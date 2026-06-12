@@ -901,8 +901,8 @@ const discoverIntegrations = [
 ];
 
 const discoverCategories = [
-  { id: 'tag_databases', title: 'Storage' },
-  { id: 'tag_dev_tools', title: 'DevTools' },
+  { id: 'tag_databases', slug: 'storage', title: 'Storage' },
+  { id: 'tag_dev_tools', slug: 'dev-tools', title: 'DevTools' },
 ];
 
 export function useResources(returnError?: number) {
@@ -935,11 +935,34 @@ export function useResources(returnError?: number) {
   });
 }
 
+export function useIntegrationCategories(opts?: { status?: number }) {
+  client.scenario.get('/v2/integrations/categories', (_req, res) => {
+    if (opts?.status) {
+      res.status(opts.status);
+      res.end();
+      return;
+    }
+    res.json(discoverCategories);
+  });
+}
+
 export function useIntegrationDiscover(opts?: {
   integrationsStatus?: number;
   categoriesStatus?: number;
 }) {
-  client.scenario.get('/v2/integrations/integrations', (_req, res) => {
+  const integrationsRequests: { categories?: string[] }[] = [];
+
+  client.scenario.get('/v2/integrations/integrations', (req, res) => {
+    // Express parses repeated query params as either string (single) or string[] (multiple).
+    // Normalize to string[] so tests can always assert array shape.
+    const raw = req.query.category;
+    let categories: string[] | undefined;
+    if (Array.isArray(raw)) {
+      categories = raw.filter((v): v is string => typeof v === 'string');
+    } else if (typeof raw === 'string') {
+      categories = [raw];
+    }
+    integrationsRequests.push({ categories });
     if (opts?.integrationsStatus) {
       res.status(opts.integrationsStatus);
       res.end();
@@ -956,6 +979,8 @@ export function useIntegrationDiscover(opts?: {
     }
     res.json(discoverCategories);
   });
+
+  return { integrationsRequests };
 }
 
 export function useConfiguration() {

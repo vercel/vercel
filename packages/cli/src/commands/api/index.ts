@@ -20,7 +20,7 @@ import {
   GLOBAL_CLI_QUERY_PARAMS,
 } from './operation-request-builder';
 import {
-  OpenApiCache,
+  createOpenApiCache,
   resolveEndpointByTagAndOperationId,
   type ResolveByTagOperationResult,
 } from '../../util/openapi';
@@ -95,9 +95,12 @@ export default async function api(client: Client): Promise<number> {
     if (lsFlags['--refresh']) telemetryClient.trackCliFlagRefresh(true);
     if (lsFlags['--format'])
       telemetryClient.trackCliOptionFormat(lsFlags['--format']);
+    if (lsFlags['--spec-url'])
+      telemetryClient.trackCliOptionSpecUrl(lsFlags['--spec-url']);
     return listEndpoints(
       client,
       lsFlags['--refresh'] ?? false,
+      lsFlags['--spec-url'],
       lsFlags['--format'] ?? 'table'
     );
   }
@@ -122,7 +125,8 @@ export default async function api(client: Client): Promise<number> {
     if (client.stdin.isTTY) {
       const selected = await promptEndpointSelection(
         client,
-        flags['--refresh'] ?? false
+        flags['--refresh'] ?? false,
+        flags['--spec-url']
       );
       if (!selected) {
         return 1;
@@ -188,6 +192,8 @@ export default async function api(client: Client): Promise<number> {
   if (flags['--verbose']) telemetryClient.trackCliFlagVerbose(true);
   if (flags['--raw']) telemetryClient.trackCliFlagRaw(true);
   if (flags['--refresh']) telemetryClient.trackCliFlagRefresh(true);
+  if (flags['--spec-url'])
+    telemetryClient.trackCliOptionSpecUrl(flags['--spec-url']);
   if (flags['--generate'])
     telemetryClient.trackCliOptionGenerate(flags['--generate']);
   if (flags['--dangerously-skip-permissions'])
@@ -210,14 +216,15 @@ export default async function api(client: Client): Promise<number> {
 }
 
 export async function printOperationHelpForTagCommand(
+  client: Client,
   flags: ParsedFlags,
   tag: string,
   operationId: string
 ): Promise<number> {
-  const openApi = new OpenApiCache();
+  const openApi = createOpenApiCache(client, flags['--spec-url']);
   const loaded = await openApi.loadWithSpinner(flags['--refresh'] ?? false);
   if (!loaded) {
-    output.error('Could not load API specification');
+    output.error(openApi.loadError ?? 'Could not load API specification');
     return 1;
   }
 
@@ -852,13 +859,17 @@ function outputResults(
 
 async function promptEndpointSelection(
   client: Client,
-  forceRefresh: boolean
+  forceRefresh: boolean,
+  specUrl: string | undefined
 ): Promise<SelectedEndpoint | null> {
   try {
-    const openApi = new OpenApiCache();
+    const openApi = createOpenApiCache(client, specUrl);
     const success = await openApi.loadWithSpinner(forceRefresh);
     if (!success) {
-      output.error('Could not load API specification for endpoint selection');
+      output.error(
+        openApi.loadError ??
+          'Could not load API specification for endpoint selection'
+      );
       return null;
     }
 
@@ -894,21 +905,22 @@ async function promptForEndpoint(
   client: Client,
   endpoints: EndpointInfo[]
 ): Promise<EndpointInfo> {
-  const allChoices = endpoints.map(ep => ({
-    name: `${colorizeMethodPadded(ep.method)} ${ep.path}`,
-    value: ep,
-    // Show full description if available, otherwise show summary
-    description: ep.description || ep.summary || undefined,
-    // Include summary in searchable metadata
-    summary: ep.summary,
-    tags: ep.tags,
-  }));
-
-  const total = allChoices.length;
+  const total = endpoints.length;
+  const buildChoices = () =>
+    endpoints.map(ep => ({
+      name: `${colorizeMethodPadded(ep.method)} ${ep.path}`,
+      value: ep,
+      // Show full description if available, otherwise show summary
+      description: ep.description || ep.summary || undefined,
+      // Include summary in searchable metadata
+      summary: ep.summary,
+      tags: ep.tags,
+    }));
 
   return client.input.search<EndpointInfo>({
     message: `Search for an API endpoint (${total} available):`,
     source: async (term: string | undefined) => {
+      const allChoices = buildChoices();
       if (!term) {
         return allChoices;
       }
@@ -935,12 +947,13 @@ async function promptForEndpoint(
 async function listEndpoints(
   client: Client,
   forceRefresh: boolean,
+  specUrl: string | undefined,
   format: string
 ): Promise<number> {
-  const openApi = new OpenApiCache();
+  const openApi = createOpenApiCache(client, specUrl);
   const success = await openApi.loadWithSpinner(forceRefresh);
   if (!success) {
-    output.error('Could not load API specification');
+    output.error(openApi.loadError ?? 'Could not load API specification');
     return 1;
   }
 
@@ -984,7 +997,10 @@ function groupEndpointsByPath(
 
   for (const ep of endpoints) {
     const existing = grouped.get(ep.path) || [];
-    existing.push({ method: ep.method, summary: ep.summary });
+    existing.push({
+      method: ep.method,
+      summary: ep.summary,
+    });
     grouped.set(ep.path, existing);
   }
 
@@ -1073,20 +1089,22 @@ async function promptForParameters(
   // Collect path parameter values (always required)
   let finalPath = path;
   for (const param of pathParams) {
-    const value = await client.input.text({
-      message: `Enter value for ${formatPathParam(param.name)}${formatDescription(param.description)}:`,
-      validate: createRequiredValidator(param.name),
-    });
+    const value = await promptForParameterValue(
+      client,
+      param,
+      `Enter value for ${formatPathParam(param.name)}${formatDescription(param.description)}:`
+    );
     finalPath = finalPath.replace(`{${param.name}}`, encodeURIComponent(value));
   }
 
   // Collect required query parameter values
   const queryValues: Record<string, string> = {};
   for (const param of requiredQueryParams) {
-    queryValues[param.name] = await client.input.text({
-      message: `Enter value for ${chalk.cyan(param.name)}${formatDescription(param.description)}:`,
-      validate: createRequiredValidator(param.name),
-    });
+    queryValues[param.name] = await promptForParameterValue(
+      client,
+      param,
+      `Enter value for ${chalk.cyan(param.name)}${formatDescription(param.description)}:`
+    );
   }
 
   // Select which optional query parameters to provide
@@ -1103,10 +1121,11 @@ async function promptForParameters(
     // Prompt for values of selected optional query params
     for (const paramName of selectedOptionalParams) {
       const param = optionalQueryParams.find(p => p.name === paramName)!;
-      queryValues[param.name] = await client.input.text({
-        message: `Enter value for ${chalk.cyan(param.name)}${formatDescription(param.description)}:`,
-        validate: createRequiredValidator(param.name),
-      });
+      queryValues[param.name] = await promptForParameterValue(
+        client,
+        param,
+        `Enter value for ${chalk.cyan(param.name)}${formatDescription(param.description)}:`
+      );
     }
   }
 
@@ -1143,6 +1162,36 @@ async function promptForParameters(
   }
 
   return { finalUrl: finalPath, bodyFields: bodyFieldValues };
+}
+
+/**
+ * Prompt for a single parameter value, honoring the schema's enum (select
+ * prompt) and default value when present.
+ */
+async function promptForParameterValue(
+  client: Client,
+  param: Parameter,
+  message: string
+): Promise<string> {
+  const schemaDefault =
+    param.schema?.default !== undefined
+      ? String(param.schema.default)
+      : undefined;
+
+  const enumValues = param.schema?.enum;
+  if (enumValues && enumValues.length > 0) {
+    return client.input.select<string>({
+      message,
+      choices: enumValues.map(v => ({ name: String(v), value: String(v) })),
+      default: schemaDefault,
+    });
+  }
+
+  return client.input.text({
+    message,
+    default: schemaDefault,
+    validate: createRequiredValidator(param.name),
+  });
 }
 
 /**
@@ -1223,12 +1272,12 @@ export async function runTagOperation(
 
   const finalFlags = { ...flags } as ParsedFlags;
 
-  const openApi = new OpenApiCache();
+  const openApi = createOpenApiCache(client, finalFlags['--spec-url']);
   const loaded = await openApi.loadWithSpinner(
     finalFlags['--refresh'] ?? false
   );
   if (!loaded) {
-    output.error('Could not load API specification');
+    output.error(openApi.loadError ?? 'Could not load API specification');
     return 1;
   }
 
@@ -1313,6 +1362,8 @@ export async function runTagOperation(
   if (finalFlags['--verbose']) telemetryClient.trackCliFlagVerbose(true);
   if (finalFlags['--raw']) telemetryClient.trackCliFlagRaw(true);
   if (finalFlags['--refresh']) telemetryClient.trackCliFlagRefresh(true);
+  if (finalFlags['--spec-url'])
+    telemetryClient.trackCliOptionSpecUrl(finalFlags['--spec-url']);
   if (finalFlags['--generate'])
     telemetryClient.trackCliOptionGenerate(finalFlags['--generate']);
   if (finalFlags['--dangerously-skip-permissions'])

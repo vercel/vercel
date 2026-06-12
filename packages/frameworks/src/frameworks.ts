@@ -2348,7 +2348,6 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => '.output',
-    experimental: true,
   },
   {
     name: 'Sanity',
@@ -4461,6 +4460,92 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Bun',
+    slug: 'bun',
+    runtimeFramework: true,
+    experimental: true,
+    supersedes: ['node'],
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/bun.svg',
+    tagline:
+      'Bun is a fast all-in-one JavaScript runtime, bundler, and package manager.',
+    description: 'A Bun application deployed as a serverless function.',
+    website: 'https://bun.com',
+    useRuntime: { src: 'package.json', use: '@vercel/backends' },
+    ignoreRuntimes: ['@vercel/node'],
+    detectors: {
+      every: [
+        {
+          path: 'bun.lock',
+        },
+      ],
+      some: [
+        {
+          path: 'server.cjs',
+        },
+        {
+          path: 'server.js',
+        },
+        {
+          path: 'server.mjs',
+        },
+        {
+          path: 'server.mts',
+        },
+        {
+          path: 'server.ts',
+        },
+        {
+          path: 'server.cts',
+        },
+        {
+          path: 'src/server.cjs',
+        },
+        {
+          path: 'src/server.js',
+        },
+        {
+          path: 'src/server.mjs',
+        },
+        {
+          path: 'src/server.mts',
+        },
+        {
+          path: 'src/server.ts',
+        },
+        {
+          path: 'src/server.cts',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        value: 'bun install',
+        placeholder: 'bun install',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: '`bun dev`, `bun run dev`, or `bun --hot server.ts`',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
     name: 'Node',
     slug: 'node',
     runtimeFramework: true,
@@ -4473,11 +4558,6 @@ export const frameworks = [
     useRuntime: { src: 'package.json', use: '@vercel/backends' },
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
-      every: [
-        {
-          path: 'package.json',
-        },
-      ],
       some: [
         {
           path: 'server.cjs',
