@@ -364,11 +364,19 @@ async function installInjectedPackage({
   const localDir = join(__dirname, '..', '..', '..', 'python', name);
   const isLocalDev = fs.existsSync(join(localDir, 'pyproject.toml'));
   const dep = envOverride || (isLocalDev ? localDir : pinned);
+  const noExclude = ['--exclude-newer-package', `${dep}=false`];
   debug(`Installing ${dep}`);
   await uv.pip({
     venvPath,
     projectDir,
-    args: ['install', '--link-mode', 'copy', ...pipPlatformArgs, dep],
+    args: [
+      'install',
+      '--link-mode',
+      'copy',
+      ...pipPlatformArgs,
+      ...noExclude,
+      dep,
+    ],
   });
 }
 
