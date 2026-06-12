@@ -30,7 +30,7 @@
       "require": "./middleware.js"
     }
   },
-  "version": "3.7.0",
+  "version": "3.7.1",
   "repository": {
     "directory": "packages/functions",
     "type": "git",
@@ -58,10 +58,14 @@
     "vitest": "2.0.1"
   },
   "peerDependencies": {
-    "@aws-sdk/credential-provider-web-identity": "*"
+    "@aws-sdk/credential-provider-web-identity": "*",
+    "ws": ">=8"
   },
   "peerDependenciesMeta": {
     "@aws-sdk/credential-provider-web-identity": {
+      "optional": true
+    },
+    "ws": {
       "optional": true
     }
   },
@@ -80,7 +84,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@vercel/oidc": "workspace:*",
-    "ws": "8.20.0"
+    "@vercel/oidc": "workspace:*"
   }
 }

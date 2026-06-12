@@ -1,6 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import api from '../../../../src/commands/api';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('api', () => {
   describe('--help', () => {
@@ -239,6 +243,87 @@ describe('api', () => {
       const exitCode = await api(client);
 
       expect(exitCode).toEqual(1);
+    });
+  });
+
+  describe('--spec-url', () => {
+    it('lists endpoints from the custom spec only', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(
+          new Response(
+            JSON.stringify({
+              openapi: '3.0.3',
+              info: { title: 'Custom API', version: '1.0.0' },
+              paths: {
+                '/custom-only': {
+                  get: {
+                    operationId: 'getCustomOnly',
+                    summary: 'Custom only',
+                    tags: ['custom'],
+                  },
+                },
+              },
+            }),
+            {
+              status: 200,
+              headers: { 'content-type': 'application/json' },
+            }
+          )
+        )
+      );
+
+      client.setArgv(
+        'api',
+        'ls',
+        '--spec-url',
+        'https://api.vercel.tools/openapi.json',
+        '--format',
+        'json'
+      );
+
+      const exitCode = await api(client);
+      expect(exitCode).toEqual(0);
+
+      const endpoints = JSON.parse(client.stdout.getFullOutput());
+      expect(endpoints).toEqual([
+        expect.objectContaining({
+          method: 'GET',
+          path: '/custom-only',
+          operationId: 'getCustomOnly',
+        }),
+      ]);
+    });
+
+    it('prints a clear error when the custom URL is not an OpenAPI spec', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(
+          new Response(
+            JSON.stringify({
+              generatedAt: '2026-06-10T17:01:31.100Z',
+              services: [],
+            }),
+            {
+              status: 200,
+              headers: { 'content-type': 'application/json' },
+            }
+          )
+        )
+      );
+
+      client.setArgv(
+        'api',
+        '--spec-url',
+        'https://api.vercel.tools/manifest.json',
+        '--refresh'
+      );
+
+      const exitCode = await api(client);
+      expect(exitCode).toEqual(1);
+      expect(client.getFullOutput()).toContain(
+        'Invalid OpenAPI spec from https://api.vercel.tools/manifest.json: expected an OpenAPI 3.x document with an "openapi" field.'
+      );
     });
   });
 

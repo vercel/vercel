@@ -827,7 +827,8 @@ exports[`help command > connex help output snapshots > connex create subcommand 
        --background-color <HEX>  Background color for the connector icon (e.g. #1A2B3C)                                      
        --connector-type <TYPE>   Connector type for non-managed creation. By default, the type is resolved from the service. 
        --data <JSON>             JSON object for non-managed connector creation. When set, posts directly to the connector   
-                                 create API.                                                                                 
+                                 create API. Pass \`@<path>\` to read from a file or \`@-\` to read from stdin — recommended for 
+                                 secrets (e.g. client secrets), which leak into shell history when passed inline.            
   -F,  --format <FORMAT>         Specify the output format (json)                                                            
        --icon <PATH>             Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)               
   -n,  --name <NAME>             Name of the connector                                                                       
@@ -870,9 +871,13 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 
     $ vercel connect create mcp.linear.app --name linear --data '{"clientId":"abc123"}'
 
-  - Create a non-managed connector with an explicit connector type
+  - Create a non-managed connector, reading credentials from a file (keeps secrets out of shell history)
 
-    $ vercel connect create slack --name my-bot --connector-type slack --data '{"appId":"A123","appName":"my-bot","clientId":"abc","clientSecret":"secret"}'
+    $ vercel connect create slack --name my-bot --connector-type slack --data @slack-app.json
+
+  - Create a non-managed connector, reading credentials from stdin
+
+    $ cat slack-app.json | vercel connect create slack --name my-bot --connector-type slack --data @-
 
   - Output as JSON
 
@@ -3617,6 +3622,48 @@ exports[`help command > integration help output snapshots > integration balance 
 "
 `;
 
+exports[`help command > integration help output snapshots > integration categories subcommand > integration categories subcommand help column width 120 1`] = `
+"
+  ▲ vercel integration categories [options]
+
+  List marketplace integration categories (slugs valid for \`integration discover --category\`)                           
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - List marketplace categories
+
+    $ vercel integration categories
+
+  - List categories as JSON
+
+    $ vercel integration categories --format=json
+
+  - Use a category slug to filter discover results
+
+    $ vercel integration discover --category storage
+
+"
+`;
+
 exports[`help command > integration help output snapshots > integration discover subcommand > integration discover subcommand help column width 120 1`] = `
 "
   ▲ vercel integration discover [query] [options]
@@ -3625,7 +3672,9 @@ exports[`help command > integration help output snapshots > integration discover
 
   Options:
 
-  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+  -c,  --category <CATEGORY>  Filter integrations by category (can be repeated; e.g., -c storage -c authentication). Run
+                              \`vercel integration categories\` for valid slugs.                                          
+  -F,  --format <FORMAT>      Specify the output format (json)                                                          
 
 
   Global Options:
@@ -3652,6 +3701,20 @@ exports[`help command > integration help output snapshots > integration discover
 
     $ vercel integration discover postgres
     $ vercel integration discover aws
+
+  - Filter integrations by category
+
+    $ vercel integration discover --category storage
+    $ vercel integration discover -c authentication
+
+  - Filter by multiple categories at once (repeat the flag)
+
+    $ vercel integration discover --category storage --category authentication
+    $ vercel integration discover -c commerce -c payments -c authentication
+
+  - List available category slugs to use with --category
+
+    $ vercel integration categories
 
   - Discover marketplace integrations as JSON
 
@@ -3770,6 +3833,16 @@ exports[`help command > integration help output snapshots > integration help col
                                   sp…
                                   ma…
                                   in…
+  categories                      Li…
+                                  ma…
+                                  in…
+                                  ca…
+                                  (s…
+                                  va…
+                                  for
+                                  \`i…
+                                  di…
+                                  --…
   discover       [query]          Di…
                                   av…
                                   ma…
@@ -4009,6 +4082,9 @@ exports[`help command > integration help output snapshots > integration help col
                                   device attestation.                        
   balance        integration      Shows the balances and thresholds of a     
                                   specified marketplace integration          
+  categories                      List marketplace integration categories    
+                                  (slugs valid for \`integration discover     
+                                  --category\`)                               
   discover       [query]          Discover available marketplace integrations
   guide          integration      Show getting started guides and code       
                                   snippets for a marketplace integration     
@@ -4085,6 +4161,8 @@ exports[`help command > integration help output snapshots > integration help col
                                   human confirmation. Does not replace integrations that require a browser or device 
                                   attestation.                                                                       
   balance        integration      Shows the balances and thresholds of a specified marketplace integration           
+  categories                      List marketplace integration categories (slugs valid for \`integration discover     
+                                  --category\`)                                                                       
   discover       [query]          Discover available marketplace integrations                                        
   guide          integration      Show getting started guides and code snippets for a marketplace integration        
   installations                   List marketplace integration installations for the current team (account scope)    

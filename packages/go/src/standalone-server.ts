@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 import { dirname, join } from 'path';
-import { readFile, pathExists, copy } from 'fs-extra';
+import { pathExists } from 'fs-extra';
 import {
   BuildOptions,
   Files,
@@ -9,7 +9,6 @@ import {
   glob,
   download,
   Lambda,
-  FileBlob,
   getWriteableDirectory,
   debug,
   cloneEnv,
@@ -17,6 +16,7 @@ import {
   execCommand,
   getReportedServiceType,
 } from '@vercel/build-utils';
+import { createStandaloneLambda } from '@vercel-internals/ipc-proxy';
 
 import { createGo, findGoBinary } from './go-helpers';
 import { generateProjectManifest } from './diagnostics';
@@ -90,7 +90,6 @@ export async function buildStandaloneServer({
 
   const outDir = await getWriteableDirectory();
   const userServerPath = join(outDir, 'user-server');
-  const bootstrapPath = join(outDir, 'executable');
 
   // Detect vendored dependencies by checking for vendor/modules.txt,
   // the canonical marker created by `go mod vendor`
@@ -130,52 +129,6 @@ export async function buildStandaloneServer({
     }
   }
 
-  // Build the bootstrap wrapper that handles IPC protocol
-  const bootstrapDir = join(__dirname, '../bootstrap');
-  const bootstrapSrc = join(bootstrapDir, 'vc-init.go');
-  const utilsSrc = join(bootstrapDir, 'vc-utils.go');
-  const bootstrapGoModSrc = join(bootstrapDir, 'go.mod');
-  debug(`Building bootstrap wrapper: ${bootstrapSrc} -> ${bootstrapPath}`);
-
-  try {
-    // Create a temporary directory for building the bootstrap
-    const bootstrapBuildDir = await getWriteableDirectory();
-    const bootstrapGoFile = join(bootstrapBuildDir, 'main.go');
-
-    // Copy bootstrap source and shared utils to temp directory
-    await copy(bootstrapSrc, bootstrapGoFile);
-    await copy(utilsSrc, join(bootstrapBuildDir, 'vc-utils.go'));
-
-    // Copy the bootstrap go.mod
-    await copy(bootstrapGoModSrc, join(bootstrapBuildDir, 'go.mod'));
-
-    // Build an isolated env for the bootstrap — only system essentials
-    // plus cross-compile settings. User-provided Go env vars (e.g.
-    // GOEXPERIMENT) must not leak in as they may be incompatible with
-    // the Go version used to compile the bootstrap wrapper.
-    // createGo() will add GOROOT, GO111MODULE, GOMODCACHE, GOCACHE,
-    // and update PATH internally.
-    const bootstrapEnv: Record<string, string> = {
-      PATH: process.env.PATH || '',
-      HOME: process.env.HOME || '',
-      TMPDIR: process.env.TMPDIR || '',
-      GOARCH: architecture === 'arm64' ? 'arm64' : 'amd64',
-      GOOS: 'linux',
-      CGO_ENABLED: '0',
-    };
-
-    const bootstrapGo = await createGo({
-      modulePath: bootstrapBuildDir,
-      opts: { cwd: bootstrapBuildDir, env: bootstrapEnv },
-      workPath: bootstrapBuildDir,
-    });
-
-    await bootstrapGo.build('.', bootstrapPath);
-  } catch (err) {
-    console.error('Failed to build bootstrap wrapper');
-    throw err;
-  }
-
   // Gather any additional files to include (user-specified via includeFiles)
   // Note: Static files in public/static/ should be handled by the static builder,
   // not bundled with the function. This follows the same pattern as Python.
@@ -192,27 +145,13 @@ export async function buildStandaloneServer({
     }
   }
 
-  // Read both binaries as FileBlob (embedded data)
-  // This ensures they persist regardless of temp file lifecycle
-  const [userServerData, bootstrapData] = await Promise.all([
-    readFile(userServerPath),
-    readFile(bootstrapPath),
-  ]);
-
-  const lambda = new Lambda({
-    ...lambdaOptions,
-    files: {
-      ...includedFiles,
-      // Bootstrap is the main entrypoint (handles IPC protocol)
-      executable: new FileBlob({ mode: 0o755, data: bootstrapData }),
-      // User's server is spawned by bootstrap
-      'user-server': new FileBlob({ mode: 0o755, data: userServerData }),
-    },
-    handler: 'executable',
-    runtime: 'executable',
-    supportsResponseStreaming: true,
+  const lambda = await createStandaloneLambda({
+    userServerPath,
     architecture,
+    lambdaOptions,
+    includedFiles,
     runtimeLanguage: 'go',
+    supportsResponseStreaming: true,
   });
 
   const preDeployCommand = config?.preDeployCommand;
@@ -267,7 +206,7 @@ export async function startStandaloneDevServer(
     resolvedEntrypoint === 'main.go' ? '.' : './' + dirname(resolvedEntrypoint);
 
   const devWrapper = join(__dirname, '../bootstrap/vc-init-dev.go');
-  const devUtils = join(__dirname, '../bootstrap/vc-utils.go');
+  const devUtils = join(__dirname, '../bootstrap/utils.go');
 
   debug(
     `Starting standalone Go dev server wrapper: go run ${devWrapper} (target ${runTarget}, port ${port})`

@@ -1,0 +1,64 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": {
+        "type": "service",
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/svc/:path*",
+      "destination": {
+        "type": "service",
+        "service": "backend",
+        "path": "/api/:path*"
+      }
+    },
+    {
+      "source": "/:path*",
+      "destination": {
+        "type": "service",
+        "service": "frontend"
+      }
+    }
+  ],
+  "experimentalServicesV2": {
+    "frontend": {
+      "root": "frontend",
+      "framework": "vite"
+    },
+    "backend": {
+      "root": "backend",
+      "framework": "fastapi",
+      "entrypoint": "server.py",
+      "redirects": [
+        {
+          "source": "/api/old",
+          "destination": "/api/new",
+          "permanent": true
+        }
+      ],
+      "headers": [
+        {
+          "source": "/api/(.*)",
+          "headers": [
+            {
+              "key": "x-backend-service",
+              "value": "backend"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "src": "/api/legacy",
+          "status": 308,
+          "headers": {
+            "Location": "/api/new"
+          }
+        }
+      ]
+    }
+  }
+}

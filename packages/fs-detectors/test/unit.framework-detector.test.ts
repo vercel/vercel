@@ -271,6 +271,32 @@ describe('detectFramework()', () => {
     ).toBe('node');
   });
 
+  it.each([
+    'server.cjs',
+    'server.js',
+    'server.mjs',
+    'server.mts',
+    'server.ts',
+    'server.cts',
+    'src/server.cjs',
+    'src/server.js',
+    'src/server.mjs',
+    'src/server.mts',
+    'src/server.ts',
+    'src/server.cts',
+  ])('Detect Node via `%s` without a package.json', async entrypoint => {
+    const fs = new VirtualFilesystem({
+      [entrypoint]: '// server entrypoint',
+    });
+
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+      })
+    ).toBe('node');
+  });
+
   it('Detect frameworks based on ascending order in framework list', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({
@@ -282,6 +308,50 @@ describe('detectFramework()', () => {
     });
 
     expect(await detectFramework({ fs, frameworkList })).toBe('nextjs');
+  });
+
+  it.each([
+    'server.cjs',
+    'server.js',
+    'server.mjs',
+    'server.mts',
+    'server.ts',
+    'server.cts',
+    'src/server.cjs',
+    'src/server.js',
+    'src/server.mjs',
+    'src/server.mts',
+    'src/server.ts',
+    'src/server.cts',
+  ])('Detect Bun via `%s` + bun.lock', async entrypoint => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({}),
+      'bun.lock': '',
+      [entrypoint]: '// server entrypoint',
+    });
+
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        useExperimentalFrameworks: true,
+      })
+    ).toBe('bun');
+  });
+
+  it('Bun is not detected without a server entrypoint', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({}),
+      'bun.lock': '',
+    });
+
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        useExperimentalFrameworks: true,
+      })
+    ).toBeNull();
   });
 
   it('Detect Nuxt.js', async () => {

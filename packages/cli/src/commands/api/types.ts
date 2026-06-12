@@ -35,6 +35,7 @@ export interface ParsedFlags {
   '--verbose'?: boolean;
   '--raw'?: boolean;
   '--refresh'?: boolean;
+  '--spec-url'?: string;
   '--generate'?: string;
   '--format'?: string;
   '--dangerously-skip-permissions'?: boolean;

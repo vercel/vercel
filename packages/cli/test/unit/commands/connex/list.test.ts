@@ -302,6 +302,46 @@ describe('connex list', () => {
       expect(stderr).not.toContain('\x1b[1A');
     });
 
+    it('should strip ansi from the type cell and project names', async () => {
+      client.scenario.get('/v1/connect/connectors', (_req, res) => {
+        res.json({
+          clients: [
+            {
+              id: 'scl_unsafe',
+              uid: 'slack/unsafe',
+              name: 'Connector',
+              type: 'slack',
+              typeName: 'Sla\x1b[31mck',
+              createdAt: Date.now() - 60_000,
+              includes: {
+                projects: {
+                  items: [
+                    {
+                      projectId: 'proj_1',
+                      project: { id: 'proj_1', name: 'evil\x1b[2Jproj' },
+                    },
+                  ],
+                  hasMore: false,
+                  cursor: null,
+                },
+              },
+            },
+          ],
+        });
+      });
+
+      client.setArgv('connect', 'list', '--all-projects');
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('Slack');
+      expect(stderr).toContain('evilproj');
+      expect(stderr).not.toContain('\x1b[31m');
+      expect(stderr).not.toContain('\x1b[2J');
+    });
+
     it('should render empty-state without project context', async () => {
       client.scenario.get('/v1/connect/connectors', (_req, res) => {
         res.json({ clients: [] });

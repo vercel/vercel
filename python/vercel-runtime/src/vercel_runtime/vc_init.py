@@ -52,6 +52,7 @@ from vercel_runtime.routing import (
     apply_service_route_prefix_to_target,
     split_request_target,
 )
+from vercel_runtime.utils import read_wsgi_request_body
 from vercel_runtime.workers import (
     is_worker_service,
     maybe_bootstrap_worker_service_app,
@@ -893,9 +894,14 @@ if "VERCEL_IPC_PATH" in os.environ:
                         "_vc_service_root_path",
                         "",
                     )
-                    content_length = int(self.headers.get("Content-Length", 0))
+                    try:
+                        body = read_wsgi_request_body(self.rfile, self.headers)
+                    except ValueError as exc:
+                        self.log_error("invalid request body: %s", exc)
+                        self.send_error(400)
+                        return
                     env: dict[str, Any] = {
-                        "CONTENT_LENGTH": str(content_length),
+                        "CONTENT_LENGTH": str(len(body)),
                         "CONTENT_TYPE": self.headers.get("content-type", ""),
                         "SCRIPT_NAME": service_root_path,
                         "PATH_INFO": path,
@@ -910,7 +916,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                         ),
                         "SERVER_PROTOCOL": "HTTP/1.1",
                         "wsgi.errors": sys.stderr,
-                        "wsgi.input": BytesIO(self.rfile.read(content_length)),
+                        "wsgi.input": BytesIO(body),
                         "wsgi.multiprocess": False,
                         "wsgi.multithread": False,
                         "wsgi.run_once": False,
@@ -923,6 +929,9 @@ if "VERCEL_IPC_PATH" in os.environ:
                         if isinstance(value, string_types):
                             env[key] = wsgi_encoding_dance(value)
                     for k, v in self.headers.items():
+                        # Hop-by-hop; body is already de-chunked (PEP 3333).
+                        if k.lower() == "transfer-encoding":
+                            continue
                         env["HTTP_" + k.replace("-", "_").upper()] = v
 
                     def start_response(

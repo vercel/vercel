@@ -1,3 +1,6 @@
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { text } from 'node:stream/consumers';
 import open from 'open';
 import output from '../../output-manager';
 import type Client from '../../util/client';
@@ -60,18 +63,33 @@ export async function create(
     return 1;
   }
 
-  const hasDataFlag = dataFlag !== undefined;
-  const isDataFlagEmpty = hasDataFlag && dataFlag.trim().length === 0;
+  const isNonManagedCreate = dataFlag !== undefined;
+
+  // Resolve the --data source up front (inline JSON, `@<path>` to read a
+  // file, or `@-` to read stdin) so credentials can be supplied without
+  // leaking into shell history / process listings, and so we fail fast on a
+  // bad source before team selection or any network call.
   let nonManagedData: JSONObject | undefined;
-  if (hasDataFlag && !isDataFlagEmpty) {
+  let isDataFlagEmpty = false;
+  if (dataFlag !== undefined) {
     try {
-      nonManagedData = parseDataFlag(dataFlag);
+      const rawData = await resolveDataFlag(dataFlag, client);
+      if (rawData.trim().length === 0) {
+        isDataFlagEmpty = true;
+      } else {
+        nonManagedData = parseDataFlag(rawData);
+        // Inline JSON (anything not read from a file or stdin) is exposed in
+        // shell history and `ps`; nudge toward `@<path>`/`@-` when it looks
+        // like it carries a secret.
+        if (!dataFlag.startsWith('@')) {
+          warnInlineSecret(nonManagedData);
+        }
+      }
     } catch (err) {
       output.error((err as Error).message);
       return 1;
     }
   }
-  const isNonManagedCreate = hasDataFlag;
 
   // Preflight branding validation BEFORE team selection / network / upload.
   // This includes hex format, icon path readability, AND magic-byte check —
@@ -342,6 +360,64 @@ export async function create(
     );
   }
   return brandingPatchFailed ? 1 : 0;
+}
+
+/**
+ * Reads the entire stdin stream to EOF and returns it as a string. Used for
+ * the explicit `--data @-` request, where the full credential payload must be
+ * captured. Unlike `readStandardInput`, this has no time cap and accumulates
+ * every chunk, so slow producers and multi-chunk payloads are read in full.
+ * Returns '' when stdin is a TTY (nothing is piped, so reading would block).
+ */
+async function readStdinToEnd(stdin: Client['stdin']): Promise<string> {
+  if (stdin.isTTY) {
+    return '';
+  }
+  return text(stdin);
+}
+
+/**
+ * Resolves a `--data` flag value to the raw JSON string. Supports inline
+ * JSON, `@<path>` to read a file (relative paths resolved against `cwd`),
+ * and `@-` to read from stdin. File/stdin sources keep secrets out of argv,
+ * shell history, and process listings.
+ */
+async function resolveDataFlag(raw: string, client: Client): Promise<string> {
+  if (!raw.startsWith('@')) {
+    return raw;
+  }
+  const source = raw.slice(1);
+  if (source === '-') {
+    return readStdinToEnd(client.stdin);
+  }
+  if (source.length === 0) {
+    throw new Error(
+      'Invalid --data value. Use `@<path>` to read from a file or `@-` to read from stdin.'
+    );
+  }
+  try {
+    return await readFile(resolve(client.cwd, source), 'utf8');
+  } catch (err) {
+    throw new Error(
+      `Could not read --data file at "${source}": ${(err as Error).message}`
+    );
+  }
+}
+
+const SECRET_KEY_PATTERN =
+  /secret|password|passwd|token|api[-_]?key|private[-_]?key|credential/i;
+
+/**
+ * Warns when inline `--data` JSON contains a credential-looking key, since
+ * inline flag values leak into shell history and `ps` output.
+ */
+function warnInlineSecret(data: JSONObject): void {
+  const secretKey = Object.keys(data).find(key => SECRET_KEY_PATTERN.test(key));
+  if (secretKey) {
+    output.warn(
+      `--data was passed inline and appears to contain a credential ("${secretKey}"). Inline flag values leak into shell history and process listings. Pass \`--data @<path>\` to read from a file or \`--data @-\` to read from stdin instead.`
+    );
+  }
 }
 
 function parseDataFlag(raw: string): JSONObject {
