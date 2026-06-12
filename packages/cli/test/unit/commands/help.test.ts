@@ -351,6 +351,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('domains verify help output snapshots', () => {
+      it('domains verify help column width 120', () => {
+        expect(
+          help(domains.verifySubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('env help output snapshots', () => {
