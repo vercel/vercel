@@ -3,6 +3,7 @@ import type { Socket } from 'net';
 import { RuntimeCache } from './cache/types';
 import { PurgeApi } from './purge/types';
 import { AddCacheTagApi } from './addcachetag/types';
+import type { Spans, SpanContext } from './spans';
 
 type Context = {
   waitUntil?: (promise: Promise<unknown>) => void;
@@ -20,6 +21,11 @@ type Context = {
     req: IncomingMessage;
     socket: Socket;
     head: Buffer;
+  };
+
+  telemetry?: {
+    reportSpans?: (request: Spans) => void;
+    rootSpanContext?: SpanContext;
   };
 };
 

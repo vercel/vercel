@@ -1,4 +1,5 @@
 import { getContext } from '../get-context';
+import { createRootSpan } from '../trace';
 
 const DEBUG = !!process.env.DEBUG;
 
@@ -174,6 +175,9 @@ function waitUntilIdleTimeout(dbPool: DbPool) {
   const promise = new Promise(resolve => {
     idleTimeoutResolve = resolve;
   });
+
+  const span = createRootSpan('@vercel/function waitUntilIdleTimeout');
+  promise.finally(() => span.end());
 
   // Don't wait longer than the maximum duration
   const waitTime = Math.min(
