@@ -23,6 +23,15 @@ Most users only need `vercel alias` — domains and DNS are auto-configured when
 
 Or manually alias: `vercel alias set <deployment-url> example.com`
 
+## Dashboard Path
+
+The same flow is available without the CLI — prefer it when guiding someone who is working in the Vercel dashboard rather than a terminal:
+
+1. On the project: **Settings → Domains → Add Domain** (`https://vercel.com/<team>/<project>/settings/domains`).
+2. After the domain is added, the dashboard displays the exact DNS records to set at the registrar: an **A** record for apex domains, a project-specific **CNAME** for subdomains, or Vercel nameservers (required for wildcard domains).
+
+Full walkthrough: [Adding & Configuring a Custom Domain](https://vercel.com/docs/domains/working-with-domains/add-a-domain).
+
 ## Domain Discovery
 
 ### Search
