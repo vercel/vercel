@@ -56,20 +56,26 @@ import reportError from './util/report-error';
 import earlyGetConfig from './util/get-config';
 import * as configFiles from './util/config/files';
 import getGlobalPathConfig from './util/config/global-path';
-import { defaultAuthConfig, defaultGlobalConfig } from '@vercel/cli-config';
+import { getDefaultAuthConfig, defaultGlobalConfig } from '@vercel/cli-config';
 import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
 import getUpdateCommand from './util/get-update-command';
 import { executeUpgrade } from './util/upgrade';
+import {
+  canAutoUpdate,
+  hasAutoUpdatePreference,
+  isNativeBinaryInstall,
+  setAutoUpdate,
+} from './util/updates';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import login from './commands/login';
 import type { AuthConfig, GlobalConfig, User } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
 import { Agent as HttpsAgent } from 'https';
 import box from './util/output/box';
-import { execExtension } from './util/extension/exec';
 import { TelemetryEventStore } from './util/telemetry';
 import { RootTelemetryClient } from './util/telemetry/root';
+import { readVercelPluginActiveSessionMarker } from './util/telemetry/vercel-plugin';
 import { help } from './args';
 import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
@@ -112,6 +118,7 @@ function hasProxyConfig(): boolean {
 epipebomb();
 
 let client: Client;
+let resolvedCommandForUpdate: string | undefined;
 
 // Register global error handlers early to catch errors during initialization.
 // Sentry is lazily initialized only when an error actually occurs.
@@ -121,7 +128,7 @@ const handleRejection = async (err: any) => {
       await handleUnexpected(err);
     } else {
       output.error(`An unexpected rejection occurred\n  ${err}`);
-      await reportError(getSentry(), client, err);
+      await reportError(await getSentry(), client, err);
     }
   } else {
     output.error('An unexpected empty rejection occurred');
@@ -140,7 +147,7 @@ const handleUnexpected = async (err: Error) => {
   }
 
   output.error(`An unexpected error occurred!\n${err.stack}`);
-  await reportError(getSentry(), client, err);
+  await reportError(await getSentry(), client, err);
 
   process.exit(1);
 };
@@ -244,14 +251,11 @@ const main = async () => {
 
   // If empty, leave this code here for easy adding of beta commands later
   const betaCommands: string[] = ['api', 'crons', 'curl', 'webhooks'];
+  const versionBanner = `${getTitleName()} CLI ${pkg.version} (Node.js ${process.versions.node})`;
   const msg = betaCommands.includes(targetOrSubcommand)
-    ? `${getTitleName()} CLI ${pkg.version} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
-    : `${getTitleName()} CLI ${pkg.version}`;
-  if (process.env.VERCEL === '1') {
-    output.print(`${msg}\n`);
-  } else {
-    output.debug(msg);
-  }
+    ? `${versionBanner} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
+    : versionBanner;
+  output.print(`${chalk.dim(msg)}\n`);
 
   // Handle `--version` directly
   if (!targetOrSubcommand && parsedArgs.flags['--version']) {
@@ -306,29 +310,35 @@ const main = async () => {
     }
   }
 
+  // Check for explicit tokens before reading persisted credentials so CI/headless
+  // usage does not depend on local auth storage such as an OS keyring.
+  let tokenSource: 'flag' | 'env' | undefined;
+  let explicitToken: string | undefined;
+  if (typeof parsedArgs.flags['--token'] === 'string') {
+    explicitToken = parsedArgs.flags['--token'];
+    tokenSource = 'flag';
+  } else if (process.env.VERCEL_TOKEN) {
+    explicitToken = process.env.VERCEL_TOKEN;
+    tokenSource = 'env';
+  }
+
   let authConfig: AuthConfig;
-  try {
-    authConfig = configFiles.readAuthConfigFile();
-  } catch (err: unknown) {
-    if (isErrnoException(err) && err.code === 'ENOENT') {
-      authConfig = defaultAuthConfig;
-      try {
-        configFiles.writeToAuthConfigFile(authConfig);
-      } catch (err: unknown) {
+  if (tokenSource) {
+    authConfig = getDefaultAuthConfig();
+  } else {
+    try {
+      authConfig = configFiles.readAuthConfigFile(config);
+    } catch (err: unknown) {
+      if (isErrnoException(err) && err.code === 'ENOENT') {
+        authConfig = getDefaultAuthConfig();
+      } else {
         output.error(
-          `An unexpected error occurred while trying to write the auth config to "${hp(
+          `An unexpected error occurred while trying to read the auth config in "${hp(
             VERCEL_AUTH_CONFIG_PATH
           )}" ${errorToString(err)}`
         );
         return 1;
       }
-    } else {
-      output.error(
-        `An unexpected error occurred while trying to read the auth config in "${hp(
-          VERCEL_AUTH_CONFIG_PATH
-        )}" ${errorToString(err)}`
-      );
-      return 1;
     }
   }
 
@@ -366,6 +376,11 @@ const main = async () => {
   const { isAgent, agent: detectedAgent } = await determineAgent();
   telemetry.trackInvocationId(telemetryEventStore.currentInvocationId);
   telemetry.trackDeviceId(telemetryEventStore.currentDeviceId);
+  const vercelPluginMarker = readVercelPluginActiveSessionMarker();
+  if (vercelPluginMarker) {
+    telemetry.trackVercelPluginActiveSession();
+    telemetry.trackVercelPluginVersion(vercelPluginMarker.pluginVersion);
+  }
   telemetry.trackAgenticUse(detectedAgent?.name);
   telemetry.trackCPUs();
   telemetry.trackPlatform();
@@ -642,14 +657,10 @@ const main = async () => {
     subcommandsWithoutToken.push('flags');
   }
 
-  // Check for VERCEL_TOKEN environment variable if --token flag not provided
-  // Track where the token came from for better error messages
-  let tokenSource: 'flag' | 'env' | undefined;
-  if (typeof parsedArgs.flags['--token'] === 'string') {
-    tokenSource = 'flag';
-  } else if (process.env.VERCEL_TOKEN) {
-    parsedArgs.flags['--token'] = process.env.VERCEL_TOKEN;
-    tokenSource = 'env';
+  // Apply VERCEL_TOKEN after telemetry so env-provided tokens are not reported
+  // as if the user supplied `--token` on the command line.
+  if (tokenSource === 'env' && explicitToken) {
+    parsedArgs.flags['--token'] = explicitToken;
   }
 
   // Prompt for login if there is no current token
@@ -657,7 +668,7 @@ const main = async () => {
     (!authConfig || !authConfig.token) &&
     !client.argv.includes('-h') &&
     !client.argv.includes('--help') &&
-    !parsedArgs.flags['--token'] &&
+    typeof parsedArgs.flags['--token'] !== 'string' &&
     subcommand &&
     !subcommandsWithoutToken.includes(subcommand)
   ) {
@@ -859,6 +870,7 @@ const main = async () => {
 
       // Try to execute as an extension
       try {
+        const { execExtension } = await import('./util/extension/exec');
         exitCode = await execExtension(
           client,
           targetCommand,
@@ -962,15 +974,10 @@ const main = async () => {
           telemetry.trackCliCommandCache(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).cache;
           break;
-        case 'connex':
-          if (process.env.FF_CONNEX_ENABLED) {
-            telemetry.trackCliCommandConnex(userSuppliedSubCommand);
-            func = (await import('./commands-bulk.js')).connex;
-            break;
-          } else {
-            func = null;
-            break;
-          }
+        case 'connect':
+          telemetry.trackCliCommandConnex(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).connex;
+          break;
         case 'contract':
           telemetry.trackCliCommandContract(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).contract;
@@ -1142,6 +1149,10 @@ const main = async () => {
           telemetry.trackCliCommandTelemetry(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).telemetry;
           break;
+        case 'traces':
+          telemetry.trackCliCommandTraces(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).traces;
+          break;
         case 'upgrade':
           telemetry.trackCliCommandUpgrade(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).upgrade;
@@ -1183,6 +1194,7 @@ const main = async () => {
         earlyGetUserPromise = getUser(client).catch(() => undefined);
       }
 
+      resolvedCommandForUpdate = targetCommand;
       exitCode = await rootSpan
         .child('vc.cli.command', { command: subcommand || 'deploy' })
         .trace(() => func(client));
@@ -1247,7 +1259,7 @@ const main = async () => {
       }
       output.prettyError(err);
     } else {
-      await reportError(getSentry(), client, err);
+      await reportError(await getSentry(), client, err);
 
       // Otherwise it is an unexpected error and we should show the trace
       // and an unexpected error message
@@ -1281,12 +1293,30 @@ const main = async () => {
 
 main()
   .then(async exitCode => {
-    if (SHOULD_CHECK_FOR_UPDATES) {
+    if (SHOULD_CHECK_FOR_UPDATES && !isNativeBinaryInstall()) {
       const latest = getLatestVersion({
         pkg,
       });
       if (latest) {
         const changelog = `https://github.com/vercel/vercel/releases/tag/vercel%40${latest}`;
+        const originalExitCode = typeof exitCode === 'number' ? exitCode : 0;
+
+        if (
+          await canAutoUpdate(
+            client,
+            originalExitCode,
+            resolvedCommandForUpdate
+          )
+        ) {
+          const upgradeExitCode = await executeUpgrade();
+          process.exitCode = originalExitCode;
+          if (upgradeExitCode !== 0) {
+            output.log(
+              `Automatic update failed. Continuing with original exit code ${originalExitCode}.`
+            );
+          }
+          return;
+        }
 
         if (isTTY) {
           // Interactive mode: prompt user to update now
@@ -1316,6 +1346,16 @@ main()
 
             if (shouldUpgrade) {
               const upgradeExitCode = await executeUpgrade();
+              if (
+                upgradeExitCode === 0 &&
+                !hasAutoUpdatePreference(client.config)
+              ) {
+                const enableAutoUpdates = await client.input.confirm(
+                  'Enable automatic CLI updates for future releases?',
+                  false
+                );
+                setAutoUpdate(client, enableAutoUpdates);
+              }
               process.exitCode = upgradeExitCode;
               return;
             }

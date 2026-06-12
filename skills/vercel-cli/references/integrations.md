@@ -23,9 +23,48 @@ vercel ir -h                                       # integration-resource subcom
 
 ## Discovering Integrations
 
+The Marketplace organizes integrations by category. For category-shaped user intent ("monitoring", "storage", "commerce", "ai"), prefer `--category <slug>` over substring search — it returns the canonical set rather than relying on description text matching.
+
 ```bash
-vercel integration discover                        # list all marketplace integrations
-vercel integration discover --format=json          # as JSON
+# Step 1: list valid category slugs
+vercel integration categories                          # slugs + titles
+vercel integration categories --json                   # machine-readable
+
+# Step 2: filter discover by category
+vercel integration discover --category storage
+vercel integration discover --category monitoring
+vercel integration discover -c ai                      # shorthand
+vercel integration discover <query> --category <slug>  # combine substring + filter
+
+# Specific integration by name (substring across slug/name/description)
+vercel integration discover postgres
+vercel integration discover sentry
+
+# Full catalog (rare — usually narrow first)
+vercel integration discover
+vercel integration discover --format=json
+```
+
+**Rule:** when the user describes a category-shaped need ("I need a database", "set up monitoring", "build me a store"), run `vercel integration categories` first to get the canonical slug, then `discover --category <slug>`. This is more accurate than substring search, which misses integrations whose description doesn't contain the exact keyword (e.g., "monitoring" search misses an integration described as "Observability").
+
+## Accepting Terms (Install Without a Resource)
+
+Some integrations require accepting marketplace legal terms before the team can install them. `accept-terms` installs the integration at the account/team scope without provisioning a product resource. Requires an interactive terminal and human confirmation.
+
+```bash
+vercel integration accept-terms <integration>
+vercel integration accept-terms neon
+vercel integration accept-terms neon --format=json
+```
+
+## Listing Installations
+
+`installations` lists every marketplace integration installation on the team (account scope). Useful for finding installation/configuration IDs needed by `update` and `add --installation-id`.
+
+```bash
+vercel integration installations                          # all installations on the team
+vercel integration installations --integration neon       # filter by integration slug
+vercel integration installations --format json            # JSON output
 ```
 
 ## Adding an Integration
@@ -145,6 +184,22 @@ vercel env pull                                        # pulls to .env.local
 ```
 
 This runs automatically after `vercel integration add` (unless `--no-env-pull`).
+
+## Updating an Installation
+
+`update` changes the billing plan or which projects can access an installation. Install / remove / connect flows live elsewhere (`integration add`, `integration remove`, `integration-resource ...`).
+
+```bash
+vercel integration update <integration> --projects all                                  # grant all team projects access
+vercel integration update neon --projects prj_abc --projects prj_def                    # limit to specific projects
+vercel integration update acme --plan pro                                               # change billing plan
+vercel integration update neon --installation-id icfg_xxx --projects all                # select an installation when several exist
+vercel integration update acme --plan pro --authorization-id auth_xxx                   # provide billing authorization
+vercel integration update neon --projects all --format=json                             # JSON output
+vercel integration update neon --projects all --non-interactive                         # JSON-on-stdout success/error
+```
+
+Use `vercel integration installations` to find the right `--installation-id` when multiple marketplace installations exist for the same integration.
 
 ## Removing Resources
 

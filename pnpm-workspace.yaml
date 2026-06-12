@@ -5,3 +5,13 @@ packages:
   - 'internals/*'
   - 'python/vercel-runtime'
   - 'python/vercel-workers'
+
+minimumReleaseAge: 2880 # 2 days
+
+minimumReleaseAgeExclude:
+  - '@next/*'
+  - '@turbo/*'
+  - '@vercel/*'
+  - 'next'
+  - 'sandbox'
+  - 'turbo'

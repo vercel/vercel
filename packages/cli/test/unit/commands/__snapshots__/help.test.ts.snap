@@ -8,19 +8,17 @@ exports[`help command > alias help output snapshots > alias help column width 40
 
   Commands:
 
-  list                      Show   
-                            all    
-                            aliases
-  remove  alias             Remove 
-                            an     
-                            alias  
-                            using  
-                            its    
-                            hostna…
-  set     deployment alias  Create 
-                            a new  
-                            alias  
-                            (defau…
+  list                     Show all
+                           aliases 
+  remove  alias            Remove  
+                           an alias
+                           using   
+                           its     
+                           hostname
+  set     id-or-url alias  Create a
+                           new     
+                           alias   
+                           (defaul…
 
 
   Global Options:
@@ -96,9 +94,9 @@ exports[`help command > alias help output snapshots > alias help column width 80
 
   Commands:
 
-  list                      Show all aliases                               
-  remove  alias             Remove an alias using its hostname             
-  set     deployment alias  Create a new alias (default)                   
+  list                     Show all aliases                                
+  remove  alias            Remove an alias using its hostname              
+  set     id-or-url alias  Create a new alias (default)                    
 
 
   Global Options:
@@ -142,9 +140,9 @@ exports[`help command > alias help output snapshots > alias help column width 12
 
   Commands:
 
-  list                      Show all aliases                                                                       
-  remove  alias             Remove an alias using its hostname                                                     
-  set     deployment alias  Create a new alias (default)                                                           
+  list                     Show all aliases                                                                        
+  remove  alias            Remove an alias using its hostname                                                      
+  set     id-or-url alias  Create a new alias (default)                                                            
 
 
   Global Options:
@@ -238,7 +236,7 @@ exports[`help command > alias help output snapshots > alias remove subcommand > 
 
 exports[`help command > alias help output snapshots > alias set subcommand > alias set subcommand help column width 120 1`] = `
 "
-  ▲ vercel alias set deployment alias
+  ▲ vercel alias set id-or-url alias
 
   Create a new alias                                                                                                    
 
@@ -755,14 +753,147 @@ exports[`help command > certs help output snapshots > certs remove help output s
 
 exports[`help command > connex help output snapshots > connex attach subcommand > connex attach subcommand help column width 120 1`] = `
 "
-  ▲ vercel connex attach client [options]
+  ▲ vercel connect attach connector [options]
 
-  Attach a Vercel project to a Connex client for one or more environments                                               
+  Attach a Vercel project to a connector for one or more environments                                                   
 
   Options:
 
-  -e,  --environment <ENV>     Environments to enable. Repeatable and comma-separated (e.g. -e production -e preview, or
-                               -e production,preview). Defaults to all environments.                                    
+  -e,  --environment <ENV>        Environments to enable. Repeatable and comma-separated (e.g. -e production -e preview, or
+                                  -e production,preview). Defaults to all environments.                                    
+  -F,  --format <FORMAT>          Specify the output format (json)                                                         
+  -p,  --project <NAME_OR_ID>     Project name or ID (default: current linked project)                                     
+       --trigger-branch <BRANCH>  Target a specific git branch for the trigger destination (default: production). Only     
+                                  valid with --triggers.                                                                   
+       --trigger-path <PATH>      Path on the destination project that receives the forwarded webhook (default:            
+                                  /{service}). Only valid with --triggers.                                                 
+       --triggers                 Also register this project as a trigger destination so the connector forwards verified   
+                                  webhooks to it (max 3 destinations per connector)                                        
+  -y,  --yes                      Skip the confirmation prompt                                                             
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Attach the current project to a connector for all environments
+
+    $ vercel connect attach scl_abc123
+
+  - Restrict to specific environments
+
+    $ vercel connect attach scl_abc123 -e production -e preview
+
+  - Attach a different project by name
+
+    $ vercel connect attach slack/my-bot --project my-app
+
+  - Attach and register the project as a trigger destination
+
+    $ vercel connect attach scl_abc123 --triggers
+
+  - Attach and register a preview-branch trigger destination
+
+    $ vercel connect attach scl_abc123 --triggers --trigger-branch staging --trigger-path /slack
+
+  - Non-interactive output as JSON
+
+    $ vercel connect attach scl_abc123 --yes --format=json
+
+"
+`;
+
+exports[`help command > connex help output snapshots > connex create subcommand > connex create subcommand help column width 120 1`] = `
+"
+  ▲ vercel connect create type [options]
+
+  Create a new connector                                                                                                
+
+  Options:
+
+       --accent-color <HEX>      Accent color for the connector icon (e.g. #1A2B3C)                                          
+       --background-color <HEX>  Background color for the connector icon (e.g. #1A2B3C)                                      
+       --connector-type <TYPE>   Connector type for non-managed creation. By default, the type is resolved from the service. 
+       --data <JSON>             JSON object for non-managed connector creation. When set, posts directly to the connector   
+                                 create API. Pass \`@<path>\` to read from a file or \`@-\` to read from stdin — recommended for 
+                                 secrets (e.g. client secrets), which leak into shell history when passed inline.            
+  -F,  --format <FORMAT>         Specify the output format (json)                                                            
+       --icon <PATH>             Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)               
+  -n,  --name <NAME>             Name of the connector                                                                       
+       --triggers                Enable webhook triggers for this connector                                                  
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Create a Slack app
+
+    $ vercel connect create slack
+
+  - Create with a custom name
+
+    $ vercel connect create slack --name my-bot
+
+  - Create with webhook triggers enabled
+
+    $ vercel connect create slack --name my-bot --triggers
+
+  - Create with branding (icon and colors)
+
+    $ vercel connect create slack --name my-bot --icon ./logo.png --background-color '#1A2B3C' --accent-color '#FF0066'
+
+  - Create a non-managed connector from explicit data
+
+    $ vercel connect create mcp.linear.app --name linear --data '{"clientId":"abc123"}'
+
+  - Create a non-managed connector, reading credentials from a file (keeps secrets out of shell history)
+
+    $ vercel connect create slack --name my-bot --connector-type slack --data @slack-app.json
+
+  - Create a non-managed connector, reading credentials from stdin
+
+    $ cat slack-app.json | vercel connect create slack --name my-bot --connector-type slack --data @-
+
+  - Output as JSON
+
+    $ vercel connect create slack --format=json
+
+"
+`;
+
+exports[`help command > connex help output snapshots > connex detach subcommand > connex detach subcommand help column width 120 1`] = `
+"
+  ▲ vercel connect detach connector [options]
+
+  Detach a Vercel project from a connector                                                                              
+
+  Options:
+
   -F,  --format <FORMAT>       Specify the output format (json)                                                         
   -p,  --project <NAME_OR_ID>  Project name or ID (default: current linked project)                                     
   -y,  --yes                   Skip the confirmation prompt                                                             
@@ -784,91 +915,46 @@ exports[`help command > connex help output snapshots > connex attach subcommand 
 
   Examples:
 
-  - Attach the current project to a client for all environments
+  - Detach the current project from a connector
 
-    $ vercel connex attach scl_abc123
+    $ vercel connect detach scl_abc123
 
-  - Restrict to specific environments
+  - Detach a different project by name
 
-    $ vercel connex attach scl_abc123 -e production -e preview
-
-  - Attach a different project by name
-
-    $ vercel connex attach slack/my-bot --project my-app
+    $ vercel connect detach slack/my-bot --project my-app
 
   - Non-interactive output as JSON
 
-    $ vercel connex attach scl_abc123 --yes --format=json
-
-"
-`;
-
-exports[`help command > connex help output snapshots > connex create subcommand > connex create subcommand help column width 120 1`] = `
-"
-  ▲ vercel connex create type [options]
-
-  Create a new Connex client                                                                                            
-
-  Options:
-
-  -F,  --format <FORMAT>  Specify the output format (json)                                                              
-  -n,  --name <NAME>      Name of the Connex client                                                                     
-       --triggers         Enable webhook triggers for this client                                                       
-
-
-  Global Options:
-
-       --cwd <DIR>            Sets the current working directory for a single run of a command                          
-  -d,  --debug                Debug mode (default off)                                                                  
-  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
-  -h,  --help                 Output usage information                                                                  
-  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
-       --no-color             No color mode (default off)                                                               
-       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
-  -S,  --scope                Set a custom scope                                                                        
-  -t,  --token <TOKEN>        Login token                                                                               
-  -v,  --version              Output the version number                                                                 
-
-
-  Examples:
-
-  - Create a Slack app
-
-    $ vercel connex create slack
-
-  - Create with a custom name
-
-    $ vercel connex create slack --name my-bot
-
-  - Create with webhook triggers enabled
-
-    $ vercel connex create slack --name my-bot --triggers
-
-  - Output as JSON
-
-    $ vercel connex create slack --format=json
+    $ vercel connect detach scl_abc123 --yes --format=json
 
 "
 `;
 
 exports[`help command > connex help output snapshots > connex help column width 80 1`] = `
 "
-  ▲ vercel connex command
+  ▲ vercel connect command
 
-  Manage Vercel Connect clients                                                 
+  Manage connectors (Beta).                                                     
+  Vercel Connect is currently in beta. Behavior, commands, and output may       
+  change before general availability.                                           
 
   Commands:
 
-  create  type    Create a new Connex client                            
-  list            List Connex clients linked to the current project     
-                  (falls back to every client in the team when no       
-                  project is linked or when --all-projects is set)      
-  token   id      Get a token for a Connex client (accepts a client ID  
-                  like scl_abc or a UID like slack/my-bot)              
-  attach  client  Attach a Vercel project to a Connex client for one or 
-                  more environments                                     
-  remove  client  Delete a Connex client                                
-  open    id      Open a Connex client in the Vercel dashboard          
+  create         type       Create a new connector                      
+  update         id         Update connector branding (icon and colors) 
+  list                      List connectors linked to the current       
+                            project (falls back to every connector in   
+                            the team when no project is linked or when  
+                            --all-projects is set)                      
+  token          id         Get a token for a connector (accepts a      
+                            connector ID like scl_abc or a UID like     
+                            slack/my-bot)                               
+  attach         connector  Attach a Vercel project to a connector for  
+                            one or more environments                    
+  detach         connector  Detach a Vercel project from a connector    
+  remove         connector  Delete a connector                          
+  revoke-tokens  connector  Revoke tokens issued from a connector       
+  open           id         Open a connector in the Vercel dashboard    
 
 
   Global Options:
@@ -891,40 +977,43 @@ exports[`help command > connex help output snapshots > connex help column width 
 
   - Create a Slack app
 
-    $ vercel connex create slack
+    $ vercel connect create slack
 
-  - List Connex clients on the current team
+  - List connectors on the current team
 
-    $ vercel connex list
+    $ vercel connect list
 
   - Get a token
 
-    $ vercel connex token scl_abc123
+    $ vercel connect token scl_abc123
 
-  - Attach the current project to a client
+  - Attach the current project to a connector
 
-    $ vercel connex attach scl_abc123
+    $ vercel connect attach scl_abc123
 
-  - Open a client in the dashboard
+  - Open a connector in the dashboard
 
-    $ vercel connex open scl_abc123
+    $ vercel connect open scl_abc123
 
 "
 `;
 
 exports[`help command > connex help output snapshots > connex list subcommand > connex list subcommand help column width 120 1`] = `
 "
-  ▲ vercel connex list [options]
+  ▲ vercel connect list [options]
 
-  List Connex clients linked to the current project (falls back to every client in the team when no project is linked   
-  or when --all-projects is set)                                                                                        
+  List connectors linked to the current project (falls back to every connector in the team when no project is linked or 
+  when --all-projects is set)                                                                                           
 
   Options:
 
-       --all-projects     List every Connex client in the team, regardless of project link                              
+       --all-projects     List every connector in the team, regardless of project link                                  
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
-       --limit <COUNT>    Number of clients to return per page                                                          
+       --limit <COUNT>    Number of connectors to return per page                                                       
        --next <CURSOR>    Cursor for the next page of results                                                           
+       --search <TEXT>    Search connectors by name or UID                                                              
+       --service <NAME>   Filter by service name (e.g. slack, mcp.linear.app). Repeatable.                              
+       --type <TYPE>      Filter by connector type (slack, github, oauth, custom). Repeatable.                          
 
 
   Global Options:
@@ -943,34 +1032,54 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
 
   Examples:
 
-  - List Connex clients linked to the current project
+  - List connectors linked to the current project
 
-    $ vercel connex list
+    $ vercel connect list
 
-  - List every Connex client in the team
+  - List every connector in the team
 
-    $ vercel connex list --all-projects
+    $ vercel connect list --all-projects
+
+  - Filter by connector type
+
+    $ vercel connect list --type slack
+
+  - Filter by multiple types
+
+    $ vercel connect list --type oauth --type github
+
+  - Filter by service name
+
+    $ vercel connect list --service mcp.linear.app
+
+  - Search by text
+
+    $ vercel connect list --search linear
+
+  - Combine filters
+
+    $ vercel connect list --type oauth --search prod
 
   - Limit the number of results
 
-    $ vercel connex list --limit 10
+    $ vercel connect list --limit 10
 
   - Fetch the next page of results
 
-    $ vercel connex list --next <cursor>
+    $ vercel connect list --next <cursor>
 
   - Output as JSON
 
-    $ vercel connex list --format=json
+    $ vercel connect list --format=json
 
 "
 `;
 
 exports[`help command > connex help output snapshots > connex open subcommand > connex open subcommand help column width 120 1`] = `
 "
-  ▲ vercel connex open id [options]
+  ▲ vercel connect open id [options]
 
-  Open a Connex client in the Vercel dashboard                                                                          
+  Open a connector in the Vercel dashboard                                                                              
 
   Options:
 
@@ -993,34 +1102,34 @@ exports[`help command > connex help output snapshots > connex open subcommand > 
 
   Examples:
 
-  - Open a client by ID
+  - Open a connector by ID
 
-    $ vercel connex open scl_abc123
+    $ vercel connect open scl_abc123
 
-  - Open a client by UID
+  - Open a connector by UID
 
-    $ vercel connex open slack/my-bot
+    $ vercel connect open slack/my-bot
 
   - Print the dashboard URL as JSON
 
-    $ vercel connex open scl_abc123 --format=json
+    $ vercel connect open scl_abc123 --format=json
 
 "
 `;
 
 exports[`help command > connex help output snapshots > connex token subcommand > connex token subcommand help column width 120 1`] = `
 "
-  ▲ vercel connex token id [options]
+  ▲ vercel connect token id [options]
 
-  Get a token for a Connex client (accepts a client ID like scl_abc or a UID like slack/my-bot)                         
+  Get a token for a connector (accepts a connector ID like scl_abc or a UID like slack/my-bot)                          
 
   Options:
 
   -F,  --format <FORMAT>       Specify the output format (json)                                                              
-       --installation-id <ID>  Target a specific installation (only useful with --subject app; defaults to the client's      
+       --installation-id <ID>  Target a specific installation (only useful with --subject app; defaults to the connector's   
                                default installation)                                                                         
        --scopes <SCOPES>       Scopes (comma- or space-separated)                                                            
-  -s,  --subject <TYPE>        Subject type: "user" (default, acts on behalf of you) or "app" (uses the client's default     
+  -s,  --subject <TYPE>        Subject type: "user" (default, acts on behalf of you) or "app" (uses the connector's default  
                                installation)                                                                                 
   -y,  --yes                   Accept default value for all prompts                                                          
 
@@ -1041,29 +1150,29 @@ exports[`help command > connex help output snapshots > connex token subcommand >
 
   Examples:
 
-  - Get a user token by client ID
+  - Get a user token by connector ID
 
-    $ vercel connex token scl_abc123
+    $ vercel connect token scl_abc123
 
-  - Get a token by client UID
+  - Get a token by connector UID
 
-    $ vercel connex token slack/my-bot
+    $ vercel connect token slack/my-bot
 
   - Get an app token (default installation)
 
-    $ vercel connex token scl_abc123 --subject app
+    $ vercel connect token scl_abc123 --subject app
 
   - Get an app token for a specific installation
 
-    $ vercel connex token scl_abc123 --subject app --installation-id inst_1
+    $ vercel connect token scl_abc123 --subject app --installation-id inst_1
 
   - Open the browser automatically if authorization/installation is required
 
-    $ vercel connex token scl_abc123 --yes
+    $ vercel connect token scl_abc123 --yes
 
   - Output as JSON (includes expiresAt, installationId, etc.)
 
-    $ vercel connex token scl_abc123 --format=json
+    $ vercel connect token scl_abc123 --format=json
 
 "
 `;
@@ -1161,6 +1270,13 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 (shorth…
                                 for     
                                 \`--targ…
+       --project <NAME_OR_ID>   Project 
+                                name or 
+                                ID      
+                                (defaul…
+                                to the  
+                                linked  
+                                project)
   -p,  --public                 Deploym…
                                 is      
                                 public  
@@ -1317,6 +1433,8 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 existing build                                  
        --prod                   Create a production deployment (shorthand for   
                                 \`--target=production\`)                          
+       --project <NAME_OR_ID>   Project name or ID (defaults to the linked      
+                                project)                                        
   -p,  --public                 Deployment is public (\`/_src\`) is exposed)      
        --regions <REGION>       Set default regions to enable the deployment on 
        --skip-domain            Disable the automatic promotion (aliasing) of   
@@ -1390,6 +1508,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
        --no-wait                Don't wait for the deployment to finish                                                 
        --prebuilt               Use in combination with \`vc build\`. Deploy an existing build                            
        --prod                   Create a production deployment (shorthand for \`--target=production\`)                    
+       --project <NAME_OR_ID>   Project name or ID (defaults to the linked project)                                     
   -p,  --public                 Deployment is public (\`/_src\`) is exposed)                                              
        --regions <REGION>       Set default regions to enable the deployment on                                         
        --skip-domain            Disable the automatic promotion (aliasing) of the relevant domains to a new production  
@@ -1447,9 +1566,12 @@ exports[`help command > dev help output snapshots > dev --help > outputs help 1`
 
   Options:
 
-  -l,  --listen <URI>  Specify a URI endpoint on which to listen [0.0.0.0:3000] 
-  -L,  --local         Start the dev server without linking to a Vercel project 
-  -y,  --yes           Accept default value for all prompts                     
+  -l,  --listen <URI>          Specify a URI endpoint on which to listen             
+                               [0.0.0.0:3000]                                        
+  -L,  --local                 Start the dev server without linking to a Vercel      
+                               project                                               
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)   
+  -y,  --yes                   Accept default value for all prompts                  
 
 
   Global Options:
@@ -1529,12 +1651,29 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
                            below
                            for  
                            exam…
-  list    domain           List 
-                           all  
+  list    [domain]         List 
                            DNS  
                            entr…
-                           for a
+                           Pass 
+                           a    
                            doma…
+                           to   
+                           list 
+                           its  
+                           reco…
+                           or   
+                           omit 
+                           the  
+                           argu…
+                           to   
+                           list 
+                           reco…
+                           acro…
+                           every
+                           doma…
+                           on   
+                           the  
+                           scope
                            (def…
   remove  id               Remo…
                            a DNS
@@ -1638,7 +1777,9 @@ exports[`help command > dns help output snapshots > dns help column width 80 1`]
   add     domain details   Add a new DNS entry (see below for examples) 
   import  domain zonefile  Import a DNS zone file (see below for        
                            examples)                                    
-  list    domain           List all DNS entries for a domain (default)  
+  list    [domain]         List DNS entries. Pass a domain to list its  
+                           records, or omit the argument to list records
+                           across every domain on the scope (default)   
   remove  id               Remove a DNS entry using its ID              
 
 
@@ -1703,7 +1844,8 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
 
   add     domain details   Add a new DNS entry (see below for examples)                                         
   import  domain zonefile  Import a DNS zone file (see below for examples)                                      
-  list    domain           List all DNS entries for a domain (default)                                          
+  list    [domain]         List DNS entries. Pass a domain to list its records, or omit the argument to list    
+                           records across every domain on the scope (default)                                   
   remove  id               Remove a DNS entry using its ID                                                      
 
 
@@ -1781,9 +1923,10 @@ exports[`help command > dns help output snapshots > dns import help output snaps
 
 exports[`help command > dns help output snapshots > dns list help output snapshots > dns list help column width 120 1`] = `
 "
-  ▲ vercel dns list domain [options]
+  ▲ vercel dns list [domain] [options]
 
-  List all DNS entries for a domain                                                                                     
+  List DNS entries. Pass a domain to list its records, or omit the argument to list records across every domain on the  
+  scope                                                                                                                 
 
   Options:
 
@@ -1895,6 +2038,48 @@ exports[`help command > domains help output snapshots > domains buy help output 
 "
 `;
 
+exports[`help command > domains help output snapshots > domains check help output snapshots > domains check help column width 120 1`] = `
+"
+  ▲ vercel domains check domain ... [options]
+
+  Check if a domain is available to buy                                                                                 
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Check if a domain is available
+
+    $ vercel domains check example.com
+
+  - Check availability for multiple domains
+
+    $ vercel domains check one.com two.com three.com
+
+  - JSON output
+
+    $ vercel domains check example.com --format json
+
+"
+`;
+
 exports[`help command > domains help output snapshots > domains help column width 40 1`] = `
 "
   ▲ vercel domains [command]
@@ -1930,6 +2115,13 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    new 
                                    dom…
                                    name
+  check        domain              Che…
+                                   if a
+                                   dom…
+                                   is  
+                                   ava…
+                                   to  
+                                   buy 
   move         domain destination  Move
                                    own…
                                    of a
@@ -1944,8 +2136,18 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    pri…
                                    quo…
                                    for 
-                                   a   
+                                   one 
+                                   or  
+                                   more
                                    dom…
+  search       query               Dis…
+                                   dom…
+                                   can…
+                                   from
+                                   a   
+                                   key…
+                                   or  
+                                   fra…
   transfer-in  domain              Tra…
                                    in a
                                    dom…
@@ -2027,9 +2229,13 @@ exports[`help command > domains help output snapshots > domains help column widt
   add          domain project      Add a domain name that you already own to a 
                                    Vercel Team                                 
   buy          domain              Purchase a new domain name                  
+  check        domain              Check if a domain is available to buy       
   move         domain destination  Move ownership of a domain name to another  
                                    Vercel Team                                 
-  price        domain              Show registrar price quote for a domain     
+  price        domain              Show registrar price quotes for one or more 
+                                   domains                                     
+  search       query               Discover domain-name candidates from a      
+                                   keyword or fragment                         
   transfer-in  domain              Transfer in a domain name to Vercel         
   remove       domain              Remove ownership of a domain name from a    
                                    Vercel Team                                 
@@ -2066,8 +2272,10 @@ exports[`help command > domains help output snapshots > domains help column widt
   inspect      domain              Displays information related to a domain                                            
   add          domain project      Add a domain name that you already own to a Vercel Team                             
   buy          domain              Purchase a new domain name                                                          
+  check        domain              Check if a domain is available to buy                                               
   move         domain destination  Move ownership of a domain name to another Vercel Team                              
-  price        domain              Show registrar price quote for a domain                                             
+  price        domain              Show registrar price quotes for one or more domains                                 
+  search       query               Discover domain-name candidates from a keyword or fragment                          
   transfer-in  domain              Transfer in a domain name to Vercel                                                 
   remove       domain              Remove ownership of a domain name from a Vercel Team                                
 
@@ -2178,9 +2386,9 @@ exports[`help command > domains help output snapshots > domains move help output
 
 exports[`help command > domains help output snapshots > domains price help output snapshots > domains price help column width 120 1`] = `
 "
-  ▲ vercel domains price domain [options]
+  ▲ vercel domains price domain ... [options]
 
-  Show registrar price quote for a domain                                                                               
+  Show registrar price quotes for one or more domains                                                                   
 
   Options:
 
@@ -2206,6 +2414,10 @@ exports[`help command > domains help output snapshots > domains price help outpu
   - Price quote for a domain
 
     $ vercel domains price example.com
+
+  - Price quotes for multiple domains
+
+    $ vercel domains price one.com two.com three.com
 
   - JSON output
 
@@ -2238,6 +2450,61 @@ exports[`help command > domains help output snapshots > domains remove help outp
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
+
+"
+`;
+
+exports[`help command > domains help output snapshots > domains search help output snapshots > domains search help column width 120 1`] = `
+"
+  ▲ vercel domains search query [options]
+
+  Discover domain-name candidates from a keyword or fragment                                                            
+
+  Options:
+
+       --available        Show only candidates available to register                                                    
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --limit <NUMBER>   Number of candidates to check per page (default: 20, max: 200)                                
+       --next <CURSOR>    Show the next page of candidates                                                              
+       --order <ORDER>    Order candidates by relevance, alphabetical order, or length (default: relevance)             
+       --tld <TLD>        Filter candidates by exact TLD. Repeatable.                                                   
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Discover domain-name candidates
+
+    $ vercel domains search acme
+
+  - Narrow candidates with a TLD fragment
+
+    $ vercel domains search acme.d
+
+  - Filter candidates by TLD
+
+    $ vercel domains search acme --tld com --tld dev
+
+  - Show only available candidates
+
+    $ vercel domains search acme --available
+
+  - JSON output
+
+    $ vercel domains search acme --format=json
 
 "
 `;
@@ -2953,7 +3220,7 @@ exports[`help command > init help output snapshots > init help column width 40 1
 
   - Initialize example project into specified directory
 
-    $ vercel <example> <dir>
+    $ vercel init <example> <dir>
 
   - Initialize example project without checking
 
@@ -3001,7 +3268,7 @@ exports[`help command > init help output snapshots > init help column width 80 1
 
   - Initialize example project into specified directory
 
-    $ vercel <example> <dir>
+    $ vercel init <example> <dir>
 
   - Initialize example project without checking
 
@@ -3047,7 +3314,7 @@ exports[`help command > init help output snapshots > init help column width 120 
 
   - Initialize example project into specified directory
 
-    $ vercel <example> <dir>
+    $ vercel init <example> <dir>
 
   - Initialize example project without checking
 
@@ -3280,13 +3547,12 @@ exports[`help command > integration help output snapshots > integration accept-t
   ▲ vercel integration accept-terms integration [options]
 
   Accept marketplace legal terms for an integration and install it on the current team (installation only; no product   
-  resource). Does not replace integrations that require a browser or device attestation.                                
+  resource). Requires an interactive terminal and human confirmation. Does not replace integrations that require a      
+  browser or device attestation.                                                                                        
 
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
-  -y,  --yes              Non-interactive only: confirm acceptance of the Vercel Marketplace End User Addendum and this 
-                          integration's privacy policy / EULA when applicable                                           
 
 
   Global Options:
@@ -3310,13 +3576,9 @@ exports[`help command > integration help output snapshots > integration accept-t
     $ vercel integration accept-terms <integration>
     $ vercel integration accept-terms neon
 
-  - Accept terms in CI (you must have read the linked policies)
-
-    $ vercel integration accept-terms neon --yes --non-interactive
-
   - Output result as JSON
 
-    $ vercel integration accept-terms neon --yes --format=json
+    $ vercel integration accept-terms neon --format=json
 
 "
 `;
@@ -3360,6 +3622,48 @@ exports[`help command > integration help output snapshots > integration balance 
 "
 `;
 
+exports[`help command > integration help output snapshots > integration categories subcommand > integration categories subcommand help column width 120 1`] = `
+"
+  ▲ vercel integration categories [options]
+
+  List marketplace integration categories (slugs valid for \`integration discover --category\`)                           
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - List marketplace categories
+
+    $ vercel integration categories
+
+  - List categories as JSON
+
+    $ vercel integration categories --format=json
+
+  - Use a category slug to filter discover results
+
+    $ vercel integration discover --category storage
+
+"
+`;
+
 exports[`help command > integration help output snapshots > integration discover subcommand > integration discover subcommand help column width 120 1`] = `
 "
   ▲ vercel integration discover [query] [options]
@@ -3368,7 +3672,9 @@ exports[`help command > integration help output snapshots > integration discover
 
   Options:
 
-  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+  -c,  --category <CATEGORY>  Filter integrations by category (can be repeated; e.g., -c storage -c authentication). Run
+                              \`vercel integration categories\` for valid slugs.                                          
+  -F,  --format <FORMAT>      Specify the output format (json)                                                          
 
 
   Global Options:
@@ -3395,6 +3701,20 @@ exports[`help command > integration help output snapshots > integration discover
 
     $ vercel integration discover postgres
     $ vercel integration discover aws
+
+  - Filter integrations by category
+
+    $ vercel integration discover --category storage
+    $ vercel integration discover -c authentication
+
+  - Filter by multiple categories at once (repeat the flag)
+
+    $ vercel integration discover --category storage --category authentication
+    $ vercel integration discover -c commerce -c payments -c authentication
+
+  - List available category slugs to use with --category
+
+    $ vercel integration categories
 
   - Discover marketplace integrations as JSON
 
@@ -3457,9 +3777,8 @@ exports[`help command > integration help output snapshots > integration help col
   ▲ vercel integration command
 
   Manage marketplace integrations. To   
-  manage individual resources           
-  (disconnect, remove), see             
-  \`integration-resource\`.               
+  manage individual resources, see      
+  \`vercel integration resource\`.        
 
   Commands:
 
@@ -3486,6 +3805,13 @@ exports[`help command > integration help output snapshots > integration help col
                                   no 
                                   pr…
                                   re…
+                                  Re…
+                                  an 
+                                  in…
+                                  te…
+                                  and
+                                  hu…
+                                  co…
                                   Do…
                                   not
                                   re…
@@ -3507,6 +3833,16 @@ exports[`help command > integration help output snapshots > integration help col
                                   sp…
                                   ma…
                                   in…
+  categories                      Li…
+                                  ma…
+                                  in…
+                                  ca…
+                                  (s…
+                                  va…
+                                  for
+                                  \`i…
+                                  di…
+                                  --…
   discover       [query]          Di…
                                   av…
                                   ma…
@@ -3550,6 +3886,15 @@ exports[`help command > integration help output snapshots > integration help col
                                   da…
                                   via
                                   SSO
+  resource                        Ma…
+                                  ma…
+                                  in…
+                                  re…
+                                  (c…
+                                  di…
+                                  re…
+                                  cr…
+                                  cl…
   update         integration      Up…
                                   a  
                                   ma…
@@ -3711,6 +4056,10 @@ exports[`help command > integration help output snapshots > integration help col
 
     $ vercel integration add acme/acme-redis
 
+  - Connect an existing resource to the current project
+
+    $ vercel integration resource connect my-acme-resource
+
 "
 `;
 
@@ -3718,8 +4067,8 @@ exports[`help command > integration help output snapshots > integration help col
 "
   ▲ vercel integration command
 
-  Manage marketplace integrations. To manage individual resources (disconnect,  
-  remove), see \`integration-resource\`.                                          
+  Manage marketplace integrations. To manage individual resources, see \`vercel  
+  integration resource\`.                                                        
 
   Commands:
 
@@ -3727,11 +4076,15 @@ exports[`help command > integration help output snapshots > integration help col
   accept-terms   integration      Accept marketplace legal terms for an      
                                   integration and install it on the current  
                                   team (installation only; no product        
-                                  resource). Does not replace integrations   
-                                  that require a browser or device           
-                                  attestation.                               
+                                  resource). Requires an interactive terminal
+                                  and human confirmation. Does not replace   
+                                  integrations that require a browser or     
+                                  device attestation.                        
   balance        integration      Shows the balances and thresholds of a     
                                   specified marketplace integration          
+  categories                      List marketplace integration categories    
+                                  (slugs valid for \`integration discover     
+                                  --category\`)                               
   discover       [query]          Discover available marketplace integrations
   guide          integration      Show getting started guides and code       
                                   snippets for a marketplace integration     
@@ -3741,6 +4094,9 @@ exports[`help command > integration help output snapshots > integration help col
                                   integrations for the current project       
   open           name [resource]  Opens a marketplace integration's or       
                                   resource's dashboard via SSO               
+  resource                        Manage marketplace integration resources   
+                                  (connect, disconnect, remove,              
+                                  create-threshold, claim)                   
   update         integration      Update a marketplace integration           
                                   installation (billing plan or which        
                                   projects can access it). Install, remove,  
@@ -3784,6 +4140,10 @@ exports[`help command > integration help output snapshots > integration help col
 
     $ vercel integration add acme/acme-redis
 
+  - Connect an existing resource to the current project
+
+    $ vercel integration resource connect my-acme-resource
+
 "
 `;
 
@@ -3791,20 +4151,25 @@ exports[`help command > integration help output snapshots > integration help col
 "
   ▲ vercel integration command
 
-  Manage marketplace integrations. To manage individual resources (disconnect, remove), see \`integration-resource\`.     
+  Manage marketplace integrations. To manage individual resources, see \`vercel integration resource\`.                   
 
   Commands:
 
   add            integration      Installs a marketplace integration                                                 
   accept-terms   integration      Accept marketplace legal terms for an integration and install it on the current    
-                                  team (installation only; no product resource). Does not replace integrations that  
-                                  require a browser or device attestation.                                           
+                                  team (installation only; no product resource). Requires an interactive terminal and
+                                  human confirmation. Does not replace integrations that require a browser or device 
+                                  attestation.                                                                       
   balance        integration      Shows the balances and thresholds of a specified marketplace integration           
+  categories                      List marketplace integration categories (slugs valid for \`integration discover     
+                                  --category\`)                                                                       
   discover       [query]          Discover available marketplace integrations                                        
   guide          integration      Show getting started guides and code snippets for a marketplace integration        
   installations                   List marketplace integration installations for the current team (account scope)    
   list           [project]        List resources from marketplace integrations for the current project               
   open           name [resource]  Opens a marketplace integration's or resource's dashboard via SSO                  
+  resource                        Manage marketplace integration resources (connect, disconnect, remove,             
+                                  create-threshold, claim)                                                           
   update         integration      Update a marketplace integration installation (billing plan or which projects can  
                                   access it). Install, remove, and connect flows are separate (integration add,      
                                   integration remove, integration-resource, env pull, etc.) — not part of update.    
@@ -3836,6 +4201,10 @@ exports[`help command > integration help output snapshots > integration help col
   - Install a specific product from an integration
 
     $ vercel integration add acme/acme-redis
+
+  - Connect an existing resource to the current project
+
+    $ vercel integration resource connect my-acme-resource
 
 "
 `;
@@ -4082,7 +4451,7 @@ exports[`help command > integration-resource help output snapshots > integration
 "
   ▲ vercel integration-resource disconnect resource [project] [options]
 
-  Disconnect a resource from a project, or the current project                                                          
+  Disconnect a marketplace resource from a project                                                                      
 
   Options:
 
@@ -4135,10 +4504,18 @@ exports[`help command > integration-resource help output snapshots > integration
   ▲ vercel integration-resource command
 
   Manage marketplace integration        
-  resources                             
+  resources (alias for \`vercel          
+  integration resource\`)                
 
   Commands:
 
+  connect           resource [project]            …
+                                                  a
+                                                  …
+                                                  …
+                                                  …
+                                                  a
+                                                  …
   create-threshold  resource minimum spend limit  …
                                                   a
                                                   …
@@ -4157,13 +4534,27 @@ exports[`help command > integration-resource help output snapshots > integration
                                                   a
                                                   …
                                                   …
+                                                  …
+                                                  a
+                                                  …
+  remove            resource                      …
+                                                  …
+                                                  …
+                                                  …
+  claim             [resource]                    …
                                                   a
                                                   …
                                                   …
                                                   …
                                                   …
                                                   …
-  remove            resource                      …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
                                                   …
                                                   …
                                                   …
@@ -4224,21 +4615,30 @@ exports[`help command > integration-resource help output snapshots > integration
 "
   ▲ vercel integration-resource command
 
-  Manage marketplace integration resources                                      
+  Manage marketplace integration resources (alias for \`vercel integration       
+  resource\`)                                                                    
 
   Commands:
 
+  connect           resource [project]            Connect a marketplace 
+                                                  resource to a project 
   create-threshold  resource minimum spend limit  Creates a threshold   
                                                   for a resource (or    
                                                   installation, if the  
                                                   integration uses      
                                                   installation-level    
                                                   thresholds)           
-  disconnect        resource [project]            Disconnect a resource 
-                                                  from a project, or the
-                                                  current project       
+  disconnect        resource [project]            Disconnect a          
+                                                  marketplace resource  
+                                                  from a project        
   remove            resource                      Delete an integration 
                                                   resource              
+  claim             [resource]                    Claim a sandbox       
+                                                  marketplace resource  
+                                                  (e.g. Stripe, Shopify)
+                                                  by opening the        
+                                                  provider claim URL in 
+                                                  your browser          
 
 
   Global Options:
@@ -4264,14 +4664,17 @@ exports[`help command > integration-resource help output snapshots > integration
 "
   ▲ vercel integration-resource command
 
-  Manage marketplace integration resources                                                                              
+  Manage marketplace integration resources (alias for \`vercel integration resource\`)                                    
 
   Commands:
 
+  connect           resource [project]            Connect a marketplace resource to a project                   
   create-threshold  resource minimum spend limit  Creates a threshold for a resource (or installation, if the   
                                                   integration uses installation-level thresholds)               
-  disconnect        resource [project]            Disconnect a resource from a project, or the current project  
+  disconnect        resource [project]            Disconnect a marketplace resource from a project              
   remove            resource                      Delete an integration resource                                
+  claim             [resource]                    Claim a sandbox marketplace resource (e.g. Stripe, Shopify) by
+                                                  opening the provider claim URL in your browser                
 
 
   Global Options:
@@ -5573,7 +5976,8 @@ exports[`help command > promote help output snapshots > promote status help outp
 
   Options:
 
-  -y,  --yes  Skip the confirmation prompt when linking a Project                                                       
+       --timeout <TIME>  Time to wait for promotion completion [3m]                                                          
+  -y,  --yes             Skip the confirmation prompt when linking a Project                                                 
 
 
   Global Options:
@@ -5618,6 +6022,11 @@ exports[`help command > pull help output snapshots > pull help column width 40 1
                                pull specific 
                                Environment   
                                Variables for 
+       --project <NAME_OR_ID>  Project name  
+                               or ID         
+                               (defaults to  
+                               the linked    
+                               project)      
   -y,  --yes                   Skip questions
                                when setting  
                                up new project
@@ -5710,6 +6119,7 @@ exports[`help command > pull help output snapshots > pull help column width 80 1
        --environment <TARGET>  Deployment environment [development]                  
        --git-branch <NAME>     Specify the Git branch to pull specific Environment   
                                Variables for                                         
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)   
   -y,  --yes                   Skip questions when setting up new project using      
                                default scope and settings                            
 
@@ -5765,6 +6175,7 @@ exports[`help command > pull help output snapshots > pull help column width 120 
 
        --environment <TARGET>  Deployment environment [development]                                                          
        --git-branch <NAME>     Specify the Git branch to pull specific Environment Variables for                             
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
   -y,  --yes                   Skip questions when setting up new project using default scope and settings                   
 
 
@@ -6309,19 +6720,13 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
 exports[`help command > rollback help output snapshots > rollback status help output snapshots > rollback status help column width 120 1`] = `
 "
-  ▲ vercel rollback url|deploymentId [options]
+  ▲ vercel rollback status [project] [options]
 
-  Quickly revert back to a previous deployment                                                                          
-
-  Commands:
-
-  status  [project]  Show the status of any current pending rollbacks                                           
-
+  Show the status of any current pending rollbacks                                                                      
 
   Options:
 
-       --timeout <TIME>  Time to wait for rollback completion [3m]                                                           
-  -y,  --yes             Accept default value for all prompts                                                                
+   --timeout <TIME>  Time to wait for rollback completion [3m]                                                           
 
 
   Global Options:
@@ -6340,9 +6745,11 @@ exports[`help command > rollback help output snapshots > rollback status help ou
 
   Examples:
 
-  - Rollback a deployment using id or url
+  - Show the status of any current pending rollbacks
 
-    $ vercel rollback <deployment id/url>
+    $ vercel rollback status
+    $ vercel rollback status <project>
+    $ vercel rollback status --timeout 30s
 
 "
 `;

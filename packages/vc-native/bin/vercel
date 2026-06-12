@@ -1,0 +1,41 @@
+#!/usr/bin/env node
+
+// Fallback launcher used when postinstall did not replace this file with the
+// native binary (e.g. pnpm blocks dependency build scripts by default).
+// It resolves the platform package at runtime and forwards to its binary.
+
+const { spawnSync } = require('child_process');
+const path = require('path');
+
+const packageName = `@vercel/vc-native-${process.platform}-${process.arch}`;
+const binaryName = process.platform === 'win32' ? 'vercel.exe' : 'vercel';
+
+let binaryPath;
+try {
+  binaryPath = path.join(
+    path.dirname(require.resolve(`${packageName}/package.json`)),
+    'bin',
+    binaryName
+  );
+} catch {
+  console.error(
+    `The native Vercel CLI binary was not installed. Try manually installing "${packageName}", or reinstall with \`npm i -g @vercel/vc-native --force\`.`
+  );
+  process.exit(1);
+}
+
+const result = spawnSync(binaryPath, process.argv.slice(2), {
+  stdio: 'inherit',
+  windowsHide: true,
+});
+
+if (result.error) {
+  console.error(result.error.message);
+  process.exit(1);
+}
+
+if (result.signal) {
+  process.kill(process.pid, result.signal);
+}
+
+process.exit(result.status ?? 1);

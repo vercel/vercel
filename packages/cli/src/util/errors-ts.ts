@@ -19,6 +19,7 @@ export class APIError extends Error {
   slug?: string;
   action?: string;
   retryAfterMs?: number | 'never';
+  wwwAuthenticate?: string;
   [key: string]: any;
 
   constructor(message: string, response: Response, body?: object) {
@@ -26,6 +27,8 @@ export class APIError extends Error {
     this.message = `${message} (${response.status})`;
     this.status = response.status;
     this.serverMessage = message;
+    this.wwwAuthenticate =
+      response.headers.get('WWW-Authenticate') ?? undefined;
 
     if (body) {
       for (const field of Object.keys(body)) {
@@ -324,11 +327,11 @@ export class InvalidDeploymentId extends NowError<
   'INVALID_DEPLOYMENT_ID',
   { id: string }
 > {
-  constructor(id: string) {
+  constructor(id: string, message?: string | null) {
     super({
       code: 'INVALID_DEPLOYMENT_ID',
       meta: { id },
-      message: `The deployment id "${id}" is not valid.`,
+      message: message || `The deployment id "${id}" is not valid.`,
     });
   }
 }

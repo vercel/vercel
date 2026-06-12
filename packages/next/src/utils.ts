@@ -217,7 +217,10 @@ function normalizePage(page: string): string {
   return page;
 }
 
-export type Redirect = Rewrite & {
+export type Redirect = Omit<Rewrite, 'destination'> & {
+  // Redirects can't target a service, so `destination` stays a plain string
+  // (unlike `Rewrite['destination']`, which is `string | ServiceDestination`).
+  destination: string;
   statusCode?: number;
   permanent?: boolean;
 };
@@ -2503,6 +2506,25 @@ export const onPrerenderRoute =
       });
     }
 
+    // `fallbackRoutes` ∪ `blockingFallbackRoutes` ∪ `omittedRoutes` is exactly
+    // the prerender-manifest `dynamicRoutes` section, so these flags let us
+    // surface dynamic-template facts on the resulting `Prerender` outputs
+    // without re-reading the manifest:
+    //   - `isDynamicRoute`: this entry came from a dynamic template rather than
+    //     a concrete prerender.
+    //   - `hasFallback`: the template had a static fallback (`isFallback`),
+    //     `false` for blocking/omitted templates, `undefined` for concrete
+    //     prerenders where the concept doesn't apply.
+    // Named to avoid shadowing the imported `isDynamicRoute` helper used
+    // elsewhere in this function.
+    const routeIsDynamic = Boolean(isFallback || isBlocking || isOmitted);
+    let hasFallback: boolean | undefined;
+    if (isFallback) {
+      hasFallback = true;
+    } else if (isBlocking || isOmitted) {
+      hasFallback = false;
+    }
+
     // Get the route file as it'd be mounted in the builder output
     let routeFileNoExt = routeKey === '/' ? '/index' : routeKey;
     let origRouteFileNoExt = routeFileNoExt;
@@ -2644,11 +2666,35 @@ export const onPrerenderRoute =
     const isOmittedOrNotFound = isOmitted || isNotFound;
     let htmlFallbackFsRef: File | null = null;
 
+    // Byte size of the prerendered `.html` shell on disk, surfaced on the HTML
+    // `Prerender` below. Computed independently of the PPR/postpone branch so
+    // it covers all app routes (incl. blocking templates whose shell is 0
+    // bytes). A bare `statSync` in a try/catch is one syscall — `existsSync`
+    // would add a redundant `stat` — and naturally yields `undefined` when
+    // there's no `.html` (pages router, route handlers, edge).
+    let htmlSize: number | undefined;
+    if (appDir) {
+      try {
+        htmlSize = fs.statSync(
+          path.join(appDir, `${routeFileNoExt}.html`)
+        ).size;
+      } catch {
+        // No `.html` on disk for this route; leave `htmlSize` undefined.
+      }
+    }
+
     // If enabled, try to get the postponed route information from the file
     // system and use it to assemble the prerender.
     let postponedPrerender: string | undefined;
     let postponedState: string | null = null;
     let didPostpone = false;
+    // Tri-state postpone signal surfaced on the resulting `Prerender` objects:
+    // `true`/`false` only for app-router PPR routes whose `.meta` we actually
+    // inspect below, `undefined` everywhere else (pages router, non-PPR app
+    // routes, blocking routes). Distinct from `didPostpone`, which also
+    // requires the `.html` file to exist and can't distinguish "inspected, no
+    // postpone" from "never inspected".
+    let hasPostponed: boolean | undefined;
     if (
       renderingMode === RenderingMode.PARTIALLY_STATIC &&
       appDir &&
@@ -2656,6 +2702,7 @@ export const onPrerenderRoute =
       !isBlocking
     ) {
       postponedState = getHTMLPostponedState({ appDir, routeFileNoExt });
+      hasPostponed = Boolean(postponedState);
 
       const htmlPath = path.join(appDir, `${routeFileNoExt}.html`);
       if (fs.existsSync(htmlPath)) {
@@ -3108,6 +3155,10 @@ export const onPrerenderRoute =
           chain,
           allowHeader,
           partialFallback: partialFallback || undefined,
+          hasPostponed,
+          hasFallback,
+          htmlSize,
+          isDynamicRoute: routeIsDynamic,
 
           ...(isNotFound
             ? {
@@ -3158,6 +3209,9 @@ export const onPrerenderRoute =
           experimentalBypassFor,
           allowHeader,
           partialFallback: undefined,
+          hasPostponed,
+          hasFallback,
+          isDynamicRoute: routeIsDynamic,
 
           ...(isNotFound
             ? {
@@ -3263,6 +3317,9 @@ export const onPrerenderRoute =
               experimentalBypassFor,
               allowHeader,
               partialFallback: undefined,
+              hasPostponed,
+              hasFallback,
+              isDynamicRoute: routeIsDynamic,
               chain: {
                 outputPath: normalizePathData(outputPathData),
                 headers: routesManifest.ppr.chain.headers,
@@ -3391,6 +3448,9 @@ export const onPrerenderRoute =
                 group: prerenderGroup,
                 allowHeader,
                 partialFallback: undefined,
+                hasPostponed,
+                hasFallback,
+                isDynamicRoute: routeIsDynamic,
 
                 // These routes are always only static, so they should not
                 // permit any bypass unless it's for preview

@@ -1,6 +1,10 @@
 import type { Route } from '@vercel/routing-utils';
-import type { Builder, ExperimentalServices } from '@vercel/build-utils';
-import type { ResolvedService } from './types';
+import type { Builder } from '@vercel/build-utils';
+import type {
+  ConfiguredServices,
+  ConfiguredServicesType,
+  Service,
+} from './types';
 import { detectServices } from './detect-services';
 import { LocalFileSystemDetector } from '../detectors/local-file-system-detector';
 
@@ -13,7 +17,8 @@ export interface ErrorResponse {
 
 export interface GetServicesBuildersOptions {
   workPath?: string;
-  configuredServices?: ExperimentalServices;
+  configuredServices?: ConfiguredServices;
+  configuredServicesType?: ConfiguredServicesType;
   projectFramework?: string | null;
 }
 
@@ -27,7 +32,8 @@ export interface ServicesBuildersResult {
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
-  services?: ResolvedService[];
+  services?: Service[];
+  useImplicitEnvInjection?: boolean;
 }
 
 function isExperimentalServicesAutoDetectionEnabled(): boolean {
@@ -44,7 +50,12 @@ function isExperimentalServicesAutoDetectionEnabled(): boolean {
 export async function getServicesBuilders(
   options: GetServicesBuildersOptions
 ): Promise<ServicesBuildersResult> {
-  const { workPath, configuredServices, projectFramework } = options;
+  const {
+    workPath,
+    configuredServices,
+    configuredServicesType,
+    projectFramework,
+  } = options;
   const hasServiceDefinitions =
     configuredServices != null && Object.keys(configuredServices).length > 0;
 
@@ -92,7 +103,11 @@ export async function getServicesBuilders(
   }
 
   const fs = new LocalFileSystemDetector(workPath);
-  const result = await detectServices({ fs });
+  const result = await detectServices({
+    fs,
+    configuredServices,
+    configuredServicesType,
+  });
 
   // Transform warnings to ErrorResponse format
   const warningResponses: ErrorResponse[] = result.warnings.map(w => ({
@@ -123,8 +138,9 @@ export async function getServicesBuilders(
       builders: null,
       errors: [
         {
-          code: 'NO_SERVICES_CONFIGURED',
-          message: 'No services configured. Add `services` to vercel.json.',
+          code: 'NO_EXPERIMENTAL_SERVICES_CONFIGURED',
+          message:
+            'No services configured. Add `experimentalServices` to vercel.json.',
         },
       ],
       warnings: warningResponses,
@@ -163,5 +179,37 @@ export async function getServicesBuilders(
         : null,
     errorRoutes: [],
     services: result.services,
+    useImplicitEnvInjection: result.useImplicitEnvInjection,
   };
+}
+
+/**
+ * Returns warnings for ignored directories that are not covered by services
+ */
+export function warnIgnoredDirectories(
+  files: string[],
+  configuredServices: ConfiguredServices
+): ErrorResponse[] {
+  const warnings: ErrorResponse[] = [];
+
+  if (files.some(f => f.startsWith('api/'))) {
+    const serviceCoversApi = Object.values(configuredServices).some(service => {
+      const root = service.root ?? '.';
+      const entrypoint = service.entrypoint ?? '';
+      return (
+        root === 'api' ||
+        root.startsWith('api/') ||
+        (root === '.' && entrypoint.startsWith('api/'))
+      );
+    });
+    if (!serviceCoversApi) {
+      warnings.push({
+        code: 'api_dir_ignored',
+        message:
+          'The `api/` directory will not be built because `experimentalServices` is configured. To serve these files, declare them as a service in your `vercel.json`.',
+      });
+    }
+  }
+
+  return warnings;
 }

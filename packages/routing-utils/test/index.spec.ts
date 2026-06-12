@@ -120,6 +120,222 @@ describe('normalizeRoutes', () => {
     assert.deepStrictEqual(normalized.routes, routes);
   });
 
+  test('accepts and preserves service `destination` dispatch routes', () => {
+    const routes: Route[] = [
+      {
+        src: '^/api/health$',
+        destination: { type: 'service', service: 'web', path: '/api/health' },
+      },
+      {
+        src: '^/api(?:/(.*))?$',
+        destination: { type: 'service', service: 'api', path: '/$1' },
+      },
+      {
+        src: '^/(.*)$',
+        destination: { type: 'service', service: 'web', path: '/$1' },
+      },
+    ];
+
+    assertValid(routes);
+
+    const normalized = normalizeRoutes(routes);
+    assert.equal(normalized.error, null);
+    // The object `destination` is preserved, not folded into `dest`.
+    assert.deepStrictEqual(normalized.routes, routes);
+  });
+
+  test('accepts a service `destination` with only type and service', () => {
+    const routes: Route[] = [
+      { src: '^/(.*)$', destination: { type: 'service', service: 'web' } },
+    ];
+
+    assertValid(routes);
+
+    const normalized = normalizeRoutes(routes);
+    assert.equal(normalized.error, null);
+    assert.deepStrictEqual(normalized.routes, routes);
+  });
+
+  test('validates service `destination` names like service config names', () => {
+    const validate = ajv.compile(routesSchema);
+
+    for (const service of ['web', 'my_backend', 'my-backend', 'a1']) {
+      assert.equal(
+        validate([
+          { src: '^/(.*)$', destination: { type: 'service', service } },
+        ]),
+        true
+      );
+    }
+
+    for (const service of [
+      '',
+      ' my-backend',
+      'my backend',
+      'my/backend',
+      '1backend',
+      'backend-',
+      'backend_',
+      'a'.repeat(65),
+    ]) {
+      assert.equal(
+        validate([
+          { src: '^/(.*)$', destination: { type: 'service', service } },
+        ]),
+        false
+      );
+    }
+  });
+
+  test('still folds a string `destination` alias into `dest`', () => {
+    const input: RouteInput[] = [{ src: '^/a$', destination: '/b' }];
+
+    const { error, routes } = normalizeRoutes(input);
+    assert.equal(error, null);
+    assert.ok(routes);
+    if (routes) {
+      const [route] = routes;
+      assert.equal(isHandler(route), false);
+      if (!isHandler(route)) {
+        assert.equal(route.dest, '/b');
+        assert.equal(route.destination, undefined);
+      }
+    }
+  });
+
+  test('rejects a service `destination` missing `service`', () => {
+    const validate = ajv.compile(routesSchema);
+    assert.equal(
+      validate([{ src: '^/(.*)$', destination: { type: 'service' } }]),
+      false
+    );
+  });
+
+  test('rejects a service `destination` missing `type`', () => {
+    const validate = ajv.compile(routesSchema);
+    assert.equal(
+      validate([{ src: '^/(.*)$', destination: { service: 'web' } }]),
+      false
+    );
+  });
+
+  test('rejects a service `destination` with an unknown property', () => {
+    const validate = ajv.compile(routesSchema);
+    assert.equal(
+      validate([
+        {
+          src: '^/(.*)$',
+          destination: { type: 'service', service: 'web', dest: '/x' },
+        },
+      ]),
+      false
+    );
+  });
+
+  test('rejects `continue: true` with a service `destination`', () => {
+    const { error } = normalizeRoutes([
+      {
+        src: '^/api/(.*)$',
+        destination: { type: 'service', service: 'api' },
+        continue: true,
+      },
+    ]);
+
+    assert.ok(error, 'expected a validation error');
+    assert.ok(
+      error?.errors?.some(e => e.includes('service `destination`')),
+      'expected a terminal-handoff error message'
+    );
+  });
+
+  test('allows a service `destination` without `continue`', () => {
+    const routes: Route[] = [
+      { src: '^/api/(.*)$', destination: { type: 'service', service: 'api' } },
+    ];
+
+    const { error } = normalizeRoutes(routes);
+    assert.equal(error, null);
+  });
+
+  test('lowers a service-targeted rewrite into a `destination` route', () => {
+    const { error, routes } = getTransformedRoutes({
+      rewrites: [
+        {
+          source: '/api/v1/:path*',
+          destination: {
+            type: 'service',
+            service: 'my_backend',
+            path: '/:path*',
+          },
+        },
+      ],
+    });
+
+    assert.equal(error, null);
+    assert.ok(routes);
+    const serviceRoute = routes?.find(
+      r => !isHandler(r) && typeof r.destination === 'object'
+    );
+    assert.ok(serviceRoute, 'expected a service-targeted route');
+    if (serviceRoute && !isHandler(serviceRoute)) {
+      // `path` is interpolated like a string dest: `:path*` -> `$1`.
+      assert.deepStrictEqual(serviceRoute.destination, {
+        type: 'service',
+        service: 'my_backend',
+        path: '/$1',
+      });
+      // Terminal handoff: no filesystem re-check is added.
+      assert.equal(serviceRoute.check, undefined);
+    }
+  });
+
+  test('interpolates path and query segments in a service `destination`', () => {
+    const { error, routes } = getTransformedRoutes({
+      rewrites: [
+        {
+          source: '/org/:orgSlug/api/:path*',
+          destination: {
+            type: 'service',
+            service: 'my_backend',
+            path: '/:path*?org=:orgSlug',
+          },
+        },
+      ],
+    });
+
+    assert.equal(error, null);
+    const serviceRoute = routes?.find(
+      r => !isHandler(r) && typeof r.destination === 'object'
+    );
+    assert.ok(serviceRoute, 'expected a service-targeted route');
+    if (serviceRoute && !isHandler(serviceRoute)) {
+      // orgSlug is capture $1, path is capture $2.
+      assert.deepStrictEqual(serviceRoute.destination, {
+        type: 'service',
+        service: 'my_backend',
+        path: '/$2?org=$1',
+      });
+    }
+  });
+
+  test('rejects a service `destination.path` referencing an unknown segment', () => {
+    const { error } = getTransformedRoutes({
+      rewrites: [
+        {
+          source: '/api/:path*',
+          destination: {
+            type: 'service',
+            service: 'my_backend',
+            path: '/:unknown*',
+          },
+        },
+      ],
+    });
+
+    assert.ok(error, 'expected a validation error');
+    assert.equal(error?.code, 'invalid_rewrite');
+  });
+
   test('normalizes src', () => {
     const expected = '^/about$';
     const sources = [

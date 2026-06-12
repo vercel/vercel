@@ -10,6 +10,7 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "edge-light": "./dist/index-edge-light.js",
       "browser": "./dist/index-browser.js",
       "react-native": "./dist/index-browser.js",
       "workflow": "./dist/index-browser.js",
@@ -17,7 +18,7 @@
       "require": "./dist/index.js"
     }
   },
-  "version": "3.4.1",
+  "version": "3.6.1",
   "repository": {
     "directory": "packages/oidc",
     "type": "git",
@@ -25,6 +26,11 @@
   },
   "bugs": {
     "url": "https://github.com/vercel/vercel/issues"
+  },
+  "dependencies": {
+    "@vercel/cli-config": "workspace:*",
+    "@vercel/cli-exec": "workspace:*",
+    "jose": "^5.9.6"
   },
   "devDependencies": {
     "prettier": "3.8.3",

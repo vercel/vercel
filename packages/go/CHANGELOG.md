@@ -1,5 +1,32 @@
 # @vercel/go
 
+## 3.9.0
+
+### Minor Changes
+
+- 0c4ea01: Refactor: extract the standalone-server IPC proxy into a shared `@vercel-internals/ipc-proxy` package.
+
+  The proxy is now compiled once into prebuilt static binaries (shipped per-architecture) and reused by compiled runtimes, instead of being compiled at deploy time. No change to deployed behavior.
+
+## 3.8.0
+
+### Minor Changes
+
+- baac149: Add project manifest to go builder.
+- b1f766a: Support preDeploy and build commands in go builder.
+
+## 3.7.1
+
+### Patch Changes
+
+- e6dc048: Fix standalone Go server builds failing when user sets Go-version-specific env vars (e.g. GOEXPERIMENT). The bootstrap wrapper now builds with a clean environment, excluding user-provided env vars that may be incompatible with the Go version used for the wrapper. Also moves bootstrap source files to a `bootstrap/` subdirectory and bumps the bootstrap Go version from 1.21 to 1.23.
+
+## 3.7.0
+
+### Minor Changes
+
+- fb0cb8d: Add normalized entrypoint detector for runtime builders.
+
 ## 3.6.0
 
 ### Minor Changes

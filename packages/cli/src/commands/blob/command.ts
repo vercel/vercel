@@ -239,74 +239,6 @@ export const getSubcommand = {
   examples: [],
 } as const;
 
-export const addStoreSubcommand = {
-  name: 'add',
-  aliases: [],
-  description: 'Add a new Blob store',
-  arguments: [
-    {
-      name: 'name',
-      required: false,
-    },
-  ],
-  options: [
-    accessOption,
-    {
-      name: 'region',
-      shorthand: 'r',
-      type: String,
-      deprecated: false,
-      description:
-        'Region to create the Blob store in (default: "iad1"). See https://vercel.com/docs/edge-network/regions#region-list for all available regions',
-      argument: 'STRING',
-    },
-    yesOption,
-    environmentOption,
-  ],
-  examples: [
-    {
-      name: 'Create a blob store (uses default region "iad1")',
-      value: 'vercel blob store add my-store',
-    },
-    {
-      name: 'Create a blob store in a specific region',
-      value: 'vercel blob store add my-store --region cdg1',
-    },
-    {
-      name: 'Create a private blob store',
-      value: 'vercel blob store add my-private-store --access private',
-    },
-  ],
-} as const;
-
-export const removeStoreSubcommand = {
-  name: 'remove',
-  aliases: ['rm'],
-  description: 'Remove a Blob store',
-  arguments: [
-    {
-      name: 'storeId',
-      required: false,
-    },
-  ],
-  options: [yesOption],
-  examples: [],
-} as const;
-
-export const getStoreSubcommand = {
-  name: 'get',
-  aliases: [],
-  description: 'Get a Blob store',
-  arguments: [
-    {
-      name: 'storeId',
-      required: false,
-    },
-  ],
-  options: [],
-  examples: [],
-} as const;
-
 export const createStoreSubcommand = {
   name: 'create-store',
   aliases: [],
@@ -450,6 +382,24 @@ export const blobCommand = {
       type: String,
       deprecated: false,
       description: 'Read_Write_Token for the Blob store',
+      argument: 'String',
+    },
+    {
+      name: 'oidc-token',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'OIDC token for the Blob store (must be passed together with --store-id)',
+      argument: 'String',
+    },
+    {
+      name: 'store-id',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Blob store id, with or without the "store_" prefix (must be passed together with --oidc-token)',
       argument: 'String',
     },
   ],

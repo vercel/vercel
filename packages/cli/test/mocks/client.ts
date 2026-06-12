@@ -266,6 +266,10 @@ export class MockClient extends Client {
     this.config = {};
     this.localConfig = {};
     this.localConfigPath = undefined;
+    this.user = undefined;
+    this.userPromise = undefined;
+    this.teams = undefined;
+    this.teamsPromise = undefined;
 
     this.scenario = Router();
 

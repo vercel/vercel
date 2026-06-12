@@ -13,9 +13,23 @@
     {
       "path": "/enqueue",
       "method": "POST",
-      "body": {},
+      "body": { "request_id": "probe-17" },
       "status": 200,
-      "mustContain": "ok"
+      "mustContain": "probe-17"
+    },
+    {
+      "path": "/status/orders/probe-17",
+      "status": 200,
+      "mustContain": "probe-17",
+      "retries": 5,
+      "retryDelay": 2000
+    },
+    {
+      "path": "/status/events/probe-17",
+      "status": 200,
+      "mustContain": "probe-17",
+      "retries": 5,
+      "retryDelay": 2000
     },
     {
       "path": "/_svc/worker/index",

@@ -1,6 +1,6 @@
 [project]
 name = "vercel-runtime"
-version = "0.13.2"
+version = "0.14.2"
 license = "Apache-2.0"
 license-files = [
   "src/vercel_runtime/_vendor/*/LICEN[CS]E*",
@@ -36,6 +36,7 @@ test = [
 
 [tool.uv]
 default-groups = ["test"]
+exclude-newer = "2 days"
 
 [tool.mypy]
 python_version = "3.12"

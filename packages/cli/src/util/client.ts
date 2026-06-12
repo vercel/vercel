@@ -25,21 +25,24 @@ import fetch, {
   type RequestInit,
   type Response,
 } from 'node-fetch';
+import pkg from './pkg';
 import ua from './ua';
 import responseError from './response-error';
 import printIndications from './print-indications';
 import reauthenticate from './login/reauthenticate';
 import type { SAMLError } from './login/types';
-import { writeToAuthConfigFile, writeToConfigFile } from './config/files';
+import { persistAuthConfig, writeToConfigFile } from './config/files';
 import type { TelemetryEventStore } from './telemetry';
 import type { Span } from '@vercel/build-utils';
 import type {
   AuthConfig,
   GlobalConfig,
   JSONObject,
+  Team,
   Stdio,
   ReadableTTY,
   PaginationOptions,
+  User,
 } from '@vercel-internals/types';
 import { sharedPromise } from './promise';
 import { APIError } from './errors-ts';
@@ -51,6 +54,8 @@ import type { z } from 'zod';
 import output from '../output-manager';
 import { parseArguments } from './get-args';
 import { processTokenResponse, refreshTokenRequest } from './oauth';
+
+const DOMAINS_API_PATH = /^\/v\d+\/(?:domains|registrar)(?:\/|$)/;
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -140,6 +145,11 @@ export default class Client extends EventEmitter implements Stdio {
   /** Track if we've already logged the token source debug message */
   private _loggedTokenSource: boolean = false;
   private _parsedArgsCache?: ParsedArgsCache;
+  /** Request-scoped identity caches used to avoid repeated scope lookups. */
+  user?: User;
+  userPromise?: Promise<User>;
+  teams?: Team[];
+  teamsPromise?: Promise<Team[]>;
 
   constructor(opts: ClientOptions) {
     super();
@@ -267,7 +277,7 @@ export default class Client extends EventEmitter implements Stdio {
     if (!hasRefreshToken(authConfig)) {
       output.debug('No refresh token found, emptying auth config.');
       this.emptyAuthConfig();
-      this.writeToAuthConfigFile();
+      this.persistAuthConfig();
       return;
     }
 
@@ -282,7 +292,7 @@ export default class Client extends EventEmitter implements Stdio {
     if (tokensError) {
       output.debug('Error refreshing token, emptying auth config.');
       this.emptyAuthConfig();
-      this.writeToAuthConfigFile();
+      this.persistAuthConfig();
       return;
     }
 
@@ -297,7 +307,7 @@ export default class Client extends EventEmitter implements Stdio {
       this.updateAuthConfig({ refreshToken: tokens.refresh_token });
     }
 
-    this.writeToAuthConfigFile();
+    this.persistAuthConfig();
     this.writeToConfigFile();
 
     output.debug('Tokens refreshed successfully.');
@@ -350,15 +360,25 @@ export default class Client extends EventEmitter implements Stdio {
   }
 
   updateAuthConfig(authConfig: Partial<AuthConfig>) {
+    if (authConfig.token && authConfig.token !== this.authConfig.token) {
+      this.user = undefined;
+      this.userPromise = undefined;
+      this.teams = undefined;
+      this.teamsPromise = undefined;
+    }
     this.authConfig = { ...this.authConfig, ...authConfig };
   }
 
   emptyAuthConfig() {
+    this.user = undefined;
+    this.userPromise = undefined;
+    this.teams = undefined;
+    this.teamsPromise = undefined;
     this.authConfig = this.authConfig.skipWrite ? { skipWrite: true } : {};
   }
 
-  writeToAuthConfigFile() {
-    writeToAuthConfigFile(this.authConfig);
+  persistAuthConfig() {
+    persistAuthConfig(this.authConfig, this.config);
   }
 
   /**
@@ -451,6 +471,9 @@ export default class Client extends EventEmitter implements Stdio {
 
     const headers = new Headers(opts.headers);
     headers.set('user-agent', ua);
+    if (DOMAINS_API_PATH.test(url.pathname)) {
+      headers.set('x-vercel-cli-version', pkg.version);
+    }
     if (this.agentName) {
       headers.set('x-ai-agent', this.agentName);
     }
@@ -488,7 +511,15 @@ export default class Client extends EventEmitter implements Stdio {
   fetch<T>(url: string, opts?: FetchOptions): Promise<T>;
   fetch(url: string, opts: FetchOptions = {}) {
     return this.retry(async bail => {
-      const res = await this._fetch(url, opts);
+      let res: Awaited<ReturnType<Client['_fetch']>>;
+      try {
+        res = await this._fetch(url, opts);
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          return bail(err);
+        }
+        throw err;
+      }
 
       printIndications(res);
 

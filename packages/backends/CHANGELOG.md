@@ -1,5 +1,165 @@
 # @vercel/backends
 
+## 0.8.13
+
+### Patch Changes
+
+- 4421ad9: Allow the Node framework preset to work without a `package.json`. The `node`
+  framework is now detected from a `server.*` entrypoint alone, and the
+  `@vercel/backends` builder defaults the module format to ESM (`"module"`) when
+  no `package.json` is present instead of erroring with "Unable to resolve format".
+
+## 0.8.12
+
+### Patch Changes
+
+- 52f005f: Fix a `@vercel/backends` performance regression. Passing `stat`/`readlink`/`readFile` overrides to `nodeFileTrace` replaces @vercel/nft's internal `CachedFileSystem`, so repeated (mostly missing) path probes during module resolution became uncached syscalls that throw on every miss. The `stat`/`readlink` overrides are now only applied when there are in-memory rolldown output files to serve, and all fs overrides are memoized (including negative results) to restore nft's caching.
+- 2d2aad9: Fix corruption of native addon (`.node`) and other binary files during file tracing. Traced files were read as UTF-8 strings, which mangled non-text bytes and caused runtime errors such as `ELF file's phentsize not the expected size` (e.g. with `argon2` on pnpm). Binary files are now preserved byte-for-byte.
+- Updated dependencies [01e18e8]
+  - @vercel/build-utils@13.30.0
+
+## 0.8.11
+
+### Patch Changes
+
+- Updated dependencies [32a730e]
+  - @vercel/build-utils@13.29.1
+
+## 0.8.10
+
+### Patch Changes
+
+- Updated dependencies [8d8e871]
+  - @vercel/build-utils@13.29.0
+
+## 0.8.9
+
+### Patch Changes
+
+- Updated dependencies [4e849dd]
+  - @vercel/build-utils@13.28.0
+
+## 0.8.8
+
+### Patch Changes
+
+- Updated dependencies [c5eeb30]
+- Updated dependencies [09c39af]
+  - @vercel/build-utils@13.27.2
+
+## 0.8.7
+
+### Patch Changes
+
+- aeb5bfa: Trace runtime dependencies from both TypeScript sources and rolldown output chunks. NFT picks the `require` vs `import` exports condition based on the parent file's parse result, so source-only tracing miscategorises packages whose conditional exports point at different files (e.g. `@planetscale/database` -> `dist/index.js` for `import`, `dist/cjs/index.js` for `require`). A CJS bundle that did `require('@planetscale/database')` at runtime would fail with `Cannot find module` because the CJS variant was never traced or uploaded.
+- Updated dependencies [0a170fd]
+  - @vercel/build-utils@13.27.1
+
+## 0.8.6
+
+### Patch Changes
+
+- Updated dependencies [338cc35]
+  - @vercel/build-utils@13.27.0
+
+## 0.8.5
+
+### Patch Changes
+
+- Updated dependencies [3019788]
+- Updated dependencies [fe893ec]
+  - @vercel/build-utils@13.26.6
+
+## 0.8.4
+
+### Patch Changes
+
+- Updated dependencies [1180675]
+  - @vercel/build-utils@13.26.5
+
+## 0.8.3
+
+### Patch Changes
+
+- ab0e5aa: Bump @vercel/nft to 1.10.0 and enable moduleSyncCatchall tracing in node, backends, and next builders.
+
+## 0.8.2
+
+### Patch Changes
+
+- Updated dependencies [6495585]
+  - @vercel/build-utils@13.26.4
+
+## 0.8.1
+
+### Patch Changes
+
+- Updated dependencies [b66bd3e]
+  - @vercel/build-utils@13.26.3
+
+## 0.8.0
+
+### Minor Changes
+
+- e917989: Add cron host script and spawn helper for vc dev.
+
+### Patch Changes
+
+- Updated dependencies [647c1e8]
+  - @vercel/build-utils@13.26.2
+
+## 0.7.2
+
+### Patch Changes
+
+- Updated dependencies [fa25cb7]
+- Updated dependencies [972cc84]
+  - @vercel/build-utils@13.26.1
+
+## 0.7.1
+
+### Patch Changes
+
+- Updated dependencies [bb61428]
+- Updated dependencies [137e5d1]
+  - @vercel/build-utils@13.26.0
+
+## 0.7.0
+
+### Minor Changes
+
+- 0a691bf: Change getServiceCrons to async.
+- fb0cb8d: Add normalized entrypoint detector for runtime builders.
+
+### Patch Changes
+
+- Updated dependencies [fb0cb8d]
+- Updated dependencies [4fc110b]
+  - @vercel/build-utils@13.25.0
+
+## 0.6.0
+
+### Minor Changes
+
+- 9615277: Add exportName to js crons.
+
+### Patch Changes
+
+- Updated dependencies [d874af6]
+  - @vercel/build-utils@13.24.0
+
+## 0.5.0
+
+### Minor Changes
+
+- 22f77b9: Add project manifest to node builder.
+
+### Patch Changes
+
+- Updated dependencies [22f77b9]
+- Updated dependencies [979d70a]
+  - @vercel/build-utils@13.23.0
+
 ## 0.4.1
 
 ### Patch Changes

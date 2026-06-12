@@ -1,5 +1,11 @@
 # @vercel/static-config
 
+## 3.4.0
+
+### Minor Changes
+
+- eecd10d: Allow opting into the Web API handler interface (`Request` → `Response`) from the static `config` export of a Node.js Serverless Function by setting `useWebApi: true`.
+
 ## 3.3.0
 
 ### Minor Changes

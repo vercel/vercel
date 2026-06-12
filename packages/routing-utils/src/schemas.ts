@@ -12,6 +12,36 @@ const mitigateSchema = {
   },
 } as const;
 
+const serviceNameSchema = {
+  description: 'A service name identifier.',
+  type: 'string',
+  minLength: 1,
+  maxLength: 64,
+  pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+} as const;
+
+const serviceDestinationSchema = {
+  description:
+    'A service-targeted destination that delegates routing into a named service from `services`.',
+  type: 'object',
+  additionalProperties: false,
+  required: ['type', 'service'],
+  properties: {
+    type: {
+      description: 'Discriminator. Must be `service`.',
+      type: 'string',
+      enum: ['service'],
+    },
+    service: serviceNameSchema,
+    path: {
+      description:
+        'Routing-only path used to select a route inside the target service. It does not mutate the URL observed by user code.',
+      type: 'string',
+      maxLength: 4096,
+    },
+  },
+} as const;
+
 const matchableValueSchema = {
   description:
     'A value to match against. Can be a string (regex) or a condition operation object',
@@ -376,8 +406,10 @@ export const routesSchema = {
             maxLength: 4096,
           },
           destination: {
-            type: 'string',
-            maxLength: 4096,
+            anyOf: [
+              { type: 'string', maxLength: 4096 },
+              serviceDestinationSchema,
+            ],
           },
           headers: {
             type: 'object',
@@ -531,9 +563,8 @@ export const rewritesSchema = {
       },
       destination: {
         description:
-          'An absolute pathname to an existing resource or an external URL.',
-        type: 'string',
-        maxLength: 4096,
+          'An absolute pathname to an existing resource, an external URL, or a service-targeted destination object.',
+        anyOf: [{ type: 'string', maxLength: 4096 }, serviceDestinationSchema],
       },
       has: hasSchema,
       missing: hasSchema,

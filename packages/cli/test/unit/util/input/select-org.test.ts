@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Router } from 'express';
 import { client } from '../../../mocks/client';
 import { isActionRequiredPayload } from '../../../../src/util/agent-output';
 import selectOrg from '../../../../src/util/input/select-org';
@@ -31,11 +32,34 @@ describe('selectOrg', () => {
       client.stdin.write('\x1B[B'); // Down arrow
       client.stdin.write('\r'); // Return key
       await expect(selectOrgPromise).resolves.toHaveProperty('id', team.id);
+
+      // Anti-regression: spinner copy was renamed from "Loading scopes…" to
+      // "Loading teams…". A regression to the old copy would break the rename.
+      const fullOutput = client.stderr.getFullOutput();
+      expect(fullOutput).not.toContain('Loading scopes');
+      expect(fullOutput).toContain('Loading teams');
     });
 
     it('automatically selects the correct scope when autoconfirm flag is passed', async () => {
       const selectOrgPromise = selectOrg(client, 'Select the scope', true);
       await expect(selectOrgPromise).resolves.toHaveProperty('id', user.id);
+    });
+
+    it('does not fetch teams when autoconfirm selects the personal account', async () => {
+      client.useScenario(Router());
+      client.scenario.get('/v2/user', (_req, res) => {
+        res.json({ user });
+      });
+      let teamsFetchCount = 0;
+      client.scenario.get('/v1/teams', (_req, res) => {
+        teamsFetchCount++;
+        res.json({ teams: [team] });
+      });
+
+      const result = await selectOrg(client, 'Select the scope', true);
+
+      expect(result).toHaveProperty('id', user.id);
+      expect(teamsFetchCount).toBe(0);
     });
 
     describe('with a selected team scope', () => {
@@ -65,6 +89,26 @@ describe('selectOrg', () => {
       it('automatically selects the correct scope when autoconfirm flag is passed', async () => {
         const selectOrgPromise = selectOrg(client, 'Select the scope', true);
         await expect(selectOrgPromise).resolves.toHaveProperty('id', team.id);
+      });
+
+      it('fetches only the current team when autoconfirm has a selected team scope', async () => {
+        client.useScenario(Router());
+        let teamsFetchCount = 0;
+        let teamFetchCount = 0;
+        client.scenario.get('/v1/teams', (_req, res) => {
+          teamsFetchCount++;
+          res.json({ teams: [team] });
+        });
+        client.scenario.get(`/teams/${team.id}`, (_req, res) => {
+          teamFetchCount++;
+          res.json(team);
+        });
+
+        const result = await selectOrg(client, 'Select the scope', true);
+
+        expect(result).toHaveProperty('id', team.id);
+        expect(teamFetchCount).toBe(1);
+        expect(teamsFetchCount).toBe(0);
       });
     });
   });

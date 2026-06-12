@@ -63,6 +63,7 @@ import getSubcommand from '../../util/get-subcommand';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import param from '../../util/output/param';
+import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import stamp from '../../util/output/stamp';
 import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
@@ -182,6 +183,7 @@ async function handleInitDeployment(
 
   telemetryClient.trackCliFlagJson(parsedArguments.flags['--json']);
   telemetryClient.trackCliOptionFormat(parsedArguments.flags['--format']);
+  telemetryClient.trackCliOptionProject(parsedArguments.flags['--project']);
   telemetryClient.trackCliFlagFunctionsBeta(
     parsedArguments.flags['--functions-beta']
   );
@@ -189,6 +191,7 @@ async function handleInitDeployment(
     parsedArguments.flags['--no-functions-beta']
   );
 
+  const projectNameOrId = parsedArguments.flags['--project'];
   const functionsBeta = parsedArguments.flags['--functions-beta'];
   const noFunctionsBeta = parsedArguments.flags['--no-functions-beta'];
 
@@ -293,12 +296,15 @@ async function handleInitDeployment(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
-    setupMsg: 'Set up and deploy',
-    projectName: getProjectName({
-      nameParam: undefined,
-      nowConfig: localConfig,
-      paths,
-    }),
+    setupMsg: 'Set up',
+    projectName:
+      projectNameOrId ??
+      getProjectName({
+        nameParam: undefined,
+        nowConfig: localConfig,
+        paths,
+      }),
+    failIfNotFound: !!projectNameOrId,
     v0: isV0,
   });
   if (typeof link === 'number') {
@@ -494,6 +500,7 @@ async function handleInitDeployment(
       manual: true,
       jsonOutput: asJson,
       functionsBeta: functionsBeta || undefined,
+      linkedProject: project,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
@@ -880,7 +887,7 @@ async function handleContinueSubcommand(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm: true,
-    setupMsg: 'Set up and deploy',
+    setupMsg: 'Set up',
     projectName: getProjectName({
       nameParam: undefined,
       nowConfig: localConfig,
@@ -1005,6 +1012,7 @@ async function handleDefaultDeploy(
   telemetryClient.trackCliFlagWithCache(parsedArguments.flags['--with-cache']);
   telemetryClient.trackCliFlagJson(parsedArguments.flags['--json']);
   telemetryClient.trackCliOptionFormat(parsedArguments.flags['--format']);
+  telemetryClient.trackCliOptionProject(parsedArguments.flags['--project']);
   telemetryClient.trackCliFlagFunctionsBeta(
     parsedArguments.flags['--functions-beta']
   );
@@ -1012,6 +1020,7 @@ async function handleDefaultDeploy(
     parsedArguments.flags['--no-functions-beta']
   );
 
+  const projectNameOrId = parsedArguments.flags['--project'];
   const functionsBeta = parsedArguments.flags['--functions-beta'];
   const noFunctionsBeta = parsedArguments.flags['--no-functions-beta'];
 
@@ -1180,12 +1189,15 @@ async function handleDefaultDeploy(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
-    setupMsg: 'Set up and deploy',
-    projectName: getProjectName({
-      nameParam: parsedArguments.flags['--name'],
-      nowConfig: localConfig,
-      paths,
-    }),
+    setupMsg: 'Set up',
+    projectName:
+      projectNameOrId ??
+      getProjectName({
+        nameParam: parsedArguments.flags['--name'],
+        nowConfig: localConfig,
+        paths,
+      }),
+    failIfNotFound: !!projectNameOrId,
     v0: isV0,
   });
   if (typeof link === 'number') {
@@ -1445,6 +1457,7 @@ async function handleDefaultDeploy(
       agentName: client.agentName,
       jsonOutput: asJson,
       functionsBeta: functionsBeta || undefined,
+      linkedProject: project,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
@@ -1631,7 +1644,9 @@ async function handleDefaultDeploy(
       return 1;
     }
 
-    if (!noWait) {
+    // The deploy status loop already returns the final payload for the normal
+    // READY + alias-assigned path, so skip the old no-op success refetch.
+    if (!noWait && shouldReconcileFinalDeployment(deployment)) {
       await getDeployment(client, contextName, deployment.id);
     }
 
@@ -2100,7 +2115,7 @@ async function handleContinueDeployment({
     return 1;
   }
 
-  output.spinner(`Continuing deployment...`, 0);
+  output.spinner(`Continuing deployment…`, 0);
 
   try {
     let finalDeployment: any = null;
@@ -2125,7 +2140,7 @@ async function handleContinueDeployment({
       if (event.type === 'file-count') {
         const { total, missing } = event.payload;
         output.spinner(
-          `Uploading ${missing.length} of ${total.size} files...`,
+          `Uploading ${missing.length} of ${total.size} files…`,
           0
         );
       }
@@ -2135,7 +2150,7 @@ async function handleContinueDeployment({
       }
 
       if (event.type === 'all-files-uploaded') {
-        output.spinner('Continuing deployment...', 0);
+        output.spinner('Continuing deployment…', 0);
       }
 
       if (event.type === 'created') {
@@ -2143,20 +2158,18 @@ async function handleContinueDeployment({
         output.stopSpinner();
 
         if (finalDeployment.inspectorUrl) {
-          output.print(
-            prependEmoji(
-              `Inspect: ${chalk.bold(finalDeployment.inspectorUrl)} ${deployStamp()}`,
-              emoji('inspect')
-            ) + '\n'
+          printAlignedLabel(
+            'Inspect',
+            chalk.cyan(finalDeployment.inspectorUrl)
           );
         }
 
+        const isProdDeployment = finalDeployment.target === 'production';
         const previewUrl = `https://${finalDeployment.url}`;
-        output.print(
-          prependEmoji(
-            `Preview: ${chalk.bold(previewUrl)} ${deployStamp()}`,
-            emoji('success')
-          ) + '\n'
+        printAlignedLabel(
+          isProdDeployment ? 'Production' : 'Preview',
+          chalk.cyan(previewUrl),
+          isProdDeployment ? { gutter: '▲' } : {}
         );
 
         if (noWait) {
@@ -2169,11 +2182,11 @@ async function handleContinueDeployment({
           );
         }
 
-        output.spinner('Building...', 0);
+        output.spinner('Building…', 0);
       }
 
       if (event.type === 'building') {
-        output.spinner('Building...', 0);
+        output.spinner('Building…', 0);
       }
 
       if (event.type === 'ready') {
@@ -2192,12 +2205,7 @@ async function handleContinueDeployment({
         ) {
           const primaryDomain = finalDeployment.alias[0];
           const prodUrl = `https://${primaryDomain}`;
-          output.print(
-            prependEmoji(
-              `Production: ${chalk.bold(prodUrl)} ${deployStamp()}`,
-              emoji('link')
-            ) + '\n'
-          );
+          printAlignedLabel('Aliased', chalk.cyan(prodUrl), { gutter: '▲' });
         }
       }
 
@@ -2258,6 +2266,46 @@ function getDeploymentOutputJson(
     deploymentApiUrl: `${apiUrl}/v13/deployments/${deployment.id}`,
     ...(error ? { error } : {}),
   };
+}
+
+// Keep one reconciliation fetch for ambiguous terminal states where alias/check
+// details may have changed after the payload we are holding was produced.
+function shouldReconcileFinalDeployment(
+  deployment:
+    | {
+        readyState?: string;
+        aliasAssigned?: boolean | number | null;
+        aliasError?: unknown;
+        checksConclusion?: string;
+        checks?: {
+          'deployment-alias'?: {
+            state?: string;
+          };
+        };
+      }
+    | null
+    | undefined
+): boolean {
+  if (!deployment) {
+    return false;
+  }
+
+  if (deployment.readyState !== 'READY') {
+    return true;
+  }
+
+  if (deployment.aliasError || !deployment.aliasAssigned) {
+    return true;
+  }
+
+  if (
+    deployment.checksConclusion === 'failed' ||
+    deployment.checks?.['deployment-alias']?.state === 'failed'
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 // v2 checks: fetch check runs and print failures

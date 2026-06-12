@@ -32,7 +32,10 @@ import {
   type TriggerEvent,
   isBackendBuilder,
   isExperimentalBackendsEnabled,
+  type ExperimentalService,
   type Service,
+  isExperimentalService,
+  isExternalSymlink,
 } from '@vercel/build-utils';
 import { getInternalServiceFunctionPath } from '@vercel/fs-detectors';
 import pipe from 'promisepipe';
@@ -48,6 +51,12 @@ import outputManager from '../../output-manager';
 
 const { normalize } = posix;
 export const OUTPUT_DIR = join(VERCEL_DIR, 'output');
+const BUILD_OUTPUT_API_ENTRIES = [
+  'config.json',
+  'functions',
+  'routes',
+  'static',
+];
 
 /**
  * An entry in the "functions" object in `vercel.json`.
@@ -73,6 +82,7 @@ export async function writeBuildResult(args: {
   standalone: boolean;
   workPath: string;
   service?: Service;
+  nestServiceOutput?: boolean;
   stripServiceRoutePrefix?: boolean;
 }) {
   const {
@@ -86,8 +96,13 @@ export async function writeBuildResult(args: {
     standalone,
     workPath,
     service,
+    nestServiceOutput = false,
     stripServiceRoutePrefix = false,
   } = args;
+  const writeOutputDir =
+    service && nestServiceOutput
+      ? getServiceOutputDir(outputDir, service)
+      : outputDir;
   let version: number;
   let actualResult: BuildResultV2 | BuildResultV3;
   if (builder.version === -1) {
@@ -102,25 +117,27 @@ export async function writeBuildResult(args: {
   if (typeof version !== 'number' || version === 2) {
     return writeBuildResultV2({
       repoRootPath,
-      outputDir,
+      outputDir: writeOutputDir,
       buildResult: actualResult as BuildResultV2,
       build,
       vercelConfig,
       standalone,
       workPath,
       service,
+      rootOutputDir: outputDir,
       stripServiceRoutePrefix,
     });
   } else if (version === 3) {
     return writeBuildResultV3({
       repoRootPath,
-      outputDir,
+      outputDir: writeOutputDir,
       buildResult: actualResult as BuildResultV3,
       build,
       vercelConfig,
       standalone,
       workPath,
       service,
+      rootOutputDir: outputDir,
       stripServiceRoutePrefix,
     });
   }
@@ -153,9 +170,14 @@ export interface PathOverride {
 
 function injectServiceEnvVars(
   lambda: Lambda,
-  service?: Service,
+  service?: ExperimentalService,
   stripServiceRoutePrefix: boolean = false
 ): void {
+  if (service?.name) {
+    // Exposes the owning service so the API can resolve per-service envVars
+    // at deploy time.
+    lambda.environment.VERCEL_SERVICE_NAME = service.name;
+  }
   if (service?.type) {
     lambda.environment.VERCEL_SERVICE_TYPE = service.type;
   }
@@ -177,6 +199,23 @@ function stripDuplicateSlashes(path: string): string {
   return normalize(path).replace(/(^\/|\/$)/g, '');
 }
 
+function getServiceOutputDir(outputDir: string, service: Service): string {
+  return join(outputDir, 'services', service.name);
+}
+
+export async function relocateRootBuildOutputToService(args: {
+  outputDir: string;
+  service: Service;
+  workPath: string;
+}) {
+  const { outputDir, service, workPath } = args;
+  await relocateBuildOutputApiEntries(
+    outputDir,
+    getServiceOutputDir(outputDir, service),
+    workPath
+  );
+}
+
 /**
  * Writes the output from the `build()` return value of a v2 Builder to
  * the filesystem.
@@ -190,6 +229,7 @@ async function writeBuildResultV2(args: {
   standalone: boolean;
   workPath: string;
   service?: Service;
+  rootOutputDir: string;
   stripServiceRoutePrefix: boolean;
 }) {
   const {
@@ -201,10 +241,11 @@ async function writeBuildResultV2(args: {
     standalone,
     workPath,
     service,
+    rootOutputDir,
     stripServiceRoutePrefix,
   } = args;
   if ('buildOutputPath' in buildResult) {
-    await mergeBuilderOutput(outputDir, buildResult, workPath);
+    await mergeBuilderOutput(outputDir, buildResult, workPath, rootOutputDir);
     return;
   }
 
@@ -226,7 +267,11 @@ async function writeBuildResultV2(args: {
   for (const [path, output] of Object.entries(buildResult.output)) {
     const normalizedPath = stripDuplicateSlashes(path);
     if (isLambda(output)) {
-      injectServiceEnvVars(output, service, stripServiceRoutePrefix);
+      injectServiceEnvVars(
+        output,
+        service && isExperimentalService(service) ? service : undefined,
+        stripServiceRoutePrefix
+      );
       await writeLambda(
         repoRootPath,
         outputDir,
@@ -337,6 +382,7 @@ async function writeBuildResultV3(args: {
   standalone: boolean;
   workPath: string;
   service?: Service;
+  rootOutputDir: string;
   stripServiceRoutePrefix: boolean;
 }) {
   const {
@@ -348,6 +394,7 @@ async function writeBuildResultV3(args: {
     standalone,
     workPath,
     service,
+    rootOutputDir,
     stripServiceRoutePrefix,
   } = args;
   const { output } = buildResult;
@@ -385,6 +432,7 @@ async function writeBuildResultV3(args: {
           standalone,
           workPath,
           service,
+          rootOutputDir,
           stripServiceRoutePrefix,
         });
       } catch (error) {
@@ -407,6 +455,7 @@ async function writeBuildResultV3(args: {
         standalone,
         workPath,
         service,
+        rootOutputDir,
         stripServiceRoutePrefix,
       });
     }
@@ -433,7 +482,11 @@ async function writeBuildResultV3(args: {
             : src
         );
   if (isLambda(output)) {
-    injectServiceEnvVars(output, service, stripServiceRoutePrefix);
+    injectServiceEnvVars(
+      output,
+      service && isExperimentalService(service) ? service : undefined,
+      stripServiceRoutePrefix
+    );
     await writeLambda(
       repoRootPath,
       outputDir,
@@ -739,9 +792,11 @@ async function writeLambda(
 async function mergeBuilderOutput(
   outputDir: string,
   buildResult: BuildResultBuildOutput,
-  workPath: string
+  workPath: string,
+  rootOutputDir: string
 ) {
   const absOutputDir = resolve(outputDir);
+  const absRootOutputDir = resolve(rootOutputDir);
   const { ig } = await getVercelIgnore(workPath);
   const filter = ig.createFilter();
 
@@ -755,6 +810,11 @@ async function mergeBuilderOutput(
     return;
   }
 
+  if (resolve(buildResult.buildOutputPath) === absRootOutputDir) {
+    await relocateBuildOutputApiEntries(rootOutputDir, outputDir, workPath);
+    return;
+  }
+
   const ignoreFilter = (path: string) => {
     const normalizedPath = path.replace(/\\/g, '/');
     if (normalizedPath.startsWith('static/')) {
@@ -764,6 +824,30 @@ async function mergeBuilderOutput(
   };
 
   await merge(buildResult.buildOutputPath, outputDir, ignoreFilter);
+}
+
+async function relocateBuildOutputApiEntries(
+  rootOutputDir: string,
+  outputDir: string,
+  workPath: string
+) {
+  const { ig } = await getVercelIgnore(workPath);
+  const filter = ig.createFilter();
+
+  await fs.mkdirp(outputDir);
+  await Promise.all(
+    BUILD_OUTPUT_API_ENTRIES.map(async entry => {
+      const src = join(rootOutputDir, entry);
+      if (!(await fs.pathExists(src))) return;
+
+      const dest = join(outputDir, entry);
+      if (entry === 'static') {
+        await merge(src, dest, path => filter(path));
+      } else {
+        await merge(src, dest);
+      }
+    })
+  );
 }
 
 async function cleanIgnoredFiles(
@@ -850,6 +934,34 @@ export async function* findDirs(
 }
 
 /**
+ * Re-anchors a Lambda file key that escapes the function root back inside it.
+ *
+ * When `vc build` runs from a monorepo subdirectory without a Root Directory
+ * setting, the repo root is detected as the app directory while dependencies
+ * are hoisted to the actual monorepo root above it. Builders then emit Lambda
+ * file keys that climb out of the function root, e.g.
+ * `../../node_modules/.pnpm/next@.../next/dist/.../server.runtime.prod.js`.
+ *
+ * Such keys cannot be used as zip entry names (`yazl` rejects any path
+ * containing a `..` segment with "invalid relative path"), and they would not
+ * resolve at runtime since nothing exists above a deployed function's root.
+ * Stripping the leading `..` segments anchors the file inside the function
+ * (e.g. `node_modules/.pnpm/.../server.runtime.prod.js`), matching the layout
+ * a root-level build produces. Relative paths between these files (such as the
+ * symlinks inside the pnpm store) are unaffected because every escaping key
+ * shares the same leading prefix and is re-anchored consistently.
+ */
+function stripParentSegments(path: string): string {
+  const normalized = normalizePath(path);
+  const segments = normalized.split('/');
+  let i = 0;
+  while (i < segments.length && segments[i] === '..') {
+    i++;
+  }
+  return segments.slice(i).join('/');
+}
+
+/**
  * Removes the `FileFsRef` instances from the `Files` object
  * and returns them in a JSON serializable map of repo root
  * relative paths to Lambda destination paths.
@@ -867,9 +979,22 @@ export function filesWithoutFsRefs(
     if (file.type === 'FileFsRef') {
       if (!filePathMap) filePathMap = {};
       if (standalone && sharedDest) {
-        shared[path] = file;
-        filePathMap[normalizePath(path)] = normalizePath(
-          relative(repoRootPath, join(sharedDest, path))
+        // pnpm and other package managers create symlinks in node_modules that
+        // point outside the app directory (e.g. ../../node_modules/.pnpm/...).
+        // These targets are rejected during prebuilt deploys, so skip them.
+        // The traced dependency files are included at their logical paths.
+        if (isExternalSymlink(file)) {
+          continue;
+        }
+        // A standalone function must be self-contained, so any remaining file
+        // whose key escapes the function root (e.g. `../../node_modules/...`,
+        // produced when building from a monorepo subdirectory) is re-anchored
+        // inside the function. The shared bytes are placed under the same
+        // anchored key so the recorded `filePathMap` value points at them.
+        const funcPath = stripParentSegments(path);
+        shared[funcPath] = file;
+        filePathMap[funcPath] = normalizePath(
+          relative(repoRootPath, join(sharedDest, funcPath))
         );
       } else {
         filePathMap[normalizePath(path)] = normalizePath(

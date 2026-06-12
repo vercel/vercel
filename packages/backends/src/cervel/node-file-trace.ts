@@ -36,6 +36,7 @@ export const nodeFileTrace = async (args: NodeFileTraceOptions) => {
       processCwd: args.workPath,
       ts: true,
       mixedModules: true,
+      moduleSyncCatchall: true,
       async resolve(id, parent, job, cjsResolve) {
         return nftResolveDependency(id, parent, job, cjsResolve);
       },

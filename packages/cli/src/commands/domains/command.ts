@@ -92,11 +92,12 @@ export const removeSubcommand = {
 export const priceSubcommand = {
   name: 'price',
   aliases: [],
-  description: 'Show registrar price quote for a domain',
+  description: 'Show registrar price quotes for one or more domains',
   arguments: [
     {
       name: 'domain',
       required: true,
+      multiple: true,
     },
   ],
   options: [formatOption],
@@ -106,8 +107,90 @@ export const priceSubcommand = {
       value: `${packageName} domains price example.com`,
     },
     {
+      name: 'Price quotes for multiple domains',
+      value: `${packageName} domains price one.com two.com three.com`,
+    },
+    {
       name: 'JSON output',
       value: `${packageName} domains price example.com --format json`,
+    },
+  ],
+} as const;
+
+export const searchSubcommand = {
+  name: 'search',
+  aliases: [],
+  description: 'Discover domain-name candidates from a keyword or fragment',
+  arguments: [
+    {
+      name: 'query',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'available',
+      shorthand: null,
+      type: Boolean,
+      description: 'Show only candidates available to register',
+      deprecated: false,
+    },
+    {
+      name: 'order',
+      shorthand: null,
+      type: String,
+      argument: 'ORDER',
+      description:
+        'Order candidates by relevance, alphabetical order, or length (default: relevance)',
+      deprecated: false,
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      argument: 'NUMBER',
+      description:
+        'Number of candidates to check per page (default: 20, max: 200)',
+      deprecated: false,
+    },
+    {
+      name: 'tld',
+      shorthand: null,
+      type: [String],
+      argument: 'TLD',
+      description: 'Filter candidates by exact TLD. Repeatable.',
+      deprecated: false,
+    },
+    {
+      name: 'next',
+      shorthand: null,
+      type: String,
+      argument: 'CURSOR',
+      description: 'Show the next page of candidates',
+      deprecated: false,
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Discover domain-name candidates',
+      value: `${packageName} domains search acme`,
+    },
+    {
+      name: 'Narrow candidates with a TLD fragment',
+      value: `${packageName} domains search acme.d`,
+    },
+    {
+      name: 'Filter candidates by TLD',
+      value: `${packageName} domains search acme --tld com --tld dev`,
+    },
+    {
+      name: 'Show only available candidates',
+      value: `${packageName} domains search acme --available`,
+    },
+    {
+      name: 'JSON output',
+      value: `${packageName} domains search acme --format=json`,
     },
   ],
 } as const;
@@ -124,6 +207,34 @@ export const buySubcommand = {
   ],
   options: [],
   examples: [],
+} as const;
+
+export const checkSubcommand = {
+  name: 'check',
+  aliases: [],
+  description: 'Check if a domain is available to buy',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+      multiple: true,
+    },
+  ],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Check if a domain is available',
+      value: `${packageName} domains check example.com`,
+    },
+    {
+      name: 'Check availability for multiple domains',
+      value: `${packageName} domains check one.com two.com three.com`,
+    },
+    {
+      name: 'JSON output',
+      value: `${packageName} domains check example.com --format json`,
+    },
+  ],
 } as const;
 
 export const moveSubcommand = {
@@ -181,8 +292,10 @@ export const domainsCommand = {
     inspectSubcommand,
     addSubcommand,
     buySubcommand,
+    checkSubcommand,
     moveSubcommand,
     priceSubcommand,
+    searchSubcommand,
     transferInSubcommand,
     removeSubcommand,
   ],

@@ -280,8 +280,8 @@ jobs:
       - name: install yarn@1.22.19
         run: npm i -g yarn@1.22.19
 
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
+      - name: install pnpm@10.29.3
+        run: npm i -g pnpm@10.29.3
 
       - name: install uv@0.10.11
         uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
@@ -357,6 +357,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
           TURBO_BASE_SHA: ${{ needs.setup.outputs.baseSha }}
+          CARGO_NET_GIT_FETCH_WITH_CLI: "true"
           FORCE_COLOR: '1'
           VITEST_TEST_FILES: ${{ matrix.useEnvPaths == true && join(matrix.testPaths, ' ') || '' }}
           # Datadog Test Optimization: emit per-test spans correlated to the
@@ -397,8 +398,8 @@ jobs:
       - name: install yarn@1.22.19
         run: npm i -g yarn@1.22.19
 
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
+      - name: install pnpm@10.29.3
+        run: npm i -g pnpm@10.29.3
 
       - name: Install uv
         uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0

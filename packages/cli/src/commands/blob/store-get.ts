@@ -1,12 +1,12 @@
 import output from '../../output-manager';
-import type { BlobRWToken } from '../../util/blob/token';
+import { getStoreIdFromAuth, type BlobRWToken } from '../../util/blob/token';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { getLinkedProject } from '../../util/projects/link';
 import getScope from '../../util/get-scope';
-import { getStoreSubcommand } from './command';
+import { getStoreInfoSubcommand } from './command';
 import { BlobGetStoreTelemetryClient } from '../../util/telemetry/commands/blob/store-get';
 import {
   formatStoreDetails,
@@ -24,7 +24,9 @@ export default async function getStore(
     },
   });
 
-  const flagsSpecification = getFlagsSpecification(getStoreSubcommand.options);
+  const flagsSpecification = getFlagsSpecification(
+    getStoreInfoSubcommand.options
+  );
 
   let parsedArgs: ReturnType<typeof parseArguments<typeof flagsSpecification>>;
   try {
@@ -38,11 +40,9 @@ export default async function getStore(
     args: [storeIdArg],
   } = parsedArgs;
 
-  let storeId = storeIdArg;
-  if (!storeId && rwToken.success) {
-    const [, , , id] = rwToken.token.split('_');
-
-    storeId = `store_${id}`;
+  let storeId: string | undefined = storeIdArg;
+  if (!storeId) {
+    storeId = getStoreIdFromAuth(rwToken) ?? undefined;
   }
 
   if (!storeId) {

@@ -1,7 +1,14 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import type { FlagSettings } from './types';
-import { resolveVariant } from './resolve-variant';
+import {
+  formatFlagBucketingBaseSelector,
+  resolveFlagBucketingBase,
+} from './bucketing-base';
+import {
+  resolveVariantByIdOrThrow,
+  resolveVariantOrThrow,
+} from './resolve-variant';
 import type {
   Flag,
   FlagRolloutOutcome,
@@ -45,13 +52,14 @@ export function resolveFlagRollout(
       : undefined;
 
   const baseSelector =
-    options.baseSelector || formatBaseSelector(currentRollout?.base);
+    options.baseSelector ||
+    formatFlagBucketingBaseSelector(currentRollout?.base);
   if (!baseSelector) {
     throw new Error(
       'Missing required flag --by. Use --by <entity.attribute> to choose how users are bucketed.'
     );
   }
-  const base = resolveRolloutBase(settings, baseSelector);
+  const base = resolveFlagBucketingBase(settings, baseSelector);
 
   const rollFromVariant = resolveRollFromVariant(
     flag,
@@ -112,57 +120,19 @@ export function resolveFlagRollout(
   };
 }
 
-function resolveRolloutBase(settings: FlagSettings, selector: string) {
-  const separatorIndex = selector.indexOf('.');
-  if (separatorIndex <= 0 || separatorIndex === selector.length - 1) {
-    throw new Error(
-      'Invalid value for --by. Use the format <entity.attribute>, for example --by user.userId.'
-    );
-  }
-
-  const kind = selector.slice(0, separatorIndex);
-  const attribute = selector.slice(separatorIndex + 1);
-  const entity = settings.entities.find(candidate => candidate.kind === kind);
-
-  if (!entity) {
-    const availableKinds = settings.entities.map(candidate => candidate.kind);
-    throw new Error(
-      `Unknown entity ${chalk.bold(kind)}. Available entities: ${availableKinds.join(', ')}`
-    );
-  }
-
-  const matchingAttribute = entity.attributes.find(
-    candidate => candidate.key === attribute
-  );
-  if (!matchingAttribute) {
-    const availableAttributes = entity.attributes.map(
-      candidate => candidate.key
-    );
-    throw new Error(
-      `Unknown attribute ${chalk.bold(selector)}. Available attributes for ${kind}: ${availableAttributes.join(', ')}`
-    );
-  }
-
-  return {
-    type: 'entity' as const,
-    kind,
-    attribute,
-  };
-}
-
 function resolveRollFromVariant(
   flag: Flag,
   selector: string | undefined,
   currentRollout: FlagRolloutOutcome | undefined
 ): FlagVariant {
   if (selector) {
-    return resolveVariantSelector(flag, selector, '--from-variant');
+    return resolveVariantOrThrow(selector, flag.variants, '--from-variant');
   }
 
   if (currentRollout) {
-    return resolveVariantById(
-      flag,
+    return resolveVariantByIdOrThrow(
       currentRollout.rollFromVariantId,
+      flag.variants,
       '--from-variant'
     );
   }
@@ -176,13 +146,13 @@ function resolveRollToVariant(
   currentRollout: FlagRolloutOutcome | undefined
 ): FlagVariant {
   if (selector) {
-    return resolveVariantSelector(flag, selector, '--to-variant');
+    return resolveVariantOrThrow(selector, flag.variants, '--to-variant');
   }
 
   if (currentRollout) {
-    return resolveVariantById(
-      flag,
+    return resolveVariantByIdOrThrow(
       currentRollout.rollToVariantId,
+      flag.variants,
       '--to-variant'
     );
   }
@@ -197,47 +167,18 @@ function resolveDefaultVariant(
   rollFromVariant: FlagVariant
 ): FlagVariant {
   if (selector) {
-    return resolveVariantSelector(flag, selector, '--default-variant');
+    return resolveVariantOrThrow(selector, flag.variants, '--default-variant');
   }
 
   if (currentRollout) {
-    return resolveVariantById(
-      flag,
+    return resolveVariantByIdOrThrow(
       currentRollout.defaultVariantId,
+      flag.variants,
       '--default-variant'
     );
   }
 
   return rollFromVariant;
-}
-
-function resolveVariantSelector(
-  flag: Flag,
-  selector: string,
-  optionName: string
-): FlagVariant {
-  const result = resolveVariant(selector, flag.variants);
-  if (result.error || !result.variant) {
-    throw new Error(
-      `${optionName} ${chalk.bold(selector)} is invalid. ${result.error || 'Variant not found.'}`
-    );
-  }
-
-  return result.variant;
-}
-
-function resolveVariantById(
-  flag: Flag,
-  variantId: string,
-  optionName: string
-): FlagVariant {
-  const variant = flag.variants.find(candidate => candidate.id === variantId);
-  if (!variant) {
-    throw new Error(
-      `${optionName} references an unknown variant ${chalk.bold(variantId)}.`
-    );
-  }
-  return variant;
 }
 
 function inferBooleanVariant(
@@ -389,20 +330,4 @@ function formatStartLabel(
     return 'immediately';
   }
   return `start at ${start}`;
-}
-
-function formatBaseSelector(
-  base:
-    | {
-        type: 'entity';
-        kind: string;
-        attribute: string;
-      }
-    | undefined
-): string | undefined {
-  if (!base) {
-    return undefined;
-  }
-
-  return `${base.kind}.${base.attribute}`;
 }

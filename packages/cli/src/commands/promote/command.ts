@@ -1,6 +1,15 @@
 import { packageName } from '../../util/pkg-name';
 import { yesOption } from '../../util/arg-common';
 
+const timeoutOption = {
+  name: 'timeout',
+  description: 'Time to wait for promotion completion [3m]',
+  argument: 'TIME',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+} as const;
+
 export const statusSubcommand = {
   name: 'status',
   aliases: [],
@@ -12,6 +21,7 @@ export const statusSubcommand = {
     },
   ],
   options: [
+    timeoutOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when linking a Project',
@@ -41,14 +51,7 @@ export const promoteCommand = {
   ],
   subcommands: [statusSubcommand],
   options: [
-    {
-      name: 'timeout',
-      description: 'Time to wait for promotion completion [3m]',
-      argument: 'TIME',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-    },
+    timeoutOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when linking a Project',

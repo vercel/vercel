@@ -3,10 +3,10 @@
 import ms from 'ms';
 import { randomBytes } from 'crypto';
 import nodeFetch from 'node-fetch';
-import type { Service } from '@vercel/fs-detectors';
+import type { ExperimentalService } from '@vercel/fs-detectors';
 import {
   getServiceQueueTopicConfigs,
-  isQueueTriggeredService,
+  isQueueBackedService,
 } from '@vercel/build-utils';
 import output from '../../output-manager';
 
@@ -79,11 +79,11 @@ export class QueueBroker {
   private tickTimer: ReturnType<typeof setInterval>;
 
   constructor(
-    services: Service[],
+    services: ExperimentalService[],
     private getServiceOrigin: (name: string) => string | null
   ) {
     for (const service of services) {
-      if (!isQueueTriggeredService(service)) continue;
+      if (!isQueueBackedService(service)) continue;
 
       const topicConfigs = getServiceQueueTopicConfigs(service);
       for (const topicConfig of topicConfigs) {

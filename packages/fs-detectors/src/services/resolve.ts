@@ -1,9 +1,9 @@
 import { posix as posixPath } from 'path';
 import type {
-  Service,
+  EnvVars,
+  ExperimentalService,
   ConfiguredServices,
   ExperimentalServiceConfig,
-  ServiceConfig,
   ServiceDetectionError,
   ServiceRuntime,
 } from './types';
@@ -44,7 +44,7 @@ const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 const PYTHON_MODULE_ATTR_RE =
   /^([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*):([A-Za-z_][\w]*)$/;
 
-function parsePyModuleAttrEntrypoint(entrypoint: string): {
+export function parsePyModuleAttrEntrypoint(entrypoint: string): {
   attrName: string;
   filePath: string;
 } | null {
@@ -58,22 +58,21 @@ function parsePyModuleAttrEntrypoint(entrypoint: string): {
 
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
 const DNS_LABEL_RE = /^(?!-)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
-const ENV_PREFIX_RE = /^[A-Z][A-Z0-9_]*_$/;
+const ENV_VAR_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const ENTRYPOINT_REQUIRED_RUNTIMES = new Set<ServiceRuntime>([
   'node',
   'python',
   'go',
 ]);
 
-type ConfiguredServiceConfig = (ServiceConfig | ExperimentalServiceConfig) &
-  Partial<ExperimentalServiceConfig>;
+type ConfiguredServiceConfig = ExperimentalServiceConfig;
 
 interface ResolvedEntrypointPath {
   normalized: string;
   isDirectory: boolean;
 }
 
-async function getServiceFs(
+export async function getServiceFs(
   fs: DetectorFilesystem,
   serviceName: string,
   root?: string
@@ -162,7 +161,7 @@ function validateBackendFileEntrypoint(
   };
 }
 
-async function resolveEntrypointPath({
+export async function resolveEntrypointPath({
   fs,
   serviceName,
   entrypoint,
@@ -210,6 +209,7 @@ interface ResolveConfiguredServiceOptions {
 interface ResolveAllConfiguredServicesOptions {
   requireFileEntrypointForBackendRuntimes?: boolean;
 }
+
 function toWorkspaceRelativeEntrypoint(
   entrypoint: string,
   workspace: string
@@ -232,7 +232,7 @@ function toWorkspaceRelativeEntrypoint(
   return relativeEntrypoint;
 }
 
-async function inferWorkspaceFromNearestManifest({
+export async function inferWorkspaceFromNearestManifest({
   fs,
   entrypoint,
   runtime,
@@ -278,7 +278,7 @@ async function inferWorkspaceFromNearestManifest({
   return undefined;
 }
 
-async function detectFrameworkFromWorkspace({
+export async function detectFrameworkFromWorkspace({
   fs,
   workspace,
   serviceName,
@@ -582,13 +582,45 @@ export function validateServiceConfig(
       };
     }
   }
-  if (config.envPrefix !== undefined) {
-    if (!ENV_PREFIX_RE.test(config.envPrefix)) {
+  if (config.env !== undefined) {
+    if (typeof config.env !== 'object' || Array.isArray(config.env)) {
       return {
-        code: 'INVALID_ENV_PREFIX',
-        message: `Service "${name}" has invalid envPrefix "${config.envPrefix}". Must start with an uppercase letter, contain only uppercase letters, digits, and underscores, and end with "_" (e.g., "MY_SERVICE_").`,
+        code: 'INVALID_ENV_VARS',
+        message: `Service "${name}" has invalid "env". Must be an object keyed by environment variable name.`,
         serviceName: name,
       };
+    }
+    for (const [envVarName, envVar] of Object.entries(config.env)) {
+      if (!ENV_VAR_NAME_RE.test(envVarName)) {
+        return {
+          code: 'INVALID_ENV_VAR_NAME',
+          message: `Service "${name}" has invalid env key "${envVarName}". Must match /^[A-Za-z_][A-Za-z0-9_]*$/.`,
+          serviceName: name,
+        };
+      }
+      if (!envVar || typeof envVar !== 'object' || Array.isArray(envVar)) {
+        return {
+          code: 'INVALID_ENV_VAR',
+          message: `Service "${name}" has invalid env["${envVarName}"]. Must be an object with a "type" discriminator.`,
+          serviceName: name,
+        };
+      }
+      const envVarType = (envVar as { type?: unknown }).type;
+      if (envVarType !== 'service-ref') {
+        return {
+          code: 'INVALID_ENV_VAR_TYPE',
+          message: `Service "${name}" env["${envVarName}"] has unknown type "${envVarType}".`,
+          serviceName: name,
+        };
+      }
+      const refService = (envVar as { service?: unknown }).service;
+      if (typeof refService !== 'string' || refService.length === 0) {
+        return {
+          code: 'INVALID_ENV_VAR_REF',
+          message: `Service "${name}" env["${envVarName}"] must specify "service" as a non-empty string.`,
+          serviceName: name,
+        };
+      }
     }
   }
   if (config.runtime && !(config.runtime in RUNTIME_BUILDERS)) {
@@ -687,7 +719,7 @@ export function validateServiceEntrypoint(
  */
 export async function resolveConfiguredService(
   options: ResolveConfiguredServiceOptions
-): Promise<Service> {
+): Promise<ExperimentalService> {
   const {
     name,
     config,
@@ -781,7 +813,9 @@ export async function resolveConfiguredService(
       ? getServiceQueueTopics({ type, topics: config.topics })
       : trigger === 'queue'
         ? config.topics
-        : undefined;
+        : trigger === 'workflow'
+          ? ['__wkf_*']
+          : undefined;
 
   let builderUse: string;
   let builderSrc: string;
@@ -891,6 +925,7 @@ export async function resolveConfiguredService(
   }
 
   return {
+    schema: 'experimentalServices',
     name,
     type,
     trigger,
@@ -909,10 +944,11 @@ export async function resolveConfiguredService(
     runtime,
     buildCommand: config.buildCommand,
     installCommand: config.installCommand,
+    preDeployCommand: config.preDeployCommand,
     schedule: config.schedule,
     handlerFunction: moduleAttrParsed?.attrName,
     topics,
-    envPrefix: config.envPrefix,
+    env: config.env,
   };
 }
 
@@ -926,15 +962,15 @@ export async function resolveAllConfiguredServices(
   routePrefixSource: RoutePrefixSource = 'configured',
   options: ResolveAllConfiguredServicesOptions = {}
 ): Promise<{
-  services: Service[];
+  services: ExperimentalService[];
   errors: ServiceDetectionError[];
 }> {
-  const resolved: Service[] = [];
+  const resolved: ExperimentalService[] = [];
   const errors: ServiceDetectionError[] = [];
   const webServicesByRoutePrefix = new Map<string, string>();
 
   for (const name of Object.keys(services)) {
-    const serviceConfig = services[name];
+    const serviceConfig = services[name] as ExperimentalServiceConfig;
 
     const validationError = validateServiceConfig(name, serviceConfig, options);
     if (validationError) {
@@ -1090,5 +1126,41 @@ export async function resolveAllConfiguredServices(
     resolved.push(service);
   }
 
+  const servicesByName = new Map(resolved.map(s => [s.name, s]));
+  for (const service of resolved) {
+    if (!service.env) continue;
+    validateEnvRefs(service.env, service.name, servicesByName, errors);
+  }
+
   return { services: resolved, errors };
+}
+
+function validateEnvRefs(
+  env: EnvVars,
+  serviceName: string,
+  servicesByName: Map<string, ExperimentalService>,
+  errors: ServiceDetectionError[]
+): void {
+  const pathPrefix = `Service "${serviceName}" env`;
+  for (const [envVarName, envVar] of Object.entries(env)) {
+    if (envVar.type !== 'service-ref') continue;
+
+    const refName = envVar.service;
+    const target = servicesByName.get(refName);
+    if (!target) {
+      errors.push({
+        code: 'UNKNOWN_SERVICE_REF',
+        message: `${pathPrefix}["${envVarName}"] references unknown service "${refName}".`,
+        serviceName,
+      });
+      continue;
+    }
+    if (target.type !== 'web') {
+      errors.push({
+        code: 'INVALID_SERVICE_REF_TYPE',
+        message: `${pathPrefix}["${envVarName}"] references service "${refName}" which is a ${target.type} service and has no URL. Only web services can be referenced.`,
+        serviceName,
+      });
+    }
+  }
 }

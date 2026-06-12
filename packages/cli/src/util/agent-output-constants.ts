@@ -24,6 +24,7 @@ export const AGENT_REASON = {
   PROJECT_SETTINGS_REQUIRED: 'project_settings_required',
   NOT_LINKED: 'not_linked',
   NOT_FOUND: 'not_found',
+  PROJECT_NOT_FOUND: 'project_not_found',
   MISSING_SCOPE: 'missing_scope',
   API_ERROR: 'api_error',
   // Env
@@ -54,6 +55,8 @@ export const AGENT_REASON = {
     'integration_terms_acceptance_required',
   /** Integration uninstall blocked because team-scoped resources still exist. */
   HAS_RESOURCES: 'has_resources',
+  /** User must claim a sandbox marketplace resource (e.g. Stripe, Shopify) in the browser. */
+  INTEGRATION_SANDBOX_CLAIM_REQUIRED: 'integration_sandbox_claim_required',
   // Tokens
   CLASSIC_TOKEN_REQUIRED: 'classic_token_required',
   /** Classic token lacks full user/account scope (e.g. team- or product-scoped token). */

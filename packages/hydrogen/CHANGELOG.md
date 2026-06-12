@@ -1,5 +1,18 @@
 # @vercel/hydrogen
 
+## 1.4.0
+
+### Minor Changes
+
+- 78e5d4f: Add project manifest to node frontend builders.
+
+## 1.3.8
+
+### Patch Changes
+
+- Updated dependencies [eecd10d]
+  - @vercel/static-config@3.4.0
+
 ## 1.3.7
 
 ### Patch Changes

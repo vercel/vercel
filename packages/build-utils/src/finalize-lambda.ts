@@ -1,7 +1,6 @@
 import type { Lambda } from './lambda';
 import type { NodejsLambda } from './nodejs-lambda';
 import type { BytecodeCachingOptions } from './process-serverless/get-lambda-preload-scripts';
-import type { SupportsStreamingResult } from './process-serverless/get-lambda-supports-streaming';
 import { getEncryptedEnv } from './process-serverless/get-encrypted-env-file';
 import { getLambdaEnvironment } from './process-serverless/get-lambda-environment';
 import { getLambdaSupportsStreaming } from './process-serverless/get-lambda-supports-streaming';
@@ -77,8 +76,6 @@ export interface FinalizeLambdaResult {
   /** Compressed size in bytes. */
   size: number;
   uncompressedBytes: number;
-  /** Non-fatal streaming detection error, if any. Caller decides how to log. */
-  streamingError?: SupportsStreamingResult['error'];
 }
 
 /**
@@ -186,11 +183,11 @@ export async function finalizeLambda(
   };
 
   // 7. Streaming detection
-  const streamingResult = await getLambdaSupportsStreaming(
+  const streamingResult = getLambdaSupportsStreaming(
     lambda,
     forceStreamingRuntime
   );
-  lambda.supportsResponseStreaming = streamingResult.supportsStreaming;
+  lambda.supportsResponseStreaming = streamingResult;
 
   return {
     buffer: zipResult.buffer,
@@ -198,6 +195,5 @@ export async function finalizeLambda(
     digest: zipResult.digest,
     size: zipResult.size,
     uncompressedBytes,
-    streamingError: streamingResult.error,
   };
 }

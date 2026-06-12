@@ -238,6 +238,64 @@ async def _http_post(
     )
 
 
+def _dechunk(data: bytes) -> bytes:
+    out = b""
+    while data:
+        size_line, _, rest = data.partition(b"\r\n")
+        size = int(size_line.split(b";")[0], 16)
+        if size == 0:
+            break
+        out += rest[:size]
+        data = rest[size + 2 :]
+    return out
+
+
+def _raw_chunked_post(
+    port: int,
+    path: str,
+    body: bytes,
+    headers: dict[str, str] | None = None,
+) -> tuple[int, bytes]:
+    """Send a POST with a chunked body and NO Content-Length over a raw socket.
+
+    ``http.client`` always adds a Content-Length (or does its own chunking),
+    so to reproduce the proxy behaviour we write the raw HTTP/1.1 request.
+    Returns ``(status_code, response_body)``.
+    """
+    hdrs = {
+        "Host": "lambda",
+        "x-vercel-internal-invocation-id": "test-inv-1",
+        "x-vercel-internal-request-id": "42",
+        "x-vercel-internal-span-id": "span-1",
+        "x-vercel-internal-trace-id": "trace-1",
+        "Content-Type": "application/json",
+        "Transfer-Encoding": "chunked",
+        **(headers or {}),
+    }
+    request_line = f"POST {path} HTTP/1.1\r\n"
+    header_block = "".join(f"{k}: {v}\r\n" for k, v in hdrs.items())
+    chunk = f"{len(body):x}\r\n".encode() + body + b"\r\n0\r\n\r\n"
+    raw = request_line.encode() + header_block.encode() + b"\r\n" + chunk
+
+    with socket.create_connection(("127.0.0.1", port), timeout=10) as sock:
+        sock.sendall(raw)
+        sock.shutdown(socket.SHUT_WR)
+        buf = b""
+        while True:
+            part = sock.recv(65536)
+            if not part:
+                break
+            buf += part
+
+    head, _, resp_body = buf.partition(b"\r\n\r\n")
+    status_line = head.split(b"\r\n", 1)[0]
+    status_code = int(status_line.split(b" ")[1])
+    # If the response itself is chunked, strip framing for the assertion.
+    if b"transfer-encoding: chunked" in head.lower():
+        resp_body = _dechunk(resp_body)
+    return status_code, resp_body
+
+
 async def _read_stderr(
     proc: asyncio.subprocess.Process,
 ) -> str:
@@ -378,6 +436,65 @@ class TestHTTPHandler(_RuntimeTestCase):
             sock.close()
             self.assertIn(b"400", data)
 
+    async def test_sc_headers_stripped_per_no_leak_flag(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            # Without x-vercel-sc-no-header-leak most headers are passed down
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            self.assertNotIn("x-vercel-sc-runtime-cache", seen)
+            self.assertIn("x-vercel-sc-headers", seen)
+            self.assertIn("x-vercel-sc-host", seen)
+            self.assertIn("x-vercel-sc-basepath", seen)
+            self.assertIn("x-vercel-sc-protocol", seen)
+
+            # With x-vercel-sc-no-header-leak every header is stripped
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-no-header-leak": "1",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            for sc_header in (
+                "x-vercel-sc-headers",
+                "x-vercel-sc-host",
+                "x-vercel-sc-basepath",
+                "x-vercel-sc-protocol",
+                "x-vercel-sc-no-header-leak",
+                "x-vercel-sc-runtime-cache",
+            ):
+                self.assertNotIn(sc_header, seen)
+
 
 class TestWSGIApp(_RuntimeTestCase):
     """Tests for WSGI app entrypoints."""
@@ -409,6 +526,31 @@ class TestWSGIApp(_RuntimeTestCase):
             self.assertEqual(
                 resp.read().decode(),
                 "GET /search?q=test",
+            )
+
+    async def test_wsgi_chunked_post_without_content_length(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wsgi_echo_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            body = json.dumps({"message": "hello"}).encode()
+            status, resp = await asyncio.to_thread(
+                _raw_chunked_post, port, "/api/test", body
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(
+                json.loads(resp.decode()),
+                {"received": body.decode(), "path": "/api/test"},
             )
 
     async def test_wsgi_closeable_response(self) -> None:
@@ -447,6 +589,60 @@ class TestWSGIApp(_RuntimeTestCase):
             resp = await _http_get(port, "/oidc")
             self.assertEqual(resp.status, 200)
             self.assertEqual(resp.read().decode(), "env-token")
+
+    async def test_sc_headers_stripped_per_no_leak_flag(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            self.assertNotIn("x-vercel-sc-runtime-cache", seen)
+            self.assertIn("x-vercel-sc-headers", seen)
+            self.assertIn("x-vercel-sc-host", seen)
+
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-no-header-leak": "1",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            for sc_header in (
+                "x-vercel-sc-headers",
+                "x-vercel-sc-host",
+                "x-vercel-sc-basepath",
+                "x-vercel-sc-protocol",
+                "x-vercel-sc-no-header-leak",
+                "x-vercel-sc-runtime-cache",
+            ):
+                self.assertNotIn(sc_header, seen)
 
 
 class TestASGIApp(_RuntimeTestCase):
@@ -532,6 +728,60 @@ class TestASGIApp(_RuntimeTestCase):
             resp = await _http_get(port, "/oidc")
             self.assertEqual(resp.status, 200)
             self.assertEqual(resp.read().decode(), "env-token")
+
+    async def test_sc_headers_stripped_per_no_leak_flag(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            self.assertNotIn("x-vercel-sc-runtime-cache", seen)
+            self.assertIn("x-vercel-sc-headers", seen)
+            self.assertIn("x-vercel-sc-host", seen)
+
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-no-header-leak": "1",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            for sc_header in (
+                "x-vercel-sc-headers",
+                "x-vercel-sc-host",
+                "x-vercel-sc-basepath",
+                "x-vercel-sc-protocol",
+                "x-vercel-sc-no-header-leak",
+                "x-vercel-sc-runtime-cache",
+            ):
+                self.assertNotIn(sc_header, seen)
 
 
 class TestCronService(_RuntimeTestCase):

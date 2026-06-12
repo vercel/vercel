@@ -2,10 +2,10 @@ import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { removeStoreSubcommand } from './command';
+import { deleteStoreSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getLinkedProject } from '../../util/projects/link';
-import type { BlobRWToken } from '../../util/blob/token';
+import { getStoreIdFromAuth, type BlobRWToken } from '../../util/blob/token';
 import { envPullCommandLogic } from '../env/pull';
 import {
   formatStoreLabel,
@@ -18,7 +18,7 @@ export default async function removeStore(
   rwToken: BlobRWToken
 ): Promise<number> {
   const flagsSpecification = getFlagsSpecification(
-    removeStoreSubcommand.options
+    deleteStoreSubcommand.options
   );
 
   let parsedArgs: ReturnType<typeof parseArguments<typeof flagsSpecification>>;
@@ -34,12 +34,10 @@ export default async function removeStore(
     flags: { '--yes': yes },
   } = parsedArgs;
 
-  let storeId = storeIdArg;
+  let storeId: string | undefined = storeIdArg;
 
-  if (!storeId && rwToken.success) {
-    const [, , , id] = rwToken.token.split('_');
-
-    storeId = `store_${id}`;
+  if (!storeId) {
+    storeId = getStoreIdFromAuth(rwToken) ?? undefined;
   }
 
   if (!storeId) {

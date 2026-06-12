@@ -1,0 +1,87 @@
+{
+  "name": "@vercel/connect",
+  "version": "0.2.3",
+  "license": "Apache-2.0",
+  "type": "module",
+  "repository": {
+    "directory": "packages/connect",
+    "type": "git",
+    "url": "git+https://github.com/vercel/vercel.git"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./eve": {
+      "types": "./dist/eve/index.d.ts",
+      "default": "./dist/eve/index.js"
+    },
+    "./betterauth": {
+      "types": "./dist/betterauth/index.d.ts",
+      "default": "./dist/betterauth/index.js"
+    },
+    "./authjs": {
+      "types": "./dist/authjs/index.d.ts",
+      "default": "./dist/authjs/index.js"
+    },
+    "./mcp": {
+      "types": "./dist/mcp/index.d.ts",
+      "default": "./dist/mcp/index.js"
+    },
+    "./ai-sdk": {
+      "types": "./dist/ai-sdk/index.d.ts",
+      "default": "./dist/ai-sdk/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run --config ../../vitest.config.mts",
+    "vitest-unit": "vitest run --config ../../vitest.config.mts",
+    "prepublishOnly": "pnpm typecheck && pnpm build"
+  },
+  "dependencies": {
+    "@vercel/oidc": "workspace:*"
+  },
+  "peerDependencies": {
+    "@ai-sdk/mcp": "^1 || ^2",
+    "@auth/core": ">=0.37.0",
+    "ai": "^6 || ^7",
+    "better-auth": ">=1.5.0",
+    "eve": ">=0.6.0-beta.1"
+  },
+  "peerDependenciesMeta": {
+    "@ai-sdk/mcp": {
+      "optional": true
+    },
+    "@auth/core": {
+      "optional": true
+    },
+    "ai": {
+      "optional": true
+    },
+    "better-auth": {
+      "optional": true
+    },
+    "eve": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@ai-sdk/mcp": "2.0.0-beta.37",
+    "@auth/core": "0.37.4",
+    "ai": "7.0.0-beta.116",
+    "better-auth": "1.5.5",
+    "eve": "0.6.0-beta.1",
+    "typescript": "^5"
+  },
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

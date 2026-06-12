@@ -13,6 +13,7 @@ import {
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
   getServiceUrlEnvVars,
+  getExperimentalServiceUrlEnvVars,
   normalizePath,
   NowBuildError,
   runNpmInstall,
@@ -28,17 +29,21 @@ import {
   type BuildResultVX,
   type Config,
   type Cron,
+  type ExperimentalServices,
+  type ExperimentalServicesV2,
   type Files,
   type FlagDefinitions,
   type Meta,
   type PackageJson,
   glob,
+  type ExperimentalService,
+  isExperimentalService,
   type Service,
   getInternalServiceCronPath,
   getInternalServiceFunctionPath,
   getServiceQueueTopicConfigs,
   isBackendBuilder,
-  isQueueTriggeredService,
+  isQueueBackedService,
   isScheduleTriggeredService,
   type Lambda,
   type TriggerEvent,
@@ -53,15 +58,18 @@ import {
   detectFrameworkRecord,
   detectFrameworkVersion,
   detectInstrumentation,
+  generateServicesRoutes,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import {
   appendRoutesToPhase,
   getTransformedRoutes,
+  isHandler,
   mergeRoutes,
   sourceToRegex,
   type MergeRoutesProps,
   type Route,
+  type HandleValue,
 } from '@vercel/routing-utils';
 
 import output from '../../output-manager';
@@ -76,6 +84,7 @@ import { scopeRoutesToServiceOwnership } from '../../util/build/service-route-ow
 import { sortBuilders } from '../../util/build/sort-builders';
 import {
   OUTPUT_DIR,
+  relocateRootBuildOutputToService,
   writeBuildResult,
   isLambda,
   type PathOverride,
@@ -92,7 +101,12 @@ import stamp from '../../util/output/stamp';
 import parseTarget from '../../util/parse-target';
 import cliPkg from '../../util/pkg';
 import * as cli from '../../util/pkg-name';
-import { getProjectLink, VERCEL_DIR } from '../../util/projects/link';
+import {
+  getLinkedProject,
+  getProjectLink,
+  VERCEL_DIR,
+} from '../../util/projects/link';
+import { printProjectNotFoundError } from '../../util/projects/project-not-found-error';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
 import {
   pickOverrides,
@@ -115,6 +129,7 @@ import { pullCommandLogic } from '../pull';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import { buildCommand } from './command';
 import { validatePackageManifest } from '../../util/validate-package-manifest';
+import { shouldEmbedFlagsDefinitions } from '../../util/flags/build-embedding';
 
 /** Build a plain suggested command with global flags (e.g. --cwd, --non-interactive) appended. */
 function buildCommandWithGlobalFlags(
@@ -147,11 +162,23 @@ interface BuildOutputConfig {
   routes?: BuildResultV2Typical['routes'];
   overrides?: Record<string, PathOverride>;
   framework?: {
+    slug: string;
     version: string;
   };
   crons?: Cron[];
-  services?: Service[];
+  experimentalServices?: ExperimentalServices;
+  experimentalServicesV2?: ExperimentalServicesV2;
+  services?: ExperimentalService[];
   deploymentId?: string;
+}
+
+function hasNonEmptyObject(value: unknown): value is Record<string, unknown> {
+  return (
+    value != null &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    Object.keys(value).length > 0
+  );
 }
 
 /**
@@ -213,6 +240,7 @@ export default async function main(client: Client): Promise<number> {
     telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
     telemetryClient.trackCliFlagStandalone(parsedArgs.flags['--standalone']);
     telemetryClient.trackCliOptionId(parsedArgs.flags['--id']);
+    telemetryClient.trackCliOptionProject(parsedArgs.flags['--project']);
   } catch (error) {
     printError(error);
     return 1;
@@ -254,10 +282,36 @@ export default async function main(client: Client): Promise<number> {
     return 1;
   }
 
+  const projectNameOrId = parsedArgs.flags['--project'];
+
   // If repo linked, update `cwd` to the repo root
-  const link = await rootSpan
+  let link = await rootSpan
     .child('vc.getProjectLink')
-    .trace(() => getProjectLink(client, cwd));
+    .trace(() => getProjectLink(client, cwd, projectNameOrId, true));
+
+  // No local link matched `--project`; resolve via API before the
+  // settings-pull prompt would silently re-link to the wrong project.
+  if (projectNameOrId && !link) {
+    const linkedFromApi = await getLinkedProject(
+      client,
+      cwd,
+      projectNameOrId,
+      true
+    );
+    if (linkedFromApi.status === 'linked') {
+      link = {
+        projectId: linkedFromApi.project.id,
+        orgId: linkedFromApi.org.id,
+        repoRoot: linkedFromApi.repoRoot,
+      };
+    } else if (linkedFromApi.status === 'error') {
+      return linkedFromApi.exitCode;
+    } else {
+      await printProjectNotFoundError(client, projectNameOrId, 'build');
+      return 1;
+    }
+  }
+
   const projectRootDirectory = link?.projectRootDirectory ?? '';
   if (link?.repoRoot) {
     cwd = client.cwd = link.repoRoot;
@@ -337,7 +391,8 @@ export default async function main(client: Client): Promise<number> {
       client.cwd,
       Boolean(parsedArgs.flags['--yes']),
       target,
-      parsedArgs.flags
+      parsedArgs.flags,
+      projectNameOrId
     );
     if (result !== 0) {
       return result;
@@ -658,7 +713,7 @@ async function doBuild(
     await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
   }
 
-  if (process.env.VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING !== '1') {
+  if (await shouldEmbedFlagsDefinitions(cwd)) {
     const { prepareFlagsDefinitions } = await import(
       '@vercel/prepare-flags-definitions'
     );
@@ -692,7 +747,30 @@ async function doBuild(
   let builds = localConfig.builds || [];
   let zeroConfigRoutes: Route[] = [];
   let zeroConfigFallbackRoutes: Route[] = [];
-  let detectedServices: Service[] | undefined;
+  let detectedServices: ExperimentalService[] | undefined;
+  let detectedResolvedServices: Service[] | undefined;
+  const localConfigWithServicesV2 = localConfig as VercelConfig & {
+    experimentalServicesV2?: ExperimentalServicesV2;
+  };
+  const hasExperimentalServicesV1ConfiguredInVercelConfig = hasNonEmptyObject(
+    localConfig.experimentalServices
+  );
+  const hasExperimentalServicesV2ConfiguredInVercelConfig = hasNonEmptyObject(
+    localConfigWithServicesV2.experimentalServicesV2
+  );
+  const configuredExperimentalServicesV2 =
+    hasExperimentalServicesV2ConfiguredInVercelConfig &&
+    localConfigWithServicesV2.experimentalServicesV2
+      ? localConfigWithServicesV2.experimentalServicesV2
+      : undefined;
+  let nestExperimentalServicesV2Output =
+    hasExperimentalServicesV2ConfiguredInVercelConfig;
+  let detectedExperimentalServicesV1Config: ExperimentalServices | undefined;
+  let detectedExperimentalServicesV2Config: ExperimentalServicesV2 | undefined =
+    configuredExperimentalServicesV2;
+  let detectedExperimentalServicesV2RootRoutes:
+    | BuildOutputConfig['routes']
+    | undefined;
   let isZeroConfig = false;
 
   if (builds.length > 0) {
@@ -708,6 +786,9 @@ async function doBuild(
     const detectedBuilders = await span.child('vc.detectBuilders').trace(() =>
       detectBuilders(files, pkg, {
         ...localConfig,
+        ...(configuredExperimentalServicesV2 && {
+          experimentalServicesV2: configuredExperimentalServicesV2,
+        }),
         projectSettings,
         ignoreBuildScript: true,
         featHandleMiss: true,
@@ -729,21 +810,23 @@ async function doBuild(
       builds = [{ src: '**', use: '@vercel/static' }];
     }
 
-    // Capture detected services for the config.json
-    detectedServices = detectedBuilders.services;
+    // Capture detected services for the config.json. Only `experimentalServices`
+    // flows is supported right now.
+    detectedResolvedServices = detectedBuilders.services;
+    detectedServices = detectedBuilders.services?.filter(isExperimentalService);
 
-    // Inject service URL environment variables so they're available during builds.
-    // for frontend frameworks like Vite (VITE_) or Next.js (NEXT_PUBLIC_) where
-    // these env vars are baked into the client bundle so they can be accessed in the client code.
-    // User-defined env vars take precedence and won't be overwritten.
-    if (detectedServices && detectedServices.length > 0) {
-      const serviceUrlEnvVars = getServiceUrlEnvVars({
+    // Legacy URL injection for `experimentalServices`.
+    if (
+      detectedBuilders.useImplicitEnvInjection &&
+      detectedServices &&
+      detectedServices.length > 0
+    ) {
+      const serviceUrlEnvVars = getExperimentalServiceUrlEnvVars({
         services: detectedServices,
         frameworkList,
         currentEnv: process.env,
         deploymentUrl: process.env.VERCEL_URL,
       });
-
       for (const [key, value] of Object.entries(serviceUrlEnvVars)) {
         process.env[key] = value;
         output.debug(`Injected service URL env var: ${key}=${value}`);
@@ -761,10 +844,13 @@ async function doBuild(
       newRoutes: detectedHostRewriteRoutes ?? null,
       phase: null,
     });
+    const detectedServiceRewriteRoutes = nestExperimentalServicesV2Output
+      ? []
+      : detectedBuilders.rewriteRoutes;
     zeroConfigRoutes.push(
       ...appendRoutesToPhase({
         routes: [],
-        newRoutes: detectedBuilders.rewriteRoutes,
+        newRoutes: detectedServiceRewriteRoutes,
         phase: 'filesystem',
       })
     );
@@ -773,13 +859,15 @@ async function doBuild(
       newRoutes: detectedBuilders.errorRoutes,
       phase: 'error',
     });
-    zeroConfigRoutes.push(...(detectedBuilders.defaultRoutes || []));
-    zeroConfigFallbackRoutes = detectedBuilders.fallbackRoutes || [];
+    if (!nestExperimentalServicesV2Output) {
+      zeroConfigRoutes.push(...(detectedBuilders.defaultRoutes || []));
+      zeroConfigFallbackRoutes = detectedBuilders.fallbackRoutes || [];
+    }
   }
 
   const builderSpecs = new Set(builds.map(b => b.use));
 
-  const buildersWithPkgs = await span
+  let buildersWithPkgs = await span
     .child('vc.importBuilders')
     .trace(() => importBuilders(builderSpecs, cwd, span));
 
@@ -799,27 +887,43 @@ async function doBuild(
   const ops: Promise<Error | void>[] = [];
 
   // Write the `detectedBuilders` result to output dir
-  const buildsJsonBuilds = new Map<Builder, SerializedBuilder>(
-    builds.map(build => {
+  const buildsJsonBuilds = new Map<Builder, SerializedBuilder>();
+  const ensureBuildersImported = async (buildsToImport: Builder[]) => {
+    const missingBuilderSpecs = new Set(
+      buildsToImport
+        .map(build => build.use)
+        .filter(builderSpec => !buildersWithPkgs.has(builderSpec))
+    );
+    if (missingBuilderSpecs.size === 0) return;
+
+    const importedBuilders = await span
+      .child('vc.importBuilders')
+      .trace(() => importBuilders(missingBuilderSpecs, cwd, span));
+    buildersWithPkgs = new Map([
+      ...buildersWithPkgs.entries(),
+      ...importedBuilders.entries(),
+    ]);
+  };
+  const addBuildsToBuildJson = async (buildsToAdd: Builder[]) => {
+    await ensureBuildersImported(buildsToAdd);
+    for (const build of buildsToAdd) {
+      if (buildsJsonBuilds.has(build)) continue;
       const builderWithPkg = buildersWithPkgs.get(build.use);
       if (!builderWithPkg) {
         throw new Error(`Failed to load Builder "${build.use}"`);
       }
       const { builder, pkg: builderPkg } = builderWithPkg;
-      return [
-        build,
-        {
-          require: builderPkg.name,
-          requirePath: builderWithPkg.path,
-          apiVersion: builder.version,
-          ...build,
-        },
-      ];
-    })
-  );
+      buildsJsonBuilds.set(build, {
+        require: builderPkg.name,
+        requirePath: builderWithPkg.path,
+        apiVersion: builder.version,
+        ...build,
+      });
+    }
 
-  buildsJson.builds = Array.from(buildsJsonBuilds.values());
-  await writeBuildJson(buildsJson, outputDir);
+    buildsJson.builds = Array.from(buildsJsonBuilds.values());
+    await writeBuildJson(buildsJson, outputDir);
+  };
 
   // The `meta` config property is re-used for each Builder
   // invocation so that Builders can share state between
@@ -831,7 +935,7 @@ async function doBuild(
 
   // Execute Builders for detected entrypoints
   // TODO: parallelize builds (except for frontend)
-  const sortedBuilders = sortBuilders(builds);
+  const executedBuilds: Builder[] = [];
   const buildResults: Map<Builder, BuildResult | BuildOutputConfig> = new Map();
   const overrides: PathOverride[] = [];
   const repoRootPath = cwd;
@@ -843,470 +947,594 @@ async function doBuild(
   const packageManifests: Array<{
     workspace: string;
     key: string;
+    buildConfig: Config;
     manifest: Record<string, unknown>;
     service?: Service;
     builderUse: string;
   }> = [];
 
-  const hasDetectedServices =
-    detectedServices !== undefined && detectedServices.length > 0;
-  const hasQueueServices =
-    hasDetectedServices && detectedServices!.some(isQueueTriggeredService);
+  const getHasDetectedServices = () =>
+    detectedResolvedServices !== undefined &&
+    detectedResolvedServices.length > 0;
+  const getHasQueueServices = () =>
+    detectedServices?.some(isQueueBackedService);
   const synthesizedServiceCrons: Cron[] = [];
   const serviceByBuilder = new Map<Builder, Service>();
-  if (hasDetectedServices) {
-    for (const service of detectedServices!) {
+  const workPathByBuilder = new Map<Builder, string>();
+  const serviceFileOverrides = new Map<Builder, Record<string, PathOverride>>();
+  if (getHasDetectedServices()) {
+    for (const service of detectedResolvedServices!) {
       serviceByBuilder.set(service.builder, service);
     }
   }
 
-  for (const build of sortedBuilders) {
-    if (typeof build.src !== 'string') continue;
+  const preDeployEntries: {
+    service: string;
+    callback?: () => Promise<void>;
+  }[] = [];
 
-    const builderWithPkg = buildersWithPkgs.get(build.use);
-    if (!builderWithPkg) {
-      throw new Error(`Failed to load Builder "${build.use}"`);
-    }
+  const runBuilders = async (buildsToRun: Builder[]) => {
+    await addBuildsToBuildJson(buildsToRun);
 
-    try {
-      const { builder, pkg: builderPkg } = builderWithPkg;
+    for (const build of sortBuilders(buildsToRun)) {
+      if (typeof build.src !== 'string') continue;
 
-      // When a service lives in a subdirectory, e.g. /frontend
-      // (workspace !== '.'), we need to:
-      // 1. Set workPath to the service's workspace directory
-      // 2. Strip the workspace prefix from the entrypoint
-      // 3. Scope the files map to only include files within the workspace
-      // This ensures builders like Next.js receive the correct workPath and
-      // entrypoint, so their routes are emitted relative to the workspace root
-      // (not polluted with the workspace directory prefix).
-      const service = hasDetectedServices
-        ? serviceByBuilder.get(build)
-        : undefined;
-      const stripServiceRoutePrefix =
-        !!service?.routePrefix && service.routePrefix !== '/';
-
-      let buildWorkPath = workPath;
-      let buildEntrypoint = build.src;
-      let buildFiles: Files = filesMap;
-
-      if (service && service.workspace !== '.') {
-        const wsPrefix = service.workspace + '/';
-        buildWorkPath = join(workPath, service.workspace);
-
-        // Strip workspace prefix from entrypoint:
-        // e.g., "frontend/package.json" → "package.json"
-        buildEntrypoint = build.src.startsWith(wsPrefix)
-          ? build.src.slice(wsPrefix.length)
-          : build.src;
-
-        // Scope files to the service workspace — re-key paths relative to
-        // the workspace root so builders see "package.json" not "frontend/package.json"
-        buildFiles = {};
-        for (const [filePath, file] of Object.entries(filesMap)) {
-          if (filePath.startsWith(wsPrefix)) {
-            buildFiles[filePath.slice(wsPrefix.length)] = file;
-          }
-        }
-
-        output.debug(
-          `Service "${service.name}": workspace-rooted build at "${buildWorkPath}", ` +
-            `entrypoint "${buildEntrypoint}" (original: "${build.src}")`
-        );
+      const builderWithPkg = buildersWithPkgs.get(build.use);
+      if (!builderWithPkg) {
+        throw new Error(`Failed to load Builder "${build.use}"`);
       }
 
-      // Set VERCEL_PROJECT_SETTINGS_* env vars.
-      // For services: use service-specific values instead of project-level settings
-      // (the project-level framework is "services", which is meaningless to individual builders).
-      const settingsForEnv = service
-        ? {
-            buildCommand: service.buildCommand ?? undefined,
-            installCommand: service.installCommand ?? undefined,
-            outputDirectory: projectSettings.outputDirectory ?? undefined,
-            nodeVersion: projectSettings.nodeVersion ?? undefined,
-          }
-        : projectSettings;
-
-      for (const key of [
-        'buildCommand',
-        'installCommand',
-        'outputDirectory',
-        'nodeVersion',
-      ] as const) {
-        const value = settingsForEnv[key];
-        const envKey =
-          `VERCEL_PROJECT_SETTINGS_` +
-          key.replace(/[A-Z]/g, letter => `_${letter}`).toUpperCase();
-        if (typeof value === 'string') {
-          process.env[envKey] = value;
-          output.debug(`Setting env ${envKey} to "${value}"`);
-        } else {
-          delete process.env[envKey];
-        }
-      }
-
-      const isFrontendBuilder = build.config && 'framework' in build.config;
-      // For services builds, the builder framework is set by the service resolver,
-      // the project-level framework is 'services'.
-      const builderFramework =
-        build.config?.framework ?? projectSettings.framework;
-
-      let buildConfig: Config;
-
-      if (isZeroConfig) {
-        if (service) {
-          // Services build: use service-specific config from resolution.
-          // build.config already contains framework, routePrefix, memory, etc.
-          buildConfig = {
-            ...build.config,
-            ...(hasQueueServices ? { hasWorkerServices: true } : undefined),
-            // Override project-level settings with service-specific ones.
-            // The project-level framework is "services" which must NOT be
-            // propagated to individual builders.
-            projectSettings: {
-              ...projectSettings,
-              framework: service.framework ?? null,
-              buildCommand: service.buildCommand ?? null,
-              installCommand: service.installCommand ?? null,
-            },
-            installCommand: service.installCommand ?? undefined,
-            buildCommand: service.buildCommand ?? undefined,
-            framework: builderFramework,
-            nodeVersion: projectSettings.nodeVersion,
-            bunVersion: localConfig.bunVersion ?? undefined,
-          };
-        } else {
-          buildConfig = {
-            outputDirectory: projectSettings.outputDirectory ?? undefined,
-            ...build.config,
-            projectSettings,
-            installCommand: projectSettings.installCommand ?? undefined,
-            devCommand: projectSettings.devCommand ?? undefined,
-            buildCommand: projectSettings.buildCommand ?? undefined,
-            framework: projectSettings.framework,
-            nodeVersion: projectSettings.nodeVersion,
-            bunVersion: localConfig.bunVersion ?? undefined,
-          };
-        }
-      } else {
-        buildConfig = {
-          ...(build.config || {}),
-          bunVersion: localConfig.bunVersion ?? undefined,
-        };
-      }
-
-      const builderSpan = span.child('vc.builder', {
-        'builder.name': builderPkg.name,
-        'builder.version': builderPkg.version,
-        'builder.dynamicallyInstalled': String(
-          builderWithPkg.dynamicallyInstalled
-        ),
-      });
-
-      const serviceRoutePrefix = build.config?.routePrefix;
-      const serviceWorkspace = build.config?.workspace;
-      const buildOptions: BuildOptions = {
-        files: buildFiles,
-        entrypoint: buildEntrypoint,
-        workPath: buildWorkPath,
-        repoRootPath,
-        config: buildConfig,
-        meta,
-        span: builderSpan,
-        ...(service
-          ? {
-              service: {
-                name: service.name,
-                type: service.type,
-                trigger: service.trigger,
-                routePrefix:
-                  typeof serviceRoutePrefix === 'string'
-                    ? serviceRoutePrefix
-                    : undefined,
-                workspace:
-                  typeof serviceWorkspace === 'string'
-                    ? serviceWorkspace
-                    : undefined,
-                schedule: service.schedule,
-              },
-            }
-          : undefined),
-      };
-      output.debug(
-        `Building entrypoint "${build.src}" with "${builderPkg.name}"`
-      );
-      let buildResult: BuildResultV2 | BuildResultV3;
-      let rawBuildResult: BuildResultV2 | BuildResultV3 | BuildResultVX;
       try {
-        rawBuildResult = await builderSpan.trace<
-          BuildResultV2 | BuildResultV3 | BuildResultVX
-        >(async () => builder.build(buildOptions));
-        if (builder.version === -1) {
-          const vx = rawBuildResult as BuildResultVX;
-          buildResult = vx.result;
-        } else {
-          buildResult = rawBuildResult as BuildResultV2 | BuildResultV3;
-        }
+        const { builder, pkg: builderPkg } = builderWithPkg;
 
-        // If the build result has no routes and the framework has default routes,
-        // then add the default routes to the build result
-        if (
-          !hasDetectedServices &&
-          buildConfig.zeroConfig &&
-          isFrontendBuilder &&
-          'output' in buildResult &&
-          !buildResult.routes
-        ) {
-          const framework = frameworkList.find(
-            f => f.slug === buildConfig.framework
-          );
-          if (framework) {
-            const defaultRoutes = await getFrameworkRoutes(
-              framework,
-              buildWorkPath
-            );
-            buildResult.routes = defaultRoutes;
-          }
-        }
-      } finally {
-        // Make sure we don't fail the build
-        try {
-          const builderDiagnostics = await builderSpan
-            .child('vc.builder.diagnostics')
-            .trace(async () => {
-              return await builder.diagnostics?.(buildOptions);
-            });
-          if (builderDiagnostics) {
-            const prefix =
-              service && service.workspace !== '.'
-                ? service.workspace + '/' + builderPkg.name + '/'
-                : '';
-            for (const [key, value] of Object.entries(builderDiagnostics)) {
-              const fullKey = prefix + key;
-              if (key.endsWith('package-manifest.json')) {
-                try {
-                  let data: string;
-                  if (value.type === 'FileBlob') {
-                    data = (value as unknown as FileBlob).data.toString();
-                  } else {
-                    data = await streamToString(value.toStream());
-                  }
-                  const packageManifest = JSON.parse(data);
-                  const validationError =
-                    validatePackageManifest(packageManifest);
-                  if (validationError) {
-                    output.warn(
-                      `Invalid package-manifest.json from ${fullKey}: ${validationError}`
-                    );
-                  } else {
-                    const workspace =
-                      service && service.workspace !== '.'
-                        ? service.workspace
-                        : '.';
-                    packageManifests.push({
-                      workspace,
-                      key: fullKey,
-                      manifest: packageManifest,
-                      service,
-                      builderUse: builderPkg.name,
-                    });
-                  }
-                } catch (e) {
-                  output.debug(
-                    `Failed to parse ${fullKey}: ${e instanceof Error ? e.message : String(e)}`
-                  );
-                }
-              } else {
-                diagnostics[fullKey] = value;
-              }
+        // When a service lives in a subdirectory, e.g. /frontend
+        // (workspace !== '.'), we need to:
+        // 1. Set workPath to the service's workspace directory
+        // 2. Strip the workspace prefix from the entrypoint
+        // 3. Scope the files map to only include files within the workspace
+        // This ensures builders like Next.js receive the correct workPath and
+        // entrypoint, so their routes are emitted relative to the workspace root
+        // (not polluted with the workspace directory prefix).
+        const service = getHasDetectedServices()
+          ? serviceByBuilder.get(build)
+          : undefined;
+        const legacyExperimentalService =
+          service && isExperimentalService(service) ? service : undefined;
+        const serviceWorkspace = service
+          ? isExperimentalService(service)
+            ? service.workspace
+            : service.root
+          : undefined;
+        const stripServiceRoutePrefix =
+          !!legacyExperimentalService?.routePrefix &&
+          legacyExperimentalService.routePrefix !== '/';
+
+        let buildWorkPath = workPath;
+        let buildEntrypoint = build.src;
+        let buildFiles: Files = filesMap;
+
+        if (service && serviceWorkspace && serviceWorkspace !== '.') {
+          const wsPrefix = serviceWorkspace + '/';
+          buildWorkPath = join(workPath, serviceWorkspace);
+
+          // Strip workspace prefix from entrypoint:
+          // e.g., "frontend/package.json" → "package.json"
+          buildEntrypoint = build.src.startsWith(wsPrefix)
+            ? build.src.slice(wsPrefix.length)
+            : build.src;
+
+          // Scope files to the service workspace — re-key paths relative to
+          // the workspace root so builders see "package.json" not "frontend/package.json"
+          buildFiles = {};
+          for (const [filePath, file] of Object.entries(filesMap)) {
+            if (filePath.startsWith(wsPrefix)) {
+              buildFiles[filePath.slice(wsPrefix.length)] = file;
             }
           }
-        } catch (error) {
-          output.error('Collecting diagnostics failed');
-          output.debug(error);
-        }
-      }
 
-      if (
-        buildResult &&
-        'output' in buildResult &&
-        'runtime' in buildResult.output &&
-        'type' in buildResult.output &&
-        buildResult.output.type === 'Lambda'
-      ) {
-        const lambdaRuntime = buildResult.output.runtime;
-        if (
-          getDiscontinuedNodeVersions().some(o => o.runtime === lambdaRuntime)
-        ) {
-          throw new NowBuildError({
-            code: 'NODEJS_DISCONTINUED_VERSION',
-            message: `The Runtime "${build.use}" is using "${lambdaRuntime}", which is discontinued. Please upgrade your Runtime to a more recent version or consult the author for more details.`,
-            link: 'https://vercel.link/function-runtimes',
-          });
+          output.debug(
+            `Service "${service.name}": workspace-rooted build at "${buildWorkPath}", ` +
+              `entrypoint "${buildEntrypoint}" (original: "${build.src}")`
+          );
         }
-      }
+        workPathByBuilder.set(build, buildWorkPath);
 
-      if (
-        'output' in buildResult &&
-        buildResult.output &&
-        (isBackendBuilder(build) || build.use === '@vercel/python')
-      ) {
-        // Use service workspace path for routes.json lookup, since the builder
-        // writes routes.json relative to its workPath
-        const routesJsonPath = join(buildWorkPath, '.vercel', 'routes.json');
-        if (existsSync(routesJsonPath)) {
-          try {
-            const routesJson = await readJSONFile(routesJsonPath);
-            if (
-              routesJson &&
-              typeof routesJson === 'object' &&
-              'routes' in routesJson &&
-              Array.isArray(routesJson.routes)
-            ) {
-              // This is a v2 build output, so only remap the outputs
-              // if we have an index lambda
-              const indexLambda =
-                'index' in buildResult.output
-                  ? (buildResult.output['index'] as Lambda)
-                  : undefined;
-              // Convert routes from introspection format to Vercel routing format
-              const convertedRoutes = [];
-              const convertedOutputs: Record<string, Lambda> = indexLambda
-                ? { index: indexLambda }
-                : {};
-              for (const route of routesJson.routes) {
-                if (typeof route.source !== 'string') {
-                  continue;
-                }
-                const { src } = sourceToRegex(route.source);
-                const newRoute: Route = {
-                  src,
-                  dest: route.source,
-                };
-                if (route.methods) {
-                  newRoute.methods = route.methods;
-                }
-                if (route.source === '/') {
-                  continue;
-                }
-                if (indexLambda) {
-                  convertedOutputs[route.source] = indexLambda;
-                }
-                convertedRoutes.push(newRoute);
+        // Set VERCEL_PROJECT_SETTINGS_* env vars.
+        // For services: use service-specific values instead of project-level settings
+        // (the project-level framework is "services", which is meaningless to individual builders).
+        const settingsForEnv = service
+          ? {
+              buildCommand: service.buildCommand ?? undefined,
+              installCommand: service.installCommand ?? undefined,
+              outputDirectory: projectSettings.outputDirectory ?? undefined,
+              nodeVersion: projectSettings.nodeVersion ?? undefined,
+            }
+          : projectSettings;
+
+        for (const key of [
+          'buildCommand',
+          'installCommand',
+          'outputDirectory',
+          'nodeVersion',
+        ] as const) {
+          const value = settingsForEnv[key];
+          const envKey =
+            `VERCEL_PROJECT_SETTINGS_` +
+            key.replace(/[A-Z]/g, letter => `_${letter}`).toUpperCase();
+          if (typeof value === 'string') {
+            process.env[envKey] = value;
+            output.debug(`Setting env ${envKey} to "${value}"`);
+          } else {
+            delete process.env[envKey];
+          }
+        }
+
+        const isFrontendBuilder = build.config && 'framework' in build.config;
+        // For services builds, the builder framework is set by the service resolver,
+        // the project-level framework is 'services'.
+        const builderFramework =
+          build.config?.framework ?? projectSettings.framework;
+
+        let buildConfig: Config;
+
+        if (isZeroConfig) {
+          if (service) {
+            // Services build: use service-specific config from resolution.
+            // build.config already contains framework, routePrefix, memory, etc.
+            buildConfig = {
+              ...build.config,
+              ...(getHasQueueServices()
+                ? { hasWorkerServices: true }
+                : undefined),
+              // Override project-level settings with service-specific ones.
+              // The project-level framework is "services" which must NOT be
+              // propagated to individual builders.
+              projectSettings: {
+                ...projectSettings,
+                framework: service.framework ?? null,
+                buildCommand: service.buildCommand ?? null,
+                installCommand: service.installCommand ?? null,
+              },
+              installCommand: service.installCommand ?? undefined,
+              buildCommand: service.buildCommand ?? undefined,
+              preDeployCommand:
+                legacyExperimentalService?.preDeployCommand ?? undefined,
+              framework: builderFramework,
+              nodeVersion: projectSettings.nodeVersion,
+              bunVersion: localConfig.bunVersion ?? undefined,
+            };
+          } else {
+            buildConfig = {
+              outputDirectory: projectSettings.outputDirectory ?? undefined,
+              ...build.config,
+              projectSettings,
+              installCommand: projectSettings.installCommand ?? undefined,
+              devCommand: projectSettings.devCommand ?? undefined,
+              buildCommand: projectSettings.buildCommand ?? undefined,
+              framework: projectSettings.framework,
+              nodeVersion: projectSettings.nodeVersion,
+              bunVersion: localConfig.bunVersion ?? undefined,
+            };
+          }
+        } else {
+          buildConfig = {
+            ...(build.config || {}),
+            bunVersion: localConfig.bunVersion ?? undefined,
+          };
+        }
+
+        const builderSpan = span.child('vc.builder', {
+          'builder.name': builderPkg.name,
+          'builder.version': builderPkg.version,
+          'builder.dynamicallyInstalled': String(
+            builderWithPkg.dynamicallyInstalled
+          ),
+        });
+
+        const serviceRoutePrefix = build.config?.routePrefix;
+        const serviceConfigWorkspace = build.config?.workspace;
+        const preDeployCmd =
+          legacyExperimentalService?.preDeployCommand?.trim();
+
+        const preDeployEntry =
+          preDeployCmd && service
+            ? ({ service: service.name } as (typeof preDeployEntries)[number])
+            : undefined;
+        if (preDeployEntry) {
+          preDeployEntries.push(preDeployEntry);
+        }
+
+        const buildOptions: BuildOptions = {
+          files: buildFiles,
+          entrypoint: buildEntrypoint,
+          workPath: buildWorkPath,
+          repoRootPath,
+          config: buildConfig,
+          meta,
+          span: builderSpan,
+          ...(preDeployCmd
+            ? {
+                registerPreDeploy: (callback: () => Promise<void>) => {
+                  preDeployEntry!.callback = callback;
+                },
               }
-              // Wrap routes with filesystem handler and catch-all
-              (buildResult as BuildResultV2Typical).routes = [
-                { handle: 'filesystem' },
-                ...convertedRoutes,
-                { src: '/(.*)', dest: '/' },
-              ];
-              if (indexLambda) {
-                (buildResult as BuildResultV2Typical).output = convertedOutputs;
+            : undefined),
+          ...(service
+            ? {
+                service: {
+                  name: service.name,
+                  ...(legacyExperimentalService
+                    ? {
+                        type: legacyExperimentalService.type,
+                        trigger: legacyExperimentalService.trigger,
+                      }
+                    : undefined),
+                  routePrefix:
+                    typeof serviceRoutePrefix === 'string'
+                      ? serviceRoutePrefix
+                      : undefined,
+                  workspace:
+                    typeof serviceConfigWorkspace === 'string'
+                      ? serviceConfigWorkspace
+                      : serviceWorkspace,
+                  ...(legacyExperimentalService
+                    ? { schedule: legacyExperimentalService.schedule }
+                    : undefined),
+                },
+              }
+            : undefined),
+        };
+        output.debug(
+          `Building entrypoint "${build.src}" with "${builderPkg.name}"`
+        );
+
+        // Inject per-service URL environment variables so they're available during builds.
+        // for frontend frameworks like Vite (VITE_) or Next.js (NEXT_PUBLIC_) where
+        // these env vars are baked into the client bundle so they can be accessed in the client code.
+        // User-defined env takes precedence and won't be overwritten. The env will be cleared
+        // after the build is complete
+        const restoreEnv = new Map<string, string | undefined>();
+        if (detectedServices && legacyExperimentalService?.env) {
+          const perServiceEnv = getServiceUrlEnvVars({
+            requestedEnv: legacyExperimentalService.env,
+            consumerService: legacyExperimentalService,
+            services: detectedServices,
+            frameworkList,
+            currentEnv: process.env,
+            deploymentUrl: process.env.VERCEL_URL,
+          });
+          for (const [key, value] of Object.entries(perServiceEnv)) {
+            if (key in process.env) continue;
+            restoreEnv.set(key, process.env[key]);
+            process.env[key] = value;
+            output.debug(`Injected service URL env var: ${key}=${value}`);
+          }
+        }
+        let buildResult: BuildResultV2 | BuildResultV3;
+        let rawBuildResult: BuildResultV2 | BuildResultV3 | BuildResultVX;
+        try {
+          rawBuildResult = await builderSpan.trace<
+            BuildResultV2 | BuildResultV3 | BuildResultVX
+          >(async () => builder.build(buildOptions));
+          if (builder.version === -1) {
+            const vx = rawBuildResult as BuildResultVX;
+            buildResult = vx.result;
+          } else {
+            buildResult = rawBuildResult as BuildResultV2 | BuildResultV3;
+          }
+
+          // If the build result has no routes and the framework has default routes,
+          // then add the default routes to the build result
+          if (
+            !getHasDetectedServices() &&
+            buildConfig.zeroConfig &&
+            isFrontendBuilder &&
+            'output' in buildResult &&
+            !buildResult.routes
+          ) {
+            const framework = frameworkList.find(
+              f => f.slug === buildConfig.framework
+            );
+            if (framework) {
+              const defaultRoutes = await getFrameworkRoutes(
+                framework,
+                buildWorkPath
+              );
+              buildResult.routes = defaultRoutes;
+            }
+          }
+        } finally {
+          // Restore any process.env keys we set from service envVars so the
+          // next builder iteration starts from a clean slate.
+          for (const [key, prior] of restoreEnv) {
+            if (prior === undefined) {
+              delete process.env[key];
+            } else {
+              process.env[key] = prior;
+            }
+          }
+          // Make sure we don't fail the build
+          try {
+            const builderDiagnostics = await builderSpan
+              .child('vc.builder.diagnostics')
+              .trace(async () => {
+                return await builder.diagnostics?.(buildOptions);
+              });
+            if (builderDiagnostics) {
+              const prefix =
+                service && serviceWorkspace && serviceWorkspace !== '.'
+                  ? serviceWorkspace + '/' + builderPkg.name + '/'
+                  : '';
+              for (const [key, value] of Object.entries(builderDiagnostics)) {
+                const fullKey = prefix + key;
+                if (key.endsWith('package-manifest.json')) {
+                  try {
+                    let data: string;
+                    if (value.type === 'FileBlob') {
+                      data = (value as unknown as FileBlob).data.toString();
+                    } else {
+                      data = await streamToString(value.toStream());
+                    }
+                    const packageManifest = JSON.parse(data);
+                    const validationError =
+                      validatePackageManifest(packageManifest);
+                    if (validationError) {
+                      output.warn(
+                        `Invalid package-manifest.json from ${fullKey}: ${validationError}`
+                      );
+                    } else {
+                      const workspace =
+                        service && serviceWorkspace && serviceWorkspace !== '.'
+                          ? serviceWorkspace
+                          : '.';
+                      packageManifests.push({
+                        workspace,
+                        key: fullKey,
+                        buildConfig: buildConfig,
+                        manifest: packageManifest,
+                        service,
+                        builderUse: builderPkg.name,
+                      });
+                    }
+                  } catch (e) {
+                    output.debug(
+                      `Failed to parse ${fullKey}: ${e instanceof Error ? e.message : String(e)}`
+                    );
+                  }
+                } else {
+                  diagnostics[fullKey] = value;
+                }
               }
             }
           } catch (error) {
-            output.error(`Failed to read routes.json: ${error}`);
+            output.error('Collecting diagnostics failed');
+            output.debug(error);
           }
         }
-      }
 
-      if (
-        hasDetectedServices &&
-        service &&
-        'routes' in buildResult &&
-        Array.isArray(buildResult.routes) &&
-        detectedServices
-      ) {
-        buildResult.routes = scopeRoutesToServiceOwnership({
-          routes: buildResult.routes as Route[],
-          owner: service,
-          allServices: detectedServices,
-        });
-      }
-
-      if (
-        service &&
-        isQueueTriggeredService(service) &&
-        'output' in buildResult
-      ) {
-        attachQueueServiceTrigger(buildResult.output, service);
-      }
-
-      if (
-        service &&
-        isScheduleTriggeredService(service) &&
-        !('crons' in buildResult && buildResult.crons?.length)
-      ) {
-        const staticSchedules = getStaticServiceSchedules(service.schedule);
-        if (typeof service.runtime === 'string' && staticSchedules.length > 0) {
-          const cronEntrypoint =
-            service.entrypoint || service.builder.src || 'index';
-          for (const schedule of staticSchedules) {
-            synthesizedServiceCrons.push({
-              path: getInternalServiceCronPath(
-                service.name,
-                cronEntrypoint,
-                service.handlerFunction || 'cron'
-              ),
-              schedule,
+        if (
+          buildResult &&
+          'output' in buildResult &&
+          'runtime' in buildResult.output &&
+          'type' in buildResult.output &&
+          buildResult.output.type === 'Lambda'
+        ) {
+          const lambdaRuntime = buildResult.output.runtime;
+          if (
+            getDiscontinuedNodeVersions().some(o => o.runtime === lambdaRuntime)
+          ) {
+            throw new NowBuildError({
+              code: 'NODEJS_DISCONTINUED_VERSION',
+              message: `The Runtime "${build.use}" is using "${lambdaRuntime}", which is discontinued. Please upgrade your Runtime to a more recent version or consult the author for more details.`,
+              link: 'https://vercel.link/function-runtimes',
             });
           }
-        } else {
-          throw new NowBuildError({
-            code: 'CRON_SERVICE_NO_CRONS',
-            message: `Scheduled service "${service.name}" did not produce any cron entries. The builder "${builderPkg.name}" may not support scheduled services.`,
+        }
+
+        if (
+          'output' in buildResult &&
+          buildResult.output &&
+          (isBackendBuilder(build) || build.use === '@vercel/python')
+        ) {
+          // Use service workspace path for routes.json lookup, since the builder
+          // writes routes.json relative to its workPath
+          const routesJsonPath = join(buildWorkPath, '.vercel', 'routes.json');
+          if (existsSync(routesJsonPath)) {
+            try {
+              const routesJson = await readJSONFile(routesJsonPath);
+              if (
+                routesJson &&
+                typeof routesJson === 'object' &&
+                'routes' in routesJson &&
+                Array.isArray(routesJson.routes)
+              ) {
+                // This is a v2 build output, so only remap the outputs
+                // if we have an index lambda
+                const indexLambda =
+                  'index' in buildResult.output
+                    ? (buildResult.output['index'] as Lambda)
+                    : undefined;
+                // Convert routes from introspection format to Vercel routing format
+                const convertedRoutes = [];
+                const convertedOutputs: Record<string, Lambda> = indexLambda
+                  ? { index: indexLambda }
+                  : {};
+                for (const route of routesJson.routes) {
+                  if (typeof route.source !== 'string') {
+                    continue;
+                  }
+                  const { src } = sourceToRegex(route.source);
+                  const newRoute: Route = {
+                    src,
+                    dest: route.source,
+                  };
+                  if (route.methods) {
+                    newRoute.methods = route.methods;
+                  }
+                  if (route.source === '/') {
+                    continue;
+                  }
+                  if (indexLambda) {
+                    convertedOutputs[route.source] = indexLambda;
+                  }
+                  convertedRoutes.push(newRoute);
+                }
+                // Wrap routes with filesystem handler and catch-all
+                (buildResult as BuildResultV2Typical).routes = [
+                  { handle: 'filesystem' },
+                  ...convertedRoutes,
+                  { src: '/(.*)', dest: '/' },
+                ];
+                if (indexLambda) {
+                  (buildResult as BuildResultV2Typical).output =
+                    convertedOutputs;
+                }
+              }
+            } catch (error) {
+              output.error(`Failed to read routes.json: ${error}`);
+            }
+          }
+        }
+
+        if (
+          getHasDetectedServices() &&
+          service &&
+          legacyExperimentalService &&
+          'routes' in buildResult &&
+          Array.isArray(buildResult.routes) &&
+          detectedServices
+        ) {
+          buildResult.routes = scopeRoutesToServiceOwnership({
+            routes: buildResult.routes as Route[],
+            owner: legacyExperimentalService,
+            allServices: detectedServices,
           });
         }
-      }
 
-      let mergedBuildResult: BuildResult | BuildOutputConfig = buildResult;
-      if ('buildOutputPath' in buildResult) {
-        // Read this builder's own Build Output API config directly. When
-        // multiple builders write into `.vercel/output`, a later filesystem
-        // merge can overwrite `config.json` from a sibling builder.
-        const buildOutputConfigPath = join(
-          buildResult.buildOutputPath,
-          'config.json'
-        );
-        const buildOutputConfig = await readJSONFile<BuildOutputConfig>(
-          buildOutputConfigPath
-        );
-        if (buildOutputConfig instanceof CantParseJSONFile) {
-          throw buildOutputConfig;
+        if (
+          legacyExperimentalService &&
+          isQueueBackedService(legacyExperimentalService) &&
+          'output' in buildResult
+        ) {
+          attachQueueServiceTrigger(
+            buildResult.output,
+            legacyExperimentalService
+          );
         }
 
-        if (buildOutputConfig) {
-          if (buildOutputConfig.overrides) {
-            overrides.push(buildOutputConfig.overrides);
-          }
+        if (
+          legacyExperimentalService &&
+          isScheduleTriggeredService(legacyExperimentalService) &&
+          !('crons' in buildResult && buildResult.crons?.length)
+        ) {
+          const staticSchedules = getStaticServiceSchedules(
+            legacyExperimentalService.schedule
+          );
           if (
-            hasDetectedServices &&
-            service &&
-            Array.isArray(buildOutputConfig.routes) &&
-            detectedServices
+            typeof legacyExperimentalService.runtime === 'string' &&
+            staticSchedules.length > 0
           ) {
-            buildOutputConfig.routes = scopeRoutesToServiceOwnership({
-              routes: buildOutputConfig.routes as Route[],
-              owner: service,
-              allServices: detectedServices,
+            const cronEntrypoint =
+              legacyExperimentalService.entrypoint ||
+              legacyExperimentalService.builder.src ||
+              'index';
+            for (const schedule of staticSchedules) {
+              synthesizedServiceCrons.push({
+                path: getInternalServiceCronPath(
+                  legacyExperimentalService.name,
+                  cronEntrypoint,
+                  legacyExperimentalService.handlerFunction || 'cron'
+                ),
+                schedule,
+              });
+            }
+          } else {
+            throw new NowBuildError({
+              code: 'CRON_SERVICE_NO_CRONS',
+              message: `Scheduled service "${legacyExperimentalService.name}" did not produce any cron entries. The builder "${builderPkg.name}" may not support scheduled services.`,
             });
           }
-          mergedBuildResult = buildOutputConfig;
         }
-      }
-      // Store the build result to generate the final `config.json` after
-      // all builds have completed
-      buildResults.set(build, mergedBuildResult);
 
-      let buildOutputLength = 0;
-      if ('output' in buildResult) {
-        buildOutputLength = Array.isArray(buildResult.output)
-          ? buildResult.output.length
-          : 1;
-      }
+        let mergedBuildResult: BuildResult | BuildOutputConfig = buildResult;
+        if ('buildOutputPath' in buildResult) {
+          // Read this builder's own Build Output API config directly. When
+          // multiple builders write into `.vercel/output`, a later filesystem
+          // merge can overwrite `config.json` from a sibling builder.
+          const buildOutputConfigPath = join(
+            buildResult.buildOutputPath,
+            'config.json'
+          );
+          const buildOutputConfig = await readJSONFile<BuildOutputConfig>(
+            buildOutputConfigPath
+          );
+          if (buildOutputConfig instanceof CantParseJSONFile) {
+            throw buildOutputConfig;
+          }
 
-      // Start flushing the file outputs to the filesystem asynchronously
-      ops.push(
-        builderSpan
+          if (buildOutputConfig) {
+            if (
+              !hasExperimentalServicesV1ConfiguredInVercelConfig &&
+              !hasExperimentalServicesV2ConfiguredInVercelConfig
+            ) {
+              const outputConfigPath = join(outputDir, 'config.json');
+              const outputConfig =
+                await readJSONFile<BuildOutputConfig>(outputConfigPath);
+              if (outputConfig instanceof CantParseJSONFile) {
+                throw outputConfig;
+              }
+              if (
+                hasNonEmptyObject(outputConfig?.experimentalServices) &&
+                !hasNonEmptyObject(buildOutputConfig.experimentalServices)
+              ) {
+                buildOutputConfig.experimentalServices =
+                  outputConfig.experimentalServices;
+              }
+              if (
+                hasNonEmptyObject(outputConfig?.experimentalServicesV2) &&
+                !hasNonEmptyObject(buildOutputConfig.experimentalServicesV2)
+              ) {
+                buildOutputConfig.experimentalServicesV2 =
+                  outputConfig.experimentalServicesV2;
+              }
+              if (
+                hasNonEmptyObject(buildOutputConfig.experimentalServices) ||
+                hasNonEmptyObject(buildOutputConfig.experimentalServicesV2)
+              ) {
+                await fs.writeJSON(buildOutputConfigPath, buildOutputConfig, {
+                  spaces: 2,
+                });
+              }
+            }
+            if (
+              getHasDetectedServices() &&
+              service &&
+              legacyExperimentalService &&
+              Array.isArray(buildOutputConfig.routes) &&
+              detectedServices
+            ) {
+              buildOutputConfig.routes = scopeRoutesToServiceOwnership({
+                routes: buildOutputConfig.routes as Route[],
+                owner: legacyExperimentalService,
+                allServices: detectedServices,
+              });
+            }
+            mergedBuildResult = buildOutputConfig;
+          }
+        }
+        // Store the build result to generate the final `config.json` after
+        // all builds have completed
+        buildResults.set(build, mergedBuildResult);
+        executedBuilds.push(build);
+
+        let buildOutputLength = 0;
+        if ('output' in buildResult) {
+          buildOutputLength = Array.isArray(buildResult.output)
+            ? buildResult.output.length
+            : 1;
+        }
+
+        const writeBuildResultPromise = builderSpan
           .child('vc.builder.writeBuildResult', {
             buildOutputLength: String(buildOutputLength),
           })
@@ -1322,28 +1550,248 @@ async function doBuild(
               standalone,
               workPath: buildWorkPath,
               service,
+              nestServiceOutput: nestExperimentalServicesV2Output,
               stripServiceRoutePrefix,
             })
+          );
+
+        if (service && nestExperimentalServicesV2Output) {
+          const override = await writeBuildResultPromise;
+          if (override) serviceFileOverrides.set(build, override);
+        } else {
+          // Start flushing the file outputs to the filesystem asynchronously
+          ops.push(
+            writeBuildResultPromise.then(
+              (override: Record<string, PathOverride> | undefined | void) => {
+                if (override) overrides.push(override);
+              },
+              (err: Error) => err
+            )
+          );
+        }
+      } catch (err: any) {
+        const buildJsonBuild = buildsJsonBuilds.get(build);
+        if (buildJsonBuild) {
+          buildJsonBuild.error = toEnumerableError(err);
+        }
+        throw err;
+      } finally {
+        ops.push(
+          download(diagnostics, join(outputDir, 'diagnostics')).then(
+            () => undefined,
+            err => err
           )
-          .then(
-            (override: Record<string, PathOverride> | undefined | void) => {
-              if (override) overrides.push(override);
-            },
-            (err: Error) => err
-          )
-      );
-    } catch (err: any) {
-      const buildJsonBuild = buildsJsonBuilds.get(build);
-      if (buildJsonBuild) {
-        buildJsonBuild.error = toEnumerableError(err);
+        );
       }
-      throw err;
-    } finally {
-      ops.push(
-        download(diagnostics, join(outputDir, 'diagnostics')).then(
-          () => undefined,
-          err => err
-        )
+    }
+  };
+
+  const flushOps = async () => {
+    const errors = await Promise.all(ops.splice(0));
+    for (const error of errors) {
+      if (error) {
+        throw error;
+      }
+    }
+  };
+
+  const normalizeBuilderSrc = (src: Builder['src']) =>
+    typeof src === 'string'
+      ? normalizePath(src).replace(/^\.\//, '')
+      : undefined;
+
+  const getBuilderIdentity = (build: Builder) => {
+    const normalizedSrc = normalizeBuilderSrc(build.src);
+    return normalizedSrc ? `${build.use}:${normalizedSrc}` : undefined;
+  };
+
+  const getAlreadyExecutedBuild = (candidate: Builder) => {
+    const candidateIdentity = getBuilderIdentity(candidate);
+    if (!candidateIdentity) return undefined;
+
+    return executedBuilds.find(
+      build => getBuilderIdentity(build) === candidateIdentity
+    );
+  };
+
+  const appendExperimentalServicesV1Routes = (
+    services: ExperimentalService[]
+  ) => {
+    const serviceRoutes = generateServicesRoutes(services);
+    zeroConfigRoutes = appendRoutesToPhase({
+      routes: zeroConfigRoutes,
+      newRoutes: serviceRoutes.hostRewrites.length
+        ? serviceRoutes.hostRewrites
+        : null,
+      phase: null,
+    });
+    const serviceRewriteRoutes = nestExperimentalServicesV2Output
+      ? []
+      : [
+          ...serviceRoutes.rewrites,
+          ...serviceRoutes.workers,
+          ...serviceRoutes.crons,
+        ];
+    zeroConfigRoutes.push(
+      ...appendRoutesToPhase({
+        routes: [],
+        newRoutes: serviceRewriteRoutes,
+        phase: 'filesystem',
+      })
+    );
+    if (!nestExperimentalServicesV2Output) {
+      zeroConfigRoutes.push(...serviceRoutes.defaults);
+      zeroConfigFallbackRoutes.push(...serviceRoutes.fallbacks);
+    }
+  };
+
+  await runBuilders(builds);
+  await flushOps();
+
+  if (
+    !hasExperimentalServicesV1ConfiguredInVercelConfig &&
+    !hasExperimentalServicesV2ConfiguredInVercelConfig
+  ) {
+    const generatedConfigPath = join(outputDir, 'config.json');
+    const generatedConfig =
+      await readJSONFile<BuildOutputConfig>(generatedConfigPath);
+    if (generatedConfig instanceof CantParseJSONFile) {
+      throw generatedConfig;
+    }
+
+    const generatedExperimentalServicesV2Config =
+      getGeneratedExperimentalServicesV2Config([
+        generatedConfig,
+        ...buildResults.values(),
+      ]);
+    const generatedExperimentalServicesV1Config =
+      getGeneratedExperimentalServicesV1Config([
+        generatedConfig,
+        ...buildResults.values(),
+      ]);
+
+    if (
+      generatedExperimentalServicesV2Config ||
+      generatedExperimentalServicesV1Config
+    ) {
+      if (generatedExperimentalServicesV2Config) {
+        nestExperimentalServicesV2Output = true;
+      }
+      detectedExperimentalServicesV1Config =
+        generatedExperimentalServicesV1Config;
+      detectedExperimentalServicesV2Config =
+        generatedExperimentalServicesV2Config;
+      detectedExperimentalServicesV2RootRoutes =
+        generatedExperimentalServicesV2Config &&
+        Array.isArray(generatedConfig?.routes)
+          ? generatedConfig.routes
+          : undefined;
+      const generatedBuilders = await span
+        .child('vc.detectGeneratedServices')
+        .trace(() =>
+          detectBuilders(files, pkg, {
+            ...localConfig,
+            ...(generatedExperimentalServicesV2Config
+              ? {
+                  experimentalServicesV2: generatedExperimentalServicesV2Config,
+                }
+              : {
+                  experimentalServices: generatedExperimentalServicesV1Config,
+                }),
+            projectSettings,
+            ignoreBuildScript: true,
+            featHandleMiss: true,
+            workPath,
+          })
+        );
+
+      if (generatedBuilders.errors && generatedBuilders.errors.length > 0) {
+        throw generatedBuilders.errors[0];
+      }
+
+      for (const w of generatedBuilders.warnings) {
+        output.warn(w.message, null, w.link, w.action || 'Learn More');
+      }
+
+      detectedResolvedServices = generatedBuilders.services;
+      if (!detectedResolvedServices || detectedResolvedServices.length === 0) {
+        detectedResolvedServices = undefined;
+        detectedServices = undefined;
+      } else {
+        detectedServices = detectedResolvedServices.filter(
+          isExperimentalService
+        );
+        if (detectedServices.length > 0) {
+          appendExperimentalServicesV1Routes(detectedServices);
+        }
+      }
+
+      if (
+        detectedServices &&
+        detectedServices.length > 0 &&
+        generatedBuilders.useImplicitEnvInjection
+      ) {
+        const serviceUrlEnvVars = getExperimentalServiceUrlEnvVars({
+          services: detectedServices,
+          frameworkList,
+          currentEnv: process.env,
+          deploymentUrl: process.env.VERCEL_URL,
+        });
+        for (const [key, value] of Object.entries(serviceUrlEnvVars)) {
+          process.env[key] = value;
+          output.debug(`Injected service URL env var: ${key}=${value}`);
+        }
+      }
+
+      const buildsToRun: Builder[] = [];
+      const seenBuildsToRun = new Set<string>();
+      const relocatedGeneratedServiceBuilds = new Set<Builder>();
+      for (const service of detectedResolvedServices || []) {
+        serviceByBuilder.set(service.builder, service);
+        const alreadyExecutedBuild = getAlreadyExecutedBuild(service.builder);
+        if (alreadyExecutedBuild) {
+          serviceByBuilder.set(alreadyExecutedBuild, service);
+          if (
+            generatedExperimentalServicesV2Config &&
+            nestExperimentalServicesV2Output &&
+            !relocatedGeneratedServiceBuilds.has(alreadyExecutedBuild)
+          ) {
+            await relocateRootBuildOutputToService({
+              outputDir,
+              service,
+              workPath: workPathByBuilder.get(alreadyExecutedBuild) ?? workPath,
+            });
+            relocatedGeneratedServiceBuilds.add(alreadyExecutedBuild);
+          }
+          continue;
+        }
+        const serviceBuilderIdentity = getBuilderIdentity(service.builder);
+        if (
+          serviceBuilderIdentity &&
+          !seenBuildsToRun.has(serviceBuilderIdentity)
+        ) {
+          seenBuildsToRun.add(serviceBuilderIdentity);
+          buildsToRun.push(service.builder);
+        }
+      }
+
+      if (buildsToRun.length > 0) {
+        await runBuilders(buildsToRun);
+      }
+    }
+  }
+
+  // Run pre-deploy commands after all builders succeeded.
+  // A builder is responsible for handling preDeployCommand, so
+  // it will actually own its env, tracing, etc.
+  // We do not fire them during the build itself, because not all builds
+  // might succeed and be actually deployed.
+  for (const entry of preDeployEntries) {
+    if (entry.callback) {
+      await entry.callback();
+    } else {
+      output.warn(
+        `Service "${entry.service}" has a preDeployCommand but its builder does not support it. The command was not executed.`
       );
     }
   }
@@ -1354,6 +1802,7 @@ async function doBuild(
     const projectManifest: Record<string, unknown> = {};
     for (const {
       workspace,
+      buildConfig,
       manifest,
       service,
       builderUse,
@@ -1362,10 +1811,14 @@ async function doBuild(
         ...manifest,
         workspace,
         builder: builderUse,
-        framework: service?.framework,
+        framework: service?.framework ?? buildConfig.framework,
         serviceName: service?.name,
-        serviceType: service?.type,
-        routePrefix: service?.routePrefix,
+        serviceType:
+          service && isExperimentalService(service) ? service.type : undefined,
+        routePrefix:
+          service && isExperimentalService(service)
+            ? service.routePrefix
+            : undefined,
       };
     }
     if (Object.keys(projectManifest).length > 0) {
@@ -1393,12 +1846,7 @@ async function doBuild(
 
   // Wait for filesystem operations to complete
   // TODO render progress bar?
-  const errors = await Promise.all(ops);
-  for (const error of errors) {
-    if (error) {
-      throw error;
-    }
-  }
+  await flushOps();
 
   let needBuildsJsonOverride = false;
   const speedInsightsVersion = await getInstalledPackageVersion(
@@ -1454,13 +1902,21 @@ async function doBuild(
       }
     }
 
-    if (existingConfig.overrides) {
+    if (existingConfig.overrides && !nestExperimentalServicesV2Output) {
       overrides.push(existingConfig.overrides);
     }
   }
 
+  const topLevelBuildResults = nestExperimentalServicesV2Output
+    ? new Map(
+        Array.from(buildResults.entries()).filter(
+          ([build]) => !serviceByBuilder.has(build)
+        )
+      )
+    : buildResults;
+
   const builderRoutes: MergeRoutesProps['builds'] = Array.from(
-    buildResults.entries()
+    topLevelBuildResults.entries()
   )
     .filter(b => 'routes' in b[1] && Array.isArray(b[1].routes))
     .map(b => {
@@ -1468,10 +1924,11 @@ async function doBuild(
       const buildResult = b[1] as BuildResultV2Typical;
       let entrypoint = build.src!;
 
-      if (hasDetectedServices && typeof build.src === 'string') {
+      if (getHasDetectedServices() && typeof build.src === 'string') {
         const service = serviceByBuilder.get(build);
         if (
           service &&
+          isExperimentalService(service) &&
           service.type === 'web' &&
           typeof service.routePrefix === 'string'
         ) {
@@ -1504,15 +1961,18 @@ async function doBuild(
     });
   }
 
-  const mergedImages = mergeImages(localConfig.images, buildResults.values());
+  const mergedImages = mergeImages(
+    localConfig.images,
+    topLevelBuildResults.values()
+  );
   const mergedCrons = mergeCrons(
     [...(localConfig.crons || []), ...synthesizedServiceCrons],
-    buildResults.values()
+    topLevelBuildResults.values()
   );
-  const mergedWildcard = mergeWildcard(buildResults.values());
+  const mergedWildcard = mergeWildcard(topLevelBuildResults.values());
   const mergedDeploymentId = await mergeDeploymentId(
     existingConfig?.deploymentId,
-    buildResults.values(),
+    topLevelBuildResults.values(),
     workPath
   );
 
@@ -1535,26 +1995,59 @@ async function doBuild(
     }
   }
 
+  const topLevelBuildResultOverrides = Array.from(topLevelBuildResults.values())
+    .map(result => ('overrides' in result ? result.overrides : undefined))
+    .filter((value): value is Record<string, PathOverride> => Boolean(value));
   const mergedOverrides: Record<string, PathOverride> =
-    overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
+    overrides.length > 0 || topLevelBuildResultOverrides.length > 0
+      ? Object.assign({}, ...overrides, ...topLevelBuildResultOverrides)
+      : undefined;
 
-  const framework = await getFramework(workPath, buildResults);
+  const framework =
+    topLevelBuildResults.size > 0
+      ? await getFramework(workPath, topLevelBuildResults)
+      : undefined;
+  const explicitRootRoutes = appendBuildOutputRouteTables(
+    routesResult.routes,
+    detectedExperimentalServicesV2RootRoutes,
+    existingConfig?.routes
+  );
 
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results
   const config: BuildOutputConfig = {
     version: 3,
-    routes: mergedRoutes,
+    routes: nestExperimentalServicesV2Output
+      ? explicitRootRoutes
+      : mergedRoutes,
     images: mergedImages,
     wildcard: mergedWildcard,
     overrides: mergedOverrides,
     framework,
     crons: mergedCrons,
-    ...(detectedServices &&
+    ...(detectedExperimentalServicesV1Config &&
+      Object.keys(detectedExperimentalServicesV1Config).length > 0 && {
+        experimentalServices: detectedExperimentalServicesV1Config,
+      }),
+    ...(detectedExperimentalServicesV2Config &&
+      Object.keys(detectedExperimentalServicesV2Config).length > 0 && {
+        experimentalServicesV2: detectedExperimentalServicesV2Config,
+      }),
+    ...(!detectedExperimentalServicesV1Config &&
+      detectedServices &&
       detectedServices.length > 0 && { services: detectedServices }),
     ...(mergedDeploymentId && { deploymentId: mergedDeploymentId }),
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
+  if (nestExperimentalServicesV2Output) {
+    await writeServiceConfigs(
+      outputDir,
+      buildResults,
+      serviceByBuilder,
+      serviceFileOverrides,
+      detectedExperimentalServicesV2Config
+    );
+  }
 
   await writeFlagsJSON(buildResults.values(), outputDir);
   collectSpan.stop();
@@ -1809,7 +2302,7 @@ function getDirectorySizeInMB(dir: string): {
 async function getFramework(
   cwd: string,
   buildResults: Map<Builder, BuildResult | BuildOutputConfig>
-): Promise<{ version: string } | undefined> {
+): Promise<{ slug: string; version: string } | undefined> {
   const detectedFramework = await detectFrameworkRecord({
     fs: new LocalFileSystemDetector(cwd),
     frameworkList,
@@ -1826,27 +2319,37 @@ async function getFramework(
         'framework' in buildResult &&
         build.use === detectedFramework.useRuntime.use
       ) {
-        return buildResult.framework;
+        return buildResult.framework
+          ? {
+              slug: buildResult.framework.slug,
+              version: buildResult.framework.version,
+            }
+          : undefined;
       }
     }
   }
 
   // determine framework version from listed package.json version
-  if (detectedFramework.detectedVersion) {
+  if (detectedFramework.slug) {
     // check for a valid, explicit version, not a range
-    if (semver.valid(detectedFramework.detectedVersion)) {
+    if (
+      detectedFramework.detectedVersion &&
+      semver.valid(detectedFramework.detectedVersion)
+    ) {
       return {
+        slug: detectedFramework.slug,
         version: detectedFramework.detectedVersion,
       };
     }
-  }
 
-  // determine framework version with runtime lookup
-  const frameworkVersion = detectFrameworkVersion(detectedFramework);
-  if (frameworkVersion) {
-    return {
-      version: frameworkVersion,
-    };
+    // determine framework version with runtime lookup
+    const frameworkVersion = detectFrameworkVersion(detectedFramework);
+    if (frameworkVersion) {
+      return {
+        slug: detectedFramework.slug,
+        version: frameworkVersion,
+      };
+    }
   }
 }
 
@@ -1924,6 +2427,179 @@ function mergeWildcard(
     }
   }
   return wildcard;
+}
+
+function appendBuildOutputRouteTables(
+  ...routeTables: Array<BuildOutputConfig['routes'] | null | undefined>
+): BuildOutputConfig['routes'] | undefined {
+  let routes: Route[] = [];
+  for (const routeTable of routeTables) {
+    if (!Array.isArray(routeTable) || routeTable.length === 0) continue;
+
+    let phase: HandleValue | null = null;
+    let phaseRoutes: Route[] = [];
+    const flushPhase = () => {
+      if (phaseRoutes.length === 0) return;
+      routes = appendRoutesToPhase({
+        routes,
+        newRoutes: phaseRoutes,
+        phase,
+      });
+      phaseRoutes = [];
+    };
+
+    for (const route of routeTable) {
+      if (isHandler(route)) {
+        flushPhase();
+        phase = route.handle;
+      } else {
+        phaseRoutes.push(route);
+      }
+    }
+    flushPhase();
+  }
+
+  return routes.length > 0 ? routes : undefined;
+}
+
+async function writeServiceConfigs(
+  outputDir: string,
+  buildResults: Map<Builder, BuildResult | BuildOutputConfig>,
+  serviceByBuilder: Map<Builder, Service>,
+  serviceFileOverrides: Map<Builder, Record<string, PathOverride>>,
+  experimentalServicesV2?: ExperimentalServicesV2
+) {
+  const serviceResults = new Map<
+    string,
+    Array<BuildResult | BuildOutputConfig>
+  >();
+  const serviceOverrides = new Map<
+    string,
+    Array<Record<string, PathOverride>>
+  >();
+
+  for (const [build, buildResult] of buildResults) {
+    const service = serviceByBuilder.get(build);
+    if (!service) continue;
+
+    const results = serviceResults.get(service.name) || [];
+    results.push(buildResult);
+    serviceResults.set(service.name, results);
+
+    const fileOverrides = serviceFileOverrides.get(build);
+    if (fileOverrides) {
+      const overrides = serviceOverrides.get(service.name) || [];
+      overrides.push(fileOverrides);
+      serviceOverrides.set(service.name, overrides);
+    }
+  }
+
+  await Promise.all(
+    Array.from(serviceResults.entries()).map(async ([serviceName, results]) => {
+      const configPath = join(
+        outputDir,
+        'services',
+        serviceName,
+        'config.json'
+      );
+      const existingConfig = await readJSONFile<BuildOutputConfig>(configPath);
+      if (existingConfig instanceof CantParseJSONFile) {
+        throw existingConfig;
+      }
+
+      const routes = results.flatMap(result =>
+        'routes' in result && Array.isArray(result.routes) ? result.routes : []
+      );
+      const configuredRoutes = experimentalServicesV2?.[serviceName]
+        ? getExperimentalServicesV2Routes(experimentalServicesV2[serviceName])
+        : [];
+      const overrides = [
+        ...results
+          .map(result => ('overrides' in result ? result.overrides : undefined))
+          .filter((value): value is Record<string, PathOverride> =>
+            Boolean(value)
+          ),
+        ...(serviceOverrides.get(serviceName) || []),
+      ];
+      const framework = results.find(
+        (result): result is BuildOutputConfig =>
+          'framework' in result && Boolean(result.framework)
+      )?.framework;
+
+      const mergedRoutes = appendBuildOutputRouteTables(
+        configuredRoutes,
+        routes,
+        existingConfig?.routes
+      );
+
+      const config: BuildOutputConfig = {
+        ...existingConfig,
+        version: 3,
+        routes: mergedRoutes,
+        images: mergeImages(existingConfig?.images, results),
+        wildcard: mergeWildcard(results) || existingConfig?.wildcard,
+        overrides:
+          overrides.length > 0
+            ? Object.assign({}, existingConfig?.overrides, ...overrides)
+            : existingConfig?.overrides,
+        framework: framework || existingConfig?.framework,
+        crons: mergeCrons(existingConfig?.crons, results),
+        services: undefined,
+        experimentalServices: undefined,
+        experimentalServicesV2: undefined,
+      };
+
+      await fs.writeJSON(configPath, config, { spaces: 2 });
+    })
+  );
+}
+
+function getExperimentalServicesV2Routes(
+  serviceConfig: ExperimentalServicesV2[string]
+): Route[] {
+  const routesResult = getTransformedRoutes({
+    routes: serviceConfig.routes,
+    cleanUrls: serviceConfig.cleanUrls,
+    trailingSlash: serviceConfig.trailingSlash,
+    headers: serviceConfig.headers,
+    redirects: serviceConfig.redirects,
+    rewrites: serviceConfig.rewrites,
+  });
+  if (routesResult.error) {
+    throw routesResult.error;
+  }
+
+  return routesResult.routes ?? [];
+}
+
+function getGeneratedExperimentalServicesV1Config(
+  buildResults: Iterable<BuildResult | BuildOutputConfig | null | undefined>
+): ExperimentalServices | undefined {
+  for (const result of buildResults) {
+    if (
+      result &&
+      'experimentalServices' in result &&
+      hasNonEmptyObject(result.experimentalServices)
+    ) {
+      return result.experimentalServices;
+    }
+  }
+  return undefined;
+}
+
+function getGeneratedExperimentalServicesV2Config(
+  buildResults: Iterable<BuildResult | BuildOutputConfig | null | undefined>
+): ExperimentalServicesV2 | undefined {
+  for (const result of buildResults) {
+    if (
+      result &&
+      'experimentalServicesV2' in result &&
+      hasNonEmptyObject(result.experimentalServicesV2)
+    ) {
+      return result.experimentalServicesV2;
+    }
+  }
+  return undefined;
 }
 
 async function mergeDeploymentId(
@@ -2053,7 +2729,7 @@ function normalizeServiceRoutePrefix(routePrefix: string): string {
  * output paths, or routing destinations.
  */
 function getServicesMergeEntrypoint(
-  service: Service,
+  service: ExperimentalService,
   buildSrc: string
 ): string {
   const routePrefix =
@@ -2065,7 +2741,7 @@ function getServicesMergeEntrypoint(
 
 function attachQueueServiceTrigger(
   buildOutput: BuildResultV2Typical['output'] | BuildResultV3['output'],
-  service: Service
+  service: ExperimentalService
 ): void {
   const topics = getServiceQueueTopicConfigs(service);
   const consumer = sanitizeConsumerName(

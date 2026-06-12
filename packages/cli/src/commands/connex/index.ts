@@ -9,18 +9,24 @@ import { ConnexTelemetryClient } from '../../util/telemetry/commands/connex';
 import { type Command, help } from '../help';
 import {
   createSubcommand,
+  updateSubcommand,
   listSubcommand,
   tokenSubcommand,
   attachSubcommand,
+  detachSubcommand,
   removeSubcommand,
+  revokeTokensSubcommand,
   openSubcommand,
   connexCommand,
 } from './command';
 import { create } from './create';
+import { update } from './update';
 import { list } from './list';
 import { token } from './token';
 import { attach } from './attach';
+import { detach } from './detach';
 import { remove } from './remove';
+import { revokeTokens } from './revoke-tokens';
 import { openClient } from './open';
 import {
   buildCommandWithGlobalFlags,
@@ -31,10 +37,13 @@ import { packageName } from '../../util/pkg-name';
 
 const COMMAND_CONFIG = {
   create: getCommandAliases(createSubcommand),
+  update: getCommandAliases(updateSubcommand),
   list: getCommandAliases(listSubcommand),
   token: getCommandAliases(tokenSubcommand),
   attach: getCommandAliases(attachSubcommand),
+  detach: getCommandAliases(detachSubcommand),
   remove: getCommandAliases(removeSubcommand),
+  'revoke-tokens': getCommandAliases(revokeTokensSubcommand),
   open: getCommandAliases(openSubcommand),
 };
 
@@ -89,11 +98,50 @@ export default async function connex(client: Client): Promise<number> {
         telemetry.trackCliSubcommandCreate(subcommandOriginal);
 
         const createFlagsSpec = getFlagsSpecification(createSubcommand.options);
-        const createParsedArgs = parseArguments(subArgs, createFlagsSpec);
+        const createParsedArgs = parseArguments(
+          normalizeCreateDataArgs(subArgs),
+          createFlagsSpec
+        );
+        telemetry.trackCliOptionIcon(createParsedArgs.flags['--icon']);
+        telemetry.trackCliOptionBackgroundColor(
+          createParsedArgs.flags['--background-color']
+        );
+        telemetry.trackCliOptionAccentColor(
+          createParsedArgs.flags['--accent-color']
+        );
+        telemetry.trackCliOptionData(createParsedArgs.flags['--data']);
+        telemetry.trackCliOptionConnectorType(
+          createParsedArgs.flags['--connector-type']
+        );
         return await create(
           client,
           createParsedArgs.args,
           createParsedArgs.flags
+        );
+      }
+      case 'update': {
+        if (needHelp) {
+          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          printHelp(updateSubcommand);
+          return 0;
+        }
+        telemetry.trackCliSubcommandUpdate(subcommandOriginal);
+
+        const updateFlagsSpec = getFlagsSpecification(updateSubcommand.options);
+        const updateParsedArgs = parseArguments(subArgs, updateFlagsSpec);
+        telemetry.trackCliArgumentId(updateParsedArgs.args[0]);
+        telemetry.trackCliOptionIcon(updateParsedArgs.flags['--icon']);
+        telemetry.trackCliOptionBackgroundColor(
+          updateParsedArgs.flags['--background-color']
+        );
+        telemetry.trackCliOptionAccentColor(
+          updateParsedArgs.flags['--accent-color']
+        );
+        telemetry.trackCliOptionFormat(updateParsedArgs.flags['--format']);
+        return await update(
+          client,
+          updateParsedArgs.args,
+          updateParsedArgs.flags
         );
       }
       case 'list': {
@@ -111,6 +159,9 @@ export default async function connex(client: Client): Promise<number> {
         );
         telemetry.trackCliOptionLimit(listParsedArgs.flags['--limit']);
         telemetry.trackCliOptionNext(listParsedArgs.flags['--next']);
+        telemetry.trackCliOptionSearch(listParsedArgs.flags['--search']);
+        telemetry.trackCliOptionService(listParsedArgs.flags['--service']);
+        telemetry.trackCliOptionType(listParsedArgs.flags['--type']);
         telemetry.trackCliOptionFormat(listParsedArgs.flags['--format']);
         return await list(client, listParsedArgs.flags);
       }
@@ -141,12 +192,39 @@ export default async function connex(client: Client): Promise<number> {
           attachParsedArgs.flags['--environment']
         );
         telemetry.trackCliOptionProject(attachParsedArgs.flags['--project']);
+        telemetry.trackCliFlagTriggers(attachParsedArgs.flags['--triggers']);
+        telemetry.trackCliOptionTriggerBranch(
+          attachParsedArgs.flags['--trigger-branch']
+        );
+        telemetry.trackCliOptionTriggerPath(
+          attachParsedArgs.flags['--trigger-path']
+        );
         telemetry.trackCliFlagYes(attachParsedArgs.flags['--yes']);
         telemetry.trackCliOptionFormat(attachParsedArgs.flags['--format']);
         return await attach(
           client,
           attachParsedArgs.args,
           attachParsedArgs.flags
+        );
+      }
+      case 'detach': {
+        if (needHelp) {
+          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          printHelp(detachSubcommand);
+          return 0;
+        }
+        telemetry.trackCliSubcommandDetach(subcommandOriginal);
+
+        const detachFlagsSpec = getFlagsSpecification(detachSubcommand.options);
+        const detachParsedArgs = parseArguments(subArgs, detachFlagsSpec);
+        telemetry.trackCliArgumentClient(detachParsedArgs.args[0]);
+        telemetry.trackCliOptionProject(detachParsedArgs.flags['--project']);
+        telemetry.trackCliFlagYes(detachParsedArgs.flags['--yes']);
+        telemetry.trackCliOptionFormat(detachParsedArgs.flags['--format']);
+        return await detach(
+          client,
+          detachParsedArgs.args,
+          detachParsedArgs.flags
         );
       }
       case 'remove': {
@@ -169,6 +247,38 @@ export default async function connex(client: Client): Promise<number> {
           client,
           removeParsedArgs.args,
           removeParsedArgs.flags
+        );
+      }
+      case 'revoke-tokens': {
+        if (needHelp) {
+          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          printHelp(revokeTokensSubcommand);
+          return 0;
+        }
+        telemetry.trackCliSubcommandRevokeTokens(subcommandOriginal);
+
+        const revokeTokensFlagsSpec = getFlagsSpecification(
+          revokeTokensSubcommand.options
+        );
+        const revokeTokensParsedArgs = parseArguments(
+          subArgs,
+          revokeTokensFlagsSpec
+        );
+        telemetry.trackCliArgumentId(revokeTokensParsedArgs.args[0]);
+        telemetry.trackCliFlagMyTokens(
+          revokeTokensParsedArgs.flags['--my-tokens']
+        );
+        telemetry.trackCliFlagAllTokens(
+          revokeTokensParsedArgs.flags['--all-tokens']
+        );
+        telemetry.trackCliFlagYes(revokeTokensParsedArgs.flags['--yes']);
+        telemetry.trackCliOptionFormat(
+          revokeTokensParsedArgs.flags['--format']
+        );
+        return await revokeTokens(
+          client,
+          revokeTokensParsedArgs.args,
+          revokeTokensParsedArgs.flags
         );
       }
       case 'open': {
@@ -207,11 +317,11 @@ export default async function connex(client: Client): Promise<number> {
               {
                 command: buildCommandWithGlobalFlags(
                   client.argv,
-                  'connex --help',
+                  'connect --help',
                   packageName,
                   { prependGlobalFlags: true }
                 ),
-                when: 'Show all connex subcommands and options',
+                when: 'Show all connect subcommands and options',
               },
             ],
           },
@@ -225,4 +335,20 @@ export default async function connex(client: Client): Promise<number> {
     printError(err);
     return 1;
   }
+}
+
+function normalizeCreateDataArgs(args: string[]): string[] {
+  const normalized: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    normalized.push(arg);
+
+    if (arg === '--data') {
+      const next = args[i + 1];
+      if (next === undefined || next.startsWith('-')) {
+        normalized.push('');
+      }
+    }
+  }
+  return normalized;
 }

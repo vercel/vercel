@@ -1920,9 +1920,10 @@ export const frameworks = [
     website: 'https://tanstack.com/start',
     supersedes: ['ionic-react', 'vite'],
     detectors: {
-      every: [
-        { matchPackage: '@tanstack/router-plugin' },
-        { matchPackage: 'nitro' },
+      every: [{ matchPackage: '@tanstack/router-plugin' }],
+      some: [
+        { matchPackage: '@tanstack/react-start' },
+        { matchPackage: '@tanstack/solid-start' },
       ],
     },
     settings: {
@@ -2312,19 +2313,57 @@ export const frameworks = [
     experimental: true,
   },
   {
-    name: 'Sanity (v3)',
-    slug: 'sanity-v3',
-    demo: 'https://sanity-studio-template.vercel.app',
+    name: 'Eve',
+    slug: 'eve',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/eve.svg',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/eve-dark.svg',
+    tagline:
+      'A filesystem-first framework for durable backend agents on Vercel.',
+    description:
+      'An Eve app: agents authored as a directory of files, compiled and served on Vercel.',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"eve":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pnpm install`, `yarn install`, or `npm install`',
+      },
+      buildCommand: {
+        value: 'eve build',
+        placeholder: '`npm run build` or `eve build`',
+      },
+      devCommand: {
+        value: 'eve dev',
+        placeholder: 'eve dev',
+      },
+      outputDirectory: {
+        value: '.output',
+      },
+    },
+    getOutputDirName: async () => '.output',
+    experimental: true,
+  },
+  {
+    name: 'Sanity',
+    slug: 'sanity',
+    demo: 'https://template-studio-clean.sanity.dev',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/sanity.svg',
-    tagline: 'The structured content platform.',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/sanity-dark.svg',
+    tagline:
+      'The back-end built for AI content operations. Power web, mobile, and agentic applications at scale.',
     description: 'A Sanity Studio',
     website: 'https://www.sanity.io',
     envPrefix: 'SANITY_STUDIO_',
     detectors: {
       some: [
-        {
-          path: 'sanity.json',
-        },
         {
           path: 'sanity.config.js',
         },
@@ -2340,9 +2379,7 @@ export const frameworks = [
       ],
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"sanity":\\s*"\\^?3\\..*"[^}]*}',
+          matchPackage: 'sanity',
         },
       ],
     },
@@ -2362,6 +2399,7 @@ export const frameworks = [
         value: 'dist',
       },
     },
+    dependency: 'sanity',
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
       {
@@ -2374,10 +2412,10 @@ export const frameworks = [
     ],
   },
   {
-    name: 'Sanity',
-    slug: 'sanity',
+    name: 'Sanity (v2 - legacy)',
+    slug: 'sanity-v2',
     demo: 'https://sanity-studio-template.vercel.app',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/sanity.svg',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/sanity-v2.svg',
     tagline: 'The structured content platform.',
     description: 'A Sanity Studio',
     website: 'https://www.sanity.io',
@@ -2387,17 +2425,12 @@ export const frameworks = [
         {
           path: 'sanity.json',
         },
+      ],
+      every: [
         {
-          path: 'sanity.config.js',
-        },
-        {
-          path: 'sanity.config.jsx',
-        },
-        {
-          path: 'sanity.config.ts',
-        },
-        {
-          path: 'sanity.config.tsx',
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@sanity/cli":\\s*"\\^?2\\..*"[^}]*}',
         },
       ],
     },
@@ -4428,6 +4461,92 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Bun',
+    slug: 'bun',
+    runtimeFramework: true,
+    experimental: true,
+    supersedes: ['node'],
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/bun.svg',
+    tagline:
+      'Bun is a fast all-in-one JavaScript runtime, bundler, and package manager.',
+    description: 'A Bun application deployed as a serverless function.',
+    website: 'https://bun.com',
+    useRuntime: { src: 'package.json', use: '@vercel/backends' },
+    ignoreRuntimes: ['@vercel/node'],
+    detectors: {
+      every: [
+        {
+          path: 'bun.lock',
+        },
+      ],
+      some: [
+        {
+          path: 'server.cjs',
+        },
+        {
+          path: 'server.js',
+        },
+        {
+          path: 'server.mjs',
+        },
+        {
+          path: 'server.mts',
+        },
+        {
+          path: 'server.ts',
+        },
+        {
+          path: 'server.cts',
+        },
+        {
+          path: 'src/server.cjs',
+        },
+        {
+          path: 'src/server.js',
+        },
+        {
+          path: 'src/server.mjs',
+        },
+        {
+          path: 'src/server.mts',
+        },
+        {
+          path: 'src/server.ts',
+        },
+        {
+          path: 'src/server.cts',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        value: 'bun install',
+        placeholder: 'bun install',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: '`bun dev`, `bun run dev`, or `bun --hot server.ts`',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
     name: 'Node',
     slug: 'node',
     runtimeFramework: true,
@@ -4440,11 +4559,6 @@ export const frameworks = [
     useRuntime: { src: 'package.json', use: '@vercel/backends' },
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
-      every: [
-        {
-          path: 'package.json',
-        },
-      ],
       some: [
         {
           path: 'server.cjs',

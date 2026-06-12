@@ -21,6 +21,7 @@ vercel metrics schema <metric-or-prefix> --format=json
 vercel activity --help
 vercel activity types --format json --scope <team>
 vercel usage --help
+vercel httpstat /api/health --deployment <deployment-url>
 ```
 
 ## Logs
@@ -28,8 +29,8 @@ vercel usage --help
 ```bash
 vercel logs <deployment-url>                   # view logs
 vercel logs --follow                           # stream live
-vercel logs --level error --level warn         # filter by severity
-vercel logs --source lambda                    # filter by source (lambda, edge, static)
+vercel logs --level error --level warning      # filter by severity (error, warning, info, fatal)
+vercel logs --source serverless                # filter by source (serverless, edge-function, edge-middleware, static)
 vercel logs --since 2024-01-01                 # filter by time
 vercel logs --query "timeout"                  # search
 ```
@@ -78,6 +79,8 @@ vercel bisect --run ./test-script.sh    # automated testing
 ## Cache
 
 ```bash
-vercel cache purge                    # purge CDN cache
-vercel cache invalidate --tag mytag   # invalidate by cache tag
+vercel cache purge --type cdn --yes      # purge CDN cache
+vercel cache invalidate --tag mytag --yes # invalidate by cache tag
 ```
+
+See `references/project-infra.md` for destructive cache deletion and other project infrastructure commands.

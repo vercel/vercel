@@ -1,4 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  type MockInstance,
+} from 'vitest';
 import dev from '../../../../src/commands/dev';
 import { client } from '../../../mocks/client';
 import { type fs, vol } from 'memfs';
@@ -6,7 +14,8 @@ import { useUser } from '../../../mocks/user';
 import { useTeams } from '../../../mocks/team';
 import { useProject } from '../../../mocks/project';
 
-const { devServerInstances, mockedRepoRoots } = vi.hoisted(() => ({
+const { mockStart, devServerInstances, mockedRepoRoots } = vi.hoisted(() => ({
+  mockStart: vi.fn<() => void>(),
   devServerInstances: [] as {
     cwd: string;
     projectId?: string;
@@ -15,7 +24,10 @@ const { devServerInstances, mockedRepoRoots } = vi.hoisted(() => ({
   mockedRepoRoots: new Map<string, string>(),
 }));
 
-vi.mock('../../../../src/util/dev/server', () => {
+vi.mock('../../../../src/util/dev/server', async () => {
+  const actual = await vi.importActual<
+    typeof import('../../../../src/util/dev/server')
+  >('../../../../src/util/dev/server');
   class DevServer {
     devCommand = 'framework dev';
     constructor(cwd: string, options: { projectId?: string; orgId?: string }) {
@@ -29,9 +41,12 @@ vi.mock('../../../../src/util/dev/server', () => {
     stop() {
       return Promise.resolve();
     }
-    start() {}
+    start = mockStart;
   }
-  return { default: DevServer };
+  return {
+    default: DevServer,
+    DevCommandExitError: actual.DevCommandExitError,
+  };
 });
 
 // `findRepoRoot` uses `git rev-parse` and real filesystem lookups that
@@ -251,6 +266,62 @@ describe('dev', () => {
     });
   });
 
+  describe('dev command failure', () => {
+    let exitSpy: MockInstance<typeof process.exit>;
+
+    beforeEach(() => {
+      exitSpy = vi.spyOn(process, 'exit').mockImplementation(((
+        code?: number
+      ) => {
+        throw new Error(`__exit__:${code ?? ''}`);
+      }) as never);
+    });
+
+    afterEach(() => {
+      exitSpy.mockRestore();
+      mockStart.mockReset();
+    });
+
+    it('prints error and exits with the dev command exit code', async () => {
+      const { DevCommandExitError } = await import(
+        '../../../../src/util/dev/server'
+      );
+
+      mockStart.mockRejectedValueOnce(
+        new DevCommandExitError(
+          'Dev Command “framework dev” exited with code 127',
+          127
+        )
+      );
+
+      client.setArgv('dev', projectPath);
+
+      await expect(dev(client)).rejects.toThrow('__exit__:127');
+      await expect(client.stderr).toOutput(
+        'Error: Dev Command “framework dev” exited with code 127'
+      );
+    });
+
+    it('exits with code 1 on ServiceStartError', async () => {
+      const { ServiceStartError } = await import(
+        '../../../../src/util/dev/services-orchestrator'
+      );
+
+      mockStart.mockRejectedValueOnce(
+        new ServiceStartError([
+          new Error('Service "frontend" exited with code 127'),
+        ])
+      );
+
+      client.setArgv('dev', projectPath);
+
+      await expect(dev(client)).rejects.toThrow('__exit__:1');
+      await expect(client.stderr).toOutput(
+        'Service "frontend" exited with code 127'
+      );
+    });
+  });
+
   describe('rootDirectory', () => {
     // Reproduces a bug where running `vercel dev` from inside a project
     // subdirectory whose name matches the project's `rootDirectory`
@@ -359,6 +430,25 @@ describe('dev', () => {
         projectId: undefined,
         orgId: undefined,
       });
+    });
+  });
+
+  describe('--project', () => {
+    it('tracks --project telemetry as [REDACTED]', async () => {
+      vi.spyOn(process, 'cwd').mockReturnValue(projectPath);
+
+      client.setArgv('dev', `--project=${projectId}`);
+      const exitCodePromise = dev(client);
+
+      // dev normally only exits on SIGTERM; here it boots the mocked server.
+      await expect(exitCodePromise).resolves.toEqual(undefined);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:project',
+          value: '[REDACTED]',
+        },
+      ]);
     });
   });
 });

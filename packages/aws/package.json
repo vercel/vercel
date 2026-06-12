@@ -1,0 +1,64 @@
+{
+  "name": "@vercel/aws",
+  "description": "Pre-configured AWS service clients for Vercel Marketplace resources",
+  "homepage": "https://vercel.com",
+  "files": [
+    "**/*.js",
+    "**/*.d.ts",
+    "**/*.md"
+  ],
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./opensearch": {
+      "import": "./dist/opensearch.js",
+      "require": "./dist/opensearch.js"
+    }
+  },
+  "version": "0.2.3",
+  "repository": {
+    "directory": "packages/aws",
+    "type": "git",
+    "url": "git+https://github.com/vercel/vercel.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vercel/vercel/issues"
+  },
+  "devDependencies": {
+    "@opensearch-project/opensearch": "3.3.0",
+    "prettier": "3.8.3",
+    "tinyspawn": "1.3.1",
+    "typedoc": "0.28.19",
+    "typedoc-plugin-markdown": "4.11.0",
+    "typedoc-plugin-mdn-links": "5.1.1",
+    "vitest": "2.0.1"
+  },
+  "peerDependencies": {
+    "@opensearch-project/opensearch": "^3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@opensearch-project/opensearch": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">= 20"
+  },
+  "scripts": {
+    "pretest": "pnpm run build:code",
+    "test": "vitest",
+    "build": "pnpm run build:code && pnpm run build:docs",
+    "build:code": "node ../../utils/build.mjs",
+    "build:docs": "typedoc && prettier --write docs/**/*.md docs/*.md"
+  },
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@vercel/oidc-aws-credentials-provider": "workspace:*"
+  }
+}

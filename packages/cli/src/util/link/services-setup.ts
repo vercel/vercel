@@ -2,9 +2,10 @@ import { normalizePath } from '@vercel/build-utils';
 import { join, relative } from 'path';
 import {
   detectServices,
+  isExperimentalService,
   LocalFileSystemDetector,
   type DetectServicesResult,
-  type Service,
+  type ExperimentalService,
 } from '@vercel/fs-detectors';
 import output from '../../output-manager';
 import type Client from '../client';
@@ -18,6 +19,7 @@ import {
   type ServicesConfigWriteBlocker,
   writeServicesConfig,
 } from '../projects/detect-services';
+import { createDetectEntrypoint } from '../projects/detect-entrypoint';
 
 const SERVICES_DOCS_URL = 'https://vercel.com/docs/services';
 const INFERRED_SERVICES_PROMPT =
@@ -40,9 +42,13 @@ export async function getServicesSetupState(
 ): Promise<ServicesSetupState> {
   const detectServicesResult = await detectServices({
     fs: new LocalFileSystemDetector(workPath),
+    detectEntrypoint: createDetectEntrypoint(workPath),
   });
+  // `resolved` is undefined when no services are detected at all (common for
+  // empty or simple fixtures). Defensive optional chain avoids crashing the
+  // setup flow before any prompts can fire.
   const hasConfiguredServices =
-    detectServicesResult.resolved.source === 'configured';
+    detectServicesResult.resolved?.source === 'configured';
   const inferredServices = hasConfiguredServices
     ? null
     : detectServicesResult.inferred;
@@ -62,8 +68,12 @@ export function displayConfiguredServicesSetup(
   detectServicesResult: DetectServicesResult,
   configFileName = 'vercel.json'
 ): void {
-  if (detectServicesResult.services.length > 0) {
-    displayDetectedServices(detectServicesResult.services);
+  // display only `experimentalServices` for now
+  const v1Services = detectServicesResult.services.filter(
+    isExperimentalService
+  );
+  if (v1Services.length > 0) {
+    displayDetectedServices(v1Services);
   }
   if (detectServicesResult.errors.length > 0) {
     displayServiceErrors(detectServicesResult.errors);
@@ -71,7 +81,9 @@ export function displayConfiguredServicesSetup(
   displayServicesConfigNote(configFileName);
 }
 
-function formatDetectedServicesSummary(services: Service[]): string {
+function formatDetectedServicesSummary(
+  services: ExperimentalService[]
+): string {
   if (services.length === 0) {
     return '';
   }
@@ -188,6 +200,6 @@ export async function promptForInferredServicesSetup({
     workPath,
     inferred.config
   );
-  output.log(`Added services configuration to ${configFileName}.`);
+  output.print(`  Added services configuration to ${configFileName}.\n`);
   return { type: 'services' };
 }
