@@ -548,6 +548,52 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
   );
 
   it.skipIf(process.platform === 'win32')(
+    'should package traced dependencies for hono --standalone from a monorepo subdirectory',
+    async () => {
+      const monorepoRoot = setupUnitFixture(
+        'commands/build/turborepo-hono-standalone'
+      );
+      const appDir = join(monorepoRoot, 'apps', 'api');
+      const output = join(appDir, '.vercel/output');
+
+      await execa('git', ['init'], { cwd: monorepoRoot });
+      await execa('pnpm', ['install', '--ignore-scripts'], {
+        cwd: monorepoRoot,
+      });
+
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_turborepo_hono_standalone',
+        name: 'turborepo-hono-standalone',
+        framework: 'hono',
+        rootDirectory: null,
+      });
+
+      client.cwd = appDir;
+      client.setArgv('build', '--standalone', '--yes', '--debug');
+      const exitCode = await build(client);
+
+      expect(exitCode).toEqual(0);
+
+      const indexFuncDir = join(output, 'functions', 'index.func');
+      expect(await fs.pathExists(indexFuncDir)).toBe(true);
+
+      const honoFiles = await glob(
+        'node_modules/.pnpm/**/node_modules/hono/**',
+        {
+          cwd: indexFuncDir,
+        }
+      );
+      expect(Object.keys(honoFiles).length).toBeGreaterThan(0);
+
+      const handler = join(indexFuncDir, 'apps/api/src/index.js');
+      await expect(import(pathToFileURL(handler).href)).resolves.toBeDefined();
+    }
+  );
+
+  it.skipIf(process.platform === 'win32')(
     'should build a pnpm nextjs monorepo with --standalone for prebuilt deploy',
     async () => {
       const rootDirectory = 'apps/web';
