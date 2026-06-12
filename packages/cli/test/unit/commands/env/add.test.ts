@@ -1226,75 +1226,60 @@ describe('env add', () => {
         logSpy.mockRestore();
       });
 
-      it('uses --value when provided and reaches next prompt (e.g. git_branch_required)', async () => {
-        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
-          throw new Error('exit');
-        });
-        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      it('adds to all Preview branches when branch omitted with --value', async () => {
+        const envName = 'PREVIEW_VAR';
+        try {
+          client.nonInteractive = true;
+          client.setArgv(
+            'env',
+            'add',
+            envName,
+            'preview',
+            '--value',
+            'my-secret-value',
+            '--yes'
+          );
+          const exitCodePromise = env(client);
 
-        client.nonInteractive = true;
-        client.setArgv(
-          'env',
-          'add',
-          'PREVIEW_VAR',
-          'preview',
-          '--value',
-          'my-secret-value',
-          '--yes'
-        );
-        const exitCodePromise = env(client);
+          await expect(exitCodePromise).resolves.toBe(0);
 
-        await expect(exitCodePromise).rejects.toThrow('exit');
-        const payload = JSON.parse(
-          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
-        );
-        expect(payload.reason).toBe('git_branch_required');
-        expect(
-          payload.next.some(
-            (n: { command: string }) =>
-              n.command.includes('preview') && n.command.includes('<gitbranch>')
-          )
-        ).toBe(true);
-
-        exitSpy.mockRestore();
-        logSpy.mockRestore();
+          const savedEnv = envs.find(currentEnv => currentEnv.key === envName);
+          expect(savedEnv?.value).toBe('my-secret-value');
+          expect(savedEnv?.target).toEqual(['preview']);
+          expect(savedEnv?.gitBranch).toBeUndefined();
+        } finally {
+          const savedEnvIndex = envs.findIndex(
+            currentEnv => currentEnv.key === envName
+          );
+          if (savedEnvIndex !== -1) {
+            envs.splice(savedEnvIndex, 1);
+          }
+        }
       });
 
-      it('outputs action_required when preview target and git branch not passed (no third argument)', async () => {
-        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
-          throw new Error('exit');
-        });
-        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      it('adds to all Preview branches when branch omitted with stdin value', async () => {
+        const envName = 'PREVIEW_VAR_STDIN';
+        try {
+          client.nonInteractive = true;
+          client.stdin.isTTY = false;
+          client.setArgv('env', 'add', envName, 'preview', '--yes');
+          const exitCodePromise = env(client);
+          setImmediate(() => client.stdin.emit('data', 'value-via-stdin'));
 
-        client.nonInteractive = true;
-        client.stdin.isTTY = false;
-        client.setArgv('env', 'add', 'PREVIEW_VAR', 'preview', '--yes');
-        const exitCodePromise = env(client);
-        setImmediate(() => client.stdin.emit('data', 'value-via-stdin'));
+          await expect(exitCodePromise).resolves.toBe(0);
 
-        await expect(exitCodePromise).rejects.toThrow('exit');
-        expect(logSpy).toHaveBeenCalled();
-        const payload = JSON.parse(
-          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
-        );
-        expect(payload).toMatchObject({
-          status: 'action_required',
-          reason: 'git_branch_required',
-          message: expect.stringMatching(/Git branch|third argument|Preview/),
-          next: expect.any(Array),
-        });
-        expect(payload.next.length).toBeGreaterThanOrEqual(1);
-        expect(
-          payload.next.some(
-            (n: { command: string }) =>
-              n.command.includes('preview') &&
-              (n.command.includes('<gitbranch>') ||
-                n.command.includes('--value'))
-          )
-        ).toBe(true);
-
-        exitSpy.mockRestore();
-        logSpy.mockRestore();
+          const savedEnv = envs.find(currentEnv => currentEnv.key === envName);
+          expect(savedEnv?.value).toBe('value-via-stdin');
+          expect(savedEnv?.target).toEqual(['preview']);
+          expect(savedEnv?.gitBranch).toBeUndefined();
+        } finally {
+          const savedEnvIndex = envs.findIndex(
+            currentEnv => currentEnv.key === envName
+          );
+          if (savedEnvIndex !== -1) {
+            envs.splice(savedEnvIndex, 1);
+          }
+        }
       });
 
       it('does not output git_branch_required when branch is passed as third argument for preview', async () => {
