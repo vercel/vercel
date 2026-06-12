@@ -814,7 +814,11 @@ export default async function add(client: Client, argv: string[]) {
   if (
     envGitBranch === undefined &&
     envTargets.length === 1 &&
-    envTargets[0] === 'preview'
+    envTargets[0] === 'preview' &&
+    // When nonInteractive and exactly two positionals (name, preview), treat
+    // as "all Preview branches" — same convention as the missing-requirements
+    // check above, whose suggested next command would otherwise fail here again
+    !(client.nonInteractive && args.length === 2)
   ) {
     if (client.nonInteractive) {
       outputActionRequired(
