@@ -31,6 +31,21 @@ export class LinkTelemetryClient
     }
   }
 
+  trackCliFlagSkipEnv(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('skip-env');
+    }
+  }
+
+  trackCliOptionProject(project: string | undefined) {
+    if (project) {
+      this.trackCliOption({
+        option: 'project',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionTeam(value: string | undefined) {
     if (value) {
       this.trackCliOption({
