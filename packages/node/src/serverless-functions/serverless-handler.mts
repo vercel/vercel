@@ -1,5 +1,5 @@
 import { addHelpers } from './helpers.js';
-import { createServer } from 'http';
+import { createServer, ServerResponse } from 'http';
 import {
   WAIT_UNTIL_TIMEOUT,
   serializeBody,
@@ -11,12 +11,14 @@ import { isAbsolute } from 'path';
 import { pathToFileURL } from 'url';
 import { buildToHeaders } from '@edge-runtime/node-utils';
 import { promisify } from 'util';
-import type { ServerResponse, IncomingMessage } from 'http';
+import type { IncomingMessage } from 'http';
 import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
 import type { Readable } from 'stream';
 import { Awaiter } from '../awaiter.js';
 import http, { Server } from 'http';
+import type { Socket } from 'net';
+import { AsyncLocalStorage } from 'async_hooks';
 
 // @ts-expect-error
 const toHeaders = buildToHeaders({ Headers });
@@ -46,7 +48,7 @@ export const HTTP_METHODS = [
 
 async function createServerlessServer(
   userCode: ServerlessFunctionSignature | Server
-): Promise<{ url: URL; onExit: () => Promise<void> }> {
+): Promise<{ server: Server; url: URL; onExit: () => Promise<void> }> {
   let server: Server;
   if (typeof userCode === 'function') {
     server = createServer(userCode);
@@ -54,10 +56,20 @@ async function createServerlessServer(
     server = userCode;
   }
   return {
+    server,
     url: await listen(server, { host: '127.0.0.1', port: 0 }),
     onExit: promisify(server.close.bind(server)),
   };
 }
+
+type RequestContext = {
+  waitUntil: (promise: Promise<unknown>) => void;
+  upgradeWebSocket?: () => {
+    req: IncomingMessage;
+    socket: Socket;
+    head: Buffer;
+  };
+};
 
 async function compileUserCode(
   entrypointPath: string,
@@ -170,17 +182,24 @@ export async function createServerlessEventHandler(
   maxDuration = WAIT_UNTIL_TIMEOUT
 ): Promise<{
   handler: (request: IncomingMessage) => Promise<VercelProxyResponse>;
+  upgradeHandler: (
+    request: IncomingMessage,
+    socket: Socket,
+    head: Buffer
+  ) => Promise<void>;
   onExit: () => Promise<void>;
 }> {
   const awaiter = new Awaiter();
+  const requestContext = new AsyncLocalStorage<RequestContext>();
+  const defaultContext: RequestContext = {
+    waitUntil: awaiter.waitUntil.bind(awaiter),
+  };
 
   Object.defineProperty(globalThis, Symbol.for('@vercel/request-context'), {
     enumerable: false,
     configurable: true,
     value: {
-      get: () => ({
-        waitUntil: awaiter.waitUntil.bind(awaiter),
-      }),
+      get: () => requestContext.getStore() ?? defaultContext,
     },
   });
 
@@ -218,6 +237,47 @@ export async function createServerlessEventHandler(
     };
   };
 
+  const upgradeHandler = async function (
+    request: IncomingMessage,
+    socket: Socket,
+    head: Buffer
+  ): Promise<void> {
+    if (server.server.listenerCount('upgrade') > 0) {
+      requestContext.run(defaultContext, () => {
+        server.server.emit('upgrade', request, socket, head);
+      });
+      return;
+    }
+
+    const response = new ServerResponse(request);
+    if (typeof response.assignSocket === 'function') {
+      response.assignSocket(socket);
+    }
+
+    let consumed = false;
+    const context: RequestContext = {
+      ...defaultContext,
+      upgradeWebSocket: () => {
+        if (consumed) {
+          throw new Error(
+            'ctx.upgradeWebSocket() can only be called once per request'
+          );
+        }
+        consumed = true;
+
+        if (typeof response.detachSocket === 'function') {
+          response.detachSocket(socket);
+        }
+
+        return { req: request, socket, head };
+      },
+    };
+
+    await requestContext.run(context, async () => {
+      server.server.emit('request', request, response);
+    });
+  };
+
   const onExit = () =>
     new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -232,6 +292,7 @@ export async function createServerlessEventHandler(
 
   return {
     handler,
+    upgradeHandler,
     onExit,
   };
 }
