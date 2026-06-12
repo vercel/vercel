@@ -43,8 +43,14 @@ export function getDeploymentTargetUrl(
   }
 
   // Preview deployments: surface the stable branch ("preview") alias rather
-  // than the commit-specific deployment URL.
-  const branchDomain = automaticAliases.find(alias => alias.includes('-git-'));
+  // than the commit-specific deployment URL. Vercel inserts a `-git-<branch>-`
+  // segment to build it: `<project>-git-<branch>-<scope>.vercel.app`. A project
+  // whose own name contains `-git-` could make a non-branch alias match too, so
+  // when several candidates match we prefer the longest, i.e. the one carrying
+  // the extra inserted branch segment.
+  const branchDomain = automaticAliases
+    .filter(alias => alias.includes('-git-'))
+    .sort((a, b) => b.length - a.length)[0];
   return branchDomain ? { label: 'Preview', url: branchDomain } : undefined;
 }
 

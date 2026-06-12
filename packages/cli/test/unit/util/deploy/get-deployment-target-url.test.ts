@@ -64,6 +64,24 @@ describe('getDeploymentTargetUrl', () => {
     });
   });
 
+  it('selects the branch alias even when the project name contains "-git-"', () => {
+    // For a project literally named `my-git-app`, multiple aliases contain
+    // `-git-`; the branch alias is the one with the extra inserted segment.
+    expect(
+      getDeploymentTargetUrl({
+        target: null,
+        alias: [],
+        automaticAliases: [
+          'my-git-app-acme.vercel.app',
+          'my-git-app-git-main-acme.vercel.app',
+        ],
+      })
+    ).toEqual({
+      label: 'Preview',
+      url: 'my-git-app-git-main-acme.vercel.app',
+    });
+  });
+
   it('returns undefined for preview deployments with no branch alias', () => {
     expect(
       getDeploymentTargetUrl({
