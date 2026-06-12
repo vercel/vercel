@@ -811,10 +811,15 @@ export default async function add(client: Client, argv: string[]) {
     return 1;
   }
 
+  // When nonInteractive and exactly two positionals (name, preview), treat as
+  // "all Preview branches" — same convention as the validation block above.
+  // Without this escape the suggested "omit for all Preview branches" retry
+  // command loops back into the same action_required error.
   if (
     envGitBranch === undefined &&
     envTargets.length === 1 &&
-    envTargets[0] === 'preview'
+    envTargets[0] === 'preview' &&
+    !(client.nonInteractive && args.length === 2)
   ) {
     if (client.nonInteractive) {
       outputActionRequired(
