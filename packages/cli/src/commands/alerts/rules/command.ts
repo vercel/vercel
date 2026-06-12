@@ -150,7 +150,7 @@ export const rulesAggregateCommand = {
   name: 'rules',
   aliases: [],
   description:
-    'Create, list, update, or delete alert notification rules (dashboard parity).',
+    'Create, list, update, or delete alert rules: the configured triggers (alert types, sensitivity, project scope) and their notification routing (dashboard Settings > Alerts parity).',
   arguments: [],
   subcommands: [
     rulesLsSubcommand,
