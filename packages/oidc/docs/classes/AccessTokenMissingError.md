@@ -4,7 +4,7 @@
 
 # Class: AccessTokenMissingError
 
-Defined in: [packages/oidc/src/auth-errors.ts:5](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/oidc/src/auth-errors.ts#L5)
+Defined in: [packages/oidc/src/auth-errors.ts:5](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L5)
 
 Error thrown when no authentication configuration is found.
 This typically means the user needs to log in.
@@ -19,7 +19,7 @@ This typically means the user needs to log in.
 
 > **new AccessTokenMissingError**(): `AccessTokenMissingError`
 
-Defined in: [packages/oidc/src/auth-errors.ts:7](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/oidc/src/auth-errors.ts#L7)
+Defined in: [packages/oidc/src/auth-errors.ts:7](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L7)
 
 #### Returns
 
@@ -47,7 +47,7 @@ Defined in: node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/lib/lib.
 
 > **name**: `string` = `'AccessTokenMissingError'`
 
-Defined in: [packages/oidc/src/auth-errors.ts:6](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/oidc/src/auth-errors.ts#L6)
+Defined in: [packages/oidc/src/auth-errors.ts:6](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L6)
 
 #### Overrides
 

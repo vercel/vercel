@@ -984,17 +984,10 @@ export interface ExperimentalServiceConfig {
   framework?: string;
   /** Builder to use, e.g. @vercel/node, @vercel/python */
   builder?: string;
-  /** Specific service runtime to use, e.g. node, python, or container. */
+  /** Specific lambda runtime to use, e.g. nodejs24.x, python3.14, container */
   runtime?: string;
   /** Optional command override for container image services. */
   command?: string | string[];
-  /**
-   * Path to a Dockerfile/Containerfile, relative to the service root, used to
-   * build and push a container image at build time. Only valid for the
-   * `container` runtime. When omitted, a prebuilt image reference is taken from
-   * the service entrypoint instead.
-   */
-  dockerfile?: string;
 
   workspace?: string;
   buildCommand?: string;

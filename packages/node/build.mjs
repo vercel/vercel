@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { existsSync, readFileSync, copyFileSync } from 'node:fs';
+import { readFileSync, copyFileSync } from 'node:fs';
 import { esbuild } from '../../utils/build.mjs';
 
 const pkgPath = join(process.cwd(), 'package.json');
@@ -26,14 +26,11 @@ const distTypesFile = new URL('dist/index.d.ts', import.meta.url);
 copyFileSync(srcTypesFile, distTypesFile);
 
 if (process.env.CI) {
-  const fixtureTypesDir = new URL(
-    'test/fixtures/15-helpers/ts/',
-    import.meta.url
+  // Copy type file for ts test
+  copyFileSync(
+    distTypesFile,
+    new URL('test/fixtures/15-helpers/ts/types.d.ts', import.meta.url)
   );
-  if (existsSync(fixtureTypesDir)) {
-    // Copy type file for ts test
-    copyFileSync(distTypesFile, new URL('types.d.ts', fixtureTypesDir));
-  }
 }
 
 copyFileSync(

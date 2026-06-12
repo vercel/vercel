@@ -6,7 +6,7 @@
 
 > **VercelOidcPayload** = `JWTPayload` & `object`
 
-Defined in: [packages/oidc/src/verify-vercel-oidc-token.ts:16](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/oidc/src/verify-vercel-oidc-token.ts#L16)
+Defined in: [packages/oidc/src/verify-vercel-oidc-token.ts:16](https://github.com/vercel/vercel/blob/main/packages/oidc/src/verify-vercel-oidc-token.ts#L16)
 
 ## Type Declaration
 

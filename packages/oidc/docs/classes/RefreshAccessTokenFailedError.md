@@ -4,7 +4,7 @@
 
 # Class: RefreshAccessTokenFailedError
 
-Defined in: [packages/oidc/src/auth-errors.ts:18](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/oidc/src/auth-errors.ts#L18)
+Defined in: [packages/oidc/src/auth-errors.ts:18](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L18)
 
 Error thrown when attempting to refresh the authentication token fails.
 This includes cases where no refresh token is available.
@@ -19,7 +19,7 @@ This includes cases where no refresh token is available.
 
 > **new RefreshAccessTokenFailedError**(`cause?`): `RefreshAccessTokenFailedError`
 
-Defined in: [packages/oidc/src/auth-errors.ts:20](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/oidc/src/auth-errors.ts#L20)
+Defined in: [packages/oidc/src/auth-errors.ts:20](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L20)
 
 #### Parameters
 
@@ -53,7 +53,7 @@ Defined in: node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/lib/lib.
 
 > **name**: `string` = `'RefreshAccessTokenFailedError'`
 
-Defined in: [packages/oidc/src/auth-errors.ts:19](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/oidc/src/auth-errors.ts#L19)
+Defined in: [packages/oidc/src/auth-errors.ts:19](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L19)
 
 #### Overrides
 

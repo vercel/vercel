@@ -6,7 +6,7 @@
 
 > **createOpenSearch**(`opts?`): `Client`
 
-Defined in: [packages/aws/src/opensearch.ts:49](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/aws/src/opensearch.ts#L49)
+Defined in: [packages/aws/src/opensearch.ts:49](https://github.com/vercel/vercel/blob/main/packages/aws/src/opensearch.ts#L49)
 
 Creates an OpenSearch `Client` pre-configured for a Vercel
 Marketplace OpenSearch Serverless resource.

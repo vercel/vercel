@@ -161,10 +161,7 @@ describe('@vercel/container', () => {
 
     const result = expectTypicalBuildResult(
       await build({
-        ...createBuildOptions({
-          runtime: 'container',
-          dockerfile: 'Dockerfile',
-        }),
+        ...createBuildOptions({ runtime: 'container' }),
         service: { name: 'api', type: 'web' },
       })
     );
@@ -217,7 +214,7 @@ describe('@vercel/container', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     await build({
-      ...createBuildOptions({ runtime: 'container', dockerfile: 'Dockerfile' }),
+      ...createBuildOptions({ runtime: 'container' }),
       service: { name: 'api', type: 'web' },
     });
 
@@ -252,10 +249,7 @@ describe('@vercel/container', () => {
 
     const result = expectTypicalBuildResult(
       await build({
-        ...createBuildOptions({
-          runtime: 'container',
-          dockerfile: 'Dockerfile',
-        }),
+        ...createBuildOptions({ runtime: 'container' }),
         service: { name: 'api', type: 'web' },
       })
     );
@@ -290,10 +284,7 @@ describe('@vercel/container', () => {
 
     const result = expectTypicalBuildResult(
       await build({
-        ...createBuildOptions({
-          runtime: 'container',
-          dockerfile: 'Dockerfile',
-        }),
+        ...createBuildOptions({ runtime: 'container' }),
         service: { name: 'api', type: 'web' },
       })
     );
@@ -319,10 +310,7 @@ describe('@vercel/container', () => {
 
     await expect(
       build({
-        ...createBuildOptions({
-          runtime: 'container',
-          dockerfile: 'Dockerfile',
-        }),
+        ...createBuildOptions({ runtime: 'container' }),
         service: { name: 'api', type: 'web' },
       })
     ).rejects.toThrow(/VERCEL_OIDC_TOKEN/);

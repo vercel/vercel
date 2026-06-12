@@ -6,7 +6,7 @@
 
 > **attachDatabasePool**(`dbPool`): `void`
 
-Defined in: [packages/functions/src/db-connections/index.ts:225](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/functions/src/db-connections/index.ts#L225)
+Defined in: [packages/functions/src/db-connections/index.ts:225](https://github.com/vercel/vercel/blob/main/packages/functions/src/db-connections/index.ts#L225)
 
 **`Experimental`**
 

@@ -4,7 +4,7 @@
 
 # Interface: AwsCredentialsProviderInit
 
-Defined in: [packages/functions/src/oidc/aws-credentials-provider.ts:20](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/functions/src/oidc/aws-credentials-provider.ts#L20)
+Defined in: [packages/functions/src/oidc/aws-credentials-provider.ts:20](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/aws-credentials-provider.ts#L20)
 
 The init object for the `awsCredentialsProvider` function.
 

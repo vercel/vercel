@@ -12,7 +12,6 @@ const ignoredPackages = [];
 
 async function main() {
   console.log(`Building static frontend ${repoRoot}...`);
-  const sha = await getSha();
 
   await fs.rm(pubDir, { recursive: true, force: true });
   await fs.mkdir(pubDir);
@@ -84,11 +83,10 @@ async function main() {
 
     const packageJson = JSON.parse(packageJsonRaw);
     const files = await fs.readdir(fullDir);
-    const expectedTarballName = `${packageJson.name.replace('@', '').replace('/', '-')}-${packageJson.version}-${sha}.tgz`;
-    const tarballName = files.find(f => f === expectedTarballName);
+    const tarballName = files.find(f => /^vercel-.+\.tgz$/.test(f));
     if (!tarballName) {
       throw new Error(
-        `Expected ${expectedTarballName} in ${fullDir} but found ${JSON.stringify(
+        `Expected vercel-*.tgz in ${fullDir} but found ${JSON.stringify(
           files,
           null,
           2
@@ -150,25 +148,7 @@ async function main() {
   console.log('Completed building static frontend.');
 }
 
-async function getSha(): Promise<string> {
-  try {
-    const { execFile } = await import('child_process');
-    const { promisify } = await import('util');
-    const execFileAsync = promisify(execFile);
-    const { stdout } = await execFileAsync(
-      'git',
-      ['rev-parse', '--short', 'HEAD'],
-      {
-        cwd: repoRoot,
-      }
-    );
-    return stdout.trim();
-  } catch {
-    return 'local';
-  }
-}
-
 main().catch(err => {
-  console.error('error running build:', err);
+  console.log('error running build:', err);
   process.exit(1);
 });

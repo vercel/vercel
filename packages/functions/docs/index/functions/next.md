@@ -6,7 +6,7 @@
 
 > **next**(`init?`): [`Response`](https://developer.mozilla.org/docs/Web/API/Response)
 
-Defined in: [packages/functions/src/middleware.ts:145](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/functions/src/middleware.ts#L145)
+Defined in: [packages/functions/src/middleware.ts:145](https://github.com/vercel/vercel/blob/main/packages/functions/src/middleware.ts#L145)
 
 Returns a Response that instructs the system to continue processing the request.
 

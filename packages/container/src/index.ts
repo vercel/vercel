@@ -13,7 +13,7 @@ export const version = 2;
  */
 const VCR_REGISTRY = process.env.VERCEL_VCR_REGISTRY || 'vcr.vercel.com';
 
-/** Images must target linux/amd64 — that's the only arch Hive runs today. */
+/** Images must target linux/amd64 — the only architecture currently supported. */
 const TARGET_PLATFORM = 'linux/amd64';
 
 const DIGEST_RE = /sha256:[a-f0-9]{64}/;
@@ -299,14 +299,14 @@ function run(
 
 /**
  * Block until the pushed image is usable. The authoritative readiness signal is
- * api-vcr reporting `image.vhs`/`ready` once OCI->VHS conversion completes
- * (~30-60s after push). When that endpoint is available, point
+ * the registry reporting the image as ready once its server-side processing
+ * completes (~30-60s after push). When that endpoint is available, point
  * `VERCEL_VCR_READY_URL` at it (it's polled with the OIDC token as a bearer and
- * treated ready when the response has `ready: true` or a truthy `vhs`).
+ * treated ready when the response reports the image as ready).
  *
  * Without a configured endpoint we fall back to confirming the pushed digest
- * resolves in the registry. This is a temporary gate — readiness will likely
- * move into api-builds once the flow is wired end to end.
+ * resolves in the registry. This is a temporary gate that may move server-side
+ * once the flow is wired end to end.
  */
 async function waitForImageReady(imageRef: string, span?: Span): Promise<void> {
   if (process.env.VERCEL_VCR_SKIP_READY_CHECK === '1') {
@@ -435,7 +435,7 @@ function extractField(text: string, label: string): string | undefined {
 }
 
 /**
- * Log the Docker toolchain in use so build-cell failures can be correlated with
+ * Log the Docker toolchain in use so build failures can be correlated with
  * a specific client/daemon. The container registry push is sensitive to which
  * pusher runs (classic `dockerd` vs BuildKit/containerd), the storage driver,
  * and the image store, so we surface all of them. Best-effort: never fail the
@@ -489,11 +489,11 @@ async function logDockerDiagnostics(span?: Span): Promise<void> {
       // buildx not installed / no active builder — fine.
     }
 
-    // Egress proxy is the leading suspect for the build-cell-only push failures:
-    // a TLS-terminating forward proxy can rewrite/drop the layer-upload
-    // `Content-Type`, which the registry then rejects. Surface any proxy config
-    // (process env + what dockerd itself was started with) so a real build log
-    // shows whether the push traffic is going through one.
+    // Egress proxy is a leading suspect for push failures seen only in the
+    // build environment: a TLS-terminating forward proxy can rewrite/drop the
+    // layer-upload `Content-Type`, which the registry then rejects. Surface any
+    // proxy config (process env + what dockerd itself was started with) so a
+    // real build log shows whether the push traffic is going through one.
     const proxyEnv = [
       'HTTP_PROXY',
       'http_proxy',
@@ -574,11 +574,11 @@ async function hasBinary(name: string): Promise<boolean> {
 }
 
 /**
- * Whether we're running inside a Vercel build container (an ephemeral Hive
- * cell) rather than a local `vercel build`. `VERCEL_BUILD_IMAGE` is set only on
- * Vercel's build image — `VERCEL`/`NOW_BUILDER` are set for local builds too, so
- * they can't be used here. This drives environment-appropriate error messages
- * and daemon teardown behavior.
+ * Whether we're running inside a Vercel build container rather than a local
+ * `vercel build`. `VERCEL_BUILD_IMAGE` is set only on Vercel's build image —
+ * `VERCEL`/`NOW_BUILDER` are set for local builds too, so they can't be used
+ * here. This drives environment-appropriate error messages and daemon teardown
+ * behavior.
  */
 function isBuildContainer(): boolean {
   return Boolean(readString(process.env.VERCEL_BUILD_IMAGE));
@@ -588,9 +588,10 @@ function isBuildContainer(): boolean {
  * Choose the dockerd storage driver. `VERCEL_VCR_DOCKER_STORAGE_DRIVER`
  * overrides everything. Otherwise prefer `fuse-overlayfs` when it's actually
  * usable (binary on PATH + `/dev/fuse` present) and fall back to `vfs`, which
- * works on any filesystem — including the overlay rootfs of a build cell, where
- * docker's default `overlay2` cannot stack. `vfs` is slower and copies layers,
- * but it's the dependency-free baseline; fuse-overlayfs is the optimization.
+ * works on any filesystem — including the overlay rootfs of the build
+ * container, where docker's default `overlay2` cannot stack. `vfs` is slower
+ * and copies layers, but it's the dependency-free baseline; fuse-overlayfs is
+ * the optimization.
  */
 async function selectStorageDriver(): Promise<string> {
   const override = readString(process.env.VERCEL_VCR_DOCKER_STORAGE_DRIVER);
@@ -614,9 +615,10 @@ function tail(text: string, n = 12): string {
 }
 
 /**
- * Start a `dockerd` we own (build cells have no daemon running). Polls until the
- * socket answers, then returns a handle so we can stop it afterwards. Throws
- * with the tail of the daemon log if it exits early or never becomes ready.
+ * Start a `dockerd` we own (the build container has no daemon running). Polls
+ * until the socket answers, then returns a handle so we can stop it afterwards.
+ * Throws with the tail of the daemon log if it exits early or never becomes
+ * ready.
  */
 async function startDockerDaemon(span?: Span): Promise<ManagedDaemon> {
   const driver = await selectStorageDriver();
@@ -624,9 +626,10 @@ async function startDockerDaemon(span?: Span): Promise<ManagedDaemon> {
   // container image is responsible for making iptables usable (install iptables
   // and select the legacy backend: `alternatives --set iptables
   // /usr/sbin/iptables-legacy`), since the default nf_tables backend can't
-  // manage netfilter rules in a restricted cell. As an escape hatch for cells
-  // where iptables can't work at all (and images that don't need RUN-time
-  // networking), pass `--iptables=false` via VERCEL_VCR_DOCKERD_ARGS.
+  // manage netfilter rules in a restricted build environment. As an escape
+  // hatch for environments where iptables can't work at all (and images that
+  // don't need RUN-time networking), pass `--iptables=false` via
+  // VERCEL_VCR_DOCKERD_ARGS.
   const args = ['--storage-driver', driver];
   const extra = readString(process.env.VERCEL_VCR_DOCKERD_ARGS);
   if (extra) {
@@ -664,7 +667,7 @@ async function startDockerDaemon(span?: Span): Promise<ManagedDaemon> {
       throw new Error(
         [
           `The Docker daemon exited before becoming ready (${exitInfo}).`,
-          'In a build container this usually means the cell is missing the',
+          'In a build container this usually means the environment is missing the',
           `kernel capabilities dockerd needs, or the "${driver}" storage driver`,
           'is unavailable. Override the storage driver with',
           'VERCEL_VCR_DOCKER_STORAGE_DRIVER, or pass extra daemon flags with',
@@ -685,7 +688,7 @@ async function startDockerDaemon(span?: Span): Promise<ManagedDaemon> {
           `The Docker daemon did not become ready within ${Math.round(
             timeoutMs / 1000
           )}s.`,
-          'In a build container this usually means the cell is missing the',
+          'In a build container this usually means the environment is missing the',
           `kernel capabilities dockerd needs, or the "${driver}" storage driver`,
           'is unavailable. Override it with VERCEL_VCR_DOCKER_STORAGE_DRIVER.',
           '',
@@ -744,8 +747,8 @@ function detachDaemon(daemon: ManagedDaemon): void {
   child.stdout?.removeAllListeners('data');
   child.stderr?.removeAllListeners('data');
   // Closing the pipes releases their hold on the event loop; unref'ing the
-  // child lets our process exit while the (soon-to-be-destroyed) cell keeps
-  // dockerd running.
+  // child lets our process exit while the (soon-to-be-destroyed) build
+  // container keeps dockerd running.
   child.stdout?.destroy();
   child.stderr?.destroy();
   child.unref();
@@ -754,8 +757,9 @@ function detachDaemon(daemon: ManagedDaemon): void {
 /**
  * Run `fn` with a Docker daemon available. If one is already reachable (e.g. a
  * developer's local Docker Desktop/OrbStack), use it untouched. Otherwise, when
- * a `dockerd` binary is present (build cell), start one we own and stop it in a
- * `finally` so it's always torn down. When neither is true, run `fn` anyway and
+ * a `dockerd` binary is present (the build container), start one we own and
+ * stop it in a `finally` so it's always torn down. When neither is true, run
+ * `fn` anyway and
  * let `ensureDockerReady` surface the actionable "install/start Docker" error.
  */
 async function withManagedDaemon<T>(
@@ -774,9 +778,9 @@ async function withManagedDaemon<T>(
   try {
     return await fn();
   } finally {
-    // Only ever touch a daemon we started ourselves. In the build container the
-    // cell is ephemeral, so we just detach (no graceful shutdown). Locally we
-    // stop it so a `vercel build` never leaves a stray dockerd behind.
+    // Only ever touch a daemon we started ourselves. The build container is
+    // ephemeral, so we just detach (no graceful shutdown). Locally we stop it so
+    // a `vercel build` never leaves a stray dockerd behind.
     if (isBuildContainer()) {
       detachDaemon(daemon);
     } else {
@@ -922,9 +926,9 @@ async function buildAndPushImage(params: {
         s => ensureRepository(repository, token, claims, s)
       );
 
-      // Build/login/push/readiness all need a Docker daemon. In a build cell
-      // there's none running, so start one we own (and tear it down after);
-      // locally we reuse the developer's existing daemon untouched.
+      // Build/login/push/readiness all need a Docker daemon. In the build
+      // container there's none running, so start one we own (and tear it down
+      // after); locally we reuse the developer's existing daemon untouched.
       return withManagedDaemon(buildSpan, async () => {
         await withSpan(
           buildSpan,
@@ -1049,7 +1053,7 @@ async function buildAndPushImage(params: {
               throw err;
             }
 
-            // Prefer the immutable digest so api-builds resolves a stable image.
+            // Prefer the immutable digest so downstream resolves a stable image.
             let resolvedDigest = stdout.match(DIGEST_RE)?.[0];
             if (!resolvedDigest) {
               debug('digest not found in push output — inspecting RepoDigests');
@@ -1078,10 +1082,10 @@ async function buildAndPushImage(params: {
           'image.resolved_ref': resolvedRef,
         });
 
-        // Block until the OCI->VHS conversion has completed so downstream routing
-        // can boot the image immediately.
+        // Block until the registry finishes processing the image so it can be
+        // booted immediately.
         const readyStart = Date.now();
-        step('Waiting for image to be ready (OCI → VHS conversion)');
+        step('Waiting for image to be ready');
         await withSpan(
           buildSpan,
           'container.wait_for_ready',
@@ -1109,14 +1113,11 @@ async function resolveImageHandler(
   const { config, workPath, entrypoint, meta } = options;
 
   const entrypointRef = readString(entrypoint);
-  // A container service builds from a Dockerfile when one is configured, when
-  // the entrypoint points at a Dockerfile, or when a `Dockerfile` exists in the
-  // work dir. Otherwise the entrypoint is a prebuilt image reference.
+  // A container service builds from a Dockerfile when the entrypoint points at
+  // one, or when a `Dockerfile` exists in the work dir. Otherwise the entrypoint
+  // is a prebuilt image reference.
   const dockerfileConfigured =
-    readString(config.dockerfile) ??
-    (entrypointRef && isDockerfileRef(entrypointRef)
-      ? entrypointRef
-      : undefined);
+    entrypointRef && isDockerfileRef(entrypointRef) ? entrypointRef : undefined;
   const dockerfileRel = dockerfileConfigured ?? 'Dockerfile';
   const dockerfilePath = path.join(workPath, dockerfileRel);
   const hasDockerfile =
@@ -1142,7 +1143,7 @@ async function resolveImageHandler(
   if (!hasDockerfile) {
     if (!prebuiltImage) {
       throw new Error(
-        'Container service must specify a prebuilt image (via "image"/entrypoint) or a "dockerfile" to build.'
+        'Container service must specify a prebuilt image (via "image" or entrypoint) or an entrypoint that points at a Dockerfile to build.'
       );
     }
     span?.setAttributes({ 'container.mode': 'prebuilt' });
@@ -1217,9 +1218,9 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
     output: {
       [outputPath]: {
         // Emit a Lambda-typed output with `runtime: 'container'`. The build
-        // container keys off `type === 'Lambda' && runtime === 'container'`
-        // (vercel/api#74661) to collect container image functions, so the
-        // output must use the `Lambda` discriminator rather than a bespoke type.
+        // pipeline keys off `type === 'Lambda' && runtime === 'container'` to
+        // collect container image functions, so the output must use the `Lambda`
+        // discriminator rather than a bespoke type.
         type: 'Lambda',
         files: {},
         handler,

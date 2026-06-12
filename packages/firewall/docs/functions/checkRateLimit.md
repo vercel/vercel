@@ -6,7 +6,7 @@
 
 > **checkRateLimit**(`rateLimitId`, `options?`): [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<\{ `error?`: `"not-found"` \| `"blocked"`; `rateLimited`: `boolean`; \}\>
 
-Defined in: [rate-limit.ts:29](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/firewall/src/rate-limit.ts#L29)
+Defined in: [rate-limit.ts:29](https://github.com/vercel/vercel/blob/main/packages/firewall/src/rate-limit.ts#L29)
 
 Experimental: Check rate-limits defined through the Vercel Firewall.
 

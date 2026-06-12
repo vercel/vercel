@@ -6,7 +6,7 @@
 
 > **getEnv**(`env?`): `object`
 
-Defined in: [packages/functions/src/get-env.ts:6](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/functions/src/get-env.ts#L6)
+Defined in: [packages/functions/src/get-env.ts:6](https://github.com/vercel/vercel/blob/main/packages/functions/src/get-env.ts#L6)
 
 Get System Environment Variables exposed by Vercel.
 

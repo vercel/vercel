@@ -6,18 +6,6 @@ const { getPythonPackages } = require('./get-python-packages.js');
 
 const rootDir = path.join(__dirname, '..');
 const ignoredPackages = ['api', 'examples'];
-
-function getTarballsBaseUrl(): string {
-  const vercelUrl = process.env.VERCEL_URL ?? process.env.VERCEL_BRANCH_URL;
-  if (vercelUrl) {
-    const host = vercelUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    return `https://${host}/tarballs`;
-  }
-
-  throw new Error(
-    'Missing tarball host. Expected VERCEL_URL or VERCEL_BRANCH_URL to be set before running `pnpm pack`.'
-  );
-}
 const pythonWheelPackages = getPythonPackages(rootDir).map(
   (pkg: {
     packageDir: string;
@@ -34,7 +22,6 @@ const pythonWheelPackages = getPythonPackages(rootDir).map(
 
 async function main() {
   const sha = await getSha();
-  const tarballsBaseUrl = getTarballsBaseUrl();
 
   const { stdout: turboStdout } = await execa(
     'turbo',
@@ -60,7 +47,7 @@ async function main() {
         const name = dependency.split('#')[0];
         // pnpm 8 fails to install dependencies with @ in the URL
         const escapedName = name.replace('@', '%40');
-        const tarballUrl = `${tarballsBaseUrl}/${escapedName}.tgz`;
+        const tarballUrl = `https://${process.env.VERCEL_URL}/tarballs/${escapedName}.tgz`;
         if (packageObj.dependencies && name in packageObj.dependencies) {
           packageObj.dependencies[name] = tarballUrl;
         }
@@ -70,13 +57,6 @@ async function main() {
       }
     }
     await fs.writeJson(packageJsonPath, packageObj, { spaces: 2 });
-
-    const existingTarballs = (await fs.readdir(dir)).filter(f =>
-      /^vercel-.+\.tgz$/.test(f)
-    );
-    await Promise.all(
-      existingTarballs.map(tarball => fs.rm(path.join(dir, tarball)))
-    );
 
     await execa('pnpm', ['pack'], {
       cwd: dir,
