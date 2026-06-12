@@ -78,7 +78,13 @@ export const nft = async (
       }
       const outputPath = file;
 
-      if (args.localBuildFiles.has(join(args.repoRootPath, outputPath))) {
+      // Source files that Rolldown already bundled should not be copied into
+      // the lambda, but node_modules entries can be added as trace roots to
+      // seed NFT for runtime CJS shims and must remain in the output.
+      if (
+        args.localBuildFiles.has(join(args.repoRootPath, outputPath)) &&
+        !outputPath.includes('node_modules')
+      ) {
         continue;
       }
 

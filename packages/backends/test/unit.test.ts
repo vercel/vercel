@@ -17,6 +17,7 @@ import {
   rm,
   mkdir,
   realpath,
+  symlink,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import type { IncomingMessage } from 'node:http';
@@ -233,6 +234,91 @@ it.skipIf(process.platform === 'win32')(
         repoRootPath: workDir,
       })
     ).resolves.toBeDefined();
+  },
+  30000
+);
+
+it.skipIf(process.platform === 'win32')(
+  'traces CJS packages imported through pnpm workspace symlinks',
+  async () => {
+    const root = await realpath(
+      await mkdtemp(join(tmpdir(), 'pnpm-cjs-shim-'))
+    );
+    const workPath = join(root, 'api');
+    const packageStorePath = join(
+      root,
+      'node_modules/.pnpm/@nestjs+common@1.0.0/node_modules/@nestjs/common'
+    );
+
+    await mkdir(packageStorePath, { recursive: true });
+    await mkdir(join(workPath, 'node_modules/@nestjs'), { recursive: true });
+    await writeFile(
+      join(workPath, 'package.json'),
+      JSON.stringify({
+        name: 'api',
+        type: 'module',
+        dependencies: { '@nestjs/common': '1.0.0' },
+      })
+    );
+    await writeFile(
+      join(workPath, 'server.ts'),
+      [
+        '// @ts-ignore - fixture package has no type declarations',
+        "import { marker } from '@nestjs/common';",
+        '',
+        'export default function handler(_req, res) {',
+        '  res.end(marker);',
+        '}',
+      ].join('\n')
+    );
+    await writeFile(
+      join(packageStorePath, 'package.json'),
+      JSON.stringify({
+        name: '@nestjs/common',
+        version: '1.0.0',
+        main: 'index.js',
+      })
+    );
+    await writeFile(
+      join(packageStorePath, 'index.js'),
+      "module.exports = { marker: 'pnpm-cjs-ok' };\n"
+    );
+    await symlink(
+      '../../../node_modules/.pnpm/@nestjs+common@1.0.0/node_modules/@nestjs/common',
+      join(workPath, 'node_modules/@nestjs/common')
+    );
+
+    try {
+      const result = (await build({
+        files: {},
+        workPath,
+        config: {
+          ...defaultConfig,
+          projectSettings: {
+            ...defaultConfig.projectSettings,
+            installCommand: 'true',
+            buildCommand: 'echo build',
+          },
+        },
+        meta,
+        entrypoint: 'server.ts',
+        repoRootPath: root,
+      })) as BuildResultV2Typical;
+
+      const lambda = result.output.index as unknown as NodejsLambda;
+      expect(Object.keys(lambda.files ?? {})).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining(
+            'node_modules/.pnpm/@nestjs+common@1.0.0/node_modules/@nestjs/common/index.js'
+          ),
+        ])
+      );
+      await expect(
+        extractAndExecuteLambda(lambda, root)
+      ).resolves.toBeUndefined();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   },
   30000
 );
