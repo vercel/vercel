@@ -1,5 +1,11 @@
 # @vercel/connect
 
+## 0.2.4
+
+### Patch Changes
+
+- 5aa09b7: Update the Better Auth and Auth.js provider default scopes to request `openid`, `profile`, and `email`.
+
 ## 0.2.3
 
 ### Patch Changes
