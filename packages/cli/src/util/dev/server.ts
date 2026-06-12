@@ -115,6 +115,7 @@ const frontendRuntimeSet = new Set(
 
 const DEV_SERVER_PORT_BIND_TIMEOUT = ms('5m');
 const DEV_QUEUES_DEFAULT_VISIBILITY_TIMEOUT_SECONDS = 60;
+const NEXT_DEV_WEBSOCKET_SHIM = join(__dirname, 'next-dev-websocket-shim.cjs');
 
 interface FSEvent {
   type: string;
@@ -2812,6 +2813,16 @@ export default class DevServer {
       .replace(/\$PORT/g, `${port}`)
       .replace(/%PORT%/g, `${port}`);
 
+    if (shouldInjectNextDevWebSocketShim(command, this.projectSettings)) {
+      env.NODE_OPTIONS = prependNodeRequireOption(
+        env.NODE_OPTIONS,
+        NEXT_DEV_WEBSOCKET_SHIM
+      );
+      output.debug(
+        `Injecting Next.js dev WebSocket shim: ${NEXT_DEV_WEBSOCKET_SHIM}`
+      );
+    }
+
     output.debug(
       `Starting dev command with parameters: ${JSON.stringify({
         cwd,
@@ -2868,6 +2879,24 @@ export default class DevServer {
     ]);
     this.devProcessOrigin = `http://${devProcessHost}:${port}`;
   }
+}
+
+function shouldInjectNextDevWebSocketShim(
+  command: string,
+  projectSettings?: ProjectSettings
+): boolean {
+  return (
+    projectSettings?.framework === 'nextjs' ||
+    /(?:^|\s)(?:next|next\.js)\s+dev(?:\s|$)/.test(command)
+  );
+}
+
+function prependNodeRequireOption(
+  nodeOptions: string | undefined,
+  requirePath: string
+): string {
+  const requireOption = `--require ${JSON.stringify(requirePath)}`;
+  return nodeOptions ? `${requireOption} ${nodeOptions}` : requireOption;
 }
 
 function isServiceDestination(
