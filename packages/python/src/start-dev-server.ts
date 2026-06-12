@@ -373,7 +373,19 @@ async function doInstallInjectedDevPackage(
     ? { cmd: uvPath, prefix: ['pip', 'install'] }
     : { cmd: pythonBin, prefix: ['-m', 'pip', 'install'] };
 
-  const spawnArgs = [...pip.prefix, '--target', targetDir, dep];
+  // Override exclude-newer so a project-level date constraint doesn't
+  // block installation of a recently-published injected package.
+  const excludeOverride = uvPath
+    ? ['--exclude-newer-package', `${pkg.name}=false`]
+    : [];
+
+  const spawnArgs = [
+    ...pip.prefix,
+    '--target',
+    targetDir,
+    ...excludeOverride,
+    dep,
+  ];
 
   await new Promise<void>((resolve, reject) => {
     const child = spawn(pip.cmd, spawnArgs, {
