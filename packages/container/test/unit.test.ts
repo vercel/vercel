@@ -56,11 +56,6 @@ function fakeChild(stdout = '') {
 
 const VCR_ENV_KEYS = [
   'VERCEL_OIDC_TOKEN',
-  'VERCEL_TOKEN',
-  'VERCEL_VCR_TOKEN',
-  'VERCEL_VCR_USERNAME',
-  'VERCEL_VCR_REPOSITORY',
-  'VERCEL_VCR_PROJECT_ID',
   'VERCEL_API_URL',
   'VERCEL_VCR_READY_URL',
   'VERCEL_VCR_READY_INTERVAL_MS',
@@ -323,9 +318,13 @@ describe('@vercel/container', () => {
     spawnMock.mockImplementation(() => fakeChild(''));
 
     await expect(
-      build(
-        createBuildOptions({ runtime: 'container', dockerfile: 'Dockerfile' })
-      )
+      build({
+        ...createBuildOptions({
+          runtime: 'container',
+          dockerfile: 'Dockerfile',
+        }),
+        service: { name: 'api', type: 'web' },
+      })
     ).rejects.toThrow(/VERCEL_OIDC_TOKEN/);
   });
 });

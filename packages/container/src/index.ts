@@ -428,6 +428,129 @@ async function ensureDockerReady(span?: Span): Promise<void> {
   }
 }
 
+/** Pull a `Key: Value` field out of `docker info` / `docker version` text. */
+function extractField(text: string, label: string): string | undefined {
+  const match = text.match(new RegExp(`^\\s*${label}:\\s*(.+)$`, 'm'));
+  return match?.[1]?.trim();
+}
+
+/**
+ * Log the Docker toolchain in use so build-cell failures can be correlated with
+ * a specific client/daemon. The container registry push is sensitive to which
+ * pusher runs (classic `dockerd` vs BuildKit/containerd), the storage driver,
+ * and the image store, so we surface all of them. Best-effort: never fail the
+ * build just because diagnostics couldn't be gathered.
+ */
+async function logDockerDiagnostics(span?: Span): Promise<void> {
+  try {
+    const [version, dockerInfo] = await Promise.all([
+      run('docker', ['version'], { quiet: true })
+        .then(r => r.stdout)
+        .catch(() => ''),
+      run('docker', ['info'], { quiet: true })
+        .then(r => r.stdout)
+        .catch(() => ''),
+    ]);
+
+    // `docker version` prints two `Version:` lines (Client then Server); the
+    // section headers let us attribute them correctly.
+    const clientVersion = extractField(
+      version.split(/^Server:/m)[0] ?? version,
+      'Version'
+    );
+    const serverBlock = version.split(/^Server:/m)[1] ?? '';
+    const serverVersion =
+      extractField(serverBlock, 'Version') ??
+      extractField(dockerInfo, 'Server Version');
+    const apiVersion = extractField(
+      version.split(/^Server:/m)[0] ?? version,
+      'API version'
+    );
+    const osArch = extractField(serverBlock, 'OS/Arch');
+
+    const storageDriver = extractField(dockerInfo, 'Storage Driver');
+    // containerd image store (the containerd snapshotter) changes the push code
+    // path from the classic distribution pusher to containerd's pusher.
+    const usingContainerdStore = /driver-type io\.containerd\./i.test(
+      dockerInfo
+    );
+
+    let buildxDriver: string | undefined;
+    let buildxVersion: string | undefined;
+    try {
+      buildxVersion = (
+        await run('docker', ['buildx', 'version'], { quiet: true })
+      ).stdout.trim();
+      const inspect = (
+        await run('docker', ['buildx', 'inspect'], { quiet: true })
+      ).stdout;
+      buildxDriver = extractField(inspect, 'Driver');
+    } catch {
+      // buildx not installed / no active builder — fine.
+    }
+
+    // Egress proxy is the leading suspect for the build-cell-only push failures:
+    // a TLS-terminating forward proxy can rewrite/drop the layer-upload
+    // `Content-Type`, which the registry then rejects. Surface any proxy config
+    // (process env + what dockerd itself was started with) so a real build log
+    // shows whether the push traffic is going through one.
+    const proxyEnv = [
+      'HTTP_PROXY',
+      'http_proxy',
+      'HTTPS_PROXY',
+      'https_proxy',
+      'NO_PROXY',
+      'no_proxy',
+      'ALL_PROXY',
+      'all_proxy',
+    ]
+      .map(name => {
+        const value = readString(process.env[name]);
+        return value ? `${name}=${value}` : undefined;
+      })
+      .filter((entry): entry is string => Boolean(entry));
+    const dockerHttpProxy = extractField(dockerInfo, 'HTTP Proxy');
+    const dockerHttpsProxy = extractField(dockerInfo, 'HTTPS Proxy');
+    const dockerNoProxy = extractField(dockerInfo, 'No Proxy');
+
+    info(
+      `docker: client=${clientVersion ?? '?'} server=${serverVersion ?? '?'} ` +
+        `storage-driver=${storageDriver ?? '?'} ` +
+        `containerd-store=${usingContainerdStore} ` +
+        `buildx-driver=${buildxDriver ?? 'n/a'}`
+    );
+    info(
+      `egress proxy: env=[${proxyEnv.join(', ') || 'none'}] ` +
+        `daemon=[http=${dockerHttpProxy ?? 'none'}, ` +
+        `https=${dockerHttpsProxy ?? 'none'}, no=${dockerNoProxy ?? 'none'}]`
+    );
+    debug(`docker API version: ${apiVersion ?? '?'} (server ${osArch ?? '?'})`);
+    debug(`docker buildx: ${buildxVersion ?? 'n/a'}`);
+    if (version) {
+      debug(`--- docker version ---\n${version.trim()}`);
+    }
+    if (dockerInfo) {
+      debug(`--- docker info ---\n${dockerInfo.trim()}`);
+    }
+
+    span?.setAttributes({
+      'docker.client_version': toTag(clientVersion),
+      'docker.server_version': toTag(serverVersion),
+      'docker.api_version': toTag(apiVersion),
+      'docker.os_arch': toTag(osArch),
+      'docker.storage_driver': toTag(storageDriver),
+      'docker.containerd_store': toTag(usingContainerdStore),
+      'docker.buildx_driver': toTag(buildxDriver),
+      'docker.buildx_version': toTag(buildxVersion),
+      'docker.proxy_env': toTag(proxyEnv.join(',') || 'none'),
+      'docker.daemon_http_proxy': toTag(dockerHttpProxy),
+      'docker.daemon_https_proxy': toTag(dockerHttpsProxy),
+    });
+  } catch (err) {
+    debug(`docker diagnostics unavailable: ${(err as Error).message}`);
+  }
+}
+
 /** Whether the Docker daemon currently answers `docker version`. */
 async function isDockerDaemonReachable(): Promise<boolean> {
   try {
@@ -497,6 +620,13 @@ function tail(text: string, n = 12): string {
  */
 async function startDockerDaemon(span?: Span): Promise<ManagedDaemon> {
   const driver = await selectStorageDriver();
+  // Keep iptables enabled so RUN steps that need the network work. The build
+  // container image is responsible for making iptables usable (install iptables
+  // and select the legacy backend: `alternatives --set iptables
+  // /usr/sbin/iptables-legacy`), since the default nf_tables backend can't
+  // manage netfilter rules in a restricted cell. As an escape hatch for cells
+  // where iptables can't work at all (and images that don't need RUN-time
+  // networking), pass `--iptables=false` via VERCEL_VCR_DOCKERD_ARGS.
   const args = ['--storage-driver', driver];
   const extra = readString(process.env.VERCEL_VCR_DOCKERD_ARGS);
   if (extra) {
@@ -536,7 +666,9 @@ async function startDockerDaemon(span?: Span): Promise<ManagedDaemon> {
           `The Docker daemon exited before becoming ready (${exitInfo}).`,
           'In a build container this usually means the cell is missing the',
           `kernel capabilities dockerd needs, or the "${driver}" storage driver`,
-          'is unavailable. Override it with VERCEL_VCR_DOCKER_STORAGE_DRIVER.',
+          'is unavailable. Override the storage driver with',
+          'VERCEL_VCR_DOCKER_STORAGE_DRIVER, or pass extra daemon flags with',
+          'VERCEL_VCR_DOCKERD_ARGS (e.g. "--iptables=false") for networking issues.',
           '',
           tail(log),
         ].join('\n')
@@ -676,9 +808,8 @@ async function ensureRepository(
     return;
   }
 
-  const teamId = readString(process.env.VERCEL_VCR_USERNAME) ?? claims.owner_id;
-  const projectId =
-    readString(process.env.VERCEL_VCR_PROJECT_ID) ?? claims.project_id;
+  const teamId = claims.owner_id;
+  const projectId = claims.project_id;
   if (!teamId || !projectId) {
     debug(
       `skipping repository auto-create (missing ${
@@ -747,79 +878,31 @@ async function buildAndPushImage(params: {
 }): Promise<string> {
   const { contextDir, dockerfilePath, repository, tag, parentSpan } = params;
 
-  // The registry password is a Vercel token. Prefer an explicit access token,
-  // otherwise use the project's OIDC token (auto-pulled by `vercel build`).
-  // VCR pairs each token type with a specific login username: an OIDC token
-  // authenticates as the literal user `oidc`, while a Vercel access token
-  // authenticates as the team id.
-  const accessToken =
-    readString(process.env.VERCEL_VCR_TOKEN) ??
-    readString(process.env.VERCEL_TOKEN);
-  const oidcToken = readString(process.env.VERCEL_OIDC_TOKEN);
-  const token = accessToken ?? oidcToken;
+  // VCR auth is OIDC-only: the project's OIDC token (auto-pulled by
+  // `vercel build`) is the docker-login password, the team id from its claims is
+  // the username, and the repository is namespaced `<team_slug>/<project_slug>/<repo>`
+  // using the slugs from those same claims.
+  const token = readString(process.env.VERCEL_OIDC_TOKEN);
   if (!token) {
     throw new Error(
-      'Missing a Vercel token for the container registry. Set VERCEL_OIDC_TOKEN ' +
-        '(auto-pulled by `vercel build`) or VERCEL_VCR_TOKEN/VERCEL_TOKEN.'
+      'Missing VERCEL_OIDC_TOKEN for the container registry ' +
+        '(it is auto-pulled by `vercel build`).'
     );
   }
-  const usingOidcToken = !accessToken;
+  const claims = decodeOidcClaims(token);
+  debug(`registry token: ${tokenFingerprint(token)}`);
+  debugTokenClaims('OIDC token claims', token);
 
-  // Token diagnostics (never logs the token itself — only presence/fingerprint
-  // and the non-secret OIDC claims). Useful for debugging VCR auth rejections.
-  const tokenSource = readString(process.env.VERCEL_VCR_TOKEN)
-    ? 'VERCEL_VCR_TOKEN'
-    : readString(process.env.VERCEL_TOKEN)
-      ? 'VERCEL_TOKEN'
-      : 'VERCEL_OIDC_TOKEN';
-  debug(
-    `token env presence: VERCEL_VCR_TOKEN=${!!readString(
-      process.env.VERCEL_VCR_TOKEN
-    )}, VERCEL_TOKEN=${!!readString(
-      process.env.VERCEL_TOKEN
-    )}, VERCEL_OIDC_TOKEN=${!!readString(process.env.VERCEL_OIDC_TOKEN)}`
-  );
-  debug(
-    `registry token: source=${tokenSource}, usingOidcToken=${usingOidcToken}, ${tokenFingerprint(
-      token
-    )}`
-  );
-  debugTokenClaims(
-    'OIDC token claims',
-    readString(process.env.VERCEL_OIDC_TOKEN)
-  );
-
-  // Repositories are namespaced as `<team_slug>/<project_slug>/<repo>`. Derive
-  // the slugs from the OIDC token claims, allowing env overrides. The login
-  // username depends on the token type: `oidc` for an OIDC token, otherwise the
-  // team id for an access token.
-  const claims = decodeOidcClaims(readString(process.env.VERCEL_OIDC_TOKEN));
-  const username =
-    readString(process.env.VERCEL_VCR_USERNAME) ??
-    (usingOidcToken ? 'oidc' : claims.owner_id);
+  const username = claims.owner_id;
   if (!username) {
     throw new Error(
-      'Could not determine the container registry login username. Set ' +
-        'VERCEL_VCR_USERNAME (team id for an access token, or `oidc`).'
+      'The OIDC token is missing the `owner_id` (team id) claim required to ' +
+        'authenticate to the container registry.'
     );
   }
 
-  // VCR is project-scoped: the full registry name is
-  // `<team_slug>/<project_slug>/<repo>`. Derive the team/project slugs from the
-  // OIDC token claims (env-overridable). A repository that already contains a
-  // slash is treated as fully-qualified and used verbatim.
-  const teamSlug = readString(process.env.VERCEL_VCR_TEAM_SLUG) ?? claims.owner;
-  const projectSlug =
-    readString(process.env.VERCEL_VCR_PROJECT_SLUG) ?? claims.project;
-  const fullRepository = repository.includes('/')
-    ? repository
-    : [teamSlug, projectSlug, repository].filter(Boolean).join('/');
-
+  const fullRepository = [claims.owner, claims.project, repository].join('/');
   const imageRef = `${VCR_REGISTRY}/${fullRepository}:${tag}`;
-
-  // The control-plane create endpoint accepts the project's OIDC token, so
-  // prefer it for repository creation regardless of the registry push token.
-  const createToken = readString(process.env.VERCEL_OIDC_TOKEN) ?? token;
 
   return withSpan(
     parentSpan,
@@ -829,8 +912,6 @@ async function buildAndPushImage(params: {
       'container.repository': fullRepository,
       'image.tag': tag,
       'image.ref': imageRef,
-      'token.source': tokenSource,
-      'token.is_oidc': toTag(usingOidcToken),
       'registry.username': username,
     },
     async buildSpan => {
@@ -838,7 +919,7 @@ async function buildAndPushImage(params: {
         buildSpan,
         'container.ensure_repository',
         { 'container.repository': repository },
-        s => ensureRepository(repository, createToken, claims, s)
+        s => ensureRepository(repository, token, claims, s)
       );
 
       // Build/login/push/readiness all need a Docker daemon. In a build cell
@@ -850,6 +931,13 @@ async function buildAndPushImage(params: {
           'container.ensure_docker_ready',
           undefined,
           s => ensureDockerReady(s)
+        );
+
+        await withSpan(
+          buildSpan,
+          'container.docker_diagnostics',
+          undefined,
+          s => logDockerDiagnostics(s)
         );
 
         info(`Building image ${imageRef}`);
@@ -880,12 +968,12 @@ async function buildAndPushImage(params: {
         );
         done(`built in ${elapsed(buildStart)}`);
 
-        // Authenticate to VCR: password is the token (passed via stdin, never
-        // argv); username is `oidc` for an OIDC token, otherwise the team id.
+        // Authenticate to VCR: the OIDC token is the password (passed via stdin,
+        // never argv) and the team id is the username.
         step(`Authenticating to ${VCR_REGISTRY} as ${username}`);
         debug(
           `exec: docker login ${VCR_REGISTRY} --username ${username} --password-stdin ` +
-            `(password from ${tokenSource} on stdin, ${tokenFingerprint(token)})`
+            `(OIDC token on stdin, ${tokenFingerprint(token)})`
         );
         await withSpan(
           buildSpan,
@@ -910,17 +998,12 @@ async function buildAndPushImage(params: {
             } catch (err) {
               const message = (err as Error).message;
               if (/denied|forbidden|unauthorized|401|403/i.test(message)) {
-                const teamId =
-                  claims.owner_id ??
-                  readString(process.env.VERCEL_VCR_USERNAME);
                 throw new Error(
                   [
                     `Authentication to ${VCR_REGISTRY} as "${username}" was rejected.`,
                     '',
-                    `Make sure your team (${teamId ? `"${teamId}"` : ''}) is enrolled in`,
-                    'the `vercel-enable-vcr` flag, and that the token is valid for it.',
-                    'Override credentials with VERCEL_VCR_USERNAME (`oidc` for an OIDC',
-                    'token, or the team id for a VERCEL_VCR_TOKEN access token).',
+                    `Make sure your team ("${username}") is enrolled in the`,
+                    '`vercel-enable-vcr` flag and that the OIDC token is valid for it.',
                     '',
                     `Underlying error: ${message}`,
                   ].join('\n')
@@ -1085,22 +1168,19 @@ async function resolveImageHandler(
     );
   }
 
-  // A fully-qualified repository (with slashes) is preserved as-is; a bare name
-  // gets namespaced under the team/project at push time.
-  const repositoryConfigured =
-    readString(config.repository) ??
-    readString(process.env.VERCEL_VCR_REPOSITORY) ??
-    options.service?.name ??
-    'service';
-  const repository = repositoryConfigured.includes('/')
-    ? repositoryConfigured
-    : sanitizeRepository(repositoryConfigured);
+  // The repository is named after the service; it gets namespaced under the
+  // team/project (from the OIDC claims) at push time.
+  const serviceName = options.service?.name;
+  if (!serviceName) {
+    throw new Error(
+      'Container service is missing a name; cannot derive the registry repository.'
+    );
+  }
+  const repository = sanitizeRepository(serviceName);
   const tag = resolveImageTag();
-  // Default the build context to the Dockerfile's directory (Docker convention),
-  // which keeps the context small without special-casing service roots.
-  const contextDir = readString(config.context)
-    ? path.join(workPath, config.context as string)
-    : path.dirname(dockerfilePath);
+  // The build context is the Dockerfile's directory (Docker convention), which
+  // keeps the context small without special-casing service roots.
+  const contextDir = path.dirname(dockerfilePath);
 
   span?.setAttributes({
     'container.mode': 'build_and_push',
