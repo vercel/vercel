@@ -9,6 +9,7 @@ import {
 import {
   download,
   getReportedServiceType,
+  getInternalServiceFunctionPath,
   glob,
   Lambda,
   FileBlob,
@@ -27,10 +28,12 @@ import {
   type GlobOptions,
   type BuildVX,
   type Files,
+  type TriggerEvent,
   type ShouldServe,
   FileFsRef,
   PythonFramework,
   type PrepareCache,
+  sanitizeConsumerName,
 } from '@vercel/build-utils';
 import {
   discoverPackage,
@@ -56,7 +59,11 @@ import {
 } from './uv';
 import { resolvePythonVersion, pythonVersionString } from './version';
 import { generateProjectManifest } from './diagnostics';
-import { buildCronRouteTable, getServiceCrons } from './crons';
+import {
+  buildCronRouteTable,
+  getServiceCrons,
+  type ServiceCronEntry,
+} from './crons';
 import { startDevServer } from './start-dev-server';
 import {
   runPyprojectScript,
@@ -66,6 +73,12 @@ import {
 } from './utils';
 import { validateBuildArch } from './platform-info';
 import { runQuirks } from './quirks';
+import {
+  hasPyprojectServices,
+  readPyprojectServices,
+  type PyprojectCron,
+  type PyprojectSubscriber,
+} from './pyproject-services';
 import {
   getDjangoSettings,
   runDjangoCollectStatic,
@@ -158,6 +171,97 @@ async function addVendorBytecodeWithinCapacity({
   });
   addFiles(files, selectedBytecode.files);
   return capacity - selectedBytecode.totalSize;
+}
+
+function createRuntimeTrampoline({
+  moduleName,
+  entrypointWithSuffix,
+  vendorDir,
+  variableName,
+  cronEnvLine = '',
+}: {
+  moduleName: string;
+  entrypointWithSuffix: string;
+  vendorDir: string;
+  variableName: string;
+  cronEnvLine?: string;
+}): string {
+  return `
+import importlib
+import os
+import os.path
+import site
+import sys
+
+_here = os.path.dirname(__file__)
+
+os.environ.update({
+  "__VC_HANDLER_MODULE_NAME": "${moduleName}",
+  "__VC_HANDLER_ENTRYPOINT": "${entrypointWithSuffix}",
+  "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypointWithSuffix}"),
+  "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",
+  "__VC_HANDLER_VARIABLE_NAME": "${variableName}",${cronEnvLine}
+})
+
+_vendor_rel = '${vendorDir}'
+_vendor = os.path.normpath(os.path.join(_here, _vendor_rel))
+
+if os.path.isdir(_vendor):
+    # Process .pth files like a real site-packages dir
+    site.addsitedir(_vendor)
+
+    # Move _vendor to the front (after script dir if present)
+    try:
+        while _vendor in sys.path:
+            sys.path.remove(_vendor)
+    except ValueError:
+        pass
+
+    # Put vendored deps ahead of site-packages but after the script dir
+    idx = 1 if (sys.path and sys.path[0] in ('', _here)) else 0
+    sys.path.insert(idx, _vendor)
+
+    importlib.invalidate_caches()
+
+from vercel_runtime.vc_init import vc_handler
+`;
+}
+
+function getCronEnvLine(crons: Awaited<ReturnType<typeof getServiceCrons>>) {
+  if (!crons?.length) return '';
+  // Single-quote the JSON so embedded double quotes don't need escaping
+  // in the surrounding Python dict literal. Backslashes would be
+  // misinterpreted by Python's string parser, but cron paths/handlers
+  // only contain [a-zA-Z0-9_./:-] so JSON.stringify won't produce any.
+  const json = JSON.stringify(buildCronRouteTable(crons));
+  assert(!json.includes('\\'), `backslash in cron route table: ${json}`);
+  return `\n  "__VC_CRON_ROUTES": '${json}',`;
+}
+
+function addPyprojectCronRoutes(
+  crons: NonNullable<Awaited<ReturnType<typeof getServiceCrons>>>
+) {
+  const prefixes = new Set(
+    crons.map(cron => {
+      const parts = cron.path.split('/');
+      return `/${parts.slice(1, 4).join('/')}`;
+    })
+  );
+  return Array.from(prefixes).map(prefix => ({
+    src: `^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/.*$`,
+    dest: `/${prefix.split('/').slice(1, 3).join('/')}/index`,
+    check: true,
+  }));
+}
+
+function getPyprojectServicePath(name: string): string {
+  return getInternalServiceFunctionPath(name).replace(/^\//, '');
+}
+
+function getPyprojectHandlerFilename(
+  service: PyprojectSubscriber | PyprojectCron
+): string {
+  return `vc__handler__python_${service.name.replace(/[^A-Za-z0-9_]/g, '_')}`;
 }
 
 interface FrameworkHookContext {
@@ -388,7 +492,6 @@ export const build: BuildVX = async ({
 
   const builderSpan = parentSpan ?? new Span({ name: 'vc.builder' });
   const framework = config?.framework;
-  const shouldInstallVercelWorkers = config?.hasWorkerServices === true;
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
@@ -407,6 +510,15 @@ export const build: BuildVX = async ({
     entrypoint,
     meta,
   });
+
+  const pyprojectServices =
+    service?.name === undefined
+      ? await readPyprojectServices(workPath)
+      : { subscribers: [], crons: [] };
+  const hasRootPyprojectServices = hasPyprojectServices(pyprojectServices);
+  const shouldInstallVercelWorkers =
+    config?.hasWorkerServices === true ||
+    pyprojectServices.subscribers.length > 0;
 
   try {
     // See: https://stackoverflow.com/a/44728772/376773
@@ -451,7 +563,11 @@ export const build: BuildVX = async ({
       service
     )) ?? undefined;
 
-  if (detected?.error && detected?.baseDir === undefined) {
+  if (
+    detected?.error &&
+    detected?.baseDir === undefined &&
+    !hasRootPyprojectServices
+  ) {
     throw detected?.error;
   }
 
@@ -721,12 +837,12 @@ export const build: BuildVX = async ({
 
   // Collect the resolved entrypoint from detection or hook, preferring the hook.
   const resolved = hookResult?.entrypoint ?? detected?.entrypoint;
-  if (!resolved && detected?.error) {
+  if (!resolved && detected?.error && !hasRootPyprojectServices) {
     throw detected?.error;
   }
 
   entrypoint = resolved?.entrypoint;
-  if (!entrypoint) {
+  if (!entrypoint && !hasRootPyprojectServices) {
     throw new NowBuildError({
       code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
       message:
@@ -797,9 +913,9 @@ export const build: BuildVX = async ({
   }
 
   debug('Entrypoint is', entrypoint);
-  const moduleName = entrypointToModule(entrypoint);
+  const moduleName = entrypoint ? entrypointToModule(entrypoint) : undefined;
 
-  if (handlerFunction) {
+  if (handlerFunction && entrypoint) {
     const entrypointPath = join(workPath, entrypoint);
     const source = await fs.promises.readFile(entrypointPath, 'utf-8');
     const found = await containsTopLevelCallable(source, handlerFunction);
@@ -816,8 +932,9 @@ export const build: BuildVX = async ({
   const vendorDir = resolveVendorDir();
 
   // Since `vercel dev` renames source files, we must reference the original
-  const suffix = meta.isDev && !entrypoint.endsWith('.py') ? '.py' : '';
-  const entrypointWithSuffix = `${entrypoint}${suffix}`;
+  const suffix =
+    entrypoint && meta.isDev && !entrypoint.endsWith('.py') ? '.py' : '';
+  const entrypointWithSuffix = entrypoint ? `${entrypoint}${suffix}` : '';
   debug('Entrypoint with suffix is', entrypointWithSuffix);
 
   const crons = await getServiceCrons({
@@ -830,62 +947,17 @@ export const build: BuildVX = async ({
     workPath,
   });
 
-  // Build trampoline env line for cron routing.
-  // Injected into os.environ.update() in the Python trampoline source,
-  // not lambdaEnv, because the platform rejects env var names with
-  // leading underscores.
-  let cronEnvLine = '';
-  if (crons?.length) {
-    // Single-quote the JSON so embedded double quotes don't need escaping
-    // in the surrounding Python dict literal. Backslashes would be
-    // misinterpreted by Python's string parser, but cron paths/handlers
-    // only contain [a-zA-Z0-9_./:-] so JSON.stringify won't produce any.
-    const json = JSON.stringify(buildCronRouteTable(crons));
-    assert(!json.includes('\\'), `backslash in cron route table: ${json}`);
-    cronEnvLine = `\n  "__VC_CRON_ROUTES": '${json}',`;
-  }
-
   const variableName = resolved?.variableName ?? '';
-
-  const runtimeTrampoline = `
-import importlib
-import os
-import os.path
-import site
-import sys
-
-_here = os.path.dirname(__file__)
-
-os.environ.update({
-  "__VC_HANDLER_MODULE_NAME": "${moduleName}",
-  "__VC_HANDLER_ENTRYPOINT": "${entrypointWithSuffix}",
-  "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypointWithSuffix}"),
-  "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",
-  "__VC_HANDLER_VARIABLE_NAME": "${variableName}",${cronEnvLine}
-})
-
-_vendor_rel = '${vendorDir}'
-_vendor = os.path.normpath(os.path.join(_here, _vendor_rel))
-
-if os.path.isdir(_vendor):
-    # Process .pth files like a real site-packages dir
-    site.addsitedir(_vendor)
-
-    # Move _vendor to the front (after script dir if present)
-    try:
-        while _vendor in sys.path:
-            sys.path.remove(_vendor)
-    except ValueError:
-        pass
-
-    # Put vendored deps ahead of site-packages but after the script dir
-    idx = 1 if (sys.path and sys.path[0] in ('', _here)) else 0
-    sys.path.insert(idx, _vendor)
-
-    importlib.invalidate_caches()
-
-from vercel_runtime.vc_init import vc_handler
-`;
+  const runtimeTrampoline =
+    moduleName && entrypointWithSuffix
+      ? createRuntimeTrampoline({
+          moduleName,
+          entrypointWithSuffix,
+          vendorDir,
+          variableName,
+          cronEnvLine: getCronEnvLine(crons),
+        })
+      : undefined;
 
   const automaticCompileAllEnabled = shouldUseCompileAll({
     isDev: meta.isDev,
@@ -944,7 +1016,11 @@ from vercel_runtime.vc_init import vc_handler
   // need our `server.py` to be called something else
   const handlerPyFilename = 'vc__handler__python';
 
-  files[`${handlerPyFilename}.py`] = new FileBlob({ data: runtimeTrampoline });
+  if (runtimeTrampoline) {
+    files[`${handlerPyFilename}.py`] = new FileBlob({
+      data: runtimeTrampoline,
+    });
+  }
 
   // "fasthtml" framework requires a `.sesskey` file to exist,
   // otherwise it tries to create one at runtime, which fails
@@ -1074,14 +1150,113 @@ from vercel_runtime.vc_init import vc_handler
       }
     });
 
-  const output = new Lambda({
-    files,
-    handler: `${handlerPyFilename}.vc_handler`,
-    runtime: pythonVersion.runtime,
-    architecture: target.architecture,
-    environment: lambdaEnv,
-    supportsResponseStreaming: true,
-  });
+  const createLambdaOutput = ({
+    handlerFilename,
+    environment,
+    experimentalTriggers,
+  }: {
+    handlerFilename: string;
+    environment: Record<string, string>;
+    experimentalTriggers?: TriggerEvent[];
+  }) =>
+    new Lambda({
+      files,
+      handler: `${handlerFilename}.vc_handler`,
+      runtime: pythonVersion.runtime,
+      architecture: target.architecture,
+      environment,
+      supportsResponseStreaming: true,
+      ...(experimentalTriggers ? { experimentalTriggers } : {}),
+    });
+
+  const output = runtimeTrampoline
+    ? createLambdaOutput({
+        handlerFilename: handlerPyFilename,
+        environment: lambdaEnv,
+      })
+    : undefined;
+
+  const pyprojectOutput: Record<string, Lambda> = {};
+  const pyprojectCrons: ServiceCronEntry[] = [];
+  for (const subscriber of pyprojectServices.subscribers) {
+    const handlerFilename = getPyprojectHandlerFilename(subscriber);
+    files[`${handlerFilename}.py`] = new FileBlob({
+      data: createRuntimeTrampoline({
+        moduleName: entrypointToModule(subscriber.entrypoint.filePath),
+        entrypointWithSuffix: subscriber.entrypoint.filePath,
+        vendorDir,
+        variableName: 'app',
+      }),
+    });
+    const servicePath = getPyprojectServicePath(subscriber.name);
+    const consumer = sanitizeConsumerName(
+      getInternalServiceFunctionPath(subscriber.name)
+    );
+    const experimentalTriggers = subscriber.topics.map(
+      (topicConfig): TriggerEvent => ({
+        type: 'queue/v2beta',
+        topic: topicConfig.topic,
+        consumer,
+        ...(topicConfig.retryAfterSeconds !== undefined
+          ? { retryAfterSeconds: topicConfig.retryAfterSeconds }
+          : {}),
+        ...(topicConfig.initialDelaySeconds !== undefined
+          ? { initialDelaySeconds: topicConfig.initialDelaySeconds }
+          : {}),
+      })
+    );
+    pyprojectOutput[servicePath] = createLambdaOutput({
+      handlerFilename,
+      environment: {
+        ...lambdaEnv,
+        VERCEL_SERVICE_NAME: subscriber.name,
+        VERCEL_SERVICE_TYPE: 'job',
+        VERCEL_SERVICE_TRIGGER: 'queue',
+        VERCEL_HAS_WORKER_SERVICES: '1',
+      },
+      experimentalTriggers,
+    });
+  }
+
+  for (const cron of pyprojectServices.crons) {
+    const service = {
+      type: 'job' as const,
+      trigger: 'schedule' as const,
+      name: cron.name,
+      schedule: cron.schedule,
+    };
+    const cronEntries = await getServiceCrons({
+      service,
+      entrypoint: cron.entrypoint.filePath,
+      rawEntrypoint: cron.entrypoint.raw,
+      handlerFunction: cron.entrypoint.handlerFunction,
+      pythonBin: getVenvPythonBin(venvPath),
+      env: pythonEnv,
+      workPath,
+    });
+    if (cronEntries?.length) {
+      pyprojectCrons.push(...cronEntries);
+    }
+    const handlerFilename = getPyprojectHandlerFilename(cron);
+    files[`${handlerFilename}.py`] = new FileBlob({
+      data: createRuntimeTrampoline({
+        moduleName: entrypointToModule(cron.entrypoint.filePath),
+        entrypointWithSuffix: cron.entrypoint.filePath,
+        vendorDir,
+        variableName: 'app',
+        cronEnvLine: getCronEnvLine(cronEntries),
+      }),
+    });
+    pyprojectOutput[getPyprojectServicePath(cron.name)] = createLambdaOutput({
+      handlerFilename,
+      environment: {
+        ...lambdaEnv,
+        VERCEL_SERVICE_NAME: cron.name,
+        VERCEL_SERVICE_TYPE: 'job',
+        VERCEL_SERVICE_TRIGGER: 'schedule',
+      },
+    });
+  }
 
   // Write project manifest for diagnostics (best-effort, never fails the build).
   // Requires uv.lock to resolve versions and dependency graph.  Skipped in
@@ -1103,7 +1278,7 @@ from vercel_runtime.vc_init import vc_handler
     }
   }
 
-  if (!isPythonFramework(framework) && !service?.name) {
+  if (!isPythonFramework(framework) && !service?.name && output) {
     return { resultVersion: 3, result: { output } };
   }
 
@@ -1117,19 +1292,33 @@ from vercel_runtime.vc_init import vc_handler
 
   // for services routing is handled by fs-detectors, for legacy builds
   // we still need to provide catch-all route
+  const pyprojectCronRoutes = addPyprojectCronRoutes(pyprojectCrons);
   const routes = service?.name
     ? undefined
-    : [{ handle: 'filesystem' }, { src: '/(.*)', dest: `/${lambdaPath}` }];
+    : output
+      ? [
+          { handle: 'filesystem' },
+          ...pyprojectCronRoutes,
+          { src: '/(.*)', dest: `/${lambdaPath}` },
+        ]
+      : pyprojectCronRoutes.length > 0
+        ? pyprojectCronRoutes
+        : undefined;
+
+  const outputFiles = {
+    ...(output ? { [lambdaPath]: output } : {}),
+    ...pyprojectOutput,
+    ...staticFiles,
+  };
 
   return {
     resultVersion: 2,
     result: {
-      output: {
-        [lambdaPath]: output,
-        ...staticFiles,
-      },
+      output: outputFiles,
       ...(routes ? { routes } : {}),
-      crons,
+      ...((crons?.length || pyprojectCrons.length) && {
+        crons: [...(crons ?? []), ...pyprojectCrons],
+      }),
     },
   };
 };

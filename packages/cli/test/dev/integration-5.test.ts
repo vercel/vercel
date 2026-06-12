@@ -1078,3 +1078,78 @@ describe('[vercel dev] Schedule-triggered job service', () => {
     }
   });
 });
+
+describe('[vercel dev] Python pyproject background services', () => {
+  const fixtureName = 'python-pyproject-background-services';
+  const resultsDir = join(__dirname, 'fixtures', fixtureName, '.results');
+
+  beforeEach(async () => {
+    await fs.remove(resultsDir);
+  });
+
+  test('[vercel dev] serves FastAPI, dynamic cron, and Celery worker from root pyproject.toml', async () => {
+    const dir = fixture(fixtureName);
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      const rootRes = await nodeFetch(`http://localhost:${port}/`);
+      expect(rootRes.status).toBe(200);
+      await expect(rootRes.json()).resolves.toHaveProperty(
+        'service',
+        'pyproject-background-services'
+      );
+
+      const enqueueRes = await nodeFetch(
+        `http://localhost:${port}/enqueue-celery`,
+        { method: 'POST' }
+      );
+      expect(enqueueRes.status).toBe(200);
+      const enqueueJson = await enqueueRes.json();
+      expect(enqueueJson).toHaveProperty('queued', true);
+      expect(enqueueJson).toHaveProperty('taskId');
+
+      const cronRes = await nodeFetch(
+        `http://localhost:${port}/_svc/cleanup/crons/jobs/cleanup/run_cron_task`,
+        { method: 'POST' }
+      );
+      expect(cronRes.status).toBe(200);
+      await expect(cronRes.json()).resolves.toHaveProperty('ok', true);
+
+      const celeryResultPath = join(resultsDir, 'celery_result.json');
+      const cronResultPath = join(resultsDir, 'cron_result.json');
+      let celeryResult: any = null;
+      let cronResult: any = null;
+      for (let i = 0; i < 30; i++) {
+        await sleep(500);
+        if (!celeryResult && (await fs.pathExists(celeryResultPath))) {
+          celeryResult = await fs.readJson(celeryResultPath);
+        }
+        if (!cronResult && (await fs.pathExists(cronResultPath))) {
+          cronResult = await fs.readJson(cronResultPath);
+        }
+        if (celeryResult && cronResult) break;
+      }
+
+      expect(celeryResult).not.toBeNull();
+      expect(celeryResult).toHaveProperty('executed', true);
+      expect(celeryResult).toHaveProperty('result', 42);
+      expect(celeryResult).toHaveProperty('taskId', enqueueJson.taskId);
+
+      expect(cronResult).not.toBeNull();
+      expect(cronResult).toHaveProperty('executed', true);
+    } finally {
+      await dev.kill();
+    }
+  });
+});

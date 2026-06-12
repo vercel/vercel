@@ -3,11 +3,7 @@
 import ms from 'ms';
 import { randomBytes } from 'crypto';
 import nodeFetch from 'node-fetch';
-import type { ExperimentalService } from '@vercel/fs-detectors';
-import {
-  getServiceQueueTopicConfigs,
-  isQueueBackedService,
-} from '@vercel/build-utils';
+import type { ServiceQueueTopic } from '@vercel/build-utils';
 import output from '../../output-manager';
 
 interface StoredMessage {
@@ -21,10 +17,11 @@ interface StoredMessage {
 
 interface ConsumerGroup {
   id: string;
+  owner?: string;
   name: string;
   topicPattern: string;
   topicRegex: RegExp;
-  serviceOriginFn: () => string | null;
+  callbackUrlFn: () => string | null;
   retryAfterMs: number;
   maxDeliveries: number;
   initialDelayMs: number;
@@ -47,6 +44,13 @@ export interface ReceivedMessage {
   deliveryCount: number;
   createdAt: string;
   receiptHandle: string;
+}
+
+export interface QueueConsumerRegistration {
+  owner?: string;
+  name: string;
+  topics: ServiceQueueTopic[];
+  callbackUrl: () => string | null;
 }
 
 const DEFAULT_RETRY_AFTER = ms('1m');
@@ -78,23 +82,25 @@ export class QueueBroker {
   private deliveryState = new Map<string, Map<string, DeliveryState>>();
   private tickTimer: ReturnType<typeof setInterval>;
 
-  constructor(
-    services: ExperimentalService[],
-    private getServiceOrigin: (name: string) => string | null
-  ) {
-    for (const service of services) {
-      if (!isQueueBackedService(service)) continue;
+  constructor(registrations: QueueConsumerRegistration[] = []) {
+    this.tickTimer = setInterval(() => this.tick(), TICK_INTERVAL);
+    this.tickTimer.unref();
+    this.addConsumers(registrations);
+  }
 
-      const topicConfigs = getServiceQueueTopicConfigs(service);
-      for (const topicConfig of topicConfigs) {
+  addConsumers(registrations: QueueConsumerRegistration[]): void {
+    for (const registration of registrations) {
+      for (const topicConfig of registration.topics) {
         const topicPattern = topicConfig.topic;
-        const id = `${service.name}::${topicPattern}`;
+        const id = `${registration.name}::${topicPattern}`;
+        if (this.deliveryState.has(id)) continue;
         const group: ConsumerGroup = {
           id,
-          name: service.name,
+          owner: registration.owner,
+          name: registration.name,
           topicPattern,
           topicRegex: topicPatternToRegex(topicPattern),
-          serviceOriginFn: () => this.getServiceOrigin(service.name),
+          callbackUrlFn: registration.callbackUrl,
           retryAfterMs:
             topicConfig.retryAfterSeconds !== undefined
               ? topicConfig.retryAfterSeconds * 1000
@@ -107,12 +113,44 @@ export class QueueBroker {
         };
 
         this.consumerGroups.push(group);
-        this.deliveryState.set(group.id, new Map());
+        const groupDeliveries = new Map<string, DeliveryState>();
+        this.deliveryState.set(group.id, groupDeliveries);
+        for (const message of this.messages.values()) {
+          if (!group.topicRegex.test(message.queueName)) continue;
+          const visibleAt =
+            group.initialDelayMs > 0 ? Date.now() + group.initialDelayMs : 0;
+          groupDeliveries.set(message.messageId, {
+            status: 'pending',
+            deliveryCount: 0,
+            receiptHandle: '',
+            visibleAt,
+            leaseExpiresAt: 0,
+          });
+          if (visibleAt === 0) {
+            this.dispatchToConsumer(message, group).catch(err => {
+              output.debug(`queues: unexpected dispatch error: ${err}`);
+            });
+          }
+        }
       }
     }
+  }
 
-    this.tickTimer = setInterval(() => this.tick(), TICK_INTERVAL);
-    this.tickTimer.unref();
+  replaceConsumers(
+    owner: string,
+    registrations: QueueConsumerRegistration[]
+  ): void {
+    this.consumerGroups = this.consumerGroups.filter(group => {
+      if (group.owner !== owner) return true;
+      this.deliveryState.delete(group.id);
+      return false;
+    });
+    this.addConsumers(
+      registrations.map(registration => ({ ...registration, owner }))
+    );
+    for (const messageId of this.messages.keys()) {
+      this.maybeCleanupMessage(messageId);
+    }
   }
 
   enqueue(
@@ -359,8 +397,8 @@ export class QueueBroker {
       return;
     }
 
-    const upstream = group.serviceOriginFn();
-    if (!upstream) {
+    const callbackUrl = group.callbackUrlFn();
+    if (!callbackUrl) {
       // Service not ready yet, retry later
       state.visibleAt = Date.now() + group.retryAfterMs;
       return;
@@ -378,11 +416,11 @@ export class QueueBroker {
     ).toISOString();
 
     output.debug(
-      `queues: dispatching v2beta callback to worker "${group.name}" at ${upstream}`
+      `queues: dispatching v2beta callback to worker "${group.name}" at ${callbackUrl}`
     );
 
     try {
-      const response = await nodeFetch(`${upstream}/`, {
+      const response = await nodeFetch(callbackUrl, {
         method: 'POST',
         headers: {
           'content-type': message.contentType,

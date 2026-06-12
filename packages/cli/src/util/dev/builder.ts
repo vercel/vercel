@@ -15,6 +15,7 @@ import {
   normalizePath,
   isBackendFramework,
   isPythonFramework,
+  readConfigFile,
   type BuildResultVX,
 } from '@vercel/build-utils';
 import { isStaticRuntime } from '@vercel/fs-detectors';
@@ -149,6 +150,7 @@ interface SerializedBuildResult {
   routes: Route[];
   watch: string[];
   distPath?: string;
+  crons?: BuildResult['crons'];
 }
 
 /** Serialized BuildResultV3 received over IPC */
@@ -157,6 +159,7 @@ interface SerializedBuildResultV3 {
   routes: Route[];
   watch: string[];
   distPath?: string;
+  crons?: BuildResult['crons'];
 }
 
 interface BuildMessageResult extends BuildMessage {
@@ -214,6 +217,24 @@ async function createBuildProcess(
       }
     });
   });
+}
+
+async function hasRootPyprojectBackgroundServices(
+  cwd: string
+): Promise<boolean> {
+  const pyproject = await readConfigFile<{
+    tool?: {
+      vercel?: {
+        subscribers?: Record<string, unknown>;
+        crons?: Record<string, unknown>;
+      };
+    };
+  }>(join(cwd, 'pyproject.toml'));
+  const vercel = pyproject?.tool?.vercel;
+  return Boolean(
+    (vercel?.subscribers && Object.keys(vercel.subscribers).length > 0) ||
+      (vercel?.crons && Object.keys(vercel.crons).length > 0)
+  );
 }
 
 export async function executeBuild(
@@ -513,6 +534,32 @@ export async function executeBuild(
   match.buildResults.set(requestPath, result);
   Object.assign(match.buildOutput, result.output);
 
+  const registrationOwner = `${match.use}:${match.src}:${requestPath ?? '<initial>'}`;
+  const queueRegistrations = Object.entries(result.output).flatMap(
+    ([path, asset]) => {
+      if (asset.type !== 'Lambda' || !asset.experimentalTriggers?.length) {
+        return [];
+      }
+      return asset.experimentalTriggers.map(trigger => ({
+        name: trigger.consumer,
+        topics: [
+          {
+            topic: trigger.topic,
+            ...(trigger.retryAfterSeconds !== undefined
+              ? { retryAfterSeconds: trigger.retryAfterSeconds }
+              : {}),
+            ...(trigger.initialDelaySeconds !== undefined
+              ? { initialDelaySeconds: trigger.initialDelaySeconds }
+              : {}),
+          },
+        ],
+        callbackUrl: () => `${devServer.address.origin}/${path}`,
+      }));
+    }
+  );
+  devServer.replaceQueueConsumers(registrationOwner, queueRegistrations);
+  devServer.replaceCrons(registrationOwner, result.crons ?? []);
+
   if (showBuildTimestamp) {
     const endTime = Date.now();
     output.log(`Built ${use}:${entrypoint} [${ms(endTime - startTime)}]`);
@@ -572,6 +619,12 @@ export async function getBuildMatches(
       buildConfig.config?.framework &&
       isPythonFramework(buildConfig.config?.framework)
     ) {
+      if (await hasRootPyprojectBackgroundServices(cwd)) {
+        config = {
+          ...config,
+          pyprojectBackgroundServices: true,
+        };
+      }
       const originalSrc = src;
       const pythonManifestFiles = [
         'pyproject.toml',
@@ -622,6 +675,7 @@ export async function getBuildMatches(
 
       matches.push({
         ...buildConfig,
+        config,
         src,
         entrypoint,
         builderWithPkg,
