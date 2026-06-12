@@ -17,6 +17,7 @@ import {
   rm,
   mkdir,
   realpath,
+  symlink,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import type { IncomingMessage } from 'node:http';
@@ -255,6 +256,107 @@ it.skipIf(process.platform === 'win32')(
         repoRootPath: workDir,
       })
     ).resolves.toBeDefined();
+  },
+  30000
+);
+
+it.skipIf(process.platform === 'win32')(
+  'traces CJS packages imported through pnpm workspace symlinks',
+  async () => {
+    const root = await realpath(
+      await mkdtemp(join(tmpdir(), 'pnpm-cjs-shim-'))
+    );
+    const workPath = join(root, 'api');
+    const packageStorePath = join(
+      root,
+      'node_modules/.pnpm/@nestjs+common@1.0.0/node_modules/@nestjs/common'
+    );
+
+    await mkdir(packageStorePath, { recursive: true });
+    await mkdir(join(workPath, 'node_modules/@nestjs'), { recursive: true });
+    await writeFile(
+      join(workPath, 'package.json'),
+      JSON.stringify({
+        name: 'api',
+        type: 'module',
+        dependencies: { '@nestjs/common': '1.0.0' },
+      })
+    );
+    await writeFile(
+      join(workPath, 'server.ts'),
+      [
+        '// @ts-ignore - fixture package has no type declarations',
+        "import { marker } from '@nestjs/common';",
+        "import { readFileSync } from 'node:fs';",
+        '',
+        "if (process.env.NEVER_READ_IGNORED_FILE) readFileSync(new URL('./ignored.txt', import.meta.url));",
+        '',
+        'export default function handler(_req, res) {',
+        '  res.end(marker);',
+        '}',
+      ].join('\n')
+    );
+    await writeFile(join(workPath, 'ignored.txt'), 'ignore me');
+    await writeFile(
+      join(packageStorePath, 'package.json'),
+      JSON.stringify({
+        name: '@nestjs/common',
+        version: '1.0.0',
+        main: 'index.js',
+      })
+    );
+    await writeFile(
+      join(packageStorePath, 'index.js'),
+      "module.exports = { marker: 'pnpm-cjs-ok' };\n"
+    );
+    await symlink(
+      '../../../node_modules/.pnpm/@nestjs+common@1.0.0/node_modules/@nestjs/common',
+      join(workPath, 'node_modules/@nestjs/common')
+    );
+
+    try {
+      const result = (await build({
+        files: {},
+        workPath,
+        config: {
+          ...defaultConfig,
+          excludeFiles: 'ignored.txt',
+          projectSettings: {
+            ...defaultConfig.projectSettings,
+            installCommand: 'true',
+            buildCommand: 'echo build',
+          },
+        },
+        meta,
+        entrypoint: 'server.ts',
+        repoRootPath: workPath,
+      })) as BuildResultV2Typical;
+
+      const lambda = result.output.index as unknown as NodejsLambda;
+      const lambdaFiles = Object.keys(lambda.files ?? {});
+      expect(lambdaFiles.some(file => file.startsWith('..'))).toBe(false);
+      expect(lambdaFiles).not.toContain('ignored.txt');
+      expect(lambdaFiles).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining(
+            'node_modules/.pnpm/@nestjs+common@1.0.0/node_modules/@nestjs/common/index.js'
+          ),
+        ])
+      );
+
+      const lambdaOutputDir = await realpath(
+        await mkdtemp(join(tmpdir(), 'pnpm-cjs-lambda-'))
+      );
+      try {
+        await expect(
+          extractAndExecuteLambda(lambda, lambdaOutputDir)
+        ).resolves.toBeUndefined();
+      } finally {
+        await rm(lambdaOutputDir, { recursive: true, force: true });
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   },
   30000
 );

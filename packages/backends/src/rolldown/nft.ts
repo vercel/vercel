@@ -2,7 +2,15 @@ import type { BuildOptions, Files } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
 import { existsSync } from 'node:fs';
 import { readFile, lstat, stat, readlink } from 'node:fs/promises';
-import { join, sep } from 'node:path';
+import {
+  dirname,
+  isAbsolute,
+  join,
+  posix,
+  relative,
+  resolve,
+  sep,
+} from 'node:path';
 import { isNativeError } from 'node:util/types';
 import { FileFsRef, FileBlob, type Span } from '@vercel/build-utils';
 import { transform } from 'oxc-transform';
@@ -35,20 +43,19 @@ export const nft = async (
       }
     }
 
-    const ignorePatterns = [
-      ...(args.ignoreNodeModules ? ['**/node_modules/**'] : []),
-      ...(args.ignore
-        ? Array.isArray(args.ignore)
-          ? args.ignore
-          : [args.ignore]
-        : []),
-    ];
     const traceRoots = [
       ...Array.from(args.localBuildFiles).filter(
         p => existsSync(p) || virtualFiles.has(p)
       ),
       ...virtualFiles.keys(),
     ];
+    const traceBase = getCommonBase(args.repoRootPath, traceRoots);
+    const ignorePatterns = getIgnorePatterns({
+      ignoreNodeModules: args.ignoreNodeModules,
+      ignore: args.ignore,
+      traceBase,
+      repoRootPath: args.repoRootPath,
+    });
 
     // Overriding these replaces nft's internal CachedFileSystem, so we only
     // override stat/readlink when there are virtual files to serve and memoize
@@ -119,7 +126,7 @@ export const nft = async (
     });
 
     const nftResult = await nodeFileTrace(traceRoots, {
-      base: args.repoRootPath,
+      base: traceBase,
       processCwd: args.workPath,
       ts: true,
       mixedModules: true,
@@ -132,7 +139,7 @@ export const nft = async (
         : {}),
     });
     for (const file of nftResult.fileList) {
-      const absolutePath = join(args.repoRootPath, file);
+      const absolutePath = join(traceBase, file);
       if (virtualFiles.has(absolutePath)) continue;
 
       let stats;
@@ -151,14 +158,43 @@ export const nft = async (
       // Lambda `files` map keys are always forward-slash separated,
       // regardless of the build host OS. NFT returns paths using the host
       // separator (backslashes on Windows), so normalize to POSIX.
-      const outputPath = file.split(sep).join('/');
+      const normalizedFile = normalizePath(
+        relative(args.repoRootPath, absolutePath)
+      );
+      const outputPath = stripParentSegments(normalizedFile);
+      const escapesBase = outputPath !== normalizedFile;
 
-      if (args.localBuildFiles.has(join(args.repoRootPath, outputPath))) {
+      // Source files that Rolldown already bundled should not be copied into
+      // the lambda, but node_modules entries can be added as trace roots to
+      // seed NFT for runtime CJS shims and must remain in the output.
+      if (
+        args.localBuildFiles.has(join(args.repoRootPath, outputPath)) &&
+        !isNodeModulesPath(outputPath)
+      ) {
         continue;
       }
 
       if (stats.isSymbolicLink() || stats.isFile()) {
-        if (args.ignoreNodeModules) {
+        if (stats.isSymbolicLink()) {
+          const symlinkTarget = await readlink(absolutePath);
+          const symlinkTargetPath = normalizePath(
+            relative(
+              args.repoRootPath,
+              resolve(dirname(absolutePath), symlinkTarget)
+            )
+          );
+
+          if (isParentPath(symlinkTargetPath)) {
+            const outputTargetPath = stripParentSegments(symlinkTargetPath);
+            args.files[outputPath] = new FileBlob({
+              data: posix.relative(posix.dirname(outputPath), outputTargetPath),
+              mode: stats.mode,
+            });
+            continue;
+          }
+        }
+
+        if (args.ignoreNodeModules || escapesBase) {
           // Symlinks may point to directories — only read actual files
           const targetStats = stats.isSymbolicLink()
             ? await stat(absolutePath)
@@ -218,6 +254,78 @@ const isJsLikeExtension = (path: string) => {
   const dot = path.lastIndexOf('.');
   if (dot === -1) return false;
   return JS_LIKE_EXTENSIONS.has(path.slice(dot).toLowerCase());
+};
+
+const getCommonBase = (base: string, paths: string[]) => {
+  let commonBase = base;
+  for (const path of paths) {
+    while (!isPathInside(commonBase, path)) {
+      const parent = dirname(commonBase);
+      if (parent === commonBase) break;
+      commonBase = parent;
+    }
+  }
+  return commonBase;
+};
+
+const isPathInside = (base: string, path: string) => {
+  const relPath = relative(base, path);
+  return (
+    relPath === '' ||
+    (!isParentPath(normalizePath(relPath)) && !isAbsolute(relPath))
+  );
+};
+
+const normalizePath = (path: string) => path.split(sep).join('/');
+
+const isParentPath = (path: string) => path === '..' || path.startsWith('../');
+
+const isNodeModulesPath = (path: string) =>
+  path.split('/').includes('node_modules');
+
+const stripParentSegments = (path: string) => {
+  const segments = path.split('/');
+  let index = 0;
+  while (segments[index] === '..') {
+    index++;
+  }
+  return segments.slice(index).join('/');
+};
+
+const getIgnorePatterns = ({
+  ignoreNodeModules,
+  ignore,
+  traceBase,
+  repoRootPath,
+}: {
+  ignoreNodeModules: boolean;
+  ignore?: string | string[] | undefined;
+  traceBase: string;
+  repoRootPath: string;
+}) => {
+  const patterns = [
+    ...(ignoreNodeModules ? ['**/node_modules/**'] : []),
+    ...(ignore ? (Array.isArray(ignore) ? ignore : [ignore]) : []),
+  ];
+  const repoRootRelativeToTraceBase = normalizePath(
+    relative(traceBase, repoRootPath)
+  );
+
+  if (
+    !repoRootRelativeToTraceBase ||
+    isParentPath(repoRootRelativeToTraceBase)
+  ) {
+    return patterns;
+  }
+
+  const rebasedPatterns = patterns.map(pattern => {
+    const isNegated = pattern.startsWith('!');
+    const patternBody = isNegated ? pattern.slice(1) : pattern;
+    const rebased = posix.join(repoRootRelativeToTraceBase, patternBody);
+    return isNegated ? `!${rebased}` : rebased;
+  });
+
+  return [...patterns, ...rebasedPatterns];
 };
 
 const createVirtualFileStat = (data: string | Buffer) => {
