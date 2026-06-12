@@ -364,11 +364,21 @@ async function installInjectedPackage({
   const localDir = join(__dirname, '..', '..', '..', 'python', name);
   const isLocalDev = fs.existsSync(join(localDir, 'pyproject.toml'));
   const dep = envOverride || (isLocalDev ? localDir : pinned);
+  // override exclude-newer, since we want vercel-runtime updates to
+  // take effect immediately after release
+  const noExclude = ['--exclude-newer-package', `${name}=false`];
   debug(`Installing ${dep}`);
   await uv.pip({
     venvPath,
     projectDir,
-    args: ['install', '--link-mode', 'copy', ...pipPlatformArgs, dep],
+    args: [
+      'install',
+      '--link-mode',
+      'copy',
+      ...pipPlatformArgs,
+      ...noExclude,
+      dep,
+    ],
   });
 }
 
