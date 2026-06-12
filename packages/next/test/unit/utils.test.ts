@@ -634,17 +634,30 @@ describe('getPageLambdaGroups large-function bundling', () => {
     expect(normal?.pages).toEqual(['small.js']);
   });
 
-  it('treats routes at or below the default limit as normal', async () => {
+  it('treats a route within the normal packing budget as normal', async () => {
     process.env[LARGE_FUNCTION_BUNDLING_ENV] = '1';
 
     const groups = await groupPagesBySize({
-      // 250 MiB is the limit; "> limit" is required to be large, so this stays
-      // normal and is not split out.
-      'exactly-limit.js': 250 * MiB,
+      // 200 MiB is under the 225 MiB budget (250 MiB limit − 25 MiB reserved).
+      'within-budget.js': 200 * MiB,
     });
 
     expect(groups).toHaveLength(1);
     expect(groups[0].isLargeFunctions).toBe(false);
+  });
+
+  it('treats a route over the packing budget but under the hard limit as large', async () => {
+    process.env[LARGE_FUNCTION_BUNDLING_ENV] = '1';
+
+    const groups = await groupPagesBySize({
+      // 240 MiB is under the 250 MiB limit but over the 225 MiB packing budget,
+      // so it cannot be guaranteed to fit a normal function (once post-build
+      // files are added) and is treated as large.
+      'over-budget.js': 240 * MiB,
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].isLargeFunctions).toBe(true);
   });
 });
 
