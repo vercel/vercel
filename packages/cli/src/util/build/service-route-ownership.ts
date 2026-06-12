@@ -37,7 +37,11 @@ export function scopeRoutesToServiceOwnership({
     return routes;
   }
   return routes.map(route => {
-    if ('handle' in route || typeof route.src !== 'string') {
+    if (
+      'handle' in route ||
+      'middlewarePath' in route ||
+      typeof route.src !== 'string'
+    ) {
       return route;
     }
     return {
