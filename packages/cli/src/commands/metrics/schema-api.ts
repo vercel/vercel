@@ -4,76 +4,17 @@ import { isAPIError } from '../../util/errors-ts';
 import { formatErrorJson, handleApiError } from './output';
 import type {
   Aggregation,
-  MetricDimension,
   MetricDetail,
   MetricDetailResponse,
   MetricListItem,
   MetricListResponse,
 } from './types';
 
-const WEB_ANALYTICS_PAGEVIEW_DIMENSIONS: MetricDimension[] = [
-  { name: 'project_id', label: 'Project' },
-  { name: 'environment', label: 'Environment' },
-  { name: 'request_hostname', label: 'Request Hostname' },
-  { name: 'request_path', label: 'Request Path' },
-  { name: 'referrer_hostname', label: 'Referrer Hostname' },
-  { name: 'route', label: 'Route' },
-  { name: 'country', label: 'Country' },
-  { name: 'device_type', label: 'Device Type' },
-  { name: 'device_id', label: 'Device Id' },
-  { name: 'os_name', label: 'Operating System' },
-  { name: 'browser_name', label: 'Browser' },
-  { name: 'utm_source', label: 'UTM Source' },
-  { name: 'utm_medium', label: 'UTM Medium' },
-  { name: 'utm_campaign', label: 'UTM Campaign' },
-  { name: 'utm_content', label: 'UTM Content' },
-  { name: 'utm_term', label: 'UTM Term' },
-  { name: 'flags', label: 'Flag' },
-];
-
-const WEB_ANALYTICS_EVENT_DIMENSIONS: MetricDimension[] = [
-  ...WEB_ANALYTICS_PAGEVIEW_DIMENSIONS,
-  { name: 'event_name', label: 'Analytics event name' },
-  { name: 'event_data', label: 'Event Data' },
-];
-
-function withWebAnalyticsDimensionFallbacks(
-  metricId: string,
-  dimensions: MetricDimension[]
-): MetricDimension[] {
-  const fallbackDimensions =
-    metricId === 'vercel.analytics_pageview.count'
-      ? WEB_ANALYTICS_PAGEVIEW_DIMENSIONS
-      : metricId === 'vercel.analytics_event.count'
-        ? WEB_ANALYTICS_EVENT_DIMENSIONS
-        : undefined;
-
-  if (!fallbackDimensions) {
-    return dimensions;
-  }
-
-  const dimensionByName = new Map(
-    dimensions.map(dimension => [dimension.name, dimension])
-  );
-  for (const dimension of fallbackDimensions) {
-    if (!dimensionByName.has(dimension.name)) {
-      dimensionByName.set(dimension.name, dimension);
-    }
-  }
-
-  return [...dimensionByName.values()].sort((a, b) =>
-    a.name.localeCompare(b.name)
-  );
-}
-
 function toMetricDetail(metric: MetricDetailResponse[number]): MetricDetail {
   return {
     id: metric.id,
     description: metric.description,
-    dimensions: withWebAnalyticsDimensionFallbacks(
-      metric.id,
-      metric.dimensions
-    ),
+    dimensions: metric.dimensions,
     unit: metric.unit,
     aggregations: metric.aggregations as Aggregation[],
     defaultAggregation: metric.defaultAggregation as Aggregation,
