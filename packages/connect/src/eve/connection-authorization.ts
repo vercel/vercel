@@ -76,6 +76,17 @@ interface CompleteAuthorizationOptions {
   readonly principal: ConnectionPrincipal;
 }
 
+/**
+ * `displayName` is being added to Eve's
+ * `ConnectionAuthorizationChallenge` (in-flight upstream PR); this
+ * intersection can be dropped in favour of the plain challenge type
+ * once the `eve` dependency picks it up.
+ */
+type ConnectionAuthorizationChallengeWithDisplayName =
+  ConnectionAuthorizationChallenge & {
+    readonly displayName?: string;
+  };
+
 /** Options accepted by {@link connect}. */
 export interface EveAuthorizationOptions {
   /**
@@ -157,6 +168,15 @@ export interface EveAuthorizationOptions {
    * from the connection's filename.
    */
   readonly instructions?: string;
+
+  /**
+   * Manual override for the human-readable provider name channels
+   * render on the authorization affordance (eg. a
+   * `Sign in with Salesforce` button). When omitted, the connector's
+   * service display name reported by Vercel Connect is used, falling
+   * back to the connector's own name for unknown services.
+   */
+  readonly displayName?: string;
 
   /**
    * Escape hatch for turning an unexpected Vercel Connect / network
@@ -361,7 +381,7 @@ function buildInteractiveDefinition(
       callbackUrl,
       webhook,
     }: StartAuthorizationOptions): Promise<{
-      challenge: ConnectionAuthorizationChallenge;
+      challenge: ConnectionAuthorizationChallengeWithDisplayName;
     }> {
       try {
         // Eve's `webhook` parameter is semantically a browser-redirect
@@ -394,6 +414,15 @@ function buildInteractiveDefinition(
             deviceCode: true,
           }
         );
+        // Sign-in buttons name the destination service ("Sign in with
+        // Salesforce"), matching the OAuth idiom — the consent screen
+        // names the specific requesting app. The connector's own name is
+        // the fallback for custom connectors on unknown services, and an
+        // author-provided override wins over both.
+        const displayName =
+          options.displayName ??
+          response.connector?.serviceName ??
+          response.connector?.name;
         return {
           challenge: {
             url: response.url,
@@ -404,7 +433,8 @@ function buildInteractiveDefinition(
             ...(options.instructions
               ? { instructions: options.instructions }
               : null),
-          } satisfies ConnectionAuthorizationChallenge,
+            ...(displayName ? { displayName } : null),
+          } satisfies ConnectionAuthorizationChallengeWithDisplayName,
         };
       } catch (error) {
         throw translate(error, 'startAuthorization', options);

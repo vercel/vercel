@@ -121,6 +121,105 @@ describe('connect() adapter evict', () => {
   });
 });
 
+describe('connect() adapter startAuthorization', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    vi.mocked(getVercelOidcToken).mockResolvedValue('oidc_token');
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('threads the service display name reported by Connect onto the challenge as displayName', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonAuthorizeResponse({ connector: SALESFORCE_CONNECTOR })
+    );
+
+    const definition = connect('oauth/connection-auth-display-name');
+    const { challenge } = await definition.startAuthorization({
+      principal: PRINCIPAL,
+    });
+
+    // The service name ("Sign in with Salesforce"), not the connector's
+    // own name — the consent screen identifies the specific app.
+    expect(challenge).toMatchObject({
+      url: 'https://connect.vercel.com/authorize/abc',
+      displayName: 'Salesforce',
+    });
+  });
+
+  it('falls back to the connector name when the service has no display name', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonAuthorizeResponse({
+        connector: { ...SALESFORCE_CONNECTOR, serviceName: undefined },
+      })
+    );
+
+    const definition = connect('oauth/connection-auth-unknown-service');
+    const { challenge } = await definition.startAuthorization({
+      principal: PRINCIPAL,
+    });
+
+    expect(challenge).toMatchObject({ displayName: 'Acme GTM Bot' });
+  });
+
+  it('prefers the author-provided displayName over the server-reported names', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonAuthorizeResponse({ connector: SALESFORCE_CONNECTOR })
+    );
+
+    const definition = connect({
+      connector: 'oauth/connection-auth-display-name-override',
+      displayName: 'Sales Cloud',
+    });
+    const { challenge } = await definition.startAuthorization({
+      principal: PRINCIPAL,
+    });
+
+    expect(challenge).toMatchObject({ displayName: 'Sales Cloud' });
+  });
+
+  it('omits displayName when neither the author nor Connect provide one', async () => {
+    fetchMock.mockResolvedValueOnce(jsonAuthorizeResponse());
+
+    const definition = connect('oauth/connection-auth-no-display-name');
+    const { challenge } = await definition.startAuthorization({
+      principal: PRINCIPAL,
+    });
+
+    expect(challenge).not.toHaveProperty('displayName');
+  });
+});
+
+const SALESFORCE_CONNECTOR = {
+  id: 'scl_salesforce',
+  uid: 'oauth/connection-auth-salesforce',
+  type: 'oauth',
+  service: 'salesforce',
+  serviceName: 'Salesforce' as string | undefined,
+  name: 'Acme GTM Bot',
+};
+
+function jsonAuthorizeResponse(extra?: {
+  connector?: typeof SALESFORCE_CONNECTOR;
+}): Response {
+  return new Response(
+    JSON.stringify({
+      request: 'req_1',
+      verifier: 'ver_1',
+      url: 'https://connect.vercel.com/authorize/abc',
+      deviceCode: 'ABCD-1234',
+      ...extra,
+    }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } }
+  );
+}
+
 function jsonTokenResponse(token: string): Response {
   return new Response(
     JSON.stringify({
