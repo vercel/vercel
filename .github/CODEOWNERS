@@ -51,6 +51,7 @@
 /packages/detect-agent/                  @vercel/ci-cd @vercel/vercel-cli-approvers
 /packages/connect/                       @vercel/ci-cd @vercel/marketplace
 /packages/python*                        @vercel/ci-cd @vercel/team-python
+/packages/backends/                      @vercel/ci-cd @vercel/team-backends
 /python                                  @vercel/ci-cd @vercel/team-python
 /uv.lock                                 @vercel/ci-cd @vercel/team-python
 /.github/workflows/*python*.yml          @vercel/ci-cd @vercel/team-python
