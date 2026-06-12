@@ -4,12 +4,39 @@ import { IncomingMessage } from 'http';
 import { SYMBOL_FOR_REQ_CONTEXT } from '../../src/get-context';
 import { experimental_upgradeWebSocket } from '../../src/websocket';
 
+const { webSocketServerOptions } = vi.hoisted(() => ({
+  webSocketServerOptions: [] as Array<Record<string, unknown> | undefined>,
+}));
+
+vi.mock('ws', async importOriginal => {
+  const actual = await importOriginal<typeof import('ws')>();
+
+  class TestWebSocketServer extends actual.WebSocketServer {
+    constructor(options?: unknown, callback?: unknown) {
+      webSocketServerOptions.push(
+        options as Record<string, unknown> | undefined
+      );
+
+      super(
+        options as ConstructorParameters<typeof actual.WebSocketServer>[0],
+        callback as ConstructorParameters<typeof actual.WebSocketServer>[1]
+      );
+    }
+  }
+
+  return {
+    ...actual,
+    WebSocketServer: TestWebSocketServer,
+  };
+});
+
 const g = globalThis as typeof globalThis & {
   [SYMBOL_FOR_REQ_CONTEXT]?: unknown;
 };
 
 beforeEach(() => {
   delete g[SYMBOL_FOR_REQ_CONTEXT];
+  webSocketServerOptions.length = 0;
 });
 
 describe('experimental_upgradeWebSocket', () => {
@@ -63,6 +90,39 @@ describe('experimental_upgradeWebSocket', () => {
       expect(typeof handler.mock.calls[0][0].send).toBe('function');
       expect(response).toBeInstanceOf(Response);
       expect(response.status).toBe(204);
+      expect(webSocketServerOptions).toEqual([
+        { noServer: true, maxPayload: 256 * 1024 },
+      ]);
+
+      socket.destroy();
+    });
+
+    test('passes maxPayload to the WebSocket server when provided', async () => {
+      const { socket } = createUpgradeContext();
+
+      const response = await experimental_upgradeWebSocket(() => {}, {
+        maxPayload: 256 * 1024,
+      });
+
+      expect(response.status).toBe(204);
+      expect(webSocketServerOptions).toEqual([
+        { noServer: true, maxPayload: 256 * 1024 },
+      ]);
+
+      socket.destroy();
+    });
+
+    test('uses the default maxPayload when undefined', async () => {
+      const { socket } = createUpgradeContext();
+
+      const response = await experimental_upgradeWebSocket(() => {}, {
+        maxPayload: undefined,
+      });
+
+      expect(response.status).toBe(204);
+      expect(webSocketServerOptions).toEqual([
+        { noServer: true, maxPayload: 256 * 1024 },
+      ]);
 
       socket.destroy();
     });

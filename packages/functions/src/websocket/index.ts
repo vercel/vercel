@@ -1,6 +1,12 @@
 import type { WebSocket } from 'ws';
 import { getContext } from '../get-context';
 
+const DEFAULT_MAX_PAYLOAD = 256 * 1024;
+
+export interface UpgradeWebSocketOptions {
+  maxPayload?: number;
+}
+
 async function loadWebSocketServer() {
   try {
     const ws = await import('ws');
@@ -14,7 +20,8 @@ async function loadWebSocketServer() {
 }
 
 export async function experimental_upgradeWebSocket(
-  handler: (ws: WebSocket) => void | Promise<void>
+  handler: (ws: WebSocket) => void | Promise<void>,
+  options: UpgradeWebSocketOptions = {}
 ): Promise<Response> {
   const ctx = getContext();
 
@@ -29,7 +36,10 @@ export async function experimental_upgradeWebSocket(
 
   const { req, socket, head } = ctx.upgradeWebSocket();
 
-  const wss = new WebSocketServer({ noServer: true });
+  const wss = new WebSocketServer({
+    noServer: true,
+    maxPayload: options.maxPayload ?? DEFAULT_MAX_PAYLOAD,
+  });
 
   const ws = await new Promise<WebSocket>((resolve, reject) => {
     const cleanup = () => {
