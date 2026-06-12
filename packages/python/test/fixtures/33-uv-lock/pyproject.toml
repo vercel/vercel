@@ -15,3 +15,8 @@ mypy = [
 dev = [
   "ruff",
 ]
+
+# We put a fixed exclude-newer here to ensure that vercel-runtime
+# works even when it is too new.
+[tool.uv]
+exclude-newer = "2026-06-07T00:54:18.627444Z"
