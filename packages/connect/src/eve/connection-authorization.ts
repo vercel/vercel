@@ -415,7 +415,7 @@ function buildInteractiveDefinition(
         );
         // The author-provided override wins over the connector name
         // reported by Vercel Connect.
-        const displayName = options.displayName ?? response.connectorName;
+        const displayName = options.displayName ?? response.connector?.name;
         return {
           challenge: {
             url: response.url,

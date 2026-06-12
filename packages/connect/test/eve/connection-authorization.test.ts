@@ -135,9 +135,9 @@ describe('connect() adapter startAuthorization', () => {
     vi.restoreAllMocks();
   });
 
-  it('threads the connectorName reported by Connect onto the challenge as displayName', async () => {
+  it('threads the connector name reported by Connect onto the challenge as displayName', async () => {
     fetchMock.mockResolvedValueOnce(
-      jsonAuthorizeResponse({ connectorName: 'Salesforce' })
+      jsonAuthorizeResponse({ connector: SALESFORCE_CONNECTOR })
     );
 
     const definition = connect('oauth/connection-auth-display-name');
@@ -151,9 +151,9 @@ describe('connect() adapter startAuthorization', () => {
     });
   });
 
-  it('prefers the author-provided displayName over the server-reported connectorName', async () => {
+  it('prefers the author-provided displayName over the server-reported connector name', async () => {
     fetchMock.mockResolvedValueOnce(
-      jsonAuthorizeResponse({ connectorName: 'Salesforce' })
+      jsonAuthorizeResponse({ connector: SALESFORCE_CONNECTOR })
     );
 
     const definition = connect({
@@ -179,7 +179,17 @@ describe('connect() adapter startAuthorization', () => {
   });
 });
 
-function jsonAuthorizeResponse(extra?: { connectorName?: string }): Response {
+const SALESFORCE_CONNECTOR = {
+  id: 'scl_salesforce',
+  uid: 'oauth/connection-auth-salesforce',
+  type: 'oauth',
+  service: 'salesforce',
+  name: 'Salesforce',
+};
+
+function jsonAuthorizeResponse(extra?: {
+  connector?: typeof SALESFORCE_CONNECTOR;
+}): Response {
   return new Response(
     JSON.stringify({
       request: 'req_1',
