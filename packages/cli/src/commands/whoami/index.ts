@@ -3,6 +3,7 @@ import { help } from '../help';
 import { whoamiCommand } from './command';
 
 import getScope from '../../util/get-scope';
+import { isVercelAppToken } from '../../util/is-vercel-app-token';
 import { parseArguments } from '../../util/get-args';
 import type Client from '../../util/client';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -10,6 +11,9 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { WhoamiTelemetryClient } from '../../util/telemetry/commands/whoami';
 import { validateJsonOutput } from '../../util/output-format';
+
+const APP_TOKEN_ERROR =
+  'You are authenticated as a Vercel App, so there is no user identity to display.';
 
 export default async function whoami(client: Client): Promise<number> {
   let parsedArgs = null;
@@ -43,8 +47,21 @@ export default async function whoami(client: Client): Promise<number> {
   const asJson = formatResult.jsonOutput;
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
+  // Check the token before resolving scope: an app token can never have a
+  // user identity, and getScope would otherwise fail on team resolution
+  // first in unlinked directories — a misleading two-step dead end.
+  if (isVercelAppToken(client.authConfig.token)) {
+    output.error(APP_TOKEN_ERROR);
+    return 1;
+  }
+
   const scope = await getScope(client, { resolveLocalScope: true });
   const { user, team, globalTeam } = scope;
+
+  if (!user) {
+    output.error(APP_TOKEN_ERROR);
+    return 1;
+  }
 
   // A local override exists when the effective team (from the linked project)
   // differs from the globally-selected team (from `vc switch`). We only treat

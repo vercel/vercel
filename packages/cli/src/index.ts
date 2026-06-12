@@ -50,6 +50,7 @@ import highlight from './util/output/highlight';
 import { parseArguments } from './util/get-args';
 import getUser from './util/get-user';
 import getTeams from './util/teams/get-teams';
+import { isVercelAppToken } from './util/is-vercel-app-token';
 import Client from './util/client';
 import { printError } from './util/error';
 import reportError from './util/report-error';
@@ -774,8 +775,36 @@ const main = async () => {
     parsedArgs.flags['--team'] ||
     localConfig?.scope;
 
+  const appPrincipal = isVercelAppToken(client.authConfig.token);
+
   if (
     typeof scope === 'string' &&
+    appPrincipal &&
+    targetCommand !== 'login' &&
+    targetCommand !== 'build' &&
+    targetCommand !== 'sandbox'
+  ) {
+    // App tokens have no user identity to resolve a slug against, and no
+    // team listing. The scope must be a team ID, which is validated by the
+    // API on the first team-scoped request.
+    if (!scope.startsWith('team_')) {
+      const scopeSource = parsedArgs.flags['--scope']
+        ? param('--scope')
+        : parsedArgs.flags['--team']
+          ? param('--team')
+          : 'the `scope` property in your project configuration';
+      output.prettyError({
+        message: `When authenticating as a Vercel App, the scope provided via ${scopeSource} must be a team ID (\`team_…\`).`,
+      });
+      return finishWithExitCode(1);
+    }
+
+    client.config.currentTeam = scope;
+  }
+
+  if (
+    typeof scope === 'string' &&
+    !appPrincipal &&
     targetCommand !== 'login' &&
     targetCommand !== 'build' &&
     targetCommand !== 'sandbox'

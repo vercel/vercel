@@ -3,10 +3,23 @@ import { describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import domains from '../../../../src/commands/domains';
 import { useUser } from '../../../mocks/user';
-import { useTeams } from '../../../mocks/team';
+import { useTeam, useTeams } from '../../../mocks/team';
 import { useDomain } from '../../../mocks/domains';
 
 describe('domains mv', () => {
+  it('should error when authenticated as a Vercel App', async () => {
+    const team = useTeam();
+    client.authConfig.token = 'vca_dummy_token';
+    client.config.currentTeam = team.id;
+    client.setArgv('domains', 'move', 'example.com', 'dest', '--yes');
+
+    const exitCodePromise = domains(client);
+    await expect(client.stderr).toOutput(
+      'requires a user identity and cannot be used when authenticating as a Vercel App'
+    );
+    expect(await exitCodePromise).toEqual(1);
+  });
+
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'domains';

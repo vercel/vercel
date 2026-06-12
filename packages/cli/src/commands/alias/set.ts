@@ -79,6 +79,18 @@ export default async function set(client: Client, argv: string[]) {
   if (args.length === 1) {
     const [aliasTarget] = args;
     telemetryClient.trackCliArgumentAlias(aliasTarget);
+
+    // Inferring the deployment means "the current user's latest deployment",
+    // which has no meaning for an app-principal token.
+    if (!user) {
+      output.error(
+        `Specify the deployment to alias when authenticating as a Vercel App: ${getCommandName(
+          'alias set <deployment> <alias>'
+        )}`
+      );
+      return 1;
+    }
+
     const deployment = handleCertError(
       await getDeploymentForAlias(
         client,

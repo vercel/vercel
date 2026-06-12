@@ -49,6 +49,29 @@ describe('whoami', () => {
     await expect(client.stderr).toOutput(`Active team: ${team.slug}`);
   });
 
+  it('should error when authenticated as a Vercel App', async () => {
+    const team = useTeam();
+    client.authConfig.token = 'vca_dummy_token';
+    client.config.currentTeam = team.id;
+
+    const exitCodePromise = whoami(client);
+    await expect(client.stderr).toOutput(
+      'Error: You are authenticated as a Vercel App'
+    );
+    expect(await exitCodePromise).toEqual(1);
+  });
+
+  it('should error in one step as a Vercel App without a team', async () => {
+    client.authConfig.token = 'vca_dummy_token';
+    client.cwd = setupTmpDir();
+
+    const exitCodePromise = whoami(client);
+    await expect(client.stderr).toOutput(
+      'Error: You are authenticated as a Vercel App'
+    );
+    expect(await exitCodePromise).toEqual(1);
+  });
+
   it('should flag a local override when a linked project uses a different team', async () => {
     useUser();
     // Both teams must be known so they can be resolved by ID.

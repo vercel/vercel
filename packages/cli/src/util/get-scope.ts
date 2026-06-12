@@ -3,7 +3,12 @@ import type Client from './client';
 import type { Org, Team, User } from '@vercel-internals/types';
 import getUser from './get-user';
 import getTeamById from './teams/get-team-by-id';
-import { TeamDeleted } from './errors-ts';
+import {
+  AppTokenPersonalScopeNotSupported,
+  AppTokenTeamRequired,
+  TeamDeleted,
+} from './errors-ts';
+import { isVercelAppToken } from './is-vercel-app-token';
 import { getLinkFromDir, getVercelDirectory } from './projects/link';
 import { getRepoLink, findProjectsFromPath } from './link/repo';
 import type { RepoProjectsConfig } from './link/repo';
@@ -12,7 +17,11 @@ import output from '../output-manager';
 export interface ScopeContext {
   org: Org;
   contextName: string;
-  user: User;
+  /**
+   * `null` when authenticating as a Vercel App (app-principal token) — there
+   * is no user identity attached to the token.
+   */
+  user: User | null;
   team: Team | null;
   /**
    * The team that's globally selected (via `vc switch` or as the northstar
@@ -31,7 +40,7 @@ export interface ScopeContext {
 
 interface BasicScopeContext {
   contextName: string;
-  user: User;
+  user: User | null;
   team: Team | null;
 }
 
@@ -60,21 +69,62 @@ export default async function getScope(
   client: Client,
   opts: GetScopeOptions = {}
 ): Promise<BasicScopeContext | ScopeContext> {
-  const user = await getUser(client);
-  let contextName = user.username || user.email;
+  const appPrincipal = isVercelAppToken(client.authConfig.token);
+
+  let user: User | null = null;
+  let contextName = '';
   let team: Team | null = null;
-  const defaultTeamId =
-    user.version === 'northstar' ? user.defaultTeamId : undefined;
-  const currentTeamOrDefaultTeamId = client.config.currentTeam || defaultTeamId;
 
-  if (currentTeamOrDefaultTeamId && opts.getTeam !== false) {
-    team = await getTeamById(client, currentTeamOrDefaultTeamId);
+  if (appPrincipal) {
+    // App tokens carry no user identity and no default team. The team must
+    // come from `--scope <team-id>` (already applied to `currentTeam`) or
+    // from the linked project.
+    let teamId = client.config.currentTeam;
 
-    if (!team) {
-      throw new TeamDeleted();
+    if (!teamId && !opts.resolveLocalScope) {
+      const { localOrgId } = await resolveLocalLink(client);
+
+      if (localOrgId) {
+        if (!localOrgId.startsWith('team_')) {
+          throw new AppTokenPersonalScopeNotSupported();
+        }
+        teamId = localOrgId;
+        client.config.currentTeam = teamId;
+      } else {
+        throw new AppTokenTeamRequired();
+      }
     }
 
-    contextName = team.slug;
+    if (teamId) {
+      if (opts.getTeam === false) {
+        contextName = teamId;
+      } else {
+        team = await getTeamById(client, teamId);
+
+        if (!team) {
+          throw new TeamDeleted();
+        }
+
+        contextName = team.slug;
+      }
+    }
+  } else {
+    user = await getUser(client);
+    contextName = user.username || user.email;
+    const defaultTeamId =
+      user.version === 'northstar' ? user.defaultTeamId : undefined;
+    const currentTeamOrDefaultTeamId =
+      client.config.currentTeam || defaultTeamId;
+
+    if (currentTeamOrDefaultTeamId && opts.getTeam !== false) {
+      team = await getTeamById(client, currentTeamOrDefaultTeamId);
+
+      if (!team) {
+        throw new TeamDeleted();
+      }
+
+      contextName = team.slug;
+    }
   }
 
   if (!opts.resolveLocalScope) {
@@ -85,6 +135,94 @@ export default async function getScope(
   const globalTeamId = client.config.currentTeam;
   const globalTeam = team;
 
+  const { localOrgId, repoLink } = await resolveLocalLink(client);
+
+  const isCrossTeamRepo = detectCrossTeamRepo(repoLink?.repoConfig);
+
+  const scopeMismatch = Boolean(
+    localOrgId && globalTeamId && globalTeamId !== localOrgId
+  );
+
+  let resolvedOrg: Org;
+  let resolvedContextName = contextName;
+  let resolvedTeam = team;
+  let linkedRepoResult: ScopeContext['linkedRepo'] = null;
+
+  if (repoLink?.repoConfig) {
+    linkedRepoResult = {
+      repoConfig: repoLink.repoConfig,
+      rootPath: repoLink.rootPath,
+    };
+  }
+
+  const userOrg = (): Org => {
+    if (!user) {
+      throw new AppTokenTeamRequired();
+    }
+    return { type: 'user', id: user.id, slug: user.username };
+  };
+
+  if (explicitScopeProvided) {
+    resolvedOrg = team
+      ? { type: 'team', id: team.id, slug: team.slug }
+      : userOrg();
+  } else if (localOrgId) {
+    client.config.currentTeam = localOrgId.startsWith('team_')
+      ? localOrgId
+      : undefined;
+
+    const correctedTeam = client.config.currentTeam
+      ? await getTeamById(client, client.config.currentTeam)
+      : null;
+    if (correctedTeam) {
+      resolvedOrg = {
+        type: 'team',
+        id: correctedTeam.id,
+        slug: correctedTeam.slug,
+      };
+      resolvedContextName = correctedTeam.slug;
+    } else {
+      if (appPrincipal) {
+        throw new AppTokenPersonalScopeNotSupported();
+      }
+      const correctedUser = await getUser(client);
+      resolvedOrg = {
+        type: 'user',
+        id: correctedUser.id,
+        slug: correctedUser.username,
+      };
+      resolvedContextName = correctedUser.username || correctedUser.email;
+    }
+    resolvedTeam = correctedTeam;
+  } else {
+    if (isCrossTeamRepo) {
+      output.warn(
+        `This repository has projects across multiple teams. ` +
+          `Use \`--scope\` to specify which team, or \`cd\` into a project directory.`
+      );
+    }
+    resolvedOrg = team
+      ? { type: 'team', id: team.id, slug: team.slug }
+      : userOrg();
+  }
+
+  return {
+    org: resolvedOrg,
+    contextName: resolvedContextName,
+    user,
+    team: resolvedTeam,
+    globalTeam,
+    linkedRepo: linkedRepoResult,
+    isCrossTeamRepo,
+    scopeMismatch,
+    explicitScopeProvided,
+  } satisfies ScopeContext;
+}
+
+async function resolveLocalLink(client: Client): Promise<{
+  localOrgId: string | undefined;
+  repoLink: Awaited<ReturnType<typeof getRepoLink>> | null;
+}> {
   const cwd = client.cwd;
   let projectLink: { orgId: string; projectId: string } | null = null;
   try {
@@ -127,76 +265,19 @@ export default async function getScope(
     }
   }
 
-  const isCrossTeamRepo = detectCrossTeamRepo(repoLink?.repoConfig);
-
-  const scopeMismatch = Boolean(
-    localOrgId && globalTeamId && globalTeamId !== localOrgId
-  );
-
-  let resolvedOrg: Org;
-  let resolvedContextName = contextName;
-  let resolvedTeam = team;
-  let linkedRepoResult: ScopeContext['linkedRepo'] = null;
-
-  if (repoLink?.repoConfig) {
-    linkedRepoResult = {
-      repoConfig: repoLink.repoConfig,
-      rootPath: repoLink.rootPath,
-    };
-  }
-
-  if (explicitScopeProvided) {
-    resolvedOrg = team
-      ? { type: 'team', id: team.id, slug: team.slug }
-      : { type: 'user', id: user.id, slug: user.username };
-  } else if (localOrgId) {
-    client.config.currentTeam = localOrgId.startsWith('team_')
-      ? localOrgId
-      : undefined;
-
-    const correctedTeam = client.config.currentTeam
-      ? await getTeamById(client, client.config.currentTeam)
-      : null;
-    const correctedUser = await getUser(client);
-    resolvedOrg = correctedTeam
-      ? { type: 'team', id: correctedTeam.id, slug: correctedTeam.slug }
-      : {
-          type: 'user',
-          id: correctedUser.id,
-          slug: correctedUser.username,
-        };
-    resolvedContextName = correctedTeam
-      ? correctedTeam.slug
-      : correctedUser.username || correctedUser.email;
-    resolvedTeam = correctedTeam;
-  } else {
-    if (isCrossTeamRepo) {
-      output.warn(
-        `This repository has projects across multiple teams. ` +
-          `Use \`--scope\` to specify which team, or \`cd\` into a project directory.`
-      );
-    }
-    resolvedOrg = team
-      ? { type: 'team', id: team.id, slug: team.slug }
-      : { type: 'user', id: user.id, slug: user.username };
-  }
-
-  return {
-    org: resolvedOrg,
-    contextName: resolvedContextName,
-    user,
-    team: resolvedTeam,
-    globalTeam,
-    linkedRepo: linkedRepoResult,
-    isCrossTeamRepo,
-    scopeMismatch,
-    explicitScopeProvided,
-  } satisfies ScopeContext;
+  return { localOrgId, repoLink };
 }
 
 export function applyScopeFromLink(client: Client, link: { org: Org }): void {
   const localOrgId = link.org.id;
   const globalTeamId = client.config.currentTeam;
+
+  if (
+    !localOrgId.startsWith('team_') &&
+    isVercelAppToken(client.authConfig.token)
+  ) {
+    throw new AppTokenPersonalScopeNotSupported();
+  }
 
   const scopeMismatch = Boolean(globalTeamId && globalTeamId !== localOrgId);
 

@@ -40,6 +40,18 @@ export default async function move(client: Client, argv: string[]) {
   telemetry.trackCliArgumentDestination(args[1]);
 
   const { contextName, user } = await getScope(client);
+
+  // Destination matching is defined in terms of the current user and their
+  // team memberships, neither of which exists for an app-principal token.
+  if (!user) {
+    output.error(
+      `${getCommandName(
+        'domains move'
+      )} requires a user identity and cannot be used when authenticating as a Vercel App.`
+    );
+    return 1;
+  }
+
   const { domainName, destination } = await getArgs(client, args);
   if (!isRootDomain(domainName)) {
     output.error(

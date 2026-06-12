@@ -91,6 +91,43 @@ export class TeamDeleted extends NowError<'TEAM_DELETED', {}> {
 }
 
 /**
+ * Thrown when authenticating as a Vercel App (`vca_` token) and no team
+ * scope could be resolved. App tokens are not bound to a team, so one must
+ * be provided explicitly.
+ */
+export class AppTokenTeamRequired extends NowError<
+  'APP_TOKEN_TEAM_REQUIRED',
+  {}
+> {
+  constructor() {
+    super({
+      code: 'APP_TOKEN_TEAM_REQUIRED',
+      message:
+        'You are authenticated as a Vercel App, which has no default team. Specify one with `--scope <team-id>` or run in a directory linked to a team project.',
+      meta: {},
+    });
+  }
+}
+
+/**
+ * Thrown when authenticating as a Vercel App while the resolved scope is a
+ * personal account. App tokens can only act on teams.
+ */
+export class AppTokenPersonalScopeNotSupported extends NowError<
+  'APP_TOKEN_PERSONAL_SCOPE',
+  {}
+> {
+  constructor() {
+    super({
+      code: 'APP_TOKEN_PERSONAL_SCOPE',
+      message:
+        'This scope is a personal account, but you are authenticated as a Vercel App. Vercel Apps can only act on teams; specify one with `--scope <team-id>`.',
+      meta: {},
+    });
+  }
+}
+
+/**
  * Thrown when a user is requested to the backend but we get unauthorized
  * because the token is not valid anymore.
  */

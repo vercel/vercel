@@ -23,7 +23,7 @@ describe('resolveScopeContext', () => {
 
       expect(ctx.org.id).toEqual(mockTeam.id);
       expect(ctx.contextName).toEqual(mockTeam.slug);
-      expect(ctx.user.id).toEqual(mockUser.id);
+      expect(ctx.user?.id).toEqual(mockUser.id);
       expect(ctx.team?.id).toEqual(mockTeam.id);
       expect(ctx.linkedRepo).toBeNull();
       expect(ctx.isCrossTeamRepo).toBe(false);
@@ -270,8 +270,103 @@ describe('resolveScopeContext', () => {
       const ctx = await getScope(client, { resolveLocalScope: true });
 
       expect(ctx.org.id).toEqual(mockTeam.id);
-      expect(ctx.user.id).toEqual(mockUser.id);
+      expect(ctx.user?.id).toEqual(mockUser.id);
       expect(ctx.team?.id).toEqual(mockTeam.id);
+    });
+  });
+
+  describe('app principal', () => {
+    let mockTeam: ReturnType<typeof useTeam>;
+
+    beforeEach(() => {
+      mockTeam = useTeam('team_dummy');
+      client.authConfig.token = 'vca_dummy_token';
+    });
+
+    it('should resolve team from --scope', async () => {
+      client.config.currentTeam = mockTeam.id;
+      client.setArgv('projects', 'ls', '--scope', mockTeam.id);
+
+      const ctx = await getScope(client, { resolveLocalScope: true });
+
+      expect(ctx.user).toBeNull();
+      expect(ctx.org).toEqual({
+        type: 'team',
+        id: mockTeam.id,
+        slug: mockTeam.slug,
+      });
+      expect(ctx.contextName).toEqual(mockTeam.slug);
+    });
+
+    it('should resolve team from linked project', async () => {
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+
+      await outputFile(
+        join(cwd, '.vercel', 'project.json'),
+        JSON.stringify({ orgId: mockTeam.id, projectId: 'prj_123' })
+      );
+
+      const ctx = await getScope(client, { resolveLocalScope: true });
+
+      expect(ctx.user).toBeNull();
+      expect(ctx.org).toEqual({
+        type: 'team',
+        id: mockTeam.id,
+        slug: mockTeam.slug,
+      });
+      expect(ctx.team?.id).toEqual(mockTeam.id);
+    });
+
+    it('should resolve team from linked project without resolveLocalScope', async () => {
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+
+      await outputFile(
+        join(cwd, '.vercel', 'project.json'),
+        JSON.stringify({ orgId: mockTeam.id, projectId: 'prj_123' })
+      );
+
+      const ctx = await getScope(client);
+
+      expect(ctx.user).toBeNull();
+      expect(ctx.team?.id).toEqual(mockTeam.id);
+      expect(ctx.contextName).toEqual(mockTeam.slug);
+      expect(client.config.currentTeam).toEqual(mockTeam.id);
+    });
+
+    it('should throw for personal linked project without resolveLocalScope', async () => {
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+
+      await outputFile(
+        join(cwd, '.vercel', 'project.json'),
+        JSON.stringify({ orgId: 'user_abc123', projectId: 'prj_123' })
+      );
+
+      await expect(getScope(client)).rejects.toThrow(/personal account/);
+    });
+
+    it('should throw when linked project is on a personal account', async () => {
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+
+      await outputFile(
+        join(cwd, '.vercel', 'project.json'),
+        JSON.stringify({ orgId: 'user_abc123', projectId: 'prj_123' })
+      );
+
+      await expect(
+        getScope(client, { resolveLocalScope: true })
+      ).rejects.toThrow(/personal account/);
+    });
+
+    it('should throw when no team can be resolved', async () => {
+      client.cwd = setupTmpDir();
+
+      await expect(
+        getScope(client, { resolveLocalScope: true })
+      ).rejects.toThrow(/--scope/);
     });
   });
 });
