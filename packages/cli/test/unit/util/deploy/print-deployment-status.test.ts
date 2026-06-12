@@ -135,7 +135,7 @@ describe('printDeploymentStatus() — ready terminal state', () => {
     expect(ready).toBe('✓ Ready in 12s');
   });
 
-  it('Ready line has a leading blank line (separates from Aliased row)', async () => {
+  it('Ready line has a leading blank line (separates from the URL row)', async () => {
     // Anti-regression: the prior test uses allPrintedLines() which .trim()s
     // each call, so it cannot catch a regression that removes the leading
     // "\n" from the Ready string. Assert against the raw call argument.

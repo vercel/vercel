@@ -989,7 +989,7 @@ describe('deploy', () => {
       // remove first 3 lines which contains randomized data
       const output = client.getFullOutput().split('\n').slice(3).join('\n');
       expect(output).toContain('Building');
-      expect(output).toContain('Production  https');
+      expect(output).toContain('Visit');
       expect(output).toContain('Completing');
       expect(exitCode).toEqual(0);
     });
@@ -1785,17 +1785,17 @@ describe('deploy', () => {
 
       const exitCodePromise = deploy(client);
 
-      await expect(client.stderr).toOutput('Production ');
+      await expect(client.stderr).toOutput('Visit ');
       await expect(client.stderr).toOutput(
-        'Aliased     https://my-app.vercel.app'
+        'Production  https://my-app.vercel.app'
       );
 
       // Anti-regression: ANSI is stripped from toOutput, so assert the raw
-      // output still contains the gutter glyphs for both Production + Aliased
+      // output still contains the gutter glyphs for both Visit + Production
       // rows. A regression that drops `gutter: '▲'` would not fail toOutput.
       const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).toContain('▲ Visit');
       expect(stderrOutput).toContain('▲ Production');
-      expect(stderrOutput).toContain('▲ Aliased');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
@@ -1868,7 +1868,7 @@ describe('deploy', () => {
 
       const exitCodePromise = deploy(client);
 
-      await expect(client.stderr).toOutput('Preview     https');
+      await expect(client.stderr).toOutput('Visit');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
@@ -1942,16 +1942,17 @@ describe('deploy', () => {
 
       const exitCodePromise = deploy(client);
 
-      await expect(client.stderr).toOutput('Production  https');
+      await expect(client.stderr).toOutput('Visit       https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
 
       const stderrOutput = client.stderr.read().toString();
       expect(stderrOutput).not.toContain('Aliased');
-      // Anti-regression: production rows always render with the ▲ gutter
-      // glyph at column 0.
-      expect(stderrOutput).toContain('▲ Production');
+      // With no project domain assigned, only the commit-specific deployment
+      // URL is shown, under the "Visit" label with the ▲ gutter glyph.
+      expect(stderrOutput).not.toContain('Production');
+      expect(stderrOutput).toContain('▲ Visit');
     });
   });
 
@@ -2724,7 +2725,9 @@ describe('deploy', () => {
       const exitCodePromise = deploy(client);
 
       await expect(client.stderr).toOutput('Running Checks…');
-      await expect(client.stderr).toOutput('Aliased     https');
+      await expect(client.stderr).toOutput(
+        'Production  https://my-app.vercel.app'
+      );
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
