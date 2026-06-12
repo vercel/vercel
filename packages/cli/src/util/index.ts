@@ -55,7 +55,6 @@ export interface CreateOptions {
   agentName?: string;
   manual?: boolean;
   jsonOutput?: boolean;
-  functionsBeta?: boolean;
   linkedProject?: Project;
 }
 
@@ -134,7 +133,6 @@ export default class Now {
       agentName,
       manual,
       jsonOutput = false,
-      functionsBeta,
       linkedProject,
     }: CreateOptions,
     org: Org,
@@ -185,7 +183,6 @@ export default class Now {
       bulkRedirectsPath: nowConfig.bulkRedirectsPath,
       manual,
       jsonOutput,
-      functionsBeta,
       linkedProject,
     });
 
