@@ -324,7 +324,11 @@ export function register(opts: Options = {}): Register {
         .getSemanticDiagnostics(fileName)
         .concat(service.getSyntacticDiagnostics(fileName));
 
-      const diagnosticList = filterDiagnostics(diagnostics, ignoreDiagnostics);
+      const diagnosticList = filterDiagnostics(
+        diagnostics,
+        ignoreDiagnostics,
+        config.options.skipLibCheck
+      );
 
       if (process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS) {
         reportTSError(diagnosticList, true);
@@ -523,6 +527,21 @@ type SourceOutput = { code: string; map: string };
 /**
  * Filter diagnostics.
  */
-function filterDiagnostics(diagnostics: _ts.Diagnostic[], ignore: number[]) {
-  return diagnostics.filter(x => ignore.indexOf(x.code) === -1);
+function filterDiagnostics(
+  diagnostics: _ts.Diagnostic[],
+  ignore: number[],
+  skipLibCheck?: boolean
+) {
+  return diagnostics.filter(x => {
+    if (ignore.indexOf(x.code) !== -1) return false;
+    // When skipLibCheck is enabled, suppress diagnostics that originate from
+    // declaration files (.d.ts) — this mirrors what tsc does with skipLibCheck.
+    // The TypeScript Language Service used in per-file mode does not always
+    // honour skipLibCheck when calling getSemanticDiagnostics(), so we filter
+    // manually here to match the expected tsc behaviour.
+    if (skipLibCheck && x.file && x.file.fileName.endsWith('.d.ts')) {
+      return false;
+    }
+    return true;
+  });
 }
