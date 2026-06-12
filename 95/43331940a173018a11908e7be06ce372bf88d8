@@ -1,0 +1,28 @@
+.changeset/fuzzy-spans-report.md
+  s_0683da51eec1f2::t_e3990872d1a153 1-4
+packages/functions/src/spans.ts
+  s_0683da51eec1f2::t_bd1f7529e046b2 1-84,86-200
+packages/functions/src/index.ts
+  s_0683da51eec1f2::t_ce520c9d1005d3 23
+packages/functions/src/get-context.ts
+  s_0683da51eec1f2::t_177691eff1e87d 6
+packages/functions/src/trace.ts
+  s_0683da51eec1f2::t_ce520c9d1005d3 4-11,37,40,51,56,61,65-91,93-96
+  s_0683da51eec1f2::t_86213dc4db2c62 92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "9543331940a173018a11908e7be06ce372bf88d8",
+  "prompts": {},
+  "sessions": {
+    "s_0683da51eec1f2": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_151427683ffeQoKCq06YWbJRHN",
+        "model": "openai/gpt-5.5"
+      },
+      "human_author": "Gal Schlezinger <gal@spitfire.co.il>"
+    }
+  }
+}
