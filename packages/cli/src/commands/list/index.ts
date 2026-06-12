@@ -124,6 +124,7 @@ export default async function list(client: Client) {
       'QUEUED',
       'READY',
       'CANCELED',
+      'BLOCKED',
     ];
     const statusValues = statusFlag.split(',').map(s => s.trim().toUpperCase());
     const invalidStatuses = statusValues.filter(
@@ -439,6 +440,8 @@ export function stateString(s: string) {
       return chalk.white(CIRCLE) + sTitle;
     case 'CANCELED':
       return chalk.gray(sTitle);
+    case 'BLOCKED':
+      return chalk.gray(CIRCLE) + sTitle;
     default:
       return chalk.gray('UNKNOWN');
   }
