@@ -21,6 +21,7 @@ import type {
   AutoProvisionResult,
 } from '../../util/integration/types';
 import { buildSSOLink } from '../../util/integration/build-sso-link';
+import { getSkillSuggestionForProduct } from '../../util/integration/skill-suggestion';
 import { resolveResourceName } from '../../util/integration/generate-resource-name';
 import {
   ENV_PULL_FAILED_MESSAGE,
@@ -568,6 +569,18 @@ export async function addAutoProvision(
     }
   );
 
+  const skillSuggestion = await getSkillSuggestionForProduct(
+    client,
+    integration.slug,
+    provisioned.product.slug
+  );
+
+  if (skillSuggestion && !options.asJson) {
+    output.log(
+      `Install the matching Claude Code skill: ${chalk.cyan(skillSuggestion.command)}`
+    );
+  }
+
   if (options.asJson) {
     const warnings: string[] = [];
     if (setupResult.connectError) {
@@ -622,6 +635,7 @@ export async function addAutoProvision(
       environments: setupResult.environments,
       envPulled: setupResult.envPulled,
       guideCommand,
+      ...(skillSuggestion && { skill: skillSuggestion }),
       warnings,
     };
 
