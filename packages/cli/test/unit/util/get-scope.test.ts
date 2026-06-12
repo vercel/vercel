@@ -18,7 +18,7 @@ describe('getScope', () => {
 
     it('should return user if team is unspecified', async () => {
       const { contextName, team, user } = await getScope(client);
-      await expect(user.id).toEqual(mockUser.id);
+      await expect(user?.id).toEqual(mockUser.id);
       await expect(team).toBeNull();
       await expect(contextName).toEqual(mockUser.username);
     });
@@ -26,7 +26,7 @@ describe('getScope', () => {
     it('should return team if team is specified', async () => {
       client.config.currentTeam = mockTeam.id;
       const { contextName, team, user } = await getScope(client);
-      await expect(user.id).toEqual(mockUser.id);
+      await expect(user?.id).toEqual(mockUser.id);
       await expect(team?.id).toEqual(mockTeam.id);
       await expect(contextName).toEqual(mockTeam.slug);
     });
@@ -36,9 +36,37 @@ describe('getScope', () => {
       const { contextName, team, user } = await getScope(client, {
         getTeam: false,
       });
-      await expect(user.id).toEqual(mockUser.id);
+      await expect(user?.id).toEqual(mockUser.id);
       await expect(team).toBeNull();
       await expect(contextName).toEqual(mockUser.username);
+    });
+  });
+
+  describe('app principal', () => {
+    beforeEach(() => {
+      client.authConfig.token = 'vca_dummy_token';
+    });
+
+    it('should return team scope without fetching a user', async () => {
+      client.config.currentTeam = mockTeam.id;
+      const { contextName, team, user } = await getScope(client);
+      expect(user).toBeNull();
+      expect(team?.id).toEqual(mockTeam.id);
+      expect(contextName).toEqual(mockTeam.slug);
+    });
+
+    it('should throw when no team is specified', async () => {
+      await expect(getScope(client)).rejects.toThrow(/--scope/);
+    });
+
+    it('should return team id as context when getTeam is false', async () => {
+      client.config.currentTeam = mockTeam.id;
+      const { contextName, team, user } = await getScope(client, {
+        getTeam: false,
+      });
+      expect(user).toBeNull();
+      expect(team).toBeNull();
+      expect(contextName).toEqual(mockTeam.id);
     });
   });
 

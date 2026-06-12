@@ -508,7 +508,11 @@ export async function getDeploymentUrlAndToken(
 
   if (deploymentFlag) {
     // Get the accountId from the scope (team or user)
-    const accountId = scope.team?.id || scope.user.id;
+    const accountId = scope.team?.id ?? scope.user?.id;
+    if (!accountId) {
+      output.error('Could not determine the account for this request.');
+      return 1;
+    }
     const deploymentUrl = await getDeploymentUrlById(
       client,
       deploymentFlag,
