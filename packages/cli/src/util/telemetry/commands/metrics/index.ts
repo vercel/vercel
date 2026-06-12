@@ -96,10 +96,10 @@ export class MetricsTelemetryClient
     }
   }
 
-  trackCliOptionTimezone(v: string | undefined) {
+  trackCliOptionBucketTimezone(v: string | undefined) {
     if (v) {
       this.trackCliOption({
-        option: 'timezone',
+        option: 'bucket-timezone',
         value: v,
       });
     }

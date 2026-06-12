@@ -904,13 +904,13 @@ describe('metrics query v2', () => {
       ]);
     });
 
-    it('should track timezone option', async () => {
+    it('should track bucket-timezone option', async () => {
       mockMetricDetail();
       mockApiSuccess();
       client.setArgv(
         'metrics',
         'vercel.request.count',
-        '--timezone',
+        '--bucket-timezone',
         'Europe/Paris'
       );
 
@@ -918,7 +918,7 @@ describe('metrics query v2', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'argument:metric-id', value: 'vercel.request.count' },
-        { key: 'option:timezone', value: 'Europe/Paris' },
+        { key: 'option:bucket-timezone', value: 'Europe/Paris' },
       ]);
     });
 
@@ -992,7 +992,7 @@ describe('metrics query v2', () => {
       expect(postedBody?.endTime).toBe('2025-01-15T10:58:00.000Z');
     });
 
-    it('should pass timezone through to the query endpoint', async () => {
+    it('should pass bucket-timezone through to the query endpoint', async () => {
       mockMetricDetail('vercel.analytics_pageview.count');
       mockApiSuccess();
       client.setArgv(
@@ -1004,7 +1004,7 @@ describe('metrics query v2', () => {
         '2026-05-29',
         '--granularity',
         '1d',
-        '--timezone',
+        '--bucket-timezone',
         'Europe/Paris'
       );
 

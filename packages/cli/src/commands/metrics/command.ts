@@ -103,12 +103,12 @@ export const metricsCommand = {
       argument: 'SIZE',
     },
     {
-      name: 'timezone',
+      name: 'bucket-timezone',
       shorthand: null,
       type: String,
       deprecated: false,
       description:
-        'IANA timezone for calendar bucket alignment (e.g., Europe/Paris)',
+        'IANA timezone for calendar bucket alignment only; does not shift --since/--until or output timestamps (e.g., Europe/Paris)',
       argument: 'ZONE',
     },
     {
@@ -147,7 +147,7 @@ export const metricsCommand = {
     },
     {
       name: 'Daily pageviews in a local timezone',
-      value: `${packageName} metrics vercel.analytics_pageview.count --since 2026-05-28 --until 2026-05-29 --granularity 1d --timezone Europe/Paris`,
+      value: `${packageName} metrics vercel.analytics_pageview.count --since 2026-05-28 --until 2026-05-29 --granularity 1d --bucket-timezone Europe/Paris`,
     },
     {
       name: 'List available metrics',

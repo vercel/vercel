@@ -164,7 +164,7 @@ export default async function query(
   const since = flags['--since'];
   const until = flags['--until'];
   const granularity = flags['--granularity'];
-  const timezone = flags['--timezone']?.trim();
+  const bucketTimezone = flags['--bucket-timezone']?.trim();
   const project = flags['--project'];
   const all = flags['--all'];
 
@@ -177,7 +177,7 @@ export default async function query(
   telemetry.trackCliOptionSince(since);
   telemetry.trackCliOptionUntil(until);
   telemetry.trackCliOptionGranularity(granularity);
-  telemetry.trackCliOptionTimezone(timezone);
+  telemetry.trackCliOptionBucketTimezone(bucketTimezone);
   telemetry.trackCliOptionProject(project);
   telemetry.trackCliFlagAll(all);
   telemetry.trackCliOptionFormat(flags['--format']);
@@ -251,7 +251,7 @@ export default async function query(
     startTime: startTime.toISOString(),
     endTime: endTime.toISOString(),
     granularity: granResult.duration,
-    ...(timezone ? { bucketTimezone: timezone } : {}),
+    ...(bucketTimezone ? { bucketTimezone } : {}),
     ...(groupBy.length > 0 ? { groupBy } : {}),
     ...(filter ? { filter } : {}),
     limit: limit ?? 10,
@@ -301,7 +301,7 @@ export default async function query(
           startTime: startTime.toISOString(),
           endTime: endTime.toISOString(),
           granularity: granResult.duration,
-          ...(timezone ? { bucketTimezone: timezone } : {}),
+          ...(bucketTimezone ? { bucketTimezone } : {}),
         },
         response
       )
@@ -321,7 +321,7 @@ export default async function query(
         periodStart: startTime.toISOString(),
         periodEnd: endTime.toISOString(),
         granularity: granResult.duration,
-        timezone,
+        timezone: bucketTimezone,
       })
     );
   }
