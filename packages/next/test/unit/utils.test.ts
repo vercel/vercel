@@ -9,8 +9,15 @@ import {
   getServerlessPages,
   normalizePrefetches,
   getMaxUncompressedLambdaSize,
+  getGroupMaxUncompressedLambdaSize,
+  isLargeFunctionBundlingEnabled,
+  LARGE_FUNCTION_BUNDLING_ENV,
+  getPageLambdaGroups,
+  detectLambdaLimitExceeding,
+  type LambdaGroup,
+  type PseudoFile,
 } from '../../src/utils';
-import { FileFsRef, FileRef } from '@vercel/build-utils';
+import { FileFsRef, FileRef, type Config } from '@vercel/build-utils';
 import { genDir } from '../utils';
 
 describe('getNextConfig', () => {
@@ -467,5 +474,241 @@ describe('getMaxUncompressedLambdaSize', () => {
     const size = getMaxUncompressedLambdaSize(runtime);
     expect(size).toBe(override);
     delete process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE;
+  });
+});
+
+const MiB = 1024 * 1024;
+
+function makePseudoFile(uncompressedSize: number): PseudoFile {
+  return {
+    file: undefined as unknown as FileFsRef,
+    isSymlink: false,
+    crc32: 0,
+    uncompressedSize,
+  };
+}
+
+/**
+ * Runs `getPageLambdaGroups` over synthetic pages where each page's entire
+ * uncompressed size is carried by its compressed page entry (no shared traces),
+ * so the standalone size of a route equals the number passed in.
+ */
+function groupPagesBySize(
+  pageSizes: Record<string, number>,
+  runtime = 'nodejs22.x'
+) {
+  const pages = Object.keys(pageSizes);
+  const compressedPages: Record<string, PseudoFile> = {};
+  for (const page of pages) {
+    compressedPages[page] = makePseudoFile(pageSizes[page]);
+  }
+
+  return getPageLambdaGroups({
+    entryPath: os.tmpdir(),
+    config: {} as Config,
+    functionsConfigManifest: undefined,
+    pages,
+    prerenderRoutes: new Set(),
+    experimentalPPRRoutes: undefined,
+    pageTraces: {},
+    compressedPages,
+    tracedPseudoLayer: {},
+    initialPseudoLayer: { pseudoLayer: {}, pseudoLayerBytes: 0 },
+    initialPseudoLayerUncompressed: 0,
+    internalPages: [],
+    nodeVersion: { runtime },
+  });
+}
+
+describe('getGroupMaxUncompressedLambdaSize', () => {
+  it('returns the default per-runtime limit for normal groups', () => {
+    expect(getGroupMaxUncompressedLambdaSize('nodejs22.x', false)).toBe(
+      250 * MiB
+    );
+    expect(getGroupMaxUncompressedLambdaSize('nodejs22.x', undefined)).toBe(
+      250 * MiB
+    );
+    expect(getGroupMaxUncompressedLambdaSize('bun1.x', false)).toBe(150 * MiB);
+  });
+
+  it('returns the 5 GiB ceiling for large-function groups', () => {
+    expect(getGroupMaxUncompressedLambdaSize('nodejs22.x', true)).toBe(
+      5 * 1024 * MiB
+    );
+    expect(getGroupMaxUncompressedLambdaSize('bun1.x', true)).toBe(
+      5 * 1024 * MiB
+    );
+  });
+});
+
+describe('isLargeFunctionBundlingEnabled', () => {
+  afterEach(() => {
+    delete process.env[LARGE_FUNCTION_BUNDLING_ENV];
+  });
+
+  it('defaults to disabled', () => {
+    delete process.env[LARGE_FUNCTION_BUNDLING_ENV];
+    expect(isLargeFunctionBundlingEnabled()).toBe(false);
+  });
+
+  it('is enabled when the env var is set', () => {
+    process.env[LARGE_FUNCTION_BUNDLING_ENV] = '1';
+    expect(isLargeFunctionBundlingEnabled()).toBe(true);
+  });
+});
+
+describe('getPageLambdaGroups large-function bundling', () => {
+  afterEach(() => {
+    delete process.env[LARGE_FUNCTION_BUNDLING_ENV];
+  });
+
+  it('keeps existing bundling unchanged when the flag is disabled', async () => {
+    delete process.env[LARGE_FUNCTION_BUNDLING_ENV];
+
+    const groups = await groupPagesBySize({
+      'big-a.js': 300 * MiB,
+      'small-1.js': 10 * MiB,
+      'small-2.js': 10 * MiB,
+      'big-b.js': 300 * MiB,
+    });
+
+    // No group is flagged large, and the two oversized routes are NOT merged
+    // together — each oversized route gets its own (over-limit) group, exactly
+    // as before this feature existed.
+    expect(groups.every(g => !g.isLargeFunctions)).toBe(true);
+    const byPages = groups.map(g => g.pages.slice().sort()).sort();
+    expect(byPages).toEqual([
+      ['big-a.js'],
+      ['big-b.js'],
+      ['small-1.js', 'small-2.js'],
+    ]);
+  });
+
+  it('separates routes over the default limit into a higher-ceiling pool when enabled', async () => {
+    process.env[LARGE_FUNCTION_BUNDLING_ENV] = '1';
+
+    const groups = await groupPagesBySize({
+      'big-a.js': 300 * MiB,
+      'small-1.js': 10 * MiB,
+      'small-2.js': 10 * MiB,
+      'big-b.js': 300 * MiB,
+    });
+
+    expect(groups).toHaveLength(2);
+
+    const large = groups.find(g => g.isLargeFunctions);
+    const normal = groups.find(g => !g.isLargeFunctions);
+
+    // The two >250 MiB routes are bundled together in the large pool
+    // (600 MiB < 5 GiB), and the small routes stay in the default pool.
+    expect(large?.pages.slice().sort()).toEqual(['big-a.js', 'big-b.js']);
+    expect(normal?.pages.slice().sort()).toEqual(['small-1.js', 'small-2.js']);
+  });
+
+  it('bundles large routes together only up to the 5 GiB ceiling', async () => {
+    process.env[LARGE_FUNCTION_BUNDLING_ENV] = '1';
+
+    const groups = await groupPagesBySize({
+      // 3 GiB + 3 GiB = 6 GiB, which exceeds the 5 GiB ceiling, so they cannot
+      // share a single large group.
+      'big-a.js': 3 * 1024 * MiB,
+      'big-b.js': 3 * 1024 * MiB,
+    });
+
+    expect(groups).toHaveLength(2);
+    expect(groups.every(g => g.isLargeFunctions)).toBe(true);
+  });
+
+  it('never mixes large and normal routes in the same group', async () => {
+    process.env[LARGE_FUNCTION_BUNDLING_ENV] = '1';
+
+    const groups = await groupPagesBySize({
+      'big.js': 260 * MiB,
+      'small.js': 50 * MiB,
+    });
+
+    expect(groups).toHaveLength(2);
+    const large = groups.find(g => g.isLargeFunctions);
+    const normal = groups.find(g => !g.isLargeFunctions);
+    expect(large?.pages).toEqual(['big.js']);
+    expect(normal?.pages).toEqual(['small.js']);
+  });
+
+  it('treats routes at or below the default limit as normal', async () => {
+    process.env[LARGE_FUNCTION_BUNDLING_ENV] = '1';
+
+    const groups = await groupPagesBySize({
+      // 250 MiB is the limit; "> limit" is required to be large, so this stays
+      // normal and is not split out.
+      'exactly-limit.js': 250 * MiB,
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].isLargeFunctions).toBe(false);
+  });
+});
+
+describe('detectLambdaLimitExceeding with large functions', () => {
+  function makeGroup(opts: {
+    pages: string[];
+    uncompressed: number;
+    isLargeFunctions: boolean;
+  }): LambdaGroup {
+    return {
+      pages: opts.pages,
+      isPrerenders: false,
+      isExperimentalPPR: false,
+      isApiLambda: false,
+      isLargeFunctions: opts.isLargeFunctions,
+      pseudoLayer: {},
+      pseudoLayerBytes: 0,
+      pseudoLayerUncompressedBytes: opts.uncompressed,
+    };
+  }
+
+  let logSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    logSpy.mockRestore();
+  });
+
+  function loggedOutput(): string {
+    return logSpy.mock.calls.map(call => call.join(' ')).join('\n');
+  }
+
+  it('does not warn for a large-function group within the 5 GiB ceiling', async () => {
+    const size = 1 * 1024 * MiB; // 1 GiB — over 250 MiB but under 5 GiB
+    await detectLambdaLimitExceeding(
+      [
+        makeGroup({
+          pages: ['big.js'],
+          uncompressed: size,
+          isLargeFunctions: true,
+        }),
+      ],
+      { 'big.js': makePseudoFile(size) },
+      'nodejs22.x'
+    );
+    expect(loggedOutput()).not.toContain('size was exceeded');
+  });
+
+  it('warns for a normal group of the same size', async () => {
+    const size = 1 * 1024 * MiB; // 1 GiB — over the 250 MiB default limit
+    await detectLambdaLimitExceeding(
+      [
+        makeGroup({
+          pages: ['big.js'],
+          uncompressed: size,
+          isLargeFunctions: false,
+        }),
+      ],
+      { 'big.js': makePseudoFile(size) },
+      'nodejs22.x'
+    );
+    expect(loggedOutput()).toContain('size was exceeded');
   });
 });

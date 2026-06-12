@@ -51,6 +51,7 @@ import {
   LAMBDA_RESERVED_UNCOMPRESSED_SIZE,
   DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE,
   DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE_BUN,
+  DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE,
   INTERNAL_PAGES,
 } from './constants';
 import {
@@ -78,6 +79,48 @@ export function getMaxUncompressedLambdaSize(runtime: string): number {
   return runtime.startsWith('bun')
     ? DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE_BUN
     : DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE;
+}
+
+/**
+ * Internal env var that enables "large function bundling". When set, a route
+ * whose own uncompressed size exceeds {@link getMaxUncompressedLambdaSize} is
+ * pulled out of the default bundling pool and grouped separately under the
+ * higher {@link DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE} ceiling, so it is
+ * never co-bundled with normally-sized routes. The default pool keeps using the
+ * existing limit unchanged.
+ *
+ * The gate is read at call time (not module load) so the build environment can
+ * toggle it without requiring a CLI upgrade, mirroring how
+ * `@vercel/build-utils` handles `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT`.
+ *
+ * TODO: Remove this gate and make large-function bundling unconditional once
+ * the upstream build system's support for uncompressed functions larger than
+ * {@link DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE} is fully rolled out.
+ */
+export const LARGE_FUNCTION_BUNDLING_ENV =
+  'NEXT_EXPERIMENTAL_LARGE_FUNCTION_BUNDLING';
+
+/**
+ * Whether large-function bundling is enabled via
+ * {@link LARGE_FUNCTION_BUNDLING_ENV}. Evaluated at call time.
+ */
+export function isLargeFunctionBundlingEnabled(): boolean {
+  return Boolean(process.env[LARGE_FUNCTION_BUNDLING_ENV]);
+}
+
+/**
+ * Returns the uncompressed size ceiling that applies to a lambda group: the
+ * higher "large function" limit when the group holds routes that each
+ * individually exceed the default per-runtime limit, otherwise the default
+ * per-runtime limit itself.
+ */
+export function getGroupMaxUncompressedLambdaSize(
+  runtime: string,
+  isLargeFunctions: boolean | undefined
+): number {
+  return isLargeFunctions
+    ? DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE
+    : getMaxUncompressedLambdaSize(runtime);
 }
 
 const skipDefaultLocaleRewrite = Boolean(
@@ -1890,6 +1933,14 @@ export type LambdaGroup = {
   isActionLambda?: boolean;
   isPages?: boolean;
   isApiLambda: boolean;
+  /**
+   * Whether this group holds "large" routes — routes that each individually
+   * exceed {@link getMaxUncompressedLambdaSize}. Such groups are bundled under
+   * the higher {@link DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE} ceiling and
+   * are never mixed with normally-sized routes. Only set when large-function
+   * bundling is enabled (see {@link isLargeFunctionBundlingEnabled}).
+   */
+  isLargeFunctions?: boolean;
   pseudoLayer: PseudoLayer;
   pseudoLayerBytes: number;
   pseudoLayerUncompressedBytes: number;
@@ -1953,6 +2004,11 @@ export async function getPageLambdaGroups({
   nodeVersion: { runtime: string };
 }) {
   const groups: Array<LambdaGroup> = [];
+
+  // When enabled, routes that individually exceed the default uncompressed
+  // limit are bundled into a separate pool with a higher ceiling instead of
+  // being co-bundled with normally-sized routes. Read once per call.
+  const largeFunctionBundlingEnabled = isLargeFunctionBundlingEnabled();
 
   for (const page of pages) {
     const newPages = [...internalPages, page];
@@ -2044,10 +2100,41 @@ export async function getPageLambdaGroups({
       }
     }
 
+    // Classify whether this route is "large": its own uncompressed size (the
+    // shared base layer plus its traced files and the page itself) exceeds the
+    // default per-runtime limit. Large routes are pulled into a separate
+    // bundling pool with a higher ceiling. `experimentalAllowBundling` defers
+    // all bundling to the upstream build system, so the split does not apply.
+    let isLargeFunction = false;
+    if (largeFunctionBundlingEnabled && !experimentalAllowBundling) {
+      let standaloneUncompressedSize = initialPseudoLayerUncompressed;
+      const countedFiles = new Set<string>(
+        Object.keys(initialPseudoLayer.pseudoLayer)
+      );
+
+      for (const newPage of newPages) {
+        for (const file of Object.keys(pageTraces[newPage] || {})) {
+          if (!countedFiles.has(file)) {
+            countedFiles.add(file);
+            const item = tracedPseudoLayer[file] as PseudoFile;
+            standaloneUncompressedSize += item?.uncompressedSize || 0;
+          }
+        }
+        standaloneUncompressedSize += compressedPages[newPage].uncompressedSize;
+      }
+
+      isLargeFunction =
+        standaloneUncompressedSize >
+        getMaxUncompressedLambdaSize(nodeVersion.runtime);
+    }
+
     let matchingGroup = experimentalAllowBundling
       ? undefined
       : groups.find(group => {
           const matches =
+            // Large routes are only ever grouped with other large routes, so
+            // the two pools stay isolated under their respective ceilings.
+            (group.isLargeFunctions ?? false) === isLargeFunction &&
             group.maxDuration === opts.maxDuration &&
             group.memory === opts.memory &&
             compareRegions(group.regions, opts.regions) &&
@@ -2077,8 +2164,9 @@ export async function getPageLambdaGroups({
                 compressedPages[newPage].uncompressedSize;
             }
 
-            const maxLambdaSize = getMaxUncompressedLambdaSize(
-              nodeVersion.runtime
+            const maxLambdaSize = getGroupMaxUncompressedLambdaSize(
+              nodeVersion.runtime,
+              isLargeFunction
             );
             const underUncompressedLimit =
               newTracedFilesUncompressedSize <
@@ -2097,6 +2185,7 @@ export async function getPageLambdaGroups({
         ...opts,
         isPrerenders: isPrerenderRoute,
         isExperimentalPPR,
+        isLargeFunctions: isLargeFunction,
         isApiLambda: !!isApiPage(page) || !!isRouteHandlers,
         pseudoLayerBytes: initialPseudoLayer.pseudoLayerBytes,
         pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
@@ -2262,9 +2351,10 @@ export const detectLambdaLimitExceeding = async (
   },
   runtime: string
 ) => {
+  // Default per-runtime limit, used for the headline message and for
+  // normally-sized groups. "Large function" groups (when large-function
+  // bundling is enabled) are measured against their higher ceiling instead.
   const maxLambdaSize = getMaxUncompressedLambdaSize(runtime);
-  // show debug info if within 5 MB of exceeding the limit
-  const UNCOMPRESSED_SIZE_LIMIT_CLOSE = maxLambdaSize - 5 * MIB;
 
   let numExceededLimit = 0;
   let numCloseToLimit = 0;
@@ -2273,10 +2363,17 @@ export const detectLambdaLimitExceeding = async (
   // pre-iterate to see if we are going to exceed the limit
   // or only get close so our first log line can be correct
   const filteredGroups = lambdaGroups.filter(group => {
-    const exceededLimit = group.pseudoLayerUncompressedBytes > maxLambdaSize;
+    const groupMaxLambdaSize = getGroupMaxUncompressedLambdaSize(
+      runtime,
+      group.isLargeFunctions
+    );
+    // show debug info if within 5 MB of exceeding the limit
+    const groupCloseLimit = groupMaxLambdaSize - 5 * MIB;
 
-    const closeToLimit =
-      group.pseudoLayerUncompressedBytes > UNCOMPRESSED_SIZE_LIMIT_CLOSE;
+    const exceededLimit =
+      group.pseudoLayerUncompressedBytes > groupMaxLambdaSize;
+
+    const closeToLimit = group.pseudoLayerUncompressedBytes > groupCloseLimit;
 
     if (
       closeToLimit ||
