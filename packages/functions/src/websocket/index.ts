@@ -38,7 +38,6 @@ export async function experimental_upgradeWebSocket(
 
   const wss = new WebSocketServer({
     noServer: true,
-    ...options,
     maxPayload: options.maxPayload ?? DEFAULT_MAX_PAYLOAD,
   });
 
