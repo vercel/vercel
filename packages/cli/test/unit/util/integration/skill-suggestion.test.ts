@@ -155,6 +155,22 @@ describe('getSkillSuggestionForProduct', () => {
     expect(result).toBeNull();
   });
 
+  it('returns null when the response body is empty (2xx with no JSON)', async () => {
+    client.scenario.get(
+      '/v2/integrations/integration/empty/owned',
+      (_req, res) => {
+        res.status(204).end();
+      }
+    );
+
+    const result = await getSkillSuggestionForProduct(
+      client,
+      'empty',
+      'any-product'
+    );
+    expect(result).toBeNull();
+  });
+
   it('returns null when the /owned fetch errors', async () => {
     client.scenario.get(
       '/v2/integrations/integration/missing/owned',

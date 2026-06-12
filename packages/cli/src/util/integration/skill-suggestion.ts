@@ -35,7 +35,8 @@ export async function getSkillSuggestionForProduct(
     return null;
   }
 
-  const product = owned.products?.find(p => p.slug === productSlug);
+  // client.fetch can resolve to null on empty / non-JSON 2xx responses.
+  const product = owned?.products?.find(p => p.slug === productSlug);
   if (!product) {
     return null;
   }
