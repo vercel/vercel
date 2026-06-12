@@ -141,6 +141,56 @@ describe('redeploy', () => {
 
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "redeploy"').toEqual(0);
+
+    // The Aliased row never prints with --no-wait, so the ▲ gutter falls
+    // back to the Production row.
+    const stderrOutput = client.stderr.getFullOutput();
+    expect(stderrOutput).toContain('▲ Production');
+  });
+
+  it('should display the ▲ Aliased row when the deployment is already ready and aliased', async () => {
+    const { fromDeployment, toDeployment } = initRedeployTest();
+    // already READY + aliasAssigned: the status polling loop is skipped
+    toDeployment.alias = ['my-app.vercel.app'];
+    client.setArgv('redeploy', fromDeployment.id);
+
+    const exitCodePromise = redeploy(client);
+    await expect(client.stderr).toOutput(
+      'Aliased     https://my-app.vercel.app'
+    );
+
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "redeploy"').toEqual(0);
+
+    const stderrOutput = client.stderr.getFullOutput();
+    expect(stderrOutput).not.toContain('▲ Production');
+    expect(stderrOutput).toContain('▲ Aliased');
+  });
+
+  it('should display the ▲ gutter only on the Aliased row when waiting for aliases', async () => {
+    const { fromDeployment, toDeployment } = initRedeployTest();
+    toDeployment.readyState = 'BUILDING';
+    toDeployment.aliasAssigned = false;
+    client.setArgv('redeploy', fromDeployment.id);
+
+    const exitCodePromise = redeploy(client);
+    await expect(client.stderr).toOutput('Production  https');
+
+    // let the status poller observe the alias assignment
+    toDeployment.readyState = 'READY';
+    toDeployment.aliasAssigned = true;
+    toDeployment.alias = ['my-app.vercel.app'];
+
+    await expect(client.stderr).toOutput(
+      'Aliased     https://my-app.vercel.app'
+    );
+
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "redeploy"').toEqual(0);
+
+    const stderrOutput = client.stderr.getFullOutput();
+    expect(stderrOutput).not.toContain('▲ Production');
+    expect(stderrOutput).toContain('▲ Aliased');
   });
 
   describe('--target', () => {
