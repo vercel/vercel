@@ -1,6 +1,8 @@
 import type { WebSocket } from 'ws';
 import { getContext } from '../get-context';
 
+const DEFAULT_MAX_PAYLOAD = 256 * 1024;
+
 export interface UpgradeWebSocketOptions {
   maxPayload?: number;
 }
@@ -36,7 +38,8 @@ export async function experimental_upgradeWebSocket(
 
   const wss = new WebSocketServer({
     noServer: true,
-    ...(options.maxPayload !== undefined && { maxPayload: options.maxPayload }),
+    ...options,
+    maxPayload: options.maxPayload ?? DEFAULT_MAX_PAYLOAD,
   });
 
   const ws = await new Promise<WebSocket>((resolve, reject) => {

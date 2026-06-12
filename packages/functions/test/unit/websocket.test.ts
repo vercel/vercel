@@ -90,7 +90,9 @@ describe('experimental_upgradeWebSocket', () => {
       expect(typeof handler.mock.calls[0][0].send).toBe('function');
       expect(response).toBeInstanceOf(Response);
       expect(response.status).toBe(204);
-      expect(webSocketServerOptions).toEqual([{ noServer: true }]);
+      expect(webSocketServerOptions).toEqual([
+        { noServer: true, maxPayload: 256 * 1024 },
+      ]);
 
       socket.destroy();
     });
@@ -110,7 +112,7 @@ describe('experimental_upgradeWebSocket', () => {
       socket.destroy();
     });
 
-    test('does not pass maxPayload to the WebSocket server when undefined', async () => {
+    test('uses the default maxPayload when undefined', async () => {
       const { socket } = createUpgradeContext();
 
       const response = await experimental_upgradeWebSocket(() => {}, {
@@ -118,7 +120,9 @@ describe('experimental_upgradeWebSocket', () => {
       });
 
       expect(response.status).toBe(204);
-      expect(webSocketServerOptions).toEqual([{ noServer: true }]);
+      expect(webSocketServerOptions).toEqual([
+        { noServer: true, maxPayload: 256 * 1024 },
+      ]);
 
       socket.destroy();
     });

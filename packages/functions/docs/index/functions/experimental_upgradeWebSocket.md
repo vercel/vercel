@@ -6,7 +6,7 @@
 
 > **experimental\_upgradeWebSocket**(`handler`, `options?`): [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<[`Response`](https://developer.mozilla.org/docs/Web/API/Response)\>
 
-Defined in: [packages/functions/src/websocket/index.ts:20](https://github.com/vercel/vercel/blob/main/packages/functions/src/websocket/index.ts#L20)
+Defined in: [packages/functions/src/websocket/index.ts:23](https://github.com/vercel/vercel/blob/main/packages/functions/src/websocket/index.ts#L23)
 
 ## Parameters
 
