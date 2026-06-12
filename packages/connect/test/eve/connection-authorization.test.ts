@@ -121,6 +121,77 @@ describe('connect() adapter evict', () => {
   });
 });
 
+describe('connect() adapter startAuthorization', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    vi.mocked(getVercelOidcToken).mockResolvedValue('oidc_token');
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('threads the connectorName reported by Connect onto the challenge as displayName', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonAuthorizeResponse({ connectorName: 'Salesforce' })
+    );
+
+    const definition = connect('oauth/connection-auth-display-name');
+    const { challenge } = await definition.startAuthorization({
+      principal: PRINCIPAL,
+    });
+
+    expect(challenge).toMatchObject({
+      url: 'https://connect.vercel.com/authorize/abc',
+      displayName: 'Salesforce',
+    });
+  });
+
+  it('prefers the author-provided displayName over the server-reported connectorName', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonAuthorizeResponse({ connectorName: 'Salesforce' })
+    );
+
+    const definition = connect({
+      connector: 'oauth/connection-auth-display-name-override',
+      displayName: 'Sales Cloud',
+    });
+    const { challenge } = await definition.startAuthorization({
+      principal: PRINCIPAL,
+    });
+
+    expect(challenge).toMatchObject({ displayName: 'Sales Cloud' });
+  });
+
+  it('omits displayName when neither the author nor Connect provide one', async () => {
+    fetchMock.mockResolvedValueOnce(jsonAuthorizeResponse());
+
+    const definition = connect('oauth/connection-auth-no-display-name');
+    const { challenge } = await definition.startAuthorization({
+      principal: PRINCIPAL,
+    });
+
+    expect(challenge).not.toHaveProperty('displayName');
+  });
+});
+
+function jsonAuthorizeResponse(extra?: { connectorName?: string }): Response {
+  return new Response(
+    JSON.stringify({
+      request: 'req_1',
+      verifier: 'ver_1',
+      url: 'https://connect.vercel.com/authorize/abc',
+      deviceCode: 'ABCD-1234',
+      ...extra,
+    }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } }
+  );
+}
+
 function jsonTokenResponse(token: string): Response {
   return new Response(
     JSON.stringify({

@@ -15,6 +15,11 @@ export interface ConnectAuthorizationResponse {
   url: string;
   deviceCode?: string;
   expiresAt?: number;
+  /**
+   * Human-readable name of the connector being authorized, eg.
+   * `Salesforce`. Present once the Vercel API supports returning it.
+   */
+  connectorName?: string;
 }
 
 export async function startAuthorization(
