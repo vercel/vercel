@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 3.7.1
+
+### Patch Changes
+
+- a7f1f7c: Make `ws` an optional peer dependency
+
 ## 3.7.0
 
 ### Minor Changes

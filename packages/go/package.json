@@ -1,6 +1,6 @@
 {
   "name": "@vercel/go",
-  "version": "3.8.0",
+  "version": "3.9.0",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/go",
@@ -10,7 +10,7 @@
     "directory": "packages/go"
   },
   "scripts": {
-    "build": "node ../../utils/build-builder.mjs",
+    "build": "node build.mjs",
     "test": "vitest run --config ../../vitest.config.mts",
     "test-e2e": "pnpm test test/integration-*",
     "type-check": "tsc --noEmit",
@@ -20,10 +20,12 @@
   "files": [
     "dist",
     "*.go",
+    "bin",
     "bootstrap"
   ],
   "devDependencies": {
     "@tootallnate/once": "1.1.2",
+    "@vercel-internals/ipc-proxy": "workspace:*",
     "@types/async-retry": "1.4.5",
     "@types/execa": "^0.9.0",
     "@types/fs-extra": "^5.0.5",

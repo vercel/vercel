@@ -1,4 +1,4 @@
-import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
+import { formatOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 import {
   claimSubcommand,
@@ -367,7 +367,18 @@ export const discoverSubcommand = {
       required: false,
     },
   ],
-  options: [formatOption, jsonOption],
+  options: [
+    {
+      name: 'category',
+      shorthand: 'c',
+      type: [String],
+      deprecated: false,
+      argument: 'CATEGORY',
+      description:
+        'Filter integrations by category (can be repeated; e.g., -c storage -c authentication). Run `vercel integration categories` for valid slugs.',
+    },
+    formatOption,
+  ],
   examples: [
     {
       name: 'Discover marketplace integrations',
@@ -381,8 +392,49 @@ export const discoverSubcommand = {
       ],
     },
     {
+      name: 'Filter integrations by category',
+      value: [
+        `${packageName} integration discover --category storage`,
+        `${packageName} integration discover -c authentication`,
+      ],
+    },
+    {
+      name: 'Filter by multiple categories at once (repeat the flag)',
+      value: [
+        `${packageName} integration discover --category storage --category authentication`,
+        `${packageName} integration discover -c commerce -c payments -c authentication`,
+      ],
+    },
+    {
+      name: 'List available category slugs to use with --category',
+      value: [`${packageName} integration categories`],
+    },
+    {
       name: 'Discover marketplace integrations as JSON',
       value: [`${packageName} integration discover --format=json`],
+    },
+  ],
+} as const;
+
+export const categoriesSubcommand = {
+  name: 'categories',
+  aliases: [],
+  description:
+    'List marketplace integration categories (slugs valid for `integration discover --category`)',
+  arguments: [],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'List marketplace categories',
+      value: [`${packageName} integration categories`],
+    },
+    {
+      name: 'List categories as JSON',
+      value: [`${packageName} integration categories --format=json`],
+    },
+    {
+      name: 'Use a category slug to filter discover results',
+      value: [`${packageName} integration discover --category storage`],
     },
   ],
 } as const;
@@ -625,6 +677,7 @@ export const integrationCommand = {
     addSubcommand,
     acceptTermsSubcommand,
     balanceSubcommand,
+    categoriesSubcommand,
     discoverSubcommand,
     guideSubcommand,
     installationsSubcommand,

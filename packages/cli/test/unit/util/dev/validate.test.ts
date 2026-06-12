@@ -245,13 +245,13 @@ describe('validateConfig', () => {
         typeof validateConfig
       >[0];
 
-    it('rejects maxDuration above the default 900s bound when unset', () => {
-      const error = validateConfig(configWith(1800));
+    it('rejects maxDuration above the default 1800s bound when unset', () => {
+      const error = validateConfig(configWith(1900));
       expect(error).not.toBeNull();
-      expect(error?.message).toMatch(/900/);
+      expect(error?.message).toMatch(/1800/);
     });
 
-    it('allows maxDuration above 900s when set to "1" (defers to the server)', () => {
+    it('allows maxDuration above 1800s when set to "1" (defers to the server)', () => {
       process.env[ENV] = '1';
       expect(validateConfig(configWith(1800))).toBeNull();
     });
@@ -262,11 +262,11 @@ describe('validateConfig', () => {
       expect(validateConfig(configWith(1.5))).not.toBeNull();
     });
 
-    it('re-applies the 900s bound once the variable is unset again', () => {
+    it('re-applies the 1800s bound once the variable is unset again', () => {
       process.env[ENV] = '1';
-      expect(validateConfig(configWith(1800))).toBeNull();
+      expect(validateConfig(configWith(2000))).toBeNull();
       delete process.env[ENV];
-      expect(validateConfig(configWith(1800))).not.toBeNull();
+      expect(validateConfig(configWith(2000))).not.toBeNull();
     });
   });
 

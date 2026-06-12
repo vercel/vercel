@@ -49,6 +49,75 @@ export const nft = async (
       ),
       ...virtualFiles.keys(),
     ];
+
+    // Overriding these replaces nft's internal CachedFileSystem, so we only
+    // override stat/readlink when there are virtual files to serve and memoize
+    // every override (including ENOENT results) to keep nft's caching.
+    const statOverride = memoize(async (fsPath: string) => {
+      const virtual = virtualFiles.get(fsPath);
+      if (virtual !== undefined) return createVirtualFileStat(virtual);
+
+      try {
+        return await stat(fsPath);
+      } catch (error: unknown) {
+        if (
+          isNativeError(error) &&
+          'code' in error &&
+          (error.code === 'ENOENT' || error.code === 'ENOTDIR')
+        ) {
+          return null;
+        }
+        throw error;
+      }
+    });
+
+    const readlinkOverride = memoize(async (fsPath: string) => {
+      if (virtualFiles.has(fsPath)) return null;
+
+      try {
+        return await readlink(fsPath);
+      } catch (error: unknown) {
+        if (
+          isNativeError(error) &&
+          'code' in error &&
+          (error.code === 'EINVAL' ||
+            error.code === 'ENOENT' ||
+            error.code === 'ENOTDIR')
+        ) {
+          return null;
+        }
+        throw error;
+      }
+    });
+
+    // `readFile` is always overridden: nft can't parse TypeScript (we transform
+    // it here) and it also serves virtual files.
+    const readFileOverride = memoize(async (fsPath: string) => {
+      const virtual = virtualFiles.get(fsPath);
+      if (virtual !== undefined) return virtual;
+
+      try {
+        let source: string | Buffer = await readFile(fsPath);
+
+        // NFT doesn't support TypeScript, so we need to transform the source code.
+        if (isTypeScriptFile(fsPath)) {
+          const transformResult = await transform(fsPath, source.toString());
+          source = transformResult.code;
+        }
+
+        return source;
+      } catch (error: unknown) {
+        if (
+          isNativeError(error) &&
+          'code' in error &&
+          (error.code === 'ENOENT' || error.code === 'EISDIR')
+        ) {
+          return null;
+        }
+        throw error;
+      }
+    });
+
     const nftResult = await nodeFileTrace(traceRoots, {
       base: args.repoRootPath,
       processCwd: args.workPath,
@@ -57,66 +126,10 @@ export const nft = async (
       moduleSyncCatchall: true,
       conditions: args.conditions,
       ignore: ignorePatterns.length > 0 ? ignorePatterns : undefined,
-      async stat(fsPath) {
-        if (virtualFiles.has(fsPath)) {
-          return createVirtualFileStat(virtualFiles.get(fsPath)!);
-        }
-
-        try {
-          return await stat(fsPath);
-        } catch (error: unknown) {
-          if (
-            isNativeError(error) &&
-            'code' in error &&
-            (error.code === 'ENOENT' || error.code === 'ENOTDIR')
-          ) {
-            return null;
-          }
-          throw error;
-        }
-      },
-      async readlink(fsPath) {
-        if (virtualFiles.has(fsPath)) return null;
-
-        try {
-          return await readlink(fsPath);
-        } catch (error: unknown) {
-          if (
-            isNativeError(error) &&
-            'code' in error &&
-            (error.code === 'EINVAL' ||
-              error.code === 'ENOENT' ||
-              error.code === 'ENOTDIR')
-          ) {
-            return null;
-          }
-          throw error;
-        }
-      },
-      async readFile(fsPath) {
-        if (virtualFiles.has(fsPath)) return virtualFiles.get(fsPath)!;
-
-        try {
-          let source: string | Buffer = await readFile(fsPath);
-
-          // NFT doesn't support TypeScript, so we need to transform the source code.
-          if (isTypeScriptFile(fsPath)) {
-            const transformResult = await transform(fsPath, source.toString());
-            source = transformResult.code;
-          }
-
-          return source;
-        } catch (error: unknown) {
-          if (
-            isNativeError(error) &&
-            'code' in error &&
-            (error.code === 'ENOENT' || error.code === 'EISDIR')
-          ) {
-            return null;
-          }
-          throw error;
-        }
-      },
+      readFile: readFileOverride,
+      ...(virtualFiles.size > 0
+        ? { stat: statOverride, readlink: readlinkOverride }
+        : {}),
     });
     for (const file of nftResult.fileList) {
       const absolutePath = join(args.repoRootPath, file);
@@ -151,10 +164,14 @@ export const nft = async (
             ? await stat(absolutePath)
             : stats;
           if (targetStats.isFile()) {
-            // Use FileBlob so introspection can include these files
-            const content = await readFile(absolutePath, 'utf-8');
+            // Use FileBlob so introspection can include these files. Read as
+            // a Buffer (no encoding) so the bytes are preserved verbatim,
+            // mirroring the `@vercel/node` builder. Decoding to UTF-8 here
+            // corrupts binary files (e.g. native `.node` addons, `.wasm`),
+            // which later surfaces at runtime as errors such as
+            // "ELF file's phentsize not the expected size".
             args.files[outputPath] = new FileBlob({
-              data: content,
+              data: await readFile(absolutePath),
               mode: stats.mode,
             });
           }
@@ -169,6 +186,19 @@ export const nft = async (
   };
 
   await nftSpan.trace(runNft);
+};
+
+/** Memoizes an async fs lookup by path, caching negative/ENOENT results too. */
+const memoize = <T>(fn: (path: string) => Promise<T>) => {
+  const cache = new Map<string, Promise<T>>();
+  return (path: string): Promise<T> => {
+    let cached = cache.get(path);
+    if (cached === undefined) {
+      cached = fn(path);
+      cache.set(path, cached);
+    }
+    return cached;
+  };
 };
 
 const JS_LIKE_EXTENSIONS = new Set([
