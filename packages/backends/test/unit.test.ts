@@ -324,20 +324,30 @@ it.skipIf(process.platform === 'win32')(
         },
         meta,
         entrypoint: 'server.ts',
-        repoRootPath: root,
+        repoRootPath: workPath,
       })) as BuildResultV2Typical;
 
       const lambda = result.output.index as unknown as NodejsLambda;
-      expect(Object.keys(lambda.files ?? {})).toEqual(
+      const lambdaFiles = Object.keys(lambda.files ?? {});
+      expect(lambdaFiles.some(file => file.startsWith('..'))).toBe(false);
+      expect(lambdaFiles).toEqual(
         expect.arrayContaining([
           expect.stringContaining(
             'node_modules/.pnpm/@nestjs+common@1.0.0/node_modules/@nestjs/common/index.js'
           ),
         ])
       );
-      await expect(
-        extractAndExecuteLambda(lambda, root)
-      ).resolves.toBeUndefined();
+
+      const lambdaOutputDir = await realpath(
+        await mkdtemp(join(tmpdir(), 'pnpm-cjs-lambda-'))
+      );
+      try {
+        await expect(
+          extractAndExecuteLambda(lambda, lambdaOutputDir)
+        ).resolves.toBeUndefined();
+      } finally {
+        await rm(lambdaOutputDir, { recursive: true, force: true });
+      }
     } finally {
       await rm(root, { recursive: true, force: true });
     }
