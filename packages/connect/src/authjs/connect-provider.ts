@@ -31,6 +31,7 @@ import { tryGetVercelTeamId, withTeamId } from '../internal/team-id.js';
 const CONNECT_AUTHORIZATION_URL = 'https://connect.vercel.com/oauth/authorize';
 const CONNECT_TOKEN_URL = 'https://connect.vercel.com/oauth/token';
 const CONNECT_USERINFO_URL = 'https://connect.vercel.com/oauth/userinfo';
+const DEFAULT_SCOPES = ['openid', 'profile', 'email'] as const;
 
 /** Userinfo payload returned by Vercel Connect's OIDC userinfo endpoint. */
 export interface ConnectProfile {
@@ -63,7 +64,7 @@ export interface AuthJsConnectOptions {
   /**
    * Scopes to request. `offline_access` is added automatically so
    * the Vercel Connect side can mint refresh tokens. Defaults to
-   * `["openid"]`.
+   * `["openid", "profile", "email"]`.
    */
   readonly scopes?: readonly string[];
 
@@ -84,7 +85,7 @@ export function connect(
 ): OAuth2Config<ConnectProfile> {
   const fetchVercelToken = options.getVercelOidcToken ?? getVercelOidcToken;
   const scope = Array.from(
-    new Set([...(options.scopes ?? ['openid']), 'offline_access'])
+    new Set([...(options.scopes ?? DEFAULT_SCOPES), 'offline_access'])
   ).join(' ');
 
   return {
