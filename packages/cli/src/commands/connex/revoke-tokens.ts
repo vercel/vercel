@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { validateJsonOutput } from '../../util/output-format';
+import { sanitizeForTerminal } from '../../util/connex/sanitize';
 import { selectConnexTeam } from '../../util/connex/select-team';
 import type { ConnexClientIdentity } from './types';
 
@@ -81,7 +82,9 @@ export async function revokeTokens(
   }
   output.stopSpinner();
 
-  const displayName = target.name || target.uid || target.id;
+  const displayName = sanitizeForTerminal(
+    target.name || target.uid || target.id
+  );
   const supportsRevocation = target.supportsRevocation !== false;
 
   // Resolve subjectScope: flag → interactive TTY → error

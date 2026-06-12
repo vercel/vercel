@@ -568,6 +568,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('integration categories subcommand', () => {
+      it('integration categories subcommand help column width 120', () => {
+        expect(
+          help(integration.categoriesSubcommand, {
+            columns: 120,
+            parent: integration.integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
     describe('integration guide subcommand', () => {
       it('integration guide subcommand help column width 120', () => {
         expect(

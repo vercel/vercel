@@ -74,14 +74,22 @@ export const introspection = async (
     const files = args.files;
     const tmpDir = mkdtempSync(join(tmpdir(), 'vercel-introspection-'));
 
-    // Only write FileBlob files (built code), not FileFsRef files (traced deps)
+    // Materialize in-memory FileBlob files (built code and traced files read
+    // into memory) so the introspected handler can load them from tmpDir.
+    // FileFsRef files (traced deps) are left on disk and resolved back to
+    // repoRootPath by the loader hooks. `data` may be a string (text/source)
+    // or a Buffer (binary files such as native `.node` addons); both must be
+    // written verbatim, so don't restrict to string data.
     for (const [key, value] of Object.entries(files)) {
-      if (!(value instanceof FileBlob) || typeof value.data !== 'string') {
+      if (!(value instanceof FileBlob)) {
         continue;
       }
       const filePath = join(tmpDir, key);
       mkdirSync(dirname(filePath), { recursive: true });
-      writeFileSync(filePath, value.data);
+      writeFileSync(
+        filePath,
+        typeof value.data === 'string' ? value.data : new Uint8Array(value.data)
+      );
     }
 
     let introspectionData: z.infer<typeof introspectionSchema> | undefined;

@@ -23,10 +23,29 @@ vercel ir -h                                       # integration-resource subcom
 
 ## Discovering Integrations
 
+The Marketplace organizes integrations by category. For category-shaped user intent ("monitoring", "storage", "commerce", "ai"), prefer `--category <slug>` over substring search — it returns the canonical set rather than relying on description text matching.
+
 ```bash
-vercel integration discover                        # list all marketplace integrations
-vercel integration discover --format=json          # as JSON
+# Step 1: list valid category slugs
+vercel integration categories                          # slugs + titles
+vercel integration categories --json                   # machine-readable
+
+# Step 2: filter discover by category
+vercel integration discover --category storage
+vercel integration discover --category monitoring
+vercel integration discover -c ai                      # shorthand
+vercel integration discover <query> --category <slug>  # combine substring + filter
+
+# Specific integration by name (substring across slug/name/description)
+vercel integration discover postgres
+vercel integration discover sentry
+
+# Full catalog (rare — usually narrow first)
+vercel integration discover
+vercel integration discover --format=json
 ```
+
+**Rule:** when the user describes a category-shaped need ("I need a database", "set up monitoring", "build me a store"), run `vercel integration categories` first to get the canonical slug, then `discover --category <slug>`. This is more accurate than substring search, which misses integrations whose description doesn't contain the exact keyword (e.g., "monitoring" search misses an integration described as "Observability").
 
 ## Accepting Terms (Install Without a Resource)
 

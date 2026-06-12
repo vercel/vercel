@@ -1,5 +1,23 @@
 # @vercel/backends
 
+## 0.8.13
+
+### Patch Changes
+
+- 4421ad9: Allow the Node framework preset to work without a `package.json`. The `node`
+  framework is now detected from a `server.*` entrypoint alone, and the
+  `@vercel/backends` builder defaults the module format to ESM (`"module"`) when
+  no `package.json` is present instead of erroring with "Unable to resolve format".
+
+## 0.8.12
+
+### Patch Changes
+
+- 52f005f: Fix a `@vercel/backends` performance regression. Passing `stat`/`readlink`/`readFile` overrides to `nodeFileTrace` replaces @vercel/nft's internal `CachedFileSystem`, so repeated (mostly missing) path probes during module resolution became uncached syscalls that throw on every miss. The `stat`/`readlink` overrides are now only applied when there are in-memory rolldown output files to serve, and all fs overrides are memoized (including negative results) to restore nft's caching.
+- 2d2aad9: Fix corruption of native addon (`.node`) and other binary files during file tracing. Traced files were read as UTF-8 strings, which mangled non-text bytes and caused runtime errors such as `ELF file's phentsize not the expected size` (e.g. with `argon2` on pnpm). Binary files are now preserved byte-for-byte.
+- Updated dependencies [01e18e8]
+  - @vercel/build-utils@13.30.0
+
 ## 0.8.11
 
 ### Patch Changes
