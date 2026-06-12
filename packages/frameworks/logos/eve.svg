@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 102 102" role="img" aria-label="Eve">
   <title>Eve</title>
-  <rect width="102" height="102" fill="#000"/>
-  <path d="M49.2811 66.9377L75.0311 34.9622H68.1393L47.9096 60.1058L42.4236 66.9377H49.2811Z" fill="#fff"/>
-  <path d="M0 34.9622H42.4048V40.0704H0V34.9622Z" fill="#fff"/>
-  <rect y="48.2844" width="27.6587" height="5.10824" fill="#fff"/>
-  <rect y="61.816" width="27.6588" height="5.10824" fill="#fff"/>
-  <rect width="32.2696" height="5.10824" transform="matrix(-1 0 0 1 101.9 34.9622)" fill="#fff"/>
-  <rect width="27.6587" height="5.10824" transform="matrix(-1 0 0 1 101.9 48.2844)" fill="#fff"/>
-  <rect width="27.6588" height="5.10824" transform="matrix(-1 0 0 1 101.9 61.816)" fill="#fff"/>
+  <rect width="102" height="102" fill="#fff"/>
+  <path d="M49.2811 66.9377L75.0311 34.9622H68.1393L47.9096 60.1058L42.4236 66.9377H49.2811Z" fill="#000"/>
+  <path d="M0 34.9622H42.4048V40.0704H0V34.9622Z" fill="#000"/>
+  <rect y="48.2844" width="27.6587" height="5.10824" fill="#000"/>
+  <rect y="61.816" width="27.6588" height="5.10824" fill="#000"/>
+  <rect width="32.2696" height="5.10824" transform="matrix(-1 0 0 1 101.9 34.9622)" fill="#000"/>
+  <rect width="27.6587" height="5.10824" transform="matrix(-1 0 0 1 101.9 48.2844)" fill="#000"/>
+  <rect width="27.6588" height="5.10824" transform="matrix(-1 0 0 1 101.9 61.816)" fill="#000"/>
 </svg>
