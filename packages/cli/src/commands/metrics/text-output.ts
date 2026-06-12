@@ -109,9 +109,14 @@ function normalizeUnit(unit: string): string {
     .replace(/[_\s]+/g, ' ');
 }
 
-/** `unique` may carry a field qualifier (e.g. `unique/visitor_id`). */
-function isUniqueAggregation(aggregation: Aggregation): boolean {
-  return aggregation === 'unique' || aggregation.startsWith('unique/');
+/**
+ * An aggregation may carry a dimension qualifier (e.g. `unique/visitor_id`),
+ * where the part before the `/` is the aggregation and the rest is the
+ * dimension it operates over.
+ */
+function isAggregationWithDimension(aggregation: Aggregation): boolean {
+  const [, dimension] = aggregation.split('/');
+  return Boolean(dimension);
 }
 
 /** Builds an internal map key from grouped dimension values. */
@@ -852,7 +857,7 @@ export function getEffectiveDisplay(
   baseUnit: string | undefined,
   aggregation: Aggregation
 ): { displayUnit: string | undefined; measureType: MeasureType } {
-  if (isUniqueAggregation(aggregation)) {
+  if (isAggregationWithDimension(aggregation)) {
     return { displayUnit: undefined, measureType: 'count' };
   }
   switch (aggregation) {
@@ -902,7 +907,10 @@ export function formatText(
   // With --group-by the summary holds one row per group, which a single header
   // line cannot represent.
   let periodUnique: number | undefined;
-  if (isUniqueAggregation(opts.aggregation) && opts.groupBy.length === 0) {
+  if (
+    isAggregationWithDimension(opts.aggregation) &&
+    opts.groupBy.length === 0
+  ) {
     const summaryValue = toNumericValue(response.summary?.[0]?.[rollupColumn]);
     if (summaryValue !== null) {
       periodUnique = summaryValue;

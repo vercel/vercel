@@ -89,17 +89,15 @@ describe('text-output', () => {
       });
     });
 
-    it('should return count display with hidden unit for unique aggregation', () => {
-      expect(getEffectiveDisplay('count', 'unique')).toEqual({
-        displayUnit: undefined,
-        measureType: 'count',
-      });
-      expect(getEffectiveDisplay('bytes', 'unique')).toEqual({
+    it('should return count display with hidden unit for an aggregation with a dimension', () => {
+      expect(
+        getEffectiveDisplay('count', 'unique/visitor_id' as Aggregation)
+      ).toEqual({
         displayUnit: undefined,
         measureType: 'count',
       });
       expect(
-        getEffectiveDisplay('count', 'unique/visitor_id' as Aggregation)
+        getEffectiveDisplay('bytes', 'unique/device_id' as Aggregation)
       ).toEqual({
         displayUnit: undefined,
         measureType: 'count',
