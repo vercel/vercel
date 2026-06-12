@@ -649,6 +649,8 @@ export interface ExperimentalServiceV2 {
   entrypoint?: string;
   /** Builder selected by the resolver. */
   builder: Builder;
+  /** Public routing declaration for this service. Not compiled into routes yet. */
+  mount?: ExperimentalServiceV2Mount;
   installCommand?: string;
   buildCommand?: string;
   devCommand?: string;
@@ -1039,6 +1041,34 @@ export interface ExperimentalServiceV2Binding {
 }
 
 /**
+ * Public routing declaration for a service in `experimentalServicesV2`.
+ *
+ * - A string is shorthand for `{ routes: [path] }`.
+ * - `routes`/`stripPrefix` are literal path segments, not patterns:
+ *   `/api` matches `/api` and `/api/...` but not `/api_v1`.
+ * - `subdomain` is a complete domain-label sequence matched right-to-left
+ *   against the project's domain: `"api"` matches `api.example.com` but
+ *   not `api.a.example.com`.
+ *
+ * @experimental This feature is experimental and may change.
+ */
+export type ExperimentalServiceV2Mount =
+  | string
+  | {
+      /** Paths owned by and delegated to this service. */
+      routes: string[];
+      /**
+       * Path-segment prefix stripped from the forwarded request path.
+       * Must be a segment-prefix of every entry in `routes`.
+       */
+      stripPrefix?: string;
+    }
+  | {
+      /** Subdomain this service is routed through. */
+      subdomain: string;
+    };
+
+/**
  * Configuration for a service in `experimentalServicesV2` in `vercel.json`.
  *
  * @experimental This feature is experimental and may change.
@@ -1046,6 +1076,8 @@ export interface ExperimentalServiceV2Binding {
 export interface ExperimentalServiceV2Config {
   /** Path to the service root, relative to `vercel.json`. */
   root: string;
+  /** Public routing declaration for this service. */
+  mount?: ExperimentalServiceV2Mount;
   /** Framework for this service. */
   framework?: string;
   /** Runtime for this service. */

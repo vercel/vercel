@@ -483,6 +483,48 @@ const experimentalServicesV2PathSchema = {
   maxLength: 512,
 };
 
+const experimentalServicesV2MountPathSchema = {
+  type: 'string',
+  minLength: 1,
+  maxLength: 512,
+  pattern: '^/',
+};
+
+const experimentalServicesV2MountSchema = {
+  oneOf: [
+    experimentalServicesV2MountPathSchema,
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['routes'],
+      properties: {
+        routes: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 100,
+          items: experimentalServicesV2MountPathSchema,
+        },
+        stripPrefix: experimentalServicesV2MountPathSchema,
+      },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['subdomain'],
+      properties: {
+        subdomain: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 253,
+          // lowercase DNS labels, optionally dotted (e.g. "api", "api.v1")
+          pattern:
+            '^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$',
+        },
+      },
+    },
+  ],
+};
+
 const experimentalServicesV2CommandSchema = {
   type: 'string',
   minLength: 1,
@@ -521,6 +563,7 @@ const getExperimentalServicesV2ServiceConfigSchema = () => ({
   required: ['root'],
   properties: {
     root: experimentalServicesV2PathSchema,
+    mount: experimentalServicesV2MountSchema,
     framework: {
       type: 'string',
       minLength: 1,

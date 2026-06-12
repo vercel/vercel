@@ -73,7 +73,6 @@ describe('validateConfig', () => {
     it.each([
       ['type', { type: 'web' }],
       ['trigger', { trigger: 'schedule' }],
-      ['mount', { mount: '/api' }],
       ['routePrefix', { routePrefix: '/api' }],
       ['subdomain', { subdomain: 'api' }],
       ['schedule', { schedule: '0 0 * * *' }],
@@ -93,6 +92,44 @@ describe('validateConfig', () => {
         },
       });
       expect(error).not.toBeNull();
+    });
+
+    describe('mount', () => {
+      it.each([
+        ['a path string', '/api'],
+        ['a routes object', { routes: ['/api/items', '/api/users'] }],
+        [
+          'routes with stripPrefix',
+          { routes: ['/api/items'], stripPrefix: '/api' },
+        ],
+        ['a subdomain', { subdomain: 'api' }],
+        ['a dotted subdomain', { subdomain: 'api.v1' }],
+      ])('should accept mount as %s', (_, mount) => {
+        const error = validateConfig({
+          experimentalServicesV2: {
+            backend: { root: 'backend/', framework: 'fastapi', mount },
+          },
+        } as any);
+        expect(error).toBeNull();
+      });
+
+      it.each([
+        ['a path without a leading slash', 'api'],
+        ['an empty routes array', { routes: [] }],
+        ['routes mixed with subdomain', { routes: ['/api'], subdomain: 'api' }],
+        ['subdomain with stripPrefix', { subdomain: 'api', stripPrefix: '/' }],
+        ['an uppercase subdomain', { subdomain: 'API' }],
+        ['a subdomain with a trailing dot', { subdomain: 'api.' }],
+        ['stripPrefix without routes', { stripPrefix: '/api' }],
+        ['an unknown property', { routes: ['/api'], path: '/api' }],
+      ])('should reject mount as %s', (_, mount) => {
+        const error = validateConfig({
+          experimentalServicesV2: {
+            backend: { root: 'backend/', framework: 'fastapi', mount },
+          },
+        } as any);
+        expect(error).not.toBeNull();
+      });
     });
 
     it('should reject a binding to an unknown service', () => {

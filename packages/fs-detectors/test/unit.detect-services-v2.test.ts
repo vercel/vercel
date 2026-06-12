@@ -278,6 +278,175 @@ describe('detectServices (experimentalServicesV2)', () => {
     expect(servicesV2(result.services)).toHaveLength(1);
   });
 
+  describe('mount', () => {
+    function mountFs(mounts: Record<string, unknown>): VirtualFilesystem {
+      const services: Record<string, object> = {};
+      const files: Record<string, string> = {};
+      for (const [name, mount] of Object.entries(mounts)) {
+        services[name] = { root: name, framework: 'express', mount };
+        files[`${name}/package.json`] = '{}';
+      }
+      return new VirtualFilesystem({
+        'vercel.json': vercelJson({ experimentalServicesV2: services }),
+        ...files,
+      });
+    }
+
+    it('carries mount through to the resolved service', async () => {
+      const fs = mountFs({
+        web: '/',
+        api: { routes: ['/api/items', '/api/users'], stripPrefix: '/api' },
+        admin: { subdomain: 'admin' },
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const services = servicesV2(result.services);
+      expect(services.find(s => s.name === 'web')?.mount).toBe('/');
+      expect(services.find(s => s.name === 'api')?.mount).toEqual({
+        routes: ['/api/items', '/api/users'],
+        stripPrefix: '/api',
+      });
+      expect(services.find(s => s.name === 'admin')?.mount).toEqual({
+        subdomain: 'admin',
+      });
+    });
+
+    it('allows a root mount alongside non-overlapping path mounts', async () => {
+      const fs = mountFs({ web: '/', api: '/api', docs: '/docs' });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+    });
+
+    it('allows sibling paths that share a string prefix but not a segment', async () => {
+      const fs = mountFs({ api: '/api', apiv1: '/api_v1' });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+    });
+
+    it.each([
+      ['an empty object', {}],
+      ['routes mixed with subdomain', { routes: ['/api'], subdomain: 'api' }],
+      ['an empty routes array', { routes: [] }],
+      ['a non-string route', { routes: [42] }],
+      ['an unknown property', { routes: ['/api'], path: '/api' }],
+      ['an uppercase subdomain', { subdomain: 'API' }],
+      ['a subdomain with a trailing dot', { subdomain: 'api.' }],
+    ])('errors on invalid mount shape: %s', async (_, mount) => {
+      const fs = mountFs({ api: mount });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_SERVICE_MOUNT',
+        serviceName: 'api',
+      });
+    });
+
+    it.each([
+      ['missing the leading slash', 'api'],
+      ['a path-to-regexp pattern', '/api/:path*'],
+      ['a regex pattern', '/api/(.*)'],
+      ['an empty path segment', '/api//items'],
+    ])('errors on a mount path %s', async (_, mount) => {
+      const fs = mountFs({ api: mount });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_SERVICE_MOUNT_PATH',
+        serviceName: 'api',
+      });
+    });
+
+    it('errors when stripPrefix is not a segment-prefix of every route', async () => {
+      const fs = mountFs({
+        api: { routes: ['/api/items', '/api_v1/items'], stripPrefix: '/api' },
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_MOUNT_STRIP_PREFIX',
+        serviceName: 'api',
+      });
+    });
+
+    it('errors when two services mount the same path', async () => {
+      const fs = mountFs({ a: '/api', b: '/api' });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors[0]).toMatchObject({
+        code: 'CONFLICTING_SERVICE_MOUNTS',
+      });
+    });
+
+    it('errors when one mount segment-prefixes another', async () => {
+      const fs = mountFs({ a: '/api', b: '/api/items' });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors[0]).toMatchObject({
+        code: 'CONFLICTING_SERVICE_MOUNTS',
+      });
+    });
+
+    it('detects conflicts regardless of declaration order', async () => {
+      const forward = await detectServices({
+        fs: mountFs({ a: '/api/items', b: '/api' }),
+      });
+      const reverse = await detectServices({
+        fs: mountFs({ b: '/api', a: '/api/items' }),
+      });
+
+      expect(forward.errors[0]).toMatchObject({
+        code: 'CONFLICTING_SERVICE_MOUNTS',
+      });
+      expect(reverse.errors[0]).toMatchObject({
+        code: 'CONFLICTING_SERVICE_MOUNTS',
+      });
+    });
+
+    it('treats a trailing slash as the same mount path', async () => {
+      const fs = mountFs({ a: '/api/', b: '/api' });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors[0]).toMatchObject({
+        code: 'CONFLICTING_SERVICE_MOUNTS',
+      });
+    });
+
+    it('errors when two services mount the root path', async () => {
+      const fs = mountFs({ a: '/', b: '/' });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors[0]).toMatchObject({
+        code: 'CONFLICTING_SERVICE_MOUNTS',
+      });
+    });
+
+    it('errors when two services mount the same subdomain', async () => {
+      const fs = mountFs({
+        a: { subdomain: 'api' },
+        b: { subdomain: 'api' },
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors[0]).toMatchObject({
+        code: 'DUPLICATE_SERVICE_SUBDOMAIN',
+      });
+    });
+  });
+
   describe('errors', () => {
     it('errors when root does not exist', async () => {
       const fs = new VirtualFilesystem({
