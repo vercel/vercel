@@ -10,8 +10,8 @@ import {
   normalizePrefetches,
   getMaxUncompressedLambdaSize,
   getGroupMaxUncompressedLambdaSize,
-  isLargeFunctionBundlingEnabled,
-  LARGE_FUNCTION_BUNDLING_ENV,
+  isLargeFunctionsEnabled,
+  LARGE_FUNCTIONS_ENV,
   getPageLambdaGroups,
   detectLambdaLimitExceeding,
   type LambdaGroup,
@@ -541,29 +541,29 @@ describe('getGroupMaxUncompressedLambdaSize', () => {
   });
 });
 
-describe('isLargeFunctionBundlingEnabled', () => {
+describe('isLargeFunctionsEnabled', () => {
   afterEach(() => {
-    delete process.env[LARGE_FUNCTION_BUNDLING_ENV];
+    delete process.env[LARGE_FUNCTIONS_ENV];
   });
 
   it('defaults to disabled', () => {
-    delete process.env[LARGE_FUNCTION_BUNDLING_ENV];
-    expect(isLargeFunctionBundlingEnabled()).toBe(false);
+    delete process.env[LARGE_FUNCTIONS_ENV];
+    expect(isLargeFunctionsEnabled()).toBe(false);
   });
 
   it('is enabled when the env var is set', () => {
-    process.env[LARGE_FUNCTION_BUNDLING_ENV] = '1';
-    expect(isLargeFunctionBundlingEnabled()).toBe(true);
+    process.env[LARGE_FUNCTIONS_ENV] = '1';
+    expect(isLargeFunctionsEnabled()).toBe(true);
   });
 });
 
-describe('getPageLambdaGroups large-function bundling', () => {
+describe('getPageLambdaGroups large functions', () => {
   afterEach(() => {
-    delete process.env[LARGE_FUNCTION_BUNDLING_ENV];
+    delete process.env[LARGE_FUNCTIONS_ENV];
   });
 
   it('keeps existing bundling unchanged when the flag is disabled', async () => {
-    delete process.env[LARGE_FUNCTION_BUNDLING_ENV];
+    delete process.env[LARGE_FUNCTIONS_ENV];
 
     const groups = await groupPagesBySize({
       'big-a.js': 300 * MiB,
@@ -585,7 +585,7 @@ describe('getPageLambdaGroups large-function bundling', () => {
   });
 
   it('emits each over-budget route as its own individual large function', async () => {
-    process.env[LARGE_FUNCTION_BUNDLING_ENV] = '1';
+    process.env[LARGE_FUNCTIONS_ENV] = '1';
 
     const groups = await groupPagesBySize({
       'big-a.js': 300 * MiB,
@@ -613,7 +613,7 @@ describe('getPageLambdaGroups large-function bundling', () => {
   });
 
   it('does not bundle large routes together even when they would fit the ceiling', async () => {
-    process.env[LARGE_FUNCTION_BUNDLING_ENV] = '1';
+    process.env[LARGE_FUNCTIONS_ENV] = '1';
 
     const groups = await groupPagesBySize({
       // Together only 600 MiB (well under the 5 GiB ceiling), yet each large
@@ -628,7 +628,7 @@ describe('getPageLambdaGroups large-function bundling', () => {
   });
 
   it('never mixes large and normal routes in the same group', async () => {
-    process.env[LARGE_FUNCTION_BUNDLING_ENV] = '1';
+    process.env[LARGE_FUNCTIONS_ENV] = '1';
 
     const groups = await groupPagesBySize({
       'big.js': 260 * MiB,
@@ -643,7 +643,7 @@ describe('getPageLambdaGroups large-function bundling', () => {
   });
 
   it('treats a route within the normal packing budget as normal', async () => {
-    process.env[LARGE_FUNCTION_BUNDLING_ENV] = '1';
+    process.env[LARGE_FUNCTIONS_ENV] = '1';
 
     const groups = await groupPagesBySize({
       // 200 MiB is under the 225 MiB budget (250 MiB limit − 25 MiB reserved).
@@ -655,7 +655,7 @@ describe('getPageLambdaGroups large-function bundling', () => {
   });
 
   it('treats a route over the packing budget but under the hard limit as large', async () => {
-    process.env[LARGE_FUNCTION_BUNDLING_ENV] = '1';
+    process.env[LARGE_FUNCTIONS_ENV] = '1';
 
     const groups = await groupPagesBySize({
       // 240 MiB is under the 250 MiB limit but over the 225 MiB packing budget,

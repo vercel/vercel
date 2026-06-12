@@ -82,10 +82,11 @@ export function getMaxUncompressedLambdaSize(runtime: string): number {
 }
 
 /**
- * Internal env var that enables "large function bundling". When set, a route
- * that does not fit the default per-runtime packing budget (the limit from
- * {@link getMaxUncompressedLambdaSize} minus {@link LAMBDA_RESERVED_UNCOMPRESSED_SIZE})
- * is emitted as its own individual function, measured against the higher
+ * Internal env var that enables the experimental large-functions feature. When
+ * set, a route that does not fit the default per-runtime packing budget (the
+ * limit from {@link getMaxUncompressedLambdaSize} minus
+ * {@link LAMBDA_RESERVED_UNCOMPRESSED_SIZE}) is emitted as its own individual
+ * function, measured against the higher
  * {@link DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE} ceiling instead of the
  * default limit. Such routes are never bundled — neither with normally-sized
  * routes nor with each other. The default pool keeps using the existing limit
@@ -95,19 +96,18 @@ export function getMaxUncompressedLambdaSize(runtime: string): number {
  * toggle it without requiring a CLI upgrade, mirroring how
  * `@vercel/build-utils` handles `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT`.
  *
- * TODO: Remove this gate and make large-function bundling unconditional once
+ * TODO: Remove this gate and make large-function handling unconditional once
  * the upstream build system's support for uncompressed functions larger than
  * {@link DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE} is fully rolled out.
  */
-export const LARGE_FUNCTION_BUNDLING_ENV =
-  'NEXT_EXPERIMENTAL_LARGE_FUNCTION_BUNDLING';
+export const LARGE_FUNCTIONS_ENV = 'NEXT_EXPERIMENTAL_LARGE_FUNCTIONS';
 
 /**
- * Whether large-function bundling is enabled via
- * {@link LARGE_FUNCTION_BUNDLING_ENV}. Evaluated at call time.
+ * Whether the experimental large-functions feature is enabled via
+ * {@link LARGE_FUNCTIONS_ENV}. Evaluated at call time.
  */
-export function isLargeFunctionBundlingEnabled(): boolean {
-  return Boolean(process.env[LARGE_FUNCTION_BUNDLING_ENV]);
+export function isLargeFunctionsEnabled(): boolean {
+  return Boolean(process.env[LARGE_FUNCTIONS_ENV]);
 }
 
 /**
@@ -1940,8 +1940,8 @@ export type LambdaGroup = {
    * the default per-runtime packing budget (the limit minus the reserved
    * headroom). Large routes are never bundled: each is its own group, measured
    * against the higher {@link DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE}
-   * ceiling instead of the default limit. Only set when large-function bundling
-   * is enabled (see {@link isLargeFunctionBundlingEnabled}).
+   * ceiling instead of the default limit. Only set when the large-functions
+   * feature is enabled (see {@link isLargeFunctionsEnabled}).
    */
   isLargeFunctions?: boolean;
   pseudoLayer: PseudoLayer;
@@ -2011,7 +2011,7 @@ export async function getPageLambdaGroups({
   // When enabled, a route that individually exceeds the default uncompressed
   // budget is emitted as its own function under a higher ceiling, instead of
   // being bundled with other routes. Read once per call.
-  const largeFunctionBundlingEnabled = isLargeFunctionBundlingEnabled();
+  const largeFunctionsEnabled = isLargeFunctionsEnabled();
 
   for (const page of pages) {
     const newPages = [...internalPages, page];
@@ -2116,7 +2116,7 @@ export async function getPageLambdaGroups({
     // `MAX_UNCOMPRESSED_LAMBDA_SIZE` override is honored via
     // `getMaxUncompressedLambdaSize`.)
     let isLargeFunction = false;
-    if (largeFunctionBundlingEnabled && !experimentalAllowBundling) {
+    if (largeFunctionsEnabled && !experimentalAllowBundling) {
       let standaloneUncompressedSize = initialPseudoLayerUncompressed;
       const countedFiles = new Set<string>(
         Object.keys(initialPseudoLayer.pseudoLayer)

@@ -23,9 +23,9 @@ export const DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE_BUN = 150 * MIB;
  * does not fit the default per-runtime packing budget (the size limit minus
  * {@link LAMBDA_RESERVED_UNCOMPRESSED_SIZE}) is emitted as its own individual
  * function, measured against this higher 5 GiB ceiling instead of the default
- * limit (it is not bundled with other routes). Only takes effect when
- * large-function bundling is enabled via the
- * `NEXT_EXPERIMENTAL_LARGE_FUNCTION_BUNDLING` env var.
+ * limit (it is not bundled with other routes). Only takes effect when the
+ * large-functions feature is enabled via the
+ * `NEXT_EXPERIMENTAL_LARGE_FUNCTIONS` env var.
  */
 export const DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE = 5 * 1024 * MIB;
 
