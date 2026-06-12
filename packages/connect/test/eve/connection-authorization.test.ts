@@ -135,7 +135,7 @@ describe('connect() adapter startAuthorization', () => {
     vi.restoreAllMocks();
   });
 
-  it('threads the connector name reported by Connect onto the challenge as displayName', async () => {
+  it('threads the service display name reported by Connect onto the challenge as displayName', async () => {
     fetchMock.mockResolvedValueOnce(
       jsonAuthorizeResponse({ connector: SALESFORCE_CONNECTOR })
     );
@@ -145,13 +145,30 @@ describe('connect() adapter startAuthorization', () => {
       principal: PRINCIPAL,
     });
 
+    // The service name ("Sign in with Salesforce"), not the connector's
+    // own name — the consent screen identifies the specific app.
     expect(challenge).toMatchObject({
       url: 'https://connect.vercel.com/authorize/abc',
       displayName: 'Salesforce',
     });
   });
 
-  it('prefers the author-provided displayName over the server-reported connector name', async () => {
+  it('falls back to the connector name when the service has no display name', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonAuthorizeResponse({
+        connector: { ...SALESFORCE_CONNECTOR, serviceName: undefined },
+      })
+    );
+
+    const definition = connect('oauth/connection-auth-unknown-service');
+    const { challenge } = await definition.startAuthorization({
+      principal: PRINCIPAL,
+    });
+
+    expect(challenge).toMatchObject({ displayName: 'Acme GTM Bot' });
+  });
+
+  it('prefers the author-provided displayName over the server-reported names', async () => {
     fetchMock.mockResolvedValueOnce(
       jsonAuthorizeResponse({ connector: SALESFORCE_CONNECTOR })
     );
@@ -184,7 +201,8 @@ const SALESFORCE_CONNECTOR = {
   uid: 'oauth/connection-auth-salesforce',
   type: 'oauth',
   service: 'salesforce',
-  name: 'Salesforce',
+  serviceName: 'Salesforce' as string | undefined,
+  name: 'Acme GTM Bot',
 };
 
 function jsonAuthorizeResponse(extra?: {

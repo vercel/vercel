@@ -29,7 +29,13 @@ export interface ConnectAuthorizationResponse {
     type: string;
     /** Resolved service id when known, eg. `salesforce`. */
     service?: string;
-    /** Human-readable display name, eg. `Salesforce`. */
+    /**
+     * Curated display name of the resolved service, eg. `Salesforce`,
+     * present when the service is known to Vercel Connect. Suited for
+     * end-user surfaces like "Sign in with {serviceName}".
+     */
+    serviceName?: string;
+    /** The connector's own (operator-given) name. */
     name: string;
   };
 }

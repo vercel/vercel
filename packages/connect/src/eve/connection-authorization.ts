@@ -172,8 +172,9 @@ export interface EveAuthorizationOptions {
   /**
    * Manual override for the human-readable provider name channels
    * render on the authorization affordance (eg. a
-   * `Sign in with Salesforce` button). When omitted, the connector
-   * name reported by Vercel Connect is used.
+   * `Sign in with Salesforce` button). When omitted, the connector's
+   * service display name reported by Vercel Connect is used, falling
+   * back to the connector's own name for unknown services.
    */
   readonly displayName?: string;
 
@@ -413,9 +414,15 @@ function buildInteractiveDefinition(
             deviceCode: true,
           }
         );
-        // The author-provided override wins over the connector name
-        // reported by Vercel Connect.
-        const displayName = options.displayName ?? response.connector?.name;
+        // Sign-in buttons name the destination service ("Sign in with
+        // Salesforce"), matching the OAuth idiom — the consent screen
+        // names the specific requesting app. The connector's own name is
+        // the fallback for custom connectors on unknown services, and an
+        // author-provided override wins over both.
+        const displayName =
+          options.displayName ??
+          response.connector?.serviceName ??
+          response.connector?.name;
         return {
           challenge: {
             url: response.url,
