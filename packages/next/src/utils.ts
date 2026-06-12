@@ -85,10 +85,11 @@ export function getMaxUncompressedLambdaSize(runtime: string): number {
  * Internal env var that enables "large function bundling". When set, a route
  * that does not fit the default per-runtime packing budget (the limit from
  * {@link getMaxUncompressedLambdaSize} minus {@link LAMBDA_RESERVED_UNCOMPRESSED_SIZE})
- * is pulled out of the default bundling pool and grouped separately under the
- * higher {@link DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE} ceiling, so it is
- * never co-bundled with normally-sized routes. The default pool keeps using the
- * existing limit unchanged.
+ * is emitted as its own individual function, measured against the higher
+ * {@link DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE} ceiling instead of the
+ * default limit. Such routes are never bundled — neither with normally-sized
+ * routes nor with each other. The default pool keeps using the existing limit
+ * unchanged.
  *
  * The gate is read at call time (not module load) so the build environment can
  * toggle it without requiring a CLI upgrade, mirroring how
@@ -111,8 +112,8 @@ export function isLargeFunctionBundlingEnabled(): boolean {
 
 /**
  * Returns the uncompressed size ceiling that applies to a lambda group: the
- * higher "large function" limit when the group holds routes that each
- * individually exceed the default per-runtime packing budget, otherwise the
+ * higher "large function" limit when the group is a large function (a single
+ * route that exceeds the default per-runtime packing budget), otherwise the
  * default per-runtime limit itself.
  */
 export function getGroupMaxUncompressedLambdaSize(
@@ -1935,12 +1936,12 @@ export type LambdaGroup = {
   isPages?: boolean;
   isApiLambda: boolean;
   /**
-   * Whether this group holds "large" routes — routes that each individually do
-   * not fit the default per-runtime packing budget (the limit minus the
-   * reserved headroom). Such groups are bundled under the higher
-   * {@link DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE} ceiling and are never
-   * mixed with normally-sized routes. Only set when large-function bundling is
-   * enabled (see {@link isLargeFunctionBundlingEnabled}).
+   * Whether this group is a "large" function — a single route that does not fit
+   * the default per-runtime packing budget (the limit minus the reserved
+   * headroom). Large routes are never bundled: each is its own group, measured
+   * against the higher {@link DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE}
+   * ceiling instead of the default limit. Only set when large-function bundling
+   * is enabled (see {@link isLargeFunctionBundlingEnabled}).
    */
   isLargeFunctions?: boolean;
   pseudoLayer: PseudoLayer;
@@ -2007,9 +2008,9 @@ export async function getPageLambdaGroups({
 }) {
   const groups: Array<LambdaGroup> = [];
 
-  // When enabled, routes that individually exceed the default uncompressed
-  // limit are bundled into a separate pool with a higher ceiling instead of
-  // being co-bundled with normally-sized routes. Read once per call.
+  // When enabled, a route that individually exceeds the default uncompressed
+  // budget is emitted as its own function under a higher ceiling, instead of
+  // being bundled with other routes. Read once per call.
   const largeFunctionBundlingEnabled = isLargeFunctionBundlingEnabled();
 
   for (const page of pages) {
@@ -2107,10 +2108,13 @@ export async function getPageLambdaGroups({
     // per-runtime packing budget — the size limit minus the headroom we reserve
     // for files added after grouping (launcher, manifests, etc.). These are the
     // routes that cannot be guaranteed to stay under the limit as a normal
-    // function, so they are pulled into a separate pool with a higher ceiling.
-    // `experimentalAllowBundling` defers all bundling to the upstream build
-    // system, so the split does not apply. (The `MAX_UNCOMPRESSED_LAMBDA_SIZE`
-    // override is honored via `getMaxUncompressedLambdaSize`.)
+    // function. Each large route is emitted as its own individual function,
+    // measured against the higher large-function ceiling instead of the default
+    // limit — it is never bundled, neither with normally-sized routes nor with
+    // other large routes. `experimentalAllowBundling` defers all bundling to the
+    // upstream build system, so the split does not apply. (The
+    // `MAX_UNCOMPRESSED_LAMBDA_SIZE` override is honored via
+    // `getMaxUncompressedLambdaSize`.)
     let isLargeFunction = false;
     if (largeFunctionBundlingEnabled && !experimentalAllowBundling) {
       let standaloneUncompressedSize = initialPseudoLayerUncompressed;
@@ -2137,12 +2141,16 @@ export async function getPageLambdaGroups({
       isLargeFunction = standaloneUncompressedSize >= normalBudget;
     }
 
-    let matchingGroup = experimentalAllowBundling
+    // Both `experimentalAllowBundling` (which defers bundling to the upstream
+    // build system) and large routes (each emitted as its own function) skip
+    // merging into an existing group — they always get a fresh group below.
+    const skipGroupBundling = experimentalAllowBundling || isLargeFunction;
+
+    let matchingGroup = skipGroupBundling
       ? undefined
       : groups.find(group => {
           const matches =
-            // Large routes are only ever grouped with other large routes, so
-            // the two pools stay isolated under their respective ceilings.
+            // Never merge a normal route into a large (single-route) group.
             (group.isLargeFunctions ?? false) === isLargeFunction &&
             group.maxDuration === opts.maxDuration &&
             group.memory === opts.memory &&

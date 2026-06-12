@@ -584,7 +584,7 @@ describe('getPageLambdaGroups large-function bundling', () => {
     ]);
   });
 
-  it('separates routes over the default limit into a higher-ceiling pool when enabled', async () => {
+  it('emits each over-budget route as its own individual large function', async () => {
     process.env[LARGE_FUNCTION_BUNDLING_ENV] = '1';
 
     const groups = await groupPagesBySize({
@@ -594,29 +594,37 @@ describe('getPageLambdaGroups large-function bundling', () => {
       'big-b.js': 300 * MiB,
     });
 
-    expect(groups).toHaveLength(2);
+    // Two individual large functions (one page each, never bundled together)
+    // plus one normal group holding both small routes.
+    expect(groups).toHaveLength(3);
 
-    const large = groups.find(g => g.isLargeFunctions);
-    const normal = groups.find(g => !g.isLargeFunctions);
+    const large = groups.filter(g => g.isLargeFunctions);
+    const normal = groups.filter(g => !g.isLargeFunctions);
 
-    // The two >250 MiB routes are bundled together in the large pool
-    // (600 MiB < 5 GiB), and the small routes stay in the default pool.
-    expect(large?.pages.slice().sort()).toEqual(['big-a.js', 'big-b.js']);
-    expect(normal?.pages.slice().sort()).toEqual(['small-1.js', 'small-2.js']);
+    expect(large.map(g => g.pages.slice().sort()).sort()).toEqual([
+      ['big-a.js'],
+      ['big-b.js'],
+    ]);
+    expect(normal).toHaveLength(1);
+    expect(normal[0].pages.slice().sort()).toEqual([
+      'small-1.js',
+      'small-2.js',
+    ]);
   });
 
-  it('bundles large routes together only up to the 5 GiB ceiling', async () => {
+  it('does not bundle large routes together even when they would fit the ceiling', async () => {
     process.env[LARGE_FUNCTION_BUNDLING_ENV] = '1';
 
     const groups = await groupPagesBySize({
-      // 3 GiB + 3 GiB = 6 GiB, which exceeds the 5 GiB ceiling, so they cannot
-      // share a single large group.
-      'big-a.js': 3 * 1024 * MiB,
-      'big-b.js': 3 * 1024 * MiB,
+      // Together only 600 MiB (well under the 5 GiB ceiling), yet each large
+      // route is still emitted as its own function rather than bundled.
+      'big-a.js': 300 * MiB,
+      'big-b.js': 300 * MiB,
     });
 
     expect(groups).toHaveLength(2);
     expect(groups.every(g => g.isLargeFunctions)).toBe(true);
+    expect(groups.every(g => g.pages.length === 1)).toBe(true);
   });
 
   it('never mixes large and normal routes in the same group', async () => {
