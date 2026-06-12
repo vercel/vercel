@@ -43,14 +43,6 @@ export const nft = async (
       }
     }
 
-    const ignorePatterns = [
-      ...(args.ignoreNodeModules ? ['**/node_modules/**'] : []),
-      ...(args.ignore
-        ? Array.isArray(args.ignore)
-          ? args.ignore
-          : [args.ignore]
-        : []),
-    ];
     const traceRoots = [
       ...Array.from(args.localBuildFiles).filter(
         p => existsSync(p) || virtualFiles.has(p)
@@ -58,6 +50,12 @@ export const nft = async (
       ...virtualFiles.keys(),
     ];
     const traceBase = getCommonBase(args.repoRootPath, traceRoots);
+    const ignorePatterns = getIgnorePatterns({
+      ignoreNodeModules: args.ignoreNodeModules,
+      ignore: args.ignore,
+      traceBase,
+      repoRootPath: args.repoRootPath,
+    });
 
     // Overriding these replaces nft's internal CachedFileSystem, so we only
     // override stat/readlink when there are virtual files to serve and memoize
@@ -171,7 +169,7 @@ export const nft = async (
       // seed NFT for runtime CJS shims and must remain in the output.
       if (
         args.localBuildFiles.has(join(args.repoRootPath, outputPath)) &&
-        !outputPath.includes('node_modules')
+        !isNodeModulesPath(outputPath)
       ) {
         continue;
       }
@@ -282,6 +280,9 @@ const normalizePath = (path: string) => path.split(sep).join('/');
 
 const isParentPath = (path: string) => path === '..' || path.startsWith('../');
 
+const isNodeModulesPath = (path: string) =>
+  path.split('/').includes('node_modules');
+
 const stripParentSegments = (path: string) => {
   const segments = path.split('/');
   let index = 0;
@@ -289,6 +290,42 @@ const stripParentSegments = (path: string) => {
     index++;
   }
   return segments.slice(index).join('/');
+};
+
+const getIgnorePatterns = ({
+  ignoreNodeModules,
+  ignore,
+  traceBase,
+  repoRootPath,
+}: {
+  ignoreNodeModules: boolean;
+  ignore?: string | string[] | undefined;
+  traceBase: string;
+  repoRootPath: string;
+}) => {
+  const patterns = [
+    ...(ignoreNodeModules ? ['**/node_modules/**'] : []),
+    ...(ignore ? (Array.isArray(ignore) ? ignore : [ignore]) : []),
+  ];
+  const repoRootRelativeToTraceBase = normalizePath(
+    relative(traceBase, repoRootPath)
+  );
+
+  if (
+    !repoRootRelativeToTraceBase ||
+    isParentPath(repoRootRelativeToTraceBase)
+  ) {
+    return patterns;
+  }
+
+  const rebasedPatterns = patterns.map(pattern => {
+    const isNegated = pattern.startsWith('!');
+    const patternBody = isNegated ? pattern.slice(1) : pattern;
+    const rebased = posix.join(repoRootRelativeToTraceBase, patternBody);
+    return isNegated ? `!${rebased}` : rebased;
+  });
+
+  return [...patterns, ...rebasedPatterns];
 };
 
 const createVirtualFileStat = (data: string | Buffer) => {

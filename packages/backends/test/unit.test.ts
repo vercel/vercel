@@ -287,12 +287,16 @@ it.skipIf(process.platform === 'win32')(
       [
         '// @ts-ignore - fixture package has no type declarations',
         "import { marker } from '@nestjs/common';",
+        "import { readFileSync } from 'node:fs';",
+        '',
+        "if (process.env.NEVER_READ_IGNORED_FILE) readFileSync(new URL('./ignored.txt', import.meta.url));",
         '',
         'export default function handler(_req, res) {',
         '  res.end(marker);',
         '}',
       ].join('\n')
     );
+    await writeFile(join(workPath, 'ignored.txt'), 'ignore me');
     await writeFile(
       join(packageStorePath, 'package.json'),
       JSON.stringify({
@@ -316,6 +320,7 @@ it.skipIf(process.platform === 'win32')(
         workPath,
         config: {
           ...defaultConfig,
+          excludeFiles: 'ignored.txt',
           projectSettings: {
             ...defaultConfig.projectSettings,
             installCommand: 'true',
@@ -330,6 +335,7 @@ it.skipIf(process.platform === 'win32')(
       const lambda = result.output.index as unknown as NodejsLambda;
       const lambdaFiles = Object.keys(lambda.files ?? {});
       expect(lambdaFiles.some(file => file.startsWith('..'))).toBe(false);
+      expect(lambdaFiles).not.toContain('ignored.txt');
       expect(lambdaFiles).toEqual(
         expect.arrayContaining([
           expect.stringContaining(
