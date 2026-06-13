@@ -17,7 +17,7 @@ const sampleRule = {
 
 function useUpdateRule(response: unknown = { ...sampleRule, enabled: false }) {
   let body: unknown;
-  client.scenario.patch('/v1/ai-gateway/rules', (req, res) => {
+  client.scenario.patch('/ai-gateway/rules', (req, res) => {
     body = req.body;
     res.json(response);
   });
@@ -25,7 +25,7 @@ function useUpdateRule(response: unknown = { ...sampleRule, enabled: false }) {
 }
 
 function useUpdateNotFound() {
-  client.scenario.patch('/v1/ai-gateway/rules', (_req, res) => {
+  client.scenario.patch('/ai-gateway/rules', (_req, res) => {
     res
       .status(404)
       .json({ error: { code: 'not_found', message: 'Rule not found.' } });

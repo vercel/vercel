@@ -17,7 +17,7 @@ const sampleRule = {
 
 function useListRules(rules: unknown[] = [sampleRule]) {
   let query: unknown;
-  client.scenario.get('/v1/ai-gateway/rules', (req, res) => {
+  client.scenario.get('/ai-gateway/rules', (req, res) => {
     query = req.query;
     res.json({ rules });
   });

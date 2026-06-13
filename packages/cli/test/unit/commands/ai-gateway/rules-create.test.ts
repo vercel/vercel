@@ -17,7 +17,7 @@ const sampleRule = {
 
 function useCreateRule(response: unknown = sampleRule) {
   let body: unknown;
-  client.scenario.post('/v1/ai-gateway/rules', (req, res) => {
+  client.scenario.post('/ai-gateway/rules', (req, res) => {
     body = req.body;
     res.json(response);
   });
@@ -160,7 +160,7 @@ describe('ai-gateway rules create', () => {
   it('surfaces a backend error', async () => {
     const team = useTeam();
     useUser();
-    client.scenario.post('/v1/ai-gateway/rules', (_req, res) => {
+    client.scenario.post('/ai-gateway/rules', (_req, res) => {
       res.status(400).json({
         error: { code: 'bad_request', message: 'Rules are not enabled.' },
       });

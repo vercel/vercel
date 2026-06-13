@@ -6,7 +6,7 @@ import { useTeam } from '../../../mocks/team';
 
 function useDeleteRule() {
   let query: unknown;
-  client.scenario.delete('/v1/ai-gateway/rules', (req, res) => {
+  client.scenario.delete('/ai-gateway/rules', (req, res) => {
     query = req.query;
     res.status(204).end();
   });
@@ -14,7 +14,7 @@ function useDeleteRule() {
 }
 
 function useDeleteNotFound() {
-  client.scenario.delete('/v1/ai-gateway/rules', (_req, res) => {
+  client.scenario.delete('/ai-gateway/rules', (_req, res) => {
     res
       .status(404)
       .json({ error: { code: 'not_found', message: 'Rule not found.' } });

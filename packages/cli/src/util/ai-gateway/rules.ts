@@ -42,7 +42,7 @@ export async function createRule(
   client: Client,
   input: CreateRuleInput
 ): Promise<Rule> {
-  return client.fetch<Rule>('/v1/ai-gateway/rules', {
+  return client.fetch<Rule>('/ai-gateway/rules', {
     method: 'POST',
     body: input,
   });
@@ -54,7 +54,7 @@ export async function listRules(
 ): Promise<Rule[]> {
   const query = includeDisabled ? '?includeDisabled=true' : '';
   const { rules } = await client.fetch<{ rules: Rule[] }>(
-    `/v1/ai-gateway/rules${query}`,
+    `/ai-gateway/rules${query}`,
     { method: 'GET' }
   );
   return rules ?? [];
@@ -64,7 +64,7 @@ export async function updateRule(
   client: Client,
   input: UpdateRuleInput
 ): Promise<Rule> {
-  return client.fetch<Rule>('/v1/ai-gateway/rules', {
+  return client.fetch<Rule>('/ai-gateway/rules', {
     method: 'PATCH',
     body: input,
   });
@@ -74,8 +74,7 @@ export async function deleteRule(
   client: Client,
   ruleId: string
 ): Promise<void> {
-  await client.fetch(
-    `/v1/ai-gateway/rules?ruleId=${encodeURIComponent(ruleId)}`,
-    { method: 'DELETE' }
-  );
+  await client.fetch(`/ai-gateway/rules?ruleId=${encodeURIComponent(ruleId)}`, {
+    method: 'DELETE',
+  });
 }
