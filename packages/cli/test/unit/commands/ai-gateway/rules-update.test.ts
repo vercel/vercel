@@ -124,4 +124,31 @@ describe('ai-gateway rules update', () => {
     await expect(client.stdout).toOutput('"ruleId": "rule_1"');
     expect(await exitCodePromise).toBe(0);
   });
+
+  it('updates the rewrite target and description', async () => {
+    const team = useTeam();
+    useUser();
+    const getBody = useUpdateRule();
+    client.config.currentTeam = team.id;
+    client.setArgv(
+      'ai-gateway',
+      'rules',
+      'update',
+      'rule_1',
+      '--rewrite-model',
+      'anthropic/claude-opus-4.8',
+      '--description',
+      'route legacy model'
+    );
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput('updated');
+    expect(await exitCodePromise).toBe(0);
+    expect(getBody()).toMatchObject({
+      ruleId: 'rule_1',
+      description: 'route legacy model',
+      action: { rewriteModel: 'anthropic/claude-opus-4.8' },
+    });
+  });
 });

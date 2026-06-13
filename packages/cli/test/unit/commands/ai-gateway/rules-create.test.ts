@@ -123,6 +123,65 @@ describe('ai-gateway rules create', () => {
     expect(await exitCodePromise).toBe(0);
   });
 
+  it('creates a deny rule with a reason', async () => {
+    const team = useTeam();
+    useUser();
+    const getBody = useCreateRule({
+      ...sampleRule,
+      ruleId: 'rule_3',
+      type: 'deny',
+      match: { model: 'openai/gpt-4o' },
+      action: { reason: 'cost control' },
+    });
+    client.config.currentTeam = team.id;
+    client.setArgv(
+      'ai-gateway',
+      'rules',
+      'create',
+      '--type',
+      'deny',
+      '--model',
+      'openai/gpt-4o',
+      '--reason',
+      'cost control'
+    );
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stdout).toOutput('rule_3');
+    expect(await exitCodePromise).toBe(0);
+    expect(getBody()).toMatchObject({
+      type: 'deny',
+      match: { model: 'openai/gpt-4o' },
+      action: { reason: 'cost control' },
+    });
+  });
+
+  it('surfaces a backend error', async () => {
+    const team = useTeam();
+    useUser();
+    client.scenario.post('/v1/ai-gateway/rules', (_req, res) => {
+      res.status(400).json({
+        error: { code: 'bad_request', message: 'Rules are not enabled.' },
+      });
+    });
+    client.config.currentTeam = team.id;
+    client.setArgv(
+      'ai-gateway',
+      'rules',
+      'create',
+      '--type',
+      'deny',
+      '--model',
+      'openai/gpt-4o'
+    );
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput('Rules are not enabled');
+    expect(await exitCodePromise).toBe(1);
+  });
+
   describe('validation', () => {
     it('requires --type', async () => {
       useUser();

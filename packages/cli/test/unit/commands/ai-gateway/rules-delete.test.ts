@@ -82,4 +82,36 @@ describe('ai-gateway rules delete', () => {
     await expect(client.stderr).toOutput('Routing rule "missing" not found');
     expect(await exitCodePromise).toBe(1);
   });
+
+  it('deletes after interactive confirmation', async () => {
+    const team = useTeam();
+    useUser();
+    useDeleteRule();
+    client.config.currentTeam = team.id;
+    client.setArgv('ai-gateway', 'rules', 'rm', 'rule_1');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput('Delete routing rule');
+    client.stdin.write('y\n');
+
+    await expect(client.stderr).toOutput('deleted');
+    expect(await exitCodePromise).toBe(0);
+  });
+
+  it('cancels when confirmation is declined', async () => {
+    const team = useTeam();
+    useUser();
+    useDeleteRule();
+    client.config.currentTeam = team.id;
+    client.setArgv('ai-gateway', 'rules', 'rm', 'rule_1');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput('Delete routing rule');
+    client.stdin.write('n\n');
+
+    await expect(client.stderr).toOutput('Canceled');
+    expect(await exitCodePromise).toBe(0);
+  });
 });
