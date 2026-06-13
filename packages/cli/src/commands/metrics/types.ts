@@ -63,6 +63,7 @@ export interface MetricsQueryRequest {
   startTime: string;
   endTime: string;
   granularity: Granularity;
+  bucketTimezone?: string;
   groupBy?: string[];
   filter?: string;
   limit?: number;
@@ -97,6 +98,7 @@ export interface QueryMetadata {
   startTime: string;
   endTime: string;
   granularity: Granularity;
+  bucketTimezone?: string;
 }
 
 export interface MetricsQueryResponse {

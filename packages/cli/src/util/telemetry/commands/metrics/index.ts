@@ -96,6 +96,24 @@ export class MetricsTelemetryClient
     }
   }
 
+  trackCliOptionBucketTimezone(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'bucket-timezone',
+        value: v,
+      });
+    }
+  }
+
+  trackCliOptionProject(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'project',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliFlagAll(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('all');

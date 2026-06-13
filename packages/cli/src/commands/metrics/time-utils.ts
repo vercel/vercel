@@ -107,28 +107,6 @@ export function computeGranularity(
   };
 }
 
-/**
- * Floors start and ceils end to the nearest granularity boundary so every
- * time bucket covers the full granularity interval. Without rounding,
- * the first and last buckets could be shorter than the rest
- * (e.g. 1h buckets over 14:23–16:47 would produce a 37-min first bucket
- * and a 47-min last bucket). Rounding to 14:00–17:00 ensures all three
- * buckets are full 1-hour intervals.
- */
-export function roundTimeBoundaries(
-  start: Date,
-  end: Date,
-  granularityMs: number
-): { start: Date; end: Date } {
-  const flooredStart = new Date(
-    Math.floor(start.getTime() / granularityMs) * granularityMs
-  );
-  const ceiledEnd = new Date(
-    Math.ceil(end.getTime() / granularityMs) * granularityMs
-  );
-  return { start: flooredStart, end: ceiledEnd };
-}
-
 export function toGranularityMsFromDuration(duration: Granularity): number {
   if ('minutes' in duration) {
     return duration.minutes * MINUTE_MS;
