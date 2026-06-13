@@ -17,6 +17,7 @@ describe('determineAgent', () => {
     vi.stubEnv('CODEX_THREAD_ID', '');
     vi.stubEnv('ANTIGRAVITY_AGENT', '');
     vi.stubEnv('AUGMENT_AGENT', '');
+    vi.stubEnv('OPENCODE', '');
     vi.stubEnv('OPENCODE_CLIENT', '');
     vi.stubEnv('CLAUDECODE', '');
     vi.stubEnv('CLAUDE_CODE', '');
@@ -320,10 +321,24 @@ describe('determineAgent', () => {
   });
 
   describe('opencode detection', () => {
-    describe('OPENCODE_CLIENT not set', () => {
+    describe('neither OPENCODE nor OPENCODE_CLIENT set', () => {
       it('returns no agent', async () => {
         const result = await determineAgent();
         expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('OPENCODE set', () => {
+      beforeEach(() => {
+        vi.stubEnv('OPENCODE', '1');
+      });
+
+      it('detects opencode', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.OPENCODE },
+        });
       });
     });
 
@@ -495,7 +510,7 @@ describe('determineAgent', () => {
       vi.stubEnv('CODEX_SANDBOX', 'seatbelt');
       vi.stubEnv('ANTIGRAVITY_AGENT', '1');
       vi.stubEnv('AUGMENT_AGENT', '1');
-      vi.stubEnv('OPENCODE_CLIENT', 'opencode');
+      vi.stubEnv('OPENCODE', '1');
       vi.stubEnv('CLAUDE_CODE', '1');
       vi.stubEnv('REPL_ID', '1');
       vi.stubEnv('COPILOT_MODEL', 'gpt-5');
@@ -521,7 +536,7 @@ describe('determineAgent', () => {
       vi.stubEnv('CODEX_SANDBOX', 'seatbelt');
       vi.stubEnv('ANTIGRAVITY_AGENT', '1');
       vi.stubEnv('AUGMENT_AGENT', '1');
-      vi.stubEnv('OPENCODE_CLIENT', 'opencode');
+      vi.stubEnv('OPENCODE', '1');
       vi.stubEnv('CLAUDE_CODE', '1');
       vi.stubEnv('REPL_ID', '1');
       vi.stubEnv('COPILOT_MODEL', 'gpt-5');
@@ -546,7 +561,7 @@ describe('determineAgent', () => {
       vi.stubEnv('CODEX_SANDBOX', 'seatbelt');
       vi.stubEnv('ANTIGRAVITY_AGENT', '1');
       vi.stubEnv('AUGMENT_AGENT', '1');
-      vi.stubEnv('OPENCODE_CLIENT', 'opencode');
+      vi.stubEnv('OPENCODE', '1');
       vi.stubEnv('CLAUDE_CODE', '1');
       vi.stubEnv('REPL_ID', '1');
       vi.stubEnv('COPILOT_MODEL', 'gpt-5');
