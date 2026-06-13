@@ -12,6 +12,13 @@ export const loginCommand = {
   ],
   options: [
     {
+      name: 'passcode',
+      description: 'Use a generated login passcode',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+    },
+    {
       name: 'github',
       description: 'Log in with GitHub',
       shorthand: null,
