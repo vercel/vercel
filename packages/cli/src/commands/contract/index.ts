@@ -18,6 +18,7 @@ import {
   formatQuantity,
   extractDatePortion,
 } from '../../util/billing/format';
+import { listPaymentMethods, setDefaultPaymentMethod } from './payment-methods';
 
 export default async function contract(client: Client): Promise<number> {
   const { print, log, error, spinner } = output;
@@ -50,6 +51,45 @@ export default async function contract(client: Client): Promise<number> {
     return 1;
   }
   const asJson = formatResult.jsonOutput;
+  const billingAction = parsedArgs.args[1];
+
+  if (billingAction === 'payment-methods') {
+    const paymentAction = parsedArgs.args[2] ?? 'ls';
+    try {
+      if (paymentAction === 'ls' || paymentAction === 'list') {
+        return await listPaymentMethods(client, asJson);
+      }
+      if (paymentAction === 'set-default') {
+        const installationId = parsedArgs.flags['--installation-id'] as
+          | string
+          | undefined;
+        const paymentMethodId = parsedArgs.flags['--payment-method-id'] as
+          | string
+          | undefined;
+        telemetry.trackCliOptionInstallationId(installationId);
+        telemetry.trackCliOptionPaymentMethodId(paymentMethodId);
+        if (!installationId || !paymentMethodId) {
+          error(
+            'Usage: vercel billing payment-methods set-default --installation-id <id> --payment-method-id <id>'
+          );
+          return 2;
+        }
+        return await setDefaultPaymentMethod(
+          client,
+          installationId,
+          paymentMethodId,
+          asJson
+        );
+      }
+      error(
+        'Usage: vercel billing payment-methods ls | set-default --installation-id <id> --payment-method-id <id>'
+      );
+      return 2;
+    } catch (err) {
+      output.prettyError(err);
+      return 1;
+    }
+  }
 
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
