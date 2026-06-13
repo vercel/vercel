@@ -40,13 +40,14 @@ function appendDpl(url: string, deploymentId: string): string {
 
 /**
  * Returns a new `AssetsManifest` where every script module URL, import URL,
- * CSS URL, and the manifest discovery URL have `?dpl=<deploymentId>` appended.
+ * CSS URL, and the manifest's own URL have `?dpl=<deploymentId>` appended.
  *
- * This ensures that `<Scripts>`, `<Links>`, and fog-of-war manifest fetches
- * emitted by `<ServerRouter>` all carry the deployment ID, allowing Vercel's
- * Skew Protection to serve them from the correct deployment without requiring
- * a `Set-Cookie: __vdpl=…` header on the SSR response (which would otherwise
- * prevent CDN caching of the page).
+ * This ensures that `<Scripts>` and `<Links>` emitted by `<ServerRouter>` all
+ * carry the deployment ID, allowing Vercel's Skew Protection to serve them
+ * from the correct deployment without requiring a `Set-Cookie: __vdpl=…`
+ * header on the SSR response (which would otherwise prevent CDN caching of
+ * the page). Note: fog-of-war (lazy route discovery) requests are separate
+ * HTTP fetches and are not covered by pinning `manifest.url` here.
  */
 function pinManifestAssets(
   manifest: AssetsManifest,
@@ -73,7 +74,7 @@ function pinManifestAssets(
           : route,
       ])
     ) as AssetsManifest['routes'],
-    // Pin the manifest discovery URL used by fog-of-war (lazy route loading)
+    // Pin the manifest's own resource URL for skew protection
     url: pin(manifest.url),
   };
 }
