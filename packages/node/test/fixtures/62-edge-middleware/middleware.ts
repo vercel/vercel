@@ -1,3 +1,7 @@
+export const config = {
+  runtime: 'edge',
+};
+
 export default (req: Request) => {
   const url = new URL(req.url);
   const headers = new Headers({
