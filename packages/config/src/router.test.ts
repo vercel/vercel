@@ -87,16 +87,20 @@ describe('Router', () => {
       expect(rewrite).toHaveProperty('destination');
     });
 
-    it('should return Rewrite type when destination has env vars', () => {
-      const rewrite = router.rewrite(
+    it('should return Route type when destination has env vars', () => {
+      const route = router.rewrite(
         '/api/:path*',
         `https://${deploymentEnv('API_HOST')}/$path*`
       );
-      expect(rewrite).toEqual({
-        source: '/api/:path*',
-        destination: 'https://$API_HOST/$path*',
+      expect(route).toMatchObject({
+        src: expect.any(String),
+        dest: expect.any(String),
         env: ['API_HOST'],
       });
+      // Must NOT have source/destination (Rewrite format) — env vars
+      // require the routes format
+      expect(route).not.toHaveProperty('source');
+      expect(route).not.toHaveProperty('destination');
     });
   });
 
@@ -131,16 +135,21 @@ describe('Router', () => {
       });
     });
 
-    it('should return Redirect type when destination has env vars', () => {
-      const redirect = router.redirect(
+    it('should return Route type when destination has env vars', () => {
+      const route = router.redirect(
         '/old/:path*',
         `https://${deploymentEnv('NEW_HOST')}/$path*`
       );
-      expect(redirect).toEqual({
-        source: '/old/:path*',
-        destination: 'https://$NEW_HOST/$path*',
+      expect(route).toMatchObject({
+        src: expect.any(String),
+        dest: expect.any(String),
         env: ['NEW_HOST'],
+        status: 307,
       });
+      // Must NOT have source/destination (Redirect format) — env vars
+      // require the routes format
+      expect(route).not.toHaveProperty('source');
+      expect(route).not.toHaveProperty('destination');
     });
   });
 

@@ -721,13 +721,19 @@ export class Router {
       respectOriginCacheControl,
     } = options || {};
 
-    // Check if any transforms were provided
+    // Check if any transforms or env vars were provided.
+    // Env vars in the destination (from `deploymentEnv()`) require the `routes`
+    // format — they are rejected in the `rewrites` array.  Treat them the same
+    // as transforms and produce a Route object.
+    const pathParams = this.extractPathParams(source);
+    const destEnvVars = extractEnvVars(destination, pathParams);
     const hasTransforms = requestHeaders || responseHeaders || requestQuery;
 
-    if (hasTransforms) {
-      // Build a Route object with transforms
+    if (hasTransforms || destEnvVars.length > 0) {
+      // Build a Route object with transforms and/or env vars.
+      // The `env` field (from `deploymentEnv()`) requires the `routes` format;
+      // it is rejected when placed in the `rewrites` array.
       const transforms: Transform[] = [];
-      const pathParams = this.extractPathParams(source);
 
       if (requestHeaders) {
         for (const [key, value] of Object.entries(requestHeaders)) {
@@ -784,32 +790,23 @@ export class Router {
       const route: Route = {
         src: regexSrc,
         dest: convertedDest,
-        transforms,
       };
+      if (transforms.length > 0) route.transforms = transforms;
       if (has) route.has = has;
       if (missing) route.missing = missing;
       if (respectOriginCacheControl !== undefined)
         route.respectOriginCacheControl = respectOriginCacheControl;
-
-      // Extract env vars from destination
-      const destEnvVars = extractEnvVars(destination, pathParams);
-      if (destEnvVars.length > 0) {
-        route.env = destEnvVars;
-      }
+      if (destEnvVars.length > 0) route.env = destEnvVars;
 
       return route;
     }
 
-    // Simple rewrite without transforms
-    const pathParams = this.extractPathParams(source);
-    const destEnvVars = extractEnvVars(destination, pathParams);
-
+    // Simple rewrite without transforms or env vars
     const rewrite: Rewrite = {
       source,
       destination,
     };
 
-    if (destEnvVars.length > 0) rewrite.env = destEnvVars;
     if (has) rewrite.has = has;
     if (missing) rewrite.missing = missing;
     if (respectOriginCacheControl !== undefined)
@@ -916,24 +913,30 @@ export class Router {
     const { permanent, statusCode, has, missing, requestHeaders } =
       options || {};
 
-    // Check if transforms were provided
-    if (requestHeaders) {
-      // Build a Route object with transforms
-      const transforms: Transform[] = [];
-      const pathParams = this.extractPathParams(source);
+    const pathParams = this.extractPathParams(source);
+    const destEnvVars = extractEnvVars(destination, pathParams);
 
-      for (const [key, value] of Object.entries(requestHeaders)) {
-        const transform: Transform = {
-          type: 'request.headers',
-          op: 'set',
-          target: { key },
-          args: value,
-        };
-        const envVars = extractEnvVars(value, pathParams);
-        if (envVars.length > 0) {
-          transform.env = envVars;
+    // Check if transforms or env vars were provided.
+    // Env vars in the destination (from `deploymentEnv()`) require the `routes`
+    // format — they are rejected in the `redirects` array.
+    if (requestHeaders || destEnvVars.length > 0) {
+      // Build a Route object with transforms and/or env vars
+      const transforms: Transform[] = [];
+
+      if (requestHeaders) {
+        for (const [key, value] of Object.entries(requestHeaders)) {
+          const transform: Transform = {
+            type: 'request.headers',
+            op: 'set',
+            target: { key },
+            args: value,
+          };
+          const envVars = extractEnvVars(value, pathParams);
+          if (envVars.length > 0) {
+            transform.env = envVars;
+          }
+          transforms.push(transform);
         }
-        transforms.push(transform);
       }
 
       // Convert path-to-regexp patterns to regex for routes format
@@ -944,30 +947,21 @@ export class Router {
         src: regexSrc,
         dest: convertedDest,
         status: statusCode || (permanent ? 308 : 307),
-        transforms,
       };
+      if (transforms.length > 0) route.transforms = transforms;
       if (has) route.has = has;
       if (missing) route.missing = missing;
-
-      // Extract env vars from destination
-      const destEnvVars = extractEnvVars(destination, pathParams);
-      if (destEnvVars.length > 0) {
-        route.env = destEnvVars;
-      }
+      if (destEnvVars.length > 0) route.env = destEnvVars;
 
       return route;
     }
 
-    // Simple redirect without transforms
-    const pathParams = this.extractPathParams(source);
-    const destEnvVars = extractEnvVars(destination, pathParams);
-
+    // Simple redirect without transforms or env vars
     const redirect: Redirect = {
       source,
       destination,
     };
 
-    if (destEnvVars.length > 0) redirect.env = destEnvVars;
     if (permanent !== undefined) redirect.permanent = permanent;
     if (statusCode !== undefined) redirect.statusCode = statusCode;
     if (has) redirect.has = has;
