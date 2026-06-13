@@ -258,8 +258,16 @@ export default async function rm(client: Client, argv: string[]) {
     const currentCustomIds = env.customEnvironmentIds ?? [];
     const totalTargets = currentTargets.length + currentCustomIds.length;
 
+    // Custom environments are specified on the command line by slug, but the
+    // record stores them as IDs. Normalize the requested target to an ID so the
+    // de-target filter can match (mirrors `env update`).
+    const customEnvironment = customEnvironments.find(
+      ({ slug, id }) => slug === envTarget || id === envTarget
+    );
+    const normalizedEnvTarget = customEnvironment?.id || envTarget;
+
     if (envTarget && totalTargets > 1) {
-      await detargetEnvRecord(client, project.id, env, envTarget);
+      await detargetEnvRecord(client, project.id, env, normalizedEnvTarget);
     } else {
       await removeEnvRecord(client, project.id, env);
     }
