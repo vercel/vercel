@@ -126,24 +126,29 @@ return 1;
 
 ## Output
 
-All output methods write to `stderr` (via the `output` singleton), except `output.print` which writes to `stdout`.
+The `output` singleton is the human-facing terminal writer and writes to `stderr`. Use `client.stdout.write()` for command results that should be piped, parsed, copied, or otherwise consumed by another process.
 
-| Method                    | Format              | Use for                                                     |
-| ------------------------- | ------------------- | ----------------------------------------------------------- |
-| `output.log(msg)`         | `> msg`             | Success messages, status updates                            |
-| `output.error(msg)`       | `Error: msg`        | User-facing errors                                          |
-| `output.warn(msg)`        | `WARNING! msg`      | Warnings that don't stop execution                          |
-| `output.debug(msg)`       | `> [debug] msg`     | Debug info (only shown with `--debug`)                      |
-| `output.print(msg)`       | raw to stdout       | Help text, JSON output, primary data                        |
-| `output.spinner(msg)`     | animated            | Long-running operations (>100ms)                            |
-| `output.success(msg)`     | styled              | Completion messages                                         |
-| `output.prettyError(err)` | `Error: msg` + link | Structured error objects with `.link`/`.action` metadata    |
-| `output.link(text, url)`  | clickable hyperlink | Terminal hyperlinks with fallback for unsupported terminals |
+| Method                       | Format / behavior              | Use for                                                              |
+| ---------------------------- | ------------------------------ | -------------------------------------------------------------------- |
+| `output.print(msg)`          | raw write to `stderr`          | Human-readable help, tables, detail blocks, and intentional spacing  |
+| `output.log(msg)`            | `> msg`                        | General status, next steps, summaries, cancellations, and notices    |
+| `output.dim(msg)`            | dimmed `> msg`                 | Low-emphasis status text when the prefixed log style is wanted       |
+| `output.note(msg)`           | `> NOTE: msg`                  | Highlighted guidance or important contextual notes                   |
+| `output.warn(msg)`           | `WARNING! msg`                 | Non-fatal warnings, deprecations, and risky follow-up guidance       |
+| `output.error(msg)`          | `Error: msg`                   | User-facing validation, command, and API errors                      |
+| `output.prettyError(err)`    | formatted error                | Structured errors that may include extra action or link guidance     |
+| `output.success(msg)`        | `> Success! msg`               | Successful completion of mutations and setup flows                   |
+| `output.ready(msg)`          | `> Ready! msg`                 | Long-running local processes becoming available, such as dev server  |
+| `output.debug(msg)`          | debug-prefixed log             | Diagnostic details that should only appear with `--debug`            |
+| `output.spinner(msg)`        | spinner or plain progress line | Network requests and operations where the user may wait              |
+| `output.stopSpinner()`       | clears active spinner          | Before printing results, prompts, errors, or returning from failures |
+| `output.time(label, fn)`     | timed debug wrapper            | Measuring async work for debug output without user-facing noise      |
 
 **Guidelines**:
 
-- Send primary data (JSON, lists) to `stdout` via `output.print` or `client.stdout.write` so it can be piped.
-- Send status/progress/errors to `stderr` via `output.log`, `output.error`, etc.
+- Send machine-consumable command results to `stdout` with `client.stdout.write()`: JSON, IDs, tokens, URLs, exported data, raw logs, and other data users may pipe or parse.
+- Send human-facing status, progress, prompts, help, tables, warnings, and errors to `stderr` with `output`.
+- Keep stdout clean: do not mix human prose, spinners, warnings, or success messages into data output.
 - Use `output.spinner` for network requests or operations that may take time. Always call `output.stopSpinner()` before other output. The spinner has an optional delay parameter (default 300ms) and degrades to plain text in non-TTY environments.
 - Confirm before dangerous or irreversible operations.
 
@@ -154,9 +159,11 @@ Commands that return data should support `--json` for script consumption. Use `v
 ```typescript
 if (asJson) {
   output.stopSpinner();
-  client.stdout.write(JSON.stringify(data, null, 2));
+  client.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
 }
 ```
+
+In JSON or agent-oriented modes, stdout should contain only the structured result or structured error object. For streaming results such as logs, write one complete record per line instead of buffering a single JSON array.
 
 ### Table formatting
 
