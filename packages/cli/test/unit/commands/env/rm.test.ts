@@ -149,3 +149,92 @@ describe('env rm', () => {
     });
   });
 });
+
+describe('multi-environment record scoping', () => {
+  describe('when a record targets multiple environments', () => {
+    beforeEach(() => {
+      useUser();
+      useTeams('team_dummy');
+      useProject(
+        {
+          ...defaultProject,
+          id: 'vercel-env-rm',
+          name: 'vercel-env-rm',
+        },
+        [
+          {
+            type: 'encrypted',
+            id: 'multi-env-id-123',
+            key: 'MULTI_ENV_VAR',
+            value: 'secret',
+            target: ['production', 'preview'],
+            gitBranch: undefined,
+            configurationId: null,
+            updatedAt: 1557241361455,
+            createdAt: 1557241361455,
+          },
+        ]
+      );
+      const cwd = setupUnitFixture('commands/env/vercel-env-rm');
+      client.cwd = cwd;
+    });
+
+    it('PATCHes the record instead of DELETEing when a specific target is given', async () => {
+      const detargetModule = await import(
+        '../../../../src/util/env/detarget-env-record'
+      );
+      const detargetSpy = vi
+        .spyOn(detargetModule, 'default')
+        .mockResolvedValue(undefined);
+
+      const removeModule = await import(
+        '../../../../src/util/env/remove-env-record'
+      );
+      const removeSpy = vi
+        .spyOn(removeModule, 'default')
+        .mockResolvedValue(undefined);
+
+      client.setArgv('env', 'rm', 'MULTI_ENV_VAR', 'preview', '--yes');
+      const exitCode = await env(client);
+
+      expect(exitCode).toBe(0);
+      expect(detargetSpy).toHaveBeenCalledOnce();
+      expect(removeSpy).not.toHaveBeenCalled();
+
+      const [, , envArg, targetArg] = detargetSpy.mock.calls[0] as Parameters<
+        typeof detargetModule.default
+      >;
+      expect(envArg.key).toBe('MULTI_ENV_VAR');
+      expect(targetArg).toBe('preview');
+
+      detargetSpy.mockRestore();
+      removeSpy.mockRestore();
+    });
+
+    it('DELETEs the record when no specific target is given', async () => {
+      const detargetModule = await import(
+        '../../../../src/util/env/detarget-env-record'
+      );
+      const detargetSpy = vi
+        .spyOn(detargetModule, 'default')
+        .mockResolvedValue(undefined);
+
+      const removeModule = await import(
+        '../../../../src/util/env/remove-env-record'
+      );
+      const removeSpy = vi
+        .spyOn(removeModule, 'default')
+        .mockResolvedValue(undefined);
+
+      client.setArgv('env', 'rm', 'MULTI_ENV_VAR', '--yes');
+      const exitCode = await env(client);
+
+      expect(exitCode).toBe(0);
+      expect(removeSpy).toHaveBeenCalledOnce();
+      expect(detargetSpy).not.toHaveBeenCalled();
+
+      detargetSpy.mockRestore();
+      removeSpy.mockRestore();
+    });
+  });
+});

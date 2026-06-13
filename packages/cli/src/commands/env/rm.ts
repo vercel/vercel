@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import removeEnvRecord from '../../util/env/remove-env-record';
+import detargetEnvRecord from '../../util/env/detarget-env-record';
 import getEnvRecords from '../../util/env/get-env-records';
 import formatEnvironments from '../../util/env/format-environments';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
@@ -246,7 +247,22 @@ export default async function rm(client: Client, argv: string[]) {
 
   try {
     output.spinner('Removing');
-    await removeEnvRecord(client, project.id, env);
+    // If the user targeted a specific environment and the record spans more
+    // than that one environment, PATCH to remove only the requested target
+    // instead of DELETEing the entire record.
+    const currentTargets = Array.isArray(env.target)
+      ? env.target
+      : env.target
+        ? [env.target]
+        : [];
+    const currentCustomIds = env.customEnvironmentIds ?? [];
+    const totalTargets = currentTargets.length + currentCustomIds.length;
+
+    if (envTarget && totalTargets > 1) {
+      await detargetEnvRecord(client, project.id, env, envTarget);
+    } else {
+      await removeEnvRecord(client, project.id, env);
+    }
   } catch (err: unknown) {
     if (client.nonInteractive && isAPIError(err)) {
       const reason =
