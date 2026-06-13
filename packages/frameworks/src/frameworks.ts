@@ -2090,7 +2090,8 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`pip install -r requirements.txt`',
+        placeholder:
+          '`uv sync` from `pyproject.toml`, `requirements.txt`, `Pipfile`, or lock files',
       },
       buildCommand: {
         placeholder: 'None',
@@ -2143,7 +2144,8 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`pip install -r requirements.txt`',
+        placeholder:
+          '`uv sync` from `pyproject.toml`, `requirements.txt`, `Pipfile`, or lock files',
       },
       buildCommand: {
         placeholder: 'None',
@@ -2191,7 +2193,8 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`pip install`',
+        placeholder:
+          '`uv sync` from `pyproject.toml`, `requirements.txt`, `Pipfile`, or lock files',
       },
       buildCommand: {
         placeholder: 'None',
@@ -2249,7 +2252,8 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`pip install -r requirements.txt`',
+        placeholder:
+          '`uv sync` from `pyproject.toml`, `requirements.txt`, `Pipfile`, or lock files',
       },
       buildCommand: {
         placeholder: 'None',
@@ -4233,7 +4237,8 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`pip install -r requirements.txt`',
+        placeholder:
+          '`uv sync` from `pyproject.toml`, `requirements.txt`, `Pipfile`, or lock files',
       },
       buildCommand: {
         placeholder: 'None',
