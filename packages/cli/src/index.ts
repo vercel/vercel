@@ -89,6 +89,7 @@ import {
   type TraceEvent,
 } from '@vercel/build-utils';
 import { mkdir, writeFile } from 'fs/promises';
+import { isBuildProcessHangCheckEnabled } from './util/build/build-process-hang-check';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -1286,6 +1287,10 @@ const main = async () => {
       output.error('Failed to write diagnostics trace file');
       output.prettyError(err);
     }
+  }
+
+  if (client.forceExitAfterBuild && isBuildProcessHangCheckEnabled()) {
+    process.exit(typeof exitCode === 'number' ? exitCode : 1);
   }
 
   return exitCode;

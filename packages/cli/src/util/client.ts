@@ -142,6 +142,8 @@ export default class Client extends EventEmitter implements Stdio {
   rootSpan?: Span;
   /** Path to write CLI trace diagnostics. Only set by `vc build`; other commands do not write traces. */
   traceDiagnosticsPath?: string;
+  /** When true, exit immediately after telemetry and trace diagnostics are flushed. */
+  forceExitAfterBuild?: boolean;
   /** Track if we've already logged the token source debug message */
   private _loggedTokenSource: boolean = false;
   private _parsedArgsCache?: ParsedArgsCache;

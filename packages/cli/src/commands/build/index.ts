@@ -76,6 +76,11 @@ import output from '../../output-manager';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
+import {
+  assertBuildProcessIdle,
+  createBuildResourceTracker,
+} from '../../util/build/assert-build-idle';
+import { isBuildProcessHangCheckEnabled } from '../../util/build/build-process-hang-check';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
@@ -508,6 +513,10 @@ export default async function main(client: Client): Promise<number> {
     process.env.VERCEL = '1';
     process.env.NOW_BUILDER = '1';
 
+    const buildResourceTracker = isBuildProcessHangCheckEnabled()
+      ? createBuildResourceTracker()
+      : null;
+    buildResourceTracker?.start();
     try {
       await rootSpan
         .child('vc.doBuild')
@@ -516,6 +525,12 @@ export default async function main(client: Client): Promise<number> {
         );
     } finally {
       await rootSpan.stop();
+    }
+
+    if (buildResourceTracker) {
+      await rootSpan
+        .child('vc.assertBuildProcessIdle')
+        .trace(span => assertBuildProcessIdle(buildResourceTracker, span));
     }
 
     if (client.nonInteractive) {
@@ -571,6 +586,13 @@ export default async function main(client: Client): Promise<number> {
       );
     }
     output.prettyError(err);
+
+    if (
+      err?.code === 'BUILD_PROCESS_HANG' &&
+      isBuildProcessHangCheckEnabled()
+    ) {
+      client.forceExitAfterBuild = true;
+    }
 
     // Write error to `builds.json` file
     buildsJson.error = toEnumerableError(err);
