@@ -67,6 +67,27 @@ describe('ai-gateway rules create', () => {
     });
   });
 
+  it('shows a beta notice when a rules subcommand runs', async () => {
+    const team = useTeam();
+    useUser();
+    useCreateRule();
+    client.config.currentTeam = team.id;
+    client.setArgv(
+      'ai-gateway',
+      'rules',
+      'create',
+      '--type',
+      'deny',
+      '--model',
+      'openai/gpt-4o'
+    );
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput('in beta');
+    expect(await exitCodePromise).toBe(0);
+  });
+
   it('creates a deny rule', async () => {
     const team = useTeam();
     useUser();
