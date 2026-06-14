@@ -69,7 +69,7 @@ export default async function rules(client: Client) {
   }
 
   if (subcommand && !needHelp) {
-    output.log(
+    output.warn(
       'AI Gateway routing rules are in beta and may change. Avoid relying on them in production. Share feedback at https://vercel.com/feedback'
     );
   }
