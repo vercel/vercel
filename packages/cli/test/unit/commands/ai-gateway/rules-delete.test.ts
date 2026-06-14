@@ -49,6 +49,27 @@ describe('ai-gateway rules delete', () => {
     expect(getQuery()).toMatchObject({ ruleId: 'rule_1' });
   });
 
+  it('outputs JSON with --format json', async () => {
+    const team = useTeam();
+    useUser();
+    useDeleteRule();
+    client.config.currentTeam = team.id;
+    client.setArgv(
+      'ai-gateway',
+      'rules',
+      'rm',
+      'rule_1',
+      '--yes',
+      '--format',
+      'json'
+    );
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stdout).toOutput('"deleted": true');
+    expect(await exitCodePromise).toBe(0);
+  });
+
   it('requires a rule id', async () => {
     useUser();
     client.setArgv('ai-gateway', 'rules', 'rm', '--yes');

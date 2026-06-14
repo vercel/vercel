@@ -11,6 +11,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { isAPIError } from '../../util/errors-ts';
 import { getCommandName } from '../../util/pkg-name';
+import { validateJsonOutput } from '../../util/output-format';
 
 export default async function remove(client: Client, argv: string[]) {
   const telemetry = new AiGatewayRulesDeleteTelemetryClient({
@@ -36,6 +37,14 @@ export default async function remove(client: Client, argv: string[]) {
 
   telemetry.trackCliArgumentRuleId(ruleId);
   telemetry.trackCliFlagYes(yes);
+  telemetry.trackCliOptionFormat(opts['--format']);
+
+  const formatResult = validateJsonOutput(opts);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
 
   if (!ruleId) {
     output.error(
@@ -69,9 +78,15 @@ export default async function remove(client: Client, argv: string[]) {
   try {
     await deleteRule(client, ruleId);
     output.stopSpinner();
-    output.success(
-      `Routing rule ${chalk.bold(ruleId)} deleted ${deleteStamp()}`
-    );
+    if (asJson) {
+      client.stdout.write(
+        `${JSON.stringify({ ruleId, deleted: true }, null, 2)}\n`
+      );
+    } else {
+      output.success(
+        `Routing rule ${chalk.bold(ruleId)} deleted ${deleteStamp()}`
+      );
+    }
     return 0;
   } catch (err: unknown) {
     output.stopSpinner();

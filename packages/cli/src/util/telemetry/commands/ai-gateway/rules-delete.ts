@@ -17,4 +17,10 @@ export class AiGatewayRulesDeleteTelemetryClient
       this.trackCliFlag('yes');
     }
   }
+
+  trackCliOptionFormat(format: string | undefined) {
+    if (format) {
+      this.trackCliOption({ option: 'format', value: format });
+    }
+  }
 }

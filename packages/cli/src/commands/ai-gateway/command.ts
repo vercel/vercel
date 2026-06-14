@@ -204,7 +204,7 @@ export const rulesDeleteSubcommand = {
   aliases: ['rm'],
   description: 'Delete an AI Gateway routing rule',
   arguments: [{ name: 'ruleId', required: true }],
-  options: [yesOption],
+  options: [yesOption, formatOption],
   examples: [
     {
       name: 'Delete a rule',
