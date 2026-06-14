@@ -217,7 +217,7 @@ export const rulesSubcommand = {
   name: 'rules',
   aliases: [],
   description:
-    'Manage AI Gateway routing rules (Beta).\n\nCLI support for routing rules is in beta. Commands and output may change before general availability, so avoid relying on them in production automation unless you can tolerate breaking changes.',
+    'Manage AI Gateway routing rules (Beta).\n\nAI Gateway routing rules are in beta and may change before general availability. Avoid relying on them in production yet unless you can accept some risk.',
   arguments: [],
   subcommands: [
     rulesCreateSubcommand,

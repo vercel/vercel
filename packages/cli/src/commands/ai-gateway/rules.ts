@@ -70,7 +70,7 @@ export default async function rules(client: Client) {
 
   if (subcommand && !needHelp) {
     output.warn(
-      'CLI support for AI Gateway routing rules is in beta. Commands and output may change, so avoid relying on them in production automation unless you can tolerate breaking changes.'
+      'AI Gateway routing rules are in beta and may change. Avoid relying on them in production yet unless you can accept some risk.'
     );
   }
 
