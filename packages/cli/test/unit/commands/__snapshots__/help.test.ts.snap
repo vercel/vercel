@@ -2027,7 +2027,7 @@ exports[`help command > dns help output snapshots > dns remove help output snaps
 
 exports[`help command > domains help output snapshots > domains add help output snapshots > domains add help column width 120 1`] = `
 "
-  ▲ vercel domains add domain project [options]
+  ▲ vercel domains add domain [project] [options]
 
   Add a domain name that you already own to a Vercel Team                                                               
 

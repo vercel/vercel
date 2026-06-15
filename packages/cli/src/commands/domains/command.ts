@@ -48,7 +48,7 @@ export const addSubcommand = {
     },
     {
       name: 'project',
-      required: true,
+      required: false,
     },
   ],
   options: [

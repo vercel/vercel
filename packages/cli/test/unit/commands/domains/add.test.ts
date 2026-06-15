@@ -25,6 +25,37 @@ describe('domains add', () => {
   });
 
   describe('[name]', () => {
+    it('adds a domain to the team without a project', async () => {
+      useUser();
+      const domain = useDomain();
+      client.setArgv('domains', 'add', domain.name);
+      client.scenario.post('/v4/domains', (_req, res) => {
+        res.json({ domain });
+      });
+      client.scenario.get(`/:version/domains/${domain.name}`, (_req, res) => {
+        res.json({ domain });
+      });
+      client.scenario.get(
+        `/:version/domains/${domain.name}/config`,
+        (_req, res) => {
+          res.json({});
+        }
+      );
+      const exitCode = await domains(client);
+      expect(exitCode, 'exit code for "domains"').toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:add',
+          value: 'add',
+        },
+        {
+          key: 'argument:domain',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+
     describe('[project]', () => {
       describe('--force', () => {
         it('tracks telemetry data', async () => {

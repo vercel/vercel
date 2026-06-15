@@ -8,7 +8,7 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import { getDomain } from '../../util/domains/get-domain';
-import { getLinkedProject } from '../../util/projects/link';
+import addDomainToTeam from '../../util/domains/add-domain';
 import { isPublicSuffix } from '../../util/domains/is-public-suffix';
 import { getDomainConfig } from '../../util/domains/get-domain-config';
 import { addDomainToProject } from '../../util/projects/add-domain-to-project';
@@ -44,8 +44,7 @@ function nextCommandsForDomainsAddFailure(
   client: Client,
   domainName: string,
   projectName: string,
-  err: Error,
-  linkedProject: boolean
+  err: Error
 ): Array<{ command: string; when?: string }> {
   const next: Array<{ command: string; when?: string }> = [
     {
@@ -91,16 +90,81 @@ function nextCommandsForDomainsAddFailure(
   }
 
   if (aliasConflict && !looksLikeOwnershipOrPurchaseIssue) {
-    const forceCmd = linkedProject
-      ? `domains add ${domainName} --force`
-      : `domains add ${domainName} ${projectName} --force`;
     next.push({
-      command: withGlobalFlags(client, forceCmd),
+      command: withGlobalFlags(
+        client,
+        `domains add ${domainName} ${projectName} --force`
+      ),
       when: 'to force move from another project (only if API returns project id—otherwise remove domain from the other project first)',
     });
   }
 
   return next;
+}
+
+async function printDomainConfiguration(
+  client: Client,
+  contextName: string,
+  domainName: string
+): Promise<number> {
+  if (isPublicSuffix(domainName)) {
+    output.log(
+      'The domain will automatically get assigned to your latest production deployment.'
+    );
+    return 0;
+  }
+
+  const domainResponse = await getDomain(client, contextName, domainName);
+
+  if (domainResponse instanceof Error) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'domain_fetch_failed',
+          message: errorToString(domainResponse),
+        },
+        1
+      );
+    }
+    output.prettyError(domainResponse);
+    return 1;
+  }
+
+  const domainConfig = await getDomainConfig(client, domainName);
+
+  if (domainConfig.misconfigured) {
+    output.warn(
+      'This domain is not configured properly. To configure it you should either:'
+    );
+    output.print(
+      `  ${chalk.grey('a)')} ` +
+        'Set the following record on your DNS provider to continue: ' +
+        `${code(`A ${domainName} 76.76.21.21`)} ` +
+        `${chalk.grey('[recommended]')}\n`
+    );
+    output.print(
+      `  ${chalk.grey('b)')} Change your Domains's nameservers to the intended set`
+    );
+    output.print(
+      `\n${formatNSTable(
+        domainResponse.intendedNameservers,
+        domainResponse.nameservers,
+        { extraSpace: '     ' }
+      )}\n\n`
+    );
+    output.print(
+      '  We will run a verification for you and you will receive an email upon completion.\n'
+    );
+    output.print('  Read more: https://vercel.link/domain-configuration\n\n');
+  } else {
+    output.log(
+      'The domain will automatically get assigned to your latest production deployment.'
+    );
+  }
+
+  return 0;
 }
 
 export default async function add(client: Client, argv: string[]) {
@@ -135,52 +199,20 @@ export default async function add(client: Client, argv: string[]) {
   telemetry.trackCliFlagForce(force);
   const { contextName } = await getScope(client);
 
-  const project = await getLinkedProject(client).then(result => {
-    if (result.status === 'linked') {
-      return result.project;
-    }
-
-    return null;
-  });
-
-  if (project && args.length !== 1) {
+  if (args.length < 1 || args.length > 2) {
     if (client.nonInteractive) {
+      const cmd = withGlobalFlags(client, 'domains add <domain> [project]');
       outputActionRequired(
         client,
         {
           status: 'action_required',
           reason: 'missing_arguments',
           action: 'missing_arguments',
-          message: `Linked project is "${project.name}". Run: ${withGlobalFlags(client, `domains add <domain>`)}`,
-          next: [
-            {
-              command: withGlobalFlags(client, `domains add <domain>`),
-              when: 'to add a domain to the linked project (single argument)',
-            },
-          ],
-        },
-        1
-      );
-    }
-    output.error(
-      `${getCommandName('domains add <domain>')} expects one argument.`
-    );
-    return 1;
-  }
-  if (!project && args.length !== 2) {
-    if (client.nonInteractive) {
-      const cmd = withGlobalFlags(client, 'domains add <domain> <project>');
-      outputActionRequired(
-        client,
-        {
-          status: 'action_required',
-          reason: 'missing_arguments',
-          action: 'missing_arguments',
-          message: `No linked project and domain needs a project. Run: ${cmd}`,
+          message: `Run: ${cmd}`,
           next: [
             {
               command: cmd,
-              when: 'to add a domain to a project (or link a project first)',
+              when: 'to add a domain to your team, or pass a project name to assign it to a project',
             },
           ],
         },
@@ -189,16 +221,61 @@ export default async function add(client: Client, argv: string[]) {
     }
     output.error(
       `${getCommandName(
-        'domains add <domain> <project>'
-      )} expects two arguments.`
+        'domains add <domain> [project]'
+      )} expects one or two arguments.`
     );
     return 1;
   }
 
   const domainName = String(args[0]);
-  const projectName = project ? project.name : String(args[1]);
+  const projectName = args.length === 2 ? String(args[1]) : undefined;
   telemetry.trackCliArgumentDomain(domainName);
   telemetry.trackCliArgumentProject(args[1]);
+
+  if (!projectName) {
+    const addStamp = stamp();
+    const addResult = await addDomainToTeam(client, domainName, contextName);
+
+    if (addResult instanceof ERRORS.InvalidDomain) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'invalid_domain',
+            message: errorToString(addResult),
+          },
+          1
+        );
+      }
+      output.prettyError(addResult);
+      return 1;
+    }
+
+    if (addResult instanceof ERRORS.DomainAlreadyExists) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'domain_already_exists',
+            message: errorToString(addResult),
+          },
+          1
+        );
+      }
+      output.prettyError(addResult);
+      return 1;
+    }
+
+    output.success(
+      `Domain ${chalk.bold(domainName)} added to ${chalk.bold(
+        contextName
+      )}. ${addStamp()}`
+    );
+
+    return printDomainConfiguration(client, contextName, domainName);
+  }
 
   const addStamp = stamp();
 
@@ -277,8 +354,7 @@ export default async function add(client: Client, argv: string[]) {
               client,
               domainName,
               projectName,
-              aliasTarget,
-              !!project
+              aliasTarget
             ),
           },
           1
@@ -296,62 +372,5 @@ export default async function add(client: Client, argv: string[]) {
     )}. ${addStamp()}`
   );
 
-  if (isPublicSuffix(domainName)) {
-    output.log(
-      'The domain will automatically get assigned to your latest production deployment.'
-    );
-    return 0;
-  }
-
-  const domainResponse = await getDomain(client, contextName, domainName);
-
-  if (domainResponse instanceof Error) {
-    if (client.nonInteractive) {
-      outputAgentError(
-        client,
-        {
-          status: 'error',
-          reason: 'domain_fetch_failed',
-          message: errorToString(domainResponse),
-        },
-        1
-      );
-    }
-    output.prettyError(domainResponse);
-    return 1;
-  }
-
-  const domainConfig = await getDomainConfig(client, domainName);
-
-  if (domainConfig.misconfigured) {
-    output.warn(
-      'This domain is not configured properly. To configure it you should either:'
-    );
-    output.print(
-      `  ${chalk.grey('a)')} ` +
-        'Set the following record on your DNS provider to continue: ' +
-        `${code(`A ${domainName} 76.76.21.21`)} ` +
-        `${chalk.grey('[recommended]')}\n`
-    );
-    output.print(
-      `  ${chalk.grey('b)')} Change your Domains's nameservers to the intended set`
-    );
-    output.print(
-      `\n${formatNSTable(
-        domainResponse.intendedNameservers,
-        domainResponse.nameservers,
-        { extraSpace: '     ' }
-      )}\n\n`
-    );
-    output.print(
-      '  We will run a verification for you and you will receive an email upon completion.\n'
-    );
-    output.print('  Read more: https://vercel.link/domain-configuration\n\n');
-  } else {
-    output.log(
-      'The domain will automatically get assigned to your latest production deployment.'
-    );
-  }
-
-  return 0;
+  return printDomainConfiguration(client, contextName, domainName);
 }
