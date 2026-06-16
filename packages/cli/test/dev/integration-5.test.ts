@@ -710,6 +710,23 @@ describe('[vercel dev] Multi-service with experimentalServicesV2', () => {
         `http://localhost:${port}/api/new`
       );
 
+      // route transforms
+      const transformed = await nodeFetch(
+        `http://localhost:${port}/transform/echo?foo=bar`
+      );
+      validateResponseHeaders(transformed);
+      expect(transformed.status).toBe(200);
+      expect(transformed.headers.get('x-resp-injected')).toBe('resp');
+      expect(transformed.headers.get('x-overridden')).toBe('overridden');
+      const transformedJson = await transformed.json();
+      expect(transformedJson).toMatchObject({
+        service: 'backend',
+        received_path: '/api/echo',
+        received_x_injected: 'hdr',
+      });
+      expect(transformedJson.received_query).toContain('foo=bar');
+      expect(transformedJson.received_query).toContain('injected=yes');
+
       // frontend handler
       const frontend = await nodeFetch(`http://localhost:${port}/`);
       validateResponseHeaders(frontend);

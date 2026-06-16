@@ -1,4 +1,44 @@
 {
+  "routes": [
+    {
+      "src": "/transform/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "backend"
+      },
+      "transforms": [
+        {
+          "type": "request.path",
+          "op": "set",
+          "args": "/api/$1"
+        },
+        {
+          "type": "request.query",
+          "op": "set",
+          "target": { "key": "injected" },
+          "args": "yes"
+        },
+        {
+          "type": "request.headers",
+          "op": "set",
+          "target": { "key": "x-injected" },
+          "args": "hdr"
+        },
+        {
+          "type": "response.headers",
+          "op": "set",
+          "target": { "key": "x-resp-injected" },
+          "args": "resp"
+        },
+        {
+          "type": "response.headers",
+          "op": "set",
+          "target": { "key": "x-overridden" },
+          "args": "overridden"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/:path*",

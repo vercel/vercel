@@ -15,6 +15,7 @@ import type {
 } from '@vercel/build-utils';
 import { VercelConfig } from '@vercel/client';
 import type { HandleValue, Route } from '@vercel/routing-utils';
+import type { Transform } from './transforms';
 import type { ProjectSettings } from '@vercel-internals/types';
 import type { Service } from '@vercel/fs-detectors';
 import type { BuilderWithPkg } from '../build/import-builders';
@@ -153,6 +154,9 @@ export interface RouteResult {
   isDestUrl: boolean;
   // the phase that this route is defined in
   phase?: HandleValue | null;
+  // transforms accumulated from every route matched in this phase, resolved
+  // against each route's capture groups (request/response header, query, path)
+  transforms?: Transform[];
 }
 
 export interface InvokePayload {

@@ -7,6 +7,7 @@ import type DevServer from './server';
 import type { VercelConfig, HttpHeadersConfig, RouteResult } from './types';
 import { isHandler, type Route, type HandleValue } from '@vercel/routing-utils';
 import { parseQueryString } from './parse-query-string';
+import { resolveTransforms, type Transform } from './transforms';
 
 export function resolveRouteParameters(
   str: string,
@@ -64,6 +65,8 @@ export async function devRouter(
   let status: number | undefined;
   let isContinue = false;
 
+  const accumulatedTransforms: Transform[] = [];
+
   // Try route match
   if (routes) {
     let idx = -1;
@@ -89,6 +92,16 @@ export async function devRouter(
         matcher.exec(reqPathname) || matcher.exec(reqPathname.substring(1));
 
       if (match) {
+        if (routeConfig.transforms) {
+          accumulatedTransforms.push(
+            ...resolveTransforms(routeConfig.transforms, {
+              match,
+              keys,
+              env: devServer?.envConfigs.runEnv,
+            })
+          );
+        }
+
         let destPath: string = reqPathname;
 
         if (routeConfig.dest) {
@@ -154,6 +167,13 @@ export async function devRouter(
                 'miss'
               );
               if (missResult.found) {
+                // Carry transforms matched before the miss into the miss result.
+                if (accumulatedTransforms.length > 0) {
+                  missResult.transforms = [
+                    ...accumulatedTransforms,
+                    ...(missResult.transforms ?? []),
+                  ];
+                }
                 return missResult;
               } else {
                 reqPathname = destPath;
@@ -182,6 +202,7 @@ export async function devRouter(
             matched_route: routeConfig,
             matched_route_idx: idx,
             phase,
+            transforms: accumulatedTransforms,
           };
           break;
         } else {
@@ -205,6 +226,7 @@ export async function devRouter(
             matched_route: routeConfig,
             matched_route_idx: idx,
             phase,
+            transforms: accumulatedTransforms,
           };
           break;
         }
@@ -222,6 +244,7 @@ export async function devRouter(
       query: reqQuery,
       headers: combinedHeaders,
       phase,
+      transforms: accumulatedTransforms,
     };
   }
 

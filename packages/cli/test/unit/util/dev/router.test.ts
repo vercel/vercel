@@ -324,4 +324,38 @@ describe('devRouter', () => {
       phase: undefined,
     });
   });
+
+  it('accumulates transforms from a `continue` route and the terminal route', async () => {
+    const routesConfig = [
+      {
+        src: '/(.*)',
+        continue: true,
+        transforms: [
+          {
+            type: 'request.headers' as const,
+            op: 'set' as const,
+            target: { key: 'x-a' },
+            args: '1',
+          },
+        ],
+      },
+      {
+        src: '/foo',
+        dest: '/bar.js',
+        transforms: [
+          {
+            type: 'request.headers' as const,
+            op: 'set' as const,
+            target: { key: 'x-b' },
+            args: '2',
+          },
+        ],
+      },
+    ];
+    const result = await devRouter('/foo', 'GET', routesConfig);
+
+    expect(result.transforms).toHaveLength(2);
+    expect(result.transforms?.[0]).toMatchObject({ target: { key: 'x-a' } });
+    expect(result.transforms?.[1]).toMatchObject({ target: { key: 'x-b' } });
+  });
 });
