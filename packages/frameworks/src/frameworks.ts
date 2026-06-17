@@ -4574,7 +4574,8 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'bun.lock',
+          path: 'package.json',
+          matchContent: '"engines"\\s*:\\s*\\{[^}]*"bun"\\s*:',
         },
       ],
       some: [
