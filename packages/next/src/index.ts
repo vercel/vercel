@@ -518,7 +518,7 @@ export const build: BuildV2 = async buildOptions => {
   if (
     // integration tests expect outputs object
     !process.env.NEXT_BUILDER_INTEGRATION &&
-    process.env.NEXT_ENABLE_ADAPTER === '1' &&
+    process.env.NEXT_ENABLE_ADAPTER !== '0' &&
     semver.gte(nextVersion, MINIMUM_NEXT_ADAPTER_VERSION)
   ) {
     env.NEXT_ADAPTER_PATH = path.join(__dirname, 'adapter/index.js');
