@@ -250,26 +250,52 @@ export async function* fetchAllRequestLogs(
   let page = 0;
   let remaining = options.limit ?? 100;
   let hasMore = true;
+  let currentUntil = options.until;
+
+  // Track IDs to completely eliminate the byte-identical duplicates mentioned in the issue
+  const seenIds = new Set<string>();
 
   while (hasMore && remaining > 0) {
     const response = await fetchRequestLogs(client, {
       ...options,
       page,
+      until: currentUntil, // Inject the dynamically shifting time window
     });
 
     if (!response.logs || response.logs.length === 0) {
       break;
     }
 
+    let newLogsYielded = 0;
+
     for (const log of response.logs) {
+      // Skip if we've already yielded this exact log (boundary overlap protection)
+      if (seenIds.has(log.id)) continue;
+      seenIds.add(log.id);
+
       yield log;
+      newLogsYielded++;
       remaining--;
+
       if (remaining <= 0) {
         return;
       }
     }
 
+    // If the server returned a page but everything was a duplicate,
+    // the backend is stuck. Break out to prevent an infinite loop.
+    if (newLogsYielded === 0) {
+      break;
+    }
+
     hasMore = response.pagination?.hasMore ?? false;
     page++;
+
+    // Shift the time window backwards for the next API call.
+    // Convert the numeric timestamp to an ISO string so `parseRelativeTime` handles it safely.
+    const lastLog = response.logs[response.logs.length - 1];
+    if (lastLog) {
+      currentUntil = new Date(lastLog.timestamp).toISOString();
+    }
   }
 }
