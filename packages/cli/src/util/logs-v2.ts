@@ -250,52 +250,60 @@ export async function* fetchAllRequestLogs(
   let page = 0;
   let remaining = options.limit ?? 100;
   let hasMore = true;
-  let currentUntil = options.until;
 
-  // Track IDs to completely eliminate the byte-identical duplicates mentioned in the issue
+  // Anchor the initial upper bound to prevent real-time log ingestion
+  // from continuously shifting pagination windows down.
+  let currentUntil = options.until || new Date().toISOString();
+  let lastTimestamp = new Date(currentUntil).getTime();
+
   const seenIds = new Set<string>();
 
   while (hasMore && remaining > 0) {
     const response = await fetchRequestLogs(client, {
       ...options,
       page,
-      until: currentUntil, // Inject the dynamically shifting time window
+      until: currentUntil,
     });
 
     if (!response.logs || response.logs.length === 0) {
       break;
     }
 
-    let newLogsYielded = 0;
-
     for (const log of response.logs) {
-      // Skip if we've already yielded this exact log (boundary overlap protection)
-      if (seenIds.has(log.id)) continue;
-      seenIds.add(log.id);
+      // Only deduplicate if a valid, non-empty requestId exists.
+      // This prevents logs missing an ID from being completely wiped out.
+      if (log.id && seenIds.has(log.id)) {
+        continue;
+      }
+      if (log.id) {
+        seenIds.add(log.id);
+      }
 
       yield log;
-      newLogsYielded++;
       remaining--;
-
       if (remaining <= 0) {
         return;
       }
     }
 
-    // If the server returned a page but everything was a duplicate,
-    // the backend is stuck. Break out to prevent an infinite loop.
-    if (newLogsYielded === 0) {
-      break;
-    }
-
     hasMore = response.pagination?.hasMore ?? false;
-    page++;
 
-    // Shift the time window backwards for the next API call.
-    // Convert the numeric timestamp to an ISO string so `parseRelativeTime` handles it safely.
-    const lastLog = response.logs[response.logs.length - 1];
-    if (lastLog) {
-      currentUntil = new Date(lastLog.timestamp).toISOString();
+    if (hasMore) {
+      const oldestLogOnPage = response.logs[response.logs.length - 1];
+      const oldestTimestamp = oldestLogOnPage?.timestamp ?? lastTimestamp;
+
+      if (oldestTimestamp === lastTimestamp) {
+        // The page boundary fell inside a same-millisecond timestamp cluster.
+        // Keep the time anchor frozen and increment the page offset to page
+        // through the rest of this specific millisecond block.
+        page++;
+      } else {
+        // The stream advanced past the millisecond cluster.
+        // Update the time anchor to the oldest timestamp seen and reset page back to 0.
+        currentUntil = new Date(oldestTimestamp).toISOString();
+        lastTimestamp = oldestTimestamp;
+        page = 0;
+      }
     }
   }
 }
