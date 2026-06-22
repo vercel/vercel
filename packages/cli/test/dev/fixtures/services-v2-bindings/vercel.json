@@ -31,6 +31,18 @@
           "service": "go_api",
           "format": "url",
           "env": "GO_API_URL"
+        },
+        {
+          "type": "service",
+          "service": "rust_api",
+          "format": "url",
+          "env": "RUST_API_URL"
+        },
+        {
+          "type": "service",
+          "service": "ruby_api",
+          "format": "url",
+          "env": "RUBY_API_URL"
         }
       ]
     },
@@ -47,6 +59,14 @@
     "go_api": {
       "root": "go-api",
       "entrypoint": "main.go"
+    },
+    "rust_api": {
+      "root": "rust-api",
+      "entrypoint": "src/main.rs"
+    },
+    "ruby_api": {
+      "root": "ruby-api",
+      "entrypoint": "app.ru"
     }
   }
 }

@@ -20,6 +20,8 @@ const server = http.createServer(async (req, res) => {
           node_api_url: process.env.NODE_API_URL,
           py_api_url: process.env.PY_API_URL,
           go_api_url: process.env.GO_API_URL,
+          rust_api_url: process.env.RUST_API_URL,
+          ruby_api_url: process.env.RUBY_API_URL,
         })
       );
       return;
@@ -34,6 +36,14 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.url === '/call/go') {
       res.end(await callBinding(process.env.GO_API_URL, 'ping'));
+      return;
+    }
+    if (req.url === '/call/rust') {
+      res.end(await callBinding(process.env.RUST_API_URL));
+      return;
+    }
+    if (req.url === '/call/ruby') {
+      res.end(await callBinding(process.env.RUBY_API_URL));
       return;
     }
     res.statusCode = 404;

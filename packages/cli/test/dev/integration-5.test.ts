@@ -745,6 +745,8 @@ describe('[vercel dev] experimentalServicesV2 service bindings', () => {
       expect(infoJson.node_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
       expect(infoJson.py_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
       expect(infoJson.go_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
+      expect(infoJson.rust_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
+      expect(infoJson.ruby_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
 
       // The gateway reaches each internal service (one per runtime) through its
       // binding. None of the targets are publicly routed.
@@ -759,6 +761,14 @@ describe('[vercel dev] experimentalServicesV2 service bindings', () => {
       const goRes = await nodeFetch(`http://localhost:${port}/call/go`);
       expect(goRes.status).toBe(200);
       expect((await goRes.text()).trim()).toBe('go_api: pong');
+
+      const rustRes = await nodeFetch(`http://localhost:${port}/call/rust`);
+      expect(rustRes.status).toBe(200);
+      expect((await rustRes.text()).trim()).toBe('rust_api: ok');
+
+      const rubyRes = await nodeFetch(`http://localhost:${port}/call/ruby`);
+      expect(rubyRes.status).toBe(200);
+      expect((await rubyRes.text()).trim()).toBe('ruby_api: ok');
     } finally {
       await dev.kill();
     }
