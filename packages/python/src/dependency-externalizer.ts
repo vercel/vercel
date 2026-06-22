@@ -231,7 +231,7 @@ export class PythonDependencyExternalizer {
           `function bundle size automatically. To fix this, you can:\n` +
           `  1. Remove unused dependencies from your project, or\n` +
           `  2. Remove the custom install command so Vercel can optimize\n` +
-          `     dependencies automatically.`,
+          `     the function bundle automatically.`,
         link: BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
