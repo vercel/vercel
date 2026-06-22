@@ -2,4 +2,4 @@
 "@vercel/python": patch
 ---
 
-python: exclude standard-size functions from bytecode
+python: restrict bytecode precompilation to large functions
