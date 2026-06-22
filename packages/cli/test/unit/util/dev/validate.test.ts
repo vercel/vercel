@@ -45,6 +45,35 @@ describe('validateConfig', () => {
       expect(error).toBeNull();
     });
 
+    it('should accept a request path transform on a service rewrite', () => {
+      const error = validateConfig({
+        experimentalServicesV2: {
+          my_backend: {
+            root: 'backend/',
+          },
+        },
+        rewrites: [
+          {
+            source: '/api/:path*',
+            destination: {
+              type: 'service',
+              service: 'my_backend',
+              path: '/:path*',
+            },
+            transforms: [
+              {
+                type: 'request.path',
+                op: 'set',
+                args: '/:path*',
+              },
+            ],
+          },
+        ],
+      } as unknown as Parameters<typeof validateConfig>[0]);
+
+      expect(error).toBeNull();
+    });
+
     it('should accept per-service build overrides', () => {
       const error = validateConfig({
         experimentalServicesV2: {
