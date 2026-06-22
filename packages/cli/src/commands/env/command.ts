@@ -272,6 +272,12 @@ export const runSubcommand = {
       argument: 'NAME',
       deprecated: false,
     },
+    {
+      name: 'experimental',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
   ],
   examples: [
     {
