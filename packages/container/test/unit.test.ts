@@ -241,6 +241,8 @@ describe('@vercel/container', () => {
      * auth file (vercel/api#76560), so the builder skips the explicit login.
      */
     authFilePresent?: boolean;
+    /** Override the service entrypoint (e.g. a `Containerfile` to build). */
+    entrypoint?: string;
   }) {
     if (options?.buildImageEnv) {
       process.env.VERCEL_BUILD_IMAGE = options.buildImageEnv;
@@ -290,6 +292,7 @@ describe('@vercel/container', () => {
     const result = expectTypicalBuildResult(
       await build({
         ...createBuildOptions({ runtime: 'container' }),
+        ...(options?.entrypoint ? { entrypoint: options.entrypoint } : {}),
         service: { name: 'api', type: 'web' },
         ...(options?.meta ? { meta: options.meta } : {}),
       } as any)
@@ -382,6 +385,21 @@ describe('@vercel/container', () => {
       authFilePresent: true,
     });
     expect(commands.some(c => /\bbuildah\b.*\blogin\b/.test(c))).toBe(true);
+  });
+
+  it('builds from a Containerfile entrypoint, passing it via -f', async () => {
+    // A `Containerfile` entrypoint is built the same as a `Dockerfile`; the
+    // resolved path is handed to `buildah build -f <path>`.
+    const commands = await runDockerfileBuild({
+      buildImageEnv: 'al2023',
+      entrypoint: 'Containerfile',
+    });
+    expect(
+      commands.some(
+        c => /\bbuildah\b.*\bbuild\b/.test(c) && /-f \S*Containerfile\b/.test(c)
+      )
+    ).toBe(true);
+    expect(commands.some(c => /\bbuildah\b.*\bpush\b/.test(c))).toBe(true);
   });
 
   it('forwards the project build env to the image build as --build-arg', async () => {

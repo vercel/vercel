@@ -571,6 +571,37 @@ describe('detectServices (experimentalServicesV2)', () => {
       expect(svc.builder.src).toBe('Dockerfile');
     });
 
+    it('infers container from a Containerfile entrypoint (no explicit runtime)', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          experimentalServicesV2: {
+            my_oci_app: { root: '.', entrypoint: 'Containerfile' },
+          },
+          rewrites: [
+            {
+              source: '/(.*)',
+              destination: { type: 'service', service: 'my_oci_app' },
+            },
+          ],
+        }),
+        Containerfile: 'FROM node:22-alpine\n',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const [svc] = servicesV2(result.services);
+      expect(svc).toMatchObject({
+        schema: 'experimentalServicesV2',
+        name: 'my_oci_app',
+        root: '.',
+        runtime: 'container',
+        entrypoint: 'Containerfile',
+      });
+      expect(svc.builder.use).toBe('@vercel/container');
+      expect(svc.builder.src).toBe('Containerfile');
+    });
+
     it('resolves a Dockerfile under a non-root service root', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': vercelJson({
