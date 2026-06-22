@@ -466,10 +466,15 @@ export const build: BuildVX = async ({
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
-  // Track whether a custom build or install command was used.
-  // When true, runtime dependency installation is disabled because
-  // custom commands may install dependencies not tracked in uv.lock.
+  // Track whether a custom install command was used. When true, runtime
+  // dependency installation is disabled because custom install commands may
+  // install dependencies not tracked in uv.lock.
   let hasCustomCommand = false;
+  // Track whether a custom build command/script was used. When true, compileall
+  // is disabled (a custom build may emit its own bytecode or bypass the venv
+  // layout compileall assumes). It does not affect runtime installation, since
+  // dependencies are still installed normally.
+  let hasCustomBuildCommand = false;
 
   const target = getTargetPlatform(meta.isDev ?? false);
 
@@ -786,12 +791,16 @@ export const build: BuildVX = async ({
             env: pythonEnv,
             cwd: workPath,
           });
+          hasCustomBuildCommand = true;
         } else {
-          await runPyprojectScript(
+          const ranBuildScript = await runPyprojectScript(
             workPath,
             ['vercel-build', 'now-build', 'build'],
             pythonEnv
           );
+          if (ranBuildScript) {
+            hasCustomBuildCommand = true;
+          }
         }
       });
   }
@@ -945,6 +954,7 @@ export const build: BuildVX = async ({
   const automaticCompileAllEnabled = shouldUseCompileAll({
     isDev: meta.isDev,
     hasCustomCommand,
+    hasCustomBuildCommand,
   });
 
   const predefinedExcludes = [

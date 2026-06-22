@@ -108,11 +108,12 @@ describe('shouldUseCompileAll', () => {
       shouldUseCompileAll({
         isDev: false,
         hasCustomCommand: false,
+        hasCustomBuildCommand: false,
       })
     ).toBe(true);
   });
 
-  it('does not enable compileall for custom commands, even with large functions and the flag set', () => {
+  it('does not enable compileall for custom install commands, even with large functions and the flag set', () => {
     process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
     process.env.VERCEL_PYTHON_COMPILEALL = '1';
 
@@ -120,6 +121,20 @@ describe('shouldUseCompileAll', () => {
       shouldUseCompileAll({
         isDev: false,
         hasCustomCommand: true,
+        hasCustomBuildCommand: false,
+      })
+    ).toBe(false);
+  });
+
+  it('does not enable compileall for custom build commands, even with large functions and the flag set', () => {
+    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+
+    expect(
+      shouldUseCompileAll({
+        isDev: false,
+        hasCustomCommand: false,
+        hasCustomBuildCommand: true,
       })
     ).toBe(false);
   });
@@ -132,6 +147,7 @@ describe('shouldUseCompileAll', () => {
       shouldUseCompileAll({
         isDev: true,
         hasCustomCommand: false,
+        hasCustomBuildCommand: false,
       })
     ).toBe(false);
   });
@@ -144,6 +160,7 @@ describe('shouldUseCompileAll', () => {
       shouldUseCompileAll({
         isDev: false,
         hasCustomCommand: false,
+        hasCustomBuildCommand: false,
       })
     ).toBe(false);
   });
@@ -156,6 +173,7 @@ describe('shouldUseCompileAll', () => {
       shouldUseCompileAll({
         isDev: false,
         hasCustomCommand: false,
+        hasCustomBuildCommand: false,
       })
     ).toBe(false);
   });

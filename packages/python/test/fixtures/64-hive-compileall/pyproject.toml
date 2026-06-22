@@ -7,7 +7,7 @@ dependencies = [
   "pydantic",
 ]
 
-# Generate a large (sparse) blob at build time so the function is built as a
-# large function, which is what runs compileall (asserted by probes.json).
+# A custom build command must disable compileall, even though this script's
+# blob makes the function large. probes.json asserts compileall is skipped.
 [tool.vercel.scripts]
 build = "python build.py"
