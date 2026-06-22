@@ -129,6 +129,7 @@ import { pullEnvRecords } from '../../util/env/get-env-records';
 import { buildCommand } from './command';
 import { validatePackageManifest } from '../../util/validate-package-manifest';
 import { shouldEmbedFlagsDefinitions } from '../../util/flags/build-embedding';
+import { resolvePerDirectoryLinkRoot } from '../../util/build/repo-root';
 
 /** Build a plain suggested command with global flags (e.g. --cwd, --non-interactive) appended. */
 function buildCommandWithGlobalFlags(
@@ -337,7 +338,11 @@ export default async function main(client: Client): Promise<number> {
     }
   }
 
-  const projectRootDirectory = link?.projectRootDirectory ?? '';
+  // The directory the build was invoked from, before any repo-root
+  // re-anchoring below. Used to resolve a per-directory link's true location.
+  const invokedCwd = cwd;
+  const hasRepoLevelLink = Boolean(link?.repoRoot);
+  let projectRootDirectory = link?.projectRootDirectory ?? '';
   if (link?.repoRoot) {
     cwd = client.cwd = link.repoRoot;
   }
@@ -425,6 +430,46 @@ export default async function main(client: Client): Promise<number> {
     client.cwd = cwd;
     client.setArgv(originalArgv);
     project = await readProjectSettings(vercelDir);
+  }
+
+  // Per-directory link (`<dir>/.vercel/project.json`) resolution. A repo-level
+  // (`repo.json`) link already reported its `repoRoot` and offset above; a
+  // per-directory link does not, so the build would otherwise treat the linked
+  // subdirectory as the repository root.
+  //
+  // Resolve the link against the true repository root so it behaves like a
+  // repo-level link: re-anchor `cwd` to the detected root and express the
+  // project as its path relative to that root. The link's physical location is
+  // authoritative — a redundant or mismatched `rootDirectory` setting is
+  // absorbed rather than applied (which previously produced broken paths like
+  // `apps/api/apps/api`). The `rootDirectory` setting lives in the project
+  // settings (just read above), not on the link, so this runs here.
+  // Gated behind an opt-in env var while it bakes.
+  if (
+    !hasRepoLevelLink &&
+    link &&
+    project?.settings &&
+    process.env.VERCEL_RESOLVE_ROOT_DIRECTORY === '1'
+  ) {
+    const resolved = resolvePerDirectoryLinkRoot(
+      invokedCwd,
+      project.settings.rootDirectory
+    );
+    if (resolved.advisory) {
+      output.warn(resolved.advisory);
+    }
+    if (resolved.resolvedRootDirectory !== '') {
+      output.debug(
+        `Resolved per-directory link: repoRoot=${resolved.repoRoot}, ` +
+          `rootDirectory=${resolved.resolvedRootDirectory} (was cwd=${invokedCwd})`
+      );
+      projectRootDirectory = resolved.resolvedRootDirectory;
+      // Normalize the setting to the resolved value so the downstream
+      // `workPath` derivation (`cwd + settings.rootDirectory`) lands at the
+      // project, consistent with how a repo-level link behaves.
+      project.settings.rootDirectory = resolved.resolvedRootDirectory;
+      cwd = client.cwd = resolved.repoRoot;
+    }
   }
 
   // Delete output directory from potential previous build
@@ -641,11 +686,12 @@ async function doBuild(
   const VALID_DEPLOYMENT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
+  const repoRootPath = cwd;
 
   const sourceConfigFile = await findSourceVercelConfigFile(workPath);
   let corepackShimDir: string | null | undefined;
   if (sourceConfigFile) {
-    corepackShimDir = await initCorepack({ repoRootPath: cwd });
+    corepackShimDir = await initCorepack({ repoRootPath });
 
     const installDepsSpan = span.child('vc.installDeps');
     try {
@@ -963,7 +1009,6 @@ async function doBuild(
   const executedBuilds: Builder[] = [];
   const buildResults: Map<Builder, BuildResult | BuildOutputConfig> = new Map();
   const overrides: PathOverride[] = [];
-  const repoRootPath = cwd;
   // Only initialize corepack if not already done during early install
   if (!corepackShimDir) {
     corepackShimDir = await initCorepack({ repoRootPath });

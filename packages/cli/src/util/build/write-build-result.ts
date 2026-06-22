@@ -965,6 +965,26 @@ function stripParentSegments(path: string): string {
  * Removes the `FileFsRef` instances from the `Files` object
  * and returns them in a JSON serializable map of repo root
  * relative paths to Lambda destination paths.
+ *
+ * For standalone builds this has two modes, depending on whether per-directory
+ * link resolution (`VERCEL_RESOLVE_ROOT_DIRECTORY=1`) is enabled:
+ *
+ *  - **resolved-root mode** (`VERCEL_RESOLVE_ROOT_DIRECTORY=1`): the build ran
+ *    anchored at the true repository root, so dependency file keys are already
+ *    anchored inside the function. Files are written directly into the
+ *    function and package-manager symlinks are preserved (rather than skipped),
+ *    making the function self-contained with no `filePathMap` indirection.
+ *    Preserving the symlinks is essential: Node resolves bare imports (e.g.
+ *    `require('hono')`) by walking up `node_modules` from the handler via the
+ *    pnpm symlink (`apps/api/node_modules/hono` -> `.../.pnpm/.../hono`).
+ *    Because the build is correctly rooted, those targets already resolve
+ *    inside the function.
+ *
+ *  - **legacy mode** (default): the build ran anchored at `cwd` (the app dir),
+ *    so hoisted dependencies produce keys that escape the function root. Those
+ *    keys are re-anchored and their bytes recorded in `filePathMap`/`shared`
+ *    for the deploy pipeline to hydrate, and external symlinks are skipped
+ *    (their targets would escape the function / be rejected on deploy).
  */
 export function filesWithoutFsRefs(
   files: Files,
@@ -972,25 +992,32 @@ export function filesWithoutFsRefs(
   sharedDest?: string,
   standalone?: boolean
 ): { files: Files; filePathMap?: Record<string, string>; shared?: Files } {
+  const repoRootResolved = process.env.VERCEL_RESOLVE_ROOT_DIRECTORY === '1';
   let filePathMap: Record<string, string> | undefined;
   const out: Files = {};
   const shared: Files = {};
   for (const [path, file] of Object.entries(files)) {
     if (file.type === 'FileFsRef') {
       if (!filePathMap) filePathMap = {};
-      if (standalone && sharedDest) {
-        // pnpm and other package managers create symlinks in node_modules that
-        // point outside the app directory (e.g. ../../node_modules/.pnpm/...).
-        // These targets are rejected during prebuilt deploys, so skip them.
-        // The traced dependency files are included at their logical paths.
+      if (standalone && sharedDest && repoRootResolved) {
+        // The build ran anchored at the true repository root, so dependency
+        // file keys are already anchored inside the function. Write them
+        // directly into the function (no `filePathMap` indirection), preserving
+        // package-manager symlinks so bare imports resolve at runtime. The
+        // symlink targets already point inside the function because the build
+        // was correctly rooted.
+        out[normalizePath(path)] = file;
+      } else if (standalone && sharedDest) {
+        // Legacy mode: the build ran anchored at `cwd`, so hoisted
+        // dependencies escape the function root. pnpm symlinks pointing
+        // outside the app are rejected on deploy, so skip them; the traced
+        // dependency bytes are included at their (re-anchored) logical paths.
         if (isExternalSymlink(file)) {
           continue;
         }
-        // A standalone function must be self-contained, so any remaining file
-        // whose key escapes the function root (e.g. `../../node_modules/...`,
-        // produced when building from a monorepo subdirectory) is re-anchored
-        // inside the function. The shared bytes are placed under the same
-        // anchored key so the recorded `filePathMap` value points at them.
+        // Re-anchor any file whose key escapes the function root and record the
+        // shared bytes under the same anchored key so `filePathMap` points at
+        // them.
         const funcPath = stripParentSegments(path);
         shared[funcPath] = file;
         filePathMap[funcPath] = normalizePath(

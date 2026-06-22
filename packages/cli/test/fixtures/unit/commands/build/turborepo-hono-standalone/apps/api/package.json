@@ -1,0 +1,14 @@
+{
+  "name": "api",
+  "type": "module",
+  "dependencies": {
+    "hono": "^4.12.23"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "typescript": "^5.8.3"
+  }
+}
