@@ -29,7 +29,7 @@
       "dependsOn": ["build"],
       "outputLogs": "new-only"
     },
-    "vitest-e2e-node-20": {
+    "vitest-e2e-node-24": {
       "dependsOn": ["build"],
       "outputLogs": "new-only"
     },
