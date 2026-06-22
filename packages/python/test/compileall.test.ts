@@ -25,7 +25,7 @@ import {
 
 const mockedExeca = vi.mocked(execa);
 const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
-const originalHiveEnv = process.env.VERCEL_PYTHON_ON_HIVE;
+const originalLargeFnEnv = process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
 const tmpDirs: string[] = [];
 
 afterEach(() => {
@@ -38,23 +38,23 @@ afterEach(() => {
   } else {
     process.env.VERCEL_PYTHON_COMPILEALL = originalCompileAllEnv;
   }
-  if (originalHiveEnv === undefined) {
-    delete process.env.VERCEL_PYTHON_ON_HIVE;
+  if (originalLargeFnEnv === undefined) {
+    delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
   } else {
-    process.env.VERCEL_PYTHON_ON_HIVE = originalHiveEnv;
+    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = originalLargeFnEnv;
   }
 });
 
 describe('isCompileAllEnabled', () => {
   it('defaults to disabled', () => {
     delete process.env.VERCEL_PYTHON_COMPILEALL;
-    delete process.env.VERCEL_PYTHON_ON_HIVE;
+    delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
 
     expect(isCompileAllEnabled()).toBe(false);
   });
 
-  it('enables compileall on Hive for truthy flag values', () => {
-    process.env.VERCEL_PYTHON_ON_HIVE = '1';
+  it('enables compileall for large functions with truthy flag values', () => {
+    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
 
     process.env.VERCEL_PYTHON_COMPILEALL = '1';
     expect(isCompileAllEnabled()).toBe(true);
@@ -66,8 +66,8 @@ describe('isCompileAllEnabled', () => {
     expect(isCompileAllEnabled()).toBe(true);
   });
 
-  it('keeps compileall disabled on Hive for non-truthy flag values', () => {
-    process.env.VERCEL_PYTHON_ON_HIVE = '1';
+  it('keeps compileall disabled for large functions with non-truthy flag values', () => {
+    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
 
     delete process.env.VERCEL_PYTHON_COMPILEALL;
     expect(isCompileAllEnabled()).toBe(false);
@@ -82,26 +82,26 @@ describe('isCompileAllEnabled', () => {
     expect(isCompileAllEnabled()).toBe(false);
   });
 
-  it('never enables compileall off Hive, even when the flag is truthy', () => {
+  it('never enables compileall without large functions, even when the flag is truthy', () => {
     process.env.VERCEL_PYTHON_COMPILEALL = '1';
 
-    delete process.env.VERCEL_PYTHON_ON_HIVE;
+    delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
     expect(isCompileAllEnabled()).toBe(false);
 
-    process.env.VERCEL_PYTHON_ON_HIVE = '0';
+    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '0';
     expect(isCompileAllEnabled()).toBe(false);
 
-    process.env.VERCEL_PYTHON_ON_HIVE = 'false';
+    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = 'false';
     expect(isCompileAllEnabled()).toBe(false);
 
-    process.env.VERCEL_PYTHON_ON_HIVE = '';
+    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '';
     expect(isCompileAllEnabled()).toBe(false);
   });
 });
 
 describe('shouldUseCompileAll', () => {
-  it('enables compileall on Hive when the flag is set for non-custom builds', () => {
-    process.env.VERCEL_PYTHON_ON_HIVE = '1';
+  it('enables compileall for large functions when the flag is set for non-custom builds', () => {
+    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
     process.env.VERCEL_PYTHON_COMPILEALL = '1';
 
     expect(
@@ -112,8 +112,8 @@ describe('shouldUseCompileAll', () => {
     ).toBe(true);
   });
 
-  it('does not enable compileall for custom commands, even on Hive with the flag set', () => {
-    process.env.VERCEL_PYTHON_ON_HIVE = '1';
+  it('does not enable compileall for custom commands, even with large functions and the flag set', () => {
+    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
     process.env.VERCEL_PYTHON_COMPILEALL = '1';
 
     expect(
@@ -124,8 +124,8 @@ describe('shouldUseCompileAll', () => {
     ).toBe(false);
   });
 
-  it('does not enable compileall in dev even on Hive with the flag set', () => {
-    process.env.VERCEL_PYTHON_ON_HIVE = '1';
+  it('does not enable compileall in dev even with large functions and the flag set', () => {
+    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
     process.env.VERCEL_PYTHON_COMPILEALL = '1';
 
     expect(
@@ -136,8 +136,8 @@ describe('shouldUseCompileAll', () => {
     ).toBe(false);
   });
 
-  it('does not enable compileall off Hive even when the flag is set', () => {
-    delete process.env.VERCEL_PYTHON_ON_HIVE;
+  it('does not enable compileall without large functions even when the flag is set', () => {
+    delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
     process.env.VERCEL_PYTHON_COMPILEALL = '1';
 
     expect(
@@ -148,8 +148,8 @@ describe('shouldUseCompileAll', () => {
     ).toBe(false);
   });
 
-  it('does not enable compileall on Hive without the flag', () => {
-    process.env.VERCEL_PYTHON_ON_HIVE = '1';
+  it('does not enable compileall for large functions without the flag', () => {
+    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
     delete process.env.VERCEL_PYTHON_COMPILEALL;
 
     expect(

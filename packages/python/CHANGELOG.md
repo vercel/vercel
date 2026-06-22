@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.47.0
+
+### Minor Changes
+
+- f530cd5: Add Python `pyproject.toml` subscriber support for queue-triggered worker Lambdas.
+
 ## 6.46.1
 
 ### Patch Changes

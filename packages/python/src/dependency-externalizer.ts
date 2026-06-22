@@ -30,6 +30,7 @@ import {
 } from './uv';
 import { detectTargetPlatform } from './platform-info';
 import { derivePycPath, type BytecodeCollectionResult } from './compileall';
+import { isLargeFunctionsEnabled } from './large-functions';
 
 const readFile = promisify(fs.readFile);
 
@@ -59,24 +60,18 @@ function shouldStripVendorFile(filePath: string): boolean {
   return false;
 }
 
-// AWS Lambda uncompressed size limit is 250MB, but we use 245MB to leave room
-// for the standard Lambda layers (rusty runtime, lambdawrapper). When the
-// OpenTelemetry collector layer is also attached, we reserve an additional 5MB.
-const LAMBDA_BASE_SIZE_THRESHOLD_BYTES = 245 * 1024 * 1024;
-const OTEL_LAYER_RESERVATION_BYTES = 5 * 1024 * 1024;
-
-export const LAMBDA_SIZE_THRESHOLD_BYTES =
-  process.env.VERCEL_DEPLOYMENT_HAS_OTEL_LAYER === '1'
-    ? LAMBDA_BASE_SIZE_THRESHOLD_BYTES - OTEL_LAYER_RESERVATION_BYTES
-    : LAMBDA_BASE_SIZE_THRESHOLD_BYTES;
+// AWS Lambda uncompressed size limit is 250MB, but we use 225MB to leave room
+// for the Lambda layers (rusty runtime, lambdawrapper, OpenTelemetry collector)
+// that count toward the limit but aren't part of this bundle.
+export const LAMBDA_SIZE_THRESHOLD_BYTES = 225 * 1024 * 1024;
 
 // AWS Lambda ephemeral storage (/tmp) is 512MB. Use 500MB to leave a buffer
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
 export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 500 * 1024 * 1024;
 
-// Extended limit for Python on Hive (Functions Beta). All dependencies are
-// bundled directly into the Lambda instead of using runtime installation.
-export const HIVE_LAMBDA_SIZE_BYTES = 1 * 1024 * 1024 * 1024;
+// Size limit for large functions: all deps bundled directly (no runtime
+// install), served on Hive.
+export const MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE = 5 * 1024 * 1024 * 1024;
 
 const BUNDLING_DOCS_LINK =
   'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled';
@@ -152,18 +147,23 @@ export class PythonDependencyExternalizer {
     if (this.hasCustomCommand) {
       return false;
     }
-    const pythonOnHiveEnabled =
-      process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
-      process.env.VERCEL_PYTHON_ON_HIVE === 'true';
-    if (pythonOnHiveEnabled) {
-      return false;
-    } else if (
-      this.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
-      this.uvLockPath !== null
+    // Fits AWS Lambda directly, or there's no lock to defer from.
+    if (
+      this.totalBundleSize <= LAMBDA_SIZE_THRESHOLD_BYTES ||
+      this.uvLockPath === null
     ) {
-      return true;
+      return false;
     }
-    return false;
+    // Over the threshold with a lock to defer from. Large functions skip
+    // runtime install once deps exceed ephemeral storage (bundled for Hive);
+    // below that, runtime install still keeps it on Lambda.
+    if (
+      isLargeFunctionsEnabled() &&
+      this.totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES
+    ) {
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -205,22 +205,22 @@ export class PythonDependencyExternalizer {
 
     const runtimeInstallEnabled = this.shouldEnableRuntimeInstall();
 
-    const pythonOnHiveEnabled =
-      process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
-      process.env.VERCEL_PYTHON_ON_HIVE === 'true';
+    const largeFunctionsEnabled = isLargeFunctionsEnabled();
 
     // Surface the size BEFORE the size-limit checks below, which may throw.
-    // Otherwise oversized bundles (e.g. Hive > 1 GB) would never report their
-    // size, biasing any size telemetry toward builds that fit the limit.
+    // Otherwise oversized bundles would never report their size, biasing any
+    // size telemetry toward builds that fit the limit.
     options.onSized?.({
       totalSizeBytes: this.totalBundleSize,
       runtimeInstallEnabled,
     });
 
+    // Custom install commands can't use runtime install; enforced only when
+    // not bundling everything directly (large functions).
     if (
       this.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
       this.hasCustomCommand &&
-      !pythonOnHiveEnabled
+      !largeFunctionsEnabled
     ) {
       const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
       throw new NowBuildError({
@@ -238,11 +238,16 @@ export class PythonDependencyExternalizer {
       });
     }
 
-    // Enforce the extended 1 GB limit for Python on Hive (Functions Beta).
-    // All dependencies are bundled directly, so check the total uncompressed
-    // size before we proceed to avoid a slower failure at ZIP time.
-    if (pythonOnHiveEnabled && this.totalBundleSize > HIVE_LAMBDA_SIZE_BYTES) {
-      const limitMB = (HIVE_LAMBDA_SIZE_BYTES / (1024 * 1024)).toFixed(0);
+    // Enforce the large-function size limit up front (faster than failing at
+    // ZIP time). `>=` matches the platform's uncompressed-size check.
+    if (
+      largeFunctionsEnabled &&
+      this.totalBundleSize >= MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
+    ) {
+      const limitMB = (
+        MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE /
+        (1024 * 1024)
+      ).toFixed(0);
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
         message:
@@ -266,8 +271,14 @@ export class PythonDependencyExternalizer {
    * Mutates `files` in place: adds vendor files (private + knapsack-selected
    * public), runtime config, and uv binary.
    * Must be called after analyze().
+   *
+   * If large functions are allowed and the bundle can't fit AWS Lambda, falls
+   * back to bundling everything for Hive and returns `fellBackToFullBundle:
+   * true` so the caller can apply the same compileall handling.
    */
-  async generateBundle(files: Files): Promise<void> {
+  async generateBundle(
+    files: Files
+  ): Promise<{ fellBackToFullBundle: boolean }> {
     if (!this.analyzed) {
       throw new Error(
         'PythonDependencyExternalizer.analyze() must be called before generateBundle()'
@@ -283,13 +294,15 @@ export class PythonDependencyExternalizer {
 
     const totalBundleSizeMB = (this.totalBundleSize / (1024 * 1024)).toFixed(2);
 
-    console.log(
-      `Bundle size (${totalBundleSizeMB} MB) exceeds limit. ` +
-        `Enabling runtime dependency installation.`
-    );
+    // When set, a bundle that can't fit AWS Lambda is bundled for Hive instead
+    // of failing the build.
+    const largeFunctionsEnabled = isLargeFunctionsEnabled();
 
     // Verify total deps won't exceed Lambda ephemeral storage (512 MB)
     if (this.totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES) {
+      if (largeFunctionsEnabled) {
+        return this.bundleAllForHive(files);
+      }
       const ephemeralLimitMB = (
         LAMBDA_EPHEMERAL_STORAGE_BYTES /
         (1024 * 1024)
@@ -387,6 +400,9 @@ export class PythonDependencyExternalizer {
     );
 
     if (externalizablePublic.length === 0) {
+      if (largeFunctionsEnabled) {
+        return this.bundleAllForHive(files);
+      }
       throw new NowBuildError({
         code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
         message:
@@ -480,6 +496,19 @@ export class PythonDependencyExternalizer {
         `remaining capacity for public packages: ${(remainingCapacity / (1024 * 1024)).toFixed(2)} MB`
     );
 
+    // The non-deferrable footprint (source + private/wheel-less packages +
+    // tooling) alone exceeds the threshold, so runtime install can't shrink the
+    // zip enough. Large functions bundle everything for Hive; otherwise the
+    // final-size check below throws.
+    if (largeFunctionsEnabled && remainingCapacity < 0) {
+      return this.bundleAllForHive(files);
+    }
+
+    console.log(
+      `Bundle size (${totalBundleSizeMB} MB) exceeds limit. ` +
+        `Enabling runtime dependency installation.`
+    );
+
     // Build size map for externalizable public packages and run the knapsack algorithm
     const externalizableSet = new Set(
       externalizablePublic.map(normalizePackageName)
@@ -570,9 +599,13 @@ export class PythonDependencyExternalizer {
     // are included in the bundle, which can push total size over the threshold.
     // Allow 100 KB of tolerance for rounding and estimation discrepancies in the
     // knapsack capacity budget.  The actual AWS Lambda limit is 250 MB and we
-    // target 245 MB, so a slight overshoot here is safe.
+    // target 225 MB, so a slight overshoot here is safe.
     const finalBundleSize = await calculateBundleSize(files);
     if (finalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES + 100 * 1024) {
+      if (largeFunctionsEnabled) {
+        // Estimation overshoot past the threshold; bundle everything for Hive.
+        return this.bundleAllForHive(files);
+      }
       const finalSizeMB = (finalBundleSize / (1024 * 1024)).toFixed(2);
       const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
       throw new NowBuildError({
@@ -587,6 +620,31 @@ export class PythonDependencyExternalizer {
         action: 'Learn More',
       });
     }
+
+    return { fellBackToFullBundle: false };
+  }
+
+  /**
+   * Discard any runtime-install artifacts added so far and bundle every
+   * dependency directly, for a function that will run on Hive. Returns the
+   * fell-back signal so the caller can apply the same compileall handling.
+   */
+  private bundleAllForHive(files: Files): { fellBackToFullBundle: true } {
+    for (const key of [
+      `${UV_BUNDLE_DIR}/_runtime_config.json`,
+      `${UV_BUNDLE_DIR}/uv`,
+      `${UV_BUNDLE_DIR}/pyproject.toml`,
+      `${UV_BUNDLE_DIR}/uv.lock`,
+    ]) {
+      delete files[key];
+    }
+    for (const [p, f] of Object.entries(this.allVendorFiles)) {
+      files[p] = f;
+    }
+    console.log(
+      'Bundle cannot fit AWS Lambda; bundling all dependencies to run on Hive.'
+    );
+    return { fellBackToFullBundle: true };
   }
 
   /**

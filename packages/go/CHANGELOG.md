@@ -1,5 +1,15 @@
 # @vercel/go
 
+## 3.9.1
+
+### Patch Changes
+
+- 94671a4: [go] Supervise the user server after startup in standalone server mode. If the user's server process exits after the `server-started` handshake, the bootstrap now reports an `unrecoverable-error` over IPC with the child's exit code, so the platform can recycle the instance instead of leaving it serving 502s while the health check still reports OK.
+- d4547af: Fix `vc dev` for standalone Go server mode:
+  - matching the real Go entrypoint when the framework preset's placeholder src does not exist
+  - serve all request paths
+  - keep a persistent dev server across requests instead of respawning `go run` per request, and wait for the server port to be ready instead of a fixed 2s window
+
 ## 3.9.0
 
 ### Minor Changes

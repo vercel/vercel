@@ -1,5 +1,21 @@
 # vercel
 
+## 54.14.5
+
+### Patch Changes
+
+- d1e1d69: Stop prompting to install the Vercel plugin after login and link commands.
+- 7aa52be: Show bounded progress while upgrading native and package-installed CLIs, and
+  report when no newer version is available without running the installer.
+- e2043e6: Build standalone Vercel CLI binaries with Node.js 24.14.1.
+- Updated dependencies [94671a4]
+- Updated dependencies [d4547af]
+- Updated dependencies [bc6f22f]
+- Updated dependencies [f530cd5]
+  - @vercel/go@3.9.1
+  - @vercel/next@4.19.1
+  - @vercel/python@6.47.0
+
 ## 54.14.4
 
 ### Patch Changes

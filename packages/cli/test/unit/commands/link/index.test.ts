@@ -32,11 +32,6 @@ import { ProjectNotFound } from '../../../../src/util/errors-ts';
 vi.mock('../../../../src/commands/env/pull');
 const mockPull = vi.mocked(pull);
 
-// Mock the auto-install agent tooling so it doesn't prompt during link tests
-vi.mock('../../../../src/util/agent/auto-install-agentic', () => ({
-  autoInstallVercelPlugin: vi.fn().mockResolvedValue(undefined),
-}));
-
 function expectLinkRowsUseExpectedGlyphs(output: string, labels: string[]) {
   const plain = stripAnsi(output);
   const completedLabels = new Set(['Created', 'Linked', 'Added']);

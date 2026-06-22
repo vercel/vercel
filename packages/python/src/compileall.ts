@@ -2,20 +2,14 @@ import execa from 'execa';
 import { debug, FileFsRef, type Files } from '@vercel/build-utils';
 import fs from 'fs';
 import { join, sep } from 'path';
-
-export function isPythonOnHive(): boolean {
-  const hive = process.env.VERCEL_PYTHON_ON_HIVE;
-  return hive === '1' || hive === 'true';
-}
+import { isLargeFunctionsEnabled } from './large-functions';
 
 /**
- * Compileall is a Hive-only feature.  It runs only when the deployment is on
- * Hive *and* `VERCEL_PYTHON_COMPILEALL` is explicitly set to a truthy value
- * (`1`/`true`).  This makes the env var an opt-in toggle for the Hive rollout;
- * it has no effect off Hive.
+ * Compileall runs only for large functions *and* when `VERCEL_PYTHON_COMPILEALL`
+ * is set truthy (`1`/`true`) — an opt-in toggle, no effect otherwise.
  */
 export function isCompileAllEnabled(): boolean {
-  if (!isPythonOnHive()) return false;
+  if (!isLargeFunctionsEnabled()) return false;
 
   const val = process.env.VERCEL_PYTHON_COMPILEALL;
   if (val === undefined || val === '') return false;

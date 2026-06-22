@@ -74,3 +74,21 @@ vercel blob empty-store --yes                                         # delete a
 vercel blob list-stores --all --json                                  # list every team store as JSON
 vercel blob list-stores --no-projects                                 # hide the Projects column in table output
 ```
+
+## `--non-interactive`
+
+`--non-interactive` is a global flag (see `global-options.md`) that tells every `vercel blob` command to never prompt. It is **auto-set when an agent is detected on a non-TTY stdin**, so agents normally get this behavior without passing the flag; pass `--non-interactive=false` to force prompts even under agent detection.
+
+In this mode a command never blocks on input. Anything it would otherwise prompt for becomes a fail-fast, structured JSON error on stdout (`{"status":"error","reason":"…","message":"…"}`, usually with a suggested `next` command) and a non-zero exit — it neither hangs nor silently guesses:
+
+- **`reason: "missing_arguments"`** — a required value that is normally prompted is absent. E.g. `create-store` without a name or `--access`, or `get-store` / `delete-store` without a store id. Pass the value as an argument/flag instead.
+- **`reason: "confirmation_required"`** — an action needs explicit consent: the destructive `delete-store` and `empty-store`, and `create-store` when it would link the new store to the current project. Pass `--yes` to confirm up front (or `--environment` to choose link targets for `create-store`).
+
+`--yes` and `--non-interactive` are **independent**: `--non-interactive` suppresses prompts but never implies consent, so the commands above still require `--yes`. `--yes` is declared per command (only the ones that confirm a mutation); `--non-interactive` is global. Read-only/idempotent commands (`list`, `get`, `list-stores`) just run — `list-stores` skips its interactive store picker rather than prompting — and `del` deletes immediately with no confirmation.
+
+```bash
+# Agent / CI: supply every required value as a flag, and --yes for destructive ops
+vercel blob create-store my-store --access private --yes   # --yes also links to the current project
+vercel blob delete-store <store-id> --yes
+vercel blob empty-store --yes
+```
