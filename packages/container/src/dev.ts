@@ -382,37 +382,43 @@ export async function startDevServer(
       };
 
       // Wait for Docker to assign + publish the host port. The container may
-      // take a moment to start; poll `docker port` briefly.
+      // take a moment to start; poll `docker port` briefly. Any failure here
+      // must still tear the container down and remove the temp env-file (it
+      // holds the full merged environment, including secrets), so all error
+      // paths funnel through `shutdown()`.
       let hostPort: number | undefined;
       const deadline = Date.now() + 30_000;
       let lastErr: Error | undefined;
-      while (Date.now() < deadline) {
-        if (child.exitCode !== null) {
-          throw new Error(
-            `Container "${options.service?.name}" exited (code ${child.exitCode}) before becoming ready.`
-          );
+      try {
+        while (Date.now() < deadline) {
+          if (child.exitCode !== null) {
+            throw new Error(
+              `Container "${options.service?.name}" exited (code ${child.exitCode}) before becoming ready.`
+            );
+          }
+          try {
+            hostPort = await readMappedHostPort(
+              containerName,
+              containerPort,
+              out
+            );
+            break;
+          } catch (err) {
+            lastErr = err as Error;
+            await new Promise(resolve => setTimeout(resolve, 250));
+          }
         }
-        try {
-          hostPort = await readMappedHostPort(
-            containerName,
-            containerPort,
-            out
-          );
-          break;
-        } catch (err) {
-          lastErr = err as Error;
-          await new Promise(resolve => setTimeout(resolve, 250));
-        }
-      }
 
-      if (hostPort === undefined) {
-        cleanupEnvFile();
+        if (hostPort === undefined) {
+          throw new Error(
+            `Timed out waiting for container "${options.service?.name}" to ` +
+              `publish port ${containerPort}.` +
+              (lastErr ? ` Last error: ${lastErr.message}` : '')
+          );
+        }
+      } catch (err) {
         await shutdown();
-        throw new Error(
-          `Timed out waiting for container "${options.service?.name}" to ` +
-            `publish port ${containerPort}.` +
-            (lastErr ? ` Last error: ${lastErr.message}` : '')
-        );
+        throw err;
       }
 
       span?.setAttributes({

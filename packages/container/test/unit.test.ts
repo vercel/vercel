@@ -1,6 +1,7 @@
 import type { BuildResultV2Typical } from '@vercel/build-utils';
 import { EventEmitter } from 'node:events';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, statSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { build, prepareCache, startDevServer } from '../src';
 import { __resetStorageDriverCache } from '../src/storage-driver';
@@ -727,6 +728,43 @@ describe('@vercel/container', () => {
       expect(commands.some(c => c.includes('-p 127.0.0.1:0:3000'))).toBe(true);
       expect(
         commands.some(c => c.includes('docker run') && c.includes('cowsay'))
+      ).toBe(true);
+    });
+
+    it('cleans up the temp env-file and stops the container when it exits before becoming ready', async () => {
+      existsSyncMock.mockReturnValue(false); // prebuilt image, no Dockerfile
+      // `docker run` returns a child that has already exited (exitCode set), so
+      // the readiness poll bails immediately via the early-exit branch.
+      const exited = fakeRunningChild(123);
+      exited.exitCode = 1;
+      let envFilePath: string | undefined;
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'docker' && args[0] === 'run') {
+          const idx = args.indexOf('--env-file');
+          if (idx >= 0) {
+            envFilePath = args[idx + 1];
+          }
+          return exited;
+        }
+        return fakeChild('');
+      });
+
+      await expect(
+        startDevServer({
+          ...createBuildOptions({ image: 'grycap/cowsay:latest' }),
+          service: { name: 'api', type: 'web' },
+          meta: { isDev: true, env: { SECRET: 'do-not-leak' } },
+        } as any)
+      ).rejects.toThrow(/exited \(code 1\) before becoming ready/);
+
+      // The temp env-file (which held the merged env, incl. secrets) is
+      // removed. `existsSync` is mocked here, so probe the real FS via
+      // `statSync` (unmocked) — it throws ENOENT once the dir is gone.
+      expect(envFilePath).toBeDefined();
+      expect(() => statSync(dirname(envFilePath!))).toThrow(/ENOENT/);
+      // The container is torn down on the failure path.
+      expect(
+        commandsRun().some(c => /^docker stop vercel-dev-api-/.test(c))
       ).toBe(true);
     });
 
