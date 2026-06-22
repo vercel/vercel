@@ -2057,6 +2057,16 @@ importers:
         specifier: 2.0.1
         version: 2.0.1(@edge-runtime/vm@3.2.0)(@types/node@24.12.4)(terser@5.48.0)
 
+  packages/passport:
+    dependencies:
+      jose:
+        specifier: 5.9.6
+        version: 5.9.6
+    devDependencies:
+      vitest:
+        specifier: 2.0.1
+        version: 2.0.1(@edge-runtime/vm@3.2.0)(@types/node@24.12.4)(terser@5.48.0)
+
   packages/python:
     dependencies:
       '@vercel/python-analysis':
