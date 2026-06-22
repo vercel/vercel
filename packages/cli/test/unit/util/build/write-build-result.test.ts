@@ -127,6 +127,11 @@ describe('filesWithoutFsRefs()', () => {
     });
     const storeKey =
       'node_modules/.pnpm/next@1.0.0/node_modules/next/server.js';
+    // A sibling package whose name shares the symlink's prefix. It must NOT be
+    // dropped: `node_modules/next-auth` is not nested under the `next` symlink,
+    // which is why the descendant check matches on a trailing slash.
+    const siblingFile = await FileFsRef.fromFsPath({ fsPath: __filename });
+    const siblingKey = 'apps/web/node_modules/next-auth/index.js';
 
     process.env.VERCEL_RESOLVE_ROOT_DIRECTORY = '1';
     try {
@@ -134,6 +139,7 @@ describe('filesWithoutFsRefs()', () => {
         {
           'apps/web/node_modules/next': symlink,
           'apps/web/node_modules/next/server.js': descendant,
+          [siblingKey]: siblingFile,
           [storeKey]: realFile,
         },
         root,
@@ -146,6 +152,8 @@ describe('filesWithoutFsRefs()', () => {
       expect(files['apps/web/node_modules/next']).toBe(symlink);
       expect(files['apps/web/node_modules/next/server.js']).toBeUndefined();
       expect(files[storeKey]).toBe(realFile);
+      // The similarly-named sibling package is unaffected.
+      expect(files[siblingKey]).toBe(siblingFile);
     } finally {
       delete process.env.VERCEL_RESOLVE_ROOT_DIRECTORY;
     }
