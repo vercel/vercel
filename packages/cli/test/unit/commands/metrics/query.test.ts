@@ -247,7 +247,7 @@ describe('metrics query v2', () => {
     });
 
     it('should default to avg for duration metrics', async () => {
-      mockMetricDetail('vercel.function_invocation.request_duration_ms', {
+      mockMetricDetail('vercel.function_invocation.function_duration_ms', {
         description: 'Request Duration',
         unit: 'milliseconds',
         aggregations: ['avg', 'p95'],
@@ -256,7 +256,7 @@ describe('metrics query v2', () => {
       mockApiSuccess();
       client.setArgv(
         'metrics',
-        'vercel.function_invocation.request_duration_ms'
+        'vercel.function_invocation.function_duration_ms'
       );
 
       const exitCode = await query(client, new MockTelemetry());
@@ -666,6 +666,26 @@ describe('metrics query v2', () => {
       expect(exitCode).toBe(0);
       expect(postedBody?.filter).toBe('http_status ge 500');
     });
+
+    it('should AND repeated filter strings before sending them to API', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--filter',
+        'http_status ge 500',
+        '-f',
+        "contains(request_path, '/api')"
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.filter).toBe(
+        "(http_status ge 500) and (contains(request_path, '/api'))"
+      );
+    });
   });
 
   describe('API errors', () => {
@@ -904,6 +924,24 @@ describe('metrics query v2', () => {
       ]);
     });
 
+    it('should track bucket-timezone option', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--bucket-timezone',
+        'Europe/Paris'
+      );
+
+      await query(client, new MockTelemetry());
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
+        { key: 'option:bucket-timezone', value: 'Europe/Paris' },
+      ]);
+    });
+
     it('should track project option as redacted', async () => {
       mockMetricDetail();
       mockApiSuccess();
@@ -951,6 +989,49 @@ describe('metrics query v2', () => {
       expect(postedBody?.aggregation).toBe('p95');
       expect(postedBody?.groupBy).toEqual(['http_status']);
       expect(postedBody?.granularity).toEqual({ minutes: 15 });
+    });
+
+    it('should send the requested time bounds without rounding them', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--since',
+        '2025-01-15T10:03:00Z',
+        '--until',
+        '2025-01-15T10:58:00Z',
+        '--granularity',
+        '15m'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.startTime).toBe('2025-01-15T10:03:00.000Z');
+      expect(postedBody?.endTime).toBe('2025-01-15T10:58:00.000Z');
+    });
+
+    it('should pass bucket-timezone through to the query endpoint', async () => {
+      mockMetricDetail('vercel.analytics_pageview.count');
+      mockApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.analytics_pageview.count',
+        '--since',
+        '2026-05-28',
+        '--until',
+        '2026-05-29',
+        '--granularity',
+        '1d',
+        '--bucket-timezone',
+        'Europe/Paris'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.bucketTimezone).toBe('Europe/Paris');
     });
   });
 });

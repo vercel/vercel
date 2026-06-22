@@ -395,6 +395,15 @@ where
                         }
                     }),
                 )
+                // Enable HTTP/1.1 upgrades so WebSocket handshakes complete.
+                // hyper injects `hyper::upgrade::OnUpgrade` into the request
+                // extensions and drives the upgraded connection after the 101,
+                // which framework extractors (e.g. axum's `WebSocketUpgrade`)
+                // rely on. The per-request `end` IPC message is already sent
+                // right after the handler returns its response, so for a 101 it
+                // fires at accept time, matching the detached-upgrade flow used
+                // by the Node.js and Python runtimes.
+                .with_upgrades()
                 .await
             {
                 // Error serving connection

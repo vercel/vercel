@@ -384,7 +384,7 @@ export default async function edit(client: Client, argv: string[]) {
   }
 
   // Populate env fields for $VAR references
-  populateRouteEnv(route.route);
+  populateRouteEnv(route.route, route.srcSyntax);
 
   // Check if anything actually changed
   if (JSON.stringify(route) === JSON.stringify(originalRoute)) {
@@ -622,7 +622,7 @@ async function handleAIEdit(
       manualRoute.route = routeInput.route;
 
       await runInteractiveEditLoop(client, manualRoute);
-      populateRouteEnv(manualRoute.route);
+      populateRouteEnv(manualRoute.route, manualRoute.srcSyntax);
 
       const editStamp = stamp();
       output.spinner(`Updating route "${manualRoute.name}"`);
@@ -679,7 +679,7 @@ async function applyAIEdit(
   skipConfirmation: boolean | undefined
 ): Promise<number> {
   const routeInput = generatedRouteToAddInput(generated);
-  populateRouteEnv(routeInput.route);
+  populateRouteEnv(routeInput.route, routeInput.srcSyntax);
 
   const editStamp = stamp();
   output.spinner(`Updating route "${routeInput.name}"`);

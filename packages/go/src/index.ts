@@ -23,13 +23,14 @@ import {
   BuildOptions,
   Files,
   PrepareCacheOptions,
+  ShouldServe,
   StartDevServerOptions,
   StartDevServerResult,
   glob,
   download,
   Lambda,
   getWriteableDirectory,
-  shouldServe,
+  shouldServe as defaultShouldServe,
   debug,
   cloneEnv,
   getProvidedRuntime,
@@ -58,7 +59,17 @@ import {
 
 import { generateProjectManifest, diagnostics } from './diagnostics';
 
-export { shouldServe, diagnostics };
+export { diagnostics };
+
+// In standalone server mode the user's Go server handles its own routing,
+// so every request path is served by this function.
+export const shouldServe: ShouldServe = opts => {
+  const framework = opts.config.framework;
+  if (framework === 'go' || framework === 'services') {
+    return true;
+  }
+  return defaultShouldServe(opts);
+};
 
 // in order to allow the user to have `main.go`,
 // we need our `main.go` to be called something else

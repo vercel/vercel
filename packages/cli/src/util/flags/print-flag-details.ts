@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import output from '../../output-manager';
 import formatDate from '../format-date';
+import { formatFlagConditionComparator } from './comparators';
 import { getFlagDashboardUrl } from './dashboard-url';
 import { formatVariantValue } from './resolve-variant';
 import type {
@@ -350,7 +351,9 @@ function formatCondition(
     lhs = `${condition.lhs.kind}.${condition.lhs.attribute}`;
   }
 
-  const cmp = chalk.dim(formatComparison(condition));
+  const cmp = chalk.dim(
+    formatFlagConditionComparator(condition.cmp, condition.cmpOptions)
+  );
 
   if (condition.rhs === undefined || condition.rhs === null) {
     return { text: `${lhs} ${cmp}` };
@@ -402,29 +405,4 @@ function formatCondition(
   }
 
   return { text: `${lhs} ${cmp} ${rhs}` };
-}
-
-function formatComparison(condition: FlagCondition): string {
-  const operators: Record<string, string> = {
-    eq: 'is',
-    oneOf: 'is in',
-    gt: 'is greater than',
-    gte: 'is greater than or equal to',
-    lt: 'is less than',
-    lte: 'is less than or equal to',
-    ex: 'has any value',
-    '!ex': 'has no value',
-    startsWith: 'starts with',
-    endsWith: 'ends with',
-    containsAnyOf: 'contains any of',
-    containsAllOf: 'contains all of',
-    containsNoneOf: 'contains none of',
-  };
-  const label = operators[condition.cmp] || condition.cmp;
-
-  if (condition.cmpOptions?.ignoreCase) {
-    return `${label} (case-insensitive)`;
-  }
-
-  return label;
 }

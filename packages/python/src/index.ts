@@ -1,5 +1,4 @@
 import assert from 'assert';
-import { execSync } from 'child_process';
 import fs from 'fs';
 import { join, dirname, basename, parse } from 'path';
 import {
@@ -23,11 +22,13 @@ import {
   BUILDER_INSTALLER_STEP,
   BUILDER_COMPILE_STEP,
   BUILDER_PRE_DEPLOY_STEP,
+  sanitizeConsumerName,
   type BuildOptions,
   type GlobOptions,
   type BuildVX,
   type Files,
   type ShouldServe,
+  type TriggerEvent,
   FileFsRef,
   PythonFramework,
   type PrepareCache,
@@ -42,8 +43,7 @@ import {
 } from './install';
 import {
   PythonDependencyExternalizer,
-  LAMBDA_SIZE_THRESHOLD_BYTES,
-  HIVE_LAMBDA_SIZE_BYTES,
+  MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE,
   lambdaKnapsack,
   calculateBundleSize,
 } from './dependency-externalizer';
@@ -53,6 +53,7 @@ import {
   getUvBinaryOrInstall,
   getUvCacheDir,
   findUvInPath,
+  checkUvBinaryVersion,
 } from './uv';
 import { resolvePythonVersion, pythonVersionString } from './version';
 import { generateProjectManifest } from './diagnostics';
@@ -79,6 +80,11 @@ import {
   shouldUseCompileAll,
   type BytecodeCollectionResult,
 } from './compileall';
+import {
+  getPyprojectSubscribers,
+  safePathSegment,
+  type Subscriber,
+} from './subscribers';
 
 const writeFile = fs.promises.writeFile;
 const PYTHON_ENTRYPOINT_DOCS_URL =
@@ -265,6 +271,62 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
   },
 };
 
+function createRuntimeTrampoline({
+  moduleName,
+  entrypoint,
+  vendorDir,
+  variableName,
+  extraEnv = [],
+}: {
+  moduleName: string;
+  entrypoint: string;
+  vendorDir: string;
+  variableName: string;
+  extraEnv?: string[];
+}): string {
+  const extraEnvLines = extraEnv.map(line => `,\n  ${line}`).join('');
+
+  return `
+import importlib
+import os
+import os.path
+import site
+import sys
+
+_here = os.path.dirname(__file__)
+
+os.environ.update({
+  "__VC_HANDLER_MODULE_NAME": "${moduleName}",
+  "__VC_HANDLER_ENTRYPOINT": "${entrypoint}",
+  "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypoint}"),
+  "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",
+  "__VC_HANDLER_VARIABLE_NAME": "${variableName}"${extraEnvLines}
+})
+
+_vendor_rel = '${vendorDir}'
+_vendor = os.path.normpath(os.path.join(_here, _vendor_rel))
+
+if os.path.isdir(_vendor):
+    # Process .pth files like a real site-packages dir
+    site.addsitedir(_vendor)
+
+    # Move _vendor to the front (after script dir if present)
+    try:
+        while _vendor in sys.path:
+            sys.path.remove(_vendor)
+    except ValueError:
+        pass
+
+    # Put vendored deps ahead of site-packages but after the script dir
+    idx = 1 if (sys.path and sys.path[0] in ('', _here)) else 0
+    sys.path.insert(idx, _vendor)
+
+    importlib.invalidate_caches()
+
+from vercel_runtime.vc_init import vc_handler
+`;
+}
+
 export async function downloadFilesInWorkPath({
   entrypoint,
   workPath,
@@ -398,7 +460,8 @@ export const build: BuildVX = async ({
 
   const builderSpan = parentSpan ?? new Span({ name: 'vc.builder' });
   const framework = config?.framework;
-  const shouldInstallVercelWorkers = config?.hasWorkerServices === true;
+  let shouldInstallVercelWorkers = config?.hasWorkerServices === true;
+  let subscribers: Subscriber[] = [];
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
@@ -417,6 +480,20 @@ export const build: BuildVX = async ({
     entrypoint,
     meta,
   });
+
+  // `tool.vercel.subscribers` declares background workers for a standalone
+  // Python app and compiles them into additional queue-triggered Lambdas.
+  // It is intentionally scoped to non-service framework builds:
+  //   - `experimentalServices` projects already declare queue consumers as
+  //     first-class `worker`/`job` services, so a second implicit mechanism
+  //     would be redundant and ambiguous (services can share one pyproject.toml,
+  //     which would duplicate every subscriber across each service build).
+  //   - Bare `api/**` functions build once per file sharing this workPath, so
+  //     emitting subscribers there would duplicate their outputs per build.
+  if (!service && isPythonFramework(framework)) {
+    subscribers = await getPyprojectSubscribers(workPath);
+    shouldInstallVercelWorkers ||= subscribers.length > 0;
+  }
 
   try {
     // See: https://stackoverflow.com/a/44728772/376773
@@ -514,10 +591,6 @@ export const build: BuildVX = async ({
   try {
     const uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
     uv = new UvRunner(uvPath, uvCacheDir);
-    const uvVersionOutput = execSync(`${uvPath} --version`, {
-      encoding: 'utf8',
-    }).trim();
-    console.log(`Using ${uvVersionOutput}`);
   } catch (err) {
     console.log('Failed to install or locate uv');
     throw new Error(
@@ -526,6 +599,9 @@ export const build: BuildVX = async ({
       }`
     );
   }
+
+  const uvVersion = checkUvBinaryVersion(uv.getPath());
+  console.log(`Using ${uvVersion}`);
 
   const venvPath = service?.name
     ? join(workPath, '.vercel', 'python', 'services', service.name, '.venv')
@@ -844,7 +920,7 @@ export const build: BuildVX = async ({
   // Injected into os.environ.update() in the Python trampoline source,
   // not lambdaEnv, because the platform rejects env var names with
   // leading underscores.
-  let cronEnvLine = '';
+  const extraTrampolineEnv: string[] = [];
   if (crons?.length) {
     // Single-quote the JSON so embedded double quotes don't need escaping
     // in the surrounding Python dict literal. Backslashes would be
@@ -852,50 +928,18 @@ export const build: BuildVX = async ({
     // only contain [a-zA-Z0-9_./:-] so JSON.stringify won't produce any.
     const json = JSON.stringify(buildCronRouteTable(crons));
     assert(!json.includes('\\'), `backslash in cron route table: ${json}`);
-    cronEnvLine = `\n  "__VC_CRON_ROUTES": '${json}',`;
+    extraTrampolineEnv.push(`"__VC_CRON_ROUTES": '${json}'`);
   }
 
   const variableName = resolved?.variableName ?? '';
 
-  const runtimeTrampoline = `
-import importlib
-import os
-import os.path
-import site
-import sys
-
-_here = os.path.dirname(__file__)
-
-os.environ.update({
-  "__VC_HANDLER_MODULE_NAME": "${moduleName}",
-  "__VC_HANDLER_ENTRYPOINT": "${entrypointWithSuffix}",
-  "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypointWithSuffix}"),
-  "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",
-  "__VC_HANDLER_VARIABLE_NAME": "${variableName}",${cronEnvLine}
-})
-
-_vendor_rel = '${vendorDir}'
-_vendor = os.path.normpath(os.path.join(_here, _vendor_rel))
-
-if os.path.isdir(_vendor):
-    # Process .pth files like a real site-packages dir
-    site.addsitedir(_vendor)
-
-    # Move _vendor to the front (after script dir if present)
-    try:
-        while _vendor in sys.path:
-            sys.path.remove(_vendor)
-    except ValueError:
-        pass
-
-    # Put vendored deps ahead of site-packages but after the script dir
-    idx = 1 if (sys.path and sys.path[0] in ('', _here)) else 0
-    sys.path.insert(idx, _vendor)
-
-    importlib.invalidate_caches()
-
-from vercel_runtime.vc_init import vc_handler
-`;
+  const runtimeTrampoline = createRuntimeTrampoline({
+    moduleName,
+    entrypoint: entrypointWithSuffix,
+    vendorDir,
+    variableName,
+    extraEnv: extraTrampolineEnv,
+  });
 
   const automaticCompileAllEnabled = shouldUseCompileAll({
     isDev: meta.isDev,
@@ -954,8 +998,6 @@ from vercel_runtime.vc_init import vc_handler
   // need our `server.py` to be called something else
   const handlerPyFilename = 'vc__handler__python';
 
-  files[`${handlerPyFilename}.py`] = new FileBlob({ data: runtimeTrampoline });
-
   // "fasthtml" framework requires a `.sesskey` file to exist,
   // otherwise it tries to create one at runtime, which fails
   // due Lambda's read-only filesystem
@@ -989,109 +1031,159 @@ from vercel_runtime.vc_init import vc_handler
     .trace(async bundleSpan => {
       // analyze() always computes source-only sizes so threshold
       // decisions are not inflated by bytecode overhead.
-      const depAnalysis = await depExternalizer.analyze(files);
-
-      bundleSpan.setAttributes({
-        'python.bundle.totalSizeBytes': String(depAnalysis.totalBundleSize),
-        'python.bundle.runtimeInstallEnabled': String(
-          depAnalysis.runtimeInstallEnabled
-        ),
+      //
+      // Record the size via the onSized callback (invoked before any
+      // size-limit enforcement that may throw) so the span is tagged even
+      // for oversized bundles that subsequently fail the build.
+      const depAnalysis = await depExternalizer.analyze(files, {
+        onSized: ({ totalSizeBytes, runtimeInstallEnabled }) => {
+          bundleSpan.setAttributes({
+            'python.bundle.totalSizeBytes': String(totalSizeBytes),
+            'python.bundle.runtimeInstallEnabled': String(
+              runtimeInstallEnabled
+            ),
+          });
+        },
       });
 
-      if (depAnalysis.runtimeInstallEnabled) {
-        // >245 MB source-only: the lambda zip is packed full with source
-        // packages via knapsack.  No room for bytecode.
-        await depExternalizer.generateBundle(files);
-      } else {
-        // ≤245 MB source-only: bundle all dependencies.
-        addFiles(files, depAnalysis.allVendorFiles);
+      // Precompile bytecode and fill remaining capacity for a fully bundled
+      // function. collectAppBytecodeFiles only collects .pyc for .py files
+      // present in the bundle, so excluded source can't re-enter as .pyc.
+      // Shared by the direct-bundle path and the generateBundle Hive fallback.
+      const runCompileAllAndFillBytecode = async () => {
+        await builderSpan
+          .child('vc.builder.python.compileall')
+          .trace(async compileSpan => {
+            const sitePackageDirs = (
+              await getVenvSitePackagesDirs(venvPath)
+            ).filter(d => fs.existsSync(d));
+            const pythonBin = getVenvPythonBin(venvPath);
 
-        // Precompile bytecode and fill remaining Lambda capacity.
-        // compileall runs on the full workPath (with an exclude regex
-        // mirroring the glob excludes) and on site-packages.
-        // collectAppBytecodeFiles only collects .pyc for .py files
-        // present in the bundle, so excluded source files cannot
-        // re-enter the Lambda as generated .pyc files.
-        if (automaticCompileAllEnabled) {
-          await builderSpan
-            .child('vc.builder.python.compileall')
-            .trace(async compileSpan => {
-              const sitePackageDirs = (
-                await getVenvSitePackagesDirs(venvPath)
-              ).filter(d => fs.existsSync(d));
-              const pythonBin = getVenvPythonBin(venvPath);
-
-              console.log('Compiling Python application bytecode...');
-              await runCompileAll({
-                pythonBin,
-                filesOrDirectories: [workPath],
-                env: pythonEnv,
-                excludeRegex: getCompileAllAppExcludeRegex(workPath),
-              });
-
-              console.log('Compiling Python dependency bytecode...');
-              await runCompileAll({
-                pythonBin,
-                filesOrDirectories: sitePackageDirs,
-                env: pythonEnv,
-              });
-
-              compileSpan.setAttributes({
-                'python.compileall.enabled': 'true',
-                'python.compileall.sitePackageDirectoryCount': String(
-                  sitePackageDirs.length
-                ),
-              });
+            console.log('Compiling Python application bytecode...');
+            await runCompileAll({
+              pythonBin,
+              filesOrDirectories: [workPath],
+              env: pythonEnv,
+              excludeRegex: getCompileAllAppExcludeRegex(workPath),
             });
 
-          // Collect bytecode and fill remaining capacity.
-          const pythonOnHiveEnabled =
-            process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
-            process.env.VERCEL_PYTHON_ON_HIVE === 'true';
-          const activeThreshold = pythonOnHiveEnabled
-            ? HIVE_LAMBDA_SIZE_BYTES
-            : LAMBDA_SIZE_THRESHOLD_BYTES;
-          const currentSize = await calculateBundleSize(files);
-          let remainingCapacity = activeThreshold - currentSize;
-
-          if (pythonVersion.major != null && pythonVersion.minor != null) {
-            const appBytecodeInfo = await collectAppBytecodeFiles({
-              workPath,
-              files,
-              pythonMajor: pythonVersion.major,
-              pythonMinor: pythonVersion.minor,
+            console.log('Compiling Python dependency bytecode...');
+            await runCompileAll({
+              pythonBin,
+              filesOrDirectories: sitePackageDirs,
+              env: pythonEnv,
             });
-            remainingCapacity = addBytecodeWithinCapacity(
-              files,
-              appBytecodeInfo,
-              remainingCapacity
-            );
-          }
 
-          const vendorBytecodeInfo = await depExternalizer.collectBytecodeFiles(
-            {
-              vendorDirName: vendorDir,
-            }
-          );
-          await addVendorBytecodeWithinCapacity({
-            files,
-            depExternalizer,
-            vendorDir,
-            bytecodeInfo: vendorBytecodeInfo,
-            capacity: remainingCapacity,
+            compileSpan.setAttributes({
+              'python.compileall.enabled': 'true',
+              'python.compileall.sitePackageDirectoryCount': String(
+                sitePackageDirs.length
+              ),
+            });
           });
+
+        // Fill remaining capacity up to the large-function size limit.
+        const currentSize = await calculateBundleSize(files);
+        let remainingCapacity =
+          MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE - currentSize;
+
+        if (pythonVersion.major != null && pythonVersion.minor != null) {
+          const appBytecodeInfo = await collectAppBytecodeFiles({
+            workPath,
+            files,
+            pythonMajor: pythonVersion.major,
+            pythonMinor: pythonVersion.minor,
+          });
+          remainingCapacity = addBytecodeWithinCapacity(
+            files,
+            appBytecodeInfo,
+            remainingCapacity
+          );
+        }
+
+        const vendorBytecodeInfo = await depExternalizer.collectBytecodeFiles({
+          vendorDirName: vendorDir,
+        });
+        await addVendorBytecodeWithinCapacity({
+          files,
+          depExternalizer,
+          vendorDir,
+          bytecodeInfo: vendorBytecodeInfo,
+          capacity: remainingCapacity,
+        });
+      };
+
+      if (depAnalysis.runtimeInstallEnabled) {
+        // Pack the zip and defer the rest to runtime install. If it can't fit
+        // Lambda, generateBundle bundles everything for Hive (which then takes
+        // compileall, below).
+        const { fellBackToFullBundle } =
+          await depExternalizer.generateBundle(files);
+        if (fellBackToFullBundle && automaticCompileAllEnabled) {
+          await runCompileAllAndFillBytecode();
+        }
+      } else {
+        // Bundle all deps directly (fits the threshold, or large functions on).
+        addFiles(files, depAnalysis.allVendorFiles);
+        if (automaticCompileAllEnabled) {
+          await runCompileAllAndFillBytecode();
         }
       }
     });
 
+  const webFiles: Files = {
+    ...files,
+    [`${handlerPyFilename}.py`]: new FileBlob({ data: runtimeTrampoline }),
+  };
+
   const output = new Lambda({
-    files,
+    files: webFiles,
     handler: `${handlerPyFilename}.vc_handler`,
     runtime: pythonVersion.runtime,
     architecture: target.architecture,
     environment: lambdaEnv,
     supportsResponseStreaming: true,
   });
+
+  const subscriberLambdas: Record<string, Lambda> = {};
+
+  for (const subscriber of subscribers) {
+    const safeName = safePathSegment(subscriber.name);
+    const outputPath = `_py_subscribers/${safeName}`;
+    const consumer = sanitizeConsumerName(outputPath);
+    const experimentalTriggers: TriggerEvent[] = subscriber.topics.map(
+      topic => ({
+        type: 'queue/v2beta',
+        topic,
+        consumer,
+        ...subscriber.triggerDefaults,
+      })
+    );
+
+    subscriberLambdas[outputPath] = new Lambda({
+      files: {
+        ...files,
+        [`${handlerPyFilename}.py`]: new FileBlob({
+          data: createRuntimeTrampoline({
+            moduleName: subscriber.moduleName,
+            entrypoint: subscriber.entrypoint,
+            vendorDir,
+            variableName: subscriber.variableName,
+          }),
+        }),
+      },
+      handler: `${handlerPyFilename}.vc_handler`,
+      runtime: pythonVersion.runtime,
+      architecture: target.architecture,
+      environment: {
+        ...lambdaEnv,
+        VERCEL_HAS_WORKER_SERVICES: '1',
+        VERCEL_SERVICE_TYPE: 'worker',
+      },
+      experimentalTriggers,
+      supportsResponseStreaming: true,
+    });
+  }
 
   // Write project manifest for diagnostics (best-effort, never fails the build).
   // Requires uv.lock to resolve versions and dependency graph.  Skipped in
@@ -1113,6 +1205,8 @@ from vercel_runtime.vc_init import vc_handler
     }
   }
 
+  // Subscribers only attach to framework apps or named services, both of which
+  // already take the V2 path below, so no early V3 return needs to consider them.
   if (!isPythonFramework(framework) && !service?.name) {
     return { resultVersion: 3, result: { output } };
   }
@@ -1136,6 +1230,7 @@ from vercel_runtime.vc_init import vc_handler
     result: {
       output: {
         [lambdaPath]: output,
+        ...subscriberLambdas,
         ...staticFiles,
       },
       ...(routes ? { routes } : {}),

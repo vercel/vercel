@@ -53,6 +53,8 @@ interface MetadataHeaderOptions {
   periodStart: string;
   periodEnd: string;
   granularity: Granularity;
+  periodUnique?: number;
+  bucketTimezone?: string;
   filter?: string;
   scope: Scope;
   projectName?: string;
@@ -73,6 +75,7 @@ export interface FormatTextOptions {
   periodStart: string;
   periodEnd: string;
   granularity: Granularity;
+  bucketTimezone?: string;
 }
 
 // Use a non-printable delimiter so group keys remain stable without colliding
@@ -104,6 +107,16 @@ function normalizeUnit(unit: string): string {
     .trim()
     .toLowerCase()
     .replace(/[_\s]+/g, ' ');
+}
+
+/**
+ * An aggregation may carry a dimension qualifier (e.g. `unique/visitor_id`),
+ * where the part before the `/` is the aggregation and the rest is the
+ * dimension it operates over.
+ */
+function isAggregationWithDimension(aggregation: Aggregation): boolean {
+  const [, dimension] = aggregation.split('/');
+  return Boolean(dimension);
 }
 
 /** Builds an internal map key from grouped dimension values. */
@@ -332,6 +345,50 @@ function buildExpectedTimestamps(
   return timestamps;
 }
 
+function buildObservedTimestamps(
+  observedTimestamps: Set<string>,
+  granularityMs: number
+): string[] {
+  const timestamps = [...observedTimestamps]
+    .map(timestamp => Date.parse(timestamp))
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b);
+
+  if (timestamps.length === 0 || granularityMs <= 0) {
+    return [];
+  }
+
+  const start = timestamps[0];
+  const end = timestamps[timestamps.length - 1] + granularityMs;
+  return buildExpectedTimestamps(
+    new Date(start).toISOString(),
+    new Date(end).toISOString(),
+    granularityMs
+  );
+}
+
+function buildSeriesTimestamps(
+  periodStart: string,
+  periodEnd: string,
+  granularityMs: number,
+  observedTimestamps: Set<string>
+): string[] {
+  const expectedTimestamps = buildExpectedTimestamps(
+    periodStart,
+    periodEnd,
+    granularityMs
+  );
+
+  if (
+    observedTimestamps.size === 0 ||
+    expectedTimestamps.some(timestamp => observedTimestamps.has(timestamp))
+  ) {
+    return expectedTimestamps;
+  }
+
+  return buildObservedTimestamps(observedTimestamps, granularityMs);
+}
+
 /**
  * Classifies a schema unit into formatting behavior:
  * - `count`: count/USD-like values (integer totals for `sum`)
@@ -436,14 +493,10 @@ export function extractGroupedSeries(
   periodEnd: string,
   granularityMs: number
 ): ExtractGroupedSeriesResult {
-  const expectedTimestamps = buildExpectedTimestamps(
-    periodStart,
-    periodEnd,
-    granularityMs
-  );
   const groups: string[] = [];
   const groupValues = new Map<string, string[]>();
   const valueByGroup = new Map<string, Map<string, number | null>>();
+  const observedTimestamps = new Set<string>();
 
   for (const row of data) {
     const values = groupBy.map(field => getGroupFieldValue(row, field));
@@ -463,9 +516,17 @@ export function extractGroupedSeries(
       continue;
     }
 
+    observedTimestamps.add(timestamp);
     const numeric = toNumericValue(row[rollupColumn]);
     groupMap.set(timestamp, numeric);
   }
+
+  const expectedTimestamps = buildSeriesTimestamps(
+    periodStart,
+    periodEnd,
+    granularityMs,
+    observedTimestamps
+  );
 
   const series = new Map<string, TimeSeriesPoint[]>();
   for (const key of groups) {
@@ -641,14 +702,33 @@ export function formatMetadataHeader(opts: MetadataHeaderOptions): string {
       value: `${opts.metric} ${opts.aggregation}`,
     },
     {
+      // Period bounds are always UTC; annotate them so the boundary is
+      // unambiguous when the Interval below reports a different
+      // --bucket-timezone.
       key: 'Period',
-      value: `${formatPeriodBound(opts.periodStart)} to ${formatPeriodBound(opts.periodEnd)}`,
+      value: `${formatPeriodBound(opts.periodStart)} to ${formatPeriodBound(opts.periodEnd)} (UTC)`,
     },
     {
+      // Period bounds are always UTC; the timezone only controls calendar
+      // bucket alignment, which is a no-op below 1d granularity. Annotate the
+      // interval (instead of a standalone Timezone row) to avoid implying the
+      // period itself is zone-local.
       key: 'Interval',
-      value: formatGranularity(opts.granularity),
+      value:
+        'days' in opts.granularity
+          ? `${formatGranularity(opts.granularity)} (${opts.bucketTimezone ?? 'UTC'})`
+          : formatGranularity(opts.granularity),
     },
   ];
+
+  // Whole-period deduplicated count from the API summary. Per-bucket uniques
+  // cannot be summed, so this is the only correct period total for `unique`.
+  if (typeof opts.periodUnique === 'number') {
+    rows.push({
+      key: 'Unique (period)',
+      value: formatCount(opts.periodUnique),
+    });
+  }
 
   if (opts.filter) {
     rows.push({ key: 'Filter', value: opts.filter });
@@ -771,15 +851,19 @@ export function formatSparklineSection(
 /**
  * Computes the display unit and measure type based on the base unit and
  * aggregation. Certain aggregations transform the output semantics:
+ * - an aggregation with a dimension (e.g. `unique/visitor_id`) → values are
+ *   distinct counts, unit is hidden
  * - `percent` → values are 0-100 percentages regardless of base unit
  * - `persecond` → values are rates in base unit per second
- * - `unique` → values are distinct counts, unit is hidden
  * - all others → values stay in the original unit
  */
 export function getEffectiveDisplay(
   baseUnit: string | undefined,
   aggregation: Aggregation
 ): { displayUnit: string | undefined; measureType: MeasureType } {
+  if (isAggregationWithDimension(aggregation)) {
+    return { displayUnit: undefined, measureType: 'count' };
+  }
   switch (aggregation) {
     case 'percent':
       return { displayUnit: '%', measureType: 'ratio' };
@@ -790,8 +874,6 @@ export function getEffectiveDisplay(
         measureType: getMeasureType(baseUnit ?? 'ratio'),
       };
     }
-    case 'unique':
-      return { displayUnit: undefined, measureType: 'count' };
     default:
       return {
         displayUnit: baseUnit,
@@ -825,12 +907,28 @@ export function formatText(
     granularityMs
   );
 
+  // Surface the whole-period deduplicated count for ungrouped unique queries.
+  // With --group-by the summary holds one row per group, which a single header
+  // line cannot represent.
+  let periodUnique: number | undefined;
+  if (
+    isAggregationWithDimension(opts.aggregation) &&
+    opts.groupBy.length === 0
+  ) {
+    const summaryValue = toNumericValue(response.summary?.[0]?.[rollupColumn]);
+    if (summaryValue !== null) {
+      periodUnique = summaryValue;
+    }
+  }
+
   const metadata = formatMetadataHeader({
     metric: opts.metric,
     aggregation: opts.aggregation,
     periodStart: opts.periodStart,
     periodEnd: opts.periodEnd,
     granularity: opts.granularity,
+    periodUnique,
+    bucketTimezone: opts.bucketTimezone,
     filter: opts.filter,
     scope: opts.scope,
     projectName: opts.projectName,

@@ -19,6 +19,7 @@ import {
   getBuilderForRuntime,
   inferRuntimeFromFramework,
   inferServiceRuntime,
+  stripTrailingSlash,
 } from './utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 
@@ -212,8 +213,10 @@ export async function resolveConfiguredServiceV2(
   config: ExperimentalServiceV2Config,
   fs: DetectorFilesystem
 ): Promise<{ service?: ExperimentalServiceV2; error?: ServiceDetectionError }> {
-  const root = config.root;
-  const normalizedRoot = posixPath.normalize(root);
+  // `posixPath.normalize` preserves trailing slashes ("frontend/" stays
+  // "frontend/"), which double-prefixes builder paths downstream. Strip it so
+  // "frontend/" and "frontend" resolve identically.
+  const normalizedRoot = stripTrailingSlash(posixPath.normalize(config.root));
 
   // Container services are resolved separately: they don't go through
   // framework/entrypoint-extension detection. Container intent is signalled by
@@ -231,7 +234,9 @@ export async function resolveConfiguredServiceV2(
   // Scope the filesystem to the service root for entrypoint/framework detection.
   // A root of "." is the project root itself, so there is nothing to chdir into.
   const serviceFsResult =
-    normalizedRoot === '.' ? { fs } : await getServiceFs(fs, name, root);
+    normalizedRoot === '.'
+      ? { fs }
+      : await getServiceFs(fs, name, normalizedRoot);
   if (serviceFsResult.error) {
     return { error: serviceFsResult.error };
   }
@@ -359,7 +364,7 @@ export async function resolveConfiguredServiceV2(
     service: {
       schema: 'experimentalServicesV2',
       name,
-      root,
+      root: normalizedRoot,
       framework,
       runtime,
       entrypoint: entrypointFile,

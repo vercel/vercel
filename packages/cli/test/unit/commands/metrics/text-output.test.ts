@@ -16,6 +16,7 @@ import {
   ellipsizeMiddle,
 } from '../../../../src/commands/metrics/text-output';
 import type {
+  Aggregation,
   MetricsQueryResponse,
   Scope,
 } from '../../../../src/commands/metrics/types';
@@ -88,12 +89,16 @@ describe('text-output', () => {
       });
     });
 
-    it('should return count display with hidden unit for unique aggregation', () => {
-      expect(getEffectiveDisplay('count', 'unique')).toEqual({
+    it('should return count display with hidden unit for an aggregation with a dimension', () => {
+      expect(
+        getEffectiveDisplay('count', 'unique/visitor_id' as Aggregation)
+      ).toEqual({
         displayUnit: undefined,
         measureType: 'count',
       });
-      expect(getEffectiveDisplay('bytes', 'unique')).toEqual({
+      expect(
+        getEffectiveDisplay('bytes', 'unique/device_id' as Aggregation)
+      ).toEqual({
         displayUnit: undefined,
         measureType: 'count',
       });
@@ -257,6 +262,26 @@ describe('text-output', () => {
       ]);
     });
 
+    it('should use observed bucket timestamps when request bounds are unrounded', () => {
+      const result = extractGroupedSeries(
+        [
+          { timestamp: '2026-02-19T10:00:00.000Z', count_sum: 10 },
+          { timestamp: '2026-02-19T10:30:00.000Z', count_sum: 30 },
+        ],
+        [],
+        'count_sum',
+        '2026-02-19T10:03:00.000Z',
+        '2026-02-19T10:58:00.000Z',
+        15 * 60 * 1000
+      );
+
+      expect(result.series.get('')!).toEqual([
+        { timestamp: '2026-02-19T10:00:00.000Z', value: 10 },
+        { timestamp: '2026-02-19T10:15:00.000Z', value: null },
+        { timestamp: '2026-02-19T10:30:00.000Z', value: 30 },
+      ]);
+    });
+
     it('should compute stats excluding null values', () => {
       const stats = computeGroupStats([
         { timestamp: '2026-02-19T10:00:00.000Z', value: 10 },
@@ -319,6 +344,7 @@ describe('text-output', () => {
         periodStart: '2026-02-19T10:00:00.000Z',
         periodEnd: '2026-02-19T10:15:00.000Z',
         granularity: { minutes: 5 },
+        bucketTimezone: 'Europe/Paris',
         filter: 'httpStatus ge 500',
         scope: projectScope,
         unit: 'milliseconds',
@@ -335,7 +361,41 @@ describe('text-output', () => {
       expect(metadata).toContain('Project:');
       expect(metadata).toContain('Units:');
       expect(metadata).toContain('Groups:');
+      // Sub-day intervals are timezone-independent, so no zone is shown.
+      expect(metadata).not.toContain('Timezone:');
+      expect(metadata).not.toContain('Europe/Paris');
       expect(metadata).toContain('2026-02-19 10:00 to 2026-02-19 10:15');
+    });
+
+    it('should annotate day intervals with the bucket alignment timezone', () => {
+      const base = {
+        metric: 'vercel.analytics_pageview.count',
+        aggregation: 'sum' as const,
+        periodStart: '2026-06-08T22:00:00.000Z',
+        periodEnd: '2026-06-09T22:00:00.000Z',
+        scope: projectScope,
+      };
+
+      const withTimezone = formatMetadataHeader({
+        ...base,
+        granularity: { days: 1 },
+        bucketTimezone: 'Europe/Paris',
+      });
+      expect(stripAnsi(withTimezone)).toContain('Interval: 1d (Europe/Paris)');
+
+      const withoutTimezone = formatMetadataHeader({
+        ...base,
+        granularity: { days: 1 },
+      });
+      expect(stripAnsi(withoutTimezone)).toContain('Interval: 1d (UTC)');
+
+      const hourly = formatMetadataHeader({
+        ...base,
+        granularity: { hours: 1 },
+        bucketTimezone: 'Europe/Paris',
+      });
+      expect(stripAnsi(hourly)).toContain('Interval: 1h');
+      expect(stripAnsi(hourly)).not.toContain('Europe/Paris');
     });
 
     it('should format grouped sparkline section', () => {
@@ -403,7 +463,7 @@ describe('text-output', () => {
 
       expect(normalized).toMatchInlineSnapshot(`
         "> Metric: vercel.request.count sum
-        > Period: 2026-02-19 10:00 to 2026-02-19 10:15
+        > Period: 2026-02-19 10:00 to 2026-02-19 10:15 (UTC)
         > Interval: 5m
         > Project: my-project (my-team)
 
@@ -650,6 +710,75 @@ describe('text-output', () => {
 
       expect(normalized).not.toContain('Units:');
       expect(normalized).not.toContain('total');
+    });
+
+    it('should read rollup values for field-qualified unique aggregations', () => {
+      const output = formatText(
+        {
+          data: [
+            {
+              timestamp: '2026-02-19T10:00:00.000Z',
+              vercel_analytics_pageview_count_unique_visitor_id: 39430,
+            },
+            {
+              timestamp: '2026-02-19T10:05:00.000Z',
+              vercel_analytics_pageview_count_unique_visitor_id: 35998,
+            },
+          ],
+          summary: [
+            { vercel_analytics_pageview_count_unique_visitor_id: 737914 },
+          ],
+          statistics: {},
+        },
+        {
+          metric: 'vercel.analytics_pageview.count',
+          metricUnit: 'count',
+          aggregation: 'unique/visitor_id' as Aggregation,
+          groupBy: [],
+          scope: projectScope,
+          periodStart: '2026-02-19T10:00:00.000Z',
+          periodEnd: '2026-02-19T10:10:00.000Z',
+          granularity: { minutes: 5 },
+        }
+      );
+
+      const normalized = stripAnsi(output);
+      // Values must resolve from the slash-flattened column instead of
+      // rendering as all-missing placeholders.
+      expect(normalized).not.toContain('--');
+      expect(normalized).toContain('35998.0');
+      expect(normalized).toContain('39430.0');
+      expect(normalized).toContain('█');
+      // The whole-period deduplicated count comes from the API summary, since
+      // per-bucket uniques cannot be summed into a period total.
+      expect(normalized).toContain('Unique (period): 737,914');
+    });
+
+    it('should not show a period unique line for non-unique aggregations', () => {
+      const output = formatText(
+        {
+          data: [
+            {
+              timestamp: '2026-02-19T10:00:00.000Z',
+              vercel_request_count_sum: 100,
+            },
+          ],
+          summary: [{ vercel_request_count_sum: 100 }],
+          statistics: {},
+        },
+        {
+          metric: 'vercel.request.count',
+          metricUnit: 'count',
+          aggregation: 'sum',
+          groupBy: [],
+          scope: projectScope,
+          periodStart: '2026-02-19T10:00:00.000Z',
+          periodEnd: '2026-02-19T10:05:00.000Z',
+          granularity: { minutes: 5 },
+        }
+      );
+
+      expect(stripAnsi(output)).not.toContain('Unique (period)');
     });
 
     it('should still show total for sum aggregation with duration measure', () => {

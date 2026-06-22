@@ -9,6 +9,7 @@ packages:
 minimumReleaseAge: 2880 # 2 days
 
 minimumReleaseAgeExclude:
+  - '@next-community/adapter-vercel'
   - '@next/*'
   - '@turbo/*'
   - '@vercel/*'

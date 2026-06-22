@@ -12,11 +12,7 @@ import {
 import { fetchMetricDetailOrExit, getDefaultAggregation } from './schema-api';
 import { formatErrorJson, formatQueryJson, handleApiError } from './output';
 import { formatText } from './text-output';
-import {
-  computeGranularity,
-  roundTimeBoundaries,
-  toGranularityMsFromDuration,
-} from './time-utils';
+import { computeGranularity } from './time-utils';
 import { resolveTimeRange } from '../../util/time-utils';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
 import type {
@@ -44,6 +40,20 @@ function handleValidationError(
     output.error(result.message);
   }
   return 1;
+}
+
+function combineFilters(filters: string[] | undefined): string | undefined {
+  const nonEmptyFilters = filters?.filter(filter => filter.length > 0) ?? [];
+
+  if (nonEmptyFilters.length === 0) {
+    return undefined;
+  }
+
+  if (nonEmptyFilters.length === 1) {
+    return nonEmptyFilters[0];
+  }
+
+  return nonEmptyFilters.map(filter => `(${filter})`).join(' and ');
 }
 
 async function resolveQueryScope(
@@ -164,10 +174,12 @@ export default async function query(
   const aggregationFlag = flags['--aggregation'];
   const groupBy = flags['--group-by'] ?? [];
   const limit = flags['--limit'];
-  const filter = flags['--filter'];
+  const filters = flags['--filter'];
+  const filter = combineFilters(filters);
   const since = flags['--since'];
   const until = flags['--until'];
   const granularity = flags['--granularity'];
+  const bucketTimezone = flags['--bucket-timezone']?.trim();
   const project = flags['--project'];
   const all = flags['--all'];
 
@@ -176,10 +188,11 @@ export default async function query(
   telemetry.trackCliOptionAggregation(aggregationFlag);
   telemetry.trackCliOptionGroupBy(groupBy.length > 0 ? groupBy : undefined);
   telemetry.trackCliOptionLimit(limit);
-  telemetry.trackCliOptionFilter(filter);
+  telemetry.trackCliOptionFilter(filters);
   telemetry.trackCliOptionSince(since);
   telemetry.trackCliOptionUntil(until);
   telemetry.trackCliOptionGranularity(granularity);
+  telemetry.trackCliOptionBucketTimezone(bucketTimezone);
   telemetry.trackCliOptionProject(project);
   telemetry.trackCliFlagAll(all);
   telemetry.trackCliOptionFormat(flags['--format']);
@@ -245,22 +258,15 @@ export default async function query(
     output.log(`Notice: ${granResult.notice}`);
   }
 
-  // Round start/end to granularity boundaries so every time bucket is complete.
-  // e.g. granularity=1h with range 14:23–16:47 rounds to 14:00–17:00.
-  const rounded = roundTimeBoundaries(
-    startTime,
-    endTime,
-    toGranularityMsFromDuration(granResult.duration)
-  );
-
   // Build request body
   const body: MetricsQueryRequest = {
     scope,
     metric,
     aggregation: aggregation as Aggregation,
-    startTime: rounded.start.toISOString(),
-    endTime: rounded.end.toISOString(),
+    startTime: startTime.toISOString(),
+    endTime: endTime.toISOString(),
     granularity: granResult.duration,
+    ...(bucketTimezone ? { bucketTimezone } : {}),
     ...(groupBy.length > 0 ? { groupBy } : {}),
     ...(filter ? { filter } : {}),
     limit: limit ?? 10,
@@ -307,9 +313,10 @@ export default async function query(
           aggregation: aggregation as Aggregation,
           groupBy,
           filter,
-          startTime: rounded.start.toISOString(),
-          endTime: rounded.end.toISOString(),
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
           granularity: granResult.duration,
+          ...(bucketTimezone ? { bucketTimezone } : {}),
         },
         response
       )
@@ -326,9 +333,10 @@ export default async function query(
         scope,
         projectName,
         teamName,
-        periodStart: rounded.start.toISOString(),
-        periodEnd: rounded.end.toISOString(),
+        periodStart: startTime.toISOString(),
+        periodEnd: endTime.toISOString(),
         granularity: granResult.duration,
+        bucketTimezone: bucketTimezone,
       })
     );
   }

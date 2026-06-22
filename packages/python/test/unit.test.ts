@@ -66,6 +66,7 @@ import { build, prepareCache } from '../src/index';
 import type { BuildResultV3, BuildResultV2 } from '@vercel/build-utils';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import {
+  UV_VERSION,
   UV_PYTHON_DOWNLOADS_MODE,
   getProtectedUvEnv,
   getUvCacheDir,
@@ -74,7 +75,12 @@ import {
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml } from '../src/install';
 import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
-import { FileBlob, Span, download } from '@vercel/build-utils';
+import {
+  FileBlob,
+  Span,
+  download,
+  sanitizeConsumerName,
+} from '@vercel/build-utils';
 import { getServiceCrons } from '../src/crons';
 import { entrypointToModule, detectPythonEntrypoint } from '../src/entrypoint';
 import execa from 'execa';
@@ -159,8 +165,12 @@ function createMockUvRunner(options?: {
   onLock?: (options: any) => void;
 }) {
   return class MockUvRunner {
+    uvPath: string;
+    constructor(uvPath = '/mock/uv') {
+      this.uvPath = uvPath;
+    }
     getPath() {
-      return '/mock/uv';
+      return this.uvPath;
     }
     async sync(syncOptions: any) {
       options?.onSync?.(syncOptions);
@@ -950,6 +960,10 @@ function makeMockPython(version: string) {
     const uvWinScript = [
       '@echo off',
       'rem mock uv binary',
+      'if "%1"=="--version" (',
+      `  echo uv ${UV_VERSION} ^(mock 2026-01-01^)`,
+      '  exit /b 0',
+      ')',
       'if "%1"=="python" if "%2"=="list" (',
       `  type "${uvPythonListFile}"`,
       '  exit /b 0',
@@ -963,6 +977,10 @@ function makeMockPython(version: string) {
     const uvPosixScript = [
       '#!/bin/sh',
       '# mock uv binary',
+      'if [ "$1" = "--version" ]; then',
+      `  echo "uv ${UV_VERSION} (mock 2026-01-01)"`,
+      '  exit 0',
+      'fi',
       'if [ "$1" = "python" ] && [ "$2" = "list" ]; then',
       `  /bin/cat "${uvPythonListFile}"`,
       '  exit 0',
@@ -1215,6 +1233,10 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
       const uvWinScript = [
         '@echo off',
         'rem mock uv binary (workspace)',
+        'if "%1"=="--version" (',
+        `  echo uv ${UV_VERSION} ^(mock 2026-01-01^)`,
+        '  exit /b 0',
+        ')',
         'if "%1"=="python" if "%2"=="list" (',
         `  type "${uvPythonListFile}"`,
         '  exit /b 0',
@@ -1227,6 +1249,10 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
       const uvPosixScript = [
         '#!/bin/sh',
         '# mock uv binary (workspace)',
+        'if [ "$1" = "--version" ]; then',
+        `  echo "uv ${UV_VERSION} (mock 2026-01-01)"`,
+        '  exit 0',
+        'fi',
         'if [ "$1" = "python" ] && [ "$2" = "list" ]; then',
         `  /bin/cat "${uvPythonListFile}"`,
         '  exit 0',
@@ -2228,6 +2254,135 @@ describe('handlerFunction validation', () => {
         repoRootPath: mockWorkPath,
       })
     ).rejects.toThrow(/Handler function "flask_app" not found in app\.py/);
+  });
+});
+
+describe('pyproject subscribers', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-subscribers-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('emits one queue/v2beta worker lambda per subscriber with all topics attached', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'worker.py': new FileBlob({
+        data: 'from celery import Celery\napp = Celery("worker")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[tool.vercel.subscribers.celery-worker]',
+          'entrypoint = "worker:app"',
+          'topics = ["celery", "emails"]',
+          'max_deliveries = 3',
+          'retry_after_seconds = 10',
+          'initial_delay_seconds = 0',
+          'max_concurrency = 5',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: false },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const output = getBuildOutputV2(result).output as any;
+    const celeryPath = '_py_subscribers/celery-worker';
+    const consumer = sanitizeConsumerName(celeryPath);
+
+    expect(output.index).toBeDefined();
+    expect(output[celeryPath]).toBeDefined();
+    expect(output['_py_subscribers/celery-worker/celery']).toBeUndefined();
+    expect(output['_py_subscribers/celery-worker/emails']).toBeUndefined();
+    expect(output.index.environment.VERCEL_HAS_WORKER_SERVICES).toBe('1');
+
+    const celery = output[celeryPath];
+    expect(celery.handler).toBe('vc__handler__python.vc_handler');
+    expect(celery.environment.VERCEL_SERVICE_TYPE).toBe('worker');
+    expect(celery.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: 'celery',
+        consumer,
+        maxDeliveries: 3,
+        retryAfterSeconds: 10,
+        initialDelaySeconds: 0,
+        maxConcurrency: 5,
+      },
+      {
+        type: 'queue/v2beta',
+        topic: 'emails',
+        consumer,
+        maxDeliveries: 3,
+        retryAfterSeconds: 10,
+        initialDelaySeconds: 0,
+        maxConcurrency: 5,
+      },
+    ]);
+
+    const handler = celery.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('subscriber handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      '"__VC_HANDLER_VARIABLE_NAME": "app"'
+    );
+  });
+
+  it('rejects consumer because subscriber consumers are derived from function paths', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'worker.py': new FileBlob({
+        data: 'app = object()\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[tool.vercel.subscribers.worker]',
+          'entrypoint = "worker:app"',
+          'topics = ["jobs"]',
+          'consumer = "custom"',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'app.py',
+        meta: { isDev: false },
+        config: { framework: 'flask' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/unrecognized field "consumer"/);
   });
 });
 
@@ -3705,6 +3860,7 @@ describe('worker services dependency installation', () => {
           pipCalls.push(options.args);
         }
       },
+      checkUvBinaryVersion: () => `uv ${UV_VERSION} (mock)`,
     }));
 
     // Worker dependency installation happens before dependency externalization.

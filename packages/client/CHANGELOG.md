@@ -1,5 +1,11 @@
 # @vercel/client
 
+## 17.5.16
+
+### Patch Changes
+
+- fd26487: Remove deprecated `public` from deployment test fixtures and helpers, and stop the CLI from sending the removed `public` field on deploy (including the `--public` flag).
+
 ## 17.5.15
 
 ### Patch Changes

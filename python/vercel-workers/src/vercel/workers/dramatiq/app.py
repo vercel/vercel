@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import math
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 from typing import Any
@@ -46,18 +45,12 @@ class DramatiqWorkerConfig:
     """
     Runtime config used by the callback route.
 
-    This controls how we receive/lock and retry messages.
+    This controls how we receive/lock messages.
     """
 
     visibility_timeout_seconds: int = 30
     visibility_refresh_interval_seconds: float = 10.0
     timeout: float | None = 10.0
-
-    # Retry policy for task exceptions.
-    max_retries: int = 3
-    retry_backoff_base_ms: int = 5000
-    retry_backoff_factor: float = 2.0
-    max_retry_delay_ms: int = 60 * 60 * 1000  # 1 hour
 
     @classmethod
     def from_broker_options(cls, broker: VercelQueuesBroker) -> DramatiqWorkerConfig:
@@ -116,24 +109,6 @@ def get_asgi_app(broker: VercelQueuesBroker) -> ASGI:
         on_startup=_on_startup,
         on_shutdown=_on_shutdown,
     )
-
-
-def _retry_delay_ms(cfg: DramatiqWorkerConfig, attempt: int) -> int:
-    """
-    Compute retry delay with exponential backoff.
-
-    attempt is 1-based.
-    """
-    delay: float
-    base = float(cfg.retry_backoff_base_ms)
-    factor = float(cfg.retry_backoff_factor)
-    if attempt <= 1:
-        delay = base
-    else:
-        delay = base * math.pow(factor, attempt - 1)
-    if not math.isfinite(delay):
-        delay = float(cfg.max_retry_delay_ms)
-    return int(max(0, min(float(cfg.max_retry_delay_ms), delay)))
 
 
 def handle_queue_callback(
@@ -198,145 +173,49 @@ def handle_queue_callback(
         # Parse the envelope and convert to Dramatiq message
         dramatiq_message = _envelope_to_message(payload)
 
-        try:
-            # Execute the task
-            outcome = _execute_message(broker, dramatiq_message)
-            timeout_seconds = outcome.get("timeoutSeconds")
+        # Dramatiq's Retries middleware (default for brokers) re-enqueues retries as
+        # separate delayed messages and marks the current one failed via message.fail(),
+        # so in the normal case the original message is acked and then deleted here
+        # and Vercel Queues does not redeliver it.
+        # If there's no Retries middleware, then it will raise exception and re-deliver
+        # because of 500
+        outcome = _execute_message(broker, dramatiq_message)
+        status = outcome["status"]
 
-            if timeout_seconds is not None:
-                if receipt_handle:
-                    _finalize_visibility(
-                        extender,
-                        lambda: queue_callback.change_visibility(
-                            queue_name,
-                            consumer_group,
-                            message_id,
-                            receipt_handle,
-                            int(timeout_seconds),
-                            timeout=cfg.timeout,
-                        ),
-                    )
-                body = json.dumps(
-                    {
-                        "ok": True,
-                        "delayed": True,
-                        "timeoutSeconds": int(timeout_seconds),
-                        "queue": queue_name,
-                        "consumer": consumer_group,
-                        "messageId": message_id,
-                        "deliveryCount": delivery_count,
-                        "createdAt": created_at,
-                    }
-                ).encode("utf-8")
-                return (
-                    200,
-                    [("Content-Type", "application/json"), ("Content-Length", str(len(body)))],
-                    body,
-                )
-
-            # Success: ack (delete) the message
-            if receipt_handle:
-                _finalize_visibility(
-                    extender,
-                    lambda: queue_callback.delete_message(
-                        queue_name,
-                        consumer_group,
-                        message_id,
-                        receipt_handle,
-                        timeout=cfg.timeout,
-                    ),
-                )
-
-            body = json.dumps(
-                {
-                    "ok": True,
-                    "queue": queue_name,
-                    "consumer": consumer_group,
-                    "messageId": message_id,
-                    "deliveryCount": delivery_count,
-                    "createdAt": created_at,
-                }
-            ).encode("utf-8")
-            return (
-                200,
-                [("Content-Type", "application/json"), ("Content-Length", str(len(body)))],
-                body,
+        if receipt_handle:
+            _finalize_visibility(
+                extender,
+                lambda: queue_callback.delete_message(
+                    queue_name,
+                    consumer_group,
+                    message_id,
+                    receipt_handle,
+                    timeout=cfg.timeout,
+                ),
             )
 
-        except KeyboardInterrupt:
-            raise
-        except Exception as exc:
-            # Handle task execution error with retry logic
-            attempt = delivery_count
+        body_payload: dict[str, Any] = {
+            "ok": status != "failed",
+            "status": status,
+            "queue": queue_name,
+            "consumer": consumer_group,
+            "messageId": message_id,
+            "deliveryCount": delivery_count,
+            "createdAt": created_at,
+        }
+        if status == "retried":
+            body_payload["retries"] = outcome.get("retries")
+        elif status == "failed":
+            exc = outcome.get("exception")
+            body_payload["error"] = str(exc)
+            body_payload["errorType"] = type(exc).__name__
 
-            if attempt < int(cfg.max_retries):
-                delay_ms = _retry_delay_ms(cfg, attempt)
-                delay_seconds = int(delay_ms / 1000)
-
-                if receipt_handle:
-                    _finalize_visibility(
-                        extender,
-                        lambda: queue_callback.change_visibility(
-                            queue_name,
-                            consumer_group,
-                            message_id,
-                            receipt_handle,
-                            int(delay_seconds),
-                            timeout=cfg.timeout,
-                        ),
-                    )
-
-                body = json.dumps(
-                    {
-                        "ok": True,
-                        "delayed": True,
-                        "timeoutSeconds": delay_seconds,
-                        "queue": queue_name,
-                        "consumer": consumer_group,
-                        "messageId": message_id,
-                        "deliveryCount": delivery_count,
-                        "createdAt": created_at,
-                        "error": str(exc),
-                        "errorType": type(exc).__name__,
-                    }
-                ).encode("utf-8")
-                return (
-                    200,
-                    [("Content-Type", "application/json"), ("Content-Length", str(len(body)))],
-                    body,
-                )
-
-            # Terminal failure: ack (delete) to prevent infinite retries
-            if receipt_handle:
-                _finalize_visibility(
-                    extender,
-                    lambda: queue_callback.delete_message(
-                        queue_name,
-                        consumer_group,
-                        message_id,
-                        receipt_handle,
-                        timeout=cfg.timeout,
-                    ),
-                )
-
-            body = json.dumps(
-                {
-                    "ok": False,
-                    "failed": True,
-                    "queue": queue_name,
-                    "consumer": consumer_group,
-                    "messageId": message_id,
-                    "deliveryCount": delivery_count,
-                    "createdAt": created_at,
-                    "error": str(exc),
-                    "errorType": type(exc).__name__,
-                }
-            ).encode("utf-8")
-            return (
-                200,
-                [("Content-Type", "application/json"), ("Content-Length", str(len(body)))],
-                body,
-            )
+        body = json.dumps(body_payload).encode("utf-8")
+        return (
+            200,
+            [("Content-Type", "application/json"), ("Content-Length", str(len(body)))],
+            body,
+        )
 
     except ValueError as exc:
         err = json.dumps(

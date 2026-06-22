@@ -333,10 +333,12 @@ class VercelQueuesBroker(Broker):
 
         envelope = _message_to_envelope(message, queue_name, encoder=self.encoder)
 
-        # Use message_id for idempotency by default
-        idempotency_key = (
-            message.message_id if self._cfg.use_message_id_as_idempotency_key else None
-        )
+        # Use message_id for idempotency by default, but for retries reuse the
+        # same message_id + retries, so the message would be considered new
+        idempotency_key = None
+        if self._cfg.use_message_id_as_idempotency_key:
+            retries = message.options.get("retries", 0)
+            idempotency_key = f"{message.message_id}:{retries}"
 
         # Compute send-time delay from the delay parameter (milliseconds).
         delay_duration = int(delay / 1000) if delay and delay > 0 else None

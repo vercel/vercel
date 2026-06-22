@@ -1,5 +1,11 @@
 # @vercel/router-sdk
 
+## 0.5.3
+
+### Patch Changes
+
+- fd26487: Remove deprecated `public` from deployment test fixtures and helpers, and stop the CLI from sending the removed `public` field on deploy (including the `--public` flag).
+
 ## 0.5.2
 
 ### Patch Changes

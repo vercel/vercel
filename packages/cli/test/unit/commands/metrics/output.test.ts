@@ -21,6 +21,15 @@ describe('output', () => {
         getRollupColumnName('vercel.request.route_cpu_duration_ms', 'p95')
       ).toBe('vercel_request_route_cpu_duration_ms_p95');
     });
+
+    it('should flatten field-qualified aggregations', () => {
+      expect(
+        getRollupColumnName(
+          'vercel.analytics_pageview.count',
+          'unique/visitor_id'
+        )
+      ).toBe('vercel_analytics_pageview_count_unique_visitor_id');
+    });
   });
 
   describe('formatQueryJson', () => {

@@ -1,4 +1,5 @@
-import { spawn } from 'child_process';
+import { spawn, type ChildProcess } from 'child_process';
+import { createConnection } from 'net';
 import { dirname, join } from 'path';
 import { pathExists } from 'fs-extra';
 import {
@@ -179,12 +180,132 @@ export async function buildStandaloneServer({
   return { output: lambda };
 }
 
+// First startup may compile the user's module and download dependencies.
+const DEV_SERVER_STARTUP_TIMEOUT = 5 * 60_000; // 5 minutes
+
+// Persistent dev servers keyed by workPath + entrypoint, reused across
+// requests in `vercel dev` so each request doesn't pay a `go run` compile.
+const PERSISTENT_SERVERS = new Map<
+  string,
+  { port: number; pid: number; child: ChildProcess }
+>();
+
+// Track pending start operations to avoid races spawning multiple servers
+const PENDING_STARTS = new Map<
+  string,
+  Promise<{ port: number; pid: number }>
+>();
+
+let cleanupHandlersInstalled = false;
+
+function killStandaloneDevServer(pid: number) {
+  // The wrapper is spawned detached (its own process group) so that the
+  // whole `go run` tree — wrapper, `go run`, and the user's compiled
+  // server — can be killed with a single process-group signal.
+  try {
+    if (process.platform === 'win32') {
+      process.kill(pid, 'SIGTERM');
+    } else {
+      process.kill(-pid, 'SIGTERM');
+    }
+  } catch (err: any) {
+    debug(`Error killing standalone Go dev server ${pid}: ${err}`);
+  }
+}
+
+function installGlobalCleanupHandlers() {
+  if (cleanupHandlersInstalled) return;
+  cleanupHandlersInstalled = true;
+
+  const killAll = () => {
+    for (const [key, info] of PERSISTENT_SERVERS.entries()) {
+      killStandaloneDevServer(info.pid);
+      PERSISTENT_SERVERS.delete(key);
+    }
+  };
+
+  // Do not exit on signals, so other interruption handlers
+  // can perform their cleanup routine.
+  process.on('SIGINT', () => {
+    killAll();
+  });
+  process.on('SIGTERM', () => {
+    killAll();
+  });
+  process.on('exit', () => {
+    killAll();
+  });
+}
+
+function isPortReachable(port: number): Promise<boolean> {
+  return new Promise<boolean>(resolve => {
+    const socket = createConnection({ port, host: '127.0.0.1' });
+    const done = (result: boolean) => {
+      socket.removeAllListeners();
+      socket.destroy();
+      resolve(result);
+    };
+    socket.setTimeout(1000);
+    socket.once('connect', () => done(true));
+    socket.once('timeout', () => done(false));
+    socket.once('error', () => done(false));
+  });
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function waitForPort(
+  port: number,
+  child: ChildProcess,
+  timeout: number
+): Promise<void> {
+  let exited: { code: number | null; signal: string | null } | null = null;
+  let spawnError: Error | null = null;
+  const onExit = (code: number | null, signal: string | null) => {
+    exited = { code, signal };
+  };
+  const onError = (err: Error) => {
+    spawnError = err;
+  };
+  child.once('exit', onExit);
+  child.once('error', onError);
+  try {
+    const start = Date.now();
+    while (Date.now() - start < timeout) {
+      if (spawnError) {
+        throw spawnError;
+      }
+      if (exited) {
+        const { code, signal } = exited;
+        throw new Error(
+          `Standalone Go dev server exited before startup completed (code: ${code}, signal: ${signal})`
+        );
+      }
+      if (await isPortReachable(port)) {
+        return;
+      }
+      await sleep(100);
+    }
+    throw new Error(
+      `Standalone Go dev server did not start within ${timeout}ms`
+    );
+  } finally {
+    child.removeListener('exit', onExit);
+    child.removeListener('error', onError);
+  }
+}
+
 /**
  * Start a dev server for standalone Go server mode.
  * This runs a small Go dev wrapper (`vc-init-dev.go`) that:
  * - starts the user server on an internal port
  * - strips generated service route prefixes when configured
  * - proxies traffic on the externally assigned dev port
+ *
+ * The server is started once and reused across requests; the returned
+ * `shutdown` is a no-op so the CLI doesn't kill it after each response.
  */
 export async function startStandaloneDevServer(
   opts: StartDevServerOptions,
@@ -192,77 +313,109 @@ export async function startStandaloneDevServer(
 ): Promise<StartDevServerResult> {
   const { workPath, meta = {} } = opts;
 
-  // Use a random port in the ephemeral range
-  const port = Math.floor(Math.random() * (65535 - 49152) + 49152);
-
-  const env = cloneEnv(process.env, meta.env, {
-    PORT: String(port),
-  });
-
-  // Determine run target based on entrypoint location
-  // - main.go at root: go run .
-  // - cmd/api/main.go: go run ./cmd/api
-  const runTarget =
-    resolvedEntrypoint === 'main.go' ? '.' : './' + dirname(resolvedEntrypoint);
-
-  const devWrapper = join(__dirname, '../bootstrap/vc-init-dev.go');
-  const devUtils = join(__dirname, '../bootstrap/utils.go');
-
-  debug(
-    `Starting standalone Go dev server wrapper: go run ${devWrapper} (target ${runTarget}, port ${port})`
-  );
-
-  const child = spawn('go', ['run', '-tags', 'vcdev', devWrapper, devUtils], {
-    cwd: workPath,
-    env: {
-      ...env,
-      __VC_GO_DEV_RUN_TARGET: runTarget,
-    },
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  child.stdout?.on('data', data => {
-    const chunk = Buffer.isBuffer(data) ? data : Buffer.from(data);
-    if (opts.onStdout) {
-      opts.onStdout(chunk);
-    } else {
-      process.stdout.write(chunk.toString());
-    }
-  });
-  child.stderr?.on('data', data => {
-    const chunk = Buffer.isBuffer(data) ? data : Buffer.from(data);
-    if (opts.onStderr) {
-      opts.onStderr(chunk);
-    } else {
-      process.stderr.write(chunk.toString());
-    }
-  });
-
-  // Give the wrapper a short startup window and fail fast if it exits early.
-  await new Promise<void>((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      cleanup();
-      resolve();
-    }, 2000);
-
-    const onExit = (code: number | null, signal: string | null) => {
-      cleanup();
-      reject(
-        new Error(
-          `Standalone Go dev server exited before startup completed (code: ${code}, signal: ${signal})`
-        )
-      );
+  const serverKey = `${workPath}::${resolvedEntrypoint}`;
+  const existing = PERSISTENT_SERVERS.get(serverKey);
+  if (existing) {
+    return {
+      port: existing.port,
+      pid: existing.pid,
+      shutdown: async () => {
+        // no-op so CLI does not kill persistent server per request
+      },
     };
+  }
 
-    const cleanup = () => {
-      clearTimeout(timeout);
-      child.removeListener('exit', onExit);
-    };
+  const pending = PENDING_STARTS.get(serverKey);
+  if (pending) {
+    const { port, pid } = await pending;
+    return { port, pid, shutdown: async () => {} };
+  }
 
-    child.once('exit', onExit);
-  });
+  const startPromise = (async () => {
+    // Use a random port in the ephemeral range
+    const port = Math.floor(Math.random() * (65535 - 49152) + 49152);
 
-  return {
-    port,
-    pid: child.pid!,
-  };
+    const env = cloneEnv(process.env, meta.env, {
+      PORT: String(port),
+    });
+
+    const entrypointDir = dirname(join(workPath, resolvedEntrypoint));
+    const { goModPath } = await findGoModPath(entrypointDir, workPath);
+    const modulePath = goModPath ? dirname(goModPath) : workPath;
+    const go = await createGo({
+      modulePath,
+      opts: { cwd: workPath, env },
+      workPath,
+    });
+
+    // Determine run target based on entrypoint location
+    // - main.go at root: go run .
+    // - cmd/api/main.go: go run ./cmd/api
+    const runTarget =
+      resolvedEntrypoint === 'main.go'
+        ? '.'
+        : './' + dirname(resolvedEntrypoint);
+
+    const devWrapper = join(__dirname, '../bootstrap/vc-init-dev.go');
+    const devUtils = join(__dirname, '../bootstrap/utils.go');
+
+    debug(
+      `Starting standalone Go dev server wrapper: go run ${devWrapper} (target ${runTarget}, port ${port})`
+    );
+
+    const child = spawn('go', ['run', '-tags', 'vcdev', devWrapper, devUtils], {
+      cwd: workPath,
+      env: {
+        ...go.getEnv(),
+        __VC_GO_DEV_RUN_TARGET: runTarget,
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+      detached: process.platform !== 'win32',
+    });
+    child.stdout?.on('data', data => {
+      const chunk = Buffer.isBuffer(data) ? data : Buffer.from(data);
+      if (opts.onStdout) {
+        opts.onStdout(chunk);
+      } else {
+        process.stdout.write(chunk.toString());
+      }
+    });
+    child.stderr?.on('data', data => {
+      const chunk = Buffer.isBuffer(data) ? data : Buffer.from(data);
+      if (opts.onStderr) {
+        opts.onStderr(chunk);
+      } else {
+        process.stderr.write(chunk.toString());
+      }
+    });
+
+    const pid = child.pid;
+    try {
+      await waitForPort(port, child, DEV_SERVER_STARTUP_TIMEOUT);
+    } catch (err) {
+      if (pid) {
+        killStandaloneDevServer(pid);
+      }
+      throw err;
+    }
+    if (!pid) {
+      throw new Error('Standalone Go dev server started without a PID');
+    }
+
+    PERSISTENT_SERVERS.set(serverKey, { port, pid, child });
+    child.once('exit', () => {
+      PERSISTENT_SERVERS.delete(serverKey);
+    });
+    installGlobalCleanupHandlers();
+
+    return { port, pid };
+  })();
+
+  PENDING_STARTS.set(serverKey, startPromise);
+  try {
+    const { port, pid } = await startPromise;
+    return { port, pid, shutdown: async () => {} };
+  } finally {
+    PENDING_STARTS.delete(serverKey);
+  }
 }

@@ -232,6 +232,50 @@ describe('detectServices (experimentalServicesV2)', () => {
     expect(api.builder.src).toBe('index.js');
   });
 
+  it('strips a trailing slash from a framework service root', async () => {
+    const fs = new VirtualFilesystem({
+      'vercel.json': vercelJson({
+        experimentalServicesV2: {
+          frontend: { root: 'frontend/', framework: 'nextjs' },
+        },
+      }),
+      'frontend/package.json': JSON.stringify({
+        dependencies: { next: 'latest' },
+      }),
+    });
+
+    const result = await detectServices({ fs });
+
+    expect(result.errors).toEqual([]);
+    const [frontend] = servicesV2(result.services);
+    // Trailing slash is normalized away so it isn't double-prefixed downstream.
+    expect(frontend.root).toBe('frontend');
+    expect(frontend.builder.use).toBe('@vercel/next');
+    expect(frontend.builder.src).toBe('frontend/package.json');
+    expect(frontend.builder.config).toMatchObject({ workspace: 'frontend' });
+  });
+
+  it('strips a trailing slash from an entrypoint service root', async () => {
+    const fs = new VirtualFilesystem({
+      'vercel.json': vercelJson({
+        experimentalServicesV2: {
+          backend: { root: 'backend/', entrypoint: 'cmd/api/main.go' },
+        },
+      }),
+      'backend/cmd/api/main.go': 'package main',
+      'backend/go.mod': 'module backend',
+    });
+
+    const result = await detectServices({ fs });
+
+    expect(result.errors).toEqual([]);
+    const [backend] = servicesV2(result.services);
+    expect(backend.root).toBe('backend');
+    expect(backend.builder.use).toBe('@vercel/go');
+    // Root prefix applied exactly once.
+    expect(backend.builder.src).toBe('backend/cmd/api/main.go');
+  });
+
   it('resolves multiple services independently', async () => {
     const fs = new VirtualFilesystem({
       'vercel.json': vercelJson({

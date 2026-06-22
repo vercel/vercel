@@ -18,7 +18,7 @@
       "require": "./dist/opensearch.js"
     }
   },
-  "version": "0.2.3",
+  "version": "0.2.4",
   "repository": {
     "directory": "packages/aws",
     "type": "git",

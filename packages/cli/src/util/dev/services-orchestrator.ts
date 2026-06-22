@@ -40,6 +40,7 @@ import { importBuilders } from '../build/import-builders';
 import { getStaticServiceSchedules } from '../service-schedules';
 import output from '../../output-manager';
 import { treeKill } from '../tree-kill';
+import { injectNextDevWebSocketShimIfNeeded } from './next-dev-websocket-shim-injection';
 
 const STARTUP_TIMEOUT = ms('5m');
 
@@ -576,6 +577,7 @@ export class ServicesOrchestrator {
     return this.spawnDevCommandProcess({
       name: service.name,
       devCommand,
+      framework: spec.framework,
       workspacePath: spec.rootPath,
       env: spec.env,
       logger,
@@ -733,6 +735,12 @@ export class ServicesOrchestrator {
         `Starting ${chalk.bold(name)} using ${chalk.cyan.bold(spec.builderSpec)}`
       );
 
+      injectNextDevWebSocketShimIfNeeded(
+        spec.env,
+        spec.framework?.settings.devCommand?.value || '',
+        { framework: spec.framework?.slug }
+      );
+
       const result = await builder.startDevServer({
         entrypoint: spec.entrypoint,
         workPath: spec.rootPath,
@@ -786,6 +794,7 @@ export class ServicesOrchestrator {
   private async spawnDevCommandProcess(params: {
     name: string;
     devCommand: string;
+    framework: Framework | undefined;
     workspacePath: string;
     env: NodeJS.ProcessEnv;
     logger: ServiceLogger;
@@ -796,6 +805,7 @@ export class ServicesOrchestrator {
     const {
       name,
       devCommand,
+      framework,
       workspacePath,
       env,
       logger,
@@ -825,6 +835,10 @@ export class ServicesOrchestrator {
     if (process.stdout.columns) {
       env.COLUMNS = `${process.stdout.columns}`;
     }
+
+    injectNextDevWebSocketShimIfNeeded(env, devCommand, {
+      framework: framework?.slug,
+    });
 
     const child = spawnCommand(devCommand, {
       cwd: workspacePath,
