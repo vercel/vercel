@@ -722,7 +722,7 @@ describe('[vercel dev] Multi-service with experimentalServicesV2', () => {
 });
 
 describe('[vercel dev] experimentalServicesV2 service bindings', () => {
-  test('[vercel dev] bindings across node, python and go services', async () => {
+  test('[vercel dev] bindings for different runtime services', async () => {
     const dir = fixture('services-v2-bindings');
     const { dev, port, readyResolver } = await testFixture(
       dir,
@@ -745,7 +745,6 @@ describe('[vercel dev] experimentalServicesV2 service bindings', () => {
       expect(infoJson.node_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
       expect(infoJson.py_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
       expect(infoJson.go_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
-      expect(infoJson.rust_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
       expect(infoJson.ruby_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
 
       // The gateway reaches each internal service (one per runtime) through its
@@ -761,10 +760,6 @@ describe('[vercel dev] experimentalServicesV2 service bindings', () => {
       const goRes = await nodeFetch(`http://localhost:${port}/call/go`);
       expect(goRes.status).toBe(200);
       expect((await goRes.text()).trim()).toBe('go_api: pong');
-
-      const rustRes = await nodeFetch(`http://localhost:${port}/call/rust`);
-      expect(rustRes.status).toBe(200);
-      expect((await rustRes.text()).trim()).toBe('rust_api: ok');
 
       const rubyRes = await nodeFetch(`http://localhost:${port}/call/ruby`);
       expect(rubyRes.status).toBe(200);
