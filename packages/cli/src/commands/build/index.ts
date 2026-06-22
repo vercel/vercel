@@ -338,8 +338,7 @@ export default async function main(client: Client): Promise<number> {
     }
   }
 
-  // The directory the build was invoked from, before any repo-root
-  // re-anchoring below. Used to resolve a per-directory link's true location.
+  // `cwd` before any repo-root re-anchoring below.
   const invokedCwd = cwd;
   const hasRepoLevelLink = Boolean(link?.repoRoot);
   let projectRootDirectory = link?.projectRootDirectory ?? '';
@@ -432,19 +431,11 @@ export default async function main(client: Client): Promise<number> {
     project = await readProjectSettings(vercelDir);
   }
 
-  // Per-directory link (`<dir>/.vercel/project.json`) resolution. A repo-level
-  // (`repo.json`) link already reported its `repoRoot` and offset above; a
-  // per-directory link does not, so the build would otherwise treat the linked
-  // subdirectory as the repository root.
-  //
-  // Resolve the link against the true repository root so it behaves like a
-  // repo-level link: re-anchor `cwd` to the detected root and express the
-  // project as its path relative to that root. The link's physical location is
-  // authoritative — a redundant or mismatched `rootDirectory` setting is
-  // absorbed rather than applied (which previously produced broken paths like
-  // `apps/api/apps/api`). The `rootDirectory` setting lives in the project
-  // settings (just read above), not on the link, so this runs here.
-  // Gated behind an opt-in env var while it bakes.
+  // A per-directory link (`<dir>/.vercel/project.json`) doesn't report a
+  // `repoRoot` like a repo-level (`repo.json`) link does, so the build would
+  // treat the linked subdirectory as the repo root. Re-anchor it to the
+  // detected root and express the project relative to that root, so it behaves
+  // like a repo-level link regardless of where the command was run.
   if (
     !hasRepoLevelLink &&
     link &&
@@ -459,14 +450,7 @@ export default async function main(client: Client): Promise<number> {
       output.warn(resolved.advisory);
     }
     if (resolved.resolvedRootDirectory !== '') {
-      output.debug(
-        `Resolved per-directory link: repoRoot=${resolved.repoRoot}, ` +
-          `rootDirectory=${resolved.resolvedRootDirectory} (was cwd=${invokedCwd})`
-      );
       projectRootDirectory = resolved.resolvedRootDirectory;
-      // Normalize the setting to the resolved value so the downstream
-      // `workPath` derivation (`cwd + settings.rootDirectory`) lands at the
-      // project, consistent with how a repo-level link behaves.
       project.settings.rootDirectory = resolved.resolvedRootDirectory;
       cwd = client.cwd = resolved.repoRoot;
     }

@@ -3,32 +3,9 @@ import { dirname, join, parse, relative } from 'node:path';
 import { getGitRootDirectory } from '../git-helpers';
 
 /**
- * Resolves the root of the repository/monorepo that contains `cwd`.
- *
- * When `vc build` is invoked from a monorepo subdirectory, dependencies are
- * frequently hoisted to the repository root above it (e.g. pnpm's
- * `<root>/node_modules/.pnpm/...`). Builders need to trace files relative to
- * that true root rather than the subdirectory, otherwise:
- *
- *   * Next.js sets `outputFileTracingRoot` / `turbopack.root` to the
- *     subdirectory, so Turbopack errors outright and Webpack `.nft.json`
- *     traces omit hoisted dependencies (runtime `Cannot find module`), and
- *   * `--standalone` emits function file keys that climb out of the function
- *     (`../../node_modules/...`), breaking both zipping and runtime
- *     resolution.
- *
- * Detection walks up from `cwd` and prefers, in order:
- *
- *  1. A workspace marker that defines a monorepo (pnpm-workspace.yaml, a
- *     `package.json` with a `workspaces` field, lerna.json, or rush.json).
- *     This is the most reliable signal and, crucially, does not depend on a
- *     `.git` directory being present — many CI / prebuilt flows build from a
- *     shallow copy or an extracted artifact with no git metadata.
- *  2. The Git repository root (`git rev-parse --show-toplevel`), as a fallback
- *     when no workspace marker is found but the project is in a git checkout.
- *  3. `cwd` itself, when nothing else can be determined.
- *
- * The returned path is always an ancestor of (or equal to) `cwd`.
+ * Resolves the repository root containing `cwd`, preferring a workspace marker
+ * (which doesn't need `.git`, unlike CI/prebuilt flows), then the git root,
+ * then `cwd`. The result is always an ancestor of (or equal to) `cwd`.
  */
 export function resolveRepoRoot({ cwd }: { cwd: string }): string {
   const workspaceRoot = findWorkspaceRoot(cwd);
@@ -45,20 +22,16 @@ export function resolveRepoRoot({ cwd }: { cwd: string }): string {
 }
 
 /**
- * Walks up the directory tree from `startDir` looking for the highest-level
- * workspace marker. Returns the workspace root, or `null` when none is found.
- *
- * We return the *highest* matching ancestor so that nested setups (an app
- * inside a package inside a monorepo) resolve to the outermost workspace,
- * which is where dependencies are ultimately hoisted.
+ * Walks up from `startDir` and returns the *highest* ancestor with a workspace
+ * marker (so nested workspaces resolve to the outermost root, where deps are
+ * hoisted), or `null` if none.
  */
 export function findWorkspaceRoot(startDir: string): string | null {
   const { root } = parse(startDir);
   let dir = startDir;
   let highestMatch: string | null = null;
 
-  // Bound the traversal to avoid pathological loops; a monorepo is never
-  // hundreds of directories deep.
+  // Bound the traversal to avoid pathological loops.
   for (let i = 0; i < 64; i++) {
     if (isWorkspaceRoot(dir)) {
       highestMatch = dir;
@@ -107,46 +80,22 @@ function isWorkspaceRoot(dir: string): boolean {
   return false;
 }
 
-/**
- * Result of resolving a per-directory link (`apps/api/.vercel/project.json`)
- * against the detected repository root.
- */
 export interface PerDirectoryLinkRoot {
-  /** The detected repository root (an ancestor of, or equal to, `anchorDir`). */
+  /** Detected repository root (ancestor of, or equal to, `anchorDir`). */
   repoRoot: string;
-  /**
-   * The project's root directory relative to `repoRoot` (the "resolved root
-   * directory"). Empty string when the link is at the repo root.
-   */
+  /** Project root directory relative to `repoRoot`; empty when at the root. */
   resolvedRootDirectory: string;
-  /**
-   * Set when the link's `rootDirectory` setting disagrees with the link's
-   * physical location. The setting is ignored (the location wins); this
-   * message explains what happened so the user can clean up their config.
-   */
+  /** Set when `rootDirectory` disagreed with the link's location and was ignored. */
   advisory?: string;
 }
 
 /**
- * Resolves a per-directory link to its canonical `(repoRoot,
- * resolvedRootDirectory)` against the detected repository root.
- *
- * A per-directory link (`<dir>/.vercel/project.json`) is anchored by its
- * physical location: the project lives at `anchorDir`, full stop. The repo
- * root is detected independently by walking up from `anchorDir`. The project's
- * root directory relative to that root is therefore always `relative(repoRoot,
- * anchorDir)` — the link's own location expressed against the root.
- *
- * The link's stored `rootDirectory` is treated as advisory only. It commonly
- * (and harmlessly) restates the link's location (e.g. a link at `apps/api`
- * with `rootDirectory: "apps/api"`); such redundancy is absorbed silently.
- * Any other non-empty value disagrees with the physical location and is
- * ignored — the location always wins — with an advisory returned so the caller
- * can surface it. The build is never moved to a location other than where the
- * link physically sits.
- *
- * @param anchorDir absolute path to the directory containing `.vercel`
- * @param rootDirectorySetting the project's `rootDirectory` setting, if any
+ * Resolves a per-directory link (`<dir>/.vercel/project.json`) against the repo
+ * root. The link's physical location is authoritative: the project always
+ * lives at `anchorDir`, so its root directory is `relative(repoRoot,
+ * anchorDir)`. A stored `rootDirectory` is advisory — a redundant restatement
+ * of the location is absorbed silently; any other value is ignored (location
+ * wins) and surfaced via `advisory`.
  */
 export function resolvePerDirectoryLinkRoot(
   anchorDir: string,
@@ -157,20 +106,18 @@ export function resolvePerDirectoryLinkRoot(
     relative(repoRoot, anchorDir)
   );
 
-  // The link is at (or above) the detected root, or no distinct root was
-  // found: nothing to resolve, the setting keeps its normal meaning.
+  // Link at (or above) the root: nothing to resolve.
   if (resolvedRootDirectory === '') {
     return { repoRoot, resolvedRootDirectory: '' };
   }
 
+  // Nullish or a redundant restatement of the location — absorb.
   const setting = normalizeRelative(rootDirectorySetting ?? '');
   if (setting === '' || setting === resolvedRootDirectory) {
-    // Nullish, or a redundant restatement of the link's location — absorb.
     return { repoRoot, resolvedRootDirectory };
   }
 
-  // The setting names somewhere other than the link's location. The physical
-  // location wins; surface the disagreement so the user can fix their config.
+  // Setting names a different location; the link's location wins.
   return {
     repoRoot,
     resolvedRootDirectory,
