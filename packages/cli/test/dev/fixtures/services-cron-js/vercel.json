@@ -1,0 +1,11 @@
+{
+  "experimentalServices": {
+    "cron": {
+      "type": "job",
+      "trigger": "schedule",
+      "runtime": "node",
+      "entrypoint": "cron/task.js",
+      "schedule": "* * * * *"
+    }
+  }
+}
