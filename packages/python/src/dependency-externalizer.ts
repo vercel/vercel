@@ -227,8 +227,8 @@ export class PythonDependencyExternalizer {
         code: 'LAMBDA_SIZE_EXCEEDED',
         message:
           `Total bundle size (${totalBundleSizeMB} MB) exceeds the maximum function size (${limitMB} MB).\n\n` +
-          `A custom install command prevents Vercel from reducing your\n` +
-          `dependency size automatically. To fix this, you can:\n` +
+          `A custom install command prevents Vercel from optimizing your\n` +
+          `function bundle size automatically. To fix this, you can:\n` +
           `  1. Remove unused dependencies from your project, or\n` +
           `  2. Remove the custom install command so Vercel can optimize\n` +
           `     dependencies automatically.`,
