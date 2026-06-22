@@ -1757,7 +1757,21 @@ export default class DevServer {
       /^([A-Za-z0-9_-]+)\/consumer\/([A-Za-z0-9_-]+)\/id\/([^/]+)$/
     );
     if (req.method === 'POST' && receiveByIdMatch) {
-      const [, , consumer, messageId] = receiveByIdMatch;
+      const [, queueName, consumer, messageId] = receiveByIdMatch;
+      const originalMessageId =
+        this.queueBroker.getOriginalMessageIdForDuplicate(queueName, messageId);
+      if (originalMessageId) {
+        res.writeHead(409, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            error:
+              'This messageId was a duplicate - use originalMessageId instead',
+            originalMessageId,
+          })
+        );
+        return;
+      }
+
       const result = this.queueBroker.receiveById(messageId, consumer);
 
       if (!result) {

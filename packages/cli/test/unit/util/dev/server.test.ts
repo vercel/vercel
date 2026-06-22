@@ -55,4 +55,45 @@ describe('DevServer queue routes', () => {
       'Vqs-Message-Id': 'message-id',
     });
   });
+
+  it('redirects duplicate message IDs to the original message ID', async () => {
+    const server = new DevServer(process.cwd(), {});
+    const getOriginalMessageIdForDuplicate = vi
+      .fn()
+      .mockReturnValue('original-message-id');
+    const receiveById = vi.fn();
+    (server as any).queueBroker = {
+      getOriginalMessageIdForDuplicate,
+      receiveById,
+    };
+
+    const req = Readable.from([]) as IncomingMessage;
+    req.method = 'POST';
+    req.headers = {};
+    const res = {
+      writeHead: vi.fn(),
+      end: vi.fn(),
+    } as unknown as ServerResponse;
+
+    await (server as any).handleQueuesRoute(
+      req,
+      res,
+      '/_svc/_queues/api/v3/topic/orders/consumer/worker/id/duplicate-message-id'
+    );
+
+    expect(getOriginalMessageIdForDuplicate).toHaveBeenCalledWith(
+      'orders',
+      'duplicate-message-id'
+    );
+    expect(receiveById).not.toHaveBeenCalled();
+    expect(res.writeHead).toHaveBeenCalledWith(409, {
+      'Content-Type': 'application/json',
+    });
+    expect(res.end).toHaveBeenCalledWith(
+      JSON.stringify({
+        error: 'This messageId was a duplicate - use originalMessageId instead',
+        originalMessageId: 'original-message-id',
+      })
+    );
+  });
 });

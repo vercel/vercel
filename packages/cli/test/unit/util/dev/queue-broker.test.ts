@@ -172,7 +172,10 @@ describe('QueueBroker', () => {
       );
       await vi.advanceTimersByTimeAsync(0);
 
-      expect(duplicate.messageId).toBe(first.messageId);
+      expect(duplicate.messageId).not.toBe(first.messageId);
+      expect(
+        broker.getOriginalMessageIdForDuplicate('orders', duplicate.messageId)
+      ).toBe(first.messageId);
       expect(mockFetch).toHaveBeenCalledOnce();
       expect((mockFetch.mock.calls[0][1] as any).body.toString()).toBe(
         '{"attempt":1}'
@@ -215,15 +218,31 @@ describe('QueueBroker', () => {
         'application/json',
         { idempotencyKey: 'expiring-key', retentionSeconds: 60 }
       );
-      await vi.advanceTimersByTimeAsync(60_001);
-      const second = broker.enqueue(
+      const duplicate = broker.enqueue(
         'orders',
         Buffer.from('{}'),
         'application/json',
         { idempotencyKey: 'expiring-key', retentionSeconds: 60 }
       );
 
-      expect(second.messageId).not.toBe(first.messageId);
+      expect(
+        broker.getOriginalMessageIdForDuplicate('orders', duplicate.messageId)
+      ).toBe(first.messageId);
+
+      await vi.advanceTimersByTimeAsync(60_001);
+      const afterExpiration = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json',
+        { idempotencyKey: 'expiring-key', retentionSeconds: 60 }
+      );
+
+      expect(
+        broker.getOriginalMessageIdForDuplicate(
+          'orders',
+          afterExpiration.messageId
+        )
+      ).toBeNull();
     });
 
     it('dispatches CloudEvent to matching worker', async () => {
