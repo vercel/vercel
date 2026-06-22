@@ -70,10 +70,17 @@ export function topicPatternToRegex(pattern: string): RegExp {
 export interface EnqueueOptions {
   retentionSeconds?: number;
   delaySeconds?: number;
+  idempotencyKey?: string;
+}
+
+interface IdempotencyRecord {
+  messageId: string;
+  expiresAt: number;
 }
 
 export class QueueBroker {
   private messages = new Map<string, StoredMessage>();
+  private idempotencyRecords = new Map<string, IdempotencyRecord>();
   private consumerGroups: ConsumerGroup[] = [];
   private deliveryState = new Map<string, Map<string, DeliveryState>>();
   private tickTimer: ReturnType<typeof setInterval>;
@@ -121,11 +128,34 @@ export class QueueBroker {
     contentType: string,
     options?: EnqueueOptions
   ): { messageId: string } {
-    const messageId = randomBytes(16).toString('hex');
     const retentionMs =
       (options?.retentionSeconds ?? 0) > 0
         ? options!.retentionSeconds! * 1000
         : DEFAULT_RETENTION;
+    const idempotencyRecordKey = options?.idempotencyKey
+      ? `${queueName}:${options.idempotencyKey}`
+      : undefined;
+
+    if (idempotencyRecordKey) {
+      const record = this.idempotencyRecords.get(idempotencyRecordKey);
+      if (record && record.expiresAt > Date.now()) {
+        output.debug(
+          `queues: skipped duplicate message for queue "${queueName}"`
+        );
+        return { messageId: record.messageId };
+      }
+      if (record) {
+        this.idempotencyRecords.delete(idempotencyRecordKey);
+      }
+    }
+
+    const messageId = randomBytes(16).toString('hex');
+    if (idempotencyRecordKey) {
+      this.idempotencyRecords.set(idempotencyRecordKey, {
+        messageId,
+        expiresAt: Date.now() + retentionMs,
+      });
+    }
 
     const message: StoredMessage = {
       messageId,
@@ -431,6 +461,12 @@ export class QueueBroker {
 
   private tick(): void {
     const now = Date.now();
+
+    for (const [key, record] of this.idempotencyRecords) {
+      if (record.expiresAt <= now) {
+        this.idempotencyRecords.delete(key);
+      }
+    }
 
     for (const group of this.consumerGroups) {
       const groupDeliveries = this.deliveryState.get(group.id);

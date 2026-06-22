@@ -1733,12 +1733,15 @@ export default class DevServer {
         delayHeader && !isNaN(parseInt(delayHeader, 10))
           ? parseInt(delayHeader, 10)
           : undefined;
+      const idempotencyKey = req.headers['vqs-idempotency-key'] as
+        | string
+        | undefined;
 
       const { messageId } = this.queueBroker.enqueue(
         topic,
         payload,
         contentType,
-        { retentionSeconds, delaySeconds }
+        { retentionSeconds, delaySeconds, idempotencyKey }
       );
 
       res.writeHead(201, {
