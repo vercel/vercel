@@ -47,6 +47,7 @@ import {
   traverseUpDirectories,
   PipInstallResult,
   NpmInstallOutput,
+  type CliType,
 } from './fs/run-user-scripts';
 import {
   getLatestNodeVersion,
@@ -133,6 +134,7 @@ export {
   hardLinkDir,
   traverseUpDirectories,
   validateNpmrc,
+  type CliType,
 };
 
 export { EdgeFunction } from './edge-function';
@@ -150,6 +152,10 @@ export {
 } from './max-duration';
 export * from './package-manifest';
 export { generateProjectManifest } from './node-diagnostics';
+export {
+  generateRubyProjectManifest,
+  parseGemfileLock,
+} from './ruby-diagnostics';
 export * from './types';
 export * from './errors';
 

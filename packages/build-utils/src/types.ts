@@ -332,6 +332,7 @@ export namespace PackageJson {
     node?: string;
     npm?: string;
     pnpm?: string;
+    bun?: string;
   }
 
   export interface PublishConfig {
