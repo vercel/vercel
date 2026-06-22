@@ -1219,11 +1219,19 @@ export const build: BuildVX = async ({
     ? await glob('**', { cwd: djangoStatic.cdnOutputDir })
     : {};
 
-  // for services routing is handled by fs-detectors, for legacy builds
-  // we still need to provide catch-all route
-  const routes = service?.name
+  // Non-web V1 services (cron, worker, job) must not emit a catch-all route
+  // because their routes are merged into a shared top-level table and would
+  // shadow other services (see #15960). Web services and V2 services (which
+  // have isolated per-service route tables) need the catch-all to reach the
+  // Lambda.
+  const isNonWebService =
+    service?.name && service.type && service.type !== 'web';
+  const routes = isNonWebService
     ? undefined
-    : [{ handle: 'filesystem' }, { src: '/(.*)', dest: `/${lambdaPath}` }];
+    : [
+        { handle: 'filesystem' as const },
+        { src: '/(.*)', dest: `/${lambdaPath}` },
+      ];
 
   return {
     resultVersion: 2,
