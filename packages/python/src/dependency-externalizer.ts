@@ -402,7 +402,7 @@ export class PythonDependencyExternalizer {
         code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
         message:
           `Total bundle size (${totalBundleSizeMB} MB) exceeds the maximum function size and\n` +
-          `can't be reduced automatically because some dependencies don't\n` +
+          `can't be optimized automatically because some dependencies don't\n` +
           `provide a compatible pre-built wheel.\n\n` +
           `To fix this, either:\n` +
           `  1. Regenerate your lock file with: uv lock --upgrade, or\n` +
