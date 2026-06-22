@@ -698,7 +698,7 @@ describe('link', () => {
         expect.objectContaining({ cwd }),
         ['--yes'],
         'vercel-cli:link',
-        { preserveExisting: true }
+        { oidcTokenOnly: true }
       );
     });
 
@@ -1647,8 +1647,8 @@ describe('link', () => {
     });
   });
 
-  describe('environment variable pull', () => {
-    it('pulls environment variables automatically after successful linking', async () => {
+  describe('OIDC token refresh', () => {
+    it('refreshes OIDC automatically after successful linking', async () => {
       useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
       const [team] = useTeams('team_dummy') as Team[];
@@ -1678,14 +1678,14 @@ describe('link', () => {
         expect.objectContaining({ cwd }),
         ['--yes'],
         'vercel-cli:link',
-        { preserveExisting: true }
+        { oidcTokenOnly: true }
       );
       expect(client.stderr.getFullOutput()).not.toContain(
         'Pull development environment variables into .env.local?'
       );
     });
 
-    it('fails when the required environment pull fails', async () => {
+    it('warns without failing when the OIDC refresh fails', async () => {
       useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
       const [team] = useTeams('team_dummy') as Team[];
@@ -1696,7 +1696,7 @@ describe('link', () => {
       });
       useUnknownProject();
 
-      // Mock env pull to fail
+      // Mock the OIDC refresh to fail after linking succeeds.
       mockPull.mockResolvedValue(1);
 
       client.cwd = cwd;
@@ -1712,21 +1712,26 @@ describe('link', () => {
       );
 
       await expect(client.stderr).toOutput(
-        'Failed to pull environment variables. You can run `vc env pull` manually.'
+        'Linked project, but failed to refresh VERCEL_OIDC_TOKEN in .env.local.'
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(0);
 
       expect(mockPull).toHaveBeenCalledWith(
         expect.objectContaining({ cwd }),
         ['--yes'],
         'vercel-cli:link',
-        { preserveExisting: true }
+        { oidcTokenOnly: true }
       );
+      const plainOutput = stripAnsi(client.stderr.getFullOutput());
+      expect(plainOutput).toMatch(
+        /^! Linked project, but failed to refresh VERCEL_OIDC_TOKEN/m
+      );
+      expect(plainOutput).not.toContain('WARNING!');
     });
 
-    it('restores the working directory when the required pull throws', async () => {
+    it('restores the working directory when the OIDC refresh throws', async () => {
       useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
       const [team] = useTeams('team_dummy') as Team[];
@@ -1755,11 +1760,11 @@ describe('link', () => {
       );
 
       await expect(client.stderr).toOutput(
-        'Failed to pull environment variables. You can run `vc env pull` manually.'
+        'Linked project, but failed to refresh VERCEL_OIDC_TOKEN in .env.local.'
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(0);
 
       expect(client.cwd).toEqual(originalCwd);
     });

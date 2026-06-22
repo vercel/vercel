@@ -1,4 +1,5 @@
 import type Client from '../../util/client';
+import chalk from 'chalk';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import cmd from '../../util/output/cmd';
@@ -20,29 +21,29 @@ const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
 };
 
-async function pullDevelopmentEnvAfterLink(
+function warnOidcRefreshFailed(): void {
+  output.print(
+    `${chalk.yellow('!')} Linked project, but failed to refresh VERCEL_OIDC_TOKEN in .env.local. Rerun the link command to retry.\n`
+  );
+}
+
+async function refreshOidcTokenAfterLink(
   client: Client,
   cwd: string
-): Promise<number> {
+): Promise<void> {
   const originalCwd = client.cwd;
   try {
     client.cwd = await resolveProjectCwd(cwd);
+    output.print('\n');
     const exitCode = await pull(client, ['--yes'], 'vercel-cli:link', {
-      preserveExisting: true,
+      oidcTokenOnly: true,
     });
 
     if (exitCode !== 0) {
-      output.error(
-        'Failed to pull environment variables. You can run `vc env pull` manually.'
-      );
+      warnOidcRefreshFailed();
     }
-
-    return exitCode;
   } catch (_error) {
-    output.error(
-      'Failed to pull environment variables. You can run `vc env pull` manually.'
-    );
-    return 1;
+    warnOidcRefreshFailed();
   } finally {
     client.cwd = originalCwd;
   }
@@ -192,7 +193,8 @@ async function linkProject(client: Client) {
       return link;
     }
 
-    return await pullDevelopmentEnvAfterLink(client, cwd);
+    await refreshOidcTokenAfterLink(client, cwd);
+    return 0;
   }
 
   return 0;

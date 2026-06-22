@@ -23,7 +23,7 @@ When adding a durable contract, add a row to `SKILL.md` so agents load it only f
 3. Intended project: explicit `--project`, repo-root match, exact folder-name match, selected existing project, or new project.
 4. Project root: inferred root, selected root, or cwd.
 5. Settings: detected framework/settings, explicit overrides, or defaults.
-6. Mutations: create project if needed, write `.vercel/project.json`, update `.gitignore`, optional Git connection, then pull development env variables.
+6. Mutations: create project if needed, write `.vercel/project.json`, update `.gitignore`, optional Git connection, then refresh `VERCEL_OIDC_TOKEN` in `.env.local`.
 
 Rules:
 
@@ -50,7 +50,7 @@ Rules:
 - Link/setup primary completed-phase rows use `✓`: `✓ Linked`, `✓ Created`, `✓ Added`. Discovery, preview, progress, and secondary rows such as `Found existing project`, `Detected`, `Project`, `Directory`, `Config`, `Settings`, and `Source` keep the blank two-space gutter. Never use `▲` for setup/link rows.
 - Default human success output prints the user-facing completion receipt, such as `✓ Linked acme/web` or `✓ Created acme/web`.
 - Do not print `.vercel/project.json`, `.vercel/repo.json`, or a repeated `Directory` row in default human success output when the local target was already shown. Verify link files in tests and expose them through machine/debug/help surfaces when needed.
-- After a successful direct `vc link`, pull development environment variables into `.env.local` automatically. Preserve pre-existing local file content instead of replacing it; when a local key conflicts, keep that local definition and omit it from the CLI-managed block. `VERCEL_OIDC_TOKEN` is the exception: replace it with a fresh token in the managed block on every link.
+- After every successful direct `vc link`, fetch a fresh `VERCEL_OIDC_TOKEN`. Replace the existing token assignment or append exactly one assignment when absent. Remove stale token assignments when the pull returns no token. Preserve every other `.env.local` entry and do not copy other remote Environment Variables into the file. A token refresh failure warns without changing the successful link exit code.
 
 Current gaps to migrate incrementally:
 
@@ -62,18 +62,18 @@ Current gaps to migrate incrementally:
 
 Link prompt map:
 
-| State                              | Human prompt/output                                                                                                                | Non-interactive                        |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Multiple teams                     | `Which team?`                                                                                                                      | `action_required: missing_team`        |
-| One existing project match         | `Directory`, `Found existing project`, aligned `Project`, then `Link directory to project?`                                        | link only for explicit/repo-root match |
-| One repository project match       | `Directory`, optional search-status rows, `Found existing project`, aligned `Project`/`Source`, then `Link repository to project?` | link only for explicit/repo-root match |
-| Multiple project matches           | aligned `Projects` summary, then `Project?`                                                                                        | `action_required: ambiguous_project`   |
-| No without-SSO match, SSO required | `Searched {count} teams available without SSO`, `No matching projects found`, then `Select teams that require SSO`                 | skip unless explicitly requested       |
-| No project match                   | `Project?` with `Create new project` / `Link existing project`, then `Name?` when creating                                         | require `--yes` or `project_not_found` |
-| Root choices exist                 | `Code directory?`                                                                                                                  | require root flag/config/payload       |
-| Settings differ                    | `Customize settings?`                                                                                                              | require flags/config/payload           |
-| Development env pull               | Automatically pull into `.env.local` after a successful direct link                                                                 | pull after a successful explicit link |
-| Stale/deleted link                 | show stale link, then concrete relink choice                                                                                       | `action_required: stale_link`          |
+| State                              | Human prompt/output                                                                                                                | Non-interactive                          |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Multiple teams                     | `Which team?`                                                                                                                      | `action_required: missing_team`          |
+| One existing project match         | `Directory`, `Found existing project`, aligned `Project`, then `Link directory to project?`                                        | link only for explicit/repo-root match   |
+| One repository project match       | `Directory`, optional search-status rows, `Found existing project`, aligned `Project`/`Source`, then `Link repository to project?` | link only for explicit/repo-root match   |
+| Multiple project matches           | aligned `Projects` summary, then `Project?`                                                                                        | `action_required: ambiguous_project`     |
+| No without-SSO match, SSO required | `Searched {count} teams available without SSO`, `No matching projects found`, then `Select teams that require SSO`                 | skip unless explicitly requested         |
+| No project match                   | `Project?` with `Create new project` / `Link existing project`, then `Name?` when creating                                         | require `--yes` or `project_not_found`   |
+| Root choices exist                 | `Code directory?`                                                                                                                  | require root flag/config/payload         |
+| Settings differ                    | `Customize settings?`                                                                                                              | require flags/config/payload             |
+| OIDC token refresh                 | Refresh exactly one `VERCEL_OIDC_TOKEN` assignment after a successful direct link                                                  | refresh after a successful explicit link |
+| Stale/deleted link                 | show stale link, then concrete relink choice                                                                                       | `action_required: stale_link`            |
 
 Link acceptance matrix:
 
@@ -90,6 +90,10 @@ Link acceptance matrix:
 - non-TTY and `--non-interactive`
 - JSON-only stdout
 - `--yes` default path creates no duplicate resources on retry
+- existing `.env.local` content remains unchanged except for `VERCEL_OIDC_TOKEN`
+- missing, existing, exported, and duplicate `VERCEL_OIDC_TOKEN` assignments
+- LF and CRLF `.env.local` files, including files without a final newline
+- OIDC refresh failure after a successful link
 - primary completed-phase gutter: `✓ Linked`, `✓ Created`, or `✓ Added`; no `▲` on setup/link rows
 
 ## Deploy Flow Contract
