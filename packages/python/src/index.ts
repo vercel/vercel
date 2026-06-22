@@ -44,6 +44,7 @@ import {
 import {
   PythonDependencyExternalizer,
   MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE,
+  LAMBDA_SIZE_THRESHOLD_BYTES,
   lambdaKnapsack,
   calculateBundleSize,
 } from './dependency-externalizer';
@@ -1125,7 +1126,14 @@ export const build: BuildVX = async ({
       } else {
         // Bundle all deps directly (fits the threshold, or large functions on).
         addFiles(files, depAnalysis.allVendorFiles);
-        if (automaticCompileAllEnabled) {
+        // Compileall is only for large functions. This branch also covers small
+        // bundles that fit the standard size limit, so gate on size to skip
+        // them — never precompile bytecode for a standard-size function.
+        // (automaticCompileAllEnabled already requires the large-functions flag.)
+        if (
+          automaticCompileAllEnabled &&
+          depAnalysis.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES
+        ) {
           await runCompileAllAndFillBytecode();
         }
       }

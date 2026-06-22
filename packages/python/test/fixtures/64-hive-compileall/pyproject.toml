@@ -6,3 +6,8 @@ dependencies = [
   "flask",
   "pydantic",
 ]
+
+# Generate a large (sparse) blob at build time so the function is built as a
+# large function, which is what runs compileall (asserted by probes.json).
+[tool.vercel.scripts]
+build = "python build.py"
