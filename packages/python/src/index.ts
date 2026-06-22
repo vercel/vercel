@@ -44,9 +44,11 @@ import {
 import {
   PythonDependencyExternalizer,
   MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE,
+  LAMBDA_SIZE_THRESHOLD_BYTES,
   lambdaKnapsack,
   calculateBundleSize,
 } from './dependency-externalizer';
+import { isLargeFunctionsEnabled } from './large-functions';
 import {
   UvRunner,
   UV_LINUX_TARGET,
@@ -1113,18 +1115,33 @@ export const build: BuildVX = async ({
         });
       };
 
+      const announceLargeFunction = () =>
+        console.log(
+          `Function "${entrypoint}" exceeds the standard size limit; enabling large functions (beta).`
+        );
+
       if (depAnalysis.runtimeInstallEnabled) {
-        // Pack the zip and defer the rest to runtime install. If it can't fit
-        // Lambda, generateBundle bundles everything for Hive (which then takes
-        // compileall, below).
+        // Pack the zip and defer the rest to runtime install. If it can't be
+        // made to fit, generateBundle bundles everything for the large
+        // functions path (which then takes compileall, below).
         const { fellBackToFullBundle } =
           await depExternalizer.generateBundle(files);
-        if (fellBackToFullBundle && automaticCompileAllEnabled) {
-          await runCompileAllAndFillBytecode();
+        if (fellBackToFullBundle) {
+          announceLargeFunction();
+          if (automaticCompileAllEnabled) {
+            await runCompileAllAndFillBytecode();
+          }
         }
       } else {
-        // Bundle all deps directly (fits the threshold, or large functions on).
+        // Bundle all deps directly. Either it fits the standard size limit, or
+        // large functions are enabled and the whole bundle ships.
         addFiles(files, depAnalysis.allVendorFiles);
+        if (
+          isLargeFunctionsEnabled() &&
+          depAnalysis.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES
+        ) {
+          announceLargeFunction();
+        }
         if (automaticCompileAllEnabled) {
           await runCompileAllAndFillBytecode();
         }
