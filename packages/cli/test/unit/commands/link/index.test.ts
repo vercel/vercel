@@ -935,6 +935,8 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
     await expect(client.stderr).toOutput('Which project?');
+    await expect(client.stderr).toOutput('(folder name)');
+    await expect(client.stderr).toOutput('Search all projects');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput(
@@ -969,6 +971,39 @@ describe('link', () => {
     expect(client.stderr.getFullOutput()).not.toContain(
       'Would you like to pull environment variables now?'
     );
+  });
+
+  it('keeps non-matching projects behind Search all projects', async () => {
+    useUser({ version: 'northstar' });
+    const cwd = setupTmpDir();
+    const [team] = useTeams('team_dummy') as Team[];
+    const { project } = useProject({
+      ...defaultProject,
+      id: 'existing-project-id',
+      name: 'existing-project',
+    });
+    useUnknownProject();
+
+    client.cwd = cwd;
+    const exitCodePromise = link(client);
+
+    await expect(client.stderr).toOutput('Which team?');
+    client.stdin.write('\n');
+    await expect(client.stderr).toOutput('Which project?');
+
+    const suggestedOutput = stripAnsi(client.stderr.getFullOutput());
+    expect(suggestedOutput).toContain('Search all projects');
+    expect(suggestedOutput).not.toContain(project.name!);
+
+    client.stdin.write('\n');
+    await expect(client.stderr).toOutput(project.name!);
+    client.stdin.write('\n');
+
+    await expect(exitCodePromise).resolves.toEqual(0);
+    expect(await readJSON(join(cwd, '.vercel/project.json'))).toMatchObject({
+      orgId: team.id,
+      projectId: project.id,
+    });
   });
 
   it('does not create a project when the selected team has no projects', async () => {
@@ -1042,8 +1077,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
     await expect(client.stderr).toOutput('Which project?');
-    client.stdin.write('missing-project');
-    await expect(client.stderr).toOutput('missing-project');
+    client.events.keypress('down');
     client.stdin.write('\n');
 
     await expect(exitCodePromise).resolves.toEqual(1);

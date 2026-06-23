@@ -14,3 +14,6 @@ explicit team and project or an existing valid local link, treats `--yes` as
 redundant, and requires user input instead of selecting defaults or list
 results. Interactive prompts show the target directory and provide explicit
 escape hatches when the intended team or project is not listed.
+After team selection, projects matching the directory name are suggested first;
+the complete project list remains available through an explicit searchable
+option.

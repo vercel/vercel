@@ -1,4 +1,5 @@
 import type Client from '../../util/client';
+import { basename } from 'path';
 import type {
   Org,
   Project,
@@ -8,6 +9,7 @@ import type {
 } from '@vercel-internals/types';
 import chalk from 'chalk';
 import { Separator } from '@inquirer/search';
+import slugify from '@sindresorhus/slugify';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import cmd from '../../util/output/cmd';
@@ -46,6 +48,7 @@ const COMMAND_CONFIG = {
 
 const TEAM_NOT_LISTED = 'team-not-listed' as const;
 const PROJECT_NOT_LISTED = 'project-not-listed' as const;
+const SEARCH_ALL_PROJECTS = 'search-all-projects' as const;
 const ESCAPE_HATCH_SEPARATOR = '─'.repeat(24);
 
 function warnOidcRefreshFailed(): void {
@@ -215,7 +218,8 @@ async function fetchLinkProjects(
 
 async function selectExistingProject(
   client: Client,
-  org: Org
+  org: Org,
+  cwd: string
 ): Promise<Project | null> {
   output.spinner('Loading projects…', 1000);
   let firstPage: ProjectsPage;
@@ -238,6 +242,63 @@ async function selectExistingProject(
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name));
   const hasMoreProjects = firstPage.pagination.next != null;
+
+  const directoryName = basename(cwd);
+  const directoryNames = Array.from(
+    new Set(
+      [directoryName, slugify(directoryName)].map(name => name.toLowerCase())
+    )
+  );
+  const directoryMatches = initialProjects.filter(project =>
+    directoryNames.includes(project.name.toLowerCase())
+  );
+
+  if (hasMoreProjects && directoryMatches.length === 0) {
+    const project = await getProjectByIdOrName(
+      client,
+      slugify(directoryName),
+      org.id
+    );
+    if (
+      !(project instanceof ProjectNotFound) &&
+      directoryNames.includes(project.name.toLowerCase())
+    ) {
+      directoryMatches.push(project);
+    }
+  }
+
+  const suggested = await client.input.select<
+    Project | typeof SEARCH_ALL_PROJECTS | typeof PROJECT_NOT_LISTED
+  >({
+    message: 'Which project?',
+    choices: [
+      ...directoryMatches.map(project => ({
+        name: `${project.name} ${chalk.gray('(folder name)')}`,
+        value: project,
+      })),
+      ...(directoryMatches.length > 0
+        ? [new Separator(ESCAPE_HATCH_SEPARATOR)]
+        : []),
+      {
+        name: 'Search all projects',
+        value: SEARCH_ALL_PROJECTS,
+        description: 'Browse or search every project in this team',
+      },
+      {
+        name: 'None of these projects',
+        value: PROJECT_NOT_LISTED,
+        description: 'Show commands to create one explicitly',
+      },
+    ],
+  });
+
+  if (suggested === PROJECT_NOT_LISTED) {
+    printProjectNotListedHelp(org);
+    return null;
+  }
+  if (suggested !== SEARCH_ALL_PROJECTS) {
+    return suggested;
+  }
 
   const selected = await client.input.search<
     Project | typeof PROJECT_NOT_LISTED
@@ -654,7 +715,7 @@ async function linkProject(client: Client) {
       return 0;
     }
 
-    const project = await selectExistingProject(client, org);
+    const project = await selectExistingProject(client, org, cwd);
     if (!project) {
       return 1;
     }
