@@ -44,7 +44,6 @@ import {
   type PackageJson,
   spawnCommand,
   shouldUseExperimentalBackends,
-  type ExperimentalServicesV2,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -662,15 +661,6 @@ export default class DevServer {
         cleanUrls,
         trailingSlash,
         workPath: this.cwd,
-        // Thread V2 services through so the services-builders path sees them
-        // (mirrors `vc build`). Without this, a V2-only config makes
-        // detectBuilders report "no services declared".
-        experimentalServices: vercelConfig.experimentalServices,
-        experimentalServicesV2: (
-          vercelConfig as typeof vercelConfig & {
-            experimentalServicesV2?: ExperimentalServicesV2;
-          }
-        ).experimentalServicesV2,
       });
       let {
         builders,
@@ -742,18 +732,7 @@ export default class DevServer {
       vercelConfig.builds.sort(sortBuilders);
     }
 
-    // Services config has now been consumed into `builds`/`routes` above. The
-    // services-vs-`builds` validation guards are meant for *user* config, so
-    // validate a copy without the (internal) services keys to avoid a false
-    // "cannot be used with builds" conflict. `vercelConfig` itself is left
-    // intact for downstream consumers.
-    const { experimentalServices: _v1, ...configForValidation } =
-      vercelConfig as VercelConfig & {
-        experimentalServicesV2?: ExperimentalServicesV2;
-      };
-    delete (configForValidation as { experimentalServicesV2?: unknown })
-      .experimentalServicesV2;
-    await this.validateVercelConfig(configForValidation as VercelConfig);
+    await this.validateVercelConfig(vercelConfig);
 
     // TODO: temporarily strip and warn since `has` is not implemented yet
     vercelConfig.routes = (vercelConfig.routes || []).filter(route => {
