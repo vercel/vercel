@@ -1138,6 +1138,7 @@ async function handleDefaultDeploy(
         paths,
       }),
     failIfNotFound: !!projectNameOrId,
+    requireExistingLink: parsedArguments.flags['--dry'],
     v0: isV0,
   });
   if (typeof link === 'number') {

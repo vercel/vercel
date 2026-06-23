@@ -188,6 +188,21 @@ describe('deploy', () => {
     ]);
   });
 
+  it('should reject a dry run when the project is not linked', async () => {
+    const cwd = setupTmpDir('deploy-dry-unlinked');
+    await fs.outputFile(join(cwd, 'index.js'), 'export default 1;');
+
+    client.setArgv('deploy', cwd, '--dry', '--yes');
+    const exitCodePromise = deploy(client);
+
+    await expect(client.stderr).toOutput(
+      'Error: Project is not linked. Run `vercel link` first.\n'
+    );
+    expect(await exitCodePromise).toEqual(1);
+    expect(await fs.pathExists(join(cwd, '.vercel'))).toBe(false);
+    expect(await fs.pathExists(join(cwd, '.gitignore'))).toBe(false);
+  });
+
   it('should print dry output as JSON', async () => {
     const cwd = setupTmpDir('deploy-dry-json');
     useUser();
