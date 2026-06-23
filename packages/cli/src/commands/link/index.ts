@@ -264,10 +264,7 @@ async function selectLinkProject(
   }
 
   const suggested = await client.input.select<
-    | Project
-    | typeof SEARCH_ALL_PROJECTS
-    | typeof CREATE_NEW_PROJECT
-    | typeof PROJECT_NOT_LISTED
+    Project | typeof SEARCH_ALL_PROJECTS | typeof CREATE_NEW_PROJECT
   >({
     message: 'Which project?',
     choices: [
@@ -292,18 +289,9 @@ async function selectLinkProject(
         value: CREATE_NEW_PROJECT,
         description: `Create it under ${org.slug}`,
       },
-      {
-        name: 'None of these projects',
-        value: PROJECT_NOT_LISTED,
-        description: 'Show commands to create one explicitly',
-      },
     ],
   });
 
-  if (suggested === PROJECT_NOT_LISTED) {
-    printProjectNotListedHelp(org);
-    return null;
-  }
   if (suggested === CREATE_NEW_PROJECT) {
     return CREATE_NEW_PROJECT;
   }

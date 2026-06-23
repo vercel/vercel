@@ -1086,7 +1086,10 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
     await expect(client.stderr).toOutput('Which project?');
-    client.events.keypress('down');
+    client.stdin.write('\n');
+    await expect(client.stderr).toOutput('existing-project');
+    client.stdin.write('missing-project');
+    await expect(client.stderr).toOutput('missing-project');
     client.events.keypress('down');
     client.stdin.write('\n');
 
