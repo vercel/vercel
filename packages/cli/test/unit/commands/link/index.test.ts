@@ -955,7 +955,7 @@ describe('link', () => {
     expect(plainOutput.indexOf('Which team?')).toBeLessThan(
       plainOutput.indexOf('Which project?')
     );
-    expect(plainOutput).not.toContain('Create new project');
+    expect(plainOutput).toContain('Create a new project');
     expect(plainOutput).not.toContain(
       'Pull development environment variables into .env.local?'
     );
@@ -1006,7 +1006,7 @@ describe('link', () => {
     });
   });
 
-  it('does not create a project when the selected team has no projects', async () => {
+  it('explicitly confirms project creation with --yes when the selected team has no projects', async () => {
     useUser({ version: 'northstar' });
     const cwd = setupTmpDir();
     const [team] = useTeams('team_dummy') as Team[];
@@ -1019,21 +1019,30 @@ describe('link', () => {
     });
 
     client.cwd = cwd;
+    client.setArgv('--yes');
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
+    await expect(client.stderr).toOutput('Which project?');
+    await expect(client.stderr).toOutput('Create a new project');
+    client.stdin.write('\n');
+    await expect(client.stderr).toOutput('Project name?');
+    client.stdin.write('\n');
+    await expect(client.stderr).toOutput(
+      `Create ${team.slug}/${basename(cwd)}?`
+    );
+    client.stdin.write('\n');
 
-    await expect(exitCodePromise).resolves.toEqual(1);
+    await expect(exitCodePromise).resolves.toEqual(0);
     const outputText = stripAnsi(client.stderr.getFullOutput());
-    expect(outputText).toContain(
-      `No existing projects were found under ${team.slug}.`
-    );
-    expect(outputText).toContain(
-      `project add <project-name> --scope ${team.slug}`
-    );
-    expect(outputText).not.toContain('Create new project');
-    expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
+    expect(outputText).toContain(`${team.slug}/${basename(cwd)}`);
+    expectLinkRowsUseExpectedGlyphs(client.stderr.getFullOutput(), ['Created']);
+    expect(await readJSON(join(cwd, '.vercel/project.json'))).toMatchObject({
+      orgId: team.id,
+      projectId: basename(cwd),
+      projectName: basename(cwd),
+    });
   });
 
   it("shows access help when the team isn't listed", async () => {
@@ -1077,6 +1086,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
     await expect(client.stderr).toOutput('Which project?');
+    client.events.keypress('down');
     client.events.keypress('down');
     client.stdin.write('\n');
 

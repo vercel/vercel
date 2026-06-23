@@ -22,7 +22,10 @@ import output from '../../output-manager';
 import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
 import { getCommandAliases } from '..';
 import getScope, { detectExplicitScope } from '../../util/get-scope';
-import { isPromptCanceledError } from '../../util/input/prompt-cancellation';
+import {
+  isPromptCanceledError,
+  PromptCanceledError,
+} from '../../util/input/prompt-cancellation';
 import pull from '../env/pull';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
 import getTeams from '../../util/teams/get-teams';
@@ -41,6 +44,7 @@ import { getCommandNamePlain } from '../../util/pkg-name';
 import type { FetchOptions } from '../../util/client';
 import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import toHumanPath from '../../util/humanize-path';
+import createProject from '../../util/projects/create-project';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
@@ -49,6 +53,7 @@ const COMMAND_CONFIG = {
 const TEAM_NOT_LISTED = 'team-not-listed' as const;
 const PROJECT_NOT_LISTED = 'project-not-listed' as const;
 const SEARCH_ALL_PROJECTS = 'search-all-projects' as const;
+const CREATE_NEW_PROJECT = 'create-new-project' as const;
 const ESCAPE_HATCH_SEPARATOR = '─'.repeat(24);
 
 function warnOidcRefreshFailed(): void {
@@ -216,26 +221,17 @@ async function fetchLinkProjects(
   });
 }
 
-async function selectExistingProject(
+async function selectLinkProject(
   client: Client,
   org: Org,
   cwd: string
-): Promise<Project | null> {
+): Promise<Project | typeof CREATE_NEW_PROJECT | null> {
   output.spinner('Loading projects…', 1000);
   let firstPage: ProjectsPage;
   try {
     firstPage = await fetchLinkProjects(client, org, 100);
   } finally {
     output.stopSpinner();
-  }
-
-  if (firstPage.projects.length === 0) {
-    output.error(
-      `No existing projects were found under ${org.slug}. Create one explicitly with ${getCommandNamePlain(
-        `project add <project-name> --scope ${org.slug}`
-      )}.`
-    );
-    return null;
   }
 
   const initialProjects = firstPage.projects
@@ -268,7 +264,10 @@ async function selectExistingProject(
   }
 
   const suggested = await client.input.select<
-    Project | typeof SEARCH_ALL_PROJECTS | typeof PROJECT_NOT_LISTED
+    | Project
+    | typeof SEARCH_ALL_PROJECTS
+    | typeof CREATE_NEW_PROJECT
+    | typeof PROJECT_NOT_LISTED
   >({
     message: 'Which project?',
     choices: [
@@ -279,10 +278,19 @@ async function selectExistingProject(
       ...(directoryMatches.length > 0
         ? [new Separator(ESCAPE_HATCH_SEPARATOR)]
         : []),
+      ...(initialProjects.length > 0
+        ? [
+            {
+              name: 'Search all projects',
+              value: SEARCH_ALL_PROJECTS,
+              description: 'Browse or search every project in this team',
+            } as const,
+          ]
+        : []),
       {
-        name: 'Search all projects',
-        value: SEARCH_ALL_PROJECTS,
-        description: 'Browse or search every project in this team',
+        name: 'Create a new project',
+        value: CREATE_NEW_PROJECT,
+        description: `Create it under ${org.slug}`,
       },
       {
         name: 'None of these projects',
@@ -296,12 +304,15 @@ async function selectExistingProject(
     printProjectNotListedHelp(org);
     return null;
   }
+  if (suggested === CREATE_NEW_PROJECT) {
+    return CREATE_NEW_PROJECT;
+  }
   if (suggested !== SEARCH_ALL_PROJECTS) {
     return suggested;
   }
 
   const selected = await client.input.search<
-    Project | typeof PROJECT_NOT_LISTED
+    Project | typeof CREATE_NEW_PROJECT | typeof PROJECT_NOT_LISTED
   >({
     message: 'Which project?',
     pageSize: 15,
@@ -333,6 +344,11 @@ async function selectExistingProject(
       if (projectChoices.length === 0) {
         return [
           {
+            name: 'Create a new project',
+            value: CREATE_NEW_PROJECT,
+            description: `Create it under ${org.slug}`,
+          },
+          {
             name: 'None of these projects',
             value: PROJECT_NOT_LISTED,
             description: 'Show commands to create one explicitly',
@@ -343,6 +359,11 @@ async function selectExistingProject(
       return [
         ...projectChoices,
         new Separator(ESCAPE_HATCH_SEPARATOR),
+        {
+          name: 'Create a new project',
+          value: CREATE_NEW_PROJECT,
+          description: `Create it under ${org.slug}`,
+        },
         {
           name: 'None of these projects',
           value: PROJECT_NOT_LISTED,
@@ -358,6 +379,36 @@ async function selectExistingProject(
   }
 
   return selected;
+}
+
+async function createInteractiveProject(
+  client: Client,
+  org: Org,
+  cwd: string
+): Promise<Project> {
+  const name = await client.input.text({
+    message: 'Project name?',
+    default: slugify(basename(cwd)),
+    validate: async value => {
+      if (!value.trim()) {
+        return 'Project name cannot be empty';
+      }
+      const existing = await getProjectByIdOrName(client, value.trim(), org.id);
+      return existing instanceof ProjectNotFound
+        ? true
+        : 'Project already exists';
+    },
+  });
+  const projectName = name.trim();
+
+  if (
+    !(await client.input.confirm(`Create ${org.slug}/${projectName}?`, true))
+  ) {
+    throw new PromptCanceledError();
+  }
+
+  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+  return await createProject(client, { name: projectName });
 }
 
 async function getExplicitOrg(client: Client): Promise<Org> {
@@ -459,7 +510,8 @@ async function linkExistingProject(
   client: Client,
   cwd: string,
   org: Org,
-  project: Project
+  project: Project,
+  resultLabel: 'Linked' | 'Created' = 'Linked'
 ): Promise<ProjectLinked> {
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
@@ -471,7 +523,8 @@ async function linkExistingProject(
     org.slug,
     'success',
     true,
-    false
+    false,
+    resultLabel
   );
   return { status: 'linked', org, project };
 }
@@ -715,12 +768,22 @@ async function linkProject(client: Client) {
       return 0;
     }
 
-    const project = await selectExistingProject(client, org, cwd);
-    if (!project) {
+    const selection = await selectLinkProject(client, org, cwd);
+    if (!selection) {
       return 1;
     }
+    const created = selection === CREATE_NEW_PROJECT;
+    const project = created
+      ? await createInteractiveProject(client, org, cwd)
+      : selection;
 
-    await linkExistingProject(client, cwd, org, project);
+    await linkExistingProject(
+      client,
+      cwd,
+      org,
+      project,
+      created ? 'Created' : 'Linked'
+    );
     await refreshOidcTokenAfterLink(client, cwd);
     return 0;
   }
