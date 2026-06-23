@@ -18,6 +18,7 @@ import {
   mkdir,
   realpath,
   symlink,
+  stat,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import type { IncomingMessage } from 'node:http';
@@ -256,6 +257,132 @@ it.skipIf(process.platform === 'win32')(
         repoRootPath: workDir,
       })
     ).resolves.toBeDefined();
+  },
+  30000
+);
+
+it.skipIf(process.platform === 'win32')(
+  'does not emit a directory symlink as a lambda file when outputDirectory is "."',
+  async () => {
+    // Reproduces the `testserver/create-server` failure: a monorepo app whose
+    // `vercel.json` sets `outputDirectory: "."` with a no-op build command.
+    // `maybeDoBuildCommand` then globs the *project root* (workPath), sweeping
+    // in `node_modules`. A pnpm workspace devDependency linked there
+    // (`node_modules/@internal/test-dd` -> a directory under
+    // `packages-internal/`) is a symlink-to-directory; glob emits it as a
+    // `FileFsRef` whose fsPath is a directory, which the deploy layer later
+    // rejects with "File <path> does not exist.".
+    //
+    // `repoRootPath` is set to the real monorepo root *above* workPath to show
+    // the failure does not depend on repo-root resolution (it is anchored to
+    // workPath + outputDirectory).
+    const repoRoot = await realpath(
+      await mkdtemp(join(tmpdir(), 'backends-outputdir-dot-'))
+    );
+
+    // Workspace package that the app depends on only for tooling (no main /
+    // exports / module — never imported by the app's source).
+    const pkgDir = join(repoRoot, 'packages-internal/test-dd');
+    await mkdir(join(pkgDir, 'bin'), { recursive: true });
+    await writeFile(
+      join(pkgDir, 'package.json'),
+      JSON.stringify({ name: '@internal/test-dd', version: '1.0.0' })
+    );
+    await writeFile(join(pkgDir, 'utils.js'), 'module.exports = {};\n');
+
+    // The app, linked in place under the monorepo.
+    const workDir = join(repoRoot, 'testserver/create-server');
+    await mkdir(join(workDir, 'src'), { recursive: true });
+    await writeFile(
+      join(workDir, 'package.json'),
+      JSON.stringify({
+        name: '@testserver/create-server',
+        version: '1.0.0',
+        type: 'module',
+        main: 'src/app.ts',
+        dependencies: { hono: '4.10.0' },
+        // `@internal/test-dd` is a workspace devDependency, already linked into
+        // node_modules below. Declared without `workspace:*` so the no-op
+        // install command does not need to resolve the protocol.
+        devDependencies: { '@internal/test-dd': '1.0.0' },
+      })
+    );
+    await writeFile(
+      join(workDir, 'src/app.ts'),
+      [
+        "import { Hono } from 'hono';",
+        'const app = new Hono();',
+        "app.get('/', c => c.text('ok'));",
+        'export default app;',
+      ].join('\n')
+    );
+
+    // pnpm-style symlink: node_modules/@internal/test-dd -> the package dir.
+    await mkdir(join(workDir, 'node_modules/@internal'), { recursive: true });
+    await symlink(
+      '../../../../packages-internal/test-dd',
+      join(workDir, 'node_modules/@internal/test-dd'),
+      'dir'
+    );
+    // Minimal hono package so rolldown can resolve the entrypoint import.
+    const honoDir = join(workDir, 'node_modules/hono');
+    await mkdir(honoDir, { recursive: true });
+    await writeFile(
+      join(honoDir, 'package.json'),
+      JSON.stringify({
+        name: 'hono',
+        version: '4.10.0',
+        type: 'module',
+        main: 'index.js',
+      })
+    );
+    await writeFile(
+      join(honoDir, 'index.js'),
+      'export class Hono { get() {} }\n'
+    );
+
+    const result = (await build({
+      files: {},
+      workPath: workDir,
+      config: {
+        ...defaultConfig,
+        // `outputDirectory` is read from the top level of `config` by the
+        // builder (the CLI merges vercel.json's value here).
+        outputDirectory: '.',
+        buildCommand: "echo 'No build step required'",
+        projectSettings: {
+          ...defaultConfig.projectSettings,
+          // No-op install: deps are pre-linked in node_modules above.
+          installCommand: 'true',
+          buildCommand: "echo 'No build step required'",
+          outputDirectory: '.',
+        },
+      },
+      meta,
+      entrypoint: 'package.json',
+      repoRootPath: repoRoot,
+    })) as BuildResultV2Typical;
+
+    const lambda = result.output.index as unknown as NodejsLambda;
+    const files = lambda.files ?? {};
+
+    // No lambda file may resolve to a directory: that is the corrupt
+    // directory-symlink entry that fails at deploy time.
+    const directoryEntries: string[] = [];
+    for (const [key, file] of Object.entries(files)) {
+      const fsPath = (file as { fsPath?: string }).fsPath;
+      if (!fsPath) continue;
+      try {
+        if ((await stat(fsPath)).isDirectory()) {
+          directoryEntries.push(key);
+        }
+      } catch {
+        // Unreadable target also indicates a bogus entry.
+        directoryEntries.push(key);
+      }
+    }
+
+    expect(directoryEntries).toEqual([]);
   },
   30000
 );
