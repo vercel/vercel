@@ -57,10 +57,9 @@ function normalizeContainerCommand(
  */
 function resolveContainerServiceV2(
   name: string,
-  config: ExperimentalServiceV2Config
+  config: ExperimentalServiceV2Config,
+  normalizedRoot: string
 ): { service?: ExperimentalServiceV2; error?: ServiceDetectionError } {
-  const root = config.root;
-  const normalizedRoot = posixPath.normalize(root);
   const isRoot = normalizedRoot === '.';
 
   const entrypoint = config.entrypoint;
@@ -107,7 +106,7 @@ function resolveContainerServiceV2(
     service: {
       schema: 'experimentalServicesV2',
       name,
-      root,
+      root: normalizedRoot,
       runtime: 'container',
       entrypoint: image ?? dockerfile,
       command,
@@ -228,7 +227,7 @@ export async function resolveConfiguredServiceV2(
     (typeof config.entrypoint === 'string' &&
       isDockerfileEntrypoint(config.entrypoint));
   if (isContainer) {
-    return resolveContainerServiceV2(name, config);
+    return resolveContainerServiceV2(name, config, normalizedRoot);
   }
 
   // Scope the filesystem to the service root for entrypoint/framework detection.

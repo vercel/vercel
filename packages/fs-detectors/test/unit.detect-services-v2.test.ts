@@ -625,6 +625,31 @@ describe('detectServices (experimentalServicesV2)', () => {
       expect(svc.builder.config).toMatchObject({ workspace: 'apps/api' });
     });
 
+    it('strips a trailing slash from a container service root', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          experimentalServicesV2: {
+            api: {
+              root: 'apps/api/',
+              runtime: 'container',
+              entrypoint: 'Dockerfile',
+            },
+          },
+        }),
+        'apps/api/Dockerfile': 'FROM node:22-alpine\n',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const [svc] = servicesV2(result.services);
+      // Trailing slash is normalized away so it isn't double-prefixed
+      // downstream, matching every other service type.
+      expect(svc.root).toBe('apps/api');
+      expect(svc.builder.src).toBe('apps/api/Dockerfile');
+      expect(svc.builder.config).toMatchObject({ workspace: 'apps/api' });
+    });
+
     it('resolves a prebuilt image (no Dockerfile build)', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': vercelJson({
