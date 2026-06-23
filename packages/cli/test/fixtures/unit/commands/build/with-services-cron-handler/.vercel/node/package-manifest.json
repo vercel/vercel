@@ -1,9 +1,0 @@
-{
-  "version": "20260304",
-  "runtime": "node",
-  "serviceType": "schedule",
-  "runtimeVersion": {
-    "resolved": "24"
-  },
-  "dependencies": []
-}
