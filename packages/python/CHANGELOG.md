@@ -1,5 +1,15 @@
 # @vercel/python
 
+## 6.47.1
+
+### Patch Changes
+
+- 95d8879: python: restrict bytecode precompilation to large functions
+- 82b3c3c: python: update functions bundle size limits
+- 96e3137: Emit catch-all routes for services V2 so requests reach the Python Lambda
+- f5fe588: python: update log messages
+- f076559: python: support large functions on Hive via supportLargeFunctions and retire the python-on-hive size path
+
 ## 6.47.0
 
 ### Minor Changes

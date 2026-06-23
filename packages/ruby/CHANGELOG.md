@@ -1,5 +1,11 @@
 # @vercel/ruby
 
+## 2.5.0
+
+### Minor Changes
+
+- 3afdb18: Emit project manifest for hugo, zola, jekyll, and middleman frameworks.
+
 ## 2.4.0
 
 ### Minor Changes
