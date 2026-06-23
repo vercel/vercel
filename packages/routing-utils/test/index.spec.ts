@@ -225,6 +225,19 @@ describe('normalizeRoutes', () => {
     );
   });
 
+  test('rejects a service rewrite `destination` missing `service`', () => {
+    const validate = ajv.compile(rewritesSchema);
+    assert.equal(
+      validate([
+        {
+          source: '/api/:path*',
+          destination: { type: 'service', path: '/api/$1' },
+        },
+      ]),
+      false
+    );
+  });
+
   test('rejects a service `destination` with an unknown property', () => {
     const validate = ajv.compile(routesSchema);
     assert.equal(
