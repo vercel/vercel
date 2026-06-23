@@ -29,8 +29,9 @@ When adding a durable contract, add a row to `SKILL.md` so agents load it only f
 Rules:
 
 - Ask `Which team?` before project discovery in TTY mode. An explicit `--scope` skips this prompt and restricts all lookup to that team.
-- Team choices show both display name and slug, identify the current team, and mark teams that require SSO.
-- The `Which team?` picker supports substring search by team name and slug.
+- Print the aligned `Directory` row before the first interactive prompt.
+- Team choices use the same plain-name presentation as the existing-project picker.
+- The `Which team?` picker supports substring search by team name and slug, even though slugs are not repeated in each row.
 - Non-TTY and `--non-interactive` never prompt, search across teams, infer a team from login defaults, select by folder name, or create a project.
 - `--yes` has no team/project selection authority and cannot enable project creation.
 - In non-interactive mode, `vc link --scope <team> --project <project>` is sufficient; `--yes` is unnecessary but may remain as a redundant compatibility flag.
@@ -38,6 +39,7 @@ Rules:
 - Missing information returns structured `action_required` output with `userActionRequired: true` and read-only discovery commands. Agents must ask the user instead of selecting a current/default/first/recent result.
 - Resolve and validate the replacement target before overwriting an existing local link.
 - Direct `vc link` only lists existing projects. It never offers `Create new project` or creates from a missing `--project` value.
+- Team selection includes `My team isn't listed`; project selection includes `None of these projects`. Both stop without mutation and print explicit next commands.
 - Project discovery after team selection is restricted to that team.
 - User-facing copy uses `team`; command examples use the preferred `--scope` flag.
 - Use `Which team?`, `Which project?`, and `Loading teams…`.

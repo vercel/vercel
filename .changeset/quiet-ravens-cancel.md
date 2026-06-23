@@ -12,4 +12,5 @@ longer creates projects in either interactive or non-interactive mode. In
 non-interactive mode, linking requires an
 explicit team and project or an existing valid local link, treats `--yes` as
 redundant, and requires user input instead of selecting defaults or list
-results.
+results. Interactive prompts show the target directory and provide explicit
+escape hatches when the intended team or project is not listed.

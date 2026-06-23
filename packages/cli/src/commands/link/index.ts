@@ -7,6 +7,7 @@ import type {
   User,
 } from '@vercel-internals/types';
 import chalk from 'chalk';
+import { Separator } from '@inquirer/search';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import cmd from '../../util/output/cmd';
@@ -36,11 +37,16 @@ import {
 } from '../../util/agent-output';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import type { FetchOptions } from '../../util/client';
-import { emoji } from '../../util/emoji';
+import { printAlignedLabel } from '../../util/output/print-aligned-label';
+import toHumanPath from '../../util/humanize-path';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
 };
+
+const TEAM_NOT_LISTED = 'team-not-listed' as const;
+const PROJECT_NOT_LISTED = 'project-not-listed' as const;
+const ESCAPE_HATCH_SEPARATOR = '─'.repeat(24);
 
 function warnOidcRefreshFailed(): void {
   output.print(
@@ -81,8 +87,7 @@ function isNonInteractiveLink(client: Client): boolean {
 
 type LinkOrgChoice = {
   org: Org;
-  label: string;
-  plainLabel: string;
+  name: string;
 };
 
 async function getLinkOrgChoices(client: Client): Promise<LinkOrgChoice[]> {
@@ -101,13 +106,9 @@ async function getLinkOrgChoices(client: Client): Promise<LinkOrgChoice[]> {
   const choices: LinkOrgChoice[] = [];
 
   if (user.version !== 'northstar') {
-    const plainLabel = `${user.name || user.email} (${user.username})`;
     choices.push({
       org: { type: 'user', id: user.id, slug: user.username },
-      plainLabel,
-      label: `${plainLabel}${
-        !selectedTeamId ? ` ${chalk.bold('(current)')}` : ''
-      }${user.limited ? ` ${emoji('locked')}` : ''}`,
+      name: user.name || user.username,
     });
   }
 
@@ -116,39 +117,83 @@ async function getLinkOrgChoices(client: Client): Promise<LinkOrgChoice[]> {
     if (b.id === selectedTeamId) return 1;
     return a.name.localeCompare(b.name);
   })) {
-    const plainLabel = team.name ? `${team.name} (${team.slug})` : team.slug;
     choices.push({
       org: { type: 'team', id: team.id, slug: team.slug },
-      plainLabel,
-      label: `${plainLabel}${
-        team.id === selectedTeamId ? ` ${chalk.bold('(current)')}` : ''
-      }${team.limited ? ` ${emoji('locked')}` : ''}`,
+      name: team.name || team.slug,
     });
   }
 
   return choices;
 }
 
-async function selectLinkOrg(client: Client): Promise<Org> {
+function printTeamNotListedHelp(): void {
+  output.print(`\n  ${chalk.bold('No team selected.')}\n\n`);
+  output.print(`  ${getCommandNamePlain('whoami')}\n`);
+  output.print(`  ${getCommandNamePlain('teams list')}\n`);
+}
+
+function printProjectNotListedHelp(org: Org): void {
+  output.print(`\n  ${chalk.bold('No project selected.')}\n\n`);
+  output.print(
+    `  ${getCommandNamePlain(
+      `project add <project-name> --scope ${org.slug}`
+    )}\n`
+  );
+  output.print(
+    `  ${getCommandNamePlain(
+      `link --scope ${org.slug} --project <project-name>`
+    )}\n`
+  );
+}
+
+async function selectLinkOrg(client: Client): Promise<Org | null> {
   const choices = await getLinkOrgChoices(client);
-  const selected = await client.input.search<LinkOrgChoice>({
+  const selected = await client.input.search<
+    LinkOrgChoice | typeof TEAM_NOT_LISTED
+  >({
     message: 'Which team?',
+    pageSize: 15,
     source: term => {
       const searchTerm = term?.trim().toLowerCase();
       const filtered = searchTerm
         ? choices.filter(
             choice =>
-              choice.plainLabel.toLowerCase().includes(searchTerm) ||
+              choice.name.toLowerCase().includes(searchTerm) ||
               choice.org.slug.toLowerCase().includes(searchTerm)
           )
         : choices;
 
-      return filtered.map(choice => ({
-        name: choice.label,
+      const teamChoices = filtered.map(choice => ({
+        name: choice.name,
         value: choice,
       }));
+
+      if (teamChoices.length === 0) {
+        return [
+          {
+            name: "My team isn't listed",
+            value: TEAM_NOT_LISTED,
+            description: 'Show account and access help',
+          },
+        ];
+      }
+
+      return [
+        ...teamChoices,
+        new Separator(ESCAPE_HATCH_SEPARATOR),
+        {
+          name: "My team isn't listed",
+          value: TEAM_NOT_LISTED,
+          description: 'Show account and access help',
+        },
+      ];
     },
   });
+
+  if (selected === TEAM_NOT_LISTED) {
+    printTeamNotListedHelp();
+    return null;
+  }
 
   return selected.org;
 }
@@ -194,39 +239,64 @@ async function selectExistingProject(
     .sort((a, b) => a.name.localeCompare(b.name));
   const hasMoreProjects = firstPage.pagination.next != null;
 
-  return await client.input.search<Project>({
+  const selected = await client.input.search<
+    Project | typeof PROJECT_NOT_LISTED
+  >({
     message: 'Which project?',
+    pageSize: 15,
     source: async (term, { signal }) => {
       const searchTerm = term?.trim();
-      if (!searchTerm) {
-        return initialProjects.map(project => ({
-          name: project.name,
-          value: project,
-        }));
-      }
+      const projects = !searchTerm
+        ? initialProjects
+        : hasMoreProjects
+          ? (
+              await client.fetch<{ projects: Project[] }>(
+                `/v9/projects?search=${encodeURIComponent(searchTerm)}&limit=20`,
+                {
+                  accountId: org.id,
+                  signal: signal as FetchOptions['signal'],
+                }
+              )
+            ).projects
+          : initialProjects.filter(
+              project =>
+                project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                project.id === searchTerm
+            );
 
-      const projects = hasMoreProjects
-        ? (
-            await client.fetch<{ projects: Project[] }>(
-              `/v9/projects?search=${encodeURIComponent(searchTerm)}&limit=20`,
-              {
-                accountId: org.id,
-                signal: signal as FetchOptions['signal'],
-              }
-            )
-          ).projects
-        : initialProjects.filter(
-            project =>
-              project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              project.id === searchTerm
-          );
-
-      return projects.map(project => ({
+      const projectChoices = projects.map(project => ({
         name: project.name,
         value: project,
       }));
+
+      if (projectChoices.length === 0) {
+        return [
+          {
+            name: 'None of these projects',
+            value: PROJECT_NOT_LISTED,
+            description: 'Show commands to create one explicitly',
+          },
+        ];
+      }
+
+      return [
+        ...projectChoices,
+        new Separator(ESCAPE_HATCH_SEPARATOR),
+        {
+          name: 'None of these projects',
+          value: PROJECT_NOT_LISTED,
+          description: 'Show commands to create one explicitly',
+        },
+      ];
     },
   });
+
+  if (selected === PROJECT_NOT_LISTED) {
+    printProjectNotListedHelp(org);
+    return null;
+  }
+
+  return selected;
 }
 
 async function getExplicitOrg(client: Client): Promise<Org> {
@@ -552,11 +622,19 @@ async function linkProject(client: Client) {
       }
     }
 
+    output.print('\n');
+    printAlignedLabel('Directory', toHumanPath(cwd));
+    output.print('\n');
+
     let org: Org;
     if (explicitScopeProvided) {
       org = await getExplicitOrg(client);
     } else {
-      org = await selectLinkOrg(client);
+      const selectedOrg = await selectLinkOrg(client);
+      if (!selectedOrg) {
+        return 1;
+      }
+      org = selectedOrg;
     }
 
     if (projectNameOrId) {

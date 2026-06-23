@@ -947,6 +947,9 @@ describe('link', () => {
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
     const plainOutput = stripAnsi(client.stderr.getFullOutput());
+    expect(plainOutput.indexOf('Directory')).toBeLessThan(
+      plainOutput.indexOf('Which team?')
+    );
     expect(plainOutput.indexOf('Which team?')).toBeLessThan(
       plainOutput.indexOf('Which project?')
     );
@@ -954,7 +957,10 @@ describe('link', () => {
     expect(plainOutput).not.toContain(
       'Pull development environment variables into .env.local?'
     );
-    expectLinkRowsUseExpectedGlyphs(client.stderr.getFullOutput(), ['Linked']);
+    expectLinkRowsUseExpectedGlyphs(client.stderr.getFullOutput(), [
+      'Directory',
+      'Linked',
+    ]);
 
     const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
     expect(projectJson.orgId).toEqual(team.id);
@@ -992,6 +998,64 @@ describe('link', () => {
       `project add <project-name> --scope ${team.slug}`
     );
     expect(outputText).not.toContain('Create new project');
+    expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
+  });
+
+  it("shows access help when the team isn't listed", async () => {
+    useUser({ version: 'northstar' });
+    const cwd = setupTmpDir();
+    useTeams('team_dummy');
+    useUnknownProject();
+
+    client.cwd = cwd;
+    const exitCodePromise = link(client);
+
+    await expect(client.stderr).toOutput('Which team?');
+    client.stdin.write('missing-team');
+    await expect(client.stderr).toOutput('missing-team');
+    client.stdin.write('\n');
+
+    await expect(exitCodePromise).resolves.toEqual(1);
+    const outputText = stripAnsi(client.stderr.getFullOutput());
+    expect(outputText).toContain("My team isn't listed");
+    expect(outputText).toContain('No team selected.');
+    expect(outputText).toContain('whoami');
+    expect(outputText).toContain('teams list');
+    expect(outputText).not.toContain('Which project?');
+    expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
+  });
+
+  it('shows explicit commands when none of the projects match', async () => {
+    useUser({ version: 'northstar' });
+    const cwd = setupTmpDir();
+    const [team] = useTeams('team_dummy') as Team[];
+    useProject({
+      ...defaultProject,
+      id: 'project-id',
+      name: 'existing-project',
+    });
+    useUnknownProject();
+
+    client.cwd = cwd;
+    const exitCodePromise = link(client);
+
+    await expect(client.stderr).toOutput('Which team?');
+    client.stdin.write('\n');
+    await expect(client.stderr).toOutput('Which project?');
+    client.stdin.write('missing-project');
+    await expect(client.stderr).toOutput('missing-project');
+    client.stdin.write('\n');
+
+    await expect(exitCodePromise).resolves.toEqual(1);
+    const outputText = stripAnsi(client.stderr.getFullOutput());
+    expect(outputText).toContain('None of these projects');
+    expect(outputText).toContain('No project selected.');
+    expect(outputText).toContain(
+      `project add <project-name> --scope ${team.slug}`
+    );
+    expect(outputText).toContain(
+      `link --scope ${team.slug} --project <project-name>`
+    );
     expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
   });
 
@@ -1300,8 +1364,10 @@ describe('link', () => {
         expect.objectContaining({ message: 'Which team?' })
       );
       const teamPromptOutput = client.stderr.getFullOutput();
-      expect(teamPromptOutput).toContain(`${teamA.name} (${teamA.slug})`);
-      expect(teamPromptOutput).toContain('Team B (team-b)');
+      expect(teamPromptOutput).toContain(teamA.name);
+      expect(teamPromptOutput).toContain('Team B');
+      expect(teamPromptOutput).not.toContain(`(${teamA.slug})`);
+      expect(teamPromptOutput).not.toContain('(current)');
       expect(teamPromptOutput).not.toContain('Which project?');
       client.stdin.write('team-b');
       client.stdin.write('\n');
