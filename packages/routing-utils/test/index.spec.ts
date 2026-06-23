@@ -167,7 +167,36 @@ describe('normalizeRoutes', () => {
 
     const normalized = normalizeRoutes(routes);
     assert.equal(normalized.error, null);
-    assert.deepStrictEqual(normalized.routes, routes);
+    assert.deepStrictEqual(normalized.routes, [
+      {
+        src: '^/api/health$',
+        destination: { type: 'service', service: 'web' },
+      },
+      {
+        src: '^/api(?:/(.*))?$',
+        destination: { type: 'service', service: 'api', path: '/$1' },
+      },
+    ]);
+  });
+
+  test('accepts short service `destination` in hand-written routes config', () => {
+    const routes: RouteInput[] = [
+      {
+        source: '/api/(.*)',
+        destination: { service: 'api', path: '/api/$1' },
+      },
+    ];
+
+    assertValid(routes);
+
+    const normalized = normalizeRoutes(routes);
+    assert.equal(normalized.error, null);
+    assert.deepStrictEqual(normalized.routes, [
+      {
+        src: '^/api/(.*)$',
+        destination: { type: 'service', service: 'api', path: '/api/$1' },
+      },
+    ]);
   });
 
   test('validates service `destination` names like service config names', () => {
@@ -298,6 +327,7 @@ describe('normalizeRoutes', () => {
     if (serviceRoute && !isHandler(serviceRoute)) {
       // `path` is interpolated like a string dest: `:path*` -> `$1`.
       assert.deepStrictEqual(serviceRoute.destination, {
+        type: 'service',
         service: 'my_backend',
         path: '/$1',
       });
