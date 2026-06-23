@@ -23,7 +23,6 @@ export interface SpawnSrvxOptions {
 }
 
 export interface SpawnedSrvx {
-  child: ChildProcess;
   pid: number;
   port: number;
   shutdown: () => Promise<void>;
@@ -188,7 +187,6 @@ export async function spawnSrvx(opts: SpawnSrvxOptions): Promise<SpawnedSrvx> {
   }
 
   return {
-    child,
     pid: child.pid,
     port,
     shutdown: () => stopChild(child),
