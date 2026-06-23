@@ -65,7 +65,8 @@ export async function devRouter(
   let status: number | undefined;
   let isContinue = false;
 
-  const accumulatedTransforms: Transform[] = [];
+  const requestTransforms: Transform[] = [];
+  let responseTransforms: Transform[] | undefined;
 
   // Try route match
   if (routes) {
@@ -92,14 +93,23 @@ export async function devRouter(
         matcher.exec(reqPathname) || matcher.exec(reqPathname.substring(1));
 
       if (match) {
-        if (routeConfig.transforms) {
-          accumulatedTransforms.push(
-            ...resolveTransforms(routeConfig.transforms, {
+        const routeTransforms = routeConfig.transforms
+          ? resolveTransforms(routeConfig.transforms, {
               match,
               keys,
               env: devServer?.envConfigs.runEnv,
             })
-          );
+          : [];
+
+        // A `service` destination is a terminal marker-only handoff, no
+        // transforms will be applied for this route
+        const isServiceMarker =
+          typeof routeConfig.destination === 'object' &&
+          routeConfig.destination !== null &&
+          routeConfig.destination.type === 'service';
+
+        if (!isServiceMarker && routeTransforms.length > 0) {
+          requestTransforms.push(...routeTransforms);
         }
 
         let destPath: string = reqPathname;
@@ -129,6 +139,9 @@ export async function devRouter(
           if (routeConfig.status) {
             status = routeConfig.status;
           }
+          if (routeTransforms.length > 0) {
+            responseTransforms = routeTransforms;
+          }
           reqPathname = destPath;
           isContinue = true;
           continue;
@@ -152,6 +165,9 @@ export async function devRouter(
           );
 
           if (!hasDestFile) {
+            if (routeTransforms.length > 0) {
+              responseTransforms = routeTransforms;
+            }
             if (routeConfig.status && phase !== 'miss') {
               // Equivalent to now-proxy exit_with_status() function
             } else if (missRoutes && missRoutes.length > 0) {
@@ -168,11 +184,14 @@ export async function devRouter(
               );
               if (missResult.found) {
                 // Carry transforms matched before the miss into the miss result.
-                if (accumulatedTransforms.length > 0) {
-                  missResult.transforms = [
-                    ...accumulatedTransforms,
-                    ...(missResult.transforms ?? []),
+                if (requestTransforms.length > 0) {
+                  missResult.requestTransforms = [
+                    ...requestTransforms,
+                    ...(missResult.requestTransforms ?? []),
                   ];
+                }
+                if (!missResult.responseTransforms && responseTransforms) {
+                  missResult.responseTransforms = responseTransforms;
                 }
                 return missResult;
               } else {
@@ -189,6 +208,22 @@ export async function devRouter(
           }
         }
 
+        const effectiveStatus = routeConfig.status || status;
+        const isRedirectExit =
+          typeof effectiveStatus === 'number' &&
+          effectiveStatus >= 300 &&
+          effectiveStatus < 400;
+        const isStatusExit =
+          typeof effectiveStatus === 'number' && !routeConfig.dest;
+        if (
+          !isServiceMarker &&
+          !isRedirectExit &&
+          !isStatusExit &&
+          routeTransforms.length > 0
+        ) {
+          responseTransforms = routeTransforms;
+        }
+
         if (isDestUrl) {
           result = {
             found: true,
@@ -202,7 +237,8 @@ export async function devRouter(
             matched_route: routeConfig,
             matched_route_idx: idx,
             phase,
-            transforms: accumulatedTransforms,
+            requestTransforms,
+            responseTransforms,
           };
           break;
         } else {
@@ -226,7 +262,8 @@ export async function devRouter(
             matched_route: routeConfig,
             matched_route_idx: idx,
             phase,
-            transforms: accumulatedTransforms,
+            requestTransforms,
+            responseTransforms,
           };
           break;
         }
@@ -244,7 +281,8 @@ export async function devRouter(
       query: reqQuery,
       headers: combinedHeaders,
       phase,
-      transforms: accumulatedTransforms,
+      requestTransforms,
+      responseTransforms,
     };
   }
 

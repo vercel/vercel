@@ -718,6 +718,9 @@ describe('[vercel dev] Multi-service with experimentalServicesV2', () => {
       expect(transformed.status).toBe(200);
       expect(transformed.headers.get('x-resp-injected')).toBe('resp');
       expect(transformed.headers.get('x-overridden')).toBe('overridden');
+      // a transform declared on the service-marker route is a marker-only
+      // handoff in the proxy and must not be applied here either
+      expect(transformed.headers.get('x-marker-should-not-apply')).toBeNull();
       const transformedJson = await transformed.json();
       expect(transformedJson).toMatchObject({
         service: 'backend',
@@ -726,6 +729,33 @@ describe('[vercel dev] Multi-service with experimentalServicesV2', () => {
       });
       expect(transformedJson.received_query).toContain('foo=bar');
       expect(transformedJson.received_query).toContain('injected=yes');
+
+      // a `response.headers` transform on a terminal status route must not be
+      // applied
+      const gone = await nodeFetch(`http://localhost:${port}/gone`);
+      expect(gone.status).toBe(410);
+      expect(gone.headers.get('x-should-not-apply')).toBeNull();
+
+      // same for a redirect route
+      const oldRedirect = await nodeFetch(`http://localhost:${port}/old`, {
+        redirect: 'manual',
+      });
+      expect(oldRedirect.status).toBe(308);
+      expect(oldRedirect.headers.get('location')).toBe(
+        `http://localhost:${port}/new`
+      );
+      expect(oldRedirect.headers.get('x-should-not-apply')).toBeNull();
+
+      // a `request.path` transform declared directly on a service rewrite is a
+      // no-op
+      const markerNoop = await nodeFetch(`http://localhost:${port}/rw/echo`);
+      validateResponseHeaders(markerNoop);
+      expect(markerNoop.status).toBe(200);
+      const markerNoopJson = await markerNoop.json();
+      expect(markerNoopJson).toMatchObject({
+        service: 'backend',
+        received_path: '/rw/echo',
+      });
 
       // frontend handler
       const frontend = await nodeFetch(`http://localhost:${port}/`);

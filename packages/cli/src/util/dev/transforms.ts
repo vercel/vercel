@@ -192,6 +192,27 @@ function applyQueryTransforms(
   }
 }
 
+const HEADER_NAME_RE = /^[-\w]+$/;
+const HEADER_VALUE_RE = /^[-\w:;.,/\\"'?!(){}[\]@<>=+*#$&`|~%^ ]+$/;
+
+function isValidHeaderName(name: string): boolean {
+  return name.length > 0 && HEADER_NAME_RE.test(name);
+}
+
+function isValidHeaderValue(value: string): boolean {
+  return value.length > 0 && HEADER_VALUE_RE.test(value);
+}
+
+function hasValidHeaderArgs(args: string | string[] | undefined): boolean {
+  if (typeof args === 'string') {
+    return isValidHeaderValue(args);
+  }
+  if (Array.isArray(args)) {
+    return args.every(isValidHeaderValue);
+  }
+  return false;
+}
+
 function applyTransform(
   data: TransformData,
   transform: TargetTransform,
@@ -200,6 +221,14 @@ function applyTransform(
   const keySelector = transform.target?.key;
   if (keySelector == null) {
     return;
+  }
+  if (isHeader && (transform.op === 'set' || transform.op === 'append')) {
+    if (typeof keySelector === 'string' && !isValidHeaderName(keySelector)) {
+      return;
+    }
+    if (!hasValidHeaderArgs(transform.args)) {
+      return;
+    }
   }
   const matchedKeys = findMatchingKeys(data, keySelector);
   switch (transform.op) {
@@ -217,13 +246,35 @@ function applyTransform(
   }
 }
 
+function isValidRequestPath(path: string): boolean {
+  if (path === '' || path.length > 2048) {
+    return false;
+  }
+  if (path[0] !== '/' || path.startsWith('//')) {
+    return false;
+  }
+  if (/[?#]/.test(path)) {
+    return false;
+  }
+  // reject control characters and whitespace (CR/LF/space/tab/etc.) — the
+  // request-smuggling guard. Mirrors Lua's `%c%s`.
+  for (let i = 0; i < path.length; i++) {
+    const code = path.charCodeAt(i);
+    if (code <= 0x20 || code === 0x7f) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function getRequestPath(transforms: Transform[]): string | undefined {
   let path: string | undefined;
   for (const transform of transforms) {
     if (
       transform.type === 'request.path' &&
       transform.op === 'set' &&
-      typeof transform.args === 'string'
+      typeof transform.args === 'string' &&
+      isValidRequestPath(transform.args)
     ) {
       path = transform.args;
     }

@@ -354,8 +354,137 @@ describe('devRouter', () => {
     ];
     const result = await devRouter('/foo', 'GET', routesConfig);
 
-    expect(result.transforms).toHaveLength(2);
-    expect(result.transforms?.[0]).toMatchObject({ target: { key: 'x-a' } });
-    expect(result.transforms?.[1]).toMatchObject({ target: { key: 'x-b' } });
+    expect(result.requestTransforms).toHaveLength(2);
+    expect(result.requestTransforms?.[0]).toMatchObject({
+      target: { key: 'x-a' },
+    });
+    expect(result.requestTransforms?.[1]).toMatchObject({
+      target: { key: 'x-b' },
+    });
+  });
+
+  it('uses only the latest transform route as the response context', async () => {
+    const routesConfig = [
+      {
+        src: '/(.*)',
+        continue: true,
+        transforms: [
+          {
+            type: 'response.headers' as const,
+            op: 'set' as const,
+            target: { key: 'x-early' },
+            args: 'early',
+          },
+        ],
+      },
+      {
+        src: '/foo',
+        dest: '/bar.js',
+        transforms: [
+          {
+            type: 'response.headers' as const,
+            op: 'set' as const,
+            target: { key: 'x-late' },
+            args: 'late',
+          },
+        ],
+      },
+    ];
+    const result = await devRouter('/foo', 'GET', routesConfig);
+
+    // request transforms accumulate, but the response context is replaced, not
+    // accumulated: only the latest matched transform route wins.
+    expect(result.requestTransforms).toHaveLength(2);
+    expect(result.responseTransforms).toHaveLength(1);
+    expect(result.responseTransforms?.[0]).toMatchObject({
+      target: { key: 'x-late' },
+    });
+  });
+
+  it('skips transforms on a service-marker route', async () => {
+    const routesConfig = [
+      {
+        src: '/transform/(.*)',
+        destination: { type: 'service' as const, service: 'backend' },
+        transforms: [
+          {
+            type: 'request.path' as const,
+            op: 'set' as const,
+            args: '/api/$1',
+          },
+          {
+            type: 'response.headers' as const,
+            op: 'set' as const,
+            target: { key: 'x-marker-resp' },
+            args: '1',
+          },
+        ],
+      },
+    ];
+    const result = await devRouter('/transform/echo', 'GET', routesConfig);
+
+    // A service-marker route is a terminal handoff
+    expect(result.requestTransforms).toHaveLength(0);
+    expect(result.responseTransforms).toBeUndefined();
+  });
+
+  it('does not set a response context for a redirect route, keeping the prior one', async () => {
+    const routesConfig = [
+      {
+        src: '/(.*)',
+        continue: true,
+        transforms: [
+          {
+            type: 'response.headers' as const,
+            op: 'set' as const,
+            target: { key: 'x-prior' },
+            args: 'prior',
+          },
+        ],
+      },
+      {
+        src: '/old',
+        status: 308,
+        headers: { Location: '/new' },
+        transforms: [
+          {
+            type: 'response.headers' as const,
+            op: 'set' as const,
+            target: { key: 'x-should-not-apply' },
+            args: '1',
+          },
+        ],
+      },
+    ];
+    const result = await devRouter('/old', 'GET', routesConfig);
+
+    expect(result.status).toBe(308);
+    // the redirecting route's own transforms must not become the context; the
+    // earlier `continue` route's context is preserved.
+    expect(result.responseTransforms).toHaveLength(1);
+    expect(result.responseTransforms?.[0]).toMatchObject({
+      target: { key: 'x-prior' },
+    });
+  });
+
+  it('does not set a response context for a terminal status route', async () => {
+    const routesConfig = [
+      {
+        src: '/gone',
+        status: 410,
+        transforms: [
+          {
+            type: 'response.headers' as const,
+            op: 'set' as const,
+            target: { key: 'x-should-not-apply' },
+            args: '1',
+          },
+        ],
+      },
+    ];
+    const result = await devRouter('/gone', 'GET', routesConfig);
+
+    expect(result.status).toBe(410);
+    expect(result.responseTransforms).toBeUndefined();
   });
 });

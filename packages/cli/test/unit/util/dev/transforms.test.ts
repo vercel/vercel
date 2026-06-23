@@ -463,3 +463,170 @@ describe('hasResponseTransforms', () => {
     expect(hasResponseTransforms([])).toBe(false);
   });
 });
+
+describe('request.path', () => {
+  it('sets the path to a literal value', () => {
+    const req = { url: '/orig', headers: {} };
+    applyRequestTransforms(req, [
+      { type: 'request.path', op: 'set', args: '/users' },
+    ]);
+    expect(req.url).toBe('/users');
+  });
+
+  it('expands numbered and named capture groups', () => {
+    const numbered = resolveTransforms(
+      [{ type: 'request.path', op: 'set', args: '/$1' }] as Transform[],
+      buildTransformCtx('/api/(.*)', '/api/users')
+    );
+    const req1 = { url: '/api/users', headers: {} };
+    applyRequestTransforms(req1, numbered);
+    expect(req1.url).toBe('/users');
+
+    const named = resolveTransforms(
+      [{ type: 'request.path', op: 'set', args: '/$path' }] as Transform[],
+      buildTransformCtx('/api/(?<path>.*)', '/api/users/123')
+    );
+    const req2 = { url: '/api/users/123', headers: {} };
+    applyRequestTransforms(req2, named);
+    expect(req2.url).toBe('/users/123');
+  });
+
+  it('expands allowlisted env vars', () => {
+    const resolved = resolveTransforms(
+      [
+        {
+          type: 'request.path',
+          op: 'set',
+          args: '/$BASE/users',
+          env: ['BASE'],
+        },
+      ] as Transform[],
+      buildTransformCtx('/x', '/x', { BASE: 'internal' })
+    );
+    const req = { url: '/x', headers: {} };
+    applyRequestTransforms(req, resolved);
+    expect(req.url).toBe('/internal/users');
+  });
+
+  // A malformed request.path must not be applied (it stays at the original URL).
+  it.each([
+    ['no leading slash', 'users'],
+    ['scheme-relative (//host)', '//evil.example.com/users'],
+    ['query string in path', '/users?foo=bar'],
+    ['whitespace', '/has space'],
+    ['CR/LF (request smuggling guard)', '/users\r\nHost: evil'],
+  ])('rejects %s', (_label, badPath) => {
+    const req = { url: '/orig', headers: {} };
+    applyRequestTransforms(req, [
+      { type: 'request.path', op: 'set', args: badPath },
+    ]);
+    expect(req.url).toBe('/orig');
+  });
+
+  it('ignores a non-set operation', () => {
+    const req = { url: '/orig', headers: {} };
+    applyRequestTransforms(req, [
+      {
+        type: 'request.path',
+        op: 'append',
+        args: '/users',
+      } as unknown as Transform,
+    ]);
+    expect(req.url).toBe('/orig');
+  });
+
+  it('ignores args that are not a single string', () => {
+    const req = { url: '/orig', headers: {} };
+    applyRequestTransforms(req, [
+      {
+        type: 'request.path',
+        op: 'set',
+        args: ['/a', '/b'],
+      } as unknown as Transform,
+    ]);
+    expect(req.url).toBe('/orig');
+  });
+});
+
+describe('header validation', () => {
+  it('rejects an invalid header name', () => {
+    const req = {
+      url: '/x',
+      headers: {} as Record<string, string | string[] | undefined>,
+    };
+    applyRequestTransforms(req, [
+      {
+        type: 'request.headers',
+        op: 'set',
+        target: { key: 'invalid header!' },
+        args: 'v',
+      },
+    ]);
+    expect(req.headers['invalid header!']).toBeUndefined();
+  });
+
+  it('rejects a header value containing a newline (smuggling guard)', () => {
+    const req = {
+      url: '/x',
+      headers: {} as Record<string, string | string[] | undefined>,
+    };
+    applyRequestTransforms(req, [
+      {
+        type: 'request.headers',
+        op: 'set',
+        target: { key: 'x-h' },
+        args: 'bad\nvalue',
+      },
+    ]);
+    expect(req.headers['x-h']).toBeUndefined();
+  });
+
+  it('rejects a header value with control characters', () => {
+    const req = {
+      url: '/x',
+      headers: {} as Record<string, string | string[] | undefined>,
+    };
+    applyRequestTransforms(req, [
+      {
+        type: 'request.headers',
+        op: 'set',
+        target: { key: 'x-h' },
+        // eslint-disable-next-line no-control-regex
+        args: 'a\x00b\x01c',
+      },
+    ]);
+    expect(req.headers['x-h']).toBeUndefined();
+  });
+
+  it('ignores an unsupported operation', () => {
+    const req = {
+      url: '/x',
+      headers: {} as Record<string, string | string[] | undefined>,
+    };
+    applyRequestTransforms(req, [
+      {
+        type: 'request.headers',
+        op: 'invalid_operation',
+        target: { key: 'x-h' },
+        args: 'v',
+      } as unknown as Transform,
+    ]);
+    expect(req.headers['x-h']).toBeUndefined();
+  });
+
+  it('ignores an unsupported transform type', () => {
+    const req = {
+      url: '/x',
+      headers: {} as Record<string, string | string[] | undefined>,
+    };
+    applyRequestTransforms(req, [
+      {
+        type: 'invalid.type',
+        op: 'set',
+        target: { key: 'x-h' },
+        args: 'v',
+      } as unknown as Transform,
+    ]);
+    expect(req.headers['x-h']).toBeUndefined();
+  });
+});

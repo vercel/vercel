@@ -154,9 +154,10 @@ export interface RouteResult {
   isDestUrl: boolean;
   // the phase that this route is defined in
   phase?: HandleValue | null;
-  // transforms accumulated from every route matched in this phase, resolved
-  // against each route's capture groups (request/response header, query, path)
-  transforms?: Transform[];
+  // request-time transforms are applied immediately to the request
+  requestTransforms?: Transform[];
+  // deferred response-time transforms
+  responseTransforms?: Transform[];
 }
 
 export interface InvokePayload {
