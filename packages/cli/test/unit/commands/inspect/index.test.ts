@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
-import { useTeams } from '../../../mocks/team';
+import { useTeam } from '../../../mocks/team';
 import { useBuildLogs, useDeployment } from '../../../mocks/deployment';
 import inspect from '../../../../src/commands/inspect';
 import sleep from '../../../../src/util/sleep';
@@ -456,8 +456,7 @@ describe('inspect', () => {
     describe('dashboard URL parsing', () => {
       it('sets team scope from dashboard URL', async () => {
         const user = useUser();
-        const teams = useTeams();
-        const team = teams[0];
+        const team = useTeam();
         const deployment = useDeployment({ creator: user });
 
         client.setArgv(
@@ -471,8 +470,7 @@ describe('inspect', () => {
 
       it('does not override explicit --scope flag', async () => {
         const user = useUser();
-        const teams = useTeams();
-        const team = teams[0];
+        const team = useTeam();
         const deployment = useDeployment({ creator: user });
 
         client.config.currentTeam = team.id;
