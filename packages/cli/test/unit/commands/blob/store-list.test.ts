@@ -499,4 +499,20 @@ describe('blob list-stores', () => {
       expect(exitCode).toBe(0);
     });
   });
+
+  describe('non-interactive mode (agents)', () => {
+    beforeEach(() => {
+      client.nonInteractive = true;
+    });
+
+    it('prints the table without the picker even in a TTY', async () => {
+      const exitCode = await listStores(client, []);
+
+      expect(exitCode).toBe(0);
+      expect(selectInputMock).not.toHaveBeenCalled();
+      expect(mockedOutput.print).toHaveBeenCalledWith(
+        expect.stringContaining('my-store')
+      );
+    });
+  });
 });

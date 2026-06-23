@@ -477,19 +477,19 @@ const experimentalServiceGroupsSchema = {
   },
 };
 
-const experimentalServicesV2PathSchema = {
+const servicesPathSchema = {
   type: 'string',
   minLength: 1,
   maxLength: 512,
 };
 
-const experimentalServicesV2CommandSchema = {
+const servicesCommandSchema = {
   type: 'string',
   minLength: 1,
   maxLength: 2048,
 };
 
-const experimentalServicesV2BindingSchema = {
+const servicesBindingSchema = {
   type: 'object',
   additionalProperties: false,
   required: ['type', 'service', 'format', 'env'],
@@ -509,18 +509,18 @@ const experimentalServicesV2BindingSchema = {
   },
 };
 
-const experimentalServicesV2BindingsSchema = {
+const servicesBindingsSchema = {
   type: 'array',
   maxItems: 100,
-  items: experimentalServicesV2BindingSchema,
+  items: servicesBindingSchema,
 };
 
-const getExperimentalServicesV2ServiceConfigSchema = () => ({
+const getServicesServiceConfigSchema = () => ({
   type: 'object',
   additionalProperties: false,
   required: ['root'],
   properties: {
-    root: experimentalServicesV2PathSchema,
+    root: servicesPathSchema,
     framework: {
       type: 'string',
       minLength: 1,
@@ -531,13 +531,13 @@ const getExperimentalServicesV2ServiceConfigSchema = () => ({
       minLength: 1,
       maxLength: 256,
     },
-    entrypoint: experimentalServicesV2PathSchema,
-    installCommand: experimentalServicesV2CommandSchema,
-    buildCommand: experimentalServicesV2CommandSchema,
-    devCommand: experimentalServicesV2CommandSchema,
-    ignoreCommand: experimentalServicesV2CommandSchema,
-    outputDirectory: experimentalServicesV2PathSchema,
-    bindings: experimentalServicesV2BindingsSchema,
+    entrypoint: servicesPathSchema,
+    installCommand: servicesCommandSchema,
+    buildCommand: servicesCommandSchema,
+    devCommand: servicesCommandSchema,
+    ignoreCommand: servicesCommandSchema,
+    outputDirectory: servicesPathSchema,
+    bindings: servicesBindingsSchema,
     functions: getFunctionsSchema(),
     headers: headersSchema,
     redirects: redirectsSchema,
@@ -548,13 +548,13 @@ const getExperimentalServicesV2ServiceConfigSchema = () => ({
   },
 });
 
-const getExperimentalServicesV2Schema = () => ({
+const getServicesSchema = () => ({
   type: 'object',
   propertyNames: {
     pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
     maxLength: 64,
   },
-  additionalProperties: getExperimentalServicesV2ServiceConfigSchema(),
+  additionalProperties: getServicesServiceConfigSchema(),
 });
 
 function buildVercelConfigSchema() {
@@ -577,7 +577,8 @@ function buildVercelConfigSchema() {
       bunVersion: { type: 'string' },
       experimentalServices: getExperimentalServicesSchema(),
       experimentalServiceGroups: experimentalServiceGroupsSchema,
-      experimentalServicesV2: getExperimentalServicesV2Schema(),
+      services: getServicesSchema(),
+      experimentalServicesV2: getServicesSchema(),
     },
   };
 }
@@ -659,26 +660,39 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
     });
   }
 
-  const hasExperimentalServicesV2 = Boolean(config.experimentalServicesV2);
+  const hasServices = config.services != null;
+  const hasExperimentalServicesV2 = config.experimentalServicesV2 != null;
 
-  if (hasExperimentalServicesV2 && hasExperimentalServices) {
+  if (hasServices && hasExperimentalServicesV2) {
     return new NowBuildError({
-      code: 'EXPERIMENTAL_SERVICES_V2_AND_EXPERIMENTAL_SERVICES',
+      code: 'SERVICES_AND_EXPERIMENTAL_SERVICES_V2',
       message:
-        'The `experimentalServicesV2` property cannot be used in conjunction with the `experimentalServices` property. Please use only one services configuration.',
+        'The `services` property cannot be used in conjunction with its deprecated alias `experimentalServicesV2`. Please use only `services`.',
     });
   }
 
-  if (hasExperimentalServicesV2 && config.builds) {
+  const servicesConfig = config.services ?? config.experimentalServicesV2;
+  const servicesConfigKey = hasServices ? 'services' : 'experimentalServicesV2';
+  const servicesErrorCodePrefix = hasServices
+    ? 'SERVICES'
+    : 'EXPERIMENTAL_SERVICES_V2';
+
+  if (servicesConfig && hasExperimentalServices) {
     return new NowBuildError({
-      code: 'EXPERIMENTAL_SERVICES_V2_AND_BUILDS',
-      message:
-        'The `experimentalServicesV2` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
+      code: `${servicesErrorCodePrefix}_AND_EXPERIMENTAL_SERVICES`,
+      message: `The \`${servicesConfigKey}\` property cannot be used in conjunction with the \`experimentalServices\` property. Please use only one services configuration.`,
     });
   }
 
-  // with `experimentalServicesV2` some fields could be present only in services declaration
-  if (hasExperimentalServicesV2) {
+  if (servicesConfig && config.builds) {
+    return new NowBuildError({
+      code: `${servicesErrorCodePrefix}_AND_BUILDS`,
+      message: `The \`${servicesConfigKey}\` property cannot be used in conjunction with the \`builds\` property. Please remove one of them.`,
+    });
+  }
+
+  // In services mode some fields can be present only in service declarations.
+  if (servicesConfig) {
     const ambiguousTopLevel: string[] = [];
     if (config.functions != null) {
       ambiguousTopLevel.push('functions');
@@ -706,27 +720,25 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
       const count = ambiguousTopLevel.length;
       const fields = ambiguousTopLevel.map(field => `\`${field}\``).join(', ');
       return new NowBuildError({
-        code: 'EXPERIMENTAL_SERVICES_V2_AND_TOP_LEVEL_BUILD_SETTINGS',
+        code: `${servicesErrorCodePrefix}_AND_TOP_LEVEL_BUILD_SETTINGS`,
         message:
-          `The top-level ${count > 1 ? 'properties' : 'property'} ${fields} cannot be used with \`experimentalServicesV2\` ` +
+          `The top-level ${count > 1 ? 'properties' : 'property'} ${fields} cannot be used with \`${servicesConfigKey}\` ` +
           `because the owning service is ambiguous. ` +
-          `Move ${count > 1 ? 'them' : 'it'} under the relevant service in \`experimentalServicesV2\`.`,
+          `Move ${count > 1 ? 'them' : 'it'} under the relevant service in \`${servicesConfigKey}\`.`,
       });
     }
   }
 
-  if (config.experimentalServicesV2) {
-    const serviceNames = new Set(Object.keys(config.experimentalServicesV2));
-    for (const [serviceName, serviceConfig] of Object.entries(
-      config.experimentalServicesV2
-    )) {
+  if (servicesConfig) {
+    const serviceNames = new Set(Object.keys(servicesConfig));
+    for (const [serviceName, serviceConfig] of Object.entries(servicesConfig)) {
       for (const binding of serviceConfig.bindings ?? []) {
         if (!serviceNames.has(binding.service)) {
           return new NowBuildError({
-            code: 'EXPERIMENTAL_SERVICES_V2_BINDING_UNKNOWN_SERVICE',
+            code: `${servicesErrorCodePrefix}_BINDING_UNKNOWN_SERVICE`,
             message:
               `Service "${serviceName}" declares a binding to unknown service "${binding.service}". ` +
-              `Add "${binding.service}" to \`experimentalServicesV2\` or fix the binding.`,
+              `Add "${binding.service}" to \`${servicesConfigKey}\` or fix the binding.`,
           });
         }
       }

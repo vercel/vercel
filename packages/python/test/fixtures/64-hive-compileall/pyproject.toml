@@ -6,3 +6,8 @@ dependencies = [
   "flask",
   "pydantic",
 ]
+
+# A custom build command must disable compileall, even though this script's
+# blob makes the function large. probes.json asserts compileall is skipped.
+[tool.vercel.scripts]
+build = "python build.py"

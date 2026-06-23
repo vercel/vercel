@@ -697,4 +697,59 @@ describe('blob store remove', () => {
       );
     });
   });
+
+  describe('non-interactive mode (agents)', () => {
+    beforeEach(() => {
+      client.nonInteractive = true;
+      // The mock throws to simulate process.exit terminating; the command's
+      // try/catch may swallow it, so we assert on the spy, not a rejection.
+      vi.spyOn(process, 'exit').mockImplementation(((_code?: number) => {
+        throw new Error('exit');
+      }) as () => never);
+    });
+
+    it('requires --yes and emits confirmation_required instead of prompting', async () => {
+      await removeStore(client, ['store_1234567890123456'], noToken).catch(
+        () => {}
+      );
+
+      expect(vi.mocked(process.exit)).toHaveBeenCalledWith(1);
+      expect(confirmInputMock).not.toHaveBeenCalled();
+      const payload = JSON.parse(client.stdout.getFullOutput());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'confirmation_required',
+        message: expect.stringMatching(/--yes/),
+        next: expect.arrayContaining([
+          expect.objectContaining({
+            command: expect.stringContaining('--yes'),
+          }),
+        ]),
+      });
+    });
+
+    it('emits missing_arguments when no store id is available', async () => {
+      await removeStore(client, [], noToken).catch(() => {});
+
+      expect(vi.mocked(process.exit)).toHaveBeenCalledWith(1);
+      const payload = JSON.parse(client.stdout.getFullOutput());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'missing_arguments',
+        message: expect.stringContaining('storeId'),
+      });
+    });
+
+    it('deletes without prompting when --yes is passed', async () => {
+      const exitCode = await removeStore(
+        client,
+        ['store_1234567890123456', '--yes'],
+        noToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(confirmInputMock).not.toHaveBeenCalled();
+      expect(mockedOutput.success).toHaveBeenCalledWith('Blob store deleted');
+    });
+  });
 });

@@ -179,6 +179,54 @@ it('should fail if the provided bun version is not valid', async () => {
   ).rejects.toThrow();
 });
 
+it('should resolve to Bun when package.json has engines.bun', async () => {
+  const result = await getNodeVersion(
+    path.join(__dirname, 'pkg-engines-bun'),
+    undefined,
+    {},
+    {}
+  );
+  expect(result).toHaveProperty('runtime', 'bun1.x');
+  expect(result).toHaveProperty('range', '1.x');
+  expect(warningMessages).toStrictEqual([]);
+});
+
+it('should default to Node when both engines.node and engines.bun are set, with a warning', async () => {
+  const result = await getNodeVersion(
+    path.join(__dirname, 'pkg-engines-node-and-bun'),
+    undefined,
+    {},
+    {}
+  );
+  expect(result).toHaveProperty('runtime', 'nodejs22.x');
+  expect(result).toHaveProperty('range', '22.x');
+  expect(warningMessages).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining(
+        'Warning detected "engines": { "node": ..., "bun": ... } in `package.json`. Defaulting to "node".'
+      ),
+    ])
+  );
+});
+
+it('should resolve to Bun when both engines.node and engines.bun are set and config.bunVersion is provided', async () => {
+  const result = await getNodeVersion(
+    path.join(__dirname, 'pkg-engines-node-and-bun'),
+    undefined,
+    { bunVersion: '1.x' },
+    {}
+  );
+  expect(result).toHaveProperty('runtime', 'bun1.x');
+  expect(result).toHaveProperty('range', '1.x');
+  expect(warningMessages).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining(
+        'Warning detected "engines": { "node": ..., "bun": ... } in `package.json`. Since "bunVersion" is set in `vercel.json`, using "bun".'
+      ),
+    ])
+  );
+});
+
 it('should select project setting from config when no package.json is found and fallback undefined', async () => {
   expect(
     await getNodeVersion('/tmp', undefined, { nodeVersion: '22.x' }, {})

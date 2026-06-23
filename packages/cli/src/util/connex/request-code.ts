@@ -11,7 +11,7 @@ export interface ConnexResult {
 }
 
 const POLL_INTERVAL_MS = 2000;
-const MAX_POLL_DURATION_MS = 30 * 60 * 1000;
+const MAX_POLL_DURATION_MS = 115 * 60 * 1000;
 const MAX_EARLY_404_COUNT = 3;
 
 /**

@@ -14,6 +14,11 @@ import {
   VALID_ENVIRONMENTS,
   validateEnvironments,
 } from '../../util/integration/post-provision-setup';
+import {
+  outputAgentError,
+  buildCommandWithYes,
+  buildCommandWithGlobalFlags,
+} from '../../util/agent-output';
 
 export default async function addStore(
   client: Client,
@@ -42,6 +47,9 @@ export default async function addStore(
     flags,
   } = parsedArgs;
 
+  // Prompting after the store is created flakes agents into duplicate stores.
+  const interactive = client.stdin.isTTY && !client.nonInteractive;
+
   const yes = flags['--yes'] ?? false;
   const environmentFlags = flags['--environment'];
 
@@ -49,15 +57,19 @@ export default async function addStore(
   if (environmentFlags?.length) {
     const envValidation = validateEnvironments(environmentFlags);
     if (!envValidation.valid) {
-      output.error(
-        `Invalid environment value: ${envValidation.invalid.map(e => `"${e}"`).join(', ')}. Must be one of: ${VALID_ENVIRONMENTS.join(', ')}`
-      );
+      const message = `Invalid environment value: ${envValidation.invalid.map(e => `"${e}"`).join(', ')}. Must be one of: ${VALID_ENVIRONMENTS.join(', ')}`;
+      outputAgentError(client, {
+        status: 'error',
+        reason: 'invalid_arguments',
+        message,
+      });
+      output.error(message);
       return 1;
     }
   }
 
   let accessFlag = flags['--access'];
-  if (!accessFlag && client.stdin.isTTY) {
+  if (!accessFlag && interactive) {
     accessFlag = await client.input.select<'public' | 'private'>({
       message: 'Choose the access type for the blob store',
       choices: [
@@ -76,6 +88,22 @@ export default async function addStore(
       ],
     });
   }
+  if (!accessFlag) {
+    outputAgentError(client, {
+      status: 'error',
+      reason: 'missing_arguments',
+      message: "Missing required --access flag. Must be 'public' or 'private'.",
+      next: [
+        {
+          command: buildCommandWithGlobalFlags(
+            client.argv,
+            'blob create-store <name> --access private --yes'
+          ),
+          when: 'create a private blob store and link it to the project',
+        },
+      ],
+    });
+  }
   const access = parseAccessFlag(accessFlag);
   if (!access) return 1;
 
@@ -83,19 +111,34 @@ export default async function addStore(
 
   let name = nameArg;
   if (!name) {
-    if (!client.stdin.isTTY) {
+    if (interactive) {
+      name = await client.input.text({
+        message: 'Enter a name for your blob store',
+        validate: value => {
+          if (value.length < 5) {
+            return 'Name must be at least 5 characters long';
+          }
+          return true;
+        },
+      });
+    } else {
+      outputAgentError(client, {
+        status: 'error',
+        reason: 'missing_arguments',
+        message: 'Missing required argument: name.',
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `blob create-store <name> --access ${access} --yes`
+            ),
+            when: 'create the blob store and link it to the project',
+          },
+        ],
+      });
       output.error('Missing required argument: name');
       return 1;
     }
-    name = await client.input.text({
-      message: 'Enter a name for your blob store',
-      validate: value => {
-        if (value.length < 5) {
-          return 'Name must be at least 5 characters long';
-        }
-        return true;
-      },
-    });
   }
 
   telemetryClient.trackCliArgumentName(name);
@@ -103,6 +146,27 @@ export default async function addStore(
   telemetryClient.trackCliOptionRegion(flags['--region']);
 
   const link = await getLinkedProject(client);
+
+  // Gate before creating so a blocked run creates nothing (no duplicate on retry).
+  if (
+    link.status === 'linked' &&
+    client.nonInteractive &&
+    !yes &&
+    !environmentFlags?.length
+  ) {
+    outputAgentError(client, {
+      status: 'error',
+      reason: 'confirmation_required',
+      message: `Creating a blob store and linking it to ${link.project.name} requires confirmation. Re-run with --yes to create the store and link it to all environments, or pass --environment to choose which ones.`,
+      next: [
+        {
+          command: buildCommandWithYes(client.argv),
+          when: 'create the store and link it to all environments',
+        },
+      ],
+    });
+    return 1;
+  }
 
   let storeId: string;
   let storeRegion: string | undefined;
@@ -139,11 +203,18 @@ export default async function addStore(
   output.log(`Access: ${access}. Learn more: ${output.link(docsUrl, docsUrl)}`);
 
   if (link.status === 'linked') {
-    let shouldLink = yes;
-    if (!shouldLink) {
+    // --yes or an explicit --environment list both mean "link without asking".
+    let shouldLink = yes || Boolean(environmentFlags?.length);
+    if (!shouldLink && interactive) {
       shouldLink = await client.input.confirm(
         `Would you like to link this blob store to ${link.project.name}?`,
         true
+      );
+    }
+
+    if (!shouldLink && !interactive) {
+      output.log(
+        `Not linked to ${chalk.bold(link.project.name)}. Pass --yes when creating to link the store to your project automatically.`
       );
     }
 
@@ -151,9 +222,7 @@ export default async function addStore(
       let environments: string[];
       if (environmentFlags?.length) {
         environments = environmentFlags;
-      } else if (yes) {
-        environments = [...VALID_ENVIRONMENTS];
-      } else {
+      } else if (interactive && !yes) {
         environments = await client.input.checkbox({
           message: 'Select environments',
           choices: [
@@ -162,6 +231,8 @@ export default async function addStore(
             { name: 'Development', value: 'development', checked: true },
           ],
         });
+      } else {
+        environments = [...VALID_ENVIRONMENTS];
       }
 
       output.spinner(

@@ -12,6 +12,23 @@ import {
 import { trace } from './trace';
 
 export default async function curl(client: Client): Promise<number> {
+  return runCurl(client, {});
+}
+
+/**
+ * Shared execution for `vercel curl` and its aliases (e.g. `vercel traces
+ * create`). Handles argument setup, URL/token resolution, and either spawning
+ * curl directly or running the `--trace` capture flow.
+ *
+ * `forceTrace` makes the trace flow run regardless of the `--trace` flag, which
+ * is how `traces create` aliases `curl --trace`. `args` overrides the parsed
+ * argument list (post `argv.slice(2)`); callers like `traces create` pass the
+ * args with their own subcommand prefix already stripped.
+ */
+export async function runCurl(
+  client: Client,
+  { forceTrace = false, args }: { forceTrace?: boolean; args?: string[] }
+): Promise<number> {
   const telemetryClient = new CurlTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -20,6 +37,7 @@ export default async function curl(client: Client): Promise<number> {
 
   const setup = setupCurlLikeCommand(client, curlCommand, telemetryClient, {
     allowFullUrl: true,
+    args,
   });
 
   if (typeof setup === 'number') {
@@ -32,9 +50,10 @@ export default async function curl(client: Client): Promise<number> {
     deploymentFlag,
     protectionBypassFlag,
     toolFlags,
-    trace: traceFlag,
     json: jsonFlag,
   } = setup;
+
+  const traceFlag = forceTrace || setup.trace;
 
   const result = isFullUrl
     ? await getFullUrlAndToken(client, path, protectionBypassFlag)

@@ -1,5 +1,27 @@
 # @vercel/backends
 
+## 0.8.16
+
+### Patch Changes
+
+- Updated dependencies [2158ab6]
+  - @vercel/build-utils@13.31.1
+
+## 0.8.15
+
+### Patch Changes
+
+- Updated dependencies [8dec9ea]
+- Updated dependencies [3afdb18]
+- Updated dependencies [04f830c]
+  - @vercel/build-utils@13.31.0
+
+## 0.8.14
+
+### Patch Changes
+
+- c453e66: Trace CommonJS package entrypoints used by Rolldown shims so pnpm-symlinked dependencies are included in Node function output.
+
 ## 0.8.13
 
 ### Patch Changes

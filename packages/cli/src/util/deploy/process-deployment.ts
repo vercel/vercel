@@ -45,7 +45,6 @@ export default async function processDeployment({
   agent,
   manual,
   jsonOutput,
-  functionsBeta,
   linkedProject,
   ...args
 }: {
@@ -69,7 +68,6 @@ export default async function processDeployment({
   bulkRedirectsPath?: string | null;
   manual?: boolean;
   jsonOutput?: boolean;
-  functionsBeta?: boolean;
   linkedProject?: Project;
 }) {
   const {
@@ -86,6 +84,12 @@ export default async function processDeployment({
   } = args;
 
   const client = now._client;
+
+  // The ▲ gutter belongs on the Aliased row, which only prints when we wait
+  // for alias assignment and domains are auto-assigned. When that row won't
+  // print (--no-wait, --skip-domain), fall back to ▲ on the Production row.
+  const aliasedRowWillPrint =
+    !noWait && requestBody.autoAssignCustomDomains !== false;
 
   const { env = {} } = requestBody;
   const token = now._token;
@@ -207,7 +211,7 @@ export default async function processDeployment({
         printAlignedLabel(
           isProdDeployment ? 'Production' : 'Preview',
           chalk.cyan(previewUrl),
-          isProdDeployment ? { gutter: '▲' } : {}
+          isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
         );
 
         if (!jsonOutput && (quiet || process.env.FORCE_TTY === '1')) {
@@ -293,7 +297,7 @@ export default async function processDeployment({
         printAlignedLabel(
           isProdDeployment ? 'Production' : 'Preview',
           chalk.cyan(previewUrl),
-          isProdDeployment ? { gutter: '▲' } : {}
+          isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
         );
 
         if (v1ChecksPending || v2ChecksPending) {
@@ -322,16 +326,6 @@ export default async function processDeployment({
       // Handle error events
       if (event.type === 'error') {
         stopSpinner();
-
-        // Check if solvable with --functions-beta
-        if (!functionsBeta) {
-          const maybeSizeError = handleErrorSolvableWithFunctionsBeta(
-            event.payload
-          );
-          if (maybeSizeError) {
-            throw maybeSizeError;
-          }
-        }
 
         if (!archive) {
           const maybeError = handleErrorSolvableWithArchive(event.payload);
@@ -376,36 +370,6 @@ export default async function processDeployment({
   } catch (err) {
     stopSpinner();
     throw err;
-  }
-}
-
-export class FunctionsSizeLimitError extends Error {
-  link =
-    'https://vercel.com/docs/functions/runtimes/python#extended-size-limits-with-functions-beta';
-}
-
-export function handleErrorSolvableWithFunctionsBeta(error: unknown) {
-  if (isErrorLike(error)) {
-    // Primary: match the Python-specific error code
-    const isLambdaSizeExceeded =
-      'errorCode' in error && error.errorCode === 'LAMBDA_SIZE_EXCEEDED';
-    // Fallback: match error message pattern for resilience
-    const isMessageMatch =
-      !isLambdaSizeExceeded &&
-      'errorMessage' in error &&
-      typeof error.errorMessage === 'string' &&
-      error.errorMessage.includes('exceeds') &&
-      (error.errorMessage.includes('Lambda size limit') ||
-        error.errorMessage.includes('Lambda ephemeral storage') ||
-        error.errorMessage.includes('exceeds Lambda limit'));
-
-    if (isLambdaSizeExceeded || isMessageMatch) {
-      return new FunctionsSizeLimitError(
-        (error as any).errorMessage ||
-          (error as any).message ||
-          'Function build exceeded the maximum size limit.'
-      );
-    }
   }
 }
 

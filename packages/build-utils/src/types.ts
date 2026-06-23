@@ -65,6 +65,7 @@ export interface Meta {
   filesRemoved?: string[];
   env?: Env;
   buildEnv?: Env;
+  port?: number;
   [key: string]: unknown;
 }
 
@@ -332,6 +333,7 @@ export namespace PackageJson {
     node?: string;
     npm?: string;
     pnpm?: string;
+    bun?: string;
   }
 
   export interface PublishConfig {
@@ -1027,10 +1029,10 @@ export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
  */
 export type ExperimentalServiceGroups = Record<string, string[]>;
 
-export interface ExperimentalServiceV2Binding {
+export interface ServiceBinding {
   /** Must be `"service"` for Service-to-Service HTTP bindings. */
   type: 'service';
-  /** Target service name from `experimentalServicesV2`. */
+  /** Target service name from `services`. */
   service: string;
   /** Generated value shape, must be `"url"`. */
   format: 'url';
@@ -1038,12 +1040,8 @@ export interface ExperimentalServiceV2Binding {
   env: string;
 }
 
-/**
- * Configuration for a service in `experimentalServicesV2` in `vercel.json`.
- *
- * @experimental This feature is experimental and may change.
- */
-export interface ExperimentalServiceV2Config {
+/** Configuration for a service in `vercel.json#services`. */
+export interface ServiceConfig {
   /** Path to the service root, relative to `vercel.json`. */
   root: string;
   /** Framework for this service. */
@@ -1064,7 +1062,7 @@ export interface ExperimentalServiceV2Config {
   outputDirectory?: string;
 
   /** Caller-side bindings that grant this service access to another service. */
-  bindings?: ExperimentalServiceV2Binding[];
+  bindings?: ServiceBinding[];
 
   /** Function configuration scoped to this service root. */
   functions?: BuilderFunctions;
@@ -1078,15 +1076,17 @@ export interface ExperimentalServiceV2Config {
   trailingSlash?: boolean;
 }
 
-/**
- * Map of service name to service configuration for `experimentalServicesV2`.
- *
- * @experimental This feature is experimental and may change.
- */
-export type ExperimentalServicesV2 = Record<
-  string,
-  ExperimentalServiceV2Config
->;
+/** Map of service name to service configuration for `vercel.json#services`. */
+export type Services = Record<string, ServiceConfig>;
+
+/** @deprecated Use `ServiceBinding` instead. */
+export type ExperimentalServiceV2Binding = ServiceBinding;
+
+/** @deprecated Use `ServiceConfig` instead. */
+export type ExperimentalServiceV2Config = ServiceConfig;
+
+/** @deprecated Use `Services` instead. */
+export type ExperimentalServicesV2 = Services;
 
 /**
  * Result of a runtime builder's normalized entrypoint detection.

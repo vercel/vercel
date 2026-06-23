@@ -17,6 +17,8 @@ import {
   rm,
   mkdir,
   realpath,
+  symlink,
+  stat,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import type { IncomingMessage } from 'node:http';
@@ -255,6 +257,212 @@ it.skipIf(process.platform === 'win32')(
         repoRootPath: workDir,
       })
     ).resolves.toBeDefined();
+  },
+  30000
+);
+
+it.skipIf(process.platform === 'win32')(
+  'does not emit a directory symlink as a lambda file when outputDirectory is "."',
+  async () => {
+    // A workspace package linked into node_modules as a directory symlink must
+    // not be globbed into the build when outputDirectory is the project root.
+    const repoRoot = await realpath(
+      await mkdtemp(join(tmpdir(), 'backends-outputdir-dot-'))
+    );
+
+    // Workspace package linked into the app's node_modules (never imported).
+    const pkgDir = join(repoRoot, 'packages-internal/test-dd');
+    await mkdir(join(pkgDir, 'bin'), { recursive: true });
+    await writeFile(
+      join(pkgDir, 'package.json'),
+      JSON.stringify({ name: '@internal/test-dd', version: '1.0.0' })
+    );
+    await writeFile(join(pkgDir, 'utils.js'), 'module.exports = {};\n');
+
+    const workDir = join(repoRoot, 'app');
+    await mkdir(join(workDir, 'src'), { recursive: true });
+    await writeFile(
+      join(workDir, 'package.json'),
+      JSON.stringify({
+        name: '@testserver/create-server',
+        version: '1.0.0',
+        type: 'module',
+        main: 'src/app.ts',
+        dependencies: { hono: '4.10.0' },
+        devDependencies: { '@internal/test-dd': '1.0.0' },
+      })
+    );
+    await writeFile(
+      join(workDir, 'src/app.ts'),
+      [
+        "import { Hono } from 'hono';",
+        'const app = new Hono();',
+        "app.get('/', c => c.text('ok'));",
+        'export default app;',
+      ].join('\n')
+    );
+
+    await mkdir(join(workDir, 'node_modules/@internal'), { recursive: true });
+    await symlink(
+      '../../../packages-internal/test-dd',
+      join(workDir, 'node_modules/@internal/test-dd'),
+      'dir'
+    );
+    // Minimal hono package so rolldown can resolve the entrypoint import.
+    const honoDir = join(workDir, 'node_modules/hono');
+    await mkdir(honoDir, { recursive: true });
+    await writeFile(
+      join(honoDir, 'package.json'),
+      JSON.stringify({
+        name: 'hono',
+        version: '4.10.0',
+        type: 'module',
+        main: 'index.js',
+      })
+    );
+    await writeFile(
+      join(honoDir, 'index.js'),
+      'export class Hono { get() {} }\n'
+    );
+
+    const result = (await build({
+      files: {},
+      workPath: workDir,
+      config: {
+        ...defaultConfig,
+        outputDirectory: '.',
+        buildCommand: "echo 'noop'",
+        projectSettings: {
+          ...defaultConfig.projectSettings,
+          installCommand: 'true',
+          buildCommand: "echo 'noop'",
+          outputDirectory: '.',
+        },
+      },
+      meta,
+      entrypoint: 'package.json',
+      repoRootPath: repoRoot,
+    })) as BuildResultV2Typical;
+
+    const lambda = result.output.index as unknown as NodejsLambda;
+    const files = lambda.files ?? {};
+
+    // No lambda file should resolve to a directory.
+    const directoryEntries: string[] = [];
+    for (const [key, file] of Object.entries(files)) {
+      const fsPath = (file as { fsPath?: string }).fsPath;
+      if (!fsPath) continue;
+      try {
+        if ((await stat(fsPath)).isDirectory()) {
+          directoryEntries.push(key);
+        }
+      } catch {
+        directoryEntries.push(key);
+      }
+    }
+
+    expect(directoryEntries).toEqual([]);
+  },
+  30000
+);
+
+it.skipIf(process.platform === 'win32')(
+  'traces CJS packages imported through pnpm workspace symlinks',
+  async () => {
+    const root = await realpath(
+      await mkdtemp(join(tmpdir(), 'pnpm-cjs-shim-'))
+    );
+    const workPath = join(root, 'api');
+    const packageStorePath = join(
+      root,
+      'node_modules/.pnpm/@nestjs+common@1.0.0/node_modules/@nestjs/common'
+    );
+
+    await mkdir(packageStorePath, { recursive: true });
+    await mkdir(join(workPath, 'node_modules/@nestjs'), { recursive: true });
+    await writeFile(
+      join(workPath, 'package.json'),
+      JSON.stringify({
+        name: 'api',
+        type: 'module',
+        dependencies: { '@nestjs/common': '1.0.0' },
+      })
+    );
+    await writeFile(
+      join(workPath, 'server.ts'),
+      [
+        '// @ts-ignore - fixture package has no type declarations',
+        "import { marker } from '@nestjs/common';",
+        "import { readFileSync } from 'node:fs';",
+        '',
+        "if (process.env.NEVER_READ_IGNORED_FILE) readFileSync(new URL('./ignored.txt', import.meta.url));",
+        '',
+        'export default function handler(_req, res) {',
+        '  res.end(marker);',
+        '}',
+      ].join('\n')
+    );
+    await writeFile(join(workPath, 'ignored.txt'), 'ignore me');
+    await writeFile(
+      join(packageStorePath, 'package.json'),
+      JSON.stringify({
+        name: '@nestjs/common',
+        version: '1.0.0',
+        main: 'index.js',
+      })
+    );
+    await writeFile(
+      join(packageStorePath, 'index.js'),
+      "module.exports = { marker: 'pnpm-cjs-ok' };\n"
+    );
+    await symlink(
+      '../../../node_modules/.pnpm/@nestjs+common@1.0.0/node_modules/@nestjs/common',
+      join(workPath, 'node_modules/@nestjs/common')
+    );
+
+    try {
+      const result = (await build({
+        files: {},
+        workPath,
+        config: {
+          ...defaultConfig,
+          excludeFiles: 'ignored.txt',
+          projectSettings: {
+            ...defaultConfig.projectSettings,
+            installCommand: 'true',
+            buildCommand: 'echo build',
+          },
+        },
+        meta,
+        entrypoint: 'server.ts',
+        repoRootPath: workPath,
+      })) as BuildResultV2Typical;
+
+      const lambda = result.output.index as unknown as NodejsLambda;
+      const lambdaFiles = Object.keys(lambda.files ?? {});
+      expect(lambdaFiles.some(file => file.startsWith('..'))).toBe(false);
+      expect(lambdaFiles).not.toContain('ignored.txt');
+      expect(lambdaFiles).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining(
+            'node_modules/.pnpm/@nestjs+common@1.0.0/node_modules/@nestjs/common/index.js'
+          ),
+        ])
+      );
+
+      const lambdaOutputDir = await realpath(
+        await mkdtemp(join(tmpdir(), 'pnpm-cjs-lambda-'))
+      );
+      try {
+        await expect(
+          extractAndExecuteLambda(lambda, lambdaOutputDir)
+        ).resolves.toBeUndefined();
+      } finally {
+        await rm(lambdaOutputDir, { recursive: true, force: true });
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   },
   30000
 );

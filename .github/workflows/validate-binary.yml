@@ -24,11 +24,11 @@ jobs:
       matrix:
         include:
           - runner: ubuntu-latest
-            target: node22-linux-x64
+            target: node24.14.1-linux-x64
             asset: vercel-linux-x64
             ext: ''
           - runner: windows-latest
-            target: node22-win-x64
+            target: node24.14.1-win-x64
             asset: vercel-windows-x64
             ext: '.exe'
     runs-on: ${{ matrix.runner }}
@@ -41,7 +41,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24.14.1
           package-manager-cache: false
 
       - name: Setup Rust
@@ -117,7 +117,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24.14.1
           package-manager-cache: false
 
       - name: Install pnpm

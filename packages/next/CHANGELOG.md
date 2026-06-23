@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.19.1
+
+### Patch Changes
+
+- bc6f22f: Upgrade to the latest Next.js adapter
+
 ## 4.19.0
 
 ### Minor Changes

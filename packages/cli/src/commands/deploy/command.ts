@@ -28,13 +28,6 @@ export const initSubcommand = {
       description: 'Retain build cache when using "--force"',
     },
     {
-      name: 'public',
-      shorthand: 'p',
-      type: Boolean,
-      deprecated: false,
-      description: 'Deployment is public (`/_src`) is exposed)',
-    },
-    {
       name: 'env',
       shorthand: 'e',
       type: [String],
@@ -110,20 +103,6 @@ export const initSubcommand = {
     jsonOption,
     confirmOption,
     projectOption,
-    {
-      name: 'functions-beta',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      // No description — keeps it hidden from --help output
-    },
-    {
-      name: 'no-functions-beta',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      // No description — keeps it hidden from --help output
-    },
   ],
   examples: [
     {
@@ -201,13 +180,6 @@ export const deployCommand = {
       type: Boolean,
       deprecated: false,
       description: 'Retain build cache when using "--force"',
-    },
-    {
-      name: 'public',
-      shorthand: 'p',
-      type: Boolean,
-      deprecated: false,
-      description: 'Deployment is public (`/_src`) is exposed)',
     },
     {
       name: 'env',
@@ -333,20 +305,6 @@ export const deployCommand = {
     jsonOption,
     confirmOption,
     projectOption,
-    {
-      name: 'functions-beta',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      // No description — keeps it hidden from --help output
-    },
-    {
-      name: 'no-functions-beta',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      // No description — keeps it hidden from --help output
-    },
   ],
   examples: [
     {

@@ -40627,7 +40627,6 @@
                               "project-custom-environment-updated",
                               "project-custom-environment-created",
                               "project-custom-environment-deleted",
-                              "project-functions-beta-updated",
                               "project-functions-fluid-disabled",
                               "project-functions-fluid-enabled",
                               "project-function-max-duration",
@@ -60273,13 +60272,6 @@
                                   false,
                                   true
                                 ]
-                              },
-                              "enableFunctionsBeta": {
-                                "type": "boolean",
-                                "enum": [
-                                  false,
-                                  true
-                                ]
                               }
                             },
                             "type": "object",
@@ -60452,13 +60444,6 @@
                                 "type": "number"
                               },
                               "isNSNBDisabled": {
-                                "type": "boolean",
-                                "enum": [
-                                  false,
-                                  true
-                                ]
-                              },
-                              "enableFunctionsBeta": {
                                 "type": "boolean",
                                 "enum": [
                                   false,
@@ -71814,13 +71799,6 @@
                                   }
                                 },
                                 "type": "object"
-                              },
-                              "enableFunctionsBeta": {
-                                "type": "boolean",
-                                "enum": [
-                                  false,
-                                  true
-                                ]
                               }
                             },
                             "type": "object",
@@ -75121,13 +75099,6 @@
                                       }
                                     },
                                     "type": "object"
-                                  },
-                                  "enableFunctionsBeta": {
-                                    "type": "boolean",
-                                    "enum": [
-                                      false,
-                                      true
-                                    ]
                                   }
                                 },
                                 "type": "object",
@@ -78846,13 +78817,6 @@
                                       }
                                     },
                                     "type": "object"
-                                  },
-                                  "enableFunctionsBeta": {
-                                    "type": "boolean",
-                                    "enum": [
-                                      false,
-                                      true
-                                    ]
                                   }
                                 },
                                 "type": "object",
@@ -79030,13 +78994,6 @@
                                       }
                                     },
                                     "type": "object"
-                                  },
-                                  "enableFunctionsBeta": {
-                                    "type": "boolean",
-                                    "enum": [
-                                      false,
-                                      true
-                                    ]
                                   }
                                 },
                                 "type": "object",
@@ -84461,13 +84418,6 @@
                             }
                           },
                           "type": "object"
-                        },
-                        "enableFunctionsBeta": {
-                          "type": "boolean",
-                          "enum": [
-                            false,
-                            true
-                          ]
                         }
                       },
                       "type": "object",
@@ -84645,13 +84595,6 @@
                             }
                           },
                           "type": "object"
-                        },
-                        "enableFunctionsBeta": {
-                          "type": "boolean",
-                          "enum": [
-                            false,
-                            true
-                          ]
                         }
                       },
                       "type": "object",
@@ -88219,9 +88162,6 @@
                             ]
                           }
                         }
-                      },
-                      "enableFunctionsBeta": {
-                        "type": "boolean"
                       }
                     },
                     "additionalProperties": false
@@ -90301,13 +90241,6 @@
                             }
                           },
                           "type": "object"
-                        },
-                        "enableFunctionsBeta": {
-                          "type": "boolean",
-                          "enum": [
-                            false,
-                            true
-                          ]
                         }
                       },
                       "type": "object",
@@ -90485,13 +90418,6 @@
                             }
                           },
                           "type": "object"
-                        },
-                        "enableFunctionsBeta": {
-                          "type": "boolean",
-                          "enum": [
-                            false,
-                            true
-                          ]
                         }
                       },
                       "type": "object",
@@ -95730,13 +95656,6 @@
                             }
                           },
                           "type": "object"
-                        },
-                        "enableFunctionsBeta": {
-                          "type": "boolean",
-                          "enum": [
-                            false,
-                            true
-                          ]
                         }
                       },
                       "type": "object",
@@ -95914,13 +95833,6 @@
                             }
                           },
                           "type": "object"
-                        },
-                        "enableFunctionsBeta": {
-                          "type": "boolean",
-                          "enum": [
-                            false,
-                            true
-                          ]
                         }
                       },
                       "type": "object",
@@ -99372,9 +99284,6 @@
                         "type": "number"
                       },
                       "isNSNBDisabled": {
-                        "type": "boolean"
-                      },
-                      "enableFunctionsBeta": {
                         "type": "boolean"
                       }
                     },
@@ -113300,13 +113209,6 @@
                             }
                           },
                           "type": "object"
-                        },
-                        "enableFunctionsBeta": {
-                          "type": "boolean",
-                          "enum": [
-                            false,
-                            true
-                          ]
                         }
                       },
                       "type": "object",
@@ -113484,13 +113386,6 @@
                             }
                           },
                           "type": "object"
-                        },
-                        "enableFunctionsBeta": {
-                          "type": "boolean",
-                          "enum": [
-                            false,
-                            true
-                          ]
                         }
                       },
                       "type": "object",
@@ -140635,7 +140530,6 @@
               "project-custom-environment-updated",
               "project-custom-environment-created",
               "project-custom-environment-deleted",
-              "project-functions-beta-updated",
               "project-functions-fluid-disabled",
               "project-functions-fluid-enabled",
               "project-function-max-duration",
@@ -151956,17 +151850,9 @@
                   },
                   "projectId": {
                     "type": "string"
-                  },
-                  "enableFunctionsBeta": {
-                    "type": "boolean",
-                    "enum": [
-                      false,
-                      true
-                    ]
                   }
                 },
                 "required": [
-                  "enableFunctionsBeta",
                   "projectId"
                 ],
                 "type": "object",

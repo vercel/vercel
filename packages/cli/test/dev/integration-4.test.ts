@@ -1,17 +1,33 @@
 import fs from 'fs-extra';
-import { join } from 'path';
+import { join, resolve } from 'path';
+import _execa from 'execa';
+import getPort from 'get-port';
+import stripAnsi from 'strip-ansi';
 import nodeFetch, { type Response } from 'node-fetch';
 import {
   fixture,
+  nukeProcessTree,
   testFixture,
   testFixtureStdio,
   validateResponseHeaders,
+  webSocketEcho,
 } from './utils';
+
+const binaryPath = resolve(__dirname, '../../scripts/start.js');
 
 test(
   '[vercel dev] 25-nextjs-src-dir',
   testFixtureStdio('25-nextjs-src-dir', async (testPath: any) => {
     await testPath(200, '/', /Next.js \+ Node.js API/m);
+  })
+);
+
+test(
+  '[vercel dev] Next.js experimental_upgradeWebSocket',
+  withLocalDev('nextjs-websocket', async port => {
+    await expect(webSocketEcho(port, '/api/ws', 'hello')).resolves.toBe(
+      'echo:hello'
+    );
   })
 );
 
@@ -411,3 +427,74 @@ test(
     { skipDeploy: true }
   )
 );
+
+function withLocalDev(
+  fixtureName: string,
+  fn: (port: number) => Promise<void>
+) {
+  return async () => {
+    const cwd = join(__dirname, 'fixtures', fixtureName);
+    const port = await getPort();
+    let stdout = '';
+    let stderr = '';
+
+    await _execa('npm', ['install'], {
+      cwd,
+      shell: true,
+      stdio: 'inherit',
+    });
+
+    const dev = _execa(
+      binaryPath,
+      ['dev', '--local', '--yes', '--listen', String(port)],
+      {
+        cwd,
+        env: { ...process.env, __VERCEL_SKIP_DEV_CMD: '1' },
+        reject: false,
+        shell: true,
+        stdio: 'pipe',
+      }
+    );
+
+    dev.stdout?.setEncoding('utf8');
+    dev.stderr?.setEncoding('utf8');
+    dev.stdout?.on('data', chunk => {
+      stdout += chunk;
+    });
+    dev.stderr?.on('data', chunk => {
+      stderr += chunk;
+    });
+
+    try {
+      await waitForReady(() => `${stdout}\n${stderr}`);
+      await fn(port);
+    } finally {
+      if (dev.pid) {
+        await nukeProcessTree(dev.pid);
+      } else {
+        dev.kill('SIGTERM', { forceKillAfterTimeout: 5000 });
+      }
+      await dev.catch(() => null);
+    }
+
+    if (dev.exitCode && dev.exitCode !== 0 && dev.exitCode !== 143) {
+      throw new Error(
+        `vc dev exited with ${dev.exitCode}:\n${stdout}\n${stderr}`
+      );
+    }
+  };
+}
+
+async function waitForReady(readOutput: () => string) {
+  const start = Date.now();
+  while (Date.now() - start < 60_000) {
+    const output = stripAnsi(readOutput());
+    if (output.includes('Ready! Available at')) return;
+    if (output.includes('Command failed') || output.includes('Error:')) {
+      throw new Error(output);
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  throw new Error(`Timed out waiting for vc dev:\n${readOutput()}`);
+}

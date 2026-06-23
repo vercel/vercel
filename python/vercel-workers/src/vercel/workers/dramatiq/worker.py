@@ -118,32 +118,22 @@ class PollingWorker:
             # Parse the envelope and convert to Dramatiq message
             dramatiq_message = _envelope_to_message(payload)
 
-            # Execute the task
+            # Execute the task. Retries are re-enqueued as
+            # separate messages by Dramatiq
             outcome = self._execute_message(dramatiq_message)
-            timeout_seconds = outcome.get("timeoutSeconds")
 
-            if timeout_seconds is not None:
-                queue_callback.change_visibility(
-                    self.queue_name,
-                    self.consumer_group,
-                    message_id,
-                    receipt_handle,
-                    int(timeout_seconds),
-                    timeout=self.timeout,
-                )
-            else:
-                queue_callback.delete_message(
-                    self.queue_name,
-                    self.consumer_group,
-                    message_id,
-                    receipt_handle,
-                    timeout=self.timeout,
-                )
+            queue_callback.delete_message(
+                self.queue_name,
+                self.consumer_group,
+                message_id,
+                receipt_handle,
+                timeout=self.timeout,
+            )
 
             if self.debug:
                 print(
-                    f"[dramatiq polling] completed task {dramatiq_message.actor_name} "
-                    f"(message {message_id})"
+                    f"[dramatiq polling] {outcome['status']} task "
+                    f"{dramatiq_message.actor_name} (message {message_id})"
                 )
 
         except Exception:
@@ -219,9 +209,14 @@ def _execute_message(broker: VercelQueuesBroker, message: Message) -> dict[str, 
     """
     Execute a Dramatiq message.
 
-    Returns:
-        {"ack": True} on success
-        {"timeoutSeconds": N} for retry
+    Depending on broker configuration it could schedule a retry
+    of a message if Retries middleware is configured.
+
+    Returns one of:
+        {"status": "success"} on success
+        {"status": "skipped"} when the message was explicitly skipped
+        {"status": "retried", "retries": n} when Dramatiq scheduled a retry
+        {"status": "failed", "exception": e} when Dramatiq decided that it's a final error
     """
     actor = broker.get_actor(message.actor_name)
     if actor is None:
@@ -235,18 +230,18 @@ def _execute_message(broker: VercelQueuesBroker, message: Message) -> dict[str, 
         if not proxy.failed:
             res = actor(*message.args, **message.kwargs)
         broker.emit_after("process_message", proxy, result=res)
-        return {"ack": True}
+        return {"status": "success"}
     except dramatiq.middleware.SkipMessage as exc:
         if proxy.failed:
             proxy.stuff_exception(exc)
         broker.emit_after("skip_message", proxy)
-        return {"ack": True}
+        return {"status": "skipped"}
     except Exception as exc:
         proxy.stuff_exception(exc)
+        retries_before = message.options.get("retries", 0)
         broker.emit_after("process_message", proxy, exception=exc)
-        if isinstance(exc, dramatiq.Retry):
-            delay = getattr(exc, "delay", None)
-            if delay is not None:
-                return {"timeoutSeconds": int(delay / 1000)}
-            return {"timeoutSeconds": 60}
+        if proxy.failed:
+            return {"status": "failed", "exception": exc}
+        if message.options.get("retries", 0) > retries_before:
+            return {"status": "retried", "retries": message.options["retries"]}
         raise

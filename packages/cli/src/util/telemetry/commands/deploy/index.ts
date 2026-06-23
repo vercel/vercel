@@ -177,17 +177,6 @@ export class DeployTelemetryClient
     }
   }
 
-  trackCliFlagFunctionsBeta(flag: boolean | undefined) {
-    if (flag) {
-      this.trackCliFlag('functions-beta');
-    }
-  }
-  trackCliFlagNoFunctionsBeta(flag: boolean | undefined) {
-    if (flag) {
-      this.trackCliFlag('no-functions-beta');
-    }
-  }
-
   trackDeploymentId(id: string | undefined) {
     if (id) {
       this.trackCommandOutput({

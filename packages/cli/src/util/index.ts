@@ -33,7 +33,6 @@ export interface CreateOptions {
   // Latest
   name: string;
   project?: string;
-  wantsPublic: boolean;
   prebuilt?: boolean;
   vercelOutputDir?: string;
   rootDirectory?: string | null;
@@ -55,7 +54,6 @@ export interface CreateOptions {
   agentName?: string;
   manual?: boolean;
   jsonOutput?: boolean;
-  functionsBeta?: boolean;
   linkedProject?: Project;
 }
 
@@ -116,7 +114,6 @@ export default class Now {
       prebuilt = false,
       vercelOutputDir,
       rootDirectory,
-      wantsPublic,
       meta,
       gitMetadata,
       regions,
@@ -134,7 +131,6 @@ export default class Now {
       agentName,
       manual,
       jsonOutput = false,
-      functionsBeta,
       linkedProject,
     }: CreateOptions,
     org: Org,
@@ -147,7 +143,6 @@ export default class Now {
       ...nowConfig,
       env,
       build,
-      public: wantsPublic || nowConfig.public,
       name,
       project,
       meta,
@@ -163,6 +158,10 @@ export default class Now {
     // Ignore specific items from vercel.json
     delete requestBody.scope;
     delete requestBody.github;
+    // `public` is no longer part of `VercelConfig`, but a user's
+    // vercel.json may still contain a stale value that must be stripped
+    // before sending to the API.
+    delete (requestBody as Record<string, unknown>).public;
 
     const deployment = await processDeployment({
       now: this,
@@ -185,7 +184,6 @@ export default class Now {
       bulkRedirectsPath: nowConfig.bulkRedirectsPath,
       manual,
       jsonOutput,
-      functionsBeta,
       linkedProject,
     });
 

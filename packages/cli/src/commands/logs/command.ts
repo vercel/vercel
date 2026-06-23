@@ -135,7 +135,7 @@ export const logsCommand = {
       type: String,
       deprecated: false,
       description:
-        'Filter by git branch (defaults to current branch when in a git repo)',
+        'Filter by git branch (defaults to current branch for a linked project)',
     },
     {
       name: 'no-branch',
@@ -153,6 +153,10 @@ export const logsCommand = {
     {
       name: 'Stream live logs for a deployment ID',
       value: `${packageName} logs dpl_xxxxx --follow`,
+    },
+    {
+      name: 'Stream logs for the latest production deployment of a project',
+      value: `${packageName} logs --project my-app --follow`,
     },
     {
       name: 'Display recent logs for the linked project',

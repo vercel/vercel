@@ -11,6 +11,7 @@ export {
   type EveAuthorizationInput,
   type EveAuthorizationOptions,
   type EveConnectAuthorizationDefinition,
+  type EveConnectionAuthorizationContext,
   type ConnectAuthorizationPhase,
   type VercelConnectMetadata,
 } from './connection-authorization.js';

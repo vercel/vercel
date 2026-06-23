@@ -70,15 +70,12 @@ async function setupProject(
     vercelAuth: 'standard',
   }
 ) {
-  await waitForPrompt(
-    process,
-    /Set up (?:and (?:deploy|develop) )?[“"][^”"]+[”"]/
-  );
+  await waitForPrompt(process, 'Directory');
   await waitForPrompt(process, /Which team[^?]*\?/);
   process.stdin?.write('\n');
 
-  await waitForPrompt(process, 'Link to existing project?');
-  process.stdin?.write('no\n');
+  await waitForPrompt(process, 'Project?');
+  process.stdin?.write('\n');
 
   await waitForPrompt(process, 'Name?');
   process.stdin?.write(`${projectName}\n`);
@@ -89,7 +86,7 @@ async function setupProject(
   // `project-link-deploy` with empty package.json). Wait for whichever fires.
   let sawDirectoryPrompt = false;
   await waitForPrompt(process, chunk => {
-    if (chunk.includes('In which directory is your code located?')) {
+    if (chunk.includes('Code directory?')) {
       sawDirectoryPrompt = true;
       return true;
     }
@@ -125,10 +122,7 @@ async function setupProject(
   }
 
   const hasAdditionalProjectSettingsToChange = vercelAuth !== 'standard';
-  await waitForPrompt(
-    process,
-    'Do you want to change additional project settings?'
-  );
+  await waitForPrompt(process, 'Customize advanced settings?');
 
   if (hasAdditionalProjectSettingsToChange) {
     process.stdin?.write('y\n');
@@ -152,7 +146,7 @@ async function setupProject(
     process.stdin?.write('\n');
   }
 
-  await waitForPrompt(process, /Linked\s+/);
+  await waitForPrompt(process, /Created\s+/);
 }
 
 beforeAll(async () => {
@@ -189,11 +183,7 @@ test.skip('assign a domain to a project', async () => {
   const domain = `project-domain.${team.slug}.vercel.app`;
   const directory = await setupE2EFixture('static-deployment');
 
-  const deploymentOutput = await execCli(binaryPath, [
-    directory,
-    '--public',
-    '--yes',
-  ]);
+  const deploymentOutput = await execCli(binaryPath, [directory, '--yes']);
   expect(deploymentOutput.exitCode, formatOutput(deploymentOutput)).toBe(0);
 
   const host = deploymentOutput.stdout?.trim().replace('https://', '');
@@ -224,7 +214,6 @@ test('ensure `github` and `scope` are not sent to the API', async () => {
   expect(output.exitCode, formatOutput(output)).toBe(0);
 });
 
-// TODO: fix: --public does not make deployments public
 // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('should show prompts to set up project during first deploy', async () => {
   const dir = await setupE2EFixture('project-link-deploy');
@@ -342,29 +331,26 @@ test('should prefill "project name" prompt with vercel.json `name`', async () =>
     }
   });
 
-  await waitForPrompt(now, /Set up [“"]/);
+  await waitForPrompt(now, 'Directory');
   await waitForPrompt(now, 'Which team?');
   now.stdin?.write('\n');
 
-  await waitForPrompt(now, 'Link to existing project?');
-  now.stdin?.write('no\n');
+  await waitForPrompt(now, 'Project?');
+  now.stdin?.write('\n');
 
   await waitForPrompt(now, `Name? (${projectName})`);
   now.stdin?.write(`\n`);
 
-  await waitForPrompt(now, 'In which directory is your code located?');
+  await waitForPrompt(now, 'Code directory?');
   now.stdin?.write('\n');
 
   await waitForPrompt(now, 'Customize settings?');
   now.stdin?.write('no\n');
 
-  await waitForPrompt(
-    now,
-    'Do you want to change additional project settings?'
-  );
+  await waitForPrompt(now, 'Customize advanced settings?');
   now.stdin?.write('\n');
 
-  await waitForPrompt(now, /Linked\s+/);
+  await waitForPrompt(now, /Created\s+/);
 
   const output = await now;
   expect(output.exitCode, formatOutput(output)).toBe(0);
@@ -457,8 +443,8 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
 
   let detectedNotice = false;
 
-  // Terminate after the first status line. The "Set up and deploy?" prompt was
-  // removed, so writing to stdin would leak into the next real prompt.
+  // Terminate after the first setup-state row. The old "Set up and deploy?"
+  // prompt is gone, so writing to stdin would leak into the next real prompt.
   await waitForPrompt(now, chunk => {
     detectedNotice =
       detectedNotice ||
@@ -466,7 +452,7 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
         'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore'
       );
 
-    return /Set up [“"][^”"]+[”"]/.test(chunk);
+    return /Directory\s+/.test(chunk);
   });
   now.kill('SIGTERM');
 
@@ -480,15 +466,11 @@ test('use `rootDirectory` from project when deploying', async () => {
 
   const directory = await setupE2EFixture('project-root-directory');
 
-  const firstDeploy = execCli(
-    binaryPath,
-    [directory, '--name', projectName, '--public'],
-    {
-      env: {
-        FORCE_TTY: '1',
-      },
-    }
-  );
+  const firstDeploy = execCli(binaryPath, [directory, '--name', projectName], {
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
   await setupProject(
     firstDeploy,
     projectName,
@@ -509,7 +491,7 @@ test('use `rootDirectory` from project when deploying', async () => {
 
   expect(projectResponse.status, await projectResponse.text()).toBe(200);
 
-  const secondResult = await execCli(binaryPath, [directory, '--public']);
+  const secondResult = await execCli(binaryPath, [directory]);
   expect(secondResult.exitCode, formatOutput(secondResult)).toBe(0);
 
   const { href } = new URL(secondResult.stdout);
@@ -586,9 +568,10 @@ test('add a sensitive env var', async () => {
   );
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr).toContain(
-    'Added Environment Variable envVarName to Project'
-  );
+  expect(output.stderr).toContain('✓ Added           envVarName');
+  expect(output.stderr).toContain('Project         ');
+  expect(output.stderr).toContain('Environments    Production');
+  expect(output.stderr).toContain('Type            Sensitive');
 
   await apiFetch(`/v2/projects/${projectName}`, { method: 'DELETE' });
 });
@@ -635,9 +618,8 @@ test('override an existing env var', async () => {
   );
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr).toContain(
-    'Added Environment Variable envVarName to Project'
-  );
+  expect(output.stderr).toMatch(/^✓ Added\s+envVarName/m);
+  expect(output.stderr).toContain('Environments    Production');
 
   // 2. Override
   const outputOverride = await execCli(
@@ -650,9 +632,8 @@ test('override an existing env var', async () => {
   );
 
   expect(outputOverride.exitCode, formatOutput(outputOverride)).toBe(0);
-  expect(outputOverride.stderr).toContain(
-    'Overrode Environment Variable envVarName to Project'
-  );
+  expect(outputOverride.stderr).toMatch(/^✓ Overrode\s+envVarName/m);
+  expect(outputOverride.stderr).toContain('Environments    Production');
 
   await apiFetch(`/v2/projects/${projectName}`, { method: 'DELETE' });
 });
@@ -892,7 +873,7 @@ test.skip(
     async function tryDeploy(cwd: string) {
       const { exitCode, stdout, stderr } = await execCli(
         binaryPath,
-        ['--public', '--yes'],
+        ['--yes'],
         {
           cwd,
           stdio: 'inherit',
@@ -921,7 +902,6 @@ test.skip(
   6 * 60 * 1000
 );
 
-// TODO: fix: --public does not make deployments public
 // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('deploy pnpm twice using pnp and symlink=false', async () => {
   const directory = path.join(__dirname, 'fixtures/unit/pnpm-pnp-symlink');
@@ -929,7 +909,7 @@ test.skip('deploy pnpm twice using pnp and symlink=false', async () => {
   await remove(path.join(directory, '.vercel'));
 
   function deploy() {
-    return execCli(binaryPath, [directory, '--name', session, '--public'], {
+    return execCli(binaryPath, [directory, '--name', session], {
       env: {
         FORCE_TTY: '1',
       },
@@ -1015,17 +995,17 @@ test('[vc link] should detect frameworks in project rootDirectory', async () => 
     },
   });
 
-  await waitForPrompt(vc, /Set up [“"]/);
+  await waitForPrompt(vc, 'Directory');
   await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Link to existing project?');
-  vc.stdin?.write('no\n');
+  await waitForPrompt(vc, 'Project?');
+  vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'Name?');
   vc.stdin?.write(`${projectName}\n`);
 
-  await waitForPrompt(vc, 'In which directory is your code located?');
+  await waitForPrompt(vc, 'Code directory?');
   vc.stdin?.write(`${projectRootDir}\n`);
 
   // This means the framework detection worked!
@@ -1126,23 +1106,23 @@ test('[vc link] should show project prompts but not framework when `builds` defi
     },
   });
 
-  await waitForPrompt(vc, /Set up [“"]/);
+  await waitForPrompt(vc, 'Directory');
   await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Link to existing project?');
-  vc.stdin?.write('no\n');
+  await waitForPrompt(vc, 'Project?');
+  vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'Name?');
   vc.stdin?.write(`${projectName}\n`);
 
-  await waitForPrompt(vc, 'In which directory is your code located?');
+  await waitForPrompt(vc, 'Code directory?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Do you want to change additional project settings?');
+  await waitForPrompt(vc, 'Customize advanced settings?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, /Linked\s+/);
+  await waitForPrompt(vc, /Created\s+/);
 
   const output = await vc;
 
@@ -1528,7 +1508,6 @@ test('[vc build] should not include .vercel when zeroConfig is true and outputDi
   expect(dir).toContain('index.txt');
 });
 
-// TODO: fix: --public does not make deployments public
 // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('vercel.json configuration overrides in a new project prompt user and merges settings correctly', async () => {
   let directory = await setupE2EFixture(
@@ -1552,11 +1531,11 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
     },
   });
 
-  await waitForPrompt(vc, 'Set up');
+  await waitForPrompt(vc, 'Directory');
   await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
-  await waitForPrompt(vc, 'Link to existing project?');
-  vc.stdin?.write('n\n');
+  await waitForPrompt(vc, 'Project?');
+  vc.stdin?.write('\n');
   await waitForPrompt(vc, 'Name?');
   vc.stdin?.write('\n');
   await waitForPrompt(vc, 'Customize settings?');
@@ -1572,7 +1551,7 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   // otherwise the output from the build command will not be the index route and the page text assertion below will fail.
   await waitForPrompt(vc, 'Output Directory?');
   vc.stdin?.write('output\n');
-  await waitForPrompt(vc, 'Do you want to change additional project settings?');
+  await waitForPrompt(vc, 'Customize advanced settings?');
   vc.stdin?.write('n\n');
   await waitForPrompt(
     vc,
@@ -1580,7 +1559,7 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   );
   vc.stdin?.write('\x1b[B'); // Down Arrow
   vc.stdin?.write('\n');
-  await waitForPrompt(vc, /Linked\s+/);
+  await waitForPrompt(vc, /Created\s+/);
   const deployment = await vc;
   expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
   // assert the command were executed
@@ -1604,7 +1583,7 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   async function deploy(autoConfirm = false) {
     const deployment = await execCli(
       binaryPath,
-      [directory, '--public'].concat(autoConfirm ? ['--yes'] : [])
+      [directory].concat(autoConfirm ? ['--yes'] : [])
     );
     expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
     return deployment;

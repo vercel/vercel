@@ -14,6 +14,7 @@ import {
   type PersistedCliSession,
   type PersistedCliSessionOptions,
 } from './session';
+import { isNativeBinaryInstall } from '../native-install';
 
 const LogLabel = `['telemetry']:`;
 const MAX_ERROR_SERVER_MESSAGE_LENGTH = 500;
@@ -523,17 +524,23 @@ export class TelemetryEventStore {
    * FIXME: handle max buffer size
    */
   async sendToSubprocess(payload: object, outputDebugEnabled: boolean) {
-    const args = [process.execPath, process.argv[0], process.argv[1]];
-    if (args[0] === args[1]) {
-      args.shift();
+    const flushArgs = ['telemetry', 'flush', JSON.stringify(payload)];
+    let nodeBinaryPath: string;
+    let script: string[];
+    if (isNativeBinaryInstall()) {
+      // In the standalone binary, `process.argv[1]` is a virtual snapshot path
+      // (e.g. `/snapshot/cli/pkg.js`) and the binary always runs its embedded
+      // entrypoint, so a script path argument would be parsed as a deploy path.
+      nodeBinaryPath = process.execPath;
+      script = flushArgs;
+    } else {
+      const args = [process.execPath, process.argv[0], process.argv[1]];
+      if (args[0] === args[1]) {
+        args.shift();
+      }
+      nodeBinaryPath = args[0];
+      script = [...args.slice(1), ...flushArgs];
     }
-    const nodeBinaryPath = args[0];
-    const script = [
-      ...args.slice(1),
-      'telemetry',
-      'flush',
-      JSON.stringify(payload),
-    ];
     // We need to disable telemetry in the subprocess, otherwise we'll end up in an infinite loop
     const env = cloneEnv(process.env, {
       VERCEL_TELEMETRY_DISABLED: '1',
