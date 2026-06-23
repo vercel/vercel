@@ -116,6 +116,50 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
+/**
+ * Maximum number of files passed to a single `strip` invocation.
+ * Bounded to keep a single batch failure cheap to retry per-file.
+ */
+const STRIP_BATCH_MAX_FILES = 256;
+
+/**
+ * Soft cap on total argv bytes per batch (path lengths + separators).
+ * 64 KB is far under any ARG_MAX and keeps retry overhead minimal.
+ */
+const STRIP_BATCH_MAX_ARGV_BYTES = 64 * 1024;
+
+/**
+ * Partition file paths into batches for `strip`, which accepts many file
+ * arguments.  Each batch is bounded by both file count and total argv bytes
+ * so a single failing batch can be efficiently retried per-file.
+ */
+function buildStripBatches(paths: string[]): string[][] {
+  const batches: string[][] = [];
+  let current: string[] = [];
+  let currentArgvBytes = 0;
+
+  for (const p of paths) {
+    const argBytes = p.length + 1;
+    if (
+      current.length >= STRIP_BATCH_MAX_FILES ||
+      (current.length > 0 &&
+        currentArgvBytes + argBytes > STRIP_BATCH_MAX_ARGV_BYTES)
+    ) {
+      batches.push(current);
+      current = [];
+      currentArgvBytes = 0;
+    }
+    current.push(p);
+    currentArgvBytes += argBytes;
+  }
+
+  if (current.length > 0) {
+    batches.push(current);
+  }
+
+  return batches;
+}
+
 interface StripOptions {
   sitePackageDirs: string[];
   distributions: Map<string, DistributionIndex>;
@@ -184,30 +228,74 @@ export async function stripNativeLibraries({
   }
 
   const paths = [...candidates];
-  const perFile = await mapWithConcurrency(paths, 16, async fsPath => {
-    let before: number;
+
+  // Stat all candidates in parallel to record pre-strip sizes and filter
+  // out any files that are missing on disk.
+  const statResults = await mapWithConcurrency(paths, 16, async fsPath => {
     try {
-      before = (await fs.promises.stat(fsPath)).size;
+      const stats = await fs.promises.stat(fsPath);
+      return { fsPath, before: stats.size };
     } catch {
-      return 0; // missing on disk
-    }
-    try {
-      await execa(tool.bin, [...tool.args, fsPath]);
-    } catch (err) {
-      debug(`could not strip "${fsPath}": ${JSON.stringify(err)}`);
-      return 0;
-    }
-    try {
-      const after = (await fs.promises.stat(fsPath)).size;
-      return Math.max(0, before - after);
-    } catch {
-      return 0;
+      return null;
     }
   });
 
+  const existing = statResults.filter(
+    (r): r is { fsPath: string; before: number } => r !== null
+  );
+  if (existing.length === 0) {
+    return empty;
+  }
+
+  const existingPaths = existing.map(e => e.fsPath);
+  const beforeMap = new Map(existing.map(e => [e.fsPath, e.before]));
+
+  // Batch file paths to reduce process spawns.  `strip` accepts many file
+  // arguments, so batching cuts spawns from O(n) to O(n / batch_size).
+  const batches = buildStripBatches(existingPaths);
+
+  // Run batches with bounded concurrency.  On a batch failure, fall back to
+  // per-file stripping for that batch: `strip` processes files sequentially
+  // and may stop mid-batch on an incompatible object.  Re-stripping
+  // already-stripped files is idempotent, so per-file retry is safe and
+  // recovers partial success.
+  const stripBatch = async (batchPaths: string[]): Promise<void> => {
+    try {
+      await execa(tool.bin, [...tool.args, ...batchPaths]);
+    } catch {
+      await mapWithConcurrency(batchPaths, 16, async fsPath => {
+        try {
+          await execa(tool.bin, [...tool.args, fsPath]);
+        } catch (err) {
+          debug(`could not strip "${fsPath}": ${JSON.stringify(err)}`);
+        }
+      });
+    }
+  };
+
+  await mapWithConcurrency(batches, 16, stripBatch);
+
+  // Stat all stripped files in parallel to compute per-file savings.
+  const afterResults = await mapWithConcurrency(
+    existingPaths,
+    16,
+    async fsPath => {
+      try {
+        const stats = await fs.promises.stat(fsPath);
+        return { fsPath, after: stats.size };
+      } catch {
+        return null;
+      }
+    }
+  );
+
   let savedBytes = 0;
   let count = 0;
-  for (const saved of perFile) {
+  for (const result of afterResults) {
+    if (!result) continue;
+    const before = beforeMap.get(result.fsPath);
+    if (before === undefined) continue;
+    const saved = Math.max(0, before - result.after);
     if (saved > 0) {
       savedBytes += saved;
       count += 1;

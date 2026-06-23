@@ -160,9 +160,11 @@ describe('stripNativeLibraries', () => {
 
     onlyTools('strip');
     mockedExeca.mockImplementation((async (_bin: string, args: string[]) => {
-      // Simulate stripping by removing half the bytes.
-      const file = args[args.length - 1];
-      fs.truncateSync(file, Math.floor(fs.statSync(file).size / 2));
+      // Simulate stripping by removing half the bytes for each file arg.
+      const filePaths = args.filter(a => !a.startsWith('--'));
+      for (const file of filePaths) {
+        fs.truncateSync(file, Math.floor(fs.statSync(file).size / 2));
+      }
       return {} as unknown;
     }) as unknown as typeof execa);
 
@@ -178,7 +180,7 @@ describe('stripNativeLibraries', () => {
 
     expect(result.count).toBe(2);
     expect(result.savedBytes).toBe(75); // 50 + 25
-    expect(mockedExeca).toHaveBeenCalledTimes(2);
+    expect(mockedExeca).toHaveBeenCalledTimes(1);
   });
 
   it('is fail-soft when strip errors on a file', async () => {
@@ -209,5 +211,79 @@ describe('stripNativeLibraries', () => {
     });
     expect(result).toEqual({ count: 0, savedBytes: 0 });
     expect(mockedExeca).not.toHaveBeenCalled();
+  });
+
+  it('batches multiple files into a single strip invocation', async () => {
+    const dir = makeTmpDir();
+    fs.mkdirSync(path.join(dir, 'pkg'));
+    const relPaths: string[] = [];
+    for (let i = 0; i < 10; i++) {
+      const relPath = `pkg/_lib${i}.so`;
+      fs.writeFileSync(path.join(dir, relPath), Buffer.alloc(100));
+      relPaths.push(relPath);
+    }
+
+    onlyTools('strip');
+    mockedExeca.mockImplementation((async (_bin: string, args: string[]) => {
+      const filePaths = args.filter(a => !a.startsWith('--'));
+      for (const file of filePaths) {
+        fs.truncateSync(file, Math.floor(fs.statSync(file).size / 2));
+      }
+      return {} as unknown;
+    }) as unknown as typeof execa);
+
+    const result = await stripNativeLibraries({
+      sitePackageDirs: [dir],
+      distributions: distributions(dir, relPaths),
+      targetArch: hostArch,
+    });
+
+    expect(result.count).toBe(10);
+    expect(result.savedBytes).toBe(500); // 10 × 50
+    expect(mockedExeca).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to per-file stripping when a batch fails', async () => {
+    const dir = makeTmpDir();
+    fs.mkdirSync(path.join(dir, 'pkg'));
+    const a = path.join(dir, 'pkg', '_a.so');
+    const b = path.join(dir, 'pkg', '_b.so');
+    const c = path.join(dir, 'pkg', '_c.so');
+    fs.writeFileSync(a, Buffer.alloc(100));
+    fs.writeFileSync(b, Buffer.alloc(80));
+    fs.writeFileSync(c, Buffer.alloc(60));
+
+    onlyTools('strip');
+    mockedExeca.mockImplementation((async (_bin: string, args: string[]) => {
+      const filePaths = args.filter(x => !x.startsWith('--'));
+      if (filePaths.length > 1) {
+        // Batch call — reject to trigger per-file fallback.
+        throw new Error('strip: bad object in batch');
+      }
+      // Per-file retry: succeed for a and b, fail for c.
+      const file = filePaths[0];
+      if (path.basename(file) === '_c.so') {
+        throw new Error('strip: bad object');
+      }
+      fs.truncateSync(file, Math.floor(fs.statSync(file).size / 2));
+      return {} as unknown;
+    }) as unknown as typeof execa);
+
+    const result = await stripNativeLibraries({
+      sitePackageDirs: [dir],
+      distributions: distributions(dir, [
+        'pkg/_a.so',
+        'pkg/_b.so',
+        'pkg/_c.so',
+      ]),
+      targetArch: hostArch,
+    });
+
+    // a: 100 → 50 (saved 50), b: 80 → 40 (saved 40), c: untouched
+    expect(result.count).toBe(2);
+    expect(result.savedBytes).toBe(90);
+    expect(fs.statSync(a).size).toBe(50);
+    expect(fs.statSync(b).size).toBe(40);
+    expect(fs.statSync(c).size).toBe(60); // untouched
   });
 });
