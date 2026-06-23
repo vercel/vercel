@@ -1,5 +1,6 @@
 import type { File, HasField, Chain } from './types';
 import { Lambda } from './lambda';
+import debug from './debug';
 
 function assertOptionalBoolean(
   value: unknown,
@@ -126,6 +127,11 @@ export class Prerender {
     // prerender, no fallback concept).
     assertOptionalBoolean(hasPostponed, 'hasPostponed');
     this.hasPostponed = hasPostponed;
+    debug(
+      `Prerender: constructed with hasPostponed=${hasPostponed}${
+        sourcePath ? ` sourcePath="${sourcePath}"` : ''
+      }`
+    );
 
     assertOptionalBoolean(hasFallback, 'hasFallback');
     this.hasFallback = hasFallback;

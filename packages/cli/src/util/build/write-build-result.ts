@@ -288,6 +288,10 @@ async function writeBuildResultV2(args: {
         );
       }
 
+      outputManager.debug(
+        `hasPostponed: writing prerender config for "${normalizedPath}": hasPostponed=${output.hasPostponed}`
+      );
+
       await writeLambda(
         repoRootPath,
         outputDir,

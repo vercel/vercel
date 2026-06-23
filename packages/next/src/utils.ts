@@ -2704,6 +2704,14 @@ export const onPrerenderRoute =
       postponedState = getHTMLPostponedState({ appDir, routeFileNoExt });
       hasPostponed = Boolean(postponedState);
 
+      debug(
+        `hasPostponed: route="${routeKey}" file="${routeFileNoExt}" renderingMode=PARTIALLY_STATIC isBlocking=${isBlocking} -> postponedState=${
+          postponedState === null
+            ? 'null'
+            : `present(length=${postponedState.length})`
+        } hasPostponed=${hasPostponed}`
+      );
+
       const htmlPath = path.join(appDir, `${routeFileNoExt}.html`);
       if (fs.existsSync(htmlPath)) {
         const html = fs.readFileSync(htmlPath, 'utf8');
@@ -2722,12 +2730,22 @@ export const onPrerenderRoute =
           postponedPrerender = html;
           didPostpone = false;
         }
+
+        debug(
+          `hasPostponed: route="${routeKey}" assembled prerender from .html (didPostpone=${didPostpone})`
+        );
       }
 
       // NOTE: we don't validate the extension suffix of the data routes because
       // some routes (like those that have PPR client segment cache, and client
       // parsing all enabled) may be null because they only contain segment
       // data.
+    } else {
+      debug(
+        `hasPostponed: left undefined for route="${routeKey}" (renderingMode=${renderingMode}, hasAppDir=${Boolean(
+          appDir
+        )}, isBlocking=${isBlocking})`
+      );
     }
 
     if (postponedPrerender) {
@@ -4669,6 +4687,9 @@ function getHTMLPostponedState({
 }) {
   const metaPath = path.join(appDir, `${routeFileNoExt}.meta`);
   if (!fs.existsSync(metaPath)) {
+    debug(
+      `hasPostponed: no .meta file at "${metaPath}" -> postponedState=null`
+    );
     return null;
   }
 
@@ -4680,9 +4701,15 @@ function getHTMLPostponedState({
     !('postponed' in meta) ||
     typeof meta.postponed !== 'string'
   ) {
+    debug(
+      `hasPostponed: .meta at "${metaPath}" has no string "postponed" field -> postponedState=null`
+    );
     return null;
   }
 
+  debug(
+    `hasPostponed: .meta at "${metaPath}" has postponed state (length=${meta.postponed.length})`
+  );
   return meta.postponed;
 }
 
