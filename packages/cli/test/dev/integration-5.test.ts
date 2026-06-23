@@ -730,13 +730,14 @@ describe('[vercel dev] Multi-service with experimentalServicesV2', () => {
       expect(transformedJson.received_query).toContain('foo=bar');
       expect(transformedJson.received_query).toContain('injected=yes');
 
-      // a `response.headers` transform on a terminal status route must not be
-      // applied
+      // a non-redirect status route (410) proceeds past the transform step, so
+      // its own `response.headers` transform DOES apply — the proxy's
+      // handle_status only finishes routing for redirects.
       const gone = await nodeFetch(`http://localhost:${port}/gone`);
       expect(gone.status).toBe(410);
-      expect(gone.headers.get('x-should-not-apply')).toBeNull();
+      expect(gone.headers.get('x-gone-resp')).toBe('1');
 
-      // same for a redirect route
+      // a redirect route, by contrast, exits before its own transforms run.
       const oldRedirect = await nodeFetch(`http://localhost:${port}/old`, {
         redirect: 'manual',
       });

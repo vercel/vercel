@@ -2383,7 +2383,8 @@ export default class DevServer {
             phase,
             req,
             res,
-            requestId
+            requestId,
+            responseTransforms
           )
         ) {
           return;
@@ -2452,6 +2453,15 @@ export default class DevServer {
         routeResult = routeResultForError;
         statusCode = routeResultForError.status;
         match = matchForError;
+        // Thread the error phase's transforms like the hit/miss phases do, so
+        // an error route's transforms apply (the proxy runs apply/store in the
+        // error phase too).
+        if (routeResult.requestTransforms) {
+          requestTransforms.push(...routeResult.requestTransforms);
+        }
+        if (routeResult.responseTransforms) {
+          responseTransforms = routeResult.responseTransforms;
+        }
       } else if (matched_route && matched_route.src && !matched_route.dest) {
         debug(
           'Route without `dest` detected in error phase, attempting to exit early'

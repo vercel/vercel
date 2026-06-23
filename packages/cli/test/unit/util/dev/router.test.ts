@@ -467,7 +467,7 @@ describe('devRouter', () => {
     });
   });
 
-  it('does not set a response context for a terminal status route', async () => {
+  it('keeps the response context for a terminal non-redirect status route', async () => {
     const routesConfig = [
       {
         src: '/gone',
@@ -476,7 +476,7 @@ describe('devRouter', () => {
           {
             type: 'response.headers' as const,
             op: 'set' as const,
-            target: { key: 'x-should-not-apply' },
+            target: { key: 'x-gone' },
             args: '1',
           },
         ],
@@ -485,10 +485,19 @@ describe('devRouter', () => {
     const result = await devRouter('/gone', 'GET', routesConfig);
 
     expect(result.status).toBe(410);
-    expect(result.responseTransforms).toBeUndefined();
+    // The proxy's handle_status() only breaks for redirects; a non-redirect
+    // status (410) proceeds past the transform step, so its own response
+    // transforms still apply.
+    expect(result.responseTransforms).toHaveLength(1);
+    expect(result.responseTransforms?.[0]).toMatchObject({
+      target: { key: 'x-gone' },
+    });
   });
 
-  it('does not store a `check` + status route’s own transforms on the exit', async () => {
+  it('stores a `check` + non-redirect status route’s own transforms', async () => {
+    // A `check` rewrite that misses and exits via a non-redirect status still
+    // proceeds past the transform step, so its own transforms become the latest
+    // context (overriding an earlier one) — matching the proxy.
     const devServer = {
       isCaseSensitive: () => false,
       hasFilesystem: async () => false,
@@ -515,7 +524,7 @@ describe('devRouter', () => {
           {
             type: 'response.headers' as const,
             op: 'set' as const,
-            target: { key: 'x-should-not-apply' },
+            target: { key: 'x-gone' },
             args: '1',
           },
         ],
@@ -532,7 +541,50 @@ describe('devRouter', () => {
     expect(result.status).toBe(410);
     expect(result.responseTransforms).toHaveLength(1);
     expect(result.responseTransforms?.[0]).toMatchObject({
-      target: { key: 'x-prior' },
+      target: { key: 'x-gone' },
     });
+  });
+
+  it('surfaces request and response transforms for an error-phase route', async () => {
+    // The proxy runs the error phase through the same per-route loop as every
+    // other phase, so an error route applies its request transforms and stores
+    // its response context.
+    const routesConfig = [
+      {
+        src: '/oops',
+        dest: '/error.js',
+        transforms: [
+          {
+            type: 'request.path' as const,
+            op: 'set' as const,
+            args: '/e',
+          },
+          {
+            type: 'response.headers' as const,
+            op: 'set' as const,
+            target: { key: 'x-err' },
+            args: '1',
+          },
+        ],
+      },
+    ];
+    const result = await devRouter(
+      '/oops',
+      'GET',
+      routesConfig,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'error'
+    );
+
+    expect(result.phase).toBe('error');
+    expect(result.requestTransforms?.some(t => t.type === 'request.path')).toBe(
+      true
+    );
+    expect(
+      result.responseTransforms?.some(t => t.type === 'response.headers')
+    ).toBe(true);
   });
 });

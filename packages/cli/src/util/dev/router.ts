@@ -215,19 +215,15 @@ export async function devRouter(
           }
         }
 
+        // The proxy's `handle_status()` only finishes routing for redirects, when
+        // non-redirect status sets the status and still runs
+        // transforms.
         const effectiveStatus = routeConfig.status || status;
         const isRedirectExit =
           typeof effectiveStatus === 'number' &&
           effectiveStatus >= 300 &&
           effectiveStatus < 400;
-        const isStatusExit =
-          typeof effectiveStatus === 'number' && !routeConfig.dest;
-        if (
-          !isServiceMarker &&
-          !isRedirectExit &&
-          !isStatusExit &&
-          routeTransforms.length > 0
-        ) {
+        if (!isServiceMarker && !isRedirectExit && routeTransforms.length > 0) {
           responseTransforms = routeTransforms;
         }
 

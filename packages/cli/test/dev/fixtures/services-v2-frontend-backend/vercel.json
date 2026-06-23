@@ -7,7 +7,7 @@
         {
           "type": "response.headers",
           "op": "set",
-          "target": { "key": "x-should-not-apply" },
+          "target": { "key": "x-gone-resp" },
           "args": "1"
         }
       ]
