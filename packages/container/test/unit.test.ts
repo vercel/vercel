@@ -768,6 +768,42 @@ describe('@vercel/container', () => {
       ).toBe(true);
     });
 
+    it('publishes on the orchestrator-provided host port (meta.port)', async () => {
+      existsSyncMock.mockReturnValue(false); // no Dockerfile
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'docker' && args[0] === 'run') {
+          return fakeRunningChild(101);
+        }
+        if (cmd === 'docker' && args.includes('inspect')) {
+          return fakeChild('{"3000/tcp":{}}');
+        }
+        if (cmd === 'docker' && args[0] === 'port') {
+          return fakeChild('127.0.0.1:49222\n');
+        }
+        return fakeChild('');
+      });
+
+      const result = await startDevServer({
+        ...createBuildOptions({}),
+        entrypoint: 'grycap/cowsay:latest',
+        service: { name: 'api', type: 'web' },
+        // The orchestrator pre-allocates a host port and passes it as
+        // `meta.port`; service bindings target it, so the container must be
+        // published on exactly this port (not a Docker-chosen ephemeral one).
+        meta: { isDev: true, port: 49222 },
+      } as any);
+
+      expect(result).toMatchObject({ port: 49222, pid: 101 });
+      const commands = commandsRun();
+      expect(
+        commands.some(
+          c => c.includes('docker run') && c.includes('-p 127.0.0.1:49222:3000')
+        )
+      ).toBe(true);
+      // Must NOT fall back to an ephemeral (`:0:`) host port.
+      expect(commands.some(c => c.includes('-p 127.0.0.1:0:'))).toBe(false);
+    });
+
     it('cleans up the temp env-file and stops the container when it exits before becoming ready', async () => {
       existsSyncMock.mockReturnValue(false); // prebuilt image, no Dockerfile
       // `docker run` returns a child that has already exited (exitCode set), so

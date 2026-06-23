@@ -387,14 +387,22 @@ export async function startDevServer(
         (config as { command?: unknown }).command
       );
 
+      // Honor the host port the orchestrator pre-allocated for this service
+      // (passed via `meta.port`). Service bindings are built against this port
+      // (`http://127.0.0.1:${preAllocatedPort}/`), so the container must listen
+      // on it for cross-service requests to reach it. Fall back to `0` (an
+      // ephemeral port chosen by Docker) when no port was provided.
+      const requestedHostPort = typeof meta?.port === 'number' ? meta.port : 0;
+
       const args = [
         'run',
         '--rm',
         '--name',
         containerName,
-        // Publish the container port to an ephemeral host port chosen by Docker.
+        // Publish the container port to the orchestrator-provided host port, or
+        // an ephemeral host port chosen by Docker when none was requested.
         '-p',
-        `127.0.0.1:0:${containerPort}`,
+        `127.0.0.1:${requestedHostPort}:${containerPort}`,
         '--env-file',
         envFilePath,
         image,
