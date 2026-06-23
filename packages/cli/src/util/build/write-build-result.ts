@@ -634,12 +634,8 @@ async function writeFunctionSymlink(
 }
 
 /**
- * Serializes the `EdgeFunction` instance to the file system.
- *
- * @param outputPath The path of the `.vercel/output` directory
- * @param edgeFunction The `EdgeFunction` instance
- * @param path The URL path where the `EdgeFunction` can be accessed from
- * @param existingFunctions (optional) Map of `Lambda`/`EdgeFunction` instances that have previously been written
+ * Serializes a container image output (`runtime: 'container'`) to the file
+ * system as a `.func` directory with a `.vc-config.json`.
  */
 async function writeContainerImage(
   outputDir: string,
@@ -647,9 +643,8 @@ async function writeContainerImage(
   path: string
 ) {
   const dest = join(outputDir, 'functions', `${path}.func`);
-  // For `runtime: 'container'`, the OCI image reference is carried in `handler`
-  // (the build-output contract; api-builds surfaces it as `image` downstream).
-  // See vercel/api#76729.
+  // For `runtime: 'container'` the OCI image reference is carried in `handler`;
+  // the platform surfaces it as the container image downstream (vercel/api#76729).
   const handler = (containerImage as any).handler;
   if (typeof handler !== 'string' || handler.length === 0) {
     throw new Error(

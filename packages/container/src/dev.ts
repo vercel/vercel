@@ -313,12 +313,10 @@ export async function startDevServer(
         options.service?.name ?? 'service'
       );
 
-      // Match the other builders' dev behavior (`cloneEnv(process.env,
-      // meta.env, ...)` in @vercel/node): the container inherits the CLI's
-      // process env, then the orchestrator's per-service env (service URLs,
-      // VERCEL_SERVICE_*, resolved .env values), then a PORT the app honors.
-      // Passed via a temp `--env-file` so values aren't exposed on the command
-      // line (visible in `ps`) and to avoid arg-length limits.
+      // Env precedence: CLI process env, then the orchestrator's per-service
+      // env (service URLs, resolved .env values), then a `PORT` the app honors.
+      // Passed via a temp `--env-file` to keep secrets off the command line and
+      // avoid arg-length limits.
       const mergedEnv: Record<string, string> = {};
       for (const [key, value] of Object.entries(process.env)) {
         if (typeof value === 'string') {
@@ -381,11 +379,9 @@ export async function startDevServer(
         }
       };
 
-      // Wait for Docker to assign + publish the host port. The container may
-      // take a moment to start; poll `docker port` briefly. Any failure here
-      // must still tear the container down and remove the temp env-file (it
-      // holds the full merged environment, including secrets), so all error
-      // paths funnel through `shutdown()`.
+      // Poll for Docker's assigned host port. Any failure funnels through
+      // `shutdown()` so the container is stopped and the temp env-file (which
+      // holds secrets) is always removed.
       let hostPort: number | undefined;
       const deadline = Date.now() + 30_000;
       let lastErr: Error | undefined;

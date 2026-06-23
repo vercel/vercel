@@ -160,15 +160,11 @@ async function buildAndPushImage(params: {
           span: buildSpan,
         };
 
-        // The Vercel build container writes a registry auth file
-        // (`~/.config/containers/auth.json`, see vercel/api#76560) before the
-        // builder runs, so buildah/podman authenticate automatically. Running
-        // `buildah login` on top of that is redundant and risks overwriting
-        // the credentials the platform provisioned. Skip the explicit login
-        // when such a file already exists; only log in ourselves otherwise
-        // (e.g. local `vercel build` with the docker engine).
-        // Escape hatch: force an explicit `engine.login` even when a
-        // provisioned auth file is present, for debugging credential issues.
+        // The build container provisions a registry auth file
+        // (`~/.config/containers/auth.json`, vercel/api#76560) that buildah
+        // picks up automatically, so skip the redundant explicit login when one
+        // exists. Local `vercel build` (docker engine) still logs in.
+        // `VERCEL_VCR_FORCE_LOGIN=1` forces an explicit login.
         const forceLogin =
           readString(process.env.VERCEL_VCR_FORCE_LOGIN) === '1';
         const authFile = forceLogin ? undefined : existingRegistryAuthFile();
@@ -382,9 +378,9 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
       [outputPath]: {
         type: 'Lambda',
         files: {},
-        // For `runtime: 'container'`, the OCI image reference is carried in
-        // `handler` (the build-output contract; api-builds surfaces it as
-        // `image` downstream). See vercel/api#76729.
+        // For `runtime: 'container'` the OCI image reference is carried in
+        // `handler`; the platform surfaces it as the container image downstream
+        // (vercel/api#76729).
         handler: image,
         runtime: 'container',
         environment: {},

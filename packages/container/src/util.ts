@@ -221,14 +221,11 @@ export function isBuildContainer(): boolean {
 }
 
 /**
- * Locate a pre-existing container registry auth file, if any. The Vercel build
- * container (see vercel/api#76560) writes `~/.config/containers/auth.json` with
- * `auths["vcr.vercel.com"] = base64("oidc:<token>")` before the builder runs,
- * so buildah/podman pick up credentials automatically. `REGISTRY_AUTH_FILE`,
- * when set, overrides the default location for those tools.
- *
- * Returns the path to the auth file that exists, or `undefined` when none is
- * present (e.g. local `vercel build`, where we still need an explicit login).
+ * Locate a pre-existing container registry auth file, if any. The build
+ * container provisions `~/.config/containers/auth.json` (vercel/api#76560) that
+ * buildah/podman read automatically; `REGISTRY_AUTH_FILE` overrides the
+ * location. Returns the existing path, or `undefined` (e.g. local
+ * `vercel build`, where an explicit login is still needed).
  */
 export function existingRegistryAuthFile(): string | undefined {
   const explicit = readString(process.env.REGISTRY_AUTH_FILE);
