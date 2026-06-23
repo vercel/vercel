@@ -3,14 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { basename, join } from 'path';
 import { readFile } from 'fs-extra';
 import stripAnsi from 'strip-ansi';
-import {
-  readJSON,
-  mkdirp,
-  writeFile,
-  writeJSON,
-  pathExists,
-  remove,
-} from 'fs-extra';
+import { readJSON, mkdirp, writeFile, writeJSON, pathExists } from 'fs-extra';
 import link from '../../../../src/commands/link';
 import pull from '../../../../src/commands/env/pull';
 import { client } from '../../../mocks/client';
@@ -21,10 +14,7 @@ import {
   useProject,
   useUnknownProject,
 } from '../../../mocks/project';
-import {
-  setupTmpDir,
-  setupUnitFixture,
-} from '../../../helpers/setup-unit-fixture';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import getProjectByNameOrId from '../../../../src/util/projects/get-project-by-id-or-name';
 import { ProjectNotFound } from '../../../../src/util/errors-ts';
 
@@ -54,6 +44,7 @@ function expectLinkRowsUseExpectedGlyphs(output: string, labels: string[]) {
 describe('link', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    client.isAgent = false;
     // Default mock implementation for env pull command
     mockPull.mockResolvedValue(0);
   });
@@ -755,7 +746,8 @@ describe('link', () => {
 
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
-      await expect(client.stderr).toOutput('Searching for existing projects');
+      await expect(client.stderr).toOutput('Which project?');
+      client.stdin.write('\n');
       await expect(client.stderr).toOutput(
         `✓ Linked          ${team.slug}/${project.name}`
       );
@@ -789,6 +781,8 @@ describe('link', () => {
       const exitCodePromise = link(client);
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Which project?');
+      client.stdin.write('\n');
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "link"').toEqual(0);
 
@@ -802,11 +796,8 @@ describe('link', () => {
   });
 
   describe('--non-interactive', () => {
-    it('outputs action_required JSON and exits when not linked and multiple teams (no --team)', async () => {
+    it('outputs action_required JSON when no scope is explicit', async () => {
       const cwd = setupTmpDir();
-      useUser({ version: 'northstar' });
-      useTeams('team_dummy');
-      createTeam(); // second team so choices.length > 1, no currentTeam
       client.cwd = cwd;
       client.setArgv('link', '--non-interactive');
       (client as { nonInteractive: boolean }).nonInteractive = true;
@@ -824,14 +815,22 @@ describe('link', () => {
       const payload = JSON.parse(logSpy.mock.calls[0][0]);
       expect(payload.status).toBe('action_required');
       expect(payload.reason).toBe('missing_scope');
-      expect(payload.message).toContain('--scope');
-      expect(payload.message).toContain('non-interactive');
+      expect(payload.userActionRequired).toBe(true);
+      expect(payload.message).toContain('selected by the user');
+      expect(payload.message).toContain('Do not choose');
+      expect(payload.choices).toBeUndefined();
       expect(payload.next).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            command: expect.stringContaining(
-              'link --scope <team-slug> --project <project-name-or-id>'
-            ),
+            command: expect.stringContaining('teams list'),
+          }),
+        ])
+      );
+      expect(payload.next).not.toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ command: expect.stringContaining('link') }),
+          expect.objectContaining({
+            command: expect.stringContaining('project add'),
           }),
         ])
       );
@@ -861,10 +860,15 @@ describe('link', () => {
       expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
     });
 
-    it('cancels with Escape from the project name prompt without linking', async () => {
+    it('cancels with Escape from the project picker without linking', async () => {
       const cwd = setupTmpDir();
       useUser({ version: 'northstar' });
       useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'project-id',
+        name: 'project-name',
+      });
       useUnknownProject();
 
       client.cwd = cwd;
@@ -873,10 +877,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
 
-      await expect(client.stderr).toOutput('Project?');
-      client.stdin.write('\n');
-
-      await expect(client.stderr).toOutput('Name?');
+      await expect(client.stderr).toOutput('Which project?');
       client.events.keypress('escape');
 
       await expect(exitCodePromise).resolves.toEqual(0);
@@ -902,6 +903,8 @@ describe('link', () => {
       (client as { nonInteractive: boolean }).nonInteractive = false;
       const exitCodePromise = link(client);
       await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Which project?');
       client.stdin.write('\n');
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "link"').toEqual(0);
@@ -931,13 +934,8 @@ describe('link', () => {
 
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
-    await expect(client.stderr).toOutput('Directory');
-    await expect(client.stderr).toOutput('Found existing project');
-    await expect(client.stderr).toOutput(
-      `Project         ${team.slug}/${project.name}`
-    );
-    await expect(client.stderr).toOutput('Link directory to project?');
-    client.stdin.write('y\n');
+    await expect(client.stderr).toOutput('Which project?');
+    client.stdin.write('\n');
 
     await expect(client.stderr).toOutput(
       `✓ Linked          ${team.slug}/${project.name}`
@@ -950,20 +948,13 @@ describe('link', () => {
     expect(exitCode, 'exit code for "link"').toEqual(0);
     const plainOutput = stripAnsi(client.stderr.getFullOutput());
     expect(plainOutput.indexOf('Which team?')).toBeLessThan(
-      plainOutput.indexOf('Directory')
+      plainOutput.indexOf('Which project?')
     );
-    expect(plainOutput).toMatch(
-      /^\s{0,2}Directory\s+.+\n\nSearching for existing projects…\n\n\s{0,2}Found existing project/m
-    );
-    expect(plainOutput).toMatch(/Link directory to project\?.*\n\n✓ Linked\s+/);
+    expect(plainOutput).not.toContain('Create new project');
     expect(plainOutput).not.toContain(
       'Pull development environment variables into .env.local?'
     );
-    expectLinkRowsUseExpectedGlyphs(client.stderr.getFullOutput(), [
-      'Directory',
-      'Project',
-      'Linked',
-    ]);
+    expectLinkRowsUseExpectedGlyphs(client.stderr.getFullOutput(), ['Linked']);
 
     const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
     expect(projectJson.orgId).toEqual(team.id);
@@ -974,549 +965,34 @@ describe('link', () => {
     );
   });
 
-  it('should create new Project', async () => {
-    const user = useUser();
-    const cwd = setupUnitFixture('commands/build/monorepo');
-    await remove(join(cwd, '.vercel'));
-    useTeams('team_dummy');
-    useUnknownProject();
-
-    client.cwd = cwd;
-    const exitCodePromise = link(client);
-
-    await expect(client.stderr).toOutput('Which team?');
-    client.stdin.write('\n');
-    await expect(client.stderr).toOutput('Directory');
-
-    await expect(client.stderr).toOutput('Project?');
-    client.stdin.write('\n');
-
-    await expect(client.stderr).toOutput('Name?');
-    client.stdin.write('awesome-app\n');
-
-    await expect(client.stderr).toOutput('Code directory? ./');
-    client.stdin.write('apps/nextjs\n');
-
-    await expect(client.stderr).toOutput('Detected Next.js');
-    await expect(client.stderr).toOutput('Customize settings?');
-    client.stdin.write('\n');
-
-    await expect(client.stderr).toOutput('Customize advanced settings?');
-    client.stdin.write('\n');
-
-    await expect(client.stderr).toOutput(
-      `✓ Created         ${user.username}/awesome-app`
-    );
-
-    const exitCode = await exitCodePromise;
-    expect(exitCode, 'exit code for "link"').toEqual(0);
-
-    // Anti-regression: old "Set up and deploy <path>?" confirm prompt is gone.
-    // Setup state is an aligned Directory row, not a prompt/status sentence.
-    const fullOutput = client.stderr.getFullOutput();
-    const plainOutput = stripAnsi(fullOutput);
-    expect(plainOutput.indexOf('Which team?')).toBeLessThan(
-      plainOutput.indexOf('Directory')
-    );
-    expect(plainOutput).toMatch(
-      /Code directory\?.*\n\n\s{0,2}Detected Next\.js/
-    );
-    expect(plainOutput).toMatch(
-      /Customize advanced settings\?.*\n\n✓ Created\s+/
-    );
-    // Old: `Set up and deploy "${path}"?`
-    expect(fullOutput).not.toMatch(/Set up and deploy "[^"]+"\?/);
-    // Old inquirer prefix: `? Set up and deploy ...`
-    expect(fullOutput).not.toMatch(/\? Set up and deploy/);
-    expect(stripAnsi(fullOutput)).not.toMatch(/^\s*Set up ["“]/m);
-    // Anti-regression: "Which scope" was renamed to "Which team".
-    expect(fullOutput).not.toContain(
-      'Which scope should contain your project?'
-    );
-    // Anti-regression: "What's your project's name?" was renamed to "Name?".
-    // Use regex to match both straight ' and curly ’ apostrophes (source on main uses curly).
-    expect(fullOutput).not.toMatch(/What.s your project.s name\?/);
-    expect(fullOutput).not.toContain(
-      'In which directory is your code located?'
-    );
-    expect(fullOutput).not.toContain(
-      'Do you want to change additional project settings?'
-    );
-    expect(fullOutput).not.toContain(
-      'Would you like to pull environment variables now?'
-    );
-    expect(fullOutput).not.toContain('Link to existing project?');
-    expect(fullOutput).not.toContain('Link to different existing project?');
-    expect(fullOutput).not.toContain(
-      `✓ Linked          ${user.username}/awesome-app`
-    );
-    expectLinkRowsUseExpectedGlyphs(fullOutput, ['Directory', 'Created']);
-  });
-
-  it('should write vercel.json for inferred multi-service layouts', async () => {
-    useUser();
+  it('does not create a project when the selected team has no projects', async () => {
+    useUser({ version: 'northstar' });
     const cwd = setupTmpDir();
-    useTeams('team_dummy');
+    const [team] = useTeams('team_dummy') as Team[];
     useUnknownProject();
-
-    await writeJSON(join(cwd, 'package.json'), {
-      dependencies: {
-        next: 'latest',
-      },
+    client.scenario.get('/v9/projects', (_req, res) => {
+      res.json({
+        projects: [],
+        pagination: { count: 0, next: null, prev: null },
+      });
     });
-    await mkdirp(join(cwd, 'services/api'));
-    await writeFile(join(cwd, 'services/api/requirements.txt'), 'fastapi\n');
-    await writeFile(
-      join(cwd, 'services/api/index.py'),
-      'from fastapi import FastAPI\napp = FastAPI()\n'
-    );
 
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
-    await expect(client.stderr).toOutput('Directory');
 
-    await expect(client.stderr).toOutput('Project?');
-    client.stdin.write('\n');
-
-    await expect(client.stderr).toOutput('Name?');
-    client.stdin.write('multi-service-app\n');
-
-    await expect(client.stderr).toOutput(
-      'Multiple services were detected. How would you like to set up this project?'
+    await expect(exitCodePromise).resolves.toEqual(1);
+    const outputText = stripAnsi(client.stderr.getFullOutput());
+    expect(outputText).toContain(
+      `No existing projects were found under ${team.slug}.`
     );
-    expect(client.stderr.getFullOutput()).toContain(
-      'Set up project with all detected services: "frontend" + "api"'
+    expect(outputText).toContain(
+      `project add <project-name> --scope ${team.slug}`
     );
-    expect(client.stderr.getFullOutput()).toContain(
-      'Set up project with "frontend"'
-    );
-    expect(client.stderr.getFullOutput()).toContain(
-      'Set up project with "api"'
-    );
-    client.stdin.write('\n');
-
-    await expect(client.stderr).toOutput('Customize advanced settings?');
-    client.stdin.write('\n');
-
-    const exitCode = await exitCodePromise;
-    expect(exitCode, 'exit code for "link"').toEqual(0);
-
-    expect(await readJSON(join(cwd, 'vercel.json'))).toMatchObject({
-      experimentalServices: {
-        frontend: {
-          framework: 'nextjs',
-          routePrefix: '/',
-        },
-        api: {
-          root: 'services/api',
-          entrypoint: 'index:app',
-          routePrefix: '/_/api',
-        },
-      },
-    });
-
-    const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
-    const project = await getProjectByNameOrId(client, projectJson.projectId);
-    if (project instanceof ProjectNotFound) {
-      throw project;
-    }
-    expect(project.framework).toEqual('services');
-  });
-
-  it('should continue with framework detection when root inferred services are declined', async () => {
-    useUser();
-    const cwd = setupTmpDir();
-    useTeams('team_dummy');
-    useUnknownProject();
-
-    await writeJSON(join(cwd, 'package.json'), {
-      dependencies: {
-        next: 'latest',
-      },
-    });
-    await mkdirp(join(cwd, 'services/api'));
-    await writeFile(join(cwd, 'services/api/requirements.txt'), 'fastapi\n');
-    await writeFile(
-      join(cwd, 'services/api/index.py'),
-      'from fastapi import FastAPI\napp = FastAPI()\n'
-    );
-
-    client.cwd = cwd;
-    const exitCodePromise = link(client);
-
-    await expect(client.stderr).toOutput('Which team?');
-    client.stdin.write('\n');
-    await expect(client.stderr).toOutput('Directory');
-
-    await expect(client.stderr).toOutput('Project?');
-    client.stdin.write('\n');
-
-    await expect(client.stderr).toOutput('Name?');
-    client.stdin.write('declined-multi-service-app\n');
-
-    await expect(client.stderr).toOutput(
-      'Multiple services were detected. How would you like to set up this project?'
-    );
-    expect(client.stderr.getFullOutput()).toContain(
-      'Set up project with "frontend"'
-    );
-    client.stdin.write('\x1B[B\n');
-
-    await expect(client.stderr).toOutput('Detected Next.js');
-    await expect(client.stderr).toOutput('Customize settings?');
-    client.stdin.write('\n');
-
-    await expect(client.stderr).toOutput('Customize advanced settings?');
-    client.stdin.write('\n');
-
-    const exitCode = await exitCodePromise;
-    expect(exitCode, 'exit code for "link"').toEqual(0);
-
-    expect(await pathExists(join(cwd, 'vercel.json'))).toBe(false);
-    expect(client.stderr.getFullOutput()).not.toContain('Code directory?');
-
-    const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
-    const project = await getProjectByNameOrId(client, projectJson.projectId);
-    if (project instanceof ProjectNotFound) {
-      throw project;
-    }
-    expect(project.framework).toEqual('nextjs');
-  });
-
-  it('should continue with the selected nested web service when single-app is chosen', async () => {
-    useUser();
-    const cwd = setupTmpDir();
-    useTeams('team_dummy');
-    useUnknownProject();
-
-    await writeJSON(join(cwd, 'package.json'), {
-      dependencies: {
-        next: 'latest',
-      },
-    });
-    await mkdirp(join(cwd, 'services/api'));
-    await writeFile(join(cwd, 'services/api/requirements.txt'), 'fastapi\n');
-    await writeFile(
-      join(cwd, 'services/api/index.py'),
-      'from fastapi import FastAPI\napp = FastAPI()\n'
-    );
-
-    client.cwd = cwd;
-    const exitCodePromise = link(client);
-
-    await expect(client.stderr).toOutput('Which team?');
-    client.stdin.write('\n');
-    await expect(client.stderr).toOutput('Directory');
-
-    await expect(client.stderr).toOutput('Project?');
-    client.stdin.write('\n');
-
-    await expect(client.stderr).toOutput('Name?');
-    client.stdin.write('single-fastapi-app\n');
-
-    await expect(client.stderr).toOutput(
-      'Multiple services were detected. How would you like to set up this project?'
-    );
-    expect(client.stderr.getFullOutput()).toContain(
-      'Set up project with "api"'
-    );
-    client.stdin.write('\x1B[B\x1B[B\n');
-
-    await expect(client.stderr).toOutput('Detected FastAPI');
-    await expect(client.stderr).toOutput('Customize settings?');
-    client.stdin.write('\n');
-
-    await expect(client.stderr).toOutput('Customize advanced settings?');
-    client.stdin.write('\n');
-
-    const exitCode = await exitCodePromise;
-    expect(exitCode, 'exit code for "link"').toEqual(0);
-
-    expect(await pathExists(join(cwd, 'vercel.json'))).toBe(false);
-    expect(client.stderr.getFullOutput()).not.toContain('Code directory?');
-
-    const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
-    const project = await getProjectByNameOrId(client, projectJson.projectId);
-    if (project instanceof ProjectNotFound) {
-      throw project;
-    }
-    expect(project.framework).toEqual('fastapi');
-    expect(project.rootDirectory).toEqual('services/api');
-  });
-
-  it('should allow choosing a different project directory before deploying detected services', async () => {
-    useUser();
-    const cwd = setupTmpDir();
-    useTeams('team_dummy');
-    useUnknownProject();
-
-    await writeJSON(join(cwd, 'package.json'), {
-      dependencies: {
-        next: 'latest',
-      },
-    });
-    await mkdirp(join(cwd, 'services/root-api'));
-    await writeFile(
-      join(cwd, 'services/root-api/requirements.txt'),
-      'fastapi\n'
-    );
-    await writeFile(
-      join(cwd, 'services/root-api/index.py'),
-      'from fastapi import FastAPI\napp = FastAPI()\n'
-    );
-
-    await mkdirp(join(cwd, 'apps/web/services/api'));
-    await writeJSON(join(cwd, 'apps/web/package.json'), {
-      dependencies: {
-        next: 'latest',
-      },
-    });
-    await writeFile(
-      join(cwd, 'apps/web/services/api/requirements.txt'),
-      'fastapi\n'
-    );
-    await writeFile(
-      join(cwd, 'apps/web/services/api/index.py'),
-      'from fastapi import FastAPI\napp = FastAPI()\n'
-    );
-
-    client.cwd = cwd;
-    const exitCodePromise = link(client);
-
-    await expect(client.stderr).toOutput('Which team?');
-    client.stdin.write('\n');
-    await expect(client.stderr).toOutput('Directory');
-
-    await expect(client.stderr).toOutput('Project?');
-    client.stdin.write('\n');
-
-    await expect(client.stderr).toOutput('Name?');
-    client.stdin.write('selected-directory-multi-service-app\n');
-
-    await expect(client.stderr).toOutput(
-      'Multiple services were detected. How would you like to set up this project?'
-    );
-    expect(client.stderr.getFullOutput()).toContain(
-      'Choose a different root directory'
-    );
-    client.stdin.write('\x1B[B\x1B[B\x1B[B\n');
-
-    await expect(client.stderr).toOutput('Code directory? ./');
-    client.stdin.write('apps/web\n');
-
-    await expect(client.stderr).toOutput(
-      'Multiple services were detected. How would you like to set up this project?'
-    );
-    client.stdin.write('\n');
-
-    await expect(client.stderr).toOutput('Customize advanced settings?');
-    client.stdin.write('\n');
-
-    const exitCode = await exitCodePromise;
-    expect(exitCode, 'exit code for "link"').toEqual(0);
-
-    expect(await readJSON(join(cwd, 'apps/web/vercel.json'))).toMatchObject({
-      experimentalServices: {
-        frontend: {
-          framework: 'nextjs',
-          routePrefix: '/',
-        },
-        api: {
-          root: 'services/api',
-          entrypoint: 'index:app',
-          routePrefix: '/_/api',
-        },
-      },
-    });
-    expect(await pathExists(join(cwd, 'vercel.json'))).toBe(false);
-
-    const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
-    const project = await getProjectByNameOrId(client, projectJson.projectId);
-    if (project instanceof ProjectNotFound) {
-      throw project;
-    }
-    expect(project.framework).toEqual('services');
-    expect(project.rootDirectory).toEqual('apps/web');
-  });
-
-  it('should write vercel.json for inferred multi-service layouts in the selected root directory', async () => {
-    useUser();
-    const cwd = setupTmpDir();
-    useTeams('team_dummy');
-    useUnknownProject();
-
-    await mkdirp(join(cwd, 'apps/web/services/api'));
-    // `pnpm-workspace.yaml` marks the repo root as a workspace, which is what
-    // triggers the "Code directory?" prompt under
-    // the standard (no-inferred-services) flow.
-    await writeFile(
-      join(cwd, 'pnpm-workspace.yaml'),
-      "packages:\n  - 'apps/*'\n"
-    );
-    await writeJSON(join(cwd, 'apps/web/package.json'), {
-      dependencies: {
-        next: 'latest',
-      },
-    });
-    await writeFile(
-      join(cwd, 'apps/web/services/api/requirements.txt'),
-      'fastapi\n'
-    );
-    await writeFile(
-      join(cwd, 'apps/web/services/api/index.py'),
-      'from fastapi import FastAPI\napp = FastAPI()\n'
-    );
-
-    client.cwd = cwd;
-    const exitCodePromise = link(client);
-
-    await expect(client.stderr).toOutput('Which team?');
-    client.stdin.write('\n');
-    await expect(client.stderr).toOutput('Directory');
-
-    await expect(client.stderr).toOutput('Project?');
-    client.stdin.write('\n');
-
-    await expect(client.stderr).toOutput('Name?');
-    client.stdin.write('nested-multi-service-app\n');
-
-    await expect(client.stderr).toOutput('Code directory? ./');
-    client.stdin.write('apps/web\n');
-
-    await expect(client.stderr).toOutput(
-      'Multiple services were detected. How would you like to set up this project?'
-    );
-    client.stdin.write('\n');
-
-    await expect(client.stderr).toOutput('Customize advanced settings?');
-    client.stdin.write('\n');
-
-    const exitCode = await exitCodePromise;
-    expect(exitCode, 'exit code for "link"').toEqual(0);
-
-    expect(await readJSON(join(cwd, 'apps/web/vercel.json'))).toMatchObject({
-      experimentalServices: {
-        frontend: {
-          framework: 'nextjs',
-          routePrefix: '/',
-        },
-        api: {
-          root: 'services/api',
-          entrypoint: 'index:app',
-          routePrefix: '/_/api',
-        },
-      },
-    });
-    expect(await pathExists(join(cwd, 'vercel.json'))).toBe(false);
-
-    const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
-    const project = await getProjectByNameOrId(client, projectJson.projectId);
-    if (project instanceof ProjectNotFound) {
-      throw project;
-    }
-    expect(project.framework).toEqual('services');
-    expect(project.rootDirectory).toEqual('apps/web');
-  });
-
-  it('should continue link when selected root vercel.json is invalid', async () => {
-    useUser();
-    const cwd = setupTmpDir();
-    useTeams('team_dummy');
-    useUnknownProject();
-
-    await mkdirp(join(cwd, 'apps/web'));
-    // `pnpm-workspace.yaml` marks the repo root as a workspace, which is what
-    // triggers the "Code directory?" prompt under
-    // the standard (no-inferred-services) flow.
-    await writeFile(
-      join(cwd, 'pnpm-workspace.yaml'),
-      "packages:\n  - 'apps/*'\n"
-    );
-    await writeFile(join(cwd, 'apps/web/vercel.json'), '{\n');
-
-    client.cwd = cwd;
-    const exitCodePromise = link(client);
-
-    await expect(client.stderr).toOutput('Which team?');
-    client.stdin.write('\n');
-    await expect(client.stderr).toOutput('Directory');
-
-    await expect(client.stderr).toOutput('Project?');
-    client.stdin.write('\n');
-
-    await expect(client.stderr).toOutput('Name?');
-    client.stdin.write('invalid-selected-root-config-app\n');
-
-    await expect(client.stderr).toOutput('Code directory? ./');
-    client.stdin.write('apps/web\n');
-
-    await expect(client.stderr).toOutput('Customize advanced settings?');
-    client.stdin.write('\n');
-
-    const exitCode = await exitCodePromise;
-    expect(exitCode, 'exit code for "link"').toEqual(0);
-
-    const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
-    const project = await getProjectByNameOrId(client, projectJson.projectId);
-    if (project instanceof ProjectNotFound) {
-      throw project;
-    }
-    expect(project.framework).toEqual('services');
-    expect(project.rootDirectory).toEqual('apps/web');
-  });
-
-  it('should warn when inferred services are blocked by builds config', async () => {
-    useUser();
-    const cwd = setupTmpDir();
-    useTeams('team_dummy');
-    useUnknownProject();
-
-    await writeJSON(join(cwd, 'package.json'), {
-      dependencies: {
-        next: 'latest',
-      },
-    });
-    await writeJSON(join(cwd, 'vercel.json'), {
-      builds: [{ src: 'package.json', use: '@vercel/next' }],
-    });
-    await mkdirp(join(cwd, 'services/api'));
-    await writeFile(join(cwd, 'services/api/requirements.txt'), 'fastapi\n');
-    await writeFile(
-      join(cwd, 'services/api/index.py'),
-      'from fastapi import FastAPI\napp = FastAPI()\n'
-    );
-
-    client.cwd = cwd;
-    const exitCodePromise = link(client);
-
-    await expect(client.stderr).toOutput('Which team?');
-    client.stdin.write('\n');
-    await expect(client.stderr).toOutput('Directory');
-
-    await expect(client.stderr).toOutput('Project?');
-    client.stdin.write('\n');
-
-    await expect(client.stderr).toOutput('Name?');
-    client.stdin.write('services-with-builds\n');
-
-    await expect(client.stderr).toOutput(
-      'Multiple services were detected, but your existing project config uses `builds`. To deploy multiple services in one project, see Services (https://vercel.com/docs/services).'
-    );
-    await expect(client.stderr).toOutput('Customize advanced settings?');
-    client.stdin.write('\n');
-
-    const exitCode = await exitCodePromise;
-    expect(exitCode, 'exit code for "link"').toEqual(0);
-    expect(client.stderr.getFullOutput()).not.toContain('Detected services:');
-    expect(client.stderr.getFullOutput()).not.toContain(
-      'Services are configured via vercel.json.'
-    );
-    expect(client.stderr.getFullOutput()).not.toContain(
-      'Multiple services were detected. How would you like to set up this project?'
-    );
+    expect(outputText).not.toContain('Create new project');
+    expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
   });
 
   it('should allow overwriting existing link', async () => {
@@ -1578,6 +1054,8 @@ describe('link', () => {
       `The \`vc link <directory>\` syntax is deprecated, please use \`vc link --cwd ${cwd}\` instead`
     );
     await expect(client.stderr).toOutput('Which team?');
+    client.stdin.write('\n');
+    await expect(client.stderr).toOutput('Which project?');
     client.stdin.write('\n');
 
     const exitCode = await exitCodePromise;
@@ -1658,10 +1136,8 @@ describe('link', () => {
 
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
-      await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Found existing project');
-      await expect(client.stderr).toOutput('Link directory to project?');
-      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Which project?');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
         `✓ Linked          ${team.slug}/${project.name}`
@@ -1672,8 +1148,6 @@ describe('link', () => {
 
       expect(exitCode).toEqual(0);
       expectLinkRowsUseExpectedGlyphs(client.stderr.getFullOutput(), [
-        'Directory',
-        'Project',
         'Linked',
       ]);
       expect(sawRepoProjectSelector).toBe(false);
@@ -1816,7 +1290,7 @@ describe('link', () => {
       });
       useUnknownProject();
 
-      client.config.currentTeam = teamB.id;
+      client.config.currentTeam = teamA.id;
       client.cwd = cwd;
       const searchSpy = vi.spyOn(client.input, 'search');
       const exitCodePromise = link(client);
@@ -1828,12 +1302,12 @@ describe('link', () => {
       const teamPromptOutput = client.stderr.getFullOutput();
       expect(teamPromptOutput).toContain(`${teamA.name} (${teamA.slug})`);
       expect(teamPromptOutput).toContain('Team B (team-b)');
-      expect(teamPromptOutput).not.toContain('Directory');
+      expect(teamPromptOutput).not.toContain('Which project?');
+      client.stdin.write('team-b');
       client.stdin.write('\n');
 
-      await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Link directory to project?');
-      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Which project?');
+      client.stdin.write('\n');
 
       await expect(exitCodePromise).resolves.toEqual(0);
       const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
@@ -1869,6 +1343,40 @@ describe('link', () => {
   });
 
   describe('deterministic non-interactive linking', () => {
+    it('treats a detected agent with a TTY as non-interactive for link only', async () => {
+      useUser({ version: 'northstar' });
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      useUnknownProject();
+
+      client.isAgent = true;
+      client.nonInteractive = false;
+      client.stdin.isTTY = true;
+      client.cwd = cwd;
+      client.setArgv('link');
+
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await expect(link(client)).rejects.toThrow('process.exit(1)');
+      const payload = JSON.parse(logSpy.mock.calls[0][0]);
+      expect(payload).toMatchObject({
+        status: 'action_required',
+        reason: 'missing_scope',
+        userActionRequired: true,
+      });
+      expect(client.stderr.getFullOutput()).not.toContain('Which team?');
+      expect(client.nonInteractive).toBe(false);
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+      client.isAgent = false;
+    });
+
     it('links an explicit --scope and --project without --yes', async () => {
       useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
@@ -1900,31 +1408,7 @@ describe('link', () => {
       expect(client.stderr.getFullOutput()).not.toContain('Which team?');
     });
 
-    it('uses a team explicitly remembered by `vc switch`', async () => {
-      useUser({ version: 'northstar' });
-      const cwd = setupTmpDir();
-      const [team] = useTeams('team_dummy') as Team[];
-      const { project } = useProject({
-        ...defaultProject,
-        id: 'project-id',
-        name: 'project-name',
-      });
-      useUnknownProject();
-
-      client.config.currentTeam = team.id;
-      client.config.explicitCurrentTeam = team.id;
-      client.nonInteractive = true;
-      client.cwd = cwd;
-      client.setArgv('link', '--non-interactive', '--project', project.name!);
-
-      await expect(link(client)).resolves.toEqual(0);
-      expect(await readJSON(join(cwd, '.vercel/project.json'))).toMatchObject({
-        orgId: team.id,
-        projectId: project.id,
-      });
-    });
-
-    it('does not trust a team inferred during login', async () => {
+    it('does not treat currentTeam as explicit scope', async () => {
       useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
       const [team] = useTeams('team_dummy') as Team[];
@@ -1990,11 +1474,15 @@ describe('link', () => {
       const [team] = useTeams('team_dummy') as Team[];
       useUnknownProject();
 
-      client.config.currentTeam = team.id;
-      client.config.explicitCurrentTeam = team.id;
       client.nonInteractive = true;
       client.cwd = cwd;
-      client.setArgv('link', '--non-interactive', '--yes');
+      client.setArgv(
+        'link',
+        '--non-interactive',
+        '--scope',
+        team.slug,
+        '--yes'
+      );
 
       const exitSpy = vi
         .spyOn(process, 'exit')
@@ -2008,7 +1496,17 @@ describe('link', () => {
       expect(payload).toMatchObject({
         status: 'action_required',
         reason: 'missing_project',
+        userActionRequired: true,
       });
+      expect(payload.message).toContain('selected by the user');
+      expect(payload.message).toContain('Do not choose by list order');
+      expect(payload.next).toEqual([
+        expect.objectContaining({
+          command: expect.stringContaining(`project list --scope ${team.slug}`),
+        }),
+      ]);
+      expect(payload.next[0].command).not.toContain('project add');
+      expect(payload.next[0].command).not.toContain('link');
       expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
 
       exitSpy.mockRestore();
@@ -2024,7 +1522,7 @@ describe('link', () => {
       try {
         await expect(link(client)).resolves.toEqual(1);
         expect(stripAnsi(client.stderr.getFullOutput())).toContain(
-          'No team could be determined with certainty in non-interactive mode.'
+          'A team must be selected by the user before linking.'
         );
         expect(client.stderr.getFullOutput()).not.toContain('Which team?');
       } finally {

@@ -194,7 +194,7 @@ export function createCliExperimentConfig({
 
 ${readmeBody}
 
-Use \`--yes\` and \`evals-setup.json\` for team/project IDs when linking.
+Use the explicit team/project IDs in \`evals-setup.json\` when the task names that target. Do not use \`--yes\` to select a team or project. If \`vercel link\` returns \`userActionRequired: true\` without an explicit target, stop and ask the user instead of choosing a current, default, first, or recently updated result.
 
 If \`vercel link\` reports no credentials, run \`source ~/.profile\` first (or \`source ~/.bashrc\`) so VERCEL_TOKEN is set, then retry.`;
 

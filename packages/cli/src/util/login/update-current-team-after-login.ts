@@ -7,8 +7,6 @@ export async function updateCurrentTeamAfterLogin(
   client: Client,
   ssoTeamId?: string
 ) {
-  delete client.config.explicitCurrentTeam;
-
   if (ssoTeamId) {
     client.config.currentTeam = ssoTeamId;
   } else {

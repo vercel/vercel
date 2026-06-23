@@ -19,62 +19,46 @@ When adding a durable contract, add a row to `SKILL.md` so agents load it only f
 `vc link` target resolution order:
 
 1. Explicit team: `--scope`/`--team` always wins over local, repository, or global state.
-2. Authoritative existing link: an exact environment, `.vercel/project.json`, or unambiguous `.vercel/repo.json` owner-project pair may be reused.
+2. Authoritative existing link: a valid `.vercel/project.json` or unambiguous `.vercel/repo.json` owner-project pair may be reused.
 3. Interactive team: when no explicit team exists, TTY asks `Which team?` before project discovery and shows team name, slug, current marker, and SSO lock state.
-4. Non-interactive team: accept only an explicit scope or a `currentTeam` proven to come from `vc switch`; login defaults are not intent.
-5. Intended project: explicit `--project`, an exact Git repository/root match inside the resolved team, or an interactive existing-project choice. Folder-name matches are never non-interactive evidence.
-6. Interactive creation: only an explicit `Create new project` choice enters project settings and creation. Non-interactive creation uses `vc project add <name> --scope <team>` before `vc link`.
-7. Mutations: write the resolved link, update `.gitignore`, optionally connect Git for an explicitly created project, then refresh `VERCEL_OIDC_TOKEN` in `.env.local`.
+4. Non-interactive team: require an explicit scope unless a valid local link already identifies the owner and project.
+5. Intended project: require explicit `--project` in non-interactive mode unless a valid local link already identifies it; otherwise use the interactive existing-project choice.
+6. Missing project: stop and direct the user to `vc project add`; direct `vc link` never creates a project.
+7. Mutations: write the resolved existing-project link, update `.gitignore`, then refresh `VERCEL_OIDC_TOKEN` in `.env.local`.
 
 Rules:
 
-- Before mutation, know whether linking existing project or creating a new one.
 - Ask `Which team?` before project discovery in TTY mode. An explicit `--scope` skips this prompt and restricts all lookup to that team.
 - Team choices show both display name and slug, identify the current team, and mark teams that require SSO.
 - The `Which team?` picker supports substring search by team name and slug.
 - Non-TTY and `--non-interactive` never prompt, search across teams, infer a team from login defaults, select by folder name, or create a project.
-- `--yes` accepts defaults only after team/project identity is resolved. It cannot supply team or project intent and cannot enable project creation.
+- `--yes` has no team/project selection authority and cannot enable project creation.
 - In non-interactive mode, `vc link --scope <team> --project <project>` is sufficient; `--yes` is unnecessary but may remain as a redundant compatibility flag.
-- A successful prior local/repository link may be reused without flags. A team saved by `vc switch` may scope an explicit project or exact Git repository/root match.
-- Missing or ambiguous evidence returns structured `action_required` output with commands for `teams list`, `project list`, `project add`, and an explicit `link` retry.
+- A successful prior local/repository link may be reused without flags.
+- Missing information returns structured `action_required` output with `userActionRequired: true` and read-only discovery commands. Agents must ask the user instead of selecting a current/default/first/recent result.
 - Resolve and validate the replacement target before overwriting an existing local link.
-- Running `vc link` is setup intent; do not ask a vague setup-intent prompt.
-- Do not ask `Link to existing project?` when no concrete project is shown. Ask `Project?` with `Create new project` and `Link existing project` choices instead.
-- Do not create a project from a user-supplied `--project` value that was not found.
+- Direct `vc link` only lists existing projects. It never offers `Create new project` or creates from a missing `--project` value.
 - Project discovery after team selection is restricted to that team.
-- Existing-project matches show `Directory` once as setup state, then `Found existing project` as a status heading and aligned `Project` before confirmation. If no setup-state `Directory` row exists, include `Directory` in the found-project block instead.
-- Repository matches show `Found existing project`, then aligned `Project` and `Source` rows before confirmation.
-- Ask for the link action after preview rows: `Link directory to project?` or `Link repository to project?`. Do not ask `Link to this project?` after the values are already visible.
-- Use `requires SSO` / `teams that require SSO`; do not use `SSO-protected` in new human copy.
 - User-facing copy uses `team`; command examples use the preferred `--scope` flag.
-- Use `Which team?`, `Name?`, `Customize settings?`, and `Loading teams…`.
-- Ask `Code directory?` only for real root ambiguity.
-- Compress framework detection: `Detected Next.js` for defaults; include parenthesized build/output details only when non-default, non-obvious, or needed for the next decision.
-- Print aligned result rows with `printAlignedLabel()`: `Linked`, `Created`, `Added`, and optional follow-up state.
-- Link/setup primary completed-phase rows use `✓`: `✓ Linked`, `✓ Created`, `✓ Added`. Discovery, preview, progress, and secondary rows such as `Found existing project`, `Detected`, `Project`, `Directory`, `Config`, `Settings`, and `Source` keep the blank two-space gutter. Never use `▲` for setup/link rows.
-- Default human success output prints the user-facing completion receipt, such as `✓ Linked acme/web` or `✓ Created acme/web`.
-- Do not print `.vercel/project.json`, `.vercel/repo.json`, or a repeated `Directory` row in default human success output when the local target was already shown. Verify link files in tests and expose them through machine/debug/help surfaces when needed.
+- Use `Which team?`, `Which project?`, and `Loading teams…`.
+- Print the completed direct-link result as `✓ Linked acme/web`. Never use `▲` for setup/link rows.
 - After every successful direct `vc link`, fetch a fresh `VERCEL_OIDC_TOKEN`. Replace the existing token assignment or append exactly one assignment when absent. Remove stale token assignments when the pull returns no token. Preserve every other `.env.local` entry and do not copy other remote Environment Variables into the file. A token refresh failure warns without changing the successful link exit code.
 
 Compatibility notes:
 
 - `--team` remains accepted; new examples and remediation commands use `--scope`.
 - `--yes` remains accepted with a fully resolved target but has no target-selection authority.
-- Non-interactive reason codes remain `missing_scope`, `missing_project`, `ambiguous_project`, and `project_not_found` for compatibility.
+- Non-interactive reason codes are `missing_scope`, `missing_project`, and `project_not_found`.
 
 Link prompt map:
 
 | State                        | Human prompt/output                                                                                        | Non-interactive                                              |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| Team not explicit            | `Which team?` before project discovery                                                                     | explicit scope, trusted `vc switch`, or `missing_scope`      |
+| Team not explicit            | `Which team?` before project discovery                                                                     | existing valid link or `missing_scope`                       |
 | Exact explicit project       | link inside the selected team                                                                              | link; no `--yes` required                                    |
-| One existing project match   | `Directory`, `Found existing project`, aligned `Project`, then `Link directory to project?`                | link only for authoritative local/repo or exact Git evidence |
-| One repository project match | `Directory`, `Found existing project`, aligned `Project`/`Source`, then `Link repository to project?`      | link only inside the resolved team                           |
-| Multiple project matches     | `Which project?` inside the selected team                                                                  | `action_required: ambiguous_project`                         |
-| No project match             | `Project?` with `Create new project` / `Link existing project`, then `Name?` only after create is selected | `action_required: missing_project`                           |
-| Explicit project missing     | `project_not_found` with list/create/retry commands                                                        | same structured error                                        |
-| Root choices exist           | `Code directory?` after explicit create choice                                                             | create separately with explicit command                      |
-| Settings differ              | `Customize settings?` after explicit create choice                                                         | create separately with explicit command                      |
+| Existing projects available  | searchable `Which project?` inside the selected team                                                       | exact authoritative evidence or user selection required      |
+| No project match             | stop with an explicit `vc project add` command                                                             | `action_required: missing_project`                           |
+| Explicit project missing     | `project_not_found`; never create                                                                          | same structured error                                        |
 | OIDC token refresh           | Refresh exactly one `VERCEL_OIDC_TOKEN` assignment after a successful direct link                          | refresh after a successful deterministic link                |
 | Existing valid link          | explicit interactive relink flow                                                                           | reuse and refresh OIDC                                       |
 
@@ -84,12 +68,9 @@ Link acceptance matrix:
 - stale/deleted project link
 - one team and many teams, with the team prompt first
 - explicit `--scope` precedence and deprecated `--team` compatibility
-- trusted `vc switch` team versus login-inferred `currentTeam`
 - explicit valid and missing `--project`
-- exact repo-root matches inside one resolved team
-- folder-name and cross-team matches rejected as non-interactive evidence
-- no match plus explicit interactive create choice
-- monorepo/root-directory selection
+- existing valid local link reuse
+- no match stops without project creation
 - non-TTY and `--non-interactive`
 - JSON-only stdout
 - `--yes` alone never selects or creates a project
@@ -97,7 +78,7 @@ Link acceptance matrix:
 - missing, existing, exported, and duplicate `VERCEL_OIDC_TOKEN` assignments
 - LF and CRLF `.env.local` files, including files without a final newline
 - OIDC refresh failure after a successful link
-- primary completed-phase gutter: `✓ Linked`, `✓ Created`, or `✓ Added`; no `▲` on setup/link rows
+- primary completed-phase gutter: `✓ Linked`; no `▲` on setup/link rows
 
 ## Deploy Flow Contract
 

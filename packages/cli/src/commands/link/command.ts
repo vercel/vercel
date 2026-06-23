@@ -54,7 +54,7 @@ export const linkCommand = {
     {
       ...yesOption,
       description:
-        'Accept setup defaults after the team and project are identified',
+        'Retained for compatibility; does not select a team or project',
     },
     confirmOption,
   ],

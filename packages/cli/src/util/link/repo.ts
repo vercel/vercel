@@ -97,13 +97,10 @@ export async function resolveGitRemote(
   {
     yes,
     existingRemoteName,
-    nonInteractive = false,
   }: {
     yes: boolean;
     /** When set, skip remote selection and use this remote. */
     existingRemoteName?: string;
-    /** Refuse to guess when more than one Git remote exists. */
-    nonInteractive?: boolean;
   }
 ): Promise<ResolvedGitRemote | undefined> {
   // Use getGitConfigPath to correctly resolve the config path for
@@ -133,9 +130,7 @@ export async function resolveGitRemote(
       const defaultRemote = remoteNames.includes('origin')
         ? 'origin'
         : remoteNames[0];
-      if (nonInteractive) {
-        return undefined;
-      } else if (yes) {
+      if (yes) {
         remoteName = defaultRemote;
       } else {
         remoteName = await client.input.select({

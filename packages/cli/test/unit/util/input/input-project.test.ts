@@ -48,13 +48,4 @@ describe('inputProject', () => {
       inputProject(client, org, 'my-app', false, false)
     ).rejects.toMatchObject({ code: 'HEADLESS' });
   });
-
-  it('does not let auto-confirm create a project in non-interactive mode', async () => {
-    mockedGetProject.mockResolvedValue(new ProjectNotFound('my-app'));
-    (client as { nonInteractive: boolean }).nonInteractive = true;
-
-    await expect(
-      inputProject(client, org, 'my-app', true, false)
-    ).rejects.toMatchObject({ code: 'PROJECT_CREATION_DISABLED' });
-  });
 });

@@ -52,7 +52,7 @@ test('linked project metadata matches eval setup when available', () => {
   }
 });
 
-test('agent used vercel link in non-interactive mode', () => {
+test('agent used vercel link', () => {
   const commands = getShellCommands();
   expect(commands.length).toBeGreaterThan(0);
 
@@ -60,16 +60,6 @@ test('agent used vercel link in non-interactive mode', () => {
     /\b(vercel|vc)\s+link\b/.test(command)
   );
   expect(linkCommands.length).toBeGreaterThan(0);
-
-  const hasNonInteractive = linkCommands.some(command => {
-    return (
-      command.includes('--yes') ||
-      /\s-y(\s|$)/.test(command) ||
-      command.endsWith('-y') ||
-      command.includes('--non-interactive')
-    );
-  });
-  expect(hasNonInteractive).toBe(true);
 });
 
 test('agent used the correct scope when linking', () => {
@@ -92,4 +82,23 @@ test('agent used the correct scope when linking', () => {
   });
 
   expect(hasExpectedScope).toBe(true);
+});
+
+test('agent used the correct project when linking', () => {
+  const evalSetup = getEvalSetup();
+  if (!evalSetup?.projectId) {
+    return;
+  }
+
+  const linkCommands = getShellCommands().filter(command =>
+    /\b(vercel|vc)\s+link\b/.test(command)
+  );
+  expect(linkCommands.length).toBeGreaterThan(0);
+  expect(
+    linkCommands.some(
+      command =>
+        command.includes(`--project ${evalSetup.projectId}`) ||
+        command.includes(`--project=${evalSetup.projectId}`)
+    )
+  ).toBe(true);
 });

@@ -218,10 +218,7 @@ export async function login(
     refreshToken: tokens.refresh_token,
   });
 
-  client.updateConfig({
-    currentTeam: undefined,
-    explicitCurrentTeam: undefined,
-  });
+  client.updateConfig({ currentTeam: undefined });
 
   // If we have a brand new login, update `currentTeam`
   if (isInitialLogin) {

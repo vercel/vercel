@@ -153,8 +153,7 @@ async function searchProjectsByRepoRoot({
   let remote: ResolvedGitRemote | undefined;
   try {
     remote = await resolveGitRemote(client, rootPath, {
-      yes: autoConfirm,
-      nonInteractive,
+      yes: autoConfirm || nonInteractive,
     });
   } catch (error) {
     output.debug(

@@ -73,7 +73,6 @@ export default async function logout(client: Client): Promise<number> {
   }
 
   delete config.currentTeam;
-  delete config.explicitCurrentTeam;
 
   delete authConfig.token;
   delete authConfig.userId;

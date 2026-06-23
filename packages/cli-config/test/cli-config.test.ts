@@ -30,7 +30,6 @@ describe('cli-config schema', () => {
   it('parses global config and preserves unknown properties', () => {
     const config = parseGlobalConfig({
       currentTeam: 'team_123',
-      explicitCurrentTeam: 'team_123',
       credStorage: 'auto',
       telemetry: {
         enabled: true,
@@ -47,7 +46,6 @@ describe('cli-config schema', () => {
 
     expect(config).toEqual({
       currentTeam: 'team_123',
-      explicitCurrentTeam: 'team_123',
       credStorage: 'auto',
       telemetry: {
         enabled: true,

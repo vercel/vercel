@@ -11,7 +11,6 @@ import { getLinkedProject } from '../../util/projects/link';
 import { printProjectNotFoundError } from '../../util/projects/project-not-found-error';
 import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
-import { printExplicitLinkRequired } from '../../util/link/ensure-link';
 import { findRepoRoot } from '../../util/link/repo';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import param from '../../util/output/param';
@@ -87,13 +86,6 @@ export default async function dev(
   }
 
   if (link.status === 'error') {
-    if (
-      link.reason === 'EXPLICIT_LINK_REQUIRED' ||
-      link.reason === 'PROJECT_NOT_FOUND'
-    ) {
-      printExplicitLinkRequired(client, 'dev', link.reason);
-      return link.exitCode;
-    }
     if (link.reason === 'HEADLESS') {
       if (client.nonInteractive) {
         outputActionRequired(
