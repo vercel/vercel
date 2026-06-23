@@ -2,11 +2,12 @@ import type Client from '../client';
 import type { Project, ProjectSettings } from '@vercel-internals/types';
 
 /**
- * Deployment type used to enable standard Vercel Auth (SSO) protection. Covers
- * production deployment URLs as well as all preview deployments. Kept in sync
- * with the `vc project protection` command.
+ * Deployment type used to enable standard Vercel Auth (SSO) protection. `all`
+ * protects every deployment URL, including the generated production deployment
+ * URLs — matching the long-standing default behaviour the CLI relied on before
+ * the server-side default changed.
  */
-const ENABLED_DEPLOYMENT_TYPE = 'prod_deployment_urls_and_all_previews';
+const ENABLED_DEPLOYMENT_TYPE = 'all';
 
 export default async function createProject(
   client: Client,
