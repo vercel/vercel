@@ -145,9 +145,22 @@ describe('normalizeRoutes', () => {
     assert.deepStrictEqual(normalized.routes, routes);
   });
 
-  test('accepts a service `destination` with only type and service', () => {
+  test('accepts a legacy service `destination` with type and service', () => {
     const routes: Route[] = [
       { src: '^/(.*)$', destination: { type: 'service', service: 'web' } },
+    ];
+
+    assertValid(routes);
+
+    const normalized = normalizeRoutes(routes);
+    assert.equal(normalized.error, null);
+    assert.deepStrictEqual(normalized.routes, routes);
+  });
+
+  test('accepts and preserves short service `destination` routes', () => {
+    const routes: Route[] = [
+      { src: '^/api/health$', destination: { service: 'web' } },
+      { src: '^/api(?:/(.*))?$', destination: { service: 'api', path: '/$1' } },
     ];
 
     assertValid(routes);
@@ -212,14 +225,6 @@ describe('normalizeRoutes', () => {
     );
   });
 
-  test('rejects a service `destination` missing `type`', () => {
-    const validate = ajv.compile(routesSchema);
-    assert.equal(
-      validate([{ src: '^/(.*)$', destination: { service: 'web' } }]),
-      false
-    );
-  });
-
   test('rejects a service `destination` with an unknown property', () => {
     const validate = ajv.compile(routesSchema);
     assert.equal(
@@ -264,7 +269,6 @@ describe('normalizeRoutes', () => {
         {
           source: '/api/v1/:path*',
           destination: {
-            type: 'service',
             service: 'my_backend',
             path: '/:path*',
           },
@@ -281,7 +285,6 @@ describe('normalizeRoutes', () => {
     if (serviceRoute && !isHandler(serviceRoute)) {
       // `path` is interpolated like a string dest: `:path*` -> `$1`.
       assert.deepStrictEqual(serviceRoute.destination, {
-        type: 'service',
         service: 'my_backend',
         path: '/$1',
       });

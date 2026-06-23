@@ -73,7 +73,11 @@ export type PathTransform = {
 export type Transform = HeaderQueryTransform | PathTransform;
 
 export type ServiceDestination = {
-  type: 'service';
+  /**
+   * Optional, retained for backward compatibility. The destination is
+   * identified by the presence of `service`, so `type` is no longer required.
+   */
+  type?: 'service';
   service: string;
   /** Routing-only path used to select a route inside the target service. */
   path?: string;
