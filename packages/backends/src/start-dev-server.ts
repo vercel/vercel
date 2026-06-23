@@ -1,4 +1,3 @@
-import { createRequire } from 'node:module';
 import type {
   Files,
   ShouldServe,
@@ -6,12 +5,6 @@ import type {
   StartDevServerSuccess,
 } from '@vercel/build-utils';
 import { findEntrypointWithHintOrThrow } from './find-entrypoint.js';
-
-const require_ = createRequire(import.meta.url);
-
-const getNodeStartDevServer = () =>
-  (require_('@vercel/node') as { startDevServer: StartDevServer })
-    .startDevServer;
 
 interface PersistentDevServer {
   files: Files;
@@ -30,11 +23,20 @@ const pendingDevServers = new Map<string, PendingDevServer>();
 let cleanupHandlersInstalled = false;
 let shuttingDown = false;
 
+// @vercel/node is large and only needed by `vercel dev`, so load it on demand.
+const startNodeDevServer: StartDevServer = async opts => {
+  // @ts-expect-error -- @vercel/node's public types omit builder APIs.
+  const { startDevServer } = await import('@vercel/node');
+  return startDevServer(opts);
+};
+
 function snapshotFiles(files: Files): Files {
   return { ...files };
 }
 
 function filesAreEqual(previous: Files, current: Files): boolean {
+  // The CLI replaces a File object whenever its source changes, so reference
+  // equality against a shallow snapshot is enough to detect invalidation.
   const previousNames = Object.keys(previous);
   const currentNames = Object.keys(current);
   return (
@@ -52,7 +54,7 @@ function isProcessRunning(pid: number): boolean {
   }
 }
 
-function forceKill(pid: number): void {
+function terminateProcess(pid: number): void {
   try {
     process.kill(pid, 'SIGTERM');
   } catch {
@@ -66,18 +68,18 @@ function stopPersistentDevServer(
 ): Promise<void> {
   if (!server.stopPromise) {
     server.stopPromise = (async () => {
-      if (persistentDevServers.get(key) === server) {
-        persistentDevServers.delete(key);
-      }
-
       try {
         if (server.result.shutdown) {
           await server.result.shutdown();
         } else {
-          forceKill(server.result.pid);
+          terminateProcess(server.result.pid);
         }
       } catch {
-        forceKill(server.result.pid);
+        terminateProcess(server.result.pid);
+      } finally {
+        if (persistentDevServers.get(key) === server) {
+          persistentDevServers.delete(key);
+        }
       }
     })();
   }
@@ -99,21 +101,25 @@ function installCleanupHandlers(): void {
   if (cleanupHandlersInstalled) return;
   cleanupHandlersInstalled = true;
 
-  const killAll = () => {
+  const stopAll = () => {
     shuttingDown = true;
     for (const [key, server] of persistentDevServers) {
-      persistentDevServers.delete(key);
-      server.stopPromise = Promise.resolve();
-      forceKill(server.result.pid);
+      void stopPersistentDevServer(key, server);
     }
   };
 
-  process.on('SIGINT', killAll);
-  process.on('SIGTERM', killAll);
+  const killAll = () => {
+    for (const server of persistentDevServers.values()) {
+      terminateProcess(server.result.pid);
+    }
+  };
+
+  process.on('SIGINT', stopAll);
+  process.on('SIGTERM', stopAll);
   process.on('exit', killAll);
 }
 
-export const shouldServe: ShouldServe = async opts => {
+export const shouldServe: ShouldServe = opts => {
   const requestPath = opts.requestPath.replace(/\/$/, '');
   if (requestPath.startsWith('api') && opts.hasMatched) {
     return false;
@@ -135,68 +141,86 @@ export const startDevServer: StartDevServer = async opts => {
   );
 
   const key = `${opts.workPath}::${entrypoint}`;
-  const files = snapshotFiles(opts.files);
   installCleanupHandlers();
 
-  const existing = persistentDevServers.get(key);
-  if (existing) {
-    if (
-      filesAreEqual(existing.files, opts.files) &&
-      isProcessRunning(existing.result.pid)
-    ) {
-      return persistentResult(key, existing);
-    }
-    await stopPersistentDevServer(key, existing);
-  }
-
-  const pending = pendingDevServers.get(key);
-  if (pending) {
-    if (filesAreEqual(pending.files, opts.files)) {
-      const server = await pending.promise;
-      return server ? persistentResult(key, server) : null;
+  // Reuse a live server, or retire stale state before starting one replacement.
+  // Concurrent cold requests wait on the same pending start.
+  while (!shuttingDown) {
+    const existing = persistentDevServers.get(key);
+    if (existing) {
+      if (
+        !existing.stopPromise &&
+        filesAreEqual(existing.files, opts.files) &&
+        isProcessRunning(existing.result.pid)
+      ) {
+        return persistentResult(key, existing);
+      }
+      await stopPersistentDevServer(key, existing);
+      continue;
     }
 
-    // A source change landed while the previous process was starting. Let it
-    // settle, then the recursive call will retire it and start current code.
-    try {
-      await pending.promise;
-    } catch {
-      // The changed source gets a fresh startup attempt below.
-    }
-    return startDevServer(opts);
-  }
+    const pending = pendingDevServers.get(key);
+    if (pending) {
+      let server: PersistentDevServer | null;
+      try {
+        server = await pending.promise;
+      } catch (error) {
+        if (filesAreEqual(pending.files, opts.files)) {
+          throw error;
+        }
+        continue;
+      }
 
-  process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS = '1';
-  const pendingServer: PendingDevServer = {
-    files,
-    promise: Promise.resolve(null),
-  };
-  pendingServer.promise = (async () => {
-    const result = await getNodeStartDevServer()({
+      if (filesAreEqual(pending.files, opts.files)) {
+        if (!server) return null;
+        if (isProcessRunning(server.result.pid)) {
+          return persistentResult(key, server);
+        }
+      }
+
+      if (server) {
+        await stopPersistentDevServer(key, server);
+      }
+      continue;
+    }
+
+    const files = snapshotFiles(opts.files);
+    process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS = '1';
+    const promise = startNodeDevServer({
       ...opts,
       config: { ...opts.config, helpers: false },
       entrypoint,
       publicDir: opts.publicDir ?? 'public',
+    }).then(async result => {
+      if (!result) return null;
+
+      const server: PersistentDevServer = { files, result };
+      if (shuttingDown) {
+        await stopPersistentDevServer(key, server);
+        return null;
+      }
+
+      persistentDevServers.set(key, server);
+      return server;
     });
-    if (!result) return null;
+    const pendingServer: PendingDevServer = { files, promise };
+    pendingDevServers.set(key, pendingServer);
 
-    const server: PersistentDevServer = { files, result };
-    if (shuttingDown) {
-      forceKill(result.pid);
-      return null;
-    }
-
-    persistentDevServers.set(key, server);
-    return server;
-  })();
-  pendingDevServers.set(key, pendingServer);
-
-  try {
-    const server = await pendingServer.promise;
-    return server ? persistentResult(key, server) : null;
-  } finally {
-    if (pendingDevServers.get(key) === pendingServer) {
-      pendingDevServers.delete(key);
+    try {
+      const server = await promise;
+      if (!filesAreEqual(files, opts.files)) {
+        if (server) {
+          await stopPersistentDevServer(key, server);
+        }
+        continue;
+      }
+      return server ? persistentResult(key, server) : null;
+    } finally {
+      if (pendingDevServers.get(key) === pendingServer) {
+        pendingDevServers.delete(key);
+      }
     }
   }
+
+  return null;
 };
