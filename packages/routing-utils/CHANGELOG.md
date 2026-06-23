@@ -1,5 +1,13 @@
 # @vercel/routing-utils
 
+## 6.3.1
+
+### Patch Changes
+
+- c4afec8: [routing-utils] support `request.path` transforms on routes and high-level rewrites, lowering path-to-regexp parameters such as `/:path*` to low-level capture references such as `/$1`
+  [config] support request path transforms in the router builder
+  [cli] preserve request path transform syntax and environment metadata across AI/manual route edits
+
 ## 6.3.0
 
 ### Minor Changes

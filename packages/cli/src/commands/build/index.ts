@@ -8,7 +8,7 @@ import { readdirSync, statSync } from 'fs';
 
 import {
   download,
-  FileBlob,
+  type FileBlob,
   FileFsRef,
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
@@ -48,7 +48,6 @@ import {
   type Lambda,
   type TriggerEvent,
   sanitizeConsumerName,
-  downloadFile,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
@@ -129,6 +128,7 @@ import { pullEnvRecords } from '../../util/env/get-env-records';
 import { buildCommand } from './command';
 import { validatePackageManifest } from '../../util/validate-package-manifest';
 import { shouldEmbedFlagsDefinitions } from '../../util/flags/build-embedding';
+import { writeManifests } from './manifest';
 
 /** Build a plain suggested command with global flags (e.g. --cwd, --non-interactive) appended. */
 function buildCommandWithGlobalFlags(
@@ -1829,46 +1829,8 @@ async function doBuild(
   }
 
   // Aggregate individual package-manifest.json files from builders into
-  // a single project-manifest.json keyed by service workspace.
-  if (packageManifests.length > 0) {
-    const projectManifest: Record<string, unknown> = {};
-    for (const {
-      workspace,
-      buildConfig,
-      manifest,
-      service,
-      builderUse,
-    } of packageManifests) {
-      projectManifest[`${builderUse}:${workspace}`] = {
-        ...manifest,
-        workspace,
-        builder: builderUse,
-        framework: service?.framework ?? buildConfig.framework,
-        serviceName: service?.name,
-        serviceType:
-          service && isExperimentalService(service) ? service.type : undefined,
-        routePrefix:
-          service && isExperimentalService(service)
-            ? service.routePrefix
-            : undefined,
-      };
-    }
-    if (Object.keys(projectManifest).length > 0) {
-      const projectManifestBlob = new FileBlob({
-        data: JSON.stringify(projectManifest),
-      });
-      diagnostics['project-manifest.json'] = projectManifestBlob;
-      ops.push(
-        downloadFile(
-          projectManifestBlob,
-          join(outputDir, 'diagnostics', 'project-manifest.json')
-        ).then(
-          () => undefined,
-          err => err
-        )
-      );
-    }
-  }
+  // a single project-manifest.json and deploy-manifest.json keyed by service workspace.
+  await writeManifests(packageManifests, diagnostics, ops, outputDir);
 
   if (corepackShimDir) {
     cleanupCorepack(corepackShimDir);
