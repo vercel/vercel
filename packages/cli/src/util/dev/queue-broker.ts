@@ -70,10 +70,24 @@ export function topicPatternToRegex(pattern: string): RegExp {
 export interface EnqueueOptions {
   retentionSeconds?: number;
   delaySeconds?: number;
+  idempotencyKey?: string;
+}
+
+interface IdempotencyRecord {
+  messageId: string;
+  expiresAt: number;
+}
+
+interface DuplicateMessageRecord {
+  queueName: string;
+  originalMessageId: string;
+  expiresAt: number;
 }
 
 export class QueueBroker {
   private messages = new Map<string, StoredMessage>();
+  private idempotencyRecords = new Map<string, IdempotencyRecord>();
+  private duplicateMessages = new Map<string, DuplicateMessageRecord>();
   private consumerGroups: ConsumerGroup[] = [];
   private deliveryState = new Map<string, Map<string, DeliveryState>>();
   private tickTimer: ReturnType<typeof setInterval>;
@@ -126,6 +140,34 @@ export class QueueBroker {
       (options?.retentionSeconds ?? 0) > 0
         ? options!.retentionSeconds! * 1000
         : DEFAULT_RETENTION;
+    const idempotencyRecordKey = options?.idempotencyKey
+      ? `${queueName}:${options.idempotencyKey}`
+      : undefined;
+
+    if (idempotencyRecordKey) {
+      const record = this.idempotencyRecords.get(idempotencyRecordKey);
+      if (record && record.expiresAt > Date.now()) {
+        this.duplicateMessages.set(messageId, {
+          queueName,
+          originalMessageId: record.messageId,
+          expiresAt: Date.now() + retentionMs,
+        });
+        output.debug(
+          `queues: skipped duplicate message for queue "${queueName}"`
+        );
+        return { messageId };
+      }
+      if (record) {
+        this.idempotencyRecords.delete(idempotencyRecordKey);
+      }
+    }
+
+    if (idempotencyRecordKey) {
+      this.idempotencyRecords.set(idempotencyRecordKey, {
+        messageId,
+        expiresAt: Date.now() + retentionMs,
+      });
+    }
 
     const message: StoredMessage = {
       messageId,
@@ -176,6 +218,21 @@ export class QueueBroker {
     }
 
     return { messageId };
+  }
+
+  getOriginalMessageIdForDuplicate(
+    queueName: string,
+    messageId: string
+  ): string | null {
+    const duplicate = this.duplicateMessages.get(messageId);
+    if (!duplicate || duplicate.queueName !== queueName) {
+      return null;
+    }
+    if (duplicate.expiresAt <= Date.now()) {
+      this.duplicateMessages.delete(messageId);
+      return null;
+    }
+    return duplicate.originalMessageId;
   }
 
   receiveById(
@@ -431,6 +488,18 @@ export class QueueBroker {
 
   private tick(): void {
     const now = Date.now();
+
+    for (const [key, record] of this.idempotencyRecords) {
+      if (record.expiresAt <= now) {
+        this.idempotencyRecords.delete(key);
+      }
+    }
+
+    for (const [messageId, record] of this.duplicateMessages) {
+      if (record.expiresAt <= now) {
+        this.duplicateMessages.delete(messageId);
+      }
+    }
 
     for (const group of this.consumerGroups) {
       const groupDeliveries = this.deliveryState.get(group.id);

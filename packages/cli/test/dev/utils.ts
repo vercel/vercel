@@ -1,4 +1,6 @@
 import fs from 'fs-extra';
+import net from 'net';
+import { createHash, randomBytes } from 'crypto';
 import { join, resolve } from 'path';
 import type { ExecaChildProcess } from 'execa';
 import _execa, { type Options } from 'execa';
@@ -148,6 +150,161 @@ export function validateResponseHeaders(res: Response, podId?: string) {
       expect(vercelID.includes(`::${podId}-`)).toBeTruthy();
     }
   }
+}
+
+export function webSocketEcho(
+  port: number,
+  path: string,
+  message: string
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const socket = net.connect(port, '127.0.0.1');
+    const key = randomBytes(16).toString('base64');
+    let buffer: Uint8Array<ArrayBufferLike> = new Uint8Array(0);
+    let handshakeComplete = false;
+    let settled = false;
+
+    const timeout = setTimeout(() => {
+      fail(new Error('Timed out waiting for WebSocket response'));
+    }, 10_000);
+
+    const settle = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      fn();
+    };
+
+    const fail = (error: Error) => {
+      settle(() => {
+        socket.destroy();
+        reject(error);
+      });
+    };
+
+    socket.once('error', fail);
+    socket.on('data', chunk => {
+      buffer = appendBytes(buffer, toBytes(chunk));
+
+      if (!handshakeComplete) {
+        const headerEnd = indexOfBytes(buffer, headerSeparator);
+        if (headerEnd === -1) return;
+
+        const headers = Buffer.from(buffer.subarray(0, headerEnd)).toString(
+          'utf8'
+        );
+        if (!headers.startsWith('HTTP/1.1 101 Switching Protocols')) {
+          fail(new Error(`Unexpected WebSocket handshake:\n${headers}`));
+          return;
+        }
+
+        const accept = createHash('sha1')
+          .update(`${key}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`)
+          .digest('base64');
+        if (
+          !headers
+            .toLowerCase()
+            .includes(`sec-websocket-accept: ${accept.toLowerCase()}`)
+        ) {
+          fail(new Error(`Unexpected Sec-WebSocket-Accept:\n${headers}`));
+          return;
+        }
+
+        handshakeComplete = true;
+        buffer = buffer.subarray(headerEnd + 4);
+        socket.write(maskedTextFrame(message));
+      }
+
+      const text = readTextFrame(buffer);
+      if (text !== undefined) {
+        settle(() => {
+          socket.end();
+          resolve(text);
+        });
+      }
+    });
+
+    socket.write(
+      [
+        `GET ${path} HTTP/1.1`,
+        `Host: 127.0.0.1:${port}`,
+        'Upgrade: websocket',
+        'Connection: Upgrade',
+        `Sec-WebSocket-Key: ${key}`,
+        'Sec-WebSocket-Version: 13',
+        '',
+        '',
+      ].join('\r\n')
+    );
+  });
+}
+
+const headerSeparator: Uint8Array<ArrayBufferLike> = new Uint8Array([
+  13, 10, 13, 10,
+]);
+
+function appendBytes(
+  a: Uint8Array<ArrayBufferLike>,
+  b: Uint8Array<ArrayBufferLike>
+): Uint8Array<ArrayBufferLike> {
+  const next = new Uint8Array(a.length + b.length);
+  next.set(a, 0);
+  next.set(b, a.length);
+  return next;
+}
+
+function toBytes(buffer: ArrayLike<number>): Uint8Array<ArrayBufferLike> {
+  const bytes = new Uint8Array(buffer.length);
+  for (let i = 0; i < buffer.length; i++) {
+    bytes[i] = buffer[i];
+  }
+  return bytes;
+}
+
+function indexOfBytes(
+  buffer: Uint8Array<ArrayBufferLike>,
+  needle: Uint8Array<ArrayBufferLike>
+): number {
+  for (let i = 0; i <= buffer.length - needle.length; i++) {
+    let matches = true;
+    for (let j = 0; j < needle.length; j++) {
+      if (buffer[i + j] !== needle[j]) {
+        matches = false;
+        break;
+      }
+    }
+    if (matches) return i;
+  }
+  return -1;
+}
+
+function maskedTextFrame(message: string): Uint8Array<ArrayBufferLike> {
+  const payload = Buffer.from(message);
+  const mask = randomBytes(4);
+  const frame = new Uint8Array(6 + payload.length);
+  frame[0] = 0x81;
+  frame[1] = 0x80 | payload.length;
+  frame.set(mask, 2);
+
+  for (let i = 0; i < payload.length; i++) {
+    frame[6 + i] = payload[i] ^ mask[i % 4];
+  }
+
+  return frame;
+}
+
+function readTextFrame(
+  buffer: Uint8Array<ArrayBufferLike>
+): string | undefined {
+  if (buffer.length < 2) return undefined;
+
+  const length = buffer[1] & 0x7f;
+  if (length > 125) {
+    throw new Error('Test WebSocket client only supports small frames');
+  }
+  if (buffer.length < 2 + length) return undefined;
+
+  return Buffer.from(buffer.subarray(2, 2 + length)).toString('utf8');
 }
 
 export async function exec(directory: string, args: string[] = []) {
@@ -611,7 +768,7 @@ async function nukePID(
   await nukePID(pid, 'SIGKILL', retries - 1);
 }
 
-async function nukeProcessTree(pid: number, signal?: string) {
+export async function nukeProcessTree(pid: number, signal?: string) {
   if (process.platform === 'win32') {
     spawnSync('taskkill', ['/pid', pid.toString(), '/T', '/F'], {
       stdio: 'inherit',

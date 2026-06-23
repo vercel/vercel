@@ -28,13 +28,6 @@ export const initSubcommand = {
       description: 'Retain build cache when using "--force"',
     },
     {
-      name: 'public',
-      shorthand: 'p',
-      type: Boolean,
-      deprecated: false,
-      description: 'Deployment is public (`/_src`) is exposed)',
-    },
-    {
       name: 'env',
       shorthand: 'e',
       type: [String],
@@ -187,13 +180,6 @@ export const deployCommand = {
       type: Boolean,
       deprecated: false,
       description: 'Retain build cache when using "--force"',
-    },
-    {
-      name: 'public',
-      shorthand: 'p',
-      type: Boolean,
-      deprecated: false,
-      description: 'Deployment is public (`/_src`) is exposed)',
     },
     {
       name: 'env',

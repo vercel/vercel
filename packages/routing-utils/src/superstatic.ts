@@ -207,6 +207,24 @@ export function convertRewrites(
         route = { src, destination };
       }
 
+      if (r.transforms) {
+        route.transforms = r.transforms.map(transform => {
+          if (transform.type !== 'request.path') {
+            return { ...transform };
+          }
+
+          return {
+            ...transform,
+            args: compilePathToRegexpTemplateFromSegments(
+              transform.args,
+              segments,
+              hasSegments,
+              transform.env
+            ),
+          };
+        });
+      }
+
       if (typeof r.env !== 'undefined') {
         route.env = r.env;
       }
@@ -376,6 +394,116 @@ const escapeSegment = (str: string, segmentName: string) =>
   str.replace(new RegExp(`:${segmentName}`, 'g'), `__ESC_COLON_${segmentName}`);
 
 const unescapeSegments = (str: string) => str.replace(/__ESC_COLON_/gi, ':');
+
+const pathTemplateSegmentNameRegex = /^([a-zA-Z_][a-zA-Z0-9_]*)/;
+
+function isEscaped(value: string, index: number): boolean {
+  let backslashCount = 0;
+  for (let i = index - 1; i >= 0 && value[i] === '\\'; i--) {
+    backslashCount++;
+  }
+  return backslashCount % 2 === 1;
+}
+
+function collectPathTemplateSegments(template: string): string[] {
+  const segments: string[] = [];
+
+  for (let i = 0; i < template.length; i++) {
+    if (template[i] !== ':' || isEscaped(template, i)) {
+      continue;
+    }
+
+    const match = template.slice(i + 1).match(pathTemplateSegmentNameRegex);
+    if (match) {
+      segments.push(match[1]);
+      i += match[1].length;
+    }
+  }
+
+  return segments;
+}
+
+function collectNamedDollarReferences(template: string): string[] {
+  const references: string[] = [];
+
+  for (let i = 0; i < template.length; i++) {
+    if (template[i] !== '$' || isEscaped(template, i)) {
+      continue;
+    }
+
+    const remainder = template.slice(i + 1);
+    const bracedMatch = remainder.match(/^\{([a-zA-Z_][a-zA-Z0-9_]*)\}/);
+    const unbracedMatch = remainder.match(pathTemplateSegmentNameRegex);
+    const name = bracedMatch?.[1] || unbracedMatch?.[1];
+    if (name) {
+      references.push(name);
+    }
+  }
+
+  return references;
+}
+
+function compilePathToRegexpTemplateFromSegments(
+  template: string,
+  segments: string[],
+  hasItemSegments: string[],
+  env: string[] = []
+): string {
+  const indexes: Record<string, string> = {};
+
+  segments.forEach((name, index) => {
+    indexes[name] = toSegmentDest(index);
+  });
+
+  // Named `has` captures remain named in the low-level route matcher.
+  hasItemSegments.forEach(name => {
+    indexes[name] = `$${name}`;
+  });
+
+  for (const name of collectPathTemplateSegments(template)) {
+    if (!(name in indexes)) {
+      throw new Error(
+        `Path template references parameter ":${name}" that is not present in the source or has conditions.`
+      );
+    }
+  }
+
+  const routeParameters = new Set([
+    ...segments.filter(name => name !== UN_NAMED_SEGMENT),
+    ...hasItemSegments,
+  ]);
+  for (const name of collectNamedDollarReferences(template)) {
+    if (routeParameters.has(name) && !env.includes(name)) {
+      throw new Error(
+        `Path template references route parameter "${name}" as \`$${name}\`. Use \`:${name}\` path-to-regexp syntax in high-level rewrites, or list "${name}" in the transform env allowlist if it is an environment variable.`
+      );
+    }
+  }
+
+  return safelyCompile(template, indexes, true);
+}
+
+/**
+ * Compiles a high-level path-to-regexp template into the capture syntax used by
+ * low-level routes. Source parameters become numbered captures (`:path*` ->
+ * `$1`) while named `has` captures remain named (`:tenant` -> `$tenant`).
+ * Existing `$N` and environment-variable references are preserved. An env
+ * allowlist disambiguates a `$name` reference that collides with a route param.
+ */
+export function compilePathToRegexpTemplate(
+  source: string,
+  template: string,
+  has?: HasField,
+  env?: string[]
+): string {
+  const { segments } = sourceToRegex(source);
+  return compilePathToRegexpTemplateFromSegments(
+    template,
+    segments,
+    collectHasSegments(has),
+    env
+  );
+}
 
 function replaceSegments(
   segments: string[],

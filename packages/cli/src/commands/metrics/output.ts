@@ -6,7 +6,9 @@ export function getRollupColumnName(
   metric: string,
   aggregation: string
 ): string {
-  return `${metric.replace(/\./g, '_')}_${aggregation}`;
+  // Aggregations can carry a field (e.g. `unique/visitor_id`); the API
+  // flattens both dots and slashes to underscores in column names.
+  return `${metric}_${aggregation}`.replace(/[./]/g, '_');
 }
 
 export function formatQueryJson(

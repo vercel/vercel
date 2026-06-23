@@ -85,6 +85,12 @@ export default async function processDeployment({
 
   const client = now._client;
 
+  // The ▲ gutter belongs on the Aliased row, which only prints when we wait
+  // for alias assignment and domains are auto-assigned. When that row won't
+  // print (--no-wait, --skip-domain), fall back to ▲ on the Production row.
+  const aliasedRowWillPrint =
+    !noWait && requestBody.autoAssignCustomDomains !== false;
+
   const { env = {} } = requestBody;
   const token = now._token;
   if (!token) {
@@ -205,7 +211,7 @@ export default async function processDeployment({
         printAlignedLabel(
           isProdDeployment ? 'Production' : 'Preview',
           chalk.cyan(previewUrl),
-          isProdDeployment ? { gutter: '▲' } : {}
+          isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
         );
 
         if (!jsonOutput && (quiet || process.env.FORCE_TTY === '1')) {
@@ -291,7 +297,7 @@ export default async function processDeployment({
         printAlignedLabel(
           isProdDeployment ? 'Production' : 'Preview',
           chalk.cyan(previewUrl),
-          isProdDeployment ? { gutter: '▲' } : {}
+          isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
         );
 
         if (v1ChecksPending || v2ChecksPending) {

@@ -989,7 +989,7 @@ describe('deploy', () => {
       // remove first 3 lines which contains randomized data
       const output = client.getFullOutput().split('\n').slice(3).join('\n');
       expect(output).toContain('Building');
-      expect(output).toContain('Production  https');
+      expect(output).toContain('Production      https');
       expect(output).toContain('Completing');
       expect(exitCode).toEqual(0);
     });
@@ -1076,24 +1076,6 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:with-cache', value: 'TRUE' },
-        { key: 'target_environment', value: 'preview' },
-        { key: 'output:deployment-id', value: 'dpl_archive_test' },
-      ]);
-    });
-    it('--public', async () => {
-      client.cwd = setupUnitFixture('commands/deploy/static');
-      client.setArgv('deploy', '--public');
-      const exitCode = await deploy(client);
-      expect(exitCode).toEqual(0);
-
-      expect(mock).toHaveBeenCalledWith(
-        ...Object.values({
-          ...baseCreateDeployArgs,
-          createArgs: expect.objectContaining({ wantsPublic: true }),
-        })
-      );
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'flag:public', value: 'TRUE' },
         { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
@@ -1635,32 +1617,35 @@ describe('deploy', () => {
 
         // I'd like to include project path in this assertion, but it ends up containing
         // a line break in a non-determinsitic location.
-        await expect(client.stderr).toOutput('Set up');
+        await expect(client.stderr).toOutput('Directory');
         await expect(client.stderr).toOutput('? Which team?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Link to existing project?');
-        client.stdin.write('no\n');
+        await expect(client.stderr).toOutput('Project?');
+        client.stdin.write('\n');
 
         // The one expecation that the test is actually about!
         await expect(client.stderr).toOutput(`Name? (${nameOption})`);
         client.stdin.write('\n');
         // Fixture has no detectable framework at the root, so the
         // root-directory prompt now fires (nested-monolith guard).
-        await expect(client.stderr).toOutput(
-          'In which directory is your code located?'
-        );
+        await expect(client.stderr).toOutput('Code directory?');
         client.stdin.write('\n');
         await expect(client.stderr).toOutput('Customize settings?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput(
-          'Do you want to change additional project settings?'
-        );
+        await expect(client.stderr).toOutput('Customize advanced settings?');
         client.stdin.write('\n');
 
         const exitCode = await exitCodePromise;
         expect(exitCode).toEqual(0);
+        const output = client.stderr.getFullOutput();
+        expect(output).not.toContain(
+          'In which directory is your code located?'
+        );
+        expect(output).not.toContain(
+          'Do you want to change additional project settings?'
+        );
       });
 
       it('prefills "project name" prompt based on directory name', async () => {
@@ -1669,32 +1654,35 @@ describe('deploy', () => {
 
         // I'd like to include project path in this assertion, but it ends up containing
         // a line break in a non-determinsitic location.
-        await expect(client.stderr).toOutput('Set up');
+        await expect(client.stderr).toOutput('Directory');
         await expect(client.stderr).toOutput('? Which team?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Link to existing project?');
-        client.stdin.write('no\n');
+        await expect(client.stderr).toOutput('Project?');
+        client.stdin.write('\n');
 
         // The one expecation that the test is actually about!
         await expect(client.stderr).toOutput(`Name? (${directoryName})`);
         client.stdin.write('\n');
         // Fixture has no detectable framework at the root, so the
         // root-directory prompt now fires (nested-monolith guard).
-        await expect(client.stderr).toOutput(
-          'In which directory is your code located?'
-        );
+        await expect(client.stderr).toOutput('Code directory?');
         client.stdin.write('\n');
         await expect(client.stderr).toOutput('Customize settings?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput(
-          'Do you want to change additional project settings?'
-        );
+        await expect(client.stderr).toOutput('Customize advanced settings?');
         client.stdin.write('\n');
 
         const exitCode = await exitCodePromise;
         expect(exitCode).toEqual(0);
+        const output = client.stderr.getFullOutput();
+        expect(output).not.toContain(
+          'In which directory is your code located?'
+        );
+        expect(output).not.toContain(
+          'Do you want to change additional project settings?'
+        );
       });
     });
   });
@@ -1787,20 +1775,137 @@ describe('deploy', () => {
 
       await expect(client.stderr).toOutput('Production ');
       await expect(client.stderr).toOutput(
-        'Aliased     https://my-app.vercel.app'
+        'Aliased         https://my-app.vercel.app'
       );
 
       // Anti-regression: ANSI is stripped from toOutput, so assert the raw
-      // output still contains the gutter glyphs for both Production + Aliased
-      // rows. A regression that drops `gutter: '▲'` would not fail toOutput.
+      // output renders the ▲ gutter exactly once — on the Aliased row, not
+      // the Production row. `toOutput` alone would not catch a gutter change.
       const stderrOutput = client.stderr.getFullOutput();
-      expect(stderrOutput).toContain('▲ Production');
+      expect(stderrOutput).not.toContain('▲ Production');
       expect(stderrOutput).toContain('▲ Aliased');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
       expect(projectFetchCount).toEqual(1);
       expect(callCount).toEqual(2);
+    });
+
+    it('should display the ▲ gutter on Production when --no-wait skips the Aliased row', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.post(`/v13/deployments`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_no_wait',
+          url: 'test-no-wait.vercel.app',
+          readyState: 'QUEUED',
+          target: 'production',
+        });
+      });
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--yes', '--no-wait');
+
+      const exitCodePromise = deploy(client);
+
+      await expect(client.stderr).toOutput('Production ');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      // The Aliased row never prints with --no-wait, so the ▲ gutter falls
+      // back to the Production row.
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).toContain('▲ Production');
+      expect(stderrOutput).not.toContain('Aliased');
+    });
+
+    it('should display the ▲ gutter on Production when --skip-domain skips the Aliased row', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.post(`/v13/deployments`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_skip_domain',
+          url: 'test-skip-domain.vercel.app',
+          target: 'production',
+        });
+      });
+
+      client.scenario.get(`/v13/deployments/dpl_skip_domain`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_skip_domain',
+          url: 'test-skip-domain.vercel.app',
+          readyState: 'READY',
+          aliasAssigned: true,
+          target: 'production',
+          alias: [],
+        });
+      });
+
+      client.scenario.get(
+        `/v10/now/deployments/dpl_skip_domain`,
+        (req, res) => {
+          res.json({
+            creator: {
+              uid: user.id,
+              username: user.username,
+            },
+            id: 'dpl_skip_domain',
+            url: 'test-skip-domain.vercel.app',
+            readyState: 'READY',
+            aliasAssigned: true,
+            target: 'production',
+            alias: [],
+          });
+        }
+      );
+
+      client.scenario.get(
+        `/v3/now/deployments/dpl_skip_domain/events`,
+        (req, res) => {
+          res.end();
+        }
+      );
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--yes', '--skip-domain');
+
+      const exitCodePromise = deploy(client);
+
+      await expect(client.stderr).toOutput('Production ');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      // The Aliased row never prints with --skip-domain, so the ▲ gutter
+      // falls back to the Production row.
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).toContain('▲ Production');
+      expect(stderrOutput).not.toContain('Aliased');
     });
 
     it('should not display aliased domain for preview deployments', async () => {
@@ -1868,7 +1973,7 @@ describe('deploy', () => {
 
       const exitCodePromise = deploy(client);
 
-      await expect(client.stderr).toOutput('Preview     https');
+      await expect(client.stderr).toOutput('Preview         https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
@@ -1942,16 +2047,17 @@ describe('deploy', () => {
 
       const exitCodePromise = deploy(client);
 
-      await expect(client.stderr).toOutput('Production  https');
+      await expect(client.stderr).toOutput('Production      https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
 
       const stderrOutput = client.stderr.read().toString();
       expect(stderrOutput).not.toContain('Aliased');
-      // Anti-regression: production rows always render with the ▲ gutter
-      // glyph at column 0.
-      expect(stderrOutput).toContain('▲ Production');
+      // The deployment waited for aliases, so the ▲ gutter was reserved for
+      // the Aliased row — when the server then assigns no aliases, no ▲ is
+      // rendered at all (accepted edge case).
+      expect(stderrOutput).not.toContain('▲');
     });
   });
 
@@ -2724,7 +2830,7 @@ describe('deploy', () => {
       const exitCodePromise = deploy(client);
 
       await expect(client.stderr).toOutput('Running Checks…');
-      await expect(client.stderr).toOutput('Aliased     https');
+      await expect(client.stderr).toOutput('Aliased         https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
