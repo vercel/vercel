@@ -1163,10 +1163,7 @@ export default class DevServer {
       const pathname = url.parse(req.url || '/').pathname || '/';
       for (const match of this.buildMatches.values()) {
         const { builder } = match.builderWithPkg;
-        if (
-          (builder.version === 3 || builder.version === -1) &&
-          typeof builder.startDevServer === 'function'
-        ) {
+        if (typeof builder.startDevServer === 'function') {
           try {
             const result = await builder.startDevServer({
               files: this.files,
@@ -2118,8 +2115,8 @@ export default class DevServer {
       const { envConfigs, files, devCacheDir, cwd: workPath } = this;
       try {
         const { builder } = middleware.builderWithPkg;
-        if (builder.version === 3 || builder.version === -1) {
-          startMiddlewareResult = await builder.startDevServer?.({
+        if (typeof builder.startDevServer === 'function') {
+          startMiddlewareResult = await builder.startDevServer({
             files,
             entrypoint: middleware.entrypoint,
             workPath,
@@ -2597,16 +2594,11 @@ export default class DevServer {
     }
 
     // Before doing any asset matching, check if this builder supports the
-    // `startDevServer()` "optimization". In this case, the vercel dev server invokes
-    // `startDevServer()` on the builder for every HTTP request so that it boots
-    // up a single-serve dev HTTP server that vercel dev will proxy this HTTP request
-    // to. Once the proxied request is finished, vercel dev shuts down the dev
-    // server child process.
+    // `startDevServer()` optimization. Builders may own a persistent server
+    // across requests; all other dev servers retain the request-scoped
+    // lifecycle.
     const { builder, pkg: builderPkg } = match.builderWithPkg;
-    if (
-      (builder.version === 3 || builder.version === -1) &&
-      typeof builder.startDevServer === 'function'
-    ) {
+    if (typeof builder.startDevServer === 'function') {
       let devServerResult: StartDevServerResult = null;
       try {
         const { envConfigs, files, devCacheDir, cwd: workPath } = this;
@@ -2658,12 +2650,13 @@ export default class DevServer {
         // is also included in the request ID. So use the same `dev1` fake region.
         requestId = generateRequestId(this.podId, true);
 
-        const { port, pid, shutdown } = devServerResult;
+        const { port, pid, shutdown, persistent } = devServerResult;
         this.shutdownCallbacks.set(pid, shutdown);
-
-        res.once('close', () => {
-          this.killBuilderDevServer(pid);
-        });
+        if (!persistent) {
+          res.once('close', () => {
+            this.killBuilderDevServer(pid);
+          });
+        }
 
         debug(
           `Proxying to "${builderPkg.name}" dev server (port=${port}, pid=${pid})`
