@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
+import { useTeam } from '../../../mocks/team';
 import { useBuildLogs, useDeployment } from '../../../mocks/deployment';
 import inspect from '../../../../src/commands/inspect';
 import sleep from '../../../../src/util/sleep';
@@ -450,6 +451,52 @@ describe('inspect', () => {
         status	● Ready
         "
       `);
+    });
+
+    describe('dashboard URL parsing', () => {
+      it('sets team scope from dashboard URL', async () => {
+        const user = useUser();
+        const team = useTeam();
+        const deployment = useDeployment({ creator: user });
+
+        client.setArgv(
+          'inspect',
+          `https://vercel.com/${team.slug}/my-project/${deployment.id}`
+        );
+        const exitCode = await inspect(client);
+        expect(exitCode).toEqual(0);
+        expect(client.config.currentTeam).toEqual(team.id);
+      });
+
+      it('does not override explicit --scope flag', async () => {
+        const user = useUser();
+        const team = useTeam();
+        const deployment = useDeployment({ creator: user });
+
+        client.config.currentTeam = team.id;
+        client.setArgv(
+          'inspect',
+          `https://vercel.com/other-team/my-project/${deployment.id}`,
+          '--scope',
+          team.slug
+        );
+        const exitCode = await inspect(client);
+        expect(exitCode).toEqual(0);
+        expect(client.config.currentTeam).toEqual(team.id);
+      });
+
+      it('resolves bare deployment ID with dpl_ prefix', async () => {
+        const user = useUser();
+        const deployment = useDeployment({ creator: user });
+        const bareId = deployment.id.replace('dpl_', '');
+
+        client.setArgv('inspect', bareId);
+        const exitCode = await inspect(client);
+        expect(exitCode).toEqual(0);
+        await expect(client.stderr).toOutput(
+          `Fetched deployment "${deployment.url}"`
+        );
+      });
     });
   });
 });

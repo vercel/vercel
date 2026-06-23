@@ -958,7 +958,7 @@ version = "8.1.7"
 
       try {
         await expect(ext.analyze(files)).rejects.toThrow(
-          'exceeds the size limit'
+          'exceeds the maximum function size'
         );
 
         // Re-create the externalizer since the previous one may have mutated state
@@ -1395,7 +1395,7 @@ version = "8.1.7"
       });
 
       await expect(ext.generateBundle({})).rejects.toThrow(
-        'exceeds Lambda ephemeral storage limit'
+        'exceeds the maximum function size'
       );
     });
   });

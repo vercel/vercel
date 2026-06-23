@@ -44,9 +44,11 @@ import {
 import {
   PythonDependencyExternalizer,
   MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE,
+  LAMBDA_SIZE_THRESHOLD_BYTES,
   lambdaKnapsack,
   calculateBundleSize,
 } from './dependency-externalizer';
+import { isLargeFunctionsEnabled } from './large-functions';
 import {
   UvRunner,
   UV_LINUX_TARGET,
@@ -465,10 +467,15 @@ export const build: BuildVX = async ({
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
-  // Track whether a custom build or install command was used.
-  // When true, runtime dependency installation is disabled because
-  // custom commands may install dependencies not tracked in uv.lock.
+  // Track whether a custom install command was used. When true, runtime
+  // dependency installation is disabled because custom install commands may
+  // install dependencies not tracked in uv.lock.
   let hasCustomCommand = false;
+  // Track whether a custom build command/script was used. When true, compileall
+  // is disabled (a custom build may emit its own bytecode or bypass the venv
+  // layout compileall assumes). It does not affect runtime installation, since
+  // dependencies are still installed normally.
+  let hasCustomBuildCommand = false;
 
   const target = getTargetPlatform(meta.isDev ?? false);
 
@@ -785,12 +792,16 @@ export const build: BuildVX = async ({
             env: pythonEnv,
             cwd: workPath,
           });
+          hasCustomBuildCommand = true;
         } else {
-          await runPyprojectScript(
+          const ranBuildScript = await runPyprojectScript(
             workPath,
             ['vercel-build', 'now-build', 'build'],
             pythonEnv
           );
+          if (ranBuildScript) {
+            hasCustomBuildCommand = true;
+          }
         }
       });
   }
@@ -944,6 +955,7 @@ export const build: BuildVX = async ({
   const automaticCompileAllEnabled = shouldUseCompileAll({
     isDev: meta.isDev,
     hasCustomCommand,
+    hasCustomBuildCommand,
   });
 
   const predefinedExcludes = [
@@ -1113,19 +1125,41 @@ export const build: BuildVX = async ({
         });
       };
 
+      const announceLargeFunction = () =>
+        console.log(
+          `Function "${entrypoint}" exceeds the standard size limit; enabling large functions (beta).`
+        );
+
       if (depAnalysis.runtimeInstallEnabled) {
-        // Pack the zip and defer the rest to runtime install. If it can't fit
-        // Lambda, generateBundle bundles everything for Hive (which then takes
-        // compileall, below).
+        // Pack the zip and defer the rest to runtime install. If it can't be
+        // made to fit, generateBundle bundles everything for the large
+        // functions path (which then takes compileall, below).
         const { fellBackToFullBundle } =
           await depExternalizer.generateBundle(files);
-        if (fellBackToFullBundle && automaticCompileAllEnabled) {
-          await runCompileAllAndFillBytecode();
+        if (fellBackToFullBundle) {
+          announceLargeFunction();
+          if (automaticCompileAllEnabled) {
+            await runCompileAllAndFillBytecode();
+          }
         }
       } else {
-        // Bundle all deps directly (fits the threshold, or large functions on).
+        // Bundle all deps directly. Either it fits the standard size limit, or
+        // large functions are enabled and the whole bundle ships.
         addFiles(files, depAnalysis.allVendorFiles);
-        if (automaticCompileAllEnabled) {
+        if (
+          isLargeFunctionsEnabled() &&
+          depAnalysis.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES
+        ) {
+          announceLargeFunction();
+        }
+        // Compileall is only for large functions. This branch also covers small
+        // bundles that fit the standard size limit, so gate on size to skip
+        // them — never precompile bytecode for a standard-size function.
+        // (automaticCompileAllEnabled already requires the large-functions flag.)
+        if (
+          automaticCompileAllEnabled &&
+          depAnalysis.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES
+        ) {
           await runCompileAllAndFillBytecode();
         }
       }
@@ -1219,11 +1253,19 @@ export const build: BuildVX = async ({
     ? await glob('**', { cwd: djangoStatic.cdnOutputDir })
     : {};
 
-  // for services routing is handled by fs-detectors, for legacy builds
-  // we still need to provide catch-all route
-  const routes = service?.name
+  // Non-web V1 services (cron, worker, job) must not emit a catch-all route
+  // because their routes are merged into a shared top-level table and would
+  // shadow other services (see #15960). Web services and V2 services (which
+  // have isolated per-service route tables) need the catch-all to reach the
+  // Lambda.
+  const isNonWebService =
+    service?.name && service.type && service.type !== 'web';
+  const routes = isNonWebService
     ? undefined
-    : [{ handle: 'filesystem' }, { src: '/(.*)', dest: `/${lambdaPath}` }];
+    : [
+        { handle: 'filesystem' as const },
+        { src: '/(.*)', dest: `/${lambdaPath}` },
+      ];
 
   return {
     resultVersion: 2,

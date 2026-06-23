@@ -226,13 +226,12 @@ export class PythonDependencyExternalizer {
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
         message:
-          `Total bundle size (${totalBundleSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
-          `When using a custom install command, Vercel cannot automatically\n` +
-          `optimize dependency bundling. To reduce the size of your\n` +
-          `dependencies, you can:\n` +
-          `  1. Remove unused dependencies from your project.\n` +
-          `  2. Remove the custom install command to allow Vercel to manage\n` +
-          `     and optimize dependencies automatically.`,
+          `Total bundle size (${totalBundleSizeMB} MB) exceeds the maximum function size (${limitMB} MB).\n\n` +
+          `A custom install command prevents Vercel from optimizing your\n` +
+          `function bundle size automatically. To fix this, you can:\n` +
+          `  1. Remove unused dependencies from your project, or\n` +
+          `  2. Remove the custom install command so Vercel can optimize\n` +
+          `     the function bundle automatically.`,
         link: BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
@@ -285,11 +284,12 @@ export class PythonDependencyExternalizer {
       );
     }
     if (!this.uvLockPath || !this.uvProjectDir) {
-      throw new NowBuildError({
-        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
-        message:
-          'Runtime dependency installation requires a uv.lock file and project directory.',
-      });
+      // Invariant: shouldEnableRuntimeInstall() only returns true when
+      // uvLockPath is set, and uvProjectDir is always set alongside it, so this
+      // is an internal bug rather than a user-fixable condition.
+      throw new Error(
+        'generateBundle() requires uvLockPath and uvProjectDir to be set'
+      );
     }
 
     const totalBundleSizeMB = (this.totalBundleSize / (1024 * 1024)).toFixed(2);
@@ -303,49 +303,44 @@ export class PythonDependencyExternalizer {
       if (largeFunctionsEnabled) {
         return this.bundleAllForHive(files);
       }
-      const ephemeralLimitMB = (
-        LAMBDA_EPHEMERAL_STORAGE_BYTES /
-        (1024 * 1024)
-      ).toFixed(0);
+      const limitMB = (LAMBDA_EPHEMERAL_STORAGE_BYTES / (1024 * 1024)).toFixed(
+        0
+      );
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
         message:
-          `Total bundle size (${totalBundleSizeMB} MB) exceeds Lambda ephemeral storage limit (${ephemeralLimitMB} MB).\n\n` +
-          `Even with runtime dependency installation, all packages must fit\n` +
-          `within the ${ephemeralLimitMB} MB ephemeral storage available to Lambda\n` +
-          `functions. Consider removing unused dependencies or splitting\n` +
-          `your application into smaller functions.`,
+          `Total bundle size (${totalBundleSizeMB} MB) exceeds the maximum function size (${limitMB} MB).\n\n` +
+          `Reduce the size of your dependencies or split your application into\n` +
+          `smaller functions.`,
         link: BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
     }
 
-    // Read and parse the uv.lock file
+    // Read and parse the uv.lock file. Use a project-relative path in
+    // user-facing messages so we don't leak absolute build paths.
+    const relLockPath = relative(this.workPath, this.uvLockPath);
     let lockContent: string;
     try {
       lockContent = await readFile(this.uvLockPath, 'utf8');
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.log(
-          `Failed to read uv.lock file at "${this.uvLockPath}": ${error.message}`
-        );
-      } else {
-        console.log(
-          `Failed to read uv.lock file at "${this.uvLockPath}": ${String(error)}`
-        );
-      }
+      debug(
+        `Failed to read uv.lock at ${this.uvLockPath}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
       throw new NowBuildError({
         code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
-        message: `Failed to read uv.lock file at "${this.uvLockPath}"`,
+        message: `Failed to read the uv.lock file at "${relLockPath}".`,
       });
     }
     let lockFile: ReturnType<typeof parseUvLock>;
     try {
-      lockFile = parseUvLock(lockContent, this.uvLockPath);
+      lockFile = parseUvLock(lockContent, relLockPath);
     } catch (error: unknown) {
       if (error instanceof PythonAnalysisError) {
         if (error.fileContent) {
-          console.log(
+          debug(
             `Failed to parse "${error.path}". File content:\n${error.fileContent}`
           );
         }
@@ -406,15 +401,12 @@ export class PythonDependencyExternalizer {
       throw new NowBuildError({
         code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
         message:
-          `Bundle size exceeds the Lambda limit and requires runtime\n` +
-          `dependency installation, but no public packages have compatible\n` +
-          `pre-built wheels for the Lambda platform.\n\n` +
-          `Runtime dependency installation requires packages to have binary\n` +
-          `wheels.\n\n` +
+          `Total bundle size (${totalBundleSizeMB} MB) exceeds the maximum function size and\n` +
+          `can't be optimized automatically because some dependencies don't\n` +
+          `provide a compatible pre-built wheel.\n\n` +
           `To fix this, either:\n` +
           `  1. Regenerate your lock file with: uv lock --upgrade, or\n` +
-          `  2. Switch the problematic packages to ones that have pre-built\n` +
-          `     wheels available.`,
+          `  2. Replace the packages that don't provide a pre-built wheel.`,
       });
     }
 
@@ -505,8 +497,7 @@ export class PythonDependencyExternalizer {
     }
 
     console.log(
-      `Bundle size (${totalBundleSizeMB} MB) exceeds limit. ` +
-        `Enabling runtime dependency installation.`
+      `Bundle size (${totalBundleSizeMB} MB) exceeds the standard size; optimizing dependencies.`
     );
 
     // Build size map for externalizable public packages and run the knapsack algorithm
@@ -587,11 +578,14 @@ export class PythonDependencyExternalizer {
       });
       debug(`Bundled uv binary from ${uvBinaryPath} to ${uvLocalPath}`);
     } catch (err) {
+      debug(
+        `Failed to bundle uv binary: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
       throw new NowBuildError({
         code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
-        message: `Failed to bundle uv binary for runtime installation: ${
-          err instanceof Error ? err.message : String(err)
-        }`,
+        message: 'Failed to prepare dependency tooling.',
       });
     }
 
@@ -611,11 +605,11 @@ export class PythonDependencyExternalizer {
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
         message:
-          `Total bundle size (${finalSizeMB} MB) exceeds Lambda limit (${limitMB} MB) even after\n` +
-          `deferring public packages to runtime installation.\n\n` +
-          `This usually means your private packages or source code are too\n` +
-          `large. Consider reducing the size of private dependencies or\n` +
-          `splitting your application.`,
+          `Total bundle size (${finalSizeMB} MB) exceeds the maximum function size (${limitMB} MB) even after\n` +
+          `optimizing dependencies.\n\n` +
+          `This usually means your source code or private packages are too\n` +
+          `large. Reduce their size or split your application into smaller\n` +
+          `functions.`,
         link: BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
@@ -641,9 +635,7 @@ export class PythonDependencyExternalizer {
     for (const [p, f] of Object.entries(this.allVendorFiles)) {
       files[p] = f;
     }
-    console.log(
-      'Bundle cannot fit AWS Lambda; bundling all dependencies to run on Hive.'
-    );
+    debug('Bundling all dependencies for the large functions path.');
     return { fellBackToFullBundle: true };
   }
 

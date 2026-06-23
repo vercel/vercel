@@ -66,6 +66,7 @@ export interface Meta {
   filesRemoved?: string[];
   env?: Env;
   buildEnv?: Env;
+  port?: number;
   [key: string]: unknown;
 }
 
@@ -333,6 +334,7 @@ export namespace PackageJson {
     node?: string;
     npm?: string;
     pnpm?: string;
+    bun?: string;
   }
 
   export interface PublishConfig {
