@@ -167,7 +167,7 @@ interface BuildOutputConfig {
   crons?: Cron[];
   experimentalServices?: ExperimentalServices;
   experimentalServicesV2?: ExperimentalServicesV2;
-  services?: ExperimentalService[];
+  services?: Service[];
   deploymentId?: string;
 }
 
@@ -835,8 +835,11 @@ async function doBuild(
       builds = [{ src: '**', use: '@vercel/static' }];
     }
 
-    // Capture detected services for the config.json. Only `experimentalServices`
-    // flows is supported right now.
+    // Capture detected services for the config.json. The full resolved set
+    // (both `experimentalServices` and `experimentalServicesV2`) is written to
+    // the `services` array; each record carries its `schema` discriminant.
+    // `detectedServices` stays scoped to V1 for the legacy env-injection and
+    // route-handling paths below, which only apply to `experimentalServices`.
     detectedResolvedServices = detectedBuilders.services;
     detectedServices = detectedBuilders.services?.filter(isExperimentalService);
 
@@ -2027,8 +2030,10 @@ async function doBuild(
         experimentalServicesV2: detectedExperimentalServicesV2Config,
       }),
     ...(!detectedExperimentalServicesV1Config &&
-      detectedServices &&
-      detectedServices.length > 0 && { services: detectedServices }),
+      detectedResolvedServices &&
+      detectedResolvedServices.length > 0 && {
+        services: detectedResolvedServices,
+      }),
     ...(mergedDeploymentId && { deploymentId: mergedDeploymentId }),
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
