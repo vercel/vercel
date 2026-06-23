@@ -22,9 +22,10 @@ prebuilt image reference through as build output.
   (non-secret diagnostics) and debug logging gated on `BUILDER_DEBUG`.
 - **`@vercel/build-utils`**: add the `ContainerImage` build-output type.
 - **`@vercel/fs-detectors`**: resolve container services from `vercel.json`
-  (`experimentalServices` and `experimentalServicesV2`); `Dockerfile`,
-  `Containerfile`, and `*.dockerfile` entrypoints trigger a build, otherwise the
-  entrypoint (or `image`) is treated as a prebuilt reference.
+  (the `services` config and its deprecated `experimentalServices` /
+  `experimentalServicesV2` aliases). A `Dockerfile`, `Containerfile`, or
+  `*.dockerfile` entrypoint triggers a build; any other entrypoint is treated as
+  a prebuilt OCI image reference.
 - **`vercel`**: wire container output into `vercel build` result writing and
   config validation.
 

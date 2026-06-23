@@ -186,7 +186,10 @@ describe('@vercel/container', () => {
 
   it('does not rewrite image references without registry', async () => {
     const result = expectTypicalBuildResult(
-      await build(createBuildOptions({ image: 'grycap/cowsay:latest' }))
+      await build({
+        ...createBuildOptions({}),
+        entrypoint: 'grycap/cowsay:latest',
+      })
     );
 
     expect(result.output.index).toMatchObject({
@@ -197,12 +200,10 @@ describe('@vercel/container', () => {
 
   it('normalizes a string command override to argv array form', async () => {
     const result = expectTypicalBuildResult(
-      await build(
-        createBuildOptions({
-          image: 'docker.io/library/nginx:1.27',
-          command: 'nginx -g daemon off;',
-        })
-      )
+      await build({
+        ...createBuildOptions({ command: 'nginx -g daemon off;' }),
+        entrypoint: 'docker.io/library/nginx:1.27',
+      })
     );
 
     expect(result.output.index).toMatchObject({
@@ -214,7 +215,8 @@ describe('@vercel/container', () => {
   it('emits service builds at the internal service function path', async () => {
     const result = expectTypicalBuildResult(
       await build({
-        ...createBuildOptions({ image: 'docker.io/library/nginx:1.27' }),
+        ...createBuildOptions({}),
+        entrypoint: 'docker.io/library/nginx:1.27',
         service: {
           name: 'api',
           type: 'web',
@@ -734,7 +736,8 @@ describe('@vercel/container', () => {
       });
 
       const result = await startDevServer({
-        ...createBuildOptions({ image: 'grycap/cowsay:latest' }),
+        ...createBuildOptions({}),
+        entrypoint: 'grycap/cowsay:latest',
         service: { name: 'api', type: 'web' },
         meta: { isDev: true },
       } as any);
@@ -769,7 +772,8 @@ describe('@vercel/container', () => {
 
       await expect(
         startDevServer({
-          ...createBuildOptions({ image: 'grycap/cowsay:latest' }),
+          ...createBuildOptions({}),
+          entrypoint: 'grycap/cowsay:latest',
           service: { name: 'api', type: 'web' },
           meta: { isDev: true, env: { SECRET: 'do-not-leak' } },
         } as any)
@@ -799,7 +803,8 @@ describe('@vercel/container', () => {
       });
 
       const result = await startDevServer({
-        ...createBuildOptions({ image: 'grycap/cowsay:latest' }),
+        ...createBuildOptions({}),
+        entrypoint: 'grycap/cowsay:latest',
         service: { name: 'api', type: 'web' },
         meta: { isDev: true },
       } as any);

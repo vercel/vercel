@@ -275,9 +275,7 @@ async function resolveImageHandler(
     dockerfileConfigured !== undefined || existsSync(dockerfilePath);
 
   const prebuiltImage =
-    readString(config.handler) ??
-    readString(config.image) ??
-    (hasDockerfile ? undefined : entrypointRef);
+    readString(config.handler) ?? (hasDockerfile ? undefined : entrypointRef);
 
   span?.setAttributes({
     'container.has_dockerfile': toTag(hasDockerfile),
@@ -287,7 +285,7 @@ async function resolveImageHandler(
   if (!hasDockerfile) {
     if (!prebuiltImage) {
       throw new Error(
-        'Container service must specify a prebuilt image (via "image" or entrypoint) or an entrypoint that points at a Dockerfile to build.'
+        'Container service must specify an entrypoint: a prebuilt OCI image reference, or a Dockerfile path to build.'
       );
     }
     span?.setAttributes({ 'container.mode': 'prebuilt' });

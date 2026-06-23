@@ -12,11 +12,11 @@ function servicesV2(services: { schema: string }[]): ExperimentalServiceV2[] {
   );
 }
 
-describe('detectServices (experimentalServicesV2)', () => {
-  it('resolves a node backend framework service to @vercel/backends', async () => {
+describe('detectServices (services)', () => {
+  it('resolves canonical services config to @vercel/backends', async () => {
     const fs = new VirtualFilesystem({
       'vercel.json': vercelJson({
-        experimentalServicesV2: {
+        services: {
           api: { root: 'api', framework: 'express' },
         },
       }),
@@ -42,6 +42,26 @@ describe('detectServices (experimentalServicesV2)', () => {
     });
     expect(api.builder.use).toBe('@vercel/backends');
     expect(api.builder.src).toBe('api/index.js');
+  });
+
+  it('rejects services together with its deprecated alias', async () => {
+    const fs = new VirtualFilesystem({
+      'vercel.json': vercelJson({
+        services: { web: { root: 'web', framework: 'nextjs' } },
+        experimentalServicesV2: {
+          api: { root: 'api', framework: 'express' },
+        },
+      }),
+    });
+
+    const result = await detectServices({ fs });
+
+    expect(result.services).toEqual([]);
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        code: 'SERVICES_AND_EXPERIMENTAL_SERVICES_V2',
+      }),
+    ]);
   });
 
   it('resolves a runtime + file entrypoint service to the runtime builder', async () => {
@@ -650,14 +670,14 @@ describe('detectServices (experimentalServicesV2)', () => {
       expect(svc.builder.config).toMatchObject({ workspace: 'apps/api' });
     });
 
-    it('resolves a prebuilt image (no Dockerfile build)', async () => {
+    it('resolves a prebuilt image from a non-Dockerfile entrypoint', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': vercelJson({
           experimentalServicesV2: {
             cowsay: {
               root: '.',
               runtime: 'container',
-              image: 'grycap/cowsay:latest',
+              entrypoint: 'grycap/cowsay:latest',
             },
           },
         }),
@@ -672,8 +692,9 @@ describe('detectServices (experimentalServicesV2)', () => {
         entrypoint: 'grycap/cowsay:latest',
       });
       expect(svc.builder.use).toBe('@vercel/container');
+      // The prebuilt image reference is carried in `handler`.
       expect(svc.builder.config).toMatchObject({
-        image: 'grycap/cowsay:latest',
+        handler: 'grycap/cowsay:latest',
       });
     });
 
@@ -702,7 +723,7 @@ describe('detectServices (experimentalServicesV2)', () => {
       });
     });
 
-    it('errors when a container service has neither Dockerfile entrypoint nor image', async () => {
+    it('errors when a container service has no entrypoint', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': vercelJson({
           experimentalServicesV2: {

@@ -1,4 +1,46 @@
 {
+  "routes": [
+    {
+      "src": "/gone",
+      "status": 410,
+      "transforms": [
+        {
+          "type": "response.headers",
+          "op": "set",
+          "target": { "key": "x-gone-resp" },
+          "args": "1"
+        }
+      ]
+    },
+    {
+      "src": "/old",
+      "status": 308,
+      "headers": { "Location": "/new" },
+      "transforms": [
+        {
+          "type": "response.headers",
+          "op": "set",
+          "target": { "key": "x-should-not-apply" },
+          "args": "1"
+        }
+      ]
+    },
+    {
+      "src": "/transform/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "backend"
+      },
+      "transforms": [
+        {
+          "type": "response.headers",
+          "op": "set",
+          "target": { "key": "x-marker-should-not-apply" },
+          "args": "1"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/:path*",
@@ -14,6 +56,20 @@
         "service": "backend",
         "path": "/api/:path*"
       }
+    },
+    {
+      "source": "/rw/:path*",
+      "destination": {
+        "type": "service",
+        "service": "backend"
+      },
+      "transforms": [
+        {
+          "type": "request.path",
+          "op": "set",
+          "args": "/api/:path*"
+        }
+      ]
     },
     {
       "source": "/:path*",
@@ -57,6 +113,40 @@
           "headers": {
             "Location": "/api/new"
           }
+        },
+        {
+          "src": "/transform/(.*)",
+          "transforms": [
+            {
+              "type": "request.path",
+              "op": "set",
+              "args": "/api/$1"
+            },
+            {
+              "type": "request.query",
+              "op": "set",
+              "target": { "key": "injected" },
+              "args": "yes"
+            },
+            {
+              "type": "request.headers",
+              "op": "set",
+              "target": { "key": "x-injected" },
+              "args": "hdr"
+            },
+            {
+              "type": "response.headers",
+              "op": "set",
+              "target": { "key": "x-resp-injected" },
+              "args": "resp"
+            },
+            {
+              "type": "response.headers",
+              "op": "set",
+              "target": { "key": "x-overridden" },
+              "args": "overridden"
+            }
+          ]
         }
       ]
     }

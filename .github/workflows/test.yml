@@ -269,6 +269,13 @@ jobs:
         with:
           node-version: ${{ matrix.nodeVersion }}
 
+      - name: Setup Go toolchain
+        if: ${{ matrix.packageName == '@vercel-internals/ipc-proxy' }}
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.23.12'
+          cache: false
+
       - name: Setup Rust toolchain
         if: ${{ matrix.needsRust == true }}
         uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0

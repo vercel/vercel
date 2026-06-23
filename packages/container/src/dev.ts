@@ -166,14 +166,13 @@ async function resolveDevImage(
     dockerfileConfigured !== undefined || existsSync(dockerfilePath);
 
   const prebuiltImage =
-    readString((config as { image?: unknown }).image) ??
-    (hasDockerfile ? undefined : entrypointRef);
+    readString(config.handler) ?? (hasDockerfile ? undefined : entrypointRef);
 
   if (!hasDockerfile) {
     if (!prebuiltImage) {
       throw new Error(
-        'Container service must specify a prebuilt "image" or an entrypoint ' +
-          'that points at a Dockerfile to run with `vercel dev`.'
+        'Container service must specify an entrypoint: a prebuilt OCI image ' +
+          'reference, or a Dockerfile path to run with `vercel dev`.'
       );
     }
     span?.setAttributes({ 'container.dev_mode': 'prebuilt' });

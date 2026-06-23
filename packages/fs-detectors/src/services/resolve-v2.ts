@@ -29,7 +29,7 @@ const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
 
 /**
  * A container entrypoint pointing at a Dockerfile/Containerfile is built &
- * pushed; anything else (or `config.image`) is a prebuilt image reference.
+ * pushed; anything else is treated as a prebuilt OCI image reference.
  */
 function isDockerfileEntrypoint(entrypoint: string): boolean {
   const base = posixPath.basename(entrypoint).toLowerCase();
@@ -52,8 +52,7 @@ function normalizeContainerCommand(
 /**
  * Resolve a container (`runtime: "container"`) service. Containers don't go
  * through framework/entrypoint-extension detection: the entrypoint is either a
- * Dockerfile to build & push or a prebuilt OCI image reference (also settable
- * via `config.image`).
+ * Dockerfile to build & push or a prebuilt OCI image reference.
  */
 function resolveContainerServiceV2(
   name: string,
@@ -67,16 +66,15 @@ function resolveContainerServiceV2(
     typeof entrypoint === 'string' && isDockerfileEntrypoint(entrypoint)
       ? posixPath.normalize(entrypoint)
       : undefined;
-  // Prebuilt image: explicit `config.image`, or a non-Dockerfile entrypoint.
+  // A non-Dockerfile entrypoint is a prebuilt OCI image reference.
   const image =
-    config.image ??
-    (typeof entrypoint === 'string' && !dockerfile ? entrypoint : undefined);
+    typeof entrypoint === 'string' && !dockerfile ? entrypoint : undefined;
 
   if (!dockerfile && !image) {
     return {
       error: {
         code: 'MISSING_SERVICE_CONFIG',
-        message: `Container service "${name}" must specify a Dockerfile "entrypoint" to build, or a prebuilt "image".`,
+        message: `Container service "${name}" must specify an "entrypoint": a Dockerfile path to build, or a prebuilt OCI image reference.`,
         serviceName: name,
       },
     };
@@ -84,7 +82,7 @@ function resolveContainerServiceV2(
 
   // builder.src is project-root-relative. For a prebuilt image there is no
   // source file, so default to a Dockerfile path under the root (the builder
-  // treats a missing Dockerfile + configured image as prebuilt).
+  // treats a missing Dockerfile + a configured image handler as prebuilt).
   const localSrc = dockerfile ?? image ?? 'Dockerfile';
   const builderSrc = isRoot
     ? localSrc
@@ -95,7 +93,7 @@ function resolveContainerServiceV2(
     builderConfig.workspace = normalizedRoot;
   }
   if (image) {
-    builderConfig.image = image;
+    builderConfig.handler = image;
   }
   const command = normalizeContainerCommand(config.command);
   if (command) {
@@ -193,10 +191,7 @@ export function validateServiceConfigV2(
       };
     }
   }
-  // Container services may specify a prebuilt `image` instead of a framework or
-  // entrypoint.
-  const isContainer =
-    config.runtime === 'container' || config.image !== undefined;
+  const isContainer = config.runtime === 'container';
   if (!config.framework && !config.entrypoint && !isContainer) {
     return {
       code: 'MISSING_SERVICE_CONFIG',
@@ -219,11 +214,9 @@ export async function resolveConfiguredServiceV2(
 
   // Container services are resolved separately: they don't go through
   // framework/entrypoint-extension detection. Container intent is signalled by
-  // an explicit `runtime: "container"`, a Dockerfile entrypoint, or a prebuilt
-  // `image`.
+  // an explicit `runtime: "container"` or a Dockerfile entrypoint.
   const isContainer =
     config.runtime === 'container' ||
-    config.image !== undefined ||
     (typeof config.entrypoint === 'string' &&
       isDockerfileEntrypoint(config.entrypoint));
   if (isContainer) {

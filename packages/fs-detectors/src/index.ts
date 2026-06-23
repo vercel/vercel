@@ -48,6 +48,9 @@ export type {
   ExperimentalServiceV2Config,
   ExperimentalServicesV2,
   ExperimentalServiceV2Binding,
+  ServiceBinding,
+  ServiceConfig,
+  Services,
   ServicesRoutes,
   ServiceDetectionError,
 } from './services/types';
