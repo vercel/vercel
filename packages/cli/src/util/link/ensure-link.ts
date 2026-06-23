@@ -7,7 +7,11 @@ import { resolveProjectCwd } from '../projects/find-project-root';
 import type { SetupAndLinkOptions } from '../link/setup-and-link';
 import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
-import { outputActionRequired, buildCommandWithYes } from '../agent-output';
+import {
+  outputActionRequired,
+  buildCommandWithYes,
+  shouldEmitNonInteractiveCommandError,
+} from '../agent-output';
 import { printProjectNotFoundError } from '../projects/project-not-found-error';
 
 /**
@@ -20,8 +24,8 @@ import { printProjectNotFoundError } from '../projects/project-not-found-error';
  * event of an error
  * @param client - The Vercel Node.js client instance
  * @param cwd - The current working directory
- * @param opts.forceDelete - When `true`, deletes the project's `.vercel`
- * directory
+ * @param opts.forceDelete - When `true`, reruns project selection even when a
+ * local project link exists
  * @param opts.projectName - The project name to use when linking, otherwise
  * the current directory
  * @returns {Promise<ProjectLinked | number>} The linked project or exit code (or process exits when nonInteractive and error)
@@ -83,6 +87,12 @@ export async function ensureLink(
   }
 
   if (link.status === 'error') {
+    if (
+      link.reason === 'EXPLICIT_LINK_REQUIRED' ||
+      link.reason === 'PROJECT_NOT_FOUND'
+    ) {
+      printExplicitLinkRequired(client, commandName, link.reason);
+    }
     if (link.reason === 'HEADLESS') {
       if (nonInteractive) {
         outputActionRequired(
@@ -115,4 +125,62 @@ export async function ensureLink(
   }
 
   return link;
+}
+
+export function printExplicitLinkRequired(
+  client: Client,
+  commandName: string,
+  reason:
+    | 'EXPLICIT_LINK_REQUIRED'
+    | 'PROJECT_NOT_FOUND' = 'EXPLICIT_LINK_REQUIRED'
+): void {
+  const message =
+    reason === 'PROJECT_NOT_FOUND'
+      ? 'No existing project matched the selected team. Project creation requires an explicit interactive choice or a separate project add command.'
+      : `Command ${getCommandNamePlain(
+          commandName
+        )} could not determine a project safely in non-interactive mode.`;
+  const next = [
+    {
+      command: getCommandNamePlain('teams list'),
+      when: 'list available teams',
+    },
+    {
+      command: getCommandNamePlain('project list --scope <team-slug>'),
+      when: 'list existing projects in a team',
+    },
+    {
+      command: getCommandNamePlain(
+        'project add <project-name> --scope <team-slug>'
+      ),
+      when: 'create a project explicitly',
+    },
+    {
+      command: getCommandNamePlain(
+        'link --scope <team-slug> --project <project-name-or-id>'
+      ),
+      when: 'link an existing project explicitly',
+    },
+  ];
+
+  if (shouldEmitNonInteractiveCommandError(client)) {
+    outputActionRequired(
+      client,
+      {
+        status: 'action_required',
+        reason:
+          reason === 'PROJECT_NOT_FOUND'
+            ? 'project_not_found'
+            : 'missing_link_target',
+        message,
+        next,
+      },
+      1
+    );
+    return;
+  }
+
+  output.error(
+    `${message}\n\n${next.map(item => `  ${item.command}`).join('\n')}`
+  );
 }

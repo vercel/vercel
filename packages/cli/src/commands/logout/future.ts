@@ -32,7 +32,10 @@ export async function logout(client: Client): Promise<number> {
   }
 
   try {
-    client.updateConfig({ currentTeam: undefined });
+    client.updateConfig({
+      currentTeam: undefined,
+      explicitCurrentTeam: undefined,
+    });
     client.writeToConfigFile();
 
     client.emptyAuthConfig();

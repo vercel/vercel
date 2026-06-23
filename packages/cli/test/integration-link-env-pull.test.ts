@@ -1,7 +1,6 @@
 import path from 'path';
 import { execCli } from './helpers/exec';
 import fs from 'fs-extra';
-import waitForPrompt from './helpers/wait-for-prompt';
 import { listTmpDirs } from './helpers/get-tmp-dir';
 import { teamPromise } from './helpers/get-account';
 import {
@@ -38,6 +37,7 @@ afterAll(async () => {
 test('[vc link] should refresh OIDC without replacing existing .env.local', async () => {
   const dir = await setupE2EFixture('project-link-gitignore');
   const projectName = `link-env-pull-${Math.random().toString(36).split('.')[1]}`;
+  const team = await teamPromise;
 
   await fs.remove(path.join(dir, '.vercel'));
   await fs.writeFile(
@@ -46,35 +46,25 @@ test('[vc link] should refresh OIDC without replacing existing .env.local', asyn
     'utf8'
   );
 
-  const vc = execCli(binaryPath, ['link', `--project=${projectName}`], {
-    cwd: dir,
-    env: {
-      FORCE_TTY: '1',
-    },
-  });
+  const created = await execCli(
+    binaryPath,
+    ['project', 'add', projectName, '--scope', team.slug],
+    { cwd: dir }
+  );
+  expect(created.exitCode, formatOutput(created)).toBe(0);
 
-  await waitForPrompt(vc, 'Directory');
-  await waitForPrompt(vc, 'Which team?');
-  vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, 'Project?');
-  vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, `Name? (${projectName})`);
-  vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, 'Code directory?');
-  vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, 'Customize settings?');
-  vc.stdin?.write('no\n');
-
-  await waitForPrompt(vc, 'Customize advanced settings?');
-  vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, /Created\s+/);
-
-  const { exitCode, stdout, stderr } = await vc;
+  const { exitCode, stdout, stderr } = await execCli(
+    binaryPath,
+    [
+      'link',
+      '--non-interactive',
+      '--scope',
+      team.slug,
+      '--project',
+      projectName,
+    ],
+    { cwd: dir }
+  );
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   expect(await fs.pathExists(path.join(dir, '.vercel/project.json'))).toBe(
@@ -91,39 +81,30 @@ test('[vc link] should refresh OIDC without replacing existing .env.local', asyn
 test('[vc link] should create .env.local when linking new project', async () => {
   const dir = await setupE2EFixture('project-link-gitignore');
   const projectName = `link-oidc-create-${Math.random().toString(36).split('.')[1]}`;
+  const team = await teamPromise;
 
   await fs.remove(path.join(dir, '.vercel'));
   await fs.remove(path.join(dir, '.env.local'));
 
-  const vc = execCli(binaryPath, ['link', `--project=${projectName}`], {
-    cwd: dir,
-    env: {
-      FORCE_TTY: '1',
-    },
-  });
+  const created = await execCli(
+    binaryPath,
+    ['project', 'add', projectName, '--scope', team.slug],
+    { cwd: dir }
+  );
+  expect(created.exitCode, formatOutput(created)).toBe(0);
 
-  await waitForPrompt(vc, 'Directory');
-  await waitForPrompt(vc, 'Which team?');
-  vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, 'Project?');
-  vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, `Name? (${projectName})`);
-  vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, 'Code directory?');
-  vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, 'Customize settings?');
-  vc.stdin?.write('no\n');
-
-  await waitForPrompt(vc, 'Customize advanced settings?');
-  vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, /Created\s+/);
-
-  const { exitCode, stdout, stderr } = await vc;
+  const { exitCode, stdout, stderr } = await execCli(
+    binaryPath,
+    [
+      'link',
+      '--non-interactive',
+      '--scope',
+      team.slug,
+      '--project',
+      projectName,
+    ],
+    { cwd: dir }
+  );
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   expect(await fs.pathExists(path.join(dir, '.vercel/project.json'))).toBe(
@@ -137,21 +118,34 @@ test('[vc link] should create .env.local when linking new project', async () => 
   );
 });
 
-test('[vc link] should work with --yes flag and auto-confirm all prompts', async () => {
+test('[vc link] should accept redundant --yes with an explicit target', async () => {
   const dir = await setupE2EFixture('project-link-gitignore');
   const projectName = `link-env-yes-${Math.random().toString(36).split('.')[1]}`;
+  const team = await teamPromise;
 
   await fs.remove(path.join(dir, '.vercel'));
   await fs.remove(path.join(dir, '.env.local'));
 
+  const created = await execCli(
+    binaryPath,
+    ['project', 'add', projectName, '--scope', team.slug],
+    { cwd: dir }
+  );
+  expect(created.exitCode, formatOutput(created)).toBe(0);
+
   const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
-    ['link', `--project=${projectName}`, '--yes'],
+    [
+      'link',
+      '--non-interactive',
+      '--scope',
+      team.slug,
+      '--project',
+      projectName,
+      '--yes',
+    ],
     {
       cwd: dir,
-      env: {
-        FORCE_TTY: '1',
-      },
     }
   );
 

@@ -39,6 +39,7 @@ export const globalConfigSchema = z.object({
   '// Docs': z.string().optional(),
   credStorage: credStorageSchema.optional(),
   currentTeam: z.string().optional(),
+  explicitCurrentTeam: z.string().optional(),
   api: z.string().optional(),
   telemetry: telemetryConfigSchema.optional(),
   guidance: guidanceConfigSchema.optional(),

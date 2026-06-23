@@ -171,6 +171,43 @@ describe('ensureLink', () => {
       expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
+    it('requires an explicit link target instead of suggesting --yes', async () => {
+      vi.mocked(getLinkedProject).mockResolvedValue({
+        status: 'not_linked',
+        org: null,
+        project: null,
+      });
+      vi.mocked(setupAndLink).mockResolvedValue({
+        status: 'error',
+        exitCode: 1,
+        reason: 'EXPLICIT_LINK_REQUIRED',
+      });
+      const agentOutput = await import('../../../../src/util/agent-output');
+      const outputActionRequired = vi.mocked(agentOutput.outputActionRequired);
+
+      client.nonInteractive = true;
+      client.setArgv('deploy', '--yes', '--non-interactive');
+      await ensureLink('deploy', client, client.cwd, { autoConfirm: true });
+
+      expect(outputActionRequired).toHaveBeenCalledWith(
+        client,
+        expect.objectContaining({
+          status: 'action_required',
+          reason: 'missing_link_target',
+          next: expect.arrayContaining([
+            expect.objectContaining({
+              command: expect.stringContaining(
+                'link --scope <team-slug> --project <project-name-or-id>'
+              ),
+            }),
+          ]),
+        }),
+        1
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      client.nonInteractive = false;
+    });
+
     it('returns 0 when user aborts (setupAndLink returns not_linked)', async () => {
       vi.mocked(getLinkedProject).mockResolvedValue({
         status: 'not_linked',

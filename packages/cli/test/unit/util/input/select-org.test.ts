@@ -255,6 +255,27 @@ describe('selectOrg', () => {
       logSpy.mockRestore();
     });
 
+    it('does not treat currentTeam alone as explicit non-interactive intent', async () => {
+      client.config.currentTeam = firstTeam.id;
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await expect(selectOrg(client, 'Which scope?', false)).rejects.toThrow(
+        'process.exit(1)'
+      );
+      expect(JSON.parse(logSpy.mock.calls[0][0])).toMatchObject({
+        status: 'action_required',
+        reason: 'missing_scope',
+      });
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+    });
+
     it('outputs action_required and exits even with single scope (no defaulting)', async () => {
       // Single team only (northstar user + one team)
       user = useUser({ version: 'northstar' });
@@ -282,8 +303,9 @@ describe('selectOrg', () => {
       logSpy.mockRestore();
     });
 
-    it('returns org when --scope/--team was passed (currentTeam set)', async () => {
+    it('returns org when --scope was passed and currentTeam is set', async () => {
       client.config.currentTeam = firstTeam.id;
+      client.setArgv('deploy', '--scope', firstTeam.slug);
       const result = await selectOrg(client, 'Which scope?', false);
       expect(result).toEqual({
         type: 'team',

@@ -32,8 +32,10 @@ function withGlobalFlags(client: Client, commandTemplate: string): string {
 const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
   if (team) {
     config.currentTeam = team.id;
+    config.explicitCurrentTeam = team.id;
   } else {
     delete config.currentTeam;
+    delete config.explicitCurrentTeam;
   }
 
   writeToConfigFile(config);
@@ -300,6 +302,7 @@ export default async function change(client: Client, argv: string[]) {
 
     // Switch to user's personal account
     if (personalScopeSelected) {
+      updateCurrentTeam(config);
       output.log('No changes made');
       return 0;
     }
@@ -347,6 +350,7 @@ export default async function change(client: Client, argv: string[]) {
   }
 
   if (newTeam.slug === currentTeam?.slug) {
+    updateCurrentTeam(config, newTeam);
     output.log('No changes made');
     return 0;
   }

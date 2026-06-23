@@ -681,6 +681,9 @@ describe('link', () => {
       client.setArgv('--project', project.name!, '--yes');
       const exitCodePromise = link(client);
 
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
+
       await expect(client.stderr).toOutput(
         `✓ Linked          ${team.slug}/${project.name}`
       );
@@ -715,7 +718,10 @@ describe('link', () => {
 
       client.cwd = cwd;
       client.setArgv('--project', project.name!, '--yes');
-      const exitCode = await link(client);
+      const exitCodePromise = link(client);
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
+      const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "link"').toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -732,7 +738,7 @@ describe('link', () => {
   });
 
   describe('--yes', () => {
-    it('should skip prompts for link with `--yes`', async () => {
+    it('should still require an explicit team choice with `--yes`', async () => {
       useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
       const [team] = useTeams('team_dummy') as Team[];
@@ -747,6 +753,8 @@ describe('link', () => {
       client.setArgv('--yes');
       const exitCodePromise = link(client);
 
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
       await expect(client.stderr).toOutput('Searching for existing projects');
       await expect(client.stderr).toOutput(
         `✓ Linked          ${team.slug}/${project.name}`
@@ -778,7 +786,10 @@ describe('link', () => {
 
       client.cwd = cwd;
       client.setArgv('--yes');
-      const exitCode = await link(client);
+      const exitCodePromise = link(client);
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
+      const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "link"').toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -815,8 +826,15 @@ describe('link', () => {
       expect(payload.reason).toBe('missing_scope');
       expect(payload.message).toContain('--scope');
       expect(payload.message).toContain('non-interactive');
-      expect(Array.isArray(payload.choices)).toBe(true);
-      expect(payload.choices.length).toBeGreaterThanOrEqual(2);
+      expect(payload.next).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            command: expect.stringContaining(
+              'link --scope <team-slug> --project <project-name-or-id>'
+            ),
+          }),
+        ])
+      );
       expect(exitSpy).toHaveBeenCalledWith(1);
 
       exitSpy.mockRestore();
@@ -882,7 +900,10 @@ describe('link', () => {
       client.cwd = cwd;
       client.setArgv('--confirm');
       (client as { nonInteractive: boolean }).nonInteractive = false;
-      const exitCode = await link(client);
+      const exitCodePromise = link(client);
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
+      const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "link"').toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -908,6 +929,8 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
+    await expect(client.stderr).toOutput('Which team?');
+    client.stdin.write('\n');
     await expect(client.stderr).toOutput('Directory');
     await expect(client.stderr).toOutput('Found existing project');
     await expect(client.stderr).toOutput(
@@ -926,6 +949,9 @@ describe('link', () => {
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
     const plainOutput = stripAnsi(client.stderr.getFullOutput());
+    expect(plainOutput.indexOf('Which team?')).toBeLessThan(
+      plainOutput.indexOf('Directory')
+    );
     expect(plainOutput).toMatch(
       /^\s{0,2}Directory\s+.+\n\nSearching for existing projects…\n\n\s{0,2}Found existing project/m
     );
@@ -958,9 +984,9 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Directory');
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
+    await expect(client.stderr).toOutput('Directory');
 
     await expect(client.stderr).toOutput('Project?');
     client.stdin.write('\n');
@@ -989,8 +1015,8 @@ describe('link', () => {
     // Setup state is an aligned Directory row, not a prompt/status sentence.
     const fullOutput = client.stderr.getFullOutput();
     const plainOutput = stripAnsi(fullOutput);
-    expect(plainOutput).toMatch(
-      /^\s{0,2}Directory\s+.+\n\n(?:Searching for existing projects…\nLoading teams…\n)?\? Which team\?/m
+    expect(plainOutput.indexOf('Which team?')).toBeLessThan(
+      plainOutput.indexOf('Directory')
     );
     expect(plainOutput).toMatch(
       /Code directory\?.*\n\n\s{0,2}Detected Next\.js/
@@ -1048,9 +1074,9 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Directory');
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
+    await expect(client.stderr).toOutput('Directory');
 
     await expect(client.stderr).toOutput('Project?');
     client.stdin.write('\n');
@@ -1121,9 +1147,9 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Directory');
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
+    await expect(client.stderr).toOutput('Directory');
 
     await expect(client.stderr).toOutput('Project?');
     client.stdin.write('\n');
@@ -1181,9 +1207,9 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Directory');
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
+    await expect(client.stderr).toOutput('Directory');
 
     await expect(client.stderr).toOutput('Project?');
     client.stdin.write('\n');
@@ -1260,9 +1286,9 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Directory');
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
+    await expect(client.stderr).toOutput('Directory');
 
     await expect(client.stderr).toOutput('Project?');
     client.stdin.write('\n');
@@ -1347,9 +1373,9 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Directory');
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
+    await expect(client.stderr).toOutput('Directory');
 
     await expect(client.stderr).toOutput('Project?');
     client.stdin.write('\n');
@@ -1414,9 +1440,9 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Directory');
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
+    await expect(client.stderr).toOutput('Directory');
 
     await expect(client.stderr).toOutput('Project?');
     client.stdin.write('\n');
@@ -1466,9 +1492,9 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Directory');
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
+    await expect(client.stderr).toOutput('Directory');
 
     await expect(client.stderr).toOutput('Project?');
     client.stdin.write('\n');
@@ -1511,7 +1537,10 @@ describe('link', () => {
 
     client.cwd = cwd;
     client.setArgv('--project', proj1.name!, '--yes');
-    const exitCodeLink1 = await link(client);
+    const exitCodeLink1Promise = link(client);
+    await expect(client.stderr).toOutput('Which team?');
+    client.stdin.write('\n');
+    const exitCodeLink1 = await exitCodeLink1Promise;
     expect(exitCodeLink1, 'exit code for "link"').toEqual(0);
 
     let projectJson = await readJSON(join(cwd, '.vercel/project.json'));
@@ -1520,7 +1549,10 @@ describe('link', () => {
     expect(projectJson.projectName).toEqual(proj1.name);
 
     client.setArgv('--project', proj2.name!, '--yes');
-    const exitCodeLink2 = await link(client);
+    const exitCodeLink2Promise = link(client);
+    await expect(client.stderr).toOutput('Which team?');
+    client.stdin.write('\n');
+    const exitCodeLink2 = await exitCodeLink2Promise;
     expect(exitCodeLink2, 'exit code for "link"').toEqual(0);
 
     projectJson = await readJSON(join(cwd, '.vercel/project.json'));
@@ -1545,6 +1577,8 @@ describe('link', () => {
     await expect(client.stderr).toOutput(
       `The \`vc link <directory>\` syntax is deprecated, please use \`vc link --cwd ${cwd}\` instead`
     );
+    await expect(client.stderr).toOutput('Which team?');
+    client.stdin.write('\n');
 
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
@@ -1622,6 +1656,8 @@ describe('link', () => {
 
       const exitCodePromise = link(client);
 
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
       await expect(client.stderr).toOutput('Directory');
       await expect(client.stderr).toOutput('Found existing project');
       await expect(client.stderr).toOutput('Link directory to project?');
@@ -1663,9 +1699,8 @@ describe('link', () => {
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Link directory to project?');
-      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
         `✓ Linked          ${team.slug}/${project.name}`
@@ -1703,9 +1738,8 @@ describe('link', () => {
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Link directory to project?');
-      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
         `✓ Linked          ${team.slug}/${project.name}`
@@ -1751,9 +1785,8 @@ describe('link', () => {
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Link directory to project?');
-      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
         `✓ Linked          ${team.slug}/${project.name}`
@@ -1770,11 +1803,12 @@ describe('link', () => {
     });
   });
 
-  describe('cross-team search', () => {
-    it('should auto-link with --yes when project found across teams', async () => {
+  describe('team-first target resolution', () => {
+    it('asks for the team before searching for projects', async () => {
       useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
-      const [team] = useTeams('team_dummy') as Team[];
+      const [teamA] = useTeams('team_a') as Team[];
+      const teamB = createTeam('team_b', 'team-b', 'Team B');
       const { project } = useProject({
         ...defaultProject,
         id: basename(cwd),
@@ -1782,919 +1816,220 @@ describe('link', () => {
       });
       useUnknownProject();
 
+      client.config.currentTeam = teamB.id;
       client.cwd = cwd;
-      client.setArgv('--yes');
-      const exitCode = await link(client);
-
-      expect(exitCode, 'exit code for "link"').toEqual(0);
-
-      const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
-      expect(projectJson.orgId).toEqual(team.id);
-      expect(projectJson.projectId).toEqual(project.id);
-      expect(projectJson.projectName).toEqual(project.name);
-    });
-
-    it('should prompt for confirmation when single match found interactively', async () => {
-      useUser({ version: 'northstar' });
-      const cwd = setupTmpDir();
-      const [team] = useTeams('team_dummy') as Team[];
-      const { project } = useProject({
-        ...defaultProject,
-        id: basename(cwd),
-        name: basename(cwd),
-      });
-      useUnknownProject();
-
-      client.cwd = cwd;
+      const searchSpy = vi.spyOn(client.input, 'search');
       const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Which team?');
+      expect(searchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Which team?' })
+      );
+      const teamPromptOutput = client.stderr.getFullOutput();
+      expect(teamPromptOutput).toContain(`${teamA.name} (${teamA.slug})`);
+      expect(teamPromptOutput).toContain('Team B (team-b)');
+      expect(teamPromptOutput).not.toContain('Directory');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Directory');
       await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput(
-        `✓ Linked          ${team.slug}/${project.name}`
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode, 'exit code for "link"').toEqual(0);
-
+      await expect(exitCodePromise).resolves.toEqual(0);
       const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
-      expect(projectJson.orgId).toEqual(team.id);
-      expect(projectJson.projectId).toEqual(project.id);
-      expect(projectJson.projectName).toEqual(project.name);
+      expect(projectJson).toMatchObject({
+        orgId: teamB.id,
+        projectId: project.id,
+      });
+      searchSpy.mockRestore();
     });
 
-    it('should fall through to selectOrg when user declines cross-team match', async () => {
+    it('lets an explicit --scope bypass the team prompt', async () => {
       useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
       const [team] = useTeams('team_dummy') as Team[];
-      const project = {
+      const { project } = useProject({
         ...defaultProject,
-        id: basename(cwd),
-        name: basename(cwd),
-      };
-      let searchedProjectName: string | undefined;
-      let searchedTeamId: string | undefined;
-      client.scenario.get('/v9/projects', (req, res) => {
-        if (typeof req.query.search === 'string') {
-          searchedProjectName = req.query.search;
-          searchedTeamId = req.query.teamId as string | undefined;
-          return res.json({ projects: [project], pagination: {} });
-        }
-
-        return res.json({
-          projects: [project],
-          pagination: { count: 101, next: 1 },
-        });
+        id: 'project-id',
+        name: 'project-name',
       });
-      useProject(project);
       useUnknownProject();
 
+      client.config.currentTeam = team.id;
       client.cwd = cwd;
-      client.setArgv();
-      const exitCodePromise = link(client);
+      client.setArgv('--scope', team.slug, '--project', project.name!);
 
-      await expect(client.stderr).toOutput('Directory');
-      // Decline cross-team match
-      await expect(client.stderr).toOutput('Link directory to project?');
-      client.stdin.write('n\n');
+      await expect(link(client)).resolves.toEqual(0);
+      expect(client.stderr.getFullOutput()).not.toContain('Which team?');
+      expect(await readJSON(join(cwd, '.vercel/project.json'))).toMatchObject({
+        orgId: team.id,
+        projectId: project.id,
+      });
+    });
+  });
 
-      // Should fall through to selectOrg
-      await expect(client.stderr).toOutput('Which team?');
-      client.stdin.write('\n');
+  describe('deterministic non-interactive linking', () => {
+    it('links an explicit --scope and --project without --yes', async () => {
+      useUser({ version: 'northstar' });
+      const cwd = setupTmpDir();
+      const [team] = useTeams('team_dummy') as Team[];
+      const { project } = useProject({
+        ...defaultProject,
+        id: 'project-id',
+        name: 'project-name',
+      });
+      useUnknownProject();
 
-      // inputProject runs with skipAutoDetect, so no duplicate search
-      await expect(client.stderr).toOutput('Project?');
-      client.stdin.write('\n');
+      client.config.currentTeam = team.id;
+      client.nonInteractive = true;
+      client.cwd = cwd;
+      client.setArgv(
+        'link',
+        '--non-interactive',
+        '--scope',
+        team.slug,
+        '--project',
+        project.name!
+      );
 
-      await expect(client.stderr).toOutput('Search existing project');
-      for (let i = 0; i < project.name!.length; i++) {
-        client.stdin.write(project.name![i]);
-        await vi.waitFor(() => {
-          expect(searchedProjectName).toEqual(project.name!.slice(0, i + 1));
+      await expect(link(client)).resolves.toEqual(0);
+      expect(await readJSON(join(cwd, '.vercel/project.json'))).toMatchObject({
+        orgId: team.id,
+        projectId: project.id,
+      });
+      expect(client.stderr.getFullOutput()).not.toContain('Which team?');
+    });
+
+    it('uses a team explicitly remembered by `vc switch`', async () => {
+      useUser({ version: 'northstar' });
+      const cwd = setupTmpDir();
+      const [team] = useTeams('team_dummy') as Team[];
+      const { project } = useProject({
+        ...defaultProject,
+        id: 'project-id',
+        name: 'project-name',
+      });
+      useUnknownProject();
+
+      client.config.currentTeam = team.id;
+      client.config.explicitCurrentTeam = team.id;
+      client.nonInteractive = true;
+      client.cwd = cwd;
+      client.setArgv('link', '--non-interactive', '--project', project.name!);
+
+      await expect(link(client)).resolves.toEqual(0);
+      expect(await readJSON(join(cwd, '.vercel/project.json'))).toMatchObject({
+        orgId: team.id,
+        projectId: project.id,
+      });
+    });
+
+    it('does not trust a team inferred during login', async () => {
+      useUser({ version: 'northstar' });
+      const cwd = setupTmpDir();
+      const [team] = useTeams('team_dummy') as Team[];
+      useUnknownProject();
+
+      client.config.currentTeam = team.id;
+      client.nonInteractive = true;
+      client.cwd = cwd;
+      client.setArgv('link', '--non-interactive', '--project', 'project-name');
+
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
         });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await expect(link(client)).rejects.toThrow('process.exit(1)');
+      const payload = JSON.parse(logSpy.mock.calls[0][0]);
+      expect(payload).toMatchObject({
+        status: 'action_required',
+        reason: 'missing_scope',
+      });
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+    });
+
+    it('reuses an authoritative local owner-project pair', async () => {
+      useUser({ version: 'northstar' });
+      const cwd = setupTmpDir();
+      const [team] = useTeams('team_dummy') as Team[];
+      const { project } = useProject({
+        ...defaultProject,
+        id: 'project-id',
+        name: 'project-name',
+      });
+      useUnknownProject();
+      await mkdirp(join(cwd, '.vercel'));
+      await writeJSON(join(cwd, '.vercel/project.json'), {
+        orgId: team.id,
+        projectId: project.id,
+        projectName: project.name,
+      });
+
+      client.nonInteractive = true;
+      client.cwd = cwd;
+      client.setArgv('link', '--non-interactive');
+
+      await expect(link(client)).resolves.toEqual(0);
+      expect(mockPull).toHaveBeenCalledWith(
+        expect.objectContaining({ cwd }),
+        ['--yes'],
+        'vercel-cli:link',
+        { oidcTokenOnly: true }
+      );
+      expect(client.stderr.getFullOutput()).not.toContain('Which team?');
+    });
+
+    it('does not let --yes create or select a project', async () => {
+      useUser({ version: 'northstar' });
+      const cwd = setupTmpDir();
+      const [team] = useTeams('team_dummy') as Team[];
+      useUnknownProject();
+
+      client.config.currentTeam = team.id;
+      client.config.explicitCurrentTeam = team.id;
+      client.nonInteractive = true;
+      client.cwd = cwd;
+      client.setArgv('link', '--non-interactive', '--yes');
+
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await expect(link(client)).rejects.toThrow('process.exit(1)');
+      const payload = JSON.parse(logSpy.mock.calls[0][0]);
+      expect(payload).toMatchObject({
+        status: 'action_required',
+        reason: 'missing_project',
+      });
+      expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+    });
+
+    it('returns a human error on a non-TTY pipe without agent mode', async () => {
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+      client.stdin.isTTY = false;
+      client.setArgv('link');
+
+      try {
+        await expect(link(client)).resolves.toEqual(1);
+        expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+          'No team could be determined with certainty in non-interactive mode.'
+        );
+        expect(client.stderr.getFullOutput()).not.toContain('Which team?');
+      } finally {
+        client.stdin.isTTY = true;
       }
-      await expect(client.stderr).toOutput(project.name!);
-      client.stdin.write('\n');
-
-      await expect(client.stderr).toOutput(
-        `✓ Linked          ${team.slug}/${project.name}`
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
-      expect(searchedProjectName).toEqual(project.name);
-      expect(searchedTeamId).toEqual(team.id);
-      expect(client.stderr.getFullOutput()).not.toContain(
-        'Existing project name?'
-      );
-    });
-
-    it('should search teams after selected SSO teams have no project match', async () => {
-      useUser({ version: 'northstar' });
-      const cwd = setupTmpDir();
-      useTeams('team_dummy');
-      const playground = createTeam(
-        'team_playground',
-        'internal-playground',
-        'Internal Playground'
-      );
-      (playground as Team & { limited?: boolean }).limited = true;
-      useUnknownProject();
-
-      client.cwd = cwd;
-      const exitCodePromise = link(client);
-
-      await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Select teams that require SSO');
-      client.stdin.write(' \n');
-
-      await expect(client.stderr).toOutput(
-        'No matching projects found in the selected teams.'
-      );
-      await expect(client.stderr).toOutput('Which team?');
-      client.stdin.write('playground');
-      await expect(client.stderr).toOutput(playground.name);
-      client.stdin.write('\n');
-
-      // inputProject runs auto-detect (skipAutoDetect=false), finds nothing
-      await expect(client.stderr).toOutput('Project?');
-      client.stdin.write('\n');
-
-      await expect(client.stderr).toOutput('Name?');
-      client.stdin.write(`${basename(cwd)}\n`);
-      // Tmp dir has no detectable framework at the root, so the
-      // root-directory prompt now fires (nested-monolith guard).
-      await expect(client.stderr).toOutput('Code directory?');
-      client.stdin.write('\n');
-      await expect(client.stderr).toOutput('Customize settings?');
-      client.stdin.write('\n');
-
-      await expect(client.stderr).toOutput('Customize advanced settings?');
-      client.stdin.write('\n');
-
-      await expect(client.stderr).toOutput('✓ Created         ');
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
-
-      const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
-      expect(projectJson.orgId).toEqual(playground.id);
-    });
-
-    it('should only search the explicit scope when --scope is provided', async () => {
-      useUser({ version: 'northstar' });
-      const cwd = setupTmpDir();
-      const projectName = 'project-x';
-
-      const [teamA] = useTeams('team_a') as Team[];
-      const teamB = createTeam('team_b', 'team-b', 'Team B');
-      const teamC = createTeam('team_c', 'team-c', 'Team C');
-      const queriedTeamIds: (string | undefined)[] = [];
-      const projectA = {
-        ...defaultProject,
-        id: 'proj-on-a',
-        name: projectName,
-      };
-
-      client.scenario.get(`/v9/projects/${projectName}`, (req, res) => {
-        const teamId = req.query.teamId as string | undefined;
-        queriedTeamIds.push(teamId);
-
-        if (teamId === teamA.id) {
-          return res.json(projectA);
-        }
-
-        res.status(403).json({
-          error: {
-            message: 'Re-authentication required',
-            saml: true,
-            teamId,
-            scope: teamId,
-            enforced: true,
-          },
-        });
-      });
-      useUnknownProject();
-
-      client.config.currentTeam = teamA.id;
-      client.cwd = cwd;
-      client.setArgv('--scope', teamA.slug, '--project', projectName, '--yes');
-      const reauthSpy = vi.spyOn(client, 'reauthenticate');
-
-      const exitCode = await link(client);
-
-      expect(exitCode).toEqual(0);
-      expect(queriedTeamIds).toEqual([teamA.id]);
-      expect(queriedTeamIds).not.toContain(teamB.id);
-      expect(queriedTeamIds).not.toContain(teamC.id);
-      expect(reauthSpy).not.toHaveBeenCalled();
-
-      const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
-      expect(projectJson.orgId).toEqual(teamA.id);
-      expect(projectJson.projectId).toEqual(projectA.id);
-
-      reauthSpy.mockRestore();
-    });
-
-    it('should not resolve the default team before unscoped cross-team search', async () => {
-      const defaultTeamId = 'team_default';
-      useUser({ version: 'northstar', defaultTeamId });
-      const cwd = setupTmpDir();
-      const projectName = 'project-x';
-
-      const [teamA] = useTeams('team_a') as Team[];
-      const projectA = {
-        ...defaultProject,
-        id: 'proj-on-a',
-        name: projectName,
-      };
-
-      client.scenario.get(`/teams/${defaultTeamId}`, (_req, res) => {
-        res.status(403).json({
-          error: {
-            code: 'team_unauthorized',
-            message:
-              'Not authorized: Trying to access resource under scope "default-team".',
-          },
-        });
-      });
-      client.scenario.get(`/v9/projects/${projectName}`, (req, res) => {
-        if (req.query.teamId === teamA.id) {
-          return res.json(projectA);
-        }
-
-        res.status(404).json({ error: { code: 'not_found' } });
-      });
-      useUnknownProject();
-
-      client.cwd = cwd;
-      client.setArgv('--project', projectName, '--yes');
-
-      const exitCode = await link(client);
-
-      expect(exitCode).toEqual(0);
-      const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
-      expect(projectJson.orgId).toEqual(teamA.id);
-      expect(projectJson.projectId).toEqual(projectA.id);
-    });
-
-    it('should skip SAML-limited teams during cross-team search', async () => {
-      useUser({ version: 'northstar' });
-      const cwd = setupTmpDir();
-      const projectName = basename(cwd);
-
-      const [teamA] = useTeams('team_a') as Team[];
-      const teamB = createTeam('team_b', 'team-b', 'Team B');
-      const teamC = createTeam('team_c', 'team-c', 'Team C');
-      // Mark teamC as limited (SAML-protected scope the current token can't
-      // access). Querying it would return a SAML 403 and force re-auth, so
-      // searchProjectAcrossTeams should skip it entirely.
-      (teamC as Team & { limited?: boolean }).limited = true;
-
-      const queriedTeamIds: (string | undefined)[] = [];
-      const projectA = {
-        ...defaultProject,
-        id: 'proj-on-a',
-        name: projectName,
-      };
-
-      client.scenario.get(`/v9/projects/${projectName}`, (req, res) => {
-        const teamId = req.query.teamId as string | undefined;
-        queriedTeamIds.push(teamId);
-
-        if (teamId === teamA.id) {
-          return res.json(projectA);
-        }
-
-        // teamB has no project; teamC should never be queried, but if it
-        // ever is, return a SAML 403 so the test fails loudly (the request
-        // would trigger reauthenticate before our spy can intercept).
-        if (teamId === teamC.id) {
-          return res.status(403).json({
-            error: {
-              message: 'Re-authentication required',
-              saml: true,
-              teamId,
-              scope: teamId,
-              enforced: true,
-            },
-          });
-        }
-
-        res.status(404).json({ error: { code: 'not_found' } });
-      });
-      useUnknownProject();
-
-      client.cwd = cwd;
-      client.setArgv('--yes');
-      const reauthSpy = vi.spyOn(client, 'reauthenticate');
-
-      const exitCode = await link(client);
-
-      expect(exitCode).toEqual(0);
-      expect(queriedTeamIds).toContain(teamA.id);
-      expect(queriedTeamIds).toContain(teamB.id);
-      expect(queriedTeamIds).not.toContain(teamC.id);
-      expect(reauthSpy).not.toHaveBeenCalled();
-
-      const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
-      expect(projectJson.orgId).toEqual(teamA.id);
-      expect(projectJson.projectId).toEqual(projectA.id);
-
-      reauthSpy.mockRestore();
-    });
-
-    it('should link repo root matches using repo.json', async () => {
-      useUser({ version: 'northstar' });
-      const repoRoot = setupTmpDir();
-      const projectDir = join(repoRoot, 'apps/web');
-      const repoUrl = 'https://github.com/user/repo.git';
-      await mkdirp(join(repoRoot, '.git'));
-      await mkdirp(projectDir);
-      await writeFile(
-        join(repoRoot, '.git/config'),
-        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
-      );
-
-      const [teamA] = useTeams('team_a') as Team[];
-      const limitedTeam = createTeam(
-        'team_limited',
-        'team-limited',
-        'Team Limited'
-      );
-      (limitedTeam as Team & { limited?: boolean }).limited = true;
-      const projectA = {
-        ...defaultProject,
-        id: 'proj-on-a',
-        name: 'dashboard',
-        rootDirectory: 'apps/web',
-      };
-
-      client.scenario.get('/v9/projects', (req, res) => {
-        if (req.query.teamId === teamA.id && req.query.repoUrl === repoUrl) {
-          return res.json({ projects: [projectA], pagination: {} });
-        }
-        return res.json({ projects: [], pagination: {} });
-      });
-      useUnknownProject();
-
-      client.cwd = projectDir;
-      const exitCodePromise = link(client);
-
-      await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Found existing project');
-      await expect(client.stderr).toOutput('Link repository to project?');
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
-        `✓ Linked          ${teamA.slug}/${projectA.name}`
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
-      const plainOutput = stripAnsi(client.stderr.getFullOutput());
-      expect(plainOutput).toMatch(
-        /^\s{0,2}Directory\s+.+\n\nSearching for existing projects…\n\n\s{0,2}Found existing project/m
-      );
-      expect(plainOutput).not.toContain('Searched teams:');
-      expect(plainOutput).toMatch(
-        /Link repository to project\?.*\n\n✓ Linked\s+/
-      );
-      expectLinkRowsUseExpectedGlyphs(client.stderr.getFullOutput(), [
-        'Directory',
-        'Project',
-        'Source',
-        'Linked',
-      ]);
-
-      const repoJson = await readJSON(join(repoRoot, '.vercel/repo.json'));
-      expect(repoJson).toEqual({
-        remoteName: 'origin',
-        projects: [
-          {
-            directory: 'apps/web',
-            id: projectA.id,
-            name: projectA.name,
-            orgId: teamA.id,
-          },
-        ],
-      });
-      expect(await pathExists(join(projectDir, '.vercel/project.json'))).toBe(
-        false
-      );
-    });
-
-    it('should preserve repo.json entries when adding a repo root match', async () => {
-      useUser({ version: 'northstar' });
-      const repoRoot = setupTmpDir();
-      const projectDir = join(repoRoot, 'apps/web');
-      const repoUrl = 'https://github.com/user/repo.git';
-      await mkdirp(join(repoRoot, '.git'));
-      await mkdirp(join(repoRoot, '.vercel'));
-      await mkdirp(projectDir);
-      await writeFile(
-        join(repoRoot, '.git/config'),
-        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
-      );
-      await writeJSON(join(repoRoot, '.vercel/repo.json'), {
-        remoteName: 'origin',
-        projects: [
-          {
-            directory: 'apps/api',
-            id: 'proj-api',
-            name: 'api',
-            orgId: 'team_a',
-          },
-        ],
-      });
-
-      const [teamA] = useTeams('team_a') as Team[];
-      const projectA = {
-        ...defaultProject,
-        id: 'proj-web',
-        name: 'web',
-        rootDirectory: 'apps/web',
-      };
-
-      client.scenario.get('/v9/projects', (req, res) => {
-        if (req.query.teamId === teamA.id && req.query.repoUrl === repoUrl) {
-          return res.json({ projects: [projectA], pagination: {} });
-        }
-        return res.json({ projects: [], pagination: {} });
-      });
-      useUnknownProject();
-
-      client.cwd = projectDir;
-      client.setArgv('--yes');
-      const exitCode = await link(client);
-
-      expect(exitCode).toEqual(0);
-
-      const repoJson = await readJSON(join(repoRoot, '.vercel/repo.json'));
-      expect(repoJson.projects).toEqual([
-        {
-          directory: 'apps/api',
-          id: 'proj-api',
-          name: 'api',
-          orgId: 'team_a',
-        },
-        {
-          directory: 'apps/web',
-          id: projectA.id,
-          name: projectA.name,
-          orgId: teamA.id,
-        },
-      ]);
-    });
-
-    it('should respect --project when matching Git-linked projects', async () => {
-      useUser({ version: 'northstar' });
-      const repoRoot = setupTmpDir();
-      const projectDir = join(repoRoot, 'apps/web');
-      const repoUrl = 'https://github.com/user/repo.git';
-      await mkdirp(join(repoRoot, '.git'));
-      await mkdirp(projectDir);
-      await writeFile(
-        join(repoRoot, '.git/config'),
-        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
-      );
-
-      const [teamA] = useTeams('team_a') as Team[];
-      const wrongProject = {
-        ...defaultProject,
-        id: 'proj-wrong',
-        name: 'wrong-app',
-        rootDirectory: 'apps/web',
-      };
-      const expectedProject = {
-        ...defaultProject,
-        id: 'proj-expected',
-        name: 'expected-app',
-        rootDirectory: 'apps/web',
-      };
-
-      client.scenario.get('/v9/projects', (req, res) => {
-        if (req.query.teamId === teamA.id && req.query.repoUrl === repoUrl) {
-          return res.json({
-            projects: [wrongProject, expectedProject],
-            pagination: {},
-          });
-        }
-        return res.json({ projects: [], pagination: {} });
-      });
-      useUnknownProject();
-
-      client.cwd = projectDir;
-      client.setArgv('--project', expectedProject.name);
-      const exitCodePromise = link(client);
-
-      await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Found existing project');
-      await expect(client.stderr).toOutput('Link repository to project?');
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
-        `✓ Linked          ${teamA.slug}/${expectedProject.name}`
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
-      expectLinkRowsUseExpectedGlyphs(client.stderr.getFullOutput(), [
-        'Project',
-        'Source',
-        'Linked',
-      ]);
-
-      const repoJson = await readJSON(join(repoRoot, '.vercel/repo.json'));
-      expect(repoJson.projects).toEqual([
-        {
-          directory: 'apps/web',
-          id: expectedProject.id,
-          name: expectedProject.name,
-          orgId: teamA.id,
-        },
-      ]);
-    });
-
-    it('should show repo-root and folder-name matches together', async () => {
-      useUser({ version: 'northstar' });
-      const repoRoot = setupTmpDir();
-      const projectDir = join(repoRoot, 'apps/web');
-      const repoUrl = 'https://github.com/user/repo.git';
-      const folderName = basename(projectDir);
-      await mkdirp(join(repoRoot, '.git'));
-      await mkdirp(projectDir);
-      await writeFile(
-        join(repoRoot, '.git/config'),
-        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
-      );
-
-      const [teamA] = useTeams('team_a') as Team[];
-      const teamB = createTeam('team_b', 'team-b', 'Team B');
-      const repoProject = {
-        ...defaultProject,
-        id: 'proj-repo',
-        name: 'dashboard',
-        rootDirectory: 'apps/web',
-      };
-      const folderProject = {
-        ...defaultProject,
-        id: 'proj-folder',
-        name: folderName,
-      };
-
-      client.scenario.get('/v9/projects', (req, res) => {
-        if (req.query.teamId === teamA.id && req.query.repoUrl === repoUrl) {
-          return res.json({ projects: [repoProject], pagination: {} });
-        }
-        return res.json({ projects: [], pagination: {} });
-      });
-      client.scenario.get(`/v9/projects/${folderName}`, (req, res) => {
-        if (req.query.teamId === teamB.id) {
-          return res.json(folderProject);
-        }
-        return res.status(404).json({ error: { code: 'not_found' } });
-      });
-      useUnknownProject();
-
-      client.cwd = projectDir;
-      const exitCodePromise = link(client);
-
-      await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Not one of these projects');
-      client.stdin.write('\n');
-
-      await expect(client.stderr).toOutput(
-        `✓ Linked          ${teamA.slug}/${repoProject.name}`
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
-    });
-
-    it('should search selected teams that require SSO after no first-pass matches', async () => {
-      useUser({ version: 'northstar' });
-      const cwd = setupTmpDir();
-      const projectName = basename(cwd);
-
-      useTeams('team_a');
-      const limitedTeam = createTeam(
-        'team_limited',
-        'team-limited',
-        'Team Limited'
-      );
-      (limitedTeam as Team & { limited?: boolean }).limited = true;
-      const limitedProject = {
-        ...defaultProject,
-        id: 'proj-limited',
-        name: projectName,
-      };
-
-      client.scenario.get(`/v9/projects/${projectName}`, (req, res) => {
-        if (req.query.teamId === limitedTeam.id) {
-          return res.json(limitedProject);
-        }
-        return res.status(404).json({ error: { code: 'not_found' } });
-      });
-      useUnknownProject();
-
-      client.cwd = cwd;
-      const exitCodePromise = link(client);
-
-      await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Select teams that require SSO');
-      expect(stripAnsi(client.stderr.getFullOutput())).toContain(
-        '<space> select, <enter> confirm, <a> toggle all, <i> invert'
-      );
-      client.stdin.write(' \n');
-
-      await expect(client.stderr).toOutput(
-        'Searching selected teams that require SSO…'
-      );
-      await expect(client.stderr).toOutput('Found existing project');
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
-        `✓ Linked          ${limitedTeam.slug}/${limitedProject.name}`
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
-      const plainOutput = stripAnsi(client.stderr.getFullOutput());
-      expect(plainOutput).toMatch(/^\s{0,2}Directory\s+.+/m);
-      expect(plainOutput).toMatch(
-        /^\s{0,2}Searched\s+1 team available without SSO\n\s{0,2}No matching projects found/m
-      );
-      expect(plainOutput).toMatch(
-        /^\s{0,2}Searched\s+1 team\n\n\s{0,2}Found existing project/m
-      );
-      expect(plainOutput).not.toContain('Searched teams:');
-      expect(plainOutput).toMatch(
-        /Link directory to project\?.*\n\n✓ Linked\s+/
-      );
-      expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
-        'Press <space> to select'
-      );
-      expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
-        'to proceed'
-      );
-
-      const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
-      expect(projectJson.projectId).toEqual(limitedProject.id);
-      expect(projectJson.orgId).toEqual(limitedTeam.id);
-      expectLinkRowsUseExpectedGlyphs(client.stderr.getFullOutput(), [
-        'Directory',
-        'Searched',
-        'Project',
-        'Linked',
-      ]);
-    });
-
-    describe('multiple matches', () => {
-      it('should auto-link to current team match with --yes', async () => {
-        useUser();
-        const cwd = setupTmpDir();
-        const projectName = basename(cwd);
-
-        useTeams('team_a');
-        createTeam('team_b', 'team-b', 'Team B');
-
-        const projectA = {
-          ...defaultProject,
-          id: 'proj-on-a',
-          name: projectName,
-        };
-        const projectB = {
-          ...defaultProject,
-          id: 'proj-on-b',
-          name: projectName,
-        };
-
-        // Return different projects per team
-        client.scenario.get(`/v9/projects/${projectName}`, (req, res) => {
-          if (req.query.teamId === 'team_a') {
-            return res.json(projectA);
-          }
-          if (req.query.teamId === 'team_b') {
-            return res.json(projectB);
-          }
-          res.status(404).json({ error: { code: 'not_found' } });
-        });
-        useUnknownProject();
-
-        // Set current team to team_a so it auto-picks that match
-        client.config.currentTeam = 'team_a';
-        client.cwd = cwd;
-        client.setArgv('--yes');
-        const exitCode = await link(client);
-
-        expect(exitCode).toEqual(0);
-        const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
-        expect(projectJson.projectId).toEqual('proj-on-a');
-        expect(projectJson.orgId).toEqual('team_a');
-      });
-
-      it('should prompt to select when --yes but no current team match', async () => {
-        useUser();
-        const cwd = setupTmpDir();
-        const projectName = basename(cwd);
-
-        useTeams('team_a');
-        createTeam('team_b', 'team-b', 'Team B');
-
-        const projectA = {
-          ...defaultProject,
-          id: 'proj-on-a',
-          name: projectName,
-        };
-        const projectB = {
-          ...defaultProject,
-          id: 'proj-on-b',
-          name: projectName,
-        };
-
-        client.scenario.get(`/v9/projects/${projectName}`, (req, res) => {
-          if (req.query.teamId === 'team_a') {
-            return res.json(projectA);
-          }
-          if (req.query.teamId === 'team_b') {
-            return res.json(projectB);
-          }
-          res.status(404).json({ error: { code: 'not_found' } });
-        });
-        useUnknownProject();
-
-        // No currentTeam set — can't auto-pick, must prompt
-        client.cwd = cwd;
-        client.setArgv('--yes');
-        const exitCodePromise = link(client);
-
-        await expect(client.stderr).toOutput(
-          'Projects        2 matches across teams'
-        );
-        // Select first option (team_a)
-        client.stdin.write('\n');
-
-        const exitCode = await exitCodePromise;
-        expect(exitCode).toEqual(0);
-
-        const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
-        expect(projectJson.projectId).toEqual('proj-on-a');
-      });
-
-      it('should prompt to select interactively when multiple matches', async () => {
-        useUser();
-        const cwd = setupTmpDir();
-        const projectName = basename(cwd);
-
-        useTeams('team_a');
-        createTeam('team_b', 'team-b', 'Team B');
-
-        const projectA = {
-          ...defaultProject,
-          id: 'proj-on-a',
-          name: projectName,
-        };
-        const projectB = {
-          ...defaultProject,
-          id: 'proj-on-b',
-          name: projectName,
-        };
-
-        client.scenario.get(`/v9/projects/${projectName}`, (req, res) => {
-          if (req.query.teamId === 'team_a') {
-            return res.json(projectA);
-          }
-          if (req.query.teamId === 'team_b') {
-            return res.json(projectB);
-          }
-          res.status(404).json({ error: { code: 'not_found' } });
-        });
-        useUnknownProject();
-
-        client.cwd = cwd;
-        const exitCodePromise = link(client);
-
-        await expect(client.stderr).toOutput('Directory');
-        await expect(client.stderr).toOutput(
-          'Projects        2 matches across teams'
-        );
-        // Select first option
-        client.stdin.write('\n');
-
-        await expect(client.stderr).toOutput('✓ Linked          ');
-
-        const exitCode = await exitCodePromise;
-        expect(exitCode).toEqual(0);
-
-        const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
-        expect(projectJson.projectId).toEqual('proj-on-a');
-      });
-
-      it('should default to the current team match when prompting interactively', async () => {
-        useUser();
-        const cwd = setupTmpDir();
-        const projectName = basename(cwd);
-
-        useTeams('team_a');
-        createTeam('team_b', 'team-b', 'Team B');
-
-        const projectA = {
-          ...defaultProject,
-          id: 'proj-on-a',
-          name: projectName,
-        };
-        const projectB = {
-          ...defaultProject,
-          id: 'proj-on-b',
-          name: projectName,
-        };
-
-        client.scenario.get(`/v9/projects/${projectName}`, (req, res) => {
-          if (req.query.teamId === 'team_a') {
-            return res.json(projectA);
-          }
-          if (req.query.teamId === 'team_b') {
-            return res.json(projectB);
-          }
-          res.status(404).json({ error: { code: 'not_found' } });
-        });
-        useUnknownProject();
-
-        client.config.currentTeam = 'team_b';
-        client.cwd = cwd;
-        const exitCodePromise = link(client);
-
-        await expect(client.stderr).toOutput('Directory');
-        await expect(client.stderr).toOutput(
-          'Projects        2 matches across teams'
-        );
-        client.stdin.write('\n');
-
-        await expect(client.stderr).toOutput('✓ Linked          ');
-
-        const exitCode = await exitCodePromise;
-        expect(exitCode).toEqual(0);
-
-        const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
-        expect(projectJson.projectId).toEqual('proj-on-b');
-        expect(projectJson.orgId).toEqual('team_b');
-      });
-
-      it('should fall through to selectOrg when non-interactive with multiple matches', async () => {
-        useUser({ version: 'northstar' });
-        const cwd = setupTmpDir();
-        const projectName = basename(cwd);
-
-        useTeams('team_a');
-        createTeam('team_b', 'team-b', 'Team B');
-
-        const projectA = {
-          ...defaultProject,
-          id: 'proj-on-a',
-          name: projectName,
-        };
-        const projectB = {
-          ...defaultProject,
-          id: 'proj-on-b',
-          name: projectName,
-        };
-
-        client.scenario.get(`/v9/projects/${projectName}`, (req, res) => {
-          if (req.query.teamId === 'team_a') {
-            return res.json(projectA);
-          }
-          if (req.query.teamId === 'team_b') {
-            return res.json(projectB);
-          }
-          res.status(404).json({ error: { code: 'not_found' } });
-        });
-        useUnknownProject();
-
-        client.cwd = cwd;
-        client.setArgv('link', '--non-interactive');
-        (client as { nonInteractive: boolean }).nonInteractive = true;
-
-        const exitSpy = vi
-          .spyOn(process, 'exit')
-          .mockImplementation((code?: number) => {
-            throw new Error(`process.exit(${code})`);
-          });
-        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-
-        await expect(link(client)).rejects.toThrow('process.exit(1)');
-
-        expect(logSpy).toHaveBeenCalledTimes(1);
-        const payload = JSON.parse(logSpy.mock.calls[0][0]);
-        expect(payload.status).toBe('action_required');
-        expect(payload.reason).toBe('missing_scope');
-
-        exitSpy.mockRestore();
-        logSpy.mockRestore();
-        (client as { nonInteractive: boolean }).nonInteractive = false;
-      });
     });
   });
 });

@@ -4839,14 +4839,14 @@ exports[`help command > link help output snapshots > link help column width 40 1
                                  for      
                                  non-inte…
                                  links    
-  -y,  --yes                     Skip     
-                                 questions
-                                 when     
-                                 setting  
-                                 up with  
-                                 default  
+  -y,  --yes                     Accept   
+                                 setup    
+                                 defaults 
+                                 after the
                                  team and 
-                                 settings 
+                                 project  
+                                 are      
+                                 identifi…
 
 
   Global Options:
@@ -4903,13 +4903,9 @@ exports[`help command > link help output snapshots > link help column width 40 1
 
     $ vercel link
 
-  - Link current directory with default options and skip questions
-
-    $ vercel link --yes
-
   - Link to an existing project in CI or agent mode
 
-    $ vercel link --yes --team <team-id> --project <project-name-or-id>
+    $ vercel link --scope <team-id-or-slug> --project <project-name-or-id>
 
   - Link a specific directory to a Vercel project
 
@@ -4946,8 +4942,8 @@ exports[`help command > link help output snapshots > link help column width 80 1
                                  (alpha)                                          
        --team <TEAM_ID_OR_SLUG>  Set the team ID or slug; use with --project for  
                                  non-interactive links                            
-  -y,  --yes                     Skip questions when setting up with default team 
-                                 and settings                                     
+  -y,  --yes                     Accept setup defaults after the team and project 
+                                 are identified                                   
 
 
   Global Options:
@@ -4972,13 +4968,9 @@ exports[`help command > link help output snapshots > link help column width 80 1
 
     $ vercel link
 
-  - Link current directory with default options and skip questions
-
-    $ vercel link --yes
-
   - Link to an existing project in CI or agent mode
 
-    $ vercel link --yes --team <team-id> --project <project-name-or-id>
+    $ vercel link --scope <team-id-or-slug> --project <project-name-or-id>
 
   - Link a specific directory to a Vercel project
 
@@ -5011,7 +5003,7 @@ exports[`help command > link help output snapshots > link help column width 120 
   -p,  --project <NAME_OR_ID>    Set the project name or ID to link; required for non-interactive existing-project links  
   -r,  --repo                    Link multiple projects from the Git repository (alpha)                                   
        --team <TEAM_ID_OR_SLUG>  Set the team ID or slug; use with --project for non-interactive links                    
-  -y,  --yes                     Skip questions when setting up with default team and settings                            
+  -y,  --yes                     Accept setup defaults after the team and project are identified                          
 
 
   Global Options:
@@ -5034,13 +5026,9 @@ exports[`help command > link help output snapshots > link help column width 120 
 
     $ vercel link
 
-  - Link current directory with default options and skip questions
-
-    $ vercel link --yes
-
   - Link to an existing project in CI or agent mode
 
-    $ vercel link --yes --team <team-id> --project <project-name-or-id>
+    $ vercel link --scope <team-id-or-slug> --project <project-name-or-id>
 
   - Link a specific directory to a Vercel project
 

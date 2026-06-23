@@ -37,7 +37,8 @@ export default async function inputProject(
   org: Org,
   detectedProjectName: string,
   autoConfirm = false,
-  skipAutoDetect = false
+  skipAutoDetect = false,
+  allowCreateProject = true
 ): Promise<Project | string> {
   const slugifiedName = slugify(detectedProjectName);
 
@@ -67,8 +68,21 @@ export default async function inputProject(
     output.stopSpinner();
   }
 
+  const canCreateProject =
+    allowCreateProject &&
+    !client.nonInteractive &&
+    client.stdin?.isTTY !== false;
+
   if (autoConfirm) {
-    return detectedProject || detectedProjectName;
+    if (detectedProject) {
+      return detectedProject;
+    }
+    if (canCreateProject) {
+      return detectedProjectName;
+    }
+    const err = new Error('No existing project matched the selected team');
+    (err as NodeJS.ErrnoException).code = 'PROJECT_CREATION_DISABLED';
+    throw err;
   }
 
   if (client.nonInteractive) {
@@ -83,11 +97,15 @@ export default async function inputProject(
   let shouldLinkProject;
 
   if (!detectedProject) {
-    const decision = await inputProjectDecision(
-      client,
-      skipAutoDetect ? 'existing' : 'create'
-    );
-    shouldLinkProject = decision === 'existing';
+    if (canCreateProject) {
+      const decision = await inputProjectDecision(
+        client,
+        skipAutoDetect ? 'existing' : 'create'
+      );
+      shouldLinkProject = decision === 'existing';
+    } else {
+      shouldLinkProject = true;
+    }
   } else {
     // auto-detected a project to link
     output.print(`  ${chalk.bold('Found existing project')}\n`);
@@ -110,9 +128,20 @@ export default async function inputProject(
     const hasMoreProjects = firstPage.pagination.next !== null;
 
     if (projects.length === 0) {
-      output.log(
-        `No existing projects found under ${chalk.bold(org.slug)}. Creating new project.`
-      );
+      output.log(`No existing projects found under ${chalk.bold(org.slug)}.`);
+      if (!canCreateProject) {
+        const err = new Error(`No existing projects found under ${org.slug}`);
+        (err as NodeJS.ErrnoException).code = 'PROJECT_CREATION_DISABLED';
+        throw err;
+      }
+
+      const decision = await inputProjectDecision(client, 'create');
+      if (decision === 'existing') {
+        const err = new Error(`No existing projects found under ${org.slug}`);
+        (err as NodeJS.ErrnoException).code = 'PROJECT_CREATION_DISABLED';
+        throw err;
+      }
+      shouldLinkProject = false;
     } else if (hasMoreProjects) {
       return await client.input.search<Project>({
         message: 'Search existing project:',
@@ -153,7 +182,13 @@ export default async function inputProject(
     }
   }
 
-  // user wants to create a new project
+  if (!canCreateProject) {
+    const err = new Error('Project creation requires interactive confirmation');
+    (err as NodeJS.ErrnoException).code = 'PROJECT_CREATION_DISABLED';
+    throw err;
+  }
+
+  // user explicitly chose to create a new project
   return await client.input.text({
     message: `Name?`,
     default: !detectedProject ? slugifiedName : undefined,

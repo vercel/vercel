@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import { remove } from 'fs-extra';
 import { join, basename } from 'path';
 import { LocalFileSystemDetector, getWorkspaces } from '@vercel/fs-detectors';
 import type {
@@ -8,13 +7,7 @@ import type {
   Org,
   Team,
 } from '@vercel-internals/types';
-import {
-  getLinkedProject,
-  linkFolderToProject,
-  getVercelDirectory,
-  VERCEL_DIR_README,
-  VERCEL_DIR_PROJECT,
-} from '../projects/link';
+import { getLinkedProject, linkFolderToProject } from '../projects/link';
 import { linkRepoProject } from './repo';
 import createProject from '../projects/create-project';
 import type Client from '../client';
@@ -73,6 +66,12 @@ export interface SetupAndLinkOptions {
   v0?: boolean;
   /** When true, search matching projects across teams before standard linking flow */
   searchAcrossTeams?: boolean;
+  /** Team/account already selected by the caller. Skips the team prompt. */
+  org?: Org;
+  /** Restrict project discovery to these explicitly selected teams. */
+  searchTeams?: Team[];
+  /** Allow the interactive setup flow to create a project. */
+  allowCreateProject?: boolean;
   /**
    * When true with an explicit `projectName`, bail out instead of running
    * `setupAndLink`. Use for user-supplied `--project <NAME_OR_ID>` so typos
@@ -463,6 +462,10 @@ export default async function setupAndLink(
     pullEnv = true,
     v0,
     searchAcrossTeams = false,
+    org: preselectedOrg,
+    searchTeams,
+    allowCreateProject,
+    failIfNotFound = false,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
   const { config } = client;
@@ -479,21 +482,24 @@ export default async function setupAndLink(
   const isTTY = client.stdin.isTTY;
   let rootDirectory: string | null = null;
   let newProjectName: string;
-  let org;
+  let org: Org | undefined = preselectedOrg;
 
   if (!forceDelete && link.status === 'linked') {
     return link;
   }
 
-  if (forceDelete) {
-    const vercelDir = getVercelDirectory(path);
-    remove(join(vercelDir, VERCEL_DIR_README));
-    remove(join(vercelDir, VERCEL_DIR_PROJECT));
+  // Do not let --yes turn a directory name into a remote project mutation.
+  // Existing local/repository links are resolved before setup; an unlinked
+  // non-interactive flow must provide an explicit project target.
+  if ((!isTTY || nonInteractive) && !failIfNotFound) {
+    return {
+      status: 'error',
+      exitCode: 1,
+      reason: 'EXPLICIT_LINK_REQUIRED',
+    };
   }
 
-  if (!isTTY && !autoConfirm && !nonInteractive) {
-    return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
-  }
+  const canCreateProject = allowCreateProject ?? (isTTY && !nonInteractive);
 
   // The command invocation carries setup intent; show the local target as state.
   output.print('\n');
@@ -517,6 +523,8 @@ export default async function setupAndLink(
           autoConfirm,
           nonInteractive,
           gitProjectName,
+          teams: searchTeams,
+          skipLimited: searchTeams ? false : undefined,
         }
       );
       crossTeamMatches = searchResult.matches;
@@ -552,7 +560,12 @@ export default async function setupAndLink(
       return linkedMatch;
     }
 
-    if (!autoConfirm && !nonInteractive && skippedLimitedTeams.length > 0) {
+    if (
+      !searchTeams &&
+      !autoConfirm &&
+      !nonInteractive &&
+      skippedLimitedTeams.length > 0
+    ) {
       if (crossTeamMatches.length === 0) {
         printAlignedLabel(
           'Searched',
@@ -594,28 +607,32 @@ export default async function setupAndLink(
     }
   }
 
-  try {
-    org = await selectOrg(
-      client,
-      'Which team?',
-      autoConfirm,
-      searchableTeamPicker
-    );
-  } catch (err: unknown) {
-    if (isAPIError(err)) {
-      if (err.code === 'NOT_AUTHORIZED') {
-        output.prettyError(err);
-        return { status: 'error', exitCode: 1, reason: 'NOT_AUTHORIZED' };
+  if (!org) {
+    try {
+      org = await selectOrg(
+        client,
+        'Which team?',
+        autoConfirm,
+        searchableTeamPicker
+      );
+    } catch (err: unknown) {
+      if (isAPIError(err)) {
+        if (err.code === 'NOT_AUTHORIZED') {
+          output.prettyError(err);
+          return { status: 'error', exitCode: 1, reason: 'NOT_AUTHORIZED' };
+        }
+
+        if (err.code === 'TEAM_DELETED') {
+          output.prettyError(err);
+          return { status: 'error', exitCode: 1, reason: 'TEAM_DELETED' };
+        }
       }
 
-      if (err.code === 'TEAM_DELETED') {
-        output.prettyError(err);
-        return { status: 'error', exitCode: 1, reason: 'TEAM_DELETED' };
-      }
+      throw err;
     }
-
-    throw err;
   }
+
+  config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   let projectOrNewProjectName: Awaited<ReturnType<typeof inputProject>>;
   try {
@@ -624,7 +641,8 @@ export default async function setupAndLink(
       org,
       projectName,
       autoConfirm,
-      skipAutoDetect
+      skipAutoDetect,
+      canCreateProject
     );
   } catch (err) {
     if (
@@ -632,6 +650,12 @@ export default async function setupAndLink(
       (err as NodeJS.ErrnoException).code === 'HEADLESS'
     ) {
       return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
+    }
+    if (
+      err instanceof Error &&
+      (err as NodeJS.ErrnoException).code === 'PROJECT_CREATION_DISABLED'
+    ) {
+      return { status: 'error', exitCode: 1, reason: 'PROJECT_NOT_FOUND' };
     }
     throw err;
   }
@@ -657,7 +681,6 @@ export default async function setupAndLink(
     return { status: 'linked', org, project };
   }
 
-  config.currentTeam = org.type === 'team' ? org.id : undefined;
   const rootServicesSetup = await getServicesSetupState(path);
   const configFileName =
     (await findSourceVercelConfigFile(path)) ?? 'vercel.json';

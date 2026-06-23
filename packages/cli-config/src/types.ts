@@ -51,6 +51,8 @@ export interface GlobalConfig {
   '// Docs'?: string;
   credStorage?: CredStorage;
   currentTeam?: string;
+  /** Team explicitly selected with `vercel switch`. */
+  explicitCurrentTeam?: string;
   api?: string;
   telemetry?: TelemetryConfig;
   guidance?: GuidanceConfig;

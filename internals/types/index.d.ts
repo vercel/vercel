@@ -464,6 +464,8 @@ export type ProjectLinkedError = {
     | 'NOT_AUTHORIZED'
     | 'TEAM_DELETED'
     | 'PATH_IS_FILE'
+    | 'EXPLICIT_LINK_REQUIRED'
+    | 'PROJECT_NOT_FOUND'
     | 'INVALID_ROOT_DIRECTORY'
     | 'TOO_MANY_PROJECTS';
 };

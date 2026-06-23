@@ -29,6 +29,7 @@ describe('teams switch', () => {
       await expect(client.stderr).toOutput(
         `Success! The team ${team.name} (${team.slug}) is now active!`
       );
+      expect(client.config.explicitCurrentTeam).toBe(team.id);
 
       // ? Switch to:
       // ── Personal Account ──────────────
@@ -45,6 +46,7 @@ describe('teams switch', () => {
       await expect(client.stderr).toOutput(
         `Your account (${user.username}) is now active!`
       );
+      expect(client.config.explicitCurrentTeam).toBeUndefined();
     });
   });
 
@@ -57,6 +59,7 @@ describe('teams switch', () => {
       client.setArgv('teams', 'switch', team.slug);
       const exitCode = await teams(client);
       expect(exitCode, 'exit code for "teams"').toEqual(0);
+      expect(client.config.explicitCurrentTeam).toBe(team.id);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:switch', value: 'switch' },
         { key: 'argument:slug', value: '[REDACTED]' },
