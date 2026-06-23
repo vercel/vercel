@@ -1013,11 +1013,12 @@ describe('per-directory link resolution (VERCEL_RESOLVE_ROOT_DIRECTORY)', () => 
   );
 
   it.skipIf(process.platform === 'win32')(
-    'absorbs a redundant rootDirectory restating the location (config #4)',
+    'recovers from a redundant rootDirectory restating the location (config #4)',
     async () => {
       // The common misconfiguration: a link at `apps/api` whose project also
-      // has `rootDirectory: "apps/api"`. Previously this double-appended into
-      // `apps/api/apps/api` and crashed; now it just works.
+      // has `rootDirectory: "apps/api"`. Applying it would point at a
+      // non-existent `apps/api/apps/api` (the old crash), so it's ignored in
+      // favor of the link's own location and the build just works.
       const { monorepoRoot, appDir } = await setupApiFixture('apps/api');
       const output = join(appDir, '.vercel/output');
 

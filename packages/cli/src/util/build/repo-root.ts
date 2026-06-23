@@ -91,42 +91,53 @@ export interface PerDirectoryLinkRoot {
 
 /**
  * Resolves a per-directory link (`<dir>/.vercel/project.json`) against the repo
- * root. The link's physical location is authoritative: the project always
- * lives at `anchorDir`, so its root directory is `relative(repoRoot,
- * anchorDir)`. A stored `rootDirectory` is advisory — a redundant restatement
- * of the location is absorbed silently; any other value is ignored (location
- * wins) and surfaced via `advisory`.
+ * root, returning the project's root directory relative to it.
+ *
+ * The `rootDirectory` setting is interpreted relative to the link's own
+ * location (`anchorDir`): if `anchorDir/<setting>` exists, it is honored;
+ * otherwise the setting is treated as redundant/misconfigured (e.g. a link at
+ * `apps/api` whose setting `apps/api` would resolve to a non-existent
+ * `apps/api/apps/api`) and ignored in favor of the link's own location, with
+ * an advisory surfaced via `advisory`.
  */
 export function resolvePerDirectoryLinkRoot(
   anchorDir: string,
   rootDirectorySetting: string | null | undefined
 ): PerDirectoryLinkRoot {
   const repoRoot = resolveRepoRoot({ cwd: anchorDir });
-  const resolvedRootDirectory = normalizeRelative(
-    relative(repoRoot, anchorDir)
-  );
+  const linkLocation = normalizeRelative(relative(repoRoot, anchorDir));
 
   // Link at (or above) the root: nothing to resolve.
-  if (resolvedRootDirectory === '') {
+  if (linkLocation === '') {
     return { repoRoot, resolvedRootDirectory: '' };
   }
 
-  // Nullish or a redundant restatement of the location — absorb.
+  // No setting: build from the link's own location.
   const setting = normalizeRelative(rootDirectorySetting ?? '');
-  if (setting === '' || setting === resolvedRootDirectory) {
-    return { repoRoot, resolvedRootDirectory };
+  if (setting === '') {
+    return { repoRoot, resolvedRootDirectory: linkLocation };
   }
 
-  // Setting names a different location; the link's location wins.
+  // Honor the setting only if it points at a real folder relative to the link.
+  if (existsSync(join(anchorDir, setting))) {
+    return {
+      repoRoot,
+      resolvedRootDirectory: normalizeRelative(
+        relative(repoRoot, join(anchorDir, setting))
+      ),
+    };
+  }
+
+  // The setting points nowhere (redundant restatement or misconfig); fall back
+  // to the link's own location and warn.
   return {
     repoRoot,
-    resolvedRootDirectory,
+    resolvedRootDirectory: linkLocation,
     advisory:
       `Ignoring "rootDirectory" setting "${setting}" for the project linked in ` +
-      `"${anchorDir}": a project linked in this directory always builds from ` +
-      `"${resolvedRootDirectory}" (its path relative to the repository root ` +
-      `"${repoRoot}"). Remove the "rootDirectory" setting, or configure it at ` +
-      `the repository root instead.`,
+      `"${anchorDir}": "${join(anchorDir, setting)}" does not exist, so the ` +
+      `build will use the linked directory "${linkLocation}" instead. Remove ` +
+      `the "rootDirectory" setting, or configure it at the repository root.`,
   };
 }
 

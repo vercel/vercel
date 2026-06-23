@@ -170,42 +170,45 @@ describe('repo-root', () => {
       expect(result.advisory).toBeUndefined();
     });
 
-    it('absorbs a redundant rootDirectory equal to the location (config #4)', async () => {
+    it('ignores a redundant rootDirectory that points nowhere and warns (config #4)', async () => {
+      // A link at apps/api with rootDirectory "apps/api" would resolve to a
+      // non-existent apps/api/apps/api, so it is treated as redundant: build
+      // from the link's own location and warn.
       const appDir = await setupMonorepo();
       const result = resolvePerDirectoryLinkRoot(appDir, 'apps/api');
       expect(result.repoRoot).toEqual(root);
       expect(result.resolvedRootDirectory).toEqual('apps/api');
-      // Redundant restatement is absorbed silently — no advisory.
-      expect(result.advisory).toBeUndefined();
-    });
-
-    it('absorbs a redundant rootDirectory with ./ and trailing slash noise', async () => {
-      const appDir = await setupMonorepo();
-      const result = resolvePerDirectoryLinkRoot(appDir, './apps/api/');
-      expect(result.resolvedRootDirectory).toEqual('apps/api');
-      expect(result.advisory).toBeUndefined();
-    });
-
-    it('ignores a mismatched rootDirectory and returns an advisory', async () => {
-      const appDir = await setupMonorepo();
-      const result = resolvePerDirectoryLinkRoot(appDir, 'apps/web');
-      // Location wins: still resolves to the link's own location.
-      expect(result.resolvedRootDirectory).toEqual('apps/api');
       expect(result.advisory).toMatch(
-        /Ignoring "rootDirectory" setting "apps\/web"/
+        /Ignoring "rootDirectory" setting "apps\/api"/
       );
-      expect(result.advisory).toMatch(/always builds from "apps\/api"/);
+      expect(result.advisory).toMatch(/does not exist/);
     });
 
-    it('treats a deeper rootDirectory as a mismatch (no deeper offset)', async () => {
-      // A link at apps/api with rootDirectory "server" does NOT build
-      // apps/api/server — the link location is authoritative.
+    it('honors a deeper rootDirectory when the folder exists', async () => {
+      // A link at apps/api with rootDirectory "server" builds apps/api/server
+      // when that folder actually exists.
+      const appDir = await setupMonorepo();
+      await mkdirp(join(appDir, 'server'));
+      const result = resolvePerDirectoryLinkRoot(appDir, 'server');
+      expect(result.resolvedRootDirectory).toEqual('apps/api/server');
+      expect(result.advisory).toBeUndefined();
+    });
+
+    it('ignores a deeper rootDirectory that points nowhere and warns', async () => {
       const appDir = await setupMonorepo();
       const result = resolvePerDirectoryLinkRoot(appDir, 'server');
       expect(result.resolvedRootDirectory).toEqual('apps/api');
       expect(result.advisory).toMatch(
         /Ignoring "rootDirectory" setting "server"/
       );
+    });
+
+    it('normalizes ./ and trailing slash noise on an existing setting', async () => {
+      const appDir = await setupMonorepo();
+      await mkdirp(join(appDir, 'server'));
+      const result = resolvePerDirectoryLinkRoot(appDir, './server/');
+      expect(result.resolvedRootDirectory).toEqual('apps/api/server');
+      expect(result.advisory).toBeUndefined();
     });
 
     it('returns empty resolvedRootDirectory when the link is at the repo root', async () => {
