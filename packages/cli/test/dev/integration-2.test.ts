@@ -201,12 +201,18 @@ test(
 test(
   '[vercel dev] Should persist and reload Node standalone servers without package.json',
   testFixtureStdio('node-standalone', async (testPath: any, port: number) => {
-    let devInstance:
-      | { instanceId: string; pid: number; requestCount: number }
-      | undefined;
+    interface NodeStandaloneResponse {
+      instanceId: string;
+      marker: string;
+      pid: number;
+      requestCount: number;
+      url: string;
+    }
+
+    let devInstance: NodeStandaloneResponse | undefined;
 
     await testPath(200, '/', (body: string, _res: unknown, isDev: boolean) => {
-      const response = JSON.parse(body);
+      const response = JSON.parse(body) as NodeStandaloneResponse;
       expect(response.url).toBe('/');
       expect(response.marker).toBe('initial');
       if (isDev) {
@@ -218,7 +224,7 @@ test(
       200,
       '/some/nested/path',
       (body: string, _res: unknown, isDev: boolean) => {
-        const response = JSON.parse(body);
+        const response = JSON.parse(body) as NodeStandaloneResponse;
         expect(response.url).toBe('/some/nested/path');
         expect(response.marker).toBe('initial');
         if (isDev) {
@@ -244,11 +250,11 @@ test(
       );
 
       const deadline = Date.now() + 15_000;
-      let updatedResponse: any;
+      let updatedResponse: NodeStandaloneResponse | undefined;
       while (Date.now() < deadline) {
         try {
           const response = await nodeFetch(`http://localhost:${port}/reloaded`);
-          const body = await response.json();
+          const body = (await response.json()) as NodeStandaloneResponse;
           if (body.marker === 'updated') {
             updatedResponse = body;
             break;

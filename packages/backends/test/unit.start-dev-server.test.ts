@@ -12,6 +12,14 @@ import { startDevServer } from '../src/start-dev-server';
 const workPaths = new Set<string>();
 const shutdowns = new Set<() => Promise<void>>();
 
+interface TestServerResponse {
+  marker: string;
+  env: string;
+  pid: number;
+  requestCount: number;
+  url: string;
+}
+
 function filesFor(serverPath: string): Files {
   return {
     'server.ts': new FileFsRef({ fsPath: serverPath }),
@@ -38,10 +46,13 @@ server.listen(12345);
 `;
 }
 
-async function request(port: number, path: string): Promise<any> {
+async function request(
+  port: number,
+  path: string
+): Promise<TestServerResponse> {
   const response = await fetch(`http://127.0.0.1:${port}${path}`);
   expect(response.status).toBe(200);
-  return response.json();
+  return (await response.json()) as TestServerResponse;
 }
 
 afterEach(async () => {
@@ -83,37 +94,40 @@ describe('startDevServer', () => {
     ]);
     const initial = results[0];
     expect(initial).not.toBeNull();
+    if (!initial) throw new Error('Expected srvx to start');
+    expect(initial.persistent).toBe(true);
+    expect(initial.shutdown).toBeTypeOf('function');
     for (const result of results) {
       if (result?.shutdown) shutdowns.add(result.shutdown);
     }
     expect(results.map(result => result?.pid)).toEqual([
-      initial?.pid,
-      initial?.pid,
-      initial?.pid,
+      initial.pid,
+      initial.pid,
+      initial.pid,
     ]);
     expect(results.map(result => result?.port)).toEqual([
-      initial?.port,
-      initial?.port,
-      initial?.port,
+      initial.port,
+      initial.port,
+      initial.port,
     ]);
 
-    const first = await request(initial!.port, '/first');
-    const second = await request(initial!.port, '/second');
+    const first = await request(initial.port, '/first');
+    const second = await request(initial.port, '/second');
     expect(first).toMatchObject({
       marker: 'initial',
       env: 'from-meta',
-      pid: initial!.pid,
+      pid: initial.pid,
       requestCount: 1,
       url: '/first',
     });
     expect(second).toMatchObject({
-      pid: initial!.pid,
+      pid: initial.pid,
       requestCount: 2,
       url: '/second',
     });
 
     const staticResponse = await fetch(
-      `http://127.0.0.1:${initial!.port}/hello.txt`
+      `http://127.0.0.1:${initial.port}/hello.txt`
     );
     expect(await staticResponse.text()).toBe('hello static');
 
@@ -123,19 +137,20 @@ describe('startDevServer', () => {
       files: filesFor(serverPath),
     });
     expect(updated).not.toBeNull();
-    if (updated?.shutdown) shutdowns.add(updated.shutdown);
-    expect(updated?.pid).not.toBe(initial?.pid);
-    expect(await request(updated!.port, '/updated')).toMatchObject({
+    if (!updated) throw new Error('Expected srvx to reload');
+    if (updated.shutdown) shutdowns.add(updated.shutdown);
+    expect(updated.pid).not.toBe(initial.pid);
+    expect(await request(updated.port, '/updated')).toMatchObject({
       marker: 'updated',
       env: 'from-meta',
-      pid: updated!.pid,
+      pid: updated.pid,
       requestCount: 1,
       url: '/updated',
     });
 
-    await updated!.shutdown?.();
+    await updated.shutdown?.();
     await expect(
-      fetch(`http://127.0.0.1:${updated!.port}/after-shutdown`)
+      fetch(`http://127.0.0.1:${updated.port}/after-shutdown`)
     ).rejects.toThrow();
   });
 

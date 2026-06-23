@@ -3,7 +3,7 @@ import { createConnection } from 'node:net';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { cloneEnv } from '@vercel/build-utils';
+import { cloneEnv, type StartDevServerSuccess } from '@vercel/build-utils';
 import getPort from 'get-port';
 
 const require_ = createRequire(import.meta.url);
@@ -13,19 +13,13 @@ const tsxPath = pathToFileURL(require_.resolve('tsx')).href;
 const STARTUP_TIMEOUT = 5 * 60_000;
 const SHUTDOWN_TIMEOUT = 5_000;
 
-export interface SpawnSrvxOptions {
+interface SpawnSrvxOptions {
   workPath: string;
   entrypoint: string;
   env?: NodeJS.ProcessEnv;
   publicDir: string;
   onStdout?: (data: Buffer) => void;
   onStderr?: (data: Buffer) => void;
-}
-
-export interface SpawnedSrvx {
-  pid: number;
-  port: number;
-  shutdown: () => Promise<void>;
 }
 
 function forwardOutput(
@@ -144,7 +138,9 @@ async function stopChild(child: ChildProcess): Promise<void> {
   await waitForExit(child, 1_000);
 }
 
-export async function spawnSrvx(opts: SpawnSrvxOptions): Promise<SpawnedSrvx> {
+export async function spawnSrvx(
+  opts: SpawnSrvxOptions
+): Promise<StartDevServerSuccess> {
   const port = await getPort({ host: '127.0.0.1' });
   const env = cloneEnv(process.env, opts.env, {
     HOST: '127.0.0.1',
