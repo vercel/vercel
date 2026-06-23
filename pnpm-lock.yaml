@@ -269,9 +269,6 @@ importers:
       '@vercel/nft':
         specifier: 1.10.0
         version: 1.10.0(rollup@4.60.4)
-      '@vercel/node':
-        specifier: workspace:*
-        version: link:../node
       execa:
         specifier: 3.2.0
         version: 3.2.0

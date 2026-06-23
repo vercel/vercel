@@ -5,6 +5,7 @@ import type {
   StartDevServerSuccess,
 } from '@vercel/build-utils';
 import { findEntrypointWithHintOrThrow } from './find-entrypoint.js';
+import { spawnSrvx } from './dev/spawn-srvx.js';
 
 interface PersistentDevServer {
   files: Files;
@@ -22,13 +23,6 @@ const pendingDevServers = new Map<string, PendingDevServer>();
 
 let cleanupHandlersInstalled = false;
 let shuttingDown = false;
-
-// @vercel/node is large and only needed by `vercel dev`, so load it on demand.
-const startNodeDevServer: StartDevServer = async opts => {
-  // @ts-expect-error -- @vercel/node's public types omit builder APIs.
-  const { startDevServer } = await import('@vercel/node');
-  return startDevServer(opts);
-};
 
 function snapshotFiles(files: Files): Files {
   return { ...files };
@@ -185,15 +179,14 @@ export const startDevServer: StartDevServer = async opts => {
     }
 
     const files = snapshotFiles(opts.files);
-    process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS = '1';
-    const promise = startNodeDevServer({
-      ...opts,
-      config: { ...opts.config, helpers: false },
+    const promise = spawnSrvx({
+      workPath: opts.workPath,
       entrypoint,
       publicDir: opts.publicDir ?? 'public',
+      env: opts.meta?.env,
+      onStdout: opts.onStdout,
+      onStderr: opts.onStderr,
     }).then(async result => {
-      if (!result) return null;
-
       const server: PersistentDevServer = { files, result };
       if (shuttingDown) {
         await stopPersistentDevServer(key, server);
