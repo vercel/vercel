@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.31.1
+
+### Patch Changes
+
+- 2158ab6: [vc dev] Add support to `experimentalServicesV2` for bindings in `vc dev`
+
 ## 13.31.0
 
 ### Minor Changes

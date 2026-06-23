@@ -721,6 +721,55 @@ describe('[vercel dev] Multi-service with experimentalServicesV2', () => {
   });
 });
 
+describe('[vercel dev] experimentalServicesV2 service bindings', () => {
+  test('[vercel dev] bindings for different runtime services', async () => {
+    const dir = fixture('services-v2-bindings');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      // Each binding env var is injected as a local URL base ending in "/".
+      const info = await nodeFetch(`http://localhost:${port}/binding-info`);
+      expect(info.status).toBe(200);
+      const infoJson = await info.json();
+      expect(infoJson.node_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
+      expect(infoJson.py_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
+      expect(infoJson.go_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
+      expect(infoJson.ruby_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
+
+      // The gateway reaches each internal service (one per runtime) through its
+      // binding. None of the targets are publicly routed.
+      const nodeRes = await nodeFetch(`http://localhost:${port}/call/node`);
+      expect(nodeRes.status).toBe(200);
+      expect((await nodeRes.text()).trim()).toBe('node_api: ok');
+
+      const pyRes = await nodeFetch(`http://localhost:${port}/call/py`);
+      expect(pyRes.status).toBe(200);
+      expect(await pyRes.json()).toMatchObject({ service: 'py_api', ok: true });
+
+      const goRes = await nodeFetch(`http://localhost:${port}/call/go`);
+      expect(goRes.status).toBe(200);
+      expect((await goRes.text()).trim()).toBe('go_api: pong');
+
+      const rubyRes = await nodeFetch(`http://localhost:${port}/call/ruby`);
+      expect(rubyRes.status).toBe(200);
+      expect((await rubyRes.text()).trim()).toBe('ruby_api: ok');
+    } finally {
+      await dev.kill();
+    }
+  });
+});
+
 describe('[vercel dev] Multi-service auto-detection', () => {
   test('[vercel dev] auto-detect: frontend at root + backend/', async () => {
     const dir = fixture('services-zc-root-backend');

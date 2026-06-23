@@ -65,6 +65,7 @@ export interface Meta {
   filesRemoved?: string[];
   env?: Env;
   buildEnv?: Env;
+  port?: number;
   [key: string]: unknown;
 }
 

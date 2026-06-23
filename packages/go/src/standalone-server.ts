@@ -332,8 +332,12 @@ export async function startStandaloneDevServer(
   }
 
   const startPromise = (async () => {
-    // Use a random port in the ephemeral range
-    const port = Math.floor(Math.random() * (65535 - 49152) + 49152);
+    // Honor the orchestrator-assigned port when present, otherwise use a random port
+    // in the ephemeral range.
+    const port =
+      typeof meta.port === 'number'
+        ? meta.port
+        : Math.floor(Math.random() * (65535 - 49152) + 49152);
 
     const env = cloneEnv(process.env, meta.env, {
       PORT: String(port),

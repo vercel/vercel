@@ -11,6 +11,7 @@
 /packages/edge                           @vercel/ci-cd @vercel/compute
 /packages/functions                      @vercel/ci-cd @vercel/compute @vercel/edge-content
 /packages/go                             @vercel/ci-cd @vercel/team-python
+/internals/ipc-proxy                     @vercel/ci-cd @vercel/team-python
 /packages/ruby                           @vercel/ci-cd @vercel/team-python
 /packages/rust                           @vercel/ci-cd @vercel/team-python @vercel/compute @ecklf
 /crates                                  @vercel/ci-cd @vercel/compute @ecklf

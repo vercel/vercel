@@ -289,6 +289,7 @@ function waitForExit(
 export class ServicesOrchestrator {
   private managedServices = new Map<string, ServiceDevProcess>();
   private managedProcesses = new Map<string, ChildProcess>();
+  private servicePorts = new Map<string, number>();
   private cronTimers: ReturnType<typeof setTimeout>[] = [];
   private stopping = false;
   private exitBackstop: (() => void) | undefined;
@@ -356,6 +357,10 @@ export class ServicesOrchestrator {
     output.debug(`Starting ${this.services.length} services`);
 
     this.registerExitBackstop();
+
+    // Pre-allocate a port for every service before starting any of them,
+    // so if a service requires bindings we can provide them
+    await this.allocateServicePorts();
 
     const startPromises = this.services.map((service, index) =>
       this.startService(service, index).then(result => {
@@ -546,6 +551,20 @@ export class ServicesOrchestrator {
     return this.managedServices;
   }
 
+  // Pre-allocate ports for services in advance, can be subject for
+  //  TOCTOU but for dev purposes it shouldn't be an often case
+  private async allocateServicePorts(): Promise<void> {
+    const used = new Set<number>();
+    for (const service of this.services) {
+      let port = await getPort();
+      while (used.has(port)) {
+        port = await getPort();
+      }
+      used.add(port);
+      this.servicePorts.set(service.name, port);
+    }
+  }
+
   private async startService(
     service: Service,
     colorIndex: number
@@ -559,8 +578,18 @@ export class ServicesOrchestrator {
       ? this.getV2StartSpec(service)
       : this.getV1StartSpec(service);
 
+    const port = this.servicePorts.get(service.name);
+    if (port !== undefined) {
+      spec.env.VERCEL_DEV_PORT = String(port);
+    }
+
     if (spec.builderSpec) {
-      const result = await this.tryStartWithBuilder(service.name, spec, logger);
+      const result = await this.tryStartWithBuilder(
+        service.name,
+        spec,
+        logger,
+        port
+      );
       if (result) {
         return result;
       }
@@ -584,6 +613,7 @@ export class ServicesOrchestrator {
       builderConfig: spec.builderConfig,
       routePrefixes: spec.routePrefixes,
       workspaceLabel: spec.rootLabel,
+      port,
     });
   }
 
@@ -678,12 +708,30 @@ export class ServicesOrchestrator {
 
   private getV2StartSpec(service: ExperimentalServiceV2): ServiceStartSpec {
     const framework = frameworkList.find(f => f.slug === service.framework);
+    const effectiveProcessEnv = cloneEnv(this.envFilesValues, process.env);
+
+    const perServiceEnv: Record<string, string> = {};
+    for (const binding of service.bindings ?? []) {
+      if (binding.type !== 'service' || binding.format !== 'url') {
+        continue;
+      }
+      if (binding.env in effectiveProcessEnv) {
+        continue;
+      }
+      const targetPort = this.servicePorts.get(binding.service);
+      if (targetPort === undefined) {
+        continue;
+      }
+      perServiceEnv[binding.env] = `http://127.0.0.1:${targetPort}/`;
+    }
+
     const env = cloneEnv(
       {
         FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
         BROWSER: 'none',
       },
-      cloneEnv(this.envFilesValues, process.env)
+      effectiveProcessEnv,
+      perServiceEnv
     );
 
     const root = service.root || '.';
@@ -711,7 +759,8 @@ export class ServicesOrchestrator {
   private async tryStartWithBuilder(
     name: string,
     spec: ServiceStartSpec,
-    logger: ServiceLogger
+    logger: ServiceLogger,
+    port?: number
   ): Promise<ServiceDevProcess | null> {
     if (!spec.builderSpec) {
       return null;
@@ -752,6 +801,7 @@ export class ServicesOrchestrator {
         meta: {
           isDev: true,
           env: spec.env,
+          port,
           serviceCount: this.services.length,
           pythonServiceCount: this.pythonServiceCount,
           syncDependencies: true,
@@ -801,6 +851,7 @@ export class ServicesOrchestrator {
     builderConfig: Config | undefined;
     routePrefixes: string[];
     workspaceLabel: string;
+    port?: number;
   }): Promise<ServiceDevProcess> {
     const {
       name,
@@ -816,7 +867,7 @@ export class ServicesOrchestrator {
 
     await this.syncDependencies(builderConfig, workspacePath, logger);
 
-    const port = await getPort();
+    const port = params.port ?? (await getPort());
     env.PORT = `${port}`;
 
     // Add node_modules/.bin to PATH
