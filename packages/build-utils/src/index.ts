@@ -151,6 +151,7 @@ export {
   getMaxDurationSchema,
 } from './max-duration';
 export * from './package-manifest';
+export * from './deploy-manifest';
 export { generateProjectManifest } from './node-diagnostics';
 export {
   generateRubyProjectManifest,

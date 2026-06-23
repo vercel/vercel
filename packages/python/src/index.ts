@@ -467,10 +467,15 @@ export const build: BuildVX = async ({
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
-  // Track whether a custom build or install command was used.
-  // When true, runtime dependency installation is disabled because
-  // custom commands may install dependencies not tracked in uv.lock.
+  // Track whether a custom install command was used. When true, runtime
+  // dependency installation is disabled because custom install commands may
+  // install dependencies not tracked in uv.lock.
   let hasCustomCommand = false;
+  // Track whether a custom build command/script was used. When true, compileall
+  // is disabled (a custom build may emit its own bytecode or bypass the venv
+  // layout compileall assumes). It does not affect runtime installation, since
+  // dependencies are still installed normally.
+  let hasCustomBuildCommand = false;
 
   const target = getTargetPlatform(meta.isDev ?? false);
 
@@ -787,12 +792,16 @@ export const build: BuildVX = async ({
             env: pythonEnv,
             cwd: workPath,
           });
+          hasCustomBuildCommand = true;
         } else {
-          await runPyprojectScript(
+          const ranBuildScript = await runPyprojectScript(
             workPath,
             ['vercel-build', 'now-build', 'build'],
             pythonEnv
           );
+          if (ranBuildScript) {
+            hasCustomBuildCommand = true;
+          }
         }
       });
   }
@@ -946,6 +955,7 @@ export const build: BuildVX = async ({
   const automaticCompileAllEnabled = shouldUseCompileAll({
     isDev: meta.isDev,
     hasCustomCommand,
+    hasCustomBuildCommand,
   });
 
   const predefinedExcludes = [
@@ -1142,7 +1152,14 @@ export const build: BuildVX = async ({
         ) {
           announceLargeFunction();
         }
-        if (automaticCompileAllEnabled) {
+        // Compileall is only for large functions. This branch also covers small
+        // bundles that fit the standard size limit, so gate on size to skip
+        // them — never precompile bytecode for a standard-size function.
+        // (automaticCompileAllEnabled already requires the large-functions flag.)
+        if (
+          automaticCompileAllEnabled &&
+          depAnalysis.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES
+        ) {
           await runCompileAllAndFillBytecode();
         }
       }
