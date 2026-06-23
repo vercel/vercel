@@ -1559,14 +1559,14 @@ export default class DevServer {
       req.headers[name] = value;
     }
 
-    // Forward the destination-resolved path to the service. When the rewrite's
-    // `destination.path` rewrites the URL (e.g. `path: "/$1"` to strip a
-    // `/whoami` prefix), the service must receive that path — not the original
-    // request URL. Without a `path`, `lookupPath` equals the original pathname,
-    // so this is a no-op.
-    if (lookupPath !== originalPathname) {
-      req.url = `${lookupPath}${parsed.search || ''}`;
-    }
+    // The original request URL is forwarded to the service unchanged. A
+    // rewrite's `destination.path` only resolves `lookupPath` for matching the
+    // service's own route table (headers/redirects/routes) above — it does not
+    // rewrite the path the service receives. This matches the established
+    // `experimentalServicesV2` dev semantics (see the services-v2 routing
+    // integration test): e.g. `/svc/echo` routed via `path: "/api/:path*"`
+    // picks up the backend's `/api/(.*)` header rule but the service still
+    // receives `/svc/echo`.
 
     this.setResponseHeaders(res, requestId);
     debug(`Delegating to service "${serviceName}": ${origin}`);
