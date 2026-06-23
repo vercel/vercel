@@ -686,11 +686,21 @@ describe('@vercel/container', () => {
         return fakeChild('');
       });
 
+      // Host/shell-only vars must not leak into the Linux container (e.g. macOS
+      // TMPDIR breaks apps that write to the OS temp dir). These arrive via the
+      // orchestrator's `meta.env` (which folds in the host `process.env`).
       const result = await startDevServer({
         ...createBuildOptions({ runtime: 'container' }),
         entrypoint: 'apps/svc/Dockerfile',
         service: { name: 'api', type: 'web' },
-        meta: { isDev: true, env: { FOO: 'bar' } },
+        meta: {
+          isDev: true,
+          env: {
+            FOO: 'bar',
+            TMPDIR: '/var/folders/qb/host-only/T',
+            HOME: '/Users/dev',
+          },
+        },
       } as any);
 
       expect(result).toMatchObject({ port: 54321, pid: 4242 });
@@ -715,8 +725,14 @@ describe('@vercel/container', () => {
       const envFileIdx = runArgs.indexOf('--env-file');
       expect(envFileIdx).toBeGreaterThanOrEqual(0);
       const envFileContents = readFileSync(runArgs[envFileIdx + 1], 'utf8');
-      expect(envFileContents).toContain('PORT=3000');
-      expect(envFileContents).toContain('FOO=bar');
+      const envKeys = envFileContents
+        .split('\n')
+        .map(line => line.split('=')[0]);
+      expect(envKeys).toContain('PORT');
+      expect(envKeys).toContain('FOO');
+      // Host/shell-only vars are filtered out (from process.env and meta.env).
+      expect(envKeys).not.toContain('TMPDIR');
+      expect(envKeys).not.toContain('HOME');
       await result!.shutdown!();
     });
 

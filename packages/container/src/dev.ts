@@ -10,6 +10,55 @@ import path from 'node:path';
 import { debug, readString, withSpan } from './util';
 
 /**
+ * Host/shell environment variables that are meaningful only on the developer's
+ * machine and must not leak into the Linux container. The classic failure is
+ * macOS `TMPDIR` (e.g. `/var/folders/.../T`): apps that write to the OS temp
+ * dir (Ghost's multer upload middleware, etc.) then crash with `EACCES` because
+ * that path doesn't exist or isn't writable inside the container. The container
+ * provides its own values for these.
+ */
+const HOST_ONLY_ENV = new Set([
+  'TMPDIR',
+  'TMP',
+  'TEMP',
+  'HOME',
+  'PATH',
+  'PWD',
+  'OLDPWD',
+  'SHELL',
+  'SHLVL',
+  'USER',
+  'LOGNAME',
+  'TERM',
+  'TERM_PROGRAM',
+  'TERM_PROGRAM_VERSION',
+  'TERM_SESSION_ID',
+  'COLORTERM',
+  'LANG',
+  'LC_ALL',
+  'LC_CTYPE',
+  'COMMAND_MODE',
+  'SECURITYSESSIONID',
+  '__CF_USER_TEXT_ENCODING',
+  '__CFBundleIdentifier',
+]);
+
+/**
+ * Whether an env var should be excluded from the container. Drops the
+ * host-only denylist plus macOS/shell-internal prefixes (`__`, `XPC_`, `SSH_`,
+ * `Apple`) that only make sense on the host.
+ */
+function isHostOnlyEnvVar(key: string): boolean {
+  return (
+    HOST_ONLY_ENV.has(key) ||
+    key.startsWith('__') ||
+    key.startsWith('XPC_') ||
+    key.startsWith('SSH_') ||
+    key.startsWith('Apple')
+  );
+}
+
+/**
  * Write env vars to a temp Docker `--env-file` (KEY=VALUE per line). Values
  * containing newlines are skipped (the env-file format is line-based and can't
  * represent them). Returns the file path.
@@ -314,17 +363,20 @@ export async function startDevServer(
 
       // Env precedence: CLI process env, then the orchestrator's per-service
       // env (service URLs, resolved .env values), then a `PORT` the app honors.
-      // Passed via a temp `--env-file` to keep secrets off the command line and
-      // avoid arg-length limits.
+      // Host/shell-only vars (TMPDIR, HOME, PATH, …) are filtered out: they
+      // describe the developer's machine, not the Linux container, and leaking
+      // them breaks apps that rely on container-native values (see
+      // `isHostOnlyEnvVar`). Passed via a temp `--env-file` to keep secrets off
+      // the command line and avoid arg-length limits.
       const mergedEnv: Record<string, string> = {};
       for (const [key, value] of Object.entries(process.env)) {
-        if (typeof value === 'string') {
+        if (typeof value === 'string' && !isHostOnlyEnvVar(key)) {
           mergedEnv[key] = value;
         }
       }
       const metaEnv = (meta?.env ?? {}) as Record<string, string | undefined>;
       for (const [key, value] of Object.entries(metaEnv)) {
-        if (typeof value === 'string') {
+        if (typeof value === 'string' && !isHostOnlyEnvVar(key)) {
           mergedEnv[key] = value;
         }
       }
