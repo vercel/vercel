@@ -1327,7 +1327,22 @@ test('[vc build] should nest experimentalServicesV2 emitted by latest Next.js co
   const outputDirectory = path.join(directory, '.vercel/output');
   const config = await fs.readJSON(path.join(outputDirectory, 'config.json'));
   expect(config.experimentalServices).toBeUndefined();
-  expect(config.services).toBeUndefined();
+  // `experimentalServicesV2` services are recorded in the `services` array,
+  // each tagged with its `schema` discriminant.
+  expect(config.services).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        schema: 'experimentalServicesV2',
+        name: 'web',
+        framework: 'nextjs',
+      }),
+      expect.objectContaining({
+        schema: 'experimentalServicesV2',
+        name: 'nitro-api',
+        framework: 'nitro',
+      }),
+    ])
+  );
   expect(config.experimentalServicesV2).toEqual({
     web: expect.objectContaining({
       framework: 'nextjs',
