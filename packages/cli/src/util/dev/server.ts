@@ -11,6 +11,7 @@ import minimatch from 'minimatch';
 import httpProxy from 'http-proxy-node16';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
+import PCRE from 'pcre-to-regexp';
 import { watch, type FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
 import path, { isAbsolute, basename, dirname, extname, join } from 'path';
@@ -51,6 +52,7 @@ import {
   detectApiExtensions,
   isOfficialRuntime,
   isExperimentalService,
+  isExperimentalServiceV2,
   type Service,
 } from '@vercel/fs-detectors';
 import { frameworkList } from '@vercel/frameworks';
@@ -63,7 +65,7 @@ import { MissingDotenvVarsError } from '../errors-ts';
 import { getVercelDirectory } from '../projects/link';
 import { staticFiles as getFiles } from '../get-files';
 import { validateConfig } from '../validate-config';
-import { devRouter, getRoutesTypes } from './router';
+import { devRouter, getRoutesTypes, resolveRouteParameters } from './router';
 import getMimeType from './mime-type';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
 import { generateErrorMessage, generateHttpStatusDescription } from './errors';
@@ -188,6 +190,7 @@ export default class DevServer {
   private services?: Service[];
   private orchestrator?: ServicesOrchestrator;
   private queueBroker?: QueueBroker;
+  private serviceRoutesTable?: Map<string, Route[]>;
 
   private vercelConfigWarning: boolean;
   private getVercelConfigPromise: Promise<VercelConfig> | null;
@@ -1422,14 +1425,42 @@ export default class DevServer {
     return headers;
   }
 
+  private getServiceRouteTable(serviceName: string): Route[] {
+    if (!this.serviceRoutesTable) {
+      this.serviceRoutesTable = new Map();
+      for (const service of this.services || []) {
+        if (!isExperimentalServiceV2(service)) continue;
+
+        const { routes, error } = getTransformedRoutes({
+          routes: service.routes,
+          rewrites: service.rewrites,
+          redirects: service.redirects,
+          headers: service.headers,
+          cleanUrls: service.cleanUrls,
+          trailingSlash: service.trailingSlash,
+        });
+        if (error) {
+          output.warn(
+            `Invalid routes for service "${service.name}": ${error.message}`
+          );
+          this.serviceRoutesTable.set(service.name, []);
+        } else {
+          this.serviceRoutesTable.set(service.name, routes || []);
+        }
+      }
+    }
+    return this.serviceRoutesTable.get(serviceName) || [];
+  }
+
   private async delegateToService(
     req: http.IncomingMessage,
     res: http.ServerResponse,
     requestId: string,
-    matchedRoute: RouteWithSrc & { destination: ServiceDestination }
+    matchedRoute: RouteWithSrc & { destination: ServiceDestination },
+    vercelConfig: VercelConfig
   ): Promise<void> {
     const { debug } = output;
-    const { service: serviceName } = matchedRoute.destination;
+    const { service: serviceName, path: destPath } = matchedRoute.destination;
 
     const origin = this.orchestrator?.getServiceOrigin(serviceName);
     if (!origin) {
@@ -1446,11 +1477,60 @@ export default class DevServer {
       return;
     }
 
-    // Pass-through: once a top-level rewrite has matched a service, proxy the
-    // request to the running service as-is. The service receives the original
-    // request URL and is responsible for its own internal routing. The CLI does
-    // not rewrite the URL or apply per-service routes/redirects/headers in dev.
+    // Resolve lookup path for the service's route table
+    const parsed = url.parse(req.url || '/');
+    const originalPathname = parsed.pathname || '/';
+    let lookupPath = originalPathname;
+    if (typeof destPath === 'string' && matchedRoute.src) {
+      const keys: string[] = [];
+      const matcher = PCRE(
+        `%${matchedRoute.src}%${this.isCaseSensitive() ? '' : 'i'}`,
+        keys
+      );
+      const match =
+        matcher.exec(originalPathname) ||
+        matcher.exec(originalPathname.substring(1));
+      lookupPath = match
+        ? resolveRouteParameters(destPath, match, keys)
+        : destPath;
+    }
+
+    const serviceRoutes = this.getServiceRouteTable(serviceName);
     const proxyHeaders = this.getProxyHeaders(req, requestId, false);
+    if (serviceRoutes.length > 0) {
+      const serviceResult = await devRouter(
+        `${lookupPath}${parsed.search || ''}`,
+        req.method,
+        serviceRoutes,
+        this,
+        vercelConfig
+      );
+
+      const location = serviceResult.headers?.location;
+      if (
+        location &&
+        typeof serviceResult.status === 'number' &&
+        serviceResult.status >= 300 &&
+        serviceResult.status < 400
+      ) {
+        await this.sendRedirect(
+          req,
+          res,
+          requestId,
+          location,
+          serviceResult.status
+        );
+        return;
+      }
+
+      if (serviceResult.headers) {
+        for (const [name, value] of Object.entries(serviceResult.headers)) {
+          if (name === 'location') continue;
+          res.setHeader(name, value);
+        }
+      }
+    }
+
     for (const [name, value] of Object.entries(proxyHeaders)) {
       req.headers[name] = value;
     }
@@ -2133,7 +2213,8 @@ export default class DevServer {
           req,
           res,
           requestId,
-          routeResult.matched_route
+          routeResult.matched_route,
+          vercelConfig
         );
       }
 
