@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { getContext } from './get-context';
 
-const SCOPE_NAME = '@vercel/functions';
+const SCOPE_NAME = 'vercel.functions';
 const INTERNAL_SPAN_KIND = 1;
 
 export type Spans = {
