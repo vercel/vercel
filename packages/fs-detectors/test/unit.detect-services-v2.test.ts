@@ -12,11 +12,11 @@ function servicesV2(services: { schema: string }[]): ExperimentalServiceV2[] {
   );
 }
 
-describe('detectServices (experimentalServicesV2)', () => {
-  it('resolves a node backend framework service to @vercel/backends', async () => {
+describe('detectServices (services)', () => {
+  it('resolves canonical services config to @vercel/backends', async () => {
     const fs = new VirtualFilesystem({
       'vercel.json': vercelJson({
-        experimentalServicesV2: {
+        services: {
           api: { root: 'api', framework: 'express' },
         },
       }),
@@ -42,6 +42,26 @@ describe('detectServices (experimentalServicesV2)', () => {
     });
     expect(api.builder.use).toBe('@vercel/backends');
     expect(api.builder.src).toBe('api/index.js');
+  });
+
+  it('rejects services together with its deprecated alias', async () => {
+    const fs = new VirtualFilesystem({
+      'vercel.json': vercelJson({
+        services: { web: { root: 'web', framework: 'nextjs' } },
+        experimentalServicesV2: {
+          api: { root: 'api', framework: 'express' },
+        },
+      }),
+    });
+
+    const result = await detectServices({ fs });
+
+    expect(result.services).toEqual([]);
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        code: 'SERVICES_AND_EXPERIMENTAL_SERVICES_V2',
+      }),
+    ]);
   });
 
   it('resolves a runtime + file entrypoint service to the runtime builder', async () => {

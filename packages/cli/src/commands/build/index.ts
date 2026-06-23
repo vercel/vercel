@@ -202,7 +202,7 @@ function getGeneratedServiceAlreadyBuiltWarning(service: Service) {
     `Detected already-built service "${service.name}" from lazily generated ` +
     `\`.vercel/output/config.json\` (framework: ${framework}, entrypoint: ${entrypoint}). ` +
     'It will not be treated as a service because its build output already exists at the top level. ' +
-    'Configure it in `vercel.json` as an `experimentalServicesV2` entry to remove this warning.'
+    'Configure it in `vercel.json` as a `services` entry to remove this warning.'
   );
 }
 
@@ -774,19 +774,16 @@ async function doBuild(
   let zeroConfigFallbackRoutes: Route[] = [];
   let detectedServices: ExperimentalService[] | undefined;
   let detectedResolvedServices: Service[] | undefined;
-  const localConfigWithServicesV2 = localConfig as VercelConfig & {
-    experimentalServicesV2?: ExperimentalServicesV2;
-  };
   const hasExperimentalServicesV1ConfiguredInVercelConfig = hasNonEmptyObject(
     localConfig.experimentalServices
   );
   const hasExperimentalServicesV2ConfiguredInVercelConfig = hasNonEmptyObject(
-    localConfigWithServicesV2.experimentalServicesV2
+    localConfig.services ?? localConfig.experimentalServicesV2
   );
   const configuredExperimentalServicesV2 =
     hasExperimentalServicesV2ConfiguredInVercelConfig &&
-    localConfigWithServicesV2.experimentalServicesV2
-      ? localConfigWithServicesV2.experimentalServicesV2
+    (localConfig.services ?? localConfig.experimentalServicesV2)
+      ? (localConfig.services ?? localConfig.experimentalServicesV2)
       : undefined;
   let nestExperimentalServicesV2Output =
     hasExperimentalServicesV2ConfiguredInVercelConfig;
@@ -811,9 +808,8 @@ async function doBuild(
     const detectedBuilders = await span.child('vc.detectBuilders').trace(() =>
       detectBuilders(files, pkg, {
         ...localConfig,
-        ...(configuredExperimentalServicesV2 && {
-          experimentalServicesV2: configuredExperimentalServicesV2,
-        }),
+        services: undefined,
+        experimentalServicesV2: configuredExperimentalServicesV2,
         projectSettings,
         ignoreBuildScript: true,
         featHandleMiss: true,
@@ -1732,11 +1728,13 @@ async function doBuild(
         .trace(() =>
           detectBuilders(files, pkg, {
             ...localConfig,
+            services: undefined,
             ...(generatedExperimentalServicesV2Config
               ? {
                   experimentalServicesV2: generatedExperimentalServicesV2Config,
                 }
               : {
+                  experimentalServicesV2: undefined,
                   experimentalServices: generatedExperimentalServicesV1Config,
                 }),
             projectSettings,

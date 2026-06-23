@@ -2626,7 +2626,7 @@ fs.writeFileSync(
     ]);
   });
 
-  it('should nest vercel.json experimentalServicesV2 outputs under service directories', async () => {
+  it('should normalize vercel.json services to the V2 build output wire format', async () => {
     const cwd = await getWriteableDirectory();
     const output = join(cwd, '.vercel', 'output');
     await fs.ensureDir(join(cwd, '.vercel'));
@@ -2642,7 +2642,7 @@ fs.writeFileSync(
       private: true,
     });
     await fs.writeJSON(join(cwd, 'vercel.json'), {
-      experimentalServicesV2: {
+      services: {
         ui: {
           root: '.',
           entrypoint: 'ui.js',
@@ -2942,7 +2942,7 @@ writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, nul
       const exitCode = await build(client);
       expect(exitCode).toBe(0);
       await expect(client.stderr).toOutput(
-        'Detected already-built service "ui" from lazily generated `.vercel/output/config.json` (framework: vite, entrypoint: package.json). It will not be treated as a service because its build output already exists at the top level. Configure it in `vercel.json` as an `experimentalServicesV2` entry to remove this warning.'
+        'Detected already-built service "ui" from lazily generated `.vercel/output/config.json` (framework: vite, entrypoint: package.json). It will not be treated as a service because its build output already exists at the top level. Configure it in `vercel.json` as a `services` entry to remove this warning.'
       );
 
       const config = await fs.readJSON(join(output, 'config.json'));
