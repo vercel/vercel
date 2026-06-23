@@ -7,6 +7,7 @@ import { availableParallelism, platform, arch, tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { pipeline } from 'node:stream/promises';
 import { promisify } from 'node:util';
+import { patchWindowsSmallIcuGenccode } from './patch-node-source.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -47,6 +48,10 @@ const sourceDir = join(buildRoot, `node-${nodeTag}`);
 try {
   await downloadAndVerifySource(sourceArchive);
   await run('tar', ['-xzf', sourceArchive], buildRoot);
+
+  if (nodePlatform === 'win') {
+    await patchWindowsSmallIcuGenccode(sourceDir);
+  }
 
   const builtNode = await buildNode(sourceDir);
   await fs.mkdir(dirname(outputNode), { recursive: true });

@@ -7,9 +7,12 @@ on:
       - 'packages/cli/pkg.js'
       - 'packages/cli/pkg.config.mjs'
       - 'packages/cli/scripts/build-binary.mjs'
+      - 'packages/cli/scripts/build-binary-node.mjs'
+      - 'packages/cli/scripts/patch-node-source.mjs'
       - 'packages/vc-native/**'
       - '.github/workflows/validate-binary.yml'
       - '.github/workflows/release-binary.yml'
+      - 'turbo.node-runtime.json'
   workflow_dispatch:
 
 concurrency:
@@ -27,10 +30,18 @@ jobs:
             target: node24.14.1-linux-x64
             asset: vercel-linux-x64
             ext: ''
-          - runner: windows-latest
+            custom_node_path: .node-runtime/node-v24.14.1-linux-x64-small-icu/bin/node
+            custom_node_platform: linux
+            custom_node_arch: x64
+          # Node 24.14.1 does not build with Clang 22 on the VS 2026 image.
+          # Keep this aligned with the Windows runner in release-binary.yml.
+          - runner: windows-2022
             target: node24.14.1-win-x64
             asset: vercel-windows-x64
             ext: '.exe'
+            custom_node_path: .node-runtime/node-v24.14.1-win-x64-small-icu/node.exe
+            custom_node_platform: win
+            custom_node_arch: x64
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
@@ -66,15 +77,29 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Linux build tools
+        if: ${{ matrix.custom_node_platform == 'linux' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
       - name: Build workspace packages
         run: pnpm build
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
+      - name: Build custom Node runtime
+        env:
+          VERCEL_CLI_NODE_VERSION: 24.14.1
+          VERCEL_CLI_NODE_PLATFORM: ${{ matrix.custom_node_platform }}
+          VERCEL_CLI_NODE_ARCH: ${{ matrix.custom_node_arch }}
+        run: pnpm turbo --no-update-notifier --root-turbo-json turbo.node-runtime.json run //#build-binary-node --output-logs=new-only
+
       - name: Build binary
         working-directory: packages/cli
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          VERCEL_CLI_BINARY_NODE_PATH: ${{ matrix.custom_node_path }}
         run: node scripts/build-binary.mjs --target ${{ matrix.target }} --output ./dist-bin/${{ matrix.asset }}${{ matrix.ext }}
 
       - name: Smoke test binary version
