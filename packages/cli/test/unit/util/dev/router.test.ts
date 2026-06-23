@@ -487,4 +487,52 @@ describe('devRouter', () => {
     expect(result.status).toBe(410);
     expect(result.responseTransforms).toBeUndefined();
   });
+
+  it('does not store a `check` + status route’s own transforms on the exit', async () => {
+    const devServer = {
+      isCaseSensitive: () => false,
+      hasFilesystem: async () => false,
+      envConfigs: { runEnv: {} },
+    } as unknown as Parameters<typeof devRouter>[3];
+    const routesConfig = [
+      {
+        src: '/(.*)',
+        continue: true,
+        transforms: [
+          {
+            type: 'response.headers' as const,
+            op: 'set' as const,
+            target: { key: 'x-prior' },
+            args: 'prior',
+          },
+        ],
+      },
+      {
+        src: '/gone',
+        check: true,
+        status: 410,
+        transforms: [
+          {
+            type: 'response.headers' as const,
+            op: 'set' as const,
+            target: { key: 'x-should-not-apply' },
+            args: '1',
+          },
+        ],
+      },
+    ];
+    const result = await devRouter(
+      '/gone',
+      'GET',
+      routesConfig,
+      devServer,
+      {} as unknown as Parameters<typeof devRouter>[4]
+    );
+
+    expect(result.status).toBe(410);
+    expect(result.responseTransforms).toHaveLength(1);
+    expect(result.responseTransforms?.[0]).toMatchObject({
+      target: { key: 'x-prior' },
+    });
+  });
 });

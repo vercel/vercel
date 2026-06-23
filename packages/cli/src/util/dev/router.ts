@@ -165,12 +165,14 @@ export async function devRouter(
           );
 
           if (!hasDestFile) {
-            if (routeTransforms.length > 0) {
-              responseTransforms = routeTransforms;
-            }
             if (routeConfig.status && phase !== 'miss') {
               // Equivalent to now-proxy exit_with_status() function
             } else if (missRoutes && missRoutes.length > 0) {
+              // A `check` rewrite that misses proceeds past the transform step,
+              // so its transforms become the latest response context.
+              if (routeTransforms.length > 0) {
+                responseTransforms = routeTransforms;
+              }
               // Trigger a 'miss'
               const missResult = await devRouter(
                 destPath,
@@ -201,6 +203,11 @@ export async function devRouter(
             } else {
               if (routeConfig.status && phase === 'miss') {
                 status = routeConfig.status;
+              }
+              // The rewrite proceeds past the transform step, so its transforms
+              // become the latest response context.
+              if (routeTransforms.length > 0) {
+                responseTransforms = routeTransforms;
               }
               reqPathname = destPath;
               continue;
