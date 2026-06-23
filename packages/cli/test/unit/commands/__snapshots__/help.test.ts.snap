@@ -2155,6 +2155,22 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    a   
                                    Ver…
                                    Team
+  verify       domain              Che…
+                                   a   
+                                   dom…
+                                   DNS 
+                                   con…
+                                   and 
+                                   exp…
+                                   what
+                                   to  
+                                   fix 
+                                   when
+                                   it  
+                                   is  
+                                   mis…
+                                   or  
+                                   unv…
 
 
   Global Options:
@@ -2231,6 +2247,9 @@ exports[`help command > domains help output snapshots > domains help column widt
   transfer-in  domain              Transfer in a domain name to Vercel         
   remove       domain              Remove ownership of a domain name from a    
                                    Vercel Team                                 
+  verify       domain              Check a domain's DNS configuration and      
+                                   explain what to fix when it is misconfigured
+                                   or unverified                               
 
 
   Global Options:
@@ -2270,6 +2289,8 @@ exports[`help command > domains help output snapshots > domains help column widt
   search       query               Discover domain-name candidates from a keyword or fragment                          
   transfer-in  domain              Transfer in a domain name to Vercel                                                 
   remove       domain              Remove ownership of a domain name from a Vercel Team                                
+  verify       domain              Check a domain's DNS configuration and explain what to fix when it is misconfigured 
+                                   or unverified                                                                       
 
 
   Global Options:
@@ -2520,6 +2541,54 @@ exports[`help command > domains help output snapshots > domains transfer-in help
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
+
+"
+`;
+
+exports[`help command > domains help output snapshots > domains verify help output snapshots > domains verify help column width 120 1`] = `
+"
+  ▲ vercel domains verify domain [options]
+
+  Check a domain's DNS configuration and explain what to fix when it is misconfigured or unverified                     
+
+  Options:
+
+  -F,  --format <FORMAT>       Specify the output format (json)                                                              
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
+       --strict                Check DNS for the exact domain only, without falling back to the parent zone configuration    
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Check why a domain is not working
+
+    $ vercel domains verify example.com
+
+  - Check a domain against a specific project
+
+    $ vercel domains verify example.com --project my-site
+
+  - JSON output (the exit code is non-zero when the domain is misconfigured or unverified)
+
+    $ vercel domains verify example.com --format json
+
+  - Agent-friendly output with status, reason, and suggested next commands
+
+    $ vercel domains verify example.com --non-interactive
 
 "
 `;

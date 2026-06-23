@@ -257,6 +257,71 @@ describe('ai-transform', () => {
       });
     });
 
+    it('should convert all request path transforms', () => {
+      const generated: GeneratedRoute = {
+        name: 'Path Transform',
+        description: '',
+        pathCondition: { value: '/api/(.*)', syntax: 'regex' },
+        actions: [
+          {
+            type: 'modify',
+            subType: 'transform-request-path',
+            requestPath: {
+              value: '/$PATH_PREFIX/$1',
+              op: 'set',
+              env: ['PATH_PREFIX'],
+            },
+          },
+          {
+            type: 'modify',
+            subType: 'transform-request-path',
+            requestPath: { value: '/rewritten/$1', op: 'set' },
+          },
+        ],
+      };
+
+      const result = generatedRouteToAddInput(generated);
+
+      expect(result.route.transforms).toEqual([
+        {
+          type: 'request.path',
+          op: 'set',
+          args: '/$PATH_PREFIX/$1',
+          env: ['PATH_PREFIX'],
+        },
+        {
+          type: 'request.path',
+          op: 'set',
+          args: '/rewritten/$1',
+        },
+      ]);
+    });
+
+    it('should preserve path-to-regexp request path args', () => {
+      const generated: GeneratedRoute = {
+        name: 'Path Transform',
+        description: '',
+        pathCondition: { value: '/api/:path*', syntax: 'path-to-regexp' },
+        actions: [
+          {
+            type: 'modify',
+            subType: 'transform-request-path',
+            requestPath: { value: '/:path*', op: 'set' },
+          },
+        ],
+      };
+
+      const result = generatedRouteToAddInput(generated);
+
+      expect(result.route.transforms).toEqual([
+        {
+          type: 'request.path',
+          op: 'set',
+          args: '/:path*',
+        },
+      ]);
+    });
+
     it('should combine multiple action types', () => {
       const generated: GeneratedRoute = {
         name: 'Full Route',
@@ -568,13 +633,102 @@ describe('ai-transform', () => {
       ]);
     });
 
-    it('should default srcSyntax to regex when undefined', () => {
+    it('should convert all request path transforms', () => {
       const rule = {
         id: 'r9',
+        name: 'Path',
+        route: {
+          src: '/test/(.*)',
+          transforms: [
+            {
+              type: 'request.path',
+              op: 'set',
+              args: '/$PATH_PREFIX/$1',
+              env: ['PATH_PREFIX'],
+            },
+            {
+              type: 'request.path',
+              op: 'set',
+              args: '/rewritten/$1',
+            },
+          ],
+        },
+        enabled: true,
+        position: 8,
+        routeType: 'transform',
+      } as RoutingRule;
+
+      const result = routingRuleToCurrentRoute(rule);
+
+      const modifyActions = result.actions.filter(
+        a => a.type === 'modify' && a.subType === 'transform-request-path'
+      );
+      expect(modifyActions).toEqual([
+        {
+          type: 'modify',
+          subType: 'transform-request-path',
+          requestPath: {
+            value: '/$PATH_PREFIX/$1',
+            op: 'set',
+            env: ['PATH_PREFIX'],
+          },
+        },
+        {
+          type: 'modify',
+          subType: 'transform-request-path',
+          requestPath: {
+            value: '/rewritten/$1',
+            op: 'set',
+          },
+        },
+      ]);
+    });
+
+    it('should preserve request path args when editing a path-to-regexp route', () => {
+      const rule = {
+        id: 'r10',
+        name: 'Path',
+        route: {
+          src: '/api/:path*',
+          transforms: [
+            {
+              type: 'request.path',
+              op: 'set',
+              args: '/:path*',
+            },
+          ],
+        },
+        srcSyntax: 'path-to-regexp',
+        enabled: true,
+        position: 9,
+        routeType: 'transform',
+      } as RoutingRule;
+
+      const result = routingRuleToCurrentRoute(rule);
+
+      expect(
+        result.actions.filter(
+          a => a.type === 'modify' && a.subType === 'transform-request-path'
+        )
+      ).toEqual([
+        {
+          type: 'modify',
+          subType: 'transform-request-path',
+          requestPath: {
+            value: '/:path*',
+            op: 'set',
+          },
+        },
+      ]);
+    });
+
+    it('should default srcSyntax to regex when undefined', () => {
+      const rule = {
+        id: 'r11',
         name: 'No Syntax',
         route: { src: '^/test$', dest: '/dest' },
         enabled: true,
-        position: 8,
+        position: 9,
         routeType: 'rewrite',
       } as RoutingRule;
 

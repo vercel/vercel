@@ -1,5 +1,12 @@
 # @vercel/oidc
 
+## 3.6.2
+
+### Patch Changes
+
+- Updated dependencies [3f21605]
+  - @vercel/cli-exec@1.0.0
+
 ## 3.6.1
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @vercel/functions
 
+## 3.7.2
+
+### Patch Changes
+
+- 071569d: Add a `maxPayload` option to `experimental_upgradeWebSocket()`, defaulting to 256 KiB.
+  - @vercel/oidc@3.6.2
+
 ## 3.7.1
 
 ### Patch Changes

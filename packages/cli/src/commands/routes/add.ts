@@ -727,7 +727,7 @@ export default async function add(client: Client, argv: string[]) {
   };
 
   // Populate env fields for $VAR references
-  populateRouteEnv(routeInput.route);
+  populateRouteEnv(routeInput.route, routeInput.srcSyntax);
 
   // --- Create the route ---
   const addStamp = stamp();
@@ -1113,7 +1113,7 @@ async function handleAIAdd(
       };
 
       await runInteractiveEditLoop(client, tempRule);
-      populateRouteEnv(tempRule.route);
+      populateRouteEnv(tempRule.route, tempRule.srcSyntax);
 
       const addStamp = stamp();
       output.spinner(`Adding route "${tempRule.name}"`);
@@ -1173,7 +1173,7 @@ async function createFromGenerated(
   skipPrompts: boolean | undefined
 ): Promise<number> {
   const routeInput = generatedRouteToAddInput(generated);
-  populateRouteEnv(routeInput.route);
+  populateRouteEnv(routeInput.route, routeInput.srcSyntax);
 
   const addStamp = stamp();
   output.spinner(`Adding route "${routeInput.name}"`);

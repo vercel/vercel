@@ -406,6 +406,12 @@ jobs:
         with:
           version: '0.10.11'
 
+      - name: Install Ruby + Bundler
+        if: ${{ matrix.packageName == 'vercel' }}
+        uses: ruby/setup-ruby@9eb537ca036ebaed86729dcb9309076e4c5c3b74 # v1
+        with:
+          ruby-version: '3.3'
+
       - run: pnpm install
 
       - name: Wait for deployment tarballs

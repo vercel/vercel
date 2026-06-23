@@ -27,6 +27,7 @@ import {
   inferRuntimeFromFramework,
   inferServiceRuntime,
   INTERNAL_SERVICE_PREFIX,
+  stripTrailingSlash,
 } from './utils';
 import { frameworkList } from '@vercel/frameworks';
 import { detectFrameworks } from '../detect-framework';
@@ -83,7 +84,9 @@ export async function getServiceFs(
   if (!root) {
     return { fs };
   }
-  const normalizedRoot = posixPath.normalize(root);
+  // Strip any trailing slash `posixPath.normalize` leaves behind so the chdir
+  // path matches what callers persist as the service `root`.
+  const normalizedRoot = stripTrailingSlash(posixPath.normalize(root));
   if (!(await fs.hasPath(normalizedRoot))) {
     return {
       fs,

@@ -547,12 +547,13 @@ class ASGIMiddleware:
         receive: _ASGIReceive,
         send: _ASGISend,
     ) -> None:
-        if scope.get("type") != "http":
-            # Non-HTTP traffic is forwarded verbatim
+        scope_type = scope.get("type")
+        if scope_type not in ("http", "websocket"):
+            # Non-HTTP/WebSocket traffic is forwarded verbatim
             await self.app(scope, receive, send)
             return
 
-        if scope.get("path") == "/_vercel/ping":
+        if scope_type == "http" and scope.get("path") == "/_vercel/ping":
             await send(
                 {
                     "type": "http.response.start",
@@ -645,9 +646,14 @@ class ASGIMiddleware:
         set_vercel_headers_from_asgi_pairs(new_headers)
         set_runtime_cache_from_asgi_pairs(sc_pairs)
 
-        try:
-            await self.app(new_scope, receive, send)
-        finally:
+        request_finished = False
+
+        def finish_request() -> None:
+            nonlocal request_finished
+            if request_finished:
+                return
+
+            request_finished = True
             clear_runtime_cache_context()
             clear_vercel_headers_context()
             storage.reset(token)
@@ -662,6 +668,34 @@ class ASGIMiddleware:
                     },
                 }
             )
+
+        async def send_wrapper(message: dict[str, Any]) -> None:
+            await send(message)
+
+            if scope_type != "websocket":
+                return
+
+            message_type = message.get("type")
+            if message_type == "websocket.accept":
+                # End the request lifecycle once the 101 is sent so the
+                # platform can begin bidirectional WebSocket streaming.
+                finish_request()
+                return
+
+            if message_type == "websocket.close":
+                finish_request()
+                return
+
+            if (
+                message_type == "websocket.http.response.body"
+                and not message.get("more_body")
+            ):
+                finish_request()
+
+        try:
+            await self.app(new_scope, receive, send_wrapper)
+        finally:
+            finish_request()
 
 
 if "VERCEL_IPC_PATH" in os.environ:

@@ -1,5 +1,11 @@
 # @vercel/oidc
 
+## 3.1.5
+
+### Patch Changes
+
+- @vercel/oidc@3.6.2
+
 ## 3.1.4
 
 ### Patch Changes
