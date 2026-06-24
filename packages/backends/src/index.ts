@@ -48,6 +48,7 @@ import { Colors as c } from './cervel/utils.js';
 // Re-export introspection functions
 export { introspectApp } from './introspection/index.js';
 export { diagnostics } from './diagnostics.js';
+export { shouldServe, startDevServer } from './start-dev-server.js';
 
 export const version = 2;
 

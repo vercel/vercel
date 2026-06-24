@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.10.0
+
+### Minor Changes
+
+- e6759d0: Add WebSocket upgrade support for standalone Go servers.
+
 ## 3.9.2
 
 ### Patch Changes

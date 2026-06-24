@@ -1185,7 +1185,9 @@ exports[`help command > deploy help output snapshots > deploy help column width 
   \`deploy\` command is the default       
   command for the Vercel CLI, and can   
   be omitted (\`vc deploy my-app\` equals 
-  \`vc my-app\`).                         
+  \`vc my-app\`). Use \`--dry\` to inspect  
+  the detected framework preset and     
+  source files without deploying.       
 
   Options:
 
@@ -1208,6 +1210,26 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 KEY1=va…
                                 -b      
                                 KEY2=va…
+       --dry                    Inspect 
+                                the     
+                                detected
+                                framewo…
+                                preset  
+                                and     
+                                source  
+                                files   
+                                without 
+                                uploadi…
+                                or      
+                                creating
+                                a       
+                                deploym…
+                                Non-TTY 
+                                output  
+                                includes
+                                every   
+                                file as 
+                                JSON    
   -e,  --env <KEY=VALUE>        Specify 
                                 environ…
                                 variabl…
@@ -1391,6 +1413,14 @@ exports[`help command > deploy help output snapshots > deploy help column width 
     $ vercel build
     $ vercel deploy --prebuilt
 
+  - Inspect deployment inputs without deploying
+
+    $ vercel deploy --dry
+
+  - Get every deployment file as JSON
+
+    $ vercel deploy --dry --format=json
+
   - Write Deployment URL to a file
 
     $ vercel > deployment-url.txt
@@ -1404,7 +1434,8 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
   Deploy your project to Vercel. The \`deploy\` command is the default command    
   for the Vercel CLI, and can be omitted (\`vc deploy my-app\` equals \`vc         
-  my-app\`).                                                                     
+  my-app\`). Use \`--dry\` to inspect the detected framework preset and source     
+  files without deploying.                                                      
 
   Options:
 
@@ -1412,6 +1443,10 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 before uploading it                             
   -b,  --build-env <KEY=VALUE>  Specify environment variables during build-time 
                                 (e.g. \`-b KEY1=value1 -b KEY2=value2\`)          
+       --dry                    Inspect the detected framework preset and source
+                                files without uploading or creating a           
+                                deployment. Non-TTY output includes every file  
+                                as JSON                                         
   -e,  --env <KEY=VALUE>        Specify environment variables during run-time   
                                 (e.g. \`-e KEY1=value1 -e KEY2=value2\`)          
   -f,  --force                  Force a new deployment even if nothing has      
@@ -1474,6 +1509,14 @@ exports[`help command > deploy help output snapshots > deploy help column width 
     $ vercel build
     $ vercel deploy --prebuilt
 
+  - Inspect deployment inputs without deploying
+
+    $ vercel deploy --dry
+
+  - Get every deployment file as JSON
+
+    $ vercel deploy --dry --format=json
+
   - Write Deployment URL to a file
 
     $ vercel > deployment-url.txt
@@ -1486,12 +1529,15 @@ exports[`help command > deploy help output snapshots > deploy help column width 
   ▲ vercel deploy [project-path] [options]
 
   Deploy your project to Vercel. The \`deploy\` command is the default command for the Vercel CLI, and can be omitted     
-  (\`vc deploy my-app\` equals \`vc my-app\`).                                                                              
+  (\`vc deploy my-app\` equals \`vc my-app\`). Use \`--dry\` to inspect the detected framework preset and source files        
+  without deploying.                                                                                                    
 
   Options:
 
        --archive <FORMAT>       Compress the deployment code into an archive before uploading it                        
   -b,  --build-env <KEY=VALUE>  Specify environment variables during build-time (e.g. \`-b KEY1=value1 -b KEY2=value2\`)  
+       --dry                    Inspect the detected framework preset and source files without uploading or creating a  
+                                deployment. Non-TTY output includes every file as JSON                                  
   -e,  --env <KEY=VALUE>        Specify environment variables during run-time (e.g. \`-e KEY1=value1 -e KEY2=value2\`)    
   -f,  --force                  Force a new deployment even if nothing has changed                                      
   -F,  --format <FORMAT>        Specify the output format (json)                                                        
@@ -1542,6 +1588,14 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
     $ vercel build
     $ vercel deploy --prebuilt
+
+  - Inspect deployment inputs without deploying
+
+    $ vercel deploy --dry
+
+  - Get every deployment file as JSON
+
+    $ vercel deploy --dry --format=json
 
   - Write Deployment URL to a file
 
