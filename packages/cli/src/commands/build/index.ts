@@ -8,7 +8,7 @@ import { readdirSync, statSync } from 'fs';
 
 import {
   download,
-  FileBlob,
+  type FileBlob,
   FileFsRef,
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
@@ -48,7 +48,6 @@ import {
   type Lambda,
   type TriggerEvent,
   sanitizeConsumerName,
-  downloadFile,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
@@ -129,6 +128,7 @@ import { pullEnvRecords } from '../../util/env/get-env-records';
 import { buildCommand } from './command';
 import { validatePackageManifest } from '../../util/validate-package-manifest';
 import { shouldEmbedFlagsDefinitions } from '../../util/flags/build-embedding';
+import { writeManifests } from './manifest';
 
 /** Build a plain suggested command with global flags (e.g. --cwd, --non-interactive) appended. */
 function buildCommandWithGlobalFlags(
@@ -202,7 +202,7 @@ function getGeneratedServiceAlreadyBuiltWarning(service: Service) {
     `Detected already-built service "${service.name}" from lazily generated ` +
     `\`.vercel/output/config.json\` (framework: ${framework}, entrypoint: ${entrypoint}). ` +
     'It will not be treated as a service because its build output already exists at the top level. ' +
-    'Configure it in `vercel.json` as an `experimentalServicesV2` entry to remove this warning.'
+    'Configure it in `vercel.json` as a `services` entry to remove this warning.'
   );
 }
 
@@ -774,19 +774,16 @@ async function doBuild(
   let zeroConfigFallbackRoutes: Route[] = [];
   let detectedServices: ExperimentalService[] | undefined;
   let detectedResolvedServices: Service[] | undefined;
-  const localConfigWithServicesV2 = localConfig as VercelConfig & {
-    experimentalServicesV2?: ExperimentalServicesV2;
-  };
   const hasExperimentalServicesV1ConfiguredInVercelConfig = hasNonEmptyObject(
     localConfig.experimentalServices
   );
   const hasExperimentalServicesV2ConfiguredInVercelConfig = hasNonEmptyObject(
-    localConfigWithServicesV2.experimentalServicesV2
+    localConfig.services ?? localConfig.experimentalServicesV2
   );
   const configuredExperimentalServicesV2 =
     hasExperimentalServicesV2ConfiguredInVercelConfig &&
-    localConfigWithServicesV2.experimentalServicesV2
-      ? localConfigWithServicesV2.experimentalServicesV2
+    (localConfig.services ?? localConfig.experimentalServicesV2)
+      ? (localConfig.services ?? localConfig.experimentalServicesV2)
       : undefined;
   let nestExperimentalServicesV2Output =
     hasExperimentalServicesV2ConfiguredInVercelConfig;
@@ -811,9 +808,8 @@ async function doBuild(
     const detectedBuilders = await span.child('vc.detectBuilders').trace(() =>
       detectBuilders(files, pkg, {
         ...localConfig,
-        ...(configuredExperimentalServicesV2 && {
-          experimentalServicesV2: configuredExperimentalServicesV2,
-        }),
+        services: undefined,
+        experimentalServicesV2: configuredExperimentalServicesV2,
         projectSettings,
         ignoreBuildScript: true,
         featHandleMiss: true,
@@ -1732,11 +1728,13 @@ async function doBuild(
         .trace(() =>
           detectBuilders(files, pkg, {
             ...localConfig,
+            services: undefined,
             ...(generatedExperimentalServicesV2Config
               ? {
                   experimentalServicesV2: generatedExperimentalServicesV2Config,
                 }
               : {
+                  experimentalServicesV2: undefined,
                   experimentalServices: generatedExperimentalServicesV1Config,
                 }),
             projectSettings,
@@ -1829,46 +1827,8 @@ async function doBuild(
   }
 
   // Aggregate individual package-manifest.json files from builders into
-  // a single project-manifest.json keyed by service workspace.
-  if (packageManifests.length > 0) {
-    const projectManifest: Record<string, unknown> = {};
-    for (const {
-      workspace,
-      buildConfig,
-      manifest,
-      service,
-      builderUse,
-    } of packageManifests) {
-      projectManifest[`${builderUse}:${workspace}`] = {
-        ...manifest,
-        workspace,
-        builder: builderUse,
-        framework: service?.framework ?? buildConfig.framework,
-        serviceName: service?.name,
-        serviceType:
-          service && isExperimentalService(service) ? service.type : undefined,
-        routePrefix:
-          service && isExperimentalService(service)
-            ? service.routePrefix
-            : undefined,
-      };
-    }
-    if (Object.keys(projectManifest).length > 0) {
-      const projectManifestBlob = new FileBlob({
-        data: JSON.stringify(projectManifest),
-      });
-      diagnostics['project-manifest.json'] = projectManifestBlob;
-      ops.push(
-        downloadFile(
-          projectManifestBlob,
-          join(outputDir, 'diagnostics', 'project-manifest.json')
-        ).then(
-          () => undefined,
-          err => err
-        )
-      );
-    }
-  }
+  // a single project-manifest.json and deploy-manifest.json keyed by service workspace.
+  await writeManifests(packageManifests, diagnostics, ops, outputDir);
 
   if (corepackShimDir) {
     cleanupCorepack(corepackShimDir);

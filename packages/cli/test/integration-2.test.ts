@@ -1659,18 +1659,18 @@ test('vercel.json configuration overrides in an existing project do not prompt u
 test.each([
   {
     vercelAuth: 'none',
-    expectedStatus: 200,
+    expectProtected: false,
   },
   {
     vercelAuth: 'standard',
-    expectedStatus: 401,
+    expectProtected: true,
   },
 ] as const)('[vc deploy] should allow a project to be created with Vercel Auth disabled or enabled with prompts - vercelAuth: %s', async ({
   vercelAuth,
-  expectedStatus,
+  expectProtected,
 }: {
   vercelAuth: 'none' | 'standard';
-  expectedStatus: number;
+  expectProtected: boolean;
 }) => {
   const dir = await setupE2EFixture('project-vercel-auth');
   const projectName = `project-vercel-auth-${
@@ -1719,9 +1719,31 @@ test.each([
 
   const { href } = new URL(output.stdout);
 
-  // Send a test request to the deployment
-  const response = await nodeFetch(href);
-  expect(response.status).toBe(expectedStatus);
+  // Send an unauthenticated request to the deployment. Use `redirect:
+  // 'manual'` so the deployment's own gate response is observed: otherwise
+  // node-fetch follows the SSO redirect to the login page and reports its
+  // 200, masking the protection.
+  //
+  // A protected deployment gates anonymous requests with either a terminal
+  // 401 or a 3xx redirect to the SSO login flow (vercel.com/sso-api),
+  // depending on the request. Accept both. A public deployment is served
+  // directly with a 200.
+  const response = await nodeFetch(href, { redirect: 'manual' });
+
+  if (expectProtected) {
+    const location = response.headers.get('location') ?? '';
+    const isSsoRedirect =
+      response.status >= 300 &&
+      response.status < 400 &&
+      location.includes('/sso-api');
+    const isProtected = response.status === 401 || isSsoRedirect;
+    expect(
+      isProtected,
+      `expected a protected response (401 or SSO redirect), got ${response.status} location=${location}\n${formatOutput(output)}`
+    ).toBe(true);
+  } else {
+    expect(response.status, formatOutput(output)).toBe(200);
+  }
 
   const projectResponse = await apiFetch(`/projects/${projectName}`, {
     method: 'DELETE',

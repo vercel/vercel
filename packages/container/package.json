@@ -1,0 +1,29 @@
+{
+  "name": "@vercel/container",
+  "version": "0.0.0",
+  "license": "Apache-2.0",
+  "main": "./dist/index.js",
+  "homepage": "https://vercel.com/docs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/container"
+  },
+  "scripts": {
+    "build": "node ../../utils/build-builder.mjs",
+    "type-check": "tsc --noEmit",
+    "test-unit": "vitest run --config ../../vitest.config.mts test/unit.test.ts",
+    "vitest-unit": "glob --absolute 'test/unit.test.ts'"
+  },
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {
+    "@types/node": "20.11.0",
+    "@vercel/build-utils": "workspace:*",
+    "vitest": "2.0.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

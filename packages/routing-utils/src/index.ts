@@ -1,6 +1,7 @@
 import { parse as parseUrl } from 'url';
 import {
   collectHasSegments,
+  compilePathToRegexpTemplate,
   convertCleanUrls,
   convertHeaders,
   convertRedirects,
@@ -19,6 +20,7 @@ import {
   RouteWithHandle,
   RouteWithSrc,
   ServiceDestination,
+  Transform,
 } from './types';
 export { appendRoutesToPhase } from './append';
 export { mergeRoutes } from './merge';
@@ -28,7 +30,11 @@ export {
   scopeRouteSourceToOwnership,
 } from './service-route-ownership';
 export * from './schemas';
-export { getCleanUrls, sourceToRegex } from './superstatic';
+export {
+  compilePathToRegexpTemplate,
+  getCleanUrls,
+  sourceToRegex,
+} from './superstatic';
 export * from './types';
 
 const VALID_HANDLE_VALUES = [
@@ -237,10 +243,12 @@ function checkPatternSyntax(
     source,
     destination,
     has,
+    transforms,
   }: {
     source: string;
     has?: HasField;
     destination?: string | ServiceDestination;
+    transforms?: Transform[];
   }
 ): { message: string; link: string } | null {
   let sourceSegments = new Set<string>();
@@ -291,6 +299,21 @@ function checkPatternSyntax(
           link: 'https://vercel.link/invalid-route-destination-segment',
         };
       }
+    }
+  }
+
+  for (const transform of transforms || []) {
+    if (transform.type !== 'request.path') {
+      continue;
+    }
+
+    try {
+      compilePathToRegexpTemplate(source, transform.args, has, transform.env);
+    } catch (error) {
+      return {
+        message: `${type} at index ${index} has an invalid \`request.path\` transform: ${error instanceof Error ? error.message : String(error)}`,
+        link: 'https://vercel.link/invalid-route-destination-segment',
+      };
     }
   }
 
