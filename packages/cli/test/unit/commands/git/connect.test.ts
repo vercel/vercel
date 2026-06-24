@@ -526,6 +526,116 @@ describe('git connect', () => {
     }
   });
 
+  describe('repo_links_exceeded_limit errors', () => {
+    const limitErrorBase = {
+      code: 'repo_links_exceeded_limit',
+      message: 'A Git Repository cannot be connected to more than 10 Projects.',
+      action: 'Learn More',
+      link: 'https://vercel.link/repository-connection-limit',
+      repo: 'user/repo',
+    };
+
+    // Registered BEFORE useProject so this route wins over the default
+    // link-route stub that useProject installs.
+    const useRepoLinkLimitError = (body: Record<string, unknown>) => {
+      client.scenario.post(`/v9/projects/new-connection/link`, (_req, res) => {
+        res.status(400).json({ error: body });
+      });
+    };
+
+    const connectAndExpect = async (
+      body: Record<string, unknown>,
+      expectedOutput: string
+    ) => {
+      const cwd = fixture('new-connection');
+      client.cwd = cwd;
+      try {
+        await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+        useRepoLinkLimitError(body);
+        useUser();
+        useTeams('team_dummy');
+        useProject({
+          ...defaultProject,
+          id: 'new-connection',
+          name: 'new-connection',
+        });
+        client.setArgv('git', 'connect', '--yes');
+        const gitPromise = git(client);
+
+        await expect(client.stderr).toOutput(
+          `Connecting GitHub repository: https://github.com/user/repo`
+        );
+        await expect(client.stderr).toOutput(expectedOutput);
+
+        const exitCode = await gitPromise;
+        expect(exitCode).toEqual(1);
+      } finally {
+        await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
+      }
+    };
+
+    it('prints the upgrade call to action when provided', async () => {
+      await connectAndExpect(
+        {
+          ...limitErrorBase,
+          currentPlan: 'hobby',
+          limit: 10,
+          linked: 10,
+          nextTierLimit: 150,
+          ctaLabel: 'Upgrade to Pro',
+          ctaUrl:
+            'https://vercel.com/dashboard?upgradeToPro=repo-link-limit&upgradeToProTeamScope=my-team',
+          docsUrl:
+            'https://vercel.com/docs/errors/error-list#repository-connection-limitation',
+        },
+        `Error: A Git Repository cannot be connected to more than 10 Projects. (400)\nUpgrade to Pro: https://vercel.com/dashboard?upgradeToPro=repo-link-limit&upgradeToProTeamScope=my-team`
+      );
+    });
+
+    it('prints the limit-increase call to action when provided', async () => {
+      await connectAndExpect(
+        {
+          ...limitErrorBase,
+          message:
+            'A Git Repository cannot be connected to more than 150 Projects.',
+          currentPlan: 'pro',
+          limit: 150,
+          linked: 150,
+          nextTierLimit: null,
+          ctaLabel: 'Request a Limit Increase',
+          ctaUrl: 'https://vercel.com/help?teamSlug=my-team',
+        },
+        `Error: A Git Repository cannot be connected to more than 150 Projects. (400)\nRequest a Limit Increase: https://vercel.com/help?teamSlug=my-team`
+      );
+    });
+
+    it('uses the same call-to-action line for a custom-limit (raised) enterprise payload', async () => {
+      // 300 is a custom/raised override (the default enterprise limit is 150);
+      // the CLI just echoes whatever limit/message the API sends.
+      await connectAndExpect(
+        {
+          ...limitErrorBase,
+          message:
+            'A Git Repository cannot be connected to more than 300 Projects.',
+          currentPlan: 'enterprise',
+          limit: 300,
+          linked: 300,
+          nextTierLimit: null,
+          ctaLabel: 'Request a Limit Increase',
+          ctaUrl: 'https://vercel.com/help?teamSlug=enterprise-team',
+        },
+        `Error: A Git Repository cannot be connected to more than 300 Projects. (400)\nRequest a Limit Increase: https://vercel.com/help?teamSlug=enterprise-team`
+      );
+    });
+
+    it('falls back to the action/link fields when no call to action is provided', async () => {
+      await connectAndExpect(
+        { ...limitErrorBase },
+        `Error: A Git Repository cannot be connected to more than 10 Projects. (400)\nLearn More: https://vercel.link/repository-connection-limit`
+      );
+    });
+  });
+
   it('should connect the default option of multiple remotes', async () => {
     const cwd = fixture('multiple-remotes');
     client.cwd = cwd;
