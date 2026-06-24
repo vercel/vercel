@@ -274,7 +274,7 @@ export default async function add(client: Client, argv: string[]) {
       )}. ${addStamp()}`
     );
 
-    return printDomainConfiguration(client, contextName, domainName);
+    return 0;
   }
 
   const addStamp = stamp();

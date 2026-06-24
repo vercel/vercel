@@ -32,17 +32,19 @@ describe('domains add', () => {
       client.scenario.post('/v4/domains', (_req, res) => {
         res.json({ domain });
       });
-      client.scenario.get(`/:version/domains/${domain.name}`, (_req, res) => {
-        res.json({ domain });
-      });
-      client.scenario.get(
-        `/:version/domains/${domain.name}/config`,
-        (_req, res) => {
-          res.json({});
-        }
-      );
       const exitCode = await domains(client);
       expect(exitCode, 'exit code for "domains"').toEqual(0);
+
+      await expect(client.stderr).toOutput(`Domain ${domain.name} added to`);
+      // When no project is provided, we must not print project/deployment
+      // oriented configuration guidance.
+      const fullOutput = client.stderr.getFullOutput();
+      expect(fullOutput).not.toContain(
+        'This domain is not configured properly'
+      );
+      expect(fullOutput).not.toContain(
+        'automatically get assigned to your latest production deployment'
+      );
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
