@@ -3,10 +3,10 @@ import type { ChildProcess } from 'child_process';
 import type { Lambda as FunLambda } from '@vercel/fun';
 import type {
   Builder as BuildConfig,
+  BuilderDevServer,
   BuildOptions,
   PrepareCacheOptions,
   ShouldServeOptions,
-  StartDevServerOptions,
   StartDevServerResult,
   Env,
   FileBlob,
@@ -57,6 +57,10 @@ export interface BuildMatch extends BuildConfig {
   buildResults: Map<string | null, BuildResult>;
   buildTimestamp: number;
   buildProcess?: ChildProcess;
+  devServer?: {
+    controller: AbortController;
+    startPromise: Promise<StartDevServerResult>;
+  };
 }
 
 export type HttpHandler = (
@@ -89,7 +93,7 @@ export interface BuilderConfigAttr {
   maxLambdaSize?: string | number;
 }
 
-export interface Builder {
+export interface Builder extends BuilderDevServer {
   version?: 1 | 2 | 3 | 4;
   config?: BuilderConfigAttr;
   build(
@@ -103,7 +107,6 @@ export interface Builder {
     opts: PrepareCacheOptions
   ): CacheOutputs | Promise<CacheOutputs>;
   shouldServe?(params: ShouldServeOptions): boolean | Promise<boolean>;
-  startDevServer?(opts: StartDevServerOptions): Promise<StartDevServerResult>;
 }
 
 export interface BuildResult {

@@ -5,6 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { cloneEnv, type StartDevServerSuccess } from '@vercel/build-utils';
 import getPort from 'get-port';
+import _treeKill from 'tree-kill';
 
 const require_ = createRequire(import.meta.url);
 const srvxCliPath = require_.resolve('srvx/cli');
@@ -13,6 +14,15 @@ const tsxPath = pathToFileURL(require_.resolve('tsx')).href;
 
 const STARTUP_TIMEOUT = 5 * 60_000;
 const SHUTDOWN_TIMEOUT = 5_000;
+
+function treeKill(pid: number, signal: NodeJS.Signals): Promise<void> {
+  return new Promise((resolve, reject) => {
+    _treeKill(pid, signal, error => {
+      if (error) reject(error);
+      else resolve();
+    });
+  });
+}
 
 interface SpawnSrvxOptions {
   workPath: string;
@@ -55,72 +65,47 @@ function canConnect(port: number): Promise<boolean> {
   });
 }
 
-function waitUntilReady(
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function waitUntilReady(
   child: ChildProcess,
   port: number,
   entrypoint: string,
   signal?: AbortSignal
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
+  let failure: Error | undefined;
+  const onError = (error: Error) => {
+    failure = error;
+  };
+  const onExit = (code: number | null, exitSignal: NodeJS.Signals | null) => {
+    const reason = exitSignal ? `signal ${exitSignal}` : `exit code ${code}`;
+    failure = new Error(`Server \`${entrypoint}\` exited with ${reason}`);
+  };
+
+  child.once('error', onError);
+  child.once('exit', onExit);
+  try {
     const deadline = Date.now() + STARTUP_TIMEOUT;
-    let retryTimer: NodeJS.Timeout | undefined;
-    let settled = false;
-
-    const cleanup = () => {
-      if (retryTimer) clearTimeout(retryTimer);
-      child.off('error', onError);
-      child.off('exit', onExit);
-      signal?.removeEventListener('abort', onAbort);
-    };
-
-    const succeed = () => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      resolve();
-    };
-
-    const fail = (error: Error) => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      reject(error);
-    };
-
-    const onError = (error: Error) => fail(error);
-    const onExit = (code: number | null, signal: NodeJS.Signals | null) => {
-      const reason = signal ? `signal ${signal}` : `exit code ${code}`;
-      fail(new Error(`Server \`${entrypoint}\` exited with ${reason}`));
-    };
-    const onAbort = () => {
-      child.kill('SIGTERM');
-      fail(new Error(`Server \`${entrypoint}\` cancelled`));
-    };
-
-    const probe = async () => {
-      if (settled) return;
-      if (await canConnect(port)) {
-        succeed();
-      } else if (Date.now() >= deadline) {
-        fail(
-          new Error(
-            `Server \`${entrypoint}\` did not listen on port ${port} within ${STARTUP_TIMEOUT}ms`
-          )
-        );
-      } else {
-        retryTimer = setTimeout(probe, 50);
+    while (Date.now() < deadline) {
+      if (signal?.aborted) {
+        throw new Error(`Server \`${entrypoint}\` cancelled`);
       }
-    };
-
-    child.once('error', onError);
-    child.once('exit', onExit);
-    signal?.addEventListener('abort', onAbort, { once: true });
-    if (signal?.aborted) {
-      onAbort();
-      return;
+      if (failure) throw failure;
+      if (await canConnect(port)) {
+        if (failure) throw failure;
+        return;
+      }
+      await sleep(50);
     }
-    void probe();
-  });
+    throw new Error(
+      `Server \`${entrypoint}\` did not listen on port ${port} within ${STARTUP_TIMEOUT}ms`
+    );
+  } finally {
+    child.off('error', onError);
+    child.off('exit', onExit);
+  }
 }
 
 function waitForExit(child: ChildProcess, timeout: number): Promise<boolean> {
@@ -144,10 +129,18 @@ function waitForExit(child: ChildProcess, timeout: number): Promise<boolean> {
 async function stopChild(child: ChildProcess): Promise<void> {
   if (child.exitCode !== null || child.signalCode !== null) return;
 
-  child.kill('SIGTERM');
+  if (child.pid) {
+    await treeKill(child.pid, 'SIGTERM').catch(() => {
+      child.kill('SIGTERM');
+    });
+  }
   if (await waitForExit(child, SHUTDOWN_TIMEOUT)) return;
 
-  child.kill('SIGKILL');
+  if (child.pid) {
+    await treeKill(child.pid, 'SIGKILL').catch(() => {
+      child.kill('SIGKILL');
+    });
+  }
   await waitForExit(child, 1_000);
 }
 

@@ -42,6 +42,7 @@
     "resolve.exports": "2.0.3",
     "rolldown": "1.0.0-rc.1",
     "srvx": "0.11.16",
+    "tree-kill": "1.2.2",
     "tsx": "4.21.0",
     "zod": "3.22.4"
   },

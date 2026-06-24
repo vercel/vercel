@@ -67,7 +67,7 @@ afterEach(async () => {
 });
 
 describe('startDevServer', () => {
-  it('serves, reuses, reloads, and shuts down a package-less TypeScript server', async () => {
+  it('serves and shuts down a package-less TypeScript server', async () => {
     const workPath = await mkdtemp(join(tmpdir(), 'backends-srvx-dev-'));
     workPaths.add(workPath);
 
@@ -87,88 +87,35 @@ describe('startDevServer', () => {
       onStderr: () => {},
     };
 
-    const results = await Promise.all([
-      startDevServer(opts),
-      startDevServer(opts),
-      startDevServer(opts),
-    ]);
-    const initial = results[0];
-    expect(initial).not.toBeNull();
-    if (!initial) throw new Error('Expected srvx to start');
-    expect(initial.persistent).toBe(true);
-    expect(initial.shutdown).toBeTypeOf('function');
-    for (const result of results) {
-      if (result?.shutdown) shutdowns.add(result.shutdown);
-    }
-    expect(results.map(result => result?.pid)).toEqual([
-      initial.pid,
-      initial.pid,
-      initial.pid,
-    ]);
-    expect(results.map(result => result?.port)).toEqual([
-      initial.port,
-      initial.port,
-      initial.port,
-    ]);
+    const result = await startDevServer(opts);
+    expect(result).not.toBeNull();
+    if (!result) throw new Error('Expected srvx to start');
+    expect(result.shutdown).toBeTypeOf('function');
+    if (result.shutdown) shutdowns.add(result.shutdown);
 
-    const first = await request(initial.port, '/first');
-    const second = await request(initial.port, '/second');
+    const first = await request(result.port, '/first');
+    const second = await request(result.port, '/second');
     expect(first).toMatchObject({
       marker: 'initial',
       env: 'from-meta',
-      pid: initial.pid,
+      pid: result.pid,
       requestCount: 1,
       url: '/first',
     });
     expect(second).toMatchObject({
-      pid: initial.pid,
+      pid: result.pid,
       requestCount: 2,
       url: '/second',
     });
 
     const staticResponse = await fetch(
-      `http://127.0.0.1:${initial.port}/hello.txt`
+      `http://127.0.0.1:${result.port}/hello.txt`
     );
     expect(await staticResponse.text()).toBe('hello static');
 
-    await writeFile(serverPath, serverSource('updated'));
-    const updatedFiles = filesFor(serverPath);
-    const updated = await startDevServer({
-      ...opts,
-      files: updatedFiles,
-    });
-    expect(updated).not.toBeNull();
-    if (!updated) throw new Error('Expected srvx to reload');
-    if (updated.shutdown) shutdowns.add(updated.shutdown);
-    expect(updated.pid).not.toBe(initial.pid);
-    expect(await request(updated.port, '/updated')).toMatchObject({
-      marker: 'updated',
-      env: 'from-meta',
-      pid: updated.pid,
-      requestCount: 1,
-      url: '/updated',
-    });
-
-    const reconfigured = await startDevServer({
-      ...opts,
-      files: updatedFiles,
-      meta: { env: { SRVX_TEST_ENV: 'updated-env' } },
-    });
-    expect(reconfigured).not.toBeNull();
-    if (!reconfigured) throw new Error('Expected srvx to restart');
-    if (reconfigured.shutdown) shutdowns.add(reconfigured.shutdown);
-    expect(reconfigured.pid).not.toBe(updated.pid);
-    expect(await request(reconfigured.port, '/updated-env')).toMatchObject({
-      marker: 'updated',
-      env: 'updated-env',
-      pid: reconfigured.pid,
-      requestCount: 1,
-      url: '/updated-env',
-    });
-
-    await reconfigured.shutdown?.();
+    await result.shutdown?.();
     await expect(
-      fetch(`http://127.0.0.1:${reconfigured.port}/after-shutdown`)
+      fetch(`http://127.0.0.1:${result.port}/after-shutdown`)
     ).rejects.toThrow();
   });
 

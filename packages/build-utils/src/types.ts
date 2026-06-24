@@ -229,6 +229,10 @@ export interface ShouldServeOptions {
  */
 export type StartDevServerOptions = BuildOptions & {
   /**
+   * Signals that a pending dev server start should be cancelled.
+   */
+  signal?: AbortSignal;
+  /**
    * Directory to serve static files from in dev mode
    */
   publicDir?: string;
@@ -254,8 +258,8 @@ export interface StartDevServerSuccess {
   port: number;
 
   /**
-   * Process ID number of the dev server. Useful for the `vercel dev` server to
-   * shut down the dev server once an HTTP request has been fulfilled.
+   * Process ID number of the dev server. Used by `vercel dev` to manage the
+   * server lifecycle.
    */
   pid: number;
 
@@ -264,12 +268,6 @@ export interface StartDevServerSuccess {
    * dev server will forcefully be killed.
    */
   shutdown?: () => Promise<void>;
-
-  /**
-   * Whether the builder owns this dev server's lifecycle across requests.
-   * Persistent servers are still shut down when `vercel dev` exits.
-   */
-  persistent?: boolean;
 
   /**
    * Cron entries produced by the builder for this service.
@@ -484,31 +482,37 @@ export interface ProjectSettings {
 /*
  * This is a builder whose build output version may dynamically change.
  */
-export interface BuilderVX {
+export interface BuilderDevServer {
+  startDevServer?: StartDevServer;
+  /**
+   * Whether `vercel dev` should reuse the started server across requests until
+   * the project files or runtime environment change.
+   */
+  shouldPersistDevServer?: boolean;
+}
+
+export interface BuilderVX extends BuilderDevServer {
   version: -1;
   build: BuildVX;
   diagnostics?: Diagnostics;
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
-  startDevServer?: StartDevServer;
 }
 
-export interface BuilderV2 {
+export interface BuilderV2 extends BuilderDevServer {
   version: 2;
   build: BuildV2;
   diagnostics?: Diagnostics;
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
-  startDevServer?: StartDevServer;
 }
 
-export interface BuilderV3 {
+export interface BuilderV3 extends BuilderDevServer {
   version: 3;
   build: BuildV3;
   diagnostics?: Diagnostics;
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
-  startDevServer?: StartDevServer;
 }
 
 type ImageFormat = 'image/avif' | 'image/webp';
