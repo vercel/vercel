@@ -231,9 +231,7 @@ export default async function backupsCmd(
 
     const queryString = query.toString();
     const suffix = queryString ? `?${queryString}` : '';
-    const response = await client.fetch<BackupListResponse>(
-      `${base}${suffix}`
-    );
+    const response = await client.fetch<BackupListResponse>(`${base}${suffix}`);
 
     if (asJson) {
       client.stdout.write(`${JSON.stringify(response, null, 2)}\n`);

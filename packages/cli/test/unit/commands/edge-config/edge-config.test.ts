@@ -368,13 +368,7 @@ describe('edge-config', () => {
         pagination: { hasNext: true, next: 'cursor_next' },
       });
     });
-    client.setArgv(
-      'edge-config',
-      'backups',
-      'my-store',
-      '--limit',
-      '2'
-    );
+    client.setArgv('edge-config', 'backups', 'my-store', '--limit', '2');
     const exitCode = await edgeConfig(client);
     expect(exitCode).toBe(0);
     const output = client.stderr.getFullOutput();
