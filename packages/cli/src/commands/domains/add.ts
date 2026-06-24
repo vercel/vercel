@@ -10,6 +10,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { getDomain } from '../../util/domains/get-domain';
 import addDomainToTeam from '../../util/domains/add-domain';
 import { isPublicSuffix } from '../../util/domains/is-public-suffix';
+import isRootDomain from '../../util/is-root-domain';
 import { getDomainConfig } from '../../util/domains/get-domain-config';
 import { addDomainToProject } from '../../util/projects/add-domain-to-project';
 import { removeDomainFromProject } from '../../util/projects/remove-domain-from-project';
@@ -233,6 +234,34 @@ export default async function add(client: Client, argv: string[]) {
   telemetry.trackCliArgumentProject(args[1]);
 
   if (!projectName) {
+    if (!isPublicSuffix(domainName) && !isRootDomain(domainName)) {
+      const cmd = withGlobalFlags(
+        client,
+        `domains add ${domainName} <project>`
+      );
+      const message = `Only apex domains can be added without a project. To add the subdomain ${domainName}, pass a project: ${cmd}`;
+      if (client.nonInteractive) {
+        outputActionRequired(
+          client,
+          {
+            status: 'action_required',
+            reason: 'project_required_for_subdomain',
+            action: 'add_with_project',
+            message,
+            next: [
+              {
+                command: cmd,
+                when: 'to add this subdomain to a specific project',
+              },
+            ],
+          },
+          1
+        );
+      }
+      output.error(message);
+      return 1;
+    }
+
     const addStamp = stamp();
     let addResult: Awaited<ReturnType<typeof addDomainToTeam>>;
     try {

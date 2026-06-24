@@ -58,6 +58,17 @@ describe('domains add', () => {
       ]);
     });
 
+    it('errors with a specific message for a subdomain without a project', async () => {
+      useUser();
+      client.setArgv('domains', 'add', 'sub.example.com');
+      const exitCode = await domains(client);
+      expect(exitCode, 'exit code for "domains"').toEqual(1);
+
+      await expect(client.stderr).toOutput(
+        'Only apex domains can be added without a project. To add the subdomain sub.example.com, pass a project: vercel domains add sub.example.com <project>'
+      );
+    });
+
     describe('[project]', () => {
       describe('--force', () => {
         it('tracks telemetry data', async () => {
