@@ -355,21 +355,31 @@ where
         let (stream, _) = tokio::select! {
             accepted = listener.accept() => accepted?,
             _ = &mut shutdown => {
-                // Drain background `waitUntil` work, bounded by the timeout, then
-                // exit. The per-request `end` IPC message has already been sent
-                // for each completed request, so this only affects background
-                // tasks. This mirrors the Node.js runtime's `onExit` behavior.
-                if tokio::time::timeout(
-                    std::time::Duration::from_secs(crate::awaiter::WAIT_UNTIL_TIMEOUT),
-                    AWAITER.awaiting(),
-                )
-                .await
-                .is_err()
-                {
-                    eprintln!(
-                        "A waitUntil() task is still running after {}s and was abandoned at shutdown.",
-                        crate::awaiter::WAIT_UNTIL_TIMEOUT
-                    );
+                // Drain background `waitUntil` work, then exit. The per-request
+                // `end` IPC message has already been sent for each completed
+                // request, so this only affects background tasks. This mirrors
+                // the Node.js runtime's `onExit` behavior.
+                //
+                // In `vc dev` (signalled by `VERCEL_DEV=1`) we bound the drain by
+                // `WAIT_UNTIL_TIMEOUT` so a hung task cannot keep the dev process
+                // alive. In production there is no artificial cap: background work
+                // runs until it resolves or the function itself times out, which
+                // matches the Node.js bridge.
+                if std::env::var("VERCEL_DEV").as_deref() == Ok("1") {
+                    if tokio::time::timeout(
+                        std::time::Duration::from_secs(crate::awaiter::WAIT_UNTIL_TIMEOUT),
+                        AWAITER.awaiting(),
+                    )
+                    .await
+                    .is_err()
+                    {
+                        eprintln!(
+                            "A waitUntil() task is still running after {}s and was abandoned at shutdown.",
+                            crate::awaiter::WAIT_UNTIL_TIMEOUT
+                        );
+                    }
+                } else {
+                    AWAITER.awaiting().await;
                 }
                 return Ok(());
             }

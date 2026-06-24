@@ -5,7 +5,10 @@
 //! entirely in-process: there is **no** dedicated IPC message. The per-request
 //! `end` IPC message is sent immediately after the handler responds and is
 //! **never** delayed by background work. Registered futures are drained only at
-//! process shutdown (SIGTERM), bounded by [`WAIT_UNTIL_TIMEOUT`].
+//! process shutdown (SIGTERM). In production the drain is unbounded (background
+//! work runs until it resolves or the function times out); in `vc dev` it is
+//! bounded by [`WAIT_UNTIL_TIMEOUT`] so a hung task cannot keep the dev process
+//! alive.
 //!
 //! Like the Node implementation:
 //! - A future registered via [`Awaiter::wait_until`] runs regardless of whether
@@ -20,8 +23,9 @@ use std::sync::{Arc, Mutex};
 
 use tokio::task::JoinHandle;
 
-/// Default time (in seconds) to wait for background work to finish at shutdown
-/// before giving up. Matches `WAIT_UNTIL_TIMEOUT` in `@vercel/node`.
+/// Time (in seconds) to wait for background work to finish at shutdown before
+/// giving up. Only applied in `vc dev`; production drains are unbounded. Matches
+/// the `WAIT_UNTIL_TIMEOUT` dev fallback in `@vercel/node`.
 pub const WAIT_UNTIL_TIMEOUT: u64 = 30;
 
 /// Collects background futures registered via `waitUntil` and drains them at
