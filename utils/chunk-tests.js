@@ -16,6 +16,13 @@ const runnersMap = new Map([
       testScript: 'vitest-run',
       runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
       nodeVersions: ['20', '22'],
+      // Skip Node 20 on Windows: it's the slowest runner with the highest
+      // per-job overhead and the oldest supported Node, so the Windows/Node 20
+      // unit cells are the lowest-value coverage. Node 20 still runs on Linux
+      // and macOS; Node 22 (current primary) still runs on all three. This
+      // keeps the full (run-all) unit matrix under GitHub Actions' 256-config
+      // limit.
+      excludeRunnerNodeVersions: { 'windows-latest': ['20'] },
     },
   ],
   [
@@ -405,13 +412,23 @@ async function getChunkedTests() {
           testScript,
           nodeVersions = ['22'],
           useEnvPaths = false,
+          excludeRunnerNodeVersions = {},
         } = runnerOptions;
 
         const sortedTestPaths = testPaths.sort((a, b) => a.localeCompare(b));
         return intoChunks(min, max, sortedTestPaths).flatMap(
           (chunk, chunkNumber, allChunks) => {
             return nodeVersions.flatMap(nodeVersion => {
-              return runners.map(runner => {
+              return runners.flatMap(runner => {
+                // Skip (runner, nodeVersion) combinations explicitly excluded
+                // for this lane (e.g. Node 20 on Windows).
+                if (
+                  (excludeRunnerNodeVersions[runner] || []).includes(
+                    nodeVersion
+                  )
+                ) {
+                  return [];
+                }
                 const runnerShort = getRunnerShort(runner);
                 const packageDisplayName = getPackageDisplayName(packageName);
                 const chunkSuffix =
