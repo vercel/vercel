@@ -7,6 +7,8 @@ import {
   type DetectServicesResult,
 } from '@vercel/fs-detectors';
 import type { InferredServicesConfig } from '@vercel/fs-detectors';
+import type { Rewrite } from '@vercel/routing-utils';
+import type { Services } from '@vercel/build-utils';
 import type { VercelConfig } from '../dev/types';
 import { compileVercelConfig } from '../compile-vercel-config';
 import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
@@ -109,9 +111,55 @@ export async function getServicesConfigWriteBlocker(
 
 function toProjectServicesConfigPatch(
   config: InferredServicesConfig
-): Pick<VercelConfig, 'experimentalServices'> {
+): Pick<VercelConfig, 'services' | 'rewrites'> {
+  const services: Services = {};
+  for (const [name, svc] of Object.entries(config)) {
+    // Non-root services get a per-service route with a path transform
+    // that strips the mount prefix so the handler sees clean paths.
+    const routes =
+      svc.mountPath && svc.mountPath !== '/'
+        ? [
+            {
+              src: `${svc.mountPath}(.*)`,
+              transforms: [
+                {
+                  type: 'request.path' as const,
+                  op: 'set' as const,
+                  args: '/$1',
+                },
+              ],
+            },
+          ]
+        : undefined;
+    services[name] = {
+      root: svc.root,
+      ...(svc.framework ? { framework: svc.framework } : {}),
+      ...(svc.entrypoint ? { entrypoint: svc.entrypoint } : {}),
+      ...(routes ? { routes } : {}),
+    };
+  }
+  // Top-level rewrites route public traffic into services by mountPath.
+  // Ordered longest-first so specific paths match before catch-all.
+  const rewrites: Rewrite[] = Object.entries(config)
+    .filter(([, svc]) => typeof svc.mountPath === 'string')
+    .sort(([, a], [, b]) => b.mountPath!.length - a.mountPath!.length)
+    .map(([name, svc]) => {
+      const mountPath = svc.mountPath!;
+      if (mountPath === '/') {
+        return {
+          source: '/(.*)',
+          destination: { type: 'service' as const, service: name },
+        };
+      }
+      const prefix = mountPath.startsWith('/') ? mountPath.slice(1) : mountPath;
+      return {
+        source: `/${prefix}(.*)`,
+        destination: { type: 'service' as const, service: name },
+      };
+    });
   return {
-    experimentalServices: config,
+    services,
+    ...(rewrites.length > 0 ? { rewrites } : {}),
   };
 }
 
@@ -147,9 +195,19 @@ async function prepareServicesConfigWrite(
     existingConfig = result ?? {};
   }
 
+  const patch = toProjectServicesConfigPatch(config);
   const nextConfig: VercelConfig = {
     ...existingConfig,
-    ...toProjectServicesConfigPatch(config),
+    ...patch,
+    // Preserve existing user rewrites; append auto-detected service rewrites.
+    ...(patch.rewrites
+      ? {
+          rewrites: [
+            ...((existingConfig.rewrites as Rewrite[]) ?? []),
+            ...patch.rewrites,
+          ],
+        }
+      : {}),
   };
   const validationError = validateConfig(nextConfig);
   if (validationError) {
@@ -206,8 +264,10 @@ function getServicesConfigWriteBlockerFromError(
 ): ServicesConfigWriteBlocker | null {
   switch ((error as { code?: string })?.code) {
     case 'EXPERIMENTAL_SERVICES_AND_BUILDS':
+    case 'SERVICES_AND_BUILDS':
       return 'builds';
     case 'EXPERIMENTAL_SERVICES_AND_FUNCTIONS':
+    case 'SERVICES_AND_FUNCTIONS':
       return 'functions';
     default:
       return null;

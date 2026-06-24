@@ -329,12 +329,12 @@ async function tryResolveInferred(
         svc.mountPath && svc.mountPath !== '/'
           ? [
               {
-                src: `${svc.mountPath}/:path*`,
+                src: `${svc.mountPath}(.*)`,
                 transforms: [
                   {
                     type: 'request.path' as const,
                     op: 'set' as const,
-                    args: '/:path*',
+                    args: '/$1',
                   },
                 ],
               },
@@ -464,10 +464,13 @@ export function generateServiceRewrites(
         destination: { type: 'service' as const, service: name },
       };
     }
-    // Strip leading slash for the source pattern
+    // Strip leading slash for the source pattern.
+    // Use `(.*)` instead of `/:path*` so that the bare mount path
+    // (e.g. `/_/backend` or `/_/backend/`) is also matched —
+    // `:path*` requires at least one character after the `/`.
     const prefix = mountPath.startsWith('/') ? mountPath.slice(1) : mountPath;
     return {
-      source: `/${prefix}/:path*`,
+      source: `/${prefix}(.*)`,
       destination: { type: 'service' as const, service: name },
     };
   });

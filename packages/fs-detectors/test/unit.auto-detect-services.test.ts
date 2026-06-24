@@ -514,7 +514,7 @@ describe('detectServices with auto-detection', () => {
       expect(result.rewrites).toHaveLength(2);
       // Longest mountPath first (backend before root catch-all)
       expect(result.rewrites[0]).toMatchObject({
-        source: '/_/backend/:path*',
+        source: '/_/backend(.*)',
         destination: { type: 'service', service: 'backend' },
       });
       expect(result.rewrites[1]).toMatchObject({
@@ -530,8 +530,8 @@ describe('detectServices with auto-detection', () => {
       if (backendV2?.schema === 'experimentalServicesV2') {
         expect(backendV2.routes).toEqual([
           {
-            src: '/_/backend/:path*',
-            transforms: [{ type: 'request.path', op: 'set', args: '/:path*' }],
+            src: '/_/backend(.*)',
+            transforms: [{ type: 'request.path', op: 'set', args: '/$1' }],
           },
         ]);
       }

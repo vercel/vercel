@@ -62,11 +62,13 @@ import {
 } from '@vercel/fs-detectors';
 import {
   appendRoutesToPhase,
+  convertRewrites,
   getTransformedRoutes,
   isHandler,
   mergeRoutes,
   sourceToRegex,
   type MergeRoutesProps,
+  type Rewrite,
   type Route,
   type HandleValue,
 } from '@vercel/routing-utils';
@@ -866,6 +868,20 @@ async function doBuild(
       }
     }
 
+    // If auto-detection generated top-level service rewrites (V2),
+    // convert them to Route[] separately and append them alongside
+    // the existing rewrite routes rather than re-running
+    // getTransformedRoutes (which would double-transform).
+    const serviceRewrites = (
+      detectedBuilders as typeof detectedBuilders & {
+        serviceRewrites?: Rewrite[];
+      }
+    ).serviceRewrites;
+    const serviceRewriteRoutes =
+      serviceRewrites && serviceRewrites.length > 0
+        ? convertRewrites(serviceRewrites)
+        : null;
+
     zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
     const detectedHostRewriteRoutes = (
       detectedBuilders as typeof detectedBuilders & {
@@ -883,7 +899,10 @@ async function doBuild(
     zeroConfigRoutes.push(
       ...appendRoutesToPhase({
         routes: [],
-        newRoutes: detectedServiceRewriteRoutes,
+        newRoutes: [
+          ...(detectedServiceRewriteRoutes || []),
+          ...(serviceRewriteRoutes || []),
+        ],
         phase: 'filesystem',
       })
     );
