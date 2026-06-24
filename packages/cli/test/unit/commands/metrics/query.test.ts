@@ -1296,6 +1296,28 @@ describe('metrics query v2', () => {
       ]);
     });
 
+    it('should track options before invalid sort returns', async () => {
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--sort',
+        'count ascending',
+        '--filter',
+        'http_status ge 500',
+        '--prod'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(1);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
+        { key: 'option:sort', value: 'count ascending' },
+        { key: 'option:filter', value: '[REDACTED]' },
+        { key: 'flag:prod', value: 'TRUE' },
+      ]);
+    });
+
     it('should track filter option as redacted', async () => {
       mockMetricDetail();
       mockApiSuccess();

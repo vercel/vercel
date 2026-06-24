@@ -248,17 +248,18 @@ export default async function query(
   const all = flags['--all'];
 
   const sortResult = parseSortFlag(sortInput);
-  if (!sortResult.valid) {
-    return handleValidationError(sortResult, jsonOutput, client);
+  let telemetrySortInput: string | undefined;
+  if (sortInput || orderInput) {
+    if (!sortResult.valid) {
+      telemetrySortInput = sortInput ?? orderInput;
+    } else if (sortResult.orderBy) {
+      telemetrySortInput = `${sortResult.orderBy} ${
+        orderInput ?? sortResult.orderDirection ?? 'desc'
+      }`;
+    } else {
+      telemetrySortInput = orderInput;
+    }
   }
-  const orderByInput = sortResult.orderBy;
-  const orderDirectionInput = orderInput ?? sortResult.orderDirection;
-  const telemetrySortInput =
-    sortInput || orderInput
-      ? orderByInput
-        ? `${orderByInput} ${orderDirectionInput ?? 'desc'}`
-        : orderDirectionInput
-      : undefined;
 
   // Track telemetry
   telemetry.trackCliArgumentMetricId(metricFlag);
@@ -266,6 +267,7 @@ export default async function query(
   telemetry.trackCliOptionGroupBy(groupBy.length > 0 ? groupBy : undefined);
   telemetry.trackCliOptionLimit(limit);
   telemetry.trackCliOptionSort(telemetrySortInput);
+  telemetry.trackCliOptionOrder(orderInput);
   telemetry.trackCliOptionFilter(filters);
   telemetry.trackCliFlagProd(prod);
   telemetry.trackCliOptionSince(since);
@@ -275,6 +277,12 @@ export default async function query(
   telemetry.trackCliOptionProject(project);
   telemetry.trackCliFlagAll(all);
   telemetry.trackCliOptionFormat(flags['--format']);
+
+  if (!sortResult.valid) {
+    return handleValidationError(sortResult, jsonOutput, client);
+  }
+  const orderByInput = sortResult.orderBy;
+  const orderDirectionInput = orderInput ?? sortResult.orderDirection;
 
   // Validate that a metric id was provided.
   const requiredMetric = validateRequiredMetric(metricFlag);
