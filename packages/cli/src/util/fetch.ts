@@ -70,6 +70,38 @@ export default function fetch(
   ) as Promise<Response>;
 }
 
+/**
+ * Like {@link fetch}, but never applies the global proxy-aware dispatcher.
+ *
+ * This is required for internal loopback requests made by `vercel dev` (e.g.
+ * dispatching to the local middleware/queue worker on `127.0.0.1`). Those
+ * requests must always go directly to the loopback dev server and must never
+ * be routed through an `HTTP_PROXY`/`HTTPS_PROXY` configured via env vars,
+ * which would otherwise break local dev for users behind a corporate proxy
+ * that does not list `127.0.0.1`/`localhost` in `no_proxy`.
+ */
+export function directFetch(
+  input: RequestInfo,
+  init?: RequestInit
+): Promise<Response> {
+  const options = { ...init } as RequestInit & {
+    dispatcher?: FetchDispatcher;
+    duplex?: 'half';
+  };
+
+  // Ensure no dispatcher (proxy or otherwise) is applied.
+  delete options.dispatcher;
+
+  if (init?.body instanceof Readable) {
+    options.duplex = 'half';
+  }
+
+  return globalThis.fetch(
+    input,
+    options as unknown as NativeRequestInit
+  ) as Promise<Response>;
+}
+
 export function toNodeReadable(body: Response['body']): Readable {
   if (!body) {
     throw new TypeError('Expected response body');
