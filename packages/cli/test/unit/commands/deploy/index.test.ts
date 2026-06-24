@@ -1273,7 +1273,7 @@ describe('deploy', () => {
       // remove first 3 lines which contains randomized data
       const output = client.getFullOutput().split('\n').slice(3).join('\n');
       expect(output).toContain('Building');
-      expect(output).toContain('Production  https');
+      expect(output).toContain('Production      https');
       expect(output).toContain('Completing');
       expect(exitCode).toEqual(0);
     });
@@ -1901,32 +1901,35 @@ describe('deploy', () => {
 
         // I'd like to include project path in this assertion, but it ends up containing
         // a line break in a non-determinsitic location.
-        await expect(client.stderr).toOutput('Set up');
+        await expect(client.stderr).toOutput('Directory');
         await expect(client.stderr).toOutput('? Which team?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Link to existing project?');
-        client.stdin.write('no\n');
+        await expect(client.stderr).toOutput('Project?');
+        client.stdin.write('\n');
 
         // The one expecation that the test is actually about!
         await expect(client.stderr).toOutput(`Name? (${nameOption})`);
         client.stdin.write('\n');
         // Fixture has no detectable framework at the root, so the
         // root-directory prompt now fires (nested-monolith guard).
-        await expect(client.stderr).toOutput(
-          'In which directory is your code located?'
-        );
+        await expect(client.stderr).toOutput('Code directory?');
         client.stdin.write('\n');
         await expect(client.stderr).toOutput('Customize settings?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput(
-          'Do you want to change additional project settings?'
-        );
+        await expect(client.stderr).toOutput('Customize advanced settings?');
         client.stdin.write('\n');
 
         const exitCode = await exitCodePromise;
         expect(exitCode).toEqual(0);
+        const output = client.stderr.getFullOutput();
+        expect(output).not.toContain(
+          'In which directory is your code located?'
+        );
+        expect(output).not.toContain(
+          'Do you want to change additional project settings?'
+        );
       });
 
       it('prefills "project name" prompt based on directory name', async () => {
@@ -1935,32 +1938,35 @@ describe('deploy', () => {
 
         // I'd like to include project path in this assertion, but it ends up containing
         // a line break in a non-determinsitic location.
-        await expect(client.stderr).toOutput('Set up');
+        await expect(client.stderr).toOutput('Directory');
         await expect(client.stderr).toOutput('? Which team?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Link to existing project?');
-        client.stdin.write('no\n');
+        await expect(client.stderr).toOutput('Project?');
+        client.stdin.write('\n');
 
         // The one expecation that the test is actually about!
         await expect(client.stderr).toOutput(`Name? (${directoryName})`);
         client.stdin.write('\n');
         // Fixture has no detectable framework at the root, so the
         // root-directory prompt now fires (nested-monolith guard).
-        await expect(client.stderr).toOutput(
-          'In which directory is your code located?'
-        );
+        await expect(client.stderr).toOutput('Code directory?');
         client.stdin.write('\n');
         await expect(client.stderr).toOutput('Customize settings?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput(
-          'Do you want to change additional project settings?'
-        );
+        await expect(client.stderr).toOutput('Customize advanced settings?');
         client.stdin.write('\n');
 
         const exitCode = await exitCodePromise;
         expect(exitCode).toEqual(0);
+        const output = client.stderr.getFullOutput();
+        expect(output).not.toContain(
+          'In which directory is your code located?'
+        );
+        expect(output).not.toContain(
+          'Do you want to change additional project settings?'
+        );
       });
     });
   });
@@ -2053,7 +2059,7 @@ describe('deploy', () => {
 
       await expect(client.stderr).toOutput('Production ');
       await expect(client.stderr).toOutput(
-        'Aliased     https://my-app.vercel.app'
+        'Aliased         https://my-app.vercel.app'
       );
 
       // Anti-regression: ANSI is stripped from toOutput, so assert the raw
@@ -2251,7 +2257,7 @@ describe('deploy', () => {
 
       const exitCodePromise = deploy(client);
 
-      await expect(client.stderr).toOutput('Preview     https');
+      await expect(client.stderr).toOutput('Preview         https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
@@ -2325,7 +2331,7 @@ describe('deploy', () => {
 
       const exitCodePromise = deploy(client);
 
-      await expect(client.stderr).toOutput('Production  https');
+      await expect(client.stderr).toOutput('Production      https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
@@ -3108,7 +3114,7 @@ describe('deploy', () => {
       const exitCodePromise = deploy(client);
 
       await expect(client.stderr).toOutput('Running Checks…');
-      await expect(client.stderr).toOutput('Aliased     https');
+      await expect(client.stderr).toOutput('Aliased         https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);

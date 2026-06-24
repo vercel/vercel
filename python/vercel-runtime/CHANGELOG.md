@@ -1,5 +1,11 @@
 # vercel-runtime
 
+## 0.15.0
+
+### Minor Changes
+
+- fe6d98b: Add WebSocket support for Python ASGI applications via vendored wsproto
+
 ## 0.14.2
 
 ### Patch Changes

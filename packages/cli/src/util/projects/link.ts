@@ -446,7 +446,8 @@ export async function linkFolderToProject(
   orgSlug: string,
   successEmoji: EmojiLabel = 'link',
   autoConfirm: boolean = false,
-  pullEnv: boolean = true
+  pullEnv: boolean = true,
+  resultLabel: 'Linked' | 'Created' = 'Linked'
 ) {
   // if the project is already linked, we skip linking
   if (await hasProjectLink(client, projectLink, path)) {
@@ -477,7 +478,8 @@ export async function linkFolderToProject(
   // update .gitignore (silent — git status surfaces the change on demand)
   await addToGitIgnore(path);
 
-  printAlignedLabel('Linked', `${orgSlug}/${projectName}`);
+  output.print('\n');
+  printAlignedLabel(resultLabel, `${orgSlug}/${projectName}`, { gutter: '✓' });
 
   if (!pullEnv) {
     return;
@@ -488,10 +490,12 @@ export async function linkFolderToProject(
     return;
   }
 
+  output.print('\n');
+
   const pullEnvConfirmed =
     autoConfirm ||
     (await client.input.confirm(
-      'Would you like to pull environment variables now?',
+      'Pull development environment variables into .env.local?',
       true
     ));
 

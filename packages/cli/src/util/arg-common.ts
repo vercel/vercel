@@ -252,6 +252,24 @@ export const projectOption = {
   deprecated: false,
 } as const;
 
+export const deploymentOption = {
+  name: 'deployment',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description: 'The deployment ID or URL to target',
+  argument: 'ID|URL',
+} as const;
+
+export const protectionBypassOption = {
+  name: 'protection-bypass',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description: 'Protection bypass secret for accessing protected deployments',
+  argument: 'SECRET',
+} as const;
+
 type GlobalOpt = (typeof globalCommandOptions)[number];
 
 const GLOBAL_LONG_TO_OPT = new Map<string, GlobalOpt>();

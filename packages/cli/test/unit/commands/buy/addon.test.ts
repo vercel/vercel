@@ -110,6 +110,14 @@ describe('buy addon', () => {
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('Use --yes');
     });
+
+    it('purchases customEnvironment addon successfully', async () => {
+      setupTeam();
+      useBuyEndpoint();
+      client.setArgv('buy', 'addon', 'customEnvironment', '1', '--yes');
+      const exitCode = await buy(client);
+      expect(exitCode).toBe(0);
+    });
   });
 
   describe('confirmation prompt', () => {
@@ -221,6 +229,27 @@ describe('buy addon', () => {
       const stdoutOutput = client.stdout.getFullOutput();
       const parsed = JSON.parse(stdoutOutput);
       expect(parsed.productAlias).toBe('siem');
+      expect(parsed.quantity).toBe(1);
+      expect(parsed.subscriptionIntent.id).toBe('subint_test_123');
+    });
+
+    it('outputs JSON for customEnvironment addon', async () => {
+      setupTeam();
+      useBuyEndpoint();
+      client.setArgv(
+        'buy',
+        'addon',
+        'customEnvironment',
+        '1',
+        '--yes',
+        '--format=json'
+      );
+      const exitCode = await buy(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const parsed = JSON.parse(stdoutOutput);
+      expect(parsed.productAlias).toBe('customEnvironment');
       expect(parsed.quantity).toBe(1);
       expect(parsed.subscriptionIntent.id).toBe('subint_test_123');
     });

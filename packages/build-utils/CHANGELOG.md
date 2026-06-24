@@ -1,5 +1,19 @@
 # @vercel/build-utils
 
+## 13.31.1
+
+### Patch Changes
+
+- 2158ab6: [vc dev] Add support to `experimentalServicesV2` for bindings in `vc dev`
+
+## 13.31.0
+
+### Minor Changes
+
+- 8dec9ea: Add deploy-manifest as an extension of project manifest.
+- 3afdb18: Emit project manifest for hugo, zola, jekyll, and middleman frameworks.
+- 04f830c: Autodetect Bun runtime if engines.bun is set.
+
 ## 13.30.0
 
 ### Minor Changes

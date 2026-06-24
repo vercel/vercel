@@ -71,6 +71,7 @@ export const help = () => `
       target               [cmd]       Manage custom environments for your Project
       teams                            Manages your teams
       telemetry            [cmd]       Enable or disable telemetry collection
+      traces               [cmd]       Fetch and capture traces for your project's deployment
       upgrade                          Upgrade the Vercel CLI to the latest version
       usage                            Show billing usage for the current billing period
       webhooks             [cmd]       Manages webhooks [beta]

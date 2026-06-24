@@ -1,5 +1,153 @@
 # vercel
 
+## 54.15.1
+
+### Patch Changes
+
+- b14be80: `vercel inspect` now supports Vercel dashboard URLs and deployment IDs without prefixes.
+- 2158ab6: [vc dev] Add support to `experimentalServicesV2` for bindings in `vc dev`
+- Updated dependencies [2158ab6]
+  - @vercel/build-utils@13.31.1
+  - @vercel/node@5.8.19
+  - @vercel/go@3.9.2
+  - @vercel/ruby@2.5.1
+  - @vercel/backends@0.8.16
+  - @vercel/elysia@0.1.95
+  - @vercel/express@0.1.107
+  - @vercel/fastify@0.1.98
+  - @vercel/h3@0.1.104
+  - @vercel/hono@0.2.98
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.78
+  - @vercel/nestjs@0.2.99
+  - @vercel/next@4.19.1
+  - @vercel/python@6.47.1
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/rust@1.3.0
+  - @vercel/static-build@2.11.1
+
+## 54.15.0
+
+### Minor Changes
+
+- 8dec9ea: Add deploy-manifest as an extension of project manifest.
+- d99dbf8: Add `vercel domains verify <domain>` for DNS misconfiguration feedback. The command checks the domain's DNS configuration, reports dashboard-aligned configuration and project-verification states, triggers a verification re-check when needed, and lists actionable fixes: recommended A/CNAME records, Vercel nameservers, conflicting records, DNSSEC guidance, and the TXT ownership challenge. Domains eligible for automatic configuration also receive a Domain Connect URL, with manual DNS guidance as a fallback. Supports `--project`, `--strict`, and `--format json`; non-interactive runs emit structured status, simultaneous issue details, automatic-configuration metadata, and shell-safe, context-preserving next commands. Human and structured output share one diagnosis so status, remediation, and exit behavior stay consistent. The command exits non-zero when action is required so scripts and agents can gate on it.
+- a5245fd: Add `vercel flags segments` commands for listing, inspecting, creating, updating, and deleting feature flag segments.
+
+  Examples:
+
+  ```bash
+  vercel flags segments ls
+  vercel flags segments inspect beta-users --json
+  vercel flags segments create beta-users --label "Beta users" --add include:user.id=user_123 --add include:user.id=user_456
+  vercel flags segments create enterprise-users --label "Enterprise users" --add rule:user.plan:eq:enterprise
+  vercel flags segments update beta-users --add include:user.id=user_789 --remove include:user.id=user_123
+  vercel flags segments update enterprise-users --add rule:user.email:ends-with:@company.com --remove rule:user.plan:eq:pro
+  vercel flags segments update enterprise-users --data '{"rules":[],"include":{"user":{"email":[{"value":"me@company.com"}]}},"exclude":{}}'
+  vercel flags segments rm beta-users --yes
+  ```
+
+### Patch Changes
+
+- 970b82b: Fix Windows standalone binary builds with the custom Node.js 24 small-ICU runtime and a compatible Windows toolchain.
+- c4afec8: [routing-utils] support `request.path` transforms on routes and high-level rewrites, lowering path-to-regexp parameters such as `/:path*` to low-level capture references such as `/$1`
+  [config] support request path transforms in the router builder
+  [cli] preserve request path transform syntax and environment metadata across AI/manual route edits
+- 300af0d: Increase Connex setup polling timeout to 115 minutes.
+- 4253eaa: Avoid applying the current Git branch to explicitly selected projects in `vc logs`, and follow the latest READY production deployment when using `--project --follow`.
+- a19feac: Rename the `gantt` value for `vercel traces get --view` to `waterfall`.
+- Updated dependencies [8dec9ea]
+- Updated dependencies [95d8879]
+- Updated dependencies [82b3c3c]
+- Updated dependencies [3afdb18]
+- Updated dependencies [96e3137]
+- Updated dependencies [f5fe588]
+- Updated dependencies [04f830c]
+- Updated dependencies [f076559]
+  - @vercel/build-utils@13.31.0
+  - @vercel/python@6.47.1
+  - @vercel/static-build@2.11.0
+  - @vercel/ruby@2.5.0
+  - @vercel/backends@0.8.15
+  - @vercel/elysia@0.1.94
+  - @vercel/express@0.1.106
+  - @vercel/fastify@0.1.97
+  - @vercel/go@3.9.1
+  - @vercel/h3@0.1.103
+  - @vercel/hono@0.2.97
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.77
+  - @vercel/nestjs@0.2.98
+  - @vercel/next@4.19.1
+  - @vercel/node@5.8.18
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/rust@1.3.0
+
+## 54.14.5
+
+### Patch Changes
+
+- d1e1d69: Stop prompting to install the Vercel plugin after login and link commands.
+- 7aa52be: Show bounded progress while upgrading native and package-installed CLIs, and
+  report when no newer version is available without running the installer.
+- e2043e6: Build standalone Vercel CLI binaries with Node.js 24.14.1.
+- Updated dependencies [94671a4]
+- Updated dependencies [d4547af]
+- Updated dependencies [bc6f22f]
+- Updated dependencies [f530cd5]
+  - @vercel/go@3.9.1
+  - @vercel/next@4.19.1
+  - @vercel/python@6.47.0
+
+## 54.14.4
+
+### Patch Changes
+
+- 4e11013: Keep Build Output API output at the root when generated `experimentalServicesV2` config identifies an already-built entrypoint as a service, and disable immutable static asset env flags for service-specific builds.
+- Updated dependencies [480ee7c]
+  - @vercel/python@6.46.1
+  - @vercel/static-build@2.10.3
+
+## 54.14.3
+
+### Patch Changes
+
+- efc1811: Add `vercel blob signed-token` and `vercel blob presign` commands, and allow `blob presign` to accept explicit delegation/client-signing tokens or issue them automatically when omitted.
+- 7d29e22: Fix the `vercel metrics` function duration example to use the supported metric name.
+- 9afe46d: Unhide the `flags` command in CLI help output.
+- fe6d98b: Add WebSocket support for Python ASGI applications via vendored wsproto
+- Updated dependencies [e84cf48]
+- Updated dependencies [0d9bc23]
+  - @vercel/python@6.46.0
+  - @vercel/node@5.8.17
+
+## 54.14.2
+
+### Patch Changes
+
+- 8e56ad5: Add experimental shim to enable Next.js WebSocket upgrade support in `vc dev`.
+- 07d3fe2: [cli] Add `traces create` as an alias for `curl --trace`
+
+## 54.14.1
+
+### Patch Changes
+
+- 3d6f057: [cli] Make `vercel blob` store commands work non-interactively for agents
+- 28dda45: Update Claude Code Vercel plugin prompts and remember accepted plugin updates for future automatic updates.
+- d55310f: Add CLI UX guidance and improve CLI output consistency.
+- b341a19: Improve CLI version output: the native binary now prints `Vercel CLI <version>` without the Node.js suffix, and `vercel upgrade` reports the version it upgraded to and says "No upgrade available" when already on the latest version.
+- 7f5f0f2: Fix telemetry flushing when running the CLI as a native binary.
+- 7866d3d: Allow `vercel buy addon customEnvironment <quantity>` by adding `customEnvironment` to the CLI add-on allowlist and help examples.
+- b7fbaec: Improve `vc metrics`: source groupable dimensions from the metric schema instead of a hardcoded list, preserve the requested time bounds so the query endpoint owns bucket rounding, and add an optional `--bucket-timezone` flag for calendar bucket alignment (it only affects bucket boundaries, not the `--since`/`--until` range or output timestamps).
+- e9aa6f5: Remove hidden `--functions-beta` / `--no-functions-beta` deploy flags and the size-limit hint messaging
+- fd26487: Remove deprecated `public` from deployment test fixtures and helpers, and stop the CLI from sending the removed `public` field on deploy (including the `--public` flag).
+- 5ed337e: Allow `vercel metrics` to combine repeated `--filter`/`-f` values with OData `and`.
+- aeea9f2: Render the ▲ gutter once per deploy summary: on the Aliased row, falling back to the Production row when no Aliased row will print (`--no-wait`, `--skip-domain`)
+- Updated dependencies [e9aa6f5]
+  - @vercel/python@6.45.1
+
 ## 54.14.0
 
 ### Minor Changes

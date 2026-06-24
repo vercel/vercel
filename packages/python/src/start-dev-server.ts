@@ -25,7 +25,7 @@ import {
   getVenvPythonBin,
   getVenvBinDir,
 } from './utils';
-import { findUvBinary, getProtectedUvEnv } from './uv';
+import { findUvBinary, getProtectedUvEnv, checkUvBinaryVersion } from './uv';
 import {
   discoverPackage,
   detectInstallSource,
@@ -717,6 +717,9 @@ export const startDevServer: StartDevServer = async opts => {
   try {
     const { pythonPath: systemPython } = getDefaultPythonVersion(meta);
     const uvPath = await findUvBinary(systemPython);
+    if (uvPath) {
+      checkUvBinaryVersion(uvPath);
+    }
     const venv = isInVirtualEnv();
     const serviceCount = (meta.serviceCount as number | undefined) ?? 0;
     const pythonServiceCount =

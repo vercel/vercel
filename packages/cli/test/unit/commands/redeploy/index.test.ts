@@ -120,7 +120,7 @@ describe('redeploy', () => {
     await expect(client.stderr).toOutput(
       `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
     );
-    await expect(client.stderr).toOutput('Production  https');
+    await expect(client.stderr).toOutput('Production      https');
 
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "redeploy"').toEqual(0);
@@ -156,7 +156,7 @@ describe('redeploy', () => {
 
     const exitCodePromise = redeploy(client);
     await expect(client.stderr).toOutput(
-      'Aliased     https://my-app.vercel.app'
+      'Aliased         https://my-app.vercel.app'
     );
 
     const exitCode = await exitCodePromise;
@@ -174,7 +174,7 @@ describe('redeploy', () => {
     client.setArgv('redeploy', fromDeployment.id);
 
     const exitCodePromise = redeploy(client);
-    await expect(client.stderr).toOutput('Production  https');
+    await expect(client.stderr).toOutput('Production      https');
 
     // let the status poller observe the alias assignment
     toDeployment.readyState = 'READY';
@@ -182,7 +182,7 @@ describe('redeploy', () => {
     toDeployment.alias = ['my-app.vercel.app'];
 
     await expect(client.stderr).toOutput(
-      'Aliased     https://my-app.vercel.app'
+      'Aliased         https://my-app.vercel.app'
     );
 
     const exitCode = await exitCodePromise;
@@ -205,7 +205,7 @@ describe('redeploy', () => {
       await expect(client.stderr).toOutput(
         `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
       );
-      await expect(client.stderr).toOutput('Production  https');
+      await expect(client.stderr).toOutput('Production      https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "redeploy"').toEqual(0);
@@ -222,7 +222,7 @@ describe('redeploy', () => {
       await expect(client.stderr).toOutput(
         `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
       );
-      await expect(client.stderr).toOutput('Preview     https');
+      await expect(client.stderr).toOutput('Preview         https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "redeploy"').toEqual(0);
@@ -239,7 +239,7 @@ describe('redeploy', () => {
       await expect(client.stderr).toOutput(
         `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
       );
-      await expect(client.stderr).toOutput('Preview     https');
+      await expect(client.stderr).toOutput('Preview         https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "redeploy"').toEqual(0);
@@ -256,7 +256,7 @@ describe('redeploy', () => {
       await expect(client.stderr).toOutput(
         `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
       );
-      await expect(client.stderr).toOutput('Preview     https');
+      await expect(client.stderr).toOutput('Preview         https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "redeploy"').toEqual(0);

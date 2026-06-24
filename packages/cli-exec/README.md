@@ -6,7 +6,9 @@ Helpers for locating and executing the Vercel CLI from other Node packages.
 
 ### `findVercelCli(options?)`
 
-Resolves the Vercel CLI executable without running it.
+Asynchronously resolves the Vercel CLI executable without running it.
+
+Returns a `Promise<VercelCliInvocation | null>`.
 
 - Prefers the nearest `node_modules/.bin/vercel`
 - Falls back to the provided `PATH`
@@ -23,7 +25,7 @@ Resolves and runs the Vercel CLI, returning:
 It preserves access to local `node_modules/.bin` entries and Node itself even
 when the caller passes a sanitized `PATH`.
 
-### `clearVercelCliCache()`
+### `clearVercelCliLookupCache()`
 
 Clears cached CLI lookups. Use this when a long-lived process needs to pick up
 an install or uninstall that happened after an earlier resolution attempt.
