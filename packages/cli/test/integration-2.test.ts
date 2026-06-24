@@ -1719,8 +1719,11 @@ test.each([
 
   const { href } = new URL(output.stdout);
 
-  // Send a test request to the deployment
-  const response = await nodeFetch(href);
+  // Send a test request to the deployment. Use `redirect: 'manual'` so a
+  // protected deployment's auth response is observed directly: otherwise
+  // node-fetch follows the SSO redirect to the login page and reports its 200,
+  // masking the 401.
+  const response = await nodeFetch(href, { redirect: 'manual' });
   expect(response.status).toBe(expectedStatus);
 
   const projectResponse = await apiFetch(`/projects/${projectName}`, {
