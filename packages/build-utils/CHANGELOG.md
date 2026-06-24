@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.32.1
+
+### Patch Changes
+
+- 8dc4702: Fix `vercel dev` for standalone Node servers, including projects without a `package.json`, and reuse the server process between requests.
+
 ## 13.32.0
 
 ### Minor Changes

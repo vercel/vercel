@@ -1,5 +1,12 @@
 # @vercel/container
 
+## 0.0.2
+
+### Patch Changes
+
+- 09743c6: Support deploying any project as a container via a `Dockerfile.vercel` or `Containerfile.vercel` marker. A new experimental `container` framework preset detects these files and is listed first so it takes precedence over all other frameworks — a project that also looks like (e.g.) a Next.js app will deploy as a container when one of these markers is present. As an experimental framework it is gated behind `VERCEL_USE_EXPERIMENTAL_FRAMEWORKS`. The `@vercel/container` builder now recognizes the `.vercel` markers, auto-discovers them when its entrypoint is `<detect>`, and supports root (non-service) container deploys.
+- 03fbb1c: Fix container service build output so requests reach the function. Container services now do a normal build, emitting the function at the natural `index` path inside the nested `services/<name>/` output along with a catch-all route, instead of namespacing under `_svc/<name>/index` with no route to it. Previously a request to the service root never matched the function.
+
 ## 0.0.1
 
 ### Patch Changes

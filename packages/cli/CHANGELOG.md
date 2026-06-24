@@ -1,5 +1,42 @@
 # vercel
 
+## 54.17.0
+
+### Minor Changes
+
+- 222d43b: Fix websocket upgrade events for services V2.
+
+### Patch Changes
+
+- 96e9513: Add `vercel deploy --dry` to inspect the detected framework preset and local deployment file set without uploading or creating a deployment, with complete JSON output for non-TTY consumers.
+- 801b8e2: [vc dev] Remove the trailing slash from service binding URL env vars injected by `vercel dev`.
+- 82bda7d: Fix the deploy size-limit warning so it prints the skipped file and plan upgrade link instead of crashing.
+- 3f0488d: Surface the `action`/`link` (and newer `ctaLabel`/`ctaUrl`) fields on `repo_links_exceeded_limit` errors from `vercel git connect` instead of dropping them, so users hitting the projects-per-repository limit see the relevant next step and URL.
+- 8dc4702: Fix `vercel dev` for standalone Node servers, including projects without a `package.json`, and reuse the server process between requests.
+- Updated dependencies [09743c6]
+- Updated dependencies [03fbb1c]
+- Updated dependencies [8dc4702]
+  - @vercel/container@0.0.2
+  - @vercel/backends@0.8.18
+  - @vercel/build-utils@13.32.1
+  - @vercel/static-build@2.11.3
+  - @vercel/elysia@0.1.97
+  - @vercel/express@0.1.109
+  - @vercel/fastify@0.1.100
+  - @vercel/go@3.10.0
+  - @vercel/h3@0.1.106
+  - @vercel/hono@0.2.100
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.80
+  - @vercel/nestjs@0.2.101
+  - @vercel/next@4.20.0
+  - @vercel/node@5.8.21
+  - @vercel/python@6.47.1
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.3.0
+
 ## 54.16.0
 
 ### Minor Changes
