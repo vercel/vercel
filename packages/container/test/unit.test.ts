@@ -426,6 +426,86 @@ describe('@vercel/container', () => {
     expect(commands.some(c => /\bbuildah\b.*\bpush\b/.test(c))).toBe(true);
   });
 
+  it.each([
+    'Dockerfile.vercel',
+    'Containerfile.vercel',
+  ])('builds from a `%s` opt-in marker entrypoint, passing it via -f', async marker => {
+    const commands = await runDockerfileBuild({
+      buildImageEnv: 'al2023',
+      entrypoint: marker,
+    });
+    const escaped = marker.replace('.', '\\.');
+    expect(
+      commands.some(
+        c =>
+          /\bbuildah\b.*\bbuild\b/.test(c) &&
+          new RegExp(`-f \\S*${escaped}\\b`).test(c)
+      )
+    ).toBe(true);
+    expect(commands.some(c => /\bbuildah\b.*\bpush\b/.test(c))).toBe(true);
+  });
+
+  it('discovers a `Dockerfile.vercel` marker when the entrypoint is `<detect>`', async () => {
+    // The `dockerfile` framework preset resolves its entrypoint via `<detect>`;
+    // the builder must then find the `.vercel` marker in the work directory.
+    const commands = await runDockerfileBuild({
+      buildImageEnv: 'al2023',
+      entrypoint: '<detect>',
+    });
+    expect(
+      commands.some(
+        c =>
+          /\bbuildah\b.*\bbuild\b/.test(c) &&
+          /-f \S*Dockerfile\.vercel\b/.test(c)
+      )
+    ).toBe(true);
+  });
+
+  it('builds a root (non-service) container deploy without a service name', async () => {
+    // A `Dockerfile.vercel` at the project root deploys as a container with no
+    // service; the repository falls back to a stable leaf instead of throwing.
+    process.env.VERCEL_OIDC_TOKEN = fakeOidcToken();
+    const fetchMock = vi.fn();
+    stubRegistryFetch(fetchMock);
+    vi.stubGlobal('fetch', fetchMock);
+    existsSyncMock.mockReturnValue(true);
+    const digest = `sha256:${'a'.repeat(64)}`;
+    spawnMock.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'buildah' && args.includes('info')) {
+        return fakeChild(
+          JSON.stringify({
+            store: {
+              GraphRoot: '/vercel/.containers/storage',
+              RunRoot: '/run/containers/storage',
+              GraphDriverName: 'overlay',
+              GraphStatus: { 'Backing Filesystem': 'xfs' },
+            },
+          })
+        );
+      }
+      if (args.includes('push')) {
+        return fakeChild(`latest: digest: ${digest} size: 1234\n`);
+      }
+      return fakeChild('');
+    });
+
+    const result = expectTypicalBuildResult(
+      await build({
+        ...createBuildOptions({ runtime: 'container' }),
+        entrypoint: 'Dockerfile.vercel',
+      } as any)
+    );
+
+    // No service name → output at `index`, no routes.
+    expect(result.output).toHaveProperty('index');
+    expect(result.output.index).toMatchObject({
+      type: 'Lambda',
+      runtime: 'container',
+      handler: `vcr.vercel.com/acme/my-app/app@${digest}`,
+    });
+    expect(result.routes).toBeUndefined();
+  });
+
   it('forwards the project build env to the image build as --build-arg', async () => {
     const commands = await runDockerfileBuild({
       buildImageEnv: 'al2023',

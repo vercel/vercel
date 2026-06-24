@@ -245,6 +245,35 @@ describe('detectFramework()', () => {
   });
 
   it.each([
+    'Dockerfile.vercel',
+    'Containerfile.vercel',
+  ])('Detect Dockerfile container via `%s`', async marker => {
+    const fs = new VirtualFilesystem({
+      [marker]: 'FROM node:20\nCMD ["node", "server.js"]',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('dockerfile');
+  });
+
+  it.each([
+    'Dockerfile.vercel',
+    'Containerfile.vercel',
+  ])('Prefer the Dockerfile container over other frameworks when `%s` is present', async marker => {
+    // A project may also be a Next.js app, but the explicit container marker
+    // is an opt-in to deploy it as a container instead.
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          next: '14.0.0',
+        },
+      }),
+      [marker]: 'FROM node:20\nCMD ["node", "server.js"]',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('dockerfile');
+  });
+
+  it.each([
     'server.cjs',
     'server.js',
     'server.mjs',

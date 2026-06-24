@@ -48,7 +48,23 @@ function isDockerfileRef(ref: string): boolean {
   return (
     base === 'dockerfile' ||
     base === 'containerfile' ||
-    base.endsWith('.dockerfile')
+    base.endsWith('.dockerfile') ||
+    // Vercel-specific container opt-in markers, used to deploy a project as a
+    // container even when another framework (e.g. Next.js) is also present.
+    base === 'dockerfile.vercel' ||
+    base === 'containerfile.vercel'
+  );
+}
+
+// Vercel-specific container opt-in markers, auto-discovered when the build
+// entrypoint doesn't name a Dockerfile explicitly (e.g. the `dockerfile`
+// framework preset resolves its entrypoint via `<detect>`). These let a
+// project deploy as a container even when another framework is also present.
+const DOCKERFILE_CANDIDATES = ['Dockerfile.vercel', 'Containerfile.vercel'];
+
+function findDockerfile(workPath: string): string | undefined {
+  return DOCKERFILE_CANDIDATES.find(name =>
+    existsSync(path.join(workPath, name))
   );
 }
 
@@ -266,8 +282,14 @@ async function resolveImageHandler(
   const { config, workPath, entrypoint, meta } = options;
 
   const entrypointRef = readString(entrypoint);
+  // An entrypoint that names a Dockerfile (including the `Dockerfile.vercel` /
+  // `Containerfile.vercel` opt-in markers) is built directly. Otherwise — e.g.
+  // when the `dockerfile` framework preset resolves its entrypoint via
+  // `<detect>` — discover a Dockerfile in the work directory.
   const dockerfileConfigured =
-    entrypointRef && isDockerfileRef(entrypointRef) ? entrypointRef : undefined;
+    entrypointRef && isDockerfileRef(entrypointRef)
+      ? entrypointRef
+      : findDockerfile(workPath);
   const dockerfileRel = dockerfileConfigured ?? 'Dockerfile';
   const dockerfilePath = path.join(workPath, dockerfileRel);
   const hasDockerfile =
@@ -309,13 +331,12 @@ async function resolveImageHandler(
     );
   }
 
+  // Named services derive the registry repository from the service name. A
+  // root (non-service) container deploy has no service name, so fall back to a
+  // stable leaf — the repository is already namespaced by owner/project from
+  // the OIDC claims, so a constant leaf is unambiguous.
   const serviceName = options.service?.name;
-  if (!serviceName) {
-    throw new Error(
-      'Container service is missing a name; cannot derive the registry repository.'
-    );
-  }
-  const repository = sanitizeRepository(serviceName);
+  const repository = sanitizeRepository(serviceName ?? 'app');
   const tag = resolveImageTag();
   const contextDir = path.dirname(dockerfilePath);
 
