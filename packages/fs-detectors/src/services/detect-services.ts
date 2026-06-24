@@ -482,15 +482,18 @@ export function generateServicesRoutes(allServices: Service[]): ServicesRoutes {
         });
       }
     } else if (service.runtime) {
-      // Function service: rewrite to internal function namespace
-      // `check: true` verifies the destination exists before applying the route
+      // Function service: rewrite to internal function namespace.
+      // `check: true` verifies Lambda destinations exist before applying the route.
+      // Container image functions are resolved via dynamic path metadata instead of
+      // normal Lambda outputs, so `check` would incorrectly prevent the rewrite.
       const functionPath = getInternalServiceFunctionPath(service.name);
+      const check = service.runtime === 'container' ? undefined : true;
 
       if (routePrefix === '/') {
         defaults.push({
           src: scopeRouteSourceToOwnership('^/(.*)$', ownershipGuard),
           dest: functionPath,
-          check: true,
+          ...(check ? { check } : {}),
         });
       } else {
         rewrites.push({
@@ -499,7 +502,7 @@ export function generateServicesRoutes(allServices: Service[]): ServicesRoutes {
             ownershipGuard
           ),
           dest: functionPath,
-          check: true,
+          ...(check ? { check } : {}),
         });
       }
     }
