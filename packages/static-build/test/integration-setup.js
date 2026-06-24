@@ -61,6 +61,7 @@ module.exports = function setupTests(groupIndex) {
     'vue-v2',
     'sapper-v0',
     '22-docusaurus-2-build-fail',
+    'stencil-v4',
   ];
 
   for (const fixture of fixtures) {
