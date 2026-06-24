@@ -15,7 +15,7 @@ export type Spans = {
         kind: number;
         startTimeUnixNano: string;
         endTimeUnixNano: string;
-        attributes: IKeyValue[];
+        attributes: KeyValue[];
         droppedAttributesCount: number;
         events: unknown[];
         droppedEventsCount: number;
@@ -33,12 +33,12 @@ export interface SpanContext {
   traceFlags?: number;
 }
 
-interface IKeyValue {
+interface KeyValue {
   key: string;
-  value: IAnyValue;
+  value: AnyValue;
 }
 
-interface IAnyValue {
+interface AnyValue {
   stringValue?: string | null;
   boolValue?: boolean;
   intValue?: number;
@@ -72,7 +72,7 @@ class Span implements Instrument {
   private startPerformance = performance.now();
   private ended = false;
   private spanContext: SpanContext;
-  private attributes: IKeyValue[] = [];
+  private attributes: KeyValue[] = [];
 
   constructor(
     readonly name: string,
@@ -81,7 +81,7 @@ class Span implements Instrument {
   ) {
     this.spanContext = {
       traceId: parent.traceId,
-      spanId: allocateSpanId(),
+      spanId: newSpanId(),
       traceFlags: parent.traceFlags,
     };
   }
@@ -167,11 +167,11 @@ export function createRootSpan(name: string): Instrument {
   return new NoopSpan();
 }
 
-function toKeyValue(key: string, value: SpanAttributeValue): IKeyValue {
+function toKeyValue(key: string, value: SpanAttributeValue): KeyValue {
   return { key, value: toAnyValue(value) };
 }
 
-function toAnyValue(value: SpanAttributeValue): IAnyValue {
+function toAnyValue(value: SpanAttributeValue): AnyValue {
   if (typeof value === 'string') {
     return { stringValue: value };
   }
@@ -193,7 +193,7 @@ function unixTimeNano(): bigint {
   return BigInt(Date.now()) * 1000000n;
 }
 
-function allocateSpanId(): string {
+function newSpanId(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(8));
   return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
 }
