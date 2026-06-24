@@ -1,13 +1,14 @@
 import chalk from 'chalk';
 import table from '../../util/output/table';
 import indent from '../../util/output/indent';
-import { getRollupColumnName } from './output';
+import { getResolvedOrderMetadata, getRollupColumnName } from './output';
 import { toGranularityMsFromDuration } from './time-utils';
 import type {
   Aggregation,
   Granularity,
   MetricsDataRow,
   MetricsQueryResponse,
+  OrderDirection,
   Scope,
 } from './types';
 
@@ -56,6 +57,8 @@ interface MetadataHeaderOptions {
   periodUnique?: number;
   bucketTimezone?: string;
   filter?: string;
+  orderBy?: string;
+  orderDirection?: OrderDirection;
   scope: Scope;
   projectName?: string;
   teamName?: string;
@@ -76,6 +79,8 @@ export interface FormatTextOptions {
   periodEnd: string;
   granularity: Granularity;
   bucketTimezone?: string;
+  orderBy?: string;
+  orderDirection?: OrderDirection;
 }
 
 // Use a non-printable delimiter so group keys remain stable without colliding
@@ -734,6 +739,13 @@ export function formatMetadataHeader(opts: MetadataHeaderOptions): string {
     rows.push({ key: 'Filter', value: opts.filter });
   }
 
+  if (opts.orderBy && opts.orderDirection) {
+    rows.push({
+      key: 'Order By',
+      value: `${opts.orderBy} ${opts.orderDirection}`,
+    });
+  }
+
   if (opts.scope.type === 'project') {
     rows.push({
       key: 'Project',
@@ -897,6 +909,7 @@ export function formatText(
     opts.aggregation
   );
   const granularityMs = toGranularityMsFromDuration(opts.granularity);
+  const orderMetadata = getResolvedOrderMetadata(opts, response);
 
   const { groups, series, groupValues } = extractGroupedSeries(
     response.data ?? [],
@@ -930,6 +943,7 @@ export function formatText(
     periodUnique,
     bucketTimezone: opts.bucketTimezone,
     filter: opts.filter,
+    ...(opts.groupBy.length > 0 ? orderMetadata : {}),
     scope: opts.scope,
     projectName: opts.projectName,
     teamName: opts.teamName,

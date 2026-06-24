@@ -63,11 +63,29 @@ export const metricsCommand = {
     },
     {
       name: 'limit',
-      shorthand: null,
+      shorthand: 'l',
       type: Number,
       deprecated: false,
       description: 'Max groups per time bucket (default: 10)',
       argument: 'N',
+    },
+    {
+      name: 'sort',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Sort key for grouped results, for example count or lcp_ms, optionally followed by asc or desc',
+      argument: 'KEY [DIR]',
+    },
+    {
+      name: 'order',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Sort direction for ranked groups: asc or desc (overrides --sort direction, default: desc)',
+      argument: 'DIR',
     },
     {
       name: 'filter',
@@ -79,7 +97,7 @@ export const metricsCommand = {
     },
     {
       name: 'since',
-      shorthand: null,
+      shorthand: 's',
       type: String,
       deprecated: false,
       description:
@@ -88,7 +106,7 @@ export const metricsCommand = {
     },
     {
       name: 'until',
-      shorthand: null,
+      shorthand: 'u',
       type: String,
       deprecated: false,
       description: 'End time (default: now)',
@@ -143,7 +161,11 @@ export const metricsCommand = {
     },
     {
       name: 'Core Web Vitals (LCP) by route',
-      value: `${packageName} metrics vercel.speed_insights_metric.lcp -a p75 --group-by route --since 7d`,
+      value: `${packageName} metrics vercel.speed_insights.lcp_ms -a p75 --group-by route --since 7d`,
+    },
+    {
+      name: 'Routes with the lowest p75 LCP',
+      value: `${packageName} metrics vercel.speed_insights.lcp_ms -a p75 --group-by route --since 7d --sort "lcp_ms asc"`,
     },
     {
       name: 'Daily pageviews with a Paris-aligned bucket',

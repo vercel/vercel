@@ -1,4 +1,8 @@
-import type { ValidationResult, ValidatedResult } from './types';
+import type {
+  OrderDirection,
+  ValidationResult,
+  ValidatedResult,
+} from './types';
 import { validateAllProjectMutualExclusivity } from '../../util/command-validation';
 
 export function validateMutualExclusivity(
@@ -19,5 +23,24 @@ export function validateRequiredMetric(
     code: 'MISSING_METRIC',
     message:
       "Missing required metric. Specify the metric to query.\n\nRun 'vercel metrics schema' to see available metrics.",
+  };
+}
+
+export function validateOrderDirection(
+  orderDirection: string | undefined
+): ValidatedResult<OrderDirection | undefined> {
+  if (orderDirection === undefined) {
+    return { valid: true, value: undefined };
+  }
+
+  if (orderDirection === 'asc' || orderDirection === 'desc') {
+    return { valid: true, value: orderDirection };
+  }
+
+  return {
+    valid: false,
+    code: 'INVALID_ORDER',
+    message: `Invalid order "${orderDirection}". Use "asc" or "desc".`,
+    allowedValues: ['asc', 'desc'],
   };
 }

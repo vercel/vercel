@@ -7,10 +7,19 @@ import { metricsCommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import {
   validateMutualExclusivity,
+  validateOrderDirection,
   validateRequiredMetric,
 } from './validation';
 import { fetchMetricDetailOrExit, getDefaultAggregation } from './schema-api';
-import { formatErrorJson, formatQueryJson, handleApiError } from './output';
+import {
+  formatErrorJson,
+  formatQueryJson,
+  getDefaultCountOrderByDisplayName,
+  getOrderByDisplayName,
+  getOrderByRollupName,
+  getRollupColumnName,
+  handleApiError,
+} from './output';
 import { formatText } from './text-output';
 import { computeGranularity } from './time-utils';
 import { resolveTimeRange } from '../../util/time-utils';
@@ -38,6 +47,9 @@ function handleValidationError(
     );
   } else {
     output.error(result.message);
+    if (result.allowedValues && result.allowedValues.length > 0) {
+      output.print(`\nAvailable values: ${result.allowedValues.join(', ')}\n`);
+    }
   }
   return 1;
 }
@@ -54,6 +66,44 @@ function combineFilters(filters: string[] | undefined): string | undefined {
   }
 
   return nonEmptyFilters.map(filter => `(${filter})`).join(' and ');
+}
+
+function parseSortFlag(
+  sort: string | undefined
+):
+  | { valid: true; orderBy?: string; orderDirection?: string }
+  | ValidationError {
+  if (!sort) {
+    return { valid: true };
+  }
+
+  const parts = sort.split(/\s+/);
+  if (parts.length > 2) {
+    return {
+      valid: false,
+      code: 'INVALID_SORT',
+      message:
+        'Invalid sort value. Use a sort key, optionally followed by "asc" or "desc".',
+      allowedValues: ['<key>', '<key> asc', '<key> desc'],
+    };
+  }
+
+  const [orderBy, rawOrderDirection] = parts;
+  const orderDirection = rawOrderDirection?.toLowerCase();
+  if (orderDirection && orderDirection !== 'asc' && orderDirection !== 'desc') {
+    return {
+      valid: false,
+      code: 'INVALID_SORT_DIRECTION',
+      message: `Invalid sort direction "${orderDirection}". Use "asc" or "desc".`,
+      allowedValues: ['asc', 'desc'],
+    };
+  }
+
+  return {
+    valid: true,
+    orderBy,
+    ...(orderDirection ? { orderDirection } : {}),
+  };
 }
 
 async function resolveQueryScope(
@@ -174,6 +224,11 @@ export default async function query(
   const aggregationFlag = flags['--aggregation'];
   const groupBy = flags['--group-by'] ?? [];
   const limit = flags['--limit'];
+  const sortInput = flags['--sort']?.trim();
+  const orderInput =
+    typeof flags['--order'] === 'string'
+      ? flags['--order'].trim().toLowerCase()
+      : undefined;
   const filters = flags['--filter'];
   const filter = combineFilters(filters);
   const since = flags['--since'];
@@ -183,11 +238,25 @@ export default async function query(
   const project = flags['--project'];
   const all = flags['--all'];
 
+  const sortResult = parseSortFlag(sortInput);
+  if (!sortResult.valid) {
+    return handleValidationError(sortResult, jsonOutput, client);
+  }
+  const orderByInput = sortResult.orderBy;
+  const orderDirectionInput = orderInput ?? sortResult.orderDirection;
+  const telemetrySortInput =
+    sortInput || orderInput
+      ? orderByInput
+        ? `${orderByInput} ${orderDirectionInput ?? 'desc'}`
+        : orderDirectionInput
+      : undefined;
+
   // Track telemetry
   telemetry.trackCliArgumentMetricId(metricFlag);
   telemetry.trackCliOptionAggregation(aggregationFlag);
   telemetry.trackCliOptionGroupBy(groupBy.length > 0 ? groupBy : undefined);
   telemetry.trackCliOptionLimit(limit);
+  telemetry.trackCliOptionSort(telemetrySortInput);
   telemetry.trackCliOptionFilter(filters);
   telemetry.trackCliOptionSince(since);
   telemetry.trackCliOptionUntil(until);
@@ -208,6 +277,12 @@ export default async function query(
   if (!mutualResult.valid) {
     return handleValidationError(mutualResult, jsonOutput, client);
   }
+
+  const orderDirectionResult = validateOrderDirection(orderDirectionInput);
+  if (!orderDirectionResult.valid) {
+    return handleValidationError(orderDirectionResult, jsonOutput, client);
+  }
+  const orderDirection = orderDirectionResult.value ?? 'desc';
 
   const scopeResult = await resolveQueryScope(client, {
     project,
@@ -234,6 +309,28 @@ export default async function query(
   const aggregationInput =
     aggregationFlag ?? getDefaultAggregation(detailOrExitCode, metric) ?? 'sum';
   const aggregation = aggregationInput;
+  const orderBy = getOrderByRollupName(metric, aggregation, orderByInput);
+  const selectedOrderBy = getRollupColumnName(metric, aggregation);
+  if (orderByInput && orderBy && orderBy !== selectedOrderBy) {
+    const allowedValues = Array.from(
+      new Set([
+        'count',
+        getDefaultCountOrderByDisplayName(metric),
+        getOrderByDisplayName(metric, aggregation, selectedOrderBy),
+        selectedOrderBy,
+      ])
+    );
+    return handleValidationError(
+      {
+        valid: false,
+        code: 'INVALID_SORT',
+        message: `Invalid sort key "${orderByInput}". Use "count" or a sort key for the requested metric.`,
+        allowedValues,
+      },
+      jsonOutput,
+      client
+    );
+  }
 
   // Resolve time range
   let startTime: Date;
@@ -270,6 +367,8 @@ export default async function query(
     ...(groupBy.length > 0 ? { groupBy } : {}),
     ...(filter ? { filter } : {}),
     limit: limit ?? 10,
+    ...(orderBy ? { orderBy } : {}),
+    orderDirection,
   };
 
   if (!jsonOutput) {
@@ -304,7 +403,6 @@ export default async function query(
     }
   }
 
-  // Format and output
   if (jsonOutput) {
     client.stdout.write(
       formatQueryJson(
@@ -317,6 +415,8 @@ export default async function query(
           endTime: endTime.toISOString(),
           granularity: granResult.duration,
           ...(bucketTimezone ? { bucketTimezone } : {}),
+          ...(orderByInput ? { orderBy: orderByInput } : {}),
+          orderDirection,
         },
         response
       )
@@ -337,6 +437,8 @@ export default async function query(
         periodEnd: endTime.toISOString(),
         granularity: granResult.duration,
         bucketTimezone: bucketTimezone,
+        orderBy: orderByInput,
+        orderDirection,
       })
     );
   }

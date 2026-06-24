@@ -1,6 +1,10 @@
 import type Client from '../../util/client';
 import output from '../../output-manager';
-import type { QueryMetadata, MetricsQueryResponse } from './types';
+import {
+  AGGREGATIONS,
+  type QueryMetadata,
+  type MetricsQueryResponse,
+} from './types';
 
 export function getRollupColumnName(
   metric: string,
@@ -11,16 +15,134 @@ export function getRollupColumnName(
   return `${metric}_${aggregation}`.replace(/[./]/g, '_');
 }
 
+function getMetricDimensionName(metric: string): string {
+  return metric.split('.').at(-1) ?? metric;
+}
+
+function getAggregationDimensionName(aggregation: string): string | undefined {
+  return aggregation.split('/')[1];
+}
+
+export function getDefaultCountOrderByDisplayName(metric: string): string {
+  const metricName = getMetricDimensionName(metric);
+  return queryMetricHasSpeedInsightsCount(metric)
+    ? `${metricName.replace(/_ms$/, '')}_count`
+    : 'count';
+}
+
+function queryMetricHasSpeedInsightsCount(metric: string): boolean {
+  return (
+    metric.includes('.speed_insights.') &&
+    !/(^|_)count$/.test(getMetricDimensionName(metric))
+  );
+}
+
+export function getOrderByDisplayName(
+  metric: string,
+  aggregation: string,
+  orderBy: string
+): string {
+  if (orderBy === getRollupColumnName(metric, aggregation)) {
+    return (
+      getAggregationDimensionName(aggregation) ?? getMetricDimensionName(metric)
+    );
+  }
+
+  const metricParts = metric.split('.');
+  metricParts.pop();
+  const rollupPrefix =
+    metricParts.length > 0 ? `${metricParts.join('_')}_` : '';
+  if (!rollupPrefix || !orderBy.startsWith(rollupPrefix)) {
+    return orderBy;
+  }
+
+  let displayName = orderBy.slice(rollupPrefix.length);
+  for (const aggregationName of AGGREGATIONS) {
+    const suffix = `_${aggregationName}`;
+    if (displayName.endsWith(suffix)) {
+      displayName = displayName.slice(0, -suffix.length);
+      break;
+    }
+  }
+
+  return displayName;
+}
+
+export function getOrderByRollupName(
+  metric: string,
+  aggregation: string,
+  orderBy: string | undefined
+): string | undefined {
+  if (!orderBy) {
+    return undefined;
+  }
+
+  const displayName =
+    getAggregationDimensionName(aggregation) ?? getMetricDimensionName(metric);
+  const defaultCountDisplayName = getDefaultCountOrderByDisplayName(metric);
+  if (
+    orderBy === 'count' ||
+    (orderBy === defaultCountDisplayName &&
+      defaultCountDisplayName !== displayName)
+  ) {
+    return undefined;
+  }
+
+  if (orderBy === displayName) {
+    return getRollupColumnName(metric, aggregation);
+  }
+
+  return orderBy;
+}
+
+export function getResolvedOrderMetadata(
+  query: Pick<
+    QueryMetadata,
+    'metric' | 'aggregation' | 'orderBy' | 'orderDirection'
+  >,
+  response: Pick<MetricsQueryResponse, 'orderBy' | 'orderDirection'>
+): Pick<QueryMetadata, 'orderBy' | 'orderDirection'> {
+  let orderBy = response.orderBy
+    ? getOrderByDisplayName(query.metric, query.aggregation, response.orderBy)
+    : query.orderBy
+      ? getOrderByDisplayName(query.metric, query.aggregation, query.orderBy)
+      : undefined;
+  const metricName = getMetricDimensionName(query.metric);
+  if (
+    orderBy === metricName &&
+    response.orderBy &&
+    (!query.orderBy ||
+      query.orderBy === 'count' ||
+      query.orderBy === getDefaultCountOrderByDisplayName(query.metric)) &&
+    !/(^|_)count$/.test(metricName)
+  ) {
+    orderBy = getDefaultCountOrderByDisplayName(query.metric);
+  }
+  const orderDirection = response.orderDirection ?? query.orderDirection;
+
+  return {
+    ...(orderBy ? { orderBy } : {}),
+    ...(orderDirection ? { orderDirection } : {}),
+  };
+}
+
 export function formatQueryJson(
   query: QueryMetadata,
   response: MetricsQueryResponse
 ): string {
+  const orderMetadata = getResolvedOrderMetadata(query, response);
+  const queryWithResponseMetadata: QueryMetadata = {
+    ...query,
+    ...orderMetadata,
+  };
+
   return JSON.stringify(
     {
-      query,
+      query: queryWithResponseMetadata,
       summary: response.summary ?? [],
       data: response.data ?? [],
       statistics: response.statistics ?? {},
+      ...orderMetadata,
     },
     null,
     2
