@@ -44,43 +44,37 @@ const readFile = promisify(fs.readFile);
  * - `WHEEL`          – wheel format metadata (installer use only)
  * - `INSTALLER`      – records which tool installed the package
  * - `direct_url.json`– PEP 610 install provenance
- * - `RECORD(.jws/.p7s)` – PEP 376 manifest, used by pip uninstall/verify only
- * - `REQUESTED`      – marks an explicitly-requested install (installer use)
- * - `top_level.txt`  – legacy top-level module list (installer/tooling use)
+ * - `REQUESTED`      – inert PEP 376 marker for an explicitly-requested
+ *   install. No runtime API reads it, so its absence can never raise.
  *
- * `METADATA` and `entry_points.txt` are deliberately NOT stripped: they are
- * read at runtime by `importlib.metadata` (version lookups, plugin/entry-point
- * discovery).  License/notice files are kept for redistribution compliance.
+ * Only files whose absence can never raise a runtime error are stripped.
+ * Notably NOT stripped (each has a runtime reader whose failure mode is an
+ * exception, not a no-op):
+ * - `RECORD(.jws/.p7s)` – `importlib.metadata.files()` returns `None` without
+ *   it, which breaks callers that iterate the result.
+ * - `top_level.txt`     – `pkg_resources` raises when this metadata is missing.
+ * - C/Cython sources and C/C++ headers – read by runtime compilation paths
+ *   (`pyximport`, cffi ABI `cdef`, `get_include()`), which fail if absent.
+ * - `METADATA` / `entry_points.txt` – read at runtime by `importlib.metadata`
+ *   (`version()`, `entry_points()`). License/notice files are kept for
+ *   redistribution compliance.
  */
 const STRIP_BASENAMES = new Set([
   'py.typed',
   'WHEEL',
   'INSTALLER',
   'direct_url.json',
-  'RECORD',
-  'RECORD.jws',
-  'RECORD.p7s',
   'REQUESTED',
-  'top_level.txt',
 ]);
 
 /**
- * File extensions that are never needed at runtime:
+ * File extensions that are never needed at runtime and whose absence cannot
+ * raise:
  *
- * - `.pyc` / `.pyi` – bytecode caches / type stubs
- * - `.c` / `.pyx` / `.pxd` / `.pxi` – Cython/C build-time sources
- * - `.h` / `.hpp`  – C/C++ headers shipped for downstream compilation
+ * - `.pyc` – bytecode caches (regenerated from source on import)
+ * - `.pyi` – type stubs, read only by static type checkers
  */
-const STRIP_EXTENSIONS = [
-  '.pyc',
-  '.pyi',
-  '.c',
-  '.pyx',
-  '.pxd',
-  '.pxi',
-  '.h',
-  '.hpp',
-];
+const STRIP_EXTENSIONS = ['.pyc', '.pyi'];
 
 export function shouldStripVendorFile(filePath: string): boolean {
   const segments = filePath.split(sep);

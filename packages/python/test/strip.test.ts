@@ -21,7 +21,7 @@ const hostArch = process.arch === 'arm64' ? 'aarch64' : 'x86_64';
 const otherArch = hostArch === 'aarch64' ? 'x86_64' : 'aarch64';
 
 const tmpDirs: string[] = [];
-const originalStripEnv = process.env.VERCEL_PYTHON_STRIP_BINARIES;
+const originalStripEnv = process.env.VERCEL_PYTHON_STRIP_DEBUG;
 
 function makeTmpDir(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vc-strip-'));
@@ -49,7 +49,7 @@ function onlyTools(...available: string[]) {
 beforeEach(() => {
   mockedExeca.mockReset();
   mockedWhich.mockReset();
-  delete process.env.VERCEL_PYTHON_STRIP_BINARIES;
+  delete process.env.VERCEL_PYTHON_STRIP_DEBUG;
 });
 
 afterEach(() => {
@@ -57,9 +57,9 @@ afterEach(() => {
     fs.rmSync(dir, { recursive: true, force: true });
   }
   if (originalStripEnv === undefined) {
-    delete process.env.VERCEL_PYTHON_STRIP_BINARIES;
+    delete process.env.VERCEL_PYTHON_STRIP_DEBUG;
   } else {
-    process.env.VERCEL_PYTHON_STRIP_BINARIES = originalStripEnv;
+    process.env.VERCEL_PYTHON_STRIP_DEBUG = originalStripEnv;
   }
 });
 
@@ -91,7 +91,7 @@ describe('stripNativeLibraries', () => {
   });
 
   it('skips when disabled via env', async () => {
-    process.env.VERCEL_PYTHON_STRIP_BINARIES = '0';
+    process.env.VERCEL_PYTHON_STRIP_DEBUG = '0';
     onlyTools('strip');
     const result = await stripNativeLibraries({
       sitePackageDirs: ['/site'],
@@ -143,7 +143,7 @@ describe('stripNativeLibraries', () => {
     });
 
     expect(mockedExeca).toHaveBeenCalledWith('/usr/bin/llvm-strip', [
-      '--strip-unneeded',
+      '--strip-debug',
       soPath,
     ]);
     expect(result).toEqual({ count: 1, savedBytes: 60 });

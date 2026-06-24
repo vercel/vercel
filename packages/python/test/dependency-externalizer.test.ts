@@ -1505,19 +1505,8 @@ describe('shouldStripVendorFile', () => {
     'pkg/mod.pyc',
     'pkg/mod.pyi',
     'pkg/py.typed',
-    // build-time sources / headers
-    'pkg/_speedups.c',
-    'pkg/_speedups.pyx',
-    'pkg/_speedups.pxd',
-    'pkg/_speedups.pxi',
-    'pkg/include/header.h',
-    'pkg/include/header.hpp',
-    // installer-only dist-info metadata
-    'pkg-1.0.dist-info/RECORD',
-    'pkg-1.0.dist-info/RECORD.jws',
-    'pkg-1.0.dist-info/RECORD.p7s',
+    // inert installer-only dist-info metadata (no runtime reader)
     'pkg-1.0.dist-info/REQUESTED',
-    'pkg-1.0.dist-info/top_level.txt',
     'pkg-1.0.dist-info/WHEEL',
     'pkg-1.0.dist-info/INSTALLER',
     'pkg-1.0.dist-info/direct_url.json',
@@ -1531,6 +1520,18 @@ describe('shouldStripVendorFile', () => {
     'pkg-1.0.dist-info/entry_points.txt',
     'pkg-1.0.dist-info/licenses/LICENSE',
     'pkg-1.0.dist-info/LICENSE',
+    // metadata whose absence can raise at runtime must be kept
+    'pkg-1.0.dist-info/RECORD',
+    'pkg-1.0.dist-info/RECORD.jws',
+    'pkg-1.0.dist-info/RECORD.p7s',
+    'pkg-1.0.dist-info/top_level.txt',
+    // build-time sources / headers read by runtime compilation paths
+    'pkg/_speedups.c',
+    'pkg/_speedups.pyx',
+    'pkg/_speedups.pxd',
+    'pkg/_speedups.pxi',
+    'pkg/include/header.h',
+    'pkg/include/header.hpp',
     // application/runtime files
     'pkg/__init__.py',
     'pkg/_speedups.so',

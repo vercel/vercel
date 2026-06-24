@@ -18,7 +18,7 @@ export function isNativeLibrary(filePath: string): boolean {
 
 /** Whether the user has explicitly disabled native library stripping. */
 function isStripDisabled(): boolean {
-  const value = process.env.VERCEL_PYTHON_STRIP_BINARIES;
+  const value = process.env.VERCEL_PYTHON_STRIP_DEBUG;
   if (value === undefined || value === '') return false;
   const lower = value.toLowerCase();
   return lower === '0' || lower === 'false';
@@ -68,15 +68,18 @@ interface StripTool {
  * `strip`, which can only process the host architecture's ELF objects — so it
  * is only used when the build host and the deploy target share an architecture.
  *
- * Uses `--strip-unneeded` (not `--strip-all`) so dynamic symbols required to
- * load the shared object are preserved.
+ * Uses `--strip-debug`, which removes only the DWARF debug sections (`.debug_*`)
+ * and leaves every symbol table (`.symtab`/`.dynsym`) intact.  Those debug
+ * sections are never mapped into memory at runtime, so removing them cannot
+ * change runtime behavior; symbol names remain available for native crash
+ * backtraces (only source line numbers are lost).
  */
 async function resolveStripTool(
   targetArch: CanonicalArch | undefined
 ): Promise<StripTool | null> {
   const llvm = await findTool('llvm-strip');
   if (llvm) {
-    return { bin: llvm, args: ['--strip-unneeded'] };
+    return { bin: llvm, args: ['--strip-debug'] };
   }
 
   const strip = await findTool('strip');
@@ -89,7 +92,7 @@ async function resolveStripTool(
   // the target architecture is the host architecture.
   const effectiveTarget = targetArch ?? host;
   if (host && effectiveTarget && host === effectiveTarget) {
-    return { bin: strip, args: ['--strip-unneeded'] };
+    return { bin: strip, args: ['--strip-debug'] };
   }
 
   return null;
@@ -196,7 +199,7 @@ export async function stripNativeLibraries({
     return empty;
   }
   if (isStripDisabled()) {
-    debug('native library stripping disabled via VERCEL_PYTHON_STRIP_BINARIES');
+    debug('native library stripping disabled via VERCEL_PYTHON_STRIP_DEBUG');
     return empty;
   }
 
