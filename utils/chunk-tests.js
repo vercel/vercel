@@ -121,6 +121,12 @@ const packageOptionsOverrides = {
   // Benchmark (wall clock of the unit-test phase):
   //   max=2 (old): ~22 min    max=4: ~10 min    max=7: ~9 min    max=14: ~8.5 min
   vercel: { max: 7, useEnvPaths: true },
+
+  // `@vercel/container`'s unit tests are pure logic with `spawn`/`fs`/`fetch`
+  // fully mocked, so they're OS-independent. Run them on Linux only instead of
+  // all three runners: the macOS/Windows copies add no coverage and pushed the
+  // all-packages unit matrix past GitHub Actions' 256-configuration limit.
+  '@vercel/container': { runners: ['ubuntu-latest'] },
 };
 
 const DEFAULT_TEST_FILE_EXTENSIONS = ['js', 'ts', 'mjs', 'mts'];
