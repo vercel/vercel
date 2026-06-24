@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import { getContext } from './get-context';
 
 const SCOPE_NAME = 'vercel.functions';
@@ -70,7 +69,7 @@ class NoopSpan implements Instrument {
 
 class Span implements Instrument {
   private startTime = unixTimeNano();
-  private startHrTime = process.hrtime.bigint();
+  private startPerformance = performance.now();
   private ended = false;
   private spanContext: SpanContext;
   private attributes: IKeyValue[] = [];
@@ -119,7 +118,11 @@ class Span implements Instrument {
       return;
     }
 
-    const endedAt = this.startTime + process.hrtime.bigint() - this.startHrTime;
+    const endedAt =
+      this.startTime +
+      BigInt(
+        Math.round((performance.now() - this.startPerformance) * 1_000_000)
+      );
     const payload: Spans = {
       resourceSpans: [
         {
@@ -191,5 +194,6 @@ function unixTimeNano(): bigint {
 }
 
 function allocateSpanId(): string {
-  return randomBytes(8).toString('hex');
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
 }
