@@ -477,6 +477,14 @@ export default class Client extends EventEmitter implements Stdio {
     if (this.agentName) {
       headers.set('x-ai-agent', this.agentName);
     }
+    headers.set(
+      'x-vercel-cli-session-id',
+      this.telemetryEventStore.currentSessionId
+    );
+    headers.set(
+      'x-vercel-cli-invocation-id',
+      this.telemetryEventStore.currentInvocationId
+    );
 
     await this.ensureAuthorized();
 
