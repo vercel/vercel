@@ -446,7 +446,7 @@ describe('@vercel/container', () => {
   });
 
   it('discovers a `Dockerfile.vercel` marker when the entrypoint is `<detect>`', async () => {
-    // The `dockerfile` framework preset resolves its entrypoint via `<detect>`;
+    // The `container` framework preset resolves its entrypoint via `<detect>`;
     // the builder must then find the `.vercel` marker in the work directory.
     const commands = await runDockerfileBuild({
       buildImageEnv: 'al2023',

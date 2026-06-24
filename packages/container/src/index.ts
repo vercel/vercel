@@ -57,7 +57,7 @@ function isDockerfileRef(ref: string): boolean {
 }
 
 // Vercel-specific container opt-in markers, auto-discovered when the build
-// entrypoint doesn't name a Dockerfile explicitly (e.g. the `dockerfile`
+// entrypoint doesn't name a Dockerfile explicitly (e.g. the `container`
 // framework preset resolves its entrypoint via `<detect>`). These let a
 // project deploy as a container even when another framework is also present.
 const DOCKERFILE_CANDIDATES = ['Dockerfile.vercel', 'Containerfile.vercel'];
@@ -284,7 +284,7 @@ async function resolveImageHandler(
   const entrypointRef = readString(entrypoint);
   // An entrypoint that names a Dockerfile (including the `Dockerfile.vercel` /
   // `Containerfile.vercel` opt-in markers) is built directly. Otherwise — e.g.
-  // when the `dockerfile` framework preset resolves its entrypoint via
+  // when the `container` framework preset resolves its entrypoint via
   // `<detect>` — discover a Dockerfile in the work directory.
   const dockerfileConfigured =
     entrypointRef && isDockerfileRef(entrypointRef)
