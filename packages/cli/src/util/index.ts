@@ -220,17 +220,10 @@ export default class Now {
   async handleDeploymentError(error: any, { env }: any) {
     if (error.status === 429) {
       if (error.code === 'builds_rate_limited') {
-        // Build a native Error (not `Object.create`) so `isAPIError` accepts it
-        // and `createDeploy` can convert it into a `BuildsRateLimited`, which
-        // carries the upgrade hint. `util.types.isNativeError` rejects objects
-        // made with `Object.create(APIError.prototype)`, which silently dropped
-        // the hint.
         const err = new Error(error.message) as APIError;
         err.status = error.status;
         err.code = error.code;
         err.retryAfterMs = 'never';
-        // Preserve any plan-appropriate call to action the API sent so it can
-        // be surfaced to the user instead of dropped.
         err.ctaLabel = error.ctaLabel;
         err.ctaUrl = error.ctaUrl;
         err.action = error.action;
