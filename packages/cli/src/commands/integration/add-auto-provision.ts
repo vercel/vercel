@@ -11,6 +11,7 @@ import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { acceptTermsViaBrowser } from '../../util/integration/accept-terms-via-browser';
 import { promptForTermAcceptance } from '../../util/integration/prompt-for-terms';
 import { selectProduct } from '../../util/integration/select-product';
+import { resolveProductSkills } from '../../util/integration/skill-suggestion';
 import { runClaimForResource } from '../integration-resource/claim';
 import { getResources } from '../../util/integration-resource/get-resources';
 import { packageName } from '../../util/pkg-name';
@@ -568,6 +569,21 @@ export async function addAutoProvision(
     }
   );
 
+  // Suggest installing the product's declared agent skills (from `agentSkills`).
+  // We only *print* the `npx skills add` command — running it is left to the
+  // user/agent so it lands in the right project, with consent.
+  const skills = resolveProductSkills(product);
+
+  if (skills.length && !options.asJson) {
+    const noun = skills.length === 1 ? 'the agent skill' : 'agent skills';
+    output.log(
+      `Install ${noun} so your AI tools can use ${chalk.bold(product.name)}:`
+    );
+    for (const skill of skills) {
+      output.log(indent(chalk.cyan(skill.command), 4));
+    }
+  }
+
   if (options.asJson) {
     const warnings: string[] = [];
     if (setupResult.connectError) {
@@ -622,6 +638,7 @@ export async function addAutoProvision(
       environments: setupResult.environments,
       envPulled: setupResult.envPulled,
       guideCommand,
+      skills,
       warnings,
     };
 
