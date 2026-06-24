@@ -1,0 +1,25 @@
+packages/routing-utils/src/schemas.ts
+  s_23044a95b214fb::t_661a97d6756218 32
+packages/routing-utils/src/types.ts
+  s_23044a95b214fb::t_661a97d6756218 77-78
+.changeset/short-service-destinations.md
+  s_23044a95b214fb::t_661a97d6756218 18-20
+packages/routing-utils/test/index.spec.ts
+  s_23044a95b214fb::t_661a97d6756218 148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "dd9bd5bc86d63b69dffb63f09dcf8d46c1bf675d",
+  "prompts": {},
+  "sessions": {
+    "s_23044a95b214fb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_10ae1a820ffe0EkRzHdtWrk1Mr",
+        "model": "openai/gpt-5.5"
+      },
+      "human_author": "Gal Schlezinger <gal@spitfire.co.il>"
+    }
+  }
+}
