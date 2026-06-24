@@ -29,8 +29,8 @@ mod types;
 use crate::awaiter::Awaiter;
 
 lazy_static::lazy_static! {
-    /// Process-global collector of `waitUntil` background work. Shared by every
-    /// request and drained once at shutdown (see [`run`]).
+    /// Process-global collector of `waitUntil` background work.
+    /// Shared by every request and drained once at shutdown (see [`run`]).
     static ref AWAITER: Awaiter = Awaiter::new();
 }
 
@@ -153,9 +153,8 @@ impl AppState {
     /// sent. The future is spawned immediately and awaited at process shutdown
     /// (bounded by [`awaiter::WAIT_UNTIL_TIMEOUT`]).
     ///
-    /// Mirrors `waitUntil` in the Node.js runtime: the future runs regardless of
-    /// whether the handler succeeded or errored, and a panic in the future is
-    /// isolated from the rest of the runtime.
+    /// This future runs regardless of whether the handler succeeded or errored.
+    /// A panic in the future is isolated from the rest of the runtime.
     pub fn wait_until<F>(&self, future: F)
     where
         F: std::future::Future<Output = ()> + Send + 'static,
@@ -341,7 +340,6 @@ where
                     sigterm.recv().await;
                 }
                 Err(_) => {
-                    // Fall back to Ctrl-C if SIGTERM cannot be registered.
                     let _ = tokio::signal::ctrl_c().await;
                 }
             }
@@ -360,7 +358,7 @@ where
                 // Drain background `waitUntil` work, bounded by the timeout, then
                 // exit. The per-request `end` IPC message has already been sent
                 // for each completed request, so this only affects background
-                // tasks, mirroring the Node.js runtime's `onExit` behavior.
+                // tasks. This mirrors the Node.js runtime's `onExit` behavior.
                 if tokio::time::timeout(
                     std::time::Duration::from_secs(crate::awaiter::WAIT_UNTIL_TIMEOUT),
                     AWAITER.awaiting(),
