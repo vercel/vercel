@@ -15,6 +15,7 @@ import type {
   ServiceRuntime,
   ExperimentalServices,
   ExperimentalServicesV2,
+  Services,
   ServiceDetectionError,
   ServiceDetectionWarning,
   ResolvedService,
@@ -39,6 +40,20 @@ export {
   getInternalServiceCronPathPrefix,
   getInternalServiceCronPath,
 };
+
+/**
+ * Removes a trailing slash from an already-`posixPath.normalize`d path.
+ *
+ * `posixPath.normalize` preserves trailing slashes (`"frontend/"` stays
+ * `"frontend/"`), which double-prefixes builder paths when the value is later
+ * used as both `builder.config.workspace` and a `posixPath.join` prefix. Strip
+ * it so `"frontend/"` and `"frontend"` resolve identically. An empty result or
+ * a lone `"/"` collapses to `"."` (matching `normalizeServiceEntrypoint`).
+ */
+export function stripTrailingSlash(p: string): string {
+  const stripped = p.replace(/\/+$/, '');
+  return stripped === '' ? '.' : stripped;
+}
 
 export async function hasFile(
   fs: DetectorFilesystem,
@@ -207,6 +222,7 @@ export function inferServiceRuntime(config: {
 export interface ReadVercelConfigResult {
   config: {
     experimentalServices?: ExperimentalServices;
+    services?: Services;
     experimentalServicesV2?: ExperimentalServicesV2;
   } | null;
   error: ServiceDetectionError | null;

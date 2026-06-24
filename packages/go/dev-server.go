@@ -12,8 +12,11 @@ func main() {
 	// create a new handler
 	handler := http.HandlerFunc(__HANDLER_FUNC_NAME)
 
-	// https://stackoverflow.com/a/43425461/376773
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	addr := "127.0.0.1:0"
+	if devPort := os.Getenv("VERCEL_DEV_PORT"); devPort != "" {
+		addr = "127.0.0.1:" + devPort
+	}
+	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		panic(err)
 	}

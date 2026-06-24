@@ -1216,7 +1216,7 @@ wheels = [
 
 [[package]]
 name = "vercel-runtime"
-version = "0.14.2"
+version = "0.15.0"
 source = { editable = "python/vercel-runtime" }
 
 [package.dev-dependencies]
@@ -1243,7 +1243,7 @@ test = [
 
 [[package]]
 name = "vercel-workers"
-version = "0.0.24"
+version = "0.0.25"
 source = { editable = "python/vercel-workers" }
 dependencies = [
     { name = "anyio" },

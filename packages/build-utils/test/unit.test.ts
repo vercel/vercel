@@ -179,6 +179,54 @@ it('should fail if the provided bun version is not valid', async () => {
   ).rejects.toThrow();
 });
 
+it('should resolve to Bun when package.json has engines.bun', async () => {
+  const result = await getNodeVersion(
+    path.join(__dirname, 'pkg-engines-bun'),
+    undefined,
+    {},
+    {}
+  );
+  expect(result).toHaveProperty('runtime', 'bun1.x');
+  expect(result).toHaveProperty('range', '1.x');
+  expect(warningMessages).toStrictEqual([]);
+});
+
+it('should default to Node when both engines.node and engines.bun are set, with a warning', async () => {
+  const result = await getNodeVersion(
+    path.join(__dirname, 'pkg-engines-node-and-bun'),
+    undefined,
+    {},
+    {}
+  );
+  expect(result).toHaveProperty('runtime', 'nodejs22.x');
+  expect(result).toHaveProperty('range', '22.x');
+  expect(warningMessages).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining(
+        'Warning detected "engines": { "node": ..., "bun": ... } in `package.json`. Defaulting to "node".'
+      ),
+    ])
+  );
+});
+
+it('should resolve to Bun when both engines.node and engines.bun are set and config.bunVersion is provided', async () => {
+  const result = await getNodeVersion(
+    path.join(__dirname, 'pkg-engines-node-and-bun'),
+    undefined,
+    { bunVersion: '1.x' },
+    {}
+  );
+  expect(result).toHaveProperty('runtime', 'bun1.x');
+  expect(result).toHaveProperty('range', '1.x');
+  expect(warningMessages).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining(
+        'Warning detected "engines": { "node": ..., "bun": ... } in `package.json`. Since "bunVersion" is set in `vercel.json`, using "bun".'
+      ),
+    ])
+  );
+});
+
 it('should select project setting from config when no package.json is found and fallback undefined', async () => {
   expect(
     await getNodeVersion('/tmp', undefined, { nodeVersion: '22.x' }, {})
@@ -345,6 +393,29 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
       'Error: Node.js version 18.x is deprecated. Deployments created on or after 2025-09-01 will fail to build. Please set "engines": { "node": "24.x" } in your `package.json` file to use Node.js 24.',
       'Error: Node.js version 18.x is deprecated. Deployments created on or after 2025-09-01 will fail to build. Please set Node.js Version to 24.x in your Project Settings to use Node.js 24.',
     ]);
+  } finally {
+    global.Date.now = realDateNow;
+  }
+});
+
+it('should discontinue Node.js 20 on October 1, 2026', async () => {
+  const realDateNow = Date.now;
+  try {
+    global.Date.now = () => new Date('2026-09-30').getTime();
+
+    expect(await getSupportedNodeVersion('20.x', false)).toHaveProperty(
+      'major',
+      20
+    );
+    expect(warningMessages).toStrictEqual([
+      'Error: Node.js version 20.x is deprecated. Deployments created on or after 2026-10-01 will fail to build. Please set "engines": { "node": "24.x" } in your `package.json` file to use Node.js 24.',
+    ]);
+
+    global.Date.now = () => new Date('2026-10-01').getTime();
+
+    await expect(getSupportedNodeVersion('20.x', false)).rejects.toThrow(
+      'Node.js Version "20.x" is discontinued and must be upgraded.'
+    );
   } finally {
     global.Date.now = realDateNow;
   }

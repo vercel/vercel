@@ -176,6 +176,98 @@ describe('detectServices', () => {
       });
     });
 
+    it('should detect container runtime services with OCI image entrypoints', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              type: 'web',
+              runtime: 'container',
+              entrypoint: 'docker.io/library/nginx:1.27',
+              command: ['nginx', '-g', 'daemon off;'],
+              mount: '/api',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'api',
+        type: 'web',
+        runtime: 'container',
+        entrypoint: 'docker.io/library/nginx:1.27',
+        routePrefix: '/api',
+        builder: {
+          src: 'docker.io/library/nginx:1.27',
+          use: '@vercel/container',
+          config: {
+            handler: 'docker.io/library/nginx:1.27',
+            command: ['nginx', '-g', 'daemon off;'],
+          },
+        },
+      });
+      expect(result.routes.rewrites).toEqual([
+        {
+          src: '^(?=/api(?:/|$))(?:/api(?:/.*)?$)',
+          dest: '/_svc/api/index',
+        },
+      ]);
+    });
+
+    it('should pass through container image entrypoints without registry', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              type: 'web',
+              runtime: 'container',
+              entrypoint: 'grycap/cowsay:latest',
+              mount: '/api',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services[0]).toMatchObject({
+        entrypoint: 'grycap/cowsay:latest',
+        builder: {
+          src: 'grycap/cowsay:latest',
+          config: {
+            handler: 'grycap/cowsay:latest',
+          },
+        },
+      });
+    });
+
+    it('should reject command without container runtime', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              runtime: 'python',
+              entrypoint: 'api/index.py',
+              command: 'python -m api',
+              mount: '/api',
+            },
+          },
+        }),
+        'api/index.py': 'def app(): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_COMMAND',
+        serviceName: 'api',
+      });
+    });
+
     it('should allow Python module:function entrypoint for backend services', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({

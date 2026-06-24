@@ -18,10 +18,6 @@ vi.mock('open', () => {
   };
 });
 
-vi.mock('../../../../src/util/agent/auto-install-agentic', () => ({
-  autoInstallVercelPlugin: vi.fn().mockResolvedValue(undefined),
-}));
-
 function mockResponse(data: unknown, ok = true): Response {
   return {
     ok,

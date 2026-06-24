@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.29.1
+
+### Patch Changes
+
+- 3b273ff: lowercase Eve to eve in framework preset
+
 ## 3.29.0
 
 ### Minor Changes

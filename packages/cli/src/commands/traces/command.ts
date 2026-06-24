@@ -1,4 +1,9 @@
 import { packageName } from '../../util/pkg-name';
+import {
+  deploymentOption,
+  protectionBypassOption,
+  yesOption,
+} from '../../util/arg-common';
 
 export const getSubcommand = {
   name: 'get',
@@ -36,7 +41,7 @@ export const getSubcommand = {
       name: 'view',
       shorthand: null,
       type: String,
-      argument: 'timeline|tree|gantt',
+      argument: 'timeline|tree|waterfall',
       deprecated: false,
       description:
         'Dashboard view to open. Only valid with --open. Defaults to timeline.',
@@ -64,8 +69,46 @@ export const getSubcommand = {
       value: `${packageName} traces get req_1234567890 --open`,
     },
     {
-      name: 'Open the trace in the Vercel Dashboard with the gantt view',
-      value: `${packageName} traces get req_1234567890 --open --view gantt`,
+      name: 'Open the trace in the Vercel Dashboard with the waterfall view',
+      value: `${packageName} traces get req_1234567890 --open --view waterfall`,
+    },
+  ],
+} as const;
+
+export const createSubcommand = {
+  name: 'create',
+  aliases: [],
+  description:
+    'Capture a session trace for a request (alias for `vercel curl --trace`).',
+  arguments: [{ name: 'path', required: true }],
+  options: [
+    deploymentOption,
+    protectionBypassOption,
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Emit { response, requestId } as JSON on stdout',
+    },
+    {
+      ...yesOption,
+      description:
+        'Skip the production confirmation prompt (e.g. in non-interactive mode)',
+    },
+  ],
+  examples: [
+    {
+      name: 'Capture a session trace for a request',
+      value: `${packageName} traces create /api/hello`,
+    },
+    {
+      name: 'Target a specific deployment',
+      value: `${packageName} traces create /api/status --deployment https://your-project-abc123.vercel.app`,
+    },
+    {
+      name: 'Pass curl flags after the separator',
+      value: `${packageName} traces create /api/test -- --request POST --data '{"name": "John"}'`,
     },
   ],
 } as const;
@@ -75,7 +118,7 @@ export const tracesCommand = {
   aliases: [],
   description: 'Fetch traces captured for a Vercel project.',
   arguments: [{ name: 'requestId', required: false }],
-  subcommands: [getSubcommand],
+  subcommands: [getSubcommand, createSubcommand],
   options: [],
   examples: [
     {
@@ -85,6 +128,10 @@ export const tracesCommand = {
     {
       name: 'Print the raw trace JSON',
       value: `${packageName} traces get req_1234567890 --json`,
+    },
+    {
+      name: 'Capture a session trace for a request',
+      value: `${packageName} traces create /api/hello`,
     },
   ],
 } as const;
