@@ -234,7 +234,58 @@ export default async function add(client: Client, argv: string[]) {
 
   if (!projectName) {
     const addStamp = stamp();
-    const addResult = await addDomainToTeam(client, domainName, contextName);
+    let addResult: Awaited<ReturnType<typeof addDomainToTeam>>;
+    try {
+      addResult = await addDomainToTeam(client, domainName, contextName);
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      if (client.nonInteractive) {
+        const status = isAPIError(error) ? error.status : undefined;
+        const apiErr = error as Error & { code?: string };
+        const code = typeof apiErr.code === 'string' ? apiErr.code : '';
+        const msg = error.message.toLowerCase();
+        let reason =
+          status === 403
+            ? 'forbidden'
+            : status === 404
+              ? 'not_found'
+              : status === 409 || msg.includes('already')
+                ? 'alias_conflict'
+                : 'domain_add_failed';
+        if (
+          code === 'not_domain_owner' ||
+          (status === 403 && msg.includes('not authorized'))
+        ) {
+          reason = 'domain_not_owned';
+        }
+        let message = errorToString(error);
+        if (
+          reason === 'domain_not_owned' ||
+          code === 'invalid_domain' ||
+          msg.includes('not authorized to use')
+        ) {
+          message +=
+            " domains add is for domains you already own or control via DNS. If you have not purchased the domain yet, the user must run 'domains buy' interactively (agents must not purchase) or buy in the dashboard; use 'domains transfer-in' to move an existing registration to Vercel.";
+        }
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason,
+            message,
+            next: nextCommandsForDomainsAddFailure(
+              client,
+              domainName,
+              '',
+              error
+            ),
+          },
+          1
+        );
+      }
+      output.prettyError(error);
+      return 1;
+    }
 
     if (addResult instanceof ERRORS.InvalidDomain) {
       if (client.nonInteractive) {
