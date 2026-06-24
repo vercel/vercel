@@ -48,6 +48,7 @@
     "@vercel/build-utils": "workspace:*",
     "@vercel/cli-auth": "workspace:*",
     "@vercel/cli-config": "workspace:*",
+    "@vercel/container": "workspace:*",
     "@vercel/detect-agent": "workspace:*",
     "@vercel/elysia": "workspace:*",
     "@vercel/express": "workspace:*",

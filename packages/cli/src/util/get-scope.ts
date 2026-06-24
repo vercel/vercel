@@ -67,6 +67,17 @@ export default async function getScope(
     user.version === 'northstar' ? user.defaultTeamId : undefined;
   const currentTeamOrDefaultTeamId = client.config.currentTeam || defaultTeamId;
 
+  // A Northstar user has no usable personal scope, so their default team is the
+  // effective scope. The default is only persisted to `currentTeam` at login
+  // (see `updateCurrentTeamAfterLogin`), which means on any invocation where
+  // `currentTeam` isn't set we would otherwise resolve the default team for
+  // *display* but send requests with no `teamId` — silently scoping API calls
+  // to the (resource-less) personal account while the UI claims the team. Apply
+  // the default here so the effective request scope matches what we report.
+  if (!client.config.currentTeam && defaultTeamId) {
+    client.config.currentTeam = defaultTeamId;
+  }
+
   if (currentTeamOrDefaultTeamId && opts.getTeam !== false) {
     team = await getTeamById(client, currentTeamOrDefaultTeamId);
 

@@ -558,4 +558,186 @@ describe('detectServices (services)', () => {
       });
     });
   });
+
+  describe('container runtime', () => {
+    it('infers container from a Dockerfile entrypoint (no explicit runtime)', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          experimentalServicesV2: {
+            my_oci_app: { root: '.', entrypoint: 'Dockerfile' },
+          },
+          rewrites: [
+            {
+              source: '/(.*)',
+              destination: { type: 'service', service: 'my_oci_app' },
+            },
+          ],
+        }),
+        Dockerfile: 'FROM node:22-alpine\n',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const [svc] = servicesV2(result.services);
+      expect(svc).toMatchObject({
+        schema: 'experimentalServicesV2',
+        name: 'my_oci_app',
+        root: '.',
+        runtime: 'container',
+        entrypoint: 'Dockerfile',
+      });
+      expect(svc.builder.use).toBe('@vercel/container');
+      expect(svc.builder.src).toBe('Dockerfile');
+    });
+
+    it('infers container from a Containerfile entrypoint (no explicit runtime)', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          experimentalServicesV2: {
+            my_oci_app: { root: '.', entrypoint: 'Containerfile' },
+          },
+          rewrites: [
+            {
+              source: '/(.*)',
+              destination: { type: 'service', service: 'my_oci_app' },
+            },
+          ],
+        }),
+        Containerfile: 'FROM node:22-alpine\n',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const [svc] = servicesV2(result.services);
+      expect(svc).toMatchObject({
+        schema: 'experimentalServicesV2',
+        name: 'my_oci_app',
+        root: '.',
+        runtime: 'container',
+        entrypoint: 'Containerfile',
+      });
+      expect(svc.builder.use).toBe('@vercel/container');
+      expect(svc.builder.src).toBe('Containerfile');
+    });
+
+    it('resolves a Dockerfile under a non-root service root', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          experimentalServicesV2: {
+            api: {
+              root: 'apps/api',
+              runtime: 'container',
+              entrypoint: 'Dockerfile',
+            },
+          },
+        }),
+        'apps/api/Dockerfile': 'FROM node:22-alpine\n',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const [svc] = servicesV2(result.services);
+      expect(svc.builder.use).toBe('@vercel/container');
+      expect(svc.builder.src).toBe('apps/api/Dockerfile');
+      expect(svc.builder.config).toMatchObject({ workspace: 'apps/api' });
+    });
+
+    it('strips a trailing slash from a container service root', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          experimentalServicesV2: {
+            api: {
+              root: 'apps/api/',
+              runtime: 'container',
+              entrypoint: 'Dockerfile',
+            },
+          },
+        }),
+        'apps/api/Dockerfile': 'FROM node:22-alpine\n',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const [svc] = servicesV2(result.services);
+      // Trailing slash is normalized away so it isn't double-prefixed
+      // downstream, matching every other service type.
+      expect(svc.root).toBe('apps/api');
+      expect(svc.builder.src).toBe('apps/api/Dockerfile');
+      expect(svc.builder.config).toMatchObject({ workspace: 'apps/api' });
+    });
+
+    it('resolves a prebuilt image from a non-Dockerfile entrypoint', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          experimentalServicesV2: {
+            cowsay: {
+              root: '.',
+              runtime: 'container',
+              entrypoint: 'grycap/cowsay:latest',
+            },
+          },
+        }),
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const [svc] = servicesV2(result.services);
+      expect(svc).toMatchObject({
+        runtime: 'container',
+        entrypoint: 'grycap/cowsay:latest',
+      });
+      expect(svc.builder.use).toBe('@vercel/container');
+      // The prebuilt image reference is carried in `handler`.
+      expect(svc.builder.config).toMatchObject({
+        handler: 'grycap/cowsay:latest',
+      });
+    });
+
+    it('carries a container command override', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          experimentalServicesV2: {
+            svc: {
+              root: '.',
+              runtime: 'container',
+              entrypoint: 'Dockerfile',
+              command: ['node', 'server.js'],
+            },
+          },
+        }),
+        Dockerfile: 'FROM node:22-alpine\n',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const [svc] = servicesV2(result.services);
+      expect(svc.command).toEqual(['node', 'server.js']);
+      expect(svc.builder.config).toMatchObject({
+        command: ['node', 'server.js'],
+      });
+    });
+
+    it('errors when a container service has no entrypoint', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          experimentalServicesV2: {
+            svc: { root: '.', runtime: 'container' },
+          },
+        }),
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors[0]).toMatchObject({
+        code: 'MISSING_SERVICE_CONFIG',
+        serviceName: 'svc',
+      });
+    });
+  });
 });
