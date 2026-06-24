@@ -1,0 +1,23 @@
+packages/functions/test/unit/spans.test.ts
+  s_0683da51eec1f2::t_52615997d6c386 1-9,11-14,16-41,43-61,63-74,81-91
+  s_0683da51eec1f2::t_8ae9050c89ed35 10,15,42,62,75-80
+packages/functions/src/spans.ts
+  s_0683da51eec1f2::t_52615997d6c386 72,121-122,197-198
+  s_0683da51eec1f2::t_d5df7b5f43a35d 123-125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "30aa598f235ecf8f7b1eead6cdf44b082af6f22c",
+  "prompts": {},
+  "sessions": {
+    "s_0683da51eec1f2": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_151427683ffeQoKCq06YWbJRHN",
+        "model": "openai/gpt-5.5"
+      },
+      "human_author": "Gal Schlezinger <gal@spitfire.co.il>"
+    }
+  }
+}
