@@ -1,4 +1,4 @@
-import type { HasField, Route } from '@vercel/routing-utils';
+import type { HasField, Rewrite, Route } from '@vercel/routing-utils';
 import {
   isScheduleTriggeredService,
   isExperimentalService,
@@ -65,6 +65,7 @@ function withResolvedResult(
     source: resolved.source,
     useImplicitEnvInjection: resolved.useImplicitEnvInjection,
     routes: resolved.routes,
+    rewrites: resolved.rewrites,
     errors: resolved.errors,
     warnings: resolved.warnings,
     resolved,
@@ -153,6 +154,7 @@ export async function detectServices(
       source: 'configured',
       useImplicitEnvInjection: true,
       routes: emptyRoutes(),
+      rewrites: [],
       errors: [configError],
       warnings: [],
     });
@@ -167,6 +169,7 @@ export async function detectServices(
       source: 'configured',
       useImplicitEnvInjection: false,
       routes: emptyRoutes(),
+      rewrites: [],
       errors: [
         {
           code: 'SERVICES_AND_EXPERIMENTAL_SERVICES_V2',
@@ -206,6 +209,7 @@ export async function detectServices(
       useImplicitEnvInjection: false,
       // V2 routes are explicitly carried per-service to output them separately.
       routes: emptyRoutes(),
+      rewrites: [],
       errors: result.errors,
       warnings: [],
     });
@@ -232,6 +236,7 @@ export async function detectServices(
       // experimentalServices uses the legacy `{NAME}_URL` injection.
       useImplicitEnvInjection: true,
       routes,
+      rewrites: [],
       errors: result.errors,
       warnings: [],
     });
@@ -266,6 +271,7 @@ export async function detectServices(
     source: 'auto-detected',
     useImplicitEnvInjection: true,
     routes: emptyRoutes(),
+    rewrites: [],
     errors: [
       {
         code: 'NO_EXPERIMENTAL_SERVICES_CONFIGURED',
@@ -301,6 +307,7 @@ async function tryResolveInferred(
       source: 'auto-detected',
       useImplicitEnvInjection: source !== 'layout',
       routes: emptyRoutes(),
+      rewrites: [],
       errors: detectResult.errors,
       warnings: detectResult.warnings,
     });
@@ -355,6 +362,9 @@ async function tryResolveInferred(
         source: 'auto-detected',
         useImplicitEnvInjection: false,
         routes: emptyRoutes(),
+        rewrites: shouldInfer
+          ? generateServiceRewrites(detectResult.services)
+          : [],
         errors: result.errors,
         warnings: detectResult.warnings,
       },
@@ -402,11 +412,46 @@ async function tryResolveInferred(
       source: 'auto-detected',
       useImplicitEnvInjection: true,
       routes: emptyRoutes(),
+      rewrites: [],
       errors: result.errors,
       warnings: detectResult.warnings,
     },
     inferred
   );
+}
+
+/**
+ * Generate top-level service-targeted rewrites from inferred mount paths.
+ *
+ * Produces `Rewrite` objects (same format as vercel.json `rewrites`) that
+ * delegate public traffic into services based on their `mountPath`.
+ *
+ * Rewrites are ordered by mount path length (longest first) so more
+ * specific paths match before broader ones. The root service (`/`) is
+ * always last as a catch-all.
+ */
+export function generateServiceRewrites(
+  services: InferredServicesConfig
+): Rewrite[] {
+  const entries = Object.entries(services)
+    .filter(([, svc]) => typeof svc.mountPath === 'string')
+    .sort(([, a], [, b]) => b.mountPath!.length - a.mountPath!.length);
+
+  return entries.map(([name, svc]) => {
+    const mountPath = svc.mountPath!;
+    if (mountPath === '/') {
+      return {
+        source: '/(.*)',
+        destination: { type: 'service' as const, service: name },
+      };
+    }
+    // Strip leading slash for the source pattern
+    const prefix = mountPath.startsWith('/') ? mountPath.slice(1) : mountPath;
+    return {
+      source: `/${prefix}/:path*`,
+      destination: { type: 'service' as const, service: name },
+    };
+  });
 }
 
 /**

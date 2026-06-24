@@ -1,4 +1,4 @@
-import type { Route } from '@vercel/routing-utils';
+import type { Rewrite, Route } from '@vercel/routing-utils';
 import type {
   DetectEntrypointFn,
   EnvVar,
@@ -129,6 +129,8 @@ export interface ResolvedServicesResult {
   source: DetectServicesSource;
   useImplicitEnvInjection: boolean;
   routes: ServicesRoutes;
+  /** Top-level service-targeted rewrites (V2). */
+  rewrites: Rewrite[];
   errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
 }

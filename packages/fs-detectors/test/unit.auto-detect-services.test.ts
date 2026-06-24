@@ -509,6 +509,18 @@ describe('detectServices with auto-detection', () => {
       expect(backend).toBeDefined();
       expect(backend?.schema).toBe('experimentalServicesV2');
       expect(backend?.root).toBe('backend');
+
+      // V2 auto-detect generates top-level service rewrites from mountPath
+      expect(result.rewrites).toHaveLength(2);
+      // Longest mountPath first (backend before root catch-all)
+      expect(result.rewrites[0]).toMatchObject({
+        source: '/_/backend/:path*',
+        destination: { type: 'service', service: 'backend' },
+      });
+      expect(result.rewrites[1]).toMatchObject({
+        source: '/(.*)',
+        destination: { type: 'service', service: 'frontend' },
+      });
     });
   });
 });
