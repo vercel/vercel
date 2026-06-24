@@ -15,6 +15,7 @@ import type {
   ServiceRuntime,
   ExperimentalServices,
   ExperimentalServicesV2,
+  InferredServicesConfig,
   Services,
   ServiceDetectionError,
   ServiceDetectionWarning,
@@ -278,7 +279,7 @@ export async function readVercelConfig(
 }
 
 /**
- * Assign route prefixes to inferred services.
+ * Assign mount paths to inferred services.
  *
  * A frontend service gets `/`, the rest get `/_/{name}`.
  * A single non-frontend service would also get `/`.
@@ -286,14 +287,14 @@ export async function readVercelConfig(
  *
  * Priority for `/`: single service or frontend > name "frontend" or "web" > alphabetical.
  */
-export function assignRoutePrefixes(
-  services: ExperimentalServices
+export function assignMountPaths(
+  services: InferredServicesConfig
 ): ServiceDetectionWarning[] {
   const warnings: ServiceDetectionWarning[] = [];
   const names = Object.keys(services);
 
   if (names.length === 1) {
-    services[names[0]].routePrefix = '/';
+    services[names[0]].mountPath = '/';
     return warnings;
   }
 
@@ -310,12 +311,12 @@ export function assignRoutePrefixes(
       frontendNames.sort()[0];
     warnings.push({
       code: 'MULTIPLE_FRONTENDS',
-      message: `Multiple frontend services detected (${frontendNames.join(', ')}). "${rootName}" was assigned routePrefix "/". Adjust manually if a different service should be the root.`,
+      message: `Multiple frontend services detected (${frontendNames.join(', ')}). "${rootName}" was assigned mount path "/". Adjust manually if a different service should be the root.`,
     });
   }
 
   for (const name of names) {
-    services[name].routePrefix = name === rootName ? '/' : `/_/${name}`;
+    services[name].mountPath = name === rootName ? '/' : `/_/${name}`;
   }
 
   return warnings;
