@@ -70,6 +70,79 @@ describe('domains add', () => {
     });
 
     describe('[project]', () => {
+      it('treats a domain already assigned to the same project as success', async () => {
+        useUser();
+        const domain = useDomain();
+        const { project } = useProject();
+        client.setArgv('domains', 'add', domain.name, String(project.name));
+        client.scenario.post(`/projects/${project.name}/alias`, (_req, res) => {
+          res.status(400).json({
+            error: {
+              code: 'ALIAS_DOMAIN_EXIST',
+              message: `Cannot add ${domain.name} since it's already assigned to another project.`,
+              project: { id: project.id, name: project.name },
+            },
+          });
+        });
+        client.scenario.get(`/:version/domains/${domain.name}`, (_req, res) => {
+          res.json({ domain });
+        });
+        client.scenario.get(
+          `/:version/domains/${domain.name}/config`,
+          (_req, res) => {
+            res.json({});
+          }
+        );
+        const exitCode = await domains(client);
+        expect(exitCode, 'exit code for "domains"').toEqual(0);
+
+        await expect(client.stderr).toOutput(
+          `Domain ${domain.name} is already assigned to project ${project.name}`
+        );
+      });
+
+      it('treats a domain already on the project as success when the API omits the conflicting project', async () => {
+        useUser();
+        const domain = useDomain();
+        const { project } = useProject();
+        client.setArgv('domains', 'add', domain.name, String(project.name));
+        client.scenario.post(`/projects/${project.name}/alias`, (_req, res) => {
+          res.status(400).json({
+            error: {
+              code: 'ALIAS_DOMAIN_EXIST',
+              message: `Cannot add ${domain.name} since it's already assigned to another project.`,
+            },
+          });
+        });
+        // The domain is in fact attached to the requested project.
+        client.scenario.get(
+          `/v9/projects/${project.name}/domains/${domain.name}`,
+          (_req, res) => {
+            res.json({
+              name: domain.name,
+              apexName: domain.name,
+              projectId: project.id,
+              verified: true,
+            });
+          }
+        );
+        client.scenario.get(`/:version/domains/${domain.name}`, (_req, res) => {
+          res.json({ domain });
+        });
+        client.scenario.get(
+          `/:version/domains/${domain.name}/config`,
+          (_req, res) => {
+            res.json({});
+          }
+        );
+        const exitCode = await domains(client);
+        expect(exitCode, 'exit code for "domains"').toEqual(0);
+
+        await expect(client.stderr).toOutput(
+          `Domain ${domain.name} is already assigned to project ${project.name}`
+        );
+      });
+
       describe('--force', () => {
         it('tracks telemetry data', async () => {
           useUser();

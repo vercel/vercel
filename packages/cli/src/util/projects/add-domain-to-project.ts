@@ -42,6 +42,12 @@ export async function addDomainToProject(
     return aliasTarget;
   } catch (err: unknown) {
     if (isAPIError(err) && err.status < 500) {
+      output.debug(
+        `Failed to add domain '${domain}' to project '${projectNameOrId}': ` +
+          `status=${err.status} code=${err.code ?? '(none)'} ` +
+          `serverMessage=${err.serverMessage ?? '(none)'} ` +
+          `project=${err.project ? JSON.stringify(err.project) : '(none)'}`
+      );
       return err;
     }
     throw err;

@@ -13,6 +13,7 @@ import { isPublicSuffix } from '../../util/domains/is-public-suffix';
 import isRootDomain from '../../util/is-root-domain';
 import { getDomainConfig } from '../../util/domains/get-domain-config';
 import { addDomainToProject } from '../../util/projects/add-domain-to-project';
+import { getProjectDomain } from '../../util/projects/get-project-domain';
 import { removeDomainFromProject } from '../../util/projects/remove-domain-from-project';
 import code from '../../util/output/code';
 import output from '../../output-manager';
@@ -364,14 +365,45 @@ export default async function add(client: Client, argv: string[]) {
   if (aliasTarget instanceof Error) {
     if (
       aliasTarget instanceof ERRORS.APIError &&
-      aliasTarget.code === 'ALIAS_DOMAIN_EXIST' &&
-      aliasTarget.project &&
-      aliasTarget.project.id
+      aliasTarget.code === 'ALIAS_DOMAIN_EXIST'
     ) {
-      if (force) {
+      const conflictProject = aliasTarget.project as
+        | { id?: string; name?: string }
+        | undefined;
+
+      // The domain may already be assigned to the project the user requested.
+      // The API does not always include the conflicting project in the error
+      // body, so confirm by querying the project's domains directly. In either
+      // case, treat it as an idempotent success rather than an "assigned to
+      // another project" error.
+      let alreadyOnRequestedProject = Boolean(
+        conflictProject &&
+          (conflictProject.id === projectName ||
+            conflictProject.name === projectName)
+      );
+
+      if (!alreadyOnRequestedProject) {
+        const existing = await getProjectDomain(
+          client,
+          projectName,
+          domainName
+        );
+        alreadyOnRequestedProject = !(existing instanceof Error);
+      }
+
+      if (alreadyOnRequestedProject) {
+        output.log(
+          `Domain ${chalk.bold(domainName)} is already assigned to project ${chalk.bold(
+            projectName
+          )}. ${addStamp()}`
+        );
+        return printDomainConfiguration(client, contextName, domainName);
+      }
+
+      if (force && conflictProject?.id) {
         const removeResponse = await removeDomainFromProject(
           client,
-          aliasTarget.project.id,
+          conflictProject.id,
           domainName
         );
 
