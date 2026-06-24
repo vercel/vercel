@@ -19,11 +19,20 @@ pub mod axum;
 #[cfg(feature = "actix")]
 pub mod actix;
 
+pub mod awaiter;
 #[cfg(unix)]
 mod ipc;
 #[cfg(unix)]
 mod ipc_utils;
 mod types;
+
+use crate::awaiter::Awaiter;
+
+lazy_static::lazy_static! {
+    /// Process-global collector of `waitUntil` background work. Shared by every
+    /// request and drained once at shutdown (see [`run`]).
+    static ref AWAITER: Awaiter = Awaiter::new();
+}
 
 use crate::types::IntoFunctionResponse;
 
@@ -129,11 +138,29 @@ impl Default for LogContext {
 #[derive(Clone)]
 pub struct AppState {
     pub log_context: LogContext,
+    awaiter: Awaiter,
 }
 
 impl AppState {
     pub fn new(log_context: LogContext) -> Self {
-        Self { log_context }
+        Self {
+            log_context,
+            awaiter: AWAITER.clone(),
+        }
+    }
+
+    /// Register a background future to keep running after the response has been
+    /// sent. The future is spawned immediately and awaited at process shutdown
+    /// (bounded by [`awaiter::WAIT_UNTIL_TIMEOUT`]).
+    ///
+    /// Mirrors `waitUntil` in the Node.js runtime: the future runs regardless of
+    /// whether the handler succeeded or errored, and a panic in the future is
+    /// isolated from the rest of the runtime.
+    pub fn wait_until<F>(&self, future: F)
+    where
+        F: std::future::Future<Output = ()> + Send + 'static,
+    {
+        self.awaiter.wait_until(future);
     }
 }
 
@@ -303,8 +330,52 @@ where
         println!("Dev server listening: {}", port);
     }
 
+    // Shutdown signal future. On Unix the host terminates the process with
+    // SIGTERM; on other platforms fall back to Ctrl-C. When it fires we stop
+    // accepting new connections and drain any pending `waitUntil` work.
+    let shutdown = async {
+        #[cfg(unix)]
+        {
+            match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+                Ok(mut sigterm) => {
+                    sigterm.recv().await;
+                }
+                Err(_) => {
+                    // Fall back to Ctrl-C if SIGTERM cannot be registered.
+                    let _ = tokio::signal::ctrl_c().await;
+                }
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = tokio::signal::ctrl_c().await;
+        }
+    };
+    tokio::pin!(shutdown);
+
     loop {
-        let (stream, _) = listener.accept().await?;
+        let (stream, _) = tokio::select! {
+            accepted = listener.accept() => accepted?,
+            _ = &mut shutdown => {
+                // Drain background `waitUntil` work, bounded by the timeout, then
+                // exit. The per-request `end` IPC message has already been sent
+                // for each completed request, so this only affects background
+                // tasks, mirroring the Node.js runtime's `onExit` behavior.
+                if tokio::time::timeout(
+                    std::time::Duration::from_secs(crate::awaiter::WAIT_UNTIL_TIMEOUT),
+                    AWAITER.awaiting(),
+                )
+                .await
+                .is_err()
+                {
+                    eprintln!(
+                        "A waitUntil() task is still running after {}s and was abandoned at shutdown.",
+                        crate::awaiter::WAIT_UNTIL_TIMEOUT
+                    );
+                }
+                return Ok(());
+            }
+        };
         let io = TokioIo::new(stream);
         #[cfg(unix)]
         let ipc_stream_clone = ipc_stream.clone();
