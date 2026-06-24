@@ -145,7 +145,7 @@ describe('normalizeRoutes', () => {
     assert.deepStrictEqual(normalized.routes, routes);
   });
 
-  test('accepts a legacy service `destination` with type and service', () => {
+  test('accepts an explicit service `destination` with type and service', () => {
     const routes: Route[] = [
       { src: '^/(.*)$', destination: { type: 'service', service: 'web' } },
     ];

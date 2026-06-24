@@ -29,7 +29,7 @@ const serviceDestinationSchema = {
   properties: {
     type: {
       description:
-        'Optional, retained for backward compatibility. The destination shape is identified by the `service` property, so `type` is no longer required. When present it must be `service`.',
+        'Optional explicit format marker. The destination shape is identified by the `service` property, so `type` is no longer required. When present it must be `service`.',
       type: 'string',
       enum: ['service'],
     },

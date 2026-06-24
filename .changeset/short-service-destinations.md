@@ -15,6 +15,6 @@ Make hand-written service-targeted route/rewrite `destination` config less repet
  }
 ```
 
-The legacy `{ "type": "service", "service": NAME }` form continues to validate
-for backward compatibility. Normalized route output continues to include
-`"type": "service"`, so machine-facing config remains canonical.
+The explicit `{ "type": "service", "service": NAME }` format continues to
+validate. Normalized route output continues to include `"type": "service"`, so
+machine-facing config remains canonical.

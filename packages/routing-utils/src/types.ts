@@ -74,8 +74,8 @@ export type Transform = HeaderQueryTransform | PathTransform;
 
 export type ServiceDestination = {
   /**
-   * Optional, retained for backward compatibility. The destination is
-   * identified by the presence of `service`, so `type` is no longer required.
+   * Optional explicit format marker. The destination is identified by the
+   * presence of `service`, so `type` is no longer required.
    */
   type?: 'service';
   service: string;
