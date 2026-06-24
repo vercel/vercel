@@ -195,6 +195,89 @@ describe('domains add', () => {
             },
           ]);
         });
+
+        it('moves the domain from another project even when the API omits the conflicting project', async () => {
+          useUser();
+          const domain = useDomain();
+          const { project } = useProject();
+          const otherProjectId = 'prj_other';
+          client.setArgv(
+            'domains',
+            'add',
+            '--force',
+            domain.name,
+            String(project.name)
+          );
+
+          let aliasPostCount = 0;
+          client.scenario.post(
+            `/projects/${project.name}/alias`,
+            (_req, res) => {
+              aliasPostCount += 1;
+              if (aliasPostCount === 1) {
+                res.status(400).json({
+                  error: {
+                    code: 'ALIAS_DOMAIN_EXIST',
+                    message: `Cannot add ${domain.name} since it's already assigned to another project.`,
+                  },
+                });
+                return;
+              }
+              res.json([{ domain: domain.name }]);
+            }
+          );
+          // Domain is not attached to the requested project.
+          client.scenario.get(
+            `/v9/projects/${project.name}/domains/${domain.name}`,
+            (_req, res) => {
+              res.status(404).json({
+                error: { code: 'not_found', message: 'Not found' },
+              });
+            }
+          );
+          // Domain is currently attached to a different project.
+          client.scenario.get(
+            `/project-domains/${domain.name}`,
+            (_req, res) => {
+              res.json({
+                name: domain.name,
+                apexName: domain.name,
+                projectId: otherProjectId,
+                verified: true,
+              });
+            }
+          );
+          let removeCalled = false;
+          client.scenario.delete(
+            `/projects/${otherProjectId}/alias`,
+            (_req, res) => {
+              removeCalled = true;
+              res.json([]);
+            }
+          );
+          client.scenario.get(
+            `/:version/domains/${domain.name}`,
+            (_req, res) => {
+              res.json({ domain });
+            }
+          );
+          client.scenario.get(
+            `/:version/domains/${domain.name}/config`,
+            (_req, res) => {
+              res.json({});
+            }
+          );
+
+          const exitCode = await domains(client);
+          expect(exitCode, 'exit code for "domains"').toEqual(0);
+          expect(removeCalled, 'removed domain from other project').toEqual(
+            true
+          );
+
+          await expect(client.stderr).toOutput(
+            `Domain ${domain.name} added to project ${project.name}`
+          );
+        });
       });
     });
   });

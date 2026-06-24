@@ -13,7 +13,10 @@ import { isPublicSuffix } from '../../util/domains/is-public-suffix';
 import isRootDomain from '../../util/is-root-domain';
 import { getDomainConfig } from '../../util/domains/get-domain-config';
 import { addDomainToProject } from '../../util/projects/add-domain-to-project';
-import { getProjectDomain } from '../../util/projects/get-project-domain';
+import {
+  getProjectDomain,
+  getProjectDomainByName,
+} from '../../util/projects/get-project-domain';
 import { removeDomainFromProject } from '../../util/projects/remove-domain-from-project';
 import code from '../../util/output/code';
 import output from '../../output-manager';
@@ -400,30 +403,50 @@ export default async function add(client: Client, argv: string[]) {
         return printDomainConfiguration(client, contextName, domainName);
       }
 
-      if (force && conflictProject?.id) {
-        const removeResponse = await removeDomainFromProject(
-          client,
-          conflictProject.id,
-          domainName
-        );
-
-        if (removeResponse instanceof Error) {
-          if (client.nonInteractive) {
-            outputAgentError(
-              client,
-              {
-                status: 'error',
-                reason: 'domain_remove_failed',
-                message: errorToString(removeResponse),
-              },
-              1
-            );
+      if (force) {
+        // The error body does not always include the conflicting project, so
+        // resolve which project the domain is currently attached to before
+        // removing it.
+        let currentProjectId = conflictProject?.id;
+        if (!currentProjectId) {
+          const currentProjectDomain = await getProjectDomainByName(
+            client,
+            domainName
+          );
+          if (!(currentProjectDomain instanceof Error)) {
+            currentProjectId = currentProjectDomain.projectId;
           }
-          output.prettyError(removeResponse);
-          return 1;
         }
 
-        aliasTarget = await addDomainToProject(client, projectName, domainName);
+        if (currentProjectId) {
+          const removeResponse = await removeDomainFromProject(
+            client,
+            currentProjectId,
+            domainName
+          );
+
+          if (removeResponse instanceof Error) {
+            if (client.nonInteractive) {
+              outputAgentError(
+                client,
+                {
+                  status: 'error',
+                  reason: 'domain_remove_failed',
+                  message: errorToString(removeResponse),
+                },
+                1
+              );
+            }
+            output.prettyError(removeResponse);
+            return 1;
+          }
+
+          aliasTarget = await addDomainToProject(
+            client,
+            projectName,
+            domainName
+          );
+        }
       }
     }
 
