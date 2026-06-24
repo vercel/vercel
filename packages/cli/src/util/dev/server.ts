@@ -1140,6 +1140,7 @@ export default class DevServer {
       await this.startPromise;
 
       if (this.orchestrator) {
+        // Services V1 use routePrefixes for WebSocket routing.
         const pathname = url.parse(req.url || '/').pathname || '/';
         const service = this.orchestrator.getServiceForRoute(pathname);
         if (service) {
@@ -1150,6 +1151,31 @@ export default class DevServer {
           this.proxy.ws(req, socket, head, { target });
           return;
         }
+
+        // Services V2 sets routePrefixes: [] and relies on the vercel.json route table.
+        const vercelConfig = await this.getVercelConfig();
+        if (vercelConfig.experimentalServicesV2 || vercelConfig.services) {
+          const routeResult = await devRouter(
+            req.url || '/',
+            req.method,
+            vercelConfig.routes,
+            this,
+            vercelConfig
+          );
+          if (isServiceDestination(routeResult.matched_route)) {
+            const { service: serviceName } =
+              routeResult.matched_route.destination;
+            const origin = this.orchestrator.getServiceOrigin(serviceName);
+            if (origin) {
+              output.debug(
+                `Detected "upgrade" event, proxying to service "${serviceName}" at ${origin}`
+              );
+              this.proxy.ws(req, socket, head, { target: origin });
+              return;
+            }
+          }
+        }
+
         output.debug(
           `Detected "upgrade" event, but no matching service found for ${pathname}`
         );
