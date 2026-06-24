@@ -54,7 +54,7 @@ export const linkCommand = {
     {
       ...yesOption,
       description:
-        'Skip questions when setting up with default team and settings',
+        'Retained for compatibility; does not select a team or project',
     },
     confirmOption,
   ],
@@ -64,12 +64,8 @@ export const linkCommand = {
       value: `${packageName} link`,
     },
     {
-      name: 'Link current directory with default options and skip questions',
-      value: `${packageName} link --yes`,
-    },
-    {
       name: 'Link to an existing project in CI or agent mode',
-      value: `${packageName} link --yes --team <team-id> --project <project-name-or-id>`,
+      value: `${packageName} link --scope <team-id-or-slug> --project <project-name-or-id>`,
     },
     {
       name: 'Link a specific directory to a Vercel project',
