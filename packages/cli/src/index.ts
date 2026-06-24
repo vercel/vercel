@@ -69,7 +69,12 @@ import {
 } from './util/updates';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import login from './commands/login';
-import type { AuthConfig, GlobalConfig, User } from '@vercel-internals/types';
+import type {
+  AuthConfig,
+  GlobalConfig,
+  Team,
+  User,
+} from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
 import { Agent as HttpsAgent } from 'https';
 import box from './util/output/box';
@@ -809,7 +814,57 @@ const main = async () => {
       return finishWithExitCode(1);
     }
 
-    if (user.id === scope || user.email === scope || user.username === scope) {
+    const scopeMatchesUserIdentity =
+      user.id === scope || user.email === scope || user.username === scope;
+
+    let teams: Team[] = [];
+
+    try {
+      teams = await getTeams(client);
+    } catch (err: unknown) {
+      // If the scope clearly refers to the user's own identity we don't need
+      // the teams list to resolve it, so swallow any failure and fall through
+      // to personal-account handling. Otherwise the teams list is required, so
+      // surface the error.
+      if (scopeMatchesUserIdentity) {
+        output.debug(
+          `Ignoring failure to load teams; scope matches the current user's identity`
+        );
+      } else if (isErrnoException(err) && err.code === 'not_authorized') {
+        output.prettyError({
+          message: `You do not have access to the specified team`,
+          link: 'https://err.sh/vercel/scope-not-accessible',
+        });
+
+        trackAgenticErrorTelemetry(err);
+        return finishWithExitCode(1);
+      } else if (isErrnoException(err) && err.code === 'rate_limited') {
+        output.prettyError({
+          message:
+            'Rate limited. Too many requests to the same endpoint: /teams',
+        });
+
+        trackAgenticErrorTelemetry(err);
+        return finishWithExitCode(1);
+      } else {
+        output.error('Not able to load teams');
+        trackAgenticErrorTelemetry(err);
+        return finishWithExitCode(1);
+      }
+    }
+
+    // A scope string can be ambiguous: a Northstar user's username may also be
+    // the slug of a team they own (the team backing their default scope). In
+    // that case the team must win — otherwise the user could never target it by
+    // name, since the personal-account check below would reject it. So resolve
+    // teams first and only fall back to personal-account handling when no team
+    // matches the scope.
+    const related =
+      teams && teams.find(team => team.id === scope || team.slug === scope);
+
+    if (related) {
+      client.config.currentTeam = related.id;
+    } else if (scopeMatchesUserIdentity) {
       if (user.version === 'northstar') {
         output.error('You cannot set your Personal Account as the scope.');
         return finishWithExitCode(1);
@@ -817,49 +872,12 @@ const main = async () => {
 
       delete client.config.currentTeam;
     } else {
-      let teams = [];
+      output.prettyError({
+        message: 'The specified scope does not exist',
+        link: 'https://err.sh/vercel/scope-not-existent',
+      });
 
-      try {
-        teams = await getTeams(client);
-      } catch (err: unknown) {
-        if (isErrnoException(err) && err.code === 'not_authorized') {
-          output.prettyError({
-            message: `You do not have access to the specified team`,
-            link: 'https://err.sh/vercel/scope-not-accessible',
-          });
-
-          trackAgenticErrorTelemetry(err);
-          return finishWithExitCode(1);
-        }
-
-        if (isErrnoException(err) && err.code === 'rate_limited') {
-          output.prettyError({
-            message:
-              'Rate limited. Too many requests to the same endpoint: /teams',
-          });
-
-          trackAgenticErrorTelemetry(err);
-          return finishWithExitCode(1);
-        }
-
-        output.error('Not able to load teams');
-        trackAgenticErrorTelemetry(err);
-        return finishWithExitCode(1);
-      }
-
-      const related =
-        teams && teams.find(team => team.id === scope || team.slug === scope);
-
-      if (!related) {
-        output.prettyError({
-          message: 'The specified scope does not exist',
-          link: 'https://err.sh/vercel/scope-not-existent',
-        });
-
-        return finishWithExitCode(1);
-      }
-
-      client.config.currentTeam = related.id;
+      return finishWithExitCode(1);
     }
   }
 

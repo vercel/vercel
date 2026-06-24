@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
+from collections.abc import Callable
 from datetime import UTC, datetime
 from decimal import Decimal
+from typing import Any
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
@@ -22,6 +25,7 @@ from vercel.workers.dramatiq import (
     VercelDramatiqEncoder,
     VercelQueuesBroker,
     VercelQueuesBrokerOptions,
+    handle_queue_callback,
 )
 from vercel.workers.dramatiq.broker import (
     _envelope_to_message,
@@ -228,10 +232,6 @@ class TestDramatiqWorkerConfig:
         assert cfg.visibility_timeout_seconds == 30
         assert cfg.visibility_refresh_interval_seconds == 10.0
         assert cfg.timeout == 10.0
-        assert cfg.max_retries == 3
-        assert cfg.retry_backoff_base_ms == 5000
-        assert cfg.retry_backoff_factor == 2.0
-        assert cfg.max_retry_delay_ms == 60 * 60 * 1000
 
     def test_from_broker_options(self):
         broker = VercelQueuesBroker(
@@ -335,7 +335,7 @@ class TestMiddlewarePipeline:
         )
 
         result = _execute_message(broker, message)
-        assert result == {"ack": True}
+        assert result == {"status": "success"}
 
         mw.before_process_message.assert_called_once()
         mw.after_process_message.assert_called_once()
@@ -392,36 +392,35 @@ class TestMiddlewarePipeline:
 
         result = _execute_message(broker, message)
 
-        assert result == {"ack": True}
+        assert result == {"status": "skipped"}
         mw.before_process_message.assert_called_once()
         mw.after_skip_message.assert_called_once()
         mw.after_process_message.assert_not_called()
 
-    def test_middleware_called_on_retry(self):
-        mw = MagicMock(spec=dramatiq.Middleware)
-        mw.actor_options = set()
-        mw.ephemeral_options = set()
-        broker = VercelQueuesBroker(middleware=[mw])
+    @patch("vercel.workers.dramatiq.broker.send")
+    def test_explicit_retry_reenqueues_with_delay(self, mock_send: MagicMock):
+        mock_send.return_value = {"messageId": "msg-retry"}
+        broker = VercelQueuesBroker(middleware=[dramatiq.middleware.Retries()])
 
         @dramatiq.actor(broker=broker, queue_name="test-mw")
         def retrying_actor():
             raise dramatiq.Retry(delay=5000)
 
-        message = Message(
-            queue_name="test-mw",
-            actor_name="retrying_actor",
-            args=(),
-            kwargs={},
-            options={},
+        result = _execute_message(
+            broker,
+            Message(
+                queue_name="test-mw",
+                actor_name="retrying_actor",
+                args=(),
+                kwargs={},
+                options={},
+            ),
         )
 
-        result = _execute_message(broker, message)
-
-        assert result == {"timeoutSeconds": 5}
-        mw.before_process_message.assert_called_once()
-        mw.after_process_message.assert_called_once()
-        call_kwargs = mw.after_process_message.call_args
-        assert isinstance(call_kwargs.kwargs["exception"], dramatiq.Retry)
+        assert result["status"] == "retried"
+        assert result["retries"] == 1
+        mock_send.assert_called_once()
+        assert mock_send.call_args.kwargs["delay"] == 5
 
 
 class TestEncoderIntegration:
@@ -568,7 +567,7 @@ class TestAsyncActors:
         )
 
         result = _execute_message(async_broker, message)
-        assert result == {"ack": True}
+        assert result == {"status": "success"}
 
     def test_async_actor_exception_propagates(self, async_broker):
         @dramatiq.actor(broker=async_broker, queue_name="test-async")
@@ -585,3 +584,175 @@ class TestAsyncActors:
 
         with pytest.raises(RuntimeError, match="test"):
             _execute_message(async_broker, message)
+
+
+def _make_message(
+    actor_name: str,
+    *,
+    options: dict[str, Any] | None = None,
+    message_id: str = "abc",
+) -> Message:
+    return Message(
+        queue_name="q",
+        actor_name=actor_name,
+        args=(),
+        kwargs={},
+        options=options or {},
+        message_id=message_id,
+    )
+
+
+class TestRetryOptions:
+    @patch("vercel.workers.dramatiq.broker.send")
+    def test_max_retries_honored_then_terminal(self, mock_send: MagicMock):
+        mock_send.return_value = {"messageId": "m"}
+        broker = VercelQueuesBroker()  # default middleware includes Retries
+
+        @dramatiq.actor(broker=broker, queue_name="q", max_retries=2)
+        def always_fails():
+            raise RuntimeError("boom")
+
+        def deliver(retries: int) -> dict[str, Any]:
+            options = {"retries": retries} if retries else None
+            return _execute_message(broker, _make_message("always_fails", options=options))
+
+        assert deliver(0) == {"status": "retried", "retries": 1}
+        assert deliver(1) == {"status": "retried", "retries": 2}
+        assert deliver(2)["status"] == "failed"
+        assert mock_send.call_count == 2
+
+    @patch("vercel.workers.dramatiq.broker.send")
+    def test_throws_is_not_retried(self, mock_send: MagicMock):
+        broker = VercelQueuesBroker()
+
+        @dramatiq.actor(broker=broker, queue_name="q", throws=(ValueError,))
+        def raises_value_error():
+            raise ValueError("nope")
+
+        result = _execute_message(broker, _make_message("raises_value_error"))
+        assert result["status"] == "failed"
+        mock_send.assert_not_called()
+
+    @patch("vercel.workers.dramatiq.broker.send")
+    def test_retry_when_controls_retry(self, mock_send: MagicMock):
+        mock_send.return_value = {"messageId": "m"}
+        broker = VercelQueuesBroker()
+
+        def retry_when(retries: int, exception: Exception) -> bool:
+            return retries < 1
+
+        @dramatiq.actor(broker=broker, queue_name="q", retry_when=retry_when)
+        def maybe_retry():
+            raise RuntimeError("x")
+
+        def deliver(retries: int) -> dict[str, Any]:
+            options = {"retries": retries} if retries else None
+            return _execute_message(broker, _make_message("maybe_retry", options=options))
+
+        assert deliver(0)["status"] == "retried"
+        assert deliver(1)["status"] == "failed"
+
+    @patch("vercel.workers.dramatiq.broker.send")
+    def test_backoff_respects_actor_bounds(self, mock_send: MagicMock):
+        mock_send.return_value = {"messageId": "m"}
+        broker = VercelQueuesBroker()
+
+        @dramatiq.actor(broker=broker, queue_name="q", min_backoff=1000, max_backoff=2000)
+        def fails():
+            raise RuntimeError("x")
+
+        _execute_message(broker, _make_message("fails"))
+        mock_send.assert_called_once()
+        delay_seconds = mock_send.call_args.kwargs["delay"]
+        assert delay_seconds is not None
+        assert 0 <= delay_seconds <= 2
+
+    @patch("vercel.workers.dramatiq.broker.send")
+    def test_idempotency_key_includes_retries(self, mock_send: MagicMock):
+        mock_send.return_value = {"messageId": "m"}
+        broker = VercelQueuesBroker()
+
+        @dramatiq.actor(broker=broker, queue_name="q")
+        def noop():
+            pass
+
+        broker.enqueue(_make_message("noop", options={"retries": 2}))
+        assert mock_send.call_args.kwargs["idempotency_key"] == "abc:2"
+
+    @patch("vercel.workers.dramatiq.broker.send")
+    def test_idempotency_key_initial_send(self, mock_send: MagicMock):
+        mock_send.return_value = {"messageId": "m"}
+        broker = VercelQueuesBroker()
+
+        @dramatiq.actor(broker=broker, queue_name="q")
+        def noop():
+            pass
+
+        broker.enqueue(_make_message("noop"))
+        assert mock_send.call_args.kwargs["idempotency_key"] == "abc:0"
+
+
+class _FakeExtender:
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        pass
+
+    def start(self) -> None:
+        pass
+
+    def stop(self) -> None:
+        pass
+
+    def finalize(self, fn: Callable[[], None]) -> None:
+        fn()
+
+
+class TestRetriesCallbackBehaviour:
+    def _invoke(
+        self, broker: VercelQueuesBroker, message: Message, mock_qc: MagicMock
+    ) -> tuple[int, list[tuple[str, str]], bytes]:
+        envelope = _message_to_envelope(message, message.queue_name, encoder=broker.encoder)
+        mock_qc.is_v2beta_callback.return_value = False
+        mock_qc.parse_cloudevent.return_value = (message.queue_name, "default", message.message_id)
+        mock_qc.receive_message_by_id.return_value = (envelope, 0, "2026-01-01", "rh")
+        mock_qc.VisibilityExtender.return_value = _FakeExtender()
+        return handle_queue_callback(broker, b"{}", {})
+
+    @patch("vercel.workers.dramatiq.broker.send")
+    @patch("vercel.workers.dramatiq.app.queue_callback")
+    def test_callback_acks_on_retry(self, mock_qc: MagicMock, mock_send: MagicMock):
+        mock_send.return_value = {"messageId": "m"}
+        broker = VercelQueuesBroker()
+
+        @dramatiq.actor(broker=broker, queue_name="q", max_retries=3)
+        def fails():
+            raise RuntimeError("x")
+
+        status_code, _headers, body = self._invoke(broker, _make_message("fails"), mock_qc)
+
+        assert status_code == 200
+        payload = json.loads(body)
+        assert payload["status"] == "retried"
+        assert payload["ok"] is True
+        mock_qc.delete_message.assert_called_once()
+
+    @patch("vercel.workers.dramatiq.broker.send")
+    @patch("vercel.workers.dramatiq.app.queue_callback")
+    def test_callback_acks_on_terminal_failure(self, mock_qc: MagicMock, mock_send: MagicMock):
+        mock_send.return_value = {"messageId": "m"}
+        broker = VercelQueuesBroker()
+
+        @dramatiq.actor(broker=broker, queue_name="q", max_retries=1)
+        def fails():
+            raise RuntimeError("boom")
+
+        message = _make_message("fails", options={"retries": 1})
+        status_code, _headers, body = self._invoke(broker, message, mock_qc)
+
+        assert status_code == 200
+        payload = json.loads(body)
+        assert payload["status"] == "failed"
+        assert payload["ok"] is False
+        assert payload["errorType"] == "RuntimeError"
+        mock_qc.delete_message.assert_called_once()
+        # Terminal failure does not re-enqueue.
+        mock_send.assert_not_called()

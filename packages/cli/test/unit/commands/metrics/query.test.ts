@@ -247,7 +247,7 @@ describe('metrics query v2', () => {
     });
 
     it('should default to avg for duration metrics', async () => {
-      mockMetricDetail('vercel.function_invocation.request_duration_ms', {
+      mockMetricDetail('vercel.function_invocation.function_duration_ms', {
         description: 'Request Duration',
         unit: 'milliseconds',
         aggregations: ['avg', 'p95'],
@@ -256,7 +256,7 @@ describe('metrics query v2', () => {
       mockApiSuccess();
       client.setArgv(
         'metrics',
-        'vercel.function_invocation.request_duration_ms'
+        'vercel.function_invocation.function_duration_ms'
       );
 
       const exitCode = await query(client, new MockTelemetry());

@@ -32,11 +32,6 @@ import { ProjectNotFound } from '../../../../src/util/errors-ts';
 vi.mock('../../../../src/commands/env/pull');
 const mockPull = vi.mocked(pull);
 
-// Mock the auto-install agent tooling so it doesn't prompt during link tests
-vi.mock('../../../../src/util/agent/auto-install-agentic', () => ({
-  autoInstallVercelPlugin: vi.fn().mockResolvedValue(undefined),
-}));
-
 function expectLinkRowsUseExpectedGlyphs(output: string, labels: string[]) {
   const plain = stripAnsi(output);
   const completedLabels = new Set(['Created', 'Linked', 'Added']);
@@ -702,7 +697,8 @@ describe('link', () => {
       expect(mockPull).toHaveBeenCalledWith(
         expect.objectContaining({ cwd }),
         ['--yes'],
-        'vercel-cli:link'
+        'vercel-cli:link',
+        { oidcTokenOnly: true }
       );
     });
 
@@ -885,11 +881,6 @@ describe('link', () => {
       /^\s{0,2}Config\s+\.vercel\/project\.json/m
     );
 
-    await expect(client.stderr).toOutput(
-      'Pull development environment variables into .env.local?'
-    );
-    client.stdin.write('n\n');
-
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
     const plainOutput = stripAnsi(client.stderr.getFullOutput());
@@ -897,8 +888,8 @@ describe('link', () => {
       /^\s{0,2}Directory\s+.+\n\nSearching for existing projects…\n\n\s{0,2}Found existing project/m
     );
     expect(plainOutput).toMatch(/Link directory to project\?.*\n\n✓ Linked\s+/);
-    expect(plainOutput).toMatch(
-      /✓ Linked\s+.+\n\n\? Pull development environment variables into \.env\.local\?/
+    expect(plainOutput).not.toContain(
+      'Pull development environment variables into .env.local?'
     );
     expectLinkRowsUseExpectedGlyphs(client.stderr.getFullOutput(), [
       'Directory',
@@ -1598,11 +1589,6 @@ describe('link', () => {
         `✓ Linked          ${team.slug}/${project.name}`
       );
 
-      await expect(client.stderr).toOutput(
-        'Pull development environment variables into .env.local?'
-      );
-      client.stdin.write('n\n');
-
       const exitCode = await exitCodePromise;
       selectSpy.mockRestore();
 
@@ -1619,8 +1605,8 @@ describe('link', () => {
     });
   });
 
-  describe('environment variable pull prompt', () => {
-    it('should prompt to pull environment variables after successful linking', async () => {
+  describe('OIDC token refresh', () => {
+    it('automatically refreshes OIDC after successful linking', async () => {
       useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
       const [team] = useTeams('team_dummy') as Team[];
@@ -1642,23 +1628,19 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         `✓ Linked          ${team.slug}/${project.name}`
       );
-
-      await expect(client.stderr).toOutput(
-        'Pull development environment variables into .env.local?'
-      );
-      client.stdin.write('y\n');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
 
       expect(mockPull).toHaveBeenCalledWith(
         expect.objectContaining({ cwd }),
-        [],
-        'vercel-cli:link'
+        ['--yes'],
+        'vercel-cli:link',
+        { oidcTokenOnly: true }
       );
     });
 
-    it('should not call env pull when user declines the prompt', async () => {
+    it('does not prompt before refreshing OIDC', async () => {
       useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
       const [team] = useTeams('team_dummy') as Team[];
@@ -1681,16 +1663,18 @@ describe('link', () => {
         `✓ Linked          ${team.slug}/${project.name}`
       );
 
-      await expect(client.stderr).toOutput(
-        'Pull development environment variables into .env.local?'
-      );
-      client.stdin.write('n\n');
-
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
 
-      // Verify env pull was NOT called
-      expect(mockPull).not.toHaveBeenCalled();
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Pull development environment variables into .env.local?'
+      );
+      expect(mockPull).toHaveBeenCalledWith(
+        expect.objectContaining({ cwd }),
+        ['--yes'],
+        'vercel-cli:link',
+        { oidcTokenOnly: true }
+      );
     });
 
     it('should handle env pull failure gracefully', async () => {
@@ -1720,12 +1704,7 @@ describe('link', () => {
       );
 
       await expect(client.stderr).toOutput(
-        'Pull development environment variables into .env.local?'
-      );
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
-        'Failed to pull environment variables. You can run `vc env pull` manually.'
+        'Linked project, but failed to refresh VERCEL_OIDC_TOKEN in .env.local.'
       );
 
       const exitCode = await exitCodePromise;
@@ -1733,8 +1712,9 @@ describe('link', () => {
 
       expect(mockPull).toHaveBeenCalledWith(
         expect.objectContaining({ cwd }),
-        [],
-        'vercel-cli:link'
+        ['--yes'],
+        'vercel-cli:link',
+        { oidcTokenOnly: true }
       );
     });
 
@@ -1765,12 +1745,7 @@ describe('link', () => {
       );
 
       await expect(client.stderr).toOutput(
-        'Pull development environment variables into .env.local?'
-      );
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
-        'Failed to pull environment variables. You can run `vc env pull` manually.'
+        'Linked project, but failed to refresh VERCEL_OIDC_TOKEN in .env.local.'
       );
 
       const exitCode = await exitCodePromise;
@@ -1778,12 +1753,13 @@ describe('link', () => {
 
       expect(mockPull).toHaveBeenCalledWith(
         expect.objectContaining({ cwd }),
-        [],
-        'vercel-cli:link'
+        ['--yes'],
+        'vercel-cli:link',
+        { oidcTokenOnly: true }
       );
     });
 
-    it('should pass empty args to env pull when link command does not use --yes', async () => {
+    it('uses --yes internally without treating it as target selection', async () => {
       useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
       const [team] = useTeams('team_dummy') as Team[];
@@ -1806,19 +1782,14 @@ describe('link', () => {
         `✓ Linked          ${team.slug}/${project.name}`
       );
 
-      await expect(client.stderr).toOutput(
-        'Pull development environment variables into .env.local?'
-      );
-      client.stdin.write('y\n');
-
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
 
-      // Verify env pull was called with empty args since link didn't use --yes
       expect(mockPull).toHaveBeenCalledWith(
         expect.objectContaining({ cwd }),
-        [],
-        'vercel-cli:link'
+        ['--yes'],
+        'vercel-cli:link',
+        { oidcTokenOnly: true }
       );
     });
 
@@ -1845,11 +1816,6 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         `✓ Linked          ${team.slug}/${project.name}`
       );
-
-      await expect(client.stderr).toOutput(
-        'Pull development environment variables into .env.local?'
-      );
-      client.stdin.write('y\n');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
@@ -1887,12 +1853,7 @@ describe('link', () => {
       );
 
       await expect(client.stderr).toOutput(
-        'Pull development environment variables into .env.local?'
-      );
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
-        'Failed to pull environment variables. You can run `vc env pull` manually.'
+        'Linked project, but failed to refresh VERCEL_OIDC_TOKEN in .env.local.'
       );
 
       const exitCode = await exitCodePromise;
@@ -1949,11 +1910,6 @@ describe('link', () => {
         `✓ Linked          ${team.slug}/${project.name}`
       );
 
-      await expect(client.stderr).toOutput(
-        'Pull development environment variables into .env.local?'
-      );
-      client.stdin.write('n\n');
-
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "link"').toEqual(0);
 
@@ -1998,11 +1954,6 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         `✓ Linked          ${team.slug}/${project.name}`
       );
-
-      await expect(client.stderr).toOutput(
-        'Pull development environment variables into .env.local?'
-      );
-      client.stdin.write('n\n');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
@@ -2252,11 +2203,6 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         `✓ Linked          ${teamA.slug}/${projectA.name}`
       );
-      await expect(client.stderr).toOutput(
-        'Pull development environment variables into .env.local?'
-      );
-      client.stdin.write('n\n');
-
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
       const plainOutput = stripAnsi(client.stderr.getFullOutput());
@@ -2403,11 +2349,6 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         `✓ Linked          ${teamA.slug}/${expectedProject.name}`
       );
-      await expect(client.stderr).toOutput(
-        'Pull development environment variables into .env.local?'
-      );
-      client.stdin.write('n\n');
-
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
       expectLinkRowsUseExpectedGlyphs(client.stderr.getFullOutput(), [
@@ -2478,11 +2419,6 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         `✓ Linked          ${teamA.slug}/${repoProject.name}`
       );
-      await expect(client.stderr).toOutput(
-        'Pull development environment variables into .env.local?'
-      );
-      client.stdin.write('n\n');
-
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
     });
@@ -2532,11 +2468,6 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         `✓ Linked          ${limitedTeam.slug}/${limitedProject.name}`
       );
-      await expect(client.stderr).toOutput(
-        'Pull development environment variables into .env.local?'
-      );
-      client.stdin.write('n\n');
-
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
       const plainOutput = stripAnsi(client.stderr.getFullOutput());
@@ -2703,11 +2634,6 @@ describe('link', () => {
 
         await expect(client.stderr).toOutput('✓ Linked          ');
 
-        await expect(client.stderr).toOutput(
-          'Pull development environment variables into .env.local?'
-        );
-        client.stdin.write('n\n');
-
         const exitCode = await exitCodePromise;
         expect(exitCode).toEqual(0);
 
@@ -2756,11 +2682,6 @@ describe('link', () => {
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput('✓ Linked          ');
-
-        await expect(client.stderr).toOutput(
-          'Pull development environment variables into .env.local?'
-        );
-        client.stdin.write('n\n');
 
         const exitCode = await exitCodePromise;
         expect(exitCode).toEqual(0);

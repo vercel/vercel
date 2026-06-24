@@ -2,43 +2,36 @@ import execa from 'execa';
 import { debug, FileFsRef, type Files } from '@vercel/build-utils';
 import fs from 'fs';
 import { join, sep } from 'path';
+import { isLargeFunctionsEnabled } from './large-functions';
 
-// Enabled by default for hive unless explicitly opted out
+/**
+ * Compileall runs only for large functions *and* when `VERCEL_PYTHON_COMPILEALL`
+ * is set truthy (`1`/`true`) — an opt-in toggle, no effect otherwise.
+ */
 export function isCompileAllEnabled(): boolean {
+  if (!isLargeFunctionsEnabled()) return false;
+
   const val = process.env.VERCEL_PYTHON_COMPILEALL;
-  if (val !== undefined && val !== '') {
-    const lower = val.toLowerCase();
-    return lower === '1' || lower === 'true';
-  }
+  if (val === undefined || val === '') return false;
 
-  const hive = process.env.VERCEL_PYTHON_ON_HIVE;
-  if (hive === '1' || hive === 'true') {
-    return true;
-  }
-
-  return false;
+  const lower = val.toLowerCase();
+  return lower === '1' || lower === 'true';
 }
 
 export function shouldUseCompileAll({
   isDev,
   hasCustomCommand,
+  hasCustomBuildCommand,
 }: {
   isDev?: boolean;
   hasCustomCommand: boolean;
+  hasCustomBuildCommand: boolean;
 }): boolean {
   if (isDev) return false;
 
-  // Explicit VERCEL_PYTHON_COMPILEALL overrides all other guards,
-  // including the custom-command guard.  This is the only way for
-  // custom-command users to opt into bytecode compilation.
-  const val = process.env.VERCEL_PYTHON_COMPILEALL;
-  if (val !== undefined && val !== '') {
-    const lower = val.toLowerCase();
-    return lower === '1' || lower === 'true';
-  }
-
-  // Without explicit opt-in, custom commands never get compileall.
-  if (hasCustomCommand) return false;
+  // Custom install or build commands never get compileall: they may produce
+  // their own bytecode or bypass the venv layout compileall assumes.
+  if (hasCustomCommand || hasCustomBuildCommand) return false;
 
   return isCompileAllEnabled();
 }

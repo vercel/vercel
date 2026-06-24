@@ -2313,7 +2313,7 @@ export const frameworks = [
     experimental: true,
   },
   {
-    name: 'Eve',
+    name: 'eve',
     slug: 'eve',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/eve.svg',
     darkModeLogo:
@@ -2321,7 +2321,7 @@ export const frameworks = [
     tagline:
       'A filesystem-first framework for durable backend agents on Vercel.',
     description:
-      'An Eve app: agents authored as a directory of files, compiled and served on Vercel.',
+      'An eve app: agents authored as a directory of files, compiled and served on Vercel.',
     detectors: {
       every: [
         {

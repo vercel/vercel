@@ -10,6 +10,11 @@ import output from '../../output-manager';
 import { outputActionRequired, buildCommandWithYes } from '../agent-output';
 import { printProjectNotFoundError } from '../projects/project-not-found-error';
 
+interface EnsureLinkOptions extends SetupAndLinkOptions {
+  /** When true, fail instead of setting up a project that is not linked. */
+  requireExistingLink?: boolean;
+}
+
 /**
  * Checks if a project is already linked and if not, links the project and
  * validates the link response. When non-interactive and an error occurs,
@@ -30,7 +35,7 @@ export async function ensureLink(
   commandName: string,
   client: Client,
   cwd: string,
-  opts: SetupAndLinkOptions = {}
+  opts: EnsureLinkOptions = {}
 ): Promise<ProjectLinked | number> {
   cwd = await resolveProjectCwd(cwd);
 
@@ -71,6 +76,13 @@ export async function ensureLink(
       opts.projectName
     ) {
       await printProjectNotFoundError(client, opts.projectName, commandName);
+      return 1;
+    }
+
+    if (link.status === 'not_linked' && opts.requireExistingLink) {
+      output.error(
+        `Project is not linked. Run ${getCommandName('link')} first.`
+      );
       return 1;
     }
 

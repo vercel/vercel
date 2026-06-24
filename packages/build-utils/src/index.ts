@@ -47,6 +47,7 @@ import {
   traverseUpDirectories,
   PipInstallResult,
   NpmInstallOutput,
+  type CliType,
 } from './fs/run-user-scripts';
 import {
   getLatestNodeVersion,
@@ -133,9 +134,12 @@ export {
   hardLinkDir,
   traverseUpDirectories,
   validateNpmrc,
+  type CliType,
 };
 
 export { EdgeFunction } from './edge-function';
+export { ContainerImage } from './container-image';
+export type { ContainerImageConfig } from './container-image';
 export { readConfigFile, getPackageJson } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
 export { getOsRelease, getProvidedRuntime } from './os';
@@ -149,7 +153,12 @@ export {
   getMaxDurationSchema,
 } from './max-duration';
 export * from './package-manifest';
+export * from './deploy-manifest';
 export { generateProjectManifest } from './node-diagnostics';
+export {
+  generateRubyProjectManifest,
+  parseGemfileLock,
+} from './ruby-diagnostics';
 export * from './types';
 export * from './errors';
 

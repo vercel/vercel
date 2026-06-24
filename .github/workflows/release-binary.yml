@@ -31,16 +31,16 @@ jobs:
       matrix:
         include:
           - runs-on: macos-15-xlarge
-            target: node22.22.2-macos-arm64
+            target: node24.14.1-macos-arm64
             asset: vercel-darwin-arm64
             ext: ''
             sign: true
             smoke: true
-            custom_node_path: .node-runtime/node-v22.22.2-darwin-arm64-small-icu/bin/node
+            custom_node_path: .node-runtime/node-v24.14.1-darwin-arm64-small-icu/bin/node
             custom_node_platform: darwin
             custom_node_arch: arm64
           - runs-on: macos-15-large
-            target: node22.22.2-macos-x64
+            target: node24.14.1-macos-x64
             asset: vercel-darwin-x64
             ext: ''
             sign: true
@@ -49,30 +49,34 @@ jobs:
             custom_node_platform: ''
             custom_node_arch: ''
           - runs-on: ubuntu-latest-32-core-arm-oss
-            target: node22.22.2-linux-arm64
+            target: node24.14.1-linux-arm64
             asset: vercel-linux-arm64
             ext: ''
             sign: false
             smoke: true
-            custom_node_path: .node-runtime/node-v22.22.2-linux-arm64-small-icu/bin/node
+            custom_node_path: .node-runtime/node-v24.14.1-linux-arm64-small-icu/bin/node
             custom_node_platform: linux
             custom_node_arch: arm64
           - runs-on: ubuntu-latest-32-core-oss
-            target: node22.22.2-linux-x64
+            target: node24.14.1-linux-x64
             asset: vercel-linux-x64
             ext: ''
             sign: false
             smoke: true
-            custom_node_path: .node-runtime/node-v22.22.2-linux-x64-small-icu/bin/node
+            custom_node_path: .node-runtime/node-v24.14.1-linux-x64-small-icu/bin/node
             custom_node_platform: linux
             custom_node_arch: x64
-          - runs-on: windows-latest-8-core-oss
-            target: node22.22.2-win-x64
+          # Node 24.14.1 does not build with Clang 22 on the VS 2026 image.
+          # windows-latest migrated to VS 2026 in June 2026, so use the
+          # stable VS 2022/LLVM 20 toolchain until the embedded Node source
+          # supports Clang 22.
+          - runs-on: windows-2022
+            target: node24.14.1-win-x64
             asset: vercel-windows-x64
             ext: '.exe'
             sign: false
             smoke: true
-            custom_node_path: .node-runtime/node-v22.22.2-win-x64-small-icu/node.exe
+            custom_node_path: .node-runtime/node-v24.14.1-win-x64-small-icu/node.exe
             custom_node_platform: win
             custom_node_arch: x64
     runs-on: ${{ matrix['runs-on'] }}
@@ -85,7 +89,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24.14.1
           package-manager-cache: false
 
       - name: Setup Rust
@@ -124,7 +128,7 @@ jobs:
       - name: Build custom Node runtime
         if: ${{ matrix.custom_node_path != '' }}
         env:
-          VERCEL_CLI_NODE_VERSION: 22.22.2
+          VERCEL_CLI_NODE_VERSION: 24.14.1
           VERCEL_CLI_NODE_PLATFORM: ${{ matrix.custom_node_platform }}
           VERCEL_CLI_NODE_ARCH: ${{ matrix.custom_node_arch }}
         run: pnpm turbo --no-update-notifier --root-turbo-json turbo.node-runtime.json run //#build-binary-node --output-logs=new-only

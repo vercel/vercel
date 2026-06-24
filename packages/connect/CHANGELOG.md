@@ -1,5 +1,18 @@
 # @vercel/connect
 
+## 0.2.7
+
+### Patch Changes
+
+- Updated dependencies [415fde0]
+  - @vercel/oidc@3.7.0
+
+## 0.2.6
+
+### Patch Changes
+
+- @vercel/oidc@3.6.2
+
 ## 0.2.5
 
 ### Patch Changes
