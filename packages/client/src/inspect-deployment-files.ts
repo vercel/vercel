@@ -41,20 +41,21 @@ export async function inspectDeploymentFiles(
   let totalSize = 0;
 
   for (const [sha, file] of filesMap) {
-    if (typeof sha === 'undefined') continue;
-
     const size = file.data?.byteLength || file.data?.length || 0;
     for (const name of file.names) {
       const pathName = isDirectory
         ? relative(workPath, name)
         : name.split(sep).at(-1) || name;
       const normalizedPath = pathName.split(sep).join('/');
-      files.push({
+      const deploymentFile: DeploymentFileItem = {
         path: normalizedPath,
         size,
         mode: file.mode,
-        sha,
-      });
+      };
+      if (typeof sha !== 'undefined') {
+        deploymentFile.sha = sha;
+      }
+      files.push(deploymentFile);
       totalSize += size;
     }
   }
