@@ -26,6 +26,7 @@ export const frameworks = [
     // container, not via `@vercel/next`.
     name: 'Container',
     slug: 'container',
+    experimental: true,
     runtimeFramework: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/container.svg',
     tagline: 'Deploy any project as a container image built from a Dockerfile.',
