@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Expose sort controls, returned ordering metadata, and a `--prod` shortcut for metrics queries, and update Speed Insights metric examples.
+Expose ordering controls, returned ordering metadata, and a `--prod` shortcut for metrics queries, and update Speed Insights metric examples.

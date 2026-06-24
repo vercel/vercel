@@ -60,10 +60,19 @@ export class MetricsTelemetryClient
     }
   }
 
-  trackCliOptionSort(v: string | undefined) {
+  trackCliOptionOrderBy(v: string | undefined) {
     if (v) {
       this.trackCliOption({
-        option: 'sort',
+        option: 'order-by',
+        value: v,
+      });
+    }
+  }
+
+  trackCliOptionOrder(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'order',
         value: v,
       });
     }

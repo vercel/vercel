@@ -742,7 +742,9 @@ export function formatMetadataHeader(opts: MetadataHeaderOptions): string {
   if (opts.orderBy && opts.orderDirection) {
     rows.push({
       key: 'Order By',
-      value: `${opts.orderBy} ${opts.orderDirection}`,
+      value: `${opts.orderBy} ${opts.orderDirection}${
+        opts.orderBy === 'count' ? ' (default)' : ''
+      }`,
     });
   }
 

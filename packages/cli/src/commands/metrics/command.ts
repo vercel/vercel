@@ -70,23 +70,21 @@ export const metricsCommand = {
       argument: 'N',
     },
     {
-      name: 'sort',
+      name: 'order-by',
       shorthand: null,
       type: String,
       deprecated: false,
-      description:
-        'Sort key for grouped results, for example count or lcp_ms, optionally followed by asc or desc',
-      argument: 'KEY [DIR]',
+      description: 'Order grouped results by value or count (default: count)',
+      argument: 'value|count',
     },
     {
       name: 'order',
       shorthand: null,
       type: String,
-      telemetry: false,
       deprecated: false,
       description:
-        'Sort direction for ranked groups: asc or desc (overrides --sort direction, default: desc)',
-      argument: 'DIR',
+        'Order direction for grouped results: asc or desc (default: desc)',
+      argument: 'asc|desc',
     },
     {
       name: 'filter',
@@ -174,7 +172,7 @@ export const metricsCommand = {
     },
     {
       name: 'Routes with the lowest p75 LCP',
-      value: `${packageName} metrics vercel.speed_insights.lcp_ms -a p75 --prod --group-by route --since 7d --sort "lcp_ms asc"`,
+      value: `${packageName} metrics vercel.speed_insights.lcp_ms -a p75 --prod --group-by route --since 7d --order-by value --order asc`,
     },
     {
       name: 'Daily pageviews with a Paris-aligned bucket',

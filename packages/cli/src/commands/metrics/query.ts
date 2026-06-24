@@ -7,6 +7,7 @@ import { metricsCommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import {
   validateMutualExclusivity,
+  validateOrderBy,
   validateOrderDirection,
   validateRequiredMetric,
 } from './validation';
@@ -14,9 +15,6 @@ import { fetchMetricDetailOrExit, getDefaultAggregation } from './schema-api';
 import {
   formatErrorJson,
   formatQueryJson,
-  getDefaultCountOrderByDisplayName,
-  getOrderByDisplayName,
-  getOrderByRollupName,
   getRollupColumnName,
   handleApiError,
 } from './output';
@@ -30,6 +28,7 @@ import type {
   ValidationError,
   MetricsQueryRequest,
   MetricsQueryResponse,
+  OrderBy,
 } from './types';
 import { getLinkedProject } from '../../util/projects/link';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
@@ -76,42 +75,14 @@ function combineFilters(
   return nonEmptyFilters.map(filter => `(${filter})`).join(' and ');
 }
 
-function parseSortFlag(
-  sort: string | undefined
-):
-  | { valid: true; orderBy?: string; orderDirection?: string }
-  | ValidationError {
-  if (!sort) {
-    return { valid: true };
-  }
-
-  const parts = sort.split(/\s+/);
-  if (parts.length > 2) {
-    return {
-      valid: false,
-      code: 'INVALID_SORT',
-      message:
-        'Invalid sort value. Use a sort key, optionally followed by "asc" or "desc".',
-      allowedValues: ['<key>', '<key> asc', '<key> desc'],
-    };
-  }
-
-  const [orderBy, rawOrderDirection] = parts;
-  const orderDirection = rawOrderDirection?.toLowerCase();
-  if (orderDirection && orderDirection !== 'asc' && orderDirection !== 'desc') {
-    return {
-      valid: false,
-      code: 'INVALID_SORT_DIRECTION',
-      message: `Invalid sort direction "${orderDirection}". Use "asc" or "desc".`,
-      allowedValues: ['asc', 'desc'],
-    };
-  }
-
-  return {
-    valid: true,
-    orderBy,
-    ...(orderDirection ? { orderDirection } : {}),
-  };
+function getRequestOrderBy(
+  metric: string,
+  aggregation: string,
+  orderBy: OrderBy | undefined
+): string | undefined {
+  return orderBy === 'value'
+    ? getRollupColumnName(metric, aggregation)
+    : undefined;
 }
 
 async function resolveQueryScope(
@@ -232,7 +203,10 @@ export default async function query(
   const aggregationFlag = flags['--aggregation'];
   const groupBy = flags['--group-by'] ?? [];
   const limit = flags['--limit'];
-  const sortInput = flags['--sort']?.trim();
+  const orderByInput =
+    typeof flags['--order-by'] === 'string'
+      ? flags['--order-by'].trim().toLowerCase()
+      : undefined;
   const orderInput =
     typeof flags['--order'] === 'string'
       ? flags['--order'].trim().toLowerCase()
@@ -247,26 +221,13 @@ export default async function query(
   const project = flags['--project'];
   const all = flags['--all'];
 
-  const sortResult = parseSortFlag(sortInput);
-  let telemetrySortInput: string | undefined;
-  if (sortInput || orderInput) {
-    if (!sortResult.valid) {
-      telemetrySortInput = sortInput ?? orderInput;
-    } else if (sortResult.orderBy) {
-      telemetrySortInput = `${sortResult.orderBy} ${
-        orderInput ?? sortResult.orderDirection ?? 'desc'
-      }`;
-    } else {
-      telemetrySortInput = orderInput;
-    }
-  }
-
   // Track telemetry
   telemetry.trackCliArgumentMetricId(metricFlag);
   telemetry.trackCliOptionAggregation(aggregationFlag);
   telemetry.trackCliOptionGroupBy(groupBy.length > 0 ? groupBy : undefined);
   telemetry.trackCliOptionLimit(limit);
-  telemetry.trackCliOptionSort(telemetrySortInput);
+  telemetry.trackCliOptionOrderBy(orderByInput);
+  telemetry.trackCliOptionOrder(orderInput);
   telemetry.trackCliOptionFilter(filters);
   telemetry.trackCliFlagProd(prod);
   telemetry.trackCliOptionSince(since);
@@ -277,11 +238,11 @@ export default async function query(
   telemetry.trackCliFlagAll(all);
   telemetry.trackCliOptionFormat(flags['--format']);
 
-  if (!sortResult.valid) {
-    return handleValidationError(sortResult, jsonOutput, client);
+  const orderByResult = validateOrderBy(orderByInput);
+  if (!orderByResult.valid) {
+    return handleValidationError(orderByResult, jsonOutput, client);
   }
-  const orderByInput = sortResult.orderBy;
-  const orderDirectionInput = orderInput ?? sortResult.orderDirection;
+  const orderByMode = orderByResult.value;
 
   // Validate that a metric id was provided.
   const requiredMetric = validateRequiredMetric(metricFlag);
@@ -295,11 +256,11 @@ export default async function query(
     return handleValidationError(mutualResult, jsonOutput, client);
   }
 
-  const orderDirectionResult = validateOrderDirection(orderDirectionInput);
+  const orderDirectionResult = validateOrderDirection(orderInput);
   if (!orderDirectionResult.valid) {
     return handleValidationError(orderDirectionResult, jsonOutput, client);
   }
-  const orderDirection = orderDirectionResult.value ?? 'desc';
+  const orderDirection = orderDirectionResult.value;
 
   const scopeResult = await resolveQueryScope(client, {
     project,
@@ -326,28 +287,7 @@ export default async function query(
   const aggregationInput =
     aggregationFlag ?? getDefaultAggregation(detailOrExitCode, metric) ?? 'sum';
   const aggregation = aggregationInput;
-  const orderBy = getOrderByRollupName(metric, aggregation, orderByInput);
-  const selectedOrderBy = getRollupColumnName(metric, aggregation);
-  if (orderByInput && orderBy && orderBy !== selectedOrderBy) {
-    const allowedValues = Array.from(
-      new Set([
-        'count',
-        getDefaultCountOrderByDisplayName(metric),
-        getOrderByDisplayName(metric, aggregation, selectedOrderBy),
-        selectedOrderBy,
-      ])
-    );
-    return handleValidationError(
-      {
-        valid: false,
-        code: 'INVALID_SORT',
-        message: `Invalid sort key "${orderByInput}". Use "count" or a sort key for the requested metric.`,
-        allowedValues,
-      },
-      jsonOutput,
-      client
-    );
-  }
+  const orderBy = getRequestOrderBy(metric, aggregation, orderByMode);
 
   // Resolve time range
   let startTime: Date;
@@ -385,7 +325,7 @@ export default async function query(
     ...(filter ? { filter } : {}),
     limit: limit ?? 10,
     ...(orderBy ? { orderBy } : {}),
-    orderDirection,
+    ...(orderDirection ? { orderDirection } : {}),
   };
 
   if (!jsonOutput) {
@@ -432,8 +372,8 @@ export default async function query(
           endTime: endTime.toISOString(),
           granularity: granResult.duration,
           ...(bucketTimezone ? { bucketTimezone } : {}),
-          ...(orderByInput ? { orderBy: orderByInput } : {}),
-          orderDirection,
+          ...(orderByMode ? { orderBy: orderByMode } : {}),
+          ...(orderDirection ? { orderDirection } : {}),
         },
         response
       )
@@ -454,7 +394,7 @@ export default async function query(
         periodEnd: endTime.toISOString(),
         granularity: granResult.duration,
         bucketTimezone: bucketTimezone,
-        orderBy: orderByInput,
+        orderBy: orderByMode,
         orderDirection,
       })
     );

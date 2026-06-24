@@ -17,6 +17,7 @@ export const AGGREGATIONS = [
 export type Aggregation = (typeof AGGREGATIONS)[number];
 
 export type OrderDirection = 'asc' | 'desc';
+export type OrderBy = 'value' | 'count';
 
 export interface ProjectScope {
   type: 'project';
@@ -105,7 +106,7 @@ export interface QueryMetadata {
   endTime: string;
   granularity: Granularity;
   bucketTimezone?: string;
-  orderBy?: string;
+  orderBy?: OrderBy;
   orderDirection?: OrderDirection;
 }
 

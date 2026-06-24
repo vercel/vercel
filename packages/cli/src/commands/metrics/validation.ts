@@ -1,4 +1,5 @@
 import type {
+  OrderBy,
   OrderDirection,
   ValidationResult,
   ValidatedResult,
@@ -42,5 +43,24 @@ export function validateOrderDirection(
     code: 'INVALID_ORDER',
     message: `Invalid order "${orderDirection}". Use "asc" or "desc".`,
     allowedValues: ['asc', 'desc'],
+  };
+}
+
+export function validateOrderBy(
+  orderBy: string | undefined
+): ValidatedResult<OrderBy | undefined> {
+  if (orderBy === undefined) {
+    return { valid: true, value: undefined };
+  }
+
+  if (orderBy === 'value' || orderBy === 'count') {
+    return { valid: true, value: orderBy };
+  }
+
+  return {
+    valid: false,
+    code: 'INVALID_ORDER_BY',
+    message: `Invalid order-by "${orderBy}". Use "value" or "count".`,
+    allowedValues: ['value', 'count'],
   };
 }

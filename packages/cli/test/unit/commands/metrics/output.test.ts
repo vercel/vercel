@@ -3,8 +3,6 @@ import { client } from '../../../mocks/client';
 import {
   formatErrorJson,
   formatQueryJson,
-  getOrderByDisplayName,
-  getOrderByRollupName,
   getRollupColumnName,
   handleApiError,
 } from '../../../../src/commands/metrics/output';
@@ -31,58 +29,6 @@ describe('output', () => {
           'unique/visitor_id'
         )
       ).toBe('vercel_analytics_pageview_count_unique_visitor_id');
-    });
-  });
-
-  describe('orderBy names', () => {
-    it('should resolve display dimensions to rollup names', () => {
-      expect(getOrderByRollupName('vercel.request.count', 'sum', 'count')).toBe(
-        undefined
-      );
-      expect(
-        getOrderByRollupName(
-          'vercel.analytics_pageview.count',
-          'unique/visitor_id',
-          'visitor_id'
-        )
-      ).toBe('vercel_analytics_pageview_count_unique_visitor_id');
-      expect(
-        getOrderByRollupName('vercel.speed_insights.lcp_ms', 'p75', 'lcp_count')
-      ).toBe(undefined);
-    });
-
-    it('should trim rollup names to display dimensions', () => {
-      expect(
-        getOrderByDisplayName(
-          'vercel.speed_insights.lcp_ms',
-          'p75',
-          'vercel_speed_insights_lcp_ms_p75'
-        )
-      ).toBe('lcp_ms');
-      expect(
-        getOrderByDisplayName(
-          'vercel.analytics_pageview.count',
-          'unique/visitor_id',
-          'vercel_analytics_pageview_count_unique_visitor_id'
-        )
-      ).toBe('visitor_id');
-    });
-
-    it('should compact non-selected rollup names', () => {
-      expect(
-        getOrderByDisplayName(
-          'vercel.speed_insights.lcp_ms',
-          'p75',
-          'vercel_speed_insights_lcp_ms_count'
-        )
-      ).toBe('lcp_ms_count');
-      expect(
-        getOrderByDisplayName(
-          'vercel.speed_insights.lcp_ms',
-          'p75',
-          'vercel_speed_insights_lcp_count_sum'
-        )
-      ).toBe('lcp_count');
     });
   });
 
@@ -146,7 +92,7 @@ describe('output', () => {
         formatQueryJson(query, {
           summary: [],
           statistics: {},
-          orderBy: 'vercel_request_count_sum',
+          orderBy: 'defaultOrderingRollup',
           orderDirection: 'desc',
         })
       );
@@ -157,7 +103,7 @@ describe('output', () => {
       expect(result.query.orderDirection).toBe('desc');
     });
 
-    it('should include returned Speed Insights count ordering metadata', () => {
+    it('should include returned count ordering metadata for Speed Insights', () => {
       const query: QueryMetadata = {
         metric: 'vercel.speed_insights.lcp_ms',
         aggregation: 'p75',
@@ -177,13 +123,13 @@ describe('output', () => {
         })
       );
 
-      expect(result.orderBy).toBe('lcp_count');
+      expect(result.orderBy).toBe('count');
       expect(result.orderDirection).toBe('desc');
-      expect(result.query.orderBy).toBe('lcp_count');
+      expect(result.query.orderBy).toBe('count');
       expect(result.query.orderDirection).toBe('desc');
     });
 
-    it('should display Speed Insights default ordering as count when the service returns the selected metric rollup', () => {
+    it('should display default response ordering as count', () => {
       const query: QueryMetadata = {
         metric: 'vercel.speed_insights.lcp_ms',
         aggregation: 'p75',
@@ -203,9 +149,9 @@ describe('output', () => {
         })
       );
 
-      expect(result.orderBy).toBe('lcp_count');
+      expect(result.orderBy).toBe('count');
       expect(result.orderDirection).toBe('desc');
-      expect(result.query.orderBy).toBe('lcp_count');
+      expect(result.query.orderBy).toBe('count');
       expect(result.query.orderDirection).toBe('desc');
     });
 
@@ -224,7 +170,7 @@ describe('output', () => {
         formatQueryJson(query, {
           summary: [],
           statistics: {},
-          orderBy: 'vercel_request_route_cpu_duration_ms_p95',
+          orderBy: 'defaultOrderingRollup',
           orderDirection: 'desc',
         })
       );
@@ -244,7 +190,7 @@ describe('output', () => {
         startTime: '2025-01-15T10:00:00Z',
         endTime: '2025-01-15T11:00:00Z',
         granularity: { minutes: 1 } as const,
-        orderBy: 'count',
+        orderBy: 'value',
       };
 
       const result = JSON.parse(
@@ -256,9 +202,9 @@ describe('output', () => {
         })
       );
 
-      expect(result.orderBy).toBe('count');
+      expect(result.orderBy).toBe('value');
       expect(result.orderDirection).toBe('desc');
-      expect(result.query.orderBy).toBe('count');
+      expect(result.query.orderBy).toBe('value');
       expect(result.query.orderDirection).toBe('desc');
     });
   });
