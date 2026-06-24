@@ -222,9 +222,7 @@ test(
 
         const body = await res.text();
         expect(res.status).toBe(301);
-        expect(res.headers.get('location')).toBe(
-          `http://localhost:${port}/?foo=bar`
-        );
+        expect(res.headers.get('location')).toBe('/?foo=bar');
         expect(body).toBe('Redirecting...\n');
       }
 
