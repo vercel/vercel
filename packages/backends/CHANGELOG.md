@@ -1,5 +1,15 @@
 # @vercel/backends
 
+## 0.8.17
+
+### Patch Changes
+
+- fdb6121: Fix build failure when `outputDirectory` is set to the project root (e.g. `.`). The builder no longer globs the working tree as build output in that case, avoiding tracing errors from package-manager symlinks in `node_modules`.
+- Updated dependencies [9fb2976]
+- Updated dependencies [186014d]
+- Updated dependencies [cb0988f]
+  - @vercel/build-utils@13.32.0
+
 ## 0.8.16
 
 ### Patch Changes
