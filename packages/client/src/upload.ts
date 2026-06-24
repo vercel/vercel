@@ -1,6 +1,7 @@
 import http from 'http';
 import https from 'https';
-import { Readable } from 'stream';
+import { createReadStream } from 'fs';
+import { Readable, Transform } from 'stream';
 import { EventEmitter } from 'node:events';
 import retry from 'async-retry';
 import { Sema } from 'async-sema';
@@ -173,36 +174,60 @@ export async function* uploadFiles(options: {
           return bail(new Error('Upload aborted'));
         }
 
-        const { data } = file;
-        /**
-         * Note: This branch is unreachable. Directories have undefined hash
-         * in FilesMap and are filtered out by mapToObject before being sent
-         * to the server, so they can't appear in the missing_files response.
-         */
-        if (typeof data === 'undefined') {
-          return;
-        }
+        const { data, size, names } = file;
 
         uploadProgress.bytesUploaded = 0;
 
-        // Split out into chunks
-        const body = new Readable();
-        const originalRead = body.read.bind(body);
-        body.read = function (...args) {
-          const chunk = originalRead(...args);
-          if (chunk) {
-            uploadProgress.bytesUploaded += chunk.length;
-            uploadProgress.emit('progress');
-          }
-          return chunk;
-        };
+        let body: Readable;
+        let contentLength: number;
 
-        const chunkSize = 16384; /* 16kb - default Node.js `highWaterMark` */
-        for (let i = 0; i < data.length; i += chunkSize) {
-          const chunk = data.slice(i, i + chunkSize);
-          body.push(chunk);
+        if (typeof data !== 'undefined') {
+          contentLength = data.length;
+
+          // Split the in-memory buffer out into chunks.
+          const buffered = new Readable();
+          const originalRead = buffered.read.bind(buffered);
+          buffered.read = function (...args) {
+            const chunk = originalRead(...args);
+            if (chunk) {
+              uploadProgress.bytesUploaded += chunk.length;
+              uploadProgress.emit('progress');
+            }
+            return chunk;
+          };
+
+          const chunkSize = 16384; /* 16kb - default Node.js `highWaterMark` */
+          for (let i = 0; i < data.length; i += chunkSize) {
+            const chunk = data.slice(i, i + chunkSize);
+            buffered.push(chunk);
+          }
+          buffered.push(null);
+          body = buffered;
+        } else if (typeof size === 'number') {
+          // File too large to hold in memory (see hashes.ts): stream it from
+          // disk. A fresh stream is created on each `retry` attempt, and bytes
+          // are counted as they flow through for progress reporting.
+          contentLength = size;
+          const fileStream = createReadStream(names[0]);
+          const counter = new Transform({
+            transform(chunk, _encoding, callback) {
+              uploadProgress.bytesUploaded += chunk.length;
+              uploadProgress.emit('progress');
+              callback(null, chunk);
+            },
+          });
+          fileStream.on('error', err => counter.destroy(err));
+          counter.on('close', () => fileStream.destroy());
+          body = fileStream.pipe(counter);
+        } else {
+          /**
+           * Note: This branch is unreachable. Directories have undefined hash
+           * in FilesMap and are filtered out by mapToObject before being sent
+           * to the server, so they can't appear in the missing_files response.
+           */
+          semaphore.release();
+          return;
         }
-        body.push(null);
 
         let err;
         let result;
@@ -218,9 +243,9 @@ export async function* uploadFiles(options: {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/octet-stream',
-                'Content-Length': data.length,
+                'Content-Length': contentLength,
                 'x-now-digest': sha,
-                'x-now-size': data.length,
+                'x-now-size': contentLength,
               },
               body,
               teamId: options.teamId,
