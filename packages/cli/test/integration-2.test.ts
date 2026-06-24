@@ -1129,9 +1129,9 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   // Ensure the exit code is right
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
-  // Ensure .gitignore is created
+  // Ensure .gitignore includes the link metadata and refreshed OIDC env file
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  expect(gitignore).toBe('.vercel\n');
+  expect(gitignore).toBe('.vercel\n.env*\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   expect(
