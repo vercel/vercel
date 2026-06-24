@@ -332,11 +332,15 @@ async function resolveImageHandler(
   }
 
   // Named services derive the registry repository from the service name. A
-  // root (non-service) container deploy has no service name, so fall back to a
-  // stable leaf — the repository is already namespaced by owner/project from
-  // the OIDC claims, so a constant leaf is unambiguous.
+  // root (non-service) container deploy has no service name, so fall back to
+  // the Dockerfile's base name (e.g. `Dockerfile.vercel` -> `dockerfile`,
+  // `Containerfile.vercel` -> `containerfile`). The repository is already
+  // namespaced by owner/project from the OIDC claims, so this leaf only needs
+  // to be stable per project.
   const serviceName = options.service?.name;
-  const repository = sanitizeRepository(serviceName ?? 'app');
+  const repository = sanitizeRepository(
+    serviceName ?? path.basename(dockerfileRel).split('.')[0]
+  );
   const tag = resolveImageTag();
   const contextDir = path.dirname(dockerfilePath);
 
@@ -387,17 +391,20 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
 
   const command = normalizeCommand(options.config.command);
 
-  // Do a normal build: the function lands at the natural `index` path inside
-  // the nested `services/<name>/` output, and a catch-all route in the
-  // service's isolated route table forwards requests to it. Without the
-  // catch-all the service has no `/` route, so the top-level service rewrite
-  // resolves to nothing (vercel/vercel#16648).
-  const isService = Boolean(options.service?.name);
-  const routes = isService
-    ? [{ handle: 'filesystem' as const }, { src: '/(.*)', dest: '/index' }]
-    : undefined;
+  // Do a normal build: the function lands at the natural `index` path and a
+  // catch-all route forwards every request to it. Without it there is no `/`
+  // route, so for a service the top-level service rewrite resolves to nothing
+  // (vercel/vercel#16648), and for a root (non-service) container deploy
+  // nothing reaches the function at all. The filesystem handler resolves `/`
+  // to the `index` output. The only service-specific concern — nesting the
+  // output under `services/<name>/` — is handled by the CLI, not here.
+  const routes = [
+    { handle: 'filesystem' as const },
+    { src: '/(.*)', dest: '/index' },
+  ];
 
   return {
+    routes,
     output: {
       index: {
         type: 'Lambda',
@@ -411,6 +418,5 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
         ...(command ? { command } : {}),
       } as any,
     },
-    ...(routes ? { routes } : {}),
   };
 }

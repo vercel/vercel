@@ -172,6 +172,7 @@ describe('@vercel/container', () => {
     );
 
     expect(result).toEqual({
+      routes: [{ handle: 'filesystem' }, { src: '/(.*)', dest: '/index' }],
       output: {
         index: {
           type: 'Lambda',
@@ -242,7 +243,9 @@ describe('@vercel/container', () => {
     ]);
   });
 
-  it('does not emit routes for non-service builds', async () => {
+  it('emits the catch-all route for non-service builds too', async () => {
+    // A root container deploy (no service) still needs the catch-all so a
+    // request to `/` reaches the function.
     const result = expectTypicalBuildResult(
       await build({
         ...createBuildOptions({}),
@@ -251,7 +254,10 @@ describe('@vercel/container', () => {
     );
 
     expect(result.output).toHaveProperty('index');
-    expect(result.routes).toBeUndefined();
+    expect(result.routes).toEqual([
+      { handle: 'filesystem' },
+      { src: '/(.*)', dest: '/index' },
+    ]);
   });
 
   async function runDockerfileBuild(options?: {
@@ -463,7 +469,8 @@ describe('@vercel/container', () => {
 
   it('builds a root (non-service) container deploy without a service name', async () => {
     // A `Dockerfile.vercel` at the project root deploys as a container with no
-    // service; the repository falls back to a stable leaf instead of throwing.
+    // service; the repository leaf is derived from the Dockerfile base name
+    // (`Dockerfile.vercel` -> `dockerfile`) instead of throwing.
     process.env.VERCEL_OIDC_TOKEN = fakeOidcToken();
     const fetchMock = vi.fn();
     stubRegistryFetch(fetchMock);
@@ -496,14 +503,18 @@ describe('@vercel/container', () => {
       } as any)
     );
 
-    // No service name → output at `index`, no routes.
+    // No service name → output at `index`, with the catch-all so `/` reaches
+    // it. Repository leaf comes from the Dockerfile base name (`dockerfile`).
     expect(result.output).toHaveProperty('index');
     expect(result.output.index).toMatchObject({
       type: 'Lambda',
       runtime: 'container',
-      handler: `vcr.vercel.com/acme/my-app/app@${digest}`,
+      handler: `vcr.vercel.com/acme/my-app/dockerfile@${digest}`,
     });
-    expect(result.routes).toBeUndefined();
+    expect(result.routes).toEqual([
+      { handle: 'filesystem' },
+      { src: '/(.*)', dest: '/index' },
+    ]);
   });
 
   it('forwards the project build env to the image build as --build-arg', async () => {
