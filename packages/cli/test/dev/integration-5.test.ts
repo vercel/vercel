@@ -9,7 +9,7 @@ import {
   validateResponseHeaders,
 } from './utils';
 import assert from 'assert';
-import nodeFetch from 'node-fetch';
+import nodeFetch from '../../src/util/fetch';
 
 test(
   '[vercel dev] temporary directory listing',

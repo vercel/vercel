@@ -1,6 +1,5 @@
 import { createServer } from 'http';
-import { Headers } from 'node-fetch';
-import type { HeadersInit } from 'node-fetch';
+import { Headers, toNodeReadable, type HeadersInit } from '../fetch';
 import {
   toOutgoingHeaders,
   mergeIntoServerResponse,
@@ -40,7 +39,7 @@ export function createProxy(client: Client): Server {
       delete outgoingHeaders['content-length'];
 
       mergeIntoServerResponse(outgoingHeaders, res);
-      fetchRes.body.pipe(res);
+      toNodeReadable(fetchRes.body).pipe(res);
     } catch (err: unknown) {
       output.prettyError(err);
       if (!res.headersSent) {

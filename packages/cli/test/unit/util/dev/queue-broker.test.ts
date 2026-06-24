@@ -9,11 +9,11 @@ vi.mock('../../../../src/output-manager', () => ({
   default: { debug: vi.fn(), debugEnabled: false },
 }));
 
-vi.mock('node-fetch', () => ({
+vi.mock('../../../../src/util/fetch', () => ({
   default: vi.fn().mockResolvedValue({ ok: true, status: 200 }),
 }));
 
-import nodeFetch from 'node-fetch';
+import nodeFetch from '../../../../src/util/fetch';
 const mockFetch = vi.mocked(nodeFetch);
 
 function makeWorkerService(

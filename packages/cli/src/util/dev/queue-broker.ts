@@ -2,7 +2,7 @@
 
 import ms from 'ms';
 import { randomBytes } from 'crypto';
-import nodeFetch from 'node-fetch';
+import fetch from '../fetch';
 import type { ExperimentalService } from '@vercel/fs-detectors';
 import {
   getServiceQueueTopicConfigs,
@@ -439,7 +439,7 @@ export class QueueBroker {
     );
 
     try {
-      const response = await nodeFetch(`${upstream}/`, {
+      const response = await fetch(`${upstream}/`, {
         method: 'POST',
         headers: {
           'content-type': message.contentType,

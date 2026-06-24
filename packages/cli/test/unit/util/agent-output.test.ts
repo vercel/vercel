@@ -506,7 +506,7 @@ describe('buildCommandWithGlobalFlags', () => {
 
 describe('exitWithNonInteractiveError', () => {
   it('emits JSON when argv includes --non-interactive even if client.nonInteractive is false', async () => {
-    const { Response } = await import('node-fetch');
+    const { Response } = await import('../../../src/util/fetch');
     const res = new Response(
       JSON.stringify({
         error: { code: 'not_found', message: 'Project not found.' },
@@ -578,7 +578,7 @@ describe('exitWithNonInteractiveError', () => {
   });
 
   it('includes action and resource from a 403 APIError', async () => {
-    const { Response } = await import('node-fetch');
+    const { Response } = await import('../../../src/util/fetch');
     const res = new Response(
       JSON.stringify({
         error: {
@@ -628,7 +628,7 @@ describe('exitWithNonInteractiveError', () => {
   });
 
   it('omits action and resource from a 404 APIError', async () => {
-    const { Response } = await import('node-fetch');
+    const { Response } = await import('../../../src/util/fetch');
     const res = new Response(
       JSON.stringify({
         error: { code: 'not_found', message: 'Not found.' },

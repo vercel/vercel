@@ -10,6 +10,7 @@ import printEvents from './events';
 import { CommandTimeout } from '../commands/logs/command';
 import output from '../output-manager';
 import stripAnsi from 'strip-ansi';
+import { toNodeReadable } from './fetch';
 
 type Printer = (l: string) => void;
 
@@ -142,7 +143,6 @@ export async function displayRuntimeLogs(
 
   const response = await client.fetch(url, {
     json: false,
-    // @ts-expect-error: typescipt is getting confused with the signal types from node (web & server) and node-fetch (server only)
     signal: abortController.signal,
     retry: {
       retries: 3,
@@ -158,7 +158,8 @@ export async function displayRuntimeLogs(
   // handle the event stream and make the promise get rejected
   // if errors occur so we can retry
   return new Promise<number>((resolve, reject) => {
-    const stream = response.body.pipe(parse ? jsonlines.parse() : split());
+    const readable = toNodeReadable(response.body);
+    const stream = readable.pipe(parse ? jsonlines.parse() : split());
     let finished = false;
     let errored = false;
 
@@ -211,7 +212,7 @@ export async function displayRuntimeLogs(
     stream.on('end', finish);
     stream.on('data', handleData);
     stream.on('error', handleError);
-    response.body.on('error', handleError);
+    readable.on('error', handleError);
   });
 }
 
