@@ -54,8 +54,16 @@ function handleValidationError(
   return 1;
 }
 
-function combineFilters(filters: string[] | undefined): string | undefined {
-  const nonEmptyFilters = filters?.filter(filter => filter.length > 0) ?? [];
+const PRODUCTION_ENVIRONMENT_FILTER = "environment eq 'production'";
+
+function combineFilters(
+  filters: string[] | undefined,
+  prod: boolean | undefined
+): string | undefined {
+  const nonEmptyFilters = [
+    ...(filters?.filter(filter => filter.length > 0) ?? []),
+    ...(prod ? [PRODUCTION_ENVIRONMENT_FILTER] : []),
+  ];
 
   if (nonEmptyFilters.length === 0) {
     return undefined;
@@ -230,7 +238,8 @@ export default async function query(
       ? flags['--order'].trim().toLowerCase()
       : undefined;
   const filters = flags['--filter'];
-  const filter = combineFilters(filters);
+  const prod = flags['--prod'];
+  const filter = combineFilters(filters, prod);
   const since = flags['--since'];
   const until = flags['--until'];
   const granularity = flags['--granularity'];
@@ -258,6 +267,7 @@ export default async function query(
   telemetry.trackCliOptionLimit(limit);
   telemetry.trackCliOptionSort(telemetrySortInput);
   telemetry.trackCliOptionFilter(filters);
+  telemetry.trackCliFlagProd(prod);
   telemetry.trackCliOptionSince(since);
   telemetry.trackCliOptionUntil(until);
   telemetry.trackCliOptionGranularity(granularity);

@@ -1066,6 +1066,36 @@ describe('metrics query v2', () => {
         "(http_status ge 500) and (contains(request_path, '/api'))"
       );
     });
+
+    it('should pass production filter to API with --prod', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv('metrics', 'vercel.request.count', '--prod');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.filter).toBe("environment eq 'production'");
+    });
+
+    it('should AND production filter with explicit filters', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--filter',
+        'http_status ge 500',
+        '--prod'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.filter).toBe(
+        "(http_status ge 500) and (environment eq 'production')"
+      );
+    });
   });
 
   describe('API errors', () => {
@@ -1281,6 +1311,19 @@ describe('metrics query v2', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'argument:metric-id', value: 'vercel.request.count' },
         { key: 'option:filter', value: '[REDACTED]' },
+      ]);
+    });
+
+    it('should track --prod flag', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv('metrics', 'vercel.request.count', '--prod');
+
+      await query(client, new MockTelemetry());
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
+        { key: 'flag:prod', value: 'TRUE' },
       ]);
     });
 

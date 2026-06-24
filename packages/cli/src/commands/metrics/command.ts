@@ -96,6 +96,14 @@ export const metricsCommand = {
       argument: 'EXPR',
     },
     {
+      name: 'prod',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Limit query to production environment (equivalent to -f "environment eq \'production\'")',
+    },
+    {
       name: 'since',
       shorthand: 's',
       type: String,
@@ -161,11 +169,11 @@ export const metricsCommand = {
     },
     {
       name: 'Core Web Vitals (LCP) by route',
-      value: `${packageName} metrics vercel.speed_insights.lcp_ms -a p75 --group-by route --since 7d`,
+      value: `${packageName} metrics vercel.speed_insights.lcp_ms -a p75 --prod --group-by route --since 7d`,
     },
     {
       name: 'Routes with the lowest p75 LCP',
-      value: `${packageName} metrics vercel.speed_insights.lcp_ms -a p75 --group-by route --since 7d --sort "lcp_ms asc"`,
+      value: `${packageName} metrics vercel.speed_insights.lcp_ms -a p75 --prod --group-by route --since 7d --sort "lcp_ms asc"`,
     },
     {
       name: 'Daily pageviews with a Paris-aligned bucket',

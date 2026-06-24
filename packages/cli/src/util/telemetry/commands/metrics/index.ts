@@ -81,6 +81,12 @@ export class MetricsTelemetryClient
     }
   }
 
+  trackCliFlagProd(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('prod');
+    }
+  }
+
   trackCliOptionSince(v: string | undefined) {
     if (v) {
       this.trackCliOption({
