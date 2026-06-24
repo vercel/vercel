@@ -1,7 +1,8 @@
 import { Readable } from 'node:stream';
 import { MockAgent, type Dispatcher } from 'undici';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import fetch, {
+  directFetch,
   setFetchDispatcher,
   toNodeReadable,
 } from '../../../src/util/fetch';
@@ -41,6 +42,7 @@ describe('native fetch', () => {
     setFetchDispatcher(undefined);
     await destroyDispatcher?.();
     destroyDispatcher = undefined;
+    vi.restoreAllMocks();
 
     for (const name of PROXY_ENV_NAMES) {
       const value = originalProxyEnv[name];
@@ -74,6 +76,21 @@ describe('native fetch', () => {
     expect(responseBody).toBe('native fetch');
   });
 
+  it('does not apply a configured dispatcher to direct requests', async () => {
+    const proxyDispatcher = trackedDispatcher('proxy', []);
+    setFetchDispatcher(proxyDispatcher);
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('direct'));
+
+    await directFetch('http://127.0.0.1:3000/', {
+      dispatcher: proxyDispatcher,
+    });
+
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    expect(fetchSpy.mock.calls[0][1]).not.toHaveProperty('dispatcher');
+  });
+
   it('selects the configured proxy dispatcher', async () => {
     const calls: string[] = [];
     const directAgent = trackedDispatcher('direct', calls);
@@ -93,6 +110,26 @@ describe('native fetch', () => {
     expect(calls).toEqual(['proxy']);
   });
 
+  it('selects protocol-specific proxy dispatchers', async () => {
+    const calls: string[] = [];
+    const directAgent = trackedDispatcher('direct', calls);
+    process.env.HTTP_PROXY = 'http://http-proxy.test:8080';
+    process.env.HTTPS_PROXY = 'http://https-proxy.test:8443';
+
+    const dispatcher = new EnvProxyDispatcher({
+      directAgent,
+      createProxyAgent: url => trackedDispatcher(url, calls),
+    });
+    destroyDispatcher = () => dispatcher.destroy();
+
+    dispatcher.dispatch(dispatchOptions('http://example.test'), handlers());
+    dispatcher.dispatch(dispatchOptions('https://example.test'), handlers());
+    expect(calls).toEqual([
+      'http://http-proxy.test:8080',
+      'http://https-proxy.test:8443',
+    ]);
+  });
+
   it('selects the direct dispatcher for NO_PROXY matches', async () => {
     const calls: string[] = [];
     const directAgent = trackedDispatcher('direct', calls);
@@ -108,6 +145,30 @@ describe('native fetch', () => {
 
     dispatcher.dispatch(dispatchOptions('http://example.test'), handlers());
     expect(calls).toEqual(['direct']);
+  });
+
+  it('honors NO_PROXY ports', async () => {
+    const calls: string[] = [];
+    const directAgent = trackedDispatcher('direct', calls);
+    const proxyAgent = trackedDispatcher('proxy', calls);
+    process.env.HTTP_PROXY = 'http://proxy.test:8080';
+    process.env.NO_PROXY = 'example.test:8080';
+
+    const dispatcher = new EnvProxyDispatcher({
+      directAgent,
+      createProxyAgent: () => proxyAgent,
+    });
+    destroyDispatcher = () => dispatcher.destroy();
+
+    dispatcher.dispatch(
+      dispatchOptions('http://example.test:8080'),
+      handlers()
+    );
+    dispatcher.dispatch(
+      dispatchOptions('http://example.test:8081'),
+      handlers()
+    );
+    expect(calls).toEqual(['direct', 'proxy']);
   });
 });
 

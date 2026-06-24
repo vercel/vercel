@@ -2192,9 +2192,12 @@ export default class DevServer {
             'transfer-encoding',
           ]);
 
-          applyOverriddenHeaders(req.headers, middlewareRes.headers);
+          const middlewareHeaders = applyOverriddenHeaders(
+            req.headers,
+            middlewareRes.headers
+          );
 
-          for (const [name, value] of middlewareRes.headers) {
+          for (const [name, value] of middlewareHeaders) {
             if (name === 'x-middleware-next') {
               shouldContinue = value === '1';
             } else if (name === 'x-middleware-rewrite') {
