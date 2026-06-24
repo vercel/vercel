@@ -69,9 +69,6 @@ export class MetricsTelemetryClient
     }
   }
 
-  // order is collapsed into sort
-  trackCliOptionOrder(_v: string | undefined) {}
-
   trackCliOptionFilter(v: string[] | undefined) {
     if (v && v.length > 0) {
       this.trackCliOption({

@@ -40,7 +40,9 @@ type ToArgType<OptType extends CommandOption['type']> =
 
 // TelemetryOptionMethods<[{ name: 'foo', type: BooleanConstructor }]> → { trackCliFlagFoo: (value: boolean | undefined) => void; }
 type TelemetryOptionMethods<Opts extends readonly CommandOption[]> = {
-  [Opt in Opts[number] as ToTelemetryOptionName<Opt>]: (
+  [Opt in Opts[number] as Opt['telemetry'] extends false
+    ? never
+    : ToTelemetryOptionName<Opt>]: (
     value: ToArgType<Opt['type']> | undefined
   ) => void;
 };

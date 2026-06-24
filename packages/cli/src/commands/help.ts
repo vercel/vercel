@@ -17,6 +17,7 @@ export interface CommandOption {
   readonly shorthand: string | null;
   readonly type: PrimitiveConstructor | ReadonlyArray<PrimitiveConstructor>;
   readonly argument?: string;
+  readonly telemetry?: false;
   readonly deprecated: boolean;
   readonly description?: string;
 }

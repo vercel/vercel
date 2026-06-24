@@ -82,6 +82,7 @@ export const metricsCommand = {
       name: 'order',
       shorthand: null,
       type: String,
+      telemetry: false,
       deprecated: false,
       description:
         'Sort direction for ranked groups: asc or desc (overrides --sort direction, default: desc)',

@@ -267,7 +267,6 @@ export default async function query(
   telemetry.trackCliOptionGroupBy(groupBy.length > 0 ? groupBy : undefined);
   telemetry.trackCliOptionLimit(limit);
   telemetry.trackCliOptionSort(telemetrySortInput);
-  telemetry.trackCliOptionOrder(orderInput);
   telemetry.trackCliOptionFilter(filters);
   telemetry.trackCliFlagProd(prod);
   telemetry.trackCliOptionSince(since);
