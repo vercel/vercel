@@ -24,10 +24,10 @@ export const frameworks = [
     // (which returns the first match in list order) selects it over everything
     // else — e.g. a Next.js app shipping a `Dockerfile.vercel` deploys as a
     // container, not via `@vercel/next`.
-    name: 'Dockerfile',
-    slug: 'dockerfile',
+    name: 'Container',
+    slug: 'container',
     runtimeFramework: true,
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/dockerfile.svg',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/container.svg',
     tagline: 'Deploy any project as a container image built from a Dockerfile.',
     description:
       'A project deployed as a container image, built from a Dockerfile.vercel or Containerfile.vercel.',
