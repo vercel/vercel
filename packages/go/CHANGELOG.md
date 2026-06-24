@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.9.2
+
+### Patch Changes
+
+- 2158ab6: [vc dev] Add support to `experimentalServicesV2` for bindings in `vc dev`
+
 ## 3.9.1
 
 ### Patch Changes
