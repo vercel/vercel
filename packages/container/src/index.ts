@@ -1,4 +1,3 @@
-import { getInternalServiceFunctionPath } from '@vercel/build-utils';
 import type { BuildOptions, BuildResultV2, Span } from '@vercel/build-utils';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -367,13 +366,19 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
 
   const command = normalizeCommand(options.config.command);
 
-  const outputPath = options.service?.name
-    ? getInternalServiceFunctionPath(options.service.name).replace(/^\//, '')
-    : 'index';
+  // Do a normal build: the function lands at the natural `index` path inside
+  // the nested `services/<name>/` output, and a catch-all route in the
+  // service's isolated route table forwards requests to it. Without the
+  // catch-all the service has no `/` route, so the top-level service rewrite
+  // resolves to nothing (vercel/vercel#16648).
+  const isService = Boolean(options.service?.name);
+  const routes = isService
+    ? [{ handle: 'filesystem' as const }, { src: '/(.*)', dest: '/index' }]
+    : undefined;
 
   return {
     output: {
-      [outputPath]: {
+      index: {
         type: 'Lambda',
         files: {},
         // For `runtime: 'container'` the OCI image reference is carried in
@@ -385,5 +390,6 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
         ...(command ? { command } : {}),
       } as any,
     },
+    ...(routes ? { routes } : {}),
   };
 }
