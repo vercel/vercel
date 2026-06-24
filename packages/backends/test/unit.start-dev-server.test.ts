@@ -132,9 +132,10 @@ describe('startDevServer', () => {
     expect(await staticResponse.text()).toBe('hello static');
 
     await writeFile(serverPath, serverSource('updated'));
+    const updatedFiles = filesFor(serverPath);
     const updated = await startDevServer({
       ...opts,
-      files: filesFor(serverPath),
+      files: updatedFiles,
     });
     expect(updated).not.toBeNull();
     if (!updated) throw new Error('Expected srvx to reload');
@@ -148,9 +149,26 @@ describe('startDevServer', () => {
       url: '/updated',
     });
 
-    await updated.shutdown?.();
+    const reconfigured = await startDevServer({
+      ...opts,
+      files: updatedFiles,
+      meta: { env: { SRVX_TEST_ENV: 'updated-env' } },
+    });
+    expect(reconfigured).not.toBeNull();
+    if (!reconfigured) throw new Error('Expected srvx to restart');
+    if (reconfigured.shutdown) shutdowns.add(reconfigured.shutdown);
+    expect(reconfigured.pid).not.toBe(updated.pid);
+    expect(await request(reconfigured.port, '/updated-env')).toMatchObject({
+      marker: 'updated',
+      env: 'updated-env',
+      pid: reconfigured.pid,
+      requestCount: 1,
+      url: '/updated-env',
+    });
+
+    await reconfigured.shutdown?.();
     await expect(
-      fetch(`http://127.0.0.1:${updated.port}/after-shutdown`)
+      fetch(`http://127.0.0.1:${reconfigured.port}/after-shutdown`)
     ).rejects.toThrow();
   });
 

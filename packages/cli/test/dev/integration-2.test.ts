@@ -200,7 +200,7 @@ test(
 
 test(
   '[vercel dev] Should persist and reload Node standalone servers without package.json',
-  testFixtureStdio('node-standalone', async (testPath: any, port: number) => {
+  testFixtureStdio('node-standalone', async (_: unknown, port: number) => {
     interface NodeStandaloneResponse {
       instanceId: string;
       marker: string;
@@ -209,33 +209,22 @@ test(
       url: string;
     }
 
-    let devInstance: NodeStandaloneResponse | undefined;
+    const requestDev = async (path: string) => {
+      const response = await nodeFetch(`http://localhost:${port}${path}`);
+      expect(response.status).toBe(200);
+      return (await response.json()) as NodeStandaloneResponse;
+    };
 
-    await testPath(200, '/', (body: string, _res: unknown, isDev: boolean) => {
-      const response = JSON.parse(body) as NodeStandaloneResponse;
-      expect(response.url).toBe('/');
-      expect(response.marker).toBe('initial');
-      if (isDev) {
-        devInstance = response;
-      }
-    });
+    const devInstance = await requestDev('/');
+    expect(devInstance.url).toBe('/');
+    expect(devInstance.marker).toBe('initial');
 
-    await testPath(
-      200,
-      '/some/nested/path',
-      (body: string, _res: unknown, isDev: boolean) => {
-        const response = JSON.parse(body) as NodeStandaloneResponse;
-        expect(response.url).toBe('/some/nested/path');
-        expect(response.marker).toBe('initial');
-        if (isDev) {
-          expect(response.instanceId).toBe(devInstance?.instanceId);
-          expect(response.pid).toBe(devInstance?.pid);
-          expect(response.requestCount).toBe(
-            (devInstance?.requestCount ?? 0) + 1
-          );
-        }
-      }
-    );
+    const secondResponse = await requestDev('/some/nested/path');
+    expect(secondResponse.url).toBe('/some/nested/path');
+    expect(secondResponse.marker).toBe('initial');
+    expect(secondResponse.instanceId).toBe(devInstance.instanceId);
+    expect(secondResponse.pid).toBe(devInstance.pid);
+    expect(secondResponse.requestCount).toBe(devInstance.requestCount + 1);
 
     const serverPath = join(fixture('node-standalone'), 'server.ts');
     const originalSource = await fs.readFile(serverPath, 'utf8');
@@ -253,10 +242,9 @@ test(
       let updatedResponse: NodeStandaloneResponse | undefined;
       while (Date.now() < deadline) {
         try {
-          const response = await nodeFetch(`http://localhost:${port}/reloaded`);
-          const body = (await response.json()) as NodeStandaloneResponse;
-          if (body.marker === 'updated') {
-            updatedResponse = body;
+          const response = await requestDev('/reloaded');
+          if (response.marker === 'updated') {
+            updatedResponse = response;
             break;
           }
         } catch {
@@ -266,7 +254,7 @@ test(
       }
 
       expect(updatedResponse?.url).toBe('/reloaded');
-      expect(updatedResponse?.instanceId).not.toBe(devInstance?.instanceId);
+      expect(updatedResponse?.instanceId).not.toBe(devInstance.instanceId);
       expect(updatedResponse?.requestCount).toBe(1);
     } finally {
       await fs.writeFile(serverPath, originalSource);

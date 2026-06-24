@@ -590,21 +590,9 @@ export async function getBuildMatches(
     // preserving the sentinel passed to the builder.
     if (buildConfig.config?.framework === 'node' && !fileList.includes(src)) {
       const originalSrc = src;
-      const nodeEntrypoints = [
-        'server.cjs',
-        'server.js',
-        'server.mjs',
-        'server.mts',
-        'server.ts',
-        'server.cts',
-        'src/server.cjs',
-        'src/server.js',
-        'src/server.mjs',
-        'src/server.mts',
-        'src/server.ts',
-        'src/server.cts',
-      ];
-      const existing = nodeEntrypoints.find(p => fileList.includes(p));
+      const existing = fileList.find(path =>
+        /^(?:src\/)?server\.[cm]?[jt]s$/.test(path)
+      );
       if (existing) {
         src = existing;
         mapToEntrypoint.set(src, originalSrc);

@@ -41,7 +41,7 @@
     "path-to-regexp": "8.3.0",
     "resolve.exports": "2.0.3",
     "rolldown": "1.0.0-rc.1",
-    "srvx": "0.8.9",
+    "srvx": "0.11.16",
     "tsx": "4.21.0",
     "zod": "3.22.4"
   },

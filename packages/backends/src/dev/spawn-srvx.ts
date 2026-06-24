@@ -1,13 +1,14 @@
 import { fork, type ChildProcess } from 'node:child_process';
 import { createConnection } from 'node:net';
 import { createRequire } from 'node:module';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { cloneEnv, type StartDevServerSuccess } from '@vercel/build-utils';
 import getPort from 'get-port';
 
 const require_ = createRequire(import.meta.url);
 const srvxCliPath = require_.resolve('srvx/cli');
+const srvxBinPath = resolve(dirname(srvxCliPath), '../bin/srvx.mjs');
 const tsxPath = pathToFileURL(require_.resolve('tsx')).href;
 
 const STARTUP_TIMEOUT = 5 * 60_000;
@@ -18,6 +19,7 @@ interface SpawnSrvxOptions {
   entrypoint: string;
   env?: NodeJS.ProcessEnv;
   publicDir: string;
+  signal?: AbortSignal;
   onStdout?: (data: Buffer) => void;
   onStderr?: (data: Buffer) => void;
 }
@@ -56,7 +58,8 @@ function canConnect(port: number): Promise<boolean> {
 function waitUntilReady(
   child: ChildProcess,
   port: number,
-  entrypoint: string
+  entrypoint: string,
+  signal?: AbortSignal
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const deadline = Date.now() + STARTUP_TIMEOUT;
@@ -67,6 +70,7 @@ function waitUntilReady(
       if (retryTimer) clearTimeout(retryTimer);
       child.off('error', onError);
       child.off('exit', onExit);
+      signal?.removeEventListener('abort', onAbort);
     };
 
     const succeed = () => {
@@ -88,6 +92,10 @@ function waitUntilReady(
       const reason = signal ? `signal ${signal}` : `exit code ${code}`;
       fail(new Error(`Server \`${entrypoint}\` exited with ${reason}`));
     };
+    const onAbort = () => {
+      child.kill('SIGTERM');
+      fail(new Error(`Server \`${entrypoint}\` cancelled`));
+    };
 
     const probe = async () => {
       if (settled) return;
@@ -106,6 +114,11 @@ function waitUntilReady(
 
     child.once('error', onError);
     child.once('exit', onExit);
+    signal?.addEventListener('abort', onAbort, { once: true });
+    if (signal?.aborted) {
+      onAbort();
+      return;
+    }
     void probe();
   });
 }
@@ -148,12 +161,11 @@ export async function spawnSrvx(
   });
   if (!env.NODE_ENV) env.NODE_ENV = 'development';
 
-  // Fork the CLI module directly so it enters srvx's IPC-aware serve path.
-  // Invoking the binary would add a watcher supervisor and obscure the PID
-  // that Backends owns. The Vercel CLI already watches source files and asks
-  // the builder to replace this process when they change.
+  // Fork the executable with IPC so srvx serves in this process. Running it as
+  // a regular command would add a watcher supervisor and obscure the PID that
+  // Backends owns. The Vercel CLI already handles source-file invalidation.
   const child = fork(
-    srvxCliPath,
+    srvxBinPath,
     [
       `--port=${port}`,
       '--host=127.0.0.1',
@@ -176,7 +188,7 @@ export async function spawnSrvx(
   }
 
   try {
-    await waitUntilReady(child, port, opts.entrypoint);
+    await waitUntilReady(child, port, opts.entrypoint, opts.signal);
   } catch (error) {
     await stopChild(child);
     throw error;

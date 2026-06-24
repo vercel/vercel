@@ -9,12 +9,15 @@ import { spawnSrvx } from './dev/spawn-srvx.js';
 
 interface PersistentDevServer {
   files: Files;
+  env: NodeJS.ProcessEnv;
   result: StartDevServerSuccess;
   stopPromise?: Promise<void>;
 }
 
 interface PendingDevServer {
   files: Files;
+  env: NodeJS.ProcessEnv;
+  controller: AbortController;
   promise: Promise<PersistentDevServer | null>;
 }
 
@@ -37,6 +40,26 @@ function filesAreEqual(previous: Files, current: Files): boolean {
     previousNames.length === currentNames.length &&
     previousNames.every(name => previous[name] === current[name])
   );
+}
+
+function envsAreEqual(
+  previous: NodeJS.ProcessEnv,
+  current: NodeJS.ProcessEnv
+): boolean {
+  const previousNames = Object.keys(previous);
+  const currentNames = Object.keys(current);
+  return (
+    previousNames.length === currentNames.length &&
+    previousNames.every(name => previous[name] === current[name])
+  );
+}
+
+function stateMatches(
+  state: Pick<PersistentDevServer, 'files' | 'env'>,
+  files: Files,
+  env: NodeJS.ProcessEnv
+): boolean {
+  return filesAreEqual(state.files, files) && envsAreEqual(state.env, env);
 }
 
 function isProcessRunning(pid: number): boolean {
@@ -84,10 +107,16 @@ function persistentResult(
   key: string,
   server: PersistentDevServer
 ): StartDevServerSuccess {
+  const { pid } = server.result;
   return {
     ...server.result,
     persistent: true,
-    shutdown: () => stopPersistentDevServer(key, server),
+    shutdown: () => {
+      const current = persistentDevServers.get(key);
+      return current?.result.pid === pid
+        ? stopPersistentDevServer(key, current)
+        : Promise.resolve();
+    },
   };
 }
 
@@ -97,12 +126,18 @@ function installCleanupHandlers(): void {
 
   const stopAll = () => {
     shuttingDown = true;
+    for (const pending of pendingDevServers.values()) {
+      pending.controller.abort();
+    }
     for (const [key, server] of persistentDevServers) {
       void stopPersistentDevServer(key, server);
     }
   };
 
   const killAll = () => {
+    for (const pending of pendingDevServers.values()) {
+      pending.controller.abort();
+    }
     for (const server of persistentDevServers.values()) {
       terminateProcess(server.result.pid);
     }
@@ -129,12 +164,12 @@ export const startDevServer: StartDevServer = async opts => {
     return null;
   }
 
+  const key = `${opts.workPath}::${opts.entrypoint ?? '<detect>'}`;
   const entrypoint = await findEntrypointWithHintOrThrow(
     opts.workPath,
     opts.entrypoint
   );
-
-  const key = `${opts.workPath}::${entrypoint}`;
+  const env = { ...opts.meta?.env };
   installCleanupHandlers();
 
   // Reuse a live server, or retire stale state before starting one replacement.
@@ -144,7 +179,7 @@ export const startDevServer: StartDevServer = async opts => {
     if (existing) {
       if (
         !existing.stopPromise &&
-        filesAreEqual(existing.files, opts.files) &&
+        stateMatches(existing, opts.files, env) &&
         isProcessRunning(existing.result.pid)
       ) {
         return persistentResult(key, existing);
@@ -155,17 +190,19 @@ export const startDevServer: StartDevServer = async opts => {
 
     const pending = pendingDevServers.get(key);
     if (pending) {
+      if (!stateMatches(pending, opts.files, env)) {
+        pending.controller.abort();
+      }
+
       let server: PersistentDevServer | null;
       try {
         server = await pending.promise;
       } catch (error) {
-        if (filesAreEqual(pending.files, opts.files)) {
-          throw error;
-        }
+        if (stateMatches(pending, opts.files, env)) throw error;
         continue;
       }
 
-      if (filesAreEqual(pending.files, opts.files)) {
+      if (stateMatches(pending, opts.files, env)) {
         if (!server) return null;
         if (isProcessRunning(server.result.pid)) {
           return persistentResult(key, server);
@@ -179,15 +216,17 @@ export const startDevServer: StartDevServer = async opts => {
     }
 
     const files = snapshotFiles(opts.files);
+    const controller = new AbortController();
     const promise = spawnSrvx({
       workPath: opts.workPath,
       entrypoint,
       publicDir: opts.publicDir ?? 'public',
-      env: opts.meta?.env,
+      env,
+      signal: controller.signal,
       onStdout: opts.onStdout,
       onStderr: opts.onStderr,
     }).then(async result => {
-      const server: PersistentDevServer = { files, result };
+      const server: PersistentDevServer = { files, env, result };
       if (shuttingDown) {
         await stopPersistentDevServer(key, server);
         return null;
@@ -196,12 +235,17 @@ export const startDevServer: StartDevServer = async opts => {
       persistentDevServers.set(key, server);
       return server;
     });
-    const pendingServer: PendingDevServer = { files, promise };
+    const pendingServer: PendingDevServer = {
+      files,
+      env,
+      controller,
+      promise,
+    };
     pendingDevServers.set(key, pendingServer);
 
     try {
       const server = await promise;
-      if (!filesAreEqual(files, opts.files)) {
+      if (!stateMatches(pendingServer, opts.files, env)) {
         if (server) {
           await stopPersistentDevServer(key, server);
         }
