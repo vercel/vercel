@@ -321,12 +321,31 @@ async function tryResolveInferred(
   // for immediate dev/build use.
   if (source === 'layout') {
     // Convert InferredServicesConfig to V2 Services for the resolver.
+    // Non-root services get a per-service route with a path transform
+    // that strips the mount prefix so the handler sees clean paths.
     const v2Services: Services = {};
     for (const [name, svc] of Object.entries(detectResult.services)) {
+      const routes: Route[] =
+        svc.mountPath && svc.mountPath !== '/'
+          ? [
+              {
+                src: `${svc.mountPath}/:path*`,
+                transforms: [
+                  {
+                    type: 'request.path' as const,
+                    op: 'set' as const,
+                    args: '/:path*',
+                  },
+                ],
+              },
+            ]
+          : [];
+
       v2Services[name] = {
         root: svc.root,
         ...(svc.framework ? { framework: svc.framework } : {}),
         ...(svc.entrypoint ? { entrypoint: svc.entrypoint } : {}),
+        ...(routes.length > 0 ? { routes } : {}),
       };
     }
 

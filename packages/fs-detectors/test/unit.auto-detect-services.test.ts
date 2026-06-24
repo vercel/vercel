@@ -521,6 +521,27 @@ describe('detectServices with auto-detection', () => {
         source: '/(.*)',
         destination: { type: 'service', service: 'frontend' },
       });
+
+      // Non-root resolved services get a per-service path transform route
+      // that strips the mount prefix so the handler sees clean paths.
+      const backendV2 = result.services.find(s => s.name === 'backend');
+      expect(backendV2).toBeDefined();
+      expect(backendV2?.schema).toBe('experimentalServicesV2');
+      if (backendV2?.schema === 'experimentalServicesV2') {
+        expect(backendV2.routes).toEqual([
+          {
+            src: '/_/backend/:path*',
+            transforms: [{ type: 'request.path', op: 'set', args: '/:path*' }],
+          },
+        ]);
+      }
+
+      // Root frontend service has no path transform
+      const frontendV2 = result.services.find(s => s.name === 'frontend');
+      expect(frontendV2).toBeDefined();
+      if (frontendV2?.schema === 'experimentalServicesV2') {
+        expect(frontendV2.routes).toBeUndefined();
+      }
     });
   });
 });
