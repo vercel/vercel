@@ -60,12 +60,36 @@ export class MetricsTelemetryClient
     }
   }
 
+  trackCliOptionOrderBy(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'order-by',
+        value: v,
+      });
+    }
+  }
+
+  trackCliOptionOrder(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'order',
+        value: v,
+      });
+    }
+  }
+
   trackCliOptionFilter(v: string[] | undefined) {
     if (v && v.length > 0) {
       this.trackCliOption({
         option: 'filter',
         value: this.redactedValue,
       });
+    }
+  }
+
+  trackCliFlagProd(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('prod');
     }
   }
 

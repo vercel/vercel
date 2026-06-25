@@ -4,7 +4,7 @@
 
 # Interface: AwsCredentialsProviderInit
 
-Defined in: [packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts:21](https://github.com/vercel/vercel/blob/main/packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts#L21)
+Defined in: [packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts:22](https://github.com/vercel/vercel/blob/main/packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts#L22)
 
 The init object for the `awsCredentialsProvider` function.
 
@@ -13,6 +13,16 @@ The init object for the `awsCredentialsProvider` function.
 - [`Omit`](https://www.typescriptlang.org/docs/handbook/utility-types.html#omittype-keys)\<`FromWebTokenInit`, `"webIdentityToken"`\>
 
 ## Properties
+
+### audience?
+
+> `optional` **audience?**: `string`
+
+Defined in: [packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts:28](https://github.com/vercel/vercel/blob/main/packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts#L28)
+
+Optional audience to set on the exchanged token.
+
+---
 
 ### clientConfig?
 
@@ -51,6 +61,16 @@ The duration, in seconds, of the role session. Defaults to 3600 seconds.
 #### Inherited from
 
 `Omit.durationSeconds`
+
+---
+
+### jti?
+
+> `optional` **jti?**: `string`
+
+Defined in: [packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts:33](https://github.com/vercel/vercel/blob/main/packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts#L33)
+
+Optional JTI to set on the exchanged token.
 
 ---
 

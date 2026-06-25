@@ -2,10 +2,10 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { validateConfig } from '../../../../src/util/validate-config';
 
 describe('validateConfig', () => {
-  describe('experimentalServicesV2', () => {
-    it('should not error with a valid config', () => {
+  describe('services', () => {
+    it('should not error with a valid canonical config', () => {
       const error = validateConfig({
-        experimentalServicesV2: {
+        services: {
           my_frontend: {
             root: 'frontend/',
             framework: 'nextjs',
@@ -26,6 +26,48 @@ describe('validateConfig', () => {
         },
       } satisfies Parameters<typeof validateConfig>[0]);
       expect(error).toBeNull();
+    });
+
+    it('should keep experimentalServicesV2 as a backwards-compatible alias', () => {
+      const error = validateConfig({
+        experimentalServicesV2: {
+          api: { root: 'api', framework: 'express' },
+        },
+      });
+
+      expect(error).toBeNull();
+    });
+
+    it('should reject services together with experimentalServicesV2', () => {
+      const error = validateConfig({
+        services: { web: { root: '.', framework: 'nextjs' } },
+        experimentalServicesV2: {
+          api: { root: 'api', framework: 'express' },
+        },
+      });
+
+      expect(error?.code).toBe('SERVICES_AND_EXPERIMENTAL_SERVICES_V2');
+    });
+
+    it('should report canonical services validation errors', () => {
+      const error = validateConfig({
+        services: {
+          web: {
+            root: '.',
+            bindings: [
+              {
+                type: 'service',
+                service: 'ghost',
+                format: 'url',
+                env: 'GHOST_URL',
+              },
+            ],
+          },
+        },
+      });
+
+      expect(error?.code).toBe('SERVICES_BINDING_UNKNOWN_SERVICE');
+      expect(error?.message).toContain('`services`');
     });
 
     it('should not error with a service-local route table and functions', () => {
@@ -324,9 +366,7 @@ describe('validateConfig', () => {
     expect(error).toBeNull();
   });
 
-  it('should ignore the removed `services` property', () => {
-    // The CLI config schema is `additionalProperties: true`,
-    // so the error would come from the API
+  it('should validate the `services` property', () => {
     const error = validateConfig({
       services: {
         frontend: {
@@ -335,7 +375,7 @@ describe('validateConfig', () => {
         },
       },
     } as any);
-    expect(error).toBeNull();
+    expect(error).not.toBeNull();
   });
 
   it('should not error with experimentalServices static schedule arrays', () => {

@@ -1129,9 +1129,9 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   // Ensure the exit code is right
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
-  // Ensure .gitignore is created
+  // Ensure .gitignore includes the link metadata and refreshed OIDC env file
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  expect(gitignore).toBe('.vercel\n');
+  expect(gitignore).toBe('.vercel\n.env*\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   expect(
@@ -1327,7 +1327,22 @@ test('[vc build] should nest experimentalServicesV2 emitted by latest Next.js co
   const outputDirectory = path.join(directory, '.vercel/output');
   const config = await fs.readJSON(path.join(outputDirectory, 'config.json'));
   expect(config.experimentalServices).toBeUndefined();
-  expect(config.services).toBeUndefined();
+  // `experimentalServicesV2` services are recorded in the `services` array,
+  // each tagged with its `schema` discriminant.
+  expect(config.services).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        schema: 'experimentalServicesV2',
+        name: 'web',
+        framework: 'nextjs',
+      }),
+      expect.objectContaining({
+        schema: 'experimentalServicesV2',
+        name: 'nitro-api',
+        framework: 'nitro',
+      }),
+    ])
+  );
   expect(config.experimentalServicesV2).toEqual({
     web: expect.objectContaining({
       framework: 'nextjs',
@@ -1659,18 +1674,18 @@ test('vercel.json configuration overrides in an existing project do not prompt u
 test.each([
   {
     vercelAuth: 'none',
-    expectedStatus: 200,
+    expectProtected: false,
   },
   {
     vercelAuth: 'standard',
-    expectedStatus: 401,
+    expectProtected: true,
   },
 ] as const)('[vc deploy] should allow a project to be created with Vercel Auth disabled or enabled with prompts - vercelAuth: %s', async ({
   vercelAuth,
-  expectedStatus,
+  expectProtected,
 }: {
   vercelAuth: 'none' | 'standard';
-  expectedStatus: number;
+  expectProtected: boolean;
 }) => {
   const dir = await setupE2EFixture('project-vercel-auth');
   const projectName = `project-vercel-auth-${
@@ -1719,9 +1734,31 @@ test.each([
 
   const { href } = new URL(output.stdout);
 
-  // Send a test request to the deployment
-  const response = await nodeFetch(href);
-  expect(response.status).toBe(expectedStatus);
+  // Send an unauthenticated request to the deployment. Use `redirect:
+  // 'manual'` so the deployment's own gate response is observed: otherwise
+  // node-fetch follows the SSO redirect to the login page and reports its
+  // 200, masking the protection.
+  //
+  // A protected deployment gates anonymous requests with either a terminal
+  // 401 or a 3xx redirect to the SSO login flow (vercel.com/sso-api),
+  // depending on the request. Accept both. A public deployment is served
+  // directly with a 200.
+  const response = await nodeFetch(href, { redirect: 'manual' });
+
+  if (expectProtected) {
+    const location = response.headers.get('location') ?? '';
+    const isSsoRedirect =
+      response.status >= 300 &&
+      response.status < 400 &&
+      location.includes('/sso-api');
+    const isProtected = response.status === 401 || isSsoRedirect;
+    expect(
+      isProtected,
+      `expected a protected response (401 or SSO redirect), got ${response.status} location=${location}\n${formatOutput(output)}`
+    ).toBe(true);
+  } else {
+    expect(response.status, formatOutput(output)).toBe(200);
+  }
 
   const projectResponse = await apiFetch(`/projects/${projectName}`, {
     method: 'DELETE',

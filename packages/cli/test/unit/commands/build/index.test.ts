@@ -2626,7 +2626,7 @@ fs.writeFileSync(
     ]);
   });
 
-  it('should nest vercel.json experimentalServicesV2 outputs under service directories', async () => {
+  it('should normalize vercel.json services to the V2 build output wire format', async () => {
     const cwd = await getWriteableDirectory();
     const output = join(cwd, '.vercel', 'output');
     await fs.ensureDir(join(cwd, '.vercel'));
@@ -2642,7 +2642,7 @@ fs.writeFileSync(
       private: true,
     });
     await fs.writeJSON(join(cwd, 'vercel.json'), {
-      experimentalServicesV2: {
+      services: {
         ui: {
           root: '.',
           entrypoint: 'ui.js',
@@ -2673,7 +2673,23 @@ createServer((_req, res) => {
     expect(exitCode).toBe(0);
 
     const config = await fs.readJSON(join(output, 'config.json'));
-    expect(config.services).toBeUndefined();
+    // `experimentalServicesV2` services are recorded in the `services` array,
+    // each tagged with its `schema` discriminant so consumers can tell V1 from
+    // V2 records.
+    expect(config.services).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          schema: 'experimentalServicesV2',
+          name: 'ui',
+          runtime: 'node',
+        }),
+        expect.objectContaining({
+          schema: 'experimentalServicesV2',
+          name: 'backend',
+          runtime: 'node',
+        }),
+      ])
+    );
     expect(config.experimentalServicesV2).toEqual({
       backend: expect.objectContaining({
         root: '.',
@@ -2942,11 +2958,23 @@ writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, nul
       const exitCode = await build(client);
       expect(exitCode).toBe(0);
       await expect(client.stderr).toOutput(
-        'Detected already-built service "ui" from lazily generated `.vercel/output/config.json` (framework: vite, entrypoint: package.json). It will not be treated as a service because its build output already exists at the top level. Configure it in `vercel.json` as an `experimentalServicesV2` entry to remove this warning.'
+        'Detected already-built service "ui" from lazily generated `.vercel/output/config.json` (framework: vite, entrypoint: package.json). It will not be treated as a service because its build output already exists at the top level. Configure it in `vercel.json` as a `services` entry to remove this warning.'
       );
 
       const config = await fs.readJSON(join(output, 'config.json'));
-      expect(config.services).toBeUndefined();
+      // Only services actually treated as services are recorded in the
+      // `services` array. `ui` was already built at the root and skipped (see
+      // the warning asserted above), so it must NOT appear here; only the newly
+      // nested `backend` service is recorded, tagged with its `schema`.
+      expect(config.services).toEqual([
+        expect.objectContaining({
+          schema: 'experimentalServicesV2',
+          name: 'backend',
+        }),
+      ]);
+      expect(config.services).not.toContainEqual(
+        expect.objectContaining({ name: 'ui' })
+      );
       expect(config.experimentalServices).toBeUndefined();
       expect(config.experimentalServicesV2).toEqual({
         backend: expect.objectContaining({

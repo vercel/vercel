@@ -21,15 +21,17 @@ export function isCompileAllEnabled(): boolean {
 export function shouldUseCompileAll({
   isDev,
   hasCustomCommand,
+  hasCustomBuildCommand,
 }: {
   isDev?: boolean;
   hasCustomCommand: boolean;
+  hasCustomBuildCommand: boolean;
 }): boolean {
   if (isDev) return false;
 
-  // Custom commands never get compileall: they may produce their own bytecode
-  // or bypass the venv layout compileall assumes.
-  if (hasCustomCommand) return false;
+  // Custom install or build commands never get compileall: they may produce
+  // their own bytecode or bypass the venv layout compileall assumes.
+  if (hasCustomCommand || hasCustomBuildCommand) return false;
 
   return isCompileAllEnabled();
 }

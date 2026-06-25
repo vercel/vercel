@@ -4,6 +4,7 @@ import type FileBlob from './file-blob';
 import type { Lambda, LambdaArchitecture } from './lambda';
 import type { Prerender } from './prerender';
 import type { EdgeFunction } from './edge-function';
+import type { ContainerImage } from './container-image';
 import type { Span } from './trace';
 import type {
   HasField,
@@ -65,6 +66,7 @@ export interface Meta {
   filesRemoved?: string[];
   env?: Env;
   buildEnv?: Env;
+  port?: number;
   [key: string]: unknown;
 }
 
@@ -262,6 +264,12 @@ export interface StartDevServerSuccess {
    * dev server will forcefully be killed.
    */
   shutdown?: () => Promise<void>;
+
+  /**
+   * Whether the builder owns this dev server's lifecycle across requests.
+   * Persistent servers are still shut down when `vercel dev` exits.
+   */
+  persistent?: boolean;
 
   /**
    * Cron entries produced by the builder for this service.
@@ -648,6 +656,8 @@ export interface ExperimentalServiceV2 {
   runtime?: string;
   /** Resolved entrypoint, relative to the service root. */
   entrypoint?: string;
+  /** Command override for `runtime: "container"` services. */
+  command?: string[];
   /** Builder selected by the resolver. */
   builder: Builder;
   installCommand?: string;
@@ -777,7 +787,7 @@ export interface BuildResultV2Typical {
   routes?: any[];
   images?: Images;
   output: {
-    [key: string]: File | Lambda | Prerender | EdgeFunction;
+    [key: string]: File | Lambda | Prerender | EdgeFunction | ContainerImage;
   };
   wildcard?: Array<{
     domain: string;
@@ -937,7 +947,13 @@ export interface TriggerEvent extends TriggerEventBase {
   consumer: string;
 }
 
-export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';
+export type ServiceRuntime =
+  | 'node'
+  | 'python'
+  | 'go'
+  | 'rust'
+  | 'ruby'
+  | 'container';
 
 export type ServiceType = 'web' | 'cron' | 'worker' | 'job';
 
@@ -978,8 +994,10 @@ export interface ExperimentalServiceConfig {
   framework?: string;
   /** Builder to use, e.g. @vercel/node, @vercel/python */
   builder?: string;
-  /** Specific lambda runtime to use, e.g. nodejs24.x, python3.14 */
+  /** Specific lambda runtime to use, e.g. nodejs24.x, python3.14, container */
   runtime?: string;
+  /** Optional command override for container image services. */
+  command?: string | string[];
 
   workspace?: string;
   buildCommand?: string;
@@ -1028,10 +1046,10 @@ export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
  */
 export type ExperimentalServiceGroups = Record<string, string[]>;
 
-export interface ExperimentalServiceV2Binding {
+export interface ServiceBinding {
   /** Must be `"service"` for Service-to-Service HTTP bindings. */
   type: 'service';
-  /** Target service name from `experimentalServicesV2`. */
+  /** Target service name from `services`. */
   service: string;
   /** Generated value shape, must be `"url"`. */
   format: 'url';
@@ -1039,12 +1057,8 @@ export interface ExperimentalServiceV2Binding {
   env: string;
 }
 
-/**
- * Configuration for a service in `experimentalServicesV2` in `vercel.json`.
- *
- * @experimental This feature is experimental and may change.
- */
-export interface ExperimentalServiceV2Config {
+/** Configuration for a service in `vercel.json#services`. */
+export interface ServiceConfig {
   /** Path to the service root, relative to `vercel.json`. */
   root: string;
   /** Framework for this service. */
@@ -1054,8 +1068,12 @@ export interface ExperimentalServiceV2Config {
   /**
    * Service entrypoint, relative to the service root directory.
    * Can be a file path or a module specification (for Python).
+   * For `runtime: "container"`, a Dockerfile path (built & pushed) or a
+   * prebuilt OCI image reference.
    */
   entrypoint?: string;
+  /** Command override for `runtime: "container"` services. */
+  command?: string | string[];
 
   /* Service-level build setting overrides. */
   installCommand?: string;
@@ -1065,7 +1083,7 @@ export interface ExperimentalServiceV2Config {
   outputDirectory?: string;
 
   /** Caller-side bindings that grant this service access to another service. */
-  bindings?: ExperimentalServiceV2Binding[];
+  bindings?: ServiceBinding[];
 
   /** Function configuration scoped to this service root. */
   functions?: BuilderFunctions;
@@ -1079,15 +1097,17 @@ export interface ExperimentalServiceV2Config {
   trailingSlash?: boolean;
 }
 
-/**
- * Map of service name to service configuration for `experimentalServicesV2`.
- *
- * @experimental This feature is experimental and may change.
- */
-export type ExperimentalServicesV2 = Record<
-  string,
-  ExperimentalServiceV2Config
->;
+/** Map of service name to service configuration for `vercel.json#services`. */
+export type Services = Record<string, ServiceConfig>;
+
+/** @deprecated Use `ServiceBinding` instead. */
+export type ExperimentalServiceV2Binding = ServiceBinding;
+
+/** @deprecated Use `ServiceConfig` instead. */
+export type ExperimentalServiceV2Config = ServiceConfig;
+
+/** @deprecated Use `Services` instead. */
+export type ExperimentalServicesV2 = Services;
 
 /**
  * Result of a runtime builder's normalized entrypoint detection.

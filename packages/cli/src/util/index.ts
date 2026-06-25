@@ -137,8 +137,6 @@ export default class Now {
     isSettingUpProject: boolean,
     archive?: ArchiveFormat
   ) {
-    const hashes: any = {};
-
     const requestBody = {
       ...nowConfig,
       env,
@@ -194,11 +192,9 @@ export default class Now {
       deployment.warnings.forEach((warning: any) => {
         if (warning.reason === 'size_limit_exceeded') {
           const { sha, limit } = warning;
-          const n = hashes[sha].names.pop();
 
-          warn(`Skipping file ${n} (size exceeded ${bytes(limit)}`);
+          warn(`Skipping file ${sha} (size exceeded ${bytes(limit)})`);
 
-          hashes[sha].names.unshift(n); // Move name (hack, if duplicate matches we report them in order)
           sizeExceeded++;
         } else if (warning.reason === 'node_version_not_found') {
           warn(`Requested node version ${warning.wanted} is not available`);
