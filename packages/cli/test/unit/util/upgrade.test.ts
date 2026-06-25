@@ -158,6 +158,7 @@ describe('executeUpgrade', () => {
     const exitCode = await exitCodePromise;
 
     expect(exitCode).toBe(0);
+    // Detection fails (default mock), so falls back to targetVersion
     expect(outputMock.success).toHaveBeenCalledWith(
       'Vercel CLI has been upgraded to v99.9.9 successfully!'
     );

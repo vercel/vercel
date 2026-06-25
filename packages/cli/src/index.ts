@@ -34,8 +34,12 @@ import { join } from 'path';
 import { existsSync } from 'fs';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
+import semver from 'semver';
 import epipebomb from 'epipebomb';
-import getLatestVersion from './util/get-latest-version';
+import getLatestVersion, {
+  fetchLatestVersion,
+  updateLatestVersionCache,
+} from './util/get-latest-version';
 import { URL } from 'url';
 import { getSentry } from './util/get-sentry';
 import hp from './util/humanize-path';
@@ -1311,32 +1315,114 @@ const main = async () => {
   return exitCode;
 };
 
+// Start the CLI update check early so the fresh registry lookup runs in
+// parallel with the command, avoiding any perceived delay when the
+// command finishes and the update prompt needs to appear.
+//
+// The notification is NOT consumed here so that if the command crashes, the
+// notification cycle is preserved for the next run.
+let cachedLatest: string | undefined;
+let freshLookupPromise: Promise<string | undefined> | undefined;
+
+if (SHOULD_CHECK_FOR_UPDATES && !isNativeBinaryInstall()) {
+  cachedLatest = getLatestVersion({ pkg, consumeNotification: false });
+  if (cachedLatest) {
+    output.debug('Update may be available, fetching fresh version...');
+    freshLookupPromise = fetchLatestVersion({
+      name: pkg.name,
+      timeout: 3000,
+    }).catch(() => undefined);
+  }
+}
+
+/**
+ * Prompts the user to upgrade now and, if they accept, runs the upgrade
+ * and optionally asks about enabling automatic updates.
+ *
+ * @returns The upgrade exit code if the user accepted, otherwise `undefined`.
+ */
+async function promptAndUpgrade(
+  client: Client,
+  targetVersion?: string
+): Promise<number | undefined> {
+  try {
+    const shouldUpgrade = await client.input.confirm(
+      'Would you like to upgrade now?',
+      true
+    );
+
+    if (!shouldUpgrade) return;
+
+    const upgradeExitCode = await executeUpgrade(targetVersion);
+    if (upgradeExitCode === 0 && !hasAutoUpdatePreference(client.config)) {
+      const enableAutoUpdates = await client.input.confirm(
+        'Enable automatic CLI updates for future releases?',
+        false
+      );
+      setAutoUpdate(client, enableAutoUpdates);
+    }
+    return upgradeExitCode;
+  } catch (err: unknown) {
+    if (
+      err instanceof Error &&
+      err.message.includes('User force closed the prompt')
+    ) {
+      // User pressed Ctrl+C to dismiss the prompt
+      return;
+    }
+    throw err;
+  }
+}
+
 main()
   .then(async exitCode => {
-    if (SHOULD_CHECK_FOR_UPDATES && !isNativeBinaryInstall()) {
-      const latest = getLatestVersion({
-        pkg,
-      });
+    if (cachedLatest) {
+      const originalExitCode = typeof exitCode === 'number' ? exitCode : 0;
+
+      // Await the fresh registry lookup to verify the exact version before
+      // presenting it. This is needed for both the auto-update and interactive paths.
+      const fresh = freshLookupPromise ? await freshLookupPromise : undefined;
+      output.debug(`Fresh lookup result: ${fresh ?? 'failed'}`);
+
+      let latest: string | undefined;
+      let userUpToDate = false;
+
+      if (fresh) {
+        updateLatestVersionCache({ name: pkg.name, version: fresh });
+
+        if (semver.lt(pkg.version, fresh)) {
+          latest = fresh;
+        } else {
+          // Cache was stale, user is already on the latest version
+          userUpToDate = true;
+        }
+      }
+
+      // Consume the notification cycle now that the command has completed
+      // and we've determined the update status. If the command had crashed,
+      // this code never runs and the notification is preserved for next time.
+      getLatestVersion({ pkg });
+
+      if (
+        !userUpToDate &&
+        (await canAutoUpdate(
+          client,
+          originalExitCode,
+          resolvedCommandForUpdate
+        ))
+      ) {
+        const upgradeExitCode = await executeUpgrade();
+        process.exitCode = originalExitCode;
+        if (upgradeExitCode !== 0) {
+          output.log(
+            `Automatic update failed. Continuing with original exit code ${originalExitCode}.`
+          );
+        }
+        return;
+      }
+
       if (latest) {
         const changelog = `https://github.com/vercel/vercel/releases/tag/vercel%40${latest}`;
-        const originalExitCode = typeof exitCode === 'number' ? exitCode : 0;
-
-        if (
-          await canAutoUpdate(
-            client,
-            originalExitCode,
-            resolvedCommandForUpdate
-          )
-        ) {
-          const upgradeExitCode = await executeUpgrade(latest);
-          process.exitCode = originalExitCode;
-          if (upgradeExitCode !== 0) {
-            output.log(
-              `Automatic update failed. Continuing with original exit code ${originalExitCode}.`
-            );
-          }
-          return;
-        }
 
         if (isTTY) {
           // Interactive mode: prompt user to update now
@@ -1358,36 +1444,10 @@ main()
             `Changelog: ${output.link(changelog, changelog, { fallback: false })}\n`
           );
 
-          try {
-            const shouldUpgrade = await client.input.confirm(
-              'Would you like to upgrade now?',
-              true
-            );
-
-            if (shouldUpgrade) {
-              const upgradeExitCode = await executeUpgrade(latest);
-              if (
-                upgradeExitCode === 0 &&
-                !hasAutoUpdatePreference(client.config)
-              ) {
-                const enableAutoUpdates = await client.input.confirm(
-                  'Enable automatic CLI updates for future releases?',
-                  false
-                );
-                setAutoUpdate(client, enableAutoUpdates);
-              }
-              process.exitCode = upgradeExitCode;
-              return;
-            }
-          } catch (err: unknown) {
-            if (
-              err instanceof Error &&
-              err.message.includes('User force closed the prompt')
-            ) {
-              // User pressed Ctrl+C to dismiss the prompt
-            } else {
-              throw err;
-            }
+          const upgradeExitCode = await promptAndUpgrade(client, latest);
+          if (upgradeExitCode !== undefined) {
+            process.exitCode = upgradeExitCode;
+            return;
           }
         } else {
           const errorMsg =
@@ -1409,7 +1469,29 @@ Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
           );
           output.print('\n');
         }
+        // If the fresh lookup failed we don't show the exact version.
+      } else if (!fresh) {
+        // Fresh lookup failed — show a generic update message without
+        // naming a specific version, since the cached version may be stale.
+        if (isTTY) {
+          output.print('\nA newer version of Vercel CLI may be available.\n');
+
+          const upgradeExitCode = await promptAndUpgrade(client);
+          if (upgradeExitCode !== undefined) {
+            process.exitCode = upgradeExitCode;
+            return;
+          }
+        } else {
+          output.print(
+            box(
+              `A newer version of Vercel CLI may be available.
+Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.`
+            )
+          );
+          output.print('\n');
+        }
       }
+      // else: userUpToDate — skip notification silently
     }
 
     process.exitCode = exitCode;

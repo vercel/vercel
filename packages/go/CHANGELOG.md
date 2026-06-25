@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.10.1
+
+### Patch Changes
+
+- 4b90a10: Route requests for named V2 standalone Go services to their internal function.
+
 ## 3.10.0
 
 ### Minor Changes

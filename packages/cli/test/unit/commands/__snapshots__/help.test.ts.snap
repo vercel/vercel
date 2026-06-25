@@ -2027,7 +2027,7 @@ exports[`help command > dns help output snapshots > dns remove help output snaps
 
 exports[`help command > domains help output snapshots > domains add help output snapshots > domains add help column width 120 1`] = `
 "
-  ▲ vercel domains add domain project [options]
+  ▲ vercel domains add domain [project] [options]
 
   Add a domain name that you already own to a Vercel Team                                                               
 
@@ -2145,7 +2145,7 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    rel…
                                    to a
                                    dom…
-  add          domain project      Add 
+  add          domain [project]    Add 
                                    a   
                                    dom…
                                    name
@@ -2288,7 +2288,7 @@ exports[`help command > domains help output snapshots > domains help column widt
 
   list                             Show all domains in a list (default)        
   inspect      domain              Displays information related to a domain    
-  add          domain project      Add a domain name that you already own to a 
+  add          domain [project]    Add a domain name that you already own to a 
                                    Vercel Team                                 
   buy          domain              Purchase a new domain name                  
   check        domain              Check if a domain is available to buy       
@@ -2335,7 +2335,7 @@ exports[`help command > domains help output snapshots > domains help column widt
 
   list                             Show all domains in a list (default)                                                
   inspect      domain              Displays information related to a domain                                            
-  add          domain project      Add a domain name that you already own to a Vercel Team                             
+  add          domain [project]    Add a domain name that you already own to a Vercel Team                             
   buy          domain              Purchase a new domain name                                                          
   check        domain              Check if a domain is available to buy                                               
   move         domain destination  Move ownership of a domain name to another Vercel Team                              
