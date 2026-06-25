@@ -152,21 +152,24 @@ export default async function link(client: Client) {
     }
   } else {
     const explicitScopeProvided = detectExplicitScope(client);
-    if (explicitScopeProvided) {
-      await getScope(client, { resolveLocalScope: true });
-    }
+    const selectedOrg = explicitScopeProvided
+      ? (await getScope(client, { resolveLocalScope: true })).org
+      : undefined;
 
     // Non-interactive when flag is passed or when agent (e.g. no TTY) so JSON is output when confirmation needed
     const linkNonInteractive =
       client.nonInteractive || client.argv.includes('--non-interactive');
+    const teamFirstInteractive =
+      client.stdin.isTTY && !linkNonInteractive && !yes;
 
     const link = await ensureLink('link', client, cwd, {
       autoConfirm: yes,
       forceDelete: true,
+      selectedOrg,
       projectName: parsedArgs.flags['--project'],
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
-      searchAcrossTeams: !explicitScopeProvided,
+      searchAcrossTeams: !explicitScopeProvided && !teamFirstInteractive,
       pullEnv: false,
     });
 

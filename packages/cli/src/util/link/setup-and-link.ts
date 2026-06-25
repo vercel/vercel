@@ -63,6 +63,8 @@ export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
   forceDelete?: boolean;
   link?: ProjectLinkResult;
+  /** Team selected by the caller before project discovery. */
+  selectedOrg?: Org;
   successEmoji?: EmojiLabel;
   projectName?: string;
   /** When true, avoid prompts and return action_required payload when scope/project choice is needed */
@@ -452,6 +454,7 @@ export default async function setupAndLink(
     autoConfirm = false,
     forceDelete = false,
     link,
+    selectedOrg,
     successEmoji = 'link',
     projectName,
     nonInteractive = false,
@@ -474,7 +477,7 @@ export default async function setupAndLink(
   const isTTY = client.stdin.isTTY;
   let rootDirectory: string | null = null;
   let newProjectName: string;
-  let org;
+  let org = selectedOrg;
 
   if (!forceDelete && link.status === 'linked') {
     return link;
@@ -587,22 +590,24 @@ export default async function setupAndLink(
     }
   }
 
-  try {
-    org = await selectOrg(client, 'Which team?', autoConfirm);
-  } catch (err: unknown) {
-    if (isAPIError(err)) {
-      if (err.code === 'NOT_AUTHORIZED') {
-        output.prettyError(err);
-        return { status: 'error', exitCode: 1, reason: 'NOT_AUTHORIZED' };
+  if (!org) {
+    try {
+      org = await selectOrg(client, 'Which team?', autoConfirm);
+    } catch (err: unknown) {
+      if (isAPIError(err)) {
+        if (err.code === 'NOT_AUTHORIZED') {
+          output.prettyError(err);
+          return { status: 'error', exitCode: 1, reason: 'NOT_AUTHORIZED' };
+        }
+
+        if (err.code === 'TEAM_DELETED') {
+          output.prettyError(err);
+          return { status: 'error', exitCode: 1, reason: 'TEAM_DELETED' };
+        }
       }
 
-      if (err.code === 'TEAM_DELETED') {
-        output.prettyError(err);
-        return { status: 'error', exitCode: 1, reason: 'TEAM_DELETED' };
-      }
+      throw err;
     }
-
-    throw err;
   }
 
   let projectOrNewProjectName: Awaited<ReturnType<typeof inputProject>>;

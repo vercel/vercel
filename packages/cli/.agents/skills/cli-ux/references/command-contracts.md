@@ -19,7 +19,7 @@ When adding a durable contract, add a row to `SKILL.md` so agents load it only f
 `vc link` target resolution order:
 
 1. Local link state: already linked, stale link, repo link, env link.
-2. Intended team: explicit `--team`/`--scope`, current config, one safe choice, otherwise ask or fail.
+2. Intended team: direct interactive `vc link` uses explicit `--team`/`--scope` or asks `Which team?` before project discovery; auto-confirm and non-interactive compatibility paths may still use current safe resolution.
 3. Intended project: explicit `--project`, repo-root match, exact folder-name match, selected existing project, or new project.
 4. Project root: inferred root, selected root, or cwd.
 5. Settings: detected framework/settings, explicit overrides, or defaults.
@@ -29,6 +29,7 @@ Rules:
 
 - Before mutation, know whether linking existing project or creating a new one.
 - Running `vc link` is setup intent; do not ask a vague setup-intent prompt.
+- In direct interactive `vc link`, resolve the team before searching for or selecting a project. An explicit `--team`/`--scope` skips the team prompt and restricts project discovery to that team.
 - Do not ask `Link to existing project?` when no concrete project is shown. Ask `Project?` with `Create new project` and `Link existing project` choices instead.
 - Do not create a project from a user-supplied `--project` value that was not found.
 - Folder-name matches across teams are lower confidence than repo-root or explicit matches.
@@ -63,7 +64,7 @@ Link prompt map:
 
 | State                              | Human prompt/output                                                                                                                | Non-interactive                        |
 | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Multiple teams                     | `Which team?`                                                                                                                      | `action_required: missing_team`        |
+| Multiple teams                     | `Which team?` before project discovery                                                                                             | `action_required: missing_team`        |
 | One existing project match         | `Directory`, `Found existing project`, aligned `Project`, then `Link directory to project?`                                        | link only for explicit/repo-root match |
 | One repository project match       | `Directory`, optional search-status rows, `Found existing project`, aligned `Project`/`Source`, then `Link repository to project?` | link only for explicit/repo-root match |
 | Multiple project matches           | aligned `Projects` summary, then `Project?`                                                                                        | `action_required: ambiguous_project`   |
@@ -78,7 +79,7 @@ Link acceptance matrix:
 
 - already linked no-op / relink behavior
 - stale/deleted project link
-- one team and many teams
+- one team and many teams, with team selection before project discovery
 - explicit `--team`
 - explicit valid and missing `--project`
 - repo-root and folder-name matches
