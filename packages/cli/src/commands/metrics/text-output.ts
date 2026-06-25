@@ -8,6 +8,7 @@ import type {
   Granularity,
   MetricsDataRow,
   MetricsQueryResponse,
+  OrderBy,
   OrderDirection,
   Scope,
 } from './types';
@@ -57,7 +58,7 @@ interface MetadataHeaderOptions {
   periodUnique?: number;
   bucketTimezone?: string;
   filter?: string;
-  orderBy?: string;
+  orderBy?: OrderBy;
   orderDirection?: OrderDirection;
   scope: Scope;
   projectName?: string;
@@ -79,7 +80,7 @@ export interface FormatTextOptions {
   periodEnd: string;
   granularity: Granularity;
   bucketTimezone?: string;
-  orderBy?: string;
+  orderBy?: OrderBy;
   orderDirection?: OrderDirection;
 }
 
