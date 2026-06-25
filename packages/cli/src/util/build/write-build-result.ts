@@ -36,6 +36,7 @@ import {
   type ExperimentalService,
   type Service,
   isExperimentalService,
+  isExperimentalServiceV2,
   isExternalSymlink,
 } from '@vercel/build-utils';
 import { getInternalServiceFunctionPath } from '@vercel/fs-detectors';
@@ -489,14 +490,19 @@ async function writeBuildResultV3(args: {
     : {};
 
   const ext = extname(src);
+  // V2 services are already isolated under `services/<name>`, so scalar
+  // runtime outputs can use the natural `index` path. V1 services still share
+  // one output directory and require their internal namespace.
   const path =
-    service && typeof service.runtime === 'string'
-      ? stripDuplicateSlashes(getInternalServiceFunctionPath(service.name))
-      : stripDuplicateSlashes(
-          build.config?.zeroConfig
-            ? src.substring(0, src.length - ext.length)
-            : src
-        );
+    service && isExperimentalServiceV2(service)
+      ? 'index'
+      : service && typeof service.runtime === 'string'
+        ? stripDuplicateSlashes(getInternalServiceFunctionPath(service.name))
+        : stripDuplicateSlashes(
+            build.config?.zeroConfig
+              ? src.substring(0, src.length - ext.length)
+              : src
+          );
   if (isContainerImage(output)) {
     injectServiceEnvVars(
       output,

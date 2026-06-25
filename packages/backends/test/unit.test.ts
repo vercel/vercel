@@ -505,7 +505,7 @@ it('extractAndExecuteLambda throws with invalid code', async () => {
   ).rejects.toThrow();
 });
 
-it('maps service internal function output without leading slash', async () => {
+it('uses the natural index output for an isolated V2 service', async () => {
   const fixtureName = '01-express-index-ts-esm';
   const fixtureSource = join(__dirname, 'fixtures', fixtureName);
   const { workDir } = await getWorkDir(fixtureName, fixtureSource);
@@ -520,14 +520,13 @@ it('maps service internal function output without leading slash', async () => {
     meta,
     entrypoint: 'package.json',
     repoRootPath: workDir,
+    service: { name: 'js-api' },
   })) as BuildResultV2Typical;
 
-  const lambda = getServiceLambda(result, 'js-api');
-  expect(
-    result.routes?.some(route => route.dest === '/_svc/js-api/index')
-  ).toBe(true);
-  expect(result.output.index).toBeUndefined();
-  expect(result.output['_svc/js-api/index']).toBeDefined();
+  const lambda = result.output.index as unknown as NodejsLambda;
+  expect(result.routes?.some(route => route.dest === '/index')).toBe(true);
+  expect(result.output.index).toBeDefined();
+  expect(result.output['_svc/js-api/index']).toBeUndefined();
   expect(result.output['/_svc/js-api/index']).toBeUndefined();
   expect(lambda.handler).toBe('index.mjs');
 }, 30000);

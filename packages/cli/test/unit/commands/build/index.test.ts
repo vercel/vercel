@@ -2705,15 +2705,12 @@ createServer((_req, res) => {
     expect(config.routes).toBeUndefined();
     expect(
       await fs.pathExists(
-        join(output, 'services/ui/functions/_svc/ui/index.func/.vc-config.json')
+        join(output, 'services/ui/functions/index.func/.vc-config.json')
       )
     ).toBe(true);
     expect(
       await fs.pathExists(
-        join(
-          output,
-          'services/backend/functions/_svc/backend/index.func/.vc-config.json'
-        )
+        join(output, 'services/backend/functions/index.func/.vc-config.json')
       )
     ).toBe(true);
     const uiConfig = await fs.readJSON(join(output, 'services/ui/config.json'));
@@ -2721,6 +2718,7 @@ createServer((_req, res) => {
       expect.arrayContaining([
         { handle: 'filesystem' },
         expect.objectContaining({ dest: '/$1', check: true }),
+        expect.objectContaining({ dest: '/index' }),
       ])
     );
     const backendConfig = await fs.readJSON(
@@ -2730,6 +2728,7 @@ createServer((_req, res) => {
       expect.arrayContaining([
         { handle: 'filesystem' },
         expect.objectContaining({ dest: '/$1', check: true }),
+        expect.objectContaining({ dest: '/index' }),
       ])
     );
     expect(await fs.pathExists(join(output, 'functions'))).toBe(false);

@@ -1285,10 +1285,11 @@ export const build: BuildVX = async ({
     return { resultVersion: 3, result: { output } };
   }
 
-  // If there is a service name, we need to mount this under the
-  // service properly, for a V2 build.
-  // TODO: Ideally this should be handled by writeBuildResultV2.
-  const lambdaPath = service?.name ? `_svc/${service.name}/index` : 'index';
+  // V2 services omit `type` and have isolated build outputs, so their Lambda
+  // can use the natural `index` path. V1 services still share one output and
+  // need the internal service namespace to avoid collisions.
+  const lambdaPath =
+    service?.name && service.type ? `_svc/${service.name}/index` : 'index';
   const staticFiles = djangoStatic?.cdnOutputDir
     ? await glob('**', { cwd: djangoStatic.cdnOutputDir })
     : {};
