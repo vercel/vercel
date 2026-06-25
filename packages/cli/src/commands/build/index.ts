@@ -8,7 +8,7 @@ import { readdirSync, statSync } from 'fs';
 
 import {
   download,
-  FileBlob,
+  type FileBlob,
   FileFsRef,
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
@@ -48,7 +48,6 @@ import {
   type Lambda,
   type TriggerEvent,
   sanitizeConsumerName,
-  downloadFile,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
@@ -84,7 +83,6 @@ import { scopeRoutesToServiceOwnership } from '../../util/build/service-route-ow
 import { sortBuilders } from '../../util/build/sort-builders';
 import {
   OUTPUT_DIR,
-  relocateRootBuildOutputToService,
   writeBuildResult,
   isLambda,
   type PathOverride,
@@ -130,6 +128,7 @@ import { pullEnvRecords } from '../../util/env/get-env-records';
 import { buildCommand } from './command';
 import { validatePackageManifest } from '../../util/validate-package-manifest';
 import { shouldEmbedFlagsDefinitions } from '../../util/flags/build-embedding';
+import { writeManifests } from './manifest';
 
 /** Build a plain suggested command with global flags (e.g. --cwd, --non-interactive) appended. */
 function buildCommandWithGlobalFlags(
@@ -168,9 +167,13 @@ interface BuildOutputConfig {
   crons?: Cron[];
   experimentalServices?: ExperimentalServices;
   experimentalServicesV2?: ExperimentalServicesV2;
-  services?: ExperimentalService[];
+  services?: Service[];
   deploymentId?: string;
 }
+
+const SERVICE_BUILD_IMMUTABLE_ENV_VARS = [
+  'VERCEL_IMMUTABLE_STATIC_FILES_ENABLED',
+] as const;
 
 function hasNonEmptyObject(value: unknown): value is Record<string, unknown> {
   return (
@@ -178,6 +181,28 @@ function hasNonEmptyObject(value: unknown): value is Record<string, unknown> {
     typeof value === 'object' &&
     !Array.isArray(value) &&
     Object.keys(value).length > 0
+  );
+}
+
+function unsetServiceBuildImmutableEnvVars(
+  restoreEnv: Map<string, string | undefined>
+) {
+  for (const key of SERVICE_BUILD_IMMUTABLE_ENV_VARS) {
+    if (!restoreEnv.has(key)) {
+      restoreEnv.set(key, process.env[key]);
+    }
+    delete process.env[key];
+  }
+}
+
+function getGeneratedServiceAlreadyBuiltWarning(service: Service) {
+  const framework = service.framework ?? 'unknown';
+  const entrypoint = service.entrypoint ?? service.builder.src ?? 'unknown';
+  return (
+    `Detected already-built service "${service.name}" from lazily generated ` +
+    `\`.vercel/output/config.json\` (framework: ${framework}, entrypoint: ${entrypoint}). ` +
+    'It will not be treated as a service because its build output already exists at the top level. ' +
+    'Configure it in `vercel.json` as a `services` entry to remove this warning.'
   );
 }
 
@@ -749,19 +774,22 @@ async function doBuild(
   let zeroConfigFallbackRoutes: Route[] = [];
   let detectedServices: ExperimentalService[] | undefined;
   let detectedResolvedServices: Service[] | undefined;
-  const localConfigWithServicesV2 = localConfig as VercelConfig & {
-    experimentalServicesV2?: ExperimentalServicesV2;
-  };
+  // The subset of `detectedResolvedServices` that were actually treated as
+  // services (i.e. produced service output). This is what gets recorded in
+  // `config.json`'s `services` array. It differs from `detectedResolvedServices`
+  // only in the generated-config path, where a service whose builder already ran
+  // at the project root is warned about and skipped (see below).
+  let servicesToRecord: Service[] | undefined;
   const hasExperimentalServicesV1ConfiguredInVercelConfig = hasNonEmptyObject(
     localConfig.experimentalServices
   );
   const hasExperimentalServicesV2ConfiguredInVercelConfig = hasNonEmptyObject(
-    localConfigWithServicesV2.experimentalServicesV2
+    localConfig.services ?? localConfig.experimentalServicesV2
   );
   const configuredExperimentalServicesV2 =
     hasExperimentalServicesV2ConfiguredInVercelConfig &&
-    localConfigWithServicesV2.experimentalServicesV2
-      ? localConfigWithServicesV2.experimentalServicesV2
+    (localConfig.services ?? localConfig.experimentalServicesV2)
+      ? (localConfig.services ?? localConfig.experimentalServicesV2)
       : undefined;
   let nestExperimentalServicesV2Output =
     hasExperimentalServicesV2ConfiguredInVercelConfig;
@@ -786,9 +814,8 @@ async function doBuild(
     const detectedBuilders = await span.child('vc.detectBuilders').trace(() =>
       detectBuilders(files, pkg, {
         ...localConfig,
-        ...(configuredExperimentalServicesV2 && {
-          experimentalServicesV2: configuredExperimentalServicesV2,
-        }),
+        services: undefined,
+        experimentalServicesV2: configuredExperimentalServicesV2,
         projectSettings,
         ignoreBuildScript: true,
         featHandleMiss: true,
@@ -810,9 +837,15 @@ async function doBuild(
       builds = [{ src: '**', use: '@vercel/static' }];
     }
 
-    // Capture detected services for the config.json. Only `experimentalServices`
-    // flows is supported right now.
+    // Capture detected services for the config.json. The full resolved set
+    // (both `experimentalServices` and `experimentalServicesV2`) is written to
+    // the `services` array; each record carries its `schema` discriminant.
+    // `detectedServices` stays scoped to V1 for the legacy env-injection and
+    // route-handling paths below, which only apply to `experimentalServices`.
     detectedResolvedServices = detectedBuilders.services;
+    // In the configured (vercel.json) path every detected service is treated as
+    // a service, so all of them are recorded.
+    servicesToRecord = detectedResolvedServices;
     detectedServices = detectedBuilders.services?.filter(isExperimentalService);
 
     // Legacy URL injection for `experimentalServices`.
@@ -960,7 +993,6 @@ async function doBuild(
     detectedServices?.some(isQueueBackedService);
   const synthesizedServiceCrons: Cron[] = [];
   const serviceByBuilder = new Map<Builder, Service>();
-  const workPathByBuilder = new Map<Builder, string>();
   const serviceFileOverrides = new Map<Builder, Record<string, PathOverride>>();
   if (getHasDetectedServices()) {
     for (const service of detectedResolvedServices!) {
@@ -1037,7 +1069,6 @@ async function doBuild(
               `entrypoint "${buildEntrypoint}" (original: "${build.src}")`
           );
         }
-        workPathByBuilder.set(build, buildWorkPath);
 
         // Set VERCEL_PROJECT_SETTINGS_* env vars.
         // For services: use service-specific values instead of project-level settings
@@ -1209,6 +1240,9 @@ async function doBuild(
             process.env[key] = value;
             output.debug(`Injected service URL env var: ${key}=${value}`);
           }
+        }
+        if (service) {
+          unsetServiceBuildImmutableEnvVars(restoreEnv);
         }
         let buildResult: BuildResultV2 | BuildResultV3;
         let rawBuildResult: BuildResultV2 | BuildResultV3 | BuildResultVX;
@@ -1659,14 +1693,26 @@ async function doBuild(
       throw generatedConfig;
     }
 
+    const defaultGeneratedOutputDir = join(workPath, OUTPUT_DIR);
+    const generatedConfigs = [generatedConfig];
+    if (resolve(outputDir) !== resolve(defaultGeneratedOutputDir)) {
+      const defaultGeneratedConfig = await readJSONFile<BuildOutputConfig>(
+        join(defaultGeneratedOutputDir, 'config.json')
+      );
+      if (defaultGeneratedConfig instanceof CantParseJSONFile) {
+        throw defaultGeneratedConfig;
+      }
+      generatedConfigs.push(defaultGeneratedConfig);
+    }
+
     const generatedExperimentalServicesV2Config =
       getGeneratedExperimentalServicesV2Config([
-        generatedConfig,
+        ...generatedConfigs,
         ...buildResults.values(),
       ]);
     const generatedExperimentalServicesV1Config =
       getGeneratedExperimentalServicesV1Config([
-        generatedConfig,
+        ...generatedConfigs,
         ...buildResults.values(),
       ]);
 
@@ -1682,20 +1728,25 @@ async function doBuild(
       detectedExperimentalServicesV2Config =
         generatedExperimentalServicesV2Config;
       detectedExperimentalServicesV2RootRoutes =
-        generatedExperimentalServicesV2Config &&
-        Array.isArray(generatedConfig?.routes)
-          ? generatedConfig.routes
+        generatedExperimentalServicesV2Config
+          ? generatedConfigs.find(
+              config =>
+                hasNonEmptyObject(config?.experimentalServicesV2) &&
+                Array.isArray(config?.routes)
+            )?.routes
           : undefined;
       const generatedBuilders = await span
         .child('vc.detectGeneratedServices')
         .trace(() =>
           detectBuilders(files, pkg, {
             ...localConfig,
+            services: undefined,
             ...(generatedExperimentalServicesV2Config
               ? {
                   experimentalServicesV2: generatedExperimentalServicesV2Config,
                 }
               : {
+                  experimentalServicesV2: undefined,
                   experimentalServices: generatedExperimentalServicesV1Config,
                 }),
             projectSettings,
@@ -1745,24 +1796,20 @@ async function doBuild(
 
       const buildsToRun: Builder[] = [];
       const seenBuildsToRun = new Set<string>();
-      const relocatedGeneratedServiceBuilds = new Set<Builder>();
+      // Only record services we actually treat as services. A generated service
+      // whose builder already ran at the project root is warned about and
+      // skipped (no service output is produced for it), so it must not leak into
+      // `config.json`'s `services` array.
+      const recordedServices: Service[] = [];
       for (const service of detectedResolvedServices || []) {
-        serviceByBuilder.set(service.builder, service);
         const alreadyExecutedBuild = getAlreadyExecutedBuild(service.builder);
         if (alreadyExecutedBuild) {
-          serviceByBuilder.set(alreadyExecutedBuild, service);
-          if (
-            generatedExperimentalServicesV2Config &&
-            nestExperimentalServicesV2Output &&
-            !relocatedGeneratedServiceBuilds.has(alreadyExecutedBuild)
-          ) {
-            await relocateRootBuildOutputToService({
-              outputDir,
-              service,
-              workPath: workPathByBuilder.get(alreadyExecutedBuild) ?? workPath,
-            });
-            relocatedGeneratedServiceBuilds.add(alreadyExecutedBuild);
+          if (generatedExperimentalServicesV2Config) {
+            output.warn(getGeneratedServiceAlreadyBuiltWarning(service));
+            continue;
           }
+          serviceByBuilder.set(alreadyExecutedBuild, service);
+          recordedServices.push(service);
           continue;
         }
         const serviceBuilderIdentity = getBuilderIdentity(service.builder);
@@ -1770,10 +1817,14 @@ async function doBuild(
           serviceBuilderIdentity &&
           !seenBuildsToRun.has(serviceBuilderIdentity)
         ) {
+          serviceByBuilder.set(service.builder, service);
           seenBuildsToRun.add(serviceBuilderIdentity);
           buildsToRun.push(service.builder);
         }
+        recordedServices.push(service);
       }
+      servicesToRecord =
+        recordedServices.length > 0 ? recordedServices : undefined;
 
       if (buildsToRun.length > 0) {
         await runBuilders(buildsToRun);
@@ -1797,46 +1848,8 @@ async function doBuild(
   }
 
   // Aggregate individual package-manifest.json files from builders into
-  // a single project-manifest.json keyed by service workspace.
-  if (packageManifests.length > 0) {
-    const projectManifest: Record<string, unknown> = {};
-    for (const {
-      workspace,
-      buildConfig,
-      manifest,
-      service,
-      builderUse,
-    } of packageManifests) {
-      projectManifest[`${builderUse}:${workspace}`] = {
-        ...manifest,
-        workspace,
-        builder: builderUse,
-        framework: service?.framework ?? buildConfig.framework,
-        serviceName: service?.name,
-        serviceType:
-          service && isExperimentalService(service) ? service.type : undefined,
-        routePrefix:
-          service && isExperimentalService(service)
-            ? service.routePrefix
-            : undefined,
-      };
-    }
-    if (Object.keys(projectManifest).length > 0) {
-      const projectManifestBlob = new FileBlob({
-        data: JSON.stringify(projectManifest),
-      });
-      diagnostics['project-manifest.json'] = projectManifestBlob;
-      ops.push(
-        downloadFile(
-          projectManifestBlob,
-          join(outputDir, 'diagnostics', 'project-manifest.json')
-        ).then(
-          () => undefined,
-          err => err
-        )
-      );
-    }
-  }
+  // a single project-manifest.json and deploy-manifest.json keyed by service workspace.
+  await writeManifests(packageManifests, diagnostics, ops, outputDir);
 
   if (corepackShimDir) {
     cleanupCorepack(corepackShimDir);
@@ -2009,8 +2022,7 @@ async function doBuild(
       : undefined;
   const explicitRootRoutes = appendBuildOutputRouteTables(
     routesResult.routes,
-    detectedExperimentalServicesV2RootRoutes,
-    existingConfig?.routes
+    detectedExperimentalServicesV2RootRoutes ?? existingConfig?.routes
   );
 
   // Write out the final `config.json` file based on the
@@ -2034,8 +2046,10 @@ async function doBuild(
         experimentalServicesV2: detectedExperimentalServicesV2Config,
       }),
     ...(!detectedExperimentalServicesV1Config &&
-      detectedServices &&
-      detectedServices.length > 0 && { services: detectedServices }),
+      servicesToRecord &&
+      servicesToRecord.length > 0 && {
+        services: servicesToRecord,
+      }),
     ...(mergedDeploymentId && { deploymentId: mergedDeploymentId }),
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });

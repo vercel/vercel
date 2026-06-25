@@ -3,6 +3,7 @@ import flags from '../../../../src/commands/flags';
 import * as ls from '../../../../src/commands/flags/ls';
 import * as openFlag from '../../../../src/commands/flags/open';
 import * as rolloutFlag from '../../../../src/commands/flags/rollout';
+import * as segmentsFlag from '../../../../src/commands/flags/segments';
 import * as splitFlag from '../../../../src/commands/flags/split';
 import * as updateFlag from '../../../../src/commands/flags/update';
 import { client } from '../../../mocks/client';
@@ -11,6 +12,7 @@ describe('flags', () => {
   const lsSpy = vi.spyOn(ls, 'default').mockResolvedValue(0);
   const openSpy = vi.spyOn(openFlag, 'default').mockResolvedValue(0);
   const rolloutSpy = vi.spyOn(rolloutFlag, 'default').mockResolvedValue(0);
+  const segmentsSpy = vi.spyOn(segmentsFlag, 'segments').mockResolvedValue(0);
   const splitSpy = vi.spyOn(splitFlag, 'default').mockResolvedValue(0);
   const updateSpy = vi.spyOn(updateFlag, 'default').mockResolvedValue(0);
 
@@ -18,6 +20,7 @@ describe('flags', () => {
     lsSpy.mockClear();
     openSpy.mockClear();
     rolloutSpy.mockClear();
+    segmentsSpy.mockClear();
     splitSpy.mockClear();
     updateSpy.mockClear();
   });
@@ -111,5 +114,13 @@ describe('flags', () => {
     client.setArgv('flags', 'split', ...args);
     await flags(client);
     expect(splitSpy).toHaveBeenCalledWith(client, args);
+  });
+
+  it('routes to segments subcommand', async () => {
+    const args: string[] = ['ls'];
+
+    client.setArgv('flags', 'segments', ...args);
+    await flags(client);
+    expect(segmentsSpy).toHaveBeenCalledWith(client);
   });
 });

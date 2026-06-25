@@ -9,4 +9,11 @@ export {
   AccessTokenMissingError,
   RefreshAccessTokenFailedError,
 } from './auth-errors';
-export { getVercelToken } from './token-util';
+export {
+  exchangeVercelOidcToken,
+  type ExchangeVercelOidcTokenOptions,
+} from './exchange-vercel-oidc-token';
+export {
+  getVercelToken,
+  type GetVercelTokenOptions,
+} from './token-util';

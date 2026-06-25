@@ -10,12 +10,23 @@ import {
   type ChildProcess,
   type SpawnOptions,
 } from 'child_process';
-import { existsSync, readFileSync, statSync, readdirSync, mkdirSync } from 'fs';
+import {
+  existsSync,
+  readFileSync,
+  statSync,
+  readdirSync,
+  mkdirSync,
+  promises as fsPromises,
+} from 'fs';
 import { cpus } from 'os';
 import {
+  BuildOptions,
   BuildV2,
-  Files,
+  BunVersion,
+  CliType,
   Config,
+  Files,
+  NodeVersion,
   PackageJson,
   PrepareCache,
   glob,
@@ -30,8 +41,13 @@ import {
   runPipInstall,
   runPackageJsonScript,
   runShellScript,
-  createDiagnostics,
   generateProjectManifest,
+  generateRubyProjectManifest,
+  writeProjectManifest,
+  manifestPath,
+  MANIFEST_VERSION,
+  FileBlob,
+  Diagnostics,
   getReportedServiceType,
   getNodeVersion,
   debug,
@@ -608,24 +624,6 @@ export const build: BuildV2 = async ({
       }
     }
 
-    if (framework?.slug) {
-      try {
-        await generateProjectManifest({
-          workPath: entrypointDir,
-          nodeVersion,
-          cliType,
-          lockfilePath,
-          lockfileVersion,
-          framework: framework.slug,
-          serviceType: service ? getReportedServiceType(service) : undefined,
-        });
-      } catch (err) {
-        debug(
-          `Failed to write static-build manifest: ${err instanceof Error ? err.message : String(err)}`
-        );
-      }
-    }
-
     if (framework?.slug === 'gatsby') {
       await GatsbyUtils.createPluginSymlinks(entrypointDir);
     }
@@ -691,6 +689,16 @@ export const build: BuildV2 = async ({
         `Set PYTHONPATH="${pythonPath}" because a requirements.txt was found`
       );
     }
+
+    await generateStaticBuildManifest({
+      framework,
+      service,
+      entrypointDir,
+      nodeVersion,
+      cliType,
+      lockfilePath,
+      lockfileVersion,
+    });
 
     const cliEnv = {
       ...process.env,
@@ -960,4 +968,132 @@ export const prepareCache: PrepareCache = async ({
   return cacheFiles;
 };
 
-export const diagnostics = createDiagnostics('node');
+const STATIC_BUILD_MANIFEST_RUNTIMES = ['node', 'go', 'rust', 'ruby'] as const;
+
+async function generateStaticBuildManifest({
+  framework,
+  service,
+  entrypointDir,
+  nodeVersion,
+  cliType,
+  lockfilePath,
+  lockfileVersion,
+}: {
+  framework?: Framework;
+  service?: BuildOptions['service'];
+  entrypointDir: string;
+  nodeVersion: NodeVersion | BunVersion;
+  cliType: CliType;
+  lockfilePath?: string;
+  lockfileVersion?: number;
+}): Promise<void> {
+  if (framework?.slug === 'hugo') {
+    try {
+      const hugoVersionOut = spawnSync('hugo', ['version'], {
+        encoding: 'utf8',
+      });
+      const hugoResolved =
+        hugoVersionOut.status === 0 && typeof hugoVersionOut.stdout === 'string'
+          ? (hugoVersionOut.stdout.match(/v(\d+(?:\.\d+)*)/)?.[1] ??
+            process.env.HUGO_VERSION ??
+            '0.58.2')
+          : process.env.HUGO_VERSION || '0.58.2';
+      await writeProjectManifest(
+        {
+          version: MANIFEST_VERSION,
+          runtime: 'go',
+          framework: framework.slug,
+          serviceType: service ? getReportedServiceType(service) : undefined,
+          dependencies: [
+            {
+              name: 'hugo',
+              type: 'direct',
+              scopes: ['prod'],
+              resolved: hugoResolved,
+            },
+          ],
+        },
+        entrypointDir,
+        'go'
+      );
+    } catch (err) {
+      debug(
+        `Failed to write hugo manifest: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  } else if (framework?.slug === 'zola') {
+    try {
+      const zolaVersionOut = spawnSync('zola', ['--version'], {
+        encoding: 'utf8',
+      });
+      const zolaResolved =
+        zolaVersionOut.status === 0 && typeof zolaVersionOut.stdout === 'string'
+          ? (zolaVersionOut.stdout.trim().split(' ')[1] ??
+            process.env.ZOLA_VERSION ??
+            '')
+          : (process.env.ZOLA_VERSION ?? '');
+      await writeProjectManifest(
+        {
+          version: MANIFEST_VERSION,
+          runtime: 'rust',
+          framework: framework.slug,
+          serviceType: service ? getReportedServiceType(service) : undefined,
+          dependencies: [
+            {
+              name: 'zola',
+              type: 'direct',
+              scopes: ['prod'],
+              resolved: zolaResolved,
+            },
+          ],
+        },
+        entrypointDir,
+        'rust'
+      );
+    } catch (err) {
+      debug(
+        `Failed to write zola manifest: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  } else if (framework?.slug === 'jekyll' || framework?.slug === 'middleman') {
+    await generateRubyProjectManifest({
+      workPath: entrypointDir,
+      gemfileLockPath: path.join(entrypointDir, 'Gemfile.lock'),
+      framework: framework.slug,
+      serviceType: service ? getReportedServiceType(service) : undefined,
+    });
+  } else if (framework?.slug) {
+    try {
+      await generateProjectManifest({
+        workPath: entrypointDir,
+        nodeVersion,
+        cliType,
+        lockfilePath,
+        lockfileVersion,
+        framework: framework.slug,
+        serviceType: service ? getReportedServiceType(service) : undefined,
+      });
+    } catch (err) {
+      debug(
+        `Failed to write static-build manifest: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+}
+
+export const diagnostics: Diagnostics = async ({ workPath }) => {
+  const files: Files = {};
+  await Promise.all(
+    STATIC_BUILD_MANIFEST_RUNTIMES.map(async runtime => {
+      const relPath = manifestPath(runtime);
+      try {
+        const data = await fsPromises.readFile(
+          path.join(workPath, relPath),
+          'utf-8'
+        );
+        files[relPath] = new FileBlob({ data });
+      } catch {}
+    })
+  );
+  return files;
+};

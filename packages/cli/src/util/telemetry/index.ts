@@ -446,6 +446,10 @@ export class TelemetryEventStore {
     return this.deviceId;
   }
 
+  get currentSessionId() {
+    return this.sessionId;
+  }
+
   get readonlyEvents() {
     return Array.from(this.events);
   }

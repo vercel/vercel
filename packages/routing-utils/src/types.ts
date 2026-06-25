@@ -39,7 +39,7 @@ export type HasField = Array<
     }
 >;
 
-type Transform = {
+export type HeaderQueryTransform = {
   type: 'request.headers' | 'request.query' | 'response.headers';
   op: 'append' | 'set' | 'delete';
   target: {
@@ -62,6 +62,15 @@ type Transform = {
   args?: string | string[];
   env?: string[];
 };
+
+export type PathTransform = {
+  type: 'request.path';
+  op: 'set';
+  args: string;
+  env?: string[];
+};
+
+export type Transform = HeaderQueryTransform | PathTransform;
 
 export type ServiceDestination = {
   type: 'service';
@@ -167,6 +176,7 @@ export interface Build {
 export interface Rewrite {
   source: string;
   destination: string | ServiceDestination;
+  transforms?: PathTransform[];
   has?: HasField;
   missing?: HasField;
   statusCode?: number;

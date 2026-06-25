@@ -9,6 +9,9 @@ import type {
   ExperimentalServices,
   ExperimentalServicesV2,
   ExperimentalServiceV2Binding,
+  ServiceBinding,
+  ServiceConfig,
+  Services,
   ExperimentalService,
   ExperimentalServiceV2,
   ServiceRuntime,
@@ -29,6 +32,9 @@ export type {
   ExperimentalServiceV2Config,
   ExperimentalServicesV2,
   ExperimentalServiceV2Binding,
+  ServiceBinding,
+  ServiceConfig,
+  Services,
   ExperimentalService,
   ExperimentalServiceV2,
   ServiceRuntime,
@@ -83,8 +89,9 @@ export interface ServicesRoutes {
 
 export type ConfiguredServicesType =
   | 'experimentalServices'
+  | 'services'
   | 'experimentalServicesV2';
-export type ConfiguredServices = ExperimentalServices | ExperimentalServicesV2;
+export type ConfiguredServices = ExperimentalServices | Services;
 export type InferredServicesConfig = ExperimentalServices;
 
 export interface ResolvedServicesResult {
@@ -107,7 +114,7 @@ export interface InferredServicesResult {
 export interface DetectServicesResult extends ResolvedServicesResult {
   /**
    * Source of service definitions:
-   * - `configured`: loaded from explicit project configuration (`vercel.json#experimentalServices` or `vercel.json#experimentalServicesV2`)
+   * - `configured`: loaded from explicit project configuration (`vercel.json#experimentalServices`, `vercel.json#services`, or the deprecated `vercel.json#experimentalServicesV2` alias)
    * - `auto-detected`: inferred from project structure
    */
   // TODO: replace consumption of top-level fields with these nested objects in caller before removal of top-level fields.
@@ -137,6 +144,7 @@ export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
   go: '@vercel/go',
   rust: '@vercel/rust',
   ruby: '@vercel/ruby',
+  container: '@vercel/container',
 };
 
 export const RUNTIME_MANIFESTS: Partial<Record<ServiceRuntime, string[]>> = {
