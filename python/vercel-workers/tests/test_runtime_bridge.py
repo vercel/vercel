@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import types
 import unittest
 from unittest.mock import patch
@@ -81,6 +82,26 @@ class TestWorkerBootstrapBridge(unittest.TestCase):
             app = vwr._resolve_worker_service_app(types.SimpleNamespace())
 
         self.assertIs(app, expected_app)
+
+    def test_workflow_service_prefers_generic_subscriptions(self) -> None:
+        expected_app = object()
+
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "VERCEL_SERVICE_TYPE": "job",
+                    "VERCEL_SERVICE_TRIGGER": "workflow",
+                },
+                clear=True,
+            ),
+            patch.object(vwr, "_bootstrap_generic_worker_app", return_value=expected_app),
+            patch.object(vwr, "_bootstrap_django_worker_app") as bootstrap_django,
+        ):
+            app = vwr._resolve_worker_service_app(types.SimpleNamespace())
+
+        self.assertIs(app, expected_app)
+        bootstrap_django.assert_not_called()
 
     def test_bootstrap_worker_service_app_wraps_framework_errors(self) -> None:
         with (

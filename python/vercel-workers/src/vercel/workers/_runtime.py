@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import os
 from collections.abc import MutableMapping
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, TypeGuard
@@ -155,7 +156,21 @@ def _bootstrap_generic_worker_app() -> object | None:
     return get_generic_asgi_app()
 
 
+def _is_workflow_service() -> bool:
+    service_type = (os.environ.get("VERCEL_SERVICE_TYPE") or "").strip().lower()
+    service_trigger = (os.environ.get("VERCEL_SERVICE_TRIGGER") or "").strip().lower()
+    return service_type == "job" and service_trigger == "workflow"
+
+
 def _resolve_worker_service_app(module: object) -> object | None:
+    # Workflow SDK registries use generic subscriptions. Prefer their
+    # multiplexer over integrations detected only from installed packages
+    # (notably Django 6's django.tasks module).
+    if _is_workflow_service():
+        app = _bootstrap_generic_worker_app()
+        if app is not None:
+            return app
+
     bootstrappers = (
         ("Celery", lambda: _bootstrap_celery_worker_app(module)),
         ("Dramatiq", lambda: _bootstrap_dramatiq_worker_app(module)),

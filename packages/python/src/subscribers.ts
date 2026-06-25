@@ -5,10 +5,12 @@ import {
   readConfigFile,
   type TriggerEvent,
 } from '@vercel/build-utils';
+import {
+  parseModuleEntrypoint,
+  resolveEntrypointFile,
+} from './module-entrypoint';
 
 const SUBSCRIBER_NAME_RE = /^[A-Za-z]([A-Za-z0-9_-]*[A-Za-z0-9])?$/;
-const MODULE_ATTR_RE =
-  /^([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*):([A-Za-z_][\w]*)$/;
 
 type SubscriberTriggerDefaults = Omit<
   TriggerEvent,
@@ -146,8 +148,13 @@ async function parseSubscriber(
     );
   }
 
-  const entrypoint = parseEntrypoint(name, config.entrypoint);
-  const existingEntrypoint = await resolveExistingEntrypoint(
+  const entrypoint = parseModuleEntrypoint(config.entrypoint);
+  if (!entrypoint) {
+    throw subscriberError(
+      `subscriber "${name}" has invalid entrypoint "${config.entrypoint}". Use "module:object"`
+    );
+  }
+  const existingEntrypoint = await resolveEntrypointFile(
     workPath,
     entrypoint.filePath
   );
@@ -165,40 +172,6 @@ async function parseSubscriber(
     topics: parseTopics(name, config.topics),
     triggerDefaults: parseTriggerDefaults(name, config),
   };
-}
-
-function parseEntrypoint(
-  name: string,
-  value: string
-): { moduleName: string; variableName: string; filePath: string } {
-  const match = MODULE_ATTR_RE.exec(value);
-  if (!match) {
-    throw subscriberError(
-      `subscriber "${name}" has invalid entrypoint "${value}". Use "module:object"`
-    );
-  }
-
-  return {
-    moduleName: match[1],
-    variableName: match[2],
-    filePath: `${match[1].replace(/\./g, '/')}.py`,
-  };
-}
-
-async function resolveExistingEntrypoint(
-  workPath: string,
-  filePath: string
-): Promise<string | null> {
-  const candidates = [filePath, filePath.replace(/\.py$/i, '/__init__.py')];
-  for (const candidate of candidates) {
-    try {
-      const stat = await fs.promises.stat(join(workPath, candidate));
-      if (stat.isFile()) {
-        return candidate;
-      }
-    } catch {}
-  }
-  return null;
 }
 
 function parseTopics(name: string, value: unknown): string[] {

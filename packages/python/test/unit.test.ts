@@ -83,6 +83,13 @@ import {
 } from '@vercel/build-utils';
 import { getServiceCrons } from '../src/crons';
 import { entrypointToModule, detectPythonEntrypoint } from '../src/entrypoint';
+import {
+  getPyprojectWorkflows,
+  PYTHON_WORKFLOW_ENTRYPOINT,
+  PYTHON_WORKFLOW_MODULE_NAME,
+  PYTHON_WORKFLOW_OUTPUT_PATH,
+  PYTHON_WORKFLOW_TOPIC,
+} from '../src/workflows';
 import execa from 'execa';
 
 function getBuildOutputV2(result: Awaited<ReturnType<typeof build>>) {
@@ -2254,6 +2261,351 @@ describe('handlerFunction validation', () => {
         repoRootPath: mockWorkPath,
       })
     ).rejects.toThrow(/Handler function "flask_app" not found in app\.py/);
+  });
+});
+
+describe('pyproject workflows', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-workflows-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.12');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('emits one private workflow job lambda for named workflows', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'workflows.py': new FileBlob({
+        data: [
+          'from vercel.workflow import Workflows',
+          'registry = Workflows()',
+          '',
+          '@registry.workflow',
+          'async def wf():',
+          '    return None',
+          '',
+        ].join('\n'),
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          'requires-python = ">=3.12"',
+          '',
+          '[tool.vercel.workflows.my_workflow]',
+          'entrypoint = "workflows:wf"',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: false },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const buildOutput = getBuildOutputV2(result);
+    const output = buildOutput.output as any;
+    const workflow = output[PYTHON_WORKFLOW_OUTPUT_PATH];
+
+    expect(output.index).toBeDefined();
+    expect(workflow).toBeDefined();
+    expect(output.index.environment.VERCEL_HAS_WORKER_SERVICES).toBe('1');
+    expect(workflow.handler).toBe('vc__handler__python.vc_handler');
+    expect(workflow.maxDuration).toBe('max');
+    expect(workflow.environment.VERCEL_SERVICE_TYPE).toBe('job');
+    expect(workflow.environment.VERCEL_SERVICE_TRIGGER).toBe('workflow');
+    expect(workflow.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: PYTHON_WORKFLOW_TOPIC,
+        consumer: sanitizeConsumerName(PYTHON_WORKFLOW_OUTPUT_PATH),
+      },
+    ]);
+    expect(buildOutput.routes).toEqual([
+      { handle: 'filesystem' },
+      { src: '/(.*)', dest: '/index' },
+    ]);
+
+    const handler = workflow.files?.['vc__handler__python.py'];
+    const aggregator = workflow.files?.[PYTHON_WORKFLOW_ENTRYPOINT];
+    if (
+      !handler ||
+      !('data' in handler) ||
+      !aggregator ||
+      !('data' in aggregator)
+    ) {
+      throw new Error('workflow bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      `"__VC_HANDLER_MODULE_NAME": "${PYTHON_WORKFLOW_MODULE_NAME}"`
+    );
+    expect(aggregator.data.toString()).toContain(
+      '("my_workflow", "workflows", "wf")'
+    );
+  });
+
+  it('resolves a named workflow from a package entrypoint', async () => {
+    fs.mkdirSync(path.join(mockWorkPath, 'workflows'), { recursive: true });
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'workflows', '__init__.py'),
+      'wf = object()\n'
+    );
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      '[tool.vercel.workflows.package_workflow]\nentrypoint = "workflows:wf"\n'
+    );
+
+    await expect(getPyprojectWorkflows(mockWorkPath)).resolves.toEqual([
+      {
+        name: 'package_workflow',
+        entrypoint: 'workflows/__init__.py',
+        moduleName: 'workflows',
+        variableName: 'wf',
+      },
+    ]);
+  });
+
+  it('aggregates multiple named workflows into one queue consumer', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'billing.py': new FileBlob({ data: 'charge = object()\n' }),
+      'fulfillment.py': new FileBlob({ data: 'ship = object()\n' }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          'requires-python = ">=3.12"',
+          '',
+          '[tool.vercel.workflows.shipping]',
+          'entrypoint = "fulfillment:ship"',
+          '',
+          '[tool.vercel.workflows.billing]',
+          'entrypoint = "billing:charge"',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: false },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const output = getBuildOutputV2(result).output as any;
+    expect(Object.keys(output).sort()).toEqual(
+      [PYTHON_WORKFLOW_OUTPUT_PATH, 'index'].sort()
+    );
+    expect(output[PYTHON_WORKFLOW_OUTPUT_PATH].experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: PYTHON_WORKFLOW_TOPIC,
+        consumer: sanitizeConsumerName(PYTHON_WORKFLOW_OUTPUT_PATH),
+      },
+    ]);
+
+    const aggregator =
+      output[PYTHON_WORKFLOW_OUTPUT_PATH].files?.[PYTHON_WORKFLOW_ENTRYPOINT];
+    if (!aggregator || !('data' in aggregator)) {
+      throw new Error('workflow aggregator not found');
+    }
+    const content = aggregator.data.toString();
+    const billingIndex = content.indexOf('("billing", "billing", "charge")');
+    const shippingIndex = content.indexOf(
+      '("shipping", "fulfillment", "ship")'
+    );
+    expect(billingIndex).toBeGreaterThanOrEqual(0);
+    expect(shippingIndex).toBeGreaterThanOrEqual(0);
+    expect(billingIndex).toBeLessThan(shippingIndex);
+  });
+
+  it('emits workflow and subscriber lambdas together', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'workflows.py': new FileBlob({ data: 'wf = object()\n' }),
+      'worker.py': new FileBlob({ data: 'app = object()\n' }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          'requires-python = ">=3.12"',
+          '',
+          '[tool.vercel.workflows.my_workflow]',
+          'entrypoint = "workflows:wf"',
+          '',
+          '[tool.vercel.subscribers.worker]',
+          'entrypoint = "worker:app"',
+          'topics = ["jobs"]',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: false },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const output = getBuildOutputV2(result).output as any;
+    expect(output[PYTHON_WORKFLOW_OUTPUT_PATH].experimentalTriggers).toEqual([
+      expect.objectContaining({ topic: PYTHON_WORKFLOW_TOPIC }),
+    ]);
+    expect(output['_py_subscribers/worker'].experimentalTriggers).toEqual([
+      expect.objectContaining({ topic: 'jobs' }),
+    ]);
+  });
+
+  it('does not compile pyproject workflows inside a first-class service', async () => {
+    const files = {
+      'jobs/workflow.py': new FileBlob({ data: 'wf = object()\n' }),
+      'pyproject.toml': new FileBlob({
+        data: '[tool.vercel.workflows.broken]\nentrypoint = "invalid"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/workflow.py',
+      meta: { isDev: false },
+      config: { framework: 'python' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'job', name: 'workflow', trigger: 'workflow' },
+    });
+
+    const output = getBuildOutputV2(result).output;
+    expect(output['_svc/workflow/index']).toBeDefined();
+    expect(output[PYTHON_WORKFLOW_OUTPUT_PATH]).toBeUndefined();
+  });
+
+  it('does not compile pyproject workflows for a bare function build', async () => {
+    const files = {
+      'handler.py': new FileBlob({
+        data: 'def app(request): return "ok"\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[tool.vercel.workflows.broken]\nentrypoint = "invalid"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    expect(result.resultVersion).toBe(3);
+  });
+
+  it.each([
+    [
+      'a non-object configuration',
+      ['[tool.vercel]', 'workflows = "invalid"'].join('\n'),
+      /"tool\.vercel\.workflows" must be an object/,
+    ],
+    [
+      'an array-of-tables configuration',
+      '[[tool.vercel.workflows]]\nentrypoint = "workflows:wf"\n',
+      /"tool\.vercel\.workflows" must be an object/,
+    ],
+    [
+      'an unnamed workflow table',
+      '[tool.vercel.workflows]\nentrypoint = "workflows:wf"\n',
+      /must contain named workflow tables/,
+    ],
+    [
+      'an empty configuration',
+      '[tool.vercel.workflows]\n',
+      /must define at least one named workflow/,
+    ],
+    [
+      'an unrecognized field',
+      [
+        '[tool.vercel.workflows.my_workflow]',
+        'entrypoint = "workflows:wf"',
+        'consumer = "custom"',
+      ].join('\n'),
+      /workflow "my_workflow" has unrecognized field "consumer"/,
+    ],
+    [
+      'a missing entrypoint',
+      '[tool.vercel.workflows.my_workflow]\n',
+      /must define string field "entrypoint"/,
+    ],
+    [
+      'an invalid workflow name',
+      '[tool.vercel.workflows."bad name"]\nentrypoint = "workflows:wf"\n',
+      /workflow name "bad name" is invalid/,
+    ],
+    [
+      'an invalid entrypoint',
+      '[tool.vercel.workflows.my_workflow]\nentrypoint = "workflows"\n',
+      /Use "module:object"/,
+    ],
+    [
+      'a missing entrypoint file',
+      '[tool.vercel.workflows.my_workflow]\nentrypoint = "workflows:wf"\n',
+      /file "workflows\.py" does not exist/,
+    ],
+  ])('rejects %s', async (_name, pyproject, expectedError) => {
+    fs.writeFileSync(path.join(mockWorkPath, 'pyproject.toml'), pyproject);
+
+    await expect(getPyprojectWorkflows(mockWorkPath)).rejects.toThrow(
+      expectedError
+    );
+  });
+
+  it('rejects duplicate workflow entrypoints', async () => {
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'workflows.py'),
+      'wf = object()\n'
+    );
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[tool.vercel.workflows.first]',
+        'entrypoint = "workflows:wf"',
+        '',
+        '[tool.vercel.workflows.second]',
+        'entrypoint = "workflows:wf"',
+        '',
+      ].join('\n')
+    );
+
+    await expect(getPyprojectWorkflows(mockWorkPath)).rejects.toThrow(
+      /workflows "first" and "second" use the same entrypoint/
+    );
   });
 });
 

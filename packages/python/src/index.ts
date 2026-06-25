@@ -87,6 +87,15 @@ import {
   safePathSegment,
   type Subscriber,
 } from './subscribers';
+import {
+  createWorkflowAggregator,
+  getPyprojectWorkflows,
+  PYTHON_WORKFLOW_ENTRYPOINT,
+  PYTHON_WORKFLOW_MODULE_NAME,
+  PYTHON_WORKFLOW_OUTPUT_PATH,
+  PYTHON_WORKFLOW_TOPIC,
+  type WorkflowConfig,
+} from './workflows';
 
 const writeFile = fs.promises.writeFile;
 const PYTHON_ENTRYPOINT_DOCS_URL =
@@ -464,6 +473,7 @@ export const build: BuildVX = async ({
   const framework = config?.framework;
   let shouldInstallVercelWorkers = config?.hasWorkerServices === true;
   let subscribers: Subscriber[] = [];
+  let workflows: WorkflowConfig[] = [];
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
@@ -488,18 +498,21 @@ export const build: BuildVX = async ({
     meta,
   });
 
-  // `tool.vercel.subscribers` declares background workers for a standalone
-  // Python app and compiles them into additional queue-triggered Lambdas.
-  // It is intentionally scoped to non-service framework builds:
+  // `tool.vercel.subscribers` and `tool.vercel.workflows` declare background
+  // workers for a standalone Python app and compile them into additional
+  // queue-triggered Lambdas. They are intentionally scoped to non-service
+  // framework builds:
   //   - `experimentalServices` projects already declare queue consumers as
   //     first-class `worker`/`job` services, so a second implicit mechanism
   //     would be redundant and ambiguous (services can share one pyproject.toml,
   //     which would duplicate every subscriber across each service build).
   //   - Bare `api/**` functions build once per file sharing this workPath, so
-  //     emitting subscribers there would duplicate their outputs per build.
+  //     emitting background outputs there would duplicate them per build.
   if (!service && isPythonFramework(framework)) {
     subscribers = await getPyprojectSubscribers(workPath);
-    shouldInstallVercelWorkers ||= subscribers.length > 0;
+    workflows = await getPyprojectWorkflows(workPath);
+    shouldInstallVercelWorkers ||=
+      subscribers.length > 0 || workflows.length > 0;
   }
 
   try {
@@ -1219,6 +1232,45 @@ export const build: BuildVX = async ({
     });
   }
 
+  let workflowLambda: Lambda | undefined;
+  if (workflows.length > 0) {
+    const consumer = sanitizeConsumerName(PYTHON_WORKFLOW_OUTPUT_PATH);
+    workflowLambda = new Lambda({
+      files: {
+        ...files,
+        [PYTHON_WORKFLOW_ENTRYPOINT]: new FileBlob({
+          data: createWorkflowAggregator(workflows),
+        }),
+        [`${handlerPyFilename}.py`]: new FileBlob({
+          data: createRuntimeTrampoline({
+            moduleName: PYTHON_WORKFLOW_MODULE_NAME,
+            entrypoint: PYTHON_WORKFLOW_ENTRYPOINT,
+            vendorDir,
+            variableName: 'app',
+          }),
+        }),
+      },
+      handler: `${handlerPyFilename}.vc_handler`,
+      runtime: pythonVersion.runtime,
+      architecture: target.architecture,
+      maxDuration: 'max',
+      environment: {
+        ...lambdaEnv,
+        VERCEL_HAS_WORKER_SERVICES: '1',
+        VERCEL_SERVICE_TYPE: 'job',
+        VERCEL_SERVICE_TRIGGER: 'workflow',
+      },
+      experimentalTriggers: [
+        {
+          type: 'queue/v2beta',
+          topic: PYTHON_WORKFLOW_TOPIC,
+          consumer,
+        },
+      ],
+      supportsResponseStreaming: true,
+    });
+  }
+
   // Write project manifest for diagnostics (best-effort, never fails the build).
   // Requires uv.lock to resolve versions and dependency graph.  Skipped in
   // `vercel dev` since the CLI only reads the manifest in `vercel build`.
@@ -1239,8 +1291,8 @@ export const build: BuildVX = async ({
     }
   }
 
-  // Subscribers only attach to framework apps or named services, both of which
-  // already take the V2 path below, so no early V3 return needs to consider them.
+  // Background outputs only attach to framework apps, which already take the
+  // V2 path below, so no early V3 return needs to consider them.
   if (!isPythonFramework(framework) && !service?.name) {
     return { resultVersion: 3, result: { output } };
   }
@@ -1274,6 +1326,9 @@ export const build: BuildVX = async ({
         [lambdaPath]: output,
         ...subscriberLambdas,
         ...staticFiles,
+        ...(workflowLambda
+          ? { [PYTHON_WORKFLOW_OUTPUT_PATH]: workflowLambda }
+          : {}),
       },
       ...(routes ? { routes } : {}),
       crons,
