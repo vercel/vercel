@@ -1,7 +1,6 @@
 // Public gateway service. It is bound to one internal service per runtime and
 // reaches each one through the injected binding env var (no public route to the
-// targets). Binding values are URL bases ending in "/", so relative paths are
-// appended directly per the `new URL("path", BASE)` contract.
+// targets).
 const http = require('http');
 
 const port = process.env.PORT || 3000;
@@ -30,11 +29,11 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     if (req.url === '/call/py') {
-      res.end(await callBinding(process.env.PY_API_URL, 'hello'));
+      res.end(await callBinding(process.env.PY_API_URL, '/hello'));
       return;
     }
     if (req.url === '/call/go') {
-      res.end(await callBinding(process.env.GO_API_URL, 'ping'));
+      res.end(await callBinding(process.env.GO_API_URL, '/ping'));
       return;
     }
     if (req.url === '/call/ruby') {

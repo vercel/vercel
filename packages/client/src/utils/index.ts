@@ -432,4 +432,4 @@ export function createDebug(debug?: boolean) {
 
   return () => {};
 }
-type Debug = ReturnType<typeof createDebug>;
+export type Debug = ReturnType<typeof createDebug>;

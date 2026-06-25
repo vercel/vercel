@@ -172,6 +172,7 @@ describe('@vercel/container', () => {
     );
 
     expect(result).toEqual({
+      routes: [{ handle: 'filesystem' }, { src: '/(.*)', dest: '/index' }],
       output: {
         index: {
           type: 'Lambda',
@@ -212,24 +213,51 @@ describe('@vercel/container', () => {
     });
   });
 
-  it('emits service builds at the internal service function path', async () => {
+  it('does a normal build with a catch-all route for services', async () => {
+    // The function lands at the natural `index` path (no `_svc` namespacing) so
+    // the nested `services/<name>/` output "just works", with a catch-all route
+    // to reach it.
     const result = expectTypicalBuildResult(
       await build({
         ...createBuildOptions({}),
         entrypoint: 'docker.io/library/nginx:1.27',
         service: {
           name: 'api',
-          type: 'web',
         },
       })
     );
 
-    expect(result.output).toHaveProperty('_svc/api/index');
-    expect(result.output['_svc/api/index']).toMatchObject({
+    expect(result.output).toHaveProperty('index');
+    expect(result.output).not.toHaveProperty('_svc/api/index');
+    expect(result.output.index).toMatchObject({
       handler: 'docker.io/library/nginx:1.27',
       runtime: 'container',
       environment: {},
     });
+
+    // Without a catch-all, a request to the service root never reaches the
+    // Lambda inside the isolated per-service route table.
+    expect(result.routes).toEqual([
+      { handle: 'filesystem' },
+      { src: '/(.*)', dest: '/index' },
+    ]);
+  });
+
+  it('emits the catch-all route for non-service builds too', async () => {
+    // A root container deploy (no service) still needs the catch-all so a
+    // request to `/` reaches the function.
+    const result = expectTypicalBuildResult(
+      await build({
+        ...createBuildOptions({}),
+        entrypoint: 'docker.io/library/nginx:1.27',
+      })
+    );
+
+    expect(result.output).toHaveProperty('index');
+    expect(result.routes).toEqual([
+      { handle: 'filesystem' },
+      { src: '/(.*)', dest: '/index' },
+    ]);
   });
 
   async function runDockerfileBuild(options?: {
@@ -295,12 +323,12 @@ describe('@vercel/container', () => {
       await build({
         ...createBuildOptions({ runtime: 'container' }),
         ...(options?.entrypoint ? { entrypoint: options.entrypoint } : {}),
-        service: { name: 'api', type: 'web' },
+        service: { name: 'api' },
         ...(options?.meta ? { meta: options.meta } : {}),
       } as any)
     );
 
-    expect(result.output['_svc/api/index']).toMatchObject({
+    expect(result.output.index).toMatchObject({
       type: 'Lambda',
       runtime: 'container',
       handler: `vcr.vercel.com/acme/my-app/api@${digest}`,
@@ -404,6 +432,91 @@ describe('@vercel/container', () => {
     expect(commands.some(c => /\bbuildah\b.*\bpush\b/.test(c))).toBe(true);
   });
 
+  it.each([
+    'Dockerfile.vercel',
+    'Containerfile.vercel',
+  ])('builds from a `%s` opt-in marker entrypoint, passing it via -f', async marker => {
+    const commands = await runDockerfileBuild({
+      buildImageEnv: 'al2023',
+      entrypoint: marker,
+    });
+    const escaped = marker.replace('.', '\\.');
+    expect(
+      commands.some(
+        c =>
+          /\bbuildah\b.*\bbuild\b/.test(c) &&
+          new RegExp(`-f \\S*${escaped}\\b`).test(c)
+      )
+    ).toBe(true);
+    expect(commands.some(c => /\bbuildah\b.*\bpush\b/.test(c))).toBe(true);
+  });
+
+  it('discovers a `Dockerfile.vercel` marker when the entrypoint is `<detect>`', async () => {
+    // The `container` framework preset resolves its entrypoint via `<detect>`;
+    // the builder must then find the `.vercel` marker in the work directory.
+    const commands = await runDockerfileBuild({
+      buildImageEnv: 'al2023',
+      entrypoint: '<detect>',
+    });
+    expect(
+      commands.some(
+        c =>
+          /\bbuildah\b.*\bbuild\b/.test(c) &&
+          /-f \S*Dockerfile\.vercel\b/.test(c)
+      )
+    ).toBe(true);
+  });
+
+  it('builds a root (non-service) container deploy without a service name', async () => {
+    // A `Dockerfile.vercel` at the project root deploys as a container with no
+    // service; the repository leaf is derived from the Dockerfile base name
+    // (`Dockerfile.vercel` -> `dockerfile`) instead of throwing.
+    process.env.VERCEL_OIDC_TOKEN = fakeOidcToken();
+    const fetchMock = vi.fn();
+    stubRegistryFetch(fetchMock);
+    vi.stubGlobal('fetch', fetchMock);
+    existsSyncMock.mockReturnValue(true);
+    const digest = `sha256:${'a'.repeat(64)}`;
+    spawnMock.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'buildah' && args.includes('info')) {
+        return fakeChild(
+          JSON.stringify({
+            store: {
+              GraphRoot: '/vercel/.containers/storage',
+              RunRoot: '/run/containers/storage',
+              GraphDriverName: 'overlay',
+              GraphStatus: { 'Backing Filesystem': 'xfs' },
+            },
+          })
+        );
+      }
+      if (args.includes('push')) {
+        return fakeChild(`latest: digest: ${digest} size: 1234\n`);
+      }
+      return fakeChild('');
+    });
+
+    const result = expectTypicalBuildResult(
+      await build({
+        ...createBuildOptions({ runtime: 'container' }),
+        entrypoint: 'Dockerfile.vercel',
+      } as any)
+    );
+
+    // No service name → output at `index`, with the catch-all so `/` reaches
+    // it. Repository leaf comes from the Dockerfile base name (`dockerfile`).
+    expect(result.output).toHaveProperty('index');
+    expect(result.output.index).toMatchObject({
+      type: 'Lambda',
+      runtime: 'container',
+      handler: `vcr.vercel.com/acme/my-app/dockerfile@${digest}`,
+    });
+    expect(result.routes).toEqual([
+      { handle: 'filesystem' },
+      { src: '/(.*)', dest: '/index' },
+    ]);
+  });
+
   it('forwards the project build env to the image build as --build-arg', async () => {
     const commands = await runDockerfileBuild({
       buildImageEnv: 'al2023',
@@ -473,7 +586,7 @@ describe('@vercel/container', () => {
 
     await build({
       ...createBuildOptions({ runtime: 'container' }),
-      service: { name: 'api', type: 'web' },
+      service: { name: 'api' },
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -505,11 +618,11 @@ describe('@vercel/container', () => {
     const result = expectTypicalBuildResult(
       await build({
         ...createBuildOptions({ runtime: 'container' }),
-        service: { name: 'api', type: 'web' },
+        service: { name: 'api' },
       })
     );
 
-    expect(result.output['_svc/api/index']).toMatchObject({
+    expect(result.output.index).toMatchObject({
       handler: `vcr.vercel.com/acme/my-app/api@${digest}`,
     });
   });
@@ -521,7 +634,7 @@ describe('@vercel/container', () => {
     await expect(
       build({
         ...createBuildOptions({ runtime: 'container' }),
-        service: { name: 'api', type: 'web' },
+        service: { name: 'api' },
       })
     ).rejects.toThrow(/Missing VERCEL_OIDC_TOKEN/);
   });
@@ -545,7 +658,7 @@ describe('@vercel/container', () => {
 
     await build({
       ...createBuildOptions({ runtime: 'container' }),
-      service: { name: 'api', type: 'web' },
+      service: { name: 'api' },
     });
 
     // An OIDC token cannot mint another OIDC token, so without a user/CLI auth
@@ -576,7 +689,7 @@ describe('@vercel/container', () => {
 
     await build({
       ...createBuildOptions({ runtime: 'container' }),
-      service: { name: 'api', type: 'web' },
+      service: { name: 'api' },
     });
 
     // The mint request must authenticate with the CLI auth token, not the OIDC
@@ -614,7 +727,7 @@ describe('@vercel/container', () => {
     await expect(
       build({
         ...createBuildOptions({ runtime: 'container' }),
-        service: { name: 'api', type: 'web' },
+        service: { name: 'api' },
       })
     ).resolves.toBeDefined();
   });
@@ -646,7 +759,7 @@ describe('@vercel/container', () => {
     await expect(
       build({
         ...createBuildOptions({ runtime: 'container' }),
-        service: { name: 'api', type: 'web' },
+        service: { name: 'api' },
       })
     ).rejects.toThrow(/vercel-enable-vcr/);
 
@@ -692,7 +805,7 @@ describe('@vercel/container', () => {
       const result = await startDevServer({
         ...createBuildOptions({ runtime: 'container' }),
         entrypoint: 'apps/svc/Dockerfile',
-        service: { name: 'api', type: 'web' },
+        service: { name: 'api' },
         meta: {
           isDev: true,
           env: {
@@ -754,7 +867,7 @@ describe('@vercel/container', () => {
       const result = await startDevServer({
         ...createBuildOptions({}),
         entrypoint: 'grycap/cowsay:latest',
-        service: { name: 'api', type: 'web' },
+        service: { name: 'api' },
         meta: { isDev: true },
       } as any);
 
@@ -786,7 +899,7 @@ describe('@vercel/container', () => {
       const result = await startDevServer({
         ...createBuildOptions({}),
         entrypoint: 'grycap/cowsay:latest',
-        service: { name: 'api', type: 'web' },
+        service: { name: 'api' },
         // The orchestrator pre-allocates a host port and passes it as
         // `meta.port`; service bindings target it, so the container must be
         // published on exactly this port (not a Docker-chosen ephemeral one).
@@ -826,7 +939,7 @@ describe('@vercel/container', () => {
         startDevServer({
           ...createBuildOptions({}),
           entrypoint: 'grycap/cowsay:latest',
-          service: { name: 'api', type: 'web' },
+          service: { name: 'api' },
           meta: { isDev: true, env: { SECRET: 'do-not-leak' } },
         } as any)
       ).rejects.toThrow(/exited \(code 1\) before becoming ready/);
@@ -857,7 +970,7 @@ describe('@vercel/container', () => {
       const result = await startDevServer({
         ...createBuildOptions({}),
         entrypoint: 'grycap/cowsay:latest',
-        service: { name: 'api', type: 'web' },
+        service: { name: 'api' },
         meta: { isDev: true },
       } as any);
 

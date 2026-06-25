@@ -722,7 +722,7 @@ export class ServicesOrchestrator {
       if (targetPort === undefined) {
         continue;
       }
-      perServiceEnv[binding.env] = `http://127.0.0.1:${targetPort}/`;
+      perServiceEnv[binding.env] = `http://127.0.0.1:${targetPort}`;
     }
 
     const env = cloneEnv(

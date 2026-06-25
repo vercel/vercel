@@ -266,6 +266,12 @@ export interface StartDevServerSuccess {
   shutdown?: () => Promise<void>;
 
   /**
+   * Whether the builder owns this dev server's lifecycle across requests.
+   * Persistent servers are still shut down when `vercel dev` exits.
+   */
+  persistent?: boolean;
+
+  /**
    * Cron entries produced by the builder for this service.
    * Used by the dev orchestrator to schedule cron triggers.
    */

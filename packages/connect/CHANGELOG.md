@@ -1,5 +1,11 @@
 # @vercel/connect
 
+## 0.2.8
+
+### Patch Changes
+
+- 64e3219: Allow local Connect authorization callbacks to use `http://*.localhost` URLs.
+
 ## 0.2.7
 
 ### Patch Changes
