@@ -1369,6 +1369,45 @@ describe('fastapi entrypoint discovery - positive cases', () => {
     fs.removeSync(workPath);
   });
 
+  it('applies functions config to the resolved FastAPI entrypoint', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-fastapi-functions-config-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'app/main.py': new FileBlob({
+        data: 'from fastapi import FastAPI\napp = FastAPI()\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, workPath);
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: '<detect>',
+      meta: { isDev: true },
+      config: {
+        framework: 'fastapi',
+        functions: {
+          'app/main.py': {
+            memory: 512,
+            maxDuration: 30,
+          },
+        },
+      },
+      repoRootPath: workPath,
+    });
+
+    const lambda = getBuildOutputV2Lambda(result) as any;
+    expect(lambda.memory).toBe(512);
+    expect(lambda.maxDuration).toBe(30);
+
+    fs.removeSync(workPath);
+  });
+
   it('discovers src/index.py containing FastAPI', async () => {
     const workPath = path.join(
       tmpdir(),

@@ -23,6 +23,7 @@ import {
   BUILDER_COMPILE_STEP,
   BUILDER_PRE_DEPLOY_STEP,
   sanitizeConsumerName,
+  getLambdaOptionsFromFunction,
   type BuildOptions,
   type GlobOptions,
   type BuildVX,
@@ -400,6 +401,39 @@ function getTargetPlatform(isDev: boolean): TargetPlatform {
   }
 
   return { uvPlatform: UV_LINUX_TARGET, architecture: 'x86_64' };
+}
+
+async function getPythonLambdaOptions({
+  config,
+  entrypoint,
+}: {
+  config: BuildOptions['config'];
+  entrypoint: string;
+}) {
+  if (!config?.functions) {
+    return {};
+  }
+
+  const sources = new Set<string>([entrypoint]);
+  if (entrypoint.endsWith('.py')) {
+    sources.add(entrypoint.slice(0, -'.py'.length));
+  }
+
+  for (const sourceFile of sources) {
+    const lambdaOptions = await getLambdaOptionsFromFunction({
+      sourceFile,
+      config,
+    });
+
+    if (Object.keys(lambdaOptions).length > 0) {
+      // Python resolves the target wheel platform before the Lambda is created,
+      // so the Lambda architecture must stay aligned with that build target.
+      delete lambdaOptions.architecture;
+      return lambdaOptions;
+    }
+  }
+
+  return {};
 }
 
 /**
@@ -1170,10 +1204,16 @@ export const build: BuildVX = async ({
     [`${handlerPyFilename}.py`]: new FileBlob({ data: runtimeTrampoline }),
   };
 
+  const lambdaOptions = await getPythonLambdaOptions({
+    config,
+    entrypoint,
+  });
+
   const output = new Lambda({
     files: webFiles,
     handler: `${handlerPyFilename}.vc_handler`,
     runtime: pythonVersion.runtime,
+    ...lambdaOptions,
     architecture: target.architecture,
     environment: lambdaEnv,
     supportsResponseStreaming: true,
