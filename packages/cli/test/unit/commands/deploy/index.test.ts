@@ -91,6 +91,9 @@ describe('deploy', () => {
       const exitCodePromise = deploy(client);
       await expect(exitCodePromise).resolves.toEqual(2);
 
+      const helpOutput = client.stderr.getFullOutput();
+      expect(helpOutput).toContain('--dry');
+      expect(helpOutput).toContain('vercel deploy --dry --format=json');
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
@@ -137,6 +140,191 @@ describe('deploy', () => {
     );
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "deploy"').toEqual(1);
+  });
+
+  it('should print a dry file distribution without deploying', async () => {
+    const cwd = setupTmpDir('deploy-dry');
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'deploy-dry',
+      name: 'deploy-dry',
+      framework: 'nextjs',
+    });
+    await fs.outputFile(join(cwd, 'src/index.js'), 'console.log("hello")');
+    await fs.outputFile(join(cwd, 'src/data.json'), 'x'.repeat(1024));
+    await fs.outputFile(join(cwd, 'public/hero.png'), 'x'.repeat(2048));
+    await fs.outputFile(join(cwd, 'ignored.txt'), 'x'.repeat(4096));
+    await fs.writeFile(join(cwd, '.vercelignore'), 'ignored.txt\n');
+    await fs.outputFile(
+      join(cwd, '.vercel/project.json'),
+      JSON.stringify({
+        orgId: 'team_dummy',
+        projectId: 'deploy-dry',
+      })
+    );
+
+    client.setArgv('deploy', cwd, '--dry');
+    const exitCode = await deploy(client);
+    const output = client.stderr.getFullOutput();
+
+    expect(exitCode).toEqual(0);
+    expect(output).toContain('Deployment Dry Run');
+    expect(output).toContain('Detected Framework Preset: Next.js (nextjs)');
+    expect(output).toContain('Included: 4 files');
+    expect(output).toContain('Ignored: 2 paths');
+    expect(output).toContain('public');
+    expect(output).toContain('src');
+    expect(output).toContain('Largest Files');
+    expect(output).toContain('public/hero.png');
+    expect(output).not.toContain(
+      'No files were uploaded and no deployment was created.'
+    );
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'flag:dry', value: 'TRUE' },
+      { key: 'argument:project-path', value: '[REDACTED]' },
+      { key: 'target_environment', value: 'preview' },
+    ]);
+  });
+
+  it('should reject a dry run when the project is not linked', async () => {
+    const cwd = setupTmpDir('deploy-dry-unlinked');
+    await fs.outputFile(join(cwd, 'index.js'), 'export default 1;');
+
+    client.setArgv('deploy', cwd, '--dry', '--yes');
+    const exitCodePromise = deploy(client);
+
+    await expect(client.stderr).toOutput(
+      'Error: Project is not linked. Run `vercel link` first.\n'
+    );
+    expect(await exitCodePromise).toEqual(1);
+    expect(await fs.pathExists(join(cwd, '.vercel'))).toBe(false);
+    expect(await fs.pathExists(join(cwd, '.gitignore'))).toBe(false);
+  });
+
+  it('should print dry output as JSON', async () => {
+    const cwd = setupTmpDir('deploy-dry-json');
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'deploy-dry-json',
+      name: 'deploy-dry-json',
+      framework: 'nextjs',
+    });
+    await fs.outputFile(join(cwd, 'api/index.js'), 'export default () => {}');
+    await fs.outputFile(join(cwd, 'public/logo.svg'), '<svg></svg>');
+    await fs.outputJson(join(cwd, 'vercel.json'), {
+      framework: 'vite',
+    });
+    await fs.outputFile(
+      join(cwd, '.vercel/project.json'),
+      JSON.stringify({
+        orgId: 'team_dummy',
+        projectId: 'deploy-dry-json',
+      })
+    );
+
+    client.setArgv('deploy', cwd, '--dry', '--format=json');
+    const exitCode = await deploy(client);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+
+    expect(exitCode).toEqual(0);
+    expect(payload).toMatchObject({
+      framework: {
+        name: 'Vite',
+        slug: 'vite',
+      },
+      basePath: cwd,
+      fileCount: 3,
+      ignoredCount: 1,
+    });
+    expect(payload.directories).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: 'api', fileCount: 1 }),
+        expect.objectContaining({ path: 'public', fileCount: 1 }),
+      ])
+    );
+    expect(payload.files).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: 'api/index.js' }),
+        expect.objectContaining({ path: 'public/logo.svg' }),
+      ])
+    );
+  });
+
+  it('should print every dry file as JSON when stdout is non-TTY', async () => {
+    const cwd = setupTmpDir('deploy-dry-non-tty');
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'deploy-dry-non-tty',
+      name: 'deploy-dry-non-tty',
+    });
+    await Promise.all(
+      Array.from({ length: 12 }, (_, index) =>
+        fs.outputFile(join(cwd, `src/file-${index}.js`), String(index))
+      )
+    );
+    await fs.outputFile(
+      join(cwd, '.vercel/project.json'),
+      JSON.stringify({
+        orgId: 'team_dummy',
+        projectId: 'deploy-dry-non-tty',
+      })
+    );
+
+    client.stdout.isTTY = false;
+    client.setArgv('deploy', cwd, '--dry');
+    const exitCode = await deploy(client);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+
+    expect(exitCode).toEqual(0);
+    expect(payload.framework).toEqual({
+      name: 'Other',
+      slug: null,
+    });
+    expect(payload.fileCount).toEqual(12);
+    expect(payload.files).toHaveLength(12);
+    expect(payload.largestFiles).toHaveLength(10);
+    expect(payload.files).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: 'src/file-0.js' }),
+        expect.objectContaining({ path: 'src/file-11.js' }),
+      ])
+    );
+  });
+
+  it('should inspect the archive payload when `--archive=tgz` is used', async () => {
+    const cwd = setupTmpDir('deploy-dry-archive');
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'deploy-dry-archive',
+      name: 'deploy-dry-archive',
+    });
+    await fs.outputFile(join(cwd, 'src/index.js'), 'export default 1;');
+    await fs.outputFile(
+      join(cwd, '.vercel/project.json'),
+      JSON.stringify({
+        orgId: 'team_dummy',
+        projectId: 'deploy-dry-archive',
+      })
+    );
+
+    client.setArgv('deploy', cwd, '--dry', '--archive=tgz', '--format=json');
+    const exitCode = await deploy(client);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+
+    expect(exitCode).toEqual(0);
+    expect(payload.files).toEqual([
+      expect.objectContaining({
+        path: '.vercel/source.tgz.part1',
+      }),
+    ]);
   });
 
   it('should reject deploying when `--prebuilt` is used and `vc build` failed before Builders', async () => {
@@ -190,6 +378,25 @@ describe('deploy', () => {
 
     client.cwd = setupUnitFixture('commands/deploy/static');
     client.setArgv('deploy', '--prebuilt');
+    const exitCodePromise = deploy(client);
+    await expect(client.stderr).toOutput(
+      'Error: The "--prebuilt" option was used, but no prebuilt output found in ".vercel/output". Run `vercel build` to generate a local build.\n'
+    );
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
+  });
+
+  it('should reject a dry run when `--prebuilt` output does not exist', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'static',
+      id: 'static',
+    });
+
+    client.cwd = setupUnitFixture('commands/deploy/static');
+    client.setArgv('deploy', '--prebuilt', '--dry');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
       'Error: The "--prebuilt" option was used, but no prebuilt output found in ".vercel/output". Run `vercel build` to generate a local build.\n'
@@ -685,6 +892,83 @@ describe('deploy', () => {
       source: 'cli',
       version: 2,
     });
+  });
+
+  it('should inspect the repository root for a dry run linked with `repo.json`', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'app',
+      id: 'QmbKpqpiUqbcke',
+      rootDirectory: 'app',
+      framework: 'nextjs',
+    });
+
+    const repoRoot = setupUnitFixture('commands/deploy/monorepo-static');
+    client.cwd = join(repoRoot, 'app');
+    client.setArgv('deploy', '--dry', '--format=json');
+    const exitCode = await deploy(client);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+
+    expect(exitCode).toEqual(0);
+    expect(payload.basePath).toEqual(repoRoot);
+    expect(payload.framework).toEqual({
+      name: 'Next.js',
+      slug: 'nextjs',
+    });
+    expect(payload.files).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: 'app/index.html' }),
+        expect.objectContaining({ path: 'app/style.css' }),
+      ])
+    );
+  });
+
+  it('should inspect linked monorepo prebuilt output from the project root directory', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'app',
+      id: 'QmbKpqpiUqbcke',
+      rootDirectory: 'app',
+      framework: 'nextjs',
+    });
+
+    const repoRoot = setupUnitFixture('commands/deploy/monorepo-static');
+    const outputDirectory = join(repoRoot, 'app/.vercel/output');
+    await fs.outputFile(
+      join(outputDirectory, 'builds.json'),
+      JSON.stringify({ target: 'preview', builds: [] })
+    );
+    await fs.outputFile(
+      join(outputDirectory, 'config.json'),
+      JSON.stringify({ version: 3 })
+    );
+    await fs.outputFile(
+      join(outputDirectory, 'static/index.html'),
+      '<h1>Hello</h1>'
+    );
+
+    client.cwd = join(repoRoot, 'app');
+    client.setArgv('deploy', '--prebuilt', '--dry', '--format=json');
+    const exitCode = await deploy(client);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+
+    expect(exitCode).toEqual(0);
+    expect(payload.basePath).toEqual(repoRoot);
+    expect(payload.framework).toEqual({
+      name: 'Next.js',
+      slug: 'nextjs',
+    });
+    expect(payload.files).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'app/.vercel/output/static/index.html',
+        }),
+      ])
+    );
   });
 
   it('should send `projectSettings.nodeVersion` based on `engines.node` package.json field', async () => {

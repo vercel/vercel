@@ -12,6 +12,8 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -27,6 +29,88 @@ import (
 	"sync"
 	"time"
 )
+
+// hijackAwareResponseWriter reports when an HTTP protocol upgrade has written
+// and flushed its handshake response. ReverseProxy performs the hijack only
+// after receiving and validating a 101 response from the upstream server.
+//
+// Unwrap preserves optional ResponseWriter capabilities used by ReverseProxy
+// for ordinary and streaming HTTP responses.
+type hijackAwareResponseWriter struct {
+	http.ResponseWriter
+	onUpgrade func()
+}
+
+func (w *hijackAwareResponseWriter) Unwrap() http.ResponseWriter {
+	return w.ResponseWriter
+}
+
+func (w *hijackAwareResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	conn, readWriter, err := http.NewResponseController(w.ResponseWriter).Hijack()
+	if err != nil {
+		return conn, readWriter, err
+	}
+
+	upgradeWriter := &upgradeHandshakeWriter{
+		writer:     readWriter.Writer,
+		onComplete: w.onUpgrade,
+	}
+	return conn, bufio.NewReadWriter(
+		readWriter.Reader,
+		bufio.NewWriter(upgradeWriter),
+	), nil
+}
+
+type upgradeHandshakeWriter struct {
+	writer     *bufio.Writer
+	onComplete func()
+	header     bytes.Buffer
+	complete   bool
+}
+
+func (w *upgradeHandshakeWriter) Write(data []byte) (int, error) {
+	written, err := w.writer.Write(data)
+	if err != nil {
+		return written, err
+	}
+	if err := w.writer.Flush(); err != nil {
+		return written, err
+	}
+
+	if !w.complete && written > 0 {
+		_, _ = w.header.Write(data[:written])
+		if bytes.Contains(w.header.Bytes(), []byte("\r\n\r\n")) {
+			w.complete = true
+			w.header.Reset()
+			if w.onComplete != nil {
+				w.onComplete()
+			}
+		}
+	}
+
+	return written, nil
+}
+
+func onceCallback(callback func()) func() {
+	var once sync.Once
+	return func() {
+		once.Do(callback)
+	}
+}
+
+func serveWithUpgradeLifecycle(
+	handler http.Handler,
+	w http.ResponseWriter,
+	r *http.Request,
+	onEnd func(),
+) {
+	endRequest := onceCallback(onEnd)
+	handler.ServeHTTP(&hijackAwareResponseWriter{
+		ResponseWriter: w,
+		onUpgrade:      endRequest,
+	}, r)
+	endRequest()
+}
 
 // IPC message types
 type StartMessage struct {
@@ -256,6 +340,27 @@ func main() {
 			requestIDStr := r.Header.Get("X-Vercel-Internal-Request-Id")
 			requestID, _ := strconv.ParseUint(requestIDStr, 10, 64)
 
+			// A successful protocol upgrade detaches the connection from the
+			// request lifecycle. End the invocation at that boundary while the
+			// reverse proxy continues tunneling the upgraded connection. The
+			// fallback after ServeHTTP handles ordinary responses and failed
+			// upgrades. sync.Once prevents a second end message when an upgraded
+			// connection eventually closes and ServeHTTP returns.
+			endRequest := func() {
+				if ipcConn != nil && invocationID != "" {
+					endMsg := EndMessage{
+						Type: "end",
+						Payload: EndPayload{
+							Context: RequestContext{
+								InvocationID: invocationID,
+								RequestID:    requestID,
+							},
+						},
+					}
+					sendIPCMessage(endMsg)
+				}
+			}
+
 			// Remove internal headers before forwarding
 			for key := range r.Header {
 				if strings.HasPrefix(strings.ToLower(key), "x-vercel-internal-") {
@@ -273,21 +378,7 @@ func main() {
 			}
 
 			// Forward request to user's server
-			proxy.ServeHTTP(w, r)
-
-			// Send end message via IPC
-			if ipcConn != nil && invocationID != "" {
-				endMsg := EndMessage{
-					Type: "end",
-					Payload: EndPayload{
-						Context: RequestContext{
-							InvocationID: invocationID,
-							RequestID:    requestID,
-						},
-					},
-				}
-				sendIPCMessage(endMsg)
-			}
+			serveWithUpgradeLifecycle(proxy, w, r, endRequest)
 		}),
 	}
 

@@ -43,6 +43,7 @@ async function hasExperimentalServicesConfig(cwd: string): Promise<boolean> {
     return (
       (config.experimentalServices != null &&
         typeof config.experimentalServices === 'object') ||
+      (config.services != null && typeof config.services === 'object') ||
       (config.experimentalServicesV2 != null &&
         typeof config.experimentalServicesV2 === 'object')
     );

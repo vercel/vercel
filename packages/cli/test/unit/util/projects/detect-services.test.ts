@@ -380,12 +380,12 @@ mount = "/api"`
       expect(result?.services).toHaveLength(2);
     });
 
-    it('should return services when vercel.json has experimentalServicesV2', async () => {
+    it('should return services when vercel.json has services', async () => {
       await mkdir(join(tempDir, 'backend'), { recursive: true });
       await writeFile(
         join(tempDir, 'vercel.json'),
         JSON.stringify({
-          experimentalServicesV2: {
+          services: {
             backend: { root: 'backend', entrypoint: 'index.py' },
           },
         })
@@ -466,11 +466,11 @@ mount = "/api"`
       await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
     });
 
-    it('should return true when vercel.json has experimentalServicesV2', async () => {
+    it('should return true when vercel.json has services', async () => {
       await writeFile(
         join(tempDir, 'vercel.json'),
         JSON.stringify({
-          experimentalServicesV2: {
+          services: {
             frontend: { root: 'frontend', framework: 'nextjs' },
           },
         })

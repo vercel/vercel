@@ -1,5 +1,29 @@
 # @vercel/node
 
+## 5.8.21
+
+### Patch Changes
+
+- Updated dependencies [8dc4702]
+  - @vercel/build-utils@13.32.1
+
+## 5.8.20
+
+### Patch Changes
+
+- Updated dependencies [9fb2976]
+- Updated dependencies [186014d]
+- Updated dependencies [cb0988f]
+  - @vercel/build-utils@13.32.0
+
+## 5.8.19
+
+### Patch Changes
+
+- 2158ab6: [vc dev] Add support to `experimentalServicesV2` for bindings in `vc dev`
+- Updated dependencies [2158ab6]
+  - @vercel/build-utils@13.31.1
+
 ## 5.8.18
 
 ### Patch Changes

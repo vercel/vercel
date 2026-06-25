@@ -3,13 +3,16 @@ import fs from 'fs-extra';
 import path from 'path';
 import { parse } from 'dotenv';
 import env from '../../../../src/commands/env';
-import { getAcrValuesFromWWWAuthenticate } from '../../../../src/commands/env/pull';
+import pull, {
+  getAcrValuesFromWWWAuthenticate,
+} from '../../../../src/commands/env/pull';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { defaultProject, envs, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { performDeviceCodeFlow } from '../../../../src/commands/login/future';
+import { VERCEL_OIDC_TOKEN } from '../../../../src/util/env/constants';
 
 vi.mock('../../../../src/commands/login/future', async importOriginal => ({
   ...(await importOriginal<
@@ -113,6 +116,94 @@ describe('env pull', () => {
         value: 'TRUE',
       },
     ]);
+  });
+
+  it('writes only OIDC for link-origin pulls', async () => {
+    const project = {
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+    };
+    let pullCount = 0;
+
+    useUser();
+    useTeams('team_dummy');
+    client.scenario.get(
+      `/v3/env/pull/${project.id}/:target?/:gitBranch?`,
+      (_req, res) => {
+        pullCount += 1;
+        res.json({
+          env: {
+            SPECIAL_FLAG: 'remote-value',
+            [VERCEL_OIDC_TOKEN]: `fresh-token-${pullCount}`,
+          },
+        });
+      }
+    );
+    useProject(project);
+    const cwd = setupUnitFixture('vercel-env-pull');
+    client.cwd = cwd;
+
+    await expect(
+      pull(client, ['--yes'], 'vercel-cli:link', { oidcTokenOnly: true })
+    ).resolves.toEqual(0);
+
+    let contents = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+    expect(contents).toBe(
+      '# Created by Vercel CLI\nVERCEL_OIDC_TOKEN="fresh-token-1"\n'
+    );
+    expect(contents).not.toContain('SPECIAL_FLAG');
+
+    await expect(
+      pull(client, ['--yes'], 'vercel-cli:link', { oidcTokenOnly: true })
+    ).resolves.toEqual(0);
+
+    contents = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+    expect(contents).toBe(
+      '# Created by Vercel CLI\nVERCEL_OIDC_TOKEN="fresh-token-2"\n'
+    );
+    expect(contents.match(/^VERCEL_OIDC_TOKEN=/gm)).toHaveLength(1);
+  });
+
+  it('preserves every other entry while refreshing OIDC for link-origin pulls', async () => {
+    const project = {
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+    };
+
+    useUser();
+    useTeams('team_dummy');
+    client.scenario.get(
+      `/v3/env/pull/${project.id}/:target?/:gitBranch?`,
+      (_req, res) => {
+        res.json({
+          env: {
+            SPECIAL_FLAG: 'remote-value',
+            [VERCEL_OIDC_TOKEN]: 'fresh-token',
+          },
+        });
+      }
+    );
+    useProject(project);
+
+    const cwd = setupUnitFixture('vercel-env-pull');
+    await fs.writeFile(
+      path.join(cwd, '.env.local'),
+      'LOCAL_ONLY=value\nSPECIAL_FLAG=local-value\nexport VERCEL_OIDC_TOKEN=stale-token\nTAIL=keep',
+      'utf8'
+    );
+    client.cwd = cwd;
+
+    await expect(
+      pull(client, ['--yes'], 'vercel-cli:link', { oidcTokenOnly: true })
+    ).resolves.toEqual(0);
+
+    const contents = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+    expect(contents).toBe(
+      'LOCAL_ONLY=value\nSPECIAL_FLAG=local-value\nVERCEL_OIDC_TOKEN="fresh-token"\nTAIL=keep'
+    );
+    expect(contents).not.toContain('remote-value');
   });
 
   it('should retry after fresh authentication when sensitive env vars require a challenge', async () => {

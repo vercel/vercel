@@ -584,6 +584,20 @@ export async function getBuildMatches(
         mapToEntrypoint.set(src, originalSrc);
       }
     }
+    // The Node framework preset uses `package.json` as a stable build src,
+    // while @vercel/backends discovers the actual server entrypoint. A
+    // package.json is optional, so match a detected server file in dev while
+    // preserving the sentinel passed to the builder.
+    if (buildConfig.config?.framework === 'node' && !fileList.includes(src)) {
+      const originalSrc = src;
+      const existing = fileList.find(path =>
+        /^(?:src\/)?server\.[cm]?[jt]s$/.test(path)
+      );
+      if (existing) {
+        src = existing;
+        mapToEntrypoint.set(src, originalSrc);
+      }
+    }
     // The Go framework preset keeps `index.go` as the stable build src for
     // deployment routing. In dev, if that sentinel file is absent, match one
     // of the known standalone entrypoints but still pass `index.go` through

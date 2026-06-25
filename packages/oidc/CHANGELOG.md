@@ -1,5 +1,11 @@
 # @vercel/oidc
 
+## 3.7.0
+
+### Minor Changes
+
+- 415fde0: Add optional `audience` and `jti` parameters to exchange Vercel OIDC tokens for use with AWS STS and other providers.
+
 ## 3.6.2
 
 ### Patch Changes
