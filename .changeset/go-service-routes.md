@@ -1,5 +1,6 @@
 ---
 '@vercel/go': patch
+'vercel': patch
 ---
 
-Route requests for named V2 standalone Go services to their internal function.
+Write V2 runtime functions at their service-local index and route standalone Go service requests to it.

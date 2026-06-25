@@ -36,6 +36,7 @@ import {
   type ExperimentalService,
   type Service,
   isExperimentalService,
+  isExperimentalServiceV2,
   isExternalSymlink,
 } from '@vercel/build-utils';
 import { getInternalServiceFunctionPath } from '@vercel/fs-detectors';
@@ -491,7 +492,11 @@ async function writeBuildResultV3(args: {
   const ext = extname(src);
   const path =
     service && typeof service.runtime === 'string'
-      ? stripDuplicateSlashes(getInternalServiceFunctionPath(service.name))
+      ? stripDuplicateSlashes(
+          isExperimentalServiceV2(service)
+            ? 'index'
+            : getInternalServiceFunctionPath(service.name)
+        )
       : stripDuplicateSlashes(
           build.config?.zeroConfig
             ? src.substring(0, src.length - ext.length)

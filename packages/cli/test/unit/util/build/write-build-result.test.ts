@@ -1,8 +1,99 @@
 import { join } from 'path';
-import { glob, FileBlob, FileFsRef } from '@vercel/build-utils';
+import {
+  glob,
+  FileBlob,
+  FileFsRef,
+  getWriteableDirectory,
+  Lambda,
+} from '@vercel/build-utils';
 import { describe, expect, it } from 'vitest';
 import fs from 'fs-extra';
-import { filesWithoutFsRefs } from '../../../../src/util/build/write-build-result';
+import {
+  filesWithoutFsRefs,
+  writeBuildResult,
+} from '../../../../src/util/build/write-build-result';
+
+async function writeV3RuntimeService(
+  service: Record<string, unknown>,
+  nestServiceOutput: boolean
+) {
+  const repoRootPath = await getWriteableDirectory();
+  const outputDir = join(repoRootPath, '.vercel', 'output');
+  const build = { src: 'main.go', use: '@vercel/go' };
+
+  await writeBuildResult({
+    repoRootPath,
+    outputDir,
+    buildResult: {
+      output: new Lambda({
+        files: { bootstrap: new FileBlob({ data: 'binary' }) },
+        handler: 'bootstrap',
+        runtime: 'provided',
+        runtimeLanguage: 'go',
+      }),
+    },
+    build,
+    builder: { version: 3 } as any,
+    builderPkg: { name: '@vercel/go' } as any,
+    vercelConfig: null,
+    standalone: false,
+    workPath: repoRootPath,
+    service: service as any,
+    nestServiceOutput,
+    stripServiceRoutePrefix: false,
+  });
+
+  return outputDir;
+}
+
+describe('writeBuildResult()', () => {
+  it('writes a V2 runtime function at its service-local index', async () => {
+    const outputDir = await writeV3RuntimeService(
+      {
+        schema: 'experimentalServicesV2',
+        name: 'api-private',
+        root: '.',
+        runtime: 'go',
+        builder: { src: 'main.go', use: '@vercel/go' },
+      },
+      true
+    );
+
+    expect(
+      await fs.pathExists(
+        join(
+          outputDir,
+          'services/api-private/functions/index.func/.vc-config.json'
+        )
+      )
+    ).toBe(true);
+    expect(
+      await fs.pathExists(
+        join(outputDir, 'services/api-private/functions/_svc')
+      )
+    ).toBe(false);
+  });
+
+  it('preserves the shared internal namespace for V1 services', async () => {
+    const outputDir = await writeV3RuntimeService(
+      {
+        schema: 'experimentalServices',
+        name: 'legacy-api',
+        type: 'web',
+        workspace: '.',
+        runtime: 'go',
+        builder: { src: 'main.go', use: '@vercel/go' },
+      },
+      false
+    );
+
+    expect(
+      await fs.pathExists(
+        join(outputDir, 'functions/_svc/legacy-api/index.func/.vc-config.json')
+      )
+    ).toBe(true);
+  });
+});
 
 describe('filesWithoutFsRefs()', () => {
   it('should create `filePathMap` with normalized POSIX paths', async () => {
