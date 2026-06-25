@@ -51,6 +51,12 @@ function expectLinkRowsUseExpectedGlyphs(output: string, labels: string[]) {
   );
 }
 
+async function chooseCreateNewProject() {
+  await expect(client.stderr).toOutput('Create a new project');
+  client.events.keypress('down');
+  client.events.keypress('enter');
+}
+
 describe('link', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -849,7 +855,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput(playground.name);
       client.events.keypress('enter');
 
-      await expect(client.stderr).toOutput('Project?');
+      await expect(client.stderr).toOutput('Which project?');
       expect(lookupTeamId).toEqual(playground.id);
       client.events.keypress('escape');
 
@@ -874,9 +880,8 @@ describe('link', () => {
 
       await expect(client.stderr).toOutput('Which team?');
       client.events.keypress('enter');
-      await expect(client.stderr).toOutput('Link directory to project?');
-      client.stdin.write('n\n');
-      await expect(client.stderr).toOutput('Project?');
+      await expect(client.stderr).toOutput('Search all projects');
+      client.events.keypress('down');
       client.events.keypress('enter');
       await expect(client.stderr).toOutput('Which project?');
       client.events.keypress('escape');
@@ -931,12 +936,13 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Directory');
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
-    await expect(client.stderr).toOutput('Found existing project');
-    await expect(client.stderr).toOutput(
-      `Project         ${team.slug}/${project.name}`
+    await expect(client.stderr).toOutput('Which project?');
+    expect(client.stderr.getFullOutput()).toContain('Search all projects');
+    expect(client.stderr.getFullOutput()).toContain('Create a new project');
+    expect(client.stderr.getFullOutput()).toContain(
+      `${project.name} (folder name)`
     );
-    await expect(client.stderr).toOutput('Link directory to project?');
-    client.stdin.write('y\n');
+    client.stdin.write('\n');
 
     await expect(client.stderr).toOutput(
       `✓ Linked          ${team.slug}/${project.name}`
@@ -955,15 +961,13 @@ describe('link', () => {
       plainOutput.indexOf('Searching for existing projects')
     );
     expect(plainOutput.indexOf('Searching for existing projects')).toBeLessThan(
-      plainOutput.indexOf('Found existing project')
+      plainOutput.indexOf('Which project?')
     );
-    expect(plainOutput).toMatch(/Link directory to project\?.*\n\n✓ Linked\s+/);
     expect(plainOutput).not.toContain(
       'Pull development environment variables into .env.local?'
     );
     expectLinkRowsUseExpectedGlyphs(client.stderr.getFullOutput(), [
       'Directory',
-      'Project',
       'Linked',
     ]);
 
@@ -1019,8 +1023,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Project?');
-    client.stdin.write('\n');
+    await chooseCreateNewProject();
 
     await expect(client.stderr).toOutput('Name?');
     client.stdin.write('awesome-app\n');
@@ -1112,8 +1115,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Project?');
-    client.stdin.write('\n');
+    await chooseCreateNewProject();
 
     await expect(client.stderr).toOutput('Name?');
     client.stdin.write('multi-service-app\n');
@@ -1185,8 +1187,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Project?');
-    client.stdin.write('\n');
+    await chooseCreateNewProject();
 
     await expect(client.stderr).toOutput('Name?');
     client.stdin.write('declined-multi-service-app\n');
@@ -1245,8 +1246,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Project?');
-    client.stdin.write('\n');
+    await chooseCreateNewProject();
 
     await expect(client.stderr).toOutput('Name?');
     client.stdin.write('single-fastapi-app\n');
@@ -1324,8 +1324,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Project?');
-    client.stdin.write('\n');
+    await chooseCreateNewProject();
 
     await expect(client.stderr).toOutput('Name?');
     client.stdin.write('selected-directory-multi-service-app\n');
@@ -1411,8 +1410,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Project?');
-    client.stdin.write('\n');
+    await chooseCreateNewProject();
 
     await expect(client.stderr).toOutput('Name?');
     client.stdin.write('nested-multi-service-app\n');
@@ -1478,8 +1476,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Project?');
-    client.stdin.write('\n');
+    await chooseCreateNewProject();
 
     await expect(client.stderr).toOutput('Name?');
     client.stdin.write('invalid-selected-root-config-app\n');
@@ -1530,8 +1527,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Project?');
-    client.stdin.write('\n');
+    await chooseCreateNewProject();
 
     await expect(client.stderr).toOutput('Name?');
     client.stdin.write('services-with-builds\n');
@@ -1685,9 +1681,8 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Directory');
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
-      await expect(client.stderr).toOutput('Found existing project');
-      await expect(client.stderr).toOutput('Link directory to project?');
-      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Search all projects');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
         `✓ Linked          ${team.slug}/${project.name}`
@@ -1699,7 +1694,6 @@ describe('link', () => {
       expect(exitCode).toEqual(0);
       expectLinkRowsUseExpectedGlyphs(client.stderr.getFullOutput(), [
         'Directory',
-        'Project',
         'Linked',
       ]);
       expect(sawRepoProjectSelector).toBe(false);
@@ -2006,7 +2000,7 @@ describe('link', () => {
       expect(projectJson.projectName).toEqual(project.name);
     });
 
-    it('should select the team before confirming a matching project', async () => {
+    it('should select the team before choosing a folder-name match', async () => {
       useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
       const [team] = useTeams('team_dummy') as Team[];
@@ -2023,8 +2017,8 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Directory');
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
-      await expect(client.stderr).toOutput('Link directory to project?');
-      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Search all projects');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
         `✓ Linked          ${team.slug}/${project.name}`
@@ -2039,7 +2033,7 @@ describe('link', () => {
       expect(projectJson.projectName).toEqual(project.name);
     });
 
-    it('should keep the selected team when the detected project is declined', async () => {
+    it('should search all projects under the selected team', async () => {
       useUser({ version: 'northstar' });
       const cwd = setupTmpDir('searchable-project');
       const [team] = useTeams('team_dummy') as Team[];
@@ -2078,14 +2072,11 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
 
-      // Decline the matching project under the selected team.
-      await expect(client.stderr).toOutput('Link directory to project?');
-      client.stdin.write('n\n');
+      await expect(client.stderr).toOutput('Search all projects');
+      client.events.keypress('down');
+      client.events.keypress('enter');
 
-      await expect(client.stderr).toOutput('Project?');
-      client.stdin.write('\n');
-
-      await expect(client.stderr).toOutput('Which project?');
+      await expect(client.stderr).toOutput('❯ other-project');
       client.stdin.write(project.name);
       await expect(client.stderr).toOutput(`❯ ${project.name}`);
       client.stdin.write('\n');
@@ -2116,9 +2107,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
 
-      // inputProject runs auto-detect (skipAutoDetect=false), finds nothing
-      await expect(client.stderr).toOutput('Project?');
-      client.stdin.write('\n');
+      await chooseCreateNewProject();
 
       await expect(client.stderr).toOutput('Name?');
       client.stdin.write(`${basename(cwd)}\n`);
@@ -2574,9 +2563,10 @@ describe('link', () => {
 
       await expect(client.stderr).toOutput('Directory');
       await expect(client.stderr).toOutput('Which team?');
+      await expect(client.stderr).toOutput(limitedTeam.name);
       client.stdin.write('\n');
-      await expect(client.stderr).toOutput('Found existing project');
-      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Search all projects');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
         `✓ Linked          ${limitedTeam.slug}/${limitedProject.name}`
@@ -2588,16 +2578,12 @@ describe('link', () => {
       expect(plainOutput.indexOf('Which team?')).toBeLessThan(
         plainOutput.indexOf('Searching for existing projects')
       );
-      expect(plainOutput).toMatch(
-        /Link directory to project\?.*\n\n✓ Linked\s+/
-      );
 
       const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
       expect(projectJson.projectId).toEqual(limitedProject.id);
       expect(projectJson.orgId).toEqual(limitedTeam.id);
       expectLinkRowsUseExpectedGlyphs(client.stderr.getFullOutput(), [
         'Directory',
-        'Project',
         'Linked',
       ]);
     });
@@ -2731,8 +2717,8 @@ describe('link', () => {
         await expect(client.stderr).toOutput('Which team?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Link directory to project?');
-        client.stdin.write('y\n');
+        await expect(client.stderr).toOutput('Search all projects');
+        client.stdin.write('\n');
 
         await expect(client.stderr).toOutput('✓ Linked          ');
 
@@ -2781,8 +2767,8 @@ describe('link', () => {
         await expect(client.stderr).toOutput('Which team?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Link directory to project?');
-        client.stdin.write('y\n');
+        await expect(client.stderr).toOutput('Search all projects');
+        client.stdin.write('\n');
 
         await expect(client.stderr).toOutput('✓ Linked          ');
 

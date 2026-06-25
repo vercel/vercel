@@ -190,6 +190,8 @@ async function linkProject(client: Client) {
       nonInteractive: linkNonInteractive,
       searchAcrossTeams: !explicitScopeProvided && !teamFirstInteractive,
       searchableTeamPicker: teamFirstInteractive,
+      showProjectSuggestions:
+        teamFirstInteractive && !parsedArgs.flags['--project'],
       pullEnv: false,
     });
 

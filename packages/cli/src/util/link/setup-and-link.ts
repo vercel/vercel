@@ -77,6 +77,8 @@ export interface SetupAndLinkOptions {
   searchAcrossTeams?: boolean;
   /** When true, filter the interactive team picker by name or slug. */
   searchableTeamPicker?: boolean;
+  /** When true, show folder matches before search and project creation. */
+  showProjectSuggestions?: boolean;
   /**
    * When true with an explicit `projectName`, bail out instead of running
    * `setupAndLink`. Use for user-supplied `--project <NAME_OR_ID>` so typos
@@ -465,6 +467,7 @@ export default async function setupAndLink(
     v0,
     searchAcrossTeams = false,
     searchableTeamPicker = false,
+    showProjectSuggestions = false,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
   const { config } = client;
@@ -626,7 +629,8 @@ export default async function setupAndLink(
       org,
       projectName,
       autoConfirm,
-      skipAutoDetect
+      skipAutoDetect,
+      showProjectSuggestions
     );
   } catch (err) {
     if (

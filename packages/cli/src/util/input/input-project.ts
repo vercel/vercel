@@ -7,8 +7,11 @@ import type { Project, Org } from '@vercel-internals/types';
 import slugify from '@sindresorhus/slugify';
 import output from '../../output-manager';
 import { printAlignedLabel } from '../output/print-aligned-label';
+import { Separator } from '@inquirer/select';
 
 type ProjectDecision = 'create' | 'existing';
+const SEARCH_ALL_PROJECTS = 'search-all-projects' as const;
+const CREATE_NEW_PROJECT = 'create-new-project' as const;
 
 async function inputProjectDecision(
   client: Client,
@@ -37,7 +40,8 @@ export default async function inputProject(
   org: Org,
   detectedProjectName: string,
   autoConfirm = false,
-  skipAutoDetect = false
+  skipAutoDetect = false,
+  showProjectSuggestions = false
 ): Promise<Project | string> {
   const slugifiedName = slugify(detectedProjectName);
 
@@ -80,9 +84,46 @@ export default async function inputProject(
     throw err;
   }
 
-  let shouldLinkProject;
+  let shouldLinkProject: boolean;
+  let useDetectedNameAsDefault = false;
 
-  if (!detectedProject) {
+  if (showProjectSuggestions && !skipAutoDetect) {
+    const selected = await client.input.select<
+      Project | typeof SEARCH_ALL_PROJECTS | typeof CREATE_NEW_PROJECT
+    >({
+      message: 'Which project?',
+      choices: [
+        ...(detectedProject
+          ? [
+              {
+                name: `${detectedProject.name} ${chalk.gray('(folder name)')}`,
+                value: detectedProject,
+              },
+              new Separator(),
+            ]
+          : []),
+        {
+          name: 'Search all projects',
+          value: SEARCH_ALL_PROJECTS,
+          description: 'Browse or search every project in this team',
+        },
+        {
+          name: 'Create a new project',
+          value: CREATE_NEW_PROJECT,
+          description: `Create it under ${org.slug}`,
+        },
+      ],
+    });
+
+    if (selected === CREATE_NEW_PROJECT) {
+      shouldLinkProject = false;
+      useDetectedNameAsDefault = true;
+    } else if (selected !== SEARCH_ALL_PROJECTS) {
+      return selected;
+    } else {
+      shouldLinkProject = true;
+    }
+  } else if (!detectedProject) {
     const decision = await inputProjectDecision(
       client,
       skipAutoDetect ? 'existing' : 'create'
@@ -156,8 +197,9 @@ export default async function inputProject(
 
   // user wants to create a new project
   return await client.input.text({
-    message: `Name?`,
-    default: !detectedProject ? slugifiedName : undefined,
+    message: 'Name?',
+    default:
+      useDetectedNameAsDefault || !detectedProject ? slugifiedName : undefined,
     validate: async val => {
       if (!val) {
         return 'Project name cannot be empty';
