@@ -825,6 +825,68 @@ describe('link', () => {
     });
   });
 
+  describe('search and prompt cancellation', () => {
+    it('filters teams by name or slug and cancels with Escape', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      const playground = createTeam(
+        'team_playground',
+        'internal-playground',
+        'Internal Playground'
+      );
+      let lookupTeamId: string | undefined;
+      client.scenario.get('/:version/projects/:projectNameOrId', (req, res) => {
+        lookupTeamId = req.query.teamId as string | undefined;
+        res.status(404).send();
+      });
+
+      client.cwd = cwd;
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Which team?');
+      client.events.type('playground');
+      await expect(client.stderr).toOutput(playground.name);
+      client.events.keypress('enter');
+
+      await expect(client.stderr).toOutput('Project?');
+      expect(lookupTeamId).toEqual(playground.id);
+      client.events.keypress('escape');
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+      await expect(client.stderr).toOutput('Canceled.');
+      expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
+    });
+
+    it('cancels from the searchable project picker with Escape', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Which team?');
+      client.events.keypress('enter');
+      await expect(client.stderr).toOutput('Link directory to project?');
+      client.stdin.write('n\n');
+      await expect(client.stderr).toOutput('Project?');
+      client.events.keypress('enter');
+      await expect(client.stderr).toOutput('Which project?');
+      client.events.keypress('escape');
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+      await expect(client.stderr).toOutput('Canceled.');
+      expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
+    });
+  });
+
   describe('--confirm', () => {
     it('should track use of `--confirm` flag', async () => {
       useUser();
@@ -1979,13 +2041,33 @@ describe('link', () => {
 
     it('should keep the selected team when the detected project is declined', async () => {
       useUser({ version: 'northstar' });
-      const cwd = setupTmpDir();
+      const cwd = setupTmpDir('searchable-project');
       const [team] = useTeams('team_dummy') as Team[];
-      const { project } = useProject({
+      const project = {
         ...defaultProject,
         id: basename(cwd),
         name: basename(cwd),
+      };
+      let searchedProjectName: string | undefined;
+      let searchedTeamId: string | undefined;
+      const otherProject = {
+        ...defaultProject,
+        id: 'other-project',
+        name: 'other-project',
+      };
+      client.scenario.get('/v9/projects', (req, res) => {
+        if (typeof req.query.search === 'string') {
+          searchedProjectName = req.query.search;
+          searchedTeamId = req.query.teamId as string | undefined;
+          return res.json({ projects: [project], pagination: {} });
+        }
+
+        return res.json({
+          projects: [otherProject],
+          pagination: { count: 101, next: 1 },
+        });
       });
+      useProject(project);
       useUnknownProject();
 
       client.cwd = cwd;
@@ -2003,9 +2085,10 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Project?');
       client.stdin.write('\n');
 
-      // Mock pagination returns {}, so hasMoreProjects is true → text input
-      await expect(client.stderr).toOutput('Existing project name?');
-      client.stdin.write(`${basename(cwd)}\n`);
+      await expect(client.stderr).toOutput('Which project?');
+      client.stdin.write(project.name);
+      await expect(client.stderr).toOutput(`❯ ${project.name}`);
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
         `✓ Linked          ${team.slug}/${project.name}`
@@ -2013,6 +2096,11 @@ describe('link', () => {
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
+      expect(searchedProjectName).toEqual(project.name);
+      expect(searchedTeamId).toEqual(team.id);
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Existing project name?'
+      );
     });
 
     it('should select the team before creating when no project is found', async () => {

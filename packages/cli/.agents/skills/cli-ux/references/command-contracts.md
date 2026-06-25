@@ -30,6 +30,9 @@ Rules:
 - Before mutation, know whether linking existing project or creating a new one.
 - Running `vc link` is setup intent; do not ask a vague setup-intent prompt.
 - In direct interactive `vc link`, resolve the team before searching for or selecting a project. An explicit `--team`/`--scope` skips the team prompt and restricts project discovery to that team.
+- Direct interactive team selection supports case-insensitive substring search by team name or slug.
+- Existing-project selection supports case-insensitive substring search. For teams with more than 100 projects, query `/v9/projects?search=<term>&limit=20` within the selected team and cancel stale requests as the query changes.
+- Escape cancels any active direct `vc link` prompt, exits successfully, and prints `Canceled.` without continuing to later prompts or mutations.
 - Do not ask `Link to existing project?` when no concrete project is shown. Ask `Project?` with `Create new project` and `Link existing project` choices instead.
 - Do not create a project from a user-supplied `--project` value that was not found.
 - Folder-name matches across teams are lower confidence than repo-root or explicit matches.
@@ -64,10 +67,10 @@ Link prompt map:
 
 | State                              | Human prompt/output                                                                                                                | Non-interactive                        |
 | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Multiple teams                     | `Which team?` before project discovery                                                                                             | `action_required: missing_team`        |
+| Multiple teams                     | searchable `Which team?` before project discovery                                                                                  | `action_required: missing_team`        |
 | One existing project match         | `Directory`, `Found existing project`, aligned `Project`, then `Link directory to project?`                                        | link only for explicit/repo-root match |
 | One repository project match       | `Directory`, optional search-status rows, `Found existing project`, aligned `Project`/`Source`, then `Link repository to project?` | link only for explicit/repo-root match |
-| Multiple project matches           | aligned `Projects` summary, then `Project?`                                                                                        | `action_required: ambiguous_project`   |
+| Multiple project matches           | aligned `Projects` summary, then searchable `Project?`                                                                             | `action_required: ambiguous_project`   |
 | No without-SSO match, SSO required | `Searched {count} teams available without SSO`, `No matching projects found`, then `Select teams that require SSO`                 | skip unless explicitly requested       |
 | No project match                   | `Project?` with `Create new project` / `Link existing project`, then `Name?` when creating                                         | require `--yes` or `project_not_found` |
 | Root choices exist                 | `Code directory?`                                                                                                                  | require root flag/config/payload       |
@@ -80,6 +83,9 @@ Link acceptance matrix:
 - already linked no-op / relink behavior
 - stale/deleted project link
 - one team and many teams, with team selection before project discovery
+- team search by name and slug
+- local and API-backed existing-project search within the selected team
+- Escape cancellation from team, project, and setup prompts without mutation
 - explicit `--team`
 - explicit valid and missing `--project`
 - repo-root and folder-name matches

@@ -36,7 +36,8 @@ function getScopeOrTeamFromArgv(argv: string[]): string | null {
 export default async function selectOrg(
   client: Client,
   question: string,
-  autoConfirm?: boolean
+  autoConfirm?: boolean,
+  searchable = false
 ): Promise<Org> {
   const {
     config: { currentTeam },
@@ -152,9 +153,33 @@ export default async function selectOrg(
     return choices[defaultChoiceIndex].value;
   }
 
-  return await client.input.select({
+  if (!searchable) {
+    return await client.input.select({
+      message: question,
+      choices,
+      default: choices[defaultChoiceIndex].value,
+    });
+  }
+
+  const defaultChoice = choices[defaultChoiceIndex];
+  const initialChoices = defaultChoice
+    ? [defaultChoice, ...choices.filter(choice => choice !== defaultChoice)]
+    : choices;
+
+  return await client.input.search<Org>({
     message: question,
-    choices,
-    default: choices[defaultChoiceIndex].value,
+    pageSize: 15,
+    source: term => {
+      const searchTerm = term?.trim().toLowerCase();
+      if (!searchTerm) {
+        return initialChoices;
+      }
+
+      return choices.filter(
+        choice =>
+          choice.name.toLowerCase().includes(searchTerm) ||
+          choice.value.slug.toLowerCase().includes(searchTerm)
+      );
+    },
   });
 }

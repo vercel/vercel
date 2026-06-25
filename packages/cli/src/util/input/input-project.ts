@@ -1,4 +1,5 @@
 import type Client from '../client';
+import type { FetchOptions } from '../client';
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import chalk from 'chalk';
 import { ProjectNotFound } from '../../util/errors-ts';
@@ -106,43 +107,50 @@ export default async function inputProject(
       pagination: { count: number; next: number | null };
     }>(`/v9/projects?limit=100`, { accountId: org.id });
     const projects = firstPage.projects;
-    const hasMoreProjects = firstPage.pagination.next !== null;
+    const hasMoreProjects = firstPage.pagination.next != null;
 
     if (projects.length === 0) {
       output.log(
         `No existing projects found under ${chalk.bold(org.slug)}. Creating new project.`
       );
-    } else if (hasMoreProjects) {
-      let toLink: Project;
-      await client.input.text({
-        message: 'Existing project name?',
-        validate: async val => {
-          if (!val) {
-            return 'Project name cannot be empty';
+    } else {
+      return await client.input.search<Project>({
+        message: 'Which project?',
+        pageSize: 15,
+        source: async (term, { signal }) => {
+          const searchTerm = term?.trim();
+          let matchingProjects = projects;
+
+          if (searchTerm) {
+            if (hasMoreProjects) {
+              matchingProjects = (
+                await client.fetch<{ projects: Project[] }>(
+                  `/v9/projects?search=${encodeURIComponent(searchTerm)}&limit=20`,
+                  {
+                    accountId: org.id,
+                    signal: signal as FetchOptions['signal'],
+                  }
+                )
+              ).projects;
+            } else {
+              const normalizedSearchTerm = searchTerm.toLowerCase();
+              matchingProjects = projects.filter(
+                project =>
+                  project.name.toLowerCase().includes(normalizedSearchTerm) ||
+                  project.id === searchTerm
+              );
+            }
           }
-          const project = await getProjectByIdOrName(client, val, org.id);
-          if (project instanceof ProjectNotFound) {
-            return 'Project not found';
-          }
-          toLink = project;
-          return true;
+
+          return matchingProjects
+            .slice()
+            .sort((a, b) => b.updatedAt - a.updatedAt)
+            .map(project => ({
+              name: project.name,
+              value: project,
+            }));
         },
       });
-      return toLink!;
-    } else {
-      const choices = projects
-        .sort((a, b) => b.updatedAt - a.updatedAt)
-        .map(project => ({
-          name: project.name,
-          value: project,
-        }));
-
-      const toLink = await client.input.select<Project>({
-        message: 'Which project?',
-        choices,
-      });
-
-      return toLink;
     }
   }
 
