@@ -120,10 +120,14 @@ function toProjectServicesConfigPatch(
       ...(svc.entrypoint ? { entrypoint: svc.entrypoint } : {}),
     };
   }
-  // Top-level rewrites route public traffic into services by mountPath.
+  // Top-level rewrites route public traffic into web services by mountPath.
+  // Non-web services (workers, crons) don't get public HTTP rewrites.
   // Ordered longest-first so specific paths match before catch-all.
   const rewrites: Rewrite[] = Object.entries(config)
-    .filter(([, svc]) => typeof svc.mountPath === 'string')
+    .filter(
+      ([, svc]) =>
+        typeof svc.mountPath === 'string' && (!svc.type || svc.type === 'web')
+    )
     .sort(([, a], [, b]) => b.mountPath!.length - a.mountPath!.length)
     .map(([name, svc]) => {
       const mountPath = svc.mountPath!;

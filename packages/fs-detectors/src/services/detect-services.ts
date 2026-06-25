@@ -434,8 +434,13 @@ async function tryResolveInferred(
 export function generateServiceRewrites(
   services: InferredServicesConfig
 ): Rewrite[] {
+  // Only web services get public HTTP rewrites. Non-web services (workers,
+  // crons) are not publicly routable.
   const entries = Object.entries(services)
-    .filter(([, svc]) => typeof svc.mountPath === 'string')
+    .filter(
+      ([, svc]) =>
+        typeof svc.mountPath === 'string' && (!svc.type || svc.type === 'web')
+    )
     .sort(([, a], [, b]) => b.mountPath!.length - a.mountPath!.length);
 
   return entries.map(([name, svc]) => {
