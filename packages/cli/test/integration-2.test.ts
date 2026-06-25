@@ -54,6 +54,31 @@ async function findFilesNamed(
   return nestedFiles.flat();
 }
 
+async function waitForTeamPrompt(process: CLIProcess) {
+  let sawDirectory = false;
+
+  // Keep one listener active because both prompts may arrive in the same chunk.
+  await waitForPrompt(process, chunk => {
+    sawDirectory ||= chunk.includes('Directory');
+    return sawDirectory && /Which team[^?]*\?/.test(chunk);
+  });
+}
+
+async function selectProjectCreation(process: CLIProcess) {
+  let usesTeamFirstPicker = false;
+
+  // `vc link` puts creation after search; deploy and dev keep creation first.
+  await waitForPrompt(process, chunk => {
+    usesTeamFirstPicker = chunk.includes('Which project?');
+    return usesTeamFirstPicker || chunk.includes('Project?');
+  });
+
+  if (usesTeamFirstPicker) {
+    process.stdin?.write('\x1b[B');
+  }
+  process.stdin?.write('\n');
+}
+
 async function setupProject(
   process: CLIProcess,
   projectName: string,
@@ -70,12 +95,10 @@ async function setupProject(
     vercelAuth: 'standard',
   }
 ) {
-  await waitForPrompt(process, 'Directory');
-  await waitForPrompt(process, /Which team[^?]*\?/);
+  await waitForTeamPrompt(process);
   process.stdin?.write('\n');
 
-  await waitForPrompt(process, 'Project?');
-  process.stdin?.write('\n');
+  await selectProjectCreation(process);
 
   await waitForPrompt(process, 'Name?');
   process.stdin?.write(`${projectName}\n`);
@@ -995,8 +1018,7 @@ test('[vc link] should detect frameworks in project rootDirectory', async () => 
     },
   });
 
-  await waitForPrompt(vc, 'Directory');
-  await waitForPrompt(vc, 'Which team?');
+  await waitForTeamPrompt(vc);
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'Project?');
@@ -1106,12 +1128,10 @@ test('[vc link] should show project prompts but not framework when `builds` defi
     },
   });
 
-  await waitForPrompt(vc, 'Directory');
-  await waitForPrompt(vc, 'Which team?');
+  await waitForTeamPrompt(vc);
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Project?');
-  vc.stdin?.write('\n');
+  await selectProjectCreation(vc);
 
   await waitForPrompt(vc, 'Name?');
   vc.stdin?.write(`${projectName}\n`);
