@@ -1,5 +1,14 @@
 # vercel
 
+## 54.17.1
+
+### Patch Changes
+
+- 2f85145: Expose ordering controls, returned ordering metadata, and a `--prod` shortcut for metrics queries, and update Speed Insights metric examples.
+- aeb8bf1: `vc build` now writes `experimentalServicesV2` services into the Build Output API `config.json` `services` array (previously only `experimentalServices` were included), so V2 services are recorded on the deployment.
+- Updated dependencies [d538795]
+  - @vercel/next@4.20.1
+
 ## 54.17.0
 
 ### Minor Changes
