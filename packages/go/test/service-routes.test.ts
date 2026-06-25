@@ -1,10 +1,10 @@
 import { getStandaloneServerRoutes } from '../src/standalone-server';
 
 describe('V2 service routes', () => {
-  it('routes a named V2 service to its service-local function', () => {
+  it('routes a named V2 service to its internal function', () => {
     expect(getStandaloneServerRoutes({ name: 'my-backend' })).toEqual([
       { handle: 'filesystem' },
-      { src: '/(.*)', dest: '/index' },
+      { src: '/(.*)', dest: '/_svc/my-backend/index' },
     ]);
   });
 
