@@ -98,6 +98,9 @@ importers:
       vitest:
         specifier: 2.0.3
         version: 2.0.3(@edge-runtime/vm@3.2.0)(@types/node@20.11.0)(terser@5.48.0)
+      ws:
+        specifier: 8.18.0
+        version: 8.18.0
 
   api:
     dependencies:
@@ -2106,9 +2109,6 @@ importers:
       '@types/which':
         specifier: 3.0.0
         version: 3.0.0
-      '@types/ws':
-        specifier: 8.5.12
-        version: 8.5.12
       '@vercel/build-utils':
         specifier: workspace:*
         version: link:../build-utils
@@ -2154,9 +2154,6 @@ importers:
       which:
         specifier: 3.0.0
         version: 3.0.0
-      ws:
-        specifier: 8.18.0
-        version: 8.18.0
 
   packages/python-analysis:
     dependencies:
@@ -6423,9 +6420,6 @@ packages:
 
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
-
-  '@types/ws@8.5.12':
-    resolution: {integrity: sha512-3tPRkv1EtkDpzlgyKyI8pGsGZAGPEaXeu0DOj5DI25Ja91bdAYddYHbADRYVrZMRbfW+1l5YwXVDKohDJNQxkQ==}
 
   '@types/yargs-parser@21.0.3':
     resolution: {integrity: sha512-I4q9QU9MQv4oEOz4tAHJtNz1cwuLxn2F3xcc2iV5WdqLPpUnj30aUuxt1mAxYTG+oe8CZMV/+6rU4S4gRDzqtQ==}
@@ -16482,10 +16476,6 @@ snapshots:
   '@types/write-json-file@2.2.1': {}
 
   '@types/ws@8.18.1':
-    dependencies:
-      '@types/node': 20.11.0
-
-  '@types/ws@8.5.12':
     dependencies:
       '@types/node': 20.11.0
 

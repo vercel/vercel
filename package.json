@@ -34,7 +34,8 @@
     "turbo": "2.5.0",
     "typescript": "5.9.3",
     "vite": "5.1.8",
-    "vitest": "2.0.3"
+    "vitest": "2.0.3",
+    "ws": "8.18.0"
   },
   "scripts": {
     "build": "node utils/gen.js && turbo --no-update-notifier run build",

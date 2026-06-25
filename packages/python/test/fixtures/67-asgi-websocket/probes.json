@@ -2,7 +2,7 @@
   "probes": [
     {
       "path": "/",
-      "mustContain": "flask-websocket ok"
+      "mustContain": "asgi-websocket ok"
     },
     {
       "websocket": {
