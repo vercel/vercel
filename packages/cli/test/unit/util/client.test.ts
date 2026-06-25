@@ -147,6 +147,16 @@ describe('Client', () => {
       await client.fetch('/v2/user');
     });
 
+    it('sends CLI tracing headers with every request', async () => {
+      client.scenario.get('/v2/user', (req, res) => {
+        expect(req.headers['x-vercel-cli-session-id']).toHaveLength(36);
+        expect(req.headers['x-vercel-cli-invocation-id']).toHaveLength(36);
+        res.json({ user: { uid: 'abc' } });
+      });
+
+      await client.fetch('/v2/user');
+    });
+
     it('should treat 3xx as errors when redirect is not manual', async () => {
       // When redirect is not set to 'manual', node-fetch follows the
       // redirect by default. If the redirect target doesn't exist, the

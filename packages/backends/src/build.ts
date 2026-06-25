@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { type Files, glob, type BuildOptions } from '@vercel/build-utils';
 import { findEntrypoint } from './find-entrypoint.js';
 import {
@@ -36,10 +36,15 @@ export const maybeDoBuildCommand = async (
   if (buildCommandResult && outputSetting) {
     if (outputSetting) {
       const _outputDir = join(args.workPath, outputSetting);
-      const _entrypoint = await findEntrypointInOutputDir(_outputDir);
-      if (_entrypoint) {
-        outputDir = _outputDir;
-        entrypoint = _entrypoint;
+      // Skip when `outputDirectory` is the project root itself (e.g. `.`):
+      // globbing it would sweep in `node_modules` and break tracing. Fall back
+      // to the rolldown bundle instead.
+      if (resolve(_outputDir) !== resolve(args.workPath)) {
+        const _entrypoint = await findEntrypointInOutputDir(_outputDir);
+        if (_entrypoint) {
+          outputDir = _outputDir;
+          entrypoint = _entrypoint;
+        }
       }
     } else {
       const commonOutputDirectories = ['dist', 'build', 'output'];

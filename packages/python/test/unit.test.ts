@@ -1369,6 +1369,45 @@ describe('fastapi entrypoint discovery - positive cases', () => {
     fs.removeSync(workPath);
   });
 
+  it('applies functions config to the resolved FastAPI entrypoint', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-fastapi-functions-config-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'app/main.py': new FileBlob({
+        data: 'from fastapi import FastAPI\napp = FastAPI()\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, workPath);
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: '<detect>',
+      meta: { isDev: true },
+      config: {
+        framework: 'fastapi',
+        functions: {
+          'app/main.py': {
+            memory: 512,
+            maxDuration: 30,
+          },
+        },
+      },
+      repoRootPath: workPath,
+    });
+
+    const lambda = getBuildOutputV2Lambda(result) as any;
+    expect(lambda.memory).toBe(512);
+    expect(lambda.maxDuration).toBe(30);
+
+    fs.removeSync(workPath);
+  });
+
   it('discovers src/index.py containing FastAPI', async () => {
     const workPath = path.join(
       tmpdir(),
@@ -2712,7 +2751,7 @@ describe('dynamic cron detection', () => {
   });
 });
 
-describe('non-web services should not generate catch-all routes', () => {
+describe('non-web V1 services should not generate catch-all routes', () => {
   let mockWorkPath: string;
 
   beforeEach(() => {
@@ -2799,14 +2838,30 @@ describe('non-web services should not generate catch-all routes', () => {
     expect(v2result.output['_svc/my-worker/index']).toBeDefined();
     expect(v2result.routes).toBeUndefined();
   });
+});
 
-  it('web service returns V2 with no routes', async () => {
+describe('V2 services should generate catch-all routes', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-service-routes-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('V2 service returns catch-all routes', async () => {
     const files = {
       'main.py': new FileBlob({
         data: 'from fastapi import FastAPI; app = FastAPI()',
       }),
       'pyproject.toml': new FileBlob({
-        data: '[project]\nname = "my-api"\nversion = "0.0.1"\ndependencies = ["fastapi"]\n',
+        data: '[project]\nname = "my-backend"\nversion = "0.0.1"\ndependencies = ["fastapi"]\n',
       }),
     } as Record<string, FileBlob>;
     await download(files, mockWorkPath);
@@ -2818,12 +2873,15 @@ describe('non-web services should not generate catch-all routes', () => {
       meta: { isDev: false },
       config: { framework: 'fastapi' },
       repoRootPath: mockWorkPath,
-      service: { type: 'web', name: 'my-api' },
+      service: { name: 'my-backend' },
     });
 
     const v2result = getBuildOutputV2(result);
-    expect(v2result.output['_svc/my-api/index']).toBeDefined();
-    expect(v2result.routes).toBeUndefined();
+    expect(v2result.output['_svc/my-backend/index']).toBeDefined();
+    expect(v2result.routes).toEqual([
+      { handle: 'filesystem' },
+      { src: '/(.*)', dest: '/_svc/my-backend/index' },
+    ]);
   });
 });
 

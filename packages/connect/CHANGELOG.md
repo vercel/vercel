@@ -1,5 +1,24 @@
 # @vercel/connect
 
+## 0.2.9
+
+### Patch Changes
+
+- dd77402: Bump the optional `eve` peer dependency for `@vercel/connect/eve` to the next eve patch release that accepts the `auth.evict` hook emitted by Vercel Connect helpers.
+
+## 0.2.8
+
+### Patch Changes
+
+- 64e3219: Allow local Connect authorization callbacks to use `http://*.localhost` URLs.
+
+## 0.2.7
+
+### Patch Changes
+
+- Updated dependencies [415fde0]
+  - @vercel/oidc@3.7.0
+
 ## 0.2.6
 
 ### Patch Changes

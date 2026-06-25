@@ -156,7 +156,7 @@ describe('Test `detectBuilders`', () => {
     );
   });
 
-  it('should use services builders when experimentalServicesV2 is configured without the services framework', async () => {
+  it('should use services builders when services is configured without the services framework', async () => {
     const workPath = join(
       __dirname,
       'fixtures',
@@ -165,7 +165,7 @@ describe('Test `detectBuilders`', () => {
     );
     const { builders, services, errors, useImplicitEnvInjection } =
       await detectBuilders([], undefined, {
-        experimentalServicesV2: {
+        services: {
           web: {
             root: '.',
             runtime: 'python',
@@ -785,6 +785,34 @@ describe('Test `detectBuilders`', () => {
             maxDuration: 10,
           },
         },
+      },
+    });
+  });
+
+  it('passes entrypoint functions config through to Python framework builders', async () => {
+    const functions = {
+      'app/main.py': {
+        memory: 512,
+        maxDuration: 30,
+      },
+    };
+
+    const { builders } = await invokeDetectBuildersAndThrow(
+      ['pyproject.toml', 'app/main.py'],
+      null,
+      {
+        functions,
+        projectSettings: { framework: 'fastapi' },
+      }
+    );
+
+    expect(builders).toContainEqual({
+      src: '<detect>',
+      use: '@vercel/python',
+      config: {
+        zeroConfig: true,
+        framework: 'fastapi',
+        functions,
       },
     });
   });

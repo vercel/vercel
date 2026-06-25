@@ -1,7 +1,7 @@
 {
   "build": {
     "env": {
-      "VERCEL_PYTHON_ON_HIVE": "1",
+      "VERCEL_SUPPORT_LARGE_FUNCTIONS": "1",
       "VERCEL_PYTHON_COMPILEALL": "1"
     }
   }

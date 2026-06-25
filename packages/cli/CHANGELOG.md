@@ -1,5 +1,267 @@
 # vercel
 
+## 54.17.3
+
+### Patch Changes
+
+- f76b357: Improve `vercel domains add`: skip project/deployment configuration guidance when no project is provided, return a specific error explaining only apex domains can be added without a project, treat a domain already assigned to the requested project as a success instead of failing with an "assigned to another project" error, and point users to `vercel domains verify <domain>` for DNS configuration instead of printing hardcoded DNS records.
+- Updated dependencies [4b90a10]
+- Updated dependencies [34b2c4c]
+  - @vercel/go@3.10.1
+  - @vercel/python@6.47.2
+  - @vercel/static-build@2.11.3
+
+## 54.17.2
+
+### Patch Changes
+
+- 6eb572e: Add `vercel edge-config backups` for listing, inspecting, and restoring Edge Config backups.
+
+  Examples:
+
+  - `vercel edge-config backups my-store`
+  - `vercel edge-config backups my-store --backup-version <backup-version-id> --format json`
+  - `vercel edge-config backups my-store --restore <backup-version-id> --yes`
+
+- 7cecf55: Make hand-written service-targeted route/rewrite `destination` config less repetitive and verbose by making the `type` discriminator optional.
+
+  ```diff
+   {
+     "rewrites": [{
+  -    "type": "service",
+       "service": "my_backend",
+       "path": "/api/$1"
+     }]
+   }
+  ```
+
+  The explicit `{ "type": "service", "service": NAME }` format continues to
+  validate. Normalized route output continues to include `"type": "service"`, so
+  machine-facing config remains canonical.
+
+- 5d37c78: Handle deployments containing very large files without crashing. Files larger than Node's `fs.readFile` limit (~2 GiB) are now hashed and uploaded by streaming instead of being read into a single Buffer (which threw `ERR_FS_FILE_TOO_LARGE` — "File size ... is greater than 2 GiB"), and the CLI upload progress no longer assumes every file is held in memory. When a file still exceeds the server's per-request upload limit (HTTP 413), the CLI now suggests `--archive=tgz`, which uploads the deployment in smaller chunks.
+  - @vercel/build-utils@13.32.1
+  - @vercel/next@4.20.1
+  - @vercel/redwood@2.5.0
+  - @vercel/rust@1.3.0
+  - @vercel/static-build@2.11.3
+
+## 54.17.1
+
+### Patch Changes
+
+- 2f85145: Expose ordering controls, returned ordering metadata, and a `--prod` shortcut for metrics queries, and update Speed Insights metric examples.
+- aeb8bf1: `vc build` now writes `experimentalServicesV2` services into the Build Output API `config.json` `services` array (previously only `experimentalServices` were included), so V2 services are recorded on the deployment.
+- Updated dependencies [d538795]
+  - @vercel/next@4.20.1
+
+## 54.17.0
+
+### Minor Changes
+
+- 222d43b: Fix websocket upgrade events for services V2.
+
+### Patch Changes
+
+- 96e9513: Add `vercel deploy --dry` to inspect the detected framework preset and local deployment file set without uploading or creating a deployment, with complete JSON output for non-TTY consumers.
+- 801b8e2: [vc dev] Remove the trailing slash from service binding URL env vars injected by `vercel dev`.
+- 82bda7d: Fix the deploy size-limit warning so it prints the skipped file and plan upgrade link instead of crashing.
+- 3f0488d: Surface the `action`/`link` (and newer `ctaLabel`/`ctaUrl`) fields on `repo_links_exceeded_limit` errors from `vercel git connect` instead of dropping them, so users hitting the projects-per-repository limit see the relevant next step and URL.
+- 8dc4702: Fix `vercel dev` for standalone Node servers, including projects without a `package.json`, and reuse the server process between requests.
+- Updated dependencies [09743c6]
+- Updated dependencies [03fbb1c]
+- Updated dependencies [8dc4702]
+  - @vercel/container@0.0.2
+  - @vercel/backends@0.8.18
+  - @vercel/build-utils@13.32.1
+  - @vercel/static-build@2.11.3
+  - @vercel/elysia@0.1.97
+  - @vercel/express@0.1.109
+  - @vercel/fastify@0.1.100
+  - @vercel/go@3.10.0
+  - @vercel/h3@0.1.106
+  - @vercel/hono@0.2.100
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.80
+  - @vercel/nestjs@0.2.101
+  - @vercel/next@4.20.0
+  - @vercel/node@5.8.21
+  - @vercel/python@6.47.1
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.3.0
+
+## 54.16.0
+
+### Minor Changes
+
+- 9fb2976: Add `services` as the canonical multi-service project configuration and keep `experimentalServicesV2` as a deprecated backwards-compatible alias.
+- 260b0be: Support the VQS idempotency key header in the local development server.
+
+### Patch Changes
+
+- 6a43bf2: Adding 2 additional headers to Vercel API calls
+- 186014d: Fix `vc dev` erroring with "Project framework is set to 'services', but no
+  services are declared" for `experimentalServicesV2` (`services`) projects. When
+  the dev server already has resolved services, it now skips zero-config builder
+  detection and lets the services orchestrator build and run them. Previously
+  `detectBuilders` ran with the remote `framework: "services"` setting but no
+  service config threaded in, which failed even though detection had succeeded.
+- 186014d: Add an experimental container service runtime. A service with
+  `runtime: "container"` either builds its `Dockerfile`/`Containerfile` and pushes
+  the resulting OCI image to the Vercel Container Registry (VCR), or passes a
+  prebuilt image reference through as build output.
+
+  - **`@vercel/container`** (new builder): authenticates to VCR with the project's
+    `VERCEL_OIDC_TOKEN`, ensures the repository exists, builds and pushes the
+    image, and emits a digest-pinned reference in `handler` (container functions
+    are `type: "Lambda"` with `runtime: "container"`; the platform surfaces
+    `handler` as the image downstream). Uses `docker` on developer machines and
+    `buildah` (daemonless) in the Vercel build container behind a shared
+    `ContainerEngine` interface. Supports `vc dev` via `startDevServer` (local
+    build/run, env parity, log forwarding) and `prepareCache` for buildah layer
+    reuse between builds. Build flow is instrumented with tracing spans
+    (non-secret diagnostics) and debug logging gated on `BUILDER_DEBUG`.
+  - **`@vercel/build-utils`**: add the `ContainerImage` build-output type.
+  - **`@vercel/fs-detectors`**: resolve container services from `vercel.json`
+    (the `services` config and its deprecated `experimentalServices` /
+    `experimentalServicesV2` aliases). A `Dockerfile`, `Containerfile`, or
+    `*.dockerfile` entrypoint triggers a build; any other entrypoint is treated as
+    a prebuilt OCI image reference.
+  - **`vercel`**: wire container output into `vercel build` result writing and
+    config validation.
+
+  Buildah specifics in the build container: host networking for `RUN` steps,
+  native `overlay` storage on the XFS `/vercel` volume (deferring to the image's
+  `storage.conf`), zstd push compression, and registry credentials read from the
+  provisioned auth file when present. Several knobs are available for debugging:
+  `VERCEL_CONTAINER_ENGINE`, `VERCEL_VCR_STRICT_STORAGE`,
+  `VERCEL_VCR_DISABLE_LAYER_CACHE`, and `VERCEL_VCR_FORCE_LOGIN`.
+
+- 007af8f: Deduplicate the team billing settings URL into a shared `getTeamBillingUrl` helper.
+- edb7256: [vc dev] Apply route `transforms` under `vercel dev`.
+- 1c5d3b3: Fixed scope resolution for Northstar accounts whose username collides with the slug of their default team.
+
+  - Commands now scope API requests to the Northstar default team on every invocation, not just at login. Previously the default team was resolved for display (`vc whoami` showing "Active team: my-user") while requests were sent with no `teamId`, silently scoping to the resource-less personal account. This caused commands like `vc projects ls` to report "No projects found" even though the team has projects.
+  - `--scope <name>` now resolves against the user's teams before falling back to personal-account handling. A team whose slug matches the user's username (e.g. a Northstar default team) can now be selected by name instead of being rejected with "You cannot set your Personal Account as the scope."
+
+- ded2d92: Refresh `VERCEL_OIDC_TOKEN` after `vercel link` without overwriting other
+  variables or formatting in an existing `.env.local` file.
+- Updated dependencies [fdb6121]
+- Updated dependencies [9fb2976]
+- Updated dependencies [186014d]
+- Updated dependencies [186014d]
+- Updated dependencies [186014d]
+- Updated dependencies [e6759d0]
+- Updated dependencies [68ed45c]
+- Updated dependencies [cb0988f]
+  - @vercel/backends@0.8.17
+  - @vercel/build-utils@13.32.0
+  - @vercel/container@0.0.1
+  - @vercel/go@3.10.0
+  - @vercel/next@4.20.0
+  - @vercel/elysia@0.1.96
+  - @vercel/express@0.1.108
+  - @vercel/fastify@0.1.99
+  - @vercel/h3@0.1.105
+  - @vercel/hono@0.2.99
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.79
+  - @vercel/nestjs@0.2.100
+  - @vercel/node@5.8.20
+  - @vercel/python@6.47.1
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.3.0
+  - @vercel/static-build@2.11.2
+
+## 54.15.1
+
+### Patch Changes
+
+- b14be80: `vercel inspect` now supports Vercel dashboard URLs and deployment IDs without prefixes.
+- 2158ab6: [vc dev] Add support to `experimentalServicesV2` for bindings in `vc dev`
+- Updated dependencies [2158ab6]
+  - @vercel/build-utils@13.31.1
+  - @vercel/node@5.8.19
+  - @vercel/go@3.9.2
+  - @vercel/ruby@2.5.1
+  - @vercel/backends@0.8.16
+  - @vercel/elysia@0.1.95
+  - @vercel/express@0.1.107
+  - @vercel/fastify@0.1.98
+  - @vercel/h3@0.1.104
+  - @vercel/hono@0.2.98
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.78
+  - @vercel/nestjs@0.2.99
+  - @vercel/next@4.19.1
+  - @vercel/python@6.47.1
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/rust@1.3.0
+  - @vercel/static-build@2.11.1
+
+## 54.15.0
+
+### Minor Changes
+
+- 8dec9ea: Add deploy-manifest as an extension of project manifest.
+- d99dbf8: Add `vercel domains verify <domain>` for DNS misconfiguration feedback. The command checks the domain's DNS configuration, reports dashboard-aligned configuration and project-verification states, triggers a verification re-check when needed, and lists actionable fixes: recommended A/CNAME records, Vercel nameservers, conflicting records, DNSSEC guidance, and the TXT ownership challenge. Domains eligible for automatic configuration also receive a Domain Connect URL, with manual DNS guidance as a fallback. Supports `--project`, `--strict`, and `--format json`; non-interactive runs emit structured status, simultaneous issue details, automatic-configuration metadata, and shell-safe, context-preserving next commands. Human and structured output share one diagnosis so status, remediation, and exit behavior stay consistent. The command exits non-zero when action is required so scripts and agents can gate on it.
+- a5245fd: Add `vercel flags segments` commands for listing, inspecting, creating, updating, and deleting feature flag segments.
+
+  Examples:
+
+  ```bash
+  vercel flags segments ls
+  vercel flags segments inspect beta-users --json
+  vercel flags segments create beta-users --label "Beta users" --add include:user.id=user_123 --add include:user.id=user_456
+  vercel flags segments create enterprise-users --label "Enterprise users" --add rule:user.plan:eq:enterprise
+  vercel flags segments update beta-users --add include:user.id=user_789 --remove include:user.id=user_123
+  vercel flags segments update enterprise-users --add rule:user.email:ends-with:@company.com --remove rule:user.plan:eq:pro
+  vercel flags segments update enterprise-users --data '{"rules":[],"include":{"user":{"email":[{"value":"me@company.com"}]}},"exclude":{}}'
+  vercel flags segments rm beta-users --yes
+  ```
+
+### Patch Changes
+
+- 970b82b: Fix Windows standalone binary builds with the custom Node.js 24 small-ICU runtime and a compatible Windows toolchain.
+- c4afec8: [routing-utils] support `request.path` transforms on routes and high-level rewrites, lowering path-to-regexp parameters such as `/:path*` to low-level capture references such as `/$1`
+  [config] support request path transforms in the router builder
+  [cli] preserve request path transform syntax and environment metadata across AI/manual route edits
+- 300af0d: Increase Connex setup polling timeout to 115 minutes.
+- 4253eaa: Avoid applying the current Git branch to explicitly selected projects in `vc logs`, and follow the latest READY production deployment when using `--project --follow`.
+- a19feac: Rename the `gantt` value for `vercel traces get --view` to `waterfall`.
+- Updated dependencies [8dec9ea]
+- Updated dependencies [95d8879]
+- Updated dependencies [82b3c3c]
+- Updated dependencies [3afdb18]
+- Updated dependencies [96e3137]
+- Updated dependencies [f5fe588]
+- Updated dependencies [04f830c]
+- Updated dependencies [f076559]
+  - @vercel/build-utils@13.31.0
+  - @vercel/python@6.47.1
+  - @vercel/static-build@2.11.0
+  - @vercel/ruby@2.5.0
+  - @vercel/backends@0.8.15
+  - @vercel/elysia@0.1.94
+  - @vercel/express@0.1.106
+  - @vercel/fastify@0.1.97
+  - @vercel/go@3.9.1
+  - @vercel/h3@0.1.103
+  - @vercel/hono@0.2.97
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.77
+  - @vercel/nestjs@0.2.98
+  - @vercel/next@4.19.1
+  - @vercel/node@5.8.18
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/rust@1.3.0
+
 ## 54.14.5
 
 ### Patch Changes
