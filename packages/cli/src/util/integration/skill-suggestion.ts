@@ -1,8 +1,13 @@
 import type { IntegrationProduct } from './types';
 
 export interface ResolvedSkill {
-  /** What a consumer (e.g. an AI agent) should do with this entry. */
-  action: 'install';
+  /**
+   * What kind of entry this is. A descriptive tag, not a directive — the skill
+   * is only ever suggested; nothing is installed by resolving it.
+   */
+  kind: 'agent-skill';
+  /** Whether the publisher recommends this skill for the product. */
+  recommended: true;
   /** The GitHub repo URL passed to `npx skills add`. */
   repoUrl: string;
   /** The skill name (the folder that holds SKILL.md), when the link points at one. */
@@ -77,5 +82,12 @@ export function resolveSkillFromUrl(value: string): ResolvedSkill | null {
     ? `npx skills add ${repoUrl} --skill ${skill}`
     : `npx skills add ${repoUrl}`;
 
-  return { action: 'install', repoUrl, skill, command, source: value };
+  return {
+    kind: 'agent-skill',
+    recommended: true,
+    repoUrl,
+    skill,
+    command,
+    source: value,
+  };
 }

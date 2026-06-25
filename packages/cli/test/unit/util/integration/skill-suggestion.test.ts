@@ -11,7 +11,8 @@ describe('resolveSkillFromUrl', () => {
         'https://github.com/Shopify/Shopify-AI-Toolkit/blob/main/skills/shopify-dev/SKILL.md'
       )
     ).toEqual({
-      action: 'install',
+      kind: 'agent-skill',
+      recommended: true,
       repoUrl: 'https://github.com/shopify/shopify-ai-toolkit',
       skill: 'shopify-dev',
       command:
