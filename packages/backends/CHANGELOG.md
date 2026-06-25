@@ -1,5 +1,13 @@
 # @vercel/backends
 
+## 0.8.18
+
+### Patch Changes
+
+- 8dc4702: Fix `vercel dev` for standalone Node servers, including projects without a `package.json`, and reuse the server process between requests.
+- Updated dependencies [8dc4702]
+  - @vercel/build-utils@13.32.1
+
 ## 0.8.17
 
 ### Patch Changes

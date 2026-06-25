@@ -1760,8 +1760,8 @@ importers:
         version: 1.10.0(rollup@4.60.4)
     devDependencies:
       '@next-community/adapter-vercel':
-        specifier: 0.0.1-beta.23
-        version: 0.0.1-beta.23(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
+        specifier: 0.0.1-beta.22
+        version: 0.0.1-beta.22(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
       '@types/aws-lambda':
         specifier: 8.10.19
         version: 8.10.19
@@ -4559,8 +4559,8 @@ packages:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
 
-  '@next-community/adapter-vercel@0.0.1-beta.23':
-    resolution: {integrity: sha512-cacQORiw/IL0g/sA/iLT2cYcEjWUHKu/gzLOHSTRvnRpPvGo53OajbZpvDe/2xFh7rsfznlkLFuPc5uYj7EqBw==}
+  '@next-community/adapter-vercel@0.0.1-beta.22':
+    resolution: {integrity: sha512-ZlRIi8MUWBLPxsFLzA2kxw1HOf5ius5kjyhHk7oVg1mhFy7QCCuhC35BrBXm1FN+7jWF4ST+jwxZ9u2lQt0MXQ==}
     engines: {node: '>= 20.6.0'}
     peerDependencies:
       next: '>= 16.1.1-canary.18'
@@ -14861,7 +14861,7 @@ snapshots:
       '@tybys/wasm-util': 0.10.2
     optional: true
 
-  '@next-community/adapter-vercel@0.0.1-beta.23(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
+  '@next-community/adapter-vercel@0.0.1-beta.22(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
     dependencies:
       next: 16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
 

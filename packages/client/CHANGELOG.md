@@ -1,5 +1,13 @@
 # @vercel/client
 
+## 17.6.1
+
+### Patch Changes
+
+- 96e9513: Add `vercel deploy --dry` to inspect the detected framework preset and local deployment file set without uploading or creating a deployment, with complete JSON output for non-TTY consumers.
+- Updated dependencies [8dc4702]
+  - @vercel/build-utils@13.32.1
+
 ## 17.6.0
 
 ### Minor Changes

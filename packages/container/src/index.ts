@@ -48,7 +48,23 @@ function isDockerfileRef(ref: string): boolean {
   return (
     base === 'dockerfile' ||
     base === 'containerfile' ||
-    base.endsWith('.dockerfile')
+    base.endsWith('.dockerfile') ||
+    // Vercel-specific container opt-in markers, used to deploy a project as a
+    // container even when another framework (e.g. Next.js) is also present.
+    base === 'dockerfile.vercel' ||
+    base === 'containerfile.vercel'
+  );
+}
+
+// Vercel-specific container opt-in markers, auto-discovered when the build
+// entrypoint doesn't name a Dockerfile explicitly (e.g. the `container`
+// framework preset resolves its entrypoint via `<detect>`). These let a
+// project deploy as a container even when another framework is also present.
+const DOCKERFILE_CANDIDATES = ['Dockerfile.vercel', 'Containerfile.vercel'];
+
+function findDockerfile(workPath: string): string | undefined {
+  return DOCKERFILE_CANDIDATES.find(name =>
+    existsSync(path.join(workPath, name))
   );
 }
 
@@ -266,8 +282,14 @@ async function resolveImageHandler(
   const { config, workPath, entrypoint, meta } = options;
 
   const entrypointRef = readString(entrypoint);
+  // An entrypoint that names a Dockerfile (including the `Dockerfile.vercel` /
+  // `Containerfile.vercel` opt-in markers) is built directly. Otherwise — e.g.
+  // when the `container` framework preset resolves its entrypoint via
+  // `<detect>` — discover a Dockerfile in the work directory.
   const dockerfileConfigured =
-    entrypointRef && isDockerfileRef(entrypointRef) ? entrypointRef : undefined;
+    entrypointRef && isDockerfileRef(entrypointRef)
+      ? entrypointRef
+      : findDockerfile(workPath);
   const dockerfileRel = dockerfileConfigured ?? 'Dockerfile';
   const dockerfilePath = path.join(workPath, dockerfileRel);
   const hasDockerfile =
@@ -309,13 +331,16 @@ async function resolveImageHandler(
     );
   }
 
+  // Named services derive the registry repository from the service name. A
+  // root (non-service) container deploy has no service name, so fall back to
+  // the Dockerfile's base name (e.g. `Dockerfile.vercel` -> `dockerfile`,
+  // `Containerfile.vercel` -> `containerfile`). The repository is already
+  // namespaced by owner/project from the OIDC claims, so this leaf only needs
+  // to be stable per project.
   const serviceName = options.service?.name;
-  if (!serviceName) {
-    throw new Error(
-      'Container service is missing a name; cannot derive the registry repository.'
-    );
-  }
-  const repository = sanitizeRepository(serviceName);
+  const repository = sanitizeRepository(
+    serviceName ?? path.basename(dockerfileRel).split('.')[0]
+  );
   const tag = resolveImageTag();
   const contextDir = path.dirname(dockerfilePath);
 
@@ -366,17 +391,20 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
 
   const command = normalizeCommand(options.config.command);
 
-  // Do a normal build: the function lands at the natural `index` path inside
-  // the nested `services/<name>/` output, and a catch-all route in the
-  // service's isolated route table forwards requests to it. Without the
-  // catch-all the service has no `/` route, so the top-level service rewrite
-  // resolves to nothing (vercel/vercel#16648).
-  const isService = Boolean(options.service?.name);
-  const routes = isService
-    ? [{ handle: 'filesystem' as const }, { src: '/(.*)', dest: '/index' }]
-    : undefined;
+  // Do a normal build: the function lands at the natural `index` path and a
+  // catch-all route forwards every request to it. Without it there is no `/`
+  // route, so for a service the top-level service rewrite resolves to nothing
+  // (vercel/vercel#16648), and for a root (non-service) container deploy
+  // nothing reaches the function at all. The filesystem handler resolves `/`
+  // to the `index` output. The only service-specific concern — nesting the
+  // output under `services/<name>/` — is handled by the CLI, not here.
+  const routes = [
+    { handle: 'filesystem' as const },
+    { src: '/(.*)', dest: '/index' },
+  ];
 
   return {
+    routes,
     output: {
       index: {
         type: 'Lambda',
@@ -390,6 +418,5 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
         ...(command ? { command } : {}),
       } as any,
     },
-    ...(routes ? { routes } : {}),
   };
 }

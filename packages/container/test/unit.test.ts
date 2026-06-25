@@ -172,6 +172,7 @@ describe('@vercel/container', () => {
     );
 
     expect(result).toEqual({
+      routes: [{ handle: 'filesystem' }, { src: '/(.*)', dest: '/index' }],
       output: {
         index: {
           type: 'Lambda',
@@ -242,7 +243,9 @@ describe('@vercel/container', () => {
     ]);
   });
 
-  it('does not emit routes for non-service builds', async () => {
+  it('emits the catch-all route for non-service builds too', async () => {
+    // A root container deploy (no service) still needs the catch-all so a
+    // request to `/` reaches the function.
     const result = expectTypicalBuildResult(
       await build({
         ...createBuildOptions({}),
@@ -251,7 +254,10 @@ describe('@vercel/container', () => {
     );
 
     expect(result.output).toHaveProperty('index');
-    expect(result.routes).toBeUndefined();
+    expect(result.routes).toEqual([
+      { handle: 'filesystem' },
+      { src: '/(.*)', dest: '/index' },
+    ]);
   });
 
   async function runDockerfileBuild(options?: {
@@ -424,6 +430,91 @@ describe('@vercel/container', () => {
       )
     ).toBe(true);
     expect(commands.some(c => /\bbuildah\b.*\bpush\b/.test(c))).toBe(true);
+  });
+
+  it.each([
+    'Dockerfile.vercel',
+    'Containerfile.vercel',
+  ])('builds from a `%s` opt-in marker entrypoint, passing it via -f', async marker => {
+    const commands = await runDockerfileBuild({
+      buildImageEnv: 'al2023',
+      entrypoint: marker,
+    });
+    const escaped = marker.replace('.', '\\.');
+    expect(
+      commands.some(
+        c =>
+          /\bbuildah\b.*\bbuild\b/.test(c) &&
+          new RegExp(`-f \\S*${escaped}\\b`).test(c)
+      )
+    ).toBe(true);
+    expect(commands.some(c => /\bbuildah\b.*\bpush\b/.test(c))).toBe(true);
+  });
+
+  it('discovers a `Dockerfile.vercel` marker when the entrypoint is `<detect>`', async () => {
+    // The `container` framework preset resolves its entrypoint via `<detect>`;
+    // the builder must then find the `.vercel` marker in the work directory.
+    const commands = await runDockerfileBuild({
+      buildImageEnv: 'al2023',
+      entrypoint: '<detect>',
+    });
+    expect(
+      commands.some(
+        c =>
+          /\bbuildah\b.*\bbuild\b/.test(c) &&
+          /-f \S*Dockerfile\.vercel\b/.test(c)
+      )
+    ).toBe(true);
+  });
+
+  it('builds a root (non-service) container deploy without a service name', async () => {
+    // A `Dockerfile.vercel` at the project root deploys as a container with no
+    // service; the repository leaf is derived from the Dockerfile base name
+    // (`Dockerfile.vercel` -> `dockerfile`) instead of throwing.
+    process.env.VERCEL_OIDC_TOKEN = fakeOidcToken();
+    const fetchMock = vi.fn();
+    stubRegistryFetch(fetchMock);
+    vi.stubGlobal('fetch', fetchMock);
+    existsSyncMock.mockReturnValue(true);
+    const digest = `sha256:${'a'.repeat(64)}`;
+    spawnMock.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'buildah' && args.includes('info')) {
+        return fakeChild(
+          JSON.stringify({
+            store: {
+              GraphRoot: '/vercel/.containers/storage',
+              RunRoot: '/run/containers/storage',
+              GraphDriverName: 'overlay',
+              GraphStatus: { 'Backing Filesystem': 'xfs' },
+            },
+          })
+        );
+      }
+      if (args.includes('push')) {
+        return fakeChild(`latest: digest: ${digest} size: 1234\n`);
+      }
+      return fakeChild('');
+    });
+
+    const result = expectTypicalBuildResult(
+      await build({
+        ...createBuildOptions({ runtime: 'container' }),
+        entrypoint: 'Dockerfile.vercel',
+      } as any)
+    );
+
+    // No service name → output at `index`, with the catch-all so `/` reaches
+    // it. Repository leaf comes from the Dockerfile base name (`dockerfile`).
+    expect(result.output).toHaveProperty('index');
+    expect(result.output.index).toMatchObject({
+      type: 'Lambda',
+      runtime: 'container',
+      handler: `vcr.vercel.com/acme/my-app/dockerfile@${digest}`,
+    });
+    expect(result.routes).toEqual([
+      { handle: 'filesystem' },
+      { src: '/(.*)', dest: '/index' },
+    ]);
   });
 
   it('forwards the project build env to the image build as --build-arg', async () => {

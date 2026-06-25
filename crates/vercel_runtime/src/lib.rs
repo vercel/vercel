@@ -19,11 +19,20 @@ pub mod axum;
 #[cfg(feature = "actix")]
 pub mod actix;
 
+pub mod awaiter;
 #[cfg(unix)]
 mod ipc;
 #[cfg(unix)]
 mod ipc_utils;
 mod types;
+
+use crate::awaiter::Awaiter;
+
+lazy_static::lazy_static! {
+    /// Process-global collector of `waitUntil` background work.
+    /// Shared by every request and drained once at shutdown (see [`run`]).
+    static ref AWAITER: Awaiter = Awaiter::new();
+}
 
 use crate::types::IntoFunctionResponse;
 
@@ -129,11 +138,28 @@ impl Default for LogContext {
 #[derive(Clone)]
 pub struct AppState {
     pub log_context: LogContext,
+    awaiter: Awaiter,
 }
 
 impl AppState {
     pub fn new(log_context: LogContext) -> Self {
-        Self { log_context }
+        Self {
+            log_context,
+            awaiter: AWAITER.clone(),
+        }
+    }
+
+    /// Register a background future to keep running after the response has been
+    /// sent. The future is spawned immediately and awaited at process shutdown
+    /// (bounded by [`awaiter::WAIT_UNTIL_TIMEOUT`]).
+    ///
+    /// This future runs regardless of whether the handler succeeded or errored.
+    /// A panic in the future is isolated from the rest of the runtime.
+    pub fn wait_until<F>(&self, future: F)
+    where
+        F: std::future::Future<Output = ()> + Send + 'static,
+    {
+        self.awaiter.wait_until(future);
     }
 }
 
@@ -303,8 +329,61 @@ where
         println!("Dev server listening: {}", port);
     }
 
+    // Shutdown signal future. On Unix the host terminates the process with
+    // SIGTERM; on other platforms fall back to Ctrl-C. When it fires we stop
+    // accepting new connections and drain any pending `waitUntil` work.
+    let shutdown = async {
+        #[cfg(unix)]
+        {
+            match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+                Ok(mut sigterm) => {
+                    sigterm.recv().await;
+                }
+                Err(_) => {
+                    let _ = tokio::signal::ctrl_c().await;
+                }
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = tokio::signal::ctrl_c().await;
+        }
+    };
+    tokio::pin!(shutdown);
+
     loop {
-        let (stream, _) = listener.accept().await?;
+        let (stream, _) = tokio::select! {
+            accepted = listener.accept() => accepted?,
+            _ = &mut shutdown => {
+                // Drain background `waitUntil` work, then exit. The per-request
+                // `end` IPC message has already been sent for each completed
+                // request, so this only affects background tasks. This mirrors
+                // the Node.js runtime's `onExit` behavior.
+                //
+                // In `vc dev` (signalled by `VERCEL_DEV=1`) we bound the drain by
+                // `WAIT_UNTIL_TIMEOUT` so a hung task cannot keep the dev process
+                // alive. In production there is no artificial cap: background work
+                // runs until it resolves or the function itself times out, which
+                // matches the Node.js bridge.
+                if std::env::var("VERCEL_DEV").as_deref() == Ok("1") {
+                    if tokio::time::timeout(
+                        std::time::Duration::from_secs(crate::awaiter::WAIT_UNTIL_TIMEOUT),
+                        AWAITER.awaiting(),
+                    )
+                    .await
+                    .is_err()
+                    {
+                        eprintln!(
+                            "A waitUntil() task is still running after {}s and was abandoned at shutdown.",
+                            crate::awaiter::WAIT_UNTIL_TIMEOUT
+                        );
+                    }
+                } else {
+                    AWAITER.awaiting().await;
+                }
+                return Ok(());
+            }
+        };
         let io = TokioIo::new(stream);
         #[cfg(unix)]
         let ipc_stream_clone = ipc_stream.clone();

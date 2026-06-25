@@ -33,4 +33,8 @@ export class EdgeConfigTelemetryClient
   trackCliSubcommandTokens(actual: string) {
     this.trackCliSubcommand({ subcommand: 'tokens', value: actual });
   }
+
+  trackCliSubcommandBackups(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'backups', value: actual });
+  }
 }
