@@ -529,6 +529,71 @@ def format_headers(
     return key_to_list
 
 
+def is_websocket_upgrade(headers: Any) -> bool:
+    """Return True if the request headers describe a WebSocket upgrade.
+
+    Mirrors the handshake checks used by WSGI WebSocket libraries such as
+    flask-sock / simple-websocket: an ``Upgrade: websocket`` header together
+    with an ``upgrade`` token in the ``Connection`` header.
+    """
+    upgrade = headers.get("upgrade")
+    if not upgrade or upgrade.strip().lower() != "websocket":
+        return False
+    connection = headers.get("connection") or ""
+    tokens = [token.strip().lower() for token in connection.split(",")]
+    return "upgrade" in tokens
+
+
+class _UpgradeSocket:
+    """Expose a WSGI connection socket to WebSocket libraries.
+
+    WSGI (PEP 3333) has no concept of a WebSocket upgrade, so libraries such
+    as simple-websocket (used by flask-sock) reach into the WSGI ``environ``
+    to obtain the raw connection socket and write the ``101 Switching
+    Protocols`` handshake to it directly, bypassing ``start_response``.
+
+    This proxy exposes the underlying socket while watching outbound bytes for
+    the ``101`` handshake. Once the handshake is written, ``on_upgrade`` is
+    invoked exactly once so the runtime can end the request lifecycle and let
+    the platform tunnel the connection bidirectionally, matching the ASGI
+    ``websocket.accept`` behavior.
+    """
+
+    def __init__(
+        self,
+        sock: socket.socket,
+        on_upgrade: Callable[[], None],
+    ) -> None:
+        self._sock = sock
+        self._on_upgrade = on_upgrade
+        self._upgraded = False
+
+    def _maybe_signal_upgrade(self, data: Any) -> None:
+        if self._upgraded:
+            return
+        # The handshake response starts with the HTTP status line, e.g.
+        # b"HTTP/1.1 101 Switching Protocols\r\n". A non-101 response (e.g. a
+        # rejected upgrade) is treated as a normal HTTP response, so the
+        # request lifecycle ends through the usual path instead.
+        prefix = bytes(data[:15]).upper()
+        if prefix.startswith((b"HTTP/1.1 101", b"HTTP/1.0 101")):
+            self._upgraded = True
+            self._on_upgrade()
+
+    def send(self, data: Any, *args: Any, **kwargs: Any) -> int:
+        self._maybe_signal_upgrade(data)
+        return self._sock.send(data, *args, **kwargs)
+
+    def sendall(self, data: Any, *args: Any, **kwargs: Any) -> None:
+        self._maybe_signal_upgrade(data)
+        return self._sock.sendall(data, *args, **kwargs)
+
+    def __getattr__(self, name: str) -> Any:
+        # Delegate everything else (recv, fileno, close, setsockopt, ...) to
+        # the wrapped socket so selectors and frame I/O work transparently.
+        return getattr(self._sock, name)
+
+
 class ASGIMiddleware:
     """ASGI middleware for Vercel IPC request lifecycle.
 
@@ -769,9 +834,39 @@ if "VERCEL_IPC_PATH" in os.environ:
                 f"{addr} - - [{ts}] {msg}\n",
             )
 
+        def _vc_fire_end_once(self) -> None:
+            # Send the IPC "end" message exactly once per request. For a
+            # WebSocket upgrade this is called as soon as the 101 handshake is
+            # written so the platform can begin bidirectional streaming, while
+            # the WSGI worker thread keeps driving the socket. For regular
+            # requests it is called once the response is fully sent.
+            if getattr(self, "_vc_end_sent", False):
+                return
+            self._vc_end_sent = True
+            clear_runtime_cache_context()
+            clear_vercel_headers_context()
+            token = getattr(self, "_vc_end_token", None)
+            if token is not None:
+                storage.reset(token)
+            send_message(
+                {
+                    "type": "end",
+                    "payload": {
+                        "context": {
+                            "invocationId": getattr(
+                                self, "_vc_invocation_id", "0"
+                            ),
+                            "requestId": getattr(self, "_vc_request_id", 0),
+                        }
+                    },
+                }
+            )
+
         # Re-implementation of handle_one_request to send
         # the end message after the response is fully sent.
         def handle_one_request(self) -> None:
+            self._vc_end_sent = False
+            self._vc_end_token = None
             self.raw_requestline = self.rfile.readline(65537)
             if not self.raw_requestline:
                 self.close_connection = True
@@ -797,6 +892,8 @@ if "VERCEL_IPC_PATH" in os.environ:
                 "0",
             )
             request_id = int(raw_request_id) if raw_request_id.isdigit() else 0
+            self._vc_invocation_id = invocation_id
+            self._vc_request_id = request_id
             del self.headers["x-vercel-internal-invocation-id"]
             del self.headers["x-vercel-internal-request-id"]
             del self.headers["x-vercel-internal-span-id"]
@@ -843,7 +940,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                 }
             )
 
-            token = storage.set(
+            self._vc_end_token = storage.set(
                 {
                     "invocationId": invocation_id,
                     "requestId": request_id,
@@ -854,20 +951,7 @@ if "VERCEL_IPC_PATH" in os.environ:
             try:
                 self.handle_request()  # type: ignore[attr-defined]
             finally:
-                clear_runtime_cache_context()
-                clear_vercel_headers_context()
-                storage.reset(token)
-                send_message(
-                    {
-                        "type": "end",
-                        "payload": {
-                            "context": {
-                                "invocationId": invocation_id,
-                                "requestId": request_id,
-                            }
-                        },
-                    }
-                )
+                self._vc_fire_end_once()
 
     try:
         app_name, app_obj = resolve_app(
@@ -967,6 +1051,22 @@ if "VERCEL_IPC_PATH" in os.environ:
                         if k.lower() == "transfer-encoding":
                             continue
                         env["HTTP_" + k.replace("-", "_").upper()] = v
+
+                    if is_websocket_upgrade(self.headers):
+                        # WSGI has no WebSocket support, so expose the raw
+                        # connection socket for libraries like flask-sock /
+                        # simple-websocket. They write the 101 handshake to it
+                        # directly; the proxy ends the request lifecycle once
+                        # that happens so the platform tunnels the connection.
+                        ws_sock = _UpgradeSocket(
+                            self.connection,
+                            self._vc_fire_end_once,
+                        )
+                        env["werkzeug.socket"] = ws_sock
+                        env["gunicorn.socket"] = ws_sock
+                        # The hijacked connection cannot be reused for further
+                        # requests once the upgrade completes.
+                        self.close_connection = True
 
                     def start_response(
                         status: str,
