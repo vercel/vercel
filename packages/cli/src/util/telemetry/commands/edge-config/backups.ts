@@ -30,7 +30,7 @@ export class EdgeConfigBackupsTelemetryClient
 
   trackCliOptionNext(value: string | undefined) {
     if (value) {
-      this.trackCliOption({ option: 'next', value });
+      this.trackCliOption({ option: 'next', value: this.redactedValue });
     }
   }
 

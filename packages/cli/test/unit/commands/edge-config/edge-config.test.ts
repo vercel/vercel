@@ -352,6 +352,7 @@ describe('edge-config', () => {
     client.scenario.get('/v1/edge-config/ecfg_backups/backups', (req, res) => {
       expect(req.query.teamId).toBe('team_ec_test');
       expect(req.query.limit).toBe('2');
+      expect(req.query.next).toBe('cursor_in');
       expect(req.query.metadata).toBe('true');
       res.json({
         backups: [
@@ -368,7 +369,15 @@ describe('edge-config', () => {
         pagination: { hasNext: true, next: 'cursor_next' },
       });
     });
-    client.setArgv('edge-config', 'backups', 'my-store', '--limit', '2');
+    client.setArgv(
+      'edge-config',
+      'backups',
+      'my-store',
+      '--limit',
+      '2',
+      '--next',
+      'cursor_in'
+    );
     const exitCode = await edgeConfig(client);
     expect(exitCode).toBe(0);
     const output = client.stderr.getFullOutput();
@@ -382,6 +391,7 @@ describe('edge-config', () => {
       { key: 'subcommand:backups', value: 'backups' },
       { key: 'argument:id-or-slug', value: 'my-store' },
       { key: 'option:limit', value: '2' },
+      { key: 'option:next', value: '[REDACTED]' },
     ]);
   });
 
