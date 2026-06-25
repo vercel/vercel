@@ -68,7 +68,7 @@ SDK's `toolApproval` option or `wrapMcpTools` from `@ai-sdk/policy-opa`.
 Non-AI-SDK MCP clients (the official MCP TypeScript SDK, Mastra, etc.)
 can import the same `connectAuthProvider` from `@vercel/connect/mcp`.
 
-### Eve
+### eve
 
 ```ts
 import { defineMcpClientConnection } from 'eve/connections';
@@ -79,6 +79,10 @@ export default defineMcpClientConnection({
   auth: connect('linear'),
 });
 ```
+
+By default, `connect()` provisions or links the connector for the deploying
+Vercel project on first use. Pass `autoProvision: false` when the connector is
+managed elsewhere.
 
 ### Better Auth
 

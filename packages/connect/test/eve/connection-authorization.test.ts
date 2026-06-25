@@ -23,6 +23,237 @@ const CONNECTION: EveConnectionAuthorizationContext = {
   url: 'https://mcp.example.com/sse',
 };
 
+describe('connect() adapter provisioning', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    vi.mocked(getVercelOidcToken).mockResolvedValue('oidc_token');
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('provisions and links a UID connector before fetching a token', async () => {
+    const connector = 'mcp.example.com/provisioned';
+    fetchMock
+      .mockResolvedValueOnce(jsonProvisionResponse(connector))
+      .mockResolvedValueOnce(jsonTokenResponse('tok_provisioned', connector));
+
+    const definition = connect(connector) as InteractiveAuthorizationDefinition;
+
+    const result = await definition.getToken({
+      principal: PRINCIPAL,
+      connection: CONNECTION,
+    });
+
+    expect(result.token).toBe('tok_provisioned');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    const [provisionUrl, provisionInit] = fetchMock.mock.calls[0];
+    expect(provisionUrl).toBe(
+      'https://api.vercel.com/v1/connect/connectors/managed/oauth'
+    );
+    expect(provisionInit).toMatchObject({
+      method: 'POST',
+      headers: expect.objectContaining({
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer oidc_token',
+      }),
+    });
+    expect(JSON.parse(provisionInit.body as string)).toEqual({
+      serverUrl: CONNECTION.url,
+      uid: connector,
+    });
+
+    const [tokenUrl] = fetchMock.mock.calls[1];
+    expect(tokenUrl).toBe(
+      'https://api.vercel.com/v1/connect/token/mcp.example.com%2Fprovisioned'
+    );
+  });
+
+  it('reuses successful provisioning for the same connector and server URL', async () => {
+    const connector = 'mcp.example.com/provision-cache';
+    fetchMock
+      .mockResolvedValueOnce(jsonProvisionResponse(connector))
+      .mockResolvedValueOnce(jsonTokenResponse('tok_first', connector))
+      .mockResolvedValueOnce(jsonTokenResponse('tok_second', connector));
+
+    const definition = connect({
+      connector,
+      validate: true,
+    }) as InteractiveAuthorizationDefinition;
+
+    const first = await definition.getToken({
+      principal: PRINCIPAL,
+      connection: CONNECTION,
+    });
+    const second = await definition.getToken({
+      principal: PRINCIPAL,
+      connection: CONNECTION,
+    });
+
+    expect(first.token).toBe('tok_first');
+    expect(second.token).toBe('tok_second');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(
+      fetchMock.mock.calls.filter(
+        ([url]) =>
+          url === 'https://api.vercel.com/v1/connect/connectors/managed/oauth'
+      )
+    ).toHaveLength(1);
+  });
+
+  it('keeps provision cache entries scoped to the Vercel token', async () => {
+    const connector = 'mcp.example.com/token-scoped-cache';
+    fetchMock
+      .mockResolvedValueOnce(jsonProvisionResponse(connector))
+      .mockResolvedValueOnce(jsonTokenResponse('tok_project_a', connector))
+      .mockResolvedValueOnce(jsonProvisionResponse(connector))
+      .mockResolvedValueOnce(jsonTokenResponse('tok_project_b', connector));
+
+    const projectA = connect({
+      connector,
+      validate: true,
+      connectOptions: { vercelToken: 'oidc_project_a' },
+    }) as InteractiveAuthorizationDefinition;
+    const projectB = connect({
+      connector,
+      validate: true,
+      connectOptions: { vercelToken: 'oidc_project_b' },
+    }) as InteractiveAuthorizationDefinition;
+
+    const first = await projectA.getToken({
+      principal: PRINCIPAL,
+      connection: CONNECTION,
+    });
+    const second = await projectB.getToken({
+      principal: PRINCIPAL,
+      connection: CONNECTION,
+    });
+
+    expect(first.token).toBe('tok_project_a');
+    expect(second.token).toBe('tok_project_b');
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({
+      Authorization: 'Bearer oidc_project_a',
+    });
+    expect(fetchMock.mock.calls[2][1]?.headers).toMatchObject({
+      Authorization: 'Bearer oidc_project_b',
+    });
+  });
+
+  it('provisions before starting an interactive authorization flow', async () => {
+    const connector = 'mcp.example.com/start-authorization';
+    fetchMock
+      .mockResolvedValueOnce(jsonProvisionResponse(connector))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            request: 'req_1',
+            verifier: 'ver_1',
+            url: 'https://connect.vercel.com/authorize/req_1',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      );
+
+    const definition = connect(connector) as InteractiveAuthorizationDefinition;
+
+    const { challenge } = await definition.startAuthorization({
+      principal: PRINCIPAL,
+      connection: CONNECTION,
+      callbackUrl: 'https://example.com/callback',
+    });
+
+    expect(challenge.url).toBe('https://connect.vercel.com/authorize/req_1');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://api.vercel.com/v1/connect/connectors/managed/oauth'
+    );
+    expect(fetchMock.mock.calls[1][0]).toBe(
+      'https://api.vercel.com/v1/connect/authorize/mcp.example.com%2Fstart-authorization'
+    );
+  });
+
+  it('skips provisioning for opaque connector ids', async () => {
+    fetchMock.mockResolvedValueOnce(jsonTokenResponse('tok_opaque'));
+
+    const definition = connect(
+      'scl_existing'
+    ) as InteractiveAuthorizationDefinition;
+
+    const result = await definition.getToken({
+      principal: PRINCIPAL,
+      connection: CONNECTION,
+    });
+
+    expect(result.token).toBe('tok_opaque');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://api.vercel.com/v1/connect/token/scl_existing'
+    );
+  });
+
+  it('falls back to token fetching when an existing connector is not managed OAuth', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: {
+              code: 'conflict',
+              message:
+                'A connector with uid "linear" already exists and is not an OAuth connector.',
+            },
+          }),
+          { status: 409, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+      .mockResolvedValueOnce(jsonTokenResponse('tok_linear', 'linear'));
+
+    const definition = connect('linear') as InteractiveAuthorizationDefinition;
+
+    const result = await definition.getToken({
+      principal: PRINCIPAL,
+      connection: CONNECTION,
+    });
+
+    expect(result.token).toBe('tok_linear');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://api.vercel.com/v1/connect/connectors/managed/oauth'
+    );
+    expect(fetchMock.mock.calls[1][0]).toBe(
+      'https://api.vercel.com/v1/connect/token/linear'
+    );
+  });
+
+  it('allows callers to disable provisioning', async () => {
+    const connector = 'mcp.example.com/manual-link';
+    fetchMock.mockResolvedValueOnce(jsonTokenResponse('tok_manual', connector));
+
+    const definition = connect({
+      connector,
+      autoProvision: false,
+    }) as InteractiveAuthorizationDefinition;
+
+    const result = await definition.getToken({
+      principal: PRINCIPAL,
+      connection: CONNECTION,
+    });
+
+    expect(result.token).toBe('tok_manual');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://api.vercel.com/v1/connect/token/mcp.example.com%2Fmanual-link'
+    );
+  });
+});
+
 describe('connect() adapter evict', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
@@ -42,9 +273,10 @@ describe('connect() adapter evict', () => {
       .mockResolvedValueOnce(jsonTokenResponse('tok_stale'))
       .mockResolvedValueOnce(jsonTokenResponse('tok_fresh'));
 
-    const definition = connect(
-      'oauth/connection-auth-evict'
-    ) as InteractiveAuthorizationDefinition & {
+    const definition = connect({
+      connector: 'oauth/connection-auth-evict',
+      autoProvision: false,
+    }) as InteractiveAuthorizationDefinition & {
       readonly evict: (opts: {
         readonly principal: ConnectionPrincipal;
         readonly connection?: EveConnectionAuthorizationContext;
@@ -79,9 +311,10 @@ describe('connect() adapter evict', () => {
       .mockResolvedValueOnce(new Response(null, { status: 200 }))
       .mockResolvedValueOnce(jsonTokenResponse('tok_reauthorized'));
 
-    const definition = connect(
-      'oauth/connection-auth-revoke'
-    ) as InteractiveAuthorizationDefinition & {
+    const definition = connect({
+      connector: 'oauth/connection-auth-revoke',
+      autoProvision: false,
+    }) as InteractiveAuthorizationDefinition & {
       readonly evict: (opts: {
         readonly principal: ConnectionPrincipal;
         readonly connection?: EveConnectionAuthorizationContext;
@@ -127,9 +360,10 @@ describe('connect() adapter evict', () => {
       )
       .mockResolvedValueOnce(jsonTokenResponse('tok_after'));
 
-    const definition = connect(
-      'oauth/connection-auth-revoke-fallback'
-    ) as InteractiveAuthorizationDefinition & {
+    const definition = connect({
+      connector: 'oauth/connection-auth-revoke-fallback',
+      autoProvision: false,
+    }) as InteractiveAuthorizationDefinition & {
       readonly evict: (opts: {
         readonly principal: ConnectionPrincipal;
         readonly connection?: EveConnectionAuthorizationContext;
@@ -190,6 +424,7 @@ describe('connect() adapter subject mapping', () => {
 
     const definition = connect({
       connector: 'oauth/subject-create',
+      autoProvision: false,
       createSubject,
     }) as InteractiveAuthorizationDefinition;
 
@@ -240,6 +475,7 @@ describe('connect() adapter subject mapping', () => {
 
     const definition = connect({
       connector: 'oauth/subject-start-auth',
+      autoProvision: false,
       createSubject,
     }) as InteractiveAuthorizationDefinition;
 
@@ -280,6 +516,7 @@ describe('connect() adapter subject mapping', () => {
 
     const definition = connect({
       connector: 'oauth/subject-precedence',
+      autoProvision: false,
       createSubject,
       principalToSubject,
     }) as InteractiveAuthorizationDefinition;
@@ -309,6 +546,7 @@ describe('connect() adapter subject mapping', () => {
 
     const definition = connect({
       connector: 'oauth/subject-legacy',
+      autoProvision: false,
       principalToSubject,
     }) as InteractiveAuthorizationDefinition;
 
@@ -332,9 +570,10 @@ describe('connect() adapter subject mapping', () => {
   it('falls back to the default principal mapping when neither hook is set', async () => {
     fetchMock.mockResolvedValueOnce(jsonTokenResponse('tok_default'));
 
-    const definition = connect(
-      'oauth/subject-default'
-    ) as InteractiveAuthorizationDefinition;
+    const definition = connect({
+      connector: 'oauth/subject-default',
+      autoProvision: false,
+    }) as InteractiveAuthorizationDefinition;
 
     await definition.getToken({
       principal: PRINCIPAL,
@@ -352,17 +591,31 @@ describe('connect() adapter subject mapping', () => {
   });
 });
 
-function jsonTokenResponse(token: string): Response {
+function jsonTokenResponse(
+  token: string,
+  uid = 'oauth/connection-auth-evict'
+): Response {
   return new Response(
     JSON.stringify({
       token,
       expiresAt: Date.now() + 60 * 60 * 1000,
       connector: {
         id: 'scl_evict',
-        uid: 'oauth/connection-auth-evict',
+        uid,
         type: 'oauth',
       },
     }),
     { status: 200, headers: { 'Content-Type': 'application/json' } }
+  );
+}
+
+function jsonProvisionResponse(uid: string): Response {
+  return new Response(
+    JSON.stringify({
+      id: 'scl_provisioned',
+      uid,
+      type: 'oauth',
+    }),
+    { status: 201, headers: { 'Content-Type': 'application/json' } }
   );
 }
