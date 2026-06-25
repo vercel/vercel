@@ -384,6 +384,7 @@ async function tryResolveInferred(
         rewrites: shouldInfer
           ? generateServiceRewrites(detectResult.services)
           : [],
+        experimentalServicesV2: shouldInfer ? v2Services : undefined,
         errors: result.errors,
         warnings: detectResult.warnings,
       },

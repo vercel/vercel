@@ -131,6 +131,8 @@ export interface ResolvedServicesResult {
   routes: ServicesRoutes;
   /** Top-level service-targeted rewrites (V2). */
   rewrites: Rewrite[];
+  /** V2 services config for the build output, so the platform activates V2 routing. */
+  experimentalServicesV2?: Services;
   errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
 }
