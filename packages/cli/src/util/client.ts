@@ -54,7 +54,10 @@ import type { z } from 'zod';
 import output from '../output-manager';
 import { parseArguments } from './get-args';
 import { processTokenResponse, refreshTokenRequest } from './oauth';
-import { PromptCanceledError } from './input/prompt-cancellation';
+import {
+  PromptBackError,
+  PromptCanceledError,
+} from './input/prompt-cancellation';
 
 const DOMAINS_API_PATH = /^\/v\d+\/(?:domains|registrar)(?:\/|$)/;
 
@@ -151,6 +154,7 @@ export default class Client extends EventEmitter implements Stdio {
   private _loggedTokenSource: boolean = false;
   private _parsedArgsCache?: ParsedArgsCache;
   private escapePromptCancellationDepth = 0;
+  private promptBackNavigationDepth = 0;
   /** Request-scoped identity caches used to avoid repeated scope lookups. */
   user?: User;
   userPromise?: Promise<User>;
@@ -236,22 +240,41 @@ export default class Client extends EventEmitter implements Stdio {
     }
   }
 
+  async withPromptBackNavigation<T>(run: () => Promise<T>): Promise<T> {
+    this.promptBackNavigationDepth++;
+    try {
+      return await run();
+    } finally {
+      this.promptBackNavigationDepth--;
+    }
+  }
+
   private runPrompt<T>(prompt: CancelablePrompt<T>): Promise<T> {
+    const escapeCancellationEnabled = this.escapePromptCancellationDepth > 0;
+    const backNavigationEnabled = this.promptBackNavigationDepth > 0;
+
     if (
-      this.escapePromptCancellationDepth === 0 ||
+      (!escapeCancellationEnabled && !backNavigationEnabled) ||
       !this.stdin.isTTY ||
       !prompt.cancel
     ) {
       return prompt;
     }
 
-    let canceled = false;
+    let cancellation: 'escape' | 'back' | undefined;
     const onKeypress = (
       _input: string | undefined,
       key: { name?: string } | undefined
     ) => {
-      if (key?.name === 'escape' && !canceled) {
-        canceled = true;
+      if (
+        key?.name === 'escape' &&
+        escapeCancellationEnabled &&
+        !cancellation
+      ) {
+        cancellation = 'escape';
+        prompt.cancel?.();
+      } else if (key?.name === 'up' && backNavigationEnabled && !cancellation) {
+        cancellation = 'back';
         prompt.cancel?.();
       }
     };
@@ -260,8 +283,11 @@ export default class Client extends EventEmitter implements Stdio {
 
     return prompt
       .catch(error => {
-        if (canceled) {
+        if (cancellation === 'escape') {
           throw new PromptCanceledError();
+        }
+        if (cancellation === 'back') {
+          throw new PromptBackError();
         }
         throw error;
       })

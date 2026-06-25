@@ -890,6 +890,92 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Canceled.');
       expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
     });
+
+    it('returns to team selection from the project picker', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      useUnknownProject();
+
+      client.cwd = cwd;
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Which team?');
+      client.events.keypress('enter');
+      await expect(client.stderr).toOutput('Choose a different team');
+      client.events.keypress('down');
+      client.events.keypress('down');
+      client.events.keypress('enter');
+
+      await expect(client.stderr).toOutput('Which team?');
+      client.events.keypress('escape');
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+      await expect(client.stderr).toOutput('Canceled.');
+      expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
+    });
+
+    it('returns to project options from project search', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Which team?');
+      client.events.keypress('enter');
+      await expect(client.stderr).toOutput('Search all projects');
+      client.events.keypress('down');
+      client.events.keypress('enter');
+
+      await expect(client.stderr).toOutput('Back to project options');
+      client.events.keypress('down');
+      client.events.keypress('enter');
+
+      await expect(client.stderr).toOutput('Which project?');
+      client.events.keypress('escape');
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+      await expect(client.stderr).toOutput('Canceled.');
+      expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
+    });
+
+    it('returns to the project picker from the name prompt with Up', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      useUnknownProject();
+
+      client.cwd = cwd;
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Which team?');
+      client.events.keypress('enter');
+      await chooseCreateNewProject();
+
+      await expect(client.stderr).toOutput('Name?');
+      expect(client.stderr.getFullOutput()).toContain(
+        'Press ↑ to return to project options'
+      );
+      client.events.keypress('up');
+
+      await expect(client.stderr).toOutput('Which project?');
+      client.events.keypress('down');
+      client.events.keypress('enter');
+      await expect(client.stderr).toOutput('Name?');
+      client.events.keypress('escape');
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+      await expect(client.stderr).toOutput('Canceled.');
+      expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
+    });
   });
 
   describe('--confirm', () => {

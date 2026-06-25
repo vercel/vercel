@@ -29,7 +29,7 @@ import {
 import toHumanPath from '../humanize-path';
 import { isDirectory } from '../fs';
 import selectOrg from '../input/select-org';
-import inputProject from '../input/input-project';
+import inputProject, { BACK_TO_TEAM_SELECTION } from '../input/input-project';
 import { validateRootDirectory } from '../validate-paths';
 import { inputRootDirectory } from '../input/input-root-directory';
 import {
@@ -597,49 +597,58 @@ export default async function setupAndLink(
     }
   }
 
-  if (!org) {
-    try {
-      org = await selectOrg(
-        client,
-        'Which team?',
-        autoConfirm,
-        searchableTeamPicker
-      );
-    } catch (err: unknown) {
-      if (isAPIError(err)) {
-        if (err.code === 'NOT_AUTHORIZED') {
-          output.prettyError(err);
-          return { status: 'error', exitCode: 1, reason: 'NOT_AUTHORIZED' };
+  let projectOrNewProjectName: Awaited<ReturnType<typeof inputProject>>;
+  for (;;) {
+    if (!org) {
+      try {
+        org = await selectOrg(
+          client,
+          'Which team?',
+          autoConfirm,
+          searchableTeamPicker
+        );
+      } catch (err: unknown) {
+        if (isAPIError(err)) {
+          if (err.code === 'NOT_AUTHORIZED') {
+            output.prettyError(err);
+            return { status: 'error', exitCode: 1, reason: 'NOT_AUTHORIZED' };
+          }
+
+          if (err.code === 'TEAM_DELETED') {
+            output.prettyError(err);
+            return { status: 'error', exitCode: 1, reason: 'TEAM_DELETED' };
+          }
         }
 
-        if (err.code === 'TEAM_DELETED') {
-          output.prettyError(err);
-          return { status: 'error', exitCode: 1, reason: 'TEAM_DELETED' };
-        }
+        throw err;
       }
+    }
 
+    try {
+      projectOrNewProjectName = await inputProject(
+        client,
+        org,
+        projectName,
+        autoConfirm,
+        skipAutoDetect,
+        showProjectSuggestions,
+        searchableTeamPicker && !selectedOrg
+      );
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        (err as NodeJS.ErrnoException).code === 'HEADLESS'
+      ) {
+        return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
+      }
       throw err;
     }
-  }
 
-  let projectOrNewProjectName: Awaited<ReturnType<typeof inputProject>>;
-  try {
-    projectOrNewProjectName = await inputProject(
-      client,
-      org,
-      projectName,
-      autoConfirm,
-      skipAutoDetect,
-      showProjectSuggestions
-    );
-  } catch (err) {
-    if (
-      err instanceof Error &&
-      (err as NodeJS.ErrnoException).code === 'HEADLESS'
-    ) {
-      return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
+    if (projectOrNewProjectName === BACK_TO_TEAM_SELECTION) {
+      org = undefined;
+      continue;
     }
-    throw err;
+    break;
   }
 
   if (typeof projectOrNewProjectName === 'string') {

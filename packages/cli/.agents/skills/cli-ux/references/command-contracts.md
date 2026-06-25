@@ -31,7 +31,9 @@ Rules:
 - Running `vc link` is setup intent; do not ask a vague setup-intent prompt.
 - In direct interactive `vc link`, resolve the team before searching for or selecting a project. An explicit `--team`/`--scope` skips the team prompt and restricts project discovery to that team.
 - Direct interactive team selection supports case-insensitive substring search by team name or slug.
-- After team selection, direct interactive `vc link` shows exact folder-name matches first, followed by `Search all projects` and `Create a new project`. Do not dump the team's full project list until the user chooses search.
+- After team selection, direct interactive `vc link` shows exact folder-name matches first, followed by `Search all projects`, `Create a new project`, and `Choose a different team`. Do not dump the team's full project list until the user chooses search.
+- Project search includes `Back to project options`; choosing it returns to the project picker without changing the selected team.
+- After choosing `Create a new project`, show `Press ↑ to return to project options` on `Name?`. Up returns to the project picker without changing the selected team; Escape still cancels the command.
 - Existing-project selection supports case-insensitive substring search. For teams with more than 100 projects, query `/v9/projects?search=<term>&limit=20` within the selected team and cancel stale requests as the query changes.
 - Include teams that require SSO in the explicit team picker. Selecting one may trigger SSO reauthentication on the first scoped project request; automatic cross-team discovery continues to skip those teams.
 - Escape cancels any active direct `vc link` prompt, exits successfully, and prints `Canceled.` without continuing to later prompts or mutations.
@@ -86,10 +88,13 @@ Link acceptance matrix:
 - stale/deleted project link
 - one team and many teams, with team selection before project discovery
 - team search by name and slug
+- returning from project selection to team selection
 - local and API-backed existing-project search within the selected team
+- returning from project search to project options
 - exact folder-name suggestion before full project search
 - explicit selection of a team that requires SSO
 - Escape cancellation from team, project, and setup prompts without mutation
+- Up from the new-project `Name?` prompt returns to project selection without repeating team selection or project discovery
 - explicit `--team`
 - explicit valid and missing `--project`
 - repo-root and folder-name matches
