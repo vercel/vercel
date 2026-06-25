@@ -245,6 +245,67 @@ describe('detectFramework()', () => {
   });
 
   it.each([
+    'Dockerfile.vercel',
+    'Containerfile.vercel',
+  ])('Detect container framework via `%s`', async marker => {
+    const fs = new VirtualFilesystem({
+      [marker]: 'FROM node:20\nCMD ["node", "server.js"]',
+    });
+
+    // The container preset is experimental, so it is only detected when
+    // experimental frameworks are enabled.
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        useExperimentalFrameworks: true,
+      })
+    ).toBe('container');
+  });
+
+  it.each([
+    'Dockerfile.vercel',
+    'Containerfile.vercel',
+  ])('Prefer the container framework over others when `%s` is present', async marker => {
+    // A project may also be a Next.js app, but the explicit container marker
+    // is an opt-in to deploy it as a container instead.
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          next: '14.0.0',
+        },
+      }),
+      [marker]: 'FROM node:20\nCMD ["node", "server.js"]',
+    });
+
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        useExperimentalFrameworks: true,
+      })
+    ).toBe('container');
+  });
+
+  it.each([
+    'Dockerfile.vercel',
+    'Containerfile.vercel',
+  ])('Does not detect the experimental container framework via `%s` without the flag', async marker => {
+    // Without experimental frameworks enabled the container preset is filtered
+    // out, so a co-present framework (here Next.js) is detected instead.
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          next: '14.0.0',
+        },
+      }),
+      [marker]: 'FROM node:20\nCMD ["node", "server.js"]',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('nextjs');
+  });
+
+  it.each([
     'server.cjs',
     'server.js',
     'server.mjs',

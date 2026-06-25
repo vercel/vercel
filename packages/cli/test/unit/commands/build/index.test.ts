@@ -2673,7 +2673,23 @@ createServer((_req, res) => {
     expect(exitCode).toBe(0);
 
     const config = await fs.readJSON(join(output, 'config.json'));
-    expect(config.services).toBeUndefined();
+    // `experimentalServicesV2` services are recorded in the `services` array,
+    // each tagged with its `schema` discriminant so consumers can tell V1 from
+    // V2 records.
+    expect(config.services).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          schema: 'experimentalServicesV2',
+          name: 'ui',
+          runtime: 'node',
+        }),
+        expect.objectContaining({
+          schema: 'experimentalServicesV2',
+          name: 'backend',
+          runtime: 'node',
+        }),
+      ])
+    );
     expect(config.experimentalServicesV2).toEqual({
       backend: expect.objectContaining({
         root: '.',
@@ -2946,7 +2962,19 @@ writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, nul
       );
 
       const config = await fs.readJSON(join(output, 'config.json'));
-      expect(config.services).toBeUndefined();
+      // Only services actually treated as services are recorded in the
+      // `services` array. `ui` was already built at the root and skipped (see
+      // the warning asserted above), so it must NOT appear here; only the newly
+      // nested `backend` service is recorded, tagged with its `schema`.
+      expect(config.services).toEqual([
+        expect.objectContaining({
+          schema: 'experimentalServicesV2',
+          name: 'backend',
+        }),
+      ]);
+      expect(config.services).not.toContainEqual(
+        expect.objectContaining({ name: 'ui' })
+      );
       expect(config.experimentalServices).toBeUndefined();
       expect(config.experimentalServicesV2).toEqual({
         backend: expect.objectContaining({

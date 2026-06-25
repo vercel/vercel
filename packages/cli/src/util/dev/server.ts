@@ -664,8 +664,16 @@ export default class DevServer {
     vercelConfig.routes = maybeRoutes || [];
 
     // no builds -> zero config
+    //
+    // Skip zero-config builder detection when the dev server already has
+    // resolved services (`experimentalServices`/`experimentalServicesV2`): the
+    // services orchestrator owns building and running them. Without this,
+    // `detectBuilders` runs with the remote `framework: "services"` setting but
+    // no service config threaded in, and errors with "no services declared".
+    const hasResolvedServices = !!this.services && this.services.length > 0;
     if (
       !vercelConfig.experimentalServices &&
+      !hasResolvedServices &&
       (!vercelConfig.builds || vercelConfig.builds.length === 0)
     ) {
       const featHandleMiss = true; // enable for zero config
@@ -1132,6 +1140,7 @@ export default class DevServer {
       await this.startPromise;
 
       if (this.orchestrator) {
+        // Services V1 use routePrefixes for WebSocket routing.
         const pathname = url.parse(req.url || '/').pathname || '/';
         const service = this.orchestrator.getServiceForRoute(pathname);
         if (service) {
@@ -1142,6 +1151,31 @@ export default class DevServer {
           this.proxy.ws(req, socket, head, { target });
           return;
         }
+
+        // Services V2 sets routePrefixes: [] and relies on the vercel.json route table.
+        const vercelConfig = await this.getVercelConfig();
+        if (vercelConfig.experimentalServicesV2 || vercelConfig.services) {
+          const routeResult = await devRouter(
+            req.url || '/',
+            req.method,
+            vercelConfig.routes,
+            this,
+            vercelConfig
+          );
+          if (isServiceDestination(routeResult.matched_route)) {
+            const { service: serviceName } =
+              routeResult.matched_route.destination;
+            const origin = this.orchestrator.getServiceOrigin(serviceName);
+            if (origin) {
+              output.debug(
+                `Detected "upgrade" event, proxying to service "${serviceName}" at ${origin}`
+              );
+              this.proxy.ws(req, socket, head, { target: origin });
+              return;
+            }
+          }
+        }
+
         output.debug(
           `Detected "upgrade" event, but no matching service found for ${pathname}`
         );
@@ -1163,10 +1197,7 @@ export default class DevServer {
       const pathname = url.parse(req.url || '/').pathname || '/';
       for (const match of this.buildMatches.values()) {
         const { builder } = match.builderWithPkg;
-        if (
-          (builder.version === 3 || builder.version === -1) &&
-          typeof builder.startDevServer === 'function'
-        ) {
+        if (typeof builder.startDevServer === 'function') {
           try {
             const result = await builder.startDevServer({
               files: this.files,
@@ -2118,8 +2149,8 @@ export default class DevServer {
       const { envConfigs, files, devCacheDir, cwd: workPath } = this;
       try {
         const { builder } = middleware.builderWithPkg;
-        if (builder.version === 3 || builder.version === -1) {
-          startMiddlewareResult = await builder.startDevServer?.({
+        if (typeof builder.startDevServer === 'function') {
+          startMiddlewareResult = await builder.startDevServer({
             files,
             entrypoint: middleware.entrypoint,
             workPath,
@@ -2597,16 +2628,11 @@ export default class DevServer {
     }
 
     // Before doing any asset matching, check if this builder supports the
-    // `startDevServer()` "optimization". In this case, the vercel dev server invokes
-    // `startDevServer()` on the builder for every HTTP request so that it boots
-    // up a single-serve dev HTTP server that vercel dev will proxy this HTTP request
-    // to. Once the proxied request is finished, vercel dev shuts down the dev
-    // server child process.
+    // `startDevServer()` optimization. Builders may own a persistent server
+    // across requests; all other dev servers retain the request-scoped
+    // lifecycle.
     const { builder, pkg: builderPkg } = match.builderWithPkg;
-    if (
-      (builder.version === 3 || builder.version === -1) &&
-      typeof builder.startDevServer === 'function'
-    ) {
+    if (typeof builder.startDevServer === 'function') {
       let devServerResult: StartDevServerResult = null;
       try {
         const { envConfigs, files, devCacheDir, cwd: workPath } = this;
@@ -2658,12 +2684,13 @@ export default class DevServer {
         // is also included in the request ID. So use the same `dev1` fake region.
         requestId = generateRequestId(this.podId, true);
 
-        const { port, pid, shutdown } = devServerResult;
+        const { port, pid, shutdown, persistent } = devServerResult;
         this.shutdownCallbacks.set(pid, shutdown);
-
-        res.once('close', () => {
-          this.killBuilderDevServer(pid);
-        });
+        if (!persistent) {
+          res.once('close', () => {
+            this.killBuilderDevServer(pid);
+          });
+        }
 
         debug(
           `Proxying to "${builderPkg.name}" dev server (port=${port}, pid=${pid})`

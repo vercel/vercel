@@ -786,14 +786,14 @@ describe('[vercel dev] experimentalServicesV2 service bindings', () => {
     try {
       await readyResolver;
 
-      // Each binding env var is injected as a local URL base ending in "/".
+      // Each binding env var is injected as a local URL base with no trailing slash.
       const info = await nodeFetch(`http://localhost:${port}/binding-info`);
       expect(info.status).toBe(200);
       const infoJson = await info.json();
-      expect(infoJson.node_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
-      expect(infoJson.py_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
-      expect(infoJson.go_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
-      expect(infoJson.ruby_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
+      expect(infoJson.node_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+      expect(infoJson.py_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+      expect(infoJson.go_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+      expect(infoJson.ruby_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
 
       // The gateway reaches each internal service (one per runtime) through its
       // binding. None of the targets are publicly routed.

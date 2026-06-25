@@ -114,6 +114,11 @@ export class DeployTelemetryClient
       this.trackCliFlag('no-wait');
     }
   }
+  trackCliFlagDry(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('dry');
+    }
+  }
   trackCliFlagPrebuilt(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('prebuilt');
