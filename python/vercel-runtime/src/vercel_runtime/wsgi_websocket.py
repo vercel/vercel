@@ -59,12 +59,13 @@ class UpgradeSocket:
             self._on_upgrade()
 
     def send(self, data: Any, *args: Any, **kwargs: Any) -> int:
+        result = self._sock.send(data, *args, **kwargs)
         self._maybe_signal_upgrade(data)
-        return self._sock.send(data, *args, **kwargs)
+        return result
 
     def sendall(self, data: Any, *args: Any, **kwargs: Any) -> None:
+        self._sock.sendall(data, *args, **kwargs)
         self._maybe_signal_upgrade(data)
-        return self._sock.sendall(data, *args, **kwargs)
 
     def __getattr__(self, name: str) -> Any:
         # Delegate everything else (recv, fileno, close, setsockopt, ...) to

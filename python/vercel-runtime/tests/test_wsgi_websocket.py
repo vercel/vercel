@@ -95,6 +95,26 @@ class TestUpgradeSocket(unittest.TestCase):
         sock.sendall(b"HTTP/1.1 400 Bad Request\r\n\r\n")
         self.assertEqual(calls, [])
 
+    def test_does_not_signal_when_send_raises(self) -> None:
+        class _BrokenSocket(_FakeSocket):
+            def send(self, data: Any, *args: Any, **kwargs: Any) -> int:
+                raise BrokenPipeError("write failed")
+
+            def sendall(self, data: Any, *args: Any, **kwargs: Any) -> None:
+                raise BrokenPipeError("write failed")
+
+        broken = _BrokenSocket()
+        calls: list[int] = []
+        sock = UpgradeSocket(_as_socket(broken), lambda: calls.append(1))
+
+        with self.assertRaises(BrokenPipeError):
+            sock.send(_HANDSHAKE_101)
+        with self.assertRaises(BrokenPipeError):
+            sock.sendall(_HANDSHAKE_101)
+
+        # The upgrade must not be signaled if the handshake write failed.
+        self.assertEqual(calls, [])
+
     def test_send_passes_through_and_returns_underlying_value(self) -> None:
         fake = _FakeSocket()
         sock = UpgradeSocket(_as_socket(fake), lambda: None)
