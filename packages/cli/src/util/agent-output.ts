@@ -526,6 +526,7 @@ export type ExitWithNonInteractiveErrorVariant =
   | 'access-groups'
   | 'access-summary'
   | 'protection'
+  | 'update'
   | 'speed-insights'
   | 'web-analytics'
   | 'checks'
@@ -557,25 +558,30 @@ function buildNextStepsForProjectSubcommands(
               template: 'project protection <name>' as const,
               when: 'Show deployment protection by project name (replace <name>)',
             }
-          : variant === 'speed-insights'
+          : variant === 'update'
             ? {
-                template: 'project speed-insights <name>' as const,
-                when: 'Enable Speed Insights by project name (replace <name>)',
+                template: 'project update <name> --framework <slug>' as const,
+                when: 'Update a framework preset by project name (replace <name> and <slug>)',
               }
-            : variant === 'web-analytics'
+            : variant === 'speed-insights'
               ? {
-                  template: 'project web-analytics <name>' as const,
-                  when: 'Enable Web Analytics by project name (replace <name>)',
+                  template: 'project speed-insights <name>' as const,
+                  when: 'Enable Speed Insights by project name (replace <name>)',
                 }
-              : variant === 'checks'
+              : variant === 'web-analytics'
                 ? {
-                    template: 'project checks add <name>' as const,
-                    when: 'Create a deployment check by project name (replace <name>)',
+                    template: 'project web-analytics <name>' as const,
+                    when: 'Enable Web Analytics by project name (replace <name>)',
                   }
-                : {
-                    template: 'project members <name>' as const,
-                    when: 'List members by project name (replace <name>)',
-                  };
+                : variant === 'checks'
+                  ? {
+                      template: 'project checks add <name>' as const,
+                      when: 'Create a deployment check by project name (replace <name>)',
+                    }
+                  : {
+                      template: 'project members <name>' as const,
+                      when: 'List members by project name (replace <name>)',
+                    };
   return [
     {
       command: buildCommandWithGlobalFlags(client.argv, 'link'),
