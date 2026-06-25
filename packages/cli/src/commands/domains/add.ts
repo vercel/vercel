@@ -3,11 +3,9 @@ import chalk from 'chalk';
 import * as ERRORS from '../../util/errors-ts';
 import { isAPIError } from '../../util/errors-ts';
 import type Client from '../../util/client';
-import formatNSTable from '../../util/format-ns-table';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
-import { getDomain } from '../../util/domains/get-domain';
 import addDomainToTeam from '../../util/domains/add-domain';
 import { isPublicSuffix } from '../../util/domains/is-public-suffix';
 import isRootDomain from '../../util/is-root-domain';
@@ -18,7 +16,6 @@ import {
   getProjectDomainByName,
 } from '../../util/projects/get-project-domain';
 import { removeDomainFromProject } from '../../util/projects/remove-domain-from-project';
-import code from '../../util/output/code';
 import output from '../../output-manager';
 import { DomainsAddTelemetryClient } from '../../util/telemetry/commands/domains/add';
 import { addSubcommand } from './command';
@@ -112,7 +109,6 @@ function nextCommandsForDomainsAddFailure(
 
 async function printDomainConfiguration(
   client: Client,
-  contextName: string,
   domainName: string
 ): Promise<number> {
   if (isPublicSuffix(domainName)) {
@@ -122,50 +118,14 @@ async function printDomainConfiguration(
     return 0;
   }
 
-  const domainResponse = await getDomain(client, contextName, domainName);
-
-  if (domainResponse instanceof Error) {
-    if (client.nonInteractive) {
-      outputAgentError(
-        client,
-        {
-          status: 'error',
-          reason: 'domain_fetch_failed',
-          message: errorToString(domainResponse),
-        },
-        1
-      );
-    }
-    output.prettyError(domainResponse);
-    return 1;
-  }
-
   const domainConfig = await getDomainConfig(client, domainName);
 
-  if (domainConfig.misconfigured) {
+  if (!(domainConfig instanceof Error) && domainConfig.misconfigured) {
     output.warn(
-      'This domain is not configured properly. To configure it you should either:'
+      `This domain is not configured properly. Run ${getCommandName(
+        `domains verify ${domainName}`
+      )} to see how to configure it.`
     );
-    output.print(
-      `  ${chalk.grey('a)')} ` +
-        'Set the following record on your DNS provider to continue: ' +
-        `${code(`A ${domainName} 76.76.21.21`)} ` +
-        `${chalk.grey('[recommended]')}\n`
-    );
-    output.print(
-      `  ${chalk.grey('b)')} Change your Domains's nameservers to the intended set`
-    );
-    output.print(
-      `\n${formatNSTable(
-        domainResponse.intendedNameservers,
-        domainResponse.nameservers,
-        { extraSpace: '     ' }
-      )}\n\n`
-    );
-    output.print(
-      '  We will run a verification for you and you will receive an email upon completion.\n'
-    );
-    output.print('  Read more: https://vercel.link/domain-configuration\n\n');
   } else {
     output.log(
       'The domain will automatically get assigned to your latest production deployment.'
@@ -403,7 +363,7 @@ export default async function add(client: Client, argv: string[]) {
             projectName
           )}. ${addStamp()}`
         );
-        return printDomainConfiguration(client, contextName, domainName);
+        return printDomainConfiguration(client, domainName);
       }
 
       if (force) {
@@ -510,5 +470,5 @@ export default async function add(client: Client, argv: string[]) {
     )}. ${addStamp()}`
   );
 
-  return printDomainConfiguration(client, contextName, domainName);
+  return printDomainConfiguration(client, domainName);
 }

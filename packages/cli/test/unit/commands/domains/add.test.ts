@@ -70,6 +70,30 @@ describe('domains add', () => {
     });
 
     describe('[project]', () => {
+      it('points to `domains verify` when the domain is misconfigured', async () => {
+        useUser();
+        const domain = useDomain();
+        const { project } = useProject();
+        client.setArgv('domains', 'add', domain.name, String(project.name));
+        client.scenario.post(`/projects/${project.name}/alias`, (_req, res) => {
+          res.json([{ domain: domain.name }]);
+        });
+        client.scenario.get(
+          `/:version/domains/${domain.name}/config`,
+          (_req, res) => {
+            res.json({ misconfigured: true });
+          }
+        );
+        const exitCode = await domains(client);
+        expect(exitCode, 'exit code for "domains"').toEqual(0);
+
+        await expect(client.stderr).toOutput(
+          `This domain is not configured properly. Run \`vercel domains verify ${domain.name}\``
+        );
+        const fullOutput = client.stderr.getFullOutput();
+        expect(fullOutput).not.toContain('76.76.21.21');
+      });
+
       it('treats a domain already assigned to the same project as success', async () => {
         useUser();
         const domain = useDomain();
