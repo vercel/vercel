@@ -40,7 +40,7 @@
     "dist"
   ],
   "engines": {
-    "node": ">= 20"
+    "node": ">= 18"
   },
   "dependencies": {
     "@vercel/backends": "workspace:*",
