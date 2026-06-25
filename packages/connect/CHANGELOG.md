@@ -1,5 +1,11 @@
 # @vercel/connect
 
+## 0.2.9
+
+### Patch Changes
+
+- dd77402: Bump the optional `eve` peer dependency for `@vercel/connect/eve` to the next eve patch release that accepts the `auth.evict` hook emitted by Vercel Connect helpers.
+
 ## 0.2.8
 
 ### Patch Changes

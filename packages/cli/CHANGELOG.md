@@ -1,5 +1,40 @@
 # vercel
 
+## 54.17.2
+
+### Patch Changes
+
+- 6eb572e: Add `vercel edge-config backups` for listing, inspecting, and restoring Edge Config backups.
+
+  Examples:
+
+  - `vercel edge-config backups my-store`
+  - `vercel edge-config backups my-store --backup-version <backup-version-id> --format json`
+  - `vercel edge-config backups my-store --restore <backup-version-id> --yes`
+
+- 7cecf55: Make hand-written service-targeted route/rewrite `destination` config less repetitive and verbose by making the `type` discriminator optional.
+
+  ```diff
+   {
+     "rewrites": [{
+  -    "type": "service",
+       "service": "my_backend",
+       "path": "/api/$1"
+     }]
+   }
+  ```
+
+  The explicit `{ "type": "service", "service": NAME }` format continues to
+  validate. Normalized route output continues to include `"type": "service"`, so
+  machine-facing config remains canonical.
+
+- 5d37c78: Handle deployments containing very large files without crashing. Files larger than Node's `fs.readFile` limit (~2 GiB) are now hashed and uploaded by streaming instead of being read into a single Buffer (which threw `ERR_FS_FILE_TOO_LARGE` — "File size ... is greater than 2 GiB"), and the CLI upload progress no longer assumes every file is held in memory. When a file still exceeds the server's per-request upload limit (HTTP 413), the CLI now suggests `--archive=tgz`, which uploads the deployment in smaller chunks.
+  - @vercel/build-utils@13.32.1
+  - @vercel/next@4.20.1
+  - @vercel/redwood@2.5.0
+  - @vercel/rust@1.3.0
+  - @vercel/static-build@2.11.3
+
 ## 54.17.1
 
 ### Patch Changes
