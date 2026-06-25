@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 6.10.3
+
+### Patch Changes
+
+- 34b2c4c: Apply `functions` config to Python framework builds using the resolved Python entrypoint.
+
 ## 6.10.2
 
 ### Patch Changes

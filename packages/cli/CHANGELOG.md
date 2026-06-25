@@ -1,5 +1,16 @@
 # vercel
 
+## 54.17.3
+
+### Patch Changes
+
+- f76b357: Improve `vercel domains add`: skip project/deployment configuration guidance when no project is provided, return a specific error explaining only apex domains can be added without a project, treat a domain already assigned to the requested project as a success instead of failing with an "assigned to another project" error, and point users to `vercel domains verify <domain>` for DNS configuration instead of printing hardcoded DNS records.
+- Updated dependencies [4b90a10]
+- Updated dependencies [34b2c4c]
+  - @vercel/go@3.10.1
+  - @vercel/python@6.47.2
+  - @vercel/static-build@2.11.3
+
 ## 54.17.2
 
 ### Patch Changes
