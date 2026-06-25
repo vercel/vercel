@@ -130,6 +130,25 @@ describe('native fetch', () => {
     ]);
   });
 
+  it('uses HTTP_PROXY for HTTPS when HTTPS_PROXY is not set', async () => {
+    const calls: string[] = [];
+    const directAgent = trackedDispatcher('direct', calls);
+    const proxyAgent = trackedDispatcher('proxy', calls);
+    process.env.HTTP_PROXY = 'http://proxy.test:8080';
+
+    const dispatcher = new EnvProxyDispatcher({
+      directAgent,
+      createProxyAgent: url => {
+        expect(url).toBe('http://proxy.test:8080');
+        return proxyAgent;
+      },
+    });
+    destroyDispatcher = () => dispatcher.destroy();
+
+    dispatcher.dispatch(dispatchOptions('https://example.test'), handlers());
+    expect(calls).toEqual(['proxy']);
+  });
+
   it('selects the direct dispatcher for NO_PROXY matches', async () => {
     const calls: string[] = [];
     const directAgent = trackedDispatcher('direct', calls);

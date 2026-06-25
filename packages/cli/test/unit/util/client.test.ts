@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { listen } from 'async-listen';
 import { createProxy } from 'proxy';
@@ -11,6 +11,17 @@ import * as getArgs from '../../../src/util/get-args';
 import pkg from '../../../src/util/pkg';
 import { EnvProxyDispatcher } from '../../../src/util/fetch-proxy';
 import { setFetchDispatcher } from '../../../src/util/fetch';
+
+const PROXY_ENV_NAMES = [
+  'HTTP_PROXY',
+  'HTTPS_PROXY',
+  'ALL_PROXY',
+  'NO_PROXY',
+  'http_proxy',
+  'https_proxy',
+  'all_proxy',
+  'no_proxy',
+] as const;
 
 const testConfigSchema = z.object({
   enabled: z.boolean(),
@@ -27,14 +38,23 @@ const dateConfigSchema = z.object({
 describe('Client', () => {
   describe('fetch()', () => {
     beforeEach(() => {
-      delete process.env.HTTPS_PROXY;
-      delete process.env.HTTP_PROXY;
+      for (const name of PROXY_ENV_NAMES) {
+        vi.stubEnv(name, undefined);
+      }
       client.agent?.destroy();
       client.agent = undefined;
       client.reset();
     });
 
-    it('should respect the `HTTP_PROXY` env var', async () => {
+    afterEach(() => {
+      setFetchDispatcher(undefined);
+      vi.unstubAllEnvs();
+    });
+
+    it.each([
+      'HTTP_PROXY',
+      'http_proxy',
+    ] as const)('should respect the `%s` env var', async proxyEnvName => {
       let requestCount = 0;
       const proxy = createProxy();
       const proxyUrl = await listen(proxy);
@@ -55,9 +75,7 @@ describe('Client', () => {
       let dispatcher: EnvProxyDispatcher | undefined;
 
       try {
-        process.env.HTTP_PROXY = proxyUrl.href;
-        delete process.env.NO_PROXY;
-        delete process.env.no_proxy;
+        vi.stubEnv(proxyEnvName, proxyUrl.href);
         dispatcher = new EnvProxyDispatcher();
         setFetchDispatcher(dispatcher);
 

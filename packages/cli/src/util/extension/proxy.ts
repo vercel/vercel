@@ -23,6 +23,7 @@ export function createProxy(client: Client): Server {
         headers: headers as unknown as HeadersInit,
         method: req.method,
         body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req,
+        redirect: 'manual',
         useCurrentTeam: false,
         json: false,
       });
@@ -39,7 +40,11 @@ export function createProxy(client: Client): Server {
       delete outgoingHeaders['content-length'];
 
       mergeIntoServerResponse(outgoingHeaders, res);
-      toNodeReadable(fetchRes.body).pipe(res);
+      if (fetchRes.body) {
+        toNodeReadable(fetchRes.body).pipe(res);
+      } else {
+        res.end();
+      }
     } catch (err: unknown) {
       output.prettyError(err);
       if (!res.headersSent) {
