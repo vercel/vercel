@@ -515,7 +515,7 @@ describe('detectServices with auto-detection', () => {
       expect(result.rewrites).toHaveLength(2);
       // Longest mountPath first (backend before root catch-all)
       expect(result.rewrites[0]).toMatchObject({
-        source: '/api/backend(.*)',
+        source: '/api/backend(/.*)?',
         destination: { type: 'service', service: 'backend' },
       });
       expect(result.rewrites[1]).toMatchObject({

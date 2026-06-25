@@ -202,7 +202,7 @@ mount = "/api"`
       },
       rewrites: [
         {
-          source: '/api/api(.*)',
+          source: '/api/api(/.*)?',
           destination: { type: 'service', service: 'api' },
         },
         {

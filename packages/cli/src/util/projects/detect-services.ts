@@ -135,7 +135,7 @@ function toProjectServicesConfigPatch(
       }
       const prefix = mountPath.startsWith('/') ? mountPath.slice(1) : mountPath;
       return {
-        source: `/${prefix}(.*)`,
+        source: `/${prefix}(/.*)?`,
         destination: { type: 'service' as const, service: name },
       };
     });
