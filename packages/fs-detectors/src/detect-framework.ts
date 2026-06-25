@@ -7,6 +7,18 @@ interface BaseFramework {
   detectors?: Framework['detectors'];
 }
 
+/**
+ * Per-framework opt-in for experimental presets, keyed by framework slug.
+ *
+ * Resolved remotely by the caller (e.g. the CLI fetches and caches this) and
+ * passed in, so this package stays free of any network/auth dependency. A
+ * value of `true` for a slug includes that experimental framework in detection
+ * even when `VERCEL_USE_EXPERIMENTAL_FRAMEWORKS` is not set.
+ *
+ * Mirrors the API shape `{ overrideExperimental: { container: true } }`.
+ */
+export type ExperimentalOverrides = Record<string, boolean>;
+
 export interface DetectFrameworkOptions {
   fs: DetectorFilesystem;
   frameworkList: readonly BaseFramework[];
@@ -16,6 +28,13 @@ export interface DetectFrameworkOptions {
    * Defaults to false if neither is set.
    */
   useExperimentalFrameworks?: boolean;
+  /**
+   * Per-slug opt-in for experimental frameworks. Only consulted when
+   * `useExperimentalFrameworks`/the env var has not already enabled all
+   * experimental frameworks. An experimental framework whose slug maps to
+   * `true` here is included in detection.
+   */
+  experimentalOverrides?: ExperimentalOverrides;
 }
 
 export interface DetectFrameworkRecordOptions {
@@ -27,6 +46,13 @@ export interface DetectFrameworkRecordOptions {
    * Defaults to false if neither is set.
    */
   useExperimentalFrameworks?: boolean;
+  /**
+   * Per-slug opt-in for experimental frameworks. Only consulted when
+   * `useExperimentalFrameworks`/the env var has not already enabled all
+   * experimental frameworks. An experimental framework whose slug maps to
+   * `true` here is included in detection.
+   */
+  experimentalOverrides?: ExperimentalOverrides;
 }
 
 type MatchResult = {
@@ -53,10 +79,20 @@ function shouldIncludeExperimentalFrameworks(
 
 /**
  * Filters out experimental frameworks unless explicitly opted in.
+ *
+ * Inclusion rules for an experimental framework, in order:
+ *   1. `useExperimentalFrameworks` / `VERCEL_USE_EXPERIMENTAL_FRAMEWORKS`
+ *      enables ALL experimental frameworks (today's behavior).
+ *   2. Otherwise, the framework is included only if its slug is explicitly
+ *      enabled via `experimentalOverrides` (e.g. the remotely-fetched
+ *      `{ overrideExperimental: { container: true } }`).
+ *
+ * Non-experimental frameworks are always included.
  */
 function filterFrameworkList<T extends BaseFramework>(
   frameworkList: readonly T[],
-  useExperimentalFrameworks?: boolean
+  useExperimentalFrameworks?: boolean,
+  experimentalOverrides?: ExperimentalOverrides
 ): readonly T[] {
   if (shouldIncludeExperimentalFrameworks(useExperimentalFrameworks)) {
     return frameworkList;
@@ -64,7 +100,12 @@ function filterFrameworkList<T extends BaseFramework>(
   return frameworkList.filter(f => {
     // Check if framework has experimental property and filter it out if true
     const experimental = (f as { experimental?: boolean }).experimental;
-    return !experimental;
+    if (!experimental) {
+      return true;
+    }
+    // Per-slug remote opt-in (e.g. graduating a preset without a CLI upgrade).
+    const slug = (f as { slug?: string | null }).slug;
+    return Boolean(slug && experimentalOverrides?.[slug] === true);
   });
 }
 
@@ -214,10 +255,12 @@ export async function detectFramework({
   fs,
   frameworkList,
   useExperimentalFrameworks,
+  experimentalOverrides,
 }: DetectFrameworkOptions): Promise<string | null> {
   const filteredList = filterFrameworkList(
     frameworkList,
-    useExperimentalFrameworks
+    useExperimentalFrameworks,
+    experimentalOverrides
   );
   const result = await Promise.all(
     filteredList.map(async frameworkMatch => {
@@ -238,10 +281,12 @@ export async function detectFrameworks({
   fs,
   frameworkList,
   useExperimentalFrameworks,
+  experimentalOverrides,
 }: DetectFrameworkRecordOptions): Promise<Framework[]> {
   const filteredList = filterFrameworkList(
     frameworkList,
-    useExperimentalFrameworks
+    useExperimentalFrameworks,
+    experimentalOverrides
   );
   const result = await Promise.all(
     filteredList.map(async frameworkMatch => {
@@ -268,10 +313,12 @@ export async function detectFrameworkRecord({
   fs,
   frameworkList,
   useExperimentalFrameworks,
+  experimentalOverrides,
 }: DetectFrameworkRecordOptions): Promise<VersionedFramework | null> {
   const filteredList = filterFrameworkList(
     frameworkList,
-    useExperimentalFrameworks
+    useExperimentalFrameworks,
+    experimentalOverrides
   );
   const result = await Promise.all(
     filteredList.map(async frameworkMatch => {

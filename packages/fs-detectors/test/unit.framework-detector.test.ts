@@ -306,6 +306,90 @@ describe('detectFramework()', () => {
   });
 
   it.each([
+    'Dockerfile.vercel',
+    'Containerfile.vercel',
+  ])('Detect the experimental container framework via `%s` when enabled per-slug via experimentalOverrides', async marker => {
+    // The env flag / `useExperimentalFrameworks` is NOT set, but the preset is
+    // remotely graduated for its slug, so it should be detected and win over
+    // the co-present Next.js app.
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          next: '14.0.0',
+        },
+      }),
+      [marker]: 'FROM node:20\nCMD ["node", "server.js"]',
+    });
+
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        experimentalOverrides: { container: true },
+      })
+    ).toBe('container');
+  });
+
+  it('Does not detect an experimental framework when experimentalOverrides maps its slug to false', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          next: '14.0.0',
+        },
+      }),
+      'Dockerfile.vercel': 'FROM node:20\nCMD ["node", "server.js"]',
+    });
+
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        experimentalOverrides: { container: false },
+      })
+    ).toBe('nextjs');
+  });
+
+  it('Does not detect an experimental framework when experimentalOverrides only enables a different slug', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          next: '14.0.0',
+        },
+      }),
+      'Dockerfile.vercel': 'FROM node:20\nCMD ["node", "server.js"]',
+    });
+
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        experimentalOverrides: { 'some-other-framework': true },
+      })
+    ).toBe('nextjs');
+  });
+
+  it('Prefers the env flag over experimentalOverrides (flag enables all experimental presets)', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          next: '14.0.0',
+        },
+      }),
+      'Dockerfile.vercel': 'FROM node:20\nCMD ["node", "server.js"]',
+    });
+
+    // Even though overrides disable container, the explicit flag enables all
+    // experimental presets, so container is still detected.
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        useExperimentalFrameworks: true,
+        experimentalOverrides: { container: false },
+      })
+    ).toBe('container');
+  });
+  it.each([
     'server.cjs',
     'server.js',
     'server.mjs',

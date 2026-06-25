@@ -40,6 +40,7 @@ import type { EmojiLabel } from '../emoji';
 import { CantParseJSONFile, isAPIError } from '../errors-ts';
 import output from '../../output-manager';
 import { detectProjects } from '../projects/detect-projects';
+import { resolveExperimentalOverrides } from '../projects/experimental-frameworks';
 import readConfig from '../config/read-config';
 import { findSourceVercelConfigFile } from '../compile-vercel-config';
 import { frameworkList } from '@vercel/frameworks';
@@ -779,8 +780,15 @@ export default async function setupAndLink(
           };
 
           // Run the framework detection logic against the local filesystem.
+          // Experimental presets stay gated behind
+          // `VERCEL_USE_EXPERIMENTAL_FRAMEWORKS`, but a preset may also be
+          // remotely graduated per-slug (e.g. `{ container: true }`) without a
+          // CLI upgrade; resolve that opt-in and pass it to detection.
+          const experimentalOverrides =
+            await resolveExperimentalOverrides(client);
           const detectedProjectsForWorkspace = await detectProjects(
-            pathWithRootDirectory
+            pathWithRootDirectory,
+            experimentalOverrides
           );
 
           // Select the first framework detected, or use

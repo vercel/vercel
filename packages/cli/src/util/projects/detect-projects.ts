@@ -5,9 +5,13 @@ import {
   getWorkspacePackagePaths,
   getWorkspaces,
   LocalFileSystemDetector,
+  type ExperimentalOverrides,
 } from '@vercel/fs-detectors';
 
-export async function detectProjects(cwd: string) {
+export async function detectProjects(
+  cwd: string,
+  experimentalOverrides?: ExperimentalOverrides
+) {
   const fs = new LocalFileSystemDetector(cwd);
   const workspaces = await getWorkspaces({ fs });
   const detectedProjects = new Map<string, Framework[]>();
@@ -29,6 +33,7 @@ export async function detectProjects(cwd: string) {
       const frameworks = await detectFrameworks({
         fs: fs.chdir(join('.', p)),
         frameworkList,
+        experimentalOverrides,
       });
       if (frameworks.length === 0) return;
       detectedProjects.set(p.slice(1), frameworks);

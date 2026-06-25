@@ -61,6 +61,7 @@ export {
   detectFrameworkRecord,
   detectFrameworkVersion,
 } from './detect-framework';
+export type { ExperimentalOverrides } from './detect-framework';
 export { getProjectPaths } from './get-project-paths';
 export { DetectorFilesystem } from './detectors/filesystem';
 export { LocalFileSystemDetector } from './detectors/local-file-system-detector';
