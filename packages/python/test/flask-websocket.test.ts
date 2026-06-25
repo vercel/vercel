@@ -7,13 +7,37 @@ import WebSocket from 'ws';
 vi.setConfig({ testTimeout: 120 * 1000, hookTimeout: 120 * 1000 });
 
 const fixturesPath = path.resolve(__dirname, 'fixtures');
-const fixturePath = path.join(fixturesPath, '29-flask2');
+const fixturePath = path.join(fixturesPath, '66-flask-websocket');
+
+/**
+ * Find a Python interpreter that satisfies vercel-runtime's `requires-python`
+ * (>= 3.12). The bare `python3` on a developer machine may be older, which
+ * would make the injected vercel-runtime install fail.
+ */
+async function findPython(): Promise<string> {
+  const candidates = ['python3.12', 'python3.13', 'python3.14', 'python3'];
+  for (const candidate of candidates) {
+    try {
+      const { stdout } = await execa(candidate, [
+        '-c',
+        'import sys; print("%d.%d" % sys.version_info[:2])',
+      ]);
+      const [major, minor] = stdout.trim().split('.').map(Number);
+      if (major === 3 && minor >= 12) {
+        return candidate;
+      }
+    } catch {
+      // try the next candidate
+    }
+  }
+  throw new Error('no Python >= 3.12 interpreter found on PATH');
+}
 
 async function withDevServer(
   workPath: string,
   fn: (url: string) => Promise<void>
 ) {
-  const entrypoint = 'api/werkzeug_version.py';
+  const entrypoint = 'api/index.py';
   const config = { framework: 'flask' as const };
 
   // Create virtual environment and install dependencies if requirements.txt
@@ -21,7 +45,8 @@ async function withDevServer(
   const requirementsPath = path.join(workPath, 'requirements.txt');
   if (await fs.pathExists(requirementsPath)) {
     try {
-      await execa('python3', ['-m', 'venv', '.venv'], {
+      const python = await findPython();
+      await execa(python, ['-m', 'venv', '.venv'], {
         cwd: workPath,
         stdio: 'inherit',
       });
@@ -120,8 +145,12 @@ describe('Flask WebSocket (flask-sock) dev server', () => {
     });
   });
 
-  it('still serves regular HTTP routes alongside the WebSocket route', async () => {
+  it('serves regular HTTP routes alongside the WebSocket route', async () => {
     await withDevServer(fixturePath, async url => {
+      const httpResponse = await fetch(`${url}/`);
+      expect(httpResponse.status).toBe(200);
+      expect(await httpResponse.text()).toContain('flask-websocket ok');
+
       const wsUrl = `${url.replace(/^http/, 'ws')}/ws`;
       const received = await wsEcho(wsUrl, ['ping']);
       expect(received).toEqual(['echo:ping']);
