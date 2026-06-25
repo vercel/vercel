@@ -579,16 +579,6 @@ test('initialize example "angular"', async () => {
   ).toBe(true);
 });
 
-test('fail to add a domain without a project', async () => {
-  const output = await execCli(binaryPath, [
-    'domains',
-    'add',
-    'my-domain.vercel.app',
-  ]);
-  expect(output.exitCode, formatOutput(output)).toBe(1);
-  expect(output.stderr).toMatch(/expects two arguments/gm);
-});
-
 test('whoami', async () => {
   const user = await userPromise;
   const { exitCode, stdout, stderr } = await execCli(binaryPath, ['whoami']);

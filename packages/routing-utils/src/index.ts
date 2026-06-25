@@ -59,9 +59,9 @@ export function isValidHandleValue(handle: string): handle is HandleValue {
 /**
  * Folds input-only aliases into their canonical fields: `source` -> `src` and
  * `statusCode` -> `status`. `destination` is an alias for `dest` ONLY when it is a
- * string; a service-targeted `destination` object (`{ type: 'service', ... }`)
- * has no `dest` equivalent and is intentionally left in place. A route may not
- * set both a canonical field and its alias.
+ * string; a service-targeted `destination` object (`{ service, path? }`) has no
+ * `dest` equivalent and is intentionally left in place. A route may not set both
+ * a canonical field and its alias.
  */
 function convertRouteAliases(route: RouteWithSrc, index: number): void {
   if (route.source !== undefined) {
@@ -84,6 +84,8 @@ function convertRouteAliases(route: RouteWithSrc, index: number): void {
     if (typeof route.destination === 'string') {
       route.dest = route.destination;
       delete route.destination;
+    } else if (typeof route.destination.service === 'string') {
+      route.destination = { ...route.destination, type: 'service' };
     }
   }
 

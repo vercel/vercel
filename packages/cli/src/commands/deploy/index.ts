@@ -7,11 +7,13 @@ import {
   fileNameSymbol,
   continueDeployment,
   VALID_ARCHIVE_FORMATS,
+  inspectDeploymentFiles,
   type ArchiveFormat,
   type Dictionary,
   type VercelConfig,
 } from '@vercel/client';
 import { errorToString, isError } from '@vercel/error-utils';
+import { frameworkList, type Framework } from '@vercel/frameworks';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import fs from 'fs-extra';
@@ -64,6 +66,7 @@ import highlight from '../../util/output/highlight';
 import param from '../../util/output/param';
 import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import stamp from '../../util/output/stamp';
+import table from '../../util/output/table';
 import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
 import { getCommandNameWithGlobalFlags } from '../../util/arg-common';
@@ -949,6 +952,7 @@ async function handleDefaultDeploy(
   telemetryClient.trackCliFlagPrebuilt(parsedArguments.flags['--prebuilt']);
   telemetryClient.trackCliOptionRegions(parsedArguments.flags['--regions']);
   telemetryClient.trackCliFlagNoWait(parsedArguments.flags['--no-wait']);
+  telemetryClient.trackCliFlagDry(parsedArguments.flags['--dry']);
   telemetryClient.trackCliFlagYes(parsedArguments.flags['--yes']);
   telemetryClient.trackCliOptionTarget(parsedArguments.flags['--target']);
   telemetryClient.trackCliFlagProd(parsedArguments.flags['--prod']);
@@ -1131,6 +1135,7 @@ async function handleDefaultDeploy(
         paths,
       }),
     failIfNotFound: !!projectNameOrId,
+    requireExistingLink: parsedArguments.flags['--dry'],
     v0: isV0,
   });
   if (typeof link === 'number') {
@@ -1239,6 +1244,36 @@ async function handleDefaultDeploy(
   }
 
   localConfig = localConfig || {};
+
+  if (parsedArguments.flags['--dry']) {
+    try {
+      const summary = await inspectDeploymentFiles({
+        path: cwd,
+        archive: parsedArchive ? 'tgz' : undefined,
+        debug: output.isDebugEnabled(),
+        prebuilt: parsedArguments.flags['--prebuilt'],
+        vercelOutputDir,
+        projectName: project.name,
+        rootDirectory,
+        bulkRedirectsPath: localConfig.bulkRedirectsPath,
+      });
+      const framework = resolveDeploymentFrameworkPreset({
+        localFramework: localConfig.framework,
+        projectFramework: project.framework,
+      });
+
+      printDeploymentDryRun(
+        client,
+        summary,
+        framework,
+        asJson || !client.stdout.isTTY
+      );
+      return 0;
+    } catch (err: unknown) {
+      printError(err);
+      return 1;
+    }
+  }
 
   if (localConfig.name) {
     output.print(
@@ -1932,6 +1967,152 @@ function handleCreateDeployError(error: Error, localConfig: VercelConfig) {
   }
 
   return error;
+}
+
+type DeploymentDryRunSummary = Awaited<
+  ReturnType<typeof inspectDeploymentFiles>
+>;
+
+type DeploymentFramework = Pick<Framework, 'name' | 'slug'>;
+
+function toDeploymentFramework(framework: Framework): DeploymentFramework {
+  return {
+    name: framework.name,
+    slug: framework.slug,
+  };
+}
+
+function resolveDeploymentFrameworkPreset({
+  localFramework,
+  projectFramework,
+}: {
+  localFramework?: string | null;
+  projectFramework?: string | null;
+}): DeploymentFramework {
+  const frameworkSlug =
+    typeof localFramework === 'undefined' ? projectFramework : localFramework;
+  const frameworkPreset = frameworkList.find(
+    framework => framework.slug === frameworkSlug
+  );
+  const otherPreset = frameworkList.find(framework => framework.slug === null);
+
+  return frameworkPreset
+    ? toDeploymentFramework(frameworkPreset)
+    : otherPreset
+      ? toDeploymentFramework(otherPreset)
+      : { name: 'Other', slug: null };
+}
+
+function printDeploymentDryRun(
+  client: Client,
+  summary: DeploymentDryRunSummary,
+  framework: DeploymentFramework,
+  asJson: boolean
+) {
+  const directories = getDirectoryDistribution(summary.files);
+  const largestFiles = [...summary.files]
+    .sort((a, b) => b.size - a.size || a.path.localeCompare(b.path))
+    .slice(0, 10);
+
+  if (asJson) {
+    client.stdout.write(
+      `${JSON.stringify(
+        {
+          framework,
+          basePath: summary.basePath,
+          fileCount: summary.fileCount,
+          totalSize: summary.totalSize,
+          ignoredCount: summary.ignoredCount,
+          ignored: summary.ignored,
+          directories,
+          largestFiles,
+          files: summary.files,
+        },
+        null,
+        2
+      )}\n`
+    );
+    return;
+  }
+
+  const lines = [
+    `${chalk.bold('Deployment Dry Run')}\n`,
+    `${chalk.bold('Detected Framework Preset')}: ${framework.name}${
+      framework.slug ? ` (${framework.slug})` : ''
+    }`,
+    `Included: ${summary.fileCount} ${pluralize(
+      'file',
+      summary.fileCount
+    )}, ${formatBytes(summary.totalSize)}`,
+    `Ignored: ${summary.ignoredCount} ${pluralize(
+      'path',
+      summary.ignoredCount
+    )}\n`,
+  ];
+
+  if (directories.length > 0) {
+    lines.push(
+      table(
+        [
+          ['Path', 'Files', 'Size'],
+          ...directories.map(item => [
+            item.path,
+            String(item.fileCount),
+            formatBytes(item.size),
+          ]),
+        ],
+        { align: ['l', 'r', 'r'], hsep: 4 }
+      ),
+      ''
+    );
+  }
+
+  if (largestFiles.length > 0) {
+    lines.push(
+      chalk.bold('Largest Files'),
+      table(
+        largestFiles.map(file => [file.path, formatBytes(file.size)]),
+        { align: ['l', 'r'], hsep: 4 }
+      ),
+      ''
+    );
+  }
+
+  output.print(`${lines.join('\n')}\n`);
+}
+
+function getDirectoryDistribution(
+  files: DeploymentDryRunSummary['files']
+): Array<{ path: string; fileCount: number; size: number }> {
+  const directories = new Map<
+    string,
+    { path: string; fileCount: number; size: number }
+  >();
+
+  for (const file of files) {
+    const [segment] = file.path.split('/');
+    const key = file.path.includes('/') ? segment : file.path;
+    const current = directories.get(key) ?? {
+      path: key,
+      fileCount: 0,
+      size: 0,
+    };
+    current.fileCount += 1;
+    current.size += file.size;
+    directories.set(key, current);
+  }
+
+  return Array.from(directories.values()).sort(
+    (a, b) => b.size - a.size || a.path.localeCompare(b.path)
+  );
+}
+
+function formatBytes(size: number): string {
+  return bytes.format(size, { decimalPlaces: 1 });
+}
+
+function pluralize(word: string, count: number): string {
+  return count === 1 ? word : `${word}s`;
 }
 
 const addProcessEnv = async (

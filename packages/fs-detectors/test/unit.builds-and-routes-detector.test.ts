@@ -789,6 +789,34 @@ describe('Test `detectBuilders`', () => {
     });
   });
 
+  it('passes entrypoint functions config through to Python framework builders', async () => {
+    const functions = {
+      'app/main.py': {
+        memory: 512,
+        maxDuration: 30,
+      },
+    };
+
+    const { builders } = await invokeDetectBuildersAndThrow(
+      ['pyproject.toml', 'app/main.py'],
+      null,
+      {
+        functions,
+        projectSettings: { framework: 'fastapi' },
+      }
+    );
+
+    expect(builders).toContainEqual({
+      src: '<detect>',
+      use: '@vercel/python',
+      config: {
+        zeroConfig: true,
+        framework: 'fastapi',
+        functions,
+      },
+    });
+  });
+
   it('extend with functions', async () => {
     const pkg = {
       scripts: { build: 'next build' },

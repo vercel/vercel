@@ -99,7 +99,8 @@ function mockMetricDetail(
 
 function mockApiSuccess(
   data: Record<string, unknown>[] = [],
-  summary: Record<string, unknown>[] = []
+  summary: Record<string, unknown>[] = [],
+  extra: Record<string, unknown> = {}
 ) {
   client.scenario.post('/v2/observability/query', (req, res) => {
     postedBody =
@@ -110,6 +111,7 @@ function mockApiSuccess(
       data,
       summary,
       statistics: { rowsRead: 100 },
+      ...extra,
     });
   });
 }
@@ -586,6 +588,161 @@ describe('metrics query v2', () => {
       expect(output).toContain('No data');
       expect(output).not.toContain('sparklines:');
     });
+
+    it('should hide returned ordering metadata for ungrouped text output', async () => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.json({
+          data: [],
+          summary: [],
+          statistics: {},
+          orderBy: 'vercel_request_count_sum',
+          orderDirection: 'desc',
+        });
+      });
+      client.setArgv('metrics', 'vercel.request.count');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      const output = client.stdout.getFullOutput();
+      expect(output).not.toContain('> Order By:');
+      expect(output).not.toContain('> Order Direction:');
+      expect(output).not.toContain('vercel_request_count_sum');
+    });
+
+    it('should show returned ordering metadata for grouped text output', async () => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.json({
+          data: [],
+          summary: [],
+          statistics: {},
+          orderBy: 'defaultOrderingRollup',
+          orderDirection: 'desc',
+        });
+      });
+      client.setArgv('metrics', 'vercel.request.count', '--group-by', 'route');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      const output = client.stdout.getFullOutput();
+      expect(output).toContain('> Order By:');
+      expect(output).toContain('count desc (default)');
+      expect(output).not.toContain('defaultOrderingRollup');
+      expect(output).not.toContain('> Order Direction:');
+    });
+
+    it('should show Speed Insights default count ordering metadata', async () => {
+      mockMetricDetail('vercel.speed_insights.lcp_ms', {
+        description: 'Largest Contentful Paint',
+        unit: 'milliseconds',
+        aggregations: ['p75'],
+        defaultAggregation: 'p75',
+        dimensions: [{ name: 'route', label: 'Route' }],
+      });
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.json({
+          data: [],
+          summary: [],
+          statistics: {},
+          orderBy: 'vercel_speed_insights_lcp_count_sum',
+          orderDirection: 'desc',
+        });
+      });
+      client.setArgv(
+        'metrics',
+        'vercel.speed_insights.lcp_ms',
+        '--aggregation',
+        'p75',
+        '--group-by',
+        'route'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      const output = client.stdout.getFullOutput();
+      expect(output).toContain('> Order By:');
+      expect(output).toContain('count desc (default)');
+      expect(output).not.toContain('vercel_speed_insights_lcp_count_sum');
+      expect(output).not.toContain('> Order Direction:');
+    });
+
+    it('should show value ordering metadata when the API returns the selected metric rollup', async () => {
+      mockMetricDetail('vercel.speed_insights.lcp_ms', {
+        description: 'Largest Contentful Paint',
+        unit: 'milliseconds',
+        aggregations: ['p75'],
+        defaultAggregation: 'p75',
+        dimensions: [{ name: 'route', label: 'Route' }],
+      });
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.json({
+          data: [],
+          summary: [],
+          statistics: {},
+          orderBy: 'vercel_speed_insights_lcp_ms_p75',
+          orderDirection: 'desc',
+        });
+      });
+      client.setArgv(
+        'metrics',
+        'vercel.speed_insights.lcp_ms',
+        '--aggregation',
+        'p75',
+        '--group-by',
+        'route',
+        '--order-by',
+        'value'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      const output = client.stdout.getFullOutput();
+      expect(output).toContain('> Order By:');
+      expect(output).toContain('value desc');
+      expect(output).not.toContain('vercel_speed_insights_lcp_ms_p75');
+      expect(output).not.toContain('> Order Direction:');
+    });
+
+    it('should show event count default ordering metadata for non-count metrics', async () => {
+      mockMetricDetail('vercel.request.route_cpu_duration_ms', {
+        description: 'Request Duration',
+        unit: 'milliseconds',
+        aggregations: ['p95'],
+        defaultAggregation: 'p95',
+        dimensions: [{ name: 'route', label: 'Route' }],
+      });
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.json({
+          data: [],
+          summary: [],
+          statistics: {},
+          orderBy: 'defaultOrderingRollup',
+          orderDirection: 'desc',
+        });
+      });
+      client.setArgv(
+        'metrics',
+        'vercel.request.route_cpu_duration_ms',
+        '--aggregation',
+        'p95',
+        '--group-by',
+        'route'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      const output = client.stdout.getFullOutput();
+      expect(output).toContain('> Order By:');
+      expect(output).toContain('count desc (default)');
+      expect(output).not.toContain('vercel_request_route_cpu_duration_ms_p95');
+      expect(output).not.toContain('> Order Direction:');
+    });
   });
 
   describe('JSON output', () => {
@@ -635,6 +792,24 @@ describe('metrics query v2', () => {
       expect(parsed.query.granularity).toEqual({ hours: 4 });
       expect(client.stderr.getFullOutput()).toBe('');
     });
+
+    it('should include returned ordering metadata with --format=json', async () => {
+      mockMetricDetail();
+      mockApiSuccess([], [], {
+        orderBy: 'defaultOrderingRollup',
+        orderDirection: 'desc',
+      });
+      client.setArgv('metrics', 'vercel.request.count', '--format=json');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      const parsed = JSON.parse(client.stdout.getFullOutput());
+      expect(parsed.orderBy).toBe('count');
+      expect(parsed.orderDirection).toBe('desc');
+      expect(parsed.query.orderBy).toBe('count');
+      expect(parsed.query.orderDirection).toBe('desc');
+    });
   });
 
   describe('--limit flag', () => {
@@ -647,6 +822,169 @@ describe('metrics query v2', () => {
 
       expect(exitCode).toBe(0);
       expect(postedBody?.limit).toBe(50);
+    });
+  });
+
+  describe('--order-by and --order flags', () => {
+    it('should pass value ordering to the API and JSON metadata', async () => {
+      mockMetricDetail('vercel.speed_insights.lcp_ms', {
+        description: 'Largest Contentful Paint',
+        unit: 'milliseconds',
+        aggregations: ['p75'],
+        defaultAggregation: 'p75',
+        dimensions: [{ name: 'route', label: 'Route' }],
+      });
+      mockApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.speed_insights.lcp_ms',
+        '--aggregation',
+        'p75',
+        '--group-by',
+        'route',
+        '--order-by',
+        'value',
+        '--order',
+        'DESC',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.orderBy).toBe('vercel_speed_insights_lcp_ms_p75');
+      expect(postedBody?.orderDirection).toBe('desc');
+      const parsed = JSON.parse(client.stdout.getFullOutput());
+      expect(parsed.query.orderBy).toBe('value');
+      expect(parsed.query.orderDirection).toBe('desc');
+      expect(parsed.orderBy).toBe('value');
+      expect(parsed.orderDirection).toBe('desc');
+    });
+
+    it('should support shorthand aliases for limit and time bounds', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--order',
+        'asc',
+        '-l',
+        '5',
+        '-s',
+        '2025-01-15T00:00:00Z',
+        '-u',
+        '2025-01-15T01:00:00Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.orderBy).toBeUndefined();
+      expect(postedBody?.orderDirection).toBe('asc');
+      expect(postedBody?.limit).toBe(5);
+      expect(postedBody?.startTime).toBe('2025-01-15T00:00:00.000Z');
+      expect(postedBody?.endTime).toBe('2025-01-15T01:00:00.000Z');
+    });
+
+    it('should omit orderBy when ordering by count', async () => {
+      mockMetricDetail('vercel.request.route_cpu_duration_ms', {
+        description: 'Request Duration',
+        unit: 'milliseconds',
+        aggregations: ['p95'],
+        defaultAggregation: 'p95',
+        dimensions: [{ name: 'route', label: 'Route' }],
+      });
+      mockApiSuccess([], [], {
+        orderBy: 'defaultOrderingRollup',
+        orderDirection: 'asc',
+      });
+      client.setArgv(
+        'metrics',
+        'vercel.request.route_cpu_duration_ms',
+        '--aggregation',
+        'p95',
+        '--group-by',
+        'route',
+        '--order-by',
+        'count',
+        '--order',
+        'asc',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.orderBy).toBeUndefined();
+      expect(postedBody?.orderDirection).toBe('asc');
+      const parsed = JSON.parse(client.stdout.getFullOutput());
+      expect(parsed.orderBy).toBe('count');
+      expect(parsed.orderDirection).toBe('asc');
+    });
+
+    it('should omit orderBy and direction when ordering by count without explicit direction', async () => {
+      mockMetricDetail('vercel.speed_insights.lcp_ms', {
+        description: 'Largest Contentful Paint',
+        unit: 'milliseconds',
+        aggregations: ['p75'],
+        defaultAggregation: 'p75',
+        dimensions: [{ name: 'route', label: 'Route' }],
+      });
+      mockApiSuccess([], [], {
+        orderBy: 'defaultOrderingRollup',
+        orderDirection: 'desc',
+      });
+      client.setArgv(
+        'metrics',
+        'vercel.speed_insights.lcp_ms',
+        '--aggregation',
+        'p75',
+        '--group-by',
+        'route',
+        '--order-by',
+        'count',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.orderBy).toBeUndefined();
+      expect(postedBody?.orderDirection).toBeUndefined();
+      const parsed = JSON.parse(client.stdout.getFullOutput());
+      expect(parsed.orderBy).toBe('count');
+      expect(parsed.orderDirection).toBe('desc');
+    });
+
+    it('should reject invalid order values', async () => {
+      client.setArgv('metrics', 'vercel.request.count', '--order', 'ascending');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(1);
+      expect(postedBody).toBeUndefined();
+      expect(client.stderr.getFullOutput()).toContain(
+        'Invalid order "ascending"'
+      );
+    });
+
+    it('should reject invalid order-by values', async () => {
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--order-by',
+        'latency'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(1);
+      expect(postedBody).toBeUndefined();
+      const error = client.stderr.getFullOutput();
+      expect(error).toContain('Invalid order-by "latency"');
+      expect(error).toContain('value');
+      expect(error).toContain('count');
     });
   });
 
@@ -684,6 +1022,36 @@ describe('metrics query v2', () => {
       expect(exitCode).toBe(0);
       expect(postedBody?.filter).toBe(
         "(http_status ge 500) and (contains(request_path, '/api'))"
+      );
+    });
+
+    it('should pass production filter to API with --prod', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv('metrics', 'vercel.request.count', '--prod');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.filter).toBe("environment eq 'production'");
+    });
+
+    it('should AND production filter with explicit filters', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--filter',
+        'http_status ge 500',
+        '--prod'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.filter).toBe(
+        "(http_status ge 500) and (environment eq 'production')"
       );
     });
   });
@@ -866,6 +1234,49 @@ describe('metrics query v2', () => {
       ]);
     });
 
+    it('should track order options', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--order-by',
+        'value',
+        '--order',
+        'desc'
+      );
+
+      await query(client, new MockTelemetry());
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
+        { key: 'option:order-by', value: 'value' },
+        { key: 'option:order', value: 'desc' },
+      ]);
+    });
+
+    it('should track options before invalid order-by returns', async () => {
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--order-by',
+        'latency',
+        '--filter',
+        'http_status ge 500',
+        '--prod'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(1);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
+        { key: 'option:order-by', value: 'latency' },
+        { key: 'option:filter', value: '[REDACTED]' },
+        { key: 'flag:prod', value: 'TRUE' },
+      ]);
+    });
+
     it('should track filter option as redacted', async () => {
       mockMetricDetail();
       mockApiSuccess();
@@ -881,6 +1292,19 @@ describe('metrics query v2', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'argument:metric-id', value: 'vercel.request.count' },
         { key: 'option:filter', value: '[REDACTED]' },
+      ]);
+    });
+
+    it('should track --prod flag', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv('metrics', 'vercel.request.count', '--prod');
+
+      await query(client, new MockTelemetry());
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
+        { key: 'flag:prod', value: 'TRUE' },
       ]);
     });
 
@@ -989,6 +1413,7 @@ describe('metrics query v2', () => {
       expect(postedBody?.aggregation).toBe('p95');
       expect(postedBody?.groupBy).toEqual(['http_status']);
       expect(postedBody?.granularity).toEqual({ minutes: 15 });
+      expect(postedBody?.orderDirection).toBeUndefined();
     });
 
     it('should send the requested time bounds without rounding them', async () => {

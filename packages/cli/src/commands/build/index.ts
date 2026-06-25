@@ -167,7 +167,7 @@ interface BuildOutputConfig {
   crons?: Cron[];
   experimentalServices?: ExperimentalServices;
   experimentalServicesV2?: ExperimentalServicesV2;
-  services?: ExperimentalService[];
+  services?: Service[];
   deploymentId?: string;
 }
 
@@ -774,6 +774,12 @@ async function doBuild(
   let zeroConfigFallbackRoutes: Route[] = [];
   let detectedServices: ExperimentalService[] | undefined;
   let detectedResolvedServices: Service[] | undefined;
+  // The subset of `detectedResolvedServices` that were actually treated as
+  // services (i.e. produced service output). This is what gets recorded in
+  // `config.json`'s `services` array. It differs from `detectedResolvedServices`
+  // only in the generated-config path, where a service whose builder already ran
+  // at the project root is warned about and skipped (see below).
+  let servicesToRecord: Service[] | undefined;
   const hasExperimentalServicesV1ConfiguredInVercelConfig = hasNonEmptyObject(
     localConfig.experimentalServices
   );
@@ -831,9 +837,15 @@ async function doBuild(
       builds = [{ src: '**', use: '@vercel/static' }];
     }
 
-    // Capture detected services for the config.json. Only `experimentalServices`
-    // flows is supported right now.
+    // Capture detected services for the config.json. The full resolved set
+    // (both `experimentalServices` and `experimentalServicesV2`) is written to
+    // the `services` array; each record carries its `schema` discriminant.
+    // `detectedServices` stays scoped to V1 for the legacy env-injection and
+    // route-handling paths below, which only apply to `experimentalServices`.
     detectedResolvedServices = detectedBuilders.services;
+    // In the configured (vercel.json) path every detected service is treated as
+    // a service, so all of them are recorded.
+    servicesToRecord = detectedResolvedServices;
     detectedServices = detectedBuilders.services?.filter(isExperimentalService);
 
     // Legacy URL injection for `experimentalServices`.
@@ -1784,14 +1796,20 @@ async function doBuild(
 
       const buildsToRun: Builder[] = [];
       const seenBuildsToRun = new Set<string>();
+      // Only record services we actually treat as services. A generated service
+      // whose builder already ran at the project root is warned about and
+      // skipped (no service output is produced for it), so it must not leak into
+      // `config.json`'s `services` array.
+      const recordedServices: Service[] = [];
       for (const service of detectedResolvedServices || []) {
         const alreadyExecutedBuild = getAlreadyExecutedBuild(service.builder);
         if (alreadyExecutedBuild) {
           if (generatedExperimentalServicesV2Config) {
             output.warn(getGeneratedServiceAlreadyBuiltWarning(service));
-          } else {
-            serviceByBuilder.set(alreadyExecutedBuild, service);
+            continue;
           }
+          serviceByBuilder.set(alreadyExecutedBuild, service);
+          recordedServices.push(service);
           continue;
         }
         const serviceBuilderIdentity = getBuilderIdentity(service.builder);
@@ -1803,7 +1821,10 @@ async function doBuild(
           seenBuildsToRun.add(serviceBuilderIdentity);
           buildsToRun.push(service.builder);
         }
+        recordedServices.push(service);
       }
+      servicesToRecord =
+        recordedServices.length > 0 ? recordedServices : undefined;
 
       if (buildsToRun.length > 0) {
         await runBuilders(buildsToRun);
@@ -2025,8 +2046,10 @@ async function doBuild(
         experimentalServicesV2: detectedExperimentalServicesV2Config,
       }),
     ...(!detectedExperimentalServicesV1Config &&
-      detectedServices &&
-      detectedServices.length > 0 && { services: detectedServices }),
+      servicesToRecord &&
+      servicesToRecord.length > 0 && {
+        services: servicesToRecord,
+      }),
     ...(mergedDeploymentId && { deploymentId: mergedDeploymentId }),
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
