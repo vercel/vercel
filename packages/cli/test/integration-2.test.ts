@@ -89,14 +89,18 @@ async function setupProject(
   },
   {
     vercelAuth,
+    skipTeamPrompt = false,
   }: {
     vercelAuth: 'standard' | 'none';
+    skipTeamPrompt?: boolean;
   } = {
     vercelAuth: 'standard',
   }
 ) {
-  await waitForTeamPrompt(process);
-  process.stdin?.write('\n');
+  if (!skipTeamPrompt) {
+    await waitForTeamPrompt(process);
+    process.stdin?.write('\n');
+  }
 
   await selectProjectCreation(process);
 
@@ -569,10 +573,15 @@ test('add a sensitive env var', async () => {
     },
   });
 
-  await setupProject(vc, projectName, {
-    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
-    outputDirectory: 'o',
-  });
+  await setupProject(
+    vc,
+    projectName,
+    {
+      buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+      outputDirectory: 'o',
+    },
+    { vercelAuth: 'standard', skipTeamPrompt: true }
+  );
 
   await vc;
 
@@ -615,10 +624,15 @@ test('override an existing env var', async () => {
     },
   });
 
-  await setupProject(vc, projectName, {
-    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
-    outputDirectory: 'o',
-  });
+  await setupProject(
+    vc,
+    projectName,
+    {
+      buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+      outputDirectory: 'o',
+    },
+    { vercelAuth: 'standard', skipTeamPrompt: true }
+  );
 
   await vc;
 
@@ -1018,9 +1032,6 @@ test('[vc link] should detect frameworks in project rootDirectory', async () => 
     },
   });
 
-  await waitForTeamPrompt(vc);
-  vc.stdin?.write('\n');
-
   await waitForPrompt(vc, 'Project?');
   vc.stdin?.write('\n');
 
@@ -1127,9 +1138,6 @@ test('[vc link] should show project prompts but not framework when `builds` defi
       FORCE_TTY: '1',
     },
   });
-
-  await waitForTeamPrompt(vc);
-  vc.stdin?.write('\n');
 
   await selectProjectCreation(vc);
 
