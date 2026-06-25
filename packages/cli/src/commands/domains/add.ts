@@ -94,7 +94,10 @@ function nextCommandsForDomainsAddFailure(
     });
   }
 
-  if (aliasConflict && !looksLikeOwnershipOrPurchaseIssue) {
+  // Only suggest `--force` when we have a target project to move the domain
+  // onto; without one the command would be malformed (`domains add <domain>
+  // --force`).
+  if (aliasConflict && !looksLikeOwnershipOrPurchaseIssue && projectName) {
     next.push({
       command: withGlobalFlags(
         client,
