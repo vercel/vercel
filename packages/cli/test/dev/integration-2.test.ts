@@ -202,6 +202,7 @@ test(
   '[vercel dev] Should persist and reload Node standalone servers without package.json',
   testFixtureStdio('node-standalone', async (_: unknown, port: number) => {
     interface NodeStandaloneResponse {
+      childPid: number;
       instanceId: string;
       marker: string;
       pid: number;
@@ -215,16 +216,29 @@ test(
       return (await response.json()) as NodeStandaloneResponse;
     };
 
-    const devInstance = await requestDev('/');
+    const initialResponses = await Promise.all([
+      requestDev('/'),
+      requestDev('/concurrent'),
+    ]);
+    const devInstance = initialResponses[0];
     expect(devInstance.url).toBe('/');
     expect(devInstance.marker).toBe('initial');
+    expect(initialResponses[1]).toMatchObject({
+      instanceId: devInstance.instanceId,
+      marker: 'initial',
+      pid: devInstance.pid,
+      childPid: devInstance.childPid,
+      url: '/concurrent',
+    });
 
     const secondResponse = await requestDev('/some/nested/path');
     expect(secondResponse.url).toBe('/some/nested/path');
     expect(secondResponse.marker).toBe('initial');
     expect(secondResponse.instanceId).toBe(devInstance.instanceId);
     expect(secondResponse.pid).toBe(devInstance.pid);
-    expect(secondResponse.requestCount).toBe(devInstance.requestCount + 1);
+    expect(secondResponse.requestCount).toBe(
+      Math.max(...initialResponses.map(response => response.requestCount)) + 1
+    );
 
     const serverPath = join(fixture('node-standalone'), 'server.ts');
     const originalSource = await fs.readFile(serverPath, 'utf8');
@@ -256,11 +270,30 @@ test(
       expect(updatedResponse?.url).toBe('/reloaded');
       expect(updatedResponse?.instanceId).not.toBe(devInstance.instanceId);
       expect(updatedResponse?.requestCount).toBe(1);
+
+      const exitDeadline = Date.now() + 5_000;
+      while (
+        Date.now() < exitDeadline &&
+        [devInstance.pid, devInstance.childPid].some(isProcessRunning)
+      ) {
+        await sleep(50);
+      }
+      expect(isProcessRunning(devInstance.pid)).toBe(false);
+      expect(isProcessRunning(devInstance.childPid)).toBe(false);
     } finally {
       await fs.writeFile(serverPath, originalSource);
     }
   })
 );
+
+function isProcessRunning(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 test(
   '[vercel dev] Should support `*.go` API serverless functions with external modules',

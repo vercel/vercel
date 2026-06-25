@@ -40,6 +40,7 @@ import {
   type Env,
   getNodeBinPaths,
   isQueueBackedService,
+  type StartDevServerOptions,
   type StartDevServerResult,
   FileFsRef,
   type PackageJson,
@@ -346,6 +347,14 @@ export default class DevServer {
       }
     }
 
+    if (filesChanged.size > 0 || filesRemoved.size > 0) {
+      await Promise.all(
+        [...this.buildMatches.values()].map(match =>
+          this.shutdownPersistentBuilderDevServer(match)
+        )
+      );
+    }
+
     const vercelConfig = await this.getVercelConfig();
 
     // Update the build matches in case an entrypoint was created or deleted
@@ -505,6 +514,7 @@ export default class DevServer {
         output.debug(`Removing build match for "${src}"`);
         const match = this.buildMatches.get(src);
         if (match) {
+          ops.push(this.shutdownPersistentBuilderDevServer(match));
           ops.push(shutdownBuilder(match));
         }
         this.buildMatches.delete(src);
@@ -517,6 +527,9 @@ export default class DevServer {
     for (const match of matches) {
       const currentMatch = this.buildMatches.get(match.src);
       if (!buildMatchEquals(currentMatch, match)) {
+        if (currentMatch) {
+          await this.shutdownPersistentBuilderDevServer(currentMatch);
+        }
         output.debug(
           `Adding build match for "${match.src}" with "${match.use}"`
         );
@@ -1199,7 +1212,7 @@ export default class DevServer {
         const { builder } = match.builderWithPkg;
         if (typeof builder.startDevServer === 'function') {
           try {
-            const result = await builder.startDevServer({
+            const result = await this.startBuilderDevServer(match, {
               files: this.files,
               entrypoint: match.entrypoint,
               workPath: this.cwd,
@@ -1214,8 +1227,7 @@ export default class DevServer {
               },
             });
             if (result) {
-              const { port, pid, shutdown } = result;
-              this.shutdownCallbacks.set(pid, shutdown);
+              const { port } = result;
               const target = `http://127.0.0.1:${port}`;
               output.debug(
                 `Detected "upgrade" event, proxying to builder dev server at ${target}`
@@ -1248,6 +1260,84 @@ export default class DevServer {
     }
   }
 
+  async startBuilderDevServer(
+    match: BuildMatch,
+    options: StartDevServerOptions
+  ): Promise<StartDevServerResult> {
+    const { builder } = match.builderWithPkg;
+    if (!builder.startDevServer) {
+      return null;
+    }
+
+    if (!builder.shouldPersistDevServer) {
+      const result = await builder.startDevServer(options);
+      if (result) {
+        this.shutdownCallbacks.set(result.pid, result.shutdown);
+      }
+      return result;
+    }
+
+    while (!this.stopping && this.buildMatches.get(match.src) === match) {
+      let state = match.devServer;
+
+      if (!state) {
+        const controller = new AbortController();
+        state = {
+          controller,
+          startPromise: builder.startDevServer({
+            ...options,
+            signal: controller.signal,
+          }),
+        };
+        match.devServer = state;
+      }
+
+      let result: StartDevServerResult;
+      try {
+        result = await state.startPromise;
+      } catch (error) {
+        if (match.devServer === state) {
+          delete match.devServer;
+        }
+        if (state.controller.signal.aborted) {
+          continue;
+        }
+        throw error;
+      }
+      if (match.devServer !== state) {
+        if (state.controller.signal.aborted) continue;
+        return result;
+      }
+      if (!result) {
+        delete match.devServer;
+        return null;
+      }
+      if (isProcessRunning(result.pid)) {
+        return result;
+      }
+
+      await this.shutdownPersistentBuilderDevServer(match);
+    }
+
+    return null;
+  }
+
+  async shutdownPersistentBuilderDevServer(match: BuildMatch): Promise<void> {
+    const state = match.devServer;
+    if (!state) return;
+
+    delete match.devServer;
+    state.controller.abort();
+    try {
+      const result = await state.startPromise;
+      if (result) {
+        await this.killBuilderDevServer(result.pid, result.shutdown);
+      }
+    } catch (error) {
+      output.debug(`Failed to stop persistent builder dev server: ${error}`);
+    }
+  }
+
   /**
    * Shuts down the `vercel dev` server, and cleans up any temporary resources.
    */
@@ -1260,6 +1350,7 @@ export default class DevServer {
     const ops: Promise<any>[] = [];
 
     for (const match of this.buildMatches.values()) {
+      ops.push(this.shutdownPersistentBuilderDevServer(match));
       ops.push(shutdownBuilder(match));
     }
 
@@ -1300,16 +1391,22 @@ export default class DevServer {
     }
   }
 
-  async killBuilderDevServer(pid: number) {
+  async killBuilderDevServer(
+    pid: number,
+    shutdownCb = this.shutdownCallbacks.get(pid)
+  ) {
     const { debug } = output;
     debug(`Killing builder dev server with PID ${pid}`);
-    const shutdownCb = this.shutdownCallbacks.get(pid);
     this.shutdownCallbacks.delete(pid);
 
     if (shutdownCb) {
       debug(`Running shutdown callback for PID ${pid}`);
-      await shutdownCb();
-      return;
+      try {
+        await shutdownCb();
+        return;
+      } catch (err) {
+        debug(`Shutdown callback failed for PID ${pid}: ${err}`);
+      }
     }
 
     try {
@@ -2150,7 +2247,7 @@ export default class DevServer {
       try {
         const { builder } = middleware.builderWithPkg;
         if (typeof builder.startDevServer === 'function') {
-          startMiddlewareResult = await builder.startDevServer({
+          startMiddlewareResult = await this.startBuilderDevServer(middleware, {
             files,
             entrypoint: middleware.entrypoint,
             workPath,
@@ -2167,9 +2264,8 @@ export default class DevServer {
         }
 
         if (startMiddlewareResult) {
-          const { port, pid, shutdown } = startMiddlewareResult;
+          const { port, pid } = startMiddlewareResult;
           middlewarePid = pid;
-          this.shutdownCallbacks.set(pid, shutdown);
 
           const middlewareReqHeaders = nodeHeadersToFetchHeaders(req.headers);
 
@@ -2305,7 +2401,10 @@ export default class DevServer {
         );
         return;
       } finally {
-        if (middlewarePid) {
+        if (
+          middlewarePid &&
+          !middleware.builderWithPkg.builder.shouldPersistDevServer
+        ) {
           this.killBuilderDevServer(middlewarePid);
         }
       }
@@ -2636,7 +2735,7 @@ export default class DevServer {
       let devServerResult: StartDevServerResult = null;
       try {
         const { envConfigs, files, devCacheDir, cwd: workPath } = this;
-        devServerResult = await builder.startDevServer({
+        devServerResult = await this.startBuilderDevServer(match, {
           files,
           entrypoint: match.entrypoint,
           workPath,
@@ -2684,9 +2783,8 @@ export default class DevServer {
         // is also included in the request ID. So use the same `dev1` fake region.
         requestId = generateRequestId(this.podId, true);
 
-        const { port, pid, shutdown, persistent } = devServerResult;
-        this.shutdownCallbacks.set(pid, shutdown);
-        if (!persistent) {
+        const { port, pid } = devServerResult;
+        if (!builder.shouldPersistDevServer) {
           res.once('close', () => {
             this.killBuilderDevServer(pid);
           });
@@ -3187,6 +3285,15 @@ function close(server: http.Server | httpProxy): Promise<void> {
       }
     });
   });
+}
+
+function isProcessRunning(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === 'EPERM';
+  }
 }
 
 /**

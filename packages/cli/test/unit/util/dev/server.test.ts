@@ -2,6 +2,8 @@ import { Readable } from 'stream';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { describe, expect, it, vi } from 'vitest';
 import DevServer from '../../../../src/util/dev/server';
+import type { BuildMatch } from '../../../../src/util/dev/types';
+import type { StartDevServerOptions } from '@vercel/build-utils';
 
 vi.mock('../../../../src/output-manager', () => ({
   default: {
@@ -95,5 +97,68 @@ describe('DevServer queue routes', () => {
         originalMessageId: 'original-message-id',
       })
     );
+  });
+});
+
+describe('DevServer persistent builder servers', () => {
+  it('deduplicates startup and replaces an invalidated server', async () => {
+    const server = new DevServer(process.cwd(), {});
+    const firstShutdown = vi.fn(async () => {});
+    const secondShutdown = vi.fn(async () => {});
+    const startDevServer = vi
+      .fn()
+      .mockResolvedValueOnce({
+        pid: process.pid,
+        port: 3001,
+        shutdown: firstShutdown,
+      })
+      .mockResolvedValueOnce({
+        pid: process.pid,
+        port: 3002,
+        shutdown: secondShutdown,
+      });
+    const match = {
+      entrypoint: 'package.json',
+      src: 'server.ts',
+      builderWithPkg: {
+        builder: {
+          version: 2,
+          build: vi.fn(),
+          shouldPersistDevServer: true,
+          startDevServer,
+        },
+      },
+    } as unknown as BuildMatch;
+    const options: StartDevServerOptions = {
+      files: {},
+      entrypoint: 'package.json',
+      workPath: process.cwd(),
+      repoRootPath: process.cwd(),
+      config: {},
+      meta: { env: { EXAMPLE: 'first' } },
+    };
+    (server as any).buildMatches.set(match.src, match);
+
+    const [first, concurrent] = await Promise.all([
+      server.startBuilderDevServer(match, options),
+      server.startBuilderDevServer(match, options),
+    ]);
+
+    expect(startDevServer).toHaveBeenCalledTimes(1);
+    expect(concurrent).toBe(first);
+
+    await server.shutdownPersistentBuilderDevServer(match);
+    const replacement = await server.startBuilderDevServer(match, {
+      ...options,
+      meta: { env: { EXAMPLE: 'second' } },
+    });
+
+    expect(firstShutdown).toHaveBeenCalledOnce();
+    expect(startDevServer).toHaveBeenCalledTimes(2);
+    expect(replacement?.port).toBe(3002);
+
+    await server.shutdownPersistentBuilderDevServer(match);
+    expect(secondShutdown).toHaveBeenCalledOnce();
+    expect(match.devServer).toBeUndefined();
   });
 });
