@@ -100,7 +100,7 @@ describe('detectRailwayServices', () => {
       expect(result.services!.api).toMatchObject({
         framework: 'fastapi',
         root: 'api',
-        mountPath: '/_/api',
+        mountPath: '/api/api',
         buildCommand: "echo 'test'",
       });
     });
@@ -134,9 +134,9 @@ describe('detectRailwayServices', () => {
         root: 'web',
         mountPath: '/',
       });
-      expect(result.services!.dashboard.mountPath).toBe('/_/dashboard');
-      expect(result.services!.api.mountPath).toBe('/_/api');
-      expect(result.services!.workers.mountPath).toBe('/_/workers');
+      expect(result.services!.dashboard.mountPath).toBe('/api/dashboard');
+      expect(result.services!.api.mountPath).toBe('/api/api');
+      expect(result.services!.workers.mountPath).toBe('/api/workers');
 
       const warning = result.warnings.find(
         w => w.code === 'MULTIPLE_FRONTENDS'
@@ -327,10 +327,10 @@ describe('detectRailwayServices', () => {
       const result = await detectRailwayServices({ fs });
 
       expect(result.services!.web.mountPath).toBe('/');
-      expect(result.services!.api.mountPath).toBe('/_/api');
+      expect(result.services!.api.mountPath).toBe('/api/api');
     });
 
-    it('should assign all to /_/ when no frontend detected', async () => {
+    it('should assign all to /api/ when no frontend detected', async () => {
       const fs = new VirtualFilesystem({
         'beta/railway.json': JSON.stringify({}),
         'beta/pyproject.toml': '[project]\ndependencies = ["fastapi"]',
@@ -342,8 +342,8 @@ describe('detectRailwayServices', () => {
 
       const result = await detectRailwayServices({ fs });
 
-      expect(result.services!.alpha.mountPath).toBe('/_/alpha');
-      expect(result.services!.beta.mountPath).toBe('/_/beta');
+      expect(result.services!.alpha.mountPath).toBe('/api/alpha');
+      expect(result.services!.beta.mountPath).toBe('/api/beta');
     });
 
     it('should warn and pick first alphabetically when multiple frontends', async () => {
@@ -366,8 +366,8 @@ describe('detectRailwayServices', () => {
       expect(result.errors).toEqual([]);
       expect(result.services).not.toBeNull();
       expect(result.services!['site-a'].mountPath).toBe('/');
-      expect(result.services!['site-b'].mountPath).toBe('/_/site-b');
-      expect(result.services!.api.mountPath).toBe('/_/api');
+      expect(result.services!['site-b'].mountPath).toBe('/api/site-b');
+      expect(result.services!.api.mountPath).toBe('/api/api');
 
       const warning = result.warnings.find(
         w => w.code === 'MULTIPLE_FRONTENDS'
@@ -393,7 +393,7 @@ describe('detectRailwayServices', () => {
 
       expect(result.errors).toEqual([]);
       expect(result.services!.web.mountPath).toBe('/');
-      expect(result.services!.admin.mountPath).toBe('/_/admin');
+      expect(result.services!.admin.mountPath).toBe('/api/admin');
     });
 
     it('should assign / to single service', async () => {
@@ -673,7 +673,7 @@ describe('detectServices with Railway detection', () => {
         framework: 'fastapi',
         root: 'api',
         entrypoint: 'main:app',
-        mountPath: '/_/api',
+        mountPath: '/api/api',
       });
     });
 

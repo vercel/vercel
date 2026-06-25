@@ -108,7 +108,7 @@ describe('detectRenderServices', () => {
       expect(result.services!.api).toMatchObject({
         framework: 'fastapi',
         root: './api',
-        mountPath: '/_/api',
+        mountPath: '/api/api',
         buildCommand: "echo 'test'",
       });
     });
@@ -142,7 +142,7 @@ describe('detectRenderServices', () => {
       expect(result.errors).toEqual([]);
       expect(result.services).not.toBeNull();
       expect(result.services!.web.mountPath).toBe('/');
-      expect(result.services!.dashboard.mountPath).toBe('/_/dashboard');
+      expect(result.services!.dashboard.mountPath).toBe('/api/dashboard');
 
       // we inferred that we want "web" to be at `/`,
       // but we still want to let a user know that they might
@@ -186,7 +186,7 @@ describe('detectRenderServices', () => {
       expect(hint!.message).toContain('internal-api');
       expect(hint!.message).toContain('not yet supported');
       expect(hint!.message).toContain('"entrypoint": "./api"');
-      expect(hint!.message).toContain('"mountPath": "/_/internal-api"');
+      expect(hint!.message).toContain('"mountPath": "/api/internal-api"');
     });
   });
 

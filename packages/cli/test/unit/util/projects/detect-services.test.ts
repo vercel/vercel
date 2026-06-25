@@ -184,7 +184,7 @@ mount = "/api"`
       api: {
         root: 'services/api',
         entrypoint: 'services/api',
-        mountPath: '/_/api',
+        mountPath: '/api/api',
       },
     });
 
@@ -198,17 +198,11 @@ mount = "/api"`
         api: {
           root: 'services/api',
           entrypoint: 'services/api',
-          routes: [
-            {
-              src: '/_/api(.*)',
-              transforms: [{ type: 'request.path', op: 'set', args: '/$1' }],
-            },
-          ],
         },
       },
       rewrites: [
         {
-          source: '/_/api(.*)',
+          source: '/api/api(.*)',
           destination: { type: 'service', service: 'api' },
         },
         {
@@ -230,7 +224,7 @@ mount = "/api"`
       api: {
         root: 'services/api',
         entrypoint: 'services/api',
-        mountPath: '/_/api',
+        mountPath: '/api/api',
       },
     });
 

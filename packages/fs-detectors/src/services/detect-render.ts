@@ -150,7 +150,7 @@ export async function detectRenderServices(options: {
       const name = rs.name ?? 'unnamed';
       const hint: Record<string, string> = {
         entrypoint: rs.rootDir ?? '<path-to-entrypoint>',
-        mountPath: `/_/${name}`,
+        mountPath: `/api/${name}`,
       };
 
       warnings.push({

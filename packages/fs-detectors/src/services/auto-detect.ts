@@ -9,7 +9,11 @@ import type {
   ServiceDetectionError,
   ServiceDetectionWarning,
 } from './types';
-import { isFrontendFramework, DETECTION_FRAMEWORKS } from './utils';
+import {
+  isFrontendFramework,
+  assignMountPaths,
+  DETECTION_FRAMEWORKS,
+} from './utils';
 
 export interface AutoDetectOptions {
   fs: DetectorFilesystem;
@@ -168,10 +172,11 @@ async function detectServicesAtRoot(
     };
   }
   Object.assign(services, backendResult.services);
+  const mountWarnings = assignMountPaths(services);
 
   return {
     services,
-    warnings: [],
+    warnings: mountWarnings,
     errors: [],
   };
 }
@@ -217,10 +222,11 @@ async function detectServicesFrontendSubdir(
   }
 
   Object.assign(services, backendResult.services);
+  const mountWarnings = assignMountPaths(services);
 
   return {
     services,
-    warnings: [],
+    warnings: mountWarnings,
     errors: [],
   };
 }
@@ -353,7 +359,8 @@ async function detectServiceInDir(
 
   const framework = frameworks[0];
   const slug = framework.slug ?? undefined;
-  const mountPath = `/_/${serviceName}`;
+  // Mount path will be assigned by assignMountPaths based on frontend type.
+  const mountPath = `/${serviceName}`;
 
   const detected =
     detectEntrypoint && !isFrontendFramework(slug)

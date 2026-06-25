@@ -580,9 +580,9 @@ describe('detectProcfileServices', () => {
 
       expect(result.errors).toEqual([]);
       // both are backend frameworks, no frontend detected,
-      // so all get /_/<name> prefixes
-      expect(result.services!.web.mountPath).toBe('/_/web');
-      expect(result.services!.api.mountPath).toBe('/_/api');
+      // so all get /api/<name> prefixes
+      expect(result.services!.web.mountPath).toBe('/api/web');
+      expect(result.services!.api.mountPath).toBe('/api/api');
     });
 
     it('should skip service when no framework detected and no runtime inferred', async () => {

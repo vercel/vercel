@@ -510,38 +510,18 @@ describe('detectServices with auto-detection', () => {
       expect(backend?.schema).toBe('experimentalServicesV2');
       expect(backend?.root).toBe('backend');
 
-      // V2 auto-detect generates top-level service rewrites from mountPath
+      // V2 auto-detect generates top-level service rewrites from mountPath.
+      // Next.js is a BFF framework, so backend gets /api/backend prefix.
       expect(result.rewrites).toHaveLength(2);
       // Longest mountPath first (backend before root catch-all)
       expect(result.rewrites[0]).toMatchObject({
-        source: '/_/backend(.*)',
+        source: '/api/backend(.*)',
         destination: { type: 'service', service: 'backend' },
       });
       expect(result.rewrites[1]).toMatchObject({
         source: '/(.*)',
         destination: { type: 'service', service: 'frontend' },
       });
-
-      // Non-root resolved services get a per-service path transform route
-      // that strips the mount prefix so the handler sees clean paths.
-      const backendV2 = result.services.find(s => s.name === 'backend');
-      expect(backendV2).toBeDefined();
-      expect(backendV2?.schema).toBe('experimentalServicesV2');
-      if (backendV2?.schema === 'experimentalServicesV2') {
-        expect(backendV2.routes).toEqual([
-          {
-            src: '/_/backend(.*)',
-            transforms: [{ type: 'request.path', op: 'set', args: '/$1' }],
-          },
-        ]);
-      }
-
-      // Root frontend service has no path transform
-      const frontendV2 = result.services.find(s => s.name === 'frontend');
-      expect(frontendV2).toBeDefined();
-      if (frontendV2?.schema === 'experimentalServicesV2') {
-        expect(frontendV2.routes).toBeUndefined();
-      }
     });
   });
 });
@@ -582,7 +562,7 @@ describe('autoDetectServices with detectEntrypoint callback', () => {
       root: 'backend',
       framework: 'fastapi',
       entrypoint: 'main:app',
-      mountPath: '/_/backend',
+      mountPath: '/api/backend',
     });
   });
 
@@ -605,7 +585,7 @@ describe('autoDetectServices with detectEntrypoint callback', () => {
     expect(result.services!.backend).toEqual({
       root: 'backend',
       framework: 'fastapi',
-      mountPath: '/_/backend',
+      mountPath: '/api/backend',
     });
     expect(result.services!.backend!.entrypoint).toBeUndefined();
   });

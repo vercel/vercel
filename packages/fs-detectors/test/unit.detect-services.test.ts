@@ -75,7 +75,7 @@ describe('detectServices', () => {
           frontend: { root: 'frontend', framework: 'nextjs', mountPath: '/' },
           backend: {
             root: 'backend',
-            mountPath: '/_/backend',
+            mountPath: '/api/backend',
           },
         },
       });

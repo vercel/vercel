@@ -158,6 +158,24 @@ export function isFrontendFramework(
   return !inferRuntimeFromFramework(framework);
 }
 
+/**
+ * BFF (Backend-for-Frontend) frameworks have their own server-side API routes
+ * (e.g. Next.js `/api/*`, Nuxt `/api/*`). Backend services mounted alongside
+ * a BFF frontend need a namespaced prefix like `/api/{name}` to avoid
+ * shadowing the frontend's API routes.
+ */
+const BFF_FRAMEWORKS = new Set([
+  'nextjs',
+  'nuxtjs',
+  'sveltekit',
+  'remix',
+  'solidstart',
+]);
+
+export function isBFFFramework(framework: string | null | undefined): boolean {
+  return !!framework && BFF_FRAMEWORKS.has(framework);
+}
+
 export function filterFrameworksByRuntime<T extends { slug?: string | null }>(
   frameworks: readonly T[],
   runtime?: ServiceRuntime
@@ -281,9 +299,14 @@ export async function readVercelConfig(
 /**
  * Assign mount paths to inferred services.
  *
- * A frontend service gets `/`, the rest get `/_/{name}`.
- * A single non-frontend service would also get `/`.
- * If no frontend service found, then multiple services get `/_/{name}`.
+ * A frontend service gets `/`, backend services get `/api/...`:
+ * - If the frontend is a BFF (e.g. Next.js, has its own API routes):
+ *   backends get `/api/{name}/(.*)` to avoid shadowing the frontend's API routes.
+ * - If the frontend is client-only (e.g. Vite):
+ *   backends get `/api/(.*)`.
+ *
+ * A single non-frontend service gets `/`.
+ * If no frontend service found, multiple services get `/api/{name}`.
  *
  * Priority for `/`: single service or frontend > name "frontend" or "web" > alphabetical.
  */
@@ -315,8 +338,24 @@ export function assignMountPaths(
     });
   }
 
+  // BFF frontends (e.g. Next.js) have their own /api routes, so backend
+  // services need a namespaced prefix to avoid conflicts.
+  const rootFramework = rootName ? services[rootName].framework : undefined;
+  const isBFF = rootFramework ? isBFFFramework(rootFramework) : false;
+
+  // Count non-root services to determine if namespacing is needed.
+  const nonRootNames = names.filter(n => n !== rootName);
+  // For client-only frontends with exactly one non-root service, use /api
+  // directly. For BFF frontends or multiple non-root services, namespace
+  // by service name to avoid mount path conflicts.
+  const needsNamespace = isBFF || nonRootNames.length > 1;
+
   for (const name of names) {
-    services[name].mountPath = name === rootName ? '/' : `/_/${name}`;
+    if (name === rootName) {
+      services[name].mountPath = '/';
+    } else {
+      services[name].mountPath = needsNamespace ? `/api/${name}` : '/api';
+    }
   }
 
   return warnings;

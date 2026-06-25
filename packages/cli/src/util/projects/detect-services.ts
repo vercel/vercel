@@ -114,28 +114,10 @@ function toProjectServicesConfigPatch(
 ): Pick<VercelConfig, 'services' | 'rewrites'> {
   const services: Services = {};
   for (const [name, svc] of Object.entries(config)) {
-    // Non-root services get a per-service route with a path transform
-    // that strips the mount prefix so the handler sees clean paths.
-    const routes =
-      svc.mountPath && svc.mountPath !== '/'
-        ? [
-            {
-              src: `${svc.mountPath}(.*)`,
-              transforms: [
-                {
-                  type: 'request.path' as const,
-                  op: 'set' as const,
-                  args: '/$1',
-                },
-              ],
-            },
-          ]
-        : undefined;
     services[name] = {
       root: svc.root,
       ...(svc.framework ? { framework: svc.framework } : {}),
       ...(svc.entrypoint ? { entrypoint: svc.entrypoint } : {}),
-      ...(routes ? { routes } : {}),
     };
   }
   // Top-level rewrites route public traffic into services by mountPath.

@@ -1045,12 +1045,6 @@ describe('link', () => {
         api: {
           root: 'services/api',
           entrypoint: 'index:app',
-          routes: [
-            {
-              src: '/_/api(.*)',
-              transforms: [{ type: 'request.path', op: 'set', args: '/$1' }],
-            },
-          ],
         },
       },
     });
@@ -1264,12 +1258,6 @@ describe('link', () => {
         api: {
           root: 'services/api',
           entrypoint: 'index:app',
-          routes: [
-            {
-              src: '/_/api(.*)',
-              transforms: [{ type: 'request.path', op: 'set', args: '/$1' }],
-            },
-          ],
         },
       },
     });
@@ -1348,12 +1336,6 @@ describe('link', () => {
         api: {
           root: 'services/api',
           entrypoint: 'index:app',
-          routes: [
-            {
-              src: '/_/api(.*)',
-              transforms: [{ type: 'request.path', op: 'set', args: '/$1' }],
-            },
-          ],
         },
       },
     });
