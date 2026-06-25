@@ -27,6 +27,7 @@ import {
   openUrlInBrowserCommand,
   outputActionRequired,
   outputAgentError,
+  outputAgentSuccess,
 } from '../../util/agent-output';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import { getCommandNamePlain } from '../../util/pkg-name';
@@ -105,6 +106,40 @@ function nextCommandsForDomainsAddFailure(
   }
 
   return next;
+}
+
+/**
+ * Suggested follow-ups after a successful `domains add`, surfaced to agents in
+ * the non-interactive success payload's next[].
+ */
+function nextCommandsForDomainsAddSuccess(
+  client: Client,
+  domainName: string,
+  projectName?: string
+): Array<{ command: string; when?: string }> {
+  if (!projectName) {
+    return [
+      {
+        command: withGlobalFlags(client, `domains add ${domainName} <project>`),
+        when: 'to attach this domain to a project',
+      },
+      {
+        command: withGlobalFlags(client, `domains inspect ${domainName}`),
+        when: 'to inspect domain configuration and ownership',
+      },
+    ];
+  }
+
+  return [
+    {
+      command: withGlobalFlags(client, `domains verify ${domainName}`),
+      when: 'to check DNS configuration and see the records you need to set',
+    },
+    {
+      command: withGlobalFlags(client, `domains inspect ${domainName}`),
+      when: 'to inspect domain configuration and ownership',
+    },
+  ];
 }
 
 async function printDomainConfiguration(
@@ -315,6 +350,19 @@ export default async function add(client: Client, argv: string[]) {
       return 1;
     }
 
+    if (client.nonInteractive) {
+      outputAgentSuccess(
+        client,
+        {
+          status: 'success',
+          reason: 'domain_added',
+          message: `Domain ${domainName} added to ${contextName}.`,
+          next: nextCommandsForDomainsAddSuccess(client, domainName),
+        },
+        0
+      );
+    }
+
     output.success(
       `Domain ${chalk.bold(domainName)} added to ${chalk.bold(
         contextName
@@ -358,6 +406,22 @@ export default async function add(client: Client, argv: string[]) {
       }
 
       if (alreadyOnRequestedProject) {
+        if (client.nonInteractive) {
+          outputAgentSuccess(
+            client,
+            {
+              status: 'success',
+              reason: 'domain_already_assigned',
+              message: `Domain ${domainName} is already assigned to project ${projectName}.`,
+              next: nextCommandsForDomainsAddSuccess(
+                client,
+                domainName,
+                projectName
+              ),
+            },
+            0
+          );
+        }
         output.log(
           `Domain ${chalk.bold(domainName)} is already assigned to project ${chalk.bold(
             projectName
@@ -461,6 +525,19 @@ export default async function add(client: Client, argv: string[]) {
       output.prettyError(aliasTarget);
       return 1;
     }
+  }
+
+  if (client.nonInteractive) {
+    outputAgentSuccess(
+      client,
+      {
+        status: 'success',
+        reason: 'domain_added',
+        message: `Domain ${domainName} added to project ${projectName}.`,
+        next: nextCommandsForDomainsAddSuccess(client, domainName, projectName),
+      },
+      0
+    );
   }
 
   // We can cast the information because we've just added the domain and it should be there

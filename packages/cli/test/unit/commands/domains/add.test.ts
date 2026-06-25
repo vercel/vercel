@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import domains from '../../../../src/commands/domains';
 import { client } from '../../../mocks/client';
 import { useDomain } from '../../../mocks/domains';
@@ -302,6 +302,85 @@ describe('domains add', () => {
             `Domain ${domain.name} added to project ${project.name}`
           );
         });
+      });
+    });
+
+    describe('non-interactive mode', () => {
+      it('emits a structured success payload with next when adding to a team', async () => {
+        useUser();
+        const domain = useDomain();
+        const exitSpy = vi
+          .spyOn(process, 'exit')
+          .mockImplementation((() => undefined) as never);
+        client.nonInteractive = true;
+        client.setArgv('domains', 'add', domain.name, '--non-interactive');
+        client.scenario.post('/v4/domains', (_req, res) => {
+          res.json({ domain });
+        });
+
+        await domains(client);
+
+        const payload = JSON.parse(client.stdout.getFullOutput());
+        expect(payload.status).toBe('success');
+        expect(payload.reason).toBe('domain_added');
+        const commands = (payload.next ?? []).map(
+          (n: { command: string }) => n.command
+        );
+        expect(
+          commands.some((c: string) =>
+            c.includes(`domains add ${domain.name} <project>`)
+          )
+        ).toBe(true);
+        expect(exitSpy).toHaveBeenCalledWith(0);
+
+        exitSpy.mockRestore();
+        client.nonInteractive = false;
+      });
+
+      it('emits a structured success payload pointing to verify when adding to a project', async () => {
+        useUser();
+        const domain = useDomain();
+        const { project } = useProject();
+        const exitSpy = vi
+          .spyOn(process, 'exit')
+          .mockImplementation((() => undefined) as never);
+        client.nonInteractive = true;
+        client.setArgv(
+          'domains',
+          'add',
+          domain.name,
+          String(project.name),
+          '--non-interactive'
+        );
+        client.scenario.post(`/projects/${project.name}/alias`, (_req, res) => {
+          res.json([{ domain: domain.name }]);
+        });
+        // Reached only because the test mocks process.exit to a no-op; in real
+        // runtime outputAgentSuccess exits before this is called.
+        client.scenario.get(
+          `/:version/domains/${domain.name}/config`,
+          (_req, res) => {
+            res.json({});
+          }
+        );
+
+        await domains(client);
+
+        const payload = JSON.parse(client.stdout.getFullOutput());
+        expect(payload.status).toBe('success');
+        expect(payload.reason).toBe('domain_added');
+        const commands = (payload.next ?? []).map(
+          (n: { command: string }) => n.command
+        );
+        expect(
+          commands.some((c: string) =>
+            c.includes(`domains verify ${domain.name}`)
+          )
+        ).toBe(true);
+        expect(exitSpy).toHaveBeenCalledWith(0);
+
+        exitSpy.mockRestore();
+        client.nonInteractive = false;
       });
     });
   });
