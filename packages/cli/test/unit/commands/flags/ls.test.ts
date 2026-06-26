@@ -165,6 +165,24 @@ describe('flags ls', () => {
       expect(parsed.pagination.next).toEqual('20');
     });
 
+    it('prints a next-page command preserving filters in table output', async () => {
+      for (let i = 0; i < 3; i++) {
+        flagsList.push({
+          ...JSON.parse(JSON.stringify(flagsList[0])),
+          id: `flag_tagged_${i}`,
+          slug: `tagged-flag-${i}`,
+          tags: ['checkout'],
+        });
+      }
+
+      client.setArgv('flags', 'ls', '--tag', 'checkout', '--limit', '1');
+      const exitCode = await flags(client);
+      expect(exitCode).toEqual(0);
+      await expect(client.stderr).toOutput(
+        'flags ls --limit 1 --tag checkout --next 1'
+      );
+    });
+
     it('rejects a --limit below 1', async () => {
       client.setArgv('flags', 'ls', '--limit', '0');
       const exitCode = await flags(client);

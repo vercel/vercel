@@ -7,6 +7,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
+import getCommandFlags from '../../util/get-command-flags';
 import { getFlags, MAX_FLAGS_PAGE_LIMIT } from '../../util/flags/get-flags';
 import formatTable from '../../util/format-table';
 import stamp from '../../util/output/stamp';
@@ -112,7 +113,9 @@ export default async function ls(
       printFlagsTable(sortedFlags);
       if (nextCursor) {
         const nextCmd = buildNextPageCommand(
-          { state, tags, createdBy, maintainerIds, limit },
+          flags,
+          tags,
+          maintainerIds,
           nextCursor
         );
         output.log(`To display the next page, run ${getCommandName(nextCmd)}`);
@@ -128,34 +131,27 @@ export default async function ls(
 }
 
 function buildNextPageCommand(
-  options: {
-    state: 'active' | 'archived';
-    tags?: string[];
-    createdBy?: string;
-    maintainerIds?: string[];
-    limit?: number;
-  },
+  flags: { [key: string]: unknown },
+  tags: string[] | undefined,
+  maintainerIds: string[] | undefined,
   nextCursor: string
 ): string {
-  const { state, tags, createdBy, maintainerIds, limit } = options;
-  const parts = ['flags ls'];
-  if (state !== 'active') {
-    parts.push(`--state ${state}`);
-  }
-  for (const tag of tags ?? []) {
-    parts.push(`--tag ${tag}`);
-  }
-  if (createdBy) {
-    parts.push(`--created-by ${createdBy}`);
-  }
-  for (const maintainerId of maintainerIds ?? []) {
-    parts.push(`--maintainer-id ${maintainerId}`);
-  }
-  if (limit !== undefined) {
-    parts.push(`--limit ${limit}`);
-  }
-  parts.push(`--next ${nextCursor}`);
-  return parts.join(' ');
+  // Forward all passed flags (including globals like --scope/--cwd) except the
+  // cursor and repeatable filters. getCommandFlags joins arrays with commas, so
+  // re-append --tag/--maintainer-id explicitly to preserve one value per flag.
+  const baseFlags = getCommandFlags(flags, [
+    '_',
+    '--tag',
+    '--maintainer-id',
+    '--next',
+    '--json',
+  ]);
+  const repeatable = [
+    ...(tags ?? []).map(tag => `--tag ${tag}`),
+    ...(maintainerIds ?? []).map(id => `--maintainer-id ${id}`),
+  ];
+  const suffix = repeatable.length > 0 ? ` ${repeatable.join(' ')}` : '';
+  return `flags ls${baseFlags}${suffix} --next ${nextCursor}`;
 }
 
 function outputJson(client: Client, flags: Flag[], next: string | null) {

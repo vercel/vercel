@@ -264,7 +264,10 @@ export function useFlags(
         );
       }
 
-      const limit = req.query.limit ? Number(req.query.limit) : 25;
+      // The CLI always sends `limit`; fall back to a single full page otherwise.
+      const limit = req.query.limit
+        ? Number(req.query.limit)
+        : filteredFlags.length;
       const offset = req.query.cursor ? Number(req.query.cursor) : 0;
       const page = filteredFlags.slice(offset, offset + limit);
       const nextOffset = offset + limit;
