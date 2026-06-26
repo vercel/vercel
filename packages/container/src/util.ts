@@ -51,6 +51,12 @@ export function delay(ms: number): Promise<void> {
  * Run `fn` inside a child span of `parent` so the container build flow is
  * traceable in the build container. When tracing is disabled (no parent span,
  * e.g. some local invocations) `fn` runs directly.
+ *
+ * If `fn` throws, the error is recorded on the span (as `error` plus
+ * `error.message` / `error.type`) before being re-thrown, so a failed step
+ * (e.g. a rejected registry login) is distinguishable in the trace instead of
+ * looking like a successful span. The span is still stopped/reported by
+ * `Span.trace`'s `finally`.
  */
 export async function withSpan<T>(
   parent: Span | undefined,
@@ -61,7 +67,20 @@ export async function withSpan<T>(
   if (!parent) {
     return fn(undefined);
   }
-  return parent.child(name, attrs).trace(span => fn(span));
+  const span = parent.child(name, attrs);
+  return span.trace(async s => {
+    try {
+      return await fn(s);
+    } catch (err) {
+      const error = err as Error;
+      s.setAttributes({
+        error: 'true',
+        'error.message': error?.message ?? String(err),
+        'error.type': error?.name ?? 'Error',
+      });
+      throw err;
+    }
+  });
 }
 
 /** Stringify a value for use as a span tag (tags must be strings). */

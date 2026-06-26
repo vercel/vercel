@@ -3322,6 +3322,38 @@ writeFileSync(
     );
   });
 
+  it('still writes trace spans when the build fails', async () => {
+    // Regression: a failed build previously returned through finishWithExitCode
+    // before the trace was flushed, so the whole trace was dropped. The trace
+    // must now be written on the error path too.
+    const cwd = fixture('node-error');
+    const outputDir = join(cwd, '.vercel/output');
+    const tracePath = join(outputDir, 'diagnostics', 'cli_traces.json');
+
+    await fs.remove(tracePath);
+
+    const cliPath = join(__dirname, '../../../../dist/vc.js');
+    let exitCode = 0;
+    try {
+      execSync(`node ${cliPath} build`, { cwd, stdio: 'pipe' });
+    } catch (err) {
+      exitCode = (err as { status?: number }).status ?? 1;
+    }
+
+    // The build fails...
+    expect(exitCode).toBe(1);
+
+    // ...but the trace file is still written, with spans up to and including
+    // the builder where the failure happened.
+    expect(await fs.pathExists(tracePath)).toBe(true);
+    const events = await fs.readJSON(tracePath);
+    expect(events.length).toBeGreaterThan(0);
+    const names = new Set(events.map((e: any) => e.name as string));
+    expect(names.has('vc.cli')).toBe(true);
+    expect(names.has('vc.doBuild')).toBe(true);
+    expect(names.has('vc.builder')).toBe(true);
+  });
+
   describe('--project', () => {
     afterEach(() => {
       vi.restoreAllMocks();

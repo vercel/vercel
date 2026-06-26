@@ -412,6 +412,35 @@ const main = async () => {
 
   let earlyGetUserPromise: Promise<User | undefined> | undefined;
   let telemetrySaved = false;
+  let traceFlushed = false;
+
+  // Stop the root span and write the trace diagnostics file. Runs at most once,
+  // on both the success and error paths, so a failed build still emits its
+  // spans (previously the flush only ran on success and failures dropped the
+  // entire trace). Only `vc build` sets `traceDiagnosticsPath`, so traces are
+  // not written for other commands (deploy, env, etc.).
+  const flushTrace = async () => {
+    if (traceFlushed) {
+      return;
+    }
+    traceFlushed = true;
+
+    rootSpan.stop();
+
+    if (!client?.traceDiagnosticsPath) {
+      return;
+    }
+    try {
+      await mkdir(join(client.traceDiagnosticsPath, '..'), { recursive: true });
+      await writeFile(
+        client.traceDiagnosticsPath,
+        JSON.stringify(traceReporter.events)
+      );
+    } catch (err) {
+      output.error('Failed to write diagnostics trace file');
+      output.prettyError(err);
+    }
+  };
 
   const getStringProperty = (
     value: unknown,
@@ -511,6 +540,7 @@ const main = async () => {
 
   const finishWithExitCode = async (code: number) => {
     await saveTelemetry();
+    await flushTrace();
     return code;
   };
 
@@ -1301,23 +1331,7 @@ const main = async () => {
   }
 
   await saveTelemetry();
-
-  rootSpan.stop();
-
-  // Flush trace events to disk. Only `vc build` sets traceDiagnosticsPath,
-  // so traces are not written for other commands (deploy, env, etc.).
-  if (client.traceDiagnosticsPath) {
-    try {
-      await mkdir(join(client.traceDiagnosticsPath, '..'), { recursive: true });
-      await writeFile(
-        client.traceDiagnosticsPath,
-        JSON.stringify(traceReporter.events)
-      );
-    } catch (err) {
-      output.error('Failed to write diagnostics trace file');
-      output.prettyError(err);
-    }
-  }
+  await flushTrace();
 
   return exitCode;
 };
