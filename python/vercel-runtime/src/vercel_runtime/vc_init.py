@@ -58,6 +58,7 @@ from vercel_runtime.workers import (
     maybe_bootstrap_worker_service_app,
     prepare_worker_environment,
 )
+from vercel_runtime.wsgi_websocket import attach_wsgi_websocket
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -769,9 +770,39 @@ if "VERCEL_IPC_PATH" in os.environ:
                 f"{addr} - - [{ts}] {msg}\n",
             )
 
+        def _vc_fire_end_once(self) -> None:
+            # Send the IPC "end" message exactly once per request. For a
+            # WebSocket upgrade this is called as soon as the 101 handshake is
+            # written so the platform can begin bidirectional streaming, while
+            # the WSGI worker thread keeps driving the socket. For regular
+            # requests it is called once the response is fully sent.
+            if getattr(self, "_vc_end_sent", False):
+                return
+            self._vc_end_sent = True
+            clear_runtime_cache_context()
+            clear_vercel_headers_context()
+            token = getattr(self, "_vc_end_token", None)
+            if token is not None:
+                storage.reset(token)
+            send_message(
+                {
+                    "type": "end",
+                    "payload": {
+                        "context": {
+                            "invocationId": getattr(
+                                self, "_vc_invocation_id", "0"
+                            ),
+                            "requestId": getattr(self, "_vc_request_id", 0),
+                        }
+                    },
+                }
+            )
+
         # Re-implementation of handle_one_request to send
         # the end message after the response is fully sent.
         def handle_one_request(self) -> None:
+            self._vc_end_sent = False
+            self._vc_end_token = None
             self.raw_requestline = self.rfile.readline(65537)
             if not self.raw_requestline:
                 self.close_connection = True
@@ -797,6 +828,8 @@ if "VERCEL_IPC_PATH" in os.environ:
                 "0",
             )
             request_id = int(raw_request_id) if raw_request_id.isdigit() else 0
+            self._vc_invocation_id = invocation_id
+            self._vc_request_id = request_id
             del self.headers["x-vercel-internal-invocation-id"]
             del self.headers["x-vercel-internal-request-id"]
             del self.headers["x-vercel-internal-span-id"]
@@ -843,7 +876,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                 }
             )
 
-            token = storage.set(
+            self._vc_end_token = storage.set(
                 {
                     "invocationId": invocation_id,
                     "requestId": request_id,
@@ -854,20 +887,7 @@ if "VERCEL_IPC_PATH" in os.environ:
             try:
                 self.handle_request()  # type: ignore[attr-defined]
             finally:
-                clear_runtime_cache_context()
-                clear_vercel_headers_context()
-                storage.reset(token)
-                send_message(
-                    {
-                        "type": "end",
-                        "payload": {
-                            "context": {
-                                "invocationId": invocation_id,
-                                "requestId": request_id,
-                            }
-                        },
-                    }
-                )
+                self._vc_fire_end_once()
 
     try:
         app_name, app_obj = resolve_app(
@@ -967,6 +987,16 @@ if "VERCEL_IPC_PATH" in os.environ:
                         if k.lower() == "transfer-encoding":
                             continue
                         env["HTTP_" + k.replace("-", "_").upper()] = v
+
+                    if attach_wsgi_websocket(
+                        env,
+                        self.headers,
+                        self.connection,
+                        self._vc_fire_end_once,
+                    ):
+                        # The hijacked connection cannot be reused for further
+                        # requests once the upgrade completes.
+                        self.close_connection = True
 
                     def start_response(
                         status: str,

@@ -94,6 +94,8 @@ export interface Flag {
   revision: number;
   seed: number;
   typeName: 'flag';
+  tags?: string[];
+  maintainerIds?: string[];
   metadata?: {
     creator?: {
       id: string;
@@ -104,6 +106,9 @@ export interface Flag {
 
 export interface FlagsListResponse {
   data: Flag[];
+  pagination?: {
+    next: string | null;
+  };
 }
 
 export interface FlagVersion {

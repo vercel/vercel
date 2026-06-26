@@ -793,6 +793,123 @@ class TestWSGIApp(_RuntimeTestCase):
             ):
                 self.assertNotIn(sc_header, seen)
 
+    async def test_wsgi_websocket_ends_request_after_handshake(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wsgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            client: _WebSocketClient | None = None
+            try:
+                client, status_line = await asyncio.to_thread(
+                    _WebSocketClient.connect,
+                    port,
+                    "/ws",
+                    {
+                        "x-vercel-internal-invocation-id": "test-inv-ws",
+                        "x-vercel-internal-request-id": "42",
+                        "x-vercel-internal-span-id": "span-ws",
+                        "x-vercel-internal-trace-id": "trace-ws",
+                    },
+                )
+                self.assertEqual(
+                    status_line, "HTTP/1.1 101 Switching Protocols"
+                )
+                assert client is not None
+
+                hs = await self.n1.wait_for_message(
+                    HandlerStartedMessage, timeout=5.0
+                )
+                self.assertEqual(
+                    hs.payload.context.invocation_id, "test-inv-ws"
+                )
+                self.assertEqual(hs.payload.context.request_id, 42)
+
+                # The "end" message must arrive right after the 101 handshake,
+                # before the (still open) connection echoes any frames.
+                end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
+                self.assertEqual(
+                    end.payload.context.invocation_id, "test-inv-ws"
+                )
+                self.assertEqual(end.payload.context.request_id, 42)
+
+                # The upgraded socket remains fully usable past the end.
+                await asyncio.to_thread(client.send_text, "ping")
+                self.assertEqual(
+                    await asyncio.to_thread(client.read_text), "echo:ping"
+                )
+                await asyncio.to_thread(client.send_text, "again")
+                self.assertEqual(
+                    await asyncio.to_thread(client.read_text), "echo:again"
+                )
+            finally:
+                if client is not None:
+                    await asyncio.to_thread(client.close)
+
+    async def test_wsgi_websocket_emits_single_end_message(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wsgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            client, _status_line = await asyncio.to_thread(
+                _WebSocketClient.connect,
+                port,
+                "/ws",
+                {"x-vercel-internal-invocation-id": "test-inv-single"},
+            )
+            try:
+                await self.n1.wait_for_message(EndMessage, timeout=5.0)
+            finally:
+                await asyncio.to_thread(client.close)
+
+            # Closing the connection (WSGI app returns) must not emit a second
+            # "end" message via the handle_one_request finally block.
+            with self.assertRaises(TimeoutError):
+                await self.n1.wait_for_message(EndMessage, timeout=1.0)
+
+    async def test_wsgi_non_upgrade_request_still_works(self) -> None:
+        # A regular request to a WebSocket-capable app must take the normal
+        # WSGI path and emit exactly one "end" message via the finally block.
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wsgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/plain")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "not a websocket")
+
+            await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+
 
 class TestASGIApp(_RuntimeTestCase):
     """Tests for ASGI app entrypoints."""
