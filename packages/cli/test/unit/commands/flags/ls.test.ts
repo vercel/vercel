@@ -81,6 +81,73 @@ describe('flags ls', () => {
     });
   });
 
+  describe('filters', () => {
+    it('tracks tag, created-by, and maintainer-id options', async () => {
+      client.setArgv(
+        'flags',
+        'ls',
+        '--tag',
+        'checkout',
+        '--created-by',
+        'user_123',
+        '--maintainer-id',
+        'user_456'
+      );
+      await flags(client);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:ls', value: 'ls' },
+        { key: 'option:state', value: 'active' },
+        { key: 'option:tag', value: '[REDACTED]' },
+        { key: 'option:created-by', value: '[REDACTED]' },
+        { key: 'option:maintainer-id', value: '[REDACTED]' },
+      ]);
+    });
+
+    it('filters flags by tag via the v2 endpoint', async () => {
+      flagsList[0].tags = ['checkout'];
+      flagsList[1].tags = ['growth'];
+
+      client.setArgv('flags', 'ls', '--tag', 'checkout', '--json');
+      const exitCode = await flags(client);
+      expect(exitCode).toEqual(0);
+
+      const parsed = JSON.parse(client.stdout.getFullOutput());
+      expect(parsed.flags).toHaveLength(1);
+      expect(parsed.flags[0].slug).toEqual('my-feature');
+    });
+
+    it('filters flags by maintainer id (any may match)', async () => {
+      flagsList[0].maintainerIds = ['user_a'];
+      flagsList[1].maintainerIds = ['user_b'];
+
+      client.setArgv('flags', 'ls', '--maintainer-id', 'user_b', '--json');
+      const exitCode = await flags(client);
+      expect(exitCode).toEqual(0);
+
+      const parsed = JSON.parse(client.stdout.getFullOutput());
+      expect(parsed.flags).toHaveLength(1);
+      expect(parsed.flags[0].slug).toEqual('another-feature');
+    });
+
+    it('follows pagination cursors to list all flags', async () => {
+      // Exceed the mock page size of 25 to force multiple pages.
+      for (let i = 0; i < 30; i++) {
+        flagsList.push({
+          ...JSON.parse(JSON.stringify(flagsList[0])),
+          id: `flag_page_${i}`,
+          slug: `paged-flag-${i}`,
+        });
+      }
+
+      client.setArgv('flags', 'ls', '--json');
+      const exitCode = await flags(client);
+      expect(exitCode).toEqual(0);
+
+      const parsed = JSON.parse(client.stdout.getFullOutput());
+      expect(parsed.flags).toHaveLength(flagsList.length);
+    });
+  });
+
   describe('--json', () => {
     it('outputs valid JSON with flag data', async () => {
       client.setArgv('flags', 'ls', '--json');

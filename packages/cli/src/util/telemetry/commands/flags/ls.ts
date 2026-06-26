@@ -15,4 +15,31 @@ export class FlagsLsTelemetryClient extends TelemetryClient {
       this.trackCliFlag('json');
     }
   }
+
+  trackCliOptionTag(tags: string[] | undefined) {
+    if (tags && tags.length > 0) {
+      this.trackCliOption({
+        option: 'tag',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionCreatedBy(createdBy: string | undefined) {
+    if (createdBy) {
+      this.trackCliOption({
+        option: 'created-by',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionMaintainerId(maintainerIds: string[] | undefined) {
+    if (maintainerIds && maintainerIds.length > 0) {
+      this.trackCliOption({
+        option: 'maintainer-id',
+        value: this.redactedValue,
+      });
+    }
+  }
 }

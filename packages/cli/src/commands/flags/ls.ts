@@ -37,9 +37,15 @@ export default async function ls(
 
   const { flags } = parsedArgs;
   const state = (flags['--state'] as 'active' | 'archived') || 'active';
+  const tags = flags['--tag'] as string[] | undefined;
+  const createdBy = flags['--created-by'] as string | undefined;
+  const maintainerIds = flags['--maintainer-id'] as string[] | undefined;
   const json = flags['--json'] as boolean | undefined;
 
   telemetryClient.trackCliOptionState(state);
+  telemetryClient.trackCliOptionTag(tags);
+  telemetryClient.trackCliOptionCreatedBy(createdBy);
+  telemetryClient.trackCliOptionMaintainerId(maintainerIds);
   telemetryClient.trackCliFlagJson(json);
 
   const link = await getLinkedProject(client);
@@ -62,7 +68,12 @@ export default async function ls(
   output.spinner(`Fetching ${state} feature flags for ${projectSlugLink}`);
 
   try {
-    const flagsList = await getFlags(client, project.id, state);
+    const flagsList = await getFlags(client, project.id, {
+      state,
+      tags,
+      createdBy,
+      maintainerIds,
+    });
     output.stopSpinner();
 
     // Sort by updatedAt descending (most recently updated first)

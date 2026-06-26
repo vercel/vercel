@@ -20,6 +20,32 @@ export const listSubcommand = {
       argument: 'STATE',
     },
     {
+      name: 'tag',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description: 'Filter flags by tag (repeatable; all must match)',
+      argument: 'TAG',
+    },
+    {
+      name: 'created-by',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Filter flags by the id of the user or team that created them',
+      argument: 'ID',
+    },
+    {
+      name: 'maintainer-id',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description:
+        'Filter flags by maintainer user id (repeatable; any may match)',
+      argument: 'ID',
+    },
+    {
       name: 'json',
       shorthand: null,
       type: Boolean,
@@ -35,6 +61,10 @@ export const listSubcommand = {
     {
       name: 'List archived flags',
       value: `${packageName} flags ls --state archived`,
+    },
+    {
+      name: 'Filter flags by tag, creator, and maintainer',
+      value: `${packageName} flags ls --tag checkout --created-by user_123 --maintainer-id user_456`,
     },
     {
       name: 'List flags as JSON',
