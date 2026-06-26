@@ -28,16 +28,53 @@ const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
 
 /**
- * A container entrypoint pointing at a Dockerfile/Containerfile is built &
- * pushed; anything else is treated as a prebuilt OCI image reference.
+ * Whether a supplied `entrypoint` names a Dockerfile, used to infer
+ * `runtime: "container"`. This is the broad match: a basename of `Dockerfile`
+ * or `Containerfile`, or one prefixed with `Dockerfile.` / `Containerfile.`
+ * (any suffix, e.g. `Dockerfile.prod`, `Containerfile.vercel`). Only applied
+ * when the user actually supplied an entrypoint.
  */
 function isDockerfileEntrypoint(entrypoint: string): boolean {
   const base = posixPath.basename(entrypoint).toLowerCase();
   return (
     base === 'dockerfile' ||
     base === 'containerfile' ||
-    base.endsWith('.dockerfile')
+    base.startsWith('dockerfile.') ||
+    base.startsWith('containerfile.')
   );
+}
+
+/**
+ * Candidate Dockerfile names probed (in order) when a service sets
+ * `runtime: "container"` without an explicit `entrypoint`. Unlike the broad
+ * entrypoint match above, auto-detection only considers these four blessed
+ * names so we never silently pick up an arbitrary `Dockerfile.*` file.
+ *
+ * The `.vercel` opt-in markers are probed first so they take precedence over a
+ * plain `Dockerfile` / `Containerfile`: a project that ships both gets to use
+ * the `.vercel` marker as the explicit "deploy this as a container" signal,
+ * matching the `container` framework preset.
+ */
+const CONTAINER_ENTRYPOINT_CANDIDATES = [
+  'Dockerfile.vercel',
+  'Containerfile.vercel',
+  'Dockerfile',
+  'Containerfile',
+];
+
+/**
+ * Probe the service root for a blessed Dockerfile candidate. Returns the
+ * service-root-relative path of the first one that exists, or undefined.
+ */
+async function detectContainerEntrypoint(
+  serviceFs: DetectorFilesystem
+): Promise<string | undefined> {
+  for (const candidate of CONTAINER_ENTRYPOINT_CANDIDATES) {
+    if (await serviceFs.hasPath(candidate)) {
+      return candidate;
+    }
+  }
+  return undefined;
 }
 
 function normalizeContainerCommand(
@@ -51,49 +88,58 @@ function normalizeContainerCommand(
 
 /**
  * Resolve a container (`runtime: "container"`) service. Containers don't go
- * through framework/entrypoint-extension detection: the entrypoint is either a
- * Dockerfile to build & push or a prebuilt OCI image reference.
+ * through framework/entrypoint-extension detection: the entrypoint is a
+ * Dockerfile/Containerfile to build & push. When no entrypoint is supplied we
+ * probe the service root for a blessed Dockerfile candidate.
  */
-function resolveContainerServiceV2(
+async function resolveContainerServiceV2(
   name: string,
   config: ExperimentalServiceV2Config,
-  normalizedRoot: string
-): { service?: ExperimentalServiceV2; error?: ServiceDetectionError } {
+  normalizedRoot: string,
+  serviceFs: DetectorFilesystem
+): Promise<{ service?: ExperimentalServiceV2; error?: ServiceDetectionError }> {
   const isRoot = normalizedRoot === '.';
 
   const entrypoint = config.entrypoint;
-  const dockerfile =
-    typeof entrypoint === 'string' && isDockerfileEntrypoint(entrypoint)
-      ? posixPath.normalize(entrypoint)
-      : undefined;
-  // A non-Dockerfile entrypoint is a prebuilt OCI image reference.
-  const image =
-    typeof entrypoint === 'string' && !dockerfile ? entrypoint : undefined;
-
-  if (!dockerfile && !image) {
-    return {
-      error: {
-        code: 'MISSING_SERVICE_CONFIG',
-        message: `Container service "${name}" must specify an "entrypoint": a Dockerfile path to build, or a prebuilt OCI image reference.`,
-        serviceName: name,
-      },
-    };
+  let dockerfile: string | undefined;
+  if (typeof entrypoint === 'string') {
+    // An explicit entrypoint must name a Dockerfile/Containerfile; there is no
+    // longer any prebuilt-image-reference entrypoint.
+    if (!isDockerfileEntrypoint(entrypoint)) {
+      return {
+        error: {
+          code: 'INVALID_SERVICE_CONFIG',
+          message: `Container service "${name}" has invalid "entrypoint" "${entrypoint}". It must name a Dockerfile or Containerfile.`,
+          serviceName: name,
+        },
+      };
+    }
+    dockerfile = posixPath.normalize(entrypoint);
+  } else {
+    // No entrypoint: auto-detect one of the blessed Dockerfile candidates in
+    // the service root.
+    dockerfile = await detectContainerEntrypoint(serviceFs);
+    if (!dockerfile) {
+      return {
+        error: {
+          code: 'MISSING_SERVICE_CONFIG',
+          message: `Container service "${name}" has no "entrypoint" and no ${CONTAINER_ENTRYPOINT_CANDIDATES.join(
+            ', '
+          )} was found in "${normalizedRoot}".`,
+          serviceName: name,
+        },
+      };
+    }
   }
 
-  // builder.src is project-root-relative. For a prebuilt image there is no
-  // source file, so default to a Dockerfile path under the root (the builder
-  // treats a missing Dockerfile + a configured image handler as prebuilt).
-  const localSrc = dockerfile ?? image ?? 'Dockerfile';
+  // builder.src is project-root-relative.
   const builderSrc = isRoot
-    ? localSrc
-    : posixPath.join(normalizedRoot, localSrc);
+    ? dockerfile
+    : posixPath.join(normalizedRoot, dockerfile);
 
   const builderConfig: Record<string, unknown> = { zeroConfig: true };
   if (!isRoot) {
     builderConfig.workspace = normalizedRoot;
-  }
-  if (image) {
-    builderConfig.handler = image;
   }
   const command = normalizeContainerCommand(config.command);
   if (command) {
@@ -106,7 +152,7 @@ function resolveContainerServiceV2(
       name,
       root: normalizedRoot,
       runtime: 'container',
-      entrypoint: image ?? dockerfile,
+      entrypoint: dockerfile,
       command,
       builder: {
         src: builderSrc,
@@ -212,19 +258,9 @@ export async function resolveConfiguredServiceV2(
   // "frontend/" and "frontend" resolve identically.
   const normalizedRoot = stripTrailingSlash(posixPath.normalize(config.root));
 
-  // Container services are resolved separately: they don't go through
-  // framework/entrypoint-extension detection. Container intent is signalled by
-  // an explicit `runtime: "container"` or a Dockerfile entrypoint.
-  const isContainer =
-    config.runtime === 'container' ||
-    (typeof config.entrypoint === 'string' &&
-      isDockerfileEntrypoint(config.entrypoint));
-  if (isContainer) {
-    return resolveContainerServiceV2(name, config, normalizedRoot);
-  }
-
-  // Scope the filesystem to the service root for entrypoint/framework detection.
-  // A root of "." is the project root itself, so there is nothing to chdir into.
+  // Scope the filesystem to the service root for entrypoint/framework detection
+  // (and container Dockerfile auto-detection). A root of "." is the project root
+  // itself, so there is nothing to chdir into.
   const serviceFsResult =
     normalizedRoot === '.'
       ? { fs }
@@ -233,6 +269,18 @@ export async function resolveConfiguredServiceV2(
     return { error: serviceFsResult.error };
   }
   const serviceFs = serviceFsResult.fs;
+
+  // Container services are resolved separately: they don't go through
+  // framework/entrypoint-extension detection. Container intent is signalled by
+  // an explicit `runtime: "container"`, or by an entrypoint that names a
+  // Dockerfile/Containerfile.
+  const isContainer =
+    config.runtime === 'container' ||
+    (typeof config.entrypoint === 'string' &&
+      isDockerfileEntrypoint(config.entrypoint));
+  if (isContainer) {
+    return resolveContainerServiceV2(name, config, normalizedRoot, serviceFs);
+  }
 
   // Resolve the entrypoint, Python `module:attr` references
   // resolve against their underlying file.
