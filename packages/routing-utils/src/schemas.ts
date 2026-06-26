@@ -486,19 +486,11 @@ export const routesSchema = {
         properties: {
           src: {
             type: 'string',
-            minLength: 1,
             maxLength: 4096,
           },
           source: {
             type: 'string',
-            minLength: 1,
             maxLength: 4096,
-          },
-          srcSyntax: {
-            description:
-              'The syntax used by the route source. Defaults to a low-level regular expression.',
-            type: 'string',
-            enum: ['regex', 'path-to-regexp'],
           },
           dest: {
             type: 'string',

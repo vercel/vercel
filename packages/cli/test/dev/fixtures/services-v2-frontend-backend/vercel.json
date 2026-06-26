@@ -115,13 +115,12 @@
           }
         },
         {
-          "src": "/transform/:path*",
-          "srcSyntax": "path-to-regexp",
+          "src": "/transform/(.*)",
           "transforms": [
             {
               "type": "request.path",
               "op": "set",
-              "args": "/api/:path*"
+              "args": "/api/$1"
             },
             {
               "type": "request.query",

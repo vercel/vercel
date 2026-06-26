@@ -10,13 +10,7 @@ import type {
   ExperimentalServicesV2,
   Services,
 } from '@vercel/build-utils';
-import type {
-  Header,
-  Route,
-  RouteInput,
-  Redirect,
-  Rewrite,
-} from '@vercel/routing-utils';
+import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
 
 export { DeploymentEventType } from './utils';
 
@@ -169,7 +163,7 @@ export interface VercelConfig {
     env?: Dictionary<string>;
   };
   builds?: Builder[];
-  routes?: RouteInput[];
+  routes?: Route[];
   files?: string[];
   cleanUrls?: boolean;
   rewrites?: Rewrite[];

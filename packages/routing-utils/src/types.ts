@@ -147,22 +147,9 @@ export type RouteWithHandle = {
 
 export type Route = RouteWithSrc | RouteWithHandle;
 
-export type RouteSourceSyntax = 'regex' | 'path-to-regexp';
-
-type RouteSourceInput = {
-  /**
-   * Syntax used by the authored route source. Omitted values preserve the
-   * historical low-level regular-expression behavior.
-   */
-  srcSyntax?: RouteSourceSyntax;
-};
-
 export type RouteInput =
-  | (RouteWithSrc & RouteSourceInput)
-  | (Omit<RouteWithSrc, 'src'> & {
-      src?: string;
-      source: string;
-    } & RouteSourceInput)
+  | RouteWithSrc
+  | (Omit<RouteWithSrc, 'src'> & { src?: string; source: string })
   | RouteWithHandle;
 
 export type NormalizedRoutes = {

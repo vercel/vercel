@@ -2653,7 +2653,19 @@ fs.writeFileSync(
           root: '.',
           entrypoint: 'backend.js',
           runtime: 'node',
-          rewrites: [{ source: '/backend/(.*)', destination: '/$1' }],
+          rewrites: [
+            {
+              source: '/backend/:path*',
+              destination: '/:path*',
+              transforms: [
+                {
+                  type: 'request.path',
+                  op: 'set',
+                  args: '/:path*',
+                },
+              ],
+            },
+          ],
         },
       },
     });
@@ -2694,7 +2706,19 @@ createServer((_req, res) => {
       backend: expect.objectContaining({
         root: '.',
         runtime: 'node',
-        rewrites: [{ source: '/backend/(.*)', destination: '/$1' }],
+        rewrites: [
+          {
+            source: '/backend/:path*',
+            destination: '/:path*',
+            transforms: [
+              {
+                type: 'request.path',
+                op: 'set',
+                args: '/:path*',
+              },
+            ],
+          },
+        ],
       }),
       ui: expect.objectContaining({
         root: '.',
@@ -2729,70 +2753,10 @@ createServer((_req, res) => {
     expect(backendConfig.routes).toEqual(
       expect.arrayContaining([
         { handle: 'filesystem' },
-        expect.objectContaining({ dest: '/$1', check: true }),
-      ])
-    );
-    expect(await fs.pathExists(join(output, 'functions'))).toBe(false);
-  });
-
-  it('should compile path-to-regexp sources in service routes', async () => {
-    const cwd = await getWriteableDirectory();
-    const output = join(cwd, '.vercel', 'output');
-    await fs.ensureDir(join(cwd, '.vercel'));
-    await fs.writeJSON(join(cwd, '.vercel', 'project.json'), {
-      orgId: '.',
-      projectId: '.',
-      settings: {
-        framework: null,
-        installCommand: '',
-      },
-    });
-    await fs.writeJSON(join(cwd, 'package.json'), { private: true });
-    await fs.writeJSON(join(cwd, 'vercel.json'), {
-      services: {
-        backend: {
-          root: '.',
-          entrypoint: 'backend.js',
-          runtime: 'node',
-          routes: [
-            {
-              src: '/api/:path*',
-              srcSyntax: 'path-to-regexp',
-              transforms: [
-                {
-                  type: 'request.path',
-                  op: 'set',
-                  args: '/:path*',
-                },
-              ],
-            },
-          ],
-        },
-      },
-    });
-    await fs.outputFile(
-      join(cwd, 'backend.js'),
-      `
-const { createServer } = require('node:http');
-
-createServer((_req, res) => {
-  res.statusCode = 200;
-  res.end('ok');
-}).listen(3000);
-`
-    );
-
-    client.cwd = cwd;
-    const exitCode = await build(client);
-    expect(exitCode).toBe(0);
-
-    const backendConfig = await fs.readJSON(
-      join(output, 'services/backend/config.json')
-    );
-    expect(backendConfig.routes).toEqual(
-      expect.arrayContaining([
-        {
-          src: '^/api(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?$',
+        expect.objectContaining({
+          src: '^/backend(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?$',
+          dest: '/$1',
+          check: true,
           transforms: [
             {
               type: 'request.path',
@@ -2800,9 +2764,10 @@ createServer((_req, res) => {
               args: '/$1',
             },
           ],
-        },
+        }),
       ])
     );
+    expect(await fs.pathExists(join(output, 'functions'))).toBe(false);
   });
 
   it('should build experimentalServices discovered from generated Build Output config', async () => {
