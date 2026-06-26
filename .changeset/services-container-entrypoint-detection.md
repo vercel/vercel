@@ -1,5 +1,6 @@
 ---
 '@vercel/fs-detectors': patch
+'@vercel/container': patch
 ---
 
 [services] Refine container detection for `services` / `experimentalServicesV2`.
@@ -13,3 +14,8 @@
   `.vercel` opt-in marker takes precedence over a plain `Dockerfile`).
 - Removed the prebuilt OCI image reference entrypoint: an `entrypoint` must now
   name a Dockerfile/Containerfile, otherwise the service errors.
+- `@vercel/container` now recognizes the same broad `Dockerfile.*` /
+  `Containerfile.*` set (via a shared `isDockerfileRef`), so a suffixed
+  entrypoint handed over by services is built with `-f <path>` instead of
+  being ignored in favor of a default `Dockerfile` or treated as a prebuilt
+  image reference.
