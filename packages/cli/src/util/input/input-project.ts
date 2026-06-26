@@ -9,6 +9,7 @@ import output from '../../output-manager';
 import { printAlignedLabel } from '../output/print-aligned-label';
 import { Separator } from '@inquirer/select';
 import { isPromptBackError } from './prompt-cancellation';
+import type { CrossTeamMatch } from '../projects/search-project-across-teams';
 
 type ProjectDecision = 'create' | 'existing';
 const SEARCH_ALL_PROJECTS = 'search-all-projects' as const;
@@ -176,14 +177,15 @@ export default async function inputProject(
   autoConfirm = false,
   skipAutoDetect = false,
   showProjectSuggestions = false,
-  allowTeamSelectionBack = false
-): Promise<Project | string | typeof BACK_TO_TEAM_SELECTION> {
+  allowTeamSelectionBack = false,
+  repoMatches: CrossTeamMatch[] = []
+): Promise<Project | CrossTeamMatch | string | typeof BACK_TO_TEAM_SELECTION> {
   const slugifiedName = slugify(detectedProjectName);
 
   // attempt to auto-detect a project to link
   let detectedProject = null;
 
-  if (!skipAutoDetect) {
+  if (!skipAutoDetect && repoMatches.length === 0) {
     output.spinner('Searching for existing projects…', 1000);
 
     const [project, slugifiedProject] = await Promise.all([
@@ -225,6 +227,7 @@ export default async function inputProject(
     for (;;) {
       type ProjectPickerValue =
         | Project
+        | CrossTeamMatch
         | typeof SEARCH_ALL_PROJECTS
         | typeof CREATE_NEW_PROJECT
         | typeof BACK_TO_TEAM_SELECTION;
@@ -237,7 +240,15 @@ export default async function inputProject(
           }
       > = [];
 
-      if (detectedProject) {
+      if (repoMatches.length > 0) {
+        choices.push(
+          ...repoMatches.map(match => ({
+            name: `${match.project.name} ${chalk.gray('(linked by git)')}`,
+            value: match,
+          })),
+          new Separator()
+        );
+      } else if (detectedProject) {
         choices.push(
           {
             name: `${detectedProject.name} ${chalk.gray('(folder name)')}`,

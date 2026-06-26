@@ -2119,6 +2119,153 @@ describe('link', () => {
       expect(projectJson.projectName).toEqual(project.name);
     });
 
+    it('should prefer a Git-linked root-directory match under the selected team', async () => {
+      useUser({ version: 'northstar' });
+      const repoRoot = setupTmpDir();
+      const projectDir = join(repoRoot, 'apps/web');
+      const repoUrl = 'git@github.com:vercel-internal-playground/services.git';
+      await mkdirp(join(repoRoot, '.git'));
+      await mkdirp(projectDir);
+      await writeFile(
+        join(repoRoot, '.git/config'),
+        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
+      );
+
+      const [team] = useTeams('team_dummy') as Team[];
+      const repoProject = {
+        ...defaultProject,
+        id: 'proj-repo-web',
+        name: 'services-web',
+        rootDirectory: 'apps/web',
+      };
+      const folderProject = {
+        ...defaultProject,
+        id: 'proj-folder-web',
+        name: 'web',
+      };
+      const queriedTeamIds: (string | undefined)[] = [];
+      let folderLookupCount = 0;
+
+      client.scenario.get('/v9/projects', (req, res) => {
+        queriedTeamIds.push(req.query.teamId as string | undefined);
+        if (req.query.repoUrl === repoUrl && req.query.teamId === team.id) {
+          return res.json({
+            projects: [repoProject],
+            pagination: { next: null },
+          });
+        }
+        return res.json({ projects: [], pagination: { next: null } });
+      });
+      client.scenario.get('/v9/projects/web', (_req, res) => {
+        folderLookupCount++;
+        return res.json(folderProject);
+      });
+      useUnknownProject();
+
+      client.cwd = projectDir;
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput(
+        `${repoProject.name} (linked by git)`
+      );
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput(
+        `✓ Linked          ${team.slug}/${repoProject.name}`
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(queriedTeamIds).toEqual([team.id]);
+      expect(folderLookupCount).toEqual(0);
+
+      expect(await readJSON(join(repoRoot, '.vercel/repo.json'))).toEqual({
+        remoteName: 'origin',
+        projects: [
+          {
+            directory: 'apps/web',
+            id: repoProject.id,
+            name: repoProject.name,
+            orgId: team.id,
+          },
+        ],
+      });
+      expect(await pathExists(join(projectDir, '.vercel/project.json'))).toBe(
+        false
+      );
+    });
+
+    it('should fall back to the folder name when no Git root-directory matches', async () => {
+      useUser({ version: 'northstar' });
+      const repoRoot = setupTmpDir();
+      const projectDir = join(repoRoot, 'apps/web');
+      const repoUrl = 'https://github.com/vercel-internal-playground/services';
+      await mkdirp(join(repoRoot, '.git'));
+      await mkdirp(projectDir);
+      await writeFile(
+        join(repoRoot, '.git/config'),
+        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
+      );
+
+      const [team] = useTeams('team_dummy') as Team[];
+      const otherRootProject = {
+        ...defaultProject,
+        id: 'proj-repo-api',
+        name: 'services-api',
+        rootDirectory: 'apps/api',
+      };
+      const folderProject = {
+        ...defaultProject,
+        id: 'proj-folder-web',
+        name: 'web',
+      };
+
+      client.scenario.get('/v9/projects', (req, res) => {
+        if (req.query.repoUrl === repoUrl && req.query.teamId === team.id) {
+          return res.json({
+            projects: [otherRootProject],
+            pagination: { next: null },
+          });
+        }
+        return res.json({ projects: [], pagination: { next: null } });
+      });
+      client.scenario.get('/v9/projects/web', (_req, res) => {
+        return res.json(folderProject);
+      });
+      useUnknownProject();
+
+      client.cwd = projectDir;
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('web (folder name)');
+      expect(client.stderr.getFullOutput()).not.toContain(
+        otherRootProject.name
+      );
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput(
+        `✓ Linked          ${team.slug}/${folderProject.name}`
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      expect(
+        await readJSON(join(projectDir, '.vercel/project.json'))
+      ).toMatchObject({
+        orgId: team.id,
+        projectId: folderProject.id,
+        projectName: folderProject.name,
+      });
+      expect(await pathExists(join(repoRoot, '.vercel/repo.json'))).toBe(false);
+    });
+
     it('should search all projects under the selected team', async () => {
       useUser({ version: 'northstar' });
       const cwd = setupTmpDir('searchable-project');

@@ -31,7 +31,7 @@ Rules:
 - Running `vc link` is setup intent; do not ask a vague setup-intent prompt.
 - In direct interactive `vc link`, resolve the team before searching for or selecting a project. An explicit `--team`/`--scope` skips the team prompt and restricts project discovery to that team.
 - Direct interactive team selection supports case-insensitive substring search by team name or slug.
-- After team selection, direct interactive `vc link` shows exact folder-name matches first, followed by `Search all projects`, `Create a new project`, and `Choose a different team`. Do not dump the team's full project list until the user chooses search.
+- After team selection, direct interactive `vc link` first checks the selected team for a project linked to the local Git repository with the deepest matching Root Directory. Show those matches as `(linked by git)`. Only when none match, fall back to an exact folder-name match. Follow detected matches with `Search all projects`, `Create a new project`, and `Choose a different team`. Do not dump the team's full project list until the user chooses search.
 - Project search includes `Back to project options`; choosing it returns to the project picker without changing the selected team.
 - After choosing `Create a new project`, show `Press ↑ to return to project options` on `Name?`. Up returns to the project picker without changing the selected team; Escape still cancels the command.
 - Existing-project selection supports case-insensitive substring search. For teams with more than 100 projects, query `/v9/projects?search=<term>&limit=20` within the selected team and cancel stale requests as the query changes.
@@ -69,18 +69,18 @@ Current gaps to migrate incrementally:
 
 Link prompt map:
 
-| State                              | Human prompt/output                                                                                                                | Non-interactive                        |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Multiple teams                     | searchable `Which team?` before project discovery                                                                                  | `action_required: missing_team`        |
-| One folder-name project match      | `Which project?` with the match labeled `(folder name)`, then search/create choices                                                | link only for explicit/repo-root match |
-| One repository project match       | `Directory`, optional search-status rows, `Found existing project`, aligned `Project`/`Source`, then `Link repository to project?` | link only for explicit/repo-root match |
-| Multiple project matches           | aligned `Projects` summary, then searchable `Project?`                                                                             | `action_required: ambiguous_project`   |
-| No without-SSO match, SSO required | `Searched {count} teams available without SSO`, `No matching projects found`, then `Select teams that require SSO`                 | skip unless explicitly requested       |
-| No project match                   | `Which project?` with `Search all projects` / `Create a new project`, then `Name?` when creating                                   | require `--yes` or `project_not_found` |
-| Root choices exist                 | `Code directory?`                                                                                                                  | require root flag/config/payload       |
-| Settings differ                    | `Customize settings?`                                                                                                              | require flags/config/payload           |
-| Optional env pull                  | `Pull development environment variables into .env.local?`                                                                          | skip unless explicitly requested       |
-| Stale/deleted link                 | show stale link, then concrete relink choice                                                                                       | `action_required: stale_link`          |
+| State                              | Human prompt/output                                                                                                                                                                  | Non-interactive                        |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
+| Multiple teams                     | searchable `Which team?` before project discovery                                                                                                                                    | `action_required: missing_team`        |
+| One folder-name project match      | `Which project?` with the match labeled `(folder name)`, then search/create choices                                                                                                  | link only for explicit/repo-root match |
+| One repository project match       | direct interactive: `Which project?` with the match labeled `(linked by git)`; other paths: `Found existing project`, aligned `Project`/`Source`, then `Link repository to project?` | link only for explicit/repo-root match |
+| Multiple project matches           | aligned `Projects` summary, then searchable `Project?`                                                                                                                               | `action_required: ambiguous_project`   |
+| No without-SSO match, SSO required | `Searched {count} teams available without SSO`, `No matching projects found`, then `Select teams that require SSO`                                                                   | skip unless explicitly requested       |
+| No project match                   | `Which project?` with `Search all projects` / `Create a new project`, then `Name?` when creating                                                                                     | require `--yes` or `project_not_found` |
+| Root choices exist                 | `Code directory?`                                                                                                                                                                    | require root flag/config/payload       |
+| Settings differ                    | `Customize settings?`                                                                                                                                                                | require flags/config/payload           |
+| Optional env pull                  | `Pull development environment variables into .env.local?`                                                                                                                            | skip unless explicitly requested       |
+| Stale/deleted link                 | show stale link, then concrete relink choice                                                                                                                                         | `action_required: stale_link`          |
 
 Link acceptance matrix:
 
@@ -91,6 +91,7 @@ Link acceptance matrix:
 - returning from project selection to team selection
 - local and API-backed existing-project search within the selected team
 - returning from project search to project options
+- selected-team Git repository and Root Directory match before folder-name fallback
 - exact folder-name suggestion before full project search
 - explicit selection of a team that requires SSO
 - Escape cancellation from team, project, and setup prompts without mutation

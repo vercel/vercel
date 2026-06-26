@@ -56,7 +56,9 @@ import {
   toProjectRootDirectory,
   type InferredServicesChoice,
 } from './services-setup';
-import searchProjectAcrossTeams from '../projects/search-project-across-teams';
+import searchProjectAcrossTeams, {
+  searchProjectsByRepoRoot,
+} from '../projects/search-project-across-teams';
 import type { CrossTeamMatch } from '../projects/search-project-across-teams';
 import { isPromptCanceledError } from '../input/prompt-cancellation';
 
@@ -102,6 +104,16 @@ function formatCrossTeamMatch(match: CrossTeamMatch): string {
 
 function formatMatchSource(match: CrossTeamMatch): string {
   return match.reason === 'repo-root' ? 'Git repository' : 'Folder name';
+}
+
+function isCrossTeamMatch(value: unknown): value is CrossTeamMatch {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'project' in value &&
+    'org' in value &&
+    'reason' in value
+  );
 }
 
 const CHECKBOX_INSTRUCTIONS = [
@@ -333,6 +345,9 @@ async function searchSelectedLimitedTeams({
     });
     return result.matches;
   } catch (err) {
+    if (isPromptCanceledError(err)) {
+      throw err;
+    }
     output.debug(`Selected team search requiring SSO failed: ${err}`);
     return [];
   } finally {
@@ -527,6 +542,9 @@ export default async function setupAndLink(
       searchedTeamSlugs = searchResult.searchedTeamSlugs;
       skippedLimitedTeams = searchResult.skippedLimitedTeams;
     } catch (err) {
+      if (isPromptCanceledError(err)) {
+        throw err;
+      }
       output.debug(`Cross-team search failed: ${err}`);
     } finally {
       output.stopSpinner();
@@ -624,6 +642,28 @@ export default async function setupAndLink(
       }
     }
 
+    let repoMatches: CrossTeamMatch[] = [];
+    if (showProjectSuggestions && !skipAutoDetect) {
+      output.spinner('Searching for existing projects…', 1000);
+      try {
+        repoMatches = await searchProjectsByRepoRoot({
+          client,
+          cwd: path,
+          gitProjectName,
+          orgs: [org],
+          autoConfirm,
+          nonInteractive,
+        });
+      } catch (err) {
+        if (isPromptCanceledError(err)) {
+          throw err;
+        }
+        output.debug(`Git-linked project search failed: ${err}`);
+      } finally {
+        output.stopSpinner();
+      }
+    }
+
     try {
       projectOrNewProjectName = await inputProject(
         client,
@@ -632,7 +672,8 @@ export default async function setupAndLink(
         autoConfirm,
         skipAutoDetect,
         showProjectSuggestions,
-        searchableTeamPicker && !selectedOrg
+        searchableTeamPicker && !selectedOrg,
+        repoMatches
       );
     } catch (err) {
       if (
@@ -653,6 +694,15 @@ export default async function setupAndLink(
 
   if (typeof projectOrNewProjectName === 'string') {
     newProjectName = projectOrNewProjectName;
+  } else if (isCrossTeamMatch(projectOrNewProjectName)) {
+    return await linkCrossTeamMatch({
+      client,
+      path,
+      match: projectOrNewProjectName,
+      successEmoji,
+      autoConfirm,
+      pullEnv,
+    });
   } else {
     const project = projectOrNewProjectName;
 
