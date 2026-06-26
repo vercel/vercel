@@ -1417,7 +1417,7 @@ main()
           resolvedCommandForUpdate
         ))
       ) {
-        const upgradeExitCode = await executeUpgrade();
+        const upgradeExitCode = await executeUpgrade(fresh);
         process.exitCode = originalExitCode;
         if (upgradeExitCode !== 0) {
           output.log(

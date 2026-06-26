@@ -5,8 +5,8 @@ import { promisify } from 'util';
 import { scanParentDirs } from '@vercel/build-utils';
 import { packageName } from './pkg-name';
 import {
-  getNativeInstallMethod,
   isNativeBinaryInstall,
+  shouldUseStandaloneUpgrade,
 } from './native-install';
 
 const nativePackageName = '@vercel/vc-native';
@@ -196,10 +196,7 @@ export async function getUpdateCommandInfo(): Promise<{
   const pkgAndVersion = `${getUpdatePackageName()}@latest`;
 
   if (nativeInstall) {
-    if (
-      process.platform !== 'win32' &&
-      getNativeInstallMethod() === 'standalone'
-    ) {
+    if (shouldUseStandaloneUpgrade()) {
       return { command: `${packageName} upgrade`, global: true };
     }
 

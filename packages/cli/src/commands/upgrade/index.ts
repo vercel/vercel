@@ -3,7 +3,7 @@ import { upgradeCommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { executeUpgrade } from '../../util/upgrade';
-import getUpdateCommand, { isGlobal } from '../../util/get-update-command';
+import { getUpdateCommandInfo } from '../../util/get-update-command';
 import { printError } from '../../util/error';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
@@ -69,8 +69,7 @@ export default async function upgrade(client: Client): Promise<number> {
 
   // --json implies --dry-run behavior
   if (dryRun || asJson) {
-    const updateCommand = await getUpdateCommand();
-    const global = await isGlobal();
+    const { command: updateCommand, global } = await getUpdateCommandInfo();
 
     if (asJson) {
       const jsonOutput = {

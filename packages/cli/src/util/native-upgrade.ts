@@ -12,60 +12,48 @@ import https from 'https';
 import type { IncomingMessage } from 'http';
 import { dirname, join } from 'path';
 import { pipeline } from 'stream/promises';
+import { fetchLatestVersion } from './get-latest-version';
+import { getReleaseTarget } from './native-install';
+import { isVersionCurrent } from './is-version-current';
+import pkg from './pkg';
 import output from '../output-manager';
 
 const REPO = 'vercel/vercel';
 
-function detectTarget(): string | undefined {
-  let os: string | undefined;
-  if (process.platform === 'darwin') {
-    os = 'darwin';
-  } else if (process.platform === 'linux') {
-    os = 'linux';
-  }
-
-  let arch: string | undefined;
-  if (process.arch === 'arm64') {
-    arch = 'arm64';
-  } else if (process.arch === 'x64') {
-    arch = 'x64';
-  }
-
-  if (!os || !arch) {
-    return undefined;
-  }
-  return `vercel-${os}-${arch}`;
-}
+const REQUEST_IDLE_TIMEOUT = 30000;
+const REQUEST_TOTAL_TIMEOUT = 120000;
 
 function request(url: string, redirects = 5): Promise<IncomingMessage> {
   return new Promise((resolve, reject) => {
-    https
-      .get(url, res => {
-        const { statusCode, headers } = res;
-        if (
-          statusCode &&
-          statusCode >= 300 &&
-          statusCode < 400 &&
-          headers.location
-        ) {
-          res.resume();
-          if (redirects === 0) {
-            reject(new Error(`Too many redirects fetching ${url}`));
-            return;
-          }
-          resolve(
-            request(new URL(headers.location, url).toString(), redirects - 1)
-          );
+    const req = https.get(url, { timeout: REQUEST_IDLE_TIMEOUT }, res => {
+      const { statusCode, headers } = res;
+      if (
+        statusCode &&
+        statusCode >= 300 &&
+        statusCode < 400 &&
+        headers.location
+      ) {
+        res.resume();
+        if (redirects === 0) {
+          reject(new Error(`Too many redirects fetching ${url}`));
           return;
         }
-        if (!statusCode || statusCode >= 400) {
-          res.resume();
-          reject(new Error(`Request failed (${statusCode}) fetching ${url}`));
-          return;
-        }
-        resolve(res);
-      })
-      .on('error', reject);
+        resolve(
+          request(new URL(headers.location, url).toString(), redirects - 1)
+        );
+        return;
+      }
+      if (!statusCode || statusCode >= 400) {
+        res.resume();
+        reject(new Error(`Request failed (${statusCode}) fetching ${url}`));
+        return;
+      }
+      resolve(res);
+    });
+    req.on('timeout', () => {
+      req.destroy(new Error(`Request timed out fetching ${url}`));
+    });
+    req.on('error', reject);
   });
 }
 
@@ -80,7 +68,14 @@ async function fetchText(url: string): Promise<string> {
 
 async function downloadToFile(url: string, dest: string): Promise<void> {
   const res = await request(url);
-  await pipeline(res, createWriteStream(dest));
+  const deadline = setTimeout(() => {
+    res.destroy(new Error(`Download exceeded ${REQUEST_TOTAL_TIMEOUT}ms`));
+  }, REQUEST_TOTAL_TIMEOUT);
+  try {
+    await pipeline(res, createWriteStream(dest));
+  } finally {
+    clearTimeout(deadline);
+  }
 }
 
 async function fileChecksum(file: string): Promise<string> {
@@ -90,20 +85,13 @@ async function fileChecksum(file: string): Promise<string> {
 }
 
 async function resolveLatestVersion(): Promise<string | undefined> {
-  try {
-    const body = await fetchText('https://registry.npmjs.org/vercel/latest');
-    const parsed = JSON.parse(body);
-    return typeof parsed?.version === 'string' ? parsed.version : undefined;
-  } catch (err) {
-    output.debug(`Failed to resolve latest version: ${err}`);
-    return undefined;
-  }
+  return fetchLatestVersion({ name: '@vercel/vc-native' });
 }
 
 export async function executeStandaloneUpgrade(
   version?: string
 ): Promise<number> {
-  const target = detectTarget();
+  const target = getReleaseTarget();
   if (!target) {
     output.error(
       `Automatic upgrade is not supported on ${process.platform}/${process.arch}.`
@@ -115,6 +103,13 @@ export async function executeStandaloneUpgrade(
   if (!resolvedVersion) {
     output.error('Could not determine the latest version to install.');
     return 1;
+  }
+
+  if (isVersionCurrent(pkg.version, resolvedVersion)) {
+    output.log(
+      `No upgrade available. Vercel CLI is already up to date (v${pkg.version}).`
+    );
+    return 0;
   }
 
   let targetPath: string;
@@ -140,15 +135,23 @@ export async function executeStandaloneUpgrade(
     try {
       const sums = await fetchText(`${base}/${target}.sha256`);
       const expected = sums.trim().split(/\s+/)[0];
+      if (!/^[0-9a-f]{64}$/i.test(expected)) {
+        throw new Error(
+          `checksum invalid: ${target}.sha256 did not contain a sha256 digest`
+        );
+      }
       const actual = await fileChecksum(tmpFile);
-      if (expected && expected !== actual) {
+      if (expected.toLowerCase() !== actual.toLowerCase()) {
         throw new Error(
           `checksum mismatch (expected ${expected}, got ${actual})`
         );
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      if (message.includes('checksum mismatch')) {
+      if (
+        message.includes('checksum mismatch') ||
+        message.includes('checksum invalid')
+      ) {
         throw err;
       }
       output.warn(`Skipping checksum verification: ${message}`);
