@@ -62,21 +62,20 @@ describe('detectServices', () => {
 
       const backend = result.inferred!.services.find(s => s.name === 'backend');
       expect(backend).toMatchObject({
+        schema: 'experimentalServicesV2',
         name: 'backend',
-        workspace: 'backend',
+        root: 'backend',
         framework: 'ruby',
         runtime: 'ruby',
-        routePrefix: '/_/backend',
-        routePrefixSource: 'generated',
       });
 
       expect(result.inferred).toMatchObject({
         source: 'layout',
         config: {
-          frontend: { framework: 'nextjs', routePrefix: '/' },
+          frontend: { root: 'frontend', framework: 'nextjs', mountPath: '/' },
           backend: {
             root: 'backend',
-            routePrefix: '/_/backend',
+            mountPath: '/api/backend',
           },
         },
       });

@@ -98,6 +98,9 @@ importers:
       vitest:
         specifier: 2.0.3
         version: 2.0.3(@edge-runtime/vm@3.2.0)(@types/node@20.11.0)(terser@5.48.0)
+      ws:
+        specifier: 8.18.0
+        version: 8.18.0
 
   api:
     dependencies:
@@ -1154,7 +1157,7 @@ importers:
         version: 1.5.5(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(vitest@2.1.4(@edge-runtime/vm@3.2.0)(@types/node@24.12.4)(terser@5.48.0))
       eve:
         specifier: 0.6.0-beta.1
-        version: 0.6.0-beta.1(@opentelemetry/api@1.9.1)(@vercel/blob@2.4.0)(@vercel/functions@3.7.1(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0))(ai@7.0.0-beta.116(zod@4.4.3))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(rollup@4.60.4)(vite@5.1.8(@types/node@20.11.0)(terser@5.48.0))
+        version: 0.6.0-beta.1(@opentelemetry/api@1.9.1)(@vercel/blob@2.4.0)(@vercel/functions@3.7.3(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0))(ai@7.0.0-beta.116(zod@4.4.3))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(rollup@4.60.4)(vite@5.1.8(@types/node@20.11.0)(terser@5.48.0))
       typescript:
         specifier: ^5
         version: 5.9.3
@@ -6631,16 +6634,16 @@ packages:
   '@vercel/cli-config@0.2.0':
     resolution: {integrity: sha512-fJRRRB7734BDuXZ89yBEaA2ncYhH7bWX30mk04W80J6VAfQc+4iB8lyzAdaGpFV3/vNlkt9VZt+/uoQoWX6UsQ==}
 
-  '@vercel/cli-exec@0.1.1':
-    resolution: {integrity: sha512-LMRMEai3Z+BODyxGcU9+KiWrS/UElNiOLKiNRfGNt2Vu3NTEmXgFeXG9wBfocAnTe5yJCX/DY6k3k7S/LkPp/g==}
+  '@vercel/cli-exec@1.0.0':
+    resolution: {integrity: sha512-kQF8LGie/Hbdq9/psJxLE7owRTcqMQMhgybU04gCeR7cbQAr5t8OrjefDNColJv1QSSucFt4pLwRiARVmlOnug==}
     engines: {node: '>= 18'}
 
   '@vercel/fun@1.3.0':
     resolution: {integrity: sha512-8erw9uPe0dFg45THkNxmjtvMX143SkZebmjgSVbcM3XCkXu3RIiBaJMcMNG8aaS+rnTuw8+d4De9HVT0M/r3wg==}
     engines: {node: '>= 18'}
 
-  '@vercel/functions@3.7.1':
-    resolution: {integrity: sha512-7PsCL2Vz4MKz4t+Nxu8u4mu/t66y1xv9I0njb3EYoFoFCsXchOChT7YFgXZYFQiUXFEifBpnoLma4e+ep7cKKA==}
+  '@vercel/functions@3.7.3':
+    resolution: {integrity: sha512-Bn7VPthKb6jBiGM3W2JUXDgDl/2trIanvnnxQ9dCVpDlDLvwn/+uk1TM9bSQJuZ4dKbOfusstpbM0PZeuNStsw==}
     engines: {node: '>= 20'}
     peerDependencies:
       '@aws-sdk/credential-provider-web-identity': '*'
@@ -6691,8 +6694,8 @@ packages:
     resolution: {integrity: sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug==}
     engines: {node: '>= 20'}
 
-  '@vercel/oidc@3.6.1':
-    resolution: {integrity: sha512-8ipTFoiX3WBRrvXLjSrmgAiwtMDQk3EgSxe8N7v2rXBz39NBIIyoGXeVbJRoBcP8WEuVnvjvIQsggbGU7ZKrMw==}
+  '@vercel/oidc@3.7.0':
+    resolution: {integrity: sha512-FWmULATInXyxER8FJjtSEUdoaoeqWv9G9T4y3vraYMJNAx/ox354COtDmhiBb/XaeDjFuiwTY9ss44NRBaGjLQ==}
     engines: {node: '>= 20'}
 
   '@vercel/prepare-flags-definitions@0.3.0':
@@ -12719,6 +12722,18 @@ packages:
     resolution: {integrity: sha512-Qqn0A4o5SpxzTPaOZImUgXOR542kKGg5qW2iVUdzEyJiPHsWy9swutOUgNcwDduKQqi63VsALDvGGykd9HeRGg==}
     engines: {node: '>=4'}
 
+  ws@8.18.0:
+    resolution: {integrity: sha512-8VbfWfHLbbwu3+N6OKsOMpBdT4kXPDDB9cJk2bJ6mh9ucxdlnNvH1e+roYkKmN9Nxw2yjz7VzeO9oOz2zJ04Pw==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
   ws@8.20.0:
     resolution: {integrity: sha512-sAt8BhgNbzCtgGbt2OxmpuryO63ZoDk/sqaB/znQm94T4fCEsy/yV+7CdC1kJhOU9lboAEU7R3kquuycDoibVA==}
     engines: {node: '>=10.0.0'}
@@ -16754,7 +16769,7 @@ snapshots:
       zod: 4.1.11
     optional: true
 
-  '@vercel/cli-exec@0.1.1':
+  '@vercel/cli-exec@1.0.0':
     dependencies:
       execa: 5.1.1
     optional: true
@@ -16783,9 +16798,9 @@ snapshots:
       - encoding
       - supports-color
 
-  '@vercel/functions@3.7.1(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0)':
+  '@vercel/functions@3.7.3(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0)':
     dependencies:
-      '@vercel/oidc': 3.6.1
+      '@vercel/oidc': 3.7.0
     optionalDependencies:
       '@aws-sdk/credential-provider-web-identity': 3.609.0(@aws-sdk/client-sts@3.609.0)
       ws: 8.20.0
@@ -16833,10 +16848,10 @@ snapshots:
 
   '@vercel/oidc@3.2.0': {}
 
-  '@vercel/oidc@3.6.1':
+  '@vercel/oidc@3.7.0':
     dependencies:
       '@vercel/cli-config': 0.2.0
-      '@vercel/cli-exec': 0.1.1
+      '@vercel/cli-exec': 1.0.0
       jose: 5.9.6
     optional: true
 
@@ -17053,14 +17068,6 @@ snapshots:
       magic-string: 0.30.21
     optionalDependencies:
       vite: 5.1.8(@types/node@20.11.0)(terser@5.48.0)
-
-  '@vitest/mocker@2.1.4(vite@5.1.8(@types/node@24.12.4)(terser@5.48.0))':
-    dependencies:
-      '@vitest/spy': 2.1.4
-      estree-walker: 3.0.3
-      magic-string: 0.30.21
-    optionalDependencies:
-      vite: 5.1.8(@types/node@24.12.4)(terser@5.48.0)
 
   '@vitest/pretty-format@2.0.3':
     dependencies:
@@ -19112,10 +19119,10 @@ snapshots:
 
   etag@1.8.1: {}
 
-  eve@0.6.0-beta.1(@opentelemetry/api@1.9.1)(@vercel/blob@2.4.0)(@vercel/functions@3.7.1(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0))(ai@7.0.0-beta.116(zod@4.4.3))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(rollup@4.60.4)(vite@5.1.8(@types/node@20.11.0)(terser@5.48.0)):
+  eve@0.6.0-beta.1(@opentelemetry/api@1.9.1)(@vercel/blob@2.4.0)(@vercel/functions@3.7.3(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0))(ai@7.0.0-beta.116(zod@4.4.3))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(rollup@4.60.4)(vite@5.1.8(@types/node@20.11.0)(terser@5.48.0)):
     dependencies:
       ai: 7.0.0-beta.116(zod@4.4.3)
-      nitro: 3.0.260522-beta(@vercel/blob@2.4.0)(@vercel/functions@3.7.1(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(rollup@4.60.4)(vite@5.1.8(@types/node@20.11.0)(terser@5.48.0))
+      nitro: 3.0.260522-beta(@vercel/blob@2.4.0)(@vercel/functions@3.7.3(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(rollup@4.60.4)(vite@5.1.8(@types/node@20.11.0)(terser@5.48.0))
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
       next: 16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -20949,7 +20956,7 @@ snapshots:
 
   nice-try@1.0.5: {}
 
-  nitro@3.0.260522-beta(@vercel/blob@2.4.0)(@vercel/functions@3.7.1(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(rollup@4.60.4)(vite@5.1.8(@types/node@20.11.0)(terser@5.48.0)):
+  nitro@3.0.260522-beta(@vercel/blob@2.4.0)(@vercel/functions@3.7.3(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(rollup@4.60.4)(vite@5.1.8(@types/node@20.11.0)(terser@5.48.0)):
     dependencies:
       consola: 3.4.2
       crossws: 0.4.6(srvx@0.11.16)
@@ -20964,7 +20971,7 @@ snapshots:
       rolldown: 1.1.0
       srvx: 0.11.16
       unenv: 2.0.0-rc.24
-      unstorage: 2.0.0-alpha.7(@vercel/blob@2.4.0)(@vercel/functions@3.7.1(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0))(chokidar@4.0.3)(db0@0.3.4(mysql2@3.14.2))(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(ofetch@2.0.0-alpha.3)
+      unstorage: 2.0.0-alpha.7(@vercel/blob@2.4.0)(@vercel/functions@3.7.3(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0))(chokidar@4.0.3)(db0@0.3.4(mysql2@3.14.2))(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(ofetch@2.0.0-alpha.3)
     optionalDependencies:
       dotenv: 16.6.1
       jiti: 2.7.0
@@ -23355,10 +23362,10 @@ snapshots:
     dependencies:
       rolldown: 1.0.0-rc.17
 
-  unstorage@2.0.0-alpha.7(@vercel/blob@2.4.0)(@vercel/functions@3.7.1(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0))(chokidar@4.0.3)(db0@0.3.4(mysql2@3.14.2))(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(ofetch@2.0.0-alpha.3):
+  unstorage@2.0.0-alpha.7(@vercel/blob@2.4.0)(@vercel/functions@3.7.3(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0))(chokidar@4.0.3)(db0@0.3.4(mysql2@3.14.2))(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(ofetch@2.0.0-alpha.3):
     optionalDependencies:
       '@vercel/blob': 2.4.0
-      '@vercel/functions': 3.7.1(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0)
+      '@vercel/functions': 3.7.3(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0)
       chokidar: 4.0.3
       db0: 0.3.4(mysql2@3.14.2)
       lru-cache: 11.5.1
@@ -23739,7 +23746,7 @@ snapshots:
   vitest@2.1.4(@edge-runtime/vm@3.2.0)(@types/node@24.12.4)(terser@5.48.0):
     dependencies:
       '@vitest/expect': 2.1.4
-      '@vitest/mocker': 2.1.4(vite@5.1.8(@types/node@24.12.4)(terser@5.48.0))
+      '@vitest/mocker': 2.1.4(vite@5.1.8(@types/node@20.11.0)(terser@5.48.0))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.4
       '@vitest/snapshot': 2.1.4
@@ -23912,6 +23919,8 @@ snapshots:
       pify: 2.3.0
       sort-keys: 1.1.2
       write-file-atomic: 2.4.3
+
+  ws@8.18.0: {}
 
   ws@8.20.0: {}
 
