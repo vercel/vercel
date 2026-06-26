@@ -1,4 +1,5 @@
 import { hostname } from 'node:os';
+import chalk from 'chalk';
 import type Client from '../../client';
 import output from '../../../output-manager';
 import { getCommandName } from '../../pkg-name';
@@ -17,6 +18,9 @@ export interface KeySource {
   key: string;
   created: boolean;
 }
+
+/** Dim connector that visually nests a follow-up question under its parent. */
+const CHILD_PROMPT = chalk.dim('↳');
 
 /** Interactively-resolved options for a newly created key. */
 export interface KeyOptions {
@@ -74,7 +78,8 @@ export async function promptQuota(client: Client): Promise<{
     return {};
   }
   const amount = await client.input.text({
-    message: 'Spend limit in USD',
+    // Indent the follow-up questions so they read as children of the quota prompt.
+    message: `${CHILD_PROMPT} Spend limit in USD`,
     default: '100',
     validate: value => {
       const n = Number(value);
@@ -84,7 +89,7 @@ export async function promptQuota(client: Client): Promise<{
     },
   });
   const refreshPeriod = await client.input.select<string>({
-    message: 'How often should the limit reset?',
+    message: `${CHILD_PROMPT} How often should the limit reset?`,
     choices: [
       { name: 'Never (one-time limit)', value: 'none' },
       { name: 'Daily', value: 'daily' },
@@ -111,7 +116,7 @@ export async function promptExpiry(
     return undefined;
   }
   const preset = await client.input.select<string>({
-    message: 'Expires in',
+    message: `${CHILD_PROMPT} Expires in`,
     choices: EXPIRY_PRESETS.map(p => ({ name: p.label, value: p.value })),
     default: DEFAULT_EXPIRY_PRESET,
   });

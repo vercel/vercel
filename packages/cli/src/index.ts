@@ -15,6 +15,9 @@ try {
 {
   const SILENCED_ERRORS = [
     'DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.',
+    // Emitted by node-fetch@2's Request constructor (DEP0169); harmless and not
+    // actionable until the HTTP client migrates off node-fetch.
+    'DeprecationWarning: `url.parse()` behavior is not standardized',
   ];
 
   // biome-ignore lint/suspicious/noConsole: intentional console usage

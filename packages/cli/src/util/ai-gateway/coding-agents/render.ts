@@ -1,27 +1,10 @@
 import chalk from 'chalk';
 import type Client from '../../client';
 import output from '../../../output-manager';
-import {
-  printAlignedLabel,
-  ALIGNED_LABEL_WIDTH,
-} from '../../output/print-aligned-label';
+import { printAlignedLabel } from '../../output/print-aligned-label';
 import { renderDiff } from './diff';
 import type { SetupPlan } from './apply';
 import type { CodingAgent } from './types';
-
-/**
- * Prints a dimmed, indented detail row nested under the row above it, with its
- * value aligned to the same column as the top-level rows. Used to show a key's
- * quota and expiry as children of the "API key" row.
- */
-function printChildLabel(label: string, value: string): void {
-  // Top-level values sit at column `2 (gutter) + ALIGNED_LABEL_WIDTH`. Indent
-  // the child label by 2 and shrink its padding by 2 so values stay aligned.
-  const indent = '    ';
-  output.print(
-    `${indent}${chalk.dim(label.padEnd(ALIGNED_LABEL_WIDTH - 2))}${chalk.dim(value)}\n`
-  );
-}
 
 export function printResolvedState(args: {
   selected: CodingAgent[];
@@ -39,25 +22,26 @@ export function printResolvedState(args: {
     output.print('\n');
     return;
   }
-  // Show the key name on the parent row, then nest its quota and expiry as
-  // dimmed child rows so it's clear they configure this one key.
   printAlignedLabel(
     'API key',
     name ? `Creating new key "${name}"` : 'Creating new key'
   );
+  // Always surface the quota and expiry so the absence of a limit is explicit.
+  // Group the quota as <amount>/<period>, e.g. $500/monthly (or just $500 for a
+  // one-time limit), falling back to "Unlimited" / "Never".
+  let spendLimit = 'Unlimited';
   if (budget !== undefined) {
-    // Group the quota as <amount>/<period>, e.g. $500/daily (or just $500 for a
-    // one-time limit with no refresh).
     const period =
       refreshPeriod && refreshPeriod !== 'none' ? refreshPeriod : '';
-    printChildLabel(
-      'Spend limit',
-      period ? `$${budget}/${period}` : `$${budget}`
-    );
+    spendLimit = period ? `$${budget}/${period}` : `$${budget}`;
   }
-  if (expiresAt !== undefined) {
-    printChildLabel('Expires', new Date(expiresAt).toISOString().slice(0, 10));
-  }
+  printAlignedLabel('Spend limit', spendLimit);
+  printAlignedLabel(
+    'Expires',
+    expiresAt !== undefined
+      ? new Date(expiresAt).toISOString().slice(0, 10)
+      : 'Never'
+  );
   output.print('\n');
 }
 

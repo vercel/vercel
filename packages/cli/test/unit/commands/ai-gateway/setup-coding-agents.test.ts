@@ -305,6 +305,9 @@ describe('ai-gateway setup-coding-agents', () => {
       await expect(client.stderr).toOutput('Set an expiration');
       client.stdin.write('\n');
 
+      // With neither set, the summary spells out the absence of limits.
+      await expect(client.stderr).toOutput('Unlimited');
+      await expect(client.stderr).toOutput('Never');
       await expect(client.stderr).toOutput('Dry run');
       expect(await exitCodePromise).toBe(0);
       // Still a preview: nothing is written and no key is minted.
