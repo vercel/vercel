@@ -2756,7 +2756,8 @@ createServer((_req, res) => {
           runtime: 'node',
           routes: [
             {
-              source: '/api/:path*',
+              src: '/api/:path*',
+              srcSyntax: 'path-to-regexp',
               transforms: [
                 {
                   type: 'request.path',

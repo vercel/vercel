@@ -12,7 +12,6 @@ import {
 } from './superstatic';
 import {
   GetRoutesProps,
-  GetTransformedRoutesOptions,
   HasField,
   NormalizedRoutes,
   Redirect,
@@ -102,12 +101,79 @@ function convertRouteAliases(route: RouteWithSrc, index: number): void {
   }
 }
 
+function prepareRouteSources(inputRoutes: RouteInput[]): {
+  routes: RouteInput[];
+  error: RouteApiError | null;
+} {
+  const patternError = inputRoutes
+    .map((route, index) => {
+      if (
+        'handle' in route ||
+        route.srcSyntax !== 'path-to-regexp' ||
+        (route.source !== undefined && route.src !== undefined)
+      ) {
+        return null;
+      }
+
+      const source = route.source ?? route.src;
+      if (source === undefined) {
+        return null;
+      }
+      if (source.length === 0) {
+        return {
+          message: `Route at index ${index} has invalid \`source\` pattern "".`,
+          link: 'https://vercel.link/invalid-route-source-pattern',
+        };
+      }
+
+      return checkPatternSyntax('Route', index, {
+        source,
+        destination: route.destination ?? route.dest,
+        has: route.has,
+        transforms: route.transforms,
+      });
+    })
+    .find(notEmpty);
+
+  if (patternError) {
+    return {
+      routes: inputRoutes,
+      error: createError(
+        'invalid_route',
+        patternError.message,
+        patternError.link,
+        'Learn More'
+      ),
+    };
+  }
+
+  try {
+    return { routes: convertRouteSources(inputRoutes), error: null };
+  } catch (error) {
+    return {
+      routes: inputRoutes,
+      error: createError(
+        'invalid_route',
+        `Failed to compile route source: ${error instanceof Error ? error.message : String(error)}`,
+        'https://vercel.link/invalid-route-source-pattern',
+        'Learn More'
+      ),
+    };
+  }
+}
+
 export function normalizeRoutes(
   inputRoutes: RouteInput[] | null
 ): NormalizedRoutes {
   if (!inputRoutes || inputRoutes.length === 0) {
     return { routes: inputRoutes as Route[] | null, error: null };
   }
+
+  const prepared = prepareRouteSources(inputRoutes);
+  if (prepared.error) {
+    return { routes: null, error: prepared.error };
+  }
+  inputRoutes = prepared.routes;
 
   const routes: Route[] = [];
   const handling: HandleValue[] = [];
@@ -358,8 +424,7 @@ function notEmpty<T>(value: T | null | undefined): value is T {
 }
 
 export function getTransformedRoutes(
-  vercelConfig: GetRoutesProps,
-  options: GetTransformedRoutesOptions = {}
+  vercelConfig: GetRoutesProps
 ): NormalizedRoutes {
   const { cleanUrls, rewrites, redirects, headers, trailingSlash } =
     vercelConfig;
@@ -389,57 +454,7 @@ export function getTransformedRoutes(
   }
 
   if (userRoutes) {
-    let routesToNormalize = userRoutes;
-
-    if (options.routeSourceSyntax === 'path-to-regexp') {
-      const patternError = userRoutes
-        .map((route, index) => {
-          if (
-            'handle' in route ||
-            route.source === undefined ||
-            route.source.startsWith('^') ||
-            route.src !== undefined
-          ) {
-            return null;
-          }
-
-          return checkPatternSyntax('Route', index, {
-            source: route.source,
-            destination: route.destination ?? route.dest,
-            has: route.has,
-            transforms: route.transforms,
-          });
-        })
-        .find(notEmpty);
-
-      if (patternError) {
-        return {
-          routes,
-          error: createError(
-            'invalid_route',
-            patternError.message,
-            patternError.link,
-            'Learn More'
-          ),
-        };
-      }
-
-      try {
-        routesToNormalize = convertRouteSources(userRoutes);
-      } catch (error) {
-        return {
-          routes,
-          error: createError(
-            'invalid_route',
-            `Failed to compile route source: ${error instanceof Error ? error.message : String(error)}`,
-            'https://vercel.link/invalid-route-source-pattern',
-            'Learn More'
-          ),
-        };
-      }
-    }
-
-    const normalized = normalizeRoutes(routesToNormalize);
+    const normalized = normalizeRoutes(userRoutes);
     if (normalized.error) {
       return { routes, error: normalized.error };
     }

@@ -2571,19 +2571,14 @@ async function writeServiceConfigs(
 function getExperimentalServicesV2Routes(
   serviceConfig: ExperimentalServicesV2[string]
 ): Route[] {
-  const routesResult = getTransformedRoutes(
-    {
-      routes: serviceConfig.routes,
-      cleanUrls: serviceConfig.cleanUrls,
-      trailingSlash: serviceConfig.trailingSlash,
-      headers: serviceConfig.headers,
-      redirects: serviceConfig.redirects,
-      rewrites: serviceConfig.rewrites,
-    },
-    {
-      routeSourceSyntax: 'path-to-regexp',
-    }
-  );
+  const routesResult = getTransformedRoutes({
+    routes: serviceConfig.routes,
+    cleanUrls: serviceConfig.cleanUrls,
+    trailingSlash: serviceConfig.trailingSlash,
+    headers: serviceConfig.headers,
+    redirects: serviceConfig.redirects,
+    rewrites: serviceConfig.rewrites,
+  });
   if (routesResult.error) {
     throw routesResult.error;
   }

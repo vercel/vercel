@@ -115,7 +115,8 @@
           }
         },
         {
-          "source": "/transform/:path*",
+          "src": "/transform/:path*",
+          "srcSyntax": "path-to-regexp",
           "transforms": [
             {
               "type": "request.path",

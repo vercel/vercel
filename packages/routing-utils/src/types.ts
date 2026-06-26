@@ -147,9 +147,22 @@ export type RouteWithHandle = {
 
 export type Route = RouteWithSrc | RouteWithHandle;
 
+export type RouteSourceSyntax = 'regex' | 'path-to-regexp';
+
+type RouteSourceInput = {
+  /**
+   * Syntax used by the authored route source. Omitted values preserve the
+   * historical low-level regular-expression behavior.
+   */
+  srcSyntax?: RouteSourceSyntax;
+};
+
 export type RouteInput =
-  | RouteWithSrc
-  | (Omit<RouteWithSrc, 'src'> & { src?: string; source: string })
+  | (RouteWithSrc & RouteSourceInput)
+  | (Omit<RouteWithSrc, 'src'> & {
+      src?: string;
+      source: string;
+    } & RouteSourceInput)
   | RouteWithHandle;
 
 export type NormalizedRoutes = {
@@ -164,16 +177,6 @@ export interface GetRoutesProps {
   redirects?: Redirect[];
   headers?: Header[];
   trailingSlash?: boolean;
-}
-
-export interface GetTransformedRoutesOptions {
-  /**
-   * Controls how `routes[].source` is interpreted. `regex` preserves the
-   * historical alias behavior, while `path-to-regexp` compiles high-level
-   * parameters such as `:path*`. `routes[].src` and caret-prefixed `source`
-   * values are always treated as low-level regular expressions.
-   */
-  routeSourceSyntax?: 'regex' | 'path-to-regexp';
 }
 
 export interface MergeRoutesProps {
