@@ -8,10 +8,9 @@ import {
   rmSync,
 } from 'fs';
 import { rename } from 'fs/promises';
-import https from 'https';
-import type { IncomingMessage } from 'http';
 import { dirname, join } from 'path';
 import { pipeline } from 'stream/promises';
+import fetch, { toNodeReadable, type Response } from './fetch';
 import { fetchLatestVersion } from './get-latest-version';
 import { getReleaseTarget } from './native-install';
 import { isVersionCurrent } from './is-version-current';
@@ -20,73 +19,22 @@ import output from '../output-manager';
 
 const REPO = 'vercel/vercel';
 
-const REQUEST_IDLE_TIMEOUT = 30000;
 const REQUEST_TOTAL_TIMEOUT = 120000;
 
-function request(url: string, redirects = 5): Promise<IncomingMessage> {
-  return new Promise((resolve, reject) => {
-    const req = https.get(url, { timeout: REQUEST_IDLE_TIMEOUT }, res => {
-      const { statusCode, headers } = res;
-      if (
-        statusCode &&
-        statusCode >= 300 &&
-        statusCode < 400 &&
-        headers.location
-      ) {
-        res.resume();
-        if (redirects === 0) {
-          reject(new Error(`Too many redirects fetching ${url}`));
-          return;
-        }
-        resolve(
-          request(new URL(headers.location, url).toString(), redirects - 1)
-        );
-        return;
-      }
-      if (!statusCode || statusCode >= 400) {
-        res.resume();
-        reject(new Error(`Request failed (${statusCode}) fetching ${url}`));
-        return;
-      }
-      resolve(res);
-    });
-    const deadline = setTimeout(() => {
-      req.destroy(new Error(`Request exceeded ${REQUEST_TOTAL_TIMEOUT}ms`));
-    }, REQUEST_TOTAL_TIMEOUT);
-    req.once('close', () => clearTimeout(deadline));
-    req.on('timeout', () => {
-      req.destroy(new Error(`Request timed out fetching ${url}`));
-    });
-    req.on('error', reject);
+async function fetchReleaseAsset(url: string): Promise<Response> {
+  const response = await fetch(url, {
+    signal: AbortSignal.timeout(REQUEST_TOTAL_TIMEOUT),
   });
-}
-
-async function fetchText(url: string): Promise<string> {
-  const res = await request(url);
-  const deadline = setTimeout(() => {
-    res.destroy(new Error(`Response exceeded ${REQUEST_TOTAL_TIMEOUT}ms`));
-  }, REQUEST_TOTAL_TIMEOUT);
-  let body = '';
-  try {
-    for await (const chunk of res) {
-      body += chunk;
-    }
-    return body;
-  } finally {
-    clearTimeout(deadline);
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new Error(`Request failed (${response.status}) fetching ${url}`);
   }
+  return response;
 }
 
 async function downloadToFile(url: string, dest: string): Promise<void> {
-  const res = await request(url);
-  const deadline = setTimeout(() => {
-    res.destroy(new Error(`Download exceeded ${REQUEST_TOTAL_TIMEOUT}ms`));
-  }, REQUEST_TOTAL_TIMEOUT);
-  try {
-    await pipeline(res, createWriteStream(dest));
-  } finally {
-    clearTimeout(deadline);
-  }
+  const response = await fetchReleaseAsset(url);
+  await pipeline(toNodeReadable(response.body), createWriteStream(dest));
 }
 
 async function fileChecksum(file: string): Promise<string> {
@@ -143,7 +91,10 @@ export async function executeStandaloneUpgrade(
   try {
     await downloadToFile(`${base}/${target}`, tmpFile);
 
-    const sums = await fetchText(`${base}/${target}.sha256`);
+    const checksumResponse = await fetchReleaseAsset(
+      `${base}/${target}.sha256`
+    );
+    const sums = await checksumResponse.text();
     const expected = sums.trim().split(/\s+/)[0];
     if (!/^[0-9a-f]{64}$/i.test(expected)) {
       throw new Error(
