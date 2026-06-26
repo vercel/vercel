@@ -3,6 +3,7 @@ import ciInfo from 'ci-info';
 import { client } from '../../mocks/client';
 import * as updateCommand from '../../../src/util/get-update-command';
 import * as configFilesUtil from '../../../src/util/config/files';
+import * as nativeInstall from '../../../src/util/native-install';
 import {
   canAutoUpdate,
   hasAutoUpdatePreference,
@@ -18,6 +19,10 @@ vi.mock('ci-info', () => ({
 }));
 
 const isGlobalSpy = vi.spyOn(updateCommand, 'isGlobal');
+const standaloneUpgradeSpy = vi.spyOn(
+  nativeInstall,
+  'shouldUseStandaloneUpgrade'
+);
 const writeConfigSpy = vi.spyOn(configFilesUtil, 'writeToConfigFile');
 const originalVercelVcNative = process.env.VERCEL_VC_NATIVE;
 
@@ -32,6 +37,7 @@ describe('updates', () => {
   afterEach(() => {
     client.reset();
     isGlobalSpy.mockReset();
+    standaloneUpgradeSpy.mockReset();
     writeConfigSpy.mockClear();
     setIsCI(false);
     if (originalVercelVcNative === undefined) {
@@ -85,12 +91,12 @@ describe('updates', () => {
     expect(isGlobalSpy).not.toHaveBeenCalled();
   });
 
-  it('does not auto-update native binary installs', async () => {
+  it('auto-updates package-managed native installs without generic global detection', async () => {
     client.config = { updates: { auto: true } };
     process.env.VERCEL_VC_NATIVE = '1';
-    isGlobalSpy.mockResolvedValue(true);
+    standaloneUpgradeSpy.mockReturnValue(false);
 
-    await expect(canAutoUpdate(client, 0)).resolves.toBe(false);
+    await expect(canAutoUpdate(client, 0)).resolves.toBe(true);
     expect(isGlobalSpy).not.toHaveBeenCalled();
   });
 

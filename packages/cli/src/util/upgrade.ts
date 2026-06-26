@@ -2,6 +2,9 @@ import { spawn, execFile } from 'child_process';
 import { tmpdir } from 'os';
 import semver from 'semver';
 import { getUpdateCommandInfo } from './get-update-command';
+import { shouldUseStandaloneUpgrade } from './native-install';
+import { executeStandaloneUpgrade } from './native-upgrade';
+import { isVersionCurrent } from './is-version-current';
 import pkg from './pkg';
 import output from '../output-manager';
 import { progress } from './output/progress';
@@ -88,12 +91,6 @@ async function getLatestPackageVersion(
   }
 }
 
-function isVersionCurrent(current: string, latest: string): boolean {
-  return semver.valid(current) && semver.valid(latest)
-    ? semver.gte(current, latest)
-    : current === latest;
-}
-
 /**
  * Executes the upgrade command to update the Vercel CLI.
  * Returns the exit code from the upgrade process.
@@ -104,6 +101,10 @@ function isVersionCurrent(current: string, latest: string): boolean {
  * reported without relying on whichever binary happens to be on `PATH`.
  */
 export async function executeUpgrade(targetVersion?: string): Promise<number> {
+  if (shouldUseStandaloneUpgrade()) {
+    return executeStandaloneUpgrade(targetVersion);
+  }
+
   const totalSteps = targetVersion ? 2 : 3;
   renderUpgradeProgress(0, totalSteps, 'Resolving installer…');
 

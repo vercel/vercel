@@ -3,7 +3,11 @@ import type { GlobalConfig } from '@vercel-internals/types';
 import type Client from './client';
 import { writeToConfigFile } from './config/files';
 import { isGlobal } from './get-update-command';
-import { isNativeBinaryInstall } from './native-install';
+import {
+  getReleaseTarget,
+  isNativeBinaryInstall,
+  shouldUseStandaloneUpgrade,
+} from './native-install';
 
 export { isNativeBinaryInstall };
 
@@ -32,10 +36,6 @@ export async function canAutoUpdate(
   exitCode: number,
   command?: string
 ) {
-  if (isNativeBinaryInstall()) {
-    return false;
-  }
-
   if (!isAutoUpdateEnabled(client.config)) {
     return false;
   }
@@ -54,6 +54,13 @@ export async function canAutoUpdate(
 
   if (command === 'upgrade') {
     return false;
+  }
+
+  if (isNativeBinaryInstall()) {
+    if (shouldUseStandaloneUpgrade()) {
+      return getReleaseTarget() !== undefined;
+    }
+    return true;
   }
 
   return isGlobal();

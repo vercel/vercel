@@ -64,7 +64,9 @@ import getGlobalPathConfig from './util/config/global-path';
 import { getDefaultAuthConfig, defaultGlobalConfig } from '@vercel/cli-config';
 import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
-import getUpdateCommand from './util/get-update-command';
+import getUpdateCommand, {
+  getUpdatePackageName,
+} from './util/get-update-command';
 import { executeUpgrade } from './util/upgrade';
 import {
   canAutoUpdate,
@@ -1330,13 +1332,17 @@ const main = async () => {
 // notification cycle is preserved for the next run.
 let cachedLatest: string | undefined;
 let freshLookupPromise: Promise<string | undefined> | undefined;
+const updatePkg = { ...pkg, name: getUpdatePackageName() };
 
-if (SHOULD_CHECK_FOR_UPDATES && !isNativeBinaryInstall()) {
-  cachedLatest = getLatestVersion({ pkg, consumeNotification: false });
+if (SHOULD_CHECK_FOR_UPDATES) {
+  cachedLatest = getLatestVersion({
+    pkg: updatePkg,
+    consumeNotification: false,
+  });
   if (cachedLatest) {
     output.debug('Update may be available, fetching fresh version...');
     freshLookupPromise = fetchLatestVersion({
-      name: pkg.name,
+      name: updatePkg.name,
       timeout: 3000,
     }).catch(() => undefined);
   }
@@ -1395,7 +1401,7 @@ main()
       let userUpToDate = false;
 
       if (fresh) {
-        updateLatestVersionCache({ name: pkg.name, version: fresh });
+        updateLatestVersionCache({ name: updatePkg.name, version: fresh });
 
         if (semver.lt(pkg.version, fresh)) {
           latest = fresh;
@@ -1408,7 +1414,7 @@ main()
       // Consume the notification cycle now that the command has completed
       // and we've determined the update status. If the command had crashed,
       // this code never runs and the notification is preserved for next time.
-      getLatestVersion({ pkg });
+      getLatestVersion({ pkg: updatePkg });
 
       if (
         !userUpToDate &&
@@ -1418,7 +1424,7 @@ main()
           resolvedCommandForUpdate
         ))
       ) {
-        const upgradeExitCode = await executeUpgrade();
+        const upgradeExitCode = await executeUpgrade(fresh);
         process.exitCode = originalExitCode;
         if (upgradeExitCode !== 0) {
           output.log(
