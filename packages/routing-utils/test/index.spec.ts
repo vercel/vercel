@@ -650,6 +650,49 @@ describe('normalizeRoutes', () => {
     }
   });
 
+  test('compiles explicitly marked path-to-regexp sources in normalizeRoutes', () => {
+    const { error, routes } = normalizeRoutes([
+      {
+        src: '/api/:path*',
+        srcSyntax: 'path-to-regexp',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/:path*',
+          },
+        ],
+      },
+    ]);
+
+    assert.equal(error, null);
+    assert.deepStrictEqual(routes, [
+      {
+        src: '^/api(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?$',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$1',
+          },
+        ],
+      },
+    ]);
+  });
+
+  test('validates explicit source syntax and rejects empty route sources', () => {
+    const validate = ajv.compile(routesSchema);
+
+    assert.equal(
+      validate([{ src: '/api/:path*', srcSyntax: 'path-to-regexp' }]),
+      true
+    );
+    assert.equal(validate([{ src: '/api/.*', srcSyntax: 'regex' }]), true);
+    assert.equal(validate([{ src: '', srcSyntax: 'path-to-regexp' }]), false);
+    assert.equal(validate([{ source: '' }]), false);
+    assert.equal(validate([{ src: '/api', srcSyntax: 'unknown' }]), false);
+  });
+
   test('converts statusCode to status in normalizeRoutes', () => {
     const input: RouteInput[] = [
       { source: '/old', destination: '/new', statusCode: 301 },
@@ -1554,6 +1597,289 @@ describe('getTransformedRoutes', () => {
     const expected = normalizeRoutes(vercelConfig.routes);
     assert.deepEqual(actual, expected);
     assertValid(actual.routes);
+  });
+
+  test('should compile route sources and request.path transforms with explicit path-to-regexp syntax', () => {
+    const actual = getTransformedRoutes({
+      routes: [
+        {
+          src: '/api/:path*',
+          srcSyntax: 'path-to-regexp',
+          transforms: [
+            {
+              type: 'request.path',
+              op: 'set',
+              args: '/:path*',
+            },
+          ],
+        },
+      ],
+    });
+
+    assert.deepStrictEqual(actual, {
+      routes: [
+        {
+          src: '^/api(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?$',
+          transforms: [
+            {
+              type: 'request.path',
+              op: 'set',
+              args: '/$1',
+            },
+          ],
+        },
+      ],
+      error: null,
+    });
+    assertValid(actual.routes);
+  });
+
+  test('should preserve low-level src routes by default', () => {
+    const actual = getTransformedRoutes({
+      routes: [
+        {
+          src: '^/api(?:/(.*))?$',
+          transforms: [
+            {
+              type: 'request.path',
+              op: 'set',
+              args: '/$1',
+            },
+          ],
+        },
+      ],
+    });
+
+    assert.deepStrictEqual(actual.routes, [
+      {
+        src: '^/api(?:/(.*))?$',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$1',
+          },
+        ],
+      },
+    ]);
+    assert.equal(actual.error, null);
+  });
+
+  test('should preserve unanchored source aliases as low-level regex by default', () => {
+    const actual = getTransformedRoutes({
+      routes: [
+        {
+          source: '/api/[a-z]+',
+          statusCode: 404,
+        },
+      ],
+    });
+
+    assert.deepStrictEqual(actual.routes, [
+      {
+        src: '^/api/[a-z]+$',
+        status: 404,
+      },
+    ]);
+    assert.equal(actual.error, null);
+  });
+
+  test('should strip an explicit regex srcSyntax marker from normalized routes', () => {
+    const actual = getTransformedRoutes({
+      routes: [
+        {
+          source: '/api/.*',
+          srcSyntax: 'regex',
+        },
+      ],
+    });
+
+    assert.deepStrictEqual(actual, {
+      routes: [{ src: '^/api/.*$' }],
+      error: null,
+    });
+  });
+
+  test('should reject unknown parameters in a compiled route transform', () => {
+    const { error } = getTransformedRoutes({
+      routes: [
+        {
+          src: '/api/:path*',
+          srcSyntax: 'path-to-regexp',
+          transforms: [
+            {
+              type: 'request.path',
+              op: 'set',
+              args: '/:unknown*',
+            },
+          ],
+        },
+      ],
+    });
+
+    assert.equal(error?.code, 'invalid_route');
+    assert.match(error?.message || '', /request\.path/);
+  });
+
+  test('should preserve destination bytes when no parameter interpolation is needed', () => {
+    const actual = getTransformedRoutes({
+      routes: [
+        {
+          source: '/api/:path*',
+          srcSyntax: 'path-to-regexp',
+          destination: '/upstream/$1?token=a+b&sig=x%2By',
+        },
+      ],
+    });
+
+    assert.deepStrictEqual(actual, {
+      routes: [
+        {
+          src: '^/api(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?$',
+          dest: '/upstream/$1?token=a+b&sig=x%2By',
+        },
+      ],
+      error: null,
+    });
+  });
+
+  test('should interpolate only explicit destination parameters', () => {
+    const actual = getTransformedRoutes({
+      routes: [
+        {
+          src: '/api/:path*',
+          srcSyntax: 'path-to-regexp',
+          destination: '/upstream/:path*?copy=:path*&optional=:path?&token=a+b',
+        },
+        {
+          src: '/service/:path*',
+          srcSyntax: 'path-to-regexp',
+          destination: {
+            service: 'backend',
+            path: '/internal/:path*?copy=:path*&optional=:path?&token=a+b',
+          },
+        },
+      ],
+    });
+
+    assert.deepStrictEqual(actual, {
+      routes: [
+        {
+          src: '^/api(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?$',
+          dest: '/upstream/$1?copy=$1&optional=$1&token=a+b',
+        },
+        {
+          src: '^/service(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?$',
+          destination: {
+            type: 'service',
+            service: 'backend',
+            path: '/internal/$1?copy=$1&optional=$1&token=a+b',
+          },
+        },
+      ],
+      error: null,
+    });
+  });
+
+  test('should compile adjacent, numeric, optional, and braced destination parameters', () => {
+    const actual = getTransformedRoutes({
+      routes: [
+        {
+          src: '/:123/:id',
+          srcSyntax: 'path-to-regexp',
+          destination: '/prefix:123/x/:id?/tail/{-:id}?',
+        },
+      ],
+    });
+
+    assert.deepStrictEqual(actual, {
+      routes: [
+        {
+          src: '^(?:/([^/]+?))(?:/([^/]+?))$',
+          dest: '/prefix$1/x/$2/tail/-$2',
+        },
+      ],
+      error: null,
+    });
+  });
+
+  test('should reject unknown destination parameters in every URL component', () => {
+    const { error } = getTransformedRoutes({
+      routes: [
+        {
+          src: '/:id',
+          srcSyntax: 'path-to-regexp',
+          destination: '/known/:id#:unknown',
+        },
+      ],
+    });
+
+    assert.equal(error?.code, 'invalid_route');
+    assert.match(error?.message || '', /Destination template.*:unknown/);
+  });
+
+  test('should preserve URL auth, escaping, and query bytes around explicit parameters', () => {
+    const actual = getTransformedRoutes({
+      routes: [
+        {
+          src: '/api/:pass/:id',
+          srcSyntax: 'path-to-regexp',
+          destination:
+            'https://user:pass@EXAMPLE.com:443/a//:id?x=:pass+2&encoded=%2f#frag/:id',
+        },
+        {
+          src: '/literal/:id',
+          srcSyntax: 'path-to-regexp',
+          destination: '/escaped/\\:id/\\{:id}/:id',
+        },
+        {
+          src: '/opaque/:id',
+          srcSyntax: 'path-to-regexp',
+          destination: 'mailto:id@example.com?subject=:id+2',
+        },
+        {
+          src: '/ipv6/:id',
+          srcSyntax: 'path-to-regexp',
+          destination: 'https://[::1]:443/:id?copy=:id',
+        },
+      ],
+    });
+
+    assert.deepStrictEqual(actual, {
+      routes: [
+        {
+          src: '^/api(?:/([^/]+?))(?:/([^/]+?))$',
+          dest: 'https://user:pass@EXAMPLE.com:443/a//$2?x=$1+2&encoded=%2f#frag/$2',
+        },
+        {
+          src: '^/literal(?:/([^/]+?))$',
+          dest: '/escaped/\\:id/\\{:id}/$1',
+        },
+        {
+          src: '^/opaque(?:/([^/]+?))$',
+          dest: 'mailto:id@example.com?subject=$1+2',
+        },
+        {
+          src: '^/ipv6(?:/([^/]+?))$',
+          dest: 'https://[::1]:443/$1?copy=$1',
+        },
+      ],
+      error: null,
+    });
+  });
+
+  test('should reject an empty path-to-regexp route source', () => {
+    const { error } = getTransformedRoutes({
+      routes: [
+        {
+          src: '',
+          srcSyntax: 'path-to-regexp',
+        },
+      ],
+    });
+
+    assert.equal(error?.code, 'invalid_route');
+    assert.match(error?.message || '', /invalid `source` pattern/);
   });
 
   test('should not error when routes is null and cleanUrls is true', () => {
