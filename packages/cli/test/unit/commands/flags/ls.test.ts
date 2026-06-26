@@ -129,6 +129,32 @@ describe('flags ls', () => {
       expect(parsed.flags[0].slug).toEqual('another-feature');
     });
 
+    it('limits the number of flags returned', async () => {
+      for (let i = 0; i < 120; i++) {
+        flagsList.push({
+          ...JSON.parse(JSON.stringify(flagsList[0])),
+          id: `flag_page_${i}`,
+          slug: `paged-flag-${i}`,
+        });
+      }
+
+      client.setArgv('flags', 'ls', '--limit', '10', '--json');
+      const exitCode = await flags(client);
+      expect(exitCode).toEqual(0);
+
+      const parsed = JSON.parse(client.stdout.getFullOutput());
+      expect(parsed.flags).toHaveLength(10);
+    });
+
+    it('rejects a non-positive --limit', async () => {
+      client.setArgv('flags', 'ls', '--limit', '0');
+      const exitCode = await flags(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'The --limit option must be a positive integer.'
+      );
+    });
+
     it('follows pagination cursors to list all flags', async () => {
       // Exceed the max page size (100) to force multiple pages.
       for (let i = 0; i < 120; i++) {

@@ -7,11 +7,15 @@ export interface GetFlagsOptions {
   tags?: string[];
   createdBy?: string;
   maintainerIds?: string[];
+  /**
+   * Maximum number of flags to return. When omitted, all flags are fetched by
+   * following pagination cursors.
+   */
+  limit?: number;
 }
 
 // The v2 endpoint paginates with a small default page size, so request the
-// maximum allowed per page to minimize round-trips while still listing all
-// flags.
+// maximum allowed per page to minimize round-trips.
 const MAX_PAGE_LIMIT = 100;
 
 export async function getFlags(
@@ -19,19 +23,24 @@ export async function getFlags(
   projectId: string,
   options: GetFlagsOptions = {}
 ): Promise<Flag[]> {
-  const { state = 'active', tags, createdBy, maintainerIds } = options;
+  const { state = 'active', tags, createdBy, maintainerIds, limit } = options;
   output.debug(`Fetching feature flags for project ${projectId}`);
 
   const basePath = `/v2/projects/${encodeURIComponent(projectId)}/feature-flags/flags`;
   const flags: Flag[] = [];
   let cursor: string | undefined;
 
-  // Follow `pagination.next` cursors to gather the full list and preserve the
-  // previous "list everything" behavior.
+  // Follow `pagination.next` cursors to gather the requested flags. Without a
+  // limit this lists everything; with a limit we stop once we have enough.
   do {
+    const pageLimit =
+      limit === undefined
+        ? MAX_PAGE_LIMIT
+        : Math.min(MAX_PAGE_LIMIT, limit - flags.length);
+
     const query = new URLSearchParams();
     query.set('state', state);
-    query.set('limit', String(MAX_PAGE_LIMIT));
+    query.set('limit', String(pageLimit));
     if (cursor) {
       query.set('cursor', cursor);
     }
@@ -50,9 +59,13 @@ export async function getFlags(
     );
     flags.push(...response.data);
     cursor = response.pagination?.next ?? undefined;
+
+    if (limit !== undefined && flags.length >= limit) {
+      break;
+    }
   } while (cursor);
 
-  return flags;
+  return limit === undefined ? flags : flags.slice(0, limit);
 }
 
 export async function getFlag(

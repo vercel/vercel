@@ -40,12 +40,19 @@ export default async function ls(
   const tags = flags['--tag'] as string[] | undefined;
   const createdBy = flags['--created-by'] as string | undefined;
   const maintainerIds = flags['--maintainer-id'] as string[] | undefined;
+  const limit = flags['--limit'] as number | undefined;
   const json = flags['--json'] as boolean | undefined;
+
+  if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) {
+    output.error('The --limit option must be a positive integer.');
+    return 1;
+  }
 
   telemetryClient.trackCliOptionState(state);
   telemetryClient.trackCliOptionTag(tags);
   telemetryClient.trackCliOptionCreatedBy(createdBy);
   telemetryClient.trackCliOptionMaintainerId(maintainerIds);
+  telemetryClient.trackCliOptionLimit(limit);
   telemetryClient.trackCliFlagJson(json);
 
   const link = await getLinkedProject(client);
@@ -73,6 +80,7 @@ export default async function ls(
       tags,
       createdBy,
       maintainerIds,
+      limit,
     });
     output.stopSpinner();
 

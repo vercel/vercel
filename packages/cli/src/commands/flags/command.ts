@@ -46,6 +46,14 @@ export const listSubcommand = {
       argument: 'ID',
     },
     {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Maximum number of flags to return (defaults to all)',
+      argument: 'NUMBER',
+    },
+    {
       name: 'json',
       shorthand: null,
       type: Boolean,
@@ -65,6 +73,10 @@ export const listSubcommand = {
     {
       name: 'Filter flags by tag, creator, and maintainer',
       value: `${packageName} flags ls --tag checkout --created-by user_123 --maintainer-id user_456`,
+    },
+    {
+      name: 'List at most 10 flags',
+      value: `${packageName} flags ls --limit 10`,
     },
     {
       name: 'List flags as JSON',
