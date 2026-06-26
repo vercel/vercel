@@ -140,6 +140,7 @@ export default async function setupCodingAgents(
     agentFlags,
     all,
     canPrompt,
+    yes: Boolean(yes),
     home,
   });
   if ('error' in selection) {

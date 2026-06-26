@@ -12,9 +12,10 @@ export async function resolveAgents(args: {
   agentFlags?: string[];
   all?: boolean;
   canPrompt: boolean;
+  yes?: boolean;
   home: string;
 }): Promise<ResolveResult> {
-  const { client, agentFlags, all, canPrompt, home } = args;
+  const { client, agentFlags, all, canPrompt, yes, home } = args;
   const guidance: string[] = [];
   const unsupported: string[] = [];
 
@@ -58,6 +59,22 @@ export async function resolveAgents(args: {
   }
 
   const detected = await Promise.all(DEFAULT_AGENTS.map(a => a.detect(home)));
+
+  // `--yes` accepts the checkbox default — the agents detected locally — without
+  // prompting. With nothing detected there is no safe default, so ask the user
+  // to name them explicitly rather than configure agents they may not use.
+  if (yes) {
+    const selected = DEFAULT_AGENTS.filter((_, i) => detected[i]);
+    if (selected.length === 0) {
+      return {
+        error:
+          'No coding agents detected on this machine. Pass --agent <name> (repeatable) or --all.',
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+      };
+    }
+    return { selected, guidance, unsupported };
+  }
+
   const choices = DEFAULT_AGENTS.map((agent, i) => ({
     name: agent.displayName,
     value: agent.id,

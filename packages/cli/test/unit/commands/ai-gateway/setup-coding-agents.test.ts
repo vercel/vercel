@@ -390,6 +390,36 @@ describe('ai-gateway setup-coding-agents', () => {
     });
   });
 
+  describe('agent selection with --yes', () => {
+    it('selects the detected agents without prompting', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      // Only Claude Code is "installed" locally.
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      client.setArgv('ai-gateway', 'setup-coding-agents', '--yes');
+
+      // Completes with no interactive input: the agent checkbox is skipped.
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
+      expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe(CREATED_KEY);
+      // An undetected agent is not configured.
+      expect(existsSync(codexConfigPath())).toBe(false);
+    });
+
+    it('errors when nothing is detected and no agent is named', async () => {
+      useUser();
+      // Fresh home: no agent config dirs, so nothing is detected.
+      client.setArgv('ai-gateway', 'setup-coding-agents', '--yes');
+
+      expect(await aiGateway(client)).toBe(1);
+      await expect(client.stderr).toOutput('No coding agents detected');
+    });
+  });
+
   describe('key options', () => {
     it('collects name, quota, and expiry interactively', async () => {
       const team = useTeam();
