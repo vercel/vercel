@@ -76,23 +76,20 @@ export function readString(value: unknown): string | undefined {
 /**
  * Whether a path/entrypoint names a Dockerfile that this builder should build.
  *
- * This intentionally mirrors the broad match used by the services resolver in
- * `@vercel/fs-detectors` (`isDockerfileEntrypoint`): a basename of `Dockerfile`
- * or `Containerfile`, or one prefixed with `Dockerfile.` / `Containerfile.`
- * (any suffix, e.g. `Dockerfile.prod`, `Dockerfile.vercel`). The legacy
- * `*.dockerfile` suffix (e.g. `api.dockerfile`) is also accepted. Keeping the
- * two layers in sync ensures the builder honors whatever Dockerfile entrypoint
- * services hands it, instead of silently falling back to a default `Dockerfile`
- * or treating the path as a prebuilt image.
+ * Matches the same blessed set as the services resolver in
+ * `@vercel/fs-detectors`: the basenames `Dockerfile`, `Containerfile`,
+ * `Dockerfile.vercel`, and `Containerfile.vercel`. Keeping the two layers in
+ * sync ensures the builder honors whatever Dockerfile entrypoint services
+ * hands it, instead of silently falling back to a default `Dockerfile` or
+ * treating the path as a prebuilt image.
  */
 export function isDockerfileRef(ref: string): boolean {
   const base = basename(ref).toLowerCase();
   return (
     base === 'dockerfile' ||
     base === 'containerfile' ||
-    base.startsWith('dockerfile.') ||
-    base.startsWith('containerfile.') ||
-    base.endsWith('.dockerfile')
+    base === 'dockerfile.vercel' ||
+    base === 'containerfile.vercel'
   );
 }
 

@@ -2,6 +2,7 @@
   "experimentalServicesV2": {
     "app": {
       "root": ".",
+      "runtime": "container",
       "entrypoint": "Dockerfile.prod"
     }
   }

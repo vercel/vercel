@@ -451,29 +451,6 @@ describe('@vercel/container', () => {
     expect(commands.some(c => /\bbuildah\b.*\bpush\b/.test(c))).toBe(true);
   });
 
-  it.each([
-    'Dockerfile.prod',
-    'Containerfile.dev',
-  ])('builds from a suffixed `%s` entrypoint, passing it via -f', async name => {
-    // The services resolver (`@vercel/fs-detectors`) treats any
-    // `Dockerfile.*` / `Containerfile.*` as a container entrypoint, so the
-    // builder must honor the same broad set rather than ignoring the suffix
-    // file and falling back to a default `Dockerfile`.
-    const commands = await runDockerfileBuild({
-      buildImageEnv: 'al2023',
-      entrypoint: name,
-    });
-    const escaped = name.replace('.', '\\.');
-    expect(
-      commands.some(
-        c =>
-          /\bbuildah\b.*\bbuild\b/.test(c) &&
-          new RegExp(`-f \\S*${escaped}\\b`).test(c)
-      )
-    ).toBe(true);
-    expect(commands.some(c => /\bbuildah\b.*\bpush\b/.test(c))).toBe(true);
-  });
-
   it('discovers a `Dockerfile.vercel` marker when the entrypoint is `<detect>`', async () => {
     // The `container` framework preset resolves its entrypoint via `<detect>`;
     // the builder must then find the `.vercel` marker in the work directory.

@@ -28,32 +28,15 @@ const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
 
 /**
- * Whether a supplied `entrypoint` names a Dockerfile, used to infer
- * `runtime: "container"`. This is the broad match: a basename of `Dockerfile`
- * or `Containerfile`, or one prefixed with `Dockerfile.` / `Containerfile.`
- * (any suffix, e.g. `Dockerfile.prod`, `Containerfile.vercel`). Only applied
- * when the user actually supplied an entrypoint.
- */
-function isDockerfileEntrypoint(entrypoint: string): boolean {
-  const base = posixPath.basename(entrypoint).toLowerCase();
-  return (
-    base === 'dockerfile' ||
-    base === 'containerfile' ||
-    base.startsWith('dockerfile.') ||
-    base.startsWith('containerfile.')
-  );
-}
-
-/**
- * Candidate Dockerfile names probed (in order) when a service sets
- * `runtime: "container"` without an explicit `entrypoint`. Unlike the broad
- * entrypoint match above, auto-detection only considers these four blessed
- * names so we never silently pick up an arbitrary `Dockerfile.*` file.
+ * The blessed Dockerfile names for container services: bare `Dockerfile` /
+ * `Containerfile` and the `.vercel` opt-in markers. Both the supplied-entrypoint
+ * check and the `runtime: "container"` auto-detection use this single set, so a
+ * suffixed name like `Dockerfile.prod` is never matched.
  *
- * The `.vercel` opt-in markers are probed first so they take precedence over a
- * plain `Dockerfile` / `Containerfile`: a project that ships both gets to use
- * the `.vercel` marker as the explicit "deploy this as a container" signal,
- * matching the `container` framework preset.
+ * Ordered so the `.vercel` opt-in markers are probed first during
+ * auto-detection: a project that ships both gets to use the `.vercel` marker as
+ * the explicit "deploy this as a container" signal, matching the `container`
+ * framework preset.
  */
 const CONTAINER_ENTRYPOINT_CANDIDATES = [
   'Dockerfile.vercel',
@@ -61,6 +44,22 @@ const CONTAINER_ENTRYPOINT_CANDIDATES = [
   'Dockerfile',
   'Containerfile',
 ];
+
+const CONTAINER_ENTRYPOINT_BASENAMES = new Set(
+  CONTAINER_ENTRYPOINT_CANDIDATES.map(name => name.toLowerCase())
+);
+
+/**
+ * Whether a supplied `entrypoint` names a blessed Dockerfile, used to infer
+ * `runtime: "container"`. Matches only the basenames `Dockerfile`,
+ * `Containerfile`, `Dockerfile.vercel`, and `Containerfile.vercel` — a suffixed
+ * name such as `Dockerfile.prod` is not a container entrypoint.
+ */
+function isDockerfileEntrypoint(entrypoint: string): boolean {
+  return CONTAINER_ENTRYPOINT_BASENAMES.has(
+    posixPath.basename(entrypoint).toLowerCase()
+  );
+}
 
 /**
  * Probe the service root for a blessed Dockerfile candidate. Returns the

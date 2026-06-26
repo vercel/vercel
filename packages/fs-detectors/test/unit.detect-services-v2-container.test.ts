@@ -38,11 +38,6 @@ describe('detectServices (services) — container detection', () => {
       ['pass-entrypoint-dockerfile', 'Dockerfile', 'Dockerfile'],
       ['pass-entrypoint-containerfile', 'Containerfile', 'Containerfile'],
       [
-        'pass-entrypoint-dockerfile-suffix',
-        'Dockerfile.prod',
-        'Dockerfile.prod',
-      ],
-      [
         'pass-entrypoint-containerfile-vercel',
         'Containerfile.vercel',
         'Containerfile.vercel',
@@ -117,6 +112,18 @@ describe('detectServices (services) — container detection', () => {
       const result = await detectFixture(
         'fail-runtime-entrypoint-not-dockerfile'
       );
+
+      expect(servicesV2(result.services)).toEqual([]);
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_SERVICE_CONFIG',
+        serviceName: 'app',
+      });
+    });
+
+    it('rejects a suffixed Dockerfile.* entrypoint (only bare and .vercel are allowed)', async () => {
+      // `Dockerfile.prod` is not one of the blessed names, so a container
+      // service entrypoint pointing at it is rejected rather than built.
+      const result = await detectFixture('fail-entrypoint-dockerfile-suffix');
 
       expect(servicesV2(result.services)).toEqual([]);
       expect(result.errors[0]).toMatchObject({
