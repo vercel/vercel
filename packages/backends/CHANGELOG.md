@@ -1,5 +1,11 @@
 # @vercel/backends
 
+## 0.8.19
+
+### Patch Changes
+
+- 62a884e: Simplify isolated `services` and `experimentalServicesV2` runtime outputs by emitting their function at `index` instead of `_svc/<service-name>/index`.
+
 ## 0.8.18
 
 ### Patch Changes

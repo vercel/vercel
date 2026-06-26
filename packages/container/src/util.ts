@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 
 /** Verbose tracing for the container builder, gated on `BUILDER_DEBUG` like every other builder. */
 export const DEBUG = Boolean(getPlatformEnv('BUILDER_DEBUG'));
@@ -71,6 +71,26 @@ export function toTag(value: unknown): string {
 
 export function readString(value: unknown): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+/**
+ * Whether a path/entrypoint names a Dockerfile that this builder should build.
+ *
+ * Matches the same blessed set as the services resolver in
+ * `@vercel/fs-detectors`: the basenames `Dockerfile`, `Containerfile`,
+ * `Dockerfile.vercel`, and `Containerfile.vercel`. Keeping the two layers in
+ * sync ensures the builder honors whatever Dockerfile entrypoint services
+ * hands it, instead of silently falling back to a default `Dockerfile` or
+ * treating the path as a prebuilt image.
+ */
+export function isDockerfileRef(ref: string): boolean {
+  const base = basename(ref).toLowerCase();
+  return (
+    base === 'dockerfile' ||
+    base === 'containerfile' ||
+    base === 'dockerfile.vercel' ||
+    base === 'containerfile.vercel'
+  );
 }
 
 export interface RunResult {
