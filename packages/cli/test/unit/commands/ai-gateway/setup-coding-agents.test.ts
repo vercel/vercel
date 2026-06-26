@@ -275,7 +275,7 @@ describe('ai-gateway setup-coding-agents', () => {
       expect(out.changes[0].action).toBe('would_create');
     });
 
-    it('prompts for a team when a key would be created', async () => {
+    it('prompts for name, team, quota, and expiry in order', async () => {
       useUser();
       useTeam();
       client.setArgv(
@@ -290,10 +290,20 @@ describe('ai-gateway setup-coding-agents', () => {
 
       // The dry-run notice comes up front, before any prompts.
       await expect(client.stderr).toOutput('previewing changes only');
+      // Name first — it carries the "we'll create a key" explainer.
       await expect(client.stderr).toOutput(
         'API key to use with your coding agents'
       );
-      client.stdin.write('\r');
+      client.stdin.write('\n'); // accept default name
+      // Then team.
+      await expect(client.stderr).toOutput('What team should it be under?');
+      client.stdin.write('\n'); // accept default scope
+      // Then quota (defaults to no).
+      await expect(client.stderr).toOutput('Set a spend limit');
+      client.stdin.write('\n');
+      // Then expiry (defaults to no).
+      await expect(client.stderr).toOutput('Set an expiration');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Dry run');
       expect(await exitCodePromise).toBe(0);
@@ -301,25 +311,30 @@ describe('ai-gateway setup-coding-agents', () => {
       expect(existsSync(claudeSettingsPath())).toBe(false);
     });
 
-    it('prompts even when a team is already selected', async () => {
+    it('prompts for the team even when one is already selected', async () => {
       const team = useTeam();
       useUser();
       // A scope is already pinned, but key ownership is still an explicit choice.
       client.config.currentTeam = team.id;
+      // Pin the other options so only the team prompt remains.
       client.setArgv(
         'ai-gateway',
         'setup-coding-agents',
         '--dry-run',
         '--agent',
-        'claude-code'
+        'claude-code',
+        '--name',
+        'my-key',
+        '--refresh-period',
+        'none',
+        '--expiration',
+        'none'
       );
 
       const exitCodePromise = aiGateway(client);
 
-      await expect(client.stderr).toOutput(
-        'API key to use with your coding agents'
-      );
-      client.stdin.write('\r');
+      await expect(client.stderr).toOutput('What team should it be under?');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Dry run');
       expect(await exitCodePromise).toBe(0);
@@ -367,6 +382,114 @@ describe('ai-gateway setup-coding-agents', () => {
 
       const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
       expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe(CREATED_KEY);
+    });
+  });
+
+  describe('key options', () => {
+    it('collects name, quota, and expiry interactively', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'setup-coding-agents',
+        '--agent',
+        'claude-code'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput(
+        'API key to use with your coding agents'
+      );
+      client.stdin.write('My Coding Key\n');
+      await expect(client.stderr).toOutput('What team should it be under?');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Set a spend limit');
+      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Spend limit in USD');
+      client.stdin.write('\n'); // accept default 100
+      await expect(client.stderr).toOutput('How often should the limit reset?');
+      client.stdin.write('\n'); // accept default "Never"
+      await expect(client.stderr).toOutput('Set an expiration');
+      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Expires in');
+      client.stdin.write('\n'); // accept default preset (30 days)
+      await expect(client.stderr).toOutput('Apply these changes?');
+      client.stdin.write('\n'); // accept default (yes)
+
+      expect(await exitCodePromise).toBe(0);
+
+      expect(lastCreateBody?.name).toBe('My Coding Key');
+      expect(lastCreateBody?.aiGatewayQuota).toMatchObject({
+        limitAmount: 100,
+      });
+      const expiresAt = lastCreateBody?.expiresAt as number;
+      expect(typeof expiresAt).toBe('number');
+      // 30-day preset lands ~30 days out.
+      const days = (expiresAt - Date.now()) / 86_400_000;
+      expect(days).toBeGreaterThan(29);
+      expect(days).toBeLessThan(31);
+    });
+
+    it('sends expiresAt from the --expiration flag', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'setup-coding-agents',
+        '--agent',
+        'claude-code',
+        '--expiration',
+        '7d'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const expiresAt = lastCreateBody?.expiresAt as number;
+      expect(typeof expiresAt).toBe('number');
+      const days = (expiresAt - Date.now()) / 86_400_000;
+      expect(days).toBeGreaterThan(6);
+      expect(days).toBeLessThan(8);
+    });
+
+    it('does not send expiresAt for --expiration none', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'setup-coding-agents',
+        '--agent',
+        'claude-code',
+        '--expiration',
+        'none'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      expect(lastCreateBody?.expiresAt).toBeUndefined();
+    });
+
+    it('rejects an invalid --expiration', async () => {
+      useUser();
+      client.setArgv(
+        'ai-gateway',
+        'setup-coding-agents',
+        '--agent',
+        'claude-code',
+        '--expiration',
+        'soon'
+      );
+
+      expect(await aiGateway(client)).toBe(1);
+      await expect(client.stderr).toOutput('Invalid expiration');
     });
   });
 

@@ -49,6 +49,13 @@ export class AiGatewaySetupCodingAgentsTelemetryClient
     }
   }
 
+  trackCliOptionExpiration(expiration: string | undefined) {
+    if (expiration) {
+      // Expiry values are a known enum (presets or `none`); safe to record.
+      this.trackCliOption({ option: 'expiration', value: expiration });
+    }
+  }
+
   trackCliOptionName(name: string | undefined) {
     if (name) {
       this.trackCliOption({ option: 'name', value: this.redactedValue });

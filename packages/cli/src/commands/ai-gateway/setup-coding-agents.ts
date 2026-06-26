@@ -11,10 +11,18 @@ import {
   isValidRefreshPeriod,
   VALID_REFRESH_PERIODS,
 } from '../../util/ai-gateway/quota';
+import {
+  isValidExpiry,
+  presetToExpiresAt,
+  VALID_EXPIRY_VALUES,
+} from '../../util/ai-gateway/expiry';
 import { resolveAgents } from '../../util/ai-gateway/coding-agents/resolve';
 import {
   ensureTeam,
   createKey,
+  promptKeyName,
+  promptQuota,
+  promptExpiry,
   type KeySource,
 } from '../../util/ai-gateway/coding-agents/key-source';
 import {
@@ -66,6 +74,7 @@ export default async function setupCodingAgents(
   const budget = opts['--budget'] as number | undefined;
   const refreshPeriod = opts['--refresh-period'] as string | undefined;
   const includeByok = opts['--include-byok'] as boolean | undefined;
+  const expiration = opts['--expiration'] as string | undefined;
   const name = opts['--name'] as string | undefined;
   const model = (opts['--model'] as string | undefined) || DEFAULT_MODEL;
   const dryRun = opts['--dry-run'] as boolean | undefined;
@@ -78,6 +87,7 @@ export default async function setupCodingAgents(
   telemetry.trackCliOptionBudget(budget);
   telemetry.trackCliOptionRefreshPeriod(refreshPeriod);
   telemetry.trackCliFlagIncludeByok(includeByok);
+  telemetry.trackCliOptionExpiration(expiration);
   telemetry.trackCliOptionName(name);
   telemetry.trackCliOptionModel(opts['--model'] as string | undefined);
   telemetry.trackCliFlagDryRun(dryRun);
@@ -105,6 +115,20 @@ export default async function setupCodingAgents(
       `Invalid refresh period "${refreshPeriod}". Must be one of: ${VALID_REFRESH_PERIODS.join(', ')}.`
     );
   }
+  if (expiration && !isValidExpiry(expiration)) {
+    return failValidation(
+      client,
+      machine,
+      AGENT_REASON.INVALID_EXPIRATION,
+      `Invalid expiration "${expiration}". Must be one of: ${VALID_EXPIRY_VALUES.join(', ')}.`
+    );
+  }
+  // Resolve the `--expiration` flag to an absolute timestamp up front; `none`
+  // (and an unset flag) leaves the key non-expiring.
+  const flagExpiresAt =
+    expiration && expiration !== 'none'
+      ? presetToExpiresAt(expiration)
+      : undefined;
 
   // Announce a dry run up front so the prompts that follow (agent selection,
   // team) are understood as a preview — nothing is created or written. Machine
@@ -141,11 +165,24 @@ export default async function setupCodingAgents(
 
   // 2. Decide the key source. Defer creation until after confirmation so we
   //    never mint an orphan key; preview diffs with a masked placeholder.
-  //    Resolve the team up front (including dry runs) so the previewed flow
-  //    matches a real apply — but only prompt when we actually can. A
+  //    Resolve the key's options up front (including dry runs) so the previewed
+  //    flow matches a real apply — but only prompt when we actually can. A
   //    non-interactive dry run is a pure preview and must not require a scope.
+  //    Flags win; interactive prompts fill the rest in this order: name, team,
+  //    quota (+ refresh), expiry. Name carries the "we'll create a key"
+  //    explainer, so it comes first.
   const willCreate = !providedKey;
+  let keyName = name;
+  let keyBudget = budget;
+  let keyRefresh = refreshPeriod;
+  let keyExpiresAt = flagExpiresAt;
   if (willCreate && (!dryRun || canPrompt)) {
+    const promptCreate = canPrompt && !yes;
+
+    if (promptCreate && keyName === undefined) {
+      keyName = await promptKeyName(client);
+    }
+
     const teamError = await ensureTeam(client, {
       machine,
       canPrompt,
@@ -153,6 +190,19 @@ export default async function setupCodingAgents(
     });
     if (teamError) {
       return teamError;
+    }
+
+    if (promptCreate) {
+      // Quota and expiry both default to "no"; only prompt for the ones the
+      // user did not already pin with a flag.
+      if (keyBudget === undefined && keyRefresh === undefined) {
+        const quota = await promptQuota(client);
+        keyBudget = quota.budget;
+        keyRefresh = quota.refreshPeriod;
+      }
+      if (keyExpiresAt === undefined && !expiration) {
+        keyExpiresAt = await promptExpiry(client);
+      }
     }
   }
   const previewKey = providedKey ?? KEY_PLACEHOLDER;
@@ -180,14 +230,28 @@ export default async function setupCodingAgents(
       backup: !noBackup,
       keySource: providedKey ? { key: providedKey, created: false } : null,
       createKey: () =>
-        createKey(client, { name, budget, refreshPeriod, includeByok }),
+        createKey(client, {
+          name: keyName,
+          budget: keyBudget,
+          refreshPeriod: keyRefresh,
+          includeByok,
+          expiresAt: keyExpiresAt,
+        }),
       model,
       home,
     });
   }
 
   // Interactive / human mode.
-  printResolvedState({ selected, model, willCreate, budget, refreshPeriod });
+  printResolvedState({
+    selected,
+    model,
+    willCreate,
+    name: keyName,
+    budget: keyBudget,
+    refreshPeriod: keyRefresh,
+    expiresAt: keyExpiresAt,
+  });
 
   if (changed.length === 0 && errored.length === 0) {
     output.log(
@@ -223,10 +287,11 @@ export default async function setupCodingAgents(
       ? { key: providedKey, created: false }
       : {
           key: await createKey(client, {
-            name,
-            budget,
-            refreshPeriod,
+            name: keyName,
+            budget: keyBudget,
+            refreshPeriod: keyRefresh,
             includeByok,
+            expiresAt: keyExpiresAt,
           }),
           created: true,
         };

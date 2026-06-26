@@ -10,18 +10,32 @@ export function printResolvedState(args: {
   selected: CodingAgent[];
   model: string;
   willCreate: boolean;
+  name?: string;
   budget?: number;
   refreshPeriod?: string;
+  expiresAt?: number;
 }): void {
-  const { selected, model, willCreate, budget, refreshPeriod } = args;
+  const {
+    selected,
+    model,
+    willCreate,
+    name,
+    budget,
+    refreshPeriod,
+    expiresAt,
+  } = args;
   output.print('\n');
   printAlignedLabel('Agents', selected.map(a => a.displayName).join(', '));
   printAlignedLabel('Model', model);
   let keyState = 'Using provided key';
   if (willCreate) {
     const parts: string[] = [];
+    if (name) parts.push(`"${name}"`);
     if (budget !== undefined) parts.push(`$${budget}`);
     if (refreshPeriod && refreshPeriod !== 'none') parts.push(refreshPeriod);
+    if (expiresAt !== undefined) {
+      parts.push(`expires ${new Date(expiresAt).toISOString().slice(0, 10)}`);
+    }
     keyState = parts.length
       ? `Creating new key (${parts.join(', ')})`
       : 'Creating new key';

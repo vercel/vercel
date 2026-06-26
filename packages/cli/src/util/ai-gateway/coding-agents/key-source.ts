@@ -1,15 +1,121 @@
+import { hostname } from 'node:os';
 import type Client from '../../client';
 import output from '../../../output-manager';
 import { getCommandName } from '../../pkg-name';
 import createApiKeyRequest from '../create-api-key';
 import selectOrg from '../../input/select-org';
 import { buildQuota } from '../quota';
+import {
+  EXPIRY_PRESETS,
+  DEFAULT_EXPIRY_PRESET,
+  presetToExpiresAt,
+} from '../expiry';
 import { outputAgentError } from '../../agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../agent-output-constants';
 
 export interface KeySource {
   key: string;
   created: boolean;
+}
+
+/** Interactively-resolved options for a newly created key. */
+export interface KeyOptions {
+  name?: string;
+  budget?: number;
+  refreshPeriod?: string;
+  includeByok?: boolean;
+  expiresAt?: number;
+}
+
+/**
+ * A human-readable default key name that hints at the local machine, e.g.
+ * `[Sams MacBook] Coding Agents`. Falls back to a plain name when the hostname
+ * is unavailable.
+ */
+export function defaultKeyName(): string {
+  let host = '';
+  try {
+    host = hostname();
+  } catch {
+    // hostname() can throw in locked-down sandboxes; fall through to default.
+  }
+  const friendly = host.split('.')[0].replace(/[-_]+/g, ' ').trim();
+  return friendly ? `[${friendly}] Coding Agents` : 'Coding Agents';
+}
+
+/**
+ * Prompts for the key name. Carries the "we'll create a key" explainer since it
+ * is the first question in the create flow. Returns the trimmed input or the
+ * machine-derived default when left blank.
+ */
+export async function promptKeyName(client: Client): Promise<string> {
+  const fallback = defaultKeyName();
+  const answer = await client.input.text({
+    message:
+      "We'll create an API key to use with your coding agents. What should we name it?",
+    default: fallback,
+  });
+  return answer.trim() || fallback;
+}
+
+/**
+ * Optionally prompts for a spend limit and its refresh cadence. Both default to
+ * "no" — declining returns an empty object so the key is created without a quota.
+ */
+export async function promptQuota(client: Client): Promise<{
+  budget?: number;
+  refreshPeriod?: string;
+}> {
+  const wantsQuota = await client.input.confirm(
+    'Set a spend limit (quota) for this key?',
+    false
+  );
+  if (!wantsQuota) {
+    return {};
+  }
+  const amount = await client.input.text({
+    message: 'Spend limit in USD',
+    default: '100',
+    validate: value => {
+      const n = Number(value);
+      return Number.isFinite(n) && n >= 1
+        ? true
+        : 'Enter a number of dollars (minimum 1).';
+    },
+  });
+  const refreshPeriod = await client.input.select<string>({
+    message: 'How often should the limit reset?',
+    choices: [
+      { name: 'Never (one-time limit)', value: 'none' },
+      { name: 'Daily', value: 'daily' },
+      { name: 'Weekly', value: 'weekly' },
+      { name: 'Monthly', value: 'monthly' },
+    ],
+    default: 'none',
+  });
+  return { budget: Number(amount), refreshPeriod };
+}
+
+/**
+ * Optionally prompts for an expiry. Defaults to "no" — declining returns
+ * `undefined` so the key never expires.
+ */
+export async function promptExpiry(
+  client: Client
+): Promise<number | undefined> {
+  const wantsExpiry = await client.input.confirm(
+    'Set an expiration for this key?',
+    false
+  );
+  if (!wantsExpiry) {
+    return undefined;
+  }
+  const preset = await client.input.select<string>({
+    message: 'Expires in',
+    choices: EXPIRY_PRESETS.map(p => ({ name: p.label, value: p.value })),
+    default: DEFAULT_EXPIRY_PRESET,
+  });
+  return presetToExpiresAt(preset);
 }
 
 /** Whether the user pinned a scope explicitly via `--scope`/`--team`. */
@@ -40,10 +146,7 @@ export async function ensureTeam(
   const { machine, canPrompt, yes } = opts;
 
   if (canPrompt && !yes && !hasExplicitScopeFlag(client.argv)) {
-    const org = await selectOrg(
-      client,
-      "We'll create an API key to use with your coding agents. What team should it be under?"
-    );
+    const org = await selectOrg(client, 'What team should it be under?');
     // Picking the personal account clears any team scope so the key is created
     // on the user's account rather than the previously selected team.
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
@@ -77,12 +180,7 @@ export async function ensureTeam(
 
 export async function createKey(
   client: Client,
-  opts: {
-    name?: string;
-    budget?: number;
-    refreshPeriod?: string;
-    includeByok?: boolean;
-  }
+  opts: KeyOptions
 ): Promise<string> {
   output.spinner('Creating AI Gateway API key');
   try {
@@ -93,6 +191,7 @@ export async function createKey(
         refreshPeriod: opts.refreshPeriod,
         includeByok: opts.includeByok,
       }),
+      ...(opts.expiresAt !== undefined && { expiresAt: opts.expiresAt }),
     });
     return result.apiKeyString;
   } finally {

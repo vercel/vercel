@@ -10,6 +10,8 @@ type CreateApiKeyRequest = {
   purpose: 'ai-gateway';
   name?: string;
   aiGatewayQuota?: AiGatewayQuota;
+  /** Optional expiry as a Unix millisecond timestamp; accepted at creation only. */
+  expiresAt?: number;
 };
 
 type CreateApiKeyApiKey = {
@@ -28,7 +30,11 @@ export type CreateApiKeyResponse = {
 
 export default async function createApiKey(
   client: Client,
-  payload: { name?: string; aiGatewayQuota?: AiGatewayQuota }
+  payload: {
+    name?: string;
+    aiGatewayQuota?: AiGatewayQuota;
+    expiresAt?: number;
+  }
 ): Promise<CreateApiKeyResponse> {
   return await client.fetch<CreateApiKeyResponse>('/v1/api-keys', {
     method: 'POST',

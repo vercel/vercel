@@ -286,6 +286,15 @@ export const setupCodingAgentsSubcommand = {
       description: 'Include BYOK usage in the new key quota',
     },
     {
+      name: 'expiration',
+      shorthand: null,
+      type: String,
+      argument: 'PERIOD',
+      deprecated: false,
+      description:
+        'Expiry for a new key: 7d, 30d, 60d, 90d, 1y, or none (default: none)',
+    },
+    {
       name: 'name',
       shorthand: null,
       type: String,
