@@ -566,9 +566,6 @@ importers:
       esbuild:
         specifier: 0.27.0
         version: 0.27.0
-      form-data:
-        specifier: ^4.0.0
-        version: 4.0.5
       jose:
         specifier: 5.9.6
         version: 5.9.6
@@ -584,6 +581,9 @@ importers:
       smol-toml:
         specifier: 1.5.2
         version: 1.5.2
+      undici:
+        specifier: 5.29.0
+        version: 5.29.0
       zod:
         specifier: 4.1.11
         version: 4.1.11
@@ -675,9 +675,6 @@ importers:
       '@types/node':
         specifier: 20.11.0
         version: 20.11.0
-      '@types/node-fetch':
-        specifier: 2.5.10
-        version: 2.5.10
       '@types/npm-package-arg':
         specifier: 6.1.0
         version: 6.1.0
@@ -882,9 +879,6 @@ importers:
       ms:
         specifier: 2.1.2
         version: 2.1.2
-      node-fetch:
-        specifier: 2.6.7
-        version: 2.6.7
       npm-package-arg:
         specifier: 6.1.0
         version: 6.1.0
@@ -8766,10 +8760,6 @@ packages:
     resolution: {integrity: sha512-f0cRzm6dkyVYV3nPoooP8XlccPQukegwhAnpoLcXy+X+A8KfpGOoXwDr9FLZd3wzgLaBGQBE3lY93Zm/i1JvIQ==}
     engines: {node: '>= 6'}
 
-  form-data@4.0.5:
-    resolution: {integrity: sha512-8RipRLol37bNs2bhoV67fiTEvdTrbMUYcFTiy3+wuuOnUog2QBHCZWXDRijWQfAkhBj2Uf5UnVaiWwA5vdd82w==}
-    engines: {node: '>= 6'}
-
   forwarded@0.2.0:
     resolution: {integrity: sha512-buRG0fpBtRHSTCOASe6hD258tEubFoRLb4ZNA6NxMVHNw2gOcwHo9wyablzMzOA5z9xA9L1KNjk/Nt6MT9aYow==}
     engines: {node: '>= 0.6'}
@@ -12263,6 +12253,10 @@ packages:
 
   undici@5.28.4:
     resolution: {integrity: sha512-72RFADWFqKmUb2hmmvNODKL3p9hcB6Gt2DOQMis1SEBaV6a4MH8soBvzg+95CYhCKPFedut2JY9bMfrDl9D23g==}
+    engines: {node: '>=14.0'}
+
+  undici@5.29.0:
+    resolution: {integrity: sha512-raqeBD6NQK4SkWhQzeYKd1KmIG6dllBOTt55Rmkt4HtI9mwdWtJljnrXjAFUBLTSN67HWrOIZ3EPF4kjUw80Bg==}
     engines: {node: '>=14.0'}
 
   undici@6.26.0:
@@ -19482,14 +19476,6 @@ snapshots:
       hasown: 2.0.4
       mime-types: 2.1.35
 
-  form-data@4.0.5:
-    dependencies:
-      asynckit: 0.4.0
-      combined-stream: 1.0.8
-      es-set-tostringtag: 2.1.0
-      hasown: 2.0.4
-      mime-types: 2.1.35
-
   forwarded@0.2.0: {}
 
   fresh@0.5.2: {}
@@ -23310,6 +23296,10 @@ snapshots:
   undici-types@7.16.0: {}
 
   undici@5.28.4:
+    dependencies:
+      '@fastify/busboy': 2.1.1
+
+  undici@5.29.0:
     dependencies:
       '@fastify/busboy': 2.1.1
 

@@ -9,7 +9,7 @@ import {
   validateResponseHeaders,
 } from './utils';
 import assert from 'assert';
-import nodeFetch from 'node-fetch';
+import nodeFetch from '../../src/util/fetch';
 
 test(
   '[vercel dev] temporary directory listing',
@@ -687,9 +687,7 @@ describe('[vercel dev] Multi-service with experimentalServicesV2', () => {
         redirect: 'manual',
       });
       expect(redirect.status).toBe(308);
-      expect(redirect.headers.get('location')).toBe(
-        `http://localhost:${port}/api/new`
-      );
+      expect(redirect.headers.get('location')).toBe('/api/new');
 
       // top-level + per-service routes redirect
       const routeRedirect = await nodeFetch(
@@ -697,18 +695,14 @@ describe('[vercel dev] Multi-service with experimentalServicesV2', () => {
         { redirect: 'manual' }
       );
       expect(routeRedirect.status).toBe(308);
-      expect(routeRedirect.headers.get('location')).toBe(
-        `http://localhost:${port}/api/new`
-      );
+      expect(routeRedirect.headers.get('location')).toBe('/api/new');
 
       // top-level rule for /svc + per-service rewrites redirect for /api/
       const pathRedirect = await nodeFetch(`http://localhost:${port}/svc/old`, {
         redirect: 'manual',
       });
       expect(pathRedirect.status).toBe(308);
-      expect(pathRedirect.headers.get('location')).toBe(
-        `http://localhost:${port}/api/new`
-      );
+      expect(pathRedirect.headers.get('location')).toBe('/api/new');
 
       // route transforms
       const transformed = await nodeFetch(
@@ -742,9 +736,7 @@ describe('[vercel dev] Multi-service with experimentalServicesV2', () => {
         redirect: 'manual',
       });
       expect(oldRedirect.status).toBe(308);
-      expect(oldRedirect.headers.get('location')).toBe(
-        `http://localhost:${port}/new`
-      );
+      expect(oldRedirect.headers.get('location')).toBe('/new');
       expect(oldRedirect.headers.get('x-should-not-apply')).toBeNull();
 
       // a `request.path` transform declared directly on a service rewrite is a
