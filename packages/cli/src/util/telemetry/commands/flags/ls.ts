@@ -51,4 +51,13 @@ export class FlagsLsTelemetryClient extends TelemetryClient {
       });
     }
   }
+
+  trackCliOptionNext(next: string | undefined) {
+    if (next) {
+      this.trackCliOption({
+        option: 'next',
+        value: this.redactedValue,
+      });
+    }
+  }
 }

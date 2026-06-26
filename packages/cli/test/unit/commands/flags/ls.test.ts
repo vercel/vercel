@@ -129,8 +129,8 @@ describe('flags ls', () => {
       expect(parsed.flags[0].slug).toEqual('another-feature');
     });
 
-    it('limits the number of flags returned', async () => {
-      for (let i = 0; i < 120; i++) {
+    it('returns a single page with a cursor when --limit is set', async () => {
+      for (let i = 0; i < 30; i++) {
         flagsList.push({
           ...JSON.parse(JSON.stringify(flagsList[0])),
           id: `flag_page_${i}`,
@@ -144,14 +144,42 @@ describe('flags ls', () => {
 
       const parsed = JSON.parse(client.stdout.getFullOutput());
       expect(parsed.flags).toHaveLength(10);
+      expect(parsed.pagination.next).toEqual('10');
     });
 
-    it('rejects a non-positive --limit', async () => {
+    it('resumes from a --next cursor', async () => {
+      for (let i = 0; i < 30; i++) {
+        flagsList.push({
+          ...JSON.parse(JSON.stringify(flagsList[0])),
+          id: `flag_page_${i}`,
+          slug: `paged-flag-${i}`,
+        });
+      }
+
+      client.setArgv('flags', 'ls', '--limit', '10', '--next', '10', '--json');
+      const exitCode = await flags(client);
+      expect(exitCode).toEqual(0);
+
+      const parsed = JSON.parse(client.stdout.getFullOutput());
+      expect(parsed.flags).toHaveLength(10);
+      expect(parsed.pagination.next).toEqual('20');
+    });
+
+    it('rejects a --limit below 1', async () => {
       client.setArgv('flags', 'ls', '--limit', '0');
       const exitCode = await flags(client);
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput(
-        'The --limit option must be a positive integer.'
+        'The --limit option must be an integer between 1 and 100.'
+      );
+    });
+
+    it('rejects a --limit above 100', async () => {
+      client.setArgv('flags', 'ls', '--limit', '101');
+      const exitCode = await flags(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'The --limit option must be an integer between 1 and 100.'
       );
     });
 

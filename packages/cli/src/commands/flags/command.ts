@@ -50,8 +50,17 @@ export const listSubcommand = {
       shorthand: null,
       type: Number,
       deprecated: false,
-      description: 'Maximum number of flags to return (defaults to all)',
+      description:
+        'Return a single page of at most NUMBER flags (1-100) instead of all',
       argument: 'NUMBER',
+    },
+    {
+      name: 'next',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Pagination cursor from a previous list response',
+      argument: 'CURSOR',
     },
     {
       name: 'json',
@@ -75,8 +84,12 @@ export const listSubcommand = {
       value: `${packageName} flags ls --tag checkout --created-by user_123 --maintainer-id user_456`,
     },
     {
-      name: 'List at most 10 flags',
+      name: 'List the first page of 10 flags',
       value: `${packageName} flags ls --limit 10`,
+    },
+    {
+      name: 'List the next page using the cursor from the previous page',
+      value: `${packageName} flags ls --limit 10 --next <cursor>`,
     },
     {
       name: 'List flags as JSON',

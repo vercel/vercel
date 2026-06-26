@@ -8,41 +8,47 @@ export interface GetFlagsOptions {
   createdBy?: string;
   maintainerIds?: string[];
   /**
-   * Maximum number of flags to return. When omitted, all flags are fetched by
-   * following pagination cursors.
+   * Page size. When set (or when `cursor` is provided), a single page is
+   * returned and `next` exposes the cursor to resume from. When omitted, all
+   * flags are fetched by following pagination cursors.
    */
   limit?: number;
+  /** Resume from a `next` cursor returned by a previous call. */
+  cursor?: string;
 }
 
-// The v2 endpoint paginates with a small default page size, so request the
-// maximum allowed per page to minimize round-trips.
-const MAX_PAGE_LIMIT = 100;
+export interface GetFlagsResult {
+  flags: Flag[];
+  next: string | null;
+}
+
+// The v2 endpoint caps the page size at 100, so request that much when
+// fetching the full list to minimize round-trips.
+export const MAX_FLAGS_PAGE_LIMIT = 100;
 
 export async function getFlags(
   client: Client,
   projectId: string,
   options: GetFlagsOptions = {}
-): Promise<Flag[]> {
-  const { state = 'active', tags, createdBy, maintainerIds, limit } = options;
+): Promise<GetFlagsResult> {
+  const {
+    state = 'active',
+    tags,
+    createdBy,
+    maintainerIds,
+    limit,
+    cursor,
+  } = options;
   output.debug(`Fetching feature flags for project ${projectId}`);
 
   const basePath = `/v2/projects/${encodeURIComponent(projectId)}/feature-flags/flags`;
-  const flags: Flag[] = [];
-  let cursor: string | undefined;
 
-  // Follow `pagination.next` cursors to gather the requested flags. Without a
-  // limit this lists everything; with a limit we stop once we have enough.
-  do {
-    const pageLimit =
-      limit === undefined
-        ? MAX_PAGE_LIMIT
-        : Math.min(MAX_PAGE_LIMIT, limit - flags.length);
-
+  const buildQuery = (pageLimit: number, pageCursor?: string) => {
     const query = new URLSearchParams();
     query.set('state', state);
     query.set('limit', String(pageLimit));
-    if (cursor) {
-      query.set('cursor', cursor);
+    if (pageCursor) {
+      query.set('cursor', pageCursor);
     }
     if (createdBy) {
       query.set('createdBy', createdBy);
@@ -53,19 +59,33 @@ export async function getFlags(
     for (const maintainerId of maintainerIds ?? []) {
       query.append('maintainerIds', maintainerId);
     }
+    return query.toString();
+  };
 
+  // Paging mode: return a single page and surface the cursor to resume from.
+  if (limit !== undefined || cursor !== undefined) {
+    const pageLimit = Math.min(
+      limit ?? MAX_FLAGS_PAGE_LIMIT,
+      MAX_FLAGS_PAGE_LIMIT
+    );
     const response = await client.fetch<FlagsListResponse>(
-      `${basePath}?${query.toString()}`
+      `${basePath}?${buildQuery(pageLimit, cursor)}`
+    );
+    return { flags: response.data, next: response.pagination?.next ?? null };
+  }
+
+  // Otherwise follow `pagination.next` cursors to gather the full list.
+  const flags: Flag[] = [];
+  let pageCursor: string | undefined;
+  do {
+    const response = await client.fetch<FlagsListResponse>(
+      `${basePath}?${buildQuery(MAX_FLAGS_PAGE_LIMIT, pageCursor)}`
     );
     flags.push(...response.data);
-    cursor = response.pagination?.next ?? undefined;
+    pageCursor = response.pagination?.next ?? undefined;
+  } while (pageCursor);
 
-    if (limit !== undefined && flags.length >= limit) {
-      break;
-    }
-  } while (cursor);
-
-  return limit === undefined ? flags : flags.slice(0, limit);
+  return { flags, next: null };
 }
 
 export async function getFlag(
