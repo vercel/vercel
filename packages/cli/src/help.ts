@@ -57,6 +57,7 @@ export const help = () => `
       dns                  [name]      Manages your DNS records
       domains              [name]      Manages your domain names
       firewall             [cmd]       Manages Vercel Firewall configuration and custom rules
+      flags                [cmd]       Manage feature flags for a Vercel project
       httpstat             path        Visualize HTTP timing statistics for deployments
       logs                 [url]       Displays the logs for a deployment
       metrics              <metric>    Queries observability metrics for your project or team
