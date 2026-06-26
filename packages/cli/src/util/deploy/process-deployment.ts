@@ -149,7 +149,12 @@ export default async function processDeployment({
         output.debug(`Total files ${total.size}, ${missing.length} changed`);
 
         const missingSize = missing
-          .map((sha: string) => total.get(sha).data.length)
+          .map((sha: string) => {
+            const file = total.get(sha);
+            // Large files are streamed and have no in-memory `data`; fall back
+            // to the recorded `size`.
+            return file?.data?.length ?? file?.size ?? 0;
+          })
           .reduce((a: number, b: number) => a + b, 0);
         const totalSizeHuman = bytes.format(missingSize, { decimalPlaces: 1 });
 
@@ -189,9 +194,10 @@ export default async function processDeployment({
       }
 
       if (event.type === 'file-uploaded') {
+        const { file } = event.payload;
         output.debug(
-          `Uploaded: ${event.payload.file.names.join(' ')} (${bytes(
-            event.payload.file.data.length
+          `Uploaded: ${file.names.join(' ')} (${bytes(
+            file.data?.length ?? file.size ?? 0
           )})`
         );
       }
@@ -388,8 +394,14 @@ export function handleErrorSolvableWithArchive(error: unknown) {
       error.errorName.startsWith('api-upload-');
     const isTooManyFilesLimit =
       'code' in error && error.code === 'too_many_files';
+    // A file that exceeds the server's per-request upload limit is rejected
+    // with HTTP 413 "Request Entity Too Large". Archiving uploads the
+    // deployment in smaller chunks, which stays under that limit.
+    const isEntityTooLarge = /entity too large|payload too large/i.test(
+      error.message
+    );
 
-    if (isUploadRateLimit || isTooManyFilesLimit) {
+    if (isUploadRateLimit || isTooManyFilesLimit || isEntityTooLarge) {
       return new UploadErrorMissingArchive(
         `${error.message}\n${archiveSuggestionText}`
       );

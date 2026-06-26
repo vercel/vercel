@@ -23,6 +23,7 @@ import {
   BUILDER_COMPILE_STEP,
   BUILDER_PRE_DEPLOY_STEP,
   sanitizeConsumerName,
+  getLambdaOptionsFromFunction,
   type BuildOptions,
   type GlobOptions,
   type BuildVX,
@@ -400,6 +401,39 @@ function getTargetPlatform(isDev: boolean): TargetPlatform {
   }
 
   return { uvPlatform: UV_LINUX_TARGET, architecture: 'x86_64' };
+}
+
+async function getPythonLambdaOptions({
+  config,
+  entrypoint,
+}: {
+  config: BuildOptions['config'];
+  entrypoint: string;
+}) {
+  if (!config?.functions) {
+    return {};
+  }
+
+  const sources = new Set<string>([entrypoint]);
+  if (entrypoint.endsWith('.py')) {
+    sources.add(entrypoint.slice(0, -'.py'.length));
+  }
+
+  for (const sourceFile of sources) {
+    const lambdaOptions = await getLambdaOptionsFromFunction({
+      sourceFile,
+      config,
+    });
+
+    if (Object.keys(lambdaOptions).length > 0) {
+      // Python resolves the target wheel platform before the Lambda is created,
+      // so the Lambda architecture must stay aligned with that build target.
+      delete lambdaOptions.architecture;
+      return lambdaOptions;
+    }
+  }
+
+  return {};
 }
 
 /**
@@ -1170,10 +1204,16 @@ export const build: BuildVX = async ({
     [`${handlerPyFilename}.py`]: new FileBlob({ data: runtimeTrampoline }),
   };
 
+  const lambdaOptions = await getPythonLambdaOptions({
+    config,
+    entrypoint,
+  });
+
   const output = new Lambda({
     files: webFiles,
     handler: `${handlerPyFilename}.vc_handler`,
     runtime: pythonVersion.runtime,
+    ...lambdaOptions,
     architecture: target.architecture,
     environment: lambdaEnv,
     supportsResponseStreaming: true,
@@ -1245,10 +1285,11 @@ export const build: BuildVX = async ({
     return { resultVersion: 3, result: { output } };
   }
 
-  // If there is a service name, we need to mount this under the
-  // service properly, for a V2 build.
-  // TODO: Ideally this should be handled by writeBuildResultV2.
-  const lambdaPath = service?.name ? `_svc/${service.name}/index` : 'index';
+  // V2 services omit `type` and have isolated build outputs, so their Lambda
+  // can use the natural `index` path. V1 services still share one output and
+  // need the internal service namespace to avoid collisions.
+  const lambdaPath =
+    service?.name && service.type ? `_svc/${service.name}/index` : 'index';
   const staticFiles = djangoStatic?.cdnOutputDir
     ? await glob('**', { cwd: djangoStatic.cdnOutputDir })
     : {};

@@ -98,6 +98,9 @@ importers:
       vitest:
         specifier: 2.0.3
         version: 2.0.3(@edge-runtime/vm@3.2.0)(@types/node@20.11.0)(terser@5.48.0)
+      ws:
+        specifier: 8.18.0
+        version: 8.18.0
 
   api:
     dependencies:
@@ -291,8 +294,8 @@ importers:
         specifier: 1.0.0-rc.1
         version: 1.0.0-rc.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       srvx:
-        specifier: 0.8.9
-        version: 0.8.9
+        specifier: 0.11.16
+        version: 0.11.16
       tsx:
         specifier: 4.21.0
         version: 4.21.0
@@ -494,6 +497,9 @@ importers:
       '@vercel/cli-config':
         specifier: workspace:*
         version: link:../cli-config
+      '@vercel/container':
+        specifier: workspace:*
+        version: link:../container
       '@vercel/detect-agent':
         specifier: workspace:*
         version: link:../detect-agent
@@ -560,9 +566,6 @@ importers:
       esbuild:
         specifier: 0.27.0
         version: 0.27.0
-      form-data:
-        specifier: ^4.0.0
-        version: 4.0.5
       jose:
         specifier: 5.9.6
         version: 5.9.6
@@ -578,6 +581,9 @@ importers:
       smol-toml:
         specifier: 1.5.2
         version: 1.5.2
+      undici:
+        specifier: 5.29.0
+        version: 5.29.0
       zod:
         specifier: 4.1.11
         version: 4.1.11
@@ -669,9 +675,6 @@ importers:
       '@types/node':
         specifier: 20.11.0
         version: 20.11.0
-      '@types/node-fetch':
-        specifier: 2.5.10
-        version: 2.5.10
       '@types/npm-package-arg':
         specifier: 6.1.0
         version: 6.1.0
@@ -876,9 +879,6 @@ importers:
       ms:
         specifier: 2.1.2
         version: 2.1.2
-      node-fetch:
-        specifier: 2.6.7
-        version: 2.6.7
       npm-package-arg:
         specifier: 6.1.0
         version: 6.1.0
@@ -1151,10 +1151,22 @@ importers:
         version: 1.5.5(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(vitest@2.1.4(@edge-runtime/vm@3.2.0)(@types/node@24.12.4)(terser@5.48.0))
       eve:
         specifier: 0.6.0-beta.1
-        version: 0.6.0-beta.1(@opentelemetry/api@1.9.1)(@vercel/blob@2.4.0)(ai@7.0.0-beta.116(zod@4.4.3))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(rollup@4.60.4)(vite@5.1.8(@types/node@20.11.0)(terser@5.48.0))
+        version: 0.6.0-beta.1(@opentelemetry/api@1.9.1)(@vercel/blob@2.4.0)(@vercel/functions@3.7.3(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0))(ai@7.0.0-beta.116(zod@4.4.3))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(rollup@4.60.4)(vite@5.1.8(@types/node@20.11.0)(terser@5.48.0))
       typescript:
         specifier: ^5
         version: 5.9.3
+
+  packages/container:
+    devDependencies:
+      '@types/node':
+        specifier: 20.11.0
+        version: 20.11.0
+      '@vercel/build-utils':
+        specifier: workspace:*
+        version: link:../build-utils
+      vitest:
+        specifier: 2.0.3
+        version: 2.0.3(@edge-runtime/vm@3.2.0)(@types/node@20.11.0)(terser@5.48.0)
 
   packages/detect-agent:
     devDependencies:
@@ -1745,8 +1757,8 @@ importers:
         version: 1.10.0(rollup@4.60.4)
     devDependencies:
       '@next-community/adapter-vercel':
-        specifier: 0.0.1-beta.23
-        version: 0.0.1-beta.23(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
+        specifier: 0.0.1-beta.22
+        version: 0.0.1-beta.22(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
       '@types/aws-lambda':
         specifier: 8.10.19
         version: 8.10.19
@@ -2053,6 +2065,16 @@ importers:
       typedoc-plugin-mdn-links:
         specifier: 5.1.1
         version: 5.1.1(typedoc@0.28.19(typescript@5.9.3))
+      vitest:
+        specifier: 2.0.1
+        version: 2.0.1(@edge-runtime/vm@3.2.0)(@types/node@24.12.4)(terser@5.48.0)
+
+  packages/passport:
+    dependencies:
+      jose:
+        specifier: 5.9.6
+        version: 5.9.6
+    devDependencies:
       vitest:
         specifier: 2.0.1
         version: 2.0.1(@edge-runtime/vm@3.2.0)(@types/node@24.12.4)(terser@5.48.0)
@@ -4534,8 +4556,8 @@ packages:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
 
-  '@next-community/adapter-vercel@0.0.1-beta.23':
-    resolution: {integrity: sha512-cacQORiw/IL0g/sA/iLT2cYcEjWUHKu/gzLOHSTRvnRpPvGo53OajbZpvDe/2xFh7rsfznlkLFuPc5uYj7EqBw==}
+  '@next-community/adapter-vercel@0.0.1-beta.22':
+    resolution: {integrity: sha512-ZlRIi8MUWBLPxsFLzA2kxw1HOf5ius5kjyhHk7oVg1mhFy7QCCuhC35BrBXm1FN+7jWF4ST+jwxZ9u2lQt0MXQ==}
     engines: {node: '>= 20.6.0'}
     peerDependencies:
       next: '>= 16.1.1-canary.18'
@@ -6603,9 +6625,28 @@ packages:
     resolution: {integrity: sha512-ncQ8CRb6XoEAYJwjOTRGpACRT6h/AeY+/33gLyeVxG5BIes27OPm1jmqreF+JHjcTmGhClTP+kBpmyLfbV0xew==}
     engines: {node: '>=20.0.0'}
 
+  '@vercel/cli-config@0.2.0':
+    resolution: {integrity: sha512-fJRRRB7734BDuXZ89yBEaA2ncYhH7bWX30mk04W80J6VAfQc+4iB8lyzAdaGpFV3/vNlkt9VZt+/uoQoWX6UsQ==}
+
+  '@vercel/cli-exec@1.0.0':
+    resolution: {integrity: sha512-kQF8LGie/Hbdq9/psJxLE7owRTcqMQMhgybU04gCeR7cbQAr5t8OrjefDNColJv1QSSucFt4pLwRiARVmlOnug==}
+    engines: {node: '>= 18'}
+
   '@vercel/fun@1.3.0':
     resolution: {integrity: sha512-8erw9uPe0dFg45THkNxmjtvMX143SkZebmjgSVbcM3XCkXu3RIiBaJMcMNG8aaS+rnTuw8+d4De9HVT0M/r3wg==}
     engines: {node: '>= 18'}
+
+  '@vercel/functions@3.7.3':
+    resolution: {integrity: sha512-Bn7VPthKb6jBiGM3W2JUXDgDl/2trIanvnnxQ9dCVpDlDLvwn/+uk1TM9bSQJuZ4dKbOfusstpbM0PZeuNStsw==}
+    engines: {node: '>= 20'}
+    peerDependencies:
+      '@aws-sdk/credential-provider-web-identity': '*'
+      ws: '>=8'
+    peerDependenciesMeta:
+      '@aws-sdk/credential-provider-web-identity':
+        optional: true
+      ws:
+        optional: true
 
   '@vercel/microfrontends@1.2.2':
     resolution: {integrity: sha512-QzcR5wVsz654XlCGT/HnxjgSkQMpeaEuj7bI1EeukwL/2D3kFkL5J68LMqA68HHSbbLvx32o7n5scSoB7a+3IQ==}
@@ -6645,6 +6686,10 @@ packages:
 
   '@vercel/oidc@3.2.0':
     resolution: {integrity: sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug==}
+    engines: {node: '>= 20'}
+
+  '@vercel/oidc@3.7.0':
+    resolution: {integrity: sha512-FWmULATInXyxER8FJjtSEUdoaoeqWv9G9T4y3vraYMJNAx/ox354COtDmhiBb/XaeDjFuiwTY9ss44NRBaGjLQ==}
     engines: {node: '>= 20'}
 
   '@vercel/prepare-flags-definitions@0.3.0':
@@ -7708,9 +7753,6 @@ packages:
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
 
-  cookie-es@2.0.1:
-    resolution: {integrity: sha512-aVf4A4hI2w70LnF7GG+7xDQUkliwiXWXFvTjkip4+b64ygDQ2sJPRSKFDHbxn8o0xu9QzPkMuuiWIXyFSE2slA==}
-
   cookie-signature@1.0.6:
     resolution: {integrity: sha512-QADzlaHc8icV8I7vbaJXJwod9HWYp8uCqf1xa4OfNu1T7JVxQIrUgOWtHdNDtPiywmFbiS12VjotIXLrKM3orQ==}
 
@@ -8716,10 +8758,6 @@ packages:
 
   form-data@3.0.4:
     resolution: {integrity: sha512-f0cRzm6dkyVYV3nPoooP8XlccPQukegwhAnpoLcXy+X+A8KfpGOoXwDr9FLZd3wzgLaBGQBE3lY93Zm/i1JvIQ==}
-    engines: {node: '>= 6'}
-
-  form-data@4.0.5:
-    resolution: {integrity: sha512-8RipRLol37bNs2bhoV67fiTEvdTrbMUYcFTiy3+wuuOnUog2QBHCZWXDRijWQfAkhBj2Uf5UnVaiWwA5vdd82w==}
     engines: {node: '>= 6'}
 
   forwarded@0.2.0:
@@ -11519,11 +11557,6 @@ packages:
     engines: {node: '>=20.16.0'}
     hasBin: true
 
-  srvx@0.8.9:
-    resolution: {integrity: sha512-wYc3VLZHRzwYrWJhkEqkhLb31TI0SOkfYZDkUhXdp3NoCnNS0FqajiQszZZjfow/VYEuc6Q5sZh9nM6kPy2NBQ==}
-    engines: {node: '>=20.16.0'}
-    hasBin: true
-
   ssh2@1.17.0:
     resolution: {integrity: sha512-wPldCk3asibAjQ/kziWQQt1Wh3PgDFpC0XpwclzKcdT1vql6KeYxf5LIt4nlFkUeR8WuphYMKqUA56X4rjbfgQ==}
     engines: {node: '>=10.16.0'}
@@ -12222,6 +12255,10 @@ packages:
     resolution: {integrity: sha512-72RFADWFqKmUb2hmmvNODKL3p9hcB6Gt2DOQMis1SEBaV6a4MH8soBvzg+95CYhCKPFedut2JY9bMfrDl9D23g==}
     engines: {node: '>=14.0'}
 
+  undici@5.29.0:
+    resolution: {integrity: sha512-raqeBD6NQK4SkWhQzeYKd1KmIG6dllBOTt55Rmkt4HtI9mwdWtJljnrXjAFUBLTSN67HWrOIZ3EPF4kjUw80Bg==}
+    engines: {node: '>=14.0'}
+
   undici@6.26.0:
     resolution: {integrity: sha512-4yqz8a3n5HmGTlsbADNtr/dJlhkh/55Rq798G6ibiULcXbDtaLpTl1pvdqcbFfeoj3iSi52lePFM7h9H21cw/A==}
     engines: {node: '>=18.17'}
@@ -12678,6 +12715,18 @@ packages:
   write-json-file@2.2.0:
     resolution: {integrity: sha512-Qqn0A4o5SpxzTPaOZImUgXOR542kKGg5qW2iVUdzEyJiPHsWy9swutOUgNcwDduKQqi63VsALDvGGykd9HeRGg==}
     engines: {node: '>=4'}
+
+  ws@8.18.0:
+    resolution: {integrity: sha512-8VbfWfHLbbwu3+N6OKsOMpBdT4kXPDDB9cJk2bJ6mh9ucxdlnNvH1e+roYkKmN9Nxw2yjz7VzeO9oOz2zJ04Pw==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
 
   ws@8.20.0:
     resolution: {integrity: sha512-sAt8BhgNbzCtgGbt2OxmpuryO63ZoDk/sqaB/znQm94T4fCEsy/yV+7CdC1kJhOU9lboAEU7R3kquuycDoibVA==}
@@ -14821,7 +14870,7 @@ snapshots:
       '@tybys/wasm-util': 0.10.2
     optional: true
 
-  '@next-community/adapter-vercel@0.0.1-beta.23(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
+  '@next-community/adapter-vercel@0.0.1-beta.22(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
     dependencies:
       next: 16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
 
@@ -16708,6 +16757,17 @@ snapshots:
       throttleit: 2.1.0
       undici: 6.26.0
 
+  '@vercel/cli-config@0.2.0':
+    dependencies:
+      xdg-app-paths: 5.1.0
+      zod: 4.1.11
+    optional: true
+
+  '@vercel/cli-exec@1.0.0':
+    dependencies:
+      execa: 5.1.1
+    optional: true
+
   '@vercel/fun@1.3.0':
     dependencies:
       '@tootallnate/once': 2.0.0
@@ -16731,6 +16791,14 @@ snapshots:
     transitivePeerDependencies:
       - encoding
       - supports-color
+
+  '@vercel/functions@3.7.3(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0)':
+    dependencies:
+      '@vercel/oidc': 3.7.0
+    optionalDependencies:
+      '@aws-sdk/credential-provider-web-identity': 3.609.0(@aws-sdk/client-sts@3.609.0)
+      ws: 8.20.0
+    optional: true
 
   '@vercel/microfrontends@1.2.2(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(vite@7.1.7(@types/node@20.11.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.21.0)(yaml@2.9.0))':
     dependencies:
@@ -16773,6 +16841,13 @@ snapshots:
   '@vercel/oidc@3.1.0': {}
 
   '@vercel/oidc@3.2.0': {}
+
+  '@vercel/oidc@3.7.0':
+    dependencies:
+      '@vercel/cli-config': 0.2.0
+      '@vercel/cli-exec': 1.0.0
+      jose: 5.9.6
+    optional: true
 
   '@vercel/prepare-flags-definitions@0.3.0': {}
 
@@ -18010,8 +18085,6 @@ snapshots:
 
   convert-source-map@2.0.0: {}
 
-  cookie-es@2.0.1: {}
-
   cookie-signature@1.0.6: {}
 
   cookie-signature@1.2.2: {}
@@ -19040,10 +19113,10 @@ snapshots:
 
   etag@1.8.1: {}
 
-  eve@0.6.0-beta.1(@opentelemetry/api@1.9.1)(@vercel/blob@2.4.0)(ai@7.0.0-beta.116(zod@4.4.3))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(rollup@4.60.4)(vite@5.1.8(@types/node@20.11.0)(terser@5.48.0)):
+  eve@0.6.0-beta.1(@opentelemetry/api@1.9.1)(@vercel/blob@2.4.0)(@vercel/functions@3.7.3(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0))(ai@7.0.0-beta.116(zod@4.4.3))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(rollup@4.60.4)(vite@5.1.8(@types/node@20.11.0)(terser@5.48.0)):
     dependencies:
       ai: 7.0.0-beta.116(zod@4.4.3)
-      nitro: 3.0.260522-beta(@vercel/blob@2.4.0)(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(rollup@4.60.4)(vite@5.1.8(@types/node@20.11.0)(terser@5.48.0))
+      nitro: 3.0.260522-beta(@vercel/blob@2.4.0)(@vercel/functions@3.7.3(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(rollup@4.60.4)(vite@5.1.8(@types/node@20.11.0)(terser@5.48.0))
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
       next: 16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -19396,14 +19469,6 @@ snapshots:
       signal-exit: 4.1.0
 
   form-data@3.0.4:
-    dependencies:
-      asynckit: 0.4.0
-      combined-stream: 1.0.8
-      es-set-tostringtag: 2.1.0
-      hasown: 2.0.4
-      mime-types: 2.1.35
-
-  form-data@4.0.5:
     dependencies:
       asynckit: 0.4.0
       combined-stream: 1.0.8
@@ -20877,7 +20942,7 @@ snapshots:
 
   nice-try@1.0.5: {}
 
-  nitro@3.0.260522-beta(@vercel/blob@2.4.0)(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(rollup@4.60.4)(vite@5.1.8(@types/node@20.11.0)(terser@5.48.0)):
+  nitro@3.0.260522-beta(@vercel/blob@2.4.0)(@vercel/functions@3.7.3(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(rollup@4.60.4)(vite@5.1.8(@types/node@20.11.0)(terser@5.48.0)):
     dependencies:
       consola: 3.4.2
       crossws: 0.4.6(srvx@0.11.16)
@@ -20892,7 +20957,7 @@ snapshots:
       rolldown: 1.1.0
       srvx: 0.11.16
       unenv: 2.0.0-rc.24
-      unstorage: 2.0.0-alpha.7(@vercel/blob@2.4.0)(chokidar@4.0.3)(db0@0.3.4(mysql2@3.14.2))(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(ofetch@2.0.0-alpha.3)
+      unstorage: 2.0.0-alpha.7(@vercel/blob@2.4.0)(@vercel/functions@3.7.3(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0))(chokidar@4.0.3)(db0@0.3.4(mysql2@3.14.2))(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(ofetch@2.0.0-alpha.3)
     optionalDependencies:
       dotenv: 16.6.1
       jiti: 2.7.0
@@ -22408,10 +22473,6 @@ snapshots:
 
   srvx@0.11.16: {}
 
-  srvx@0.8.9:
-    dependencies:
-      cookie-es: 2.0.1
-
   ssh2@1.17.0:
     dependencies:
       asn1: 0.2.6
@@ -23238,6 +23299,10 @@ snapshots:
     dependencies:
       '@fastify/busboy': 2.1.1
 
+  undici@5.29.0:
+    dependencies:
+      '@fastify/busboy': 2.1.1
+
   undici@6.26.0: {}
 
   undici@7.26.0: {}
@@ -23287,9 +23352,10 @@ snapshots:
     dependencies:
       rolldown: 1.0.0-rc.17
 
-  unstorage@2.0.0-alpha.7(@vercel/blob@2.4.0)(chokidar@4.0.3)(db0@0.3.4(mysql2@3.14.2))(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(ofetch@2.0.0-alpha.3):
+  unstorage@2.0.0-alpha.7(@vercel/blob@2.4.0)(@vercel/functions@3.7.3(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0))(chokidar@4.0.3)(db0@0.3.4(mysql2@3.14.2))(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(ofetch@2.0.0-alpha.3):
     optionalDependencies:
       '@vercel/blob': 2.4.0
+      '@vercel/functions': 3.7.3(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0))(ws@8.20.0)
       chokidar: 4.0.3
       db0: 0.3.4(mysql2@3.14.2)
       lru-cache: 11.5.1
@@ -23843,6 +23909,8 @@ snapshots:
       pify: 2.3.0
       sort-keys: 1.1.2
       write-file-atomic: 2.4.3
+
+  ws@8.18.0: {}
 
   ws@8.20.0: {}
 

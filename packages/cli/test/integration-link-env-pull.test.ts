@@ -35,7 +35,7 @@ afterAll(async () => {
   }
 });
 
-test('[vc link] should skip env pull prompt when creating new project', async () => {
+test('[vc link] should refresh OIDC when creating a new project', async () => {
   const dir = await setupE2EFixture('project-link-gitignore');
   const projectName = `link-env-pull-${Math.random().toString(36).split('.')[1]}`;
 
@@ -76,14 +76,21 @@ test('[vc link] should skip env pull prompt when creating new project', async ()
   expect(await fs.pathExists(path.join(dir, '.vercel/project.json'))).toBe(
     true
   );
+  expect(await fs.readFile(path.join(dir, '.env.local'), 'utf8')).toMatch(
+    /^# Created by Vercel CLI\nVERCEL_OIDC_TOKEN="[^"\n]+"\n$/
+  );
 });
 
-test('[vc link] should not create .env.local when linking new project', async () => {
+test('[vc link] should preserve existing .env.local when refreshing OIDC', async () => {
   const dir = await setupE2EFixture('project-link-gitignore');
   const projectName = `link-env-decline-${Math.random().toString(36).split('.')[1]}`;
 
   await fs.remove(path.join(dir, '.vercel'));
-  await fs.remove(path.join(dir, '.env.local'));
+  await fs.writeFile(
+    path.join(dir, '.env.local'),
+    'LOCAL_ONLY=keep\nVERCEL_OIDC_TOKEN=stale-token\nTAIL=keep\n',
+    'utf8'
+  );
 
   const vc = execCli(binaryPath, ['link', `--project=${projectName}`], {
     cwd: dir,
@@ -120,7 +127,11 @@ test('[vc link] should not create .env.local when linking new project', async ()
     true
   );
 
-  expect(await fs.pathExists(path.join(dir, '.env.local'))).toBe(false);
+  const envContents = await fs.readFile(path.join(dir, '.env.local'), 'utf8');
+  expect(envContents).toMatch(
+    /^LOCAL_ONLY=keep\nVERCEL_OIDC_TOKEN="[^"\n]+"\nTAIL=keep\n$/
+  );
+  expect(envContents).not.toContain('stale-token');
 });
 
 test('[vc link] should work with --yes flag and auto-confirm all prompts', async () => {
@@ -145,5 +156,8 @@ test('[vc link] should work with --yes flag and auto-confirm all prompts', async
 
   expect(await fs.pathExists(path.join(dir, '.vercel/project.json'))).toBe(
     true
+  );
+  expect(await fs.readFile(path.join(dir, '.env.local'), 'utf8')).toMatch(
+    /^# Created by Vercel CLI\nVERCEL_OIDC_TOKEN="[^"\n]+"\n$/
   );
 });

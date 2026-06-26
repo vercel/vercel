@@ -1868,15 +1868,36 @@ createServer((_req, res) => {
   });
 
   describe('flags-definitions', () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const FLAGS_DATAFILE_URL = 'https://flags.vercel.com/v1/datafile';
+    const spyOnFetch = () => vi.spyOn(globalThis, 'fetch');
+    let fetchSpy: ReturnType<typeof spyOnFetch>;
 
     const findDefinitionsDir = (dir: string) =>
       join(dir, 'node_modules', '@vercel', 'flags-definitions');
 
+    const definitionsDirs = ['static', 'with-vercel-flags'].map(name =>
+      findDefinitionsDir(fixture(name))
+    );
+
+    const getFetchUrl = (
+      input: Parameters<typeof globalThis.fetch>[0]
+    ): string => {
+      if (typeof input === 'string') {
+        return input;
+      }
+      return input instanceof URL ? input.href : input.url;
+    };
+
+    const flagsFetchCalls = () =>
+      fetchSpy.mock.calls.filter(
+        ([input]) => getFetchUrl(input) === FLAGS_DATAFILE_URL
+      );
+
     beforeEach(() => {
+      fetchSpy = spyOnFetch();
       fetchSpy.mockImplementation(async input => {
-        const url = typeof input === 'string' ? input : input.toString();
-        if (url === 'https://flags.vercel.com/v1/datafile') {
+        const url = getFetchUrl(input);
+        if (url === FLAGS_DATAFILE_URL) {
           return new Response(JSON.stringify({ flags: [] }), {
             status: 200,
             headers: { 'content-type': 'application/json' },
@@ -1887,12 +1908,12 @@ createServer((_req, res) => {
     });
 
     afterEach(() => {
+      for (const definitionsDir of definitionsDirs) {
+        fs.removeSync(definitionsDir);
+      }
+      fetchSpy.mockRestore();
       vi.resetAllMocks();
       vi.unstubAllEnvs();
-    });
-
-    afterAll(() => {
-      vi.restoreAllMocks();
     });
 
     it('should emit flags-definitions module with SDK key', async () => {
@@ -1905,7 +1926,7 @@ createServer((_req, res) => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fetchSpy).toHaveBeenCalledOnce();
+      expect(flagsFetchCalls()).toHaveLength(1);
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
       expect(fs.existsSync(join(definitionsDir, 'index.d.ts'))).toBe(true);
       expect(fs.existsSync(join(definitionsDir, 'package.json'))).toBe(true);
@@ -1916,8 +1937,6 @@ createServer((_req, res) => {
         'utf8'
       );
       expect(indexJs).toContain('export function get(key)');
-
-      fs.removeSync(definitionsDir);
     });
 
     it('should not emit flags-definitions module without SDK key and flags dependencies', async () => {
@@ -1928,7 +1947,7 @@ createServer((_req, res) => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fetchSpy).not.toHaveBeenCalledOnce();
+      expect(flagsFetchCalls()).toHaveLength(0);
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
     });
 
@@ -1943,7 +1962,7 @@ createServer((_req, res) => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fetchSpy).not.toHaveBeenCalledOnce();
+      expect(flagsFetchCalls()).toHaveLength(0);
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
     });
 
@@ -1958,10 +1977,8 @@ createServer((_req, res) => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fetchSpy).toHaveBeenCalledOnce();
+      expect(flagsFetchCalls()).toHaveLength(1);
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
-
-      fs.removeSync(definitionsDir);
     });
 
     it('should not emit flags-definitions module with SDK key when VERCEL_FLAGS_EMBED_DEFINITIONS=force-off', async () => {
@@ -1975,7 +1992,7 @@ createServer((_req, res) => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fetchSpy).not.toHaveBeenCalledOnce();
+      expect(flagsFetchCalls()).toHaveLength(0);
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
     });
 
@@ -1993,10 +2010,8 @@ createServer((_req, res) => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fetchSpy).toHaveBeenCalledOnce();
+      expect(flagsFetchCalls()).toHaveLength(1);
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
-
-      fs.removeSync(definitionsDir);
     });
 
     it('should not emit flags-definitions module with OIDC when VERCEL_FLAGS_EMBED_DEFINITIONS=force-off', async () => {
@@ -2013,7 +2028,7 @@ createServer((_req, res) => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fetchSpy).not.toHaveBeenCalledOnce();
+      expect(flagsFetchCalls()).toHaveLength(0);
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
     });
 
@@ -2031,10 +2046,8 @@ createServer((_req, res) => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fetchSpy).toHaveBeenCalledOnce();
+      expect(flagsFetchCalls()).toHaveLength(1);
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
-
-      fs.removeSync(definitionsDir);
     });
   });
 
@@ -2673,7 +2686,23 @@ createServer((_req, res) => {
     expect(exitCode).toBe(0);
 
     const config = await fs.readJSON(join(output, 'config.json'));
-    expect(config.services).toBeUndefined();
+    // `experimentalServicesV2` services are recorded in the `services` array,
+    // each tagged with its `schema` discriminant so consumers can tell V1 from
+    // V2 records.
+    expect(config.services).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          schema: 'experimentalServicesV2',
+          name: 'ui',
+          runtime: 'node',
+        }),
+        expect.objectContaining({
+          schema: 'experimentalServicesV2',
+          name: 'backend',
+          runtime: 'node',
+        }),
+      ])
+    );
     expect(config.experimentalServicesV2).toEqual({
       backend: expect.objectContaining({
         root: '.',
@@ -2689,15 +2718,12 @@ createServer((_req, res) => {
     expect(config.routes).toBeUndefined();
     expect(
       await fs.pathExists(
-        join(output, 'services/ui/functions/_svc/ui/index.func/.vc-config.json')
+        join(output, 'services/ui/functions/index.func/.vc-config.json')
       )
     ).toBe(true);
     expect(
       await fs.pathExists(
-        join(
-          output,
-          'services/backend/functions/_svc/backend/index.func/.vc-config.json'
-        )
+        join(output, 'services/backend/functions/index.func/.vc-config.json')
       )
     ).toBe(true);
     const uiConfig = await fs.readJSON(join(output, 'services/ui/config.json'));
@@ -2705,6 +2731,7 @@ createServer((_req, res) => {
       expect.arrayContaining([
         { handle: 'filesystem' },
         expect.objectContaining({ dest: '/$1', check: true }),
+        expect.objectContaining({ dest: '/index' }),
       ])
     );
     const backendConfig = await fs.readJSON(
@@ -2714,6 +2741,7 @@ createServer((_req, res) => {
       expect.arrayContaining([
         { handle: 'filesystem' },
         expect.objectContaining({ dest: '/$1', check: true }),
+        expect.objectContaining({ dest: '/index' }),
       ])
     );
     expect(await fs.pathExists(join(output, 'functions'))).toBe(false);
@@ -2946,7 +2974,19 @@ writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, nul
       );
 
       const config = await fs.readJSON(join(output, 'config.json'));
-      expect(config.services).toBeUndefined();
+      // Only services actually treated as services are recorded in the
+      // `services` array. `ui` was already built at the root and skipped (see
+      // the warning asserted above), so it must NOT appear here; only the newly
+      // nested `backend` service is recorded, tagged with its `schema`.
+      expect(config.services).toEqual([
+        expect.objectContaining({
+          schema: 'experimentalServicesV2',
+          name: 'backend',
+        }),
+      ]);
+      expect(config.services).not.toContainEqual(
+        expect.objectContaining({ name: 'ui' })
+      );
       expect(config.experimentalServices).toBeUndefined();
       expect(config.experimentalServicesV2).toEqual({
         backend: expect.objectContaining({

@@ -63,11 +63,28 @@ export const metricsCommand = {
     },
     {
       name: 'limit',
-      shorthand: null,
+      shorthand: 'l',
       type: Number,
       deprecated: false,
       description: 'Max groups per time bucket (default: 10)',
       argument: 'N',
+    },
+    {
+      name: 'order-by',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Order grouped results by value or count (default: count)',
+      argument: 'value|count',
+    },
+    {
+      name: 'order',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Order direction for grouped results: asc or desc (default: desc)',
+      argument: 'asc|desc',
     },
     {
       name: 'filter',
@@ -78,8 +95,16 @@ export const metricsCommand = {
       argument: 'EXPR',
     },
     {
-      name: 'since',
+      name: 'prod',
       shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Limit query to production environment (equivalent to -f "environment eq \'production\'")',
+    },
+    {
+      name: 'since',
+      shorthand: 's',
       type: String,
       deprecated: false,
       description:
@@ -88,7 +113,7 @@ export const metricsCommand = {
     },
     {
       name: 'until',
-      shorthand: null,
+      shorthand: 'u',
       type: String,
       deprecated: false,
       description: 'End time (default: now)',
@@ -143,7 +168,11 @@ export const metricsCommand = {
     },
     {
       name: 'Core Web Vitals (LCP) by route',
-      value: `${packageName} metrics vercel.speed_insights_metric.lcp -a p75 --group-by route --since 7d`,
+      value: `${packageName} metrics vercel.speed_insights.lcp_ms -a p75 --prod --group-by route --since 7d`,
+    },
+    {
+      name: 'Routes with the lowest p75 LCP',
+      value: `${packageName} metrics vercel.speed_insights.lcp_ms -a p75 --prod --group-by route --since 7d --order-by value --order asc`,
     },
     {
       name: 'Daily pageviews with a Paris-aligned bucket',

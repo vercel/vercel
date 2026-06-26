@@ -398,6 +398,29 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
   }
 });
 
+it('should discontinue Node.js 20 on October 1, 2026', async () => {
+  const realDateNow = Date.now;
+  try {
+    global.Date.now = () => new Date('2026-09-30').getTime();
+
+    expect(await getSupportedNodeVersion('20.x', false)).toHaveProperty(
+      'major',
+      20
+    );
+    expect(warningMessages).toStrictEqual([
+      'Error: Node.js version 20.x is deprecated. Deployments created on or after 2026-10-01 will fail to build. Please set "engines": { "node": "24.x" } in your `package.json` file to use Node.js 24.',
+    ]);
+
+    global.Date.now = () => new Date('2026-10-01').getTime();
+
+    await expect(getSupportedNodeVersion('20.x', false)).rejects.toThrow(
+      'Node.js Version "20.x" is discontinued and must be upgraded.'
+    );
+  } finally {
+    global.Date.now = realDateNow;
+  }
+});
+
 it('should support initialHeaders and initialStatus correctly', async () => {
   new Prerender({
     expiration: 1,

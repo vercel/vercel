@@ -50,6 +50,7 @@
 /packages/frameworks/                    @vercel/ci-cd @vercel/vercel-cli-approvers
 /packages/error-utils/                   @vercel/ci-cd @vercel/vercel-cli-approvers
 /packages/detect-agent/                  @vercel/ci-cd @vercel/vercel-cli-approvers
+/skills/vercel-cli/                      @vercel/ci-cd @vercel/vercel-cli-approvers
 /packages/connect/                       @vercel/ci-cd @vercel/marketplace
 /packages/python*                        @vercel/ci-cd @vercel/team-python
 /python                                  @vercel/ci-cd @vercel/team-python
