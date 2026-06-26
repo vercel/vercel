@@ -1,13 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { join, sep } from 'path';
 
-const { mockExecFile, mockIsNative, mockNativeInstallMethod } = vi.hoisted(
-  () => ({
+const { mockExecFile, mockIsNative, mockShouldUseStandaloneUpgrade } =
+  vi.hoisted(() => ({
     mockExecFile: vi.fn(),
     mockIsNative: vi.fn(),
-    mockNativeInstallMethod: vi.fn(),
-  })
-);
+    mockShouldUseStandaloneUpgrade: vi.fn(),
+  }));
 
 vi.mock('child_process', () => {
   const customSym = Symbol.for('nodejs.util.promisify.custom');
@@ -26,7 +25,7 @@ vi.mock('@vercel/build-utils', () => ({ scanParentDirs: vi.fn() }));
 
 vi.mock('../../../src/util/native-install', () => ({
   isNativeBinaryInstall: () => mockIsNative(),
-  getNativeInstallMethod: () => mockNativeInstallMethod(),
+  shouldUseStandaloneUpgrade: () => mockShouldUseStandaloneUpgrade(),
 }));
 
 vi.mock('../../../src/util/pkg-name', () => ({ packageName: 'vercel' }));
@@ -43,7 +42,7 @@ describe('getUpdateCommandInfo install detection', () => {
     vi.clearAllMocks();
     realpathMock.mockImplementation(async (p: any) => String(p));
     mockIsNative.mockReturnValue(false);
-    mockNativeInstallMethod.mockReturnValue('npm');
+    mockShouldUseStandaloneUpgrade.mockReturnValue(false);
   });
 
   describe('global installed, local not', () => {

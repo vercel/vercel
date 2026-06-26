@@ -40,8 +40,8 @@ describe('getUpdateCommand', () => {
   it('should update the native package when running through vc-native', async () => {
     process.env.VERCEL_VC_NATIVE = '1';
     const methodSpy = vi
-      .spyOn(nativeInstall, 'getNativeInstallMethod')
-      .mockReturnValue('npm');
+      .spyOn(nativeInstall, 'shouldUseStandaloneUpgrade')
+      .mockReturnValue(false);
 
     const updateCommand = await getUpdateCommand();
 
@@ -54,8 +54,8 @@ describe('getUpdateCommand', () => {
     process.env.VERCEL_VC_NATIVE = '1';
     setPlatform('linux');
     const methodSpy = vi
-      .spyOn(nativeInstall, 'getNativeInstallMethod')
-      .mockReturnValue('standalone');
+      .spyOn(nativeInstall, 'shouldUseStandaloneUpgrade')
+      .mockReturnValue(true);
 
     const updateCommand = await getUpdateCommand();
 
@@ -67,8 +67,8 @@ describe('getUpdateCommand', () => {
     process.env.VERCEL_VC_NATIVE = '1';
     setPlatform('win32');
     const methodSpy = vi
-      .spyOn(nativeInstall, 'getNativeInstallMethod')
-      .mockReturnValue('standalone');
+      .spyOn(nativeInstall, 'shouldUseStandaloneUpgrade')
+      .mockReturnValue(false);
 
     const updateCommand = await getUpdateCommand();
 
@@ -107,6 +107,9 @@ describe('getUpdateCommand', () => {
 
     it('should suggest pnpm when the binary is installed via pnpm', async () => {
       process.env.VERCEL_VC_NATIVE = '1';
+      const standaloneSpy = vi
+        .spyOn(nativeInstall, 'shouldUseStandaloneUpgrade')
+        .mockReturnValue(false);
       setExecPath(
         '/home/user/.local/share/pnpm/global/5/node_modules/.pnpm/@vercel+vc-native-linux-x64@1.0.0/node_modules/@vercel/vc-native-linux-x64/bin/vercel'
       );
@@ -114,10 +117,14 @@ describe('getUpdateCommand', () => {
       expect(await getUpdateCommand()).toEqual(
         'pnpm i -g @vercel/vc-native@latest'
       );
+      standaloneSpy.mockRestore();
     });
 
     it('should suggest npm with --force otherwise', async () => {
       process.env.VERCEL_VC_NATIVE = '1';
+      const standaloneSpy = vi
+        .spyOn(nativeInstall, 'shouldUseStandaloneUpgrade')
+        .mockReturnValue(false);
       setExecPath(
         '/usr/local/lib/node_modules/@vercel/vc-native/bin/vercel.exe'
       );
@@ -125,10 +132,14 @@ describe('getUpdateCommand', () => {
       expect(await getUpdateCommand()).toEqual(
         'npm i -g @vercel/vc-native@latest --force'
       );
+      standaloneSpy.mockRestore();
     });
 
     it('should suggest yarn when the binary is installed via yarn', async () => {
       process.env.VERCEL_VC_NATIVE = '1';
+      const standaloneSpy = vi
+        .spyOn(nativeInstall, 'shouldUseStandaloneUpgrade')
+        .mockReturnValue(false);
       setExecPath(
         '/home/user/.config/yarn/global/node_modules/@vercel/vc-native/bin/vercel.exe'
       );
@@ -136,6 +147,7 @@ describe('getUpdateCommand', () => {
       expect(await getUpdateCommand()).toEqual(
         'yarn global add @vercel/vc-native@latest'
       );
+      standaloneSpy.mockRestore();
     });
   });
 });

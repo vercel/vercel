@@ -50,6 +50,10 @@ function request(url: string, redirects = 5): Promise<IncomingMessage> {
       }
       resolve(res);
     });
+    const deadline = setTimeout(() => {
+      req.destroy(new Error(`Request exceeded ${REQUEST_TOTAL_TIMEOUT}ms`));
+    }, REQUEST_TOTAL_TIMEOUT);
+    req.once('close', () => clearTimeout(deadline));
     req.on('timeout', () => {
       req.destroy(new Error(`Request timed out fetching ${url}`));
     });
@@ -59,11 +63,18 @@ function request(url: string, redirects = 5): Promise<IncomingMessage> {
 
 async function fetchText(url: string): Promise<string> {
   const res = await request(url);
+  const deadline = setTimeout(() => {
+    res.destroy(new Error(`Response exceeded ${REQUEST_TOTAL_TIMEOUT}ms`));
+  }, REQUEST_TOTAL_TIMEOUT);
   let body = '';
-  for await (const chunk of res) {
-    body += chunk;
+  try {
+    for await (const chunk of res) {
+      body += chunk;
+    }
+    return body;
+  } finally {
+    clearTimeout(deadline);
   }
-  return body;
 }
 
 async function downloadToFile(url: string, dest: string): Promise<void> {
@@ -132,29 +143,18 @@ export async function executeStandaloneUpgrade(
   try {
     await downloadToFile(`${base}/${target}`, tmpFile);
 
-    try {
-      const sums = await fetchText(`${base}/${target}.sha256`);
-      const expected = sums.trim().split(/\s+/)[0];
-      if (!/^[0-9a-f]{64}$/i.test(expected)) {
-        throw new Error(
-          `checksum invalid: ${target}.sha256 did not contain a sha256 digest`
-        );
-      }
-      const actual = await fileChecksum(tmpFile);
-      if (expected.toLowerCase() !== actual.toLowerCase()) {
-        throw new Error(
-          `checksum mismatch (expected ${expected}, got ${actual})`
-        );
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      if (
-        message.includes('checksum mismatch') ||
-        message.includes('checksum invalid')
-      ) {
-        throw err;
-      }
-      output.warn(`Skipping checksum verification: ${message}`);
+    const sums = await fetchText(`${base}/${target}.sha256`);
+    const expected = sums.trim().split(/\s+/)[0];
+    if (!/^[0-9a-f]{64}$/i.test(expected)) {
+      throw new Error(
+        `checksum invalid: ${target}.sha256 did not contain a sha256 digest`
+      );
+    }
+    const actual = await fileChecksum(tmpFile);
+    if (expected.toLowerCase() !== actual.toLowerCase()) {
+      throw new Error(
+        `checksum mismatch (expected ${expected}, got ${actual})`
+      );
     }
 
     chmodSync(tmpFile, 0o755);

@@ -32,6 +32,47 @@ describe('getNativeInstallMethod', () => {
     expect(getNativeInstallMethod()).toBe('npm');
   });
 
+  it('detects npm fallback installs through a platform package', () => {
+    const npmPath = [
+      '',
+      'usr',
+      'local',
+      'lib',
+      'node_modules',
+      '@vercel',
+      'vc-native-linux-x64',
+      'bin',
+      'vercel',
+    ].join(sep);
+    realpathMock.mockReturnValue(npmPath);
+
+    expect(getNativeInstallMethod()).toBe('npm');
+  });
+
+  it('detects pnpm fallback installs through a platform package', () => {
+    const pnpmPath = [
+      '',
+      'home',
+      'user',
+      '.local',
+      'share',
+      'pnpm',
+      'global',
+      '5',
+      'node_modules',
+      '.pnpm',
+      '@vercel+vc-native-linux-x64@1.0.0',
+      'node_modules',
+      '@vercel',
+      'vc-native-linux-x64',
+      'bin',
+      'vercel',
+    ].join(sep);
+    realpathMock.mockReturnValue(pnpmPath);
+
+    expect(getNativeInstallMethod()).toBe('npm');
+  });
+
   it('treats other locations as standalone', () => {
     const standalonePath = [
       '',

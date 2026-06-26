@@ -11,7 +11,13 @@ export type NativeInstallMethod = 'npm' | 'standalone';
 export function getNativeInstallMethod(): NativeInstallMethod {
   try {
     const real = realpathSync(process.execPath);
-    if (real.includes(`node_modules${sep}@vercel${sep}vc-native`)) {
+    const segments = real.split(sep);
+    const scopeIndex = segments.lastIndexOf('@vercel');
+    const packageName = segments[scopeIndex + 1];
+    if (
+      scopeIndex !== -1 &&
+      (packageName === 'vc-native' || packageName?.startsWith('vc-native-'))
+    ) {
       return 'npm';
     }
     return 'standalone';

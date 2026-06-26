@@ -2,7 +2,6 @@ import assert from 'assert';
 import fs from 'fs-extra';
 import { isIP } from 'net';
 import { join } from 'path';
-import nodeFetch from 'node-fetch';
 import { exec, fixture, sleep, testFixture, testFixtureStdio } from './utils';
 
 test('[vercel dev] validate redirects', async () => {
@@ -210,7 +209,7 @@ test(
     }
 
     const requestDev = async (path: string) => {
-      const response = await nodeFetch(`http://localhost:${port}${path}`);
+      const response = await fetch(`http://localhost:${port}${path}`);
       expect(response.status).toBe(200);
       return (await response.json()) as NodeStandaloneResponse;
     };

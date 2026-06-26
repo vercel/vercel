@@ -65,7 +65,7 @@ function mockLatestVersion(version: string) {
 describe('executeUpgrade', () => {
   const spies: Array<{ mockRestore: () => void }> = [];
   const originalPlatform = process.platform;
-  let isNativeSpy: MockInstance<() => boolean>;
+  let standaloneInstallSpy: MockInstance<() => boolean>;
   let standaloneSpy: MockInstance<(version?: string) => Promise<number>>;
 
   function setPlatform(platform: NodeJS.Platform) {
@@ -77,13 +77,13 @@ describe('executeUpgrade', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    isNativeSpy = vi
-      .spyOn(nativeInstall, 'isNativeBinaryInstall')
+    standaloneInstallSpy = vi
+      .spyOn(nativeInstall, 'shouldUseStandaloneUpgrade')
       .mockReturnValue(false);
     standaloneSpy = vi
       .spyOn(nativeUpgrade, 'executeStandaloneUpgrade')
       .mockResolvedValue(0);
-    spies.push(isNativeSpy, standaloneSpy);
+    spies.push(standaloneInstallSpy, standaloneSpy);
     // Default: the latest-version lookup fails, so the installer still runs
     // and the generic success message is used.
     execFileMock.mockImplementation(((
@@ -498,12 +498,7 @@ describe('executeUpgrade', () => {
 
   it('should use the in-process updater for standalone native installs on unix', async () => {
     setPlatform('linux');
-    isNativeSpy.mockReturnValue(true);
-    spies.push(
-      vi
-        .spyOn(nativeInstall, 'getNativeInstallMethod')
-        .mockReturnValue('standalone')
-    );
+    standaloneInstallSpy.mockReturnValue(true);
 
     const exitCode = await executeUpgrade();
 
@@ -513,10 +508,7 @@ describe('executeUpgrade', () => {
   });
 
   it('should use the package manager for npm native installs', async () => {
-    isNativeSpy.mockReturnValue(true);
-    spies.push(
-      vi.spyOn(nativeInstall, 'getNativeInstallMethod').mockReturnValue('npm')
-    );
+    standaloneInstallSpy.mockReturnValue(false);
     const mockProcess = createMockProcess();
     spawnMock.mockReturnValue(mockProcess as any);
 

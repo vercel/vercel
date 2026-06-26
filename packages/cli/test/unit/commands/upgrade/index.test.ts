@@ -73,8 +73,8 @@ describe('upgrade', () => {
     it('prints native upgrade command for npm vc-native installs', async () => {
       process.env.VERCEL_VC_NATIVE = '1';
       const methodSpy = vi
-        .spyOn(nativeInstall, 'getNativeInstallMethod')
-        .mockReturnValue('npm');
+        .spyOn(nativeInstall, 'shouldUseStandaloneUpgrade')
+        .mockReturnValue(false);
       client.setArgv('upgrade', '--dry-run');
 
       const exitCode = await upgrade(client);
@@ -91,8 +91,8 @@ describe('upgrade', () => {
       process.env.VERCEL_VC_NATIVE = '1';
       setPlatform('linux');
       const methodSpy = vi
-        .spyOn(nativeInstall, 'getNativeInstallMethod')
-        .mockReturnValue('standalone');
+        .spyOn(nativeInstall, 'shouldUseStandaloneUpgrade')
+        .mockReturnValue(true);
       client.setArgv('upgrade', '--dry-run');
 
       const exitCode = await upgrade(client);
@@ -137,8 +137,8 @@ describe('upgrade', () => {
     it('outputs native upgrade command for npm vc-native installs', async () => {
       process.env.VERCEL_VC_NATIVE = '1';
       const methodSpy = vi
-        .spyOn(nativeInstall, 'getNativeInstallMethod')
-        .mockReturnValue('npm');
+        .spyOn(nativeInstall, 'shouldUseStandaloneUpgrade')
+        .mockReturnValue(false);
       client.setArgv('upgrade', '--json');
 
       const exitCode = await upgrade(client);
@@ -154,8 +154,8 @@ describe('upgrade', () => {
       process.env.VERCEL_VC_NATIVE = '1';
       setPlatform('linux');
       const methodSpy = vi
-        .spyOn(nativeInstall, 'getNativeInstallMethod')
-        .mockReturnValue('standalone');
+        .spyOn(nativeInstall, 'shouldUseStandaloneUpgrade')
+        .mockReturnValue(true);
       client.setArgv('upgrade', '--json');
 
       const exitCode = await upgrade(client);
