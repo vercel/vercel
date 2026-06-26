@@ -1,6 +1,7 @@
 ---
 '@vercel/fs-detectors': patch
 '@vercel/container': patch
+'@vercel/frameworks': patch
 ---
 
 [services] Refine container detection for `services` / `experimentalServicesV2`.
@@ -19,3 +20,6 @@
   entrypoint handed over by services is built with `-f <path>` instead of
   being ignored in favor of a default `Dockerfile` or treated as a prebuilt
   image reference.
+- The `container` framework preset is no longer experimental: a project with a
+  `Dockerfile.vercel` / `Containerfile.vercel` marker is detected as a
+  container without `VERCEL_USE_EXPERIMENTAL_FRAMEWORKS`.
