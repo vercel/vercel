@@ -1556,6 +1556,133 @@ describe('getTransformedRoutes', () => {
     assertValid(actual.routes);
   });
 
+  test('should compile high-level route sources and request.path transforms when requested', () => {
+    const actual = getTransformedRoutes(
+      {
+        routes: [
+          {
+            source: '/api/:path*',
+            transforms: [
+              {
+                type: 'request.path',
+                op: 'set',
+                args: '/:path*',
+              },
+            ],
+          },
+        ],
+      },
+      { routeSourceSyntax: 'path-to-regexp' }
+    );
+
+    assert.deepStrictEqual(actual, {
+      routes: [
+        {
+          src: '^/api(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?$',
+          transforms: [
+            {
+              type: 'request.path',
+              op: 'set',
+              args: '/$1',
+            },
+          ],
+        },
+      ],
+      error: null,
+    });
+  });
+
+  test('should preserve low-level src routes when compiling route sources', () => {
+    const actual = getTransformedRoutes(
+      {
+        routes: [
+          {
+            src: '^/api(?:/(.*))?$',
+            transforms: [
+              {
+                type: 'request.path',
+                op: 'set',
+                args: '/$1',
+              },
+            ],
+          },
+        ],
+      },
+      { routeSourceSyntax: 'path-to-regexp' }
+    );
+
+    assert.deepStrictEqual(actual.routes, [
+      {
+        src: '^/api(?:/(.*))?$',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$1',
+          },
+        ],
+      },
+    ]);
+    assert.equal(actual.error, null);
+  });
+
+  test('should preserve caret-prefixed source routes as low-level regex', () => {
+    const actual = getTransformedRoutes(
+      {
+        routes: [
+          {
+            source: '^/api(?:/(.*))?$',
+            transforms: [
+              {
+                type: 'request.path',
+                op: 'set',
+                args: '/$1',
+              },
+            ],
+          },
+        ],
+      },
+      { routeSourceSyntax: 'path-to-regexp' }
+    );
+
+    assert.deepStrictEqual(actual.routes, [
+      {
+        src: '^/api(?:/(.*))?$',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$1',
+          },
+        ],
+      },
+    ]);
+    assert.equal(actual.error, null);
+  });
+
+  test('should reject unknown parameters in a compiled route transform', () => {
+    const { error } = getTransformedRoutes(
+      {
+        routes: [
+          {
+            source: '/api/:path*',
+            transforms: [
+              {
+                type: 'request.path',
+                op: 'set',
+                args: '/:unknown*',
+              },
+            ],
+          },
+        ],
+      },
+      { routeSourceSyntax: 'path-to-regexp' }
+    );
+
+    assert.equal(error?.code, 'invalid_route');
+    assert.match(error?.message || '', /request\.path/);
+  });
+
   test('should not error when routes is null and cleanUrls is true', () => {
     const vercelConfig = { cleanUrls: true, routes: null };
     // @ts-expect-error intentionally passing invalid `routes: null` here

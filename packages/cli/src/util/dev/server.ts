@@ -1508,14 +1508,17 @@ export default class DevServer {
       for (const service of this.services || []) {
         if (!isExperimentalServiceV2(service)) continue;
 
-        const { routes, error } = getTransformedRoutes({
-          routes: service.routes,
-          rewrites: service.rewrites,
-          redirects: service.redirects,
-          headers: service.headers,
-          cleanUrls: service.cleanUrls,
-          trailingSlash: service.trailingSlash,
-        });
+        const { routes, error } = getTransformedRoutes(
+          {
+            routes: service.routes,
+            rewrites: service.rewrites,
+            redirects: service.redirects,
+            headers: service.headers,
+            cleanUrls: service.cleanUrls,
+            trailingSlash: service.trailingSlash,
+          },
+          { routeSourceSyntax: 'path-to-regexp' }
+        );
         if (error) {
           output.warn(
             `Invalid routes for service "${service.name}": ${error.message}`

@@ -166,6 +166,16 @@ export interface GetRoutesProps {
   trailingSlash?: boolean;
 }
 
+export interface GetTransformedRoutesOptions {
+  /**
+   * Controls how `routes[].source` is interpreted. `regex` preserves the
+   * historical alias behavior, while `path-to-regexp` compiles high-level
+   * parameters such as `:path*`. `routes[].src` and caret-prefixed `source`
+   * values are always treated as low-level regular expressions.
+   */
+  routeSourceSyntax?: 'regex' | 'path-to-regexp';
+}
+
 export interface MergeRoutesProps {
   userRoutes?: Route[] | null | undefined;
   builds: Build[];

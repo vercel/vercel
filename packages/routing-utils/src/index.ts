@@ -6,11 +6,13 @@ import {
   convertHeaders,
   convertRedirects,
   convertRewrites,
+  convertRouteSources,
   convertTrailingSlash,
   sourceToRegex,
 } from './superstatic';
 import {
   GetRoutesProps,
+  GetTransformedRoutesOptions,
   HasField,
   NormalizedRoutes,
   Redirect,
@@ -239,7 +241,7 @@ function checkRegexSyntax(
 }
 
 function checkPatternSyntax(
-  type: ErrorMessageType,
+  type: ErrorMessageType | 'Route',
   index: number,
   {
     source,
@@ -356,7 +358,8 @@ function notEmpty<T>(value: T | null | undefined): value is T {
 }
 
 export function getTransformedRoutes(
-  vercelConfig: GetRoutesProps
+  vercelConfig: GetRoutesProps,
+  options: GetTransformedRoutesOptions = {}
 ): NormalizedRoutes {
   const { cleanUrls, rewrites, redirects, headers, trailingSlash } =
     vercelConfig;
@@ -386,7 +389,57 @@ export function getTransformedRoutes(
   }
 
   if (userRoutes) {
-    const normalized = normalizeRoutes(userRoutes);
+    let routesToNormalize = userRoutes;
+
+    if (options.routeSourceSyntax === 'path-to-regexp') {
+      const patternError = userRoutes
+        .map((route, index) => {
+          if (
+            'handle' in route ||
+            route.source === undefined ||
+            route.source.startsWith('^') ||
+            route.src !== undefined
+          ) {
+            return null;
+          }
+
+          return checkPatternSyntax('Route', index, {
+            source: route.source,
+            destination: route.destination ?? route.dest,
+            has: route.has,
+            transforms: route.transforms,
+          });
+        })
+        .find(notEmpty);
+
+      if (patternError) {
+        return {
+          routes,
+          error: createError(
+            'invalid_route',
+            patternError.message,
+            patternError.link,
+            'Learn More'
+          ),
+        };
+      }
+
+      try {
+        routesToNormalize = convertRouteSources(userRoutes);
+      } catch (error) {
+        return {
+          routes,
+          error: createError(
+            'invalid_route',
+            `Failed to compile route source: ${error instanceof Error ? error.message : String(error)}`,
+            'https://vercel.link/invalid-route-source-pattern',
+            'Learn More'
+          ),
+        };
+      }
+    }
+
+    const normalized = normalizeRoutes(routesToNormalize);
     if (normalized.error) {
       return { routes, error: normalized.error };
     }

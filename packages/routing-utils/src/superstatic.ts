@@ -5,6 +5,7 @@
 import { parse as parseUrl, format as formatUrl } from 'url';
 import {
   Route,
+  RouteInput,
   RouteWithSrc,
   Redirect,
   Rewrite,
@@ -241,6 +242,65 @@ export function convertRewrites(
     } catch (_e) {
       throw new Error(`Failed to parse rewrite: ${JSON.stringify(r)}`);
     }
+  });
+}
+
+/**
+ * Converts high-level `source` patterns on routes into the low-level `src`
+ * regular expressions consumed by the proxy. Routes authored with `src` are
+ * already low-level and are intentionally left untouched. Caret-prefixed
+ * `source` values retain their historical low-level regex behavior.
+ */
+export function convertRouteSources(routes: RouteInput[]): RouteInput[] {
+  return routes.map(inputRoute => {
+    if (
+      'handle' in inputRoute ||
+      inputRoute.source === undefined ||
+      inputRoute.source.startsWith('^') ||
+      inputRoute.src !== undefined
+    ) {
+      return inputRoute;
+    }
+
+    const { src, segments } = sourceToRegex(inputRoute.source);
+    const hasSegments = collectHasSegments(inputRoute.has);
+    const interpolate = (value: string): string =>
+      replaceSegments(segments, hasSegments, value, false);
+    const route: RouteWithSrc = { ...inputRoute, src };
+    delete route.source;
+
+    if (typeof route.dest === 'string') {
+      route.dest = interpolate(route.dest);
+    }
+
+    if (typeof route.destination === 'string') {
+      route.destination = interpolate(route.destination);
+    } else if (route.destination) {
+      route.destination = { ...route.destination };
+      if (typeof route.destination.path === 'string') {
+        route.destination.path = interpolate(route.destination.path);
+      }
+    }
+
+    if (route.transforms) {
+      route.transforms = route.transforms.map(transform => {
+        if (transform.type !== 'request.path') {
+          return { ...transform };
+        }
+
+        return {
+          ...transform,
+          args: compilePathToRegexpTemplateFromSegments(
+            transform.args,
+            segments,
+            hasSegments,
+            transform.env
+          ),
+        };
+      });
+    }
+
+    return route;
   });
 }
 

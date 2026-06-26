@@ -8,7 +8,7 @@ import type { ContainerImage } from './container-image';
 import type { Span } from './trace';
 import type {
   HasField,
-  Route,
+  RouteInput,
   Rewrite,
   Redirect,
   Header,
@@ -673,7 +673,7 @@ export interface ExperimentalServiceV2 {
   headers?: Header[];
   redirects?: Redirect[];
   rewrites?: Rewrite[];
-  routes?: Route[];
+  routes?: RouteInput[];
   cleanUrls?: boolean;
   trailingSlash?: boolean;
 }
@@ -1088,11 +1088,14 @@ export interface ServiceConfig {
   /** Function configuration scoped to this service root. */
   functions?: BuilderFunctions;
 
-  /* Service's route table. Applied only after top-level routing. */
+  /**
+   * Service's route table. Applied only after top-level routing. `source`
+   * accepts path-to-regexp syntax; use `src` for a low-level regular expression.
+   */
   headers?: Header[];
   redirects?: Redirect[];
   rewrites?: Rewrite[];
-  routes?: Route[];
+  routes?: RouteInput[];
   cleanUrls?: boolean;
   trailingSlash?: boolean;
 }
