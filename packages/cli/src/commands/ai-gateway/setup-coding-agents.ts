@@ -106,6 +106,15 @@ export default async function setupCodingAgents(
     );
   }
 
+  // Announce a dry run up front so the prompts that follow (agent selection,
+  // team) are understood as a preview — nothing is created or written. Machine
+  // mode conveys this in its JSON payload instead.
+  if (dryRun && !machine) {
+    output.log(
+      `${chalk.bold('Dry run')} — previewing changes only. No files will be written and no API key will be created.`
+    );
+  }
+
   // 1. Resolve which agents to configure.
   const selection = await resolveAgents({
     client,
@@ -132,9 +141,16 @@ export default async function setupCodingAgents(
 
   // 2. Decide the key source. Defer creation until after confirmation so we
   //    never mint an orphan key; preview diffs with a masked placeholder.
+  //    Resolve the team up front (including dry runs) so the previewed flow
+  //    matches a real apply — but only prompt when we actually can. A
+  //    non-interactive dry run is a pure preview and must not require a scope.
   const willCreate = !providedKey;
-  if (willCreate && !dryRun) {
-    const teamError = await ensureTeam(client, machine, canPrompt);
+  if (willCreate && (!dryRun || canPrompt)) {
+    const teamError = await ensureTeam(client, {
+      machine,
+      canPrompt,
+      yes: Boolean(yes),
+    });
     if (teamError) {
       return teamError;
     }

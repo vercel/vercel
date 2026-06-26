@@ -274,6 +274,100 @@ describe('ai-gateway setup-coding-agents', () => {
       expect(out.reason).toBe('dry_run');
       expect(out.changes[0].action).toBe('would_create');
     });
+
+    it('prompts for a team when a key would be created', async () => {
+      useUser();
+      useTeam();
+      client.setArgv(
+        'ai-gateway',
+        'setup-coding-agents',
+        '--dry-run',
+        '--agent',
+        'claude-code'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      // The dry-run notice comes up front, before any prompts.
+      await expect(client.stderr).toOutput('previewing changes only');
+      await expect(client.stderr).toOutput(
+        'API key to use with your coding agents'
+      );
+      client.stdin.write('\r');
+
+      await expect(client.stderr).toOutput('Dry run');
+      expect(await exitCodePromise).toBe(0);
+      // Still a preview: nothing is written and no key is minted.
+      expect(existsSync(claudeSettingsPath())).toBe(false);
+    });
+
+    it('prompts even when a team is already selected', async () => {
+      const team = useTeam();
+      useUser();
+      // A scope is already pinned, but key ownership is still an explicit choice.
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'setup-coding-agents',
+        '--dry-run',
+        '--agent',
+        'claude-code'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput(
+        'API key to use with your coding agents'
+      );
+      client.stdin.write('\r');
+
+      await expect(client.stderr).toOutput('Dry run');
+      expect(await exitCodePromise).toBe(0);
+      expect(existsSync(claudeSettingsPath())).toBe(false);
+    });
+
+    it('does not require a scope in non-interactive mode', async () => {
+      useUser();
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'setup-coding-agents',
+        '--dry-run',
+        '--agent',
+        'claude-code'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+      expect(existsSync(claudeSettingsPath())).toBe(false);
+
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.reason).toBe('dry_run');
+    });
+  });
+
+  describe('team selection', () => {
+    it('skips the prompt with --yes and uses the current scope', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'setup-coding-agents',
+        '--yes',
+        '--agent',
+        'claude-code'
+      );
+
+      // No prompt is awaited: --yes accepts the current scope and the run
+      // completes without any interactive input.
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
+      expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe(CREATED_KEY);
+    });
   });
 
   describe('idempotency', () => {

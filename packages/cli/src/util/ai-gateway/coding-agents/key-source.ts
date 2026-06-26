@@ -12,43 +12,67 @@ export interface KeySource {
   created: boolean;
 }
 
+/** Whether the user pinned a scope explicitly via `--scope`/`--team`. */
+function hasExplicitScopeFlag(argv: string[]): boolean {
+  const args = argv.slice(2);
+  return args.some(
+    a =>
+      a === '--scope' ||
+      a === '-S' ||
+      a === '--team' ||
+      a === '-T' ||
+      a.startsWith('--scope=') ||
+      a.startsWith('--team=')
+  );
+}
+
 /**
- * Ensures a team is selected before key creation, prompting interactively or
- * returning an exit code when running non-interactively without a scope.
+ * Resolves which team owns the new key. Key ownership is a deliberate choice, so
+ * when we can prompt we always ask — even if a `currentTeam` is already set —
+ * defaulting the highlighted option to that team. The prompt is skipped when the
+ * user pinned a scope (`--scope`/`--team`) or opted into defaults (`--yes`), and
+ * non-interactive runs fall back to the resolved scope or error without one.
  */
 export async function ensureTeam(
   client: Client,
-  machine: boolean,
-  canPrompt: boolean
+  opts: { machine: boolean; canPrompt: boolean; yes: boolean }
 ): Promise<number | undefined> {
-  if (client.config.currentTeam) {
+  const { machine, canPrompt, yes } = opts;
+
+  if (canPrompt && !yes && !hasExplicitScopeFlag(client.argv)) {
+    const org = await selectOrg(
+      client,
+      "We'll create an API key to use with your coding agents. What team should it be under?"
+    );
+    // Picking the personal account clears any team scope so the key is created
+    // on the user's account rather than the previously selected team.
+    client.config.currentTeam = org.type === 'team' ? org.id : undefined;
     return undefined;
   }
-  if (!canPrompt) {
-    const message =
-      'No team selected. Pass --scope <team-slug> or run `vercel switch` first.';
-    if (machine) {
-      outputAgentError(client, {
-        status: AGENT_STATUS.ERROR,
-        reason: AGENT_REASON.MISSING_SCOPE,
-        message,
-        next: [
-          {
-            command: getCommandName(
-              'ai-gateway setup-coding-agents --scope <team-slug>'
-            ),
-          },
-        ],
-      });
-    }
-    output.error(message);
-    return 1;
+
+  // Non-interactive, an explicit scope, or `--yes`: use the resolved scope.
+  if (hasExplicitScopeFlag(client.argv) || client.config.currentTeam) {
+    return undefined;
   }
-  const org = await selectOrg(client, 'Which team should own this API key?');
-  if (org.type === 'team') {
-    client.config.currentTeam = org.id;
+
+  const message =
+    'No team selected. Pass --scope <team-slug> or run `vercel switch` first.';
+  if (machine) {
+    outputAgentError(client, {
+      status: AGENT_STATUS.ERROR,
+      reason: AGENT_REASON.MISSING_SCOPE,
+      message,
+      next: [
+        {
+          command: getCommandName(
+            'ai-gateway setup-coding-agents --scope <team-slug>'
+          ),
+        },
+      ],
+    });
   }
-  return undefined;
+  output.error(message);
+  return 1;
 }
 
 export async function createKey(
