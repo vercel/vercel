@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHash } from 'crypto';
+import { dirname, join } from 'path';
 import { Readable, Writable } from 'stream';
 import output from '../../../src/output-manager';
 import { fetchLatestVersion } from '../../../src/util/get-latest-version';
@@ -56,11 +57,16 @@ vi.mock('../../../src/util/native-install', () => ({
 
 const fetchLatestVersionMock = vi.mocked(fetchLatestVersion);
 const outputMock = vi.mocked(output);
+const targetPath = join('/tmp', 'vercel');
+const temporaryPath = join(
+  dirname(targetPath),
+  `.vercel-upgrade-${process.pid}.tmp`
+);
 
 describe('executeStandaloneUpgrade', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.realpathSync.mockReturnValue('/tmp/vercel');
+    mocks.realpathSync.mockReturnValue(targetPath);
     mocks.createWriteStream.mockReturnValue(
       new Writable({
         write(_chunk, _encoding, callback) {
@@ -116,14 +122,8 @@ describe('executeStandaloneUpgrade', () => {
     expect(mocks.fetch).toHaveBeenNthCalledWith(2, `${base}.sha256`, {
       signal: expect.any(AbortSignal),
     });
-    expect(mocks.chmodSync).toHaveBeenCalledWith(
-      `/tmp/.vercel-upgrade-${process.pid}.tmp`,
-      0o755
-    );
-    expect(mocks.rename).toHaveBeenCalledWith(
-      `/tmp/.vercel-upgrade-${process.pid}.tmp`,
-      '/tmp/vercel'
-    );
+    expect(mocks.chmodSync).toHaveBeenCalledWith(temporaryPath, 0o755);
+    expect(mocks.rename).toHaveBeenCalledWith(temporaryPath, targetPath);
     expect(outputMock.success).toHaveBeenCalledWith(
       'Vercel CLI has been upgraded to 999.0.0!'
     );
@@ -136,10 +136,7 @@ describe('executeStandaloneUpgrade', () => {
 
     await expect(executeStandaloneUpgrade('999.0.0')).resolves.toBe(1);
 
-    expect(mocks.rmSync).toHaveBeenCalledWith(
-      `/tmp/.vercel-upgrade-${process.pid}.tmp`,
-      { force: true }
-    );
+    expect(mocks.rmSync).toHaveBeenCalledWith(temporaryPath, { force: true });
     expect(outputMock.error).toHaveBeenCalledWith(
       expect.stringContaining('Request failed (404)')
     );
