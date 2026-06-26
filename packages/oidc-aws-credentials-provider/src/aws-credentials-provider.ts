@@ -27,7 +27,7 @@ import { getVercelOidcToken } from '@vercel/oidc';
  * because they only take effect while exchanging the token for a custom
  * audience — without an `audience` there is no exchange.
  */
-type VercelOidcExchangeInit =
+export type VercelOidcExchangeInit =
   | {
       /**
        * Audience to set on the exchanged token.
