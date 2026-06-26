@@ -229,12 +229,121 @@ export const rulesSubcommand = {
   examples: [],
 } as const;
 
+export const setupCodingAgentsSubcommand = {
+  name: 'setup-coding-agents',
+  aliases: ['setup'],
+  description:
+    'Configure local coding agents (Claude Code, Codex, OpenCode, Pi) to route through the AI Gateway',
+  arguments: [],
+  options: [
+    {
+      name: 'agent',
+      shorthand: null,
+      type: [String],
+      argument: 'NAME',
+      deprecated: false,
+      description:
+        'Coding agent to configure, repeatable (claude-code, codex, opencode, pi)',
+    },
+    {
+      name: 'all',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Configure every supported coding agent',
+    },
+    {
+      name: 'key',
+      shorthand: null,
+      type: String,
+      argument: 'KEY',
+      deprecated: false,
+      description: 'Use an existing AI Gateway API key instead of creating one',
+    },
+    {
+      name: 'budget',
+      shorthand: null,
+      type: Number,
+      argument: 'AMOUNT',
+      deprecated: false,
+      description:
+        'Quota budget in dollars for a newly created key (minimum 1)',
+    },
+    {
+      name: 'refresh-period',
+      shorthand: null,
+      type: String,
+      argument: 'PERIOD',
+      deprecated: false,
+      description:
+        'Quota refresh cadence for a new key: daily, weekly, monthly, or none',
+    },
+    {
+      name: 'include-byok',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Include BYOK usage in the new key quota',
+    },
+    {
+      name: 'name',
+      shorthand: null,
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+      description: 'Name for a newly created API key',
+    },
+    {
+      name: 'model',
+      shorthand: null,
+      type: String,
+      argument: 'MODEL',
+      deprecated: false,
+      description:
+        'Default model slug to write (e.g. anthropic/claude-sonnet-4.5)',
+    },
+    {
+      name: 'dry-run',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Show what would change without writing any files',
+    },
+    {
+      name: 'no-backup',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Do not write .bak backups of changed files',
+    },
+    yesOption,
+  ],
+  examples: [
+    {
+      name: 'Configure all detected coding agents (creates a key)',
+      value: `${packageName} ai-gateway setup-coding-agents`,
+    },
+    {
+      name: 'Configure specific agents with a budgeted key',
+      value: `${packageName} ai-gateway setup-coding-agents --agent claude-code --agent codex --budget 500 --refresh-period monthly`,
+    },
+    {
+      name: 'Reuse an existing key and preview changes only',
+      value: `${packageName} ai-gateway setup-coding-agents --key <key> --dry-run`,
+    },
+  ],
+} as const;
+
 export const aiGatewayCommand = {
   name: 'ai-gateway',
   aliases: [],
   description: 'Manage AI Gateway resources',
   arguments: [],
-  subcommands: [apiKeysSubcommand, rulesSubcommand],
+  subcommands: [
+    apiKeysSubcommand,
+    rulesSubcommand,
+    setupCodingAgentsSubcommand,
+  ],
   options: [],
   examples: [],
 } as const;
