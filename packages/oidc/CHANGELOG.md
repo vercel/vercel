@@ -1,5 +1,11 @@
 # @vercel/oidc
 
+## 3.7.1
+
+### Patch Changes
+
+- fb93ff6: Deprecate `getVercelOidcTokenSync` in favor of `getVercelOidcToken`
+
 ## 3.7.0
 
 ### Minor Changes

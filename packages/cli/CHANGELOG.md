@@ -1,5 +1,36 @@
 # vercel
 
+## 54.18.0
+
+### Minor Changes
+
+- 4f8b5b1: - Migrate service auto-detection to V2 format.
+  - Layout auto-detect now resolves via the V2 resolver and generates top-level service-targeted rewrites and per-service path transform routes.
+  - CLI build and dev server merge auto-detected rewrites into the route table.
+
+### Patch Changes
+
+- 50276e7: Show the `flags` command in the top-level CLI help output.
+- 6881d74: Use Node.js native fetch for the CLI API client, removing legacy URL parser deprecation warnings from standalone binaries while preserving proxy routing and local middleware behavior.
+- 6514009: Fix CLI update notification showing a stale or incorrect version number. The update prompt now performs a fresh registry lookup before displaying the target version, and the upgrade success message reports the actually installed version instead of the prompted version.
+- 69f15ee: `vercel flags ls` now uses the v2 flag list endpoint and supports filtering by `--tag`, `--created-by`, and `--maintainer-id`, plus cursor pagination via `--limit` (page size) and `--next` (resume cursor).
+- c1641e4: Update integration error and warning hints to suggest the canonical `vercel integration resource` form instead of the legacy `vercel integration-resource` alias
+- ee389a1: Support WebSockets for WSGI apps (e.g. Flask via `flask-sock`). The runtime now
+  exposes the raw connection socket in the WSGI `environ` as `werkzeug.socket` /
+  `gunicorn.socket` for WebSocket upgrade requests, and ends the request lifecycle
+  once the `101` handshake is written so the platform can begin bidirectional
+  streaming — matching the ASGI `websocket.accept` behavior.
+- 62a884e: Simplify isolated `services` and `experimentalServicesV2` runtime outputs by emitting their function at `index` instead of `_svc/<service-name>/index`.
+- Updated dependencies [66be3e0]
+- Updated dependencies [62a884e]
+  - @vercel/container@0.0.3
+  - @vercel/backends@0.8.19
+  - @vercel/go@3.10.2
+  - @vercel/python@6.47.3
+  - @vercel/static-build@2.11.3
+  - @vercel/express@0.1.110
+  - @vercel/node@5.8.21
+
 ## 54.17.3
 
 ### Patch Changes
