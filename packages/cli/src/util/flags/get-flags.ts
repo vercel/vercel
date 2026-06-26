@@ -13,7 +13,11 @@ export interface GetFlagsOptions {
    * flags are fetched by following pagination cursors.
    */
   limit?: number;
-  /** Resume from a `next` cursor returned by a previous call. */
+  /**
+   * Resume from a `next` cursor returned by a previous call. Unlike the repo's
+   * usual timestamp-based `--next`, the v2 endpoint is cursor-based, so we
+   * follow `pagination.next` cursors here instead of using `fetchPaginated`.
+   */
   cursor?: string;
 }
 

@@ -183,6 +183,24 @@ describe('flags ls', () => {
       );
     });
 
+    it('quotes filter values that contain shell metacharacters in the next-page command', async () => {
+      for (let i = 0; i < 3; i++) {
+        flagsList.push({
+          ...JSON.parse(JSON.stringify(flagsList[0])),
+          id: `flag_tagged_${i}`,
+          slug: `tagged-flag-${i}`,
+          tags: ['needs review'],
+        });
+      }
+
+      client.setArgv('flags', 'ls', '--tag', 'needs review', '--limit', '1');
+      const exitCode = await flags(client);
+      expect(exitCode).toEqual(0);
+      await expect(client.stderr).toOutput(
+        "flags ls --limit 1 --tag 'needs review' --next 1"
+      );
+    });
+
     it('rejects a --limit below 1', async () => {
       client.setArgv('flags', 'ls', '--limit', '0');
       const exitCode = await flags(client);

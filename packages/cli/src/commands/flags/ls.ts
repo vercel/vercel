@@ -45,6 +45,14 @@ export default async function ls(
   const next = flags['--next'] as string | undefined;
   const json = flags['--json'] as boolean | undefined;
 
+  telemetryClient.trackCliOptionState(state);
+  telemetryClient.trackCliOptionTag(tags);
+  telemetryClient.trackCliOptionCreatedBy(createdBy);
+  telemetryClient.trackCliOptionMaintainerId(maintainerIds);
+  telemetryClient.trackCliOptionLimit(limit);
+  telemetryClient.trackCliOptionNext(next);
+  telemetryClient.trackCliFlagJson(json);
+
   if (
     limit !== undefined &&
     (!Number.isInteger(limit) || limit < 1 || limit > MAX_FLAGS_PAGE_LIMIT)
@@ -54,14 +62,6 @@ export default async function ls(
     );
     return 1;
   }
-
-  telemetryClient.trackCliOptionState(state);
-  telemetryClient.trackCliOptionTag(tags);
-  telemetryClient.trackCliOptionCreatedBy(createdBy);
-  telemetryClient.trackCliOptionMaintainerId(maintainerIds);
-  telemetryClient.trackCliOptionLimit(limit);
-  telemetryClient.trackCliOptionNext(next);
-  telemetryClient.trackCliFlagJson(json);
 
   const link = await getLinkedProject(client);
   if (link.status === 'error') {
@@ -97,11 +97,8 @@ export default async function ls(
     );
     output.stopSpinner();
 
-    // Sort by updatedAt descending (most recently updated first)
-    const sortedFlags = flagsList.sort((a, b) => b.updatedAt - a.updatedAt);
-
     if (json) {
-      outputJson(client, sortedFlags, nextCursor);
+      outputJson(client, flagsList, nextCursor);
     } else if (flagsList.length === 0) {
       output.log(
         `No ${state} feature flags found for ${projectSlugLink} ${chalk.gray(lsStamp())}`
@@ -110,7 +107,7 @@ export default async function ls(
       output.log(
         `${plural('feature flag', flagsList.length, true)} found for ${projectSlugLink} ${chalk.gray(lsStamp())}`
       );
-      printFlagsTable(sortedFlags);
+      printFlagsTable(flagsList);
       if (nextCursor) {
         const nextCmd = buildNextPageCommand(
           flags,
@@ -147,11 +144,22 @@ function buildNextPageCommand(
     '--json',
   ]);
   const repeatable = [
-    ...(tags ?? []).map(tag => `--tag ${tag}`),
-    ...(maintainerIds ?? []).map(id => `--maintainer-id ${id}`),
+    ...(tags ?? []).map(tag => `--tag ${quoteArg(tag)}`),
+    ...(maintainerIds ?? []).map(id => `--maintainer-id ${quoteArg(id)}`),
   ];
   const suffix = repeatable.length > 0 ? ` ${repeatable.join(' ')}` : '';
   return `flags ls${baseFlags}${suffix} --next ${nextCursor}`;
+}
+
+// Wrap a value in single quotes only when it contains characters the shell
+// would otherwise interpret, so the printed next-page command stays
+// copy-pasteable for tags that include spaces or special characters. The
+// cursor is base64url and therefore always shell-safe.
+function quoteArg(value: string): string {
+  if (/^[A-Za-z0-9_./@:-]+$/.test(value)) {
+    return value;
+  }
+  return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
 function outputJson(client: Client, flags: Flag[], next: string | null) {
