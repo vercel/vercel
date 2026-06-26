@@ -14,12 +14,6 @@ export const GATEWAY_ANTHROPIC_BASE_URL = 'https://ai-gateway.vercel.sh';
 export const GATEWAY_API_KEY_ENV = 'AI_GATEWAY_API_KEY';
 
 /**
- * Default model written into agent configs when the user does not pass `--model`.
- * Models are addressed as `creator/model` slugs (see GET /v1/models).
- */
-export const DEFAULT_MODEL = 'anthropic/claude-sonnet-4.5';
-
-/**
  * Placeholder stood in for the real key while previewing diffs, so we never mint
  * an API key until the user confirms (avoids orphaned keys on decline / dry-run).
  */

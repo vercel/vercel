@@ -10,8 +10,6 @@
 export interface SetupContext {
   /** The Gateway API key (or {@link KEY_PLACEHOLDER} during preview). */
   apiKey: string;
-  /** Default model slug (`creator/model`) to write, if the agent wants one. */
-  model: string;
   /** Home directory to resolve config paths against (overridable in tests). */
   home: string;
 }

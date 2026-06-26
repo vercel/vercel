@@ -52,7 +52,7 @@ export async function promptKeyName(client: Client): Promise<string> {
   const fallback = defaultKeyName();
   const answer = await client.input.text({
     message:
-      "We'll create an API key to use with your coding agents. What should we name it?",
+      'An AI Gateway API key will be created to use with your coding agents. What should it be called?',
     default: fallback,
   });
   return answer.trim() || fallback;
@@ -146,7 +146,10 @@ export async function ensureTeam(
   const { machine, canPrompt, yes } = opts;
 
   if (canPrompt && !yes && !hasExplicitScopeFlag(client.argv)) {
-    const org = await selectOrg(client, 'What team should it be under?');
+    const org = await selectOrg(
+      client,
+      'What team should the API key be under?'
+    );
     // Picking the personal account clears any team scope so the key is created
     // on the user's account rather than the previously selected team.
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;

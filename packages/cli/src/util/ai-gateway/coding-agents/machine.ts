@@ -20,10 +20,9 @@ export async function runMachine(args: {
   backup: boolean;
   keySource: KeySource | null;
   createKey: () => Promise<string>;
-  model: string;
   home: string;
 }): Promise<number> {
-  const { client, selected, previewPlan, dryRun, backup, model, home } = args;
+  const { client, selected, previewPlan, dryRun, backup, home } = args;
 
   const errored = previewPlan.changes.filter(c => c.status === 'error');
   const skipped: Array<{ target: string; reason: string; message?: string }> =
@@ -83,7 +82,7 @@ export async function runMachine(args: {
 
   const finalPlan = args.keySource
     ? previewPlan
-    : await buildSetupPlan(selected, { apiKey: key, model, home });
+    : await buildSetupPlan(selected, { apiKey: key, home });
   const results = await applyPlan(finalPlan, { backup });
 
   client.stdout.write(

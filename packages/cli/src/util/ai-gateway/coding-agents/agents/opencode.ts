@@ -4,9 +4,9 @@ import { mergeJson, pathExists } from '../config-files';
 
 /**
  * OpenCode has a first-class native `vercel` provider (`@ai-sdk/gateway`). We
- * supply the key via `provider.vercel.options.apiKey` and set a default model.
- * OpenCode model ids are `provider/model`, and the gateway's own slugs already
- * contain a slash, so the full id is `vercel/<creator>/<model>`.
+ * only supply the key via `provider.vercel.options.apiKey` — we deliberately do
+ * NOT pin a default model; the user selects one (OpenCode model ids are
+ * `vercel/<creator>/<model>` since the gateway's slugs already contain a slash).
  *
  * Config: `~/.config/opencode/opencode.json` (honors `$XDG_CONFIG_HOME`).
  * Docs: https://vercel.com/docs/ai-gateway/coding-agents/opencode
@@ -28,7 +28,6 @@ export const opencode: CodingAgent = {
   },
 
   buildPlan(ctx) {
-    const modelSlug = ctx.model;
     return {
       fileChanges: [
         {
@@ -44,12 +43,13 @@ export const opencode: CodingAgent = {
                   },
                 },
               },
-              model: `vercel/${modelSlug}`,
             }),
         },
       ],
       envExports: [],
-      notes: [`OpenCode will default to the model vercel/${modelSlug}.`],
+      notes: [
+        'OpenCode can now use the Vercel AI Gateway; pick a model like vercel/<creator>/<model>.',
+      ],
     };
   },
 };

@@ -62,12 +62,6 @@ export class AiGatewaySetupCodingAgentsTelemetryClient
     }
   }
 
-  trackCliOptionModel(model: string | undefined) {
-    if (model) {
-      this.trackCliOption({ option: 'model', value: model });
-    }
-  }
-
   trackCliFlagDryRun(dryRun: boolean | undefined) {
     if (dryRun) {
       this.trackCliFlag('dry-run');

@@ -5,10 +5,11 @@ import { GATEWAY_OPENAI_BASE_URL, GATEWAY_API_KEY_ENV } from '../gateway';
 
 /**
  * Codex reads `~/.codex/config.toml`. We add a `vercel` model provider pointing
- * at the gateway's OpenAI-compatible base URL and make it the default by setting
- * the top-level `model_provider` and `model` (the top-level `profile = "..."`
- * key is rejected by current Codex). `wire_api` MUST be `responses` — Codex
- * removed Chat Completions support, and the gateway serves the Responses API at
+ * at the gateway's OpenAI-compatible base URL and make it the default provider
+ * via the top-level `model_provider` (the top-level `profile = "..."` key is
+ * rejected by current Codex). We deliberately do NOT pin a `model` — the user
+ * keeps choosing their own. `wire_api` MUST be `responses` — Codex removed Chat
+ * Completions support, and the gateway serves the Responses API at
  * `/v1/responses`. The key itself never lands in the TOML; `env_key` names an env
  * var Codex reads at runtime, so we also export it via the shell rc.
  *
@@ -32,7 +33,6 @@ export const codex: CodingAgent = {
           format: 'toml',
           transform: current =>
             mergeToml(current, {
-              model: ctx.model,
               model_provider: 'vercel',
               model_providers: {
                 vercel: {
@@ -47,7 +47,7 @@ export const codex: CodingAgent = {
       ],
       envExports: [{ name: GATEWAY_API_KEY_ENV, value: ctx.apiKey }],
       notes: [
-        `Codex now defaults to the Vercel AI Gateway (model ${ctx.model}).`,
+        'Codex now defaults to the Vercel AI Gateway; pick a model with --model or in config.',
         `Open a new terminal so ${GATEWAY_API_KEY_ENV} is loaded, or run: export ${GATEWAY_API_KEY_ENV}=<key>`,
       ],
     };

@@ -1,46 +1,63 @@
 import chalk from 'chalk';
 import type Client from '../../client';
 import output from '../../../output-manager';
-import { printAlignedLabel } from '../../output/print-aligned-label';
+import {
+  printAlignedLabel,
+  ALIGNED_LABEL_WIDTH,
+} from '../../output/print-aligned-label';
 import { renderDiff } from './diff';
 import type { SetupPlan } from './apply';
 import type { CodingAgent } from './types';
 
+/**
+ * Prints a dimmed, indented detail row nested under the row above it, with its
+ * value aligned to the same column as the top-level rows. Used to show a key's
+ * quota and expiry as children of the "API key" row.
+ */
+function printChildLabel(label: string, value: string): void {
+  // Top-level values sit at column `2 (gutter) + ALIGNED_LABEL_WIDTH`. Indent
+  // the child label by 2 and shrink its padding by 2 so values stay aligned.
+  const indent = '    ';
+  output.print(
+    `${indent}${chalk.dim(label.padEnd(ALIGNED_LABEL_WIDTH - 2))}${chalk.dim(value)}\n`
+  );
+}
+
 export function printResolvedState(args: {
   selected: CodingAgent[];
-  model: string;
   willCreate: boolean;
   name?: string;
   budget?: number;
   refreshPeriod?: string;
   expiresAt?: number;
 }): void {
-  const {
-    selected,
-    model,
-    willCreate,
-    name,
-    budget,
-    refreshPeriod,
-    expiresAt,
-  } = args;
-  output.print('\n');
+  const { selected, willCreate, name, budget, refreshPeriod, expiresAt } = args;
+  output.print(chalk.bold('Summary\n'));
   printAlignedLabel('Agents', selected.map(a => a.displayName).join(', '));
-  printAlignedLabel('Model', model);
-  let keyState = 'Using provided key';
-  if (willCreate) {
-    const parts: string[] = [];
-    if (name) parts.push(`"${name}"`);
-    if (budget !== undefined) parts.push(`$${budget}`);
-    if (refreshPeriod && refreshPeriod !== 'none') parts.push(refreshPeriod);
-    if (expiresAt !== undefined) {
-      parts.push(`expires ${new Date(expiresAt).toISOString().slice(0, 10)}`);
-    }
-    keyState = parts.length
-      ? `Creating new key (${parts.join(', ')})`
-      : 'Creating new key';
+  if (!willCreate) {
+    printAlignedLabel('API key', 'Using provided key');
+    output.print('\n');
+    return;
   }
-  printAlignedLabel('API key', keyState);
+  // Show the key name on the parent row, then nest its quota and expiry as
+  // dimmed child rows so it's clear they configure this one key.
+  printAlignedLabel(
+    'API key',
+    name ? `Creating new key "${name}"` : 'Creating new key'
+  );
+  if (budget !== undefined) {
+    // Group the quota as <amount>/<period>, e.g. $500/daily (or just $500 for a
+    // one-time limit with no refresh).
+    const period =
+      refreshPeriod && refreshPeriod !== 'none' ? refreshPeriod : '';
+    printChildLabel(
+      'Spend limit',
+      period ? `$${budget}/${period}` : `$${budget}`
+    );
+  }
+  if (expiresAt !== undefined) {
+    printChildLabel('Expires', new Date(expiresAt).toISOString().slice(0, 10));
+  }
   output.print('\n');
 }
 

@@ -135,7 +135,8 @@ describe('ai-gateway setup-coding-agents', () => {
 
       const toml = tomlParse(readFileSync(codexConfigPath(), 'utf8')) as any;
       expect(toml.model_provider).toBe('vercel');
-      expect(toml.model).toBe('anthropic/claude-sonnet-4.5');
+      // We never pin a default model — only the provider/URL/auth are set up.
+      expect(toml.model).toBeUndefined();
       expect(toml.model_providers.vercel.base_url).toBe(
         'https://ai-gateway.vercel.sh/v1'
       );
@@ -179,9 +180,7 @@ describe('ai-gateway setup-coding-agents', () => {
         '--key',
         'vck_DummyKey0003',
         '--agent',
-        'opencode',
-        '--model',
-        'anthropic/claude-opus-4.7'
+        'opencode'
       );
 
       const exitCode = await aiGateway(client);
@@ -189,7 +188,8 @@ describe('ai-gateway setup-coding-agents', () => {
 
       const cfg = JSON.parse(readFileSync(opencodeConfigPath(), 'utf8'));
       expect(cfg.provider.vercel.options.apiKey).toBe('vck_DummyKey0003');
-      expect(cfg.model).toBe('vercel/anthropic/claude-opus-4.7');
+      // We never pin a default model — only the provider/key are set up.
+      expect(cfg.model).toBeUndefined();
     });
 
     it('configures Pi via the native vercel-ai-gateway auth entry (0600)', async () => {
@@ -291,12 +291,12 @@ describe('ai-gateway setup-coding-agents', () => {
       // The dry-run notice comes up front, before any prompts.
       await expect(client.stderr).toOutput('previewing changes only');
       // Name first — it carries the "we'll create a key" explainer.
-      await expect(client.stderr).toOutput(
-        'API key to use with your coding agents'
-      );
+      await expect(client.stderr).toOutput('use with your coding agents');
       client.stdin.write('\n'); // accept default name
       // Then team.
-      await expect(client.stderr).toOutput('What team should it be under?');
+      await expect(client.stderr).toOutput(
+        'What team should the API key be under?'
+      );
       client.stdin.write('\n'); // accept default scope
       // Then quota (defaults to no).
       await expect(client.stderr).toOutput('Set a spend limit');
@@ -333,7 +333,9 @@ describe('ai-gateway setup-coding-agents', () => {
 
       const exitCodePromise = aiGateway(client);
 
-      await expect(client.stderr).toOutput('What team should it be under?');
+      await expect(client.stderr).toOutput(
+        'What team should the API key be under?'
+      );
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Dry run');
@@ -400,11 +402,11 @@ describe('ai-gateway setup-coding-agents', () => {
 
       const exitCodePromise = aiGateway(client);
 
-      await expect(client.stderr).toOutput(
-        'API key to use with your coding agents'
-      );
+      await expect(client.stderr).toOutput('use with your coding agents');
       client.stdin.write('My Coding Key\n');
-      await expect(client.stderr).toOutput('What team should it be under?');
+      await expect(client.stderr).toOutput(
+        'What team should the API key be under?'
+      );
       client.stdin.write('\n');
       await expect(client.stderr).toOutput('Set a spend limit');
       client.stdin.write('y\n');
@@ -416,6 +418,9 @@ describe('ai-gateway setup-coding-agents', () => {
       client.stdin.write('y\n');
       await expect(client.stderr).toOutput('Expires in');
       client.stdin.write('\n'); // accept default preset (30 days)
+      // Planned changes are shown first, then the summary, then the apply prompt.
+      await expect(client.stderr).toOutput('Planned changes');
+      await expect(client.stderr).toOutput('Summary');
       await expect(client.stderr).toOutput('Apply these changes?');
       client.stdin.write('\n'); // accept default (yes)
 

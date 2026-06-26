@@ -303,15 +303,6 @@ export const setupCodingAgentsSubcommand = {
       description: 'Name for a newly created API key',
     },
     {
-      name: 'model',
-      shorthand: null,
-      type: String,
-      argument: 'MODEL',
-      deprecated: false,
-      description:
-        'Default model slug to write (e.g. anthropic/claude-sonnet-4.5)',
-    },
-    {
       name: 'dry-run',
       shorthand: null,
       type: Boolean,

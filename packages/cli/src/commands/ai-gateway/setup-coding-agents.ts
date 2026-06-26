@@ -36,10 +36,7 @@ import {
   printKey,
 } from '../../util/ai-gateway/coding-agents/render';
 import { runMachine } from '../../util/ai-gateway/coding-agents/machine';
-import {
-  DEFAULT_MODEL,
-  KEY_PLACEHOLDER,
-} from '../../util/ai-gateway/coding-agents/gateway';
+import { KEY_PLACEHOLDER } from '../../util/ai-gateway/coding-agents/gateway';
 import {
   outputAgentError,
   shouldEmitNonInteractiveCommandError,
@@ -76,7 +73,6 @@ export default async function setupCodingAgents(
   const includeByok = opts['--include-byok'] as boolean | undefined;
   const expiration = opts['--expiration'] as string | undefined;
   const name = opts['--name'] as string | undefined;
-  const model = (opts['--model'] as string | undefined) || DEFAULT_MODEL;
   const dryRun = opts['--dry-run'] as boolean | undefined;
   const noBackup = opts['--no-backup'] as boolean | undefined;
   const yes = opts['--yes'] as boolean | undefined;
@@ -89,7 +85,6 @@ export default async function setupCodingAgents(
   telemetry.trackCliFlagIncludeByok(includeByok);
   telemetry.trackCliOptionExpiration(expiration);
   telemetry.trackCliOptionName(name);
-  telemetry.trackCliOptionModel(opts['--model'] as string | undefined);
   telemetry.trackCliFlagDryRun(dryRun);
   telemetry.trackCliFlagNoBackup(noBackup);
   telemetry.trackCliFlagYes(yes);
@@ -210,7 +205,6 @@ export default async function setupCodingAgents(
   // 3. Build the preview plan.
   const previewPlan = await buildSetupPlan(selected, {
     apiKey: previewKey,
-    model,
     home,
   });
 
@@ -237,22 +231,11 @@ export default async function setupCodingAgents(
           includeByok,
           expiresAt: keyExpiresAt,
         }),
-      model,
       home,
     });
   }
 
   // Interactive / human mode.
-  printResolvedState({
-    selected,
-    model,
-    willCreate,
-    name: keyName,
-    budget: keyBudget,
-    refreshPeriod: keyRefresh,
-    expiresAt: keyExpiresAt,
-  });
-
   if (changed.length === 0 && errored.length === 0) {
     output.log(
       'All selected agents are already configured for the AI Gateway.'
@@ -263,7 +246,17 @@ export default async function setupCodingAgents(
     return 0;
   }
 
+  // Show the planned changes first, then a summary of what will happen, then ask
+  // to apply.
   printPlan(previewPlan, previewKey);
+  printResolvedState({
+    selected,
+    willCreate,
+    name: keyName,
+    budget: keyBudget,
+    refreshPeriod: keyRefresh,
+    expiresAt: keyExpiresAt,
+  });
 
   if (dryRun) {
     output.log(
@@ -306,7 +299,7 @@ export default async function setupCodingAgents(
 
   const applyPlanResult = providedKey
     ? previewPlan
-    : await buildSetupPlan(selected, { apiKey: keySource.key, model, home });
+    : await buildSetupPlan(selected, { apiKey: keySource.key, home });
 
   // 5. Write.
   const results = await applyPlan(applyPlanResult, { backup: !noBackup });
