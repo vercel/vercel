@@ -9,6 +9,11 @@ export interface GetFlagsOptions {
   maintainerIds?: string[];
 }
 
+// The v2 endpoint paginates with a small default page size, so request the
+// maximum allowed per page to minimize round-trips while still listing all
+// flags.
+const MAX_PAGE_LIMIT = 100;
+
 export async function getFlags(
   client: Client,
   projectId: string,
@@ -21,11 +26,12 @@ export async function getFlags(
   const flags: Flag[] = [];
   let cursor: string | undefined;
 
-  // The v2 endpoint paginates (default 25 per page), so follow cursors to
-  // gather the full list and preserve the previous "list everything" behavior.
+  // Follow `pagination.next` cursors to gather the full list and preserve the
+  // previous "list everything" behavior.
   do {
     const query = new URLSearchParams();
     query.set('state', state);
+    query.set('limit', String(MAX_PAGE_LIMIT));
     if (cursor) {
       query.set('cursor', cursor);
     }

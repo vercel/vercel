@@ -130,8 +130,8 @@ describe('flags ls', () => {
     });
 
     it('follows pagination cursors to list all flags', async () => {
-      // Exceed the mock page size of 25 to force multiple pages.
-      for (let i = 0; i < 30; i++) {
+      // Exceed the max page size (100) to force multiple pages.
+      for (let i = 0; i < 120; i++) {
         flagsList.push({
           ...JSON.parse(JSON.stringify(flagsList[0])),
           id: `flag_page_${i}`,
