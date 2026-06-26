@@ -32,14 +32,79 @@ export interface ExchangeVercelOidcTokenOptions {
   skipCache?: boolean;
 }
 
+interface CacheEntry {
+  token: string;
+  /** Epoch milliseconds after which the cached token must not be reused. */
+  expiresAt: number;
+}
+
 /**
- * In-memory cache of exchanged tokens, keyed by a hash of token + audience +
- * jti. Because the source token is part of the key, a rotated token yields a
- * new key (and a fresh exchange), while a still-valid token reuses its cached
- * exchange — which inherits the source token's expiry — avoiding a round-trip
- * to the token exchange endpoint on every call.
+ * Bounded, expiry-aware, in-memory cache of exchanged tokens keyed by a hash of
+ * token + audience + jti. Entries are evicted once their API-provided expiry
+ * passes, and the cache is bounded via least-recently-used eviction so callers
+ * that rotate tokens frequently — or pass a unique `jti` each time — can't grow
+ * it without bound. Because the source token is part of the key, a rotated
+ * token yields a new key (and a fresh exchange), while a still-valid token
+ * reuses its cached exchange, avoiding a round-trip to the token exchange
+ * endpoint on every call.
  */
-const tokenCache = new Map<string, string>();
+class TokenCache {
+  private readonly entries = new Map<string, CacheEntry>();
+
+  constructor(private readonly maxEntries: number) {}
+
+  /**
+   * Returns a cached token for the key when present and unexpired, refreshing
+   * its recency for LRU eviction. Expired entries are removed on access.
+   */
+  get(key: string): string | undefined {
+    const entry = this.entries.get(key);
+    if (entry === undefined) {
+      return undefined;
+    }
+    if (entry.expiresAt <= Date.now()) {
+      this.entries.delete(key);
+      return undefined;
+    }
+    // Re-insert to mark the entry as most-recently-used.
+    this.entries.delete(key);
+    this.entries.set(key, entry);
+    return entry.token;
+  }
+
+  /**
+   * Stores a token under the key and evicts the least-recently-used entries
+   * once the cache exceeds its size limit.
+   */
+  set({
+    key,
+    token,
+    expiresAt,
+  }: {
+    key: string;
+    token: string;
+    expiresAt: number;
+  }): void {
+    // Delete first so the re-insert places the key at the most-recent position.
+    this.entries.delete(key);
+    this.entries.set(key, { token, expiresAt });
+    while (this.entries.size > this.maxEntries) {
+      const oldest = this.entries.keys().next().value;
+      if (oldest === undefined) {
+        break;
+      }
+      this.entries.delete(oldest);
+    }
+  }
+}
+
+/**
+ * Upper bound on the number of cached exchanges before least-recently-used
+ * eviction kicks in.
+ */
+const MAX_CACHE_ENTRIES = 1000;
+
+const tokenCache = new TokenCache(MAX_CACHE_ENTRIES);
 
 /**
  * Derives a stable cache key from the source token, audience, and jti. The
@@ -116,7 +181,18 @@ export async function exchangeVercelOidcToken(
     );
   }
   const { token } = data;
-  tokenCache.set(cacheKey, token);
+  // `expiry` is the exchanged token's `exp` claim: an absolute Unix timestamp
+  // in seconds. Only cache when the API provides it and it lies in the future.
+  const expiry =
+    'expiry' in data && typeof data.expiry === 'number'
+      ? data.expiry
+      : undefined;
+  if (expiry !== undefined) {
+    const expiresAt = expiry * 1000;
+    if (expiresAt > Date.now()) {
+      tokenCache.set({ key: cacheKey, token, expiresAt });
+    }
+  }
   return token;
 }
 
