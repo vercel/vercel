@@ -22,7 +22,8 @@
   ],
   "dependencies": {
     "smol-toml": "1.5.2",
-    "execa": "5"
+    "execa": "5",
+    "get-port": "5.1.1"
   },
   "devDependencies": {
     "@types/ms": "^0.7.31",
