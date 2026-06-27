@@ -13,6 +13,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./chat": {
+      "types": "./dist/chat/index.d.ts",
+      "default": "./dist/chat/index.js"
+    },
     "./eve": {
       "types": "./dist/eve/index.d.ts",
       "default": "./dist/eve/index.js"
