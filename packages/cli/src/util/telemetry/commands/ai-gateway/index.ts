@@ -20,9 +20,9 @@ export class AiGatewayTelemetryClient
     });
   }
 
-  trackCliSubcommandSetupCodingAgents(actual: string) {
+  trackCliSubcommandCodingAgents(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'setup-coding-agents',
+      subcommand: 'coding-agents',
       value: actual,
     });
   }

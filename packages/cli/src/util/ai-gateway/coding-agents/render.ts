@@ -1,8 +1,8 @@
 import chalk from 'chalk';
-import type Client from '../../client';
 import output from '../../../output-manager';
 import { printAlignedLabel } from '../../output/print-aligned-label';
 import { renderDiff } from './diff';
+import { maskSecret } from './gateway';
 import type { SetupPlan } from './apply';
 import type { CodingAgent } from './types';
 
@@ -87,13 +87,16 @@ export function printNotes(plan: SetupPlan): void {
   }
 }
 
-export function printKey(client: Client, key: string): void {
+export function printKey(key: string, opts: { keychain?: boolean } = {}): void {
+  // Only show a masked form (prefix + last 4) — never print the whole secret to
+  // the terminal. The full key lives in the Keychain or the configs above.
+  const where = opts.keychain
+    ? 'stored in your macOS Keychain'
+    : 'written to the configs above';
   output.print('\n');
   output.log(
     chalk.dim(
-      'AI Gateway API key (also written to the configs above) — keep it secret:'
+      `AI Gateway API key ${maskSecret(key)} ${where} — keep it secret.`
     )
   );
-  // Raw key on stdout so it can be captured/piped.
-  client.stdout.write(`${key}\n`);
 }

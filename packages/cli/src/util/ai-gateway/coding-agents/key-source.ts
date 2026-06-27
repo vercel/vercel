@@ -176,7 +176,7 @@ export async function ensureTeam(
       next: [
         {
           command: getCommandName(
-            'ai-gateway setup-coding-agents --scope <team-slug>'
+            'ai-gateway coding-agents connect --scope <team-slug>'
           ),
         },
       ],

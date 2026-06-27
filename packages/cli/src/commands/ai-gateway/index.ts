@@ -4,12 +4,12 @@ import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import apiKeys from './api-keys';
 import rules from './rules';
-import setupCodingAgents from './setup-coding-agents';
+import codingAgents from './coding-agents';
 import {
   aiGatewayCommand,
   apiKeysSubcommand,
   rulesSubcommand,
-  setupCodingAgentsSubcommand,
+  codingAgentsSubcommand,
 } from './command';
 import { help } from '../help';
 import { getCommandAliases } from '..';
@@ -20,7 +20,7 @@ import output from '../../output-manager';
 const COMMAND_CONFIG = {
   'api-keys': getCommandAliases(apiKeysSubcommand),
   rules: getCommandAliases(rulesSubcommand),
-  'setup-coding-agents': getCommandAliases(setupCodingAgentsSubcommand),
+  'coding-agents': getCommandAliases(codingAgentsSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -41,7 +41,7 @@ export default async function main(client: Client) {
     },
   });
 
-  const { subcommand, subcommandOriginal, args } = getSubcommand(
+  const { subcommand, subcommandOriginal } = getSubcommand(
     parsedArgs.args.slice(1),
     COMMAND_CONFIG
   );
@@ -61,16 +61,9 @@ export default async function main(client: Client) {
     case 'rules':
       telemetry.trackCliSubcommandRules(subcommandOriginal);
       return rules(client);
-    case 'setup-coding-agents':
-      if (needHelp) {
-        telemetry.trackCliFlagHelp('ai-gateway', subcommandOriginal);
-        output.print(
-          help(setupCodingAgentsSubcommand, { columns: client.stderr.columns })
-        );
-        return 2;
-      }
-      telemetry.trackCliSubcommandSetupCodingAgents(subcommandOriginal);
-      return setupCodingAgents(client, args);
+    case 'coding-agents':
+      telemetry.trackCliSubcommandCodingAgents(subcommandOriginal);
+      return codingAgents(client);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('ai-gateway', subcommandOriginal);

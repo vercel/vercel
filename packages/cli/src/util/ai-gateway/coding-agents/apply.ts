@@ -6,6 +6,7 @@ import {
   writeConfigFile,
   upsertManagedBlock,
 } from './config-files';
+import { keychainLookup } from './keychain';
 
 export type ChangeStatus = 'create' | 'update' | 'unchanged' | 'error';
 
@@ -54,12 +55,17 @@ function shellQuote(value: string): string {
   return `'${value.split("'").join("'\\''")}'`;
 }
 
-function envBlockBody(exports: EnvExport[]): string {
+function envBlockBody(exports: EnvExport[], useKeychain: boolean): string {
   const lines = [
-    '# Managed by `vercel ai-gateway setup-coding-agents` — safe to remove this block.',
+    '# Managed by `vercel ai-gateway coding-agents connect` — safe to remove this block.',
   ];
   for (const e of exports) {
-    lines.push(`export ${e.name}=${shellQuote(e.value)}`);
+    if (useKeychain) {
+      // Resolve the secret from the Keychain at runtime; no plaintext in the rc.
+      lines.push(`export ${e.name}="${keychainLookup()}"`);
+    } else {
+      lines.push(`export ${e.name}=${shellQuote(e.value)}`);
+    }
   }
   return lines.join('\n');
 }
@@ -109,7 +115,7 @@ export async function buildSetupPlan(
   let shellRcPath: string | undefined;
   if (envExports.length) {
     shellRcPath = detectShellRc(ctx.home);
-    const body = envBlockBody(envExports);
+    const body = envBlockBody(envExports, ctx.useKeychain);
     pending.push({
       path: shellRcPath,
       label: 'Shell environment',

@@ -38,25 +38,27 @@ import {
 import { runMachine } from '../../util/ai-gateway/coding-agents/machine';
 import { KEY_PLACEHOLDER } from '../../util/ai-gateway/coding-agents/gateway';
 import {
+  isKeychainAvailable,
+  storeKeyInKeychain,
+} from '../../util/ai-gateway/coding-agents/keychain';
+import {
   outputAgentError,
   shouldEmitNonInteractiveCommandError,
 } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
-import { setupCodingAgentsSubcommand } from './command';
-import { AiGatewaySetupCodingAgentsTelemetryClient } from '../../util/telemetry/commands/ai-gateway/setup-coding-agents';
+import { connectSubcommand } from './command';
+import { AiGatewayCodingAgentsConnectTelemetryClient } from '../../util/telemetry/commands/ai-gateway/coding-agents-connect';
 
-export default async function setupCodingAgents(
+export default async function codingAgentsConnect(
   client: Client,
   argv: string[]
 ): Promise<number> {
-  const telemetry = new AiGatewaySetupCodingAgentsTelemetryClient({
+  const telemetry = new AiGatewayCodingAgentsConnectTelemetryClient({
     opts: { store: client.telemetryEventStore },
   });
 
   let parsedArgs;
-  const flagsSpecification = getFlagsSpecification(
-    setupCodingAgentsSubcommand.options
-  );
+  const flagsSpecification = getFlagsSpecification(connectSubcommand.options);
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
@@ -75,6 +77,7 @@ export default async function setupCodingAgents(
   const name = opts['--name'] as string | undefined;
   const dryRun = opts['--dry-run'] as boolean | undefined;
   const noBackup = opts['--no-backup'] as boolean | undefined;
+  const noKeychain = opts['--no-keychain'] as boolean | undefined;
   const yes = opts['--yes'] as boolean | undefined;
 
   telemetry.trackCliOptionAgent(agentFlags as [string] | undefined);
@@ -87,11 +90,15 @@ export default async function setupCodingAgents(
   telemetry.trackCliOptionName(name);
   telemetry.trackCliFlagDryRun(dryRun);
   telemetry.trackCliFlagNoBackup(noBackup);
+  telemetry.trackCliFlagNoKeychain(noKeychain);
   telemetry.trackCliFlagYes(yes);
 
   const machine = shouldEmitNonInteractiveCommandError(client);
   const canPrompt = Boolean(client.stdin.isTTY) && !machine;
   const home = homedir();
+  // Prefer the macOS Keychain when available so the key stays out of plaintext
+  // config files; `--no-keychain` (or a non-macOS host) falls back to embedding.
+  const wantKeychain = !noKeychain && isKeychainAvailable();
 
   // Validate quota flags up front (before any remote work).
   if (budget !== undefined && (!Number.isFinite(budget) || budget < 1)) {
@@ -207,6 +214,7 @@ export default async function setupCodingAgents(
   const previewPlan = await buildSetupPlan(selected, {
     apiKey: previewKey,
     home,
+    useKeychain: wantKeychain,
   });
 
   const changed = previewPlan.changes.filter(
@@ -232,6 +240,7 @@ export default async function setupCodingAgents(
           includeByok,
           expiresAt: keyExpiresAt,
         }),
+      useKeychain: wantKeychain,
       home,
     });
   }
@@ -242,7 +251,7 @@ export default async function setupCodingAgents(
       'All selected agents are already configured for the AI Gateway.'
     );
     if (providedKey) {
-      printKey(client, providedKey);
+      printKey(providedKey);
     }
     return 0;
   }
@@ -298,9 +307,21 @@ export default async function setupCodingAgents(
     throw err;
   }
 
-  const applyPlanResult = providedKey
-    ? previewPlan
-    : await buildSetupPlan(selected, { apiKey: keySource.key, home });
+  // Stash the secret in the Keychain before writing; on failure fall back to
+  // embedding it in the config so the run still produces a working setup.
+  let useKeychain = wantKeychain;
+  if (useKeychain && !storeKeyInKeychain(keySource.key)) {
+    output.warn(
+      'Could not store the key in the macOS Keychain; writing it to the config instead.'
+    );
+    useKeychain = false;
+  }
+
+  const applyPlanResult = await buildSetupPlan(selected, {
+    apiKey: keySource.key,
+    home,
+    useKeychain,
+  });
 
   // 5. Write.
   const results = await applyPlan(applyPlanResult, { backup: !noBackup });
@@ -324,7 +345,7 @@ export default async function setupCodingAgents(
   }
 
   printNotes(applyPlanResult);
-  printKey(client, keySource.key);
+  printKey(keySource.key, { keychain: useKeychain });
   return 0;
 }
 

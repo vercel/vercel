@@ -14,6 +14,14 @@ import { client } from '../../../mocks/client';
 import aiGateway from '../../../../src/commands/ai-gateway';
 import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
+import { buildSetupPlan } from '../../../../src/util/ai-gateway/coding-agents/apply';
+import { claudeCode } from '../../../../src/util/ai-gateway/coding-agents/agents/claude-code';
+import { codex } from '../../../../src/util/ai-gateway/coding-agents/agents/codex';
+import {
+  isKeychainAvailable,
+  storeKeyInKeychain,
+  keychainLookup,
+} from '../../../../src/util/ai-gateway/coding-agents/keychain';
 
 const CREATED_KEY = 'vck_CreatedSecretKey1234';
 const mockApiKeyResponse = {
@@ -78,10 +86,10 @@ afterEach(() => {
   }
 });
 
-describe('ai-gateway setup-coding-agents', () => {
+describe('ai-gateway coding-agents connect', () => {
   describe('--help', () => {
     it('returns exit code 2', async () => {
-      client.setArgv('ai-gateway', 'setup-coding-agents', '--help');
+      client.setArgv('ai-gateway', 'coding-agents', 'connect', '--help');
       const exitCode = await aiGateway(client);
       expect(exitCode).toBe(2);
     });
@@ -93,7 +101,8 @@ describe('ai-gateway setup-coding-agents', () => {
       client.nonInteractive = true;
       client.setArgv(
         'ai-gateway',
-        'setup-coding-agents',
+        'coding-agents',
+        'connect',
         '--key',
         'vck_DummyKey0001',
         '--agent',
@@ -123,7 +132,8 @@ describe('ai-gateway setup-coding-agents', () => {
       client.nonInteractive = true;
       client.setArgv(
         'ai-gateway',
-        'setup-coding-agents',
+        'coding-agents',
+        'connect',
         '--key',
         'vck_DummyKey0002',
         '--agent',
@@ -155,7 +165,8 @@ describe('ai-gateway setup-coding-agents', () => {
       const trickyKey = 'vck_a$b`c\'d"e';
       client.setArgv(
         'ai-gateway',
-        'setup-coding-agents',
+        'coding-agents',
+        'connect',
         '--key',
         trickyKey,
         '--agent',
@@ -176,7 +187,8 @@ describe('ai-gateway setup-coding-agents', () => {
       client.nonInteractive = true;
       client.setArgv(
         'ai-gateway',
-        'setup-coding-agents',
+        'coding-agents',
+        'connect',
         '--key',
         'vck_DummyKey0003',
         '--agent',
@@ -197,7 +209,8 @@ describe('ai-gateway setup-coding-agents', () => {
       client.nonInteractive = true;
       client.setArgv(
         'ai-gateway',
-        'setup-coding-agents',
+        'coding-agents',
+        'connect',
         '--key',
         'vck_DummyKey0007',
         '--agent',
@@ -226,7 +239,8 @@ describe('ai-gateway setup-coding-agents', () => {
       client.nonInteractive = true;
       client.setArgv(
         'ai-gateway',
-        'setup-coding-agents',
+        'coding-agents',
+        'connect',
         '--agent',
         'claude-code',
         '--budget',
@@ -258,7 +272,8 @@ describe('ai-gateway setup-coding-agents', () => {
       client.nonInteractive = true;
       client.setArgv(
         'ai-gateway',
-        'setup-coding-agents',
+        'coding-agents',
+        'connect',
         '--dry-run',
         '--key',
         'vck_DummyKey0004',
@@ -280,7 +295,8 @@ describe('ai-gateway setup-coding-agents', () => {
       useTeam();
       client.setArgv(
         'ai-gateway',
-        'setup-coding-agents',
+        'coding-agents',
+        'connect',
         '--dry-run',
         '--agent',
         'claude-code'
@@ -322,7 +338,8 @@ describe('ai-gateway setup-coding-agents', () => {
       // Pin the other options so only the team prompt remains.
       client.setArgv(
         'ai-gateway',
-        'setup-coding-agents',
+        'coding-agents',
+        'connect',
         '--dry-run',
         '--agent',
         'claude-code',
@@ -351,7 +368,8 @@ describe('ai-gateway setup-coding-agents', () => {
       client.nonInteractive = true;
       client.setArgv(
         'ai-gateway',
-        'setup-coding-agents',
+        'coding-agents',
+        'connect',
         '--dry-run',
         '--agent',
         'claude-code'
@@ -374,7 +392,8 @@ describe('ai-gateway setup-coding-agents', () => {
       client.config.currentTeam = team.id;
       client.setArgv(
         'ai-gateway',
-        'setup-coding-agents',
+        'coding-agents',
+        'connect',
         '--yes',
         '--agent',
         'claude-code'
@@ -398,7 +417,7 @@ describe('ai-gateway setup-coding-agents', () => {
       client.config.currentTeam = team.id;
       // Only Claude Code is "installed" locally.
       mkdirSync(join(home, '.claude'), { recursive: true });
-      client.setArgv('ai-gateway', 'setup-coding-agents', '--yes');
+      client.setArgv('ai-gateway', 'coding-agents', 'connect', '--yes');
 
       // Completes with no interactive input: the agent checkbox is skipped.
       const exitCode = await aiGateway(client);
@@ -413,10 +432,57 @@ describe('ai-gateway setup-coding-agents', () => {
     it('errors when nothing is detected and no agent is named', async () => {
       useUser();
       // Fresh home: no agent config dirs, so nothing is detected.
-      client.setArgv('ai-gateway', 'setup-coding-agents', '--yes');
+      client.setArgv('ai-gateway', 'coding-agents', 'connect', '--yes');
 
       expect(await aiGateway(client)).toBe(1);
       await expect(client.stderr).toOutput('No coding agents detected');
+    });
+  });
+
+  describe('keychain', () => {
+    it('is unavailable off macOS and fails closed', () => {
+      // The CI host is Linux, so the Keychain path is never taken there.
+      if (process.platform !== 'darwin') {
+        expect(isKeychainAvailable()).toBe(false);
+        expect(storeKeyInKeychain('vck_whatever')).toBe(false);
+      }
+      expect(keychainLookup()).toContain('security find-generic-password');
+    });
+
+    it('keeps the secret out of the configs and reads it from the shell', async () => {
+      const secret = 'vck_KeychainSecret321';
+      const plan = await buildSetupPlan([claudeCode, codex], {
+        apiKey: secret,
+        home,
+        useKeychain: true,
+      });
+
+      const shell = plan.changes.find(c => c.format === 'shell');
+      // Both env-based agents resolve their var from the Keychain at runtime.
+      expect(shell?.next).toContain('security find-generic-password');
+      expect(shell?.next).toContain('export AI_GATEWAY_API_KEY=');
+      expect(shell?.next).toContain('export ANTHROPIC_AUTH_TOKEN=');
+      expect(shell?.next).not.toContain(secret);
+
+      // Claude's token is no longer embedded in settings.json.
+      const claude = plan.changes.find(c => c.label === 'Claude Code settings');
+      expect(claude?.next).toContain('ANTHROPIC_BASE_URL');
+      expect(claude?.next).not.toContain('ANTHROPIC_AUTH_TOKEN');
+      expect(claude?.next).not.toContain(secret);
+    });
+
+    it('embeds the key directly when keychain is off', async () => {
+      const secret = 'vck_PlainSecret654';
+      const plan = await buildSetupPlan([claudeCode, codex], {
+        apiKey: secret,
+        home,
+        useKeychain: false,
+      });
+
+      const shell = plan.changes.find(c => c.format === 'shell');
+      expect(shell?.next).toContain(secret);
+      const claude = plan.changes.find(c => c.label === 'Claude Code settings');
+      expect(claude?.next).toContain(secret);
     });
   });
 
@@ -428,7 +494,8 @@ describe('ai-gateway setup-coding-agents', () => {
       client.config.currentTeam = team.id;
       client.setArgv(
         'ai-gateway',
-        'setup-coding-agents',
+        'coding-agents',
+        'connect',
         '--agent',
         'claude-code'
       );
@@ -479,7 +546,8 @@ describe('ai-gateway setup-coding-agents', () => {
       client.nonInteractive = true;
       client.setArgv(
         'ai-gateway',
-        'setup-coding-agents',
+        'coding-agents',
+        'connect',
         '--agent',
         'claude-code',
         '--expiration',
@@ -504,7 +572,8 @@ describe('ai-gateway setup-coding-agents', () => {
       client.nonInteractive = true;
       client.setArgv(
         'ai-gateway',
-        'setup-coding-agents',
+        'coding-agents',
+        'connect',
         '--agent',
         'claude-code',
         '--expiration',
@@ -519,7 +588,8 @@ describe('ai-gateway setup-coding-agents', () => {
       useUser();
       client.setArgv(
         'ai-gateway',
-        'setup-coding-agents',
+        'coding-agents',
+        'connect',
         '--agent',
         'claude-code',
         '--expiration',
@@ -537,7 +607,8 @@ describe('ai-gateway setup-coding-agents', () => {
       client.nonInteractive = true;
       const argv = [
         'ai-gateway',
-        'setup-coding-agents',
+        'coding-agents',
+        'connect',
         '--key',
         'vck_DummyKey0005',
         '--agent',
@@ -569,7 +640,8 @@ describe('ai-gateway setup-coding-agents', () => {
 
       client.setArgv(
         'ai-gateway',
-        'setup-coding-agents',
+        'coding-agents',
+        'connect',
         '--key',
         'vck_DummyKey0006',
         '--agent',
@@ -588,12 +660,13 @@ describe('ai-gateway setup-coding-agents', () => {
       ).toBe(true);
     });
 
-    it('masks the key in the diff but prints it raw on stdout (interactive)', async () => {
+    it('never prints the full key — only a masked form', async () => {
       useUser();
       const secret = 'vck_SuperSecretValue98765';
       client.setArgv(
         'ai-gateway',
-        'setup-coding-agents',
+        'coding-agents',
+        'connect',
         '--key',
         secret,
         '--agent',
@@ -604,12 +677,12 @@ describe('ai-gateway setup-coding-agents', () => {
       const exitCode = await aiGateway(client);
       expect(exitCode).toBe(0);
 
+      // Masked in the diff and the receipt; the full secret never reaches the
+      // terminal (it lives only in the config files).
       const stderr = client.stderr.getFullOutput();
-      expect(stderr).toContain('••••');
+      expect(stderr).toContain('vck_••••8765');
       expect(stderr).not.toContain(secret);
-
-      // The key is still emitted in full on stdout for piping.
-      expect(client.stdout.getFullOutput()).toContain(secret);
+      expect(client.stdout.getFullOutput()).not.toContain(secret);
     });
   });
 
@@ -618,7 +691,8 @@ describe('ai-gateway setup-coding-agents', () => {
       useUser();
       client.setArgv(
         'ai-gateway',
-        'setup-coding-agents',
+        'coding-agents',
+        'connect',
         '--budget',
         '-5',
         '--agent',
@@ -637,7 +711,8 @@ describe('ai-gateway setup-coding-agents', () => {
       useUser();
       client.setArgv(
         'ai-gateway',
-        'setup-coding-agents',
+        'coding-agents',
+        'connect',
         '--agent',
         'bogus',
         '--key',

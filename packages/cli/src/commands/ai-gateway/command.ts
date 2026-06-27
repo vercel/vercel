@@ -229,11 +229,11 @@ export const rulesSubcommand = {
   examples: [],
 } as const;
 
-export const setupCodingAgentsSubcommand = {
-  name: 'setup-coding-agents',
-  aliases: ['setup'],
+export const connectSubcommand = {
+  name: 'connect',
+  aliases: [],
   description:
-    'Configure local coding agents (Claude Code, Codex, OpenCode, Pi) to route through the AI Gateway',
+    'Connect local coding agents (Claude Code, Codex, OpenCode, Pi) to the AI Gateway',
   arguments: [],
   options: [
     {
@@ -316,22 +316,40 @@ export const setupCodingAgentsSubcommand = {
       deprecated: false,
       description: 'Do not write .bak backups of changed files',
     },
+    {
+      name: 'no-keychain',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Always write the key into config files instead of the macOS Keychain',
+    },
     yesOption,
   ],
   examples: [
     {
-      name: 'Configure all detected coding agents (creates a key)',
-      value: `${packageName} ai-gateway setup-coding-agents`,
+      name: 'Connect all detected coding agents (creates a key)',
+      value: `${packageName} ai-gateway coding-agents connect`,
     },
     {
-      name: 'Configure specific agents with a budgeted key',
-      value: `${packageName} ai-gateway setup-coding-agents --agent claude-code --agent codex --budget 500 --refresh-period monthly`,
+      name: 'Connect specific agents with a budgeted key',
+      value: `${packageName} ai-gateway coding-agents connect --agent claude-code --agent codex --budget 500 --refresh-period monthly`,
     },
     {
       name: 'Reuse an existing key and preview changes only',
-      value: `${packageName} ai-gateway setup-coding-agents --key <key> --dry-run`,
+      value: `${packageName} ai-gateway coding-agents connect --key <key> --dry-run`,
     },
   ],
+} as const;
+
+export const codingAgentsSubcommand = {
+  name: 'coding-agents',
+  aliases: [],
+  description: 'Connect local coding agents to the AI Gateway',
+  arguments: [],
+  subcommands: [connectSubcommand],
+  options: [],
+  examples: [],
 } as const;
 
 export const aiGatewayCommand = {
@@ -339,11 +357,7 @@ export const aiGatewayCommand = {
   aliases: [],
   description: 'Manage AI Gateway resources',
   arguments: [],
-  subcommands: [
-    apiKeysSubcommand,
-    rulesSubcommand,
-    setupCodingAgentsSubcommand,
-  ],
+  subcommands: [apiKeysSubcommand, rulesSubcommand, codingAgentsSubcommand],
   options: [],
   examples: [],
 } as const;

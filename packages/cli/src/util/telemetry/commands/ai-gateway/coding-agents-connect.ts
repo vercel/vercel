@@ -1,10 +1,10 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { setupCodingAgentsSubcommand } from '../../../../commands/ai-gateway/command';
+import type { connectSubcommand } from '../../../../commands/ai-gateway/command';
 
-export class AiGatewaySetupCodingAgentsTelemetryClient
+export class AiGatewayCodingAgentsConnectTelemetryClient
   extends TelemetryClient
-  implements TelemetryMethods<typeof setupCodingAgentsSubcommand>
+  implements TelemetryMethods<typeof connectSubcommand>
 {
   trackCliOptionAgent(agents: [string] | undefined) {
     if (agents && agents.length) {
@@ -71,6 +71,12 @@ export class AiGatewaySetupCodingAgentsTelemetryClient
   trackCliFlagNoBackup(noBackup: boolean | undefined) {
     if (noBackup) {
       this.trackCliFlag('no-backup');
+    }
+  }
+
+  trackCliFlagNoKeychain(noKeychain: boolean | undefined) {
+    if (noKeychain) {
+      this.trackCliFlag('no-keychain');
     }
   }
 

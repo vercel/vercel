@@ -12,6 +12,11 @@ export interface SetupContext {
   apiKey: string;
   /** Home directory to resolve config paths against (overridable in tests). */
   home: string;
+  /**
+   * When true, the key is kept in the macOS Keychain and env-based agents read
+   * it from the shell at runtime instead of embedding it in a config file.
+   */
+  useKeychain: boolean;
 }
 
 export type FileFormat = 'json' | 'toml' | 'shell';
