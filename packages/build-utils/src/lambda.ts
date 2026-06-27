@@ -552,7 +552,7 @@ export async function getLambdaOptionsFromFunction({
     for (const [pattern, fn] of Object.entries(config.functions)) {
       if (sourceFile === pattern || minimatch(sourceFile, pattern)) {
         const consumer = sanitizeConsumerName(
-          serviceName ? `${serviceName}/${pattern}` : pattern
+          serviceName ? `${serviceName}$${pattern}` : pattern
         );
         const experimentalTriggers: TriggerEvent[] | undefined =
           fn.experimentalTriggers?.map(
