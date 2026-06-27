@@ -320,18 +320,25 @@ describe('vercel traces get', () => {
       );
     });
 
-    it('appends ?view=gantt when --view=gantt', async () => {
+    it('appends ?view=waterfall when --view=waterfall', async () => {
       mockLinkedProject();
       client.scenario.get('/v1/projects/traces', (_req, res) => {
         res.json({ trace: sampleTrace });
       });
 
-      client.setArgv('traces', 'get', 'req_gantt', '--open', '--view', 'gantt');
+      client.setArgv(
+        'traces',
+        'get',
+        'req_waterfall',
+        '--open',
+        '--view',
+        'waterfall'
+      );
       const exitCode = await traces(client);
 
       expect(exitCode).toBe(0);
       expect(mockedOpen).toHaveBeenCalledWith(
-        'https://vercel.com/my-team/traces-project/logs/traces/trace_001?view=gantt'
+        'https://vercel.com/my-team/traces-project/logs/traces/trace_001?view=waterfall'
       );
     });
 
@@ -370,7 +377,7 @@ describe('vercel traces get', () => {
 
       expect(exitCode).toBe(1);
       expect(client.stderr.getFullOutput()).toContain(
-        '`--view` must be one of: timeline, tree, gantt. Received: flamegraph'
+        '`--view` must be one of: timeline, tree, waterfall. Received: flamegraph'
       );
       expect(mockedOpen).not.toHaveBeenCalled();
     });
@@ -515,7 +522,7 @@ describe('vercel traces get', () => {
       expect(payload.status).toBe('error');
       expect(payload.reason).toBe('invalid_arguments');
       expect(payload.message).toBe(
-        '`--view` must be one of: timeline, tree, gantt. Received: flamegraph'
+        '`--view` must be one of: timeline, tree, waterfall. Received: flamegraph'
       );
 
       exitSpy.mockRestore();

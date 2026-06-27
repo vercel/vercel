@@ -10,6 +10,7 @@ import type {
   BuilderFunctions,
   ExperimentalServices,
   ExperimentalServicesV2,
+  Services,
   ProjectSettings,
   Service,
 } from '@vercel/build-utils';
@@ -70,6 +71,7 @@ export interface Options {
   tag?: string;
   functions?: BuilderFunctions;
   experimentalServices?: ExperimentalServices;
+  services?: Services;
   experimentalServicesV2?: ExperimentalServicesV2;
   ignoreBuildScript?: boolean;
   projectSettings?: ProjectSettings;
@@ -145,17 +147,39 @@ export async function detectBuilders(
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
   services?: Service[];
+  experimentalServicesV2?: Services;
   useImplicitEnvInjection?: boolean;
 }> {
   const {
     experimentalServices: experimentalServicesV1,
+    services,
     experimentalServicesV2,
     projectSettings = {},
   } = options;
+  if (services != null && experimentalServicesV2 != null) {
+    return {
+      builders: null,
+      errors: [
+        {
+          code: 'SERVICES_AND_EXPERIMENTAL_SERVICES_V2',
+          message:
+            'The `services` option cannot be used in conjunction with its deprecated alias `experimentalServicesV2`. Please use only `services`.',
+        },
+      ],
+      warnings: [],
+      defaultRoutes: null,
+      redirectRoutes: null,
+      rewriteRoutes: null,
+      errorRoutes: null,
+    };
+  }
   const { framework } = projectSettings;
-  const configuredServices = experimentalServicesV2 ?? experimentalServicesV1;
-  const configuredServicesType = experimentalServicesV2
-    ? 'experimentalServicesV2'
+  const servicesConfig = services ?? experimentalServicesV2;
+  const configuredServices = servicesConfig ?? experimentalServicesV1;
+  const configuredServicesType = servicesConfig
+    ? services
+      ? 'services'
+      : 'experimentalServicesV2'
     : 'experimentalServices';
   const hasServicesConfig =
     configuredServices != null && typeof configuredServices === 'object';
@@ -853,9 +877,10 @@ function checkUnusedFunctions(
     frontendBuilder &&
     (isOfficialRuntime('express', frontendBuilder.use) ||
       isOfficialRuntime('hono', frontendBuilder.use) ||
+      isOfficialRuntime('python', frontendBuilder.use) ||
       isOfficialRuntime('backends', frontendBuilder.use))
   ) {
-    // Skip for backends because function names aren't statically defined
+    // Skip for runtimes that resolve function names inside the builder.
     return null;
   }
 

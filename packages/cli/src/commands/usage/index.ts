@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import jsonlines from 'jsonlines';
-import type { Response } from 'node-fetch';
+import { toNodeReadable, type Response } from '../../util/fetch';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
 import type Client from '../../util/client';
@@ -265,7 +265,8 @@ async function processCharges(
 
   await new Promise<void>((resolve, reject) => {
     // gzip compression is assumed
-    const stream = response.body!.pipe(jsonlines.parse());
+    const readable = toNodeReadable(response.body);
+    const stream = readable.pipe(jsonlines.parse());
 
     stream.on('data', (charge: FocusCharge) => {
       chargeCount++;
@@ -367,7 +368,7 @@ async function processCharges(
 
     stream.on('end', resolve);
     stream.on('error', reject);
-    response.body!.on('error', reject);
+    readable.on('error', reject);
   });
 
   return {

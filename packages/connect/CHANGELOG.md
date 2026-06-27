@@ -1,5 +1,46 @@
 # @vercel/connect
 
+## 0.2.10
+
+### Patch Changes
+
+- 0a3bbd7: Pass eve authorization webhooks through to Vercel Connect so OAuth failures can resume the eve session.
+- f2475bd: Add default-on first-use connector provisioning to `connect()` from `@vercel/connect/eve`. When the helper runs inside a Vercel deployment, it now posts the eve connection URL and connector UID to the managed OAuth create/link endpoint before token or consent calls, so Connect can create a missing connector or link an existing one to the OIDC project and eligible environments. Pass `autoProvision: false` to keep managing the connector link manually.
+- Updated dependencies [fb93ff6]
+  - @vercel/oidc@3.7.1
+
+## 0.2.9
+
+### Patch Changes
+
+- dd77402: Bump the optional `eve` peer dependency for `@vercel/connect/eve` to the next eve patch release that accepts the `auth.evict` hook emitted by Vercel Connect helpers.
+
+## 0.2.8
+
+### Patch Changes
+
+- 64e3219: Allow local Connect authorization callbacks to use `http://*.localhost` URLs.
+
+## 0.2.7
+
+### Patch Changes
+
+- Updated dependencies [415fde0]
+  - @vercel/oidc@3.7.0
+
+## 0.2.6
+
+### Patch Changes
+
+- @vercel/oidc@3.6.2
+
+## 0.2.5
+
+### Patch Changes
+
+- ed811f4: Update the optional AI SDK peer dependency range to accept the `ai@7.0.0` beta line.
+- b1c1606: Add a context-aware `createSubject` hook to `connect()` from `@vercel/connect/eve`. The new `createSubject?: (principal, ctx) => ConnectTokenSubject` option receives both the framework-resolved principal and Eve's per-connection authorization context (currently the declared server `url`), unblocking jwt-bearer-style connectors whose subject/assertion needs more than the principal — custom claims, the connection URL, or an audience derived from it. The adapter now threads the `connection` context Eve already passes to `getToken` / `startAuthorization` / `completeAuthorization` (previously dropped) into subject resolution, and the context type is exported as `EveConnectionAuthorizationContext`. Precedence is `createSubject` > `principalToSubject` > default principal mapping; `principalToSubject` keeps working but is now deprecated in favor of `createSubject`.
+
 ## 0.2.4
 
 ### Patch Changes

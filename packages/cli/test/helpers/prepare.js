@@ -445,7 +445,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'zero-config-next-js-nested': {
       // `pnpm-workspace.yaml` makes this fixture a workspace, which is what
-      // triggers the "In which directory is your code located?" prompt under
+      // triggers the "Code directory?" prompt under
       // the new input-root-directory behavior (prompt fires only when
       // `getWorkspaces()` returns non-empty).
       'pnpm-workspace.yaml': "packages:\n  - 'app'\n",

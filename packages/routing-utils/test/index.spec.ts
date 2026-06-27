@@ -11,6 +11,7 @@ import {
   headersSchema,
   cleanUrlsSchema,
   trailingSlashSchema,
+  compilePathToRegexpTemplate,
   getTransformedRoutes,
   hasSchema,
 } from '../src';
@@ -144,7 +145,7 @@ describe('normalizeRoutes', () => {
     assert.deepStrictEqual(normalized.routes, routes);
   });
 
-  test('accepts a service `destination` with only type and service', () => {
+  test('accepts an explicit service `destination` with type and service', () => {
     const routes: Route[] = [
       { src: '^/(.*)$', destination: { type: 'service', service: 'web' } },
     ];
@@ -154,6 +155,48 @@ describe('normalizeRoutes', () => {
     const normalized = normalizeRoutes(routes);
     assert.equal(normalized.error, null);
     assert.deepStrictEqual(normalized.routes, routes);
+  });
+
+  test('accepts and preserves short service `destination` routes', () => {
+    const routes: Route[] = [
+      { src: '^/api/health$', destination: { service: 'web' } },
+      { src: '^/api(?:/(.*))?$', destination: { service: 'api', path: '/$1' } },
+    ];
+
+    assertValid(routes);
+
+    const normalized = normalizeRoutes(routes);
+    assert.equal(normalized.error, null);
+    assert.deepStrictEqual(normalized.routes, [
+      {
+        src: '^/api/health$',
+        destination: { type: 'service', service: 'web' },
+      },
+      {
+        src: '^/api(?:/(.*))?$',
+        destination: { type: 'service', service: 'api', path: '/$1' },
+      },
+    ]);
+  });
+
+  test('accepts short service `destination` in hand-written routes config', () => {
+    const routes: RouteInput[] = [
+      {
+        source: '/api/(.*)',
+        destination: { service: 'api', path: '/api/$1' },
+      },
+    ];
+
+    assertValid(routes);
+
+    const normalized = normalizeRoutes(routes);
+    assert.equal(normalized.error, null);
+    assert.deepStrictEqual(normalized.routes, [
+      {
+        src: '^/api/(.*)$',
+        destination: { type: 'service', service: 'api', path: '/api/$1' },
+      },
+    ]);
   });
 
   test('validates service `destination` names like service config names', () => {
@@ -211,10 +254,15 @@ describe('normalizeRoutes', () => {
     );
   });
 
-  test('rejects a service `destination` missing `type`', () => {
-    const validate = ajv.compile(routesSchema);
+  test('rejects a service rewrite `destination` missing `service`', () => {
+    const validate = ajv.compile(rewritesSchema);
     assert.equal(
-      validate([{ src: '^/(.*)$', destination: { service: 'web' } }]),
+      validate([
+        {
+          source: '/api/:path*',
+          destination: { type: 'service', path: '/api/$1' },
+        },
+      ]),
       false
     );
   });
@@ -263,7 +311,6 @@ describe('normalizeRoutes', () => {
         {
           source: '/api/v1/:path*',
           destination: {
-            type: 'service',
             service: 'my_backend',
             path: '/:path*',
           },
@@ -286,6 +333,214 @@ describe('normalizeRoutes', () => {
       });
       // Terminal handoff: no filesystem re-check is added.
       assert.equal(serviceRoute.check, undefined);
+    }
+  });
+
+  test('compiles request.path parameters on service rewrites', () => {
+    const rewrite = {
+      source: '/api/v1/:path*',
+      destination: {
+        type: 'service' as const,
+        service: 'my_backend',
+        path: '/:path*',
+      },
+      transforms: [
+        {
+          type: 'request.path' as const,
+          op: 'set' as const,
+          args: '/:path*',
+        },
+      ],
+    };
+
+    assertValid([rewrite], rewritesSchema);
+
+    const { error, routes } = getTransformedRoutes({
+      rewrites: [rewrite],
+    });
+
+    assert.equal(error, null);
+    const serviceRoute = routes?.find(
+      r => !isHandler(r) && typeof r.destination === 'object'
+    );
+    assert.ok(serviceRoute, 'expected a service-targeted route');
+    if (serviceRoute && !isHandler(serviceRoute)) {
+      assert.deepStrictEqual(serviceRoute.destination, {
+        type: 'service',
+        service: 'my_backend',
+        path: '/$1',
+      });
+      assert.deepStrictEqual(serviceRoute.transforms, [
+        {
+          type: 'request.path',
+          op: 'set',
+          args: '/$1',
+        },
+      ]);
+    }
+  });
+
+  test('only accepts request.path transforms on high-level rewrites', () => {
+    const validate = ajv.compile(rewritesSchema);
+    const valid = validate([
+      {
+        source: '/api/:path*',
+        destination: '/internal/:path*',
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'set',
+            target: { key: 'x-path' },
+            args: ':path',
+          },
+        ],
+      },
+    ]);
+
+    assert.equal(valid, false);
+  });
+
+  test('lowers every request.path transform while preserving env references and order', () => {
+    const { error, routes } = getTransformedRoutes({
+      rewrites: [
+        {
+          source: '/org/:orgSlug/api/:path*',
+          destination: {
+            type: 'service',
+            service: 'my_backend',
+          },
+          transforms: [
+            {
+              type: 'request.path',
+              op: 'set',
+              args: '/$LOCALE/:path*',
+              env: ['LOCALE'],
+            },
+            {
+              type: 'request.path',
+              op: 'set',
+              args: '/tenants/:orgSlug/:path*',
+            },
+          ],
+        },
+      ],
+    });
+
+    assert.equal(error, null);
+    const route = routes?.find(r => !isHandler(r) && r.transforms);
+    assert.ok(route && !isHandler(route));
+    if (route && !isHandler(route)) {
+      assert.deepStrictEqual(route.transforms, [
+        {
+          type: 'request.path',
+          op: 'set',
+          args: '/$LOCALE/$2',
+          env: ['LOCALE'],
+        },
+        {
+          type: 'request.path',
+          op: 'set',
+          args: '/tenants/$1/$2',
+        },
+      ]);
+    }
+  });
+
+  test('lowers named has captures in request.path transforms', () => {
+    assert.equal(
+      compilePathToRegexpTemplate('/api/:path*', '/:tenant/:path*', [
+        {
+          type: 'host',
+          value: '(?<tenant>[^.]+)\\..+',
+        },
+      ]),
+      '/$tenant/$1'
+    );
+  });
+
+  test('rejects request.path transforms referencing an unknown segment', () => {
+    const { error } = getTransformedRoutes({
+      rewrites: [
+        {
+          source: '/api/:path*',
+          destination: {
+            type: 'service',
+            service: 'my_backend',
+          },
+          transforms: [
+            {
+              type: 'request.path',
+              op: 'set',
+              args: '/:unknown*',
+            },
+          ],
+        },
+      ],
+    });
+
+    assert.ok(error, 'expected a validation error');
+    assert.equal(error?.code, 'invalid_rewrite');
+    assert.match(error?.message || '', /request\.path/);
+  });
+
+  test('rejects low-level named capture syntax for a high-level source parameter', () => {
+    const { error } = getTransformedRoutes({
+      rewrites: [
+        {
+          source: '/api/:path*',
+          destination: {
+            type: 'service',
+            service: 'my_backend',
+          },
+          transforms: [
+            {
+              type: 'request.path',
+              op: 'set',
+              args: '/$path',
+            },
+          ],
+        },
+      ],
+    });
+
+    assert.ok(error, 'expected a validation error');
+    assert.equal(error?.code, 'invalid_rewrite');
+    assert.match(error?.message || '', /Use `:path`/);
+  });
+
+  test('preserves an explicitly allowlisted env var that matches a source parameter name', () => {
+    const { error, routes } = getTransformedRoutes({
+      rewrites: [
+        {
+          source: '/api/:path*',
+          destination: {
+            type: 'service',
+            service: 'my_backend',
+          },
+          transforms: [
+            {
+              type: 'request.path',
+              op: 'set',
+              args: '/$path',
+              env: ['path'],
+            },
+          ],
+        },
+      ],
+    });
+
+    assert.equal(error, null);
+    const route = routes?.find(r => !isHandler(r) && r.transforms);
+    assert.ok(route && !isHandler(route));
+    if (route && !isHandler(route)) {
+      assert.deepStrictEqual(route.transforms, [
+        {
+          type: 'request.path',
+          op: 'set',
+          args: '/$path',
+          env: ['path'],
+        },
+      ]);
     }
   });
 
@@ -2038,6 +2293,126 @@ describe('getTransformedRoutes', () => {
     assertValid(routes, routesSchema);
   });
 
+  test('should validate request path transforms', () => {
+    const routes: Route[] = [
+      {
+        src: '^/api/v1/(.*)$',
+        dest: '/api/$1',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$1',
+          },
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$runtimePath',
+            env: ['runtimePath'],
+          },
+        ],
+      },
+    ];
+
+    assertValid(routes, routesSchema);
+  });
+
+  test('should reject invalid request path transforms', () => {
+    const invalidRoutes: unknown[] = [
+      {
+        src: '^/api/(.*)$',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'append',
+            args: '/users',
+          },
+        ],
+      },
+      {
+        src: '^/api/(.*)$',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: ['/users'],
+          },
+        ],
+      },
+      {
+        src: '^/api/(.*)$',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: 'users',
+          },
+        ],
+      },
+      {
+        src: '^/api/(.*)$',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '//users',
+          },
+        ],
+      },
+      {
+        src: '^/api/(.*)$',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/users?debug=1',
+          },
+        ],
+      },
+      {
+        src: '^/api/(.*)$',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/users#profile',
+          },
+        ],
+      },
+      {
+        src: '^/api/(.*)$',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/user path',
+          },
+        ],
+      },
+      {
+        src: '^/api/(.*)$',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/users',
+            target: {
+              key: 'path',
+            },
+          },
+        ],
+      },
+    ];
+
+    for (const route of invalidRoutes) {
+      const validate = ajv.compile(routesSchema);
+      const valid = validate([route]);
+
+      if (valid) console.log(route);
+      assert.equal(valid, false);
+    }
+  });
+
   test('should fail validation for transforms with regex property', () => {
     const routes: Route[] = [
       {
@@ -2469,9 +2844,17 @@ describe('getTransformedRoutes', () => {
       {
         dataPath: '[0].transforms[0]',
         keyword: 'required',
-        message: "should have required property 'target'",
-        params: { missingProperty: 'target' },
-        schemaPath: '#/items/anyOf/0/properties/transforms/items/required',
+        message: "should have required property '.target'",
+        params: { missingProperty: '.target' },
+        schemaPath:
+          '#/items/anyOf/0/properties/transforms/items/allOf/2/then/required',
+      },
+      {
+        dataPath: '[0].transforms[0]',
+        keyword: 'if',
+        message: 'should match "then" schema',
+        params: { failingKeyword: 'then' },
+        schemaPath: '#/items/anyOf/0/properties/transforms/items/allOf/2/if',
       },
       {
         dataPath: '[0]',
@@ -2560,6 +2943,7 @@ describe('getTransformedRoutes', () => {
             'request.headers',
             'request.query',
             'response.headers',
+            'request.path',
           ],
         },
         schemaPath:

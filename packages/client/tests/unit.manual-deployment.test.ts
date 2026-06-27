@@ -92,6 +92,27 @@ describe('manual deployment', () => {
   });
 
   describe('createDeployment with manual option', () => {
+    it('should validate the path before entering manual mode', async () => {
+      const { default: buildCreateDeployment } = await import(
+        '../src/create-deployment'
+      );
+      const createDeployment = buildCreateDeployment();
+
+      const iterator = createDeployment(
+        {
+          token: 'test-token',
+          manual: true,
+          prebuilt: true,
+        } as Parameters<typeof createDeployment>[0],
+        {}
+      );
+
+      await expect(iterator.next()).rejects.toMatchObject({
+        code: 'missing_path',
+      });
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
     it('should throw error when manual is true but prebuilt is false', async () => {
       const { default: buildCreateDeployment } = await import(
         '../src/create-deployment'
