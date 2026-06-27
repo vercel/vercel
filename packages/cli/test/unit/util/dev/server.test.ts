@@ -1,7 +1,7 @@
 import { Readable } from 'stream';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { describe, expect, it, vi } from 'vitest';
-import DevServer from '../../../../src/util/dev/server';
+import DevServer, { hasNewRoutingProperties } from '../../../../src/util/dev/server';
 
 vi.mock('../../../../src/output-manager', () => ({
   default: {
@@ -95,5 +95,21 @@ describe('DevServer queue routes', () => {
         originalMessageId: 'original-message-id',
       })
     );
+  });
+});
+
+describe('hasNewRoutingProperties', () => {
+  it('returns false for a legacy config without new routing properties', () => {
+    expect(hasNewRoutingProperties({})).toBe(false);
+    expect(hasNewRoutingProperties({ routes: [] })).toBe(false);
+  });
+
+  it('returns true when a new routing property is present', () => {
+    expect(hasNewRoutingProperties({ cleanUrls: true })).toBe(true);
+    expect(hasNewRoutingProperties({ redirects: [] })).toBe(true);
+    expect(hasNewRoutingProperties({ headers: [] })).toBe(true);
+    expect(hasNewRoutingProperties({ rewrites: [] })).toBe(true);
+    // A defined-but-falsy value still counts as present.
+    expect(hasNewRoutingProperties({ trailingSlash: false })).toBe(true);
   });
 });

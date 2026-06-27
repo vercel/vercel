@@ -3448,13 +3448,13 @@ function filterFrontendBuilds(build: Builder) {
   return !frontendRuntimeSet.has(name || '');
 }
 
-function hasNewRoutingProperties(vercelConfig: VercelConfig) {
+export function hasNewRoutingProperties(vercelConfig: VercelConfig) {
   return (
-    typeof vercelConfig.cleanUrls !== undefined ||
-    typeof vercelConfig.headers !== undefined ||
-    typeof vercelConfig.redirects !== undefined ||
-    typeof vercelConfig.rewrites !== undefined ||
-    typeof vercelConfig.trailingSlash !== undefined
+    typeof vercelConfig.cleanUrls !== 'undefined' ||
+    typeof vercelConfig.headers !== 'undefined' ||
+    typeof vercelConfig.redirects !== 'undefined' ||
+    typeof vercelConfig.rewrites !== 'undefined' ||
+    typeof vercelConfig.trailingSlash !== 'undefined'
   );
 }
 
