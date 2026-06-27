@@ -122,7 +122,7 @@ export interface LambdaOptionsWithZipBuffer extends LambdaOptionsBase {
 
 interface GetLambdaOptionsFromFunctionOptions {
   sourceFile: string;
-  config?: Pick<Config, 'functions'>;
+  config?: Pick<Config, 'functions' | 'serviceName'>;
 }
 
 function getDefaultLambdaArchitecture(
@@ -541,15 +541,26 @@ export async function getLambdaOptionsFromFunction({
   >
 > {
   if (config?.functions) {
+    // When this build belongs to a service, the function `pattern` is relative
+    // to the service root and would collide across services that share the same
+    // function path + topic. Scope the derived consumer by the service name so
+    // it is unique per `(service, function)`.
+    const serviceName =
+      typeof config.serviceName === 'string' && config.serviceName !== ''
+        ? config.serviceName
+        : undefined;
     for (const [pattern, fn] of Object.entries(config.functions)) {
       if (sourceFile === pattern || minimatch(sourceFile, pattern)) {
+        const consumer = sanitizeConsumerName(
+          serviceName ? `${serviceName}/${pattern}` : pattern
+        );
         const experimentalTriggers: TriggerEvent[] | undefined =
           fn.experimentalTriggers?.map(
             (trigger: TriggerEventInput): TriggerEvent => {
               if (trigger.type === 'queue/v2beta') {
                 return {
                   ...trigger,
-                  consumer: sanitizeConsumerName(pattern),
+                  consumer,
                 };
               }
               return trigger;

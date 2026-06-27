@@ -38,6 +38,7 @@ import {
   glob,
   type ExperimentalService,
   isExperimentalService,
+  isExperimentalServiceV2,
   type Service,
   getInternalServiceCronPath,
   getInternalServiceFunctionPath,
@@ -1152,6 +1153,15 @@ async function doBuild(
               ...(getHasQueueServices()
                 ? { hasWorkerServices: true }
                 : undefined),
+              // Per-service `functions` config (relative to the service root) so
+              // builders that read `config.functions` (e.g. Next.js) apply
+              // per-function `maxDuration`/`memory`/`experimentalTriggers`.
+              // `serviceName` scopes the derived `queue/v2beta` consumer so it is
+              // unique per `(service, function)`.
+              ...(isExperimentalServiceV2(service) && service.functions
+                ? { functions: service.functions }
+                : undefined),
+              serviceName: service.name,
               // Override project-level settings with service-specific ones.
               // The project-level framework is "services" which must NOT be
               // propagated to individual builders.

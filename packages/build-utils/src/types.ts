@@ -52,6 +52,12 @@ export interface Config {
   framework?: string | null;
   nodeVersion?: string;
   middleware?: boolean;
+  /**
+   * Name of the owning service when this build is part of an experimental
+   * service. Used to scope per-function configuration (e.g. to derive a
+   * service-unique `queue/v2beta` consumer in `getLambdaOptionsFromFunction`).
+   */
+  serviceName?: string;
   [key: string]: unknown;
 }
 
