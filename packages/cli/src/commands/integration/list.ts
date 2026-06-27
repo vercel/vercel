@@ -211,7 +211,7 @@ export async function list(client: Client) {
     const noun = sandboxCount === 1 ? 'resource' : 'resources';
     output.log(`${sandboxCount} sandbox ${noun} can be claimed.`);
     output.print(
-      `  Run \`${packageName} integration-resource claim <name>\` to claim one.\n`
+      `  Run \`${packageName} integration resource claim <name>\` to claim one.\n`
     );
   }
 

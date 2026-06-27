@@ -80,12 +80,12 @@ export async function remove(client: Client, argv: string[]) {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message,
-        hint: `Put global flags first, then \`integration-resource remove <resource> --yes\`. Use \`--disconnect-all\` to detach projects before delete.`,
+        hint: `Put global flags first, then \`integration resource remove <resource> --yes\`. Use \`--disconnect-all\` to detach projects before delete.`,
         next: [
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
-              'integration-resource remove <resource> --yes',
+              'integration resource remove <resource> --yes',
               packageName,
               suggestRemoveOpts
             ),
@@ -108,12 +108,12 @@ export async function remove(client: Client, argv: string[]) {
         status: 'error',
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message,
-        hint: `One resource per invocation: \`${packageName} [global flags] integration-resource remove <resource> [--disconnect-all] --yes\`.`,
+        hint: `One resource per invocation: \`${packageName} [global flags] integration resource remove <resource> [--disconnect-all] --yes\`.`,
         next: [
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
-              'integration-resource remove <resource> --disconnect-all --yes',
+              'integration resource remove <resource> --disconnect-all --yes',
               packageName,
               suggestRemoveOpts
             ),

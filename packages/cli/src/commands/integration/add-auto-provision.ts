@@ -507,24 +507,24 @@ export async function addAutoProvision(
             });
           } else {
             output.warn(
-              `Could not locate the newly provisioned resource. Run \`${packageName} integration-resource claim ${resourceName}\` to claim it.`
+              `Could not locate the newly provisioned resource. Run \`${packageName} integration resource claim ${resourceName}\` to claim it.`
             );
           }
         } catch (error) {
           output.warn(
-            `Failed to start claim flow: ${(error as Error).message}. Run \`${packageName} integration-resource claim ${resourceName}\` to retry.`
+            `Failed to start claim flow: ${(error as Error).message}. Run \`${packageName} integration resource claim ${resourceName}\` to retry.`
           );
         }
       }
     } else {
       output.log(
-        `Sandbox resource — claim it with: ${chalk.cyan(`vercel integration-resource claim ${resourceName}`)}`
+        `Sandbox resource — claim it with: ${chalk.cyan(`vercel integration resource claim ${resourceName}`)}`
       );
     }
   } else if (isSandbox && options.noClaim) {
     telemetry.trackCliFlagNoClaim(options.noClaim);
     output.log(
-      `Sandbox resource — claim it later with: ${chalk.cyan(`vercel integration-resource claim ${resourceName}`)}`
+      `Sandbox resource — claim it later with: ${chalk.cyan(`vercel integration resource claim ${resourceName}`)}`
     );
   }
 

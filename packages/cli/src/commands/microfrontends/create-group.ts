@@ -11,6 +11,7 @@ import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
 import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
 import { isAPIError, ProjectNotFound } from '../../util/errors-ts';
+import { getTeamBillingUrl } from '../../util/billing-url';
 import type { Project } from '@vercel-internals/types';
 import type { MicrofrontendsGroupResponse } from './types';
 import {
@@ -68,7 +69,7 @@ export default async function createGroup(client: Client): Promise<number> {
   if (groups.length >= maxMicrofrontendsGroupsPerTeam) {
     if (isLimitedPlan) {
       const planName = isProTrialPlan ? 'Pro Trial' : 'Hobby';
-      const url = `https://vercel.com/${teamSlug}/~/settings/billing`;
+      const url = getTeamBillingUrl(teamSlug);
       output.log(
         `You've reached the microfrontends group limit for ${planName}. Upgrade to Pro to create more groups.`
       );

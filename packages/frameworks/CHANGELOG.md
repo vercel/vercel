@@ -1,5 +1,35 @@
 # @vercel/frameworks
 
+## 3.30.1
+
+### Patch Changes
+
+- 66be3e0: [services] Refine container detection for `services` / `experimentalServicesV2`.
+
+  - A supplied `entrypoint` infers `runtime: "container"` when it names one of the
+    blessed Dockerfile names: `Dockerfile`, `Containerfile`, `Dockerfile.vercel`,
+    or `Containerfile.vercel`. A suffixed name like `Dockerfile.prod` is not a
+    container entrypoint.
+  - `runtime: "container"` without an `entrypoint` auto-detects one of those same
+    four blessed names in the service root, probing `Dockerfile.vercel`,
+    `Containerfile.vercel`, `Dockerfile`, `Containerfile` (in that order, so a
+    `.vercel` opt-in marker takes precedence over a plain `Dockerfile`).
+  - Removed the prebuilt OCI image reference entrypoint: an `entrypoint` must now
+    name a Dockerfile/Containerfile, otherwise the service errors.
+  - `@vercel/container` recognizes the same blessed set (via a shared
+    `isDockerfileRef`), keeping the builder and the services resolver in sync so
+    the configured Dockerfile entrypoint is honored instead of being ignored in
+    favor of a default `Dockerfile` or treated as a prebuilt image reference.
+  - The `container` framework preset is no longer experimental: a project with a
+    `Dockerfile.vercel` / `Containerfile.vercel` marker is detected as a
+    container without `VERCEL_USE_EXPERIMENTAL_FRAMEWORKS`.
+
+## 3.30.0
+
+### Minor Changes
+
+- 09743c6: Support deploying any project as a container via a `Dockerfile.vercel` or `Containerfile.vercel` marker. A new experimental `container` framework preset detects these files and is listed first so it takes precedence over all other frameworks — a project that also looks like (e.g.) a Next.js app will deploy as a container when one of these markers is present. As an experimental framework it is gated behind `VERCEL_USE_EXPERIMENTAL_FRAMEWORKS`. The `@vercel/container` builder now recognizes the `.vercel` markers, auto-discovers them when its entrypoint is `<detect>`, and supports root (non-service) container deploys.
+
 ## 3.29.1
 
 ### Patch Changes

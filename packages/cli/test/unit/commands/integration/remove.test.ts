@@ -401,13 +401,13 @@ describe('integration', () => {
             expect.arrayContaining([
               expect.objectContaining({
                 command: expect.stringContaining(
-                  'integration-resource remove store-acme-other-project --disconnect-all --yes --format=json'
+                  'integration resource remove store-acme-other-project --disconnect-all --yes --format=json'
                 ),
                 when: expect.stringMatching(/store-acme-other-project/),
               }),
               expect.objectContaining({
                 command: expect.stringContaining(
-                  'integration-resource remove store-acme-no-projects --disconnect-all --yes --format=json'
+                  'integration resource remove store-acme-no-projects --disconnect-all --yes --format=json'
                 ),
                 when: expect.stringMatching(/store-acme-no-projects/),
               }),

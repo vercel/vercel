@@ -1,5 +1,36 @@
 # @vercel/backends
 
+## 0.8.19
+
+### Patch Changes
+
+- 62a884e: Simplify isolated `services` and `experimentalServicesV2` runtime outputs by emitting their function at `index` instead of `_svc/<service-name>/index`.
+
+## 0.8.18
+
+### Patch Changes
+
+- 8dc4702: Fix `vercel dev` for standalone Node servers, including projects without a `package.json`, and reuse the server process between requests.
+- Updated dependencies [8dc4702]
+  - @vercel/build-utils@13.32.1
+
+## 0.8.17
+
+### Patch Changes
+
+- fdb6121: Fix build failure when `outputDirectory` is set to the project root (e.g. `.`). The builder no longer globs the working tree as build output in that case, avoiding tracing errors from package-manager symlinks in `node_modules`.
+- Updated dependencies [9fb2976]
+- Updated dependencies [186014d]
+- Updated dependencies [cb0988f]
+  - @vercel/build-utils@13.32.0
+
+## 0.8.16
+
+### Patch Changes
+
+- Updated dependencies [2158ab6]
+  - @vercel/build-utils@13.31.1
+
 ## 0.8.15
 
 ### Patch Changes

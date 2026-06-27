@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import {
-  getRollupColumnName,
-  formatQueryJson,
   formatErrorJson,
+  formatQueryJson,
+  getRollupColumnName,
   handleApiError,
 } from '../../../../src/commands/metrics/output';
 import type { QueryMetadata } from '../../../../src/commands/metrics/types';
@@ -75,6 +75,137 @@ describe('output', () => {
       expect(result.data).toEqual([]);
       expect(result.summary).toEqual([]);
       expect(result.statistics).toEqual({});
+    });
+
+    it('should include returned ordering metadata', () => {
+      const query: QueryMetadata = {
+        metric: 'vercel.request.count',
+        aggregation: 'sum',
+        groupBy: [],
+        filter: undefined,
+        startTime: '2025-01-15T10:00:00Z',
+        endTime: '2025-01-15T11:00:00Z',
+        granularity: { minutes: 1 } as const,
+      };
+
+      const result = JSON.parse(
+        formatQueryJson(query, {
+          summary: [],
+          statistics: {},
+          orderBy: 'defaultOrderingRollup',
+          orderDirection: 'desc',
+        })
+      );
+
+      expect(result.orderBy).toBe('count');
+      expect(result.orderDirection).toBe('desc');
+      expect(result.query.orderBy).toBe('count');
+      expect(result.query.orderDirection).toBe('desc');
+    });
+
+    it('should include returned count ordering metadata for Speed Insights', () => {
+      const query: QueryMetadata = {
+        metric: 'vercel.speed_insights.lcp_ms',
+        aggregation: 'p75',
+        groupBy: ['route'],
+        filter: undefined,
+        startTime: '2025-01-15T10:00:00Z',
+        endTime: '2025-01-15T11:00:00Z',
+        granularity: { minutes: 1 } as const,
+      };
+
+      const result = JSON.parse(
+        formatQueryJson(query, {
+          summary: [],
+          statistics: {},
+          orderBy: 'vercel_speed_insights_lcp_count_sum',
+          orderDirection: 'desc',
+        })
+      );
+
+      expect(result.orderBy).toBe('count');
+      expect(result.orderDirection).toBe('desc');
+      expect(result.query.orderBy).toBe('count');
+      expect(result.query.orderDirection).toBe('desc');
+    });
+
+    it('should display default response ordering as count', () => {
+      const query: QueryMetadata = {
+        metric: 'vercel.speed_insights.lcp_ms',
+        aggregation: 'p75',
+        groupBy: ['route'],
+        filter: undefined,
+        startTime: '2025-01-15T10:00:00Z',
+        endTime: '2025-01-15T11:00:00Z',
+        granularity: { minutes: 1 } as const,
+      };
+
+      const result = JSON.parse(
+        formatQueryJson(query, {
+          summary: [],
+          statistics: {},
+          orderBy: 'vercel_speed_insights_lcp_ms_p75',
+          orderDirection: 'desc',
+        })
+      );
+
+      expect(result.orderBy).toBe('count');
+      expect(result.orderDirection).toBe('desc');
+      expect(result.query.orderBy).toBe('count');
+      expect(result.query.orderDirection).toBe('desc');
+    });
+
+    it('should display implicit default ordering as event count for non-count metrics', () => {
+      const query: QueryMetadata = {
+        metric: 'vercel.request.route_cpu_duration_ms',
+        aggregation: 'p95',
+        groupBy: ['route'],
+        filter: undefined,
+        startTime: '2025-01-15T10:00:00Z',
+        endTime: '2025-01-15T11:00:00Z',
+        granularity: { minutes: 1 } as const,
+      };
+
+      const result = JSON.parse(
+        formatQueryJson(query, {
+          summary: [],
+          statistics: {},
+          orderBy: 'defaultOrderingRollup',
+          orderDirection: 'desc',
+        })
+      );
+
+      expect(result.orderBy).toBe('count');
+      expect(result.orderDirection).toBe('desc');
+      expect(result.query.orderBy).toBe('count');
+      expect(result.query.orderDirection).toBe('desc');
+    });
+
+    it('should keep explicit requested ordering metadata compact', () => {
+      const query: QueryMetadata = {
+        metric: 'vercel.request.count',
+        aggregation: 'sum',
+        groupBy: [],
+        filter: undefined,
+        startTime: '2025-01-15T10:00:00Z',
+        endTime: '2025-01-15T11:00:00Z',
+        granularity: { minutes: 1 } as const,
+        orderBy: 'value',
+      };
+
+      const result = JSON.parse(
+        formatQueryJson(query, {
+          summary: [],
+          statistics: {},
+          orderBy: 'vercel_request_count_sum',
+          orderDirection: 'desc',
+        })
+      );
+
+      expect(result.orderBy).toBe('value');
+      expect(result.orderDirection).toBe('desc');
+      expect(result.query.orderBy).toBe('value');
+      expect(result.query.orderDirection).toBe('desc');
     });
   });
 

@@ -1,5 +1,11 @@
 # @vercel/ruby
 
+## 2.5.1
+
+### Patch Changes
+
+- 2158ab6: [vc dev] Add support to `experimentalServicesV2` for bindings in `vc dev`
+
 ## 2.5.0
 
 ### Minor Changes
