@@ -75,6 +75,7 @@
     "luxon": "^3.4.0",
     "proxy-agent": "6.4.0",
     "sandbox": "3.1.2",
+    "smol-toml": "1.6.1",
     "smol-toml": "1.5.2",
     "undici": "5.29.0",
     "zod": "4.1.11"
