@@ -1153,15 +1153,12 @@ async function doBuild(
               ...(getHasQueueServices()
                 ? { hasWorkerServices: true }
                 : undefined),
-              // Per-service `functions` config (relative to the service root) so
-              // builders that read `config.functions` (e.g. Next.js) apply
-              // per-function `maxDuration`/`memory`/`experimentalTriggers`.
-              // `serviceName` scopes the derived `queue/v2beta` consumer so it is
-              // unique per `(service, function)`.
+              // `service.functions` isn't on `build.config`, so builders that
+              // read `config.functions` (e.g. Next.js) would otherwise miss it;
+              // `serviceName` scopes the derived v2beta consumer.
               ...(isExperimentalServiceV2(service) && service.functions
-                ? { functions: service.functions }
+                ? { functions: service.functions, serviceName: service.name }
                 : undefined),
-              serviceName: service.name,
               // Override project-level settings with service-specific ones.
               // The project-level framework is "services" which must NOT be
               // propagated to individual builders.

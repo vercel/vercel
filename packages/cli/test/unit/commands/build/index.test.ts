@@ -2799,10 +2799,8 @@ createServer((_req, res) => {
     const vcConfig = await fs.readJSON(
       join(output, 'services/worker/functions/index.func/.vc-config.json')
     );
-    // Per-function `maxDuration` is honored (previously dropped for services).
     expect(vcConfig.maxDuration).toBe(30);
-    // The `queue/v2beta` consumer is scoped by the service name so it is unique
-    // per `(service, function)`.
+    // Consumer is scoped by service name so it stays unique across services.
     expect(vcConfig.experimentalTriggers).toEqual([
       {
         type: 'queue/v2beta',

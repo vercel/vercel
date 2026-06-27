@@ -541,10 +541,8 @@ export async function getLambdaOptionsFromFunction({
   >
 > {
   if (config?.functions) {
-    // When this build belongs to a service, the function `pattern` is relative
-    // to the service root and would collide across services that share the same
-    // function path + topic. Scope the derived consumer by the service name so
-    // it is unique per `(service, function)`.
+    // `pattern` is service-root-relative, so two services sharing a function
+    // path would derive the same consumer; scope it by service name.
     const serviceName =
       typeof config.serviceName === 'string' && config.serviceName !== ''
         ? config.serviceName

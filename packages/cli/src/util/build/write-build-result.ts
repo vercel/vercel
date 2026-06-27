@@ -486,9 +486,8 @@ async function writeBuildResultV3(args: {
     ReturnType<typeof getLambdaOptionsFromFunction>
   > = {};
   if (service && isExperimentalServiceV2(service) && service.functions) {
-    // A V2 service's `functions` keys are relative to the service root, while
-    // `build.src` is project-relative (e.g. `svc/index.js`). Strip the service
-    // root so the source file matches the service's per-function patterns.
+    // `functions` keys are service-root-relative but `build.src` is
+    // project-relative; strip the root so patterns match.
     let sourceFile = src;
     const serviceRoot = stripDuplicateSlashes(service.root);
     if (serviceRoot && serviceRoot !== '.') {
