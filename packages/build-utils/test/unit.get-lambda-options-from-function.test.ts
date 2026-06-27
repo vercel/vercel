@@ -113,7 +113,7 @@ describe('getLambdaOptionsFromFunction', () => {
       {
         type: 'queue/v2beta',
         topic: 'orders',
-        consumer: sanitizeConsumerName('orders-worker$api/worker.js'),
+        consumer: sanitizeConsumerName('orders-worker~api/worker.js'),
       },
     ]);
 

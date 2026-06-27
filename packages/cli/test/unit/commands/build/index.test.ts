@@ -2807,7 +2807,7 @@ createServer((_req, res) => {
       {
         type: 'queue/v2beta',
         topic: 'orders',
-        consumer: sanitizeConsumerName('worker$index.js'),
+        consumer: sanitizeConsumerName('worker~index.js'),
       },
     ]);
   });
