@@ -1,5 +1,32 @@
 # vercel
 
+## 54.18.1
+
+### Patch Changes
+
+- 6b49a17: Apply per-service `functions` config when building experimental V2 services. Previously, function configuration declared under `services.<name>.functions` in `vercel.json` (`experimentalTriggers`, `maxDuration`, `memory`, `architecture`, `regions`, `functionFailoverRegions`, `supportsCancellation`) was dropped at build time — only the top-level `functions` map was honored. The build now feeds each service's `functions` to its lambdas for both single-lambda builders (`@vercel/node`, etc., via `writeBuildResultV3`) and framework builders that read `config.functions` (e.g. `@vercel/next`, via the builder config). Derived `queue/v2beta` consumer groups are now scoped by the owning service name so two services that declare the same function path + topic no longer collide.
+- Updated dependencies [6b49a17]
+  - @vercel/build-utils@13.32.2
+  - @vercel/backends@0.8.20
+  - @vercel/container@0.0.3
+  - @vercel/elysia@0.1.98
+  - @vercel/express@0.1.111
+  - @vercel/fastify@0.1.101
+  - @vercel/go@3.10.2
+  - @vercel/h3@0.1.107
+  - @vercel/hono@0.2.101
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.81
+  - @vercel/nestjs@0.2.102
+  - @vercel/next@4.20.1
+  - @vercel/node@5.8.22
+  - @vercel/python@6.47.3
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.3.0
+  - @vercel/static-build@2.11.4
+
 ## 54.18.0
 
 ### Minor Changes
