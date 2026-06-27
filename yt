@@ -1,0 +1,39 @@
+export default function Home() {
+  return (
+    <main style={{ padding: 20, fontFamily: "Arial" }}>
+      <h1>🎮 修哥 Gaming Hub</h1>
+
+      <p>神魔之塔｜異環｜活動整理｜卡片圖鑑</p>
+
+      <section style={{ marginTop: 20 }}>
+        <h2>🎥 最新影片</h2>
+        <iframe
+          width="100%"
+          height="400"
+          src="https://www.youtube.com/embed?listType=user_uploads&list=UC5DKi5EIoRlcKj1rV5wFhVA"
+          allowFullScreen
+        />
+      </section>
+
+      <section style={{ marginTop: 20 }}>
+        <h2>📢 神魔活動</h2>
+        <ul>
+          <li>最新合作活動整理中...</li>
+          <li>黑金資訊更新中...</li>
+        </ul>
+      </section>
+
+      <section style={{ marginTop: 20 }}>
+        <h2>🌆 異環活動</h2>
+        <ul>
+          <li>最新活動整理中...</li>
+        </ul>
+      </section>
+
+      <section style={{ marginTop: 20 }}>
+        <h2>🃏 神魔圖鑑</h2>
+        <p>搜尋卡片功能（下一版加入）</p>
+      </section>
+    </main>
+  );
+}
