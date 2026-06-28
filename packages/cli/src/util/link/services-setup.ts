@@ -3,9 +3,10 @@ import { join, relative } from 'path';
 import {
   detectServices,
   isExperimentalService,
+  isExperimentalServiceV2,
   LocalFileSystemDetector,
   type DetectServicesResult,
-  type ExperimentalService,
+  type Service,
 } from '@vercel/fs-detectors';
 import output from '../../output-manager';
 import type Client from '../client';
@@ -81,9 +82,7 @@ export function displayConfiguredServicesSetup(
   displayServicesConfigNote(configFileName);
 }
 
-function formatDetectedServicesSummary(
-  services: ExperimentalService[]
-): string {
+function formatDetectedServicesSummary(services: Service[]): string {
   if (services.length === 0) {
     return '';
   }
@@ -141,8 +140,8 @@ export async function promptForInferredServicesSetup({
   if (autoConfirm) {
     choice = { type: 'services' };
   } else if (!nonInteractive) {
-    const webServices = inferred.services.filter(
-      service => service.type === 'web'
+    const webServices = inferred.services.filter(service =>
+      isExperimentalService(service) ? service.type === 'web' : true
     );
     const choices: Array<{ name: string; value: string }> = [
       {
@@ -181,12 +180,13 @@ export async function promptForInferredServicesSetup({
       const index = Number.parseInt(selected.slice('single-app:'.length), 10);
       const service = webServices[index];
       if (service) {
+        const serviceRoot = isExperimentalServiceV2(service)
+          ? service.root
+          : service.workspace;
         choice = {
           type: 'single-app',
           selectedPath:
-            service.workspace === '.'
-              ? workPath
-              : join(workPath, service.workspace),
+            serviceRoot === '.' ? workPath : join(workPath, serviceRoot),
         };
       }
     }

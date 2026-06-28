@@ -2877,10 +2877,11 @@ describe('V2 services should generate catch-all routes', () => {
     });
 
     const v2result = getBuildOutputV2(result);
-    expect(v2result.output['_svc/my-backend/index']).toBeDefined();
+    expect(v2result.output.index).toBeDefined();
+    expect(v2result.output['_svc/my-backend/index']).toBeUndefined();
     expect(v2result.routes).toEqual([
       { handle: 'filesystem' },
-      { src: '/(.*)', dest: '/_svc/my-backend/index' },
+      { src: '/(.*)', dest: '/index' },
     ]);
   });
 });

@@ -147,6 +147,7 @@ export async function detectBuilders(
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
   services?: Service[];
+  experimentalServicesV2?: Services;
   useImplicitEnvInjection?: boolean;
 }> {
   const {

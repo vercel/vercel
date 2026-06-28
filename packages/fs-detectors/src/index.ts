@@ -38,6 +38,7 @@ export type {
   DetectServicesOptions,
   DetectServicesResult,
   DetectServicesSource,
+  InferredServiceConfig,
   InferredServicesConfig,
   ResolvedServicesResult,
   InferredServicesResult,

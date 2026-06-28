@@ -1,4 +1,4 @@
-import type { Route } from '@vercel/routing-utils';
+import type { Rewrite, Route } from '@vercel/routing-utils';
 import type {
   DetectEntrypointFn,
   EnvVar,
@@ -92,13 +92,47 @@ export type ConfiguredServicesType =
   | 'services'
   | 'experimentalServicesV2';
 export type ConfiguredServices = ExperimentalServices | Services;
-export type InferredServicesConfig = ExperimentalServices;
+
+/**
+ * A single service entry inferred from project structure.
+ *
+ * This is an intermediate format produced by auto-detection — it carries
+ * the detection results (including `mountPath`, the inferred route mount
+ * point) before they are converted into a concrete config format (V1 or V2).
+ */
+export interface InferredServiceConfig {
+  /** Service root directory relative to the project root. */
+  root: string;
+  /** Framework slug, if detected. */
+  framework?: string;
+  /** Service entrypoint (file path or `module:attr` reference). */
+  entrypoint?: string;
+  /** Runtime identifier (e.g. "python", "node"). */
+  runtime?: string;
+  /** Service type (e.g. "web", "cron", "worker"). */
+  type?: ServiceType;
+  /** Build command override. */
+  buildCommand?: string;
+  /** Pre-deploy command override. */
+  preDeployCommand?: string;
+  /**
+   * Inferred route mount path for this service.
+   * For example, `"/"` for the root frontend, `"/_/backend"` for a backend.
+   */
+  mountPath?: string;
+}
+
+export type InferredServicesConfig = Record<string, InferredServiceConfig>;
 
 export interface ResolvedServicesResult {
   services: Service[];
   source: DetectServicesSource;
   useImplicitEnvInjection: boolean;
   routes: ServicesRoutes;
+  /** Top-level service-targeted rewrites (V2). */
+  rewrites: Rewrite[];
+  /** V2 services config for the build output, so the platform activates V2 routing. */
+  experimentalServicesV2?: Services;
   errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
 }
@@ -106,8 +140,7 @@ export interface ResolvedServicesResult {
 export interface InferredServicesResult {
   source: 'layout' | 'procfile' | 'railway' | 'render';
   config: InferredServicesConfig;
-  // Inferred services are always produced from `experimentalServices` so far, so no V2
-  services: ExperimentalService[];
+  services: Service[];
   warnings: ServiceDetectionWarning[];
 }
 
