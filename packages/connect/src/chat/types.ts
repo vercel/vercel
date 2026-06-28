@@ -9,18 +9,6 @@ import type { ConnectWebhookVerifier } from './webhook-verifier.js';
 export type ConnectTokenResolver = () => Promise<string>;
 
 /**
- * Partial Slack adapter config backed by Vercel Connect.
- *
- * Structurally matches the `botToken` and `webhookVerifier` options of
- * `createSlackAdapter` from `@chat-adapter/slack`, so callers spread it
- * into the factory without this subpath depending on `@chat-adapter/*`.
- */
-export interface ConnectSlackAdapterConfig {
-  botToken: ConnectTokenResolver;
-  webhookVerifier: ConnectWebhookVerifier;
-}
-
-/**
  * Partial GitHub adapter config backed by Vercel Connect.
  *
  * Structurally matches the `installationToken` and `webhookVerifier`

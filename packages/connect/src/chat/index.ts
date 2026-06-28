@@ -29,12 +29,12 @@ export {
 export type {
   ConnectGitHubAdapterConfig,
   ConnectLinearAdapterConfig,
-  ConnectSlackAdapterConfig,
   ConnectTokenResolver,
 } from './types.js';
 
 export {
   connectSlackAdapter,
+  type ConnectSlackAdapterConfig,
   type ConnectSlackAdapterParams,
 } from './slack-adapter.js';
 export {

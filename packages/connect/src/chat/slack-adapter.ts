@@ -1,9 +1,10 @@
+import type { SlackAdapterConfig } from '@chat-adapter/slack';
+
 import {
   getToken,
   type ConnectOptions,
   type ConnectTokenParams,
 } from '../index.js';
-import type { ConnectSlackAdapterConfig } from './types.js';
 import { createConnectWebhookVerifier } from './webhook-verifier.js';
 
 /**
@@ -15,6 +16,18 @@ import { createConnectWebhookVerifier } from './webhook-verifier.js';
  * overridden.
  */
 export type ConnectSlackAdapterParams = Omit<ConnectTokenParams, 'subject'>;
+
+/**
+ * Slack adapter config fragment produced by {@link connectSlackAdapter}.
+ *
+ * Derived from `@chat-adapter/slack`'s `SlackAdapterConfig` so the helper's
+ * output is type-checked against the real adapter config at compile time.
+ * `@chat-adapter/slack` is an optional peer dependency used for types only —
+ * there is no runtime dependency on the Chat SDK.
+ */
+export type ConnectSlackAdapterConfig = Required<
+  Pick<SlackAdapterConfig, 'botToken' | 'webhookVerifier'>
+>;
 
 /**
  * Build a Slack adapter config fragment backed by a Vercel Connect
