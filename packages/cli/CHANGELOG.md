@@ -1,5 +1,12 @@
 # vercel
 
+## 54.18.2
+
+### Patch Changes
+
+- 1a1c745: [services] fix bare static service builds, allow services with only 'root' to resolve at @vercel/static
+  - @vercel/static-build@2.11.4
+
 ## 54.18.1
 
 ### Patch Changes

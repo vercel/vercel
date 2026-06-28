@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 6.11.2
+
+### Patch Changes
+
+- 1a1c745: [services] fix bare static service builds, allow services with only 'root' to resolve at @vercel/static
+
 ## 6.11.1
 
 ### Patch Changes
