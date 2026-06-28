@@ -26,8 +26,6 @@ import type { DetectorFilesystem } from '../detectors/filesystem';
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
-const STATIC_ENTRYPOINT = '**/*';
-const STATIC_BUILD_ENTRYPOINT = 'package.json';
 
 /**
  * The blessed Dockerfile names for container services: bare `Dockerfile` /
@@ -305,17 +303,20 @@ export async function resolveConfiguredServiceV2(
       ? undefined
       : normalizedEntrypoint;
 
-  const inferredRuntime = inferServiceRuntime({
+  let inferredRuntime = inferServiceRuntime({
     runtime: config.runtime,
     framework: config.framework,
     entrypoint: entrypointFile,
   });
 
   let framework = config.framework;
-  if (!framework && normalizedEntrypoint) {
-    const workspace = entrypointIsDirectory
-      ? normalizedEntrypoint
-      : posixPath.dirname(normalizedEntrypoint) || '.';
+  let detectedFramework = false;
+  if (!framework) {
+    const workspace = normalizedEntrypoint
+      ? entrypointIsDirectory
+        ? normalizedEntrypoint
+        : posixPath.dirname(normalizedEntrypoint) || '.'
+      : '.';
     const detection = await detectFrameworkFromWorkspace({
       fs: serviceFs,
       workspace,
@@ -326,6 +327,12 @@ export async function resolveConfiguredServiceV2(
       return { error: detection.error };
     }
     framework = detection.framework;
+    detectedFramework = Boolean(framework);
+    inferredRuntime = inferServiceRuntime({
+      runtime: config.runtime,
+      framework,
+      entrypoint: entrypointFile,
+    });
   }
 
   if (entrypointIsDirectory && !framework) {
@@ -335,6 +342,17 @@ export async function resolveConfiguredServiceV2(
         message:
           `Service "${name}" uses directory entrypoint "${config.entrypoint}" but no framework could be detected. ` +
           `Specify "framework" explicitly or use a file entrypoint.`,
+        serviceName: name,
+      },
+    };
+  }
+
+  const frameworkRuntime = inferRuntimeFromFramework(framework);
+  if (detectedFramework && frameworkRuntime && !entrypointFile) {
+    return {
+      error: {
+        code: 'MISSING_SERVICE_CONFIG',
+        message: `Service "${name}" detected framework "${framework}" in "${normalizedRoot}" and must specify an "entrypoint" for runtime "${frameworkRuntime}".`,
         serviceName: name,
       },
     };
@@ -354,13 +372,17 @@ export async function resolveConfiguredServiceV2(
   } else {
     if (!inferredRuntime) {
       if (config.buildCommand) {
+        // Match zero-config static-build detection: use package.json as the
+        // stable build source and let @vercel/static-build run buildCommand.
         builderUse = '@vercel/static-build';
-        builderSrc = STATIC_BUILD_ENTRYPOINT;
+        builderSrc = 'package.json';
       } else {
+        // Match zero-config static detection: @vercel/static receives a glob
+        // entrypoint and owns its excluded-file filtering.
         builderUse = '@vercel/static';
         builderSrc = config.outputDirectory
-          ? posixPath.join(config.outputDirectory, STATIC_ENTRYPOINT)
-          : STATIC_ENTRYPOINT;
+          ? posixPath.join(config.outputDirectory, '**')
+          : '**';
       }
     } else {
       if (!entrypointFile) {

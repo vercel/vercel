@@ -188,6 +188,43 @@ describe('detectServices (services)', () => {
     expect(isRouteOwningBuilder(web)).toBe(true);
   });
 
+  it('detects a root-only frontend framework service', async () => {
+    const fs = new VirtualFilesystem({
+      'vercel.json': vercelJson({
+        experimentalServicesV2: {
+          frontend: { root: 'frontend' },
+        },
+      }),
+      'frontend/package.json': JSON.stringify({
+        dependencies: {
+          next: 'latest',
+          react: 'latest',
+          'react-dom': 'latest',
+        },
+      }),
+    });
+
+    const result = await detectServices({ fs });
+
+    expect(result.errors).toEqual([]);
+    const [frontend] = servicesV2(result.services);
+    expect(frontend).toMatchObject({
+      name: 'frontend',
+      root: 'frontend',
+      framework: 'nextjs',
+    });
+    expect(frontend.builder).toEqual({
+      src: 'frontend/package.json',
+      use: '@vercel/next',
+      config: {
+        zeroConfig: true,
+        framework: 'nextjs',
+        workspace: 'frontend',
+      },
+    });
+    expect(isRouteOwningBuilder(frontend)).toBe(true);
+  });
+
   it('resolves a static framework to @vercel/static-build', async () => {
     const fs = new VirtualFilesystem({
       'vercel.json': vercelJson({
@@ -472,7 +509,7 @@ describe('detectServices (services)', () => {
         rewrites: [{ source: '/(.*)', destination: '/index.html' }],
       });
       expect(frontend.builder).toEqual({
-        src: 'frontend/**/*',
+        src: 'frontend/**',
         use: '@vercel/static',
         config: { zeroConfig: true, workspace: 'frontend' },
       });
@@ -538,7 +575,7 @@ describe('detectServices (services)', () => {
       expect(result.errors).toEqual([]);
       const [frontend] = servicesV2(result.services);
       expect(frontend.builder).toEqual({
-        src: 'frontend/public/**/*',
+        src: 'frontend/public/**',
         use: '@vercel/static',
         config: {
           zeroConfig: true,
@@ -567,6 +604,28 @@ describe('detectServices (services)', () => {
         code: 'MISSING_SERVICE_CONFIG',
         serviceName: 'worker',
       });
+    });
+
+    it('errors when a root-only service detects a backend framework without an entrypoint', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          experimentalServicesV2: {
+            api: { root: 'api' },
+          },
+        }),
+        'api/pyproject.toml': '[project]\ndependencies = ["fastapi"]\n',
+        'api/main.py': 'app = object()',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(servicesV2(result.services)).toEqual([]);
+      expect(result.errors[0]).toMatchObject({
+        code: 'MISSING_SERVICE_CONFIG',
+        serviceName: 'api',
+      });
+      expect(result.errors[0].message).toContain('framework "fastapi"');
+      expect(result.errors[0].message).toContain('"entrypoint"');
     });
 
     it('errors when root is missing', async () => {
