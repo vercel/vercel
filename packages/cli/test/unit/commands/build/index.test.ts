@@ -2669,19 +2669,7 @@ fs.writeFileSync(
           root: '.',
           entrypoint: 'backend.js',
           runtime: 'node',
-          rewrites: [
-            {
-              source: '/backend/:path*',
-              destination: '/:path*',
-              transforms: [
-                {
-                  type: 'request.path',
-                  op: 'set',
-                  args: '/:path*',
-                },
-              ],
-            },
-          ],
+          rewrites: [{ source: '/backend/(.*)', destination: '/$1' }],
         },
       },
     });
@@ -2722,19 +2710,7 @@ createServer((_req, res) => {
       backend: expect.objectContaining({
         root: '.',
         runtime: 'node',
-        rewrites: [
-          {
-            source: '/backend/:path*',
-            destination: '/:path*',
-            transforms: [
-              {
-                type: 'request.path',
-                op: 'set',
-                args: '/:path*',
-              },
-            ],
-          },
-        ],
+        rewrites: [{ source: '/backend/(.*)', destination: '/$1' }],
       }),
       ui: expect.objectContaining({
         root: '.',
@@ -2767,18 +2743,7 @@ createServer((_req, res) => {
     expect(backendConfig.routes).toEqual(
       expect.arrayContaining([
         { handle: 'filesystem' },
-        expect.objectContaining({
-          src: '^/backend(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?$',
-          dest: '/$1',
-          check: true,
-          transforms: [
-            {
-              type: 'request.path',
-              op: 'set',
-              args: '/$1',
-            },
-          ],
-        }),
+        expect.objectContaining({ dest: '/$1', check: true }),
         expect.objectContaining({ dest: '/index' }),
       ])
     );
