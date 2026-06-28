@@ -68,10 +68,14 @@ beforeEach(() => {
   home = mkdtempSync(join(tmpdir(), 'vc-setup-agents-'));
   savedEnv = {
     HOME: process.env.HOME,
+    // os.homedir() reads USERPROFILE on Windows and HOME on POSIX, so override
+    // both to keep the temp home in effect across platforms.
+    USERPROFILE: process.env.USERPROFILE,
     SHELL: process.env.SHELL,
     XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME,
   };
   process.env.HOME = home;
+  process.env.USERPROFILE = home;
   process.env.SHELL = '/bin/bash';
   delete process.env.XDG_CONFIG_HOME;
 });
