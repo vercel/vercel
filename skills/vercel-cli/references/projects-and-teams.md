@@ -20,6 +20,8 @@ vercel remove <name|id>              # remove deployments
 vercel remove my-app --safe          # skip aliased deployments
 ```
 
+`vercel list` supports cursor pagination with `--next`; do not assume it accepts `--limit`. Use project, scope, status, environment, and metadata filters to keep deployment lists focused, or use `vercel api` when a strict page size is required.
+
 ## Teams
 
 ```bash

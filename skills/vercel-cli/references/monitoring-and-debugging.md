@@ -7,7 +7,7 @@ For production issues, start broad and narrow with bounded commands:
 1. Identify project and scope.
 2. List recent deployments: `vercel list <project> --scope <team> --status READY --format json`.
 3. Inspect the relevant deployment: `vercel inspect <deployment-url>`.
-4. Check logs for a bounded window: `vercel logs <deployment-url> --no-follow --since 1h --limit 100 --json`.
+4. Check logs for a bounded window: `vercel logs <deployment-url> --since 1h --limit 100 --json`.
 5. If metrics are available, inspect schema first, then query a relevant metric with a bounded time window and group-by.
 6. If logs or metrics are unavailable, report the permission, subscription, retention, or no-data limitation and use deployments, activity, or inspect output as fallback evidence.
 
@@ -34,6 +34,8 @@ vercel logs --source serverless                # filter by source (serverless, e
 vercel logs --since 2024-01-01                 # filter by time
 vercel logs --query "timeout"                  # search
 ```
+
+Use `--follow` only for live debugging. Historical log queries should be bounded with `--since`, `--until`, and `--limit`.
 
 ## Metrics
 
