@@ -402,16 +402,20 @@ interface RunningContainer {
   containerName: string;
   /** Whether the `docker run` child process is still alive. */
   isRunning: () => boolean;
-  /** Stop the container and drop it from the cache. */
-  stop: () => Promise<void>;
-  stopPromise?: Promise<void>;
 }
 
 const runningContainers = new Map<string, RunningContainer>();
 
-/** Test-only: clear the reused-container cache between cases. */
+// In-flight container starts, keyed the same way as `runningContainers`.
+// Concurrent cold requests for the same service share this promise so we only
+// ever `docker run` one container; without it each request would spawn its own
+// container and all but the last would be orphaned (never `docker stop`ped).
+const pendingContainers = new Map<string, Promise<StartDevServerResult>>();
+
+/** Test-only: clear the reused-container caches between cases. */
 export function __resetRunningContainers(): void {
   runningContainers.clear();
+  pendingContainers.clear();
 }
 
 /**
@@ -439,7 +443,7 @@ export async function startDevServer(
   // container is a persistent server, so we hand back the running one.
   const reuseKey = containerReuseKey(options);
   const existing = runningContainers.get(reuseKey);
-  if (existing && !existing.stopPromise && existing.isRunning()) {
+  if (existing && existing.isRunning()) {
     return existing.result;
   }
   if (existing) {
@@ -447,7 +451,18 @@ export async function startDevServer(
     runningContainers.delete(reuseKey);
   }
 
-  return startContainer(options, reuseKey);
+  // Coalesce concurrent cold starts: if a start for this service is already in
+  // flight, wait on it rather than spawning a second container.
+  const inFlight = pendingContainers.get(reuseKey);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const startPromise = startContainer(options, reuseKey).finally(() => {
+    pendingContainers.delete(reuseKey);
+  });
+  pendingContainers.set(reuseKey, startPromise);
+  return startPromise;
 }
 
 async function startContainer(
@@ -627,7 +642,6 @@ async function startContainer(
         result,
         containerName,
         isRunning: () => child.exitCode === null,
-        stop: shutdown,
       };
       // If the container exits on its own (crash, `docker stop`, etc.), evict it
       // so the next request rebuilds rather than reusing a dead container.

@@ -927,6 +927,49 @@ describe('@vercel/container', () => {
       await first!.shutdown!();
     });
 
+    it('coalesces concurrent cold starts into a single container', async () => {
+      // Two requests can arrive before the first container is up. Without
+      // in-flight dedup each would `docker run` its own container and all but
+      // the last would be orphaned (never stopped). Both calls must share one
+      // start and resolve to the same container.
+      existsSyncMock.mockReturnValue(true); // Dockerfile present
+      const child = fakeRunningChild(4242);
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'docker' && args[0] === 'run') {
+          return child;
+        }
+        if (cmd === 'docker' && args.includes('inspect')) {
+          return fakeChild('{"3000/tcp":{}}');
+        }
+        if (cmd === 'docker' && args[0] === 'port') {
+          return fakeChild('127.0.0.1:54321\n');
+        }
+        return fakeChild('');
+      });
+
+      const opts = {
+        ...createBuildOptions({ runtime: 'container' }),
+        entrypoint: 'apps/svc/Dockerfile',
+        service: { name: 'api' },
+        meta: { isDev: true },
+      } as any;
+
+      // Fire both before awaiting either, so the second call sees an in-flight
+      // start rather than a completed one.
+      const [first, second] = await Promise.all([
+        startDevServer(opts),
+        startDevServer(opts),
+      ]);
+
+      expect(first!.pid).toBe(second!.pid);
+      const runCount = spawnMock.mock.calls.filter(
+        ([cmd, args]) => cmd === 'docker' && (args as string[])[0] === 'run'
+      ).length;
+      expect(runCount).toBe(1);
+
+      await first!.shutdown!();
+    });
+
     it('discovers a `Containerfile.vercel` marker when the entrypoint is `<detect>`', async () => {
       // The `container` framework preset resolves its entrypoint to `<detect>`.
       // In dev the builder must discover the `.vercel` opt-in marker in the
