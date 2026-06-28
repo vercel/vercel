@@ -27,38 +27,7 @@ const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
 const STATIC_ENTRYPOINT = '**/*';
-const STATIC_EXCLUDED_DIRS = new Set([
-  '.git',
-  '.vercel',
-  'api',
-  'node_modules',
-]);
-const STATIC_EXCLUDED_FILES = new Set([
-  'vercel.json',
-  'vercel.toml',
-  '.vercelignore',
-  'now.json',
-  '.nowignore',
-  '.gitignore',
-  'package.json',
-  'package-lock.json',
-  'yarn.lock',
-  'pnpm-lock.yaml',
-  'bun.lock',
-  'bun.lockb',
-  'README.md',
-  'middleware.js',
-  'middleware.ts',
-]);
-const STATIC_BUILD_ENTRYPOINTS = [
-  'package.json',
-  'config.yaml',
-  'config.toml',
-  'config.json',
-  '_config.yml',
-  'config.yml',
-  'config.rb',
-];
+const STATIC_BUILD_ENTRYPOINT = 'package.json';
 
 /**
  * A container entrypoint pointing at a Dockerfile/Containerfile is built &
@@ -80,44 +49,6 @@ function normalizeContainerCommand(
     return undefined;
   }
   return Array.isArray(command) ? command : [command];
-}
-
-async function hasStaticServiceFiles(fs: DetectorFilesystem): Promise<boolean> {
-  async function visit(dirPath: string): Promise<boolean> {
-    const entries = await fs.readdir(dirPath);
-
-    for (const entry of entries) {
-      if (entry.type === 'dir') {
-        if (STATIC_EXCLUDED_DIRS.has(entry.name)) {
-          continue;
-        }
-        if (await visit(entry.path)) {
-          return true;
-        }
-      } else if (
-        !STATIC_EXCLUDED_FILES.has(entry.name) &&
-        !entry.name.startsWith('.env')
-      ) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  return visit('/');
-}
-
-async function getStaticBuildEntrypoint(
-  fs: DetectorFilesystem
-): Promise<string> {
-  for (const entrypoint of STATIC_BUILD_ENTRYPOINTS) {
-    if (await fs.isFile(entrypoint)) {
-      return entrypoint;
-    }
-  }
-
-  return 'package.json';
 }
 
 /**
@@ -377,18 +308,12 @@ export async function resolveConfiguredServiceV2(
     if (!inferredRuntime) {
       if (config.buildCommand) {
         builderUse = '@vercel/static-build';
-        builderSrc = await getStaticBuildEntrypoint(serviceFs);
-      } else if (await hasStaticServiceFiles(serviceFs)) {
-        builderUse = '@vercel/static';
-        builderSrc = STATIC_ENTRYPOINT;
+        builderSrc = STATIC_BUILD_ENTRYPOINT;
       } else {
-        return {
-          error: {
-            code: 'MISSING_SERVICE_CONFIG',
-            message: `Service "${name}" must specify "framework", a runtime-resolvable "entrypoint", or contain static files.`,
-            serviceName: name,
-          },
-        };
+        builderUse = '@vercel/static';
+        builderSrc = config.outputDirectory
+          ? posixPath.join(config.outputDirectory, STATIC_ENTRYPOINT)
+          : STATIC_ENTRYPOINT;
       }
     } else {
       if (!entrypointFile) {

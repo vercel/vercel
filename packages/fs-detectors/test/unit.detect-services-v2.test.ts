@@ -523,20 +523,32 @@ describe('detectServices (services)', () => {
       expect(isStaticBuild(frontend)).toBe(true);
     });
 
-    it('errors when neither framework nor entrypoint is given and no static files are present', async () => {
+    it('resolves a root-only static service with an output directory to @vercel/static', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': vercelJson({
-          experimentalServicesV2: { a: { root: 'svc' } },
+          experimentalServicesV2: {
+            frontend: { root: 'frontend', outputDirectory: 'public' },
+          },
         }),
-        'svc/package.json': '{}',
+        'frontend/public/index.html': '<h1>Hello public directory</h1>',
       });
 
       const result = await detectServices({ fs });
 
-      expect(result.errors[0]).toMatchObject({
-        code: 'MISSING_SERVICE_CONFIG',
-        serviceName: 'a',
+      expect(result.errors).toEqual([]);
+      const [frontend] = servicesV2(result.services);
+      expect(frontend.builder).toEqual({
+        src: 'frontend/public/**/*',
+        use: '@vercel/static',
+        config: {
+          zeroConfig: true,
+          outputDirectory: 'public',
+          workspace: 'frontend',
+        },
       });
+      expect(frontend.outputDirectory).toBe('public');
+      expect(frontend.runtime).toBeUndefined();
+      expect(isStaticBuild(frontend)).toBe(true);
     });
 
     it('errors when a runtime service has no entrypoint', async () => {
