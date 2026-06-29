@@ -1,15 +1,19 @@
 import type { BuildResultV2Typical } from '@vercel/build-utils';
 import { EventEmitter } from 'node:events';
 import { readFileSync, statSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { build, prepareCache, startDevServer } from '../src';
-import { __resetStorageDriverCache } from '../src/storage-driver';
+import {
+  __resetBuildahGraphRoot,
+  __resetStorageDriverCache,
+} from '../src/storage-driver';
 import { __resetRunningContainers } from '../src/dev';
 
-const { spawnMock, existsSyncMock } = vi.hoisted(() => ({
+const { spawnMock, existsSyncMock, mkdirSyncMock } = vi.hoisted(() => ({
   spawnMock: vi.fn(),
   existsSyncMock: vi.fn(),
+  mkdirSyncMock: vi.fn(),
 }));
 
 vi.mock('node:child_process', async importActual => {
@@ -19,7 +23,7 @@ vi.mock('node:child_process', async importActual => {
 
 vi.mock('node:fs', async importActual => {
   const actual = await importActual<typeof import('node:fs')>();
-  return { ...actual, existsSync: existsSyncMock };
+  return { ...actual, existsSync: existsSyncMock, mkdirSync: mkdirSyncMock };
 });
 
 const createBuildOptions = (config: Record<string, unknown>) => ({
@@ -146,7 +150,9 @@ const VCR_ENV_KEYS = [
 beforeEach(() => {
   existsSyncMock.mockReturnValue(false);
   spawnMock.mockReset();
+  mkdirSyncMock.mockReset();
   __resetStorageDriverCache();
+  __resetBuildahGraphRoot();
   __resetRunningContainers();
   for (const key of VCR_ENV_KEYS) {
     delete process.env[key];
@@ -295,10 +301,10 @@ describe('@vercel/container', () => {
       return true;
     });
     // Simulate `buildah info` reporting the intended store: native overlay with
-    // the graphroot under the XFS /vercel volume. Tests can override via
-    // `storeInfo`.
+    // the graphroot at the work-dir `.vercel/cache` store (workPath is `/` in
+    // these tests). Tests can override via `storeInfo`.
     const storeInfo = options?.storeInfo ?? {
-      GraphRoot: '/vercel/.containers/storage',
+      GraphRoot: '/.vercel/cache/vercel-container/storage',
       RunRoot: '/run/containers/storage',
       GraphDriverName: 'overlay',
       GraphStatus: { 'Backing Filesystem': 'xfs' },
@@ -391,8 +397,12 @@ describe('@vercel/container', () => {
     // Defer to /etc/containers/storage.conf (native overlay on /vercel); we
     // must NOT force a --storage-driver.
     expect(commands.some(c => c.includes('--storage-driver'))).toBe(false);
+    // The graphroot is redirected into the work-dir `.vercel/cache` so the
+    // store is persisted by prepareCache (workPath is `/` in these tests).
     expect(
-      commands.some(c => c.includes('--root /vercel/.containers/storage'))
+      commands.some(c =>
+        c.includes('--root /.vercel/cache/vercel-container/storage')
+      )
     ).toBe(true);
     expect(commands.some(c => c.startsWith('docker build'))).toBe(false);
   });
@@ -484,7 +494,7 @@ describe('@vercel/container', () => {
         return fakeChild(
           JSON.stringify({
             store: {
-              GraphRoot: '/vercel/.containers/storage',
+              GraphRoot: '/.vercel/cache/vercel-container/storage',
               RunRoot: '/run/containers/storage',
               GraphDriverName: 'overlay',
               GraphStatus: { 'Backing Filesystem': 'xfs' },
@@ -570,7 +580,7 @@ describe('@vercel/container', () => {
       runDockerfileBuild({
         buildImageEnv: 'al2023',
         storeInfo: {
-          GraphRoot: '/vercel/.containers/storage',
+          GraphRoot: '/.vercel/cache/vercel-container/storage',
           RunRoot: '/run/containers/storage',
           GraphDriverName: 'vfs',
           GraphStatus: { 'Backing Filesystem': 'xfs' },
@@ -586,7 +596,7 @@ describe('@vercel/container', () => {
         runDockerfileBuild({
           buildImageEnv: 'al2023',
           storeInfo: {
-            GraphRoot: '/vercel/.containers/storage',
+            GraphRoot: '/.vercel/cache/vercel-container/storage',
             RunRoot: '/run/containers/storage',
             GraphDriverName: 'vfs',
             GraphStatus: { 'Backing Filesystem': 'xfs' },
@@ -1229,6 +1239,47 @@ describe('@vercel/container', () => {
       existsSyncMock.mockReturnValue(false); // graphroot missing
       const result = await prepareCache(baseOpts);
       expect(result).toEqual({});
+    });
+
+    it('globs the work-dir store relative to workPath so keys are project-relative', async () => {
+      process.env.VERCEL_BUILD_IMAGE = 'al2023';
+      // Use a real temp work dir with a real store file so the (unmocked) glob
+      // returns results. The store lives at <workPath>/.vercel/cache/... .
+      // `node:fs` is mocked in this file, so reach the real implementation.
+      const realFs = await vi.importActual<typeof import('node:fs')>('node:fs');
+      const { tmpdir: realTmpdir } =
+        await vi.importActual<typeof import('node:os')>('node:os');
+      const tmpWorkPath = realFs.mkdtempSync(
+        join(realTmpdir(), 'vc-container-')
+      );
+      const storeDir = join(
+        tmpWorkPath,
+        '.vercel/cache/vercel-container/storage'
+      );
+      realFs.mkdirSync(join(storeDir, 'overlay'), { recursive: true });
+      realFs.writeFileSync(join(storeDir, 'overlay', 'layer'), 'x');
+      // prepareCache's existence guard uses the mocked existsSync.
+      existsSyncMock.mockReturnValue(true);
+      try {
+        const result = await prepareCache({
+          ...baseOpts,
+          workPath: tmpWorkPath,
+          repoRootPath: tmpWorkPath,
+        });
+        // Keys must be relative to the project work dir (so the platform
+        // restores them to the same path on the next build): under
+        // `.vercel/cache/...`, never absolute / anchored outside the work dir.
+        const keys = Object.keys(result);
+        expect(keys.length).toBeGreaterThan(0);
+        for (const key of keys) {
+          expect(key.startsWith('.vercel/cache/vercel-container/storage')).toBe(
+            true
+          );
+          expect(key.startsWith('/')).toBe(false);
+        }
+      } finally {
+        realFs.rmSync(tmpWorkPath, { recursive: true, force: true });
+      }
     });
   });
 });

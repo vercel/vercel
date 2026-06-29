@@ -8,8 +8,47 @@ import { isBuildContainer, readString, run } from './util';
 // native `overlay` storage driver doesn't nest. runroot is transient state on
 // tmpfs. These mirror the build image's `/etc/containers/storage.conf`
 // (vercel/api#76567).
-export const BUILDAH_GRAPH_ROOT = '/vercel/.containers/storage';
+//
+// NOTE: this is only buildah's default. The effective graphroot is resolved
+// via `getBuildahGraphRoot()` so it can be redirected into the project's
+// work-dir cache (`.vercel/cache`), which is what `prepareCache` actually
+// persists across builds. See `setBuildahGraphRoot()`.
+export const DEFAULT_BUILDAH_GRAPH_ROOT = '/vercel/.containers/storage';
 export const BUILDAH_RUN_ROOT = '/run/containers/storage';
+
+/**
+ * Path, relative to the project work dir, where we keep buildah's image store
+ * so it lands inside `.vercel/cache` — the directory `prepareCache` globs and
+ * the platform restores on the next build. Anchored here (rather than the
+ * storage.conf default under `/vercel`) so the cache is actually persisted.
+ */
+export const GRAPH_ROOT_CACHE_REL = '.vercel/cache/vercel-container/storage';
+
+// The effective graphroot for this build. Defaults to buildah's storage.conf
+// location; `setBuildahGraphRoot()` redirects it into the work-dir cache once
+// `build()`/`prepareCache()` know the work dir.
+let effectiveGraphRoot = DEFAULT_BUILDAH_GRAPH_ROOT;
+
+/**
+ * Redirect buildah's image store (graphroot) at `<workPath>/.vercel/cache/...`
+ * so it is captured by `prepareCache` and restored on subsequent builds. Both
+ * the build path and `prepareCache` call this with the same `workPath` so they
+ * agree on a single location.
+ */
+export function setBuildahGraphRoot(workPath: string): string {
+  effectiveGraphRoot = join(workPath, GRAPH_ROOT_CACHE_REL);
+  return effectiveGraphRoot;
+}
+
+/** The graphroot buildah should use for this build. */
+export function getBuildahGraphRoot(): string {
+  return effectiveGraphRoot;
+}
+
+/** Test-only: reset the resolved graphroot back to the default. */
+export function __resetBuildahGraphRoot(): void {
+  effectiveGraphRoot = DEFAULT_BUILDAH_GRAPH_ROOT;
+}
 
 /**
  * The storage driver we expect in the build container. The cell is granted
@@ -98,7 +137,7 @@ function buildahRegistriesConfPath(): string {
 export async function buildahStorageArgs(): Promise<string[]> {
   const driver = await selectStorageDriver();
   const rootArgs = isBuildContainer()
-    ? ['--root', BUILDAH_GRAPH_ROOT, '--runroot', BUILDAH_RUN_ROOT]
+    ? ['--root', getBuildahGraphRoot(), '--runroot', BUILDAH_RUN_ROOT]
     : [];
 
   const registriesArgs = [
@@ -160,8 +199,9 @@ export async function readBuildahStoreInfo(): Promise<
 
 /**
  * In the build container, report whether buildah came up with the intended
- * storage: native `overlay` driver, graphroot under `/vercel`
- * (`/vercel/.containers/storage`), backed by a real (non-overlay) filesystem.
+ * storage: native `overlay` driver, graphroot at the resolved location (the
+ * work-dir `.vercel/cache` store, or buildah's storage.conf default), backed by
+ * a real (non-overlay) filesystem.
  *
  * This is observability-only by default: on a mismatch it logs loudly but does
  * NOT fail the build, so a cell where overlay can't initialize still builds
@@ -208,6 +248,7 @@ export async function assertBuildContainerStorage(
     return;
   }
 
+  const expectedGraphRoot = getBuildahGraphRoot();
   const problems: string[] = [];
   if (storeInfo.driver !== REQUIRED_BUILD_CONTAINER_DRIVER) {
     problems.push(
@@ -215,10 +256,10 @@ export async function assertBuildContainerStorage(
         `"${REQUIRED_BUILD_CONTAINER_DRIVER}"`
     );
   }
-  if (storeInfo.graphRoot !== BUILDAH_GRAPH_ROOT) {
+  if (storeInfo.graphRoot !== expectedGraphRoot) {
     problems.push(
-      `graphRoot is "${storeInfo.graphRoot}", expected the mounted ` +
-        `volume "${BUILDAH_GRAPH_ROOT}"`
+      `graphRoot is "${storeInfo.graphRoot}", expected ` +
+        `"${expectedGraphRoot}"`
     );
   }
   // The volume is XFS; an overlay backing fs would mean we're on the cell
@@ -242,9 +283,9 @@ export async function assertBuildContainerStorage(
 
   const detail =
     `${summary}\nProblems: ${problems.join('; ')}.\n` +
-    'Expected the native overlay driver with the graphroot under the XFS ' +
-    '`/vercel` cell volume (requires vercel/hive#2310 capabilities + the ' +
-    'storage.conf from vercel/api#76567).';
+    'Expected the native overlay driver with the graphroot at ' +
+    `"${expectedGraphRoot}" on an XFS-backed volume (requires ` +
+    'vercel/hive#2310 capabilities + the storage.conf from vercel/api#76567).';
 
   if (strict) {
     throw new Error(

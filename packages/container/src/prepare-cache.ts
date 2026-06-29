@@ -1,30 +1,24 @@
 import type { Files, PrepareCacheOptions } from '@vercel/build-utils';
 import { glob } from '@vercel/build-utils';
 import { existsSync } from 'node:fs';
-import { posix as posixPath } from 'node:path';
-import { BUILDAH_GRAPH_ROOT } from './storage-driver';
+import { GRAPH_ROOT_CACHE_REL, setBuildahGraphRoot } from './storage-driver';
 import { debug, info, isBuildContainer } from './util';
-
-/**
- * The graphroot (`/vercel/.containers/storage`) lives under `/vercel`, the
- * always-mounted XFS cell volume. We anchor the cache glob at `/vercel` so the
- * returned `Files` keys are `\.containers/storage/...`, and on the next build
- * the build cache restores them back to exactly that path — where buildah's
- * `storage.conf` expects its store. A warm store lets buildah reuse unchanged
- * layers (with `buildah build --layers`) instead of rebuilding them.
- */
-const CACHE_ROOT = '/vercel';
-const GRAPH_ROOT_REL = posixPath.relative(CACHE_ROOT, BUILDAH_GRAPH_ROOT);
 
 /**
  * Cache buildah's image layer store between builds.
  *
- * Only meaningful in the build container (the store is at a fixed absolute
- * path there). Locally there is no such store, so this is a no-op. Disable with
+ * The store lives at `<workPath>/.vercel/cache/...` (see `setBuildahGraphRoot`)
+ * so that globbing it relative to `workPath` yields project-relative keys that
+ * the platform restores back to the same path on the next build. (Anchoring the
+ * store outside `workPath` would produce keys the restore step can't place,
+ * which is why the cache previously never warmed.)
+ *
+ * Only meaningful in the build container, where buildah runs. Locally there is
+ * no such store, so this is a no-op. Disable with
  * `VERCEL_VCR_DISABLE_LAYER_CACHE=1`.
  */
 export async function prepareCache(
-  _options: PrepareCacheOptions
+  options: PrepareCacheOptions
 ): Promise<Files> {
   if (process.env.VERCEL_VCR_DISABLE_LAYER_CACHE) {
     debug('layer cache disabled (VERCEL_VCR_DISABLE_LAYER_CACHE)');
@@ -37,16 +31,23 @@ export async function prepareCache(
     return {};
   }
 
-  if (!existsSync(BUILDAH_GRAPH_ROOT)) {
-    debug(`no buildah store to cache at ${BUILDAH_GRAPH_ROOT}`);
+  const { workPath } = options;
+  // Keep this in agreement with the build path: resolve the same work-dir store
+  // location that the build used as buildah's graphroot.
+  const graphRoot = setBuildahGraphRoot(workPath);
+
+  if (!existsSync(graphRoot)) {
+    debug(`no buildah store to cache at ${graphRoot}`);
     return {};
   }
 
   const start = Date.now();
-  const files = await glob(`${GRAPH_ROOT_REL}/**`, CACHE_ROOT);
+  // Glob relative to `workPath` so the returned keys are project-relative
+  // (`.vercel/cache/...`) and the platform restores them to the same place.
+  const files = await glob(`${GRAPH_ROOT_CACHE_REL}/**`, workPath);
   const count = Object.keys(files).length;
   info(
-    `cached container layer store: ${count} files from ${BUILDAH_GRAPH_ROOT} ` +
+    `cached container layer store: ${count} files from ${graphRoot} ` +
       `in ${Date.now() - start}ms`
   );
   return files;

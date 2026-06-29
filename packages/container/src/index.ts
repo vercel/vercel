@@ -1,11 +1,12 @@
 import type { BuildOptions, BuildResultV2, Span } from '@vercel/build-utils';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import {
   selectContainerEngine,
   VCR_REGISTRY,
   TARGET_PLATFORM,
 } from './engines';
+import { setBuildahGraphRoot } from './storage-driver';
 import type { BuildPushParams } from './engines/types';
 import { resolveOidcTokenForBuild } from './oidc';
 import { ensureRepository } from './registry';
@@ -19,6 +20,7 @@ import {
   existingRegistryAuthFile,
   findDockerfile,
   info,
+  isBuildContainer,
   isDockerfileRef,
   readString,
   shortDigest,
@@ -364,6 +366,16 @@ function buildArgsFromEnv(
 }
 
 export async function build(options: BuildOptions): Promise<BuildResultV2> {
+  // Anchor buildah's image store under the project work dir's `.vercel/cache`
+  // so `prepareCache` can persist it and restore it (warm) on the next build.
+  // `prepareCache` resolves the same location from the same `workPath`. Create
+  // the directory up front so buildah's `--root` points at an existing path.
+  const graphRoot = setBuildahGraphRoot(options.workPath);
+  if (isBuildContainer()) {
+    mkdirSync(graphRoot, { recursive: true });
+    debug(`container layer store: ${graphRoot}`);
+  }
+
   const image = await withSpan(
     options.span,
     'container.resolve_image',
