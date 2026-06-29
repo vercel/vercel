@@ -1,10 +1,12 @@
 import { join } from 'path';
 import {
+  EdgeFunction,
   glob,
   FileBlob,
   FileFsRef,
   getWriteableDirectory,
   Lambda,
+  type BuilderV2,
   type BuilderV3,
 } from '@vercel/build-utils';
 import { describe, expect, it } from 'vitest';
@@ -75,6 +77,169 @@ describe('writeBuildResult()', () => {
           )
         )
       ).toBe(false);
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
+
+  it('rejects V3 Edge Function outputs from services', async () => {
+    const workPath = await getWriteableDirectory();
+    const outputDir = join(workPath, '.vercel', 'output');
+    const build = {
+      src: 'index.js',
+      use: '@vercel/node',
+      config: { zeroConfig: true },
+    };
+    const runtimeBuilder: BuilderV3 = {
+      version: 3,
+      build: async () => {
+        throw new Error('not used by writeBuildResult');
+      },
+    };
+
+    try {
+      await expect(
+        writeBuildResult({
+          repoRootPath: workPath,
+          outputDir,
+          buildResult: {
+            output: new EdgeFunction({
+              deploymentTarget: 'v8-worker',
+              entrypoint: 'index.js',
+              files: {
+                'index.js': new FileBlob({
+                  data: 'export default () => new Response("ok")',
+                }),
+              },
+            }),
+          },
+          build,
+          builder: runtimeBuilder,
+          builderPkg: { name: '@vercel/node' },
+          vercelConfig: null,
+          standalone: false,
+          workPath,
+          service: {
+            schema: 'experimentalServicesV2',
+            name: 'api',
+            root: '.',
+            runtime: 'node',
+            entrypoint: 'index.js',
+            builder: build,
+          },
+          nestServiceOutput: true,
+        })
+      ).rejects.toThrow('Service "api" produced Edge Function output "index"');
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
+
+  it('rejects V2 Edge Function outputs from services', async () => {
+    const workPath = await getWriteableDirectory();
+    const outputDir = join(workPath, '.vercel', 'output');
+    const build = {
+      src: 'index.js',
+      use: '@vercel/node',
+      config: { zeroConfig: true },
+    };
+    const runtimeBuilder: BuilderV2 = {
+      version: 2,
+      build: async () => {
+        throw new Error('not used by writeBuildResult');
+      },
+    };
+
+    try {
+      await expect(
+        writeBuildResult({
+          repoRootPath: workPath,
+          outputDir,
+          buildResult: {
+            output: {
+              edge: new EdgeFunction({
+                deploymentTarget: 'v8-worker',
+                entrypoint: 'index.js',
+                files: {
+                  'index.js': new FileBlob({
+                    data: 'export default () => new Response("ok")',
+                  }),
+                },
+              }),
+            },
+          },
+          build,
+          builder: runtimeBuilder,
+          builderPkg: { name: '@vercel/node' },
+          vercelConfig: null,
+          standalone: false,
+          workPath,
+          service: {
+            schema: 'experimentalServicesV2',
+            name: 'api',
+            root: '.',
+            runtime: 'node',
+            entrypoint: 'index.js',
+            builder: build,
+          },
+          nestServiceOutput: true,
+        })
+      ).rejects.toThrow('Service "api" produced Edge Function output "edge"');
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
+
+  it('rejects Build Output API edge functions from services', async () => {
+    const workPath = await getWriteableDirectory();
+    const outputDir = join(workPath, '.vercel', 'output');
+    const buildOutputPath = join(workPath, 'builder-output');
+    const build = {
+      src: 'package.json',
+      use: '@vercel/next',
+      config: { zeroConfig: true },
+    };
+    const runtimeBuilder: BuilderV2 = {
+      version: 2,
+      build: async () => {
+        throw new Error('not used by writeBuildResult');
+      },
+    };
+
+    try {
+      await fs.outputJSON(
+        join(buildOutputPath, 'functions/api.func/.vc-config.json'),
+        {
+          runtime: 'edge',
+          entrypoint: 'index.js',
+          deploymentTarget: 'v8-worker',
+        }
+      );
+
+      await expect(
+        writeBuildResult({
+          repoRootPath: workPath,
+          outputDir,
+          buildResult: {
+            buildOutputVersion: 3,
+            buildOutputPath,
+          },
+          build,
+          builder: runtimeBuilder,
+          builderPkg: { name: '@vercel/next' },
+          vercelConfig: null,
+          standalone: false,
+          workPath,
+          service: {
+            schema: 'experimentalServicesV2',
+            name: 'web',
+            root: '.',
+            framework: 'nextjs',
+            builder: build,
+          },
+          nestServiceOutput: true,
+        })
+      ).rejects.toThrow('Service "web" produced Edge Function output "api"');
     } finally {
       await fs.remove(workPath);
     }

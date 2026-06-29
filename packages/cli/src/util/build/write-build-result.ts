@@ -1,4 +1,5 @@
 import fs, { existsSync } from 'fs-extra';
+import type { Dirent } from 'fs';
 import mimeTypes from 'mime-types';
 import {
   basename,
@@ -171,6 +172,82 @@ function isFile(v: any): v is File {
   return type === 'FileRef' || type === 'FileFsRef' || type === 'FileBlob';
 }
 
+function getUnsupportedServiceEdgeRuntimeError(
+  service: Service,
+  outputPath: string
+) {
+  return new Error(
+    `Edge Runtime is not supported in services. Service "${service.name}" produced Edge Function output "${outputPath}". ` +
+      `Remove the Edge runtime configuration from this service or deploy it outside of services.`
+  );
+}
+
+function assertServiceCanUseFunctionOutput(
+  service: Service | undefined,
+  output: unknown,
+  outputPath: string
+) {
+  if (service && isEdgeFunction(output)) {
+    throw getUnsupportedServiceEdgeRuntimeError(service, outputPath);
+  }
+}
+
+async function assertBuildOutputCanBeUsedByService(
+  service: Service | undefined,
+  buildOutputPath: string
+) {
+  if (!service) {
+    return;
+  }
+
+  const functionsDir = join(buildOutputPath, 'functions');
+  const edgeFunctionPath = await findEdgeFunctionConfig(functionsDir);
+  if (!edgeFunctionPath) {
+    return;
+  }
+
+  const outputPath = normalize(
+    relative(functionsDir, dirname(edgeFunctionPath))
+  ).replace(/\.func$/, '');
+
+  throw getUnsupportedServiceEdgeRuntimeError(service, outputPath);
+}
+
+async function findEdgeFunctionConfig(dir: string): Promise<string | null> {
+  let entries: Dirent[];
+  try {
+    entries = await fs.readdir(dir, { withFileTypes: true });
+  } catch (error: any) {
+    if (error?.code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+
+  for (const entry of entries) {
+    const childPath = join(dir, entry.name);
+
+    if (entry.name.endsWith('.func')) {
+      const configPath = join(childPath, '.vc-config.json');
+      if (await fs.pathExists(configPath)) {
+        const config = await fs.readJSON(configPath);
+        if (config?.runtime === 'edge') {
+          return configPath;
+        }
+      }
+    }
+
+    if (entry.isDirectory()) {
+      const edgeFunctionPath = await findEdgeFunctionConfig(childPath);
+      if (edgeFunctionPath) {
+        return edgeFunctionPath;
+      }
+    }
+  }
+
+  return null;
+}
+
 export interface PathOverride {
   contentType?: string;
   path?: string;
@@ -255,6 +332,10 @@ async function writeBuildResultV2(args: {
     stripServiceRoutePrefix,
   } = args;
   if ('buildOutputPath' in buildResult) {
+    await assertBuildOutputCanBeUsedByService(
+      service,
+      buildResult.buildOutputPath
+    );
     await mergeBuilderOutput(outputDir, buildResult, workPath, rootOutputDir);
     return;
   }
@@ -367,6 +448,7 @@ async function writeBuildResultV2(args: {
         vercelConfig?.cleanUrls
       );
     } else if (isEdgeFunction(output)) {
+      assertServiceCanUseFunctionOutput(service, output, normalizedPath);
       await writeEdgeFunction(
         repoRootPath,
         outputDir,
@@ -548,6 +630,7 @@ async function writeBuildResultV3(args: {
       standalone
     );
   } else if (isEdgeFunction(output)) {
+    assertServiceCanUseFunctionOutput(service, output, path);
     await writeEdgeFunction(
       repoRootPath,
       outputDir,
