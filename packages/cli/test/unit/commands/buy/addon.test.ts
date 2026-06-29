@@ -55,36 +55,43 @@ describe('buy addon', () => {
       await expect(client.stderr).toOutput('Invalid addon "invalid"');
     });
 
+    it('errors when addon name is siem', async () => {
+      client.setArgv('buy', 'addon', 'siem', '1');
+      const exitCode = await buy(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('Invalid addon "siem"');
+    });
+
     it('errors when quantity is missing', async () => {
-      client.setArgv('buy', 'addon', 'siem');
+      client.setArgv('buy', 'addon', 'customEnvironment');
       const exitCode = await buy(client);
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('Missing quantity');
     });
 
     it('errors when quantity is not a number', async () => {
-      client.setArgv('buy', 'addon', 'siem', 'abc');
+      client.setArgv('buy', 'addon', 'customEnvironment', 'abc');
       const exitCode = await buy(client);
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('Invalid quantity "abc"');
     });
 
     it('errors when quantity is zero', async () => {
-      client.setArgv('buy', 'addon', 'siem', '0');
+      client.setArgv('buy', 'addon', 'customEnvironment', '0');
       const exitCode = await buy(client);
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('positive number');
     });
 
     it('errors when quantity is negative', async () => {
-      client.setArgv('buy', 'addon', 'siem', '-1');
+      client.setArgv('buy', 'addon', 'customEnvironment', '-1');
       const exitCode = await buy(client);
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('unknown or unexpected option');
     });
 
     it('errors when quantity is a decimal', async () => {
-      client.setArgv('buy', 'addon', 'siem', '1.5');
+      client.setArgv('buy', 'addon', 'customEnvironment', '1.5');
       const exitCode = await buy(client);
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('Invalid quantity "1.5"');
@@ -92,10 +99,10 @@ describe('buy addon', () => {
   });
 
   describe('--yes', () => {
-    it('skips confirmation and purchases successfully', async () => {
+    it('skips confirmation and purchases', async () => {
       setupTeam();
       useBuyEndpoint();
-      client.setArgv('buy', 'addon', 'siem', '1', '--yes');
+      client.setArgv('buy', 'addon', 'customEnvironment', '1', '--yes');
       const exitCode = await buy(client);
       expect(exitCode).toBe(0);
     });
@@ -103,7 +110,7 @@ describe('buy addon', () => {
     it('errors in non-TTY mode without --yes', async () => {
       setupTeam();
       useBuyEndpoint();
-      client.setArgv('buy', 'addon', 'siem', '1');
+      client.setArgv('buy', 'addon', 'customEnvironment', '1');
       (client.stdin as any).isTTY = false;
 
       const exitCode = await buy(client);
@@ -111,7 +118,7 @@ describe('buy addon', () => {
       await expect(client.stderr).toOutput('Use --yes');
     });
 
-    it('purchases customEnvironment addon successfully', async () => {
+    it('purchases customEnvironment addon', async () => {
       setupTeam();
       useBuyEndpoint();
       client.setArgv('buy', 'addon', 'customEnvironment', '1', '--yes');
@@ -124,7 +131,7 @@ describe('buy addon', () => {
     it('aborts when user declines', async () => {
       setupTeam();
       useBuyEndpoint();
-      client.setArgv('buy', 'addon', 'siem', '1');
+      client.setArgv('buy', 'addon', 'customEnvironment', '1');
 
       const exitCodePromise = buy(client);
       await expect(client.stderr).toOutput('Purchase');
@@ -136,7 +143,7 @@ describe('buy addon', () => {
     it('proceeds when user confirms', async () => {
       setupTeam();
       useBuyEndpoint();
-      client.setArgv('buy', 'addon', 'siem', '1');
+      client.setArgv('buy', 'addon', 'customEnvironment', '1');
 
       const exitCodePromise = buy(client);
       await expect(client.stderr).toOutput('Purchase');
@@ -157,7 +164,7 @@ describe('buy addon', () => {
           },
         });
       });
-      client.setArgv('buy', 'addon', 'siem', '1', '--yes');
+      client.setArgv('buy', 'addon', 'customEnvironment', '1', '--yes');
       const exitCode = await buy(client);
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('payment method');
@@ -176,7 +183,7 @@ describe('buy addon', () => {
           },
         });
       });
-      client.setArgv('buy', 'addon', 'siem', '1', '--yes');
+      client.setArgv('buy', 'addon', 'customEnvironment', '1', '--yes');
       const exitCode = await buy(client);
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('Payment failed');
@@ -195,7 +202,7 @@ describe('buy addon', () => {
           },
         });
       });
-      client.setArgv('buy', 'addon', 'siem', '1', '--yes');
+      client.setArgv('buy', 'addon', 'customEnvironment', '1', '--yes');
       const exitCode = await buy(client);
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('Flex plan');
@@ -211,7 +218,7 @@ describe('buy addon', () => {
           },
         });
       });
-      client.setArgv('buy', 'addon', 'siem', '1', '--yes');
+      client.setArgv('buy', 'addon', 'customEnvironment', '1', '--yes');
       const exitCode = await buy(client);
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('active subscription');
@@ -222,13 +229,20 @@ describe('buy addon', () => {
     it('outputs JSON on success', async () => {
       setupTeam();
       useBuyEndpoint();
-      client.setArgv('buy', 'addon', 'siem', '1', '--yes', '--format=json');
+      client.setArgv(
+        'buy',
+        'addon',
+        'customEnvironment',
+        '1',
+        '--yes',
+        '--format=json'
+      );
       const exitCode = await buy(client);
       expect(exitCode).toBe(0);
 
       const stdoutOutput = client.stdout.getFullOutput();
       const parsed = JSON.parse(stdoutOutput);
-      expect(parsed.productAlias).toBe('siem');
+      expect(parsed.productAlias).toBe('customEnvironment');
       expect(parsed.quantity).toBe(1);
       expect(parsed.subscriptionIntent.id).toBe('subint_test_123');
     });
@@ -260,6 +274,10 @@ describe('buy addon', () => {
       client.setArgv('buy', 'addon', '--help');
       const exitCode = await buy(client);
       expect(exitCode).toBe(2);
+      const output = client.stderr.getFullOutput();
+      expect(output).toContain('buy addon customEnvironment 1');
+      expect(output).not.toContain('buy addon siem 1');
+      expect(output).not.toContain('SIEM');
     });
 
     it('tracks telemetry', async () => {
@@ -278,7 +296,7 @@ describe('buy addon', () => {
     it('tracks addon subcommand', async () => {
       setupTeam();
       useBuyEndpoint();
-      client.setArgv('buy', 'addon', 'siem', '1', '--yes');
+      client.setArgv('buy', 'addon', 'customEnvironment', '1', '--yes');
       await buy(client);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

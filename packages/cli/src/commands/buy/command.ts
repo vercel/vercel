@@ -49,12 +49,11 @@ export const creditsSubcommand = {
 } as const;
 
 // TODO(mingchungx): Add other addons
-export const SUPPORTED_ADDON_ALIASES = ['siem', 'customEnvironment'] as const;
+export const SUPPORTED_ADDON_ALIASES = ['customEnvironment'] as const;
 export type AddonAlias = (typeof SUPPORTED_ADDON_ALIASES)[number];
 
 // TODO(mingchungx): Add other labels
 export const ADDON_LABELS: Record<AddonAlias, string> = {
-  siem: 'SIEM',
   customEnvironment: 'Custom Environments',
 };
 
@@ -81,10 +80,6 @@ export const addonSubcommand = {
     jsonOption,
   ],
   examples: [
-    {
-      name: 'Purchase 1 unit of the SIEM addon',
-      value: `${packageName} buy addon siem 1`,
-    },
     {
       name: 'Purchase 1 unit of the Custom Environments addon',
       value: `${packageName} buy addon customEnvironment 1`,
@@ -167,10 +162,6 @@ export const buyCommand = {
     {
       name: 'Purchase $100 of v0 credits',
       value: `${packageName} buy credits v0 100`,
-    },
-    {
-      name: 'Purchase the SIEM addon',
-      value: `${packageName} buy addon siem 1`,
     },
     {
       name: 'Purchase the Custom Environments addon',
