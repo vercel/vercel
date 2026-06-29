@@ -170,7 +170,7 @@ interface BuildOutputConfig {
   crons?: Cron[];
   experimentalServices?: ExperimentalServices;
   experimentalServicesV2?: ExperimentalServicesV2;
-  services?: Service[];
+  services?: ExperimentalServicesV2 | Service[];
   deploymentId?: string;
 }
 
@@ -1574,8 +1574,15 @@ async function doBuild(
                   outputConfig.experimentalServicesV2;
               }
               if (
+                hasGeneratedServicesConfig(outputConfig) &&
+                !hasGeneratedServicesConfig(buildOutputConfig)
+              ) {
+                buildOutputConfig.services = outputConfig.services;
+              }
+              if (
                 hasNonEmptyObject(buildOutputConfig.experimentalServices) ||
-                hasNonEmptyObject(buildOutputConfig.experimentalServicesV2)
+                hasNonEmptyObject(buildOutputConfig.experimentalServicesV2) ||
+                hasGeneratedServicesConfig(buildOutputConfig)
               ) {
                 await fs.writeJSON(buildOutputConfigPath, buildOutputConfig, {
                   spaces: 2,
@@ -1747,45 +1754,40 @@ async function doBuild(
       generatedConfigs.push(defaultGeneratedConfig);
     }
 
-    const generatedExperimentalServicesV2Config =
-      getGeneratedExperimentalServicesV2Config([
-        ...generatedConfigs,
-        ...buildResults.values(),
-      ]);
+    const generatedServicesConfig = getGeneratedServicesConfig([
+      ...generatedConfigs,
+      ...buildResults.values(),
+    ]);
     const generatedExperimentalServicesV1Config =
       getGeneratedExperimentalServicesV1Config([
         ...generatedConfigs,
         ...buildResults.values(),
       ]);
 
-    if (
-      generatedExperimentalServicesV2Config ||
-      generatedExperimentalServicesV1Config
-    ) {
-      if (generatedExperimentalServicesV2Config) {
+    if (generatedServicesConfig || generatedExperimentalServicesV1Config) {
+      if (generatedServicesConfig) {
         nestExperimentalServicesV2Output = true;
       }
       detectedExperimentalServicesV1Config =
         generatedExperimentalServicesV1Config;
-      detectedExperimentalServicesV2Config =
-        generatedExperimentalServicesV2Config;
-      detectedExperimentalServicesV2RootRoutes =
-        generatedExperimentalServicesV2Config
-          ? generatedConfigs.find(
-              config =>
-                hasNonEmptyObject(config?.experimentalServicesV2) &&
-                Array.isArray(config?.routes)
-            )?.routes
-          : undefined;
+      detectedExperimentalServicesV2Config = generatedServicesConfig;
+      detectedExperimentalServicesV2RootRoutes = generatedServicesConfig
+        ? generatedConfigs.find(
+            config =>
+              (hasGeneratedServicesConfig(config) ||
+                hasNonEmptyObject(config?.experimentalServicesV2)) &&
+              Array.isArray(config?.routes)
+          )?.routes
+        : undefined;
       const generatedBuilders = await span
         .child('vc.detectGeneratedServices')
         .trace(() =>
           detectBuilders(files, pkg, {
             ...localConfig,
-            services: undefined,
-            ...(generatedExperimentalServicesV2Config
+            ...(generatedServicesConfig
               ? {
-                  experimentalServicesV2: generatedExperimentalServicesV2Config,
+                  services: generatedServicesConfig,
+                  experimentalServicesV2: undefined,
                 }
               : {
                   experimentalServicesV2: undefined,
@@ -1846,7 +1848,7 @@ async function doBuild(
       for (const service of detectedResolvedServices || []) {
         const alreadyExecutedBuild = getAlreadyExecutedBuild(service.builder);
         if (alreadyExecutedBuild) {
-          if (generatedExperimentalServicesV2Config) {
+          if (generatedServicesConfig) {
             output.warn(getGeneratedServiceAlreadyBuiltWarning(service));
             continue;
           }
@@ -2643,10 +2645,23 @@ function getGeneratedExperimentalServicesV1Config(
   return undefined;
 }
 
-function getGeneratedExperimentalServicesV2Config(
+function hasGeneratedServicesConfig(
+  result: BuildResult | BuildOutputConfig | null | undefined
+): result is (BuildResult | BuildOutputConfig) & {
+  services: ExperimentalServicesV2;
+} {
+  return (
+    result != null && 'services' in result && hasNonEmptyObject(result.services)
+  );
+}
+
+function getGeneratedServicesConfig(
   buildResults: Iterable<BuildResult | BuildOutputConfig | null | undefined>
 ): ExperimentalServicesV2 | undefined {
   for (const result of buildResults) {
+    if (hasGeneratedServicesConfig(result)) {
+      return result.services;
+    }
     if (
       result &&
       'experimentalServicesV2' in result &&
