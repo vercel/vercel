@@ -335,7 +335,7 @@ describe('executeUpgrade', () => {
       ['i', '-g', 'vercel@latest'],
       {
         cwd: tmpdir(),
-        stdio: ['inherit', 'pipe', 'pipe'],
+        stdio: ['ignore', 'pipe', 'pipe'],
         shell: false,
       }
     );
@@ -398,7 +398,7 @@ describe('executeUpgrade', () => {
       ['i', '-g', '@vercel/vc-native@latest', '--force'],
       {
         cwd: tmpdir(),
-        stdio: ['inherit', 'pipe', 'pipe'],
+        stdio: ['ignore', 'pipe', 'pipe'],
         shell: false,
       }
     );
@@ -448,18 +448,35 @@ describe('executeUpgrade', () => {
     );
   });
 
-  it('should log the upgrade command in debug mode', async () => {
+  it('should log installer diagnostics in debug mode', async () => {
     const mockProcess = createMockProcess();
     spawnMock.mockReturnValue(mockProcess as any);
 
     const exitCodePromise = executeUpgrade();
     await tick();
 
+    mockProcess.stdout.emit('data', Buffer.from('Installing packages...\n'));
+    mockProcess.stderr.emit('data', Buffer.from('pnpm WARN check\n'));
     mockProcess.emit('close', 0);
     await exitCodePromise;
 
     expect(outputMock.debug).toHaveBeenCalledWith(
       `Executing: npm i -g vercel@latest (cwd: ${tmpdir()})`
+    );
+    expect(outputMock.debug).toHaveBeenCalledWith(
+      'Upgrade installer spawned: pid=unknown'
+    );
+    expect(outputMock.debug).toHaveBeenCalledWith(
+      'Waiting for upgrade installer to exit...'
+    );
+    expect(outputMock.debug).toHaveBeenCalledWith(
+      'Upgrade installer stdout: Installing packages...'
+    );
+    expect(outputMock.debug).toHaveBeenCalledWith(
+      'Upgrade installer stderr: pnpm WARN check'
+    );
+    expect(outputMock.debug).toHaveBeenCalledWith(
+      'Upgrade installer closed: code=0, signal=none'
     );
   });
 });

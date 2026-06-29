@@ -27,11 +27,19 @@ export function setAutoUpdate(client: Client, enabled: boolean): void {
   writeToConfigFile(client.config);
 }
 
+export function shouldRunUpdateNotifier(command?: string): boolean {
+  return command !== 'upgrade';
+}
+
 export async function canAutoUpdate(
   client: Client,
   exitCode: number,
   command?: string
 ) {
+  if (!shouldRunUpdateNotifier(command)) {
+    return false;
+  }
+
   if (isNativeBinaryInstall()) {
     return false;
   }
@@ -49,10 +57,6 @@ export async function canAutoUpdate(
   }
 
   if (client.nonInteractive || client.isAgent) {
-    return false;
-  }
-
-  if (command === 'upgrade') {
     return false;
   }
 

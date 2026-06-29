@@ -37,6 +37,20 @@ function execFileStdout(command: string, args: string[]): Promise<string> {
   });
 }
 
+function debugInstallerOutput(stream: 'stdout' | 'stderr', data: Buffer): void {
+  const text = data.toString().replace(/\r/g, '\n').trimEnd();
+  if (!text) {
+    output.debug(`Upgrade installer ${stream}: <${data.byteLength} bytes>`);
+    return;
+  }
+
+  for (const line of text.split('\n')) {
+    if (line) {
+      output.debug(`Upgrade installer ${stream}: ${line}`);
+    }
+  }
+}
+
 function parseVersionOutput(stdout: string): string | undefined {
   for (const line of stdout.trim().split('\n').reverse()) {
     try {
@@ -76,8 +90,15 @@ async function getLatestPackageVersion(
       : ['view', packageSpecifier, 'version', '--json'];
 
   try {
+    output.debug(
+      `Resolving latest Vercel CLI version: ${packageManager} ${queryArgs.join(
+        ' '
+      )}`
+    );
     const stdout = await execFileStdout(packageManager, queryArgs);
-    return parseVersionOutput(stdout);
+    const version = parseVersionOutput(stdout);
+    output.debug(`Resolved latest Vercel CLI version: ${version ?? 'unknown'}`);
+    return version;
   } catch (error) {
     output.debug(
       `Failed to resolve the latest Vercel CLI version: ${
@@ -127,6 +148,12 @@ export async function executeUpgrade(targetVersion?: string): Promise<number> {
     resolvedTargetVersion = await getLatestPackageVersion(command, args);
   }
 
+  output.debug(
+    `Upgrade versions: current=${versionBefore}, target=${
+      resolvedTargetVersion ?? 'unknown'
+    }`
+  );
+
   if (
     resolvedTargetVersion &&
     isVersionCurrent(versionBefore, resolvedTargetVersion)
@@ -145,29 +172,57 @@ export async function executeUpgrade(targetVersion?: string): Promise<number> {
   return new Promise<number>(resolve => {
     const stdout: Uint8Array[] = [];
     const stderr: Uint8Array[] = [];
+    let waitDebugTimer: ReturnType<typeof setTimeout> | undefined;
 
     const upgradeProcess = spawn(command, args, {
       cwd,
-      stdio: ['inherit', 'pipe', 'pipe'],
+      stdio: ['ignore', 'pipe', 'pipe'],
       shell: false,
     });
 
+    output.debug(
+      `Upgrade installer spawned: pid=${upgradeProcess.pid ?? 'unknown'}`
+    );
+    output.debug('Waiting for upgrade installer to exit...');
+
+    waitDebugTimer = setTimeout(() => {
+      output.debug(
+        `Upgrade installer still running after 10s: ${updateCommand}`
+      );
+    }, 10_000);
+    waitDebugTimer.unref?.();
+
     upgradeProcess.stdout?.on('data', (data: Buffer) => {
       stdout.push(Uint8Array.from(data));
+      debugInstallerOutput('stdout', data);
     });
 
     upgradeProcess.stderr?.on('data', (data: Buffer) => {
       stderr.push(Uint8Array.from(data));
+      debugInstallerOutput('stderr', data);
     });
 
     upgradeProcess.on('error', (err: Error) => {
+      if (waitDebugTimer) {
+        clearTimeout(waitDebugTimer);
+      }
+      output.debug(`Upgrade installer spawn error: ${err.message}`);
       output.stopSpinner();
       output.error(`Failed to execute upgrade command: ${err.message}`);
       output.log(`You can try running the command manually: ${updateCommand}`);
       resolve(1);
     });
 
-    upgradeProcess.on('close', (code: number | null) => {
+    upgradeProcess.on('close', (code: number | null, signal: string | null) => {
+      if (waitDebugTimer) {
+        clearTimeout(waitDebugTimer);
+      }
+      output.debug(
+        `Upgrade installer closed: code=${code ?? 'unknown'}, signal=${
+          signal ?? 'none'
+        }`
+      );
+
       if (code !== 0) {
         output.stopSpinner();
         // Show output only on error

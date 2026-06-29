@@ -9,6 +9,7 @@ import {
   isNativeBinaryInstall,
   isAutoUpdateEnabled,
   setAutoUpdate,
+  shouldRunUpdateNotifier,
 } from '../../../src/util/updates';
 
 vi.mock('ci-info', () => ({
@@ -68,6 +69,11 @@ describe('updates', () => {
 
     process.env.VERCEL_VC_NATIVE = '1';
     expect(isNativeBinaryInstall()).toBe(true);
+  });
+
+  it('does not run the update notifier after the upgrade command', () => {
+    expect(shouldRunUpdateNotifier('upgrade')).toBe(false);
+    expect(shouldRunUpdateNotifier('deploy')).toBe(true);
   });
 
   it('allows auto-update only for successful global interactive invocations', async () => {

@@ -71,6 +71,7 @@ import {
   hasAutoUpdatePreference,
   isNativeBinaryInstall,
   setAutoUpdate,
+  shouldRunUpdateNotifier,
 } from './util/updates';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import login from './commands/login';
@@ -1383,7 +1384,7 @@ async function promptAndUpgrade(
 
 main()
   .then(async exitCode => {
-    if (cachedLatest) {
+    if (cachedLatest && shouldRunUpdateNotifier(resolvedCommandForUpdate)) {
       const originalExitCode = typeof exitCode === 'number' ? exitCode : 0;
 
       // Await the fresh registry lookup to verify the exact version before
