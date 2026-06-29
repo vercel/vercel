@@ -179,6 +179,7 @@ interface FrameworkHookContext {
 
 interface FrameworkHookResult {
   entrypoint?: PythonEntrypoint;
+  extraPythonPath?: string;
 }
 
 interface DjangoFrameworkHookResult extends FrameworkHookResult {
@@ -273,7 +274,11 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
         djangoVersion
       );
     }
-    return { entrypoint: resolvedEntrypoint, djangoStatic };
+    return {
+      entrypoint: resolvedEntrypoint,
+      djangoStatic,
+      extraPythonPath: baseDir ? join(workPath, baseDir) : undefined,
+    };
   },
 };
 
