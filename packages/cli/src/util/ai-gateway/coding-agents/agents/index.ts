@@ -1,11 +1,12 @@
 import type { CodingAgent } from '../types';
 import { claudeCode } from './claude-code';
+import { codex } from './codex';
 
 /**
  * Registry of supported coding agents. Add a new agent by exporting a
  * `CodingAgent` from a file in this folder and appending it here.
  */
-export const CODING_AGENTS: CodingAgent[] = [claudeCode];
+export const CODING_AGENTS: CodingAgent[] = [claudeCode, codex];
 
 /** Default targets when the user does not pass `--agent` (excludes experimental). */
 export const DEFAULT_AGENTS = CODING_AGENTS.filter(a => !a.experimental);

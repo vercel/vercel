@@ -8,12 +8,14 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { parse as tomlParse } from 'smol-toml';
 import { client } from '../../../mocks/client';
 import aiGateway from '../../../../src/commands/ai-gateway';
 import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
 import { buildSetupPlan } from '../../../../src/util/ai-gateway/coding-agents/apply';
 import { claudeCode } from '../../../../src/util/ai-gateway/coding-agents/agents/claude-code';
+import { codex } from '../../../../src/util/ai-gateway/coding-agents/agents/codex';
 import {
   isKeychainAvailable,
   storeKeyInKeychain,
@@ -50,6 +52,9 @@ function claudeSettingsPath() {
 }
 function codexConfigPath() {
   return join(home, '.codex', 'config.toml');
+}
+function bashrcPath() {
+  return join(home, '.bashrc');
 }
 
 beforeEach(() => {
@@ -127,6 +132,58 @@ describe('ai-gateway coding-agents connect', () => {
       expect(out.apiKey).toBe('vck_DummyKey0001');
       expect(out.configured).toHaveLength(1);
       expect(out.configured[0].action).toBe('created');
+    });
+
+    it('configures Codex with the responses wire API and a shell export', async () => {
+      useUser();
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--key',
+        'vck_DummyKey0002',
+        '--agent',
+        'codex'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const toml = tomlParse(readFileSync(codexConfigPath(), 'utf8')) as any;
+      expect(toml.model_provider).toBe('vercel');
+      // We never pin a default model — only the provider/URL/auth are set up.
+      expect(toml.model).toBeUndefined();
+      expect(toml.model_providers.vercel.base_url).toBe(
+        'https://ai-gateway.vercel.sh/v1'
+      );
+      expect(toml.model_providers.vercel.wire_api).toBe('responses');
+      expect(toml.model_providers.vercel.env_key).toBe('AI_GATEWAY_API_KEY');
+
+      const bashrc = readFileSync(bashrcPath(), 'utf8');
+      expect(bashrc).toContain('# >>> vercel ai-gateway >>>');
+      expect(bashrc).toContain("export AI_GATEWAY_API_KEY='vck_DummyKey0002'");
+    });
+
+    it('shell-escapes a key with special characters', async () => {
+      useUser();
+      client.nonInteractive = true;
+      const trickyKey = 'vck_a$b`c\'d"e';
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--key',
+        trickyKey,
+        '--agent',
+        'codex'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      const bashrc = readFileSync(bashrcPath(), 'utf8');
+      expect(bashrc).toContain(
+        `export AI_GATEWAY_API_KEY='vck_a$b\`c'\\''d"e'`
+      );
     });
   });
 
@@ -379,6 +436,20 @@ describe('ai-gateway coding-agents connect', () => {
       const claude = plan.changes.find(c => c.label === 'Claude Code settings');
       expect(claude?.next).toContain(secret);
     });
+
+    it('reads the Codex env key from the Keychain instead of the config', async () => {
+      const secret = 'vck_KeychainSecret321';
+      const plan = await buildSetupPlan([codex], {
+        apiKey: secret,
+        home,
+        useKeychain: true,
+      });
+
+      const shell = plan.changes.find(c => c.format === 'shell');
+      expect(shell?.next).toContain('security find-generic-password');
+      expect(shell?.next).toContain('export AI_GATEWAY_API_KEY=');
+      expect(shell?.next).not.toContain(secret);
+    });
   });
 
   describe('key options', () => {
@@ -548,6 +619,20 @@ describe('ai-gateway coding-agents connect', () => {
       ).toBe(true);
     });
 
+    it('writes fish syntax to a fish rc', async () => {
+      const fishRc = join(home, '.config', 'fish', 'config.fish');
+      const plan = await buildSetupPlan([codex], {
+        apiKey: "vck_a'b",
+        home,
+        useKeychain: false,
+        shellRcOverride: fishRc,
+      });
+      const shell = plan.changes.find(c => c.format === 'shell');
+      expect(shell?.path).toBe(fishRc);
+      expect(shell?.next).toContain('set -gx AI_GATEWAY_API_KEY');
+      expect(shell?.next).not.toContain('export ');
+    });
+
     it('rejects a malformed --agent-config', async () => {
       useUser();
       client.setArgv(
@@ -561,6 +646,21 @@ describe('ai-gateway coding-agents connect', () => {
       );
       expect(await aiGateway(client)).toBe(1);
       await expect(client.stderr).toOutput('Invalid --agent-config');
+    });
+
+    it('rejects an override for an unselected agent', async () => {
+      useUser();
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--agent',
+        'claude-code',
+        '--agent-config',
+        'codex=/tmp/x/config.toml'
+      );
+      expect(await aiGateway(client)).toBe(1);
+      await expect(client.stderr).toOutput("isn't selected");
     });
   });
 
