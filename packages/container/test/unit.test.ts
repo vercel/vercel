@@ -4,26 +4,33 @@ import { readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { build, prepareCache, startDevServer } from '../src';
-import {
-  __resetBuildahGraphRoot,
-  __resetStorageDriverCache,
-} from '../src/storage-driver';
+import { __resetStorageDriverCache } from '../src/storage-driver';
 import { __resetRunningContainers } from '../src/dev';
 
-const { spawnMock, existsSyncMock, mkdirSyncMock } = vi.hoisted(() => ({
-  spawnMock: vi.fn(),
-  existsSyncMock: vi.fn(),
-  mkdirSyncMock: vi.fn(),
-}));
+const { spawnMock, existsSyncMock, mkdirSyncMock, cpSyncMock } = vi.hoisted(
+  () => ({
+    spawnMock: vi.fn(),
+    existsSyncMock: vi.fn(),
+    mkdirSyncMock: vi.fn(),
+    cpSyncMock: vi.fn(),
+  })
+);
 
 vi.mock('node:child_process', async importActual => {
   const actual = await importActual<typeof import('node:child_process')>();
   return { ...actual, spawn: spawnMock };
 });
 
+// NOTE: `rmSync` is intentionally NOT mocked — the dev path relies on the real
+// implementation to delete the temp env-file dir, and a test asserts that.
 vi.mock('node:fs', async importActual => {
   const actual = await importActual<typeof import('node:fs')>();
-  return { ...actual, existsSync: existsSyncMock, mkdirSync: mkdirSyncMock };
+  return {
+    ...actual,
+    existsSync: existsSyncMock,
+    mkdirSync: mkdirSyncMock,
+    cpSync: cpSyncMock,
+  };
 });
 
 const createBuildOptions = (config: Record<string, unknown>) => ({
@@ -151,8 +158,8 @@ beforeEach(() => {
   existsSyncMock.mockReturnValue(false);
   spawnMock.mockReset();
   mkdirSyncMock.mockReset();
+  cpSyncMock.mockReset();
   __resetStorageDriverCache();
-  __resetBuildahGraphRoot();
   __resetRunningContainers();
   for (const key of VCR_ENV_KEYS) {
     delete process.env[key];
@@ -301,10 +308,10 @@ describe('@vercel/container', () => {
       return true;
     });
     // Simulate `buildah info` reporting the intended store: native overlay with
-    // the graphroot at the work-dir `.vercel/cache` store (workPath is `/` in
-    // these tests). Tests can override via `storeInfo`.
+    // the graphroot under the XFS /vercel volume. Tests can override via
+    // `storeInfo`.
     const storeInfo = options?.storeInfo ?? {
-      GraphRoot: '/.vercel/cache/vercel-container/storage',
+      GraphRoot: '/vercel/.containers/storage',
       RunRoot: '/run/containers/storage',
       GraphDriverName: 'overlay',
       GraphStatus: { 'Backing Filesystem': 'xfs' },
@@ -397,12 +404,10 @@ describe('@vercel/container', () => {
     // Defer to /etc/containers/storage.conf (native overlay on /vercel); we
     // must NOT force a --storage-driver.
     expect(commands.some(c => c.includes('--storage-driver'))).toBe(false);
-    // The graphroot is redirected into the work-dir `.vercel/cache` so the
-    // store is persisted by prepareCache (workPath is `/` in these tests).
+    // buildah's store runs at the fixed XFS graphroot so the native overlay
+    // driver initializes (it can't run under the work dir's overlayfs rootfs).
     expect(
-      commands.some(c =>
-        c.includes('--root /.vercel/cache/vercel-container/storage')
-      )
+      commands.some(c => c.includes('--root /vercel/.containers/storage'))
     ).toBe(true);
     expect(commands.some(c => c.startsWith('docker build'))).toBe(false);
   });
@@ -494,7 +499,7 @@ describe('@vercel/container', () => {
         return fakeChild(
           JSON.stringify({
             store: {
-              GraphRoot: '/.vercel/cache/vercel-container/storage',
+              GraphRoot: '/vercel/.containers/storage',
               RunRoot: '/run/containers/storage',
               GraphDriverName: 'overlay',
               GraphStatus: { 'Backing Filesystem': 'xfs' },
@@ -580,7 +585,7 @@ describe('@vercel/container', () => {
       runDockerfileBuild({
         buildImageEnv: 'al2023',
         storeInfo: {
-          GraphRoot: '/.vercel/cache/vercel-container/storage',
+          GraphRoot: '/vercel/.containers/storage',
           RunRoot: '/run/containers/storage',
           GraphDriverName: 'vfs',
           GraphStatus: { 'Backing Filesystem': 'xfs' },
@@ -596,7 +601,7 @@ describe('@vercel/container', () => {
         runDockerfileBuild({
           buildImageEnv: 'al2023',
           storeInfo: {
-            GraphRoot: '/.vercel/cache/vercel-container/storage',
+            GraphRoot: '/vercel/.containers/storage',
             RunRoot: '/run/containers/storage',
             GraphDriverName: 'vfs',
             GraphStatus: { 'Backing Filesystem': 'xfs' },
@@ -1241,24 +1246,28 @@ describe('@vercel/container', () => {
       expect(result).toEqual({});
     });
 
-    it('globs the work-dir store relative to workPath so keys are project-relative', async () => {
+    it('mirrors the graphroot into .vercel/cache and returns project-relative keys', async () => {
       process.env.VERCEL_BUILD_IMAGE = 'al2023';
-      // Use a real temp work dir with a real store file so the (unmocked) glob
-      // returns results. The store lives at <workPath>/.vercel/cache/... .
-      // `node:fs` is mocked in this file, so reach the real implementation.
+      // Real temp work dir so the (unmocked) glob can read the mirror. fs is
+      // mocked in this file, so reach the real implementation for setup.
       const realFs = await vi.importActual<typeof import('node:fs')>('node:fs');
       const { tmpdir: realTmpdir } =
         await vi.importActual<typeof import('node:os')>('node:os');
       const tmpWorkPath = realFs.mkdtempSync(
         join(realTmpdir(), 'vc-container-')
       );
-      const storeDir = join(
+      const cacheDir = join(
         tmpWorkPath,
         '.vercel/cache/vercel-container/storage'
       );
-      realFs.mkdirSync(join(storeDir, 'overlay'), { recursive: true });
-      realFs.writeFileSync(join(storeDir, 'overlay', 'layer'), 'x');
-      // prepareCache's existence guard uses the mocked existsSync.
+      // cpSync is mocked; simulate the real copy by materializing the mirror
+      // the (real) glob will then read. (rmSync/mkdirSync that run before it in
+      // prepareCache are real/mocked respectively and safe here.)
+      cpSyncMock.mockImplementation((_src: unknown, dest: unknown) => {
+        realFs.mkdirSync(join(String(dest), 'overlay'), { recursive: true });
+        realFs.writeFileSync(join(String(dest), 'overlay', 'layer'), 'x');
+      });
+      // prepareCache's guard checks the real graphroot exists (mocked true).
       existsSyncMock.mockReturnValue(true);
       try {
         const result = await prepareCache({
@@ -1266,6 +1275,12 @@ describe('@vercel/container', () => {
           workPath: tmpWorkPath,
           repoRootPath: tmpWorkPath,
         });
+        // The real store is copied into the work-dir cache mirror.
+        expect(cpSyncMock).toHaveBeenCalledWith(
+          '/vercel/.containers/storage',
+          cacheDir,
+          expect.objectContaining({ recursive: true })
+        );
         // Keys must be relative to the project work dir (so the platform
         // restores them to the same path on the next build): under
         // `.vercel/cache/...`, never absolute / anchored outside the work dir.
@@ -1280,6 +1295,35 @@ describe('@vercel/container', () => {
       } finally {
         realFs.rmSync(tmpWorkPath, { recursive: true, force: true });
       }
+    });
+  });
+
+  describe('restoreLayerStore', () => {
+    it('copies the cached mirror back to the graphroot in the build container', async () => {
+      const { restoreLayerStore } = await import('../src/prepare-cache');
+      process.env.VERCEL_BUILD_IMAGE = 'al2023';
+      existsSyncMock.mockReturnValue(true); // cached mirror present
+      restoreLayerStore('/vercel');
+      expect(cpSyncMock).toHaveBeenCalledWith(
+        join('/vercel', '.vercel/cache/vercel-container/storage'),
+        '/vercel/.containers/storage',
+        expect.objectContaining({ recursive: true })
+      );
+    });
+
+    it('is a no-op outside the build container', async () => {
+      const { restoreLayerStore } = await import('../src/prepare-cache');
+      existsSyncMock.mockReturnValue(true);
+      restoreLayerStore('/vercel'); // VERCEL_BUILD_IMAGE unset
+      expect(cpSyncMock).not.toHaveBeenCalled();
+    });
+
+    it('is a no-op when there is no cached mirror', async () => {
+      const { restoreLayerStore } = await import('../src/prepare-cache');
+      process.env.VERCEL_BUILD_IMAGE = 'al2023';
+      existsSyncMock.mockReturnValue(false); // no mirror
+      restoreLayerStore('/vercel');
+      expect(cpSyncMock).not.toHaveBeenCalled();
     });
   });
 });
