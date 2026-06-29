@@ -91,13 +91,12 @@ const dash = () => chalk.gray('–');
 const positive = (value: string | undefined) =>
   value != null && Number(value) > 0;
 
-const price = (value: string | undefined) => (positive(value) ? value : dash());
-
 const count = (value: number | undefined) =>
   value != null && value > 0 ? String(value) : dash();
 
 // Input column: per-token when present, else fall back to the model's actual
-// unit (per-second video / per-image). Full pricing stays in --format json.
+// unit (image / per-second video / per-character speech / per-request). Full
+// pricing stays in --format json.
 function inputPrice(p: ModelEndpoint['pricing']) {
   if (positive(p?.prompt)) return p?.prompt;
   if (positive(p?.image)) return `${p?.image}/img`;
@@ -106,6 +105,16 @@ function inputPrice(p: ModelEndpoint['pricing']) {
     .filter(positive)
     .sort((a, b) => Number(a) - Number(b))[0];
   if (perSec) return `${perSec}/s`;
+  if (positive(p?.speech_input_character_cost))
+    return `${p?.speech_input_character_cost}/char`;
+  if (positive(p?.request)) return `${p?.request}/req`;
+  return dash();
+}
+
+// Output column: per-token completion, else per-generated-image when present.
+function outputPrice(p: ModelEndpoint['pricing']) {
+  if (positive(p?.completion)) return p?.completion;
+  if (positive(p?.image_output)) return `${p?.image_output}/img`;
   return dash();
 }
 
@@ -126,7 +135,7 @@ function printEndpointsTable(list: ModelEndpoint[]) {
         e.provider_name,
         count(e.context_length),
         inputPrice(e.pricing),
-        price(e.pricing?.completion),
+        outputPrice(e.pricing),
         e.latency_last_1h?.p50 != null
           ? `${Math.round(e.latency_last_1h.p50)}ms`
           : dash(),
