@@ -4733,7 +4733,7 @@ export const frameworks = [
     slug: 'services',
     experimental: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/services.svg',
-    logoDark:
+    darkModeLogo:
       'https://api-frameworks.vercel.sh/framework-logos/services-dark.svg',
     tagline:
       'Multiple services deployed as serverless functions within your project.',
