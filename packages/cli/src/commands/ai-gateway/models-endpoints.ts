@@ -86,19 +86,36 @@ export default async function endpoints(client: Client, argv: string[]) {
   return 0;
 }
 
+const dash = () => chalk.gray('–');
+
 function printEndpointsTable(list: ModelEndpoint[]) {
   return `${table(
     [
-      ['provider', 'context', 'input', 'output'].map(header =>
-        chalk.gray(header)
-      ),
+      [
+        'provider',
+        'context',
+        'input',
+        'output',
+        'p50 lat',
+        'p50 tput',
+        'uptime',
+        'tags',
+      ].map(header => chalk.gray(header)),
       ...list.map(e => [
         e.provider_name,
-        e.context_length != null ? String(e.context_length) : chalk.gray('–'),
-        e.pricing?.prompt ?? chalk.gray('–'),
-        e.pricing?.completion ?? chalk.gray('–'),
+        e.context_length != null ? String(e.context_length) : dash(),
+        e.pricing?.prompt ?? dash(),
+        e.pricing?.completion ?? dash(),
+        e.latency_last_1h?.p50 != null
+          ? `${Math.round(e.latency_last_1h.p50)}ms`
+          : dash(),
+        e.throughput_last_1h?.p50 != null
+          ? `${Math.round(e.throughput_last_1h.p50)} t/s`
+          : dash(),
+        e.uptime_last_1h != null ? `${e.uptime_last_1h.toFixed(1)}%` : dash(),
+        e.tags?.length ? e.tags.join(', ') : dash(),
       ]),
     ],
-    { align: ['l', 'r', 'r', 'r'], hsep: 4 }
+    { align: ['l', 'r', 'r', 'r', 'r', 'r', 'r', 'l'], hsep: 3 }
   ).replace(/^/gm, '  ')}\n\n`;
 }

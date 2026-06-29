@@ -38,6 +38,9 @@ export type ModelEndpoint = {
   max_completion_tokens?: number;
   pricing?: ModelEndpointPricing;
   tags?: string[];
+  uptime_last_1h?: number;
+  latency_last_1h?: { p50?: number; p95?: number };
+  throughput_last_1h?: { p50?: number; p95?: number };
 };
 
 export type ModelWithEndpoints = {
