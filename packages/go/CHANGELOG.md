@@ -1,5 +1,23 @@
 # @vercel/go
 
+## 3.10.2
+
+### Patch Changes
+
+- 62a884e: Simplify isolated `services` and `experimentalServicesV2` runtime outputs by emitting their function at `index` instead of `_svc/<service-name>/index`.
+
+## 3.10.1
+
+### Patch Changes
+
+- 4b90a10: Route requests for named V2 standalone Go services to their internal function.
+
+## 3.10.0
+
+### Minor Changes
+
+- e6759d0: Add WebSocket upgrade support for standalone Go servers.
+
 ## 3.9.2
 
 ### Patch Changes

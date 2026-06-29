@@ -7,7 +7,8 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
-import { getFlags } from '../../util/flags/get-flags';
+import getCommandFlags from '../../util/get-command-flags';
+import { getFlags, MAX_FLAGS_PAGE_LIMIT } from '../../util/flags/get-flags';
 import formatTable from '../../util/format-table';
 import stamp from '../../util/output/stamp';
 import output from '../../output-manager';
@@ -37,10 +38,30 @@ export default async function ls(
 
   const { flags } = parsedArgs;
   const state = (flags['--state'] as 'active' | 'archived') || 'active';
+  const tags = flags['--tag'] as string[] | undefined;
+  const createdBy = flags['--created-by'] as string | undefined;
+  const maintainerIds = flags['--maintainer-id'] as string[] | undefined;
+  const limit = flags['--limit'] as number | undefined;
+  const next = flags['--next'] as string | undefined;
   const json = flags['--json'] as boolean | undefined;
 
   telemetryClient.trackCliOptionState(state);
+  telemetryClient.trackCliOptionTag(tags);
+  telemetryClient.trackCliOptionCreatedBy(createdBy);
+  telemetryClient.trackCliOptionMaintainerId(maintainerIds);
+  telemetryClient.trackCliOptionLimit(limit);
+  telemetryClient.trackCliOptionNext(next);
   telemetryClient.trackCliFlagJson(json);
+
+  if (
+    limit !== undefined &&
+    (!Number.isInteger(limit) || limit < 1 || limit > MAX_FLAGS_PAGE_LIMIT)
+  ) {
+    output.error(
+      `The --limit option must be an integer between 1 and ${MAX_FLAGS_PAGE_LIMIT}.`
+    );
+    return 1;
+  }
 
   const link = await getLinkedProject(client);
   if (link.status === 'error') {
@@ -62,14 +83,22 @@ export default async function ls(
   output.spinner(`Fetching ${state} feature flags for ${projectSlugLink}`);
 
   try {
-    const flagsList = await getFlags(client, project.id, state);
+    const { flags: flagsList, next: nextCursor } = await getFlags(
+      client,
+      project.id,
+      {
+        state,
+        tags,
+        createdBy,
+        maintainerIds,
+        limit,
+        cursor: next,
+      }
+    );
     output.stopSpinner();
 
-    // Sort by updatedAt descending (most recently updated first)
-    const sortedFlags = flagsList.sort((a, b) => b.updatedAt - a.updatedAt);
-
     if (json) {
-      outputJson(client, sortedFlags);
+      outputJson(client, flagsList, nextCursor);
     } else if (flagsList.length === 0) {
       output.log(
         `No ${state} feature flags found for ${projectSlugLink} ${chalk.gray(lsStamp())}`
@@ -78,7 +107,16 @@ export default async function ls(
       output.log(
         `${plural('feature flag', flagsList.length, true)} found for ${projectSlugLink} ${chalk.gray(lsStamp())}`
       );
-      printFlagsTable(sortedFlags);
+      printFlagsTable(flagsList);
+      if (nextCursor) {
+        const nextCmd = buildNextPageCommand(
+          flags,
+          tags,
+          maintainerIds,
+          nextCursor
+        );
+        output.log(`To display the next page, run ${getCommandName(nextCmd)}`);
+      }
     }
   } catch (err) {
     output.stopSpinner();
@@ -89,7 +127,42 @@ export default async function ls(
   return 0;
 }
 
-function outputJson(client: Client, flags: Flag[]) {
+function buildNextPageCommand(
+  flags: { [key: string]: unknown },
+  tags: string[] | undefined,
+  maintainerIds: string[] | undefined,
+  nextCursor: string
+): string {
+  // Forward all passed flags (including globals like --scope/--cwd) except the
+  // cursor and repeatable filters. getCommandFlags joins arrays with commas, so
+  // re-append --tag/--maintainer-id explicitly to preserve one value per flag.
+  const baseFlags = getCommandFlags(flags, [
+    '_',
+    '--tag',
+    '--maintainer-id',
+    '--next',
+    '--json',
+  ]);
+  const repeatable = [
+    ...(tags ?? []).map(tag => `--tag ${quoteArg(tag)}`),
+    ...(maintainerIds ?? []).map(id => `--maintainer-id ${quoteArg(id)}`),
+  ];
+  const suffix = repeatable.length > 0 ? ` ${repeatable.join(' ')}` : '';
+  return `flags ls${baseFlags}${suffix} --next ${nextCursor}`;
+}
+
+// Wrap a value in single quotes only when it contains characters the shell
+// would otherwise interpret, so the printed next-page command stays
+// copy-pasteable for tags that include spaces or special characters. The
+// cursor is base64url and therefore always shell-safe.
+function quoteArg(value: string): string {
+  if (/^[A-Za-z0-9_./@:-]+$/.test(value)) {
+    return value;
+  }
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function outputJson(client: Client, flags: Flag[], next: string | null) {
   const jsonOutput = {
     flags: flags.map(flag => ({
       id: flag.id,
@@ -101,6 +174,7 @@ function outputJson(client: Client, flags: Flag[]) {
       createdAt: flag.createdAt,
       updatedAt: flag.updatedAt,
     })),
+    pagination: { next },
   };
   client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
 }

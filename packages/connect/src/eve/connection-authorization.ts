@@ -52,6 +52,7 @@ import {
   revokeToken,
   UserAuthorizationRequiredError,
 } from '../token.js';
+import { provisionEveOAuthConnector } from './provision-oauth-connector.js';
 
 /**
  * Authorization phase passed to {@link EveAuthorizationOptions.onError}
@@ -174,6 +175,23 @@ export interface EveAuthorizationOptions {
   readonly connectOptions?: ConnectOptions;
 
   /**
+   * Create or link the declared connector against the deploying Vercel
+   * project before the first token / authorization call. Defaults to
+   * `true`.
+   *
+   * The provision request is authenticated with the deployment OIDC token
+   * and carries the eve connection's `url` plus this connector UID. Connect
+   * creates the managed OAuth connector when missing, links an existing
+   * OAuth connector when the UID already exists, and scopes the new project
+   * link to the OIDC token's environment and higher promotion targets.
+   *
+   * Set this to `false` for callers that intentionally manage the connector
+   * linkage elsewhere. Opaque connector ids (`scl_...`) and connections
+   * without a URL are skipped automatically.
+   */
+  readonly autoProvision?: boolean;
+
+  /**
    * Re-validate the grant against Vercel Connect on every `getToken`
    * instead of trusting the in-process token cache.
    *
@@ -235,9 +253,10 @@ export type EveAuthorizationInput = string | EveAuthorizationOptions;
  * both forms address the same connector.
  *
  * The marker is purely metadata — it does not influence the runtime
- * token-fetching behaviour, which continues to be driven by the
+ * token-fetching identity, which continues to be driven by the
  * `getToken` / `startAuthorization` / `completeAuthorization`
- * callbacks.
+ * callbacks. When auto-provisioning is enabled, the same connector value is
+ * also sent as the managed OAuth UID.
  */
 export interface VercelConnectMetadata {
   readonly connector: string;
@@ -400,6 +419,7 @@ function buildInteractiveDefinition(
       connection,
     }: GetTokenOptions): Promise<TokenResult> {
       try {
+        await autoProvisionConnectorIfEnabled(options, connection);
         const response = await getTokenResponse(
           options.connector,
           await buildTokenParams(options, principal, connection),
@@ -420,33 +440,33 @@ function buildInteractiveDefinition(
       challenge: ConnectionAuthorizationChallenge;
     }> {
       try {
-        // Eve's `webhook` parameter is semantically a browser-redirect
-        // target — the orchestrator mints it via `createWebhook({
-        // respondWith: buildAuthorizationCompletePage() })` so the
-        // user lands on a friendly "you can close this tab" page after
-        // consent. That maps to Vercel Connect's `callbackUrl:`
-        // semantics, which accepts both `https://` (prod) and
-        // `http://localhost` (vercel dev) — one field covers both.
+        await autoProvisionConnectorIfEnabled(options, connection);
+        // eve's `webhook` parameter is also the browser-redirect
+        // target when `callbackUrl` is absent — the orchestrator mints
+        // it via `createWebhook({ respondWith:
+        // buildAuthorizationCompletePage() })` so the user lands on a
+        // friendly "you can close this tab" page after consent. That
+        // maps to Vercel Connect's `callbackUrl:` semantics, which
+        // accepts both `https://` (prod) and `http://localhost`
+        // (vercel dev).
+        //
+        // When the eve webhook is HTTPS, also pass it as Vercel
+        // Connect's server-side completion webhook. That lets Connect
+        // resume the eve session even when the OAuth callback fails
+        // before the browser can be redirected back, such as a token
+        // exchange error after provider consent.
+        //
         // Vercel Connect authenticates the calling Vercel project via
         // OIDC, which is what lets per-workflow dynamic webhook URLs
         // work without an OAuth-style redirect-URI allowlist.
-        //
-        // We don't route `https://` URLs into Vercel Connect's
-        // `webhook:` (server-POST) field, even though it would
-        // survive the user closing the consent tab right after IdP
-        // callback. That mode shows the user Vercel Connect's
-        // generic "close this window" page instead of Eve's branded
-        // landing page, and the helper would need to grow
-        // protocol-aware logic that diverges from the simple "Eve
-        // mints one URL, Vercel Connect redirects there" mental
-        // model. Revisit if tab-close timeouts become a real problem
-        // in production.
+        const completionWebhook = connectCompletionWebhook(webhook);
         const response = await startAuthorization(
           options.connector,
           await buildTokenParams(options, principal, connection),
           {
             ...options.connectOptions,
             callbackUrl: callbackUrl ?? webhook,
+            ...(completionWebhook ? { webhook: completionWebhook } : null),
             deviceCode: true,
           }
         );
@@ -472,6 +492,7 @@ function buildInteractiveDefinition(
       connection,
     }: CompleteAuthorizationOptions): Promise<TokenResult> {
       try {
+        await autoProvisionConnectorIfEnabled(options, connection);
         const response = await getTokenResponse(
           options.connector,
           await buildTokenParams(options, principal, connection),
@@ -485,6 +506,17 @@ function buildInteractiveDefinition(
   };
 }
 
+function connectCompletionWebhook(webhook: string | undefined): string | null {
+  if (!webhook) {
+    return null;
+  }
+  try {
+    return new URL(webhook).protocol === 'https:' ? webhook : null;
+  } catch {
+    return null;
+  }
+}
+
 function buildNonInteractiveDefinition(
   options: EveAuthorizationOptions
 ): NonInteractiveAuthorizationDefinition {
@@ -495,6 +527,7 @@ function buildNonInteractiveDefinition(
       connection,
     }: GetTokenOptions): Promise<TokenResult> {
       try {
+        await autoProvisionConnectorIfEnabled(options, connection);
         const response = await getTokenResponse(
           options.connector,
           await buildTokenParams(options, principal, connection),
@@ -506,6 +539,20 @@ function buildNonInteractiveDefinition(
       }
     },
   };
+}
+
+async function autoProvisionConnectorIfEnabled(
+  options: EveAuthorizationOptions,
+  connection: EveConnectionAuthorizationContext
+): Promise<void> {
+  if (options.autoProvision === false) {
+    return;
+  }
+  await provisionEveOAuthConnector({
+    connector: options.connector,
+    connection,
+    connectOptions: options.connectOptions,
+  });
 }
 
 /**

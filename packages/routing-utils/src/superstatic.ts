@@ -200,7 +200,7 @@ export function convertRewrites(
       } else {
         // Service destination: a terminal handoff into the target service's
         // route table. Interpolate `path` like a string `dest`.
-        const destination = { ...r.destination };
+        const destination = { ...r.destination, type: 'service' as const };
         if (typeof destination.path === 'string') {
           destination.path = interpolate(destination.path);
         }

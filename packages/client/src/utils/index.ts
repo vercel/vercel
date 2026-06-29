@@ -411,7 +411,7 @@ export const prepareFiles = (
 
       preparedFiles.push({
         file: isWin ? fileName.replace(/\\/g, '/') : fileName,
-        size: file.data?.byteLength || file.data?.length,
+        size: file.data?.byteLength ?? file.size,
         mode: file.mode,
         sha: sha || undefined,
       });
@@ -432,4 +432,4 @@ export function createDebug(debug?: boolean) {
 
   return () => {};
 }
-type Debug = ReturnType<typeof createDebug>;
+export type Debug = ReturnType<typeof createDebug>;

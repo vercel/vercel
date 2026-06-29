@@ -26,6 +26,7 @@ import {
   download,
   downloadFile,
   type EdgeFunction,
+  type ContainerImage,
   type BuildResultBuildOutput,
   getLambdaOptionsFromFunction,
   normalizePath,
@@ -35,6 +36,7 @@ import {
   type ExperimentalService,
   type Service,
   isExperimentalService,
+  isExperimentalServiceV2,
   isExternalSymlink,
 } from '@vercel/build-utils';
 import { getInternalServiceFunctionPath } from '@vercel/fs-detectors';
@@ -150,6 +152,12 @@ function isEdgeFunction(v: any): v is EdgeFunction {
   return v?.type === 'EdgeFunction';
 }
 
+function isContainerImage(v: any): v is ContainerImage {
+  // Container image outputs use `runtime: 'container'`. Detect by runtime so
+  // they are handled before the generic Lambda path.
+  return v?.runtime === 'container';
+}
+
 export function isLambda(v: any): v is Lambda {
   return v?.type === 'Lambda';
 }
@@ -169,26 +177,28 @@ export interface PathOverride {
 }
 
 function injectServiceEnvVars(
-  lambda: Lambda,
+  fn: { environment?: Record<string, string | undefined>; config?: any },
   service?: ExperimentalService,
   stripServiceRoutePrefix: boolean = false
 ): void {
+  const target = fn.config ?? fn;
+  target.environment ??= {};
   if (service?.name) {
     // Exposes the owning service so the API can resolve per-service envVars
     // at deploy time.
-    lambda.environment.VERCEL_SERVICE_NAME = service.name;
+    target.environment.VERCEL_SERVICE_NAME = service.name;
   }
   if (service?.type) {
-    lambda.environment.VERCEL_SERVICE_TYPE = service.type;
+    target.environment.VERCEL_SERVICE_TYPE = service.type;
   }
   if (service?.trigger) {
-    lambda.environment.VERCEL_SERVICE_TRIGGER = service.trigger;
+    target.environment.VERCEL_SERVICE_TRIGGER = service.trigger;
   }
   if (service?.routePrefix && service.routePrefix !== '/') {
-    lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
+    target.environment.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
   }
   if (stripServiceRoutePrefix) {
-    lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
+    target.environment.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
   }
 }
 
@@ -266,7 +276,14 @@ async function writeBuildResultV2(args: {
 
   for (const [path, output] of Object.entries(buildResult.output)) {
     const normalizedPath = stripDuplicateSlashes(path);
-    if (isLambda(output)) {
+    if (isContainerImage(output)) {
+      injectServiceEnvVars(
+        output,
+        service && isExperimentalService(service) ? service : undefined,
+        stripServiceRoutePrefix
+      );
+      await writeContainerImage(outputDir, output, normalizedPath);
+    } else if (isLambda(output)) {
       injectServiceEnvVars(
         output,
         service && isExperimentalService(service) ? service : undefined,
@@ -465,23 +482,57 @@ async function writeBuildResultV3(args: {
     throw new Error(`Expected "build.src" to be a string`);
   }
 
-  const functionConfiguration = vercelConfig
-    ? await getLambdaOptionsFromFunction({
-        sourceFile: src,
-        config: vercelConfig,
-      })
-    : {};
+  let functionConfiguration: Awaited<
+    ReturnType<typeof getLambdaOptionsFromFunction>
+  > = {};
+  if (service && isExperimentalServiceV2(service) && service.functions) {
+    // `functions` keys are service-root-relative but `build.src` is
+    // project-relative; strip the root so patterns match.
+    let sourceFile = src;
+    const serviceRoot = stripDuplicateSlashes(service.root);
+    if (serviceRoot && serviceRoot !== '.') {
+      const prefix = `${serviceRoot}/`;
+      if (sourceFile.startsWith(prefix)) {
+        sourceFile = sourceFile.slice(prefix.length);
+      }
+    }
+    functionConfiguration = await getLambdaOptionsFromFunction({
+      sourceFile,
+      config: {
+        ...vercelConfig,
+        functions: service.functions,
+        serviceName: service.name,
+      },
+    });
+  } else if (vercelConfig) {
+    functionConfiguration = await getLambdaOptionsFromFunction({
+      sourceFile: src,
+      config: vercelConfig,
+    });
+  }
 
   const ext = extname(src);
+  // V2 services are already isolated under `services/<name>`, so scalar
+  // runtime outputs can use the natural `index` path. V1 services still share
+  // one output directory and require their internal namespace.
   const path =
-    service && typeof service.runtime === 'string'
-      ? stripDuplicateSlashes(getInternalServiceFunctionPath(service.name))
-      : stripDuplicateSlashes(
-          build.config?.zeroConfig
-            ? src.substring(0, src.length - ext.length)
-            : src
-        );
-  if (isLambda(output)) {
+    service && isExperimentalServiceV2(service)
+      ? 'index'
+      : service && typeof service.runtime === 'string'
+        ? stripDuplicateSlashes(getInternalServiceFunctionPath(service.name))
+        : stripDuplicateSlashes(
+            build.config?.zeroConfig
+              ? src.substring(0, src.length - ext.length)
+              : src
+          );
+  if (isContainerImage(output)) {
+    injectServiceEnvVars(
+      output,
+      service && isExperimentalService(service) ? service : undefined,
+      stripServiceRoutePrefix
+    );
+    await writeContainerImage(outputDir, output, path);
+  } else if (isLambda(output)) {
     injectServiceEnvVars(
       output,
       service && isExperimentalService(service) ? service : undefined,
@@ -611,13 +662,39 @@ async function writeFunctionSymlink(
 }
 
 /**
- * Serializes the `EdgeFunction` instance to the file system.
- *
- * @param outputPath The path of the `.vercel/output` directory
- * @param edgeFunction The `EdgeFunction` instance
- * @param path The URL path where the `EdgeFunction` can be accessed from
- * @param existingFunctions (optional) Map of `Lambda`/`EdgeFunction` instances that have previously been written
+ * Serializes a container image output (`runtime: 'container'`) to the file
+ * system as a `.func` directory with a `.vc-config.json`.
  */
+async function writeContainerImage(
+  outputDir: string,
+  containerImage: ContainerImage,
+  path: string
+) {
+  const dest = join(outputDir, 'functions', `${path}.func`);
+  // For `runtime: 'container'` the OCI image reference is carried in `handler`;
+  // the platform surfaces it as the container image downstream (vercel/api#76729).
+  const handler = (containerImage as any).handler;
+  if (typeof handler !== 'string' || handler.length === 0) {
+    throw new Error(
+      `Container image output for "${path}" is missing "handler".`
+    );
+  }
+
+  await fs.mkdirp(dest);
+  await fs.writeJSON(
+    join(dest, '.vc-config.json'),
+    {
+      handler,
+      runtime: 'container',
+      environment: (containerImage as any).environment ?? {},
+      ...((containerImage as any).command
+        ? { command: (containerImage as any).command }
+        : {}),
+    },
+    { spaces: 2 }
+  );
+}
+
 async function writeEdgeFunction(
   repoRootPath: string,
   outputDir: string,

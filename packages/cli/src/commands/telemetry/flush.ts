@@ -1,4 +1,4 @@
-import nodeFetch from 'node-fetch';
+import fetch from '../../util/fetch';
 import type Client from '../../util/client';
 
 export default async function flush(_client: Client, args: string[]) {
@@ -7,9 +7,9 @@ export default async function flush(_client: Client, args: string[]) {
     'https://telemetry.vercel.com/api/vercel-cli/v1/events';
   const { headers, body } = JSON.parse(args[0]);
   try {
-    // Use node-fetch directly instead of client.fetch because the client's
-    // HTTP agent may be HTTPS-only, but the bridge URL can be http:// in tests.
-    const res = await nodeFetch(url, {
+    // Bypass client.fetch because telemetry bridge requests do not use the
+    // authenticated Vercel API client.
+    const res = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),

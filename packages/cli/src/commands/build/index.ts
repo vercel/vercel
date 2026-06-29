@@ -38,6 +38,7 @@ import {
   glob,
   type ExperimentalService,
   isExperimentalService,
+  isExperimentalServiceV2,
   type Service,
   getInternalServiceCronPath,
   getInternalServiceFunctionPath,
@@ -62,11 +63,13 @@ import {
 } from '@vercel/fs-detectors';
 import {
   appendRoutesToPhase,
+  convertRewrites,
   getTransformedRoutes,
   isHandler,
   mergeRoutes,
   sourceToRegex,
   type MergeRoutesProps,
+  type Rewrite,
   type Route,
   type HandleValue,
 } from '@vercel/routing-utils';
@@ -167,7 +170,7 @@ interface BuildOutputConfig {
   crons?: Cron[];
   experimentalServices?: ExperimentalServices;
   experimentalServicesV2?: ExperimentalServicesV2;
-  services?: ExperimentalService[];
+  services?: Service[];
   deploymentId?: string;
 }
 
@@ -774,6 +777,12 @@ async function doBuild(
   let zeroConfigFallbackRoutes: Route[] = [];
   let detectedServices: ExperimentalService[] | undefined;
   let detectedResolvedServices: Service[] | undefined;
+  // The subset of `detectedResolvedServices` that were actually treated as
+  // services (i.e. produced service output). This is what gets recorded in
+  // `config.json`'s `services` array. It differs from `detectedResolvedServices`
+  // only in the generated-config path, where a service whose builder already ran
+  // at the project root is warned about and skipped (see below).
+  let servicesToRecord: Service[] | undefined;
   const hasExperimentalServicesV1ConfiguredInVercelConfig = hasNonEmptyObject(
     localConfig.experimentalServices
   );
@@ -831,10 +840,32 @@ async function doBuild(
       builds = [{ src: '**', use: '@vercel/static' }];
     }
 
-    // Capture detected services for the config.json. Only `experimentalServices`
-    // flows is supported right now.
+    // Capture detected services for the config.json. The full resolved set
+    // (both `experimentalServices` and `experimentalServicesV2`) is written to
+    // the `services` array; each record carries its `schema` discriminant.
+    // `detectedServices` stays scoped to V1 for the legacy env-injection and
+    // route-handling paths below, which only apply to `experimentalServices`.
     detectedResolvedServices = detectedBuilders.services;
+    // In the configured (vercel.json) path every detected service is treated as
+    // a service, so all of them are recorded.
+    servicesToRecord = detectedResolvedServices;
     detectedServices = detectedBuilders.services?.filter(isExperimentalService);
+
+    // When auto-detection produces a V2 services config, enable V2 output
+    // nesting so the build output config.json includes experimentalServicesV2
+    // and the platform activates V2 routing.
+    const autoDetectedV2Config = (
+      detectedBuilders as typeof detectedBuilders & {
+        experimentalServicesV2?: ExperimentalServicesV2;
+      }
+    ).experimentalServicesV2;
+    if (
+      !hasExperimentalServicesV2ConfiguredInVercelConfig &&
+      autoDetectedV2Config
+    ) {
+      nestExperimentalServicesV2Output = true;
+      detectedExperimentalServicesV2Config = autoDetectedV2Config;
+    }
 
     // Legacy URL injection for `experimentalServices`.
     if (
@@ -854,6 +885,20 @@ async function doBuild(
       }
     }
 
+    // If auto-detection generated top-level service rewrites (V2),
+    // convert them to Route[] separately and append them alongside
+    // the existing rewrite routes rather than re-running
+    // getTransformedRoutes (which would double-transform).
+    const serviceRewrites = (
+      detectedBuilders as typeof detectedBuilders & {
+        serviceRewrites?: Rewrite[];
+      }
+    ).serviceRewrites;
+    const serviceRewriteRoutes =
+      serviceRewrites && serviceRewrites.length > 0
+        ? convertRewrites(serviceRewrites)
+        : null;
+
     zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
     const detectedHostRewriteRoutes = (
       detectedBuilders as typeof detectedBuilders & {
@@ -871,7 +916,10 @@ async function doBuild(
     zeroConfigRoutes.push(
       ...appendRoutesToPhase({
         routes: [],
-        newRoutes: detectedServiceRewriteRoutes,
+        newRoutes: [
+          ...(detectedServiceRewriteRoutes || []),
+          ...(serviceRewriteRoutes || []),
+        ],
         phase: 'filesystem',
       })
     );
@@ -1104,6 +1152,12 @@ async function doBuild(
               ...build.config,
               ...(getHasQueueServices()
                 ? { hasWorkerServices: true }
+                : undefined),
+              // `service.functions` isn't on `build.config`, so builders that
+              // read `config.functions` (e.g. Next.js) would otherwise miss it;
+              // `serviceName` scopes the derived v2beta consumer.
+              ...(isExperimentalServiceV2(service) && service.functions
+                ? { functions: service.functions, serviceName: service.name }
                 : undefined),
               // Override project-level settings with service-specific ones.
               // The project-level framework is "services" which must NOT be
@@ -1784,14 +1838,20 @@ async function doBuild(
 
       const buildsToRun: Builder[] = [];
       const seenBuildsToRun = new Set<string>();
+      // Only record services we actually treat as services. A generated service
+      // whose builder already ran at the project root is warned about and
+      // skipped (no service output is produced for it), so it must not leak into
+      // `config.json`'s `services` array.
+      const recordedServices: Service[] = [];
       for (const service of detectedResolvedServices || []) {
         const alreadyExecutedBuild = getAlreadyExecutedBuild(service.builder);
         if (alreadyExecutedBuild) {
           if (generatedExperimentalServicesV2Config) {
             output.warn(getGeneratedServiceAlreadyBuiltWarning(service));
-          } else {
-            serviceByBuilder.set(alreadyExecutedBuild, service);
+            continue;
           }
+          serviceByBuilder.set(alreadyExecutedBuild, service);
+          recordedServices.push(service);
           continue;
         }
         const serviceBuilderIdentity = getBuilderIdentity(service.builder);
@@ -1803,7 +1863,10 @@ async function doBuild(
           seenBuildsToRun.add(serviceBuilderIdentity);
           buildsToRun.push(service.builder);
         }
+        recordedServices.push(service);
       }
+      servicesToRecord =
+        recordedServices.length > 0 ? recordedServices : undefined;
 
       if (buildsToRun.length > 0) {
         await runBuilders(buildsToRun);
@@ -2025,8 +2088,10 @@ async function doBuild(
         experimentalServicesV2: detectedExperimentalServicesV2Config,
       }),
     ...(!detectedExperimentalServicesV1Config &&
-      detectedServices &&
-      detectedServices.length > 0 && { services: detectedServices }),
+      servicesToRecord &&
+      servicesToRecord.length > 0 && {
+        services: servicesToRecord,
+      }),
     ...(mergedDeploymentId && { deploymentId: mergedDeploymentId }),
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
