@@ -1,5 +1,11 @@
 # @vercel/passport
 
+## 0.1.2
+
+### Patch Changes
+
+- fadffb5: Read the Passport cookie from Vercel request context headers.
+
 ## 0.1.1
 
 ### Patch Changes
