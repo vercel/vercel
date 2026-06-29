@@ -88,13 +88,26 @@ export default async function endpoints(client: Client, argv: string[]) {
 
 const dash = () => chalk.gray('–');
 
-// Per-token price comes back as "0" for models priced another way (e.g. video
-// per-second). Show a dash so they don't read as free; full pricing is in JSON.
-const price = (value: string | undefined) =>
-  value && Number(value) > 0 ? value : dash();
+const positive = (value: string | undefined) =>
+  value != null && Number(value) > 0;
+
+const price = (value: string | undefined) => (positive(value) ? value : dash());
 
 const count = (value: number | undefined) =>
   value != null && value > 0 ? String(value) : dash();
+
+// Input column: per-token when present, else fall back to the model's actual
+// unit (per-second video / per-image). Full pricing stays in --format json.
+function inputPrice(p: ModelEndpoint['pricing']) {
+  if (positive(p?.prompt)) return p?.prompt;
+  if (positive(p?.image)) return `${p?.image}/img`;
+  const perSec = p?.video_duration_pricing
+    ?.map(v => v.cost_per_second)
+    .filter(positive)
+    .sort((a, b) => Number(a) - Number(b))[0];
+  if (perSec) return `${perSec}/s`;
+  return dash();
+}
 
 function printEndpointsTable(list: ModelEndpoint[]) {
   return `${table(
@@ -112,7 +125,7 @@ function printEndpointsTable(list: ModelEndpoint[]) {
       ...list.map(e => [
         e.provider_name,
         count(e.context_length),
-        price(e.pricing?.prompt),
+        inputPrice(e.pricing),
         price(e.pricing?.completion),
         e.latency_last_1h?.p50 != null
           ? `${Math.round(e.latency_last_1h.p50)}ms`

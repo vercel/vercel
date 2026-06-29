@@ -28,6 +28,10 @@ export type ModelEndpointPricing = {
   request?: string;
   input_cache_read?: string;
   input_cache_write?: string;
+  // Non-token pricing (image/video models)
+  image?: string;
+  image_output?: string;
+  video_duration_pricing?: { resolution?: string; cost_per_second?: string }[];
 };
 
 export type ModelEndpoint = {

@@ -70,6 +70,34 @@ describe('ai-gateway models endpoints', () => {
     expect(await exitCodePromise).toBe(0);
   });
 
+  it('falls back to per-second pricing for video models', async () => {
+    useUser();
+    useModelEndpoints([
+      {
+        name: 'xai | grok-video',
+        provider_name: 'xai',
+        pricing: {
+          prompt: '0',
+          completion: '0',
+          video_duration_pricing: [
+            { resolution: '480p', cost_per_second: '0.08' },
+          ],
+        },
+      },
+    ]);
+    client.setArgv(
+      'ai-gateway',
+      'models',
+      'endpoints',
+      'anthropic/claude-opus-4.8'
+    );
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stdout).toOutput('0.08/s');
+    expect(await exitCodePromise).toBe(0);
+  });
+
   it('outputs JSON with --format json', async () => {
     useUser();
     useModelEndpoints();
