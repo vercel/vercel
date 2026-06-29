@@ -216,7 +216,7 @@ export const startDevServer: StartDevServer = async opts => {
       if (onStdout) {
         onStdout(chunk);
       } else {
-        process.stdout.write(chunk);
+        process.stdout.write(chunk.toString());
       }
     });
 
@@ -226,7 +226,7 @@ export const startDevServer: StartDevServer = async opts => {
       if (onStderr) {
         onStderr(chunk);
       } else {
-        process.stderr.write(chunk);
+        process.stderr.write(chunk.toString());
       }
     });
 
