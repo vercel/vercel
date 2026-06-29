@@ -28,8 +28,6 @@ export const frameworks = [
     slug: 'container',
     runtimeFramework: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/container.svg',
-    darkModeLogo:
-      'https://api-frameworks.vercel.sh/framework-logos/container-dark.svg',
     tagline: 'Deploy any project as a container image built from a Dockerfile.',
     description:
       'A project deployed as a container image, built from a Dockerfile.vercel or Containerfile.vercel.',
@@ -4733,8 +4731,6 @@ export const frameworks = [
     slug: 'services',
     experimental: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/services.svg',
-    darkModeLogo:
-      'https://api-frameworks.vercel.sh/framework-logos/services-dark.svg',
     tagline:
       'Multiple services deployed as serverless functions within your project.',
     description:
