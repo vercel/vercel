@@ -1,15 +1,27 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { listen } from 'async-listen';
 import { createProxy } from 'proxy';
-import { ProxyAgent } from 'proxy-agent';
 import { createServer } from 'http';
 import { client } from '../../mocks/client';
 import * as getArgs from '../../../src/util/get-args';
 import pkg from '../../../src/util/pkg';
+import { EnvProxyDispatcher } from '../../../src/util/fetch-proxy';
+import { setFetchDispatcher } from '../../../src/util/fetch';
+
+const PROXY_ENV_NAMES = [
+  'HTTP_PROXY',
+  'HTTPS_PROXY',
+  'ALL_PROXY',
+  'NO_PROXY',
+  'http_proxy',
+  'https_proxy',
+  'all_proxy',
+  'no_proxy',
+] as const;
 
 const testConfigSchema = z.object({
   enabled: z.boolean(),
@@ -26,20 +38,31 @@ const dateConfigSchema = z.object({
 describe('Client', () => {
   describe('fetch()', () => {
     beforeEach(() => {
-      delete process.env.HTTPS_PROXY;
-      delete process.env.HTTP_PROXY;
+      for (const name of PROXY_ENV_NAMES) {
+        vi.stubEnv(name, undefined);
+      }
       client.agent?.destroy();
       client.agent = undefined;
       client.reset();
     });
 
-    it('should respect the `HTTP_PROXY` env var', async () => {
+    afterEach(() => {
+      setFetchDispatcher(undefined);
+      vi.unstubAllEnvs();
+    });
+
+    it.each([
+      'HTTP_PROXY',
+      'http_proxy',
+    ] as const)('should respect the `%s` env var', async proxyEnvName => {
       let requestCount = 0;
       const proxy = createProxy();
       const proxyUrl = await listen(proxy);
 
-      // For HTTP proxying, listen to 'request' events instead of 'connect'
       proxy.on('request', () => {
+        requestCount++;
+      });
+      proxy.on('connect', () => {
         requestCount++;
       });
 
@@ -49,22 +72,21 @@ describe('Client', () => {
         res.end('OK');
       });
       const mockServerUrl = await listen(mockServer);
+      let dispatcher: EnvProxyDispatcher | undefined;
 
       try {
-        process.env.HTTP_PROXY = proxyUrl.href;
-
-        client.agent = new ProxyAgent({
-          keepAlive: true,
-          // Ensure localhost isn't bypassed
-          rejectUnauthorized: false,
-        });
+        vi.stubEnv(proxyEnvName, proxyUrl.href);
+        dispatcher = new EnvProxyDispatcher();
+        setFetchDispatcher(dispatcher);
 
         expect(requestCount).toEqual(0);
         const res = await client.fetch(mockServerUrl.href, { json: false });
+        await res.text();
         expect(requestCount).toEqual(1);
         expect(res.status).toEqual(200);
       } finally {
-        client.agent?.destroy();
+        setFetchDispatcher(undefined);
+        await dispatcher?.close();
         await new Promise<void>(resolve => {
           proxy.close(() => resolve());
         });
@@ -91,7 +113,6 @@ describe('Client', () => {
         client.fetch('/v2/user', {
           json: false,
           retry: { retries: 3 },
-          // @ts-expect-error: signal types differ between node-fetch and web
           signal: abortController.signal,
         })
       ).rejects.toThrowError(/abort/i);
@@ -158,7 +179,7 @@ describe('Client', () => {
     });
 
     it('should treat 3xx as errors when redirect is not manual', async () => {
-      // When redirect is not set to 'manual', node-fetch follows the
+      // When redirect is not set to 'manual', fetch follows the
       // redirect by default. If the redirect target doesn't exist, the
       // fetch will fail. This test verifies the default behavior is
       // unchanged — 3xx without redirect:'manual' doesn't return the
@@ -174,7 +195,7 @@ describe('Client', () => {
         res.json({ followed: true });
       });
 
-      // Without redirect:'manual', node-fetch follows the redirect and
+      // Without redirect:'manual', fetch follows the redirect and
       // we get the target response (200 JSON)
       const data = (await client.fetch('/v1/test-redirect-default')) as {
         followed: boolean;

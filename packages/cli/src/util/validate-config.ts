@@ -499,6 +499,8 @@ const servicesCommandSchema = {
   maxLength: 2048,
 };
 
+const servicesServiceNamePattern = '^[a-z]([a-z_-]*[a-z])?$';
+
 const servicesBindingSchema = {
   type: 'object',
   additionalProperties: false,
@@ -509,7 +511,7 @@ const servicesBindingSchema = {
       type: 'string',
       minLength: 1,
       maxLength: 64,
-      pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+      pattern: servicesServiceNamePattern,
     },
     format: { const: 'url' },
     env: {
@@ -564,7 +566,7 @@ const getServicesServiceConfigSchema = () => ({
 const getServicesSchema = () => ({
   type: 'object',
   propertyNames: {
-    pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+    pattern: servicesServiceNamePattern,
     maxLength: 64,
   },
   additionalProperties: getServicesServiceConfigSchema(),

@@ -1,5 +1,18 @@
 # @vercel/backends
 
+## 0.8.20
+
+### Patch Changes
+
+- Updated dependencies [6b49a17]
+  - @vercel/build-utils@13.32.2
+
+## 0.8.19
+
+### Patch Changes
+
+- 62a884e: Simplify isolated `services` and `experimentalServicesV2` runtime outputs by emitting their function at `index` instead of `_svc/<service-name>/index`.
+
 ## 0.8.18
 
 ### Patch Changes

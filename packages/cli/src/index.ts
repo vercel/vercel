@@ -55,6 +55,7 @@ import { parseArguments } from './util/get-args';
 import getUser from './util/get-user';
 import getTeams from './util/teams/get-teams';
 import Client from './util/client';
+import { setFetchDispatcher } from './util/fetch';
 import { printError } from './util/error';
 import reportError from './util/report-error';
 import earlyGetConfig from './util/get-config';
@@ -543,10 +544,16 @@ const main = async () => {
     `Agent/TTY/nonInteractive: isAgent=${isAgent} agentName=${detectedAgent?.name ?? 'none'} stdin.isTTY=${String(process.stdin?.isTTY)} --non-interactive=${nonInteractiveFlag} explicitFalse=${explicitNonInteractiveFalse} => nonInteractive=${nonInteractive}`
   );
 
-  // Only load proxy-agent if proxy env vars are configured (saves ~60ms startup)
-  const agent = hasProxyConfig()
+  // Only load proxy support if proxy env vars are configured (saves startup time).
+  const proxyConfigured = hasProxyConfig();
+  const agent = proxyConfigured
     ? new (await import('proxy-agent')).ProxyAgent({ keepAlive: true })
     : new HttpsAgent({ keepAlive: true });
+
+  if (proxyConfigured) {
+    const { EnvProxyDispatcher } = await import('./util/fetch-proxy');
+    setFetchDispatcher(new EnvProxyDispatcher());
+  }
 
   client = new Client({
     agent,

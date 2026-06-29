@@ -1,5 +1,91 @@
 # vercel
 
+## 54.18.3
+
+### Patch Changes
+
+- 262e935: Fixed `vercel dev` for the `container` framework when used as a top-level build (outside of `services`).
+
+  - The dev server now maps the container preset's `<detect>` sentinel to a discovered Dockerfile (`Dockerfile.vercel`, `Containerfile.vercel`, `Dockerfile`, or `Containerfile`), so the build is recognized instead of warning that it "did not match any source files".
+  - The `@vercel/container` `build()` path no longer throws `` `vercel dev` cannot build container images from a Dockerfile `` during dev. Containers are always built from a Dockerfile/Containerfile (there is no prebuilt-image input); in dev the image is built and run locally by `startDevServer`, so `build()` returns a stable local tag without pushing to a registry.
+  - The dev server no longer treats a container build output (an OCI image reference, `runtime: "container"`) as a zip-based function. It previously failed with `output.createZip is not a function` while trying to spin the image up under `fun`; container outputs are now skipped there and served by the builder's `startDevServer` instead.
+  - The dev path (`startDevServer`) now discovers the `Dockerfile.vercel` / `Containerfile.vercel` opt-in markers when the container entrypoint is the `<detect>` sentinel, matching the build path. Previously it only looked for a bare `Dockerfile`, so a project using a `.vercel` marker failed with "Container service must specify an entrypoint…" even though deploys worked. The discovery helper is now shared between the build and dev paths.
+  - `vercel dev` now fails fast with a clear message when the Docker daemon isn't running ("Could not connect to the Docker daemon. Start Docker…") instead of a cryptic `Container "undefined" exited (code 125) before becoming ready.`. Container start failures also now name the actual container and include the underlying Docker error output.
+  - The container dev server is now reused across requests. Previously the image was rebuilt and a fresh container started on every HTTP request (the result was missing the `persistent` flag); now a live container is kept and reused for the same service, matching how other persistent builders behave.
+
+- 9e3f9cd: [services] service name validation
+- 9e3f9cd: Align `services` and `experimentalServicesV2` service-name validation with the platform schema.
+- Updated dependencies [262e935]
+- Updated dependencies [e05ed3c]
+  - @vercel/container@0.0.4
+  - @vercel/next@4.20.2
+  - @vercel/static-build@2.11.4
+
+## 54.18.2
+
+### Patch Changes
+
+- 1a1c745: [services] fix bare static service builds, allow services with only 'root' to resolve at @vercel/static
+  - @vercel/static-build@2.11.4
+
+## 54.18.1
+
+### Patch Changes
+
+- 6b49a17: Apply per-service `functions` config when building experimental V2 services. Previously, function configuration declared under `services.<name>.functions` in `vercel.json` (`experimentalTriggers`, `maxDuration`, `memory`, `architecture`, `regions`, `functionFailoverRegions`, `supportsCancellation`) was dropped at build time — only the top-level `functions` map was honored. The build now feeds each service's `functions` to its lambdas for both single-lambda builders (`@vercel/node`, etc., via `writeBuildResultV3`) and framework builders that read `config.functions` (e.g. `@vercel/next`, via the builder config). Derived `queue/v2beta` consumer groups are now scoped by the owning service name so two services that declare the same function path + topic no longer collide.
+- Updated dependencies [6b49a17]
+  - @vercel/build-utils@13.32.2
+  - @vercel/backends@0.8.20
+  - @vercel/container@0.0.3
+  - @vercel/elysia@0.1.98
+  - @vercel/express@0.1.111
+  - @vercel/fastify@0.1.101
+  - @vercel/go@3.10.2
+  - @vercel/h3@0.1.107
+  - @vercel/hono@0.2.101
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.81
+  - @vercel/nestjs@0.2.102
+  - @vercel/next@4.20.1
+  - @vercel/node@5.8.22
+  - @vercel/python@6.47.3
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.3.0
+  - @vercel/static-build@2.11.4
+
+## 54.18.0
+
+### Minor Changes
+
+- 4f8b5b1: - Migrate service auto-detection to V2 format.
+  - Layout auto-detect now resolves via the V2 resolver and generates top-level service-targeted rewrites and per-service path transform routes.
+  - CLI build and dev server merge auto-detected rewrites into the route table.
+
+### Patch Changes
+
+- 50276e7: Show the `flags` command in the top-level CLI help output.
+- 6881d74: Use Node.js native fetch for the CLI API client, removing legacy URL parser deprecation warnings from standalone binaries while preserving proxy routing and local middleware behavior.
+- 6514009: Fix CLI update notification showing a stale or incorrect version number. The update prompt now performs a fresh registry lookup before displaying the target version, and the upgrade success message reports the actually installed version instead of the prompted version.
+- 69f15ee: `vercel flags ls` now uses the v2 flag list endpoint and supports filtering by `--tag`, `--created-by`, and `--maintainer-id`, plus cursor pagination via `--limit` (page size) and `--next` (resume cursor).
+- c1641e4: Update integration error and warning hints to suggest the canonical `vercel integration resource` form instead of the legacy `vercel integration-resource` alias
+- ee389a1: Support WebSockets for WSGI apps (e.g. Flask via `flask-sock`). The runtime now
+  exposes the raw connection socket in the WSGI `environ` as `werkzeug.socket` /
+  `gunicorn.socket` for WebSocket upgrade requests, and ends the request lifecycle
+  once the `101` handshake is written so the platform can begin bidirectional
+  streaming — matching the ASGI `websocket.accept` behavior.
+- 62a884e: Simplify isolated `services` and `experimentalServicesV2` runtime outputs by emitting their function at `index` instead of `_svc/<service-name>/index`.
+- Updated dependencies [66be3e0]
+- Updated dependencies [62a884e]
+  - @vercel/container@0.0.3
+  - @vercel/backends@0.8.19
+  - @vercel/go@3.10.2
+  - @vercel/python@6.47.3
+  - @vercel/static-build@2.11.3
+  - @vercel/express@0.1.110
+  - @vercel/node@5.8.21
+
 ## 54.17.3
 
 ### Patch Changes

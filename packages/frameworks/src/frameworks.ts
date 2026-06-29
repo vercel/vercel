@@ -23,14 +23,13 @@ export const frameworks = [
     // may also be detected. It is listed first so that framework detection
     // (which returns the first match in list order) selects it over everything
     // else — e.g. a Next.js app shipping a `Dockerfile.vercel` deploys as a
-    // container, not via `@vercel/next`. Experimental for now, so it is only
-    // detected when experimental frameworks are enabled
-    // (`VERCEL_USE_EXPERIMENTAL_FRAMEWORKS`).
+    // container, not via `@vercel/next`.
     name: 'Container',
     slug: 'container',
-    experimental: true,
     runtimeFramework: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/container.svg',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/container-dark.svg',
     tagline: 'Deploy any project as a container image built from a Dockerfile.',
     description:
       'A project deployed as a container image, built from a Dockerfile.vercel or Containerfile.vercel.',

@@ -38,6 +38,7 @@ import {
   glob,
   type ExperimentalService,
   isExperimentalService,
+  isExperimentalServiceV2,
   type Service,
   getInternalServiceCronPath,
   getInternalServiceFunctionPath,
@@ -1151,6 +1152,12 @@ async function doBuild(
               ...build.config,
               ...(getHasQueueServices()
                 ? { hasWorkerServices: true }
+                : undefined),
+              // `service.functions` isn't on `build.config`, so builders that
+              // read `config.functions` (e.g. Next.js) would otherwise miss it;
+              // `serviceName` scopes the derived v2beta consumer.
+              ...(isExperimentalServiceV2(service) && service.functions
+                ? { functions: service.functions, serviceName: service.name }
                 : undefined),
               // Override project-level settings with service-specific ones.
               // The project-level framework is "services" which must NOT be
