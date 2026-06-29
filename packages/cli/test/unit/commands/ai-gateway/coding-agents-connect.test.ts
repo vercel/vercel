@@ -56,6 +56,9 @@ function codexConfigPath() {
 function bashrcPath() {
   return join(home, '.bashrc');
 }
+function opencodeConfigPath() {
+  return join(home, '.config', 'opencode', 'opencode.json');
+}
 
 beforeEach(() => {
   home = mkdtempSync(join(tmpdir(), 'vc-setup-agents-'));
@@ -184,6 +187,27 @@ describe('ai-gateway coding-agents connect', () => {
       expect(bashrc).toContain(
         `export AI_GATEWAY_API_KEY='vck_a$b\`c'\\''d"e'`
       );
+    });
+
+    it('configures OpenCode with the native vercel provider', async () => {
+      useUser();
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--key',
+        'vck_DummyKey0003',
+        '--agent',
+        'opencode'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const cfg = JSON.parse(readFileSync(opencodeConfigPath(), 'utf8'));
+      expect(cfg.provider.vercel.options.apiKey).toBe('vck_DummyKey0003');
+      expect(cfg.model).toBeUndefined();
     });
   });
 
