@@ -5,6 +5,7 @@ import {
   writeFileSync,
   existsSync,
   mkdirSync,
+  statSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -58,6 +59,9 @@ function bashrcPath() {
 }
 function opencodeConfigPath() {
   return join(home, '.config', 'opencode', 'opencode.json');
+}
+function piAuthPath() {
+  return join(home, '.pi', 'agent', 'auth.json');
 }
 
 beforeEach(() => {
@@ -208,6 +212,32 @@ describe('ai-gateway coding-agents connect', () => {
       const cfg = JSON.parse(readFileSync(opencodeConfigPath(), 'utf8'));
       expect(cfg.provider.vercel.options.apiKey).toBe('vck_DummyKey0003');
       expect(cfg.model).toBeUndefined();
+    });
+
+    it('configures Pi via the native vercel-ai-gateway auth entry (0600)', async () => {
+      useUser();
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--key',
+        'vck_DummyKey0007',
+        '--agent',
+        'pi'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const auth = JSON.parse(readFileSync(piAuthPath(), 'utf8'));
+      expect(auth['vercel-ai-gateway']).toEqual({
+        type: 'api_key',
+        key: 'vck_DummyKey0007',
+      });
+      if (process.platform !== 'win32') {
+        expect(statSync(piAuthPath()).mode & 0o777).toBe(0o600);
+      }
     });
   });
 
