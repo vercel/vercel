@@ -207,16 +207,17 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
     detected,
   }): Promise<DjangoFrameworkHookResult | void> => {
     let baseDir: string | undefined = detected?.baseDir;
-    if (!baseDir) {
+    if (baseDir === undefined) {
       if (!fs.existsSync(join(workPath, 'manage.py'))) {
         debug('Django hook: no manage.py detected, skipping');
         return;
       }
       baseDir = '';
     }
+    const djangoPath = join(workPath, baseDir);
     let settingsResult;
     try {
-      settingsResult = await getDjangoSettings(workPath, pythonEnv);
+      settingsResult = await getDjangoSettings(djangoPath, pythonEnv);
     } catch (err: any) {
       let detail: string;
       if (err?.code === 'ENOENT') {
@@ -226,7 +227,7 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
       }
       throw new NowBuildError({
         code: 'DJANGO_SETTINGS_FAILED',
-        message: `Failed to read Django application settings from ${workPath}/manage.py:\n${detail}`,
+        message: `Failed to read Django application settings from ${djangoPath}/manage.py:\n${detail}`,
       });
     }
     debug(`Django settings: ${JSON.stringify(settingsResult)}`);
@@ -264,6 +265,7 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
       djangoStatic = await runDjangoCollectStatic(
         venvPath,
         workPath,
+        djangoPath,
         pythonEnv,
         outputStaticDir,
         settingsModule,
