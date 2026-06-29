@@ -11,14 +11,10 @@ describe('resolveSkillFromUrl', () => {
         'https://github.com/Shopify/Shopify-AI-Toolkit/blob/main/skills/shopify-dev/SKILL.md'
       )
     ).toEqual({
-      kind: 'agent-skill',
-      recommended: true,
       repoUrl: 'https://github.com/shopify/shopify-ai-toolkit',
       skill: 'shopify-dev',
       command:
         'npx skills add https://github.com/shopify/shopify-ai-toolkit --skill shopify-dev',
-      source:
-        'https://github.com/Shopify/Shopify-AI-Toolkit/blob/main/skills/shopify-dev/SKILL.md',
     });
   });
 

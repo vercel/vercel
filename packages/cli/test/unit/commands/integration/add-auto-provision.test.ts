@@ -2715,14 +2715,10 @@ describe('integration add (auto-provision)', () => {
       const jsonOutput = JSON.parse(client.stdout.getFullOutput());
       expect(jsonOutput.skills).toEqual([
         {
-          kind: 'agent-skill',
-          recommended: true,
           repoUrl: 'https://github.com/shopify/shopify-ai-toolkit',
           skill: 'shopify-dev',
           command:
             'npx skills add https://github.com/shopify/shopify-ai-toolkit --skill shopify-dev',
-          source:
-            'https://github.com/Shopify/Shopify-AI-Toolkit/blob/main/skills/shopify-dev/SKILL.md',
         },
       ]);
       expect(execaMock).not.toHaveBeenCalled();

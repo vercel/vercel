@@ -592,6 +592,9 @@ export async function addAutoProvision(
     if (runInstall) {
       output.log(`Installing ${noun} for ${chalk.bold(product.name)}…`);
       for (const skill of skills) {
+        // Echo the command before running it, so the publisher code being
+        // executed is visible in interactive, CI, and agent transcripts.
+        output.log(indent(chalk.cyan(skill.command), 4));
         // `--yes` is required: without it `npx` prompts to install the `skills`
         // package and hangs in non-interactive (agent/CI) contexts.
         const args = [

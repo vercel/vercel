@@ -85,10 +85,7 @@ export interface IntegrationProduct {
   guides?: IntegrationGuide[];
   snippets?: IntegrationSnippet[];
   resourceLinks?: IntegrationResourceLink[];
-  /**
-   * Public links to the product's agent skills (e.g. a GitHub `SKILL.md` URL).
-   * Used to suggest `npx skills add …` commands after provisioning.
-   */
+  /** Public GitHub `SKILL.md` links used to suggest `npx skills add …` after provisioning. */
   agentSkills?: string[];
 }
 
