@@ -71,6 +71,8 @@ import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
 import { getCommandNameWithGlobalFlags } from '../../util/arg-common';
 import { getCommandName } from '../../util/pkg-name';
+import { getErrorCta } from '../../util/get-error-cta';
+import link from '../../util/output/link';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS } from '../../util/agent-output-constants';
 import { pickOverrides } from '../../util/projects/project-settings';
@@ -1946,8 +1948,13 @@ function handleCreateDeployError(error: Error, localConfig: VercelConfig) {
   }
   if (error instanceof BuildsRateLimited) {
     output.error(error.message);
+    // Surface the backend's plan-appropriate call to action when present;
+    // otherwise fall back to a plan-agnostic nudge.
+    const cta = getErrorCta(error.meta);
     output.note(
-      `Run ${getCommandName('upgrade')} to increase your builds limit.`
+      cta
+        ? `${cta.label}: ${link(cta.url)}`
+        : 'Upgrade your plan to increase your builds limit.'
     );
     return 1;
   }

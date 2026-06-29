@@ -378,6 +378,74 @@ describe('validateConfig', () => {
     expect(error).not.toBeNull();
   });
 
+  it.each([
+    'services',
+    'experimentalServicesV2',
+  ] as const)('should reject invalid service names in `%s`', configKey => {
+    for (const name of ['Bad', 'api1', 'api.service', 'api_', 'api-']) {
+      const error = validateConfig({
+        [configKey]: {
+          [name]: {
+            root: 'api',
+          },
+        },
+      } as any);
+
+      expect(error).not.toBeNull();
+    }
+  });
+
+  it.each([
+    'services',
+    'experimentalServicesV2',
+  ] as const)('should reject service names longer than 64 characters in `%s`', configKey => {
+    const error = validateConfig({
+      [configKey]: {
+        ['a'.repeat(65)]: {
+          root: 'api',
+        },
+      },
+    } as any);
+
+    expect(error).not.toBeNull();
+  });
+
+  it.each([
+    'services',
+    'experimentalServicesV2',
+  ] as const)('should accept service names matching the API schema in `%s`', configKey => {
+    const error = validateConfig({
+      [configKey]: {
+        ['a'.repeat(64)]: {
+          root: 'api',
+        },
+        my_service: {
+          root: 'worker',
+        },
+        'my-service': {
+          root: 'web',
+        },
+      },
+    } as any);
+
+    expect(error).toBeNull();
+  });
+
+  it('should reject invalid `experimentalServicesV2` service binding names', () => {
+    const error = validateConfig({
+      experimentalServicesV2: {
+        web: {
+          root: 'web',
+          bindings: [
+            { type: 'service', service: 'Api', format: 'url', env: 'API_URL' },
+          ],
+        },
+      },
+    } as any);
+
+    expect(error).not.toBeNull();
+  });
+
   it('should not error with experimentalServices static schedule arrays', () => {
     const error = validateConfig({
       experimentalServices: {

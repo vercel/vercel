@@ -1,0 +1,48 @@
+{
+  "uploadNowJson": true,
+  "projectSettings": {
+    "framework": "services"
+  },
+  "rewrites": [
+    {
+      "source": "/docs(/.*)?",
+      "destination": {
+        "type": "service",
+        "service": "docs"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "frontend"
+      }
+    }
+  ],
+  "services": {
+    "frontend": {
+      "root": "frontend",
+      "rewrites": [
+        {
+          "source": "/:path*",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    "docs": {
+      "root": "docs",
+      "buildCommand": "node build.mjs",
+      "outputDirectory": "dist",
+      "rewrites": [
+        {
+          "source": "/docs",
+          "destination": "/docs/index.html"
+        },
+        {
+          "source": "/docs/:path*",
+          "destination": "/docs/:path*/index.html"
+        }
+      ]
+    }
+  }
+}

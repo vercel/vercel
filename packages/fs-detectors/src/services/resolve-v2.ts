@@ -25,7 +25,18 @@ import type { DetectorFilesystem } from '../detectors/filesystem';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
-const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
+const MAX_SERVICE_NAME_LENGTH = 64;
+const SERVICE_NAME_REGEX = /^[a-z]([a-z_-]*[a-z])?$/;
+
+function isValidServiceName(name: string): boolean {
+  return (
+    name.length <= MAX_SERVICE_NAME_LENGTH && SERVICE_NAME_REGEX.test(name)
+  );
+}
+
+function getInvalidServiceNameMessage(name: string): string {
+  return `Service name "${name}" is invalid. Names must be 1-${MAX_SERVICE_NAME_LENGTH} characters, start and end with a lowercase letter, and contain only lowercase letters, hyphens, and underscores.`;
+}
 
 /**
  * The blessed Dockerfile names for container services: bare `Dockerfile` /
@@ -174,10 +185,10 @@ export function validateServiceConfigV2(
   name: string,
   config: ExperimentalServiceV2Config
 ): ServiceDetectionError | null {
-  if (!SERVICE_NAME_REGEX.test(name)) {
+  if (!isValidServiceName(name)) {
     return {
       code: 'INVALID_SERVICE_NAME',
-      message: `Service name "${name}" is invalid. Names must start with a letter, end with an alphanumeric character, and contain only alphanumeric characters, hyphens, and underscores.`,
+      message: getInvalidServiceNameMessage(name),
       serviceName: name,
     };
   }
@@ -235,14 +246,6 @@ export function validateServiceConfigV2(
         serviceName: name,
       };
     }
-  }
-  const isContainer = config.runtime === 'container';
-  if (!config.framework && !config.entrypoint && !isContainer) {
-    return {
-      code: 'MISSING_SERVICE_CONFIG',
-      message: `Service "${name}" must specify "framework" or "entrypoint".`,
-      serviceName: name,
-    };
   }
   return null;
 }
@@ -311,17 +314,20 @@ export async function resolveConfiguredServiceV2(
       ? undefined
       : normalizedEntrypoint;
 
-  const inferredRuntime = inferServiceRuntime({
+  let inferredRuntime = inferServiceRuntime({
     runtime: config.runtime,
     framework: config.framework,
     entrypoint: entrypointFile,
   });
 
   let framework = config.framework;
-  if (!framework && normalizedEntrypoint) {
-    const workspace = entrypointIsDirectory
-      ? normalizedEntrypoint
-      : posixPath.dirname(normalizedEntrypoint) || '.';
+  let detectedFramework = false;
+  if (!framework) {
+    const workspace = normalizedEntrypoint
+      ? entrypointIsDirectory
+        ? normalizedEntrypoint
+        : posixPath.dirname(normalizedEntrypoint) || '.'
+      : '.';
     const detection = await detectFrameworkFromWorkspace({
       fs: serviceFs,
       workspace,
@@ -332,6 +338,12 @@ export async function resolveConfiguredServiceV2(
       return { error: detection.error };
     }
     framework = detection.framework;
+    detectedFramework = Boolean(framework);
+    inferredRuntime = inferServiceRuntime({
+      runtime: config.runtime,
+      framework,
+      entrypoint: entrypointFile,
+    });
   }
 
   if (entrypointIsDirectory && !framework) {
@@ -341,6 +353,17 @@ export async function resolveConfiguredServiceV2(
         message:
           `Service "${name}" uses directory entrypoint "${config.entrypoint}" but no framework could be detected. ` +
           `Specify "framework" explicitly or use a file entrypoint.`,
+        serviceName: name,
+      },
+    };
+  }
+
+  const frameworkRuntime = inferRuntimeFromFramework(framework);
+  if (detectedFramework && frameworkRuntime && !entrypointFile) {
+    return {
+      error: {
+        code: 'MISSING_SERVICE_CONFIG',
+        message: `Service "${name}" detected framework "${framework}" in "${normalizedRoot}" and must specify an "entrypoint" for runtime "${frameworkRuntime}".`,
         serviceName: name,
       },
     };
@@ -359,19 +382,35 @@ export async function resolveConfiguredServiceV2(
       entrypointFile || frameworkDefinition?.useRuntime?.src || 'package.json';
   } else {
     if (!inferredRuntime) {
-      return {
-        error: {
-          code: 'MISSING_SERVICE_CONFIG',
-          message: `Service "${name}" must specify "framework" or a runtime-resolvable "entrypoint".`,
-          serviceName: name,
-        },
-      };
+      if (config.buildCommand) {
+        // Match zero-config static-build detection: use package.json as the
+        // stable build source and let @vercel/static-build run buildCommand.
+        builderUse = '@vercel/static-build';
+        builderSrc = 'package.json';
+      } else {
+        // Match zero-config static detection: @vercel/static receives a glob
+        // entrypoint and owns its excluded-file filtering.
+        builderUse = '@vercel/static';
+        builderSrc = config.outputDirectory
+          ? posixPath.join(config.outputDirectory, '**')
+          : '**';
+      }
+    } else {
+      if (!entrypointFile) {
+        return {
+          error: {
+            code: 'MISSING_SERVICE_CONFIG',
+            message: `Service "${name}" must specify an "entrypoint" for runtime "${inferredRuntime}".`,
+            serviceName: name,
+          },
+        };
+      }
+      builderUse =
+        inferredRuntime === 'node'
+          ? '@vercel/backends'
+          : getBuilderForRuntime(inferredRuntime as ServiceRuntime);
+      builderSrc = entrypointFile;
     }
-    builderUse =
-      inferredRuntime === 'node'
-        ? '@vercel/backends'
-        : getBuilderForRuntime(inferredRuntime as ServiceRuntime);
-    builderSrc = entrypointFile as string;
   }
 
   // builder.src must be project-root-relative.
@@ -389,6 +428,9 @@ export async function resolveConfiguredServiceV2(
   }
   if (framework) {
     builderConfig.framework = framework;
+  }
+  if (config.outputDirectory) {
+    builderConfig.outputDirectory = config.outputDirectory;
   }
   if (!isRoot) {
     builderConfig.workspace = normalizedRoot;
@@ -466,6 +508,14 @@ export async function resolveAllConfiguredServicesV2(
   const serviceNames = new Set(Object.keys(services));
   for (const service of resolved) {
     for (const binding of service.bindings ?? []) {
+      if (!isValidServiceName(binding.service)) {
+        errors.push({
+          code: 'INVALID_SERVICE_BINDING_NAME',
+          message: `Service "${service.name}" declares an invalid binding service name "${binding.service}". ${getInvalidServiceNameMessage(binding.service)}`,
+          serviceName: service.name,
+        });
+        continue;
+      }
       if (!serviceNames.has(binding.service)) {
         errors.push({
           code: 'UNKNOWN_SERVICE_BINDING',

@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.20.2
+
+### Patch Changes
+
+- e05ed3c: Add support for stable Cache Components without experimental PPR
+
 ## 4.20.1
 
 ### Patch Changes
