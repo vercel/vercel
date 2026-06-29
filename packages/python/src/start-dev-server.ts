@@ -670,7 +670,7 @@ export const startDevServer: StartDevServer = async opts => {
       : undefined,
     service
   );
-  let hookResult: Awaited<ReturnType<typeof runFrameworkHook>>;
+  let hookResult: Awaited<ReturnType<typeof runFrameworkHook>> | undefined;
   if (detected?.entrypoint) {
     resolved = detected.entrypoint;
   } else {
