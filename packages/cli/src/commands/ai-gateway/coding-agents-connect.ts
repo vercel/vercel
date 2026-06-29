@@ -23,6 +23,7 @@ import {
   promptKeyName,
   promptQuota,
   promptExpiry,
+  promptKeychain,
   type KeySource,
 } from '../../util/ai-gateway/coding-agents/key-source';
 import {
@@ -208,13 +209,19 @@ export default async function codingAgentsConnect(
       }
     }
   }
+  // Offer to keep the key in the macOS Keychain when it's available; default
+  // yes. Non-interactive runs use availability (with --no-keychain to opt out).
+  let useKeychain = wantKeychain;
+  if (wantKeychain && canPrompt && !yes) {
+    useKeychain = await promptKeychain(client);
+  }
   const previewKey = providedKey ?? KEY_PLACEHOLDER;
 
   // 3. Build the preview plan.
   const previewPlan = await buildSetupPlan(selected, {
     apiKey: previewKey,
     home,
-    useKeychain: wantKeychain,
+    useKeychain,
   });
 
   const changed = previewPlan.changes.filter(
@@ -240,7 +247,7 @@ export default async function codingAgentsConnect(
           includeByok,
           expiresAt: keyExpiresAt,
         }),
-      useKeychain: wantKeychain,
+      useKeychain,
       home,
     });
   }
@@ -266,6 +273,7 @@ export default async function codingAgentsConnect(
     budget: keyBudget,
     refreshPeriod: keyRefresh,
     expiresAt: keyExpiresAt,
+    keychain: wantKeychain ? useKeychain : undefined,
   });
 
   if (dryRun) {
@@ -309,7 +317,6 @@ export default async function codingAgentsConnect(
 
   // Stash the secret in the Keychain before writing; on failure fall back to
   // embedding it in the config so the run still produces a working setup.
-  let useKeychain = wantKeychain;
   if (useKeychain && !storeKeyInKeychain(keySource.key)) {
     output.warn(
       'Could not store the key in the macOS Keychain; writing it to the config instead.'

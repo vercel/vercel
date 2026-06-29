@@ -1,4 +1,4 @@
-import { hostname } from 'node:os';
+import { hostname, userInfo } from 'node:os';
 import chalk from 'chalk';
 import type Client from '../../client';
 import output from '../../../output-manager';
@@ -32,19 +32,29 @@ export interface KeyOptions {
 }
 
 /**
- * A human-readable default key name that hints at the local machine, e.g.
- * `[Sams MacBook] Coding Agents`. Falls back to a plain name when the hostname
- * is unavailable.
+ * A human-readable default key name that hints at the owner and machine, e.g.
+ * `smrth's MacBook Pro — Coding Agents`. Falls back gracefully when the user or
+ * hostname is unavailable.
  */
 export function defaultKeyName(): string {
   let host = '';
+  let user = '';
   try {
     host = hostname();
   } catch {
     // hostname() can throw in locked-down sandboxes; fall through to default.
   }
-  const friendly = host.split('.')[0].replace(/[-_]+/g, ' ').trim();
-  return friendly ? `[${friendly}] Coding Agents` : 'Coding Agents';
+  try {
+    user = userInfo().username;
+  } catch {
+    // userInfo() can throw without a passwd entry; fall through.
+  }
+  const device = host.split('.')[0].replace(/[-_]+/g, ' ').trim();
+  const who = user.trim();
+  if (who && device) return `${who}'s ${device} — Coding Agents`;
+  if (device) return `${device} — Coding Agents`;
+  if (who) return `${who}'s Coding Agents`;
+  return 'Coding Agents';
 }
 
 /**
@@ -121,6 +131,17 @@ export async function promptExpiry(
     default: DEFAULT_EXPIRY_PRESET,
   });
   return presetToExpiresAt(preset);
+}
+
+/**
+ * Asks whether to store the key in the macOS Keychain. Defaults to yes so the
+ * secret stays out of plaintext config files; declining writes it directly.
+ */
+export async function promptKeychain(client: Client): Promise<boolean> {
+  return client.input.confirm(
+    'Store the API key in your macOS Keychain?',
+    true
+  );
 }
 
 /** Whether the user pinned a scope explicitly via `--scope`/`--team`. */

@@ -13,6 +13,8 @@ export function printResolvedState(args: {
   budget?: number;
   refreshPeriod?: string;
   expiresAt?: number;
+  /** true = stored in Keychain, false = written to configs, undefined = N/A. */
+  keychain?: boolean;
 }): void {
   const { selected, willCreate, name, budget, refreshPeriod, expiresAt } = args;
   output.print(chalk.bold('Summary\n'));
@@ -42,6 +44,12 @@ export function printResolvedState(args: {
       ? new Date(expiresAt).toISOString().slice(0, 10)
       : 'Never'
   );
+  if (args.keychain !== undefined) {
+    printAlignedLabel(
+      'Key storage',
+      args.keychain ? 'macOS Keychain' : 'Config files'
+    );
+  }
   output.print('\n');
 }
 
