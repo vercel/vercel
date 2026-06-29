@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.30.2
+
+### Patch Changes
+
+- acddddf: Update the Container framework logo to use the Box icon.
+
 ## 3.30.1
 
 ### Patch Changes
