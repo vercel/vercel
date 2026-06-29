@@ -14,6 +14,11 @@ import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
 import { buildSetupPlan } from '../../../../src/util/ai-gateway/coding-agents/apply';
 import { claudeCode } from '../../../../src/util/ai-gateway/coding-agents/agents/claude-code';
+import {
+  isKeychainAvailable,
+  storeKeyInKeychain,
+  keychainLookup,
+} from '../../../../src/util/ai-gateway/coding-agents/keychain';
 
 const CREATED_KEY = 'vck_CreatedSecretKey1234';
 const mockApiKeyResponse = {
@@ -333,6 +338,49 @@ describe('ai-gateway coding-agents connect', () => {
     });
   });
 
+  describe('keychain', () => {
+    it('is unavailable off macOS and fails closed', () => {
+      if (process.platform !== 'darwin') {
+        expect(isKeychainAvailable()).toBe(false);
+        expect(storeKeyInKeychain('vck_whatever')).toBe(false);
+      }
+      expect(keychainLookup()).toContain('security find-generic-password');
+    });
+
+    it('keeps the secret out of the configs and reads it from the shell', async () => {
+      const secret = 'vck_KeychainSecret321';
+      const plan = await buildSetupPlan([claudeCode], {
+        apiKey: secret,
+        home,
+        useKeychain: true,
+      });
+
+      // The env-based agent resolves its var from the Keychain at runtime.
+      const shell = plan.changes.find(c => c.format === 'shell');
+      expect(shell?.next).toContain('security find-generic-password');
+      expect(shell?.next).toContain('export ANTHROPIC_AUTH_TOKEN=');
+      expect(shell?.next).not.toContain(secret);
+
+      // Claude's token is no longer embedded in settings.json.
+      const claude = plan.changes.find(c => c.label === 'Claude Code settings');
+      expect(claude?.next).toContain('ANTHROPIC_BASE_URL');
+      expect(claude?.next).not.toContain('ANTHROPIC_AUTH_TOKEN');
+      expect(claude?.next).not.toContain(secret);
+    });
+
+    it('embeds the key directly when keychain is off', async () => {
+      const secret = 'vck_PlainSecret654';
+      const plan = await buildSetupPlan([claudeCode], {
+        apiKey: secret,
+        home,
+        useKeychain: false,
+      });
+
+      const claude = plan.changes.find(c => c.label === 'Claude Code settings');
+      expect(claude?.next).toContain(secret);
+    });
+  });
+
   describe('key options', () => {
     it('collects name, quota, and expiry interactively', async () => {
       const team = useTeam();
@@ -478,6 +526,7 @@ describe('ai-gateway coding-agents connect', () => {
       const plan = await buildSetupPlan([claudeCode], {
         apiKey: 'vck_x',
         home,
+        useKeychain: false,
         // (set per-test; restored by afterEach)
       });
       expect(
@@ -490,6 +539,7 @@ describe('ai-gateway coding-agents connect', () => {
       const relocated = await buildSetupPlan([claudeCode], {
         apiKey: 'vck_x',
         home,
+        useKeychain: false,
       });
       expect(
         relocated.changes.some(

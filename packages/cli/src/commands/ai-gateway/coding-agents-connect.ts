@@ -26,6 +26,7 @@ import {
   promptKeyName,
   promptQuota,
   promptExpiry,
+  promptKeychain,
   type KeySource,
 } from '../../util/ai-gateway/coding-agents/key-source';
 import {
@@ -40,6 +41,10 @@ import {
 } from '../../util/ai-gateway/coding-agents/render';
 import { runMachine } from '../../util/ai-gateway/coding-agents/machine';
 import { KEY_PLACEHOLDER } from '../../util/ai-gateway/coding-agents/gateway';
+import {
+  isKeychainAvailable,
+  storeKeyInKeychain,
+} from '../../util/ai-gateway/coding-agents/keychain';
 import {
   outputAgentError,
   shouldEmitNonInteractiveCommandError,
@@ -76,6 +81,7 @@ export default async function codingAgentsConnect(
   const name = opts['--name'] as string | undefined;
   const dryRun = opts['--dry-run'] as boolean | undefined;
   const noBackup = opts['--no-backup'] as boolean | undefined;
+  const noKeychain = opts['--no-keychain'] as boolean | undefined;
   const agentConfig = opts['--agent-config'] as string[] | undefined;
   const shellRcOverride = opts['--shell-rc'] as string | undefined;
   const yes = opts['--yes'] as boolean | undefined;
@@ -90,6 +96,7 @@ export default async function codingAgentsConnect(
   telemetry.trackCliOptionName(name);
   telemetry.trackCliFlagDryRun(dryRun);
   telemetry.trackCliFlagNoBackup(noBackup);
+  telemetry.trackCliFlagNoKeychain(noKeychain);
   telemetry.trackCliOptionAgentConfig(agentConfig);
   telemetry.trackCliOptionShellRc(shellRcOverride);
   telemetry.trackCliFlagYes(yes);
@@ -97,6 +104,9 @@ export default async function codingAgentsConnect(
   const machine = shouldEmitNonInteractiveCommandError(client);
   const canPrompt = Boolean(client.stdin.isTTY) && !machine;
   const home = homedir();
+  // Prefer the macOS Keychain when available so the key stays out of plaintext
+  // config files; `--no-keychain` (or a non-macOS host) falls back to embedding.
+  const wantKeychain = !noKeychain && isKeychainAvailable();
 
   if (budget !== undefined && (!Number.isFinite(budget) || budget < 1)) {
     return failValidation(
@@ -228,6 +238,11 @@ export default async function codingAgentsConnect(
       }
     }
   }
+  let useKeychain = wantKeychain;
+  if (wantKeychain && canPrompt && !yes) {
+    useKeychain = await promptKeychain(client);
+  }
+
   // If a selected agent isn't at its default/native location, offer custom
   // paths (opt-in, so normal setups aren't interrupted). Flags pin paths in
   // either mode; this just surfaces the option interactively.
@@ -235,7 +250,9 @@ export default async function codingAgentsConnect(
     const missing = selected.filter(
       a =>
         !overrides[a.id] &&
-        !existsSync(dirname(a.configPath({ apiKey: '', home })))
+        !existsSync(
+          dirname(a.configPath({ apiKey: '', home, useKeychain: false }))
+        )
     );
     if (missing.length > 0) {
       const customize = await client.input.confirm(
@@ -247,6 +264,7 @@ export default async function codingAgentsConnect(
           const resolved = agent.configPath({
             apiKey: '',
             home,
+            useKeychain: false,
           });
           const answer = await client.input.text({
             message: `${agent.displayName} config path`,
@@ -265,6 +283,7 @@ export default async function codingAgentsConnect(
   const previewPlan = await buildSetupPlan(selected, {
     apiKey: previewKey,
     home,
+    useKeychain,
     overrides,
     shellRcOverride,
   });
@@ -291,6 +310,7 @@ export default async function codingAgentsConnect(
           includeByok,
           expiresAt: keyExpiresAt,
         }),
+      useKeychain,
       overrides,
       shellRcOverride,
       home,
@@ -315,6 +335,7 @@ export default async function codingAgentsConnect(
     budget: keyBudget,
     refreshPeriod: keyRefresh,
     expiresAt: keyExpiresAt,
+    keychain: wantKeychain ? useKeychain : undefined,
   });
 
   if (dryRun) {
@@ -355,9 +376,17 @@ export default async function codingAgentsConnect(
     throw err;
   }
 
+  if (useKeychain && !storeKeyInKeychain(keySource.key)) {
+    output.warn(
+      'Could not store the key in the macOS Keychain; writing it to the config instead.'
+    );
+    useKeychain = false;
+  }
+
   const applyPlanResult = await buildSetupPlan(selected, {
     apiKey: keySource.key,
     home,
+    useKeychain,
     overrides,
     shellRcOverride,
   });
@@ -383,7 +412,7 @@ export default async function codingAgentsConnect(
   }
 
   printNotes(applyPlanResult);
-  printKey(keySource.key);
+  printKey(keySource.key, { keychain: useKeychain });
   return 0;
 }
 

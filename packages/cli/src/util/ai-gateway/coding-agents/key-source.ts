@@ -108,6 +108,13 @@ export async function promptExpiry(
   return presetToExpiresAt(preset);
 }
 
+export async function promptKeychain(client: Client): Promise<boolean> {
+  return client.input.confirm(
+    'Store the API key in your macOS Keychain?',
+    true
+  );
+}
+
 function hasExplicitScopeFlag(argv: string[]): boolean {
   const args = argv.slice(2);
   return args.some(

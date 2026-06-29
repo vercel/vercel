@@ -13,6 +13,7 @@ export function printResolvedState(args: {
   budget?: number;
   refreshPeriod?: string;
   expiresAt?: number;
+  keychain?: boolean;
 }): void {
   const { selected, willCreate, name, budget, refreshPeriod, expiresAt } = args;
   output.print(chalk.bold('Summary\n'));
@@ -39,6 +40,12 @@ export function printResolvedState(args: {
       ? new Date(expiresAt).toISOString().slice(0, 10)
       : 'Never'
   );
+  if (args.keychain !== undefined) {
+    printAlignedLabel(
+      'Key storage',
+      args.keychain ? 'macOS Keychain' : 'Config files'
+    );
+  }
   output.print('\n');
 }
 
@@ -84,11 +91,14 @@ export function printNotes(plan: SetupPlan): void {
   }
 }
 
-export function printKey(key: string): void {
+export function printKey(key: string, opts: { keychain?: boolean } = {}): void {
+  const where = opts.keychain
+    ? 'stored in your macOS Keychain'
+    : 'written to the configs above';
   output.print('\n');
   output.log(
     chalk.dim(
-      `AI Gateway API key ${maskSecret(key)} written to the configs above — keep it secret.`
+      `AI Gateway API key ${maskSecret(key)} ${where} — keep it secret.`
     )
   );
 }

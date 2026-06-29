@@ -1,6 +1,7 @@
 export interface SetupContext {
   apiKey: string;
   home: string;
+  useKeychain: boolean;
   /** Per-agent config-file path overrides, keyed by agent id. */
   overrides?: Record<string, string>;
   /** Override for the shell rc file env exports are written into. */
