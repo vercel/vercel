@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.30.3
+
+### Patch Changes
+
+- 02d8bab: Add services logo
+
 ## 3.30.2
 
 ### Patch Changes
