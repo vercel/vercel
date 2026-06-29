@@ -1,0 +1,639 @@
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  mkdirSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { client } from '../../../mocks/client';
+import aiGateway from '../../../../src/commands/ai-gateway';
+import { useUser } from '../../../mocks/user';
+import { useTeam } from '../../../mocks/team';
+import { buildSetupPlan } from '../../../../src/util/ai-gateway/coding-agents/apply';
+import { claudeCode } from '../../../../src/util/ai-gateway/coding-agents/agents/claude-code';
+
+const CREATED_KEY = 'vck_CreatedSecretKey1234';
+const mockApiKeyResponse = {
+  apiKeyString: CREATED_KEY,
+  apiKey: {
+    id: '5d9f2ebd38dd',
+    name: 'my-key',
+    partialKey: 'vck',
+    teamId: 'team_abc',
+    purpose: 'ai-gateway',
+    createdAt: 1700000000000,
+  },
+};
+
+let lastCreateBody: Record<string, unknown> | undefined;
+function useCreateApiKey(response = mockApiKeyResponse) {
+  lastCreateBody = undefined;
+  client.scenario.post('/v1/api-keys', (req, res) => {
+    lastCreateBody = req.body;
+    res.json(response);
+  });
+}
+
+let home: string;
+let savedEnv: Record<string, string | undefined>;
+
+function claudeSettingsPath() {
+  return join(home, '.claude', 'settings.json');
+}
+function codexConfigPath() {
+  return join(home, '.codex', 'config.toml');
+}
+
+beforeEach(() => {
+  home = mkdtempSync(join(tmpdir(), 'vc-setup-agents-'));
+  savedEnv = {
+    HOME: process.env.HOME,
+    USERPROFILE: process.env.USERPROFILE,
+    SHELL: process.env.SHELL,
+    XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME,
+    CLAUDE_CONFIG_DIR: process.env.CLAUDE_CONFIG_DIR,
+    CODEX_HOME: process.env.CODEX_HOME,
+    PI_CODING_AGENT_DIR: process.env.PI_CODING_AGENT_DIR,
+    ZDOTDIR: process.env.ZDOTDIR,
+  };
+  process.env.HOME = home;
+  process.env.USERPROFILE = home;
+  process.env.SHELL = '/bin/bash';
+  for (const v of [
+    'XDG_CONFIG_HOME',
+    'CLAUDE_CONFIG_DIR',
+    'CODEX_HOME',
+    'PI_CODING_AGENT_DIR',
+    'ZDOTDIR',
+  ]) {
+    delete process.env[v];
+  }
+});
+
+afterEach(() => {
+  for (const [key, value] of Object.entries(savedEnv)) {
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
+});
+
+describe('ai-gateway coding-agents connect', () => {
+  describe('--help', () => {
+    it('returns exit code 2', async () => {
+      client.setArgv('ai-gateway', 'coding-agents', 'connect', '--help');
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(2);
+    });
+  });
+
+  describe('non-interactive with an existing key', () => {
+    it('configures Claude Code and emits JSON with the key', async () => {
+      useUser();
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--key',
+        'vck_DummyKey0001',
+        '--agent',
+        'claude-code'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
+      expect(settings.env.ANTHROPIC_BASE_URL).toBe(
+        'https://ai-gateway.vercel.sh'
+      );
+      expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe('vck_DummyKey0001');
+      expect(settings.env.ANTHROPIC_API_KEY).toBe('');
+
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.status).toBe('ok');
+      expect(out.reason).toBe('coding_agents_configured');
+      expect(out.apiKey).toBe('vck_DummyKey0001');
+      expect(out.configured).toHaveLength(1);
+      expect(out.configured[0].action).toBe('created');
+    });
+  });
+
+  describe('non-interactive key creation', () => {
+    it('mints a budgeted key and writes it everywhere', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--agent',
+        'claude-code',
+        '--budget',
+        '500',
+        '--refresh-period',
+        'monthly'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      expect(lastCreateBody?.purpose).toBe('ai-gateway');
+      expect(lastCreateBody?.aiGatewayQuota).toMatchObject({
+        limitAmount: 500,
+        refreshPeriod: 'monthly',
+      });
+
+      const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
+      expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe(CREATED_KEY);
+
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.apiKey).toBe(CREATED_KEY);
+    });
+  });
+
+  describe('--dry-run', () => {
+    it('writes nothing and reports the planned changes', async () => {
+      useUser();
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--dry-run',
+        '--key',
+        'vck_DummyKey0004',
+        '--agent',
+        'claude-code'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+      expect(existsSync(claudeSettingsPath())).toBe(false);
+
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.reason).toBe('dry_run');
+      expect(out.changes[0].action).toBe('would_create');
+    });
+
+    it('prompts for name, team, quota, and expiry in order', async () => {
+      useUser();
+      useTeam();
+      // Found at its default location, so the custom-path prompt stays quiet.
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--dry-run',
+        '--agent',
+        'claude-code'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput('previewing changes only');
+      await expect(client.stderr).toOutput('use with your coding agents');
+      client.stdin.write('\n');
+      // Then team.
+      await expect(client.stderr).toOutput(
+        'What team should the API key be under?'
+      );
+      client.stdin.write('\n'); // accept default scope
+      // Then quota (defaults to no).
+      await expect(client.stderr).toOutput('Set a spend limit');
+      client.stdin.write('\n');
+      // Then expiry (defaults to no).
+      await expect(client.stderr).toOutput('Set an expiration');
+      client.stdin.write('\n');
+
+      // With neither set, the summary spells out the absence of limits.
+      await expect(client.stderr).toOutput('Unlimited');
+      await expect(client.stderr).toOutput('Never');
+      await expect(client.stderr).toOutput('Dry run');
+      expect(await exitCodePromise).toBe(0);
+      // Still a preview: nothing is written and no key is minted.
+      expect(existsSync(claudeSettingsPath())).toBe(false);
+    });
+
+    it('prompts for the team even when one is already selected', async () => {
+      const team = useTeam();
+      useUser();
+      // A scope is already pinned, but key ownership is still an explicit choice.
+      client.config.currentTeam = team.id;
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      // Pin the other options so only the team prompt remains.
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--dry-run',
+        '--agent',
+        'claude-code',
+        '--name',
+        'my-key',
+        '--refresh-period',
+        'none',
+        '--expiration',
+        'none'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput(
+        'What team should the API key be under?'
+      );
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('Dry run');
+      expect(await exitCodePromise).toBe(0);
+      expect(existsSync(claudeSettingsPath())).toBe(false);
+    });
+
+    it('does not require a scope in non-interactive mode', async () => {
+      useUser();
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--dry-run',
+        '--agent',
+        'claude-code'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+      expect(existsSync(claudeSettingsPath())).toBe(false);
+
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.reason).toBe('dry_run');
+    });
+  });
+
+  describe('team selection', () => {
+    it('skips the prompt with --yes and uses the current scope', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--yes',
+        '--agent',
+        'claude-code'
+      );
+
+      // No prompt is awaited: --yes accepts the current scope and the run
+      // completes without any interactive input.
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
+      expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe(CREATED_KEY);
+    });
+  });
+
+  describe('agent selection with --yes', () => {
+    it('selects the detected agents without prompting', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      client.setArgv('ai-gateway', 'coding-agents', 'connect', '--yes');
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
+      expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe(CREATED_KEY);
+      // An undetected agent is not configured.
+      expect(existsSync(codexConfigPath())).toBe(false);
+    });
+
+    it('errors when nothing is detected and no agent is named', async () => {
+      useUser();
+      // Fresh home: no agent config dirs, so nothing is detected.
+      client.setArgv('ai-gateway', 'coding-agents', 'connect', '--yes');
+
+      expect(await aiGateway(client)).toBe(1);
+      await expect(client.stderr).toOutput('No coding agents detected');
+    });
+  });
+
+  describe('key options', () => {
+    it('collects name, quota, and expiry interactively', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--agent',
+        'claude-code'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput('use with your coding agents');
+      client.stdin.write('My Coding Key\n');
+      await expect(client.stderr).toOutput(
+        'What team should the API key be under?'
+      );
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Set a spend limit');
+      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Spend limit in USD');
+      client.stdin.write('\n'); // accept default 100
+      await expect(client.stderr).toOutput('How often should the limit reset?');
+      client.stdin.write('\n'); // accept default "Never"
+      await expect(client.stderr).toOutput('Set an expiration');
+      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Expires in');
+      client.stdin.write('\n'); // accept default preset (30 days)
+      // Planned changes are shown first, then the summary, then the apply prompt.
+      await expect(client.stderr).toOutput('Planned changes');
+      await expect(client.stderr).toOutput('Summary');
+      await expect(client.stderr).toOutput('Apply these changes?');
+      client.stdin.write('\n'); // accept default (yes)
+
+      expect(await exitCodePromise).toBe(0);
+
+      expect(lastCreateBody?.name).toBe('My Coding Key');
+      expect(lastCreateBody?.aiGatewayQuota).toMatchObject({
+        limitAmount: 100,
+      });
+      const expiresAt = lastCreateBody?.expiresAt as number;
+      expect(typeof expiresAt).toBe('number');
+      // 30-day preset lands ~30 days out.
+      const days = (expiresAt - Date.now()) / 86_400_000;
+      expect(days).toBeGreaterThan(29);
+      expect(days).toBeLessThan(31);
+    });
+
+    it('sends expiresAt from the --expiration flag', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--agent',
+        'claude-code',
+        '--expiration',
+        '7d'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const expiresAt = lastCreateBody?.expiresAt as number;
+      expect(typeof expiresAt).toBe('number');
+      const days = (expiresAt - Date.now()) / 86_400_000;
+      expect(days).toBeGreaterThan(6);
+      expect(days).toBeLessThan(8);
+    });
+
+    it('does not send expiresAt for --expiration none', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--agent',
+        'claude-code',
+        '--expiration',
+        'none'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      expect(lastCreateBody?.expiresAt).toBeUndefined();
+    });
+
+    it('rejects an invalid --expiration', async () => {
+      useUser();
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--agent',
+        'claude-code',
+        '--expiration',
+        'soon'
+      );
+
+      expect(await aiGateway(client)).toBe(1);
+      await expect(client.stderr).toOutput('Invalid expiration');
+    });
+  });
+
+  describe('custom config paths', () => {
+    it('writes an agent config to an --agent-config path', async () => {
+      useUser();
+      client.nonInteractive = true;
+      const custom = join(home, 'work', 'claude', 'settings.json');
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--key',
+        'vck_DummyKey0009',
+        '--agent',
+        'claude-code',
+        '--agent-config',
+        `claude-code=${custom}`
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      expect(existsSync(custom)).toBe(true);
+      // The default location is left untouched.
+      expect(existsSync(claudeSettingsPath())).toBe(false);
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.configured[0].file).toBe(custom);
+    });
+
+    it('honors an agent-native config dir env var (CLAUDE_CONFIG_DIR)', async () => {
+      const plan = await buildSetupPlan([claudeCode], {
+        apiKey: 'vck_x',
+        home,
+        // (set per-test; restored by afterEach)
+      });
+      expect(
+        plan.changes.some(
+          c => c.path === join(home, '.claude', 'settings.json')
+        )
+      ).toBe(true);
+
+      process.env.CLAUDE_CONFIG_DIR = join(home, 'alt-claude');
+      const relocated = await buildSetupPlan([claudeCode], {
+        apiKey: 'vck_x',
+        home,
+      });
+      expect(
+        relocated.changes.some(
+          c => c.path === join(home, 'alt-claude', 'settings.json')
+        )
+      ).toBe(true);
+    });
+
+    it('rejects a malformed --agent-config', async () => {
+      useUser();
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--agent',
+        'claude-code',
+        '--agent-config',
+        'claude-code' // missing =path
+      );
+      expect(await aiGateway(client)).toBe(1);
+      await expect(client.stderr).toOutput('Invalid --agent-config');
+    });
+  });
+
+  describe('idempotency', () => {
+    it('is a no-op on the second run with the same key', async () => {
+      useUser();
+      client.nonInteractive = true;
+      const argv = [
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--key',
+        'vck_DummyKey0005',
+        '--agent',
+        'claude-code',
+      ] as const;
+
+      client.setArgv(...argv);
+      expect(await aiGateway(client)).toBe(0);
+      const first = readFileSync(claudeSettingsPath(), 'utf8');
+      const stdoutAfterFirst = client.stdout.getFullOutput().length;
+
+      client.setArgv(...argv);
+      expect(await aiGateway(client)).toBe(0);
+      const second = readFileSync(claudeSettingsPath(), 'utf8');
+
+      expect(second).toBe(first);
+      const secondJson = client.stdout.getFullOutput().slice(stdoutAfterFirst);
+      const out = JSON.parse(secondJson);
+      expect(out.configured).toHaveLength(0);
+    });
+  });
+
+  describe('safety', () => {
+    it('skips a malformed config instead of clobbering it', async () => {
+      useUser();
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      writeFileSync(claudeSettingsPath(), '{ this is not json', 'utf8');
+
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--key',
+        'vck_DummyKey0006',
+        '--agent',
+        'claude-code'
+      );
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      // File untouched.
+      expect(readFileSync(claudeSettingsPath(), 'utf8')).toBe(
+        '{ this is not json'
+      );
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(
+        out.skipped.some((s: any) => s.reason === 'unparseable_config')
+      ).toBe(true);
+    });
+
+    it('never prints the full key — only a masked form', async () => {
+      useUser();
+      const secret = 'vck_SuperSecretValue98765';
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--key',
+        secret,
+        '--agent',
+        'claude-code',
+        '--yes'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      // Masked in the diff and the receipt; the full secret never reaches the
+      // terminal (it lives only in the config files).
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('vck_••••8765');
+      expect(stderr).not.toContain(secret);
+      expect(client.stdout.getFullOutput()).not.toContain(secret);
+    });
+  });
+
+  describe('validation', () => {
+    it('rejects a negative budget', async () => {
+      useUser();
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--budget',
+        '-5',
+        '--agent',
+        'claude-code',
+        '--key',
+        'vck_x'
+      );
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Budget must be a positive number in dollars'
+      );
+    });
+
+    it('rejects an unknown agent', async () => {
+      useUser();
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'connect',
+        '--agent',
+        'bogus',
+        '--key',
+        'vck_x'
+      );
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain('Unknown agent');
+    });
+  });
+});
