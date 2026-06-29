@@ -236,14 +236,6 @@ export function validateServiceConfigV2(
       };
     }
   }
-  const isContainer = config.runtime === 'container';
-  if (!config.framework && !config.entrypoint && !isContainer) {
-    return {
-      code: 'MISSING_SERVICE_CONFIG',
-      message: `Service "${name}" must specify "framework" or "entrypoint".`,
-      serviceName: name,
-    };
-  }
   return null;
 }
 
@@ -311,17 +303,20 @@ export async function resolveConfiguredServiceV2(
       ? undefined
       : normalizedEntrypoint;
 
-  const inferredRuntime = inferServiceRuntime({
+  let inferredRuntime = inferServiceRuntime({
     runtime: config.runtime,
     framework: config.framework,
     entrypoint: entrypointFile,
   });
 
   let framework = config.framework;
-  if (!framework && normalizedEntrypoint) {
-    const workspace = entrypointIsDirectory
-      ? normalizedEntrypoint
-      : posixPath.dirname(normalizedEntrypoint) || '.';
+  let detectedFramework = false;
+  if (!framework) {
+    const workspace = normalizedEntrypoint
+      ? entrypointIsDirectory
+        ? normalizedEntrypoint
+        : posixPath.dirname(normalizedEntrypoint) || '.'
+      : '.';
     const detection = await detectFrameworkFromWorkspace({
       fs: serviceFs,
       workspace,
@@ -332,6 +327,12 @@ export async function resolveConfiguredServiceV2(
       return { error: detection.error };
     }
     framework = detection.framework;
+    detectedFramework = Boolean(framework);
+    inferredRuntime = inferServiceRuntime({
+      runtime: config.runtime,
+      framework,
+      entrypoint: entrypointFile,
+    });
   }
 
   if (entrypointIsDirectory && !framework) {
@@ -341,6 +342,17 @@ export async function resolveConfiguredServiceV2(
         message:
           `Service "${name}" uses directory entrypoint "${config.entrypoint}" but no framework could be detected. ` +
           `Specify "framework" explicitly or use a file entrypoint.`,
+        serviceName: name,
+      },
+    };
+  }
+
+  const frameworkRuntime = inferRuntimeFromFramework(framework);
+  if (detectedFramework && frameworkRuntime && !entrypointFile) {
+    return {
+      error: {
+        code: 'MISSING_SERVICE_CONFIG',
+        message: `Service "${name}" detected framework "${framework}" in "${normalizedRoot}" and must specify an "entrypoint" for runtime "${frameworkRuntime}".`,
         serviceName: name,
       },
     };
@@ -359,19 +371,35 @@ export async function resolveConfiguredServiceV2(
       entrypointFile || frameworkDefinition?.useRuntime?.src || 'package.json';
   } else {
     if (!inferredRuntime) {
-      return {
-        error: {
-          code: 'MISSING_SERVICE_CONFIG',
-          message: `Service "${name}" must specify "framework" or a runtime-resolvable "entrypoint".`,
-          serviceName: name,
-        },
-      };
+      if (config.buildCommand) {
+        // Match zero-config static-build detection: use package.json as the
+        // stable build source and let @vercel/static-build run buildCommand.
+        builderUse = '@vercel/static-build';
+        builderSrc = 'package.json';
+      } else {
+        // Match zero-config static detection: @vercel/static receives a glob
+        // entrypoint and owns its excluded-file filtering.
+        builderUse = '@vercel/static';
+        builderSrc = config.outputDirectory
+          ? posixPath.join(config.outputDirectory, '**')
+          : '**';
+      }
+    } else {
+      if (!entrypointFile) {
+        return {
+          error: {
+            code: 'MISSING_SERVICE_CONFIG',
+            message: `Service "${name}" must specify an "entrypoint" for runtime "${inferredRuntime}".`,
+            serviceName: name,
+          },
+        };
+      }
+      builderUse =
+        inferredRuntime === 'node'
+          ? '@vercel/backends'
+          : getBuilderForRuntime(inferredRuntime as ServiceRuntime);
+      builderSrc = entrypointFile;
     }
-    builderUse =
-      inferredRuntime === 'node'
-        ? '@vercel/backends'
-        : getBuilderForRuntime(inferredRuntime as ServiceRuntime);
-    builderSrc = entrypointFile as string;
   }
 
   // builder.src must be project-root-relative.
@@ -389,6 +417,9 @@ export async function resolveConfiguredServiceV2(
   }
   if (framework) {
     builderConfig.framework = framework;
+  }
+  if (config.outputDirectory) {
+    builderConfig.outputDirectory = config.outputDirectory;
   }
   if (!isRoot) {
     builderConfig.workspace = normalizedRoot;

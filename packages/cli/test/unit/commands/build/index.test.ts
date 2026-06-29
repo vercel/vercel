@@ -1,7 +1,10 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import fs from 'fs-extra';
 import { join } from 'path';
-import { getWriteableDirectory } from '@vercel/build-utils';
+import {
+  getWriteableDirectory,
+  sanitizeConsumerName,
+} from '@vercel/build-utils';
 import build from '../../../../src/commands/build';
 import cliPkg from '../../../../src/util/pkg';
 import { client } from '../../../mocks/client';
@@ -2745,6 +2748,66 @@ createServer((_req, res) => {
       ])
     );
     expect(await fs.pathExists(join(output, 'functions'))).toBe(false);
+  });
+
+  it('should apply per-service `functions` config to the service lambda', async () => {
+    const cwd = await getWriteableDirectory();
+    const output = join(cwd, '.vercel', 'output');
+    await fs.ensureDir(join(cwd, '.vercel'));
+    await fs.writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: '.',
+      projectId: '.',
+      settings: {
+        framework: null,
+        installCommand: '',
+      },
+    });
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      private: true,
+    });
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      services: {
+        worker: {
+          root: '.',
+          entrypoint: 'index.js',
+          runtime: 'node',
+          functions: {
+            'index.js': {
+              maxDuration: 30,
+              experimentalTriggers: [{ type: 'queue/v2beta', topic: 'orders' }],
+            },
+          },
+        },
+      },
+    });
+    await fs.outputFile(
+      join(cwd, 'index.js'),
+      `
+const { createServer } = require('node:http');
+
+createServer((_req, res) => {
+  res.statusCode = 200;
+  res.end('ok');
+}).listen(3000);
+`
+    );
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const vcConfig = await fs.readJSON(
+      join(output, 'services/worker/functions/index.func/.vc-config.json')
+    );
+    expect(vcConfig.maxDuration).toBe(30);
+    // Consumer is scoped by service name so it stays unique across services.
+    expect(vcConfig.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: 'orders',
+        consumer: sanitizeConsumerName('worker~index.js'),
+      },
+    ]);
   });
 
   it('should build experimentalServices discovered from generated Build Output config', async () => {
