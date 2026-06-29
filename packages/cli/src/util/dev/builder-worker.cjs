@@ -85,13 +85,20 @@ async function processMessage(message) {
     }
   }
 
+  // Container Lambdas carry an OCI image reference in `handler`, not a code
+  // bundle, so there is nothing to zip. They are built and run locally by the
+  // builder's `startDevServer`; calling `createZip()` on them would throw since
+  // the output is a plain image-reference object.
+  const isZippableLambda = output =>
+    output.type === 'Lambda' && output.runtime !== 'container';
+
   if (effectiveVersion === 3) {
-    if (result.output.type === 'Lambda') {
+    if (isZippableLambda(result.output)) {
       await processLambdaOutput(result.output);
     }
   } else {
     for (const output of Object.values(result.output)) {
-      if (output.type === 'Lambda') {
+      if (isZippableLambda(output)) {
         await processLambdaOutput(output);
       }
     }

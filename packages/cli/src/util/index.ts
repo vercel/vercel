@@ -216,11 +216,14 @@ export default class Now {
   async handleDeploymentError(error: any, { env }: any) {
     if (error.status === 429) {
       if (error.code === 'builds_rate_limited') {
-        const err: APIError = Object.create(APIError.prototype);
-        err.message = error.message;
+        const err = new Error(error.message) as APIError;
         err.status = error.status;
-        err.retryAfterMs = 'never';
         err.code = error.code;
+        err.retryAfterMs = 'never';
+        err.ctaLabel = error.ctaLabel;
+        err.ctaUrl = error.ctaUrl;
+        err.action = error.action;
+        err.link = error.link;
         return err;
       }
 

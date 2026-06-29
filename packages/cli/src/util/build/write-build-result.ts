@@ -482,12 +482,34 @@ async function writeBuildResultV3(args: {
     throw new Error(`Expected "build.src" to be a string`);
   }
 
-  const functionConfiguration = vercelConfig
-    ? await getLambdaOptionsFromFunction({
-        sourceFile: src,
-        config: vercelConfig,
-      })
-    : {};
+  let functionConfiguration: Awaited<
+    ReturnType<typeof getLambdaOptionsFromFunction>
+  > = {};
+  if (service && isExperimentalServiceV2(service) && service.functions) {
+    // `functions` keys are service-root-relative but `build.src` is
+    // project-relative; strip the root so patterns match.
+    let sourceFile = src;
+    const serviceRoot = stripDuplicateSlashes(service.root);
+    if (serviceRoot && serviceRoot !== '.') {
+      const prefix = `${serviceRoot}/`;
+      if (sourceFile.startsWith(prefix)) {
+        sourceFile = sourceFile.slice(prefix.length);
+      }
+    }
+    functionConfiguration = await getLambdaOptionsFromFunction({
+      sourceFile,
+      config: {
+        ...vercelConfig,
+        functions: service.functions,
+        serviceName: service.name,
+      },
+    });
+  } else if (vercelConfig) {
+    functionConfiguration = await getLambdaOptionsFromFunction({
+      sourceFile: src,
+      config: vercelConfig,
+    });
+  }
 
   const ext = extname(src);
   // V2 services are already isolated under `services/<name>`, so scalar

@@ -2,7 +2,7 @@ import assert from 'assert';
 import fs from 'fs-extra';
 import { isIP } from 'net';
 import { join } from 'path';
-import nodeFetch from 'node-fetch';
+import nodeFetch from '../../src/util/fetch';
 import { exec, fixture, sleep, testFixture, testFixtureStdio } from './utils';
 
 test('[vercel dev] validate redirects', async () => {
