@@ -88,6 +88,14 @@ export default async function endpoints(client: Client, argv: string[]) {
 
 const dash = () => chalk.gray('–');
 
+// Per-token price comes back as "0" for models priced another way (e.g. video
+// per-second). Show a dash so they don't read as free; full pricing is in JSON.
+const price = (value: string | undefined) =>
+  value && Number(value) > 0 ? value : dash();
+
+const count = (value: number | undefined) =>
+  value != null && value > 0 ? String(value) : dash();
+
 function printEndpointsTable(list: ModelEndpoint[]) {
   return `${table(
     [
@@ -103,9 +111,9 @@ function printEndpointsTable(list: ModelEndpoint[]) {
       ].map(header => chalk.gray(header)),
       ...list.map(e => [
         e.provider_name,
-        e.context_length != null ? String(e.context_length) : dash(),
-        e.pricing?.prompt ?? dash(),
-        e.pricing?.completion ?? dash(),
+        count(e.context_length),
+        price(e.pricing?.prompt),
+        price(e.pricing?.completion),
         e.latency_last_1h?.p50 != null
           ? `${Math.round(e.latency_last_1h.p50)}ms`
           : dash(),
