@@ -229,12 +229,50 @@ export const rulesSubcommand = {
   examples: [],
 } as const;
 
+export const modelsListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List AI Gateway models',
+  arguments: [],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'List available models',
+      value: `${packageName} ai-gateway models ls`,
+    },
+  ],
+} as const;
+
+export const modelsEndpointsSubcommand = {
+  name: 'endpoints',
+  aliases: [],
+  description: 'List provider endpoints for an AI Gateway model',
+  arguments: [{ name: 'model', required: true }],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'List provider endpoints for a model',
+      value: `${packageName} ai-gateway models endpoints anthropic/claude-opus-4.8`,
+    },
+  ],
+} as const;
+
+export const modelsSubcommand = {
+  name: 'models',
+  aliases: [],
+  description: 'Manage AI Gateway models',
+  arguments: [],
+  subcommands: [modelsListSubcommand, modelsEndpointsSubcommand],
+  options: [],
+  examples: [],
+} as const;
+
 export const aiGatewayCommand = {
   name: 'ai-gateway',
   aliases: [],
   description: 'Manage AI Gateway resources',
   arguments: [],
-  subcommands: [apiKeysSubcommand, rulesSubcommand],
+  subcommands: [apiKeysSubcommand, rulesSubcommand, modelsSubcommand],
   options: [],
   examples: [],
 } as const;

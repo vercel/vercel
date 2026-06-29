@@ -19,4 +19,11 @@ export class AiGatewayTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandModels(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'models',
+      value: actual,
+    });
+  }
 }
