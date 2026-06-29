@@ -1,5 +1,146 @@
 # @vercel/fs-detectors
 
+## 6.11.2
+
+### Patch Changes
+
+- 1a1c745: [services] fix bare static service builds, allow services with only 'root' to resolve at @vercel/static
+
+## 6.11.1
+
+### Patch Changes
+
+- Updated dependencies [6b49a17]
+  - @vercel/build-utils@13.32.2
+
+## 6.11.0
+
+### Minor Changes
+
+- 4f8b5b1: - Migrate service auto-detection to V2 format.
+  - Layout auto-detect now resolves via the V2 resolver and generates top-level service-targeted rewrites and per-service path transform routes.
+  - CLI build and dev server merge auto-detected rewrites into the route table.
+
+### Patch Changes
+
+- 66be3e0: [services] Refine container detection for `services` / `experimentalServicesV2`.
+
+  - A supplied `entrypoint` infers `runtime: "container"` when it names one of the
+    blessed Dockerfile names: `Dockerfile`, `Containerfile`, `Dockerfile.vercel`,
+    or `Containerfile.vercel`. A suffixed name like `Dockerfile.prod` is not a
+    container entrypoint.
+  - `runtime: "container"` without an `entrypoint` auto-detects one of those same
+    four blessed names in the service root, probing `Dockerfile.vercel`,
+    `Containerfile.vercel`, `Dockerfile`, `Containerfile` (in that order, so a
+    `.vercel` opt-in marker takes precedence over a plain `Dockerfile`).
+  - Removed the prebuilt OCI image reference entrypoint: an `entrypoint` must now
+    name a Dockerfile/Containerfile, otherwise the service errors.
+  - `@vercel/container` recognizes the same blessed set (via a shared
+    `isDockerfileRef`), keeping the builder and the services resolver in sync so
+    the configured Dockerfile entrypoint is honored instead of being ignored in
+    favor of a default `Dockerfile` or treated as a prebuilt image reference.
+  - The `container` framework preset is no longer experimental: a project with a
+    `Dockerfile.vercel` / `Containerfile.vercel` marker is detected as a
+    container without `VERCEL_USE_EXPERIMENTAL_FRAMEWORKS`.
+
+- Updated dependencies [66be3e0]
+  - @vercel/frameworks@3.30.1
+
+## 6.10.3
+
+### Patch Changes
+
+- 34b2c4c: Apply `functions` config to Python framework builds using the resolved Python entrypoint.
+
+## 6.10.2
+
+### Patch Changes
+
+- Updated dependencies [7cecf55]
+  - @vercel/routing-utils@6.4.0
+  - @vercel/build-utils@13.32.1
+  - @vercel/frameworks@3.30.0
+
+## 6.10.1
+
+### Patch Changes
+
+- Updated dependencies [09743c6]
+- Updated dependencies [8dc4702]
+  - @vercel/frameworks@3.30.0
+  - @vercel/build-utils@13.32.1
+
+## 6.10.0
+
+### Minor Changes
+
+- 9fb2976: Add `services` as the canonical multi-service project configuration and keep `experimentalServicesV2` as a deprecated backwards-compatible alias.
+
+### Patch Changes
+
+- 186014d: Add an experimental container service runtime. A service with
+  `runtime: "container"` either builds its `Dockerfile`/`Containerfile` and pushes
+  the resulting OCI image to the Vercel Container Registry (VCR), or passes a
+  prebuilt image reference through as build output.
+
+  - **`@vercel/container`** (new builder): authenticates to VCR with the project's
+    `VERCEL_OIDC_TOKEN`, ensures the repository exists, builds and pushes the
+    image, and emits a digest-pinned reference in `handler` (container functions
+    are `type: "Lambda"` with `runtime: "container"`; the platform surfaces
+    `handler` as the image downstream). Uses `docker` on developer machines and
+    `buildah` (daemonless) in the Vercel build container behind a shared
+    `ContainerEngine` interface. Supports `vc dev` via `startDevServer` (local
+    build/run, env parity, log forwarding) and `prepareCache` for buildah layer
+    reuse between builds. Build flow is instrumented with tracing spans
+    (non-secret diagnostics) and debug logging gated on `BUILDER_DEBUG`.
+  - **`@vercel/build-utils`**: add the `ContainerImage` build-output type.
+  - **`@vercel/fs-detectors`**: resolve container services from `vercel.json`
+    (the `services` config and its deprecated `experimentalServices` /
+    `experimentalServicesV2` aliases). A `Dockerfile`, `Containerfile`, or
+    `*.dockerfile` entrypoint triggers a build; any other entrypoint is treated as
+    a prebuilt OCI image reference.
+  - **`vercel`**: wire container output into `vercel build` result writing and
+    config validation.
+
+  Buildah specifics in the build container: host networking for `RUN` steps,
+  native `overlay` storage on the XFS `/vercel` volume (deferring to the image's
+  `storage.conf`), zstd push compression, and registry credentials read from the
+  provisioned auth file when present. Several knobs are available for debugging:
+  `VERCEL_CONTAINER_ENGINE`, `VERCEL_VCR_STRICT_STORAGE`,
+  `VERCEL_VCR_DISABLE_LAYER_CACHE`, and `VERCEL_VCR_FORCE_LOGIN`.
+
+- Updated dependencies [9fb2976]
+- Updated dependencies [186014d]
+- Updated dependencies [cb0988f]
+  - @vercel/build-utils@13.32.0
+
+## 6.9.3
+
+### Patch Changes
+
+- Updated dependencies [2158ab6]
+  - @vercel/build-utils@13.31.1
+
+## 6.9.2
+
+### Patch Changes
+
+- edb5429: Strip trailing slashes from `experimentalServicesV2` service `root` so a config like `"root": "frontend/"` no longer double-prefixes builder paths (e.g. `frontend/frontend/package.json`)
+- Updated dependencies [8dec9ea]
+- Updated dependencies [c4afec8]
+- Updated dependencies [3afdb18]
+- Updated dependencies [04f830c]
+  - @vercel/build-utils@13.31.0
+  - @vercel/routing-utils@6.3.1
+  - @vercel/frameworks@3.29.1
+
+## 6.9.1
+
+### Patch Changes
+
+- Updated dependencies [3b273ff]
+  - @vercel/frameworks@3.29.1
+
 ## 6.9.0
 
 ### Minor Changes

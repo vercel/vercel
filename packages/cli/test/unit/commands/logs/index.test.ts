@@ -3,7 +3,7 @@ import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeam, useTeams } from '../../../mocks/team';
 import { defaultProject, useProject } from '../../../mocks/project';
-import { useDeployment } from '../../../mocks/deployment';
+import { useDeployment, useRuntimeLogs } from '../../../mocks/deployment';
 import logs from '../../../../src/commands/logs';
 import { join } from 'path';
 
@@ -231,8 +231,10 @@ describe('logs', () => {
   });
 
   describe('--project option', () => {
+    let user: ReturnType<typeof useUser>;
+
     beforeEach(() => {
-      useUser();
+      user = useUser();
       useProject({
         ...defaultProject,
         id: 'prj_explicit',
@@ -240,13 +242,94 @@ describe('logs', () => {
       });
     });
 
-    it('should fetch logs for specified project', async () => {
-      useRequestLogs([createMockLog()]);
+    it('should fetch logs without using the current branch', async () => {
+      let receivedBranch: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedBranch = req.query.branch as string | undefined;
+        res.json({
+          rows: [createMockLog()],
+          hasMoreRows: false,
+        });
+      });
 
+      client.cwd = fixture('linked-project');
       client.setArgv('logs', '--project', 'explicit-project');
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(0);
+      expect(receivedBranch).toBeUndefined();
+    });
+
+    it('should use an explicitly selected branch', async () => {
+      let receivedBranch: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedBranch = req.query.branch as string | undefined;
+        res.json({
+          rows: [createMockLog()],
+          hasMoreRows: false,
+        });
+      });
+
+      client.setArgv(
+        'logs',
+        '--project',
+        'explicit-project',
+        '--branch',
+        'feature-branch'
+      );
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedBranch).toEqual('feature-branch');
+    });
+
+    it('should follow the latest READY production deployment', async () => {
+      let requestedProjectId: string | undefined;
+      let requestedLimit: string | undefined;
+      let requestedState: string | undefined;
+      let requestedTarget: string | undefined;
+      let productionDeployment: ReturnType<typeof useDeployment>;
+
+      client.scenario.get('/v6/deployments', (req, res) => {
+        requestedProjectId = req.query.projectId as string | undefined;
+        requestedLimit = req.query.limit as string | undefined;
+        requestedState = req.query.state as string | undefined;
+        requestedTarget = req.query.target as string | undefined;
+        res.json({
+          deployments: [
+            {
+              uid: productionDeployment.id,
+              url: productionDeployment.url,
+            },
+          ],
+        });
+      });
+
+      productionDeployment = useDeployment({
+        creator: user,
+        project: {
+          ...defaultProject,
+          id: 'prj_explicit',
+          name: 'explicit-project',
+        },
+        target: 'production',
+      });
+      useRuntimeLogs({
+        deployment: productionDeployment,
+        logProducer: async function* () {},
+      });
+
+      client.setArgv('logs', '--project', 'explicit-project', '--follow');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(requestedProjectId).toEqual('prj_explicit');
+      expect(requestedLimit).toEqual('1');
+      expect(requestedState).toEqual('READY');
+      expect(requestedTarget).toEqual('production');
+      await expect(client.stderr).toOutput(
+        `Streaming logs for latest production deployment ${productionDeployment.id}`
+      );
     });
 
     it('should track telemetry for --project option', async () => {

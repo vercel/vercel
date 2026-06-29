@@ -82,6 +82,21 @@ export interface AgentErrorPayload {
 }
 
 /**
+ * Structured payload for successful command completion in non-interactive mode.
+ * Emitted as JSON so agents can parse the result and follow up via next[].
+ */
+export interface AgentSuccessPayload {
+  status: 'success';
+  /** Short, stable machine-readable code for what completed (e.g. 'domain_added'). */
+  reason?: string;
+  /** Human-readable message (no ANSI). */
+  message: string;
+  /** Hint for agents: follow up with one of the commands in next[]. */
+  hint?: string;
+  next?: Array<{ command: string; when?: string }>;
+}
+
+/**
  * Builds the invoking CLI command with --yes added (or retained).
  * Used for non-interactive "confirmation required" payloads.
  */
@@ -493,6 +508,26 @@ export function outputAgentError(
 ): void {
   if (!shouldEmitNonInteractiveCommandError(client)) {
     return;
+  }
+  client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+  process.exit(exitCode);
+}
+
+/**
+ * Writes a single JSON success payload to stdout and exits when non-interactive
+ * (`client.nonInteractive` or `--non-interactive` on argv). In interactive mode,
+ * does nothing (caller should print normal human output).
+ */
+export function outputAgentSuccess(
+  client: Client,
+  payload: AgentSuccessPayload,
+  exitCode: number = 0
+): void {
+  if (!shouldEmitNonInteractiveCommandError(client)) {
+    return;
+  }
+  if (!payload.hint && payload.next?.length) {
+    payload.hint = 'Follow up with one of the commands in next[].';
   }
   client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
   process.exit(exitCode);

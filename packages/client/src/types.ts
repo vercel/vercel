@@ -8,6 +8,7 @@ import type {
   ExperimentalServices,
   ExperimentalServiceGroups,
   ExperimentalServicesV2,
+  Services,
 } from '@vercel/build-utils';
 import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
 
@@ -198,7 +199,11 @@ export interface VercelConfig {
    */
   experimentalServiceGroups?: ExperimentalServiceGroups;
   /**
-   * @experimental This feature is experimental and may change.
+   * Configures multiple services in this project.
+   */
+  services?: Services;
+  /**
+   * @deprecated Use `services` instead.
    */
   experimentalServicesV2?: ExperimentalServicesV2;
 }

@@ -7,16 +7,19 @@ import { metricsCommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import {
   validateMutualExclusivity,
+  validateOrderBy,
+  validateOrderDirection,
   validateRequiredMetric,
 } from './validation';
 import { fetchMetricDetailOrExit, getDefaultAggregation } from './schema-api';
-import { formatErrorJson, formatQueryJson, handleApiError } from './output';
-import { formatText } from './text-output';
 import {
-  computeGranularity,
-  roundTimeBoundaries,
-  toGranularityMsFromDuration,
-} from './time-utils';
+  formatErrorJson,
+  formatQueryJson,
+  getRollupColumnName,
+  handleApiError,
+} from './output';
+import { formatText } from './text-output';
+import { computeGranularity } from './time-utils';
 import { resolveTimeRange } from '../../util/time-utils';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
 import type {
@@ -25,6 +28,7 @@ import type {
   ValidationError,
   MetricsQueryRequest,
   MetricsQueryResponse,
+  OrderBy,
 } from './types';
 import { getLinkedProject } from '../../util/projects/link';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
@@ -42,8 +46,43 @@ function handleValidationError(
     );
   } else {
     output.error(result.message);
+    if (result.allowedValues && result.allowedValues.length > 0) {
+      output.print(`\nAvailable values: ${result.allowedValues.join(', ')}\n`);
+    }
   }
   return 1;
+}
+
+const PRODUCTION_ENVIRONMENT_FILTER = "environment eq 'production'";
+
+function combineFilters(
+  filters: string[] | undefined,
+  prod: boolean | undefined
+): string | undefined {
+  const nonEmptyFilters = [
+    ...(filters?.filter(filter => filter.length > 0) ?? []),
+    ...(prod ? [PRODUCTION_ENVIRONMENT_FILTER] : []),
+  ];
+
+  if (nonEmptyFilters.length === 0) {
+    return undefined;
+  }
+
+  if (nonEmptyFilters.length === 1) {
+    return nonEmptyFilters[0];
+  }
+
+  return nonEmptyFilters.map(filter => `(${filter})`).join(' and ');
+}
+
+function getRequestOrderBy(
+  metric: string,
+  aggregation: string,
+  orderBy: OrderBy | undefined
+): string | undefined {
+  return orderBy === 'value'
+    ? getRollupColumnName(metric, aggregation)
+    : undefined;
 }
 
 async function resolveQueryScope(
@@ -164,10 +203,21 @@ export default async function query(
   const aggregationFlag = flags['--aggregation'];
   const groupBy = flags['--group-by'] ?? [];
   const limit = flags['--limit'];
-  const filter = flags['--filter'];
+  const orderByInput =
+    typeof flags['--order-by'] === 'string'
+      ? flags['--order-by'].trim().toLowerCase()
+      : undefined;
+  const orderInput =
+    typeof flags['--order'] === 'string'
+      ? flags['--order'].trim().toLowerCase()
+      : undefined;
+  const filters = flags['--filter'];
+  const prod = flags['--prod'];
+  const filter = combineFilters(filters, prod);
   const since = flags['--since'];
   const until = flags['--until'];
   const granularity = flags['--granularity'];
+  const bucketTimezone = flags['--bucket-timezone']?.trim();
   const project = flags['--project'];
   const all = flags['--all'];
 
@@ -176,13 +226,23 @@ export default async function query(
   telemetry.trackCliOptionAggregation(aggregationFlag);
   telemetry.trackCliOptionGroupBy(groupBy.length > 0 ? groupBy : undefined);
   telemetry.trackCliOptionLimit(limit);
-  telemetry.trackCliOptionFilter(filter);
+  telemetry.trackCliOptionOrderBy(orderByInput);
+  telemetry.trackCliOptionOrder(orderInput);
+  telemetry.trackCliOptionFilter(filters);
+  telemetry.trackCliFlagProd(prod);
   telemetry.trackCliOptionSince(since);
   telemetry.trackCliOptionUntil(until);
   telemetry.trackCliOptionGranularity(granularity);
+  telemetry.trackCliOptionBucketTimezone(bucketTimezone);
   telemetry.trackCliOptionProject(project);
   telemetry.trackCliFlagAll(all);
   telemetry.trackCliOptionFormat(flags['--format']);
+
+  const orderByResult = validateOrderBy(orderByInput);
+  if (!orderByResult.valid) {
+    return handleValidationError(orderByResult, jsonOutput, client);
+  }
+  const orderByMode = orderByResult.value;
 
   // Validate that a metric id was provided.
   const requiredMetric = validateRequiredMetric(metricFlag);
@@ -195,6 +255,12 @@ export default async function query(
   if (!mutualResult.valid) {
     return handleValidationError(mutualResult, jsonOutput, client);
   }
+
+  const orderDirectionResult = validateOrderDirection(orderInput);
+  if (!orderDirectionResult.valid) {
+    return handleValidationError(orderDirectionResult, jsonOutput, client);
+  }
+  const orderDirection = orderDirectionResult.value;
 
   const scopeResult = await resolveQueryScope(client, {
     project,
@@ -221,6 +287,7 @@ export default async function query(
   const aggregationInput =
     aggregationFlag ?? getDefaultAggregation(detailOrExitCode, metric) ?? 'sum';
   const aggregation = aggregationInput;
+  const orderBy = getRequestOrderBy(metric, aggregation, orderByMode);
 
   // Resolve time range
   let startTime: Date;
@@ -245,25 +312,20 @@ export default async function query(
     output.log(`Notice: ${granResult.notice}`);
   }
 
-  // Round start/end to granularity boundaries so every time bucket is complete.
-  // e.g. granularity=1h with range 14:23–16:47 rounds to 14:00–17:00.
-  const rounded = roundTimeBoundaries(
-    startTime,
-    endTime,
-    toGranularityMsFromDuration(granResult.duration)
-  );
-
   // Build request body
   const body: MetricsQueryRequest = {
     scope,
     metric,
     aggregation: aggregation as Aggregation,
-    startTime: rounded.start.toISOString(),
-    endTime: rounded.end.toISOString(),
+    startTime: startTime.toISOString(),
+    endTime: endTime.toISOString(),
     granularity: granResult.duration,
+    ...(bucketTimezone ? { bucketTimezone } : {}),
     ...(groupBy.length > 0 ? { groupBy } : {}),
     ...(filter ? { filter } : {}),
     limit: limit ?? 10,
+    ...(orderBy ? { orderBy } : {}),
+    ...(orderDirection ? { orderDirection } : {}),
   };
 
   if (!jsonOutput) {
@@ -298,7 +360,6 @@ export default async function query(
     }
   }
 
-  // Format and output
   if (jsonOutput) {
     client.stdout.write(
       formatQueryJson(
@@ -307,9 +368,12 @@ export default async function query(
           aggregation: aggregation as Aggregation,
           groupBy,
           filter,
-          startTime: rounded.start.toISOString(),
-          endTime: rounded.end.toISOString(),
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
           granularity: granResult.duration,
+          ...(bucketTimezone ? { bucketTimezone } : {}),
+          ...(orderByMode ? { orderBy: orderByMode } : {}),
+          ...(orderDirection ? { orderDirection } : {}),
         },
         response
       )
@@ -326,9 +390,12 @@ export default async function query(
         scope,
         projectName,
         teamName,
-        periodStart: rounded.start.toISOString(),
-        periodEnd: rounded.end.toISOString(),
+        periodStart: startTime.toISOString(),
+        periodEnd: endTime.toISOString(),
         granularity: granResult.duration,
+        bucketTimezone: bucketTimezone,
+        orderBy: orderByMode,
+        orderDirection,
       })
     );
   }

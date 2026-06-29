@@ -1,8 +1,85 @@
 import { join } from 'path';
-import { glob, FileBlob, FileFsRef } from '@vercel/build-utils';
+import {
+  glob,
+  FileBlob,
+  FileFsRef,
+  getWriteableDirectory,
+  Lambda,
+  type BuilderV3,
+} from '@vercel/build-utils';
 import { describe, expect, it } from 'vitest';
 import fs from 'fs-extra';
-import { filesWithoutFsRefs } from '../../../../src/util/build/write-build-result';
+import {
+  filesWithoutFsRefs,
+  writeBuildResult,
+} from '../../../../src/util/build/write-build-result';
+
+describe('writeBuildResult()', () => {
+  it('writes isolated V2 service functions at index', async () => {
+    const workPath = await getWriteableDirectory();
+    const outputDir = join(workPath, '.vercel', 'output');
+    const build = {
+      src: 'app.rb',
+      use: '@vercel/ruby',
+      config: { zeroConfig: true },
+    };
+    const runtimeBuilder: BuilderV3 = {
+      version: 3,
+      build: async () => {
+        throw new Error('not used by writeBuildResult');
+      },
+    };
+
+    try {
+      await writeBuildResult({
+        repoRootPath: workPath,
+        outputDir,
+        buildResult: {
+          output: new Lambda({
+            files: {
+              'app.rb': new FileBlob({
+                data: 'run ->(_env) { [200, {}, []] }',
+              }),
+            },
+            handler: 'app.handler',
+            runtime: 'ruby3.3',
+          }),
+        },
+        build,
+        builder: runtimeBuilder,
+        builderPkg: { name: '@vercel/ruby' },
+        vercelConfig: null,
+        standalone: false,
+        workPath,
+        service: {
+          schema: 'experimentalServicesV2',
+          name: 'api',
+          root: '.',
+          runtime: 'ruby',
+          entrypoint: 'app.rb',
+          builder: build,
+        },
+        nestServiceOutput: true,
+      });
+
+      expect(
+        await fs.pathExists(
+          join(outputDir, 'services/api/functions/index.func/.vc-config.json')
+        )
+      ).toBe(true);
+      expect(
+        await fs.pathExists(
+          join(
+            outputDir,
+            'services/api/functions/_svc/api/index.func/.vc-config.json'
+          )
+        )
+      ).toBe(false);
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
+});
 
 describe('filesWithoutFsRefs()', () => {
   it('should create `filePathMap` with normalized POSIX paths', async () => {

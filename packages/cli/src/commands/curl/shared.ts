@@ -167,12 +167,15 @@ export function setupCurlLikeCommand(
   client: Client,
   command: Command,
   telemetryClient: CommandTelemetryClient,
-  options: { allowFullUrl?: boolean } = {}
+  options: { allowFullUrl?: boolean; args?: string[] } = {}
 ): CommandSetupResult | number {
   const { print } = output;
 
   if (options.allowFullUrl) {
-    const parsed = parseCurlLikeArgs(client.argv.slice(2), command.name);
+    const parsed = parseCurlLikeArgs(
+      options.args ?? client.argv.slice(2),
+      command.name
+    );
 
     if (parsed.help) {
       print(help(command, { columns: client.stderr.columns }));

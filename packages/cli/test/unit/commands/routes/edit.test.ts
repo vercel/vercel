@@ -1080,6 +1080,15 @@ describe('routes edit', () => {
               type: 'rewrite',
               dest: 'https://new-backend.internal/$1',
             },
+            {
+              type: 'modify',
+              subType: 'transform-request-path',
+              requestPath: {
+                value: '/$pathPrefix/$1',
+                op: 'set',
+                env: ['pathPrefix'],
+              },
+            },
           ],
         },
       });
@@ -1101,6 +1110,18 @@ describe('routes edit', () => {
       await expect(client.stderr).toOutput('Updated');
 
       await expect(exitCodePromise).resolves.toEqual(0);
+
+      const body = capturedBodies.edit as any;
+      expect(body.route.route.transforms).toEqual(
+        expect.arrayContaining([
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$pathPrefix/$1',
+            env: ['pathPrefix'],
+          },
+        ])
+      );
     });
 
     it('should show error when --ai is used with conflicting flags', async () => {
@@ -1253,8 +1274,8 @@ describe('routes edit', () => {
       // Should see the edit menu
       await expect(client.stderr).toOutput('What would you like to edit?');
 
-      // Navigate to "Done - save changes" — last option (9th)
-      for (let i = 0; i < 8; i++) {
+      // Navigate to "Done - save changes" — last option (10th)
+      for (let i = 0; i < 9; i++) {
         client.stdin.write('\x1B[B');
       }
       client.stdin.write('\n');
@@ -1486,6 +1507,32 @@ describe('routes edit', () => {
       client.setArgv('routes', 'edit', 'API Rewrite');
       const exitCode = await routes(client);
       expect(exitCode).toEqual(0);
+    });
+
+    it('should add a request path transform interactively', async () => {
+      useEditRouteComprehensive();
+
+      let selectCallCount = 0;
+      const selectResponses = ['manual', 'request-path', 'add', 'done'];
+      client.input.select = vi.fn().mockImplementation(() => {
+        return Promise.resolve(selectResponses[selectCallCount++]);
+      });
+      client.input.text = vi.fn().mockResolvedValue('/:path*');
+
+      client.setArgv('routes', 'edit', 'API Rewrite');
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+
+      const body = capturedBodies.edit as any;
+      expect(body.route.route.transforms).toEqual(
+        expect.arrayContaining([
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/:path*',
+          },
+        ])
+      );
     });
   });
 });

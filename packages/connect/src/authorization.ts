@@ -81,14 +81,19 @@ function validateCallbackUrl(value: string): void {
     throw new Error(`Invalid callbackUrl: ${value}`);
   }
   if (url.protocol === 'https:') return;
-  if (
-    url.protocol === 'http:' &&
-    (url.hostname === 'localhost' || url.hostname === '127.0.0.1')
-  ) {
+  if (url.protocol === 'http:' && isLocalHttpCallbackHostname(url.hostname)) {
     return;
   }
   throw new Error(
-    `callbackUrl must be https:// or http://localhost, got: ${value}`
+    `callbackUrl must be https://, http://localhost, or http://*.localhost, got: ${value}`
+  );
+}
+
+function isLocalHttpCallbackHostname(hostname: string): boolean {
+  return (
+    hostname === 'localhost' ||
+    hostname.endsWith('.localhost') ||
+    hostname === '127.0.0.1'
   );
 }
 

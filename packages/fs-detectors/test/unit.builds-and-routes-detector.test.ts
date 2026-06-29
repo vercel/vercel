@@ -156,7 +156,7 @@ describe('Test `detectBuilders`', () => {
     );
   });
 
-  it('should use services builders when experimentalServicesV2 is configured without the services framework', async () => {
+  it('should use services builders when services is configured without the services framework', async () => {
     const workPath = join(
       __dirname,
       'fixtures',
@@ -165,7 +165,7 @@ describe('Test `detectBuilders`', () => {
     );
     const { builders, services, errors, useImplicitEnvInjection } =
       await detectBuilders([], undefined, {
-        experimentalServicesV2: {
+        services: {
           web: {
             root: '.',
             runtime: 'python',
@@ -235,51 +235,6 @@ describe('Test `detectBuilders`', () => {
           'Project framework is set to "services", but no services are declared. Add `experimentalServices` to vercel.json with at least one service, or change the project framework setting.',
       },
     ]);
-  });
-
-  it('should allow services framework auto-detection when experimental services env is enabled', async () => {
-    const originalEnv = process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
-    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
-
-    try {
-      const workPath = join(
-        __dirname,
-        'fixtures',
-        'e2e',
-        '07-services-frontend-backend-zc'
-      );
-      const { builders, errors, services } = await detectBuilders(
-        ['vercel.json'],
-        undefined,
-        {
-          projectSettings: {
-            framework: 'services',
-          },
-          workPath,
-        }
-      );
-
-      expect(errors).toBeNull();
-      expect(services).toHaveLength(2);
-      expect(builders).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            src: 'frontend/package.json',
-            use: '@vercel/next',
-          }),
-          expect.objectContaining({
-            src: 'backend/<detect>',
-            use: '@vercel/python',
-          }),
-        ])
-      );
-    } finally {
-      if (originalEnv === undefined) {
-        delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
-      } else {
-        process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = originalEnv;
-      }
-    }
   });
 
   it('should build experimentalServicesV2 services configured inline', async () => {
@@ -785,6 +740,34 @@ describe('Test `detectBuilders`', () => {
             maxDuration: 10,
           },
         },
+      },
+    });
+  });
+
+  it('passes entrypoint functions config through to Python framework builders', async () => {
+    const functions = {
+      'app/main.py': {
+        memory: 512,
+        maxDuration: 30,
+      },
+    };
+
+    const { builders } = await invokeDetectBuildersAndThrow(
+      ['pyproject.toml', 'app/main.py'],
+      null,
+      {
+        functions,
+        projectSettings: { framework: 'fastapi' },
+      }
+    );
+
+    expect(builders).toContainEqual({
+      src: '<detect>',
+      use: '@vercel/python',
+      config: {
+        zeroConfig: true,
+        framework: 'fastapi',
+        functions,
       },
     });
   });

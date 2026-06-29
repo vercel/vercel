@@ -18,6 +18,7 @@ export default async function getDomainByName(
   domainName: string,
   options: {
     ignoreWait?: boolean;
+    bailOn429?: boolean;
   } = {}
 ) {
   if (!options.ignoreWait) {
@@ -27,7 +28,8 @@ export default async function getDomainByName(
   }
   try {
     const { domain } = await client.fetch<Response>(
-      `/v4/domains/${encodeURIComponent(domainName)}`
+      `/v4/domains/${encodeURIComponent(domainName)}`,
+      { bailOn429: options.bailOn429 }
     );
     return domain;
   } catch (err: unknown) {

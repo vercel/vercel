@@ -216,13 +216,13 @@ export async function remove(client: Client, argv: string[]) {
           message: `Cannot uninstall ${integrationName} because it still has resources.`,
           resources: resourceNames,
           hint: client.isAgent
-            ? `${approvalHint} Agents must obtain explicit user approval before running integration-resource remove.`
+            ? `${approvalHint} Agents must obtain explicit user approval before running integration resource remove.`
             : approvalHint,
           userActionRequired: client.isAgent ? true : undefined,
           next: resourceNames.map(name => ({
             command: buildCommandWithGlobalFlags(
               client.argv,
-              `integration-resource remove ${name} ${resourceTail}`,
+              `integration resource remove ${name} ${resourceTail}`,
               packageName,
               suggestNextOpts
             ),
@@ -258,7 +258,7 @@ export async function remove(client: Client, argv: string[]) {
         );
       }
       output.log(
-        `Remove and disconnect all resources first with: ${chalk.cyan(`${packageName} integration-resource remove <resource-name> --disconnect-all`)}`
+        `Remove and disconnect all resources first with: ${chalk.cyan(`${packageName} integration resource remove <resource-name> --disconnect-all`)}`
       );
       output.log(
         `Then retry: ${chalk.cyan(`${packageName} integration remove ${integrationName}`)}`

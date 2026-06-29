@@ -12,9 +12,11 @@ import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import type { Command } from '../help';
 import {
   getRouteTypeLabel,
+  isTargetTransform,
   type RoutingRule,
   type RoutePosition,
   type RouteVersion,
+  type Transform,
 } from '../../util/routes/types';
 
 export interface ParsedSubcommand {
@@ -252,6 +254,7 @@ export const TRANSFORM_TYPE_LABELS: Record<string, string> = {
   'request.headers': 'Request Header',
   'request.query': 'Request Query',
   'response.headers': 'Response Header',
+  'request.path': 'Request Path',
 };
 
 /**
@@ -269,20 +272,16 @@ const TRANSFORM_OP_LABELS: Record<string, string> = {
  * When includeType is false:          set X-Custom = "value"
  */
 export function formatTransform(
-  transform: {
-    type: string;
-    op: string;
-    target: { key: string | Record<string, unknown> };
-    args?: string | string[];
-  },
+  transform: Transform,
   includeType = true
 ): string {
   const opLabel = TRANSFORM_OP_LABELS[transform.op] ?? transform.op;
 
-  const key =
-    typeof transform.target.key === 'string'
+  const key = isTargetTransform(transform)
+    ? typeof transform.target.key === 'string'
       ? transform.target.key
-      : JSON.stringify(transform.target.key);
+      : JSON.stringify(transform.target.key)
+    : 'path';
 
   const parts: string[] = [];
   if (includeType) {

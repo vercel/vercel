@@ -48,6 +48,7 @@ import { Colors as c } from './cervel/utils.js';
 // Re-export introspection functions
 export { introspectApp } from './introspection/index.js';
 export { diagnostics } from './diagnostics.js';
+export { shouldServe, startDevServer } from './start-dev-server.js';
 
 export const version = 2;
 
@@ -302,11 +303,16 @@ export const build: BuildV2 = async args => {
       args.config.serviceName !== ''
         ? args.config.serviceName
         : undefined;
-    const internalServiceFunctionPath =
-      typeof serviceName === 'string' && serviceName !== ''
+    // V2 services have isolated build outputs, so their function can live at
+    // the natural `/index` path. V1 services still share one output and need
+    // the internal service namespace to avoid collisions.
+    const isIsolatedService = !!args.service?.name && !args.service.type;
+    const serviceFunctionPath = isIsolatedService
+      ? '/index'
+      : typeof serviceName === 'string' && serviceName !== ''
         ? `/_svc/${serviceName}/index`
         : undefined;
-    const internalServiceOutputPath = internalServiceFunctionPath?.slice(1);
+    const serviceOutputPath = serviceFunctionPath?.slice(1);
     const remapRouteDestination = <T extends { src?: string; dest?: string }>(
       route: T
     ): T => {
@@ -314,12 +320,12 @@ export const build: BuildV2 = async args => {
         route,
         serviceRoutePrefix
       );
-      if (!internalServiceFunctionPath || !route.dest) {
+      if (!serviceFunctionPath || !route.dest) {
         return prefixedRoute;
       }
       return {
         ...prefixedRoute,
-        dest: internalServiceFunctionPath,
+        dest: serviceFunctionPath,
       };
     };
 
@@ -334,12 +340,12 @@ export const build: BuildV2 = async args => {
           ...introspectionResult.routes.map(remapRouteDestination),
           {
             src: getServiceCatchallSource(serviceRoutePrefix),
-            dest: internalServiceFunctionPath ?? '/',
+            dest: serviceFunctionPath ?? '/',
           },
         ];
 
-    const output: Record<string, Lambda> = internalServiceOutputPath
-      ? { [internalServiceOutputPath]: lambda }
+    const output: Record<string, Lambda> = serviceOutputPath
+      ? { [serviceOutputPath]: lambda }
       : { index: lambda };
 
     for (const route of routes) {
@@ -349,9 +355,8 @@ export const build: BuildV2 = async args => {
         }
         // Only the exact service alias needs the leading slash removed.
         const outputPath =
-          route.dest === internalServiceFunctionPath &&
-          internalServiceOutputPath
-            ? internalServiceOutputPath
+          route.dest === serviceFunctionPath && serviceOutputPath
+            ? serviceOutputPath
             : route.dest;
         output[outputPath] = lambda;
       }

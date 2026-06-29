@@ -20,6 +20,7 @@ import archive from './archive';
 import disable from './disable';
 import enable from './enable';
 import { sdkKeys } from './sdk-keys';
+import { segments } from './segments';
 import {
   flagsCommand,
   listSubcommand,
@@ -35,6 +36,7 @@ import {
   disableSubcommand,
   prepareSubcommand,
   enableSubcommand,
+  segmentsSubcommand,
   sdkKeysSubcommand,
   overrideSubcommand,
 } from './command';
@@ -54,6 +56,7 @@ const COMMAND_CONFIG = {
   archive: getCommandAliases(archiveSubcommand),
   disable: getCommandAliases(disableSubcommand),
   enable: getCommandAliases(enableSubcommand),
+  segments: getCommandAliases(segmentsSubcommand),
   'sdk-keys': getCommandAliases(sdkKeysSubcommand),
   prepare: getCommandAliases(prepareSubcommand),
   override: getCommandAliases(overrideSubcommand),
@@ -197,6 +200,9 @@ export default async function main(client: Client) {
     case 'sdk-keys':
       telemetry.trackCliSubcommandSdkKeys(subcommandOriginal);
       return sdkKeys(client);
+    case 'segments':
+      telemetry.trackCliSubcommandSegments(subcommandOriginal);
+      return segments(client);
     case 'prepare':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);

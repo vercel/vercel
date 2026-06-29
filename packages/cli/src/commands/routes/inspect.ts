@@ -19,7 +19,9 @@ import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import {
   getRouteTypeLabel,
   getSrcSyntaxLabel,
+  isTargetTransform,
   type RoutingRule,
+  type Transform,
 } from '../../util/routes/types';
 
 function withGlobalFlags(client: Client, commandTemplate: string): string {
@@ -473,15 +475,12 @@ function normalizeForComparison(rule: RoutingRule) {
   };
 }
 
-function transformKey(t: {
-  type: string;
-  op: string;
-  target: { key: unknown };
-}): string {
-  const key =
-    typeof t.target.key === 'string'
+function transformKey(t: Transform): string {
+  const key = isTargetTransform(t)
+    ? typeof t.target.key === 'string'
       ? t.target.key
-      : JSON.stringify(t.target.key);
+      : JSON.stringify(t.target.key)
+    : stringifyArgs(t.args);
   return `${t.type}:${t.op}:${key}`;
 }
 
@@ -495,17 +494,13 @@ function stringifyArgs(args: unknown): string {
 /**
  * Plain-text format for a transform (no chalk colors, for use with strikethrough).
  */
-function formatTransformPlain(transform: {
-  type: string;
-  op: string;
-  target: { key: string | Record<string, unknown> };
-  args?: string | string[];
-}): string {
+function formatTransformPlain(transform: Transform): string {
   const typeLabel = TRANSFORM_TYPE_LABELS[transform.type] ?? transform.type;
-  const key =
-    typeof transform.target.key === 'string'
+  const key = isTargetTransform(transform)
+    ? typeof transform.target.key === 'string'
       ? transform.target.key
-      : JSON.stringify(transform.target.key);
+      : JSON.stringify(transform.target.key)
+    : 'path';
   const parts = [`[${typeLabel}]`, transform.op, key];
   if (transform.args !== undefined && transform.op !== 'delete') {
     const argsStr = Array.isArray(transform.args)
@@ -593,12 +588,7 @@ function formatRouteDetails(rule: RoutingRule): string {
 
   // Group all header/transform operations by type
   const responseHeaderSets = Object.entries(rule.route.headers ?? {});
-  const allTransforms = (rule.route.transforms ?? []) as Array<{
-    type: string;
-    op: string;
-    target: { key: string | Record<string, unknown> };
-    args?: string | string[];
-  }>;
+  const allTransforms = (rule.route.transforms ?? []) as Transform[];
   const responseHeaderTransforms = allTransforms.filter(
     t => t.type === 'response.headers'
   );
@@ -607,6 +597,9 @@ function formatRouteDetails(rule: RoutingRule): string {
   );
   const requestQueryTransforms = allTransforms.filter(
     t => t.type === 'request.query'
+  );
+  const requestPathTransforms = allTransforms.filter(
+    t => t.type === 'request.path'
   );
 
   if (responseHeaderSets.length > 0 || responseHeaderTransforms.length > 0) {
@@ -632,6 +625,14 @@ function formatRouteDetails(rule: RoutingRule): string {
     lines.push('');
     lines.push(chalk.bold('  Request Query'));
     for (const t of requestQueryTransforms) {
+      lines.push(`  ${formatTransform(t, false)}`);
+    }
+  }
+
+  if (requestPathTransforms.length > 0) {
+    lines.push('');
+    lines.push(chalk.bold('  Request Path'));
+    for (const t of requestPathTransforms) {
       lines.push(`  ${formatTransform(t, false)}`);
     }
   }

@@ -3,21 +3,22 @@ import { detectFrameworks } from '../detect-framework';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
   DetectEntrypointFn,
-  ExperimentalServiceConfig,
-  ExperimentalServices,
+  InferredServiceConfig,
+  InferredServicesConfig,
   ServiceDetectionError,
   ServiceDetectionWarning,
+  ServiceType,
 } from './types';
 import { RUNTIME_BUILDERS } from './types';
 import {
-  assignRoutePrefixes,
+  assignMountPaths,
   combineBuildCommand,
   isFrontendFramework,
   DETECTION_FRAMEWORKS,
 } from './utils';
 
 export interface RenderDetectResult {
-  services: ExperimentalServices | null;
+  services: InferredServicesConfig | null;
   errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
 }
@@ -41,10 +42,7 @@ const RENDER_YAML = 'render.yaml';
 
 type RenderServiceType = 'web' | 'static';
 
-const SERVICE_TYPE_MAP: Record<
-  RenderServiceType,
-  ExperimentalServiceConfig['type']
-> = {
+const SERVICE_TYPE_MAP: Record<RenderServiceType, ServiceType> = {
   web: 'web',
   static: 'web',
 };
@@ -77,7 +75,7 @@ export async function detectRenderServices(options: {
     return { services: null, errors: [], warnings: [] };
   }
 
-  const services: ExperimentalServices = {};
+  const services: InferredServicesConfig = {};
   const serviceNames = new Set<string>();
   const errors: ServiceDetectionError[] = [];
   const warnings: ServiceDetectionWarning[] = [];
@@ -152,7 +150,7 @@ export async function detectRenderServices(options: {
       const name = rs.name ?? 'unnamed';
       const hint: Record<string, string> = {
         entrypoint: rs.rootDir ?? '<path-to-entrypoint>',
-        routePrefix: `/_/${name}`,
+        mountPath: `/api/${name}`,
       };
 
       warnings.push({
@@ -220,20 +218,23 @@ export async function detectRenderServices(options: {
     const framework = frameworks[0];
     const vercelType = SERVICE_TYPE_MAP[serviceType as RenderServiceType];
 
-    const serviceConfig: ExperimentalServiceConfig = {};
-    serviceConfig.type = vercelType;
-    serviceConfig.framework = framework.slug ?? undefined;
+    const serviceConfig: InferredServiceConfig = {
+      root: rootDir,
+      type: vercelType,
+      framework: framework.slug ?? undefined,
+    };
 
-    if (rootDir !== '.') {
-      serviceConfig.root = rootDir;
-      if (detectEntrypoint && !isFrontendFramework(serviceConfig.framework)) {
-        const detected = await detectEntrypoint({
-          workPath: rootDir,
-          framework: serviceConfig.framework,
-        });
-        if (detected) {
-          serviceConfig.entrypoint = detected.entrypoint;
-        }
+    if (
+      rootDir !== '.' &&
+      detectEntrypoint &&
+      !isFrontendFramework(serviceConfig.framework)
+    ) {
+      const detected = await detectEntrypoint({
+        workPath: rootDir,
+        framework: serviceConfig.framework,
+      });
+      if (detected) {
+        serviceConfig.entrypoint = detected.entrypoint;
       }
     }
 
@@ -256,7 +257,7 @@ export async function detectRenderServices(options: {
     return { services: null, errors: [], warnings };
   }
 
-  warnings.push(...assignRoutePrefixes(services));
+  warnings.push(...assignMountPaths(services));
 
   return { services, errors: [], warnings };
 }
