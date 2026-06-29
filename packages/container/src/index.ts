@@ -17,6 +17,7 @@ import {
   elapsed,
   existingRegistryAuthFile,
   info,
+  isDockerfileRef,
   readString,
   shortDigest,
   step,
@@ -41,19 +42,6 @@ function normalizeCommand(command: unknown): string[] | undefined {
     return command;
   }
   return undefined;
-}
-
-function isDockerfileRef(ref: string): boolean {
-  const base = path.basename(ref).toLowerCase();
-  return (
-    base === 'dockerfile' ||
-    base === 'containerfile' ||
-    base.endsWith('.dockerfile') ||
-    // Vercel-specific container opt-in markers, used to deploy a project as a
-    // container even when another framework (e.g. Next.js) is also present.
-    base === 'dockerfile.vercel' ||
-    base === 'containerfile.vercel'
-  );
 }
 
 // Vercel-specific container opt-in markers, auto-discovered when the build

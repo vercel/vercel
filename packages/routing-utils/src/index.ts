@@ -32,6 +32,7 @@ export {
 export * from './schemas';
 export {
   compilePathToRegexpTemplate,
+  convertRewrites,
   getCleanUrls,
   sourceToRegex,
 } from './superstatic';

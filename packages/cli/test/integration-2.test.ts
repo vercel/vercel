@@ -1,6 +1,6 @@
 import path from 'path';
 import { URL } from 'url';
-import nodeFetch from 'node-fetch';
+import nodeFetch from '../src/util/fetch';
 import express from 'express';
 import { createServer } from 'http';
 import { listen } from 'async-listen';
@@ -1736,7 +1736,7 @@ test.each([
 
   // Send an unauthenticated request to the deployment. Use `redirect:
   // 'manual'` so the deployment's own gate response is observed: otherwise
-  // node-fetch follows the SSO redirect to the login page and reports its
+  // fetch follows the SSO redirect to the login page and reports its
   // 200, masking the protection.
   //
   // A protected deployment gates anonymous requests with either a terminal

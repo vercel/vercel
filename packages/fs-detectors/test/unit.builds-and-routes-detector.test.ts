@@ -237,51 +237,6 @@ describe('Test `detectBuilders`', () => {
     ]);
   });
 
-  it('should allow services framework auto-detection when experimental services env is enabled', async () => {
-    const originalEnv = process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
-    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
-
-    try {
-      const workPath = join(
-        __dirname,
-        'fixtures',
-        'e2e',
-        '07-services-frontend-backend-zc'
-      );
-      const { builders, errors, services } = await detectBuilders(
-        ['vercel.json'],
-        undefined,
-        {
-          projectSettings: {
-            framework: 'services',
-          },
-          workPath,
-        }
-      );
-
-      expect(errors).toBeNull();
-      expect(services).toHaveLength(2);
-      expect(builders).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            src: 'frontend/package.json',
-            use: '@vercel/next',
-          }),
-          expect.objectContaining({
-            src: 'backend/<detect>',
-            use: '@vercel/python',
-          }),
-        ])
-      );
-    } finally {
-      if (originalEnv === undefined) {
-        delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
-      } else {
-        process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = originalEnv;
-      }
-    }
-  });
-
   it('should build experimentalServicesV2 services configured inline', async () => {
     // `detectBuilders` resolves services against a real filesystem (workPath).
     // V2 isn't deployable yet, so build using a temp dir

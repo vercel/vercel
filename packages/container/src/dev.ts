@@ -7,7 +7,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { debug, readString, withSpan } from './util';
+import { debug, isDockerfileRef, readString, withSpan } from './util';
 
 /**
  * Host/shell environment variables that are meaningful only on the developer's
@@ -168,15 +168,6 @@ function runForwarded(
 function devImageTag(serviceName: string): string {
   const safe = serviceName.toLowerCase().replace(/[^a-z0-9-_.]/g, '-');
   return `vercel-dev/${safe || 'service'}:dev`;
-}
-
-function isDockerfileRef(ref: string): boolean {
-  const base = path.basename(ref).toLowerCase();
-  return (
-    base === 'dockerfile' ||
-    base === 'containerfile' ||
-    base.endsWith('.dockerfile')
-  );
 }
 
 function normalizeCommand(command: unknown): string[] | undefined {

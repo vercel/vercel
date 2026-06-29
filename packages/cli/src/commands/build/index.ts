@@ -38,6 +38,7 @@ import {
   glob,
   type ExperimentalService,
   isExperimentalService,
+  isExperimentalServiceV2,
   type Service,
   getInternalServiceCronPath,
   getInternalServiceFunctionPath,
@@ -62,11 +63,13 @@ import {
 } from '@vercel/fs-detectors';
 import {
   appendRoutesToPhase,
+  convertRewrites,
   getTransformedRoutes,
   isHandler,
   mergeRoutes,
   sourceToRegex,
   type MergeRoutesProps,
+  type Rewrite,
   type Route,
   type HandleValue,
 } from '@vercel/routing-utils';
@@ -878,6 +881,22 @@ async function doBuild(
     servicesToRecord = detectedResolvedServices;
     detectedServices = detectedBuilders.services?.filter(isExperimentalService);
 
+    // When auto-detection produces a V2 services config, enable V2 output
+    // nesting so the build output config.json includes experimentalServicesV2
+    // and the platform activates V2 routing.
+    const autoDetectedV2Config = (
+      detectedBuilders as typeof detectedBuilders & {
+        experimentalServicesV2?: ExperimentalServicesV2;
+      }
+    ).experimentalServicesV2;
+    if (
+      !hasExperimentalServicesV2ConfiguredInVercelConfig &&
+      autoDetectedV2Config
+    ) {
+      nestExperimentalServicesV2Output = true;
+      detectedExperimentalServicesV2Config = autoDetectedV2Config;
+    }
+
     // Legacy URL injection for `experimentalServices`.
     if (
       detectedBuilders.useImplicitEnvInjection &&
@@ -896,6 +915,20 @@ async function doBuild(
       }
     }
 
+    // If auto-detection generated top-level service rewrites (V2),
+    // convert them to Route[] separately and append them alongside
+    // the existing rewrite routes rather than re-running
+    // getTransformedRoutes (which would double-transform).
+    const serviceRewrites = (
+      detectedBuilders as typeof detectedBuilders & {
+        serviceRewrites?: Rewrite[];
+      }
+    ).serviceRewrites;
+    const serviceRewriteRoutes =
+      serviceRewrites && serviceRewrites.length > 0
+        ? convertRewrites(serviceRewrites)
+        : null;
+
     zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
     const detectedHostRewriteRoutes = (
       detectedBuilders as typeof detectedBuilders & {
@@ -913,7 +946,10 @@ async function doBuild(
     zeroConfigRoutes.push(
       ...appendRoutesToPhase({
         routes: [],
-        newRoutes: detectedServiceRewriteRoutes,
+        newRoutes: [
+          ...(detectedServiceRewriteRoutes || []),
+          ...(serviceRewriteRoutes || []),
+        ],
         phase: 'filesystem',
       })
     );
@@ -1145,6 +1181,12 @@ async function doBuild(
               ...build.config,
               ...(getHasQueueServices()
                 ? { hasWorkerServices: true }
+                : undefined),
+              // `service.functions` isn't on `build.config`, so builders that
+              // read `config.functions` (e.g. Next.js) would otherwise miss it;
+              // `serviceName` scopes the derived v2beta consumer.
+              ...(isExperimentalServiceV2(service) && service.functions
+                ? { functions: service.functions, serviceName: service.name }
                 : undefined),
               // Override project-level settings with service-specific ones.
               // The project-level framework is "services" which must NOT be

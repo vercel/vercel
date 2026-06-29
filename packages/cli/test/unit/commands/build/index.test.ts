@@ -1,7 +1,10 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import fs from 'fs-extra';
 import { join } from 'path';
-import { getWriteableDirectory } from '@vercel/build-utils';
+import {
+  getWriteableDirectory,
+  sanitizeConsumerName,
+} from '@vercel/build-utils';
 import build from '../../../../src/commands/build';
 import cliPkg from '../../../../src/util/pkg';
 import { client } from '../../../mocks/client';
@@ -1868,15 +1871,36 @@ createServer((_req, res) => {
   });
 
   describe('flags-definitions', () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const FLAGS_DATAFILE_URL = 'https://flags.vercel.com/v1/datafile';
+    const spyOnFetch = () => vi.spyOn(globalThis, 'fetch');
+    let fetchSpy: ReturnType<typeof spyOnFetch>;
 
     const findDefinitionsDir = (dir: string) =>
       join(dir, 'node_modules', '@vercel', 'flags-definitions');
 
+    const definitionsDirs = ['static', 'with-vercel-flags'].map(name =>
+      findDefinitionsDir(fixture(name))
+    );
+
+    const getFetchUrl = (
+      input: Parameters<typeof globalThis.fetch>[0]
+    ): string => {
+      if (typeof input === 'string') {
+        return input;
+      }
+      return input instanceof URL ? input.href : input.url;
+    };
+
+    const flagsFetchCalls = () =>
+      fetchSpy.mock.calls.filter(
+        ([input]) => getFetchUrl(input) === FLAGS_DATAFILE_URL
+      );
+
     beforeEach(() => {
+      fetchSpy = spyOnFetch();
       fetchSpy.mockImplementation(async input => {
-        const url = typeof input === 'string' ? input : input.toString();
-        if (url === 'https://flags.vercel.com/v1/datafile') {
+        const url = getFetchUrl(input);
+        if (url === FLAGS_DATAFILE_URL) {
           return new Response(JSON.stringify({ flags: [] }), {
             status: 200,
             headers: { 'content-type': 'application/json' },
@@ -1887,12 +1911,12 @@ createServer((_req, res) => {
     });
 
     afterEach(() => {
+      for (const definitionsDir of definitionsDirs) {
+        fs.removeSync(definitionsDir);
+      }
+      fetchSpy.mockRestore();
       vi.resetAllMocks();
       vi.unstubAllEnvs();
-    });
-
-    afterAll(() => {
-      vi.restoreAllMocks();
     });
 
     it('should emit flags-definitions module with SDK key', async () => {
@@ -1905,7 +1929,7 @@ createServer((_req, res) => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fetchSpy).toHaveBeenCalledOnce();
+      expect(flagsFetchCalls()).toHaveLength(1);
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
       expect(fs.existsSync(join(definitionsDir, 'index.d.ts'))).toBe(true);
       expect(fs.existsSync(join(definitionsDir, 'package.json'))).toBe(true);
@@ -1916,8 +1940,6 @@ createServer((_req, res) => {
         'utf8'
       );
       expect(indexJs).toContain('export function get(key)');
-
-      fs.removeSync(definitionsDir);
     });
 
     it('should not emit flags-definitions module without SDK key and flags dependencies', async () => {
@@ -1928,7 +1950,7 @@ createServer((_req, res) => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fetchSpy).not.toHaveBeenCalledOnce();
+      expect(flagsFetchCalls()).toHaveLength(0);
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
     });
 
@@ -1943,7 +1965,7 @@ createServer((_req, res) => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fetchSpy).not.toHaveBeenCalledOnce();
+      expect(flagsFetchCalls()).toHaveLength(0);
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
     });
 
@@ -1958,10 +1980,8 @@ createServer((_req, res) => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fetchSpy).toHaveBeenCalledOnce();
+      expect(flagsFetchCalls()).toHaveLength(1);
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
-
-      fs.removeSync(definitionsDir);
     });
 
     it('should not emit flags-definitions module with SDK key when VERCEL_FLAGS_EMBED_DEFINITIONS=force-off', async () => {
@@ -1975,7 +1995,7 @@ createServer((_req, res) => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fetchSpy).not.toHaveBeenCalledOnce();
+      expect(flagsFetchCalls()).toHaveLength(0);
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
     });
 
@@ -1993,10 +2013,8 @@ createServer((_req, res) => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fetchSpy).toHaveBeenCalledOnce();
+      expect(flagsFetchCalls()).toHaveLength(1);
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
-
-      fs.removeSync(definitionsDir);
     });
 
     it('should not emit flags-definitions module with OIDC when VERCEL_FLAGS_EMBED_DEFINITIONS=force-off', async () => {
@@ -2013,7 +2031,7 @@ createServer((_req, res) => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fetchSpy).not.toHaveBeenCalledOnce();
+      expect(flagsFetchCalls()).toHaveLength(0);
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
     });
 
@@ -2031,10 +2049,8 @@ createServer((_req, res) => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fetchSpy).toHaveBeenCalledOnce();
+      expect(flagsFetchCalls()).toHaveLength(1);
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
-
-      fs.removeSync(definitionsDir);
     });
   });
 
@@ -2705,15 +2721,12 @@ createServer((_req, res) => {
     expect(config.routes).toBeUndefined();
     expect(
       await fs.pathExists(
-        join(output, 'services/ui/functions/_svc/ui/index.func/.vc-config.json')
+        join(output, 'services/ui/functions/index.func/.vc-config.json')
       )
     ).toBe(true);
     expect(
       await fs.pathExists(
-        join(
-          output,
-          'services/backend/functions/_svc/backend/index.func/.vc-config.json'
-        )
+        join(output, 'services/backend/functions/index.func/.vc-config.json')
       )
     ).toBe(true);
     const uiConfig = await fs.readJSON(join(output, 'services/ui/config.json'));
@@ -2721,6 +2734,7 @@ createServer((_req, res) => {
       expect.arrayContaining([
         { handle: 'filesystem' },
         expect.objectContaining({ dest: '/$1', check: true }),
+        expect.objectContaining({ dest: '/index' }),
       ])
     );
     const backendConfig = await fs.readJSON(
@@ -2730,9 +2744,70 @@ createServer((_req, res) => {
       expect.arrayContaining([
         { handle: 'filesystem' },
         expect.objectContaining({ dest: '/$1', check: true }),
+        expect.objectContaining({ dest: '/index' }),
       ])
     );
     expect(await fs.pathExists(join(output, 'functions'))).toBe(false);
+  });
+
+  it('should apply per-service `functions` config to the service lambda', async () => {
+    const cwd = await getWriteableDirectory();
+    const output = join(cwd, '.vercel', 'output');
+    await fs.ensureDir(join(cwd, '.vercel'));
+    await fs.writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: '.',
+      projectId: '.',
+      settings: {
+        framework: null,
+        installCommand: '',
+      },
+    });
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      private: true,
+    });
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      services: {
+        worker: {
+          root: '.',
+          entrypoint: 'index.js',
+          runtime: 'node',
+          functions: {
+            'index.js': {
+              maxDuration: 30,
+              experimentalTriggers: [{ type: 'queue/v2beta', topic: 'orders' }],
+            },
+          },
+        },
+      },
+    });
+    await fs.outputFile(
+      join(cwd, 'index.js'),
+      `
+const { createServer } = require('node:http');
+
+createServer((_req, res) => {
+  res.statusCode = 200;
+  res.end('ok');
+}).listen(3000);
+`
+    );
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const vcConfig = await fs.readJSON(
+      join(output, 'services/worker/functions/index.func/.vc-config.json')
+    );
+    expect(vcConfig.maxDuration).toBe(30);
+    // Consumer is scoped by service name so it stays unique across services.
+    expect(vcConfig.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: 'orders',
+        consumer: sanitizeConsumerName('worker~index.js'),
+      },
+    ]);
   });
 
   it('should build experimentalServices discovered from generated Build Output config', async () => {

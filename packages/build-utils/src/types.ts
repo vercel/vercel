@@ -52,6 +52,8 @@ export interface Config {
   framework?: string | null;
   nodeVersion?: string;
   middleware?: boolean;
+  /** Owning service name; scopes per-function config such as the v2beta consumer. */
+  serviceName?: string;
   [key: string]: unknown;
 }
 

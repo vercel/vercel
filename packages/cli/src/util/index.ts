@@ -2,7 +2,7 @@ import qs from 'querystring';
 import { parse as parseUrl } from 'url';
 import retry from 'async-retry';
 import ms from 'ms';
-import nodeFetch, { Headers } from 'node-fetch';
+import fetch, { Headers } from './fetch';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import ua from './ua';
@@ -375,7 +375,7 @@ export default class Now {
 
     const res = await output.time(
       `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
-      nodeFetch(`${this._apiUrl}${_url}`, { ...opts, body })
+      fetch(`${this._apiUrl}${_url}`, { ...opts, body })
     );
     printIndications(res);
     return res;

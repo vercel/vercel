@@ -1,6 +1,6 @@
 import path from 'path';
 import { execCli } from './helpers/exec';
-import nodeFetch from 'node-fetch';
+import nodeFetch from '../src/util/fetch';
 import { apiFetch } from './helpers/api-fetch';
 import fs from 'fs-extra';
 import sleep from '../src/util/sleep';
