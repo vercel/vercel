@@ -33,7 +33,7 @@ export interface KeyOptions {
 
 /**
  * A human-readable default key name that hints at the owner and machine, e.g.
- * `smrth's MacBook Pro — Coding Agents`. Falls back gracefully when the user or
+ * `[smrth's MacBook Pro] Coding Agents`. Falls back gracefully when the user or
  * hostname is unavailable.
  */
 export function defaultKeyName(): string {
@@ -51,9 +51,9 @@ export function defaultKeyName(): string {
   }
   const device = host.split('.')[0].replace(/[-_]+/g, ' ').trim();
   const who = user.trim();
-  if (who && device) return `${who}'s ${device} — Coding Agents`;
-  if (device) return `${device} — Coding Agents`;
-  if (who) return `${who}'s Coding Agents`;
+  if (who && device) return `[${who}'s ${device}] Coding Agents`;
+  if (device) return `[${device}] Coding Agents`;
+  if (who) return `[${who}] Coding Agents`;
   return 'Coding Agents';
 }
 
