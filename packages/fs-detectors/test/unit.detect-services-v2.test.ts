@@ -666,18 +666,45 @@ describe('detectServices (services)', () => {
       expect(result.errors[0]).toMatchObject({ code: 'INVALID_ROOT' });
     });
 
-    it('errors on an invalid service name', async () => {
+    it.each([
+      '1bad',
+      'bad1',
+      'Bad',
+      'bad.service',
+      'bad_service_',
+      'bad'.repeat(22),
+    ])('errors on invalid service name "%s"', async name => {
       const fs = new VirtualFilesystem({
         'vercel.json': vercelJson({
           experimentalServicesV2: {
-            '1bad': { root: 'svc', framework: 'express' },
+            [name]: { root: 'svc', framework: 'express' },
           },
         }),
       });
 
       const result = await detectServices({ fs });
 
-      expect(result.errors[0]).toMatchObject({ code: 'INVALID_SERVICE_NAME' });
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_SERVICE_NAME',
+      });
+    });
+
+    it('accepts service names matching the API schema', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          experimentalServicesV2: {
+            ['a'.repeat(64)]: { root: 'svc', framework: 'express' },
+            my_service: { root: 'svc', framework: 'express' },
+            'my-service': { root: 'svc', framework: 'express' },
+          },
+        }),
+        'svc/package.json': '{}',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(3);
     });
 
     it('reports errors per service and resolves the valid ones', async () => {
@@ -721,6 +748,29 @@ describe('detectServices (services)', () => {
 
       expect(result.errors[0]).toMatchObject({
         code: 'UNKNOWN_SERVICE_BINDING',
+      });
+    });
+
+    it('errors when a binding references an invalid service name', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          experimentalServicesV2: {
+            web: {
+              root: 'apps/web',
+              framework: 'express',
+              bindings: [
+                { type: 'service', service: 'Bad', format: 'url', env: 'G' },
+              ],
+            },
+          },
+        }),
+        'apps/web/package.json': '{}',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_SERVICE_BINDING_NAME',
       });
     });
   });
