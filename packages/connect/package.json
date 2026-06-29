@@ -13,6 +13,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./chat": {
+      "types": "./dist/chat/index.d.ts",
+      "default": "./dist/chat/index.js"
+    },
     "./eve": {
       "types": "./dist/eve/index.d.ts",
       "default": "./dist/eve/index.js"
@@ -51,6 +55,7 @@
   "peerDependencies": {
     "@ai-sdk/mcp": "^1 || ^2",
     "@auth/core": ">=0.37.0",
+    "@chat-adapter/slack": "^4.0.0",
     "ai": "^6 || ^7.0.0-beta.0",
     "better-auth": ">=1.5.0",
     "eve": ">=0.13.7"
@@ -60,6 +65,9 @@
       "optional": true
     },
     "@auth/core": {
+      "optional": true
+    },
+    "@chat-adapter/slack": {
       "optional": true
     },
     "ai": {
@@ -75,6 +83,7 @@
   "devDependencies": {
     "@ai-sdk/mcp": "2.0.0-beta.37",
     "@auth/core": "0.37.4",
+    "@chat-adapter/slack": "4.31.0",
     "ai": "7.0.0-beta.116",
     "better-auth": "1.5.5",
     "eve": "0.6.0-beta.1",
