@@ -219,4 +219,112 @@ describe('startDevServer', () => {
 
     await expect(promise).resolves.toBeNull();
   });
+
+  it('installs global cleanup handlers that kill tracked dev servers', async () => {
+    // Use a fresh module instance so the install-once guard runs in this test
+    // and we can capture the handlers it registers on `process`.
+    vi.resetModules();
+    const cp = await import('child_process');
+    const gp = await import('get-port');
+    const toolchain = await import('../../src/lib/rust-toolchain');
+    const build = await import('../../src/lib/dev-build');
+    vi.mocked(toolchain.installRustToolchain).mockResolvedValue(
+      undefined as any
+    );
+    vi.mocked(build.buildExecutableForDev).mockResolvedValue(EXECUTABLE);
+    vi.mocked(gp.default).mockResolvedValue(54321 as any);
+
+    const child = makeChild();
+    vi.mocked(cp.spawn).mockReturnValue(child as any);
+
+    const onSpy = vi.spyOn(process, 'on');
+    const { startDevServer: freshStartDevServer } = await import(
+      '../../src/lib/start-dev-server'
+    );
+
+    const promise = freshStartDevServer({
+      entrypoint: 'api/main.rs',
+      workPath: '/work',
+      config: {},
+      meta: { isDev: true },
+      onStdout: vi.fn(),
+      onStderr: vi.fn(),
+    } as any);
+    await flush();
+    child.stdout.emit('data', Buffer.from('Dev server listening: 54321\n'));
+    await promise;
+
+    // Handlers for graceful signals + the synchronous exit backstop.
+    for (const event of ['SIGINT', 'SIGTERM', 'SIGHUP', 'exit']) {
+      expect(onSpy.mock.calls.some(call => call[0] === event)).toBe(true);
+    }
+
+    // A graceful signal sends SIGTERM to the tracked child.
+    const sigtermHandler = onSpy.mock.calls.find(
+      call => call[0] === 'SIGTERM'
+    )?.[1] as () => void;
+    sigtermHandler();
+    expect(child.kill).toHaveBeenCalledWith('SIGTERM');
+
+    // The synchronous exit backstop force-kills any still-running child.
+    const killSpy = vi
+      .spyOn(process, 'kill')
+      .mockImplementation(() => true as any);
+    const exitHandler = onSpy.mock.calls.find(
+      call => call[0] === 'exit'
+    )?.[1] as () => void;
+    exitHandler();
+    expect(killSpy).toHaveBeenCalledWith(4242, 'SIGKILL');
+
+    killSpy.mockRestore();
+    onSpy.mockRestore();
+  });
+
+  it('untracks a dev server once it exits so cleanup does not target it', async () => {
+    vi.resetModules();
+    const cp = await import('child_process');
+    const gp = await import('get-port');
+    const toolchain = await import('../../src/lib/rust-toolchain');
+    const build = await import('../../src/lib/dev-build');
+    vi.mocked(toolchain.installRustToolchain).mockResolvedValue(
+      undefined as any
+    );
+    vi.mocked(build.buildExecutableForDev).mockResolvedValue(EXECUTABLE);
+    vi.mocked(gp.default).mockResolvedValue(54321 as any);
+
+    const child = makeChild();
+    vi.mocked(cp.spawn).mockReturnValue(child as any);
+
+    const onSpy = vi.spyOn(process, 'on');
+    const { startDevServer: freshStartDevServer } = await import(
+      '../../src/lib/start-dev-server'
+    );
+
+    const promise = freshStartDevServer({
+      entrypoint: 'api/main.rs',
+      workPath: '/work',
+      config: {},
+      meta: { isDev: true },
+      onStdout: vi.fn(),
+      onStderr: vi.fn(),
+    } as any);
+    await flush();
+    child.stdout.emit('data', Buffer.from('Dev server listening: 54321\n'));
+    await promise;
+
+    // The child exits on its own; it must be removed from the registry.
+    child.emit('exit', 0, null);
+
+    const killSpy = vi
+      .spyOn(process, 'kill')
+      .mockImplementation(() => true as any);
+    const exitHandler = onSpy.mock.calls.find(
+      call => call[0] === 'exit'
+    )?.[1] as () => void;
+    exitHandler();
+    expect(killSpy).not.toHaveBeenCalled();
+
+    killSpy.mockRestore();
+    onSpy.mockRestore();
+  });
 });

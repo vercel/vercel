@@ -18,6 +18,71 @@ const ADDR_IN_USE_RE = /address (already )?in use|AddrInUse|EADDRINUSE/i;
 const MAX_STDERR_CAPTURE = 8_192;
 
 /**
+ * Tracks every dev server child process we spawn so they can be cleaned up if
+ * `vercel dev` exits without invoking each child's `shutdown` (e.g. a hard
+ * crash, an uncaught exception, or a response whose `close` event never fires).
+ *
+ * Each spawned executable binds its own free port, so a leaked process would
+ * keep running and holding resources indefinitely. This registry plus the
+ * global cleanup handlers below bound that leak, mirroring the safety nets in
+ * the Go, Python, and Ruby runtimes.
+ */
+const RUNNING_DEV_SERVERS = new Set<ChildProcess>();
+let cleanupHandlersInstalled = false;
+
+function installGlobalCleanupHandlers(): void {
+  if (cleanupHandlersInstalled) return;
+  cleanupHandlersInstalled = true;
+
+  // Asynchronous signal handlers: request a graceful shutdown but do not call
+  // `process.exit()` so other interruption handlers (notably `vercel dev`'s
+  // own cleanup) can still run.
+  const onSignal = () => {
+    for (const child of RUNNING_DEV_SERVERS) {
+      try {
+        child.kill('SIGTERM');
+      } catch (err) {
+        debug(`Error sending SIGTERM to Rust dev server on signal: ${err}`);
+      }
+    }
+  };
+
+  process.on('SIGINT', onSignal);
+  process.on('SIGTERM', onSignal);
+  process.on('SIGHUP', onSignal);
+
+  // Synchronous backstop: the `exit` event cannot await async work, so send a
+  // synchronous `SIGKILL` to any children still running. This covers paths that
+  // bypass the async shutdown (uncaught exceptions, `process.exit()`).
+  process.on('exit', () => {
+    for (const child of RUNNING_DEV_SERVERS) {
+      if (child.pid) {
+        try {
+          process.kill(child.pid, 'SIGKILL');
+        } catch {
+          // Process already gone; nothing to do.
+        }
+      }
+    }
+    RUNNING_DEV_SERVERS.clear();
+  });
+}
+
+/**
+ * Register a spawned dev server child for global cleanup and ensure it is
+ * removed from the registry once it exits.
+ */
+function trackDevServer(child: ChildProcess): void {
+  installGlobalCleanupHandlers();
+  RUNNING_DEV_SERVERS.add(child);
+  const untrack = () => {
+    RUNNING_DEV_SERVERS.delete(child);
+  };
+  child.once('exit', untrack);
+  child.once('close', untrack);
+}
+
+/**
  * Error thrown when the Rust dev server starts but cannot become ready in a way
  * the user should know about (e.g. port collision). Unlike a generic early
  * exit, this is surfaced to `vercel dev` instead of silently falling back to
@@ -114,6 +179,10 @@ export const startDevServer: StartDevServer = async opts => {
     if (!child.pid) {
       throw new Error('Failed to start Rust dev server process');
     }
+
+    // Track the child so it is cleaned up even if `vercel dev` exits without
+    // invoking its `shutdown` (crash, uncaught exception, non-closing response).
+    trackDevServer(child);
 
     debug(`Rust dev server process started with PID: ${child.pid}`);
 
