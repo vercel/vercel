@@ -8,6 +8,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { parse as tomlParse } from 'smol-toml';
 import { client } from '../../../mocks/client';
 import aiGateway from '../../../../src/commands/ai-gateway';
 import { useUser } from '../../../mocks/user';
@@ -18,10 +19,12 @@ import {
 import { renderDiff } from '../../../../src/util/ai-gateway/coding-agents/diff';
 import {
   mergeJson,
+  mergeToml,
   upsertManagedBlock,
 } from '../../../../src/util/ai-gateway/coding-agents/config-files';
 import { useTeam } from '../../../mocks/team';
 import { claudeCode } from '../../../../src/util/ai-gateway/coding-agents/agents/claude-code';
+import { codex } from '../../../../src/util/ai-gateway/coding-agents/agents/codex';
 import {
   isKeychainAvailable,
   storeKeyInKeychain,
@@ -91,6 +94,9 @@ function claudeSettingsPath() {
 }
 function codexConfigPath() {
   return join(home, '.codex', 'config.toml');
+}
+function bashrcPath() {
+  return join(home, '.bashrc');
 }
 
 beforeEach(() => {
@@ -171,6 +177,89 @@ describe('ai-gateway coding-agents setup', () => {
       expect(out.apiKey).toBe('vck_DummyKey0001');
       expect(out.configured).toHaveLength(1);
       expect(out.configured[0].action).toBe('created');
+    });
+
+    it('configures Codex with the responses wire API and a shell export', async () => {
+      useUser();
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0002',
+        '--agent',
+        'codex'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const toml = tomlParse(readFileSync(codexConfigPath(), 'utf8')) as any;
+      expect(toml.model_provider).toBe('vercel');
+      // We never pin a default model — only the provider/URL/auth are set up.
+      expect(toml.model).toBeUndefined();
+      expect(toml.model_providers.vercel.base_url).toBe(
+        'https://ai-gateway.vercel.sh/v1'
+      );
+      expect(toml.model_providers.vercel.wire_api).toBe('responses');
+      expect(toml.model_providers.vercel.env_key).toBe('AI_GATEWAY_API_KEY');
+
+      const bashrc = readFileSync(bashrcPath(), 'utf8');
+      expect(bashrc).toContain('# >>> vercel ai-gateway >>>');
+      expect(bashrc).toContain("export AI_GATEWAY_API_KEY='vck_DummyKey0002'");
+    });
+
+    it('appends the rc block a blank line after existing user content', async () => {
+      useUser();
+      client.nonInteractive = true;
+      writeFileSync(bashrcPath(), '# my rc\nalias ll="ls -la"\n');
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0018',
+        '--agent',
+        'codex'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      // The exact bytes: the block reads as its own section, never as a tail
+      // of the user's last block.
+      expect(readFileSync(bashrcPath(), 'utf8')).toBe(
+        [
+          '# my rc',
+          'alias ll="ls -la"',
+          '',
+          '# >>> vercel ai-gateway >>>',
+          '# Managed by `vercel ai-gateway coding-agents setup` — safe to remove this block.',
+          "export AI_GATEWAY_API_KEY='vck_DummyKey0018'",
+          '# <<< vercel ai-gateway <<<',
+          '',
+        ].join('\n')
+      );
+    });
+
+    it('shell-escapes a key with special characters', async () => {
+      useUser();
+      client.nonInteractive = true;
+      const trickyKey = 'vck_a$b`c\'d"e';
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        trickyKey,
+        '--agent',
+        'codex'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      const bashrc = readFileSync(bashrcPath(), 'utf8');
+      expect(bashrc).toContain(
+        `export AI_GATEWAY_API_KEY='vck_a$b\`c'\\''d"e'`
+      );
     });
   });
 
@@ -471,6 +560,20 @@ describe('ai-gateway coding-agents setup', () => {
       const claude = plan.changes.find(c => c.label === 'Claude Code settings');
       expect(claude?.next).toContain(secret);
     });
+
+    it('reads the Codex env key from the Keychain instead of the config', async () => {
+      const secret = 'vck_KeychainSecret321';
+      const plan = await buildSetupPlan([codex], {
+        apiKey: secret,
+        home,
+        useKeychain: true,
+      });
+
+      const shell = plan.changes.find(c => c.format === 'shell');
+      expect(shell?.next).toContain('security find-generic-password');
+      expect(shell?.next).toContain('export AI_GATEWAY_API_KEY=');
+      expect(shell?.next).not.toContain(secret);
+    });
   });
 
   describe('key options', () => {
@@ -642,6 +745,20 @@ describe('ai-gateway coding-agents setup', () => {
       ).toBe(true);
     });
 
+    it('writes fish syntax to a fish rc', async () => {
+      const fishRc = join(home, '.config', 'fish', 'config.fish');
+      const plan = await buildSetupPlan([codex], {
+        apiKey: "vck_a'b",
+        home,
+        useKeychain: false,
+        shellRcOverride: fishRc,
+      });
+      const shell = plan.changes.find(c => c.format === 'shell');
+      expect(shell?.path).toBe(fishRc);
+      expect(shell?.next).toContain('set -gx AI_GATEWAY_API_KEY');
+      expect(shell?.next).not.toContain('export ');
+    });
+
     it('rejects a malformed --agent-config', async () => {
       useUser();
       client.setArgv(
@@ -655,6 +772,21 @@ describe('ai-gateway coding-agents setup', () => {
       );
       expect(await aiGateway(client)).toBe(1);
       await expect(client.stderr).toOutput('Invalid --agent-config');
+    });
+
+    it('rejects an override for an unselected agent', async () => {
+      useUser();
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--agent',
+        'claude-code',
+        '--agent-config',
+        'codex=/tmp/x/config.toml'
+      );
+      expect(await aiGateway(client)).toBe(1);
+      await expect(client.stderr).toOutput("isn't selected");
     });
   });
 
@@ -1160,6 +1292,107 @@ describe('ai-gateway coding-agents setup', () => {
       const hostile = '{"env":"weird","env":{"B":"2"}}';
       const fixed = JSON.parse(mergeJson(hostile, { env: { TOKEN: 'vck_x' } }));
       expect(fixed.env).toEqual({ B: '2', TOKEN: 'vck_x' });
+    });
+  });
+
+  describe('mergeToml edits in place', () => {
+    const PATCH = {
+      model_provider: 'vercel',
+      model_providers: {
+        vercel: { name: 'Vercel AI Gateway', wire_api: 'responses' },
+      },
+    };
+
+    it('preserves comments, quoting, and spacing of untouched lines', async () => {
+      useUser();
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.codex'), { recursive: true });
+      const original = [
+        'model = "gpt-5.5"  # my pick',
+        '',
+        '[desktop.fonts]',
+        `code = '"Geist Mono", ui-monospace'`,
+        '',
+      ].join('\n');
+      writeFileSync(codexConfigPath(), original, 'utf8');
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_TomlKey0001',
+        '--agent',
+        'codex'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+
+      const next = readFileSync(codexConfigPath(), 'utf8');
+      // The user's lines survive byte-for-byte: inline comment, TOML
+      // literal-string quoting, everything.
+      expect(next).toContain('model = "gpt-5.5"  # my pick');
+      expect(next).toContain(`code = '"Geist Mono", ui-monospace'`);
+      // Only the gateway keys were added.
+      const toml = tomlParse(next) as any;
+      expect(toml.model_provider).toBe('vercel');
+      expect(toml.model_providers.vercel.wire_api).toBe('responses');
+    });
+
+    it('replaces an existing model_provider assignment in place', () => {
+      const next = mergeToml(
+        '# provider\nmodel_provider = "openai"\n\n[other]\nx = 1\n',
+        PATCH
+      );
+      expect(next).toContain('# provider');
+      expect(next).toContain('model_provider = "vercel"');
+      expect(next).not.toContain('"openai"');
+      expect(next).toContain('[other]\nx = 1');
+    });
+
+    it('keeps user keys in an existing [model_providers.vercel] table', () => {
+      const next = mergeToml(
+        '[model_providers.vercel]\nname = "Old"\nquery_params = "keep"\n',
+        PATCH
+      );
+      expect(next).toContain('query_params = "keep"');
+      expect(next).toContain('name = "Vercel AI Gateway"');
+      expect(next).not.toContain('"Old"');
+    });
+
+    it('returns the input byte-for-byte when already configured', () => {
+      const configured = mergeToml('model = "gpt-5.5"\n', PATCH);
+      expect(mergeToml(configured, PATCH)).toBe(configured);
+    });
+
+    it('falls back to a full rewrite for layouts it cannot edit in place', () => {
+      // An inline table cannot take an appended [model_providers.vercel]
+      // header, so the editor must give up rather than corrupt the file.
+      const next = mergeToml(
+        'model_providers = { vercel = { name = "x" } }\n',
+        PATCH
+      );
+      const toml = tomlParse(next) as any;
+      expect(toml.model_provider).toBe('vercel');
+      expect(toml.model_providers.vercel.wire_api).toBe('responses');
+    });
+
+    it('still rejects invalid TOML', () => {
+      expect(() => mergeToml('model = [unclosed', { a: 1 })).toThrow(
+        /existing file is not valid TOML/
+      );
+    });
+
+    it('never corrupts a multi-line string that looks like an assignment', () => {
+      // The line editor is not string-aware: a naive replace would rewrite
+      // the assignment-lookalike INSIDE the string. The full-document verify
+      // must reject that edit and fall back.
+      const banner = 'model_provider = "mine"';
+      const current = `banner = """\n${banner}\n"""\nmodel_provider = "vercel"\n`;
+      const next = mergeToml(current, PATCH);
+      const toml = tomlParse(next) as any;
+      expect(toml.banner).toContain(banner);
+      expect(toml.model_provider).toBe('vercel');
+      expect(toml.model_providers.vercel.wire_api).toBe('responses');
     });
   });
 
