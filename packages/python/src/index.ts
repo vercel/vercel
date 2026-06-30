@@ -82,6 +82,10 @@ import {
   runDjangoCollectStatic,
   type DjangoCollectStaticResult,
 } from './django';
+import {
+  runFastAPICollectStatic,
+  type FastAPICollectStaticResult,
+} from './fastapi';
 import { containsTopLevelCallable } from '@vercel/python-analysis';
 import {
   collectAppBytecodeFiles,
@@ -333,6 +337,10 @@ interface DjangoFrameworkHookResult extends FrameworkHookResult {
   djangoStatic: DjangoCollectStaticResult | null;
 }
 
+interface FastAPIFrameworkHookResult extends FrameworkHookResult {
+  fastapiStatic: FastAPICollectStaticResult;
+}
+
 type FrameworkHook = (
   ctx: FrameworkHookContext
 ) => Promise<FrameworkHookResult | void>;
@@ -426,6 +434,37 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
       djangoStatic,
       extraPythonPath: baseDir ? join(workPath, baseDir) : undefined,
     };
+  },
+  fastapi: async ({
+    pythonEnv,
+    detected,
+    workPath,
+    venvPath,
+  }): Promise<FastAPIFrameworkHookResult | void> => {
+    if (!detected?.entrypoint || !workPath || !venvPath) {
+      debug(
+        `FastAPI hook: skipping — detected.entrypoint=${JSON.stringify(detected?.entrypoint)}, workPath=${workPath}, venvPath=${venvPath}`
+      );
+      return;
+    }
+
+    const { entrypoint: entrypointRel, variableName } = detected.entrypoint;
+    debug(
+      `FastAPI hook: entrypoint=${entrypointRel}, variableName=${variableName}`
+    );
+    const entrypointAbs = join(workPath, entrypointRel);
+    const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
+
+    const fastapiStatic = await runFastAPICollectStatic(
+      workPath,
+      pythonEnv,
+      outputStaticDir,
+      entrypointAbs,
+      variableName
+    );
+    if (!fastapiStatic) return;
+
+    return { fastapiStatic };
   },
 };
 
@@ -1061,6 +1100,11 @@ export const build: BuildVX = async ({
 
   const djangoStatic: DjangoCollectStaticResult | null =
     (hookResult as DjangoFrameworkHookResult | undefined)?.djangoStatic ?? null;
+  const fastapiStatic: FastAPICollectStaticResult | null =
+    (hookResult as FastAPIFrameworkHookResult | undefined)?.fastapiStatic ??
+    null;
+  const cdnOutputDir =
+    djangoStatic?.cdnOutputDir ?? fastapiStatic?.cdnOutputDir ?? null;
 
   const pipPlatformArgs = target.uvPlatform
     ? ['--python-platform', target.uvPlatform]
@@ -1685,8 +1729,8 @@ export const build: BuildVX = async ({
   // need the internal service namespace to avoid collisions.
   const lambdaPath =
     service?.name && service.type ? `_svc/${service.name}/index` : 'index';
-  const staticFiles = djangoStatic?.cdnOutputDir
-    ? await glob('**', { cwd: djangoStatic.cdnOutputDir })
+  const staticFiles = cdnOutputDir
+    ? await glob('**', { cwd: cdnOutputDir })
     : {};
 
   // Non-web V1 services (cron, worker, job) must not emit a catch-all route
