@@ -1,6 +1,6 @@
 ---
 name: vercel-cli
-description: Deploy, manage, inspect, and troubleshoot Vercel projects from the command line. Use for Vercel deployments, projects and teams, environment variables, domains and DNS, logs, metrics, Speed Insights, Core Web Vitals, request traces, usage, activity, alerts, firewall rules, cache, cron jobs, deploy hooks, Edge Config, feature flags, integrations, connectors, Blob storage, microfrontends, rolling releases, custom environments, Sandbox, agent/MCP setup, OAuth apps, preview access, local development, or `vercel api` fallback.
+description: Deploy, manage, inspect, and troubleshoot Vercel projects from the command line. Use for Vercel deployments, build failures, projects and teams, environment variables, domains and DNS, logs, metrics, Speed Insights, Core Web Vitals, request traces, usage, activity, alerts, firewall rules, cache, cron jobs, deploy hooks, Edge Config, feature flags, integrations, connectors, Blob storage, microfrontends, rolling releases, custom environments, Sandbox, agent/MCP setup, OAuth apps, preview access, local development, or `vercel api` fallback.
 ---
 
 # Vercel CLI Skill
@@ -38,14 +38,14 @@ vercel --prod     # production deployment
 
 Use this to route to the correct reference file:
 
-- **Deploy** → `references/deployment.md`
+- **Deploy, redeploy, forced builds, no-cache builds, or deployment source/provenance** → `references/deployment.md`
 - **Rolling releases, deploy hooks, cron jobs, cache, git connection, Edge Config, redirects, custom environments** → `references/project-infra.md`
 - **Local development** → `references/local-development.md`
 - **Environment variables** → `references/environment-variables.md`
 - **CI/CD automation** → `references/ci-automation.md`
 - **Domains or DNS** → `references/domains-and-dns.md`
 - **Projects or teams** → `references/projects-and-teams.md`
-- **Logs, metrics, Speed Insights, Core Web Vitals, activity, performance, preview access, or production debugging** → `references/monitoring-and-debugging.md`
+- **Build failures, deployment errors, logs, metrics, Speed Insights, Core Web Vitals, activity, performance, preview access, or production debugging** → `references/monitoring-and-debugging.md`
 - **Alerts, usage, contracts, billing purchases, tokens, telemetry, or CLI upgrades** → `references/platform-ops.md`
 - **Blob storage** → `references/storage.md`
 - **Integrations (databases, storage, etc.)** → `references/integrations.md`
@@ -74,6 +74,7 @@ Use this to route to the correct reference file:
 - **Linking while on the wrong team**: Use `vercel whoami` to check, `vercel teams switch` to change.
 - **Forgetting non-interactive flags in CI/agent runs**: Use `--non-interactive` when you need prompt-free behavior, and add `--yes` only for commands that require confirmation.
 - **Using `vercel deploy` after `vercel build` without `--prebuilt`**: The build output is ignored.
+- **Assuming `vercel redeploy` supports no-cache rebuilds**: Use `vercel deploy --force` without `--with-cache` when you need a fresh deployment that does not retain build cache.
 - **Hardcoding tokens in flags**: Use `VERCEL_TOKEN` env var instead of `--token`.
 - **Disabling deployment protection**: Use `vercel curl` instead to access preview deploys.
 - **Using `vercel api` too early**: Prefer first-class CLI commands when they expose the needed data or mutation.
