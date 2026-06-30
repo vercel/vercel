@@ -6,6 +6,7 @@ import {
   writeConfigFile,
   upsertManagedBlock,
 } from './config-files';
+import { KEY_PLACEHOLDER } from './gateway';
 
 export type ChangeStatus = 'create' | 'update' | 'unchanged' | 'error';
 
@@ -87,6 +88,25 @@ interface PendingChange {
   transform(current: string | null): string;
 }
 
+/**
+ * True when `current` is exactly `templated` with every KEY_PLACEHOLDER
+ * replaced by one consistent concrete secret. When the key is unknown (no
+ * --key), plans are built with the placeholder — reading the stored key as
+ * drift would make every re-run look unconfigured and mint a fresh key.
+ */
+function matchesWithStoredKey(current: string, templated: string): boolean {
+  const parts = templated.split(KEY_PLACEHOLDER);
+  if (parts.length < 2) {
+    return false;
+  }
+  const escaped = parts.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  // Keys never contain whitespace, quotes, or backslashes, so this can't
+  // swallow surrounding syntax; the backreference pins later occurrences to
+  // the first.
+  const pattern = `^${escaped[0]}([^\\s"'\\\\]+)${escaped.slice(1).join('\\1')}$`;
+  return new RegExp(pattern).test(current);
+}
+
 export async function buildSetupPlan(
   agents: CodingAgent[],
   ctx: SetupContext
@@ -162,8 +182,18 @@ export async function buildSetupPlan(
         acc = transform(acc);
       }
       next = acc;
-      status =
-        current === null ? 'create' : next === current ? 'unchanged' : 'update';
+      if (current === null) {
+        status = 'create';
+      } else if (
+        acc === current ||
+        (ctx.apiKey === KEY_PLACEHOLDER &&
+          acc !== null &&
+          matchesWithStoredKey(current, acc))
+      ) {
+        status = 'unchanged';
+      } else {
+        status = 'update';
+      }
     } catch (err) {
       status = 'error';
       error = err instanceof Error ? err.message : String(err);

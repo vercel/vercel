@@ -10,6 +10,29 @@ import {
   mergeJson,
   upsertManagedBlock,
 } from '../../../../src/util/ai-gateway/coding-agents/config-files';
+import { useTeam } from '../../../mocks/team';
+
+const CREATED_KEY = 'vck_CreatedSecretKey1234';
+const mockApiKeyResponse = {
+  apiKeyString: CREATED_KEY,
+  apiKey: {
+    id: '5d9f2ebd38dd',
+    name: 'my-key',
+    partialKey: 'vck',
+    teamId: 'team_abc',
+    purpose: 'ai-gateway',
+    createdAt: 1700000000000,
+  },
+};
+
+let lastCreateBody: Record<string, unknown> | undefined;
+function useCreateApiKey(response = mockApiKeyResponse) {
+  lastCreateBody = undefined;
+  client.scenario.post('/v1/api-keys', (req, res) => {
+    lastCreateBody = req.body;
+    res.json(response);
+  });
+}
 
 let home: string;
 let savedEnv: Record<string, string | undefined>;
@@ -87,9 +110,41 @@ describe('ai-gateway coding-agents setup', () => {
     });
   });
 
-  describe('an existing key is required', () => {
-    it('errors when --key is omitted', async () => {
+  describe('key creation', () => {
+    it('creates a key when --key is omitted and writes it', async () => {
+      const team = useTeam();
       useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--agent',
+        'claude-code',
+        '--name',
+        'my-coding-key'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      expect(lastCreateBody?.purpose).toBe('ai-gateway');
+      expect(lastCreateBody?.name).toBe('my-coding-key');
+
+      const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
+      expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe(CREATED_KEY);
+
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.apiKey).toBe(CREATED_KEY);
+    });
+
+    it('prompts for the team and a name, then creates the key', async () => {
+      useTeam();
+      useUser();
+      useCreateApiKey();
+      mkdirSync(join(home, '.claude'), { recursive: true });
       client.setArgv(
         'ai-gateway',
         'coding-agents',
@@ -98,10 +153,37 @@ describe('ai-gateway coding-agents setup', () => {
         'claude-code'
       );
 
-      expect(await aiGateway(client)).toBe(1);
-      expect(client.stderr.getFullOutput()).toContain(
-        'existing AI Gateway API key is required'
+      const exitCodePromise = aiGateway(client);
+
+      // The owning team decides where the key lives, so it comes first.
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Key name?');
+      client.stdin.write('My Coding Key\n');
+
+      expect(await exitCodePromise).toBe(0);
+      expect(lastCreateBody?.name).toBe('My Coding Key');
+    });
+
+    it('skips the prompts with --yes and uses the current scope', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--yes',
+        '--agent',
+        'claude-code'
       );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
+      expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe(CREATED_KEY);
     });
   });
 
@@ -132,6 +214,80 @@ describe('ai-gateway coding-agents setup', () => {
       const secondJson = client.stdout.getFullOutput().slice(stdoutAfterFirst);
       const out = JSON.parse(secondJson);
       expect(out.configured).toHaveLength(0);
+    });
+
+    it('does not mint a new key when re-run without --key', async () => {
+      const team = useTeam();
+      useUser();
+      let creates = 0;
+      client.scenario.post('/v1/api-keys', (req, res) => {
+        creates++;
+        res.json({
+          ...mockApiKeyResponse,
+          apiKeyString: `vck_Minted${creates}0000000`,
+        });
+      });
+      client.config.currentTeam = team.id;
+      client.nonInteractive = true;
+      const argv = [
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--agent',
+        'claude-code',
+        '--name',
+        'my-coding-key',
+      ] as const;
+
+      client.setArgv(...argv);
+      expect(await aiGateway(client)).toBe(0);
+      expect(creates).toBe(1);
+      const first = readFileSync(claudeSettingsPath(), 'utf8');
+      const stdoutAfterFirst = client.stdout.getFullOutput().length;
+
+      client.setArgv(...argv);
+      expect(await aiGateway(client)).toBe(0);
+      expect(creates).toBe(1);
+      expect(readFileSync(claudeSettingsPath(), 'utf8')).toBe(first);
+      const out = JSON.parse(
+        client.stdout.getFullOutput().slice(stdoutAfterFirst)
+      );
+      expect(out.reason).toBe('already_configured');
+      expect(out.configured).toHaveLength(0);
+    });
+
+    it('--reconfigure mints a fresh key and rewrites the configs', async () => {
+      const team = useTeam();
+      useUser();
+      let creates = 0;
+      client.scenario.post('/v1/api-keys', (req, res) => {
+        creates++;
+        res.json({
+          ...mockApiKeyResponse,
+          apiKeyString: `vck_Minted${creates}0000000`,
+        });
+      });
+      client.config.currentTeam = team.id;
+      client.nonInteractive = true;
+      const argv = [
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--agent',
+        'claude-code',
+        '--name',
+        'my-coding-key',
+      ] as const;
+
+      client.setArgv(...argv);
+      expect(await aiGateway(client)).toBe(0);
+      expect(creates).toBe(1);
+
+      client.setArgv(...argv, '--reconfigure');
+      expect(await aiGateway(client)).toBe(0);
+      expect(creates).toBe(2);
+      const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
+      expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe('vck_Minted20000000');
     });
   });
 
@@ -463,6 +619,91 @@ describe('ai-gateway coding-agents setup', () => {
       process.env.SHELL = '/bin/bash';
       const custom = join(home, 'custom', 'rc');
       expect(detectShellRc(home, custom)).toBe(custom);
+    });
+  });
+
+  describe('reconfigure', () => {
+    it('re-running with the same key is a no-op and mints no new key', async () => {
+      useUser();
+      client.nonInteractive = true;
+      const argv = [
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_Same0001',
+        '--agent',
+        'claude-code',
+      ] as const;
+
+      client.setArgv(...argv);
+      expect(await aiGateway(client)).toBe(0);
+      const afterFirst = client.stdout.getFullOutput().length;
+
+      // If a no-op ever mints a key, this endpoint flips the flag and fails us.
+      let minted = false;
+      client.scenario.post('/v1/api-keys', (_req, res) => {
+        minted = true;
+        res.json(mockApiKeyResponse);
+      });
+
+      client.setArgv(...argv);
+      expect(await aiGateway(client)).toBe(0);
+
+      const out = JSON.parse(client.stdout.getFullOutput().slice(afterFirst));
+      expect(out.reason).toBe('already_configured');
+      expect(out.configured).toHaveLength(0);
+      expect(minted).toBe(false);
+    });
+
+    it('--reconfigure re-runs past the already-configured short-circuit', async () => {
+      useUser();
+      client.nonInteractive = true;
+      const base = [
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_Same0002',
+        '--agent',
+        'claude-code',
+      ] as const;
+
+      client.setArgv(...base);
+      expect(await aiGateway(client)).toBe(0);
+      const afterFirst = client.stdout.getFullOutput().length;
+
+      client.setArgv(...base, '--reconfigure');
+      expect(await aiGateway(client)).toBe(0);
+
+      const out = JSON.parse(client.stdout.getFullOutput().slice(afterFirst));
+      // Not short-circuited: it proceeded and re-applied the configuration.
+      expect(out.reason).toBe('coding_agents_configured');
+    });
+
+    it('prompts to reconfigure when already set up and proceeds on confirm', async () => {
+      useUser();
+      client.nonInteractive = true;
+      const argv = [
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_Old0003',
+        '--agent',
+        'claude-code',
+      ] as const;
+      client.setArgv(...argv);
+      expect(await aiGateway(client)).toBe(0);
+
+      // Re-run interactively with the same key: it's already configured, so the
+      // user is asked whether to reconfigure instead of getting a silent no-op.
+      client.nonInteractive = false;
+      client.setArgv(...argv);
+      const run = aiGateway(client);
+      await expect(client.stderr).toOutput('already configured');
+      client.stdin.write('y\n');
+      expect(await run).toBe(0);
     });
   });
 });

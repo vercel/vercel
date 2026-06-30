@@ -26,6 +26,18 @@ export class AiGatewayCodingAgentsSetupTelemetryClient
     }
   }
 
+  trackCliOptionName(name: string | undefined) {
+    if (name) {
+      this.trackCliOption({ option: 'name', value: this.redactedValue });
+    }
+  }
+
+  trackCliFlagReconfigure(reconfigure: boolean | undefined) {
+    if (reconfigure) {
+      this.trackCliFlag('reconfigure');
+    }
+  }
+
   trackCliFlagYes(yes: boolean | undefined) {
     if (yes) {
       this.trackCliFlag('yes');
