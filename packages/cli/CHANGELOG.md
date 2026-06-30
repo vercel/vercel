@@ -1,5 +1,14 @@
 # vercel
 
+## 54.18.6
+
+### Patch Changes
+
+- e833330: Point rolling release start at the dedicated rolling-release start API endpoint.
+- Updated dependencies [cbf22bf]
+  - @vercel/backends@0.8.21
+  - @vercel/express@0.1.112
+
 ## 54.18.5
 
 ### Patch Changes
