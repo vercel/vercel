@@ -26,6 +26,7 @@ import {
   promptKeyName,
   promptQuota,
   promptExpiry,
+  promptKeychain,
   type KeySource,
 } from '../../util/ai-gateway/coding-agents/key-source';
 import {
@@ -44,6 +45,10 @@ import {
 } from '../../util/ai-gateway/coding-agents/render';
 import { runMachine } from '../../util/ai-gateway/coding-agents/machine';
 import { KEY_PLACEHOLDER } from '../../util/ai-gateway/coding-agents/gateway';
+import {
+  isKeychainAvailable,
+  storeKeyInKeychain,
+} from '../../util/ai-gateway/coding-agents/keychain';
 import {
   outputAgentError,
   shouldEmitNonInteractiveCommandError,
@@ -81,6 +86,7 @@ export default async function codingAgentsSetup(
   const reconfigure = opts['--reconfigure'] as boolean | undefined;
   const dryRun = opts['--dry-run'] as boolean | undefined;
   const noBackup = opts['--no-backup'] as boolean | undefined;
+  const noKeychain = opts['--no-keychain'] as boolean | undefined;
   const agentConfig = opts['--agent-config'] as string[] | undefined;
   const shellRcOverride = opts['--shell-rc'] as string | undefined;
   const yes = opts['--yes'] as boolean | undefined;
@@ -96,6 +102,7 @@ export default async function codingAgentsSetup(
   telemetry.trackCliFlagReconfigure(reconfigure);
   telemetry.trackCliFlagDryRun(dryRun);
   telemetry.trackCliFlagNoBackup(noBackup);
+  telemetry.trackCliFlagNoKeychain(noKeychain);
   telemetry.trackCliOptionAgentConfig(agentConfig);
   telemetry.trackCliOptionShellRc(shellRcOverride);
   telemetry.trackCliFlagYes(yes);
@@ -103,6 +110,7 @@ export default async function codingAgentsSetup(
   const machine = shouldEmitNonInteractiveCommandError(client);
   const canPrompt = Boolean(client.stdin.isTTY) && !machine;
   const home = homedir();
+  const wantKeychain = !noKeychain && isKeychainAvailable();
 
   if (budget !== undefined && (!Number.isFinite(budget) || budget < 1)) {
     return failValidation(
@@ -232,6 +240,11 @@ export default async function codingAgentsSetup(
       }
     }
   }
+  let useKeychain = wantKeychain;
+  if (wantKeychain && canPrompt && !yes) {
+    useKeychain = await promptKeychain(client);
+  }
+
   if (canPrompt && !yes) {
     const missing = selected.filter(
       a =>
@@ -266,6 +279,7 @@ export default async function codingAgentsSetup(
   const previewPlan = await buildSetupPlan(selected, {
     apiKey: previewKey,
     home,
+    useKeychain,
     overrides,
     shellRcOverride,
   });
@@ -293,6 +307,7 @@ export default async function codingAgentsSetup(
           includeByok,
           expiresAt: keyExpiresAt,
         }),
+      useKeychain,
       overrides,
       shellRcOverride,
       home,
@@ -303,10 +318,25 @@ export default async function codingAgentsSetup(
 
   // Already wired up: instead of a dead-end no-op, offer to rotate the key or
   // reconfigure (e.g. a rotated/expired key, or a different team).
-  // `--reconfigure` skips the prompt.
   if (alreadyConfigured) {
+    // A provided key on a Keychain setup: refresh the stored secret in place,
+    // even though the config files themselves don't change.
+    if (!dryRun && useKeychain && providedKey) {
+      if (!storeKeyInKeychain(providedKey)) {
+        output.error(
+          'Failed to update the key in the macOS Keychain. Re-run with --no-keychain to write it to the config files instead.'
+        );
+        return 1;
+      }
+      output.log(
+        'All selected agents are already configured; updated the macOS Keychain with the provided key.'
+      );
+      printKey(providedKey, { keychain: true });
+      return 0;
+    }
+    // Otherwise offer to rotate/reconfigure. `--reconfigure` skips the prompt.
     let doReconfigure = Boolean(reconfigure);
-    if (!doReconfigure && canPrompt && !yes) {
+    if (!doReconfigure && canPrompt && !yes && !dryRun) {
       doReconfigure = await client.input.confirm(
         'These agents are already configured for the AI Gateway. Reconfigure them?',
         false
@@ -321,6 +351,7 @@ export default async function codingAgentsSetup(
       }
       return 0;
     }
+    // doReconfigure: fall through to (re)create the key and apply below.
   }
 
   // Resolved state first, then the mutation preview, then the confirm.
@@ -331,6 +362,7 @@ export default async function codingAgentsSetup(
     budget: keyBudget,
     refreshPeriod: keyRefresh,
     expiresAt: keyExpiresAt,
+    keychain: wantKeychain ? useKeychain : undefined,
   });
   printPlan(previewPlan, previewKey, { backup: !noBackup });
 
@@ -372,9 +404,17 @@ export default async function codingAgentsSetup(
     throw err;
   }
 
+  if (useKeychain && !storeKeyInKeychain(keySource.key)) {
+    printWarning(
+      'Failed to store the key in the macOS Keychain; writing it to the config files instead.'
+    );
+    useKeychain = false;
+  }
+
   const applyPlanResult = await buildSetupPlan(selected, {
     apiKey: keySource.key,
     home,
+    useKeychain,
     overrides,
     shellRcOverride,
   });
@@ -386,7 +426,7 @@ export default async function codingAgentsSetup(
     // key is resolved from the environment rather than embedded).
     output.print('\n');
     printAlignedLabel('Rotated', 'AI Gateway API key', { gutter: '✓' });
-    printKeyRow(keySource.key);
+    printKeyRow(keySource.key, { keychain: useKeychain });
     output.print(chalk.dim('  No config files changed.\n'));
   }
   if (results.length > 0) {
@@ -404,7 +444,7 @@ export default async function codingAgentsSetup(
         result.path
       );
     }
-    printKeyRow(keySource.key);
+    printKeyRow(keySource.key, { keychain: useKeychain });
     if (results.some(r => r.backupPath)) {
       output.print(chalk.dim('  Previous files saved alongside as .bak\n'));
     }

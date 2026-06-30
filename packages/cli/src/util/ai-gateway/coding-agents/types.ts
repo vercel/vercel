@@ -1,6 +1,7 @@
 export interface SetupContext {
   apiKey: string;
   home: string;
+  useKeychain?: boolean;
   overrides?: Record<string, string>;
   shellRcOverride?: string;
 }

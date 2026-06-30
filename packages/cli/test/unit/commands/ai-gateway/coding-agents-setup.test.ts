@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   mkdtempSync,
   readFileSync,
@@ -11,15 +11,55 @@ import { join } from 'node:path';
 import { client } from '../../../mocks/client';
 import aiGateway from '../../../../src/commands/ai-gateway';
 import { useUser } from '../../../mocks/user';
-import { detectShellRc } from '../../../../src/util/ai-gateway/coding-agents/apply';
+import {
+  buildSetupPlan,
+  detectShellRc,
+} from '../../../../src/util/ai-gateway/coding-agents/apply';
 import { renderDiff } from '../../../../src/util/ai-gateway/coding-agents/diff';
 import {
   mergeJson,
   upsertManagedBlock,
 } from '../../../../src/util/ai-gateway/coding-agents/config-files';
 import { useTeam } from '../../../mocks/team';
-import { buildSetupPlan } from '../../../../src/util/ai-gateway/coding-agents/apply';
 import { claudeCode } from '../../../../src/util/ai-gateway/coding-agents/agents/claude-code';
+import {
+  isKeychainAvailable,
+  storeKeyInKeychain,
+  keychainLookup,
+} from '../../../../src/util/ai-gateway/coding-agents/keychain';
+
+// A pass-through mock of the keychain module: tests that set `available` get a
+// fake in-memory keychain (usable on Linux CI); everything else hits the real
+// implementation.
+const keychainState = vi.hoisted(() => ({
+  available: undefined as boolean | undefined,
+  stored: [] as string[],
+  storeResult: true,
+}));
+
+vi.mock(
+  '../../../../src/util/ai-gateway/coding-agents/keychain',
+  async importOriginal => {
+    const actual =
+      await importOriginal<
+        typeof import('../../../../src/util/ai-gateway/coding-agents/keychain')
+      >();
+    return {
+      ...actual,
+      isKeychainAvailable: () =>
+        keychainState.available ?? actual.isKeychainAvailable(),
+      storeKeyInKeychain: (key: string) => {
+        if (keychainState.available === undefined) {
+          return actual.storeKeyInKeychain(key);
+        }
+        if (keychainState.storeResult) {
+          keychainState.stored.push(key);
+        }
+        return keychainState.storeResult;
+      },
+    };
+  }
+);
 
 const CREATED_KEY = 'vck_CreatedSecretKey1234';
 const mockApiKeyResponse = {
@@ -54,6 +94,9 @@ function codexConfigPath() {
 }
 
 beforeEach(() => {
+  keychainState.available = undefined;
+  keychainState.stored.length = 0;
+  keychainState.storeResult = true;
   home = mkdtempSync(join(tmpdir(), 'vc-setup-agents-'));
   savedEnv = {
     HOME: process.env.HOME,
@@ -387,6 +430,49 @@ describe('ai-gateway coding-agents setup', () => {
     });
   });
 
+  describe('keychain', () => {
+    it('is unavailable off macOS and fails closed', () => {
+      if (process.platform !== 'darwin') {
+        expect(isKeychainAvailable()).toBe(false);
+        expect(storeKeyInKeychain('vck_whatever')).toBe(false);
+      }
+      expect(keychainLookup()).toContain('security find-generic-password');
+    });
+
+    it('keeps the secret out of the configs and reads it from the shell', async () => {
+      const secret = 'vck_KeychainSecret321';
+      const plan = await buildSetupPlan([claudeCode], {
+        apiKey: secret,
+        home,
+        useKeychain: true,
+      });
+
+      // The env-based agent resolves its var from the Keychain at runtime.
+      const shell = plan.changes.find(c => c.format === 'shell');
+      expect(shell?.next).toContain('security find-generic-password');
+      expect(shell?.next).toContain('export ANTHROPIC_AUTH_TOKEN=');
+      expect(shell?.next).not.toContain(secret);
+
+      // Claude's token is no longer embedded in settings.json.
+      const claude = plan.changes.find(c => c.label === 'Claude Code settings');
+      expect(claude?.next).toContain('ANTHROPIC_BASE_URL');
+      expect(claude?.next).not.toContain('ANTHROPIC_AUTH_TOKEN');
+      expect(claude?.next).not.toContain(secret);
+    });
+
+    it('embeds the key directly when keychain is off', async () => {
+      const secret = 'vck_PlainSecret654';
+      const plan = await buildSetupPlan([claudeCode], {
+        apiKey: secret,
+        home,
+        useKeychain: false,
+      });
+
+      const claude = plan.changes.find(c => c.label === 'Claude Code settings');
+      expect(claude?.next).toContain(secret);
+    });
+  });
+
   describe('key options', () => {
     it('collects name, quota, and expiry interactively', async () => {
       const team = useTeam();
@@ -534,6 +620,7 @@ describe('ai-gateway coding-agents setup', () => {
       const plan = await buildSetupPlan([claudeCode], {
         apiKey: 'vck_x',
         home,
+        useKeychain: false,
         // (set per-test; restored by afterEach)
       });
       expect(
@@ -546,6 +633,7 @@ describe('ai-gateway coding-agents setup', () => {
       const relocated = await buildSetupPlan([claudeCode], {
         apiKey: 'vck_x',
         home,
+        useKeychain: false,
       });
       expect(
         relocated.changes.some(
@@ -671,6 +759,149 @@ describe('ai-gateway coding-agents setup', () => {
       expect(creates).toBe(2);
       const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
       expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe('vck_Minted20000000');
+    });
+  });
+
+  describe('key rotation', () => {
+    it('updates the config when re-run with a different key', async () => {
+      useUser();
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_OldKey0001',
+        '--agent',
+        'claude-code'
+      );
+      expect(await aiGateway(client)).toBe(0);
+
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_NewKey0002',
+        '--agent',
+        'claude-code'
+      );
+      expect(await aiGateway(client)).toBe(0);
+
+      const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
+      expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe('vck_NewKey0002');
+      // The pre-rotation config is kept as a backup.
+      const backup = JSON.parse(
+        readFileSync(`${claudeSettingsPath()}.bak`, 'utf8')
+      );
+      expect(backup.env.ANTHROPIC_AUTH_TOKEN).toBe('vck_OldKey0001');
+    });
+
+    it('stores a rotated key in the Keychain even when configs are unchanged', async () => {
+      useUser();
+      keychainState.available = true;
+
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--yes',
+        '--key',
+        'vck_OldKey0001',
+        '--agent',
+        'claude-code'
+      );
+      expect(await aiGateway(client)).toBe(0);
+      expect(keychainState.stored).toEqual(['vck_OldKey0001']);
+      // Keychain mode: the key lives outside the config files…
+      expect(readFileSync(claudeSettingsPath(), 'utf8')).not.toContain(
+        'vck_OldKey0001'
+      );
+
+      // …so re-running with a new key writes no files but must still refresh
+      // the Keychain entry.
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--yes',
+        '--key',
+        'vck_NewKey0002',
+        '--agent',
+        'claude-code'
+      );
+      expect(await aiGateway(client)).toBe(0);
+      expect(keychainState.stored).toEqual([
+        'vck_OldKey0001',
+        'vck_NewKey0002',
+      ]);
+      expect(client.stderr.getFullOutput()).toContain(
+        'updated the macOS Keychain'
+      );
+    });
+
+    it('does not touch the Keychain during --dry-run', async () => {
+      useUser();
+      keychainState.available = true;
+
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--yes',
+        '--key',
+        'vck_OldKey0001',
+        '--agent',
+        'claude-code'
+      );
+      expect(await aiGateway(client)).toBe(0);
+
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--dry-run',
+        '--yes',
+        '--key',
+        'vck_NewKey0002',
+        '--agent',
+        'claude-code'
+      );
+      expect(await aiGateway(client)).toBe(0);
+      expect(keychainState.stored).toEqual(['vck_OldKey0001']);
+    });
+
+    it('fails when the rotated key cannot be stored in the Keychain', async () => {
+      useUser();
+      keychainState.available = true;
+
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--yes',
+        '--key',
+        'vck_OldKey0001',
+        '--agent',
+        'claude-code'
+      );
+      expect(await aiGateway(client)).toBe(0);
+
+      keychainState.storeResult = false;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--yes',
+        '--key',
+        'vck_NewKey0002',
+        '--agent',
+        'claude-code'
+      );
+      expect(await aiGateway(client)).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Failed to update the key in the macOS Keychain'
+      );
     });
   });
 
@@ -1009,6 +1240,13 @@ describe('ai-gateway coding-agents setup', () => {
     it('masks JSON secret fields without a known secret list', () => {
       const out = renderDiff('', '{\n  "apiKey": "vck_LeakMe12345"\n}');
       expect(out).not.toContain('vck_LeakMe12345');
+    });
+
+    it('leaves the keychain lookup command readable — it holds no secret', () => {
+      const line = `export AI_GATEWAY_API_KEY="$(/usr/bin/security find-generic-password -s 'Vercel AI Gateway' -a 'vercel-ai-gateway' -w 2>/dev/null)"`;
+      const out = renderDiff('', line);
+      expect(out).toContain('find-generic-password');
+      expect(out).not.toContain('••••');
     });
   });
 

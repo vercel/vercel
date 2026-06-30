@@ -60,7 +60,9 @@ function redactSecretFields(text: string): string {
       (_match, prefix, value) => `${prefix}"${maskSecret(value)}"`
     )
     .replace(
-      /(export\s+AI_GATEWAY_API_KEY=)(["'])((?:(?!\2).)+)(\2)/g,
+      // `(?!\$\()` keeps the keychain lookup readable: its value is a
+      // command substitution, not a secret.
+      /(export\s+AI_GATEWAY_API_KEY=)(["'])(?!\$\()((?:(?!\2).)+)(\2)/g,
       (_match, prefix, quote, value, close) =>
         `${prefix}${quote}${maskSecret(value)}${close}`
     )

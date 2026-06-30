@@ -77,6 +77,12 @@ export class AiGatewayCodingAgentsSetupTelemetryClient
     }
   }
 
+  trackCliFlagNoKeychain(noKeychain: boolean | undefined) {
+    if (noKeychain) {
+      this.trackCliFlag('no-keychain');
+    }
+  }
+
   trackCliOptionAgentConfig(agentConfig: string[] | undefined) {
     if (agentConfig && agentConfig.length) {
       // Local paths may be sensitive; record only that the option was used.

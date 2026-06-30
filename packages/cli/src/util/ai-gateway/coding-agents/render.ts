@@ -16,6 +16,7 @@ export function printResolvedState(args: {
   budget?: number;
   refreshPeriod?: string;
   expiresAt?: number;
+  keychain?: boolean;
 }): void {
   const { selected, willCreate, name, budget, refreshPeriod, expiresAt } = args;
   output.print(chalk.bold('  Summary\n'));
@@ -42,6 +43,12 @@ export function printResolvedState(args: {
       ? new Date(expiresAt).toISOString().slice(0, 10)
       : 'Never'
   );
+  if (args.keychain !== undefined) {
+    printAlignedLabel(
+      'Key storage',
+      args.keychain ? 'macOS Keychain' : 'Config files'
+    );
+  }
   output.print('\n');
 }
 
@@ -111,9 +118,15 @@ export function printReceiptPath(label: string, path: string): void {
   );
 }
 
-/** Masked-key receipt row, e.g. `API Key  vck_1234••••abcd`. */
-export function printKeyRow(key: string): void {
-  printAlignedLabel('API Key', maskSecret(key));
+/** Masked-key receipt row, e.g. `API Key  vck_1234••••abcd · macOS Keychain`. */
+export function printKeyRow(
+  key: string,
+  opts: { keychain?: boolean } = {}
+): void {
+  printAlignedLabel(
+    'API Key',
+    `${maskSecret(key)} · ${opts.keychain ? 'macOS Keychain' : 'Config files'}`
+  );
 }
 
 export function printNotes(plan: SetupPlan): void {
@@ -128,7 +141,7 @@ export function printNotes(plan: SetupPlan): void {
   }
 }
 
-export function printKey(key: string): void {
+export function printKey(key: string, opts: { keychain?: boolean } = {}): void {
   output.print('\n');
-  printKeyRow(key);
+  printKeyRow(key, opts);
 }

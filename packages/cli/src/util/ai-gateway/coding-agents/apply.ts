@@ -7,6 +7,7 @@ import {
   upsertManagedBlock,
 } from './config-files';
 import { KEY_PLACEHOLDER } from './gateway';
+import { keychainLookup } from './keychain';
 
 export type ChangeStatus = 'create' | 'update' | 'unchanged' | 'error';
 
@@ -65,16 +66,26 @@ function fishQuote(value: string): string {
   return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 }
 
-function envBlockBody(exports: EnvExport[], fish: boolean): string {
+function envBlockBody(
+  exports: EnvExport[],
+  useKeychain: boolean | undefined,
+  fish: boolean
+): string {
   const lines = [
     '# Managed by `vercel ai-gateway coding-agents setup` — safe to remove this block.',
   ];
   for (const e of exports) {
-    lines.push(
-      fish
-        ? `set -gx ${e.name} ${fishQuote(e.value)}`
-        : `export ${e.name}=${shellQuote(e.value)}`
-    );
+    if (fish) {
+      lines.push(
+        useKeychain
+          ? `set -gx ${e.name} ${keychainLookup({ fish: true })}`
+          : `set -gx ${e.name} ${fishQuote(e.value)}`
+      );
+    } else if (useKeychain) {
+      lines.push(`export ${e.name}="${keychainLookup()}"`);
+    } else {
+      lines.push(`export ${e.name}=${shellQuote(e.value)}`);
+    }
   }
   return lines.join('\n');
 }
@@ -137,7 +148,11 @@ export async function buildSetupPlan(
   let shellRcPath: string | undefined;
   if (envExports.length) {
     shellRcPath = detectShellRc(ctx.home, ctx.shellRcOverride);
-    const body = envBlockBody(envExports, shellRcPath.endsWith('.fish'));
+    const body = envBlockBody(
+      envExports,
+      ctx.useKeychain,
+      shellRcPath.endsWith('.fish')
+    );
     pending.push({
       path: shellRcPath,
       label: 'Shell environment',
