@@ -1188,6 +1188,10 @@ const main = async () => {
           telemetry.trackCliCommandUpgrade(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).upgrade;
           break;
+        case 'byoc':
+          telemetry.trackCliCommandByoc(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).byoc;
+          break;
         case 'webhooks':
           telemetry.trackCliCommandWebhooks(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).webhooks;

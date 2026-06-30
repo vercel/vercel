@@ -60,6 +60,7 @@ import { upgradeCommand } from './upgrade/command';
 import { usageCommand } from './usage/command';
 import { whoamiCommand } from './whoami/command';
 import { blobCommand } from './blob/command';
+import { byocCommand } from './byoc/command';
 import { webhooksCommand } from './webhooks/command';
 import type { Command } from './help';
 import output from '../output-manager';
@@ -122,6 +123,7 @@ const commandsStructs = [
   telemetryCommand,
   tracesCommand,
   upgradeCommand,
+  byocCommand,
   webhooksCommand,
   usageCommand,
   whoamiCommand,
