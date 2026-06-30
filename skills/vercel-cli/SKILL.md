@@ -74,7 +74,7 @@ Use this to route to the correct reference file:
 - **Linking while on the wrong team**: Use `vercel whoami` to check, `vercel teams switch` to change.
 - **Forgetting non-interactive flags in CI/agent runs**: Use `--non-interactive` when you need prompt-free behavior, and add `--yes` only for commands that require confirmation.
 - **Using `vercel deploy` after `vercel build` without `--prebuilt`**: The build output is ignored.
-- **Assuming `vercel redeploy` supports no-cache rebuilds**: Use `vercel deploy --force` without `--with-cache` when you need a fresh deployment that does not retain build cache.
+- **Using `vercel redeploy` for no-cache rebuilds**: `vercel redeploy` does not expose a no-cache flag; use `vercel deploy --force` without `--with-cache` when you need a fresh deployment that does not retain build cache.
 - **Hardcoding tokens in flags**: Use `VERCEL_TOKEN` env var instead of `--token`.
 - **Disabling deployment protection**: Use `vercel curl` instead to access preview deploys.
 - **Using `vercel api` too early**: Prefer first-class CLI commands when they expose the needed data or mutation.
