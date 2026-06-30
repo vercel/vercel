@@ -1,8 +1,9 @@
 import type { CodingAgent } from '../types';
 import { claudeCode } from './claude-code';
 import { codex } from './codex';
+import { opencode } from './opencode';
 
-export const CODING_AGENTS: CodingAgent[] = [claudeCode, codex];
+export const CODING_AGENTS: CodingAgent[] = [claudeCode, codex, opencode];
 
 export const DEFAULT_AGENTS = CODING_AGENTS.filter(a => !a.experimental);
 

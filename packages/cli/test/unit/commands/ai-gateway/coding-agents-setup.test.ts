@@ -25,6 +25,7 @@ import {
 import { useTeam } from '../../../mocks/team';
 import { claudeCode } from '../../../../src/util/ai-gateway/coding-agents/agents/claude-code';
 import { codex } from '../../../../src/util/ai-gateway/coding-agents/agents/codex';
+import { opencode } from '../../../../src/util/ai-gateway/coding-agents/agents/opencode';
 import {
   isKeychainAvailable,
   storeKeyInKeychain,
@@ -97,6 +98,9 @@ function codexConfigPath() {
 }
 function bashrcPath() {
   return join(home, '.bashrc');
+}
+function opencodeConfigPath() {
+  return join(home, '.config', 'opencode', 'opencode.json');
 }
 
 beforeEach(() => {
@@ -260,6 +264,77 @@ describe('ai-gateway coding-agents setup', () => {
       expect(bashrc).toContain(
         `export AI_GATEWAY_API_KEY='vck_a$b\`c'\\''d"e'`
       );
+    });
+
+    it('configures OpenCode with the native vercel provider', async () => {
+      useUser();
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0003',
+        '--agent',
+        'opencode'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const cfg = JSON.parse(readFileSync(opencodeConfigPath(), 'utf8'));
+      expect(cfg.provider.vercel.options.apiKey).toBe('vck_DummyKey0003');
+      expect(cfg.model).toBeUndefined();
+    });
+
+    it('leaves a minified opencode.json on one line, existing entries untouched', async () => {
+      useUser();
+      client.nonInteractive = true;
+      keychainState.available = false; // deterministic: key embeds in the config
+      mkdirSync(join(home, '.config', 'opencode'), { recursive: true });
+      // Some tools write opencode.json minified; connecting must not explode
+      // it into pretty-printed form.
+      const original =
+        '{"mcp":{"devbox":{"command":["/x/devbox","mcp"],"enabled":true,"type":"local"}}}';
+      writeFileSync(opencodeConfigPath(), original, 'utf8');
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_Minified001',
+        '--agent',
+        'opencode'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+
+      const next = readFileSync(opencodeConfigPath(), 'utf8');
+      expect(next.trim()).not.toContain('\n');
+      expect(next).toContain(
+        '{"mcp":{"devbox":{"command":["/x/devbox","mcp"],"enabled":true,"type":"local"}}'
+      );
+      const cfg = JSON.parse(next);
+      expect(cfg.provider.vercel.options.apiKey).toBe('vck_Minified001');
+    });
+
+    it('keeps the OpenCode key out of the config under keychain', async () => {
+      const secret = 'vck_OpenCodeKeychain';
+      const plan = await buildSetupPlan([opencode], {
+        apiKey: secret,
+        home,
+        useKeychain: true,
+      });
+
+      // The provider is declared, but the key is not embedded…
+      const cfg = plan.changes.find(c => c.label === 'OpenCode config');
+      expect(cfg?.next).toContain('vercel');
+      expect(cfg?.next).not.toContain(secret);
+      // …it's resolved from AI_GATEWAY_API_KEY via the Keychain at runtime.
+      const shell = plan.changes.find(c => c.format === 'shell');
+      expect(shell?.next).toContain('export AI_GATEWAY_API_KEY=');
+      expect(shell?.next).toContain('security find-generic-password');
+      expect(shell?.next).not.toContain(secret);
     });
   });
 
@@ -1602,6 +1677,52 @@ describe('ai-gateway coding-agents setup', () => {
       await expect(client.stderr).toOutput('already configured');
       client.stdin.write('y\n');
       expect(await run).toBe(0);
+    });
+  });
+
+  describe('unconventional locations and multi-agent runs', () => {
+    it('places the OpenCode config under $XDG_CONFIG_HOME when set', async () => {
+      process.env.XDG_CONFIG_HOME = join(home, 'xdg');
+      const plan = await buildSetupPlan([opencode], { apiKey: 'vck_x', home });
+      expect(
+        plan.changes.some(
+          c => c.path === join(home, 'xdg', 'opencode', 'opencode.json')
+        )
+      ).toBe(true);
+    });
+
+    it('shares a single deduped env block across multiple agents', async () => {
+      const plan = await buildSetupPlan([claudeCode, codex, opencode], {
+        apiKey: 'vck_multi',
+        home,
+        useKeychain: true,
+      });
+
+      // One config file per agent.
+      expect(plan.changes.some(c => c.label === 'Claude Code settings')).toBe(
+        true
+      );
+      expect(plan.changes.some(c => c.label === 'Codex config')).toBe(true);
+      expect(plan.changes.some(c => c.label === 'OpenCode config')).toBe(true);
+
+      // A single shared shell block. Codex and OpenCode both want
+      // AI_GATEWAY_API_KEY — it's exported once (deduped) — and Claude Code
+      // contributes ANTHROPIC_AUTH_TOKEN.
+      const shells = plan.changes.filter(c => c.format === 'shell');
+      expect(shells).toHaveLength(1);
+      const gateway = shells[0].next?.match(/AI_GATEWAY_API_KEY/g) ?? [];
+      expect(gateway).toHaveLength(1);
+      expect(shells[0].next).toContain('ANTHROPIC_AUTH_TOKEN');
+    });
+
+    it('skips a malformed Codex config instead of clobbering it', async () => {
+      mkdirSync(join(home, '.codex'), { recursive: true });
+      writeFileSync(codexConfigPath(), 'this is = = not valid toml [', 'utf8');
+
+      const plan = await buildSetupPlan([codex], { apiKey: 'vck_x', home });
+      const codexChange = plan.changes.find(c => c.format === 'toml');
+      expect(codexChange?.status).toBe('error');
+      expect(codexChange?.error).toContain('not valid TOML');
     });
   });
 });
