@@ -1,5 +1,12 @@
 # vercel
 
+## 54.18.5
+
+### Patch Changes
+
+- 0eea3d6: Expose `cacheReason` in `vc logs` output, alongside the existing cache status, so users can see why a request was a cache MISS/BYPASS/STALE.
+  - @vercel/static-build@2.11.4
+
 ## 54.18.4
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.30.4
+
+### Patch Changes
+
+- d19dbc5: Use circle icons for dark mode and light mode for services and containers
+
 ## 3.30.3
 
 ### Patch Changes
