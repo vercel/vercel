@@ -26,6 +26,33 @@ export class AiGatewayCodingAgentsSetupTelemetryClient
     }
   }
 
+  trackCliOptionBudget(budget: number | undefined) {
+    if (budget !== undefined) {
+      this.trackCliOption({ option: 'budget', value: this.redactedValue });
+    }
+  }
+
+  trackCliOptionRefreshPeriod(refreshPeriod: string | undefined) {
+    if (refreshPeriod) {
+      this.trackCliOption({
+        option: 'refresh-period',
+        value: refreshPeriod,
+      });
+    }
+  }
+
+  trackCliFlagIncludeByok(includeByok: boolean | undefined) {
+    if (includeByok) {
+      this.trackCliFlag('include-byok');
+    }
+  }
+
+  trackCliOptionExpiration(expiration: string | undefined) {
+    if (expiration) {
+      this.trackCliOption({ option: 'expiration', value: expiration });
+    }
+  }
+
   trackCliOptionName(name: string | undefined) {
     if (name) {
       this.trackCliOption({ option: 'name', value: this.redactedValue });
