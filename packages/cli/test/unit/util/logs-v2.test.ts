@@ -17,6 +17,8 @@ interface ApiLogEntry {
   statusCode?: number;
   environment?: string;
   domain?: string;
+  cache?: string;
+  cacheReason?: string;
   logs?: Array<{
     level?: string;
     message?: string;
@@ -62,6 +64,24 @@ describe('logs-v2 utility', () => {
 
       expect(result.logs).toHaveLength(1);
       expect(result.logs[0].id).toEqual('log_123');
+    });
+
+    it('should pass through cache status and cacheReason', async () => {
+      const mockLogs = [
+        createMockApiLog({ cache: 'BYPASS', cacheReason: 'draft_mode' }),
+      ];
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        res.json({ rows: mockLogs, hasMoreRows: false });
+      });
+
+      const result = await fetchRequestLogs(client, {
+        projectId: 'prj_test',
+        ownerId: 'team_test',
+      });
+
+      expect(result.logs).toHaveLength(1);
+      expect(result.logs[0].cache).toEqual('BYPASS');
+      expect(result.logs[0].cacheReason).toEqual('draft_mode');
     });
 
     it('should include deploymentId in query when provided', async () => {

@@ -272,6 +272,9 @@ importers:
       '@vercel/nft':
         specifier: 1.10.0
         version: 1.10.0(rollup@4.60.4)
+      '@vercel/static-config':
+        specifier: workspace:*
+        version: link:../static-config
       execa:
         specifier: 3.2.0
         version: 3.2.0
@@ -296,6 +299,9 @@ importers:
       srvx:
         specifier: 0.11.16
         version: 0.11.16
+      ts-morph:
+        specifier: 12.0.0
+        version: 12.0.0
       tsx:
         specifier: 4.21.0
         version: 4.21.0

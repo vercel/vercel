@@ -1,5 +1,29 @@
 # vercel
 
+## 54.18.6
+
+### Patch Changes
+
+- e833330: Point rolling release start at the dedicated rolling-release start API endpoint.
+- Updated dependencies [cbf22bf]
+  - @vercel/backends@0.8.21
+  - @vercel/express@0.1.112
+
+## 54.18.5
+
+### Patch Changes
+
+- 0eea3d6: Expose `cacheReason` in `vc logs` output, alongside the existing cache status, so users can see why a request was a cache MISS/BYPASS/STALE.
+  - @vercel/static-build@2.11.4
+
+## 54.18.4
+
+### Patch Changes
+
+- 16cf8f6: Surface the builds rate-limit upgrade hint on `vercel deploy`. The hint previously never printed (the error was dropped before conversion) and pointed at the CLI self-updater; it now renders the backend's plan-appropriate call to action (`ctaLabel`/`ctaUrl`, or legacy `action`/`link`) from the error, falling back to a plan-agnostic nudge.
+- 56875d2: Remove the non-functional `vercel buy v0` subcommand; use `vercel buy credits v0` to purchase v0 credits.
+- 6c5aa14: Support lazily generated Build Output `services` configs during `vc build`.
+
 ## 54.18.3
 
 ### Patch Changes

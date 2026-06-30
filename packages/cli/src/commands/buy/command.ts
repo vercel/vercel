@@ -117,20 +117,6 @@ export const proSubcommand = {
   ],
 } as const;
 
-export const v0Subcommand = {
-  name: 'v0',
-  aliases: [],
-  description: 'Purchase a v0 subscription for your team',
-  arguments: [],
-  options: [],
-  examples: [
-    {
-      name: 'Purchase v0 for your team',
-      value: `${packageName} buy v0`,
-    },
-  ],
-} as const;
-
 export const domainSubcommand = {
   name: 'domain',
   aliases: [],
@@ -159,7 +145,6 @@ export const buyCommand = {
     creditsSubcommand,
     addonSubcommand,
     proSubcommand,
-    v0Subcommand,
     domainSubcommand,
   ],
   options: [],
@@ -179,10 +164,6 @@ export const buyCommand = {
     {
       name: 'Upgrade to Pro',
       value: `${packageName} buy pro`,
-    },
-    {
-      name: 'Purchase v0',
-      value: `${packageName} buy v0`,
     },
     {
       name: 'Purchase a domain',

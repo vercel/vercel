@@ -3120,6 +3120,99 @@ writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, nul
     }
   });
 
+  it('should detect generated services from build output config', async () => {
+    const cwd = await getWriteableDirectory();
+    const output = join(cwd, '.vercel', 'output');
+    await fs.ensureDir(join(cwd, '.vercel'));
+    await fs.writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: '.',
+      projectId: '.',
+      settings: {
+        framework: null,
+        installCommand: '',
+      },
+    });
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      private: true,
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+    await fs.outputFile(
+      join(cwd, 'build.mjs'),
+      `
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+mkdirSync(join(outputDir, 'static'), { recursive: true });
+writeFileSync(join(outputDir, 'static', 'index.html'), 'root output');
+writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    routes: [{ src: '^/api/(.*)$', service: 'backend' }],
+    services: {
+      backend: {
+        root: 'backend',
+        entrypoint: 'package.json',
+        framework: 'vite'
+      }
+    }
+  }, null, 2)
+);
+`
+    );
+    await fs.outputJSON(join(cwd, 'backend', 'package.json'), {
+      private: true,
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+    await fs.outputFile(
+      join(cwd, 'backend', 'build.mjs'),
+      `
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+mkdirSync(join(outputDir, 'static'), { recursive: true });
+writeFileSync(join(outputDir, 'static', 'backend.html'), 'backend output');
+writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, null, 2));
+`
+    );
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.experimentalServicesV2).toEqual({
+      backend: expect.objectContaining({
+        root: 'backend',
+        framework: 'vite',
+      }),
+    });
+    expect(config.services).toEqual([
+      expect.objectContaining({
+        schema: 'experimentalServicesV2',
+        name: 'backend',
+      }),
+    ]);
+    expect(config.routes).toEqual(
+      expect.arrayContaining([{ src: '^/api/(.*)$', service: 'backend' }])
+    );
+    expect(await fs.readFile(join(output, 'static/index.html'), 'utf8')).toBe(
+      'root output'
+    );
+    expect(
+      await fs.readFile(
+        join(output, 'services/backend/static/backend.html'),
+        'utf8'
+      )
+    ).toBe('backend output');
+  });
+
   it('should detect generated experimentalServicesV2 from default output when using --output', async () => {
     const cwd = await getWriteableDirectory();
     const output = join(cwd, 'custom-output');
