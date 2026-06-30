@@ -576,6 +576,7 @@ const main = async () => {
 
   // The `--cwd` flag is respected for all sub-commands
   if (parsedArgs.flags['--cwd']) {
+    client.originalCwd = client.cwd;
     client.cwd = parsedArgs.flags['--cwd'];
   }
   const { cwd } = client;

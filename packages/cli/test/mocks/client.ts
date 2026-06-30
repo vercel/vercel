@@ -277,6 +277,7 @@ export class MockClient extends Client {
     this.agent = undefined;
 
     this.cwd = originalCwd;
+    this.originalCwd = undefined;
     this.telemetryEventStore.reset();
 
     // Reset agent and confirmation flags

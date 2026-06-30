@@ -675,3 +675,25 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
     }
   );
 });
+
+describe('monorepo with cwd flag but no rootDirectory', () => {
+  it('should correctly infer repoRoot and workPath', async () => {
+    const subdir = 'apps/nextjs';
+    const cwd = setupUnitFixture('commands/build/monorepo-cwd');
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'prj_monorepo_cwd',
+      name: 'monorepo-cwd',
+      framework: 'nextjs',
+    });
+
+    client.originalCwd = cwd;
+    client.setArgv('build', '--yes', '--cwd=' + subdir);
+    const exitCode = await build(client);
+
+    expect(exitCode).toEqual(0);
+  });
+});

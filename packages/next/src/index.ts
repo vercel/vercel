@@ -329,6 +329,7 @@ export const build: BuildV2 = async buildOptions => {
     'build',
   ]);
   const { installCommand, buildCommand } = config;
+  console.log(pkg, installCommand, buildCommand);
 
   if (!buildScriptName && !buildCommand) {
     console.log(

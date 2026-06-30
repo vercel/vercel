@@ -150,6 +150,8 @@ export default class Client extends EventEmitter implements Stdio {
   userPromise?: Promise<User>;
   teams?: Team[];
   teamsPromise?: Promise<Team[]>;
+  /** The original cwd when the client is created, regardless of --cwd */
+  originalCwd: string | undefined;
 
   constructor(opts: ClientOptions) {
     super();

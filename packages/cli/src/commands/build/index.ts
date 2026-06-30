@@ -340,15 +340,16 @@ export default async function main(client: Client): Promise<number> {
     }
   }
 
+  let repoRootPath = client.originalCwd ?? client.cwd;
   const projectRootDirectory = link?.projectRootDirectory ?? '';
   if (link?.repoRoot) {
-    cwd = client.cwd = link.repoRoot;
+    repoRootPath = cwd = client.cwd = link.repoRoot;
   }
 
   // TODO: read project settings from the API, fall back to local `project.json` if that fails
 
   // Read project settings, and pull them from Vercel if necessary
-  const vercelDir = join(cwd, projectRootDirectory, VERCEL_DIR);
+  const vercelDir = join(repoRootPath, projectRootDirectory, VERCEL_DIR);
   let project = await rootSpan
     .child('vc.readProjectSettings')
     .trace(() => readProjectSettings(vercelDir));
@@ -407,7 +408,7 @@ export default async function main(client: Client): Promise<number> {
       return 0;
     }
     const { argv: originalArgv } = client;
-    client.cwd = join(cwd, projectRootDirectory);
+    client.cwd = join(repoRootPath, projectRootDirectory);
     client.setArgv([
       ...originalArgv.slice(0, 2),
       'pull',
@@ -431,7 +432,7 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // Delete output directory from potential previous build
-  const defaultOutputDir = join(cwd, projectRootDirectory, OUTPUT_DIR);
+  const defaultOutputDir = join(repoRootPath, projectRootDirectory, OUTPUT_DIR);
   const outputDir = parsedArgs.flags['--output']
     ? resolve(parsedArgs.flags['--output'])
     : defaultOutputDir;
@@ -498,7 +499,7 @@ export default async function main(client: Client): Promise<number> {
         );
       } else {
         const envPath = join(
-          cwd,
+          repoRootPath,
           projectRootDirectory,
           VERCEL_DIR,
           `.env.${target}.local`
@@ -540,7 +541,16 @@ export default async function main(client: Client): Promise<number> {
       await rootSpan
         .child('vc.doBuild')
         .trace(span =>
-          doBuild(client, project, buildsJson, cwd, outputDir, span, standalone)
+          doBuild(
+            client,
+            project,
+            buildsJson,
+            repoRootPath,
+            cwd,
+            outputDir,
+            span,
+            standalone
+          )
         );
     } finally {
       await rootSpan.stop();
@@ -633,6 +643,7 @@ async function doBuild(
   client: Client,
   project: ProjectLinkAndSettings,
   buildsJson: BuildsManifest,
+  repoRootPath: string,
   cwd: string,
   outputDir: string,
   span: Span,
@@ -648,7 +659,7 @@ async function doBuild(
   const sourceConfigFile = await findSourceVercelConfigFile(workPath);
   let corepackShimDir: string | null | undefined;
   if (sourceConfigFile) {
-    corepackShimDir = await initCorepack({ repoRootPath: cwd });
+    corepackShimDir = await initCorepack({ repoRootPath });
 
     const installDepsSpan = span.child('vc.installDeps');
     try {
@@ -1007,7 +1018,6 @@ async function doBuild(
   const executedBuilds: Builder[] = [];
   const buildResults: Map<Builder, BuildResult | BuildOutputConfig> = new Map();
   const overrides: PathOverride[] = [];
-  const repoRootPath = cwd;
   // Only initialize corepack if not already done during early install
   if (!corepackShimDir) {
     corepackShimDir = await initCorepack({ repoRootPath });
@@ -1217,6 +1227,13 @@ async function doBuild(
           preDeployEntries.push(preDeployEntry);
         }
 
+        console.log({
+          entrypoint: buildEntrypoint,
+          workPath: buildWorkPath,
+          repoRootPath,
+        });
+
+        // HERE
         const buildOptions: BuildOptions = {
           files: buildFiles,
           entrypoint: buildEntrypoint,
