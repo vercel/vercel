@@ -7,11 +7,22 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { isAPIError } from '../../util/errors-ts';
 import { printAlignedLabel } from '../../util/output/print-aligned-label';
+import {
+  isValidRefreshPeriod,
+  VALID_REFRESH_PERIODS,
+} from '../../util/ai-gateway/quota';
+import {
+  isValidExpiry,
+  presetToExpiresAt,
+  VALID_EXPIRY_VALUES,
+} from '../../util/ai-gateway/expiry';
 import { resolveAgents } from '../../util/ai-gateway/coding-agents/resolve';
 import {
   ensureTeam,
   createKey,
   promptKeyName,
+  promptQuota,
+  promptExpiry,
   type KeySource,
 } from '../../util/ai-gateway/coding-agents/key-source';
 import {
@@ -32,7 +43,7 @@ import {
   outputAgentError,
   shouldEmitNonInteractiveCommandError,
 } from '../../util/agent-output';
-import { AGENT_STATUS } from '../../util/agent-output-constants';
+import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
 import { setupSubcommand } from './command';
 import { AiGatewayCodingAgentsSetupTelemetryClient } from '../../util/telemetry/commands/ai-gateway/coding-agents-setup';
 
@@ -57,6 +68,10 @@ export default async function codingAgentsSetup(
   const agentFlags = opts['--agent'] as string[] | undefined;
   const all = opts['--all'] as boolean | undefined;
   const providedKey = opts['--key'] as string | undefined;
+  const budget = opts['--budget'] as number | undefined;
+  const refreshPeriod = opts['--refresh-period'] as string | undefined;
+  const includeByok = opts['--include-byok'] as boolean | undefined;
+  const expiration = opts['--expiration'] as string | undefined;
   const name = opts['--name'] as string | undefined;
   const reconfigure = opts['--reconfigure'] as boolean | undefined;
   const yes = opts['--yes'] as boolean | undefined;
@@ -64,6 +79,10 @@ export default async function codingAgentsSetup(
   telemetry.trackCliOptionAgent(agentFlags as [string] | undefined);
   telemetry.trackCliFlagAll(all);
   telemetry.trackCliOptionKey(providedKey);
+  telemetry.trackCliOptionBudget(budget);
+  telemetry.trackCliOptionRefreshPeriod(refreshPeriod);
+  telemetry.trackCliFlagIncludeByok(includeByok);
+  telemetry.trackCliOptionExpiration(expiration);
   telemetry.trackCliOptionName(name);
   telemetry.trackCliFlagReconfigure(reconfigure);
   telemetry.trackCliFlagYes(yes);
@@ -71,6 +90,35 @@ export default async function codingAgentsSetup(
   const machine = shouldEmitNonInteractiveCommandError(client);
   const canPrompt = Boolean(client.stdin.isTTY) && !machine;
   const home = homedir();
+
+  if (budget !== undefined && (!Number.isFinite(budget) || budget < 1)) {
+    return failValidation(
+      client,
+      machine,
+      AGENT_REASON.INVALID_BUDGET,
+      'Budget must be a positive number in dollars (minimum 1).'
+    );
+  }
+  if (refreshPeriod && !isValidRefreshPeriod(refreshPeriod)) {
+    return failValidation(
+      client,
+      machine,
+      AGENT_REASON.INVALID_REFRESH_PERIOD,
+      `Invalid refresh period "${refreshPeriod}". Must be one of: ${VALID_REFRESH_PERIODS.join(', ')}.`
+    );
+  }
+  if (expiration && !isValidExpiry(expiration)) {
+    return failValidation(
+      client,
+      machine,
+      AGENT_REASON.INVALID_EXPIRATION,
+      `Invalid expiration "${expiration}". Must be one of: ${VALID_EXPIRY_VALUES.join(', ')}.`
+    );
+  }
+  const flagExpiresAt =
+    expiration && expiration !== 'none'
+      ? presetToExpiresAt(expiration)
+      : undefined;
 
   const selection = await resolveAgents({
     client,
@@ -97,10 +145,15 @@ export default async function codingAgentsSetup(
   }
 
   // With no --key we create one. Resolve the owning team first — it decides
-  // where the key lives (and can fail), so it comes before any naming.
+  // where the key lives (and can fail) — then collect name, quota, and expiry.
   const willCreate = !providedKey;
   let keyName = name;
+  let keyBudget = budget;
+  let keyRefresh = refreshPeriod;
+  let keyExpiresAt = flagExpiresAt;
   if (willCreate) {
+    const promptCreate = canPrompt && !yes;
+
     const teamError = await ensureTeam(client, {
       machine,
       canPrompt,
@@ -109,8 +162,20 @@ export default async function codingAgentsSetup(
     if (teamError) {
       return teamError;
     }
-    if (canPrompt && !yes && keyName === undefined) {
+
+    if (promptCreate && keyName === undefined) {
       keyName = await promptKeyName(client);
+    }
+
+    if (promptCreate) {
+      if (keyBudget === undefined && keyRefresh === undefined) {
+        const quota = await promptQuota(client);
+        keyBudget = quota.budget;
+        keyRefresh = quota.refreshPeriod;
+      }
+      if (keyExpiresAt === undefined && !expiration) {
+        keyExpiresAt = await promptExpiry(client);
+      }
     }
   }
 
@@ -125,13 +190,22 @@ export default async function codingAgentsSetup(
   const errored = previewPlan.changes.filter(c => c.status === 'error');
   const alreadyConfigured = changed.length === 0 && errored.length === 0;
 
+  const mintKey = () =>
+    createKey(client, {
+      name: keyName,
+      budget: keyBudget,
+      refreshPeriod: keyRefresh,
+      includeByok,
+      expiresAt: keyExpiresAt,
+    });
+
   if (machine) {
     return runMachine({
       client,
       selected,
       unsupported,
       keySource: providedKey ? { key: providedKey, created: false } : null,
-      createKey: () => createKey(client, { name: keyName }),
+      createKey: mintKey,
       backup: true,
       home,
       alreadyConfigured,
@@ -165,7 +239,7 @@ export default async function codingAgentsSetup(
   try {
     keySource = providedKey
       ? { key: providedKey, created: false }
-      : { key: await createKey(client, { name: keyName }), created: true };
+      : { key: await mintKey(), created: true };
   } catch (err) {
     output.stopSpinner();
     if (isAPIError(err)) {
@@ -214,4 +288,21 @@ export default async function codingAgentsSetup(
 
   printNotes(plan);
   return 0;
+}
+
+function failValidation(
+  client: Client,
+  machine: boolean,
+  reason: string,
+  message: string
+): number {
+  if (machine) {
+    outputAgentError(client, {
+      status: AGENT_STATUS.ERROR,
+      reason,
+      message,
+    });
+  }
+  output.error(message);
+  return 1;
 }

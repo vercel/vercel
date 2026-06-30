@@ -160,6 +160,11 @@ describe('ai-gateway coding-agents setup', () => {
       client.stdin.write('\n');
       await expect(client.stderr).toOutput('Key name?');
       client.stdin.write('My Coding Key\n');
+      // The create flow also offers a spend limit and an expiry; decline both.
+      await expect(client.stderr).toOutput('Set a spend limit');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Set an expiration');
+      client.stdin.write('\n');
 
       expect(await exitCodePromise).toBe(0);
       expect(lastCreateBody?.name).toBe('My Coding Key');
@@ -184,6 +189,152 @@ describe('ai-gateway coding-agents setup', () => {
 
       const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
       expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe(CREATED_KEY);
+    });
+  });
+
+  describe('key limits', () => {
+    it('sends a budgeted quota from flags', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--agent',
+        'claude-code',
+        '--budget',
+        '500',
+        '--refresh-period',
+        'monthly'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      expect(lastCreateBody?.aiGatewayQuota).toMatchObject({
+        limitAmount: 500,
+        refreshPeriod: 'monthly',
+      });
+    });
+
+    it('collects quota and expiry interactively', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--agent',
+        'claude-code'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Key name?');
+      client.stdin.write('My Coding Key\n');
+      await expect(client.stderr).toOutput('Set a spend limit');
+      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('How often should the limit reset?');
+      client.stdin.write('\n'); // accept default "Never"
+      await expect(client.stderr).toOutput('Spend limit in USD');
+      client.stdin.write('\n'); // accept default 100
+      await expect(client.stderr).toOutput('Set an expiration');
+      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Expires in');
+      client.stdin.write('\n'); // accept default preset (30 days)
+
+      expect(await exitCodePromise).toBe(0);
+
+      expect(lastCreateBody?.aiGatewayQuota).toMatchObject({
+        limitAmount: 100,
+      });
+      const expiresAt = lastCreateBody?.expiresAt as number;
+      expect(typeof expiresAt).toBe('number');
+      const days = (expiresAt - Date.now()) / 86_400_000;
+      expect(days).toBeGreaterThan(29);
+      expect(days).toBeLessThan(31);
+    });
+
+    it('sends expiresAt from the --expiration flag', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--agent',
+        'claude-code',
+        '--expiration',
+        '7d'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      const expiresAt = lastCreateBody?.expiresAt as number;
+      const days = (expiresAt - Date.now()) / 86_400_000;
+      expect(days).toBeGreaterThan(6);
+      expect(days).toBeLessThan(8);
+    });
+
+    it('does not send expiresAt for --expiration none', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--agent',
+        'claude-code',
+        '--expiration',
+        'none'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      expect(lastCreateBody?.expiresAt).toBeUndefined();
+    });
+
+    it('rejects an invalid --expiration', async () => {
+      useUser();
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--agent',
+        'claude-code',
+        '--expiration',
+        'soon'
+      );
+
+      expect(await aiGateway(client)).toBe(1);
+      await expect(client.stderr).toOutput('Invalid expiration');
+    });
+
+    it('rejects a negative budget', async () => {
+      useUser();
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--budget',
+        '-5',
+        '--agent',
+        'claude-code'
+      );
+      expect(await aiGateway(client)).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Budget must be a positive number in dollars'
+      );
     });
   });
 

@@ -6,6 +6,11 @@ import { getCommandName } from '../../pkg-name';
 import createApiKeyRequest from '../create-api-key';
 import selectOrg from '../../input/select-org';
 import { buildQuota } from '../quota';
+import {
+  EXPIRY_PRESETS,
+  DEFAULT_EXPIRY_PRESET,
+  presetToExpiresAt,
+} from '../expiry';
 import { outputAgentError } from '../../agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../agent-output-constants';
 
@@ -14,11 +19,14 @@ export interface KeySource {
   created: boolean;
 }
 
+const CHILD_PROMPT = chalk.dim('↳');
+
 export interface KeyOptions {
   name?: string;
   budget?: number;
   refreshPeriod?: string;
   includeByok?: boolean;
+  expiresAt?: number;
 }
 
 export function defaultKeyName(): string {
@@ -47,6 +55,58 @@ export async function promptKeyName(client: Client): Promise<string> {
     default: fallback,
   });
   return answer.trim() || fallback;
+}
+
+export async function promptQuota(client: Client): Promise<{
+  budget?: number;
+  refreshPeriod?: string;
+}> {
+  const wantsQuota = await client.input.confirm(
+    'Set a spend limit for this key?',
+    false
+  );
+  if (!wantsQuota) {
+    return {};
+  }
+  const refreshPeriod = await client.input.select<string>({
+    message: `${CHILD_PROMPT} How often should the limit reset?`,
+    choices: [
+      { name: 'Never (one-time limit)', value: 'none' },
+      { name: 'Daily', value: 'daily' },
+      { name: 'Weekly', value: 'weekly' },
+      { name: 'Monthly', value: 'monthly' },
+    ],
+    default: 'none',
+  });
+  const amount = await client.input.text({
+    message: `${CHILD_PROMPT} Spend limit in USD`,
+    default: '100',
+    validate: value => {
+      const n = Number(value);
+      return Number.isFinite(n) && n >= 1
+        ? true
+        : 'Enter a number of dollars (minimum 1).';
+    },
+  });
+  return { budget: Number(amount), refreshPeriod };
+}
+
+export async function promptExpiry(
+  client: Client
+): Promise<number | undefined> {
+  const wantsExpiry = await client.input.confirm(
+    'Set an expiration for this key?',
+    false
+  );
+  if (!wantsExpiry) {
+    return undefined;
+  }
+  const preset = await client.input.select<string>({
+    message: `${CHILD_PROMPT} Expires in`,
+    choices: EXPIRY_PRESETS.map(p => ({ name: p.label, value: p.value })),
+    default: DEFAULT_EXPIRY_PRESET,
+  });
+  return presetToExpiresAt(preset);
 }
 
 function hasExplicitScopeFlag(argv: string[]): boolean {
@@ -115,6 +175,7 @@ export async function createKey(
         refreshPeriod: opts.refreshPeriod,
         includeByok: opts.includeByok,
       }),
+      ...(opts.expiresAt !== undefined && { expiresAt: opts.expiresAt }),
     });
     return result.apiKeyString;
   } finally {

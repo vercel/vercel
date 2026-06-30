@@ -259,6 +259,40 @@ export const setupSubcommand = {
       description: 'Use an existing AI Gateway API key instead of creating one',
     },
     {
+      name: 'budget',
+      shorthand: null,
+      type: Number,
+      argument: 'AMOUNT',
+      deprecated: false,
+      description:
+        'Quota budget in dollars for a newly created key (minimum 1)',
+    },
+    {
+      name: 'refresh-period',
+      shorthand: null,
+      type: String,
+      argument: 'PERIOD',
+      deprecated: false,
+      description:
+        'Quota refresh cadence for a new key: daily, weekly, monthly, or none',
+    },
+    {
+      name: 'include-byok',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Include BYOK usage in the new key quota',
+    },
+    {
+      name: 'expiration',
+      shorthand: null,
+      type: String,
+      argument: 'PERIOD',
+      deprecated: false,
+      description:
+        'Expiry for a new key: 7d, 30d, 60d, 90d, 1y, or none (default: none)',
+    },
+    {
       name: 'name',
       shorthand: null,
       type: String,
@@ -282,8 +316,8 @@ export const setupSubcommand = {
       value: `${packageName} ai-gateway coding-agents setup`,
     },
     {
-      name: 'Connect specific agents with an existing key',
-      value: `${packageName} ai-gateway coding-agents setup --key <key> --agent claude-code`,
+      name: 'Connect specific agents with a budgeted key',
+      value: `${packageName} ai-gateway coding-agents setup --agent claude-code --budget 500 --refresh-period monthly`,
     },
     {
       name: 'Rotate the key on an already-configured setup',

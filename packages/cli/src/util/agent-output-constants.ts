@@ -80,6 +80,7 @@ export const AGENT_REASON = {
   // AI Gateway
   INVALID_BUDGET: 'invalid_budget',
   INVALID_REFRESH_PERIOD: 'invalid_refresh_period',
+  INVALID_EXPIRATION: 'invalid_expiration',
   // Redirects
   REDIRECT_NOT_FOUND: 'redirect_not_found',
   VERSION_NOT_FOUND: 'version_not_found',
