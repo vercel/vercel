@@ -2,12 +2,20 @@ import type {
   Span,
   StartDevServerOptions,
   StartDevServerResult,
+  StartDevServerSuccess,
 } from '@vercel/build-utils';
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { debug, isDockerfileRef, readString, withSpan } from './util';
+import {
+  debug,
+  devImageTag,
+  findDockerfile,
+  isDockerfileRef,
+  readString,
+  withSpan,
+} from './util';
 
 /**
  * Host/shell environment variables that are meaningful only on the developer's
@@ -161,15 +169,6 @@ function runForwarded(
   });
 }
 
-/**
- * Local dev image tag for a service. Stable per service so repeat `vercel dev`
- * runs reuse Docker's layer cache.
- */
-function devImageTag(serviceName: string): string {
-  const safe = serviceName.toLowerCase().replace(/[^a-z0-9-_.]/g, '-');
-  return `vercel-dev/${safe || 'service'}:dev`;
-}
-
 function normalizeCommand(command: unknown): string[] | undefined {
   if (typeof command === 'string') {
     return [command];
@@ -198,8 +197,16 @@ async function resolveDevImage(
   const { config, workPath, entrypoint } = options;
 
   const entrypointRef = readString(entrypoint);
+  // An entrypoint that names a Dockerfile (including the `Dockerfile.vercel` /
+  // `Containerfile.vercel` opt-in markers) is built directly. Otherwise — e.g.
+  // when the `container` framework preset resolves its entrypoint via
+  // `<detect>` — discover an opt-in marker in the work directory. This mirrors
+  // the build path (`resolveImageHandler`) so dev and deploy resolve the same
+  // Dockerfile.
   const dockerfileConfigured =
-    entrypointRef && isDockerfileRef(entrypointRef) ? entrypointRef : undefined;
+    entrypointRef && isDockerfileRef(entrypointRef)
+      ? entrypointRef
+      : findDockerfile(workPath);
   const dockerfileRel = dockerfileConfigured ?? 'Dockerfile';
   const dockerfilePath = path.join(workPath, dockerfileRel);
   const hasDockerfile =
@@ -326,7 +333,103 @@ function uniqueContainerName(serviceName: string): string {
 }
 
 /**
- * Start a container service locally for `vercel dev`.
+ * Verify the Docker daemon is installed and reachable before doing any build
+ * or run work, so the user gets one clear message instead of a cryptic exit
+ * code from whichever Docker command happened to run first. `docker info`
+ * connects to the daemon and exits non-zero (125) when it can't.
+ */
+async function assertDockerAvailable(out: DevOutput): Promise<void> {
+  try {
+    await runForwarded(
+      'docker',
+      ['info', '--format', '{{.ServerVersion}}'],
+      out,
+      {
+        quiet: true,
+      }
+    );
+  } catch (err) {
+    const message = (err as Error).message ?? '';
+    if (/command not found/i.test(message)) {
+      throw new Error(
+        'Docker is required for `vercel dev` with containers, but the ' +
+          '`docker` command was not found. Install Docker and ensure it is ' +
+          'on your PATH.'
+      );
+    }
+    throw new Error(
+      'Could not connect to the Docker daemon. Start Docker (e.g. open ' +
+        'Docker Desktop) and run `vercel dev` again.'
+    );
+  }
+}
+
+/**
+ * Build a helpful error for a `docker run` that exited before the container
+ * became ready. Exit code 125 means the Docker CLI itself failed (as opposed
+ * to the container process) — overwhelmingly because the daemon isn't running
+ * or isn't reachable — so call that out explicitly. Any captured stderr is
+ * appended so the underlying Docker message is visible.
+ */
+function containerExitMessage(exitCode: number, stderr: string): string {
+  const detail = stderr.trim().split('\n').slice(-5).join('\n');
+  const looksLikeDaemonDown =
+    exitCode === 125 || /cannot connect to the docker daemon/i.test(stderr);
+
+  if (looksLikeDaemonDown) {
+    return (
+      'Could not start the container: the Docker daemon is not running or ' +
+      'is unreachable. Start Docker (e.g. open Docker Desktop) and try ' +
+      '`vercel dev` again.' +
+      (detail ? `\n\nDocker reported:\n${detail}` : '')
+    );
+  }
+
+  return (
+    `The container exited (code ${exitCode}) before becoming ready.` +
+    (detail ? `\n\nDocker reported:\n${detail}` : '')
+  );
+}
+
+/**
+ * A container the dev server is keeping alive across requests. Containers are
+ * long-running servers, not per-request functions, so once one is up we reuse
+ * it instead of rebuilding the image and starting a fresh container on every
+ * request.
+ */
+interface RunningContainer {
+  result: StartDevServerSuccess;
+  containerName: string;
+  /** Whether the `docker run` child process is still alive. */
+  isRunning: () => boolean;
+}
+
+const runningContainers = new Map<string, RunningContainer>();
+
+// In-flight container starts, keyed the same way as `runningContainers`.
+// Concurrent cold requests for the same service share this promise so we only
+// ever `docker run` one container; without it each request would spawn its own
+// container and all but the last would be orphaned (never `docker stop`ped).
+const pendingContainers = new Map<string, Promise<StartDevServerResult>>();
+
+/** Test-only: clear the reused-container caches between cases. */
+export function __resetRunningContainers(): void {
+  runningContainers.clear();
+  pendingContainers.clear();
+}
+
+/**
+ * Stable identity for a dev container so repeat requests reuse the same running
+ * container. A service is unique by name; a root (non-service) deploy is unique
+ * by its work directory.
+ */
+function containerReuseKey(options: StartDevServerOptions): string {
+  return options.service?.name ?? `root:${options.workPath}`;
+}
+
+/**
+ * Start a container service locally for `vercel dev`, reusing an already-running
+ * container for the same service when one is live.
  *
  * Builds (or uses a prebuilt) image, runs it with Docker publishing the
  * container port to an ephemeral host port, injects the service env + a `PORT`
@@ -335,6 +438,37 @@ function uniqueContainerName(serviceName: string): string {
 export async function startDevServer(
   options: StartDevServerOptions
 ): Promise<StartDevServerResult> {
+  // Reuse a live container for this service instead of rebuilding/running on
+  // every request. The dev server calls `startDevServer` per request; a
+  // container is a persistent server, so we hand back the running one.
+  const reuseKey = containerReuseKey(options);
+  const existing = runningContainers.get(reuseKey);
+  if (existing && existing.isRunning()) {
+    return existing.result;
+  }
+  if (existing) {
+    // Stale (exited) entry — clear it before starting a replacement.
+    runningContainers.delete(reuseKey);
+  }
+
+  // Coalesce concurrent cold starts: if a start for this service is already in
+  // flight, wait on it rather than spawning a second container.
+  const inFlight = pendingContainers.get(reuseKey);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const startPromise = startContainer(options, reuseKey).finally(() => {
+    pendingContainers.delete(reuseKey);
+  });
+  pendingContainers.set(reuseKey, startPromise);
+  return startPromise;
+}
+
+async function startContainer(
+  options: StartDevServerOptions,
+  reuseKey: string
+): Promise<StartDevServerResult> {
   return withSpan(
     options.span,
     'container.dev.start',
@@ -342,6 +476,10 @@ export async function startDevServer(
     async span => {
       const { config, meta, onStdout, onStderr } = options;
       const out: DevOutput = { onStdout, onStderr };
+
+      // Fail fast with a clear message if Docker isn't running, rather than
+      // letting `docker build`/`docker run` fail later with a bare exit code.
+      await assertDockerAvailable(out);
 
       const image = await withSpan(span, 'container.dev.resolve_image', {}, s =>
         resolveDevImage(options, out, s)
@@ -406,14 +544,33 @@ export async function startDevServer(
       const child = spawn('docker', args, {
         stdio: ['ignore', 'pipe', 'pipe'],
       });
+      // `docker run` failures (most importantly "Cannot connect to the Docker
+      // daemon", exit code 125) are reported on stderr. Retain the tail so the
+      // readiness check can surface it instead of a bare exit code.
+      let runStderr = '';
       child.stdout?.on('data', (data: Buffer) => onStdout?.(data));
-      child.stderr?.on('data', (data: Buffer) => onStderr?.(data));
+      child.stderr?.on('data', (data: Buffer) => {
+        runStderr += data.toString();
+        onStderr?.(data);
+      });
+      // Surface the classic "command not found" case (Docker not installed)
+      // with the same actionable message the build path uses.
+      child.on('error', (err: NodeJS.ErrnoException) => {
+        if (err.code === 'ENOENT') {
+          runStderr +=
+            'Command not found: `docker`. Ensure Docker is installed and on ' +
+            'your PATH, and that the Docker daemon is running.';
+        }
+      });
 
       const cleanupEnvFile = () => {
         rmSync(path.dirname(envFilePath), { recursive: true, force: true });
       };
 
       const shutdown = async (): Promise<void> => {
+        // Drop the cache entry first so a concurrent request starts a fresh
+        // container rather than reusing one that's being torn down.
+        runningContainers.delete(reuseKey);
         try {
           // `docker stop` causes the foreground `docker run --rm` to exit and
           // removes the container.
@@ -438,9 +595,7 @@ export async function startDevServer(
       try {
         while (Date.now() < deadline) {
           if (child.exitCode !== null) {
-            throw new Error(
-              `Container "${options.service?.name}" exited (code ${child.exitCode}) before becoming ready.`
-            );
+            throw new Error(containerExitMessage(child.exitCode, runStderr));
           }
           try {
             hostPort = await readMappedHostPort(
@@ -457,7 +612,7 @@ export async function startDevServer(
 
         if (hostPort === undefined) {
           throw new Error(
-            `Timed out waiting for container "${options.service?.name}" to ` +
+            `Timed out waiting for container "${containerName}" to ` +
               `publish port ${containerPort}.` +
               (lastErr ? ` Last error: ${lastErr.message}` : '')
           );
@@ -474,11 +629,30 @@ export async function startDevServer(
       });
       emit(out, `▲ container  container ready on localhost:${hostPort}`);
 
-      return {
+      const result: StartDevServerSuccess = {
         port: hostPort,
         pid: child.pid ?? 0,
         shutdown,
+        // The container is a long-running server; the dev server should keep it
+        // alive across requests instead of tearing it down after each response.
+        persistent: true,
       };
+
+      const running: RunningContainer = {
+        result,
+        containerName,
+        isRunning: () => child.exitCode === null,
+      };
+      // If the container exits on its own (crash, `docker stop`, etc.), evict it
+      // so the next request rebuilds rather than reusing a dead container.
+      child.on('close', () => {
+        if (runningContainers.get(reuseKey) === running) {
+          runningContainers.delete(reuseKey);
+        }
+      });
+      runningContainers.set(reuseKey, running);
+
+      return result;
     }
   );
 }

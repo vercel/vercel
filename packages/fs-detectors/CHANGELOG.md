@@ -1,5 +1,28 @@
 # @vercel/fs-detectors
 
+## 6.11.5
+
+### Patch Changes
+
+- Updated dependencies [d19dbc5]
+  - @vercel/frameworks@3.30.4
+
+## 6.11.4
+
+### Patch Changes
+
+- Updated dependencies [02d8bab]
+  - @vercel/frameworks@3.30.3
+
+## 6.11.3
+
+### Patch Changes
+
+- 9e3f9cd: [services] service name validation
+- 9e3f9cd: Align `services` and `experimentalServicesV2` service-name validation with the platform schema.
+- Updated dependencies [acddddf]
+  - @vercel/frameworks@3.30.2
+
 ## 6.11.2
 
 ### Patch Changes

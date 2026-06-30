@@ -25,7 +25,18 @@ import type { DetectorFilesystem } from '../detectors/filesystem';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
-const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
+const MAX_SERVICE_NAME_LENGTH = 64;
+const SERVICE_NAME_REGEX = /^[a-z]([a-z_-]*[a-z])?$/;
+
+function isValidServiceName(name: string): boolean {
+  return (
+    name.length <= MAX_SERVICE_NAME_LENGTH && SERVICE_NAME_REGEX.test(name)
+  );
+}
+
+function getInvalidServiceNameMessage(name: string): string {
+  return `Service name "${name}" is invalid. Names must be 1-${MAX_SERVICE_NAME_LENGTH} characters, start and end with a lowercase letter, and contain only lowercase letters, hyphens, and underscores.`;
+}
 
 /**
  * The blessed Dockerfile names for container services: bare `Dockerfile` /
@@ -174,10 +185,10 @@ export function validateServiceConfigV2(
   name: string,
   config: ExperimentalServiceV2Config
 ): ServiceDetectionError | null {
-  if (!SERVICE_NAME_REGEX.test(name)) {
+  if (!isValidServiceName(name)) {
     return {
       code: 'INVALID_SERVICE_NAME',
-      message: `Service name "${name}" is invalid. Names must start with a letter, end with an alphanumeric character, and contain only alphanumeric characters, hyphens, and underscores.`,
+      message: getInvalidServiceNameMessage(name),
       serviceName: name,
     };
   }
@@ -497,6 +508,14 @@ export async function resolveAllConfiguredServicesV2(
   const serviceNames = new Set(Object.keys(services));
   for (const service of resolved) {
     for (const binding of service.bindings ?? []) {
+      if (!isValidServiceName(binding.service)) {
+        errors.push({
+          code: 'INVALID_SERVICE_BINDING_NAME',
+          message: `Service "${service.name}" declares an invalid binding service name "${binding.service}". ${getInvalidServiceNameMessage(binding.service)}`,
+          serviceName: service.name,
+        });
+        continue;
+      }
       if (!serviceNames.has(binding.service)) {
         errors.push({
           code: 'UNKNOWN_SERVICE_BINDING',

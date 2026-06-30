@@ -93,6 +93,35 @@ export function isDockerfileRef(ref: string): boolean {
   );
 }
 
+// Vercel-specific container opt-in markers, auto-discovered when the build
+// entrypoint doesn't name a Dockerfile explicitly (e.g. the `container`
+// framework preset resolves its entrypoint via `<detect>`). These let a
+// project deploy as a container even when another framework is also present.
+export const DOCKERFILE_CANDIDATES = [
+  'Dockerfile.vercel',
+  'Containerfile.vercel',
+];
+
+/**
+ * Discover a Vercel container opt-in marker (`Dockerfile.vercel` /
+ * `Containerfile.vercel`) in `workPath`. Used by both the build and dev paths
+ * so they resolve the same Dockerfile when the entrypoint is the `<detect>`
+ * sentinel.
+ */
+export function findDockerfile(workPath: string): string | undefined {
+  return DOCKERFILE_CANDIDATES.find(name => existsSync(join(workPath, name)));
+}
+
+/**
+ * Stable local image tag for `vercel dev`. Used by both the `build()` path
+ * (which never pushes in dev) and `startDevServer` (which builds & runs the
+ * image locally), so the two agree on a single name per service.
+ */
+export function devImageTag(serviceName: string): string {
+  const safe = serviceName.toLowerCase().replace(/[^a-z0-9-_.]/g, '-');
+  return `vercel-dev/${safe || 'service'}:dev`;
+}
+
 export interface RunResult {
   stdout: string;
   stderr: string;
