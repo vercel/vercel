@@ -256,18 +256,38 @@ export const setupSubcommand = {
       type: String,
       argument: 'KEY',
       deprecated: false,
-      description: 'Existing AI Gateway API key to configure the agents with',
+      description: 'Use an existing AI Gateway API key instead of creating one',
+    },
+    {
+      name: 'name',
+      shorthand: null,
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+      description: 'Name for a newly created API key',
+    },
+    {
+      name: 'reconfigure',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Re-run even if already configured, to rotate the key or switch team',
     },
     yesOption,
   ],
   examples: [
     {
-      name: 'Connect the detected coding agents with an existing key',
-      value: `${packageName} ai-gateway coding-agents setup --key <key>`,
+      name: 'Connect the detected coding agents (creates a key)',
+      value: `${packageName} ai-gateway coding-agents setup`,
     },
     {
-      name: 'Connect specific agents',
+      name: 'Connect specific agents with an existing key',
       value: `${packageName} ai-gateway coding-agents setup --key <key> --agent claude-code`,
+    },
+    {
+      name: 'Rotate the key on an already-configured setup',
+      value: `${packageName} ai-gateway coding-agents setup --reconfigure`,
     },
   ],
 } as const;
