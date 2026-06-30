@@ -17,7 +17,10 @@ import type Client from '../client';
 import type { Framework } from '@vercel/frameworks';
 import type { Project } from '@vercel-internals/types';
 import createProject from '../projects/create-project';
-import { detectProjects } from '../projects/detect-projects';
+import {
+  detectProjects,
+  type DetectedProject,
+} from '../projects/detect-projects';
 import { repoInfoToUrl } from '../git/repo-info-to-url';
 import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
 import { getGitConfigPath, getGitRootDirectory } from '../git-helpers';
@@ -250,7 +253,7 @@ async function discoverRepoProjects(
   // they will be ready by the time the projects are listed
   const detectedProjectsPromise = detectProjects(rootPath).catch(err => {
     output.debug(`Failed to detect local projects: ${err}`);
-    return new Map<string, Framework[]>();
+    return new Map<string, DetectedProject[]>();
   });
 
   const promptAction = existingRemoteName ? 'add' : 'link';
@@ -372,8 +375,8 @@ async function discoverRepoProjects(
           ? [new Separator('----- New Projects to be created -----')]
           : []),
         ...Array.from(detectedProjects.entries()).flatMap(
-          ([rootDirectory, frameworks]) =>
-            frameworks.map((framework, i) => {
+          ([rootDirectory, detected]) =>
+            detected.map(({ framework }, i) => {
               const name = slugify(
                 [
                   basename(rootDirectory) || basename(rootPath),

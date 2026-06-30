@@ -773,6 +773,7 @@ export default async function setupAndLink(
             buildCommand: localConfig?.buildCommand,
             devCommand: localConfig?.devCommand,
             framework: localConfig?.framework,
+            runtime: localConfig?.runtime,
             commandForIgnoringBuildStep: localConfig?.ignoreCommand,
             installCommand: localConfig?.installCommand,
             outputDirectory: localConfig?.outputDirectory,
@@ -787,12 +788,15 @@ export default async function setupAndLink(
           // the "Other" preset if none was detected.
           const detectedProjects = detectedProjectsForWorkspace.get('') || [];
           const framework =
-            detectedProjects[0] ?? frameworkList.find(f => f.slug === null);
+            detectedProjects[0]?.framework ??
+            frameworkList.find(f => f.slug === null);
+          const runtime = detectedProjects[0]?.runtime ?? null;
 
           settings = await editProjectSettings(
             client,
             {},
             framework,
+            runtime,
             autoConfirm,
             localConfigurationOverrides,
             configFileName
@@ -821,8 +825,11 @@ export default async function setupAndLink(
       settings.rootDirectory = rootDirectory;
     }
 
+    // Strip `runtime` until the Vercel API accepts it.
+    const { runtime: _runtime, ...settingsForApi } = settings;
+
     const project = await createProject(client, {
-      ...settings,
+      ...settingsForApi,
       name: newProjectName,
       vercelAuth: vercelAuthSetting,
       v0,

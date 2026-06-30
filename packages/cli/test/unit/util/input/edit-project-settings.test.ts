@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import type { Framework } from '@vercel/frameworks';
-import { frameworks } from '@vercel/frameworks';
+import { frameworks, Runtime, type Framework } from '@vercel/frameworks';
 import { editProjectSettings } from '../../../../src/util/input/edit-project-settings';
 import { client } from '../../../mocks/client';
 
@@ -18,6 +17,7 @@ describe('editProjectSettings', () => {
         client,
         null,
         otherFramework,
+        null,
         true,
         null
       );
@@ -25,6 +25,7 @@ describe('editProjectSettings', () => {
         buildCommand: null,
         devCommand: null,
         framework: null,
+        runtime: null,
         commandForIgnoringBuildStep: null,
         installCommand: null,
         outputDirectory: null,
@@ -52,10 +53,15 @@ describe('editProjectSettings', () => {
         client,
         projectSettings,
         otherFramework,
+        null,
         true,
         null
       );
-      expect(settings).toStrictEqual({ ...projectSettings, framework: null });
+      expect(settings).toStrictEqual({
+        ...projectSettings,
+        framework: null,
+        runtime: null,
+      });
       await expect(client.stderr).toOutput(
         'No framework detected. Default Project Settings:'
       );
@@ -79,12 +85,14 @@ describe('editProjectSettings', () => {
         client,
         projectSettings,
         nextJSFramework,
+        null,
         true,
         null
       );
       expect(settings).toStrictEqual({
         ...projectSettings,
         framework: nextJSFramework.slug,
+        runtime: null,
       });
       await expect(client.stderr).toOutput('Detected Next.js');
     });
@@ -111,10 +119,14 @@ describe('editProjectSettings', () => {
         client,
         projectSettings,
         nextJSFramework,
+        null,
         true,
         overrides
       );
-      expect(settings).toStrictEqual(overrides);
+      expect(settings).toStrictEqual({
+        ...overrides,
+        runtime: null,
+      });
       await expect(client.stderr).toOutput(
         'Local settings detected in vercel.json:'
       );
@@ -145,10 +157,14 @@ describe('editProjectSettings', () => {
         client,
         null,
         nextJSFramework,
+        null,
         true,
         overrides
       );
-      expect(settings).toStrictEqual(overrides);
+      expect(settings).toStrictEqual({
+        ...overrides,
+        runtime: null,
+      });
       await expect(client.stderr).toOutput(
         'Local settings detected in vercel.json:'
       );
@@ -179,10 +195,14 @@ describe('editProjectSettings', () => {
         client,
         null,
         null,
+        null,
         true,
         overrides
       );
-      expect(settings).toStrictEqual(overrides);
+      expect(settings).toStrictEqual({
+        ...overrides,
+        runtime: null,
+      });
       await expect(client.stderr).toOutput(
         'Local settings detected in vercel.json:'
       );
@@ -209,6 +229,7 @@ describe('editProjectSettings', () => {
         client,
         null,
         nextJSFramework,
+        null,
         true,
         overrides,
         'vercel.toml'
@@ -228,6 +249,7 @@ describe('editProjectSettings', () => {
         client,
         null,
         nextJSFramework,
+        null,
         true,
         overrides,
         'vercel.ts'
@@ -245,6 +267,7 @@ describe('editProjectSettings', () => {
         client,
         null,
         nextJSFramework,
+        null,
         false,
         null
       );
@@ -264,6 +287,7 @@ describe('editProjectSettings', () => {
         client,
         null,
         nextJSFramework,
+        null,
         false,
         null
       );
@@ -282,6 +306,7 @@ describe('editProjectSettings', () => {
         client,
         null,
         nextJSFramework,
+        null,
         false,
         null
       );
@@ -297,6 +322,7 @@ describe('editProjectSettings', () => {
         client,
         null,
         nextJSFramework,
+        null,
         false,
         null
       );
@@ -322,6 +348,7 @@ describe('editProjectSettings', () => {
         client,
         null,
         nextJSFramework,
+        null,
         false,
         null
       );
@@ -353,7 +380,14 @@ describe('editProjectSettings', () => {
 
   describe('detected line formatting', () => {
     test('uses bold "Detected" verb without the gray "> " log prefix', async () => {
-      await editProjectSettings(client, null, nextJSFramework, true, null);
+      await editProjectSettings(
+        client,
+        null,
+        nextJSFramework,
+        null,
+        true,
+        null
+      );
 
       const fullOutput = client.stderr.getFullOutput();
       // output.log prepends gray "> " — output.print does not.
@@ -364,7 +398,14 @@ describe('editProjectSettings', () => {
     });
 
     test('inline detail uses Title Case "Build Command" / "Output Directory"', async () => {
-      await editProjectSettings(client, null, nextJSFramework, true, null);
+      await editProjectSettings(
+        client,
+        null,
+        nextJSFramework,
+        null,
+        true,
+        null
+      );
 
       const fullOutput = client.stderr.getFullOutput();
       // Title Case matches the checkbox panel that follows.
@@ -376,7 +417,14 @@ describe('editProjectSettings', () => {
     });
 
     test('does not apply blue color to framework name', async () => {
-      await editProjectSettings(client, null, nextJSFramework, true, null);
+      await editProjectSettings(
+        client,
+        null,
+        nextJSFramework,
+        null,
+        true,
+        null
+      );
       const fullOutput = client.stderr.getFullOutput();
       // The framework name should be bold but not blue (no chalk.blue ANSI code).
       // chalk.blue ANSI sequence is \x1b[34m. The Detected line must NOT contain it.
@@ -390,9 +438,127 @@ describe('editProjectSettings', () => {
         fwk => fwk.name === 'Hono'
       ) as unknown as Framework;
       expect(honoFramework).toBeDefined();
-      await editProjectSettings(client, null, honoFramework, true, null);
+      await editProjectSettings(client, null, honoFramework, null, true, null);
       const fullOutput = client.stderr.getFullOutput();
       expect(fullOutput).not.toContain('🔥');
+    });
+  });
+
+  describe('runtime processing', () => {
+    test('passes the runtime parameter through to settings.runtime', async () => {
+      const settings = await editProjectSettings(
+        client,
+        null,
+        nextJSFramework,
+        Runtime.Bun,
+        true,
+        null
+      );
+      expect(settings.framework).toBe('nextjs');
+      expect(settings.runtime).toBe(Runtime.Bun);
+    });
+
+    test('sets settings.runtime to null when no framework is provided', async () => {
+      const settings = await editProjectSettings(
+        client,
+        null,
+        null,
+        Runtime.Bun,
+        true,
+        null
+      );
+      expect(settings.framework).toBeNull();
+      expect(settings.runtime).toBeNull();
+    });
+
+    test('accepts a vercel.json runtime override matching the framework default', async () => {
+      const overrides = { runtime: Runtime.Bun };
+      const settings = await editProjectSettings(
+        client,
+        null,
+        nextJSFramework,
+        Runtime.Node,
+        true,
+        overrides
+      );
+      expect(settings.runtime).toBe(Runtime.Bun);
+    });
+
+    test('nulls a runtime override that does not match the framework language', async () => {
+      const overrides = { runtime: Runtime.Python };
+      const settings = await editProjectSettings(
+        client,
+        null,
+        nextJSFramework,
+        Runtime.Node,
+        true,
+        overrides
+      );
+      expect(settings.runtime).toBeNull();
+      await expect(client.stderr).toOutput(
+        'Configured runtime "python" does not match the framework "Next.js".'
+      );
+    });
+
+    test('nulls a runtime override when the framework is "Other" (no language)', async () => {
+      const overrides = { runtime: Runtime.Node };
+      const settings = await editProjectSettings(
+        client,
+        null,
+        otherFramework,
+        Runtime.Node,
+        true,
+        overrides
+      );
+      expect(settings.runtime).toBeNull();
+      await expect(client.stderr).toOutput(
+        'Using "Other" framework, ignoring configured runtime "node".'
+      );
+    });
+
+    test('resets the runtime when a framework override changes the language', async () => {
+      const overrides = { framework: 'django' };
+      const settings = await editProjectSettings(
+        client,
+        null,
+        nextJSFramework,
+        Runtime.Bun,
+        true,
+        overrides
+      );
+      expect(settings.framework).toBe('django');
+      expect(settings.runtime).toBeNull();
+    });
+
+    test('preserves the runtime when a framework override keeps the same language', async () => {
+      const overrides = { framework: 'svelte' };
+      const settings = await editProjectSettings(
+        client,
+        null,
+        nextJSFramework,
+        Runtime.Bun,
+        true,
+        overrides
+      );
+      expect(settings.framework).toBe('svelte');
+      expect(settings.runtime).toBe(Runtime.Bun);
+    });
+
+    test('nulls a runtime override when a framework override changes language and does not match the runtime override', async () => {
+      const overrides = { framework: 'django', runtime: Runtime.Bun };
+      const settings = await editProjectSettings(
+        client,
+        null,
+        nextJSFramework,
+        Runtime.Node,
+        true,
+        overrides
+      );
+      expect(settings.framework).toBe('django');
+      expect(settings.runtime).toBeNull();
+      await expect(client.stderr).toOutput(
+        'Configured runtime "bun" does not match the framework "Django".'
+      );
     });
   });
 });

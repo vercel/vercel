@@ -17,6 +17,7 @@ export type ProjectLinkAndSettings = Partial<ProjectLink> & {
     rootDirectory: Project['rootDirectory'];
     framework: Project['framework'];
     nodeVersion: Project['nodeVersion'];
+    runtime: Project['runtime'];
     analyticsId?: string;
   };
 };
@@ -47,6 +48,7 @@ export async function writeProjectSettings(
     settings: {
       createdAt: project.createdAt,
       framework: project.framework,
+      runtime: project.runtime,
       devCommand: project.devCommand,
       installCommand: project.installCommand,
       buildCommand: project.buildCommand,
@@ -95,6 +97,7 @@ export function pickOverrides(
     'buildCommand',
     'devCommand',
     'framework',
+    'runtime',
     'ignoreCommand',
     'installCommand',
     'outputDirectory',

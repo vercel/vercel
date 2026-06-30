@@ -651,6 +651,10 @@ function detectFrontBuilder(
     config.framework = framework;
   }
 
+  if (projectSettings.runtime) {
+    config.runtime = projectSettings.runtime;
+  }
+
   if (projectSettings.devCommand) {
     config.devCommand = projectSettings.devCommand;
   }

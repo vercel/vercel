@@ -202,6 +202,7 @@ const Schema = {
       supersedes: { type: 'array', items: { type: 'string' } },
       experimental: { type: 'boolean' },
       runtimeFramework: { type: 'boolean' },
+      language: { type: 'string' },
     },
   },
 };

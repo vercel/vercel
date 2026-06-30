@@ -50,6 +50,7 @@ export interface Config {
   buildCommand?: string;
   devCommand?: string;
   framework?: string | null;
+  runtime?: string | null;
   nodeVersion?: string;
   middleware?: boolean;
   /** Owning service name; scopes per-function config such as the v2beta consumer. */
@@ -468,6 +469,7 @@ export interface BuilderFunctions {
 
 export interface ProjectSettings {
   framework?: string | null;
+  runtime?: string | null;
   devCommand?: string | null;
   installCommand?: string | null;
   buildCommand?: string | null;

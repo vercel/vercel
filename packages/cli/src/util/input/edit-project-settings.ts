@@ -1,5 +1,10 @@
 import chalk from 'chalk';
-import { frameworkList, type Framework } from '@vercel/frameworks';
+import {
+  frameworkList,
+  runtimes,
+  type Framework,
+  type Runtime,
+} from '@vercel/frameworks';
 import type Client from '../client';
 import { isSettingValue } from '../is-setting-value';
 import type { ProjectSettings } from '@vercel-internals/types';
@@ -12,6 +17,7 @@ const settingMap = {
   installCommand: 'Install Command',
   outputDirectory: 'Output Directory',
   framework: 'Framework',
+  runtime: 'Runtime',
 } as const;
 type ConfigKeys = keyof typeof settingMap;
 const settingKeys = Object.keys(settingMap).sort() as unknown as readonly [
@@ -27,6 +33,7 @@ export async function editProjectSettings(
   client: Client,
   projectSettings: PartialProjectSettings | null,
   framework: Framework | null,
+  runtime: Runtime | null,
   autoConfirm: boolean,
   localConfigurationOverrides: PartialProjectSettings | null,
   configFileName = 'vercel.json'
@@ -37,6 +44,7 @@ export async function editProjectSettings(
       buildCommand: null,
       devCommand: null,
       framework: null,
+      runtime: null,
       commandForIgnoringBuildStep: null,
       installCommand: null,
       outputDirectory: null,
@@ -77,10 +85,37 @@ export async function editProjectSettings(
       );
 
       if (overrideFramework) {
+        const languageChanged =
+          overrideFramework.language !== framework?.language;
         framework = overrideFramework;
+        if (languageChanged) {
+          // If the framework language changed, reset the runtime.
+          runtime = null;
+        }
         output.print(
           `  Merging default Project Settings for ${framework.name}. Previously listed overrides are prioritized.\n`
         );
+      }
+    }
+
+    if (framework && localConfigurationOverrides.runtime) {
+      if (!framework.language) {
+        output.print(
+          `  Using "Other" framework, ignoring configured runtime "${localConfigurationOverrides.runtime}".\n`
+        );
+        runtime = null;
+      } else {
+        runtime = localConfigurationOverrides.runtime as Runtime;
+        const frameworkRuntimes = runtimes[framework.language];
+        if (
+          frameworkRuntimes.default !== runtime &&
+          !frameworkRuntimes.alternatives?.some(a => a.runtime === runtime)
+        ) {
+          output.print(
+            `  Configured runtime "${localConfigurationOverrides.runtime}" does not match the framework "${framework.name}".\n`
+          );
+          runtime = null;
+        }
       }
     }
   }
@@ -88,6 +123,7 @@ export async function editProjectSettings(
   // skip editing project settings if no framework is detected
   if (!framework) {
     settings.framework = null;
+    settings.runtime = null;
     return settings;
   }
 
@@ -120,12 +156,14 @@ export async function editProjectSettings(
   }
 
   settings.framework = framework.slug;
+  settings.runtime = runtime;
 
   // Now print defaults for the provided framework whether it was auto-detected or overwritten
   if (!framework.slug) {
     for (const setting of settingKeys) {
       if (
         setting === 'framework' ||
+        setting === 'runtime' ||
         setting === 'commandForIgnoringBuildStep'
       ) {
         continue;
@@ -160,6 +198,7 @@ export async function editProjectSettings(
     (acc, setting) => {
       const skip =
         setting === 'framework' ||
+        setting === 'runtime' ||
         setting === 'commandForIgnoringBuildStep' ||
         setting === 'installCommand' ||
         localConfigurationOverrides?.[setting];

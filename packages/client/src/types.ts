@@ -181,6 +181,7 @@ export interface VercelConfig {
   devCommand?: string | null;
   installCommand?: string | null;
   framework?: string | null;
+  runtime?: string | null;
   outputDirectory?: string | null;
   images?: Images;
   crons?: Cron[];

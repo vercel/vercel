@@ -1,6 +1,7 @@
 import type { Framework, FrameworkDetectionItem } from '@vercel/frameworks';
 import { spawnSync } from 'child_process';
 import { DetectorFilesystem } from './detectors/filesystem';
+import { checkDetector } from './detectors/check';
 
 interface BaseFramework {
   slug: Framework['slug'];
@@ -88,63 +89,12 @@ async function matches(
     return;
   }
 
-  const check = async ({
-    path,
-    matchContent,
-    matchPackage,
-  }: FrameworkDetectionItem): Promise<MatchResult | undefined> => {
-    if (matchPackage && matchContent) {
-      throw new Error(
-        `Cannot specify "matchPackage" and "matchContent" in the same detector for "${framework.slug}"`
-      );
-    }
-    if (matchPackage && path) {
-      throw new Error(
-        `Cannot specify "matchPackage" and "path" in the same detector for "${framework.slug}" because "path" is assumed to be "package.json".`
-      );
-    }
-
-    if (!path && !matchPackage) {
-      throw new Error(
-        `Must specify either "path" or "matchPackage" in detector for "${framework.slug}".`
-      );
-    }
-
-    if (!path) {
-      path = 'package.json';
-    }
-
-    if (matchPackage) {
-      matchContent = `"(dev)?(d|D)ependencies":\\s*{[^}]*"${matchPackage}":\\s*"(.+?)"[^}]*}`;
-    }
-
-    if ((await fs.hasPath(path)) === false) {
-      return;
-    }
-
-    if (matchContent) {
-      if ((await fs.isFile(path)) === false) {
-        return;
-      }
-
-      const regex = new RegExp(matchContent, 'm');
-      const content = await fs.readFile(path);
-
-      const match = content.toString().match(regex);
-      if (!match) {
-        return;
-      }
-      if (matchPackage && match[3]) {
-        return {
-          framework,
-          detectedVersion: match[3],
-        };
-      }
-    }
-
-    return {
-      framework,
-    };
+  const check = async (
+    item: FrameworkDetectionItem
+  ): Promise<MatchResult | undefined> => {
+    const result = await checkDetector(fs, item);
+    if (!result) return undefined;
+    return { framework, ...result };
   };
 
   const result: (MatchResult | undefined)[] = [];
