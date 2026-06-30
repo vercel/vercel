@@ -4,8 +4,95 @@ import {
   ALIGNED_LABEL_WIDTH,
   printAlignedLabel,
 } from '../../output/print-aligned-label';
+import { renderDiff } from './diff';
 import { maskSecret } from './gateway';
 import type { SetupPlan } from './apply';
+import type { CodingAgent } from './types';
+
+export function printResolvedState(args: {
+  selected: CodingAgent[];
+  willCreate: boolean;
+  name?: string;
+  budget?: number;
+  refreshPeriod?: string;
+  expiresAt?: number;
+}): void {
+  const { selected, willCreate, name, budget, refreshPeriod, expiresAt } = args;
+  output.print(chalk.bold('  Summary\n'));
+  printAlignedLabel('Agents', selected.map(a => a.displayName).join(', '));
+  if (!willCreate) {
+    printAlignedLabel('API key', 'Using provided key');
+    output.print('\n');
+    return;
+  }
+  printAlignedLabel(
+    'API key',
+    name ? `Creating new key "${name}"` : 'Creating new key'
+  );
+  let spendLimit = 'Unlimited';
+  if (budget !== undefined) {
+    const period =
+      refreshPeriod && refreshPeriod !== 'none' ? refreshPeriod : '';
+    spendLimit = period ? `$${budget}/${period}` : `$${budget}`;
+  }
+  printAlignedLabel('Spend limit', spendLimit);
+  printAlignedLabel(
+    'Expires',
+    expiresAt !== undefined
+      ? new Date(expiresAt).toISOString().slice(0, 10)
+      : 'Never'
+  );
+  output.print('\n');
+}
+
+export function printPlan(
+  plan: SetupPlan,
+  previewKey: string,
+  opts: { backup?: boolean } = {}
+): void {
+  // The backup promise belongs up front — before the user decides — not only
+  // in the post-apply receipt.
+  output.print(
+    opts.backup
+      ? `${chalk.bold('  Planned changes')}  ${chalk.dim(
+          'existing files are backed up alongside as .bak first'
+        )}\n`
+      : chalk.bold('  Planned changes\n')
+  );
+  for (const change of plan.changes) {
+    if (change.status === 'unchanged') {
+      output.print(
+        `  ${chalk.dim(`= ${change.label} (unchanged)`)}  ${chalk.dim(change.path)}\n`
+      );
+      continue;
+    }
+    if (change.status === 'error') {
+      // A skipped file is a nonfatal warning: yellow gutter, dim detail.
+      output.print(
+        `${chalk.yellow('!')} ${chalk.bold(change.label)}  ${chalk.dim(change.path)}\n`
+      );
+      output.print(chalk.dim(`    cannot edit: ${change.error}\n`));
+      continue;
+    }
+    const verb = change.status === 'create' ? 'create' : 'update';
+    output.print(
+      `  ${verb === 'create' ? chalk.green('+') : '~'} ${chalk.bold(change.label)} (${verb})  ${chalk.dim(change.path)}\n`
+    );
+    // An existing file is copied to `<path>.bak` before it's overwritten;
+    // surface that side effect in the preview unless backups are disabled.
+    if (opts.backup && change.current !== null) {
+      output.print(chalk.dim(`    ↳ backs up to ${change.path}.bak\n`));
+    }
+    const diff = renderDiff(change.current ?? '', change.next ?? '', {
+      secrets: [previewKey],
+      indent: '    ',
+    });
+    if (diff) {
+      output.print(`${diff}\n`);
+    }
+  }
+  output.print('\n');
+}
 
 /** Warning gutter row (`! <message>`), not output.warn's WARNING! label. */
 export function printWarning(message: string): void {

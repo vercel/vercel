@@ -308,11 +308,42 @@ export const setupSubcommand = {
       description:
         'Re-run even if already configured, to rotate the key or switch team',
     },
+    {
+      name: 'dry-run',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Show what would change without writing any files',
+    },
+    {
+      name: 'no-backup',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Do not write .bak backups of changed files',
+    },
+    {
+      name: 'agent-config',
+      shorthand: null,
+      type: [String],
+      argument: 'AGENT=PATH',
+      deprecated: false,
+      description:
+        "Override an agent's config file path, e.g. claude-code=/path/settings.json (repeatable)",
+    },
+    {
+      name: 'shell-rc',
+      shorthand: null,
+      type: String,
+      argument: 'PATH',
+      deprecated: false,
+      description: 'Shell rc file to write the env exports into',
+    },
     yesOption,
   ],
   examples: [
     {
-      name: 'Connect the detected coding agents (creates a key)',
+      name: 'Connect all detected coding agents (creates a key)',
       value: `${packageName} ai-gateway coding-agents setup`,
     },
     {
@@ -322,6 +353,10 @@ export const setupSubcommand = {
     {
       name: 'Rotate the key on an already-configured setup',
       value: `${packageName} ai-gateway coding-agents setup --reconfigure`,
+    },
+    {
+      name: 'Reuse an existing key and preview changes only',
+      value: `${packageName} ai-gateway coding-agents setup --key <key> --dry-run`,
     },
   ],
 } as const;
