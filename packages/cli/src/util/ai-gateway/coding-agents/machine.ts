@@ -4,6 +4,7 @@ import { outputAgentError } from '../../agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../agent-output-constants';
 import { UNSUPPORTED_AGENTS } from './agents';
 import { buildSetupPlan, applyPlan, type SetupPlan } from './apply';
+import { storeKeyInKeychain } from './keychain';
 import type { KeySource } from './key-source';
 import type { CodingAgent } from './types';
 
@@ -16,6 +17,7 @@ export async function runMachine(args: {
   backup: boolean;
   keySource: KeySource | null;
   createKey: () => Promise<string>;
+  useKeychain: boolean;
   overrides?: Record<string, string>;
   shellRcOverride?: string;
   home: string;
@@ -100,9 +102,12 @@ export async function runMachine(args: {
     throw err;
   }
 
+  const useKeychain = args.useKeychain && storeKeyInKeychain(key);
+
   const finalPlan = await buildSetupPlan(selected, {
     apiKey: key,
     home,
+    useKeychain,
     overrides: args.overrides,
     shellRcOverride: args.shellRcOverride,
   });

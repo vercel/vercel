@@ -323,6 +323,14 @@ export const setupSubcommand = {
       description: 'Do not write .bak backups of changed files',
     },
     {
+      name: 'no-keychain',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Always write the key into config files instead of the macOS Keychain',
+    },
+    {
       name: 'agent-config',
       shorthand: null,
       type: [String],
