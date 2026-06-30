@@ -83,7 +83,7 @@ describe('domains buy', () => {
   });
 
   describe('[name]', () => {
-    it('should track redacted domain name positional argument', async () => {
+    it('should track the domain name positional argument', async () => {
       useUser();
       client.scenario.get(
         '/v1/registrar/domains/example.com/price',
@@ -118,7 +118,7 @@ describe('domains buy', () => {
         },
         {
           key: 'argument:domain',
-          value: '[REDACTED]',
+          value: 'example.com',
         },
       ]);
     });
