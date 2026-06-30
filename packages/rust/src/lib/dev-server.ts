@@ -19,13 +19,9 @@ export function createDevServerEnv(
     ...(meta.env || {}),
   };
 
-  // The `vercel_runtime` crate binds the port from `VERCEL_DEV_PORT`, falling
-  // back to a fixed default (3000) when it is unset. Because `vercel dev`
-  // restarts the dev server between requests, a fixed port causes
-  // "address already in use" when a new instance is spawned before the previous
-  // one has fully released the port. Always provide an explicit port (a unique
-  // free port is allocated by the caller) so each dev server binds a port that
-  // is known to be available.
+  // The runtime reads VERCEL_DEV_PORT (default 3000). `vercel dev` restarts the
+  // server between requests, so pass an explicit free port (allocated by the
+  // caller) to avoid "address already in use" collisions.
   if (typeof port === 'number' && Number.isInteger(port)) {
     devEnv.VERCEL_DEV_PORT = String(port);
   }
