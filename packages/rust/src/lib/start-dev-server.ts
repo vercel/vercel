@@ -8,7 +8,8 @@ import { buildExecutableForDev } from './dev-build';
 import { createDevServerEnv } from './dev-server';
 
 // How long to wait for a graceful `SIGTERM` shutdown before forcing `SIGKILL`.
-const SHUTDOWN_TIMEOUT = 5_000;
+// Set to 35s since the vercel runtime crate allows up to 30s for waitUntil to complete.
+const SHUTDOWN_TIMEOUT = 35_000;
 
 // Matches the Rust runtime's "address already in use" error.
 const ADDR_IN_USE_RE = /address (already )?in use|AddrInUse|EADDRINUSE/i;
@@ -16,7 +17,7 @@ const ADDR_IN_USE_RE = /address (already )?in use|AddrInUse|EADDRINUSE/i;
 const MAX_STDERR_CAPTURE = 8_192;
 
 // Tracks spawned dev servers so they can be force-killed if `vercel dev` exits
-// without calling `shutdown`. Mirrors the Go, Python, and Ruby runtimes.
+// without calling `shutdown`.
 const RUNNING_DEV_SERVERS = new Set<ChildProcess>();
 let cleanupHandlersInstalled = false;
 
