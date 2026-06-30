@@ -8,6 +8,7 @@ import {
   envTargetChoices,
 } from '../../util/env/env-target';
 import readStandardInput from '../../util/input/read-standard-input';
+import { CHECKBOX_INSTRUCTIONS } from '../../util/input/checkbox-instructions';
 import param from '../../util/output/param';
 import { isKnownError } from '../../util/env/known-error';
 import {
@@ -51,18 +52,6 @@ const SENSITIVE_VALUE_HINT = 'Sensitive values cannot be read later';
 const SENSITIVE_SECRET_PROMPT = `Store as sensitive? ${chalk.dim(
   SENSITIVE_VALUE_HINT
 )}`;
-const CHECKBOX_INSTRUCTIONS = [
-  ' ',
-  chalk.cyan('<space>'),
-  chalk.dim(' select, '),
-  chalk.cyan('<enter>'),
-  chalk.dim(' confirm, '),
-  chalk.cyan('<a>'),
-  chalk.dim(' toggle all, '),
-  chalk.cyan('<i>'),
-  chalk.dim(' invert'),
-].join('');
-
 function filterEnvChoicesForSensitivity(
   choices: EnvChoice[],
   opts: { isSensitive: boolean; policyOn: boolean }

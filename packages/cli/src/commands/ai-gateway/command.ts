@@ -229,12 +229,65 @@ export const rulesSubcommand = {
   examples: [],
 } as const;
 
+export const setupSubcommand = {
+  name: 'setup',
+  aliases: [],
+  description: 'Connect Claude Code to the AI Gateway',
+  arguments: [],
+  options: [
+    {
+      name: 'agent',
+      shorthand: null,
+      type: [String],
+      argument: 'NAME',
+      deprecated: false,
+      description: 'Coding agent to configure, repeatable (claude-code)',
+    },
+    {
+      name: 'all',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Configure every supported coding agent',
+    },
+    {
+      name: 'key',
+      shorthand: null,
+      type: String,
+      argument: 'KEY',
+      deprecated: false,
+      description: 'Existing AI Gateway API key to configure the agents with',
+    },
+    yesOption,
+  ],
+  examples: [
+    {
+      name: 'Connect the detected coding agents with an existing key',
+      value: `${packageName} ai-gateway coding-agents setup --key <key>`,
+    },
+    {
+      name: 'Connect specific agents',
+      value: `${packageName} ai-gateway coding-agents setup --key <key> --agent claude-code`,
+    },
+  ],
+} as const;
+
+export const codingAgentsSubcommand = {
+  name: 'coding-agents',
+  aliases: [],
+  description: 'Connect local coding agents to the AI Gateway',
+  arguments: [],
+  subcommands: [setupSubcommand],
+  options: [],
+  examples: [],
+} as const;
+
 export const aiGatewayCommand = {
   name: 'ai-gateway',
   aliases: [],
   description: 'Manage AI Gateway resources',
   arguments: [],
-  subcommands: [apiKeysSubcommand, rulesSubcommand],
+  subcommands: [apiKeysSubcommand, rulesSubcommand, codingAgentsSubcommand],
   options: [],
   examples: [],
 } as const;
