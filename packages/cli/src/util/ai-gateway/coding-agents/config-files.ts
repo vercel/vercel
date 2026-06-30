@@ -122,6 +122,88 @@ export function mergeJson(current: string | null, patch: JsonObject): string {
   return `${JSON.stringify(merged, null, 2)}\n`;
 }
 
+/** True when every value the patch would set already holds (deep-merge view). */
+function patchSatisfied(existing: unknown, patch: JsonObject): boolean {
+  for (const [key, patchValue] of Object.entries(patch)) {
+    const existingValue = isPlainObject(existing)
+      ? existing[key]
+      : (undefined as unknown);
+    if (isPlainObject(patchValue) && isPlainObject(existingValue)) {
+      if (!patchSatisfied(existingValue, patchValue)) {
+        return false;
+      }
+    } else if (!isDeepStrictEqual(existingValue, patchValue)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function tomlScalar(value: unknown): string | null {
+  switch (typeof value) {
+    case 'string':
+      // A JSON string is a valid TOML basic string.
+      return JSON.stringify(value);
+    case 'number':
+      return Number.isFinite(value) ? String(value) : null;
+    case 'boolean':
+      return String(value);
+    default:
+      return null;
+  }
+}
+
+const TOML_BARE_KEY = /^[A-Za-z0-9_-]+$/;
+
+/**
+ * Flatten a patch into `section -> key -> serialized scalar`, where '' is the
+ * top-level section and nested objects become dotted table names. Returns null
+ * for shapes the line editor can't express (non-scalar leaves, keys that need
+ * quoting) — those take the legacy full-rewrite path.
+ */
+function flattenTomlPatch(
+  patch: JsonObject,
+  prefix = '',
+  out = new Map<string, Map<string, string>>()
+): Map<string, Map<string, string>> | null {
+  for (const [key, value] of Object.entries(patch)) {
+    if (!TOML_BARE_KEY.test(key)) {
+      return null;
+    }
+    if (isPlainObject(value)) {
+      const nested = flattenTomlPatch(
+        value,
+        prefix ? `${prefix}.${key}` : key,
+        out
+      );
+      if (!nested) {
+        return null;
+      }
+    } else {
+      const scalar = tomlScalar(value);
+      if (scalar === null) {
+        return null;
+      }
+      let section = out.get(prefix);
+      if (!section) {
+        section = new Map();
+        out.set(prefix, section);
+      }
+      section.set(key, scalar);
+    }
+  }
+  return out;
+}
+
+const TOML_HEADER = /^\s*\[\[?\s*([^\]]*?)\s*\]\]?\s*(?:#.*)?$/;
+
+/**
+ * The user's file is edited line by line, never re-serialized: assignments the
+ * patch sets are replaced or appended inside their table, missing tables are
+ * appended at the end, and every other line — comments, quoting, spacing —
+ * survives byte-for-byte. The result is re-parsed and checked; anything the
+ * editor mishandled (exotic layouts) falls back to a full merge-and-rewrite.
+ */
 export function mergeToml(current: string | null, patch: JsonObject): string {
   let parsed: JsonObject = {};
   if (current && current.trim()) {
@@ -133,7 +215,118 @@ export function mergeToml(current: string | null, patch: JsonObject): string {
       );
     }
   }
-  return `${tomlStringify(deepMerge(parsed, patch))}\n`;
+  const legacy = () => `${tomlStringify(deepMerge(parsed, patch))}\n`;
+  if (!current || !current.trim()) {
+    return legacy();
+  }
+  if (patchSatisfied(parsed, patch)) {
+    return current;
+  }
+  const flat = flattenTomlPatch(patch);
+  if (!flat) {
+    return legacy();
+  }
+
+  const crlf = current.includes('\r\n');
+  const lines = current.split('\n');
+  const content = (line: string) =>
+    line.endsWith('\r') ? line.slice(0, -1) : line;
+  const finish = (line: string, i: number) =>
+    i < lines.length && lines[i]?.endsWith('\r') ? `${line}\r` : line;
+
+  const headerAt = (i: number): string | null => {
+    const m = content(lines[i]).match(TOML_HEADER);
+    if (!m) {
+      return null;
+    }
+    return m[1]
+      .split('.')
+      .map(s => s.trim())
+      .join('.');
+  };
+
+  // [start, end) line range of each section's body; '' is the top level.
+  const sectionRange = (name: string): [number, number] | null => {
+    let start = name === '' ? 0 : -1;
+    for (let i = 0; i < lines.length; i++) {
+      const header = headerAt(i);
+      if (header === null) {
+        continue;
+      }
+      if (start !== -1) {
+        return [start, i];
+      }
+      if (name === '') {
+        return [0, i];
+      }
+      if (header === name) {
+        start = i + 1;
+      }
+    }
+    return start === -1 ? null : [start, lines.length];
+  };
+
+  const appendSections: string[] = [];
+  // Sections are edited independently; insertions go through a per-section
+  // splice so earlier line indices stay valid (append-only within a range).
+  for (const [name, keys] of flat) {
+    const range = sectionRange(name);
+    if (!range) {
+      appendSections.push(
+        `[${name}]`,
+        ...[...keys].map(([k, v]) => `${k} = ${v}`)
+      );
+      continue;
+    }
+    const [start, end] = range;
+    const inserts: string[] = [];
+    for (const [key, value] of keys) {
+      const assignment = new RegExp(`^(\\s*)${key}\\s*=`);
+      let replaced = false;
+      for (let i = start; i < end; i++) {
+        const m = content(lines[i]).match(assignment);
+        if (m) {
+          lines[i] = finish(`${m[1]}${key} = ${value}`, i);
+          replaced = true;
+          break;
+        }
+      }
+      if (!replaced) {
+        inserts.push(`${key} = ${value}`);
+      }
+    }
+    if (inserts.length > 0) {
+      let at = start;
+      for (let i = start; i < end; i++) {
+        if (content(lines[i]).trim() !== '') {
+          at = i + 1;
+        }
+      }
+      lines.splice(at, 0, ...inserts.map(l => finish(l, at)));
+    }
+  }
+  if (appendSections.length > 0) {
+    while (lines.length > 0 && content(lines[lines.length - 1]).trim() === '') {
+      lines.pop();
+    }
+    const eol = crlf ? '\r' : '';
+    lines.push(
+      ...['', ...appendSections, ''].map(l => (l === '' ? l : `${l}${eol}`))
+    );
+  }
+
+  const result = lines.join('\n');
+  // Full-document check, not just the patched keys: a line that happened to
+  // sit inside a multi-line string could have been rewritten, which only a
+  // comparison of every value catches.
+  try {
+    if (isDeepStrictEqual(tomlParse(result), deepMerge(parsed, patch))) {
+      return result;
+    }
+  } catch {
+    // fall through to the legacy rewrite
+  }
+  return legacy();
 }
 
 export const MANAGED_BLOCK_START = '# >>> vercel ai-gateway >>>';
