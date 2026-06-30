@@ -24,6 +24,7 @@ export interface ConnexClientIdentity {
   id: string;
   uid: string;
   name?: string;
+  supportsRevocation?: boolean;
   supportsTriggers?: boolean;
   triggers?: { enabled: boolean };
   triggerDestinations?: ConnexTriggerDestination[];

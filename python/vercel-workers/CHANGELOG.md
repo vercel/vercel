@@ -1,5 +1,17 @@
 # vercel-workers
 
+## 0.0.25
+
+### Patch Changes
+
+- dd86db6: [vercel-workers] Honor per-actor Dramatiq retry options.
+
+## 0.0.24
+
+### Patch Changes
+
+- 796452d: Set exclude-newer to 2 days.
+
 ## 0.0.23
 
 ### Patch Changes

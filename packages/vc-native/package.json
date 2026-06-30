@@ -1,6 +1,6 @@
 {
   "name": "@vercel/vc-native",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "description": "Native Vercel CLI npm package staging tools",
   "license": "Apache-2.0",

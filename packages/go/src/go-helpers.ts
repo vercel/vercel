@@ -9,8 +9,10 @@ import {
   readFile,
   remove,
   symlink,
+  copy,
 } from 'fs-extra';
-import { delimiter, dirname, join } from 'path';
+import fs from 'fs';
+import { basename, delimiter, dirname, join } from 'path';
 import stringArgv from 'string-argv';
 import { cloneEnv, debug } from '@vercel/build-utils';
 import { pipeline } from 'stream';
@@ -200,16 +202,28 @@ Learn more: https://vercel.com/docs/functions/serverless-functions/runtimes/go
   return JSON.parse(analyzed) as Analyzed;
 }
 
+export interface GoModJson {
+  Module?: { Path: string };
+  Go?: string;
+  Require?: Array<{ Path: string; Version: string; Indirect?: boolean }>;
+  Replace?: Array<{
+    Old: { Path: string; Version?: string };
+    New: { Path: string; Version?: string };
+  }>;
+}
+
 export class GoWrapper {
   private env: Env;
   private opts: execa.Options;
+  readonly resolvedVersion: string;
 
-  constructor(env: Env, opts: execa.Options = {}) {
+  constructor(env: Env, opts: execa.Options = {}, resolvedVersion: string) {
     if (!opts.cwd) {
       opts.cwd = process.cwd();
     }
     this.env = env;
     this.opts = opts;
+    this.resolvedVersion = resolvedVersion;
   }
 
   private async execute(...args: string[]) {
@@ -226,6 +240,7 @@ export class GoWrapper {
     const subprocess = execa('go', args, {
       ...opts,
       env,
+      extendEnv: false,
       stdio: captureAndForwardOutput ? 'pipe' : opts.stdio,
     });
 
@@ -249,6 +264,26 @@ export class GoWrapper {
     return this.execute(...args);
   }
 
+  /**
+   * Runs `go mod edit -json <path>` and returns the parsed structure.
+   */
+  async modEditJson(goModPath: string): Promise<GoModJson | null> {
+    try {
+      debug(`Exec: go mod edit -json ${goModPath}`);
+      const result = await execa('go', ['mod', 'edit', '-json', goModPath], {
+        ...this.opts,
+        env: this.env,
+        extendEnv: false,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+
+      return JSON.parse(result.stdout) as GoModJson;
+    } catch (err) {
+      debug(`Failed to read go.mod for manifest: ${err}`);
+      return null;
+    }
+  }
+
   vendor() {
     return this.execute('mod', 'vendor');
   }
@@ -262,6 +297,10 @@ export class GoWrapper {
       debug(`Fetching 'go' dependencies for cwd ${this.opts.cwd}`);
     }
     return this.execute(...args);
+  }
+
+  getEnv(): Env {
+    return this.env;
   }
 
   build(src: string | string[], dest: string, { vendorMode = false } = {}) {
@@ -324,7 +363,7 @@ export async function createGo({
     ? goPreferredVersion.toolchain || goPreferredVersion.go
     : Array.from(versionMap.values())[0];
 
-  const env = cloneEnv(process.env, opts.env);
+  const env = opts.env ? cloneEnv(opts.env) : cloneEnv(process.env);
   const { PATH } = env;
   const { platform } = process;
   const goGlobalCacheDir = join(
@@ -414,7 +453,10 @@ export async function createGo({
       env.GOROOT = goDir || undefined;
       env.PATH = goBinDir || PATH;
 
-      const { stdout } = await execa('go', ['version'], { env });
+      const { stdout } = await execa('go', ['version'], {
+        env,
+        extendEnv: false,
+      });
       const { major, minor, short, version } = parseGoVersionString(stdout);
 
       if (
@@ -427,7 +469,7 @@ export async function createGo({
         debug(`Selected go ${version} (from ${label})`);
 
         await setGoEnv(goDir);
-        return new GoWrapper(env, opts);
+        return new GoWrapper(env, opts, version);
       } else {
         debug(`Found go ${version} in ${label}, but need ${goSelectedVersion}`);
       }
@@ -443,7 +485,7 @@ export async function createGo({
   });
 
   await setGoEnv(goGlobalCacheDir);
-  return new GoWrapper(env, opts);
+  return new GoWrapper(env, opts, goSelectedVersion);
 }
 
 /**
@@ -575,6 +617,138 @@ async function parseGoModVersionFromModule(
  * @returns The version in { go: `${major}.${minor}.${patch}`, toolchain: `${major}.${minor}.${patch}` | undefined } format, or undefined if no version was found
  * @throws GoError If the go version is not supported
  */
+/**
+ * Checks if a file is an ELF binary by reading the 4-byte magic header.
+ */
+export async function isElfBinary(filePath: string): Promise<boolean> {
+  const fd = await fs.promises.open(filePath, 'r');
+  try {
+    const buf = new Uint8Array(4);
+    await fd.read(buf, 0, 4, 0);
+    // ELF magic: 0x7F 'E' 'L' 'F'
+    return (
+      buf[0] === 0x7f && buf[1] === 0x45 && buf[2] === 0x4c && buf[3] === 0x46
+    );
+  } finally {
+    await fd.close();
+  }
+}
+
+/**
+ * Extracts the module name's last path segment from a go.mod file.
+ * e.g. "github.com/user/myapp" -> "myapp"
+ */
+export async function getGoModuleName(
+  goModPath: string
+): Promise<string | undefined> {
+  try {
+    const content = await readFile(goModPath, 'utf8');
+    const match = content.match(/^\s*module\s+(.+)$/m);
+    if (match) {
+      const modulePath = match[1].trim();
+      return basename(modulePath);
+    }
+  } catch {
+    // go.mod not readable
+  }
+  return undefined;
+}
+
+/**
+ * Discovers the compiled Go binary after a custom buildCommand.
+ *
+ * Priority:
+ *  1. User wrote directly to `destPath` (via $VERCEL_OUTPUT_FILE)
+ *  2. Well-known binary names in workPath (with ELF + mtime check)
+ *  3. Scan workPath top-level for new ELF binaries (mtime check)
+ *  4. Scan workPath/bin/ for new ELF binaries (mtime check)
+ */
+export async function findGoBinary(
+  workPath: string,
+  destPath: string,
+  goModPath: string | undefined,
+  buildStartTime: number
+): Promise<void> {
+  if (await pathExists(destPath)) {
+    return;
+  }
+
+  const moduleName = goModPath ? await getGoModuleName(goModPath) : undefined;
+
+  const candidates = [moduleName, 'server', 'app', 'main', 'api'].filter(
+    (c): c is string => Boolean(c)
+  );
+
+  for (const name of candidates) {
+    const p = join(workPath, name);
+    if (await pathExists(p)) {
+      const stat = await fs.promises.stat(p);
+      if (
+        stat.isFile() &&
+        stat.mtimeMs >= buildStartTime &&
+        (await isElfBinary(p))
+      ) {
+        debug(`Found Go binary: ${name}`);
+        await copy(p, destPath);
+        return;
+      }
+    }
+  }
+
+  const found: string[] = [];
+
+  // Scan top-level workPath
+  const entries = await fs.promises.readdir(workPath);
+  for (const entry of entries) {
+    if (candidates.includes(entry)) continue;
+    const p = join(workPath, entry);
+    const stat = await fs.promises.stat(p);
+    if (
+      stat.isFile() &&
+      stat.mtimeMs >= buildStartTime &&
+      (await isElfBinary(p))
+    ) {
+      found.push(entry);
+    }
+  }
+
+  // Scan bin/ subdirectory
+  const binDir = join(workPath, 'bin');
+  if (await pathExists(binDir)) {
+    const binEntries = await fs.promises.readdir(binDir);
+    for (const entry of binEntries) {
+      const p = join(binDir, entry);
+      const stat = await fs.promises.stat(p);
+      if (
+        stat.isFile() &&
+        stat.mtimeMs >= buildStartTime &&
+        (await isElfBinary(p))
+      ) {
+        found.push(join('bin', entry));
+      }
+    }
+  }
+
+  if (found.length === 1) {
+    debug(`Found Go binary: ${found[0]}`);
+    await copy(join(workPath, found[0]), destPath);
+    return;
+  }
+
+  if (found.length > 1) {
+    throw new Error(
+      `Found multiple ELF binaries after buildCommand: ${found.join(', ')}. ` +
+        'Use `go build -o $VERCEL_OUTPUT_FILE` to specify which binary to deploy.'
+    );
+  }
+
+  throw new Error(
+    'No compiled Go binary found after buildCommand. ' +
+      'Ensure your command produces a Linux binary (GOOS=linux is set), ' +
+      'or use `go build -o $VERCEL_OUTPUT_FILE`.'
+  );
+}
+
 export function parseGoModVersion(content: string): GoVersions | undefined {
   const goMatches = /^\s*go\s+(\d+)\.(\d+)(?:\.(\d+))?\s*(?:\/\/.*)?$/gm.exec(
     content

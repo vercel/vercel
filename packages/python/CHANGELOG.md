@@ -1,5 +1,110 @@
 # @vercel/python
 
+## 6.47.3
+
+### Patch Changes
+
+- 62a884e: Simplify isolated `services` and `experimentalServicesV2` runtime outputs by emitting their function at `index` instead of `_svc/<service-name>/index`.
+
+## 6.47.2
+
+### Patch Changes
+
+- 34b2c4c: Apply `functions` config to Python framework builds using the resolved Python entrypoint.
+
+## 6.47.1
+
+### Patch Changes
+
+- 95d8879: python: restrict bytecode precompilation to large functions
+- 82b3c3c: python: update functions bundle size limits
+- 96e3137: Emit catch-all routes for services V2 so requests reach the Python Lambda
+- f5fe588: python: update log messages
+- f076559: python: support large functions on Hive via supportLargeFunctions and retire the python-on-hive size path
+
+## 6.47.0
+
+### Minor Changes
+
+- f530cd5: Add Python `pyproject.toml` subscriber support for queue-triggered worker Lambdas.
+
+## 6.46.1
+
+### Patch Changes
+
+- 480ee7c: Record the `python.bundle.totalSizeBytes` build span tag before the bundle size-limit checks, so oversized functions that exceed the limit (and fail the build) still report their size instead of being omitted from telemetry.
+
+## 6.46.0
+
+### Minor Changes
+
+- e84cf48: Produce an error message when the uv version is too old
+
+### Patch Changes
+
+- 0d9bc23: Scope `compileall` bytecode precompilation to Hive deployments. It now runs only when `VERCEL_PYTHON_ON_HIVE` is set and is gated behind `VERCEL_PYTHON_COMPILEALL` as an explicit opt-in flag (default off). The dev and custom-command guards are unchanged.
+
+## 6.45.1
+
+### Patch Changes
+
+- e9aa6f5: Remove hidden `--functions-beta` / `--no-functions-beta` deploy flags and the size-limit hint messaging
+
+## 6.45.0
+
+### Minor Changes
+
+- d712d41: Override uv's exclude-newer when install vercel-runtime/vercel-workers
+- dbb31fc: Override uv's exclude-newer when installing vercel-runtime/vercel-workers for dev server
+
+### Patch Changes
+
+- f7f0003: Refactor dev server dep injection to not be so duplicated
+
+## 6.44.1
+
+### Patch Changes
+
+- 4637f0a: Force Python bytecode precompilation to rewrite existing `.pyc` files with unchecked-hash invalidation.
+- c5d53d7: Use the in-repo `python/vercel-runtime` and `python/vercel-workers` source as the install target during monorepo `vercel build` runs (mirroring the existing dev-server behavior). This prevents CLI unit tests from depending on a PyPI release of a version that has not been published yet — the case that breaks Version Packages PRs that bump these packages.
+
+## 6.44.0
+
+### Minor Changes
+
+- 4f782b1: Support bytecode compilation for hive deployment path.
+
+## 6.43.3
+
+### Patch Changes
+
+- 0e04bc5: Reduce lambda threshold bytes when VERCEL_DEPLOYMENT_HAS_OTEL_LAYER is set.
+
+  When the deployments use the otel collector it can push the deployment over the limit since we don't account
+  for the size overhead added by this layer. Reduce the total uncompressed size for these types of deployments.
+
+## 6.43.2
+
+### Patch Changes
+
+- 1318682: minor performance improvements
+
+## 6.43.1
+
+### Patch Changes
+
+- 972cc84: Support workflow-triggered job services in queue infrastructure
+
+  Add `isWorkflowTriggeredService()` and `isQueueBackedService()` helpers so workflow services
+  are recognized by the queue broker, dev server, and build pipeline. Update Python runtime to
+  bootstrap workflow services as queue-backed workers.
+
+## 6.43.0
+
+### Minor Changes
+
+- 2cd64ea: Support `vc build` + `vc deploy --prebuilt` for Python functions. When building outside the Vercel build image, `uv sync` now targets `x86_64-unknown-linux-gnu` so Linux-compatible wheels are resolved. Downloads the Linux `uv` binary (with SHA-256 verification) for runtime dependency installation, and uses the Lambda target platform for PEP 508 marker evaluation and Prisma engine binary selection.
+
 ## 6.42.0
 
 ### Minor Changes

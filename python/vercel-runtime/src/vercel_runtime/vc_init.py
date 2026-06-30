@@ -18,6 +18,14 @@ import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING, Any, Literal, Never, TextIO
 
+from vercel_runtime.cache import (
+    SC_HEADERS_ALWAYS_STRIP,
+    SC_HEADERS_STRIP_ON_NO_LEAK,
+    SC_NO_HEADER_LEAK_HEADER,
+    clear_runtime_cache_context,
+    set_runtime_cache_from_asgi_pairs,
+    set_runtime_cache_from_http_headers,
+)
 from vercel_runtime.crons import (
     bootstrap_cron_service_app,
     is_cron_service,
@@ -44,11 +52,13 @@ from vercel_runtime.routing import (
     apply_service_route_prefix_to_target,
     split_request_target,
 )
+from vercel_runtime.utils import read_wsgi_request_body
 from vercel_runtime.workers import (
     is_worker_service,
     maybe_bootstrap_worker_service_app,
     prepare_worker_environment,
 )
+from vercel_runtime.wsgi_websocket import attach_wsgi_websocket
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -430,6 +440,9 @@ if os.path.exists(_runtime_config_path):
                     "PATH": os.environ.get("PATH", ""),
                     "VIRTUAL_ENV": _deps_dir,
                     "UV_PYTHON_DOWNLOADS": "never",
+                    # Skip writing INSTALLER, REQUESTED, and
+                    # direct_url.json — they are never read at runtime.
+                    "UV_NO_INSTALLER_METADATA": "1",
                 },
             )
             _install_duration = time.time() - _install_start
@@ -482,6 +495,7 @@ if is_worker_service():
         if worker_app is not None:
             __vc_module.__dict__["app"] = worker_app
             __vc_variables = dir(__vc_module)
+            _entrypoint_varname = "app"
     except Exception:
         _stderr("Error bootstrapping worker service app:")
         _stderr(traceback.format_exc())
@@ -491,6 +505,7 @@ if is_cron_service():
     try:
         __vc_module.__dict__["app"] = bootstrap_cron_service_app(__vc_module)
         __vc_variables = dir(__vc_module)
+        _entrypoint_varname = "app"
     except Exception:
         _stderr("Error bootstrapping cron service app:")
         _stderr(traceback.format_exc())
@@ -533,12 +548,13 @@ class ASGIMiddleware:
         receive: _ASGIReceive,
         send: _ASGISend,
     ) -> None:
-        if scope.get("type") != "http":
-            # Non-HTTP traffic is forwarded verbatim
+        scope_type = scope.get("type")
+        if scope_type not in ("http", "websocket"):
+            # Non-HTTP/WebSocket traffic is forwarded verbatim
             await self.app(scope, receive, send)
             return
 
-        if scope.get("path") == "/_vercel/ping":
+        if scope_type == "http" and scope.get("path") == "/_vercel/ping":
             await send(
                 {
                     "type": "http.response.start",
@@ -563,6 +579,8 @@ class ASGIMiddleware:
         invocation_id = "0"
         request_id = 0
         internal_oidc_token: str | None = None
+        sc_pairs: list[tuple[bytes, bytes]] = []
+        sc_no_header_leak = False
 
         for raw_k, raw_v in headers_list:
             key_bytes = raw_k if isinstance(raw_k, bytes) else raw_k.encode()
@@ -583,12 +601,24 @@ class ASGIMiddleware:
             if key == INTERNAL_OIDC_HEADER_NAME:
                 internal_oidc_token = val
                 continue
+            if key in SC_HEADERS_ALWAYS_STRIP:
+                continue
+            if key in SC_HEADERS_STRIP_ON_NO_LEAK:
+                # Hold these aside until we know whether the proxy asked us to
+                # hide them from client code
+                sc_pairs.append((key_bytes, val_bytes))
+                if key == SC_NO_HEADER_LEAK_HEADER:
+                    sc_no_header_leak = bool(val)
+                continue
             new_headers.append((key_bytes, val_bytes))
 
         append_oidc_header_if_missing(
             new_headers,
             internal_oidc_token=internal_oidc_token,
         )
+        if not sc_no_header_leak:
+            # Proxy didn't ask for header hiding, so extend the normal headers
+            new_headers.extend(sc_pairs)
 
         new_scope = dict(scope)
         new_scope["headers"] = new_headers
@@ -615,10 +645,17 @@ class ASGIMiddleware:
             }
         )
         set_vercel_headers_from_asgi_pairs(new_headers)
+        set_runtime_cache_from_asgi_pairs(sc_pairs)
 
-        try:
-            await self.app(new_scope, receive, send)
-        finally:
+        request_finished = False
+
+        def finish_request() -> None:
+            nonlocal request_finished
+            if request_finished:
+                return
+
+            request_finished = True
+            clear_runtime_cache_context()
             clear_vercel_headers_context()
             storage.reset(token)
             send_message(
@@ -632,6 +669,34 @@ class ASGIMiddleware:
                     },
                 }
             )
+
+        async def send_wrapper(message: dict[str, Any]) -> None:
+            await send(message)
+
+            if scope_type != "websocket":
+                return
+
+            message_type = message.get("type")
+            if message_type == "websocket.accept":
+                # End the request lifecycle once the 101 is sent so the
+                # platform can begin bidirectional WebSocket streaming.
+                finish_request()
+                return
+
+            if message_type == "websocket.close":
+                finish_request()
+                return
+
+            if (
+                message_type == "websocket.http.response.body"
+                and not message.get("more_body")
+            ):
+                finish_request()
+
+        try:
+            await self.app(new_scope, receive, send_wrapper)
+        finally:
+            finish_request()
 
 
 if "VERCEL_IPC_PATH" in os.environ:
@@ -705,9 +770,39 @@ if "VERCEL_IPC_PATH" in os.environ:
                 f"{addr} - - [{ts}] {msg}\n",
             )
 
+        def _vc_fire_end_once(self) -> None:
+            # Send the IPC "end" message exactly once per request. For a
+            # WebSocket upgrade this is called as soon as the 101 handshake is
+            # written so the platform can begin bidirectional streaming, while
+            # the WSGI worker thread keeps driving the socket. For regular
+            # requests it is called once the response is fully sent.
+            if getattr(self, "_vc_end_sent", False):
+                return
+            self._vc_end_sent = True
+            clear_runtime_cache_context()
+            clear_vercel_headers_context()
+            token = getattr(self, "_vc_end_token", None)
+            if token is not None:
+                storage.reset(token)
+            send_message(
+                {
+                    "type": "end",
+                    "payload": {
+                        "context": {
+                            "invocationId": getattr(
+                                self, "_vc_invocation_id", "0"
+                            ),
+                            "requestId": getattr(self, "_vc_request_id", 0),
+                        }
+                    },
+                }
+            )
+
         # Re-implementation of handle_one_request to send
         # the end message after the response is fully sent.
         def handle_one_request(self) -> None:
+            self._vc_end_sent = False
+            self._vc_end_token = None
             self.raw_requestline = self.rfile.readline(65537)
             if not self.raw_requestline:
                 self.close_connection = True
@@ -733,6 +828,8 @@ if "VERCEL_IPC_PATH" in os.environ:
                 "0",
             )
             request_id = int(raw_request_id) if raw_request_id.isdigit() else 0
+            self._vc_invocation_id = invocation_id
+            self._vc_request_id = request_id
             del self.headers["x-vercel-internal-invocation-id"]
             del self.headers["x-vercel-internal-request-id"]
             del self.headers["x-vercel-internal-span-id"]
@@ -754,6 +851,18 @@ if "VERCEL_IPC_PATH" in os.environ:
             with contextlib.suppress(Exception):
                 del self.headers[INTERNAL_OIDC_HEADER_NAME]
 
+            sc_no_header_leak = bool(
+                self.headers.get(SC_NO_HEADER_LEAK_HEADER),
+            )
+            set_runtime_cache_from_http_headers(self.headers)
+            for sc_header in SC_HEADERS_ALWAYS_STRIP:
+                with contextlib.suppress(Exception):
+                    del self.headers[sc_header]
+            if sc_no_header_leak:
+                for sc_header in SC_HEADERS_STRIP_ON_NO_LEAK:
+                    with contextlib.suppress(Exception):
+                        del self.headers[sc_header]
+
             send_message(
                 {
                     "type": "handler-started",
@@ -767,7 +876,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                 }
             )
 
-            token = storage.set(
+            self._vc_end_token = storage.set(
                 {
                     "invocationId": invocation_id,
                     "requestId": request_id,
@@ -778,19 +887,7 @@ if "VERCEL_IPC_PATH" in os.environ:
             try:
                 self.handle_request()  # type: ignore[attr-defined]
             finally:
-                clear_vercel_headers_context()
-                storage.reset(token)
-                send_message(
-                    {
-                        "type": "end",
-                        "payload": {
-                            "context": {
-                                "invocationId": invocation_id,
-                                "requestId": request_id,
-                            }
-                        },
-                    }
-                )
+                self._vc_fire_end_once()
 
     try:
         app_name, app_obj = resolve_app(
@@ -851,9 +948,14 @@ if "VERCEL_IPC_PATH" in os.environ:
                         "_vc_service_root_path",
                         "",
                     )
-                    content_length = int(self.headers.get("Content-Length", 0))
+                    try:
+                        body = read_wsgi_request_body(self.rfile, self.headers)
+                    except ValueError as exc:
+                        self.log_error("invalid request body: %s", exc)
+                        self.send_error(400)
+                        return
                     env: dict[str, Any] = {
-                        "CONTENT_LENGTH": str(content_length),
+                        "CONTENT_LENGTH": str(len(body)),
                         "CONTENT_TYPE": self.headers.get("content-type", ""),
                         "SCRIPT_NAME": service_root_path,
                         "PATH_INFO": path,
@@ -868,7 +970,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                         ),
                         "SERVER_PROTOCOL": "HTTP/1.1",
                         "wsgi.errors": sys.stderr,
-                        "wsgi.input": BytesIO(self.rfile.read(content_length)),
+                        "wsgi.input": BytesIO(body),
                         "wsgi.multiprocess": False,
                         "wsgi.multithread": False,
                         "wsgi.run_once": False,
@@ -881,7 +983,20 @@ if "VERCEL_IPC_PATH" in os.environ:
                         if isinstance(value, string_types):
                             env[key] = wsgi_encoding_dance(value)
                     for k, v in self.headers.items():
+                        # Hop-by-hop; body is already de-chunked (PEP 3333).
+                        if k.lower() == "transfer-encoding":
+                            continue
                         env["HTTP_" + k.replace("-", "_").upper()] = v
+
+                    if attach_wsgi_websocket(
+                        env,
+                        self.headers,
+                        self.connection,
+                        self._vc_fire_end_once,
+                    ):
+                        # The hijacked connection cannot be reused for further
+                        # requests once the upgrade completes.
+                        self.close_connection = True
 
                     def start_response(
                         status: str,
@@ -982,14 +1097,28 @@ if (
     port = server.server_address[1]  # type: ignore[attr-defined]
 
     def vc_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-        _thread.start_new_thread(server.handle_request, ())  # type: ignore[attr-defined]
-
         payload = json.loads(event["body"])
         path, _ = apply_service_route_prefix_to_target(payload["path"])
         headers = normalize_event_headers(payload.get("headers", {}))
         method = payload["method"]
         encoding = payload.get("encoding")
         body = payload.get("body")
+
+        sc_no_header_leak = bool(headers.get(SC_NO_HEADER_LEAK_HEADER))
+        set_runtime_cache_from_http_headers(headers)
+        for sc_header in SC_HEADERS_ALWAYS_STRIP:
+            headers.pop(sc_header, None)
+        if sc_no_header_leak:
+            for sc_header in SC_HEADERS_STRIP_ON_NO_LEAK:
+                headers.pop(sc_header, None)
+
+        # `_thread.start_new_thread` does not propagate contextvars
+        captured_ctx = contextvars.copy_context()
+        _thread.start_new_thread(
+            captured_ctx.run,
+            (server.handle_request,),  # type: ignore[attr-defined]
+        )
+        clear_runtime_cache_context()
 
         if (body is not None and len(body) > 0) and (
             encoding is not None and encoding == "base64"
@@ -1066,6 +1195,15 @@ else:
             payload = json.loads(event["body"])
 
             raw_headers = normalize_event_headers(payload.get("headers", {}))
+
+            sc_no_header_leak = bool(raw_headers.get(SC_NO_HEADER_LEAK_HEADER))
+            set_runtime_cache_from_http_headers(raw_headers)
+            for sc_header in SC_HEADERS_ALWAYS_STRIP:
+                raw_headers.pop(sc_header, None)
+            if sc_no_header_leak:
+                for sc_header in SC_HEADERS_STRIP_ON_NO_LEAK:
+                    raw_headers.pop(sc_header, None)
+
             headers = Headers(raw_headers)
 
             body: Any = payload.get("body", "")
@@ -1118,6 +1256,7 @@ else:
             try:
                 response = Response.from_app(wsgi_user_app, environ)
             finally:
+                clear_runtime_cache_context()
                 clear_vercel_headers_context()
 
             return_dict: dict[str, Any] = {
@@ -1347,11 +1486,30 @@ else:
             header_pairs = normalize_event_header_pairs(
                 payload.get("headers", {})
             )
+
+            sc_pairs: list[tuple[str, str]] = []
+            sc_no_header_leak = False
             headers: dict[str, str] = {}
             headers_encoded: list[tuple[bytes, bytes]] = []
             for key, value in header_pairs:
+                key_lower = key.lower()
+                if key_lower in SC_HEADERS_ALWAYS_STRIP:
+                    continue
+                if key_lower in SC_HEADERS_STRIP_ON_NO_LEAK:
+                    sc_pairs.append((key_lower, value))
+                    if key_lower == SC_NO_HEADER_LEAK_HEADER:
+                        sc_no_header_leak = bool(value)
+                    continue
                 headers[key] = value
-                headers_encoded.append((key.lower().encode(), value.encode()))
+                headers_encoded.append((key_lower.encode(), value.encode()))
+
+            set_runtime_cache_from_http_headers(dict(sc_pairs))
+            if not sc_no_header_leak:
+                for sc_key, sc_value in sc_pairs:
+                    headers[sc_key] = sc_value
+                    headers_encoded.append(
+                        (sc_key.encode(), sc_value.encode()),
+                    )
 
             body = payload.get("body", b"")
             if payload.get("encoding") == "base64":
@@ -1397,4 +1555,5 @@ else:
                 response = asgi_cycle(asgi_user_app, body)
                 return response
             finally:
+                clear_runtime_cache_context()
                 clear_vercel_headers_context()

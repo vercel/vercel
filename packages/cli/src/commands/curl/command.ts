@@ -1,5 +1,9 @@
 import { packageName } from '../../util/pkg-name';
-import { yesOption } from '../../util/arg-common';
+import {
+  deploymentOption,
+  protectionBypassOption,
+  yesOption,
+} from '../../util/arg-common';
 
 export const curlCommand = {
   name: 'curl',
@@ -18,22 +22,23 @@ export const curlCommand = {
       description:
         'Skip confirmation when linking is required (e.g. in non-interactive mode)',
     },
+    deploymentOption,
+    protectionBypassOption,
     {
-      name: 'deployment',
+      name: 'trace',
       shorthand: null,
-      type: String,
-      deprecated: false,
-      description: 'The deployment ID or URL to target',
-      argument: 'ID|URL',
-    },
-    {
-      name: 'protection-bypass',
-      shorthand: null,
-      type: String,
+      type: Boolean,
       deprecated: false,
       description:
-        'Protection bypass secret for accessing protected deployments',
-      argument: 'SECRET',
+        'Capture a session trace for the request and print the trace request id',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'With --trace, emit { response, requestId } as JSON on stdout',
     },
   ],
   examples: [
@@ -60,6 +65,10 @@ export const curlCommand = {
     {
       name: 'Use with protection bypass secret',
       value: `${packageName} curl /api/protected --protection-bypass <secret> -- --request GET`,
+    },
+    {
+      name: 'Capture a session trace for the request',
+      value: `${packageName} curl --trace /api/hello`,
     },
   ],
 } as const;

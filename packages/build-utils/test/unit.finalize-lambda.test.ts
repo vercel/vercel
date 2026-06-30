@@ -46,7 +46,7 @@ describe('finalizeLambda()', () => {
     });
 
     expect(result.buffer).toBeInstanceOf(Buffer);
-    expect(result.buffer.length).toBeGreaterThan(0);
+    expect(result.buffer?.length).toBeGreaterThan(0);
     expect(result.zipPath).toBeNull();
     expect(result.digest).toEqual(sha256(result.buffer));
     expect(result.uncompressedBytes).toEqual(0);
@@ -131,13 +131,12 @@ describe('finalizeLambda()', () => {
     });
     (lambda as any).launcherType = 'Nodejs';
 
-    const result = await finalizeLambda({
+    await finalizeLambda({
       lambda,
       bytecodeCachingOptions: NO_BYTECODE,
       forceStreamingRuntime: false,
     });
 
-    expect(result.streamingError).toBeUndefined();
     expect(lambda.supportsResponseStreaming).toEqual(true);
   });
 
@@ -156,13 +155,12 @@ describe('finalizeLambda()', () => {
       awsLambdaHandler: 'index.handler',
     });
 
-    const result = await finalizeLambda({
+    await finalizeLambda({
       lambda,
       bytecodeCachingOptions: NO_BYTECODE,
       forceStreamingRuntime: false,
     });
 
-    expect(result.streamingError).toBeUndefined();
     expect(lambda.supportsResponseStreaming).toEqual(false);
   });
 

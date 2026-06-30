@@ -2,7 +2,14 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import path from 'path';
 import fs, { readlink } from 'fs-extra';
 import { strict as assert, strictEqual } from 'assert';
-import { download, glob, FileBlob } from '../src';
+import {
+  download,
+  glob,
+  FileBlob,
+  isExternalSymlink,
+  isExternalSymlinkTarget,
+  getSymlinkTarget,
+} from '../src';
 
 // File mode constants (octal) used by FileBlob to indicate file type
 const S_IFREG = 33188; // 0o100644 - regular file
@@ -157,6 +164,30 @@ describe('download()', () => {
     expect(warningMessages).toEqual([
       'Warning: file "linkdir/file.txt" is within a symlinked directory "linkdir" and will be ignored',
     ]);
+  });
+
+  it('should detect external symlink targets', () => {
+    expect(isExternalSymlinkTarget('../../node_modules/.pnpm/next')).toBe(true);
+    expect(isExternalSymlinkTarget('./a.txt')).toBe(false);
+    expect(isExternalSymlinkTarget('a.txt')).toBe(false);
+    expect(isExternalSymlinkTarget('/absolute/path')).toBe(true);
+
+    const externalSymlink = new FileBlob({
+      mode: S_IFLNK,
+      contentType: undefined,
+      data: '../../node_modules/.pnpm/next',
+    });
+    const internalSymlink = new FileBlob({
+      mode: S_IFLNK,
+      contentType: undefined,
+      data: './a.txt',
+    });
+
+    expect(getSymlinkTarget(externalSymlink)).toBe(
+      '../../node_modules/.pnpm/next'
+    );
+    expect(isExternalSymlink(externalSymlink)).toBe(true);
+    expect(isExternalSymlink(internalSymlink)).toBe(false);
   });
 
   it('should not fail when symlink already exists with same target', async () => {

@@ -29,6 +29,27 @@ describe('getUser', () => {
     expect(client.telemetryEventStore.hasUserId).toBe(true);
   });
 
+  it('reuses the fetched user within the same client invocation', async () => {
+    const user = {
+      id: 'user_cached',
+      email: 'cached@example.com',
+      name: 'Cached User',
+      username: 'cached-user',
+    };
+    let fetchCount = 0;
+    client.scenario.get('/v2/user', (_req, res) => {
+      fetchCount++;
+      res.json({ user });
+    });
+
+    const first = await getUser(client);
+    const second = await getUser(client);
+
+    expect(first.id).toBe(user.id);
+    expect(second.id).toBe(user.id);
+    expect(fetchCount).toBe(1);
+  });
+
   it('clears cached userId in best-effort mode when the token is invalid', async () => {
     client.authConfig.userId = 'user_stale';
 

@@ -8,11 +8,12 @@ import { copySubcommand } from './command';
 import { BlobCopyTelemetryClient } from '../../util/telemetry/commands/blob/copy';
 import { getCommandName } from '../../util/pkg-name';
 import { parseAccessFlag } from '../../util/blob/access';
+import { blobOpts, type BlobRWToken } from '../../util/blob/token';
 
 export default async function copy(
   client: Client,
   argv: string[],
-  rwToken: string
+  auth: BlobRWToken
 ): Promise<number> {
   const telemetryClient = new BlobCopyTelemetryClient({
     opts: {
@@ -68,7 +69,7 @@ export default async function copy(
     output.spinner('Copying blob');
 
     result = await blob.copy(fromUrl, toPathname, {
-      token: rwToken,
+      ...blobOpts(auth),
       access,
       addRandomSuffix: addRandomSuffix ?? false,
       contentType,

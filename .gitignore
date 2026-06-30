@@ -1,4 +1,6 @@
 node_modules
+!packages/node/test/unit-fixtures/**/node_modules
+!packages/node/test/unit-fixtures/**/node_modules/**
 dist
 dist-bin
 dist-native
@@ -51,3 +53,4 @@ junit.xml
 !packages/cli/test/unit/commands/target/**
 .claude/settings.local.json
 .pnpm-store
+.env*

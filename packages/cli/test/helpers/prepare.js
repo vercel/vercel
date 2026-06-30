@@ -19,6 +19,202 @@ const getRevertAliasConfigFile = () => {
     ],
   });
 };
+
+const getNextGeneratedNitroServiceFixture = servicesConfigKey => ({
+  '.vercel/project.json': JSON.stringify({
+    orgId: '.',
+    projectId: '.',
+    settings: {
+      framework: 'nextjs',
+    },
+  }),
+  'package.json': JSON.stringify({
+    private: true,
+    scripts: {
+      build:
+        servicesConfigKey === 'experimentalServicesV2'
+          ? 'next build && node write-experimental-services-v2.mjs'
+          : 'next build',
+    },
+    dependencies: {
+      next: 'latest',
+      react: 'latest',
+      'react-dom': 'latest',
+    },
+  }),
+  'pages/index.js':
+    'export default function Home() { return <p>Latest Next.js app</p>; }',
+  ...(servicesConfigKey === 'experimentalServicesV2'
+    ? {
+        'vercel.json': JSON.stringify({
+          experimentalServicesV2: {
+            web: {
+              root: '.',
+              entrypoint: 'package.json',
+              framework: 'nextjs',
+              rewrites: [{ source: '/(.*)', destination: '/$1' }],
+            },
+            'nitro-api': {
+              root: 'nitro',
+              entrypoint: 'package.json',
+              framework: 'nitro',
+              rewrites: [{ source: '/api/(.*)', destination: '/$1' }],
+            },
+          },
+        }),
+        'write-experimental-services-v2.mjs': `
+import fs from 'node:fs';
+import path from 'node:path';
+
+const servicesConfig = {
+  web: {
+    root: '.',
+    entrypoint: 'package.json',
+    framework: 'nextjs',
+    rewrites: [{ source: '/(.*)', destination: '/$1' }],
+  },
+  'nitro-api': {
+    root: 'nitro',
+    entrypoint: 'package.json',
+    framework: 'nitro',
+    rewrites: [{ source: '/api/(.*)', destination: '/$1' }],
+  },
+};
+
+const serviceRoutes = [
+  {
+    src: '/api/(.*)',
+    service: 'nitro-api',
+  },
+  {
+    src: '/(.*)',
+    service: 'web',
+  },
+];
+
+const outputDir = path.join(process.cwd(), '.vercel', 'output');
+const configPath = path.join(outputDir, 'config.json');
+let config = { version: 3 };
+try {
+  config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+} catch (error) {
+  if (error.code !== 'ENOENT') {
+    throw error;
+  }
+}
+
+fs.mkdirSync(outputDir, { recursive: true });
+fs.writeFileSync(
+  configPath,
+  JSON.stringify(
+    {
+      ...config,
+      version: 3,
+      routes: serviceRoutes,
+      experimentalServicesV2: servicesConfig,
+    },
+    null,
+    2
+  )
+);
+`,
+      }
+    : {}),
+  'next.config.js': `
+const fs = require('node:fs');
+const path = require('node:path');
+
+const servicesConfig =
+  ${JSON.stringify(servicesConfigKey)} === 'experimentalServicesV2'
+    ? {
+        web: {
+          root: '.',
+          entrypoint: 'package.json',
+          framework: 'nextjs',
+          rewrites: [{ source: '/(.*)', destination: '/$1' }],
+        },
+        'nitro-api': {
+          root: 'nitro',
+          entrypoint: 'package.json',
+          framework: 'nitro',
+          rewrites: [{ source: '/api/(.*)', destination: '/$1' }],
+        },
+      }
+    : {
+        web: {
+          type: 'web',
+          root: '.',
+          entrypoint: 'package.json',
+          framework: 'nextjs',
+          mount: '/',
+        },
+        'nitro-api': {
+          type: 'web',
+          root: 'nitro',
+          entrypoint: 'package.json',
+          framework: 'nitro',
+          mount: '/api',
+        },
+      };
+
+function writeExperimentalServicesConfig(projectDir) {
+  const outputDir = path.join(projectDir, '.vercel', 'output');
+  const configPath = path.join(outputDir, 'config.json');
+  let config = { version: 3 };
+  try {
+    config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  fs.mkdirSync(outputDir, { recursive: true });
+  fs.writeFileSync(
+    configPath,
+    JSON.stringify(
+      {
+        ...config,
+        version: 3,
+        ${JSON.stringify(servicesConfigKey)}: servicesConfig,
+      },
+      null,
+      2
+    )
+  );
+}
+
+writeExperimentalServicesConfig(__dirname);
+
+module.exports = {};
+`,
+  'nitro/package.json': JSON.stringify({
+    private: true,
+    scripts: {
+      build: 'nitro build',
+      dev: 'nitro dev',
+      prepare: 'nitro prepare',
+      preview: 'node .output/server/index.mjs',
+    },
+    devDependencies: {
+      nitropack: 'latest',
+    },
+  }),
+  'nitro/.npmrc': 'shamefully-hoist=true\nstrict-peer-dependencies=false\n',
+  'nitro/nitro.config.ts': `
+export default defineNitroConfig({
+  preset: 'vercel',
+  compatibilityDate: '2026-05-27',
+  srcDir: 'server'
+});
+`,
+  'nitro/server/routes/index.ts': `
+export default defineEventHandler(() => {
+  return 'nitro ok';
+});
+`,
+});
+
 module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
   const spec = {
     'static-single-file': {
@@ -249,7 +445,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'zero-config-next-js-nested': {
       // `pnpm-workspace.yaml` makes this fixture a workspace, which is what
-      // triggers the "In which directory is your code located?" prompt under
+      // triggers the "Code directory?" prompt under
       // the new input-root-directory behavior (prompt fires only when
       // `getWorkspaces()` returns non-empty).
       'pnpm-workspace.yaml': "packages:\n  - 'app'\n",
@@ -494,6 +690,10 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         },
       }),
     },
+    'vc-build-next-generated-nitro-service':
+      getNextGeneratedNitroServiceFixture('experimentalServices'),
+    'vc-build-next-generated-experimental-services-v2-nitro-service':
+      getNextGeneratedNitroServiceFixture('experimentalServicesV2'),
     'vercel-json-configuration-overrides': {
       'vercel.json': '{}',
       'package.json': '{}',

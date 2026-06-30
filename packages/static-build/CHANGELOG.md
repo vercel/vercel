@@ -1,5 +1,138 @@
 # @vercel/static-build
 
+## 2.11.4
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.24
+
+## 2.11.3
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.23
+
+## 2.11.2
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.22
+
+## 2.11.1
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.21
+
+## 2.11.0
+
+### Minor Changes
+
+- 3afdb18: Emit project manifest for hugo, zola, jekyll, and middleman frameworks.
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.20
+
+## 2.10.3
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.19
+
+## 2.10.2
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.18
+
+## 2.10.1
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.17
+
+## 2.10.0
+
+### Minor Changes
+
+- 78e5d4f: Add project manifest to node frontend builders.
+
+## 2.9.39
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.16
+
+## 2.9.38
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.15
+
+## 2.9.37
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.14
+
+## 2.9.36
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.13
+
+## 2.9.35
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.12
+
+## 2.9.34
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.11
+
+## 2.9.33
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.10
+
+## 2.9.32
+
+### Patch Changes
+
+- Updated dependencies [eecd10d]
+  - @vercel/static-config@3.4.0
+  - @vercel/gatsby-plugin-vercel-builder@2.2.9
+
+## 2.9.31
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.8
+
+## 2.9.30
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.7
+
+## 2.9.29
+
+### Patch Changes
+
+- 23eee91: Revert "[static-build] Support Vite Environments API for SSR projects (#16354)"
+
+## 2.9.28
+
+### Patch Changes
+
+- 7923d34: [static-build] Add vite-environments path for TanStack Start
+  - @vercel/gatsby-plugin-vercel-builder@2.2.6
+
 ## 2.9.27
 
 ### Patch Changes

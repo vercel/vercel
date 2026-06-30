@@ -1,5 +1,11 @@
 # @vercel/rust
 
+## 1.3.0
+
+### Minor Changes
+
+- 6860c32: Add project manifest to rust builder.
+
 ## 1.2.0
 
 ### Minor Changes

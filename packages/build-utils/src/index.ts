@@ -14,6 +14,9 @@ import download, {
   DownloadedFiles,
   isSymbolicLink,
   isDirectory,
+  isExternalSymlink,
+  isExternalSymlinkTarget,
+  getSymlinkTarget,
 } from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
 import glob, { GlobOptions } from './fs/glob';
@@ -44,6 +47,7 @@ import {
   traverseUpDirectories,
   PipInstallResult,
   NpmInstallOutput,
+  type CliType,
 } from './fs/run-user-scripts';
 import {
   getLatestNodeVersion,
@@ -118,6 +122,9 @@ export {
   debug,
   isSymbolicLink,
   isDirectory,
+  isExternalSymlink,
+  isExternalSymlinkTarget,
+  getSymlinkTarget,
   getLambdaOptionsFromFunction,
   sanitizeConsumerName,
   scanParentDirs,
@@ -127,17 +134,31 @@ export {
   hardLinkDir,
   traverseUpDirectories,
   validateNpmrc,
+  type CliType,
 };
 
 export { EdgeFunction } from './edge-function';
+export { ContainerImage } from './container-image';
+export type { ContainerImageConfig } from './container-image';
 export { readConfigFile, getPackageJson } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
 export { getOsRelease, getProvidedRuntime } from './os';
 
 export * from './should-serve';
 export * from './schemas';
+export {
+  DEFAULT_MAX_DURATION_LIMIT,
+  SKIP_MAX_DURATION_LIMIT_ENV,
+  getMaxDurationLimit,
+  getMaxDurationSchema,
+} from './max-duration';
 export * from './package-manifest';
+export * from './deploy-manifest';
 export { generateProjectManifest } from './node-diagnostics';
+export {
+  generateRubyProjectManifest,
+  parseGemfileLock,
+} from './ruby-diagnostics';
 export * from './types';
 export * from './errors';
 
@@ -146,6 +167,7 @@ export * from './trace';
 export { NODE_VERSIONS } from './fs/node-version';
 
 export { getInstalledPackageVersion } from './get-installed-package-version';
+export { isPackageInstalled } from './is-package-installed';
 
 export { defaultCachePathGlob } from './default-cache-path-glob';
 
@@ -180,10 +202,7 @@ export {
   getLambdaPreloadScripts,
   type BytecodeCachingOptions,
 } from './process-serverless/get-lambda-preload-scripts';
-export {
-  getLambdaSupportsStreaming,
-  type SupportsStreamingResult,
-} from './process-serverless/get-lambda-supports-streaming';
+export { getLambdaSupportsStreaming } from './process-serverless/get-lambda-supports-streaming';
 
 export {
   streamToDigestAsync,

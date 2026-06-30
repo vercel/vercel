@@ -7,6 +7,7 @@ import jsonlines from 'jsonlines';
 import { eraseLines } from 'ansi-escapes';
 
 import type Client from './client';
+import { toNodeReadable } from './fetch';
 import getDeployment from './get-deployment';
 import getScope from './get-scope';
 
@@ -35,7 +36,7 @@ async function printEvents(
   abortController?: AbortController
 ) {
   const { log, debug } = output;
-  const { contextName } = await getScope(client);
+  const scope = mode === 'deploy' ? await getScope(client) : null;
 
   // we keep track of how much we log in case we
   // drop the connection and have to start over
@@ -60,12 +61,11 @@ async function printEvents(
       try {
         const eventsRes = await client.fetch(eventsUrl, {
           json: false,
-          // @ts-expect-error: typescript is getting confused with the signal types from node (web & server) and node-fetch (server only)
           signal: abortController?.signal,
         });
 
         if (eventsRes.ok) {
-          const readable = eventsRes.body;
+          const readable = toNodeReadable(eventsRes.body);
 
           // handle the event stream and make the promise get rejected
           // if errors occur so we can retry
@@ -80,7 +80,7 @@ async function printEvents(
                   try {
                     const json = await getDeployment(
                       client,
-                      contextName,
+                      scope!.contextName,
                       urlOrDeploymentId
                     );
                     if (json.readyState === 'READY') {

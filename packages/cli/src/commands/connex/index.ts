@@ -15,6 +15,7 @@ import {
   attachSubcommand,
   detachSubcommand,
   removeSubcommand,
+  revokeTokensSubcommand,
   openSubcommand,
   connexCommand,
 } from './command';
@@ -25,6 +26,7 @@ import { token } from './token';
 import { attach } from './attach';
 import { detach } from './detach';
 import { remove } from './remove';
+import { revokeTokens } from './revoke-tokens';
 import { openClient } from './open';
 import {
   buildCommandWithGlobalFlags,
@@ -41,6 +43,7 @@ const COMMAND_CONFIG = {
   attach: getCommandAliases(attachSubcommand),
   detach: getCommandAliases(detachSubcommand),
   remove: getCommandAliases(removeSubcommand),
+  'revoke-tokens': getCommandAliases(revokeTokensSubcommand),
   open: getCommandAliases(openSubcommand),
 };
 
@@ -95,7 +98,21 @@ export default async function connex(client: Client): Promise<number> {
         telemetry.trackCliSubcommandCreate(subcommandOriginal);
 
         const createFlagsSpec = getFlagsSpecification(createSubcommand.options);
-        const createParsedArgs = parseArguments(subArgs, createFlagsSpec);
+        const createParsedArgs = parseArguments(
+          normalizeCreateDataArgs(subArgs),
+          createFlagsSpec
+        );
+        telemetry.trackCliOptionIcon(createParsedArgs.flags['--icon']);
+        telemetry.trackCliOptionBackgroundColor(
+          createParsedArgs.flags['--background-color']
+        );
+        telemetry.trackCliOptionAccentColor(
+          createParsedArgs.flags['--accent-color']
+        );
+        telemetry.trackCliOptionData(createParsedArgs.flags['--data']);
+        telemetry.trackCliOptionConnectorType(
+          createParsedArgs.flags['--connector-type']
+        );
         return await create(
           client,
           createParsedArgs.args,
@@ -142,6 +159,9 @@ export default async function connex(client: Client): Promise<number> {
         );
         telemetry.trackCliOptionLimit(listParsedArgs.flags['--limit']);
         telemetry.trackCliOptionNext(listParsedArgs.flags['--next']);
+        telemetry.trackCliOptionSearch(listParsedArgs.flags['--search']);
+        telemetry.trackCliOptionService(listParsedArgs.flags['--service']);
+        telemetry.trackCliOptionType(listParsedArgs.flags['--type']);
         telemetry.trackCliOptionFormat(listParsedArgs.flags['--format']);
         return await list(client, listParsedArgs.flags);
       }
@@ -229,6 +249,38 @@ export default async function connex(client: Client): Promise<number> {
           removeParsedArgs.flags
         );
       }
+      case 'revoke-tokens': {
+        if (needHelp) {
+          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          printHelp(revokeTokensSubcommand);
+          return 0;
+        }
+        telemetry.trackCliSubcommandRevokeTokens(subcommandOriginal);
+
+        const revokeTokensFlagsSpec = getFlagsSpecification(
+          revokeTokensSubcommand.options
+        );
+        const revokeTokensParsedArgs = parseArguments(
+          subArgs,
+          revokeTokensFlagsSpec
+        );
+        telemetry.trackCliArgumentId(revokeTokensParsedArgs.args[0]);
+        telemetry.trackCliFlagMyTokens(
+          revokeTokensParsedArgs.flags['--my-tokens']
+        );
+        telemetry.trackCliFlagAllTokens(
+          revokeTokensParsedArgs.flags['--all-tokens']
+        );
+        telemetry.trackCliFlagYes(revokeTokensParsedArgs.flags['--yes']);
+        telemetry.trackCliOptionFormat(
+          revokeTokensParsedArgs.flags['--format']
+        );
+        return await revokeTokens(
+          client,
+          revokeTokensParsedArgs.args,
+          revokeTokensParsedArgs.flags
+        );
+      }
       case 'open': {
         if (needHelp) {
           telemetry.trackCliFlagHelp('connex', subcommandOriginal);
@@ -283,4 +335,20 @@ export default async function connex(client: Client): Promise<number> {
     printError(err);
     return 1;
   }
+}
+
+function normalizeCreateDataArgs(args: string[]): string[] {
+  const normalized: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    normalized.push(arg);
+
+    if (arg === '--data') {
+      const next = args[i + 1];
+      if (next === undefined || next.startsWith('-')) {
+        normalized.push('');
+      }
+    }
+  }
+  return normalized;
 }

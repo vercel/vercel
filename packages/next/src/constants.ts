@@ -18,6 +18,13 @@ export const DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE = 250 * MIB;
  */
 export const DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE_BUN = 150 * MIB;
 
+/**
+ * Uncompressed size ceiling for a "large" function (a single over-budget route
+ * emitted on its own). Only applies when large functions are enabled via
+ * `NEXT_EXPERIMENTAL_LARGE_FUNCTIONS`; see {@link isLargeFunctionsEnabled}.
+ */
+export const DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE = 5 * 1024 * MIB;
+
 // we need to leave wiggle room as other files are added
 // post build so we don't want to completely pack the function
 export const LAMBDA_RESERVED_UNCOMPRESSED_SIZE = 25 * MIB;

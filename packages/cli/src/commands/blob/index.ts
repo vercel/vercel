@@ -9,12 +9,14 @@ import {
   delSubcommand,
   getSubcommand,
   listSubcommand,
+  presignSubcommand,
   putSubcommand,
   copySubcommand,
   createStoreSubcommand,
   deleteStoreSubcommand,
   getStoreInfoSubcommand,
   listStoresSubcommand,
+  signedTokenSubcommand,
   emptyStoreSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -30,8 +32,10 @@ import removeStore from './store-remove';
 import getStore from './store-get';
 import listStores from './store-list';
 import emptyStore from './store-empty';
+import presign from './presign';
+import signedToken from './signed-token';
 import { printError } from '../../util/error';
-import { getBlobRWToken } from '../../util/blob/token';
+import { findFlagValue, getBlobRWToken } from '../../util/blob/token';
 
 const COMMAND_CONFIG = {
   list: getCommandAliases(listSubcommand),
@@ -39,6 +43,8 @@ const COMMAND_CONFIG = {
   get: getCommandAliases(getSubcommand),
   del: getCommandAliases(delSubcommand),
   copy: getCommandAliases(copySubcommand),
+  'signed-token': getCommandAliases(signedTokenSubcommand),
+  presign: getCommandAliases(presignSubcommand),
   'create-store': getCommandAliases(createStoreSubcommand),
   'delete-store': getCommandAliases(deleteStoreSubcommand),
   'get-store': getCommandAliases(getStoreInfoSubcommand),
@@ -85,7 +91,9 @@ export default async function main(client: Client) {
   }
 
   const token = await getBlobRWToken(client, client.argv);
-  telemetry.trackCliOptionRwToken();
+  telemetry.trackCliOptionRwToken(findFlagValue(client.argv, '--rw-token'));
+  telemetry.trackCliOptionOidcToken(findFlagValue(client.argv, '--oidc-token'));
+  telemetry.trackCliOptionStoreId(findFlagValue(client.argv, '--store-id'));
 
   switch (subcommand) {
     case 'list':
@@ -102,7 +110,7 @@ export default async function main(client: Client) {
         return 1;
       }
 
-      return list(client, args, token.token);
+      return list(client, args, token);
     case 'put':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
@@ -117,7 +125,7 @@ export default async function main(client: Client) {
         return 1;
       }
 
-      return put(client, args, token.token);
+      return put(client, args, token);
     case 'get':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
@@ -132,7 +140,7 @@ export default async function main(client: Client) {
         return 1;
       }
 
-      return get(client, args, token.token);
+      return get(client, args, token);
     case 'del':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
@@ -147,7 +155,7 @@ export default async function main(client: Client) {
         return 1;
       }
 
-      return del(client, args, token.token);
+      return del(client, args, token);
     case 'copy':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
@@ -162,7 +170,37 @@ export default async function main(client: Client) {
         return 1;
       }
 
-      return copy(client, args, token.token);
+      return copy(client, args, token);
+    case 'signed-token':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('blob', subcommandOriginal);
+        printHelp(signedTokenSubcommand);
+        return 2;
+      }
+
+      telemetry.trackCliSubcommandSignedToken(subcommandOriginal);
+
+      if (!token.success) {
+        printError(token.error);
+        return 1;
+      }
+
+      return signedToken(client, args, token);
+    case 'presign':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('blob', subcommandOriginal);
+        printHelp(presignSubcommand);
+        return 2;
+      }
+
+      telemetry.trackCliSubcommandPresign(subcommandOriginal);
+
+      if (!token.success) {
+        printError(token.error);
+        return 1;
+      }
+
+      return presign(client, args, token);
     case 'create-store':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
@@ -217,7 +255,7 @@ export default async function main(client: Client) {
         return 1;
       }
 
-      return emptyStore(client, args, token.token, token);
+      return emptyStore(client, args, token);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(blobCommand, { columns: client.stderr.columns }));

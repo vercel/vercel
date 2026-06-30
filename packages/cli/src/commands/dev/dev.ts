@@ -2,12 +2,13 @@ import chalk from 'chalk';
 import ms from 'ms';
 import { resolve, join } from 'path';
 import fs from 'fs-extra';
-import type { ResolvedService } from '@vercel/fs-detectors';
+import type { Service } from '@vercel/fs-detectors';
 
 import DevServer, { DevCommandExitError } from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
 import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
+import { printProjectNotFoundError } from '../../util/projects/project-not-found-error';
 import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
 import { findRepoRoot } from '../../util/link/repo';
@@ -33,6 +34,7 @@ type Options = {
   '--listen': string;
   '--local': boolean;
   '--yes': boolean;
+  '--project': string;
 };
 
 export default async function dev(
@@ -47,8 +49,15 @@ export default async function dev(
 
   cwd = await resolveProjectCwd(cwd);
 
+  const projectNameOrId = opts['--project'];
+
   // retrieve dev command
-  let link = await getLinkedProject(client, cwd);
+  let link = await getLinkedProject(
+    client,
+    cwd,
+    projectNameOrId,
+    !!projectNameOrId
+  );
 
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
     if (opts['--local']) {
@@ -58,12 +67,14 @@ export default async function dev(
           '  - Project settings are defined by local configuration\n\n' +
           `To link your project, run ${getCommandName('dev')} without \`-L\` or \`--local\` or ${getCommandName('link')}.`
       );
+    } else if (projectNameOrId) {
+      await printProjectNotFoundError(client, projectNameOrId, 'dev');
+      return 1;
     } else {
       link = await setupAndLink(client, cwd, {
         autoConfirm: opts['--yes'],
         link,
         successEmoji: 'link',
-        setupMsg: 'Set up',
         nonInteractive: client.nonInteractive,
       });
 
@@ -140,13 +151,13 @@ export default async function dev(
       .env;
   }
 
-  let services: ResolvedService[] | undefined;
+  let services: Service[] | undefined;
   let useImplicitServicesEnvInjection = true;
   const servicesResult = await tryDetectServices(cwd);
   const foundServices = servicesResult && servicesResult.services.length > 0;
   if (foundServices) {
-    displayDetectedServices(servicesResult.services);
     services = servicesResult.services;
+    displayDetectedServices(services);
     useImplicitServicesEnvInjection = servicesResult.useImplicitEnvInjection;
   }
 

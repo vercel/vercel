@@ -1,4 +1,4 @@
-import { formatOption, yesOption } from '../../util/arg-common';
+import { formatOption, projectOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const createSubcommand = {
@@ -27,6 +27,49 @@ export const createSubcommand = {
       deprecated: false,
       description: 'Enable webhook triggers for this connector',
     },
+    {
+      name: 'data',
+      shorthand: null,
+      type: String,
+      argument: 'JSON',
+      deprecated: false,
+      description:
+        'JSON object for non-managed connector creation. When set, posts directly to the connector create API. Pass `@<path>` to read from a file or `@-` to read from stdin — recommended for secrets (e.g. client secrets), which leak into shell history when passed inline.',
+    },
+    {
+      name: 'connector-type',
+      shorthand: null,
+      type: String,
+      argument: 'TYPE',
+      deprecated: false,
+      description:
+        'Connector type for non-managed creation. By default, the type is resolved from the service.',
+    },
+    {
+      name: 'icon',
+      shorthand: null,
+      type: String,
+      argument: 'PATH',
+      deprecated: false,
+      description:
+        'Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)',
+    },
+    {
+      name: 'background-color',
+      shorthand: null,
+      type: String,
+      argument: 'HEX',
+      deprecated: false,
+      description: 'Background color for the connector icon (e.g. #1A2B3C)',
+    },
+    {
+      name: 'accent-color',
+      shorthand: null,
+      type: String,
+      argument: 'HEX',
+      deprecated: false,
+      description: 'Accent color for the connector icon (e.g. #1A2B3C)',
+    },
     formatOption,
   ],
   examples: [
@@ -41,6 +84,22 @@ export const createSubcommand = {
     {
       name: 'Create with webhook triggers enabled',
       value: `${packageName} connect create slack --name my-bot --triggers`,
+    },
+    {
+      name: 'Create with branding (icon and colors)',
+      value: `${packageName} connect create slack --name my-bot --icon ./logo.png --background-color '#1A2B3C' --accent-color '#FF0066'`,
+    },
+    {
+      name: 'Create a non-managed connector from explicit data',
+      value: `${packageName} connect create mcp.linear.app --name linear --data '{"clientId":"abc123"}'`,
+    },
+    {
+      name: 'Create a non-managed connector, reading credentials from a file (keeps secrets out of shell history)',
+      value: `${packageName} connect create slack --name my-bot --connector-type slack --data @slack-app.json`,
+    },
+    {
+      name: 'Create a non-managed connector, reading credentials from stdin',
+      value: `cat slack-app.json | ${packageName} connect create slack --name my-bot --connector-type slack --data @-`,
     },
     {
       name: 'Output as JSON',
@@ -134,6 +193,32 @@ export const listSubcommand = {
       deprecated: false,
       description: 'Cursor for the next page of results',
     },
+    {
+      name: 'search',
+      shorthand: null,
+      type: String,
+      argument: 'TEXT',
+      deprecated: false,
+      description: 'Search connectors by name or UID',
+    },
+    {
+      name: 'service',
+      shorthand: null,
+      type: [String],
+      argument: 'NAME',
+      deprecated: false,
+      description:
+        'Filter by service name (e.g. slack, mcp.linear.app). Repeatable.',
+    },
+    {
+      name: 'type',
+      shorthand: null,
+      type: [String],
+      argument: 'TYPE',
+      deprecated: false,
+      description:
+        'Filter by connector type (slack, github, oauth, custom). Repeatable.',
+    },
     formatOption,
   ],
   examples: [
@@ -144,6 +229,26 @@ export const listSubcommand = {
     {
       name: 'List every connector in the team',
       value: `${packageName} connect list --all-projects`,
+    },
+    {
+      name: 'Filter by connector type',
+      value: `${packageName} connect list --type slack`,
+    },
+    {
+      name: 'Filter by multiple types',
+      value: `${packageName} connect list --type oauth --type github`,
+    },
+    {
+      name: 'Filter by service name',
+      value: `${packageName} connect list --service mcp.linear.app`,
+    },
+    {
+      name: 'Search by text',
+      value: `${packageName} connect list --search linear`,
+    },
+    {
+      name: 'Combine filters',
+      value: `${packageName} connect list --type oauth --search prod`,
     },
     {
       name: 'Limit the number of results',
@@ -166,7 +271,7 @@ export const removeSubcommand = {
   description: 'Delete a connector',
   arguments: [
     {
-      name: 'client',
+      name: 'connector',
       required: true,
     },
   ],
@@ -281,6 +386,62 @@ export const tokenSubcommand = {
   ],
 } as const;
 
+export const revokeTokensSubcommand = {
+  name: 'revoke-tokens',
+  aliases: [],
+  description: 'Revoke tokens issued from a connector',
+  arguments: [
+    {
+      name: 'connector',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'my-tokens',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Revoke only your own tokens for this connector',
+    },
+    {
+      name: 'all-tokens',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Revoke every token for all users and installations. Requires team owner or member permissions.',
+    },
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Interactively select which tokens to revoke',
+      value: `${packageName} connect revoke-tokens scl_abc123`,
+    },
+    {
+      name: 'Revoke only your own tokens',
+      value: `${packageName} connect revoke-tokens scl_abc123 --my-tokens`,
+    },
+    {
+      name: 'Revoke all tokens for all users',
+      value: `${packageName} connect revoke-tokens scl_abc123 --all-tokens`,
+    },
+    {
+      name: 'Skip the confirmation prompt',
+      value: `${packageName} connect revoke-tokens scl_abc123 --my-tokens --yes`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} connect revoke-tokens scl_abc123 --my-tokens --yes --format=json`,
+    },
+  ],
+} as const;
+
 export const openSubcommand = {
   name: 'open',
   aliases: [],
@@ -315,7 +476,7 @@ export const attachSubcommand = {
     'Attach a Vercel project to a connector for one or more environments',
   arguments: [
     {
-      name: 'client',
+      name: 'connector',
       required: true,
     },
   ],
@@ -330,11 +491,8 @@ export const attachSubcommand = {
         'Environments to enable. Repeatable and comma-separated (e.g. -e production -e preview, or -e production,preview). Defaults to all environments.',
     },
     {
-      name: 'project',
+      ...projectOption,
       shorthand: 'p',
-      type: String,
-      argument: 'NAME_OR_ID',
-      deprecated: false,
       description: 'Project name or ID (default: current linked project)',
     },
     {
@@ -403,17 +561,14 @@ export const detachSubcommand = {
   description: 'Detach a Vercel project from a connector',
   arguments: [
     {
-      name: 'client',
+      name: 'connector',
       required: true,
     },
   ],
   options: [
     {
-      name: 'project',
+      ...projectOption,
       shorthand: 'p',
-      type: String,
-      argument: 'NAME_OR_ID',
-      deprecated: false,
       description: 'Project name or ID (default: current linked project)',
     },
     {
@@ -453,6 +608,7 @@ export const connexCommand = {
     attachSubcommand,
     detachSubcommand,
     removeSubcommand,
+    revokeTokensSubcommand,
     openSubcommand,
   ],
   examples: [

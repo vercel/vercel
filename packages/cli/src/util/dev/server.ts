@@ -3,7 +3,7 @@ import http from 'http';
 import fs from 'fs-extra';
 import ms from 'ms';
 import chalk from 'chalk';
-import nodeFetch from 'node-fetch';
+import { directFetch } from '../fetch';
 import plural from 'pluralize';
 import rawBody from 'raw-body';
 import { listen } from 'async-listen';
@@ -11,6 +11,7 @@ import minimatch from 'minimatch';
 import httpProxy from 'http-proxy-node16';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
+import PCRE from 'pcre-to-regexp';
 import { watch, type FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
 import path, { isAbsolute, basename, dirname, extname, join } from 'path';
@@ -25,17 +26,22 @@ import JSONparse from 'json-parse-better-errors';
 
 import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
 import {
+  convertRewrites,
   getTransformedRoutes,
   appendRoutesToPhase,
+  isHandler,
   type HandleValue,
+  type Rewrite,
   type Route,
+  type RouteWithSrc,
+  type ServiceDestination,
 } from '@vercel/routing-utils';
 import {
   type Builder,
   cloneEnv,
   type Env,
   getNodeBinPaths,
-  isQueueTriggeredService,
+  isQueueBackedService,
   type StartDevServerResult,
   FileFsRef,
   type PackageJson,
@@ -47,6 +53,8 @@ import {
   detectApiDirectory,
   detectApiExtensions,
   isOfficialRuntime,
+  isExperimentalService,
+  isExperimentalServiceV2,
   type Service,
 } from '@vercel/fs-detectors';
 import { frameworkList } from '@vercel/frameworks';
@@ -59,7 +67,13 @@ import { MissingDotenvVarsError } from '../errors-ts';
 import { getVercelDirectory } from '../projects/link';
 import { staticFiles as getFiles } from '../get-files';
 import { validateConfig } from '../validate-config';
-import { devRouter, getRoutesTypes } from './router';
+import { devRouter, getRoutesTypes, resolveRouteParameters } from './router';
+import {
+  applyRequestTransforms,
+  applyResponseTransforms,
+  hasResponseTransforms,
+  type Transform,
+} from './transforms';
 import getMimeType from './mime-type';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
 import { generateErrorMessage, generateHttpStatusDescription } from './errors';
@@ -91,6 +105,7 @@ import type { ProjectSettings } from '@vercel-internals/types';
 import { treeKill } from '../tree-kill';
 import { ServicesOrchestrator } from './services-orchestrator';
 import { QueueBroker } from './queue-broker';
+import { injectNextDevWebSocketShimIfNeeded } from './next-dev-websocket-shim-injection';
 import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
 import {
@@ -183,6 +198,7 @@ export default class DevServer {
   private services?: Service[];
   private orchestrator?: ServicesOrchestrator;
   private queueBroker?: QueueBroker;
+  private serviceRoutesTable?: Map<string, Route[]>;
 
   private vercelConfigWarning: boolean;
   private getVercelConfigPromise: Promise<VercelConfig> | null;
@@ -193,6 +209,11 @@ export default class DevServer {
   private useImplicitServicesEnvInjection: boolean;
   private projectId?: string;
   private orgId?: string;
+
+  private responseTransformsByReq = new WeakMap<
+    http.IncomingMessage,
+    Transform[]
+  >();
 
   private shouldUseServicesOrchestrator(): boolean {
     if (!this.services || this.services.length === 0) {
@@ -223,9 +244,38 @@ export default class DevServer {
       ws: true,
       xfwd: true,
     });
-    this.proxy.on('proxyRes', proxyRes => {
+    this.proxy.on('proxyRes', (proxyRes, req) => {
       // override "server" header, like production
       proxyRes.headers['server'] = 'Vercel';
+
+      // Apply transform context for response that was stored
+      // before proxying this request
+      const responseTransforms = this.responseTransformsByReq.get(req);
+      if (responseTransforms) {
+        this.responseTransformsByReq.delete(req);
+        applyResponseTransforms(proxyRes.headers, responseTransforms);
+      }
+    });
+    this.proxy.on('error', (err, req, res) => {
+      output.debug(
+        `Proxy error for ${req?.url ?? 'unknown request'}: ${errorToString(err)}`
+      );
+
+      if (!res) {
+        return;
+      }
+
+      if ('destroy' in res && typeof res.destroy === 'function') {
+        res.destroy();
+        return;
+      }
+
+      if (res instanceof http.ServerResponse) {
+        if (!res.headersSent) {
+          res.writeHead(502);
+        }
+        res.end();
+      }
     });
 
     this.server = http.createServer(this.devServerHandler);
@@ -616,9 +666,16 @@ export default class DevServer {
     vercelConfig.routes = maybeRoutes || [];
 
     // no builds -> zero config
+    //
+    // Skip zero-config builder detection when the dev server already has
+    // resolved services (`experimentalServices`/`experimentalServicesV2`): the
+    // services orchestrator owns building and running them. Without this,
+    // `detectBuilders` runs with the remote `framework: "services"` setting but
+    // no service config threaded in, and errors with "no services declared".
+    const hasResolvedServices = !!this.services && this.services.length > 0;
     if (
-      !vercelConfig.services &&
       !vercelConfig.experimentalServices &&
+      !hasResolvedServices &&
       (!vercelConfig.builds || vercelConfig.builds.length === 0)
     ) {
       const featHandleMiss = true; // enable for zero config
@@ -674,6 +731,20 @@ export default class DevServer {
         delete vercelConfig.functions;
       }
 
+      // If auto-detection generated top-level service rewrites (V2),
+      // convert them to Route[] separately so they can be appended to the
+      // route table without re-running getTransformedRoutes on an already-
+      // transformed vercelConfig (which would double-transform routes).
+      const serviceRewrites = (
+        detectedBuilders as typeof detectedBuilders & {
+          serviceRewrites?: Rewrite[];
+        }
+      ).serviceRewrites;
+      const serviceRewriteRoutes =
+        serviceRewrites && serviceRewrites.length > 0
+          ? convertRewrites(serviceRewrites)
+          : null;
+
       let routes: Route[] = [];
       routes.push(...(redirectRoutes || []));
       routes = appendRoutesToPhase({
@@ -684,7 +755,10 @@ export default class DevServer {
       routes.push(
         ...appendRoutesToPhase({
           routes: vercelConfig.routes,
-          newRoutes: rewriteRoutes,
+          newRoutes: [
+            ...(rewriteRoutes || []),
+            ...(serviceRewriteRoutes || []),
+          ],
           phase: 'filesystem',
         })
       );
@@ -727,14 +801,9 @@ export default class DevServer {
     this.apiDir = detectApiDirectory(vercelConfig.builds || []);
     this.apiExtensions = detectApiExtensions(vercelConfig.builds || []);
 
-    // Update the env vars configuration. `vercelConfig.env` may now be the
-    // new `Record<string, EnvVar>` shape and this will be resolved later,
-    // so only the legacy literal shape is forwarded as a `.env` validation base.
-    const literalTopLevelEnv = isLiteralEnvRecord(vercelConfig.env)
-      ? vercelConfig.env
-      : undefined;
+    // Update the env vars configuration
     let [runEnv, buildEnv] = await Promise.all([
-      this.getLocalEnv('.env', literalTopLevelEnv),
+      this.getLocalEnv('.env', vercelConfig.env),
       this.getLocalEnv('.env.build', vercelConfig.build?.env),
     ]);
 
@@ -992,11 +1061,12 @@ export default class DevServer {
       this.devProcessOrigin = undefined;
 
       // Instantiate the dev queue broker if any queue-backed services exist.
-      const queueServices = (this.services || []).filter(
-        isQueueTriggeredService
-      );
+      // Queue-backed services are `experimentalServices` feature only.
+      const queueServices = (this.services || [])
+        .filter(isExperimentalService)
+        .filter(isQueueBackedService);
       if (queueServices.length > 0) {
-        this.queueBroker = new QueueBroker(this.services || [], name =>
+        this.queueBroker = new QueueBroker(queueServices, name =>
           this.orchestrator!.getServiceOrigin(name)
         );
       }
@@ -1008,11 +1078,20 @@ export default class DevServer {
       }
 
       output.print(`${chalk.cyan('>')} Available at:\n`);
-      for (const service of this.services || []) {
-        if (service.type !== 'web') continue;
-        const servicePath = service.routePrefix || '/';
-        const serviceUrl = `${addressFormatted}${servicePath === '/' ? '' : servicePath}`;
-        output.print(`  ${chalk.bold(service.name)}: ${link(serviceUrl)}\n`);
+      // `experimentalServices` mount at a public `routePrefix` and can be accessed only from it,
+      // when `experimentalServicesV2` services are internal and can be reached only
+      // through the defined routes
+      const v1WebServices = (this.services || [])
+        .filter(isExperimentalService)
+        .filter(service => service.type === 'web');
+      if (v1WebServices.length > 0) {
+        for (const service of v1WebServices) {
+          const servicePath = service.routePrefix || '/';
+          const serviceUrl = `${addressFormatted}${servicePath === '/' ? '' : servicePath}`;
+          output.print(`  ${chalk.bold(service.name)}: ${link(serviceUrl)}\n`);
+        }
+      } else {
+        output.print(`  ${link(addressFormatted)}\n`);
       }
     } else {
       devCommandPromise = this.runDevCommand();
@@ -1080,6 +1159,7 @@ export default class DevServer {
       await this.startPromise;
 
       if (this.orchestrator) {
+        // Services V1 use routePrefixes for WebSocket routing.
         const pathname = url.parse(req.url || '/').pathname || '/';
         const service = this.orchestrator.getServiceForRoute(pathname);
         if (service) {
@@ -1090,6 +1170,31 @@ export default class DevServer {
           this.proxy.ws(req, socket, head, { target });
           return;
         }
+
+        // Services V2 sets routePrefixes: [] and relies on the vercel.json route table.
+        const vercelConfig = await this.getVercelConfig();
+        if (vercelConfig.experimentalServicesV2 || vercelConfig.services) {
+          const routeResult = await devRouter(
+            req.url || '/',
+            req.method,
+            vercelConfig.routes,
+            this,
+            vercelConfig
+          );
+          if (isServiceDestination(routeResult.matched_route)) {
+            const { service: serviceName } =
+              routeResult.matched_route.destination;
+            const origin = this.orchestrator.getServiceOrigin(serviceName);
+            if (origin) {
+              output.debug(
+                `Detected "upgrade" event, proxying to service "${serviceName}" at ${origin}`
+              );
+              this.proxy.ws(req, socket, head, { target: origin });
+              return;
+            }
+          }
+        }
+
         output.debug(
           `Detected "upgrade" event, but no matching service found for ${pathname}`
         );
@@ -1097,16 +1202,56 @@ export default class DevServer {
         return;
       }
 
-      if (!this.devProcessOrigin) {
-        output.debug(
-          `Detected "upgrade" event, but closing socket because no frontend dev server is running`
-        );
-        socket.destroy();
+      if (this.devProcessOrigin) {
+        const target = this.devProcessOrigin;
+        output.debug(`Detected "upgrade" event, proxying to ${target}`);
+        this.proxy.ws(req, socket, head, { target });
         return;
       }
-      const target = this.devProcessOrigin;
-      output.debug(`Detected "upgrade" event, proxying to ${target}`);
-      this.proxy.ws(req, socket, head, { target });
+
+      // Try to find a builder dev server (e.g. Python persistent server)
+      // that can handle the WebSocket upgrade. For now this picks the
+      // first builder that returns a running dev server — sufficient for
+      // single-entrypoint projects where one process handles all routes.
+      const pathname = url.parse(req.url || '/').pathname || '/';
+      for (const match of this.buildMatches.values()) {
+        const { builder } = match.builderWithPkg;
+        if (typeof builder.startDevServer === 'function') {
+          try {
+            const result = await builder.startDevServer({
+              files: this.files,
+              entrypoint: match.entrypoint,
+              workPath: this.cwd,
+              config: match.config || {},
+              repoRootPath: this.repoRoot,
+              meta: {
+                isDev: true,
+                requestPath: pathname,
+                devCacheDir: this.devCacheDir,
+                env: { ...this.envConfigs.runEnv },
+                buildEnv: { ...this.envConfigs.buildEnv },
+              },
+            });
+            if (result) {
+              const { port, pid, shutdown } = result;
+              this.shutdownCallbacks.set(pid, shutdown);
+              const target = `http://127.0.0.1:${port}`;
+              output.debug(
+                `Detected "upgrade" event, proxying to builder dev server at ${target}`
+              );
+              this.proxy.ws(req, socket, head, { target });
+              return;
+            }
+          } catch (err) {
+            output.debug(`Failed to start dev server for upgrade: ${err}`);
+          }
+        }
+      }
+
+      output.debug(
+        `Detected "upgrade" event, but no backend available for ${pathname}`
+      );
+      socket.destroy();
     });
 
     await devCommandPromise;
@@ -1273,12 +1418,19 @@ export default class DevServer {
     res: http.ServerResponse,
     requestId: string,
     location: string,
-    statusCode: number = 302
+    statusCode: number = 302,
+    responseTransforms?: Transform[]
   ): Promise<void> {
     output.debug(`Redirect ${statusCode}: ${location}`);
 
     res.statusCode = statusCode;
-    this.setResponseHeaders(res, requestId, { location });
+    // Apply any previously stored response-transform context to the redirect's
+    // headers.
+    const redirectHeaders: http.OutgoingHttpHeaders = { location };
+    if (responseTransforms) {
+      applyResponseTransforms(redirectHeaders, responseTransforms);
+    }
+    this.setResponseHeaders(res, requestId, redirectHeaders);
 
     let body: string;
     const { accept = 'text/plain' } = req.headers;
@@ -1324,6 +1476,26 @@ export default class DevServer {
     }
   }
 
+  private prepareTransforms(
+    req: http.IncomingMessage,
+    requestTransforms: Transform[] | undefined,
+    responseTransforms?: Transform[] | undefined
+  ): void {
+    // Request-side transforms are applied immediately to the outgoing request
+    if (requestTransforms && requestTransforms.length > 0) {
+      applyRequestTransforms(req, requestTransforms);
+    }
+    // Response-side transforms are deferred: store the latest context so
+    // it can be applied once the response comes back
+    if (responseTransforms && hasResponseTransforms(responseTransforms)) {
+      this.responseTransformsByReq.set(req, responseTransforms);
+    }
+  }
+
+  clearResponseTransforms(req: http.IncomingMessage): void {
+    this.responseTransformsByReq.delete(req);
+  }
+
   /**
    * Returns the request `headers` that will be sent to the Lambda.
    */
@@ -1347,6 +1519,146 @@ export default class DevServer {
       headers['x-forwarded-for'] = ip;
     }
     return headers;
+  }
+
+  private getServiceRouteTable(serviceName: string): Route[] {
+    if (!this.serviceRoutesTable) {
+      this.serviceRoutesTable = new Map();
+      for (const service of this.services || []) {
+        if (!isExperimentalServiceV2(service)) continue;
+
+        const { routes, error } = getTransformedRoutes({
+          routes: service.routes,
+          rewrites: service.rewrites,
+          redirects: service.redirects,
+          headers: service.headers,
+          cleanUrls: service.cleanUrls,
+          trailingSlash: service.trailingSlash,
+        });
+        if (error) {
+          output.warn(
+            `Invalid routes for service "${service.name}": ${error.message}`
+          );
+          this.serviceRoutesTable.set(service.name, []);
+        } else {
+          this.serviceRoutesTable.set(service.name, routes || []);
+        }
+      }
+    }
+    return this.serviceRoutesTable.get(serviceName) || [];
+  }
+
+  private async delegateToService(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    requestId: string,
+    matchedRoute: RouteWithSrc & { destination: ServiceDestination },
+    vercelConfig: VercelConfig,
+    requestTransforms?: Transform[],
+    responseTransforms?: Transform[]
+  ): Promise<void> {
+    const { debug } = output;
+    const { service: serviceName, path: destPath } = matchedRoute.destination;
+
+    const origin = this.orchestrator?.getServiceOrigin(serviceName);
+    if (!origin) {
+      output.error(
+        `Cannot route to service ${cmd(serviceName)}: it is not running.`
+      );
+      await this.sendError(
+        req,
+        res,
+        requestId,
+        'FUNCTION_INVOCATION_FAILED',
+        502
+      );
+      return;
+    }
+
+    // Resolve lookup path for the service's route table
+    const parsed = url.parse(req.url || '/');
+    const originalPathname = parsed.pathname || '/';
+
+    let lookupPath = originalPathname;
+    if (typeof destPath === 'string' && matchedRoute.src) {
+      const keys: string[] = [];
+      const matcher = PCRE(
+        `%${matchedRoute.src}%${this.isCaseSensitive() ? '' : 'i'}`,
+        keys
+      );
+      const match =
+        matcher.exec(originalPathname) ||
+        matcher.exec(originalPathname.substring(1));
+      lookupPath = match
+        ? resolveRouteParameters(destPath, match, keys)
+        : destPath;
+    }
+
+    const serviceRoutes = this.getServiceRouteTable(serviceName);
+    const proxyHeaders = this.getProxyHeaders(req, requestId, false);
+
+    const requestTransformsToApply: Transform[] = [
+      ...(requestTransforms ?? []),
+    ];
+    let responseTransformsToApply = responseTransforms;
+
+    if (serviceRoutes.length > 0) {
+      const serviceResult = await devRouter(
+        `${lookupPath}${parsed.search || ''}`,
+        req.method,
+        serviceRoutes,
+        this,
+        vercelConfig
+      );
+
+      if (serviceResult.requestTransforms) {
+        requestTransformsToApply.push(...serviceResult.requestTransforms);
+      }
+      // The service table's latest context replaces the carried one
+      if (serviceResult.responseTransforms) {
+        responseTransformsToApply = serviceResult.responseTransforms;
+      }
+
+      const location = serviceResult.headers?.location;
+      if (
+        location &&
+        typeof serviceResult.status === 'number' &&
+        serviceResult.status >= 300 &&
+        serviceResult.status < 400
+      ) {
+        await this.sendRedirect(
+          req,
+          res,
+          requestId,
+          location,
+          serviceResult.status,
+          responseTransformsToApply
+        );
+        return;
+      }
+
+      if (serviceResult.headers) {
+        for (const [name, value] of Object.entries(serviceResult.headers)) {
+          if (name === 'location') continue;
+          res.setHeader(name, value);
+        }
+      }
+    }
+
+    for (const [name, value] of Object.entries(proxyHeaders)) {
+      req.headers[name] = value;
+    }
+
+    // Apply request-time transforms and store the response-transform context
+    this.prepareTransforms(
+      req,
+      requestTransformsToApply,
+      responseTransformsToApply
+    );
+
+    this.setResponseHeaders(res, requestId);
+    debug(`Delegating to service "${serviceName}": ${origin}`);
+    return proxyPass(req, res, origin, this, requestId, false);
   }
 
   async triggerBuild(
@@ -1468,14 +1780,22 @@ export default class DevServer {
     phase: HandleValue | null,
     req: http.IncomingMessage,
     res: http.ServerResponse,
-    requestId: string
+    requestId: string,
+    responseTransforms?: Transform[]
   ): Promise<boolean> => {
     const { status, headers, dest } = routeResult;
     const location = headers['location'] || dest;
 
     if (status && location && 300 <= status && status <= 399) {
       output.debug(`Route found with redirect status code ${status}`);
-      await this.sendRedirect(req, res, requestId, location, status);
+      await this.sendRedirect(
+        req,
+        res,
+        requestId,
+        location,
+        status,
+        responseTransforms
+      );
       return true;
     }
 
@@ -1486,7 +1806,11 @@ export default class DevServer {
       }
 
       output.debug(`Route found with with status code ${status}`);
-      await this.sendError(req, res, requestId, '', status, headers);
+      const errorHeaders: HttpHeadersConfig = { ...headers };
+      if (responseTransforms) {
+        applyResponseTransforms(errorHeaders, responseTransforms);
+      }
+      await this.sendError(req, res, requestId, '', status, errorHeaders);
       return true;
     }
 
@@ -1542,12 +1866,15 @@ export default class DevServer {
         delayHeader && !isNaN(parseInt(delayHeader, 10))
           ? parseInt(delayHeader, 10)
           : undefined;
+      const idempotencyKey = req.headers['vqs-idempotency-key'] as
+        | string
+        | undefined;
 
       const { messageId } = this.queueBroker.enqueue(
         topic,
         payload,
         contentType,
-        { retentionSeconds, delaySeconds }
+        { retentionSeconds, delaySeconds, idempotencyKey }
       );
 
       res.writeHead(201, {
@@ -1563,7 +1890,21 @@ export default class DevServer {
       /^([A-Za-z0-9_-]+)\/consumer\/([A-Za-z0-9_-]+)\/id\/([^/]+)$/
     );
     if (req.method === 'POST' && receiveByIdMatch) {
-      const [, , consumer, messageId] = receiveByIdMatch;
+      const [, queueName, consumer, messageId] = receiveByIdMatch;
+      const originalMessageId =
+        this.queueBroker.getOriginalMessageIdForDuplicate(queueName, messageId);
+      if (originalMessageId) {
+        res.writeHead(409, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            error:
+              'This messageId was a duplicate - use originalMessageId instead',
+            originalMessageId,
+          })
+        );
+        return;
+      }
+
       const result = this.queueBroker.receiveById(messageId, consumer);
 
       if (!result) {
@@ -1811,6 +2152,8 @@ export default class DevServer {
     let prevUrl = req.url;
     let prevHeaders: HttpHeadersConfig = {};
     let middlewarePid: number | undefined;
+    const requestTransforms: Transform[] = [];
+    let responseTransforms: Transform[] | undefined;
 
     // Run the middleware file, if present, and apply any
     // mutations to the incoming request based on the
@@ -1825,8 +2168,8 @@ export default class DevServer {
       const { envConfigs, files, devCacheDir, cwd: workPath } = this;
       try {
         const { builder } = middleware.builderWithPkg;
-        if (builder.version === 3 || builder.version === -1) {
-          startMiddlewareResult = await builder.startDevServer?.({
+        if (typeof builder.startDevServer === 'function') {
+          startMiddlewareResult = await builder.startDevServer({
             files,
             entrypoint: middleware.entrypoint,
             workPath,
@@ -1855,7 +2198,7 @@ export default class DevServer {
             middlewareReqHeaders.set(name, value);
           }
 
-          const middlewareRes = await nodeFetch(
+          const middlewareRes = await directFetch(
             `http://127.0.0.1:${port}${parsed.path}`,
             {
               headers: middlewareReqHeaders,
@@ -1864,7 +2207,7 @@ export default class DevServer {
             }
           );
 
-          const middlewareBody = await middlewareRes.buffer();
+          const middlewareBody = Buffer.from(await middlewareRes.arrayBuffer());
 
           if (middlewareRes.status === 500 && middlewareBody.byteLength === 0) {
             await this.sendError(
@@ -1891,9 +2234,12 @@ export default class DevServer {
             'transfer-encoding',
           ]);
 
-          applyOverriddenHeaders(req.headers, middlewareRes.headers);
+          const middlewareHeaders = applyOverriddenHeaders(
+            req.headers,
+            middlewareRes.headers
+          );
 
-          for (const [name, value] of middlewareRes.headers) {
+          for (const [name, value] of middlewareHeaders) {
             if (name === 'x-middleware-next') {
               shouldContinue = value === '1';
             } else if (name === 'x-middleware-rewrite') {
@@ -2002,6 +2348,13 @@ export default class DevServer {
         phase
       );
 
+      if (routeResult.requestTransforms) {
+        requestTransforms.push(...routeResult.requestTransforms);
+      }
+      if (routeResult.responseTransforms) {
+        responseTransforms = routeResult.responseTransforms;
+      }
+
       if (routeResult.continue) {
         if (routeResult.dest) {
           prevUrl = getReqUrl(routeResult);
@@ -2012,6 +2365,23 @@ export default class DevServer {
         }
       }
 
+      if (
+        callLevel === 0 &&
+        this.orchestrator &&
+        !routeResult.continue &&
+        isServiceDestination(routeResult.matched_route)
+      ) {
+        return this.delegateToService(
+          req,
+          res,
+          requestId,
+          routeResult.matched_route,
+          vercelConfig,
+          requestTransforms,
+          responseTransforms
+        );
+      }
+
       if (routeResult.isDestUrl) {
         // Mix the `routes` result dest query params into the req path
         const destParsed = url.parse(routeResult.dest);
@@ -2019,6 +2389,8 @@ export default class DevServer {
         Object.assign(destQuery, routeResult.query);
         destParsed.search = formatQueryString(destQuery);
         const destUrl = url.format(destParsed);
+
+        this.prepareTransforms(req, requestTransforms, responseTransforms);
 
         debug(`ProxyPass: ${destUrl}`);
         this.setResponseHeaders(res, requestId);
@@ -2040,7 +2412,8 @@ export default class DevServer {
           phase,
           req,
           res,
-          requestId
+          requestId,
+          responseTransforms
         )
       ) {
         return;
@@ -2059,6 +2432,13 @@ export default class DevServer {
           'miss'
         );
 
+        if (routeResult.requestTransforms) {
+          requestTransforms.push(...routeResult.requestTransforms);
+        }
+        if (routeResult.responseTransforms) {
+          responseTransforms = routeResult.responseTransforms;
+        }
+
         match = await findBuildMatch(
           this.buildMatches,
           this.files,
@@ -2073,7 +2453,8 @@ export default class DevServer {
             phase,
             req,
             res,
-            requestId
+            requestId,
+            responseTransforms
           )
         ) {
           return;
@@ -2093,6 +2474,13 @@ export default class DevServer {
           'hit'
         );
         routeResult.status = prevStatus;
+
+        if (routeResult.requestTransforms) {
+          requestTransforms.push(...routeResult.requestTransforms);
+        }
+        if (routeResult.responseTransforms) {
+          responseTransforms = routeResult.responseTransforms;
+        }
       }
 
       statusCode = routeResult.status;
@@ -2135,6 +2523,15 @@ export default class DevServer {
         routeResult = routeResultForError;
         statusCode = routeResultForError.status;
         match = matchForError;
+        // Thread the error phase's transforms like the hit/miss phases do, so
+        // an error route's transforms apply (the proxy runs apply/store in the
+        // error phase too).
+        if (routeResult.requestTransforms) {
+          requestTransforms.push(...routeResult.requestTransforms);
+        }
+        if (routeResult.responseTransforms) {
+          responseTransforms = routeResult.responseTransforms;
+        }
       } else if (matched_route && matched_route.src && !matched_route.dest) {
         debug(
           'Route without `dest` detected in error phase, attempting to exit early'
@@ -2146,7 +2543,8 @@ export default class DevServer {
             'error',
             req,
             res,
-            requestId
+            requestId,
+            responseTransforms
           )
         ) {
           return;
@@ -2199,6 +2597,7 @@ export default class DevServer {
         Object.assign(origQuery, query);
         origUrl.search = formatQueryString(origQuery);
         req.url = url.format(origUrl);
+        this.prepareTransforms(req, requestTransforms, responseTransforms);
         return proxyPass(req, res, upstream, this, requestId, false);
       }
 
@@ -2251,16 +2650,11 @@ export default class DevServer {
     }
 
     // Before doing any asset matching, check if this builder supports the
-    // `startDevServer()` "optimization". In this case, the vercel dev server invokes
-    // `startDevServer()` on the builder for every HTTP request so that it boots
-    // up a single-serve dev HTTP server that vercel dev will proxy this HTTP request
-    // to. Once the proxied request is finished, vercel dev shuts down the dev
-    // server child process.
+    // `startDevServer()` optimization. Builders may own a persistent server
+    // across requests; all other dev servers retain the request-scoped
+    // lifecycle.
     const { builder, pkg: builderPkg } = match.builderWithPkg;
-    if (
-      (builder.version === 3 || builder.version === -1) &&
-      typeof builder.startDevServer === 'function'
-    ) {
+    if (typeof builder.startDevServer === 'function') {
       let devServerResult: StartDevServerResult = null;
       try {
         const { envConfigs, files, devCacheDir, cwd: workPath } = this;
@@ -2312,12 +2706,13 @@ export default class DevServer {
         // is also included in the request ID. So use the same `dev1` fake region.
         requestId = generateRequestId(this.podId, true);
 
-        const { port, pid, shutdown } = devServerResult;
+        const { port, pid, shutdown, persistent } = devServerResult;
         this.shutdownCallbacks.set(pid, shutdown);
-
-        res.once('close', () => {
-          this.killBuilderDevServer(pid);
-        });
+        if (!persistent) {
+          res.once('close', () => {
+            this.killBuilderDevServer(pid);
+          });
+        }
 
         debug(
           `Proxying to "${builderPkg.name}" dev server (port=${port}, pid=${pid})`
@@ -2339,6 +2734,7 @@ export default class DevServer {
           req.headers[name] = value;
         }
 
+        this.prepareTransforms(req, requestTransforms, responseTransforms);
         this.setResponseHeaders(res, requestId);
         return proxyPass(
           req,
@@ -2376,6 +2772,7 @@ export default class DevServer {
         req.headers[name] = value;
       }
 
+      this.prepareTransforms(req, requestTransforms, responseTransforms);
       this.setResponseHeaders(res, requestId);
       return proxyPass(req, res, this.devProcessOrigin, this, requestId, false);
     }
@@ -2395,6 +2792,11 @@ export default class DevServer {
     switch (asset.type) {
       case 'FileFsRef':
         this.setResponseHeaders(res, requestId);
+        const staticResHeaders: http.OutgoingHttpHeaders = {};
+        applyResponseTransforms(staticResHeaders, responseTransforms ?? []);
+        for (const [name, value] of Object.entries(staticResHeaders)) {
+          if (value !== undefined) res.setHeader(name, value);
+        }
         req.url = `/${basename(asset.fsPath)}`;
         return serveStaticFile(req, res, dirname(asset.fsPath), {
           headers: [
@@ -2415,6 +2817,7 @@ export default class DevServer {
           'Content-Length': asset.data.length,
           'Content-Type': asset.contentType || getMimeType(assetKey),
         };
+        applyResponseTransforms(headers, responseTransforms ?? []);
         this.setResponseHeaders(res, requestId, headers);
         res.end(asset.data);
         return;
@@ -2442,10 +2845,13 @@ export default class DevServer {
         const origQuery = parseQueryString(origUrl.search);
         Object.assign(origQuery, query);
         origUrl.search = formatQueryString(origQuery);
-        const path = url.format({
+        req.url = url.format({
           pathname: origUrl.pathname,
           search: origUrl.search,
         });
+
+        applyRequestTransforms(req, requestTransforms);
+        const path = req.url || '/';
 
         const body = await rawBody(req);
         const payload: InvokePayload = {
@@ -2484,7 +2890,9 @@ export default class DevServer {
         if (!statusCode) {
           res.statusCode = result.statusCode;
         }
-        this.setResponseHeaders(res, requestId, result.headers);
+        const lambdaHeaders = result.headers ?? {};
+        applyResponseTransforms(lambdaHeaders, responseTransforms ?? []);
+        this.setResponseHeaders(res, requestId, lambdaHeaders);
 
         let resBody: Buffer | string | undefined;
         if (result.encoding === 'base64' && typeof result.body === 'string') {
@@ -2671,6 +3079,8 @@ export default class DevServer {
       .replace(/\$PORT/g, `${port}`)
       .replace(/%PORT%/g, `${port}`);
 
+    injectNextDevWebSocketShimIfNeeded(env, command, this.projectSettings);
+
     output.debug(
       `Starting dev command with parameters: ${JSON.stringify({
         cwd,
@@ -2729,6 +3139,19 @@ export default class DevServer {
   }
 }
 
+function isServiceDestination(
+  route: Route | undefined
+): route is RouteWithSrc & { destination: ServiceDestination } {
+  return (
+    !!route &&
+    !isHandler(route) &&
+    typeof route.destination === 'object' &&
+    route.destination !== null &&
+    'service' in route.destination &&
+    typeof route.destination.service === 'string'
+  );
+}
+
 /**
  * Mimic nginx's `proxy_pass` for routes using a URL as `dest`.
  */
@@ -2745,6 +3168,9 @@ function proxyPass(
     res,
     { target: dest, ignorePath },
     (error: NodeJS.ErrnoException) => {
+      // response transforms for this request would never be applied
+      // so clear the stored transforms
+      devServer.clearResponseTransforms(req);
       // only debug output this error because it's always something generic like
       // "Error: socket hang up"
       // and the original error should have already been logged
@@ -2801,18 +3227,6 @@ function generateRequestId(podId: string, isInvoke = false): string {
 
 function hasProp(obj: any, prop: string) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
-}
-
-/**
- * Type guard for the legacy top-level `env` shape (`Record<string, string>`).
- * The schema rejects mixed records, so a single sample is sufficient.
- */
-function isLiteralEnvRecord(
-  env: VercelConfig['env']
-): env is Record<string, string> {
-  if (!env) return false;
-  const first = Object.values(env)[0];
-  return first === undefined || typeof first === 'string';
 }
 
 async function findBuildMatch(

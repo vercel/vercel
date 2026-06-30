@@ -39,19 +39,6 @@ function logPolicyLinksSummary(
   }
 }
 
-function policiesFromConfirmYes(integration: Integration): AcceptedPolicies {
-  const policies: AcceptedPolicies = {
-    toc: new Date().toISOString(),
-  };
-  if (integration.privacyDocUri) {
-    policies.privacy = new Date().toISOString();
-  }
-  if (integration.eulaDocUri) {
-    policies.eula = new Date().toISOString();
-  }
-  return policies;
-}
-
 export default async function acceptTerms(
   client: Client,
   argv: string[]
@@ -114,8 +101,6 @@ export default async function acceptTerms(
   }
 
   const integrationSlug = parsed.args[0];
-  const yes = Boolean(parsed.flags['--yes']);
-
   const { team } = await getScope(client);
   if (!team) {
     output.error('Team not found. Run `vercel switch` or use --scope.');
@@ -193,40 +178,26 @@ export default async function acceptTerms(
   let acceptedPolicies: AcceptedPolicies | null;
 
   if (shouldEmitNonInteractiveCommandError(client)) {
-    if (!yes) {
-      const msg =
-        'Non-interactive mode requires --yes to record acceptance of the Marketplace End User Addendum and any integration privacy policy / EULA.';
-      outputAgentError(
-        client,
-        {
-          status: 'error',
-          reason: AGENT_REASON.MISSING_ARGUMENTS,
-          message: msg,
-          policy_links: getMarketplacePolicyLinks(integration),
-          hint: `Run interactively without --non-interactive, or pass --yes after reading policy_links (and \`${packageName} integration discover\`).`,
-          next: [
-            {
-              command: buildCommandWithGlobalFlags(
-                client.argv,
-                `integration accept-terms ${integration.slug} --yes`,
-                packageName,
-                { prependGlobalFlags: true }
-              ),
-              when: 'After confirming policy text out of band',
-            },
-          ],
-        },
-        1
-      );
-      output.error(msg);
-      return 1;
-    }
-    acceptedPolicies = policiesFromConfirmYes(integration);
-  } else {
-    acceptedPolicies = await promptForTermAcceptance(client, integration);
-    if (!acceptedPolicies) {
-      return 1;
-    }
+    const msg =
+      'Marketplace terms cannot be accepted in non-interactive mode. Run this command in an interactive terminal as a human.';
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.INTEGRATION_TERMS_ACCEPTANCE_REQUIRED,
+        message: msg,
+        policy_links: getMarketplacePolicyLinks(integration),
+        hint: `Open the policy links, then run \`${packageName} integration accept-terms ${integration.slug}\` interactively.`,
+      },
+      1
+    );
+    output.error(msg);
+    return 1;
+  }
+
+  acceptedPolicies = await promptForTermAcceptance(client, integration);
+  if (!acceptedPolicies) {
+    return 1;
   }
 
   try {

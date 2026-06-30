@@ -3,6 +3,7 @@ import output from '../../output-manager';
 import type Client from '../../util/client';
 import { validateJsonOutput } from '../../util/output-format';
 import { printError } from '../../util/error';
+import { sanitizeForTerminal } from '../../util/connex/sanitize';
 import { selectConnexTeam } from '../../util/connex/select-team';
 import { getLinkedProject } from '../../util/projects/link';
 import table from '../../util/output/table';
@@ -48,6 +49,9 @@ export async function list(
     '--all-projects'?: boolean;
     '--limit'?: number;
     '--next'?: string;
+    '--search'?: string;
+    '--service'?: string[];
+    '--type'?: string[];
     '--format'?: string;
     '--json'?: boolean;
   }
@@ -59,6 +63,13 @@ export async function list(
   }
   const asJson = formatResult.jsonOutput;
   const allProjects = flags['--all-projects'] === true;
+  const types = (flags['--type'] ?? [])
+    .flatMap(v => v.split(',').map(s => s.trim().toLowerCase()))
+    .filter(Boolean);
+  const services = (flags['--service'] ?? [])
+    .flatMap(v => v.split(',').map(s => s.trim().toLowerCase()))
+    .filter(Boolean);
+  const searchQuery = flags['--search'];
 
   let projectId: string | undefined;
   let projectName: string | undefined;
@@ -101,6 +112,15 @@ export async function list(
     params.set('include', 'projects');
   } else if (projectId) {
     params.set('projectId', projectId);
+  }
+  if (types.length > 0) {
+    params.set('type', types.join(','));
+  }
+  if (services.length > 0) {
+    params.set('service', services.join(','));
+  }
+  if (searchQuery) {
+    params.set('search', searchQuery);
   }
   const query = params.toString();
   const url = `/v1/connect/connectors${query ? `?${query}` : ''}`;
@@ -160,7 +180,7 @@ export async function list(
       return item;
     });
     client.stdout.write(
-      `${JSON.stringify({ clients: jsonClients, cursor: response.cursor }, null, 2)}\n`
+      `${JSON.stringify({ connectors: jsonClients, cursor: response.cursor }, null, 2)}\n`
     );
     return 0;
   }
@@ -188,16 +208,17 @@ export async function list(
   }
   const rows = clients.map(c => {
     const row = [
-      c.uid || chalk.gray('–'),
+      sanitizeForTerminal(c.uid || '') || chalk.gray('–'),
       c.id,
-      c.name || chalk.gray('–'),
-      c.typeName || c.type,
+      sanitizeForTerminal(c.name || '') || chalk.gray('–'),
+      sanitizeForTerminal(c.typeName || c.type),
     ];
     if (unscoped) {
       const projectsInclude = c.includes?.projects;
       const names = (projectsInclude?.items ?? [])
         .map(p => p.project?.name)
-        .filter((n): n is string => Boolean(n));
+        .filter((n): n is string => Boolean(n))
+        .map(sanitizeForTerminal);
       const more = projectsInclude?.hasMore === true;
       let cell: string;
       if (names.length === 0 && !more) {
@@ -220,10 +241,13 @@ export async function list(
   );
 
   if (response.cursor) {
-    const nextCommand = allProjects
-      ? `${packageName} connect list --all-projects --next ${response.cursor}`
-      : `${packageName} connect list --next ${response.cursor}`;
-    output.log(`To see more, run \`${nextCommand}\``);
+    const parts = [`${packageName} connect list`];
+    if (allProjects) parts.push('--all-projects');
+    for (const t of types) parts.push(`--type ${t}`);
+    for (const s of services) parts.push(`--service ${s}`);
+    if (searchQuery) parts.push(`--search "${searchQuery}"`);
+    parts.push(`--next ${response.cursor}`);
+    output.log(`To see more, run \`${parts.join(' ')}\``);
   }
 
   return 0;

@@ -1,12 +1,19 @@
-import type { Route } from '@vercel/routing-utils';
+import type { Rewrite, Route } from '@vercel/routing-utils';
 import type {
+  DetectEntrypointFn,
   EnvVar,
   EnvVars,
   ExperimentalServiceConfig,
+  ExperimentalServiceV2Config,
   ExperimentalServiceGroups,
   ExperimentalServices,
+  ExperimentalServicesV2,
+  ExperimentalServiceV2Binding,
+  ServiceBinding,
   ServiceConfig,
   Services,
+  ExperimentalService,
+  ExperimentalServiceV2,
   ServiceRuntime,
   ServiceType,
   ServiceRefEnvVar,
@@ -16,13 +23,20 @@ import type {
 import type { DetectorFilesystem } from '../detectors/filesystem';
 
 export type {
+  DetectEntrypointFn,
   EnvVar,
   EnvVars,
   ExperimentalServiceConfig,
   ExperimentalServiceGroups,
   ExperimentalServices,
+  ExperimentalServiceV2Config,
+  ExperimentalServicesV2,
+  ExperimentalServiceV2Binding,
+  ServiceBinding,
   ServiceConfig,
   Services,
+  ExperimentalService,
+  ExperimentalServiceV2,
   ServiceRuntime,
   ServiceType,
   ServiceRefEnvVar,
@@ -37,11 +51,19 @@ export type ResolvedService = Service;
 
 export interface DetectServicesOptions {
   fs: DetectorFilesystem;
+  configuredServices?: ConfiguredServices;
+  configuredServicesType?: ConfiguredServicesType;
   /**
    * Working directory path (relative to fs root).
    * If provided, vercel.json is read from this path.
    */
   workPath?: string;
+  /**
+   * Optional callback that, given a candidate service directory and its
+   * detected framework, returns a normalized entrypoint (file path or
+   * `module:attr` reference). Used to suggested service configs.
+   */
+  detectEntrypoint?: DetectEntrypointFn;
 }
 
 export interface ServicesRoutes {
@@ -65,20 +87,58 @@ export interface ServicesRoutes {
   workers: Route[];
 }
 
-export type ConfiguredServices = Services | ExperimentalServices;
-export type InferredServicesConfig = ExperimentalServices;
+export type ConfiguredServicesType =
+  | 'experimentalServices'
+  | 'services'
+  | 'experimentalServicesV2';
+export type ConfiguredServices = ExperimentalServices | Services;
+
+/**
+ * A single service entry inferred from project structure.
+ *
+ * This is an intermediate format produced by auto-detection — it carries
+ * the detection results (including `mountPath`, the inferred route mount
+ * point) before they are converted into a concrete config format (V1 or V2).
+ */
+export interface InferredServiceConfig {
+  /** Service root directory relative to the project root. */
+  root: string;
+  /** Framework slug, if detected. */
+  framework?: string;
+  /** Service entrypoint (file path or `module:attr` reference). */
+  entrypoint?: string;
+  /** Runtime identifier (e.g. "python", "node"). */
+  runtime?: string;
+  /** Service type (e.g. "web", "cron", "worker"). */
+  type?: ServiceType;
+  /** Build command override. */
+  buildCommand?: string;
+  /** Pre-deploy command override. */
+  preDeployCommand?: string;
+  /**
+   * Inferred route mount path for this service.
+   * For example, `"/"` for the root frontend, `"/_/backend"` for a backend.
+   */
+  mountPath?: string;
+}
+
+export type InferredServicesConfig = Record<string, InferredServiceConfig>;
 
 export interface ResolvedServicesResult {
   services: Service[];
   source: DetectServicesSource;
   useImplicitEnvInjection: boolean;
   routes: ServicesRoutes;
+  /** Top-level service-targeted rewrites (V2). */
+  rewrites: Rewrite[];
+  /** V2 services config for the build output, so the platform activates V2 routing. */
+  experimentalServicesV2?: Services;
   errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
 }
 
 export interface InferredServicesResult {
-  source: 'layout' | 'procfile' | 'railway';
+  source: 'layout' | 'procfile' | 'railway' | 'render';
   config: InferredServicesConfig;
   services: Service[];
   warnings: ServiceDetectionWarning[];
@@ -87,7 +147,7 @@ export interface InferredServicesResult {
 export interface DetectServicesResult extends ResolvedServicesResult {
   /**
    * Source of service definitions:
-   * - `configured`: loaded from explicit project configuration (`vercel.json#services` or legacy `experimentalServices`)
+   * - `configured`: loaded from explicit project configuration (`vercel.json#experimentalServices`, `vercel.json#services`, or the deprecated `vercel.json#experimentalServicesV2` alias)
    * - `auto-detected`: inferred from project structure
    */
   // TODO: replace consumption of top-level fields with these nested objects in caller before removal of top-level fields.
@@ -117,6 +177,7 @@ export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
   go: '@vercel/go',
   rust: '@vercel/rust',
   ruby: '@vercel/ruby',
+  container: '@vercel/container',
 };
 
 export const RUNTIME_MANIFESTS: Partial<Record<ServiceRuntime, string[]>> = {

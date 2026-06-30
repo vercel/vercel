@@ -1,8 +1,4 @@
 {
-  "env": {
-    "ECHO_VAR": {"type": "service-ref", "service": "service-a"},
-    "GLOBAL_REF": {"type": "service-ref", "service": "service-b"}
-  },
   "services": {
     "service-next": {
       "type": "web",

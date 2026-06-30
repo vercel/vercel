@@ -1,19 +1,23 @@
 import { posix as posixPath } from 'path';
 import toml from 'smol-toml';
-import type { Framework } from '@vercel/frameworks';
-import { frameworkList } from '@vercel/frameworks';
+import type { DetectEntrypointFn } from '@vercel/build-utils';
 import { detectFrameworks } from '../detect-framework';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
-  ExperimentalServiceConfig,
-  ExperimentalServices,
+  InferredServiceConfig,
+  InferredServicesConfig,
   ServiceDetectionError,
   ServiceDetectionWarning,
 } from './types';
-import { isFrontendFramework, inferRuntimeFromFramework } from './utils';
+import {
+  assignMountPaths,
+  DETECTION_FRAMEWORKS,
+  inferRuntimeFromFramework,
+  isFrontendFramework,
+} from './utils';
 
 export interface RailwayDetectResult {
-  services: ExperimentalServices | null;
+  services: InferredServicesConfig | null;
   errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
 }
@@ -67,11 +71,6 @@ const SKIP_DIRS = new Set([
   'CVS',
 ]);
 
-const DETECTION_FRAMEWORKS = frameworkList.filter(
-  (framework: Framework) =>
-    !framework.experimental || framework.runtimeFramework
-);
-
 /**
  * Detect Railway service configurations in the project.
  *
@@ -84,15 +83,16 @@ const DETECTION_FRAMEWORKS = frameworkList.filter(
  */
 export async function detectRailwayServices(options: {
   fs: DetectorFilesystem;
+  detectEntrypoint?: DetectEntrypointFn;
 }): Promise<RailwayDetectResult> {
-  const { fs } = options;
+  const { fs, detectEntrypoint } = options;
 
   const { configs, warnings } = await findRailwayConfigs(fs);
   if (configs.length === 0) {
     return { services: null, errors: [], warnings };
   }
 
-  const services: ExperimentalServices = {};
+  const services: InferredServicesConfig = {};
   const serviceDirs = new Map<string, string>();
   const errors: ServiceDetectionError[] = [];
 
@@ -108,6 +108,8 @@ export async function detectRailwayServices(options: {
 
     // we don't have write access to the FS, so can't just define an entrypoint.
     // The best we can do is suggest a canonical schedule-triggered job service.
+    // Later there will be an option to execute arbitrary bash commands,
+    // so we would be able to automatically handle crons as well.
     if (cf.config.deploy?.cronSchedule) {
       const schedule = cf.config.deploy.cronSchedule;
       const runtime =
@@ -169,11 +171,21 @@ export async function detectRailwayServices(options: {
     }
 
     const framework = frameworks[0];
+    const slug = framework.slug ?? undefined;
 
-    let serviceConfig: ExperimentalServiceConfig = {};
-    serviceConfig.framework = framework.slug ?? undefined;
-    if (cf.dirPath !== '.') {
-      serviceConfig.entrypoint = cf.dirPath;
+    const serviceConfig: InferredServiceConfig = {
+      root: cf.dirPath,
+      framework: slug,
+    };
+
+    if (cf.dirPath !== '.' && detectEntrypoint && !isFrontendFramework(slug)) {
+      const detected = await detectEntrypoint({
+        workPath: cf.dirPath,
+        framework: slug,
+      });
+      if (detected) {
+        serviceConfig.entrypoint = detected.entrypoint;
+      }
     }
 
     if (cf.config.build?.buildCommand) {
@@ -198,7 +210,7 @@ export async function detectRailwayServices(options: {
     return { services: null, errors: [], warnings };
   }
 
-  warnings.push(...assignRoutePrefixes(services));
+  warnings.push(...assignMountPaths(services));
 
   return { services, errors: [], warnings };
 }
@@ -313,48 +325,4 @@ function deriveServiceName(dirPath: string): string {
   }
   const segments = dirPath.split('/');
   return segments[segments.length - 1];
-}
-
-/**
- * Assign route prefixes.
- *
- * A frontend service gets `/`, the rest get `/_/{name}`.
- * A single non-frontend service would also get `/`.
- * If no frontend service found, then multiple services get `/_/{name}`.
- *
- * Priority for `/`: single service or frontend > name "frontend" or "web" > alphabetical.
- */
-function assignRoutePrefixes(
-  services: ExperimentalServices
-): ServiceDetectionWarning[] {
-  const warnings: ServiceDetectionWarning[] = [];
-  const names = Object.keys(services);
-
-  if (names.length === 1) {
-    services[names[0]].routePrefix = '/';
-    return warnings;
-  }
-
-  const frontendNames = names.filter(name =>
-    isFrontendFramework(services[name].framework)
-  );
-
-  let rootName: string | null = null;
-  if (frontendNames.length === 1) {
-    rootName = frontendNames[0];
-  } else if (frontendNames.length > 1) {
-    rootName =
-      frontendNames.find(n => n === 'frontend' || n === 'web') ??
-      frontendNames.sort()[0];
-    warnings.push({
-      code: 'MULTIPLE_FRONTENDS',
-      message: `Multiple frontend services detected (${frontendNames.join(', ')}). "${rootName}" was assigned routePrefix "/". Adjust manually if a different service should be the root.`,
-    });
-  }
-
-  for (const name of names) {
-    services[name].routePrefix = name === rootName ? '/' : `/_/${name}`;
-  }
-
-  return warnings;
 }

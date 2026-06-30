@@ -1,5 +1,8 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const MAX_RETRY_TRANSCRIPTS = 5;
 
 function parseArgs(argv) {
   const args = {};
@@ -140,6 +143,10 @@ function contentTypeFor(relativePath) {
   return 'application/octet-stream';
 }
 
+function isRawTranscriptFile(relativePath) {
+  return /\/transcript-raw\.jsonl$/.test(relativePath);
+}
+
 function shouldUploadFile(relativePath, uploadArtifacts) {
   if (uploadArtifacts === 'results') {
     return (
@@ -148,16 +155,35 @@ function shouldUploadFile(relativePath, uploadArtifacts) {
     );
   }
 
-  return true;
+  return !isRawTranscriptFile(relativePath);
 }
 
 function isTimestampSegment(segment) {
   return /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}(?:\.\d+)?Z$/.test(segment);
 }
 
-function getRunGroup(relativePath) {
+function splitAtTimestamp(relativePath) {
   const segments = relativePath.split('/');
   const timestampIndex = segments.findIndex(isTimestampSegment);
+  return { segments, timestampIndex };
+}
+
+function normalizeUploadPath(relativePath) {
+  const { segments, timestampIndex } = splitAtTimestamp(relativePath);
+  if (timestampIndex <= 1) return relativePath;
+
+  const modelSegments = segments.slice(1, timestampIndex);
+  if (modelSegments.length <= 1) return relativePath;
+
+  return [
+    segments[0],
+    modelSegments.join('-'),
+    ...segments.slice(timestampIndex),
+  ].join('/');
+}
+
+function getRunGroup(relativePath) {
+  const { segments, timestampIndex } = splitAtTimestamp(relativePath);
   if (timestampIndex === -1) return 'ungrouped';
   return segments.slice(0, timestampIndex + 1).join('/');
 }
@@ -192,10 +218,11 @@ async function uploadFileGroup({
     const relativePath = path
       .relative(resultsDir, fullPath)
       .replace(/\\/g, '/');
+    const uploadPath = normalizeUploadPath(relativePath);
     const buffer = await readFile(fullPath);
     formData.append(
       'results_file',
-      new File([buffer], relativePath, {
+      new File([buffer], uploadPath, {
         type: contentTypeFor(relativePath),
       })
     );
@@ -209,10 +236,37 @@ async function uploadFileGroup({
 
   const responseBody = await response.text();
   if (!response.ok) {
-    throw new Error(`Batch upload failed: ${response.status} ${responseBody}`);
+    const error = new Error(
+      `Batch upload failed: ${response.status} ${responseBody}`
+    );
+    error.status = response.status;
+    throw error;
   }
 
   return responseBody;
+}
+
+async function selectRetryFiles(files, resultsDir) {
+  const toRelative = fullPath =>
+    path.relative(resultsDir, fullPath).replace(/\\/g, '/');
+
+  const resultsFiles = files.filter(fullPath =>
+    shouldUploadFile(toRelative(fullPath), 'results')
+  );
+
+  const transcripts = [];
+  for (const fullPath of files) {
+    if (/\/transcript\.json$/.test(toRelative(fullPath))) {
+      const { size } = await stat(fullPath);
+      transcripts.push([fullPath, size]);
+    }
+  }
+  transcripts.sort((a, b) => b[1] - a[1]);
+  const largestTranscripts = transcripts
+    .slice(0, MAX_RETRY_TRANSCRIPTS)
+    .map(([fullPath]) => fullPath);
+
+  return [...resultsFiles, ...largestTranscripts];
 }
 
 async function main() {
@@ -332,15 +386,35 @@ async function main() {
         uploadGroup: group,
       },
     };
-    const responseBody = await uploadFileGroup({
-      files,
-      resultsDir,
-      payload: groupPayload,
-      ingestUrl,
-      headers,
-    });
+    let uploadFiles = files;
+    let responseBody;
+    try {
+      responseBody = await uploadFileGroup({
+        files: uploadFiles,
+        resultsDir,
+        payload: groupPayload,
+        ingestUrl,
+        headers,
+      });
+    } catch (error) {
+      if (error?.status !== 413) throw error;
+
+      uploadFiles = await selectRetryFiles(files, resultsDir);
+      console.warn(
+        `Warning: group ${group} exceeded the ingest body limit (413). Retrying with ${uploadFiles.length}/${files.length} file(s): results plus the ${MAX_RETRY_TRANSCRIPTS} largest transcript(s).`
+      );
+
+      responseBody = await uploadFileGroup({
+        files: uploadFiles,
+        resultsDir,
+        payload: groupPayload,
+        ingestUrl,
+        headers,
+      });
+    }
+
     console.log(
-      `Uploaded batch ${args['batch-id']} group ${group} with ${files.length} file(s): ${responseBody}`
+      `Uploaded batch ${args['batch-id']} group ${group} with ${uploadFiles.length} file(s): ${responseBody}`
     );
   }
 
@@ -349,7 +423,18 @@ async function main() {
   );
 }
 
-main().catch(error => {
-  console.error(error);
-  process.exitCode = 1;
-});
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch(error => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
+
+export {
+  isRawTranscriptFile,
+  shouldUploadFile,
+  splitAtTimestamp,
+  normalizeUploadPath,
+  getRunGroup,
+  selectRetryFiles,
+};

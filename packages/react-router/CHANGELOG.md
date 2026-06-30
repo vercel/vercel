@@ -1,5 +1,12 @@
 # @vercel/react-router
 
+## 1.3.1
+
+### Patch Changes
+
+- Updated dependencies [eecd10d]
+  - @vercel/static-config@3.4.0
+
 ## 1.3.0
 
 ### Minor Changes

@@ -1,6 +1,16 @@
 import { packageName } from '../../util/pkg-name';
 import { formatOption } from '../../util/arg-common';
 
+const specUrlOption = {
+  name: 'spec-url',
+  shorthand: null,
+  type: String,
+  argument: 'URL',
+  deprecated: false,
+  description:
+    'Fetch endpoints from a custom OpenAPI spec URL instead of the public Vercel spec',
+} as const;
+
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
@@ -8,6 +18,7 @@ export const listSubcommand = {
   arguments: [],
   options: [
     formatOption,
+    specUrlOption,
     {
       name: 'refresh',
       shorthand: null,
@@ -24,6 +35,10 @@ export const listSubcommand = {
     {
       name: 'List all endpoints as JSON',
       value: `${packageName} api ls --format json`,
+    },
+    {
+      name: 'List endpoints from a custom OpenAPI spec',
+      value: `${packageName} api ls --spec-url https://openapi-internal.vercel.sh --refresh`,
     },
   ],
 } as const;
@@ -124,6 +139,7 @@ export const apiCommand = {
       deprecated: false,
       description: 'Force refresh the cached OpenAPI spec',
     },
+    specUrlOption,
     {
       name: 'generate',
       shorthand: null,
@@ -174,6 +190,10 @@ export const apiCommand = {
     {
       name: 'Interactive mode (select endpoint)',
       value: `${packageName} api`,
+    },
+    {
+      name: 'Interactive mode with a custom OpenAPI spec',
+      value: `${packageName} api --spec-url https://openapi-internal.vercel.sh --refresh`,
     },
   ],
 } as const;

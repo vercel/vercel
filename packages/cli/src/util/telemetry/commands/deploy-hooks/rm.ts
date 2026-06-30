@@ -15,15 +15,6 @@ export class DeployHooksRmTelemetryClient
     }
   }
 
-  trackCliOptionProject(project: string | undefined) {
-    if (project) {
-      this.trackCliOption({
-        option: 'project',
-        value: project,
-      });
-    }
-  }
-
   trackCliFlagYes(yes: boolean | undefined) {
     if (yes) {
       this.trackCliFlag('yes');

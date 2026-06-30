@@ -243,6 +243,33 @@ export const allOption = {
   description: 'List resources across all projects',
 } as const;
 
+export const projectOption = {
+  name: 'project',
+  shorthand: null,
+  type: String,
+  argument: 'NAME_OR_ID',
+  description: 'Project name or ID (defaults to the linked project)',
+  deprecated: false,
+} as const;
+
+export const deploymentOption = {
+  name: 'deployment',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description: 'The deployment ID or URL to target',
+  argument: 'ID|URL',
+} as const;
+
+export const protectionBypassOption = {
+  name: 'protection-bypass',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description: 'Protection bypass secret for accessing protected deployments',
+  argument: 'SECRET',
+} as const;
+
 type GlobalOpt = (typeof globalCommandOptions)[number];
 
 const GLOBAL_LONG_TO_OPT = new Map<string, GlobalOpt>();

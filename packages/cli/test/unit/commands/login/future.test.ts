@@ -2,13 +2,13 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import login from '../../../../src/commands/login';
 import { client } from '../../../mocks/client';
 import { vi } from 'vitest';
-import _fetch, { Headers, type Response } from 'node-fetch';
+import _fetch, { Headers, type Response } from '../../../../src/util/fetch';
 import * as oauth from '../../../../src/util/oauth';
 import { randomUUID } from 'node:crypto';
 
 const fetch = vi.mocked(_fetch);
-vi.mock('node-fetch', async () => ({
-  ...(await vi.importActual('node-fetch')),
+vi.mock('../../../../src/util/fetch', async () => ({
+  ...(await vi.importActual('../../../../src/util/fetch')),
   default: vi.fn(),
 }));
 
@@ -17,10 +17,6 @@ vi.mock('open', () => {
     default: vi.fn().mockResolvedValue(undefined),
   };
 });
-
-vi.mock('../../../../src/util/agent/auto-install-agentic', () => ({
-  autoInstallVercelPlugin: vi.fn().mockResolvedValue(undefined),
-}));
 
 function mockResponse(data: unknown, ok = true): Response {
   return {
@@ -106,7 +102,6 @@ describe('login', () => {
     );
 
     expect(
-      // TODO: Drop `Headers` wrapper when `node-fetch` is dropped
       new Headers(fetch.mock.calls[0][1]?.headers).get('user-agent'),
       'Passing the correct user agent so the user can verify'
     ).toBe(oauth.userAgent);
@@ -139,6 +134,36 @@ describe('login', () => {
 
   it.todo('Authorization request error');
   it.todo('Token request error');
+
+  it('sends provided acr values for step-up device authorization requests', async () => {
+    vi.resetModules();
+    const freshOauth = await import('../../../../src/util/oauth');
+
+    fetch.mockResolvedValueOnce(
+      mockResponse({
+        issuer: 'https://vercel.com',
+        device_authorization_endpoint: 'https://vercel.com',
+        token_endpoint: 'https://vercel.com',
+        revocation_endpoint: 'https://vercel.com',
+        jwks_uri: 'https://vercel.com',
+        introspection_endpoint: 'https://vercel.com',
+      })
+    );
+    fetch.mockResolvedValueOnce(mockResponse({}));
+
+    await freshOauth.deviceAuthorizationRequest({
+      refresh_token: 'vcr_existing',
+      acr_values: 'urn:vercel:loa:custom',
+    });
+
+    expect(fetch.mock.calls[1][1]?.body?.toString()).toBe(
+      new URLSearchParams({
+        client_id: freshOauth.VERCEL_CLI_CLIENT_ID,
+        refresh_token: 'vcr_existing',
+        acr_values: 'urn:vercel:loa:custom',
+      }).toString()
+    );
+  });
 
   it('clears stale cached userId on re-login', async () => {
     vi.resetModules();

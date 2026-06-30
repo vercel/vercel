@@ -1,5 +1,6 @@
 import type Client from '../client';
 import getUser from '../get-user';
+import getTeamById from '../teams/get-team-by-id';
 import getTeams from '../teams/get-teams';
 import type { User, Team, Org } from '@vercel-internals/types';
 import output from '../../output-manager';
@@ -40,6 +41,44 @@ export default async function selectOrg(
   const {
     config: { currentTeam },
   } = client;
+
+  if (autoConfirm && !client.nonInteractive) {
+    if (currentTeam) {
+      output.spinner('Loading team…', 1000);
+      try {
+        const team = await getTeamById(client, currentTeam);
+        return { type: 'team', id: team.id, slug: team.slug };
+      } catch (err) {
+        output.debug(`Unable to load current team directly: ${err}`);
+      } finally {
+        output.stopSpinner();
+      }
+    }
+
+    output.spinner('Loading user…', 1000);
+    let user: User;
+    try {
+      user = await getUser(client);
+    } finally {
+      output.stopSpinner();
+    }
+
+    if (user.version !== 'northstar') {
+      return { type: 'user', id: user.id, slug: user.username };
+    }
+
+    if (user.defaultTeamId) {
+      output.spinner('Loading team…', 1000);
+      try {
+        const team = await getTeamById(client, user.defaultTeamId);
+        return { type: 'team', id: team.id, slug: team.slug };
+      } catch (err) {
+        output.debug(`Unable to load default team directly: ${err}`);
+      } finally {
+        output.stopSpinner();
+      }
+    }
+  }
 
   output.spinner('Loading teams…', 1000);
   let user: User;

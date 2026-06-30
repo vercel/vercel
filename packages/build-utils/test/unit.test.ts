@@ -179,6 +179,54 @@ it('should fail if the provided bun version is not valid', async () => {
   ).rejects.toThrow();
 });
 
+it('should resolve to Bun when package.json has engines.bun', async () => {
+  const result = await getNodeVersion(
+    path.join(__dirname, 'pkg-engines-bun'),
+    undefined,
+    {},
+    {}
+  );
+  expect(result).toHaveProperty('runtime', 'bun1.x');
+  expect(result).toHaveProperty('range', '1.x');
+  expect(warningMessages).toStrictEqual([]);
+});
+
+it('should default to Node when both engines.node and engines.bun are set, with a warning', async () => {
+  const result = await getNodeVersion(
+    path.join(__dirname, 'pkg-engines-node-and-bun'),
+    undefined,
+    {},
+    {}
+  );
+  expect(result).toHaveProperty('runtime', 'nodejs22.x');
+  expect(result).toHaveProperty('range', '22.x');
+  expect(warningMessages).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining(
+        'Warning detected "engines": { "node": ..., "bun": ... } in `package.json`. Defaulting to "node".'
+      ),
+    ])
+  );
+});
+
+it('should resolve to Bun when both engines.node and engines.bun are set and config.bunVersion is provided', async () => {
+  const result = await getNodeVersion(
+    path.join(__dirname, 'pkg-engines-node-and-bun'),
+    undefined,
+    { bunVersion: '1.x' },
+    {}
+  );
+  expect(result).toHaveProperty('runtime', 'bun1.x');
+  expect(result).toHaveProperty('range', '1.x');
+  expect(warningMessages).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining(
+        'Warning detected "engines": { "node": ..., "bun": ... } in `package.json`. Since "bunVersion" is set in `vercel.json`, using "bun".'
+      ),
+    ])
+  );
+});
+
 it('should select project setting from config when no package.json is found and fallback undefined', async () => {
   expect(
     await getNodeVersion('/tmp', undefined, { nodeVersion: '22.x' }, {})
@@ -345,6 +393,29 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
       'Error: Node.js version 18.x is deprecated. Deployments created on or after 2025-09-01 will fail to build. Please set "engines": { "node": "24.x" } in your `package.json` file to use Node.js 24.',
       'Error: Node.js version 18.x is deprecated. Deployments created on or after 2025-09-01 will fail to build. Please set Node.js Version to 24.x in your Project Settings to use Node.js 24.',
     ]);
+  } finally {
+    global.Date.now = realDateNow;
+  }
+});
+
+it('should discontinue Node.js 20 on October 1, 2026', async () => {
+  const realDateNow = Date.now;
+  try {
+    global.Date.now = () => new Date('2026-09-30').getTime();
+
+    expect(await getSupportedNodeVersion('20.x', false)).toHaveProperty(
+      'major',
+      20
+    );
+    expect(warningMessages).toStrictEqual([
+      'Error: Node.js version 20.x is deprecated. Deployments created on or after 2026-10-01 will fail to build. Please set "engines": { "node": "24.x" } in your `package.json` file to use Node.js 24.',
+    ]);
+
+    global.Date.now = () => new Date('2026-10-01').getTime();
+
+    await expect(getSupportedNodeVersion('20.x', false)).rejects.toThrow(
+      'Node.js Version "20.x" is discontinued and must be upgraded.'
+    );
   } finally {
     global.Date.now = realDateNow;
   }
@@ -549,6 +620,186 @@ it('should support experimentalBypassFor correctly', async () => {
     });
   }).toThrowError(
     'The `experimentalBypassFor` argument for `Prerender` must be Array of objects with fields `type`, `key` and optionally `value`.'
+  );
+});
+
+it('should round-trip hasPostponed as a tri-state', async () => {
+  // The api repo relies on telling `false` (PPR machinery but fully static)
+  // apart from `undefined` (no signal), so `false` must NOT collapse to
+  // `undefined` the way other boolean options do.
+  const postponed = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    hasPostponed: true,
+  });
+  expect(postponed.hasPostponed).toBe(true);
+
+  const notPostponed = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    hasPostponed: false,
+  });
+  expect(notPostponed.hasPostponed).toBe(false);
+
+  const omitted = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+  });
+  expect(omitted.hasPostponed).toBeUndefined();
+
+  expect(
+    () =>
+      new Prerender({
+        expiration: 1,
+        fallback: null,
+        group: 1,
+        bypassToken: 'some-long-bypass-token-to-make-it-work',
+        // @ts-expect-error - intentionally invalid to assert validation
+        hasPostponed: 'yes',
+      })
+  ).toThrow('The `hasPostponed` argument for `Prerender` must be a boolean');
+});
+
+it('should round-trip hasFallback as a tri-state', async () => {
+  // Like `hasPostponed`, the api repo needs to tell `false` (blocking/omitted
+  // template, no fallback) apart from `undefined` (concrete prerender, the
+  // concept doesn't apply), so `false` must NOT collapse to `undefined`.
+  const withFallback = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    hasFallback: true,
+  });
+  expect(withFallback.hasFallback).toBe(true);
+
+  const noFallback = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    hasFallback: false,
+  });
+  expect(noFallback.hasFallback).toBe(false);
+
+  const concrete = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+  });
+  expect(concrete.hasFallback).toBeUndefined();
+
+  expect(
+    () =>
+      new Prerender({
+        expiration: 1,
+        fallback: null,
+        group: 1,
+        bypassToken: 'some-long-bypass-token-to-make-it-work',
+        // @ts-expect-error - intentionally invalid to assert validation
+        hasFallback: 'yes',
+      })
+  ).toThrow('The `hasFallback` argument for `Prerender` must be a boolean');
+});
+
+it('should round-trip isDynamicRoute as a tri-state', async () => {
+  const dynamic = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    isDynamicRoute: true,
+  });
+  expect(dynamic.isDynamicRoute).toBe(true);
+
+  const concrete = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    isDynamicRoute: false,
+  });
+  expect(concrete.isDynamicRoute).toBe(false);
+
+  const unset = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+  });
+  expect(unset.isDynamicRoute).toBeUndefined();
+
+  expect(
+    () =>
+      new Prerender({
+        expiration: 1,
+        fallback: null,
+        group: 1,
+        bypassToken: 'some-long-bypass-token-to-make-it-work',
+        // @ts-expect-error - intentionally invalid to assert validation
+        isDynamicRoute: 'yes',
+      })
+  ).toThrow('The `isDynamicRoute` argument for `Prerender` must be a boolean');
+});
+
+it('should validate htmlSize as a non-negative integer', async () => {
+  const emptyShell = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    htmlSize: 0,
+  });
+  expect(emptyShell.htmlSize).toBe(0);
+
+  const fullShell = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    htmlSize: 5491,
+  });
+  expect(fullShell.htmlSize).toBe(5491);
+
+  const noHtml = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+  });
+  expect(noHtml.htmlSize).toBeUndefined();
+
+  expect(
+    () =>
+      new Prerender({
+        expiration: 1,
+        fallback: null,
+        group: 1,
+        bypassToken: 'some-long-bypass-token-to-make-it-work',
+        htmlSize: -1,
+      })
+  ).toThrow(
+    'The `htmlSize` argument for `Prerender` must be a non-negative integer'
+  );
+
+  expect(
+    () =>
+      new Prerender({
+        expiration: 1,
+        fallback: null,
+        group: 1,
+        bypassToken: 'some-long-bypass-token-to-make-it-work',
+        htmlSize: 1.5,
+      })
+  ).toThrow(
+    'The `htmlSize` argument for `Prerender` must be a non-negative integer'
   );
 });
 
@@ -1024,7 +1275,7 @@ it('should detect package.json in nested backend', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
   // There is no lockfile but this test will pick up vercel/vercel/pnpm-lock.yaml
-  expect(result.lockfileVersion).toEqual(6);
+  expect(result.lockfileVersion).toEqual(9);
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
@@ -1036,7 +1287,7 @@ it('should detect package.json in nested frontend', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
   // There is no lockfile but this test will pick up vercel/vercel/pnpm-lock.yaml
-  expect(result.lockfileVersion).toEqual(6);
+  expect(result.lockfileVersion).toEqual(9);
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 

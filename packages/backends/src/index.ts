@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs';
 import { delimiter, join } from 'node:path';
 import { downloadInstallAndBundle } from './utils.js';
 import { generateProjectManifest } from './diagnostics.js';
@@ -9,6 +8,7 @@ import {
   getReportedServiceType,
   glob,
   NodejsLambda,
+  NowBuildError,
   debug,
   getNodeVersion,
   getLambdaOptionsFromFunction,
@@ -19,7 +19,9 @@ import {
   type NodejsLambdaOptions,
   isBunVersion,
 } from '@vercel/build-utils';
-import { findEntrypointOrThrow } from './cervel/index.js';
+import { getConfig } from '@vercel/static-config';
+import { Project } from 'ts-morph';
+import { findEntrypointWithHintOrThrow } from './find-entrypoint.js';
 import { applyServiceVcInit } from './service-vc-init.js';
 import { applyCronDispatch } from './cron-dispatch.js';
 import { buildCronRouteTable, getServiceCrons } from './crons.js';
@@ -49,8 +51,16 @@ import { Colors as c } from './cervel/utils.js';
 // Re-export introspection functions
 export { introspectApp } from './introspection/index.js';
 export { diagnostics } from './diagnostics.js';
+export { shouldServe, startDevServer } from './start-dev-server.js';
 
 export const version = 2;
+
+/**
+ * Edge Runtime is not supported in services. Mirrors the `EdgeRuntimes` enum in
+ * `@vercel/node` (`'edge' | 'experimental-edge'`) — the values a function can
+ * set via `export const config = { runtime: ... }`.
+ */
+const EDGE_RUNTIMES = new Set(['edge', 'experimental-edge']);
 
 /** Non-empty Build Command from project settings / vercel.json (not the default `build` script). */
 function hasExplicitBuildCommand(
@@ -93,22 +103,41 @@ export const build: BuildV2 = async args => {
   const buildSpan = span.child('vc.builder.backends.build');
 
   return buildSpan.trace(async () => {
-    // Use an explicit entrypoint when provided by CLI/fs-detectors.
-    // Fall back to candidate-list discovery when:
-    // - The CLI/framework passes the `package.json` sentinel.
-    // - The file doesn't exist (framework-preset placeholders like
-    //   `useRuntime.src: 'index.js'` reach us unreplaced under
-    //   VERCEL_EXPERIMENTAL_BACKENDS).
-    const explicit =
-      args.entrypoint && args.entrypoint !== 'package.json'
-        ? args.entrypoint
-        : null;
-    const entrypoint =
-      explicit && existsSync(join(args.workPath, explicit))
-        ? explicit
-        : await findEntrypointOrThrow(args.workPath);
+    const entrypoint = await findEntrypointWithHintOrThrow(
+      args.workPath,
+      args.entrypoint
+    );
     debug('Entrypoint', entrypoint);
     args.entrypoint = entrypoint;
+
+    const serviceName =
+      typeof args.config?.serviceName === 'string' &&
+      args.config.serviceName !== ''
+        ? args.config.serviceName
+        : undefined;
+
+    // Edge Runtime is not supported in services. Without this check the Node
+    // service builder silently ignores an in-file
+    // `export const config = { runtime: 'edge' }` and ships a Node lambda;
+    // surface it as a clear build error instead.
+    if (serviceName) {
+      const staticConfig = getConfig(
+        new Project(),
+        join(args.workPath, entrypoint)
+      );
+      const configuredRuntime = staticConfig?.runtime;
+      if (
+        typeof configuredRuntime === 'string' &&
+        EDGE_RUNTIMES.has(configuredRuntime)
+      ) {
+        throw new NowBuildError({
+          code: 'EDGE_RUNTIME_UNSUPPORTED_IN_SERVICES',
+          message:
+            `Edge Runtime is not supported in services. Service "${serviceName}" entrypoint "${entrypoint}" sets \`config.runtime = '${configuredRuntime}'\`. ` +
+            'Remove the Edge runtime configuration from this service or deploy it outside of services.',
+        });
+      }
+    }
 
     const cronEntries = await getServiceCrons({
       service: args.service,
@@ -216,6 +245,7 @@ export const build: BuildV2 = async args => {
       ignoreNodeModules: false,
       ignore: args.config.excludeFiles,
       conditions: isBun ? ['bun'] : undefined,
+      traceFiles: true,
       span: buildSpan,
     });
 
@@ -307,16 +337,16 @@ export const build: BuildV2 = async args => {
         VERCEL_SERVICE_ROUTE_PREFIX_STRIP: '1',
       };
     }
-    const serviceName =
-      typeof args.config?.serviceName === 'string' &&
-      args.config.serviceName !== ''
-        ? args.config.serviceName
-        : undefined;
-    const internalServiceFunctionPath =
-      typeof serviceName === 'string' && serviceName !== ''
+    // V2 services have isolated build outputs, so their function can live at
+    // the natural `/index` path. V1 services still share one output and need
+    // the internal service namespace to avoid collisions.
+    const isIsolatedService = !!args.service?.name && !args.service.type;
+    const serviceFunctionPath = isIsolatedService
+      ? '/index'
+      : typeof serviceName === 'string' && serviceName !== ''
         ? `/_svc/${serviceName}/index`
         : undefined;
-    const internalServiceOutputPath = internalServiceFunctionPath?.slice(1);
+    const serviceOutputPath = serviceFunctionPath?.slice(1);
     const remapRouteDestination = <T extends { src?: string; dest?: string }>(
       route: T
     ): T => {
@@ -324,12 +354,12 @@ export const build: BuildV2 = async args => {
         route,
         serviceRoutePrefix
       );
-      if (!internalServiceFunctionPath || !route.dest) {
+      if (!serviceFunctionPath || !route.dest) {
         return prefixedRoute;
       }
       return {
         ...prefixedRoute,
-        dest: internalServiceFunctionPath,
+        dest: serviceFunctionPath,
       };
     };
 
@@ -344,12 +374,12 @@ export const build: BuildV2 = async args => {
           ...introspectionResult.routes.map(remapRouteDestination),
           {
             src: getServiceCatchallSource(serviceRoutePrefix),
-            dest: internalServiceFunctionPath ?? '/',
+            dest: serviceFunctionPath ?? '/',
           },
         ];
 
-    const output: Record<string, Lambda> = internalServiceOutputPath
-      ? { [internalServiceOutputPath]: lambda }
+    const output: Record<string, Lambda> = serviceOutputPath
+      ? { [serviceOutputPath]: lambda }
       : { index: lambda };
 
     for (const route of routes) {
@@ -359,9 +389,8 @@ export const build: BuildV2 = async args => {
         }
         // Only the exact service alias needs the leading slash removed.
         const outputPath =
-          route.dest === internalServiceFunctionPath &&
-          internalServiceOutputPath
-            ? internalServiceOutputPath
+          route.dest === serviceFunctionPath && serviceOutputPath
+            ? serviceOutputPath
             : route.dest;
         output[outputPath] = lambda;
       }

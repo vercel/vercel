@@ -188,10 +188,12 @@ function applyGroupedLambdas<TLambda extends Lambda>(
 }
 
 export async function deserializeBuildOutput<
-  TConfig extends DeserializeBuildOutputConfig = DeserializeBuildOutputConfig,
-  TResult extends DeserializeBuildOutputResult = DeserializeBuildOutputResult,
+  TFlags = unknown,
+  TMeta = unknown,
   TLambda extends Lambda = Lambda,
->(options: DeserializeBuildOutputOptions<TResult, TLambda>): Promise<TResult> {
+>(
+  options: DeserializeBuildOutputOptions<TMeta, TLambda>
+): Promise<DeserializeBuildOutputResult<TFlags, TMeta>> {
   const {
     outputDir,
     repoRootPath,
@@ -208,7 +210,8 @@ export async function deserializeBuildOutput<
   } = options;
   let hasServerActions = false;
   const configPath = join(outputDir, 'config.json');
-  const config = await maybeReadJSON<TConfig>(configPath);
+  const config =
+    await maybeReadJSON<DeserializeBuildOutputConfig<TFlags>>(configPath);
 
   if (!config) {
     throw new Error(`Config file was not found at "${configPath}"`);
@@ -222,9 +225,7 @@ export async function deserializeBuildOutput<
 
   validateDeploymentId(config.deploymentId);
 
-  const flags = await maybeReadJSON<TResult['flags']>(
-    join(outputDir, 'flags.json')
-  );
+  const flags = await maybeReadJSON<TFlags>(join(outputDir, 'flags.json'));
 
   const staticDir = join(outputDir, 'static');
   const output: BuildResultV2Typical['output'] = await glob('**', {
@@ -340,7 +341,7 @@ export async function deserializeBuildOutput<
   );
   applyGroupedLambdas(output, groupedLambdas);
 
-  const framework = validateFrameworkVersion(config?.framework?.version);
+  const framework = validateFrameworkVersion(config?.framework);
   const meta = getMeta?.(hasServerActions);
   return {
     wildcard: config.wildcard,
@@ -352,5 +353,5 @@ export async function deserializeBuildOutput<
     framework,
     ...(includeDeploymentId ? { deploymentId: config.deploymentId } : {}),
     ...(meta !== undefined ? { meta } : {}),
-  } as TResult;
+  };
 }

@@ -25,7 +25,7 @@ import {
   getVenvPythonBin,
   getVenvBinDir,
 } from './utils';
-import { findUvBinary, getProtectedUvEnv } from './uv';
+import { findUvBinary, getProtectedUvEnv, checkUvBinaryVersion } from './uv';
 import {
   discoverPackage,
   detectInstallSource,
@@ -124,7 +124,7 @@ async function getReachableHost(port: number): Promise<string | false> {
   return results.find(Boolean) || false;
 }
 
-interface SyncDependenciesOptions {
+interface DevPythonOptions {
   workPath: string;
   uvPath: string | null;
   pythonBin: string;
@@ -140,7 +140,7 @@ async function syncDependencies({
   env,
   onStdout,
   onStderr,
-}: SyncDependenciesOptions): Promise<void> {
+}: DevPythonOptions): Promise<void> {
   const pythonPackage = await discoverPackage({
     entrypointDir: workPath,
     rootDir: workPath,
@@ -309,100 +309,83 @@ async function runSync({
   });
 }
 
-interface InstallVercelRuntimeOptions {
-  workPath: string;
-  uvPath: string | null;
-  pythonBin: string;
-  env: NodeJS.ProcessEnv;
-  onStdout?: (buf: Buffer) => void;
-  onStderr?: (buf: Buffer) => void;
+// Dedup concurrent installs: keyed by "targetDir:packageName" so parallel
+// requests to vc dev reuse the in-flight promise instead of spawning duplicates.
+const PENDING_INSTALLS = new Map<string, Promise<void>>();
+
+interface InjectedPackageSpec {
+  name: 'vercel-runtime' | 'vercel-workers';
+  pinnedVersion: string;
+  envOverride: string | undefined;
 }
 
-const PENDING_RUNTIME_INSTALLS = new Map<string, Promise<void>>();
-const PENDING_WORKERS_INSTALLS = new Map<string, Promise<void>>();
+async function installInjectedDevPackage(
+  pkg: InjectedPackageSpec,
+  opts: DevPythonOptions
+): Promise<void> {
+  const targetDir = join(opts.workPath, '.vercel', 'python');
+  const key = `${targetDir}:${pkg.name}`;
 
-async function installVercelRuntime({
-  workPath,
-  uvPath,
-  pythonBin,
-  env,
-  onStdout,
-  onStderr,
-}: InstallVercelRuntimeOptions): Promise<void> {
-  const targetDir = join(workPath, '.vercel', 'python');
-
-  let pending = PENDING_RUNTIME_INSTALLS.get(targetDir);
+  let pending = PENDING_INSTALLS.get(key);
   if (!pending) {
-    pending = doInstallVercelRuntime({
-      targetDir,
-      workPath,
-      uvPath,
-      pythonBin,
-      env,
-      onStdout,
-      onStderr,
-    });
-    PENDING_RUNTIME_INSTALLS.set(targetDir, pending);
-    pending.finally(() => PENDING_RUNTIME_INSTALLS.delete(targetDir));
+    pending = doInstallInjectedDevPackage(pkg, { ...opts, targetDir });
+    PENDING_INSTALLS.set(key, pending);
+    pending.finally(() => PENDING_INSTALLS.delete(key));
   }
   await pending;
 }
 
-async function doInstallVercelRuntime({
-  targetDir,
-  workPath,
-  uvPath,
-  pythonBin,
-  env,
-  onStdout,
-  onStderr,
-}: InstallVercelRuntimeOptions & { targetDir: string }): Promise<void> {
+async function doInstallInjectedDevPackage(
+  pkg: InjectedPackageSpec,
+  opts: DevPythonOptions & { targetDir: string }
+): Promise<void> {
+  const { targetDir, workPath, uvPath, pythonBin, env, onStdout, onStderr } =
+    opts;
   mkdirSync(targetDir, { recursive: true });
 
-  // Check if we're running from a dev build
-  // so that we can use the local version instead
-  // of installing from pypi
-  const localRuntimeDir = join(
-    __dirname,
-    '..',
-    '..',
-    '..',
-    'python',
-    'vercel-runtime'
-  );
-  const isLocalDev = existsSync(join(localRuntimeDir, 'pyproject.toml'));
+  const localDir = join(__dirname, '..', '..', '..', 'python', pkg.name);
+  const isLocalDev = existsSync(join(localDir, 'pyproject.toml'));
 
-  const runtimeDep =
-    env.VERCEL_RUNTIME_PYTHON ||
-    (isLocalDev
-      ? localRuntimeDir
-      : `vercel-runtime==${VERCEL_RUNTIME_VERSION}`);
+  const dep =
+    pkg.envOverride ||
+    (isLocalDev ? localDir : `${pkg.name}==${pkg.pinnedVersion}`);
 
-  // Skip install if the exact pypi version is already present,
-  // local dev builds and explicitly specified version
-  // always reinstall to pick up possible source changes
-  if (!isLocalDev && !env.VERCEL_RUNTIME_PYTHON) {
+  // Skip install if the exact pypi version is already present;
+  // local dev builds and explicitly specified versions
+  // always reinstall to pick up possible source changes.
+  if (!isLocalDev && !pkg.envOverride) {
+    const distInfoName = pkg.name.replace('-', '_');
     const distInfo = join(
       targetDir,
-      `vercel_runtime-${VERCEL_RUNTIME_VERSION}.dist-info`
+      `${distInfoName}-${pkg.pinnedVersion}.dist-info`
     );
     if (existsSync(distInfo)) {
-      debug(
-        `vercel-runtime ${VERCEL_RUNTIME_VERSION} already installed, skipping`
-      );
+      debug(`${pkg.name} ${pkg.pinnedVersion} already installed, skipping`);
       return;
     }
   }
 
   debug(
-    `Installing vercel-runtime into ${targetDir} (type: ${isLocalDev ? 'local' : 'pypi'}, source: ${runtimeDep})`
+    `Installing ${pkg.name} into ${targetDir} (type: ${isLocalDev ? 'local' : 'pypi'}, source: ${dep})`
   );
 
   const pip = uvPath
     ? { cmd: uvPath, prefix: ['pip', 'install'] }
     : { cmd: pythonBin, prefix: ['-m', 'pip', 'install'] };
 
-  const spawnArgs = [...pip.prefix, '--target', targetDir, runtimeDep];
+  // Override exclude-newer so a project-level date constraint doesn't
+  // block installation of a recently-published injected package.
+  const excludeOverride = uvPath
+    ? ['--exclude-newer-package', `${pkg.name}=false`]
+    : [];
+
+  const spawnArgs = [
+    ...pip.prefix,
+    '--target',
+    targetDir,
+    ...excludeOverride,
+    dep,
+  ];
 
   await new Promise<void>((resolve, reject) => {
     const child = spawn(pip.cmd, spawnArgs, {
@@ -434,122 +417,7 @@ async function doInstallVercelRuntime({
       } else {
         reject(
           new Error(
-            `Installing vercel-runtime failed with code ${code}, signal ${signal}`
-          )
-        );
-      }
-    });
-  });
-}
-
-async function installVercelWorkers({
-  workPath,
-  uvPath,
-  pythonBin,
-  env,
-  onStdout,
-  onStderr,
-}: InstallVercelRuntimeOptions): Promise<void> {
-  const targetDir = join(workPath, '.vercel', 'python');
-
-  let pending = PENDING_WORKERS_INSTALLS.get(targetDir);
-  if (!pending) {
-    pending = doInstallVercelWorkers({
-      targetDir,
-      workPath,
-      uvPath,
-      pythonBin,
-      env,
-      onStdout,
-      onStderr,
-    });
-    PENDING_WORKERS_INSTALLS.set(targetDir, pending);
-    pending.finally(() => PENDING_WORKERS_INSTALLS.delete(targetDir));
-  }
-  await pending;
-}
-
-async function doInstallVercelWorkers({
-  targetDir,
-  workPath,
-  uvPath,
-  pythonBin,
-  env,
-  onStdout,
-  onStderr,
-}: InstallVercelRuntimeOptions & { targetDir: string }): Promise<void> {
-  mkdirSync(targetDir, { recursive: true });
-
-  const localWorkersDir = join(
-    __dirname,
-    '..',
-    '..',
-    '..',
-    'python',
-    'vercel-workers'
-  );
-  const isLocalDev = existsSync(join(localWorkersDir, 'pyproject.toml'));
-
-  const workersDep =
-    env.VERCEL_WORKERS_PYTHON ||
-    (isLocalDev
-      ? localWorkersDir
-      : `vercel-workers==${VERCEL_WORKERS_VERSION}`);
-
-  if (!isLocalDev && !env.VERCEL_WORKERS_PYTHON) {
-    const distInfo = join(
-      targetDir,
-      `vercel_workers-${VERCEL_WORKERS_VERSION}.dist-info`
-    );
-    if (existsSync(distInfo)) {
-      debug(
-        `vercel-workers ${VERCEL_WORKERS_VERSION} already installed, skipping`
-      );
-      return;
-    }
-  }
-
-  debug(
-    `Installing vercel-workers into ${targetDir} (type: ${isLocalDev ? 'local' : 'pypi'}, source: ${workersDep})`
-  );
-
-  const pip = uvPath
-    ? { cmd: uvPath, prefix: ['pip', 'install'] }
-    : { cmd: pythonBin, prefix: ['-m', 'pip', 'install'] };
-
-  const spawnArgs = [...pip.prefix, '--target', targetDir, workersDep];
-
-  await new Promise<void>((resolve, reject) => {
-    const child = spawn(pip.cmd, spawnArgs, {
-      cwd: workPath,
-      env: getProtectedUvEnv(env),
-      stdio: ['inherit', 'pipe', 'pipe'],
-    });
-
-    child.stdout?.on('data', (data: Buffer) => {
-      if (onStdout) {
-        onStdout(data);
-      } else {
-        debug(data.toString());
-      }
-    });
-
-    child.stderr?.on('data', (data: Buffer) => {
-      if (onStderr) {
-        onStderr(data);
-      } else {
-        debug(data.toString());
-      }
-    });
-
-    child.on('error', reject);
-    child.on('exit', (code, signal) => {
-      if (code === 0) {
-        resolve();
-      } else {
-        reject(
-          new Error(
-            `Installing vercel-workers failed with code ${code}, signal ${signal}`
+            `Installing ${pkg.name} failed with code ${code}, signal ${signal}`
           )
         );
       }
@@ -849,6 +717,9 @@ export const startDevServer: StartDevServer = async opts => {
   try {
     const { pythonPath: systemPython } = getDefaultPythonVersion(meta);
     const uvPath = await findUvBinary(systemPython);
+    if (uvPath) {
+      checkUvBinaryVersion(uvPath);
+    }
     const venv = isInVirtualEnv();
     const serviceCount = (meta.serviceCount as number | undefined) ?? 0;
     const pythonServiceCount =
@@ -912,6 +783,15 @@ export const startDevServer: StartDevServer = async opts => {
       }
     }
 
+    const devOpts: DevPythonOptions = {
+      workPath,
+      uvPath,
+      pythonBin: spawnCommand,
+      env,
+      onStdout,
+      onStderr,
+    };
+
     if (meta.syncDependencies) {
       const gray = '\x1b[90m';
       const reset = '\x1b[0m';
@@ -922,34 +802,29 @@ export const startDevServer: StartDevServer = async opts => {
         console.log(syncMessage);
       }
 
-      await syncDependencies({
-        workPath,
-        uvPath,
-        pythonBin: spawnCommand,
-        env,
-        onStdout,
-        onStderr,
-      });
+      await syncDependencies(devOpts);
     }
 
     // vercel-runtime is a separate dependency that we need to install into .vercel/python/
     // so the dev shim can import it without messing with project's manifest (and possibly uv)
-    await installVercelRuntime({
-      workPath,
-      uvPath,
-      pythonBin: spawnCommand,
-      env,
-    });
+    await installInjectedDevPackage(
+      {
+        name: 'vercel-runtime',
+        pinnedVersion: VERCEL_RUNTIME_VERSION,
+        envOverride: env.VERCEL_RUNTIME_PYTHON,
+      },
+      devOpts
+    );
 
     if (hasWorkerServicesEnabled(env)) {
-      await installVercelWorkers({
-        workPath,
-        uvPath,
-        pythonBin: spawnCommand,
-        env,
-        onStdout,
-        onStderr,
-      });
+      await installInjectedDevPackage(
+        {
+          name: 'vercel-workers',
+          pinnedVersion: VERCEL_WORKERS_VERSION,
+          envOverride: env.VERCEL_WORKERS_PYTHON,
+        },
+        devOpts
+      );
     }
 
     // Detect crons before spawning so we can set __VC_CRON_ROUTES.

@@ -1,17 +1,23 @@
-export type Aggregation =
-  | 'sum'
-  | 'persecond'
-  | 'percent'
-  | 'unique'
-  | 'avg'
-  | 'min'
-  | 'max'
-  | 'p50'
-  | 'p75'
-  | 'p90'
-  | 'p95'
-  | 'p99'
-  | 'stddev';
+export const AGGREGATIONS = [
+  'sum',
+  'persecond',
+  'percent',
+  'unique',
+  'avg',
+  'min',
+  'max',
+  'p50',
+  'p75',
+  'p90',
+  'p95',
+  'p99',
+  'stddev',
+] as const;
+
+export type Aggregation = (typeof AGGREGATIONS)[number];
+
+export type OrderDirection = 'asc' | 'desc';
+export type OrderBy = 'value' | 'count';
 
 export interface ProjectScope {
   type: 'project';
@@ -63,10 +69,12 @@ export interface MetricsQueryRequest {
   startTime: string;
   endTime: string;
   granularity: Granularity;
+  bucketTimezone?: string;
   groupBy?: string[];
   filter?: string;
   limit?: number;
   orderBy?: string;
+  orderDirection?: OrderDirection;
 }
 
 export type MetricsApiDataCell = string | number | null;
@@ -97,12 +105,17 @@ export interface QueryMetadata {
   startTime: string;
   endTime: string;
   granularity: Granularity;
+  bucketTimezone?: string;
+  orderBy?: OrderBy;
+  orderDirection?: OrderDirection;
 }
 
 export interface MetricsQueryResponse {
   data?: MetricsDataRow[];
   summary: MetricsSummaryRow[];
   statistics: MetricsQueryStatistics;
+  orderBy?: string;
+  orderDirection?: OrderDirection;
 }
 
 export type ValidationError = {

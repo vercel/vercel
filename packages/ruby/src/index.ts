@@ -18,12 +18,14 @@ import {
   walkParentDirs,
   cloneEnv,
   FileBlob,
+  getReportedServiceType,
   type GlobOptions,
   type Files,
   type BuildV3,
   type ShouldServe,
 } from '@vercel/build-utils';
 import { installBundler } from './install-ruby';
+import { generateProjectManifest } from './diagnostics';
 
 async function matchPaths(
   configPatterns: string | string[] | undefined,
@@ -169,6 +171,7 @@ export const build: BuildV3 = async ({
   entrypoint,
   config,
   meta = {},
+  service,
 }) => {
   await download(files, workPath, meta);
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
@@ -327,10 +330,23 @@ export const build: BuildV3 = async ({
     environment: {},
   });
 
+  try {
+    // We ensure the lockfile is up to date in bundleLock, so we are sure it's up to date.
+    await generateProjectManifest({
+      workPath,
+      gemfileLockPath: join(dirname(gemfilePath), 'Gemfile.lock'),
+      framework: config?.framework ?? undefined,
+      serviceType: service ? getReportedServiceType(service) : undefined,
+    });
+  } catch (err) {
+    debug(`Failed to write ruby manifest: ${String(err)}`);
+  }
+
   return { output };
 };
 
 export { startDevServer } from './start-dev-server';
+export { diagnostics } from './diagnostics';
 
 // Route all requests to the Ruby dev server during `vercel dev`
 export const shouldServe: ShouldServe = () => true;

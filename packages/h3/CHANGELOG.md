@@ -1,5 +1,130 @@
 # @vercel/h3
 
+## 0.1.107
+
+### Patch Changes
+
+- @vercel/node@5.8.22
+
+## 0.1.106
+
+### Patch Changes
+
+- @vercel/node@5.8.21
+
+## 0.1.105
+
+### Patch Changes
+
+- @vercel/node@5.8.20
+
+## 0.1.104
+
+### Patch Changes
+
+- Updated dependencies [2158ab6]
+  - @vercel/node@5.8.19
+
+## 0.1.103
+
+### Patch Changes
+
+- @vercel/node@5.8.18
+
+## 0.1.102
+
+### Patch Changes
+
+- @vercel/node@5.8.17
+
+## 0.1.101
+
+### Patch Changes
+
+- @vercel/node@5.8.16
+
+## 0.1.100
+
+### Patch Changes
+
+- @vercel/node@5.8.15
+
+## 0.1.99
+
+### Patch Changes
+
+- @vercel/node@5.8.14
+
+## 0.1.98
+
+### Patch Changes
+
+- @vercel/node@5.8.13
+
+## 0.1.97
+
+### Patch Changes
+
+- @vercel/node@5.8.12
+
+## 0.1.96
+
+### Patch Changes
+
+- @vercel/node@5.8.11
+
+## 0.1.95
+
+### Patch Changes
+
+- @vercel/node@5.8.10
+
+## 0.1.94
+
+### Patch Changes
+
+- @vercel/node@5.8.9
+
+## 0.1.93
+
+### Patch Changes
+
+- Updated dependencies [ab0e5aa]
+  - @vercel/node@5.8.8
+
+## 0.1.92
+
+### Patch Changes
+
+- @vercel/node@5.8.7
+
+## 0.1.91
+
+### Patch Changes
+
+- Updated dependencies [eecd10d]
+  - @vercel/static-config@3.4.0
+  - @vercel/node@5.8.6
+
+## 0.1.90
+
+### Patch Changes
+
+- Updated dependencies [ecf5033]
+  - @vercel/node@5.8.5
+
+## 0.1.89
+
+### Patch Changes
+
+- @vercel/node@5.8.4
+
+## 0.1.88
+
+### Patch Changes
+
+- @vercel/node@5.8.3
+
 ## 0.1.87
 
 ### Patch Changes

@@ -2,15 +2,20 @@ import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { removeStoreSubcommand } from './command';
+import { deleteStoreSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getLinkedProject } from '../../util/projects/link';
-import type { BlobRWToken } from '../../util/blob/token';
+import { getStoreIdFromAuth, type BlobRWToken } from '../../util/blob/token';
 import { envPullCommandLogic } from '../env/pull';
 import {
   formatStoreLabel,
   formatConnectedProjects,
 } from '../../util/blob/confirm';
+import {
+  outputAgentError,
+  buildCommandWithYes,
+  buildCommandWithGlobalFlags,
+} from '../../util/agent-output';
 
 export default async function removeStore(
   client: Client,
@@ -18,7 +23,7 @@ export default async function removeStore(
   rwToken: BlobRWToken
 ): Promise<number> {
   const flagsSpecification = getFlagsSpecification(
-    removeStoreSubcommand.options
+    deleteStoreSubcommand.options
   );
 
   let parsedArgs: ReturnType<typeof parseArguments<typeof flagsSpecification>>;
@@ -34,28 +39,43 @@ export default async function removeStore(
     flags: { '--yes': yes },
   } = parsedArgs;
 
-  let storeId = storeIdArg;
+  const interactive = client.stdin.isTTY && !client.nonInteractive;
 
-  if (!storeId && rwToken.success) {
-    const [, , , id] = rwToken.token.split('_');
+  let storeId: string | undefined = storeIdArg;
 
-    storeId = `store_${id}`;
+  if (!storeId) {
+    storeId = getStoreIdFromAuth(rwToken) ?? undefined;
   }
 
   if (!storeId) {
-    if (!client.stdin.isTTY) {
+    if (interactive) {
+      storeId = await client.input.text({
+        message: 'Enter the ID of the blob store you want to remove',
+        validate: value => {
+          if (value.length !== 22) {
+            return 'ID must be 22 characters long';
+          }
+          return true;
+        },
+      });
+    } else {
+      outputAgentError(client, {
+        status: 'error',
+        reason: 'missing_arguments',
+        message: 'Missing required argument: storeId.',
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'blob delete-store <storeId> --yes'
+            ),
+            when: 'delete the blob store',
+          },
+        ],
+      });
       output.error('Missing required argument: storeId');
       return 1;
     }
-    storeId = await client.input.text({
-      message: 'Enter the ID of the blob store you want to remove',
-      validate: value => {
-        if (value.length !== 22) {
-          return 'ID must be 22 characters long';
-        }
-        return true;
-      },
-    });
   }
 
   const link = await getLinkedProject(client);
@@ -84,7 +104,18 @@ export default async function removeStore(
     );
 
     if (!yes) {
-      if (!client.stdin.isTTY) {
+      if (!interactive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'confirmation_required',
+          message: `Removing ${label} cannot be undone and requires confirmation. Re-run with --yes.`,
+          next: [
+            {
+              command: buildCommandWithYes(client.argv),
+              when: 'remove the blob store without prompting',
+            },
+          ],
+        });
         output.error(
           'Confirmation required. Use --yes to skip confirmation in non-interactive environments.'
         );

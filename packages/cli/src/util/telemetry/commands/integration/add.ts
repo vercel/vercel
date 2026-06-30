@@ -87,4 +87,16 @@ export class IntegrationAddTelemetryClient
       });
     }
   }
+
+  trackCliFlagClaim(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('claim');
+    }
+  }
+
+  trackCliFlagNoClaim(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('no-claim');
+    }
+  }
 }

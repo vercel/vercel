@@ -9,6 +9,7 @@ import updateCmd from './update';
 import removeCmd from './remove';
 import itemsCmd from './items';
 import tokensCmd from './tokens';
+import backupsCmd from './backups';
 import {
   edgeConfigCommand,
   listSubcommand,
@@ -18,6 +19,7 @@ import {
   removeSubcommand,
   itemsSubcommand,
   tokensSubcommand,
+  backupsSubcommand,
 } from './command';
 import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -33,6 +35,7 @@ const COMMAND_CONFIG = {
   remove: ['remove', 'rm', 'delete'],
   items: ['items'],
   tokens: ['tokens'],
+  backups: ['backups'],
 };
 
 export default async function main(client: Client): Promise<number> {
@@ -130,6 +133,13 @@ export default async function main(client: Client): Promise<number> {
       }
       telemetry.trackCliSubcommandTokens(subcommandOriginal);
       return tokensCmd(client, args);
+    case 'backups':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('edge-config', subcommandOriginal);
+        return printHelp(backupsSubcommand);
+      }
+      telemetry.trackCliSubcommandBackups(subcommandOriginal);
+      return backupsCmd(client, args);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('edge-config', subcommandOriginal);

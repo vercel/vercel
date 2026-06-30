@@ -25,7 +25,7 @@ describe('integration', () => {
 
     it('returns formatted json output', async () => {
       useIntegrationDiscover();
-      client.setArgv('integration', 'discover', '--json');
+      client.setArgv('integration', 'discover', '--format=json');
       const exitCode = await integrationCommand(client);
       expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
 
@@ -90,7 +90,7 @@ describe('integration', () => {
 
     it('continues when categories endpoint fails', async () => {
       useIntegrationDiscover({ categoriesStatus: 404 });
-      client.setArgv('integration', 'discover', '--json');
+      client.setArgv('integration', 'discover', '--format=json');
       const exitCode = await integrationCommand(client);
       expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
 
@@ -143,7 +143,7 @@ describe('integration', () => {
 
     it('errors when integrations endpoint fails', async () => {
       useIntegrationDiscover({ integrationsStatus: 500 });
-      client.setArgv('integration', 'discover', '--json');
+      client.setArgv('integration', 'discover', '--format=json');
       const exitCode = await integrationCommand(client);
       expect(exitCode, 'exit code for "integrationCommand"').toEqual(1);
 
@@ -156,7 +156,7 @@ describe('integration', () => {
     describe('search term filtering', () => {
       it('filters products by name', async () => {
         useIntegrationDiscover();
-        client.setArgv('integration', 'discover', 'neon', '--json');
+        client.setArgv('integration', 'discover', 'neon', '--format=json');
         const exitCode = await integrationCommand(client);
         expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
 
@@ -167,7 +167,7 @@ describe('integration', () => {
 
       it('filters products by provider', async () => {
         useIntegrationDiscover();
-        client.setArgv('integration', 'discover', 'acme', '--json');
+        client.setArgv('integration', 'discover', 'acme', '--format=json');
         const exitCode = await integrationCommand(client);
         expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
 
@@ -183,7 +183,7 @@ describe('integration', () => {
 
       it('filters products by description', async () => {
         useIntegrationDiscover();
-        client.setArgv('integration', 'discover', 'key-value', '--json');
+        client.setArgv('integration', 'discover', 'key-value', '--format=json');
         const exitCode = await integrationCommand(client);
         expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
 
@@ -194,7 +194,7 @@ describe('integration', () => {
 
       it('filters products by tag', async () => {
         useIntegrationDiscover();
-        client.setArgv('integration', 'discover', 'postgres', '--json');
+        client.setArgv('integration', 'discover', 'postgres', '--format=json');
         const exitCode = await integrationCommand(client);
         expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
 
@@ -208,7 +208,7 @@ describe('integration', () => {
 
       it('is case-insensitive', async () => {
         useIntegrationDiscover();
-        client.setArgv('integration', 'discover', 'NEON', '--json');
+        client.setArgv('integration', 'discover', 'NEON', '--format=json');
         const exitCode = await integrationCommand(client);
         expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
 
@@ -231,7 +231,7 @@ describe('integration', () => {
 
       it('returns all products when no search term is provided', async () => {
         useIntegrationDiscover();
-        client.setArgv('integration', 'discover', '--json');
+        client.setArgv('integration', 'discover', '--format=json');
         const exitCode = await integrationCommand(client);
         expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
 
@@ -253,14 +253,14 @@ describe('integration', () => {
 
     it('accepts global debug flag before command', async () => {
       useIntegrationDiscover();
-      client.setArgv('--debug', 'integration', 'discover', '--json');
+      client.setArgv('--debug', 'integration', 'discover', '--format=json');
       const exitCode = await integrationCommand(client);
       expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
     });
 
-    it('tracks telemetry for subcommand and --json', async () => {
+    it('tracks telemetry for subcommand', async () => {
       useIntegrationDiscover();
-      client.setArgv('integration', 'discover', '--json');
+      client.setArgv('integration', 'discover', '--format=json');
       const exitCode = await integrationCommand(client);
       expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
 
@@ -269,16 +269,12 @@ describe('integration', () => {
           key: 'subcommand:discover',
           value: 'discover',
         },
-        {
-          key: 'flag:json',
-          value: 'TRUE',
-        },
       ]);
     });
 
     it('tracks telemetry for search term argument', async () => {
       useIntegrationDiscover();
-      client.setArgv('integration', 'discover', 'postgres', '--json');
+      client.setArgv('integration', 'discover', 'postgres', '--format=json');
       const exitCode = await integrationCommand(client);
       expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
 
@@ -291,11 +287,141 @@ describe('integration', () => {
           key: 'argument:query',
           value: '[REDACTED]',
         },
-        {
-          key: 'flag:json',
-          value: 'TRUE',
-        },
       ]);
+    });
+
+    describe('--category filter', () => {
+      it('passes --category to the API as a query param', async () => {
+        const { integrationsRequests } = useIntegrationDiscover();
+        client.setArgv(
+          'integration',
+          'discover',
+          '--category',
+          'storage',
+          '--format=json'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+        expect(integrationsRequests.at(-1)?.categories).toEqual(['storage']);
+      });
+
+      it('accepts -c shorthand for --category', async () => {
+        const { integrationsRequests } = useIntegrationDiscover();
+        client.setArgv(
+          'integration',
+          'discover',
+          '-c',
+          'authentication',
+          '--format=json'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+        expect(integrationsRequests.at(-1)?.categories).toEqual([
+          'authentication',
+        ]);
+      });
+
+      it('accepts repeated --category for multi-category filter', async () => {
+        const { integrationsRequests } = useIntegrationDiscover();
+        client.setArgv(
+          'integration',
+          'discover',
+          '--category',
+          'storage',
+          '--category',
+          'authentication',
+          '--format=json'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+        expect(integrationsRequests.at(-1)?.categories).toEqual([
+          'storage',
+          'authentication',
+        ]);
+      });
+
+      it('accepts repeated -c shorthand for multi-category filter', async () => {
+        const { integrationsRequests } = useIntegrationDiscover();
+        client.setArgv(
+          'integration',
+          'discover',
+          '-c',
+          'storage',
+          '-c',
+          'monitoring',
+          '--format=json'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+        expect(integrationsRequests.at(-1)?.categories).toEqual([
+          'storage',
+          'monitoring',
+        ]);
+      });
+
+      it('combines positional query with --category', async () => {
+        const { integrationsRequests } = useIntegrationDiscover();
+        client.setArgv(
+          'integration',
+          'discover',
+          'neon',
+          '--category',
+          'storage',
+          '--format=json'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+        expect(integrationsRequests.at(-1)?.categories).toEqual(['storage']);
+
+        const output = JSON.parse(client.stdout.getFullOutput());
+        expect(output.products).toHaveLength(1);
+        expect(output.products[0].name).toBe('Neon Postgres');
+      });
+
+      it('tracks telemetry for --category option', async () => {
+        useIntegrationDiscover();
+        client.setArgv(
+          'integration',
+          'discover',
+          '--category',
+          'storage',
+          '--format=json'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'subcommand:discover',
+            value: 'discover',
+          },
+          {
+            key: 'option:category',
+            value: '[REDACTED]',
+          },
+        ]);
+      });
+
+      it('emits one telemetry event per --category value', async () => {
+        useIntegrationDiscover();
+        client.setArgv(
+          'integration',
+          'discover',
+          '--category',
+          'storage',
+          '--category',
+          'authentication',
+          '--format=json'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+
+        const categoryEvents = client.telemetryEventStore.readonlyEvents.filter(
+          e => e.key === 'option:category'
+        );
+        expect(categoryEvents.length).toBe(2);
+        expect(categoryEvents.every(e => e.value === '[REDACTED]')).toBe(true);
+      });
     });
   });
 });

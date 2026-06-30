@@ -15,15 +15,6 @@ export class LogsTelemetryClient
     }
   }
 
-  trackCliOptionProject(v: string | undefined) {
-    if (v) {
-      this.trackCliOption({
-        option: 'project',
-        value: this.redactedValue,
-      });
-    }
-  }
-
   trackCliOptionDeployment(v: string | undefined) {
     if (v) {
       this.trackCliOption({

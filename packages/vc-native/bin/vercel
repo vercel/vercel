@@ -1,48 +1,32 @@
 #!/usr/bin/env node
 
-const childProcess = require('node:child_process');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
+// Fallback launcher used when postinstall did not replace this file with the
+// native binary (e.g. pnpm blocks dependency build scripts by default).
+// It resolves the platform package at runtime and forwards to its binary.
 
-const platformPackages = {
-  darwin: {
-    arm64: '@vercel/vc-native-darwin-arm64',
-    x64: '@vercel/vc-native-darwin-x64',
-  },
-  linux: {
-    arm64: '@vercel/vc-native-linux-arm64',
-    x64: '@vercel/vc-native-linux-x64',
-  },
-  win32: {
-    x64: '@vercel/vc-native-win32-x64',
-  },
-};
+const { spawnSync } = require('child_process');
+const path = require('path');
 
-const platform = os.platform();
-const arch = os.arch();
-const packageName = platformPackages[platform]?.[arch];
+const packageName = `@vercel/vc-native-${process.platform}-${process.arch}`;
+const binaryName = process.platform === 'win32' ? 'vercel.exe' : 'vercel';
 
-if (!packageName) {
+let binaryPath;
+try {
+  binaryPath = path.join(
+    path.dirname(require.resolve(`${packageName}/package.json`)),
+    'bin',
+    binaryName
+  );
+} catch {
   console.error(
-    `The native Vercel CLI does not support ${platform}-${arch}. Use \`npm i -g vercel\` for the Node.js-based CLI.`
+    `The native Vercel CLI binary was not installed. Try manually installing "${packageName}", or reinstall with \`npm i -g @vercel/vc-native --force\`.`
   );
   process.exit(1);
 }
 
-const binaryName = platform === 'win32' ? 'vercel.exe' : 'vercel';
-const binaryPath = findBinary(path.dirname(fs.realpathSync(__filename)));
-
-if (!binaryPath) {
-  console.error(
-    `Could not find ${packageName}. Your package manager may have skipped optional dependencies. Try reinstalling with \`npm i -g @vercel/vc-native --force\`.`
-  );
-  process.exit(1);
-}
-
-const result = childProcess.spawnSync(binaryPath, process.argv.slice(2), {
+const result = spawnSync(binaryPath, process.argv.slice(2), {
   stdio: 'inherit',
-  windowsHide: false,
+  windowsHide: true,
 });
 
 if (result.error) {
@@ -54,28 +38,4 @@ if (result.signal) {
   process.kill(process.pid, result.signal);
 }
 
-process.exit(typeof result.status === 'number' ? result.status : 1);
-
-function findBinary(startDir) {
-  let current = startDir;
-
-  for (;;) {
-    const candidate = path.join(
-      current,
-      'node_modules',
-      ...packageName.split('/'),
-      'bin',
-      binaryName
-    );
-
-    if (fs.existsSync(candidate)) {
-      return candidate;
-    }
-
-    const parent = path.dirname(current);
-    if (parent === current) {
-      return undefined;
-    }
-    current = parent;
-  }
-}
+process.exit(result.status ?? 1);

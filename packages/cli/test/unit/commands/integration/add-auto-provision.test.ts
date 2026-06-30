@@ -571,9 +571,10 @@ describe('integration add (auto-provision)', () => {
 
       await expect(integrationCommand(client)).rejects.toThrow('exit:1');
 
-      expect(openMock).toHaveBeenCalledWith(
-        expect.stringMatching(/\/integrations\/accept-terms\/acme/)
-      );
+      // The browser must NOT be opened in non-interactive mode — AI agents
+      // and CI have no way to interact with it. The URL is delivered via
+      // the action_required JSON payload instead (verification_uri below).
+      expect(openMock).not.toHaveBeenCalled();
 
       const payload = JSON.parse(client.stdout.getFullOutput().trim());
       expect(payload.status).toBe('action_required');
@@ -594,9 +595,7 @@ describe('integration add (auto-provision)', () => {
       expect(payload.next?.[0]?.command).toBe(
         'vercel --non-interactive --cwd /tmp/proj integration add acme'
       );
-      expect(payload.next?.[1]?.command).toBe(
-        'vercel --non-interactive --cwd /tmp/proj integration accept-terms acme --yes'
-      );
+      expect(payload.next).toHaveLength(1);
 
       expect(client.stderr.getFullOutput()).not.toContain(
         'Terms accepted in browser.'

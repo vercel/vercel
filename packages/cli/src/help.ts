@@ -57,6 +57,7 @@ export const help = () => `
       dns                  [name]      Manages your DNS records
       domains              [name]      Manages your domain names
       firewall             [cmd]       Manages Vercel Firewall configuration and custom rules
+      flags                [cmd]       Manage feature flags for a Vercel project
       httpstat             path        Visualize HTTP timing statistics for deployments
       logs                 [url]       Displays the logs for a deployment
       metrics              <metric>    Queries observability metrics for your project or team
@@ -71,6 +72,7 @@ export const help = () => `
       target               [cmd]       Manage custom environments for your Project
       teams                            Manages your teams
       telemetry            [cmd]       Enable or disable telemetry collection
+      traces               [cmd]       Fetch and capture traces for your project's deployment
       upgrade                          Upgrade the Vercel CLI to the latest version
       usage                            Show billing usage for the current billing period
       webhooks             [cmd]       Manages webhooks [beta]

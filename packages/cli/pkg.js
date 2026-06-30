@@ -4,6 +4,8 @@ import { basename } from 'node:path';
 
 const [, , script] = process.argv;
 
+process.env.VERCEL_VC_NATIVE = '1';
+
 // In the standalone binary, process.execPath points back to this binary.
 // Route internal worker invocations here so script paths are not parsed as CLI args.
 if (script && basename(script) === 'get-latest-worker.cjs') {

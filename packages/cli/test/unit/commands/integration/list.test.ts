@@ -446,6 +446,17 @@ describe('integration', () => {
             },
           ]);
         });
+
+        it('omits claim_status entirely for non-sandbox resources', async () => {
+          client.setArgv('integration', 'list', '--format=json');
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
+
+          const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+          for (const resource of jsonOutput.resources) {
+            expect(resource).not.toHaveProperty('claim_status');
+          }
+        });
       });
     });
 

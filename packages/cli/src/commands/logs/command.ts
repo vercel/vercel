@@ -1,4 +1,5 @@
 import { packageName } from '../../util/pkg-name';
+import { projectOption } from '../../util/arg-common';
 
 // has to be ms compliant
 // https://github.com/vercel/ms/blob/fe5338229cfdac6822891dcb9c24660b4d2e612b/src/index.ts#L95
@@ -17,13 +18,7 @@ export const logsCommand = {
     },
   ],
   options: [
-    {
-      name: 'project',
-      shorthand: 'p',
-      type: String,
-      deprecated: false,
-      description: 'Project ID or name (defaults to linked project)',
-    },
+    { ...projectOption, shorthand: 'p' },
     {
       name: 'deployment',
       shorthand: 'd',
@@ -140,7 +135,7 @@ export const logsCommand = {
       type: String,
       deprecated: false,
       description:
-        'Filter by git branch (defaults to current branch when in a git repo)',
+        'Filter by git branch (defaults to current branch for a linked project)',
     },
     {
       name: 'no-branch',
@@ -158,6 +153,10 @@ export const logsCommand = {
     {
       name: 'Stream live logs for a deployment ID',
       value: `${packageName} logs dpl_xxxxx --follow`,
+    },
+    {
+      name: 'Stream logs for the latest production deployment of a project',
+      value: `${packageName} logs --project my-app --follow`,
     },
     {
       name: 'Display recent logs for the linked project',

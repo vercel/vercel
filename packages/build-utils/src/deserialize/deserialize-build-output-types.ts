@@ -67,7 +67,7 @@ export type InspectSerializedLambda = (
 ) => Promise<boolean>;
 
 export interface DeserializeBuildOutputOptions<
-  TResult extends DeserializeBuildOutputResult = DeserializeBuildOutputResult,
+  TMeta = unknown,
   TLambda extends Lambda = Lambda,
 > {
   outputDir: string;
@@ -81,9 +81,7 @@ export interface DeserializeBuildOutputOptions<
   inspectSerializedLambda?: InspectSerializedLambda;
   warn?: (message: string) => void;
   includeDeploymentId?: boolean;
-  getMeta?: (
-    hasServerActions: boolean
-  ) => TResult extends { meta?: infer TMeta } ? TMeta : never;
+  getMeta?: (hasServerActions: boolean) => TMeta;
 }
 
 export type DeserializeBuildOutputFiles = BuildResultV2Typical['output'];

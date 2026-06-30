@@ -1,13 +1,14 @@
-import { formatOption, yesOption } from '../../../util/arg-common';
+import {
+  formatOption,
+  projectOption,
+  yesOption,
+} from '../../../util/arg-common';
 import { packageName } from '../../../util/pkg-name';
 
 const scopeOptions = [
   {
-    name: 'project',
+    ...projectOption,
     shorthand: 'p',
-    type: String,
-    argument: 'NAME_OR_ID',
-    deprecated: false,
     description:
       'Project scope (overrides linked project). Requires team context.',
   },

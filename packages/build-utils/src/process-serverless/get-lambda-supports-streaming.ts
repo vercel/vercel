@@ -6,11 +6,6 @@ interface LambdaLike {
   supportsResponseStreaming?: boolean;
 }
 
-export interface SupportsStreamingResult {
-  supportsStreaming: boolean | undefined;
-  error?: { handler: string; message: string };
-}
-
 /**
  * Determines if a Lambda should have streaming enabled.
  *
@@ -24,25 +19,25 @@ export interface SupportsStreamingResult {
  * enabled. If the setting is defined it will be honored. Enabled by
  * default for Node.js.
  */
-export async function getLambdaSupportsStreaming(
+export function getLambdaSupportsStreaming(
   lambda: LambdaLike,
   forceStreamingRuntime: boolean
-): Promise<SupportsStreamingResult> {
+): boolean | undefined {
   if (lambda.awsLambdaHandler) {
-    return { supportsStreaming: false };
+    return false;
   }
 
   if (forceStreamingRuntime) {
-    return { supportsStreaming: true };
+    return true;
   }
 
   if (typeof lambda.supportsResponseStreaming === 'boolean') {
-    return { supportsStreaming: lambda.supportsResponseStreaming };
+    return lambda.supportsResponseStreaming;
   }
 
   if ('launcherType' in lambda && lambda.launcherType === 'Nodejs') {
-    return { supportsStreaming: true };
+    return true;
   }
 
-  return { supportsStreaming: undefined };
+  return undefined;
 }

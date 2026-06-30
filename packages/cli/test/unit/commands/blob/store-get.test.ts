@@ -10,7 +10,12 @@ import type { BlobRWToken } from '../../../../src/util/blob/token';
 // Mock the external dependencies
 vi.mock('../../../../src/util/projects/link');
 vi.mock('../../../../src/util/get-scope');
-vi.mock('../../../../src/util/blob/token');
+vi.mock('../../../../src/util/blob/token', async () => {
+  const actual = await vi.importActual<
+    typeof import('../../../../src/util/blob/token')
+  >('../../../../src/util/blob/token');
+  return { ...actual, getBlobRWToken: vi.fn() };
+});
 vi.mock('../../../../src/output-manager');
 vi.mock('date-fns/format');
 const formatSpy = vi.mocked(format);
@@ -25,6 +30,7 @@ describe('blob store get', () => {
   const noToken: BlobRWToken = { success: false, error: 'No token found' };
   const token: BlobRWToken = {
     success: true,
+    kind: 'rw',
     token: 'vercel_blob_rw_123456_abcdefghijk',
   };
 
@@ -394,8 +400,9 @@ describe('blob store get', () => {
         const expectedStoreId = `store_${id}`;
 
         const exitCode = await getStore(client, [], {
-          token,
           success: true,
+          kind: 'rw',
+          token,
         });
         expect(exitCode).toBe(0);
         expect(client.fetch).toHaveBeenCalledWith(
@@ -740,6 +747,34 @@ describe('blob store get', () => {
           accountId: 'user_123',
         }
       );
+    });
+  });
+
+  describe('non-interactive mode (agents)', () => {
+    beforeEach(() => {
+      client.nonInteractive = true;
+      vi.spyOn(process, 'exit').mockImplementation(((_code?: number) => {
+        throw new Error('exit');
+      }) as () => never);
+    });
+
+    it('emits missing_arguments instead of prompting for a store id', async () => {
+      await expect(getStore(client, [], noToken)).rejects.toThrow('exit');
+
+      expect(textInputMock).not.toHaveBeenCalled();
+      const payload = JSON.parse(client.stdout.getFullOutput());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'missing_arguments',
+        message: expect.stringContaining('storeId'),
+      });
+    });
+
+    it('still works when the store id is provided', async () => {
+      const exitCode = await getStore(client, ['store_provided_123456'], token);
+
+      expect(exitCode).toBe(0);
+      expect(textInputMock).not.toHaveBeenCalled();
     });
   });
 });

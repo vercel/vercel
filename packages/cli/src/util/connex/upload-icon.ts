@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import type Client from '../client';
@@ -24,29 +24,25 @@ const MIN_IMAGE_BYTES = 12;
  * format and `resolveConnexIcon` only logs format-validation failures (it
  * still stores the SHA). So uploading a non-image would succeed silently and
  * surface as a broken icon in the dashboard. Reject early at the CLI layer.
+ *
+ * Signature list mirrors the API-side `now-fmeta-util/check-file-type.ts`
+ * so the CLI rejects formats the API would also reject.
  */
+const IMAGE_SIGNATURES: RegExp[] = [
+  /^ffd8ffdb/, // JPEG raw
+  /^ffd8ffe000104a4649460001/, // JFIF with marker
+  /^ffd8ffee/, // Adobe JPEG
+  /^ffd8ffe1.{4}457869660000/, // Exif: 2-byte segment length then "Exif\0\0"
+  /^ffd8ffe0/, // JFIF (lenient)
+  /^89504e470d0a1a0a/, // PNG
+];
+
 function isImageBuffer(buf: Buffer): boolean {
   if (buf.length < MIN_IMAGE_BYTES) {
     return false;
   }
-  // PNG: 89 50 4E 47 0D 0A 1A 0A (full 8-byte signature)
-  if (
-    buf[0] === 0x89 &&
-    buf[1] === 0x50 &&
-    buf[2] === 0x4e &&
-    buf[3] === 0x47 &&
-    buf[4] === 0x0d &&
-    buf[5] === 0x0a &&
-    buf[6] === 0x1a &&
-    buf[7] === 0x0a
-  ) {
-    return true;
-  }
-  // JPEG: FF D8 FF
-  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) {
-    return true;
-  }
-  return false;
+  const hex = buf.subarray(0, MIN_IMAGE_BYTES).toString('hex');
+  return IMAGE_SIGNATURES.some(re => re.test(hex));
 }
 
 export interface PreparedIcon {
@@ -70,17 +66,25 @@ export async function prepareConnexIcon(
   cwd: string
 ): Promise<PreparedIcon> {
   const absPath = resolve(cwd, filePath);
+  let size: number;
+  try {
+    size = (await stat(absPath)).size;
+  } catch (err) {
+    throw new Error(
+      `Could not read icon file at "${filePath}": ${(err as Error).message}`
+    );
+  }
+  if (size > MAX_ICON_BYTES) {
+    throw new Error(
+      `Icon file at "${filePath}" is ${size} bytes; maximum is ${MAX_ICON_BYTES} bytes (5 MB).`
+    );
+  }
   let buf: Buffer;
   try {
     buf = await readFile(absPath);
   } catch (err) {
     throw new Error(
       `Could not read icon file at "${filePath}": ${(err as Error).message}`
-    );
-  }
-  if (buf.length > MAX_ICON_BYTES) {
-    throw new Error(
-      `Icon file at "${filePath}" is ${buf.length} bytes; maximum is ${MAX_ICON_BYTES} bytes (5 MB).`
     );
   }
   if (!isImageBuffer(buf)) {

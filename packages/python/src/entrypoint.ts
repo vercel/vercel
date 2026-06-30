@@ -6,6 +6,7 @@ import {
   isPythonFramework,
   isScheduleTriggeredService,
   isQueueTriggeredService,
+  isWorkflowTriggeredService,
   type DetectEntrypointFn,
   type ServiceType,
   type JobTrigger,
@@ -524,7 +525,8 @@ export async function detectPythonEntrypoint(
       const needsDynamicApp =
         !!service &&
         (isScheduleTriggeredService(service) ||
-          isQueueTriggeredService(service));
+          isQueueTriggeredService(service) ||
+          isWorkflowTriggeredService(service));
       if (needsDynamicApp) {
         varName = 'app';
       }

@@ -14,13 +14,4 @@ export class DeployHooksLsTelemetryClient
       });
     }
   }
-
-  trackCliOptionProject(project: string | undefined) {
-    if (project) {
-      this.trackCliOption({
-        option: 'project',
-        value: project,
-      });
-    }
-  }
 }

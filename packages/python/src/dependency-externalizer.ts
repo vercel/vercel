@@ -23,53 +23,58 @@ import type {
   UvLockPackage,
 } from '@vercel/python-analysis';
 import { getVenvSitePackagesDirs } from './install';
-import { getUvBinaryForBundling, UV_BUNDLE_DIR } from './uv';
-import { detectPlatform } from './utils';
+import {
+  downloadUvBinaryForTarget,
+  getUvBinaryForBundling,
+  UV_BUNDLE_DIR,
+} from './uv';
+import { detectTargetPlatform } from './platform-info';
+import { derivePycPath, type BytecodeCollectionResult } from './compileall';
+import { isLargeFunctionsEnabled } from './large-functions';
 
 const readFile = promisify(fs.readFile);
 
-// AWS Lambda uncompressed size limit is 250MB, but we use 245MB to leave room for Lambda layers
-export const LAMBDA_SIZE_THRESHOLD_BYTES = 245 * 1024 * 1024;
+/**
+ * Files that are never needed at runtime and can be safely stripped from the
+ * vendor directory to reduce bundle size:
+ *
+ * - `*.pyi`          – type stubs for static type checkers
+ * - `py.typed`       – PEP 561 marker for typed packages
+ * - `WHEEL`          – wheel format metadata (installer use only)
+ * - `INSTALLER`      – records which tool installed the package
+ * - `direct_url.json`– PEP 610 install provenance
+ */
+const STRIP_BASENAMES = new Set([
+  'py.typed',
+  'WHEEL',
+  'INSTALLER',
+  'direct_url.json',
+]);
+
+function shouldStripVendorFile(filePath: string): boolean {
+  const segments = filePath.split(sep);
+  if (segments.includes('__pycache__')) return true;
+  const name = segments[segments.length - 1] ?? '';
+  if (name.endsWith('.pyc') || name.endsWith('.pyi')) return true;
+  if (STRIP_BASENAMES.has(name)) return true;
+  return false;
+}
+
+// AWS Lambda uncompressed size limit is 250MB, but we use 225MB to leave room
+// for the Lambda layers (rusty runtime, lambdawrapper, OpenTelemetry collector)
+// that count toward the limit but aren't part of this bundle.
+export const LAMBDA_SIZE_THRESHOLD_BYTES = 225 * 1024 * 1024;
 
 // AWS Lambda ephemeral storage (/tmp) is 512MB. Use 500MB to leave a buffer
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
 export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 500 * 1024 * 1024;
 
-// Extended limit for Python on Hive (Functions Beta). All dependencies are
-// bundled directly into the Lambda instead of using runtime installation.
-export const HIVE_LAMBDA_SIZE_BYTES = 1 * 1024 * 1024 * 1024;
-
-// Error messages are hard-wrapped with explicit newlines so the Vercel
-// build log renders them as multi-line paragraphs instead of one long
-// unbroken sentence.
-const FUNCTIONS_BETA_CTA =
-  'Run `vercel deploy --functions-beta` to use extended function limits ' +
-  '(up to 1 GB), or reduce your dependency footprint.';
+// Size limit for large functions: all deps bundled directly (no runtime
+// install), served on Hive.
+export const MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE = 5 * 1024 * 1024 * 1024;
 
 const BUNDLING_DOCS_LINK =
   'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled';
-const FUNCTIONS_BETA_DOCS_LINK =
-  'https://vercel.com/docs/functions/runtimes/python#extended-size-limits-with-functions-beta';
-
-// Shown when the user is already on Functions Beta (Hive) but their bundle
-// still exceeds the extended 1 GB limit. In that case we cannot suggest
-// opting into Functions Beta -- they are already using it -- so we tell
-// them the only remaining path is to reduce the bundle below 1 GB.
-const FUNCTIONS_BETA_EXCEEDED_CTA =
-  'Your deployment is already using extended function limits (`--functions-beta`).\n' +
-  'Reduce your dependency footprint to under 1 GB or split your application\n' +
-  'into smaller functions.';
-
-/**
- * Returns true when the build environment opts in to showing the
- * `--functions-beta` suggestion in size-limit error messages.
- * Gated behind `VERCEL_FUNCTIONS_BETA_HINT` so it can be rolled out
- * independently of the feature itself.
- */
-export function shouldShowFunctionsBetaHint(): boolean {
-  const v = process.env.VERCEL_FUNCTIONS_BETA_HINT;
-  return v === '1' || v === 'true';
-}
 
 interface PythonDependencyExternalizerOptions {
   venvPath: string;
@@ -91,6 +96,19 @@ interface DependencyAnalysis {
   totalBundleSize: number;
 }
 
+interface AnalyzeOptions {
+  /**
+   * Invoked once the source-only bundle size is known, BEFORE any
+   * size-limit enforcement that may throw.  This guarantees the size is
+   * always observable (e.g. for telemetry) even for oversized bundles that
+   * subsequently fail the build.
+   */
+  onSized?: (info: {
+    totalSizeBytes: number;
+    runtimeInstallEnabled: boolean;
+  }) => void;
+}
+
 export class PythonDependencyExternalizer {
   private venvPath: string;
   private vendorDir: string;
@@ -105,15 +123,11 @@ export class PythonDependencyExternalizer {
   private alwaysBundlePackages: string[];
 
   // Populated by analyze()
+  private sitePackageDirs: string[] = [];
+  private distributions: Map<string, DistributionIndex> = new Map();
   private allVendorFiles: Files = {};
   private totalBundleSize: number = 0;
   private analyzed = false;
-
-  // Resolved once at the start of analyze().  The venv is immutable
-  // after construction (quirks run before the bundle span) so these
-  // do not change between analyze() and generateBundle().
-  private sitePackageDirs: string[] | null = null;
-  private distributions: Map<string, DistributionIndex> | null = null;
 
   constructor(options: PythonDependencyExternalizerOptions) {
     this.venvPath = options.venvPath;
@@ -133,18 +147,23 @@ export class PythonDependencyExternalizer {
     if (this.hasCustomCommand) {
       return false;
     }
-    const pythonOnHiveEnabled =
-      process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
-      process.env.VERCEL_PYTHON_ON_HIVE === 'true';
-    if (pythonOnHiveEnabled) {
-      return false;
-    } else if (
-      this.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
-      this.uvLockPath !== null
+    // Fits AWS Lambda directly, or there's no lock to defer from.
+    if (
+      this.totalBundleSize <= LAMBDA_SIZE_THRESHOLD_BYTES ||
+      this.uvLockPath === null
     ) {
-      return true;
+      return false;
     }
-    return false;
+    // Over the threshold with a lock to defer from. Large functions skip
+    // runtime install once deps exceed ephemeral storage (bundled for Hive);
+    // below that, runtime install still keeps it on Lambda.
+    if (
+      isLargeFunctionsEnabled() &&
+      this.totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES
+    ) {
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -152,7 +171,10 @@ export class PythonDependencyExternalizer {
    * and determine whether runtime installation is needed.
    * Must be called before generateBundle().
    */
-  async analyze(files: Files): Promise<DependencyAnalysis> {
+  async analyze(
+    files: Files,
+    options: AnalyzeOptions = {}
+  ): Promise<DependencyAnalysis> {
     // Resolve site-packages dirs and scan distributions once.  Subsequent
     // calls to mirrorPackagesIntoVendor() and calculatePerPackageSizes()
     // read from these fields directly.
@@ -183,49 +205,55 @@ export class PythonDependencyExternalizer {
 
     const runtimeInstallEnabled = this.shouldEnableRuntimeInstall();
 
-    const pythonOnHiveEnabled =
-      process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
-      process.env.VERCEL_PYTHON_ON_HIVE === 'true';
+    const largeFunctionsEnabled = isLargeFunctionsEnabled();
 
+    // Surface the size BEFORE the size-limit checks below, which may throw.
+    // Otherwise oversized bundles would never report their size, biasing any
+    // size telemetry toward builds that fit the limit.
+    options.onSized?.({
+      totalSizeBytes: this.totalBundleSize,
+      runtimeInstallEnabled,
+    });
+
+    // Custom install commands can't use runtime install; enforced only when
+    // not bundling everything directly (large functions).
     if (
       this.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
       this.hasCustomCommand &&
-      !pythonOnHiveEnabled
+      !largeFunctionsEnabled
     ) {
       const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
-        message: shouldShowFunctionsBetaHint()
-          ? `Total bundle size (${totalBundleSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
-            FUNCTIONS_BETA_CTA
-          : `Total bundle size (${totalBundleSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
-            `When using a custom install command, Vercel cannot automatically\n` +
-            `optimize dependency bundling. To reduce the size of your\n` +
-            `dependencies, you can:\n` +
-            `  1. Remove unused dependencies from your project.\n` +
-            `  2. Remove the custom install command to allow Vercel to manage\n` +
-            `     and optimize dependencies automatically.`,
-        link: shouldShowFunctionsBetaHint()
-          ? FUNCTIONS_BETA_DOCS_LINK
-          : BUNDLING_DOCS_LINK,
+        message:
+          `Total bundle size (${totalBundleSizeMB} MB) exceeds the maximum function size (${limitMB} MB).\n\n` +
+          `A custom install command prevents Vercel from optimizing your\n` +
+          `function bundle size automatically. To fix this, you can:\n` +
+          `  1. Remove unused dependencies from your project, or\n` +
+          `  2. Remove the custom install command so Vercel can optimize\n` +
+          `     the function bundle automatically.`,
+        link: BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
     }
 
-    // Enforce the extended 1 GB limit for Python on Hive (Functions Beta).
-    // All dependencies are bundled directly, so check the total uncompressed
-    // size before we proceed to avoid a slower failure at ZIP time.
-    if (pythonOnHiveEnabled && this.totalBundleSize > HIVE_LAMBDA_SIZE_BYTES) {
-      const limitMB = (HIVE_LAMBDA_SIZE_BYTES / (1024 * 1024)).toFixed(0);
+    // Enforce the large-function size limit up front (faster than failing at
+    // ZIP time). `>=` matches the platform's uncompressed-size check.
+    if (
+      largeFunctionsEnabled &&
+      this.totalBundleSize >= MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
+    ) {
+      const limitMB = (
+        MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE /
+        (1024 * 1024)
+      ).toFixed(0);
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
-        message: shouldShowFunctionsBetaHint()
-          ? `Total bundle size (${totalBundleSizeMB} MB) exceeds the extended function size limit (${limitMB} MB).\n\n` +
-            FUNCTIONS_BETA_EXCEEDED_CTA
-          : `Total bundle size (${totalBundleSizeMB} MB) exceeds the extended function size limit (${limitMB} MB).\n\n` +
-            `Consider removing unused dependencies or splitting your\n` +
-            `application into smaller functions.`,
-        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+        message:
+          `Total bundle size (${totalBundleSizeMB} MB) exceeds the extended function size limit (${limitMB} MB).\n\n` +
+          `Consider removing unused dependencies or splitting your\n` +
+          `application into smaller functions.`,
+        link: BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
     }
@@ -242,77 +270,77 @@ export class PythonDependencyExternalizer {
    * Mutates `files` in place: adds vendor files (private + knapsack-selected
    * public), runtime config, and uv binary.
    * Must be called after analyze().
+   *
+   * If large functions are allowed and the bundle can't fit AWS Lambda, falls
+   * back to bundling everything for Hive and returns `fellBackToFullBundle:
+   * true` so the caller can apply the same compileall handling.
    */
-  async generateBundle(files: Files): Promise<void> {
+  async generateBundle(
+    files: Files
+  ): Promise<{ fellBackToFullBundle: boolean }> {
     if (!this.analyzed) {
       throw new Error(
         'PythonDependencyExternalizer.analyze() must be called before generateBundle()'
       );
     }
     if (!this.uvLockPath || !this.uvProjectDir) {
-      throw new NowBuildError({
-        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
-        message:
-          'Runtime dependency installation requires a uv.lock file and project directory.',
-      });
+      // Invariant: shouldEnableRuntimeInstall() only returns true when
+      // uvLockPath is set, and uvProjectDir is always set alongside it, so this
+      // is an internal bug rather than a user-fixable condition.
+      throw new Error(
+        'generateBundle() requires uvLockPath and uvProjectDir to be set'
+      );
     }
 
     const totalBundleSizeMB = (this.totalBundleSize / (1024 * 1024)).toFixed(2);
 
-    console.log(
-      `Bundle size (${totalBundleSizeMB} MB) exceeds limit. ` +
-        `Enabling runtime dependency installation.`
-    );
+    // When set, a bundle that can't fit AWS Lambda is bundled for Hive instead
+    // of failing the build.
+    const largeFunctionsEnabled = isLargeFunctionsEnabled();
 
     // Verify total deps won't exceed Lambda ephemeral storage (512 MB)
     if (this.totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES) {
-      const ephemeralLimitMB = (
-        LAMBDA_EPHEMERAL_STORAGE_BYTES /
-        (1024 * 1024)
-      ).toFixed(0);
+      if (largeFunctionsEnabled) {
+        return this.bundleAllForHive(files);
+      }
+      const limitMB = (LAMBDA_EPHEMERAL_STORAGE_BYTES / (1024 * 1024)).toFixed(
+        0
+      );
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
-        message: shouldShowFunctionsBetaHint()
-          ? `Total bundle size (${totalBundleSizeMB} MB) exceeds the ephemeral storage limit (${ephemeralLimitMB} MB).\n\n` +
-            FUNCTIONS_BETA_CTA
-          : `Total bundle size (${totalBundleSizeMB} MB) exceeds Lambda ephemeral storage limit (${ephemeralLimitMB} MB).\n\n` +
-            `Even with runtime dependency installation, all packages must fit\n` +
-            `within the ${ephemeralLimitMB} MB ephemeral storage available to Lambda\n` +
-            `functions. Consider removing unused dependencies or splitting\n` +
-            `your application into smaller functions.`,
-        link: shouldShowFunctionsBetaHint()
-          ? FUNCTIONS_BETA_DOCS_LINK
-          : BUNDLING_DOCS_LINK,
+        message:
+          `Total bundle size (${totalBundleSizeMB} MB) exceeds the maximum function size (${limitMB} MB).\n\n` +
+          `Reduce the size of your dependencies or split your application into\n` +
+          `smaller functions.`,
+        link: BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
     }
 
-    // Read and parse the uv.lock file
+    // Read and parse the uv.lock file. Use a project-relative path in
+    // user-facing messages so we don't leak absolute build paths.
+    const relLockPath = relative(this.workPath, this.uvLockPath);
     let lockContent: string;
     try {
       lockContent = await readFile(this.uvLockPath, 'utf8');
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.log(
-          `Failed to read uv.lock file at "${this.uvLockPath}": ${error.message}`
-        );
-      } else {
-        console.log(
-          `Failed to read uv.lock file at "${this.uvLockPath}": ${String(error)}`
-        );
-      }
+      debug(
+        `Failed to read uv.lock at ${this.uvLockPath}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
       throw new NowBuildError({
         code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
-        message: `Failed to read uv.lock file at "${this.uvLockPath}"`,
+        message: `Failed to read the uv.lock file at "${relLockPath}".`,
       });
     }
     let lockFile: ReturnType<typeof parseUvLock>;
     try {
-      lockFile = parseUvLock(lockContent, this.uvLockPath);
+      lockFile = parseUvLock(lockContent, relLockPath);
     } catch (error: unknown) {
       if (error instanceof PythonAnalysisError) {
         if (error.fileContent) {
-          console.log(
+          debug(
             `Failed to parse "${error.path}". File content:\n${error.fileContent}`
           );
         }
@@ -367,18 +395,18 @@ export class PythonDependencyExternalizer {
     );
 
     if (externalizablePublic.length === 0) {
+      if (largeFunctionsEnabled) {
+        return this.bundleAllForHive(files);
+      }
       throw new NowBuildError({
         code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
         message:
-          `Bundle size exceeds the Lambda limit and requires runtime\n` +
-          `dependency installation, but no public packages have compatible\n` +
-          `pre-built wheels for the Lambda platform.\n\n` +
-          `Runtime dependency installation requires packages to have binary\n` +
-          `wheels.\n\n` +
+          `Total bundle size (${totalBundleSizeMB} MB) exceeds the maximum function size and\n` +
+          `can't be optimized automatically because some dependencies don't\n` +
+          `provide a compatible pre-built wheel.\n\n` +
           `To fix this, either:\n` +
           `  1. Regenerate your lock file with: uv lock --upgrade, or\n` +
-          `  2. Switch the problematic packages to ones that have pre-built\n` +
-          `     wheels available.`,
+          `  2. Replace the packages that don't provide a pre-built wheel.`,
       });
     }
 
@@ -414,15 +442,13 @@ export class PythonDependencyExternalizer {
     // This must be subtracted from capacity before running the knapsack
     // so we don't over-pack and exceed the Lambda size limit.
     let runtimeToolingOverhead = 0;
-    if (process.env.VERCEL_BUILD_IMAGE) {
-      try {
-        const uvBinaryPath = await getUvBinaryForBundling(this.pythonPath);
-        const uvStats = await fs.promises.stat(uvBinaryPath);
-        runtimeToolingOverhead = uvStats.size;
-      } catch {
-        // If we can't stat the binary, use a conservative estimate
-        runtimeToolingOverhead = 50 * 1024 * 1024; // 50 MB
-      }
+    try {
+      const uvBinaryPath = await this.resolveUvBinaryForBundling();
+      const uvStats = await fs.promises.stat(uvBinaryPath);
+      runtimeToolingOverhead = uvStats.size;
+    } catch {
+      // If we can't stat the binary, use a conservative estimate
+      runtimeToolingOverhead = 50 * 1024 * 1024; // 50 MB
     }
 
     // _runtime_config.json will always be written.  We don't know the exact
@@ -460,6 +486,18 @@ export class PythonDependencyExternalizer {
       `Fixed overhead: ${(fixedOverhead / (1024 * 1024)).toFixed(2)} MB, ` +
         `runtime tooling: ${(runtimeToolingOverhead / (1024 * 1024)).toFixed(2)} MB, ` +
         `remaining capacity for public packages: ${(remainingCapacity / (1024 * 1024)).toFixed(2)} MB`
+    );
+
+    // The non-deferrable footprint (source + private/wheel-less packages +
+    // tooling) alone exceeds the threshold, so runtime install can't shrink the
+    // zip enough. Large functions bundle everything for Hive; otherwise the
+    // final-size check below throws.
+    if (largeFunctionsEnabled && remainingCapacity < 0) {
+      return this.bundleAllForHive(files);
+    }
+
+    console.log(
+      `Bundle size (${totalBundleSizeMB} MB) exceeds the standard size; optimizing dependencies.`
     );
 
     // Build size map for externalizable public packages and run the knapsack algorithm
@@ -523,59 +561,82 @@ export class PythonDependencyExternalizer {
       data: runtimeConfigData,
     });
 
-    // Skip uv bundling when running vercel build locally
-    if (process.env.VERCEL_BUILD_IMAGE) {
-      // Add the uv binary to the lambda zip
-      try {
-        const uvBinaryPath = await getUvBinaryForBundling(this.pythonPath);
+    // Add the uv binary to the Lambda zip.
+    try {
+      const uvBinaryPath = await this.resolveUvBinaryForBundling();
 
-        const uvBundleDir = join(this.workPath, UV_BUNDLE_DIR);
-        const uvLocalPath = join(uvBundleDir, 'uv');
-        await fs.promises.mkdir(uvBundleDir, { recursive: true });
-        await fs.promises.copyFile(uvBinaryPath, uvLocalPath);
-        await fs.promises.chmod(uvLocalPath, 0o755);
+      const uvBundleDir = join(this.workPath, UV_BUNDLE_DIR);
+      const uvLocalPath = join(uvBundleDir, 'uv');
+      await fs.promises.mkdir(uvBundleDir, { recursive: true });
+      await fs.promises.copyFile(uvBinaryPath, uvLocalPath);
+      await fs.promises.chmod(uvLocalPath, 0o755);
 
-        const uvBundlePath = `${UV_BUNDLE_DIR}/uv`;
-        files[uvBundlePath] = new FileFsRef({
-          fsPath: uvLocalPath,
-          mode: 0o100755, // Regular file + executable
-        });
-        debug(`Bundled uv binary from ${uvBinaryPath} to ${uvLocalPath}`);
-      } catch (err) {
-        throw new NowBuildError({
-          code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
-          message: `Failed to bundle uv binary for runtime installation: ${
-            err instanceof Error ? err.message : String(err)
-          }`,
-        });
-      }
+      const uvBundlePath = `${UV_BUNDLE_DIR}/uv`;
+      files[uvBundlePath] = new FileFsRef({
+        fsPath: uvLocalPath,
+        mode: 0o100755,
+      });
+      debug(`Bundled uv binary from ${uvBinaryPath} to ${uvLocalPath}`);
+    } catch (err) {
+      debug(
+        `Failed to bundle uv binary: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
+      throw new NowBuildError({
+        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+        message: 'Failed to prepare dependency tooling.',
+      });
     }
 
     // Final size verification – note that force-bundled wheel-incompatible packages
     // are included in the bundle, which can push total size over the threshold.
     // Allow 100 KB of tolerance for rounding and estimation discrepancies in the
     // knapsack capacity budget.  The actual AWS Lambda limit is 250 MB and we
-    // target 245 MB, so a slight overshoot here is safe.
+    // target 225 MB, so a slight overshoot here is safe.
     const finalBundleSize = await calculateBundleSize(files);
     if (finalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES + 100 * 1024) {
+      if (largeFunctionsEnabled) {
+        // Estimation overshoot past the threshold; bundle everything for Hive.
+        return this.bundleAllForHive(files);
+      }
       const finalSizeMB = (finalBundleSize / (1024 * 1024)).toFixed(2);
       const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
-        message: shouldShowFunctionsBetaHint()
-          ? `Total bundle size (${finalSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
-            FUNCTIONS_BETA_CTA
-          : `Total bundle size (${finalSizeMB} MB) exceeds Lambda limit (${limitMB} MB) even after\n` +
-            `deferring public packages to runtime installation.\n\n` +
-            `This usually means your private packages or source code are too\n` +
-            `large. Consider reducing the size of private dependencies or\n` +
-            `splitting your application.`,
-        link: shouldShowFunctionsBetaHint()
-          ? FUNCTIONS_BETA_DOCS_LINK
-          : BUNDLING_DOCS_LINK,
+        message:
+          `Total bundle size (${finalSizeMB} MB) exceeds the maximum function size (${limitMB} MB) even after\n` +
+          `optimizing dependencies.\n\n` +
+          `This usually means your source code or private packages are too\n` +
+          `large. Reduce their size or split your application into smaller\n` +
+          `functions.`,
+        link: BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
     }
+
+    return { fellBackToFullBundle: false };
+  }
+
+  /**
+   * Discard any runtime-install artifacts added so far and bundle every
+   * dependency directly, for a function that will run on Hive. Returns the
+   * fell-back signal so the caller can apply the same compileall handling.
+   */
+  private bundleAllForHive(files: Files): { fellBackToFullBundle: true } {
+    for (const key of [
+      `${UV_BUNDLE_DIR}/_runtime_config.json`,
+      `${UV_BUNDLE_DIR}/uv`,
+      `${UV_BUNDLE_DIR}/pyproject.toml`,
+      `${UV_BUNDLE_DIR}/uv.lock`,
+    ]) {
+      delete files[key];
+    }
+    for (const [p, f] of Object.entries(this.allVendorFiles)) {
+      files[p] = f;
+    }
+    debug('Bundling all dependencies for the large functions path.');
+    return { fellBackToFullBundle: true };
   }
 
   /**
@@ -592,7 +653,7 @@ export class PythonDependencyExternalizer {
     lockFile: UvLockFile,
     publicPackageNames: string[]
   ): Promise<string[]> {
-    const platform = detectPlatform();
+    const platform = detectTargetPlatform();
 
     // Skip wheel-compat filtering in dev; the bundle isn't deployed.
     if (this.pythonMajor === undefined || this.pythonMinor === undefined) {
@@ -685,6 +746,18 @@ export class PythonDependencyExternalizer {
     return incompatible;
   }
 
+  /** Resolve the uv binary for bundling (host binary on build image, downloaded on local). */
+  private async resolveUvBinaryForBundling(): Promise<string> {
+    if (process.env.VERCEL_BUILD_IMAGE) {
+      return getUvBinaryForBundling(this.pythonPath);
+    }
+    // Builds targeting arm64 run inside the build container where
+    // uv is preinstalled.
+    return downloadUvBinaryForTarget(
+      join(this.workPath, '.vercel', 'python', 'cache')
+    );
+  }
+
   /**
    * Mirror packages from site-packages into the _vendor directory.
    *
@@ -737,10 +810,7 @@ export class PythonDependencyExternalizer {
           if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
             continue;
           }
-          if (
-            filePath.endsWith('.pyc') ||
-            filePath.split(sep).includes('__pycache__')
-          ) {
+          if (shouldStripVendorFile(filePath)) {
             continue;
           }
           const srcFsPath = join(dir, filePath);
@@ -824,11 +894,7 @@ export class PythonDependencyExternalizer {
           if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
             continue;
           }
-          // Skip .pyc and __pycache__
-          if (
-            filePath.endsWith('.pyc') ||
-            filePath.split(sep).includes('__pycache__')
-          ) {
+          if (shouldStripVendorFile(filePath)) {
             continue;
           }
 
@@ -855,6 +921,106 @@ export class PythonDependencyExternalizer {
     }
 
     return sizes;
+  }
+
+  /**
+   * Collect pre-compiled `.pyc` bytecode files for vendor packages.
+   *
+   * For each `.py` file listed in a package's RECORD, derives the expected
+   * `__pycache__/*.cpython-XY.pyc` path and checks whether it exists on
+   * disk (i.e. whether `compileall` produced it).  Files that do not exist
+   * are silently skipped.
+   *
+   * Must be called after `analyze()` which populates `sitePackageDirs` and
+   * `distributions`.
+   */
+  async collectBytecodeFiles({
+    vendorDirName,
+    includePackages,
+  }: {
+    vendorDirName: string;
+    includePackages?: string[];
+  }): Promise<BytecodeCollectionResult> {
+    if (!this.sitePackageDirs || !this.distributions) {
+      throw new Error('collectBytecodeFiles() must be called after analyze()');
+    }
+    if (this.pythonMajor == null || this.pythonMinor == null) {
+      return { files: {}, totalSize: 0, perItemSizes: new Map() };
+    }
+
+    const includeSet = includePackages
+      ? new Set(includePackages.map(normalizePackageName))
+      : null;
+
+    interface PycPending {
+      bundlePath: string;
+      srcFsPath: string;
+      packageName: string;
+    }
+    const pending: PycPending[] = [];
+
+    for (const dir of this.sitePackageDirs) {
+      const dirDistributions = this.distributions.get(dir);
+      if (!dirDistributions) continue;
+
+      for (const [name, dist] of dirDistributions) {
+        if (includeSet && !includeSet.has(name)) continue;
+
+        for (const { path: rawPath } of dist.files) {
+          const pycRel = derivePycPath(
+            rawPath,
+            this.pythonMajor,
+            this.pythonMinor
+          );
+          if (!pycRel) continue;
+
+          const pycFilePath = pycRel.replaceAll('/', sep);
+          const srcFsPath = join(dir, pycFilePath);
+          const bundlePath = join(vendorDirName, pycFilePath).replace(
+            /\\/g,
+            '/'
+          );
+          pending.push({ bundlePath, srcFsPath, packageName: name });
+        }
+      }
+    }
+
+    // Stat all .pyc files in parallel.  Missing files (compileall
+    // may have skipped them) are silently dropped.
+    const results = await Promise.all(
+      pending.map(async ({ bundlePath, srcFsPath, packageName }) => {
+        try {
+          const stats = await fs.promises.stat(srcFsPath);
+          return { bundlePath, srcFsPath, size: stats.size, packageName };
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    const files: Files = {};
+    let totalSize = 0;
+    const perItemSizes = new Map<string, number>();
+
+    for (const result of results) {
+      if (!result) continue;
+      files[result.bundlePath] = new FileFsRef({
+        fsPath: result.srcFsPath,
+        size: result.size,
+      });
+      totalSize += result.size;
+      perItemSizes.set(
+        result.packageName,
+        (perItemSizes.get(result.packageName) ?? 0) + result.size
+      );
+    }
+
+    debug(
+      `Collected ${Object.keys(files).length} bytecode files` +
+        ` (${(totalSize / (1024 * 1024)).toFixed(2)} MB)` +
+        (includePackages ? ` from ${includePackages.length} packages` : '')
+    );
+    return { files, totalSize, perItemSizes };
   }
 }
 

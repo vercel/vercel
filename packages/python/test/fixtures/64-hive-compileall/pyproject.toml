@@ -1,0 +1,13 @@
+[project]
+name = "fixture-64-hive-compileall"
+version = "0.0.1"
+requires-python = ">=3.12"
+dependencies = [
+  "flask",
+  "pydantic",
+]
+
+# A custom build command must disable compileall, even though this script's
+# blob makes the function large. probes.json asserts compileall is skipped.
+[tool.vercel.scripts]
+build = "python build.py"

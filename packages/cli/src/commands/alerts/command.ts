@@ -1,4 +1,8 @@
-import { formatOption, limitOption } from '../../util/arg-common';
+import {
+  formatOption,
+  limitOption,
+  projectOption,
+} from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 import { rulesAggregateCommand } from './rules/command';
 
@@ -26,11 +30,8 @@ export const inspectSubcommand = {
   options: [
     formatOption,
     {
-      name: 'project',
+      ...projectOption,
       shorthand: 'p',
-      type: String,
-      argument: 'NAME_OR_ID',
-      deprecated: false,
       description:
         'Filter by project (overrides auto-detected linked project).',
     },
@@ -72,11 +73,8 @@ export const alertsCommand = {
         'Filter by alert type. Repeatable and comma-separated (for example --type usage_anomaly,error_anomaly).',
     },
     {
-      name: 'project',
+      ...projectOption,
       shorthand: 'p',
-      type: String,
-      argument: 'NAME_OR_ID',
-      deprecated: false,
       description:
         'Filter by project (overrides auto-detected linked project).',
     },
