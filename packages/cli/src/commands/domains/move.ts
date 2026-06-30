@@ -40,9 +40,10 @@ export default async function move(client: Client, argv: string[]) {
   telemetry.trackCliArgumentDestination(args[1]);
 
   const { contextName, user } = await getScope(client);
+  // This command's logic still needs a user identity; let the server own the
+  // authorization decision for non-user principals once it supports them.
   if (!user) {
-    output.error('This command requires a user scope.');
-    return 1;
+    throw new ERRORS.MissingUser();
   }
   const { domainName, destination } = await getArgs(client, args);
   if (!isRootDomain(domainName)) {

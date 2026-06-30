@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { help } from '../help';
 import { whoamiCommand } from './command';
 
-import getScope, { isAppPrincipalScopeContext } from '../../util/get-scope';
+import getScope from '../../util/get-scope';
 import { parseArguments } from '../../util/get-args';
 import type Client from '../../util/client';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -46,15 +46,20 @@ export default async function whoami(client: Client): Promise<number> {
   const scope = await getScope(client, {
     resolveLocalScope: true,
   });
-  const isAppPrincipal = isAppPrincipalScopeContext(scope);
-  const team = isAppPrincipal ? scope.appPrincipal.team : scope.team;
+  const { principal, user } = scope;
+  // The team's slug/name may be absent for an app principal that can't read its
+  // team, so fall back to the id for display.
+  const team = principal ? principal.team : scope.team;
+  const teamLabel = team ? (team.slug ?? team.id) : null;
 
   // A local override exists when the effective team (from the linked project)
   // differs from the globally-selected team (from `vc switch`). We only treat
   // it as an override when it wasn't caused by an explicit `--scope`/`--team`
-  // flag, since those are user-directed rather than context-inferred.
+  // flag, since those are user-directed rather than context-inferred. Local
+  // overrides only apply to user scopes (app principals have no linked-repo
+  // resolution).
   const hasLocalOverride =
-    !isAppPrincipal &&
+    !principal &&
     !scope.explicitScopeProvided &&
     ((team?.id ?? null) !== (scope.globalTeam?.id ?? null) ||
       // `team` being null while a local project linked to personal scope
@@ -62,23 +67,23 @@ export default async function whoami(client: Client): Promise<number> {
       scope.scopeMismatch);
 
   if (asJson) {
-    const jsonOutput = isAppPrincipal
+    const jsonOutput = principal
       ? {
           principal: {
-            type: 'app',
-            id: scope.appPrincipal.id,
-            name: scope.appPrincipal.name,
+            type: principal.type,
+            id: principal.id,
+            name: principal.name,
           },
           app: {
-            id: scope.appPrincipal.id,
-            name: scope.appPrincipal.name,
+            id: principal.id,
+            name: principal.name,
           },
           team,
         }
       : {
-          username: scope.user.username,
-          email: scope.user.email,
-          name: scope.user.name,
+          username: user?.username,
+          email: user?.email,
+          name: user?.name,
           team: team ? { id: team.id, slug: team.slug, name: team.name } : null,
           globalTeam: undefined as
             | { id: string; slug: string; name: string }
@@ -86,7 +91,7 @@ export default async function whoami(client: Client): Promise<number> {
             | undefined,
           localOverride: undefined as boolean | undefined,
         };
-    if (hasLocalOverride) {
+    if (hasLocalOverride && !principal) {
       jsonOutput.localOverride = true;
       jsonOutput.globalTeam = scope.globalTeam
         ? {
@@ -98,26 +103,24 @@ export default async function whoami(client: Client): Promise<number> {
     }
     client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
   } else if (client.stdout.isTTY) {
-    const identityLabel = isAppPrincipal
-      ? `Vercel App: ${chalk.bold(
-          scope.appPrincipal.name ?? scope.appPrincipal.id
-        )}`
-      : chalk.bold(scope.user.username);
+    const identityLabel = principal
+      ? `Vercel App: ${chalk.bold(principal.name ?? principal.id)}`
+      : chalk.bold(user?.username ?? '');
     output.log(`Logged in as ${identityLabel}`);
     if (team) {
       output.log(
-        `Active team: ${chalk.bold(team.slug)}${
-          team.name && team.name !== team.slug ? ` (${team.name})` : ''
+        `Active team: ${chalk.bold(teamLabel)}${
+          team.name && team.name !== teamLabel ? ` (${team.name})` : ''
         }`
       );
-    } else if (!isAppPrincipal) {
+    } else if (!principal) {
       output.log(`Active team: ${chalk.bold('Personal Account')}`);
     }
     if (hasLocalOverride) {
       const globalLabel = scope.globalTeam
         ? scope.globalTeam.slug
         : 'Personal Account';
-      const localLabel = team ? team.slug : 'Personal Account';
+      const localLabel = teamLabel ?? 'Personal Account';
       output.log(
         `${chalk.yellow('Local override:')} scope is set to ${chalk.bold(
           localLabel
@@ -132,11 +135,7 @@ export default async function whoami(client: Client): Promise<number> {
     // behavior for scripts that rely on `vc whoami` printing the logged-in
     // user. Team information is available via `--format json`.
     client.stdout.write(
-      `${
-        isAppPrincipal
-          ? (scope.appPrincipal.name ?? scope.appPrincipal.id)
-          : scope.user.username
-      }\n`
+      `${principal ? (principal.name ?? principal.id) : user?.username}\n`
     );
   }
 

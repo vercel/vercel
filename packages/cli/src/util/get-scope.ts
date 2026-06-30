@@ -12,29 +12,28 @@ import { introspectToken } from './introspect-token';
 
 export const APP_PRINCIPAL_SCOPE_ENV = 'VERCEL_CLI_WHOAMI_INTROSPECTION';
 
-type AppPrincipalTeam = Pick<Team, 'id' | 'slug' | 'name'>;
-
-export interface AppPrincipalScopeContext {
-  org: Org;
-  contextName: string;
-  user: null;
-  appPrincipal: {
-    id: string;
-    name?: string;
-    team: AppPrincipalTeam | null;
-  };
-  team: null;
-  globalTeam: null;
-  linkedRepo: null;
-  isCrossTeamRepo: false;
-  scopeMismatch: false;
-  explicitScopeProvided: boolean;
+/**
+ * A non-user principal (currently only Vercel Apps). Present on the scope when
+ * the authenticated token is not a user token, in which case `user` is `null`.
+ *
+ * `team.slug`/`team.name` are only present when the token may read the team
+ * (the API gates them on `auth.can(Read, Team)`); `team.id` is always present.
+ *
+ * Consumers should remain principal-agnostic where possible and only branch on
+ * this at the presentation layer (e.g. `whoami`).
+ */
+export interface AppPrincipal {
+  type: 'app';
+  id: string;
+  name?: string;
+  team: { id: string; slug?: string; name?: string } | null;
 }
 
 export interface ScopeContext {
   org: Org;
   contextName: string;
-  user: User;
+  user: User | null;
+  principal?: AppPrincipal;
   team: Team | null;
   /**
    * The team that's globally selected (via `vc switch` or as the northstar
@@ -53,7 +52,8 @@ export interface ScopeContext {
 
 interface BasicScopeContext {
   contextName: string;
-  user: User;
+  user: User | null;
+  principal?: AppPrincipal;
   team: Team | null;
 }
 
@@ -73,18 +73,18 @@ interface GetScopeWithoutLocalScopeOptions extends GetScopeOptions {
 export default function getScope(
   client: Client,
   opts: GetScopeWithLocalScopeOptions
-): Promise<ScopeContext | AppPrincipalScopeContext>;
+): Promise<ScopeContext>;
 export default function getScope(
   client: Client,
   opts?: GetScopeWithoutLocalScopeOptions
-): Promise<BasicScopeContext | AppPrincipalScopeContext>;
+): Promise<BasicScopeContext>;
 export default async function getScope(
   client: Client,
   opts: GetScopeOptions = {}
-): Promise<BasicScopeContext | ScopeContext | AppPrincipalScopeContext> {
+): Promise<BasicScopeContext | ScopeContext> {
   const allowAppPrincipal = isAppPrincipalScopeEnabled();
   let userError: unknown;
-  const [user, appPrincipal] = await Promise.all([
+  const [user, principal] = await Promise.all([
     getUser(client).catch(error => {
       if (!allowAppPrincipal) {
         throw error;
@@ -96,8 +96,8 @@ export default async function getScope(
   ]);
 
   if (!user) {
-    if (appPrincipal) {
-      return createAppPrincipalScopeContext(client, appPrincipal);
+    if (principal) {
+      return createAppPrincipalScopeContext(client, principal);
     }
     throw userError;
   }
@@ -245,32 +245,25 @@ export default async function getScope(
   } satisfies ScopeContext;
 }
 
-export function isAppPrincipalScopeContext(
-  scope: BasicScopeContext | ScopeContext | AppPrincipalScopeContext
-): scope is AppPrincipalScopeContext {
-  return 'appPrincipal' in scope;
-}
-
-async function getAppPrincipal(client: Client): Promise<{
-  id: string;
-  name?: string;
-  team: AppPrincipalTeam | null;
-} | null> {
+async function getAppPrincipal(client: Client): Promise<AppPrincipal | null> {
   const token = client.authConfig.token;
   if (!token) {
     return null;
   }
 
   const introspection = await introspectToken(client, token);
+  // App principals are identified by a `sub` carrying the app's client id,
+  // which is prefixed with `cl_`. There is no separate discriminator field.
   if (
     !introspection.active ||
-    introspection.subject_type !== 'client' ||
-    !introspection.client_id
+    !introspection.client_id ||
+    !introspection.sub?.startsWith('cl_')
   ) {
     return null;
   }
 
   return {
+    type: 'app',
     id: introspection.client_id,
     name: introspection.client_name,
     team: introspection.team ?? null,
@@ -279,31 +272,30 @@ async function getAppPrincipal(client: Client): Promise<{
 
 function createAppPrincipalScopeContext(
   client: Client,
-  appPrincipal: {
-    id: string;
-    name?: string;
-    team: AppPrincipalTeam | null;
-  }
-): AppPrincipalScopeContext {
+  principal: AppPrincipal
+): ScopeContext {
   const explicitScopeProvided = detectExplicitScope(client);
-  const org = appPrincipal.team
+  const org: Org = principal.team
     ? {
-        type: 'team' as const,
-        id: appPrincipal.team.id,
-        slug: appPrincipal.team.slug,
+        type: 'team',
+        id: principal.team.id,
+        slug: principal.team.slug ?? principal.team.id,
       }
     : {
-        type: 'user' as const,
-        id: appPrincipal.id,
-        slug: appPrincipal.name ?? appPrincipal.id,
+        type: 'user',
+        id: principal.id,
+        slug: principal.name ?? principal.id,
       };
 
   return {
     org,
     contextName:
-      appPrincipal.team?.slug ?? appPrincipal.name ?? appPrincipal.id,
+      principal.team?.slug ??
+      principal.team?.id ??
+      principal.name ??
+      principal.id,
     user: null,
-    appPrincipal,
+    principal,
     team: null,
     globalTeam: null,
     linkedRepo: null,

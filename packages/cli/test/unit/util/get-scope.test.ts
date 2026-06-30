@@ -106,7 +106,6 @@ describe('getScope', () => {
           client_id: 'cl_vercel_agent',
           client_name: 'Vercel Agent',
           sub: 'cl_vercel_agent',
-          subject_type: 'client',
           team: {
             id: 'team_vercel',
             slug: 'vercel',
@@ -120,7 +119,8 @@ describe('getScope', () => {
       });
 
       expect(scope.user).toBeNull();
-      expect('appPrincipal' in scope ? scope.appPrincipal : null).toEqual({
+      expect(scope.principal).toEqual({
+        type: 'app',
         id: 'cl_vercel_agent',
         name: 'Vercel Agent',
         team: {
@@ -131,6 +131,46 @@ describe('getScope', () => {
       });
       expect(scope.contextName).toEqual('vercel');
       expect(scope.team).toBeNull();
+    });
+
+    it('should omit team slug/name when the introspection response omits them', async () => {
+      process.env[APP_PRINCIPAL_SCOPE_ENV] = '1';
+      client.scenario.get('/v2/user', (_req, res) => {
+        res.status(403).json({
+          error: {
+            code: 'forbidden',
+            message: 'Not authorized',
+          },
+        });
+      });
+      client.scenario.post('/login/oauth/token/introspect', (_req, res) => {
+        res.json({
+          active: true,
+          client_id: 'cl_vercel_agent',
+          client_name: 'Vercel Agent',
+          sub: 'cl_vercel_agent',
+          team: { id: 'team_vercel' },
+        });
+      });
+
+      const scope = await getScope(client, {
+        resolveLocalScope: true,
+      });
+
+      expect(scope.user).toBeNull();
+      expect(scope.principal).toEqual({
+        type: 'app',
+        id: 'cl_vercel_agent',
+        name: 'Vercel Agent',
+        team: { id: 'team_vercel' },
+      });
+      // With no slug, the team id is used for the context name and org slug.
+      expect(scope.contextName).toEqual('team_vercel');
+      expect(scope.org).toEqual({
+        type: 'team',
+        id: 'team_vercel',
+        slug: 'team_vercel',
+      });
     });
 
     it('should raise the introspection error when user lookup and introspection fail', async () => {

@@ -103,7 +103,6 @@ describe('whoami', () => {
         client_id: 'cl_vercel_agent',
         client_name: 'Vercel Agent',
         sub: 'cl_vercel_agent',
-        subject_type: 'client',
         team: {
           id: 'team_vercel',
           slug: 'vercel',
@@ -245,7 +244,6 @@ describe('whoami', () => {
           client_id: 'cl_vercel_agent',
           client_name: 'Vercel Agent',
           sub: 'cl_vercel_agent',
-          subject_type: 'client',
           team: {
             id: 'team_vercel',
             slug: 'vercel',

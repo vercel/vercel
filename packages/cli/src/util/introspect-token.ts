@@ -5,8 +5,9 @@ export type TokenIntrospectionResponse = {
   client_id?: string;
   client_name?: string;
   sub?: string;
-  subject_type?: 'client' | 'user';
-  team?: { id: string; slug: string; name: string };
+  // `slug`/`name` are only present when the token may read the team (enforced
+  // server-side via `auth.can(Read, Team)`); `id` is always present.
+  team?: { id: string; slug?: string; name?: string };
 };
 
 export async function introspectToken(
