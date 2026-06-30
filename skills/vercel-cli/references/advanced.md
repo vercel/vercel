@@ -23,7 +23,7 @@ vercel api /v6/deployments --paginate                  # paginate all results
 vercel api list                                        # list available endpoints
 vercel api list --format json                          # list endpoints as JSON
 vercel api "/v6/deployments?projectId=<project-id>&limit=10" --scope <team>
-vercel api "/v6/deployments?limit=10" --raw            # JSON payload for jq/scripts
+vercel api "/v6/deployments?limit=10" --raw            # JSON payload
 vercel api /v9/projects/<project>/env/<env-id> -X PATCH --raw-field value=false --scope <team>
 ```
 
