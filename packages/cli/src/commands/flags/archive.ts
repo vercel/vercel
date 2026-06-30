@@ -3,7 +3,6 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { getFlag } from '../../util/flags/get-flags';
 import { updateFlag } from '../../util/flags/update-flag';
@@ -11,6 +10,7 @@ import { getFlagsDashboardUrl } from '../../util/flags/dashboard-url';
 import output from '../../output-manager';
 import { FlagsArchiveTelemetryClient } from '../../util/telemetry/commands/flags/archive';
 import { archiveSubcommand } from './command';
+import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
 export default async function archive(
   client: Client,
@@ -34,6 +34,7 @@ export default async function archive(
   const { args, flags } = parsedArgs;
   const [flagArg] = args;
   const skipConfirmation = flags['--yes'] as boolean | undefined;
+  const projectName = getProjectNameFromFlags(flags);
 
   if (!flagArg) {
     output.error('Please provide a flag slug or ID to archive');
@@ -42,9 +43,10 @@ export default async function archive(
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
+  telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliFlagYes(skipConfirmation);
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {

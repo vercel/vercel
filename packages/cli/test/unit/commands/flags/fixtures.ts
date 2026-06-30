@@ -1,4 +1,10 @@
+import { rmSync } from 'node:fs';
+import { join } from 'node:path';
 import type { Flag } from '../../../../src/util/flags/types';
+
+export function removeProjectLink(cwd: string) {
+  rmSync(join(cwd, '.vercel'), { recursive: true, force: true });
+}
 
 export function createTestFlags(): Flag[] {
   return [

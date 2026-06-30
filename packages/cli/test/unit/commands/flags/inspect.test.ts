@@ -7,6 +7,7 @@ import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { useFlags, defaultFlags } from '../../../mocks/flags';
 import type { Flag } from '../../../../src/util/flags/types';
+import { removeProjectLink } from './fixtures';
 
 describe('flags inspect', () => {
   let flagsList: Flag[];
@@ -55,6 +56,29 @@ describe('flags inspect', () => {
     expect(output).toContain('preview: On');
     expect(output).toContain('development: On');
     expect(output).not.toContain('production: active');
+  });
+
+  it('shows flag details with --project when the cwd is not linked', async () => {
+    const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
+    removeProjectLink(cwd);
+    client.cwd = cwd;
+
+    client.setArgv(
+      'flags',
+      'inspect',
+      defaultFlags[0].slug,
+      '--project',
+      'vercel-flags-test'
+    );
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(client.stderr.getFullOutput()).toContain('Kind:         boolean');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:inspect', value: 'inspect' },
+      { key: 'argument:flag', value: '[REDACTED]' },
+      { key: 'option:project', value: '[REDACTED]' },
+    ]);
   });
 
   it('shows the served value for simple environments', async () => {

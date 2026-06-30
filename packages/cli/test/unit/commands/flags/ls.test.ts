@@ -7,6 +7,7 @@ import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { useFlags, defaultFlags } from '../../../mocks/flags';
 import type { Flag } from '../../../../src/util/flags/types';
+import { removeProjectLink } from './fixtures';
 
 describe('flags ls', () => {
   let flagsList: Flag[];
@@ -44,6 +45,24 @@ describe('flags ls', () => {
     client.setArgv('flags', 'ls');
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
+  });
+
+  it('lists flags with --project when the cwd is not linked', async () => {
+    const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
+    removeProjectLink(cwd);
+    client.cwd = cwd;
+
+    client.setArgv('flags', 'ls', '--project', 'vercel-flags-test', '--json');
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(JSON.parse(client.stdout.getFullOutput()).flags).toHaveLength(2);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:ls', value: 'ls' },
+      { key: 'option:project', value: '[REDACTED]' },
+      { key: 'option:state', value: 'active' },
+      { key: 'flag:json', value: 'TRUE' },
+    ]);
   });
 
   describe('--help', () => {
