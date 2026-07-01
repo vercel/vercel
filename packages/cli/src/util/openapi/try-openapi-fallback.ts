@@ -55,7 +55,7 @@ export async function tryOpenApiFallback(
   }
 
   if (flags['--help']) {
-    return printOperationHelpForTagCommand(flags, tag, operationHint);
+    return printOperationHelpForTagCommand(client, flags, tag, operationHint);
   }
 
   return runTagOperation(client, {

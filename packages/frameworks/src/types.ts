@@ -54,7 +54,8 @@ export interface SettingValue {
 
 export type Setting = SettingValue | SettingPlaceholder;
 
-export type Redirect = Rewrite & {
+export type Redirect = Omit<Rewrite, 'destination'> & {
+  destination: string;
   statusCode?: number;
   permanent?: boolean;
 };

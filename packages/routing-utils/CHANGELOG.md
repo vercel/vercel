@@ -1,5 +1,39 @@
 # @vercel/routing-utils
 
+## 6.4.0
+
+### Minor Changes
+
+- 7cecf55: Make hand-written service-targeted route/rewrite `destination` config less repetitive and verbose by making the `type` discriminator optional.
+
+  ```diff
+   {
+     "rewrites": [{
+  -    "type": "service",
+       "service": "my_backend",
+       "path": "/api/$1"
+     }]
+   }
+  ```
+
+  The explicit `{ "type": "service", "service": NAME }` format continues to
+  validate. Normalized route output continues to include `"type": "service"`, so
+  machine-facing config remains canonical.
+
+## 6.3.1
+
+### Patch Changes
+
+- c4afec8: [routing-utils] support `request.path` transforms on routes and high-level rewrites, lowering path-to-regexp parameters such as `/:path*` to low-level capture references such as `/$1`
+  [config] support request path transforms in the router builder
+  [cli] preserve request path transform syntax and environment metadata across AI/manual route edits
+
+## 6.3.0
+
+### Minor Changes
+
+- 90a7cc1: Support a service-targeted `destination` object (`{ type: "service", service, path }`) on routes and rewrites, so a route/rewrite can delegate into a named service. The service handoff is terminal: `continue: true` together with a service `destination` is rejected during normalization.
+
 ## 6.2.0
 
 ### Minor Changes

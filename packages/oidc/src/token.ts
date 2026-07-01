@@ -1,9 +1,14 @@
+import {
+  getGlobalPathConfig,
+  getLikelyEffectiveCredStorage,
+} from '@vercel/cli-config';
 import { VercelOidcTokenError } from './token-error';
 import {
   findProjectInfo,
   getTokenPayload,
   getVercelToken,
   getVercelOidcToken,
+  getVercelOidcTokenFromCli,
   isExpired,
   loadToken,
   saveToken,
@@ -59,11 +64,18 @@ export async function refreshToken(
     !maybeToken ||
     isExpired(getTokenPayload(maybeToken.token), options?.expirationBufferMs)
   ) {
-    const authToken = await getVercelToken({
-      expirationBufferMs: options?.expirationBufferMs,
-    });
+    const configDir = getGlobalPathConfig();
 
-    maybeToken = await getVercelOidcToken(authToken, projectId, teamId);
+    if (getLikelyEffectiveCredStorage(configDir) === 'keyring') {
+      maybeToken = await getVercelOidcTokenFromCli(projectId, teamId);
+    } else {
+      const authToken = await getVercelToken({
+        expirationBufferMs: options?.expirationBufferMs,
+      });
+
+      maybeToken = await getVercelOidcToken(authToken, projectId, teamId);
+    }
+
     if (!maybeToken) {
       throw new VercelOidcTokenError('Failed to refresh OIDC token');
     }

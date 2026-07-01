@@ -28,13 +28,6 @@ export const initSubcommand = {
       description: 'Retain build cache when using "--force"',
     },
     {
-      name: 'public',
-      shorthand: 'p',
-      type: Boolean,
-      deprecated: false,
-      description: 'Deployment is public (`/_src`) is exposed)',
-    },
-    {
       name: 'env',
       shorthand: 'e',
       type: [String],
@@ -110,20 +103,6 @@ export const initSubcommand = {
     jsonOption,
     confirmOption,
     projectOption,
-    {
-      name: 'functions-beta',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      // No description — keeps it hidden from --help output
-    },
-    {
-      name: 'no-functions-beta',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      // No description — keeps it hidden from --help output
-    },
   ],
   examples: [
     {
@@ -182,7 +161,7 @@ export const deployCommand = {
   name: 'deploy',
   aliases: [],
   description:
-    'Deploy your project to Vercel. The `deploy` command is the default command for the Vercel CLI, and can be omitted (`vc deploy my-app` equals `vc my-app`).',
+    'Deploy your project to Vercel. The `deploy` command is the default command for the Vercel CLI, and can be omitted (`vc deploy my-app` equals `vc my-app`). Use `--dry` to inspect the detected framework preset and source files without deploying.',
   arguments: [
     {
       name: 'project-path',
@@ -201,13 +180,6 @@ export const deployCommand = {
       type: Boolean,
       deprecated: false,
       description: 'Retain build cache when using "--force"',
-    },
-    {
-      name: 'public',
-      shorthand: 'p',
-      type: Boolean,
-      deprecated: false,
-      description: 'Deployment is public (`/_src`) is exposed)',
     },
     {
       name: 'env',
@@ -277,6 +249,14 @@ export const deployCommand = {
       description: "Don't wait for the deployment to finish",
     },
     {
+      name: 'dry',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Inspect the detected framework preset and source files without uploading or creating a deployment. Non-TTY output includes every file as JSON',
+    },
+    {
       name: 'skip-domain',
       shorthand: null,
       type: Boolean,
@@ -333,20 +313,6 @@ export const deployCommand = {
     jsonOption,
     confirmOption,
     projectOption,
-    {
-      name: 'functions-beta',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      // No description — keeps it hidden from --help output
-    },
-    {
-      name: 'no-functions-beta',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      // No description — keeps it hidden from --help output
-    },
   ],
   examples: [
     {
@@ -364,6 +330,14 @@ export const deployCommand = {
     {
       name: 'Deploy with prebuilt outputs',
       value: ['vercel build', 'vercel deploy --prebuilt'],
+    },
+    {
+      name: 'Inspect deployment inputs without deploying',
+      value: 'vercel deploy --dry',
+    },
+    {
+      name: 'Get every deployment file as JSON',
+      value: 'vercel deploy --dry --format=json',
     },
     {
       name: 'Write Deployment URL to a file',

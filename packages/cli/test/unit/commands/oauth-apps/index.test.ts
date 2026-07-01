@@ -1,4 +1,4 @@
-import { Response } from 'node-fetch';
+import { Response } from '../../../../src/util/fetch';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import oauthApps from '../../../../src/commands/oauth-apps';
 import getScope from '../../../../src/util/get-scope';

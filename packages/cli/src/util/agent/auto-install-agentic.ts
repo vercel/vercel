@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { access } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { spawn } from 'node:child_process';
 import chalk from 'chalk';
@@ -49,7 +49,10 @@ const promptedAtSchema = z.codec(
 
 const agentPreferencesSchema = z.object({
   pluginDeclined: z.boolean().optional(),
+  pluginAutoUpdate: z.boolean().optional(),
   lastPromptedAt: promptedAtSchema.optional(),
+  lastPluginAutoUpdateAttemptedAt: promptedAtSchema.optional(),
+  lastPluginAutoUpdateAttemptedKey: z.string().optional(),
 });
 
 type AgentPreferences = z.output<typeof agentPreferencesSchema>;
@@ -117,7 +120,31 @@ async function writePrefs(
   }
 }
 
-async function getPluginTargets(agentName?: string): Promise<string[]> {
+function encodeClaudeProjectDir(projectPath: string): string {
+  return projectPath.replace(/[^A-Za-z0-9]/g, '-');
+}
+
+export async function projectHasUsedClaudeCode(cwd: string): Promise<boolean> {
+  const home = homedir();
+  const projectsDir = join(home, '.claude', 'projects');
+  let dir = resolve(cwd);
+  while (dir !== home) {
+    if (await fileExists(join(projectsDir, encodeClaudeProjectDir(dir)))) {
+      return true;
+    }
+    const parent = dirname(dir);
+    if (parent === dir) {
+      break;
+    }
+    dir = parent;
+  }
+  return false;
+}
+
+async function getPluginTargets(
+  agentName?: string,
+  cwd?: string
+): Promise<string[]> {
   const targetForAgent = getPluginTargetForAgent(agentName);
   if (targetForAgent) {
     return [targetForAgent];
@@ -125,12 +152,10 @@ async function getPluginTargets(agentName?: string): Promise<string[]> {
   if (agentName) {
     return [];
   }
-  const home = homedir();
-  const targets: string[] = [];
-  if (await fileExists(join(home, '.claude'))) {
-    targets.push('claude-code');
+  if (cwd && (await projectHasUsedClaudeCode(cwd))) {
+    return ['claude-code'];
   }
-  return targets;
+  return [];
 }
 
 async function readClaudeInstalledPluginsFromRegistry(): Promise<
@@ -234,12 +259,32 @@ function wasPromptedToday(prefs: AgentPreferences): boolean {
     : false;
 }
 
+function wasPluginAutoUpdateAttemptedToday(
+  prefs: AgentPreferences,
+  attemptKey: string
+): boolean {
+  return (
+    prefs.lastPluginAutoUpdateAttemptedKey === attemptKey &&
+    !!prefs.lastPluginAutoUpdateAttemptedAt &&
+    isSameDay(prefs.lastPluginAutoUpdateAttemptedAt, new Date())
+  );
+}
+
 async function markPromptedToday(
   client: Client,
   prefs: AgentPreferences
 ): Promise<void> {
   prefs.lastPromptedAt = new Date();
   await writePrefs(client, prefs);
+}
+
+function markPluginAutoUpdateAttempted(
+  prefs: AgentPreferences,
+  attemptKey?: string
+): void {
+  if (!attemptKey) return;
+  prefs.lastPluginAutoUpdateAttemptedAt = new Date();
+  prefs.lastPluginAutoUpdateAttemptedKey = attemptKey;
 }
 
 async function runCommand(
@@ -398,40 +443,57 @@ function hasClaudeMigrationActions(plan: ClaudePluginMigrationPlan): boolean {
   );
 }
 
+function getClaudeAutoUpdateAttemptKey(
+  status: ClaudePluginStatus,
+  plan: ClaudePluginMigrationPlan
+): string {
+  return [
+    status.state,
+    status.legacy?.version ?? 'none',
+    status.official?.version ?? 'none',
+    status.latestVersion ?? 'unknown',
+    plan.installOfficial ? 'install' : '',
+    plan.updateOfficial ? 'update' : '',
+    plan.removeLegacy ? 'remove-legacy' : '',
+    plan.removeLegacyMarketplace ? 'remove-marketplace' : '',
+  ].join(':');
+}
+
 export function buildClaudePromptCopy(
   status: ClaudePluginStatus,
   plan: ClaudePluginMigrationPlan
 ): { message: string; confirm: string } {
   if (plan.installOfficial && status.state === 'none') {
     return {
-      message: '',
-      confirm:
-        'Working with Vercel is easier with the Vercel Plugin for Claude Code. Would you like to install it?',
+      message: 'Vercel Plugin for Claude Code is not installed.',
+      confirm: 'Would you like to install it now?',
     };
   }
 
   if (plan.installOfficial && status.state === 'legacy-only') {
     return {
-      message: '',
-      confirm:
-        'Working with Vercel is easier with the latest Vercel Plugin for Claude Code. Would you like to update it?',
+      message:
+        'Update available for Vercel Plugin for Claude Code (legacy -> official).',
+      confirm: 'Would you like to update now?',
     };
   }
 
   if (status.state === 'both' && plan.removeLegacy) {
     return {
-      message: '',
-      confirm:
-        'Working with Vercel is easier with the latest Vercel Plugin for Claude Code. Would you like to update it?',
+      message:
+        'Vercel Plugin for Claude Code has a legacy install to clean up.',
+      confirm: 'Would you like to update now?',
     };
   }
 
   if (plan.updateOfficial) {
-    const fromVersion = status.official?.version ?? 'your current version';
-    const toVersion = status.latestVersion ?? 'the latest version';
+    const fromVersion = status.official?.version;
+    const toVersion = status.latestVersion;
+    const versionRange =
+      fromVersion && toVersion ? ` (v${fromVersion} -> v${toVersion})` : '';
     return {
-      message: '',
-      confirm: `Working with Vercel is easier with the latest Vercel Plugin for Claude Code. Would you like to update from ${fromVersion} to ${toVersion}?`,
+      message: `Update available for Vercel Plugin for Claude Code${versionRange}.`,
+      confirm: 'Would you like to update now?',
     };
   }
 
@@ -604,8 +666,8 @@ export async function autoInstallVercelPlugin(
     const prefs = await readPrefs(client);
     const applyMode = options?.mode === 'apply';
 
-    if (!prefs.pluginDeclined || applyMode) {
-      const targets = await getPluginTargets(client.agentName);
+    if (!prefs.pluginDeclined || prefs.pluginAutoUpdate || applyMode) {
+      const targets = await getPluginTargets(client.agentName, client.cwd);
       const uninstalledTargets: string[] = [];
       const claudeStatus = targets.includes('claude-code')
         ? await getClaudePluginStatus()
@@ -613,6 +675,10 @@ export async function autoInstallVercelPlugin(
       const claudePlan = claudeStatus
         ? buildClaudePluginMigrationPlan(claudeStatus)
         : undefined;
+      const claudeAutoUpdateAttemptKey =
+        claudeStatus && claudePlan
+          ? getClaudeAutoUpdateAttemptKey(claudeStatus, claudePlan)
+          : undefined;
 
       for (const target of targets) {
         if (target === 'claude-code') {
@@ -628,12 +694,28 @@ export async function autoInstallVercelPlugin(
       }
 
       if (uninstalledTargets.length > 0) {
+        if (prefs.pluginAutoUpdate) {
+          if (
+            claudeAutoUpdateAttemptKey &&
+            wasPluginAutoUpdateAttemptedToday(prefs, claudeAutoUpdateAttemptKey)
+          ) {
+            return;
+          }
+
+          prefs.pluginDeclined = false;
+          markPluginAutoUpdateAttempted(prefs, claudeAutoUpdateAttemptKey);
+          await writePrefs(client, prefs);
+          await applyPluginActions(uninstalledTargets, claudePlan);
+          return;
+        }
+
         if (!applyMode && wasPromptedToday(prefs)) {
           return;
         }
 
         if (applyMode) {
           prefs.pluginDeclined = false;
+          prefs.pluginAutoUpdate = true;
           await writePrefs(client, prefs);
           await applyPluginActions(uninstalledTargets, claudePlan);
           return;
@@ -659,10 +741,12 @@ export async function autoInstallVercelPlugin(
         await markPromptedToday(client, prefs);
         if (accepted) {
           prefs.pluginDeclined = false;
+          prefs.pluginAutoUpdate = true;
           await writePrefs(client, prefs);
           await applyPluginActions(uninstalledTargets, claudePlan);
         } else {
           prefs.pluginDeclined = true;
+          prefs.pluginAutoUpdate = false;
           await writePrefs(client, prefs);
         }
       }
@@ -677,7 +761,7 @@ export async function showPluginTipIfNeeded(client: Client): Promise<void> {
     const prefs = await readPrefs(client);
     if (prefs.pluginDeclined) return;
 
-    const targets = await getPluginTargets();
+    const targets = await getPluginTargets(client.agentName, client.cwd);
     for (const target of targets) {
       if (!(await isPluginInstalledForTarget(target))) {
         output.log(

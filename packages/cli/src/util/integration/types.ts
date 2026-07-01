@@ -199,7 +199,7 @@ interface AutoProvisionResource {
   externalResourceId: string;
   name: string;
   status: string;
-  ownership?: unknown;
+  ownership?: 'sandbox' | 'owned' | 'linked';
   secretKeys?: string[];
 }
 

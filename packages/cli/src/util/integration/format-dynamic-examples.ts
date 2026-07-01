@@ -119,6 +119,24 @@ export function formatDynamicExamples(
     `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --installation-id <id>`)}`
   );
 
+  // Claim a sandbox resource immediately after provisioning
+  lines.push('');
+  lines.push(
+    `  ${chalk.dim('-')} Claim a sandbox resource immediately after provisioning`
+  );
+  lines.push('');
+  lines.push(
+    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --claim`)}`
+  );
+
+  // Skip the offer to claim a sandbox resource
+  lines.push('');
+  lines.push(`  ${chalk.dim('-')} Skip the offer to claim a sandbox resource`);
+  lines.push('');
+  lines.push(
+    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --no-claim`)}`
+  );
+
   lines.push('');
 
   return lines.join('\n');

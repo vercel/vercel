@@ -3,6 +3,7 @@ import type { Service } from '../src';
 import { describe, expect, it } from 'vitest';
 
 const createService = (overrides: Partial<Service>): Service => ({
+  schema: 'experimentalServices',
   name: 'test',
   type: 'web',
   workspace: '.',

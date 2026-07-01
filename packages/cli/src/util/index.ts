@@ -2,7 +2,7 @@ import qs from 'querystring';
 import { parse as parseUrl } from 'url';
 import retry from 'async-retry';
 import ms from 'ms';
-import nodeFetch, { Headers } from 'node-fetch';
+import fetch, { Headers } from './fetch';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import ua from './ua';
@@ -33,7 +33,6 @@ export interface CreateOptions {
   // Latest
   name: string;
   project?: string;
-  wantsPublic: boolean;
   prebuilt?: boolean;
   vercelOutputDir?: string;
   rootDirectory?: string | null;
@@ -55,7 +54,6 @@ export interface CreateOptions {
   agentName?: string;
   manual?: boolean;
   jsonOutput?: boolean;
-  functionsBeta?: boolean;
   linkedProject?: Project;
 }
 
@@ -116,7 +114,6 @@ export default class Now {
       prebuilt = false,
       vercelOutputDir,
       rootDirectory,
-      wantsPublic,
       meta,
       gitMetadata,
       regions,
@@ -134,20 +131,16 @@ export default class Now {
       agentName,
       manual,
       jsonOutput = false,
-      functionsBeta,
       linkedProject,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
     archive?: ArchiveFormat
   ) {
-    const hashes: any = {};
-
     const requestBody = {
       ...nowConfig,
       env,
       build,
-      public: wantsPublic || nowConfig.public,
       name,
       project,
       meta,
@@ -163,6 +156,10 @@ export default class Now {
     // Ignore specific items from vercel.json
     delete requestBody.scope;
     delete requestBody.github;
+    // `public` is no longer part of `VercelConfig`, but a user's
+    // vercel.json may still contain a stale value that must be stripped
+    // before sending to the API.
+    delete (requestBody as Record<string, unknown>).public;
 
     const deployment = await processDeployment({
       now: this,
@@ -185,7 +182,6 @@ export default class Now {
       bulkRedirectsPath: nowConfig.bulkRedirectsPath,
       manual,
       jsonOutput,
-      functionsBeta,
       linkedProject,
     });
 
@@ -196,11 +192,9 @@ export default class Now {
       deployment.warnings.forEach((warning: any) => {
         if (warning.reason === 'size_limit_exceeded') {
           const { sha, limit } = warning;
-          const n = hashes[sha].names.pop();
 
-          warn(`Skipping file ${n} (size exceeded ${bytes(limit)}`);
+          warn(`Skipping file ${sha} (size exceeded ${bytes(limit)})`);
 
-          hashes[sha].names.unshift(n); // Move name (hack, if duplicate matches we report them in order)
           sizeExceeded++;
         } else if (warning.reason === 'node_version_not_found') {
           warn(`Requested node version ${warning.wanted} is not available`);
@@ -222,11 +216,14 @@ export default class Now {
   async handleDeploymentError(error: any, { env }: any) {
     if (error.status === 429) {
       if (error.code === 'builds_rate_limited') {
-        const err: APIError = Object.create(APIError.prototype);
-        err.message = error.message;
+        const err = new Error(error.message) as APIError;
         err.status = error.status;
-        err.retryAfterMs = 'never';
         err.code = error.code;
+        err.retryAfterMs = 'never';
+        err.ctaLabel = error.ctaLabel;
+        err.ctaUrl = error.ctaUrl;
+        err.action = error.action;
+        err.link = error.link;
         return err;
       }
 
@@ -381,7 +378,7 @@ export default class Now {
 
     const res = await output.time(
       `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
-      nodeFetch(`${this._apiUrl}${_url}`, { ...opts, body })
+      fetch(`${this._apiUrl}${_url}`, { ...opts, body })
     );
     printIndications(res);
     return res;

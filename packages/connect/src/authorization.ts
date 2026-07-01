@@ -5,12 +5,16 @@ export interface ConnectAuthorizationOptions {
   vercelToken?: string;
   callbackUrl?: string;
   webhook?: string;
+  deviceCode?: boolean;
+  expiresInMs?: number;
 }
 
 export interface ConnectAuthorizationResponse {
   request: string;
   verifier: string;
   url: string;
+  deviceCode?: string;
+  expiresAt?: number;
 }
 
 export async function startAuthorization(
@@ -37,6 +41,12 @@ export async function startAuthorization(
       returnUrl: options.callbackUrl,
     }),
     ...(options?.webhook !== undefined && { webhook: options.webhook }),
+    ...(options?.deviceCode !== undefined && {
+      deviceCode: options.deviceCode,
+    }),
+    ...(options?.expiresInMs !== undefined && {
+      expiresInMs: options.expiresInMs,
+    }),
   };
 
   const response = await fetch(endpoint, {
@@ -59,9 +69,8 @@ export async function startAuthorization(
     );
   }
 
-  const { request, verifier, url }: ConnectAuthorizationResponse =
-    await response.json();
-  return { request, verifier, url };
+  const data: ConnectAuthorizationResponse = await response.json();
+  return data;
 }
 
 function validateCallbackUrl(value: string): void {
@@ -72,14 +81,19 @@ function validateCallbackUrl(value: string): void {
     throw new Error(`Invalid callbackUrl: ${value}`);
   }
   if (url.protocol === 'https:') return;
-  if (
-    url.protocol === 'http:' &&
-    (url.hostname === 'localhost' || url.hostname === '127.0.0.1')
-  ) {
+  if (url.protocol === 'http:' && isLocalHttpCallbackHostname(url.hostname)) {
     return;
   }
   throw new Error(
-    `callbackUrl must be https:// or http://localhost, got: ${value}`
+    `callbackUrl must be https://, http://localhost, or http://*.localhost, got: ${value}`
+  );
+}
+
+function isLocalHttpCallbackHostname(hostname: string): boolean {
+  return (
+    hostname === 'localhost' ||
+    hostname.endsWith('.localhost') ||
+    hostname === '127.0.0.1'
   );
 }
 

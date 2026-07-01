@@ -4,6 +4,7 @@ import {
   formatOption,
   limitOption,
   nextOption,
+  projectOption,
   yesOption,
 } from '../../util/arg-common';
 
@@ -47,7 +48,7 @@ export const addSubcommand = {
     },
     {
       name: 'project',
-      required: true,
+      required: false,
     },
   ],
   options: [
@@ -113,6 +114,84 @@ export const priceSubcommand = {
     {
       name: 'JSON output',
       value: `${packageName} domains price example.com --format json`,
+    },
+  ],
+} as const;
+
+export const searchSubcommand = {
+  name: 'search',
+  aliases: [],
+  description: 'Discover domain-name candidates from a keyword or fragment',
+  arguments: [
+    {
+      name: 'query',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'available',
+      shorthand: null,
+      type: Boolean,
+      description: 'Show only candidates available to register',
+      deprecated: false,
+    },
+    {
+      name: 'order',
+      shorthand: null,
+      type: String,
+      argument: 'ORDER',
+      description:
+        'Order candidates by relevance, alphabetical order, or length (default: relevance)',
+      deprecated: false,
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      argument: 'NUMBER',
+      description:
+        'Number of candidates to check per page (default: 20, max: 200)',
+      deprecated: false,
+    },
+    {
+      name: 'tld',
+      shorthand: null,
+      type: [String],
+      argument: 'TLD',
+      description: 'Filter candidates by exact TLD. Repeatable.',
+      deprecated: false,
+    },
+    {
+      name: 'next',
+      shorthand: null,
+      type: String,
+      argument: 'CURSOR',
+      description: 'Show the next page of candidates',
+      deprecated: false,
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Discover domain-name candidates',
+      value: `${packageName} domains search acme`,
+    },
+    {
+      name: 'Narrow candidates with a TLD fragment',
+      value: `${packageName} domains search acme.d`,
+    },
+    {
+      name: 'Filter candidates by TLD',
+      value: `${packageName} domains search acme --tld com --tld dev`,
+    },
+    {
+      name: 'Show only available candidates',
+      value: `${packageName} domains search acme --available`,
+    },
+    {
+      name: 'JSON output',
+      value: `${packageName} domains search acme --format=json`,
     },
   ],
 } as const;
@@ -204,6 +283,49 @@ export const transferInSubcommand = {
   examples: [],
 } as const;
 
+export const verifySubcommand = {
+  name: 'verify',
+  aliases: [],
+  description:
+    "Check a domain's DNS configuration and explain what to fix when it is misconfigured or unverified",
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'strict',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Check DNS for the exact domain only, without falling back to the parent zone configuration',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Check why a domain is not working',
+      value: `${packageName} domains verify example.com`,
+    },
+    {
+      name: 'Check a domain against a specific project',
+      value: `${packageName} domains verify example.com --project my-site`,
+    },
+    {
+      name: 'JSON output (the exit code is non-zero when the domain is misconfigured or unverified)',
+      value: `${packageName} domains verify example.com --format json`,
+    },
+    {
+      name: 'Agent-friendly output with status, reason, and suggested next commands',
+      value: `${packageName} domains verify example.com --non-interactive`,
+    },
+  ],
+} as const;
+
 export const domainsCommand = {
   name: 'domains',
   aliases: ['domain'],
@@ -217,8 +339,10 @@ export const domainsCommand = {
     checkSubcommand,
     moveSubcommand,
     priceSubcommand,
+    searchSubcommand,
     transferInSubcommand,
     removeSubcommand,
+    verifySubcommand,
   ],
   options: [],
   examples: [],

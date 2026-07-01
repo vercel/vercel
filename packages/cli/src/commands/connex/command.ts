@@ -28,6 +28,24 @@ export const createSubcommand = {
       description: 'Enable webhook triggers for this connector',
     },
     {
+      name: 'data',
+      shorthand: null,
+      type: String,
+      argument: 'JSON',
+      deprecated: false,
+      description:
+        'JSON object for non-managed connector creation. When set, posts directly to the connector create API. Pass `@<path>` to read from a file or `@-` to read from stdin — recommended for secrets (e.g. client secrets), which leak into shell history when passed inline.',
+    },
+    {
+      name: 'connector-type',
+      shorthand: null,
+      type: String,
+      argument: 'TYPE',
+      deprecated: false,
+      description:
+        'Connector type for non-managed creation. By default, the type is resolved from the service.',
+    },
+    {
       name: 'icon',
       shorthand: null,
       type: String,
@@ -70,6 +88,18 @@ export const createSubcommand = {
     {
       name: 'Create with branding (icon and colors)',
       value: `${packageName} connect create slack --name my-bot --icon ./logo.png --background-color '#1A2B3C' --accent-color '#FF0066'`,
+    },
+    {
+      name: 'Create a non-managed connector from explicit data',
+      value: `${packageName} connect create mcp.linear.app --name linear --data '{"clientId":"abc123"}'`,
+    },
+    {
+      name: 'Create a non-managed connector, reading credentials from a file (keeps secrets out of shell history)',
+      value: `${packageName} connect create slack --name my-bot --connector-type slack --data @slack-app.json`,
+    },
+    {
+      name: 'Create a non-managed connector, reading credentials from stdin',
+      value: `cat slack-app.json | ${packageName} connect create slack --name my-bot --connector-type slack --data @-`,
     },
     {
       name: 'Output as JSON',
@@ -241,7 +271,7 @@ export const removeSubcommand = {
   description: 'Delete a connector',
   arguments: [
     {
-      name: 'client',
+      name: 'connector',
       required: true,
     },
   ],
@@ -446,7 +476,7 @@ export const attachSubcommand = {
     'Attach a Vercel project to a connector for one or more environments',
   arguments: [
     {
-      name: 'client',
+      name: 'connector',
       required: true,
     },
   ],
@@ -531,7 +561,7 @@ export const detachSubcommand = {
   description: 'Detach a Vercel project from a connector',
   arguments: [
     {
-      name: 'client',
+      name: 'connector',
       required: true,
     },
   ],

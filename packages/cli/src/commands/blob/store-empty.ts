@@ -16,6 +16,7 @@ import {
   formatStoreLabel,
   formatConnectedProjects,
 } from '../../util/blob/confirm';
+import { outputAgentError, buildCommandWithYes } from '../../util/agent-output';
 
 export default async function emptyStore(
   client: Client,
@@ -43,6 +44,8 @@ export default async function emptyStore(
   const {
     flags: { '--yes': yes },
   } = parsedArgs;
+
+  const interactive = client.stdin.isTTY && !client.nonInteractive;
 
   telemetryClient.trackCliFlagYes(yes);
 
@@ -87,7 +90,18 @@ export default async function emptyStore(
     const message = `Are you sure you want to delete all files in ${label}?${projectsInfo} This action cannot be undone.`;
 
     if (!yes) {
-      if (!client.stdin.isTTY) {
+      if (!interactive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'confirmation_required',
+          message: `Deleting all files in ${label} cannot be undone and requires confirmation. Re-run with --yes.`,
+          next: [
+            {
+              command: buildCommandWithYes(client.argv),
+              when: 'empty the blob store without prompting',
+            },
+          ],
+        });
         output.error(
           'Missing --yes flag. This is a destructive operation, use --yes to confirm.'
         );

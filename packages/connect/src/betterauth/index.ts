@@ -8,3 +8,9 @@
  * without it.
  */
 export { connect, type BetterAuthConnectOptions } from './connect-provider.js';
+
+export {
+  ConnectError,
+  type ConnectErrorOptions,
+  type ConnectVendorErrorPayload,
+} from '../token.js';

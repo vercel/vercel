@@ -8,8 +8,9 @@ import type {
   Builder,
   Config,
   BuilderFunctions,
-  Services,
   ExperimentalServices,
+  ExperimentalServicesV2,
+  Services,
   ProjectSettings,
   Service,
 } from '@vercel/build-utils';
@@ -20,8 +21,12 @@ import {
   BACKEND_BUILDERS,
   UNIFIED_BACKEND_BUILDER,
   isExperimentalBackendsEnabled,
+  getMaxDurationLimit,
 } from '@vercel/build-utils';
-import { getServicesBuilders } from './services/get-services-builders';
+import {
+  getServicesBuilders,
+  warnIgnoredDirectories,
+} from './services/get-services-builders';
 
 /**
  * Pattern for finding all supported middleware files.
@@ -65,8 +70,9 @@ export interface ErrorResponse {
 export interface Options {
   tag?: string;
   functions?: BuilderFunctions;
-  services?: Services;
   experimentalServices?: ExperimentalServices;
+  services?: Services;
+  experimentalServicesV2?: ExperimentalServicesV2;
   ignoreBuildScript?: boolean;
   projectSettings?: ProjectSettings;
   cleanUrls?: boolean;
@@ -141,23 +147,58 @@ export async function detectBuilders(
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
   services?: Service[];
+  experimentalServicesV2?: Services;
   useImplicitEnvInjection?: boolean;
 }> {
-  const { services, experimentalServices, projectSettings = {} } = options;
+  const {
+    experimentalServices: experimentalServicesV1,
+    services,
+    experimentalServicesV2,
+    projectSettings = {},
+  } = options;
+  if (services != null && experimentalServicesV2 != null) {
+    return {
+      builders: null,
+      errors: [
+        {
+          code: 'SERVICES_AND_EXPERIMENTAL_SERVICES_V2',
+          message:
+            'The `services` option cannot be used in conjunction with its deprecated alias `experimentalServicesV2`. Please use only `services`.',
+        },
+      ],
+      warnings: [],
+      defaultRoutes: null,
+      redirectRoutes: null,
+      rewriteRoutes: null,
+      errorRoutes: null,
+    };
+  }
   const { framework } = projectSettings;
-  const configuredServices = services ?? experimentalServices;
-  const configuredServicesType =
-    services != null ? 'services' : 'experimentalServices';
+  const servicesConfig = services ?? experimentalServicesV2;
+  const configuredServices = servicesConfig ?? experimentalServicesV1;
+  const configuredServicesType = servicesConfig
+    ? services
+      ? 'services'
+      : 'experimentalServicesV2'
+    : 'experimentalServices';
   const hasServicesConfig =
     configuredServices != null && typeof configuredServices === 'object';
 
   if (hasServicesConfig || framework === 'services') {
-    return getServicesBuilders({
+    const result = await getServicesBuilders({
       workPath: options.workPath,
       configuredServices: configuredServices,
       configuredServicesType,
       projectFramework: framework,
     });
+
+    if (configuredServices != null) {
+      result.warnings.push(
+        ...warnIgnoredDirectories(files, configuredServices)
+      );
+    }
+
+    return result;
   }
 
   const errors: ErrorResponse[] = [];
@@ -724,17 +765,25 @@ function validateFunctions({ functions = {} }: Options) {
       };
     }
 
+    // The upper bound is enforced by server-side validation; only apply a
+    // client-side maximum when it has not been skipped via
+    // `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT`. The lower bound and integer check
+    // are always enforced.
+    const maxDurationLimit = getMaxDurationLimit();
     if (
       func.maxDuration !== undefined &&
       func.maxDuration !== 'max' &&
       (func.maxDuration < 1 ||
-        func.maxDuration > 900 ||
+        (maxDurationLimit !== undefined &&
+          func.maxDuration > maxDurationLimit) ||
         !Number.isInteger(func.maxDuration))
     ) {
       return {
         code: 'invalid_function_duration',
         message:
-          'Functions must have a maxDuration between 1 and 900, or "max".',
+          maxDurationLimit !== undefined
+            ? `Functions must have a maxDuration between 1 and ${maxDurationLimit}, or "max".`
+            : 'Functions must have a positive integer maxDuration, or "max".',
       };
     }
 
@@ -828,9 +877,10 @@ function checkUnusedFunctions(
     frontendBuilder &&
     (isOfficialRuntime('express', frontendBuilder.use) ||
       isOfficialRuntime('hono', frontendBuilder.use) ||
+      isOfficialRuntime('python', frontendBuilder.use) ||
       isOfficialRuntime('backends', frontendBuilder.use))
   ) {
-    // Skip for backends because function names aren't statically defined
+    // Skip for runtimes that resolve function names inside the builder.
     return null;
   }
 

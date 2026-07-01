@@ -1,8 +1,15 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { join, resolve } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { KNOWN_AGENTS } from '@vercel/detect-agent';
+
+const spawnMock = vi.hoisted(() => vi.fn());
+
+vi.mock('node:child_process', () => ({
+  spawn: spawnMock,
+}));
+
 import {
   autoInstallVercelPlugin,
   buildClaudePromptCopy,
@@ -10,8 +17,29 @@ import {
   buildClaudePluginStatus,
   comparePluginVersions,
   getPluginTargetForAgent,
+  projectHasUsedClaudeCode,
 } from '../../../src/util/agent/auto-install-agentic';
 import { client } from '../../mocks/client';
+
+function mockClaudeCommand(stdout = '[]', exitCode = 0) {
+  spawnMock.mockReturnValue({
+    stdout: {
+      on(event: string, callback: (chunk: Buffer) => void) {
+        if (event === 'data' && stdout) {
+          callback(Buffer.from(stdout));
+        }
+      },
+    },
+    stderr: {
+      on() {},
+    },
+    on(event: string, callback: (code: number) => void) {
+      if (event === 'close') {
+        callback(exitCode);
+      }
+    },
+  });
+}
 
 describe('comparePluginVersions', () => {
   it('compares dot-separated versions', () => {
@@ -162,11 +190,10 @@ describe('buildClaudePromptCopy', () => {
       }
     );
 
-    expect(copy.message).toBe('');
-    expect(copy.confirm).toContain(
-      'Working with Vercel is easier with the Vercel Plugin for Claude Code'
+    expect(copy.message).toBe(
+      'Vercel Plugin for Claude Code is not installed.'
     );
-    expect(copy.confirm).toContain('Would you like to install it?');
+    expect(copy.confirm).toBe('Would you like to install it now?');
   });
 
   it('uses migration copy for the old Claude marketplace install', () => {
@@ -184,11 +211,10 @@ describe('buildClaudePromptCopy', () => {
       }
     );
 
-    expect(copy.message).toBe('');
-    expect(copy.confirm).toContain(
-      'Working with Vercel is easier with the latest Vercel Plugin for Claude Code'
+    expect(copy.message).toBe(
+      'Update available for Vercel Plugin for Claude Code (legacy -> official).'
     );
-    expect(copy.confirm).toContain('Would you like to update it?');
+    expect(copy.confirm).toBe('Would you like to update now?');
   });
 
   it('uses cleanup copy when both Claude installs exist', () => {
@@ -207,11 +233,10 @@ describe('buildClaudePromptCopy', () => {
       }
     );
 
-    expect(copy.message).toBe('');
-    expect(copy.confirm).toContain(
-      'Working with Vercel is easier with the latest Vercel Plugin for Claude Code'
+    expect(copy.message).toBe(
+      'Vercel Plugin for Claude Code has a legacy install to clean up.'
     );
-    expect(copy.confirm).toContain('Would you like to update it?');
+    expect(copy.confirm).toBe('Would you like to update now?');
   });
 
   it('uses update copy for an outdated official Claude install', () => {
@@ -229,15 +254,27 @@ describe('buildClaudePromptCopy', () => {
       }
     );
 
-    expect(copy.message).toBe('');
-    expect(copy.confirm).toContain(
-      'Working with Vercel is easier with the latest Vercel Plugin for Claude Code'
+    expect(copy.message).toBe(
+      'Update available for Vercel Plugin for Claude Code (v0.32.6 -> v0.32.7).'
     );
-    expect(copy.confirm).toContain('0.32.6 to 0.32.7');
+    expect(copy.confirm).toBe('Would you like to update now?');
   });
 });
 
 describe('autoInstallVercelPlugin', () => {
+  let fetchSpy: { mockRestore(): void };
+
+  beforeEach(() => {
+    fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('no'));
+    spawnMock.mockReset();
+    mockClaudeCommand();
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+    client.reset();
+  });
+
   it('swallows unreadable prefs files', async () => {
     const configDir = await mkdtemp(join(tmpdir(), 'vercel-cli-agent-prefs-'));
 
@@ -250,5 +287,167 @@ describe('autoInstallVercelPlugin', () => {
     } finally {
       await rm(configDir, { recursive: true, force: true });
     }
+  });
+
+  it('enables automatic plugin updates after accepting the plugin prompt', async () => {
+    const configDir = await mkdtemp(join(tmpdir(), 'vercel-cli-agent-prefs-'));
+
+    try {
+      client.setArgv('--global-config', configDir);
+      client.agentName = KNOWN_AGENTS.CLAUDE;
+      client.stdin.write('y\n');
+
+      await autoInstallVercelPlugin(client);
+
+      const prefs = JSON.parse(
+        await readFile(join(configDir, 'agent-preferences.json'), 'utf8')
+      );
+      expect(prefs.pluginDeclined).toBe(false);
+      expect(prefs.pluginAutoUpdate).toBe(true);
+    } finally {
+      await rm(configDir, { recursive: true, force: true });
+    }
+  });
+
+  it('applies plugin updates without prompting when automatic updates are enabled', async () => {
+    const configDir = await mkdtemp(join(tmpdir(), 'vercel-cli-agent-prefs-'));
+
+    try {
+      client.setArgv('--global-config', configDir);
+      client.agentName = KNOWN_AGENTS.CLAUDE;
+      await writeFile(
+        join(configDir, 'agent-preferences.json'),
+        JSON.stringify({ pluginAutoUpdate: true }),
+        'utf8'
+      );
+      const confirmSpy = vi.spyOn(client.input, 'confirm');
+
+      await autoInstallVercelPlugin(client);
+
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(spawnMock).toHaveBeenCalledWith(
+        'claude',
+        ['plugins', 'install', 'vercel@claude-plugins-official'],
+        expect.any(Object)
+      );
+      const prefs = JSON.parse(
+        await readFile(join(configDir, 'agent-preferences.json'), 'utf8')
+      );
+      expect(prefs.pluginDeclined).toBe(false);
+      expect(prefs.pluginAutoUpdate).toBe(true);
+      expect(prefs.lastPluginAutoUpdateAttemptedAt).toEqual(expect.any(String));
+      expect(prefs.lastPluginAutoUpdateAttemptedKey).toEqual(
+        expect.any(String)
+      );
+    } finally {
+      await rm(configDir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not retry the same automatic plugin update more than once per day', async () => {
+    const configDir = await mkdtemp(join(tmpdir(), 'vercel-cli-agent-prefs-'));
+
+    try {
+      client.setArgv('--global-config', configDir);
+      client.agentName = KNOWN_AGENTS.CLAUDE;
+      await writeFile(
+        join(configDir, 'agent-preferences.json'),
+        JSON.stringify({ pluginAutoUpdate: true }),
+        'utf8'
+      );
+
+      await autoInstallVercelPlugin(client);
+      const prefs = JSON.parse(
+        await readFile(join(configDir, 'agent-preferences.json'), 'utf8')
+      );
+      const firstCallCount = spawnMock.mock.calls.length;
+      spawnMock.mockClear();
+
+      await writeFile(
+        join(configDir, 'agent-preferences.json'),
+        JSON.stringify(prefs),
+        'utf8'
+      );
+      await autoInstallVercelPlugin(client);
+
+      expect(firstCallCount).toBeGreaterThan(0);
+      expect(spawnMock).not.toHaveBeenCalledWith(
+        'claude',
+        ['plugins', 'install', 'vercel@claude-plugins-official'],
+        expect.any(Object)
+      );
+    } finally {
+      await rm(configDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('projectHasUsedClaudeCode', () => {
+  let fakeHome: string;
+  let originalHome: string | undefined;
+  let originalUserProfile: string | undefined;
+
+  beforeEach(async () => {
+    fakeHome = await mkdtemp(join(tmpdir(), 'vercel-cli-cc-home-'));
+    await mkdir(join(fakeHome, '.claude', 'projects'), { recursive: true });
+    originalHome = process.env.HOME;
+    originalUserProfile = process.env.USERPROFILE;
+    process.env.HOME = fakeHome;
+    process.env.USERPROFILE = fakeHome;
+  });
+
+  afterEach(async () => {
+    restoreEnv('HOME', originalHome);
+    restoreEnv('USERPROFILE', originalUserProfile);
+    await rm(fakeHome, { recursive: true, force: true });
+  });
+
+  function restoreEnv(key: string, value: string | undefined): void {
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
+
+  async function recordProject(projectPath: string): Promise<void> {
+    await mkdir(
+      join(
+        fakeHome,
+        '.claude',
+        'projects',
+        resolve(projectPath).replace(/[^A-Za-z0-9]/g, '-')
+      ),
+      { recursive: true }
+    );
+  }
+
+  it('matches when cwd is exactly a recorded project', async () => {
+    await recordProject('/work/project-a');
+    expect(await projectHasUsedClaudeCode('/work/project-a')).toBe(true);
+  });
+
+  it('matches a parent directory (walk-up, no git required)', async () => {
+    await recordProject('/work/project-b');
+    expect(
+      await projectHasUsedClaudeCode('/work/project-b/packages/app/src')
+    ).toBe(true);
+  });
+
+  it('does not match when no ancestor has Claude Code history', async () => {
+    await recordProject('/work/project-b');
+    expect(await projectHasUsedClaudeCode('/work/project-c/sub')).toBe(false);
+  });
+
+  it('does not match a descendant of cwd (only walks up)', async () => {
+    await recordProject('/work/project-d/child');
+    expect(await projectHasUsedClaudeCode('/work/project-d')).toBe(false);
+  });
+
+  it('does not match the home directory itself', async () => {
+    await recordProject(fakeHome);
+    expect(await projectHasUsedClaudeCode(join(fakeHome, 'x', 'deep'))).toBe(
+      false
+    );
   });
 });

@@ -77,7 +77,7 @@ vercel pull --environment=<target>
 vercel --target=<target>
 ```
 
-`vercel target` lists custom environments. Use `--target` on deploy/build/pull flows when targeting one.
+`vercel target` lists custom environments. `deploy` and `build` accept `--target`; `pull` accepts `--environment` (not `--target`).
 
 ## Rolling Releases
 

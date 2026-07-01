@@ -1,5 +1,12 @@
-import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
+import { formatOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
+import {
+  claimSubcommand,
+  connectSubcommand,
+  createThresholdSubcommand,
+  disconnectSubcommand,
+  removeSubcommand as resourceRemoveSubcommand,
+} from '../integration-resource/command';
 
 export const addSubcommand = {
   name: 'add',
@@ -79,6 +86,22 @@ export const addSubcommand = {
       argument: 'ID',
       description:
         'Installation ID to use when multiple installations exist for the integration',
+    },
+    {
+      name: 'claim',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'If the new resource is a sandbox (e.g. Stripe, Shopify), claim it immediately without prompting',
+    },
+    {
+      name: 'no-claim',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'If the new resource is a sandbox, skip the offer to claim it (only print a hint)',
     },
     formatOption,
   ],
@@ -344,7 +367,18 @@ export const discoverSubcommand = {
       required: false,
     },
   ],
-  options: [formatOption, jsonOption],
+  options: [
+    {
+      name: 'category',
+      shorthand: 'c',
+      type: [String],
+      deprecated: false,
+      argument: 'CATEGORY',
+      description:
+        'Filter integrations by category (can be repeated; e.g., -c storage -c authentication). Run `vercel integration categories` for valid slugs.',
+    },
+    formatOption,
+  ],
   examples: [
     {
       name: 'Discover marketplace integrations',
@@ -358,8 +392,49 @@ export const discoverSubcommand = {
       ],
     },
     {
+      name: 'Filter integrations by category',
+      value: [
+        `${packageName} integration discover --category storage`,
+        `${packageName} integration discover -c authentication`,
+      ],
+    },
+    {
+      name: 'Filter by multiple categories at once (repeat the flag)',
+      value: [
+        `${packageName} integration discover --category storage --category authentication`,
+        `${packageName} integration discover -c commerce -c payments -c authentication`,
+      ],
+    },
+    {
+      name: 'List available category slugs to use with --category',
+      value: [`${packageName} integration categories`],
+    },
+    {
       name: 'Discover marketplace integrations as JSON',
       value: [`${packageName} integration discover --format=json`],
+    },
+  ],
+} as const;
+
+export const categoriesSubcommand = {
+  name: 'categories',
+  aliases: [],
+  description:
+    'List marketplace integration categories (slugs valid for `integration discover --category`)',
+  arguments: [],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'List marketplace categories',
+      value: [`${packageName} integration categories`],
+    },
+    {
+      name: 'List categories as JSON',
+      value: [`${packageName} integration categories --format=json`],
+    },
+    {
+      name: 'Use a category slug to filter discover results',
+      value: [`${packageName} integration discover --category storage`],
     },
   ],
 } as const;
@@ -561,22 +636,54 @@ export const guideSubcommand = {
   ],
 } as const;
 
+export const resourceSubcommand = {
+  name: 'resource',
+  aliases: [],
+  description:
+    'Manage marketplace integration resources (connect, disconnect, remove, create-threshold, claim)',
+  options: [],
+  arguments: [],
+  subcommands: [
+    connectSubcommand,
+    createThresholdSubcommand,
+    disconnectSubcommand,
+    resourceRemoveSubcommand,
+    claimSubcommand,
+  ],
+  examples: [
+    {
+      name: 'Connect a resource to the current project',
+      value: `${packageName} integration resource connect my-acme-resource`,
+    },
+    {
+      name: 'Disconnect a resource from the current project',
+      value: `${packageName} integration resource disconnect my-acme-resource`,
+    },
+    {
+      name: 'Remove a resource (disconnecting all projects first)',
+      value: `${packageName} integration resource remove my-acme-resource --disconnect-all --yes`,
+    },
+  ],
+} as const;
+
 export const integrationCommand = {
   name: 'integration',
   aliases: [],
   description:
-    'Manage marketplace integrations. To manage individual resources (disconnect, remove), see `integration-resource`.',
+    'Manage marketplace integrations. To manage individual resources, see `vercel integration resource`.',
   options: [],
   arguments: [],
   subcommands: [
     addSubcommand,
     acceptTermsSubcommand,
     balanceSubcommand,
+    categoriesSubcommand,
     discoverSubcommand,
     guideSubcommand,
     installationsSubcommand,
     listSubcommand,
     openSubcommand,
+    resourceSubcommand,
     updateSubcommand,
     removeSubcommand,
   ],
@@ -584,6 +691,10 @@ export const integrationCommand = {
     {
       name: 'Install a specific product from an integration',
       value: `${packageName} integration add acme/acme-redis`,
+    },
+    {
+      name: 'Connect an existing resource to the current project',
+      value: `${packageName} integration resource connect my-acme-resource`,
     },
   ],
 } as const;

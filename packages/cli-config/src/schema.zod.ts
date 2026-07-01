@@ -13,6 +13,12 @@ export const updatesConfigSchema = z.object({
   auto: z.boolean().optional(),
 });
 
+export const credStorageSchema = z.union([
+  z.literal('auto'),
+  z.literal('file'),
+  z.literal('keyring'),
+]);
+
 export const authConfigSchema = z.object({
   '// Note': z.string().optional(),
   '// Docs': z.string().optional(),
@@ -24,9 +30,14 @@ export const authConfigSchema = z.object({
   tokenSource: z.union([z.literal('flag'), z.literal('env')]).optional(),
 });
 
+export const authFileConfigSchema = authConfigSchema.omit({
+  tokenSource: true,
+});
+
 export const globalConfigSchema = z.object({
   '// Note': z.string().optional(),
   '// Docs': z.string().optional(),
+  credStorage: credStorageSchema.optional(),
   currentTeam: z.string().optional(),
   api: z.string().optional(),
   telemetry: telemetryConfigSchema.optional(),

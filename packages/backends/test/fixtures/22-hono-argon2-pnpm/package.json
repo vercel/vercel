@@ -1,0 +1,12 @@
+{
+  "name": "hono-argon2-pnpm",
+  "type": "module",
+  "dependencies": {
+    "hono": "4.8.9",
+    "argon2": "0.44.0"
+  },
+  "devDependencies": {
+    "@types/node": "20.11.17",
+    "typescript": "5.8.3"
+  }
+}

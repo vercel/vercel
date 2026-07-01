@@ -29,8 +29,8 @@ vercel httpstat /api/health --deployment <deployment-url>
 ```bash
 vercel logs <deployment-url>                   # view logs
 vercel logs --follow                           # stream live
-vercel logs --level error --level warn         # filter by severity
-vercel logs --source lambda                    # filter by source (lambda, edge, static)
+vercel logs --level error --level warning      # filter by severity (error, warning, info, fatal)
+vercel logs --source serverless                # filter by source (serverless, edge-function, edge-middleware, static)
 vercel logs --since 2024-01-01                 # filter by time
 vercel logs --query "timeout"                  # search
 ```

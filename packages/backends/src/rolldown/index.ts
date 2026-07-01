@@ -203,7 +203,9 @@ export const rolldown = async (
               ? await isCommonJS(id, resolved.id, resolved)
               : false;
 
-            if (isCjs) {
+            if (isCjs && resolved) {
+              localBuildFiles.add(resolved.id);
+
               const importerResolved = await this.resolve(importer);
               const importerPkgJsonPath = importerResolved?.packageJsonPath;
 

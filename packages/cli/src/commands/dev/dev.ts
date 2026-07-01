@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import { resolve, join } from 'path';
 import fs from 'fs-extra';
-import type { ResolvedService } from '@vercel/fs-detectors';
+import type { Service } from '@vercel/fs-detectors';
 
 import DevServer, { DevCommandExitError } from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
@@ -75,7 +75,6 @@ export default async function dev(
         autoConfirm: opts['--yes'],
         link,
         successEmoji: 'link',
-        setupMsg: 'Set up',
         nonInteractive: client.nonInteractive,
       });
 
@@ -152,13 +151,13 @@ export default async function dev(
       .env;
   }
 
-  let services: ResolvedService[] | undefined;
+  let services: Service[] | undefined;
   let useImplicitServicesEnvInjection = true;
   const servicesResult = await tryDetectServices(cwd);
   const foundServices = servicesResult && servicesResult.services.length > 0;
   if (foundServices) {
-    displayDetectedServices(servicesResult.services);
     services = servicesResult.services;
+    displayDetectedServices(services);
     useImplicitServicesEnvInjection = servicesResult.useImplicitEnvInjection;
   }
 

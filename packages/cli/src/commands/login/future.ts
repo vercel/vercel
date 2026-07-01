@@ -4,7 +4,6 @@ import * as open from 'open';
 import { eraseLines } from 'ansi-escapes';
 import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import type Client from '../../util/client';
-import { autoInstallVercelPlugin } from '../../util/agent/auto-install-agentic';
 import { printError } from '../../util/error';
 import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
 import { getCommandName } from '../../util/pkg-name';
@@ -38,9 +37,12 @@ export interface DeviceCodeTokens {
  */
 export async function performDeviceCodeFlow(
   client: Client,
-  options?: { teamId?: string }
+  options?: { teamId?: string; refreshToken?: string; acrValues?: string }
 ): Promise<DeviceCodeTokens | null> {
-  const deviceAuthorizationResponse = await deviceAuthorizationRequest();
+  const deviceAuthorizationResponse = await deviceAuthorizationRequest({
+    refresh_token: options?.refreshToken,
+    acr_values: options?.acrValues,
+  });
 
   o.debug(
     `'Device Authorization response:', ${await deviceAuthorizationResponse.clone().text()}`
@@ -223,7 +225,7 @@ export async function login(
     await updateCurrentTeamAfterLogin(client);
   }
 
-  client.writeToAuthConfigFile();
+  client.persistAuthConfig();
   client.writeToConfigFile();
 
   o.debug(`Saved credentials in "${hp(client.getGlobalPathConfig())}"`);
@@ -237,8 +239,6 @@ export async function login(
   connect a Git Repository (${chalk.bold(o.link('vercel.link/git', 'https://vercel.link/git', { color: false }))}).\n`);
 
   telemetry.trackState('success');
-
-  await autoInstallVercelPlugin(client);
 
   return 0;
 }

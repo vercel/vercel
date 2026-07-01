@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { validateJsonOutput } from '../../util/output-format';
+import { sanitizeForTerminal } from '../../util/connex/sanitize';
 import { selectConnexTeam } from '../../util/connex/select-team';
 import type {
   ConnexClientIdentity,
@@ -37,7 +38,7 @@ export async function remove(
   const clientIdOrUid = args[0];
   if (!clientIdOrUid) {
     output.error(
-      'Missing connector ID or UID. Usage: vercel connect remove <client>'
+      'Missing connector ID or UID. Usage: vercel connect remove <connector>'
     );
     return 1;
   }
@@ -64,7 +65,7 @@ export async function remove(
   }
   output.stopSpinner();
 
-  const displayName = target.uid || target.id;
+  const displayName = sanitizeForTerminal(target.uid || target.id);
 
   let projectLinks: ConnexClientProject[];
   try {
