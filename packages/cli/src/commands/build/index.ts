@@ -84,7 +84,7 @@ import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
 import {
   detectFirstDeploymentFramework,
   detectAllFrameworks,
-  warnIfConfiguredFrameworkMismatch,
+  warnIfFrameworkMismatch,
   type DetectedFramework,
 } from '../../util/build/framework-detection';
 import {
@@ -2150,13 +2150,19 @@ async function doBuild(
 
   await writeFlagsJSON(buildResults.values(), outputDir);
 
-  // Cross-check the configured framework against what the source code looks
-  // like. This runs off the background detection kicked off earlier, so it
-  // does not add latency to the build. Surface a warning on mismatch.
+  // Cross-check the frameworks detected from the source code against how the
+  // project was actually built. This runs off the background detection kicked
+  // off earlier, so it does not add latency to the build. Surface a warning
+  // on mismatch.
   const detectedFrameworks = await detectedFrameworksPromise;
-  warnIfConfiguredFrameworkMismatch({
+  const executedBuilders = Array.from(buildResults.keys());
+  warnIfFrameworkMismatch({
     configuredFramework: projectSettings.framework,
     detectedFrameworks,
+    usedBuilders: executedBuilders
+      .map(b => b.use)
+      .filter((use): use is string => Boolean(use)),
+    usedFrameworks: executedBuilders.map(b => b.config?.framework),
   });
 
   // Validate that the build output we just wrote looks valid. This is a louder

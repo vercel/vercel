@@ -127,45 +127,98 @@ export async function detectAllFrameworks(workPath: string): Promise<string[]> {
 }
 
 /**
- * Warn the user when the framework configured for the project does not match
- * any framework detected from the source code.
+ * Warn the user when the frameworks detected from the source code do not
+ * match how the project was actually built.
+ *
+ * Two cases are covered:
+ * - A framework is configured but is not among the detected frameworks.
+ * - No framework is configured, frameworks were detected, but none of their
+ *   builders (or framework-tagged builds) were used by the build — e.g. the
+ *   source looks like Hono but everything fell back to `@vercel/static`.
  */
-export function warnIfConfiguredFrameworkMismatch(options: {
+export function warnIfFrameworkMismatch(options: {
   configuredFramework: string | null | undefined;
   detectedFrameworks: string[];
+  /** `use` values of the builders that ran (e.g. `@vercel/static`). */
+  usedBuilders?: string[];
+  /** `config.framework` values of the builders that ran. */
+  usedFrameworks?: (string | null | undefined)[];
 }): void {
-  const { configuredFramework, detectedFrameworks } = options;
-
-  if (!configuredFramework) {
-    logDebug(
-      'Framework cross-check: no configured framework to compare against; skipping'
-    );
-    return;
-  }
+  const {
+    configuredFramework,
+    detectedFrameworks,
+    usedBuilders = [],
+    usedFrameworks = [],
+  } = options;
 
   if (detectedFrameworks.length === 0) {
     logDebug(
-      `Framework cross-check: nothing detected from source; cannot validate configured framework "${configuredFramework}"`
+      'Framework cross-check: nothing detected from source; skipping validation'
     );
     return;
   }
 
-  if (detectedFrameworks.includes(configuredFramework)) {
+  if (configuredFramework) {
+    if (detectedFrameworks.includes(configuredFramework)) {
+      logDebug(
+        `Framework cross-check: configured framework "${configuredFramework}" matches detected frameworks; no mismatch`
+      );
+      return;
+    }
+
     logDebug(
-      `Framework cross-check: configured framework "${configuredFramework}" matches detected frameworks; no mismatch`
+      `Framework cross-check: configured framework "${configuredFramework}" not among detected [${detectedFrameworks.join(
+        ', '
+      )}]; warning`
+    );
+    output.warn(
+      `Your project is configured to use the "${configuredFramework}" framework, but the source code looks like it's for: ${detectedFrameworks.join(
+        ', '
+      )}. This may be a misconfiguration.`,
+      null,
+      'https://vercel.com/docs/project-configuration',
+      'Learn More'
+    );
+    return;
+  }
+
+  // No framework configured. Check whether the build actually used any of
+  // the detected frameworks, either via a framework-tagged build config or
+  // via the framework's dedicated runtime builder.
+  const buildUsedDetectedFramework = detectedFrameworks.some(slug => {
+    if (usedFrameworks.includes(slug)) {
+      return true;
+    }
+    const record = frameworkList.find(f => f.slug === slug);
+    const expectedBuilder = record?.useRuntime?.use;
+    if (!expectedBuilder) {
+      return false;
+    }
+    return usedBuilders.some(
+      use => use === expectedBuilder || use.startsWith(`${expectedBuilder}@`)
+    );
+  });
+
+  if (buildUsedDetectedFramework) {
+    logDebug(
+      `Framework cross-check: no framework configured, but the build used one of the detected frameworks [${detectedFrameworks.join(
+        ', '
+      )}]; no mismatch`
     );
     return;
   }
 
   logDebug(
-    `Framework cross-check: configured framework "${configuredFramework}" not among detected [${detectedFrameworks.join(
+    `Framework cross-check: no framework configured and the build did not use any of the detected frameworks [${detectedFrameworks.join(
       ', '
-    )}]; warning`
+    )}] (used builders: [${usedBuilders.join(', ') || '<none>'}]); warning`
   );
   output.warn(
-    `Your project is configured to use the "${configuredFramework}" framework, but the source code looks like it's for: ${detectedFrameworks.join(
+    `The source code looks like it's for: ${detectedFrameworks.join(
       ', '
-    )}. This may be a misconfiguration.`,
+    )}, but no framework is configured for this project and the build did not use ${
+      detectedFrameworks.length === 1 ? 'its builder' : 'their builders'
+    }. Set the framework in your Project Settings if this is unexpected.`,
     null,
     'https://vercel.com/docs/project-configuration',
     'Learn More'

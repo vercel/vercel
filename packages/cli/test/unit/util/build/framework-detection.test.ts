@@ -5,7 +5,7 @@ import { join } from 'path';
 import {
   detectFirstDeploymentFramework,
   isFirstDeployment,
-  warnIfConfiguredFrameworkMismatch,
+  warnIfFrameworkMismatch,
 } from '../../../../src/util/build/framework-detection';
 import output from '../../../../src/output-manager';
 
@@ -122,7 +122,7 @@ describe('detectFirstDeploymentFramework()', () => {
   });
 });
 
-describe('warnIfConfiguredFrameworkMismatch()', () => {
+describe('warnIfFrameworkMismatch()', () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
@@ -133,16 +133,8 @@ describe('warnIfConfiguredFrameworkMismatch()', () => {
     warnSpy.mockRestore();
   });
 
-  it('does not warn when no framework is configured', () => {
-    warnIfConfiguredFrameworkMismatch({
-      configuredFramework: null,
-      detectedFrameworks: ['nextjs'],
-    });
-    expect(warnSpy).not.toHaveBeenCalled();
-  });
-
   it('does not warn when nothing was detected', () => {
-    warnIfConfiguredFrameworkMismatch({
+    warnIfFrameworkMismatch({
       configuredFramework: 'nextjs',
       detectedFrameworks: [],
     });
@@ -150,7 +142,7 @@ describe('warnIfConfiguredFrameworkMismatch()', () => {
   });
 
   it('does not warn when the configured framework was detected', () => {
-    warnIfConfiguredFrameworkMismatch({
+    warnIfFrameworkMismatch({
       configuredFramework: 'nextjs',
       detectedFrameworks: ['nextjs', 'vite'],
     });
@@ -158,7 +150,7 @@ describe('warnIfConfiguredFrameworkMismatch()', () => {
   });
 
   it('warns when the configured framework does not match', () => {
-    warnIfConfiguredFrameworkMismatch({
+    warnIfFrameworkMismatch({
       configuredFramework: 'nextjs',
       detectedFrameworks: ['vite'],
     });
@@ -166,5 +158,38 @@ describe('warnIfConfiguredFrameworkMismatch()', () => {
     const [message] = warnSpy.mock.calls[0];
     expect(message).toContain('nextjs');
     expect(message).toContain('vite');
+  });
+
+  it('does not warn when no framework is configured but the build used a framework-tagged build', () => {
+    warnIfFrameworkMismatch({
+      configuredFramework: null,
+      detectedFrameworks: ['nextjs'],
+      usedBuilders: ['@vercel/next'],
+      usedFrameworks: ['nextjs'],
+    });
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not warn when no framework is configured but the detected framework's runtime builder ran", () => {
+    warnIfFrameworkMismatch({
+      configuredFramework: null,
+      detectedFrameworks: ['hono'],
+      usedBuilders: ['@vercel/hono@latest'],
+      usedFrameworks: [undefined],
+    });
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('warns when no framework is configured and the build did not use any detected framework', () => {
+    warnIfFrameworkMismatch({
+      configuredFramework: null,
+      detectedFrameworks: ['hono'],
+      usedBuilders: ['@vercel/static'],
+      usedFrameworks: [undefined],
+    });
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const [message] = warnSpy.mock.calls[0];
+    expect(message).toContain('hono');
+    expect(message).toContain('no framework is configured');
   });
 });
