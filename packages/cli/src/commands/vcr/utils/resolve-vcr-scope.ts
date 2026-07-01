@@ -1,14 +1,14 @@
-import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
-import { ProjectNotFound, isAPIError } from '../../util/errors-ts';
-import { getLinkedProject } from '../../util/projects/link';
-import { outputError } from '../../util/command-validation';
+import type Client from '../../../util/client';
+import getScope from '../../../util/get-scope';
+import getProjectByNameOrId from '../../../util/projects/get-project-by-id-or-name';
+import { ProjectNotFound, isAPIError } from '../../../util/errors-ts';
+import { getLinkedProject } from '../../../util/projects/link';
+import { outputError } from '../../../util/command-validation';
 import {
   buildCommandWithGlobalFlags,
   outputAgentError,
-} from '../../util/agent-output';
-import { AGENT_REASON } from '../../util/agent-output-constants';
+} from '../../../util/agent-output';
+import { AGENT_REASON } from '../../../util/agent-output-constants';
 
 export interface VcrScope {
   teamId: string;

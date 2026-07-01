@@ -5,7 +5,6 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
-import { validateJsonOutput } from '../../util/output-format';
 import { isAPIError } from '../../util/errors-ts';
 import {
   outputError,
@@ -15,13 +14,11 @@ import { outputAgentError } from '../../util/agent-output';
 import { AGENT_REASON } from '../../util/agent-output-constants';
 import type { VcrTelemetryClient } from '../../util/telemetry/commands/vcr';
 import { listSubcommand } from './command';
-import { resolveVcrScope } from './resolve-vcr-scope';
-import { formatRelativeTime } from './format';
-import {
-  emitVcrArgParseError,
-  handleVcrApiError,
-  repositoriesPath,
-} from './util';
+import { resolveVcrScope } from './utils/resolve-vcr-scope';
+import { formatRelativeTime } from './utils/format';
+import { validateVcrJsonOutput } from './utils/validators';
+import { emitVcrArgParseError, handleVcrApiError } from './utils/errors';
+import { repositoriesPath } from './utils/paths';
 
 interface Repository {
   id: string;
@@ -83,19 +80,9 @@ export default async function ls(
     return 1;
   }
 
-  const fr = validateJsonOutput(parsedArgs.flags);
-  if (!fr.valid) {
-    outputAgentError(
-      client,
-      {
-        status: 'error',
-        reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: fr.error,
-      },
-      1
-    );
-    output.error(fr.error);
-    return 1;
+  const fr = validateVcrJsonOutput(client, parsedArgs.flags);
+  if (typeof fr === 'number') {
+    return fr;
   }
 
   const project = parsedArgs.flags['--project'] as string | undefined;

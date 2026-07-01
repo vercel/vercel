@@ -3,24 +3,18 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
-import { validateJsonOutput } from '../../util/output-format';
 import { isAPIError } from '../../util/errors-ts';
-import { outputError } from '../../util/command-validation';
-import {
-  buildCommandWithGlobalFlags,
-  buildCommandWithYes,
-  outputAgentError,
-} from '../../util/agent-output';
+import { buildCommandWithYes, outputAgentError } from '../../util/agent-output';
 import { AGENT_REASON } from '../../util/agent-output-constants';
-import { packageName } from '../../util/pkg-name';
 import type { VcrTelemetryClient } from '../../util/telemetry/commands/vcr';
 import { removeSubcommand } from './command';
-import { resolveVcrScope } from './resolve-vcr-scope';
+import { resolveVcrScope } from './utils/resolve-vcr-scope';
 import {
-  emitVcrArgParseError,
-  handleVcrApiError,
-  repositoryPath,
-} from './util';
+  requireVcrRepository,
+  validateVcrJsonOutput,
+} from './utils/validators';
+import { emitVcrArgParseError, handleVcrApiError } from './utils/errors';
+import { repositoryPath } from './utils/paths';
 
 export default async function rm(
   client: Client,
@@ -43,19 +37,9 @@ export default async function rm(
     return 1;
   }
 
-  const fr = validateJsonOutput(parsedArgs.flags);
-  if (!fr.valid) {
-    outputAgentError(
-      client,
-      {
-        status: 'error',
-        reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: fr.error,
-      },
-      1
-    );
-    output.error(fr.error);
-    return 1;
+  const fr = validateVcrJsonOutput(client, parsedArgs.flags);
+  if (typeof fr === 'number') {
+    return fr;
   }
 
   const repository = parsedArgs.args[0];
@@ -65,28 +49,14 @@ export default async function rm(
   telemetry.trackCliFlagYes(parsedArgs.flags['--yes'] as boolean | undefined);
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
-  if (!repository) {
-    outputAgentError(
-      client,
-      {
-        status: 'error',
-        reason: AGENT_REASON.MISSING_ARGUMENTS,
-        message: `Missing repository. Example: ${packageName} vcr rm <repository>`,
-        next: [
-          {
-            command: buildCommandWithGlobalFlags(client.argv, 'vcr ls'),
-            when: 'List repositories to pick a name or id',
-          },
-        ],
-      },
-      1
-    );
-    return outputError(
-      client,
-      fr.jsonOutput,
-      'MISSING_ARGUMENTS',
-      'Usage: `vercel vcr rm <repository>`'
-    );
+  const missingRepository = requireVcrRepository(
+    client,
+    repository,
+    fr.jsonOutput,
+    'vcr rm <repository>'
+  );
+  if (typeof missingRepository === 'number') {
+    return missingRepository;
   }
 
   const scope = await resolveVcrScope(client, {

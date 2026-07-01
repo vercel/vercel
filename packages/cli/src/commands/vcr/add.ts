@@ -3,7 +3,6 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
-import { validateJsonOutput } from '../../util/output-format';
 import { isAPIError } from '../../util/errors-ts';
 import { outputError } from '../../util/command-validation';
 import {
@@ -14,8 +13,9 @@ import { AGENT_REASON } from '../../util/agent-output-constants';
 import { packageName } from '../../util/pkg-name';
 import type { VcrTelemetryClient } from '../../util/telemetry/commands/vcr';
 import { addSubcommand } from './command';
-import { resolveVcrScope } from './resolve-vcr-scope';
-import { emitVcrArgParseError, handleVcrApiError } from './util';
+import { resolveVcrScope } from './utils/resolve-vcr-scope';
+import { validateVcrJsonOutput } from './utils/validators';
+import { emitVcrArgParseError, handleVcrApiError } from './utils/errors';
 
 export default async function add(
   client: Client,
@@ -34,19 +34,9 @@ export default async function add(
     return 1;
   }
 
-  const fr = validateJsonOutput(parsedArgs.flags);
-  if (!fr.valid) {
-    outputAgentError(
-      client,
-      {
-        status: 'error',
-        reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: fr.error,
-      },
-      1
-    );
-    output.error(fr.error);
-    return 1;
+  const fr = validateVcrJsonOutput(client, parsedArgs.flags);
+  if (typeof fr === 'number') {
+    return fr;
   }
 
   const name = parsedArgs.args[0];
