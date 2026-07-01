@@ -82,6 +82,10 @@ describe('integration-resource inspect', () => {
     expect(out).not.toContain('Initializing');
     expect(out).toContain('Acme');
     expect(out).toContain('web-app');
+    // Dashboard row shows the full URL, not just the resource name.
+    expect(out).toContain(
+      `https://vercel.com/${team.slug}/~/stores/integration/store_acme`
+    );
   });
 
   it('works via the `status` alias', async () => {
@@ -145,6 +149,7 @@ describe('integration-resource inspect', () => {
           },
         ],
         billingPlan: null,
+        dashboard: `https://vercel.com/${team.slug}/~/stores/integration/store_acme`,
       },
     });
   });

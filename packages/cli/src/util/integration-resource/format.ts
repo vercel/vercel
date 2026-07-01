@@ -24,7 +24,13 @@ export function resourceStatus(status: string, isSandbox = false) {
   }
 }
 
-// Builds a deep link to the vercel dashboard resource page
+// Builds the vercel dashboard URL for a marketplace resource.
+export function resourceDashboardUrl(orgSlug: string, resourceId: string) {
+  return `https://vercel.com/${orgSlug}/~/stores/integration/${resourceId}`;
+}
+
+// Builds a deep link to the vercel dashboard resource page, rendered as the
+// resource name (used in the list table's Name column).
 export function resourceLink(
   orgSlug: string,
   resource: { id: string; name?: string }
@@ -33,10 +39,12 @@ export function resourceLink(
     return;
   }
 
-  const projectUrl = `https://vercel.com/${orgSlug}/~`;
   return output.link(
     resource.name,
-    `${projectUrl}/stores/integration/${resource.id}`,
-    { fallback: () => resource.name ?? '–', color: false }
+    resourceDashboardUrl(orgSlug, resource.id),
+    {
+      fallback: () => resource.name ?? '–',
+      color: false,
+    }
   );
 }

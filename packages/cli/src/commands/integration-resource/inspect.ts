@@ -12,7 +12,7 @@ import { getResources } from '../../util/integration-resource/get-resources';
 import { getResource } from '../../util/integration-resource/get-resource';
 import { isSandboxResource } from '../../util/integration-resource/claim-status';
 import {
-  resourceLink,
+  resourceDashboardUrl,
   resourceStatus,
 } from '../../util/integration-resource/format';
 import { buildSSOLink } from '../../util/integration/build-sso-link';
@@ -108,6 +108,7 @@ export async function inspect(client: Client, argv: string[]) {
   output.stopSpinner();
 
   const isSandbox = isSandboxResource(resource);
+  const dashboardUrl = resourceDashboardUrl(contextName, resource.id);
 
   if (asJson) {
     const json = {
@@ -133,6 +134,7 @@ export async function inspect(client: Client, argv: string[]) {
               scope: resource.billingPlan.scope,
             }
           : null,
+        dashboard: dashboardUrl,
         ...(isSandbox ? { claim_status: 'sandbox' } : {}),
       },
     };
@@ -168,10 +170,10 @@ export async function inspect(client: Client, argv: string[]) {
     printAlignedLabel('Plan', meta ? `${name} · ${meta}` : name);
   }
   printAlignedLabel('Resource ID', chalk.gray(resource.id));
-  const link = resourceLink(contextName, resource);
-  if (link) {
-    printAlignedLabel('Dashboard', link);
-  }
+  printAlignedLabel(
+    'Dashboard',
+    output.link(dashboardUrl, dashboardUrl, { fallback: false })
+  );
 
   const projects = resource.projectsMetadata ?? [];
   output.print('\n');
