@@ -31,7 +31,15 @@ export default async function dangerouslyDelete(
     return 1;
   }
 
-  const link = await getLinkedProject(client);
+  const projectName = parsedArgs.flags['--project'];
+  telemetry.trackCliOptionProject(projectName);
+
+  const link = await getLinkedProject(
+    client,
+    client.cwd,
+    projectName,
+    Boolean(projectName)
+  );
 
   if (link.status === 'not_linked') {
     output.error(
@@ -86,12 +94,13 @@ export default async function dangerouslyDelete(
 
   if (!yes) {
     if (!process.stdin.isTTY) {
+      const projectFlag = projectName ? ` --project ${projectName}` : '';
       const optional =
         typeof revalidate !== 'undefined'
           ? ` --revalidation-deadline-seconds ${revalidate}`
           : '';
       output.print(
-        `${msg}. To continue, run ${getCommandName(`cache dangerously-delete ${flag} ${itemValue}${optional} --yes`)}.`
+        `${msg}. To continue, run ${getCommandName(`cache dangerously-delete ${flag} ${itemValue}${projectFlag}${optional} --yes`)}.`
       );
       return 1;
     }

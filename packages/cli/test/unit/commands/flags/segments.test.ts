@@ -1,6 +1,9 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import flags from '../../../../src/commands/flags';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  removeProjectLink,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
@@ -8,7 +11,6 @@ import { useUser } from '../../../mocks/user';
 import { defaultSegments, useFlags } from '../../../mocks/flags';
 import type { Segment } from '../../../../src/util/flags/types';
 import { formatFlagConditionComparatorList } from '../../../../src/util/flags/comparators';
-import { removeProjectLink } from './fixtures';
 
 function expectHelpOutputToListRuleOperators(output: string) {
   expect(output.replace(/\s+/g, ' ')).toContain(
@@ -28,6 +30,7 @@ describe('flags segments', () => {
       ...defaultProject,
       id: 'vercel-flags-test',
       name: 'vercel-flags-test',
+      accountId: 'team_dummy',
     });
     useFlags(undefined, undefined, undefined, segmentsList);
     const cwd = setupUnitFixture('commands/flags/vercel-flags-test');

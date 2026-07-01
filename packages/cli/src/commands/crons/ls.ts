@@ -48,6 +48,8 @@ export default async function ls(client: Client, argv: string[]) {
   }
 
   telemetry.trackCliOptionFormat(opts['--format']);
+  const projectName = opts['--project'];
+  telemetry.trackCliOptionProject(projectName);
 
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
@@ -56,7 +58,12 @@ export default async function ls(client: Client, argv: string[]) {
   }
   const asJson = formatResult.jsonOutput;
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedProject(
+    client,
+    client.cwd,
+    projectName,
+    Boolean(projectName)
+  );
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {

@@ -39,12 +39,22 @@ const COMMAND_CONFIG = {
   fetch: getCommandAliases(fetchSubcommand),
 };
 
+const SUBCOMMANDS = {
+  configure: configureSubcommand,
+  start: startSubcommand,
+  approve: approveSubcommand,
+  abort: abortSubcommand,
+  complete: completeSubcommand,
+  fetch: fetchSubcommand,
+} as const;
+
 function buildDeploymentSuggestionCommands(
   client: Client,
   subcmd: 'start' | 'abort' | 'approve' | 'complete'
 ): { listCommand: string; subcommandCommand: string } {
   const args = client.argv.slice(2);
   const preservedParts: string[] = [];
+  const listParts: string[] = [];
   let hasNonInteractive = false;
   // args[0] = 'rolling-release', args[1] = subcmd
   for (let i = 2; i < args.length; i++) {
@@ -57,21 +67,41 @@ function buildDeploymentSuggestionCommands(
       const cwdPath = arg.slice(6);
       if (cwdPath) {
         preservedParts.push('--cwd', cwdPath);
+        listParts.push('--cwd', cwdPath);
       }
       continue;
     }
     if (arg === '--cwd') {
       if (i + 1 < args.length) {
         preservedParts.push('--cwd', args[i + 1]);
+        listParts.push('--cwd', args[i + 1]);
+        i++;
+      }
+      continue;
+    }
+    if (arg.startsWith('--project=')) {
+      const projectName = arg.slice('--project='.length);
+      if (projectName) {
+        listParts.push(projectName);
+      }
+      preservedParts.push(arg);
+      continue;
+    }
+    if (arg === '--project') {
+      if (i + 1 < args.length) {
+        listParts.push(args[i + 1]);
+        preservedParts.push(arg, args[i + 1]);
         i++;
       }
       continue;
     }
     preservedParts.push(arg);
+    listParts.push(arg);
   }
   const preservedSuffix = preservedParts.join(' ');
-  const listCommand = preservedSuffix
-    ? `${packageName} ls ${preservedSuffix}`
+  const listSuffix = listParts.join(' ');
+  const listCommand = listSuffix
+    ? `${packageName} ls ${listSuffix}`
     : `${packageName} ls`;
   const base = preservedSuffix
     ? `${packageName} rolling-release ${subcmd} ${preservedSuffix}`
@@ -148,7 +178,34 @@ export default async function rollingRelease(client: Client): Promise<number> {
   }
 
   try {
-    const link = await getLinkedProject(client);
+    const subcommandConfig =
+      subcommand && subcommand in SUBCOMMANDS
+        ? SUBCOMMANDS[subcommand as keyof typeof SUBCOMMANDS]
+        : undefined;
+
+    if (subcommandConfig && needHelp) {
+      telemetry.trackCliFlagHelp('rolling-release', subcommandOriginal);
+      printHelp(subcommandConfig);
+      return 2;
+    }
+
+    let subcommandFlags;
+    let projectName;
+    if (subcommandConfig) {
+      subcommandFlags = parseArguments(
+        subcommandArgs,
+        getFlagsSpecification(subcommandConfig.options)
+      );
+      projectName = subcommandFlags.flags['--project'];
+      telemetry.trackCliOptionProject(projectName);
+    }
+
+    const link = await getLinkedProject(
+      client,
+      client.cwd,
+      projectName,
+      Boolean(projectName)
+    );
     if (link.status === 'error') {
       return link.exitCode;
     }
@@ -175,19 +232,8 @@ export default async function rollingRelease(client: Client): Promise<number> {
     const { project, org } = link;
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-    let subcommandFlags;
     switch (subcommand) {
       case 'configure': {
-        if (needHelp) {
-          telemetry.trackCliFlagHelp('rolling-release', subcommandOriginal);
-          printHelp(configureSubcommand);
-          return 2;
-        }
-        subcommandFlags = parseArguments(
-          subcommandArgs,
-          getFlagsSpecification(configureSubcommand.options)
-        );
-
         const cfgString = subcommandFlags.flags['--cfg'];
         const enableFlag = subcommandFlags.flags['--enable'];
         const disableFlag = subcommandFlags.flags['--disable'];
@@ -221,15 +267,6 @@ export default async function rollingRelease(client: Client): Promise<number> {
         break;
       }
       case 'start': {
-        if (needHelp) {
-          telemetry.trackCliFlagHelp('rolling-release', subcommandOriginal);
-          printHelp(startSubcommand);
-          return 2;
-        }
-        subcommandFlags = parseArguments(
-          subcommandArgs,
-          getFlagsSpecification(startSubcommand.options)
-        );
         const dpl = subcommandFlags.flags['--dpl'];
         if (dpl === undefined) {
           if (client.nonInteractive) {
@@ -267,15 +304,6 @@ export default async function rollingRelease(client: Client): Promise<number> {
         break;
       }
       case 'approve': {
-        if (needHelp) {
-          telemetry.trackCliFlagHelp('rolling-release', subcommandOriginal);
-          printHelp(approveSubcommand);
-          return 2;
-        }
-        subcommandFlags = parseArguments(
-          subcommandArgs,
-          getFlagsSpecification(approveSubcommand.options)
-        );
         const dpl = subcommandFlags.flags['--dpl'];
         const currentStageIndex = subcommandFlags.flags['--currentStageIndex'];
         const activeStageIndex = parseInt(currentStageIndex ?? '');
@@ -325,15 +353,6 @@ export default async function rollingRelease(client: Client): Promise<number> {
         break;
       }
       case 'abort': {
-        if (needHelp) {
-          telemetry.trackCliFlagHelp('rolling-release', subcommandOriginal);
-          printHelp(abortSubcommand);
-          return 2;
-        }
-        subcommandFlags = parseArguments(
-          subcommandArgs,
-          getFlagsSpecification(abortSubcommand.options)
-        );
         const dpl = subcommandFlags.flags['--dpl'];
         if (!dpl) {
           if (client.nonInteractive) {
@@ -370,15 +389,6 @@ export default async function rollingRelease(client: Client): Promise<number> {
         break;
       }
       case 'complete': {
-        if (needHelp) {
-          telemetry.trackCliFlagHelp('rolling-release', subcommandOriginal);
-          printHelp(completeSubcommand);
-          return 2;
-        }
-        subcommandFlags = parseArguments(
-          subcommandArgs,
-          getFlagsSpecification(completeSubcommand.options)
-        );
         const dpl = subcommandFlags.flags['--dpl'];
         if (!dpl) {
           if (client.nonInteractive) {
@@ -401,11 +411,6 @@ export default async function rollingRelease(client: Client): Promise<number> {
         break;
       }
       case 'fetch': {
-        if (needHelp) {
-          telemetry.trackCliFlagHelp('rolling-release', subcommandOriginal);
-          printHelp(fetchSubcommand);
-          return 2;
-        }
         const result = await requestRollingRelease({
           client,
           projectId: project.id,

@@ -31,7 +31,15 @@ export default async function invalidate(
     return 1;
   }
 
-  const link = await getLinkedProject(client);
+  const projectName = parsedArgs.flags['--project'];
+  telemetry.trackCliOptionProject(projectName);
+
+  const link = await getLinkedProject(
+    client,
+    client.cwd,
+    projectName,
+    Boolean(projectName)
+  );
 
   if (link.status === 'not_linked') {
     output.error(
@@ -84,8 +92,9 @@ export default async function invalidate(
 
   if (!yes) {
     if (!process.stdin.isTTY) {
+      const projectFlag = projectName ? ` --project ${projectName}` : '';
       output.print(
-        `${msg}. To continue, run ${getCommandName(`cache invalidate ${flag} ${itemValue} --yes`)}.`
+        `${msg}. To continue, run ${getCommandName(`cache invalidate ${flag} ${itemValue}${projectFlag} --yes`)}.`
       );
       return 1;
     }

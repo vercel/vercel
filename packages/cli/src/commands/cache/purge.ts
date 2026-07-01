@@ -28,7 +28,15 @@ export default async function purge(
     return 1;
   }
 
-  const link = await getLinkedProject(client);
+  const projectName = parsedArgs.flags['--project'];
+  telemetry.trackCliOptionProject(projectName);
+
+  const link = await getLinkedProject(
+    client,
+    client.cwd,
+    projectName,
+    Boolean(projectName)
+  );
 
   if (link.status === 'not_linked') {
     output.error(
@@ -67,8 +75,9 @@ export default async function purge(
 
   if (!yes) {
     if (!process.stdin.isTTY) {
+      const projectFlag = projectName ? ` --project ${projectName}` : '';
       output.print(
-        `${msg}. To continue, run ${getCommandName('cache purge --yes')}.`
+        `${msg}. To continue, run ${getCommandName(`cache purge${projectFlag} --yes`)}.`
       );
       return 1;
     }

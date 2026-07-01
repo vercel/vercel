@@ -1,13 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import flags from '../../../../src/commands/flags';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  removeProjectLink,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { useFlags, defaultFlags } from '../../../mocks/flags';
 import type { Flag } from '../../../../src/util/flags/types';
-import { removeProjectLink } from './fixtures';
 
 describe('flags inspect', () => {
   let flagsList: Flag[];
@@ -20,6 +22,7 @@ describe('flags inspect', () => {
       ...defaultProject,
       id: 'vercel-flags-test',
       name: 'vercel-flags-test',
+      accountId: 'team_dummy',
     });
     useFlags(flagsList);
     const cwd = setupUnitFixture('commands/flags/vercel-flags-test');

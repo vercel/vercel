@@ -279,6 +279,25 @@ describe('crons ls', () => {
         { key: 'option:format', value: 'json' },
       ]);
     });
+
+    it('tracks project option and passes it to project resolution', async () => {
+      mockLinkedProject();
+      mockProjectWithCrons([]);
+      client.setArgv('crons', 'ls', '--project', 'crons-project');
+      const exitCode = await crons(client);
+
+      expect(exitCode).toEqual(0);
+      expect(mockedGetLinkedProject).toHaveBeenCalledWith(
+        client,
+        client.cwd,
+        'crons-project',
+        true
+      );
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:list', value: 'ls' },
+        { key: 'option:project', value: '[REDACTED]' },
+      ]);
+    });
   });
 
   describe('extra arguments', () => {

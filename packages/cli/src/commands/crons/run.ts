@@ -27,13 +27,20 @@ export default async function run(client: Client, argv: string[]) {
     printError(error);
     return 1;
   }
-  const { args } = parsedArgs;
+  const { args, flags: opts } = parsedArgs;
 
   let [cronPath] = args;
 
+  const projectName = opts['--project'];
+  telemetry.trackCliOptionProject(projectName);
   telemetry.trackCliArgumentPath(cronPath);
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedProject(
+    client,
+    client.cwd,
+    projectName,
+    Boolean(projectName)
+  );
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
