@@ -16,6 +16,8 @@ export async function validateBuildOutput(
 ): Promise<BuildOutputProblem[]> {
   const problems: BuildOutputProblem[] = [];
 
+  output.debug(`Validating build output at "${outputDir}"`);
+
   try {
     const configPath = join(outputDir, 'config.json');
     const configExists = await fs.pathExists(configPath);
@@ -58,6 +60,13 @@ export async function validateBuildOutput(
           'Build output contains no "functions" or "static" directory; the build may not have produced any deployable output.',
       });
     }
+
+    output.debug(
+      `Build output validation found ${problems.length} problem(s)` +
+        (problems.length
+          ? `: ${problems.map(p => `${p.severity}: ${p.message}`).join('; ')}`
+          : '')
+    );
 
     return problems;
   } catch (err) {

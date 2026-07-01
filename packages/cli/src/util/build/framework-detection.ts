@@ -13,7 +13,14 @@ import output from '../../output-manager';
  * it creates a brand-new project).
  */
 export function isFirstDeployment(): boolean {
-  return process.env.VERCEL_FIRST_DEPLOYMENT === '1';
+  const raw = process.env.VERCEL_FIRST_DEPLOYMENT;
+  const result = raw === '1';
+  output.debug(
+    `isFirstDeployment: VERCEL_FIRST_DEPLOYMENT=${
+      raw === undefined ? '<unset>' : JSON.stringify(raw)
+    } -> ${result}`
+  );
+  return result;
 }
 
 /**
@@ -32,9 +39,34 @@ export async function detectAndPersistFirstDeploymentFramework(options: {
 }): Promise<string | null> {
   const { client, workPath, projectSettings, projectId, orgId } = options;
 
-  if (!isFirstDeployment() || projectSettings.framework) {
+  output.debug(
+    `First deployment: evaluating framework detection (workPath="${workPath}", ` +
+      `projectId=${projectId ? `"${projectId}"` : '<none>'}, ` +
+      `orgId=${orgId ? `"${orgId}"` : '<none>'}, ` +
+      `configuredFramework=${
+        projectSettings.framework ? `"${projectSettings.framework}"` : '<none>'
+      })`
+  );
+
+  // Disambiguate the two skip conditions so it is clear in logs why the
+  // first-deployment path did not run.
+  if (!isFirstDeployment()) {
+    output.debug(
+      'First deployment: skipping framework detection because this is not a first deployment'
+    );
     return null;
   }
+
+  if (projectSettings.framework) {
+    output.debug(
+      `First deployment: skipping framework detection because a framework is already configured ("${projectSettings.framework}")`
+    );
+    return null;
+  }
+
+  output.debug(
+    `First deployment: no framework configured; detecting from source at "${workPath}"`
+  );
 
   const detected = await detectFrameworkRecord({
     fs: new LocalFileSystemDetector(workPath),
@@ -42,7 +74,7 @@ export async function detectAndPersistFirstDeploymentFramework(options: {
   });
 
   if (!detected || !detected.slug) {
-    output.debug('First deployment: no framework detected');
+    output.debug('First deployment: no framework detected from source code');
     return null;
   }
 
@@ -50,9 +82,16 @@ export async function detectAndPersistFirstDeploymentFramework(options: {
 
   // Mutate in-memory so the current build uses the detected framework.
   projectSettings.framework = slug;
-  output.debug(`First deployment: detected framework "${slug}"`);
+  output.debug(
+    `First deployment: detected framework "${slug}"${
+      detected.detectedVersion ? ` (version ${detected.detectedVersion})` : ''
+    }; applied to project settings for this build`
+  );
 
   if (projectId && orgId) {
+    output.debug(
+      `First deployment: persisting framework "${slug}" to project "${projectId}"`
+    );
     try {
       await client.fetch(`/v9/projects/${encodeURIComponent(projectId)}`, {
         method: 'PATCH',
@@ -66,6 +105,10 @@ export async function detectAndPersistFirstDeploymentFramework(options: {
         `First deployment: failed to persist framework "${slug}": ${err}`
       );
     }
+  } else {
+    output.debug(
+      'First deployment: not persisting framework because the project is not linked (missing projectId/orgId)'
+    );
   }
 
   return slug;
@@ -76,13 +119,18 @@ export async function detectAndPersistFirstDeploymentFramework(options: {
  * their slugs.
  */
 export async function detectAllFrameworks(workPath: string): Promise<string[]> {
+  output.debug(`Framework cross-check: detecting frameworks at "${workPath}"`);
   const frameworks = await detectFrameworks({
     fs: new LocalFileSystemDetector(workPath),
     frameworkList,
   });
-  return frameworks
+  const slugs = frameworks
     .map(f => f.slug)
     .filter((slug): slug is string => Boolean(slug));
+  output.debug(
+    `Framework cross-check: detected [${slugs.join(', ') || '<none>'}]`
+  );
+  return slugs;
 }
 
 /**
@@ -96,17 +144,31 @@ export function warnIfConfiguredFrameworkMismatch(options: {
   const { configuredFramework, detectedFrameworks } = options;
 
   if (!configuredFramework) {
+    output.debug(
+      'Framework cross-check: no configured framework to compare against; skipping'
+    );
     return;
   }
 
   if (detectedFrameworks.length === 0) {
+    output.debug(
+      `Framework cross-check: nothing detected from source; cannot validate configured framework "${configuredFramework}"`
+    );
     return;
   }
 
   if (detectedFrameworks.includes(configuredFramework)) {
+    output.debug(
+      `Framework cross-check: configured framework "${configuredFramework}" matches detected frameworks; no mismatch`
+    );
     return;
   }
 
+  output.debug(
+    `Framework cross-check: configured framework "${configuredFramework}" not among detected [${detectedFrameworks.join(
+      ', '
+    )}]; warning`
+  );
   output.warn(
     `Your project is configured to use the "${configuredFramework}" framework, but the source code looks like it's for: ${detectedFrameworks.join(
       ', '
