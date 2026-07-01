@@ -29,11 +29,17 @@ export type { TriggerEvent, TriggerEventInput };
  * - Other invalid chars → `_XX` (hex code)
  *
  * @example
+ * sanitizeConsumerName('my_func') // => 'my_func'
  * sanitizeConsumerName('api/test.js') // => 'api_Stest_Djs'
  * sanitizeConsumerName('api/users/handler.ts') // => 'api_Susers_Shandler_Dts'
  * sanitizeConsumerName('my_func.ts') // => 'my__func_Dts'
  */
 export function sanitizeConsumerName(functionPath: string): string {
+  if (/^[A-Za-z0-9_-]+$/.test(functionPath)) {
+    // Pass valid names as-is.
+    return functionPath;
+  }
+
   let result = '';
   for (const char of functionPath) {
     if (char === '_') {

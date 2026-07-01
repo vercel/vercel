@@ -612,6 +612,10 @@ describe('Lambda', () => {
       );
     });
 
+    it('should preserve already valid names', () => {
+      expect(sanitizeConsumerName('src_my-func_123')).toBe('src_my-func_123');
+    });
+
     it('should escape underscores with __', () => {
       expect(sanitizeConsumerName('src/my_func.js')).toBe('src_Smy__func_Djs');
     });
