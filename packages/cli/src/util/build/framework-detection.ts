@@ -1,4 +1,3 @@
-import type Client from '../client';
 import {
   LocalFileSystemDetector,
   detectFrameworkRecord,
@@ -36,25 +35,33 @@ export function isFirstDeployment(): boolean {
 }
 
 /**
- * On a project's first deployment, detect the framework from the source code
- * and persist it to the project settings. Returns the detected framework slug,
- * or `null` if nothing was detected or detection did not run.
- *
- * Persistence failures never fail the build.
+ * The framework detected on a project's first deployment. Written to
+ * `builds.json` so the platform (api-builds) can persist it to the project
+ * record; the build container intentionally has no credentials to update the
+ * project itself.
  */
-export async function detectAndPersistFirstDeploymentFramework(options: {
-  client: Client;
+export interface DetectedFramework {
+  slug: string;
+  version?: string;
+}
+
+/**
+ * On a project's first deployment, detect the framework from the source code
+ * and apply it to the in-memory project settings so the current build's
+ * builder detection uses it. Returns the detected framework, or `null` if
+ * nothing was detected or detection did not run.
+ *
+ * The result is surfaced in `builds.json` (see `BuildsManifest`), where the
+ * platform picks it up to persist onto the project record.
+ */
+export async function detectFirstDeploymentFramework(options: {
   workPath: string;
   projectSettings: { framework?: string | null };
-  projectId?: string;
-  orgId?: string;
-}): Promise<string | null> {
-  const { client, workPath, projectSettings, projectId, orgId } = options;
+}): Promise<DetectedFramework | null> {
+  const { workPath, projectSettings } = options;
 
   logDebug(
     `First deployment: evaluating framework detection (workPath="${workPath}", ` +
-      `projectId=${projectId ? `"${projectId}"` : '<none>'}, ` +
-      `orgId=${orgId ? `"${orgId}"` : '<none>'}, ` +
       `configuredFramework=${
         projectSettings.framework ? `"${projectSettings.framework}"` : '<none>'
       })`
@@ -100,30 +107,10 @@ export async function detectAndPersistFirstDeploymentFramework(options: {
     }; applied to project settings for this build`
   );
 
-  if (projectId && orgId) {
-    logDebug(
-      `First deployment: persisting framework "${slug}" to project "${projectId}"`
-    );
-    try {
-      await client.fetch(`/v9/projects/${encodeURIComponent(projectId)}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ framework: slug }),
-        headers: { 'Content-Type': 'application/json' },
-        accountId: orgId,
-      });
-      logDebug(`First deployment: persisted framework "${slug}"`);
-    } catch (err) {
-      logDebug(
-        `First deployment: failed to persist framework "${slug}": ${err}`
-      );
-    }
-  } else {
-    logDebug(
-      'First deployment: not persisting framework because the project is not linked (missing projectId/orgId)'
-    );
-  }
-
-  return slug;
+  return {
+    slug,
+    ...(detected.detectedVersion && { version: detected.detectedVersion }),
+  };
 }
 
 /**

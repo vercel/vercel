@@ -82,9 +82,10 @@ import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
 import {
-  detectAndPersistFirstDeploymentFramework,
+  detectFirstDeploymentFramework,
   detectAllFrameworks,
   warnIfConfiguredFrameworkMismatch,
+  type DetectedFramework,
 } from '../../util/build/framework-detection';
 import {
   validateBuildOutput,
@@ -232,6 +233,14 @@ export interface BuildsManifest {
     speedInsightsVersion?: string | undefined;
     webAnalyticsVersion?: string | undefined;
   };
+  /**
+   * Framework detected from the source code on a project's first deployment
+   * (`VERCEL_FIRST_DEPLOYMENT=1`) when no framework was configured. The build
+   * container has no credentials to update the project record, so the
+   * platform (api-builds) reads this from `builds.json` and persists it to
+   * the project.
+   */
+  detectedFramework?: DetectedFramework;
 }
 
 export default async function main(client: Client): Promise<number> {
@@ -743,18 +752,22 @@ async function doBuild(
 
   // On a project's very first deployment (signalled by VERCEL_FIRST_DEPLOYMENT),
   // aggressively detect the framework when none is configured, so builders run
-  // with the correct framework. Also persists it to the project record. This is
-  // a single filesystem-detector pass, so it is cheap; it must run before
-  // `detectBuilders` because that relies on `projectSettings.framework`.
-  await span.child('vc.detectFirstDeploymentFramework').trace(() =>
-    detectAndPersistFirstDeploymentFramework({
-      client,
-      workPath,
-      projectSettings,
-      projectId: project.projectId,
-      orgId: project.orgId,
-    })
-  );
+  // with the correct framework. This is a single filesystem-detector pass, so
+  // it is cheap; it must run before `detectBuilders` because that relies on
+  // `projectSettings.framework`. The result is recorded in `builds.json` so
+  // the platform (api-builds) can persist it to the project record — the build
+  // container intentionally has no credentials to update the project itself.
+  const firstDeploymentFramework = await span
+    .child('vc.detectFirstDeploymentFramework')
+    .trace(() =>
+      detectFirstDeploymentFramework({
+        workPath,
+        projectSettings,
+      })
+    );
+  if (firstDeploymentFramework) {
+    buildsJson.detectedFramework = firstDeploymentFramework;
+  }
 
   if (
     process.env.VERCEL_BUILD_MONOREPO_SUPPORT === '1' &&
