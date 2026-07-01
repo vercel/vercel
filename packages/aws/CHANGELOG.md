@@ -1,5 +1,12 @@
 # @vercel/aws
 
+## 0.2.7
+
+### Patch Changes
+
+- Updated dependencies [d29a8f9]
+  - @vercel/oidc-aws-credentials-provider@3.3.0
+
 ## 0.2.6
 
 ### Patch Changes
