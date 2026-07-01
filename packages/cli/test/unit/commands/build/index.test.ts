@@ -2959,6 +2959,7 @@ writeFileSync(
   JSON.stringify({
     version: 3,
     routes: [
+      { src: '/generated/(.*)', dest: '/generated-output/$1' },
       { src: '/backend/(.*)', service: 'backend' },
       { src: '/ui/(.*)', service: 'ui' }
     ],
@@ -3066,6 +3067,7 @@ writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, nul
       expect(config.routes).toEqual(
         expect.arrayContaining([
           { handle: 'filesystem' },
+          { src: '/generated/(.*)', dest: '/generated-output/$1' },
           { src: '/backend/(.*)', service: 'backend' },
           { src: '/ui/(.*)', service: 'ui' },
           expect.objectContaining({ dest: '/$1', check: true }),

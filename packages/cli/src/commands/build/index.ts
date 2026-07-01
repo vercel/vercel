@@ -2097,14 +2097,19 @@ async function doBuild(
     routesResult.routes,
     detectedExperimentalServicesV2RootRoutes ?? existingConfig?.routes
   );
+  const mergedRoutesWithGeneratedServicesV2Routes =
+    nestExperimentalServicesV2Output
+      ? appendBuildOutputRouteTables(
+          mergedRoutes,
+          detectedExperimentalServicesV2RootRoutes ?? existingConfig?.routes
+        )
+      : mergedRoutes;
 
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results
   const config: BuildOutputConfig = {
     version: 3,
-    routes: nestExperimentalServicesV2Output
-      ? explicitRootRoutes
-      : mergedRoutes,
+    routes: mergedRoutesWithGeneratedServicesV2Routes ?? explicitRootRoutes,
     images: mergedImages,
     wildcard: mergedWildcard,
     overrides: mergedOverrides,
