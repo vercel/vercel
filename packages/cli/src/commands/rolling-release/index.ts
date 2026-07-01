@@ -48,6 +48,16 @@ const SUBCOMMANDS = {
   fetch: fetchSubcommand,
 } as const;
 
+type RollingReleaseSubcommand = keyof typeof SUBCOMMANDS;
+
+function getRollingReleaseSubcommand(
+  subcommand: string | string[] | undefined
+): RollingReleaseSubcommand | undefined {
+  return typeof subcommand === 'string' && subcommand in SUBCOMMANDS
+    ? (subcommand as RollingReleaseSubcommand)
+    : undefined;
+}
+
 function buildDeploymentSuggestionCommands(
   client: Client,
   subcmd: 'start' | 'abort' | 'approve' | 'complete'
@@ -178,10 +188,10 @@ export default async function rollingRelease(client: Client): Promise<number> {
   }
 
   try {
-    const subcommandConfig =
-      subcommand && subcommand in SUBCOMMANDS
-        ? SUBCOMMANDS[subcommand as keyof typeof SUBCOMMANDS]
-        : undefined;
+    const subcommandName = getRollingReleaseSubcommand(subcommand);
+    const subcommandConfig = subcommandName
+      ? SUBCOMMANDS[subcommandName]
+      : undefined;
 
     if (subcommandConfig && needHelp) {
       telemetry.trackCliFlagHelp('rolling-release', subcommandOriginal);
@@ -232,7 +242,16 @@ export default async function rollingRelease(client: Client): Promise<number> {
     const { project, org } = link;
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-    switch (subcommand) {
+    if (!subcommandName || !subcommandFlags) {
+      output.debug(`Invalid subcommand: ${subcommand}`);
+      output.error(getInvalidSubcommand(COMMAND_CONFIG));
+      output.print(
+        help(rollingReleaseCommand, { columns: client.stderr.columns })
+      );
+      return 2;
+    }
+
+    switch (subcommandName) {
       case 'configure': {
         const cfgString = subcommandFlags.flags['--cfg'];
         const enableFlag = subcommandFlags.flags['--enable'];
@@ -418,14 +437,6 @@ export default async function rollingRelease(client: Client): Promise<number> {
         });
         output.log(JSON.stringify(result, null, 2));
         break;
-      }
-      default: {
-        output.debug(`Invalid subcommand: ${subcommand}`);
-        output.error(getInvalidSubcommand(COMMAND_CONFIG));
-        output.print(
-          help(rollingReleaseCommand, { columns: client.stderr.columns })
-        );
-        return 2;
       }
     }
 
