@@ -181,15 +181,81 @@ describe('warnIfFrameworkMismatch()', () => {
   });
 
   it('warns when no framework is configured and the build did not use any detected framework', () => {
-    warnIfFrameworkMismatch({
+    const result = warnIfFrameworkMismatch({
       configuredFramework: null,
       detectedFrameworks: ['hono'],
       usedBuilders: ['@vercel/static'],
       usedFrameworks: [undefined],
     });
+    expect(result).toBe('unused-mismatch');
     expect(warnSpy).toHaveBeenCalledTimes(1);
     const [message] = warnSpy.mock.calls[0];
     expect(message).toContain('hono');
     expect(message).toContain('no framework is configured');
+  });
+
+  it('does not warn for low-confidence (path-only) detections like node on a static site', () => {
+    // `node` is detected by mere existence of server.js — too weak a signal
+    // to warn an intentionally-static project about.
+    const result = warnIfFrameworkMismatch({
+      configuredFramework: null,
+      detectedFrameworks: ['node'],
+      usedBuilders: ['@vercel/static'],
+      usedFrameworks: [undefined],
+    });
+    expect(result).toBe('low-confidence');
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not warn for low-confidence detections like jekyll via _config.yml', () => {
+    const result = warnIfFrameworkMismatch({
+      configuredFramework: null,
+      detectedFrameworks: ['jekyll'],
+      usedBuilders: ['@vercel/static'],
+      usedFrameworks: [undefined],
+    });
+    expect(result).toBe('low-confidence');
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not warn when detected frameworks have no dedicated runtime builder (static-build frameworks)', () => {
+    // Astro is high-confidence (package.json dependency) but builds via
+    // @vercel/static-build, so its absence from used builders proves nothing.
+    const result = warnIfFrameworkMismatch({
+      configuredFramework: null,
+      detectedFrameworks: ['astro'],
+      usedBuilders: ['@vercel/static-build'],
+      usedFrameworks: [undefined],
+    });
+    expect(result).toBe('low-confidence');
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not warn on configured mismatch when all detections are low-confidence', () => {
+    // Configured as a static-ish framework while a stray server.js makes
+    // `node` match — should not warn.
+    const result = warnIfFrameworkMismatch({
+      configuredFramework: 'astro',
+      detectedFrameworks: ['node'],
+      usedBuilders: ['@vercel/static-build'],
+      usedFrameworks: ['astro'],
+    });
+    expect(result).toBe('low-confidence');
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('still warns on configured mismatch when a high-confidence framework was detected', () => {
+    const result = warnIfFrameworkMismatch({
+      configuredFramework: 'nextjs',
+      detectedFrameworks: ['vite', 'node'],
+      usedBuilders: [],
+      usedFrameworks: [],
+    });
+    expect(result).toBe('configured-mismatch');
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const [message] = warnSpy.mock.calls[0];
+    // Low-confidence `node` should not appear in the warning message
+    expect(message).toContain('vite');
+    expect(message).not.toContain('node');
   });
 });
