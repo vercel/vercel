@@ -235,10 +235,7 @@ export interface BuildsManifest {
   };
   /**
    * Framework detected from the source code on a project's first deployment
-   * (`VERCEL_FIRST_DEPLOYMENT=1`) when no framework was configured. The build
-   * container has no credentials to update the project record, so the
-   * platform (api-builds) reads this from `builds.json` and persists it to
-   * the project.
+   * (`VERCEL_FIRST_DEPLOYMENT=1`) when no framework was configured.
    */
   detectedFramework?: DetectedFramework;
 }
@@ -754,9 +751,7 @@ async function doBuild(
   // aggressively detect the framework when none is configured, so builders run
   // with the correct framework. This is a single filesystem-detector pass, so
   // it is cheap; it must run before `detectBuilders` because that relies on
-  // `projectSettings.framework`. The result is recorded in `builds.json` so
-  // the platform (api-builds) can persist it to the project record — the build
-  // container intentionally has no credentials to update the project itself.
+  // `projectSettings.framework`. The result is recorded in `builds.json`.
   const firstDeploymentFramework = await span
     .child('vc.detectFirstDeploymentFramework')
     .trace(() =>

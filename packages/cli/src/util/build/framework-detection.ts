@@ -19,9 +19,8 @@ function logDebug(message: string): void {
 }
 
 /**
- * Whether this is the very first deployment for a project, as signalled by the
- * `VERCEL_FIRST_DEPLOYMENT` environment variable (set by api-deployments when
- * it creates a brand-new project).
+ * Whether this is the very first deployment for a project, as signalled by
+ * the `VERCEL_FIRST_DEPLOYMENT` environment variable.
  */
 export function isFirstDeployment(): boolean {
   const raw = process.env.VERCEL_FIRST_DEPLOYMENT;
@@ -35,10 +34,8 @@ export function isFirstDeployment(): boolean {
 }
 
 /**
- * The framework detected on a project's first deployment. Written to
- * `builds.json` so the platform (api-builds) can persist it to the project
- * record; the build container intentionally has no credentials to update the
- * project itself.
+ * The framework detected on a project's first deployment.
+ * Recorded in `builds.json` (see `BuildsManifest`).
  */
 export interface DetectedFramework {
   slug: string;
@@ -51,8 +48,7 @@ export interface DetectedFramework {
  * builder detection uses it. Returns the detected framework, or `null` if
  * nothing was detected or detection did not run.
  *
- * The result is surfaced in `builds.json` (see `BuildsManifest`), where the
- * platform picks it up to persist onto the project record.
+ * The result is surfaced in `builds.json` (see `BuildsManifest`).
  */
 export async function detectFirstDeploymentFramework(options: {
   workPath: string;
