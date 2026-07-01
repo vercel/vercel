@@ -1078,8 +1078,8 @@ export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
 export type ExperimentalServiceGroups = Record<string, string[]>;
 
 export interface ServiceBinding {
-  /** Must be `"service"` for Service-to-Service HTTP bindings. */
-  type: 'service';
+  /** If present, must be `"service"` for Service-to-Service HTTP bindings. */
+  type?: 'service';
   /** Target service name from `services`. */
   service: string;
   /** Generated value shape, must be `"url"`. */
