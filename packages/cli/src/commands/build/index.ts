@@ -81,6 +81,15 @@ import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
+import {
+  detectAndPersistFirstDeploymentFramework,
+  detectAllFrameworks,
+  warnIfConfiguredFrameworkMismatch,
+} from '../../util/build/framework-detection';
+import {
+  validateBuildOutput,
+  reportBuildOutputProblems,
+} from '../../util/build/validate-build-output';
 import { scrubArgv } from '../../util/build/scrub-argv';
 import { scopeRoutesToServiceOwnership } from '../../util/build/service-route-ownership';
 import { sortBuilders } from '../../util/build/sort-builders';
@@ -732,6 +741,21 @@ async function doBuild(
     ...pickOverrides(localConfig),
   };
 
+  // On a project's very first deployment (signalled by VERCEL_FIRST_DEPLOYMENT),
+  // aggressively detect the framework when none is configured, so builders run
+  // with the correct framework. Also persists it to the project record. This is
+  // a single filesystem-detector pass, so it is cheap; it must run before
+  // `detectBuilders` because that relies on `projectSettings.framework`.
+  await span.child('vc.detectFirstDeploymentFramework').trace(() =>
+    detectAndPersistFirstDeploymentFramework({
+      client,
+      workPath,
+      projectSettings,
+      projectId: project.projectId,
+      orgId: project.orgId,
+    })
+  );
+
   if (
     process.env.VERCEL_BUILD_MONOREPO_SUPPORT === '1' &&
     pkg?.scripts?.['vercel-build'] === undefined &&
@@ -757,6 +781,15 @@ async function doBuild(
   const files = (await getFiles(workPath, {})).map(f =>
     normalizePath(relative(workPath, f))
   );
+
+  // Kick off framework detection in the background so it overlaps with the
+  // (expensive) builder work and doesn't slow down the build. The result is
+  // awaited near the end of the build to cross-check the configured framework
+  // against what the source code actually looks like.
+  const detectedFrameworksPromise = detectAllFrameworks(workPath).catch(err => {
+    output.debug(`Framework cross-check detection failed: ${err}`);
+    return [] as string[];
+  });
 
   const routesResult = getTransformedRoutes(localConfig);
   if (routesResult.error) {
@@ -2108,6 +2141,21 @@ async function doBuild(
   }
 
   await writeFlagsJSON(buildResults.values(), outputDir);
+
+  // Cross-check the configured framework against what the source code looks
+  // like. This runs off the background detection kicked off earlier, so it
+  // does not add latency to the build. Surface a warning on mismatch.
+  const detectedFrameworks = await detectedFrameworksPromise;
+  warnIfConfiguredFrameworkMismatch({
+    configuredFramework: projectSettings.framework,
+    detectedFrameworks,
+  });
+
+  // Validate that the build output we just wrote looks valid. This is a louder
+  // signal that something is wrong beyond a framework mismatch.
+  const outputProblems = await validateBuildOutput(outputDir);
+  reportBuildOutputProblems(outputProblems);
+
   collectSpan.stop();
 
   const relOutputDir = relative(cwd, outputDir);
