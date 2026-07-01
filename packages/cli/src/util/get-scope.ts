@@ -13,19 +13,26 @@ import { introspectToken } from './introspect-token';
 export const APP_PRINCIPAL_SCOPE_ENV = 'VERCEL_CLI_WHOAMI_INTROSPECTION';
 
 /**
- * A non-user principal (currently only Vercel Apps). Present on the scope when
- * the authenticated token is not a user token, in which case `user` is `null`.
- *
- * `team.slug`/`team.name` are only present when the token may read the team
- * (the API gates them on `auth.can(Read, Team)`); `team.id` is always present.
+ * The Vercel App that authenticated the request. Present on the scope when the
+ * token is an app-principal token rather than a user token, in which case
+ * `user` is `null`.
  *
  * Consumers should remain principal-agnostic where possible and only branch on
  * this at the presentation layer (e.g. `whoami`).
  */
-export interface AppPrincipal {
-  type: 'app';
+export interface ScopeApp {
   id: string;
   name?: string;
+}
+
+/**
+ * Internal result of token introspection for an app principal: the app itself
+ * plus the team the token is bound to (as reported by introspection, which only
+ * includes `slug`/`name` when the token may read the team). Used to seed team
+ * resolution and to fall back when the team can't be fully fetched.
+ */
+interface AppPrincipal {
+  app: ScopeApp;
   team: { id: string; slug?: string; name?: string } | null;
 }
 
@@ -33,7 +40,7 @@ export interface ScopeContext {
   org: Org;
   contextName: string;
   user: User | null;
-  principal?: AppPrincipal;
+  app?: ScopeApp;
   team: Team | null;
   /**
    * The team that's globally selected (via `vc switch` or as the northstar
@@ -53,7 +60,7 @@ export interface ScopeContext {
 interface BasicScopeContext {
   contextName: string;
   user: User | null;
-  principal?: AppPrincipal;
+  app?: ScopeApp;
   team: Team | null;
 }
 
@@ -84,7 +91,7 @@ export default async function getScope(
 ): Promise<BasicScopeContext | ScopeContext> {
   const allowAppPrincipal = isAppPrincipalScopeEnabled();
   let userError: unknown;
-  const [user, principal] = await Promise.all([
+  const [user, appPrincipal] = await Promise.all([
     getUser(client).catch(error => {
       if (!allowAppPrincipal) {
         throw error;
@@ -95,16 +102,26 @@ export default async function getScope(
     allowAppPrincipal ? getAppPrincipal(client) : null,
   ]);
 
-  if (!user) {
-    if (principal) {
-      return createAppPrincipalScopeContext(client, principal);
-    }
+  if (!user && !appPrincipal) {
     throw userError;
   }
-  let contextName = user.username || user.email;
+
+  const app = appPrincipal?.app;
+
+  // An app-principal token is authenticated to a specific team server-side, so
+  // seed the current team from the token when one isn't already selected. This
+  // lets the app principal flow through the same team + local-scope resolution
+  // as a user, rather than short-circuiting to a hand-built context.
+  if (app && appPrincipal.team && !client.config.currentTeam) {
+    client.config.currentTeam = appPrincipal.team.id;
+  }
+
+  let contextName: string = user
+    ? user.username || user.email
+    : (app?.name ?? app?.id ?? '');
   let team: Team | null = null;
   const defaultTeamId =
-    user.version === 'northstar' ? user.defaultTeamId : undefined;
+    user?.version === 'northstar' ? user.defaultTeamId : undefined;
   const currentTeamOrDefaultTeamId = client.config.currentTeam || defaultTeamId;
 
   // A Northstar user has no usable personal scope, so their default team is the
@@ -119,7 +136,7 @@ export default async function getScope(
   }
 
   if (currentTeamOrDefaultTeamId && opts.getTeam !== false) {
-    team = await getTeamById(client, currentTeamOrDefaultTeamId);
+    team = await resolveTeam(client, currentTeamOrDefaultTeamId, appPrincipal);
 
     if (!team) {
       throw new TeamDeleted();
@@ -129,7 +146,7 @@ export default async function getScope(
   }
 
   if (!opts.resolveLocalScope) {
-    return { contextName, team, user };
+    return { contextName, team, user, app };
   }
 
   const explicitScopeProvided = detectExplicitScope(client);
@@ -199,7 +216,7 @@ export default async function getScope(
   if (explicitScopeProvided) {
     resolvedOrg = team
       ? { type: 'team', id: team.id, slug: team.slug }
-      : { type: 'user', id: user.id, slug: user.username };
+      : nonTeamOrg(user, app);
   } else if (localOrgId) {
     client.config.currentTeam = localOrgId.startsWith('team_')
       ? localOrgId
@@ -208,17 +225,17 @@ export default async function getScope(
     const correctedTeam = client.config.currentTeam
       ? await getTeamById(client, client.config.currentTeam)
       : null;
-    const correctedUser = await getUser(client);
+    // Only user tokens can be re-resolved to a personal scope; an app principal
+    // has no personal account, so fall back to the app identity.
+    const correctedUser = user ? await getUser(client) : null;
     resolvedOrg = correctedTeam
       ? { type: 'team', id: correctedTeam.id, slug: correctedTeam.slug }
-      : {
-          type: 'user',
-          id: correctedUser.id,
-          slug: correctedUser.username,
-        };
+      : nonTeamOrg(correctedUser, app);
     resolvedContextName = correctedTeam
       ? correctedTeam.slug
-      : correctedUser.username || correctedUser.email;
+      : correctedUser
+        ? correctedUser.username || correctedUser.email
+        : (app?.name ?? app?.id ?? resolvedContextName);
     resolvedTeam = correctedTeam;
   } else {
     if (isCrossTeamRepo) {
@@ -229,13 +246,14 @@ export default async function getScope(
     }
     resolvedOrg = team
       ? { type: 'team', id: team.id, slug: team.slug }
-      : { type: 'user', id: user.id, slug: user.username };
+      : nonTeamOrg(user, app);
   }
 
   return {
     org: resolvedOrg,
     contextName: resolvedContextName,
     user,
+    app,
     team: resolvedTeam,
     globalTeam,
     linkedRepo: linkedRepoResult,
@@ -263,46 +281,45 @@ async function getAppPrincipal(client: Client): Promise<AppPrincipal | null> {
   }
 
   return {
-    type: 'app',
-    id: introspection.client_id,
-    name: introspection.client_name,
+    app: { id: introspection.client_id, name: introspection.client_name },
     team: introspection.team ?? null,
   };
 }
 
-function createAppPrincipalScopeContext(
+/**
+ * Resolve a team by id using the same mechanics as the user path. For an app
+ * principal that lacks read access to the team, `getTeamById` (a `/teams/:id`
+ * fetch) will fail; fall back to the partial team the introspection endpoint
+ * returned so we still surface the team `id`.
+ */
+async function resolveTeam(
   client: Client,
-  principal: AppPrincipal
-): ScopeContext {
-  const explicitScopeProvided = detectExplicitScope(client);
-  const org: Org = principal.team
-    ? {
-        type: 'team',
-        id: principal.team.id,
-        slug: principal.team.slug ?? principal.team.id,
-      }
-    : {
-        type: 'user',
-        id: principal.id,
-        slug: principal.name ?? principal.id,
-      };
+  teamId: string,
+  appPrincipal: AppPrincipal | null
+): Promise<Team | null> {
+  try {
+    return await getTeamById(client, teamId);
+  } catch (error) {
+    const fallback = appPrincipal?.team;
+    if (fallback && fallback.id === teamId) {
+      return { id: fallback.id, slug: fallback.slug ?? fallback.id } as Team;
+    }
+    throw error;
+  }
+}
 
-  return {
-    org,
-    contextName:
-      principal.team?.slug ??
-      principal.team?.id ??
-      principal.name ??
-      principal.id,
-    user: null,
-    principal,
-    team: null,
-    globalTeam: null,
-    linkedRepo: null,
-    isCrossTeamRepo: false,
-    scopeMismatch: false,
-    explicitScopeProvided,
-  };
+/**
+ * The org to use when there is no team scope: a user's personal account, or —
+ * for an app principal, which has no personal account — the app itself.
+ */
+function nonTeamOrg(user: User | null, app: ScopeApp | undefined): Org {
+  if (user) {
+    return { type: 'user', id: user.id, slug: user.username };
+  }
+  if (app) {
+    return { type: 'user', id: app.id, slug: app.name ?? app.id };
+  }
+  throw new Error('Cannot resolve scope without a user or app principal');
 }
 
 function isAppPrincipalScopeEnabled(): boolean {

@@ -110,6 +110,16 @@ describe('whoami', () => {
         },
       });
     });
+    client.scenario.get('/teams/team_vercel', (_req, res) => {
+      res.json({
+        id: 'team_vercel',
+        slug: 'vercel',
+        name: 'Vercel',
+        creatorId: 'u1',
+        created: '2017-04-29T17:21:54.514Z',
+        avatar: null,
+      });
+    });
 
     const exitCode = await whoami(client);
 
@@ -249,6 +259,16 @@ describe('whoami', () => {
             slug: 'vercel',
             name: 'Vercel',
           },
+        });
+      });
+      client.scenario.get('/teams/team_vercel', (_req, res) => {
+        res.json({
+          id: 'team_vercel',
+          slug: 'vercel',
+          name: 'Vercel',
+          creatorId: 'u1',
+          created: '2017-04-29T17:21:54.514Z',
+          avatar: null,
         });
       });
       client.setArgv('whoami', '--format', 'json');

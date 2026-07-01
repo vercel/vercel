@@ -90,7 +90,7 @@ describe('getScope', () => {
   });
 
   describe('app principal fallback', () => {
-    it('should return app principal scope when user lookup fails and introspection succeeds', async () => {
+    it('should return app principal scope resolving the full team like a user', async () => {
       process.env[APP_PRINCIPAL_SCOPE_ENV] = '1';
       client.scenario.get('/v2/user', (_req, res) => {
         res.status(403).json({
@@ -113,27 +113,42 @@ describe('getScope', () => {
           },
         });
       });
+      // The app can read the team, so it resolves via /teams/:id like a user.
+      client.scenario.get('/teams/team_vercel', (_req, res) => {
+        res.json({
+          id: 'team_vercel',
+          slug: 'vercel',
+          name: 'Vercel',
+          creatorId: 'u1',
+          created: '2017-04-29T17:21:54.514Z',
+          avatar: null,
+        });
+      });
 
       const scope = await getScope(client, {
         resolveLocalScope: true,
       });
 
       expect(scope.user).toBeNull();
-      expect(scope.principal).toEqual({
-        type: 'app',
+      expect(scope.app).toEqual({
         id: 'cl_vercel_agent',
         name: 'Vercel Agent',
-        team: {
-          id: 'team_vercel',
-          slug: 'vercel',
-          name: 'Vercel',
-        },
+      });
+      // The team is resolved through the same mechanics as a user's team.
+      expect(scope.team).toMatchObject({
+        id: 'team_vercel',
+        slug: 'vercel',
+        name: 'Vercel',
       });
       expect(scope.contextName).toEqual('vercel');
-      expect(scope.team).toBeNull();
+      expect(scope.org).toEqual({
+        type: 'team',
+        id: 'team_vercel',
+        slug: 'vercel',
+      });
     });
 
-    it('should omit team slug/name when the introspection response omits them', async () => {
+    it('should fall back to the introspected team when the app cannot read it', async () => {
       process.env[APP_PRINCIPAL_SCOPE_ENV] = '1';
       client.scenario.get('/v2/user', (_req, res) => {
         res.status(403).json({
@@ -152,17 +167,26 @@ describe('getScope', () => {
           team: { id: 'team_vercel' },
         });
       });
+      // The app lacks read access to the team, so /teams/:id fails and we fall
+      // back to the partial team from introspection.
+      client.scenario.get('/teams/team_vercel', (_req, res) => {
+        res.status(403).json({
+          error: { code: 'forbidden', message: 'Not authorized' },
+        });
+      });
 
       const scope = await getScope(client, {
         resolveLocalScope: true,
       });
 
       expect(scope.user).toBeNull();
-      expect(scope.principal).toEqual({
-        type: 'app',
+      expect(scope.app).toEqual({
         id: 'cl_vercel_agent',
         name: 'Vercel Agent',
-        team: { id: 'team_vercel' },
+      });
+      expect(scope.team).toMatchObject({
+        id: 'team_vercel',
+        slug: 'team_vercel',
       });
       // With no slug, the team id is used for the context name and org slug.
       expect(scope.contextName).toEqual('team_vercel');
