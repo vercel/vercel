@@ -166,6 +166,78 @@ describe('filesWithoutFsRefs()', () => {
     await fs.remove(root);
   });
 
+  it('keeps the symlink but drops its descendants in resolved-root mode', async () => {
+    if (process.platform === 'win32') {
+      return;
+    }
+
+    // With VERCEL_RESOLVE_ROOT_DIRECTORY, the build is anchored at the repo
+    // root, so the symlink is preserved instead of skipped. Its descendants
+    // must NOT also be written, or `download()` can race and create a real
+    // directory at the symlink's path (EEXIST -> readlink on a dir -> EINVAL).
+    const root = await fs.mkdtemp(join(__dirname, 'resolved-root-symlink-'));
+    const pnpmStore = join(
+      root,
+      'node_modules/.pnpm/next@1.0.0/node_modules/next'
+    );
+    const appNodeModules = join(root, 'apps/web/node_modules');
+    const sharedDest = join(root, '.vercel/output/shared');
+
+    await fs.mkdirp(pnpmStore);
+    await fs.writeFile(join(pnpmStore, 'server.js'), 'module.exports = {}');
+    await fs.mkdirp(appNodeModules);
+    await fs.symlink(
+      '../../../node_modules/.pnpm/next@1.0.0/node_modules/next',
+      join(appNodeModules, 'next')
+    );
+
+    const symlink = await FileFsRef.fromFsPath({
+      fsPath: join(appNodeModules, 'next'),
+    });
+    // A traced descendant reached through the symlink (the failure case).
+    const descendant = await FileFsRef.fromFsPath({
+      fsPath: join(appNodeModules, 'next/server.js'),
+    });
+    // The real bytes, anchored in the function (not under the symlink).
+    const realFile = await FileFsRef.fromFsPath({
+      fsPath: join(pnpmStore, 'server.js'),
+    });
+    const storeKey =
+      'node_modules/.pnpm/next@1.0.0/node_modules/next/server.js';
+    // A sibling package whose name shares the symlink's prefix. It must NOT be
+    // dropped: `node_modules/next-auth` is not nested under the `next` symlink,
+    // which is why the descendant check matches on a trailing slash.
+    const siblingFile = await FileFsRef.fromFsPath({ fsPath: __filename });
+    const siblingKey = 'apps/web/node_modules/next-auth/index.js';
+
+    process.env.VERCEL_RESOLVE_ROOT_DIRECTORY = '1';
+    try {
+      const { files } = filesWithoutFsRefs(
+        {
+          'apps/web/node_modules/next': symlink,
+          'apps/web/node_modules/next/server.js': descendant,
+          [siblingKey]: siblingFile,
+          [storeKey]: realFile,
+        },
+        root,
+        sharedDest,
+        true
+      );
+
+      // The symlink itself is kept, its descendant is dropped, and the real
+      // file (the symlink's target) is kept.
+      expect(files['apps/web/node_modules/next']).toBe(symlink);
+      expect(files['apps/web/node_modules/next/server.js']).toBeUndefined();
+      expect(files[storeKey]).toBe(realFile);
+      // The similarly-named sibling package is unaffected.
+      expect(files[siblingKey]).toBe(siblingFile);
+    } finally {
+      delete process.env.VERCEL_RESOLVE_ROOT_DIRECTORY;
+    }
+
+    await fs.remove(root);
+  });
+
   it('re-anchors standalone keys that escape the function root', async () => {
     // Mirrors a `vc build --standalone` from a monorepo subdirectory: the
     // repo root is detected as the app dir while dependencies are hoisted two

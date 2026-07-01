@@ -131,6 +131,7 @@ import { pullEnvRecords } from '../../util/env/get-env-records';
 import { buildCommand } from './command';
 import { validatePackageManifest } from '../../util/validate-package-manifest';
 import { shouldEmbedFlagsDefinitions } from '../../util/flags/build-embedding';
+import { resolvePerDirectoryLinkRoot } from '../../util/build/repo-root';
 import { writeManifests } from './manifest';
 
 /** Build a plain suggested command with global flags (e.g. --cwd, --non-interactive) appended. */
@@ -340,7 +341,10 @@ export default async function main(client: Client): Promise<number> {
     }
   }
 
-  const projectRootDirectory = link?.projectRootDirectory ?? '';
+  // `cwd` before any repo-root re-anchoring below.
+  const invokedCwd = cwd;
+  const hasRepoLevelLink = Boolean(link?.repoRoot);
+  let projectRootDirectory = link?.projectRootDirectory ?? '';
   if (link?.repoRoot) {
     cwd = client.cwd = link.repoRoot;
   }
@@ -428,6 +432,31 @@ export default async function main(client: Client): Promise<number> {
     client.cwd = cwd;
     client.setArgv(originalArgv);
     project = await readProjectSettings(vercelDir);
+  }
+
+  // A per-directory link (`<dir>/.vercel/project.json`) doesn't report a
+  // `repoRoot` like a repo-level (`repo.json`) link does, so the build would
+  // treat the linked subdirectory as the repo root. Re-anchor it to the
+  // detected root and express the project relative to that root, so it behaves
+  // like a repo-level link regardless of where the command was run.
+  if (
+    !hasRepoLevelLink &&
+    link &&
+    project?.settings &&
+    process.env.VERCEL_RESOLVE_ROOT_DIRECTORY === '1'
+  ) {
+    const resolved = resolvePerDirectoryLinkRoot(
+      invokedCwd,
+      project.settings.rootDirectory
+    );
+    if (resolved.advisory) {
+      output.warn(resolved.advisory);
+    }
+    if (resolved.resolvedRootDirectory !== '') {
+      projectRootDirectory = resolved.resolvedRootDirectory;
+      project.settings.rootDirectory = resolved.resolvedRootDirectory;
+      cwd = client.cwd = resolved.repoRoot;
+    }
   }
 
   // Delete output directory from potential previous build
@@ -644,11 +673,12 @@ async function doBuild(
   const VALID_DEPLOYMENT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
+  const repoRootPath = cwd;
 
   const sourceConfigFile = await findSourceVercelConfigFile(workPath);
   let corepackShimDir: string | null | undefined;
   if (sourceConfigFile) {
-    corepackShimDir = await initCorepack({ repoRootPath: cwd });
+    corepackShimDir = await initCorepack({ repoRootPath });
 
     const installDepsSpan = span.child('vc.installDeps');
     try {
@@ -1007,7 +1037,6 @@ async function doBuild(
   const executedBuilds: Builder[] = [];
   const buildResults: Map<Builder, BuildResult | BuildOutputConfig> = new Map();
   const overrides: PathOverride[] = [];
-  const repoRootPath = cwd;
   // Only initialize corepack if not already done during early install
   if (!corepackShimDir) {
     corepackShimDir = await initCorepack({ repoRootPath });
