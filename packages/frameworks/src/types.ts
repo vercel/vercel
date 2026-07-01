@@ -235,4 +235,14 @@ export interface Framework {
    * @example true
    */
   runtimeFramework?: boolean;
+  /**
+   * When `true`, a positive detection is commonly incidental — the detector
+   * matches projects that never intended to deploy as this framework — so
+   * the detection should not be used to suggest this framework as an
+   * override. For example, Storybook is a devDependency of many apps that
+   * deploy something else entirely; deploying Storybook itself is a
+   * deliberate, comparatively rare choice.
+   * @example true
+   */
+  weakDetectionSignal?: boolean;
 }

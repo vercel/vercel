@@ -127,22 +127,15 @@ export async function detectAllFrameworks(workPath: string): Promise<string[]> {
 }
 
 /**
- * Whether a framework's detectors provide a high-confidence signal.
- *
- * Frameworks detected purely by file *existence* (no `matchPackage` or
- * `matchContent`) are low confidence: files like `server.js`, `_config.yml`,
- * `requirements.txt`, `Gemfile`, `go.mod`, or `bun.lock` commonly appear in
- * intentionally-static projects without implying the framework is in use.
- * Low-confidence detections may confirm a match but never drive a warning.
+ * Whether a detected framework is a strong enough signal to drive a warning
+ * (and be suggested as the framework override). Frameworks annotated with
+ * `weakDetectionSignal` (e.g. Storybook, which is a devDependency of many
+ * apps that deploy something else) may still confirm a match, but never
+ * trigger a warning on their own.
  */
 function isHighConfidenceDetection(slug: string): boolean {
   const record = frameworkList.find(f => f.slug === slug);
-  const detectors = record?.detectors;
-  if (!detectors) {
-    return false;
-  }
-  const items = [...(detectors.every ?? []), ...(detectors.some ?? [])];
-  return items.some(item => item.matchPackage || item.matchContent);
+  return !record?.weakDetectionSignal;
 }
 
 /**
@@ -155,10 +148,10 @@ function isHighConfidenceDetection(slug: string): boolean {
  *   builders (or framework-tagged builds) were used by the build — e.g. the
  *   source looks like Hono but everything fell back to `@vercel/static`.
  *
- * Warnings are conservative: only high-confidence detections (see
- * `isHighConfidenceDetection`) with a checkable runtime builder can trigger
- * the "unused" warning, so intentionally-static projects that happen to
- * contain files like `server.js` or `requirements.txt` stay quiet.
+ * Warnings are conservative: only high-confidence detections (frameworks
+ * without `weakDetectionSignal`) with a checkable runtime builder can
+ * trigger the "unused" warning, so e.g. Storybook appearing in
+ * `devDependencies` never produces a spurious suggestion.
  */
 export type FrameworkMismatchResult =
   | 'none-detected'
@@ -189,9 +182,9 @@ export function warnIfFrameworkMismatch(options: {
     return 'none-detected';
   }
 
-  // Only high-confidence detections may drive a warning. Low-confidence
-  // (path-existence-only) detections like `node` via `server.js` or `jekyll`
-  // via `_config.yml` are common in intentionally-static projects.
+  // Only high-confidence detections may drive a warning. Weak-signal
+  // detections like `storybook` as a devDependency are common in projects
+  // that deploy something else.
   const confidentFrameworks = detectedFrameworks.filter(
     isHighConfidenceDetection
   );
