@@ -75,6 +75,7 @@ export const help = () => `
       traces               [cmd]       Fetch and capture traces for your project's deployment
       upgrade                          Upgrade the Vercel CLI to the latest version
       usage                            Show billing usage for the current billing period
+      vcr                  [cmd]       Manages your Container Registry repositories and images
       webhooks             [cmd]       Manages webhooks [beta]
       whoami                           Shows the username of the currently logged in user
 

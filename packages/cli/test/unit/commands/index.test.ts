@@ -86,6 +86,7 @@ describe('index', () => {
         ['webhook', 'webhooks'],
         ['webhooks', 'webhooks'],
         ['usage', 'usage'],
+        ['vcr', 'vcr'],
         ['whoami', 'whoami'],
       ])
     );
