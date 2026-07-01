@@ -1,6 +1,18 @@
 import fs from 'fs-extra';
 import { join } from 'path';
+import { debug as builderDebug } from '@vercel/build-utils';
 import output from '../../output-manager';
+
+/**
+ * Emit a debug log to both the CLI output manager (visible with `--debug`) and
+ * the build-utils debug channel (visible with `VERCEL_BUILDER_DEBUG=1` /
+ * `VERCEL_DEBUG=1` inside the build container, where `vercel build` is invoked
+ * without the `--debug` flag).
+ */
+function logDebug(message: string): void {
+  output.debug(message);
+  builderDebug(message);
+}
 
 export interface BuildOutputProblem {
   severity: 'warning' | 'error';
@@ -16,7 +28,7 @@ export async function validateBuildOutput(
 ): Promise<BuildOutputProblem[]> {
   const problems: BuildOutputProblem[] = [];
 
-  output.debug(`Validating build output at "${outputDir}"`);
+  logDebug(`Validating build output at "${outputDir}"`);
 
   try {
     const configPath = join(outputDir, 'config.json');
@@ -61,7 +73,7 @@ export async function validateBuildOutput(
       });
     }
 
-    output.debug(
+    logDebug(
       `Build output validation found ${problems.length} problem(s)` +
         (problems.length
           ? `: ${problems.map(p => `${p.severity}: ${p.message}`).join('; ')}`
