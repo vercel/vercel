@@ -8,12 +8,15 @@ import { getLinkFromDir, getVercelDirectory } from './projects/link';
 import { getRepoLink, findProjectsFromPath } from './link/repo';
 import type { RepoProjectsConfig } from './link/repo';
 import output from '../output-manager';
+import { introspectToken } from './introspect-token';
+import { type App, isAppPrincipalEnabled, resolveAppFromToken } from './app';
 
 export interface ScopeContext {
   org: Org;
   contextName: string;
-  user: User;
+  user: User | null;
   team: Team | null;
+  app: App | null;
   /**
    * The team that's globally selected (via `vc switch` or as the northstar
    * default), before any local project-link overrides are applied. This will
@@ -31,8 +34,9 @@ export interface ScopeContext {
 
 interface BasicScopeContext {
   contextName: string;
-  user: User;
+  user: User | null;
   team: Team | null;
+  app: App | null;
 }
 
 interface GetScopeOptions {
@@ -60,12 +64,20 @@ export default async function getScope(
   client: Client,
   opts: GetScopeOptions = {}
 ): Promise<BasicScopeContext | ScopeContext> {
-  const user = await getUser(client);
-  let contextName = user.username || user.email;
+  const [user, token] = await Promise.all([
+    getUser(client).catch(err =>
+      isAppPrincipalEnabled() ? null : Promise.reject(err)
+    ),
+    isAppPrincipalEnabled() ? introspectToken(client) : null,
+  ]);
+
+  let contextName = user?.username || user?.email;
   let team: Team | null = null;
+  const app = token ? resolveAppFromToken(token) : null;
   const defaultTeamId =
-    user.version === 'northstar' ? user.defaultTeamId : undefined;
-  const currentTeamOrDefaultTeamId = client.config.currentTeam || defaultTeamId;
+    user?.version === 'northstar' ? user.defaultTeamId : undefined;
+  const currentTeamOrDefaultTeamId =
+    client.config.currentTeam || defaultTeamId || token?.team?.id;
 
   // A Northstar user has no usable personal scope, so their default team is the
   // effective scope. The default is only persisted to `currentTeam` at login
@@ -88,8 +100,17 @@ export default async function getScope(
     contextName = team.slug;
   }
 
+  if (!contextName) {
+    throw new Error(`Unable to determine context name`);
+  }
+
   if (!opts.resolveLocalScope) {
-    return { contextName, team, user };
+    return {
+      contextName,
+      team,
+      user,
+      app,
+    };
   }
 
   const explicitScopeProvided = detectExplicitScope(client);
@@ -157,9 +178,15 @@ export default async function getScope(
   }
 
   if (explicitScopeProvided) {
-    resolvedOrg = team
-      ? { type: 'team', id: team.id, slug: team.slug }
-      : { type: 'user', id: user.id, slug: user.username };
+    if (team) {
+      resolvedOrg = { type: 'team', id: team.id, slug: team.slug };
+    } else {
+      if (!user) {
+        throw new Error();
+      }
+
+      resolvedOrg = { type: 'user', id: user.id, slug: user.username };
+    }
   } else if (localOrgId) {
     client.config.currentTeam = localOrgId.startsWith('team_')
       ? localOrgId
@@ -181,15 +208,22 @@ export default async function getScope(
       : correctedUser.username || correctedUser.email;
     resolvedTeam = correctedTeam;
   } else {
-    if (isCrossTeamRepo) {
+    if (!isCrossTeamRepo) {
       output.warn(
         `This repository has projects across multiple teams. ` +
           `Use \`--scope\` to specify which team, or \`cd\` into a project directory.`
       );
     }
-    resolvedOrg = team
-      ? { type: 'team', id: team.id, slug: team.slug }
-      : { type: 'user', id: user.id, slug: user.username };
+
+    if (team) {
+      resolvedOrg = { type: 'team', id: team.id, slug: team.slug };
+    } else {
+      if (!user) {
+        throw new Error();
+      }
+
+      resolvedOrg = { type: 'user', id: user.id, slug: user.username };
+    }
   }
 
   return {
@@ -197,6 +231,7 @@ export default async function getScope(
     contextName: resolvedContextName,
     user,
     team: resolvedTeam,
+    app,
     globalTeam,
     linkedRepo: linkedRepoResult,
     isCrossTeamRepo,

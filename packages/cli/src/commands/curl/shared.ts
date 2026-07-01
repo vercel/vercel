@@ -511,12 +511,12 @@ export async function getDeploymentUrlAndToken(
 
   if (deploymentFlag) {
     // Get the accountId from the scope (team or user)
-    const accountId = scope.team?.id || scope.user.id;
-    const deploymentUrl = await getDeploymentUrlById(
-      client,
-      deploymentFlag,
-      accountId
-    );
+    const accountId = scope.team?.id || scope.user?.id;
+
+    const deploymentUrl = accountId
+      ? await getDeploymentUrlById(client, deploymentFlag, accountId)
+      : undefined;
+
     if (!deploymentUrl) {
       output.error(`No deployment found for ID "${deploymentFlag}"`);
       return 1;

@@ -68,7 +68,7 @@ export default async function move(client: Client, argv: string[]) {
   const teams = await getTeams(client);
   const matchId = await findDestinationMatch(destination, user, teams);
 
-  if (matchId && matchId === user.id && user.version === 'northstar') {
+  if (matchId && user && matchId === user.id && user.version === 'northstar') {
     output.error(`You may not move your domain to your user account.`);
     return 1;
   }
@@ -200,10 +200,10 @@ async function getArgs(client: Client, args: string[]) {
 
 async function findDestinationMatch(
   destination: string,
-  user: User,
+  user: User | null,
   teams: Team[]
 ) {
-  if (user.id === destination || user.username === destination) {
+  if (user && (user.id === destination || user.username === destination)) {
     return user.id;
   }
 
