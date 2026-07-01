@@ -4,11 +4,11 @@ import { envKey, resolvePrefix, requireEnv } from './resolve-prefix';
 describe('resolvePrefix', () => {
   const original: Record<string, string | undefined> = {};
   const KEYS = [
-    'AWS_RESOURCE_ARN',
-    'STORAGE_AWS_RESOURCE_ARN',
-    'STORAGE2_AWS_RESOURCE_ARN',
-    'STORAGE3_AWS_RESOURCE_ARN',
-    'PROD_DB_AWS_RESOURCE_ARN',
+    'AWS_RESOURCE_TYPE',
+    'STORAGE_AWS_RESOURCE_TYPE',
+    'STORAGE2_AWS_RESOURCE_TYPE',
+    'STORAGE3_AWS_RESOURCE_TYPE',
+    'PROD_DB_AWS_RESOURCE_TYPE',
   ];
 
   beforeEach(() => {
@@ -26,36 +26,32 @@ describe('resolvePrefix', () => {
   });
 
   test('returns the single matching prefix', () => {
-    process.env.STORAGE2_AWS_RESOURCE_ARN =
-      'arn:aws:dsql:us-east-2:1:cluster/abc';
+    process.env.STORAGE2_AWS_RESOURCE_TYPE = 'dsql';
     const prefix = resolvePrefix({
       factory: 'createAuroraDSQL',
       service: 'Aurora DSQL',
-      arnPrefix: 'arn:aws:dsql:',
+      resourceType: 'dsql',
     });
     expect(prefix).toBe('STORAGE2');
   });
 
-  test('ignores ARNs from other services', () => {
-    process.env.STORAGE_AWS_RESOURCE_ARN =
-      'arn:aws:rds:us-east-2:1:cluster/aurora';
-    process.env.STORAGE2_AWS_RESOURCE_ARN =
-      'arn:aws:dsql:us-east-2:1:cluster/dsql';
+  test('ignores resources of other types', () => {
+    process.env.STORAGE_AWS_RESOURCE_TYPE = 'rds';
+    process.env.STORAGE2_AWS_RESOURCE_TYPE = 'dsql';
     const prefix = resolvePrefix({
       factory: 'createAuroraPostgreSQL',
       service: 'Aurora PostgreSQL',
-      arnPrefix: 'arn:aws:rds:',
+      resourceType: 'rds',
     });
     expect(prefix).toBe('STORAGE');
   });
 
   test('supports custom prefixes', () => {
-    process.env.PROD_DB_AWS_RESOURCE_ARN =
-      'arn:aws:dsql:us-east-2:1:cluster/abc';
+    process.env.PROD_DB_AWS_RESOURCE_TYPE = 'dsql';
     const prefix = resolvePrefix({
       factory: 'createAuroraDSQL',
       service: 'Aurora DSQL',
-      arnPrefix: 'arn:aws:dsql:',
+      resourceType: 'dsql',
     });
     expect(prefix).toBe('PROD_DB');
   });
@@ -65,43 +61,40 @@ describe('resolvePrefix', () => {
       resolvePrefix({
         factory: 'createAuroraDSQL',
         service: 'Aurora DSQL',
-        arnPrefix: 'arn:aws:dsql:',
+        resourceType: 'dsql',
       })
     ).toThrow(/no Aurora DSQL resource is connected/);
   });
 
   test('throws when multiple matching resources are connected', () => {
-    process.env.STORAGE2_AWS_RESOURCE_ARN =
-      'arn:aws:dsql:us-east-2:1:cluster/abc';
-    process.env.STORAGE3_AWS_RESOURCE_ARN =
-      'arn:aws:dsql:us-east-2:1:cluster/def';
+    process.env.STORAGE2_AWS_RESOURCE_TYPE = 'dsql';
+    process.env.STORAGE3_AWS_RESOURCE_TYPE = 'dsql';
     expect(() =>
       resolvePrefix({
         factory: 'createAuroraDSQL',
         service: 'Aurora DSQL',
-        arnPrefix: 'arn:aws:dsql:',
+        resourceType: 'dsql',
       })
     ).toThrow(/multiple Aurora DSQL resources[\s\S]*STORAGE2[\s\S]*STORAGE3/);
   });
 
   test('returns the empty prefix for an unprefixed default connection', () => {
-    process.env.AWS_RESOURCE_ARN = 'arn:aws:dsql:us-east-2:1:cluster/abc';
+    process.env.AWS_RESOURCE_TYPE = 'dsql';
     const prefix = resolvePrefix({
       factory: 'createAuroraDSQL',
       service: 'Aurora DSQL',
-      arnPrefix: 'arn:aws:dsql:',
+      resourceType: 'dsql',
     });
     expect(prefix).toBe('');
   });
 
   test('prefers the unprefixed default when prefixed resources also exist', () => {
-    process.env.AWS_RESOURCE_ARN = 'arn:aws:dsql:us-east-2:1:cluster/default';
-    process.env.STORAGE2_AWS_RESOURCE_ARN =
-      'arn:aws:dsql:eu-west-1:1:cluster/second';
+    process.env.AWS_RESOURCE_TYPE = 'dsql';
+    process.env.STORAGE2_AWS_RESOURCE_TYPE = 'dsql';
     const prefix = resolvePrefix({
       factory: 'createAuroraDSQL',
       service: 'Aurora DSQL',
-      arnPrefix: 'arn:aws:dsql:',
+      resourceType: 'dsql',
     });
     expect(prefix).toBe('');
   });

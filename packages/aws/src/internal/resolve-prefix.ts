@@ -1,16 +1,14 @@
 /**
- * Scans `process.env` for env vars matching `<PREFIX>_AWS_RESOURCE_ARN` (or
- * the bare `AWS_RESOURCE_ARN`, which the Marketplace injects for the first
- * connected resource) whose value starts with the given ARN service segment
- * (e.g. `arn:aws:dsql:`).
+ * Scans `process.env` for `<PREFIX>_AWS_RESOURCE_TYPE` (or the bare
+ * `AWS_RESOURCE_TYPE`, which the Marketplace injects for the first connected
+ * resource) equal to the given service type (e.g. `dsql`).
  *
  * Each Vercel Marketplace storage integration is linked to a project under
  * a prefix. The first connection has no prefix and uses bare env vars
- * (`AWS_RESOURCE_ARN`, `PGHOST`, …); additional connections are prefixed
- * (`STORAGE2_AWS_RESOURCE_ARN`, `STORAGE2_PGHOST`, …). Since the integration
- * the user wants is identified by its resource ARN — and the ARN contains
- * the AWS service name — we can derive the prefix from any matching
- * `_AWS_RESOURCE_ARN` (or bare `AWS_RESOURCE_ARN`) in env.
+ * (`AWS_RESOURCE_TYPE`, `PGHOST`, …); additional connections are prefixed
+ * (`STORAGE2_AWS_RESOURCE_TYPE`, `STORAGE2_PGHOST`, …). The Marketplace tags
+ * each resource with its service type, so we find the resource by matching
+ * that type and derive the prefix from the matching var's name.
  *
  * The returned prefix is an empty string for the unprefixed default
  * connection, or the captured prefix otherwise.
@@ -28,43 +26,35 @@ export function resolvePrefix(opts: {
   factory: string;
   /** Human-readable service name, used in error messages. */
   service: string;
-  /** ARN service segment, e.g. `arn:aws:dsql:`. */
-  arnPrefix: string;
+  /** Marketplace resource type, e.g. `dsql`, `rds`, `dynamodb`, `opensearch`. */
+  resourceType: string;
 }): string {
-  const matches: Array<{ prefix: string; arn: string }> = [];
+  const prefixes: string[] = [];
   for (const [key, value] of Object.entries(process.env)) {
-    if (!value || !value.startsWith(opts.arnPrefix)) continue;
-    let prefix: string;
-    if (key === 'AWS_RESOURCE_ARN') {
-      prefix = '';
-    } else if (key.endsWith('_AWS_RESOURCE_ARN')) {
-      prefix = key.slice(0, -'_AWS_RESOURCE_ARN'.length);
-    } else {
-      continue;
+    if (value !== opts.resourceType) continue;
+    if (key === 'AWS_RESOURCE_TYPE') {
+      prefixes.push('');
+    } else if (key.endsWith('_AWS_RESOURCE_TYPE')) {
+      prefixes.push(key.slice(0, -'_AWS_RESOURCE_TYPE'.length));
     }
-    matches.push({ prefix, arn: value });
   }
 
-  const defaultMatch = matches.find(m => m.prefix === '');
-  if (defaultMatch) return defaultMatch.prefix;
+  if (prefixes.includes('')) return '';
+  if (prefixes.length === 1) return prefixes[0];
 
-  if (matches.length === 1) {
-    return matches[0].prefix;
-  }
-
-  if (matches.length === 0) {
+  if (prefixes.length === 0) {
     throw new Error(
       `${opts.factory}: no ${opts.service} resource is connected to this project. ` +
         `Connect one from the Vercel Marketplace, or pass { prefix } / explicit fields.`
     );
   }
 
-  const list = matches.map(m => `  - ${m.prefix}  →  ${m.arn}`).join('\n');
+  const list = prefixes.map(p => `  - ${p}`).join('\n');
   throw new Error(
     `${opts.factory}: found multiple ${opts.service} resources connected to this project:\n\n` +
       `${list}\n\n` +
       `Pick one by passing { prefix }:\n` +
-      `  ${opts.factory}({ prefix: '${matches[0].prefix}' })`
+      `  ${opts.factory}({ prefix: '${prefixes[0]}' })`
   );
 }
 

@@ -9,8 +9,7 @@ Defined in: [packages/aws/src/dynamodb.ts:23](https://github.com/vercel/vercel/b
 Options for [createDynamoDB](../functions/createDynamoDB.md).
 
 All fields are optional. With no arguments, the factory finds the connected
-DynamoDB resource by scanning env for a `_AWS_RESOURCE_ARN` starting with
-`arn:aws:dynamodb:`, then reads every other field from env vars under that
+DynamoDB resource by scanning env for a `_AWS_RESOURCE_TYPE` equal to `dynamodb`, then reads every other field from env vars under that
 prefix.
 
 Any field on `DynamoDBClientConfig` may also be passed and is forwarded
@@ -423,7 +422,7 @@ Value for how many times a request will be made at most in case of retry.
 Defined in: [packages/aws/src/dynamodb.ts:28](https://github.com/vercel/vercel/blob/main/packages/aws/src/dynamodb.ts#L28)
 
 The env var prefix the Marketplace integration was linked under
-(e.g. `STORAGE3`). Defaults to autodetect via the resource ARN.
+(e.g. `STORAGE3`). Defaults to autodetect via the resource type.
 
 ---
 

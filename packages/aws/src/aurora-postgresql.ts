@@ -7,9 +7,8 @@ import { envKey, requireEnv, resolvePrefix } from './internal/resolve-prefix';
  * Options for {@link createAuroraPostgreSQL}.
  *
  * All fields are optional. With no arguments, the factory finds the connected
- * Aurora PostgreSQL resource by scanning env for a `_AWS_RESOURCE_ARN`
- * starting with `arn:aws:rds:`, then reads every other field from env vars
- * under that prefix.
+ * Aurora PostgreSQL resource by scanning env for a `_AWS_RESOURCE_TYPE` equal
+ * to `rds`, then reads every other field from env vars under that prefix.
  *
  * Any field on `pg`'s `PoolConfig` may also be passed and is forwarded to
  * the `Pool`.
@@ -17,7 +16,7 @@ import { envKey, requireEnv, resolvePrefix } from './internal/resolve-prefix';
 export interface CreateAuroraPostgreSQLOptions extends Partial<PoolConfig> {
   /**
    * The env var prefix the Marketplace integration was linked under
-   * (e.g. `STORAGE`). Defaults to autodetect via the resource ARN.
+   * (e.g. `STORAGE`). Defaults to autodetect via the resource type.
    */
   prefix?: string;
   /** Overrides `<prefix>_PGHOST`. */
@@ -53,7 +52,7 @@ export function createAuroraPostgreSQL(
     (prefix ??= resolvePrefix({
       factory,
       service: 'Aurora PostgreSQL',
-      arnPrefix: 'arn:aws:rds:',
+      resourceType: 'rds',
     }));
   const fromEnv = (suffix: string) => requireEnv(factory, getPrefix(), suffix);
 

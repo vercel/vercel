@@ -23,7 +23,7 @@ pnpm add @aws-sdk/client-dynamodb @aws-sdk/lib-dynamodb  # DynamoDB
 
 When you link a Marketplace resource to a project, Vercel asks you to choose an env var prefix (defaults to `STORAGE`, then `STORAGE2`, etc.). Every value the integration injects is namespaced under that prefix — for example `STORAGE_PGHOST`, `STORAGE_AWS_REGION`, `STORAGE_AWS_ROLE_ARN`.
 
-Each factory in this package finds its resource by scanning env for a `*_AWS_RESOURCE_ARN` whose value starts with the relevant AWS service segment (`arn:aws:aoss:`, `arn:aws:dsql:`, `arn:aws:rds:`, `arn:aws:dynamodb:`). When exactly one match exists, the prefix is determined automatically. If you have multiple resources of the same service connected, pass `{ prefix }` to pick which one. You can also pass explicit fields (`hostname`, `region`, `roleArn`, etc.) to bypass env lookup entirely — useful for local development.
+Each factory in this package finds its resource by scanning env for a `*_AWS_RESOURCE_TYPE` whose value matches the relevant service (`opensearch`, `dsql`, `rds`, `dynamodb`). When exactly one match exists, the prefix is determined automatically. If you have multiple resources of the same service connected, pass `{ prefix }` to pick which one. You can also pass explicit fields (`hostname`, `region`, `roleArn`, etc.) to bypass env lookup entirely — useful for local development.
 
 ## OpenSearch
 

@@ -9,8 +9,7 @@ Defined in: [packages/aws/src/opensearch.ts:18](https://github.com/vercel/vercel
 Options for [createOpenSearch](../functions/createOpenSearch.md).
 
 All fields are optional. With no arguments, the factory finds the connected
-OpenSearch resource by scanning env for a `_AWS_RESOURCE_ARN` starting
-with `arn:aws:aoss:`, then reads every other field from env vars under
+OpenSearch resource by scanning env for a `_AWS_RESOURCE_TYPE` equal to `opensearch`, then reads every other field from env vars under
 that prefix.
 
 Any field on the underlying `ClientOptions` from
@@ -305,7 +304,7 @@ Defined in: [packages/aws/src/opensearch.ts:25](https://github.com/vercel/vercel
 
 The env var prefix the Marketplace integration was linked under
 (e.g. `STORAGE`, `STORAGE2`, or a custom name). Defaults to autodetect
-via the resource ARN — only required when multiple OpenSearch resources
+via the resource type — only required when multiple OpenSearch resources
 are connected.
 
 ---

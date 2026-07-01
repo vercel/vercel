@@ -32,13 +32,13 @@ import { awsCredentialsProvider } from '@vercel/oidc-aws-credentials-provider';
 import { createDynamoDB, createDynamoDBDocument } from './dynamodb';
 
 const KEYS = [
-  'AWS_RESOURCE_ARN',
+  'AWS_RESOURCE_TYPE',
   'AWS_REGION',
   'AWS_ROLE_ARN',
-  'STORAGE_AWS_RESOURCE_ARN',
+  'STORAGE_AWS_RESOURCE_TYPE',
   'STORAGE_AWS_REGION',
   'STORAGE_AWS_ROLE_ARN',
-  'STORAGE2_AWS_RESOURCE_ARN',
+  'STORAGE2_AWS_RESOURCE_TYPE',
   'STORAGE2_AWS_REGION',
   'STORAGE2_AWS_ROLE_ARN',
 ];
@@ -62,8 +62,7 @@ describe('createDynamoDB', () => {
   });
 
   test('autodetects the prefix and builds a client', () => {
-    process.env.STORAGE_AWS_RESOURCE_ARN =
-      'arn:aws:dynamodb:us-east-2:1:table/users';
+    process.env.STORAGE_AWS_RESOURCE_TYPE = 'dynamodb';
     process.env.STORAGE_AWS_REGION = 'us-east-2';
     process.env.STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::1:role/vercel-ddb';
 
@@ -78,13 +77,11 @@ describe('createDynamoDB', () => {
   });
 
   test('passes prefix to override autodetect', () => {
-    process.env.STORAGE_AWS_RESOURCE_ARN =
-      'arn:aws:dynamodb:us-east-2:1:table/one';
+    process.env.STORAGE_AWS_RESOURCE_TYPE = 'dynamodb';
     process.env.STORAGE_AWS_REGION = 'us-east-2';
     process.env.STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::1:role/one';
 
-    process.env.STORAGE2_AWS_RESOURCE_ARN =
-      'arn:aws:dynamodb:eu-west-1:1:table/two';
+    process.env.STORAGE2_AWS_RESOURCE_TYPE = 'dynamodb';
     process.env['STORAGE2_AWS_REGION'] = 'eu-west-1';
     process.env['STORAGE2_AWS_ROLE_ARN'] = 'arn:aws:iam::2:role/two';
 
@@ -99,15 +96,13 @@ describe('createDynamoDB', () => {
   });
 
   test('throws when multiple resources are connected without a prefix', () => {
-    process.env.STORAGE_AWS_RESOURCE_ARN =
-      'arn:aws:dynamodb:us-east-2:1:table/one';
-    process.env.STORAGE2_AWS_RESOURCE_ARN =
-      'arn:aws:dynamodb:us-east-2:1:table/two';
+    process.env.STORAGE_AWS_RESOURCE_TYPE = 'dynamodb';
+    process.env.STORAGE2_AWS_RESOURCE_TYPE = 'dynamodb';
     expect(() => createDynamoDB()).toThrow(/multiple DynamoDB resources/);
   });
 
   test('autodetects an unprefixed default connection', () => {
-    process.env.AWS_RESOURCE_ARN = 'arn:aws:dynamodb:us-east-2:1:table/default';
+    process.env.AWS_RESOURCE_TYPE = 'dynamodb';
     process.env.AWS_REGION = 'us-east-2';
     process.env.AWS_ROLE_ARN = 'arn:aws:iam::1:role/default';
 
@@ -121,12 +116,11 @@ describe('createDynamoDB', () => {
   });
 
   test('default + STORAGE2: bare call returns default, prefixed returns prefixed', () => {
-    process.env.AWS_RESOURCE_ARN = 'arn:aws:dynamodb:us-east-2:1:table/default';
+    process.env.AWS_RESOURCE_TYPE = 'dynamodb';
     process.env.AWS_REGION = 'us-east-2';
     process.env.AWS_ROLE_ARN = 'arn:aws:iam::1:role/default';
 
-    process.env.STORAGE2_AWS_RESOURCE_ARN =
-      'arn:aws:dynamodb:eu-west-1:1:table/second';
+    process.env.STORAGE2_AWS_RESOURCE_TYPE = 'dynamodb';
     process.env.STORAGE2_AWS_REGION = 'eu-west-1';
     process.env.STORAGE2_AWS_ROLE_ARN = 'arn:aws:iam::2:role/second';
 
@@ -161,8 +155,7 @@ describe('createDynamoDBDocument', () => {
   });
 
   test('wraps the base client via DynamoDBDocumentClient.from', () => {
-    process.env.STORAGE_AWS_RESOURCE_ARN =
-      'arn:aws:dynamodb:us-east-2:1:table/users';
+    process.env.STORAGE_AWS_RESOURCE_TYPE = 'dynamodb';
     process.env.STORAGE_AWS_REGION = 'us-east-2';
     process.env.STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::1:role/vercel-ddb';
 

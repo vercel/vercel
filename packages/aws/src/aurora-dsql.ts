@@ -7,9 +7,8 @@ import { envKey, requireEnv, resolvePrefix } from './internal/resolve-prefix';
  * Options for {@link createAuroraDSQL}.
  *
  * All fields are optional. With no arguments, the factory finds the connected
- * Aurora DSQL resource by scanning env for a `_AWS_RESOURCE_ARN` starting
- * with `arn:aws:dsql:`, then reads every other field from env vars under
- * that prefix.
+ * Aurora DSQL resource by scanning env for a `_AWS_RESOURCE_TYPE` equal to
+ * `dsql`, then reads every other field from env vars under that prefix.
  *
  * Any field on `pg`'s `PoolConfig` may also be passed and is forwarded to
  * the `Pool`.
@@ -17,7 +16,7 @@ import { envKey, requireEnv, resolvePrefix } from './internal/resolve-prefix';
 export interface CreateAuroraDSQLOptions extends Partial<PoolConfig> {
   /**
    * The env var prefix the Marketplace integration was linked under
-   * (e.g. `STORAGE2`). Defaults to autodetect via the resource ARN.
+   * (e.g. `STORAGE2`). Defaults to autodetect via the resource type.
    */
   prefix?: string;
   /** Overrides `<prefix>_PGHOST`. */
@@ -50,7 +49,7 @@ export function createAuroraDSQL(opts: CreateAuroraDSQLOptions = {}): Pool {
     (prefix ??= resolvePrefix({
       factory,
       service: 'Aurora DSQL',
-      arnPrefix: 'arn:aws:dsql:',
+      resourceType: 'dsql',
     }));
   const fromEnv = (suffix: string) => requireEnv(factory, getPrefix(), suffix);
 

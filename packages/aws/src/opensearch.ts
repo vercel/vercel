@@ -7,9 +7,8 @@ import { requireEnv, resolvePrefix } from './internal/resolve-prefix';
  * Options for {@link createOpenSearch}.
  *
  * All fields are optional. With no arguments, the factory finds the connected
- * OpenSearch resource by scanning env for a `_AWS_RESOURCE_ARN` starting
- * with `arn:aws:aoss:`, then reads every other field from env vars under
- * that prefix.
+ * OpenSearch resource by scanning env for a `_AWS_RESOURCE_TYPE` equal to
+ * `opensearch`, then reads every other field from env vars under that prefix.
  *
  * Any field on the underlying `ClientOptions` from
  * `@opensearch-project/opensearch` may also be passed and is forwarded to the
@@ -19,7 +18,7 @@ export interface CreateOpenSearchOptions extends Partial<ClientOptions> {
   /**
    * The env var prefix the Marketplace integration was linked under
    * (e.g. `STORAGE`, `STORAGE2`, or a custom name). Defaults to autodetect
-   * via the resource ARN — only required when multiple OpenSearch resources
+   * via the resource type — only required when multiple OpenSearch resources
    * are connected.
    */
   prefix?: string;
@@ -56,7 +55,7 @@ export function createOpenSearch(opts: CreateOpenSearchOptions = {}): Client {
       (prefix ??= resolvePrefix({
         factory,
         service: 'OpenSearch',
-        arnPrefix: 'arn:aws:aoss:',
+        resourceType: 'opensearch',
       })),
       suffix
     );

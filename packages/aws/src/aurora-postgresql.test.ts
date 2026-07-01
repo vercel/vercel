@@ -28,7 +28,7 @@ import { Signer } from '@aws-sdk/rds-signer';
 import { createAuroraPostgreSQL } from './aurora-postgresql';
 
 const KEYS = [
-  'AWS_RESOURCE_ARN',
+  'AWS_RESOURCE_TYPE',
   'AWS_REGION',
   'AWS_ROLE_ARN',
   'PGHOST',
@@ -36,7 +36,7 @@ const KEYS = [
   'PGUSER',
   'PGDATABASE',
   'PGSSLMODE',
-  'STORAGE_AWS_RESOURCE_ARN',
+  'STORAGE_AWS_RESOURCE_TYPE',
   'STORAGE_AWS_REGION',
   'STORAGE_AWS_ROLE_ARN',
   'STORAGE_PGHOST',
@@ -44,7 +44,7 @@ const KEYS = [
   'STORAGE_PGUSER',
   'STORAGE_PGDATABASE',
   'STORAGE_PGSSLMODE',
-  'STORAGE2_AWS_RESOURCE_ARN',
+  'STORAGE2_AWS_RESOURCE_TYPE',
   'STORAGE2_AWS_REGION',
   'STORAGE2_AWS_ROLE_ARN',
   'STORAGE2_PGHOST',
@@ -73,8 +73,7 @@ describe('createAuroraPostgreSQL', () => {
   });
 
   function setStorage() {
-    process.env.STORAGE_AWS_RESOURCE_ARN =
-      'arn:aws:rds:us-east-2:1:cluster:aurora-prod';
+    process.env.STORAGE_AWS_RESOURCE_TYPE = 'rds';
     process.env.STORAGE_AWS_REGION = 'us-east-2';
     process.env.STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::1:role/vercel-aurora';
     process.env.STORAGE_PGHOST =
@@ -107,8 +106,7 @@ describe('createAuroraPostgreSQL', () => {
 
   test('passes prefix to override autodetect', () => {
     setStorage();
-    process.env.STORAGE2_AWS_RESOURCE_ARN =
-      'arn:aws:rds:eu-west-1:1:cluster:second';
+    process.env.STORAGE2_AWS_RESOURCE_TYPE = 'rds';
 
     createAuroraPostgreSQL({ prefix: 'STORAGE' });
 
@@ -124,17 +122,15 @@ describe('createAuroraPostgreSQL', () => {
   });
 
   test('throws when multiple Aurora resources are connected without a prefix', () => {
-    process.env.STORAGE_AWS_RESOURCE_ARN =
-      'arn:aws:rds:us-east-2:1:cluster:one';
-    process.env.STORAGE2_AWS_RESOURCE_ARN =
-      'arn:aws:rds:us-east-2:1:cluster:two';
+    process.env.STORAGE_AWS_RESOURCE_TYPE = 'rds';
+    process.env.STORAGE2_AWS_RESOURCE_TYPE = 'rds';
     expect(() => createAuroraPostgreSQL()).toThrow(
       /multiple Aurora PostgreSQL resources/
     );
   });
 
   function setDefault() {
-    process.env.AWS_RESOURCE_ARN = 'arn:aws:rds:us-east-2:1:cluster:default';
+    process.env.AWS_RESOURCE_TYPE = 'rds';
     process.env.AWS_REGION = 'us-east-2';
     process.env.AWS_ROLE_ARN = 'arn:aws:iam::1:role/default';
     process.env.PGHOST = 'default.cluster.us-east-2.rds.amazonaws.com';
@@ -156,8 +152,7 @@ describe('createAuroraPostgreSQL', () => {
 
   test('default + STORAGE2: bare call returns default, prefixed returns prefixed', () => {
     setDefault();
-    process.env.STORAGE2_AWS_RESOURCE_ARN =
-      'arn:aws:rds:eu-west-1:1:cluster:second';
+    process.env.STORAGE2_AWS_RESOURCE_TYPE = 'rds';
     process.env.STORAGE2_AWS_REGION = 'eu-west-1';
     process.env.STORAGE2_AWS_ROLE_ARN = 'arn:aws:iam::2:role/second';
     process.env.STORAGE2_PGHOST = 'second.cluster.eu-west-1.rds.amazonaws.com';

@@ -411,7 +411,7 @@ Value for how many times a request will be made at most in case of retry.
 Defined in: [packages/aws/src/dynamodb.ts:28](https://github.com/vercel/vercel/blob/main/packages/aws/src/dynamodb.ts#L28)
 
 The env var prefix the Marketplace integration was linked under
-(e.g. `STORAGE3`). Defaults to autodetect via the resource ARN.
+(e.g. `STORAGE3`). Defaults to autodetect via the resource type.
 
 #### Inherited from
 

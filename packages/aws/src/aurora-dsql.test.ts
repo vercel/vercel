@@ -29,21 +29,21 @@ import { DsqlSigner } from '@aws-sdk/dsql-signer';
 import { createAuroraDSQL } from './aurora-dsql';
 
 const KEYS = [
-  'AWS_RESOURCE_ARN',
+  'AWS_RESOURCE_TYPE',
   'AWS_REGION',
   'AWS_ROLE_ARN',
   'PGHOST',
   'PGPORT',
   'PGUSER',
   'PGDATABASE',
-  'STORAGE_AWS_RESOURCE_ARN',
+  'STORAGE_AWS_RESOURCE_TYPE',
   'STORAGE_AWS_REGION',
   'STORAGE_AWS_ROLE_ARN',
   'STORAGE_PGHOST',
   'STORAGE_PGPORT',
   'STORAGE_PGUSER',
   'STORAGE_PGDATABASE',
-  'STORAGE2_AWS_RESOURCE_ARN',
+  'STORAGE2_AWS_RESOURCE_TYPE',
   'STORAGE2_AWS_REGION',
   'STORAGE2_AWS_ROLE_ARN',
   'STORAGE2_PGHOST',
@@ -71,8 +71,7 @@ describe('createAuroraDSQL', () => {
   });
 
   function setStorage() {
-    process.env.STORAGE_AWS_RESOURCE_ARN =
-      'arn:aws:dsql:us-east-2:1:cluster/abc';
+    process.env.STORAGE_AWS_RESOURCE_TYPE = 'dsql';
     process.env.STORAGE_AWS_REGION = 'us-east-2';
     process.env.STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::1:role/vercel-dsql';
     process.env.STORAGE_PGHOST = 'abc.dsql.us-east-2.on.aws';
@@ -110,8 +109,7 @@ describe('createAuroraDSQL', () => {
 
   test('passes prefix to override autodetect', () => {
     setStorage();
-    process.env.STORAGE2_AWS_RESOURCE_ARN =
-      'arn:aws:dsql:eu-west-1:1:cluster/def';
+    process.env.STORAGE2_AWS_RESOURCE_TYPE = 'dsql';
 
     createAuroraDSQL({ prefix: 'STORAGE' });
 
@@ -125,15 +123,13 @@ describe('createAuroraDSQL', () => {
   });
 
   test('throws when multiple DSQL resources are connected without a prefix', () => {
-    process.env.STORAGE_AWS_RESOURCE_ARN =
-      'arn:aws:dsql:us-east-2:1:cluster/abc';
-    process.env.STORAGE2_AWS_RESOURCE_ARN =
-      'arn:aws:dsql:us-east-2:1:cluster/def';
+    process.env.STORAGE_AWS_RESOURCE_TYPE = 'dsql';
+    process.env.STORAGE2_AWS_RESOURCE_TYPE = 'dsql';
     expect(() => createAuroraDSQL()).toThrow(/multiple Aurora DSQL resources/);
   });
 
   function setDefault() {
-    process.env.AWS_RESOURCE_ARN = 'arn:aws:dsql:us-east-2:1:cluster/default';
+    process.env.AWS_RESOURCE_TYPE = 'dsql';
     process.env.AWS_REGION = 'us-east-2';
     process.env.AWS_ROLE_ARN = 'arn:aws:iam::1:role/default';
     process.env.PGHOST = 'default.dsql.us-east-2.on.aws';
@@ -154,8 +150,7 @@ describe('createAuroraDSQL', () => {
 
   test('default + STORAGE2: bare call returns default, prefixed returns prefixed', () => {
     setDefault();
-    process.env.STORAGE2_AWS_RESOURCE_ARN =
-      'arn:aws:dsql:eu-west-1:1:cluster/second';
+    process.env.STORAGE2_AWS_RESOURCE_TYPE = 'dsql';
     process.env.STORAGE2_AWS_REGION = 'eu-west-1';
     process.env.STORAGE2_AWS_ROLE_ARN = 'arn:aws:iam::2:role/second';
     process.env.STORAGE2_PGHOST = 'second.dsql.eu-west-1.on.aws';

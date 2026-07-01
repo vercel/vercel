@@ -13,9 +13,8 @@ import { requireEnv, resolvePrefix } from './internal/resolve-prefix';
  * Options for {@link createDynamoDB}.
  *
  * All fields are optional. With no arguments, the factory finds the connected
- * DynamoDB resource by scanning env for a `_AWS_RESOURCE_ARN` starting with
- * `arn:aws:dynamodb:`, then reads every other field from env vars under that
- * prefix.
+ * DynamoDB resource by scanning env for a `_AWS_RESOURCE_TYPE` equal to
+ * `dynamodb`, then reads every other field from env vars under that prefix.
  *
  * Any field on `DynamoDBClientConfig` may also be passed and is forwarded
  * to the underlying client.
@@ -23,7 +22,7 @@ import { requireEnv, resolvePrefix } from './internal/resolve-prefix';
 export interface CreateDynamoDBOptions extends Partial<DynamoDBClientConfig> {
   /**
    * The env var prefix the Marketplace integration was linked under
-   * (e.g. `STORAGE3`). Defaults to autodetect via the resource ARN.
+   * (e.g. `STORAGE3`). Defaults to autodetect via the resource type.
    */
   prefix?: string;
   /** Overrides `<prefix>_AWS_REGION`. */
@@ -52,7 +51,7 @@ function resolveDynamoConfig(
     (prefix ??= resolvePrefix({
       factory,
       service: 'DynamoDB',
-      arnPrefix: 'arn:aws:dynamodb:',
+      resourceType: 'dynamodb',
     }));
   const fromEnv = (suffix: string) => requireEnv(factory, getPrefix(), suffix);
 
