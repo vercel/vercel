@@ -20,7 +20,7 @@ import { packageName } from '../../util/pkg-name';
 import type { VcrTelemetryClient } from '../../util/telemetry/commands/vcr';
 import { tagsSubcommand } from './command';
 import { resolveVcrScope } from './resolve-vcr-scope';
-import { formatBytes } from './format';
+import { formatBytes, formatDigest, formatRelativeTime } from './format';
 import {
   emitVcrArgParseError,
   handleVcrApiError,
@@ -30,9 +30,11 @@ import {
 interface Tag {
   tag: string;
   imageId: string;
+  manifestDigest: string;
   arch?: string;
   platform?: string;
   sizeInBytes: number;
+  createdAt: string;
   updatedAt: string;
 }
 
@@ -47,14 +49,18 @@ function printTags(list: TagList): void {
     return;
   }
 
-  const headers = ['Tag', 'Image ID', 'Arch', 'Size'].map(h => chalk.cyan(h));
+  const headers = ['Tag', 'Image ID', 'Digest', 'Arch', 'Size', 'Created'].map(
+    h => chalk.cyan(h)
+  );
   const rows = [
     headers,
     ...list.tags.map(tag => [
       chalk.bold(tag.tag),
       chalk.dim(tag.imageId),
+      chalk.dim(formatDigest(tag.manifestDigest)),
       tag.arch ?? '-',
       formatBytes(tag.sizeInBytes),
+      formatRelativeTime(tag.createdAt),
     ]),
   ];
 

@@ -20,19 +20,24 @@ import { packageName } from '../../../util/pkg-name';
 import type { VcrTelemetryClient } from '../../../util/telemetry/commands/vcr';
 import { imageLsSubcommand } from './command';
 import { resolveVcrScope } from '../resolve-vcr-scope';
-import { formatBytes } from '../format';
+import { formatBytes, formatDigest, formatRelativeTime } from '../format';
 import {
   emitVcrArgParseError,
   handleVcrApiError,
   repositoryImagesPath,
 } from '../util';
 
+type ImageStatus = 'ready' | 'preparing' | 'unoptimized' | null;
+
 interface Image {
   id: string;
   manifestDigest: string;
+  kind: 'index' | 'manifest';
   arch?: string;
   platform?: string;
   sizeInBytes: number;
+  status: ImageStatus;
+  createdAt: string;
   tags: string[];
 }
 
@@ -41,20 +46,50 @@ interface ImageList {
   nextCursor?: string;
 }
 
+function formatType(kind: Image['kind']): string {
+  return kind === 'index' ? 'Index' : 'Image';
+}
+
+function formatStatus(status: ImageStatus): string {
+  switch (status) {
+    case 'ready':
+      return 'Ready';
+    case 'preparing':
+      return 'Preparing';
+    case 'unoptimized':
+      return 'Ready (unoptimized)';
+    default:
+      return '-';
+  }
+}
+
 function printImages(list: ImageList): void {
   if (list.images.length === 0) {
     output.log('No images found.');
     return;
   }
 
-  const headers = ['Image ID', 'Tags', 'Arch', 'Size'].map(h => chalk.cyan(h));
+  const headers = [
+    'Image ID',
+    'Digest',
+    'Tags',
+    'Type',
+    'Status',
+    'Arch',
+    'Size',
+    'Created',
+  ].map(h => chalk.cyan(h));
   const rows = [
     headers,
     ...list.images.map(image => [
       chalk.bold(image.id),
+      chalk.dim(formatDigest(image.manifestDigest)),
       image.tags.length > 0 ? image.tags.join(', ') : chalk.dim('<none>'),
+      formatType(image.kind),
+      formatStatus(image.status),
       image.arch ?? '-',
       formatBytes(image.sizeInBytes),
+      formatRelativeTime(image.createdAt),
     ]),
   ];
 

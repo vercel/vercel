@@ -1,4 +1,3 @@
-import ms from 'ms';
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import table from '../../util/output/table';
@@ -17,6 +16,7 @@ import { AGENT_REASON } from '../../util/agent-output-constants';
 import type { VcrTelemetryClient } from '../../util/telemetry/commands/vcr';
 import { listSubcommand } from './command';
 import { resolveVcrScope } from './resolve-vcr-scope';
+import { formatRelativeTime } from './format';
 import {
   emitVcrArgParseError,
   handleVcrApiError,
@@ -36,14 +36,6 @@ interface RepositoryList {
   nextCursor?: string;
 }
 
-function relativeTime(iso: string): string {
-  const time = new Date(iso).getTime();
-  if (Number.isNaN(time)) {
-    return '-';
-  }
-  return `${ms(Date.now() - time)} ago`;
-}
-
 function printRepositories(list: RepositoryList): void {
   if (list.repositories.length === 0) {
     output.log('No repositories found.');
@@ -56,7 +48,7 @@ function printRepositories(list: RepositoryList): void {
     ...list.repositories.map(repo => [
       chalk.bold(repo.name),
       chalk.dim(repo.id),
-      relativeTime(repo.createdAt),
+      formatRelativeTime(repo.createdAt),
     ]),
   ];
 

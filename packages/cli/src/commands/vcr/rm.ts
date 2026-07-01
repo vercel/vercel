@@ -104,7 +104,7 @@ export default async function rm(
         status: 'error',
         reason: AGENT_REASON.CONFIRMATION_REQUIRED,
         message:
-          'Deleting a repository schedules it and all of its images for deletion. Re-run with --yes.',
+          'Deleting a repository deletes it and all of its images. Re-run with --yes.',
         next: [{ command: buildCommandWithYes(client.argv) }],
       },
       1
@@ -126,10 +126,10 @@ export default async function rm(
     await client.fetch(path, { method: 'DELETE' });
     if (fr.jsonOutput) {
       client.stdout.write(
-        `${JSON.stringify({ repository, scheduledForDeletion: true }, null, 2)}\n`
+        `${JSON.stringify({ repository, deleted: true }, null, 2)}\n`
       );
     } else {
-      output.success(`Repository ${repository} scheduled for deletion`);
+      output.success(`Repository ${repository} deleted`);
     }
     return 0;
   } catch (err) {

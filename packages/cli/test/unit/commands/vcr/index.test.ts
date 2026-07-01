@@ -205,7 +205,7 @@ describe('vcr', () => {
       const exitCode = await vcr(client);
       expect(exitCode).toBe(0);
       expect(method).toBe('DELETE');
-      expect(client.stderr.getFullOutput()).toContain('scheduled for deletion');
+      expect(client.stderr.getFullOutput()).toContain('deleted');
     });
 
     it('prompts for confirmation when --yes is omitted', async () => {
@@ -311,7 +311,7 @@ describe('vcr', () => {
       const exitCode = await vcr(client);
       expect(exitCode).toBe(0);
       expect(method).toBe('DELETE');
-      expect(client.stderr.getFullOutput()).toContain('scheduled for deletion');
+      expect(client.stderr.getFullOutput()).toContain('deleted');
     });
 
     it('errors on an unknown image subcommand', async () => {
