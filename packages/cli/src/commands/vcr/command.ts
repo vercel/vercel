@@ -115,6 +115,9 @@ export const removeSubcommand = {
   ],
 } as const;
 
+export const TAGS_SORT_BY_CHOICES = ['updatedAt', 'tag'] as const;
+export const TAGS_SORT_ORDER_CHOICES = ['asc', 'desc'] as const;
+
 export const tagsSubcommand = {
   name: 'tags',
   aliases: [],
@@ -134,7 +137,7 @@ export const tagsSubcommand = {
       deprecated: false,
       description: 'Field to sort tags by (default: updatedAt)',
       argument: 'FIELD',
-      choices: ['updatedAt', 'tag'],
+      choices: TAGS_SORT_BY_CHOICES,
     },
     {
       name: 'sort-order',
@@ -143,7 +146,7 @@ export const tagsSubcommand = {
       deprecated: false,
       description: 'Sort direction (default: desc)',
       argument: 'ORDER',
-      choices: ['asc', 'desc'],
+      choices: TAGS_SORT_ORDER_CHOICES,
     },
     limitOption,
     cursorOption,

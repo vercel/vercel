@@ -35,6 +35,34 @@ export function validateVcrJsonOutput(
 }
 
 /**
+ * Validates that a flag's value is one of a fixed set of choices. Returns an
+ * exit code to return immediately when invalid, or `undefined` when the
+ * value is valid or unset.
+ */
+export function validateVcrChoice<T extends string>(
+  client: Client,
+  flag: string,
+  value: string | undefined,
+  choices: readonly T[],
+  jsonOutput: boolean
+): number | undefined {
+  if (value === undefined || (choices as readonly string[]).includes(value)) {
+    return undefined;
+  }
+  const message = `Invalid value for ${flag}: "${value}". Must be one of: ${choices.join(', ')}.`;
+  outputAgentError(
+    client,
+    {
+      status: 'error',
+      reason: AGENT_REASON.INVALID_ARGUMENTS,
+      message,
+    },
+    1
+  );
+  return outputError(client, jsonOutput, 'INVALID_ARGUMENTS', message);
+}
+
+/**
  * Requires a `<repository>` positional argument. Returns an exit code to
  * return immediately when missing, or `undefined` when present.
  */

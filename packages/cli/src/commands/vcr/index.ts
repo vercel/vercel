@@ -85,7 +85,7 @@ export default async function vcr(client: Client): Promise<number> {
         printHelp(tagsSubcommand);
         return 2;
       case 'image': {
-        telemetry.trackCliFlagHelp('vcr', 'image');
+        telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         const nested = args[0];
         if (nested === 'ls' || nested === 'list') {
           printHelp(imageLsSubcommand);
@@ -126,7 +126,7 @@ export default async function vcr(client: Client): Promise<number> {
       telemetry.trackCliSubcommandTags(subcommandOriginal);
       return (await import('./tags')).default(client, args, telemetry);
     case 'image':
-      telemetry.trackCliSubcommandImage(args[0] ?? 'ls');
+      telemetry.trackCliSubcommandImage(subcommandOriginal);
       return (await import('./image')).default(client, args, telemetry);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));

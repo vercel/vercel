@@ -148,7 +148,21 @@ describe('vcr', () => {
       client.setArgv('vcr', 'inspect', 'my-app');
       const exitCode = await vcr(client);
       expect(exitCode).toBe(0);
-      expect(client.stdout.getFullOutput()).toContain('repo_1');
+      const out = client.stderr.getFullOutput();
+      expect(out).toContain('repo_1');
+      expect(out).not.toContain('{');
+    });
+
+    it('outputs JSON with --format json', async () => {
+      client.scenario.get('/v1/vcr/repository/my-app', (_req, res) => {
+        res.json({ repository: { id: 'repo_1', name: 'my-app' } });
+      });
+
+      client.setArgv('vcr', 'inspect', 'my-app', '--format', 'json');
+      const exitCode = await vcr(client);
+      expect(exitCode).toBe(0);
+      const parsed = JSON.parse(client.stdout.getFullOutput());
+      expect(parsed.id).toBe('repo_1');
     });
 
     it('errors when the repository argument is missing', async () => {
@@ -244,6 +258,24 @@ describe('vcr', () => {
       expect(out).toContain('latest');
       expect(out).toContain('img_1');
     });
+
+    it('rejects an invalid --sort-by value', async () => {
+      client.setArgv('vcr', 'tags', 'my-app', '--sort-by', 'bogus');
+      const exitCode = await vcr(client);
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Invalid value for --sort-by'
+      );
+    });
+
+    it('rejects an invalid --sort-order value', async () => {
+      client.setArgv('vcr', 'tags', 'my-app', '--sort-order', 'bogus');
+      const exitCode = await vcr(client);
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Invalid value for --sort-order'
+      );
+    });
   });
 
   describe('image', () => {
@@ -294,7 +326,32 @@ describe('vcr', () => {
       client.setArgv('vcr', 'image', 'inspect', 'my-app', 'img_1');
       const exitCode = await vcr(client);
       expect(exitCode).toBe(0);
-      expect(client.stdout.getFullOutput()).toContain('img_1');
+      const out = client.stderr.getFullOutput();
+      expect(out).toContain('img_1');
+      expect(out).not.toContain('{');
+    });
+
+    it('outputs JSON with --format json for image inspect', async () => {
+      client.scenario.get(
+        '/v1/vcr/repository/my-app/images/img_1',
+        (_req, res) => {
+          res.json({ image: { id: 'img_1', manifestDigest: 'sha256:abc' } });
+        }
+      );
+
+      client.setArgv(
+        'vcr',
+        'image',
+        'inspect',
+        'my-app',
+        'img_1',
+        '--format',
+        'json'
+      );
+      const exitCode = await vcr(client);
+      expect(exitCode).toBe(0);
+      const parsed = JSON.parse(client.stdout.getFullOutput());
+      expect(parsed.id).toBe('img_1');
     });
 
     it('deletes an image with --yes', async () => {
@@ -319,6 +376,30 @@ describe('vcr', () => {
       const exitCode = await vcr(client);
       expect(exitCode).toBe(1);
       expect(client.stderr.getFullOutput()).toContain('Unknown "vcr image"');
+    });
+
+    it('errors with a generic message when no image subcommand is given', async () => {
+      client.setArgv('vcr', 'image');
+      const exitCode = await vcr(client);
+      expect(exitCode).toBe(1);
+      const out = client.stderr.getFullOutput();
+      expect(out).not.toContain('undefined');
+      expect(out).toContain('Please specify a valid subcommand');
+    });
+
+    it('tracks which alias of "image" was used', async () => {
+      client.setArgv('vcr', 'images', 'ls', 'my-app');
+      client.scenario.get('/v1/vcr/repository/my-app/images', (_req, res) => {
+        res.json({ images: [] });
+      });
+      const exitCode = await vcr(client);
+      expect(exitCode).toBe(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:image',
+          value: 'images',
+        },
+      ]);
     });
   });
 

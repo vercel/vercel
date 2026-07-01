@@ -13,11 +13,16 @@ import {
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_REASON } from '../../util/agent-output-constants';
 import type { VcrTelemetryClient } from '../../util/telemetry/commands/vcr';
-import { tagsSubcommand } from './command';
+import {
+  tagsSubcommand,
+  TAGS_SORT_BY_CHOICES,
+  TAGS_SORT_ORDER_CHOICES,
+} from './command';
 import { resolveVcrScope } from './utils/resolve-vcr-scope';
 import { formatBytes, formatDigest, formatRelativeTime } from './utils/format';
 import {
   requireVcrRepository,
+  validateVcrChoice,
   validateVcrJsonOutput,
 } from './utils/validators';
 import { emitVcrArgParseError, handleVcrApiError } from './utils/errors';
@@ -145,6 +150,28 @@ export default async function tags(
       limitResult.code,
       limitResult.message
     );
+  }
+
+  const sortByError = validateVcrChoice(
+    client,
+    '--sort-by',
+    sortBy,
+    TAGS_SORT_BY_CHOICES,
+    fr.jsonOutput
+  );
+  if (typeof sortByError === 'number') {
+    return sortByError;
+  }
+
+  const sortOrderError = validateVcrChoice(
+    client,
+    '--sort-order',
+    sortOrder,
+    TAGS_SORT_ORDER_CHOICES,
+    fr.jsonOutput
+  );
+  if (typeof sortOrderError === 'number') {
+    return sortOrderError;
   }
 
   const scope = await resolveVcrScope(client, {

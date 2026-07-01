@@ -1,4 +1,5 @@
 import getSubcommand from '../../../util/get-subcommand';
+import getInvalidSubcommand from '../../../util/get-invalid-subcommand';
 import output from '../../../output-manager';
 import type Client from '../../../util/client';
 import {
@@ -22,12 +23,16 @@ export default async function image(
   const { subcommand, args } = getSubcommand(argv, IMAGE_CONFIG);
 
   if (subcommand == null) {
+    const message =
+      argv.length === 0
+        ? getInvalidSubcommand(IMAGE_CONFIG)
+        : `Unknown "vcr image" subcommand "${argv[0]}".`;
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: `Unknown "vcr image" subcommand "${argv[0]}".`,
+        message,
         next: [
           {
             command: buildCommandWithGlobalFlags(
@@ -40,9 +45,7 @@ export default async function image(
       },
       1
     );
-    output.error(
-      `Unknown "vcr image" subcommand "${argv[0]}". Run \`vercel vcr image --help\`.`
-    );
+    output.error(`${message} Run \`vercel vcr image --help\`.`);
     return 1;
   }
 

@@ -14,6 +14,29 @@ import {
 } from './utils/validators';
 import { emitVcrArgParseError, handleVcrApiError } from './utils/errors';
 import { repositoryPath } from './utils/paths';
+import { formatRelativeTime } from './utils/format';
+
+interface Repository {
+  id: string;
+  projectId: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function printRepository(repository: Repository): void {
+  output.print('\n');
+  output.print(`  ${chalk.cyan('Name')}\t\t${repository.name}\n`);
+  output.print(`  ${chalk.cyan('ID')}\t\t\t${repository.id}\n`);
+  output.print(`  ${chalk.cyan('Project ID')}\t\t${repository.projectId}\n`);
+  output.print(
+    `  ${chalk.cyan('Created')}\t\t${formatRelativeTime(repository.createdAt)}\n`
+  );
+  output.print(
+    `  ${chalk.cyan('Updated')}\t\t${formatRelativeTime(repository.updatedAt)}\n`
+  );
+  output.print('\n');
+}
 
 export default async function inspect(
   client: Client,
@@ -67,14 +90,12 @@ export default async function inspect(
   const path = repositoryPath(scope, repository);
   output.spinner('Fetching repository...');
   try {
-    const result = await client.fetch<Record<string, unknown>>(path);
+    const result = await client.fetch<{ repository: Repository }>(path);
     if (fr.jsonOutput) {
-      client.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      client.stdout.write(`${JSON.stringify(result.repository, null, 2)}\n`);
     } else {
       output.log(`${chalk.bold('Repository')} ${chalk.cyan(repository)}`);
-      client.stdout.write(
-        `${JSON.stringify(result.repository ?? result, null, 2)}\n`
-      );
+      printRepository(result.repository);
     }
     return 0;
   } catch (err) {
