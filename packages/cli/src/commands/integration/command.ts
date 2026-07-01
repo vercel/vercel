@@ -5,6 +5,7 @@ import {
   connectSubcommand,
   createThresholdSubcommand,
   disconnectSubcommand,
+  inspectSubcommand,
   removeSubcommand as resourceRemoveSubcommand,
 } from '../integration-resource/command';
 
@@ -649,6 +650,7 @@ export const resourceSubcommand = {
     disconnectSubcommand,
     resourceRemoveSubcommand,
     claimSubcommand,
+    inspectSubcommand,
   ],
   examples: [
     {
