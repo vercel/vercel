@@ -136,6 +136,12 @@ export async function detectAllFrameworks(workPath: string): Promise<string[]> {
  *   builders (or framework-tagged builds) were used by the build — e.g. the
  *   source looks like Hono but everything fell back to `@vercel/static`.
  */
+export type FrameworkMismatchResult =
+  | 'none-detected'
+  | 'match'
+  | 'configured-mismatch'
+  | 'unused-mismatch';
+
 export function warnIfFrameworkMismatch(options: {
   configuredFramework: string | null | undefined;
   detectedFrameworks: string[];
@@ -143,7 +149,7 @@ export function warnIfFrameworkMismatch(options: {
   usedBuilders?: string[];
   /** `config.framework` values of the builders that ran. */
   usedFrameworks?: (string | null | undefined)[];
-}): void {
+}): FrameworkMismatchResult {
   const {
     configuredFramework,
     detectedFrameworks,
@@ -155,7 +161,7 @@ export function warnIfFrameworkMismatch(options: {
     logDebug(
       'Framework cross-check: nothing detected from source; skipping validation'
     );
-    return;
+    return 'none-detected';
   }
 
   if (configuredFramework) {
@@ -163,7 +169,7 @@ export function warnIfFrameworkMismatch(options: {
       logDebug(
         `Framework cross-check: configured framework "${configuredFramework}" matches detected frameworks; no mismatch`
       );
-      return;
+      return 'match';
     }
 
     logDebug(
@@ -179,7 +185,7 @@ export function warnIfFrameworkMismatch(options: {
       'https://vercel.com/docs/project-configuration',
       'Learn More'
     );
-    return;
+    return 'configured-mismatch';
   }
 
   // No framework configured. Check whether the build actually used any of
@@ -205,7 +211,7 @@ export function warnIfFrameworkMismatch(options: {
         ', '
       )}]; no mismatch`
     );
-    return;
+    return 'match';
   }
 
   logDebug(
@@ -223,4 +229,5 @@ export function warnIfFrameworkMismatch(options: {
     'https://vercel.com/docs/project-configuration',
     'Learn More'
   );
+  return 'unused-mismatch';
 }

@@ -753,13 +753,21 @@ async function doBuild(
   // it is cheap; it must run before `detectBuilders` because that relies on
   // `projectSettings.framework`. The result is recorded in `builds.json`.
   const firstDeploymentFramework = await span
-    .child('vc.detectFirstDeploymentFramework')
-    .trace(() =>
-      detectFirstDeploymentFramework({
+    .child('vc.detectFirstDeploymentFramework', {
+      firstDeployment: String(process.env.VERCEL_FIRST_DEPLOYMENT === '1'),
+      configuredFramework: projectSettings.framework ?? undefined,
+    })
+    .trace(async s => {
+      const result = await detectFirstDeploymentFramework({
         workPath,
         projectSettings,
-      })
-    );
+      });
+      s.setAttributes({
+        detectedFramework: result?.slug,
+        detectedFrameworkVersion: result?.version,
+      });
+      return result;
+    });
   if (firstDeploymentFramework) {
     buildsJson.detectedFramework = firstDeploymentFramework;
   }
@@ -793,11 +801,27 @@ async function doBuild(
   // Kick off framework detection in the background so it overlaps with the
   // (expensive) builder work and doesn't slow down the build. The result is
   // awaited near the end of the build to cross-check the configured framework
-  // against what the source code actually looks like.
-  const detectedFrameworksPromise = detectAllFrameworks(workPath).catch(err => {
-    output.debug(`Framework cross-check detection failed: ${err}`);
-    return [] as string[];
-  });
+  // against what the source code actually looks like. The span measures the
+  // detection itself; because it runs concurrently with builders, its
+  // duration does not add to the build's critical path.
+  const detectedFrameworksPromise = span
+    .child('vc.detectAllFrameworks')
+    .trace(async s => {
+      try {
+        const slugs = await detectAllFrameworks(workPath);
+        s.setAttributes({
+          detectedFrameworks: slugs.join(',') || undefined,
+          detectedFrameworkCount: String(slugs.length),
+        });
+        return slugs;
+      } catch (err) {
+        output.debug(`Framework cross-check detection failed: ${err}`);
+        s.setAttributes({
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return [] as string[];
+      }
+    });
 
   const routesResult = getTransformedRoutes(localConfig);
   if (routesResult.error) {
@@ -2154,21 +2178,38 @@ async function doBuild(
   // project was actually built. This runs off the background detection kicked
   // off earlier, so it does not add latency to the build. Surface a warning
   // on mismatch.
-  const detectedFrameworks = await detectedFrameworksPromise;
-  const executedBuilders = Array.from(buildResults.keys());
-  warnIfFrameworkMismatch({
-    configuredFramework: projectSettings.framework,
-    detectedFrameworks,
-    usedBuilders: executedBuilders
+  await span.child('vc.frameworkCrossCheck').trace(async s => {
+    const detectedFrameworks = await detectedFrameworksPromise;
+    const executedBuilders = Array.from(buildResults.keys());
+    const usedBuilders = executedBuilders
       .map(b => b.use)
-      .filter((use): use is string => Boolean(use)),
-    usedFrameworks: executedBuilders.map(b => b.config?.framework),
+      .filter((use): use is string => Boolean(use));
+    const mismatchResult = warnIfFrameworkMismatch({
+      configuredFramework: projectSettings.framework,
+      detectedFrameworks,
+      usedBuilders,
+      usedFrameworks: executedBuilders.map(b => b.config?.framework),
+    });
+    s.setAttributes({
+      result: mismatchResult,
+      configuredFramework: projectSettings.framework ?? undefined,
+      detectedFrameworks: detectedFrameworks.join(',') || undefined,
+      usedBuilders: usedBuilders.join(',') || undefined,
+    });
   });
 
   // Validate that the build output we just wrote looks valid. This is a louder
   // signal that something is wrong beyond a framework mismatch.
-  const outputProblems = await validateBuildOutput(outputDir);
-  reportBuildOutputProblems(outputProblems);
+  await span.child('vc.validateBuildOutput').trace(async s => {
+    const outputProblems = await validateBuildOutput(outputDir);
+    s.setAttributes({
+      problemCount: String(outputProblems.length),
+      problems:
+        outputProblems.map(p => `${p.severity}: ${p.message}`).join('; ') ||
+        undefined,
+    });
+    reportBuildOutputProblems(outputProblems);
+  });
 
   collectSpan.stop();
 
