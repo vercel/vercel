@@ -648,7 +648,6 @@ const main = async () => {
   }
 
   const subcommandsWithoutToken = [
-    'agent',
     'login',
     'logout',
     'help',
@@ -659,6 +658,11 @@ const main = async () => {
     'upgrade',
     'skills',
   ];
+
+  // `agent init` works offline; the Agent Runs subcommands hit the API.
+  if (subcommand === 'agent' && (!subSubCommand || subSubCommand === 'init')) {
+    subcommandsWithoutToken.push('agent');
+  }
 
   if (process.env.FF_GUIDANCE_MODE) {
     subcommandsWithoutToken.push('guidance');

@@ -1,0 +1,137 @@
+import type Client from '../../util/client';
+import output from '../../output-manager';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import table from '../../util/output/table';
+import { runsSubcommand } from './command';
+import {
+  fetchAgentRuns,
+  handleAgentRunsApiError,
+  invalidArguments,
+  resolveAgentRunsScope,
+} from './agent-runs-api';
+import {
+  asArray,
+  formatAge,
+  formatCount,
+  formatDurationMs,
+  readNumber,
+  readRecord,
+  runDurationMs,
+  runId,
+  runModel,
+  runStartedAtMs,
+  runStatus,
+  runTotalTokens,
+  runTrigger,
+} from './format';
+import { AgentRunsTelemetryClient } from '../../util/telemetry/commands/agent/runs';
+
+export default async function runs(client: Client): Promise<number> {
+  const telemetry = new AgentRunsTelemetryClient({
+    opts: { store: client.telemetryEventStore },
+  });
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(runsSubcommand.options);
+  try {
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
+
+  const {
+    '--project': projectFlag,
+    '--environment': environment,
+    '--since': since,
+    '--until': until,
+    '--search': search,
+    '--page': page,
+    '--limit': limit,
+    '--json': json,
+    '--scope': scopeFlag,
+  } = parsedArgs.flags;
+
+  telemetry.trackCliOptionProject(projectFlag);
+  telemetry.trackCliOptionEnvironment(environment);
+  telemetry.trackCliOptionSince(since);
+  telemetry.trackCliOptionUntil(until);
+  telemetry.trackCliOptionSearch(search);
+  telemetry.trackCliOptionPage(page);
+  telemetry.trackCliOptionLimit(limit);
+  telemetry.trackCliFlagJson(json);
+
+  if (until && !since) {
+    return invalidArguments(client, '`--until` requires `--since`.');
+  }
+
+  const scope = await resolveAgentRunsScope(client, {
+    scopeFlag,
+    projectFlag,
+    requireProject: true,
+  });
+  if (!scope.ok) {
+    return scope.exitCode;
+  }
+
+  output.spinner('Fetching Agent Runs…');
+  let data;
+  try {
+    data = await fetchAgentRuns(client, {
+      teamId: scope.teamId,
+      projectId: scope.projectId,
+      environment,
+      since,
+      until,
+      page,
+      pageSize: limit,
+      search,
+    });
+  } catch (err) {
+    output.stopSpinner();
+    handleAgentRunsApiError(client, err);
+    return 1;
+  }
+  output.stopSpinner();
+
+  if (json) {
+    client.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
+    return 0;
+  }
+
+  const runList = asArray(data.runs);
+  if (runList.length === 0) {
+    if (search || since) {
+      output.log('No Agent Runs match the current filters.');
+    } else {
+      output.log('No Agent Runs found.');
+    }
+    return 0;
+  }
+
+  const rows = [
+    ['Run ID', 'Status', 'Trigger', 'Model', 'Tokens', 'Duration', 'Age'],
+    ...runList.map(run => [
+      runId(run),
+      runStatus(run),
+      runTrigger(run),
+      runModel(run),
+      formatCount(runTotalTokens(run)),
+      formatDurationMs(runDurationMs(run)),
+      formatAge(runStartedAtMs(run)),
+    ]),
+  ];
+  client.stdout.write(`${table(rows)}\n`);
+
+  const pagination = readRecord(data, 'pagination');
+  const total = readNumber(pagination, 'total', 'totalCount');
+  if (total !== undefined && total > runList.length) {
+    output.log(
+      `Showing ${runList.length} of ${total} Agent Runs. Use --page and --limit to paginate.`
+    );
+  }
+  output.log('Run `vercel agent inspect <runId>` for run details.');
+  return 0;
+}

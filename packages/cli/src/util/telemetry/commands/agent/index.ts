@@ -6,18 +6,38 @@ export class AgentTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof agentCommand>
 {
-  trackCliArgumentInit(value: string | undefined) {
-    if (value) {
-      this.trackCliArgument({
-        arg: 'init',
-        value,
-      });
-    }
+  trackCliSubcommandInit(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'init',
+      value: actual,
+    });
   }
 
-  trackCliFlagYes(value: boolean | undefined) {
-    if (value) {
-      this.trackCliFlag('yes');
-    }
+  trackCliSubcommandRuns(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'runs',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandInspect(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'inspect',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandTrace(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'trace',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandProjects(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'projects',
+      value: actual,
+    });
   }
 }
