@@ -149,4 +149,31 @@ describe('vc.js managed store redirect', () => {
 
     await expect(runVc(dir, storeDir)).rejects.toMatchObject({ code: 42 });
   });
+
+  it('prints a damaged-store hint when the store version dies immediately', async () => {
+    const dir = await setupInstalledCli();
+    const storeDir = join(dir, 'store');
+    // Simulates a store version with a broken dist (e.g. mangled
+    // node_modules): exits instantly with a non-0, non-1 code.
+    await seedStore(storeDir, '2.0.0', {
+      entrypointBody: 'process.exit(7);\n',
+    });
+
+    const err = await runVc(dir, storeDir).catch(e => e);
+    expect(err.code).toBe(7);
+    expect(err.stderr).toContain('may be damaged');
+    expect(err.stderr).toContain('VERCEL_CLI_STORE=0');
+  });
+
+  it('does not print the hint for normal CLI failures (exit code 1)', async () => {
+    const dir = await setupInstalledCli();
+    const storeDir = join(dir, 'store');
+    await seedStore(storeDir, '2.0.0', {
+      entrypointBody: 'process.exit(1);\n',
+    });
+
+    const err = await runVc(dir, storeDir).catch(e => e);
+    expect(err.code).toBe(1);
+    expect(err.stderr ?? '').not.toContain('may be damaged');
+  });
 });

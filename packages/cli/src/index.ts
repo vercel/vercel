@@ -1359,6 +1359,15 @@ if (SHOULD_CHECK_FOR_UPDATES && !isNativeBinaryInstall()) {
 // requiring an explicit `vc upgrade`. Rate-limited to one attempt per
 // version per day; the pointer is monotonic so a slow seed can never undo
 // a newer upgrade. Fire-and-forget: failures only mean no seeding.
+if (process.env.VERCEL_CLI_STORE === '1') {
+  // Surface store involvement in debug output so bug reports can always
+  // answer "was the managed store in play, and which version ran?"
+  const redirected = process.env.VERCEL_CLI_STORE_REDIRECTED === '1';
+  output.debug(
+    `CLI store: enabled; running v${pkg.version}${redirected ? ' (redirected from store)' : ' (invoked install)'}`
+  );
+}
+
 if (
   process.env.VERCEL_CLI_STORE === '1' &&
   !isNativeBinaryInstall() &&

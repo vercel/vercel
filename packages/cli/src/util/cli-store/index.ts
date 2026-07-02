@@ -276,19 +276,69 @@ function installRuntimeDependencies(stagingDir: string): void {
   // (same fix as turborepo's launcher).
   const env = { ...process.env, npm_config_global: undefined };
 
-  execFileSync(
-    process.platform === 'win32' ? 'npm.cmd' : 'npm',
-    [
-      'install',
-      '--omit=dev',
-      '--ignore-scripts',
-      '--no-audit',
-      '--no-fund',
-      '--loglevel=error',
-      '--progress=false',
-    ],
-    { cwd: stagingDir, stdio: 'pipe', windowsHide: true, env }
-  );
+  try {
+    execFileSync(
+      process.platform === 'win32' ? 'npm.cmd' : 'npm',
+      [
+        'install',
+        '--omit=dev',
+        '--ignore-scripts',
+        '--no-audit',
+        '--no-fund',
+        '--loglevel=error',
+        '--progress=false',
+      ],
+      { cwd: stagingDir, stdio: 'pipe', windowsHide: true, env }
+    );
+  } catch (err) {
+    throw new Error(describeDependencyInstallError(err));
+  }
+}
+
+/**
+ * Translates common npm failures from the contained dependency install into
+ * actionable messages instead of raw npm stderr.
+ */
+function describeDependencyInstallError(err: unknown): string {
+  const stderr =
+    err && typeof err === 'object' && 'stderr' in err
+      ? String((err as { stderr: unknown }).stderr ?? '')
+      : '';
+  const message = err instanceof Error ? err.message : String(err);
+
+  if (
+    err &&
+    typeof err === 'object' &&
+    'code' in err &&
+    err.code === 'ENOENT'
+  ) {
+    return (
+      'Could not install the CLI\u2019s dependencies: npm was not found on your PATH. ' +
+      'Install npm (it ships with Node.js) and try again.'
+    );
+  }
+
+  if (/ETARGET|minimum.?release.?age|with a date before/i.test(stderr)) {
+    return (
+      'Could not install the CLI\u2019s dependencies: your npm minimum release age ' +
+      'policy is delaying a recently published package. Retry later, or override ' +
+      'for this upgrade with: npm_config_min_release_age=0 vercel upgrade'
+    );
+  }
+
+  if (
+    /E(AI_AGAIN|NOTFOUND|CONNREFUSED|TIMEDOUT)|network|fetch failed/i.test(
+      stderr + message
+    )
+  ) {
+    return (
+      'Could not install the CLI\u2019s dependencies: a network error occurred while ' +
+      'contacting the npm registry. Check your connection or proxy settings and retry.'
+    );
+  }
+
+  const detail = stderr.trim().split('\n').slice(0, 3).join('\n');
+  return `Could not install the CLI\u2019s dependencies.${detail ? `\n${detail}` : ''}`;
 }
 
 /**

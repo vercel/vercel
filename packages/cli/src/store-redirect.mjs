@@ -72,6 +72,7 @@ export async function redirectToStoreIfNewer() {
     return; // pointer names a missing version — fall through
   }
 
+  const startedAt = Date.now();
   const child = spawn(
     process.execPath,
     [entrypoint, ...process.argv.slice(2)],
@@ -80,7 +81,10 @@ export async function redirectToStoreIfNewer() {
       windowsHide: true,
       env: {
         ...process.env,
-        // Loop guard: the store version must not redirect again.
+        // Loop guard: the store version must not redirect again. Also acts
+        // as a manual bypass and prevents infinite re-exec if the store's
+        // contents ever disagree with the pointer (e.g. a version dir whose
+        // files report a lower version than the pointer claims).
         VERCEL_CLI_STORE_REDIRECTED: '1',
       },
     }
@@ -100,6 +104,20 @@ export async function redirectToStoreIfNewer() {
 
   if (code === undefined) {
     return; // spawn failed — fall through to running the invoked version
+  }
+
+  // A store version that dies almost immediately with an unusual exit code
+  // suggests a damaged store (e.g. a pruned or corrupted node_modules)
+  // rather than a normal CLI error. Leave a breadcrumb so the user is not
+  // stuck with every command failing identically and no way to know why.
+  // Exit code 1 is excluded: it is the CLI's normal failure code (auth
+  // errors, validation errors, etc.) and would false-positive constantly.
+  if (code !== 0 && code !== 1 && Date.now() - startedAt < 2000) {
+    console.error(
+      `vercel: the managed CLI version at ${entrypoint} exited immediately ` +
+        `with code ${code}. If this persists, the store may be damaged — ` +
+        `delete ${root} to reset it, or set VERCEL_CLI_STORE=0 to bypass.`
+    );
   }
   process.exit(code);
 }
