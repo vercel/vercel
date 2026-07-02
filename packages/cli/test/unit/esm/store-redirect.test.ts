@@ -176,4 +176,16 @@ describe('vc.js managed store redirect', () => {
     expect(err.code).toBe(1);
     expect(err.stderr ?? '').not.toContain('may be damaged');
   });
+
+  it('does not print the hint for usage errors (exit code 2)', async () => {
+    const dir = await setupInstalledCli();
+    const storeDir = join(dir, 'store');
+    await seedStore(storeDir, '2.0.0', {
+      entrypointBody: 'process.exit(2);\n',
+    });
+
+    const err = await runVc(dir, storeDir).catch(e => e);
+    expect(err.code).toBe(2);
+    expect(err.stderr ?? '').not.toContain('may be damaged');
+  });
 });

@@ -110,9 +110,12 @@ export async function redirectToStoreIfNewer() {
   // suggests a damaged store (e.g. a pruned or corrupted node_modules)
   // rather than a normal CLI error. Leave a breadcrumb so the user is not
   // stuck with every command failing identically and no way to know why.
-  // Exit code 1 is excluded: it is the CLI's normal failure code (auth
-  // errors, validation errors, etc.) and would false-positive constantly.
-  if (code !== 0 && code !== 1 && Date.now() - startedAt < 2000) {
+  // Excluded codes: 1 is the CLI's normal failure code (auth/validation
+  // errors — and also Node's uncaught-exception code, so module-load
+  // crashes are indistinguishable from ordinary errors and deliberately
+  // not flagged); 2 is the CLI's usage-error code (e.g. unknown flags),
+  // which exits fast by design. This hint is best-effort, not a detector.
+  if (code !== 0 && code !== 1 && code !== 2 && Date.now() - startedAt < 2000) {
     console.error(
       `vercel: the managed CLI version at ${entrypoint} exited immediately ` +
         `with code ${code}. If this persists, the store may be damaged — ` +
