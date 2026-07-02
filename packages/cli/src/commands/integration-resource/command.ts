@@ -282,17 +282,17 @@ export const inspectSubcommand = {
     {
       name: 'Show live details and status for a resource',
       value: [
-        `${packageName} integration-resource inspect <resource>`,
-        `${packageName} integration-resource inspect my-acme-resource`,
+        `${packageName} integration resource inspect <resource>`,
+        `${packageName} integration resource inspect my-acme-resource`,
       ],
     },
     {
       name: 'Show live status for a resource (alias)',
-      value: `${packageName} integration-resource status my-acme-resource`,
+      value: `${packageName} integration resource status my-acme-resource`,
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} integration-resource inspect my-acme-resource --format=json`,
+      value: `${packageName} integration resource inspect my-acme-resource --format=json`,
     },
   ],
 } as const;
