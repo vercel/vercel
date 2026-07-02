@@ -40,7 +40,7 @@ jobs:
           node-version: 24
 
       - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0
+        uses: dtolnay/rust-toolchain@a75363d06101555fc97c6c7e1e65670b99104d98 # 1.96.1
         with:
           targets: wasm32-wasip2
 

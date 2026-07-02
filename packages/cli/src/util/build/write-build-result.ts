@@ -38,6 +38,7 @@ import {
   isExperimentalService,
   isExperimentalServiceV2,
   isExternalSymlink,
+  isSymbolicLink,
 } from '@vercel/build-utils';
 import { getInternalServiceFunctionPath } from '@vercel/fs-detectors';
 import pipe from 'promisepipe';
@@ -1049,25 +1050,41 @@ export function filesWithoutFsRefs(
   sharedDest?: string,
   standalone?: boolean
 ): { files: Files; filePathMap?: Record<string, string>; shared?: Files } {
+  // When the build is anchored at the true repo root, traced keys already sit
+  // inside the function, so write files (and package-manager symlinks) directly
+  // instead of skipping symlinks / re-anchoring via `filePathMap`.
+  const repoRootResolved = process.env.VERCEL_RESOLVE_ROOT_DIRECTORY === '1';
+  // Directory symlinks whose descendants must not be materialized separately:
+  // `download()` would write the descendants concurrently and could create a
+  // real directory at the symlink's path before the symlink itself is written
+  // (EEXIST -> readlink on a dir -> EINVAL). Only the symlink is kept; its
+  // target still points at the real files elsewhere in the function.
+  const symlinkDirs =
+    repoRootResolved && standalone && sharedDest
+      ? Object.entries(files)
+          .filter(([, f]) => f.type === 'FileFsRef' && isSymbolicLink(f.mode))
+          .map(([p]) => `${normalizePath(p)}/`)
+      : [];
   let filePathMap: Record<string, string> | undefined;
   const out: Files = {};
   const shared: Files = {};
   for (const [path, file] of Object.entries(files)) {
     if (file.type === 'FileFsRef') {
       if (!filePathMap) filePathMap = {};
-      if (standalone && sharedDest) {
-        // pnpm and other package managers create symlinks in node_modules that
-        // point outside the app directory (e.g. ../../node_modules/.pnpm/...).
-        // These targets are rejected during prebuilt deploys, so skip them.
-        // The traced dependency files are included at their logical paths.
+      if (standalone && sharedDest && repoRootResolved) {
+        // Keep symlinks so bare imports resolve at runtime, but drop any entry
+        // nested under a symlink (the symlink's target holds the real files).
+        const normalized = normalizePath(path);
+        if (symlinkDirs.some(prefix => normalized.startsWith(prefix))) {
+          continue;
+        }
+        out[normalized] = file;
+      } else if (standalone && sharedDest) {
+        // Skip symlinks pointing outside the app (rejected on deploy) and
+        // re-anchor escaping keys into the function via `filePathMap`/`shared`.
         if (isExternalSymlink(file)) {
           continue;
         }
-        // A standalone function must be self-contained, so any remaining file
-        // whose key escapes the function root (e.g. `../../node_modules/...`,
-        // produced when building from a monorepo subdirectory) is re-anchored
-        // inside the function. The shared bytes are placed under the same
-        // anchored key so the recorded `filePathMap` value points at them.
         const funcPath = stripParentSegments(path);
         shared[funcPath] = file;
         filePathMap[funcPath] = normalizePath(
