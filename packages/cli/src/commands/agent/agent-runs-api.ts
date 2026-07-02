@@ -118,16 +118,24 @@ export async function resolveAgentRunsScope(
   }
 
   if (linkedProject.status === 'linked') {
-    const teamName = flagScope ?? linkedProject.org.slug;
+    const { org, project } = linkedProject;
+    if (flagScope && flagScope !== org.id && flagScope !== org.slug) {
+      return {
+        ok: false,
+        exitCode: invalidArguments(
+          client,
+          `\`--scope ${flagScope}\` doesn't match the linked project's team. Pass \`--project <name>\` to query a project in that team.`
+        ),
+      };
+    }
+    const teamName = flagScope ?? org.slug;
     const projectName = requireProject
-      ? (flagProject ?? linkedProject.project.name)
+      ? (flagProject ?? project.name)
       : flagProject;
     return {
       ok: true,
-      teamId: flagScope ?? linkedProject.org.id,
-      projectId: requireProject
-        ? (flagProject ?? linkedProject.project.id)
-        : flagProject,
+      teamId: flagScope ?? org.id,
+      projectId: requireProject ? (flagProject ?? project.id) : flagProject,
       contextName: projectName ? `${teamName}/${projectName}` : teamName,
     };
   }

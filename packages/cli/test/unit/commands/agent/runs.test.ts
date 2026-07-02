@@ -156,6 +156,34 @@ describe('agent runs', () => {
     });
   });
 
+  it('errors when --scope points at a different team than the linked project', async () => {
+    useLinkedProject();
+    client.setArgv('agent', 'runs', '--scope', 'other-team');
+    const exitCode = await agent(client);
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      "doesn't match the linked project's team"
+    );
+  });
+
+  it('uses the linked project when --scope matches the linked team', async () => {
+    useLinkedProject();
+    let receivedQuery: Record<string, unknown> | undefined;
+    client.scenario.get('/api/observability/agent-runs', (req, res) => {
+      receivedQuery = req.query;
+      res.json({ runs: [] });
+    });
+
+    client.setArgv('agent', 'runs', '--scope', 'my-team');
+    const exitCode = await agent(client);
+
+    expect(exitCode).toBe(0);
+    expect(receivedQuery).toMatchObject({
+      teamSlug: 'my-team',
+      project: 'prj_test',
+    });
+  });
+
   it('errors when --until is used without --since', async () => {
     useLinkedProject();
     client.setArgv('agent', 'runs', '--until', '1h');
