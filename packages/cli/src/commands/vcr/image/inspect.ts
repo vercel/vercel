@@ -17,11 +17,11 @@ import { imagePath, repositoryPath } from '../utils/paths';
 import {
   formatBytes,
   formatImageReference,
+  formatImageStatus,
   formatRelativeTime,
 } from '../utils/format';
+import type { VcrImageStatus } from '../utils/format';
 import type { VcrScope } from '../utils/resolve-vcr-scope';
-
-type ImageStatus = 'ready' | 'preparing' | 'unoptimized' | null;
 
 interface Image {
   id: string;
@@ -30,26 +30,13 @@ interface Image {
   arch?: string;
   platform?: string;
   sizeInBytes: number;
-  status: ImageStatus;
+  status: VcrImageStatus;
   createdAt: string;
   tags: string[];
 }
 
 interface Repository {
   name: string;
-}
-
-function formatStatus(status: ImageStatus): string {
-  switch (status) {
-    case 'ready':
-      return 'Ready';
-    case 'preparing':
-      return 'Preparing';
-    case 'unoptimized':
-      return 'Ready (unoptimized)';
-    default:
-      return '-';
-  }
 }
 
 function printImage(
@@ -74,7 +61,9 @@ function printImage(
   output.print(
     `  ${chalk.cyan('Size')}\t\t\t${formatBytes(image.sizeInBytes)}\n`
   );
-  output.print(`  ${chalk.cyan('Status')}\t\t${formatStatus(image.status)}\n`);
+  output.print(
+    `  ${chalk.cyan('Status')}\t\t${formatImageStatus(image.status)}\n`
+  );
   output.print(
     `  ${chalk.cyan('Created')}\t\t${formatRelativeTime(image.createdAt)}\n`
   );

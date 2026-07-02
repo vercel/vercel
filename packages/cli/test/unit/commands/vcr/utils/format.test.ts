@@ -3,6 +3,7 @@ import {
   formatBytes,
   formatDigest,
   formatImageReference,
+  formatImageStatus,
   formatRelativeTime,
 } from '../../../../../src/commands/vcr/utils/format';
 
@@ -45,6 +46,18 @@ describe('formatDigest', () => {
     expect(formatDigest(null)).toBe('-');
     expect(formatDigest(undefined)).toBe('-');
     expect(formatDigest('')).toBe('-');
+  });
+});
+
+describe('formatImageStatus', () => {
+  it('maps known statuses to human-readable labels', () => {
+    expect(formatImageStatus('ready')).toBe('Ready');
+    expect(formatImageStatus('preparing')).toBe('Preparing');
+    expect(formatImageStatus('unoptimized')).toBe('Ready (unoptimized)');
+  });
+
+  it('returns a dash for null', () => {
+    expect(formatImageStatus(null)).toBe('-');
   });
 });
 

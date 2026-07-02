@@ -15,15 +15,19 @@ import { AGENT_REASON } from '../../../util/agent-output-constants';
 import type { VcrTelemetryClient } from '../../../util/telemetry/commands/vcr';
 import { imageLsSubcommand } from './command';
 import { resolveVcrScope } from '../utils/resolve-vcr-scope';
-import { formatBytes, formatDigest, formatRelativeTime } from '../utils/format';
+import {
+  formatBytes,
+  formatDigest,
+  formatImageStatus,
+  formatRelativeTime,
+} from '../utils/format';
+import type { VcrImageStatus } from '../utils/format';
 import {
   requireVcrRepository,
   validateVcrJsonOutput,
 } from '../utils/validators';
 import { emitVcrArgParseError, handleVcrApiError } from '../utils/errors';
 import { repositoryImagesPath } from '../utils/paths';
-
-type ImageStatus = 'ready' | 'preparing' | 'unoptimized' | null;
 
 interface Image {
   id: string;
@@ -32,7 +36,7 @@ interface Image {
   arch?: string;
   platform?: string;
   sizeInBytes: number;
-  status: ImageStatus;
+  status: VcrImageStatus;
   createdAt: string;
   tags: string[];
 }
@@ -44,19 +48,6 @@ interface ImageList {
 
 function formatType(kind: Image['kind']): string {
   return kind === 'index' ? 'Index' : 'Image';
-}
-
-function formatStatus(status: ImageStatus): string {
-  switch (status) {
-    case 'ready':
-      return 'Ready';
-    case 'preparing':
-      return 'Preparing';
-    case 'unoptimized':
-      return 'Ready (unoptimized)';
-    default:
-      return '-';
-  }
 }
 
 function printImages(list: ImageList): void {
@@ -82,7 +73,7 @@ function printImages(list: ImageList): void {
       chalk.dim(formatDigest(image.manifestDigest)),
       image.tags.length > 0 ? image.tags.join(', ') : chalk.dim('<none>'),
       formatType(image.kind),
-      formatStatus(image.status),
+      formatImageStatus(image.status),
       image.arch ?? '-',
       formatBytes(image.sizeInBytes),
       formatRelativeTime(image.createdAt),

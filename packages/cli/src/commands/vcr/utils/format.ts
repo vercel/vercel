@@ -23,6 +23,21 @@ export function formatDigest(digest: string | null | undefined): string {
   return digest.replace(/^sha256:/, '').slice(0, 12);
 }
 
+export type VcrImageStatus = 'ready' | 'preparing' | 'unoptimized' | null;
+
+export function formatImageStatus(status: VcrImageStatus): string {
+  switch (status) {
+    case 'ready':
+      return 'Ready';
+    case 'preparing':
+      return 'Preparing';
+    case 'unoptimized':
+      return 'Ready (unoptimized)';
+    default:
+      return '-';
+  }
+}
+
 export const VCR_REGISTRY = 'vcr.vercel.com';
 
 export function formatImageReference(

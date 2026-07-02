@@ -17,11 +17,11 @@ import { repositoryPath, repositoryTagPath } from '../utils/paths';
 import {
   formatBytes,
   formatImageReference,
+  formatImageStatus,
   formatRelativeTime,
 } from '../utils/format';
+import type { VcrImageStatus } from '../utils/format';
 import type { VcrScope } from '../utils/resolve-vcr-scope';
-
-type ImageStatus = 'ready' | 'preparing' | 'unoptimized' | null;
 
 interface Tag {
   tag: string;
@@ -31,7 +31,7 @@ interface Tag {
   arch?: string;
   platform?: string;
   pushedBy?: string;
-  status: ImageStatus;
+  status: VcrImageStatus;
   sizeInBytes: number;
   createdAt: string;
   updatedAt: string;
@@ -39,19 +39,6 @@ interface Tag {
 
 interface Repository {
   name: string;
-}
-
-function formatStatus(status: ImageStatus): string {
-  switch (status) {
-    case 'ready':
-      return 'Ready';
-    case 'preparing':
-      return 'Preparing';
-    case 'unoptimized':
-      return 'Ready (unoptimized)';
-    default:
-      return '-';
-  }
 }
 
 function printTag(tag: Tag, scope: VcrScope, repository: Repository): void {
@@ -72,7 +59,9 @@ function printTag(tag: Tag, scope: VcrScope, repository: Repository): void {
   output.print(
     `  ${chalk.cyan('Size')}\t\t\t${formatBytes(tag.sizeInBytes)}\n`
   );
-  output.print(`  ${chalk.cyan('Status')}\t\t${formatStatus(tag.status)}\n`);
+  output.print(
+    `  ${chalk.cyan('Status')}\t\t${formatImageStatus(tag.status)}\n`
+  );
   output.print(
     `  ${chalk.cyan('Created')}\t\t${formatRelativeTime(tag.createdAt)}\n`
   );
