@@ -19,7 +19,7 @@ import {
   toTag,
 } from '../util';
 import type { BuildPushParams, ContainerEngine } from './types';
-import { TARGET_PLATFORM, buildArgFlags } from './types';
+import { TARGET_PLATFORM, buildArgFlags, buildSecretFlags } from './types';
 
 async function runBuildah(
   args: string[],
@@ -140,6 +140,7 @@ export const buildahEngine: ContainerEngine = {
       '--network',
       'host',
       ...buildArgFlags(params),
+      ...buildSecretFlags(params),
       '-t',
       params.imageRef,
       '-f',

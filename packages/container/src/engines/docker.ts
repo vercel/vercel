@@ -16,7 +16,7 @@ import {
 } from '../util';
 import { selectStorageDriver } from '../storage-driver';
 import type { BuildPushParams, ContainerEngine } from './types';
-import { TARGET_PLATFORM, buildArgFlags } from './types';
+import { TARGET_PLATFORM, buildArgFlags, buildSecretFlags } from './types';
 
 /** Run `docker` with the given args, logging the exact invocation for debugging. */
 function runDocker(
@@ -293,6 +293,7 @@ export const dockerEngine: ContainerEngine = {
       '--platform',
       TARGET_PLATFORM,
       ...buildArgFlags(params),
+      ...buildSecretFlags(params),
       '-t',
       params.imageRef,
       '-f',
