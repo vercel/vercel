@@ -6,13 +6,13 @@ export interface App {
 }
 
 export function isAppPrincipalEnabled() {
-  return !!process.env['APP_PRINICPAL_ENABLED'];
+  return !!process.env['APP_PRINCIPAL_ENABLED'];
 }
 
 export function resolveAppFromToken(
   token: TokenIntrospectionResponse
 ): App | null {
-  if (!token.client_id) {
+  if (!token.active || !token.client_id) {
     return null;
   }
 
