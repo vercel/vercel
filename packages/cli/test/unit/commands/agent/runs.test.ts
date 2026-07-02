@@ -71,7 +71,7 @@ describe('agent runs', () => {
     expect(receivedQuery).not.toHaveProperty('view');
     const stdout = client.stdout.getFullOutput();
     expect(stdout).toContain('run_001');
-    expect(stdout).toContain('completed');
+    expect(stdout).toContain('Completed');
     expect(stdout).toContain('anthropic/claude-opus-4.8');
     expect(client.stderr.getFullOutput()).toContain(
       'vercel agent inspect <runId>'

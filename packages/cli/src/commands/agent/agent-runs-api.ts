@@ -80,7 +80,12 @@ const MISSING_TEAM_SCOPE_MESSAGE =
   'No team scope found. Run `vercel link`, pass --cwd to a linked dir, or use --scope <team>.';
 
 export type AgentRunsScope =
-  | { ok: true; teamId: string; projectId: string | undefined }
+  | {
+      ok: true;
+      teamId: string;
+      projectId: string | undefined;
+      contextName: string;
+    }
   | { ok: false; exitCode: number };
 
 export async function resolveAgentRunsScope(
@@ -99,7 +104,12 @@ export async function resolveAgentRunsScope(
   const flagProject = projectFlag?.trim() || undefined;
 
   if (flagScope && (flagProject || !requireProject)) {
-    return { ok: true, teamId: flagScope, projectId: flagProject };
+    return {
+      ok: true,
+      teamId: flagScope,
+      projectId: flagProject,
+      contextName: flagProject ? `${flagScope}/${flagProject}` : flagScope,
+    };
   }
 
   const linkedProject: ProjectLinkResult = await getLinkedProject(client);
@@ -108,12 +118,17 @@ export async function resolveAgentRunsScope(
   }
 
   if (linkedProject.status === 'linked') {
+    const teamName = flagScope ?? linkedProject.org.slug;
+    const projectName = requireProject
+      ? (flagProject ?? linkedProject.project.name)
+      : flagProject;
     return {
       ok: true,
       teamId: flagScope ?? linkedProject.org.id,
       projectId: requireProject
         ? (flagProject ?? linkedProject.project.id)
         : flagProject,
+      contextName: projectName ? `${teamName}/${projectName}` : teamName,
     };
   }
 

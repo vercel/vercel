@@ -1,4 +1,6 @@
+import chalk from 'chalk';
 import ms from 'ms';
+import title from 'title';
 
 // The Agent Runs API response shapes are owned by the dashboard; these helpers
 // read the documented fields defensively and fall back to '-' so the human
@@ -85,6 +87,38 @@ export function runId(run: UnknownRecord): string {
 
 export function runStatus(run: UnknownRecord): string {
   return readString(run, 'status', 'state') ?? PLACEHOLDER;
+}
+
+export function formatRunStatus(run: UnknownRecord): string {
+  const status = readString(run, 'status', 'state');
+  if (!status) return PLACEHOLDER;
+  const label = title(status.replace(/[_-]+/g, ' '));
+  const CIRCLE = '● ';
+  switch (status.toLowerCase()) {
+    case 'completed':
+    case 'succeeded':
+    case 'success':
+    case 'ready':
+      return chalk.green(CIRCLE) + label;
+    case 'error':
+    case 'errored':
+    case 'failed':
+    case 'timed out':
+    case 'timed_out':
+      return chalk.red(CIRCLE) + label;
+    case 'running':
+    case 'in progress':
+    case 'in_progress':
+    case 'pending':
+    case 'queued':
+    case 'started':
+      return chalk.yellow(CIRCLE) + label;
+    case 'canceled':
+    case 'cancelled':
+      return chalk.gray(label);
+    default:
+      return label;
+  }
 }
 
 export function runModel(run: UnknownRecord): string {

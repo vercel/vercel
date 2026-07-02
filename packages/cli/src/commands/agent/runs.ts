@@ -1,8 +1,11 @@
+import chalk from 'chalk';
 import type Client from '../../util/client';
 import output from '../../output-manager';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import cmd from '../../util/output/cmd';
+import stamp from '../../util/output/stamp';
 import table from '../../util/output/table';
 import { runsSubcommand } from './command';
 import {
@@ -16,13 +19,13 @@ import {
   formatAge,
   formatCount,
   formatDurationMs,
+  formatRunStatus,
   readNumber,
   readRecord,
   runDurationMs,
   runId,
   runModel,
   runStartedAtMs,
-  runStatus,
   runTotalTokens,
   runTrigger,
 } from './format';
@@ -76,7 +79,8 @@ export default async function runs(client: Client): Promise<number> {
     return scope.exitCode;
   }
 
-  output.spinner('Fetching Agent Runs…');
+  const fetchStamp = stamp();
+  output.spinner(`Fetching Agent Runs in ${chalk.bold(scope.contextName)}…`);
   let data;
   try {
     data = await fetchAgentRuns(client, {
@@ -111,27 +115,41 @@ export default async function runs(client: Client): Promise<number> {
     return 0;
   }
 
+  output.log(
+    `Agent Runs under ${chalk.bold(scope.contextName)} ${fetchStamp()}`
+  );
+
   const rows = [
-    ['Run ID', 'Status', 'Trigger', 'Model', 'Tokens', 'Duration', 'Age'],
+    ['Run ID', 'Status', 'Trigger', 'Model', 'Tokens', 'Duration', 'Age'].map(
+      header => chalk.bold(chalk.cyan(header))
+    ),
     ...runList.map(run => [
-      runId(run),
-      runStatus(run),
+      chalk.bold(runId(run)),
+      formatRunStatus(run),
       runTrigger(run),
       runModel(run),
       formatCount(runTotalTokens(run)),
-      formatDurationMs(runDurationMs(run)),
-      formatAge(runStartedAtMs(run)),
+      chalk.gray(formatDurationMs(runDurationMs(run))),
+      chalk.gray(formatAge(runStartedAtMs(run))),
     ]),
   ];
-  client.stdout.write(`${table(rows)}\n`);
+  client.stdout.write(`\n${table(rows, { hsep: 3 }).replace(/^/gm, '  ')}\n\n`);
 
   const pagination = readRecord(data, 'pagination');
   const total = readNumber(pagination, 'total', 'totalCount');
   if (total !== undefined && total > runList.length) {
+    const nextPageArgs = [
+      'vercel agent runs',
+      scopeFlag ? `--scope ${scopeFlag}` : '',
+      projectFlag ? `--project ${projectFlag}` : '',
+      `--page ${(page ?? 1) + 1}`,
+    ]
+      .filter(Boolean)
+      .join(' ');
     output.log(
-      `Showing ${runList.length} of ${total} Agent Runs. Use --page and --limit to paginate.`
+      `Showing ${runList.length} of ${total} Agent Runs. Run ${cmd(nextPageArgs)} for more.`
     );
   }
-  output.log('Run `vercel agent inspect <runId>` for run details.');
+  output.log(`Run ${cmd('vercel agent inspect <runId>')} for run details.`);
   return 0;
 }

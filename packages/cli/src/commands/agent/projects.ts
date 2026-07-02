@@ -1,8 +1,11 @@
+import chalk from 'chalk';
 import type Client from '../../util/client';
 import output from '../../output-manager';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import cmd from '../../util/output/cmd';
+import stamp from '../../util/output/stamp';
 import table from '../../util/output/table';
 import { projectsSubcommand } from './command';
 import {
@@ -60,7 +63,10 @@ export default async function projects(client: Client): Promise<number> {
     return scope.exitCode;
   }
 
-  output.spinner('Fetching projects with Agent Runs…');
+  const fetchStamp = stamp();
+  output.spinner(
+    `Fetching projects with Agent Runs in ${chalk.bold(scope.contextName)}…`
+  );
   let data;
   try {
     data = await fetchAgentRuns(client, {
@@ -88,26 +94,41 @@ export default async function projects(client: Client): Promise<number> {
     return 0;
   }
 
+  output.log(
+    `Projects with Agent Runs under ${chalk.bold(scope.contextName)} ${fetchStamp()}`
+  );
+
   const rows = [
-    ['Project', 'Runs', 'Avg Duration'],
+    ['Project', 'Runs', 'Avg Duration'].map(header =>
+      chalk.bold(chalk.cyan(header))
+    ),
     ...projectList.map(project => [
-      readString(
-        project,
-        'projectName',
-        'name',
-        'project',
-        'projectId',
-        'id'
-      ) ?? '-',
+      chalk.bold(
+        readString(
+          project,
+          'projectName',
+          'name',
+          'project',
+          'projectId',
+          'id'
+        ) ?? '-'
+      ),
       formatCount(readNumber(project, 'runs', 'runCount', 'totalRuns')),
-      formatDurationMs(
-        readNumber(project, 'avgDurationMs', 'averageDurationMs', 'avgDuration')
+      chalk.gray(
+        formatDurationMs(
+          readNumber(
+            project,
+            'avgDurationMs',
+            'averageDurationMs',
+            'avgDuration'
+          )
+        )
       ),
     ]),
   ];
-  client.stdout.write(`${table(rows)}\n`);
+  client.stdout.write(`\n${table(rows, { hsep: 3 }).replace(/^/gm, '  ')}\n\n`);
   output.log(
-    'Run `vercel agent runs --project <name>` to list its Agent Runs.'
+    `Run ${cmd('vercel agent runs --project <name>')} to list its Agent Runs.`
   );
   return 0;
 }

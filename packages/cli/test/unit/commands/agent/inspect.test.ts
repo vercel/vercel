@@ -83,12 +83,10 @@ describe('agent inspect', () => {
     expect(receivedQuery).not.toHaveProperty('trace');
     const stdout = client.stdout.getFullOutput();
     expect(stdout).toContain('run_001');
-    expect(stdout).toContain('completed');
+    expect(stdout).toContain('Completed');
     expect(stdout).toContain('run.started');
     expect(stdout).toContain('researcher');
-    expect(client.stderr.getFullOutput()).toContain(
-      'Run with --json for full run data.'
-    );
+    expect(client.stderr.getFullOutput()).toContain('for full run data.');
   });
 
   it('prints the raw response with --json', async () => {

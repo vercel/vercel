@@ -1,8 +1,10 @@
+import chalk from 'chalk';
 import type Client from '../../util/client';
 import output from '../../output-manager';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import cmd from '../../util/output/cmd';
 import table from '../../util/output/table';
 import { help } from '../help';
 import { agentCommand, inspectSubcommand } from './command';
@@ -14,8 +16,10 @@ import {
 } from './agent-runs-api';
 import {
   asArray,
+  formatAge,
   formatCount,
   formatDurationMs,
+  formatRunStatus,
   formatTimestamp,
   isRecord,
   readNumber,
@@ -26,7 +30,6 @@ import {
   runId,
   runModel,
   runStartedAtMs,
-  runStatus,
   runTitle,
   runTotalTokens,
   runTrigger,
@@ -34,19 +37,25 @@ import {
 } from './format';
 import { AgentInspectTelemetryClient } from '../../util/telemetry/commands/agent/inspect';
 
+function formatStartedAt(run: UnknownRecord): string {
+  const startedAt = runStartedAtMs(run);
+  if (startedAt === undefined) return '-';
+  return `${formatAge(startedAt)} ${chalk.gray(formatTimestamp(startedAt))}`;
+}
+
 function renderDetail(run: UnknownRecord): string {
   const usage = readRecord(run, 'usage');
   const rows: string[][] = [
-    ['Run ID', runId(run)],
-    ['Status', runStatus(run)],
+    [chalk.bold('Run ID'), runId(run)],
+    [chalk.bold('Status'), formatRunStatus(run)],
   ];
   const title = runTitle(run);
-  if (title) rows.push(['Title', title]);
+  if (title) rows.push([chalk.bold('Title'), title]);
   rows.push(
-    ['Trigger', runTrigger(run)],
-    ['Model', runModel(run)],
-    ['Started', formatTimestamp(runStartedAtMs(run))],
-    ['Duration', formatDurationMs(runDurationMs(run))]
+    [chalk.bold('Trigger'), runTrigger(run)],
+    [chalk.bold('Model'), runModel(run)],
+    [chalk.bold('Started'), formatStartedAt(run)],
+    [chalk.bold('Duration'), formatDurationMs(runDurationMs(run))]
   );
   const input = readNumber(usage, 'inputTokens', 'promptTokens', 'input');
   const outputTokens = readNumber(
@@ -62,40 +71,56 @@ function renderDetail(run: UnknownRecord): string {
     total !== undefined
   ) {
     rows.push([
-      'Tokens',
+      chalk.bold('Tokens'),
       `${formatCount(input)} in / ${formatCount(outputTokens)} out / ${formatCount(total)} total`,
     ]);
   }
 
-  const sections = [table(rows)];
+  const sections = [table(rows, { hsep: 3 })];
 
   const events = asArray(run.events);
   if (events.length > 0) {
+    const eventTimes = events.map(event =>
+      readTimestampMs(event, 'timestamp', 'createdAt', 'time', 'at')
+    );
+    const knownTimes = [runStartedAtMs(run), ...eventTimes].filter(
+      (time): time is number => time !== undefined
+    );
+    const baseTime = knownTimes.length ? Math.min(...knownTimes) : undefined;
     const eventRows = [
-      ['Time', 'Event'],
-      ...events.map(event => [
-        formatTimestamp(
-          readTimestampMs(event, 'timestamp', 'createdAt', 'time', 'at')
-        ),
-        readString(event, 'type', 'name', 'event', 'message') ?? '-',
-      ]),
+      ['Time', 'Event'].map(header => chalk.bold(chalk.cyan(header))),
+      ...events.map((event, index) => {
+        const time = eventTimes[index];
+        const offset =
+          time !== undefined && baseTime !== undefined && time >= baseTime
+            ? `+${formatDurationMs(time - baseTime)}`
+            : formatTimestamp(time);
+        return [
+          chalk.gray(offset),
+          readString(event, 'type', 'name', 'event', 'message') ?? '-',
+        ];
+      }),
     ];
-    sections.push(`Events\n${table(eventRows)}`);
+    sections.push(`${chalk.bold('Events')}\n${table(eventRows, { hsep: 3 })}`);
   }
 
   const subagents = asArray(run.subagents ?? run.subAgents);
   if (subagents.length > 0) {
     const subagentRows = [
-      ['Subagent', 'Status', 'Model', 'Tokens', 'Duration'],
+      ['Subagent', 'Status', 'Model', 'Tokens', 'Duration'].map(header =>
+        chalk.bold(chalk.cyan(header))
+      ),
       ...subagents.map(subagent => [
-        readString(subagent, 'name', 'id', 'runId') ?? '-',
-        runStatus(subagent),
+        chalk.bold(readString(subagent, 'name', 'id', 'runId') ?? '-'),
+        formatRunStatus(subagent),
         runModel(subagent),
         formatCount(runTotalTokens(subagent)),
-        formatDurationMs(runDurationMs(subagent)),
+        chalk.gray(formatDurationMs(runDurationMs(subagent))),
       ]),
     ];
-    sections.push(`Subagents\n${table(subagentRows)}`);
+    sections.push(
+      `${chalk.bold('Subagents')}\n${table(subagentRows, { hsep: 3 })}`
+    );
   }
 
   return `${sections.join('\n\n')}\n`;
@@ -182,6 +207,6 @@ export default async function inspect(client: Client): Promise<number> {
 
   const run = isRecord(data.run) ? data.run : data;
   client.stdout.write(renderDetail(run));
-  output.log('Run with --json for full run data.');
+  output.log(`Run with ${cmd('--json')} for full run data.`);
   return 0;
 }
