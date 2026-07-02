@@ -3,6 +3,7 @@ import { client } from '../../../../mocks/client';
 import {
   requireVcrRepository,
   requireVcrRepositoryAndImageId,
+  requireVcrRepositoryAndTag,
   validateVcrChoice,
   validateVcrJsonOutput,
 } from '../../../../../src/commands/vcr/utils/validators';
@@ -130,6 +131,48 @@ describe('requireVcrRepositoryAndImageId', () => {
       'img_1',
       false,
       'vcr image inspect <repository> <imageId>'
+    );
+    expect(result).toBe(1);
+  });
+});
+
+describe('requireVcrRepositoryAndTag', () => {
+  beforeEach(() => {
+    client.reset();
+  });
+
+  it('returns undefined when both arguments are present', () => {
+    const result = requireVcrRepositoryAndTag(
+      client,
+      'my-app',
+      'latest',
+      false,
+      'vcr tags inspect <repository> <tag>'
+    );
+    expect(result).toBeUndefined();
+  });
+
+  it('returns exit code 1 when the tag is missing', () => {
+    const result = requireVcrRepositoryAndTag(
+      client,
+      'my-app',
+      undefined,
+      false,
+      'vcr tags inspect <repository> <tag>'
+    );
+    expect(result).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'vcr tags inspect <repository> <tag>'
+    );
+  });
+
+  it('returns exit code 1 when the repository is missing', () => {
+    const result = requireVcrRepositoryAndTag(
+      client,
+      undefined,
+      'latest',
+      false,
+      'vcr tags inspect <repository> <tag>'
     );
     expect(result).toBe(1);
   });

@@ -76,3 +76,11 @@ export function repositoryTagsPath(
   }
   return `/v1/vcr/repository/${encodeURIComponent(idOrName)}/tags?${query.toString()}`;
 }
+
+export function repositoryTagPath(
+  scope: VcrScope,
+  idOrName: string,
+  tag: string
+): string {
+  return `/v1/vcr/repository/${encodeURIComponent(idOrName)}/tags/${encodeURIComponent(tag)}?${baseQuery(scope).toString()}`;
+}

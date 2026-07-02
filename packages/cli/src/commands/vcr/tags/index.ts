@@ -11,6 +11,7 @@ import type { VcrTelemetryClient } from '../../../util/telemetry/commands/vcr';
 
 const TAGS_CONFIG = {
   ls: ['ls', 'list'],
+  inspect: ['inspect', 'get'],
 };
 
 export default async function tags(
@@ -50,6 +51,8 @@ export default async function tags(
   switch (subcommand) {
     case 'ls':
       return (await import('./ls')).default(client, args, telemetry);
+    case 'inspect':
+      return (await import('./inspect')).default(client, args, telemetry);
     default:
       output.error(`Unhandled tags subcommand: ${subcommand}`);
       return 1;

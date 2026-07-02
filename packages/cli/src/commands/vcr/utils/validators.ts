@@ -99,6 +99,47 @@ export function requireVcrRepository(
 }
 
 /**
+ * Requires `<repository>` and `<tag>` positional arguments. Returns an exit
+ * code to return immediately when either is missing, or `undefined` when both
+ * are present.
+ */
+export function requireVcrRepositoryAndTag(
+  client: Client,
+  repository: string | undefined,
+  tag: string | undefined,
+  jsonOutput: boolean,
+  usage: string
+): number | undefined {
+  if (repository && tag) {
+    return undefined;
+  }
+  outputAgentError(
+    client,
+    {
+      status: 'error',
+      reason: AGENT_REASON.MISSING_ARGUMENTS,
+      message: `Missing arguments. Example: ${packageName} ${usage}`,
+      next: [
+        {
+          command: buildCommandWithGlobalFlags(
+            client.argv,
+            'vcr tags ls <repository>'
+          ),
+          when: 'List tags to pick a tag (replace <repository>)',
+        },
+      ],
+    },
+    1
+  );
+  return outputError(
+    client,
+    jsonOutput,
+    'MISSING_ARGUMENTS',
+    `Usage: \`vercel ${usage}\``
+  );
+}
+
+/**
  * Requires `<repository>` and `<imageId>` positional arguments. Returns an
  * exit code to return immediately when either is missing, or `undefined`
  * when both are present.

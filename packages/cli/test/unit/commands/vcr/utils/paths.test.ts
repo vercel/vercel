@@ -4,6 +4,7 @@ import {
   repositoriesPath,
   repositoryImagesPath,
   repositoryPath,
+  repositoryTagPath,
   repositoryTagsPath,
 } from '../../../../../src/commands/vcr/utils/paths';
 import type { VcrScope } from '../../../../../src/commands/vcr/utils/resolve-vcr-scope';
@@ -91,6 +92,20 @@ describe('repositoryTagsPath', () => {
       })
     ).toBe(
       '/v1/vcr/repository/my-app/tags?teamId=team_dummy&projectId=prj_vcr&sortBy=size&sortOrder=desc'
+    );
+  });
+});
+
+describe('repositoryTagPath', () => {
+  it('builds a path scoped to a single tag', () => {
+    expect(repositoryTagPath(scope, 'my-app', 'latest')).toBe(
+      '/v1/vcr/repository/my-app/tags/latest?teamId=team_dummy&projectId=prj_vcr'
+    );
+  });
+
+  it('url-encodes the repository name and tag', () => {
+    expect(repositoryTagPath(scope, 'my app', 'v1.0/beta')).toBe(
+      '/v1/vcr/repository/my%20app/tags/v1.0%2Fbeta?teamId=team_dummy&projectId=prj_vcr'
     );
   });
 });

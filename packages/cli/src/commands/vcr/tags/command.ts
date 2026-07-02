@@ -65,6 +65,29 @@ export const tagsLsSubcommand = {
   ],
 } as const;
 
+export const tagsInspectSubcommand = {
+  name: 'inspect',
+  aliases: ['get'],
+  description: 'Show details for a single tag',
+  arguments: [
+    {
+      name: 'repository',
+      required: true,
+    },
+    {
+      name: 'tag',
+      required: true,
+    },
+  ],
+  options: [projectScopeOption, formatOption],
+  examples: [
+    {
+      name: 'Inspect a tag by name',
+      value: `${packageName} vcr tags inspect my-app latest`,
+    },
+  ],
+} as const;
+
 /**
  * Umbrella command used only for help output of the nested `vcr tags` group.
  * Routing happens in `tags/index.ts` via `getSubcommand`.
@@ -72,9 +95,9 @@ export const tagsLsSubcommand = {
 export const tagsAggregateCommand = {
   name: 'tags',
   aliases: [],
-  description: "List a repository's tags",
+  description: "List or inspect a repository's tags",
   arguments: [],
-  subcommands: [tagsLsSubcommand],
+  subcommands: [tagsLsSubcommand, tagsInspectSubcommand],
   options: [],
   examples: [],
 } as const;

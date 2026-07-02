@@ -21,7 +21,11 @@ import {
   imageInspectSubcommand,
   imageRmSubcommand,
 } from './image/command';
-import { tagsAggregateCommand, tagsLsSubcommand } from './tags/command';
+import {
+  tagsAggregateCommand,
+  tagsLsSubcommand,
+  tagsInspectSubcommand,
+} from './tags/command';
 
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
@@ -85,6 +89,10 @@ export default async function vcr(client: Client): Promise<number> {
         const nested = args[0];
         if (nested === 'ls' || nested === 'list') {
           printHelp(tagsLsSubcommand);
+          return 2;
+        }
+        if (nested === 'inspect' || nested === 'get') {
+          printHelp(tagsInspectSubcommand);
           return 2;
         }
         printHelp(tagsAggregateCommand);
