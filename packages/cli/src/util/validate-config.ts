@@ -587,6 +587,7 @@ function buildVercelConfigSchema() {
       rewrites: rewritesSchema,
       trailingSlash: trailingSlashSchema,
       functions: getFunctionsSchema(),
+      maxDuration: getMaxDurationSchema(),
       images: imagesSchema,
       crons: cronsSchema,
       bunVersion: { type: 'string' },

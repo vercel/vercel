@@ -54,6 +54,8 @@ export interface Config {
   middleware?: boolean;
   /** Owning service name; scopes per-function config such as the v2beta consumer. */
   serviceName?: string;
+  /** Default maxDuration for all functions; individual functions can override via `functions`. */
+  maxDuration?: MaxDuration;
   [key: string]: unknown;
 }
 

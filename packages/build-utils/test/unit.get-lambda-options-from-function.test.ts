@@ -71,6 +71,81 @@ describe('getLambdaOptionsFromFunction', () => {
     expect(options).toEqual({});
   });
 
+  it('returns top-level maxDuration when no function pattern matches', async () => {
+    const config: Pick<Config, 'functions' | 'maxDuration'> = {
+      maxDuration: 30,
+      functions: {
+        'api/*.ts': { regions: ['sfo1'] },
+      },
+    };
+
+    const options = await getLambdaOptionsFromFunction({
+      sourceFile: 'api/user.js',
+      config,
+    });
+
+    expect(options).toEqual({ maxDuration: 30 });
+  });
+
+  it('returns top-level maxDuration when no functions config is set', async () => {
+    const config: Pick<Config, 'maxDuration'> = {
+      maxDuration: 60,
+    };
+
+    const options = await getLambdaOptionsFromFunction({
+      sourceFile: 'api/user.js',
+      config,
+    });
+
+    expect(options).toEqual({ maxDuration: 60 });
+  });
+
+  it('per-function maxDuration overrides top-level maxDuration', async () => {
+    const config: Pick<Config, 'functions' | 'maxDuration'> = {
+      maxDuration: 30,
+      functions: {
+        'api/*.js': { maxDuration: 120 },
+      },
+    };
+
+    const options = await getLambdaOptionsFromFunction({
+      sourceFile: 'api/user.js',
+      config,
+    });
+
+    expect(options.maxDuration).toBe(120);
+  });
+
+  it('falls back to top-level maxDuration when function pattern matches but omits maxDuration', async () => {
+    const config: Pick<Config, 'functions' | 'maxDuration'> = {
+      maxDuration: 45,
+      functions: {
+        'api/*.js': { memory: 512 },
+      },
+    };
+
+    const options = await getLambdaOptionsFromFunction({
+      sourceFile: 'api/user.js',
+      config,
+    });
+
+    expect(options.maxDuration).toBe(45);
+    expect(options.memory).toBe(512);
+  });
+
+  it('supports "max" as top-level maxDuration', async () => {
+    const config: Pick<Config, 'maxDuration'> = {
+      maxDuration: 'max',
+    };
+
+    const options = await getLambdaOptionsFromFunction({
+      sourceFile: 'api/user.js',
+      config,
+    });
+
+    expect(options).toEqual({ maxDuration: 'max' });
+  });
+
   it('derives the queue/v2beta consumer from the function pattern', async () => {
     const config: Pick<Config, 'functions'> = {
       functions: {

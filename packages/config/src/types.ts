@@ -465,6 +465,10 @@ export interface VercelConfig {
    */
   env?: Record<string, string>;
   /**
+   * The default maximum duration (in seconds) for all Serverless Functions in the deployment. Individual functions can override this via the `functions` config. Accepts an integer between 1 and your plan's maximum, or `'max'` to use the plan maximum.
+   */
+  maxDuration?: number | 'max';
+  /**
    * An array of the passive regions the deployment's Serverless Functions should be deployed to that can be failed over to during a lambda outage
    */
   passiveRegions?: string[];

@@ -122,7 +122,7 @@ export interface LambdaOptionsWithZipBuffer extends LambdaOptionsBase {
 
 interface GetLambdaOptionsFromFunctionOptions {
   sourceFile: string;
-  config?: Pick<Config, 'functions' | 'serviceName'>;
+  config?: Pick<Config, 'functions' | 'serviceName' | 'maxDuration'>;
 }
 
 function getDefaultLambdaArchitecture(
@@ -580,7 +580,7 @@ export async function getLambdaOptionsFromFunction({
         return {
           architecture: fn.architecture,
           memory: fn.memory,
-          maxDuration: fn.maxDuration,
+          maxDuration: fn.maxDuration ?? config?.maxDuration,
           regions: fn.regions,
           functionFailoverRegions: fn.functionFailoverRegions,
           experimentalTriggers,
@@ -590,5 +590,7 @@ export async function getLambdaOptionsFromFunction({
     }
   }
 
-  return {};
+  return config?.maxDuration !== undefined
+    ? { maxDuration: config.maxDuration }
+    : {};
 }
