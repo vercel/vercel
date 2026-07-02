@@ -255,6 +255,28 @@ const integrations: Record<string, Integration> = {
     name: 'Acme Integration External',
     slug: 'acme-external',
   },
+  // Legacy, non-marketplace integration (no products) whose Marketplace
+  // counterpart is `tursocloud`. Used to test "did you mean" suggestions.
+  turso: {
+    id: 'turso',
+    name: 'Turso',
+    slug: 'turso',
+  },
+  tursocloud: {
+    id: 'tursocloud',
+    name: 'Turso Cloud',
+    slug: 'tursocloud',
+    products: [
+      {
+        id: 'tursocloud-product',
+        name: 'Turso Cloud',
+        slug: 'tursocloud',
+        type: 'storage',
+        shortDescription: 'Serverless SQLite database',
+        metadataSchema: metadataSchema1,
+      },
+    ],
+  },
   'acme-no-products': {
     id: 'acme-no-products',
     name: 'Acme Integration No Products',
@@ -897,6 +919,15 @@ const discoverIntegrations = [
     isMarketplace: false,
     canInstall: true,
     products: [{ slug: 'connect', name: 'Connect' }],
+  },
+  {
+    slug: 'tursocloud',
+    name: 'Turso Cloud',
+    shortDescription: 'Serverless SQLite database',
+    tagIds: ['tag_databases'],
+    isMarketplace: true,
+    canInstall: true,
+    products: [{ slug: 'tursocloud', name: 'Turso Cloud' }],
   },
 ];
 
