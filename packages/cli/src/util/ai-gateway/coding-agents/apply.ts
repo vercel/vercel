@@ -32,6 +32,7 @@ export interface AgentNotes {
 export interface SetupPlan {
   changes: PlannedChange[];
   notes: AgentNotes[];
+  envExports: EnvExport[];
   shellRcPath?: string;
 }
 
@@ -146,7 +147,22 @@ export async function buildSetupPlan(
   }
 
   let shellRcPath: string | undefined;
-  if (envExports.length) {
+  if (
+    envExports.length &&
+    process.platform === 'win32' &&
+    !ctx.shellRcOverride
+  ) {
+    // There is no shell rc to manage on Windows; tell the user what to set.
+    notes.push({
+      id: 'environment',
+      displayName: 'Environment',
+      notes: [
+        `Automatic shell setup is not supported on Windows. Set ${envExports
+          .map(e => e.name)
+          .join(', ')} to your API key in your environment.`,
+      ],
+    });
+  } else if (envExports.length) {
     shellRcPath = detectShellRc(ctx.home, ctx.shellRcOverride);
     const body = envBlockBody(
       envExports,
@@ -226,7 +242,7 @@ export async function buildSetupPlan(
     });
   }
 
-  return { changes, notes, shellRcPath };
+  return { changes, notes, envExports, shellRcPath };
 }
 
 export interface ApplyResult {
