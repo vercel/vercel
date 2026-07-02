@@ -56,13 +56,9 @@ export async function resolveAgents(args: {
     return { selected: DEFAULT_AGENTS, guidance, unsupported };
   }
 
-  if (!canPrompt) {
-    return { selected: DEFAULT_AGENTS, guidance, unsupported };
-  }
-
   const detected = await Promise.all(DEFAULT_AGENTS.map(a => a.detect(home)));
 
-  if (yes) {
+  if (!canPrompt || yes) {
     const selected = DEFAULT_AGENTS.filter((_, i) => detected[i]);
     if (selected.length === 0) {
       return {
