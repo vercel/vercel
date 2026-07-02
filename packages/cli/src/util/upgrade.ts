@@ -7,7 +7,11 @@ import output from '../output-manager';
 import { progress } from './output/progress';
 import { isNativeBinaryInstall } from './native-install';
 import { fetchLatestVersion } from './get-latest-version';
-import { isCliStoreEnabled, installVersionToStore } from './cli-store';
+import {
+  isCliStoreEnabled,
+  installVersionToStore,
+  readPointer,
+} from './cli-store';
 import { packageName } from './pkg-name';
 
 function renderUpgradeProgress(
@@ -136,6 +140,21 @@ async function executeStoreUpgrade(targetVersion?: string): Promise<number> {
     output.stopSpinner();
     output.log(
       `No upgrade available. Vercel CLI is already up to date (v${versionBefore}).`
+    );
+    return 0;
+  }
+
+  // Also a no-op when the store already holds the target, even though the
+  // running version is older. Notably: prerelease builds (x.y.z-sha) sort
+  // below the release x.y.z, so without this check a prerelease install
+  // would re-report an available upgrade on every run despite the store
+  // being current.
+  const pointer = readPointer();
+  if (pointer && isVersionCurrent(pointer.version, resolvedTarget)) {
+    renderUpgradeProgress(totalSteps, totalSteps);
+    output.stopSpinner();
+    output.log(
+      `No upgrade available. The managed CLI store is already up to date (v${pointer.version}).`
     );
     return 0;
   }
