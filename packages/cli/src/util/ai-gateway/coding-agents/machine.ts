@@ -12,6 +12,8 @@ export async function runMachine(args: {
   client: Client;
   selected: CodingAgent[];
   unsupported: string[];
+  warnings: Array<{ agent: string; code: string; message: string }>;
+  consentSkipped: Array<{ target: string; reason: string; message: string }>;
   previewPlan: SetupPlan;
   dryRun: boolean;
   backup: boolean;
@@ -40,6 +42,7 @@ export async function runMachine(args: {
       message: UNSUPPORTED_AGENTS[id],
     });
   }
+  skipped.push(...args.consentSkipped);
 
   if (dryRun) {
     client.stdout.write(
@@ -60,6 +63,7 @@ export async function runMachine(args: {
                   : c.status,
           })),
           skipped,
+          warnings: args.warnings,
         },
         null,
         2
@@ -71,8 +75,14 @@ export async function runMachine(args: {
   // Idempotent by default: if nothing needs writing and we weren't asked to
   // reconfigure, report the no-op without minting a fresh key.
   if (args.alreadyConfigured && !args.reconfigure) {
+    const consentSkips = args.consentSkipped.length > 0;
+    // '--reconfigure' is dead advice for a consent-skipped agent (skipped[]
+    // carries the '--agent <id>' hint), so only name the agents this run
+    // actually verified.
     let message =
-      'All selected agents are already configured for the AI Gateway. Pass --reconfigure to rotate the key.';
+      selected.length > 0
+        ? `${consentSkips ? 'The remaining' : 'All selected'} agents are already configured for the AI Gateway. Pass --reconfigure to rotate the key.`
+        : 'Every selected agent needs explicit consent (see skipped); the existing configuration already uses the AI Gateway.';
     // A provided key on a Keychain setup: refresh the stored secret in place,
     // mirroring the interactive flow (the config files never carry the key).
     if (args.useKeychain && args.keySource) {
@@ -84,6 +94,8 @@ export async function runMachine(args: {
               reason: 'keychain_error',
               message:
                 'Failed to update the key in the macOS Keychain. Re-run with --no-keychain to write it to the config files instead.',
+              skipped,
+              warnings: args.warnings,
             },
             null,
             2
@@ -92,7 +104,9 @@ export async function runMachine(args: {
         return 1;
       }
       message =
-        'All selected agents are already configured; updated the macOS Keychain with the provided key.';
+        selected.length > 0
+          ? `${consentSkips ? 'The remaining' : 'All selected'} agents are already configured; updated the macOS Keychain with the provided key.`
+          : 'The existing configuration already uses the AI Gateway; updated the macOS Keychain with the provided key.';
     }
     client.stdout.write(
       `${JSON.stringify(
@@ -101,7 +115,8 @@ export async function runMachine(args: {
           reason: 'already_configured',
           message,
           configured: [],
-          skipped: [],
+          skipped,
+          warnings: args.warnings,
         },
         null,
         2
@@ -122,6 +137,7 @@ export async function runMachine(args: {
           reason: 'unparseable_config',
           message: "Couldn't write any agent configurations.",
           skipped,
+          warnings: args.warnings,
         },
         null,
         2
@@ -173,6 +189,7 @@ export async function runMachine(args: {
           backup: r.backupPath,
         })),
         skipped,
+        warnings: args.warnings,
         notes: finalPlan.notes.flatMap(n =>
           n.notes.map(line => `${n.displayName}: ${line}`)
         ),
