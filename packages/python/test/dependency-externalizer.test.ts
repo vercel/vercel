@@ -4,7 +4,9 @@ import path from 'path';
 import { tmpdir } from 'os';
 import {
   PythonDependencyExternalizer,
+  PYC_TO_PY_RATIO,
   calculateBundleSize,
+  estimateBytecodeSize,
   getPackagesReachableOnPlatform,
   lambdaKnapsack,
   LAMBDA_SIZE_THRESHOLD_BYTES,
@@ -226,6 +228,50 @@ describe('dependency externalizer support', () => {
       } finally {
         fs.removeSync(tempDir);
       }
+    });
+
+    it('only counts files matching the filter when provided', async () => {
+      const files = {
+        'app.py': new FileFsRef({ fsPath: '/nonexistent/app.py', size: 100 }),
+        'pkg/mod.py': new FileFsRef({
+          fsPath: '/nonexistent/mod.py',
+          size: 50,
+        }),
+        'lib.so': new FileFsRef({ fsPath: '/nonexistent/lib.so', size: 999 }),
+        'data.json': new FileBlob({ data: 'x'.repeat(40) }),
+      };
+
+      const pySize = await calculateBundleSize(files, p => p.endsWith('.py'));
+      expect(pySize).toBe(150);
+
+      const allSize = await calculateBundleSize(files);
+      expect(allSize).toBe(1189);
+    });
+  });
+
+  describe('estimateBytecodeSize', () => {
+    it('estimates bytecode as PYC_TO_PY_RATIO times the .py bytes', async () => {
+      const files = {
+        'app.py': new FileFsRef({ fsPath: '/nonexistent/app.py', size: 100 }),
+        '_vendor/pkg/mod.py': new FileFsRef({
+          fsPath: '/nonexistent/mod.py',
+          size: 900,
+        }),
+        'lib.so': new FileFsRef({
+          fsPath: '/nonexistent/lib.so',
+          size: 5000,
+        }),
+      };
+
+      expect(await estimateBytecodeSize(files)).toBe(PYC_TO_PY_RATIO * 1000);
+    });
+
+    it('returns 0 when the bundle has no .py files', async () => {
+      const files = {
+        'lib.so': new FileFsRef({ fsPath: '/nonexistent/lib.so', size: 5000 }),
+      };
+
+      expect(await estimateBytecodeSize(files)).toBe(0);
     });
   });
 

@@ -49,6 +49,7 @@ import {
   LAMBDA_SIZE_THRESHOLD_BYTES,
   lambdaKnapsack,
   calculateBundleSize,
+  estimateBytecodeSize,
 } from './dependency-externalizer';
 import { isLargeFunctionsEnabled } from './large-functions';
 import {
@@ -81,8 +82,7 @@ import {
   collectAppBytecodeFiles,
   getCompileAllAppExcludeRegex,
   runCompileAll,
-  shouldPrecompileStandardFunction,
-  shouldUseCompileAll,
+  shouldCompileAll,
   type BytecodeCollectionResult,
 } from './compileall';
 import {
@@ -979,7 +979,7 @@ export const build: BuildVX = async ({
     extraEnv: extraTrampolineEnv,
   });
 
-  const automaticCompileAllEnabled = shouldUseCompileAll({
+  const compileAllEnabled = shouldCompileAll({
     isDev: meta.isDev,
     hasCustomCommand,
   });
@@ -1170,7 +1170,7 @@ export const build: BuildVX = async ({
           await depExternalizer.generateBundle(files);
         if (fellBackToFullBundle) {
           announceLargeFunction();
-          if (automaticCompileAllEnabled) {
+          if (compileAllEnabled) {
             await runCompileAllAndFillBytecode(
               MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
             );
@@ -1184,20 +1184,19 @@ export const build: BuildVX = async ({
           if (isLargeFunctionsEnabled()) {
             announceLargeFunction();
           }
-          if (automaticCompileAllEnabled) {
+          if (compileAllEnabled) {
             await runCompileAllAndFillBytecode(
               MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
             );
           }
-        } else if (
-          shouldPrecompileStandardFunction({
-            isDev: meta.isDev,
-            hasCustomCommand,
-            headroomBytes:
-              LAMBDA_SIZE_THRESHOLD_BYTES - depAnalysis.totalBundleSize,
-          })
-        ) {
-          await runCompileAllAndFillBytecode(BYTECODE_FILL_CEILING_BYTES);
+        } else if (compileAllEnabled) {
+          // Compile only when the expected bytecode fits the remaining
+          // capacity; a partial fill isn't worth the compile time.
+          const capacity =
+            BYTECODE_FILL_CEILING_BYTES - depAnalysis.totalBundleSize;
+          if (capacity >= (await estimateBytecodeSize(files))) {
+            await runCompileAllAndFillBytecode(BYTECODE_FILL_CEILING_BYTES);
+          }
         }
       }
     });

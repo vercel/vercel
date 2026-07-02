@@ -1123,11 +1123,15 @@ export async function getPackagesReachableOnPlatform(
  * to avoid redundant stat calls.  Remaining files are stat'd in
  * parallel for throughput.
  */
-export async function calculateBundleSize(files: Files): Promise<number> {
+export async function calculateBundleSize(
+  files: Files,
+  filter?: (filePath: string) => boolean
+): Promise<number> {
   let knownSize = 0;
   const statPromises: Promise<number>[] = [];
 
   for (const filePath of Object.keys(files)) {
+    if (filter && !filter(filePath)) continue;
     const file = files[filePath];
     if ('fsPath' in file && file.fsPath) {
       const fsRef = file as FileFsRef;
@@ -1161,6 +1165,23 @@ export async function calculateBundleSize(files: Files): Promise<number> {
     totalSize += s;
   }
   return totalSize;
+}
+
+/**
+ * Expected .pyc-to-.py size ratio. Measured empirically on real venvs
+ * (1.06 and 1.14 across different dependency mixes); slightly high so the
+ * gate errs toward skipping marginal compiles.
+ */
+export const PYC_TO_PY_RATIO = 1.2;
+
+/**
+ * Estimate the total bytecode size compileall would produce for the .py
+ * files in the bundle. Used only to gate whether compiling is worthwhile;
+ * the fill itself measures real .pyc sizes.
+ */
+export async function estimateBytecodeSize(files: Files): Promise<number> {
+  const pyBytes = await calculateBundleSize(files, p => p.endsWith('.py'));
+  return PYC_TO_PY_RATIO * pyBytes;
 }
 
 /**
