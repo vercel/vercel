@@ -114,10 +114,18 @@ function toProjectServicesConfigPatch(
 ): Pick<VercelConfig, 'services' | 'rewrites'> {
   const services: Services = {};
   for (const [name, svc] of Object.entries(config)) {
+    // Combine preDeployCommand into buildCommand since V2 ServiceConfig
+    // doesn't have a separate preDeployCommand field.
+    const buildCommand =
+      svc.preDeployCommand && svc.buildCommand
+        ? `${svc.buildCommand} && ${svc.preDeployCommand}`
+        : svc.preDeployCommand || svc.buildCommand;
+
     services[name] = {
       root: svc.root,
       ...(svc.framework ? { framework: svc.framework } : {}),
       ...(svc.entrypoint ? { entrypoint: svc.entrypoint } : {}),
+      ...(buildCommand ? { buildCommand } : {}),
     };
   }
   // Top-level rewrites route public traffic into web services by mountPath.
