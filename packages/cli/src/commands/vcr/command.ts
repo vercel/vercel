@@ -1,4 +1,9 @@
-import { formatOption, projectOption, yesOption } from '../../util/arg-common';
+import {
+  formatOption,
+  limitOption,
+  projectOption,
+  yesOption,
+} from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 import { imageAggregateCommand } from './image/command';
 import { tagsAggregateCommand } from './tags/command';
@@ -18,26 +23,12 @@ const cursorOption = {
   argument: 'STRING',
 } as const;
 
-const repositoryLimitOption = {
-  name: 'limit',
-  shorthand: null,
-  type: Number,
-  deprecated: false,
-  description: 'Number of results to return per page (default: 20, max: 1000)',
-  argument: 'NUMBER',
-} as const;
-
 export const listSubcommand = {
   name: 'ls',
   aliases: ['list'],
   description: 'List container registry repositories for a project',
   arguments: [],
-  options: [
-    projectScopeOption,
-    repositoryLimitOption,
-    cursorOption,
-    formatOption,
-  ],
+  options: [projectScopeOption, limitOption, cursorOption, formatOption],
   examples: [
     {
       name: 'List repositories in the linked project',
