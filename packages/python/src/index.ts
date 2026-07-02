@@ -44,6 +44,7 @@ import {
 } from './install';
 import {
   PythonDependencyExternalizer,
+  BYTECODE_FILL_CEILING_BYTES,
   MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   lambdaKnapsack,
@@ -77,7 +78,6 @@ import {
 } from './django';
 import { containsTopLevelCallable } from '@vercel/python-analysis';
 import {
-  BYTECODE_FILL_CEILING_BYTES,
   collectAppBytecodeFiles,
   getCompileAllAppExcludeRegex,
   runCompileAll,
@@ -1084,68 +1084,77 @@ export const build: BuildVX = async ({
         },
       });
 
-      // Precompile bytecode and fill remaining capacity for a fully bundled
-      // function. collectAppBytecodeFiles only collects .pyc for .py files
-      // present in the bundle, so excluded source can't re-enter as .pyc.
-      // Shared by the direct-bundle path and the generateBundle Hive fallback.
+      // Precompile bytecode and fill remaining capacity up to capacityBytes.
+      // Only .pyc for .py files already in the bundle are collected, so
+      // excluded source can't re-enter as .pyc. Bytecode is a pure
+      // optimization: failures are logged and the build continues.
       const runCompileAllAndFillBytecode = async (capacityBytes: number) => {
-        await builderSpan
-          .child('vc.builder.python.compileall')
-          .trace(async compileSpan => {
-            const sitePackageDirs = (
-              await getVenvSitePackagesDirs(venvPath)
-            ).filter(d => fs.existsSync(d));
-            const pythonBin = getVenvPythonBin(venvPath);
+        try {
+          await builderSpan
+            .child('vc.builder.python.compileall')
+            .trace(async compileSpan => {
+              const sitePackageDirs = (
+                await getVenvSitePackagesDirs(venvPath)
+              ).filter(d => fs.existsSync(d));
+              const pythonBin = getVenvPythonBin(venvPath);
 
-            console.log('Compiling Python bytecode...');
-            await runCompileAll({
-              pythonBin,
-              filesOrDirectories: [workPath],
-              env: pythonEnv,
-              excludeRegex: getCompileAllAppExcludeRegex(workPath),
+              console.log('Compiling Python bytecode...');
+              await runCompileAll({
+                pythonBin,
+                filesOrDirectories: [workPath],
+                env: pythonEnv,
+                excludeRegex: getCompileAllAppExcludeRegex(workPath),
+              });
+
+              await runCompileAll({
+                pythonBin,
+                filesOrDirectories: sitePackageDirs,
+                env: pythonEnv,
+              });
+
+              compileSpan.setAttributes({
+                'python.compileall.enabled': 'true',
+                'python.compileall.sitePackageDirectoryCount': String(
+                  sitePackageDirs.length
+                ),
+              });
             });
 
-            await runCompileAll({
-              pythonBin,
-              filesOrDirectories: sitePackageDirs,
-              env: pythonEnv,
+          const currentSize = await calculateBundleSize(files);
+          let remainingCapacity = capacityBytes - currentSize;
+
+          if (pythonVersion.major != null && pythonVersion.minor != null) {
+            const appBytecodeInfo = await collectAppBytecodeFiles({
+              workPath,
+              files,
+              pythonMajor: pythonVersion.major,
+              pythonMinor: pythonVersion.minor,
             });
+            remainingCapacity = addBytecodeWithinCapacity(
+              files,
+              appBytecodeInfo,
+              remainingCapacity
+            );
+          }
 
-            compileSpan.setAttributes({
-              'python.compileall.enabled': 'true',
-              'python.compileall.sitePackageDirectoryCount': String(
-                sitePackageDirs.length
-              ),
-            });
-          });
-
-        const currentSize = await calculateBundleSize(files);
-        let remainingCapacity = capacityBytes - currentSize;
-
-        if (pythonVersion.major != null && pythonVersion.minor != null) {
-          const appBytecodeInfo = await collectAppBytecodeFiles({
-            workPath,
-            files,
-            pythonMajor: pythonVersion.major,
-            pythonMinor: pythonVersion.minor,
-          });
-          remainingCapacity = addBytecodeWithinCapacity(
-            files,
-            appBytecodeInfo,
-            remainingCapacity
+          const vendorBytecodeInfo = await depExternalizer.collectBytecodeFiles(
+            {
+              vendorDirName: vendorDir,
+            }
           );
+          await addVendorBytecodeWithinCapacity({
+            files,
+            depExternalizer,
+            vendorDir,
+            bytecodeInfo: vendorBytecodeInfo,
+            capacity: remainingCapacity,
+          });
+        } catch (err) {
+          console.log(
+            'Bytecode precompilation failed; continuing without precompiled bytecode.'
+          );
+          debug(`bytecode precompilation error details: ${err}`);
         }
-
-        const vendorBytecodeInfo = await depExternalizer.collectBytecodeFiles({
-          vendorDirName: vendorDir,
-        });
-        await addVendorBytecodeWithinCapacity({
-          files,
-          depExternalizer,
-          vendorDir,
-          bytecodeInfo: vendorBytecodeInfo,
-          capacity: remainingCapacity,
-        });
       };
 
       const announceLargeFunction = () =>

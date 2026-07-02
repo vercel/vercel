@@ -5,18 +5,13 @@ import { join, sep } from 'path';
 import { isLargeFunctionsEnabled } from './large-functions';
 
 /**
- * Fill target for standard-size functions when adding precompiled bytecode.
- * Kept 5MB under LAMBDA_SIZE_THRESHOLD_BYTES so the bytecode fill
- * can never push a function over the size limit.
- */
-export const BYTECODE_FILL_CEILING_BYTES = 220 * 1024 * 1024;
-
-/**
  * Minimum headroom below the size limit required to precompile a
- * standard-size function. Below this, coverage would be partial at best and
- * the compile time is wasted.
+ * standard-size function; below this, coverage would be partial at best.
  */
 export const MIN_BYTECODE_HEADROOM_BYTES = 32 * 1024 * 1024;
+
+/** Converts a hung compileall subprocess into a skipped optimization. */
+export const COMPILEALL_TIMEOUT_MS = 5 * 60 * 1000;
 
 function isCompileAllFlagEnabled(): boolean {
   const val = process.env.VERCEL_PYTHON_COMPILEALL;
@@ -43,7 +38,10 @@ export function shouldUseCompileAll({
 }): boolean {
   if (isDev) return false;
 
-  // Custom install commands may bypass the venv layout compileall assumes.
+  // Custom install commands replace the standard install, leaving no
+  // known-good venv layout to compile against. Custom build commands are
+  // safe: they run after the standard install, and bytecode collection
+  // degrades gracefully.
   if (hasCustomCommand) return false;
 
   return isCompileAllEnabled();
@@ -112,7 +110,10 @@ export async function runCompileAll({
   ];
 
   try {
-    await execa(pythonBin, args, { env: env || process.env });
+    await execa(pythonBin, args, {
+      env: env || process.env,
+      timeout: COMPILEALL_TIMEOUT_MS,
+    });
   } catch (err) {
     debug(`compileall error details: ${JSON.stringify(err)}`);
   }

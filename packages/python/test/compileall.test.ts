@@ -15,7 +15,7 @@ vi.mock('@vercel/build-utils', async importOriginal => ({
 import execa from 'execa';
 import { FileFsRef } from '@vercel/build-utils';
 import {
-  BYTECODE_FILL_CEILING_BYTES,
+  COMPILEALL_TIMEOUT_MS,
   MIN_BYTECODE_HEADROOM_BYTES,
   collectAppBytecodeFiles,
   derivePycPath,
@@ -25,7 +25,10 @@ import {
   shouldPrecompileStandardFunction,
   shouldUseCompileAll,
 } from '../src/compileall';
-import { LAMBDA_SIZE_THRESHOLD_BYTES } from '../src/dependency-externalizer';
+import {
+  BYTECODE_FILL_CEILING_BYTES,
+  LAMBDA_SIZE_THRESHOLD_BYTES,
+} from '../src/dependency-externalizer';
 
 const mockedExeca = vi.mocked(execa);
 const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
@@ -292,8 +295,19 @@ describe('runCompileAll', () => {
         '[/\\\\]\\.vercel(?:[/\\\\]|$)',
         '/work',
       ],
-      { env }
+      { env, timeout: COMPILEALL_TIMEOUT_MS }
     );
+  });
+
+  it('resolves without throwing when compileall fails', async () => {
+    mockedExeca.mockRejectedValue(new Error('compileall crashed'));
+
+    await expect(
+      runCompileAll({
+        pythonBin: '/work/.vercel/python/.venv/bin/python',
+        filesOrDirectories: ['/work'],
+      })
+    ).resolves.toBeUndefined();
   });
 });
 

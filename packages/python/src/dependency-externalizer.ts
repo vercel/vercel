@@ -65,6 +65,12 @@ function shouldStripVendorFile(filePath: string): boolean {
 // that count toward the limit but aren't part of this bundle.
 export const LAMBDA_SIZE_THRESHOLD_BYTES = 225 * 1024 * 1024;
 
+// Bytecode fill target for standard-size functions, with a margin so the
+// fill can never push a function over the size limit.
+const BYTECODE_FILL_MARGIN_BYTES = 5 * 1024 * 1024;
+export const BYTECODE_FILL_CEILING_BYTES =
+  LAMBDA_SIZE_THRESHOLD_BYTES - BYTECODE_FILL_MARGIN_BYTES;
+
 // AWS Lambda ephemeral storage (/tmp) is 512MB. Use 500MB to leave a buffer
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
 export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 500 * 1024 * 1024;

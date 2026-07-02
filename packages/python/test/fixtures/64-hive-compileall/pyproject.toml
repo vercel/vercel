@@ -7,8 +7,6 @@ dependencies = [
   "pydantic",
 ]
 
-# Custom build commands do not disable compileall (only custom install
-# commands do). This script's blob makes the function large, so probes.json
-# asserts compileall runs despite the custom build command.
+# probes.json asserts compileall runs despite this custom build command.
 [tool.vercel.scripts]
 build = "python build.py"

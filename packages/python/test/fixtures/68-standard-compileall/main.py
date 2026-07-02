@@ -1,8 +1,5 @@
-# A standard-size function (well below the Lambda size limit) with
-# VERCEL_PYTHON_COMPILEALL=1 and no VERCEL_SUPPORT_LARGE_FUNCTIONS.
-# Verifies precompiled bytecode ships in the bundle: PYTHONDONTWRITEBYTECODE
-# is set at runtime and /var/task is read-only, so any .pyc present must have
-# been produced at build time.
+# Standard-size function: verifies precompiled bytecode ships in the bundle.
+# The runtime never writes .pyc, so any present were produced at build time.
 from pathlib import Path
 
 from flask import Flask, jsonify
