@@ -14,7 +14,6 @@ import {
   inspectSubcommand,
   addSubcommand,
   removeSubcommand,
-  tagsSubcommand,
 } from './command';
 import {
   imageAggregateCommand,
@@ -22,13 +21,14 @@ import {
   imageInspectSubcommand,
   imageRmSubcommand,
 } from './image/command';
+import { tagsAggregateCommand, tagsLsSubcommand } from './tags/command';
 
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
   inspect: getCommandAliases(inspectSubcommand),
   add: getCommandAliases(addSubcommand),
   rm: getCommandAliases(removeSubcommand),
-  tags: getCommandAliases(tagsSubcommand),
+  tags: getCommandAliases(tagsAggregateCommand),
   image: getCommandAliases(imageAggregateCommand),
 };
 
@@ -80,10 +80,16 @@ export default async function vcr(client: Client): Promise<number> {
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         printHelp(removeSubcommand);
         return 2;
-      case 'tags':
+      case 'tags': {
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
-        printHelp(tagsSubcommand);
+        const nested = args[0];
+        if (nested === 'ls' || nested === 'list') {
+          printHelp(tagsLsSubcommand);
+          return 2;
+        }
+        printHelp(tagsAggregateCommand);
         return 2;
+      }
       case 'image': {
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         const nested = args[0];

@@ -26,7 +26,7 @@ interface Repository {
 
 function printRepository(repository: Repository): void {
   output.print('\n');
-  output.print(`  ${chalk.cyan('Name')}\t\t${repository.name}\n`);
+  output.print(`  ${chalk.cyan('Name')}\t\t\t${repository.name}\n`);
   output.print(`  ${chalk.cyan('ID')}\t\t\t${repository.id}\n`);
   output.print(`  ${chalk.cyan('Project ID')}\t\t${repository.projectId}\n`);
   output.print(

@@ -251,7 +251,7 @@ describe('vcr', () => {
         });
       });
 
-      client.setArgv('vcr', 'tags', 'my-app');
+      client.setArgv('vcr', 'tags', 'ls', 'my-app');
       const exitCode = await vcr(client);
       expect(exitCode).toBe(0);
       const out = client.stderr.getFullOutput();
@@ -260,7 +260,7 @@ describe('vcr', () => {
     });
 
     it('rejects an invalid --sort-by value', async () => {
-      client.setArgv('vcr', 'tags', 'my-app', '--sort-by', 'bogus');
+      client.setArgv('vcr', 'tags', 'ls', 'my-app', '--sort-by', 'bogus');
       const exitCode = await vcr(client);
       expect(exitCode).toBe(1);
       expect(client.stderr.getFullOutput()).toContain(
@@ -269,7 +269,7 @@ describe('vcr', () => {
     });
 
     it('rejects an invalid --sort-order value', async () => {
-      client.setArgv('vcr', 'tags', 'my-app', '--sort-order', 'bogus');
+      client.setArgv('vcr', 'tags', 'ls', 'my-app', '--sort-order', 'bogus');
       const exitCode = await vcr(client);
       expect(exitCode).toBe(1);
       expect(client.stderr.getFullOutput()).toContain(
@@ -322,12 +322,19 @@ describe('vcr', () => {
           res.json({ image: { id: 'img_1', manifestDigest: 'sha256:abc' } });
         }
       );
+      client.scenario.get('/v1/vcr/repository/my-app', (_req, res) => {
+        res.json({ repository: { name: 'my-app' } });
+      });
 
       client.setArgv('vcr', 'image', 'inspect', 'my-app', 'img_1');
       const exitCode = await vcr(client);
       expect(exitCode).toBe(0);
       const out = client.stderr.getFullOutput();
       expect(out).toContain('img_1');
+      expect(out).toContain('sha256:abc');
+      expect(out).toContain(
+        'vcr.vercel.com/my-team/vcr-project/my-app@sha256:abc'
+      );
       expect(out).not.toContain('{');
     });
 

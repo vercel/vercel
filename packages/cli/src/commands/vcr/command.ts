@@ -1,11 +1,7 @@
-import {
-  formatOption,
-  limitOption,
-  projectOption,
-  yesOption,
-} from '../../util/arg-common';
+import { formatOption, projectOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 import { imageAggregateCommand } from './image/command';
+import { tagsAggregateCommand } from './tags/command';
 
 const projectScopeOption = {
   ...projectOption,
@@ -115,51 +111,6 @@ export const removeSubcommand = {
   ],
 } as const;
 
-export const TAGS_SORT_BY_CHOICES = ['updatedAt', 'tag'] as const;
-export const TAGS_SORT_ORDER_CHOICES = ['asc', 'desc'] as const;
-
-export const tagsSubcommand = {
-  name: 'tags',
-  aliases: [],
-  description: "List a repository's tags",
-  arguments: [
-    {
-      name: 'repository',
-      required: true,
-    },
-  ],
-  options: [
-    projectScopeOption,
-    {
-      name: 'sort-by',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-      description: 'Field to sort tags by (default: updatedAt)',
-      argument: 'FIELD',
-      choices: TAGS_SORT_BY_CHOICES,
-    },
-    {
-      name: 'sort-order',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-      description: 'Sort direction (default: desc)',
-      argument: 'ORDER',
-      choices: TAGS_SORT_ORDER_CHOICES,
-    },
-    limitOption,
-    cursorOption,
-    formatOption,
-  ],
-  examples: [
-    {
-      name: "List a repository's tags",
-      value: `${packageName} vcr tags my-app`,
-    },
-  ],
-} as const;
-
 export const vcrCommand = {
   name: 'vcr',
   aliases: [],
@@ -171,7 +122,7 @@ export const vcrCommand = {
     inspectSubcommand,
     addSubcommand,
     removeSubcommand,
-    tagsSubcommand,
+    tagsAggregateCommand,
     imageAggregateCommand,
   ],
   options: [],

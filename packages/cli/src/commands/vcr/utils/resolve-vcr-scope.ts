@@ -12,7 +12,9 @@ import { AGENT_REASON } from '../../../util/agent-output-constants';
 
 export interface VcrScope {
   teamId: string;
+  teamSlug: string;
   projectId: string;
+  projectName: string;
 }
 
 function emitVcrScopeError(
@@ -130,7 +132,9 @@ export async function resolveVcrScope(
 
     return {
       teamId: team.id,
+      teamSlug: team.slug,
       projectId: projectResult.id,
+      projectName: projectResult.name,
     };
   }
 
@@ -163,6 +167,8 @@ export async function resolveVcrScope(
 
   return {
     teamId: linkedProject.org.id,
+    teamSlug: linkedProject.org.slug,
     projectId: linkedProject.project.id,
+    projectName: linkedProject.project.name,
   };
 }

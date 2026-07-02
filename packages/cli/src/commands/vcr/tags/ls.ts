@@ -1,32 +1,32 @@
 import chalk from 'chalk';
-import type Client from '../../util/client';
-import table from '../../util/output/table';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
-import output from '../../output-manager';
-import { isAPIError } from '../../util/errors-ts';
+import type Client from '../../../util/client';
+import table from '../../../util/output/table';
+import { parseArguments } from '../../../util/get-args';
+import { getFlagsSpecification } from '../../../util/get-flags-specification';
+import { printError } from '../../../util/error';
+import output from '../../../output-manager';
+import { isAPIError } from '../../../util/errors-ts';
 import {
   outputError,
   validateOptionalIntegerRange,
-} from '../../util/command-validation';
-import { outputAgentError } from '../../util/agent-output';
-import { AGENT_REASON } from '../../util/agent-output-constants';
-import type { VcrTelemetryClient } from '../../util/telemetry/commands/vcr';
+} from '../../../util/command-validation';
+import { outputAgentError } from '../../../util/agent-output';
+import { AGENT_REASON } from '../../../util/agent-output-constants';
+import type { VcrTelemetryClient } from '../../../util/telemetry/commands/vcr';
 import {
-  tagsSubcommand,
+  tagsLsSubcommand,
   TAGS_SORT_BY_CHOICES,
   TAGS_SORT_ORDER_CHOICES,
 } from './command';
-import { resolveVcrScope } from './utils/resolve-vcr-scope';
-import { formatBytes, formatDigest, formatRelativeTime } from './utils/format';
+import { resolveVcrScope } from '../utils/resolve-vcr-scope';
+import { formatBytes, formatDigest, formatRelativeTime } from '../utils/format';
 import {
   requireVcrRepository,
   validateVcrChoice,
   validateVcrJsonOutput,
-} from './utils/validators';
-import { emitVcrArgParseError, handleVcrApiError } from './utils/errors';
-import { repositoryTagsPath } from './utils/paths';
+} from '../utils/validators';
+import { emitVcrArgParseError, handleVcrApiError } from '../utils/errors';
+import { repositoryTagsPath } from '../utils/paths';
 
 interface Tag {
   tag: string;
@@ -74,12 +74,12 @@ function printTags(list: TagList): void {
 
   if (list.nextCursor) {
     output.log(
-      `\nMore results available. Re-run with \`--cursor ${list.nextCursor}\`.`
+      `More results available. Re-run with \`--cursor ${list.nextCursor}\`.`
     );
   }
 }
 
-export default async function tags(
+export default async function ls(
   client: Client,
   argv: string[],
   telemetry: VcrTelemetryClient
@@ -88,13 +88,13 @@ export default async function tags(
   try {
     parsedArgs = parseArguments(
       argv,
-      getFlagsSpecification(tagsSubcommand.options)
+      getFlagsSpecification(tagsLsSubcommand.options)
     );
   } catch (err) {
     emitVcrArgParseError(
       client,
       err,
-      'vcr tags <repository> --project <name-or-id>'
+      'vcr tags ls <repository> --project <name-or-id>'
     );
     printError(err);
     return 1;
@@ -123,7 +123,7 @@ export default async function tags(
     client,
     repository,
     fr.jsonOutput,
-    'vcr tags <repository>'
+    'vcr tags ls <repository>'
   );
   if (typeof missingRepository === 'number') {
     return missingRepository;

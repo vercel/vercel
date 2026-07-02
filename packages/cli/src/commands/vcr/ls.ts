@@ -58,7 +58,7 @@ function printRepositories(list: RepositoryList): void {
 
   if (list.nextCursor) {
     output.log(
-      `\nMore results available. Re-run with \`--cursor ${list.nextCursor}\`.`
+      `More results available. Re-run with \`--cursor ${list.nextCursor}\`.`
     );
   }
 }
@@ -97,7 +97,7 @@ export default async function ls(
   const limitResult = validateOptionalIntegerRange(limitFlag, {
     flag: '--limit',
     min: 1,
-    max: 1000,
+    max: 100,
   });
   if (!limitResult.valid) {
     outputAgentError(

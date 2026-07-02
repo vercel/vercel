@@ -13,8 +13,13 @@ import {
   validateVcrJsonOutput,
 } from '../utils/validators';
 import { emitVcrArgParseError, handleVcrApiError } from '../utils/errors';
-import { imagePath } from '../utils/paths';
-import { formatBytes, formatDigest, formatRelativeTime } from '../utils/format';
+import { imagePath, repositoryPath } from '../utils/paths';
+import {
+  formatBytes,
+  formatImageReference,
+  formatRelativeTime,
+} from '../utils/format';
+import type { VcrScope } from '../utils/resolve-vcr-scope';
 
 type ImageStatus = 'ready' | 'preparing' | 'unoptimized' | null;
 
@@ -30,6 +35,10 @@ interface Image {
   tags: string[];
 }
 
+interface Repository {
+  name: string;
+}
+
 function formatStatus(status: ImageStatus): string {
   switch (status) {
     case 'ready':
@@ -43,24 +52,34 @@ function formatStatus(status: ImageStatus): string {
   }
 }
 
-function printImage(image: Image): void {
+function printImage(
+  image: Image,
+  scope: VcrScope,
+  repository: Repository
+): void {
   output.print('\n');
-  output.print(`  ${chalk.cyan('ID')}\t\t${image.id}\n`);
+  output.print(`  ${chalk.cyan('ID')}\t\t\t${image.id}\n`);
+  output.print(`  ${chalk.cyan('Digest')}\t\t${image.manifestDigest}\n`);
   output.print(
-    `  ${chalk.cyan('Digest')}\t\t${formatDigest(image.manifestDigest)}\n`
+    `  ${chalk.cyan('Image')}\t\t\t${formatImageReference(
+      scope.teamSlug,
+      scope.projectName,
+      repository.name,
+      image.manifestDigest
+    )}\n`
   );
-  output.print(`  ${chalk.cyan('Type')}\t\t${image.kind}\n`);
-  output.print(`  ${chalk.cyan('Arch')}\t\t${image.arch ?? '-'}\n`);
+  output.print(`  ${chalk.cyan('Type')}\t\t\t${image.kind}\n`);
+  output.print(`  ${chalk.cyan('Arch')}\t\t\t${image.arch ?? '-'}\n`);
   output.print(`  ${chalk.cyan('Platform')}\t\t${image.platform ?? '-'}\n`);
   output.print(
-    `  ${chalk.cyan('Size')}\t\t${formatBytes(image.sizeInBytes)}\n`
+    `  ${chalk.cyan('Size')}\t\t\t${formatBytes(image.sizeInBytes)}\n`
   );
   output.print(`  ${chalk.cyan('Status')}\t\t${formatStatus(image.status)}\n`);
   output.print(
     `  ${chalk.cyan('Created')}\t\t${formatRelativeTime(image.createdAt)}\n`
   );
   output.print(
-    `  ${chalk.cyan('Tags')}\t\t${image.tags?.length ? image.tags.join(', ') : '-'}\n`
+    `  ${chalk.cyan('Tags')}\t\t\t${image.tags?.length ? image.tags.join(', ') : '-'}\n`
   );
   output.print('\n');
 }
@@ -119,12 +138,18 @@ export default async function inspect(
   const path = imagePath(scope, repository, imageId);
   output.spinner('Fetching image...');
   try {
-    const result = await client.fetch<{ image: Image }>(path);
     if (fr.jsonOutput) {
+      const result = await client.fetch<{ image: Image }>(path);
       client.stdout.write(`${JSON.stringify(result.image, null, 2)}\n`);
     } else {
+      const [imageResult, repositoryResult] = await Promise.all([
+        client.fetch<{ image: Image }>(path),
+        client.fetch<{ repository: Repository }>(
+          repositoryPath(scope, repository)
+        ),
+      ]);
       output.log(`${chalk.bold('Image')} ${chalk.cyan(imageId)}`);
-      printImage(result.image);
+      printImage(imageResult.image, scope, repositoryResult.repository);
     }
     return 0;
   } catch (err) {

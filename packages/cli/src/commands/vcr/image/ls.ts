@@ -98,7 +98,7 @@ function printImages(list: ImageList): void {
 
   if (list.nextCursor) {
     output.log(
-      `\nMore results available. Re-run with \`--cursor ${list.nextCursor}\`.`
+      `More results available. Re-run with \`--cursor ${list.nextCursor}\`.`
     );
   }
 }

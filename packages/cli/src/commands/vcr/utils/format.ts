@@ -22,3 +22,17 @@ export function formatDigest(digest: string | null | undefined): string {
   }
   return digest.replace(/^sha256:/, '').slice(0, 12);
 }
+
+export const VCR_REGISTRY = 'vcr.vercel.com';
+
+export function formatImageReference(
+  teamSlug: string,
+  projectName: string,
+  repositoryName: string,
+  digest: string | null | undefined
+): string {
+  if (!digest) {
+    return '-';
+  }
+  return `${VCR_REGISTRY}/${teamSlug}/${projectName}/${repositoryName}@${digest}`;
+}
