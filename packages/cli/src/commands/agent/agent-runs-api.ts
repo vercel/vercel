@@ -8,9 +8,6 @@ import { outputAgentError } from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { parseTimeFlag } from '../../util/time-utils';
 
-// The Agent Runs data is served by the dashboard API on vercel.com (not
-// api.vercel.com), matching the Vercel MCP integration. The env var exists so
-// tests and staging can point elsewhere.
 const AGENT_RUNS_API_BASE = 'https://vercel.com/api/observability/agent-runs';
 
 export const DEFAULT_TRACE_MAX_FIELD_LENGTH = 8000;
@@ -21,14 +18,10 @@ export function getAgentRunsApiBase(): string {
 }
 
 export interface AgentRunsQuery {
-  /** Team id or slug — sent as the `teamSlug` query param (API accepts both). */
   teamId: string;
-  /** Project id or name — sent as the `project` query param. Omitted for team view. */
   projectId?: string;
   environment?: string;
-  /** Raw --since value (ISO 8601 or relative like "1d"). */
   since?: string;
-  /** Raw --until value. Only valid together with `since`. */
   until?: string;
   view?: 'team';
   page?: number;
@@ -48,7 +41,6 @@ export function buildAgentRunsUrl(query: AgentRunsQuery): string {
   }
   url.searchParams.set('environment', query.environment || 'production');
   if (query.since) {
-    // The API requires `from` and `to` together, as unix seconds.
     const from = parseTimeFlag(query.since);
     const to = query.until ? parseTimeFlag(query.until) : new Date();
     url.searchParams.set('from', String(Math.floor(from.getTime() / 1000)));
@@ -91,12 +83,6 @@ export type AgentRunsScope =
   | { ok: true; teamId: string; projectId: string | undefined }
   | { ok: false; exitCode: number };
 
-/**
- * Resolves team/project for Agent Runs queries from the linked project or the
- * global --scope and per-command --project flags. Flag values forward to the
- * API verbatim — it accepts slug or id for both. Prints (or emits the agent
- * payload for) the failure itself and returns an exit code when unresolvable.
- */
 export async function resolveAgentRunsScope(
   client: Client,
   {
@@ -143,16 +129,10 @@ export async function resolveAgentRunsScope(
   return { ok: false, exitCode: 1 };
 }
 
-/** Strip trailing " (404)" style suffixes from API error text. */
 function normalizeApiErrorText(message: string): string {
   return message.replace(/\s*\(\d{3}\)\s*$/, '').trim();
 }
 
-/**
- * Prints an Agent Runs API failure. In non-interactive mode, emits a
- * structured JSON error payload on stdout (and exits) so agents can branch on
- * `reason`.
- */
 export function handleAgentRunsApiError(client: Client, err: unknown): void {
   if (isAPIError(err)) {
     const reason =
@@ -180,10 +160,6 @@ export function handleAgentRunsApiError(client: Client, err: unknown): void {
   printError(err);
 }
 
-/**
- * Emits an invalid-arguments failure on both the human and agent surfaces.
- * Returns 1 so callers can `return invalidArguments(client, msg);`.
- */
 export function invalidArguments(client: Client, message: string): number {
   outputAgentError(client, {
     status: AGENT_STATUS.ERROR,
@@ -203,7 +179,6 @@ export function normalizeTraceMaxFieldLength(
   return Math.min(Math.max(Math.floor(value), 0), MAX_TRACE_FIELD_LENGTH);
 }
 
-/** Recursively truncates long strings so trace output stays bounded. */
 export function truncateLargeStrings(
   value: unknown,
   maxLength: number

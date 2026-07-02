@@ -106,10 +106,6 @@ export default async function agent(client: Client): Promise<number> {
       return await projects(client);
     }
     default: {
-      // `init` matched, or no subcommand was given (bare `vercel agent`
-      // still runs init). Permissive parsing leaves unknown flags like
-      // `--yes` in the args, so only a non-flag token is an unknown
-      // subcommand.
       if (
         subcommand !== 'init' &&
         subArgs.length > 0 &&
