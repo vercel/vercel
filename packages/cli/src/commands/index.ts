@@ -58,6 +58,7 @@ import { telemetryCommand } from './telemetry/command';
 import { tracesCommand } from './traces/command';
 import { upgradeCommand } from './upgrade/command';
 import { usageCommand } from './usage/command';
+import { vcrCommand } from './vcr/command';
 import { whoamiCommand } from './whoami/command';
 import { blobCommand } from './blob/command';
 import { webhooksCommand } from './webhooks/command';
@@ -124,6 +125,7 @@ const commandsStructs = [
   upgradeCommand,
   webhooksCommand,
   usageCommand,
+  vcrCommand,
   whoamiCommand,
   // added because we don't have a full help command
   { name: 'help', aliases: [] },
