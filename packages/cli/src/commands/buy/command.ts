@@ -49,12 +49,13 @@ export const creditsSubcommand = {
 } as const;
 
 // TODO(mingchungx): Add other addons
-export const SUPPORTED_ADDON_ALIASES = ['siem'] as const;
+export const SUPPORTED_ADDON_ALIASES = ['siem', 'customEnvironment'] as const;
 export type AddonAlias = (typeof SUPPORTED_ADDON_ALIASES)[number];
 
 // TODO(mingchungx): Add other labels
 export const ADDON_LABELS: Record<AddonAlias, string> = {
   siem: 'SIEM',
+  customEnvironment: 'Custom Environments',
 };
 
 export const addonSubcommand = {
@@ -84,6 +85,10 @@ export const addonSubcommand = {
       name: 'Purchase 1 unit of the SIEM addon',
       value: `${packageName} buy addon siem 1`,
     },
+    {
+      name: 'Purchase 1 unit of the Custom Environments addon',
+      value: `${packageName} buy addon customEnvironment 1`,
+    },
   ],
 } as const;
 
@@ -108,20 +113,6 @@ export const proSubcommand = {
     {
       name: 'Upgrade without confirmation prompt',
       value: `${packageName} buy pro --yes`,
-    },
-  ],
-} as const;
-
-export const v0Subcommand = {
-  name: 'v0',
-  aliases: [],
-  description: 'Purchase a v0 subscription for your team',
-  arguments: [],
-  options: [],
-  examples: [
-    {
-      name: 'Purchase v0 for your team',
-      value: `${packageName} buy v0`,
     },
   ],
 } as const;
@@ -154,7 +145,6 @@ export const buyCommand = {
     creditsSubcommand,
     addonSubcommand,
     proSubcommand,
-    v0Subcommand,
     domainSubcommand,
   ],
   options: [],
@@ -168,12 +158,12 @@ export const buyCommand = {
       value: `${packageName} buy addon siem 1`,
     },
     {
-      name: 'Upgrade to Pro',
-      value: `${packageName} buy pro`,
+      name: 'Purchase the Custom Environments addon',
+      value: `${packageName} buy addon customEnvironment 1`,
     },
     {
-      name: 'Purchase v0',
-      value: `${packageName} buy v0`,
+      name: 'Upgrade to Pro',
+      value: `${packageName} buy pro`,
     },
     {
       name: 'Purchase a domain',

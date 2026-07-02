@@ -63,23 +63,48 @@ export const metricsCommand = {
     },
     {
       name: 'limit',
-      shorthand: null,
+      shorthand: 'l',
       type: Number,
       deprecated: false,
       description: 'Max groups per time bucket (default: 10)',
       argument: 'N',
     },
     {
-      name: 'filter',
-      shorthand: 'f',
+      name: 'order-by',
+      shorthand: null,
       type: String,
       deprecated: false,
-      description: 'OData filter expression',
+      description: 'Order grouped results by value or count (default: count)',
+      argument: 'value|count',
+    },
+    {
+      name: 'order',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Order direction for grouped results: asc or desc (default: desc)',
+      argument: 'asc|desc',
+    },
+    {
+      name: 'filter',
+      shorthand: 'f',
+      type: [String],
+      deprecated: false,
+      description: 'OData filter expression (repeatable, ANDed together)',
       argument: 'EXPR',
     },
     {
-      name: 'since',
+      name: 'prod',
       shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Limit query to production environment (equivalent to -f "environment eq \'production\'")',
+    },
+    {
+      name: 'since',
+      shorthand: 's',
       type: String,
       deprecated: false,
       description:
@@ -88,7 +113,7 @@ export const metricsCommand = {
     },
     {
       name: 'until',
-      shorthand: null,
+      shorthand: 'u',
       type: String,
       deprecated: false,
       description: 'End time (default: now)',
@@ -101,6 +126,15 @@ export const metricsCommand = {
       deprecated: false,
       description: 'Time bucket size: 5m, 15m, 1h, 1d (default: auto)',
       argument: 'SIZE',
+    },
+    {
+      name: 'bucket-timezone',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'IANA timezone for calendar bucket alignment only; does not shift --since/--until or output timestamps (e.g., Europe/Paris)',
+      argument: 'ZONE',
     },
     {
       ...projectOption,
@@ -126,7 +160,7 @@ export const metricsCommand = {
     },
     {
       name: 'Function duration by route',
-      value: `${packageName} metrics vercel.function_invocation.request_duration_ms -a avg --group-by route --since 1h`,
+      value: `${packageName} metrics vercel.function_invocation.function_duration_ms -a avg --group-by route --since 1h`,
     },
     {
       name: 'AI Gateway costs by provider',
@@ -134,7 +168,19 @@ export const metricsCommand = {
     },
     {
       name: 'Core Web Vitals (LCP) by route',
-      value: `${packageName} metrics vercel.speed_insights_metric.lcp -a p75 --group-by route --since 7d`,
+      value: `${packageName} metrics vercel.speed_insights.lcp_ms -a p75 --prod --group-by route --since 7d`,
+    },
+    {
+      name: 'Routes with the lowest p75 LCP',
+      value: `${packageName} metrics vercel.speed_insights.lcp_ms -a p75 --prod --group-by route --since 7d --order-by value --order asc`,
+    },
+    {
+      name: 'Daily pageviews with a Paris-aligned bucket',
+      value: `${packageName} metrics vercel.analytics_pageview.count --since 2026-05-28 --until 2026-05-29 --granularity 1d --bucket-timezone Europe/Paris`,
+    },
+    {
+      name: 'Visitors time series from the top 5 countries',
+      value: `${packageName} metrics vercel.analytics_pageview.count -a unique/visitor_id --group-by country --since 1d --granularity 1h --limit 5`,
     },
     {
       name: 'List available metrics',
@@ -143,6 +189,10 @@ export const metricsCommand = {
     {
       name: 'Function executions matching a path pattern',
       value: `${packageName} metrics vercel.function_invocation.count -f "contains(request_path, '/api')" --group-by route --since 1h`,
+    },
+    {
+      name: 'Function executions matching multiple filters',
+      value: `${packageName} metrics vercel.function_invocation.count -f "http_status ge 500" -f "contains(request_path, '/api')" --since 1h`,
     },
     {
       name: 'Show schema for a metric prefix',

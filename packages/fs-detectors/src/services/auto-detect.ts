@@ -4,11 +4,16 @@ import { detectFrameworks } from '../detect-framework';
 import { frameworkList } from '@vercel/frameworks';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
-  ExperimentalServices,
+  InferredServiceConfig,
+  InferredServicesConfig,
   ServiceDetectionError,
   ServiceDetectionWarning,
 } from './types';
-import { isFrontendFramework, DETECTION_FRAMEWORKS } from './utils';
+import {
+  isFrontendFramework,
+  assignMountPaths,
+  DETECTION_FRAMEWORKS,
+} from './utils';
 
 export interface AutoDetectOptions {
   fs: DetectorFilesystem;
@@ -20,7 +25,7 @@ export interface AutoDetectOptions {
 }
 
 export interface AutoDetectResult {
-  services: ExperimentalServices | null;
+  services: InferredServicesConfig | null;
   errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
 }
@@ -143,11 +148,12 @@ async function detectServicesAtRoot(
   rootFramework: Framework,
   detectEntrypoint: DetectEntrypointFn | undefined
 ): Promise<AutoDetectResult> {
-  const services: ExperimentalServices = {};
+  const services: InferredServicesConfig = {};
 
   services.frontend = {
+    root: '.',
     framework: rootFramework.slug ?? undefined,
-    routePrefix: '/',
+    mountPath: '/',
   };
 
   const backendResult = await detectBackendServices(fs, detectEntrypoint);
@@ -166,10 +172,11 @@ async function detectServicesAtRoot(
     };
   }
   Object.assign(services, backendResult.services);
+  const mountWarnings = assignMountPaths(services);
 
   return {
     services,
-    warnings: [],
+    warnings: mountWarnings,
     errors: [],
   };
 }
@@ -180,7 +187,7 @@ async function detectServicesFrontendSubdir(
   frontendLocation: string,
   detectEntrypoint: DetectEntrypointFn | undefined
 ): Promise<AutoDetectResult> {
-  const services: ExperimentalServices = {};
+  const services: InferredServicesConfig = {};
 
   // Infer service name from directory (e.g., "frontend" or "web" from "apps/web")
   const serviceName = frontendLocation.split('/').pop() || 'frontend';
@@ -188,7 +195,7 @@ async function detectServicesFrontendSubdir(
   services[serviceName] = {
     framework: frontendFramework.slug ?? undefined,
     root: frontendLocation,
-    routePrefix: '/',
+    mountPath: '/',
   };
 
   const backendResult = await detectBackendServices(fs, detectEntrypoint);
@@ -215,10 +222,11 @@ async function detectServicesFrontendSubdir(
   }
 
   Object.assign(services, backendResult.services);
+  const mountWarnings = assignMountPaths(services);
 
   return {
     services,
-    warnings: [],
+    warnings: mountWarnings,
     errors: [],
   };
 }
@@ -227,10 +235,10 @@ async function detectBackendServices(
   fs: DetectorFilesystem,
   detectEntrypoint: DetectEntrypointFn | undefined
 ): Promise<{
-  services: ExperimentalServices;
+  services: InferredServicesConfig;
   error?: ServiceDetectionError;
 }> {
-  const services: ExperimentalServices = {};
+  const services: InferredServicesConfig = {};
 
   const backendResult = await detectServiceInDir(
     fs,
@@ -275,10 +283,10 @@ async function detectServicesDirectory(
   fs: DetectorFilesystem,
   detectEntrypoint: DetectEntrypointFn | undefined
 ): Promise<{
-  services: ExperimentalServices;
+  services: InferredServicesConfig;
   error?: ServiceDetectionError;
 }> {
-  const services: ExperimentalServices = {};
+  const services: InferredServicesConfig = {};
 
   const hasServicesDir = await fs.hasPath(SERVICES_DIR);
   if (!hasServicesDir) {
@@ -319,7 +327,7 @@ async function detectServiceInDir(
   serviceName: string,
   detectEntrypoint: DetectEntrypointFn | undefined
 ): Promise<{
-  service?: ExperimentalServices[string];
+  service?: InferredServiceConfig;
   error?: ServiceDetectionError;
 }> {
   const hasDirPath = await fs.hasPath(dirPath);
@@ -351,7 +359,8 @@ async function detectServiceInDir(
 
   const framework = frameworks[0];
   const slug = framework.slug ?? undefined;
-  const routePrefix = `/_/${serviceName}`;
+  // Mount path will be assigned by assignMountPaths based on frontend type.
+  const mountPath = `/${serviceName}`;
 
   const detected =
     detectEntrypoint && !isFrontendFramework(slug)
@@ -362,7 +371,7 @@ async function detectServiceInDir(
       framework: slug,
       root: dirPath,
       ...(detected ? { entrypoint: detected.entrypoint } : {}),
-      routePrefix,
+      mountPath,
     },
   };
 }

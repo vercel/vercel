@@ -22,6 +22,7 @@ export interface RequestLogEntry {
   environment: 'production' | 'preview';
   branch?: string;
   cache?: string;
+  cacheReason?: string;
   traceId?: string;
   messageTruncated?: boolean;
   logs: RequestLogMessage[];
@@ -187,6 +188,7 @@ export async function fetchRequestLogs(
     environment?: string;
     branch?: string;
     cache?: string;
+    cacheReason?: string;
     traceId?: string;
     logs?: Array<{
       level?: string;
@@ -227,6 +229,7 @@ export async function fetchRequestLogs(
         (row.environment as RequestLogEntry['environment']) || 'production',
       branch: row.branch,
       cache: row.cache,
+      cacheReason: row.cacheReason,
       traceId: row.traceId,
       logs: requestLogs,
     };

@@ -1,5 +1,39 @@
 # @vercel/static-build
 
+## 2.11.4
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.24
+
+## 2.11.3
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.23
+
+## 2.11.2
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.22
+
+## 2.11.1
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.21
+
+## 2.11.0
+
+### Minor Changes
+
+- 3afdb18: Emit project manifest for hugo, zola, jekyll, and middleman frameworks.
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.20
+
 ## 2.10.3
 
 ### Patch Changes

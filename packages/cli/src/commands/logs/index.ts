@@ -29,10 +29,16 @@ import { help } from '../help';
 import { logsCommand } from './command';
 import output from '../../output-manager';
 
-interface BranchDeployment {
+interface LatestDeployment {
   id: string;
   url: string;
 }
+
+interface DeploymentResponse {
+  deployments: Array<{ uid: string; url: string }>;
+}
+
+type LogsTargetSource = 'deployment' | 'explicit-project' | 'linked-project';
 
 interface LogsTarget {
   projectId: string;
@@ -40,6 +46,7 @@ interface LogsTarget {
   orgSlug: string;
   ownerId: string;
   deployment?: Deployment;
+  targetSource: LogsTargetSource;
 }
 
 interface ResolveLogsTargetOptions {
@@ -54,11 +61,7 @@ async function getLatestDeploymentByBranch(
   client: Client,
   projectId: string,
   branch: string
-): Promise<BranchDeployment | null> {
-  interface DeploymentResponse {
-    deployments: Array<{ uid: string; url: string }>;
-  }
-
+): Promise<LatestDeployment | null> {
   // Different git providers use different metadata keys for the branch
   const branchMetaKeys = [
     'githubCommitRef',
@@ -86,6 +89,148 @@ async function getLatestDeploymentByBranch(
   }
 
   return null;
+}
+
+async function getLatestProductionDeployment(
+  client: Client,
+  projectId: string
+): Promise<LatestDeployment | null> {
+  const query = new URLSearchParams();
+  query.set('projectId', projectId);
+  query.set('limit', '1');
+  query.set('state', 'READY');
+  query.set('target', 'production');
+
+  const { deployments } = await client.fetch<DeploymentResponse>(
+    `/v6/deployments?${query}`
+  );
+
+  if (deployments.length === 0) {
+    return null;
+  }
+
+  return {
+    id: deployments[0].uid,
+    url: deployments[0].url,
+  };
+}
+
+interface ResolveBranchFilterOptions {
+  client: Client;
+  explicitBranch?: string;
+  logsTarget: LogsTarget;
+  noBranch?: boolean;
+}
+
+async function resolveBranchFilter({
+  client,
+  explicitBranch,
+  logsTarget,
+  noBranch,
+}: ResolveBranchFilterOptions): Promise<string | undefined> {
+  if (explicitBranch) {
+    return explicitBranch;
+  }
+
+  if (
+    noBranch ||
+    logsTarget.deployment ||
+    logsTarget.targetSource !== 'linked-project'
+  ) {
+    return;
+  }
+
+  try {
+    const gitMeta = await createGitMeta(client.cwd);
+    if (gitMeta?.commitRef) {
+      output.debug(`Detected git branch: ${gitMeta.commitRef}`);
+      return gitMeta.commitRef;
+    }
+  } catch {
+    // Not in a git repo or git not available, continue without branch filter
+  }
+}
+
+interface ResolveFollowDeploymentOptions {
+  branch?: string;
+  client: Client;
+  logsTarget: LogsTarget;
+  noBranch?: boolean;
+}
+
+type ResolveFollowDeploymentResult =
+  | { deploymentId: string; label: string }
+  | { exitCode: number };
+
+async function resolveFollowDeployment({
+  branch,
+  client,
+  logsTarget,
+  noBranch,
+}: ResolveFollowDeploymentOptions): Promise<ResolveFollowDeploymentResult> {
+  const { deployment, orgSlug, projectId, projectSlug, targetSource } =
+    logsTarget;
+  const deploymentId = deployment?.id;
+
+  if (deploymentId) {
+    return { deploymentId, label: 'deployment' };
+  }
+
+  if (targetSource === 'explicit-project' && !branch) {
+    output.spinner('Finding latest production deployment', 1000);
+    const productionDeployment = await getLatestProductionDeployment(
+      client,
+      projectId
+    );
+    output.stopSpinner();
+
+    if (!productionDeployment) {
+      output.error(
+        `No READY production deployments found for ${formatProject(orgSlug, projectSlug)}. Deploy to production first, specify a deployment with ${chalk.bold('--deployment')}, or select a preview branch with ${chalk.bold('--branch')}.`
+      );
+      return { exitCode: 1 };
+    }
+
+    output.debug(
+      `Found latest production deployment ${productionDeployment.id} (${productionDeployment.url})`
+    );
+    return {
+      deploymentId: productionDeployment.id,
+      label: 'latest production deployment',
+    };
+  }
+
+  if (noBranch) {
+    output.error(
+      `The ${chalk.bold('--follow')} flag requires a deployment. Specify one with ${chalk.bold('--deployment')} or remove ${chalk.bold('--no-branch')} to auto-detect from the current git branch.`
+    );
+    return { exitCode: 1 };
+  }
+
+  if (!branch) {
+    output.error(
+      `The ${chalk.bold('--follow')} flag requires a deployment. Specify one with ${chalk.bold('--deployment')} or run from within a git repository.`
+    );
+    return { exitCode: 1 };
+  }
+
+  output.spinner(`Finding latest deployment for branch "${branch}"`, 1000);
+  const branchDeployment = await getLatestDeploymentByBranch(
+    client,
+    projectId,
+    branch
+  );
+  output.stopSpinner();
+
+  if (!branchDeployment) {
+    output.error(
+      `No deployments found for branch "${branch}". Deploy this branch first or specify a deployment with ${chalk.bold('--deployment')}.`
+    );
+    return { exitCode: 1 };
+  }
+
+  output.debug(`Found deployment ${branchDeployment.id} for branch ${branch}`);
+  return { deploymentId: branchDeployment.id, label: 'deployment' };
 }
 
 const TIME_ONLY_FORMAT = 'HH:mm:ss.SS';
@@ -329,6 +474,7 @@ async function resolveLogsTarget(
       orgSlug: contextName,
       ownerId: project.accountId,
       deployment,
+      targetSource: 'deployment',
     };
   }
 
@@ -349,6 +495,7 @@ async function resolveLogsTarget(
       projectSlug: project.name,
       orgSlug: contextName,
       ownerId: project.accountId,
+      targetSource: 'explicit-project',
     };
   }
 
@@ -373,6 +520,7 @@ async function resolveLogsTarget(
     projectSlug: link.project.name,
     orgSlug: link.org.slug,
     ownerId: link.org.id,
+    targetSource: 'linked-project',
   };
 }
 
@@ -501,7 +649,7 @@ export default async function logs(client: Client) {
   }
 
   const { projectId, projectSlug, orgSlug, ownerId, deployment } = logsTarget;
-  let deploymentId = deployment?.id;
+  const deploymentId = deployment?.id;
 
   if (deployment && isNonLiveTerminalDeployment(deployment)) {
     const inspectContextName = detectExplicitScope(client)
@@ -527,74 +675,37 @@ export default async function logs(client: Client) {
   // Determine branch filter:
   // - If --branch is explicitly set (string), use it
   // - If --no-branch is set, don't filter by branch
-  // - Otherwise, auto-detect current git branch when no deployment is specified
+  // - Otherwise, auto-detect the current git branch only for a linked project
   const noBranchFlagValue = parsedArguments.flags['--no-branch'];
-  let branchOption: string | undefined;
-  if (typeof branchFlagValue === 'string') {
-    branchOption = branchFlagValue;
-  } else if (!noBranchFlagValue && !deploymentId) {
-    try {
-      const gitMeta = await createGitMeta(client.cwd);
-      if (gitMeta?.commitRef) {
-        branchOption = gitMeta.commitRef;
-        output.debug(`Detected git branch: ${branchOption}`);
-      }
-    } catch {
-      // Not in a git repo or git not available, continue without branch filter
-    }
-  }
+  const branchOption = await resolveBranchFilter({
+    client,
+    explicitBranch:
+      typeof branchFlagValue === 'string' ? branchFlagValue : undefined,
+    logsTarget,
+    noBranch: noBranchFlagValue,
+  });
 
   if (followOption) {
-    // If no deployment specified, try to find one by branch
-    if (!deploymentId) {
-      if (noBranchFlagValue) {
-        output.error(
-          `The ${chalk.bold('--follow')} flag requires a deployment. Specify one with ${chalk.bold('--deployment')} or remove ${chalk.bold('--no-branch')} to auto-detect from the current git branch.`
-        );
-        return 1;
-      }
-
-      if (!branchOption) {
-        output.error(
-          `The ${chalk.bold('--follow')} flag requires a deployment. Specify one with ${chalk.bold('--deployment')} or run from within a git repository.`
-        );
-        return 1;
-      }
-
-      output.spinner(
-        `Finding latest deployment for branch "${branchOption}"`,
-        1000
-      );
-      const branchDeployment = await getLatestDeploymentByBranch(
-        client,
-        projectId,
-        branchOption
-      );
-      output.stopSpinner();
-
-      if (!branchDeployment) {
-        output.error(
-          `No deployments found for branch "${branchOption}". Deploy this branch first or specify a deployment with ${chalk.bold('--deployment')}.`
-        );
-        return 1;
-      }
-
-      deploymentId = branchDeployment.id;
-      output.debug(
-        `Found deployment ${deploymentId} for branch ${branchOption}`
-      );
+    const followDeployment = await resolveFollowDeployment({
+      branch: branchOption,
+      client,
+      logsTarget,
+      noBranch: noBranchFlagValue,
+    });
+    if ('exitCode' in followDeployment) {
+      return followDeployment.exitCode;
     }
 
     if (!jsonOption) {
       output.print(
-        `Streaming logs for deployment ${chalk.bold(deploymentId)} starting from ${chalk.bold(format(Date.now(), TIME_ONLY_FORMAT))}\n\n`
+        `Streaming logs for ${followDeployment.label} ${chalk.bold(followDeployment.deploymentId)} starting from ${chalk.bold(format(Date.now(), TIME_ONLY_FORMAT))}\n\n`
       );
     }
     const abortController = new AbortController();
     return await displayRuntimeLogs(
       client,
       {
-        deploymentId: deploymentId!,
+        deploymentId: followDeployment.deploymentId,
         projectId,
         parse: !jsonOption,
       },

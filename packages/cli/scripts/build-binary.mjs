@@ -25,12 +25,12 @@ const binaryRuntimePackageNames = [
   '@vercel/prepare-flags-definitions',
   'chokidar',
   'esbuild',
-  'form-data',
   'jose',
   'luxon',
   'proxy-agent',
   'sandbox',
   'smol-toml',
+  'undici',
   'zod',
 ];
 const binaryRuntimeDevDependencies = new Map([

@@ -491,10 +491,6 @@ export interface VercelConfig {
    */
   name?: string;
   /**
-   * Whether a deployment's source and logs are available publicly
-   */
-  public?: boolean;
-  /**
    * A list of redirect definitions.
    */
   redirects?: Redirect[];

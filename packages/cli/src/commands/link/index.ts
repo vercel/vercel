@@ -1,4 +1,5 @@
 import type Client from '../../util/client';
+import chalk from 'chalk';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import cmd from '../../util/output/cmd';
@@ -11,12 +12,41 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
 import { getCommandAliases } from '..';
-import { autoInstallVercelPlugin } from '../../util/agent/auto-install-agentic';
 import getScope, { detectExplicitScope } from '../../util/get-scope';
+import pull from '../env/pull';
+import { resolveProjectCwd } from '../../util/projects/find-project-root';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
 };
+
+function warnOidcRefreshFailed(): void {
+  output.print(
+    `${chalk.yellow('!')} Linked project, but failed to refresh VERCEL_OIDC_TOKEN in .env.local. Rerun the link command to retry.\n`
+  );
+}
+
+async function refreshOidcTokenAfterLink(
+  client: Client,
+  cwd: string
+): Promise<void> {
+  const originalCwd = client.cwd;
+  try {
+    client.cwd = await resolveProjectCwd(cwd);
+    output.print('\n');
+    const exitCode = await pull(client, ['--yes'], 'vercel-cli:link', {
+      oidcTokenOnly: true,
+    });
+
+    if (exitCode !== 0) {
+      warnOidcRefreshFailed();
+    }
+  } catch (_error) {
+    warnOidcRefreshFailed();
+  } finally {
+    client.cwd = originalCwd;
+  }
+}
 
 export default async function link(client: Client) {
   let parsedArgs = null;
@@ -69,10 +99,6 @@ export default async function link(client: Client) {
       output.prettyError(err);
       return 1;
     }
-
-    await autoInstallVercelPlugin(client, {
-      autoConfirm: yes,
-    });
 
     return 0;
   }
@@ -141,16 +167,15 @@ export default async function link(client: Client) {
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
       searchAcrossTeams: !explicitScopeProvided,
+      pullEnv: false,
     });
 
     if (typeof link === 'number') {
       return link;
     }
-  }
 
-  await autoInstallVercelPlugin(client, {
-    autoConfirm: yes,
-  });
+    await refreshOidcTokenAfterLink(client, cwd);
+  }
 
   return 0;
 }

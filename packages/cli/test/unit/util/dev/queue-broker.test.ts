@@ -9,12 +9,12 @@ vi.mock('../../../../src/output-manager', () => ({
   default: { debug: vi.fn(), debugEnabled: false },
 }));
 
-vi.mock('node-fetch', () => ({
-  default: vi.fn().mockResolvedValue({ ok: true, status: 200 }),
+vi.mock('../../../../src/util/fetch', () => ({
+  directFetch: vi.fn().mockResolvedValue({ ok: true, status: 200 }),
 }));
 
-import nodeFetch from 'node-fetch';
-const mockFetch = vi.mocked(nodeFetch);
+import { directFetch } from '../../../../src/util/fetch';
+const mockFetch = vi.mocked(directFetch);
 
 function makeWorkerService(
   name: string,
@@ -150,6 +150,99 @@ describe('QueueBroker', () => {
       expect(r1.messageId).toBeTruthy();
       expect(r2.messageId).toBeTruthy();
       expect(r1.messageId).not.toBe(r2.messageId);
+    });
+
+    it('deduplicates idempotency keys within a queue', async () => {
+      broker = new QueueBroker(
+        [makeWorkerService('worker-a', ['orders'])],
+        getServiceOrigin
+      );
+
+      const first = broker.enqueue(
+        'orders',
+        Buffer.from('{"attempt":1}'),
+        'application/json',
+        { idempotencyKey: 'order-123' }
+      );
+      const duplicate = broker.enqueue(
+        'orders',
+        Buffer.from('{"attempt":2}'),
+        'application/json',
+        { idempotencyKey: 'order-123' }
+      );
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(duplicate.messageId).not.toBe(first.messageId);
+      expect(
+        broker.getOriginalMessageIdForDuplicate('orders', duplicate.messageId)
+      ).toBe(first.messageId);
+      expect(mockFetch).toHaveBeenCalledOnce();
+      expect((mockFetch.mock.calls[0][1] as any).body.toString()).toBe(
+        '{"attempt":1}'
+      );
+    });
+
+    it('scopes idempotency keys to a queue', async () => {
+      broker = new QueueBroker(
+        [makeWorkerService('worker-a', ['*'])],
+        getServiceOrigin
+      );
+
+      const first = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json',
+        { idempotencyKey: 'shared-key' }
+      );
+      const second = broker.enqueue(
+        'events',
+        Buffer.from('{}'),
+        'application/json',
+        { idempotencyKey: 'shared-key' }
+      );
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(second.messageId).not.toBe(first.messageId);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('expires idempotency keys with message retention', async () => {
+      broker = new QueueBroker(
+        [makeWorkerService('worker-a', ['orders'])],
+        getServiceOrigin
+      );
+
+      const first = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json',
+        { idempotencyKey: 'expiring-key', retentionSeconds: 60 }
+      );
+      const duplicate = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json',
+        { idempotencyKey: 'expiring-key', retentionSeconds: 60 }
+      );
+
+      expect(
+        broker.getOriginalMessageIdForDuplicate('orders', duplicate.messageId)
+      ).toBe(first.messageId);
+
+      await vi.advanceTimersByTimeAsync(60_001);
+      const afterExpiration = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json',
+        { idempotencyKey: 'expiring-key', retentionSeconds: 60 }
+      );
+
+      expect(
+        broker.getOriginalMessageIdForDuplicate(
+          'orders',
+          afterExpiration.messageId
+        )
+      ).toBeNull();
     });
 
     it('dispatches CloudEvent to matching worker', async () => {
