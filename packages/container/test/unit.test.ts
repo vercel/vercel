@@ -323,6 +323,8 @@ describe('@vercel/container', () => {
     /** Override the simulated `buildah info` store object. */
     storeInfo?: Record<string, unknown>;
     meta?: Record<string, unknown>;
+    /** Add support for custom CLI config payloads (like --build-env) */
+    config?: Record<string, unknown>;
     /**
      * When true, simulate the build container having provisioned a registry
      * auth file (vercel/api#76560), so the builder skips the explicit login.
@@ -378,7 +380,7 @@ describe('@vercel/container', () => {
 
     const result = expectTypicalBuildResult(
       await build({
-        ...createBuildOptions({ runtime: 'container' }),
+        ...createBuildOptions({ runtime: 'container', ...options?.config }),
         ...(options?.entrypoint ? { entrypoint: options.entrypoint } : {}),
         service: { name: 'api' },
         ...(options?.meta ? { meta: options.meta } : {}),
@@ -585,6 +587,32 @@ describe('@vercel/container', () => {
           /\bbuildah\b.*\bbuild\b/.test(c) &&
           c.includes('--build-arg MY_BUILD_VAR=hello') &&
           c.includes('--build-arg OTHER=world')
+      )
+    ).toBe(true);
+  });
+
+  it('merges config.build.env (CLI) and meta.buildEnv (Dashboard) to the image build as --build-arg', async () => {
+    const commands = await runDockerfileBuild({
+      buildImageEnv: 'al2023',
+      // Simulate CLI: vercel deploy --build-env CLI_VAR=from-cli --build-env OVERRIDE_VAR=cli-value
+      config: {
+        build: {
+          env: { CLI_VAR: 'from-cli', OVERRIDE_VAR: 'cli-value' },
+        },
+      },
+      // Simulate Vercel Dashboard UI Environment Variables
+      meta: {
+        buildEnv: { DASHBOARD_VAR: 'from-meta', OVERRIDE_VAR: 'meta-value' },
+      },
+    });
+
+    expect(
+      commands.some(
+        c =>
+          /\bbuildah\b.*\bbuild\b/.test(c) &&
+          c.includes('--build-arg CLI_VAR=from-cli') &&
+          c.includes('--build-arg DASHBOARD_VAR=from-meta') &&
+          c.includes('--build-arg OVERRIDE_VAR=meta-value')
       )
     ).toBe(true);
   });
