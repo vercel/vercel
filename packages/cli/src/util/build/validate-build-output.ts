@@ -4,10 +4,8 @@ import { debug as builderDebug } from '@vercel/build-utils';
 import output from '../../output-manager';
 
 /**
- * Emit a debug log to both the CLI output manager (visible with `--debug`) and
- * the build-utils debug channel (visible with `VERCEL_BUILDER_DEBUG=1` /
- * `VERCEL_DEBUG=1` inside the build container, where `vercel build` is invoked
- * without the `--debug` flag).
+ * Emit a debug log to both the CLI output manager (visible with `--debug`)
+ * and the build-utils debug channel (visible with `VERCEL_BUILDER_DEBUG=1`).
  */
 function logDebug(message: string): void {
   output.debug(message);

@@ -748,10 +748,8 @@ async function doBuild(
     ...pickOverrides(localConfig),
   };
 
-  // On a project's very first deployment (signalled by VERCEL_FIRST_DEPLOYMENT),
-  // aggressively detect the framework when none is configured, so builders run
-  // with the correct framework. This is a single filesystem-detector pass, so
-  // it is cheap; it must run before `detectBuilders` because that relies on
+  // On a project's first deployment, detect the framework when none is
+  // configured. Must run before `detectBuilders`, which relies on
   // `projectSettings.framework`. The result is recorded in `builds.json`.
   const firstDeploymentFramework = await span
     .child('vc.detectFirstDeploymentFramework', {
@@ -799,13 +797,8 @@ async function doBuild(
     normalizePath(relative(workPath, f))
   );
 
-  // Kick off framework detection in the background so it overlaps with the
-  // (expensive) builder work and doesn't slow down the build. The result is
-  // awaited near the end of the build to cross-check the configured framework
-  // against what the source code actually looks like. The span measures the
-  // detection itself; because it runs concurrently with builders, its
-  // duration does not add to the build's critical path. Opt-in via
-  // VERCEL_FRAMEWORK_DETECTION=1 so the feature can be rolled out gradually.
+  // Framework detection for the end-of-build cross-check, started here so it
+  // runs concurrently with the builders instead of adding latency.
   const detectedFrameworksPromise = !isFrameworkDetectionEnabled()
     ? Promise.resolve([] as string[])
     : span.child('vc.detectAllFrameworks').trace(async s => {
@@ -2176,10 +2169,7 @@ async function doBuild(
 
   await writeFlagsJSON(buildResults.values(), outputDir);
 
-  // Cross-check the frameworks detected from the source code against how the
-  // project was actually built. This runs off the background detection kicked
-  // off earlier, so it does not add latency to the build. Surface a warning
-  // on mismatch.
+  // Warn when the detected frameworks don't match how the project was built.
   await span.child('vc.frameworkCrossCheck').trace(async s => {
     const detectedFrameworks = await detectedFrameworksPromise;
     const executedBuilders = Array.from(buildResults.keys());
@@ -2200,8 +2190,6 @@ async function doBuild(
     });
   });
 
-  // Validate that the build output we just wrote looks valid. This is a louder
-  // signal that something is wrong beyond a framework mismatch.
   await span.child('vc.validateBuildOutput').trace(async s => {
     const outputProblems = await validateBuildOutput(outputDir);
     s.setAttributes({

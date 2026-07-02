@@ -251,8 +251,6 @@ describe('warnIfFrameworkMismatch()', () => {
   });
 
   it('does not warn for weak-signal detections like storybook on a static site', () => {
-    // Storybook is a devDependency of many apps that deploy something else
-    // entirely — too weak a signal to suggest it as the framework override.
     const result = warnIfFrameworkMismatch({
       configuredFramework: null,
       detectedFrameworks: ['storybook'],
@@ -264,8 +262,6 @@ describe('warnIfFrameworkMismatch()', () => {
   });
 
   it('does not warn for detections without a dedicated runtime builder like jekyll', () => {
-    // Jekyll builds via @vercel/static-build, so its absence from used
-    // builders proves nothing.
     const result = warnIfFrameworkMismatch({
       configuredFramework: null,
       detectedFrameworks: ['jekyll'],
@@ -277,8 +273,6 @@ describe('warnIfFrameworkMismatch()', () => {
   });
 
   it('does not warn when detected frameworks have no dedicated runtime builder (static-build frameworks)', () => {
-    // Astro is high-confidence (package.json dependency) but builds via
-    // @vercel/static-build, so its absence from used builders proves nothing.
     const result = warnIfFrameworkMismatch({
       configuredFramework: null,
       detectedFrameworks: ['astro'],
@@ -290,8 +284,6 @@ describe('warnIfFrameworkMismatch()', () => {
   });
 
   it('does not warn on configured mismatch when all detections are weak-signal', () => {
-    // Configured as a static-ish framework while storybook sits in
-    // devDependencies — should not warn.
     const result = warnIfFrameworkMismatch({
       configuredFramework: 'astro',
       detectedFrameworks: ['storybook'],

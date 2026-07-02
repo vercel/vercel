@@ -236,12 +236,9 @@ export interface Framework {
    */
   runtimeFramework?: boolean;
   /**
-   * When `true`, a positive detection is commonly incidental — the detector
-   * matches projects that never intended to deploy as this framework — so
-   * the detection should not be used to suggest this framework as an
-   * override. For example, Storybook is a devDependency of many apps that
-   * deploy something else entirely; deploying Storybook itself is a
-   * deliberate, comparatively rare choice.
+   * When `true`, a positive detection is commonly incidental (e.g. Storybook
+   * as a devDependency of an app that deploys something else), so it should
+   * not be used to suggest this framework as an override.
    * @example true
    */
   weakDetectionSignal?: boolean;
