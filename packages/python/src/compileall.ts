@@ -5,12 +5,20 @@ import { join, sep } from 'path';
 import { isLargeFunctionsEnabled } from './large-functions';
 
 /**
- * Compileall runs only for large functions *and* when `VERCEL_PYTHON_COMPILEALL`
- * is set truthy (`1`/`true`) — an opt-in toggle, no effect otherwise.
+ * Fill target for standard-size functions when adding precompiled bytecode.
+ * Kept 5MB under LAMBDA_SIZE_THRESHOLD_BYTES so the bytecode fill
+ * can never push a function over the size limit.
  */
-export function isCompileAllEnabled(): boolean {
-  if (!isLargeFunctionsEnabled()) return false;
+export const BYTECODE_FILL_CEILING_BYTES = 220 * 1024 * 1024;
 
+/**
+ * Minimum headroom below the size limit required to precompile a
+ * standard-size function. Below this, coverage would be partial at best and
+ * the compile time is wasted.
+ */
+export const MIN_BYTECODE_HEADROOM_BYTES = 32 * 1024 * 1024;
+
+function isCompileAllFlagEnabled(): boolean {
   const val = process.env.VERCEL_PYTHON_COMPILEALL;
   if (val === undefined || val === '') return false;
 
@@ -18,22 +26,48 @@ export function isCompileAllEnabled(): boolean {
   return lower === '1' || lower === 'true';
 }
 
+/**
+ * Compileall for large functions requires both `VERCEL_SUPPORT_LARGE_FUNCTIONS`
+ * and `VERCEL_PYTHON_COMPILEALL` to be set truthy (`1`/`true`).
+ */
+export function isCompileAllEnabled(): boolean {
+  return isLargeFunctionsEnabled() && isCompileAllFlagEnabled();
+}
+
 export function shouldUseCompileAll({
   isDev,
   hasCustomCommand,
-  hasCustomBuildCommand,
 }: {
   isDev?: boolean;
   hasCustomCommand: boolean;
-  hasCustomBuildCommand: boolean;
 }): boolean {
   if (isDev) return false;
 
-  // Custom install or build commands never get compileall: they may produce
-  // their own bytecode or bypass the venv layout compileall assumes.
-  if (hasCustomCommand || hasCustomBuildCommand) return false;
+  // Custom install commands may bypass the venv layout compileall assumes.
+  if (hasCustomCommand) return false;
 
   return isCompileAllEnabled();
+}
+
+/**
+ * Whether to precompile bytecode for a function that fits the standard
+ * Lambda size limit. Unlike the large-function path, this does not require
+ * `VERCEL_SUPPORT_LARGE_FUNCTIONS`.
+ */
+export function shouldPrecompileStandardFunction({
+  isDev,
+  hasCustomCommand,
+  headroomBytes,
+}: {
+  isDev?: boolean;
+  hasCustomCommand: boolean;
+  headroomBytes: number;
+}): boolean {
+  if (isDev) return false;
+  if (hasCustomCommand) return false;
+  if (!isCompileAllFlagEnabled()) return false;
+
+  return headroomBytes >= MIN_BYTECODE_HEADROOM_BYTES;
 }
 
 interface CompileAllOptions {

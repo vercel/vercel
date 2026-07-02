@@ -15,13 +15,17 @@ vi.mock('@vercel/build-utils', async importOriginal => ({
 import execa from 'execa';
 import { FileFsRef } from '@vercel/build-utils';
 import {
+  BYTECODE_FILL_CEILING_BYTES,
+  MIN_BYTECODE_HEADROOM_BYTES,
   collectAppBytecodeFiles,
   derivePycPath,
   getCompileAllAppExcludeRegex,
   isCompileAllEnabled,
   runCompileAll,
+  shouldPrecompileStandardFunction,
   shouldUseCompileAll,
 } from '../src/compileall';
+import { LAMBDA_SIZE_THRESHOLD_BYTES } from '../src/dependency-externalizer';
 
 const mockedExeca = vi.mocked(execa);
 const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
@@ -108,7 +112,6 @@ describe('shouldUseCompileAll', () => {
       shouldUseCompileAll({
         isDev: false,
         hasCustomCommand: false,
-        hasCustomBuildCommand: false,
       })
     ).toBe(true);
   });
@@ -121,20 +124,6 @@ describe('shouldUseCompileAll', () => {
       shouldUseCompileAll({
         isDev: false,
         hasCustomCommand: true,
-        hasCustomBuildCommand: false,
-      })
-    ).toBe(false);
-  });
-
-  it('does not enable compileall for custom build commands, even with large functions and the flag set', () => {
-    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
-    process.env.VERCEL_PYTHON_COMPILEALL = '1';
-
-    expect(
-      shouldUseCompileAll({
-        isDev: false,
-        hasCustomCommand: false,
-        hasCustomBuildCommand: true,
       })
     ).toBe(false);
   });
@@ -147,7 +136,6 @@ describe('shouldUseCompileAll', () => {
       shouldUseCompileAll({
         isDev: true,
         hasCustomCommand: false,
-        hasCustomBuildCommand: false,
       })
     ).toBe(false);
   });
@@ -160,7 +148,6 @@ describe('shouldUseCompileAll', () => {
       shouldUseCompileAll({
         isDev: false,
         hasCustomCommand: false,
-        hasCustomBuildCommand: false,
       })
     ).toBe(false);
   });
@@ -173,9 +160,108 @@ describe('shouldUseCompileAll', () => {
       shouldUseCompileAll({
         isDev: false,
         hasCustomCommand: false,
-        hasCustomBuildCommand: false,
       })
     ).toBe(false);
+  });
+});
+
+describe('shouldPrecompileStandardFunction', () => {
+  const AMPLE_HEADROOM = MIN_BYTECODE_HEADROOM_BYTES * 4;
+
+  it('enables precompilation with the flag set and ample headroom, without large functions', () => {
+    delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+
+    expect(
+      shouldPrecompileStandardFunction({
+        isDev: false,
+        hasCustomCommand: false,
+        headroomBytes: AMPLE_HEADROOM,
+      })
+    ).toBe(true);
+  });
+
+  it('enables precompilation at exactly the minimum headroom', () => {
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+
+    expect(
+      shouldPrecompileStandardFunction({
+        isDev: false,
+        hasCustomCommand: false,
+        headroomBytes: MIN_BYTECODE_HEADROOM_BYTES,
+      })
+    ).toBe(true);
+  });
+
+  it('does not enable precompilation below the minimum headroom', () => {
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+
+    expect(
+      shouldPrecompileStandardFunction({
+        isDev: false,
+        hasCustomCommand: false,
+        headroomBytes: MIN_BYTECODE_HEADROOM_BYTES - 1,
+      })
+    ).toBe(false);
+  });
+
+  it('does not enable precompilation without the flag or with a falsy flag', () => {
+    delete process.env.VERCEL_PYTHON_COMPILEALL;
+    expect(
+      shouldPrecompileStandardFunction({
+        isDev: false,
+        hasCustomCommand: false,
+        headroomBytes: AMPLE_HEADROOM,
+      })
+    ).toBe(false);
+
+    process.env.VERCEL_PYTHON_COMPILEALL = '0';
+    expect(
+      shouldPrecompileStandardFunction({
+        isDev: false,
+        hasCustomCommand: false,
+        headroomBytes: AMPLE_HEADROOM,
+      })
+    ).toBe(false);
+
+    process.env.VERCEL_PYTHON_COMPILEALL = 'false';
+    expect(
+      shouldPrecompileStandardFunction({
+        isDev: false,
+        hasCustomCommand: false,
+        headroomBytes: AMPLE_HEADROOM,
+      })
+    ).toBe(false);
+  });
+
+  it('does not enable precompilation in dev', () => {
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+
+    expect(
+      shouldPrecompileStandardFunction({
+        isDev: true,
+        hasCustomCommand: false,
+        headroomBytes: AMPLE_HEADROOM,
+      })
+    ).toBe(false);
+  });
+
+  it('does not enable precompilation for custom install commands', () => {
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+
+    expect(
+      shouldPrecompileStandardFunction({
+        isDev: false,
+        hasCustomCommand: true,
+        headroomBytes: AMPLE_HEADROOM,
+      })
+    ).toBe(false);
+  });
+
+  it('keeps the fill ceiling safely below the Lambda size threshold', () => {
+    expect(BYTECODE_FILL_CEILING_BYTES).toBeLessThan(
+      LAMBDA_SIZE_THRESHOLD_BYTES
+    );
   });
 });
 
