@@ -5,6 +5,7 @@ import {
   formatImageReference,
   formatImageStatus,
   formatRelativeTime,
+  formatTagReference,
 } from '../../../../../src/commands/vcr/utils/format';
 
 describe('formatBytes', () => {
@@ -73,6 +74,23 @@ describe('formatImageReference', () => {
       formatImageReference('my-team', 'vcr-project', 'my-app', undefined)
     ).toBe('-');
     expect(formatImageReference('my-team', 'vcr-project', 'my-app', null)).toBe(
+      '-'
+    );
+  });
+});
+
+describe('formatTagReference', () => {
+  it('builds a tag-qualified pull string', () => {
+    expect(
+      formatTagReference('my-team', 'vcr-project', 'my-app', 'latest')
+    ).toBe('vcr.vercel.com/my-team/vcr-project/my-app:latest');
+  });
+
+  it('returns a dash when the tag is missing', () => {
+    expect(
+      formatTagReference('my-team', 'vcr-project', 'my-app', undefined)
+    ).toBe('-');
+    expect(formatTagReference('my-team', 'vcr-project', 'my-app', null)).toBe(
       '-'
     );
   });

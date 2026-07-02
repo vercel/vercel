@@ -147,7 +147,7 @@ describe('requireVcrRepositoryAndTag', () => {
       'my-app',
       'latest',
       false,
-      'vcr tags inspect <repository> <tag>'
+      'vcr tag inspect <repository> <tag>'
     );
     expect(result).toBeUndefined();
   });
@@ -158,11 +158,11 @@ describe('requireVcrRepositoryAndTag', () => {
       'my-app',
       undefined,
       false,
-      'vcr tags inspect <repository> <tag>'
+      'vcr tag inspect <repository> <tag>'
     );
     expect(result).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
-      'vcr tags inspect <repository> <tag>'
+      'vcr tag inspect <repository> <tag>'
     );
   });
 
@@ -172,7 +172,7 @@ describe('requireVcrRepositoryAndTag', () => {
       undefined,
       'latest',
       false,
-      'vcr tags inspect <repository> <tag>'
+      'vcr tag inspect <repository> <tag>'
     );
     expect(result).toBe(1);
   });

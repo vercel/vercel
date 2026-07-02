@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import vcr from '../../../../src/commands/vcr';
 import { client } from '../../../mocks/client';
 
-describe('vcr tags', () => {
+describe('vcr tag', () => {
   it('displays help when invoked without subcommand', async () => {
-    client.setArgv('vcr', 'tags');
+    client.setArgv('vcr', 'tag');
     const exitCode = await vcr(client);
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
@@ -13,9 +13,9 @@ describe('vcr tags', () => {
   });
 
   it('errors on an unknown subcommand', async () => {
-    client.setArgv('vcr', 'tags', 'bogus');
+    client.setArgv('vcr', 'tag', 'bogus');
     const exitCode = await vcr(client);
     expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain('Unknown "vcr tags"');
+    expect(client.stderr.getFullOutput()).toContain('Unknown "vcr tag"');
   });
 });

@@ -25,7 +25,7 @@ export default async function tags(
     const message =
       argv.length === 0
         ? getInvalidSubcommand(TAGS_CONFIG)
-        : `Unknown "vcr tags" subcommand "${argv[0]}".`;
+        : `Unknown "vcr tag" subcommand "${argv[0]}".`;
     outputAgentError(
       client,
       {
@@ -34,17 +34,14 @@ export default async function tags(
         message,
         next: [
           {
-            command: buildCommandWithGlobalFlags(
-              client.argv,
-              'vcr tags --help'
-            ),
-            when: 'Show valid tags subcommands',
+            command: buildCommandWithGlobalFlags(client.argv, 'vcr tag --help'),
+            when: 'Show valid tag subcommands',
           },
         ],
       },
       1
     );
-    output.error(`${message} Run \`vercel vcr tags --help\`.`);
+    output.error(`${message} Run \`vercel vcr tag --help\`.`);
     return 1;
   }
 

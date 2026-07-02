@@ -16,9 +16,9 @@ import { emitVcrArgParseError, handleVcrApiError } from '../utils/errors';
 import { repositoryPath, repositoryTagPath } from '../utils/paths';
 import {
   formatBytes,
-  formatImageReference,
   formatImageStatus,
   formatRelativeTime,
+  formatTagReference,
 } from '../utils/format';
 import type { VcrImageStatus } from '../utils/format';
 import type { VcrScope } from '../utils/resolve-vcr-scope';
@@ -46,11 +46,11 @@ function printTag(tag: Tag, scope: VcrScope, repository: Repository): void {
   output.print(`  ${chalk.cyan('ID')}\t\t\t${tag.imageId}\n`);
   output.print(`  ${chalk.cyan('Digest')}\t\t${tag.manifestDigest}\n`);
   output.print(
-    `  ${chalk.cyan('Image')}\t\t\t${formatImageReference(
+    `  ${chalk.cyan('Image')}\t\t\t${formatTagReference(
       scope.teamSlug,
       scope.projectName,
       repository.name,
-      tag.manifestDigest
+      tag.tag
     )}\n`
   );
   output.print(`  ${chalk.cyan('Type')}\t\t\t${tag.kind}\n`);
@@ -83,7 +83,7 @@ export default async function inspect(
     emitVcrArgParseError(
       client,
       err,
-      'vcr tags inspect <repository> <tag> --project <name-or-id>'
+      'vcr tag inspect <repository> <tag> --project <name-or-id>'
     );
     printError(err);
     return 1;
@@ -105,7 +105,7 @@ export default async function inspect(
     repository,
     tag,
     fr.jsonOutput,
-    'vcr tags inspect <repository> <tag>'
+    'vcr tag inspect <repository> <tag>'
   );
   if (typeof missingArgs === 'number') {
     return missingArgs;

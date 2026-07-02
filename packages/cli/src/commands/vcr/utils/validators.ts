@@ -123,7 +123,7 @@ export function requireVcrRepositoryAndTag(
         {
           command: buildCommandWithGlobalFlags(
             client.argv,
-            'vcr tags ls <repository>'
+            'vcr tag ls <repository>'
           ),
           when: 'List tags to pick a tag (replace <repository>)',
         },

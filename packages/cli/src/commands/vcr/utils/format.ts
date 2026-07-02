@@ -51,3 +51,15 @@ export function formatImageReference(
   }
   return `${VCR_REGISTRY}/${teamSlug}/${projectName}/${repositoryName}@${digest}`;
 }
+
+export function formatTagReference(
+  teamSlug: string,
+  projectName: string,
+  repositoryName: string,
+  tag: string | null | undefined
+): string {
+  if (!tag) {
+    return '-';
+  }
+  return `${VCR_REGISTRY}/${teamSlug}/${projectName}/${repositoryName}:${tag}`;
+}

@@ -61,7 +61,7 @@ function mockTagAndRepository() {
   });
 }
 
-describe('vcr tags inspect', () => {
+describe('vcr tag inspect', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
@@ -77,14 +77,14 @@ describe('vcr tags inspect', () => {
 
   describe('--help', () => {
     it('tracks telemetry', async () => {
-      client.setArgv('vcr', 'tags', 'inspect', '--help');
+      client.setArgv('vcr', 'tag', 'inspect', '--help');
       const exitCode = await vcr(client);
       expect(exitCode).toEqual(2);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
-          value: 'vcr:tags',
+          value: 'vcr:tag',
         },
       ]);
     });
@@ -93,7 +93,7 @@ describe('vcr tags inspect', () => {
   it('inspects a single tag', async () => {
     mockTagAndRepository();
 
-    client.setArgv('vcr', 'tags', 'inspect', 'my-app', 'latest');
+    client.setArgv('vcr', 'tag', 'inspect', 'my-app', 'latest');
     const exitCode = await vcr(client);
     expect(exitCode).toBe(0);
 
@@ -101,23 +101,30 @@ describe('vcr tags inspect', () => {
     expect(out).toContain('latest');
     expect(out).toContain('img_1');
     expect(out).toContain('sha256:abc');
-    expect(out).toContain(
-      'vcr.vercel.com/my-team/vcr-project/my-app@sha256:abc'
-    );
+    expect(out).toContain('vcr.vercel.com/my-team/vcr-project/my-app:latest');
     expect(out).not.toContain('{');
   });
 
-  it('tracks subcommand invocation', async () => {
+  it('still routes via the "tags" alias', async () => {
     mockTagAndRepository();
 
     client.setArgv('vcr', 'tags', 'inspect', 'my-app', 'latest');
     const exitCode = await vcr(client);
     expect(exitCode).toBe(0);
+    expect(client.stderr.getFullOutput()).toContain('img_1');
+  });
+
+  it('tracks subcommand invocation', async () => {
+    mockTagAndRepository();
+
+    client.setArgv('vcr', 'tag', 'inspect', 'my-app', 'latest');
+    const exitCode = await vcr(client);
+    expect(exitCode).toBe(0);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
-        key: 'subcommand:tags',
-        value: 'tags',
+        key: 'subcommand:tag',
+        value: 'tag',
       },
     ]);
   });
@@ -127,7 +134,7 @@ describe('vcr tags inspect', () => {
 
     client.setArgv(
       'vcr',
-      'tags',
+      'tag',
       'inspect',
       'my-app',
       'latest',
@@ -144,10 +151,10 @@ describe('vcr tags inspect', () => {
   });
 
   it('errors when the tag argument is missing', async () => {
-    client.setArgv('vcr', 'tags', 'inspect', 'my-app');
+    client.setArgv('vcr', 'tag', 'inspect', 'my-app');
     const exitCode = await vcr(client);
     expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain('vcr tags inspect');
+    expect(client.stderr.getFullOutput()).toContain('vcr tag inspect');
   });
 
   it('reports a not found tag', async () => {
@@ -163,7 +170,7 @@ describe('vcr tags inspect', () => {
       res.json({ repository: { name: 'my-app' } });
     });
 
-    client.setArgv('vcr', 'tags', 'inspect', 'my-app', 'missing');
+    client.setArgv('vcr', 'tag', 'inspect', 'my-app', 'missing');
     const exitCode = await vcr(client);
     expect(exitCode).toBe(1);
   });

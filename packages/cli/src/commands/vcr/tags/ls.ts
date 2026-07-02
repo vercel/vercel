@@ -94,7 +94,7 @@ export default async function ls(
     emitVcrArgParseError(
       client,
       err,
-      'vcr tags ls <repository> --project <name-or-id>'
+      'vcr tag ls <repository> --project <name-or-id>'
     );
     printError(err);
     return 1;
@@ -123,7 +123,7 @@ export default async function ls(
     client,
     repository,
     fr.jsonOutput,
-    'vcr tags ls <repository>'
+    'vcr tag ls <repository>'
   );
   if (typeof missingRepository === 'number') {
     return missingRepository;

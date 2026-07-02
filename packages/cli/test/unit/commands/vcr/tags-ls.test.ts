@@ -39,7 +39,7 @@ function mockTeamScope() {
   } as any);
 }
 
-describe('vcr tags ls', () => {
+describe('vcr tag ls', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
@@ -55,14 +55,14 @@ describe('vcr tags ls', () => {
 
   describe('--help', () => {
     it('tracks telemetry', async () => {
-      client.setArgv('vcr', 'tags', 'ls', '--help');
+      client.setArgv('vcr', 'tag', 'ls', '--help');
       const exitCode = await vcr(client);
       expect(exitCode).toEqual(2);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
-          value: 'vcr:tags',
+          value: 'vcr:tag',
         },
       ]);
     });
@@ -84,7 +84,7 @@ describe('vcr tags ls', () => {
       });
     });
 
-    client.setArgv('vcr', 'tags', 'ls', 'my-app');
+    client.setArgv('vcr', 'tag', 'ls', 'my-app');
     const exitCode = await vcr(client);
     expect(exitCode).toBe(0);
     const out = client.stderr.getFullOutput();
@@ -97,20 +97,20 @@ describe('vcr tags ls', () => {
       res.json({ tags: [] });
     });
 
-    client.setArgv('vcr', 'tags', 'ls', 'my-app');
+    client.setArgv('vcr', 'tag', 'ls', 'my-app');
     const exitCode = await vcr(client);
     expect(exitCode).toBe(0);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
-        key: 'subcommand:tags',
-        value: 'tags',
+        key: 'subcommand:tag',
+        value: 'tag',
       },
     ]);
   });
 
   it('rejects an invalid --sort-by value', async () => {
-    client.setArgv('vcr', 'tags', 'ls', 'my-app', '--sort-by', 'bogus');
+    client.setArgv('vcr', 'tag', 'ls', 'my-app', '--sort-by', 'bogus');
     const exitCode = await vcr(client);
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
@@ -119,7 +119,7 @@ describe('vcr tags ls', () => {
   });
 
   it('rejects an invalid --sort-order value', async () => {
-    client.setArgv('vcr', 'tags', 'ls', 'my-app', '--sort-order', 'bogus');
+    client.setArgv('vcr', 'tag', 'ls', 'my-app', '--sort-order', 'bogus');
     const exitCode = await vcr(client);
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
@@ -128,9 +128,9 @@ describe('vcr tags ls', () => {
   });
 
   it('errors when the repository argument is missing', async () => {
-    client.setArgv('vcr', 'tags', 'ls');
+    client.setArgv('vcr', 'tag', 'ls');
     const exitCode = await vcr(client);
     expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain('vcr tags ls');
+    expect(client.stderr.getFullOutput()).toContain('vcr tag ls');
   });
 });

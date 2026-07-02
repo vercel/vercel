@@ -34,9 +34,9 @@ export class VcrTelemetryClient
     });
   }
 
-  trackCliSubcommandTags(actual: string) {
+  trackCliSubcommandTag(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'tags',
+      subcommand: 'tag',
       value: actual,
     });
   }

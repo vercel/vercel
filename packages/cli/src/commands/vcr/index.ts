@@ -32,7 +32,7 @@ const COMMAND_CONFIG = {
   inspect: getCommandAliases(inspectSubcommand),
   add: getCommandAliases(addSubcommand),
   rm: getCommandAliases(removeSubcommand),
-  tags: getCommandAliases(tagsAggregateCommand),
+  tag: getCommandAliases(tagsAggregateCommand),
   image: getCommandAliases(imageAggregateCommand),
 };
 
@@ -84,7 +84,7 @@ export default async function vcr(client: Client): Promise<number> {
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         printHelp(removeSubcommand);
         return 2;
-      case 'tags': {
+      case 'tag': {
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         const nested = args[0];
         if (nested === 'ls' || nested === 'list') {
@@ -136,8 +136,8 @@ export default async function vcr(client: Client): Promise<number> {
     case 'rm':
       telemetry.trackCliSubcommandRm(subcommandOriginal);
       return (await import('./rm')).default(client, args, telemetry);
-    case 'tags':
-      telemetry.trackCliSubcommandTags(subcommandOriginal);
+    case 'tag':
+      telemetry.trackCliSubcommandTag(subcommandOriginal);
       return (await import('./tags')).default(client, args, telemetry);
     case 'image':
       telemetry.trackCliSubcommandImage(subcommandOriginal);
