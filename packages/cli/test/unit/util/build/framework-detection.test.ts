@@ -5,6 +5,7 @@ import { join } from 'path';
 import {
   detectFirstDeploymentFramework,
   isFirstDeployment,
+  isFrameworkDetectionDisabled,
   warnIfFrameworkMismatch,
 } from '../../../../src/util/build/framework-detection';
 import output from '../../../../src/output-manager';
@@ -33,6 +34,28 @@ describe('isFirstDeployment()', () => {
   it('returns false when VERCEL_FIRST_DEPLOYMENT is not "1"', () => {
     process.env.VERCEL_FIRST_DEPLOYMENT = '0';
     expect(isFirstDeployment()).toBe(false);
+  });
+});
+
+describe('isFrameworkDetectionDisabled()', () => {
+  const original = process.env.VERCEL_DISABLE_FRAMEWORK_DETECTION;
+
+  afterEach(() => {
+    if (original === undefined) {
+      delete process.env.VERCEL_DISABLE_FRAMEWORK_DETECTION;
+    } else {
+      process.env.VERCEL_DISABLE_FRAMEWORK_DETECTION = original;
+    }
+  });
+
+  it('returns true when VERCEL_DISABLE_FRAMEWORK_DETECTION is "1"', () => {
+    process.env.VERCEL_DISABLE_FRAMEWORK_DETECTION = '1';
+    expect(isFrameworkDetectionDisabled()).toBe(true);
+  });
+
+  it('returns false when VERCEL_DISABLE_FRAMEWORK_DETECTION is unset', () => {
+    delete process.env.VERCEL_DISABLE_FRAMEWORK_DETECTION;
+    expect(isFrameworkDetectionDisabled()).toBe(false);
   });
 });
 
@@ -75,6 +98,27 @@ describe('detectFirstDeploymentFramework()', () => {
 
     expect(result).toBeNull();
     expect(projectSettings.framework).toBeNull();
+  });
+
+  it('returns null when the kill switch is set', async () => {
+    process.env.VERCEL_FIRST_DEPLOYMENT = '1';
+    process.env.VERCEL_DISABLE_FRAMEWORK_DETECTION = '1';
+    try {
+      const dir = await makeProjectDir({ dependencies: { next: '14.0.0' } });
+      const projectSettings: { framework?: string | null } = {
+        framework: null,
+      };
+
+      const result = await detectFirstDeploymentFramework({
+        workPath: dir,
+        projectSettings,
+      });
+
+      expect(result).toBeNull();
+      expect(projectSettings.framework).toBeNull();
+    } finally {
+      delete process.env.VERCEL_DISABLE_FRAMEWORK_DETECTION;
+    }
   });
 
   it('returns null when a framework is already configured', async () => {

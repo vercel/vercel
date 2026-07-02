@@ -19,6 +19,22 @@ function logDebug(message: string): void {
 }
 
 /**
+ * Kill switch for build-time framework detection. When set to `1`, both the
+ * first-deployment detection and the background framework cross-check are
+ * skipped entirely, so detection can be disabled quickly if it ever causes
+ * a performance regression or bad behavior in builds.
+ */
+export function isFrameworkDetectionDisabled(): boolean {
+  const disabled = process.env.VERCEL_DISABLE_FRAMEWORK_DETECTION === '1';
+  if (disabled) {
+    logDebug(
+      'Framework detection disabled via VERCEL_DISABLE_FRAMEWORK_DETECTION=1'
+    );
+  }
+  return disabled;
+}
+
+/**
  * Whether this is the very first deployment for a project, as signalled by
  * the `VERCEL_FIRST_DEPLOYMENT` environment variable.
  */
@@ -55,6 +71,10 @@ export async function detectFirstDeploymentFramework(options: {
   projectSettings: { framework?: string | null };
 }): Promise<DetectedFramework | null> {
   const { workPath, projectSettings } = options;
+
+  if (isFrameworkDetectionDisabled()) {
+    return null;
+  }
 
   logDebug(
     `First deployment: evaluating framework detection (workPath="${workPath}", ` +

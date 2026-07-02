@@ -84,6 +84,7 @@ import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
 import {
   detectFirstDeploymentFramework,
   detectAllFrameworks,
+  isFrameworkDetectionDisabled,
   warnIfFrameworkMismatch,
   type DetectedFramework,
 } from '../../util/build/framework-detection';
@@ -803,25 +804,26 @@ async function doBuild(
   // awaited near the end of the build to cross-check the configured framework
   // against what the source code actually looks like. The span measures the
   // detection itself; because it runs concurrently with builders, its
-  // duration does not add to the build's critical path.
-  const detectedFrameworksPromise = span
-    .child('vc.detectAllFrameworks')
-    .trace(async s => {
-      try {
-        const slugs = await detectAllFrameworks(workPath);
-        s.setAttributes({
-          detectedFrameworks: slugs.join(',') || undefined,
-          detectedFrameworkCount: String(slugs.length),
-        });
-        return slugs;
-      } catch (err) {
-        output.debug(`Framework cross-check detection failed: ${err}`);
-        s.setAttributes({
-          error: err instanceof Error ? err.message : String(err),
-        });
-        return [] as string[];
-      }
-    });
+  // duration does not add to the build's critical path. Disabled entirely by
+  // the VERCEL_DISABLE_FRAMEWORK_DETECTION kill switch.
+  const detectedFrameworksPromise = isFrameworkDetectionDisabled()
+    ? Promise.resolve([] as string[])
+    : span.child('vc.detectAllFrameworks').trace(async s => {
+        try {
+          const slugs = await detectAllFrameworks(workPath);
+          s.setAttributes({
+            detectedFrameworks: slugs.join(',') || undefined,
+            detectedFrameworkCount: String(slugs.length),
+          });
+          return slugs;
+        } catch (err) {
+          output.debug(`Framework cross-check detection failed: ${err}`);
+          s.setAttributes({
+            error: err instanceof Error ? err.message : String(err),
+          });
+          return [] as string[];
+        }
+      });
 
   const routesResult = getTransformedRoutes(localConfig);
   if (routesResult.error) {
