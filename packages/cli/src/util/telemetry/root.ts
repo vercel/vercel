@@ -453,6 +453,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandVcr(actual: string) {
+    this.trackCliCommand({
+      command: 'vcr',
+      value: actual,
+    });
+  }
+
   trackCPUs() {
     super.trackCPUs();
   }

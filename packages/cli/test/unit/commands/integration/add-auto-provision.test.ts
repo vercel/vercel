@@ -346,20 +346,21 @@ describe('integration add (auto-provision)', () => {
       });
     });
 
-    it('should prompt for terms upfront and provision', async () => {
+    it('should list all documents and provision after a single acceptance', async () => {
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
 
-      // 3-term prompt sequence (upfront, before provisioning)
+      // All legal documents are listed together, each on its own line...
       await expect(client.stderr).toOutput(
-        'Accept Vercel Marketplace End User Addendum?'
+        'Vercel Marketplace End User Addendum'
       );
-      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Privacy Policy');
+      await expect(client.stderr).toOutput('Terms of Service');
 
-      await expect(client.stderr).toOutput('Accept privacy policy?');
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput('Accept terms of service?');
+      // ...and accepted with a single confirmation.
+      await expect(client.stderr).toOutput(
+        'Accept all of the documents listed above?'
+      );
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
@@ -370,17 +371,17 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(0);
     });
 
-    it('should exit with code 1 when addendum declined', async () => {
+    it('should exit with code 1 when the documents are declined', async () => {
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Accept Vercel Marketplace End User Addendum?'
+        'Accept all of the documents listed above?'
       );
       client.stdin.write('n\n');
 
       await expect(client.stderr).toOutput(
-        'Vercel Marketplace End User Addendum must be accepted to continue.'
+        'All of the listed documents must be accepted to continue.'
       );
 
       const exitCode = await exitCodePromise;
@@ -398,49 +399,6 @@ describe('integration add (auto-provision)', () => {
           }),
         ])
       );
-    });
-
-    it('should exit with code 1 when privacy policy declined', async () => {
-      client.setArgv('integration', 'add', 'acme');
-      const exitCodePromise = integrationCommand(client);
-
-      await expect(client.stderr).toOutput(
-        'Accept Vercel Marketplace End User Addendum?'
-      );
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput('Accept privacy policy?');
-      client.stdin.write('n\n');
-
-      await expect(client.stderr).toOutput(
-        'Privacy policy must be accepted to continue.'
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(1);
-    });
-
-    it('should exit with code 1 when terms of service declined', async () => {
-      client.setArgv('integration', 'add', 'acme');
-      const exitCodePromise = integrationCommand(client);
-
-      await expect(client.stderr).toOutput(
-        'Accept Vercel Marketplace End User Addendum?'
-      );
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput('Accept privacy policy?');
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput('Accept terms of service?');
-      client.stdin.write('n\n');
-
-      await expect(client.stderr).toOutput(
-        'Terms of service must be accepted to continue.'
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(1);
     });
 
     it('should open browser for terms acceptance in non-TTY mode', async () => {
@@ -711,17 +669,20 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(1);
     });
 
-    it('should only prompt for addendum when integration has no privacy or EULA', async () => {
+    it('should only list the addendum when integration has no privacy or EULA', async () => {
       client.setArgv('integration', 'add', 'acme-prepayment');
       const exitCodePromise = integrationCommand(client);
 
-      // Only the addendum prompt should appear (acme-prepayment has no eulaDocUri/privacyDocUri)
+      // Only the addendum is listed (acme-prepayment has no eulaDocUri/privacyDocUri)
       await expect(client.stderr).toOutput(
-        'Accept Vercel Marketplace End User Addendum?'
+        'Vercel Marketplace End User Addendum'
+      );
+      await expect(client.stderr).toOutput(
+        'Accept all of the documents listed above?'
       );
       client.stdin.write('y\n');
 
-      // Should go straight to provisioning without privacy/EULA prompts
+      // Should go straight to provisioning
       await expect(client.stderr).toOutput(
         'Acme Product successfully provisioned'
       );
@@ -897,14 +858,10 @@ describe('integration add (auto-provision)', () => {
       );
       const exitCodePromise = integrationCommand(client);
 
-      // Upfront term prompts
+      // Upfront term acceptance (single confirmation)
       await expect(client.stderr).toOutput(
-        'Accept Vercel Marketplace End User Addendum?'
+        'Accept all of the documents listed above?'
       );
-      client.stdin.write('y\n');
-      await expect(client.stderr).toOutput('Accept privacy policy?');
-      client.stdin.write('y\n');
-      await expect(client.stderr).toOutput('Accept terms of service?');
       client.stdin.write('y\n');
 
       // After provisioning attempt, falls back to browser
@@ -931,14 +888,10 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
 
-      // Upfront term prompts
+      // Upfront term acceptance (single confirmation)
       await expect(client.stderr).toOutput(
-        'Accept Vercel Marketplace End User Addendum?'
+        'Accept all of the documents listed above?'
       );
-      client.stdin.write('y\n');
-      await expect(client.stderr).toOutput('Accept privacy policy?');
-      client.stdin.write('y\n');
-      await expect(client.stderr).toOutput('Accept terms of service?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
@@ -1472,14 +1425,10 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme', '--plan', 'pro');
       const exitCodePromise = integrationCommand(client);
 
-      // Upfront term prompts
+      // Upfront term acceptance (single confirmation)
       await expect(client.stderr).toOutput(
-        'Accept Vercel Marketplace End User Addendum?'
+        'Accept all of the documents listed above?'
       );
-      client.stdin.write('y\n');
-      await expect(client.stderr).toOutput('Accept privacy policy?');
-      client.stdin.write('y\n');
-      await expect(client.stderr).toOutput('Accept terms of service?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
