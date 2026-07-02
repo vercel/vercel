@@ -100,6 +100,7 @@ const entryPoints = [
   join(cwd, 'src/index.ts'),
   join(cwd, 'src/help.ts'),
   join(cwd, 'src/commands-bulk.ts'),
+  join(cwd, 'src/seed-store-worker.ts'),
   ...PRIORITY_COMMANDS.map(cmd => join(cwd, `src/commands/${cmd}/index.ts`)),
 ];
 
@@ -174,6 +175,10 @@ copyFileSync(
   new URL('fetch-dist-tags.cjs', distRoot)
 );
 copyFileSync(new URL('src/vc.js', repoRoot), new URL('vc.js', distRoot));
+copyFileSync(
+  new URL('src/store-redirect.mjs', repoRoot),
+  new URL('store-redirect.mjs', distRoot)
+);
 
 // Generate version.mjs for fast --version lookup
 writeFileSync(

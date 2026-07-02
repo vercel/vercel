@@ -32,6 +32,7 @@ try {
 
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { spawn } from 'child_process';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
 import semver from 'semver';
@@ -66,6 +67,11 @@ import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
 import getUpdateCommand from './util/get-update-command';
 import { executeUpgrade } from './util/upgrade';
+import {
+  shouldSeedStore,
+  shouldAttemptSeed,
+  recordSeedAttempt,
+} from './util/cli-store';
 import {
   canAutoUpdate,
   hasAutoUpdatePreference,
@@ -1343,6 +1349,37 @@ if (SHOULD_CHECK_FOR_UPDATES && !isNativeBinaryInstall()) {
       name: pkg.name,
       timeout: 3000,
     }).catch(() => undefined);
+  }
+}
+
+// Managed CLI store self-seeding (experimental, VERCEL_CLI_STORE=1): when
+// this install is newer than the store pointer, spawn a detached worker to
+// install this version into the store from the registry. This converges
+// every install on the machine to the newest version anyone runs, without
+// requiring an explicit `vc upgrade`. Rate-limited to one attempt per
+// version per day; the pointer is monotonic so a slow seed can never undo
+// a newer upgrade. Fire-and-forget: failures only mean no seeding.
+if (
+  process.env.VERCEL_CLI_STORE === '1' &&
+  !isNativeBinaryInstall() &&
+  process.env.VERCEL_CLI_STORE_REDIRECTED !== '1'
+) {
+  try {
+    if (shouldSeedStore(pkg.version) && shouldAttemptSeed(pkg.version)) {
+      recordSeedAttempt(pkg.version);
+      const workerPath = join(__dirname, 'seed-store-worker.js');
+      if (existsSync(workerPath)) {
+        output.debug(`Seeding CLI store with v${pkg.version} (background)`);
+        const seedWorker = spawn(process.execPath, [workerPath, pkg.version], {
+          detached: true,
+          stdio: 'ignore',
+          windowsHide: true,
+        });
+        seedWorker.unref();
+      }
+    }
+  } catch (err) {
+    output.debug(`CLI store seeding skipped: ${err}`);
   }
 }
 

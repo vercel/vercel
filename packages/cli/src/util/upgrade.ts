@@ -5,6 +5,10 @@ import { getUpdateCommandInfo } from './get-update-command';
 import pkg from './pkg';
 import output from '../output-manager';
 import { progress } from './output/progress';
+import { isNativeBinaryInstall } from './native-install';
+import { fetchLatestVersion } from './get-latest-version';
+import { isCliStoreEnabled, installVersionToStore } from './cli-store';
+import { packageName } from './pkg-name';
 
 function renderUpgradeProgress(
   current: number,
@@ -103,7 +107,69 @@ function isVersionCurrent(current: string, latest: string): boolean {
  * latest version is resolved before the install so no-op upgrades can be
  * reported without relying on whichever binary happens to be on `PATH`.
  */
+/**
+ * Upgrades via the managed CLI store: downloads the target version's tarball
+ * from the npm registry, verifies its integrity, extracts it into
+ * ~/.vercel/cli/versions/<v>/, and atomically flips the store pointer. The
+ * entrypoint redirects to the store when it holds a newer version, so this
+ * upgrade takes effect for every install of the CLI on the machine without
+ * touching any package manager.
+ */
+async function executeStoreUpgrade(targetVersion?: string): Promise<number> {
+  const totalSteps = 3;
+  const versionBefore = pkg.version;
+
+  renderUpgradeProgress(0, totalSteps, 'Checking for updates…');
+  const resolvedTarget =
+    targetVersion ?? (await fetchLatestVersion({ name: packageName }));
+
+  if (!resolvedTarget) {
+    output.stopSpinner();
+    output.error(
+      'Could not determine the latest Vercel CLI version from the registry.'
+    );
+    return 1;
+  }
+
+  if (isVersionCurrent(versionBefore, resolvedTarget)) {
+    renderUpgradeProgress(totalSteps, totalSteps);
+    output.stopSpinner();
+    output.log(
+      `No upgrade available. Vercel CLI is already up to date (v${versionBefore}).`
+    );
+    return 0;
+  }
+
+  renderUpgradeProgress(1, totalSteps, `Downloading v${resolvedTarget}…`);
+  try {
+    const installedVersion = await installVersionToStore(
+      packageName,
+      resolvedTarget
+    );
+    renderUpgradeProgress(totalSteps, totalSteps);
+    output.stopSpinner();
+    // Report the measured version, not the requested one.
+    output.success(
+      `Vercel CLI has been upgraded to v${installedVersion} successfully!`
+    );
+    return 0;
+  } catch (err) {
+    output.stopSpinner();
+    output.error(
+      `Upgrade failed: ${err instanceof Error ? err.message : String(err)}`
+    );
+    return 1;
+  }
+}
+
 export async function executeUpgrade(targetVersion?: string): Promise<number> {
+  // The managed store path never invokes a package manager, so it does not
+  // need to detect how the CLI was installed. Native binary installs are
+  // excluded until the store supports native payloads.
+  if (isCliStoreEnabled() && !isNativeBinaryInstall()) {
+    return executeStoreUpgrade(targetVersion);
+  }
+
   const totalSteps = targetVersion ? 2 : 3;
   renderUpgradeProgress(0, totalSteps, 'Resolving installer…');
 
