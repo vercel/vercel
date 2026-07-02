@@ -21,7 +21,7 @@ import {
   readNumber,
   readString,
 } from './format';
-import { AgentProjectsTelemetryClient } from '../../util/telemetry/commands/agent/projects';
+import { AgentProjectsTelemetryClient } from '../../util/telemetry/commands/agent-runs/projects';
 
 export default async function projects(client: Client): Promise<number> {
   const telemetry = new AgentProjectsTelemetryClient({
@@ -128,7 +128,7 @@ export default async function projects(client: Client): Promise<number> {
   ];
   client.stdout.write(`\n${table(rows, { hsep: 3 }).replace(/^/gm, '  ')}\n\n`);
   output.log(
-    `Run ${cmd('vercel agent runs --project <name>')} to list its Agent Runs.`
+    `Run ${cmd('vercel agent-runs list --project <name>')} to list its Agent Runs.`
   );
   return 0;
 }

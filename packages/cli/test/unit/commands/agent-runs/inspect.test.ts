@@ -1,6 +1,6 @@
 import { describe, beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
-import agent from '../../../../src/commands/agent';
+import agentRuns from '../../../../src/commands/agent-runs';
 import * as linkModule from '../../../../src/util/projects/link';
 
 vi.mock('../../../../src/util/projects/link', async () => {
@@ -27,7 +27,7 @@ function useLinkedProject() {
   } as Awaited<ReturnType<typeof linkModule.getLinkedProject>>);
 }
 
-describe('agent inspect', () => {
+describe('agent-runs inspect', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
@@ -43,8 +43,8 @@ describe('agent inspect', () => {
 
   it('prints help and returns 2 when runId is missing', async () => {
     useLinkedProject();
-    client.setArgv('agent', 'inspect');
-    const exitCode = await agent(client);
+    client.setArgv('agent-runs', 'inspect');
+    const exitCode = await agentRuns(client);
     expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('inspect');
   });
@@ -71,8 +71,8 @@ describe('agent inspect', () => {
       });
     });
 
-    client.setArgv('agent', 'inspect', 'run_001');
-    const exitCode = await agent(client);
+    client.setArgv('agent-runs', 'inspect', 'run_001');
+    const exitCode = await agentRuns(client);
 
     expect(exitCode).toBe(0);
     expect(receivedQuery).toMatchObject({
@@ -96,8 +96,8 @@ describe('agent inspect', () => {
       res.json(payload);
     });
 
-    client.setArgv('agent', 'inspect', 'run_001', '--json');
-    const exitCode = await agent(client);
+    client.setArgv('agent-runs', 'inspect', 'run_001', '--json');
+    const exitCode = await agentRuns(client);
 
     expect(exitCode).toBe(0);
     expect(JSON.parse(client.stdout.getFullOutput())).toEqual(payload);
@@ -109,8 +109,8 @@ describe('agent inspect', () => {
       res.json({ run: { id: 'run_001' } });
     });
 
-    client.setArgv('agent', 'inspect', 'run_001');
-    const exitCode = await agent(client);
+    client.setArgv('agent-runs', 'inspect', 'run_001');
+    const exitCode = await agentRuns(client);
 
     expect(exitCode).toBe(0);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([

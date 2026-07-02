@@ -1,6 +1,6 @@
 import { describe, beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
-import agent from '../../../../src/commands/agent';
+import agentRuns from '../../../../src/commands/agent-runs';
 import * as linkModule from '../../../../src/util/projects/link';
 
 vi.mock('../../../../src/util/projects/link', async () => {
@@ -37,7 +37,7 @@ const sampleRun = {
   usage: { inputTokens: 100, outputTokens: 200 },
 };
 
-describe('agent runs', () => {
+describe('agent-runs list', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
@@ -59,8 +59,8 @@ describe('agent runs', () => {
       res.json({ runs: [sampleRun], pagination: { page: 1, total: 1 } });
     });
 
-    client.setArgv('agent', 'runs');
-    const exitCode = await agent(client);
+    client.setArgv('agent-runs', 'list');
+    const exitCode = await agentRuns(client);
 
     expect(exitCode).toBe(0);
     expect(receivedQuery).toMatchObject({
@@ -74,7 +74,7 @@ describe('agent runs', () => {
     expect(stdout).toContain('Completed');
     expect(stdout).toContain('anthropic/claude-opus-4.8');
     expect(client.stderr.getFullOutput()).toContain(
-      'vercel agent inspect <runId>'
+      'vercel agent-runs inspect <runId>'
     );
   });
 
@@ -87,8 +87,8 @@ describe('agent runs', () => {
     });
 
     client.setArgv(
-      'agent',
-      'runs',
+      'agent-runs',
+      'list',
       '--search',
       'checkout',
       '--page',
@@ -100,7 +100,7 @@ describe('agent runs', () => {
       '--since',
       '1d'
     );
-    const exitCode = await agent(client);
+    const exitCode = await agentRuns(client);
 
     expect(exitCode).toBe(0);
     expect(receivedQuery).toMatchObject({
@@ -124,8 +124,8 @@ describe('agent runs', () => {
       res.json(payload);
     });
 
-    client.setArgv('agent', 'runs', '--json');
-    const exitCode = await agent(client);
+    client.setArgv('agent-runs', 'list', '--json');
+    const exitCode = await agentRuns(client);
 
     expect(exitCode).toBe(0);
     expect(JSON.parse(client.stdout.getFullOutput())).toEqual(payload);
@@ -139,14 +139,14 @@ describe('agent runs', () => {
     });
 
     client.setArgv(
-      'agent',
-      'runs',
+      'agent-runs',
+      'list',
       '--scope',
       'my-team',
       '--project',
       'my-app'
     );
-    const exitCode = await agent(client);
+    const exitCode = await agentRuns(client);
 
     expect(exitCode).toBe(0);
     expect(mockedGetLinkedProject).not.toHaveBeenCalled();
@@ -158,8 +158,8 @@ describe('agent runs', () => {
 
   it('errors when --scope points at a different team than the linked project', async () => {
     useLinkedProject();
-    client.setArgv('agent', 'runs', '--scope', 'other-team');
-    const exitCode = await agent(client);
+    client.setArgv('agent-runs', 'list', '--scope', 'other-team');
+    const exitCode = await agentRuns(client);
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
       "doesn't match the linked project's team"
@@ -174,8 +174,8 @@ describe('agent runs', () => {
       res.json({ runs: [] });
     });
 
-    client.setArgv('agent', 'runs', '--scope', 'my-team');
-    const exitCode = await agent(client);
+    client.setArgv('agent-runs', 'list', '--scope', 'my-team');
+    const exitCode = await agentRuns(client);
 
     expect(exitCode).toBe(0);
     expect(receivedQuery).toMatchObject({
@@ -186,8 +186,8 @@ describe('agent runs', () => {
 
   it('errors when --until is used without --since', async () => {
     useLinkedProject();
-    client.setArgv('agent', 'runs', '--until', '1h');
-    const exitCode = await agent(client);
+    client.setArgv('agent-runs', 'list', '--until', '1h');
+    const exitCode = await agentRuns(client);
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
       '`--until` requires `--since`.'
@@ -200,9 +200,9 @@ describe('agent runs', () => {
       throw new Error('process.exit called');
     }) as never);
     client.nonInteractive = true;
-    client.setArgv('agent', 'runs', '--until', '1h');
+    client.setArgv('agent-runs', 'list', '--until', '1h');
 
-    await expect(agent(client)).rejects.toThrow('process.exit called');
+    await expect(agentRuns(client)).rejects.toThrow('process.exit called');
     const payload = JSON.parse(client.stdout.getFullOutput());
     expect(payload).toMatchObject({
       status: 'error',
@@ -218,8 +218,8 @@ describe('agent runs', () => {
       res.status(403).json({ error: { message: 'Not authorized' } });
     });
 
-    client.setArgv('agent', 'runs');
-    const exitCode = await agent(client);
+    client.setArgv('agent-runs', 'list');
+    const exitCode = await agentRuns(client);
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain('Not authorized');
   });
@@ -231,8 +231,8 @@ describe('agent runs', () => {
       project: null,
     } as Awaited<ReturnType<typeof linkModule.getLinkedProject>>);
 
-    client.setArgv('agent', 'runs');
-    const exitCode = await agent(client);
+    client.setArgv('agent-runs', 'list');
+    const exitCode = await agentRuns(client);
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain('No linked project found.');
   });
@@ -243,27 +243,27 @@ describe('agent runs', () => {
       res.json({ runs: [] });
     });
 
-    client.setArgv('agent', 'runs', '--json', '--search', 'checkout');
-    const exitCode = await agent(client);
+    client.setArgv('agent-runs', 'list', '--json', '--search', 'checkout');
+    const exitCode = await agentRuns(client);
 
     expect(exitCode).toBe(0);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
-      { key: 'subcommand:runs', value: 'runs' },
+      { key: 'subcommand:list', value: 'list' },
       { key: 'option:search', value: '[REDACTED]' },
       { key: 'flag:json', value: 'TRUE' },
     ]);
   });
 });
 
-describe('agent (routing)', () => {
+describe('agent-runs (routing)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
   });
 
   it('errors on unknown subcommands', async () => {
-    client.setArgv('agent', 'bogus');
-    const exitCode = await agent(client);
+    client.setArgv('agent-runs', 'bogus');
+    const exitCode = await agentRuns(client);
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
       'Unknown subcommand: bogus'
@@ -271,11 +271,11 @@ describe('agent (routing)', () => {
   });
 
   it('prints subcommand help for `agent runs --help`', async () => {
-    client.setArgv('agent', 'runs', '--help');
-    const exitCode = await agent(client);
+    client.setArgv('agent-runs', 'list', '--help');
+    const exitCode = await agentRuns(client);
     expect(exitCode).toBe(2);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
-      { key: 'flag:help', value: 'agent:runs' },
+      { key: 'flag:help', value: 'agent-runs:list' },
     ]);
   });
 });

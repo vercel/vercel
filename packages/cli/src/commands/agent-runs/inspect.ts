@@ -7,7 +7,7 @@ import { printError } from '../../util/error';
 import cmd from '../../util/output/cmd';
 import table from '../../util/output/table';
 import { help } from '../help';
-import { agentCommand, inspectSubcommand } from './command';
+import { agentRunsCommand, inspectSubcommand } from './command';
 import {
   fetchAgentRuns,
   handleAgentRunsApiError,
@@ -35,7 +35,7 @@ import {
   runTrigger,
   type UnknownRecord,
 } from './format';
-import { AgentInspectTelemetryClient } from '../../util/telemetry/commands/agent/inspect';
+import { AgentInspectTelemetryClient } from '../../util/telemetry/commands/agent-runs/inspect';
 
 function formatStartedAt(run: UnknownRecord): string {
   const startedAt = runStartedAtMs(run);
@@ -162,7 +162,7 @@ export default async function inspect(client: Client): Promise<number> {
   if (!runIdArg) {
     output.print(
       help(inspectSubcommand, {
-        parent: agentCommand,
+        parent: agentRunsCommand,
         columns: client.stderr.columns,
       })
     );

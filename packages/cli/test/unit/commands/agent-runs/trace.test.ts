@@ -1,6 +1,6 @@
 import { describe, beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
-import agent from '../../../../src/commands/agent';
+import agentRuns from '../../../../src/commands/agent-runs';
 import * as linkModule from '../../../../src/util/projects/link';
 
 vi.mock('../../../../src/util/projects/link', async () => {
@@ -43,7 +43,7 @@ const sampleTrace = {
   },
 };
 
-describe('agent trace', () => {
+describe('agent-runs trace', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
@@ -59,8 +59,8 @@ describe('agent trace', () => {
 
   it('prints help and returns 2 when runId is missing', async () => {
     useLinkedProject();
-    client.setArgv('agent', 'trace');
-    const exitCode = await agent(client);
+    client.setArgv('agent-runs', 'trace');
+    const exitCode = await agentRuns(client);
     expect(exitCode).toBe(2);
   });
 
@@ -72,8 +72,8 @@ describe('agent trace', () => {
       res.json(sampleTrace);
     });
 
-    client.setArgv('agent', 'trace', 'run_001');
-    const exitCode = await agent(client);
+    client.setArgv('agent-runs', 'trace', 'run_001');
+    const exitCode = await agentRuns(client);
 
     expect(exitCode).toBe(0);
     expect(receivedQuery).toMatchObject({
@@ -100,8 +100,8 @@ describe('agent trace', () => {
       });
     });
 
-    client.setArgv('agent', 'trace', 'run_001', '--json');
-    let exitCode = await agent(client);
+    client.setArgv('agent-runs', 'trace', 'run_001', '--json');
+    let exitCode = await agentRuns(client);
     expect(exitCode).toBe(0);
     expect(client.stdout.getFullOutput()).toContain('[truncated 1000 chars]');
 
@@ -119,14 +119,14 @@ describe('agent trace', () => {
       });
     });
     client.setArgv(
-      'agent',
+      'agent-runs',
       'trace',
       'run_001',
       '--json',
       '--max-field-length',
       '0'
     );
-    exitCode = await agent(client);
+    exitCode = await agentRuns(client);
     expect(exitCode).toBe(0);
     expect(client.stdout.getFullOutput()).not.toContain('[truncated');
   });
@@ -137,8 +137,8 @@ describe('agent trace', () => {
       res.json({ trace: { something: 'else' } });
     });
 
-    client.setArgv('agent', 'trace', 'run_001');
-    const exitCode = await agent(client);
+    client.setArgv('agent-runs', 'trace', 'run_001');
+    const exitCode = await agentRuns(client);
     expect(exitCode).toBe(0);
     expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
       trace: { something: 'else' },

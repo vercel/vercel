@@ -1,10 +1,10 @@
 import type { TelemetryMethods } from '../../types';
-import type { runsSubcommand } from '../../../../commands/agent/command';
+import type { listSubcommand } from '../../../../commands/agent-runs/command';
 import { AgentRunsQueryTelemetryClient } from './shared';
 
-export class AgentRunsTelemetryClient
+export class AgentRunsListTelemetryClient
   extends AgentRunsQueryTelemetryClient
-  implements TelemetryMethods<typeof runsSubcommand>
+  implements TelemetryMethods<typeof listSubcommand>
 {
   trackCliOptionSearch(value: string | undefined) {
     if (value) {

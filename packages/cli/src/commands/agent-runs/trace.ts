@@ -5,7 +5,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import ellipsis from '../../util/output/ellipsis';
 import { help } from '../help';
-import { agentCommand, traceSubcommand } from './command';
+import { agentRunsCommand, traceSubcommand } from './command';
 import {
   fetchAgentRuns,
   handleAgentRunsApiError,
@@ -21,7 +21,7 @@ import {
   readString,
   type UnknownRecord,
 } from './format';
-import { AgentTraceTelemetryClient } from '../../util/telemetry/commands/agent/trace';
+import { AgentTraceTelemetryClient } from '../../util/telemetry/commands/agent-runs/trace';
 
 const INLINE_VALUE_MAX_LEN = 2000;
 
@@ -148,7 +148,7 @@ export default async function trace(client: Client): Promise<number> {
   if (!runIdArg) {
     output.print(
       help(traceSubcommand, {
-        parent: agentCommand,
+        parent: agentRunsCommand,
         columns: client.stderr.columns,
       })
     );

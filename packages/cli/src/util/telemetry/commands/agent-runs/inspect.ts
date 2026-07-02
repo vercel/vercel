@@ -1,5 +1,5 @@
 import type { TelemetryMethods } from '../../types';
-import type { inspectSubcommand } from '../../../../commands/agent/command';
+import type { inspectSubcommand } from '../../../../commands/agent-runs/command';
 import { AgentRunsQueryTelemetryClient } from './shared';
 
 export class AgentInspectTelemetryClient

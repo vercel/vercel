@@ -1,5 +1,5 @@
 import type { TelemetryMethods } from '../../types';
-import type { traceSubcommand } from '../../../../commands/agent/command';
+import type { traceSubcommand } from '../../../../commands/agent-runs/command';
 import { AgentRunsQueryTelemetryClient } from './shared';
 
 export class AgentTraceTelemetryClient

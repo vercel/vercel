@@ -657,12 +657,8 @@ const main = async () => {
     'telemetry',
     'upgrade',
     'skills',
+    'agent',
   ];
-
-  // `agent init` works offline; the Agent Runs subcommands hit the API.
-  if (subcommand === 'agent' && (!subSubCommand || subSubCommand === 'init')) {
-    subcommandsWithoutToken.push('agent');
-  }
 
   if (process.env.FF_GUIDANCE_MODE) {
     subcommandsWithoutToken.push('guidance');
@@ -968,6 +964,10 @@ const main = async () => {
         case 'agent':
           telemetry.trackCliCommandAgent(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).agent;
+          break;
+        case 'agent-runs':
+          telemetry.trackCliCommandAgentRuns(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).agentRuns;
           break;
         case 'ai-gateway':
           telemetry.trackCliCommandAiGateway(userSuppliedSubCommand);

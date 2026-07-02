@@ -1,6 +1,6 @@
 import { describe, beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
-import agent from '../../../../src/commands/agent';
+import agentRuns from '../../../../src/commands/agent-runs';
 import * as linkModule from '../../../../src/util/projects/link';
 
 vi.mock('../../../../src/util/projects/link', async () => {
@@ -13,7 +13,7 @@ vi.mock('../../../../src/util/projects/link', async () => {
 
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
 
-describe('agent projects', () => {
+describe('agent-runs projects', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
@@ -48,8 +48,8 @@ describe('agent projects', () => {
       });
     });
 
-    client.setArgv('agent', 'projects');
-    const exitCode = await agent(client);
+    client.setArgv('agent-runs', 'projects');
+    const exitCode = await agentRuns(client);
 
     expect(exitCode).toBe(0);
     expect(receivedQuery).toMatchObject({
@@ -70,8 +70,8 @@ describe('agent projects', () => {
       res.json({ projects: [] });
     });
 
-    client.setArgv('agent', 'projects', '--scope', 'my-team');
-    const exitCode = await agent(client);
+    client.setArgv('agent-runs', 'projects', '--scope', 'my-team');
+    const exitCode = await agentRuns(client);
 
     expect(exitCode).toBe(0);
     expect(mockedGetLinkedProject).not.toHaveBeenCalled();
@@ -88,8 +88,8 @@ describe('agent projects', () => {
       project: null,
     } as Awaited<ReturnType<typeof linkModule.getLinkedProject>>);
 
-    client.setArgv('agent', 'projects');
-    const exitCode = await agent(client);
+    client.setArgv('agent-runs', 'projects');
+    const exitCode = await agentRuns(client);
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain('No team scope found.');
   });

@@ -7,7 +7,7 @@ import { printError } from '../../util/error';
 import cmd from '../../util/output/cmd';
 import stamp from '../../util/output/stamp';
 import table from '../../util/output/table';
-import { runsSubcommand } from './command';
+import { listSubcommand } from './command';
 import {
   fetchAgentRuns,
   handleAgentRunsApiError,
@@ -29,15 +29,15 @@ import {
   runTotalTokens,
   runTrigger,
 } from './format';
-import { AgentRunsTelemetryClient } from '../../util/telemetry/commands/agent/runs';
+import { AgentRunsListTelemetryClient } from '../../util/telemetry/commands/agent-runs/list';
 
-export default async function runs(client: Client): Promise<number> {
-  const telemetry = new AgentRunsTelemetryClient({
+export default async function list(client: Client): Promise<number> {
+  const telemetry = new AgentRunsListTelemetryClient({
     opts: { store: client.telemetryEventStore },
   });
 
   let parsedArgs;
-  const flagsSpecification = getFlagsSpecification(runsSubcommand.options);
+  const flagsSpecification = getFlagsSpecification(listSubcommand.options);
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
@@ -139,7 +139,7 @@ export default async function runs(client: Client): Promise<number> {
   const total = readNumber(pagination, 'total', 'totalCount');
   if (total !== undefined && total > runList.length) {
     const nextPageArgs = [
-      'vercel agent runs',
+      'vercel agent-runs list',
       scopeFlag ? `--scope ${scopeFlag}` : '',
       projectFlag ? `--project ${projectFlag}` : '',
       `--page ${(page ?? 1) + 1}`,
@@ -150,6 +150,8 @@ export default async function runs(client: Client): Promise<number> {
       `Showing ${runList.length} of ${total} Agent Runs. Run ${cmd(nextPageArgs)} for more.`
     );
   }
-  output.log(`Run ${cmd('vercel agent inspect <runId>')} for run details.`);
+  output.log(
+    `Run ${cmd('vercel agent-runs inspect <runId>')} for run details.`
+  );
   return 0;
 }
