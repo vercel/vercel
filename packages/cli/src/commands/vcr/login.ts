@@ -27,6 +27,13 @@ import {
 /** stderr signatures that mean the registry rejected our credentials. */
 const AUTH_FAILURE = /denied|forbidden|unauthorized|401|403/i;
 
+/**
+ * The minted project OIDC token is development-scoped, which the API issues with
+ * a 12-hour TTL (see `getProjectToken` in vercel/api). The engine stores that
+ * token as a static credential, so the login is only good until it expires.
+ */
+const LOGIN_VALID_HOURS = 12;
+
 /** Last few lines of engine stderr, for surfacing an unexpected failure. */
 function stderrTail(stderr: string): string {
   return stderr.trim().split('\n').slice(-5).join('\n');
@@ -181,6 +188,7 @@ export default async function login(
             engine,
             registry,
             username: VCR_LOGIN_USERNAME,
+            validForHours: LOGIN_VALID_HOURS,
           },
           null,
           2
@@ -189,6 +197,12 @@ export default async function login(
     } else {
       output.success(
         `Logged in to ${registry} as ${VCR_LOGIN_USERNAME} (${engine}).`
+      );
+      output.log(
+        `Credentials are valid for ~${LOGIN_VALID_HOURS} hours. Re-run \`${buildCommandWithGlobalFlags(
+          client.argv,
+          `vcr login ${engine}`
+        )}\` to refresh.`
       );
     }
     return 0;

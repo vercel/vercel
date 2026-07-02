@@ -112,6 +112,7 @@ describe('vcr login', () => {
     expect(client.stderr.getFullOutput()).toContain(
       'Logged in to vcr.vercel.com'
     );
+    expect(client.stderr.getFullOutput()).toContain('valid for ~12 hours');
   });
 
   it('never leaks the token to stdout or stderr', async () => {
@@ -193,6 +194,7 @@ describe('vcr login', () => {
       engine: 'docker',
       registry: 'vcr.vercel.com',
       username: 'oidc',
+      validForHours: 12,
     });
     expect(parsed).not.toHaveProperty('token');
     expect(client.stdout.getFullOutput()).not.toContain(TOKEN);
