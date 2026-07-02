@@ -1142,7 +1142,11 @@ export async function calculateBundleSize(
         statPromises.push(
           fs.promises
             .stat(fsRef.fsPath)
-            .then(stats => stats.size)
+            .then(stats => {
+              // Cache so later passes (estimate, fill recount) skip the stat.
+              fsRef.size = stats.size;
+              return stats.size;
+            })
             .catch(err => {
               console.warn(
                 `Warning: Failed to stat file ${fsRef.fsPath}, size will not be included in bundle calculation: ${err}`
@@ -1173,6 +1177,13 @@ export async function calculateBundleSize(
  * gate errs toward skipping marginal compiles.
  */
 export const PYC_TO_PY_RATIO = 1.2;
+
+/**
+ * Minimum fraction of the estimated bytecode that must fit the remaining
+ * capacity to justify running compileall. Cold-start benefit is roughly
+ * proportional to coverage, so partial fills above this floor are worth it.
+ */
+export const BYTECODE_COVERAGE_FLOOR = 0.5;
 
 /**
  * Estimate the total bytecode size compileall would produce for the .py

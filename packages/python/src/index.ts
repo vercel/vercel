@@ -44,6 +44,7 @@ import {
 } from './install';
 import {
   PythonDependencyExternalizer,
+  BYTECODE_COVERAGE_FLOOR,
   BYTECODE_FILL_CEILING_BYTES,
   MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE,
   LAMBDA_SIZE_THRESHOLD_BYTES,
@@ -1190,11 +1191,12 @@ export const build: BuildVX = async ({
             );
           }
         } else if (compileAllEnabled) {
-          // Compile only when the expected bytecode fits the remaining
-          // capacity; a partial fill isn't worth the compile time.
+          // Compile only when enough of the expected bytecode ships to
+          // justify the compile time.
           const capacity =
             BYTECODE_FILL_CEILING_BYTES - depAnalysis.totalBundleSize;
-          if (capacity >= (await estimateBytecodeSize(files))) {
+          const estimate = await estimateBytecodeSize(files);
+          if (capacity >= BYTECODE_COVERAGE_FLOOR * estimate) {
             await runCompileAllAndFillBytecode(BYTECODE_FILL_CEILING_BYTES);
           }
         }

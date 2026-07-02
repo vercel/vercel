@@ -1,5 +1,5 @@
 ---
-'@vercel/python': patch
+'@vercel/python': minor
 ---
 
-Precompile Python bytecode for standard-size Lambda functions when the estimated bytecode size fits the remaining capacity, and allow bytecode precompilation when a custom build command is configured.
+Precompile Python bytecode for standard-size Lambda functions when enough of the estimated bytecode fits the remaining capacity, and allow bytecode precompilation when a custom build command is configured.
