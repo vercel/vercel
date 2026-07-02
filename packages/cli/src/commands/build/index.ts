@@ -84,7 +84,7 @@ import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
 import {
   detectFirstDeploymentFramework,
   detectAllFrameworks,
-  isFrameworkDetectionDisabled,
+  isFrameworkDetectionEnabled,
   warnIfFrameworkMismatch,
   type DetectedFramework,
 } from '../../util/build/framework-detection';
@@ -804,9 +804,9 @@ async function doBuild(
   // awaited near the end of the build to cross-check the configured framework
   // against what the source code actually looks like. The span measures the
   // detection itself; because it runs concurrently with builders, its
-  // duration does not add to the build's critical path. Disabled entirely by
-  // the VERCEL_DISABLE_FRAMEWORK_DETECTION kill switch.
-  const detectedFrameworksPromise = isFrameworkDetectionDisabled()
+  // duration does not add to the build's critical path. Opt-in via
+  // VERCEL_FRAMEWORK_DETECTION=1 so the feature can be rolled out gradually.
+  const detectedFrameworksPromise = !isFrameworkDetectionEnabled()
     ? Promise.resolve([] as string[])
     : span.child('vc.detectAllFrameworks').trace(async s => {
         try {

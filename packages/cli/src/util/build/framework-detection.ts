@@ -19,19 +19,21 @@ function logDebug(message: string): void {
 }
 
 /**
- * Kill switch for build-time framework detection. When set to `1`, both the
- * first-deployment detection and the background framework cross-check are
- * skipped entirely, so detection can be disabled quickly if it ever causes
- * a performance regression or bad behavior in builds.
+ * Opt-in switch for build-time framework detection. Both the
+ * first-deployment detection and the background framework cross-check only
+ * run when `VERCEL_FRAMEWORK_DETECTION=1` is set, so the feature can be
+ * rolled out gradually and rolled back instantly (by no longer setting the
+ * variable) if it causes a performance regression or bad behavior.
  */
-export function isFrameworkDetectionDisabled(): boolean {
-  const disabled = process.env.VERCEL_DISABLE_FRAMEWORK_DETECTION === '1';
-  if (disabled) {
-    logDebug(
-      'Framework detection disabled via VERCEL_DISABLE_FRAMEWORK_DETECTION=1'
-    );
-  }
-  return disabled;
+export function isFrameworkDetectionEnabled(): boolean {
+  const raw = process.env.VERCEL_FRAMEWORK_DETECTION;
+  const enabled = raw === '1';
+  logDebug(
+    `Framework detection: VERCEL_FRAMEWORK_DETECTION=${
+      raw === undefined ? '<unset>' : JSON.stringify(raw)
+    } -> ${enabled ? 'enabled' : 'disabled'}`
+  );
+  return enabled;
 }
 
 /**
@@ -72,7 +74,7 @@ export async function detectFirstDeploymentFramework(options: {
 }): Promise<DetectedFramework | null> {
   const { workPath, projectSettings } = options;
 
-  if (isFrameworkDetectionDisabled()) {
+  if (!isFrameworkDetectionEnabled()) {
     return null;
   }
 

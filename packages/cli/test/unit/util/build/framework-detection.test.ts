@@ -5,7 +5,7 @@ import { join } from 'path';
 import {
   detectFirstDeploymentFramework,
   isFirstDeployment,
-  isFrameworkDetectionDisabled,
+  isFrameworkDetectionEnabled,
   warnIfFrameworkMismatch,
 } from '../../../../src/util/build/framework-detection';
 import output from '../../../../src/output-manager';
@@ -37,37 +37,53 @@ describe('isFirstDeployment()', () => {
   });
 });
 
-describe('isFrameworkDetectionDisabled()', () => {
-  const original = process.env.VERCEL_DISABLE_FRAMEWORK_DETECTION;
+describe('isFrameworkDetectionEnabled()', () => {
+  const original = process.env.VERCEL_FRAMEWORK_DETECTION;
 
   afterEach(() => {
     if (original === undefined) {
-      delete process.env.VERCEL_DISABLE_FRAMEWORK_DETECTION;
+      delete process.env.VERCEL_FRAMEWORK_DETECTION;
     } else {
-      process.env.VERCEL_DISABLE_FRAMEWORK_DETECTION = original;
+      process.env.VERCEL_FRAMEWORK_DETECTION = original;
     }
   });
 
-  it('returns true when VERCEL_DISABLE_FRAMEWORK_DETECTION is "1"', () => {
-    process.env.VERCEL_DISABLE_FRAMEWORK_DETECTION = '1';
-    expect(isFrameworkDetectionDisabled()).toBe(true);
+  it('returns true when VERCEL_FRAMEWORK_DETECTION is "1"', () => {
+    process.env.VERCEL_FRAMEWORK_DETECTION = '1';
+    expect(isFrameworkDetectionEnabled()).toBe(true);
   });
 
-  it('returns false when VERCEL_DISABLE_FRAMEWORK_DETECTION is unset', () => {
-    delete process.env.VERCEL_DISABLE_FRAMEWORK_DETECTION;
-    expect(isFrameworkDetectionDisabled()).toBe(false);
+  it('returns false when VERCEL_FRAMEWORK_DETECTION is unset', () => {
+    delete process.env.VERCEL_FRAMEWORK_DETECTION;
+    expect(isFrameworkDetectionEnabled()).toBe(false);
+  });
+
+  it('returns false when VERCEL_FRAMEWORK_DETECTION is not "1"', () => {
+    process.env.VERCEL_FRAMEWORK_DETECTION = '0';
+    expect(isFrameworkDetectionEnabled()).toBe(false);
   });
 });
 
 describe('detectFirstDeploymentFramework()', () => {
   const original = process.env.VERCEL_FIRST_DEPLOYMENT;
+  const originalEnabled = process.env.VERCEL_FRAMEWORK_DETECTION;
   const created: string[] = [];
+
+  beforeEach(() => {
+    // Framework detection is opt-in
+    process.env.VERCEL_FRAMEWORK_DETECTION = '1';
+  });
 
   afterEach(async () => {
     if (original === undefined) {
       delete process.env.VERCEL_FIRST_DEPLOYMENT;
     } else {
       process.env.VERCEL_FIRST_DEPLOYMENT = original;
+    }
+    if (originalEnabled === undefined) {
+      delete process.env.VERCEL_FRAMEWORK_DETECTION;
+    } else {
+      process.env.VERCEL_FRAMEWORK_DETECTION = originalEnabled;
     }
     while (created.length) {
       const dir = created.pop();
@@ -100,25 +116,21 @@ describe('detectFirstDeploymentFramework()', () => {
     expect(projectSettings.framework).toBeNull();
   });
 
-  it('returns null when the kill switch is set', async () => {
+  it('returns null when framework detection is not opted in', async () => {
     process.env.VERCEL_FIRST_DEPLOYMENT = '1';
-    process.env.VERCEL_DISABLE_FRAMEWORK_DETECTION = '1';
-    try {
-      const dir = await makeProjectDir({ dependencies: { next: '14.0.0' } });
-      const projectSettings: { framework?: string | null } = {
-        framework: null,
-      };
+    delete process.env.VERCEL_FRAMEWORK_DETECTION;
+    const dir = await makeProjectDir({ dependencies: { next: '14.0.0' } });
+    const projectSettings: { framework?: string | null } = {
+      framework: null,
+    };
 
-      const result = await detectFirstDeploymentFramework({
-        workPath: dir,
-        projectSettings,
-      });
+    const result = await detectFirstDeploymentFramework({
+      workPath: dir,
+      projectSettings,
+    });
 
-      expect(result).toBeNull();
-      expect(projectSettings.framework).toBeNull();
-    } finally {
-      delete process.env.VERCEL_DISABLE_FRAMEWORK_DETECTION;
-    }
+    expect(result).toBeNull();
+    expect(projectSettings.framework).toBeNull();
   });
 
   it('returns null when a framework is already configured', async () => {
