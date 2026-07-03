@@ -79,8 +79,6 @@ export interface AgentErrorPayload {
   resource?: string;
   /** Team slug or username/email that was searched. Present on `project_not_found`. */
   scope?: string;
-  /** OAuth scopes that would grant the denied permission (e.g. "read-write:project"). Present on 403 when the API provides them. */
-  requiredScopes?: string[];
 }
 
 /**

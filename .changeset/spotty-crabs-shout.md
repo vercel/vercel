@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Surface permission details on 403 responses from `vercel api`: missing OAuth scopes (`requiredScopes`), the denied action/resource, and inaccessible team scopes are now shown in the error output, and emitted as a structured JSON payload in non-interactive/agent mode.
+`vercel api` now passes API error responses through in non-interactive mode: the structured error body (e.g. `code`, `action`, `resource` on a 403) is printed to stdout with exit code 1, instead of collapsing to a prose message. This lets agents recover from permission errors by reading which action/resource was denied. Interactive behavior is unchanged.

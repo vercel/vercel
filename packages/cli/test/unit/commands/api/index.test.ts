@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
-import api from '../../../../src/commands/api';
+import api, { runTagOperation } from '../../../../src/commands/api';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -245,8 +245,8 @@ describe('api', () => {
       expect(exitCode).toEqual(1);
     });
 
-    describe('403 responses', () => {
-      it('surfaces required scopes in interactive mode', async () => {
+    describe('error body passthrough (non-interactive mode)', () => {
+      it('passes 403 error bodies through on stdout', async () => {
         client.scenario.post('/v10/projects', (_req, res) => {
           res.status(403).json({
             error: {
@@ -254,7 +254,132 @@ describe('api', () => {
               message: "You don't have permission to create the project.",
               action: 'create',
               resource: 'project',
-              requiredScopes: ['read-write:project'],
+            },
+          });
+        });
+
+        client.nonInteractive = true;
+        client.setArgv('api', '/v10/projects', '-F', 'name=my-project');
+        const exitCode = await api(client);
+
+        expect(exitCode).toEqual(1);
+        const payload = JSON.parse(client.stdout.getFullOutput());
+        expect(payload).toEqual({
+          error: {
+            code: 'forbidden',
+            message: "You don't have permission to create the project.",
+            action: 'create',
+            resource: 'project',
+          },
+        });
+      });
+
+      it('passes 403 error bodies through for tag operations', async () => {
+        const spec = {
+          openapi: '3.0.3',
+          info: { title: 'API', version: '1.0.0' },
+          paths: {
+            '/v10/projects': {
+              post: {
+                operationId: 'createProject',
+                summary: 'Create a project',
+                tags: ['project'],
+                requestBody: {
+                  content: {
+                    'application/json': {
+                      schema: {
+                        type: 'object',
+                        properties: { name: { type: 'string' } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        };
+        // Serve the OpenAPI spec from the stub; delegate everything else
+        // (the mock API server) to the real fetch.
+        const originalFetch = globalThis.fetch;
+        vi.stubGlobal(
+          'fetch',
+          vi.fn((input: string | URL | Request, init?: RequestInit) => {
+            const url =
+              typeof input === 'string'
+                ? input
+                : input instanceof URL
+                  ? input.href
+                  : input.url;
+            if (url.startsWith('https://api.vercel.tools/')) {
+              return Promise.resolve(
+                new Response(JSON.stringify(spec), {
+                  status: 200,
+                  headers: { 'content-type': 'application/json' },
+                })
+              );
+            }
+            return originalFetch(input, init);
+          })
+        );
+        client.scenario.post('/v10/projects', (_req, res) => {
+          res.status(403).json({
+            error: {
+              code: 'forbidden',
+              message: "You don't have permission to create the project.",
+              action: 'create',
+              resource: 'project',
+            },
+          });
+        });
+
+        client.nonInteractive = true;
+        client.stdin.isTTY = false;
+        client.setArgv('api', 'project', 'createProject', 'name=my-project');
+        const exitCode = await runTagOperation(client, {
+          tag: 'project',
+          operationId: 'createProject',
+          flags: {
+            '--spec-url': 'https://api.vercel.tools/openapi.json',
+            '--refresh': true,
+          },
+          positionalOperationFields: ['name=my-project'],
+        });
+
+        expect(exitCode).toEqual(1);
+        const payload = JSON.parse(client.stdout.getFullOutput());
+        expect(payload.error).toMatchObject({
+          code: 'forbidden',
+          action: 'create',
+          resource: 'project',
+        });
+      });
+
+      it('passes non-403 error bodies through on stdout', async () => {
+        client.scenario.get('/v2/nonexistent', (_req, res) => {
+          res
+            .status(404)
+            .json({ error: { code: 'not_found', message: 'Not found' } });
+        });
+
+        client.nonInteractive = true;
+        client.setArgv('api', '/v2/nonexistent');
+        const exitCode = await api(client);
+
+        expect(exitCode).toEqual(1);
+        const payload = JSON.parse(client.stdout.getFullOutput());
+        expect(payload).toEqual({
+          error: { code: 'not_found', message: 'Not found' },
+        });
+      });
+
+      it('keeps the prose error on stderr in interactive mode', async () => {
+        client.scenario.post('/v10/projects', (_req, res) => {
+          res.status(403).json({
+            error: {
+              code: 'forbidden',
+              message: "You don't have permission to create the project.",
+              action: 'create',
+              resource: 'project',
             },
           });
         });
@@ -263,113 +388,10 @@ describe('api', () => {
         const exitCode = await api(client);
 
         expect(exitCode).toEqual(1);
-        const output = client.getFullOutput();
-        expect(output).toContain(
+        expect(client.stdout.getFullOutput()).toBe('');
+        expect(client.getFullOutput()).toContain(
           "You don't have permission to create the project."
         );
-        expect(output).toContain('read-write:project');
-      });
-
-      it('emits a JSON payload with required scopes in non-interactive mode', async () => {
-        client.scenario.post('/v10/projects', (_req, res) => {
-          res.status(403).json({
-            error: {
-              code: 'forbidden',
-              message: "You don't have permission to create the project.",
-              action: 'create',
-              resource: 'project',
-              requiredScopes: ['read-write:project'],
-            },
-          });
-        });
-
-        const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
-          throw new Error('process.exit called');
-        }) as never);
-        client.nonInteractive = true;
-        client.setArgv('api', '/v10/projects', '-F', 'name=my-project');
-
-        await expect(api(client)).rejects.toThrow('process.exit called');
-        const payload = JSON.parse(client.stdout.getFullOutput());
-        expect(payload).toMatchObject({
-          status: 'error',
-          reason: 'missing_scope',
-          message: "You don't have permission to create the project.",
-          action: 'create',
-          resource: 'project',
-          requiredScopes: ['read-write:project'],
-          userActionRequired: true,
-        });
-        expect(payload.hint).toContain('read-write:project');
-        expect(exitSpy).toHaveBeenCalledWith(1);
-        exitSpy.mockRestore();
-        client.nonInteractive = false;
-      });
-
-      it('emits scope_not_accessible for team scope 403s in non-interactive mode', async () => {
-        client.scenario.get('/v9/projects', (_req, res) => {
-          res.status(403).json({
-            error: {
-              code: 'forbidden',
-              message:
-                'Not authorized: Trying to access resource under scope "my-team". You must re-authenticate to this scope or use a token with access to this scope.',
-              saml: false,
-              teamId: null,
-              scope: 'my-team',
-              enforced: false,
-            },
-          });
-        });
-
-        const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
-          throw new Error('process.exit called');
-        }) as never);
-        client.nonInteractive = true;
-        client.setArgv('api', '/v9/projects');
-
-        await expect(api(client)).rejects.toThrow('process.exit called');
-        const payload = JSON.parse(client.stdout.getFullOutput());
-        expect(payload).toMatchObject({
-          status: 'error',
-          reason: 'scope_not_accessible',
-          scope: 'my-team',
-          userActionRequired: true,
-        });
-        expect(exitSpy).toHaveBeenCalledWith(1);
-        exitSpy.mockRestore();
-        client.nonInteractive = false;
-      });
-
-      it('emits permission_denied for plain 403s in non-interactive mode', async () => {
-        client.scenario.post('/v10/projects', (_req, res) => {
-          res.status(403).json({
-            error: {
-              code: 'forbidden',
-              message: "You don't have permission to create the project.",
-              action: 'create',
-              resource: 'project',
-            },
-          });
-        });
-
-        const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
-          throw new Error('process.exit called');
-        }) as never);
-        client.nonInteractive = true;
-        client.setArgv('api', '/v10/projects', '-F', 'name=my-project');
-
-        await expect(api(client)).rejects.toThrow('process.exit called');
-        const payload = JSON.parse(client.stdout.getFullOutput());
-        expect(payload).toMatchObject({
-          status: 'error',
-          reason: 'permission_denied',
-          action: 'create',
-          resource: 'project',
-        });
-        expect(payload.requiredScopes).toBeUndefined();
-        expect(exitSpy).toHaveBeenCalledWith(1);
-        exitSpy.mockRestore();
-        client.nonInteractive = false;
       });
     });
   });
