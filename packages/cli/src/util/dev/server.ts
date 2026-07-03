@@ -130,7 +130,7 @@ type WithFileNameSymbol<T> = T & {
   [fileNameSymbol]: string;
 };
 
-const frontendRuntimeSet = new Set(
+const frameworkRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
 );
 
@@ -237,7 +237,7 @@ export default class DevServer {
     }
 
     const { name } = npa(build.use);
-    return !frontendRuntimeSet.has(name || '');
+    return !frameworkRuntimeSet.has(name || '');
   };
 
   constructor(cwd: string, options: DevServerOptions) {
