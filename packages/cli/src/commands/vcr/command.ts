@@ -120,8 +120,12 @@ export const loginSubcommand = {
       value: `${packageName} vcr login docker`,
     },
     {
-      name: 'Log in with podman or buildah',
+      name: 'Log in with Podman',
       value: `${packageName} vcr login podman`,
+    },
+    {
+      name: 'Log in with Buildah',
+      value: `${packageName} vcr login buildah`,
     },
     {
       name: 'Log in for a specific project',
