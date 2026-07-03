@@ -43,6 +43,7 @@ export const help = () => `
       activity                         List user activity events
       agent                [init]      Generate AGENTS.md with Vercel best practices
       ai-gateway           [cmd]       Manage AI Gateway resources
+      agent-runs           [cmd]       Inspect Agent Runs observability data
       alerts                           List alerts for a project or team
       alias                [cmd]       Manages your domain aliases
       api                  [endpoint]  Make authenticated HTTP requests to the Vercel API [beta]
