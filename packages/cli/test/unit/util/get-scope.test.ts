@@ -3,6 +3,13 @@ import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
 import { useTeam } from '../../mocks/team';
 import getScope from '../../../src/util/get-scope';
+import { introspectToken } from '../../../src/util/introspect-token';
+
+vi.mock('../../../src/util/introspect-token', () => ({
+  introspectToken: vi.fn(),
+}));
+
+const introspectTokenMock = vi.mocked(introspectToken);
 
 describe('getScope', () => {
   let mockTeam: ReturnType<typeof useTeam>;
@@ -92,19 +99,18 @@ describe('getScope', () => {
 
     afterEach(() => {
       vi.unstubAllEnvs();
+      introspectTokenMock.mockReset();
     });
 
     function useAppToken({ active = true }: { active?: boolean } = {}) {
       client.scenario.get('/v2/user', (_req, res) => {
         res.status(403).json({ error: { message: 'forbidden' } });
       });
-      client.scenario.post('/login/oauth/token/introspect', (_req, res) => {
-        res.json({
-          active,
-          client_id: 'app_dummy',
-          client_name: 'Dummy App',
-          team: { id: mockTeam.id, slug: mockTeam.slug },
-        });
+      introspectTokenMock.mockResolvedValue({
+        active,
+        client_id: 'app_dummy',
+        client_name: 'Dummy App',
+        team: { id: mockTeam.id, slug: mockTeam.slug },
       });
     }
 
@@ -139,9 +145,7 @@ describe('getScope', () => {
 
     it('should resolve the user when introspection fails', async () => {
       const mockUser = useUser();
-      client.scenario.post('/login/oauth/token/introspect', (_req, res) => {
-        res.status(400).json({ error: { message: 'bad request' } });
-      });
+      introspectTokenMock.mockRejectedValue(new Error('introspection failed'));
       const { contextName, user, app } = await getScope(client);
       expect(user?.id).toEqual(mockUser.id);
       expect(app).toBeNull();
@@ -150,17 +154,28 @@ describe('getScope', () => {
 
     it('should include the app alongside the user for a user token', async () => {
       const mockUser = useUser();
-      client.scenario.post('/login/oauth/token/introspect', (_req, res) => {
-        res.json({
-          active: true,
-          client_id: 'app_dummy',
-          client_name: 'Dummy App',
-        });
+      introspectTokenMock.mockResolvedValue({
+        active: true,
+        client_id: 'app_dummy',
+        client_name: 'Dummy App',
       });
       const { contextName, user, app } = await getScope(client);
       expect(user?.id).toEqual(mockUser.id);
       expect(app?.id).toEqual('app_dummy');
       expect(contextName).toEqual(mockUser.username);
+    });
+
+    it('should throw when getUser fails unexpectedly even if an app resolves', async () => {
+      client.scenario.get('/v2/user', (_req, res) => {
+        res.status(401).json({ error: { message: 'unauthorized' } });
+      });
+      introspectTokenMock.mockResolvedValue({
+        active: true,
+        client_id: 'app_dummy',
+        client_name: 'Dummy App',
+        team: { id: mockTeam.id, slug: mockTeam.slug },
+      });
+      await expect(getScope(client)).rejects.toMatchObject({ status: 401 });
     });
   });
 });

@@ -1,38 +1,28 @@
 import type Client from './client';
+import {
+  type AccessToken,
+  inspectTokenRequest,
+  processInspectTokenResponse,
+} from './oauth';
 
-export type TokenIntrospectionResponse = {
-  active: boolean;
-  client_id?: string;
-  client_name?: string;
-  sub?: string;
-  team?: {
-    id: string;
-    slug?: string;
-    name?: string;
-  };
-};
+export type TokenIntrospectionResponse = AccessToken;
 
 export async function introspectToken(
-  client: Client,
-  token?: string
+  client: Client
 ): Promise<TokenIntrospectionResponse> {
-  token = token || client.authConfig.token;
+  const token = client.authConfig.token;
 
   if (!token) {
     throw new Error('No token to introspect');
   }
 
-  return client.fetch<TokenIntrospectionResponse>(
-    '/login/oauth/token/introspect',
-    {
-      method: 'POST',
-      useCurrentTeam: false,
-      headers: {
-        'content-type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        token,
-      }),
-    }
+  const [error, introspection] = await processInspectTokenResponse(
+    await inspectTokenRequest(token)
   );
+
+  if (error) {
+    throw error;
+  }
+
+  return introspection;
 }

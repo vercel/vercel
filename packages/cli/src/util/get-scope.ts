@@ -3,7 +3,7 @@ import type Client from './client';
 import type { Org, Team, User } from '@vercel-internals/types';
 import getUser from './get-user';
 import getTeamById from './teams/get-team-by-id';
-import { TeamDeleted } from './errors-ts';
+import { InvalidToken, TeamDeleted } from './errors-ts';
 import { getLinkFromDir, getVercelDirectory } from './projects/link';
 import { getRepoLink, findProjectsFromPath } from './link/repo';
 import type { RepoProjectsConfig } from './link/repo';
@@ -105,26 +105,29 @@ export default async function getScope(
 
 /**
  * Resolves the authenticated principal: the user for a personal token, or the
- * app (from token introspection) for an app token. Both lookups run in
- * parallel and either may fail — the original `getUser` error is only
- * surfaced when no principal resolves at all, so an introspection failure is
- * never fatal for a valid user token.
+ * app (from token introspection) for an app token. `getUser` runs first — its
+ * fetch refreshes an expired OAuth access token, so introspection reads the
+ * fresh token. An introspection failure is never fatal for a valid user
+ * token, and a missing user is only tolerated for the app-token case (403
+ * from /v2/user); any other `getUser` failure surfaces.
  */
 async function getPrincipal(client: Client): Promise<Principal> {
   if (!isAppPrincipalEnabled()) {
     return { user: await getUser(client), app: null, token: null };
   }
 
-  const [userResult, tokenResult] = await Promise.allSettled([
-    getUser(client),
-    introspectToken(client),
-  ]);
+  const [userResult] = await Promise.allSettled([getUser(client)]);
+  const [tokenResult] = await Promise.allSettled([introspectToken(client)]);
 
   const token = tokenResult.status === 'fulfilled' ? tokenResult.value : null;
   const app = token ? resolveAppFromToken(token) : null;
 
-  if (userResult.status === 'rejected' && !app) {
-    throw userResult.reason;
+  if (userResult.status === 'rejected') {
+    const isAppToken = app && userResult.reason instanceof InvalidToken;
+
+    if (!isAppToken) {
+      throw userResult.reason;
+    }
   }
 
   const user = userResult.status === 'fulfilled' ? userResult.value : null;
