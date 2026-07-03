@@ -33,6 +33,7 @@ import {
   formatDescription,
 } from './format-utils';
 import output from '../../output-manager';
+import { handleRequestError } from './handle-request-error';
 import { renderCard, renderTable, parseArrayColumns } from './display-columns';
 import { packageName } from '../../util/pkg-name';
 import type {
@@ -652,8 +653,7 @@ async function executeSingleRequest(
       options
     );
   } catch (err) {
-    output.prettyError(err);
-    return 1;
+    return handleRequestError(client, err);
   }
 }
 
@@ -690,8 +690,7 @@ async function executePaginatedRequest(
     // Output combined results
     return outputResults(client, results, flags);
   } catch (err) {
-    output.prettyError(err);
-    return 1;
+    return handleRequestError(client, err);
   }
 }
 

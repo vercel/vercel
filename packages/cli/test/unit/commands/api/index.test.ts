@@ -244,6 +244,134 @@ describe('api', () => {
 
       expect(exitCode).toEqual(1);
     });
+
+    describe('403 responses', () => {
+      it('surfaces required scopes in interactive mode', async () => {
+        client.scenario.post('/v10/projects', (_req, res) => {
+          res.status(403).json({
+            error: {
+              code: 'forbidden',
+              message: "You don't have permission to create the project.",
+              action: 'create',
+              resource: 'project',
+              requiredScopes: ['read-write:project'],
+            },
+          });
+        });
+
+        client.setArgv('api', '/v10/projects', '-F', 'name=my-project');
+        const exitCode = await api(client);
+
+        expect(exitCode).toEqual(1);
+        const output = client.getFullOutput();
+        expect(output).toContain(
+          "You don't have permission to create the project."
+        );
+        expect(output).toContain('read-write:project');
+      });
+
+      it('emits a JSON payload with required scopes in non-interactive mode', async () => {
+        client.scenario.post('/v10/projects', (_req, res) => {
+          res.status(403).json({
+            error: {
+              code: 'forbidden',
+              message: "You don't have permission to create the project.",
+              action: 'create',
+              resource: 'project',
+              requiredScopes: ['read-write:project'],
+            },
+          });
+        });
+
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+          throw new Error('process.exit called');
+        }) as never);
+        client.nonInteractive = true;
+        client.setArgv('api', '/v10/projects', '-F', 'name=my-project');
+
+        await expect(api(client)).rejects.toThrow('process.exit called');
+        const payload = JSON.parse(client.stdout.getFullOutput());
+        expect(payload).toMatchObject({
+          status: 'error',
+          reason: 'missing_scope',
+          message: "You don't have permission to create the project.",
+          action: 'create',
+          resource: 'project',
+          requiredScopes: ['read-write:project'],
+          userActionRequired: true,
+        });
+        expect(payload.hint).toContain('read-write:project');
+        expect(exitSpy).toHaveBeenCalledWith(1);
+        exitSpy.mockRestore();
+        client.nonInteractive = false;
+      });
+
+      it('emits scope_not_accessible for team scope 403s in non-interactive mode', async () => {
+        client.scenario.get('/v9/projects', (_req, res) => {
+          res.status(403).json({
+            error: {
+              code: 'forbidden',
+              message:
+                'Not authorized: Trying to access resource under scope "my-team". You must re-authenticate to this scope or use a token with access to this scope.',
+              saml: false,
+              teamId: null,
+              scope: 'my-team',
+              enforced: false,
+            },
+          });
+        });
+
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+          throw new Error('process.exit called');
+        }) as never);
+        client.nonInteractive = true;
+        client.setArgv('api', '/v9/projects');
+
+        await expect(api(client)).rejects.toThrow('process.exit called');
+        const payload = JSON.parse(client.stdout.getFullOutput());
+        expect(payload).toMatchObject({
+          status: 'error',
+          reason: 'scope_not_accessible',
+          scope: 'my-team',
+          userActionRequired: true,
+        });
+        expect(exitSpy).toHaveBeenCalledWith(1);
+        exitSpy.mockRestore();
+        client.nonInteractive = false;
+      });
+
+      it('emits permission_denied for plain 403s in non-interactive mode', async () => {
+        client.scenario.post('/v10/projects', (_req, res) => {
+          res.status(403).json({
+            error: {
+              code: 'forbidden',
+              message: "You don't have permission to create the project.",
+              action: 'create',
+              resource: 'project',
+            },
+          });
+        });
+
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+          throw new Error('process.exit called');
+        }) as never);
+        client.nonInteractive = true;
+        client.setArgv('api', '/v10/projects', '-F', 'name=my-project');
+
+        await expect(api(client)).rejects.toThrow('process.exit called');
+        const payload = JSON.parse(client.stdout.getFullOutput());
+        expect(payload).toMatchObject({
+          status: 'error',
+          reason: 'permission_denied',
+          action: 'create',
+          resource: 'project',
+        });
+        expect(payload.requiredScopes).toBeUndefined();
+        expect(exitSpy).toHaveBeenCalledWith(1);
+        exitSpy.mockRestore();
+        client.nonInteractive = false;
+      });
+    });
   });
 
   describe('--spec-url', () => {
