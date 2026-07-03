@@ -146,6 +146,38 @@ function buildCommandWithGlobalFlags(
   return cli.getCommandNamePlain(full);
 }
 
+/**
+ * Prefix of the control line emitted at each service boundary of a multi-service build.
+ * The Vercel build-container captures this CLI's output line-by-line and has no other way
+ * to know which service is currently building, so we announce it inline. The build-container
+ * swallows these lines (they are never stored or shown to the user) and uses them to attribute
+ * subsequent build log lines to a service. Format: `[vc:service] <name>`; an empty name resets
+ * attribution so lines emitted between services stay untagged.
+ *
+ * This start/end marker scheme relies on service builds running SEQUENTIALLY: the
+ * build-container tracks a single "current service" from the markers, so interleaved output
+ * from concurrent builds would be misattributed. Builds are sequential today (see the
+ * `for (const build of sortBuilders(...))` loop and the "TODO: parallelize builds" above it).
+ * If/when builds run in parallel, this must switch to per-line tagging — prepend the tag to
+ * each output line rather than bracketing the build. That is a larger change because most
+ * build output (framework subprocesses like `next build`) is written straight to the OS
+ * stdout/stderr fds via `stdio: 'inherit'` with no JS interception point; per-line tagging
+ * would require routing each builder's spawns through a prefixing Transform (via the
+ * outputStream/errorStream hooks on spawnAsync) and rerouting builders' direct console.log.
+ *
+ * Must stay in sync with SERVICE_MARKER_PREFIX in
+ * api/build-container/container/src/utils/logging.ts.
+ */
+const SERVICE_BOUNDARY_MARKER_PREFIX = '[vc:service] ';
+
+/**
+ * Emit a service-boundary marker. Pass a service name at the start of a service's build and
+ * an empty string to reset once it finishes. No-op outside a multi-service build.
+ */
+function emitServiceBoundaryMarker(serviceName: string): void {
+  output.print(`${SERVICE_BOUNDARY_MARKER_PREFIX}${serviceName}\n`);
+}
+
 type BuildResult = BuildResultV2 | BuildResultV3;
 
 interface SerializedBuilder extends Builder {
@@ -1095,6 +1127,13 @@ async function doBuild(
         const service = getHasDetectedServices()
           ? serviceByBuilder.get(build)
           : undefined;
+
+        // Announce the service boundary so the build-container can attribute the log
+        // lines this build produces to the right service (multi-service deployments only).
+        if (service) {
+          emitServiceBoundaryMarker(service.name);
+        }
+
         const legacyExperimentalService =
           service && isExperimentalService(service) ? service : undefined;
         const serviceWorkspace = service
@@ -1688,6 +1727,11 @@ async function doBuild(
         }
         throw err;
       } finally {
+        // Reset service attribution so any lines emitted between services (or after the
+        // last one) are not misattributed. Runs even if the build above threw.
+        if (getHasDetectedServices()) {
+          emitServiceBoundaryMarker('');
+        }
         ops.push(
           download(diagnostics, join(outputDir, 'diagnostics')).then(
             () => undefined,

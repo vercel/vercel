@@ -1196,6 +1196,31 @@ describe.skipIf(flakey)('build', () => {
     expect(reportConfig.handler).toContain('__vc_cron_dispatch');
   });
 
+  it('should emit service-boundary markers around each service build', async () => {
+    // Two services (cleanup, report) build in one deployment. The CLI announces each
+    // boundary on stderr so the build-container can attribute build log lines to a
+    // service, then resets attribution once the service finishes.
+    const cwd = fixture('with-services-cron-nested');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain('[vc:service] cleanup\n');
+    expect(stderr).toContain('[vc:service] report\n');
+    // Attribution is reset (empty name) after each service so inter-service lines are untagged.
+    expect(stderr).toContain('[vc:service] \n');
+  });
+
+  it('should not emit service-boundary markers for a single-project build', async () => {
+    const cwd = fixture('node');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    expect(client.stderr.getFullOutput()).not.toContain('[vc:service]');
+  });
+
   it('should build a JS cron service through the cron dispatcher', async () => {
     const cwd = fixture('with-services-cron-handler');
     const output = join(cwd, '.vercel', 'output');
