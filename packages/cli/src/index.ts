@@ -654,7 +654,6 @@ const main = async () => {
   }
 
   const subcommandsWithoutToken = [
-    'agent',
     'login',
     'logout',
     'help',
@@ -664,6 +663,7 @@ const main = async () => {
     'telemetry',
     'upgrade',
     'skills',
+    'agent',
   ];
 
   if (process.env.FF_GUIDANCE_MODE) {
@@ -970,6 +970,10 @@ const main = async () => {
         case 'agent':
           telemetry.trackCliCommandAgent(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).agent;
+          break;
+        case 'agent-runs':
+          telemetry.trackCliCommandAgentRuns(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).agentRuns;
           break;
         case 'ai-gateway':
           telemetry.trackCliCommandAiGateway(userSuppliedSubCommand);
