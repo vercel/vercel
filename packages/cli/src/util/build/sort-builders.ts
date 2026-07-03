@@ -8,10 +8,12 @@ export function sortBuilders<B extends { use: string }>(builds: B[]): B[] {
   // for runtime framework presets.
   // Delete them from the frontend set, and then special case them below
   // so that they are treated as "middle" priority in the sort.
+  frontendRuntimeSet.delete('@vercel/go');
   frontendRuntimeSet.delete('@vercel/python');
   frontendRuntimeSet.delete('@vercel/ruby');
   frontendRuntimeSet.delete('@vercel/rust');
   const toNumber = (build: B) =>
+    build.use === '@vercel/go' ||
     build.use === '@vercel/python' ||
     build.use === '@vercel/ruby' ||
     build.use === '@vercel/rust'
