@@ -1,5 +1,12 @@
 # vercel
 
+## 54.20.1
+
+### Patch Changes
+
+- 4b1306c: List `vercel agent-runs` in the root CLI help output.
+- 0b64f51: Add missing commands to the root `vercel --help` list: `ai-gateway`, `edge-config`, `oauth-apps`, `sandbox`, and `tokens`
+
 ## 54.20.0
 
 ### Minor Changes
