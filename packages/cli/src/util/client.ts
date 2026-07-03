@@ -74,12 +74,6 @@ export interface FetchOptions extends Omit<RequestInit, 'body'> {
   accountId?: string;
   /** When true, 429 responses are returned immediately instead of waiting for Retry-After and retrying */
   bailOn429?: boolean;
-  /**
-   * When true, non-2xx responses are returned instead of thrown — no retries
-   * and no SAML re-authentication. Used by `vercel api` in non-interactive
-   * mode to pass the API error body through to the caller.
-   */
-  returnErrorResponse?: boolean;
 }
 
 export interface ClientOptions extends Stdio {
@@ -538,12 +532,6 @@ export default class Client extends EventEmitter implements Stdio {
       printIndications(res);
 
       if (!res.ok) {
-        // Return error responses directly when requested, so callers can
-        // pass the structured error body through to the user or agent
-        if (opts.returnErrorResponse) {
-          return res;
-        }
-
         // Return 3xx responses directly when manual redirect is requested
         if (
           opts.redirect === 'manual' &&

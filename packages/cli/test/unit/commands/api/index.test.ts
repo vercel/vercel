@@ -245,8 +245,8 @@ describe('api', () => {
       expect(exitCode).toEqual(1);
     });
 
-    describe('error body passthrough (non-interactive mode)', () => {
-      it('passes 403 error bodies through on stdout', async () => {
+    describe('API error body rendering', () => {
+      it('renders the 403 error body as JSON on stdout', async () => {
         client.scenario.post('/v10/projects', (_req, res) => {
           res.status(403).json({
             error: {
@@ -258,7 +258,6 @@ describe('api', () => {
           });
         });
 
-        client.nonInteractive = true;
         client.setArgv('api', '/v10/projects', '-F', 'name=my-project');
         const exitCode = await api(client);
 
@@ -274,7 +273,7 @@ describe('api', () => {
         });
       });
 
-      it('passes 403 error bodies through for tag operations', async () => {
+      it('renders 403 error bodies for tag operations', async () => {
         const spec = {
           openapi: '3.0.3',
           info: { title: 'API', version: '1.0.0' },
@@ -332,7 +331,6 @@ describe('api', () => {
           });
         });
 
-        client.nonInteractive = true;
         client.stdin.isTTY = false;
         client.setArgv('api', 'project', 'createProject', 'name=my-project');
         const exitCode = await runTagOperation(client, {
@@ -354,14 +352,13 @@ describe('api', () => {
         });
       });
 
-      it('passes non-403 error bodies through on stdout', async () => {
+      it('renders non-403 error bodies as JSON on stdout', async () => {
         client.scenario.get('/v2/nonexistent', (_req, res) => {
           res
             .status(404)
             .json({ error: { code: 'not_found', message: 'Not found' } });
         });
 
-        client.nonInteractive = true;
         client.setArgv('api', '/v2/nonexistent');
         const exitCode = await api(client);
 
@@ -372,26 +369,31 @@ describe('api', () => {
         });
       });
 
-      it('keeps the prose error on stderr in interactive mode', async () => {
-        client.scenario.post('/v10/projects', (_req, res) => {
-          res.status(403).json({
-            error: {
-              code: 'forbidden',
-              message: "You don't have permission to create the project.",
-              action: 'create',
-              resource: 'project',
-            },
-          });
+      it('suppresses the error body with --silent', async () => {
+        client.scenario.get('/v2/nonexistent', (_req, res) => {
+          res
+            .status(404)
+            .json({ error: { code: 'not_found', message: 'Not found' } });
         });
 
-        client.setArgv('api', '/v10/projects', '-F', 'name=my-project');
+        client.setArgv('api', '/v2/nonexistent', '--silent');
         const exitCode = await api(client);
 
         expect(exitCode).toEqual(1);
         expect(client.stdout.getFullOutput()).toBe('');
-        expect(client.getFullOutput()).toContain(
-          "You don't have permission to create the project."
-        );
+      });
+
+      it('falls back to the error message when the body is not JSON', async () => {
+        client.scenario.get('/v2/plain-text-error', (_req, res) => {
+          res.status(500).set('content-type', 'text/plain').send('oops');
+        });
+
+        client.setArgv('api', '/v2/plain-text-error');
+        const exitCode = await api(client);
+
+        expect(exitCode).toEqual(1);
+        expect(client.stdout.getFullOutput()).toBe('');
+        expect(client.getFullOutput()).toContain('Response Error');
       });
     });
   });

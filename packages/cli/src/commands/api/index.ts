@@ -33,7 +33,8 @@ import {
   formatDescription,
 } from './format-utils';
 import output from '../../output-manager';
-import { shouldEmitNonInteractiveCommandError } from '../../util/agent-output';
+import { isAPIError } from '../../util/errors-ts';
+import { isJSONObject } from '../../util/client';
 import { renderCard, renderTable, parseArrayColumns } from './display-columns';
 import { packageName } from '../../util/pkg-name';
 import type {
@@ -642,12 +643,6 @@ async function executeSingleRequest(
       body: config.body,
       headers: config.headers,
       json: false,
-      // In non-interactive/agent mode, pass API error responses through so
-      // the caller gets the structured error body (e.g. `code`, `action`,
-      // `resource` on a 403) on stdout instead of a prose message.
-      // Interactive runs keep the thrown-error path, which includes SAML
-      // re-authentication.
-      returnErrorResponse: shouldEmitNonInteractiveCommandError(client),
     });
 
     return handleResponse(
@@ -659,8 +654,7 @@ async function executeSingleRequest(
       options
     );
   } catch (err) {
-    output.prettyError(err);
-    return 1;
+    return outputRequestError(client, err, flags);
   }
 }
 
@@ -697,9 +691,34 @@ async function executePaginatedRequest(
     // Output combined results
     return outputResults(client, results, flags);
   } catch (err) {
-    output.prettyError(err);
+    return outputRequestError(client, err, flags);
+  }
+}
+
+/**
+ * Renders a failed request. API error responses are rendered as the JSON
+ * error body the API returned (preserved on the thrown error by
+ * `responseError`), so callers get the structured payload — e.g. `code`,
+ * `action`, and `resource` on a 403 — instead of only the prose message.
+ * Errors without a structured body (network failures, etc.) fall back to
+ * the standard error output.
+ */
+function outputRequestError(
+  client: Client,
+  err: unknown,
+  flags: ParsedFlags
+): number {
+  if (isAPIError(err) && isJSONObject(err.responseBody)) {
+    if (!flags['--silent']) {
+      client.stdout.write(
+        formatOutput(err.responseBody, { raw: flags['--raw'] }) + '\n'
+      );
+    }
     return 1;
   }
+
+  output.prettyError(err);
+  return 1;
 }
 
 /**
@@ -748,20 +767,14 @@ async function handleResponse(
       );
     }
 
-    // Error responses only reach this point when `returnErrorResponse` was
-    // set on the fetch (non-interactive mode). Pass the structured error
-    // body through so callers can act on fields like `code`, `action`, and
-    // `resource` (e.g. agents requesting the missing permission on a 403).
-    if (!response.ok) {
-      outputResults(client, json, flags);
-      return 1;
-    }
-
     if (displayColumns && response.ok && !flags['--raw']) {
       return outputWithDisplayColumns(client, json, displayColumns);
     }
 
     if (isMutation && !flags['--raw']) {
+      if (!response.ok) {
+        return outputMutationResult(client, response, method, json);
+      }
       return outputMutationResult(client, response, method);
     }
 
