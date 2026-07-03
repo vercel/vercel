@@ -439,12 +439,7 @@ export default async function main(client: Client): Promise<number> {
   // treat the linked subdirectory as the repo root. Re-anchor it to the
   // detected root and express the project relative to that root, so it behaves
   // like a repo-level link regardless of where the command was run.
-  if (
-    !hasRepoLevelLink &&
-    link &&
-    project?.settings &&
-    process.env.VERCEL_RESOLVE_ROOT_DIRECTORY === '1'
-  ) {
+  if (!hasRepoLevelLink && link && project?.settings) {
     const resolved = resolvePerDirectoryLinkRoot(
       invokedCwd,
       project.settings.rootDirectory

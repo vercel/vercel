@@ -1,19 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'fs-extra';
-import { join } from 'path';
+import { dirname, join, resolve, sep } from 'path';
 import { tmpdir } from 'os';
 import { lstatSync, readdirSync, readlinkSync } from 'fs';
 import { mkdtemp, writeFile, rm } from 'fs/promises';
 import { createServer, type Server } from 'http';
 import { pathToFileURL } from 'url';
 import execa from 'execa';
-import {
-  FileFsRef,
-  NodejsLambda,
-  download,
-  glob,
-  isExternalSymlinkTarget,
-} from '@vercel/build-utils';
+import { FileFsRef, NodejsLambda, download, glob } from '@vercel/build-utils';
 import build from '../../../../src/commands/build';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
@@ -154,36 +148,6 @@ function findSymlinks(dir: string): string[] {
 
   walk(dir);
   return symlinks;
-}
-
-async function assertStandaloneSharedOutput(outputDir: string) {
-  const sharedDir = join(outputDir, 'shared');
-  expect(await fs.pathExists(sharedDir)).toBe(true);
-
-  for (const symlinkPath of findSymlinks(sharedDir)) {
-    const target = readlinkSync(symlinkPath);
-    expect(
-      isExternalSymlinkTarget(target),
-      `unexpected external symlink at ${symlinkPath} -> ${target}`
-    ).toBe(false);
-  }
-
-  const functionsDir = join(outputDir, 'functions');
-  const vcConfigFiles = await glob('**/.vc-config.json', {
-    cwd: functionsDir,
-  });
-
-  for (const relativePath of Object.keys(vcConfigFiles)) {
-    const configPath = join(functionsDir, relativePath);
-    const config = await fs.readJSON(configPath);
-    if (!config.filePathMap) continue;
-
-    for (const value of Object.values(config.filePathMap) as string[]) {
-      expect(value).not.toMatch(/^\.\./);
-      expect(value).not.toContain('/../');
-      expect(value).toContain('.vercel/output/shared');
-    }
-  }
 }
 
 /**
@@ -358,7 +322,6 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
     delete process.env.VERCEL_BUILD_MONOREPO_SUPPORT;
     delete process.env.VERCEL_API_FUNCTION_BUNDLING;
     delete process.env.VERCEL_EXPERIMENTAL_BACKENDS;
-    delete process.env.VERCEL_RESOLVE_ROOT_DIRECTORY;
     delete process.env.TURBO_FORCE;
   });
 
@@ -623,113 +586,39 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
       expect(exitCode).toEqual(0);
       expect(await fs.pathExists(output)).toBe(true);
 
-      await assertStandaloneSharedOutput(output);
-
       const markerFuncDir = join(output, 'functions', 'api', 'marker.func');
       expect(await fs.pathExists(markerFuncDir)).toBe(true);
 
+      // Standalone functions are self-contained: files (including
+      // package-manager symlinks) are written directly into the `.func`
+      // directory with no `filePathMap`/shared-dir indirection.
       const vcConfig = await fs.readJSON(
         join(markerFuncDir, '.vc-config.json')
       );
-      expect(vcConfig.filePathMap).toBeDefined();
-      expect(Object.keys(vcConfig.filePathMap).length).toBeGreaterThan(0);
+      expect(vcConfig.filePathMap ?? {}).toEqual({});
 
-      const lambda = await createLambdaFromFuncDir(markerFuncDir, cwd);
-
-      for (const path of Object.keys(vcConfig.filePathMap)) {
-        expect(lambda.files?.[path]).toBeDefined();
+      // No symlink inside the function may resolve outside of it. Relative
+      // `../` targets are fine (pnpm store links) as long as they stay within
+      // the `.func` directory.
+      for (const symlinkPath of findSymlinks(markerFuncDir)) {
+        const target = readlinkSync(symlinkPath);
+        const resolved = resolve(dirname(symlinkPath), target);
+        expect(
+          resolved.startsWith(markerFuncDir + sep),
+          `symlink resolves outside the function: ${symlinkPath} -> ${target}`
+        ).toBe(true);
       }
 
+      const lambda = await createLambdaFromFuncDir(markerFuncDir, cwd);
       await expect(lambda.createZip()).resolves.toBeInstanceOf(Buffer);
-    }
-  );
-
-  // Regression test for the `--standalone` monorepo zip bug.
-  //
-  // Setup mirrors the original failure: a pnpm turborepo where the project is
-  // linked *inside* the app (`apps/web/.vercel/project.json`, no
-  // `rootDirectory`) and `vc build --standalone` is run from `apps/web`. The
-  // app's `node_modules` are hoisted to the monorepo root
-  // (`<root>/node_modules/.pnpm/...`), two levels above `apps/web`.
-  //
-  // Before the fix, `--standalone` recorded Lambda file keys that escaped the
-  // function root to reach those hoisted dependencies, e.g.
-  // `../../node_modules/.pnpm/next@.../next/dist/compiled/next-server/server.runtime.prod.js`.
-  // `vc build` succeeded, but zipping the reconstructed Lambda later (as the
-  // deploy pipeline does) failed because `yazl` rejects any zip entry name
-  // containing a `..` segment with:
-  //
-  //   Error: invalid relative path: ../../node_modules/.pnpm/.../server.runtime.prod.js
-  //
-  // The fix re-anchors those escaping keys inside the function root, so the
-  // resulting Lambda is self-contained and zips cleanly.
-  it.skipIf(process.platform === 'win32')(
-    'produces a zippable --standalone Lambda from a monorepo subdirectory',
-    async () => {
-      // Copy the fixture to a temp dir OUTSIDE this repo so its pnpm workspace
-      // does not get mixed up with the monorepo we're testing in.
-      const monorepoRoot = setupUnitFixture(
-        'commands/build/turborepo-next-standalone'
-      );
-      // The project is linked inside the app, and the build runs from there
-      // (no `rootDirectory`), exactly like the original reproduction.
-      const appDir = join(monorepoRoot, 'apps', 'web');
-      const output = join(appDir, '.vercel/output');
-
-      useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'prj_turborepo_next_standalone',
-        name: 'turborepo-next-standalone',
-        framework: 'nextjs',
-        rootDirectory: null,
-      });
-
-      process.env.VERCEL_BUILD_MONOREPO_SUPPORT = '1';
-      process.env.TURBO_FORCE = '1'; // Force execution, ignore cache
-
-      // Run from inside the app directory.
-      client.cwd = appDir;
-      client.setArgv('build', '--standalone', '--yes');
-      const exitCode = await build(client);
-
-      expect(exitCode).toEqual(0);
-
-      // The Next app's main route should have produced a Lambda.
-      const indexFuncDir = join(output, 'functions', 'index.func');
-      expect(await fs.pathExists(indexFuncDir)).toBe(true);
-
-      // No `filePathMap` key should escape the function root — the hoisted
-      // `../../node_modules/.pnpm/...` paths must be re-anchored to
-      // `node_modules/.pnpm/...` inside the function.
-      const vcConfig = await fs.readJSON(join(indexFuncDir, '.vc-config.json'));
-      const escapingKeys = Object.keys(vcConfig.filePathMap ?? {}).filter(key =>
-        key.split('/').includes('..')
-      );
-      expect(escapingKeys).toEqual([]);
-
-      // The re-anchored keys still point at the hoisted dependencies (the
-      // values reach the monorepo-root `node_modules`).
-      const reanchored = Object.keys(vcConfig.filePathMap ?? {}).filter(key =>
-        key.startsWith('node_modules/.pnpm/')
-      );
-      expect(reanchored.length).toBeGreaterThan(0);
-
-      // Reconstruct the Lambda exactly like the deploy pipeline does (glob the
-      // `.func` dir + hydrate `filePathMap` relative to the build cwd) and zip
-      // it. This used to throw `invalid relative path: ../../...`.
-      const lambda = await createLambdaFromFuncDir(indexFuncDir, appDir);
-      const zip = await lambda.createZip();
-      expect(zip.length).toBeGreaterThan(0);
     }
   );
 });
 
-// Building a project from a monorepo subdirectory, gated behind
-// `VERCEL_RESOLVE_ROOT_DIRECTORY`. When `vc build` runs from a subdirectory
-// (e.g. `--cwd apps/api`), the build re-anchors to the true repository root so
-// builders trace relative to it instead of the subdirectory. This fixes a
+// Building a project from a monorepo subdirectory. When `vc build` runs from
+// a subdirectory (e.g. `--cwd apps/api`), the build re-anchors to the true
+// repository root so builders trace relative to it instead of the
+// subdirectory. This fixes a
 // family of monorepo bugs that share one root cause (the build treating the
 // subdirectory as the repository root):
 //
@@ -746,15 +635,13 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
 // rather than standalone-specific. Each asserts the dependency resolves from
 // an isolated copy of the function — the failure customers reported
 // (`Cannot find module`).
-describe('standalone builds from a subdirectory (VERCEL_RESOLVE_ROOT_DIRECTORY)', () => {
+describe('standalone builds from a subdirectory', () => {
   beforeEach(() => {
     delete process.env.__VERCEL_BUILD_RUNNING;
     delete process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION;
-    process.env.VERCEL_RESOLVE_ROOT_DIRECTORY = '1';
   });
 
   afterEach(() => {
-    delete process.env.VERCEL_RESOLVE_ROOT_DIRECTORY;
     delete process.env.VERCEL_BUILD_MONOREPO_SUPPORT;
     delete process.env.TURBO_FORCE;
   });
@@ -926,7 +813,7 @@ describe('standalone builds from a subdirectory (VERCEL_RESOLVE_ROOT_DIRECTORY)'
   );
 });
 
-// Per-directory link resolution, gated behind `VERCEL_RESOLVE_ROOT_DIRECTORY`.
+// Per-directory link resolution.
 //
 // A project linked in place (`apps/api/.vercel/project.json`) is anchored by
 // the link's physical location. Running `vc build` from there should resolve
@@ -935,15 +822,10 @@ describe('standalone builds from a subdirectory (VERCEL_RESOLVE_ROOT_DIRECTORY)'
 // or a redundant restatement of the location (config #4, a common
 // misconfiguration). The latter previously produced a broken `apps/api/apps/api`
 // path; here it must "just work".
-describe('per-directory link resolution (VERCEL_RESOLVE_ROOT_DIRECTORY)', () => {
+describe('per-directory link resolution', () => {
   beforeEach(() => {
     delete process.env.__VERCEL_BUILD_RUNNING;
     delete process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION;
-    process.env.VERCEL_RESOLVE_ROOT_DIRECTORY = '1';
-  });
-
-  afterEach(() => {
-    delete process.env.VERCEL_RESOLVE_ROOT_DIRECTORY;
   });
 
   async function setupApiFixture(rootDirectorySetting: string | null) {
