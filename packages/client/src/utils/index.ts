@@ -7,7 +7,7 @@ import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
 import { VercelClientOptions, VercelConfig } from '../types';
 import { Sema } from 'async-sema';
-import { readFile, stat } from 'fs-extra';
+import { pathExists, readFile, stat } from 'fs-extra';
 import readdir from './readdir-recursive';
 import {
   findConfig as findMicrofrontendsConfig,
@@ -309,6 +309,21 @@ export async function getVercelIgnore(
         return vercelignore || nowignore;
       })
     );
+
+    // Rust projects produce a `target/` directory of build artifacts that can
+    // be hundreds of MB. It's rebuilt on Vercel during the deployment (and
+    // cached server-side by `@vercel/rust`), so uploading it only slows
+    // deployments down. Skip it by default when the project looks like a Rust
+    // project (a root `Cargo.toml`). Users can opt back in with `!/target` in
+    // their `.vercelignore`, since user patterns are applied after these
+    // defaults.
+    const isRustProject = (
+      await Promise.all(cwds.map(cwd => pathExists(join(cwd, 'Cargo.toml'))))
+    ).some(Boolean);
+
+    if (isRustProject) {
+      ignores.push('/target');
+    }
 
     const ignoreFile = files.join('\n');
 

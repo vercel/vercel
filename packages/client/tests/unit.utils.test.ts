@@ -1,7 +1,7 @@
 import { join, resolve } from 'path';
 import fs from 'fs-extra';
 import { buildFileTree } from '../src/utils';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const fixture = (name: string) => resolve(__dirname, 'fixtures', name);
 const noop = () => {};
@@ -290,5 +290,61 @@ describe('buildFileTree()', () => {
     for (const expectedFile of normalizeWindowsPaths(expectedFiles)) {
       expect(normalizedFileList).toContain(expectedFile);
     }
+  });
+
+  describe('Rust `target/` directory', () => {
+    // The `target/` directory is `.gitignore`d repo-wide, so it can't be
+    // committed as a fixture. Create it at runtime instead.
+    const rustFixtures = ['rust-target', 'rust-target-with-ignore'];
+
+    beforeEach(async () => {
+      for (const name of rustFixtures) {
+        const cwd = fixture(name);
+        await fs.mkdirp(join(cwd, 'target', 'debug'));
+        await fs.mkdirp(join(cwd, 'target', 'release'));
+        await fs.writeFile(join(cwd, 'target', 'debug', 'binary'), 'debug');
+        await fs.writeFile(join(cwd, 'target', 'release', 'binary'), 'release');
+      }
+    });
+
+    afterEach(async () => {
+      for (const name of rustFixtures) {
+        await fs.remove(join(fixture(name), 'target'));
+      }
+    });
+
+    it('should exclude `target/` by default for Rust projects', async () => {
+      const cwd = fixture('rust-target');
+      const { fileList, ignoreList } = await buildFileTree(
+        cwd,
+        { isDirectory: true },
+        noop
+      );
+
+      const expectedFileList = toAbsolutePaths(cwd, [
+        'Cargo.toml',
+        'src/main.rs',
+      ]);
+      expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
+        normalizeWindowsPaths(fileList).sort()
+      );
+
+      expect(normalizeWindowsPaths(ignoreList)).toContain('target');
+    });
+
+    it('should allow re-including `target/` via `.vercelignore`', async () => {
+      const cwd = fixture('rust-target-with-ignore');
+      const { fileList } = await buildFileTree(
+        cwd,
+        { isDirectory: true },
+        noop
+      );
+
+      const normalized = normalizeWindowsPaths(fileList);
+      const expected = normalizeWindowsPaths(
+        toAbsolutePaths(cwd, ['target/debug/binary'])
+      )[0];
+      expect(normalized).toContain(expected);
+    });
   });
 });
