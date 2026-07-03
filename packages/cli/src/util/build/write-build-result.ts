@@ -512,6 +512,18 @@ async function writeBuildResultV3(args: {
     });
   }
 
+  // Service-level regions apply to every function in the service unless the
+  // function's own `functions` entry overrides them.
+  if (service && isExperimentalServiceV2(service)) {
+    functionConfiguration = {
+      ...functionConfiguration,
+      regions: functionConfiguration.regions ?? service.regions,
+      functionFailoverRegions:
+        functionConfiguration.functionFailoverRegions ??
+        service.functionFailoverRegions,
+    };
+  }
+
   const ext = extname(src);
   // V2 services are already isolated under `services/<name>`, so scalar
   // runtime outputs can use the natural `index` path. V1 services still share

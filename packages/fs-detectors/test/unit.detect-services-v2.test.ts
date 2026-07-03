@@ -111,7 +111,7 @@ describe('detectServices (services)', () => {
     });
   });
 
-  it('carries bindings, functions and route tables', async () => {
+  it('carries bindings, functions, regions and route tables', async () => {
     const functions = { 'api/**': { memory: 1024 } };
     const routes = [{ src: '/health', dest: '/health' }];
     const rewrites = [{ source: '/old', destination: '/new' }];
@@ -121,6 +121,8 @@ describe('detectServices (services)', () => {
     const bindings = [
       { type: 'service', service: 'api', format: 'url', env: 'API_URL' },
     ];
+    const regions = ['sfo1', 'iad1'];
+    const functionFailoverRegions = ['dub1'];
 
     const fs = new VirtualFilesystem({
       'vercel.json': vercelJson({
@@ -135,6 +137,8 @@ describe('detectServices (services)', () => {
             outputDirectory: 'dist',
             bindings,
             functions,
+            regions,
+            functionFailoverRegions,
             routes,
             rewrites,
             headers,
@@ -161,6 +165,8 @@ describe('detectServices (services)', () => {
       outputDirectory: 'dist',
       bindings,
       functions,
+      regions,
+      functionFailoverRegions,
       routes,
       rewrites,
       headers,

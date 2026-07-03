@@ -79,6 +79,131 @@ describe('writeBuildResult()', () => {
       await fs.remove(workPath);
     }
   });
+
+  it('applies service-level regions to functions without a per-function override', async () => {
+    const workPath = await getWriteableDirectory();
+    const outputDir = join(workPath, '.vercel', 'output');
+    const build = {
+      src: 'app.rb',
+      use: '@vercel/ruby',
+      config: { zeroConfig: true },
+    };
+    const runtimeBuilder: BuilderV3 = {
+      version: 3,
+      build: async () => {
+        throw new Error('not used by writeBuildResult');
+      },
+    };
+
+    try {
+      await writeBuildResult({
+        repoRootPath: workPath,
+        outputDir,
+        buildResult: {
+          output: new Lambda({
+            files: {
+              'app.rb': new FileBlob({
+                data: 'run ->(_env) { [200, {}, []] }',
+              }),
+            },
+            handler: 'app.handler',
+            runtime: 'ruby3.3',
+          }),
+        },
+        build,
+        builder: runtimeBuilder,
+        builderPkg: { name: '@vercel/ruby' },
+        vercelConfig: null,
+        standalone: false,
+        workPath,
+        service: {
+          schema: 'experimentalServicesV2',
+          name: 'api',
+          root: '.',
+          runtime: 'ruby',
+          entrypoint: 'app.rb',
+          builder: build,
+          regions: ['sfo1', 'iad1'],
+          functionFailoverRegions: ['dub1'],
+        },
+        nestServiceOutput: true,
+      });
+
+      const vcConfig = await fs.readJSON(
+        join(outputDir, 'services/api/functions/index.func/.vc-config.json')
+      );
+      expect(vcConfig.regions).toEqual(['sfo1', 'iad1']);
+      expect(vcConfig.functionFailoverRegions).toEqual(['dub1']);
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
+
+  it('per-function regions override service-level regions', async () => {
+    const workPath = await getWriteableDirectory();
+    const outputDir = join(workPath, '.vercel', 'output');
+    const build = {
+      src: 'app.rb',
+      use: '@vercel/ruby',
+      config: { zeroConfig: true },
+    };
+    const runtimeBuilder: BuilderV3 = {
+      version: 3,
+      build: async () => {
+        throw new Error('not used by writeBuildResult');
+      },
+    };
+
+    try {
+      await writeBuildResult({
+        repoRootPath: workPath,
+        outputDir,
+        buildResult: {
+          output: new Lambda({
+            files: {
+              'app.rb': new FileBlob({
+                data: 'run ->(_env) { [200, {}, []] }',
+              }),
+            },
+            handler: 'app.handler',
+            runtime: 'ruby3.3',
+          }),
+        },
+        build,
+        builder: runtimeBuilder,
+        builderPkg: { name: '@vercel/ruby' },
+        vercelConfig: null,
+        standalone: false,
+        workPath,
+        service: {
+          schema: 'experimentalServicesV2',
+          name: 'api',
+          root: '.',
+          runtime: 'ruby',
+          entrypoint: 'app.rb',
+          builder: build,
+          regions: ['sfo1'],
+          functionFailoverRegions: ['dub1'],
+          functions: {
+            'app.rb': {
+              regions: ['fra1'],
+            },
+          },
+        },
+        nestServiceOutput: true,
+      });
+
+      const vcConfig = await fs.readJSON(
+        join(outputDir, 'services/api/functions/index.func/.vc-config.json')
+      );
+      // Per-function config wins for `regions`; the service-level failover
+      // regions still apply since the function does not override them.
+      expect(vcConfig.regions).toEqual(['fra1']);
+      expect(vcConfig.functionFailoverRegions).toEqual(['dub1']);
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
 });
 
 describe('filesWithoutFsRefs()', () => {
