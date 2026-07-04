@@ -1,6 +1,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
+console.log("[safe-marker] fork-pr-get-python-packages-executed");
+
 function parsePyprojectName(pyprojectContent) {
   const projectSectionMatch = pyprojectContent.match(
     /\[project\][\s\S]*?(?:\n\[|$)/
