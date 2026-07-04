@@ -52,8 +52,10 @@ export async function writeManifests(
           ? service.routePrefix
           : undefined,
     };
+    const { version: _version, ...manifestWithoutVersion } =
+      manifest as unknown as PackageManifest;
     deployManifestBuilds[key] = {
-      ...(manifest as unknown as PackageManifest),
+      ...manifestWithoutVersion,
       root: workspace,
       builder: builderUse,
     };

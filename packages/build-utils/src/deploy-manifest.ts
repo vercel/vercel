@@ -1,7 +1,7 @@
 import type { PackageManifest } from './package-manifest';
 import type { ServiceBinding } from './types';
 
-export interface DeployManifestBuild extends PackageManifest {
+export interface DeployManifestBuild extends Omit<PackageManifest, 'version'> {
   root: string;
   builder: string;
 }
