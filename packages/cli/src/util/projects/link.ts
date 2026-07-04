@@ -296,6 +296,10 @@ export async function getLinkedProject(
    */
   apiFallback?: boolean
 ): Promise<ProjectLinkResult> {
+  // Fall back to the global --project flag value if no explicit name was given
+  if (!projectName && client.projectName) {
+    projectName = client.projectName;
+  }
   path = await resolveProjectCwd(path);
 
   const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');

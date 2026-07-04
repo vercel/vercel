@@ -27,6 +27,14 @@ export const globalCommandOptions = [
     deprecated: false,
   },
   {
+    name: 'project-name',
+    shorthand: 'P',
+    type: String,
+    argument: 'NAME',
+    description: 'Target a specific project within a monorepo by name',
+    deprecated: false,
+  },
+  {
     name: 'local-config',
     shorthand: 'A',
     type: String,
