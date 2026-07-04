@@ -3,8 +3,10 @@ import {
   FileBlob,
   downloadFile,
   isExperimentalService,
+  isExperimentalServiceV2,
   type Config,
   type DeployManifestBuild,
+  type DeployManifestService,
   type Files,
   type PackageManifest,
   type Service,
@@ -27,6 +29,7 @@ export async function writeManifests(
 
   const projectManifest: Record<string, unknown> = {};
   const deployManifestBuilds: Record<string, DeployManifestBuild> = {};
+  const deployManifestServices: Record<string, DeployManifestService> = {};
 
   for (const {
     workspace,
@@ -54,6 +57,20 @@ export async function writeManifests(
       root: workspace,
       builder: builderUse,
     };
+
+    if (service) {
+      const existing = deployManifestServices[service.name];
+      if (existing) {
+        existing.builds.push(key);
+      } else {
+        deployManifestServices[service.name] = {
+          builds: [key],
+          bindings: isExperimentalServiceV2(service)
+            ? service.bindings
+            : undefined,
+        };
+      }
+    }
   }
 
   if (Object.keys(projectManifest).length === 0) return;
@@ -76,6 +93,7 @@ export async function writeManifests(
     data: JSON.stringify({
       manifestVersion: '2.0',
       builds: deployManifestBuilds,
+      services: deployManifestServices,
     }),
   });
   diagnostics['deploy-manifest.json'] = deployManifestBlob;
