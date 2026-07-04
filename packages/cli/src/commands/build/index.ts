@@ -442,7 +442,7 @@ export default async function main(client: Client): Promise<number> {
   // regardless of where the command was run. Directories not claimed by any
   // workspace are left untouched.
   if (!hasRepoLevelLink && link && project?.settings) {
-    const resolved = await resolvePerDirectoryLinkRoot(
+    const resolved = resolvePerDirectoryLinkRoot(
       invokedCwd,
       project.settings.rootDirectory
     );

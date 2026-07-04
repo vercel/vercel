@@ -1,19 +1,17 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, parse, relative } from 'node:path';
-import {
-  getWorkspacePackagePaths,
-  LocalFileSystemDetector,
-} from '@vercel/fs-detectors';
+import yaml from 'js-yaml';
+import minimatch from 'minimatch';
 
 /**
- * Workspace manager types whose member lists we can resolve (via
- * `@vercel/fs-detectors`). A marker we can't enumerate members for (e.g. a
- * bare `lerna.json`) is intentionally not a candidate: membership can't be
- * verified, so the build must not re-anchor onto it.
+ * Workspace manager types whose member declarations we can read and match.
+ * A marker we can't interpret (e.g. a bare `lerna.json`) is intentionally not
+ * a candidate: membership can't be verified, so the build must not re-anchor
+ * onto it.
  */
 export type WorkspaceRootCandidate = {
   dir: string;
-  type: 'pnpm' | 'npm' | 'rush';
+  type: 'pnpm' | 'npm';
 };
 
 /**
@@ -46,14 +44,11 @@ export function findWorkspaceRootCandidates(
 
 /**
  * Returns the workspace manager type when `dir` looks like the root of a
- * workspace/monorepo whose members can be enumerated, or `null`.
+ * workspace/monorepo whose member declarations can be read, or `null`.
  */
 function workspaceTypeOf(dir: string): WorkspaceRootCandidate['type'] | null {
   if (existsSync(join(dir, 'pnpm-workspace.yaml'))) {
     return 'pnpm';
-  }
-  if (existsSync(join(dir, 'rush.json'))) {
-    return 'rush';
   }
 
   // npm / yarn / bun workspaces are declared via `workspaces` in package.json.
@@ -80,26 +75,64 @@ function workspaceTypeOf(dir: string): WorkspaceRootCandidate['type'] | null {
 }
 
 /**
+ * Reads the workspace member patterns declared by the manager manifest at
+ * `candidate.dir`. Returns `null` when the manifest can't be read or parsed
+ * (treated as "claims nothing" by the caller).
+ */
+function readWorkspacePatterns(
+  candidate: WorkspaceRootCandidate
+): string[] | null {
+  try {
+    if (candidate.type === 'pnpm') {
+      const doc = yaml.load(
+        readFileSync(join(candidate.dir, 'pnpm-workspace.yaml'), 'utf8')
+      ) as { packages?: unknown } | null | undefined;
+      const packages = doc?.packages;
+      return Array.isArray(packages)
+        ? packages.filter((p): p is string => typeof p === 'string')
+        : null;
+    }
+
+    const pkg = JSON.parse(
+      readFileSync(join(candidate.dir, 'package.json'), 'utf8')
+    );
+    const { workspaces } = pkg;
+    const packages = Array.isArray(workspaces)
+      ? workspaces
+      : workspaces?.packages;
+    return Array.isArray(packages)
+      ? packages.filter((p: unknown): p is string => typeof p === 'string')
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Whether the workspace rooted at `candidate.dir` claims `memberDir` as one
  * of its member packages.
+ *
+ * Membership is decided by matching the member's root-relative path against
+ * the manifest's own declared patterns (pure string matching — no filesystem
+ * traversal, so a huge `node_modules` or a hostile `**` pattern costs
+ * nothing), then confirming the directory is a real package (it has a
+ * `package.json`, mirroring how package managers expand workspace globs).
+ *
+ * Negated patterns (`!apps/legacy`) exclude: a path matching any negation is
+ * not a member even when a positive pattern matches, following pnpm/yarn
+ * semantics.
  *
  * Membership must be exact: a directory merely *nested inside* a member
  * package (e.g. a fixture or example under `packages/cli/...` when the
  * workspace declares `packages/*`) is NOT claimed — such a directory is not a
  * workspace package and its dependencies are not hoisted for it, so
- * re-anchoring would only distort its build.
- *
- * Membership is resolved through `@vercel/fs-detectors`, which parses the
- * manager's own manifest (`pnpm-workspace.yaml`, `package.json#workspaces`,
- * `rush.json`) and expands its globs against the filesystem. Any failure to
- * read or parse is treated as "not a member" — the safe default is to leave
- * the build un-anchored rather than re-anchor onto a root that never
- * declared this project.
+ * re-anchoring would only distort its build. (`apps/*` does not match
+ * `apps/api/test/fixture` because `*` never crosses `/`.)
  */
-async function workspaceClaims(
+function workspaceClaims(
   candidate: WorkspaceRootCandidate,
   memberDir: string
-): Promise<boolean> {
+): boolean {
   const rel = normalizeRelative(relative(candidate.dir, memberDir));
   if (rel === '') {
     // A workspace root trivially contains itself, but there is nothing to
@@ -107,18 +140,29 @@ async function workspaceClaims(
     return false;
   }
 
-  try {
-    const fs = new LocalFileSystemDetector(candidate.dir);
-    const packagePaths = await getWorkspacePackagePaths({
-      fs,
-      workspace: { type: candidate.type, rootPath: '/' },
-    });
-    return packagePaths.some(
-      packagePath => normalizeRelative(packagePath) === rel
-    );
-  } catch {
+  const patterns = readWorkspacePatterns(candidate);
+  if (!patterns || patterns.length === 0) {
     return false;
   }
+
+  const positives: string[] = [];
+  const negatives: string[] = [];
+  for (const pattern of patterns) {
+    if (pattern.startsWith('!')) {
+      negatives.push(normalizeRelative(pattern.slice(1)));
+    } else {
+      positives.push(normalizeRelative(pattern));
+    }
+  }
+
+  const matches = (pattern: string) => minimatch(rel, pattern, { dot: false });
+  if (!positives.some(matches) || negatives.some(matches)) {
+    return false;
+  }
+
+  // The pattern names this directory; confirm it is a real package, the same
+  // way package managers expand workspace globs against `<dir>/package.json`.
+  return existsSync(join(memberDir, 'package.json'));
 }
 
 export interface PerDirectoryLinkRoot {
@@ -149,13 +193,13 @@ export interface PerDirectoryLinkRoot {
  * `apps/api/apps/api`) and ignored in favor of the link's own location, with
  * an advisory surfaced via `advisory`.
  */
-export async function resolvePerDirectoryLinkRoot(
+export function resolvePerDirectoryLinkRoot(
   anchorDir: string,
   rootDirectorySetting: string | null | undefined
-): Promise<PerDirectoryLinkRoot> {
+): PerDirectoryLinkRoot {
   let repoRoot = anchorDir;
   for (const candidate of findWorkspaceRootCandidates(anchorDir)) {
-    if (await workspaceClaims(candidate, anchorDir)) {
+    if (workspaceClaims(candidate, anchorDir)) {
       repoRoot = candidate.dir;
       break;
     }

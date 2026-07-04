@@ -126,8 +126,8 @@ describe('repo-root', () => {
         join(root, 'pnpm-workspace.yaml'),
         'packages:\n  - apps/*\n'
       );
-      // Workspace membership is resolved by expanding the manifest's globs
-      // against `<member>/package.json`, so the member needs a manifest.
+      // Membership requires the directory to be a real package (mirroring how
+      // package managers expand workspace globs against `<dir>/package.json`).
       await writeFile(
         join(appDir, 'package.json'),
         JSON.stringify({ name: 'api' })
@@ -137,7 +137,7 @@ describe('repo-root', () => {
 
     it('resolves a null rootDirectory to the link location (config #3)', async () => {
       const appDir = await setupMonorepo();
-      const result = await resolvePerDirectoryLinkRoot(appDir, null);
+      const result = resolvePerDirectoryLinkRoot(appDir, null);
       expect(result.repoRoot).toEqual(root);
       expect(result.resolvedRootDirectory).toEqual('apps/api');
       expect(result.advisory).toBeUndefined();
@@ -148,7 +148,7 @@ describe('repo-root', () => {
       // non-existent apps/api/apps/api, so it is treated as redundant: build
       // from the link's own location and warn.
       const appDir = await setupMonorepo();
-      const result = await resolvePerDirectoryLinkRoot(appDir, 'apps/api');
+      const result = resolvePerDirectoryLinkRoot(appDir, 'apps/api');
       expect(result.repoRoot).toEqual(root);
       expect(result.resolvedRootDirectory).toEqual('apps/api');
       expect(result.advisory).toMatch(
@@ -162,14 +162,14 @@ describe('repo-root', () => {
       // when that folder actually exists.
       const appDir = await setupMonorepo();
       await mkdirp(join(appDir, 'server'));
-      const result = await resolvePerDirectoryLinkRoot(appDir, 'server');
+      const result = resolvePerDirectoryLinkRoot(appDir, 'server');
       expect(result.resolvedRootDirectory).toEqual('apps/api/server');
       expect(result.advisory).toBeUndefined();
     });
 
     it('ignores a deeper rootDirectory that points nowhere and warns', async () => {
       const appDir = await setupMonorepo();
-      const result = await resolvePerDirectoryLinkRoot(appDir, 'server');
+      const result = resolvePerDirectoryLinkRoot(appDir, 'server');
       expect(result.resolvedRootDirectory).toEqual('apps/api');
       expect(result.advisory).toMatch(
         /Ignoring "rootDirectory" setting "server"/
@@ -179,7 +179,7 @@ describe('repo-root', () => {
     it('normalizes ./ and trailing slash noise on an existing setting', async () => {
       const appDir = await setupMonorepo();
       await mkdirp(join(appDir, 'server'));
-      const result = await resolvePerDirectoryLinkRoot(appDir, './server/');
+      const result = resolvePerDirectoryLinkRoot(appDir, './server/');
       expect(result.resolvedRootDirectory).toEqual('apps/api/server');
       expect(result.advisory).toBeUndefined();
     });
@@ -191,7 +191,7 @@ describe('repo-root', () => {
       );
       // Link anchored at the root itself: nothing to re-anchor, setting keeps
       // its normal meaning (handled by the caller's default path).
-      const result = await resolvePerDirectoryLinkRoot(root, 'apps/api');
+      const result = resolvePerDirectoryLinkRoot(root, 'apps/api');
       expect(result.resolvedRootDirectory).toEqual('');
       expect(result.advisory).toBeUndefined();
     });
@@ -211,21 +211,8 @@ describe('repo-root', () => {
         JSON.stringify({ name: 'my-app' })
       );
 
-      const result = await resolvePerDirectoryLinkRoot(strayDir, null);
+      const result = resolvePerDirectoryLinkRoot(strayDir, null);
       expect(result.repoRoot).toEqual(strayDir);
-      expect(result.resolvedRootDirectory).toEqual('');
-    });
-
-    it('does NOT re-anchor to a plain git root', async () => {
-      // A per-directory link inside a plain git repo (no workspace) has no
-      // membership to verify, and no hoisted node_modules above it — leave it
-      // untouched.
-      const appDir = join(root, 'apps', 'api');
-      await mkdirp(appDir);
-      await execa('git', ['init'], { cwd: root });
-
-      const result = await resolvePerDirectoryLinkRoot(appDir, null);
-      expect(result.repoRoot).toEqual(appDir);
       expect(result.resolvedRootDirectory).toEqual('');
     });
 
@@ -244,26 +231,84 @@ describe('repo-root', () => {
         JSON.stringify({ name: 'sample' })
       );
 
-      const result = await resolvePerDirectoryLinkRoot(nestedDir, null);
+      const result = resolvePerDirectoryLinkRoot(nestedDir, null);
       expect(result.repoRoot).toEqual(nestedDir);
       expect(result.resolvedRootDirectory).toEqual('');
     });
 
-    it('anchors to the workspace whose member list names the directory', async () => {
-      // Nested workspaces: the outer root claims packages/inner (the member),
-      // but only the inner pnpm workspace names apps/svc — and it is the one
-      // whose package manager hoists the app's dependencies. The app anchors
-      // to the inner root.
+    it('does NOT claim a matching directory that is not a real package', async () => {
+      // The pattern matches but there is no package.json — package managers
+      // would not treat it as a workspace member, so neither do we.
+      const appDir = join(root, 'apps', 'api');
+      await mkdirp(appDir);
+      await writeFile(
+        join(root, 'pnpm-workspace.yaml'),
+        'packages:\n  - apps/*\n'
+      );
+
+      const result = resolvePerDirectoryLinkRoot(appDir, null);
+      expect(result.repoRoot).toEqual(appDir);
+      expect(result.resolvedRootDirectory).toEqual('');
+    });
+
+    it('respects negated workspace patterns', async () => {
+      const appDir = join(root, 'apps', 'legacy');
+      await mkdirp(appDir);
+      await writeFile(
+        join(root, 'pnpm-workspace.yaml'),
+        'packages:\n  - apps/*\n  - "!apps/legacy"\n'
+      );
+      await writeFile(
+        join(appDir, 'package.json'),
+        JSON.stringify({ name: 'legacy' })
+      );
+
+      const result = resolvePerDirectoryLinkRoot(appDir, null);
+      expect(result.repoRoot).toEqual(appDir);
+      expect(result.resolvedRootDirectory).toEqual('');
+    });
+
+    it('matches recursive globs without touching the filesystem tree', async () => {
+      // A `**`-style pattern is pure string matching plus one package.json
+      // check — no tree traversal, so even a huge node_modules costs nothing.
+      const appDir = join(root, 'components', 'deep', 'widget');
+      await mkdirp(appDir);
+      await writeFile(
+        join(root, 'pnpm-workspace.yaml'),
+        'packages:\n  - components/**\n'
+      );
+      await writeFile(
+        join(appDir, 'package.json'),
+        JSON.stringify({ name: 'widget' })
+      );
+
+      const result = resolvePerDirectoryLinkRoot(appDir, null);
+      expect(result.repoRoot).toEqual(root);
+      expect(result.resolvedRootDirectory).toEqual('components/deep/widget');
+    });
+
+    it('does NOT re-anchor to a plain git root', async () => {
+      // A per-directory link inside a plain git repo (no workspace) has no
+      // membership to verify, and no hoisted node_modules above it — leave it
+      // untouched.
+      const appDir = join(root, 'apps', 'api');
+      await mkdirp(appDir);
+      await execa('git', ['init'], { cwd: root });
+
+      const result = resolvePerDirectoryLinkRoot(appDir, null);
+      expect(result.repoRoot).toEqual(appDir);
+      expect(result.resolvedRootDirectory).toEqual('');
+    });
+
+    it('anchors to the outermost workspace that claims the directory', async () => {
+      // Nested workspaces where BOTH declare the app: the outermost wins,
+      // since that is where package managers hoist dependencies.
       const inner = join(root, 'packages', 'inner');
       const innerApp = join(inner, 'apps', 'svc');
       await mkdirp(innerApp);
       await writeFile(
         join(root, 'package.json'),
-        JSON.stringify({ workspaces: ['packages/*'] })
-      );
-      await writeFile(
-        join(inner, 'package.json'),
-        JSON.stringify({ name: 'inner' })
+        JSON.stringify({ workspaces: ['packages/inner/apps/*'] })
       );
       await writeFile(
         join(inner, 'pnpm-workspace.yaml'),
@@ -274,14 +319,14 @@ describe('repo-root', () => {
         JSON.stringify({ name: 'svc' })
       );
 
-      const result = await resolvePerDirectoryLinkRoot(innerApp, null);
-      expect(result.repoRoot).toEqual(inner);
-      expect(result.resolvedRootDirectory).toEqual('apps/svc');
+      const result = resolvePerDirectoryLinkRoot(innerApp, null);
+      expect(result.repoRoot).toEqual(root);
+      expect(result.resolvedRootDirectory).toEqual('packages/inner/apps/svc');
     });
 
     it('falls back to an inner workspace when only it claims the directory', async () => {
-      // The outer workspace exists but its globs do not cover the inner tree;
-      // the inner workspace claims the app, so it becomes the anchor.
+      // The outer workspace exists but its patterns do not name the app; the
+      // inner workspace claims it, so it becomes the anchor.
       const inner = join(root, 'vendored', 'inner');
       const innerApp = join(inner, 'apps', 'svc');
       await mkdirp(innerApp);
@@ -298,7 +343,7 @@ describe('repo-root', () => {
         JSON.stringify({ name: 'svc' })
       );
 
-      const result = await resolvePerDirectoryLinkRoot(innerApp, null);
+      const result = resolvePerDirectoryLinkRoot(innerApp, null);
       expect(result.repoRoot).toEqual(inner);
       expect(result.resolvedRootDirectory).toEqual('apps/svc');
     });
