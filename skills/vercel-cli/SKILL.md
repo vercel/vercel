@@ -9,7 +9,7 @@ The Vercel CLI (`vercel` or `vc`) deploys, manages, and develops projects on the
 
 The installed CLI help is the source of truth for obscure or newly added flags. If a command example here is not enough, check `vercel <command> --help` before acting instead of guessing.
 
-Output streams: command output (URLs, JSON) prints to stdout; everything else — warnings, notices, progress, spinners, and `--help` text — prints to stderr. Pipe only stdout into parsers (`2>&1 | jq` feeds diagnostics into the parser), and merge streams when filtering help text: `vercel logs --help 2>&1 | grep since`.
+Output streams: command output (URLs, JSON) prints to stdout; everything else — warnings, notices, progress, spinners, and `--help` text — prints to stderr. Pipe only stdout into parsers (`2>&1 | jq` feeds diagnostics into the parser), and merge streams when filtering help text: `vercel logs --help 2>&1 | grep since`. Some commands exit non-zero (2) after printing `--help`; if usage text was printed, treat the invocation as successful help output, not a command failure.
 
 In agent/non-interactive mode, many commands report errors and required confirmations as a single JSON object on stdout with `status`, `reason`, `hint`, and `next` (runnable follow-up commands). Prefer running a suggested `next` command over composing a retry. Read commands such as `list`, `logs`, `inspect`, and `api` keep their normal output shape.
 
