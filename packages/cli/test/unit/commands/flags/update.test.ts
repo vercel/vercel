@@ -424,6 +424,27 @@ describe('flags update', () => {
       );
     });
 
+    it('stores literal equals signs in values set with --value', async () => {
+      makeNonInteractive();
+      client.setArgv(
+        'flags',
+        'update',
+        testFlags[1].slug,
+        '--variant',
+        'control',
+        '--value',
+        'a=b'
+      );
+
+      const exitCode = await flags(client);
+
+      expect(exitCode).toEqual(0);
+      expect(testFlags[1].variants).toMatchObject([
+        { id: 'default', value: 'a=b', label: 'Control' },
+        { id: 'variant-a', value: 'variant-a', label: 'Variant A' },
+      ]);
+    });
+
     it('sends the provided revision message', async () => {
       makeNonInteractive();
       client.setArgv(
@@ -654,6 +675,35 @@ describe('flags update', () => {
 
       expect(exitCode).toEqual(0);
       expect(getFlag(slug).variants).toMatchObject(expected);
+    });
+
+    it('removes JSON variants selected by a value containing equals signs', async () => {
+      makeNonInteractive();
+      testFlags[3].variants.push({
+        id: 'query',
+        value: { query: 'a=b' },
+        label: 'Query',
+      });
+      client.setArgv(
+        'flags',
+        'update',
+        'layout-config',
+        '--remove-variant',
+        '{"query":"a=b"}',
+        '--yes'
+      );
+
+      const exitCode = await flags(client);
+
+      expect(exitCode).toEqual(0);
+      expect(getFlag('layout-config').variants).toMatchObject([
+        {
+          id: 'light',
+          value: { theme: 'light', sidebar: false },
+          label: 'Light',
+        },
+        { id: 'dark', value: ['dark', 'compact'], label: 'Dark' },
+      ]);
     });
 
     it('supports repeatable adds', async () => {

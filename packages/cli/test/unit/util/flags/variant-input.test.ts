@@ -68,5 +68,26 @@ describe('variant-input', () => {
       expect(variant.value).toEqual({ theme: 'light', sidebar: false });
       expect(variant.label).toBe('Light');
     });
+
+    it('parses unlabeled JSON variants whose value contains equals signs', () => {
+      const variant = parseVariantInput('{"redirect":"/x?a=b"}', 'json', 0);
+
+      expect(variant.value).toEqual({ redirect: '/x?a=b' });
+      expect(variant.label).toBe('Variant 1');
+    });
+
+    it('splits labeled JSON variants at the separator, not at equals signs inside the value', () => {
+      const variant = parseVariantInput('{"query":"a=b"}=Search', 'json', 0);
+
+      expect(variant.value).toEqual({ query: 'a=b' });
+      expect(variant.label).toBe('Search');
+    });
+
+    it('splits string variants at the first equals sign', () => {
+      const variant = parseVariantInput('a=b=c', 'string', 0);
+
+      expect(variant.value).toBe('a');
+      expect(variant.label).toBe('b=c');
+    });
   });
 });
