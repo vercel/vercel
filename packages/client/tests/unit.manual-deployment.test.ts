@@ -11,8 +11,8 @@ const { mockHashes } = vi.hoisted(() => ({
   mockHashes: vi.fn(),
 }));
 
-const { mockCreateTgzFiles } = vi.hoisted(() => ({
-  mockCreateTgzFiles: vi.fn(),
+const { mockCreateArchiveFiles } = vi.hoisted(() => ({
+  mockCreateArchiveFiles: vi.fn(),
 }));
 
 const { mockLstatSync, mockPathExists } = vi.hoisted(() => ({
@@ -41,7 +41,7 @@ vi.mock('../src/utils/archive', async () => {
   const actual = await vi.importActual('../src/utils/archive');
   return {
     ...actual,
-    createTgzFiles: mockCreateTgzFiles,
+    createArchiveFiles: mockCreateArchiveFiles,
   };
 });
 
@@ -346,7 +346,7 @@ describe('manual deployment', () => {
           },
         ],
       ]);
-      mockCreateTgzFiles.mockResolvedValueOnce(mockFilesMap);
+      mockCreateArchiveFiles.mockResolvedValueOnce(mockFilesMap);
 
       mockFetch.mockResolvedValueOnce(
         mockResponse(200, {
@@ -371,9 +371,10 @@ describe('manual deployment', () => {
       }
 
       expect(events.map(e => e.type)).toContain('hashes-calculated');
-      expect(mockCreateTgzFiles).toHaveBeenCalledWith(
+      expect(mockCreateArchiveFiles).toHaveBeenCalledWith(
         '/test/path',
         ['/test/path/.vercel/output/index.html'],
+        'tgz',
         expect.any(Function),
         []
       );
@@ -403,7 +404,7 @@ describe('manual deployment', () => {
           },
         ],
       ]);
-      mockCreateTgzFiles.mockResolvedValueOnce(mockArchiveMap);
+      mockCreateArchiveFiles.mockResolvedValueOnce(mockArchiveMap);
 
       const provisionData = Buffer.from('{"resources":[]}');
       const provisionMap = new Map([
@@ -440,10 +441,11 @@ describe('manual deployment', () => {
         events.push(event);
       }
 
-      // createTgzFiles should be called with provision.json in the exclude list
-      expect(mockCreateTgzFiles).toHaveBeenCalledWith(
+      // createArchiveFiles should be called with provision.json in the exclude list
+      expect(mockCreateArchiveFiles).toHaveBeenCalledWith(
         testPath,
         [indexPath, provisionPath],
+        'tgz',
         expect.any(Function),
         [provisionPath]
       );
