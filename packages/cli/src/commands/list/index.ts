@@ -199,7 +199,10 @@ export default async function list(client: Client) {
     }
     const p = await getProjectByNameOrId(client, app);
     if (p instanceof ProjectNotFound) {
-      exitWithNonInteractiveError(client, p, 1, { variant: 'list' });
+      exitWithNonInteractiveError(client, p, 1, {
+        variant: 'list',
+        projectName: app,
+      });
       error(`The provided argument "${app}" is not a valid project name`);
       return 1;
     }

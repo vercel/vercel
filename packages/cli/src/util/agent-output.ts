@@ -579,19 +579,29 @@ const LIST_ERROR_HINT =
  * Suggested follow-ups for `vercel list` failures (only caller of
  * exitWithNonInteractiveError). `project ls --filter` beats bare `project ls`
  * here: both return a single page of 20, so on large teams only a name search
- * reliably surfaces the intended project.
+ * reliably surfaces the intended project. When the attempted project name is
+ * known, the filter suggestion is emitted fully runnable.
  */
 function buildNextStepsForList(
-  client: Client
+  client: Client,
+  projectName?: string
 ): NonNullable<AgentErrorPayload['next']> {
   return [
-    {
-      command: buildCommandWithGlobalFlags(
-        client.argv,
-        'project ls --filter <name>'
-      ),
-      when: 'Search projects by name substring to find the right one (replace <name>)',
-    },
+    projectName
+      ? {
+          command: buildCommandWithGlobalFlags(
+            client.argv,
+            `project ls --filter ${projectName}`
+          ),
+          when: 'Search projects matching the attempted name to find the right one',
+        }
+      : {
+          command: buildCommandWithGlobalFlags(
+            client.argv,
+            'project ls --filter <name>'
+          ),
+          when: 'Search projects by name substring to find the right one (replace <name>)',
+        },
     {
       command: buildCommandWithGlobalFlags(client.argv, 'list --all'),
       when: 'List deployments across all projects in the current scope',
@@ -736,7 +746,11 @@ export function exitWithNonInteractiveError(
   client: Client,
   err: unknown,
   exitCode: number = 1,
-  options: { variant: ExitWithNonInteractiveErrorVariant } = {
+  options: {
+    variant: ExitWithNonInteractiveErrorVariant;
+    /** Attempted project name; makes `list` next[] suggestions fully runnable. */
+    projectName?: string;
+  } = {
     variant: 'members',
   }
 ): void {
@@ -779,6 +793,9 @@ export function exitWithNonInteractiveError(
         status: 'error',
         reason: 'project_not_found',
         message: err instanceof Error ? err.message : String(err),
+        ...(variant === 'list' && options.projectName
+          ? { next: buildNextStepsForList(client, options.projectName) }
+          : {}),
       },
       exitCode,
       variant

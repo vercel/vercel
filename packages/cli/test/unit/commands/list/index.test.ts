@@ -70,7 +70,7 @@ describe('list', () => {
         });
         expect(
           payload.next?.some((n: { command: string }) =>
-            /project ls --filter/.test(n.command)
+            /project ls --filter does-not-exist/.test(n.command)
           )
         ).toBe(true);
       } finally {
