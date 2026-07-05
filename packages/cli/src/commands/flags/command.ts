@@ -234,12 +234,33 @@ export const updateSubcommand = {
       argument: 'LABEL',
     },
     {
+      name: 'add-variant',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description:
+        'Add a variant as VALUE[=LABEL] (repeatable for string, number, and json flags)',
+      argument: 'VALUE[=LABEL]',
+    },
+    {
+      name: 'remove-variant',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description: 'Remove a variant by ID or value (repeatable)',
+      argument: 'VARIANT',
+    },
+    {
       name: 'message',
       shorthand: null,
       type: String,
       deprecated: false,
       description: 'Optional revision message for the update',
       argument: 'TEXT',
+    },
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when removing a variant',
     },
   ],
   examples: [
@@ -254,6 +275,14 @@ export const updateSubcommand = {
     {
       name: 'Rename a boolean variant label',
       value: `${packageName} flags update my-feature --variant false --label "Disabled"`,
+    },
+    {
+      name: 'Add a new variant',
+      value: `${packageName} flags update my-feature --add-variant treatment="New onboarding"`,
+    },
+    {
+      name: 'Remove variants by value or ID',
+      value: `${packageName} flags update my-feature --remove-variant control --remove-variant var_123 --yes`,
     },
   ],
 } as const;

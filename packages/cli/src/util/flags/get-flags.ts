@@ -1,5 +1,6 @@
 import type Client from '../client';
 import type { Flag, FlagsListResponse, FlagSettings } from './types';
+import { flagUrl } from './update-flag';
 import output from '../../output-manager';
 
 export interface GetFlagsOptions {
@@ -101,7 +102,7 @@ export async function getFlag(
     `Fetching feature flag ${flagIdOrSlug} for project ${projectId}`
   );
 
-  const url = `/v1/projects/${encodeURIComponent(projectId)}/feature-flags/flags/${encodeURIComponent(flagIdOrSlug)}`;
+  const url = flagUrl(projectId, flagIdOrSlug);
   const response = await client.fetch<Flag>(url);
 
   return response;
