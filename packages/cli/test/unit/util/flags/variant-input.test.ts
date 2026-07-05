@@ -89,5 +89,12 @@ describe('variant-input', () => {
       expect(variant.value).toBe('a');
       expect(variant.label).toBe('b=c');
     });
+
+    it('leaves string variants unlabeled when no label is provided', () => {
+      const variant = parseVariantInput('control', 'string', 0);
+
+      expect(variant.value).toBe('control');
+      expect(variant.label).toBeUndefined();
+    });
   });
 });

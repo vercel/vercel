@@ -196,14 +196,10 @@ async function updateExistingVariant(
     client,
     projectId,
     flagArg,
-    updateMessage
-      ? {
-          variants,
-          message: updateMessage,
-        }
-      : {
-          variants,
-        },
+    {
+      variants,
+      message: updateMessage,
+    },
     {
       ifMatch: etag,
     }
@@ -280,14 +276,10 @@ async function updateFlagVariants(
     client,
     projectId,
     flagArg,
-    updateMessage
-      ? {
-          variants: plan.variants,
-          message: updateMessage,
-        }
-      : {
-          variants: plan.variants,
-        },
+    {
+      variants: plan.variants,
+      message: updateMessage,
+    },
     {
       ifMatch: etag,
     }

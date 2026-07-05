@@ -422,6 +422,8 @@ describe('flags update', () => {
       expect((testFlags[1] as Flag & { message?: string }).message).toEqual(
         'Updated via CLI'
       );
+      expect(client.stderr.getFullOutput()).toContain('has been updated');
+      expect(client.stderr.getFullOutput()).toContain('Variant:');
     });
 
     it('stores literal equals signs in values set with --value', async () => {
@@ -602,6 +604,39 @@ describe('flags update', () => {
       );
     });
 
+    it('prompts for missing value and label when variant is provided', async () => {
+      textMock
+        .mockResolvedValueOnce('welcome-back')
+        .mockResolvedValueOnce('Welcome back')
+        .mockResolvedValueOnce('Rename control variant');
+
+      client.setArgv(
+        'flags',
+        'update',
+        testFlags[1].slug,
+        '--variant',
+        'control'
+      );
+
+      const exitCode = await flags(client);
+
+      expect(exitCode).toEqual(0);
+      expect(selectMock).not.toHaveBeenCalled();
+      expect(textMock).toHaveBeenCalledTimes(3);
+      expect(textMock.mock.calls[0][0].message).toContain('Enter a new value');
+      expect(textMock.mock.calls[1][0].message).toContain('Enter a new label');
+      expect(textMock.mock.calls[2][0].message).toContain('Enter a message');
+      expect(textMock.mock.calls[2][0].default).toEqual('Updated via CLI');
+      expect(testFlags[1].variants[0]).toMatchObject({
+        id: 'default',
+        value: 'welcome-back',
+        label: 'Welcome back',
+      });
+      expect((testFlags[1] as Flag & { message?: string }).message).toEqual(
+        'Rename control variant'
+      );
+    });
+
     it('returns a 412 failure when the flag changes after it is fetched', async () => {
       makeNonInteractive();
       testFlags[1].etag = '"test-etag-1"';
@@ -628,6 +663,58 @@ describe('flags update', () => {
         { id: 'default', value: 'control', label: 'Control' },
         { id: 'variant-a', value: 'variant-a', label: 'Variant A' },
       ]);
+    });
+
+    it('validates prompted values and allows empty input to keep the current value', async () => {
+      textMock
+        .mockResolvedValueOnce('') // value prompt: keep the current value
+        .mockResolvedValueOnce(''); // label prompt: skip
+      client.setArgv(
+        'flags',
+        'update',
+        testFlags[3].slug,
+        '--variant',
+        'light'
+      );
+
+      const exitCode = await flags(client);
+
+      expect(exitCode).toEqual(0);
+      expect(selectMock).not.toHaveBeenCalled();
+      expect(client.stderr.getFullOutput()).toContain('already up to date');
+
+      const validate = textMock.mock.calls[0][0].validate;
+      expect(validate('')).toBe(true);
+      expect(validate('   ')).toBe(true);
+      expect(validate('{bad')).toEqual(
+        'JSON variant values must be valid JSON'
+      );
+      expect(validate('{"ok":1}')).toBe(true);
+    });
+
+    it('skips the value prompt for boolean flags in interactive mode', async () => {
+      textMock
+        .mockResolvedValueOnce('Disabled') // label prompt
+        .mockResolvedValueOnce(''); // message prompt: use default
+      client.setArgv(
+        'flags',
+        'update',
+        testFlags[0].slug,
+        '--variant',
+        'false'
+      );
+
+      const exitCode = await flags(client);
+
+      expect(exitCode).toEqual(0);
+      expect(selectMock).not.toHaveBeenCalled();
+      expect(textMock).toHaveBeenCalledTimes(2);
+      expect(textMock.mock.calls[0][0].message).toContain('label');
+      expect(testFlags[0].variants[0]).toMatchObject({
+        id: 'off',
+        value: false,
+        label: 'Disabled',
+      });
     });
   });
 
@@ -807,6 +894,9 @@ describe('flags update', () => {
         { id: 'legacy-id', value: 'legacy', label: 'Legacy' },
         { value: 'new-value', label: 'New Value' },
       ]);
+      expect(client.stderr.getFullOutput()).toContain('has been updated');
+      expect(client.stderr.getFullOutput()).toContain('Added:');
+      expect(client.stderr.getFullOutput()).toContain('Removed:');
     });
 
     it('preserves existing variant IDs and environment config', async () => {
@@ -866,35 +956,85 @@ describe('flags update', () => {
       ]);
     });
 
-    it('rejects boolean add and remove operations', async () => {
+    it.each([
+      ['--add-variant', 'maybe=Maybe'],
+      ['--remove-variant', 'off'],
+    ])('rejects boolean %s operations', async (...args) => {
+      makeNonInteractive();
+      client.setArgv('flags', 'update', testFlags[0].slug, ...args);
+
+      const exitCode = await flags(client);
+
+      expect(exitCode).toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Boolean flags do not support --add-variant or --remove-variant.'
+      );
+    });
+
+    it('rejects add and remove on archived flags', async () => {
+      makeNonInteractive();
+      const archivedFlag = createMutableStringFlag();
+      archivedFlag.state = 'archived';
+      testFlags.push(archivedFlag);
+      client.setArgv(
+        'flags',
+        'update',
+        'mutable-feature',
+        '--add-variant',
+        'x=X',
+        '--yes'
+      );
+
+      const exitCode = await flags(client);
+
+      expect(exitCode).toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'is archived and cannot be updated'
+      );
+    });
+
+    it('replaces a variant by removing and re-adding its value in one command', async () => {
+      makeNonInteractive();
+      testFlags.push(createMutableStringFlag());
+      client.setArgv(
+        'flags',
+        'update',
+        'mutable-feature',
+        '--remove-variant',
+        'treatment-id',
+        '--add-variant',
+        'treatment=New',
+        '--yes'
+      );
+
+      const exitCode = await flags(client);
+
+      expect(exitCode).toEqual(0);
+      const updatedFlag = getFlag('mutable-feature');
+      expect(updatedFlag.variants).toMatchObject([
+        { id: 'control-id', value: 'control', label: 'Control' },
+        { id: 'legacy-id', value: 'legacy', label: 'Legacy' },
+        { value: 'treatment', label: 'New' },
+      ]);
+      expect(updatedFlag.variants[2].id).not.toEqual('treatment-id');
+    });
+
+    it('rejects duplicate values across added variants', async () => {
       makeNonInteractive();
       client.setArgv(
         'flags',
         'update',
-        testFlags[0].slug,
+        'another-feature',
         '--add-variant',
-        'maybe=Maybe'
+        'x=A',
+        '--add-variant',
+        'x=B'
       );
 
-      let exitCode = await flags(client);
+      const exitCode = await flags(client);
+
       expect(exitCode).toEqual(1);
-      expect(client.stderr.getFullOutput()).toContain(
-        'Boolean flags do not support --add-variant or --remove-variant.'
-      );
-
-      client.setArgv(
-        'flags',
-        'update',
-        testFlags[0].slug,
-        '--remove-variant',
-        'off'
-      );
-
-      exitCode = await flags(client);
-      expect(exitCode).toEqual(1);
-      expect(client.stderr.getFullOutput()).toContain(
-        'Boolean flags do not support --add-variant or --remove-variant.'
-      );
+      expect(client.stderr.getFullOutput()).toContain('would be duplicated');
     });
 
     it.each([
@@ -1044,7 +1184,6 @@ describe('flags update', () => {
     });
 
     it('skips the removal prompt with --yes', async () => {
-      makeNonInteractive();
       testFlags.push(createMutableStringFlag());
       client.setArgv(
         'flags',
@@ -1176,6 +1315,27 @@ describe('flags update', () => {
 
       expect(exitCode).toEqual(1);
       expect(client.stderr.getFullOutput()).toContain(
+        'Unable to update flag safely'
+      );
+      expect(getFlag('mutable-feature').variants).toHaveLength(3);
+    });
+
+    it('reports missing flags without the ETag failure message', async () => {
+      makeNonInteractive();
+      client.setArgv(
+        'flags',
+        'update',
+        'nonexistent-flag',
+        '--add-variant',
+        'x=X',
+        '--yes'
+      );
+
+      const exitCode = await flags(client);
+
+      expect(exitCode).toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain('Flag not found');
+      expect(client.stderr.getFullOutput()).not.toContain(
         'Unable to update flag safely'
       );
     });
@@ -1319,6 +1479,104 @@ describe('flags update', () => {
       expect(exitCode).toEqual(1);
       expect(client.stderr.getFullOutput()).toContain('Cannot remove variant');
       expect(client.stderr.getFullOutput()).toContain(expectedPath);
+      expect(getFlag('reference-feature').variants).toHaveLength(
+        referenceFlag.variants.length
+      );
+    });
+
+    it('allows removal when targets reference the variant with an empty list', async () => {
+      makeNonInteractive();
+      const referenceFlag = createReferenceFlag();
+      referenceFlag.environments.production.targets = {
+        'remove-me': {
+          user: {
+            plan: [],
+          },
+        },
+      };
+      testFlags.push(referenceFlag);
+      client.setArgv(
+        'flags',
+        'update',
+        'reference-feature',
+        '--remove-variant',
+        'remove-me',
+        '--yes'
+      );
+
+      const exitCode = await flags(client);
+
+      expect(exitCode).toEqual(0);
+      expect(
+        getFlag('reference-feature').variants.map(v => v.id)
+      ).not.toContain('remove-me');
+    });
+
+    it('reports each referenced variant when multiple removals are blocked', async () => {
+      makeNonInteractive();
+      const referenceFlag = createReferenceFlag();
+      referenceFlag.environments.production.fallthrough = {
+        type: 'variant',
+        variantId: 'remove-me',
+      };
+      referenceFlag.environments.production.pausedOutcome = {
+        type: 'variant',
+        variantId: 'targeted',
+      };
+      testFlags.push(referenceFlag);
+      client.setArgv(
+        'flags',
+        'update',
+        'reference-feature',
+        '--remove-variant',
+        'remove-me',
+        '--remove-variant',
+        'targeted',
+        '--yes'
+      );
+
+      const exitCode = await flags(client);
+
+      expect(exitCode).toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Cannot remove variants because they are still referenced'
+      );
+      expect(client.stderr.getFullOutput()).toContain('production.fallthrough');
+      expect(client.stderr.getFullOutput()).toContain(
+        'production.pausedOutcome'
+      );
+    });
+
+    it('only lists still-referenced variants in the removal error', async () => {
+      makeNonInteractive();
+      const referenceFlag = createReferenceFlag();
+      referenceFlag.environments.production.fallthrough = {
+        type: 'variant',
+        variantId: 'remove-me',
+      };
+      testFlags.push(referenceFlag);
+      client.setArgv(
+        'flags',
+        'update',
+        'reference-feature',
+        '--remove-variant',
+        'remove-me',
+        '--remove-variant',
+        'targeted',
+        '--yes'
+      );
+
+      const exitCode = await flags(client);
+
+      expect(exitCode).toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Cannot remove variant because it is still referenced'
+      );
+      expect(client.stderr.getFullOutput()).toContain('"remove-me"');
+      // "targeted" is unreferenced, so it must not appear in a detail line;
+      // its id and value share the same lowercase text, so this also covers
+      // the value-only and id-only forms of that line.
+      expect(client.stderr.getFullOutput()).not.toContain('targeted');
     });
   });
 
