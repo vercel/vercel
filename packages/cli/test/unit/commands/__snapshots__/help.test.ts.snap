@@ -1425,7 +1425,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
   - Deploy with zstd archive compression
 
-    $ vercel deploy --prod --compress=zstd
+    $ vercel deploy --prod --archive=zstd
 
   - Get every deployment file as JSON
 
@@ -1526,7 +1526,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
   - Deploy with zstd archive compression
 
-    $ vercel deploy --prod --compress=zstd
+    $ vercel deploy --prod --archive=zstd
 
   - Get every deployment file as JSON
 
@@ -1611,7 +1611,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
   - Deploy with zstd archive compression
 
-    $ vercel deploy --prod --compress=zstd
+    $ vercel deploy --prod --archive=zstd
 
   - Get every deployment file as JSON
 

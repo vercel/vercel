@@ -607,6 +607,78 @@ describe('deploy', () => {
     ]);
   });
 
+  it('should send a tgz file when `deploy continue --compress=tgz`', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'static',
+      id: 'static',
+    });
+
+    let body: any;
+    client.scenario.post(`/deployments/dpl_continue/continue`, (req, res) => {
+      body = req.body;
+      res.json({
+        id: 'dpl_continue',
+        url: 'continue.vercel.app',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+      });
+    });
+
+    client.cwd = setupUnitFixture('commands/deploy/static-with-build-output');
+    client.setArgv(
+      'deploy',
+      'continue',
+      '--id',
+      'dpl_continue',
+      '--compress=tgz'
+    );
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    const fileNames = body?.files?.map((f: any) => f.file);
+    expect(fileNames).toContain('.vercel/source.tgz.part1');
+    expect(fileNames).toContain('.vercel/output/provision.json');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:continue',
+        value: 'continue',
+      },
+      {
+        key: 'option:compress',
+        value: 'tgz',
+      },
+    ]);
+  });
+
+  it('should reject `deploy continue --compress` with `--error`', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'static',
+      id: 'static',
+    });
+
+    client.cwd = setupUnitFixture('commands/deploy/static');
+    client.setArgv(
+      'deploy',
+      'continue',
+      '--id',
+      'dpl_continue',
+      '--compress=tgz',
+      '--error=External CI failed'
+    );
+    const exitCodePromise = deploy(client);
+
+    await expect(client.stderr).toOutput(
+      'Error: Cannot use "--archive" or "--compress" with "--error"'
+    );
+    expect(await exitCodePromise).toEqual(1);
+  });
+
   it('should mark a manual deployment as errored with `deploy continue --error`', async () => {
     useUser();
     useTeams('team_dummy');
@@ -1576,7 +1648,7 @@ describe('deploy', () => {
     });
     it('--archive and --compress with different values rejects', async () => {
       client.cwd = setupUnitFixture('commands/deploy/static');
-      client.setArgv('deploy', '--archive=tgz', '--compress=split-tgz');
+      client.setArgv('deploy', '--archive=tgz', '--compress=zstd');
       const exitCodePromise = deploy(client);
 
       await expect(client.stderr).toOutput(

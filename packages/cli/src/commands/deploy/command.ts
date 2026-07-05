@@ -361,7 +361,7 @@ export const deployCommand = {
     },
     {
       name: 'Deploy with zstd archive compression',
-      value: 'vercel deploy --prod --compress=zstd',
+      value: 'vercel deploy --prod --archive=zstd',
     },
     {
       name: 'Get every deployment file as JSON',

@@ -146,9 +146,9 @@ function resolveArchiveFormat(
       return {
         format: 'tgz' as ArchiveFormat,
         warning: `${prependEmoji(
-          `${param('--archive=tgz')} now has the same behavior as ${param(
-            '--archive=split-tgz'
-          )}. Please use ${param('--archive=tgz')} instead.`,
+          `The ${param('split-tgz')} archive format is deprecated. Use ${param(
+            'tgz'
+          )} instead.`,
           emoji('warning')
         )}\n`,
       };

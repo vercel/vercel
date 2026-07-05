@@ -109,7 +109,8 @@ export default async function createDeploy(
           path,
           createArgs,
           org,
-          isSettingUpProject
+          isSettingUpProject,
+          archive
         );
       }
 
