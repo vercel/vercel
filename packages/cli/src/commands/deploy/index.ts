@@ -331,6 +331,9 @@ async function handleInitDeployment(
     output.print(archiveResult.warning);
   }
 
+  telemetryClient.trackCliOptionArchive(parsedArchive);
+  telemetryClient.trackCliOptionCompress(parsedCompress);
+
   const cliMeta = parseMeta(parsedArguments.flags['--meta']);
   const isV0 = cliMeta.v0 === 'true';
 

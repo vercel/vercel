@@ -2926,6 +2926,30 @@ describe('deploy', () => {
       ]);
     });
 
+    it('should track --archive telemetry', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', 'init', '--archive=tgz');
+      await deploy(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:init', value: 'init' },
+        { key: 'target_environment', value: 'preview' },
+        { key: 'option:archive', value: 'tgz' },
+      ]);
+    });
+
+    it('should track --compress telemetry', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', 'init', '--compress=tgz');
+      await deploy(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:init', value: 'init' },
+        { key: 'target_environment', value: 'preview' },
+        { key: 'option:compress', value: 'tgz' },
+      ]);
+    });
+
     it('should return error for invalid format', async () => {
       client.cwd = setupUnitFixture('commands/deploy/static');
       client.setArgv('deploy', 'init', '--format', 'xml');
