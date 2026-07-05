@@ -81,7 +81,7 @@ async function createZstdFiles(
         reject(
           new Error(
             'The `zstd` binary is not installed or not found on PATH. ' +
-              'It is required for --compress zstd. Install it via your system ' +
+              'It is required for --archive=zstd or --compress=zstd. Install it via your system ' +
               'package manager (e.g. `apt install zstd`, `brew install zstd`, ' +
               '`pacman -S zstd`, `choco install zstandard`, or ' +
               '`winget install Facebook.Zstandard`). Use --archive=tgz for a portable fallback.'

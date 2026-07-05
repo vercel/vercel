@@ -1579,6 +1579,24 @@ describe('deploy', () => {
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
+    it('--compress=split-tgz resolves to archive=tgz', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--compress=split-tgz');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(mock).toHaveBeenCalledWith(
+        ...Object.values({
+          ...baseCreateDeployArgs,
+          archive: 'tgz',
+        })
+      );
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'option:compress', value: 'split-tgz' },
+        { key: 'target_environment', value: 'preview' },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
+      ]);
+    });
     it('--compress=tgz resolves to archive=tgz', async () => {
       client.cwd = setupUnitFixture('commands/deploy/static');
       client.setArgv('deploy', '--compress=tgz');
