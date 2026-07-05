@@ -9,6 +9,10 @@ The Vercel CLI (`vercel` or `vc`) deploys, manages, and develops projects on the
 
 The installed CLI help is the source of truth for obscure or newly added flags. If a command example here is not enough, check `vercel <command> --help` before acting instead of guessing.
 
+Output streams: command output (URLs, JSON) prints to stdout; everything else — warnings, notices, progress, spinners, and `--help` text — prints to stderr. Pipe only stdout into parsers (`2>&1 | jq` feeds diagnostics into the parser), and merge streams when filtering help text: `vercel logs --help 2>&1 | grep since`.
+
+In agent/non-interactive mode, many commands report errors and required confirmations as a single JSON object on stdout with `status`, `reason`, `hint`, and `next` (runnable follow-up commands). Prefer running a suggested `next` command over composing a retry. Read commands such as `list`, `logs`, `inspect`, and `api` keep their normal output shape.
+
 ## Critical: Project Linking
 
 Commands must be run from the directory containing the `.vercel` folder (or a subdirectory of it). How `.vercel` gets set up depends on your project structure:
@@ -72,7 +76,7 @@ Use this to route to the correct reference file:
 - **Wrong link type in monorepos with multiple projects**: `vercel link` creates `project.json`, which only tracks one project. Use `vercel link --repo` instead. When things break, check `.vercel/` first.
 - **Letting commands auto-link in monorepos**: Many commands implicitly run `vercel link` if `.vercel/` doesn't exist. This creates `project.json`, which may be wrong. Run `vercel link` (or `--repo`) explicitly first.
 - **Linking while on the wrong team**: Use `vercel whoami` to check, `vercel teams switch` to change.
-- **Forgetting non-interactive flags in CI/agent runs**: Use `--non-interactive` when you need prompt-free behavior, and add `--yes` only for commands that require confirmation.
+- **Forgetting non-interactive flags in plain CI runs**: detected agents get `--non-interactive` by default, but plain CI does not — pass it explicitly there, and add `--yes` only for commands that require confirmation.
 - **Using `vercel deploy` after `vercel build` without `--prebuilt`**: The build output is ignored.
 - **Using `vercel redeploy` for no-cache rebuilds**: `vercel redeploy` does not expose a no-cache flag; use `vercel deploy --force` without `--with-cache` when you need a fresh deployment that does not retain build cache.
 - **Hardcoding tokens in flags**: Use `VERCEL_TOKEN` env var instead of `--token`.

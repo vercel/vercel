@@ -31,6 +31,8 @@ Use `vercel api list` to discover available endpoints. `vercel api ls` is also a
 
 Do not parse `vercel api --generate=curl` output as JSON; it emits a curl command.
 
+DELETE requests prompt for confirmation; in non-interactive/agent mode they are refused unless `--dangerously-skip-permissions` is passed. Use that flag only for deletions the user explicitly approved.
+
 ## `vercel traces` — Captured Request Traces
 
 Fetch traces captured for a Vercel project. `get` is the default subcommand.
