@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { join, relative } from 'node:path';
 import { createGzip } from 'node:zlib';
 import { streamToBufferChunks } from '@vercel/build-utils';
@@ -56,12 +56,36 @@ export async function createArchiveFiles(
   );
 }
 
+function getMissingZstdError() {
+  return new Error(
+    'The `zstd` binary is not installed or not found on PATH. ' +
+      'It is required for --archive=zstd or --compress=zstd. Install it via your system ' +
+      'package manager (e.g. `apt install zstd`, `brew install zstd`, ' +
+      '`pacman -S zstd`, `choco install zstandard`, or ' +
+      '`winget install Facebook.Zstandard`). Use --archive=tgz for a portable fallback.'
+  );
+}
+
+function assertZstdAvailable() {
+  const result = spawnSync('zstd', ['--version'], { stdio: 'ignore' });
+  if ((result.error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT') {
+    throw getMissingZstdError();
+  }
+  if (result.error) {
+    throw result.error;
+  }
+  if (typeof result.status === 'number' && result.status !== 0) {
+    throw new Error(`zstd --version exited with code ${result.status}`);
+  }
+}
+
 async function createZstdFiles(
   workPath: string,
   entries: string[],
   debug?: (message: string) => void
 ): Promise<FilesMap> {
   debug?.('Packing tarball with zstd');
+  assertZstdAvailable();
   const tarStream = tar.pack(workPath, { entries });
   const child = spawn(
     'zstd',
@@ -78,15 +102,7 @@ async function createZstdFiles(
   const childExit = new Promise<void>((resolve, reject) => {
     child.on('error', (err: NodeJS.ErrnoException) => {
       if (err.code === 'ENOENT') {
-        reject(
-          new Error(
-            'The `zstd` binary is not installed or not found on PATH. ' +
-              'It is required for --archive=zstd or --compress=zstd. Install it via your system ' +
-              'package manager (e.g. `apt install zstd`, `brew install zstd`, ' +
-              '`pacman -S zstd`, `choco install zstandard`, or ' +
-              '`winget install Facebook.Zstandard`). Use --archive=tgz for a portable fallback.'
-          )
-        );
+        reject(getMissingZstdError());
         return;
       }
       reject(err);
