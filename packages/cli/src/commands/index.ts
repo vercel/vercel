@@ -1,4 +1,5 @@
 import { agentCommand } from './agent/command';
+import { agentRunsCommand } from './agent-runs/command';
 import { activityCommand } from './activity/command';
 import { aiGatewayCommand } from './ai-gateway/command';
 import { alertsCommand } from './alerts/command';
@@ -67,6 +68,7 @@ import output from '../output-manager';
 
 const commandsStructs = [
   agentCommand,
+  agentRunsCommand,
   aiGatewayCommand,
   alertsCommand,
   aliasCommand,
