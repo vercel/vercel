@@ -109,12 +109,18 @@ async function createZstdFiles(
     });
   });
 
+  const childStdin = new Promise<void>((resolve, reject) => {
+    child.stdin.on('error', reject);
+    child.stdin.on('finish', resolve);
+  });
+
   tarStream.on('error', err => {
     child.stdin.destroy(err);
   });
   tarStream.pipe(child.stdin);
   const [chunkedTarBuffers] = await Promise.all([
     streamToBufferChunks(child.stdout),
+    childStdin,
     childExit,
   ]);
   debug?.(`Packed tarball into ${chunkedTarBuffers.length} chunks`);
