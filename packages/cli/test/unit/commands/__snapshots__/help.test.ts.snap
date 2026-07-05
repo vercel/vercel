@@ -1423,7 +1423,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
     $ vercel deploy --dry
 
-  - Deploy with zstd archive compression
+  - Deploy with zstd archive compression (requires zstd on PATH)
 
     $ vercel deploy --prod --archive=zstd
 
@@ -1524,7 +1524,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
     $ vercel deploy --dry
 
-  - Deploy with zstd archive compression
+  - Deploy with zstd archive compression (requires zstd on PATH)
 
     $ vercel deploy --prod --archive=zstd
 
@@ -1609,7 +1609,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
     $ vercel deploy --dry
 
-  - Deploy with zstd archive compression
+  - Deploy with zstd archive compression (requires zstd on PATH)
 
     $ vercel deploy --prod --archive=zstd
 

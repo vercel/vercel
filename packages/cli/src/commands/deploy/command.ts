@@ -360,7 +360,7 @@ export const deployCommand = {
       value: 'vercel deploy --dry',
     },
     {
-      name: 'Deploy with zstd archive compression',
+      name: 'Deploy with zstd archive compression (requires zstd on PATH)',
       value: 'vercel deploy --prod --archive=zstd',
     },
     {
