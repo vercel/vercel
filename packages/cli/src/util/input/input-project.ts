@@ -40,6 +40,39 @@ async function inputProjectDecision(
   });
 }
 
+function randomNameSuffix(): string {
+  return Math.random().toString(36).slice(2, 6).padEnd(4, '0');
+}
+
+/**
+ * Suggests a default for the new-project `Name?` prompt. When the slugified
+ * folder name is already a project in the team, suggest a variant with a
+ * short random suffix instead of a default that can only fail the
+ * "Project already exists" validation.
+ */
+async function suggestNewProjectName(
+  client: Client,
+  org: Org,
+  slugifiedName: string,
+  knownTaken: boolean
+): Promise<string> {
+  let taken = knownTaken;
+  if (!taken) {
+    try {
+      const existing = await getProjectByIdOrName(
+        client,
+        slugifiedName,
+        org.id
+      );
+      taken = !(existing instanceof ProjectNotFound);
+    } catch {
+      // Suggestion only; submit-time validation still guards.
+      taken = false;
+    }
+  }
+  return taken ? `${slugifiedName}-${randomNameSuffix()}` : slugifiedName;
+}
+
 function promptForProjectName(
   client: Client,
   org: Org,
@@ -155,17 +188,20 @@ async function searchExistingProjects(
         name: 'Back to project options',
         value: BACK_TO_PROJECT_SELECTION,
       };
+
+      // No matches: only the way back remains.
       if (choices.length === 0) {
         return [backChoice];
       }
 
-      const backIndex = Math.min(choices.length, 13);
-      return [
-        ...choices.slice(0, backIndex),
-        new Separator(),
-        backChoice,
-        ...choices.slice(backIndex),
-      ];
+      // A search term filters the list down to projects only.
+      if (searchTerm) {
+        return choices;
+      }
+
+      // Unfiltered list: pin the way back to the end, after a separator,
+      // instead of floating it mid-list on long project lists.
+      return [...choices, new Separator(), backChoice];
     },
   });
 }
@@ -183,7 +219,7 @@ export default async function inputProject(
   const slugifiedName = slugify(detectedProjectName);
 
   // attempt to auto-detect a project to link
-  let detectedProject = null;
+  let detectedProject: Project | null = null;
 
   if (!skipAutoDetect && repoMatches.length === 0) {
     output.spinner('Searching for existing projects…', 1000);
@@ -219,6 +255,25 @@ export default async function inputProject(
     const err = new Error('Confirmation required');
     (err as NodeJS.ErrnoException).code = 'HEADLESS';
     throw err;
+  }
+
+  // When auto-detect ran and found nothing, the slugified name is known to be
+  // free; otherwise check once so the suggested default is actually creatable.
+  const slugifiedNameKnownFree =
+    !skipAutoDetect && repoMatches.length === 0 && !detectedProject;
+  let memoizedDefaultName: string | undefined;
+  async function defaultNewProjectName(): Promise<string> {
+    if (memoizedDefaultName === undefined) {
+      memoizedDefaultName = slugifiedNameKnownFree
+        ? slugifiedName
+        : await suggestNewProjectName(
+            client,
+            org,
+            slugifiedName,
+            detectedProject?.name === slugifiedName
+          );
+    }
+    return memoizedDefaultName;
   }
 
   let shouldLinkProject: boolean;
@@ -289,7 +344,7 @@ export default async function inputProject(
         const projectName = await promptForProjectNameWithBack(
           client,
           org,
-          slugifiedName
+          await defaultNewProjectName()
         );
         if (projectName === BACK_TO_PROJECT_SELECTION) {
           continue;
@@ -347,9 +402,5 @@ export default async function inputProject(
   }
 
   // user wants to create a new project
-  return await promptForProjectName(
-    client,
-    org,
-    !detectedProject ? slugifiedName : undefined
-  );
+  return await promptForProjectName(client, org, await defaultNewProjectName());
 }

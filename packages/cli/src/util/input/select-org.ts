@@ -1,9 +1,13 @@
+import chalk from 'chalk';
 import type Client from '../client';
 import getUser from '../get-user';
 import getTeamById from '../teams/get-team-by-id';
 import getTeams from '../teams/get-teams';
 import type { User, Team, Org } from '@vercel-internals/types';
+import { getPlatformEnv } from '@vercel/build-utils';
+import { emoji } from '../emoji';
 import output from '../../output-manager';
+import param from '../output/param';
 import { packageName } from '../pkg-name';
 import {
   outputActionRequired,
@@ -43,7 +47,10 @@ export default async function selectOrg(
     config: { currentTeam },
   } = client;
 
-  if (autoConfirm && !client.nonInteractive) {
+  // Only a TTY may fall back to the globally selected team (`vc switch`,
+  // login default) under `--yes`; without one, the strict resolution below
+  // requires an explicit signal so scripts never link to a guessed team.
+  if (autoConfirm && !client.nonInteractive && client.stdin.isTTY) {
     if (currentTeam) {
       output.spinner('Loading team…', 1000);
       try {
@@ -90,12 +97,35 @@ export default async function selectOrg(
     output.stopSpinner();
   }
 
+  // Match the `vc switch` label format: `Name (slug)` plus a bold `(current)`
+  // marker and a lock for teams that require SSO.
+  const formatChoiceName = (
+    name: string,
+    slug: string,
+    isCurrent: boolean,
+    limited: boolean | undefined
+  ): string => {
+    let title = `${name} (${slug})`;
+    if (isCurrent) {
+      title += ` ${chalk.bold('(current)')}`;
+    }
+    if (limited) {
+      title += ` ${emoji('locked')}`;
+    }
+    return title;
+  };
+
   const personalAccountChoice =
     user.version === 'northstar'
       ? []
       : [
           {
-            name: user.name || user.username,
+            name: formatChoiceName(
+              user.name || user.username,
+              user.username,
+              !currentTeam,
+              user.limited
+            ),
             value: { type: 'user', id: user.id, slug: user.username },
           } as const,
         ];
@@ -105,7 +135,12 @@ export default async function selectOrg(
     ...teams
       .sort(a => (a.id === user.defaultTeamId ? -1 : 1))
       .map<Choice>(team => ({
-        name: team.name || team.slug,
+        name: formatChoiceName(
+          team.name || team.slug,
+          team.slug,
+          team.id === currentTeam,
+          team.limited
+        ),
         value: { type: 'team', id: team.id, slug: team.slug },
       })),
   ];
@@ -115,19 +150,38 @@ export default async function selectOrg(
     0
   );
 
-  // Non-interactive: if user already passed --scope/--team (currentTeam set or via argv), use it; otherwise output choices and exit
-  if (client.nonInteractive) {
-    if (currentTeam) {
-      const match = choices.find(c => c.value.id === currentTeam);
-      if (match) return match.value;
-    }
-
-    const explicitScope = getScopeOrTeamFromArgv(client.argv);
+  // Strict resolution when prompting is impossible (non-interactive mode or
+  // no TTY): only an explicit signal — `--scope`/`--team`, `vercel.json`
+  // `scope`, `VERCEL_ORG_ID` — or a single unambiguous choice selects a team.
+  // The globally selected team (`vc switch`, login default) is a guess, not a
+  // signal, and must not silently decide where a project gets linked.
+  if (client.nonInteractive || !client.stdin.isTTY) {
+    const localConfigScope = client.localConfig?.scope;
+    const explicitScope =
+      getScopeOrTeamFromArgv(client.argv) ??
+      (typeof localConfigScope === 'string' ? localConfigScope : null) ??
+      getPlatformEnv('ORG_ID') ??
+      null;
     if (explicitScope) {
       const match = choices.find(
         c => c.value.id === explicitScope || c.value.slug === explicitScope
       );
       if (match) return match.value;
+
+      // An explicit scope naming the user (id/email/username) resolves to the
+      // personal account when one is available (non-Northstar users).
+      if (
+        user.id === explicitScope ||
+        user.email === explicitScope ||
+        user.username === explicitScope
+      ) {
+        const personal = choices.find(c => c.value.type === 'user');
+        if (personal) return personal.value;
+      }
+    }
+
+    if (choices.length === 1) {
+      return choices[0].value;
     }
 
     const actionRequired: ActionRequiredPayload = {
@@ -145,7 +199,15 @@ export default async function selectOrg(
         command: `${packageName} link --team ${c.value.slug}`,
       })),
     };
+    // Emits JSON and exits in non-interactive mode; no-op otherwise.
     outputActionRequired(client, actionRequired);
+    output.error(
+      choices.length > 0
+        ? `Multiple teams found. Provide ${param('--team')} or ${param(
+            '--scope'
+          )} explicitly. No default is applied without a terminal.`
+        : 'No teams available.'
+    );
     process.exit(1);
   }
 

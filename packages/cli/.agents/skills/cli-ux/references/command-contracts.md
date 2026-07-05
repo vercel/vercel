@@ -19,7 +19,7 @@ When adding a durable contract, add a row to `SKILL.md` so agents load it only f
 `vc link` target resolution order:
 
 1. Local link state: already linked, stale link, repo link, env link.
-2. Intended team: direct interactive `vc link` uses explicit `--team`/`--scope` or asks `Which team?` before project discovery; auto-confirm and non-interactive compatibility paths may still use current safe resolution.
+2. Intended team: direct interactive `vc link` uses explicit `--team`/`--scope` or asks `Which team?` before project discovery. Without a TTY or in non-interactive mode, the team resolves only from an explicit signal (`--team`/`--scope`, `vercel.json` `scope`, `VERCEL_ORG_ID`) or a single available choice; the globally selected team (`vc switch`, login default) is never a signal and `--yes` does not substitute for one.
 3. Intended project: explicit `--project`, repo-root match, exact folder-name match, selected existing project, or new project.
 4. Project root: inferred root, selected root, or cwd.
 5. Settings: detected framework/settings, explicit overrides, or defaults.
@@ -32,11 +32,14 @@ Rules:
 - In direct interactive `vc link`, resolve the team before searching for or selecting a project. An explicit `--team`/`--scope` skips the team prompt and restricts project discovery to that team.
 - Direct interactive team selection supports case-insensitive substring search by team name or slug.
 - After team selection, direct interactive `vc link` first checks the selected team for a project linked to the local Git repository with the deepest matching Root Directory. Show those matches as `(linked by git)`. Only when none match, fall back to an exact folder-name match. Follow detected matches with `Search all projects`, `Create a new project`, and `Choose a different team`. Do not dump the team's full project list until the user chooses search.
-- Project search includes `Back to project options`; choosing it returns to the project picker without changing the selected team.
+- Project search includes `Back to project options`; choosing it returns to the project picker without changing the selected team. It renders after a separator at the end of the unfiltered list and alone when a search has no matches; a search term with matches filters it out. Never float it mid-list.
 - After choosing `Create a new project`, show `Press ↑ to return to project options` on `Name?`. Up returns to the project picker without changing the selected team; Escape still cancels the command.
 - Existing-project selection supports case-insensitive substring search. For teams with more than 100 projects, query `/v9/projects?search=<term>&limit=20` within the selected team and cancel stale requests as the query changes.
 - Include teams that require SSO in the explicit team picker. Selecting one may trigger SSO reauthentication on the first scoped project request; automatic cross-team discovery continues to skip those teams.
 - Escape cancels any active direct `vc link` prompt, exits successfully, and prints `Canceled.` without continuing to later prompts or mutations.
+- Without a TTY or in non-interactive mode, a missing team signal fails before any project discovery, project creation, or deletion of the existing local link: `action_required: missing_scope` JSON in non-interactive mode, a plain missing-scope error otherwise. Report missing data (team) before missing consent (`--yes`).
+- When both `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` are set, `vc link` resolves and confirms exactly that pair without prompting and without `--yes`, prints aligned `Directory`/`Source`/`✓ Linked` rows with `Source` naming the env vars, and leaves local link files untouched (the env link itself is what other commands read). An unresolvable pair errors; it never falls back to prompts or guesses.
+- The new-project `Name?` default must be creatable: when the slugified folder name is already a project in the selected team, suggest `<folder-name>-<4-char suffix>` instead of a default that can only fail `Project already exists` validation.
 - Do not ask `Link to existing project?` when no concrete project is shown. Ask `Project?` with `Create new project` and `Link existing project` choices instead.
 - Do not create a project from a user-supplied `--project` value that was not found.
 - Folder-name matches across teams are lower confidence than repo-root or explicit matches.
@@ -71,7 +74,7 @@ Link prompt map:
 
 | State                              | Human prompt/output                                                                                                                                                                  | Non-interactive                        |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
-| Multiple teams                     | searchable `Which team?` before project discovery                                                                                                                                    | `action_required: missing_team`        |
+| Multiple teams                     | searchable `Which team?` before project discovery                                                                                                                                    | `action_required: missing_scope` unless explicit signal or single choice |
 | One folder-name project match      | `Which project?` with the match labeled `(folder name)`, then search/create choices                                                                                                  | link only for explicit/repo-root match |
 | One repository project match       | direct interactive: `Which project?` with the match labeled `(linked by git)`; other paths: `Found existing project`, aligned `Project`/`Source`, then `Link repository to project?` | link only for explicit/repo-root match |
 | Multiple project matches           | aligned `Projects` summary, then searchable `Project?`                                                                                                                               | `action_required: ambiguous_project`   |
@@ -104,6 +107,10 @@ Link acceptance matrix:
 - no match plus create project
 - monorepo/root-directory selection
 - non-TTY and `--non-interactive`
+- non-TTY/non-interactive with multiple teams and no signal errors `missing_scope` (even with `--yes`), preserving any existing local link
+- non-TTY/non-interactive with a single team, explicit `--team`/`--scope`, `vercel.json` `scope`, or `VERCEL_ORG_ID` proceeds
+- `VERCEL_ORG_ID` + `VERCEL_PROJECT_ID` pair links without prompts or `--yes`, preserving local link files; an unknown pair errors
+- new-project `Name?` default is suffixed when the folder name is taken and plain when available
 - JSON-only stdout
 - `--yes` default path creates no duplicate resources on retry
 - primary completed-phase gutter: `✓ Linked`, `✓ Created`, or `✓ Added`; no `▲` on setup/link rows

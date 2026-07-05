@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { join, basename } from 'path';
+import { getPlatformEnv } from '@vercel/build-utils';
 import { LocalFileSystemDetector, getWorkspaces } from '@vercel/fs-detectors';
 import type {
   ProjectLinkResult,
@@ -114,6 +115,34 @@ function isCrossTeamMatch(value: unknown): value is CrossTeamMatch {
     'org' in value &&
     'reason' in value
   );
+}
+
+/**
+ * Resolves the team via `selectOrg`, mapping known API errors to link error
+ * results. Returns an `Org` on success, or a `ProjectLinkResult` error.
+ */
+async function selectOrgForLink(
+  client: Client,
+  autoConfirm: boolean,
+  searchable = false
+): Promise<Org | ProjectLinkResult> {
+  try {
+    return await selectOrg(client, 'Which team?', autoConfirm, searchable);
+  } catch (err: unknown) {
+    if (isAPIError(err)) {
+      if (err.code === 'NOT_AUTHORIZED') {
+        output.prettyError(err);
+        return { status: 'error', exitCode: 1, reason: 'NOT_AUTHORIZED' };
+      }
+
+      if (err.code === 'TEAM_DELETED') {
+        output.prettyError(err);
+        return { status: 'error', exitCode: 1, reason: 'TEAM_DELETED' };
+      }
+    }
+
+    throw err;
+  }
 }
 
 const CHECKBOX_INSTRUCTIONS = [
@@ -505,14 +534,51 @@ export default async function setupAndLink(
     return link;
   }
 
-  if (forceDelete) {
-    const vercelDir = getVercelDirectory(path);
-    remove(join(vercelDir, VERCEL_DIR_README));
-    remove(join(vercelDir, VERCEL_DIR_PROJECT));
+  // `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` form an explicit project-owner
+  // pair, so resolve and confirm exactly that pair without prompting (and
+  // without requiring `--yes`). The env link itself is what makes commands
+  // work here, so leave local link files untouched.
+  if (getPlatformEnv('ORG_ID') && getPlatformEnv('PROJECT_ID')) {
+    const envLink = await getLinkedProject(client, path);
+    if (envLink.status === 'error') {
+      return envLink;
+    }
+    if (envLink.status === 'linked') {
+      config.currentTeam =
+        envLink.org.type === 'team' ? envLink.org.id : undefined;
+      output.print('\n');
+      printAlignedLabel('Directory', toHumanPath(path));
+      printAlignedLabel('Source', 'VERCEL_ORG_ID and VERCEL_PROJECT_ID');
+      output.print('\n');
+      printAlignedLabel(
+        'Linked',
+        `${envLink.org.slug}/${envLink.project.name}`,
+        { gutter: '✓' }
+      );
+      return envLink;
+    }
   }
 
   if (!isTTY && !autoConfirm && !nonInteractive) {
     return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
+  }
+
+  // Without a TTY the team must come from an explicit signal (`--scope`,
+  // `--team`, `vercel.json` `scope`, `VERCEL_ORG_ID`) or be the only choice.
+  // Resolve it before deleting the existing link and before any project
+  // discovery, so a missing scope fails fast without breaking local state.
+  if (!org && (nonInteractive || !isTTY)) {
+    const resolved = await selectOrgForLink(client, autoConfirm);
+    if ('status' in resolved) {
+      return resolved;
+    }
+    org = resolved;
+  }
+
+  if (forceDelete) {
+    const vercelDir = getVercelDirectory(path);
+    remove(join(vercelDir, VERCEL_DIR_README));
+    remove(join(vercelDir, VERCEL_DIR_PROJECT));
   }
 
   // The command invocation carries setup intent; show the local target as state.
@@ -618,28 +684,15 @@ export default async function setupAndLink(
   let projectOrNewProjectName: Awaited<ReturnType<typeof inputProject>>;
   for (;;) {
     if (!org) {
-      try {
-        org = await selectOrg(
-          client,
-          'Which team?',
-          autoConfirm,
-          searchableTeamPicker
-        );
-      } catch (err: unknown) {
-        if (isAPIError(err)) {
-          if (err.code === 'NOT_AUTHORIZED') {
-            output.prettyError(err);
-            return { status: 'error', exitCode: 1, reason: 'NOT_AUTHORIZED' };
-          }
-
-          if (err.code === 'TEAM_DELETED') {
-            output.prettyError(err);
-            return { status: 'error', exitCode: 1, reason: 'TEAM_DELETED' };
-          }
-        }
-
-        throw err;
+      const resolved = await selectOrgForLink(
+        client,
+        autoConfirm,
+        searchableTeamPicker
+      );
+      if ('status' in resolved) {
+        return resolved;
       }
+      org = resolved;
     }
 
     let repoMatches: CrossTeamMatch[] = [];

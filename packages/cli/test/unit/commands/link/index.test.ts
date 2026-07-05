@@ -829,6 +829,229 @@ describe('link', () => {
       logSpy.mockRestore();
       (client as { nonInteractive: boolean }).nonInteractive = false;
     });
+
+    it('errors with missing_scope even with --yes and a globally selected team, preserving the existing link', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      const [team] = useTeams('team_dummy') as Team[];
+      createTeam(); // second team so choices.length > 1
+      let projectLookups = 0;
+      client.scenario.get(
+        '/:version/projects/:projectNameOrId',
+        (_req, res) => {
+          projectLookups++;
+          res.status(404).send();
+        }
+      );
+      client.scenario.get('/v9/projects', (_req, res) => {
+        projectLookups++;
+        res.json({ projects: [], pagination: { next: null } });
+      });
+
+      // The globally selected team (`vc switch`) is a guess, not a signal.
+      client.config.currentTeam = team.id;
+      const existingLink = { orgId: 'org_before', projectId: 'proj_before' };
+      await mkdirp(join(cwd, '.vercel'));
+      await writeJSON(join(cwd, '.vercel/project.json'), existingLink);
+
+      client.cwd = cwd;
+      client.setArgv('link', '--non-interactive', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await expect(link(client)).rejects.toThrow('process.exit(1)');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0]);
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('missing_scope');
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      // Scope resolution must fail before any project discovery or mutation.
+      expect(projectLookups).toBe(0);
+      expect(await readJSON(join(cwd, '.vercel/project.json'))).toEqual(
+        existingLink
+      );
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('treats a single team as unambiguous and links the folder-name match', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      const [team] = useTeams('team_dummy') as Team[];
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+      mockPull.mockResolvedValue(0);
+
+      client.cwd = cwd;
+      client.setArgv('link', '--non-interactive', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await link(client);
+      expect(exitCode).toEqual(0);
+
+      expect(await readJSON(join(cwd, '.vercel/project.json'))).toMatchObject({
+        orgId: team.id,
+        projectId: project.id,
+      });
+
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('links without prompting when --team is provided explicitly', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      const [team] = useTeams('team_dummy') as Team[];
+      createTeam(); // second team; explicit --team disambiguates
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+      mockPull.mockResolvedValue(0);
+
+      client.config.currentTeam = team.id;
+      client.cwd = cwd;
+      client.setArgv('link', '--team', team.slug, '--non-interactive', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await link(client);
+      expect(exitCode).toEqual(0);
+
+      expect(client.stderr.getFullOutput()).not.toContain('Which team?');
+      expect(await readJSON(join(cwd, '.vercel/project.json'))).toMatchObject({
+        orgId: team.id,
+        projectId: project.id,
+      });
+
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+  });
+
+  describe('VERCEL_ORG_ID and VERCEL_PROJECT_ID', () => {
+    it('links to the env pair without prompting, --yes, or --scope', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      const [team] = useTeams('team_dummy') as Team[];
+      createTeam(); // multiple teams; the env pair disambiguates
+      const { project } = useProject({
+        ...defaultProject,
+        id: 'prj_env123',
+        name: 'env-project',
+      });
+      useUnknownProject();
+      mockPull.mockResolvedValue(0);
+
+      // A pre-existing link stays untouched; the env pair governs.
+      const existingLink = { orgId: 'org_before', projectId: 'proj_before' };
+      await mkdirp(join(cwd, '.vercel'));
+      await writeJSON(join(cwd, '.vercel/project.json'), existingLink);
+
+      process.env.VERCEL_ORG_ID = team.id;
+      process.env.VERCEL_PROJECT_ID = 'prj_env123';
+      client.cwd = cwd;
+      client.setArgv('link', '--non-interactive');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+      try {
+        const exitCode = await link(client);
+        expect(exitCode).toEqual(0);
+      } finally {
+        delete process.env.VERCEL_ORG_ID;
+        delete process.env.VERCEL_PROJECT_ID;
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      }
+
+      const plainOutput = stripAnsi(client.stderr.getFullOutput());
+      expect(plainOutput).not.toContain('Which team?');
+      expect(plainOutput).toContain('VERCEL_ORG_ID and VERCEL_PROJECT_ID');
+      expect(plainOutput).toContain(`${team.slug}/${project.name}`);
+      expectLinkRowsUseExpectedGlyphs(client.stderr.getFullOutput(), [
+        'Directory',
+        'Source',
+        'Linked',
+      ]);
+      expect(await readJSON(join(cwd, '.vercel/project.json'))).toEqual(
+        existingLink
+      );
+    });
+
+    it('errors when the env pair points to an unknown project', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      const [team] = useTeams('team_dummy') as Team[];
+      useUnknownProject();
+
+      process.env.VERCEL_ORG_ID = team.id;
+      process.env.VERCEL_PROJECT_ID = 'prj_missing';
+      client.cwd = cwd;
+      client.setArgv('link', '--non-interactive');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      try {
+        await expect(link(client)).rejects.toThrow('process.exit(1)');
+      } finally {
+        delete process.env.VERCEL_ORG_ID;
+        delete process.env.VERCEL_PROJECT_ID;
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+        exitSpy.mockRestore();
+      }
+
+      expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+        'Project not found'
+      );
+      expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
+    });
+  });
+
+  describe('non-TTY without --non-interactive', () => {
+    it('errors instead of guessing the team under --yes with multiple teams', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      const [team] = useTeams('team_dummy') as Team[];
+      createTeam(); // second team so choices.length > 1
+
+      client.config.currentTeam = team.id;
+      client.cwd = cwd;
+      client.stdin.isTTY = false;
+      client.setArgv('link', '--yes');
+
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await expect(link(client)).rejects.toThrow('process.exit(1)');
+
+      // Human error on stderr; no JSON payload without --non-interactive.
+      expect(logSpy).not.toHaveBeenCalled();
+      const plainOutput = stripAnsi(client.stderr.getFullOutput());
+      expect(plainOutput).toContain('Multiple teams found');
+      expect(plainOutput).toContain('--scope');
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+    });
   });
 
   describe('search and prompt cancellation', () => {
@@ -947,6 +1170,38 @@ describe('link', () => {
       expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
     });
 
+    it('shows only the back option when a project search has no matches', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Which team?');
+      client.events.keypress('enter');
+      await expect(client.stderr).toOutput('Search all projects');
+      client.events.keypress('down');
+      client.events.keypress('enter');
+
+      await expect(client.stderr).toOutput('Back to project options');
+      client.events.type('zzz-no-such-project');
+      await expect(client.stderr).toOutput('❯ Back to project options');
+      client.events.keypress('enter');
+
+      await expect(client.stderr).toOutput('Which project?');
+      client.events.keypress('escape');
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+      await expect(client.stderr).toOutput('Canceled.');
+    });
+
     it('returns to the project picker from the name prompt with Up', async () => {
       const cwd = setupTmpDir();
       useUser({ version: 'northstar' });
@@ -975,6 +1230,67 @@ describe('link', () => {
       await expect(exitCodePromise).resolves.toEqual(0);
       await expect(client.stderr).toOutput('Canceled.');
       expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
+    });
+  });
+
+  describe('new-project name suggestion', () => {
+    it('suggests a suffixed name when the folder name is already a project', async () => {
+      const cwd = setupTmpDir('name-suffix-taken');
+      const folderName = basename(cwd);
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: folderName,
+        name: folderName,
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Which team?');
+      client.events.keypress('enter');
+
+      await expect(client.stderr).toOutput('Which project?');
+      // Choices: folder-name match, separator, Search all, Create a new project
+      client.events.keypress('down');
+      client.events.keypress('down');
+      client.events.keypress('enter');
+
+      await expect(client.stderr).toOutput('Name?');
+      const plainOutput = stripAnsi(client.stderr.getFullOutput());
+      // Default must be creatable: `<folder>-<suffix>`, not the taken name.
+      expect(plainOutput).toContain(`(${folderName}-`);
+      expect(plainOutput).not.toContain(`(${folderName})`);
+
+      client.events.keypress('escape');
+      await expect(exitCodePromise).resolves.toEqual(0);
+      await expect(client.stderr).toOutput('Canceled.');
+      expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
+    });
+
+    it('keeps the plain folder name when it is available', async () => {
+      const cwd = setupTmpDir('name-suffix-free');
+      const folderName = basename(cwd);
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      useUnknownProject();
+
+      client.cwd = cwd;
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Which team?');
+      client.events.keypress('enter');
+      await chooseCreateNewProject();
+
+      await expect(client.stderr).toOutput('Name?');
+      const plainOutput = stripAnsi(client.stderr.getFullOutput());
+      expect(plainOutput).toContain(`(${folderName})`);
+
+      client.events.keypress('escape');
+      await expect(exitCodePromise).resolves.toEqual(0);
+      await expect(client.stderr).toOutput('Canceled.');
     });
   });
 
@@ -3013,7 +3329,7 @@ describe('link', () => {
         expect(projectJson.orgId).toEqual('team_b');
       });
 
-      it('should fall through to selectOrg when non-interactive with multiple matches', async () => {
+      it('should error with missing_scope before searching teams when non-interactive', async () => {
         useUser({ version: 'northstar' });
         const cwd = setupTmpDir();
         const projectName = basename(cwd);
@@ -3032,7 +3348,9 @@ describe('link', () => {
           name: projectName,
         };
 
+        let projectLookups = 0;
         client.scenario.get(`/v9/projects/${projectName}`, (req, res) => {
+          projectLookups++;
           if (req.query.teamId === 'team_a') {
             return res.json(projectA);
           }
@@ -3060,6 +3378,8 @@ describe('link', () => {
         const payload = JSON.parse(logSpy.mock.calls[0][0]);
         expect(payload.status).toBe('action_required');
         expect(payload.reason).toBe('missing_scope');
+        // The scope error fires before any cross-team project search.
+        expect(projectLookups).toBe(0);
 
         exitSpy.mockRestore();
         logSpy.mockRestore();
