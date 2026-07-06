@@ -56,9 +56,29 @@ export const REGEX_VERCEL_PLATFORM_FILES = [
  */
 export const REGEX_NON_VERCEL_PLATFORM_FILES = `!{${REGEX_VERCEL_PLATFORM_FILES}}`;
 
-const slugToFramework = new Map<string | null, Framework>(
+const defaultSlugToFramework = new Map<string | null, Framework>(
   frameworkList.map(f => [f.slug, f])
 );
+
+// Cache the slug lookup per framework list, so that passing a runtime
+// resolved list (see `Options.frameworkList`) doesn't rebuild the map on
+// every call.
+const slugMapCache = new WeakMap<
+  readonly Framework[],
+  Map<string | null, Framework>
+>();
+
+function getSlugToFramework(
+  list?: readonly Framework[]
+): Map<string | null, Framework> {
+  if (!list) return defaultSlugToFramework;
+  let map = slugMapCache.get(list);
+  if (!map) {
+    map = new Map(list.map(f => [f.slug, f]));
+    slugMapCache.set(list, map);
+  }
+  return map;
+}
 
 export interface ErrorResponse {
   code: string;
@@ -69,6 +89,13 @@ export interface ErrorResponse {
 
 export interface Options {
   tag?: string;
+  /**
+   * The framework presets used to resolve the project's framework slug.
+   * Defaults to the pinned list bundled with `@vercel/frameworks`. Pass a
+   * runtime-resolved list (see `resolveFrameworks()`) so that presets
+   * delivered via the remote manifest are honored.
+   */
+  frameworkList?: readonly Framework[];
   functions?: BuilderFunctions;
   experimentalServices?: ExperimentalServices;
   services?: Services;
@@ -235,7 +262,9 @@ export async function detectBuilders(
   const absolutePathCache = new Map<string, string>();
 
   const { buildCommand, outputDirectory } = projectSettings;
-  const frameworkConfig = slugToFramework.get(framework || '');
+  const frameworkConfig = getSlugToFramework(options.frameworkList).get(
+    framework || ''
+  );
   const ignoreRuntimes = new Set(frameworkConfig?.ignoreRuntimes);
   const withTag = options.tag ? `@${options.tag}` : '';
   const apiMatches = getApiMatches()
@@ -696,7 +725,7 @@ function detectFrontBuilder(
     });
   }
 
-  const f = slugToFramework.get(framework || '');
+  const f = getSlugToFramework(options.frameworkList).get(framework || '');
   if (f && f.useRuntime) {
     const { src, use } = f.useRuntime;
     // Replace framework-specific backend builders with the unified backend builder
@@ -1184,7 +1213,9 @@ function getRouteResult(
   const isGatsby = framework === 'gatsby';
   const isNextjs =
     framework === 'nextjs' || isOfficialRuntime('next', frontendBuilder?.use);
-  const ignoreRuntimes = slugToFramework.get(framework)?.ignoreRuntimes;
+  const ignoreRuntimes = getSlugToFramework(options.frameworkList).get(
+    framework
+  )?.ignoreRuntimes;
 
   if (apiRoutes && apiRoutes.length > 0) {
     if (options.featHandleMiss) {

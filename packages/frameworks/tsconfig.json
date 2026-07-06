@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "outDir": "./dist",
+    "resolveJsonModule": true,
     "types": ["node", "vitest/globals"]
   },
   "extends": "../../tsconfig.base.json",

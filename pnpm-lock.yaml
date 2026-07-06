@@ -1374,6 +1374,9 @@ importers:
       js-yaml:
         specifier: 3.13.1
         version: 3.13.1
+      semver:
+        specifier: 6.3.1
+        version: 6.3.1
       smol-toml:
         specifier: 1.5.2
         version: 1.5.2
@@ -1387,6 +1390,9 @@ importers:
       '@types/node-fetch':
         specifier: 2.5.8
         version: 2.5.8
+      '@types/semver':
+        specifier: 6.0.0
+        version: 6.0.0
       '@vercel/routing-utils':
         specifier: workspace:*
         version: link:../routing-utils

@@ -52,7 +52,7 @@ import {
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
-import { frameworkList, type Framework } from '@vercel/frameworks';
+import type { Framework } from '@vercel/frameworks';
 import {
   detectBuilders,
   detectFrameworkRecord,
@@ -75,6 +75,10 @@ import {
 } from '@vercel/routing-utils';
 
 import output from '../../output-manager';
+import {
+  checkStaleFrameworks,
+  getResolvedFrameworks,
+} from '../../util/build/resolve-frameworks';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
@@ -852,6 +856,14 @@ async function doBuild(
       }
     });
 
+  // Resolve the framework presets for this build. Prefers the remote
+  // frameworks manifest (with a 24h local cache) so new presets are picked
+  // up without a CLI release, falling back to the pinned list when offline.
+  const { frameworks: frameworkList, requiresUpdate: staleFrameworks } =
+    await span
+      .child('vc.resolveFrameworks')
+      .trace(() => getResolvedFrameworks());
+
   const routesResult = getTransformedRoutes(localConfig);
   if (routesResult.error) {
     throw routesResult.error;
@@ -907,6 +919,15 @@ async function doBuild(
     // Zero config
     isZeroConfig = true;
 
+    // If the project matches a preset from the remote manifest that this
+    // CLI version cannot build, warn (or abort, for `failOnStale` presets
+    // like `Dockerfile.vercel` containers) before running detection with
+    // the presets we do understand.
+    await checkStaleFrameworks(
+      new LocalFileSystemDetector(workPath),
+      staleFrameworks
+    );
+
     // Detect the Vercel Builders that will need to be invoked
     const detectedBuilders = await span.child('vc.detectBuilders').trace(() =>
       detectBuilders(files, pkg, {
@@ -917,6 +938,7 @@ async function doBuild(
         ignoreBuildScript: true,
         featHandleMiss: true,
         workPath,
+        frameworkList,
       })
     );
 
@@ -1890,6 +1912,7 @@ async function doBuild(
             ignoreBuildScript: true,
             featHandleMiss: true,
             workPath,
+            frameworkList,
           })
         );
 
@@ -2155,7 +2178,7 @@ async function doBuild(
 
   const framework =
     topLevelBuildResults.size > 0
-      ? await getFramework(workPath, topLevelBuildResults)
+      ? await getFramework(workPath, topLevelBuildResults, frameworkList)
       : undefined;
   const explicitRootRoutes = appendBuildOutputRouteTables(
     routesResult.routes,
@@ -2490,7 +2513,8 @@ function getDirectorySizeInMB(dir: string): {
 
 async function getFramework(
   cwd: string,
-  buildResults: Map<Builder, BuildResult | BuildOutputConfig>
+  buildResults: Map<Builder, BuildResult | BuildOutputConfig>,
+  frameworkList: readonly Framework[]
 ): Promise<{ slug: string; version: string } | undefined> {
   const detectedFramework = await detectFrameworkRecord({
     fs: new LocalFileSystemDetector(cwd),
