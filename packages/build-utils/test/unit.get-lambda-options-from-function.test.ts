@@ -71,7 +71,11 @@ describe('getLambdaOptionsFromFunction', () => {
     expect(options).toEqual({});
   });
 
-  it('returns top-level maxDuration when no function pattern matches', async () => {
+  // The top-level `maxDuration` default from `vercel.json` is intentionally
+  // NOT resolved here — consumers with visibility into the Lambda's own value
+  // (e.g. the CLI's write-build-result) apply it. Several builders (e.g.
+  // @vercel/python) also rely on a `{}` return to mean "no pattern matched".
+  it('ignores top-level maxDuration when no function pattern matches', async () => {
     const config: Pick<Config, 'functions' | 'maxDuration'> = {
       maxDuration: 30,
       functions: {
@@ -84,10 +88,10 @@ describe('getLambdaOptionsFromFunction', () => {
       config,
     });
 
-    expect(options).toEqual({ maxDuration: 30 });
+    expect(options).toEqual({});
   });
 
-  it('returns top-level maxDuration when no functions config is set', async () => {
+  it('ignores top-level maxDuration when no functions config is set', async () => {
     const config: Pick<Config, 'maxDuration'> = {
       maxDuration: 60,
     };
@@ -97,14 +101,14 @@ describe('getLambdaOptionsFromFunction', () => {
       config,
     });
 
-    expect(options).toEqual({ maxDuration: 60 });
+    expect(options).toEqual({});
   });
 
-  it('per-function maxDuration overrides top-level maxDuration', async () => {
+  it('ignores top-level maxDuration when a function pattern matches', async () => {
     const config: Pick<Config, 'functions' | 'maxDuration'> = {
       maxDuration: 30,
       functions: {
-        'api/*.js': { maxDuration: 120 },
+        'api/*.js': { memory: 512, maxDuration: 120 },
       },
     };
 
@@ -114,9 +118,10 @@ describe('getLambdaOptionsFromFunction', () => {
     });
 
     expect(options.maxDuration).toBe(120);
+    expect(options.memory).toBe(512);
   });
 
-  it('falls back to top-level maxDuration when function pattern matches but omits maxDuration', async () => {
+  it('does not inherit top-level maxDuration when a matching function omits it', async () => {
     const config: Pick<Config, 'functions' | 'maxDuration'> = {
       maxDuration: 45,
       functions: {
@@ -129,21 +134,8 @@ describe('getLambdaOptionsFromFunction', () => {
       config,
     });
 
-    expect(options.maxDuration).toBe(45);
+    expect(options.maxDuration).toBeUndefined();
     expect(options.memory).toBe(512);
-  });
-
-  it('supports "max" as top-level maxDuration', async () => {
-    const config: Pick<Config, 'maxDuration'> = {
-      maxDuration: 'max',
-    };
-
-    const options = await getLambdaOptionsFromFunction({
-      sourceFile: 'api/user.js',
-      config,
-    });
-
-    expect(options).toEqual({ maxDuration: 'max' });
   });
 
   it('derives the queue/v2beta consumer from the function pattern', async () => {

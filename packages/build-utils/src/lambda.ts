@@ -122,7 +122,7 @@ export interface LambdaOptionsWithZipBuffer extends LambdaOptionsBase {
 
 interface GetLambdaOptionsFromFunctionOptions {
   sourceFile: string;
-  config?: Pick<Config, 'functions' | 'serviceName' | 'maxDuration'>;
+  config?: Pick<Config, 'functions' | 'serviceName'>;
 }
 
 function getDefaultLambdaArchitecture(
@@ -580,7 +580,7 @@ export async function getLambdaOptionsFromFunction({
         return {
           architecture: fn.architecture,
           memory: fn.memory,
-          maxDuration: fn.maxDuration ?? config?.maxDuration,
+          maxDuration: fn.maxDuration,
           regions: fn.regions,
           functionFailoverRegions: fn.functionFailoverRegions,
           experimentalTriggers,
@@ -590,7 +590,9 @@ export async function getLambdaOptionsFromFunction({
     }
   }
 
-  return config?.maxDuration !== undefined
-    ? { maxDuration: config.maxDuration }
-    : {};
+  // Intentionally NOT inherited here: the top-level `maxDuration` default is
+  // applied by consumers that can see the Lambda's own value (e.g. the CLI's
+  // write-build-result), so a project-wide default never overrides in-code
+  // per-function config, and "no pattern matched" still returns `{}`.
+  return {};
 }

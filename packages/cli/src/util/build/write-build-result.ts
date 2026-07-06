@@ -30,6 +30,7 @@ import {
   type BuildResultBuildOutput,
   getLambdaOptionsFromFunction,
   normalizePath,
+  type MaxDuration,
   type TriggerEvent,
   isBackendBuilder,
   isExperimentalBackendsEnabled,
@@ -297,7 +298,8 @@ async function writeBuildResultV2(args: {
         normalizedPath,
         undefined,
         existingFunctions,
-        standalone
+        standalone,
+        vercelConfig?.maxDuration
       );
     } else if (isPrerender(output)) {
       if (!output.lambda) {
@@ -313,7 +315,8 @@ async function writeBuildResultV2(args: {
         normalizedPath,
         undefined,
         existingFunctions,
-        standalone
+        standalone,
+        vercelConfig?.maxDuration
       );
 
       // Write the fallback file alongside the Lambda directory
@@ -546,7 +549,8 @@ async function writeBuildResultV3(args: {
       path,
       functionConfiguration,
       undefined,
-      standalone
+      standalone,
+      vercelConfig?.maxDuration
     );
   } else if (isEdgeFunction(output)) {
     await writeEdgeFunction(
@@ -759,6 +763,7 @@ async function writeEdgeFunction(
  * @param path The URL path where the `Lambda` can be accessed from
  * @param functionConfiguration (optional) Extra configuration to apply to the function's `.vc-config.json` file
  * @param existingFunctions (optional) Map of `Lambda`/`EdgeFunction` instances that have previously been written
+ * @param defaultMaxDuration (optional) Top-level `maxDuration` from `vercel.json`, applied only when neither the matched `functions` entry nor the Lambda itself sets one
  */
 async function writeLambda(
   repoRootPath: string,
@@ -767,7 +772,8 @@ async function writeLambda(
   path: string,
   functionConfiguration?: FunctionConfiguration,
   existingFunctions?: Map<Lambda | EdgeFunction, string>,
-  standalone: boolean = false
+  standalone: boolean = false,
+  defaultMaxDuration?: MaxDuration
 ) {
   const dest = join(outputDir, 'functions', `${path}.func`);
 
@@ -807,7 +813,13 @@ async function writeLambda(
   const architecture =
     functionConfiguration?.architecture ?? lambda.architecture;
   const memory = functionConfiguration?.memory ?? lambda.memory;
-  const maxDuration = functionConfiguration?.maxDuration ?? lambda.maxDuration;
+  // Precedence: `functions` entry from `vercel.json`, then the value the
+  // builder baked into the Lambda (e.g. in-code `export const config`), then
+  // the top-level `vercel.json` default.
+  const maxDuration =
+    functionConfiguration?.maxDuration ??
+    lambda.maxDuration ??
+    defaultMaxDuration;
   const regions = functionConfiguration?.regions ?? lambda.regions;
   const functionFailoverRegions =
     functionConfiguration?.functionFailoverRegions ??

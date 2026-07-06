@@ -3,6 +3,7 @@ import type {
   Builder,
   BuilderFunctions,
   Images,
+  MaxDuration,
   ProjectSettings,
   Cron,
   ExperimentalServices,
@@ -171,6 +172,11 @@ export interface VercelConfig {
   headers?: Header[];
   trailingSlash?: boolean;
   functions?: BuilderFunctions;
+  /**
+   * Default `maxDuration` for all Serverless Functions in the deployment;
+   * a matching `functions` entry or in-code function config overrides it.
+   */
+  maxDuration?: MaxDuration;
   github?: DeploymentGithubData;
   scope?: string;
   alias?: string | string[];
