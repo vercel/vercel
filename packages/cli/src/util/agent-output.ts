@@ -127,6 +127,17 @@ const GLOBAL_FLAG_NAMES = new Set([
 /** Boolean globals: the next argv token is never their value (avoids eating a subcommand like `oauth-apps`). */
 const BOOLEAN_GLOBAL_FLAG_NAMES = new Set(['--yes', '-y', '--non-interactive']);
 
+/** Shorthand → long form for global flags, so `-S` and `--scope` dedupe as the same flag. */
+const GLOBAL_FLAG_SHORTHANDS: Record<string, string> = {
+  '-y': '--yes',
+  '-S': '--scope',
+  '-T': '--team',
+};
+
+function canonicalGlobalFlagName(name: string): string {
+  return GLOBAL_FLAG_SHORTHANDS[name] ?? name;
+}
+
 /**
  * Returns global flag args from argv so suggested commands can include them (e.g. --cwd, --non-interactive).
  */
@@ -212,13 +223,24 @@ export function buildCommandWithGlobalFlags(
   options?: BuildCommandWithGlobalFlagsOptions
 ): string {
   let preserved = getGlobalFlagsFromArgv(argv);
-  if (options?.excludeFlags?.length) {
-    const exclude = new Set(options.excludeFlags);
+  // Flags the template already carries must not be appended again: a template
+  // like `deploy --scope <team-slug>` plus a preserved `--scope my-team` would
+  // suggest a command with two conflicting --scope values.
+  const exclude = new Set(
+    commandTemplate
+      .split(/\s+/)
+      .filter(token => token.startsWith('-'))
+      .map(token => canonicalGlobalFlagName(token.split('=')[0]))
+  );
+  for (const flag of options?.excludeFlags ?? []) {
+    exclude.add(canonicalGlobalFlagName(flag));
+  }
+  if (exclude.size) {
     const out: string[] = [];
     for (let i = 0; i < preserved.length; i++) {
       const arg = preserved[i];
       const name = arg.startsWith('--') ? arg.split('=')[0] : arg;
-      if (exclude.has(name)) {
+      if (exclude.has(canonicalGlobalFlagName(name))) {
         if (
           !arg.includes('=') &&
           i + 1 < preserved.length &&
