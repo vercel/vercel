@@ -38,6 +38,7 @@ import {
   glob,
   type ExperimentalService,
   isExperimentalService,
+  isExperimentalServiceV2,
   type Service,
   getInternalServiceCronPath,
   getInternalServiceFunctionPath,
@@ -130,6 +131,7 @@ import { pullEnvRecords } from '../../util/env/get-env-records';
 import { buildCommand } from './command';
 import { validatePackageManifest } from '../../util/validate-package-manifest';
 import { shouldEmbedFlagsDefinitions } from '../../util/flags/build-embedding';
+import { resolvePerDirectoryLinkRoot } from '../../util/build/repo-root';
 import { writeManifests } from './manifest';
 
 /** Build a plain suggested command with global flags (e.g. --cwd, --non-interactive) appended. */
@@ -169,7 +171,7 @@ interface BuildOutputConfig {
   crons?: Cron[];
   experimentalServices?: ExperimentalServices;
   experimentalServicesV2?: ExperimentalServicesV2;
-  services?: Service[];
+  services?: ExperimentalServicesV2 | Service[];
   deploymentId?: string;
 }
 
@@ -339,7 +341,10 @@ export default async function main(client: Client): Promise<number> {
     }
   }
 
-  const projectRootDirectory = link?.projectRootDirectory ?? '';
+  // `cwd` before any repo-root re-anchoring below.
+  const invokedCwd = cwd;
+  const hasRepoLevelLink = Boolean(link?.repoRoot);
+  let projectRootDirectory = link?.projectRootDirectory ?? '';
   if (link?.repoRoot) {
     cwd = client.cwd = link.repoRoot;
   }
@@ -427,6 +432,31 @@ export default async function main(client: Client): Promise<number> {
     client.cwd = cwd;
     client.setArgv(originalArgv);
     project = await readProjectSettings(vercelDir);
+  }
+
+  // A per-directory link (`<dir>/.vercel/project.json`) doesn't report a
+  // `repoRoot` like a repo-level (`repo.json`) link does, so the build would
+  // treat the linked subdirectory as the repo root. Re-anchor it to the
+  // detected root and express the project relative to that root, so it behaves
+  // like a repo-level link regardless of where the command was run.
+  if (
+    !hasRepoLevelLink &&
+    link &&
+    project?.settings &&
+    process.env.VERCEL_RESOLVE_ROOT_DIRECTORY === '1'
+  ) {
+    const resolved = resolvePerDirectoryLinkRoot(
+      invokedCwd,
+      project.settings.rootDirectory
+    );
+    if (resolved.advisory) {
+      output.warn(resolved.advisory);
+    }
+    if (resolved.resolvedRootDirectory !== '') {
+      projectRootDirectory = resolved.resolvedRootDirectory;
+      project.settings.rootDirectory = resolved.resolvedRootDirectory;
+      cwd = client.cwd = resolved.repoRoot;
+    }
   }
 
   // Delete output directory from potential previous build
@@ -643,11 +673,12 @@ async function doBuild(
   const VALID_DEPLOYMENT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
+  const repoRootPath = cwd;
 
   const sourceConfigFile = await findSourceVercelConfigFile(workPath);
   let corepackShimDir: string | null | undefined;
   if (sourceConfigFile) {
-    corepackShimDir = await initCorepack({ repoRootPath: cwd });
+    corepackShimDir = await initCorepack({ repoRootPath });
 
     const installDepsSpan = span.child('vc.installDeps');
     try {
@@ -1006,7 +1037,6 @@ async function doBuild(
   const executedBuilds: Builder[] = [];
   const buildResults: Map<Builder, BuildResult | BuildOutputConfig> = new Map();
   const overrides: PathOverride[] = [];
-  const repoRootPath = cwd;
   // Only initialize corepack if not already done during early install
   if (!corepackShimDir) {
     corepackShimDir = await initCorepack({ repoRootPath });
@@ -1151,6 +1181,12 @@ async function doBuild(
               ...build.config,
               ...(getHasQueueServices()
                 ? { hasWorkerServices: true }
+                : undefined),
+              // `service.functions` isn't on `build.config`, so builders that
+              // read `config.functions` (e.g. Next.js) would otherwise miss it;
+              // `serviceName` scopes the derived v2beta consumer.
+              ...(isExperimentalServiceV2(service) && service.functions
+                ? { functions: service.functions, serviceName: service.name }
                 : undefined),
               // Override project-level settings with service-specific ones.
               // The project-level framework is "services" which must NOT be
@@ -1567,8 +1603,15 @@ async function doBuild(
                   outputConfig.experimentalServicesV2;
               }
               if (
+                hasGeneratedServicesConfig(outputConfig) &&
+                !hasGeneratedServicesConfig(buildOutputConfig)
+              ) {
+                buildOutputConfig.services = outputConfig.services;
+              }
+              if (
                 hasNonEmptyObject(buildOutputConfig.experimentalServices) ||
-                hasNonEmptyObject(buildOutputConfig.experimentalServicesV2)
+                hasNonEmptyObject(buildOutputConfig.experimentalServicesV2) ||
+                hasGeneratedServicesConfig(buildOutputConfig)
               ) {
                 await fs.writeJSON(buildOutputConfigPath, buildOutputConfig, {
                   spaces: 2,
@@ -1740,45 +1783,40 @@ async function doBuild(
       generatedConfigs.push(defaultGeneratedConfig);
     }
 
-    const generatedExperimentalServicesV2Config =
-      getGeneratedExperimentalServicesV2Config([
-        ...generatedConfigs,
-        ...buildResults.values(),
-      ]);
+    const generatedServicesConfig = getGeneratedServicesConfig([
+      ...generatedConfigs,
+      ...buildResults.values(),
+    ]);
     const generatedExperimentalServicesV1Config =
       getGeneratedExperimentalServicesV1Config([
         ...generatedConfigs,
         ...buildResults.values(),
       ]);
 
-    if (
-      generatedExperimentalServicesV2Config ||
-      generatedExperimentalServicesV1Config
-    ) {
-      if (generatedExperimentalServicesV2Config) {
+    if (generatedServicesConfig || generatedExperimentalServicesV1Config) {
+      if (generatedServicesConfig) {
         nestExperimentalServicesV2Output = true;
       }
       detectedExperimentalServicesV1Config =
         generatedExperimentalServicesV1Config;
-      detectedExperimentalServicesV2Config =
-        generatedExperimentalServicesV2Config;
-      detectedExperimentalServicesV2RootRoutes =
-        generatedExperimentalServicesV2Config
-          ? generatedConfigs.find(
-              config =>
-                hasNonEmptyObject(config?.experimentalServicesV2) &&
-                Array.isArray(config?.routes)
-            )?.routes
-          : undefined;
+      detectedExperimentalServicesV2Config = generatedServicesConfig;
+      detectedExperimentalServicesV2RootRoutes = generatedServicesConfig
+        ? generatedConfigs.find(
+            config =>
+              (hasGeneratedServicesConfig(config) ||
+                hasNonEmptyObject(config?.experimentalServicesV2)) &&
+              Array.isArray(config?.routes)
+          )?.routes
+        : undefined;
       const generatedBuilders = await span
         .child('vc.detectGeneratedServices')
         .trace(() =>
           detectBuilders(files, pkg, {
             ...localConfig,
-            services: undefined,
-            ...(generatedExperimentalServicesV2Config
+            ...(generatedServicesConfig
               ? {
-                  experimentalServicesV2: generatedExperimentalServicesV2Config,
+                  services: generatedServicesConfig,
+                  experimentalServicesV2: undefined,
                 }
               : {
                   experimentalServicesV2: undefined,
@@ -1839,7 +1877,7 @@ async function doBuild(
       for (const service of detectedResolvedServices || []) {
         const alreadyExecutedBuild = getAlreadyExecutedBuild(service.builder);
         if (alreadyExecutedBuild) {
-          if (generatedExperimentalServicesV2Config) {
+          if (generatedServicesConfig) {
             output.warn(getGeneratedServiceAlreadyBuiltWarning(service));
             continue;
           }
@@ -2059,14 +2097,19 @@ async function doBuild(
     routesResult.routes,
     detectedExperimentalServicesV2RootRoutes ?? existingConfig?.routes
   );
+  const mergedRoutesWithGeneratedServicesV2Routes =
+    nestExperimentalServicesV2Output
+      ? appendBuildOutputRouteTables(
+          mergedRoutes,
+          detectedExperimentalServicesV2RootRoutes ?? existingConfig?.routes
+        )
+      : mergedRoutes;
 
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results
   const config: BuildOutputConfig = {
     version: 3,
-    routes: nestExperimentalServicesV2Output
-      ? explicitRootRoutes
-      : mergedRoutes,
+    routes: mergedRoutesWithGeneratedServicesV2Routes ?? explicitRootRoutes,
     images: mergedImages,
     wildcard: mergedWildcard,
     overrides: mergedOverrides,
@@ -2636,10 +2679,23 @@ function getGeneratedExperimentalServicesV1Config(
   return undefined;
 }
 
-function getGeneratedExperimentalServicesV2Config(
+function hasGeneratedServicesConfig(
+  result: BuildResult | BuildOutputConfig | null | undefined
+): result is (BuildResult | BuildOutputConfig) & {
+  services: ExperimentalServicesV2;
+} {
+  return (
+    result != null && 'services' in result && hasNonEmptyObject(result.services)
+  );
+}
+
+function getGeneratedServicesConfig(
   buildResults: Iterable<BuildResult | BuildOutputConfig | null | undefined>
 ): ExperimentalServicesV2 | undefined {
   for (const result of buildResults) {
+    if (hasGeneratedServicesConfig(result)) {
+      return result.services;
+    }
     if (
       result &&
       'experimentalServicesV2' in result &&

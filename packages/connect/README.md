@@ -2,9 +2,10 @@
 
 SDK for obtaining scoped tokens for third-party services on behalf of apps or users. Authenticates the calling Vercel project via [`@vercel/oidc`](https://www.npmjs.com/package/@vercel/oidc) and exchanges the OIDC token for a Vercel Connect-issued credential.
 
-Six entrypoints, all ESM:
+Seven entrypoints, all ESM:
 
 - `@vercel/connect` — core token / authorization SDK
+- `@vercel/connect/chat` — adapter helpers for the [Chat SDK](https://chat-sdk.dev) (`chat`): `connectSlackAdapter`, `connectGitHubAdapter`, `connectLinearAdapter` (no Chat SDK dependency — returns structural config)
 - `@vercel/connect/ai-sdk` — [Vercel AI SDK](https://ai-sdk.dev) glue: re-exports `connectAuthProvider` for MCP transports (optional peers: `ai`, `@ai-sdk/mcp`)
 - `@vercel/connect/mcp` — canonical MCP-spec `OAuthClientProvider` for any MCP client (optional peer: `@ai-sdk/mcp`)
 - `@vercel/connect/eve` — adapter helpers for [Eve](https://github.com/vercel/eve) connections (optional peer: `eve`)
@@ -28,6 +29,27 @@ const token = await getToken(process.env.CONNECTOR_LINEAR!, {
   subject: { type: 'user', id: 'user_123' },
 });
 ```
+
+### Chat SDK
+
+Spread the helper into the matching `create*Adapter` factory. Each helper
+wires both outbound app-scoped tokens and inbound Connect trigger-forwarded
+webhook verification (Vercel OIDC), so no provider secret lives in your env.
+
+```ts
+import { createSlackAdapter } from '@chat-adapter/slack';
+import { connectSlackAdapter } from '@vercel/connect/chat';
+
+createSlackAdapter({
+  ...connectSlackAdapter('slack/acme-slack'),
+  userName: 'my-bot',
+});
+```
+
+`connectGitHubAdapter` (`installationToken`) and `connectLinearAdapter`
+(`accessToken`) follow the same shape. See the
+[Chat SDK integration guide](https://github.com/vercel/vercel/blob/main/packages/connect/docs/chat-integration.md)
+for connector setup, trigger forwarding, and per-platform examples.
 
 ### Vercel AI SDK + MCP
 

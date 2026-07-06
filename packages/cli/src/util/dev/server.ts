@@ -3,7 +3,7 @@ import http from 'http';
 import fs from 'fs-extra';
 import ms from 'ms';
 import chalk from 'chalk';
-import nodeFetch from 'node-fetch';
+import { directFetch } from '../fetch';
 import plural from 'pluralize';
 import rawBody from 'raw-body';
 import { listen } from 'async-listen';
@@ -2198,7 +2198,7 @@ export default class DevServer {
             middlewareReqHeaders.set(name, value);
           }
 
-          const middlewareRes = await nodeFetch(
+          const middlewareRes = await directFetch(
             `http://127.0.0.1:${port}${parsed.path}`,
             {
               headers: middlewareReqHeaders,
@@ -2207,7 +2207,7 @@ export default class DevServer {
             }
           );
 
-          const middlewareBody = await middlewareRes.buffer();
+          const middlewareBody = Buffer.from(await middlewareRes.arrayBuffer());
 
           if (middlewareRes.status === 500 && middlewareBody.byteLength === 0) {
             await this.sendError(
@@ -2234,9 +2234,12 @@ export default class DevServer {
             'transfer-encoding',
           ]);
 
-          applyOverriddenHeaders(req.headers, middlewareRes.headers);
+          const middlewareHeaders = applyOverriddenHeaders(
+            req.headers,
+            middlewareRes.headers
+          );
 
-          for (const [name, value] of middlewareRes.headers) {
+          for (const [name, value] of middlewareHeaders) {
             if (name === 'x-middleware-next') {
               shouldContinue = value === '1';
             } else if (name === 'x-middleware-rewrite') {

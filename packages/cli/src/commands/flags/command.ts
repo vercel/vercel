@@ -20,6 +20,49 @@ export const listSubcommand = {
       argument: 'STATE',
     },
     {
+      name: 'tag',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description: 'Filter flags by tag (repeatable; all must match)',
+      argument: 'TAG',
+    },
+    {
+      name: 'created-by',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Filter flags by the id of the user or team that created them',
+      argument: 'ID',
+    },
+    {
+      name: 'maintainer-id',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description:
+        'Filter flags by maintainer user id (repeatable; any may match)',
+      argument: 'ID',
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description:
+        'Return a single page of at most NUMBER flags (1-100) instead of all',
+      argument: 'NUMBER',
+    },
+    {
+      name: 'next',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Pagination cursor from a previous list response',
+      argument: 'CURSOR',
+    },
+    {
       name: 'json',
       shorthand: null,
       type: Boolean,
@@ -35,6 +78,18 @@ export const listSubcommand = {
     {
       name: 'List archived flags',
       value: `${packageName} flags ls --state archived`,
+    },
+    {
+      name: 'Filter flags by tag, creator, and maintainer',
+      value: `${packageName} flags ls --tag checkout --created-by user_123 --maintainer-id user_456`,
+    },
+    {
+      name: 'List the first page of 10 flags',
+      value: `${packageName} flags ls --limit 10`,
+    },
+    {
+      name: 'List the next page using the cursor from the previous page',
+      value: `${packageName} flags ls --limit 10 --next <cursor>`,
     },
     {
       name: 'List flags as JSON',

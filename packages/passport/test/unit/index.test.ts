@@ -79,6 +79,35 @@ describe('getIdentity', () => {
     }
   });
 
+  test('reads Passport cookie from Vercel request context', async () => {
+    const token = createToken(payload);
+    const previousContext = (globalThis as Record<symbol, unknown>)[
+      SYMBOL_FOR_REQ_CONTEXT
+    ];
+
+    (globalThis as Record<symbol, unknown>)[SYMBOL_FOR_REQ_CONTEXT] = {
+      get: () => ({
+        headers: {
+          cookie: `other=value; ${PASSPORT_COOKIE_NAME}=${token}`,
+        },
+      }),
+    };
+
+    try {
+      const identity = await getIdentity(undefined, { verifyOptions });
+      expect(identity?.tokenSource).toBe('cookie');
+      expect(identity?.externalSubject).toBe('user_123');
+      expect(identity?.verified).toBe(true);
+    } finally {
+      if (previousContext === undefined) {
+        delete (globalThis as Record<symbol, unknown>)[SYMBOL_FOR_REQ_CONTEXT];
+      } else {
+        (globalThis as Record<symbol, unknown>)[SYMBOL_FOR_REQ_CONTEXT] =
+          previousContext;
+      }
+    }
+  });
+
   test('reads Passport identity from the trusted header', async () => {
     const token = createToken(payload);
     const identity = await getIdentity(
@@ -108,6 +137,20 @@ describe('getIdentity', () => {
       {
         cookieHeader: `${PASSPORT_COOKIE_NAME}=${token}`,
       },
+      { verifyOptions }
+    );
+
+    expect(identity?.tokenSource).toBe('cookie');
+    expect(identity?.externalSubject).toBe('user_123');
+    expect(identity?.verified).toBe(true);
+  });
+
+  test('falls back to a Passport cookie from explicit headers', async () => {
+    const token = createToken(payload);
+    const identity = await getIdentity(
+      new Headers({
+        cookie: `other=value; ${PASSPORT_COOKIE_NAME}=${token}`,
+      }),
       { verifyOptions }
     );
 

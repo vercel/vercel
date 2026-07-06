@@ -5,6 +5,7 @@ describe('index', () => {
     expect(commands).toEqual(
       new Map([
         ['agent', 'agent'],
+        ['agent-runs', 'agent-runs'],
         ['ai-gateway', 'ai-gateway'],
         ['alerts', 'alerts'],
         ['alias', 'alias'],
@@ -86,6 +87,7 @@ describe('index', () => {
         ['webhook', 'webhooks'],
         ['webhooks', 'webhooks'],
         ['usage', 'usage'],
+        ['vcr', 'vcr'],
         ['whoami', 'whoami'],
       ])
     );

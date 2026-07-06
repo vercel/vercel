@@ -10,7 +10,7 @@ import {
 
 export const addSubcommand = {
   name: 'add',
-  aliases: [],
+  aliases: ['install'],
   description: 'Installs a marketplace integration',
   arguments: [
     {

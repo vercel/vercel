@@ -252,15 +252,7 @@ describe('detectFramework()', () => {
       [marker]: 'FROM node:20\nCMD ["node", "server.js"]',
     });
 
-    // The container preset is experimental, so it is only detected when
-    // experimental frameworks are enabled.
-    expect(
-      await detectFramework({
-        fs,
-        frameworkList,
-        useExperimentalFrameworks: true,
-      })
-    ).toBe('container');
+    expect(await detectFramework({ fs, frameworkList })).toBe('container');
   });
 
   it.each([
@@ -278,21 +270,15 @@ describe('detectFramework()', () => {
       [marker]: 'FROM node:20\nCMD ["node", "server.js"]',
     });
 
-    expect(
-      await detectFramework({
-        fs,
-        frameworkList,
-        useExperimentalFrameworks: true,
-      })
-    ).toBe('container');
+    expect(await detectFramework({ fs, frameworkList })).toBe('container');
   });
 
   it.each([
     'Dockerfile.vercel',
     'Containerfile.vercel',
-  ])('Does not detect the experimental container framework via `%s` without the flag', async marker => {
-    // Without experimental frameworks enabled the container preset is filtered
-    // out, so a co-present framework (here Next.js) is detected instead.
+  ])('Detects the container framework via `%s` even without the experimental flag', async marker => {
+    // The container preset is no longer experimental, so the explicit marker
+    // wins over a co-present framework (here Next.js) without any flag.
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({
         dependencies: {
@@ -302,7 +288,7 @@ describe('detectFramework()', () => {
       [marker]: 'FROM node:20\nCMD ["node", "server.js"]',
     });
 
-    expect(await detectFramework({ fs, frameworkList })).toBe('nextjs');
+    expect(await detectFramework({ fs, frameworkList })).toBe('container');
   });
 
   it.each([

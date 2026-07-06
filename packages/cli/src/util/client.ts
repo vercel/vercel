@@ -24,7 +24,7 @@ import fetch, {
   Headers,
   type RequestInit,
   type Response,
-} from 'node-fetch';
+} from './fetch';
 import pkg from './pkg';
 import ua from './ua';
 import responseError from './response-error';
@@ -511,7 +511,7 @@ export default class Client extends EventEmitter implements Stdio {
           return `#${requestId} → ${opts.method || 'GET'} ${url.href}`;
         }
       },
-      fetch(url, { agent: this.agent, ...opts, headers, body })
+      fetch(url, { ...opts, headers, body })
     );
   }
 

@@ -15,7 +15,7 @@
       "require": "./dist/index.js"
     }
   },
-  "version": "0.1.1",
+  "version": "0.1.2",
   "repository": {
     "directory": "packages/passport",
     "type": "git",

@@ -159,9 +159,10 @@ export async function getIdentity(
   const headers = normalized.headers ?? context.headers;
   const tokenFromInput = normalized.token;
   const headerToken = getHeader(headers, PASSPORT_HEADER_NAME);
+  const cookieHeader = normalized.cookieHeader ?? getHeader(headers, 'cookie');
   const cookieToken = getCookie(
     normalized.cookies,
-    normalized.cookieHeader,
+    cookieHeader,
     PASSPORT_COOKIE_NAME
   );
   const token =
