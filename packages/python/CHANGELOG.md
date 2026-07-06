@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.48.0
+
+### Minor Changes
+
+- 4097a62: Fix django services when using static assets and vc dev.
+
 ## 6.47.3
 
 ### Patch Changes
