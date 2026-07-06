@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import type Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
-import { getLinkedProject } from '../../util/projects/link';
+import { getLinkedProjectOrFail } from '../../util/projects/get-linked-project-or-fail';
 import output from '../../output-manager';
 import { CronsRunTelemetryClient } from '../../util/telemetry/commands/crons/run';
 import { runSubcommand } from './command';
@@ -27,18 +27,20 @@ export default async function run(client: Client, argv: string[]) {
     printError(error);
     return 1;
   }
-  const { args } = parsedArgs;
+  const { args, flags: opts } = parsedArgs;
 
   let [cronPath] = args;
 
+  const projectName = opts['--project'];
+  telemetry.trackCliOptionProject(projectName);
   telemetry.trackCliArgumentPath(cronPath);
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedProjectOrFail(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
-      `Your codebase isn't linked to a project on Vercel. ${client.nonInteractive ? `Run ${getCommandName('link --yes --team <team-id> --project <project-id>')} to link non-interactively.` : `Run ${getCommandName('link')} to begin.`}`
+      `Your codebase isn't linked to a project on Vercel. Pass --project <name>, or ${client.nonInteractive ? `run ${getCommandName('link --yes --team <team-id> --project <project-id>')} to link non-interactively.` : `run ${getCommandName('link')} to begin.`}`
     );
     return 1;
   }

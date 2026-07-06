@@ -1652,12 +1652,14 @@ async function doBuild(
               if (outputConfig instanceof CantParseJSONFile) {
                 throw outputConfig;
               }
+              let shouldMergeGeneratedOutputRoutes = false;
               if (
                 hasNonEmptyObject(outputConfig?.experimentalServices) &&
                 !hasNonEmptyObject(buildOutputConfig.experimentalServices)
               ) {
                 buildOutputConfig.experimentalServices =
                   outputConfig.experimentalServices;
+                shouldMergeGeneratedOutputRoutes = true;
               }
               if (
                 hasNonEmptyObject(outputConfig?.experimentalServicesV2) &&
@@ -1665,12 +1667,23 @@ async function doBuild(
               ) {
                 buildOutputConfig.experimentalServicesV2 =
                   outputConfig.experimentalServicesV2;
+                shouldMergeGeneratedOutputRoutes = true;
               }
               if (
                 hasGeneratedServicesConfig(outputConfig) &&
                 !hasGeneratedServicesConfig(buildOutputConfig)
               ) {
                 buildOutputConfig.services = outputConfig.services;
+                shouldMergeGeneratedOutputRoutes = true;
+              }
+              if (
+                shouldMergeGeneratedOutputRoutes &&
+                Array.isArray(outputConfig?.routes)
+              ) {
+                buildOutputConfig.routes = prependMissingBuildOutputRoutes(
+                  outputConfig.routes,
+                  buildOutputConfig.routes
+                );
               }
               if (
                 hasNonEmptyObject(buildOutputConfig.experimentalServices) ||
@@ -2649,6 +2662,24 @@ function appendBuildOutputRouteTables(
   }
 
   return routes.length > 0 ? routes : undefined;
+}
+
+function prependMissingBuildOutputRoutes(
+  routesToPrepend: BuildOutputConfig['routes'],
+  existingRoutes: BuildOutputConfig['routes']
+): BuildOutputConfig['routes'] | undefined {
+  if (!Array.isArray(routesToPrepend) || routesToPrepend.length === 0) {
+    return existingRoutes;
+  }
+
+  const existingRouteKeys = new Set(
+    (existingRoutes ?? []).map(route => JSON.stringify(route))
+  );
+  const missingRoutes = routesToPrepend.filter(
+    route => !existingRouteKeys.has(JSON.stringify(route))
+  );
+
+  return appendBuildOutputRouteTables(missingRoutes, existingRoutes);
 }
 
 async function writeServiceConfigs(

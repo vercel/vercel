@@ -3215,7 +3215,7 @@ writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, nul
     ).toBe('backend output');
   });
 
-  it('should detect generated experimentalServicesV2 from default output when using --output', async () => {
+  it('should detect generated stable services routes from default output when using --output', async () => {
     const cwd = await getWriteableDirectory();
     const output = join(cwd, 'custom-output');
     await fs.ensureDir(join(cwd, '.vercel'));
@@ -3246,8 +3246,16 @@ writeFileSync(
   join(outputDir, 'config.json'),
   JSON.stringify({
     version: 3,
-    routes: [{ src: '^/api/(.*)$', service: 'backend' }],
-    experimentalServicesV2: {
+    routes: [
+      {
+        src: '^/api/(.*)$',
+        destination: {
+          type: 'service',
+          service: 'backend'
+        }
+      }
+    ],
+    services: {
       backend: {
         root: 'backend',
         entrypoint: 'package.json',
@@ -3290,7 +3298,15 @@ writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, nul
       }),
     });
     expect(config.routes).toEqual(
-      expect.arrayContaining([{ src: '^/api/(.*)$', service: 'backend' }])
+      expect.arrayContaining([
+        {
+          src: '^/api/(.*)$',
+          destination: {
+            type: 'service',
+            service: 'backend',
+          },
+        },
+      ])
     );
     expect(await fs.readFile(join(output, 'static/index.html'), 'utf8')).toBe(
       'root output'

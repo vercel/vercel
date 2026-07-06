@@ -323,11 +323,10 @@ export async function resolveConfiguredServiceV2(
   let framework = config.framework;
   let detectedFramework = false;
   if (!framework) {
-    const workspace = normalizedEntrypoint
-      ? entrypointIsDirectory
+    const workspace =
+      entrypointIsDirectory && normalizedEntrypoint
         ? normalizedEntrypoint
-        : posixPath.dirname(normalizedEntrypoint) || '.'
-      : '.';
+        : '.';
     const detection = await detectFrameworkFromWorkspace({
       fs: serviceFs,
       workspace,
