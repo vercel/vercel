@@ -3,7 +3,7 @@
 ## Projects
 
 ```bash
-vercel project ls                    # list projects (one page of 20; --next for more)
+vercel project ls                    # list projects
 vercel project ls --filter my-app    # substring search by name
 vercel project add my-project        # create project
 vercel project inspect my-app        # inspect project
