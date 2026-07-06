@@ -79,6 +79,29 @@ describe('domains inspect', () => {
       await expect(exitCodePromise).resolves.toEqual(null);
     });
 
+    it('skips project-domain references whose project cannot be fetched', async () => {
+      const domain = useDomain('9');
+      useUser();
+      useProject();
+      // Second reference points at a project the token cannot read
+      // (stale reference / no read access) — inspect must not fail on it.
+      useProjectDomains(domain.name, [
+        defaultProject.id,
+        'prj_inaccessible404',
+      ]);
+      client.scenario.get('/v9/projects/prj_inaccessible404', (_req, res) => {
+        res.status(404).json({
+          error: { code: 'not_found', message: 'Project not found' },
+        });
+      });
+      useDomainInspectScenario(domain);
+
+      client.setArgv('domains', 'inspect', domain.name);
+      const exitCodePromise = domains(client);
+      await expect(client.stderr).toOutput(defaultProject.name);
+      await expect(exitCodePromise).resolves.toEqual(null);
+    });
+
     it('renders the assigned project-domain names, not production aliases', async () => {
       const domain = useDomain('9');
       useUser();

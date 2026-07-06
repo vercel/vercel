@@ -39,10 +39,21 @@ export async function findProjectsForDomain(
     const result: ProjectForDomain[] = [];
 
     for (const [projectId, domains] of domainsByProjectId) {
-      const project = await client.fetch<Project>(
-        `/v9/projects/${encodeURIComponent(projectId)}`
-      );
-      result.push({ project, domains });
+      try {
+        const project = await client.fetch<Project>(
+          `/v9/projects/${encodeURIComponent(projectId)}`
+        );
+        result.push({ project, domains });
+      } catch (err: unknown) {
+        // A stale project-domain reference or a token without access to this
+        // particular project must not fail the whole lookup: the old
+        // all-projects scan simply did not surface projects it could not read.
+        if (isAPIError(err) && err.status < 500) {
+          continue;
+        }
+
+        throw err;
+      }
     }
 
     return result;
