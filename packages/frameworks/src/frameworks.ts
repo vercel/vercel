@@ -2521,7 +2521,7 @@ export const frameworks = [
     // Storybook is a devDependency of many apps that deploy something else
     // entirely, so detecting it is not evidence the user intends to deploy
     // Storybook itself.
-    weakDetectionSignal: true,
+    detectionConfidence: 'weak',
     detectors: {
       every: [
         {

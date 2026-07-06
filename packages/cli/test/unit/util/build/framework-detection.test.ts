@@ -102,7 +102,7 @@ describe('detectFirstDeploymentFramework()', () => {
     return dir;
   }
 
-  it('returns null when not a first deployment', async () => {
+  it('returns skipped when not a first deployment', async () => {
     delete process.env.VERCEL_FIRST_DEPLOYMENT;
     const dir = await makeProjectDir({ dependencies: { next: '14.0.0' } });
     const projectSettings: { framework?: string | null } = { framework: null };
@@ -112,11 +112,11 @@ describe('detectFirstDeploymentFramework()', () => {
       projectSettings,
     });
 
-    expect(result).toBeNull();
+    expect(result).toEqual({ status: 'skipped' });
     expect(projectSettings.framework).toBeNull();
   });
 
-  it('returns null when framework detection is not opted in', async () => {
+  it('returns skipped when framework detection is not opted in', async () => {
     process.env.VERCEL_FIRST_DEPLOYMENT = '1';
     delete process.env.VERCEL_FRAMEWORK_DETECTION;
     const dir = await makeProjectDir({ dependencies: { next: '14.0.0' } });
@@ -129,11 +129,11 @@ describe('detectFirstDeploymentFramework()', () => {
       projectSettings,
     });
 
-    expect(result).toBeNull();
+    expect(result).toEqual({ status: 'skipped' });
     expect(projectSettings.framework).toBeNull();
   });
 
-  it('returns null when a framework is already configured', async () => {
+  it('returns skipped when a framework is already configured', async () => {
     process.env.VERCEL_FIRST_DEPLOYMENT = '1';
     const dir = await makeProjectDir({ dependencies: { next: '14.0.0' } });
     const projectSettings: { framework?: string | null } = {
@@ -145,7 +145,7 @@ describe('detectFirstDeploymentFramework()', () => {
       projectSettings,
     });
 
-    expect(result).toBeNull();
+    expect(result).toEqual({ status: 'skipped' });
     expect(projectSettings.framework).toBe('vite');
   });
 
@@ -159,11 +159,15 @@ describe('detectFirstDeploymentFramework()', () => {
       projectSettings,
     });
 
-    expect(result).toEqual({ slug: 'nextjs', version: '14.0.0' });
+    expect(result).toEqual({
+      status: 'detected',
+      slug: 'nextjs',
+      version: '14.0.0',
+    });
     expect(projectSettings.framework).toBe('nextjs');
   });
 
-  it('returns null when nothing is detected', async () => {
+  it('returns not-detected when nothing is detected', async () => {
     process.env.VERCEL_FIRST_DEPLOYMENT = '1';
     const dir = await makeProjectDir();
     const projectSettings: { framework?: string | null } = { framework: null };
@@ -173,7 +177,7 @@ describe('detectFirstDeploymentFramework()', () => {
       projectSettings,
     });
 
-    expect(result).toBeNull();
+    expect(result).toEqual({ status: 'not-detected' });
     expect(projectSettings.framework).toBeNull();
   });
 });

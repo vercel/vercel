@@ -18,6 +18,9 @@ function logDebug(message: string): void {
 
 /**
  * Build-time framework detection is opt-in via `VERCEL_FRAMEWORK_DETECTION=1`.
+ * The variable is set by the Vercel build pipeline (to control rollout) and
+ * can also be set manually, e.g. in project build env vars or locally when
+ * running `vc build`.
  */
 export function isFrameworkDetectionEnabled(): boolean {
   const raw = process.env.VERCEL_FRAMEWORK_DETECTION;
@@ -32,7 +35,8 @@ export function isFrameworkDetectionEnabled(): boolean {
 
 /**
  * Whether this is the very first deployment for a project, as signalled by
- * the `VERCEL_FIRST_DEPLOYMENT` environment variable.
+ * the `VERCEL_FIRST_DEPLOYMENT` environment variable. The Vercel deployment
+ * pipeline sets it when a deployment is created for a brand-new project.
  */
 export function isFirstDeployment(): boolean {
   const raw = process.env.VERCEL_FIRST_DEPLOYMENT;
@@ -46,28 +50,29 @@ export function isFirstDeployment(): boolean {
 }
 
 /**
- * The framework detected on a project's first deployment.
- * Recorded in `builds.json` (see `BuildsManifest`).
+ * Result of first-deployment framework detection, recorded in `builds.json`
+ * (see `BuildsManifest`). Always includes a `status` so consumers can tell
+ * the difference between "detected", "nothing detected", and "did not run".
  */
 export interface DetectedFramework {
-  slug: string;
+  status: 'detected' | 'not-detected' | 'skipped';
+  slug?: string;
   version?: string;
 }
 
 /**
  * On a project's first deployment, detect the framework from the source code
- * and apply it to the in-memory project settings so the current build's
- * builder detection uses it. Returns the detected framework, or `null` if
- * nothing was detected or detection did not run.
+ * and apply it to the in-memory `projectSettings` (mutated in place so the
+ * caller's subsequent `detectBuilders` call sees it).
  */
 export async function detectFirstDeploymentFramework(options: {
   workPath: string;
   projectSettings: { framework?: string | null };
-}): Promise<DetectedFramework | null> {
+}): Promise<DetectedFramework> {
   const { workPath, projectSettings } = options;
 
   if (!isFrameworkDetectionEnabled()) {
-    return null;
+    return { status: 'skipped' };
   }
 
   logDebug(
@@ -81,14 +86,14 @@ export async function detectFirstDeploymentFramework(options: {
     logDebug(
       'First deployment: skipping framework detection because this is not a first deployment'
     );
-    return null;
+    return { status: 'skipped' };
   }
 
   if (projectSettings.framework) {
     logDebug(
       `First deployment: skipping framework detection because a framework is already configured ("${projectSettings.framework}")`
     );
-    return null;
+    return { status: 'skipped' };
   }
 
   logDebug(
@@ -102,7 +107,7 @@ export async function detectFirstDeploymentFramework(options: {
 
   if (!detected || !detected.slug) {
     logDebug('First deployment: no framework detected from source code');
-    return null;
+    return { status: 'not-detected' };
   }
 
   const { slug } = detected;
@@ -116,6 +121,7 @@ export async function detectFirstDeploymentFramework(options: {
   );
 
   return {
+    status: 'detected',
     slug,
     ...(detected.detectedVersion && { version: detected.detectedVersion }),
   };
@@ -139,12 +145,12 @@ export async function detectAllFrameworks(workPath: string): Promise<string[]> {
 }
 
 /**
- * Frameworks annotated with `weakDetectionSignal` may confirm a match but
- * never trigger a warning on their own.
+ * Frameworks annotated with `detectionConfidence: 'weak'` may confirm a
+ * match but never trigger a warning on their own.
  */
 function isHighConfidenceDetection(slug: string): boolean {
   const record = frameworkList.find(f => f.slug === slug);
-  return !record?.weakDetectionSignal;
+  return record?.detectionConfidence !== 'weak';
 }
 
 export type FrameworkMismatchResult =

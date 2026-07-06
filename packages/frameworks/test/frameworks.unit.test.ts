@@ -202,7 +202,7 @@ const Schema = {
       supersedes: { type: 'array', items: { type: 'string' } },
       experimental: { type: 'boolean' },
       runtimeFramework: { type: 'boolean' },
-      weakDetectionSignal: { type: 'boolean' },
+      detectionConfidence: { type: 'string', enum: ['weak', 'strong'] },
     },
   },
 };

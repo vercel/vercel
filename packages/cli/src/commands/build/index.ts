@@ -235,8 +235,9 @@ export interface BuildsManifest {
     webAnalyticsVersion?: string | undefined;
   };
   /**
-   * Framework detected from the source code on a project's first deployment
-   * (`VERCEL_FIRST_DEPLOYMENT=1`) when no framework was configured.
+   * Result of first-deployment framework detection. Present whenever the
+   * build ran, with `status` distinguishing a positive detection from
+   * "nothing detected" and "did not run".
    */
   detectedFramework?: DetectedFramework;
 }
@@ -749,10 +750,13 @@ async function doBuild(
   };
 
   // On a project's first deployment, detect the framework when none is
-  // configured. Must run before `detectBuilders`, which relies on
-  // `projectSettings.framework`. The result is recorded in `builds.json`.
-  const firstDeploymentFramework = await span
+  // configured. Mutates `projectSettings` in place so the `detectBuilders`
+  // call below sees the detected framework; must therefore run before it.
+  // The result is always recorded in `builds.json`, including when detection
+  // was skipped or found nothing.
+  buildsJson.detectedFramework = await span
     .child('vc.detectFirstDeploymentFramework', {
+      enabled: String(isFrameworkDetectionEnabled()),
       firstDeployment: String(process.env.VERCEL_FIRST_DEPLOYMENT === '1'),
       configuredFramework: projectSettings.framework ?? undefined,
     })
@@ -762,14 +766,12 @@ async function doBuild(
         projectSettings,
       });
       s.setAttributes({
-        detectedFramework: result?.slug,
-        detectedFrameworkVersion: result?.version,
+        detectionStatus: result.status,
+        detectedFramework: result.slug,
+        detectedFrameworkVersion: result.version,
       });
       return result;
     });
-  if (firstDeploymentFramework) {
-    buildsJson.detectedFramework = firstDeploymentFramework;
-  }
 
   if (
     process.env.VERCEL_BUILD_MONOREPO_SUPPORT === '1' &&
@@ -799,24 +801,29 @@ async function doBuild(
 
   // Framework detection for the end-of-build cross-check, started here so it
   // runs concurrently with the builders instead of adding latency.
-  const detectedFrameworksPromise = !isFrameworkDetectionEnabled()
-    ? Promise.resolve([] as string[])
-    : span.child('vc.detectAllFrameworks').trace(async s => {
-        try {
-          const slugs = await detectAllFrameworks(workPath);
-          s.setAttributes({
-            detectedFrameworks: slugs.join(',') || undefined,
-            detectedFrameworkCount: String(slugs.length),
-          });
-          return slugs;
-        } catch (err) {
-          output.debug(`Framework cross-check detection failed: ${err}`);
-          s.setAttributes({
-            error: err instanceof Error ? err.message : String(err),
-          });
-          return [] as string[];
-        }
-      });
+  const detectedFrameworksPromise = span
+    .child('vc.detectAllFrameworks', {
+      enabled: String(isFrameworkDetectionEnabled()),
+    })
+    .trace(async s => {
+      if (!isFrameworkDetectionEnabled()) {
+        return [] as string[];
+      }
+      try {
+        const slugs = await detectAllFrameworks(workPath);
+        s.setAttributes({
+          detectedFrameworks: slugs.join(',') || undefined,
+          detectedFrameworkCount: String(slugs.length),
+        });
+        return slugs;
+      } catch (err) {
+        output.debug(`Framework cross-check detection failed: ${err}`);
+        s.setAttributes({
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return [] as string[];
+      }
+    });
 
   const routesResult = getTransformedRoutes(localConfig);
   if (routesResult.error) {
