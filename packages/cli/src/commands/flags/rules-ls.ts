@@ -10,6 +10,7 @@ import stamp from '../../util/output/stamp';
 import {
   formatFlagRuleCondition,
   formatFlagRuleOutcome,
+  resolveEffectiveFlagRulesEnvironment,
 } from '../../util/flags/rules';
 import output from '../../output-manager';
 import { FlagsRulesCommandTelemetryClient } from '../../util/telemetry/commands/flags/rules';
@@ -63,20 +64,28 @@ export default async function rulesLs(
       return context.exitCode;
     }
 
-    const rules = context.envConfig.rules ?? [];
+    const effectiveEnvironment = resolveEffectiveFlagRulesEnvironment(
+      context.flag,
+      context.environment
+    );
+    const rules = effectiveEnvironment.envConfig.rules ?? [];
     if (json) {
       outputJson(client, {
         flag: context.flag.slug,
         environment: context.environment,
+        inheritedFrom: effectiveEnvironment.inheritedFrom,
         rules,
       });
       return 0;
     }
 
     const lsStamp = stamp();
+    const environmentLabel = effectiveEnvironment.inheritedFrom
+      ? `${context.environment} (reuses ${effectiveEnvironment.inheritedFrom})`
+      : context.environment;
     if (rules.length === 0) {
       output.log(
-        `No conditional rules found for ${chalk.bold(context.flag.slug)} in ${context.environment} ${chalk.gray(lsStamp())}`
+        `No conditional rules found for ${chalk.bold(context.flag.slug)} in ${environmentLabel} ${chalk.gray(lsStamp())}`
       );
       output.log(
         `\nAdd one with: ${getCommandName('flags rules add ' + context.flag.slug + ' --environment ' + context.environment + ' --condition user.plan:eq:pro --variant on')}`
@@ -85,7 +94,7 @@ export default async function rulesLs(
     }
 
     output.log(
-      `${plural('conditional rule', rules.length, true)} found for ${chalk.bold(context.flag.slug)} in ${context.environment} ${chalk.gray(lsStamp())}`
+      `${plural('conditional rule', rules.length, true)} found for ${chalk.bold(context.flag.slug)} in ${environmentLabel} ${chalk.gray(lsStamp())}`
     );
     printRulesTable(rules, context.flag.variants);
   } catch (err) {
@@ -102,6 +111,7 @@ function outputJson(
   data: {
     flag: string;
     environment: string;
+    inheritedFrom?: string;
     rules: FlagRule[];
   }
 ) {

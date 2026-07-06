@@ -269,6 +269,51 @@ export function moveFlagRule(
   return buildRulesEnvironmentConfig(envConfig, rules);
 }
 
+export function resolveEffectiveFlagRulesEnvironment(
+  flag: Flag,
+  environment: string
+): {
+  environment: string;
+  envConfig: FlagEnvironmentConfig;
+  inheritedFrom?: string;
+} {
+  const envConfig = flag.environments[environment];
+  const inheritedFrom = envConfig.reuse?.active
+    ? envConfig.reuse.environment
+    : undefined;
+
+  if (!inheritedFrom) {
+    return { environment, envConfig };
+  }
+
+  const inheritedConfig = flag.environments[inheritedFrom];
+  if (!inheritedConfig) {
+    return { environment, envConfig };
+  }
+
+  return {
+    environment,
+    envConfig: inheritedConfig,
+    inheritedFrom,
+  };
+}
+
+export function getFlagRulesEnvironmentConfig(
+  flag: Flag,
+  environment: string
+): FlagEnvironmentConfig {
+  const envConfig = flag.environments[environment];
+  const effectiveEnvironment = resolveEffectiveFlagRulesEnvironment(
+    flag,
+    environment
+  );
+
+  return {
+    ...envConfig,
+    rules: structuredClone(effectiveEnvironment.envConfig.rules ?? []),
+  };
+}
+
 export function findFlagRule(rules: FlagRule[], ruleId: string): FlagRule {
   const rule = rules.find(rule => rule.id === ruleId);
   if (!rule) {
@@ -320,6 +365,7 @@ function buildRulesEnvironmentConfig(
 ): FlagEnvironmentConfig {
   const nextConfig: FlagEnvironmentConfig = {
     ...envConfig,
+    active: true,
     rules,
   };
 

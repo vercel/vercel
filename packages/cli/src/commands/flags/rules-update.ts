@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import deepEqual from 'fast-deep-equal';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -11,6 +12,7 @@ import {
   findFlagRule,
   formatFlagRuleCondition,
   formatFlagRuleOutcome,
+  getFlagRulesEnvironmentConfig,
   hasFlagRuleOutcomeOptions,
   needsFlagRuleOutcomeSettings,
   parseFlagRuleConditions,
@@ -116,7 +118,11 @@ export default async function rulesUpdate(
       return context.exitCode;
     }
 
-    const currentRule = findFlagRule(context.envConfig.rules ?? [], ruleId);
+    const envConfig = getFlagRulesEnvironmentConfig(
+      context.flag,
+      context.environment
+    );
+    const currentRule = findFlagRule(envConfig.rules ?? [], ruleId);
     const hasOutcomeOptions = hasFlagRuleOutcomeOptions(outcomeOptions);
     const nextConditions =
       conditionInputs.length > 0
@@ -134,10 +140,16 @@ export default async function rulesUpdate(
       return 0;
     }
 
-    const nextEnvConfig = updateFlagRule(context.envConfig, ruleId, {
+    const nextEnvConfig = updateFlagRule(envConfig, ruleId, {
       conditions: nextConditions,
       outcome: resolvedOutcome,
     });
+
+    if (deepEqual(context.envConfig, nextEnvConfig)) {
+      output.warn('No rule changes were provided');
+      return 0;
+    }
+
     const updateMessage = await resolveFlagUpdateMessage(
       client,
       message,

@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import deepEqual from 'fast-deep-equal';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -7,7 +8,10 @@ import { getCommandName } from '../../util/pkg-name';
 import { updateFlag } from '../../util/flags/update-flag';
 import { normalizeOptionalInput } from '../../util/flags/normalize-optional-input';
 import { resolveFlagUpdateMessage } from '../../util/flags/environment-variant';
-import { moveFlagRule } from '../../util/flags/rules';
+import {
+  getFlagRulesEnvironmentConfig,
+  moveFlagRule,
+} from '../../util/flags/rules';
 import output from '../../output-manager';
 import { FlagsRulesCommandTelemetryClient } from '../../util/telemetry/commands/flags/rules';
 import { rulesMoveSubcommand } from './command';
@@ -67,7 +71,18 @@ export default async function rulesMove(
       return context.exitCode;
     }
 
-    const nextEnvConfig = moveFlagRule(context.envConfig, ruleId, position);
+    const envConfig = getFlagRulesEnvironmentConfig(
+      context.flag,
+      context.environment
+    );
+    const nextEnvConfig = moveFlagRule(envConfig, ruleId, position);
+    if (deepEqual(context.envConfig, nextEnvConfig)) {
+      output.warn(
+        `Rule ${chalk.bold(ruleId)} is already at position ${position} in ${context.environment}`
+      );
+      return 0;
+    }
+
     const updateMessage = await resolveFlagUpdateMessage(
       client,
       message,

@@ -11,6 +11,7 @@ import {
   addFlagRule,
   createFlagRule,
   formatFlagRuleOutcome,
+  getFlagRulesEnvironmentConfig,
   needsFlagRuleOutcomeSettings,
   parseFlagRuleConditions,
   resolveFlagRuleOutcome,
@@ -119,7 +120,11 @@ export default async function rulesAdd(
       requireOutcome: true,
     });
     const rule = createFlagRule(conditions, outcome);
-    const nextEnvConfig = addFlagRule(context.envConfig, rule, position);
+    const envConfig = getFlagRulesEnvironmentConfig(
+      context.flag,
+      context.environment
+    );
+    const nextEnvConfig = addFlagRule(envConfig, rule, position);
     const nextPosition =
       nextEnvConfig.rules.findIndex(candidate => candidate.id === rule.id) + 1;
     const updateMessage = await resolveFlagUpdateMessage(

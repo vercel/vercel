@@ -7,7 +7,10 @@ import { getCommandName } from '../../util/pkg-name';
 import { updateFlag } from '../../util/flags/update-flag';
 import { normalizeOptionalInput } from '../../util/flags/normalize-optional-input';
 import { resolveFlagUpdateMessage } from '../../util/flags/environment-variant';
-import { removeFlagRule } from '../../util/flags/rules';
+import {
+  getFlagRulesEnvironmentConfig,
+  removeFlagRule,
+} from '../../util/flags/rules';
 import output from '../../output-manager';
 import { FlagsRulesCommandTelemetryClient } from '../../util/telemetry/commands/flags/rules';
 import { rulesRemoveSubcommand } from './command';
@@ -65,7 +68,11 @@ export default async function rulesRemove(
       return context.exitCode;
     }
 
-    const nextEnvConfig = removeFlagRule(context.envConfig, ruleId);
+    const envConfig = getFlagRulesEnvironmentConfig(
+      context.flag,
+      context.environment
+    );
+    const nextEnvConfig = removeFlagRule(envConfig, ruleId);
     const updateMessage = await resolveFlagUpdateMessage(
       client,
       message,
