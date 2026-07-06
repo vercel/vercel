@@ -564,12 +564,54 @@ export type ExitWithNonInteractiveErrorVariant =
   | 'speed-insights'
   | 'web-analytics'
   | 'checks'
-  | 'edge-config';
+  | 'edge-config'
+  | 'list';
 
 type ProjectExitWithNonInteractiveVariant = Exclude<
   ExitWithNonInteractiveErrorVariant,
-  'edge-config'
+  'edge-config' | 'list'
 >;
+
+const LIST_ERROR_HINT =
+  'Project names are team-scoped. Use --scope when the project belongs to another team, or `list --all` to list deployments across all projects.';
+
+/**
+ * Suggested follow-ups for `vercel list` failures (only caller of
+ * exitWithNonInteractiveError). `project ls --filter` beats bare `project ls`
+ * here: both return a single page of 20, so on large teams only a name search
+ * reliably surfaces the intended project. When the attempted project name is
+ * known, the filter suggestion is emitted fully runnable.
+ */
+function buildNextStepsForList(
+  client: Client,
+  projectName?: string
+): NonNullable<AgentErrorPayload['next']> {
+  return [
+    projectName
+      ? {
+          command: buildCommandWithGlobalFlags(
+            client.argv,
+            `project ls --filter ${projectName}`
+          ),
+          when: 'Search projects matching the attempted name to find the right one',
+        }
+      : {
+          command: buildCommandWithGlobalFlags(
+            client.argv,
+            'project ls --filter <name>'
+          ),
+          when: 'Search projects by name substring to find the right one (replace <name>)',
+        },
+    {
+      command: buildCommandWithGlobalFlags(client.argv, 'list --all'),
+      when: 'List deployments across all projects in the current scope',
+    },
+    {
+      command: buildCommandWithGlobalFlags(client.argv, 'link'),
+      when: 'Re-link this directory to the correct Vercel project',
+    },
+  ];
+}
 
 /** Suggested follow-ups for project subcommands that use `exitWithNonInteractiveError`. */
 function buildNextStepsForProjectSubcommands(
@@ -640,6 +682,12 @@ function resolveNonInteractiveDefaults(
       hint: EDGE_CONFIG_NON_INTERACTIVE_HINT,
     };
   }
+  if (variant === 'list') {
+    return {
+      next: buildNextStepsForList(client),
+      hint: LIST_ERROR_HINT,
+    };
+  }
   return {
     next: buildNextStepsForProjectSubcommands(client, variant),
     hint: PROJECT_SUBCOMMAND_ERROR_HINT,
@@ -698,7 +746,11 @@ export function exitWithNonInteractiveError(
   client: Client,
   err: unknown,
   exitCode: number = 1,
-  options: { variant: ExitWithNonInteractiveErrorVariant } = {
+  options: {
+    variant: ExitWithNonInteractiveErrorVariant;
+    /** Attempted project name; makes `list` next[] suggestions fully runnable. */
+    projectName?: string;
+  } = {
     variant: 'members',
   }
 ): void {
@@ -741,6 +793,9 @@ export function exitWithNonInteractiveError(
         status: 'error',
         reason: 'project_not_found',
         message: err instanceof Error ? err.message : String(err),
+        ...(variant === 'list' && options.projectName
+          ? { next: buildNextStepsForList(client, options.projectName) }
+          : {}),
       },
       exitCode,
       variant

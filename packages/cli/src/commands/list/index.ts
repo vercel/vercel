@@ -25,6 +25,7 @@ import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name'
 import { formatProject } from '../../util/projects/format-project';
 import { formatEnvironment } from '../../util/target/format-environment';
 import { ListTelemetryClient } from '../../util/telemetry/commands/list';
+import { exitWithNonInteractiveError } from '../../util/agent-output';
 import { validateLsArgs } from '../../util/validate-ls-args';
 import { validateJsonOutput } from '../../util/output-format';
 import type {
@@ -198,6 +199,10 @@ export default async function list(client: Client) {
     }
     const p = await getProjectByNameOrId(client, app);
     if (p instanceof ProjectNotFound) {
+      exitWithNonInteractiveError(client, p, 1, {
+        variant: 'list',
+        projectName: app,
+      });
       error(`The provided argument "${app}" is not a valid project name`);
       return 1;
     }
