@@ -91,5 +91,7 @@ export default async function upgrade(client: Client): Promise<number> {
     return 0;
   }
 
-  return executeUpgrade();
+  // Run interactively so package managers that prompt (e.g. pnpm's
+  // dependency build-script approval for esbuild) can ask the user directly.
+  return executeUpgrade(undefined, { interactive: true });
 }

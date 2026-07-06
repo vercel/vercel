@@ -448,6 +448,128 @@ describe('executeUpgrade', () => {
     );
   });
 
+  describe('interactive installs', () => {
+    let stdinIsTTY: boolean | undefined;
+    let stdoutIsTTY: boolean | undefined;
+
+    beforeEach(() => {
+      stdinIsTTY = process.stdin.isTTY;
+      stdoutIsTTY = process.stdout.isTTY;
+      process.stdin.isTTY = true;
+      process.stdout.isTTY = true;
+    });
+
+    afterEach(() => {
+      process.stdin.isTTY = stdinIsTTY as boolean;
+      process.stdout.isTTY = stdoutIsTTY as boolean;
+    });
+
+    it('inherits stdio for pnpm so the user can answer build-script prompts', async () => {
+      getUpdateCommandInfoMock.mockResolvedValueOnce({
+        command: 'pnpm i -g vercel@latest',
+        global: true,
+      });
+      const mockProcess = createMockProcess();
+      spawnMock.mockReturnValue(mockProcess as any);
+
+      const exitCodePromise = executeUpgrade(undefined, { interactive: true });
+      await tick();
+
+      mockProcess.emit('close', 0);
+      const exitCode = await exitCodePromise;
+
+      expect(exitCode).toBe(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'pnpm',
+        ['i', '-g', 'vercel@latest'],
+        {
+          cwd: tmpdir(),
+          stdio: 'inherit',
+          shell: false,
+        }
+      );
+      expect(outputMock.log).toHaveBeenCalledWith(
+        'Running pnpm i -g vercel@latest'
+      );
+      expect(outputMock.success).toHaveBeenCalledWith(
+        'Vercel CLI has been upgraded successfully!'
+      );
+    });
+
+    it('keeps captured output for npm even when interactive is requested', async () => {
+      const mockProcess = createMockProcess();
+      spawnMock.mockReturnValue(mockProcess as any);
+
+      const exitCodePromise = executeUpgrade(undefined, { interactive: true });
+      await tick();
+
+      mockProcess.emit('close', 0);
+      await exitCodePromise;
+
+      expect(spawnMock).toHaveBeenCalledWith(
+        'npm',
+        ['i', '-g', 'vercel@latest'],
+        {
+          cwd: tmpdir(),
+          stdio: ['inherit', 'pipe', 'pipe'],
+          shell: false,
+        }
+      );
+    });
+
+    it('falls back to non-interactive pnpm when there is no TTY', async () => {
+      process.stdin.isTTY = false;
+
+      getUpdateCommandInfoMock.mockResolvedValueOnce({
+        command: 'pnpm i -g vercel@latest',
+        global: true,
+      });
+      const mockProcess = createMockProcess();
+      spawnMock.mockReturnValue(mockProcess as any);
+
+      const exitCodePromise = executeUpgrade(undefined, { interactive: true });
+      await tick();
+
+      mockProcess.emit('close', 0);
+      await exitCodePromise;
+
+      expect(spawnMock).toHaveBeenCalledWith(
+        'pnpm',
+        ['i', '-g', 'vercel@latest'],
+        {
+          cwd: tmpdir(),
+          stdio: ['ignore', 'pipe', 'pipe'],
+          shell: false,
+        }
+      );
+    });
+
+    it('detaches stdin for pnpm when interactive is not requested', async () => {
+      getUpdateCommandInfoMock.mockResolvedValueOnce({
+        command: 'pnpm i -g vercel@latest',
+        global: true,
+      });
+      const mockProcess = createMockProcess();
+      spawnMock.mockReturnValue(mockProcess as any);
+
+      const exitCodePromise = executeUpgrade();
+      await tick();
+
+      mockProcess.emit('close', 0);
+      await exitCodePromise;
+
+      expect(spawnMock).toHaveBeenCalledWith(
+        'pnpm',
+        ['i', '-g', 'vercel@latest'],
+        {
+          cwd: tmpdir(),
+          stdio: ['ignore', 'pipe', 'pipe'],
+          shell: false,
+        }
+      );
+    });
+  });
+
   it('should log the upgrade command in debug mode', async () => {
     const mockProcess = createMockProcess();
     spawnMock.mockReturnValue(mockProcess as any);

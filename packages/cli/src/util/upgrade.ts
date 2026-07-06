@@ -94,6 +94,10 @@ function isVersionCurrent(current: string, latest: string): boolean {
     : current === latest;
 }
 
+function isInteractiveTerminal(): boolean {
+  return Boolean(process.stdin.isTTY && process.stdout.isTTY);
+}
+
 /**
  * Executes the upgrade command to update the Vercel CLI.
  * Returns the exit code from the upgrade process.
@@ -102,8 +106,17 @@ function isVersionCurrent(current: string, latest: string): boolean {
  * knows it (the update notifier). When omitted (e.g. `vercel upgrade`), the
  * latest version is resolved before the install so no-op upgrades can be
  * reported without relying on whichever binary happens to be on `PATH`.
+ * @param options.interactive Allow the package manager to interact with the
+ * user's terminal. pnpm v10+ prompts to approve dependency build scripts
+ * (e.g. esbuild's postinstall), which requires the install to run with the
+ * user's stdio attached. Only takes effect when the package manager may
+ * prompt (pnpm) and the process is attached to a TTY. Callers running
+ * unattended (e.g. automatic updates) should leave this off.
  */
-export async function executeUpgrade(targetVersion?: string): Promise<number> {
+export async function executeUpgrade(
+  targetVersion?: string,
+  options: { interactive?: boolean } = {}
+): Promise<number> {
   const totalSteps = targetVersion ? 2 : 3;
   renderUpgradeProgress(0, totalSteps, 'Resolving installer…');
 
@@ -139,8 +152,29 @@ export async function executeUpgrade(targetVersion?: string): Promise<number> {
     return 0;
   }
 
+  // npm and yarn never prompt during install, so only pnpm needs the
+  // interactive treatment. Interactivity also requires a TTY — without one,
+  // pnpm skips its prompts and proceeds non-interactively.
+  const mayPrompt = command === 'pnpm';
+  const interactive =
+    Boolean(options.interactive) && mayPrompt && isInteractiveTerminal();
+
   output.debug(`Executing: ${updateCommand} (cwd: ${cwd})`);
-  renderUpgradeProgress(targetVersion ? 1 : 2, totalSteps, 'Installing…');
+
+  if (interactive) {
+    // Hand the installer the terminal so the user can see and answer pnpm's
+    // build-script approval prompt (e.g. esbuild's postinstall).
+    output.stopSpinner();
+    output.log(`Running ${updateCommand}`);
+  } else {
+    renderUpgradeProgress(targetVersion ? 1 : 2, totalSteps, 'Installing…');
+  }
+
+  // When pnpm runs non-interactively, detach stdin so it cannot wait on a
+  // hidden prompt (its output is captured, so the user would never see it).
+  const stdio: ('inherit' | 'ignore' | 'pipe')[] | 'inherit' = interactive
+    ? 'inherit'
+    : [mayPrompt ? 'ignore' : 'inherit', 'pipe', 'pipe'];
 
   return new Promise<number>(resolve => {
     const stdout: Uint8Array[] = [];
@@ -148,7 +182,7 @@ export async function executeUpgrade(targetVersion?: string): Promise<number> {
 
     const upgradeProcess = spawn(command, args, {
       cwd,
-      stdio: ['inherit', 'pipe', 'pipe'],
+      stdio,
       shell: false,
     });
 
@@ -170,7 +204,8 @@ export async function executeUpgrade(targetVersion?: string): Promise<number> {
     upgradeProcess.on('close', (code: number | null) => {
       if (code !== 0) {
         output.stopSpinner();
-        // Show output only on error
+        // Show captured output only on error (interactive installs already
+        // streamed their output directly to the terminal)
         const stdoutStr = Buffer.concat(stdout).toString();
         const stderrStr = Buffer.concat(stderr).toString();
         if (stdoutStr) {
@@ -187,8 +222,10 @@ export async function executeUpgrade(targetVersion?: string): Promise<number> {
         return;
       }
 
-      renderUpgradeProgress(totalSteps, totalSteps);
-      output.stopSpinner();
+      if (!interactive) {
+        renderUpgradeProgress(totalSteps, totalSteps);
+        output.stopSpinner();
+      }
 
       if (resolvedTargetVersion) {
         output.success(
