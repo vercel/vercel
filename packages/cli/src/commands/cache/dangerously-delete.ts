@@ -5,7 +5,7 @@ import { dangerouslyDeleteSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandName } from '../../util/pkg-name';
-import { getLinkedProject } from '../../util/projects/link';
+import { getLinkedProjectOrFail } from '../../util/projects/get-linked-project-or-fail';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { CacheDangerouslyDeleteTelemetryClient } from '../../util/telemetry/commands/cache/dangerously-delete';
 import plural from 'pluralize';
@@ -34,12 +34,7 @@ export default async function dangerouslyDelete(
   const projectName = parsedArgs.flags['--project'];
   telemetry.trackCliOptionProject(projectName);
 
-  const link = await getLinkedProject(
-    client,
-    client.cwd,
-    projectName,
-    Boolean(projectName)
-  );
+  const link = await getLinkedProjectOrFail(client, projectName);
 
   if (link.status === 'not_linked') {
     output.error(

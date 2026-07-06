@@ -1,5 +1,5 @@
 import type Client from '../../util/client';
-import { getLinkedProject } from '../../util/projects/link';
+import { getLinkedProjectOrFail } from '../../util/projects/get-linked-project-or-fail';
 
 export function getProjectNameFromFlags(flags: {
   [key: string]: unknown;
@@ -8,10 +8,5 @@ export function getProjectNameFromFlags(flags: {
 }
 
 export function getLinkedFlagsProject(client: Client, projectName?: string) {
-  return getLinkedProject(
-    client,
-    client.cwd,
-    projectName,
-    Boolean(projectName)
-  );
+  return getLinkedProjectOrFail(client, projectName);
 }

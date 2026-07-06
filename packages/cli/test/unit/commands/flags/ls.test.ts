@@ -5,7 +5,11 @@ import {
   setupUnitFixture,
 } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
-import { defaultProject, useProject } from '../../../mocks/project';
+import {
+  defaultProject,
+  useProject,
+  useUnknownProject,
+} from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { useFlags, defaultFlags } from '../../../mocks/flags';
@@ -66,6 +70,20 @@ describe('flags ls', () => {
       { key: 'option:state', value: 'active' },
       { key: 'flag:json', value: 'TRUE' },
     ]);
+  });
+
+  it('reports project not found when --project does not resolve', async () => {
+    const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
+    removeProjectLink(cwd);
+    client.cwd = cwd;
+    useUnknownProject();
+
+    client.setArgv('flags', 'ls', '--project', 'no-such-project');
+    const exitCodePromise = flags(client);
+    await expect(client.stderr).toOutput(
+      'Project "no-such-project" was not found'
+    );
+    await expect(exitCodePromise).resolves.toEqual(1);
   });
 
   describe('--help', () => {

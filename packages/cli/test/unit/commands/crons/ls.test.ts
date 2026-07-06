@@ -79,6 +79,18 @@ describe('crons ls', () => {
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput("isn't linked");
     });
+
+    it('reports project not found when --project does not resolve', async () => {
+      mockedGetLinkedProject.mockResolvedValue({
+        status: 'not_linked',
+      } as any);
+      client.setArgv('crons', 'ls', '--project', 'no-such-project');
+      const exitCode = await crons(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Project "no-such-project" was not found'
+      );
+    });
   });
 
   describe('with deployed crons', () => {
