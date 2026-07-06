@@ -123,7 +123,7 @@ describe('writeBuildResult()', () => {
               regions: ['iad1'],
             },
           },
-        },
+        } as unknown as import('@vercel/build-utils').BuildResultV2,
         build,
         builder: runtimeBuilder,
         builderPkg: { name: '@vercel/container' },

@@ -307,11 +307,9 @@ async function writeBuildResultV2(args: {
 
   const existingFunctions = new Map<Lambda | EdgeFunction, string>();
   const overrides: Record<string, PathOverride> = {};
-  const functionConfiguration = await resolveFunctionConfiguration(
-    build.src,
-    vercelConfig,
-    service
-  );
+  const functionConfiguration = build.src
+    ? await resolveFunctionConfiguration(build.src, vercelConfig, service)
+    : {};
 
   for (const [path, output] of Object.entries(buildResult.output)) {
     const normalizedPath = stripDuplicateSlashes(path);
