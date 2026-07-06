@@ -6,6 +6,7 @@
 
 // Non-priority commands - bundled together
 export { default as agent } from './commands/agent';
+export { default as agentRuns } from './commands/agent-runs';
 export { default as activity } from './commands/activity';
 export { default as aiGateway } from './commands/ai-gateway';
 export { default as alerts } from './commands/alerts';
