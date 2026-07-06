@@ -1,6 +1,7 @@
 import { join, relative } from 'path';
 import { isErrnoException } from '@vercel/error-utils';
-import { stat, move, remove, rmdir, readdir } from 'fs-extra';
+import { stat, remove, rmdir, readdir } from 'fs-extra';
+import fs from 'fs/promises';
 import type { Stats } from 'fs-extra';
 import type { Span } from '@vercel/build-utils';
 
@@ -40,12 +41,13 @@ export async function merge(
       if (destStat.code === 'ENOENT') {
         // Destination does not exist, so move directly
         await (
-          span?.child('move1', { source, destination }) ?? {
+          span?.child('fsrename1', { source, destination }) ?? {
             // @ts-ignore
             trace: f => f(undefined),
           }
         )?.trace(async () => {
-          await move(source, destination);
+          await fs.rename(source, destination);
+          // await move(source, destination);
         });
         return;
       }
@@ -90,12 +92,12 @@ export async function merge(
       await remove(destination);
     });
     await (
-      span?.child('move2', { source, destination }) ?? {
+      span?.child('fsrename2', { source, destination }) ?? {
         // @ts-ignore
         trace: f => f(undefined),
       }
     )?.trace(async () => {
-      await move(source, destination);
+      await fs.rename(source, destination);
     });
   });
 }
