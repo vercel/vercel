@@ -72,6 +72,19 @@ const triggerEventSchema = {
   oneOf: [triggerEventSchemaV1, triggerEventSchemaV2],
 };
 
+/**
+ * Shape of `regions`/`functionFailoverRegions` values. Shared by the
+ * per-function schema below and the service-level schema in the CLI's
+ * `validate-config.ts` so a value valid at one level of the cascade is
+ * valid at the other.
+ */
+export const regionsSchema = {
+  type: 'array',
+  items: {
+    type: 'string',
+  },
+} as const;
+
 export const getFunctionsSchema = () => ({
   type: 'object',
   minProperties: 1,
@@ -95,18 +108,8 @@ export const getFunctionsSchema = () => ({
           maximum: 10240,
         },
         maxDuration: getMaxDurationSchema(),
-        regions: {
-          type: 'array',
-          items: {
-            type: 'string',
-          },
-        },
-        functionFailoverRegions: {
-          type: 'array',
-          items: {
-            type: 'string',
-          },
-        },
+        regions: regionsSchema,
+        functionFailoverRegions: regionsSchema,
         includeFiles: {
           type: 'string',
           maxLength: 256,

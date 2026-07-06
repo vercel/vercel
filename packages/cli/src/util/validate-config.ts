@@ -15,6 +15,7 @@ import {
   getMaxDurationSchema,
   NowBuildError,
   getPrettyError,
+  regionsSchema,
 } from '@vercel/build-utils';
 import { fileNameSymbol } from '@vercel/client';
 
@@ -527,24 +528,16 @@ const servicesBindingsSchema = {
   items: servicesBindingSchema,
 };
 
-// Mirrors the per-function `regions`/`functionFailoverRegions` shape in
-// `getFunctionsSchema` so a value valid at one level of the cascade is valid
-// at the other.
-const servicesRegionsSchema = {
-  type: 'array',
-  items: {
-    type: 'string',
-  },
-};
-
 const getServicesServiceConfigSchema = () => ({
   type: 'object',
   additionalProperties: false,
   required: ['root'],
   properties: {
     root: servicesPathSchema,
-    regions: servicesRegionsSchema,
-    functionFailoverRegions: servicesRegionsSchema,
+    // Same schema as the per-function `regions`/`functionFailoverRegions` so
+    // a value valid at one level of the cascade is valid at the other.
+    regions: regionsSchema,
+    functionFailoverRegions: regionsSchema,
     framework: {
       type: 'string',
       minLength: 1,

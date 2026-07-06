@@ -132,6 +132,20 @@ describe('detectServices (services) — container detection', () => {
       });
     });
 
+    it('rejects regions on a container service', async () => {
+      // `regions`/`functionFailoverRegions` only apply to function runtimes;
+      // nothing consumes them for container output, so they are rejected
+      // rather than silently ignored.
+      const result = await detectFixture('fail-regions-on-container');
+
+      expect(servicesV2(result.services)).toEqual([]);
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_SERVICE_CONFIG',
+        serviceName: 'app',
+      });
+      expect(result.errors[0].message).toContain('regions');
+    });
+
     it('does not auto-detect a non-blessed Dockerfile.* when only runtime is set', async () => {
       // Only a `Dockerfile.prod` is present. Auto-detection considers just the
       // four blessed names, so this must error rather than silently pick it up.
