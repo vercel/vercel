@@ -102,13 +102,9 @@ function isVersionCurrent(current: string, latest: string): boolean {
  * knows it (the update notifier). When omitted (e.g. `vercel upgrade`), the
  * latest version is resolved before the install so no-op upgrades can be
  * reported without relying on whichever binary happens to be on `PATH`.
- * @param options.interactive Allow the package manager to interact with the
- * user's terminal. pnpm v10+ prompts to approve dependency build scripts
- * (e.g. esbuild's postinstall), which requires the install to run with the
- * user's stdio attached. Callers must gate this with canPrompt(client), so
- * it is only set when attached to a TTY and not in non-interactive mode.
- * Only takes effect when the package manager may prompt (pnpm). Callers
- * running unattended (e.g. automatic updates) should leave this off.
+ * @param options.interactive Run the installer with the user's stdio so it
+ * can prompt (pnpm v10+ asks to approve dependency build scripts). Callers
+ * must gate this with canPrompt(client).
  */
 export async function executeUpgrade(
   targetVersion?: string,
@@ -149,24 +145,21 @@ export async function executeUpgrade(
     return 0;
   }
 
-  // npm and yarn never prompt during install, so only pnpm needs the
-  // interactive treatment.
+  // Only pnpm prompts during install (build-script approval)
   const mayPrompt = command === 'pnpm';
   const interactive = Boolean(options.interactive) && mayPrompt;
 
   output.debug(`Executing: ${updateCommand} (cwd: ${cwd})`);
 
   if (interactive) {
-    // Hand the installer the terminal so the user can see and answer pnpm's
-    // build-script approval prompt (e.g. esbuild's postinstall).
     output.stopSpinner();
     output.log(`Running ${updateCommand}`);
   } else {
     renderUpgradeProgress(targetVersion ? 1 : 2, totalSteps, 'Installing…');
   }
 
-  // When pnpm runs non-interactively, detach stdin so it cannot wait on a
-  // hidden prompt (its output is captured, so the user would never see it).
+  // Non-interactive pnpm gets stdin detached so it can't block on a prompt
+  // the user can't see
   const stdio: ('inherit' | 'ignore' | 'pipe')[] | 'inherit' = interactive
     ? 'inherit'
     : [mayPrompt ? 'ignore' : 'inherit', 'pipe', 'pipe'];
@@ -199,8 +192,6 @@ export async function executeUpgrade(
     upgradeProcess.on('close', (code: number | null) => {
       if (code !== 0) {
         output.stopSpinner();
-        // Show captured output only on error (interactive installs already
-        // streamed their output directly to the terminal)
         const stdoutStr = Buffer.concat(stdout).toString();
         const stderrStr = Buffer.concat(stderr).toString();
         if (stdoutStr) {

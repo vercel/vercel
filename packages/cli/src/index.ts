@@ -1369,8 +1369,6 @@ async function promptAndUpgrade(
 
     if (!shouldUpgrade) return;
 
-    // The user just confirmed interactively, so let the package manager
-    // prompt too (e.g. pnpm's dependency build-script approval).
     const upgradeExitCode = await executeUpgrade(targetVersion, {
       interactive: canPrompt(client),
     });
