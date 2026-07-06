@@ -123,6 +123,34 @@ describe('project update', () => {
     ]);
   });
 
+  it('accepts the "set" alias', async () => {
+    useSettingsProject({ framework: 'nextjs' }, body => {
+      expect(body).toEqual({ framework: 'vite' });
+    });
+
+    client.setArgv('project', 'set', 'my-project', '--framework', 'vite');
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(0);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Next.js (nextjs) → Vite (vite)'
+    );
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:update',
+        value: 'set',
+      },
+      {
+        key: 'argument:name',
+        value: '[REDACTED]',
+      },
+      {
+        key: 'option:framework',
+        value: '[REDACTED]',
+      },
+    ]);
+  });
+
   it('returns a stable JSON result on stdout', async () => {
     useSettingsProject({ framework: 'nextjs' });
 

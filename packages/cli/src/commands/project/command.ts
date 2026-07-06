@@ -230,7 +230,7 @@ export const renameSubcommand = {
 
 export const updateSubcommand = {
   name: 'update',
-  aliases: [],
+  aliases: ['set'],
   description:
     'Update one or more project settings; omitted settings remain unchanged',
   arguments: [
