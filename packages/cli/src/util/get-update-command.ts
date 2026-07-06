@@ -106,24 +106,13 @@ async function getConfigPrefix() {
 }
 
 /**
- * Detects a pnpm global install by checking whether the CLI is running from
- * inside `PNPM_HOME`. This is the most reliable signal for pnpm because it is
- * independent of pnpm's global layout, which changes across major versions:
- * pnpm ≤10 uses `{PNPM_HOME}/global/5/.pnpm/...` while pnpm 11+ uses isolated
- * installs under `{PNPM_HOME}/global/v11/{hash}/` whose realpath resolves into
- * the global virtual store at `{storeDir}/links/...`. Additionally,
- * `pnpm root -g` cannot be trusted here: on machines upgraded from pnpm ≤10 it
- * keeps answering with the stale `global/5` layout (pnpm does not migrate it,
- * see pnpm/pnpm#11528), so the query-based detection misses v11 installs.
- *
- * On clean pnpm 11 machines the query fails differently but just as fatally:
- * `pnpm root -g` answers with the parent of the isolated install dirs (e.g.
- * `{PNPM_HOME}/global/v11`), which is not a node_modules directory, so
- * `join(root, pkg)` never resolves to an existing path.
- *
- * The unresolved entrypoint (`process.argv[1]`) is checked as well as the
- * realpath'd install dir: pnpm 11 bin shims exec a target inside `PNPM_HOME`,
- * while its realpath may escape into a relocated store directory.
+ * Detects a pnpm global install: the CLI runs from inside `PNPM_HOME`.
+ * Layout-independent (pnpm has changed its global layout across majors) and
+ * more reliable than `pnpm root -g`, which returns stale or unusable paths
+ * for pnpm 11 installs (see pnpm/pnpm#11528). Checks the unresolved
+ * entrypoint as well as the realpath'd install dir because pnpm 11 shims
+ * exec a target inside `PNPM_HOME` whose realpath may escape into a
+ * relocated store directory.
  */
 async function isPnpmHomeInstall(installPath: string): Promise<boolean> {
   const pnpmHome = process.env.PNPM_HOME;
@@ -135,7 +124,7 @@ async function isPnpmHomeInstall(installPath: string): Promise<boolean> {
   try {
     candidates.push(await realpath(pnpmHome));
   } catch (_) {
-    // PNPM_HOME set but unresolvable; fall through with the raw value
+    // PNPM_HOME set but unresolvable; check the raw value only
   }
 
   const entrypoint = process.argv[1];
@@ -165,8 +154,7 @@ function isGlobalByPath(installPath: string): boolean {
     return true;
   }
 
-  // pnpm 11+ global virtual store: installs realpath into
-  // `.../pnpm/store/v{N}/links/...`
+  // pnpm 11+ global virtual store (`.../pnpm/store/v{N}/links/...`)
   if (
     installPath.includes(['', 'pnpm', 'store', ''].join(sep)) &&
     installPath.includes(sep + 'links' + sep)
@@ -231,15 +219,11 @@ async function resolveInstall() {
     // fall through to the global npm default below
   }
 
-  // A genuine local (project-dependency) install always has a lockfile above
-  // the CLI's install location. Without that positive evidence, never
-  // classify as local: a local classification makes the upgrade run
-  // `<pm> i vercel@latest` in the user's current directory, which mutates
-  // whatever project they happen to be standing in. Unknown layouts (e.g.
-  // future package manager changes) must degrade to a global upgrade, which
-  // runs from a temp dir and cannot touch the cwd.
+  // Only classify as a local install with positive evidence (a lockfile
+  // above the install). A wrong "local" runs `<pm> i vercel@latest` in the
+  // user's cwd, mutating whatever project they are standing in; unknown
+  // layouts must degrade to a global upgrade, which runs from a temp dir.
   if (!lockfileCliType) {
-    // Global installs for npm do not have a lockfile
     return { cliType: 'npm' as const, global: true };
   }
 
