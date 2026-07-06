@@ -43,13 +43,17 @@ export function useDomains() {
   });
 }
 
-export function useProjectDomains(domainName: string, projectIds: string[]) {
+export function useProjectDomains(
+  domainName: string,
+  projectIds: string[],
+  assignedDomainName: string = domainName
+) {
   client.scenario.get(
     `/v1/domains/${encodeURIComponent(domainName)}/project-domains`,
     (_req, res) => {
       res.json({
         projectDomains: projectIds.map(projectId => ({
-          name: domainName,
+          name: assignedDomainName,
           apexName: domainName,
           projectId,
           redirect: null,

@@ -78,5 +78,24 @@ describe('domains inspect', () => {
       await expect(client.stderr).toOutput(defaultProject.name);
       await expect(exitCodePromise).resolves.toEqual(null);
     });
+
+    it('renders the assigned project-domain names, not production aliases', async () => {
+      const domain = useDomain('9');
+      useUser();
+      useProject();
+      // A branch-specific assignment: the subdomain appears only in the
+      // project-domains listing, never in the project's production aliases.
+      useProjectDomains(
+        domain.name,
+        [defaultProject.id],
+        `staging.${domain.name}`
+      );
+      useDomainInspectScenario(domain);
+
+      client.setArgv('domains', 'inspect', domain.name);
+      const exitCodePromise = domains(client);
+      await expect(client.stderr).toOutput(`staging.${domain.name}`);
+      await expect(exitCodePromise).resolves.toEqual(null);
+    });
   });
 });
