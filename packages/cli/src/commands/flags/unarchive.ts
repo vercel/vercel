@@ -7,22 +7,22 @@ import { getCommandName } from '../../util/pkg-name';
 import { getFlag } from '../../util/flags/get-flags';
 import { updateFlag } from '../../util/flags/update-flag';
 import output from '../../output-manager';
-import { FlagsArchiveTelemetryClient } from '../../util/telemetry/commands/flags/archive';
-import { archiveSubcommand } from './command';
+import { FlagsUnarchiveTelemetryClient } from '../../util/telemetry/commands/flags/unarchive';
+import { unarchiveSubcommand } from './command';
 import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
-export default async function archive(
+export default async function unarchive(
   client: Client,
   argv: string[]
 ): Promise<number> {
-  const telemetryClient = new FlagsArchiveTelemetryClient({
+  const telemetryClient = new FlagsUnarchiveTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
   });
 
   let parsedArgs;
-  const flagsSpecification = getFlagsSpecification(archiveSubcommand.options);
+  const flagsSpecification = getFlagsSpecification(unarchiveSubcommand.options);
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
@@ -36,8 +36,8 @@ export default async function archive(
   const projectName = getProjectNameFromFlags(flags);
 
   if (!flagArg) {
-    output.error('Please provide a flag slug or ID to archive');
-    output.log(`Example: ${getCommandName('flags archive my-feature')}`);
+    output.error('Please provide a flag slug or ID to unarchive');
+    output.log(`Example: ${getCommandName('flags unarchive my-feature')}`);
     return 1;
   }
 
@@ -61,17 +61,15 @@ export default async function archive(
   const { project } = link;
 
   try {
-    // First, verify the flag exists
     output.spinner('Fetching flag...');
     const flag = await getFlag(client, project.id, flagArg);
     output.stopSpinner();
 
-    if (flag.state === 'archived') {
-      output.warn(`Flag ${chalk.bold(flag.slug)} is already archived`);
+    if (flag.state === 'active') {
+      output.warn(`Flag ${chalk.bold(flag.slug)} is already active`);
       return 0;
     }
 
-    // Confirm archival
     if (!skipConfirmation) {
       if (!client.stdin.isTTY) {
         output.error(
@@ -81,7 +79,7 @@ export default async function archive(
       }
 
       const confirmed = await client.input.confirm(
-        `Are you sure you want to archive ${chalk.bold(flag.slug)}?`,
+        `Are you sure you want to unarchive ${chalk.bold(flag.slug)}?`,
         false
       );
 
@@ -91,18 +89,14 @@ export default async function archive(
       }
     }
 
-    // Archive the flag by setting state to 'archived'
-    output.spinner('Archiving flag...');
+    output.spinner('Unarchiving flag...');
     await updateFlag(client, project.id, flagArg, {
-      state: 'archived',
-      message: 'Archived via CLI',
+      state: 'active',
+      message: 'Unarchive',
     });
     output.stopSpinner();
 
-    output.success(`Feature flag ${chalk.bold(flag.slug)} has been archived`);
-    output.log(
-      `\nTo unarchive this flag, run ${getCommandName(`flags unarchive ${flag.slug}`)}`
-    );
+    output.success(`Feature flag ${chalk.bold(flag.slug)} has been unarchived`);
   } catch (err) {
     output.stopSpinner();
     printError(err);
