@@ -39,7 +39,14 @@ export async function merge(
     if (isErrnoException(destStat)) {
       if (destStat.code === 'ENOENT') {
         // Destination does not exist, so move directly
-        await move(source, destination);
+        await (
+          span?.child('move1', { source, destination }) ?? {
+            // @ts-ignore
+            trace: f => f(undefined),
+          }
+        )?.trace(async () => {
+          await move(source, destination);
+        });
         return;
       }
       // Some other kind of error, bail
@@ -74,7 +81,21 @@ export async function merge(
     }
 
     // Destination is not a directory, or dest is a dir + source is not, so overwrite
-    await remove(destination);
-    await move(source, destination);
+    await (
+      span?.child('remove2', { source, destination }) ?? {
+        // @ts-ignore
+        trace: f => f(undefined),
+      }
+    )?.trace(async () => {
+      await remove(destination);
+    });
+    await (
+      span?.child('move2', { source, destination }) ?? {
+        // @ts-ignore
+        trace: f => f(undefined),
+      }
+    )?.trace(async () => {
+      await move(source, destination);
+    });
   });
 }
