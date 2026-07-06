@@ -72,9 +72,13 @@ over time; each addition is safe and additive.
 Every failure in store code degrades to running the invoked install —
 today's behavior. Unknown store formats or payload types read as "no
 store" (forward compatibility for the future native payload). The pointer
-only moves up, so racing writers (seeder vs. upgrade) are harmless. Only
-`vc upgrade` and the seeder ever write to the store; commands never change
-the effective version mid-run.
+only moves up, so racing writers (seeder vs. upgrade) are harmless.
+
+All store writes funnel through one path (`installVersionToStore`), with
+exactly two callers: `vc upgrade` and the background seeder. And the
+effective version is decided once, at entrypoint time: a store write that
+lands while a command is running only affects future invocations — no
+command ever observes the version changing underneath it.
 
 ## Interactions to know about
 
