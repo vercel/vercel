@@ -40,15 +40,12 @@ works exactly as before); the store owns currency.
 
 ## Eligibility: who participates
 
-The crux of this work: the `vc`/`vercel` that PATH resolves is some
-installed version A, but the code that should run may be a newer version B
-— the entrypoint must be able to invoke code it did not ship with. That
-handoff is only legitimate when version A is merely _stale_ (a global
-install, where "keep me current" is the expectation). When version A was
-_chosen_ — a project dependency pinned by a lockfile — A is the correct
-answer by definition, and no handoff may occur. The eligibility check
-answers exactly that question: is the invoked version authoritative, or
-merely stale?
+The crux of this work: the `vc`/`vercel` binaries on PATH are effectively
+just pointers now — whatever version they shipped as, they run whatever
+the store says is current. That's correct for global installs ("keep me
+current") and wrong for lockfile-pinned project dependencies, where the
+installed version is the answer. The eligibility check decides which kind
+an install is.
 
 Only installations we can **confidently classify as global** are redirected
 or seed the store (`isConfidentlyGlobal`):
