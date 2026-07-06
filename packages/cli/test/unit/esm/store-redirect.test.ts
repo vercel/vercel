@@ -106,7 +106,9 @@ describe('vc.js managed store redirect', () => {
     expect(stdout.trim()).toBe('ran installed 1.0.0');
   });
 
-  it('runs the installed version when the flag is not enabled', async () => {
+  it('redirects without the env var when the store exists (enrolled machine)', async () => {
+    // The store's existence is the enrollment signal — created only by the
+    // explicit `vc upgrade --experimental` act.
     const { root, dist } = await setupInstalledCli();
     const storeDir = join(root, 'store');
     await seedStore(storeDir, '2.0.0');
@@ -119,9 +121,19 @@ describe('vc.js managed store redirect', () => {
           ...process.env,
           VERCEL_CLI_STORE_DIR: storeDir,
           VERCEL_CLI_STORE: undefined,
+          PNPM_HOME: undefined,
         },
       }
     );
+    expect(stdout.trim()).toBe('ran store 2.0.0 redirected=true');
+  });
+
+  it('runs the installed version when bypassed with VERCEL_CLI_STORE=0', async () => {
+    const { root, dist } = await setupInstalledCli();
+    const storeDir = join(root, 'store');
+    await seedStore(storeDir, '2.0.0');
+
+    const { stdout } = await runVc(dist, storeDir, { VERCEL_CLI_STORE: '0' });
     expect(stdout.trim()).toBe('ran installed 1.0.0');
   });
 
@@ -217,6 +229,57 @@ describe('vc.js managed store redirect', () => {
 
     // Store is newer, but the install sits under a project lockfile — the
     // lockfile is authoritative and the invoked version must run.
+    const { stdout } = await runVc(dist, storeDir);
+    expect(stdout.trim()).toBe('ran installed 1.0.0');
+  });
+
+  it('execs a native payload directly when the pointer type is native', async () => {
+    const { root, dist } = await setupInstalledCli();
+    const storeDir = join(root, 'store');
+    // Native payload: an executable script at versions/native/<v>/bin/vercel.
+    const binDir = join(storeDir, 'versions', 'native', '2.0.0', 'bin');
+    await mkdir(binDir, { recursive: true });
+    const binPath = join(binDir, 'vercel');
+    await writeFile(binPath, `#!/bin/sh\necho "ran native 2.0.0 args=$@"\n`);
+    const { chmod } = await import('node:fs/promises');
+    await chmod(binPath, 0o755);
+    await writeFile(
+      join(storeDir, 'current.json'),
+      JSON.stringify({ storeFormat: 1, version: '2.0.0', type: 'native' })
+    );
+
+    const { stdout } = await runVc(dist, storeDir);
+    expect(stdout.trim()).toBe('ran native 2.0.0 args=whoami');
+  });
+
+  it('a native pointer wins even when the invoked version is newer', async () => {
+    const { root, dist } = await setupInstalledCli(); // installed = 1.0.0
+    const storeDir = join(root, 'store');
+    const binDir = join(storeDir, 'versions', 'native', '0.5.0', 'bin');
+    await mkdir(binDir, { recursive: true });
+    const binPath = join(binDir, 'vercel');
+    await writeFile(binPath, `#!/bin/sh\necho "ran native 0.5.0"\n`);
+    const { chmod } = await import('node:fs/promises');
+    await chmod(binPath, 0o755);
+    await writeFile(
+      join(storeDir, 'current.json'),
+      JSON.stringify({ storeFormat: 1, version: '0.5.0', type: 'native' })
+    );
+
+    // The user chose the binary; version comparison does not apply.
+    const { stdout } = await runVc(dist, storeDir);
+    expect(stdout.trim()).toBe('ran native 0.5.0');
+  });
+
+  it('falls through when a native pointer names a missing binary', async () => {
+    const { root, dist } = await setupInstalledCli();
+    const storeDir = join(root, 'store');
+    await mkdir(storeDir, { recursive: true });
+    await writeFile(
+      join(storeDir, 'current.json'),
+      JSON.stringify({ storeFormat: 1, version: '2.0.0', type: 'native' })
+    );
+
     const { stdout } = await runVc(dist, storeDir);
     expect(stdout.trim()).toBe('ran installed 1.0.0');
   });

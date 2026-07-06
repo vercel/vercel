@@ -10,14 +10,13 @@ try {
   }
 } catch {}
 
-// Managed CLI store redirect (experimental, VERCEL_CLI_STORE=1): when the
-// self-owned store at ~/.vercel/cli holds a newer version than this install,
-// run that version instead. This makes `vc upgrade` take effect for every
-// install of the CLI on the machine (npm, pnpm, yarn, any node version)
-// without touching any package manager. Best-effort: any failure falls
-// through to running this install, which is the pre-store behavior.
+// Managed CLI store redirect (experimental): when the machine has opted in
+// (`vc upgrade --experimental` creates ~/.vercel/cli) and the store holds a
+// newer version than this install, run that version instead. Best-effort:
+// any failure falls through to running this install. VERCEL_CLI_STORE=0
+// bypasses; =1 forces on without enrollment (testing).
 if (
-  process.env.VERCEL_CLI_STORE === '1' &&
+  process.env.VERCEL_CLI_STORE !== '0' &&
   process.env.VERCEL_VC_NATIVE !== '1' &&
   process.env.VERCEL_CLI_STORE_REDIRECTED !== '1'
 ) {

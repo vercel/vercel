@@ -72,6 +72,7 @@ import {
   shouldAttemptSeed,
   recordSeedAttempt,
   isConfidentlyGlobal,
+  isCliStoreEnabled,
 } from './util/cli-store';
 import {
   canAutoUpdate,
@@ -1357,14 +1358,12 @@ if (SHOULD_CHECK_FOR_UPDATES && !isNativeBinaryInstall()) {
   }
 }
 
-// Managed CLI store self-seeding (experimental, VERCEL_CLI_STORE=1): when
-// this install is newer than the store pointer, spawn a detached worker to
-// install this version into the store from the registry. This converges
-// every install on the machine to the newest version anyone runs, without
-// requiring an explicit `vc upgrade`. Rate-limited to one attempt per
-// version per day; the pointer is monotonic so a slow seed can never undo
-// a newer upgrade. Fire-and-forget: failures only mean no seeding.
-if (process.env.VERCEL_CLI_STORE === '1') {
+// Managed CLI store self-seeding (experimental): when the machine is
+// enrolled (store exists via `vc upgrade --experimental`, or forced via
+// VERCEL_CLI_STORE=1) and this install is newer than the store pointer,
+// spawn a detached worker to install this version into the store from the
+// registry. Rate-limited; the pointer is monotonic. Fire-and-forget.
+if (isCliStoreEnabled()) {
   // Surface store involvement in debug output so bug reports can always
   // answer "was the managed store in play, and which version ran?"
   const redirected = process.env.VERCEL_CLI_STORE_REDIRECTED === '1';
@@ -1374,7 +1373,7 @@ if (process.env.VERCEL_CLI_STORE === '1') {
 }
 
 if (
-  process.env.VERCEL_CLI_STORE === '1' &&
+  isCliStoreEnabled() &&
   !isNativeBinaryInstall() &&
   process.env.VERCEL_CLI_STORE_REDIRECTED !== '1'
 ) {

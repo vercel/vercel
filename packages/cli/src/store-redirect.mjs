@@ -108,49 +108,48 @@ export async function redirectToStoreIfNewer() {
   if (
     !pointer ||
     pointer.storeFormat !== STORE_FORMAT ||
-    pointer.type !== 'npm' ||
+    (pointer.type !== 'npm' && pointer.type !== 'native') ||
     typeof pointer.version !== 'string'
   ) {
     return; // unknown store format — behave as if absent
   }
 
   const { version } = await import('./version.mjs');
-  if (!gt(pointer.version, version)) {
+  // A native pointer always wins (the user explicitly chose the binary via
+  // `vc upgrade --binary`); an npm pointer must be strictly newer.
+  if (pointer.type !== 'native' && !gt(pointer.version, version)) {
     return; // store is not newer; run the invoked version
   }
 
-  // Version dirs are namespaced by payload type (versions/npm/<v>). This
-  // shim only understands the 'npm' payload; readPointer-equivalent checks
-  // above already rejected other types.
-  const entrypoint = join(
-    root,
-    'versions',
-    'npm',
-    pointer.version,
-    'dist',
-    'vc.js'
-  );
+  // Version dirs are namespaced by payload type: npm payloads run via node
+  // (versions/npm/<v>/dist/vc.js), native payloads are exec'd directly
+  // (versions/native/<v>/bin/vercel).
+  const binaryName = process.platform === 'win32' ? 'vercel.exe' : 'vercel';
+  const entrypoint =
+    pointer.type === 'native'
+      ? join(root, 'versions', 'native', pointer.version, 'bin', binaryName)
+      : join(root, 'versions', 'npm', pointer.version, 'dist', 'vc.js');
   if (!existsSync(entrypoint)) {
     return; // pointer names a missing version — fall through
   }
 
   const startedAt = Date.now();
-  const child = spawn(
-    process.execPath,
-    [entrypoint, ...process.argv.slice(2)],
-    {
-      stdio: 'inherit',
-      windowsHide: true,
-      env: {
-        ...process.env,
-        // Loop guard: the store version must not redirect again. Also acts
-        // as a manual bypass and prevents infinite re-exec if the store's
-        // contents ever disagree with the pointer (e.g. a version dir whose
-        // files report a lower version than the pointer claims).
-        VERCEL_CLI_STORE_REDIRECTED: '1',
-      },
-    }
-  );
+  const [execCmd, execArgs] =
+    pointer.type === 'native'
+      ? [entrypoint, process.argv.slice(2)]
+      : [process.execPath, [entrypoint, ...process.argv.slice(2)]];
+  const child = spawn(execCmd, execArgs, {
+    stdio: 'inherit',
+    windowsHide: true,
+    env: {
+      ...process.env,
+      // Loop guard: the store version must not redirect again. Also acts
+      // as a manual bypass and prevents infinite re-exec if the store's
+      // contents ever disagree with the pointer (e.g. a version dir whose
+      // files report a lower version than the pointer claims).
+      VERCEL_CLI_STORE_REDIRECTED: '1',
+    },
+  });
 
   const code = await new Promise(resolve => {
     child.on('error', () => resolve(undefined));

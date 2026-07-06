@@ -10,6 +10,7 @@ import { fetchLatestVersion } from './get-latest-version';
 import {
   isCliStoreEnabled,
   installVersionToStore,
+  installNativeVersionToStore,
   readPointer,
 } from './cli-store';
 import { packageName } from './pkg-name';
@@ -119,7 +120,10 @@ function isVersionCurrent(current: string, latest: string): boolean {
  * upgrade takes effect for every install of the CLI on the machine without
  * touching any package manager.
  */
-async function executeStoreUpgrade(targetVersion?: string): Promise<number> {
+async function executeStoreUpgrade(
+  targetVersion: string | undefined,
+  payloadType: 'npm' | 'native'
+): Promise<number> {
   const totalSteps = 3;
   const versionBefore = pkg.version;
 
@@ -135,41 +139,67 @@ async function executeStoreUpgrade(targetVersion?: string): Promise<number> {
     return 1;
   }
 
-  if (isVersionCurrent(versionBefore, resolvedTarget)) {
-    renderUpgradeProgress(totalSteps, totalSteps);
-    output.stopSpinner();
-    output.log(
-      `No upgrade available. Vercel CLI is already up to date (v${versionBefore}).`
-    );
-    return 0;
-  }
-
-  // Also a no-op when the store already holds the target, even though the
-  // running version is older. Notably: prerelease builds (x.y.z-sha) sort
-  // below the release x.y.z, so without this check a prerelease install
-  // would re-report an available upgrade on every run despite the store
-  // being current.
   const pointer = readPointer();
-  if (pointer && isVersionCurrent(pointer.version, resolvedTarget)) {
-    renderUpgradeProgress(totalSteps, totalSteps);
-    output.stopSpinner();
-    output.log(
-      `No upgrade available. The managed CLI store is already up to date (v${pointer.version}).`
-    );
-    return 0;
+  const switchingType = pointer !== undefined && pointer.type !== payloadType;
+
+  const install = (version: string) =>
+    payloadType === 'native'
+      ? installNativeVersionToStore(version)
+      : installVersionToStore(packageName, version);
+
+  // No-op cases — unless the payload type is changing, in which case an
+  // install of the same version with the new type is exactly the point.
+  if (!switchingType) {
+    if (isVersionCurrent(versionBefore, resolvedTarget)) {
+      // Enrollment must produce a store even when no upgrade is needed:
+      // seed it so the machine is managed from now on.
+      if (!pointer) {
+        renderUpgradeProgress(1, totalSteps, 'Initializing managed store…');
+        try {
+          await install(resolvedTarget);
+        } catch (err) {
+          output.stopSpinner();
+          output.error(
+            `Could not initialize the managed store: ${err instanceof Error ? err.message : String(err)}`
+          );
+          return 1;
+        }
+      }
+      renderUpgradeProgress(totalSteps, totalSteps);
+      output.stopSpinner();
+      output.log(
+        `No upgrade available. Vercel CLI is already up to date (v${versionBefore}).`
+      );
+      return 0;
+    }
+
+    // Also a no-op when the store already holds the target (prerelease
+    // builds sort below the release, so the running-version check alone
+    // would re-offer the same upgrade forever).
+    if (pointer && isVersionCurrent(pointer.version, resolvedTarget)) {
+      renderUpgradeProgress(totalSteps, totalSteps);
+      output.stopSpinner();
+      output.log(
+        `No upgrade available. The managed CLI store is already up to date (v${pointer.version}).`
+      );
+      return 0;
+    }
   }
 
-  renderUpgradeProgress(1, totalSteps, `Downloading v${resolvedTarget}…`);
+  renderUpgradeProgress(
+    1,
+    totalSteps,
+    `Downloading v${resolvedTarget}${payloadType === 'native' ? ' (native binary)' : ''}…`
+  );
   try {
-    const installedVersion = await installVersionToStore(
-      packageName,
-      resolvedTarget
-    );
+    const installedVersion = await install(resolvedTarget);
     renderUpgradeProgress(totalSteps, totalSteps);
     output.stopSpinner();
     // Report the measured version, not the requested one.
     output.success(
-      `Vercel CLI has been upgraded to v${installedVersion} successfully!`
+      payloadType === 'native'
+        ? `Vercel CLI (native binary) v${installedVersion} is now active!`
+        : `Vercel CLI has been upgraded to v${installedVersion} successfully!`
     );
     return 0;
   } catch (err) {
@@ -181,12 +211,33 @@ async function executeStoreUpgrade(targetVersion?: string): Promise<number> {
   }
 }
 
-export async function executeUpgrade(targetVersion?: string): Promise<number> {
+export interface ExecuteUpgradeOptions {
+  experimental?: boolean;
+  /** Switch the managed store to the native binary payload. */
+  binary?: boolean;
+  /** Switch the managed store back to the npm payload. */
+  noBinary?: boolean;
+}
+
+export async function executeUpgrade(
+  targetVersion?: string,
+  opts: ExecuteUpgradeOptions = {}
+): Promise<number> {
   // The managed store path never invokes a package manager, so it does not
-  // need to detect how the CLI was installed. Native binary installs are
-  // excluded until the store supports native payloads.
-  if (isCliStoreEnabled() && !isNativeBinaryInstall()) {
-    return executeStoreUpgrade(targetVersion);
+  // need to detect how the CLI was installed. Active when the machine is
+  // enrolled (store exists) or enrolling now (--experimental/--binary).
+  // VERCEL_VC_NATIVE installs are excluded: the running native binary
+  // manages itself through its own channel until it is store-aware.
+  const storeActive =
+    opts.experimental || opts.binary || opts.noBinary || isCliStoreEnabled();
+  if (storeActive && !isNativeBinaryInstall()) {
+    const pointer = readPointer();
+    const payloadType: 'npm' | 'native' = opts.binary
+      ? 'native'
+      : opts.noBinary
+        ? 'npm'
+        : (pointer?.type ?? 'npm');
+    return executeStoreUpgrade(targetVersion, payloadType);
   }
 
   const totalSteps = targetVersion ? 2 : 3;

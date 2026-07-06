@@ -7,6 +7,7 @@ const writeConfigSpy = vi.spyOn(configFilesUtil, 'writeToConfigFile');
 
 describe('upgrade', () => {
   const originalVercelVcNative = process.env.VERCEL_VC_NATIVE;
+  const originalCliStore = process.env.VERCEL_CLI_STORE;
 
   afterEach(() => {
     writeConfigSpy.mockClear();
@@ -15,6 +16,41 @@ describe('upgrade', () => {
     } else {
       process.env.VERCEL_VC_NATIVE = originalVercelVcNative;
     }
+    if (originalCliStore === undefined) {
+      delete process.env.VERCEL_CLI_STORE;
+    } else {
+      process.env.VERCEL_CLI_STORE = originalCliStore;
+    }
+  });
+
+  describe('--experimental / --stable', () => {
+    it('rejects using both flags together', async () => {
+      client.setArgv('upgrade', '--experimental', '--stable');
+      const exitCode = await upgrade(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput(
+        'Cannot use --experimental and --stable together'
+      );
+    });
+
+    it('--stable on an unenrolled machine is a no-op', async () => {
+      process.env.VERCEL_CLI_STORE = '0'; // ensure not enrolled
+      client.setArgv('upgrade', '--stable');
+      const exitCode = await upgrade(client);
+      expect(exitCode).toBe(0);
+      await expect(client.stderr).toOutput(
+        'Already on the stable upgrade channel'
+      );
+    });
+
+    it('tracks telemetry for both flags', async () => {
+      client.setArgv('upgrade', '--stable');
+      process.env.VERCEL_CLI_STORE = '0';
+      await upgrade(client);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'flag:stable', value: 'TRUE' },
+      ]);
+    });
   });
 
   describe('--help', () => {

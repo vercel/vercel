@@ -28,6 +28,32 @@ export const upgradeCommand = {
       deprecated: false,
       description: 'Disable automatic CLI updates',
     },
+    // Experimental managed-store flags — intentionally undocumented for now
+    // (no description = filtered out of help output).
+    {
+      name: 'experimental',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'stable',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'binary',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'no-binary',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
     {
       ...formatOption,
       description: 'Specify the output format (json) - implies --dry-run',

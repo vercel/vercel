@@ -72,11 +72,20 @@ describe('cli-store pointer', () => {
     expect(readPointer(root)).toBeUndefined();
   });
 
-  it('returns undefined for an unknown payload type', () => {
+  it('accepts the native payload type', () => {
     writeJSONSync(join(root, 'current.json'), {
       storeFormat: STORE_FORMAT,
       version: '54.19.0',
       type: 'native',
+    });
+    expect(readPointer(root)?.type).toBe('native');
+  });
+
+  it('returns undefined for an unknown payload type', () => {
+    writeJSONSync(join(root, 'current.json'), {
+      storeFormat: STORE_FORMAT,
+      version: '54.19.0',
+      type: 'wasm',
     });
     expect(readPointer(root)).toBeUndefined();
   });

@@ -1,5 +1,5 @@
 /**
- * Managed CLI store (experimental, enabled via VERCEL_CLI_STORE=1).
+ * Managed CLI store (experimental; opt in via `vc upgrade --experimental`).
  *
  * A self-owned directory holding versioned copies of the CLI, with an
  * atomically-updated pointer file selecting the active version:
@@ -39,6 +39,7 @@ import {
   removeSync,
   writeJSONSync,
   renameSync,
+  chmodSync,
 } from 'fs-extra';
 import output from '../../output-manager';
 
@@ -47,13 +48,30 @@ export const STORE_FORMAT = 1;
 export interface StorePointer {
   storeFormat: number;
   version: string;
-  /** Payload type. 'npm' = extracted npm tarball run via node. Reserved for
-   * future values like 'native'. */
-  type: 'npm';
+  /** Payload type. 'npm' = extracted npm tarball run via node.
+   * 'native' = standalone platform binary, exec'd directly. */
+  type: 'npm' | 'native';
 }
 
+export const NATIVE_PACKAGE_SCOPE = '@vercel/vc-native';
+
+/** The platform-specific npm package carrying the native binary. */
+export function getNativePlatformPackage(): string {
+  return `${NATIVE_PACKAGE_SCOPE}-${process.platform}-${process.arch}`;
+}
+
+/**
+ * The store is active when the machine has opted in. Enrollment is the
+ * explicit act of running `vc upgrade --experimental`, which creates the
+ * store; from then on, its existence (a valid pointer) is the enrollment
+ * signal. Env overrides: VERCEL_CLI_STORE=1 forces on (testing),
+ * VERCEL_CLI_STORE=0 forces off (bypass).
+ */
 export function isCliStoreEnabled(): boolean {
-  return process.env.VERCEL_CLI_STORE === '1';
+  const env = process.env.VERCEL_CLI_STORE;
+  if (env === '1') return true;
+  if (env === '0') return false;
+  return readPointer() !== undefined;
 }
 
 /**
@@ -66,6 +84,15 @@ export function getStoreRoot(): string {
 
 export function getPointerPath(root: string = getStoreRoot()): string {
   return join(root, 'current.json');
+}
+
+/**
+ * Unenrolls the machine from the managed upgrade channel by removing the
+ * store. Installed copies revert to running themselves (package-manager
+ * managed) — the store's existence is the enrollment signal.
+ */
+export function removeStore(root: string = getStoreRoot()): void {
+  removeSync(root);
 }
 
 /**
@@ -97,7 +124,7 @@ export function readPointer(
       pointer.storeFormat === STORE_FORMAT &&
       typeof pointer.version === 'string' &&
       semver.valid(pointer.version) &&
-      pointer.type === 'npm'
+      (pointer.type === 'npm' || pointer.type === 'native')
     ) {
       return pointer as StorePointer;
     }
@@ -402,13 +429,67 @@ export async function installVersionToStore(
 }
 
 /**
- * Removes store versions other than the currently-pointed one and the
- * (optional) version to keep as rollback.
+ * Downloads, verifies, and installs a native binary version into the store,
+ * then flips the pointer to the native payload. The binary comes from the
+ * platform-specific npm package (@vercel/vc-native-<platform>-<arch>),
+ * verified against the registry's published checksum. The extracted binary
+ * is never modified, so its code signature remains intact.
  */
-export function getStoreEntrypoint(
+export async function installNativeVersionToStore(
   version: string,
   root: string = getStoreRoot()
+): Promise<string> {
+  const platformPackage = getNativePlatformPackage();
+  const versionDir = getVersionDir(version, root, 'native');
+  const binaryName = process.platform === 'win32' ? 'vercel.exe' : 'vercel';
+  const binaryPath = join(versionDir, binaryName);
+
+  if (!existsSync(binaryPath)) {
+    const meta = await fetchVersionMetadata(platformPackage, version);
+    output.debug(`Downloading ${meta.tarballUrl}`);
+    const tarball = await downloadTarball(meta.tarballUrl);
+
+    if (!verifyIntegrity(tarball, meta)) {
+      throw new Error(
+        `Integrity verification failed for ${platformPackage}@${version}. ` +
+          `The downloaded tarball does not match the registry's published checksum.`
+      );
+    }
+
+    const stagingDir = `${versionDir}.tmp-${process.pid}`;
+    removeSync(stagingDir);
+    try {
+      await extractTarball(tarball, stagingDir);
+      // The platform package carries the binary at bin/<name>.
+      const extractedBinary = join(stagingDir, 'bin', binaryName);
+      if (!existsSync(extractedBinary)) {
+        throw new Error(
+          `The ${platformPackage} package does not contain the expected binary at bin/${binaryName}.`
+        );
+      }
+      chmodSync(extractedBinary, 0o755);
+      moveSync(stagingDir, versionDir, { overwrite: false });
+    } catch (err) {
+      removeSync(stagingDir);
+      if (!existsSync(binaryPath)) {
+        throw err;
+      }
+    }
+  }
+
+  writePointer({ storeFormat: STORE_FORMAT, version, type: 'native' }, root);
+  return version;
+}
+
+export function getStoreEntrypoint(
+  version: string,
+  root: string = getStoreRoot(),
+  type: StorePointer['type'] = 'npm'
 ): string {
+  if (type === 'native') {
+    const binaryName = process.platform === 'win32' ? 'vercel.exe' : 'vercel';
+    return join(getVersionDir(version, root, 'native'), 'bin', binaryName);
+  }
   return join(getVersionDir(version, root), 'dist', 'vc.js');
 }
 
@@ -467,6 +548,9 @@ export function isConfidentlyGlobal(packageDir: string): boolean {
  * the background self-seeder so that merely running the CLI converges every
  * install on the machine to the newest version anyone has installed —
  * without requiring an explicit `vc upgrade`.
+ *
+ * A native-pointer machine is never seeded by npm-payload installs: the
+ * user chose the binary; only explicit `vc upgrade` moves a native pointer.
  */
 export function shouldSeedStore(
   runningVersion: string,
@@ -474,6 +558,7 @@ export function shouldSeedStore(
 ): boolean {
   if (!semver.valid(runningVersion)) return false;
   const pointer = readPointer(root);
+  if (pointer?.type === 'native') return false;
   if (pointer && semver.gte(pointer.version, runningVersion)) return false;
   return true;
 }
@@ -532,7 +617,11 @@ export function shouldRedirectToStore(
   const pointer = readPointer(root);
   if (!pointer) return undefined;
   if (!semver.valid(runningVersion)) return undefined;
-  if (!semver.gt(pointer.version, runningVersion)) return undefined;
-  if (!existsSync(getStoreEntrypoint(pointer.version, root))) return undefined;
+  // A native pointer always wins over an npm-payload install (the user
+  // chose the binary); an npm pointer must be strictly newer.
+  if (pointer.type !== 'native' && !semver.gt(pointer.version, runningVersion))
+    return undefined;
+  if (!existsSync(getStoreEntrypoint(pointer.version, root, pointer.type)))
+    return undefined;
   return pointer;
 }
