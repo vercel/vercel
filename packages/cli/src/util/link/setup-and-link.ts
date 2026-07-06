@@ -124,10 +124,17 @@ function isCrossTeamMatch(value: unknown): value is CrossTeamMatch {
 async function selectOrgForLink(
   client: Client,
   autoConfirm: boolean,
-  searchable = false
+  searchable = false,
+  meta?: { choiceCount?: number }
 ): Promise<Org | ProjectLinkResult> {
   try {
-    return await selectOrg(client, 'Which team?', autoConfirm, searchable);
+    return await selectOrg(
+      client,
+      'Which team?',
+      autoConfirm,
+      searchable,
+      meta
+    );
   } catch (err: unknown) {
     if (isAPIError(err)) {
       if (err.code === 'NOT_AUTHORIZED') {
@@ -682,17 +689,23 @@ export default async function setupAndLink(
   }
 
   let projectOrNewProjectName: Awaited<ReturnType<typeof inputProject>>;
+  // When the team was auto-selected as the only choice, there is no other
+  // team to go back to, so the project picker hides that option.
+  let teamAutoSelected = false;
   for (;;) {
     if (!org) {
+      const orgMeta: { choiceCount?: number } = {};
       const resolved = await selectOrgForLink(
         client,
         autoConfirm,
-        searchableTeamPicker
+        searchableTeamPicker,
+        orgMeta
       );
       if ('status' in resolved) {
         return resolved;
       }
       org = resolved;
+      teamAutoSelected = orgMeta.choiceCount === 1;
     }
 
     let repoMatches: CrossTeamMatch[] = [];
@@ -725,7 +738,7 @@ export default async function setupAndLink(
         autoConfirm,
         skipAutoDetect,
         showProjectSuggestions,
-        searchableTeamPicker && !selectedOrg,
+        searchableTeamPicker && !selectedOrg && !teamAutoSelected,
         repoMatches
       );
     } catch (err) {

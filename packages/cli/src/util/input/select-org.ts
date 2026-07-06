@@ -8,6 +8,7 @@ import { getPlatformEnv } from '@vercel/build-utils';
 import { emoji } from '../emoji';
 import output from '../../output-manager';
 import param from '../output/param';
+import { printAlignedLabel } from '../output/print-aligned-label';
 import { packageName } from '../pkg-name';
 import {
   outputActionRequired,
@@ -41,7 +42,9 @@ export default async function selectOrg(
   client: Client,
   question: string,
   autoConfirm?: boolean,
-  searchable = false
+  searchable = false,
+  /** Filled with resolution details for callers that adjust follow-up UI. */
+  meta?: { choiceCount?: number }
 ): Promise<Org> {
   const {
     config: { currentTeam },
@@ -150,6 +153,10 @@ export default async function selectOrg(
     0
   );
 
+  if (meta) {
+    meta.choiceCount = choices.length;
+  }
+
   // Strict resolution when prompting is impossible (non-interactive mode or
   // no TTY): only an explicit signal — `--scope`/`--team`, `vercel.json`
   // `scope`, `VERCEL_ORG_ID` — or a single unambiguous choice selects a team.
@@ -209,6 +216,13 @@ export default async function selectOrg(
         : 'No teams available.'
     );
     process.exit(1);
+  }
+
+  // A single choice is unambiguous: skip the prompt and show the resolved
+  // team as state instead. Prompts are for decisions, rows are for facts.
+  if (choices.length === 1) {
+    printAlignedLabel('Team', choices[0].value.slug);
+    return choices[0].value;
   }
 
   if (autoConfirm) {
