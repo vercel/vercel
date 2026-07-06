@@ -927,9 +927,13 @@ async function mergeBuilderOutput(
     return true;
   };
 
-  await span.child('merge').trace(async () => {
-    await merge(buildResult.buildOutputPath, outputDir, ignoreFilter);
-  });
+  await merge(
+    buildResult.buildOutputPath,
+    outputDir,
+    ignoreFilter,
+    undefined,
+    span
+  );
 }
 
 async function relocateBuildOutputApiEntries(
@@ -948,9 +952,9 @@ async function relocateBuildOutputApiEntries(
 
       const dest = join(outputDir, entry);
       if (entry === 'static') {
-        await merge(src, dest, path => filter(path));
+        await merge(src, dest, path => filter(path), undefined, undefined);
       } else {
-        await merge(src, dest);
+        await merge(src, dest, undefined, undefined, undefined);
       }
     })
   );

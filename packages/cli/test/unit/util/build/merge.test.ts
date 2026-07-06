@@ -12,7 +12,7 @@ describe('merge()', () => {
     try {
       await mkdirp(source);
       await writeFile(join(source, 'a.txt'), 'a');
-      await merge(source, dest);
+      await merge(source, dest, undefined, undefined, undefined);
       const destContents = await readdir(dest);
       expect(destContents.sort()).toEqual(['a.txt']);
       const sourceStat: Error = await stat(source).then(
@@ -35,7 +35,7 @@ describe('merge()', () => {
       await writeFile(join(source, 'c.txt'), 'c');
       await writeFile(join(dest, 'b.txt'), 'b');
       await writeFile(join(dest, 'c.txt'), 'original');
-      await merge(source, dest);
+      await merge(source, dest, undefined, undefined, undefined);
       const destContents = await readdir(dest);
       expect(destContents.sort()).toEqual(['a.txt', 'b.txt', 'c.txt']);
       const sourceStat: Error = await stat(source).then(
@@ -56,7 +56,7 @@ describe('merge()', () => {
       await mkdirp(source);
       await mkdirp(join(dest, 'a'));
       await writeFile(join(source, 'a'), 'a');
-      await merge(source, dest);
+      await merge(source, dest, undefined, undefined, undefined);
       const destContents = await readdir(dest);
       expect(destContents.sort()).toEqual(['a']);
       const sourceStat: Error = await stat(source).then(
