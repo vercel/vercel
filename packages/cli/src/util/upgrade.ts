@@ -94,10 +94,6 @@ function isVersionCurrent(current: string, latest: string): boolean {
     : current === latest;
 }
 
-function isInteractiveTerminal(): boolean {
-  return Boolean(process.stdin.isTTY && process.stdout.isTTY);
-}
-
 /**
  * Executes the upgrade command to update the Vercel CLI.
  * Returns the exit code from the upgrade process.
@@ -109,9 +105,10 @@ function isInteractiveTerminal(): boolean {
  * @param options.interactive Allow the package manager to interact with the
  * user's terminal. pnpm v10+ prompts to approve dependency build scripts
  * (e.g. esbuild's postinstall), which requires the install to run with the
- * user's stdio attached. Only takes effect when the package manager may
- * prompt (pnpm) and the process is attached to a TTY. Callers running
- * unattended (e.g. automatic updates) should leave this off.
+ * user's stdio attached. Callers must gate this with canPrompt(client), so
+ * it is only set when attached to a TTY and not in non-interactive mode.
+ * Only takes effect when the package manager may prompt (pnpm). Callers
+ * running unattended (e.g. automatic updates) should leave this off.
  */
 export async function executeUpgrade(
   targetVersion?: string,
@@ -153,11 +150,9 @@ export async function executeUpgrade(
   }
 
   // npm and yarn never prompt during install, so only pnpm needs the
-  // interactive treatment. Interactivity also requires a TTY — without one,
-  // pnpm skips its prompts and proceeds non-interactively.
+  // interactive treatment.
   const mayPrompt = command === 'pnpm';
-  const interactive =
-    Boolean(options.interactive) && mayPrompt && isInteractiveTerminal();
+  const interactive = Boolean(options.interactive) && mayPrompt;
 
   output.debug(`Executing: ${updateCommand} (cwd: ${cwd})`);
 

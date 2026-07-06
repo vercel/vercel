@@ -66,6 +66,7 @@ import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
 import getUpdateCommand from './util/get-update-command';
 import { executeUpgrade } from './util/upgrade';
+import { canPrompt } from './util/flags/can-prompt';
 import {
   canAutoUpdate,
   hasAutoUpdatePreference,
@@ -1371,7 +1372,7 @@ async function promptAndUpgrade(
     // The user just confirmed interactively, so let the package manager
     // prompt too (e.g. pnpm's dependency build-script approval).
     const upgradeExitCode = await executeUpgrade(targetVersion, {
-      interactive: true,
+      interactive: canPrompt(client),
     });
     if (upgradeExitCode === 0 && !hasAutoUpdatePreference(client.config)) {
       const enableAutoUpdates = await client.input.confirm(

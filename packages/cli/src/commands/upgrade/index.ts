@@ -11,6 +11,7 @@ import pkg from '../../util/pkg';
 import type Client from '../../util/client';
 import { UpgradeTelemetryClient } from '../../util/telemetry/commands/upgrade';
 import { isAutoUpdateEnabled, setAutoUpdate } from '../../util/updates';
+import { canPrompt } from '../../util/flags/can-prompt';
 
 export default async function upgrade(client: Client): Promise<number> {
   let parsedArgs = null;
@@ -93,5 +94,5 @@ export default async function upgrade(client: Client): Promise<number> {
 
   // Run interactively so package managers that prompt (e.g. pnpm's
   // dependency build-script approval for esbuild) can ask the user directly.
-  return executeUpgrade(undefined, { interactive: true });
+  return executeUpgrade(undefined, { interactive: canPrompt(client) });
 }

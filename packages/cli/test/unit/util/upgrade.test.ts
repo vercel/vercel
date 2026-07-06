@@ -449,21 +449,6 @@ describe('executeUpgrade', () => {
   });
 
   describe('interactive installs', () => {
-    let stdinIsTTY: boolean | undefined;
-    let stdoutIsTTY: boolean | undefined;
-
-    beforeEach(() => {
-      stdinIsTTY = process.stdin.isTTY;
-      stdoutIsTTY = process.stdout.isTTY;
-      process.stdin.isTTY = true;
-      process.stdout.isTTY = true;
-    });
-
-    afterEach(() => {
-      process.stdin.isTTY = stdinIsTTY as boolean;
-      process.stdout.isTTY = stdoutIsTTY as boolean;
-    });
-
     it('inherits stdio for pnpm so the user can answer build-script prompts', async () => {
       getUpdateCommandInfoMock.mockResolvedValueOnce({
         command: 'pnpm i -g vercel@latest',
@@ -512,33 +497,6 @@ describe('executeUpgrade', () => {
         {
           cwd: tmpdir(),
           stdio: ['inherit', 'pipe', 'pipe'],
-          shell: false,
-        }
-      );
-    });
-
-    it('falls back to non-interactive pnpm when there is no TTY', async () => {
-      process.stdin.isTTY = false;
-
-      getUpdateCommandInfoMock.mockResolvedValueOnce({
-        command: 'pnpm i -g vercel@latest',
-        global: true,
-      });
-      const mockProcess = createMockProcess();
-      spawnMock.mockReturnValue(mockProcess as any);
-
-      const exitCodePromise = executeUpgrade(undefined, { interactive: true });
-      await tick();
-
-      mockProcess.emit('close', 0);
-      await exitCodePromise;
-
-      expect(spawnMock).toHaveBeenCalledWith(
-        'pnpm',
-        ['i', '-g', 'vercel@latest'],
-        {
-          cwd: tmpdir(),
-          stdio: ['ignore', 'pipe', 'pipe'],
           shell: false,
         }
       );
