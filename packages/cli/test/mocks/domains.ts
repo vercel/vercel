@@ -43,6 +43,27 @@ export function useDomains() {
   });
 }
 
+export function useProjectDomains(domainName: string, projectIds: string[]) {
+  client.scenario.get(
+    `/v1/domains/${encodeURIComponent(domainName)}/project-domains`,
+    (_req, res) => {
+      res.json({
+        projectDomains: projectIds.map(projectId => ({
+          name: domainName,
+          apexName: domainName,
+          projectId,
+          redirect: null,
+          gitBranch: null,
+          verified: true,
+          createdAt: chance().timestamp(),
+          updatedAt: chance().timestamp(),
+        })),
+        pagination: { count: projectIds.length, next: null, prev: null },
+      });
+    }
+  );
+}
+
 export function useDomain(postfix?: string) {
   const domain = createDomain(postfix);
 
