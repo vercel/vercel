@@ -39,6 +39,7 @@ import {
   isExperimentalServiceV2,
   isExternalSymlink,
   isSymbolicLink,
+  type Span,
 } from '@vercel/build-utils';
 import { getInternalServiceFunctionPath } from '@vercel/fs-detectors';
 import pipe from 'promisepipe';
@@ -87,6 +88,7 @@ export async function writeBuildResult(args: {
   service?: Service;
   nestServiceOutput?: boolean;
   stripServiceRoutePrefix?: boolean;
+  span: Span;
 }) {
   const {
     repoRootPath,
@@ -101,6 +103,7 @@ export async function writeBuildResult(args: {
     service,
     nestServiceOutput = false,
     stripServiceRoutePrefix = false,
+    span,
   } = args;
   const writeOutputDir =
     service && nestServiceOutput
@@ -129,6 +132,7 @@ export async function writeBuildResult(args: {
       service,
       rootOutputDir: outputDir,
       stripServiceRoutePrefix,
+      span,
     });
   } else if (version === 3) {
     return writeBuildResultV3({
@@ -142,6 +146,7 @@ export async function writeBuildResult(args: {
       service,
       rootOutputDir: outputDir,
       stripServiceRoutePrefix,
+      span,
     });
   }
   throw new Error(
@@ -242,6 +247,7 @@ async function writeBuildResultV2(args: {
   service?: Service;
   rootOutputDir: string;
   stripServiceRoutePrefix: boolean;
+  span: Span;
 }) {
   const {
     repoRootPath,
@@ -254,137 +260,148 @@ async function writeBuildResultV2(args: {
     service,
     rootOutputDir,
     stripServiceRoutePrefix,
+    span,
   } = args;
-  if ('buildOutputPath' in buildResult) {
-    await mergeBuilderOutput(outputDir, buildResult, workPath, rootOutputDir);
-    return;
-  }
-
-  // Some very old `@now` scoped Builders return `output` at the top-level.
-  // These Builders are no longer supported.
-  if (!buildResult.output) {
-    const configFile = vercelConfig?.[fileNameSymbol];
-    const updateMessage = build.use.startsWith('@now/')
-      ? ` Please update from "@now" to "@vercel" in your \`${configFile}\` file.`
-      : '';
-    throw new Error(
-      `The build result from "${build.use}" is missing the "output" property.${updateMessage}`
-    );
-  }
-
-  const existingFunctions = new Map<Lambda | EdgeFunction, string>();
-  const overrides: Record<string, PathOverride> = {};
-
-  for (const [path, output] of Object.entries(buildResult.output)) {
-    const normalizedPath = stripDuplicateSlashes(path);
-    if (isContainerImage(output)) {
-      injectServiceEnvVars(
-        output,
-        service && isExperimentalService(service) ? service : undefined,
-        stripServiceRoutePrefix
-      );
-      await writeContainerImage(outputDir, output, normalizedPath);
-    } else if (isLambda(output)) {
-      injectServiceEnvVars(
-        output,
-        service && isExperimentalService(service) ? service : undefined,
-        stripServiceRoutePrefix
-      );
-      await writeLambda(
-        repoRootPath,
-        outputDir,
-        output,
-        normalizedPath,
-        undefined,
-        existingFunctions,
-        standalone
-      );
-    } else if (isPrerender(output)) {
-      if (!output.lambda) {
-        throw new Error(
-          `Invalid Prerender with no "lambda" property: ${normalizedPath}`
+  return span.child('writeBuildResultV2').trace(async span => {
+    if ('buildOutputPath' in buildResult) {
+      await span.child('mergeBuilderOutput').trace(async span => {
+        await mergeBuilderOutput(
+          outputDir,
+          buildResult,
+          workPath,
+          rootOutputDir,
+          span
         );
-      }
+      });
+      return;
+    }
 
-      await writeLambda(
-        repoRootPath,
-        outputDir,
-        output.lambda,
-        normalizedPath,
-        undefined,
-        existingFunctions,
-        standalone
-      );
-
-      // Write the fallback file alongside the Lambda directory
-      let fallback = output.fallback;
-      if (fallback) {
-        const ext = getFileExtension(fallback);
-        const fallbackName = `${normalizedPath}.prerender-fallback${ext}`;
-        const fallbackPath = join(outputDir, 'functions', fallbackName);
-
-        // if file is already on the disk we can hard link
-        // instead of creating a new copy
-        let usedHardLink = false;
-        if ('fsPath' in fallback) {
-          try {
-            await fs.link(fallback.fsPath, fallbackPath);
-            usedHardLink = true;
-          } catch (_) {
-            // if link fails we continue attempting to copy
-          }
-        }
-
-        if (!usedHardLink) {
-          const stream = fallback.toStream();
-          await pipe(
-            stream,
-            fs.createWriteStream(fallbackPath, { mode: fallback.mode })
-          );
-        }
-        fallback = new FileFsRef({
-          ...output.fallback,
-          fsPath: basename(fallbackName),
-        });
-      }
-
-      const prerenderConfigPath = join(
-        outputDir,
-        'functions',
-        `${normalizedPath}.prerender-config.json`
-      );
-      const prerenderConfig = {
-        ...output,
-        lambda: undefined,
-        fallback,
-      };
-      await fs.writeJSON(prerenderConfigPath, prerenderConfig, { spaces: 2 });
-    } else if (isFile(output)) {
-      await writeStaticFile(
-        outputDir,
-        output,
-        normalizedPath,
-        overrides,
-        vercelConfig?.cleanUrls
-      );
-    } else if (isEdgeFunction(output)) {
-      await writeEdgeFunction(
-        repoRootPath,
-        outputDir,
-        output,
-        normalizedPath,
-        existingFunctions,
-        standalone
-      );
-    } else {
+    // Some very old `@now` scoped Builders return `output` at the top-level.
+    // These Builders are no longer supported.
+    if (!buildResult.output) {
+      const configFile = vercelConfig?.[fileNameSymbol];
+      const updateMessage = build.use.startsWith('@now/')
+        ? ` Please update from "@now" to "@vercel" in your \`${configFile}\` file.`
+        : '';
       throw new Error(
-        `Unsupported output type: "${
-          (output as any).type
-        }" for ${normalizedPath}`
+        `The build result from "${build.use}" is missing the "output" property.${updateMessage}`
       );
     }
-  }
-  return Object.keys(overrides).length > 0 ? overrides : undefined;
+
+    const existingFunctions = new Map<Lambda | EdgeFunction, string>();
+    const overrides: Record<string, PathOverride> = {};
+
+    for (const [path, output] of Object.entries(buildResult.output)) {
+      const normalizedPath = stripDuplicateSlashes(path);
+      if (isContainerImage(output)) {
+        injectServiceEnvVars(
+          output,
+          service && isExperimentalService(service) ? service : undefined,
+          stripServiceRoutePrefix
+        );
+        await writeContainerImage(outputDir, output, normalizedPath);
+      } else if (isLambda(output)) {
+        injectServiceEnvVars(
+          output,
+          service && isExperimentalService(service) ? service : undefined,
+          stripServiceRoutePrefix
+        );
+        await writeLambda(
+          repoRootPath,
+          outputDir,
+          output,
+          normalizedPath,
+          undefined,
+          existingFunctions,
+          standalone
+        );
+      } else if (isPrerender(output)) {
+        if (!output.lambda) {
+          throw new Error(
+            `Invalid Prerender with no "lambda" property: ${normalizedPath}`
+          );
+        }
+
+        await writeLambda(
+          repoRootPath,
+          outputDir,
+          output.lambda,
+          normalizedPath,
+          undefined,
+          existingFunctions,
+          standalone
+        );
+
+        // Write the fallback file alongside the Lambda directory
+        let fallback = output.fallback;
+        if (fallback) {
+          const ext = getFileExtension(fallback);
+          const fallbackName = `${normalizedPath}.prerender-fallback${ext}`;
+          const fallbackPath = join(outputDir, 'functions', fallbackName);
+
+          // if file is already on the disk we can hard link
+          // instead of creating a new copy
+          let usedHardLink = false;
+          if ('fsPath' in fallback) {
+            try {
+              await fs.link(fallback.fsPath, fallbackPath);
+              usedHardLink = true;
+            } catch (_) {
+              // if link fails we continue attempting to copy
+            }
+          }
+
+          if (!usedHardLink) {
+            const stream = fallback.toStream();
+            await pipe(
+              stream,
+              fs.createWriteStream(fallbackPath, { mode: fallback.mode })
+            );
+          }
+          fallback = new FileFsRef({
+            ...output.fallback,
+            fsPath: basename(fallbackName),
+          });
+        }
+
+        const prerenderConfigPath = join(
+          outputDir,
+          'functions',
+          `${normalizedPath}.prerender-config.json`
+        );
+        const prerenderConfig = {
+          ...output,
+          lambda: undefined,
+          fallback,
+        };
+        await fs.writeJSON(prerenderConfigPath, prerenderConfig, { spaces: 2 });
+      } else if (isFile(output)) {
+        await writeStaticFile(
+          outputDir,
+          output,
+          normalizedPath,
+          overrides,
+          vercelConfig?.cleanUrls
+        );
+      } else if (isEdgeFunction(output)) {
+        await writeEdgeFunction(
+          repoRootPath,
+          outputDir,
+          output,
+          normalizedPath,
+          existingFunctions,
+          standalone
+        );
+      } else {
+        throw new Error(
+          `Unsupported output type: "${
+            (output as any).type
+          }" for ${normalizedPath}`
+        );
+      }
+    }
+    return Object.keys(overrides).length > 0 ? overrides : undefined;
+  });
 }
 
 /**
@@ -402,6 +419,7 @@ async function writeBuildResultV3(args: {
   service?: Service;
   rootOutputDir: string;
   stripServiceRoutePrefix: boolean;
+  span: Span;
 }) {
   const {
     repoRootPath,
@@ -414,6 +432,7 @@ async function writeBuildResultV3(args: {
     service,
     rootOutputDir,
     stripServiceRoutePrefix,
+    span,
   } = args;
   const { output } = buildResult;
   const routesJsonPath = join(workPath, '.vercel', 'routes.json');
@@ -452,6 +471,7 @@ async function writeBuildResultV3(args: {
           service,
           rootOutputDir,
           stripServiceRoutePrefix,
+          span,
         });
       } catch (error) {
         outputManager.error(`Failed to read routes.json: ${error}`);
@@ -475,6 +495,7 @@ async function writeBuildResultV3(args: {
         service,
         rootOutputDir,
         stripServiceRoutePrefix,
+        span,
       });
     }
   }
@@ -871,7 +892,8 @@ async function mergeBuilderOutput(
   outputDir: string,
   buildResult: BuildResultBuildOutput,
   workPath: string,
-  rootOutputDir: string
+  rootOutputDir: string,
+  span: Span
 ) {
   const absOutputDir = resolve(outputDir);
   const absRootOutputDir = resolve(rootOutputDir);
@@ -881,7 +903,9 @@ async function mergeBuilderOutput(
   if (absOutputDir === buildResult.buildOutputPath) {
     const staticDir = join(outputDir, 'static');
     try {
-      await cleanIgnoredFiles(staticDir, staticDir, filter);
+      await span.child('cleanIgnoredFiles').trace(async () => {
+        await cleanIgnoredFiles(staticDir, staticDir, filter);
+      });
     } catch (err: any) {
       if (err.code !== 'ENOENT') throw err;
     }
@@ -889,7 +913,9 @@ async function mergeBuilderOutput(
   }
 
   if (resolve(buildResult.buildOutputPath) === absRootOutputDir) {
-    await relocateBuildOutputApiEntries(rootOutputDir, outputDir, workPath);
+    await span.child('relocateBuildOutputApiEntries').trace(async () => {
+      await relocateBuildOutputApiEntries(rootOutputDir, outputDir, workPath);
+    });
     return;
   }
 
@@ -901,7 +927,9 @@ async function mergeBuilderOutput(
     return true;
   };
 
-  await merge(buildResult.buildOutputPath, outputDir, ignoreFilter);
+  await span.child('merge').trace(async () => {
+    await merge(buildResult.buildOutputPath, outputDir, ignoreFilter);
+  });
 }
 
 async function relocateBuildOutputApiEntries(

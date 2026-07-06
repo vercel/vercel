@@ -1650,7 +1650,7 @@ async function doBuild(
           .child('vc.builder.writeBuildResult', {
             buildOutputLength: String(buildOutputLength),
           })
-          .trace<Record<string, PathOverride> | undefined | void>(() =>
+          .trace<Record<string, PathOverride> | undefined | void>(span =>
             writeBuildResult({
               repoRootPath,
               outputDir,
@@ -1664,6 +1664,7 @@ async function doBuild(
               service,
               nestServiceOutput: nestExperimentalServicesV2Output,
               stripServiceRoutePrefix,
+              span,
             })
           );
 
