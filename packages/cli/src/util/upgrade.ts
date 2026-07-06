@@ -152,12 +152,19 @@ export async function executeUpgrade(targetVersion?: string): Promise<number> {
       shell: false,
     });
 
+    // Stream the installer's output to debug as it arrives. The install can
+    // hang if the package manager prompts for input (e.g. corepack download
+    // confirmations, store migration recovery) — with output piped, that
+    // prompt is otherwise invisible. Running with --debug reveals what the
+    // installer said last before any hang.
     upgradeProcess.stdout?.on('data', (data: Buffer) => {
       stdout.push(Uint8Array.from(data));
+      output.debug(`[upgrade stdout] ${data.toString().trimEnd()}`);
     });
 
     upgradeProcess.stderr?.on('data', (data: Buffer) => {
       stderr.push(Uint8Array.from(data));
+      output.debug(`[upgrade stderr] ${data.toString().trimEnd()}`);
     });
 
     upgradeProcess.on('error', (err: Error) => {
