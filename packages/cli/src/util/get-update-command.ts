@@ -107,12 +107,8 @@ async function getConfigPrefix() {
 
 /**
  * Detects a pnpm global install: the CLI runs from inside `PNPM_HOME`.
- * Layout-independent (pnpm has changed its global layout across majors) and
- * more reliable than `pnpm root -g`, which returns stale or unusable paths
- * for pnpm 11 installs (see pnpm/pnpm#11528). Checks the unresolved
- * entrypoint as well as the realpath'd install dir because pnpm 11 shims
- * exec a target inside `PNPM_HOME` whose realpath may escape into a
- * relocated store directory.
+ * Works across pnpm's global layout changes, unlike `pnpm root -g`
+ * (see pnpm/pnpm#11528).
  */
 async function isPnpmHomeInstall(installPath: string): Promise<boolean> {
   const pnpmHome = process.env.PNPM_HOME;
@@ -124,7 +120,7 @@ async function isPnpmHomeInstall(installPath: string): Promise<boolean> {
   try {
     candidates.push(await realpath(pnpmHome));
   } catch (_) {
-    // PNPM_HOME set but unresolvable; check the raw value only
+    // unresolvable; check the raw value only
   }
 
   const entrypoint = process.argv[1];
@@ -204,8 +200,6 @@ async function resolveInstall() {
     return { cliType: globalCliType, global: true };
   }
 
-  // The entrypoint may not resolve on disk (e.g. inside a virtual filesystem
-  // snapshot); treat that the same as finding no lockfile rather than crashing.
   let lockfileCliType: string | undefined;
   try {
     const entrypoint = await realpath(process.argv[1]);
@@ -216,13 +210,11 @@ async function resolveInstall() {
       lockfileCliType = cliType;
     }
   } catch (_) {
-    // fall through to the global npm default below
+    // entrypoint may not resolve on disk (e.g. virtual filesystem snapshot)
   }
 
-  // Only classify as a local install with positive evidence (a lockfile
-  // above the install). A wrong "local" runs `<pm> i vercel@latest` in the
-  // user's cwd, mutating whatever project they are standing in; unknown
-  // layouts must degrade to a global upgrade, which runs from a temp dir.
+  // No lockfile above the install — never guess "local": a wrong local
+  // install runs in (and mutates) the user's cwd. Default to global.
   if (!lockfileCliType) {
     return { cliType: 'npm' as const, global: true };
   }
