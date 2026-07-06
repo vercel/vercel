@@ -25,6 +25,7 @@ import {
   recordSeedAttempt,
   getVersionDir,
   getStoreEntrypoint,
+  isConfidentlyGlobal,
 } from '../../../src/util/cli-store';
 
 let root: string;
@@ -190,6 +191,61 @@ describe('extractTarball', () => {
     await expect(
       extractTarball(Buffer.from('definitely not gzip'), join(root, 'out'))
     ).rejects.toThrow();
+  });
+});
+
+describe('isConfidentlyGlobal', () => {
+  const originalPnpmHome = process.env.PNPM_HOME;
+
+  afterEach(() => {
+    if (originalPnpmHome === undefined) {
+      delete process.env.PNPM_HOME;
+    } else {
+      process.env.PNPM_HOME = originalPnpmHome;
+    }
+  });
+
+  it('accepts an npm-global-shaped install (node_modules, no lockfile above)', () => {
+    delete process.env.PNPM_HOME;
+    const dir = join(root, 'lib', 'node_modules', 'vercel');
+    mkdirpSync(dir);
+    expect(isConfidentlyGlobal(dir)).toBe(true);
+  });
+
+  it('rejects a project-shaped install (lockfile above node_modules)', () => {
+    delete process.env.PNPM_HOME;
+    const dir = join(root, 'my-app', 'node_modules', 'vercel');
+    mkdirpSync(dir);
+    writeFileSync(join(root, 'my-app', 'package-lock.json'), '{}');
+    expect(isConfidentlyGlobal(dir)).toBe(false);
+  });
+
+  it('accepts anything under PNPM_HOME even with a lockfile present', () => {
+    // pnpm 11 isolated globals carry their own pnpm-lock.yaml; PNPM_HOME
+    // containment must take precedence over the lockfile heuristic.
+    process.env.PNPM_HOME = join(root, 'pnpm-home');
+    const dir = join(
+      root,
+      'pnpm-home',
+      'global',
+      'v11',
+      'hash',
+      'node_modules',
+      'vercel'
+    );
+    mkdirpSync(dir);
+    writeFileSync(
+      join(root, 'pnpm-home', 'global', 'v11', 'hash', 'pnpm-lock.yaml'),
+      ''
+    );
+    expect(isConfidentlyGlobal(dir)).toBe(true);
+  });
+
+  it('rejects paths not under any node_modules (ambiguous)', () => {
+    delete process.env.PNPM_HOME;
+    const dir = join(root, 'some', 'random', 'place');
+    mkdirpSync(dir);
+    expect(isConfidentlyGlobal(dir)).toBe(false);
   });
 });
 

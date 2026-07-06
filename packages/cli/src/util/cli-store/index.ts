@@ -26,7 +26,7 @@
 import { createHash } from 'crypto';
 import { execFileSync } from 'child_process';
 import { homedir } from 'os';
-import { join, dirname } from 'path';
+import { join, dirname, sep } from 'path';
 import { Readable } from 'stream';
 import zlib from 'zlib';
 import tar from 'tar-fs';
@@ -410,6 +410,55 @@ export function getStoreEntrypoint(
   root: string = getStoreRoot()
 ): string {
   return join(getVersionDir(version, root), 'dist', 'vc.js');
+}
+
+const LOCKFILES = [
+  'package-lock.json',
+  'pnpm-lock.yaml',
+  'yarn.lock',
+  'bun.lock',
+  'bun.lockb',
+];
+
+/**
+ * Store participation (redirect and seeding) is limited to installations we
+ * can confidently classify as global. Asymmetric by design: a false
+ * negative means an install keeps today's package-manager-managed behavior,
+ * while project dependencies must never participate — redirecting them
+ * would break lockfile reproducibility. Anything ambiguous resolves to
+ * "not global".
+ *
+ * Mirrored in store-redirect.mjs, which must stay dependency-free — keep
+ * the two implementations in sync.
+ */
+export function isConfidentlyGlobal(packageDir: string): boolean {
+  // pnpm global installs of any layout generation live under PNPM_HOME.
+  const pnpmHome = process.env.PNPM_HOME;
+  if (
+    pnpmHome &&
+    packageDir.startsWith(pnpmHome.replace(/[\\/]+$/, '') + sep)
+  ) {
+    return true;
+  }
+
+  // npm/yarn-classic globals: under node_modules with NO lockfile in any
+  // ancestor — npm never writes lockfiles for globals, while a project
+  // dependency always has one above it.
+  if (!packageDir.includes(sep + 'node_modules' + sep)) {
+    return false;
+  }
+  let dir = packageDir;
+  for (let i = 0; i < 30; i++) {
+    for (const lockfile of LOCKFILES) {
+      if (existsSync(join(dir, lockfile))) {
+        return false;
+      }
+    }
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return true;
 }
 
 /**

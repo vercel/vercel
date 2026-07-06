@@ -6,13 +6,63 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { join, dirname, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 
 const STORE_FORMAT = 1;
 
 function storeRoot() {
   return process.env.VERCEL_CLI_STORE_DIR || join(homedir(), '.vercel', 'cli');
+}
+
+const LOCKFILES = [
+  'package-lock.json',
+  'pnpm-lock.yaml',
+  'yarn.lock',
+  'bun.lock',
+  'bun.lockb',
+];
+
+/**
+ * Store participation is limited to installations we can confidently
+ * classify as global. The check is deliberately asymmetric: a false
+ * negative only means an install keeps today's behavior (runs itself,
+ * package-manager-managed), while project dependencies must never be
+ * redirected — that would break lockfile reproducibility. Anything
+ * ambiguous therefore resolves to "not global".
+ */
+export function isConfidentlyGlobal(packageDir) {
+  // pnpm global installs of any layout generation live under PNPM_HOME.
+  const pnpmHome = process.env.PNPM_HOME;
+  if (
+    pnpmHome &&
+    packageDir.startsWith(pnpmHome.replace(/[\\/]+$/, '') + sep)
+  ) {
+    return true;
+  }
+
+  // npm/yarn-classic global installs: <prefix>/lib/node_modules/vercel (or
+  // <prefix>/node_modules/vercel on Windows) with NO lockfile in any
+  // ancestor directory — npm has never written lockfiles for globals,
+  // while a genuine project dependency always has one above it.
+  const marker = sep + 'node_modules' + sep;
+  const idx = packageDir.lastIndexOf(marker);
+  if (idx === -1) {
+    return false;
+  }
+  let dir = packageDir;
+  for (let i = 0; i < 30; i++) {
+    for (const lockfile of LOCKFILES) {
+      if (existsSync(join(dir, lockfile))) {
+        return false; // lockfile above the install: project-shaped, stay exact
+      }
+    }
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return true;
 }
 
 // Minimal semver x.y.z comparison (no prerelease/range support — the store
@@ -36,6 +86,18 @@ function gt(a, b) {
  */
 export async function redirectToStoreIfNewer() {
   const root = storeRoot();
+
+  // Only confidently-global installations participate. Project dependencies
+  // (and anything ambiguous) always run exactly the version that was
+  // invoked — the lockfile is authoritative.
+  try {
+    const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
+    if (!isConfidentlyGlobal(packageDir)) {
+      return;
+    }
+  } catch {
+    return; // cannot determine own location — stay exact
+  }
 
   let pointer;
   try {

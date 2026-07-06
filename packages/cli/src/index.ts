@@ -71,6 +71,7 @@ import {
   shouldSeedStore,
   shouldAttemptSeed,
   recordSeedAttempt,
+  isConfidentlyGlobal,
 } from './util/cli-store';
 import {
   canAutoUpdate,
@@ -1378,7 +1379,11 @@ if (
   process.env.VERCEL_CLI_STORE_REDIRECTED !== '1'
 ) {
   try {
-    if (shouldSeedStore(pkg.version) && shouldAttemptSeed(pkg.version)) {
+    if (
+      isConfidentlyGlobal(join(__dirname, '..')) &&
+      shouldSeedStore(pkg.version) &&
+      shouldAttemptSeed(pkg.version)
+    ) {
       recordSeedAttempt(pkg.version);
       const workerPath = join(__dirname, 'seed-store-worker.js');
       if (existsSync(workerPath)) {
