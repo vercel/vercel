@@ -85,6 +85,19 @@ describe('partitionManifest', () => {
     expect(requiresUpdate.map(s => s.entry.slug)).toEqual(['new']);
   });
 
+  it('treats entries with a malformed minCliVersion as stale instead of throwing', () => {
+    const { frameworks, requiresUpdate } = partitionManifest(
+      [
+        entry({ slug: 'old' }),
+        entry({ slug: 'bad', minCliVersion: 'not-a-version' }),
+      ],
+      { cliVersion: '54.0.0' }
+    );
+    expect(frameworks.map(f => f.slug)).toEqual(['old']);
+    expect(requiresUpdate.map(s => s.entry.slug)).toEqual(['bad']);
+    expect(requiresUpdate[0].reason).toBe('min-cli-version');
+  });
+
   it('preserves failOnStale on stale entries', () => {
     const { requiresUpdate } = partitionManifest(
       [

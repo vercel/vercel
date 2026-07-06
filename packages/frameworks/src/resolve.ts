@@ -87,10 +87,12 @@ export function partitionManifest(
 
   for (const entry of manifest) {
     if (typeof cliVersion === 'string' && entry.minCliVersion) {
-      // Non-semver CLI versions (e.g. snapshot builds) can't be compared,
-      // so version-gated entries are conservatively treated as stale.
+      // When either side isn't valid semver (snapshot CLI builds, or a
+      // malformed manifest entry), the versions can't be compared, so the
+      // entry is conservatively treated as stale.
       const version = semverValid(cliVersion);
-      if (!version || semverLt(version, entry.minCliVersion)) {
+      const minVersion = semverValid(entry.minCliVersion);
+      if (!version || !minVersion || semverLt(version, minVersion)) {
         requiresUpdate.push({ entry, reason: 'min-cli-version' });
         continue;
       }
