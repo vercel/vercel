@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Emit service-boundary markers during multi-service builds so the build-container can tag each build log line with the service that produced it.
+Prefix each build output line with a service tag during multi-service builds so the build-container can attribute every build log line to the service that produced it.

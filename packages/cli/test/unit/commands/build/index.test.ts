@@ -5,7 +5,7 @@ import {
   getWriteableDirectory,
   sanitizeConsumerName,
 } from '@vercel/build-utils';
-import build from '../../../../src/commands/build';
+import build, { tagServiceOutput } from '../../../../src/commands/build';
 import cliPkg from '../../../../src/util/pkg';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
@@ -1196,29 +1196,86 @@ describe.skipIf(flakey)('build', () => {
     expect(reportConfig.handler).toContain('__vc_cron_dispatch');
   });
 
-  it('should emit service-boundary markers around each service build', async () => {
-    // Two services (cleanup, report) build in one deployment. The CLI announces each
-    // boundary on stderr so the build-container can attribute build log lines to a
-    // service, then resets attribution once the service finishes.
-    const cwd = fixture('with-services-cron-nested');
-    client.cwd = cwd;
-    const exitCode = await build(client);
-    expect(exitCode).toBe(0);
+  describe('tagServiceOutput', () => {
+    // tagServiceOutput wraps process.stdout/stderr.write to prefix each line with the
+    // service tag the build-container strips. Capture what reaches the underlying write.
+    function captureWrites(stream: NodeJS.WriteStream) {
+      const chunks: string[] = [];
+      const spy = vi
+        .spyOn(stream, 'write')
+        .mockImplementation((chunk: string | Uint8Array) => {
+          chunks.push(
+            typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString()
+          );
+          return true;
+        });
+      return { chunks, spy };
+    }
 
-    const stderr = client.stderr.getFullOutput();
-    expect(stderr).toContain('[vc:service] cleanup\n');
-    expect(stderr).toContain('[vc:service] report\n');
-    // Attribution is reset (empty name) after each service so inter-service lines are untagged.
-    expect(stderr).toContain('[vc:service] \n');
-  });
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
 
-  it('should not emit service-boundary markers for a single-project build', async () => {
-    const cwd = fixture('node');
-    client.cwd = cwd;
-    const exitCode = await build(client);
-    expect(exitCode).toBe(0);
+    it('prefixes each complete line written to stdout and stderr', () => {
+      const out = captureWrites(process.stdout);
+      const err = captureWrites(process.stderr);
 
-    expect(client.stderr.getFullOutput()).not.toContain('[vc:service]');
+      const restore = tagServiceOutput('frontend');
+      process.stdout.write('building\ncompiled\n');
+      process.stderr.write('a warning\n');
+      restore();
+
+      expect(out.chunks.join('')).toBe(
+        '[vc:service:frontend] building\n[vc:service:frontend] compiled\n'
+      );
+      expect(err.chunks.join('')).toBe('[vc:service:frontend] a warning\n');
+    });
+
+    it('buffers partial lines across writes and only tags at line starts', () => {
+      const out = captureWrites(process.stdout);
+
+      const restore = tagServiceOutput('api');
+      process.stdout.write('Instal');
+      process.stdout.write('ling deps\nDone\n');
+      restore();
+
+      expect(out.chunks.join('')).toBe(
+        '[vc:service:api] Installing deps\n[vc:service:api] Done\n'
+      );
+    });
+
+    it('flushes a trailing unterminated line on restore', () => {
+      const out = captureWrites(process.stdout);
+
+      const restore = tagServiceOutput('api');
+      process.stdout.write('no newline here');
+      restore();
+
+      expect(out.chunks.join('')).toBe('[vc:service:api] no newline here');
+    });
+
+    it('handles Buffer chunks', () => {
+      const out = captureWrites(process.stdout);
+
+      const restore = tagServiceOutput('worker');
+      process.stdout.write(Buffer.from('from a buffer\n'));
+      restore();
+
+      expect(out.chunks.join('')).toBe('[vc:service:worker] from a buffer\n');
+    });
+
+    it('restores the original write so later output is untagged', () => {
+      const out = captureWrites(process.stdout);
+
+      const restore = tagServiceOutput('frontend');
+      process.stdout.write('tagged\n');
+      restore();
+      process.stdout.write('untagged\n');
+
+      expect(out.chunks.join('')).toBe(
+        '[vc:service:frontend] tagged\nuntagged\n'
+      );
+    });
   });
 
   it('should build a JS cron service through the cron dispatcher', async () => {
