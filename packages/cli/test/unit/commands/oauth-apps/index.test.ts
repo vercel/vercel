@@ -20,6 +20,7 @@ describe('oauth-apps', () => {
         contextName: 'acme',
         team: { id: 'team_oauth_install', slug: 'acme' } as any,
         user: {} as any,
+        app: null,
       });
     });
 
@@ -100,6 +101,7 @@ describe('oauth-apps', () => {
         contextName: 'acme',
         team: { id: 'team_testoauth', slug: 'acme' } as any,
         user: {} as any,
+        app: null,
       });
     });
 
@@ -196,6 +198,7 @@ describe('oauth-apps', () => {
         contextName: 'solo',
         team: null,
         user: {} as any,
+        app: null,
       });
 
       client.nonInteractive = true;

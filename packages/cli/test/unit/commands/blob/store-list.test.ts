@@ -137,6 +137,7 @@ describe('blob list-stores', () => {
         contextName: 'my-team',
         team: { id: 'team_123', slug: 'my-team' } as any,
         user: {} as any,
+        app: null,
       });
     });
 
@@ -168,6 +169,7 @@ describe('blob list-stores', () => {
         contextName: '',
         team: null,
         user: {} as any,
+        app: null,
       });
 
       const exitCode = await listStores(client, []);
@@ -229,6 +231,7 @@ describe('blob list-stores', () => {
         contextName: 'my-team',
         team: { id: 'team_123', slug: 'my-team' } as any,
         user: {} as any,
+        app: null,
       });
       client.fetch = vi.fn().mockResolvedValue({ stores: [] });
 
