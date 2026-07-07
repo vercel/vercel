@@ -27,6 +27,7 @@ When adding a durable contract, add a row to `SKILL.md` so agents load it only f
 
 Rules:
 
+- Every command that establishes a link (`vc link`, `vc deploy`, `vc pull`, `vc dev`, `vc git connect`, …) uses the same flow: team first (explicit signal, single choice, or searchable picker), then project suggestions scoped to the chosen team. There is no cross-team project sweep. An explicit project name (`--project`, `--name`, `vercel.json` `name`) skips the suggestions and resolves directly within the team.
 - Before mutation, know whether linking existing project or creating a new one.
 - Running `vc link` is setup intent; do not ask a vague setup-intent prompt.
 - In direct interactive `vc link`, resolve the team before searching for or selecting a project. An explicit `--team`/`--scope` skips the team prompt and restricts project discovery to that team.
@@ -43,15 +44,8 @@ Rules:
 - The new-project `Name?` default must be creatable: when the slugified folder name is already a project in the selected team, suggest `<folder-name>-<4-char suffix>` instead of a default that can only fail `Project already exists` validation.
 - Do not ask `Link to existing project?` when no concrete project is shown. Ask `Project?` with `Create new project` and `Link existing project` choices instead.
 - Do not create a project from a user-supplied `--project` value that was not found.
-- Folder-name matches across teams are lower confidence than repo-root or explicit matches.
-- Cross-team matches need visible team/search context before linking.
-- Print searched-team scope only when search scope affects interpretation, such as multiple teams or manual SSO fallback. Keep it dim and compact: `Searched 13 teams`, not a wrapped list of team slugs. Do not add it to a one-team happy path.
 - Existing-project confirmation paths outside the direct project chooser show `Directory` once as setup state, then `Found existing project` as a status heading and aligned `Project` before confirmation. If no setup-state `Directory` row exists, include `Directory` in the found-project block instead.
-- Repository matches show `Found existing project`, then aligned `Project` and `Source` rows before confirmation.
-- Ask for the link action after preview rows: `Link directory to project?` or `Link repository to project?`. Do not ask `Link to this project?` after the values are already visible.
-- When without-SSO team search finds no match, show `Searched {count} teams available without SSO`, then `No matching projects found`, then ask `Select teams that require SSO`.
-- Use a manual team multiselect for the SSO fallback because each selected team may require the user to log in through SSO.
-- Keep checkbox instructions inline, dim, and unwrapped: `<space> select, <enter> confirm, <a> toggle all, <i> invert`.
+- Ask for the link action after preview rows: `Link directory to project?`. Do not ask `Link to this project?` after the values are already visible.
 - Use `requires SSO` / `teams that require SSO`; do not use `SSO-protected` in new human copy.
 - `--scope` may remain compatibility input; user-facing copy uses `team`.
 - Use `Which team?`, `Name?`, `Customize settings?`, and `Loading teams…`.
@@ -79,8 +73,6 @@ Link prompt map:
 | Single team                        | no prompt; aligned `Team` row, then project discovery                                                                                                                                | proceeds with that team                |
 | One folder-name project match      | `Which project?` with the match labeled `(folder name)`, then search/create choices                                                                                                  | link only for explicit/repo-root match |
 | One repository project match       | direct interactive: `Which project?` with the match labeled `(linked by git)`; other paths: `Found existing project`, aligned `Project`/`Source`, then `Link repository to project?` | link only for explicit/repo-root match |
-| Multiple project matches           | aligned `Projects` summary, then searchable `Project?`                                                                                                                               | `action_required: ambiguous_project`   |
-| No without-SSO match, SSO required | `Searched {count} teams available without SSO`, `No matching projects found`, then `Select teams that require SSO`                                                                   | skip unless explicitly requested       |
 | No project match                   | `Which project?` with `Search all projects` / `Create a new project`, then `Name?` when creating                                                                                     | require `--yes` or `project_not_found` |
 | Root choices exist                 | `Code directory?`                                                                                                                                                                    | require root flag/config/payload       |
 | Settings differ                    | `Customize settings?`                                                                                                                                                                | require flags/config/payload           |
@@ -104,8 +96,6 @@ Link acceptance matrix:
 - explicit `--team`
 - explicit valid and missing `--project`
 - repo-root and folder-name matches
-- multiple project matches across teams
-- no match in teams available without SSO, then manual selection/search for teams that require SSO
 - no match plus create project
 - monorepo/root-directory selection
 - non-TTY and `--non-interactive`

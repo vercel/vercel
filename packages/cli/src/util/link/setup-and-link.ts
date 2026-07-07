@@ -1,4 +1,3 @@
-import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { join, basename } from 'path';
 import { getPlatformEnv } from '@vercel/build-utils';
@@ -7,7 +6,6 @@ import type {
   ProjectLinkResult,
   ProjectSettings,
   Org,
-  Team,
 } from '@vercel-internals/types';
 import {
   getLinkedProject,
@@ -57,9 +55,7 @@ import {
   toProjectRootDirectory,
   type InferredServicesChoice,
 } from './services-setup';
-import searchProjectAcrossTeams, {
-  searchProjectsByRepoRoot,
-} from '../projects/search-project-across-teams';
+import { searchProjectsByRepoRoot } from '../projects/search-project-across-teams';
 import type { CrossTeamMatch } from '../projects/search-project-across-teams';
 import { isPromptCanceledError } from '../input/prompt-cancellation';
 
@@ -76,35 +72,12 @@ export interface SetupAndLinkOptions {
   pullEnv?: boolean;
   /** When true, indicates the project is being created from v0 (grants V0Builder permissions) */
   v0?: boolean;
-  /** When true, search matching projects across teams before standard linking flow */
-  searchAcrossTeams?: boolean;
-  /** When true, filter the interactive team picker by name or slug. */
-  searchableTeamPicker?: boolean;
-  /** When true, show folder matches before search and project creation. */
-  showProjectSuggestions?: boolean;
   /**
    * When true with an explicit `projectName`, bail out instead of running
    * `setupAndLink`. Use for user-supplied `--project <NAME_OR_ID>` so typos
    * fail fast rather than creating a new project.
    */
   failIfNotFound?: boolean;
-}
-
-function formatMatchReason(match: CrossTeamMatch): string {
-  if (match.reason === 'repo-root') {
-    return chalk.gray('(linked by git)');
-  }
-  return chalk.gray('(folder name)');
-}
-
-function formatCrossTeamMatch(match: CrossTeamMatch): string {
-  return `${chalk.bold(match.org.slug)}/${match.project.name} ${formatMatchReason(
-    match
-  )}`;
-}
-
-function formatMatchSource(match: CrossTeamMatch): string {
-  return match.reason === 'repo-root' ? 'Git repository' : 'Folder name';
 }
 
 function isCrossTeamMatch(value: unknown): value is CrossTeamMatch {
@@ -149,35 +122,6 @@ async function selectOrgForLink(
     }
 
     throw err;
-  }
-}
-
-const CHECKBOX_INSTRUCTIONS = [
-  '\n  ',
-  chalk.dim('('),
-  chalk.cyan('<space>'),
-  chalk.dim(' select, '),
-  chalk.cyan('<enter>'),
-  chalk.dim(' confirm, '),
-  chalk.cyan('<a>'),
-  chalk.dim(' toggle all, '),
-  chalk.cyan('<i>'),
-  chalk.dim(' invert)'),
-].join('');
-
-function printCrossTeamSearchScope({
-  searchedTeamSlugs,
-}: {
-  searchedTeamSlugs: string[];
-}): void {
-  if (searchedTeamSlugs.length > 0) {
-    output.print(
-      `  ${chalk.dim(
-        `Searched ${searchedTeamSlugs.length} ${
-          searchedTeamSlugs.length === 1 ? 'team' : 'teams'
-        }`
-      )}\n`
-    );
   }
 }
 
@@ -333,176 +277,6 @@ async function linkCrossTeamMatch({
   return { status: 'linked', org: match.org, project: match.project };
 }
 
-async function promptForLimitedTeams(
-  client: Client,
-  teams: Team[]
-): Promise<Team[]> {
-  if (teams.length === 0) {
-    return [];
-  }
-
-  return await client.input.checkbox<Team>({
-    message: 'Select teams that require SSO',
-    instructions: CHECKBOX_INSTRUCTIONS,
-    choices: teams.map(team => ({
-      name: team.name ? `${team.name} (${team.slug})` : team.slug,
-      value: team,
-    })),
-  });
-}
-
-async function searchSelectedLimitedTeams({
-  client,
-  path,
-  projectName,
-  gitProjectName,
-  teams,
-}: {
-  client: Client;
-  path: string;
-  projectName: string;
-  gitProjectName?: string;
-  teams: Team[];
-}): Promise<CrossTeamMatch[]> {
-  const selectedTeams = await promptForLimitedTeams(client, teams);
-  if (selectedTeams.length === 0) {
-    return [];
-  }
-
-  output.spinner('Searching selected teams that require SSO…', 1000);
-  try {
-    const result = await searchProjectAcrossTeams(client, projectName, path, {
-      teams: selectedTeams,
-      skipLimited: false,
-      gitProjectName,
-    });
-    printCrossTeamSearchScope({
-      searchedTeamSlugs: result.searchedTeamSlugs,
-    });
-    return result.matches;
-  } catch (err) {
-    if (isPromptCanceledError(err)) {
-      throw err;
-    }
-    output.debug(`Selected team search requiring SSO failed: ${err}`);
-    return [];
-  } finally {
-    output.stopSpinner();
-  }
-}
-
-async function linkCrossTeamMatches({
-  client,
-  path,
-  matches,
-  successEmoji,
-  autoConfirm,
-  nonInteractive,
-  pullEnv,
-}: {
-  client: Client;
-  path: string;
-  matches: CrossTeamMatch[];
-  successEmoji: EmojiLabel;
-  autoConfirm: boolean;
-  nonInteractive: boolean;
-  pullEnv: boolean;
-}): Promise<ProjectLinkResult | null> {
-  if (matches.length === 0) {
-    return null;
-  }
-
-  if (matches.length === 1) {
-    const match = matches[0];
-
-    if (autoConfirm || nonInteractive) {
-      return await linkCrossTeamMatch({
-        client,
-        path,
-        match,
-        successEmoji,
-        autoConfirm,
-        pullEnv,
-      });
-    }
-
-    output.print('\n');
-    output.print(`  ${chalk.bold('Found existing project')}\n`);
-    if (match.reason === 'repo-root') {
-      printAlignedLabel('Project', `${match.org.slug}/${match.project.name}`);
-      printAlignedLabel('Source', formatMatchSource(match));
-    } else {
-      printAlignedLabel('Project', `${match.org.slug}/${match.project.name}`);
-    }
-    const confirmed = await client.input.confirm(
-      match.reason === 'repo-root'
-        ? 'Link repository to project?'
-        : 'Link directory to project?',
-      true
-    );
-    if (confirmed) {
-      return await linkCrossTeamMatch({
-        client,
-        path,
-        match,
-        successEmoji,
-        autoConfirm,
-        pullEnv,
-      });
-    }
-    return null;
-  }
-
-  const currentTeamMatch = matches.find(
-    match => match.org.id === client.config.currentTeam
-  );
-
-  if (autoConfirm && currentTeamMatch) {
-    return await linkCrossTeamMatch({
-      client,
-      path,
-      match: currentTeamMatch,
-      successEmoji,
-      autoConfirm,
-      pullEnv,
-    });
-  }
-
-  if (nonInteractive) {
-    return null;
-  }
-
-  const choices = matches.map(match => ({
-    name: formatCrossTeamMatch(match),
-    value: match as CrossTeamMatch | null,
-  }));
-  choices.push({
-    name: 'Not one of these projects',
-    value: null,
-  });
-
-  output.print('\n');
-  printAlignedLabel('Projects', `${matches.length} matches across teams`);
-  const selected = await client.input.select<CrossTeamMatch | null>({
-    message: 'Which project?',
-    choices,
-    default: currentTeamMatch ?? undefined,
-  });
-
-  if (!selected) {
-    return null;
-  }
-
-  return await linkCrossTeamMatch({
-    client,
-    path,
-    match: selected,
-    successEmoji,
-    autoConfirm,
-    pullEnv,
-  });
-}
-
 export default async function setupAndLink(
   client: Client,
   path: string,
@@ -516,9 +290,6 @@ export default async function setupAndLink(
     nonInteractive = false,
     pullEnv = true,
     v0,
-    searchAcrossTeams = false,
-    searchableTeamPicker = false,
-    showProjectSuggestions = false,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
   const { config } = client;
@@ -593,100 +364,13 @@ export default async function setupAndLink(
   printAlignedLabel('Directory', toHumanPath(path));
   output.print('\n');
 
-  let skipAutoDetect = false;
-  if (searchAcrossTeams) {
-    // Search for existing projects across all teams
-    let crossTeamMatches: CrossTeamMatch[] = [];
-    let searchedTeamSlugs: string[] = [];
-    let skippedLimitedTeams: Team[] = [];
-    output.spinner('Searching for existing projects…', 1000);
-    try {
-      const searchResult = await searchProjectAcrossTeams(
-        client,
-        projectName,
-        path,
-        {
-          autoConfirm,
-          nonInteractive,
-          gitProjectName,
-        }
-      );
-      crossTeamMatches = searchResult.matches;
-      searchedTeamSlugs = searchResult.searchedTeamSlugs;
-      skippedLimitedTeams = searchResult.skippedLimitedTeams;
-    } catch (err) {
-      if (isPromptCanceledError(err)) {
-        throw err;
-      }
-      output.debug(`Cross-team search failed: ${err}`);
-    } finally {
-      output.stopSpinner();
-    }
-
-    if (
-      crossTeamMatches.length > 0 &&
-      searchedTeamSlugs.length > 1 &&
-      !autoConfirm &&
-      !nonInteractive
-    ) {
-      printCrossTeamSearchScope({
-        searchedTeamSlugs,
-      });
-    }
-
-    const linkedMatch = await linkCrossTeamMatches({
-      client,
-      path,
-      matches: crossTeamMatches,
-      successEmoji,
-      autoConfirm,
-      nonInteractive,
-      pullEnv,
-    });
-    if (linkedMatch) {
-      return linkedMatch;
-    }
-
-    if (!autoConfirm && !nonInteractive && skippedLimitedTeams.length > 0) {
-      if (crossTeamMatches.length === 0) {
-        printAlignedLabel(
-          'Searched',
-          `${searchedTeamSlugs.length} ${
-            searchedTeamSlugs.length === 1 ? 'team' : 'teams'
-          } available without SSO`
-        );
-        output.print('  No matching projects found\n');
-      }
-      const limitedTeamMatches = await searchSelectedLimitedTeams({
-        client,
-        path,
-        projectName,
-        gitProjectName,
-        teams: skippedLimitedTeams,
-      });
-      const linkedLimitedMatch = await linkCrossTeamMatches({
-        client,
-        path,
-        matches: limitedTeamMatches,
-        successEmoji,
-        autoConfirm,
-        nonInteractive,
-        pullEnv,
-      });
-      if (linkedLimitedMatch) {
-        return linkedLimitedMatch;
-      }
-      if (limitedTeamMatches.length === 0) {
-        output.print('  No matching projects found in the selected teams.\n');
-      }
-      skipAutoDetect =
-        skipAutoDetect ||
-        crossTeamMatches.length > 0 ||
-        limitedTeamMatches.length > 0;
-    } else if (crossTeamMatches.length > 0) {
-      skipAutoDetect = true;
-    }
-  }
+  // Every command that establishes a link gets the same interactive flow:
+  // searchable team picker, then Git/folder project suggestions scoped to
+  // the chosen team. An explicit project name skips the suggestions and is
+  // resolved directly.
+  const interactive = isTTY && !nonInteractive;
+  const searchableTeamPicker = interactive;
+  const showProjectSuggestions = interactive && !gitProjectName;
 
   let projectOrNewProjectName: Awaited<ReturnType<typeof inputProject>>;
   // When the team was auto-selected as the only choice, there is no other
@@ -709,7 +393,7 @@ export default async function setupAndLink(
     }
 
     let repoMatches: CrossTeamMatch[] = [];
-    if (showProjectSuggestions && !skipAutoDetect) {
+    if (showProjectSuggestions) {
       output.spinner('Searching for existing projects…', 1000);
       try {
         repoMatches = await searchProjectsByRepoRoot({
@@ -736,7 +420,7 @@ export default async function setupAndLink(
         org,
         projectName,
         autoConfirm,
-        skipAutoDetect,
+        false,
         showProjectSuggestions,
         searchableTeamPicker && !selectedOrg && !teamAutoSelected,
         repoMatches

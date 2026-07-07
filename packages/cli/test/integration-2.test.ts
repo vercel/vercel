@@ -9,6 +9,7 @@ import fs, { writeFile, readFile, remove, ensureDir } from 'fs-extra';
 import sleep from '../src/util/sleep';
 import waitForPrompt, {
   answerTeamPromptThenWait,
+  answerTeamPromptThenCreateProject,
 } from './helpers/wait-for-prompt';
 import { execCli } from './helpers/exec';
 import { listTmpDirs } from './helpers/get-tmp-dir';
@@ -1551,9 +1552,9 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   });
 
   await waitForPrompt(vc, 'Directory');
-  // Single-team accounts auto-select the team; answer the prompt only if shown.
-  await answerTeamPromptThenWait(vc, 'Project?');
-  vc.stdin?.write('\n');
+  // Single-team accounts auto-select the team; answer the prompt only if
+  // shown, then choose project creation in whichever prompt style appears.
+  await answerTeamPromptThenCreateProject(vc);
   await waitForPrompt(vc, 'Name?');
   vc.stdin?.write('\n');
   await waitForPrompt(vc, 'Customize settings?');

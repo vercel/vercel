@@ -182,12 +182,13 @@ export default async function selectOrg(
     process.exit(1);
   }
 
-  // `--yes` answers confirmations, not data questions: an explicit signal
-  // resolves the team, but it is never guessed from the globally selected
-  // team. With multiple choices and no signal, ask.
-  if (autoConfirm) {
-    const match = matchExplicitScope();
-    if (match) return match;
+  // An explicit signal answers the team question without prompting. The team
+  // is never guessed from the globally selected team — with multiple choices
+  // and no signal, ask (even under `--yes`, which answers confirmations, not
+  // data questions).
+  const explicitOrg = matchExplicitScope();
+  if (explicitOrg) {
+    return explicitOrg;
   }
 
   // A single choice is unambiguous: skip the prompt and show the resolved

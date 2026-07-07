@@ -38,6 +38,30 @@ export async function answerTeamPromptThenWait(
   );
 }
 
+/**
+ * Tolerantly walks the link setup to project creation: answers `Which team?`
+ * if it appears, then handles either the unified `Which project?` picker
+ * (creation is the second choice) or the legacy `Project?` decision
+ * (creation is the default).
+ */
+export async function answerTeamPromptThenCreateProject(cp: CLIProcess) {
+  let answeredTeam = false;
+  let usesTeamFirstPicker = false;
+  await waitForPrompt(cp, chunk => {
+    if (!answeredTeam && /Which team[^?]*\?/.test(chunk)) {
+      answeredTeam = true;
+      cp.stdin?.write('\n');
+      return false;
+    }
+    usesTeamFirstPicker = chunk.includes('Which project?');
+    return usesTeamFirstPicker || chunk.includes('Project?');
+  });
+  if (usesTeamFirstPicker) {
+    cp.stdin?.write('\x1b[B');
+  }
+  cp.stdin?.write('\n');
+}
+
 export default async function waitForPrompt(
   cp: CLIProcess,
   rawAssertion: string | RegExp | ((chunk: string) => boolean),

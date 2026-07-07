@@ -1942,8 +1942,10 @@ describe('deploy', () => {
         await expect(client.stderr).toOutput('? Which team?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Project?');
-        client.stdin.write('\n');
+        // Unified flow: the project picker replaces the create/link decision.
+        await expect(client.stderr).toOutput('Which project?');
+        client.events.keypress('down');
+        client.events.keypress('enter');
 
         // The one expecation that the test is actually about!
         await expect(client.stderr).toOutput(`Name? (${directoryName})`);

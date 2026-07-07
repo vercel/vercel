@@ -178,10 +178,6 @@ async function linkProject(client: Client) {
     // Non-interactive when flag is passed or when agent (e.g. no TTY) so JSON is output when confirmation needed
     const linkNonInteractive =
       client.nonInteractive || client.argv.includes('--non-interactive');
-    // `--yes` goes through the same team-first flow: the team comes from an
-    // explicit signal, a single available choice, or the picker — it is
-    // never guessed and never resolved by sweeping every team for matches.
-    const teamFirstInteractive = client.stdin.isTTY && !linkNonInteractive;
 
     const link = await ensureLink('link', client, cwd, {
       autoConfirm: yes,
@@ -190,9 +186,6 @@ async function linkProject(client: Client) {
       projectName: parsedArgs.flags['--project'],
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
-      searchableTeamPicker: teamFirstInteractive,
-      showProjectSuggestions:
-        teamFirstInteractive && !parsedArgs.flags['--project'],
       pullEnv: false,
     });
 

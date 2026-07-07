@@ -389,7 +389,7 @@ describe('link', () => {
     });
 
     it('should track use of `--repo` flag', async () => {
-      useUser();
+      useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
 
       // Set up a `.git/config` file to simulate a repo
@@ -451,7 +451,7 @@ describe('link', () => {
     });
 
     it('should add projects to existing repo.json', async () => {
-      const user = useUser();
+      const user = useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
 
       // Set up a `.git/config` file to simulate a repo
@@ -575,7 +575,7 @@ describe('link', () => {
     });
 
     it('should not show detected projects for directories already linked to another org', async () => {
-      useUser();
+      useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
 
       // Set up a `.git/config` file to simulate a repo
@@ -629,7 +629,7 @@ describe('link', () => {
     });
 
     it('should track `add` subcommand telemetry', async () => {
-      useUser();
+      useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
 
       // Set up a `.git/config` file to simulate a repo
@@ -710,7 +710,7 @@ describe('link', () => {
 
     it('should track use of redacted `--project` option', async () => {
       const cwd = setupTmpDir();
-      useUser();
+      useUser({ version: 'northstar' });
       useTeams('team_dummy');
       const { project } = useProject({
         ...defaultProject,
@@ -772,7 +772,7 @@ describe('link', () => {
     });
 
     it('should track use of `--yes` flag', async () => {
-      useUser();
+      useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
       useTeams('team_dummy');
       useProject({
@@ -1291,7 +1291,7 @@ describe('link', () => {
 
   describe('--confirm', () => {
     it('should track use of `--confirm` flag', async () => {
-      useUser();
+      useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
       useTeams('team_dummy');
       useProject({
@@ -1983,7 +1983,7 @@ describe('link', () => {
   });
 
   it('should track use of deprecated `cwd` positional argument', async () => {
-    useUser();
+    useUser({ version: 'northstar' });
     const cwd = setupTmpDir();
     useTeams('team_dummy');
     useProject({
@@ -2751,7 +2751,7 @@ describe('link', () => {
       expect(projectJson.projectId).toEqual(projectA.id);
     });
 
-    it('should skip SAML-limited teams during cross-team search', async () => {
+    it('should never query other teams (including SAML-limited) under --yes', async () => {
       useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
       const projectName = basename(cwd);
@@ -2802,11 +2802,17 @@ describe('link', () => {
       client.setArgv('--yes');
       const reauthSpy = vi.spyOn(client, 'reauthenticate');
 
-      const exitCode = await link(client);
+      const exitCodePromise = link(client);
+
+      // `--yes` no longer guesses among multiple teams: pick teamA (first).
+      await expect(client.stderr).toOutput('Which team?');
+      client.events.keypress('enter');
+
+      const exitCode = await exitCodePromise;
 
       expect(exitCode).toEqual(0);
       expect(queriedTeamIds).toContain(teamA.id);
-      expect(queriedTeamIds).toContain(teamB.id);
+      expect(queriedTeamIds).not.toContain(teamB.id);
       expect(queriedTeamIds).not.toContain(teamC.id);
       expect(reauthSpy).not.toHaveBeenCalled();
 
@@ -2853,7 +2859,13 @@ describe('link', () => {
 
       client.cwd = projectDir;
       client.setArgv('--yes');
-      const exitCode = await link(client);
+      const exitCodePromise = link(client);
+
+      // `--yes` no longer guesses among multiple teams: pick teamA (first).
+      await expect(client.stderr).toOutput('Which team?');
+      client.events.keypress('enter');
+
+      const exitCode = await exitCodePromise;
 
       expect(exitCode).toEqual(0);
       const plainOutput = stripAnsi(client.stderr.getFullOutput());
@@ -2944,7 +2956,7 @@ describe('link', () => {
       ]);
     });
 
-    it('should respect --project when matching Git-linked projects', async () => {
+    it('should resolve an explicit --project within the selected team', async () => {
       useUser({ version: 'northstar' });
       const repoRoot = setupTmpDir();
       const projectDir = join(repoRoot, 'apps/web');
@@ -2979,6 +2991,15 @@ describe('link', () => {
         }
         return res.json({ projects: [], pagination: {} });
       });
+      client.scenario.get(
+        `/v9/projects/${expectedProject.name}`,
+        (req, res) => {
+          if (req.query.teamId === teamA.id) {
+            return res.json(expectedProject);
+          }
+          return res.status(404).json({ error: { code: 'not_found' } });
+        }
+      );
       useUnknownProject();
 
       client.cwd = projectDir;
@@ -2991,18 +3012,18 @@ describe('link', () => {
         'Linked',
       ]);
 
-      const repoJson = await readJSON(join(repoRoot, '.vercel/repo.json'));
-      expect(repoJson.projects).toEqual([
-        {
-          directory: 'apps/web',
-          id: expectedProject.id,
-          name: expectedProject.name,
-          orgId: teamA.id,
-        },
-      ]);
+      // An explicit --project resolves directly and links this directory;
+      // no repo-style link is created for it.
+      expect(
+        await readJSON(join(projectDir, '.vercel/project.json'))
+      ).toMatchObject({
+        orgId: teamA.id,
+        projectId: expectedProject.id,
+      });
+      expect(await pathExists(join(repoRoot, '.vercel/repo.json'))).toBe(false);
     });
 
-    it('should show repo-root and folder-name matches together', async () => {
+    it('should auto-link the Git match in the chosen team under --yes', async () => {
       useUser({ version: 'northstar' });
       const repoRoot = setupTmpDir();
       const projectDir = join(repoRoot, 'apps/web');
@@ -3048,8 +3069,9 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Not one of these projects');
-      client.stdin.write('\n');
+      // `--yes` no longer guesses among multiple teams: pick teamA (first).
+      await expect(client.stderr).toOutput('Which team?');
+      client.events.keypress('enter');
 
       await expect(client.stderr).toOutput(
         `✓ Linked          ${teamA.slug}/${repoProject.name}`
@@ -3116,7 +3138,7 @@ describe('link', () => {
     });
 
     describe('multiple matches', () => {
-      it('should auto-link to current team match with --yes', async () => {
+      it('should default the picker to the current team under --yes', async () => {
         useUser();
         const cwd = setupTmpDir();
         const projectName = basename(cwd);
@@ -3147,11 +3169,17 @@ describe('link', () => {
         });
         useUnknownProject();
 
-        // Set current team to team_a so it auto-picks that match
+        // The globally selected team is only the picker default, not a
+        // silent choice: Enter confirms it, then --yes links the match.
         client.config.currentTeam = 'team_a';
         client.cwd = cwd;
         client.setArgv('--yes');
-        const exitCode = await link(client);
+        const exitCodePromise = link(client);
+
+        await expect(client.stderr).toOutput('Which team?');
+        client.events.keypress('enter');
+
+        const exitCode = await exitCodePromise;
 
         expect(exitCode).toEqual(0);
         const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
@@ -3159,7 +3187,7 @@ describe('link', () => {
         expect(projectJson.orgId).toEqual('team_a');
       });
 
-      it('should prompt to select when --yes but no current team match', async () => {
+      it('should ask for the team under --yes when none is current', async () => {
         useUser();
         const cwd = setupTmpDir();
         const projectName = basename(cwd);
@@ -3189,16 +3217,15 @@ describe('link', () => {
         });
         useUnknownProject();
 
-        // No currentTeam set — can't auto-pick, must prompt
+        // No currentTeam set — the team question must be asked.
         client.cwd = cwd;
         client.setArgv('--yes');
         const exitCodePromise = link(client);
 
-        await expect(client.stderr).toOutput(
-          'Projects        2 matches across teams'
-        );
-        // Select first option (team_a)
-        client.stdin.write('\n');
+        await expect(client.stderr).toOutput('Which team?');
+        // Choices: personal account first, then team_a.
+        client.events.keypress('down');
+        client.events.keypress('enter');
 
         const exitCode = await exitCodePromise;
         expect(exitCode).toEqual(0);
