@@ -138,9 +138,17 @@ async function searchExistingProjects(
     return NO_EXISTING_PROJECTS;
   }
 
+  const pageSize = 15;
+  const countHint =
+    projects.length > pageSize
+      ? ` ${chalk.dim(
+          `(${hasMoreProjects ? '100+' : projects.length} projects)`
+        )}`
+      : '';
+
   return await client.input.search<Project | typeof BACK_TO_PROJECT_SELECTION>({
-    message: 'Which project?',
-    pageSize: 15,
+    message: `Which project?${countHint}`,
+    pageSize,
     source: async (term, { signal }) => {
       const searchTerm = term?.trim();
       let matchingProjects = projects;

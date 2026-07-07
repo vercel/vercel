@@ -242,9 +242,15 @@ export default async function selectOrg(
     ? [defaultChoice, ...choices.filter(choice => choice !== defaultChoice)]
     : choices;
 
+  const pageSize = 15;
+  const countHint =
+    choices.length > pageSize
+      ? ` ${chalk.dim(`(${choices.length} teams)`)}`
+      : '';
+
   return await client.input.search<Org>({
-    message: question,
-    pageSize: 15,
+    message: `${question}${countHint}`,
+    pageSize,
     source: term => {
       const searchTerm = term?.trim().toLowerCase();
       if (!searchTerm) {
