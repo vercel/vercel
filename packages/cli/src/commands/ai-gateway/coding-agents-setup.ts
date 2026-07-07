@@ -233,6 +233,9 @@ export default async function codingAgentsSetup(
     message: string;
   }> = [];
   const previewKey = providedKey ?? KEY_PLACEHOLDER;
+  // Set when every selected agent was consent-skipped: whether the existing
+  // setup already matches what a consented run would write.
+  let allSkippedConfigured = false;
   if (agentWarnings.length > 0) {
     const explicit = Boolean((agentFlags && agentFlags.length > 0) || all);
     if (canPrompt && !yes && !dryRun) {
@@ -268,10 +271,27 @@ export default async function codingAgentsSetup(
         printWarning(message);
       }
       agents = agents.filter(a => !consentSkipped.some(s => s.target === a.id));
-      if (agents.length === 0 && !dryRun) {
-        // Everything was consent-skipped: without explicit --agent/--all
-        // consent there is nothing this run may write.
-        return failConsent(client, machine, machineWarnings, consentSkipped);
+      if (agents.length === 0) {
+        // Everything was consent-skipped. A fully-configured setup is still a
+        // successful no-op (automation re-runs must not start failing once a
+        // login appears), so probe with the preview key before failing: on
+        // Keychain and env-only setups the key never lands in the files, so
+        // even a no-key re-run proves 'unchanged', while a setup this run
+        // would rewrite shows 'create'/'update'. The keychain prompt never
+        // runs on this branch, so wantKeychain is the resolved value.
+        const probePlan = await buildSetupPlan(selected, {
+          apiKey: previewKey,
+          home,
+          useKeychain: wantKeychain,
+          overrides,
+          shellRcOverride,
+        });
+        allSkippedConfigured = probePlan.changes.every(
+          c => c.status === 'unchanged'
+        );
+        if (!dryRun && !allSkippedConfigured) {
+          return failConsent(client, machine, machineWarnings, consentSkipped);
+        }
       }
     }
   }
@@ -395,11 +415,16 @@ export default async function codingAgentsSetup(
     const skippedSome = agents.length < selected.length;
     // Every selected agent was consent-skipped during a dry run: the plan is
     // empty because nothing was inspected, not because everything is set up.
+    // Predict the real run's outcome from the probe instead.
     if (dryRun && agents.length === 0 && consentSkipped.length > 0) {
       printStatus(
-        `All selected agents need explicit consent (see the warnings above) — a real run would fail. Pass ${consentSkipped
-          .map(s => `--agent ${s.target}`)
-          .join(' ')} (or --all) to consent. No files would be changed.`
+        allSkippedConfigured
+          ? providedKey && useKeychain
+            ? 'All selected agents need explicit consent (see the warnings above), but their existing configuration already uses the AI Gateway — a real run would only update the macOS Keychain with the provided key.'
+            : 'All selected agents need explicit consent (see the warnings above), but their existing configuration already uses the AI Gateway — a real run would make no changes.'
+          : `All selected agents need explicit consent (see the warnings above) — a real run would fail. Pass ${consentSkipped
+              .map(s => `--agent ${s.target}`)
+              .join(' ')} (or --all) to consent. No files would be changed.`
       );
       return 0;
     }

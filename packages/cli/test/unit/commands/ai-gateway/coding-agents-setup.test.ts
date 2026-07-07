@@ -2153,6 +2153,133 @@ describe('ai-gateway coding-agents setup', () => {
       expect(existsSync(codexConfigPath())).toBe(false);
     });
 
+    it('a no-key Keychain re-run stays already_configured after the desktop app appears', async () => {
+      useUser();
+      client.nonInteractive = true;
+      keychainState.available = true;
+      // First run stores the key in the Keychain; no consent needed yet.
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_Keychain0031',
+        '--agent',
+        'codex'
+      );
+      expect(await aiGateway(client)).toBe(0);
+      const stdoutAfterFirst = client.stdout.getFullOutput().length;
+      const bashrc = readFileSync(bashrcPath(), 'utf8');
+      // Keychain setup: the rc carries a lookup, never the key itself.
+      expect(bashrc).not.toContain('vck_Keychain0031');
+
+      // The desktop app appears, then automation re-runs with NO --key at all.
+      // The probe must still prove the setup unchanged (nothing embeds a key),
+      // so the re-run stays a green no-op instead of failing for consent.
+      desktopState.codex = true;
+      let minted = false;
+      client.scenario.post('/v1/api-keys', (_req, res) => {
+        minted = true;
+        res.json(mockApiKeyResponse);
+      });
+      client.setArgv('ai-gateway', 'coding-agents', 'setup');
+      expect(await aiGateway(client)).toBe(0);
+      const out = JSON.parse(
+        client.stdout.getFullOutput().slice(stdoutAfterFirst)
+      );
+      expect(out.status).toBe('ok');
+      expect(out.reason).toBe('already_configured');
+      expect(out.warnings).toEqual([
+        expect.objectContaining({ agent: 'codex', code: 'desktop_app_breaks' }),
+      ]);
+      expect(minted).toBe(false);
+      expect(readFileSync(bashrcPath(), 'utf8')).toBe(bashrc);
+    });
+
+    it('--reconfigure cannot tunnel past a consent skip', async () => {
+      useUser();
+      client.nonInteractive = true;
+      keychainState.available = false;
+      desktopState.codex = true;
+      mkdirSync(join(home, '.codex'), { recursive: true });
+      // Configured earlier with explicit consent…
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_Reconf0033',
+        '--agent',
+        'codex'
+      );
+      expect(await aiGateway(client)).toBe(0);
+      const stdoutAfterFirst = client.stdout.getFullOutput().length;
+      const config = readFileSync(codexConfigPath(), 'utf8');
+      const bashrc = readFileSync(bashrcPath(), 'utf8');
+
+      // …then an implicit --reconfigure re-run must not rotate the skipped
+      // agent's key or touch its files.
+      let minted = false;
+      client.scenario.post('/v1/api-keys', (_req, res) => {
+        minted = true;
+        res.json(mockApiKeyResponse);
+      });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_Reconf0033',
+        '--reconfigure'
+      );
+      expect(await aiGateway(client)).toBe(0);
+      const out = JSON.parse(
+        client.stdout.getFullOutput().slice(stdoutAfterFirst)
+      );
+      expect(out.reason).toBe('already_configured');
+      expect(minted).toBe(false);
+      expect(readFileSync(codexConfigPath(), 'utf8')).toBe(config);
+      expect(readFileSync(bashrcPath(), 'utf8')).toBe(bashrc);
+    });
+
+    it('a --yes dry run on a Keychain setup predicts the Keychain refresh', async () => {
+      useUser();
+      client.nonInteractive = true;
+      keychainState.available = true;
+      desktopState.codex = false;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0038',
+        '--agent',
+        'codex'
+      );
+      expect(await aiGateway(client)).toBe(0);
+
+      // The real run would not touch any file — but it WOULD store the
+      // provided key in the Keychain, and the prediction must say so.
+      desktopState.codex = true;
+      client.nonInteractive = false;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--yes',
+        '--dry-run',
+        '--key',
+        'vck_DummyKey0038'
+      );
+      expect(await aiGateway(client)).toBe(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain(
+        'a real run would only update the macOS Keychain'
+      );
+      expect(stderr).not.toContain('a real run would make no changes');
+      expect(keychainState.stored).toEqual(['vck_DummyKey0038']); // first run only
+    });
+
     it('an interactive --yes dry run predicts the failure a real run would hit', async () => {
       useUser();
       keychainState.available = false;
@@ -2174,6 +2301,39 @@ describe('ai-gateway coding-agents setup', () => {
       expect(stderr).toContain('a real run would fail');
       expect(stderr).toContain('Pass --agent codex');
       expect(existsSync(codexConfigPath())).toBe(false);
+    });
+
+    it('an interactive --yes dry run reports a configured setup as a no-op', async () => {
+      useUser();
+      client.nonInteractive = true;
+      keychainState.available = false;
+      desktopState.codex = true;
+      mkdirSync(join(home, '.codex'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0035',
+        '--agent',
+        'codex'
+      );
+      expect(await aiGateway(client)).toBe(0);
+
+      client.nonInteractive = false;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--yes',
+        '--dry-run',
+        '--key',
+        'vck_DummyKey0035'
+      );
+      expect(await aiGateway(client)).toBe(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('a real run would make no changes');
+      expect(stderr).not.toContain('a real run would fail');
     });
 
     it('carries warnings and consent skips through a JSON dry run', async () => {
