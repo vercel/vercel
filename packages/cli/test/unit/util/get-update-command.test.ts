@@ -24,9 +24,7 @@ describe('getUpdateCommand', () => {
         `pnpm i -g vercel@latest --allow-build=esbuild`
       );
     } else {
-      expect(updateCommand).toEqual(
-        `pnpm i vercel@latest --allow-build=esbuild`
-      );
+      expect(updateCommand).toEqual(`pnpm i vercel@latest`);
     }
   });
 

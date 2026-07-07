@@ -159,7 +159,7 @@ describe('getUpdateCommandInfo install detection', () => {
         const info = await getUpdateCommandInfo();
 
         expect(info).toEqual({
-          command: 'pnpm i vercel@latest --allow-build=esbuild',
+          command: 'pnpm i vercel@latest',
           global: false,
         });
       } finally {
