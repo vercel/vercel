@@ -164,10 +164,6 @@ describe('git connect', () => {
             key: 'flag:yes',
             value: 'TRUE',
           },
-          {
-            key: 'flag:yes',
-            value: 'TRUE',
-          },
         ]);
       });
     });
@@ -196,10 +192,6 @@ describe('git connect', () => {
           },
           {
             key: 'flag:confirm',
-            value: 'TRUE',
-          },
-          {
-            key: 'flag:yes',
             value: 'TRUE',
           },
         ]);
