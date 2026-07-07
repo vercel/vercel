@@ -222,14 +222,8 @@ export async function getUpdateCommandInfo(): Promise<{
   };
 }
 
-/**
- * pnpm v10+ refuses to run dependency build scripts without approval and
- * prompts for it (or skips them without a TTY). Pre-approve the specific
- * scripts a Vercel CLI install needs — esbuild's postinstall for the Node.js
- * package, @vercel/vc-native's own postinstall for the native binary — so
- * upgrades behave the same as npm/yarn installs. The flag approves this
- * single invocation only; it does not persist a policy for global installs.
- */
+// pnpm v10+ skips dependency build scripts (e.g. esbuild's postinstall)
+// without approval; pre-approve the one this install needs
 function pnpmAllowBuildFlag(cliType: string, pkg: string): string {
   return cliType === 'pnpm' ? ` --allow-build=${pkg}` : '';
 }
