@@ -2,6 +2,14 @@ import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import rollingRelease from '../../../../src/commands/rolling-release/index';
 import { parseDuration } from '../../../../src/commands/rolling-release/configure-rolling-release';
+import {
+  abortSubcommand,
+  approveSubcommand,
+  completeSubcommand,
+  configureSubcommand,
+  fetchSubcommand,
+  startSubcommand,
+} from '../../../../src/commands/rolling-release/command';
 import * as linkModule from '../../../../src/util/projects/link';
 
 vi.mock('../../../../src/util/projects/link');
@@ -67,6 +75,44 @@ describe('rolling-release configure', () => {
       },
       org: { id: 'org_123', slug: 'my-org', type: 'team' },
     });
+  });
+
+  it('exposes --project on all project-scoped subcommands', () => {
+    for (const command of [
+      configureSubcommand,
+      startSubcommand,
+      approveSubcommand,
+      abortSubcommand,
+      completeSubcommand,
+      fetchSubcommand,
+    ]) {
+      expect(command.options.map(option => option.name)).toContain('project');
+    }
+  });
+
+  it('should configure with --project when cwd is not linked', async () => {
+    client.setArgv(
+      'rolling-release',
+      'configure',
+      '--project',
+      'my-project',
+      '--disable'
+    );
+
+    const exitCode = await rollingRelease(client);
+
+    expect(exitCode).toBe(0);
+    expect(patchBody).toEqual({ enabled: false });
+    expect(mockedGetLinkedProject).toHaveBeenCalledWith(
+      client,
+      client.cwd,
+      'my-project',
+      true
+    );
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'option:project', value: '[REDACTED]' },
+      { key: 'flag:disable', value: 'TRUE' },
+    ]);
   });
 
   describe('--cfg flag (legacy)', () => {
