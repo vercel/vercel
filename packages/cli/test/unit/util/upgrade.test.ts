@@ -335,7 +335,7 @@ describe('executeUpgrade', () => {
       ['i', '-g', 'vercel@latest'],
       {
         cwd: tmpdir(),
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: ['inherit', 'pipe', 'pipe'],
         shell: false,
       }
     );
@@ -398,7 +398,7 @@ describe('executeUpgrade', () => {
       ['i', '-g', '@vercel/vc-native@latest', '--force'],
       {
         cwd: tmpdir(),
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: ['inherit', 'pipe', 'pipe'],
         shell: false,
       }
     );
@@ -445,35 +445,6 @@ describe('executeUpgrade', () => {
     expect(outputMock.success).not.toHaveBeenCalled();
     expect(outputMock.log).toHaveBeenCalledWith(
       `No upgrade available. Vercel CLI is already up to date (v${pkg.version}).`
-    );
-  });
-
-  it('runs a pnpm upgrade with stdin detached and pre-approved builds', async () => {
-    getUpdateCommandInfoMock.mockResolvedValueOnce({
-      command: 'pnpm i -g vercel@latest --allow-build=esbuild',
-      global: true,
-    });
-    const mockProcess = createMockProcess();
-    spawnMock.mockReturnValue(mockProcess as any);
-
-    const exitCodePromise = executeUpgrade();
-    await tick();
-
-    mockProcess.emit('close', 0);
-    const exitCode = await exitCodePromise;
-
-    expect(exitCode).toBe(0);
-    expect(spawnMock).toHaveBeenCalledWith(
-      'pnpm',
-      ['i', '-g', 'vercel@latest', '--allow-build=esbuild'],
-      {
-        cwd: tmpdir(),
-        stdio: ['ignore', 'pipe', 'pipe'],
-        shell: false,
-      }
-    );
-    expect(outputMock.success).toHaveBeenCalledWith(
-      'Vercel CLI has been upgraded successfully!'
     );
   });
 

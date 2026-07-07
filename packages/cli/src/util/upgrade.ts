@@ -148,10 +148,7 @@ export async function executeUpgrade(targetVersion?: string): Promise<number> {
 
     const upgradeProcess = spawn(command, args, {
       cwd,
-      // stdin is detached so a package manager can never block on a prompt
-      // the user can't see (output is captured; pnpm's build-script approval
-      // is pre-answered via --allow-build in the update command).
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ['inherit', 'pipe', 'pipe'],
       shell: false,
     });
 
@@ -173,6 +170,7 @@ export async function executeUpgrade(targetVersion?: string): Promise<number> {
     upgradeProcess.on('close', (code: number | null) => {
       if (code !== 0) {
         output.stopSpinner();
+        // Show output only on error
         const stdoutStr = Buffer.concat(stdout).toString();
         const stderrStr = Buffer.concat(stderr).toString();
         if (stdoutStr) {

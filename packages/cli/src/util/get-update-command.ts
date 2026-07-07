@@ -215,9 +215,8 @@ export async function getUpdateCommandInfo(): Promise<{
     install = yarn ? 'global add' : 'i -g';
   }
 
-  // Only pre-approve for global installs: it's one-shot there, whereas a
-  // local install would persist the approval into the project's
-  // pnpm-workspace.yaml — that policy belongs to the project owner.
+  // Global-only: on a local install pnpm would persist the approval into
+  // the project's pnpm-workspace.yaml, which belongs to the project owner.
   const allowBuild = global ? pnpmAllowBuildFlag(cliType, 'esbuild') : '';
   return {
     command: `${cliType} ${install} ${pkgAndVersion}${allowBuild}`,
