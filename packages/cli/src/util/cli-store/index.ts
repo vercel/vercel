@@ -442,7 +442,8 @@ export async function installNativeVersionToStore(
   const platformPackage = getNativePlatformPackage();
   const versionDir = getVersionDir(version, root, 'native');
   const binaryName = process.platform === 'win32' ? 'vercel.exe' : 'vercel';
-  const binaryPath = join(versionDir, binaryName);
+  // Must match getStoreEntrypoint: the binary lives at <versionDir>/bin/<name>.
+  const binaryPath = join(versionDir, 'bin', binaryName);
 
   if (!existsSync(binaryPath)) {
     const meta = await fetchVersionMetadata(platformPackage, version);

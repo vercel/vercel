@@ -26,6 +26,7 @@ import {
   getVersionDir,
   getStoreEntrypoint,
   isConfidentlyGlobal,
+  installNativeVersionToStore,
 } from '../../../src/util/cli-store';
 
 let root: string;
@@ -291,6 +292,28 @@ describe('self-seeding', () => {
     expect(shouldAttemptSeed('54.19.0', root)).toBe(false);
     // A different version is a fresh attempt.
     expect(shouldAttemptSeed('54.20.0', root)).toBe(true);
+  });
+});
+
+describe('installNativeVersionToStore', () => {
+  it('short-circuits without network when the binary already exists', async () => {
+    // Pre-seed the exact path the installer checks — which must agree with
+    // getStoreEntrypoint. A path mismatch here would defeat idempotency and
+    // force a registry round-trip (and failure) on every call.
+    const entrypoint = getStoreEntrypoint('54.19.0', root, 'native');
+    mkdirpSync(join(entrypoint, '..'));
+    writeFileSync(entrypoint, '#!/bin/sh\n');
+
+    // No registry is reachable for this version in this test; success
+    // proves the existence check hit and no download was attempted.
+    await expect(installNativeVersionToStore('54.19.0', root)).resolves.toBe(
+      '54.19.0'
+    );
+    expect(readPointer(root)).toEqual({
+      storeFormat: STORE_FORMAT,
+      version: '54.19.0',
+      type: 'native',
+    });
   });
 });
 
