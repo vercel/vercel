@@ -97,6 +97,40 @@ function normalizeContainerCommand(
 }
 
 /**
+ * Config keys carried verbatim from the service's `vercel.json` entry onto
+ * the resolved service. Shared by the container and configured resolvers so
+ * a key added for one service kind cannot silently miss the other.
+ */
+function servicePassthroughConfig(
+  config: ExperimentalServiceV2Config
+): Pick<
+  ExperimentalServiceV2,
+  | 'bindings'
+  | 'functions'
+  | 'regions'
+  | 'functionFailoverRegions'
+  | 'headers'
+  | 'redirects'
+  | 'rewrites'
+  | 'routes'
+  | 'cleanUrls'
+  | 'trailingSlash'
+> {
+  return {
+    bindings: config.bindings,
+    functions: config.functions,
+    regions: config.regions,
+    functionFailoverRegions: config.functionFailoverRegions,
+    headers: config.headers,
+    redirects: config.redirects,
+    rewrites: config.rewrites,
+    routes: config.routes,
+    cleanUrls: config.cleanUrls,
+    trailingSlash: config.trailingSlash,
+  };
+}
+
+/**
  * Resolve a container (`runtime: "container"`) service. Containers don't go
  * through framework/entrypoint-extension detection: the entrypoint is a
  * Dockerfile/Containerfile to build & push. When no entrypoint is supplied we
@@ -109,6 +143,18 @@ async function resolveContainerServiceV2(
   serviceFs: DetectorFilesystem
 ): Promise<{ service?: ExperimentalServiceV2; error?: ServiceDetectionError }> {
   const isRoot = normalizedRoot === '.';
+
+  // Region configuration only applies to function runtimes; nothing consumes
+  // it for container output today. Reject rather than silently ignore it.
+  if (config.regions || config.functionFailoverRegions) {
+    return {
+      error: {
+        code: 'INVALID_SERVICE_CONFIG',
+        message: `Container service "${name}" does not support "regions" or "functionFailoverRegions".`,
+        serviceName: name,
+      },
+    };
+  }
 
   const entrypoint = config.entrypoint;
   let dockerfile: string | undefined;
@@ -169,14 +215,7 @@ async function resolveContainerServiceV2(
         use: '@vercel/container',
         config: builderConfig,
       },
-      bindings: config.bindings,
-      functions: config.functions,
-      headers: config.headers,
-      redirects: config.redirects,
-      rewrites: config.rewrites,
-      routes: config.routes,
-      cleanUrls: config.cleanUrls,
-      trailingSlash: config.trailingSlash,
+      ...servicePassthroughConfig(config),
     },
   };
 }
@@ -458,14 +497,7 @@ export async function resolveConfiguredServiceV2(
       devCommand: config.devCommand,
       ignoreCommand: config.ignoreCommand,
       outputDirectory: config.outputDirectory,
-      bindings: config.bindings,
-      functions: config.functions,
-      headers: config.headers,
-      redirects: config.redirects,
-      rewrites: config.rewrites,
-      routes: config.routes,
-      cleanUrls: config.cleanUrls,
-      trailingSlash: config.trailingSlash,
+      ...servicePassthroughConfig(config),
     },
   };
 }

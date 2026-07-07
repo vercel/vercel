@@ -28,6 +28,48 @@ describe('validateConfig', () => {
       expect(error).toBeNull();
     });
 
+    it('should not error with service-level regions and functionFailoverRegions', () => {
+      const error = validateConfig({
+        services: {
+          api: {
+            root: 'api',
+            runtime: 'python',
+            entrypoint: 'main:app',
+            regions: ['sfo1', 'iad1'],
+            functionFailoverRegions: ['dub1'],
+          },
+        },
+      } satisfies Parameters<typeof validateConfig>[0]);
+      expect(error).toBeNull();
+    });
+
+    it('should error when service-level regions is not an array', () => {
+      const error = validateConfig({
+        services: {
+          api: {
+            root: 'api',
+            // @ts-expect-error - intentionally invalid
+            regions: 'sfo1',
+          },
+        },
+      });
+      expect(error?.message).toContain('regions');
+      expect(error?.message).toContain('array');
+    });
+
+    it('should error when service-level functionFailoverRegions is not an array of strings', () => {
+      const error = validateConfig({
+        services: {
+          api: {
+            root: 'api',
+            // @ts-expect-error - intentionally invalid
+            functionFailoverRegions: [123],
+          },
+        },
+      });
+      expect(error?.message).toContain('functionFailoverRegions');
+    });
+
     it('should keep experimentalServicesV2 as a backwards-compatible alias', () => {
       const error = validateConfig({
         experimentalServicesV2: {

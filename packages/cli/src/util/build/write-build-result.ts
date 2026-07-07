@@ -73,6 +73,28 @@ interface FunctionConfiguration {
   supportsCancellation?: boolean;
 }
 
+type ServiceFunctionDefaults = Pick<
+  FunctionConfiguration,
+  'regions' | 'functionFailoverRegions'
+>;
+
+/**
+ * Service-level function defaults apply to every function in a V2 service
+ * unless a more specific layer sets them (see the cascade in `writeLambda()`).
+ */
+function getServiceFunctionDefaults(
+  service?: Service
+): ServiceFunctionDefaults | undefined {
+  if (!service || !isExperimentalServiceV2(service)) {
+    return undefined;
+  }
+  const { regions, functionFailoverRegions } = service;
+  if (!regions && !functionFailoverRegions) {
+    return undefined;
+  }
+  return { regions, functionFailoverRegions };
+}
+
 export async function writeBuildResult(args: {
   repoRootPath: string;
   outputDir: string;
@@ -254,8 +276,16 @@ async function writeBuildResultV2(args: {
     rootOutputDir,
     stripServiceRoutePrefix,
   } = args;
+  const serviceDefaults = getServiceFunctionDefaults(service);
+
   if ('buildOutputPath' in buildResult) {
     await mergeBuilderOutput(outputDir, buildResult, workPath, rootOutputDir);
+    // Build Output API functions are written by the framework's adapter
+    // rather than through `writeLambda()`, so service-level defaults are
+    // filled into the merged `.vc-config.json` files instead.
+    if (serviceDefaults) {
+      await applyServiceDefaultsToBuildOutput(outputDir, serviceDefaults);
+    }
     return;
   }
 
@@ -296,7 +326,8 @@ async function writeBuildResultV2(args: {
         normalizedPath,
         undefined,
         existingFunctions,
-        standalone
+        standalone,
+        serviceDefaults
       );
     } else if (isPrerender(output)) {
       if (!output.lambda) {
@@ -312,7 +343,8 @@ async function writeBuildResultV2(args: {
         normalizedPath,
         undefined,
         existingFunctions,
-        standalone
+        standalone,
+        serviceDefaults
       );
 
       // Write the fallback file alongside the Lambda directory
@@ -545,7 +577,8 @@ async function writeBuildResultV3(args: {
       path,
       functionConfiguration,
       undefined,
-      standalone
+      standalone,
+      getServiceFunctionDefaults(service)
     );
   } else if (isEdgeFunction(output)) {
     await writeEdgeFunction(
@@ -753,6 +786,7 @@ async function writeEdgeFunction(
  * @param path The URL path where the `Lambda` can be accessed from
  * @param functionConfiguration (optional) Extra configuration to apply to the function's `.vc-config.json` file
  * @param existingFunctions (optional) Map of `Lambda`/`EdgeFunction` instances that have previously been written
+ * @param serviceDefaults (optional) Service-level fallbacks applied when neither `functionConfiguration` nor the `Lambda` sets a value
  */
 async function writeLambda(
   repoRootPath: string,
@@ -761,7 +795,8 @@ async function writeLambda(
   path: string,
   functionConfiguration?: FunctionConfiguration,
   existingFunctions?: Map<Lambda | EdgeFunction, string>,
-  standalone: boolean = false
+  standalone: boolean = false,
+  serviceDefaults?: ServiceFunctionDefaults
 ) {
   const dest = join(outputDir, 'functions', `${path}.func`);
 
@@ -793,10 +828,17 @@ async function writeLambda(
     functionConfiguration?.architecture ?? lambda.architecture;
   const memory = functionConfiguration?.memory ?? lambda.memory;
   const maxDuration = functionConfiguration?.maxDuration ?? lambda.maxDuration;
-  const regions = functionConfiguration?.regions ?? lambda.regions;
+  // Cascade: explicit per-function config wins, then values the builder set
+  // on the `Lambda` itself (which already reflect any per-function config the
+  // builder applied), then service-level defaults.
+  const regions =
+    functionConfiguration?.regions ??
+    lambda.regions ??
+    serviceDefaults?.regions;
   const functionFailoverRegions =
     functionConfiguration?.functionFailoverRegions ??
-    lambda.functionFailoverRegions;
+    lambda.functionFailoverRegions ??
+    serviceDefaults?.functionFailoverRegions;
   const experimentalTriggers =
     functionConfiguration?.experimentalTriggers ?? lambda.experimentalTriggers;
   const supportsCancellation =
@@ -843,6 +885,62 @@ async function writeLambda(
     } else {
       // Delete the entire `.vercel` directory
       await fs.remove(absDir);
+    }
+  }
+}
+
+/**
+ * Fills service-level function defaults into the `.vc-config.json` files of
+ * Build Output API functions, which are authored by the framework's adapter
+ * and never pass through `writeLambda()`. Only keys the adapter left unset
+ * are filled; edge functions take no Lambda region configuration and are
+ * skipped.
+ */
+async function applyServiceDefaultsToBuildOutput(
+  outputDir: string,
+  serviceDefaults: ServiceFunctionDefaults
+): Promise<void> {
+  const functionsDir = join(outputDir, 'functions');
+  if (!(await fs.pathExists(functionsDir))) {
+    return;
+  }
+  const dirs = [functionsDir];
+  // `for...of` visits directories pushed during iteration.
+  for (const dir of dirs) {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const entryPath = join(dir, entry.name);
+      if (entry.isSymbolicLink()) {
+        // Symlinked `.func` directories alias a function that is processed
+        // at its real path.
+        continue;
+      }
+      if (entry.isDirectory()) {
+        dirs.push(entryPath);
+      } else if (entry.name === '.vc-config.json') {
+        const config = await fs.readJSON(entryPath);
+        if (
+          !config ||
+          typeof config !== 'object' ||
+          config.runtime === 'edge'
+        ) {
+          continue;
+        }
+        const regions = config.regions ?? serviceDefaults.regions;
+        const functionFailoverRegions =
+          config.functionFailoverRegions ??
+          serviceDefaults.functionFailoverRegions;
+        if (
+          regions !== config.regions ||
+          functionFailoverRegions !== config.functionFailoverRegions
+        ) {
+          await fs.writeJSON(
+            entryPath,
+            { ...config, regions, functionFailoverRegions },
+            { spaces: 2 }
+          );
+        }
+      }
     }
   }
 }

@@ -671,6 +671,10 @@ export interface ExperimentalServiceV2 {
   bindings?: ExperimentalServiceV2Binding[];
   /** Function configuration scoped to this service. */
   functions?: BuilderFunctions;
+  /** Regions this service's functions deploy to; per-function config overrides. */
+  regions?: string[];
+  /** Passive failover regions for this service's functions; per-function config overrides. */
+  functionFailoverRegions?: string[];
   /* Per-service route table. Applied only after top-level routing. */
   headers?: Header[];
   redirects?: Redirect[];
@@ -1089,6 +1093,11 @@ export interface ServiceConfig {
 
   /** Function configuration scoped to this service root. */
   functions?: BuilderFunctions;
+
+  /** Regions this service's functions deploy to; per-function config overrides. */
+  regions?: string[];
+  /** Passive failover regions for this service's functions; per-function config overrides. */
+  functionFailoverRegions?: string[];
 
   /* Service's route table. Applied only after top-level routing. */
   headers?: Header[];

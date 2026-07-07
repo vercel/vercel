@@ -5,7 +5,9 @@ import {
   FileFsRef,
   getWriteableDirectory,
   Lambda,
+  type BuilderV2,
   type BuilderV3,
+  type ExperimentalServiceV2,
 } from '@vercel/build-utils';
 import { describe, expect, it } from 'vitest';
 import fs from 'fs-extra';
@@ -15,7 +17,12 @@ import {
 } from '../../../../src/util/build/write-build-result';
 
 describe('writeBuildResult()', () => {
-  it('writes isolated V2 service functions at index', async () => {
+  // Scaffold for V3 scalar-output service builds (ruby service "api").
+  // Returns the paths so tests can make their own assertions; callers own
+  // cleanup of `workPath`.
+  async function writeRubyServiceBuild(
+    serviceOverrides: Partial<ExperimentalServiceV2> = {}
+  ): Promise<{ workPath: string; outputDir: string; vcConfigPath: string }> {
     const workPath = await getWriteableDirectory();
     const outputDir = join(workPath, '.vercel', 'output');
     const build = {
@@ -58,15 +65,29 @@ describe('writeBuildResult()', () => {
           runtime: 'ruby',
           entrypoint: 'app.rb',
           builder: build,
+          ...serviceOverrides,
         },
         nestServiceOutput: true,
       });
+    } catch (err) {
+      await fs.remove(workPath);
+      throw err;
+    }
 
-      expect(
-        await fs.pathExists(
-          join(outputDir, 'services/api/functions/index.func/.vc-config.json')
-        )
-      ).toBe(true);
+    return {
+      workPath,
+      outputDir,
+      vcConfigPath: join(
+        outputDir,
+        'services/api/functions/index.func/.vc-config.json'
+      ),
+    };
+  }
+
+  it('writes isolated V2 service functions at index', async () => {
+    const { workPath, outputDir, vcConfigPath } = await writeRubyServiceBuild();
+    try {
+      expect(await fs.pathExists(vcConfigPath)).toBe(true);
       expect(
         await fs.pathExists(
           join(
@@ -75,6 +96,199 @@ describe('writeBuildResult()', () => {
           )
         )
       ).toBe(false);
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
+
+  it('applies service-level regions to functions without a per-function override', async () => {
+    const { workPath, vcConfigPath } = await writeRubyServiceBuild({
+      regions: ['sfo1', 'iad1'],
+      functionFailoverRegions: ['dub1'],
+    });
+    try {
+      const vcConfig = await fs.readJSON(vcConfigPath);
+      expect(vcConfig.regions).toEqual(['sfo1', 'iad1']);
+      expect(vcConfig.functionFailoverRegions).toEqual(['dub1']);
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
+
+  it('per-function regions override service-level regions', async () => {
+    const { workPath, vcConfigPath } = await writeRubyServiceBuild({
+      regions: ['sfo1'],
+      functionFailoverRegions: ['dub1'],
+      functions: {
+        'app.rb': {
+          regions: ['fra1'],
+        },
+      },
+    });
+    try {
+      const vcConfig = await fs.readJSON(vcConfigPath);
+      // Per-function config wins for `regions`; the service-level failover
+      // regions still apply since the function does not override them.
+      expect(vcConfig.regions).toEqual(['fra1']);
+      expect(vcConfig.functionFailoverRegions).toEqual(['dub1']);
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
+
+  // Node/python services produce version-2 build results (e.g. via
+  // `@vercel/backends`), which take a different write path than the V3
+  // scalar outputs above; service-level regions must survive both.
+  it('applies service-level regions to V2 build results', async () => {
+    const workPath = await getWriteableDirectory();
+    const outputDir = join(workPath, '.vercel', 'output');
+    const build = {
+      src: 'index.ts',
+      use: '@vercel/backends',
+      config: { zeroConfig: true },
+    };
+    const v2Builder: BuilderV2 = {
+      version: 2,
+      build: async () => {
+        throw new Error('not used by writeBuildResult');
+      },
+    };
+
+    try {
+      await writeBuildResult({
+        repoRootPath: workPath,
+        outputDir,
+        buildResult: {
+          output: {
+            index: new Lambda({
+              files: {
+                'index.js': new FileBlob({ data: 'module.exports = {};' }),
+              },
+              handler: 'index.handler',
+              runtime: 'nodejs22.x',
+            }),
+            // A builder-set value (e.g. from per-function config the builder
+            // already applied) must win over the service-level default.
+            pinned: new Lambda({
+              files: {
+                'index.js': new FileBlob({ data: 'module.exports = {};' }),
+              },
+              handler: 'index.handler',
+              runtime: 'nodejs22.x',
+              regions: ['fra1'],
+            }),
+          },
+        },
+        build,
+        builder: v2Builder,
+        builderPkg: { name: '@vercel/backends' },
+        vercelConfig: null,
+        standalone: false,
+        workPath,
+        service: {
+          schema: 'experimentalServicesV2',
+          name: 'api',
+          root: '.',
+          runtime: 'node',
+          entrypoint: 'index.ts',
+          builder: build,
+          regions: ['sfo1', 'iad1'],
+          functionFailoverRegions: ['dub1'],
+        },
+        nestServiceOutput: true,
+      });
+
+      const inherited = await fs.readJSON(
+        join(outputDir, 'services/api/functions/index.func/.vc-config.json')
+      );
+      expect(inherited.regions).toEqual(['sfo1', 'iad1']);
+      expect(inherited.functionFailoverRegions).toEqual(['dub1']);
+
+      const pinned = await fs.readJSON(
+        join(outputDir, 'services/api/functions/pinned.func/.vc-config.json')
+      );
+      expect(pinned.regions).toEqual(['fra1']);
+      expect(pinned.functionFailoverRegions).toEqual(['dub1']);
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
+
+  // Framework services (e.g. sveltekit via `@vercel/static-build`) emit Build
+  // Output API results whose `.vc-config.json` files are authored by the
+  // framework adapter and merged verbatim; service-level regions are filled
+  // in afterwards.
+  it('fills service-level regions into Build Output API functions', async () => {
+    const workPath = await getWriteableDirectory();
+    const outputDir = join(workPath, '.vercel', 'output');
+    const buildOutputPath = join(workPath, 'web', '.vercel', 'output');
+    await fs.outputJSON(
+      join(buildOutputPath, 'functions/render.func/.vc-config.json'),
+      { handler: 'index.js', runtime: 'nodejs22.x' }
+    );
+    await fs.outputJSON(
+      join(buildOutputPath, 'functions/pinned.func/.vc-config.json'),
+      { handler: 'index.js', runtime: 'nodejs22.x', regions: ['fra1'] }
+    );
+    await fs.outputJSON(
+      join(buildOutputPath, 'functions/edge.func/.vc-config.json'),
+      { runtime: 'edge', entrypoint: 'index.js' }
+    );
+    const build = {
+      src: 'package.json',
+      use: '@vercel/static-build',
+      config: { zeroConfig: true },
+    };
+    const v2Builder: BuilderV2 = {
+      version: 2,
+      build: async () => {
+        throw new Error('not used by writeBuildResult');
+      },
+    };
+
+    try {
+      await writeBuildResult({
+        repoRootPath: workPath,
+        outputDir,
+        buildResult: { buildOutputVersion: 3, buildOutputPath },
+        build,
+        builder: v2Builder,
+        builderPkg: { name: '@vercel/static-build' },
+        vercelConfig: null,
+        standalone: false,
+        workPath,
+        service: {
+          schema: 'experimentalServicesV2',
+          name: 'web',
+          root: 'web',
+          framework: 'sveltekit',
+          builder: build,
+          regions: ['sfo1'],
+          functionFailoverRegions: ['dub1'],
+        },
+        nestServiceOutput: true,
+      });
+
+      const functionsDir = join(outputDir, 'services/web/functions');
+      const rendered = await fs.readJSON(
+        join(functionsDir, 'render.func/.vc-config.json')
+      );
+      expect(rendered.regions).toEqual(['sfo1']);
+      expect(rendered.functionFailoverRegions).toEqual(['dub1']);
+
+      // Adapter-set regions win; unset failover regions still inherit.
+      const pinned = await fs.readJSON(
+        join(functionsDir, 'pinned.func/.vc-config.json')
+      );
+      expect(pinned.regions).toEqual(['fra1']);
+      expect(pinned.functionFailoverRegions).toEqual(['dub1']);
+
+      // Edge functions take no Lambda region configuration.
+      const edge = await fs.readJSON(
+        join(functionsDir, 'edge.func/.vc-config.json')
+      );
+      expect(edge.regions).toBeUndefined();
+      expect(edge.functionFailoverRegions).toBeUndefined();
     } finally {
       await fs.remove(workPath);
     }
