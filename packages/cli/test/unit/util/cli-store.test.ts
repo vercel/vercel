@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import { tmpdir } from 'os';
 import { gzipSync } from 'zlib';
 import { createHash } from 'crypto';
@@ -215,24 +215,19 @@ describe('isConfidentlyGlobal', () => {
     }
   });
 
-  it('accepts an npm-global-shaped install (node_modules, no lockfile above)', () => {
+  function npmGlobalRoot() {
+    const nodeBin = dirname(process.execPath);
+    return process.platform === 'win32'
+      ? join(nodeBin, 'node_modules')
+      : join(dirname(nodeBin), 'lib', 'node_modules');
+  }
+
+  it('accepts an install under the running node\u2019s global root', () => {
     delete process.env.PNPM_HOME;
-    const dir = join(root, 'lib', 'node_modules', 'vercel');
-    mkdirpSync(dir);
-    expect(isConfidentlyGlobal(dir)).toBe(true);
+    expect(isConfidentlyGlobal(join(npmGlobalRoot(), 'vercel'))).toBe(true);
   });
 
-  it('rejects a project-shaped install (lockfile above node_modules)', () => {
-    delete process.env.PNPM_HOME;
-    const dir = join(root, 'my-app', 'node_modules', 'vercel');
-    mkdirpSync(dir);
-    writeFileSync(join(root, 'my-app', 'package-lock.json'), '{}');
-    expect(isConfidentlyGlobal(dir)).toBe(false);
-  });
-
-  it('accepts anything under PNPM_HOME even with a lockfile present', () => {
-    // pnpm 11 isolated globals carry their own pnpm-lock.yaml; PNPM_HOME
-    // containment must take precedence over the lockfile heuristic.
+  it('accepts any pnpm layout generation under PNPM_HOME', () => {
     process.env.PNPM_HOME = join(root, 'pnpm-home');
     const dir = join(
       root,
@@ -244,18 +239,52 @@ describe('isConfidentlyGlobal', () => {
       'vercel'
     );
     mkdirpSync(dir);
-    writeFileSync(
-      join(root, 'pnpm-home', 'global', 'v11', 'hash', 'pnpm-lock.yaml'),
-      ''
-    );
     expect(isConfidentlyGlobal(dir)).toBe(true);
   });
 
-  it('rejects paths not under any node_modules (ambiguous)', () => {
+  it('resolves PNPM_HOME symlinks', () => {
+    const realHome = join(root, 'real-pnpm-home');
+    const linkHome = join(root, 'link-pnpm-home');
+    mkdirpSync(join(realHome, 'global', 'node_modules', 'vercel'));
+    require('fs').symlinkSync(realHome, linkHome);
+    process.env.PNPM_HOME = linkHome;
+    // packageDir arrives realpath'd (node resolves modules); base is a symlink
+    expect(
+      isConfidentlyGlobal(join(realHome, 'global', 'node_modules', 'vercel'))
+    ).toBe(true);
+  });
+
+  it('rejects a project dependency \u2014 with or without a lockfile', () => {
     delete process.env.PNPM_HOME;
-    const dir = join(root, 'some', 'random', 'place');
+    const dir = join(root, 'my-app', 'node_modules', 'vercel');
+    mkdirpSync(dir);
+    // no lockfile: manifest-pinned projects must still be exact
+    expect(isConfidentlyGlobal(dir)).toBe(false);
+    writeFileSync(join(root, 'my-app', 'package-lock.json'), '{}');
+    expect(isConfidentlyGlobal(dir)).toBe(false);
+  });
+
+  it('rejects pnpm virtual-store project paths', () => {
+    delete process.env.PNPM_HOME;
+    const dir = join(
+      root,
+      'my-app',
+      'node_modules',
+      '.pnpm',
+      'vercel@54.0.0',
+      'node_modules',
+      'vercel'
+    );
     mkdirpSync(dir);
     expect(isConfidentlyGlobal(dir)).toBe(false);
+  });
+
+  it('rejects npx-cache and unknown locations', () => {
+    delete process.env.PNPM_HOME;
+    const npx = join(root, '_npx', 'abc123', 'node_modules', 'vercel');
+    mkdirpSync(npx);
+    expect(isConfidentlyGlobal(npx)).toBe(false);
+    expect(isConfidentlyGlobal(join(root, 'random', 'place'))).toBe(false);
   });
 });
 

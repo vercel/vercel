@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { copyFile, mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { promisify } from 'node:util';
 import { describe, expect, it } from 'vitest';
 
@@ -10,10 +10,9 @@ const execFileAsync = promisify(execFile);
 // End-to-end tests for the managed-store redirect in the vc.js entrypoint:
 // a fake "installed" CLI at version 1.0.0 and a fake store holding 2.0.0.
 //
-// Only confidently-global installs participate in the store, so the fake
-// install mimics an npm global layout by default: <root>/lib/node_modules/
-// vercel/dist with no lockfile in any ancestor. Pass `projectShaped` to
-// mimic a project dependency instead (lockfile above node_modules).
+// Only known-global installs participate, so the default fixture is
+// pnpm-global-shaped (under a dir runVc exposes as PNPM_HOME). Pass
+// `projectShaped` for a project-dependency fixture instead.
 
 async function setupInstalledCli({
   projectShaped = false,
@@ -24,7 +23,9 @@ async function setupInstalledCli({
   dist: string;
 }> {
   const root = await mkdtemp(join(tmpdir(), 'vc-store-redirect-'));
-  const base = projectShaped ? join(root, 'my-app') : join(root, 'lib');
+  const base = projectShaped
+    ? join(root, 'my-app')
+    : join(root, 'pnpm-home', 'global', 'hash');
   const dist = join(base, 'node_modules', 'vercel', 'dist');
   await mkdir(dist, { recursive: true });
   if (projectShaped) {
@@ -68,14 +69,18 @@ function runVc(
   storeDir: string,
   extraEnv: NodeJS.ProcessEnv = {}
 ) {
+  // Global-shaped fixtures live under a 'pnpm-home' segment; expose it as
+  // PNPM_HOME. Project fixtures don't contain it, so PNPM_HOME stays unset.
+  const marker = `${sep}pnpm-home${sep}`;
+  const idx = dist.indexOf(marker);
+  const pnpmHome =
+    idx === -1 ? undefined : dist.slice(0, idx + marker.length - 1);
   return execFileAsync(process.execPath, [join(dist, 'vc.js'), 'whoami'], {
     env: {
       ...process.env,
       VERCEL_CLI_STORE: '1',
       VERCEL_CLI_STORE_DIR: storeDir,
-      // The suite runs inside a pnpm repo; ensure PNPM_HOME can't make the
-      // temp fixture look pnpm-global by accident.
-      PNPM_HOME: undefined,
+      PNPM_HOME: pnpmHome,
       ...extraEnv,
     },
   });
@@ -121,7 +126,7 @@ describe('vc.js managed store redirect', () => {
           ...process.env,
           VERCEL_CLI_STORE_DIR: storeDir,
           VERCEL_CLI_STORE: undefined,
-          PNPM_HOME: undefined,
+          PNPM_HOME: join(root, 'pnpm-home'),
         },
       }
     );
@@ -293,15 +298,17 @@ describe('vc.js managed store redirect', () => {
     expect(stdout.trim()).toBe('ran installed 1.0.0');
   });
 
-  it('redirects a pnpm-global-shaped install via PNPM_HOME', async () => {
-    // pnpm 11 isolated global installs DO have a lockfile in the install
-    // dir, so the lockfile heuristic alone would wrongly exclude them —
-    // PNPM_HOME containment must win.
-    const { root, dist } = await setupInstalledCli({ projectShaped: true });
+  it('redirects a pnpm global even when its install dir has a lockfile', async () => {
+    // pnpm 11 isolated globals carry pnpm-lock.yaml; PNPM_HOME wins.
+    const { root, dist } = await setupInstalledCli();
+    await writeFile(
+      join(dist, '..', '..', '..', 'pnpm-lock.yaml'),
+      'lockfileVersion: 9\n'
+    );
     const storeDir = join(root, 'store');
     await seedStore(storeDir, '2.0.0');
 
-    const { stdout } = await runVc(dist, storeDir, { PNPM_HOME: root });
+    const { stdout } = await runVc(dist, storeDir);
     expect(stdout.trim()).toBe('ran store 2.0.0 redirected=true');
   });
 });

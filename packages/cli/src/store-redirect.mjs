@@ -16,63 +16,42 @@ function storeRoot() {
   return process.env.VERCEL_CLI_STORE_DIR || join(homedir(), '.vercel', 'cli');
 }
 
-const LOCKFILES = [
-  'package-lock.json',
-  'pnpm-lock.yaml',
-  'yarn.lock',
-  'bun.lock',
-  'bun.lockb',
-];
+// Expand a base dir to [raw, realpath'd] candidates; packageDir is
+// realpath'd by node, the base may contain symlinks.
+function prefixCandidates(base) {
+  if (!base) return [];
+  const candidates = [base];
+  try {
+    candidates.push(realpathSync(base));
+  } catch {}
+  return candidates;
+}
+
+function isUnder(packageDir, base) {
+  return prefixCandidates(base).some(dir =>
+    packageDir.startsWith(dir.replace(/[\\/]+$/, '') + sep)
+  );
+}
 
 /**
- * Store participation is limited to installations we can confidently
- * classify as global. The check is deliberately asymmetric: a false
- * negative only means an install keeps today's behavior (runs itself,
- * package-manager-managed), while project dependencies must never be
- * redirected — that would break lockfile reproducibility. Anything
- * ambiguous therefore resolves to "not global".
+ * Only installations in known-global locations participate in the store.
+ * Decided from two facts the process holds exactly: PNPM_HOME (all pnpm
+ * global layouts) and the running node's own global root (npm-style
+ * managers: nvm, fnm, n, brew, system). Everything else — project deps,
+ * unknown layouts — runs the version that was invoked. Misses under-serve;
+ * they can never redirect a pinned install.
  */
 export function isConfidentlyGlobal(packageDir) {
-  // pnpm global installs of any layout generation live under PNPM_HOME.
-  // Compare against both the raw and resolved forms: node realpaths the
-  // main module, so packageDir is resolved while PNPM_HOME may contain
-  // symlinks (e.g. /var/folders -> /private/var/folders on macOS).
-  const pnpmHome = process.env.PNPM_HOME;
-  if (pnpmHome) {
-    const candidates = [pnpmHome];
-    try {
-      candidates.push(realpathSync(pnpmHome));
-    } catch {
-      // unresolvable; check the raw value only
-    }
-    for (const home of candidates) {
-      if (packageDir.startsWith(home.replace(/[\\/]+$/, '') + sep)) {
-        return true;
-      }
-    }
+  if (isUnder(packageDir, process.env.PNPM_HOME)) {
+    return true;
   }
 
-  // npm/yarn-classic global installs: <prefix>/lib/node_modules/vercel (or
-  // <prefix>/node_modules/vercel on Windows) with NO lockfile in any
-  // ancestor directory — npm has never written lockfiles for globals,
-  // while a genuine project dependency always has one above it.
-  const marker = sep + 'node_modules' + sep;
-  const idx = packageDir.lastIndexOf(marker);
-  if (idx === -1) {
-    return false;
-  }
-  let dir = packageDir;
-  for (let i = 0; i < 30; i++) {
-    for (const lockfile of LOCKFILES) {
-      if (existsSync(join(dir, lockfile))) {
-        return false; // lockfile above the install: project-shaped, stay exact
-      }
-    }
-    const parent = dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-  return true;
+  const nodeBin = dirname(process.execPath);
+  const npmGlobalRoot =
+    process.platform === 'win32'
+      ? join(nodeBin, 'node_modules')
+      : join(dirname(nodeBin), 'lib', 'node_modules');
+  return isUnder(packageDir, npmGlobalRoot);
 }
 
 // Minimal semver x.y.z comparison (no prerelease/range support — the store

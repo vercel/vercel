@@ -58,22 +58,21 @@ current") and wrong for lockfile-pinned project dependencies, where the
 installed version is the answer. The eligibility check decides which kind
 an install is.
 
-Only installations we can **confidently classify as global** are redirected
-or seed the store (`isConfidentlyGlobal`):
+Only installations in **known-global locations** are redirected or seed the
+store (`isConfidentlyGlobal`), decided from two facts the process holds
+exactly — no filesystem crawling or layout inference:
 
-- anything under `PNPM_HOME` (pnpm globals, any layout generation), or
-- under a `node_modules` with **no lockfile in any ancestor directory**
-  (npm/yarn-classic globals — npm never writes lockfiles for globals).
+- under `PNPM_HOME` (pnpm globals, any layout generation), or
+- under the running node's own global root, derived from
+  `process.execPath` (npm-style managers: nvm, fnm, n, brew, system node).
 
-Everything else — project dependencies, and anything ambiguous — runs
-exactly the version that was invoked. **Project installs are
-lockfile-exact, always**: redirecting them would break build
-reproducibility and change builder resolution. The check is deliberately
-asymmetric: a false negative merely keeps an install on today's
-package-manager-managed behavior, while a false positive on a project
-install would violate its lockfile — so all doubt resolves to "not
-global". Unrecognized global layouts can be added to the confident set
-over time; each addition is safe and additive.
+Everything else — project dependencies, npx caches, unknown layouts — runs
+exactly the version that was invoked. **Project installs are pinned-exact,
+always**: redirecting them would break reproducibility and change builder
+resolution, and no project can live under either global location, so no
+classification bug can violate a pin. Known under-served layouts (volta,
+custom npm `prefix=` configs, yarn-classic globals) keep today's behavior
+until their location facts are added — additive, safe changes.
 
 ## Failure posture
 

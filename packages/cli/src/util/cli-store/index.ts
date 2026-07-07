@@ -500,63 +500,44 @@ export function getStoreEntrypoint(
   return join(getVersionDir(version, root), 'dist', 'vc.js');
 }
 
-const LOCKFILES = [
-  'package-lock.json',
-  'pnpm-lock.yaml',
-  'yarn.lock',
-  'bun.lock',
-  'bun.lockb',
-];
+function prefixCandidates(base: string | undefined): string[] {
+  if (!base) return [];
+  const candidates = [base];
+  try {
+    candidates.push(realpathSync(base));
+  } catch (_) {
+    // unresolvable; check the raw value only
+  }
+  return candidates;
+}
+
+function isUnder(packageDir: string, base: string | undefined): boolean {
+  return prefixCandidates(base).some(dir =>
+    packageDir.startsWith(dir.replace(/[\\/]+$/, '') + sep)
+  );
+}
 
 /**
- * Store participation (redirect and seeding) is limited to installations we
- * can confidently classify as global. Asymmetric by design: a false
- * negative means an install keeps today's package-manager-managed behavior,
- * while project dependencies must never participate — redirecting them
- * would break lockfile reproducibility. Anything ambiguous resolves to
- * "not global".
+ * Only installations in known-global locations participate in the store
+ * (redirect and seeding). Decided from two facts the process holds exactly:
+ * PNPM_HOME (all pnpm global layouts) and the running node's own global
+ * root (npm-style managers: nvm, fnm, n, brew, system). Everything else —
+ * project deps, unknown layouts — runs the version that was invoked.
+ * Misses under-serve; they can never redirect a pinned install.
  *
- * Mirrored in store-redirect.mjs, which must stay dependency-free — keep
- * the two implementations in sync.
+ * Mirrored in store-redirect.mjs (dependency-free) — keep in sync.
  */
 export function isConfidentlyGlobal(packageDir: string): boolean {
-  // pnpm global installs of any layout generation live under PNPM_HOME.
-  // Compare against both the raw and resolved forms: module paths are
-  // realpath'd by node while PNPM_HOME may contain symlinks (e.g.
-  // /var/folders -> /private/var/folders on macOS).
-  const pnpmHome = process.env.PNPM_HOME;
-  if (pnpmHome) {
-    const candidates = [pnpmHome];
-    try {
-      candidates.push(realpathSync(pnpmHome));
-    } catch (_) {
-      // unresolvable; check the raw value only
-    }
-    for (const home of candidates) {
-      if (packageDir.startsWith(home.replace(/[\\/]+$/, '') + sep)) {
-        return true;
-      }
-    }
+  if (isUnder(packageDir, process.env.PNPM_HOME)) {
+    return true;
   }
 
-  // npm/yarn-classic globals: under node_modules with NO lockfile in any
-  // ancestor — npm never writes lockfiles for globals, while a project
-  // dependency always has one above it.
-  if (!packageDir.includes(sep + 'node_modules' + sep)) {
-    return false;
-  }
-  let dir = packageDir;
-  for (let i = 0; i < 30; i++) {
-    for (const lockfile of LOCKFILES) {
-      if (existsSync(join(dir, lockfile))) {
-        return false;
-      }
-    }
-    const parent = dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-  return true;
+  const nodeBin = dirname(process.execPath);
+  const npmGlobalRoot =
+    process.platform === 'win32'
+      ? join(nodeBin, 'node_modules')
+      : join(dirname(nodeBin), 'lib', 'node_modules');
+  return isUnder(packageDir, npmGlobalRoot);
 }
 
 /**
