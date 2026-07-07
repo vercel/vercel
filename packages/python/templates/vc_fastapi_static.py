@@ -59,7 +59,13 @@ def main() -> None:
         print(json.dumps([]))
         return
 
+    # app.mount("/path", StaticFiles(...)) — in app.routes
     candidates = list(getattr(app, "routes", []))
+    # app.frontend("/path", directory="...") — in router._low_priority_routes
+    router = getattr(app, "router", None)
+    for group in getattr(router, "_low_priority_routes", []):
+        candidates.extend(getattr(group, "routes", []))
+
     mounts = [m for r in candidates if (m := StaticMount.from_route(r)) is not None]
     print(json.dumps([asdict(m) for m in mounts]))
 
