@@ -295,6 +295,7 @@ export default async function codingAgentsSetup(
       }
     }
   }
+  const skippedAgents = selected.filter(a => !agents.includes(a));
 
   // With no --key we create one. Resolve the owning team first — it decides
   // where the key lives (and can fail) — then collect name, quota, and expiry.
@@ -372,6 +373,7 @@ export default async function codingAgentsSetup(
     useKeychain,
     overrides,
     shellRcOverride,
+    preserveEnvOf: skippedAgents,
   });
 
   const changed = previewPlan.changes.filter(
@@ -387,6 +389,7 @@ export default async function codingAgentsSetup(
       unsupported,
       warnings: machineWarnings,
       consentSkipped,
+      preserveEnvOf: skippedAgents,
       previewPlan,
       dryRun: Boolean(dryRun),
       backup: !noBackup,
@@ -541,6 +544,7 @@ export default async function codingAgentsSetup(
     useKeychain,
     overrides,
     shellRcOverride,
+    preserveEnvOf: skippedAgents,
   });
 
   const results = await applyPlan(applyPlanResult, { backup: !noBackup });

@@ -2196,6 +2196,64 @@ describe('ai-gateway coding-agents setup', () => {
       expect(readFileSync(bashrcPath(), 'utf8')).toBe(bashrc);
     });
 
+    it("preserves a skipped agent's shell export when the remaining agents are rewritten", async () => {
+      useUser();
+      client.nonInteractive = true;
+      keychainState.available = true;
+      // Connect both agents under the Keychain: the shared rc block carries
+      // one export per agent.
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_Keychain0032',
+        '--agent',
+        'claude-code',
+        '--agent',
+        'codex'
+      );
+      expect(await aiGateway(client)).toBe(0);
+      const stdoutAfterFirst = client.stdout.getFullOutput().length;
+      const bashrc = readFileSync(bashrcPath(), 'utf8');
+      expect(bashrc).toContain('ANTHROPIC_AUTH_TOKEN');
+      expect(bashrc).toContain('AI_GATEWAY_API_KEY');
+
+      // Codex signs into ChatGPT while Claude Code's settings drift. The
+      // re-run rewrites Claude Code — but must not drop the consent-skipped
+      // agent's export from the regenerated block.
+      writeFileSync(join(home, '.codex', 'auth.json'), '{}');
+      writeFileSync(claudeSettingsPath(), JSON.stringify({ model: 'opus' }));
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_Keychain0032'
+      );
+      expect(await aiGateway(client)).toBe(0);
+      const out = JSON.parse(
+        client.stdout.getFullOutput().slice(stdoutAfterFirst)
+      );
+      expect(out.status).toBe('ok');
+      expect(out.skipped).toEqual([
+        expect.objectContaining({
+          target: 'codex',
+          reason: 'requires_consent',
+        }),
+      ]);
+      const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
+      expect(settings.model).toBe('opus');
+      expect(settings.env.ANTHROPIC_BASE_URL).toBeDefined();
+      // The block was regenerated from Claude Code alone, yet Codex's export
+      // survived — byte-identical, so the rc was not even rewritten.
+      expect(readFileSync(bashrcPath(), 'utf8')).toBe(bashrc);
+      // Codex's own config was left untouched.
+      expect(out.configured.every((c: any) => !c.file.includes('.codex'))).toBe(
+        true
+      );
+    });
+
     it('--reconfigure cannot tunnel past a consent skip', async () => {
       useUser();
       client.nonInteractive = true;
@@ -2240,6 +2298,54 @@ describe('ai-gateway coding-agents setup', () => {
       expect(minted).toBe(false);
       expect(readFileSync(codexConfigPath(), 'utf8')).toBe(config);
       expect(readFileSync(bashrcPath(), 'utf8')).toBe(bashrc);
+    });
+
+    it("preserves a Keychain-connected agent's export on a --no-keychain re-run", async () => {
+      useUser();
+      client.nonInteractive = true;
+      keychainState.available = true;
+      // Both agents connected under the Keychain: the rc block holds two
+      // lookup lines and no key lands in any file.
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_CrossMode0036',
+        '--agent',
+        'claude-code',
+        '--agent',
+        'codex'
+      );
+      expect(await aiGateway(client)).toBe(0);
+      const settings = readFileSync(claudeSettingsPath(), 'utf8');
+      expect(readFileSync(bashrcPath(), 'utf8')).toContain(
+        'ANTHROPIC_AUTH_TOKEN'
+      );
+
+      // Claude Code logs in, then a re-run switches keychain mode. The skipped
+      // agent exports nothing under useKeychain=false, so preservation must
+      // not depend on the CURRENT run's mode.
+      writeFileSync(
+        join(home, '.claude', '.credentials.json'),
+        JSON.stringify({ claudeAiOauth: { accessToken: 'not-a-real-token' } })
+      );
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_CrossMode0037',
+        '--no-keychain'
+      );
+      expect(await aiGateway(client)).toBe(0);
+      const bashrc = readFileSync(bashrcPath(), 'utf8');
+      // The skipped agent's Keychain lookup survived the mode switch…
+      expect(bashrc).toContain('export ANTHROPIC_AUTH_TOKEN="$(');
+      expect(bashrc).toContain('find-generic-password');
+      // …while the consenting agent's export was rewritten to the new mode.
+      expect(bashrc).toContain("AI_GATEWAY_API_KEY='vck_CrossMode0037'");
+      expect(readFileSync(claudeSettingsPath(), 'utf8')).toBe(settings);
     });
 
     it('a --yes dry run on a Keychain setup predicts the Keychain refresh', async () => {

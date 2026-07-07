@@ -14,6 +14,8 @@ export async function runMachine(args: {
   unsupported: string[];
   warnings: Array<{ agent: string; code: string; message: string }>;
   consentSkipped: Array<{ target: string; reason: string; message: string }>;
+  /** Skipped/declined agents whose shell exports must survive a block rewrite. */
+  preserveEnvOf: CodingAgent[];
   previewPlan: SetupPlan;
   dryRun: boolean;
   backup: boolean;
@@ -168,6 +170,7 @@ export async function runMachine(args: {
     useKeychain,
     overrides: args.overrides,
     shellRcOverride: args.shellRcOverride,
+    preserveEnvOf: args.preserveEnvOf,
   });
   const results = await applyPlan(finalPlan, { backup });
 

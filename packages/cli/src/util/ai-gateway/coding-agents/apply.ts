@@ -5,6 +5,8 @@ import {
   backupFile,
   writeConfigFile,
   upsertManagedBlock,
+  MANAGED_BLOCK_START,
+  MANAGED_BLOCK_END,
 } from './config-files';
 import { KEY_PLACEHOLDER } from './gateway';
 import { keychainLookup } from './keychain';
@@ -119,6 +121,70 @@ function matchesWithStoredKey(current: string, templated: string): boolean {
   return new RegExp(pattern).test(current);
 }
 
+/** Var name of a managed-block export line, POSIX or fish. */
+function envLineName(line: string): string | null {
+  const match =
+    /^export ([A-Za-z_][A-Za-z0-9_]*)=/.exec(line) ??
+    /^set -gx ([A-Za-z_][A-Za-z0-9_]*) /.exec(line);
+  return match ? match[1] : null;
+}
+
+/**
+ * The managed block is regenerated from the configuring agents only, but a
+ * consent-skipped or declined agent that was connected earlier still has its
+ * export line in the existing block — replacing the block wholesale would
+ * silently disconnect it. Keep lines for `preserveNames` in their existing
+ * positions so an already-complete block stays byte-identical (a no-op).
+ */
+function mergeManagedEnvBody(
+  current: string | null,
+  body: string,
+  preserveNames: string[]
+): string {
+  if (preserveNames.length === 0 || current === null) {
+    return body;
+  }
+  const start = current.indexOf(MANAGED_BLOCK_START);
+  const end = current.indexOf(MANAGED_BLOCK_END);
+  if (start === -1 || end === -1 || end <= start) {
+    return body;
+  }
+  const existingLines = current
+    .slice(start + MANAGED_BLOCK_START.length, end)
+    .split('\n')
+    .filter(line => line.trim() !== '');
+  const generatedLines = body.split('\n');
+  const header = generatedLines[0];
+  const generatedByName = new Map<string, string>();
+  for (const line of generatedLines.slice(1)) {
+    const name = envLineName(line);
+    if (name) {
+      generatedByName.set(name, line);
+    }
+  }
+  const merged: string[] = [];
+  const used = new Set<string>();
+  for (const line of existingLines) {
+    const name = envLineName(line);
+    if (!name) {
+      continue; // the header comment; regenerated below
+    }
+    const generated = generatedByName.get(name);
+    if (generated !== undefined) {
+      merged.push(generated);
+      used.add(name);
+    } else if (preserveNames.includes(name)) {
+      merged.push(line);
+    }
+  }
+  for (const [name, line] of generatedByName) {
+    if (!used.has(name)) {
+      merged.push(line);
+    }
+  }
+  return [header, ...merged].join('\n');
+}
+
 export async function buildSetupPlan(
   agents: CodingAgent[],
   ctx: SetupContext
@@ -143,6 +209,25 @@ export async function buildSetupPlan(
         displayName: agent.displayName,
         notes: plan.notes,
       });
+    }
+  }
+
+  // Env names owned by skipped/declined agents, minus any a configuring agent
+  // also exports (those are regenerated anyway). Union across both keychain
+  // modes: which names an agent exports depends on the mode it was originally
+  // connected with, which this run can't know — and over-inclusion is safe
+  // because only lines already present in the block are kept.
+  const preserveNames: string[] = [];
+  for (const agent of ctx.preserveEnvOf ?? []) {
+    for (const useKeychain of [true, false]) {
+      for (const ee of agent.buildPlan({ ...ctx, useKeychain }).envExports) {
+        if (
+          !envExports.some(x => x.name === ee.name) &&
+          !preserveNames.includes(ee.name)
+        ) {
+          preserveNames.push(ee.name);
+        }
+      }
     }
   }
 
@@ -174,7 +259,11 @@ export async function buildSetupPlan(
       label: 'Shell environment',
       format: 'shell',
       owner: 'Environment',
-      transform: current => upsertManagedBlock(current, body),
+      transform: current =>
+        upsertManagedBlock(
+          current,
+          mergeManagedEnvBody(current, body, preserveNames)
+        ),
     });
   }
 

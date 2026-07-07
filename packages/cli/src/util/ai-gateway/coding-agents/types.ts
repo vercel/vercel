@@ -4,6 +4,12 @@ export interface SetupContext {
   useKeychain?: boolean;
   overrides?: Record<string, string>;
   shellRcOverride?: string;
+  /**
+   * Agents that were selected but not consented to (declined or skipped).
+   * Their existing exports in the managed shell block must survive a rewrite —
+   * dropping them would break a previously connected agent's setup.
+   */
+  preserveEnvOf?: CodingAgent[];
 }
 
 export type FileFormat = 'json' | 'toml' | 'shell';
