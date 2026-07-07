@@ -1,27 +1,32 @@
 /**
- * Managed CLI store (experimental; opt in via `vc upgrade --experimental`).
+ * Managed CLI store (experimental; opt in via `vc upgrade --experimental`,
+ * opt out via `vc upgrade --stable`).
  *
  * A self-owned directory holding versioned copies of the CLI, with an
- * atomically-updated pointer file selecting the active version:
+ * atomically-updated pointer file selecting the active version and payload:
  *
  *   ~/.vercel/cli/
  *   ├── versions/
- *   │   └── 54.19.0/          extracted npm tarball (write-once, immutable)
- *   │       ├── package.json
- *   │       └── dist/vc.js
+ *   │   ├── npm/54.19.0/      extracted npm tarball (write-once, immutable)
+ *   │   │   ├── package.json
+ *   │   │   └── dist/vc.js    run via node
+ *   │   └── native/54.21.0/   platform binary (via `vc upgrade --binary`)
+ *   │       └── bin/vercel    exec'd directly
  *   └── current.json          { storeFormat, version, type }
  *
- * `vc upgrade` populates the store by downloading the tarball directly from
- * the npm registry, verifying its integrity against the registry metadata,
- * extracting it to a version directory, and flipping the pointer with an
- * atomic rename. The entrypoint (dist/vc.js) redirects to the store's
- * current version when it is newer than the running package.
+ * `vc upgrade` populates the store by downloading the payload directly from
+ * the npm registry (the CLI tarball, or the platform-specific
+ * @vercel/vc-native package for --binary), verifying its integrity against
+ * the registry metadata, extracting it to a version directory, and flipping
+ * the pointer with an atomic rename. Eligible entrypoints redirect to the
+ * store's version when it is newer than the running package; a native
+ * pointer always wins, since choosing the binary is an explicit act.
  *
  * This never invokes a package manager and never needs to know how the CLI
  * was installed — the store lifecycle is identical whether the entrypoint
- * arrived via npm, pnpm, yarn, or a standalone installer. Native binary
- * installs (VERCEL_VC_NATIVE=1) are excluded for now: the pointer's `type`
- * field is reserved for a future native payload.
+ * arrived via npm, pnpm, yarn, or a standalone installer. A running native
+ * binary install (VERCEL_VC_NATIVE=1) does not consult the store; making
+ * its wrapper store-aware is follow-up work.
  */
 import { createHash } from 'crypto';
 import { execFileSync } from 'child_process';
