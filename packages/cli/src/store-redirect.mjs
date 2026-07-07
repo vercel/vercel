@@ -25,6 +25,34 @@ function isUnder(packageDir, base) {
   );
 }
 
+function ownPackageDir() {
+  return dirname(dirname(fileURLToPath(import.meta.url)));
+}
+
+function readPointer(root) {
+  try {
+    const pointer = JSON.parse(
+      readFileSync(join(root, 'current.json'), 'utf8')
+    );
+    if (
+      pointer &&
+      pointer.storeFormat === STORE_FORMAT &&
+      (pointer.type === 'npm' || pointer.type === 'native') &&
+      typeof pointer.version === 'string'
+    ) {
+      return pointer;
+    }
+  } catch {}
+  return undefined;
+}
+
+function storeEntrypoint(root, pointer) {
+  const binaryName = process.platform === 'win32' ? 'vercel.exe' : 'vercel';
+  return pointer.type === 'native'
+    ? join(root, 'versions', 'native', pointer.version, 'bin', binaryName)
+    : join(root, 'versions', 'npm', pointer.version, 'dist', 'vc.js');
+}
+
 // Global locations are decided from two exact facts: PNPM_HOME, and the
 // running node's own global root. Anything else (project deps, unknown
 // layouts) runs the invoked version. Kept in sync with util/cli-store.
@@ -58,26 +86,15 @@ export async function redirectToStoreIfNewer() {
   const root = storeRoot();
 
   try {
-    const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
-    if (!isConfidentlyGlobal(packageDir)) {
+    if (!isConfidentlyGlobal(ownPackageDir())) {
       return;
     }
   } catch {
     return;
   }
 
-  let pointer;
-  try {
-    pointer = JSON.parse(readFileSync(join(root, 'current.json'), 'utf8'));
-  } catch {
-    return;
-  }
-  if (
-    !pointer ||
-    pointer.storeFormat !== STORE_FORMAT ||
-    (pointer.type !== 'npm' && pointer.type !== 'native') ||
-    typeof pointer.version !== 'string'
-  ) {
+  const pointer = readPointer(root);
+  if (!pointer) {
     return;
   }
 
@@ -87,11 +104,7 @@ export async function redirectToStoreIfNewer() {
     return;
   }
 
-  const binaryName = process.platform === 'win32' ? 'vercel.exe' : 'vercel';
-  const entrypoint =
-    pointer.type === 'native'
-      ? join(root, 'versions', 'native', pointer.version, 'bin', binaryName)
-      : join(root, 'versions', 'npm', pointer.version, 'dist', 'vc.js');
+  const entrypoint = storeEntrypoint(root, pointer);
   if (!existsSync(entrypoint)) {
     return;
   }
@@ -137,4 +150,44 @@ export async function redirectToStoreIfNewer() {
     );
   }
   process.exit(code);
+}
+
+// `vc -v --verbose`: version plus install/store diagnostics for the invoked
+// copy (no redirect). stdout stays machine-readable: bare version only.
+export async function printVerboseVersion() {
+  const root = storeRoot();
+  const packageDir = ownPackageDir();
+
+  let buildVersion;
+  try {
+    buildVersion = JSON.parse(
+      readFileSync(join(packageDir, 'package.json'), 'utf8')
+    ).version;
+  } catch {}
+  const { version } = await import('./version.mjs');
+
+  let global = false;
+  try {
+    global = isConfidentlyGlobal(packageDir);
+  } catch {}
+
+  const pointer = readPointer(root);
+  const storeCurrent = pointer && existsSync(storeEntrypoint(root, pointer));
+  const wouldRedirect =
+    global &&
+    storeCurrent &&
+    process.env.VERCEL_CLI_STORE !== '0' &&
+    (pointer.type === 'native' || gt(pointer.version, version));
+
+  const lines = [
+    `Vercel CLI ${version}`,
+    `build:          ${buildVersion ?? version}`,
+    `native binary:  ${process.env.VERCEL_VC_NATIVE === '1' ? 'yes' : 'no'}`,
+    `install path:   ${packageDir}`,
+    `install type:   ${global ? 'global (store-eligible)' : 'not store-eligible (project dep or unrecognized layout)'}`,
+    `store:          ${pointer ? `${root} → v${pointer.version} (${pointer.type})${storeCurrent ? '' : ' [payload missing]'}` : 'not enrolled'}`,
+    `effective:      ${wouldRedirect ? `v${pointer.version} via store redirect` : `v${version} (this install)`}`,
+  ];
+  console.error(lines.join('\n'));
+  console.log(version);
 }

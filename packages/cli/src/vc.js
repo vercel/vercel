@@ -10,9 +10,18 @@ try {
   }
 } catch {}
 
+const cliArgs = process.argv.slice(2);
+const hasVersionFlag = cliArgs.includes('--version') || cliArgs.includes('-v');
+const hasVerboseFlag = cliArgs.includes('--verbose');
+const isVersionCmd = hasVersionFlag && cliArgs.length === 1;
+const isVersionVerboseCmd =
+  hasVersionFlag && hasVerboseFlag && cliArgs.length === 2;
+
 // Managed CLI store redirect (experimental) — see util/cli-store/README.md.
 // Best-effort: any failure falls through to running this install.
+// Skipped for verbose version output, which inspects the invoked copy.
 if (
+  !isVersionVerboseCmd &&
   process.env.VERCEL_CLI_STORE !== '0' &&
   process.env.VERCEL_VC_NATIVE !== '1' &&
   process.env.VERCEL_CLI_STORE_REDIRECTED !== '1'
@@ -24,14 +33,18 @@ if (
 }
 
 // Fast path for --version to avoid loading the entire CLI
-if (
-  process.argv.length === 3 &&
-  (process.argv[2] === '--version' || process.argv[2] === '-v')
-) {
+if (isVersionCmd) {
   const { version } = await import('./version.mjs');
   const binaryLabel = process.env.VERCEL_VC_NATIVE === '1' ? ' (native)' : '';
   console.error(`Vercel CLI ${version}${binaryLabel}`);
   console.log(version);
+  process.exit(0);
+}
+
+// `vc -v --verbose`: version + install/store diagnostics, still fast-path
+if (isVersionVerboseCmd) {
+  const { printVerboseVersion } = await import('./store-redirect.mjs');
+  await printVerboseVersion();
   process.exit(0);
 }
 

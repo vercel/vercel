@@ -298,6 +298,55 @@ describe('vc.js managed store redirect', () => {
     expect(stdout.trim()).toBe('ran installed 1.0.0');
   });
 
+  it('-v --verbose reports install and store diagnostics without redirecting', async () => {
+    const { root, dist } = await setupInstalledCli(); // global-shaped, 1.0.0
+    const storeDir = join(root, 'store');
+    await seedStore(storeDir, '2.0.0');
+
+    const marker = `${sep}pnpm-home${sep}`;
+    const idx = dist.indexOf(marker);
+    const pnpmHome = dist.slice(0, idx + marker.length - 1);
+    const { stdout, stderr } = await execFileAsync(
+      process.execPath,
+      [join(dist, 'vc.js'), '-v', '--verbose'],
+      {
+        env: {
+          ...process.env,
+          VERCEL_CLI_STORE_DIR: storeDir,
+          PNPM_HOME: pnpmHome,
+        },
+      }
+    );
+
+    // stdout stays machine-readable; diagnostics go to stderr. Despite the
+    // store being newer, the verbose path reports the INVOKED copy.
+    expect(stdout.trim()).toBe('1.0.0');
+    expect(stderr).toContain('install type:   global (store-eligible)');
+    expect(stderr).toContain('→ v2.0.0 (npm)');
+    expect(stderr).toContain('effective:      v2.0.0 via store redirect');
+  });
+
+  it('-v --verbose reports project deps as not store-eligible', async () => {
+    const { root, dist } = await setupInstalledCli({ projectShaped: true });
+    const storeDir = join(root, 'store');
+    await seedStore(storeDir, '2.0.0');
+
+    const { stderr } = await execFileAsync(
+      process.execPath,
+      [join(dist, 'vc.js'), '-v', '--verbose'],
+      {
+        env: {
+          ...process.env,
+          VERCEL_CLI_STORE_DIR: storeDir,
+          PNPM_HOME: undefined,
+        },
+      }
+    );
+
+    expect(stderr).toContain('install type:   not store-eligible');
+    expect(stderr).toContain('effective:      v1.0.0 (this install)');
+  });
+
   it('redirects a pnpm global even when its install dir has a lockfile', async () => {
     // pnpm 11 isolated globals carry pnpm-lock.yaml; PNPM_HOME wins.
     const { root, dist } = await setupInstalledCli();
