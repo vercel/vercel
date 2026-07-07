@@ -119,18 +119,13 @@ function outputPrice(p: ModelEndpoint['pricing']) {
 }
 
 function printEndpointsTable(list: ModelEndpoint[]) {
+  // Keep the default view scannable on an 80-col terminal. Throughput, tags,
+  // and the full pricing/metrics stay available via --format json.
   return `${table(
     [
-      [
-        'provider',
-        'context',
-        'input',
-        'output',
-        'p50 ttft',
-        'p50 tps',
-        'uptime',
-        'tags',
-      ].map(header => chalk.gray(header)),
+      ['provider', 'context', 'input', 'output', 'p50 ttft', 'uptime'].map(
+        header => chalk.gray(header)
+      ),
       ...list.map(e => [
         e.provider_name,
         count(e.context_length),
@@ -139,13 +134,9 @@ function printEndpointsTable(list: ModelEndpoint[]) {
         e.latency_last_1h?.p50 != null
           ? `${Math.round(e.latency_last_1h.p50)}ms`
           : dash(),
-        e.throughput_last_1h?.p50 != null
-          ? `${Math.round(e.throughput_last_1h.p50)} t/s`
-          : dash(),
         e.uptime_last_1h != null ? `${e.uptime_last_1h.toFixed(1)}%` : dash(),
-        e.tags?.length ? e.tags.join(', ') : dash(),
       ]),
     ],
-    { align: ['l', 'r', 'r', 'r', 'r', 'r', 'r', 'l'], hsep: 3 }
+    { align: ['l', 'r', 'r', 'r', 'r', 'r'], hsep: 3 }
   ).replace(/^/gm, '  ')}\n\n`;
 }

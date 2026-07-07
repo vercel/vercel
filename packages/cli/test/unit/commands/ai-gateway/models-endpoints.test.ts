@@ -115,4 +115,63 @@ describe('ai-gateway models endpoints', () => {
     await expect(client.stdout).toOutput('"endpoints"');
     expect(await exitCodePromise).toBe(0);
   });
+
+  it('hides throughput and tags from the table', async () => {
+    useUser();
+    useModelEndpoints([
+      {
+        name: 'anthropic | anthropic/claude-opus-4.8',
+        provider_name: 'anthropic',
+        context_length: 1000000,
+        pricing: { prompt: '0.000005', completion: '0.000025' },
+        throughput_last_1h: { p50: 150 },
+        tags: ['reasoning'],
+      },
+    ]);
+    client.setArgv(
+      'ai-gateway',
+      'models',
+      'endpoints',
+      'anthropic/claude-opus-4.8'
+    );
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stdout).toOutput('anthropic');
+    expect(await exitCodePromise).toBe(0);
+
+    const out = client.stdout.getFullOutput();
+    expect(out).not.toContain('t/s');
+    expect(out).not.toContain('reasoning');
+  });
+
+  it('keeps throughput and tags in --format json', async () => {
+    useUser();
+    useModelEndpoints([
+      {
+        name: 'anthropic | anthropic/claude-opus-4.8',
+        provider_name: 'anthropic',
+        pricing: { prompt: '0.000005', completion: '0.000025' },
+        throughput_last_1h: { p50: 150 },
+        tags: ['reasoning'],
+      },
+    ]);
+    client.setArgv(
+      'ai-gateway',
+      'models',
+      'endpoints',
+      'anthropic/claude-opus-4.8',
+      '--format',
+      'json'
+    );
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stdout).toOutput('"endpoints"');
+    expect(await exitCodePromise).toBe(0);
+
+    const json = JSON.parse(client.stdout.getFullOutput());
+    expect(json.endpoints[0].throughput_last_1h.p50).toBe(150);
+    expect(json.endpoints[0].tags).toContain('reasoning');
+  });
 });
