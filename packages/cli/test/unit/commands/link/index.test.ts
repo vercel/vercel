@@ -1045,7 +1045,8 @@ describe('link', () => {
       expect(logSpy).not.toHaveBeenCalled();
       const plainOutput = stripAnsi(client.stderr.getFullOutput());
       expect(plainOutput).toContain('Multiple teams found');
-      expect(plainOutput).toContain('--scope');
+      expect(plainOutput).toContain('--team <slug>');
+      expect(plainOutput).toContain('teams ls');
       expect(exitSpy).toHaveBeenCalledWith(1);
       expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
 

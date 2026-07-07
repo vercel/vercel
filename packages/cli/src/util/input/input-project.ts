@@ -253,6 +253,10 @@ export default async function inputProject(
   }
 
   if (autoConfirm) {
+    // A single Git-linked root-directory match is the strongest signal.
+    if (repoMatches.length === 1) {
+      return repoMatches[0];
+    }
     return detectedProject || detectedProjectName;
   }
 

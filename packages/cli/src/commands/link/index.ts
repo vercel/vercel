@@ -178,12 +178,10 @@ async function linkProject(client: Client) {
     // Non-interactive when flag is passed or when agent (e.g. no TTY) so JSON is output when confirmation needed
     const linkNonInteractive =
       client.nonInteractive || client.argv.includes('--non-interactive');
-    const teamFirstInteractive =
-      client.stdin.isTTY && !linkNonInteractive && !yes;
-    // Without a TTY (or in non-interactive mode) the team must come from an
-    // explicit signal, so skip the all-teams project sweep; strict team
-    // resolution in `setupAndLink` errors first when the scope is ambiguous.
-    const strictScope = linkNonInteractive || !client.stdin.isTTY;
+    // `--yes` goes through the same team-first flow: the team comes from an
+    // explicit signal, a single available choice, or the picker — it is
+    // never guessed and never resolved by sweeping every team for matches.
+    const teamFirstInteractive = client.stdin.isTTY && !linkNonInteractive;
 
     const link = await ensureLink('link', client, cwd, {
       autoConfirm: yes,
@@ -192,8 +190,6 @@ async function linkProject(client: Client) {
       projectName: parsedArgs.flags['--project'],
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
-      searchAcrossTeams:
-        !explicitScopeProvided && !teamFirstInteractive && !strictScope,
       searchableTeamPicker: teamFirstInteractive,
       showProjectSuggestions:
         teamFirstInteractive && !parsedArgs.flags['--project'],

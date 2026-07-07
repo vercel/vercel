@@ -1,7 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../client';
 import getUser from '../get-user';
-import getTeamById from '../teams/get-team-by-id';
 import getTeams from '../teams/get-teams';
 import type { User, Team, Org } from '@vercel-internals/types';
 import { getPlatformEnv } from '@vercel/build-utils';
@@ -9,7 +8,7 @@ import { emoji } from '../emoji';
 import output from '../../output-manager';
 import param from '../output/param';
 import { printAlignedLabel } from '../output/print-aligned-label';
-import { packageName } from '../pkg-name';
+import { getCommandName, packageName } from '../pkg-name';
 import {
   outputActionRequired,
   type ActionRequiredPayload,
@@ -49,47 +48,6 @@ export default async function selectOrg(
   const {
     config: { currentTeam },
   } = client;
-
-  // Only a TTY may fall back to the globally selected team (`vc switch`,
-  // login default) under `--yes`; without one, the strict resolution below
-  // requires an explicit signal so scripts never link to a guessed team.
-  if (autoConfirm && !client.nonInteractive && client.stdin.isTTY) {
-    if (currentTeam) {
-      output.spinner('Loading team…', 1000);
-      try {
-        const team = await getTeamById(client, currentTeam);
-        return { type: 'team', id: team.id, slug: team.slug };
-      } catch (err) {
-        output.debug(`Unable to load current team directly: ${err}`);
-      } finally {
-        output.stopSpinner();
-      }
-    }
-
-    output.spinner('Loading user…', 1000);
-    let user: User;
-    try {
-      user = await getUser(client);
-    } finally {
-      output.stopSpinner();
-    }
-
-    if (user.version !== 'northstar') {
-      return { type: 'user', id: user.id, slug: user.username };
-    }
-
-    if (user.defaultTeamId) {
-      output.spinner('Loading team…', 1000);
-      try {
-        const team = await getTeamById(client, user.defaultTeamId);
-        return { type: 'team', id: team.id, slug: team.slug };
-      } catch (err) {
-        output.debug(`Unable to load default team directly: ${err}`);
-      } finally {
-        output.stopSpinner();
-      }
-    }
-  }
 
   output.spinner('Loading teams…', 1000);
   let user: User;
@@ -157,35 +115,41 @@ export default async function selectOrg(
     meta.choiceCount = choices.length;
   }
 
-  // Strict resolution when prompting is impossible (non-interactive mode or
-  // no TTY): only an explicit signal — `--scope`/`--team`, `vercel.json`
-  // `scope`, `VERCEL_ORG_ID` — or a single unambiguous choice selects a team.
-  // The globally selected team (`vc switch`, login default) is a guess, not a
-  // signal, and must not silently decide where a project gets linked.
-  if (client.nonInteractive || !client.stdin.isTTY) {
-    const localConfigScope = client.localConfig?.scope;
-    const explicitScope =
-      getScopeOrTeamFromArgv(client.argv) ??
-      (typeof localConfigScope === 'string' ? localConfigScope : null) ??
-      getPlatformEnv('ORG_ID') ??
-      null;
-    if (explicitScope) {
-      const match = choices.find(
-        c => c.value.id === explicitScope || c.value.slug === explicitScope
-      );
-      if (match) return match.value;
+  // An explicit signal — `--scope`/`--team`, `vercel.json` `scope`,
+  // `VERCEL_ORG_ID` — selects the team directly. The globally selected team
+  // (`vc switch`, login default) is a guess, not a signal, and must not
+  // silently decide where a project gets linked.
+  const localConfigScope = client.localConfig?.scope;
+  const explicitScope =
+    getScopeOrTeamFromArgv(client.argv) ??
+    (typeof localConfigScope === 'string' ? localConfigScope : null) ??
+    getPlatformEnv('ORG_ID') ??
+    null;
+  const matchExplicitScope = (): Org | undefined => {
+    if (!explicitScope) return undefined;
+    const match = choices.find(
+      c => c.value.id === explicitScope || c.value.slug === explicitScope
+    );
+    if (match) return match.value;
 
-      // An explicit scope naming the user (id/email/username) resolves to the
-      // personal account when one is available (non-Northstar users).
-      if (
-        user.id === explicitScope ||
-        user.email === explicitScope ||
-        user.username === explicitScope
-      ) {
-        const personal = choices.find(c => c.value.type === 'user');
-        if (personal) return personal.value;
-      }
+    // An explicit scope naming the user (id/email/username) resolves to the
+    // personal account when one is available (non-Northstar users).
+    if (
+      user.id === explicitScope ||
+      user.email === explicitScope ||
+      user.username === explicitScope
+    ) {
+      return choices.find(c => c.value.type === 'user')?.value;
     }
+    return undefined;
+  };
+
+  // Strict resolution when prompting is impossible (non-interactive mode or
+  // no TTY): only an explicit signal or a single unambiguous choice selects
+  // a team.
+  if (client.nonInteractive || !client.stdin.isTTY) {
+    const match = matchExplicitScope();
+    if (match) return match;
 
     if (choices.length === 1) {
       return choices[0].value;
@@ -210,12 +174,20 @@ export default async function selectOrg(
     outputActionRequired(client, actionRequired);
     output.error(
       choices.length > 0
-        ? `Multiple teams found. Provide ${param('--team')} or ${param(
-            '--scope'
-          )} explicitly. No default is applied without a terminal.`
+        ? `Multiple teams found. Teams are never auto-selected when the CLI runs without an interactive terminal. Re-run this command with ${param(
+            '--team <slug>'
+          )}, or run ${getCommandName('teams ls')} to list your teams.`
         : 'No teams available.'
     );
     process.exit(1);
+  }
+
+  // `--yes` answers confirmations, not data questions: an explicit signal
+  // resolves the team, but it is never guessed from the globally selected
+  // team. With multiple choices and no signal, ask.
+  if (autoConfirm) {
+    const match = matchExplicitScope();
+    if (match) return match;
   }
 
   // A single choice is unambiguous: skip the prompt and show the resolved
@@ -223,10 +195,6 @@ export default async function selectOrg(
   if (choices.length === 1) {
     printAlignedLabel('Team', choices[0].value.slug);
     return choices[0].value;
-  }
-
-  if (autoConfirm) {
-    return choices[defaultChoiceIndex].value;
   }
 
   if (!searchable) {

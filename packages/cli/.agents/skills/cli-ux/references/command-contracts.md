@@ -19,7 +19,7 @@ When adding a durable contract, add a row to `SKILL.md` so agents load it only f
 `vc link` target resolution order:
 
 1. Local link state: already linked, stale link, repo link, env link.
-2. Intended team: direct interactive `vc link` uses explicit `--team`/`--scope` or asks `Which team?` before project discovery. Without a TTY or in non-interactive mode, the team resolves only from an explicit signal (`--team`/`--scope`, `vercel.json` `scope`, `VERCEL_ORG_ID`) or a single available choice; the globally selected team (`vc switch`, login default) is never a signal and `--yes` does not substitute for one.
+2. Intended team: the team resolves only from an explicit signal (`--team`/`--scope`, `vercel.json` `scope`, `VERCEL_ORG_ID`), a single available choice, or the `Which team?` prompt. The globally selected team (`vc switch`, login default) is never a signal, and `--yes` does not substitute for one: `--yes` answers confirmations, not data questions, so with multiple teams and no signal a TTY still asks and non-TTY fails with `missing_scope`. `--yes` never triggers cross-team discovery.
 3. Intended project: explicit `--project`, repo-root match, exact folder-name match, selected existing project, or new project.
 4. Project root: inferred root, selected root, or cwd.
 5. Settings: detected framework/settings, explicit overrides, or defaults.
