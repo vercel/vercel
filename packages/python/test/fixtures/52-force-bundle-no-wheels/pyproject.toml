@@ -3,12 +3,18 @@ name = "fixture-52-force-bundle-no-wheels"
 version = "0.0.1"
 requires-python = "~=3.14.0"
 dependencies = [
-  # Heavy deps to push the bundle over 249 MB and trigger externalization.
+  # Heavy deps to push the bundle past the size threshold and trigger
+  # externalization.  numpy/scipy/pandas/matplotlib/pillow ship native
+  # extensions whose debug symbols are stripped at build time, so sympy and
+  # plotly (pure-Python, no .so) are included as strip-proof ballast to keep
+  # the optimized bundle comfortably above the limit (~300 MB).
   "scipy~=1.17.1",
   "numpy~=2.4.3",
   "pandas~=3.0.1",
   "matplotlib~=3.10.8",
   "pillow~=12.1.1",
+  "sympy~=1.14.0",
+  "plotly~=6.8.0",
   "flask",
   # simplejson 3.18.0 has wheels only up to cp310 and no py3-none-any
   # fallback.  On Python 3.14 none of the wheels match, so the builder

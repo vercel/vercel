@@ -1070,6 +1070,8 @@ export const build: BuildVX = async ({
         ? ['vercel-workers', 'vercel_workers']
         : []),
     ],
+    targetArch: target.architecture,
+    isDev: meta.isDev,
   });
 
   await builderSpan

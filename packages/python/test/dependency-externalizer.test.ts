@@ -11,6 +11,7 @@ import {
   estimateBytecodeSize,
   getPackagesReachableOnPlatform,
   lambdaKnapsack,
+  shouldStripVendorFile,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
   MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE,
@@ -1595,5 +1596,48 @@ describe('downloadUvBinaryForTarget', () => {
     } finally {
       fs.removeSync(cacheDir);
     }
+  });
+});
+
+describe('shouldStripVendorFile', () => {
+  it.each([
+    // bytecode / stubs
+    'pkg/__pycache__/mod.cpython-312.pyc',
+    'pkg/mod.pyc',
+    'pkg/mod.pyi',
+    'pkg/py.typed',
+    // inert installer-only dist-info metadata (no runtime reader)
+    'pkg-1.0.dist-info/REQUESTED',
+    'pkg-1.0.dist-info/WHEEL',
+    'pkg-1.0.dist-info/INSTALLER',
+    'pkg-1.0.dist-info/direct_url.json',
+  ])('strips %s', file => {
+    expect(shouldStripVendorFile(file.split('/').join(path.sep))).toBe(true);
+  });
+
+  it.each([
+    // runtime-relevant metadata must be kept
+    'pkg-1.0.dist-info/METADATA',
+    'pkg-1.0.dist-info/entry_points.txt',
+    'pkg-1.0.dist-info/licenses/LICENSE',
+    'pkg-1.0.dist-info/LICENSE',
+    // metadata whose absence can raise at runtime must be kept
+    'pkg-1.0.dist-info/RECORD',
+    'pkg-1.0.dist-info/RECORD.jws',
+    'pkg-1.0.dist-info/RECORD.p7s',
+    'pkg-1.0.dist-info/top_level.txt',
+    // build-time sources / headers read by runtime compilation paths
+    'pkg/_speedups.c',
+    'pkg/_speedups.pyx',
+    'pkg/_speedups.pxd',
+    'pkg/_speedups.pxi',
+    'pkg/include/header.h',
+    'pkg/include/header.hpp',
+    // application/runtime files
+    'pkg/__init__.py',
+    'pkg/_speedups.so',
+    'pkg/data.json',
+  ])('keeps %s', file => {
+    expect(shouldStripVendorFile(file.split('/').join(path.sep))).toBe(false);
   });
 });
