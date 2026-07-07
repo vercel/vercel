@@ -1,5 +1,5 @@
 ---
-'vercel': minor
+'vercel': major
 ---
 
 Require an explicit team signal when linking without a TTY. In non-interactive
