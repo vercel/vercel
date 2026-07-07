@@ -7,7 +7,9 @@ import { listen } from 'async-listen';
 import { apiFetch } from './helpers/api-fetch';
 import fs, { writeFile, readFile, remove, ensureDir } from 'fs-extra';
 import sleep from '../src/util/sleep';
-import waitForPrompt from './helpers/wait-for-prompt';
+import waitForPrompt, {
+  answerTeamPromptThenWait,
+} from './helpers/wait-for-prompt';
 import { execCli } from './helpers/exec';
 import { listTmpDirs } from './helpers/get-tmp-dir';
 import { teamPromise, userPromise } from './helpers/get-account';
@@ -54,21 +56,19 @@ async function findFilesNamed(
   return nestedFiles.flat();
 }
 
-async function waitForTeamPrompt(process: CLIProcess) {
-  let sawDirectory = false;
-
-  // Keep one listener active because both prompts may arrive in the same chunk.
-  await waitForPrompt(process, chunk => {
-    sawDirectory ||= chunk.includes('Directory');
-    return sawDirectory && /Which team[^?]*\?/.test(chunk);
-  });
-}
-
 async function selectProjectCreation(process: CLIProcess) {
   let usesTeamFirstPicker = false;
+  let answeredTeam = false;
 
-  // `vc link` puts creation after search; deploy and dev keep creation first.
+  // Single-team accounts auto-select the team, so answer `Which team?` only
+  // if it appears. `vc link` puts creation after search; deploy and dev keep
+  // creation first.
   await waitForPrompt(process, chunk => {
+    if (!answeredTeam && /Which team[^?]*\?/.test(chunk)) {
+      answeredTeam = true;
+      process.stdin?.write('\n');
+      return false;
+    }
     usesTeamFirstPicker = chunk.includes('Which project?');
     return usesTeamFirstPicker || chunk.includes('Project?');
   });
@@ -89,19 +89,12 @@ async function setupProject(
   },
   {
     vercelAuth,
-    skipTeamPrompt = false,
   }: {
     vercelAuth: 'standard' | 'none';
-    skipTeamPrompt?: boolean;
   } = {
     vercelAuth: 'standard',
   }
 ) {
-  if (!skipTeamPrompt) {
-    await waitForTeamPrompt(process);
-    process.stdin?.write('\n');
-  }
-
   await selectProjectCreation(process);
 
   await waitForPrompt(process, 'Name?');
@@ -359,10 +352,8 @@ test('should prefill "project name" prompt with vercel.json `name`', async () =>
   });
 
   await waitForPrompt(now, 'Directory');
-  await waitForPrompt(now, 'Which team?');
-  now.stdin?.write('\n');
-
-  await waitForPrompt(now, 'Project?');
+  // Single-team accounts auto-select the team; answer the prompt only if shown.
+  await answerTeamPromptThenWait(now, 'Project?');
   now.stdin?.write('\n');
 
   await waitForPrompt(now, `Name? (${projectName})`);
@@ -580,7 +571,7 @@ test('add a sensitive env var', async () => {
       buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
       outputDirectory: 'o',
     },
-    { vercelAuth: 'standard', skipTeamPrompt: true }
+    { vercelAuth: 'standard' }
   );
 
   await vc;
@@ -631,7 +622,7 @@ test('override an existing env var', async () => {
       buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
       outputDirectory: 'o',
     },
-    { vercelAuth: 'standard', skipTeamPrompt: true }
+    { vercelAuth: 'standard' }
   );
 
   await vc;
@@ -1560,9 +1551,8 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   });
 
   await waitForPrompt(vc, 'Directory');
-  await waitForPrompt(vc, 'Which team?');
-  vc.stdin?.write('\n');
-  await waitForPrompt(vc, 'Project?');
+  // Single-team accounts auto-select the team; answer the prompt only if shown.
+  await answerTeamPromptThenWait(vc, 'Project?');
   vc.stdin?.write('\n');
   await waitForPrompt(vc, 'Name?');
   vc.stdin?.write('\n');

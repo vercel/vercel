@@ -10,6 +10,34 @@ function getPromptErrorDetails(
   return `Waiting for:\n  "${assertion}"\nmost recent chunk was:\n  "${mostRecent}"`;
 }
 
+/**
+ * Answers the `Which team?` prompt if it appears and resolves once
+ * `nextPrompt` shows. Accounts with a single team auto-select it (the CLI
+ * prints an aligned `Team` row instead of prompting), so the team prompt
+ * must be treated as optional.
+ */
+export async function answerTeamPromptThenWait(
+  cp: CLIProcess,
+  nextPrompt: string | RegExp,
+  timeout?: number
+) {
+  let answeredTeam = false;
+  await waitForPrompt(
+    cp,
+    chunk => {
+      if (!answeredTeam && /Which team[^?]*\?/.test(chunk)) {
+        answeredTeam = true;
+        cp.stdin?.write('\n');
+        return false;
+      }
+      return typeof nextPrompt === 'string'
+        ? chunk.includes(nextPrompt)
+        : nextPrompt.test(chunk);
+    },
+    timeout
+  );
+}
+
 export default async function waitForPrompt(
   cp: CLIProcess,
   rawAssertion: string | RegExp | ((chunk: string) => boolean),
