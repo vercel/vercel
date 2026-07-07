@@ -69,8 +69,9 @@ describe('git connect', () => {
 
   describe('connecting an unlinked project', () => {
     const cwd = fixture('unlinked');
+    let user: ReturnType<typeof useUser>;
     beforeEach(async () => {
-      useUser();
+      user = useUser();
       useTeams('team_dummy');
       useProject({
         ...defaultProject,
@@ -84,6 +85,8 @@ describe('git connect', () => {
     });
 
     afterEach(async () => {
+      delete process.env.VERCEL_ORG_ID;
+      delete process.env.VERCEL_PROJECT_ID;
       await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
     });
 
@@ -138,6 +141,10 @@ describe('git connect', () => {
 
     describe('--yes', () => {
       it('tracks telemetry', async () => {
+        // `--yes` no longer guesses a team; the env pair is the explicit
+        // signal and resolves the link without prompting.
+        process.env.VERCEL_ORG_ID = user.id;
+        process.env.VERCEL_PROJECT_ID = 'unlinked';
         client.setArgv('git', 'connect', '--yes');
         const gitPromise = git(client);
 
@@ -167,6 +174,10 @@ describe('git connect', () => {
 
     describe('--confirm', () => {
       it('tracks telemetry', async () => {
+        // `--yes` no longer guesses a team; the env pair is the explicit
+        // signal and resolves the link without prompting.
+        process.env.VERCEL_ORG_ID = user.id;
+        process.env.VERCEL_PROJECT_ID = 'unlinked';
         client.setArgv('git', 'connect', '--confirm');
         const gitPromise = git(client);
 

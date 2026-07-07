@@ -476,7 +476,7 @@ describe('link', () => {
         ],
       });
 
-      useTeams('team_dummy');
+      const [team] = useTeams('team_dummy') as Team[];
       const { project: newProject } = useProject({
         ...defaultProject,
         id: 'new-project-id',
@@ -493,9 +493,7 @@ describe('link', () => {
       );
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput('Which team?');
-      client.stdin.write('\n');
-
+      // Single team auto-selects; no team prompt.
       await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
       await expect(client.stderr).toOutput(
         `Found 1 Project linked to ${repoUrl}`
@@ -519,16 +517,16 @@ describe('link', () => {
         directory: 'packages/existing',
         orgId: user.id,
       });
-      // New project should be added
+      // New project should be added under the auto-selected team
       expect(repoJson.projects[1]).toMatchObject({
         id: newProject.id,
         name: newProject.name,
-        orgId: user.id,
+        orgId: team.id,
       });
     });
 
     it('should not duplicate already-linked projects', async () => {
-      const user = useUser();
+      const user = useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
 
       // Set up a `.git/config` file to simulate a repo
