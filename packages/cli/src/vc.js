@@ -10,11 +10,8 @@ try {
   }
 } catch {}
 
-// Managed CLI store redirect (experimental): when the machine has opted in
-// (`vc upgrade --experimental` creates ~/.vercel/cli) and the store holds a
-// newer version than this install, run that version instead. Best-effort:
-// any failure falls through to running this install. VERCEL_CLI_STORE=0
-// bypasses; =1 forces on without enrollment (testing).
+// Managed CLI store redirect (experimental) — see util/cli-store/README.md.
+// Best-effort: any failure falls through to running this install.
 if (
   process.env.VERCEL_CLI_STORE !== '0' &&
   process.env.VERCEL_VC_NATIVE !== '1' &&

@@ -1,32 +1,11 @@
 /**
- * Managed CLI store (experimental; opt in via `vc upgrade --experimental`,
- * opt out via `vc upgrade --stable`).
- *
- * A self-owned directory holding versioned copies of the CLI, with an
- * atomically-updated pointer file selecting the active version and payload:
+ * Managed CLI store (experimental). See README.md in this directory.
  *
  *   ~/.vercel/cli/
  *   ├── versions/
- *   │   ├── npm/54.19.0/      extracted npm tarball (write-once, immutable)
- *   │   │   ├── package.json
- *   │   │   └── dist/vc.js    run via node
- *   │   └── native/54.21.0/   platform binary (via `vc upgrade --binary`)
- *   │       └── bin/vercel    exec'd directly
+ *   │   ├── npm/54.19.0/      extracted npm tarball, run via node
+ *   │   └── native/54.21.0/   platform binary, exec'd directly
  *   └── current.json          { storeFormat, version, type }
- *
- * `vc upgrade` populates the store by downloading the payload directly from
- * the npm registry (the CLI tarball, or the platform-specific
- * @vercel/vc-native package for --binary), verifying its integrity against
- * the registry metadata, extracting it to a version directory, and flipping
- * the pointer with an atomic rename. Eligible entrypoints redirect to the
- * store's version when it is newer than the running package; a native
- * pointer always wins, since choosing the binary is an explicit act.
- *
- * This never invokes a package manager and never needs to know how the CLI
- * was installed — the store lifecycle is identical whether the entrypoint
- * arrived via npm, pnpm, yarn, or a standalone installer. A running native
- * binary install (VERCEL_VC_NATIVE=1) does not consult the store; making
- * its wrapper store-aware is follow-up work.
  */
 import { createHash } from 'crypto';
 import { execFileSync } from 'child_process';
@@ -54,25 +33,17 @@ export const STORE_FORMAT = 1;
 export interface StorePointer {
   storeFormat: number;
   version: string;
-  /** Payload type. 'npm' = extracted npm tarball run via node.
-   * 'native' = standalone platform binary, exec'd directly. */
   type: 'npm' | 'native';
 }
 
 export const NATIVE_PACKAGE_SCOPE = '@vercel/vc-native';
 
-/** The platform-specific npm package carrying the native binary. */
 export function getNativePlatformPackage(): string {
   return `${NATIVE_PACKAGE_SCOPE}-${process.platform}-${process.arch}`;
 }
 
-/**
- * The store is active when the machine has opted in. Enrollment is the
- * explicit act of running `vc upgrade --experimental`, which creates the
- * store; from then on, its existence (a valid pointer) is the enrollment
- * signal. Env overrides: VERCEL_CLI_STORE=1 forces on (testing),
- * VERCEL_CLI_STORE=0 forces off (bypass).
- */
+// Enrolled when the store exists (created by `vc upgrade --experimental`).
+// VERCEL_CLI_STORE=1 forces on (testing), =0 forces off (bypass).
 export function isCliStoreEnabled(): boolean {
   const env = process.env.VERCEL_CLI_STORE;
   if (env === '1') return true;
@@ -80,10 +51,6 @@ export function isCliStoreEnabled(): boolean {
   return readPointer() !== undefined;
 }
 
-/**
- * Resolves the store root directory. Overridable for tests and for users who
- * need the store somewhere other than the home directory.
- */
 export function getStoreRoot(): string {
   return process.env.VERCEL_CLI_STORE_DIR || join(homedir(), '.vercel', 'cli');
 }
@@ -92,21 +59,10 @@ export function getPointerPath(root: string = getStoreRoot()): string {
   return join(root, 'current.json');
 }
 
-/**
- * Unenrolls the machine from the managed upgrade channel by removing the
- * store. Installed copies revert to running themselves (package-manager
- * managed) — the store's existence is the enrollment signal.
- */
 export function removeStore(root: string = getStoreRoot()): void {
   removeSync(root);
 }
 
-/**
- * Version directories are namespaced by payload type (versions/npm/<v>,
- * versions/native/<v> in the future) so npm-tarball and native-binary
- * payloads of the same release can coexist in one store without a format
- * bump.
- */
 export function getVersionDir(
   version: string,
   root: string = getStoreRoot(),
@@ -115,11 +71,8 @@ export function getVersionDir(
   return join(root, 'versions', type, version);
 }
 
-/**
- * Reads the pointer file. Returns undefined when missing, malformed, or from
- * an incompatible (newer) store format — a shim that does not understand the
- * store must behave as if the store does not exist rather than misbehave.
- */
+// Missing, malformed, or unrecognized-format pointers all read as "no
+// store" so future format changes degrade old installs gracefully.
 export function readPointer(
   root: string = getStoreRoot()
 ): StorePointer | undefined {
@@ -134,22 +87,12 @@ export function readPointer(
     ) {
       return pointer as StorePointer;
     }
-  } catch (_) {
-    // missing or unreadable — treat as no store
-  }
+  } catch (_) {}
   return undefined;
 }
 
-/**
- * Atomically updates the pointer: write to a temp file in the same directory,
- * then rename over the destination. Readers see either the old pointer or the
- * new one, never a partial write.
- *
- * The pointer is monotonic: writes that would lower the version are ignored.
- * This lets the background self-seeder and explicit upgrades race safely —
- * whichever writes the newer version wins, and a slow seed of an older
- * version can never undo an upgrade that completed meanwhile.
- */
+// Atomic (tmp + rename) and monotonic: lower-version writes are ignored,
+// so racing writers (seeder vs. upgrade) are harmless.
 export function writePointer(
   pointer: StorePointer,
   root: string = getStoreRoot()
@@ -165,10 +108,7 @@ export function writePointer(
   renameSync(tmp, dest);
 }
 
-/**
- * Verifies content bytes against an SRI integrity string ("sha512-<base64>")
- * or a legacy hex sha1 shasum. Returns true only on a positive match.
- */
+// SRI string ("sha512-<base64>") or legacy hex sha1 shasum.
 export function verifyIntegrity(
   content: Buffer,
   { integrity, shasum }: { integrity?: string; shasum?: string }
@@ -189,10 +129,6 @@ export function verifyIntegrity(
   return false;
 }
 
-/**
- * Extracts a gzipped npm tarball (entries prefixed with "package/") into the
- * destination directory.
- */
 export async function extractTarball(
   tarball: Buffer,
   destDir: string
@@ -269,18 +205,9 @@ async function downloadTarball(url: string): Promise<Buffer> {
   return Buffer.from(await res.arrayBuffer());
 }
 
-/**
- * The published CLI bundle marks its runtime dependencies as external, so an
- * extracted tarball is not self-sufficient — by design, to keep the tarball
- * small. Install those runtime packages into the version directory itself.
- *
- * Runtime packages may be declared as dependencies or as peerDependencies
- * (the CLI is moving externals to peers); npm >= 7 installs both. Either
- * way the install is scoped strictly to the staging dir via cwd — never
- * global, never the user's project. That containment is what distinguishes
- * this from the install-method-guessing the store exists to replace. (Same
- * pattern as turborepo's just-in-time platform-binary repair.)
- */
+// The published bundle keeps runtime deps external (small tarball), so
+// install them into the version dir. npm here is strictly a downloader
+// scoped to the staging dir — never global, never the user's project.
 function installRuntimeDependencies(stagingDir: string): void {
   const manifestPath = join(stagingDir, 'package.json');
   const manifest = readJSONSync(manifestPath) as Record<string, unknown> & {
@@ -295,18 +222,15 @@ function installRuntimeDependencies(stagingDir: string): void {
     return;
   }
 
-  // Remove devDependencies before installing: even with --omit=dev, npm
-  // resolves them to record in the lockfile, and the published manifest's
-  // devDependencies reference unpublished workspace packages
-  // (@vercel-internals/*), which turns the install into a registry 404.
+  // devDeps reference unpublished @vercel-internals/* packages; npm
+  // resolves them even with --omit=dev, so strip them first.
   if (manifest.devDependencies) {
     delete manifest.devDependencies;
     writeJSONSync(manifestPath, manifest);
   }
 
-  // Erase npm_config_global so a store install triggered from within a
-  // global npm context does not deadlock on the global installation lock
-  // (same fix as turborepo's launcher).
+  // Avoid deadlocking on npm's global install lock when invoked from a
+  // global npm context.
   const env = { ...process.env, npm_config_global: undefined };
 
   try {
@@ -328,10 +252,6 @@ function installRuntimeDependencies(stagingDir: string): void {
   }
 }
 
-/**
- * Translates common npm failures from the contained dependency install into
- * actionable messages instead of raw npm stderr.
- */
 function describeDependencyInstallError(err: unknown): string {
   const stderr =
     err && typeof err === 'object' && 'stderr' in err
@@ -374,11 +294,8 @@ function describeDependencyInstallError(err: unknown): string {
   return `Could not install the CLI\u2019s dependencies.${detail ? `\n${detail}` : ''}`;
 }
 
-/**
- * Downloads, verifies, and installs a version into the store, then flips the
- * pointer. Returns the measured version from the extracted package.json —
- * never a value assumed from the request.
- */
+// Returns the measured version from the extracted package.json, never the
+// requested value.
 export async function installVersionToStore(
   packageName: string,
   version: string,
@@ -398,8 +315,7 @@ export async function installVersionToStore(
       );
     }
 
-    // Extract to a temp sibling, then move into place so a version directory
-    // is either complete or absent — never half-extracted.
+    // Stage + atomic move: a version dir is either complete or absent.
     const stagingDir = `${versionDir}.tmp-${process.pid}`;
     removeSync(stagingDir);
     try {
@@ -408,15 +324,13 @@ export async function installVersionToStore(
       moveSync(stagingDir, versionDir, { overwrite: false });
     } catch (err) {
       removeSync(stagingDir);
-      // A concurrent process may have installed the same version between our
-      // existence check and the move; that is success, not failure.
+      // A concurrent install of the same version is success, not failure.
       if (!existsSync(join(versionDir, 'package.json'))) {
         throw err;
       }
     }
   }
 
-  // Measure what actually landed on disk rather than trusting the request.
   const installed = readJSONSync(join(versionDir, 'package.json')) as {
     version?: string;
   };
@@ -434,13 +348,8 @@ export async function installVersionToStore(
   return installed.version;
 }
 
-/**
- * Downloads, verifies, and installs a native binary version into the store,
- * then flips the pointer to the native payload. The binary comes from the
- * platform-specific npm package (@vercel/vc-native-<platform>-<arch>),
- * verified against the registry's published checksum. The extracted binary
- * is never modified, so its code signature remains intact.
- */
+// Binary comes from the platform package, verified, never modified after
+// extraction (code signature stays intact).
 export async function installNativeVersionToStore(
   version: string,
   root: string = getStoreRoot()
@@ -448,7 +357,7 @@ export async function installNativeVersionToStore(
   const platformPackage = getNativePlatformPackage();
   const versionDir = getVersionDir(version, root, 'native');
   const binaryName = process.platform === 'win32' ? 'vercel.exe' : 'vercel';
-  // Must match getStoreEntrypoint: the binary lives at <versionDir>/bin/<name>.
+  // Must match getStoreEntrypoint.
   const binaryPath = join(versionDir, 'bin', binaryName);
 
   if (!existsSync(binaryPath)) {
@@ -467,7 +376,6 @@ export async function installNativeVersionToStore(
     removeSync(stagingDir);
     try {
       await extractTarball(tarball, stagingDir);
-      // The platform package carries the binary at bin/<name>.
       const extractedBinary = join(stagingDir, 'bin', binaryName);
       if (!existsSync(extractedBinary)) {
         throw new Error(
@@ -505,9 +413,7 @@ function prefixCandidates(base: string | undefined): string[] {
   const candidates = [base];
   try {
     candidates.push(realpathSync(base));
-  } catch (_) {
-    // unresolvable; check the raw value only
-  }
+  } catch (_) {}
   return candidates;
 }
 
@@ -517,16 +423,9 @@ function isUnder(packageDir: string, base: string | undefined): boolean {
   );
 }
 
-/**
- * Only installations in known-global locations participate in the store
- * (redirect and seeding). Decided from two facts the process holds exactly:
- * PNPM_HOME (all pnpm global layouts) and the running node's own global
- * root (npm-style managers: nvm, fnm, n, brew, system). Everything else —
- * project deps, unknown layouts — runs the version that was invoked.
- * Misses under-serve; they can never redirect a pinned install.
- *
- * Mirrored in store-redirect.mjs (dependency-free) — keep in sync.
- */
+// Global locations are decided from two exact facts: PNPM_HOME, and the
+// running node's own global root. Anything else (project deps, unknown
+// layouts) runs the invoked version. Kept in sync with store-redirect.mjs.
 export function isConfidentlyGlobal(packageDir: string): boolean {
   if (isUnder(packageDir, process.env.PNPM_HOME)) {
     return true;
@@ -540,16 +439,8 @@ export function isConfidentlyGlobal(packageDir: string): boolean {
   return isUnder(packageDir, npmGlobalRoot);
 }
 
-/**
- * True when the store should be seeded with the running version: the flag is
- * on, and the pointer is absent or older than the running version. Used by
- * the background self-seeder so that merely running the CLI converges every
- * install on the machine to the newest version anyone has installed —
- * without requiring an explicit `vc upgrade`.
- *
- * A native-pointer machine is never seeded by npm-payload installs: the
- * user chose the binary; only explicit `vc upgrade` moves a native pointer.
- */
+// Seeding never changes payload type: a native-pointer machine is only
+// moved by explicit `vc upgrade`.
 export function shouldSeedStore(
   runningVersion: string,
   root: string = getStoreRoot()
@@ -568,11 +459,8 @@ interface SeedAttempt {
 
 const SEED_RETRY_INTERVAL = 1000 * 60 * 60 * 24; // 1 day
 
-/**
- * Rate limit for background seeding: at most one attempt per version per
- * day. Prevents unpublished versions (dev builds) or transient registry
- * failures from triggering a registry round-trip on every CLI invocation.
- */
+// One attempt per version per day, so unpublished dev builds and transient
+// failures don't hit the registry on every invocation.
 export function shouldAttemptSeed(
   version: string,
   root: string = getStoreRoot()
@@ -587,9 +475,7 @@ export function shouldAttemptSeed(
     ) {
       return false;
     }
-  } catch (_) {
-    // no marker — attempt allowed
-  }
+  } catch (_) {}
   return true;
 }
 
@@ -604,10 +490,6 @@ export function recordSeedAttempt(
   } satisfies SeedAttempt);
 }
 
-/**
- * True when a store version exists, is valid, and is newer than the provided
- * running version — i.e. the entrypoint should redirect to it.
- */
 export function shouldRedirectToStore(
   runningVersion: string,
   root: string = getStoreRoot()
@@ -615,8 +497,7 @@ export function shouldRedirectToStore(
   const pointer = readPointer(root);
   if (!pointer) return undefined;
   if (!semver.valid(runningVersion)) return undefined;
-  // A native pointer always wins over an npm-payload install (the user
-  // chose the binary); an npm pointer must be strictly newer.
+  // Native pointers always win (explicit user choice); npm must be newer.
   if (pointer.type !== 'native' && !semver.gt(pointer.version, runningVersion))
     return undefined;
   if (!existsSync(getStoreEntrypoint(pointer.version, root, pointer.type)))

@@ -1358,14 +1358,7 @@ if (SHOULD_CHECK_FOR_UPDATES && !isNativeBinaryInstall()) {
   }
 }
 
-// Managed CLI store self-seeding (experimental): when the machine is
-// enrolled (store exists via `vc upgrade --experimental`, or forced via
-// VERCEL_CLI_STORE=1) and this install is newer than the store pointer,
-// spawn a detached worker to install this version into the store from the
-// registry. Rate-limited; the pointer is monotonic. Fire-and-forget.
 if (isCliStoreEnabled()) {
-  // Surface store involvement in debug output so bug reports can always
-  // answer "was the managed store in play, and which version ran?"
   const redirected = process.env.VERCEL_CLI_STORE_REDIRECTED === '1';
   output.debug(
     `CLI store: enabled; running v${pkg.version}${redirected ? ' (redirected from store)' : ' (invoked install)'}`
