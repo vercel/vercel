@@ -233,43 +233,52 @@ describe('vc.js managed store redirect', () => {
     expect(stdout.trim()).toBe('ran installed 1.0.0');
   });
 
-  it('execs a native payload directly when the pointer type is native', async () => {
-    const { root, dist } = await setupInstalledCli();
-    const storeDir = join(root, 'store');
-    // Native payload: an executable script at versions/native/<v>/bin/vercel.
-    const binDir = join(storeDir, 'versions', 'native', '2.0.0', 'bin');
-    await mkdir(binDir, { recursive: true });
-    const binPath = join(binDir, 'vercel');
-    await writeFile(binPath, `#!/bin/sh\necho "ran native 2.0.0 args=$@"\n`);
-    const { chmod } = await import('node:fs/promises');
-    await chmod(binPath, 0o755);
-    await writeFile(
-      join(storeDir, 'current.json'),
-      JSON.stringify({ storeFormat: 1, version: '2.0.0', type: 'native' })
-    );
+  // The native-exec fixtures are POSIX shell scripts, which Windows cannot
+  // spawn; the shim's Windows dispatch (bin/vercel.exe) is covered by the
+  // missing-binary fall-through test below.
+  it.skipIf(process.platform === 'win32')(
+    'execs a native payload directly when the pointer type is native',
+    async () => {
+      const { root, dist } = await setupInstalledCli();
+      const storeDir = join(root, 'store');
+      // Native payload: an executable script at versions/native/<v>/bin/vercel.
+      const binDir = join(storeDir, 'versions', 'native', '2.0.0', 'bin');
+      await mkdir(binDir, { recursive: true });
+      const binPath = join(binDir, 'vercel');
+      await writeFile(binPath, `#!/bin/sh\necho "ran native 2.0.0 args=$@"\n`);
+      const { chmod } = await import('node:fs/promises');
+      await chmod(binPath, 0o755);
+      await writeFile(
+        join(storeDir, 'current.json'),
+        JSON.stringify({ storeFormat: 1, version: '2.0.0', type: 'native' })
+      );
 
-    const { stdout } = await runVc(dist, storeDir);
-    expect(stdout.trim()).toBe('ran native 2.0.0 args=whoami');
-  });
+      const { stdout } = await runVc(dist, storeDir);
+      expect(stdout.trim()).toBe('ran native 2.0.0 args=whoami');
+    }
+  );
 
-  it('a native pointer wins even when the invoked version is newer', async () => {
-    const { root, dist } = await setupInstalledCli(); // installed = 1.0.0
-    const storeDir = join(root, 'store');
-    const binDir = join(storeDir, 'versions', 'native', '0.5.0', 'bin');
-    await mkdir(binDir, { recursive: true });
-    const binPath = join(binDir, 'vercel');
-    await writeFile(binPath, `#!/bin/sh\necho "ran native 0.5.0"\n`);
-    const { chmod } = await import('node:fs/promises');
-    await chmod(binPath, 0o755);
-    await writeFile(
-      join(storeDir, 'current.json'),
-      JSON.stringify({ storeFormat: 1, version: '0.5.0', type: 'native' })
-    );
+  it.skipIf(process.platform === 'win32')(
+    'a native pointer wins even when the invoked version is newer',
+    async () => {
+      const { root, dist } = await setupInstalledCli(); // installed = 1.0.0
+      const storeDir = join(root, 'store');
+      const binDir = join(storeDir, 'versions', 'native', '0.5.0', 'bin');
+      await mkdir(binDir, { recursive: true });
+      const binPath = join(binDir, 'vercel');
+      await writeFile(binPath, `#!/bin/sh\necho "ran native 0.5.0"\n`);
+      const { chmod } = await import('node:fs/promises');
+      await chmod(binPath, 0o755);
+      await writeFile(
+        join(storeDir, 'current.json'),
+        JSON.stringify({ storeFormat: 1, version: '0.5.0', type: 'native' })
+      );
 
-    // The user chose the binary; version comparison does not apply.
-    const { stdout } = await runVc(dist, storeDir);
-    expect(stdout.trim()).toBe('ran native 0.5.0');
-  });
+      // The user chose the binary; version comparison does not apply.
+      const { stdout } = await runVc(dist, storeDir);
+      expect(stdout.trim()).toBe('ran native 0.5.0');
+    }
+  );
 
   it('falls through when a native pointer names a missing binary', async () => {
     const { root, dist } = await setupInstalledCli();
