@@ -1715,7 +1715,7 @@ describe('Django entrypoint discovery', () => {
     });
     // Simulate collectstatic succeeding
     vi.mocked(runDjangoCollectStatic).mockImplementationOnce(
-      async (_venvPath, _workPath, _env, outputStaticDir) => {
+      async (_venvPath, _workPath, _djangoPath, _env, outputStaticDir) => {
         fs.mkdirSync(path.join(outputStaticDir, 'static'), { recursive: true });
         fs.writeFileSync(
           path.join(outputStaticDir, 'static', 'app.css'),

@@ -13,9 +13,11 @@ import {
   debug,
   debugTokenClaims,
   decodeOidcClaims,
+  devImageTag,
   done,
   elapsed,
   existingRegistryAuthFile,
+  findDockerfile,
   info,
   isDockerfileRef,
   readString,
@@ -42,18 +44,6 @@ function normalizeCommand(command: unknown): string[] | undefined {
     return command;
   }
   return undefined;
-}
-
-// Vercel-specific container opt-in markers, auto-discovered when the build
-// entrypoint doesn't name a Dockerfile explicitly (e.g. the `container`
-// framework preset resolves its entrypoint via `<detect>`). These let a
-// project deploy as a container even when another framework is also present.
-const DOCKERFILE_CANDIDATES = ['Dockerfile.vercel', 'Containerfile.vercel'];
-
-function findDockerfile(workPath: string): string | undefined {
-  return DOCKERFILE_CANDIDATES.find(name =>
-    existsSync(path.join(workPath, name))
-  );
 }
 
 function sanitizeRepository(name: string): string {
@@ -303,14 +293,18 @@ async function resolveImageHandler(
   }
 
   if (meta?.isDev) {
-    if (prebuiltImage) {
-      span?.setAttributes({ 'container.mode': 'prebuilt_dev' });
-      info(`vercel dev: using prebuilt image ${prebuiltImage}`);
-      return prebuiltImage;
-    }
-    throw new Error(
-      '`vercel dev` cannot build container images from a Dockerfile. Specify a prebuilt "image" for local development.'
+    // In dev the image is built and run locally from the Dockerfile by
+    // `startDevServer` (see ./dev.ts `resolveDevImage`), which never pushes to
+    // a registry. The `build()` path must not push either, so we don't build
+    // here — we only return a stable local tag for the build output. The
+    // resolved entrypoint is always a Dockerfile/Containerfile (containers have
+    // no prebuilt-image input), so there is nothing to error on.
+    const serviceName = options.service?.name;
+    const tag = devImageTag(
+      serviceName ?? path.basename(dockerfileRel).split('.')[0]
     );
+    span?.setAttributes({ 'container.mode': 'dev', 'image.tag': tag });
+    return tag;
   }
 
   if (!existsSync(dockerfilePath)) {

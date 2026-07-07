@@ -118,18 +118,21 @@ describe('filesWithoutFsRefs()', () => {
     expect(filePathMap['package.json']).toEqual('package.json');
   });
 
-  it('should omit external symlinks from standalone shared output', async () => {
+  it('keeps the symlink but drops its descendants in standalone mode', async () => {
     if (process.platform === 'win32') {
       return;
     }
 
-    const root = await fs.mkdtemp(join(__dirname, 'standalone-symlink-'));
+    // The build is anchored at the repo root, so the symlink is preserved
+    // instead of skipped. Its descendants must NOT also be written, or
+    // `download()` can race and create a real directory at the symlink's path
+    // (EEXIST -> readlink on a dir -> EINVAL).
+    const root = await fs.mkdtemp(join(__dirname, 'resolved-root-symlink-'));
     const pnpmStore = join(
       root,
       'node_modules/.pnpm/next@1.0.0/node_modules/next'
     );
     const appNodeModules = join(root, 'apps/web/node_modules');
-    const sharedDest = join(root, 'apps/web/.vercel/output/shared');
 
     await fs.mkdirp(pnpmStore);
     await fs.writeFile(join(pnpmStore, 'server.js'), 'module.exports = {}');
@@ -139,69 +142,44 @@ describe('filesWithoutFsRefs()', () => {
       join(appNodeModules, 'next')
     );
 
-    const tracedFile = await FileFsRef.fromFsPath({
-      fsPath: join(appNodeModules, 'next/server.js'),
-    });
-    const externalSymlink = await FileFsRef.fromFsPath({
+    const symlink = await FileFsRef.fromFsPath({
       fsPath: join(appNodeModules, 'next'),
     });
+    // A traced descendant reached through the symlink (the failure case).
+    const descendant = await FileFsRef.fromFsPath({
+      fsPath: join(appNodeModules, 'next/server.js'),
+    });
+    // The real bytes, anchored in the function (not under the symlink).
+    const realFile = await FileFsRef.fromFsPath({
+      fsPath: join(pnpmStore, 'server.js'),
+    });
+    const storeKey =
+      'node_modules/.pnpm/next@1.0.0/node_modules/next/server.js';
+    // A sibling package whose name shares the symlink's prefix. It must NOT be
+    // dropped: `node_modules/next-auth` is not nested under the `next` symlink,
+    // which is why the descendant check matches on a trailing slash.
+    const siblingFile = await FileFsRef.fromFsPath({ fsPath: __filename });
+    const siblingKey = 'apps/web/node_modules/next-auth/index.js';
 
-    const { shared = {}, filePathMap = {} } = filesWithoutFsRefs(
+    const { files } = filesWithoutFsRefs(
       {
-        'node_modules/next': externalSymlink,
-        'node_modules/next/server.js': tracedFile,
+        'apps/web/node_modules/next': symlink,
+        'apps/web/node_modules/next/server.js': descendant,
+        [siblingKey]: siblingFile,
+        [storeKey]: realFile,
       },
       root,
-      sharedDest,
       true
     );
 
-    expect(shared['node_modules/next']).toBeUndefined();
-    expect(shared['node_modules/next/server.js']).toBeDefined();
-    expect(filePathMap['node_modules/next']).toBeUndefined();
-    expect(filePathMap['node_modules/next/server.js']).toEqual(
-      'apps/web/.vercel/output/shared/node_modules/next/server.js'
-    );
+    // The symlink itself is kept, its descendant is dropped, and the real
+    // file (the symlink's target) is kept.
+    expect(files['apps/web/node_modules/next']).toBe(symlink);
+    expect(files['apps/web/node_modules/next/server.js']).toBeUndefined();
+    expect(files[storeKey]).toBe(realFile);
+    // The similarly-named sibling package is unaffected.
+    expect(files[siblingKey]).toBe(siblingFile);
 
     await fs.remove(root);
-  });
-
-  it('re-anchors standalone keys that escape the function root', async () => {
-    // Mirrors a `vc build --standalone` from a monorepo subdirectory: the
-    // repo root is detected as the app dir while dependencies are hoisted two
-    // levels up, so the builder emits keys like `../../node_modules/...`.
-    const repoRootPath = join(__dirname, 'app-dir');
-    const sharedDest = join(repoRootPath, '.vercel/output/shared');
-    const fsPath = join(__filename); // any real file works as the byte source
-
-    const escapingKey =
-      '../../node_modules/.pnpm/next@1.0.0/node_modules/next/dist/server.js';
-    const {
-      files,
-      filePathMap = {},
-      shared = {},
-    } = filesWithoutFsRefs(
-      { [escapingKey]: new FileFsRef({ fsPath }) },
-      repoRootPath,
-      sharedDest,
-      true
-    );
-
-    // The FileFsRef is removed from `files` and the escaping key is gone.
-    expect(files[escapingKey]).toBeUndefined();
-    expect(Object.keys(filePathMap)).not.toContain(escapingKey);
-
-    // It is re-anchored inside the function root (no leading `..`).
-    const anchoredKey =
-      'node_modules/.pnpm/next@1.0.0/node_modules/next/dist/server.js';
-    expect(Object.keys(filePathMap)).toEqual([anchoredKey]);
-    expect(filePathMap[anchoredKey]).not.toContain('..');
-
-    // The shared bytes are placed under the same anchored key, and the
-    // recorded value points at them (relative to the repo root).
-    expect(shared[anchoredKey]).toBeDefined();
-    expect(filePathMap[anchoredKey]).toEqual(
-      `.vercel/output/shared/${anchoredKey}`
-    );
   });
 });

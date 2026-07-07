@@ -1,5 +1,24 @@
 # @vercel/connect
 
+## 0.3.2
+
+### Patch Changes
+
+- 2f8d81f: Surface the connector's human-readable name through authorization challenges. `startAuthorization` now exposes the optional `connector` object returned by `POST /v1/connect/authorize/:connector` (matching the `connector` object on the token response), and the Eve `connect()` adapter stamps the service display name (`connector.serviceName`, eg. `"Salesforce"`, falling back to the connector's own `connector.name` for unknown services) onto the `ConnectionAuthorizationChallenge` as `displayName` so channels can render "Sign in with Salesforce" instead of a title-cased file name. Connection authors can override the server-reported name via the new `displayName` option on `connect()`. No behavior change until the Vercel API starts returning `connector`.
+
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies [d29a8f9]
+  - @vercel/oidc@3.8.0
+
+## 0.3.0
+
+### Minor Changes
+
+- aa64ac7: Add the `@vercel/connect/chat` subpath with adapter helpers for the Chat SDK (`chat`). `connectSlackAdapter`, `connectGitHubAdapter`, and `connectLinearAdapter` each return a config fragment you spread into the matching `create*Adapter` factory, wiring a Connect connector for both outbound app-scoped tokens (`getToken` with `subject: { type: 'app' }`) and inbound trigger-forwarded webhooks (Vercel OIDC verification via the exported `createConnectWebhookVerifier`). The subpath has no runtime dependency on `@chat-adapter/*` — it returns structural config types.
+
 ## 0.2.10
 
 ### Patch Changes

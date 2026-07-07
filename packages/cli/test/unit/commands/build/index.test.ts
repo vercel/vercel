@@ -2959,6 +2959,7 @@ writeFileSync(
   JSON.stringify({
     version: 3,
     routes: [
+      { src: '/generated/(.*)', dest: '/generated-output/$1' },
       { src: '/backend/(.*)', service: 'backend' },
       { src: '/ui/(.*)', service: 'ui' }
     ],
@@ -3066,6 +3067,7 @@ writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, nul
       expect(config.routes).toEqual(
         expect.arrayContaining([
           { handle: 'filesystem' },
+          { src: '/generated/(.*)', dest: '/generated-output/$1' },
           { src: '/backend/(.*)', service: 'backend' },
           { src: '/ui/(.*)', service: 'ui' },
           expect.objectContaining({ dest: '/$1', check: true }),
@@ -3120,7 +3122,100 @@ writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, nul
     }
   });
 
-  it('should detect generated experimentalServicesV2 from default output when using --output', async () => {
+  it('should detect generated services from build output config', async () => {
+    const cwd = await getWriteableDirectory();
+    const output = join(cwd, '.vercel', 'output');
+    await fs.ensureDir(join(cwd, '.vercel'));
+    await fs.writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: '.',
+      projectId: '.',
+      settings: {
+        framework: null,
+        installCommand: '',
+      },
+    });
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      private: true,
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+    await fs.outputFile(
+      join(cwd, 'build.mjs'),
+      `
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+mkdirSync(join(outputDir, 'static'), { recursive: true });
+writeFileSync(join(outputDir, 'static', 'index.html'), 'root output');
+writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    routes: [{ src: '^/api/(.*)$', service: 'backend' }],
+    services: {
+      backend: {
+        root: 'backend',
+        entrypoint: 'package.json',
+        framework: 'vite'
+      }
+    }
+  }, null, 2)
+);
+`
+    );
+    await fs.outputJSON(join(cwd, 'backend', 'package.json'), {
+      private: true,
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+    await fs.outputFile(
+      join(cwd, 'backend', 'build.mjs'),
+      `
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+mkdirSync(join(outputDir, 'static'), { recursive: true });
+writeFileSync(join(outputDir, 'static', 'backend.html'), 'backend output');
+writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, null, 2));
+`
+    );
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.experimentalServicesV2).toEqual({
+      backend: expect.objectContaining({
+        root: 'backend',
+        framework: 'vite',
+      }),
+    });
+    expect(config.services).toEqual([
+      expect.objectContaining({
+        schema: 'experimentalServicesV2',
+        name: 'backend',
+      }),
+    ]);
+    expect(config.routes).toEqual(
+      expect.arrayContaining([{ src: '^/api/(.*)$', service: 'backend' }])
+    );
+    expect(await fs.readFile(join(output, 'static/index.html'), 'utf8')).toBe(
+      'root output'
+    );
+    expect(
+      await fs.readFile(
+        join(output, 'services/backend/static/backend.html'),
+        'utf8'
+      )
+    ).toBe('backend output');
+  });
+
+  it('should detect generated stable services routes from default output when using --output', async () => {
     const cwd = await getWriteableDirectory();
     const output = join(cwd, 'custom-output');
     await fs.ensureDir(join(cwd, '.vercel'));
@@ -3151,8 +3246,16 @@ writeFileSync(
   join(outputDir, 'config.json'),
   JSON.stringify({
     version: 3,
-    routes: [{ src: '^/api/(.*)$', service: 'backend' }],
-    experimentalServicesV2: {
+    routes: [
+      {
+        src: '^/api/(.*)$',
+        destination: {
+          type: 'service',
+          service: 'backend'
+        }
+      }
+    ],
+    services: {
       backend: {
         root: 'backend',
         entrypoint: 'package.json',
@@ -3195,7 +3298,15 @@ writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, nul
       }),
     });
     expect(config.routes).toEqual(
-      expect.arrayContaining([{ src: '^/api/(.*)$', service: 'backend' }])
+      expect.arrayContaining([
+        {
+          src: '^/api/(.*)$',
+          destination: {
+            type: 'service',
+            service: 'backend',
+          },
+        },
+      ])
     );
     expect(await fs.readFile(join(output, 'static/index.html'), 'utf8')).toBe(
       'root output'
@@ -3334,9 +3445,14 @@ writeFileSync(
     const cwd = fixture('static');
     const outputDir = join(cwd, '.vercel/output');
 
-    // Run the full CLI entry point so index.ts writes cli_traces.json
+    // Run the full CLI entry point so index.ts writes cli_traces.json.
+    // Framework detection is opt-in, so enable it to assert its spans.
     const cliPath = join(__dirname, '../../../../dist/vc.js');
-    execSync(`node ${cliPath} build`, { cwd, stdio: 'pipe' });
+    execSync(`node ${cliPath} build`, {
+      cwd,
+      stdio: 'pipe',
+      env: { ...process.env, VERCEL_FRAMEWORK_DETECTION: '1' },
+    });
 
     // Read trace events written to disk
     const tracePath = join(outputDir, 'diagnostics', 'cli_traces.json');
@@ -3376,9 +3492,13 @@ writeFileSync(
         { name: 'vc.doBuild', parent: 'vc' },
         { name: 'vc.loadEnv', parent: 'vc' },
         { name: 'vc.compileVercelConfig', parent: 'vc.doBuild' },
+        { name: 'vc.detectFirstDeploymentFramework', parent: 'vc.doBuild' },
+        { name: 'vc.detectAllFrameworks', parent: 'vc.doBuild' },
         { name: 'vc.detectBuilders', parent: 'vc.doBuild' },
         { name: 'vc.importBuilders', parent: 'vc.doBuild' },
         { name: 'vc.builder', parent: 'vc.doBuild' },
+        { name: 'vc.frameworkCrossCheck', parent: 'vc.doBuild' },
+        { name: 'vc.validateBuildOutput', parent: 'vc.doBuild' },
         { name: 'vc.finalizeBuildOutput', parent: 'vc.doBuild' },
         { name: 'vc.postCommand', parent: 'vc.cli' },
       ])

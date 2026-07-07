@@ -81,6 +81,17 @@ import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
+import {
+  detectFirstDeploymentFramework,
+  detectAllFrameworks,
+  isFrameworkDetectionEnabled,
+  warnIfFrameworkMismatch,
+  type DetectedFramework,
+} from '../../util/build/framework-detection';
+import {
+  validateBuildOutput,
+  reportBuildOutputProblems,
+} from '../../util/build/validate-build-output';
 import { scrubArgv } from '../../util/build/scrub-argv';
 import { scopeRoutesToServiceOwnership } from '../../util/build/service-route-ownership';
 import { sortBuilders } from '../../util/build/sort-builders';
@@ -131,6 +142,7 @@ import { pullEnvRecords } from '../../util/env/get-env-records';
 import { buildCommand } from './command';
 import { validatePackageManifest } from '../../util/validate-package-manifest';
 import { shouldEmbedFlagsDefinitions } from '../../util/flags/build-embedding';
+import { resolvePerDirectoryLinkRoot } from '../../util/build/repo-root';
 import { writeManifests } from './manifest';
 
 /** Build a plain suggested command with global flags (e.g. --cwd, --non-interactive) appended. */
@@ -170,7 +182,7 @@ interface BuildOutputConfig {
   crons?: Cron[];
   experimentalServices?: ExperimentalServices;
   experimentalServicesV2?: ExperimentalServicesV2;
-  services?: Service[];
+  services?: ExperimentalServicesV2 | Service[];
   deploymentId?: string;
 }
 
@@ -223,6 +235,12 @@ export interface BuildsManifest {
     speedInsightsVersion?: string | undefined;
     webAnalyticsVersion?: string | undefined;
   };
+  /**
+   * Result of first-deployment framework detection. Present whenever the
+   * build ran, with `status` distinguishing a positive detection from
+   * "nothing detected" and "did not run".
+   */
+  detectedFramework?: DetectedFramework;
 }
 
 export default async function main(client: Client): Promise<number> {
@@ -340,7 +358,10 @@ export default async function main(client: Client): Promise<number> {
     }
   }
 
-  const projectRootDirectory = link?.projectRootDirectory ?? '';
+  // `cwd` before any repo-root re-anchoring below.
+  const invokedCwd = cwd;
+  const hasRepoLevelLink = Boolean(link?.repoRoot);
+  let projectRootDirectory = link?.projectRootDirectory ?? '';
   if (link?.repoRoot) {
     cwd = client.cwd = link.repoRoot;
   }
@@ -428,6 +449,28 @@ export default async function main(client: Client): Promise<number> {
     client.cwd = cwd;
     client.setArgv(originalArgv);
     project = await readProjectSettings(vercelDir);
+  }
+
+  // A per-directory link (`<dir>/.vercel/project.json`) doesn't report a
+  // `repoRoot` like a repo-level (`repo.json`) link does, so the build would
+  // treat the linked subdirectory as the repo root. When an ancestor workspace
+  // claims the directory as a member package, re-anchor to that root and
+  // express the project relative to it, so it behaves like a repo-level link
+  // regardless of where the command was run. Directories not claimed by any
+  // workspace are left untouched.
+  if (!hasRepoLevelLink && link && project?.settings) {
+    const resolved = resolvePerDirectoryLinkRoot(
+      invokedCwd,
+      project.settings.rootDirectory
+    );
+    if (resolved.advisory) {
+      output.warn(resolved.advisory);
+    }
+    if (resolved.resolvedRootDirectory !== '') {
+      projectRootDirectory = resolved.resolvedRootDirectory;
+      project.settings.rootDirectory = resolved.resolvedRootDirectory;
+      cwd = client.cwd = resolved.repoRoot;
+    }
   }
 
   // Delete output directory from potential previous build
@@ -644,11 +687,12 @@ async function doBuild(
   const VALID_DEPLOYMENT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
+  const repoRootPath = cwd;
 
   const sourceConfigFile = await findSourceVercelConfigFile(workPath);
   let corepackShimDir: string | null | undefined;
   if (sourceConfigFile) {
-    corepackShimDir = await initCorepack({ repoRootPath: cwd });
+    corepackShimDir = await initCorepack({ repoRootPath });
 
     const installDepsSpan = span.child('vc.installDeps');
     try {
@@ -732,6 +776,30 @@ async function doBuild(
     ...pickOverrides(localConfig),
   };
 
+  // On a project's first deployment, detect the framework when none is
+  // configured. Mutates `projectSettings` in place so the `detectBuilders`
+  // call below sees the detected framework; must therefore run before it.
+  // The result is always recorded in `builds.json`, including when detection
+  // was skipped or found nothing.
+  buildsJson.detectedFramework = await span
+    .child('vc.detectFirstDeploymentFramework', {
+      enabled: String(isFrameworkDetectionEnabled()),
+      firstDeployment: String(process.env.VERCEL_FIRST_DEPLOYMENT === '1'),
+      configuredFramework: projectSettings.framework ?? undefined,
+    })
+    .trace(async s => {
+      const result = await detectFirstDeploymentFramework({
+        workPath,
+        projectSettings,
+      });
+      s.setAttributes({
+        detectionStatus: result.status,
+        detectedFramework: result.slug,
+        detectedFrameworkVersion: result.version,
+      });
+      return result;
+    });
+
   if (
     process.env.VERCEL_BUILD_MONOREPO_SUPPORT === '1' &&
     pkg?.scripts?.['vercel-build'] === undefined &&
@@ -757,6 +825,32 @@ async function doBuild(
   const files = (await getFiles(workPath, {})).map(f =>
     normalizePath(relative(workPath, f))
   );
+
+  // Framework detection for the end-of-build cross-check, started here so it
+  // runs concurrently with the builders instead of adding latency.
+  const detectedFrameworksPromise = span
+    .child('vc.detectAllFrameworks', {
+      enabled: String(isFrameworkDetectionEnabled()),
+    })
+    .trace(async s => {
+      if (!isFrameworkDetectionEnabled()) {
+        return [] as string[];
+      }
+      try {
+        const slugs = await detectAllFrameworks(workPath);
+        s.setAttributes({
+          detectedFrameworks: slugs.join(',') || undefined,
+          detectedFrameworkCount: String(slugs.length),
+        });
+        return slugs;
+      } catch (err) {
+        output.debug(`Framework cross-check detection failed: ${err}`);
+        s.setAttributes({
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return [] as string[];
+      }
+    });
 
   const routesResult = getTransformedRoutes(localConfig);
   if (routesResult.error) {
@@ -1007,7 +1101,6 @@ async function doBuild(
   const executedBuilds: Builder[] = [];
   const buildResults: Map<Builder, BuildResult | BuildOutputConfig> = new Map();
   const overrides: PathOverride[] = [];
-  const repoRootPath = cwd;
   // Only initialize corepack if not already done during early install
   if (!corepackShimDir) {
     corepackShimDir = await initCorepack({ repoRootPath });
@@ -1559,12 +1652,14 @@ async function doBuild(
               if (outputConfig instanceof CantParseJSONFile) {
                 throw outputConfig;
               }
+              let shouldMergeGeneratedOutputRoutes = false;
               if (
                 hasNonEmptyObject(outputConfig?.experimentalServices) &&
                 !hasNonEmptyObject(buildOutputConfig.experimentalServices)
               ) {
                 buildOutputConfig.experimentalServices =
                   outputConfig.experimentalServices;
+                shouldMergeGeneratedOutputRoutes = true;
               }
               if (
                 hasNonEmptyObject(outputConfig?.experimentalServicesV2) &&
@@ -1572,10 +1667,28 @@ async function doBuild(
               ) {
                 buildOutputConfig.experimentalServicesV2 =
                   outputConfig.experimentalServicesV2;
+                shouldMergeGeneratedOutputRoutes = true;
+              }
+              if (
+                hasGeneratedServicesConfig(outputConfig) &&
+                !hasGeneratedServicesConfig(buildOutputConfig)
+              ) {
+                buildOutputConfig.services = outputConfig.services;
+                shouldMergeGeneratedOutputRoutes = true;
+              }
+              if (
+                shouldMergeGeneratedOutputRoutes &&
+                Array.isArray(outputConfig?.routes)
+              ) {
+                buildOutputConfig.routes = prependMissingBuildOutputRoutes(
+                  outputConfig.routes,
+                  buildOutputConfig.routes
+                );
               }
               if (
                 hasNonEmptyObject(buildOutputConfig.experimentalServices) ||
-                hasNonEmptyObject(buildOutputConfig.experimentalServicesV2)
+                hasNonEmptyObject(buildOutputConfig.experimentalServicesV2) ||
+                hasGeneratedServicesConfig(buildOutputConfig)
               ) {
                 await fs.writeJSON(buildOutputConfigPath, buildOutputConfig, {
                   spaces: 2,
@@ -1747,45 +1860,40 @@ async function doBuild(
       generatedConfigs.push(defaultGeneratedConfig);
     }
 
-    const generatedExperimentalServicesV2Config =
-      getGeneratedExperimentalServicesV2Config([
-        ...generatedConfigs,
-        ...buildResults.values(),
-      ]);
+    const generatedServicesConfig = getGeneratedServicesConfig([
+      ...generatedConfigs,
+      ...buildResults.values(),
+    ]);
     const generatedExperimentalServicesV1Config =
       getGeneratedExperimentalServicesV1Config([
         ...generatedConfigs,
         ...buildResults.values(),
       ]);
 
-    if (
-      generatedExperimentalServicesV2Config ||
-      generatedExperimentalServicesV1Config
-    ) {
-      if (generatedExperimentalServicesV2Config) {
+    if (generatedServicesConfig || generatedExperimentalServicesV1Config) {
+      if (generatedServicesConfig) {
         nestExperimentalServicesV2Output = true;
       }
       detectedExperimentalServicesV1Config =
         generatedExperimentalServicesV1Config;
-      detectedExperimentalServicesV2Config =
-        generatedExperimentalServicesV2Config;
-      detectedExperimentalServicesV2RootRoutes =
-        generatedExperimentalServicesV2Config
-          ? generatedConfigs.find(
-              config =>
-                hasNonEmptyObject(config?.experimentalServicesV2) &&
-                Array.isArray(config?.routes)
-            )?.routes
-          : undefined;
+      detectedExperimentalServicesV2Config = generatedServicesConfig;
+      detectedExperimentalServicesV2RootRoutes = generatedServicesConfig
+        ? generatedConfigs.find(
+            config =>
+              (hasGeneratedServicesConfig(config) ||
+                hasNonEmptyObject(config?.experimentalServicesV2)) &&
+              Array.isArray(config?.routes)
+          )?.routes
+        : undefined;
       const generatedBuilders = await span
         .child('vc.detectGeneratedServices')
         .trace(() =>
           detectBuilders(files, pkg, {
             ...localConfig,
-            services: undefined,
-            ...(generatedExperimentalServicesV2Config
+            ...(generatedServicesConfig
               ? {
-                  experimentalServicesV2: generatedExperimentalServicesV2Config,
+                  services: generatedServicesConfig,
+                  experimentalServicesV2: undefined,
                 }
               : {
                   experimentalServicesV2: undefined,
@@ -1846,7 +1954,7 @@ async function doBuild(
       for (const service of detectedResolvedServices || []) {
         const alreadyExecutedBuild = getAlreadyExecutedBuild(service.builder);
         if (alreadyExecutedBuild) {
-          if (generatedExperimentalServicesV2Config) {
+          if (generatedServicesConfig) {
             output.warn(getGeneratedServiceAlreadyBuiltWarning(service));
             continue;
           }
@@ -2066,14 +2174,19 @@ async function doBuild(
     routesResult.routes,
     detectedExperimentalServicesV2RootRoutes ?? existingConfig?.routes
   );
+  const mergedRoutesWithGeneratedServicesV2Routes =
+    nestExperimentalServicesV2Output
+      ? appendBuildOutputRouteTables(
+          mergedRoutes,
+          detectedExperimentalServicesV2RootRoutes ?? existingConfig?.routes
+        )
+      : mergedRoutes;
 
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results
   const config: BuildOutputConfig = {
     version: 3,
-    routes: nestExperimentalServicesV2Output
-      ? explicitRootRoutes
-      : mergedRoutes,
+    routes: mergedRoutesWithGeneratedServicesV2Routes ?? explicitRootRoutes,
     images: mergedImages,
     wildcard: mergedWildcard,
     overrides: mergedOverrides,
@@ -2106,6 +2219,39 @@ async function doBuild(
   }
 
   await writeFlagsJSON(buildResults.values(), outputDir);
+
+  // Warn when the detected frameworks don't match how the project was built.
+  await span.child('vc.frameworkCrossCheck').trace(async s => {
+    const detectedFrameworks = await detectedFrameworksPromise;
+    const executedBuilders = Array.from(buildResults.keys());
+    const usedBuilders = executedBuilders
+      .map(b => b.use)
+      .filter((use): use is string => Boolean(use));
+    const mismatchResult = warnIfFrameworkMismatch({
+      configuredFramework: projectSettings.framework,
+      detectedFrameworks,
+      usedBuilders,
+      usedFrameworks: executedBuilders.map(b => b.config?.framework),
+    });
+    s.setAttributes({
+      result: mismatchResult,
+      configuredFramework: projectSettings.framework ?? undefined,
+      detectedFrameworks: detectedFrameworks.join(',') || undefined,
+      usedBuilders: usedBuilders.join(',') || undefined,
+    });
+  });
+
+  await span.child('vc.validateBuildOutput').trace(async s => {
+    const outputProblems = await validateBuildOutput(outputDir);
+    s.setAttributes({
+      problemCount: String(outputProblems.length),
+      problems:
+        outputProblems.map(p => `${p.severity}: ${p.message}`).join('; ') ||
+        undefined,
+    });
+    reportBuildOutputProblems(outputProblems);
+  });
+
   collectSpan.stop();
 
   const relOutputDir = relative(cwd, outputDir);
@@ -2518,6 +2664,24 @@ function appendBuildOutputRouteTables(
   return routes.length > 0 ? routes : undefined;
 }
 
+function prependMissingBuildOutputRoutes(
+  routesToPrepend: BuildOutputConfig['routes'],
+  existingRoutes: BuildOutputConfig['routes']
+): BuildOutputConfig['routes'] | undefined {
+  if (!Array.isArray(routesToPrepend) || routesToPrepend.length === 0) {
+    return existingRoutes;
+  }
+
+  const existingRouteKeys = new Set(
+    (existingRoutes ?? []).map(route => JSON.stringify(route))
+  );
+  const missingRoutes = routesToPrepend.filter(
+    route => !existingRouteKeys.has(JSON.stringify(route))
+  );
+
+  return appendBuildOutputRouteTables(missingRoutes, existingRoutes);
+}
+
 async function writeServiceConfigs(
   outputDir: string,
   buildResults: Map<Builder, BuildResult | BuildOutputConfig>,
@@ -2643,10 +2807,23 @@ function getGeneratedExperimentalServicesV1Config(
   return undefined;
 }
 
-function getGeneratedExperimentalServicesV2Config(
+function hasGeneratedServicesConfig(
+  result: BuildResult | BuildOutputConfig | null | undefined
+): result is (BuildResult | BuildOutputConfig) & {
+  services: ExperimentalServicesV2;
+} {
+  return (
+    result != null && 'services' in result && hasNonEmptyObject(result.services)
+  );
+}
+
+function getGeneratedServicesConfig(
   buildResults: Iterable<BuildResult | BuildOutputConfig | null | undefined>
 ): ExperimentalServicesV2 | undefined {
   for (const result of buildResults) {
+    if (hasGeneratedServicesConfig(result)) {
+      return result.services;
+    }
     if (
       result &&
       'experimentalServicesV2' in result &&

@@ -15,13 +15,17 @@ vi.mock('@vercel/build-utils', async importOriginal => ({
 import execa from 'execa';
 import { FileFsRef } from '@vercel/build-utils';
 import {
+  COMPILEALL_TIMEOUT_MS,
   collectAppBytecodeFiles,
   derivePycPath,
   getCompileAllAppExcludeRegex,
-  isCompileAllEnabled,
   runCompileAll,
-  shouldUseCompileAll,
+  shouldCompileAll,
 } from '../src/compileall';
+import {
+  BYTECODE_FILL_CEILING_BYTES,
+  LAMBDA_SIZE_THRESHOLD_BYTES,
+} from '../src/dependency-externalizer';
 
 const mockedExeca = vi.mocked(execa);
 const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
@@ -45,137 +49,67 @@ afterEach(() => {
   }
 });
 
-describe('isCompileAllEnabled', () => {
-  it('defaults to disabled', () => {
-    delete process.env.VERCEL_PYTHON_COMPILEALL;
-    delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
-
-    expect(isCompileAllEnabled()).toBe(false);
-  });
-
-  it('enables compileall for large functions with truthy flag values', () => {
-    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
-
+describe('shouldCompileAll', () => {
+  it('enables compileall with truthy flag values', () => {
     process.env.VERCEL_PYTHON_COMPILEALL = '1';
-    expect(isCompileAllEnabled()).toBe(true);
+    expect(shouldCompileAll({ isDev: false, hasCustomCommand: false })).toBe(
+      true
+    );
 
     process.env.VERCEL_PYTHON_COMPILEALL = 'true';
-    expect(isCompileAllEnabled()).toBe(true);
+    expect(shouldCompileAll({ isDev: false, hasCustomCommand: false })).toBe(
+      true
+    );
 
     process.env.VERCEL_PYTHON_COMPILEALL = 'TRUE';
-    expect(isCompileAllEnabled()).toBe(true);
+    expect(shouldCompileAll({ isDev: false, hasCustomCommand: false })).toBe(
+      true
+    );
   });
 
-  it('keeps compileall disabled for large functions with non-truthy flag values', () => {
-    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
-
-    delete process.env.VERCEL_PYTHON_COMPILEALL;
-    expect(isCompileAllEnabled()).toBe(false);
-
-    process.env.VERCEL_PYTHON_COMPILEALL = '';
-    expect(isCompileAllEnabled()).toBe(false);
-
-    process.env.VERCEL_PYTHON_COMPILEALL = '0';
-    expect(isCompileAllEnabled()).toBe(false);
-
-    process.env.VERCEL_PYTHON_COMPILEALL = 'false';
-    expect(isCompileAllEnabled()).toBe(false);
-  });
-
-  it('never enables compileall without large functions, even when the flag is truthy', () => {
-    process.env.VERCEL_PYTHON_COMPILEALL = '1';
-
-    delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
-    expect(isCompileAllEnabled()).toBe(false);
-
-    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '0';
-    expect(isCompileAllEnabled()).toBe(false);
-
-    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = 'false';
-    expect(isCompileAllEnabled()).toBe(false);
-
-    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '';
-    expect(isCompileAllEnabled()).toBe(false);
-  });
-});
-
-describe('shouldUseCompileAll', () => {
-  it('enables compileall for large functions when the flag is set for non-custom builds', () => {
-    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
-    process.env.VERCEL_PYTHON_COMPILEALL = '1';
-
-    expect(
-      shouldUseCompileAll({
-        isDev: false,
-        hasCustomCommand: false,
-        hasCustomBuildCommand: false,
-      })
-    ).toBe(true);
-  });
-
-  it('does not enable compileall for custom install commands, even with large functions and the flag set', () => {
-    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
-    process.env.VERCEL_PYTHON_COMPILEALL = '1';
-
-    expect(
-      shouldUseCompileAll({
-        isDev: false,
-        hasCustomCommand: true,
-        hasCustomBuildCommand: false,
-      })
-    ).toBe(false);
-  });
-
-  it('does not enable compileall for custom build commands, even with large functions and the flag set', () => {
-    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
-    process.env.VERCEL_PYTHON_COMPILEALL = '1';
-
-    expect(
-      shouldUseCompileAll({
-        isDev: false,
-        hasCustomCommand: false,
-        hasCustomBuildCommand: true,
-      })
-    ).toBe(false);
-  });
-
-  it('does not enable compileall in dev even with large functions and the flag set', () => {
-    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
-    process.env.VERCEL_PYTHON_COMPILEALL = '1';
-
-    expect(
-      shouldUseCompileAll({
-        isDev: true,
-        hasCustomCommand: false,
-        hasCustomBuildCommand: false,
-      })
-    ).toBe(false);
-  });
-
-  it('does not enable compileall without large functions even when the flag is set', () => {
+  it('does not require VERCEL_SUPPORT_LARGE_FUNCTIONS', () => {
     delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
     process.env.VERCEL_PYTHON_COMPILEALL = '1';
 
-    expect(
-      shouldUseCompileAll({
-        isDev: false,
-        hasCustomCommand: false,
-        hasCustomBuildCommand: false,
-      })
-    ).toBe(false);
+    expect(shouldCompileAll({ isDev: false, hasCustomCommand: false })).toBe(
+      true
+    );
   });
 
-  it('does not enable compileall for large functions without the flag', () => {
-    process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
+  it('stays disabled without the flag or with non-truthy flag values', () => {
     delete process.env.VERCEL_PYTHON_COMPILEALL;
+    expect(shouldCompileAll({ isDev: false, hasCustomCommand: false })).toBe(
+      false
+    );
 
-    expect(
-      shouldUseCompileAll({
-        isDev: false,
-        hasCustomCommand: false,
-        hasCustomBuildCommand: false,
-      })
-    ).toBe(false);
+    for (const val of ['', '0', 'false']) {
+      process.env.VERCEL_PYTHON_COMPILEALL = val;
+      expect(shouldCompileAll({ isDev: false, hasCustomCommand: false })).toBe(
+        false
+      );
+    }
+  });
+
+  it('does not enable compileall in dev', () => {
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+
+    expect(shouldCompileAll({ isDev: true, hasCustomCommand: false })).toBe(
+      false
+    );
+  });
+
+  it('does not enable compileall for custom install commands', () => {
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+
+    expect(shouldCompileAll({ isDev: false, hasCustomCommand: true })).toBe(
+      false
+    );
+  });
+
+  it('keeps the fill ceiling safely below the Lambda size threshold', () => {
+    expect(BYTECODE_FILL_CEILING_BYTES).toBeLessThan(
+      LAMBDA_SIZE_THRESHOLD_BYTES
+    );
   });
 });
 
@@ -206,8 +140,19 @@ describe('runCompileAll', () => {
         '[/\\\\]\\.vercel(?:[/\\\\]|$)',
         '/work',
       ],
-      { env }
+      { env, timeout: COMPILEALL_TIMEOUT_MS }
     );
+  });
+
+  it('resolves without throwing when compileall fails', async () => {
+    mockedExeca.mockRejectedValue(new Error('compileall crashed'));
+
+    await expect(
+      runCompileAll({
+        pythonBin: '/work/.vercel/python/.venv/bin/python',
+        filesOrDirectories: ['/work'],
+      })
+    ).resolves.toBeUndefined();
   });
 });
 

@@ -531,6 +531,52 @@ it('uses the natural index output for an isolated V2 service', async () => {
   expect(lambda.handler).toBe('index.mjs');
 }, 30000);
 
+it('rejects a service whose entrypoint sets the Edge runtime', async () => {
+  // Build the entrypoint in a temp dir rather than a committed fixture: the
+  // "successful builds" loop above auto-discovers every directory under
+  // fixtures/ and asserts it builds, but this entrypoint is meant to fail.
+  const workDir = await realpath(
+    await mkdtemp(join(tmpdir(), 'edge-runtime-service-'))
+  );
+  await writeFile(
+    join(workDir, 'package.json'),
+    JSON.stringify({
+      name: 'edge-runtime-service',
+      version: '1.0.0',
+      type: 'module',
+    })
+  );
+  await writeFile(
+    join(workDir, 'index.js'),
+    [
+      "export const config = { runtime: 'edge' };",
+      '',
+      'export async function GET() {',
+      "  return new Response('hello from the edge');",
+      '}',
+    ].join('\n')
+  );
+
+  await expect(
+    build({
+      files: {},
+      workPath: workDir,
+      config: {
+        ...defaultConfig,
+        // Skip install — the build must fail before any heavy work.
+        projectSettings: { installCommand: '' },
+        serviceName: 'edge-api',
+      },
+      meta,
+      entrypoint: 'index.js',
+      repoRootPath: workDir,
+      service: { name: 'edge-api' },
+    })
+  ).rejects.toThrow(
+    'Edge Runtime is not supported in services. Service "edge-api"'
+  );
+}, 30000);
+
 it('prefixes emitted service route sources with routePrefix', async () => {
   const fixtureName = '01-express-index-ts-esm';
   const fixtureSource = join(__dirname, 'fixtures', fixtureName);

@@ -19,6 +19,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandAgentRuns(actual: string) {
+    this.trackCliCommand({
+      command: 'agent-runs',
+      value: actual,
+    });
+  }
+
   trackCliCommandAiGateway(actual: string) {
     this.trackCliCommand({
       command: 'ai-gateway',
@@ -449,6 +456,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandUsage(actual: string) {
     this.trackCliCommand({
       command: 'usage',
+      value: actual,
+    });
+  }
+
+  trackCliCommandVcr(actual: string) {
+    this.trackCliCommand({
+      command: 'vcr',
       value: actual,
     });
   }

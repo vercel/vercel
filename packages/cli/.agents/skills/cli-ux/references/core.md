@@ -6,6 +6,8 @@ This is the target design system. Move every touched command family toward these
 
 ## Voice + Copy
 
+This is the cross-cutting baseline because most CLI UX work touches strings. For copy changes or copy review, load [`copy.md`](copy.md); it owns detailed wording rules. Canonical product vocabulary stays here because it is coupled to CLI resource and output contracts.
+
 - Clear, competent, no fluff.
 - Be brief. Every word earns its place.
 - Use active voice by default.

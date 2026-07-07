@@ -670,12 +670,12 @@ export const startDevServer: StartDevServer = async opts => {
       : undefined,
     service
   );
+  let hookResult: Awaited<ReturnType<typeof runFrameworkHook>> | undefined;
   if (detected?.entrypoint) {
     resolved = detected.entrypoint;
   } else {
-    const hookResult = await runFrameworkHook(framework, {
+    hookResult = await runFrameworkHook(framework, {
       pythonEnv: env,
-      projectDir: join(workPath, detected?.baseDir ?? ''),
       workPath,
       entrypoint,
       detected: detected ?? undefined,
@@ -871,6 +871,10 @@ export const startDevServer: StartDevServer = async opts => {
 
       if (devShim.extraPythonPath) {
         pathParts.push(devShim.extraPythonPath);
+      }
+
+      if (hookResult?.extraPythonPath) {
+        pathParts.push(hookResult.extraPythonPath);
       }
 
       const existingPythonPath = env.PYTHONPATH || '';

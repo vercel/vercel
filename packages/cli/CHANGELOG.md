@@ -1,5 +1,132 @@
 # vercel
 
+## 54.21.1
+
+### Patch Changes
+
+- 1e774e8: Preserve generated service routes when Build Output services are merged from framework output into a custom build output directory.
+- c9c9edb: Add `--project` support to project-scoped flags, cache, crons, and rolling-release commands.
+  - @vercel/static-build@2.11.4
+
+## 54.21.0
+
+### Minor Changes
+
+- cc74129: Enable monorepo subdirectory build fixes by default (previously gated behind `VERCEL_RESOLVE_ROOT_DIRECTORY=1`), scoped to directories the workspace actually claims.
+
+  When a project is linked in place (`apps/api/.vercel/project.json`) and `vc build` is run from that directory, the build now re-anchors to the workspace root and expresses the project as its path relative to that root — so builders trace correctly, hoisted dependencies are packaged, and `--standalone` output preserves package-manager symlinks so dependencies resolve at runtime.
+
+  Re-anchoring only happens when an ancestor workspace manifest (`pnpm-workspace.yaml` or `package.json#workspaces`) actually declares the linked directory as a member package. Membership is decided by matching the directory's path against the manifest's declared patterns (including negations like `!apps/legacy`) plus a `package.json` existence check — pure string matching with no filesystem traversal, so large repositories and recursive patterns like `**` cost nothing. A project that merely sits inside an unrelated repository — a vendored folder, a fixture, a scratch project in a company monorepo, or a plain git repo with no workspace — is left untouched and builds from its own directory exactly as before.
+
+  The `rootDirectory` setting is interpreted relative to the link's location and honored when it points at a folder that exists; otherwise (e.g. a redundant `apps/api` setting on a link at `apps/api`, which previously crashed with `ENOENT .../apps/api/apps/api/...`) it is ignored in favor of the link's own location and a warning is emitted.
+
+  To restore the previous behavior, pin an earlier CLI version.
+
+### Patch Changes
+
+- 001a879: Do not duplicate global flags (e.g. `--scope`) in agent-output `next[]` command suggestions when the command template already carries the flag
+- d15f17c: Resolve projects for `domains inspect` and `domains rm` from the domain's project-domains instead of scanning every project in the account
+- 3190211: Show list help instead of transfer-in help for `vercel domains ls --help`
+- 85c897e: Run framework detection during `vc build` (opt-in via `VERCEL_FRAMEWORK_DETECTION=1`): detect the framework on a project's first deployment (`VERCEL_FIRST_DEPLOYMENT=1`) when none is configured and record it as `detectedFramework` in `builds.json`, cross-check the configured framework against the source code in the background without slowing the build, and validate the build output after it is written. Adds a `detectionConfidence` annotation to framework definitions for detections that are commonly incidental (e.g. Storybook as a devDependency) so they are never suggested as a framework override.
+- 3f3ca56: [cli] `integration add` now installs a product's declared agent skills after provisioning. It reads the product's `agentSkills` (public GitHub `SKILL.md` links) and runs `npx skills add` for each — prompting first in an interactive terminal (default yes), or auto-installing for non-interactive callers (agents, CI). `--format=json` stays read-only: it surfaces a `skills` array instead of installing. Non-GitHub or unparseable links are skipped.
+- 3aa331b: Emit structured agent-output JSON (`project_not_found` with runnable `next` suggestions) when `vercel list <project>` does not resolve in non-interactive mode
+- 24b012c: Update the CLI's `sandbox` dependency from `3.1.2` to `3.4.0`.
+- d8307a7: Add a project update command for changing framework and build settings.
+- Updated dependencies [6dbc280]
+- Updated dependencies [4097a62]
+  - @vercel/next@4.20.3
+  - @vercel/python@6.48.0
+  - @vercel/static-build@2.11.4
+
+## 54.20.1
+
+### Patch Changes
+
+- 4b1306c: List `vercel agent-runs` in the root CLI help output.
+- 0b64f51: Add missing commands to the root `vercel --help` list: `ai-gateway`, `edge-config`, `oauth-apps`, `sandbox`, and `tokens`
+
+## 54.20.0
+
+### Minor Changes
+
+- b9e4f06: Add a `vercel agent-runs` command for Agent Runs observability: `list` lists Agent Runs for a project, `inspect <runId>` shows run metadata, events, usage, and subagents, `trace <runId>` shows the full trace (turns, messages, reasoning, and tool calls), and `projects` lists projects in the team with Agent Runs activity. All subcommands support `--json` for machine-readable output.
+
+## 54.19.0
+
+### Minor Changes
+
+- 2c87793: Add `vercel vcr` commands to manage Vercel Container Registry repositories and images.
+
+### Patch Changes
+
+- 84c01ff: Add `install` as an alias for `vercel integration add`.
+- 08d234f: Merge routes from generated Build Output config with builder routes when nesting Services V2 output, so framework routes and generated service or custom routes are all preserved.
+- 6e004b1: Accept all marketplace integration legal documents (addendum, privacy policy, terms of service) with a single confirmation instead of one prompt each. The links are now listed together, each on its own line, before asking.
+
+## 54.18.7
+
+### Patch Changes
+
+- 4d9394b: Bridge WebSocket close to response close
+- c4667d3: Fix `vc build` run from a monorepo subdirectory (gated behind `VERCEL_RESOLVE_ROOT_DIRECTORY=1`).
+
+  When a project is linked in place (`apps/api/.vercel/project.json`) and `vc build` is run from that directory, the build previously treated the linked subdirectory as the repository root. Because the project's dependencies are typically hoisted to the monorepo root above it, this broke builds in several ways that share one root cause:
+
+  - A `rootDirectory` setting that restates the link's own location (e.g. `apps/api` for a link at `apps/api`) double-appended into `apps/api/apps/api`, failing with `ENOENT … /apps/api/apps/api/.next/package.json`.
+  - With `--standalone`, the package-manager symlink that makes a dependency resolvable (`apps/api/node_modules/hono` → `../../node_modules/.pnpm/.../hono`) was skipped because its target pointed outside the subdirectory, so the deployed function failed at runtime with `Cannot find module 'hono'` even though the dependency's files were packaged.
+  - Builders traced from the wrong root, so Next.js set an incorrect `outputFileTracingRoot`/`turbopack.root` (Turbopack errors; Webpack `.nft.json` omits hoisted dependencies).
+
+  With the flag enabled, a per-directory link is resolved like a repository-level link: the repository root is detected (workspace markers, then git) and the project is expressed as its path relative to that root, so the build is anchored correctly regardless of which directory the command is run from. The `rootDirectory` setting is interpreted relative to the link's location and honored when it points at a folder that exists; otherwise (e.g. the redundant `apps/api/apps/api` case) it is ignored in favor of the link's own location and a warning is emitted. Standalone builds additionally preserve the package-manager symlinks (rather than skipping them) so dependencies resolve at runtime. Behavior is unchanged when the flag is not set.
+
+- Updated dependencies [69892ba]
+  - @vercel/rust@1.4.0
+  - @vercel/node@5.8.22
+
+## 54.18.6
+
+### Patch Changes
+
+- e833330: Point rolling release start at the dedicated rolling-release start API endpoint.
+- Updated dependencies [cbf22bf]
+  - @vercel/backends@0.8.21
+  - @vercel/express@0.1.112
+
+## 54.18.5
+
+### Patch Changes
+
+- 0eea3d6: Expose `cacheReason` in `vc logs` output, alongside the existing cache status, so users can see why a request was a cache MISS/BYPASS/STALE.
+  - @vercel/static-build@2.11.4
+
+## 54.18.4
+
+### Patch Changes
+
+- 16cf8f6: Surface the builds rate-limit upgrade hint on `vercel deploy`. The hint previously never printed (the error was dropped before conversion) and pointed at the CLI self-updater; it now renders the backend's plan-appropriate call to action (`ctaLabel`/`ctaUrl`, or legacy `action`/`link`) from the error, falling back to a plan-agnostic nudge.
+- 56875d2: Remove the non-functional `vercel buy v0` subcommand; use `vercel buy credits v0` to purchase v0 credits.
+- 6c5aa14: Support lazily generated Build Output `services` configs during `vc build`.
+
+## 54.18.3
+
+### Patch Changes
+
+- 262e935: Fixed `vercel dev` for the `container` framework when used as a top-level build (outside of `services`).
+
+  - The dev server now maps the container preset's `<detect>` sentinel to a discovered Dockerfile (`Dockerfile.vercel`, `Containerfile.vercel`, `Dockerfile`, or `Containerfile`), so the build is recognized instead of warning that it "did not match any source files".
+  - The `@vercel/container` `build()` path no longer throws `` `vercel dev` cannot build container images from a Dockerfile `` during dev. Containers are always built from a Dockerfile/Containerfile (there is no prebuilt-image input); in dev the image is built and run locally by `startDevServer`, so `build()` returns a stable local tag without pushing to a registry.
+  - The dev server no longer treats a container build output (an OCI image reference, `runtime: "container"`) as a zip-based function. It previously failed with `output.createZip is not a function` while trying to spin the image up under `fun`; container outputs are now skipped there and served by the builder's `startDevServer` instead.
+  - The dev path (`startDevServer`) now discovers the `Dockerfile.vercel` / `Containerfile.vercel` opt-in markers when the container entrypoint is the `<detect>` sentinel, matching the build path. Previously it only looked for a bare `Dockerfile`, so a project using a `.vercel` marker failed with "Container service must specify an entrypoint…" even though deploys worked. The discovery helper is now shared between the build and dev paths.
+  - `vercel dev` now fails fast with a clear message when the Docker daemon isn't running ("Could not connect to the Docker daemon. Start Docker…") instead of a cryptic `Container "undefined" exited (code 125) before becoming ready.`. Container start failures also now name the actual container and include the underlying Docker error output.
+  - The container dev server is now reused across requests. Previously the image was rebuilt and a fresh container started on every HTTP request (the result was missing the `persistent` flag); now a live container is kept and reused for the same service, matching how other persistent builders behave.
+
+- 9e3f9cd: [services] service name validation
+- 9e3f9cd: Align `services` and `experimentalServicesV2` service-name validation with the platform schema.
+- Updated dependencies [262e935]
+- Updated dependencies [e05ed3c]
+  - @vercel/container@0.0.4
+  - @vercel/next@4.20.2
+  - @vercel/static-build@2.11.4
+
 ## 54.18.2
 
 ### Patch Changes

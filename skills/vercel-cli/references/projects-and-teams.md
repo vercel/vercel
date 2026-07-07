@@ -4,6 +4,7 @@
 
 ```bash
 vercel project ls                    # list projects
+vercel project ls --filter my-app    # substring search by name
 vercel project add my-project        # create project
 vercel project inspect my-app        # inspect project
 vercel project rm my-app             # remove project
@@ -19,6 +20,8 @@ vercel inspect <url>                 # deployment details
 vercel remove <name|id>              # remove deployments
 vercel remove my-app --safe          # skip aliased deployments
 ```
+
+`vercel list` returns one page of 20 and supports cursor pagination with `--next`; do not assume it accepts `--limit`. Use project, scope, status, environment, and metadata filters to keep deployment lists focused, or use `vercel api` when a strict page size is required.
 
 ## Teams
 

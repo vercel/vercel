@@ -648,7 +648,6 @@ const main = async () => {
   }
 
   const subcommandsWithoutToken = [
-    'agent',
     'login',
     'logout',
     'help',
@@ -658,6 +657,7 @@ const main = async () => {
     'telemetry',
     'upgrade',
     'skills',
+    'agent',
   ];
 
   if (process.env.FF_GUIDANCE_MODE) {
@@ -965,6 +965,10 @@ const main = async () => {
           telemetry.trackCliCommandAgent(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).agent;
           break;
+        case 'agent-runs':
+          telemetry.trackCliCommandAgentRuns(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).agentRuns;
+          break;
         case 'ai-gateway':
           telemetry.trackCliCommandAiGateway(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).aiGateway;
@@ -1196,6 +1200,10 @@ const main = async () => {
           telemetry.trackCliCommandUsage(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).usage;
           break;
+        case 'vcr':
+          telemetry.trackCliCommandVcr(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).vcr;
+          break;
         case 'whoami':
           telemetry.trackCliCommandWhoami(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).whoami;
@@ -1383,7 +1391,10 @@ async function promptAndUpgrade(
 
 main()
   .then(async exitCode => {
-    if (cachedLatest) {
+    // Skip the update notification after `vc upgrade`: the process still has
+    // the pre-upgrade version in memory, so it would prompt the user to
+    // upgrade again right after the upgrade completed.
+    if (cachedLatest && resolvedCommandForUpdate !== 'upgrade') {
       const originalExitCode = typeof exitCode === 'number' ? exitCode : 0;
 
       // Await the fresh registry lookup to verify the exact version before

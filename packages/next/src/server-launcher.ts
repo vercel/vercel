@@ -54,7 +54,9 @@ module.exports = serve(nextServer.getRequestHandler());
 // If available, add `getRequestHandlerWithMetadata` to the export if it's
 // required by the configuration.
 if (
-  (conf.experimental?.ppr || conf.experimental?.cacheComponents) &&
+  (conf.experimental?.ppr ||
+    conf.experimental?.cacheComponents ||
+    conf.cacheComponents) &&
   'getRequestHandlerWithMetadata' in nextServer &&
   typeof nextServer.getRequestHandlerWithMetadata === 'function'
 ) {

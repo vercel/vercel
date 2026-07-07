@@ -37,7 +37,7 @@ import {
   type Service,
   isExperimentalService,
   isExperimentalServiceV2,
-  isExternalSymlink,
+  isSymbolicLink,
 } from '@vercel/build-utils';
 import { getInternalServiceFunctionPath } from '@vercel/fs-detectors';
 import pipe from 'promisepipe';
@@ -721,17 +721,12 @@ async function writeEdgeFunction(
 
   await fs.mkdirp(dest);
   const ops: Promise<any>[] = [];
-  const sharedDest = join(outputDir, 'shared');
-  const { files, filePathMap, shared } = filesWithoutFsRefs(
+  const { files, filePathMap } = filesWithoutFsRefs(
     edgeFunction.files,
     repoRootPath,
-    sharedDest,
     standalone
   );
   ops.push(download(files, dest));
-  if (shared) {
-    ops.push(download(shared, sharedDest));
-  }
 
   const config = {
     runtime: 'edge',
@@ -783,19 +778,10 @@ async function writeLambda(
   const ops: Promise<any>[] = [];
   let filePathMap: Record<string, string> | undefined;
   if (lambda.files) {
-    const sharedDest = join(outputDir, 'shared');
     // `files` is defined
-    const f = filesWithoutFsRefs(
-      lambda.files,
-      repoRootPath,
-      sharedDest,
-      standalone
-    );
+    const f = filesWithoutFsRefs(lambda.files, repoRootPath, standalone);
     filePathMap = f.filePathMap;
     ops.push(download(f.files, dest));
-    if (f.shared) {
-      ops.push(download(f.shared, sharedDest));
-    }
   } else if (lambda.zipBuffer) {
     // Builders that use the deprecated `createLambda()` might only have `zipBuffer`
     ops.push(unzip(lambda.zipBuffer, dest));
@@ -1011,69 +997,43 @@ export async function* findDirs(
 }
 
 /**
- * Re-anchors a Lambda file key that escapes the function root back inside it.
- *
- * When `vc build` runs from a monorepo subdirectory without a Root Directory
- * setting, the repo root is detected as the app directory while dependencies
- * are hoisted to the actual monorepo root above it. Builders then emit Lambda
- * file keys that climb out of the function root, e.g.
- * `../../node_modules/.pnpm/next@.../next/dist/.../server.runtime.prod.js`.
- *
- * Such keys cannot be used as zip entry names (`yazl` rejects any path
- * containing a `..` segment with "invalid relative path"), and they would not
- * resolve at runtime since nothing exists above a deployed function's root.
- * Stripping the leading `..` segments anchors the file inside the function
- * (e.g. `node_modules/.pnpm/.../server.runtime.prod.js`), matching the layout
- * a root-level build produces. Relative paths between these files (such as the
- * symlinks inside the pnpm store) are unaffected because every escaping key
- * shares the same leading prefix and is re-anchored consistently.
- */
-function stripParentSegments(path: string): string {
-  const normalized = normalizePath(path);
-  const segments = normalized.split('/');
-  let i = 0;
-  while (i < segments.length && segments[i] === '..') {
-    i++;
-  }
-  return segments.slice(i).join('/');
-}
-
-/**
  * Removes the `FileFsRef` instances from the `Files` object
  * and returns them in a JSON serializable map of repo root
  * relative paths to Lambda destination paths.
+ *
+ * In standalone mode the build is anchored at the repo root, so traced keys
+ * already sit inside the function; files (and package-manager symlinks) are
+ * written directly instead of being recorded in `filePathMap`.
  */
 export function filesWithoutFsRefs(
   files: Files,
   repoRootPath: string,
-  sharedDest?: string,
   standalone?: boolean
-): { files: Files; filePathMap?: Record<string, string>; shared?: Files } {
+): { files: Files; filePathMap?: Record<string, string> } {
+  // Directory symlinks whose descendants must not be materialized separately:
+  // `download()` would write the descendants concurrently and could create a
+  // real directory at the symlink's path before the symlink itself is written
+  // (EEXIST -> readlink on a dir -> EINVAL). Only the symlink is kept; its
+  // target still points at the real files elsewhere in the function.
+  const symlinkDirs = standalone
+    ? Object.entries(files)
+        .filter(([, f]) => f.type === 'FileFsRef' && isSymbolicLink(f.mode))
+        .map(([p]) => `${normalizePath(p)}/`)
+    : [];
   let filePathMap: Record<string, string> | undefined;
   const out: Files = {};
-  const shared: Files = {};
   for (const [path, file] of Object.entries(files)) {
     if (file.type === 'FileFsRef') {
-      if (!filePathMap) filePathMap = {};
-      if (standalone && sharedDest) {
-        // pnpm and other package managers create symlinks in node_modules that
-        // point outside the app directory (e.g. ../../node_modules/.pnpm/...).
-        // These targets are rejected during prebuilt deploys, so skip them.
-        // The traced dependency files are included at their logical paths.
-        if (isExternalSymlink(file)) {
+      if (standalone) {
+        // Keep symlinks so bare imports resolve at runtime, but drop any entry
+        // nested under a symlink (the symlink's target holds the real files).
+        const normalized = normalizePath(path);
+        if (symlinkDirs.some(prefix => normalized.startsWith(prefix))) {
           continue;
         }
-        // A standalone function must be self-contained, so any remaining file
-        // whose key escapes the function root (e.g. `../../node_modules/...`,
-        // produced when building from a monorepo subdirectory) is re-anchored
-        // inside the function. The shared bytes are placed under the same
-        // anchored key so the recorded `filePathMap` value points at them.
-        const funcPath = stripParentSegments(path);
-        shared[funcPath] = file;
-        filePathMap[funcPath] = normalizePath(
-          relative(repoRootPath, join(sharedDest, funcPath))
-        );
+        out[normalized] = file;
       } else {
+        if (!filePathMap) filePathMap = {};
         filePathMap[normalizePath(path)] = normalizePath(
           relative(repoRootPath, file.fsPath)
         );
@@ -1082,5 +1042,5 @@ export function filesWithoutFsRefs(
       out[path] = file;
     }
   }
-  return { files: out, filePathMap, shared };
+  return { files: out, filePathMap };
 }
