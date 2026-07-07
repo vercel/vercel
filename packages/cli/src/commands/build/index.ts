@@ -856,9 +856,6 @@ async function doBuild(
       }
     });
 
-  // Resolve the framework presets for this build. Prefers the remote
-  // frameworks manifest (with a 24h local cache) so new presets are picked
-  // up without a CLI release, falling back to the pinned list when offline.
   const { frameworks: frameworkList, requiresUpdate: staleFrameworks } =
     await span
       .child('vc.resolveFrameworks')
@@ -919,10 +916,6 @@ async function doBuild(
     // Zero config
     isZeroConfig = true;
 
-    // If the project matches a preset from the remote manifest that this
-    // CLI version cannot build, warn (or abort, for `failOnStale` presets
-    // like `Dockerfile.vercel` containers) before running detection with
-    // the presets we do understand.
     await checkStaleFrameworks(
       new LocalFileSystemDetector(workPath),
       staleFrameworks

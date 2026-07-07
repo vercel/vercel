@@ -17,10 +17,8 @@ import cliPkg from '../pkg';
 let resolved: Promise<ResolvedFrameworkList> | undefined;
 
 /**
- * Resolves the framework preset list for this CLI invocation, preferring
- * the remote manifest (cached for 24h) over the pinned list. Memoized for
- * the lifetime of the process. Pass `requiresUpdate` from the result to
- * {@link checkStaleFrameworks}.
+ * Resolves the framework preset list, preferring the remote manifest
+ * (cached for 24h) over the pinned list. Memoized per process.
  */
 export function getResolvedFrameworks(): Promise<ResolvedFrameworkList> {
   if (!resolved) {
@@ -46,10 +44,8 @@ export function resetResolvedFrameworks(): void {
 }
 
 /**
- * Checks whether the project matches a preset this CLI version cannot
- * build. Matches produce an upgrade warning and the build continues —
- * unless the preset is marked `failOnStale`, in which case the build is
- * aborted (a fallback build would be incorrect, e.g. `Dockerfile.vercel`).
+ * Warns when the project matches a preset this CLI version cannot build,
+ * or aborts the build for presets marked `failOnStale`.
  */
 export async function checkStaleFrameworks(
   fs: DetectorFilesystem,
@@ -60,7 +56,7 @@ export async function checkStaleFrameworks(
   }
 
   // Detection only consults `slug` and `detectors`, which stale entries
-  // still carry — only their build behavior cannot be interpreted.
+  // still carry.
   const detectable = requiresUpdate.filter(s => s.entry.detectors);
   if (detectable.length === 0) {
     return;

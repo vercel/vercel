@@ -60,9 +60,6 @@ const defaultSlugToFramework = new Map<string | null, Framework>(
   frameworkList.map(f => [f.slug, f])
 );
 
-// Cache the slug lookup per framework list, so that passing a runtime
-// resolved list (see `Options.frameworkList`) doesn't rebuild the map on
-// every call.
 const slugMapCache = new WeakMap<
   readonly Framework[],
   Map<string | null, Framework>
@@ -90,10 +87,8 @@ export interface ErrorResponse {
 export interface Options {
   tag?: string;
   /**
-   * The framework presets used to resolve the project's framework slug.
-   * Defaults to the pinned list bundled with `@vercel/frameworks`. Pass a
-   * runtime-resolved list (see `resolveFrameworks()`) so that presets
-   * delivered via the remote manifest are honored.
+   * Framework presets used to resolve the project's framework slug.
+   * Defaults to the pinned list bundled with `@vercel/frameworks`.
    */
   frameworkList?: readonly Framework[];
   functions?: BuilderFunctions;

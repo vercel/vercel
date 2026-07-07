@@ -87,9 +87,8 @@ export function partitionManifest(
 
   for (const entry of manifest) {
     if (typeof cliVersion === 'string' && entry.minCliVersion) {
-      // When either side isn't valid semver (snapshot CLI builds, or a
-      // malformed manifest entry), the versions can't be compared, so the
-      // entry is conservatively treated as stale.
+      // Uncomparable versions (snapshot CLI builds, malformed manifest
+      // entries) are conservatively treated as stale.
       const version = semverValid(cliVersion);
       const minVersion = semverValid(entry.minCliVersion);
       if (!version || !minVersion || semverLt(version, minVersion)) {
@@ -130,7 +129,7 @@ async function readManifestCache(
       return cache;
     }
   } catch (_err) {
-    // missing or malformed cache is treated as absent
+    // treated as absent
   }
   return undefined;
 }
@@ -144,7 +143,7 @@ async function writeManifestCache(
     const cache: ManifestCache = { fetchedAt: Date.now(), manifest };
     await writeFile(cacheFile, JSON.stringify(cache));
   } catch (_err) {
-    // a cache write failure must never fail the caller
+    // must never fail the caller
   }
 }
 

@@ -52,18 +52,13 @@ export type KnownOutputDirNameDescriptor =
   | ConfigFileOutputDirName;
 
 /**
- * `{ type: string }` keeps this union open: a newer manifest may introduce
- * descriptor types this version of the package does not understand, which
- * must be treated as "requires an update".
+ * `{ type: string }` keeps this union open: newer manifests may introduce
+ * descriptor types this package version does not understand.
  */
 export type OutputDirNameDescriptor =
   | KnownOutputDirNameDescriptor
   | ({ type: string } & Record<string, unknown>);
 
-/**
- * Gatsby's routes may be generated at build time by `gatsby-plugin-now` /
- * `gatsby-plugin-zeit-now`, with the manifest-provided routes as fallback.
- */
 export interface GatsbyDefaultRoutes {
   type: 'gatsby';
   fallback: Route[];
@@ -75,9 +70,8 @@ export type DefaultRoutesDescriptor =
   | ({ type: string } & Record<string, unknown>);
 
 /**
- * A single entry of the frameworks manifest — the serializable counterpart
- * of `Framework`, with runtime behavior expressed as declarative descriptors
- * that this package interprets into functions.
+ * A frameworks manifest entry — the serializable counterpart of
+ * `Framework`, with runtime behavior expressed as declarative descriptors.
  */
 export type FrameworkManifestEntry = Omit<
   Framework,

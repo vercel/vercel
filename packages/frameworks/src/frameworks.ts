@@ -34,9 +34,8 @@ export const frameworkRuntimeOverrides: Record<
     getOutputDirName: async () => 'public',
   },
   storybook: {
-    // Storybook is a devDependency of many apps that deploy something else
-    // entirely, so detecting it is not evidence the user intends to deploy
-    // Storybook itself. Remove once the manifest carries this field.
+    // Storybook is commonly a devDependency of apps that deploy something
+    // else. Remove once the manifest carries this field.
     detectionConfidence: 'weak',
   },
 };

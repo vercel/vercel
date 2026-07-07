@@ -1,8 +1,7 @@
 import { beforeAll, vi } from 'vitest';
 import output from './src/output-manager';
 
-// Tests must be deterministic: always use the pinned frameworks manifest
-// instead of fetching the remote one.
+// Keep tests deterministic: never fetch the remote frameworks manifest.
 process.env.VERCEL_SKIP_REMOTE_FRAMEWORKS = '1';
 
 beforeAll(() => {
