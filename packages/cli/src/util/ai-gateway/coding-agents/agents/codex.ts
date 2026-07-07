@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import type { AgentWarning, CodingAgent } from '../types';
 import { mergeToml, pathExists } from '../config-files';
 import { isMacAppInstalled } from '../desktop-apps';
+import { hasCodexLogin } from '../logins';
 import { GATEWAY_OPENAI_BASE_URL, GATEWAY_API_KEY_ENV } from '../gateway';
 
 /** The Codex desktop app shares `~/.codex/config.toml` with the CLI. */
@@ -45,6 +46,22 @@ export const codex: CodingAgent = {
           'The Codex CLI keeps working.',
         ],
         undo: `remove the model_provider line from ${configPath}`,
+        confirm: 'Configure Codex anyway?',
+      });
+    }
+    if (hasCodexLogin(codexDir(home))) {
+      warnings.push({
+        code: 'openai_login_conflict',
+        impact: 'Your ChatGPT or OpenAI login will stop being used or billed.',
+        why: [
+          'Codex is signed in with a ChatGPT or OpenAI account, and connecting makes the gateway the default model provider.',
+          'The login itself stays in place.',
+        ],
+        undo: `remove the model_provider line from ${this.configPath({
+          apiKey: '',
+          home,
+          overrides,
+        })}`,
         confirm: 'Configure Codex anyway?',
       });
     }

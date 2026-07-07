@@ -12,6 +12,7 @@ import { client } from '../../../mocks/client';
 import aiGateway from '../../../../src/commands/ai-gateway';
 import { useUser } from '../../../mocks/user';
 import { claudeCode } from '../../../../src/util/ai-gateway/coding-agents/agents/claude-code';
+import { codex } from '../../../../src/util/ai-gateway/coding-agents/agents/codex';
 
 // The gateway-key keychain stays out of the picture (no keychain prompts,
 // even on macOS dev machines). Login detection itself never touches the
@@ -29,6 +30,15 @@ vi.mock(
     };
   }
 );
+
+// Desktop-app detection defaults to "not installed" so a developer's real
+// /Applications never leaks warnings into unrelated tests.
+const desktopState = vi.hoisted(() => ({ codex: false }));
+
+vi.mock('../../../../src/util/ai-gateway/coding-agents/desktop-apps', () => ({
+  isMacAppInstalled: (bundleName: string) =>
+    bundleName === 'Codex.app' ? desktopState.codex : false,
+}));
 
 let home: string;
 let savedEnv: Record<string, string | undefined>;
@@ -50,7 +60,16 @@ function loginClaude(dir = join(home, '.claude')) {
 }
 
 /** Simulate a Codex ChatGPT/OpenAI login (`auth.json` in the Codex dir). */
+function loginCodex(dir = join(home, '.codex')) {
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(
+    join(dir, 'auth.json'),
+    JSON.stringify({ OPENAI_API_KEY: null, tokens: {} })
+  );
+}
+
 beforeEach(() => {
+  desktopState.codex = false;
   home = mkdtempSync(join(tmpdir(), 'vc-setup-agents-logins-'));
   savedEnv = {
     HOME: process.env.HOME,
@@ -338,6 +357,75 @@ describe('ai-gateway coding-agents setup — pre-existing logins', () => {
     });
   });
 
+  describe('Codex (openai_login_conflict)', () => {
+    it('an auth.json login emits the warning but an explicit --agent proceeds', async () => {
+      useUser();
+      client.nonInteractive = true;
+      loginCodex();
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_LoginKey0008',
+        '--agent',
+        'codex'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.status).toBe('ok');
+      expect(out.warnings).toEqual([
+        expect.objectContaining({
+          agent: 'codex',
+          code: 'openai_login_conflict',
+        }),
+      ]);
+      expect(existsSync(codexConfigPath())).toBe(true);
+    });
+
+    it('composes with the desktop-app warning as two entries', async () => {
+      useUser();
+      client.nonInteractive = true;
+      desktopState.codex = true;
+      loginCodex();
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_LoginKey0009',
+        '--agent',
+        'codex'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.warnings).toEqual([
+        expect.objectContaining({ agent: 'codex', code: 'desktop_app_breaks' }),
+        expect.objectContaining({
+          agent: 'codex',
+          code: 'openai_login_conflict',
+        }),
+      ]);
+    });
+
+    it('a bare ~/.codex dir without auth.json is not a login', async () => {
+      mkdirSync(join(home, '.codex'), { recursive: true });
+      expect(await codex.warnings!({ home })).toEqual([]);
+    });
+
+    it('honors CODEX_HOME for login detection', async () => {
+      const custom = join(home, 'custom-codex');
+      loginCodex(custom);
+      process.env.CODEX_HOME = custom;
+      expect(await codex.warnings!({ home })).toHaveLength(1);
+
+      delete process.env.CODEX_HOME;
+      expect(await codex.warnings!({ home })).toEqual([]);
+    });
+  });
+
   describe('consent interactions', () => {
     it('dry-run without naming the agent reports the skip instead of failing', async () => {
       useUser();
@@ -449,6 +537,110 @@ describe('ai-gateway coding-agents setup — pre-existing logins', () => {
       // The old key survives — rotation of a warned agent needs --agent.
       expect(readFileSync(claudeSettingsPath(), 'utf8')).toContain(
         'vck_LoginKey0012'
+      );
+    });
+
+    it('reports the remaining agents as already configured when one is consent-skipped', async () => {
+      useUser();
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      mkdirSync(join(home, '.codex'), { recursive: true });
+      // Configure both agents while nothing needs consent.
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_LoginKey0015'
+      );
+      expect(await aiGateway(client)).toBe(0);
+      const stdoutAfterFirst = client.stdout.getFullOutput().length;
+      const bashrc = readFileSync(join(home, '.bashrc'), 'utf8');
+      expect(bashrc).toContain('AI_GATEWAY_API_KEY');
+
+      // Codex signs in; the same re-run stays a no-op that doesn't claim the
+      // skipped agent was configured — and keeps its shell export.
+      loginCodex();
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_LoginKey0015'
+      );
+      expect(await aiGateway(client)).toBe(0);
+      const out = JSON.parse(
+        client.stdout.getFullOutput().slice(stdoutAfterFirst)
+      );
+      expect(out.reason).toBe('already_configured');
+      expect(out.message).toContain(
+        'The remaining agents are already configured'
+      );
+      expect(out.skipped).toEqual([
+        expect.objectContaining({
+          target: 'codex',
+          reason: 'requires_consent',
+        }),
+      ]);
+      expect(readFileSync(join(home, '.bashrc'), 'utf8')).toBe(bashrc);
+    });
+
+    it('asks once per agent when it carries multiple warnings', async () => {
+      useUser();
+      desktopState.codex = true;
+      loginCodex();
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_LoginKey0013',
+        '--agent',
+        'codex'
+      );
+
+      const exitCodePromise = aiGateway(client);
+      await expect(client.stderr).toOutput(
+        'The Codex desktop app will stop working'
+      );
+      await expect(client.stderr).toOutput(
+        'Codex is signed in with a ChatGPT or OpenAI account'
+      );
+      await expect(client.stderr).toOutput('Configure Codex anyway?');
+      client.stdin.write('\n'); // one decline covers the whole agent
+
+      expect(await exitCodePromise).toBe(0);
+      const stderr = client.stderr.getFullOutput();
+      // Both warnings share one prompt — asked exactly once. The answered
+      // re-render repeats the question text, so count unanswered renders.
+      expect(stderr.match(/\(y\/N\)/g)).toHaveLength(1);
+      expect(stderr.match(/Skipped Codex/g)).toHaveLength(1);
+      expect(existsSync(codexConfigPath())).toBe(false);
+    });
+
+    it('dedupes the requires_consent skip for an agent with multiple warnings', async () => {
+      useUser();
+      client.nonInteractive = true;
+      desktopState.codex = true;
+      loginCodex();
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--dry-run',
+        '--key',
+        'vck_LoginKey0014'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      const out = JSON.parse(client.stdout.getFullOutput());
+      const codexSkips = out.skipped.filter((s: any) => s.target === 'codex');
+      expect(codexSkips).toHaveLength(1);
+      // One entry carries both warnings and a single hint.
+      expect(codexSkips[0].message).toContain('desktop app');
+      expect(codexSkips[0].message).toContain('signed in with a ChatGPT');
+      expect(codexSkips[0].message.match(/Pass --agent codex/g)).toHaveLength(
+        1
       );
     });
   });

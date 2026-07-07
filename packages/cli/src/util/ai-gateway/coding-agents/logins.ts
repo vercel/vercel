@@ -60,3 +60,15 @@ export function hasClaudeCodeLogin(home: string, claudeDir: string): boolean {
     return false;
   }
 }
+
+/**
+ * True when Codex is signed in: `auth.json` in the Codex dir holds either
+ * ChatGPT OAuth tokens or a stored OPENAI_API_KEY.
+ */
+export function hasCodexLogin(codexDir: string): boolean {
+  try {
+    return existsSync(join(codexDir, 'auth.json'));
+  } catch {
+    return false;
+  }
+}
