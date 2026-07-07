@@ -233,3 +233,27 @@ Env add stale-string sweep:
 ```bash
 rg -n "What's the name of the variable\\?|What's the value of|Is the value a sensitive secret\\?|How to proceed\\?|Add .* to which Environments \\(select multiple\\)\\?|Added Environment Variable|Overrode Environment Variable|✅|successfully" <paths>
 ```
+
+## Coding Agents Setup Flow Contract
+
+`vc ai-gateway coding-agents setup` phase order:
+
+1. Dry-run banner (when `--dry-run`): status row behind the blank gutter.
+2. Agent selection: `--agent`/`--all`, otherwise a checkbox with the shared unparenthesized key legend; detected agents pre-checked, detection note as dim inline context.
+3. Consent warnings for pre-existing logins/desktop apps: `! <impact>` on the warning gutter; the cause spans one dimmed line per sentence behind the blank gutter, then a dimmed `To undo:` line that names the resolved file path (matching what the receipts print — never a bare filename); one blank line before each agent's warning group, then a single `↳`-prefixed confirm per agent. A command name is never a noun phrase in this copy ("the setup adds" is banned — name the file instead).
+4. Key interview (no `--key`): `Which team?` (the team decides where the key lives, so it comes first), `Key name?`, spend limit, expiry — child prompts carry the dim `↳` prefix.
+5. Resolved state: bold `Summary` status heading, aligned rows (`Agents`, `API key`, `Spend limit`, `Expires`, `Key storage`).
+6. Mutation preview: bold `Planned changes` heading with the backup promise as dim inline context (`existing files are backed up alongside as .bak first`, dropped under `--no-backup`) — the promise appears before the user decides, not only in the receipt; entries behind the blank gutter with `+` (green, create), `~` (update), `=` (dim, unchanged) markers; skipped-unwritable files as `! <label>` warning rows with a dim `cannot edit:` detail; `↳ backs up to <path>.bak` side-effect lines; masked diffs with `⋯` marking collapsed unchanged regions.
+7. Confirm: `Apply these changes?`.
+8. Receipt: one `✓ Connected` row with the agent names; `Created`/`Updated` file rows and the `API Key` row (masked, `· macOS Keychain` or `· Config files`) keep the blank gutter; dim `.bak` note.
+9. Continue: per-agent notes (`> Agent: …`) print last.
+
+Command-specific glyphs (documented exceptions to the core glyph list): `↳` marks a child prompt or a derived side effect; `⋯` marks a collapsed unchanged diff region. Neither appears on primary result or progress rows.
+
+Secrets: keys render masked (`vck_1234••••abcd`) everywhere. One deliberate exception: when a newly created key lands in no config file and no shell rc (e.g. Windows env-only setups), the raw key is written once to stdout as a pipeable single value — stderr carries all prose.
+
+Coding agents setup stale-string sweep:
+
+```bash
+rg -n "WARNING!|What team should the API key be under\\?|use with your coding agents|spend limit \\(quota\\)|Could not (store|update) the key|No agent configurations could be written|file\\(s\\)|agent\\(s\\)|the setup\\b|auth conflict|claude /logout" <paths>
+```

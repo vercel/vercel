@@ -66,6 +66,7 @@ Load only what the task needs.
 | `vc link` or setup/link work     | [`references/command-contracts.md`](references/command-contracts.md) → Link Flow Contract       |
 | `vc env add` work                | `command-contracts.md` → Env Add Flow Contract                                                  |
 | `vc`, `vc deploy`, deploy output | `command-contracts.md` → Deploy Flow Contract                                                   |
+| `vc ai-gateway coding-agents setup` work | `command-contracts.md` → Coding Agents Setup Flow Contract                         |
 | Tests, stale-copy sweeps, review | [`references/verification.md`](references/verification.md)                                      |
 
 If you add durable guidance, put detailed wording rules in `copy.md`, keep only the cross-cutting copy baseline plus reusable flow/output rules in `core.md`, put command-only state machines in `command-contracts.md`, and put test/review gates in `verification.md`. Short safety rules may repeat when sections need to stand alone; the canonical reject/fix checklist stays in `verification.md`.
