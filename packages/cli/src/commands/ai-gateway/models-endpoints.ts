@@ -88,7 +88,7 @@ export default async function endpoints(client: Client, argv: string[]) {
 
 const dash = () => chalk.gray('–');
 
-const positive = (value: string | undefined) =>
+const positive = (value: string | undefined): value is string =>
   value != null && Number(value) > 0;
 
 const count = (value: number | undefined) =>

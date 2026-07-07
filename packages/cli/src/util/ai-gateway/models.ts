@@ -29,7 +29,6 @@ export type ModelEndpointPricing = {
   input_cache_read?: string;
   input_cache_write?: string;
   // Non-token pricing (image/video/audio/per-request models)
-  request?: string;
   image?: string;
   image_output?: string;
   speech_input_character_cost?: string;
