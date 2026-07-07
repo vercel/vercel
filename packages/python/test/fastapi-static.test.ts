@@ -48,6 +48,34 @@ describe('FastAPI static files', () => {
     );
   });
 
+  it('discovers an app.frontend() mount', async () => {
+    const appDir = path.join(testDir, 'app-frontend');
+    fs.mkdirSync(path.join(appDir, 'dist'), { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'dist', 'index.html'), '<h1>Hello</h1>');
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'app = FastAPI()',
+        'app.frontend("/", directory="dist")',
+      ].join('\n')
+    );
+
+    const mounts = await getFastAPIStaticMounts(
+      entrypointAbs,
+      'app',
+      process.env,
+      appDir
+    );
+
+    expect(mounts).toHaveLength(1);
+    expect(mounts[0].urlPath).toBe('/');
+    expect(mounts[0].directory).toBe(
+      fs.realpathSync(path.join(appDir, 'dist'))
+    );
+  });
+
   it('returns empty when no StaticFiles mounts exist', async () => {
     const appDir = path.join(testDir, 'app-no-static');
     fs.mkdirSync(appDir, { recursive: true });
