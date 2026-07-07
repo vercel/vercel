@@ -40,6 +40,7 @@ import {
   writeJSONSync,
   renameSync,
   chmodSync,
+  realpathSync,
 } from 'fs-extra';
 import output from '../../output-manager';
 
@@ -515,12 +516,22 @@ const LOCKFILES = [
  */
 export function isConfidentlyGlobal(packageDir: string): boolean {
   // pnpm global installs of any layout generation live under PNPM_HOME.
+  // Compare against both the raw and resolved forms: module paths are
+  // realpath'd by node while PNPM_HOME may contain symlinks (e.g.
+  // /var/folders -> /private/var/folders on macOS).
   const pnpmHome = process.env.PNPM_HOME;
-  if (
-    pnpmHome &&
-    packageDir.startsWith(pnpmHome.replace(/[\\/]+$/, '') + sep)
-  ) {
-    return true;
+  if (pnpmHome) {
+    const candidates = [pnpmHome];
+    try {
+      candidates.push(realpathSync(pnpmHome));
+    } catch (_) {
+      // unresolvable; check the raw value only
+    }
+    for (const home of candidates) {
+      if (packageDir.startsWith(home.replace(/[\\/]+$/, '') + sep)) {
+        return true;
+      }
+    }
   }
 
   // npm/yarn-classic globals: under node_modules with NO lockfile in any

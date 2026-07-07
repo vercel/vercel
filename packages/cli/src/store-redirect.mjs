@@ -4,7 +4,7 @@
 // fails to start. Every failure path falls through silently to running the
 // version that was actually invoked.
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -34,12 +34,22 @@ const LOCKFILES = [
  */
 export function isConfidentlyGlobal(packageDir) {
   // pnpm global installs of any layout generation live under PNPM_HOME.
+  // Compare against both the raw and resolved forms: node realpaths the
+  // main module, so packageDir is resolved while PNPM_HOME may contain
+  // symlinks (e.g. /var/folders -> /private/var/folders on macOS).
   const pnpmHome = process.env.PNPM_HOME;
-  if (
-    pnpmHome &&
-    packageDir.startsWith(pnpmHome.replace(/[\\/]+$/, '') + sep)
-  ) {
-    return true;
+  if (pnpmHome) {
+    const candidates = [pnpmHome];
+    try {
+      candidates.push(realpathSync(pnpmHome));
+    } catch {
+      // unresolvable; check the raw value only
+    }
+    for (const home of candidates) {
+      if (packageDir.startsWith(home.replace(/[\\/]+$/, '') + sep)) {
+        return true;
+      }
+    }
   }
 
   // npm/yarn-classic global installs: <prefix>/lib/node_modules/vercel (or
