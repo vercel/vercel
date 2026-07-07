@@ -161,6 +161,12 @@ copyFileSync(
   new URL('src/util/dev/builder-worker.cjs', repoRoot),
   new URL('commands/dev/builder-worker.cjs', distRoot)
 );
+// The `vc build` builder worker is bundled into dist/commands/build/index.js, so its
+// join(__dirname, 'builder-worker.cjs') resolves next to that entry.
+copyFileSync(
+  new URL('src/util/build/builder-worker.cjs', repoRoot),
+  new URL('commands/build/builder-worker.cjs', distRoot)
+);
 copyFileSync(
   new URL('src/util/dev/next-dev-websocket-shim-preload.cjs', repoRoot),
   new URL('commands/dev/next-dev-websocket-shim-preload.cjs', distRoot)
