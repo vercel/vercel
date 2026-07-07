@@ -62,7 +62,17 @@ type SerializedFile =
 interface BuildMessageResult {
   type: 'buildResult';
   result?: BuildResultV2 | BuildResultV3;
+  /** Serialized Files returned by the builder's `diagnostics()`, if any. */
+  diagnostics?: Record<string, SerializedFile>;
   error?: object;
+}
+
+/** A builder's rehydrated diagnostics: a map of filename → File instance. */
+export type BuilderDiagnostics = Record<string, FileFsRef | FileBlob | FileRef>;
+
+export interface BuildInSubprocessResult {
+  buildResult: BuildResultV2 | BuildResultV3;
+  diagnostics?: BuilderDiagnostics;
 }
 
 /**
@@ -122,6 +132,17 @@ function rehydrateFiles(
   for (const name of Object.keys(files)) {
     files[name] = rehydrateFile(files[name]) as unknown as SerializedFile;
   }
+}
+
+/** Rehydrate the builder's serialized diagnostics Files into real File instances. */
+function rehydrateDiagnostics(
+  diagnostics: Record<string, SerializedFile>
+): BuilderDiagnostics {
+  const result: BuilderDiagnostics = {};
+  for (const [name, file] of Object.entries(diagnostics)) {
+    result[name] = rehydrateFile(file);
+  }
+  return result;
 }
 
 /** Rehydrate a single Lambda/EdgeFunction/Prerender/File output from its serialized form. */
@@ -212,7 +233,7 @@ export async function buildInSubprocess({
   buildOptions,
   env,
   cwd,
-}: BuildInSubprocessOptions): Promise<BuildResultV2 | BuildResultV3> {
+}: BuildInSubprocessOptions): Promise<BuildInSubprocessResult> {
   const workerPath = join(__dirname, 'builder-worker.cjs');
 
   // `span` is a class instance with methods — not serializable. Send everything else.
@@ -247,39 +268,47 @@ export async function buildInSubprocess({
       buildOptions: serializableBuildOptions,
     });
 
-    const result = await new Promise<BuildResultV2 | BuildResultV3>(
-      (resolve, reject) => {
-        function onMessage({ type, result, error }: BuildMessageResult) {
-          cleanup();
-          if (type === 'buildResult') {
-            if (result) {
-              resolve(result);
-            } else {
-              reject(Object.assign(new Error(), error));
-            }
+    const message = await new Promise<
+      BuildMessageResult & { result: BuildResultV2 | BuildResultV3 }
+    >((resolve, reject) => {
+      function onMessage(msg: BuildMessageResult) {
+        cleanup();
+        if (msg.type === 'buildResult') {
+          if (msg.result) {
+            resolve(
+              msg as BuildMessageResult & {
+                result: BuildResultV2 | BuildResultV3;
+              }
+            );
           } else {
-            reject(new Error(`Got unexpected message type: ${type}`));
+            reject(Object.assign(new Error(), msg.error));
           }
+        } else {
+          reject(new Error(`Got unexpected message type: ${msg.type}`));
         }
-        function onExit(code: number | null, signal: string | null) {
-          cleanup();
-          reject(
-            new Error(
-              `Builder exited with ${signal || code} before sending build result`
-            )
-          );
-        }
-        function cleanup() {
-          child.removeListener('close', onExit);
-          child.removeListener('message', onMessage);
-        }
-        child.on('close', onExit);
-        child.on('message', onMessage);
       }
-    );
+      function onExit(code: number | null, signal: string | null) {
+        cleanup();
+        reject(
+          new Error(
+            `Builder exited with ${signal || code} before sending build result`
+          )
+        );
+      }
+      function cleanup() {
+        child.removeListener('close', onExit);
+        child.removeListener('message', onMessage);
+      }
+      child.on('close', onExit);
+      child.on('message', onMessage);
+    });
 
-    rehydrateResult(result);
-    return result;
+    const buildResult = message.result;
+    rehydrateResult(buildResult);
+    const diagnostics = message.diagnostics
+      ? rehydrateDiagnostics(message.diagnostics)
+      : undefined;
+    return { buildResult, diagnostics };
   } finally {
     if (child.connected) child.disconnect();
     if (child.exitCode === null && child.signalCode === null) {

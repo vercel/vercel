@@ -82,6 +82,7 @@ import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import {
   buildInSubprocess,
+  type BuilderDiagnostics,
   canBuildInSubprocess,
 } from '../../util/build/builder-process';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
@@ -1385,30 +1386,36 @@ async function doBuild(
         }
         let buildResult: BuildResultV2 | BuildResultV3;
         let rawBuildResult: BuildResultV2 | BuildResultV3 | BuildResultVX;
+        // Diagnostics from a forked build come back over IPC alongside the result; for
+        // in-process builds we call `builder.diagnostics()` ourselves in the `finally` below.
+        let subprocessDiagnostics: BuilderDiagnostics | undefined;
+        // Run the builder in a forked worker when possible, so its output (including
+        // subprocesses it spawns) can be captured and prefixed per line, and so builds are
+        // isolated. Falls back to in-process for builders that can't cross the process
+        // boundary (see canBuildInSubprocess): the built-in `@vercel/static` (no module path
+        // to require) and builds that register a pre-deploy or build callback.
+        const subprocessEligible = canBuildInSubprocess({
+          builderPath: builderWithPkg.path,
+          hasPreDeploy: Boolean(preDeployCmd),
+          hasBuildCallback: Boolean(buildOptions.buildCallback),
+        });
         try {
-          // Run the builder in a forked worker when possible, so its output (including
-          // subprocesses it spawns) can be captured and prefixed per line, and so builds are
-          // isolated. Falls back to in-process for builders that can't cross the process
-          // boundary (see canBuildInSubprocess): the built-in `@vercel/static` (no module path
-          // to require) and builds that register a pre-deploy or build callback.
-          const subprocessEligible = canBuildInSubprocess({
-            builderPath: builderWithPkg.path,
-            hasPreDeploy: Boolean(preDeployCmd),
-            hasBuildCallback: Boolean(buildOptions.buildCallback),
-          });
           rawBuildResult = await builderSpan.trace<
             BuildResultV2 | BuildResultV3 | BuildResultVX
-          >(async () =>
-            subprocessEligible
-              ? // The worker unwraps BuildResultVX itself, so this is always V2/V3.
-                buildInSubprocess({
-                  requirePath: builderWithPkg.path,
-                  buildOptions,
-                  env: process.env,
-                  cwd: buildWorkPath,
-                })
-              : builder.build(buildOptions)
-          );
+          >(async () => {
+            if (subprocessEligible) {
+              const outcome = await buildInSubprocess({
+                requirePath: builderWithPkg.path,
+                buildOptions,
+                env: process.env,
+                cwd: buildWorkPath,
+              });
+              subprocessDiagnostics = outcome.diagnostics;
+              // The worker unwraps BuildResultVX itself, so this is always V2/V3.
+              return outcome.buildResult;
+            }
+            return builder.build(buildOptions);
+          });
           if (builder.version === -1 && 'resultVersion' in rawBuildResult) {
             const vx = rawBuildResult as BuildResultVX;
             buildResult = vx.result;
@@ -1448,11 +1455,15 @@ async function doBuild(
           }
           // Make sure we don't fail the build
           try {
-            const builderDiagnostics = await builderSpan
-              .child('vc.builder.diagnostics')
-              .trace(async () => {
-                return await builder.diagnostics?.(buildOptions);
-              });
+            // A forked build already ran `diagnostics()` in the worker and returned the Files
+            // over IPC; only call it in-process for builds that didn't fork.
+            const builderDiagnostics = subprocessEligible
+              ? subprocessDiagnostics
+              : await builderSpan
+                  .child('vc.builder.diagnostics')
+                  .trace(async () => {
+                    return await builder.diagnostics?.(buildOptions);
+                  });
             if (builderDiagnostics) {
               const prefix =
                 service && serviceWorkspace && serviceWorkspace !== '.'

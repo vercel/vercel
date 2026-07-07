@@ -136,7 +136,21 @@ async function processMessage(message) {
     }
   }
 
-  process.send({ type: 'buildResult', result });
+  // Collect diagnostics from the same builder instance that just built. diagnostics() returns
+  // a Files map (e.g. { 'package-manifest.json': FileBlob }); serialize it like build outputs so
+  // the parent can validate/write it. Failures here must not fail the build.
+  let diagnostics;
+  try {
+    diagnostics = (await builder.diagnostics?.(buildOptions)) || undefined;
+    if (diagnostics) serializeFiles(diagnostics);
+  } catch (err) {
+    // Surface to the worker's stderr (piped/inherited to the parent) but don't fail the build.
+    // biome-ignore lint/suspicious/noConsole: intentional console usage
+    console.error(`[vc] collecting diagnostics failed: ${err}`);
+    diagnostics = undefined;
+  }
+
+  process.send({ type: 'buildResult', result, diagnostics });
 }
 
 process.send({ type: 'ready' });
