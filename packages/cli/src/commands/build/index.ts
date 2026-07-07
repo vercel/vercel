@@ -1409,6 +1409,11 @@ async function doBuild(
                 env: process.env,
                 cwd: buildWorkPath,
                 expectsPreDeploy: Boolean(preDeployCmd),
+                // Report the builder's in-worker spans under this `vc.builder` span so forked
+                // builds keep full trace fidelity (called on success and failure).
+                // reportChildEvents reparents the worker's root span under `vc.builder`.
+                reportTraceEvents: events =>
+                  builderSpan.reportChildEvents(events),
               });
               subprocessDiagnostics = outcome.diagnostics;
               // A forked build with a pre-deploy keeps its worker alive; route the deferred
@@ -1460,15 +1465,14 @@ async function doBuild(
           }
           // Make sure we don't fail the build
           try {
-            // A forked build already ran `diagnostics()` in the worker and returned the Files
-            // over IPC; only call it in-process for builds that didn't fork.
+            // A forked build already ran `diagnostics()` in the worker (traced there, with the
+            // span shipped back), so just use those Files. Only call — and trace — diagnostics
+            // in-process for builds that didn't fork.
             const builderDiagnostics = subprocessEligible
               ? subprocessDiagnostics
               : await builderSpan
                   .child('vc.builder.diagnostics')
-                  .trace(async () => {
-                    return await builder.diagnostics?.(buildOptions);
-                  });
+                  .trace(async () => await builder.diagnostics?.(buildOptions));
             if (builderDiagnostics) {
               const prefix =
                 service && serviceWorkspace && serviceWorkspace !== '.'

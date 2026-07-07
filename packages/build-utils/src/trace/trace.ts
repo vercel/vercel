@@ -113,6 +113,22 @@ export class Span {
     });
   }
 
+  /**
+   * Report already-finalized trace events (e.g. collected in a child process) to this span's
+   * reporter so they appear nested under this span. Any event that is a root of the passed set —
+   * i.e. whose `parentId` refers to a span not present in `events` — is reparented to this span;
+   * links internal to the set are preserved. Safe to call with events from any process: the
+   * caller does not need to know or set this span's id.
+   */
+  reportChildEvents(events: TraceEvent[]) {
+    if (!this._reporter) return;
+    const ids = new Set(events.map(event => event.id));
+    for (const event of events) {
+      const isRoot = event.parentId === undefined || !ids.has(event.parentId);
+      this._reporter.report(isRoot ? { ...event, parentId: this.id } : event);
+    }
+  }
+
   async trace<T>(fn: (span: Span) => T | Promise<T>): Promise<T> {
     try {
       return await fn(this);

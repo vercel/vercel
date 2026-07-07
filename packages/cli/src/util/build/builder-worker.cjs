@@ -14,11 +14,25 @@
  * Like the dev worker, this file is copied verbatim into `dist` next to the compiled `build`
  * command, so it must only `require` `@vercel/build-utils` and Node built-ins.
  */
-const { FileFsRef } = require('@vercel/build-utils');
+const { FileFsRef, Span } = require('@vercel/build-utils');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
+
+// Trace events produced by the builder's own spans (children of buildOptions.span) are collected
+// here and shipped back to the parent, which reports them under its `vc.builder` span so forked
+// builds keep full trace fidelity. Included on both success and error messages so a failed build
+// still contributes the spans it managed to record. Emptied after each send so a later phase
+// (the deferred pre-deploy step) ships only the events it newly recorded.
+let collectedTraceEvents = [];
+const traceReporter = { report: event => collectedTraceEvents.push(event) };
+// Take the events collected so far and reset the buffer, so the next send starts fresh.
+function drainTraceEvents() {
+  const events = collectedTraceEvents;
+  collectedTraceEvents = [];
+  return events;
+}
 
 // Above this size a FileBlob's Buffer is written to a temp file rather than sent inline over
 // IPC. JSON-serializing a large Buffer amplifies memory badly (each byte becomes an array
@@ -49,20 +63,35 @@ function onMessage(message) {
     Object.defineProperty(err, 'message', { enumerable: true });
     Object.defineProperty(err, 'stack', { enumerable: true });
     process.removeListener('message', onMessage);
-    process.send({ type: 'buildResult', error: err }, () => process.exit(1));
+    // Ship whatever spans were recorded before the failure so failed builds still trace.
+    process.send(
+      { type: 'buildResult', error: err, traceEvents: drainTraceEvents() },
+      () => process.exit(1)
+    );
   });
 }
 
 function runPreDeploy() {
+  // The pre-deploy callback records its own spans (e.g. `vc.builder.preDeploy`) into the (now
+  // drained) buffer; ship those back so they nest under the parent's `vc.builder` span.
   Promise.resolve()
     .then(() => preDeployCallback?.())
     .then(
-      () => process.send({ type: 'preDeployResult' }, () => process.exit(0)),
+      () =>
+        process.send(
+          { type: 'preDeployResult', traceEvents: drainTraceEvents() },
+          () => process.exit(0)
+        ),
       err => {
         Object.defineProperty(err, 'message', { enumerable: true });
         Object.defineProperty(err, 'stack', { enumerable: true });
-        process.send({ type: 'preDeployResult', error: err }, () =>
-          process.exit(1)
+        process.send(
+          {
+            type: 'preDeployResult',
+            error: err,
+            traceEvents: drainTraceEvents(),
+          },
+          () => process.exit(1)
         );
       }
     );
@@ -103,6 +132,15 @@ async function processMessage(message) {
   for (const name of Object.keys(buildOptions.files)) {
     buildOptions.files[name] = rehydrateFile(buildOptions.files[name]);
   }
+
+  // Give the builder a span backed by our collecting reporter so the child spans it records are
+  // shipped back to the parent. The parent dropped the real Span (a class instance can't cross
+  // IPC), so we reconstruct one here; it has no parent id — the parent reparents this root under
+  // its own `vc.builder` span via Span.reportChildEvents when the events are reported.
+  buildOptions.span = new Span({
+    name: 'vc.builder.worker',
+    reporter: traceReporter,
+  });
 
   // Capture any pre-deploy callback the builder registers during build(); the parent triggers
   // it later via a `runPreDeploy` message. Only wired when the parent said a pre-deploy command
@@ -171,10 +209,15 @@ async function processMessage(message) {
 
   // Collect diagnostics from the same builder instance that just built. diagnostics() returns
   // a Files map (e.g. { 'package-manifest.json': FileBlob }); serialize it like build outputs so
-  // the parent can validate/write it. Failures here must not fail the build.
+  // the parent can validate/write it. Traced here in the worker (the span rides back with the
+  // rest), and failures must not fail the build.
   let diagnostics;
   try {
-    diagnostics = (await builder.diagnostics?.(buildOptions)) || undefined;
+    diagnostics = await buildOptions.span
+      .child('vc.builder.diagnostics')
+      .trace(
+        async () => (await builder.diagnostics?.(buildOptions)) || undefined
+      );
     if (diagnostics) serializeFiles(diagnostics);
   } catch (err) {
     // Surface to the worker's stderr (piped/inherited to the parent) but don't fail the build.
@@ -183,11 +226,22 @@ async function processMessage(message) {
     diagnostics = undefined;
   }
 
+  // Stop the worker root span so it (and its recorded children) are collected before we drain
+  // and ship the events for the parent to report under its `vc.builder` span.
+  buildOptions.span.stop();
+
   // With a pending pre-deploy the worker stays alive to run the callback (which holds the
   // builder-computed env) when the parent later sends `runPreDeploy`; the parent tears the
   // worker down once done. Without one, the parent kills the worker as soon as it has the result.
+  // Drain the collected events here so the deferred pre-deploy step ships only what it records.
   const hasPreDeploy = Boolean(preDeployCallback);
-  process.send({ type: 'buildResult', result, diagnostics, hasPreDeploy });
+  process.send({
+    type: 'buildResult',
+    result,
+    diagnostics,
+    hasPreDeploy,
+    traceEvents: drainTraceEvents(),
+  });
 }
 
 process.send({ type: 'ready' });

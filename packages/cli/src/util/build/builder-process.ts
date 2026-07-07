@@ -9,6 +9,7 @@ import {
   FileBlob,
   FileFsRef,
   FileRef,
+  type TraceEvent,
 } from '@vercel/build-utils';
 import output from '../../output-manager';
 
@@ -66,11 +67,15 @@ interface BuildMessageResult {
   diagnostics?: Record<string, SerializedFile>;
   /** True when the builder registered a pre-deploy callback the worker is holding. */
   hasPreDeploy?: boolean;
+  /** Trace events the builder recorded in the worker, to report under the parent span. */
+  traceEvents?: TraceEvent[];
   error?: object;
 }
 
 interface PreDeployMessageResult {
   type: 'preDeployResult';
+  /** Trace events the pre-deploy step recorded (e.g. `vc.builder.preDeploy`). */
+  traceEvents?: TraceEvent[];
   error?: object;
 }
 
@@ -238,6 +243,13 @@ export interface BuildInSubprocessOptions {
    * run later via the returned `runPreDeploy`.
    */
   expectsPreDeploy?: boolean;
+  /**
+   * Called with the trace events the builder recorded in the worker (on success and failure),
+   * so the caller can report them under its `vc.builder` span (via Span.reportChildEvents, which
+   * reparents the roots). Kept as a callback rather than a return value so failed builds still
+   * surface their spans without polluting the thrown error.
+   */
+  reportTraceEvents?: (events: TraceEvent[]) => void;
 }
 
 /**
@@ -253,6 +265,7 @@ export async function buildInSubprocess({
   env,
   cwd,
   expectsPreDeploy,
+  reportTraceEvents,
 }: BuildInSubprocessOptions): Promise<BuildInSubprocessResult> {
   const workerPath = join(__dirname, 'builder-worker.cjs');
 
@@ -303,6 +316,10 @@ export async function buildInSubprocess({
       function onMessage(msg: BuildMessageResult) {
         cleanup();
         if (msg.type === 'buildResult') {
+          // Report spans the build recorded (even on failure) so forked builds keep trace
+          // fidelity. Done here, not by attaching to the error, so the error stays a clean
+          // object when serialized into builds.json.
+          if (msg.traceEvents) reportTraceEvents?.(msg.traceEvents);
           if (msg.result) {
             resolve(
               msg as BuildMessageResult & {
@@ -351,6 +368,8 @@ export async function buildInSubprocess({
         function onMessage(msg: PreDeployMessageResult) {
           if (msg.type !== 'preDeployResult') return;
           cleanup();
+          // Report spans the pre-deploy step recorded (success or failure) before settling.
+          if (msg.traceEvents) reportTraceEvents?.(msg.traceEvents);
           if (msg.error) reject(Object.assign(new Error(), msg.error));
           else resolve();
         }
