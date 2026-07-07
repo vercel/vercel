@@ -102,14 +102,8 @@ function isVersionCurrent(current: string, latest: string): boolean {
  * knows it (the update notifier). When omitted (e.g. `vercel upgrade`), the
  * latest version is resolved before the install so no-op upgrades can be
  * reported without relying on whichever binary happens to be on `PATH`.
- * @param options.interactive Run the installer with the user's stdio so it
- * can prompt (pnpm v10+ asks to approve dependency build scripts). Callers
- * must gate this with canPrompt(client).
  */
-export async function executeUpgrade(
-  targetVersion?: string,
-  options: { interactive?: boolean } = {}
-): Promise<number> {
+export async function executeUpgrade(targetVersion?: string): Promise<number> {
   const totalSteps = targetVersion ? 2 : 3;
   renderUpgradeProgress(0, totalSteps, 'Resolving installer…');
 
@@ -145,24 +139,8 @@ export async function executeUpgrade(
     return 0;
   }
 
-  // Only pnpm prompts during install (build-script approval)
-  const mayPrompt = command === 'pnpm';
-  const interactive = Boolean(options.interactive) && mayPrompt;
-
   output.debug(`Executing: ${updateCommand} (cwd: ${cwd})`);
-
-  if (interactive) {
-    output.stopSpinner();
-    output.log(`Running ${updateCommand}`);
-  } else {
-    renderUpgradeProgress(targetVersion ? 1 : 2, totalSteps, 'Installing…');
-  }
-
-  // Non-interactive pnpm gets stdin detached so it can't block on a prompt
-  // the user can't see
-  const stdio: ('inherit' | 'ignore' | 'pipe')[] | 'inherit' = interactive
-    ? 'inherit'
-    : [mayPrompt ? 'ignore' : 'inherit', 'pipe', 'pipe'];
+  renderUpgradeProgress(targetVersion ? 1 : 2, totalSteps, 'Installing…');
 
   return new Promise<number>(resolve => {
     const stdout: Uint8Array[] = [];
@@ -170,7 +148,10 @@ export async function executeUpgrade(
 
     const upgradeProcess = spawn(command, args, {
       cwd,
-      stdio,
+      // stdin is detached so a package manager can never block on a prompt
+      // the user can't see (output is captured; pnpm's build-script approval
+      // is pre-answered via --allow-build in the update command).
+      stdio: ['ignore', 'pipe', 'pipe'],
       shell: false,
     });
 
@@ -208,10 +189,8 @@ export async function executeUpgrade(
         return;
       }
 
-      if (!interactive) {
-        renderUpgradeProgress(totalSteps, totalSteps);
-        output.stopSpinner();
-      }
+      renderUpgradeProgress(totalSteps, totalSteps);
+      output.stopSpinner();
 
       if (resolvedTargetVersion) {
         output.success(

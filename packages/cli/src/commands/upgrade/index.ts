@@ -11,7 +11,6 @@ import pkg from '../../util/pkg';
 import type Client from '../../util/client';
 import { UpgradeTelemetryClient } from '../../util/telemetry/commands/upgrade';
 import { isAutoUpdateEnabled, setAutoUpdate } from '../../util/updates';
-import { canPrompt } from '../../util/flags/can-prompt';
 
 export default async function upgrade(client: Client): Promise<number> {
   let parsedArgs = null;
@@ -92,5 +91,5 @@ export default async function upgrade(client: Client): Promise<number> {
     return 0;
   }
 
-  return executeUpgrade(undefined, { interactive: canPrompt(client) });
+  return executeUpgrade();
 }

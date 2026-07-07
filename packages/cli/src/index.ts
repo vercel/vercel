@@ -66,7 +66,6 @@ import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
 import getUpdateCommand from './util/get-update-command';
 import { executeUpgrade } from './util/upgrade';
-import { canPrompt } from './util/flags/can-prompt';
 import {
   canAutoUpdate,
   hasAutoUpdatePreference,
@@ -1369,9 +1368,7 @@ async function promptAndUpgrade(
 
     if (!shouldUpgrade) return;
 
-    const upgradeExitCode = await executeUpgrade(targetVersion, {
-      interactive: canPrompt(client),
-    });
+    const upgradeExitCode = await executeUpgrade(targetVersion);
     if (upgradeExitCode === 0 && !hasAutoUpdatePreference(client.config)) {
       const enableAutoUpdates = await client.input.confirm(
         'Enable automatic CLI updates for future releases?',

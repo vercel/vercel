@@ -200,8 +200,9 @@ export async function getUpdateCommandInfo(): Promise<{
     }
     const install = cliType === 'yarn' ? 'global add' : 'i -g';
     const force = cliType === 'npm' ? ' --force' : '';
+    const allowBuild = pnpmAllowBuildFlag(cliType, nativePackageName);
     return {
-      command: `${cliType} ${install} ${pkgAndVersion}${force}`,
+      command: `${cliType} ${install} ${pkgAndVersion}${force}${allowBuild}`,
       global: true,
     };
   }
@@ -214,7 +215,23 @@ export async function getUpdateCommandInfo(): Promise<{
     install = yarn ? 'global add' : 'i -g';
   }
 
-  return { command: `${cliType} ${install} ${pkgAndVersion}`, global };
+  const allowBuild = pnpmAllowBuildFlag(cliType, 'esbuild');
+  return {
+    command: `${cliType} ${install} ${pkgAndVersion}${allowBuild}`,
+    global,
+  };
+}
+
+/**
+ * pnpm v10+ refuses to run dependency build scripts without approval and
+ * prompts for it (or skips them without a TTY). Pre-approve the specific
+ * scripts a Vercel CLI install needs — esbuild's postinstall for the Node.js
+ * package, @vercel/vc-native's own postinstall for the native binary — so
+ * upgrades behave the same as npm/yarn installs. The flag approves this
+ * single invocation only; it does not persist a policy for global installs.
+ */
+function pnpmAllowBuildFlag(cliType: string, pkg: string): string {
+  return cliType === 'pnpm' ? ` --allow-build=${pkg}` : '';
 }
 
 export default async function getUpdateCommand(): Promise<string> {

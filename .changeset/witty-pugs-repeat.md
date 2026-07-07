@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Run `vercel upgrade` interactively when installed via pnpm so users can approve dependency build scripts (e.g. esbuild's postinstall) instead of the install silently hanging or skipping them. Unattended automatic updates remain non-interactive with stdin detached.
+Fix `vercel upgrade` for pnpm installs: pnpm v10+ requires approval to run dependency build scripts (e.g. esbuild's postinstall) and would either skip them or wait on an invisible prompt. The upgrade command now pre-approves the required build script for that single install via `--allow-build`, and stdin is detached so the installer can never block on a hidden prompt.
