@@ -99,8 +99,17 @@ export async function redirectToStoreIfNewer() {
   }
 
   const { version } = await import('./version.mjs');
-  // Native pointers always win (explicit user choice); npm must be newer.
-  if (pointer.type !== 'native' && !gt(pointer.version, version)) {
+  // Pinned and native pointers always win (explicit user choice); an
+  // unpinned npm pointer must be strictly newer.
+  if (
+    !pointer.pinned &&
+    pointer.type !== 'native' &&
+    !gt(pointer.version, version)
+  ) {
+    return;
+  }
+  // Never self-redirect (a pin naming this exact version).
+  if (pointer.version === version && pointer.type === 'npm') {
     return;
   }
 
@@ -177,15 +186,21 @@ export async function printVerboseVersion() {
     global &&
     storeCurrent &&
     process.env.VERCEL_CLI_STORE !== '0' &&
-    (pointer.type === 'native' || gt(pointer.version, version));
+    !(pointer.version === version && pointer.type === 'npm') &&
+    (pointer.pinned ||
+      pointer.type === 'native' ||
+      gt(pointer.version, version));
 
+  const pointerLabel = pointer
+    ? `${root} → v${pointer.version} (${pointer.type}${pointer.pinned ? ', pinned' : ''})${storeCurrent ? '' : ' [payload missing]'}`
+    : 'not enrolled';
   const lines = [
     `Vercel CLI ${version}`,
     `build:          ${buildVersion ?? version}`,
     `native binary:  ${process.env.VERCEL_VC_NATIVE === '1' ? 'yes' : 'no'}`,
     `install path:   ${packageDir}`,
     `install type:   ${global ? 'global (store-eligible)' : 'not store-eligible (project dep or unrecognized layout)'}`,
-    `store:          ${pointer ? `${root} → v${pointer.version} (${pointer.type})${storeCurrent ? '' : ' [payload missing]'}` : 'not enrolled'}`,
+    `store:          ${pointerLabel}`,
     `effective:      ${wouldRedirect ? `v${pointer.version} via store redirect` : `v${version} (this install)`}`,
   ];
   console.error(lines.join('\n'));

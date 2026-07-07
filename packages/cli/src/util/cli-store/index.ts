@@ -34,6 +34,8 @@ export interface StorePointer {
   storeFormat: number;
   version: string;
   type: 'npm' | 'native';
+  /** Pinned pointers are only moved by explicit `vc version` commands. */
+  pinned?: boolean;
 }
 
 export const NATIVE_PACKAGE_SCOPE = '@vercel/vc-native';
@@ -42,7 +44,7 @@ export function getNativePlatformPackage(): string {
   return `${NATIVE_PACKAGE_SCOPE}-${process.platform}-${process.arch}`;
 }
 
-// Enrolled when the store exists (created by `vc upgrade --experimental`).
+// Enrolled when the store exists (created by `vc version`).
 // VERCEL_CLI_STORE=1 forces on (testing), =0 forces off (bypass).
 export function isCliStoreEnabled(): boolean {
   const env = process.env.VERCEL_CLI_STORE;
@@ -91,15 +93,18 @@ export function readPointer(
   return undefined;
 }
 
-// Atomic (tmp + rename) and monotonic: lower-version writes are ignored,
-// so racing writers (seeder vs. upgrade) are harmless.
+// Atomic (tmp + rename). Monotonic for unpinned pointers (racing writers
+// are harmless); pinned pointers are never moved except with force, which
+// is reserved for explicit `vc version` commands.
 export function writePointer(
   pointer: StorePointer,
-  root: string = getStoreRoot()
+  root: string = getStoreRoot(),
+  opts: { force?: boolean } = {}
 ): void {
   const existing = readPointer(root);
-  if (existing && semver.gte(existing.version, pointer.version)) {
-    return;
+  if (existing && !opts.force) {
+    if (existing.pinned) return;
+    if (semver.gte(existing.version, pointer.version)) return;
   }
   const dest = getPointerPath(root);
   mkdirpSync(dirname(dest));
@@ -294,28 +299,18 @@ function describeDependencyInstallError(err: unknown): string {
   return `Could not install the CLI\u2019s dependencies.${detail ? `\n${detail}` : ''}`;
 }
 
-// Returns the measured version from the extracted package.json, never the
-// requested value.
-export async function installVersionToStore(
-  packageName: string,
-  version: string,
-  root: string = getStoreRoot()
+export interface InstallOptions {
+  pinned?: boolean;
+  force?: boolean;
+}
+
+// Stage + atomic move: a version dir is either complete or absent. A
+// concurrent install of the same version is success, not failure.
+async function placeNpmPayload(
+  tarball: Buffer | undefined,
+  versionDir: string
 ): Promise<string> {
-  const versionDir = getVersionDir(version, root);
-
-  if (!existsSync(join(versionDir, 'package.json'))) {
-    const meta = await fetchVersionMetadata(packageName, version);
-    output.debug(`Downloading ${meta.tarballUrl}`);
-    const tarball = await downloadTarball(meta.tarballUrl);
-
-    if (!verifyIntegrity(tarball, meta)) {
-      throw new Error(
-        `Integrity verification failed for ${packageName}@${version}. ` +
-          `The downloaded tarball does not match the registry's published checksum.`
-      );
-    }
-
-    // Stage + atomic move: a version dir is either complete or absent.
+  if (tarball && !existsSync(join(versionDir, 'package.json'))) {
     const stagingDir = `${versionDir}.tmp-${process.pid}`;
     removeSync(stagingDir);
     try {
@@ -324,7 +319,6 @@ export async function installVersionToStore(
       moveSync(stagingDir, versionDir, { overwrite: false });
     } catch (err) {
       removeSync(stagingDir);
-      // A concurrent install of the same version is success, not failure.
       if (!existsSync(join(versionDir, 'package.json'))) {
         throw err;
       }
@@ -340,19 +334,97 @@ export async function installVersionToStore(
       `Installed package at ${versionDir} has an invalid version — removed.`
     );
   }
+  return installed.version;
+}
+
+// Returns the measured version from the extracted package.json, never the
+// requested value.
+export async function installVersionToStore(
+  packageName: string,
+  version: string,
+  root: string = getStoreRoot(),
+  opts: InstallOptions = {}
+): Promise<string> {
+  const versionDir = getVersionDir(version, root);
+
+  let tarball: Buffer | undefined;
+  if (!existsSync(join(versionDir, 'package.json'))) {
+    const meta = await fetchVersionMetadata(packageName, version);
+    output.debug(`Downloading ${meta.tarballUrl}`);
+    tarball = await downloadTarball(meta.tarballUrl);
+
+    if (!verifyIntegrity(tarball, meta)) {
+      throw new Error(
+        `Integrity verification failed for ${packageName}@${version}. ` +
+          `The downloaded tarball does not match the registry's published checksum.`
+      );
+    }
+  }
+
+  const installedVersion = await placeNpmPayload(tarball, versionDir);
 
   writePointer(
-    { storeFormat: STORE_FORMAT, version: installed.version, type: 'npm' },
-    root
+    {
+      storeFormat: STORE_FORMAT,
+      version: installedVersion,
+      type: 'npm',
+      ...(opts.pinned ? { pinned: true } : {}),
+    },
+    root,
+    { force: opts.force }
   );
-  return installed.version;
+  return installedVersion;
+}
+
+// Installs from an arbitrary tarball URL (e.g. a PR build). No registry
+// metadata exists for these, so there is no integrity verification; the
+// measured package.json version names the store entry. Always pinned.
+export async function installTarballUrlToStore(
+  url: string,
+  root: string = getStoreRoot()
+): Promise<string> {
+  output.debug(`Downloading ${url}`);
+  const tarball = await downloadTarball(url);
+
+  const probeDir = join(root, `probe.tmp-${process.pid}`);
+  removeSync(probeDir);
+  let version: string;
+  try {
+    await extractTarball(tarball, probeDir);
+    const manifest = readJSONSync(join(probeDir, 'package.json')) as {
+      version?: string;
+    };
+    if (!manifest.version || !semver.valid(manifest.version)) {
+      throw new Error(`Tarball at ${url} has an invalid package version.`);
+    }
+    version = manifest.version;
+  } finally {
+    removeSync(probeDir);
+  }
+
+  const versionDir = getVersionDir(version, root);
+  removeSync(versionDir); // same-version re-pins replace the payload
+  const installedVersion = await placeNpmPayload(tarball, versionDir);
+
+  writePointer(
+    {
+      storeFormat: STORE_FORMAT,
+      version: installedVersion,
+      type: 'npm',
+      pinned: true,
+    },
+    root,
+    { force: true }
+  );
+  return installedVersion;
 }
 
 // Binary comes from the platform package, verified, never modified after
 // extraction (code signature stays intact).
 export async function installNativeVersionToStore(
   version: string,
-  root: string = getStoreRoot()
+  root: string = getStoreRoot(),
+  opts: InstallOptions = {}
 ): Promise<string> {
   const platformPackage = getNativePlatformPackage();
   const versionDir = getVersionDir(version, root, 'native');
@@ -392,7 +464,16 @@ export async function installNativeVersionToStore(
     }
   }
 
-  writePointer({ storeFormat: STORE_FORMAT, version, type: 'native' }, root);
+  writePointer(
+    {
+      storeFormat: STORE_FORMAT,
+      version,
+      type: 'native',
+      ...(opts.pinned ? { pinned: true } : {}),
+    },
+    root,
+    { force: opts.force }
+  );
   return version;
 }
 
@@ -439,14 +520,14 @@ export function isConfidentlyGlobal(packageDir: string): boolean {
   return isUnder(packageDir, npmGlobalRoot);
 }
 
-// Seeding never changes payload type: a native-pointer machine is only
-// moved by explicit `vc upgrade`.
+// Seeding never changes payload type and never moves a pinned pointer.
 export function shouldSeedStore(
   runningVersion: string,
   root: string = getStoreRoot()
 ): boolean {
   if (!semver.valid(runningVersion)) return false;
   const pointer = readPointer(root);
+  if (pointer?.pinned) return false;
   if (pointer?.type === 'native') return false;
   if (pointer && semver.gte(pointer.version, runningVersion)) return false;
   return true;
@@ -497,8 +578,16 @@ export function shouldRedirectToStore(
   const pointer = readPointer(root);
   if (!pointer) return undefined;
   if (!semver.valid(runningVersion)) return undefined;
-  // Native pointers always win (explicit user choice); npm must be newer.
-  if (pointer.type !== 'native' && !semver.gt(pointer.version, runningVersion))
+  // Never redirect to the same npm version (native is a payload switch).
+  if (pointer.type !== 'native' && pointer.version === runningVersion)
+    return undefined;
+  // Pinned and native pointers always win (explicit user choice); an
+  // unpinned npm pointer must be strictly newer.
+  if (
+    !pointer.pinned &&
+    pointer.type !== 'native' &&
+    !semver.gt(pointer.version, runningVersion)
+  )
     return undefined;
   if (!existsSync(getStoreEntrypoint(pointer.version, root, pointer.type)))
     return undefined;

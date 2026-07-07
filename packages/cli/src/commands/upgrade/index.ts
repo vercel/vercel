@@ -11,7 +11,6 @@ import pkg from '../../util/pkg';
 import type Client from '../../util/client';
 import { UpgradeTelemetryClient } from '../../util/telemetry/commands/upgrade';
 import { isAutoUpdateEnabled, setAutoUpdate } from '../../util/updates';
-import { isCliStoreEnabled, removeStore } from '../../util/cli-store';
 
 export default async function upgrade(client: Client): Promise<number> {
   let parsedArgs = null;
@@ -41,10 +40,6 @@ export default async function upgrade(client: Client): Promise<number> {
   const dryRun = parsedArgs.flags['--dry-run'];
   const enableAuto = parsedArgs.flags['--enable-auto'];
   const disableAuto = parsedArgs.flags['--disable-auto'];
-  const experimental = parsedArgs.flags['--experimental'];
-  const stable = parsedArgs.flags['--stable'];
-  const binary = parsedArgs.flags['--binary'];
-  const noBinary = parsedArgs.flags['--no-binary'];
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
@@ -55,43 +50,12 @@ export default async function upgrade(client: Client): Promise<number> {
   telemetry.trackCliFlagDryRun(dryRun);
   telemetry.trackCliFlagEnableAuto(enableAuto);
   telemetry.trackCliFlagDisableAuto(disableAuto);
-  telemetry.trackCliFlagExperimental(experimental);
-  telemetry.trackCliFlagStable(stable);
-  telemetry.trackCliFlagBinary(binary);
-  telemetry.trackCliFlagNoBinary(noBinary);
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
   telemetry.trackCliFlagJson(parsedArgs.flags['--json']);
 
   if (enableAuto && disableAuto) {
     output.error('Cannot use --enable-auto and --disable-auto together');
     return 1;
-  }
-
-  if (experimental && stable) {
-    output.error('Cannot use --experimental and --stable together');
-    return 1;
-  }
-
-  if (binary && noBinary) {
-    output.error('Cannot use --binary and --no-binary together');
-    return 1;
-  }
-
-  if (stable && (binary || noBinary)) {
-    output.error('Cannot combine --stable with --binary or --no-binary');
-    return 1;
-  }
-
-  if (stable) {
-    if (isCliStoreEnabled()) {
-      removeStore();
-      output.success(
-        'Returned to the stable upgrade channel. Installed copies now run their own versions and upgrade via your package manager.'
-      );
-    } else {
-      output.log('Already on the stable upgrade channel.');
-    }
-    return 0;
   }
 
   if (enableAuto || disableAuto) {
@@ -127,5 +91,5 @@ export default async function upgrade(client: Client): Promise<number> {
     return 0;
   }
 
-  return executeUpgrade(undefined, { experimental, binary, noBinary });
+  return executeUpgrade();
 }

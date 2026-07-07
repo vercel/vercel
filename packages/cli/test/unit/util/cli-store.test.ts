@@ -394,3 +394,65 @@ describe('shouldRedirectToStore', () => {
     expect(shouldRedirectToStore('54.18.0', root)).toBeUndefined();
   });
 });
+
+describe('pinned pointers', () => {
+  function seedVersion(version: string) {
+    const dir = getVersionDir(version, root);
+    mkdirpSync(join(dir, 'dist'));
+    writeFileSync(getStoreEntrypoint(version, root), '// entry');
+    writeJSONSync(join(dir, 'package.json'), { name: 'vercel', version });
+  }
+
+  const pinned = (version: string) => ({
+    storeFormat: STORE_FORMAT,
+    version,
+    type: 'npm' as const,
+    pinned: true,
+  });
+
+  it('writePointer refuses to move a pinned pointer without force', () => {
+    writePointer(pinned('54.17.0'), root, { force: true });
+    writePointer(
+      { storeFormat: STORE_FORMAT, version: '54.19.0', type: 'npm' },
+      root
+    );
+    expect(readPointer(root)?.version).toBe('54.17.0');
+  });
+
+  it('writePointer moves a pinned pointer with force', () => {
+    writePointer(pinned('54.17.0'), root, { force: true });
+    writePointer(
+      { storeFormat: STORE_FORMAT, version: '54.19.0', type: 'npm' },
+      root,
+      { force: true }
+    );
+    expect(readPointer(root)?.version).toBe('54.19.0');
+    expect(readPointer(root)?.pinned).toBeUndefined();
+  });
+
+  it('force allows a downward move (explicit downgrade)', () => {
+    writePointer(
+      { storeFormat: STORE_FORMAT, version: '54.19.0', type: 'npm' },
+      root
+    );
+    writePointer(pinned('54.17.0'), root, { force: true });
+    expect(readPointer(root)).toEqual(pinned('54.17.0'));
+  });
+
+  it('shouldSeedStore is false when pinned', () => {
+    writePointer(pinned('54.17.0'), root, { force: true });
+    expect(shouldSeedStore('54.19.0', root)).toBe(false);
+  });
+
+  it('a pinned pointer redirects even when older than the running version', () => {
+    seedVersion('54.17.0');
+    writePointer(pinned('54.17.0'), root, { force: true });
+    expect(shouldRedirectToStore('54.19.0', root)?.version).toBe('54.17.0');
+  });
+
+  it('a pinned pointer does not redirect to the running version itself', () => {
+    seedVersion('54.19.0');
+    writePointer(pinned('54.19.0'), root, { force: true });
+    expect(shouldRedirectToStore('54.19.0', root)).toBeUndefined();
+  });
+});

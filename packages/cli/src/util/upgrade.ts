@@ -191,28 +191,13 @@ async function executeStoreUpgrade(
   }
 }
 
-export interface ExecuteUpgradeOptions {
-  experimental?: boolean;
-  binary?: boolean;
-  noBinary?: boolean;
-}
-
-export async function executeUpgrade(
-  targetVersion?: string,
-  opts: ExecuteUpgradeOptions = {}
-): Promise<number> {
-  // Store path: enrolled (store exists) or enrolling now. Running native
-  // binaries manage themselves until their wrapper is store-aware.
-  const storeActive =
-    opts.experimental || opts.binary || opts.noBinary || isCliStoreEnabled();
-  if (storeActive && !isNativeBinaryInstall()) {
+export async function executeUpgrade(targetVersion?: string): Promise<number> {
+  // Store path: enrolled installs upgrade the store, keeping their payload
+  // type. Enrollment happens via `vc version`. Running native binaries
+  // manage themselves until their wrapper is store-aware.
+  if (isCliStoreEnabled() && !isNativeBinaryInstall()) {
     const pointer = readPointer();
-    const payloadType: 'npm' | 'native' = opts.binary
-      ? 'native'
-      : opts.noBinary
-        ? 'npm'
-        : (pointer?.type ?? 'npm');
-    return executeStoreUpgrade(targetVersion, payloadType);
+    return executeStoreUpgrade(targetVersion, pointer?.type ?? 'npm');
   }
 
   const totalSteps = targetVersion ? 2 : 3;

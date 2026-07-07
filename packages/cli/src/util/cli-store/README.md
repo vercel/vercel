@@ -1,10 +1,28 @@
 # Managed CLI Store (experimental)
 
-Opt in with `vc upgrade --experimental` (or `--binary`); opt out with
-`vc upgrade --stable`. The store's existence is the enrollment signal —
-until someone runs an opt-in flag, none of this changes behavior.
+Managed via the hidden `vc version` command. Opt in with
+`vc version --experimental` (or `--binary` for the native payload); opt
+out with `vc version reset`. The store's existence is the enrollment
+signal — until someone enrolls, none of this changes behavior.
 Env overrides: `VERCEL_CLI_STORE=0` bypasses per-invocation,
 `VERCEL_CLI_STORE=1` forces on without enrollment (testing).
+
+```
+vc version                      status: running version + store state
+vc version --experimental       enroll (track latest, npm payload)
+vc version --binary             enroll/switch to the native payload
+vc version pin <semver|latest|tarball-url> [--binary]
+                                latest = tracking; semver/URL = pinned
+vc version unpin                resume tracking from the pinned version
+vc version list | ls            list store versions
+vc version reset                remove the store entirely
+```
+
+A **pinned** pointer (`pinned: true` in `current.json`) is authoritative:
+it wins the redirect even over a newer invoked version, the background
+seeder never moves it, and only explicit `vc version` commands (which
+write with force) change it. Tarball-URL pins skip integrity verification
+(no registry metadata exists for them) and always pin.
 
 A self-owned, versioned installation directory that decouples CLI upgrades
 from package managers. Package managers keep acquisition (`npm i -g vercel`
@@ -22,7 +40,8 @@ works exactly as before); the store owns currency.
 │                                 @vercel/vc-native-<platform>-<arch>;
 │                                 integrity-verified; exec'd directly
 ├── current.json                  the pointer: { storeFormat, version, type }
-│                                 atomic rename; monotonic within a type
+│                                 (+ pinned?); atomic rename; monotonic
+│                                 within a type unless forced by `vc version`
 └── seed-attempt.json             background-seeding rate limiter
 ```
 
@@ -33,21 +52,21 @@ works exactly as before); the store owns currency.
   it to a version directory, and flips the pointer. No package manager is
   invoked against the user's environment, and no install-method detection
   is performed. The success message reports the measured installed version.
-  `--binary` switches the pointer to the native payload; `--no-binary`
-  switches back to npm.
+  The payload type follows the pointer; switching types is a `vc version`
+  act (`--binary`).
 - **Redirect** (`src/store-redirect.mjs`): the entrypoint re-execs the
   store's version when it is strictly newer than the invoked install
   (`max(invoked, store)`). A fresh package-manager install of a newer
   version always wins immediately. Prerelease/dev builds never participate.
-  A **native** pointer always wins regardless of version — choosing the
-  binary is an explicit act, and the entrypoint execs it directly (no
-  second node startup).
+  A **native or pinned** pointer always wins regardless of version — both
+  are explicit acts. Native payloads are exec'd directly (no second node
+  startup).
 - **Self-seeding**: when a running install is newer than the pointer, a
   detached background worker installs that version (from the registry,
   verified — never copied from local files) into the store. All eligible
   installs on a machine converge on the newest version anyone runs,
-  without an explicit upgrade. Seeding never changes the payload type: a
-  native-pointer machine is only moved by explicit `vc upgrade`.
+  without an explicit upgrade. Seeding never changes the payload type and
+  never moves a pinned pointer.
 
 ## Eligibility: who participates
 
@@ -80,11 +99,11 @@ Every failure in store code degrades to running the invoked install —
 today's behavior. Unknown store formats or payload types read as "no
 store" (forward compatibility). The pointer only moves up within a payload
 type, so racing writers (seeder vs. upgrade) are harmless; type switches
-happen only through explicit `vc upgrade --binary`/`--no-binary`.
+and pin changes happen only through explicit `vc version` commands.
 
 All store writes funnel through `installVersionToStore` /
-`installNativeVersionToStore`, with exactly two callers: `vc upgrade` and
-the background seeder. The effective version is decided once, at
+`installNativeVersionToStore` / `installTarballUrlToStore`, called only
+by `vc upgrade`, `vc version`, and the background seeder. The effective version is decided once, at
 entrypoint time: a store write that lands while a command is running only
 affects future invocations — no command ever observes the version changing
 underneath it.
@@ -95,9 +114,8 @@ underneath it.
   advancing once the store is ahead; `vc -v` reports the effective
   version. `--debug` prints whether the store was involved and which
   version ran.
-- Per-invocation bypass: `VERCEL_CLI_STORE=0`. Unenroll: `vc upgrade
---stable` (removes the store; installs revert to package-manager
-  managed).
+- Per-invocation bypass: `VERCEL_CLI_STORE=0`. Unenroll: `vc version
+reset` (removes the store; installs revert to package-manager managed).
 - Auth and global config are untouched — every version reads the same
   `auth.json`/`config.json` from the existing global config directory.
 - A running native binary install (`VERCEL_VC_NATIVE=1`) does not consult

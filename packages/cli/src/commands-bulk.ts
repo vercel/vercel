@@ -60,6 +60,7 @@ export { default as tokens } from './commands/tokens';
 export { default as telemetry } from './commands/telemetry';
 export { default as traces } from './commands/traces';
 export { default as upgrade } from './commands/upgrade';
+export { default as version } from './commands/version';
 export { default as usage } from './commands/usage';
 export { default as vcr } from './commands/vcr';
 export { default as webhooks } from './commands/webhooks';

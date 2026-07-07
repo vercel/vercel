@@ -664,6 +664,7 @@ const main = async () => {
     'sandbox',
     'telemetry',
     'upgrade',
+    'version',
     'skills',
     'agent',
   ];
@@ -1199,6 +1200,10 @@ const main = async () => {
         case 'upgrade':
           telemetry.trackCliCommandUpgrade(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).upgrade;
+          break;
+        case 'version':
+          telemetry.trackCliCommandVersion(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).version;
           break;
         case 'webhooks':
           telemetry.trackCliCommandWebhooks(userSuppliedSubCommand);

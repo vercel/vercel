@@ -24,28 +24,4 @@ export class UpgradeTelemetryClient extends TelemetryClient {
       this.trackCliFlag('disable-auto');
     }
   }
-
-  trackCliFlagExperimental(experimental: boolean | undefined) {
-    if (experimental) {
-      this.trackCliFlag('experimental');
-    }
-  }
-
-  trackCliFlagStable(stable: boolean | undefined) {
-    if (stable) {
-      this.trackCliFlag('stable');
-    }
-  }
-
-  trackCliFlagBinary(binary: boolean | undefined) {
-    if (binary) {
-      this.trackCliFlag('binary');
-    }
-  }
-
-  trackCliFlagNoBinary(noBinary: boolean | undefined) {
-    if (noBinary) {
-      this.trackCliFlag('no-binary');
-    }
-  }
 }

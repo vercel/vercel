@@ -113,7 +113,7 @@ describe('vc.js managed store redirect', () => {
 
   it('redirects without the env var when the store exists (enrolled machine)', async () => {
     // The store's existence is the enrollment signal — created only by the
-    // explicit `vc upgrade --experimental` act.
+    // explicit `vc version` act.
     const { root, dist } = await setupInstalledCli();
     const storeDir = join(root, 'store');
     await seedStore(storeDir, '2.0.0');
