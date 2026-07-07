@@ -41,7 +41,7 @@ export default async function endpoints(client: Client, argv: string[]) {
 
   if (!model) {
     output.error(
-      `Specify a model, e.g. ${getCommandName('ai-gateway models endpoints anthropic/claude-opus-4.8')}.`
+      `Specify a model. Run ${getCommandName('ai-gateway models ls')} to see available models.`
     );
     return 1;
   }
