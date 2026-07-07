@@ -1101,8 +1101,7 @@ describe('link', () => {
       client.cwd = cwd;
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Which team?');
-      client.events.keypress('enter');
+      // Single team auto-selects; no team prompt.
       await expect(client.stderr).toOutput('Search all projects');
       client.events.keypress('down');
       client.events.keypress('enter');
@@ -1118,6 +1117,7 @@ describe('link', () => {
       const cwd = setupTmpDir();
       useUser({ version: 'northstar' });
       useTeams('team_dummy');
+      createTeam(); // second team so team selection stays interactive
       useUnknownProject();
 
       client.cwd = cwd;
@@ -1152,8 +1152,7 @@ describe('link', () => {
       client.cwd = cwd;
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Which team?');
-      client.events.keypress('enter');
+      // Single team auto-selects; no team prompt.
       await expect(client.stderr).toOutput('Search all projects');
       client.events.keypress('down');
       client.events.keypress('enter');
@@ -1184,8 +1183,7 @@ describe('link', () => {
       client.cwd = cwd;
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Which team?');
-      client.events.keypress('enter');
+      // Single team auto-selects; no team prompt.
       await expect(client.stderr).toOutput('Search all projects');
       client.events.keypress('down');
       client.events.keypress('enter');
@@ -1211,8 +1209,7 @@ describe('link', () => {
       client.cwd = cwd;
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Which team?');
-      client.events.keypress('enter');
+      // Single team auto-selects; no team prompt.
       await chooseCreateNewProject();
 
       await expect(client.stderr).toOutput('Name?');
@@ -1249,9 +1246,7 @@ describe('link', () => {
       client.cwd = cwd;
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Which team?');
-      client.events.keypress('enter');
-
+      // Single team auto-selects; no team prompt.
       await expect(client.stderr).toOutput('Which project?');
       // Choices: folder-name match, separator, Search all, Create a new project
       client.events.keypress('down');
@@ -1280,8 +1275,7 @@ describe('link', () => {
       client.cwd = cwd;
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Which team?');
-      client.events.keypress('enter');
+      // Single team auto-selects; no team prompt.
       await chooseCreateNewProject();
 
       await expect(client.stderr).toOutput('Name?');
@@ -1336,8 +1330,7 @@ describe('link', () => {
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Directory');
-    await expect(client.stderr).toOutput('Which team?');
-    client.stdin.write('\n');
+    // Single team auto-selects: aligned `Team` row instead of a prompt.
     await expect(client.stderr).toOutput('Which project?');
     expect(client.stderr.getFullOutput()).toContain('Search all projects');
     expect(client.stderr.getFullOutput()).toContain('Create a new project');
@@ -1356,10 +1349,11 @@ describe('link', () => {
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
     const plainOutput = stripAnsi(client.stderr.getFullOutput());
+    expect(plainOutput).not.toContain('Which team?');
     expect(plainOutput.indexOf('Directory')).toBeLessThan(
-      plainOutput.indexOf('Which team?')
+      plainOutput.indexOf(`Team            ${team.slug}`)
     );
-    expect(plainOutput.indexOf('Which team?')).toBeLessThan(
+    expect(plainOutput.indexOf(`Team            ${team.slug}`)).toBeLessThan(
       plainOutput.indexOf('Searching for existing projects')
     );
     expect(plainOutput.indexOf('Searching for existing projects')).toBeLessThan(
@@ -2081,8 +2075,7 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Which team?');
-      client.stdin.write('\n');
+      // Single team auto-selects; no team prompt.
       await expect(client.stderr).toOutput('Search all projects');
       client.stdin.write('\n');
 
@@ -2122,8 +2115,7 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Which team?');
-      client.stdin.write('\n');
+      // Single team auto-selects; no team prompt.
       await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
@@ -2158,8 +2150,7 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Which team?');
-      client.stdin.write('\n');
+      // Single team auto-selects; no team prompt.
       await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
@@ -2200,8 +2191,7 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Which team?');
-      client.stdin.write('\n');
+      // Single team auto-selects; no team prompt.
       await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
@@ -2243,8 +2233,7 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Which team?');
-      client.stdin.write('\n');
+      // Single team auto-selects; no team prompt.
       await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
@@ -2283,8 +2272,7 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Which team?');
-      client.stdin.write('\n');
+      // Single team auto-selects; no team prompt.
       await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
@@ -2320,8 +2308,7 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Which team?');
-      client.stdin.write('\n');
+      // Single team auto-selects; no team prompt.
       await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
@@ -2357,8 +2344,7 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Which team?');
-      client.stdin.write('\n');
+      // Single team auto-selects; no team prompt.
       await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
@@ -2417,8 +2403,7 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Which team?');
-      client.stdin.write('\n');
+      // Single team auto-selects; no team prompt.
       await expect(client.stderr).toOutput('Search all projects');
       client.stdin.write('\n');
 
@@ -2481,9 +2466,7 @@ describe('link', () => {
       client.cwd = projectDir;
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Which team?');
-      client.stdin.write('\n');
-
+      // Single team auto-selects; no team prompt.
       await expect(client.stderr).toOutput(
         `${repoProject.name} (linked by git)`
       );
@@ -2556,9 +2539,7 @@ describe('link', () => {
       client.cwd = projectDir;
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Which team?');
-      client.stdin.write('\n');
-
+      // Single team auto-selects; no team prompt.
       await expect(client.stderr).toOutput('web (folder name)');
       expect(client.stderr.getFullOutput()).not.toContain(
         otherRootProject.name
@@ -2618,9 +2599,7 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Which team?');
-      client.stdin.write('\n');
-
+      // Single team auto-selects; no team prompt.
       await expect(client.stderr).toOutput('Search all projects');
       client.events.keypress('down');
       client.events.keypress('enter');
@@ -2653,9 +2632,7 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Directory');
-      await expect(client.stderr).toOutput('Which team?');
-      client.stdin.write('\n');
-
+      // Single team auto-selects; no team prompt.
       await chooseCreateNewProject();
 
       await expect(client.stderr).toOutput('Name?');
