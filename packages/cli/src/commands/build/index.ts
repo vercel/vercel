@@ -1393,10 +1393,9 @@ async function doBuild(
         // subprocesses it spawns) can be captured and prefixed per line, and so builds are
         // isolated. Falls back to in-process for builders that can't cross the process
         // boundary (see canBuildInSubprocess): the built-in `@vercel/static` (no module path
-        // to require) and builds that register a pre-deploy or build callback.
+        // to require) and builds that register a build callback.
         const subprocessEligible = canBuildInSubprocess({
           builderPath: builderWithPkg.path,
-          hasPreDeploy: Boolean(preDeployCmd),
           hasBuildCallback: Boolean(buildOptions.buildCallback),
         });
         try {
@@ -1409,8 +1408,14 @@ async function doBuild(
                 buildOptions,
                 env: process.env,
                 cwd: buildWorkPath,
+                expectsPreDeploy: Boolean(preDeployCmd),
               });
               subprocessDiagnostics = outcome.diagnostics;
+              // A forked build with a pre-deploy keeps its worker alive; route the deferred
+              // pre-deploy through the worker handle instead of the in-process callback.
+              if (outcome.runPreDeploy && preDeployEntry) {
+                preDeployEntry.callback = outcome.runPreDeploy;
+              }
               // The worker unwraps BuildResultVX itself, so this is always V2/V3.
               return outcome.buildResult;
             }

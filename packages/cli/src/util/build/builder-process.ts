@@ -64,6 +64,13 @@ interface BuildMessageResult {
   result?: BuildResultV2 | BuildResultV3;
   /** Serialized Files returned by the builder's `diagnostics()`, if any. */
   diagnostics?: Record<string, SerializedFile>;
+  /** True when the builder registered a pre-deploy callback the worker is holding. */
+  hasPreDeploy?: boolean;
+  error?: object;
+}
+
+interface PreDeployMessageResult {
+  type: 'preDeployResult';
   error?: object;
 }
 
@@ -73,24 +80,30 @@ export type BuilderDiagnostics = Record<string, FileFsRef | FileBlob | FileRef>;
 export interface BuildInSubprocessResult {
   buildResult: BuildResultV2 | BuildResultV3;
   diagnostics?: BuilderDiagnostics;
+  /**
+   * When the build registered a pre-deploy command, the worker is kept alive to run it later.
+   * Call `runPreDeploy()` after all builds succeed (it runs the callback in the worker, with the
+   * builder-computed env it captured). When there's no pre-deploy, the worker is already torn
+   * down and this is undefined.
+   */
+  runPreDeploy?: () => Promise<void>;
 }
 
 /**
- * Whether a build can run in a forked worker. Anything that requires passing a live
- * function/closure across the process boundary must stay in-process for now:
+ * Whether a build can run in a forked worker:
  * - `@vercel/static` is a built-in with no module path to `require()` in the worker.
- * - `registerPreDeploy`/`buildCallback` are callbacks the builder invokes during `build()`.
+ * - `buildCallback` is a callback the builder invokes DURING `build()` that mutates parent
+ *   state, so it can't cross the process boundary. (A pre-deploy callback, by contrast, runs
+ *   after all builds via the worker keep-alive mechanism, so it does not block forking.)
  */
 export function canBuildInSubprocess({
   builderPath,
-  hasPreDeploy,
   hasBuildCallback,
 }: {
   builderPath: string;
-  hasPreDeploy: boolean;
   hasBuildCallback: boolean;
 }): boolean {
-  return Boolean(builderPath) && !hasPreDeploy && !hasBuildCallback;
+  return Boolean(builderPath) && !hasBuildCallback;
 }
 
 /** Re-prototype a plain object from IPC back into its File instance, by its `type` tag. */
@@ -219,6 +232,12 @@ export interface BuildInSubprocessOptions {
   /** Fully-computed environment for the child (replaces the parent's per-build env mutation). */
   env: NodeJS.ProcessEnv;
   cwd: string;
+  /**
+   * Whether this build has a configured pre-deploy command. When true, the worker wires a
+   * `registerPreDeploy` into buildOptions and stays alive after the build so its callback can be
+   * run later via the returned `runPreDeploy`.
+   */
+  expectsPreDeploy?: boolean;
 }
 
 /**
@@ -233,6 +252,7 @@ export async function buildInSubprocess({
   buildOptions,
   env,
   cwd,
+  expectsPreDeploy,
 }: BuildInSubprocessOptions): Promise<BuildInSubprocessResult> {
   const workerPath = join(__dirname, 'builder-worker.cjs');
 
@@ -244,6 +264,14 @@ export async function buildInSubprocess({
     execArgv: [],
     env,
   });
+
+  const teardown = () => {
+    if (child.connected) child.disconnect();
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill();
+    }
+    output.debug(`Build subprocess for "${buildOptions.entrypoint}" finished`);
+  };
 
   // Wait for the worker's `ready` handshake before sending the build request.
   await new Promise<void>((resolve, reject) => {
@@ -266,6 +294,7 @@ export async function buildInSubprocess({
       type: 'build',
       requirePath,
       buildOptions: serializableBuildOptions,
+      expectsPreDeploy: Boolean(expectsPreDeploy),
     });
 
     const message = await new Promise<
@@ -308,12 +337,44 @@ export async function buildInSubprocess({
     const diagnostics = message.diagnostics
       ? rehydrateDiagnostics(message.diagnostics)
       : undefined;
-    return { buildResult, diagnostics };
-  } finally {
-    if (child.connected) child.disconnect();
-    if (child.exitCode === null && child.signalCode === null) {
-      child.kill();
+
+    if (!message.hasPreDeploy) {
+      teardown();
+      return { buildResult, diagnostics };
     }
-    output.debug(`Build subprocess for "${buildOptions.entrypoint}" finished`);
+
+    // The build registered a pre-deploy callback. Keep the worker alive and hand back a
+    // trigger the caller runs after all builds succeed; it runs the callback in the worker
+    // (with the env it captured) and then tears the worker down.
+    const runPreDeploy = () =>
+      new Promise<void>((resolve, reject) => {
+        function onMessage(msg: PreDeployMessageResult) {
+          if (msg.type !== 'preDeployResult') return;
+          cleanup();
+          if (msg.error) reject(Object.assign(new Error(), msg.error));
+          else resolve();
+        }
+        function onExit(code: number | null, signal: string | null) {
+          cleanup();
+          reject(
+            new Error(
+              `Builder exited with ${signal || code} before running pre-deploy`
+            )
+          );
+        }
+        function cleanup() {
+          child.removeListener('close', onExit);
+          child.removeListener('message', onMessage);
+          teardown();
+        }
+        child.on('close', onExit);
+        child.on('message', onMessage);
+        child.send({ type: 'runPreDeploy' });
+      });
+
+    return { buildResult, diagnostics, runPreDeploy };
+  } catch (err) {
+    teardown();
+    throw err;
   }
 }

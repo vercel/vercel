@@ -33,15 +33,39 @@ process.on('unhandledRejection', err => {
   process.exit(1);
 });
 
+// A builder may register a pre-deploy callback during build(). The CLI runs pre-deploys only
+// after every build succeeds, so we hold the callback here and run it when the parent sends a
+// `runPreDeploy` message, keeping the builder-computed env the callback captured.
+let preDeployCallback;
+
 process.on('message', onMessage);
 
 function onMessage(message) {
+  if (message && message.type === 'runPreDeploy') {
+    runPreDeploy();
+    return;
+  }
   processMessage(message).catch(err => {
     Object.defineProperty(err, 'message', { enumerable: true });
     Object.defineProperty(err, 'stack', { enumerable: true });
     process.removeListener('message', onMessage);
     process.send({ type: 'buildResult', error: err }, () => process.exit(1));
   });
+}
+
+function runPreDeploy() {
+  Promise.resolve()
+    .then(() => preDeployCallback?.())
+    .then(
+      () => process.send({ type: 'preDeployResult' }, () => process.exit(0)),
+      err => {
+        Object.defineProperty(err, 'message', { enumerable: true });
+        Object.defineProperty(err, 'stack', { enumerable: true });
+        process.send({ type: 'preDeployResult', error: err }, () =>
+          process.exit(1)
+        );
+      }
+    );
 }
 
 // Re-prototype a plain object sent over IPC back into a FileFsRef instance.
@@ -72,12 +96,21 @@ function serializeFiles(files) {
 }
 
 async function processMessage(message) {
-  const { requirePath, buildOptions } = message;
+  const { requirePath, buildOptions, expectsPreDeploy } = message;
   const builder = require(requirePath);
 
   // `files` arrive as plain objects — turn them back into FileFsRef instances the builder expects.
   for (const name of Object.keys(buildOptions.files)) {
     buildOptions.files[name] = rehydrateFile(buildOptions.files[name]);
+  }
+
+  // Capture any pre-deploy callback the builder registers during build(); the parent triggers
+  // it later via a `runPreDeploy` message. Only wired when the parent said a pre-deploy command
+  // is configured for this build.
+  if (expectsPreDeploy) {
+    buildOptions.registerPreDeploy = callback => {
+      preDeployCallback = callback;
+    };
   }
 
   const result = await builder.build(buildOptions);
@@ -150,7 +183,11 @@ async function processMessage(message) {
     diagnostics = undefined;
   }
 
-  process.send({ type: 'buildResult', result, diagnostics });
+  // With a pending pre-deploy the worker stays alive to run the callback (which holds the
+  // builder-computed env) when the parent later sends `runPreDeploy`; the parent tears the
+  // worker down once done. Without one, the parent kills the worker as soon as it has the result.
+  const hasPreDeploy = Boolean(preDeployCallback);
+  process.send({ type: 'buildResult', result, diagnostics, hasPreDeploy });
 }
 
 process.send({ type: 'ready' });
