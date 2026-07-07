@@ -10,6 +10,31 @@ import importlib.util
 import json
 import os
 import sys
+from dataclasses import asdict, dataclass
+from typing import Self
+
+
+@dataclass
+class StaticMount:
+    urlPath: str
+    directory: str
+
+    @classmethod
+    def from_route(cls, route: object) -> Self | None:
+        try:
+            from starlette.staticfiles import StaticFiles
+        except ImportError:
+            return None
+        static_app = getattr(route, "app", None)
+        if not isinstance(static_app, StaticFiles):
+            return None
+        directory = getattr(static_app, "directory", None)
+        if directory is None:
+            return None
+        return cls(
+            urlPath=getattr(route, "path", "/"),
+            directory=os.path.abspath(str(directory)),
+        )
 
 
 def main() -> None:
@@ -34,25 +59,9 @@ def main() -> None:
         print(json.dumps([]))
         return
 
-    try:
-        from starlette.routing import Mount
-        from starlette.staticfiles import StaticFiles
-    except ImportError:
-        print(json.dumps([]))
-        return
-
-    mounts = []
-    for route in getattr(app, "routes", []):
-        if isinstance(route, Mount) and isinstance(route.app, StaticFiles):
-            directory = route.app.directory
-            mounts.append(
-                {
-                    "urlPath": route.path,
-                    "directory": os.path.abspath(str(directory)),
-                }
-            )
-
-    print(json.dumps(mounts))
+    candidates = list(getattr(app, "routes", []))
+    mounts = [m for r in candidates if (m := StaticMount.from_route(r)) is not None]
+    print(json.dumps([asdict(m) for m in mounts]))
 
 
 main()
