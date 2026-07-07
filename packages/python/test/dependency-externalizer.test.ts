@@ -330,6 +330,41 @@ describe('dependency externalizer support', () => {
     });
   });
 
+  describe('bytecode gate math for large functions (coverage floor)', () => {
+    const MB = 1024 * 1024;
+    const GB = 1024 * MB;
+    const gatePasses = (bundleSize: number, pyBytes: number) => {
+      const capacity = MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE - bundleSize;
+      const estimate = PYC_TO_PY_RATIO * pyBytes;
+      return capacity >= BYTECODE_COVERAGE_FLOOR * estimate;
+    };
+
+    it('compiles a typical large function with plenty of headroom', () => {
+      // 500MB bundle, 100MB of .py — 4.5GB headroom easily fits all bytecode
+      expect(gatePasses(500 * MB, 100 * MB)).toBe(true);
+    });
+
+    it('compiles when bytecode is small relative to headroom', () => {
+      // 4.9GB bundle, only 10MB of .py — 100MB headroom fits 12MB estimated
+      expect(gatePasses(4.9 * GB, 10 * MB)).toBe(true);
+    });
+
+    it('skips near-cap bundles when estimated bytecode far exceeds capacity', () => {
+      // 4.9GB bundle, 400MB of .py — estimated bytecode is 480MB,
+      // 50% floor is 240MB, but only ~100MB headroom
+      expect(gatePasses(4.9 * GB, 400 * MB)).toBe(false);
+    });
+
+    it('skips when the bundle exceeds the 5GB cap', () => {
+      expect(gatePasses(5.1 * GB, 0)).toBe(false);
+    });
+
+    it('compiles a 4GB function with moderate .py content', () => {
+      // 4GB bundle, 200MB of .py — 1GB headroom easily fits 240MB estimated
+      expect(gatePasses(4 * GB, 200 * MB)).toBe(true);
+    });
+  });
+
   describe('Lambda size constants', () => {
     it('LAMBDA_SIZE_THRESHOLD_BYTES is 225 MB', () => {
       expect(LAMBDA_SIZE_THRESHOLD_BYTES).toBe(225 * 1024 * 1024);

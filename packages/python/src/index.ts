@@ -1092,11 +1092,10 @@ export const build: BuildVX = async ({
         },
       });
 
-      // Precompile bytecode and fill remaining capacity up to capacityBytes.
-      // Only .pyc for .py files already in the bundle are collected, so
-      // excluded source can't re-enter as .pyc. Bytecode is a pure
-      // optimization: failures are logged and the build continues.
-      const runCompileAllAndFillBytecode = async (capacityBytes: number) => {
+      const runCompileAllAndFillBytecode = async (
+        capacityBytes: number,
+        precomputedBundleSize?: number
+      ) => {
         try {
           await builderSpan
             .child('vc.builder.python.compileall')
@@ -1128,8 +1127,9 @@ export const build: BuildVX = async ({
               });
             });
 
-          const currentSize = await calculateBundleSize(files);
-          let remainingCapacity = capacityBytes - currentSize;
+          let remainingCapacity =
+            capacityBytes -
+            (precomputedBundleSize ?? (await calculateBundleSize(files)));
 
           if (pythonVersion.major != null && pythonVersion.minor != null) {
             const appBytecodeInfo = await collectAppBytecodeFiles({
@@ -1165,6 +1165,19 @@ export const build: BuildVX = async ({
         }
       };
 
+      // Skip compileall when insufficient capacity for meaningful coverage.
+      const maybeCompileAll = async (
+        capacityCeiling: number,
+        currentBundleSize?: number
+      ) => {
+        const size = currentBundleSize ?? (await calculateBundleSize(files));
+        const capacity = capacityCeiling - size;
+        const estimate = await estimateBytecodeSize(files);
+        if (capacity >= BYTECODE_COVERAGE_FLOOR * estimate) {
+          await runCompileAllAndFillBytecode(capacityCeiling, size);
+        }
+      };
+
       const announceLargeFunction = () =>
         console.log(
           `Function "${entrypoint}" exceeds the standard size limit; enabling large functions (beta).`
@@ -1179,9 +1192,7 @@ export const build: BuildVX = async ({
         if (fellBackToFullBundle) {
           announceLargeFunction();
           if (compileAllEnabled) {
-            await runCompileAllAndFillBytecode(
-              MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
-            );
+            await maybeCompileAll(MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE);
           }
         }
       } else {
@@ -1193,19 +1204,16 @@ export const build: BuildVX = async ({
             announceLargeFunction();
           }
           if (compileAllEnabled) {
-            await runCompileAllAndFillBytecode(
-              MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
+            await maybeCompileAll(
+              MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE,
+              depAnalysis.totalBundleSize
             );
           }
         } else if (compileAllEnabled) {
-          // Compile only when enough of the expected bytecode ships to
-          // justify the compile time.
-          const capacity =
-            BYTECODE_FILL_CEILING_BYTES - depAnalysis.totalBundleSize;
-          const estimate = await estimateBytecodeSize(files);
-          if (capacity >= BYTECODE_COVERAGE_FLOOR * estimate) {
-            await runCompileAllAndFillBytecode(BYTECODE_FILL_CEILING_BYTES);
-          }
+          await maybeCompileAll(
+            BYTECODE_FILL_CEILING_BYTES,
+            depAnalysis.totalBundleSize
+          );
         }
       }
     });
