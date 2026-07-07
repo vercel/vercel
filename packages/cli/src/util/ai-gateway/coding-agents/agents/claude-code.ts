@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import type { CodingAgent, EnvExport } from '../types';
 import { mergeJson, pathExists } from '../config-files';
+import { hasClaudeCodeLogin } from '../logins';
 import { GATEWAY_ANTHROPIC_BASE_URL } from '../gateway';
 
 /**
@@ -28,6 +29,29 @@ export const claudeCode: CodingAgent = {
 
   async detect(home) {
     return pathExists(claudeDir(home));
+  },
+
+  async warnings({ home, overrides }) {
+    if (!hasClaudeCodeLogin(home, claudeDir(home))) {
+      return [];
+    }
+    return [
+      {
+        code: 'anthropic_login_conflict',
+        impact: 'Your Anthropic login will stop being used for Claude Code.',
+        why: [
+          'Claude Code is logged in with an Anthropic account, and connecting sets ANTHROPIC_AUTH_TOKEN, which takes precedence over that login.',
+          'The login stays signed in but unused; run /logout inside Claude Code to clear it.',
+        ],
+        undo: `remove the ANTHROPIC_* entries from ${this.configPath({
+          apiKey: '',
+          home,
+          overrides,
+        })}`,
+        confirm:
+          'Configure Claude Code anyway? Answering no leaves your Anthropic login untouched.',
+      },
+    ];
   },
 
   configPath(ctx) {
