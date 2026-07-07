@@ -5,7 +5,7 @@ import { invalidateSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandName } from '../../util/pkg-name';
-import { getLinkedProject } from '../../util/projects/link';
+import { getLinkedProjectOrFail } from '../../util/projects/get-linked-project-or-fail';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { CacheInvalidateTelemetryClient } from '../../util/telemetry/commands/cache/invalidate';
 import plural from 'pluralize';
@@ -31,7 +31,10 @@ export default async function invalidate(
     return 1;
   }
 
-  const link = await getLinkedProject(client);
+  const projectName = parsedArgs.flags['--project'];
+  telemetry.trackCliOptionProject(projectName);
+
+  const link = await getLinkedProjectOrFail(client, projectName);
 
   if (link.status === 'not_linked') {
     output.error(
@@ -84,8 +87,9 @@ export default async function invalidate(
 
   if (!yes) {
     if (!process.stdin.isTTY) {
+      const projectFlag = projectName ? ` --project ${projectName}` : '';
       output.print(
-        `${msg}. To continue, run ${getCommandName(`cache invalidate ${flag} ${itemValue} --yes`)}.`
+        `${msg}. To continue, run ${getCommandName(`cache invalidate ${flag} ${itemValue}${projectFlag} --yes`)}.`
       );
       return 1;
     }

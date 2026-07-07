@@ -3215,7 +3215,7 @@ writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, nul
     ).toBe('backend output');
   });
 
-  it('should detect generated experimentalServicesV2 from default output when using --output', async () => {
+  it('should detect generated stable services routes from default output when using --output', async () => {
     const cwd = await getWriteableDirectory();
     const output = join(cwd, 'custom-output');
     await fs.ensureDir(join(cwd, '.vercel'));
@@ -3246,8 +3246,16 @@ writeFileSync(
   join(outputDir, 'config.json'),
   JSON.stringify({
     version: 3,
-    routes: [{ src: '^/api/(.*)$', service: 'backend' }],
-    experimentalServicesV2: {
+    routes: [
+      {
+        src: '^/api/(.*)$',
+        destination: {
+          type: 'service',
+          service: 'backend'
+        }
+      }
+    ],
+    services: {
       backend: {
         root: 'backend',
         entrypoint: 'package.json',
@@ -3290,7 +3298,15 @@ writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, nul
       }),
     });
     expect(config.routes).toEqual(
-      expect.arrayContaining([{ src: '^/api/(.*)$', service: 'backend' }])
+      expect.arrayContaining([
+        {
+          src: '^/api/(.*)$',
+          destination: {
+            type: 'service',
+            service: 'backend',
+          },
+        },
+      ])
     );
     expect(await fs.readFile(join(output, 'static/index.html'), 'utf8')).toBe(
       'root output'
@@ -3429,9 +3445,14 @@ writeFileSync(
     const cwd = fixture('static');
     const outputDir = join(cwd, '.vercel/output');
 
-    // Run the full CLI entry point so index.ts writes cli_traces.json
+    // Run the full CLI entry point so index.ts writes cli_traces.json.
+    // Framework detection is opt-in, so enable it to assert its spans.
     const cliPath = join(__dirname, '../../../../dist/vc.js');
-    execSync(`node ${cliPath} build`, { cwd, stdio: 'pipe' });
+    execSync(`node ${cliPath} build`, {
+      cwd,
+      stdio: 'pipe',
+      env: { ...process.env, VERCEL_FRAMEWORK_DETECTION: '1' },
+    });
 
     // Read trace events written to disk
     const tracePath = join(outputDir, 'diagnostics', 'cli_traces.json');
@@ -3471,9 +3492,13 @@ writeFileSync(
         { name: 'vc.doBuild', parent: 'vc' },
         { name: 'vc.loadEnv', parent: 'vc' },
         { name: 'vc.compileVercelConfig', parent: 'vc.doBuild' },
+        { name: 'vc.detectFirstDeploymentFramework', parent: 'vc.doBuild' },
+        { name: 'vc.detectAllFrameworks', parent: 'vc.doBuild' },
         { name: 'vc.detectBuilders', parent: 'vc.doBuild' },
         { name: 'vc.importBuilders', parent: 'vc.doBuild' },
         { name: 'vc.builder', parent: 'vc.doBuild' },
+        { name: 'vc.frameworkCrossCheck', parent: 'vc.doBuild' },
+        { name: 'vc.validateBuildOutput', parent: 'vc.doBuild' },
         { name: 'vc.finalizeBuildOutput', parent: 'vc.doBuild' },
         { name: 'vc.postCommand', parent: 'vc.cli' },
       ])

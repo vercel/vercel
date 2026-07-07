@@ -171,8 +171,7 @@ async function addVendorBytecodeWithinCapacity({
 
 interface FrameworkHookContext {
   pythonEnv: NodeJS.ProcessEnv;
-  projectDir: string;
-  workPath?: string;
+  workPath: string;
   venvPath?: string;
   entrypoint: string | undefined;
   detected: DetectedPythonEntrypoint | undefined;
@@ -180,6 +179,7 @@ interface FrameworkHookContext {
 
 interface FrameworkHookResult {
   entrypoint?: PythonEntrypoint;
+  extraPythonPath?: string;
 }
 
 interface DjangoFrameworkHookResult extends FrameworkHookResult {
@@ -203,18 +203,22 @@ export async function runFrameworkHook(
 const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
   django: async ({
     pythonEnv,
-    projectDir,
     workPath,
     venvPath,
     detected,
   }): Promise<DjangoFrameworkHookResult | void> => {
-    if (detected?.baseDir === undefined) {
-      debug('Django hook: no manage.py detected, skipping');
-      return;
+    let baseDir: string | undefined = detected?.baseDir;
+    if (baseDir === undefined) {
+      if (!fs.existsSync(join(workPath, 'manage.py'))) {
+        debug('Django hook: no manage.py detected, skipping');
+        return;
+      }
+      baseDir = '';
     }
+    const djangoPath = join(workPath, baseDir);
     let settingsResult;
     try {
-      settingsResult = await getDjangoSettings(projectDir, pythonEnv);
+      settingsResult = await getDjangoSettings(djangoPath, pythonEnv);
     } catch (err: any) {
       let detail: string;
       if (err?.code === 'ENOENT') {
@@ -224,7 +228,7 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
       }
       throw new NowBuildError({
         code: 'DJANGO_SETTINGS_FAILED',
-        message: `Failed to read Django application settings from ${projectDir}/manage.py:\n${detail}`,
+        message: `Failed to read Django application settings from ${djangoPath}/manage.py:\n${detail}`,
       });
     }
     debug(`Django settings: ${JSON.stringify(settingsResult)}`);
@@ -234,7 +238,6 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
     }
 
     let resolvedEntrypoint: PythonEntrypoint | undefined;
-    const baseDir = detected?.baseDir ?? '';
     const asgiApp = djangoSettings['ASGI_APPLICATION'];
     if (typeof asgiApp === 'string') {
       const parts = asgiApp.split('.');
@@ -263,6 +266,7 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
       djangoStatic = await runDjangoCollectStatic(
         venvPath,
         workPath,
+        djangoPath,
         pythonEnv,
         outputStaticDir,
         settingsModule,
@@ -270,7 +274,11 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
         djangoVersion
       );
     }
-    return { entrypoint: resolvedEntrypoint, djangoStatic };
+    return {
+      entrypoint: resolvedEntrypoint,
+      djangoStatic,
+      extraPythonPath: baseDir ? join(workPath, baseDir) : undefined,
+    };
   },
 };
 
@@ -843,7 +851,6 @@ export const build: BuildVX = async ({
   // Run per-framework hooks (e.g. entrypoint detection and collectstatic for Django).
   const hookResult = await runFrameworkHook(framework, {
     pythonEnv,
-    projectDir: join(workPath, entryDirectory),
     workPath,
     venvPath,
     entrypoint,

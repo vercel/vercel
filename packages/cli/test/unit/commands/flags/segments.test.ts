@@ -1,6 +1,9 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import flags from '../../../../src/commands/flags';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  removeProjectLink,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
@@ -27,6 +30,7 @@ describe('flags segments', () => {
       ...defaultProject,
       id: 'vercel-flags-test',
       name: 'vercel-flags-test',
+      accountId: 'team_dummy',
     });
     useFlags(undefined, undefined, undefined, segmentsList);
     const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
@@ -89,6 +93,33 @@ describe('flags segments', () => {
       expect(parsed.segments).toHaveLength(2);
       expect(parsed.segments[0]).toHaveProperty('slug');
       expect(parsed.segments[0]).toHaveProperty('data');
+    });
+
+    it('lists segments with --project when the cwd is not linked', async () => {
+      const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
+      removeProjectLink(cwd);
+      client.cwd = cwd;
+
+      client.setArgv(
+        'flags',
+        'segments',
+        'ls',
+        '--project',
+        'vercel-flags-test',
+        '--json'
+      );
+      const exitCode = await flags(client);
+
+      expect(exitCode).toEqual(0);
+      expect(JSON.parse(client.stdout.getFullOutput()).segments).toHaveLength(
+        2
+      );
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:segments', value: 'segments' },
+        { key: 'subcommand:ls', value: 'ls' },
+        { key: 'option:project', value: '[REDACTED]' },
+        { key: 'flag:json', value: 'TRUE' },
+      ]);
     });
 
     it('tracks `ls` subcommand', async () => {

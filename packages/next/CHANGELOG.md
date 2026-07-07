@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.20.3
+
+### Patch Changes
+
+- 6dbc280: [next] Update to latest Next.js adapter
+
 ## 4.20.2
 
 ### Patch Changes
