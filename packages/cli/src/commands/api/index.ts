@@ -3,6 +3,7 @@ import type Client from '../../util/client';
 import type { Response } from '../../util/fetch';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { getCommandFlagsSpecification } from '../../util/arg-common';
 import { printError } from '../../util/error';
 import { help } from '../help';
 import { apiCommand, listSubcommand } from './command';
@@ -70,7 +71,7 @@ export default async function api(client: Client): Promise<number> {
   const firstArg = args[1];
   if (firstArg === 'ls' || firstArg === 'list') {
     // Re-parse with listSubcommand options to capture --format
-    const lsFlagsSpec = getFlagsSpecification(listSubcommand.options);
+    const lsFlagsSpec = getCommandFlagsSpecification(listSubcommand);
     let lsParsedArgs;
     try {
       lsParsedArgs = parseArguments(client.argv.slice(2), lsFlagsSpec);

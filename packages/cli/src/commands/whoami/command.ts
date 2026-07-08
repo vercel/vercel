@@ -1,5 +1,4 @@
 import { packageName } from '../../util/pkg-name';
-import { outputFormatOptions } from '../../util/arg-common';
 
 export const whoamiCommand = {
   name: 'whoami',
@@ -7,7 +6,7 @@ export const whoamiCommand = {
   description: 'Shows the username of the currently logged in user.',
   arguments: [],
   outputFormats: ['json'],
-  options: [...outputFormatOptions(['json'])],
+  options: [],
   examples: [
     {
       name: 'Shows the username of the currently logged in user',

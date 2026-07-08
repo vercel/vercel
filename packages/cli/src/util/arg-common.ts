@@ -1,8 +1,9 @@
+import type arg from 'arg';
 import { getFlagsSpecification } from './get-flags-specification';
 import { getCommandNamePlain } from './pkg-name';
 import { normalizeFlagName, stripSensitiveAuthArgs } from './redact-args';
 import { ALL_OUTPUT_FORMATS, type OutputFormat } from './output-format';
-import type { CommandOption } from '../commands/help';
+import type { Command, CommandOption } from '../commands/help';
 
 export const globalCommandOptions = [
   {
@@ -305,6 +306,48 @@ export function outputFormatOptions<const F extends readonly OutputFormat[]>(
  */
 export function isOutputFormatAlias(name: string): name is OutputFormat {
   return name in OUTPUT_FORMAT_ALIAS_OPTIONS;
+}
+
+/**
+ * The effective options for a command: its declared `options` plus the
+ * output-format options generated from `command.outputFormats` (if any).
+ *
+ * A command that declares `outputFormats` does NOT need to add
+ * `outputFormatOptions(...)` to its `options` array — the framework merges
+ * them here, so both flag parsing (`getCommandFlagsSpecification`) and help
+ * rendering see the generated `--format` / `--json` / `--table` flags.
+ *
+ * Options already declared explicitly win over generated ones with the same
+ * name, so a command can still override an individual flag if needed.
+ */
+export function getCommandOptions(
+  command: Pick<Command, 'options' | 'outputFormats'>
+): CommandOption[] {
+  if (!command.outputFormats || command.outputFormats.length === 0) {
+    return [...command.options];
+  }
+
+  const declaredNames = new Set(command.options.map(option => option.name));
+  const generated = outputFormatOptions(command.outputFormats).filter(
+    option => !declaredNames.has(option.name)
+  );
+
+  return [...command.options, ...generated];
+}
+
+/**
+ * Builds the `arg` flags specification for a command, including any
+ * output-format flags generated from `command.outputFormats`. Prefer this
+ * over `getFlagsSpecification(command.options)` for commands that declare
+ * `outputFormats`.
+ */
+export function getCommandFlagsSpecification(
+  command: Pick<Command, 'options' | 'outputFormats'>
+): arg.Spec {
+  // The merged options are widened to `CommandOption[]`, so the generic
+  // `ToArgSpec` result is a loose spec. Commands using this read flags via
+  // `resolveOutputFormat`, not typed keys, so returning `arg.Spec` is correct.
+  return getFlagsSpecification(getCommandOptions(command)) as arg.Spec;
 }
 
 export const nonInteractiveOption = {

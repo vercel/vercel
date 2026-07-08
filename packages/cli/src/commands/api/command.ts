@@ -1,5 +1,4 @@
 import { packageName } from '../../util/pkg-name';
-import { outputFormatOptions } from '../../util/arg-common';
 
 const specUrlOption = {
   name: 'spec-url',
@@ -18,7 +17,6 @@ export const listSubcommand = {
   arguments: [],
   outputFormats: ['json', 'table'],
   options: [
-    ...outputFormatOptions(['json', 'table']),
     specUrlOption,
     {
       name: 'refresh',

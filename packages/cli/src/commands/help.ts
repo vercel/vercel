@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { LOGO, NAME } from '@vercel-internals/constants';
 import Table, { type CellOptions } from 'cli-table3';
 import { noBorderChars } from '../util/output/table';
-import { globalCommandOptions } from '../util/arg-common';
+import { globalCommandOptions, getCommandOptions } from '../util/arg-common';
 import type { OutputFormat } from '../util/output-format';
 
 const INDENT = ' '.repeat(2);
@@ -141,7 +141,7 @@ export function buildCommandSynopsisLine(command: Command, parent?: Command) {
       line.push(argument.required ? name : `[${name}]`);
     }
   }
-  if (command.options.length > 0) {
+  if (getCommandOptions(command).length > 0) {
     line.push('[options]');
   }
 
@@ -350,7 +350,7 @@ export function buildHelpOutput(
     buildCommandSynopsisLine(command, options.parent),
     buildDescriptionLine(command, options),
     buildSubcommandLines(command.subcommands, options),
-    buildCommandOptionLines(command.options, options, 'Options'),
+    buildCommandOptionLines(getCommandOptions(command), options, 'Options'),
     buildCommandOptionLines(filteredGlobalOptions, options, 'Global Options'),
     buildCommandExampleLines(command),
     '',

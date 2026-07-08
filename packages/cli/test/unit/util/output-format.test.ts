@@ -12,6 +12,8 @@ import {
   formatOption,
   jsonOption,
   outputFormatOptions,
+  getCommandOptions,
+  getCommandFlagsSpecification,
 } from '../../../src/util/arg-common';
 import { getFlagsSpecification } from '../../../src/util/get-flags-specification';
 import { parseArguments } from '../../../src/util/get-args';
@@ -285,6 +287,68 @@ describe('output-format', () => {
       expect(parseArguments(['--table'], spec).flags['--table']).toBe(true);
       expect(parseArguments(['-F', 'table'], spec).flags['--format']).toBe(
         'table'
+      );
+    });
+  });
+
+  describe('getCommandOptions', () => {
+    it('auto-merges output-format options from outputFormats', () => {
+      const options = getCommandOptions({
+        options: [],
+        outputFormats: ['json'],
+      });
+      const names = options.map(o => o.name);
+      expect(names).toEqual(['format', 'json']);
+    });
+
+    it('does not add format options when outputFormats is absent', () => {
+      const declared = [
+        { name: 'foo', shorthand: null, type: Boolean, deprecated: false },
+      ];
+      expect(getCommandOptions({ options: declared })).toEqual(declared);
+    });
+
+    it('lets an explicitly declared option win over a generated one', () => {
+      const declared = [
+        {
+          name: 'json',
+          shorthand: null,
+          type: Boolean,
+          deprecated: false,
+          description: 'custom json flag',
+        },
+      ];
+      const options = getCommandOptions({
+        options: declared,
+        outputFormats: ['json'],
+      });
+      const jsonOptions = options.filter(o => o.name === 'json');
+      expect(jsonOptions).toHaveLength(1);
+      expect(jsonOptions[0].description).toBe('custom json flag');
+    });
+
+    it('preserves declared non-format options alongside generated ones', () => {
+      const declared = [
+        { name: 'refresh', shorthand: null, type: Boolean, deprecated: false },
+      ];
+      const names = getCommandOptions({
+        options: declared,
+        outputFormats: ['json', 'table'],
+      }).map(o => o.name);
+      expect(names).toEqual(['refresh', 'format', 'json', 'table']);
+    });
+  });
+
+  describe('getCommandFlagsSpecification', () => {
+    it('parses generated aliases without listing them in options', () => {
+      const spec = getCommandFlagsSpecification({
+        options: [],
+        outputFormats: ['json', 'table'],
+      });
+      expect(parseArguments(['--json'], spec).flags['--json']).toBe(true);
+      expect(parseArguments(['--table'], spec).flags['--table']).toBe(true);
+      expect(parseArguments(['--format', 'json'], spec).flags['--format']).toBe(
+        'json'
       );
     });
   });
