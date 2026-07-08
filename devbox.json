@@ -1,0 +1,23 @@
+{
+  "$schema": "https://devboxd.s3.us-west-1.amazonaws.com/devbox.schema.json",
+  "run": {
+    "sandbox": {
+      "runtime": "node22",
+      "vcpus": 16
+    },
+    "injectEgress": [
+      {
+        "name": "NPM",
+        "value": "${shell:sed -n 's#^//registry.npmjs.org/:_authToken=##p' ~/.npmrc}"
+      }
+    ],
+    "agent": {
+      "context": "This devbox holds the Vercel CLI monorepo (github.com/vercel/vercel), cloned at `~/vercel` — the primary clone where `devbox build` ran. It's a pnpm + turbo monorepo with TypeScript packages under `packages/`, Rust crates under `crates/`, and Python packages under `python/`. Read `~/vercel/AGENTS.md` first for conventions: pnpm for installs, turbo for builds, and biome for formatting. Common commands: `pnpm install`, `pnpm build`, `pnpm type-check`, `pnpm test-unit`, and package-scoped work via `cd packages/<name>`."
+    }
+  },
+  "build": {
+    "name": "vercel",
+    "repos": ["vercel/vercel"],
+    "command": "~/vercel/.devbox/vercel-snapshot.sh"
+  }
+}

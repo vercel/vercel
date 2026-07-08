@@ -1,0 +1,54 @@
+name: Devbox snapshot (vercel)
+
+# Rebuild the `vercel` devbox snapshot — the vercel/vercel monorepo dev image
+# (pnpm workspace + Rust + Python/uv toolchains + a frozen install), layered on
+# the canonical `devbox` base. Manual-dispatch-only for now; auto-trigger on
+# push or a schedule can be wired up once a few runs are validated by hand.
+
+on:
+  workflow_dispatch:
+
+# Serialize so two builds can't fight over the same `vercel` image name.
+# `cancel-in-progress: false` keeps a running build alive rather than
+# aborting partway through and leaking a partially-set-up build devbox.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build vercel snapshot (${{ matrix.team-id }})
+    runs-on: ubuntu-latest
+    # Clones vercel/vercel, installs Rust/Python/uv + pnpm deps, then warms
+    # package builds. 45 min leaves headroom over the observed runtime.
+    timeout-minutes: 45
+    strategy:
+      # Build for each team independently — one team's failure shouldn't
+      # cancel the other's. The team scopes the snapshot, so the per-team
+      # images are distinct and safe to build in parallel.
+      fail-fast: false
+      matrix:
+        team-id:
+          - vercel
+          - vercel-internal-apps
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install devbox CLI
+        run: |
+          curl -fsSL https://api.vercel.com/v1/devbox/install.sh | bash
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          devbox --version
+
+      - name: Build snapshot
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_API_TOKEN }}
+        run: |
+          devbox build \
+            --team-id ${{ matrix.team-id }} \
+            --visibility team \
+            --config devbox.json
