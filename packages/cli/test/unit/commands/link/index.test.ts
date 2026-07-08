@@ -1536,15 +1536,14 @@ describe('link', () => {
     expect(exitCode, 'exit code for "link"').toEqual(0);
 
     expect(await readJSON(join(cwd, 'vercel.json'))).toMatchObject({
-      experimentalServices: {
+      services: {
         frontend: {
+          root: '.',
           framework: 'nextjs',
-          routePrefix: '/',
         },
         api: {
           root: 'services/api',
           entrypoint: 'index:app',
-          routePrefix: '/_/api',
         },
       },
     });
@@ -1747,15 +1746,14 @@ describe('link', () => {
     expect(exitCode, 'exit code for "link"').toEqual(0);
 
     expect(await readJSON(join(cwd, 'apps/web/vercel.json'))).toMatchObject({
-      experimentalServices: {
+      services: {
         frontend: {
+          root: '.',
           framework: 'nextjs',
-          routePrefix: '/',
         },
         api: {
           root: 'services/api',
           entrypoint: 'index:app',
-          routePrefix: '/_/api',
         },
       },
     });
@@ -1825,15 +1823,14 @@ describe('link', () => {
     expect(exitCode, 'exit code for "link"').toEqual(0);
 
     expect(await readJSON(join(cwd, 'apps/web/vercel.json'))).toMatchObject({
-      experimentalServices: {
+      services: {
         frontend: {
+          root: '.',
           framework: 'nextjs',
-          routePrefix: '/',
         },
         api: {
           root: 'services/api',
           entrypoint: 'index:app',
-          routePrefix: '/_/api',
         },
       },
     });

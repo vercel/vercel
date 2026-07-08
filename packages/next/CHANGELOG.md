@@ -1,5 +1,23 @@
 # @vercel/next
 
+## 4.20.3
+
+### Patch Changes
+
+- 6dbc280: [next] Update to latest Next.js adapter
+
+## 4.20.2
+
+### Patch Changes
+
+- e05ed3c: Add support for stable Cache Components without experimental PPR
+
+## 4.20.1
+
+### Patch Changes
+
+- d538795: Revert update to latest Next.js adapter
+
 ## 4.20.0
 
 ### Minor Changes

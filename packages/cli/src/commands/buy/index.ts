@@ -5,14 +5,12 @@ import { printError } from '../../util/error';
 import credits from './credits';
 import addon from './addon';
 import pro from './pro';
-import v0 from './v0';
 import domain from './domain';
 import {
   buyCommand,
   creditsSubcommand,
   addonSubcommand,
   proSubcommand,
-  v0Subcommand,
   domainSubcommand,
 } from './command';
 import { type Command, help } from '../help';
@@ -25,7 +23,6 @@ const COMMAND_CONFIG = {
   credits: getCommandAliases(creditsSubcommand),
   addon: getCommandAliases(addonSubcommand),
   pro: getCommandAliases(proSubcommand),
-  v0: getCommandAliases(v0Subcommand),
   domain: getCommandAliases(domainSubcommand),
 };
 
@@ -95,13 +92,6 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandPro(subcommandOriginal);
       return pro(client, args);
-    case 'v0':
-      if (needHelp) {
-        telemetry.trackCliFlagHelp('buy', subcommandOriginal);
-        return printHelp(v0Subcommand);
-      }
-      telemetry.trackCliSubcommandV0(subcommandOriginal);
-      return v0(client, args);
     case 'domain':
       if (needHelp) {
         telemetry.trackCliFlagHelp('buy', subcommandOriginal);

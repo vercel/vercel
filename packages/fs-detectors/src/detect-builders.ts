@@ -147,6 +147,7 @@ export async function detectBuilders(
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
   services?: Service[];
+  experimentalServicesV2?: Services;
   useImplicitEnvInjection?: boolean;
 }> {
   const {
@@ -876,9 +877,10 @@ function checkUnusedFunctions(
     frontendBuilder &&
     (isOfficialRuntime('express', frontendBuilder.use) ||
       isOfficialRuntime('hono', frontendBuilder.use) ||
+      isOfficialRuntime('python', frontendBuilder.use) ||
       isOfficialRuntime('backends', frontendBuilder.use))
   ) {
-    // Skip for backends because function names aren't statically defined
+    // Skip for runtimes that resolve function names inside the builder.
     return null;
   }
 

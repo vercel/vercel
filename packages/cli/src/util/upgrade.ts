@@ -152,12 +152,16 @@ export async function executeUpgrade(targetVersion?: string): Promise<number> {
       shell: false,
     });
 
+    // Stream to debug so --debug reveals an otherwise-invisible installer
+    // prompt (the cause of apparent hangs).
     upgradeProcess.stdout?.on('data', (data: Buffer) => {
       stdout.push(Uint8Array.from(data));
+      output.debug(`[upgrade stdout] ${data.toString().trimEnd()}`);
     });
 
     upgradeProcess.stderr?.on('data', (data: Buffer) => {
       stderr.push(Uint8Array.from(data));
+      output.debug(`[upgrade stderr] ${data.toString().trimEnd()}`);
     });
 
     upgradeProcess.on('error', (err: Error) => {

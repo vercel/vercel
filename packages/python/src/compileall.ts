@@ -2,15 +2,11 @@ import execa from 'execa';
 import { debug, FileFsRef, type Files } from '@vercel/build-utils';
 import fs from 'fs';
 import { join, sep } from 'path';
-import { isLargeFunctionsEnabled } from './large-functions';
 
-/**
- * Compileall runs only for large functions *and* when `VERCEL_PYTHON_COMPILEALL`
- * is set truthy (`1`/`true`) — an opt-in toggle, no effect otherwise.
- */
-export function isCompileAllEnabled(): boolean {
-  if (!isLargeFunctionsEnabled()) return false;
+/** Converts a hung compileall subprocess into a skipped optimization. */
+export const COMPILEALL_TIMEOUT_MS = 5 * 60 * 1000;
 
+function isCompileAllFlagEnabled(): boolean {
   const val = process.env.VERCEL_PYTHON_COMPILEALL;
   if (val === undefined || val === '') return false;
 
@@ -18,22 +14,27 @@ export function isCompileAllEnabled(): boolean {
   return lower === '1' || lower === 'true';
 }
 
-export function shouldUseCompileAll({
+/**
+ * Whether to precompile bytecode, gated by `VERCEL_PYTHON_COMPILEALL`
+ * (`1`/`true`). Callers decide the fill capacity based on which deploy path
+ * the function takes.
+ */
+export function shouldCompileAll({
   isDev,
   hasCustomCommand,
-  hasCustomBuildCommand,
 }: {
   isDev?: boolean;
   hasCustomCommand: boolean;
-  hasCustomBuildCommand: boolean;
 }): boolean {
   if (isDev) return false;
 
-  // Custom install or build commands never get compileall: they may produce
-  // their own bytecode or bypass the venv layout compileall assumes.
-  if (hasCustomCommand || hasCustomBuildCommand) return false;
+  // Custom install commands replace the standard install, leaving no
+  // known-good venv layout to compile against. Custom build commands are
+  // safe: they run after the standard install, and bytecode collection
+  // degrades gracefully.
+  if (hasCustomCommand) return false;
 
-  return isCompileAllEnabled();
+  return isCompileAllFlagEnabled();
 }
 
 interface CompileAllOptions {
@@ -78,7 +79,10 @@ export async function runCompileAll({
   ];
 
   try {
-    await execa(pythonBin, args, { env: env || process.env });
+    await execa(pythonBin, args, {
+      env: env || process.env,
+      timeout: COMPILEALL_TIMEOUT_MS,
+    });
   } catch (err) {
     debug(`compileall error details: ${JSON.stringify(err)}`);
   }

@@ -235,4 +235,12 @@ export interface Framework {
    * @example true
    */
   runtimeFramework?: boolean;
+  /**
+   * How much confidence a positive detection carries. Defaults to `strong`.
+   * `weak` means the detection is commonly incidental (e.g. Storybook as a
+   * devDependency of an app that deploys something else), so it should not
+   * be used to suggest this framework as an override.
+   * @example "weak"
+   */
+  detectionConfidence?: 'weak' | 'strong';
 }

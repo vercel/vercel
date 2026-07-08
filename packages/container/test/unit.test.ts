@@ -1,10 +1,12 @@
 import type { BuildResultV2Typical } from '@vercel/build-utils';
+import { sanitizeConsumerName } from '@vercel/build-utils';
 import { EventEmitter } from 'node:events';
 import { readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { build, prepareCache, startDevServer } from '../src';
 import { __resetStorageDriverCache } from '../src/storage-driver';
+import { __resetRunningContainers } from '../src/dev';
 
 const { spawnMock, existsSyncMock } = vi.hoisted(() => ({
   spawnMock: vi.fn(),
@@ -146,6 +148,7 @@ beforeEach(() => {
   existsSyncMock.mockReturnValue(false);
   spawnMock.mockReset();
   __resetStorageDriverCache();
+  __resetRunningContainers();
   for (const key of VCR_ENV_KEYS) {
     delete process.env[key];
   }
@@ -172,6 +175,7 @@ describe('@vercel/container', () => {
     );
 
     expect(result).toEqual({
+      routes: [{ handle: 'filesystem' }, { src: '/(.*)', dest: '/index' }],
       output: {
         index: {
           type: 'Lambda',
@@ -181,6 +185,60 @@ describe('@vercel/container', () => {
           environment: {},
         },
       },
+    });
+  });
+
+  it('applies matching function configuration to the build output', async () => {
+    const result = expectTypicalBuildResult(
+      await build({
+        ...createBuildOptions({
+          functions: {
+            'docker.io/library/nginx:*': {
+              memory: 2048,
+              maxDuration: 120,
+              regions: ['iad1'],
+            },
+          },
+        }),
+        entrypoint: 'docker.io/library/nginx:1.27',
+      })
+    );
+
+    expect(result.output.index).toMatchObject({
+      handler: 'docker.io/library/nginx:1.27',
+      runtime: 'container',
+      memory: 2048,
+      maxDuration: 120,
+      regions: ['iad1'],
+    });
+  });
+
+  it('applies per-service function configuration scoped by service name', async () => {
+    const result = expectTypicalBuildResult(
+      await build({
+        ...createBuildOptions({
+          functions: {
+            'docker.io/library/nginx:*': {
+              memory: 4096,
+              experimentalTriggers: [{ type: 'queue/v2beta', topic: 'jobs' }],
+            },
+          },
+          serviceName: 'api',
+        }),
+        entrypoint: 'docker.io/library/nginx:1.27',
+        service: { name: 'api' },
+      })
+    );
+
+    expect(result.output.index).toMatchObject({
+      memory: 4096,
+      experimentalTriggers: [
+        {
+          type: 'queue/v2beta',
+          topic: 'jobs',
+          consumer: sanitizeConsumerName('api~docker.io/library/nginx:*'),
+        },
+      ],
     });
   });
 
@@ -242,7 +300,9 @@ describe('@vercel/container', () => {
     ]);
   });
 
-  it('does not emit routes for non-service builds', async () => {
+  it('emits the catch-all route for non-service builds too', async () => {
+    // A root container deploy (no service) still needs the catch-all so a
+    // request to `/` reaches the function.
     const result = expectTypicalBuildResult(
       await build({
         ...createBuildOptions({}),
@@ -251,7 +311,10 @@ describe('@vercel/container', () => {
     );
 
     expect(result.output).toHaveProperty('index');
-    expect(result.routes).toBeUndefined();
+    expect(result.routes).toEqual([
+      { handle: 'filesystem' },
+      { src: '/(.*)', dest: '/index' },
+    ]);
   });
 
   async function runDockerfileBuild(options?: {
@@ -426,6 +489,91 @@ describe('@vercel/container', () => {
     expect(commands.some(c => /\bbuildah\b.*\bpush\b/.test(c))).toBe(true);
   });
 
+  it.each([
+    'Dockerfile.vercel',
+    'Containerfile.vercel',
+  ])('builds from a `%s` opt-in marker entrypoint, passing it via -f', async marker => {
+    const commands = await runDockerfileBuild({
+      buildImageEnv: 'al2023',
+      entrypoint: marker,
+    });
+    const escaped = marker.replace('.', '\\.');
+    expect(
+      commands.some(
+        c =>
+          /\bbuildah\b.*\bbuild\b/.test(c) &&
+          new RegExp(`-f \\S*${escaped}\\b`).test(c)
+      )
+    ).toBe(true);
+    expect(commands.some(c => /\bbuildah\b.*\bpush\b/.test(c))).toBe(true);
+  });
+
+  it('discovers a `Dockerfile.vercel` marker when the entrypoint is `<detect>`', async () => {
+    // The `container` framework preset resolves its entrypoint via `<detect>`;
+    // the builder must then find the `.vercel` marker in the work directory.
+    const commands = await runDockerfileBuild({
+      buildImageEnv: 'al2023',
+      entrypoint: '<detect>',
+    });
+    expect(
+      commands.some(
+        c =>
+          /\bbuildah\b.*\bbuild\b/.test(c) &&
+          /-f \S*Dockerfile\.vercel\b/.test(c)
+      )
+    ).toBe(true);
+  });
+
+  it('builds a root (non-service) container deploy without a service name', async () => {
+    // A `Dockerfile.vercel` at the project root deploys as a container with no
+    // service; the repository leaf is derived from the Dockerfile base name
+    // (`Dockerfile.vercel` -> `dockerfile`) instead of throwing.
+    process.env.VERCEL_OIDC_TOKEN = fakeOidcToken();
+    const fetchMock = vi.fn();
+    stubRegistryFetch(fetchMock);
+    vi.stubGlobal('fetch', fetchMock);
+    existsSyncMock.mockReturnValue(true);
+    const digest = `sha256:${'a'.repeat(64)}`;
+    spawnMock.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'buildah' && args.includes('info')) {
+        return fakeChild(
+          JSON.stringify({
+            store: {
+              GraphRoot: '/vercel/.containers/storage',
+              RunRoot: '/run/containers/storage',
+              GraphDriverName: 'overlay',
+              GraphStatus: { 'Backing Filesystem': 'xfs' },
+            },
+          })
+        );
+      }
+      if (args.includes('push')) {
+        return fakeChild(`latest: digest: ${digest} size: 1234\n`);
+      }
+      return fakeChild('');
+    });
+
+    const result = expectTypicalBuildResult(
+      await build({
+        ...createBuildOptions({ runtime: 'container' }),
+        entrypoint: 'Dockerfile.vercel',
+      } as any)
+    );
+
+    // No service name → output at `index`, with the catch-all so `/` reaches
+    // it. Repository leaf comes from the Dockerfile base name (`dockerfile`).
+    expect(result.output).toHaveProperty('index');
+    expect(result.output.index).toMatchObject({
+      type: 'Lambda',
+      runtime: 'container',
+      handler: `vcr.vercel.com/acme/my-app/dockerfile@${digest}`,
+    });
+    expect(result.routes).toEqual([
+      { handle: 'filesystem' },
+      { src: '/(.*)', dest: '/index' },
+    ]);
+  });
+
   it('forwards the project build env to the image build as --build-arg', async () => {
     const commands = await runDockerfileBuild({
       buildImageEnv: 'al2023',
@@ -439,6 +587,35 @@ describe('@vercel/container', () => {
           c.includes('--build-arg OTHER=world')
       )
     ).toBe(true);
+  });
+
+  it('build() in dev returns a local tag without pushing to a registry', async () => {
+    // `vercel dev` runs the container builder's `build()` with `meta.isDev`.
+    // Containers are always built from a Dockerfile (there is no prebuilt-image
+    // input), and the real local build/run happens in `startDevServer`, so the
+    // `build()` path must not push to a registry and must never throw.
+    existsSyncMock.mockReturnValue(true); // Dockerfile present
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = expectTypicalBuildResult(
+      await build({
+        ...createBuildOptions({ runtime: 'container' }),
+        entrypoint: '<detect>',
+        service: { name: 'api' },
+        meta: { isDev: true },
+      } as any)
+    );
+
+    expect(result.output.index).toMatchObject({
+      type: 'Lambda',
+      runtime: 'container',
+      handler: 'vercel-dev/api:dev',
+    });
+    // No image build/push in dev: nothing is spawned and the registry is
+    // never contacted.
+    expect(spawnMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('storage verification is observability-only by default (does not fail the build)', async () => {
@@ -758,6 +935,134 @@ describe('@vercel/container', () => {
       await result!.shutdown!();
     });
 
+    it('reuses a running container across requests instead of rebuilding', async () => {
+      // The dev server calls `startDevServer` per request. A container is a
+      // persistent server, so the second call must hand back the same running
+      // container — no second `docker build`/`docker run`.
+      existsSyncMock.mockReturnValue(true); // Dockerfile present
+      const child = fakeRunningChild(4242);
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'docker' && args[0] === 'run') {
+          return child;
+        }
+        if (cmd === 'docker' && args.includes('inspect')) {
+          return fakeChild('{"3000/tcp":{}}');
+        }
+        if (cmd === 'docker' && args[0] === 'port') {
+          return fakeChild('127.0.0.1:54321\n');
+        }
+        return fakeChild('');
+      });
+
+      const opts = {
+        ...createBuildOptions({ runtime: 'container' }),
+        entrypoint: 'apps/svc/Dockerfile',
+        service: { name: 'api' },
+        meta: { isDev: true },
+      } as any;
+
+      const first = await startDevServer(opts);
+      const second = await startDevServer(opts);
+
+      // Same persistent server handed back both times.
+      expect(first).toMatchObject({ port: 54321, persistent: true });
+      expect(second).toMatchObject({ port: 54321 });
+      expect(second!.pid).toBe(first!.pid);
+
+      // Built and ran exactly once across the two requests.
+      const buildCount = spawnMock.mock.calls.filter(
+        ([cmd, args]) => cmd === 'docker' && (args as string[])[0] === 'build'
+      ).length;
+      const runCount = spawnMock.mock.calls.filter(
+        ([cmd, args]) => cmd === 'docker' && (args as string[])[0] === 'run'
+      ).length;
+      expect(buildCount).toBe(1);
+      expect(runCount).toBe(1);
+
+      await first!.shutdown!();
+    });
+
+    it('coalesces concurrent cold starts into a single container', async () => {
+      // Two requests can arrive before the first container is up. Without
+      // in-flight dedup each would `docker run` its own container and all but
+      // the last would be orphaned (never stopped). Both calls must share one
+      // start and resolve to the same container.
+      existsSyncMock.mockReturnValue(true); // Dockerfile present
+      const child = fakeRunningChild(4242);
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'docker' && args[0] === 'run') {
+          return child;
+        }
+        if (cmd === 'docker' && args.includes('inspect')) {
+          return fakeChild('{"3000/tcp":{}}');
+        }
+        if (cmd === 'docker' && args[0] === 'port') {
+          return fakeChild('127.0.0.1:54321\n');
+        }
+        return fakeChild('');
+      });
+
+      const opts = {
+        ...createBuildOptions({ runtime: 'container' }),
+        entrypoint: 'apps/svc/Dockerfile',
+        service: { name: 'api' },
+        meta: { isDev: true },
+      } as any;
+
+      // Fire both before awaiting either, so the second call sees an in-flight
+      // start rather than a completed one.
+      const [first, second] = await Promise.all([
+        startDevServer(opts),
+        startDevServer(opts),
+      ]);
+
+      expect(first!.pid).toBe(second!.pid);
+      const runCount = spawnMock.mock.calls.filter(
+        ([cmd, args]) => cmd === 'docker' && (args as string[])[0] === 'run'
+      ).length;
+      expect(runCount).toBe(1);
+
+      await first!.shutdown!();
+    });
+
+    it('discovers a `Containerfile.vercel` marker when the entrypoint is `<detect>`', async () => {
+      // The `container` framework preset resolves its entrypoint to `<detect>`.
+      // In dev the builder must discover the `.vercel` opt-in marker in the
+      // work dir (matching the build path), not fall back to a bare
+      // `Dockerfile` that doesn't exist.
+      existsSyncMock.mockImplementation((p: unknown) =>
+        typeof p === 'string' ? p.endsWith('Containerfile.vercel') : false
+      );
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'docker' && args[0] === 'run') {
+          return fakeRunningChild(4242);
+        }
+        if (cmd === 'docker' && args.includes('inspect')) {
+          return fakeChild('{"3000/tcp":{}}');
+        }
+        if (cmd === 'docker' && args[0] === 'port') {
+          return fakeChild('127.0.0.1:54321\n');
+        }
+        return fakeChild('');
+      });
+
+      const result = await startDevServer({
+        ...createBuildOptions({ framework: 'container' }),
+        entrypoint: '<detect>',
+        meta: { isDev: true },
+      } as any);
+
+      expect(result).toMatchObject({ port: 54321 });
+      // The local build must target the discovered marker via `-f`.
+      expect(
+        commandsRun().some(
+          c =>
+            c.startsWith('docker build') &&
+            /-f \S*Containerfile\.vercel\b/.test(c)
+        )
+      ).toBe(true);
+    });
+
     it('uses a prebuilt image without building', async () => {
       existsSyncMock.mockReturnValue(false); // no Dockerfile
       spawnMock.mockImplementation((cmd: string, args: string[]) => {
@@ -861,6 +1166,64 @@ describe('@vercel/container', () => {
       // The container is torn down on the failure path.
       expect(
         commandsRun().some(c => /^docker stop vercel-dev-api-/.test(c))
+      ).toBe(true);
+    });
+
+    it('fails fast with a clear message when the Docker daemon is unreachable', async () => {
+      // The very first Docker call is the daemon availability probe
+      // (`docker info`). Simulate the daemon being down: it exits non-zero
+      // with the classic connection error on stderr.
+      existsSyncMock.mockReturnValue(true); // Dockerfile present
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'docker' && args[0] === 'info') {
+          return fakeChildFailure(
+            'Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?'
+          );
+        }
+        return fakeChild('');
+      });
+
+      await expect(
+        startDevServer({
+          ...createBuildOptions({ runtime: 'container' }),
+          entrypoint: 'apps/svc/Dockerfile',
+          service: { name: 'api' },
+          meta: { isDev: true },
+        } as any)
+      ).rejects.toThrow(/Docker daemon/i);
+
+      // It must bail at the probe — no build or run is attempted.
+      const commands = commandsRun();
+      expect(commands.some(c => c.startsWith('docker build'))).toBe(false);
+      expect(commands.some(c => c.includes('docker run'))).toBe(false);
+    });
+
+    it('reports a daemon-down hint and the container name when run exits 125', async () => {
+      // Defense in depth: even if the upfront probe passes but `docker run`
+      // later exits 125 (daemon became unreachable), the error names the
+      // container and points at Docker rather than printing "undefined".
+      existsSyncMock.mockReturnValue(false); // prebuilt image, no Dockerfile
+      const exited = fakeRunningChild(555);
+      exited.exitCode = 125;
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'docker' && args[0] === 'run') {
+          return exited;
+        }
+        return fakeChild('');
+      });
+
+      await expect(
+        startDevServer({
+          ...createBuildOptions({}),
+          entrypoint: 'grycap/cowsay:latest',
+          // No service name: the previous message printed `"undefined"` here.
+          meta: { isDev: true },
+        } as any)
+      ).rejects.toThrow(/Docker daemon is not running|is unreachable/i);
+
+      // The teardown targets the real (defined) container name.
+      expect(
+        commandsRun().some(c => /^docker stop vercel-dev-service-/.test(c))
       ).toBe(true);
     });
 

@@ -3,7 +3,7 @@ import { join, resolve } from 'path';
 import _execa from 'execa';
 import getPort from 'get-port';
 import stripAnsi from 'strip-ansi';
-import nodeFetch, { type Response } from 'node-fetch';
+import nodeFetch, { type Response } from '../../src/util/fetch';
 import {
   fixture,
   nukeProcessTree,

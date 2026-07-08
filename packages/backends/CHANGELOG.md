@@ -1,5 +1,32 @@
 # @vercel/backends
 
+## 0.8.21
+
+### Patch Changes
+
+- cbf22bf: Reject services that opt into the Edge Runtime. A service entrypoint exporting `config.runtime = 'edge'` (or `'experimental-edge'`) was previously ignored and silently built as a Node function; the build now fails with a clear `EDGE_RUNTIME_UNSUPPORTED_IN_SERVICES` error.
+
+## 0.8.20
+
+### Patch Changes
+
+- Updated dependencies [6b49a17]
+  - @vercel/build-utils@13.32.2
+
+## 0.8.19
+
+### Patch Changes
+
+- 62a884e: Simplify isolated `services` and `experimentalServicesV2` runtime outputs by emitting their function at `index` instead of `_svc/<service-name>/index`.
+
+## 0.8.18
+
+### Patch Changes
+
+- 8dc4702: Fix `vercel dev` for standalone Node servers, including projects without a `package.json`, and reuse the server process between requests.
+- Updated dependencies [8dc4702]
+  - @vercel/build-utils@13.32.1
+
 ## 0.8.17
 
 ### Patch Changes

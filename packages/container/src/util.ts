@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 
 /** Verbose tracing for the container builder, gated on `BUILDER_DEBUG` like every other builder. */
 export const DEBUG = Boolean(getPlatformEnv('BUILDER_DEBUG'));
@@ -71,6 +71,55 @@ export function toTag(value: unknown): string {
 
 export function readString(value: unknown): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+/**
+ * Whether a path/entrypoint names a Dockerfile that this builder should build.
+ *
+ * Matches the same blessed set as the services resolver in
+ * `@vercel/fs-detectors`: the basenames `Dockerfile`, `Containerfile`,
+ * `Dockerfile.vercel`, and `Containerfile.vercel`. Keeping the two layers in
+ * sync ensures the builder honors whatever Dockerfile entrypoint services
+ * hands it, instead of silently falling back to a default `Dockerfile` or
+ * treating the path as a prebuilt image.
+ */
+export function isDockerfileRef(ref: string): boolean {
+  const base = basename(ref).toLowerCase();
+  return (
+    base === 'dockerfile' ||
+    base === 'containerfile' ||
+    base === 'dockerfile.vercel' ||
+    base === 'containerfile.vercel'
+  );
+}
+
+// Vercel-specific container opt-in markers, auto-discovered when the build
+// entrypoint doesn't name a Dockerfile explicitly (e.g. the `container`
+// framework preset resolves its entrypoint via `<detect>`). These let a
+// project deploy as a container even when another framework is also present.
+export const DOCKERFILE_CANDIDATES = [
+  'Dockerfile.vercel',
+  'Containerfile.vercel',
+];
+
+/**
+ * Discover a Vercel container opt-in marker (`Dockerfile.vercel` /
+ * `Containerfile.vercel`) in `workPath`. Used by both the build and dev paths
+ * so they resolve the same Dockerfile when the entrypoint is the `<detect>`
+ * sentinel.
+ */
+export function findDockerfile(workPath: string): string | undefined {
+  return DOCKERFILE_CANDIDATES.find(name => existsSync(join(workPath, name)));
+}
+
+/**
+ * Stable local image tag for `vercel dev`. Used by both the `build()` path
+ * (which never pushes in dev) and `startDevServer` (which builds & runs the
+ * image locally), so the two agree on a single name per service.
+ */
+export function devImageTag(serviceName: string): string {
+  const safe = serviceName.toLowerCase().replace(/[^a-z0-9-_.]/g, '-');
+  return `vercel-dev/${safe || 'service'}:dev`;
 }
 
 export interface RunResult {

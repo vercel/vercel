@@ -23,6 +23,7 @@ import {
   BUILDER_COMPILE_STEP,
   BUILDER_PRE_DEPLOY_STEP,
   sanitizeConsumerName,
+  getLambdaOptionsFromFunction,
   type BuildOptions,
   type GlobOptions,
   type BuildVX,
@@ -43,10 +44,13 @@ import {
 } from './install';
 import {
   PythonDependencyExternalizer,
+  BYTECODE_COVERAGE_FLOOR,
+  BYTECODE_FILL_CEILING_BYTES,
   MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   lambdaKnapsack,
   calculateBundleSize,
+  estimateBytecodeSize,
 } from './dependency-externalizer';
 import { isLargeFunctionsEnabled } from './large-functions';
 import {
@@ -79,7 +83,7 @@ import {
   collectAppBytecodeFiles,
   getCompileAllAppExcludeRegex,
   runCompileAll,
-  shouldUseCompileAll,
+  shouldCompileAll,
   type BytecodeCollectionResult,
 } from './compileall';
 import {
@@ -170,8 +174,7 @@ async function addVendorBytecodeWithinCapacity({
 
 interface FrameworkHookContext {
   pythonEnv: NodeJS.ProcessEnv;
-  projectDir: string;
-  workPath?: string;
+  workPath: string;
   venvPath?: string;
   entrypoint: string | undefined;
   detected: DetectedPythonEntrypoint | undefined;
@@ -179,6 +182,7 @@ interface FrameworkHookContext {
 
 interface FrameworkHookResult {
   entrypoint?: PythonEntrypoint;
+  extraPythonPath?: string;
 }
 
 interface DjangoFrameworkHookResult extends FrameworkHookResult {
@@ -202,18 +206,22 @@ export async function runFrameworkHook(
 const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
   django: async ({
     pythonEnv,
-    projectDir,
     workPath,
     venvPath,
     detected,
   }): Promise<DjangoFrameworkHookResult | void> => {
-    if (detected?.baseDir === undefined) {
-      debug('Django hook: no manage.py detected, skipping');
-      return;
+    let baseDir: string | undefined = detected?.baseDir;
+    if (baseDir === undefined) {
+      if (!fs.existsSync(join(workPath, 'manage.py'))) {
+        debug('Django hook: no manage.py detected, skipping');
+        return;
+      }
+      baseDir = '';
     }
+    const djangoPath = join(workPath, baseDir);
     let settingsResult;
     try {
-      settingsResult = await getDjangoSettings(projectDir, pythonEnv);
+      settingsResult = await getDjangoSettings(djangoPath, pythonEnv);
     } catch (err: any) {
       let detail: string;
       if (err?.code === 'ENOENT') {
@@ -223,7 +231,7 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
       }
       throw new NowBuildError({
         code: 'DJANGO_SETTINGS_FAILED',
-        message: `Failed to read Django application settings from ${projectDir}/manage.py:\n${detail}`,
+        message: `Failed to read Django application settings from ${djangoPath}/manage.py:\n${detail}`,
       });
     }
     debug(`Django settings: ${JSON.stringify(settingsResult)}`);
@@ -233,7 +241,6 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
     }
 
     let resolvedEntrypoint: PythonEntrypoint | undefined;
-    const baseDir = detected?.baseDir ?? '';
     const asgiApp = djangoSettings['ASGI_APPLICATION'];
     if (typeof asgiApp === 'string') {
       const parts = asgiApp.split('.');
@@ -262,6 +269,7 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
       djangoStatic = await runDjangoCollectStatic(
         venvPath,
         workPath,
+        djangoPath,
         pythonEnv,
         outputStaticDir,
         settingsModule,
@@ -269,7 +277,11 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
         djangoVersion
       );
     }
-    return { entrypoint: resolvedEntrypoint, djangoStatic };
+    return {
+      entrypoint: resolvedEntrypoint,
+      djangoStatic,
+      extraPythonPath: baseDir ? join(workPath, baseDir) : undefined,
+    };
   },
 };
 
@@ -402,6 +414,39 @@ function getTargetPlatform(isDev: boolean): TargetPlatform {
   return { uvPlatform: UV_LINUX_TARGET, architecture: 'x86_64' };
 }
 
+async function getPythonLambdaOptions({
+  config,
+  entrypoint,
+}: {
+  config: BuildOptions['config'];
+  entrypoint: string;
+}) {
+  if (!config?.functions) {
+    return {};
+  }
+
+  const sources = new Set<string>([entrypoint]);
+  if (entrypoint.endsWith('.py')) {
+    sources.add(entrypoint.slice(0, -'.py'.length));
+  }
+
+  for (const sourceFile of sources) {
+    const lambdaOptions = await getLambdaOptionsFromFunction({
+      sourceFile,
+      config,
+    });
+
+    if (Object.keys(lambdaOptions).length > 0) {
+      // Python resolves the target wheel platform before the Lambda is created,
+      // so the Lambda architecture must stay aligned with that build target.
+      delete lambdaOptions.architecture;
+      return lambdaOptions;
+    }
+  }
+
+  return {};
+}
+
 /**
  * Install a Vercel-owned Python package into the build venv, resolving the
  * source in this order: env override → in-repo source (if present) → pinned
@@ -471,11 +516,6 @@ export const build: BuildVX = async ({
   // dependency installation is disabled because custom install commands may
   // install dependencies not tracked in uv.lock.
   let hasCustomCommand = false;
-  // Track whether a custom build command/script was used. When true, compileall
-  // is disabled (a custom build may emit its own bytecode or bypass the venv
-  // layout compileall assumes). It does not affect runtime installation, since
-  // dependencies are still installed normally.
-  let hasCustomBuildCommand = false;
 
   const target = getTargetPlatform(meta.isDev ?? false);
 
@@ -792,16 +832,12 @@ export const build: BuildVX = async ({
             env: pythonEnv,
             cwd: workPath,
           });
-          hasCustomBuildCommand = true;
         } else {
-          const ranBuildScript = await runPyprojectScript(
+          await runPyprojectScript(
             workPath,
             ['vercel-build', 'now-build', 'build'],
             pythonEnv
           );
-          if (ranBuildScript) {
-            hasCustomBuildCommand = true;
-          }
         }
       });
   }
@@ -809,7 +845,6 @@ export const build: BuildVX = async ({
   // Run per-framework hooks (e.g. entrypoint detection and collectstatic for Django).
   const hookResult = await runFrameworkHook(framework, {
     pythonEnv,
-    projectDir: join(workPath, entryDirectory),
     workPath,
     venvPath,
     entrypoint,
@@ -952,10 +987,9 @@ export const build: BuildVX = async ({
     extraEnv: extraTrampolineEnv,
   });
 
-  const automaticCompileAllEnabled = shouldUseCompileAll({
+  const compileAllEnabled = shouldCompileAll({
     isDev: meta.isDev,
     hasCustomCommand,
-    hasCustomBuildCommand,
   });
 
   const predefinedExcludes = [
@@ -1058,71 +1092,77 @@ export const build: BuildVX = async ({
         },
       });
 
-      // Precompile bytecode and fill remaining capacity for a fully bundled
-      // function. collectAppBytecodeFiles only collects .pyc for .py files
-      // present in the bundle, so excluded source can't re-enter as .pyc.
-      // Shared by the direct-bundle path and the generateBundle Hive fallback.
-      const runCompileAllAndFillBytecode = async () => {
-        await builderSpan
-          .child('vc.builder.python.compileall')
-          .trace(async compileSpan => {
-            const sitePackageDirs = (
-              await getVenvSitePackagesDirs(venvPath)
-            ).filter(d => fs.existsSync(d));
-            const pythonBin = getVenvPythonBin(venvPath);
+      // Precompile bytecode and fill remaining capacity up to capacityBytes.
+      // Only .pyc for .py files already in the bundle are collected, so
+      // excluded source can't re-enter as .pyc. Bytecode is a pure
+      // optimization: failures are logged and the build continues.
+      const runCompileAllAndFillBytecode = async (capacityBytes: number) => {
+        try {
+          await builderSpan
+            .child('vc.builder.python.compileall')
+            .trace(async compileSpan => {
+              const sitePackageDirs = (
+                await getVenvSitePackagesDirs(venvPath)
+              ).filter(d => fs.existsSync(d));
+              const pythonBin = getVenvPythonBin(venvPath);
 
-            console.log('Compiling Python application bytecode...');
-            await runCompileAll({
-              pythonBin,
-              filesOrDirectories: [workPath],
-              env: pythonEnv,
-              excludeRegex: getCompileAllAppExcludeRegex(workPath),
+              console.log('Compiling Python bytecode...');
+              await runCompileAll({
+                pythonBin,
+                filesOrDirectories: [workPath],
+                env: pythonEnv,
+                excludeRegex: getCompileAllAppExcludeRegex(workPath),
+              });
+
+              await runCompileAll({
+                pythonBin,
+                filesOrDirectories: sitePackageDirs,
+                env: pythonEnv,
+              });
+
+              compileSpan.setAttributes({
+                'python.compileall.enabled': 'true',
+                'python.compileall.sitePackageDirectoryCount': String(
+                  sitePackageDirs.length
+                ),
+              });
             });
 
-            console.log('Compiling Python dependency bytecode...');
-            await runCompileAll({
-              pythonBin,
-              filesOrDirectories: sitePackageDirs,
-              env: pythonEnv,
+          const currentSize = await calculateBundleSize(files);
+          let remainingCapacity = capacityBytes - currentSize;
+
+          if (pythonVersion.major != null && pythonVersion.minor != null) {
+            const appBytecodeInfo = await collectAppBytecodeFiles({
+              workPath,
+              files,
+              pythonMajor: pythonVersion.major,
+              pythonMinor: pythonVersion.minor,
             });
+            remainingCapacity = addBytecodeWithinCapacity(
+              files,
+              appBytecodeInfo,
+              remainingCapacity
+            );
+          }
 
-            compileSpan.setAttributes({
-              'python.compileall.enabled': 'true',
-              'python.compileall.sitePackageDirectoryCount': String(
-                sitePackageDirs.length
-              ),
-            });
-          });
-
-        // Fill remaining capacity up to the large-function size limit.
-        const currentSize = await calculateBundleSize(files);
-        let remainingCapacity =
-          MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE - currentSize;
-
-        if (pythonVersion.major != null && pythonVersion.minor != null) {
-          const appBytecodeInfo = await collectAppBytecodeFiles({
-            workPath,
-            files,
-            pythonMajor: pythonVersion.major,
-            pythonMinor: pythonVersion.minor,
-          });
-          remainingCapacity = addBytecodeWithinCapacity(
-            files,
-            appBytecodeInfo,
-            remainingCapacity
+          const vendorBytecodeInfo = await depExternalizer.collectBytecodeFiles(
+            {
+              vendorDirName: vendorDir,
+            }
           );
+          await addVendorBytecodeWithinCapacity({
+            files,
+            depExternalizer,
+            vendorDir,
+            bytecodeInfo: vendorBytecodeInfo,
+            capacity: remainingCapacity,
+          });
+        } catch (err) {
+          console.log(
+            'Bytecode precompilation failed; continuing without precompiled bytecode.'
+          );
+          debug(`bytecode precompilation error details: ${err}`);
         }
-
-        const vendorBytecodeInfo = await depExternalizer.collectBytecodeFiles({
-          vendorDirName: vendorDir,
-        });
-        await addVendorBytecodeWithinCapacity({
-          files,
-          depExternalizer,
-          vendorDir,
-          bytecodeInfo: vendorBytecodeInfo,
-          capacity: remainingCapacity,
-        });
       };
 
       const announceLargeFunction = () =>
@@ -1138,29 +1178,34 @@ export const build: BuildVX = async ({
           await depExternalizer.generateBundle(files);
         if (fellBackToFullBundle) {
           announceLargeFunction();
-          if (automaticCompileAllEnabled) {
-            await runCompileAllAndFillBytecode();
+          if (compileAllEnabled) {
+            await runCompileAllAndFillBytecode(
+              MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
+            );
           }
         }
       } else {
         // Bundle all deps directly. Either it fits the standard size limit, or
         // large functions are enabled and the whole bundle ships.
         addFiles(files, depAnalysis.allVendorFiles);
-        if (
-          isLargeFunctionsEnabled() &&
-          depAnalysis.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES
-        ) {
-          announceLargeFunction();
-        }
-        // Compileall is only for large functions. This branch also covers small
-        // bundles that fit the standard size limit, so gate on size to skip
-        // them — never precompile bytecode for a standard-size function.
-        // (automaticCompileAllEnabled already requires the large-functions flag.)
-        if (
-          automaticCompileAllEnabled &&
-          depAnalysis.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES
-        ) {
-          await runCompileAllAndFillBytecode();
+        if (depAnalysis.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES) {
+          if (isLargeFunctionsEnabled()) {
+            announceLargeFunction();
+          }
+          if (compileAllEnabled) {
+            await runCompileAllAndFillBytecode(
+              MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
+            );
+          }
+        } else if (compileAllEnabled) {
+          // Compile only when enough of the expected bytecode ships to
+          // justify the compile time.
+          const capacity =
+            BYTECODE_FILL_CEILING_BYTES - depAnalysis.totalBundleSize;
+          const estimate = await estimateBytecodeSize(files);
+          if (capacity >= BYTECODE_COVERAGE_FLOOR * estimate) {
+            await runCompileAllAndFillBytecode(BYTECODE_FILL_CEILING_BYTES);
+          }
         }
       }
     });
@@ -1170,10 +1215,16 @@ export const build: BuildVX = async ({
     [`${handlerPyFilename}.py`]: new FileBlob({ data: runtimeTrampoline }),
   };
 
+  const lambdaOptions = await getPythonLambdaOptions({
+    config,
+    entrypoint,
+  });
+
   const output = new Lambda({
     files: webFiles,
     handler: `${handlerPyFilename}.vc_handler`,
     runtime: pythonVersion.runtime,
+    ...lambdaOptions,
     architecture: target.architecture,
     environment: lambdaEnv,
     supportsResponseStreaming: true,
@@ -1245,10 +1296,11 @@ export const build: BuildVX = async ({
     return { resultVersion: 3, result: { output } };
   }
 
-  // If there is a service name, we need to mount this under the
-  // service properly, for a V2 build.
-  // TODO: Ideally this should be handled by writeBuildResultV2.
-  const lambdaPath = service?.name ? `_svc/${service.name}/index` : 'index';
+  // V2 services omit `type` and have isolated build outputs, so their Lambda
+  // can use the natural `index` path. V1 services still share one output and
+  // need the internal service namespace to avoid collisions.
+  const lambdaPath =
+    service?.name && service.type ? `_svc/${service.name}/index` : 'index';
   const staticFiles = djangoStatic?.cdnOutputDir
     ? await glob('**', { cwd: djangoStatic.cdnOutputDir })
     : {};

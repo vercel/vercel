@@ -169,6 +169,10 @@ copyFileSync(
   new URL('src/util/get-latest-version/get-latest-worker.cjs', repoRoot),
   new URL('get-latest-worker.cjs', distRoot)
 );
+copyFileSync(
+  new URL('src/util/get-latest-version/fetch-dist-tags.cjs', repoRoot),
+  new URL('fetch-dist-tags.cjs', distRoot)
+);
 copyFileSync(new URL('src/vc.js', repoRoot), new URL('vc.js', distRoot));
 
 // Generate version.mjs for fast --version lookup

@@ -1,5 +1,17 @@
 # @vercel/fastify
 
+## 0.1.101
+
+### Patch Changes
+
+- @vercel/node@5.8.22
+
+## 0.1.100
+
+### Patch Changes
+
+- @vercel/node@5.8.21
+
 ## 0.1.99
 
 ### Patch Changes

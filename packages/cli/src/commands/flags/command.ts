@@ -1,4 +1,4 @@
-import { yesOption } from '../../util/arg-common';
+import { projectOption, yesOption } from '../../util/arg-common';
 import { formatFlagConditionComparatorList } from '../../util/flags/comparators';
 import { packageName } from '../../util/pkg-name';
 
@@ -11,6 +11,7 @@ export const listSubcommand = {
   default: true,
   arguments: [],
   options: [
+    projectOption,
     {
       name: 'state',
       shorthand: 's',
@@ -18,6 +19,49 @@ export const listSubcommand = {
       deprecated: false,
       description: 'Filter flags by state (active or archived)',
       argument: 'STATE',
+    },
+    {
+      name: 'tag',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description: 'Filter flags by tag (repeatable; all must match)',
+      argument: 'TAG',
+    },
+    {
+      name: 'created-by',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Filter flags by the id of the user or team that created them',
+      argument: 'ID',
+    },
+    {
+      name: 'maintainer-id',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description:
+        'Filter flags by maintainer user id (repeatable; any may match)',
+      argument: 'ID',
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description:
+        'Return a single page of at most NUMBER flags (1-100) instead of all',
+      argument: 'NUMBER',
+    },
+    {
+      name: 'next',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Pagination cursor from a previous list response',
+      argument: 'CURSOR',
     },
     {
       name: 'json',
@@ -37,6 +81,18 @@ export const listSubcommand = {
       value: `${packageName} flags ls --state archived`,
     },
     {
+      name: 'Filter flags by tag, creator, and maintainer',
+      value: `${packageName} flags ls --tag checkout --created-by user_123 --maintainer-id user_456`,
+    },
+    {
+      name: 'List the first page of 10 flags',
+      value: `${packageName} flags ls --limit 10`,
+    },
+    {
+      name: 'List the next page using the cursor from the previous page',
+      value: `${packageName} flags ls --limit 10 --next <cursor>`,
+    },
+    {
       name: 'List flags as JSON',
       value: `${packageName} flags ls --json`,
     },
@@ -53,7 +109,7 @@ export const inspectSubcommand = {
       required: true,
     },
   ],
-  options: [],
+  options: [projectOption],
   examples: [
     {
       name: 'Show details of a feature flag',
@@ -73,6 +129,7 @@ export const createSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'kind',
       shorthand: 'k',
@@ -130,7 +187,7 @@ export const openSubcommand = {
       required: false,
     },
   ],
-  options: [],
+  options: [projectOption],
   examples: [
     {
       name: 'Open the project feature flags dashboard',
@@ -154,6 +211,7 @@ export const updateSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'variant',
       shorthand: 'v',
@@ -214,6 +272,7 @@ export const setSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -268,6 +327,7 @@ export const splitSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -341,6 +401,7 @@ export const rolloutSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -440,6 +501,7 @@ export const removeSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when deleting a flag',
@@ -468,6 +530,7 @@ export const archiveSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when archiving a flag',
@@ -497,6 +560,7 @@ export const disableSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -552,6 +616,7 @@ export const enableSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -588,6 +653,7 @@ export const segmentsListSubcommand = {
   description: 'List all feature flag segments for the current project',
   arguments: [],
   options: [
+    projectOption,
     {
       name: 'json',
       shorthand: null,
@@ -619,6 +685,7 @@ export const segmentsInspectSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'json',
       shorthand: null,
@@ -650,6 +717,7 @@ export const segmentsCreateSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'label',
       shorthand: 'l',
@@ -726,6 +794,7 @@ export const segmentsUpdateSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'label',
       shorthand: 'l',
@@ -810,6 +879,7 @@ export const segmentsRemoveSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when deleting a segment',
@@ -850,6 +920,7 @@ export const sdkKeysListSubcommand = {
   description: 'List all SDK keys for the current project',
   arguments: [],
   options: [
+    projectOption,
     {
       name: 'json',
       shorthand: null,
@@ -876,6 +947,7 @@ export const sdkKeysAddSubcommand = {
   description: 'Create a new SDK key',
   arguments: [],
   options: [
+    projectOption,
     {
       name: 'type',
       // No shorthand: `-t` is already used globally for `--token`
@@ -925,6 +997,7 @@ export const sdkKeysRemoveSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when deleting an SDK key',

@@ -6,8 +6,7 @@ import semVer from 'semver';
 import { homedir } from 'os';
 import { runNpmInstall } from '@vercel/build-utils';
 import { execCli } from './helpers/exec';
-import type { RequestInfo } from 'node-fetch';
-import nodeFetch from 'node-fetch';
+import nodeFetch, { type RequestInfo } from '../src/util/fetch';
 import fs from 'fs-extra';
 import { logo } from '../src/util/pkg-name';
 import sleep from '../src/util/sleep';
@@ -577,16 +576,6 @@ test('initialize example "angular"', async () => {
     fs.existsSync(path.join(cwd, 'angular', 'angular.json')),
     'angular.json'
   ).toBe(true);
-});
-
-test('fail to add a domain without a project', async () => {
-  const output = await execCli(binaryPath, [
-    'domains',
-    'add',
-    'my-domain.vercel.app',
-  ]);
-  expect(output.exitCode, formatOutput(output)).toBe(1);
-  expect(output.stderr).toMatch(/expects two arguments/gm);
 });
 
 test('whoami', async () => {

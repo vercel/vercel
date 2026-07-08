@@ -1,4 +1,5 @@
 import type { BuildOptions, BuildResultV2, Span } from '@vercel/build-utils';
+import { getLambdaOptionsFromFunction } from '@vercel/build-utils';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import {
@@ -13,10 +14,13 @@ import {
   debug,
   debugTokenClaims,
   decodeOidcClaims,
+  devImageTag,
   done,
   elapsed,
   existingRegistryAuthFile,
+  findDockerfile,
   info,
+  isDockerfileRef,
   readString,
   shortDigest,
   step,
@@ -30,6 +34,14 @@ export const version = 2;
 export { startDevServer } from './dev';
 export { prepareCache } from './prepare-cache';
 
+function resolveFunctionSourceFile(options: BuildOptions): string {
+  const entrypoint = readString(options.entrypoint) ?? '';
+  if (entrypoint === '<detect>') {
+    return findDockerfile(options.workPath) ?? entrypoint;
+  }
+  return entrypoint;
+}
+
 function normalizeCommand(command: unknown): string[] | undefined {
   if (typeof command === 'string') {
     return [command];
@@ -41,15 +53,6 @@ function normalizeCommand(command: unknown): string[] | undefined {
     return command;
   }
   return undefined;
-}
-
-function isDockerfileRef(ref: string): boolean {
-  const base = path.basename(ref).toLowerCase();
-  return (
-    base === 'dockerfile' ||
-    base === 'containerfile' ||
-    base.endsWith('.dockerfile')
-  );
 }
 
 function sanitizeRepository(name: string): string {
@@ -266,8 +269,14 @@ async function resolveImageHandler(
   const { config, workPath, entrypoint, meta } = options;
 
   const entrypointRef = readString(entrypoint);
+  // An entrypoint that names a Dockerfile (including the `Dockerfile.vercel` /
+  // `Containerfile.vercel` opt-in markers) is built directly. Otherwise — e.g.
+  // when the `container` framework preset resolves its entrypoint via
+  // `<detect>` — discover a Dockerfile in the work directory.
   const dockerfileConfigured =
-    entrypointRef && isDockerfileRef(entrypointRef) ? entrypointRef : undefined;
+    entrypointRef && isDockerfileRef(entrypointRef)
+      ? entrypointRef
+      : findDockerfile(workPath);
   const dockerfileRel = dockerfileConfigured ?? 'Dockerfile';
   const dockerfilePath = path.join(workPath, dockerfileRel);
   const hasDockerfile =
@@ -293,14 +302,18 @@ async function resolveImageHandler(
   }
 
   if (meta?.isDev) {
-    if (prebuiltImage) {
-      span?.setAttributes({ 'container.mode': 'prebuilt_dev' });
-      info(`vercel dev: using prebuilt image ${prebuiltImage}`);
-      return prebuiltImage;
-    }
-    throw new Error(
-      '`vercel dev` cannot build container images from a Dockerfile. Specify a prebuilt "image" for local development.'
+    // In dev the image is built and run locally from the Dockerfile by
+    // `startDevServer` (see ./dev.ts `resolveDevImage`), which never pushes to
+    // a registry. The `build()` path must not push either, so we don't build
+    // here — we only return a stable local tag for the build output. The
+    // resolved entrypoint is always a Dockerfile/Containerfile (containers have
+    // no prebuilt-image input), so there is nothing to error on.
+    const serviceName = options.service?.name;
+    const tag = devImageTag(
+      serviceName ?? path.basename(dockerfileRel).split('.')[0]
     );
+    span?.setAttributes({ 'container.mode': 'dev', 'image.tag': tag });
+    return tag;
   }
 
   if (!existsSync(dockerfilePath)) {
@@ -309,13 +322,16 @@ async function resolveImageHandler(
     );
   }
 
+  // Named services derive the registry repository from the service name. A
+  // root (non-service) container deploy has no service name, so fall back to
+  // the Dockerfile's base name (e.g. `Dockerfile.vercel` -> `dockerfile`,
+  // `Containerfile.vercel` -> `containerfile`). The repository is already
+  // namespaced by owner/project from the OIDC claims, so this leaf only needs
+  // to be stable per project.
   const serviceName = options.service?.name;
-  if (!serviceName) {
-    throw new Error(
-      'Container service is missing a name; cannot derive the registry repository.'
-    );
-  }
-  const repository = sanitizeRepository(serviceName);
+  const repository = sanitizeRepository(
+    serviceName ?? path.basename(dockerfileRel).split('.')[0]
+  );
   const tag = resolveImageTag();
   const contextDir = path.dirname(dockerfilePath);
 
@@ -364,19 +380,27 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
     span => resolveImageHandler(options, span)
   );
 
+  const lambdaOptions = await getLambdaOptionsFromFunction({
+    sourceFile: resolveFunctionSourceFile(options),
+    config: options.config,
+  });
+
   const command = normalizeCommand(options.config.command);
 
-  // Do a normal build: the function lands at the natural `index` path inside
-  // the nested `services/<name>/` output, and a catch-all route in the
-  // service's isolated route table forwards requests to it. Without the
-  // catch-all the service has no `/` route, so the top-level service rewrite
-  // resolves to nothing (vercel/vercel#16648).
-  const isService = Boolean(options.service?.name);
-  const routes = isService
-    ? [{ handle: 'filesystem' as const }, { src: '/(.*)', dest: '/index' }]
-    : undefined;
+  // Do a normal build: the function lands at the natural `index` path and a
+  // catch-all route forwards every request to it. Without it there is no `/`
+  // route, so for a service the top-level service rewrite resolves to nothing
+  // (vercel/vercel#16648), and for a root (non-service) container deploy
+  // nothing reaches the function at all. The filesystem handler resolves `/`
+  // to the `index` output. The only service-specific concern — nesting the
+  // output under `services/<name>/` — is handled by the CLI, not here.
+  const routes = [
+    { handle: 'filesystem' as const },
+    { src: '/(.*)', dest: '/index' },
+  ];
 
   return {
+    routes,
     output: {
       index: {
         type: 'Lambda',
@@ -388,8 +412,8 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
         runtime: 'container',
         environment: {},
         ...(command ? { command } : {}),
+        ...lambdaOptions,
       } as any,
     },
-    ...(routes ? { routes } : {}),
   };
 }

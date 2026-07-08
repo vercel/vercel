@@ -27,6 +27,21 @@ vercel flags list --json                                  # output as JSON
 vercel flags inspect my-feature                           # show flag details
 ```
 
+Filter the list with `--tag` (repeatable, all must match), `--created-by` (user or team id), and `--maintainer-id` (repeatable, any may match):
+
+```bash
+vercel flags list --tag checkout --tag beta               # flags tagged checkout AND beta
+vercel flags list --created-by user_123                    # flags created by a user/team
+vercel flags list --maintainer-id user_456                 # flags maintained by a user
+```
+
+By default the list returns every flag. Use `--limit` (page size, 1-100) for a single page; the command prints a `--next <cursor>` command to fetch the following page. `--json` output includes `pagination.next`.
+
+```bash
+vercel flags list --limit 25                               # first page of 25
+vercel flags list --limit 25 --next <cursor>              # next page
+```
+
 ## Opening in Dashboard
 
 ```bash

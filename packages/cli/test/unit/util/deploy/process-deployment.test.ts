@@ -34,6 +34,17 @@ describe('processDeployment()', () => {
       );
     });
 
+    it('should return an entity too large error', () => {
+      const originalMessage = 'Request Entity Too Large';
+      const result = handleErrorSolvableWithArchive({
+        message: originalMessage,
+      });
+      expect(result).toBeInstanceOf(UploadErrorMissingArchive);
+      expect(result?.message).toEqual(
+        `${originalMessage}\n${archiveSuggestionText}`
+      );
+    });
+
     it('should not throw if missing `rateLimitName`', () => {
       expect(
         handleErrorSolvableWithArchive({

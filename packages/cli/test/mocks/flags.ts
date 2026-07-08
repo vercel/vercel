@@ -240,13 +240,41 @@ export function useFlags(
     }
   );
 
-  // List flags
+  // List flags (v2: paginated, supports tag/createdBy/maintainerId filters)
   client.scenario.get(
-    '/v1/projects/:projectId/feature-flags/flags',
+    '/v2/projects/:projectId/feature-flags/flags',
     (req, res) => {
       const state = req.query.state || 'active';
-      const filteredFlags = flagsList.filter(f => f.state === state);
-      res.json({ data: filteredFlags });
+      const createdBy = req.query.createdBy as string | undefined;
+      const tags = toArray(req.query.tags);
+      const maintainerIds = toArray(req.query.maintainerIds);
+
+      let filteredFlags = flagsList.filter(f => f.state === state);
+      if (createdBy) {
+        filteredFlags = filteredFlags.filter(f => f.createdBy === createdBy);
+      }
+      if (tags.length > 0) {
+        filteredFlags = filteredFlags.filter(f =>
+          tags.every(tag => (f.tags ?? []).includes(tag))
+        );
+      }
+      if (maintainerIds.length > 0) {
+        filteredFlags = filteredFlags.filter(f =>
+          maintainerIds.some(id => (f.maintainerIds ?? []).includes(id))
+        );
+      }
+
+      // The CLI always sends `limit`; fall back to a single full page otherwise.
+      const limit = req.query.limit
+        ? Number(req.query.limit)
+        : filteredFlags.length;
+      const offset = req.query.cursor ? Number(req.query.cursor) : 0;
+      const page = filteredFlags.slice(offset, offset + limit);
+      const nextOffset = offset + limit;
+      const next =
+        nextOffset < filteredFlags.length ? String(nextOffset) : null;
+
+      res.json({ data: page, pagination: { next } });
     }
   );
 
@@ -552,6 +580,16 @@ export function useFlags(
   );
 
   return { flags: flagsList, sdkKeys: sdkKeysList, segments: segmentsList };
+}
+
+function toArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map(String);
+  }
+  if (typeof value === 'string') {
+    return [value];
+  }
+  return [];
 }
 
 function applySegmentOperationsForMock(

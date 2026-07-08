@@ -5,7 +5,7 @@ import { dangerouslyDeleteSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandName } from '../../util/pkg-name';
-import { getLinkedProject } from '../../util/projects/link';
+import { getLinkedProjectOrFail } from '../../util/projects/get-linked-project-or-fail';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { CacheDangerouslyDeleteTelemetryClient } from '../../util/telemetry/commands/cache/dangerously-delete';
 import plural from 'pluralize';
@@ -31,7 +31,10 @@ export default async function dangerouslyDelete(
     return 1;
   }
 
-  const link = await getLinkedProject(client);
+  const projectName = parsedArgs.flags['--project'];
+  telemetry.trackCliOptionProject(projectName);
+
+  const link = await getLinkedProjectOrFail(client, projectName);
 
   if (link.status === 'not_linked') {
     output.error(
@@ -86,12 +89,13 @@ export default async function dangerouslyDelete(
 
   if (!yes) {
     if (!process.stdin.isTTY) {
+      const projectFlag = projectName ? ` --project ${projectName}` : '';
       const optional =
         typeof revalidate !== 'undefined'
           ? ` --revalidation-deadline-seconds ${revalidate}`
           : '';
       output.print(
-        `${msg}. To continue, run ${getCommandName(`cache dangerously-delete ${flag} ${itemValue}${optional} --yes`)}.`
+        `${msg}. To continue, run ${getCommandName(`cache dangerously-delete ${flag} ${itemValue}${projectFlag}${optional} --yes`)}.`
       );
       return 1;
     }

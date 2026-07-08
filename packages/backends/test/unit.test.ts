@@ -505,7 +505,7 @@ it('extractAndExecuteLambda throws with invalid code', async () => {
   ).rejects.toThrow();
 });
 
-it('maps service internal function output without leading slash', async () => {
+it('uses the natural index output for an isolated V2 service', async () => {
   const fixtureName = '01-express-index-ts-esm';
   const fixtureSource = join(__dirname, 'fixtures', fixtureName);
   const { workDir } = await getWorkDir(fixtureName, fixtureSource);
@@ -520,16 +520,61 @@ it('maps service internal function output without leading slash', async () => {
     meta,
     entrypoint: 'package.json',
     repoRootPath: workDir,
+    service: { name: 'js-api' },
   })) as BuildResultV2Typical;
 
-  const lambda = getServiceLambda(result, 'js-api');
-  expect(
-    result.routes?.some(route => route.dest === '/_svc/js-api/index')
-  ).toBe(true);
-  expect(result.output.index).toBeUndefined();
-  expect(result.output['_svc/js-api/index']).toBeDefined();
+  const lambda = result.output.index as unknown as NodejsLambda;
+  expect(result.routes?.some(route => route.dest === '/index')).toBe(true);
+  expect(result.output.index).toBeDefined();
+  expect(result.output['_svc/js-api/index']).toBeUndefined();
   expect(result.output['/_svc/js-api/index']).toBeUndefined();
   expect(lambda.handler).toBe('index.mjs');
+}, 30000);
+
+it('rejects a service whose entrypoint sets the Edge runtime', async () => {
+  // Build the entrypoint in a temp dir rather than a committed fixture: the
+  // "successful builds" loop above auto-discovers every directory under
+  // fixtures/ and asserts it builds, but this entrypoint is meant to fail.
+  const workDir = await realpath(
+    await mkdtemp(join(tmpdir(), 'edge-runtime-service-'))
+  );
+  await writeFile(
+    join(workDir, 'package.json'),
+    JSON.stringify({
+      name: 'edge-runtime-service',
+      version: '1.0.0',
+      type: 'module',
+    })
+  );
+  await writeFile(
+    join(workDir, 'index.js'),
+    [
+      "export const config = { runtime: 'edge' };",
+      '',
+      'export async function GET() {',
+      "  return new Response('hello from the edge');",
+      '}',
+    ].join('\n')
+  );
+
+  await expect(
+    build({
+      files: {},
+      workPath: workDir,
+      config: {
+        ...defaultConfig,
+        // Skip install — the build must fail before any heavy work.
+        projectSettings: { installCommand: '' },
+        serviceName: 'edge-api',
+      },
+      meta,
+      entrypoint: 'index.js',
+      repoRootPath: workDir,
+      service: { name: 'edge-api' },
+    })
+  ).rejects.toThrow(
+    'Edge Runtime is not supported in services. Service "edge-api"'
+  );
 }, 30000);
 
 it('prefixes emitted service route sources with routePrefix', async () => {

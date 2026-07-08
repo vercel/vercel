@@ -346,6 +346,8 @@ describe('text-output', () => {
         granularity: { minutes: 5 },
         bucketTimezone: 'Europe/Paris',
         filter: 'httpStatus ge 500',
+        orderBy: 'count',
+        orderDirection: 'desc',
         scope: projectScope,
         unit: 'milliseconds',
         groupCount: 2,
@@ -358,6 +360,8 @@ describe('text-output', () => {
       expect(metadata).toContain('Period:');
       expect(metadata).toContain('Interval:');
       expect(metadata).toContain('Filter:');
+      expect(metadata).toContain('Order By:');
+      expect(stripAnsi(metadata)).toContain('Order By: count desc (default)');
       expect(metadata).toContain('Project:');
       expect(metadata).toContain('Units:');
       expect(metadata).toContain('Groups:');

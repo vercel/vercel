@@ -15,6 +15,29 @@ export interface ConnectAuthorizationResponse {
   url: string;
   deviceCode?: string;
   expiresAt?: number;
+  /**
+   * Connector (client) being authorized, matching the `connector`
+   * object on the Vercel Connect token response. Present once the
+   * Vercel API supports returning it.
+   */
+  connector?: {
+    /** Client id. */
+    id: string;
+    /** Client uid. */
+    uid: string;
+    /** Client type, eg. `oauth`, `salesforce`. */
+    type: string;
+    /** Resolved service id when known, eg. `salesforce`. */
+    service?: string;
+    /**
+     * Curated display name of the resolved service, eg. `Salesforce`,
+     * present when the service is known to Vercel Connect. Suited for
+     * end-user surfaces like "Sign in with {serviceName}".
+     */
+    serviceName?: string;
+    /** The connector's own (operator-given) name. */
+    name: string;
+  };
 }
 
 export async function startAuthorization(
