@@ -6,6 +6,7 @@ import { exec } from 'child_process';
 import type { GitMetadata, Project } from '@vercel-internals/types';
 import { errorToString, normalizeError } from '@vercel/error-utils';
 import output from '../output-manager';
+import { getGitConfigPath } from './git-helpers';
 
 export async function createGitMeta(
   directory: string,
@@ -17,7 +18,9 @@ export async function createGitMeta(
     // in the form of org/repo
     const { repo } = project.link;
 
-    const remoteUrls = await getRemoteUrls(join(directory, '.git/config'));
+    const gitConfigPath =
+      getGitConfigPath({ cwd: directory }) ?? join(directory, '.git/config');
+    const remoteUrls = await getRemoteUrls(gitConfigPath);
     if (remoteUrls) {
       for (const urlValue of Object.values(remoteUrls)) {
         if (urlValue.includes(repo)) {
@@ -29,7 +32,9 @@ export async function createGitMeta(
 
   // If we couldn't get a remote url from the connected repo, default to the origin url
   if (!remoteUrl) {
-    remoteUrl = await getOriginUrl(join(directory, '.git/config'));
+    const configPath =
+      getGitConfigPath({ cwd: directory }) ?? join(directory, '.git/config');
+    remoteUrl = await getOriginUrl(configPath);
   }
 
   const [commitResult, dirtyResult] = await Promise.allSettled([
