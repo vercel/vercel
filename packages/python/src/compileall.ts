@@ -22,9 +22,11 @@ function isCompileAllFlagEnabled(): boolean {
 export function shouldCompileAll({
   isDev,
   hasCustomCommand,
+  hasPreDeployCommand,
 }: {
   isDev?: boolean;
   hasCustomCommand: boolean;
+  hasPreDeployCommand?: boolean;
 }): boolean {
   if (isDev) return false;
 
@@ -33,6 +35,13 @@ export function shouldCompileAll({
   // safe: they run after the standard install, and bytecode collection
   // degrades gracefully.
   if (hasCustomCommand) return false;
+
+  // Precompiled bytecode uses `--invalidation-mode unchecked-hash`, which trusts
+  // the .pyc without re-hashing the source at import — safe only because the
+  // build output is normally immutable. A `preDeployCommand` runs after the build
+  // and can rewrite source files, which would leave the (already-compiled) bytecode
+  // stale and served instead of the updated source. Skip precompilation in that case.
+  if (hasPreDeployCommand) return false;
 
   return isCompileAllFlagEnabled();
 }
