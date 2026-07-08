@@ -28,6 +28,7 @@ import { ListTelemetryClient } from '../../util/telemetry/commands/list';
 import { exitWithNonInteractiveError } from '../../util/agent-output';
 import { validateLsArgs } from '../../util/validate-ls-args';
 import { validateJsonOutput } from '../../util/output-format';
+import { getPaginationOpts } from '../../util/get-pagination-opts';
 import type {
   Deployment,
   PaginationOptions,
@@ -240,21 +241,15 @@ export default async function list(client: Client) {
     }
   }
 
-  const nextTimestamp = parsedArgs.flags['--next'];
-  const limitFlag = parsedArgs.flags['--limit'];
+  let nextTimestamp;
+  let limitFlag;
+  try {
+    [nextTimestamp, limitFlag] = getPaginationOpts(parsedArgs.flags);
+  } catch (err: unknown) {
+    printError(err);
+    return 1;
+  }
   const limit = limitFlag ?? 20;
-
-  if (Number.isNaN(nextTimestamp)) {
-    error('Please provide a number for flag `--next`');
-    return 1;
-  }
-  if (
-    typeof limitFlag === 'number' &&
-    (!Number.isInteger(limitFlag) || limitFlag < 1 || limitFlag > 100)
-  ) {
-    error('Please provide an integer from 1 to 100 for option --limit');
-    return 1;
-  }
 
   const projectSlugLink = project
     ? formatProject(contextName, project.name)

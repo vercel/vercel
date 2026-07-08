@@ -11,6 +11,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import getScope from '../../util/get-scope';
+import { getPaginationOpts } from '../../util/get-pagination-opts';
 import type Client from '../../util/client';
 import type { Project } from '@vercel-internals/types';
 
@@ -141,13 +142,10 @@ function processFlags(
   telemetryClient.trackCliFlagJson(opts['--json']);
   telemetryClient.trackCliOptionFilter(filter);
 
-  if (
-    typeof limit === 'number' &&
-    (!Number.isInteger(limit) || limit < 1 || limit > 100)
-  ) {
-    return {
-      error: 'Please provide an integer from 1 to 100 for option --limit',
-    };
+  try {
+    getPaginationOpts(opts);
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) };
   }
 
   return { deprecated, next, json, filter, limit };

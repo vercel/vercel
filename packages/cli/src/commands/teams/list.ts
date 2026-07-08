@@ -16,6 +16,7 @@ import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import { TeamsListTelemetryClient } from '../../util/telemetry/commands/teams/list';
 import { validateLsArgs } from '../../util/validate-ls-args';
+import { getPaginationOpts } from '../../util/get-pagination-opts';
 
 export default async function list(
   client: Client,
@@ -78,11 +79,10 @@ export default async function list(
     output.error('Please provide a number for flag `--next`');
     return 1;
   }
-  if (
-    typeof limit === 'number' &&
-    (!Number.isInteger(limit) || limit < 1 || limit > 100)
-  ) {
-    output.error('Please provide an integer from 1 to 100 for option --limit');
+  try {
+    getPaginationOpts(parsedArgs.flags);
+  } catch (error) {
+    output.error(error instanceof Error ? error.message : String(error));
     return 1;
   }
 

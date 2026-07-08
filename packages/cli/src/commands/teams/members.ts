@@ -11,6 +11,7 @@ import { packageName } from '../../util/pkg-name';
 import getCommandFlags from '../../util/get-command-flags';
 import cmd from '../../util/output/cmd';
 import output from '../../output-manager';
+import { getPaginationOpts } from '../../util/get-pagination-opts';
 
 interface TeamMember {
   uid: string;
@@ -65,11 +66,10 @@ export default async function members(
     output.error('Please provide a number for flag `--next`');
     return 1;
   }
-  if (
-    typeof limit === 'number' &&
-    (!Number.isInteger(limit) || limit < 1 || limit > 100)
-  ) {
-    output.error('Please provide an integer from 1 to 100 for option --limit');
+  try {
+    getPaginationOpts(parsedArgs.flags);
+  } catch (error) {
+    output.error(error instanceof Error ? error.message : String(error));
     return 1;
   }
 
