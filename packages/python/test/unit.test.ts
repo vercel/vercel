@@ -2325,7 +2325,7 @@ describe('pyproject subscribers', () => {
           'name = "x"',
           'version = "0.0.1"',
           '',
-          '[tool.vercel.subscribers.celery-worker]',
+          '[[tool.vercel.subscribers]]',
           'entrypoint = "worker:app"',
           'topics = ["celery", "emails"]',
           'max_deliveries = 3',
@@ -2347,19 +2347,19 @@ describe('pyproject subscribers', () => {
     });
 
     const output = getBuildOutputV2(result).output as any;
-    const celeryPath = '_py_subscribers/celery-worker';
-    const consumer = sanitizeConsumerName(celeryPath);
+    const workerPath = '_py_subscribers/worker__app';
+    const consumer = sanitizeConsumerName(workerPath);
 
     expect(output.index).toBeDefined();
-    expect(output[celeryPath]).toBeDefined();
-    expect(output['_py_subscribers/celery-worker/celery']).toBeUndefined();
-    expect(output['_py_subscribers/celery-worker/emails']).toBeUndefined();
+    expect(output[workerPath]).toBeDefined();
+    expect(output['_py_subscribers/worker__app/celery']).toBeUndefined();
+    expect(output['_py_subscribers/worker__app/emails']).toBeUndefined();
     expect(output.index.environment.VERCEL_HAS_WORKER_SERVICES).toBe('1');
 
-    const celery = output[celeryPath];
-    expect(celery.handler).toBe('vc__handler__python.vc_handler');
-    expect(celery.environment.VERCEL_SERVICE_TYPE).toBe('worker');
-    expect(celery.experimentalTriggers).toEqual([
+    const worker = output[workerPath];
+    expect(worker.handler).toBe('vc__handler__python.vc_handler');
+    expect(worker.environment.VERCEL_SERVICE_TYPE).toBe('worker');
+    expect(worker.experimentalTriggers).toEqual([
       {
         type: 'queue/v2beta',
         topic: 'celery',
@@ -2380,7 +2380,7 @@ describe('pyproject subscribers', () => {
       },
     ]);
 
-    const handler = celery.files?.['vc__handler__python.py'];
+    const handler = worker.files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('subscriber handler bootstrap not found');
     }
@@ -2403,7 +2403,7 @@ describe('pyproject subscribers', () => {
           'name = "x"',
           'version = "0.0.1"',
           '',
-          '[tool.vercel.subscribers.worker]',
+          '[[tool.vercel.subscribers]]',
           'entrypoint = "worker:app"',
           'topics = ["jobs"]',
           'consumer = "custom"',
