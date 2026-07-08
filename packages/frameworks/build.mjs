@@ -6,7 +6,7 @@ import { esbuild, tsc } from '../../utils/build.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const MANIFEST_URL = 'https://api-frameworks-two.vercel.sh/v1/frameworks.json';
+const MANIFEST_URL = 'https://api-frameworks-two.vercel.sh';
 const pinnedManifestPath = join(__dirname, 'src', 'frameworks.json');
 
 async function fetchPinnedManifest() {
