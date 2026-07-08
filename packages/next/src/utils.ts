@@ -3971,6 +3971,7 @@ export async function getNodeMiddleware({
   isCorrectMiddlewareOrder,
   functionsConfigManifest,
   requiredServerFilesManifest,
+  instrumentationHookBuildTrace,
 }: {
   config: Config;
   baseDir: string;
@@ -3987,6 +3988,7 @@ export async function getNodeMiddleware({
   routesManifest: RoutesManifest;
   functionsConfigManifest?: FunctionsConfigManifestV1;
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
+  instrumentationHookBuildTrace: any | undefined;
 }): Promise<null | {
   lambdas: Record<string, NodejsLambda>;
   routes: RouteWithSrc[];
@@ -4071,6 +4073,26 @@ export async function getNodeMiddleware({
       console.log('outside base dir', absolutePath);
     }
   });
+  if (instrumentationHookBuildTrace) {
+    // Node.js instrumentation exists
+    // For regular functions, this is added via required-server-files.json#files. But that isn't
+    // read for middleware (because the various files in there aren't actually needed).
+    instrumentationHookBuildTrace.files.map((file: string) => {
+      fileList.push(
+        path.relative(
+          baseDir,
+          path.join(entryPath, outputDirectory, 'server', file)
+        )
+      );
+    });
+    fileList.push(
+      path.relative(
+        baseDir,
+        path.join(entryPath, outputDirectory, 'server', 'instrumentation.js')
+      )
+    );
+  }
+
   const reasons = new Map();
 
   const tracedFiles: {

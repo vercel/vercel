@@ -2,6 +2,7 @@ import { packageName } from '../../util/pkg-name';
 import {
   formatOption,
   jsonOption,
+  limitOption,
   nextOption,
   yesOption,
 } from '../../util/arg-common';
@@ -157,6 +158,7 @@ export const listSubcommand = {
   arguments: [],
   options: [
     nextOption,
+    limitOption,
     formatOption,
     jsonOption,
     {

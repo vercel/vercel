@@ -143,6 +143,7 @@ export function entrypointToModule(entrypoint: string): string {
   return entrypoint
     .replace(/\\/g, '/')
     .replace(/\.py$/i, '')
+    .replace(/\/__init__$/i, '')
     .replace(/\//g, '.');
 }
 

@@ -306,12 +306,16 @@ describe('list', () => {
       useDeployment({ creator: user });
 
       client.cwd = fixture('with-team');
-      client.setArgv('list', '--next', '123456');
+      client.setArgv('list', '--next', '123456', '--limit', '5');
       await list(client);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'option:next',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'option:limit',
           value: '[REDACTED]',
         },
       ]);

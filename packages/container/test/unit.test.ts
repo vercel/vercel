@@ -1,4 +1,5 @@
 import type { BuildResultV2Typical } from '@vercel/build-utils';
+import { sanitizeConsumerName } from '@vercel/build-utils';
 import { EventEmitter } from 'node:events';
 import { readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -184,6 +185,60 @@ describe('@vercel/container', () => {
           environment: {},
         },
       },
+    });
+  });
+
+  it('applies matching function configuration to the build output', async () => {
+    const result = expectTypicalBuildResult(
+      await build({
+        ...createBuildOptions({
+          functions: {
+            'docker.io/library/nginx:*': {
+              memory: 2048,
+              maxDuration: 120,
+              regions: ['iad1'],
+            },
+          },
+        }),
+        entrypoint: 'docker.io/library/nginx:1.27',
+      })
+    );
+
+    expect(result.output.index).toMatchObject({
+      handler: 'docker.io/library/nginx:1.27',
+      runtime: 'container',
+      memory: 2048,
+      maxDuration: 120,
+      regions: ['iad1'],
+    });
+  });
+
+  it('applies per-service function configuration scoped by service name', async () => {
+    const result = expectTypicalBuildResult(
+      await build({
+        ...createBuildOptions({
+          functions: {
+            'docker.io/library/nginx:*': {
+              memory: 4096,
+              experimentalTriggers: [{ type: 'queue/v2beta', topic: 'jobs' }],
+            },
+          },
+          serviceName: 'api',
+        }),
+        entrypoint: 'docker.io/library/nginx:1.27',
+        service: { name: 'api' },
+      })
+    );
+
+    expect(result.output.index).toMatchObject({
+      memory: 4096,
+      experimentalTriggers: [
+        {
+          type: 'queue/v2beta',
+          topic: 'jobs',
+          consumer: sanitizeConsumerName('api~docker.io/library/nginx:*'),
+        },
+      ],
     });
   });
 

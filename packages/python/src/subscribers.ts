@@ -3,12 +3,13 @@ import fs from 'fs';
 import {
   NowBuildError,
   readConfigFile,
+  sanitizeConsumerName,
   type TriggerEvent,
 } from '@vercel/build-utils';
 
-const SUBSCRIBER_NAME_RE = /^[A-Za-z]([A-Za-z0-9_-]*[A-Za-z0-9])?$/;
 const MODULE_ATTR_RE =
   /^([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*):([A-Za-z_][\w]*)$/;
+const SUBSCRIBER_OUTPUT_DIR = '_py_subscribers';
 
 type SubscriberTriggerDefaults = Omit<
   TriggerEvent,
@@ -76,12 +77,12 @@ const SUBSCRIBER_FIELD_NAMES = new Set([
 interface Pyproject {
   tool?: {
     vercel?: {
-      subscribers?: Record<string, RawSubscriber>;
+      subscribers?: RawSubscriber[];
     };
   };
 }
 
-export function safePathSegment(value: string): string {
+function safePathSegment(value: string): string {
   return [...value]
     .map(char => {
       if (char === '_') {
@@ -92,6 +93,14 @@ export function safePathSegment(value: string): string {
         : `_${char.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')}`;
     })
     .join('');
+}
+
+export function getSubscriberOutputPath(subscriberName: string): string {
+  return `${SUBSCRIBER_OUTPUT_DIR}/${safePathSegment(subscriberName)}`;
+}
+
+export function getSubscriberConsumerName(subscriberName: string): string {
+  return sanitizeConsumerName(getSubscriberOutputPath(subscriberName));
 }
 
 export async function getPyprojectSubscribers(
@@ -107,46 +116,49 @@ export async function getPyprojectSubscribers(
   if (!subscribers) {
     return [];
   }
-  if (typeof subscribers !== 'object' || Array.isArray(subscribers)) {
-    throw subscriberError('"tool.vercel.subscribers" must be an object');
+  if (!Array.isArray(subscribers)) {
+    throw subscriberError('"tool.vercel.subscribers" must be an array');
   }
 
-  return Promise.all(
-    Object.entries(subscribers).map(([name, config]) =>
-      parseSubscriber(workPath, name, config)
-    )
+  const parsedSubscribers = await Promise.all(
+    subscribers.map((config, index) => parseSubscriber(workPath, index, config))
   );
+
+  const seenNames = new Set<string>();
+  for (const subscriber of parsedSubscribers) {
+    if (seenNames.has(subscriber.name)) {
+      throw subscriberError(
+        `subscriber "${subscriber.name}" is declared more than once`
+      );
+    }
+    seenNames.add(subscriber.name);
+  }
+
+  return parsedSubscribers;
 }
 
 async function parseSubscriber(
   workPath: string,
-  name: string,
+  index: number,
   config: RawSubscriber
 ): Promise<Subscriber> {
-  if (!SUBSCRIBER_NAME_RE.test(name)) {
-    throw subscriberError(
-      `subscriber name "${name}" is invalid. Names must start with a letter, end with an alphanumeric character, and contain only alphanumeric characters, hyphens, and underscores`
-    );
-  }
+  const label = `subscriber #${index + 1}`;
   if (!config || typeof config !== 'object' || Array.isArray(config)) {
-    throw subscriberError(`subscriber "${name}" must be an object`);
+    throw subscriberError(`${label} must be an object`);
   }
 
   for (const key of Object.keys(config)) {
     if (!SUBSCRIBER_FIELD_NAMES.has(key)) {
-      throw subscriberError(
-        `subscriber "${name}" has unrecognized field "${key}"`
-      );
+      throw subscriberError(`${label} has unrecognized field "${key}"`);
     }
   }
 
   if (typeof config.entrypoint !== 'string') {
-    throw subscriberError(
-      `subscriber "${name}" must define string field "entrypoint"`
-    );
+    throw subscriberError(`${label} must define string field "entrypoint"`);
   }
 
-  const entrypoint = parseEntrypoint(name, config.entrypoint);
+  const entrypoint = parseEntrypoint(label, config.entrypoint);
+  const name = getSubscriberName(entrypoint);
   const existingEntrypoint = await resolveExistingEntrypoint(
     workPath,
     entrypoint.filePath
@@ -165,6 +177,16 @@ async function parseSubscriber(
     topics: parseTopics(name, config.topics),
     triggerDefaults: parseTriggerDefaults(name, config),
   };
+}
+
+function getSubscriberName({
+  moduleName,
+  variableName,
+}: {
+  moduleName: string;
+  variableName: string;
+}): string {
+  return `${moduleName.replace(/\./g, '-')}_${variableName}`;
 }
 
 function parseEntrypoint(

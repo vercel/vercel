@@ -483,6 +483,30 @@ export interface ProjectSettings {
   commandForIgnoringBuildStep?: string | null;
 }
 
+export interface GetDevSidecarsOptions {
+  workPath: string;
+  /** Original build configuration before source expansion or dev filtering. */
+  build: Builder;
+}
+
+export interface DevSubscriber {
+  type: 'subscriber';
+  name: string;
+  consumer: string;
+  workspace: string;
+  framework?: string;
+  runtime?: string;
+  builder: Builder;
+  topics: ServiceTopics;
+}
+
+export type DevSidecar = DevSubscriber;
+
+/** Returns additional processes that a builder needs alongside its primary dev server. */
+export type GetDevSidecars = (
+  options: GetDevSidecarsOptions
+) => Promise<DevSidecar[]>;
+
 /*
  * This is a builder whose build output version may dynamically change.
  */
@@ -493,6 +517,7 @@ export interface BuilderVX {
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
   startDevServer?: StartDevServer;
+  getDevSidecars?: GetDevSidecars;
 }
 
 export interface BuilderV2 {
@@ -502,6 +527,7 @@ export interface BuilderV2 {
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
   startDevServer?: StartDevServer;
+  getDevSidecars?: GetDevSidecars;
 }
 
 export interface BuilderV3 {
@@ -511,6 +537,7 @@ export interface BuilderV3 {
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
   startDevServer?: StartDevServer;
+  getDevSidecars?: GetDevSidecars;
 }
 
 type ImageFormat = 'image/avif' | 'image/webp';
