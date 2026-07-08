@@ -1473,6 +1473,10 @@ version = "8.1.7"
       const result = await ext.generateBundle(files);
 
       expect(result.fellBackToFullBundle).toBe(true);
+      // Package lists are only reported for a generated runtime-install
+      // bundle; the fallback bundles everything.
+      expect(result.alwaysBundledPackages).toBeUndefined();
+      expect(result.bundledPublicPackages).toBeUndefined();
       // Every vendor file is bundled directly.
       expect(files['_vendor/pkg/__init__.py']).toBe(
         allVendorFiles['_vendor/pkg/__init__.py']

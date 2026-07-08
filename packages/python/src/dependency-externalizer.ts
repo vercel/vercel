@@ -29,7 +29,12 @@ import {
   UV_BUNDLE_DIR,
 } from './uv';
 import { detectTargetPlatform } from './platform-info';
-import { derivePycPath, type BytecodeCollectionResult } from './compileall';
+import {
+  derivePrefixPycBundlePath,
+  derivePycPath,
+  deriveStagedPycFsPath,
+  type BytecodeCollectionResult,
+} from './compileall';
 import { isLargeFunctionsEnabled } from './large-functions';
 
 const readFile = promisify(fs.readFile);
@@ -75,6 +80,28 @@ export const BYTECODE_FILL_CEILING_BYTES =
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
 export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 500 * 1024 * 1024;
 
+// Extra /tmp headroom reserved for transient wheel archives while the
+// cold-start `uv sync` is downloading/extracting (installs hardlink from an
+// ephemeral cache, so steady-state usage is ~1x installed size, but archives
+// exist briefly during the install). Applied to the bytecode-first packing
+// mode, which externalizes every eligible public package.
+export const TRANSIENT_WHEEL_BUFFER_BYTES = 50 * 1024 * 1024;
+
+// Where the cold-start bootstrap installs externalized dependencies.
+// Must match `_deps_dir` in python/vercel-runtime/src/vercel_runtime/vc_init.py.
+export const RUNTIME_DEPS_DIR = '/tmp/_vc_deps';
+
+/**
+ * Absolute runtime path of the site-packages directory that the cold-start
+ * `uv sync` populates. Must mirror the layout `vc_init.py` constructs.
+ */
+export function runtimeDepsSitePackagesDir(
+  pythonMajor: number,
+  pythonMinor: number
+): string {
+  return `${RUNTIME_DEPS_DIR}/lib/python${pythonMajor}.${pythonMinor}/site-packages`;
+}
+
 // Size limit for large functions: all deps bundled directly (no runtime
 // install), served on Hive.
 export const MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE = 5 * 1024 * 1024 * 1024;
@@ -100,6 +127,48 @@ interface DependencyAnalysis {
   runtimeInstallEnabled: boolean;
   allVendorFiles: Files;
   totalBundleSize: number;
+}
+
+export type PackingMode = 'knapsack' | 'bytecode-first';
+
+export interface GenerateBundleResult {
+  fellBackToFullBundle: boolean;
+  /**
+   * How the zip was packed. `knapsack` bundles the largest public packages
+   * to minimize cold-start downloads; `bytecode-first` bundles only the
+   * mandatory set and reserves zip capacity for precompiled bytecode,
+   * deferring every eligible public package to the cold-start install.
+   * Only set when the runtime-install bundle was generated.
+   */
+  packingMode?: PackingMode;
+  /**
+   * Vendor packages guaranteed to be in the zip regardless of the packing
+   * mode: private packages, vercel-runtime, alwaysBundle packages, and
+   * packages force-bundled because they lack a compatible wheel. Only set
+   * when the runtime-install bundle was generated (no full-bundle fallback).
+   */
+  alwaysBundledPackages?: string[];
+  /**
+   * Public packages selected to bundle into the zip (empty in
+   * `bytecode-first` mode). Only set when the runtime-install bundle was
+   * generated (no full-bundle fallback).
+   */
+  bundledPublicPackages?: string[];
+  /**
+   * Public packages deferred to the cold-start install. Only set when the
+   * runtime-install bundle was generated (no full-bundle fallback).
+   */
+  externalizedPublicPackages?: string[];
+}
+
+interface GenerateBundleOptions {
+  /**
+   * Request bytecode-first packing: bundle only the mandatory set and
+   * externalize every eligible public package, freeing zip capacity for
+   * precompiled bytecode. Falls back to knapsack packing when the
+   * externalized set would not safely fit Lambda ephemeral storage.
+   */
+  bytecodeFirst?: boolean;
 }
 
 interface AnalyzeOptions {
@@ -282,8 +351,9 @@ export class PythonDependencyExternalizer {
    * true` so the caller can apply the same compileall handling.
    */
   async generateBundle(
-    files: Files
-  ): Promise<{ fellBackToFullBundle: boolean }> {
+    files: Files,
+    options: GenerateBundleOptions = {}
+  ): Promise<GenerateBundleResult> {
     if (!this.analyzed) {
       throw new Error(
         'PythonDependencyExternalizer.analyze() must be called before generateBundle()'
@@ -506,7 +576,7 @@ export class PythonDependencyExternalizer {
       `Bundle size (${totalBundleSizeMB} MB) exceeds the standard size; optimizing dependencies.`
     );
 
-    // Build size map for externalizable public packages and run the knapsack algorithm
+    // Build size map for externalizable public packages.
     const externalizableSet = new Set(
       externalizablePublic.map(normalizePackageName)
     );
@@ -516,7 +586,43 @@ export class PythonDependencyExternalizer {
       )
     );
 
-    const bundledPublic = lambdaKnapsack(publicPackageSizes, remainingCapacity);
+    // Select the packing mode.
+    //
+    // bytecode-first: bundle no public packages at all — they are all
+    // installed into /tmp at cold start — and let the caller fill the freed
+    // zip capacity with precompiled bytecode. Only safe when the entire
+    // externalized set fits Lambda ephemeral storage with headroom for
+    // transient wheel archives during the install; otherwise fall back to
+    // knapsack packing (which keeps /tmp usage strictly smaller).
+    let packingMode: PackingMode = 'knapsack';
+    if (options.bytecodeFirst) {
+      let externalizedSum = 0;
+      for (const size of publicPackageSizes.values()) {
+        externalizedSum += size;
+      }
+      const ephemeralBudget =
+        LAMBDA_EPHEMERAL_STORAGE_BYTES - TRANSIENT_WHEEL_BUFFER_BYTES;
+      if (externalizedSum <= ephemeralBudget) {
+        packingMode = 'bytecode-first';
+      } else {
+        debug(
+          `bytecode-first packing disabled: externalized set ` +
+            `(${(externalizedSum / (1024 * 1024)).toFixed(2)} MB) exceeds the ` +
+            `ephemeral storage budget ` +
+            `(${(ephemeralBudget / (1024 * 1024)).toFixed(2)} MB); ` +
+            `falling back to knapsack packing`
+        );
+      }
+    }
+
+    const bundledPublic =
+      packingMode === 'bytecode-first'
+        ? []
+        : lambdaKnapsack(publicPackageSizes, remainingCapacity);
+    const bundledPublicSet = new Set(bundledPublic.map(normalizePackageName));
+    const externalizedPublic = externalizablePublic.filter(
+      name => !bundledPublicSet.has(normalizePackageName(name))
+    );
 
     // Mirror the selected packages (always-bundled + knapsack-selected public)
     const allBundledPackages = [...alwaysBundled, ...bundledPublic];
@@ -621,7 +727,13 @@ export class PythonDependencyExternalizer {
       });
     }
 
-    return { fellBackToFullBundle: false };
+    return {
+      fellBackToFullBundle: false,
+      packingMode,
+      alwaysBundledPackages: alwaysBundled,
+      bundledPublicPackages: bundledPublic,
+      externalizedPublicPackages: externalizedPublic,
+    };
   }
 
   /**
@@ -1024,6 +1136,124 @@ export class PythonDependencyExternalizer {
     debug(
       `Collected ${Object.keys(files).length} bytecode files` +
         ` (${(totalSize / (1024 * 1024)).toFixed(2)} MB)` +
+        (includePackages ? ` from ${includePackages.length} packages` : '')
+    );
+    return { files, totalSize, perItemSizes };
+  }
+
+  /**
+   * Collect staged pycache-prefix `.pyc` files for vendor packages.
+   *
+   * For each `.py` file listed in a package's RECORD, derives:
+   * - the staged `.pyc` produced by compileall run with
+   *   `PYTHONPYCACHEPREFIX=stagingDir` against the build venv, and
+   * - the zip bundle key under `_vc_pycache/` for the package's source
+   *   location at runtime (`runtimeRoot`, e.g. `/var/task/_vendor` for
+   *   bundled packages or `/tmp/_vc_deps/.../site-packages` for packages
+   *   installed by the cold-start `uv sync`).
+   *
+   * Staged files that do not exist are silently skipped.
+   * Must be called after `analyze()`.
+   */
+  async collectPrefixBytecodeFiles({
+    stagingDir,
+    runtimeRoot,
+    includePackages,
+  }: {
+    stagingDir: string;
+    runtimeRoot: string;
+    includePackages?: string[];
+  }): Promise<BytecodeCollectionResult> {
+    if (!this.sitePackageDirs || !this.distributions) {
+      throw new Error(
+        'collectPrefixBytecodeFiles() must be called after analyze()'
+      );
+    }
+    if (this.pythonMajor == null || this.pythonMinor == null) {
+      return { files: {}, totalSize: 0, perItemSizes: new Map() };
+    }
+
+    const includeSet = includePackages
+      ? new Set(includePackages.map(normalizePackageName))
+      : null;
+
+    interface PycPending {
+      bundlePath: string;
+      srcFsPath: string;
+      packageName: string;
+    }
+    const pending: PycPending[] = [];
+
+    for (const dir of this.sitePackageDirs) {
+      const dirDistributions = this.distributions.get(dir);
+      if (!dirDistributions) continue;
+
+      const resolvedDir = resolve(dir);
+      const dirPrefix = resolvedDir + sep;
+
+      for (const [name, dist] of dirDistributions) {
+        if (includeSet && !includeSet.has(name)) continue;
+
+        for (const { path: rawPath } of dist.files) {
+          if (!rawPath.endsWith('.py')) continue;
+          // Skip files installed outside site-packages (e.g. ../../bin/x).
+          const filePath = rawPath.replaceAll('/', sep);
+          if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
+            continue;
+          }
+
+          const srcFsPath = deriveStagedPycFsPath(
+            stagingDir,
+            join(dir, filePath),
+            this.pythonMajor,
+            this.pythonMinor
+          );
+          const bundlePath = derivePrefixPycBundlePath(
+            `${runtimeRoot}/${rawPath}`,
+            this.pythonMajor,
+            this.pythonMinor
+          );
+          if (!srcFsPath || !bundlePath) continue;
+
+          pending.push({ bundlePath, srcFsPath, packageName: name });
+        }
+      }
+    }
+
+    // Stat all staged .pyc files in parallel. Missing files (compileall
+    // may have skipped them) are silently dropped.
+    const results = await Promise.all(
+      pending.map(async ({ bundlePath, srcFsPath, packageName }) => {
+        try {
+          const stats = await fs.promises.stat(srcFsPath);
+          return { bundlePath, srcFsPath, size: stats.size, packageName };
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    const files: Files = {};
+    let totalSize = 0;
+    const perItemSizes = new Map<string, number>();
+
+    for (const result of results) {
+      if (!result) continue;
+      files[result.bundlePath] = new FileFsRef({
+        fsPath: result.srcFsPath,
+        size: result.size,
+      });
+      totalSize += result.size;
+      perItemSizes.set(
+        result.packageName,
+        (perItemSizes.get(result.packageName) ?? 0) + result.size
+      );
+    }
+
+    debug(
+      `Collected ${Object.keys(files).length} prefix bytecode files` +
+        ` (${(totalSize / (1024 * 1024)).toFixed(2)} MB)` +
+        ` for runtime root ${runtimeRoot}` +
         (includePackages ? ` from ${includePackages.length} packages` : '')
     );
     return { files, totalSize, perItemSizes };
