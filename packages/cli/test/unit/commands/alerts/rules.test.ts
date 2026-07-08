@@ -91,7 +91,7 @@ describe('alerts rules', () => {
       res.json([{ id: 'ar_1', name: 'Team rule', teamId: 'team_dummy' }]);
     });
 
-    client.setArgv('alerts', 'rules', 'ls', '--all', '--format', 'json');
+    client.setArgv('alerts', 'rules', '--all', '--format', 'json');
 
     const exitCode = await alerts(client);
     expect(exitCode).toBe(0);
@@ -112,7 +112,6 @@ describe('alerts rules', () => {
     client.setArgv(
       'alerts',
       'rules',
-      'ls',
       '--project',
       'explicit-project',
       '--format',
