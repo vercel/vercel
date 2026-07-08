@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import fs from 'fs-extra';
-import { join } from 'path';
+import { basename, join } from 'path';
 import {
   getWriteableDirectory,
   sanitizeConsumerName,
@@ -12,6 +12,7 @@ import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { execSync } from 'child_process';
+import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { vi } from 'vitest';
 import {
   detectBuilders,
@@ -508,6 +509,45 @@ describe.skipIf(flakey)('build', () => {
       { key: 'option:target', value: 'production' },
       { key: 'flag:yes', value: 'TRUE' },
     ]);
+  });
+
+  it('links before asking to pull settings in an unlinked directory', async () => {
+    const cwd = setupUnitFixture('commands/build/static-pull');
+    await fs.remove(join(cwd, '.vercel'));
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: basename(cwd),
+      name: basename(cwd),
+    });
+
+    const originalIsTTY = process.stdin.isTTY;
+    process.stdin.isTTY = true;
+    try {
+      client.cwd = cwd;
+      client.setArgv('build');
+      const exitCodePromise = build(client);
+
+      // The link flow runs before the pull question.
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Link directory to project?');
+      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Linked');
+
+      await expect(client.stderr).toOutput('No Project Settings found locally');
+      client.stdin.write('y\n');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      const projectJson = await fs.readJSON(join(cwd, '.vercel/project.json'));
+      expect(projectJson.projectId).toEqual(basename(cwd));
+    } finally {
+      process.stdin.isTTY = originalIsTTY;
+    }
   });
 
   it('should build root-level `middleware.js` and exclude from static files', async () => {

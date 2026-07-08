@@ -5,6 +5,7 @@ import {
   FileFsRef,
   getWriteableDirectory,
   Lambda,
+  type BuilderV2,
   type BuilderV3,
 } from '@vercel/build-utils';
 import { describe, expect, it } from 'vitest';
@@ -75,6 +76,80 @@ describe('writeBuildResult()', () => {
           )
         )
       ).toBe(false);
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
+
+  it('writes container function configuration to .vc-config.json', async () => {
+    const workPath = await getWriteableDirectory();
+    const outputDir = join(workPath, '.vercel', 'output');
+    const build = {
+      src: 'Dockerfile.vercel',
+      use: '@vercel/container',
+      config: {
+        zeroConfig: true,
+        functions: {
+          'Dockerfile.vercel': {
+            memory: 2048,
+            maxDuration: 60,
+            regions: ['iad1'],
+          },
+        },
+      },
+    };
+    const runtimeBuilder: BuilderV2 = {
+      version: 2,
+      build: async () => {
+        throw new Error('not used by writeBuildResult');
+      },
+    };
+
+    try {
+      await writeBuildResult({
+        repoRootPath: workPath,
+        outputDir,
+        buildResult: {
+          routes: [{ handle: 'filesystem' }, { src: '/(.*)', dest: '/index' }],
+          output: {
+            index: {
+              type: 'Lambda',
+              files: {},
+              handler: 'docker.io/library/nginx:1.27',
+              runtime: 'container',
+              environment: {},
+              memory: 2048,
+              maxDuration: 60,
+              regions: ['iad1'],
+            },
+          },
+        } as unknown as import('@vercel/build-utils').BuildResultV2,
+        build,
+        builder: runtimeBuilder,
+        builderPkg: { name: '@vercel/container' },
+        vercelConfig: {
+          functions: {
+            'Dockerfile.vercel': {
+              memory: 2048,
+              maxDuration: 60,
+              regions: ['iad1'],
+            },
+          },
+        },
+        standalone: false,
+        workPath,
+      });
+
+      const vcConfig = await fs.readJSON(
+        join(outputDir, 'functions/index.func/.vc-config.json')
+      );
+      expect(vcConfig).toMatchObject({
+        handler: 'docker.io/library/nginx:1.27',
+        runtime: 'container',
+        memory: 2048,
+        maxDuration: 60,
+        regions: ['iad1'],
+      });
     } finally {
       await fs.remove(workPath);
     }
