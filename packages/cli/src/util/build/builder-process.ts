@@ -96,19 +96,24 @@ export interface BuildInSubprocessResult {
 
 /**
  * Whether a build can run in a forked worker:
+ * - Only multi-service deployments fork for now. Forking exists to isolate and per-line tag each
+ *   service's build output; single-project builds don't need it, so they stay on the in-process
+ *   path to limit the blast radius of any regression.
  * - `@vercel/static` is a built-in with no module path to `require()` in the worker.
  * - `buildCallback` is a callback the builder invokes DURING `build()` that mutates parent
  *   state, so it can't cross the process boundary. (A pre-deploy callback, by contrast, runs
  *   after all builds via the worker keep-alive mechanism, so it does not block forking.)
  */
 export function canBuildInSubprocess({
+  hasDetectedServices,
   builderPath,
   hasBuildCallback,
 }: {
+  hasDetectedServices: boolean;
   builderPath: string;
   hasBuildCallback: boolean;
 }): boolean {
-  return Boolean(builderPath) && !hasBuildCallback;
+  return hasDetectedServices && Boolean(builderPath) && !hasBuildCallback;
 }
 
 /** Re-prototype a plain object from IPC back into its File instance, by its `type` tag. */

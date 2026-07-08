@@ -1391,10 +1391,11 @@ async function doBuild(
         let subprocessDiagnostics: BuilderDiagnostics | undefined;
         // Run the builder in a forked worker when possible, so its output (including
         // subprocesses it spawns) can be captured and prefixed per line, and so builds are
-        // isolated. Falls back to in-process for builders that can't cross the process
-        // boundary (see canBuildInSubprocess): the built-in `@vercel/static` (no module path
-        // to require) and builds that register a build callback.
+        // isolated. Scoped to multi-service deployments for now; single-project builds and
+        // builders that can't cross the process boundary (see canBuildInSubprocess: the built-in
+        // `@vercel/static`, and builds that register a build callback) stay in-process.
         const subprocessEligible = canBuildInSubprocess({
+          hasDetectedServices: getHasDetectedServices(),
           builderPath: builderWithPkg.path,
           hasBuildCallback: Boolean(buildOptions.buildCallback),
         });
