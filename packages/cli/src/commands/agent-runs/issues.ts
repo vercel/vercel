@@ -39,11 +39,11 @@ function issueType(group: UnknownRecord): string {
   return raw ? (ISSUE_TYPE_LABEL[raw] ?? raw) : '-';
 }
 
-function issueCode(group: UnknownRecord): string {
+function formatIssueCode(group: UnknownRecord): string {
   return readString(group, 'code') ?? '-';
 }
 
-function issueTool(group: UnknownRecord): string {
+function formatIssueTool(group: UnknownRecord): string {
   return readString(group, 'tool') ?? '-';
 }
 
@@ -66,6 +66,8 @@ export default async function issues(client: Client): Promise<number> {
     '--environment': environment,
     '--since': since,
     '--until': until,
+    '--issue-code': issueCode,
+    '--issue-tool': issueTool,
     '--json': json,
     '--scope': scopeFlag,
   } = parsedArgs.flags;
@@ -74,6 +76,8 @@ export default async function issues(client: Client): Promise<number> {
   telemetry.trackCliOptionEnvironment(environment);
   telemetry.trackCliOptionSince(since);
   telemetry.trackCliOptionUntil(until);
+  telemetry.trackCliOptionIssueCode(issueCode);
+  telemetry.trackCliOptionIssueTool(issueTool);
   telemetry.trackCliFlagJson(json);
 
   if (until && !since) {
@@ -101,6 +105,8 @@ export default async function issues(client: Client): Promise<number> {
       environment,
       since,
       until,
+      issueCode,
+      issueTool,
       groupBy: 'issue',
     });
   } catch (err) {
@@ -131,8 +137,8 @@ export default async function issues(client: Client): Promise<number> {
     ),
     ...issueGroups.map(group => [
       issueType(group),
-      issueTool(group),
-      issueCode(group),
+      formatIssueTool(group),
+      formatIssueCode(group),
       formatCount(readNumber(group, 'turns')),
       formatCount(readNumber(group, 'runs')),
       chalk.gray(formatAge(readTimestampMs(group, 'lastSeenAt'))),

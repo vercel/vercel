@@ -52,6 +52,8 @@ export default async function list(client: Client): Promise<number> {
     '--until': until,
     '--search': search,
     '--issue': issue,
+    '--issue-code': issueCode,
+    '--issue-tool': issueTool,
     '--session-status': sessionStatus,
     '--trigger': trigger,
     '--page': page,
@@ -66,6 +68,8 @@ export default async function list(client: Client): Promise<number> {
   telemetry.trackCliOptionUntil(until);
   telemetry.trackCliOptionSearch(search);
   telemetry.trackCliOptionIssue(issue);
+  telemetry.trackCliOptionIssueCode(issueCode);
+  telemetry.trackCliOptionIssueTool(issueTool);
   telemetry.trackCliOptionSessionStatus(sessionStatus);
   telemetry.trackCliOptionTrigger(trigger);
   telemetry.trackCliOptionPage(page);
@@ -145,6 +149,8 @@ export default async function list(client: Client): Promise<number> {
       pageSize: limit,
       search,
       issue: issue === 'error' ? 'error' : undefined,
+      issueCode,
+      issueTool,
       sessionStatus: validatedSessionStatus,
       trigger: validatedTrigger,
     });

@@ -127,6 +127,34 @@ describe('agent-runs list', () => {
     );
   });
 
+  it('forwards issue fingerprint filters', async () => {
+    useLinkedProject();
+    let receivedQuery: Record<string, string> | undefined;
+    client.scenario.get('/api/observability/agent-runs', (req, res) => {
+      receivedQuery = req.query as Record<string, string>;
+      res.json({ runs: [] });
+    });
+
+    client.setArgv(
+      'agent-runs',
+      'list',
+      '--issue',
+      'error',
+      '--issue-code',
+      'ETIMEDOUT',
+      '--issue-tool',
+      'linear.createIssue'
+    );
+    const exitCode = await agentRuns(client);
+
+    expect(exitCode).toBe(0);
+    expect(receivedQuery).toMatchObject({
+      issue: 'error',
+      issue_code: 'ETIMEDOUT',
+      issue_tool: 'linear.createIssue',
+    });
+  });
+
   it('prints the raw response with --json', async () => {
     useLinkedProject();
     const payload = { runs: [sampleRun], pagination: { page: 1, total: 1 } };
@@ -294,7 +322,11 @@ describe('agent-runs list', () => {
       '--session-status',
       'failed',
       '--trigger',
-      'manual'
+      'manual',
+      '--issue-code',
+      'ETIMEDOUT',
+      '--issue-tool',
+      'linear.createIssue'
     );
     const exitCode = await agentRuns(client);
 
@@ -303,6 +335,8 @@ describe('agent-runs list', () => {
       { key: 'subcommand:list', value: 'list' },
       { key: 'option:search', value: '[REDACTED]' },
       { key: 'option:issue', value: 'error' },
+      { key: 'option:issue-code', value: '[REDACTED]' },
+      { key: 'option:issue-tool', value: '[REDACTED]' },
       { key: 'option:session-status', value: 'failed' },
       { key: 'option:trigger', value: 'manual' },
       { key: 'flag:json', value: 'TRUE' },

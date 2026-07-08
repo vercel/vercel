@@ -93,6 +93,32 @@ describe('agent-runs issues', () => {
     });
   });
 
+  it('forwards issue fingerprint filters', async () => {
+    useLinkedProject();
+    let receivedQuery: Record<string, string> | undefined;
+    client.scenario.get('/api/observability/agent-runs', (req, res) => {
+      receivedQuery = req.query as Record<string, string>;
+      res.json({ issueGroups: [] });
+    });
+
+    client.setArgv(
+      'agent-runs',
+      'issues',
+      '--issue-code',
+      'ETIMEDOUT',
+      '--issue-tool',
+      'linear.createIssue'
+    );
+    const exitCode = await agentRuns(client);
+
+    expect(exitCode).toBe(0);
+    expect(receivedQuery).toMatchObject({
+      groupBy: 'issue',
+      issue_code: 'ETIMEDOUT',
+      issue_tool: 'linear.createIssue',
+    });
+  });
+
   it('tracks telemetry for subcommand and flags', async () => {
     useLinkedProject();
     client.scenario.get('/api/observability/agent-runs', (_req, res) => {
