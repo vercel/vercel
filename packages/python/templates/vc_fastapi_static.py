@@ -6,12 +6,13 @@ app object and walking its route table. Prints a JSON array of
 Usage: python -c <this_script> <entrypoint_abs_path> <variable_name>
 """
 
+from __future__ import annotations
+
 import importlib.util
 import json
 import os
 import sys
 from dataclasses import asdict, dataclass
-from typing import Self
 
 
 @dataclass
@@ -20,7 +21,7 @@ class StaticMount:
     directory: str
 
     @classmethod
-    def from_route(cls, route: object) -> Self | None:
+    def from_route(cls, route: object) -> StaticMount | None:
         try:
             from starlette.staticfiles import StaticFiles
         except ImportError:
