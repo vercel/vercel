@@ -48,6 +48,7 @@ fi
 
 # Python + uv — the workspace ships python/vercel-runtime and python/vercel-workers.
 if ! command -v uv >/dev/null 2>&1 || ! uv --version | grep -q "${UV_VERSION}"; then
+  mkdir -p "$HOME/.local/bin"
   curl -fsSL "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-${ARCH}-unknown-linux-gnu.tar.gz" -o /tmp/uv.tgz
   tar -xzf /tmp/uv.tgz -C /tmp
   install -m 0755 "/tmp/uv-${ARCH}-unknown-linux-gnu/uv" "$HOME/.local/bin/uv"
