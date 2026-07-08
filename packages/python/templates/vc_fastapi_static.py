@@ -1,9 +1,9 @@
 """
 Discover StaticFiles mounts in a FastAPI/Starlette app by importing the user's
-app object and walking its route table. Prints a JSON array of
-{"urlPath": str, "directory": str} objects to stdout.
+app object and walking its route table. Writes a JSON array of
+{"urlPath": str, "directory": str} objects to the output file.
 
-Usage: python -c <this_script> <entrypoint_abs_path> <variable_name>
+Usage: python <this_script> <entrypoint_abs_path> <variable_name> <output_path>
 """
 
 from __future__ import annotations
@@ -38,13 +38,19 @@ class StaticMount:
         )
 
 
+def write_output(output_path: str, data: list[object]) -> None:
+    with open(output_path, "w") as f:
+        json.dump(data, f)
+
+
 def main() -> None:
     entrypoint_abs = sys.argv[1]
     variable_name = sys.argv[2]
+    output_path = sys.argv[3]
 
     spec = importlib.util.spec_from_file_location("__vc_app", entrypoint_abs)
     if spec is None or spec.loader is None:
-        print(json.dumps([]))
+        write_output(output_path, [])
         return
 
     mod = importlib.util.module_from_spec(spec)
@@ -52,12 +58,12 @@ def main() -> None:
         spec.loader.exec_module(mod)  # type: ignore[union-attr]
     except Exception as exc:
         print(f"vc_fastapi_static: exec_module failed: {exc}", file=sys.stderr)
-        print(json.dumps([]))
+        write_output(output_path, [])
         return
 
     app = getattr(mod, variable_name, None)
     if app is None:
-        print(json.dumps([]))
+        write_output(output_path, [])
         return
 
     # app.mount("/path", StaticFiles(...)) — in app.routes
@@ -68,7 +74,7 @@ def main() -> None:
         candidates.extend(getattr(group, "routes", []))
 
     mounts = [m for r in candidates if (m := StaticMount.from_route(r)) is not None]
-    print(json.dumps([asdict(m) for m in mounts]))
+    write_output(output_path, [asdict(m) for m in mounts])
 
 
 main()
