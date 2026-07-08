@@ -625,7 +625,8 @@ export const build: BuildVX = async ({
                 : handlerFunction,
           }
         : undefined,
-      service
+      service,
+      repoRootPath
     )) ?? undefined;
 
   if (detected?.error && detected?.baseDir === undefined) {

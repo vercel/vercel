@@ -2002,7 +2002,30 @@ describe('tool.vercel.entrypoint validation', () => {
     fs.writeFileSync(path.join(workPath, 'main.py'), 'app = object()\n');
 
     await expect(detectPythonEntrypoint('fastapi', workPath)).rejects.toThrow(
-      /"tool\.vercel\.entrypoint" in pyproject\.toml is "backend\.api:app" but no matching module file was found/
+      /"tool\.vercel\.entrypoint" in "pyproject\.toml" is "backend\.api:app" but no matching module file was found/
+    );
+  });
+
+  it('names the broken pyproject.toml relative to the repo root', async () => {
+    // Monorepos can contain several pyproject.toml files (one per service);
+    // the error must identify which one is broken.
+    const serviceRoot = path.join(workPath, 'backend');
+    fs.mkdirSync(serviceRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(serviceRoot, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = "api:app"\n'
+    );
+
+    await expect(
+      detectPythonEntrypoint(
+        'fastapi',
+        serviceRoot,
+        undefined,
+        undefined,
+        workPath
+      )
+    ).rejects.toThrow(
+      /"tool\.vercel\.entrypoint" in "backend[/\\]pyproject\.toml"/
     );
   });
 

@@ -247,15 +247,26 @@ async function resolveModuleAttrEntrypoint(
 }
 
 export async function getVercelToolsEntrypoint(
-  workPath: string
+  workPath: string,
+  repoRootPath?: string
 ): Promise<PythonEntrypoint | null> {
+  const pyprojectPath = join(workPath, 'pyproject.toml');
   const pyprojectData = await readConfigFile<{
     tool?: { vercel?: { entrypoint?: unknown } };
-  }>(join(workPath, 'pyproject.toml'));
+  }>(pyprojectPath);
   if (!pyprojectData) return null;
 
   const vercelEntrypoint = pyprojectData.tool?.vercel?.entrypoint;
   if (vercelEntrypoint === undefined) return null;
+
+  // Name the specific file in errors relative to the repo root: a monorepo
+  // can contain several pyproject.toml files (one per service), so a bare
+  // "pyproject.toml" would not identify which one is broken.
+  const relPyprojectPath = relative(repoRootPath ?? workPath, pyprojectPath);
+  const displayPath =
+    !relPyprojectPath || relPyprojectPath.startsWith('..')
+      ? pyprojectPath
+      : relPyprojectPath;
 
   // `tool.vercel.*` is Vercel-owned configuration: a declared entrypoint that
   // cannot be resolved is a hard error. Silently falling back to filename
@@ -265,8 +276,7 @@ export async function getVercelToolsEntrypoint(
   if (typeof vercelEntrypoint !== 'string') {
     throw new NowBuildError({
       code: 'PYTHON_INVALID_ENTRYPOINT',
-      message:
-        '"tool.vercel.entrypoint" in pyproject.toml must be a string in "module:object" format (e.g. "main:app").',
+      message: `"tool.vercel.entrypoint" in "${displayPath}" must be a string in "module:object" format (e.g. "main:app").`,
       link: PYTHON_ENTRYPOINT_DOCS_URL,
       action: 'Learn More',
     });
@@ -278,7 +288,7 @@ export async function getVercelToolsEntrypoint(
   if (!resolved) {
     throw new NowBuildError({
       code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
-      message: `"tool.vercel.entrypoint" in pyproject.toml is "${vercelEntrypoint}" but no matching module file was found. Use "module:object" format (e.g. "main:app") and ensure the module file exists, or remove the setting to use automatic entrypoint detection.`,
+      message: `"tool.vercel.entrypoint" in "${displayPath}" is "${vercelEntrypoint}" but no matching module file was found. Use "module:object" format (e.g. "main:app") and ensure the module file exists, or remove the setting to use automatic entrypoint detection.`,
       link: PYTHON_ENTRYPOINT_DOCS_URL,
       action: 'Learn More',
     });
@@ -521,7 +531,8 @@ export async function detectPythonEntrypoint(
   framework: PythonFramework | undefined,
   workPath: string,
   configuredEntrypoint?: { filePath: string; varName?: string },
-  service?: { type?: ServiceType; trigger?: JobTrigger }
+  service?: { type?: ServiceType; trigger?: JobTrigger },
+  repoRootPath?: string
 ): Promise<DetectedPythonEntrypoint | null> {
   // If a configured entrypoint was provided, check it first
   if (configuredEntrypoint) {
@@ -579,7 +590,7 @@ export async function detectPythonEntrypoint(
   }
 
   // Check `tool.vercel.entrypoint` in pyproject.toml first.
-  const vercelEntry = await getVercelToolsEntrypoint(workPath);
+  const vercelEntry = await getVercelToolsEntrypoint(workPath, repoRootPath);
   if (vercelEntry) return { entrypoint: vercelEntry };
 
   // Then do a framework-specific search, collecting diagnostics for better error messages

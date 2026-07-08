@@ -730,7 +730,8 @@ export const startDevServer: StartDevServer = async opts => {
               : handlerFunction,
         }
       : undefined,
-    service
+    service,
+    opts.repoRootPath
   );
   let hookResult: Awaited<ReturnType<typeof runFrameworkHook>> | undefined;
   if (detected?.entrypoint) {
