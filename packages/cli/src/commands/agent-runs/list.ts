@@ -52,6 +52,7 @@ export default async function list(client: Client): Promise<number> {
     '--until': until,
     '--search': search,
     '--issue': issue,
+    '--session-status': sessionStatus,
     '--page': page,
     '--limit': limit,
     '--json': json,
@@ -64,6 +65,7 @@ export default async function list(client: Client): Promise<number> {
   telemetry.trackCliOptionUntil(until);
   telemetry.trackCliOptionSearch(search);
   telemetry.trackCliOptionIssue(issue);
+  telemetry.trackCliOptionSessionStatus(sessionStatus);
   telemetry.trackCliOptionPage(page);
   telemetry.trackCliOptionLimit(limit);
   telemetry.trackCliFlagJson(json);
@@ -77,6 +79,25 @@ export default async function list(client: Client): Promise<number> {
       '`--issue` currently supports only `error`.'
     );
   }
+  if (
+    sessionStatus &&
+    sessionStatus !== 'completed' &&
+    sessionStatus !== 'failed' &&
+    sessionStatus !== 'running' &&
+    sessionStatus !== 'waiting'
+  ) {
+    return invalidArguments(
+      client,
+      '`--session-status` supports `completed`, `failed`, `running`, or `waiting`.'
+    );
+  }
+  const validatedSessionStatus =
+    sessionStatus === 'completed' ||
+    sessionStatus === 'failed' ||
+    sessionStatus === 'running' ||
+    sessionStatus === 'waiting'
+      ? sessionStatus
+      : undefined;
 
   const scope = await resolveAgentRunsScope(client, {
     scopeFlag,
@@ -101,6 +122,7 @@ export default async function list(client: Client): Promise<number> {
       pageSize: limit,
       search,
       issue: issue === 'error' ? 'error' : undefined,
+      sessionStatus: validatedSessionStatus,
     });
   } catch (err) {
     output.stopSpinner();

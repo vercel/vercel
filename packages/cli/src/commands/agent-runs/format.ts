@@ -86,11 +86,11 @@ export function runId(run: UnknownRecord): string {
 }
 
 export function runStatus(run: UnknownRecord): string {
-  return readString(run, 'status', 'state') ?? PLACEHOLDER;
+  return readString(run, 'sessionStatus', 'status', 'state') ?? PLACEHOLDER;
 }
 
 export function formatRunStatus(run: UnknownRecord): string {
-  const status = readString(run, 'status', 'state');
+  const status = readString(run, 'sessionStatus', 'status', 'state');
   if (!status) return PLACEHOLDER;
   const label = title(status.replace(/[_-]+/g, ' '));
   const CIRCLE = '● ';

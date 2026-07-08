@@ -73,6 +73,14 @@ export const listSubcommand = {
       description: 'Filter Agent Runs by issue type. Currently supports: error',
     },
     {
+      name: 'session-status',
+      shorthand: null,
+      type: String,
+      argument: 'completed|failed|running|waiting',
+      deprecated: false,
+      description: 'Filter Agent Runs by Eve session status',
+    },
+    {
       name: 'page',
       shorthand: null,
       type: Number,

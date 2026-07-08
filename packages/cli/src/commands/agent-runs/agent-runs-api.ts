@@ -28,6 +28,7 @@ export interface AgentRunsQuery {
   pageSize?: number;
   search?: string;
   issue?: 'error';
+  sessionStatus?: 'completed' | 'failed' | 'running' | 'waiting';
   runId?: string;
   trace?: boolean;
 }
@@ -61,6 +62,9 @@ export function buildAgentRunsUrl(query: AgentRunsQuery): string {
   }
   if (query.issue) {
     url.searchParams.set('issue', query.issue);
+  }
+  if (query.sessionStatus) {
+    url.searchParams.set('session_status', query.sessionStatus);
   }
   if (query.runId) {
     url.searchParams.set('runId', query.runId);

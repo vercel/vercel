@@ -30,6 +30,7 @@ function useLinkedProject() {
 const sampleRun = {
   id: 'run_001',
   status: 'completed',
+  sessionStatus: 'waiting',
   model: 'anthropic/claude-opus-4.8',
   trigger: 'api',
   createdAt: Date.now() - 60_000,
@@ -71,14 +72,14 @@ describe('agent-runs list', () => {
     expect(receivedQuery).not.toHaveProperty('view');
     const stdout = client.stdout.getFullOutput();
     expect(stdout).toContain('run_001');
-    expect(stdout).toContain('Completed');
+    expect(stdout).toContain('Waiting');
     expect(stdout).toContain('anthropic/claude-opus-4.8');
     expect(client.stderr.getFullOutput()).toContain(
       'vercel agent-runs inspect <runId>'
     );
   });
 
-  it('forwards search, issue, pagination, environment, and time range params', async () => {
+  it('forwards search, issue, session status, pagination, environment, and time range params', async () => {
     useLinkedProject();
     let receivedQuery: Record<string, string> | undefined;
     client.scenario.get('/api/observability/agent-runs', (req, res) => {
@@ -93,6 +94,8 @@ describe('agent-runs list', () => {
       'checkout',
       '--issue',
       'error',
+      '--session-status',
+      'failed',
       '--page',
       '2',
       '--limit',
@@ -108,6 +111,7 @@ describe('agent-runs list', () => {
     expect(receivedQuery).toMatchObject({
       search: 'checkout',
       issue: 'error',
+      session_status: 'failed',
       page: '2',
       pageSize: '50',
       environment: 'preview',
@@ -207,6 +211,16 @@ describe('agent-runs list', () => {
     );
   });
 
+  it('errors when --session-status is not supported', async () => {
+    useLinkedProject();
+    client.setArgv('agent-runs', 'list', '--session-status', 'cancelled');
+    const exitCode = await agentRuns(client);
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      '`--session-status` supports `completed`, `failed`, `running`, or `waiting`.'
+    );
+  });
+
   it('emits a JSON error payload in non-interactive mode for invalid arguments', async () => {
     useLinkedProject();
     const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
@@ -263,7 +277,9 @@ describe('agent-runs list', () => {
       '--search',
       'checkout',
       '--issue',
-      'error'
+      'error',
+      '--session-status',
+      'failed'
     );
     const exitCode = await agentRuns(client);
 
@@ -272,6 +288,7 @@ describe('agent-runs list', () => {
       { key: 'subcommand:list', value: 'list' },
       { key: 'option:search', value: '[REDACTED]' },
       { key: 'option:issue', value: 'error' },
+      { key: 'option:session-status', value: 'failed' },
       { key: 'flag:json', value: 'TRUE' },
     ]);
   });
