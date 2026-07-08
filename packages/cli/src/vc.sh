@@ -93,7 +93,23 @@ if [ "$verbose_diag" = "1" ]; then
   {
     echo "dispatcher: $self"
     echo "version:    $VERSION"
+    # OS/arch in npm platform-package convention (what a native payload
+    # selection would use), with raw uname alongside.
+    case $(uname -s 2>/dev/null) in
+      Darwin) np_os=darwin ;;
+      Linux) np_os=linux ;;
+      *) np_os=unknown ;;
+    esac
+    case $(uname -m 2>/dev/null) in
+      arm64 | aarch64) np_arch=arm64 ;;
+      x86_64 | amd64) np_arch=x64 ;;
+      *) np_arch=unknown ;;
+    esac
+    echo "platform:   $np_os-$np_arch ($(uname -sm 2>/dev/null))"
     echo "global:     $is_global"
+    if [ -n "${npm_config_user_agent:-}" ]; then
+      echo "invoked by: $npm_config_user_agent"
+    fi
     echo "store dir:  $store"
     if [ -r "$store/current.path" ]; then
       {
@@ -126,7 +142,7 @@ fi
 # Fire-and-forget background work (stand-in for the store seeder).
 if [ "${VERCEL_CLI_STORE_DEBUG:-}" = "1" ]; then
   (
-    echo "seed-check: invoked v$VERSION at $(date -u '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null)" \
+    echo "seed-check: invoked v$VERSION ($(uname -sm 2>/dev/null)) at $(date -u '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null)" \
       >>"$store/seed-debug.log"
   ) >/dev/null 2>&1 &
   debug "background seed-check spawned (pid $!)"
