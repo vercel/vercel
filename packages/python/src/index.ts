@@ -1033,6 +1033,9 @@ export const build: BuildVX = async ({
   const compileAllEnabled = shouldCompileAll({
     isDev: meta.isDev,
     hasCustomCommand,
+    // A pre-deploy command can rewrite source after the build, which would make
+    // unchecked-hash precompiled bytecode stale; skip precompilation to avoid serving it.
+    hasPreDeployCommand: typeof preDeployCommand === 'string',
   });
 
   const predefinedExcludes = [
