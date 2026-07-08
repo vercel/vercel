@@ -92,7 +92,9 @@ import {
   getPyprojectSubscribers,
   getSubscriberConsumerName,
   getSubscriberOutputPath,
+  resolveSubscriberSubscriptions,
   type Subscriber,
+  type SubscriberSubscription,
 } from './subscribers';
 
 const writeFile = fs.promises.writeFile;
@@ -111,8 +113,15 @@ export { detectEntrypoint } from './entrypoint';
 export const version = -1;
 
 function getDevSubscriberTopics(subscriber: Subscriber): ServiceQueueTopic[] {
+  // Topic detection needs the project's dependencies, and no build venv
+  // exists at dev startup. Instead of importing user code here, subscribers
+  // without explicit topics subscribe to every topic ("*"); the worker's own
+  // SDK routing decides what it handles, which is the dispatcher in
+  // production too. Explicit topics pass through unverified. The build is
+  // the enforcement point for detection and the topic-subset rule.
+  const topics = subscriber.topics ?? ['*'];
   const { retryAfterSeconds, initialDelaySeconds } = subscriber.triggerDefaults;
-  return subscriber.topics.map(topic => ({
+  return topics.map(topic => ({
     topic,
     ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
     ...(initialDelaySeconds === undefined ? {} : { initialDelaySeconds }),
@@ -1005,6 +1014,25 @@ export const build: BuildVX = async ({
     workPath,
   });
 
+  // Resolve subscriber topics now that dependencies are installed. Static
+  // topics come from pyproject.toml; subscribers without topics import their
+  // entrypoint in the build venv and call get_queue_subscriptions() on it.
+  const resolvedSubscribers: Array<{
+    subscriber: Subscriber;
+    subscriptions: SubscriberSubscription[];
+  }> = [];
+  for (const subscriber of subscribers) {
+    resolvedSubscribers.push({
+      subscriber,
+      subscriptions: await resolveSubscriberSubscriptions({
+        subscriber,
+        pythonBin: getVenvPythonBin(venvPath),
+        env: pythonEnv,
+        workPath,
+      }),
+    });
+  }
+
   // Build trampoline env line for cron routing.
   // Injected into os.environ.update() in the Python trampoline source,
   // not lambdaEnv, because the platform rejects env var names with
@@ -1275,15 +1303,15 @@ export const build: BuildVX = async ({
 
   const subscriberLambdas: Record<string, Lambda> = {};
 
-  for (const subscriber of subscribers) {
+  for (const { subscriber, subscriptions } of resolvedSubscribers) {
     const outputPath = getSubscriberOutputPath(subscriber.name);
     const consumer = getSubscriberConsumerName(subscriber.name);
-    const experimentalTriggers: TriggerEvent[] = subscriber.topics.map(
-      topic => ({
+    const experimentalTriggers: TriggerEvent[] = subscriptions.map(
+      ({ topic, trigger }) => ({
         type: 'queue/v2beta',
         topic,
         consumer,
-        ...subscriber.triggerDefaults,
+        ...trigger,
       })
     );
 
