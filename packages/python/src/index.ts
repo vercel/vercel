@@ -178,13 +178,8 @@ async function addVendorBytecodeWithinCapacity({
 
 /**
  * Add vendor bytecode within `capacity`, in tiers: earlier tiers get
- * remaining capacity first, and packages outside every tier are never
- * collected. Used on the runtime-install path so always-bundled packages
- * (private, wheel-less, alwaysBundle) take priority over knapsack-selected
- * public packages, and externalized packages can't contribute bytecode.
- *
- * A tier of `undefined` collects every vendor package (unrestricted).
- * Returns the remaining capacity after all tiers.
+ * capacity first; packages outside every tier are never collected. A tier
+ * of `undefined` collects everything. Returns the remaining capacity.
  */
 export async function addVendorBytecodeInTiers({
   files,
@@ -1173,12 +1168,8 @@ export const build: BuildVX = async ({
       // Only .pyc for .py files already in the bundle are collected, so
       // excluded source can't re-enter as .pyc. Bytecode is a pure
       // optimization: failures are logged and the build continues.
-      //
-      // `vendorPackageTiers` restricts and prioritizes vendor bytecode
-      // collection: earlier tiers get remaining capacity first, and packages
-      // outside every tier are never collected (used on the runtime-install
-      // path so externalized packages can't contribute bytecode). When
-      // omitted, a single unrestricted pass covers every vendor package.
+      // `vendorPackageTiers` restricts/prioritizes vendor collection;
+      // omitted = one unrestricted pass.
       const runCompileAllAndFillBytecode = async (
         capacityBytes: number,
         vendorPackageTiers?: string[][]
@@ -1246,15 +1237,10 @@ export const build: BuildVX = async ({
         }
       };
 
-      // Bytecode-first packing (runtime-install path): every eligible public
-      // package is deferred to the cold-start install, and the freed zip
-      // capacity is filled with a pycache-prefix bytecode tree covering the
-      // app, bundled vendor packages, AND the packages installed into /tmp
-      // at cold start. At runtime, PYTHONPYCACHEPREFIX points into the
-      // read-only zip tree, so imports skip compilation even for /tmp
-      // sources — `uv sync --frozen` installs the exact locked versions the
-      // bytecode was compiled from. Failures degrade to shipping no
-      // bytecode; the dependency split is unaffected either way.
+      // Bytecode-first fill: ship a pycache-prefix tree covering the app,
+      // bundled vendor packages, and the packages installed into /tmp at
+      // cold start (safe: `uv sync --frozen` installs the exact versions
+      // the bytecode was compiled from). Failures degrade to no bytecode.
       const runPrefixCompileAndFill = async (
         bundleResult: GenerateBundleResult
       ) => {
@@ -1343,8 +1329,7 @@ export const build: BuildVX = async ({
               }),
           });
 
-          // Only point the runtime at the prefix tree when bytecode
-          // actually shipped.
+          // Point the runtime at the tree only when bytecode shipped.
           if (Object.keys(files).length > beforeCount) {
             lambdaEnv.PYTHONPYCACHEPREFIX = RUNTIME_PYCACHE_PREFIX;
           }
@@ -1365,13 +1350,6 @@ export const build: BuildVX = async ({
         // Pack the zip and defer the rest to runtime install. If it can't be
         // made to fit, generateBundle bundles everything for the large
         // functions path (which then takes compileall, below).
-        //
-        // With compileall enabled, request bytecode-first packing: bundle
-        // only the mandatory vendor set, externalize everything else to the
-        // cold-start install, and spend the freed zip capacity on a
-        // pycache-prefix bytecode tree covering all of it. generateBundle
-        // falls back to knapsack packing when the externalized set wouldn't
-        // safely fit ephemeral storage.
         const bytecodeFirst =
           compileAllEnabled &&
           pythonVersion.major != null &&
@@ -1389,16 +1367,10 @@ export const build: BuildVX = async ({
         } else if (bundleResult.packingMode === 'bytecode-first') {
           await runPrefixCompileAndFill(bundleResult);
         } else if (compileAllEnabled) {
-          // Knapsack packing (bytecode-first was skipped or fell back): the
-          // dependency split is final, so bytecode may only fill the slack
-          // left under the fill ceiling and is collected exclusively for
-          // in-zip packages. Externalized deps are untouched — the /tmp
-          // footprint at cold start is unchanged and the fill (real,
-          // stat'd .pyc sizes) can't exceed the ceiling. Compile only when
-          // enough of the expected bytecode ships to justify the compile
-          // time. Always-bundled packages (private, wheel-less,
-          // alwaysBundle) get capacity before knapsack-selected public
-          // packages.
+          // Knapsack packing (bytecode-first skipped or fell back): fill
+          // only the slack under the ceiling with bytecode for in-zip
+          // packages, and only when enough of it ships to justify the
+          // compile time. Always-bundled packages get capacity first.
           const currentSize = await calculateBundleSize(files);
           const capacity = BYTECODE_FILL_CEILING_BYTES - currentSize;
           const estimate = await estimateBytecodeSize(files);

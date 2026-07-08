@@ -6,19 +6,13 @@ import { join, sep } from 'path';
 /** Converts a hung compileall subprocess into a skipped optimization. */
 export const COMPILEALL_TIMEOUT_MS = 5 * 60 * 1000;
 
-/**
- * Directory in the Lambda zip that holds the pycache-prefix bytecode tree
- * (see https://docs.python.org/3/library/sys.html#sys.pycache_prefix).
- * Reserved name; chosen to be unlikely to collide with user files.
- */
+/** Zip directory holding the `sys.pycache_prefix` bytecode tree. */
 export const PYCACHE_PREFIX_DIR = '_vc_pycache';
 
 /**
- * Absolute path of the pycache prefix at runtime. The Lambda zip is
- * extracted to /var/task, so the tree shipped under `_vc_pycache/` in the
- * bundle is addressable at this path. Set as PYTHONPYCACHEPREFIX on the
- * Lambda so CPython resolves bytecode from the read-only zip tree even for
- * sources installed into /tmp at cold start.
+ * Runtime path of the bytecode tree (zip extracts to /var/task). Set as
+ * PYTHONPYCACHEPREFIX so imports resolve bytecode from the read-only zip,
+ * even for sources installed into /tmp at cold start.
  */
 export const RUNTIME_PYCACHE_PREFIX = `/var/task/${PYCACHE_PREFIX_DIR}`;
 
@@ -72,9 +66,8 @@ interface CompileAllOptions {
   /** Optional regular expression passed to compileall's -x skip filter. */
   excludeRegex?: string;
   /**
-   * When set, bytecode is written into this directory as a pycache-prefix
-   * tree (`<prefix>/<abs source dir>/<mod>.<tag>.pyc`) instead of adjacent
-   * `__pycache__` directories, via PYTHONPYCACHEPREFIX.
+   * Write bytecode into this pycache-prefix tree (via PYTHONPYCACHEPREFIX)
+   * instead of adjacent `__pycache__` directories.
    */
   pycachePrefix?: string;
 }
@@ -149,13 +142,8 @@ export function derivePycPath(
 }
 
 /**
- * Derive the pycache-prefix relative `.pyc` path for a `.py` source path.
- * CPython lays out `sys.pycache_prefix` trees as
- * `<prefix>/<source dir minus leading separator>/<mod>.<tag>.pyc`
- * (no `__pycache__` component).
- *
- * Given `"pkg/mod.py"` and version `(3, 12)`, returns
- * `"pkg/mod.cpython-312.pyc"`. Returns `null` if the input is not `.py`.
+ * Prefix-tree relative `.pyc` path (no `__pycache__` component):
+ * `"pkg/mod.py"` → `"pkg/mod.cpython-312.pyc"`. Null for non-`.py` input.
  */
 export function derivePrefixPycRelPath(
   pyRelPath: string,
@@ -167,11 +155,8 @@ export function derivePrefixPycRelPath(
 }
 
 /**
- * Derive the on-disk staging path of the `.pyc` that compileall (run with
- * PYTHONPYCACHEPREFIX=stagingDir) produced for an absolute source path:
- * `<stagingDir>/<abs source path minus leading sep, .py → .<tag>.pyc>`.
- *
- * Returns `null` if the input is not a `.py` file.
+ * Staged `.pyc` path produced by compileall run with
+ * PYTHONPYCACHEPREFIX=stagingDir for an absolute source path.
  */
 export function deriveStagedPycFsPath(
   stagingDir: string,
@@ -189,12 +174,8 @@ export function deriveStagedPycFsPath(
 }
 
 /**
- * Derive the zip bundle key of the `.pyc` for a source file that lives at
- * `runtimeAbsPath` on the Lambda: the pycache-prefix tree ships under
- * `_vc_pycache/` in the bundle, so the key is
- * `_vc_pycache/<runtime path minus leading slash, .py → .<tag>.pyc>`.
- *
- * Returns `null` if the input is not a `.py` file.
+ * Zip bundle key of the `.pyc` for a source living at `runtimeAbsPath`:
+ * `_vc_pycache/<runtime path, .py → .<tag>.pyc>`.
  */
 export function derivePrefixPycBundlePath(
   runtimeAbsPath: string,
@@ -255,11 +236,9 @@ export function getCompileAllAppExcludeRegex(workPath: string): string {
 }
 
 /**
- * Collect staged pycache-prefix `.pyc` files for the app's bundled `.py`
- * sources. For each `.py` file in the bundle (rooted at workPath, addressed
- * at /var/task at runtime), derives the staged `.pyc` path under
- * `stagingDir` and the `_vc_pycache/var/task/...` bundle key. Missing
- * staged files (compileall may have skipped them) are silently dropped.
+ * Collect staged prefix `.pyc` files for the app's bundled `.py` sources,
+ * keyed under `_vc_pycache/<runtimeTaskRoot>/...`. Missing staged files are
+ * silently dropped.
  */
 export async function collectAppPrefixBytecodeFiles({
   stagingDir,

@@ -80,21 +80,15 @@ export const BYTECODE_FILL_CEILING_BYTES =
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
 export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 500 * 1024 * 1024;
 
-// Extra /tmp headroom reserved for transient wheel archives while the
-// cold-start `uv sync` is downloading/extracting (installs hardlink from an
-// ephemeral cache, so steady-state usage is ~1x installed size, but archives
-// exist briefly during the install). Applied to the bytecode-first packing
-// mode, which externalizes every eligible public package.
+// /tmp headroom for transient wheel archives during the cold-start
+// `uv sync` (steady-state usage is ~1x installed size via hardlinks).
 export const TRANSIENT_WHEEL_BUFFER_BYTES = 50 * 1024 * 1024;
 
-// Where the cold-start bootstrap installs externalized dependencies.
-// Must match `_deps_dir` in python/vercel-runtime/src/vercel_runtime/vc_init.py.
+// Cold-start install target. Must match `_deps_dir` in
+// python/vercel-runtime/src/vercel_runtime/vc_init.py.
 export const RUNTIME_DEPS_DIR = '/tmp/_vc_deps';
 
-/**
- * Absolute runtime path of the site-packages directory that the cold-start
- * `uv sync` populates. Must mirror the layout `vc_init.py` constructs.
- */
+/** Runtime site-packages dir populated by the cold-start `uv sync`. */
 export function runtimeDepsSitePackagesDir(
   pythonMajor: number,
   pythonMinor: number
@@ -131,41 +125,30 @@ interface DependencyAnalysis {
 
 export type PackingMode = 'knapsack' | 'bytecode-first';
 
+// Package lists below are only set when the runtime-install bundle was
+// generated (no full-bundle fallback).
 export interface GenerateBundleResult {
   fellBackToFullBundle: boolean;
   /**
-   * How the zip was packed. `knapsack` bundles the largest public packages
-   * to minimize cold-start downloads; `bytecode-first` bundles only the
-   * mandatory set and reserves zip capacity for precompiled bytecode,
-   * deferring every eligible public package to the cold-start install.
-   * Only set when the runtime-install bundle was generated.
+   * `knapsack` bundles the largest public packages to minimize cold-start
+   * downloads; `bytecode-first` bundles only the mandatory set and reserves
+   * zip capacity for precompiled bytecode.
    */
   packingMode?: PackingMode;
   /**
-   * Vendor packages guaranteed to be in the zip regardless of the packing
-   * mode: private packages, vercel-runtime, alwaysBundle packages, and
-   * packages force-bundled because they lack a compatible wheel. Only set
-   * when the runtime-install bundle was generated (no full-bundle fallback).
+   * Always in the zip: private, vercel-runtime, alwaysBundle, and
+   * wheel-less (force-bundled) packages.
    */
   alwaysBundledPackages?: string[];
-  /**
-   * Public packages selected to bundle into the zip (empty in
-   * `bytecode-first` mode). Only set when the runtime-install bundle was
-   * generated (no full-bundle fallback).
-   */
+  /** Public packages bundled into the zip (empty in bytecode-first mode). */
   bundledPublicPackages?: string[];
-  /**
-   * Public packages deferred to the cold-start install. Only set when the
-   * runtime-install bundle was generated (no full-bundle fallback).
-   */
+  /** Public packages deferred to the cold-start install. */
   externalizedPublicPackages?: string[];
 }
 
 interface GenerateBundleOptions {
   /**
-   * Request bytecode-first packing: bundle only the mandatory set and
-   * externalize every eligible public package, freeing zip capacity for
-   * precompiled bytecode. Falls back to knapsack packing when the
+   * Request bytecode-first packing. Falls back to knapsack packing when the
    * externalized set would not safely fit Lambda ephemeral storage.
    */
   bytecodeFirst?: boolean;
@@ -586,14 +569,9 @@ export class PythonDependencyExternalizer {
       )
     );
 
-    // Select the packing mode.
-    //
-    // bytecode-first: bundle no public packages at all — they are all
-    // installed into /tmp at cold start — and let the caller fill the freed
-    // zip capacity with precompiled bytecode. Only safe when the entire
-    // externalized set fits Lambda ephemeral storage with headroom for
-    // transient wheel archives during the install; otherwise fall back to
-    // knapsack packing (which keeps /tmp usage strictly smaller).
+    // bytecode-first bundles no public packages (all installed into /tmp at
+    // cold start), freeing zip capacity for bytecode. Only safe when the
+    // externalized set fits ephemeral storage with wheel-archive headroom.
     let packingMode: PackingMode = 'knapsack';
     if (options.bytecodeFirst) {
       let externalizedSum = 0;
@@ -1142,18 +1120,11 @@ export class PythonDependencyExternalizer {
   }
 
   /**
-   * Collect staged pycache-prefix `.pyc` files for vendor packages.
-   *
-   * For each `.py` file listed in a package's RECORD, derives:
-   * - the staged `.pyc` produced by compileall run with
-   *   `PYTHONPYCACHEPREFIX=stagingDir` against the build venv, and
-   * - the zip bundle key under `_vc_pycache/` for the package's source
-   *   location at runtime (`runtimeRoot`, e.g. `/var/task/_vendor` for
-   *   bundled packages or `/tmp/_vc_deps/.../site-packages` for packages
-   *   installed by the cold-start `uv sync`).
-   *
-   * Staged files that do not exist are silently skipped.
-   * Must be called after `analyze()`.
+   * Collect staged prefix `.pyc` files for vendor packages, keyed under
+   * `_vc_pycache/<runtimeRoot>/...` (`runtimeRoot` = `/var/task/_vendor`
+   * for bundled packages, the /tmp site-packages dir for externalized
+   * ones). Missing staged files are silently skipped. Must be called after
+   * `analyze()`.
    */
   async collectPrefixBytecodeFiles({
     stagingDir,
