@@ -170,12 +170,26 @@ async function processMessage(message) {
   // Prepare each output for IPC. Lambda/EdgeFunction carry a `files` map; Prerender wraps a
   // `lambda` (with its own `files`) and a `fallback` file. serializeFiles only spills
   // oversized FileBlob Buffers to temp files — everything else rides IPC as-is.
-  const serializeOutput = output => {
+  const serializeOutput = (output, dedup) => {
     if (!output || typeof output !== 'object') return;
     if (output.type === 'Lambda' || output.type === 'EdgeFunction') {
       serializeFiles(output.files);
     } else if (output.type === 'Prerender') {
-      if (output.lambda) serializeFiles(output.lambda.files);
+      // A single Lambda instance is routinely shared as the `.lambda` of many
+      // Prerender outputs (e.g. `@vercel/next` groups prerendered/ISR routes and
+      // an HTML prerender with its `.rsc` data prerender onto one Lambda). That
+      // shared identity — which writeBuildResult uses to emit a symlink instead of
+      // a duplicate function — is only preserved across IPC if we dedup nested
+      // lambdas too (`dedup` is provided for the V2 output map). Without it every
+      // prerender route ships a full copy of the same function.
+      if (output.lambda) {
+        const deduped = dedup ? dedup(output.lambda) : output.lambda;
+        if (deduped !== output.lambda) {
+          output.lambda = deduped;
+        } else {
+          serializeFiles(output.lambda.files);
+        }
+      }
       if (output.fallback) serializeFiles({ fallback: output.fallback });
     }
   };
@@ -186,23 +200,38 @@ async function processMessage(message) {
     if (effectiveVersion === 3) {
       serializeOutput(concrete.output);
     } else {
-      // A V2 output map can reference the SAME Lambda/EdgeFunction instance under multiple
-      // keys; writeBuildResult relies on that shared identity to emit a symlink instead of a
-      // duplicate function. JSON/IPC would clone each reference into a distinct object and
-      // break the dedup, so replace repeat references with a { __sharedRef: <firstKey> }
-      // sentinel the parent resolves back to one instance after deserialization.
+      // A V2 output map can reference the SAME Lambda/EdgeFunction instance in
+      // multiple places — under multiple top-level keys, and (crucially) as the
+      // nested `.lambda` of many Prerender outputs. writeBuildResult relies on that
+      // shared identity to emit a symlink instead of a duplicate function. JSON/IPC
+      // would clone each reference into a distinct object and break the dedup, so on
+      // the first time we see an object we tag it with a `__sharedId` and every later
+      // reference is replaced by a `{ __sharedRef: <id> }` sentinel the parent
+      // resolves back to the one instance after deserialization.
       const seen = new Map();
+      let nextSharedId = 0;
+      // Returns the value unchanged on first encounter (tagging it so the parent can
+      // register it by id), or a sentinel referencing that first encounter.
+      const dedup = value => {
+        const existingId = seen.get(value);
+        if (existingId !== undefined) {
+          return { __sharedRef: existingId };
+        }
+        const id = nextSharedId++;
+        seen.set(value, id);
+        value.__sharedId = id;
+        return value;
+      };
       for (const key of Object.keys(concrete.output)) {
         const value = concrete.output[key];
         if (value && typeof value === 'object') {
-          const firstKey = seen.get(value);
-          if (firstKey !== undefined) {
-            concrete.output[key] = { __sharedRef: firstKey };
+          const deduped = dedup(value);
+          if (deduped !== value) {
+            concrete.output[key] = deduped;
             continue;
           }
-          seen.set(value, key);
         }
-        serializeOutput(value);
+        serializeOutput(value, dedup);
       }
     }
   }

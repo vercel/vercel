@@ -168,24 +168,41 @@ function rehydrateDiagnostics(
   return result;
 }
 
-/** Rehydrate a single Lambda/EdgeFunction/Prerender/File output from its serialized form. */
-function rehydrateOutput(output: unknown): void {
+/**
+ * Rehydrate a single Lambda/EdgeFunction/Prerender/File output from its serialized form.
+ * Objects the worker tagged with a `__sharedId` are registered in `sharedRefs` so later
+ * `{ __sharedRef }` sentinels (including nested `Prerender.lambda` references) can be
+ * resolved back to the one shared instance.
+ */
+function rehydrateOutput(
+  output: unknown,
+  sharedRefs: Map<number, object>
+): void {
   if (!output || typeof output !== 'object') return;
   const obj = output as {
     type?: string;
     files?: Record<string, SerializedFile>;
     lambda?: unknown;
     fallback?: unknown;
+    __sharedId?: number;
   };
+  if (typeof obj.__sharedId === 'number') {
+    sharedRefs.set(obj.__sharedId, obj);
+    delete obj.__sharedId;
+  }
   if (obj.type === 'Lambda') {
     rehydrateFiles(obj.files);
     Object.setPrototypeOf(obj, Lambda.prototype);
   } else if (obj.type === 'EdgeFunction') {
     rehydrateFiles(obj.files);
   } else if (obj.type === 'Prerender') {
-    // Prerender wraps a Lambda and a fallback File, each needing rehydration.
-    if (obj.lambda) rehydrateOutput(obj.lambda);
-    if (obj.fallback) rehydrateOutput(obj.fallback);
+    // Prerender wraps a Lambda and a fallback File, each needing rehydration. A shared
+    // `.lambda` arrives as a sentinel that we resolve in a second pass (see below), so
+    // only rehydrate it here when it's a real (first-encountered) object.
+    if (obj.lambda && !isSharedRef(obj.lambda)) {
+      rehydrateOutput(obj.lambda, sharedRefs);
+    }
+    if (obj.fallback) rehydrateOutput(obj.fallback, sharedRefs);
   } else if (
     obj.type === 'FileFsRef' ||
     obj.type === 'FileBlob' ||
@@ -194,6 +211,18 @@ function rehydrateOutput(output: unknown): void {
     const rehydrated = rehydrateFile(obj as SerializedFile);
     Object.assign(obj, rehydrated);
     Object.setPrototypeOf(obj, Object.getPrototypeOf(rehydrated));
+  }
+}
+
+/** Replace any `{ __sharedRef }` sentinel nested inside an output with its shared instance. */
+function resolveNestedSharedRefs(
+  output: unknown,
+  sharedRefs: Map<number, object>
+): void {
+  if (!output || typeof output !== 'object') return;
+  const obj = output as { type?: string; lambda?: unknown };
+  if (obj.type === 'Prerender' && isSharedRef(obj.lambda)) {
+    obj.lambda = sharedRefs.get(obj.lambda.__sharedRef);
   }
 }
 
@@ -207,31 +236,36 @@ function rehydrateResult(result: BuildResultV2 | BuildResultV3): void {
       : result;
   const output = (unwrapped as { output?: unknown }).output;
   if (!output) return;
+  const sharedRefs = new Map<number, object>();
   if ((output as { type?: string }).type) {
     // V3: a single output.
-    rehydrateOutput(output);
+    rehydrateOutput(output, sharedRefs);
   } else {
-    // V2: a map of named outputs. Rehydrate real outputs first, then resolve any
-    // { __sharedRef: <firstKey> } sentinels (see the worker) back to the same instance so
-    // writeBuildResult's identity-based symlink dedup works across the process boundary.
+    // V2: a map of named outputs. First rehydrate every real (non-sentinel) output,
+    // registering each `__sharedId`-tagged instance. Then resolve `{ __sharedRef }`
+    // sentinels — both top-level map entries and nested `Prerender.lambda` references —
+    // back to the one shared instance so writeBuildResult's identity-based symlink dedup
+    // works across the process boundary.
     const map = output as Record<string, unknown>;
     for (const value of Object.values(map)) {
-      if (!isSharedRef(value)) rehydrateOutput(value);
+      if (!isSharedRef(value)) rehydrateOutput(value, sharedRefs);
     }
     for (const key of Object.keys(map)) {
       const value = map[key];
       if (isSharedRef(value)) {
-        map[key] = map[value.__sharedRef];
+        map[key] = sharedRefs.get(value.__sharedRef);
+      } else {
+        resolveNestedSharedRefs(value, sharedRefs);
       }
     }
   }
 }
 
-function isSharedRef(value: unknown): value is { __sharedRef: string } {
+function isSharedRef(value: unknown): value is { __sharedRef: number } {
   return (
     typeof value === 'object' &&
     value !== null &&
-    typeof (value as { __sharedRef?: unknown }).__sharedRef === 'string'
+    typeof (value as { __sharedRef?: unknown }).__sharedRef === 'number'
   );
 }
 
