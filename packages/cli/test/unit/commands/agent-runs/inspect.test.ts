@@ -63,6 +63,24 @@ describe('agent-runs inspect', () => {
           createdAt: 1_718_000_000_000,
           durationMs: 4500,
           usage: { inputTokens: 100, outputTokens: 200 },
+          detailIssueSummary: {
+            issueCount: 2,
+            errorCount: 1,
+            failedActionCount: 1,
+            rejectedActionCount: 1,
+            failedTurnCount: 0,
+            failedToolCallIds: ['tool_timeout'],
+            rejectedToolCallIds: ['tool_policy'],
+            latestIssue: {
+              type: 'action_failed',
+              turnId: 'turn_1',
+              toolCallId: 'tool_timeout',
+              tool: 'linear.createIssue',
+              code: 'ETIMEDOUT',
+              message: 'Linear timed out.',
+              occurredAt: '2026-01-01T00:00:05.000Z',
+            },
+          },
           events: [{ timestamp: 1_718_000_000_000, type: 'run.started' }],
           subagents: [
             { name: 'researcher', status: 'completed', durationMs: 1200 },
@@ -84,6 +102,9 @@ describe('agent-runs inspect', () => {
     const stdout = client.stdout.getFullOutput();
     expect(stdout).toContain('run_001');
     expect(stdout).toContain('Completed');
+    expect(stdout).toContain('Issues');
+    expect(stdout).toContain('ETIMEDOUT');
+    expect(stdout).toContain('linear.createIssue');
     expect(stdout).toContain('run.started');
     expect(stdout).toContain('researcher');
     expect(client.stderr.getFullOutput()).toContain('for full run data.');
