@@ -1,5 +1,6 @@
 import path from 'path';
-import { remove } from 'fs-extra';
+import os from 'os';
+import { chmod, mkdtemp, remove, writeFile } from 'fs-extra';
 import { build } from '../src';
 
 vi.setConfig({ testTimeout: 2 * 60 * 1000, hookTimeout: 2 * 60 * 1000 });
@@ -179,30 +180,70 @@ describe('build()', () => {
   });
 
   describe('routePrefix validation', () => {
-    it('should reject routePrefix values with path traversal segments', async () => {
-      const workPath = path.join(
-        __dirname,
-        'build-fixtures',
-        '11-build-output-v1'
-      );
+    const workPath = path.join(
+      __dirname,
+      'build-fixtures',
+      '11-build-output-v1'
+    );
+    const baseBuildArgs = {
+      files: {},
+      entrypoint: 'package.json',
+      repoRootPath: workPath,
+      workPath,
+      meta: {
+        skipDownload: true,
+        cliVersion: '0.0.0',
+      },
+    };
 
+    it.each([
+      '/../../../../outside-target/static-escape',
+      '/admin/../../outside-target/static-escape',
+      '/..\\..\\outside-target/static-escape',
+    ])('should reject routePrefix traversal value %s', async routePrefix => {
       await expect(
         build({
-          files: {},
-          entrypoint: 'package.json',
-          repoRootPath: workPath,
-          workPath,
-          config: {
-            routePrefix: '/../../../../outside-target/static-escape',
-          },
-          meta: {
-            skipDownload: true,
-            cliVersion: '0.0.0',
-          },
+          ...baseBuildArgs,
+          config: { routePrefix },
         })
       ).rejects.toMatchObject({
         code: 'STATIC_BUILD_UNSAFE_ROUTE_PREFIX',
       });
+    });
+
+    it('should mount safe routePrefix values under the prefixed output path', async () => {
+      const workPath = await mkdtemp(
+        path.join(os.tmpdir(), 'static-build-route-prefix-')
+      );
+
+      try {
+        const buildScript = path.join(workPath, 'build.sh');
+        await writeFile(
+          buildScript,
+          '#!/bin/sh\nmkdir -p dist\necho hello > dist/index.html\n'
+        );
+        await chmod(buildScript, 0o755);
+
+        const buildResult = await build({
+          files: {},
+          entrypoint: 'build.sh',
+          repoRootPath: workPath,
+          workPath,
+          config: { routePrefix: '/admin' },
+          meta: {
+            skipDownload: true,
+            cliVersion: '0.0.0',
+          },
+        });
+
+        if ('buildOutputVersion' in buildResult) {
+          throw new Error('Unexpected `buildOutputVersion` in build result');
+        }
+
+        expect(buildResult.output['admin/index.html']).toBeTruthy();
+      } finally {
+        await remove(workPath);
+      }
     });
   });
 });
