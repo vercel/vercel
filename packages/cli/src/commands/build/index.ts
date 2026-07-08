@@ -137,6 +137,7 @@ import {
   DEFAULT_VERCEL_CONFIG_FILENAME,
 } from '../../util/compile-vercel-config';
 import { help } from '../help';
+import { ensureLink } from '../../util/link/ensure-link';
 import { pullCommandLogic } from '../pull';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import { buildCommand } from './command';
@@ -415,6 +416,21 @@ export default async function main(client: Client): Promise<number> {
         return 1;
       }
 
+      // An unlinked directory gets the link flow first, so the pull
+      // question refers to a known project instead of linking as a side
+      // effect of the pull.
+      if (!link) {
+        const ensured = await ensureLink('build', client, cwd, {
+          projectName: projectNameOrId,
+          failIfNotFound: !!projectNameOrId,
+          pullEnv: false,
+        });
+        if (typeof ensured === 'number') {
+          return ensured;
+        }
+        link = await getProjectLink(client, cwd, projectNameOrId, true);
+      }
+
       confirmed = await client.input.confirm(
         `No Project Settings found locally. Run ${cli.getCommandName(
           'pull'
@@ -449,6 +465,12 @@ export default async function main(client: Client): Promise<number> {
     client.cwd = cwd;
     client.setArgv(originalArgv);
     project = await readProjectSettings(vercelDir);
+  }
+
+  // The settings pull above may have just established the link; re-read it
+  // so the re-anchoring below sees it.
+  if (!link) {
+    link = await getProjectLink(client, cwd, projectNameOrId, true);
   }
 
   // A per-directory link (`<dir>/.vercel/project.json`) doesn't report a

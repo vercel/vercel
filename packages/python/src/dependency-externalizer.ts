@@ -65,6 +65,12 @@ function shouldStripVendorFile(filePath: string): boolean {
 // that count toward the limit but aren't part of this bundle.
 export const LAMBDA_SIZE_THRESHOLD_BYTES = 225 * 1024 * 1024;
 
+// Bytecode fill target for standard-size functions, with a margin so the
+// fill can never push a function over the size limit.
+const BYTECODE_FILL_MARGIN_BYTES = 5 * 1024 * 1024;
+export const BYTECODE_FILL_CEILING_BYTES =
+  LAMBDA_SIZE_THRESHOLD_BYTES - BYTECODE_FILL_MARGIN_BYTES;
+
 // AWS Lambda ephemeral storage (/tmp) is 512MB. Use 500MB to leave a buffer
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
 export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 500 * 1024 * 1024;
@@ -1117,11 +1123,15 @@ export async function getPackagesReachableOnPlatform(
  * to avoid redundant stat calls.  Remaining files are stat'd in
  * parallel for throughput.
  */
-export async function calculateBundleSize(files: Files): Promise<number> {
+export async function calculateBundleSize(
+  files: Files,
+  filter?: (filePath: string) => boolean
+): Promise<number> {
   let knownSize = 0;
   const statPromises: Promise<number>[] = [];
 
   for (const filePath of Object.keys(files)) {
+    if (filter && !filter(filePath)) continue;
     const file = files[filePath];
     if ('fsPath' in file && file.fsPath) {
       const fsRef = file as FileFsRef;
@@ -1132,7 +1142,11 @@ export async function calculateBundleSize(files: Files): Promise<number> {
         statPromises.push(
           fs.promises
             .stat(fsRef.fsPath)
-            .then(stats => stats.size)
+            .then(stats => {
+              // Cache so later passes (estimate, fill recount) skip the stat.
+              fsRef.size = stats.size;
+              return stats.size;
+            })
             .catch(err => {
               console.warn(
                 `Warning: Failed to stat file ${fsRef.fsPath}, size will not be included in bundle calculation: ${err}`
@@ -1155,6 +1169,30 @@ export async function calculateBundleSize(files: Files): Promise<number> {
     totalSize += s;
   }
   return totalSize;
+}
+
+/**
+ * Expected .pyc-to-.py size ratio. Measured empirically on real venvs
+ * (1.06 and 1.14 across different dependency mixes); slightly high so the
+ * gate errs toward skipping marginal compiles.
+ */
+export const PYC_TO_PY_RATIO = 1.2;
+
+/**
+ * Minimum fraction of the estimated bytecode that must fit the remaining
+ * capacity to justify running compileall. Cold-start benefit is roughly
+ * proportional to coverage, so partial fills above this floor are worth it.
+ */
+export const BYTECODE_COVERAGE_FLOOR = 0.5;
+
+/**
+ * Estimate the total bytecode size compileall would produce for the .py
+ * files in the bundle. Used only to gate whether compiling is worthwhile;
+ * the fill itself measures real .pyc sizes.
+ */
+export async function estimateBytecodeSize(files: Files): Promise<number> {
+  const pyBytes = await calculateBundleSize(files, p => p.endsWith('.py'));
+  return PYC_TO_PY_RATIO * pyBytes;
 }
 
 /**

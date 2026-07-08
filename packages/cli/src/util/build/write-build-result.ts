@@ -209,6 +209,40 @@ function stripDuplicateSlashes(path: string): string {
   return normalize(path).replace(/(^\/|\/$)/g, '');
 }
 
+async function resolveFunctionConfiguration(
+  src: string,
+  vercelConfig: VercelConfig | null,
+  service?: Service
+): Promise<FunctionConfiguration> {
+  if (service && isExperimentalServiceV2(service) && service.functions) {
+    // `functions` keys are service-root-relative but `build.src` is
+    // project-relative; strip the root so patterns match.
+    let sourceFile = src;
+    const serviceRoot = stripDuplicateSlashes(service.root);
+    if (serviceRoot && serviceRoot !== '.') {
+      const prefix = `${serviceRoot}/`;
+      if (sourceFile.startsWith(prefix)) {
+        sourceFile = sourceFile.slice(prefix.length);
+      }
+    }
+    return getLambdaOptionsFromFunction({
+      sourceFile,
+      config: {
+        ...vercelConfig,
+        functions: service.functions,
+        serviceName: service.name,
+      },
+    });
+  }
+  if (vercelConfig) {
+    return getLambdaOptionsFromFunction({
+      sourceFile: src,
+      config: vercelConfig,
+    });
+  }
+  return {};
+}
+
 function getServiceOutputDir(outputDir: string, service: Service): string {
   return join(outputDir, 'services', service.name);
 }
@@ -273,6 +307,9 @@ async function writeBuildResultV2(args: {
 
   const existingFunctions = new Map<Lambda | EdgeFunction, string>();
   const overrides: Record<string, PathOverride> = {};
+  const functionConfiguration = build.src
+    ? await resolveFunctionConfiguration(build.src, vercelConfig, service)
+    : {};
 
   for (const [path, output] of Object.entries(buildResult.output)) {
     const normalizedPath = stripDuplicateSlashes(path);
@@ -282,7 +319,12 @@ async function writeBuildResultV2(args: {
         service && isExperimentalService(service) ? service : undefined,
         stripServiceRoutePrefix
       );
-      await writeContainerImage(outputDir, output, normalizedPath);
+      await writeContainerImage(
+        outputDir,
+        output,
+        normalizedPath,
+        functionConfiguration
+      );
     } else if (isLambda(output)) {
       injectServiceEnvVars(
         output,
@@ -482,34 +524,11 @@ async function writeBuildResultV3(args: {
     throw new Error(`Expected "build.src" to be a string`);
   }
 
-  let functionConfiguration: Awaited<
-    ReturnType<typeof getLambdaOptionsFromFunction>
-  > = {};
-  if (service && isExperimentalServiceV2(service) && service.functions) {
-    // `functions` keys are service-root-relative but `build.src` is
-    // project-relative; strip the root so patterns match.
-    let sourceFile = src;
-    const serviceRoot = stripDuplicateSlashes(service.root);
-    if (serviceRoot && serviceRoot !== '.') {
-      const prefix = `${serviceRoot}/`;
-      if (sourceFile.startsWith(prefix)) {
-        sourceFile = sourceFile.slice(prefix.length);
-      }
-    }
-    functionConfiguration = await getLambdaOptionsFromFunction({
-      sourceFile,
-      config: {
-        ...vercelConfig,
-        functions: service.functions,
-        serviceName: service.name,
-      },
-    });
-  } else if (vercelConfig) {
-    functionConfiguration = await getLambdaOptionsFromFunction({
-      sourceFile: src,
-      config: vercelConfig,
-    });
-  }
+  const functionConfiguration = await resolveFunctionConfiguration(
+    src,
+    vercelConfig,
+    service
+  );
 
   const ext = extname(src);
   // V2 services are already isolated under `services/<name>`, so scalar
@@ -531,7 +550,7 @@ async function writeBuildResultV3(args: {
       service && isExperimentalService(service) ? service : undefined,
       stripServiceRoutePrefix
     );
-    await writeContainerImage(outputDir, output, path);
+    await writeContainerImage(outputDir, output, path, functionConfiguration);
   } else if (isLambda(output)) {
     injectServiceEnvVars(
       output,
@@ -668,7 +687,8 @@ async function writeFunctionSymlink(
 async function writeContainerImage(
   outputDir: string,
   containerImage: ContainerImage,
-  path: string
+  path: string,
+  functionConfiguration?: FunctionConfiguration
 ) {
   const dest = join(outputDir, 'functions', `${path}.func`);
   // For `runtime: 'container'` the OCI image reference is carried in `handler`;
@@ -680,6 +700,24 @@ async function writeContainerImage(
     );
   }
 
+  const architecture =
+    functionConfiguration?.architecture ?? (containerImage as any).architecture;
+  const memory =
+    functionConfiguration?.memory ?? (containerImage as any).memory;
+  const maxDuration =
+    functionConfiguration?.maxDuration ?? (containerImage as any).maxDuration;
+  const regions =
+    functionConfiguration?.regions ?? (containerImage as any).regions;
+  const functionFailoverRegions =
+    functionConfiguration?.functionFailoverRegions ??
+    (containerImage as any).functionFailoverRegions;
+  const experimentalTriggers =
+    functionConfiguration?.experimentalTriggers ??
+    (containerImage as any).experimentalTriggers;
+  const supportsCancellation =
+    functionConfiguration?.supportsCancellation ??
+    (containerImage as any).supportsCancellation;
+
   await fs.mkdirp(dest);
   await fs.writeJSON(
     join(dest, '.vc-config.json'),
@@ -690,6 +728,15 @@ async function writeContainerImage(
       ...((containerImage as any).command
         ? { command: (containerImage as any).command }
         : {}),
+      ...(architecture !== undefined ? { architecture } : {}),
+      ...(memory !== undefined ? { memory } : {}),
+      ...(maxDuration !== undefined ? { maxDuration } : {}),
+      ...(regions !== undefined ? { regions } : {}),
+      ...(functionFailoverRegions !== undefined
+        ? { functionFailoverRegions }
+        : {}),
+      ...(experimentalTriggers !== undefined ? { experimentalTriggers } : {}),
+      ...(supportsCancellation !== undefined ? { supportsCancellation } : {}),
     },
     { spaces: 2 }
   );

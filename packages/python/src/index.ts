@@ -44,10 +44,13 @@ import {
 } from './install';
 import {
   PythonDependencyExternalizer,
+  BYTECODE_COVERAGE_FLOOR,
+  BYTECODE_FILL_CEILING_BYTES,
   MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   lambdaKnapsack,
   calculateBundleSize,
+  estimateBytecodeSize,
 } from './dependency-externalizer';
 import { isLargeFunctionsEnabled } from './large-functions';
 import {
@@ -80,7 +83,7 @@ import {
   collectAppBytecodeFiles,
   getCompileAllAppExcludeRegex,
   runCompileAll,
-  shouldUseCompileAll,
+  shouldCompileAll,
   type BytecodeCollectionResult,
 } from './compileall';
 import {
@@ -513,11 +516,6 @@ export const build: BuildVX = async ({
   // dependency installation is disabled because custom install commands may
   // install dependencies not tracked in uv.lock.
   let hasCustomCommand = false;
-  // Track whether a custom build command/script was used. When true, compileall
-  // is disabled (a custom build may emit its own bytecode or bypass the venv
-  // layout compileall assumes). It does not affect runtime installation, since
-  // dependencies are still installed normally.
-  let hasCustomBuildCommand = false;
 
   const target = getTargetPlatform(meta.isDev ?? false);
 
@@ -834,16 +832,12 @@ export const build: BuildVX = async ({
             env: pythonEnv,
             cwd: workPath,
           });
-          hasCustomBuildCommand = true;
         } else {
-          const ranBuildScript = await runPyprojectScript(
+          await runPyprojectScript(
             workPath,
             ['vercel-build', 'now-build', 'build'],
             pythonEnv
           );
-          if (ranBuildScript) {
-            hasCustomBuildCommand = true;
-          }
         }
       });
   }
@@ -993,10 +987,9 @@ export const build: BuildVX = async ({
     extraEnv: extraTrampolineEnv,
   });
 
-  const automaticCompileAllEnabled = shouldUseCompileAll({
+  const compileAllEnabled = shouldCompileAll({
     isDev: meta.isDev,
     hasCustomCommand,
-    hasCustomBuildCommand,
   });
 
   const predefinedExcludes = [
@@ -1099,71 +1092,77 @@ export const build: BuildVX = async ({
         },
       });
 
-      // Precompile bytecode and fill remaining capacity for a fully bundled
-      // function. collectAppBytecodeFiles only collects .pyc for .py files
-      // present in the bundle, so excluded source can't re-enter as .pyc.
-      // Shared by the direct-bundle path and the generateBundle Hive fallback.
-      const runCompileAllAndFillBytecode = async () => {
-        await builderSpan
-          .child('vc.builder.python.compileall')
-          .trace(async compileSpan => {
-            const sitePackageDirs = (
-              await getVenvSitePackagesDirs(venvPath)
-            ).filter(d => fs.existsSync(d));
-            const pythonBin = getVenvPythonBin(venvPath);
+      // Precompile bytecode and fill remaining capacity up to capacityBytes.
+      // Only .pyc for .py files already in the bundle are collected, so
+      // excluded source can't re-enter as .pyc. Bytecode is a pure
+      // optimization: failures are logged and the build continues.
+      const runCompileAllAndFillBytecode = async (capacityBytes: number) => {
+        try {
+          await builderSpan
+            .child('vc.builder.python.compileall')
+            .trace(async compileSpan => {
+              const sitePackageDirs = (
+                await getVenvSitePackagesDirs(venvPath)
+              ).filter(d => fs.existsSync(d));
+              const pythonBin = getVenvPythonBin(venvPath);
 
-            console.log('Compiling Python application bytecode...');
-            await runCompileAll({
-              pythonBin,
-              filesOrDirectories: [workPath],
-              env: pythonEnv,
-              excludeRegex: getCompileAllAppExcludeRegex(workPath),
+              console.log('Compiling Python bytecode...');
+              await runCompileAll({
+                pythonBin,
+                filesOrDirectories: [workPath],
+                env: pythonEnv,
+                excludeRegex: getCompileAllAppExcludeRegex(workPath),
+              });
+
+              await runCompileAll({
+                pythonBin,
+                filesOrDirectories: sitePackageDirs,
+                env: pythonEnv,
+              });
+
+              compileSpan.setAttributes({
+                'python.compileall.enabled': 'true',
+                'python.compileall.sitePackageDirectoryCount': String(
+                  sitePackageDirs.length
+                ),
+              });
             });
 
-            console.log('Compiling Python dependency bytecode...');
-            await runCompileAll({
-              pythonBin,
-              filesOrDirectories: sitePackageDirs,
-              env: pythonEnv,
+          const currentSize = await calculateBundleSize(files);
+          let remainingCapacity = capacityBytes - currentSize;
+
+          if (pythonVersion.major != null && pythonVersion.minor != null) {
+            const appBytecodeInfo = await collectAppBytecodeFiles({
+              workPath,
+              files,
+              pythonMajor: pythonVersion.major,
+              pythonMinor: pythonVersion.minor,
             });
+            remainingCapacity = addBytecodeWithinCapacity(
+              files,
+              appBytecodeInfo,
+              remainingCapacity
+            );
+          }
 
-            compileSpan.setAttributes({
-              'python.compileall.enabled': 'true',
-              'python.compileall.sitePackageDirectoryCount': String(
-                sitePackageDirs.length
-              ),
-            });
-          });
-
-        // Fill remaining capacity up to the large-function size limit.
-        const currentSize = await calculateBundleSize(files);
-        let remainingCapacity =
-          MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE - currentSize;
-
-        if (pythonVersion.major != null && pythonVersion.minor != null) {
-          const appBytecodeInfo = await collectAppBytecodeFiles({
-            workPath,
-            files,
-            pythonMajor: pythonVersion.major,
-            pythonMinor: pythonVersion.minor,
-          });
-          remainingCapacity = addBytecodeWithinCapacity(
-            files,
-            appBytecodeInfo,
-            remainingCapacity
+          const vendorBytecodeInfo = await depExternalizer.collectBytecodeFiles(
+            {
+              vendorDirName: vendorDir,
+            }
           );
+          await addVendorBytecodeWithinCapacity({
+            files,
+            depExternalizer,
+            vendorDir,
+            bytecodeInfo: vendorBytecodeInfo,
+            capacity: remainingCapacity,
+          });
+        } catch (err) {
+          console.log(
+            'Bytecode precompilation failed; continuing without precompiled bytecode.'
+          );
+          debug(`bytecode precompilation error details: ${err}`);
         }
-
-        const vendorBytecodeInfo = await depExternalizer.collectBytecodeFiles({
-          vendorDirName: vendorDir,
-        });
-        await addVendorBytecodeWithinCapacity({
-          files,
-          depExternalizer,
-          vendorDir,
-          bytecodeInfo: vendorBytecodeInfo,
-          capacity: remainingCapacity,
-        });
       };
 
       const announceLargeFunction = () =>
@@ -1179,29 +1178,34 @@ export const build: BuildVX = async ({
           await depExternalizer.generateBundle(files);
         if (fellBackToFullBundle) {
           announceLargeFunction();
-          if (automaticCompileAllEnabled) {
-            await runCompileAllAndFillBytecode();
+          if (compileAllEnabled) {
+            await runCompileAllAndFillBytecode(
+              MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
+            );
           }
         }
       } else {
         // Bundle all deps directly. Either it fits the standard size limit, or
         // large functions are enabled and the whole bundle ships.
         addFiles(files, depAnalysis.allVendorFiles);
-        if (
-          isLargeFunctionsEnabled() &&
-          depAnalysis.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES
-        ) {
-          announceLargeFunction();
-        }
-        // Compileall is only for large functions. This branch also covers small
-        // bundles that fit the standard size limit, so gate on size to skip
-        // them — never precompile bytecode for a standard-size function.
-        // (automaticCompileAllEnabled already requires the large-functions flag.)
-        if (
-          automaticCompileAllEnabled &&
-          depAnalysis.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES
-        ) {
-          await runCompileAllAndFillBytecode();
+        if (depAnalysis.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES) {
+          if (isLargeFunctionsEnabled()) {
+            announceLargeFunction();
+          }
+          if (compileAllEnabled) {
+            await runCompileAllAndFillBytecode(
+              MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
+            );
+          }
+        } else if (compileAllEnabled) {
+          // Compile only when enough of the expected bytecode ships to
+          // justify the compile time.
+          const capacity =
+            BYTECODE_FILL_CEILING_BYTES - depAnalysis.totalBundleSize;
+          const estimate = await estimateBytecodeSize(files);
+          if (capacity >= BYTECODE_COVERAGE_FLOOR * estimate) {
+            await runCompileAllAndFillBytecode(BYTECODE_FILL_CEILING_BYTES);
+          }
         }
       }
     });

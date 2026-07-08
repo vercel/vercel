@@ -1,5 +1,13 @@
 # vercel
 
+## 54.21.1
+
+### Patch Changes
+
+- 1e774e8: Preserve generated service routes when Build Output services are merged from framework output into a custom build output directory.
+- c9c9edb: Add `--project` support to project-scoped flags, cache, crons, and rolling-release commands.
+  - @vercel/static-build@2.11.4
+
 ## 54.21.0
 
 ### Minor Changes
