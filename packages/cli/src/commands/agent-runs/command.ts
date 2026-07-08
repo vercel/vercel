@@ -81,6 +81,14 @@ export const listSubcommand = {
       description: 'Filter Agent Runs by Eve session status',
     },
     {
+      name: 'trigger',
+      shorthand: null,
+      type: String,
+      argument: 'slack|http|schedule|manual|unknown',
+      deprecated: false,
+      description: 'Filter Agent Runs by trigger source',
+    },
+    {
       name: 'page',
       shorthand: null,
       type: Number,

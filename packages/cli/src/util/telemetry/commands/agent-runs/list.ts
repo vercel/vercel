@@ -33,6 +33,15 @@ export class AgentRunsListTelemetryClient
     }
   }
 
+  trackCliOptionTrigger(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'trigger',
+        value,
+      });
+    }
+  }
+
   trackCliOptionPage(value: number | undefined) {
     if (typeof value === 'number') {
       this.trackCliOption({

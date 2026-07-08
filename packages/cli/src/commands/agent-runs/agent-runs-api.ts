@@ -32,6 +32,7 @@ export interface AgentRunsQuery {
   issueTool?: string;
   groupBy?: 'issue';
   sessionStatus?: 'completed' | 'failed' | 'running' | 'waiting';
+  trigger?: 'slack' | 'http' | 'schedule' | 'manual' | 'unknown';
   runId?: string;
   trace?: boolean;
 }
@@ -77,6 +78,9 @@ export function buildAgentRunsUrl(query: AgentRunsQuery): string {
   }
   if (query.sessionStatus) {
     url.searchParams.set('session_status', query.sessionStatus);
+  }
+  if (query.trigger) {
+    url.searchParams.set('trigger', query.trigger);
   }
   if (query.runId) {
     url.searchParams.set('runId', query.runId);

@@ -79,7 +79,7 @@ describe('agent-runs list', () => {
     );
   });
 
-  it('forwards search, issue, session status, pagination, environment, and time range params', async () => {
+  it('forwards search, issue, session status, trigger, pagination, environment, and time range params', async () => {
     useLinkedProject();
     let receivedQuery: Record<string, string> | undefined;
     client.scenario.get('/api/observability/agent-runs', (req, res) => {
@@ -96,6 +96,8 @@ describe('agent-runs list', () => {
       'error',
       '--session-status',
       'failed',
+      '--trigger',
+      'slack',
       '--page',
       '2',
       '--limit',
@@ -112,6 +114,7 @@ describe('agent-runs list', () => {
       search: 'checkout',
       issue: 'error',
       session_status: 'failed',
+      trigger: 'slack',
       page: '2',
       pageSize: '50',
       environment: 'preview',
@@ -221,6 +224,16 @@ describe('agent-runs list', () => {
     );
   });
 
+  it('errors when --trigger is not supported', async () => {
+    useLinkedProject();
+    client.setArgv('agent-runs', 'list', '--trigger', 'github');
+    const exitCode = await agentRuns(client);
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      '`--trigger` supports `slack`, `http`, `schedule`, `manual`, or `unknown`.'
+    );
+  });
+
   it('emits a JSON error payload in non-interactive mode for invalid arguments', async () => {
     useLinkedProject();
     const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
@@ -279,7 +292,9 @@ describe('agent-runs list', () => {
       '--issue',
       'error',
       '--session-status',
-      'failed'
+      'failed',
+      '--trigger',
+      'manual'
     );
     const exitCode = await agentRuns(client);
 
@@ -289,6 +304,7 @@ describe('agent-runs list', () => {
       { key: 'option:search', value: '[REDACTED]' },
       { key: 'option:issue', value: 'error' },
       { key: 'option:session-status', value: 'failed' },
+      { key: 'option:trigger', value: 'manual' },
       { key: 'flag:json', value: 'TRUE' },
     ]);
   });

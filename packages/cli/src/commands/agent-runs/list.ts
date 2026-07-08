@@ -53,6 +53,7 @@ export default async function list(client: Client): Promise<number> {
     '--search': search,
     '--issue': issue,
     '--session-status': sessionStatus,
+    '--trigger': trigger,
     '--page': page,
     '--limit': limit,
     '--json': json,
@@ -66,6 +67,7 @@ export default async function list(client: Client): Promise<number> {
   telemetry.trackCliOptionSearch(search);
   telemetry.trackCliOptionIssue(issue);
   telemetry.trackCliOptionSessionStatus(sessionStatus);
+  telemetry.trackCliOptionTrigger(trigger);
   telemetry.trackCliOptionPage(page);
   telemetry.trackCliOptionLimit(limit);
   telemetry.trackCliFlagJson(json);
@@ -98,6 +100,27 @@ export default async function list(client: Client): Promise<number> {
     sessionStatus === 'waiting'
       ? sessionStatus
       : undefined;
+  if (
+    trigger &&
+    trigger !== 'slack' &&
+    trigger !== 'http' &&
+    trigger !== 'schedule' &&
+    trigger !== 'manual' &&
+    trigger !== 'unknown'
+  ) {
+    return invalidArguments(
+      client,
+      '`--trigger` supports `slack`, `http`, `schedule`, `manual`, or `unknown`.'
+    );
+  }
+  const validatedTrigger =
+    trigger === 'slack' ||
+    trigger === 'http' ||
+    trigger === 'schedule' ||
+    trigger === 'manual' ||
+    trigger === 'unknown'
+      ? trigger
+      : undefined;
 
   const scope = await resolveAgentRunsScope(client, {
     scopeFlag,
@@ -123,6 +146,7 @@ export default async function list(client: Client): Promise<number> {
       search,
       issue: issue === 'error' ? 'error' : undefined,
       sessionStatus: validatedSessionStatus,
+      trigger: validatedTrigger,
     });
   } catch (err) {
     output.stopSpinner();
