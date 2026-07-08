@@ -18,6 +18,9 @@ export interface FastAPICollectStaticResult {
   cdnOutputDir: string;
 }
 
+const _STATIC_FILE_COLLECTION_ERROR_MESSAGE =
+  'Warning: FastAPI static file collection failed. Static files will not be served from the CDN.';
+
 /**
  * Discover StaticFiles mounts by importing the entrypoint via a Python shim
  * run with the build venv Python. The venv already contains the user's
@@ -40,9 +43,12 @@ export async function getFastAPIStaticMounts(
       { env, cwd: workPath }
     ));
     if (stderr) {
+      console.error(`${_STATIC_FILE_COLLECTION_ERROR_MESSAGE}`);
       debug(`FastAPI shim stderr:\n${stderr}`);
+      return [];
     }
   } catch (err: any) {
+    console.error(_STATIC_FILE_COLLECTION_ERROR_MESSAGE);
     debug(
       `FastAPI: could not discover static mounts: ${err?.stderr ?? err?.message ?? err}`
     );
@@ -53,6 +59,7 @@ export async function getFastAPIStaticMounts(
     debug(`FastAPI: discovered mounts: ${JSON.stringify(parsed)}`);
     return parsed;
   } catch {
+    console.error(_STATIC_FILE_COLLECTION_ERROR_MESSAGE);
     debug(`FastAPI: could not parse shim output: ${stdout}`);
     return [];
   }
