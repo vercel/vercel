@@ -13,6 +13,8 @@ import {
   jsonOption,
   outputFormatOptions,
 } from '../../../src/util/arg-common';
+import { getFlagsSpecification } from '../../../src/util/get-flags-specification';
+import { parseArguments } from '../../../src/util/get-args';
 
 describe('output-format', () => {
   describe('parseOutputFormat', () => {
@@ -259,6 +261,31 @@ describe('output-format', () => {
       for (const format of ALL_OUTPUT_FORMATS) {
         expect(names).toContain(format);
       }
+    });
+  });
+
+  describe('end-to-end flag parsing', () => {
+    it('parses --json and --format for a json-only command', () => {
+      const spec = getFlagsSpecification(outputFormatOptions(['json']));
+
+      expect(parseArguments(['--json'], spec).flags['--json']).toBe(true);
+      expect(parseArguments(['--format', 'json'], spec).flags['--format']).toBe(
+        'json'
+      );
+      // A format the command didn't declare is not a registered flag.
+      expect(() => parseArguments(['--table'], spec)).toThrow();
+    });
+
+    it('parses --json and --table for a json+table command', () => {
+      const spec = getFlagsSpecification(
+        outputFormatOptions(['json', 'table'])
+      );
+
+      expect(parseArguments(['--json'], spec).flags['--json']).toBe(true);
+      expect(parseArguments(['--table'], spec).flags['--table']).toBe(true);
+      expect(parseArguments(['-F', 'table'], spec).flags['--format']).toBe(
+        'table'
+      );
     });
   });
 

@@ -25,6 +25,7 @@ import {
   type ResolveByTagOperationResult,
 } from '../../util/openapi';
 import { API_BASE_URL } from './constants';
+import { resolveOutputFormat } from '../../util/output-format';
 import {
   colorizeMethod,
   colorizeMethodPadded,
@@ -91,17 +92,26 @@ export default async function api(client: Client): Promise<number> {
       return 2;
     }
 
+    const formatResult = resolveOutputFormat(
+      lsFlags,
+      listSubcommand.outputFormats
+    );
+    if ('error' in formatResult) {
+      output.error(formatResult.error);
+      return 1;
+    }
+
     telemetryClient.trackCliSubcommandList();
     if (lsFlags['--refresh']) telemetryClient.trackCliFlagRefresh(true);
-    if (lsFlags['--format'])
-      telemetryClient.trackCliOptionFormat(lsFlags['--format']);
+    if (formatResult.format)
+      telemetryClient.trackCliOptionFormat(formatResult.format);
     if (lsFlags['--spec-url'])
       telemetryClient.trackCliOptionSpecUrl(lsFlags['--spec-url']);
     return listEndpoints(
       client,
       lsFlags['--refresh'] ?? false,
       lsFlags['--spec-url'],
-      lsFlags['--format'] ?? 'table'
+      formatResult.format ?? 'table'
     );
   }
 

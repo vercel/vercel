@@ -7557,9 +7557,12 @@ exports[`help command > whoami help output snapshots > whoami help column width 
 
   Options:
 
-  -F,  --format <FORMAT>  Specify the   
-                          output format 
-                          (json)        
+  -F,  --format <json>  Specify the     
+                        output format   
+                        (json)          
+       --json           Output as JSON  
+                        (alias for      
+                        --format=json)  
 
 
   Global Options:
@@ -7616,6 +7619,10 @@ exports[`help command > whoami help output snapshots > whoami help column width 
 
     $ vercel whoami
 
+  - Print the current user as JSON
+
+    $ vercel whoami --json
+
 "
 `;
 
@@ -7627,7 +7634,8 @@ exports[`help command > whoami help output snapshots > whoami help column width 
 
   Options:
 
-  -F,  --format <FORMAT>  Specify the output format (json)                      
+  -F,  --format <json>  Specify the output format (json)                        
+       --json           Output as JSON (alias for --format=json)                
 
 
   Global Options:
@@ -7652,6 +7660,10 @@ exports[`help command > whoami help output snapshots > whoami help column width 
 
     $ vercel whoami
 
+  - Print the current user as JSON
+
+    $ vercel whoami --json
+
 "
 `;
 
@@ -7663,7 +7675,8 @@ exports[`help command > whoami help output snapshots > whoami help column width 
 
   Options:
 
-  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+  -F,  --format <json>  Specify the output format (json)                                                                
+       --json           Output as JSON (alias for --format=json)                                                        
 
 
   Global Options:
@@ -7685,6 +7698,10 @@ exports[`help command > whoami help output snapshots > whoami help column width 
   - Shows the username of the currently logged in user
 
     $ vercel whoami
+
+  - Print the current user as JSON
+
+    $ vercel whoami --json
 
 "
 `;
