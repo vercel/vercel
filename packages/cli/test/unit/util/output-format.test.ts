@@ -4,9 +4,19 @@ import {
   getOutputFormat,
   isJsonOutput,
   validateJsonOutput,
+  resolveOutputFormat,
   OUTPUT_FORMATS,
+  ALL_OUTPUT_FORMATS,
 } from '../../../src/util/output-format';
-import { formatOption, jsonOption } from '../../../src/util/arg-common';
+import {
+  formatOption,
+  jsonOption,
+  outputFormatOptions,
+  getCommandOptions,
+  getCommandFlagsSpecification,
+} from '../../../src/util/arg-common';
+import { getFlagsSpecification } from '../../../src/util/get-flags-specification';
+import { parseArguments } from '../../../src/util/get-args';
 
 describe('output-format', () => {
   describe('parseOutputFormat', () => {
@@ -20,15 +30,26 @@ describe('output-format', () => {
       expect(parseOutputFormat('jSoN')).toBe('json');
     });
 
+    it('should return "table" for valid table format', () => {
+      expect(parseOutputFormat('table')).toBe('table');
+    });
+
     it('should throw error for invalid format', () => {
       expect(() => parseOutputFormat('xml')).toThrow(
-        'Invalid output format: "xml". Valid formats: json'
+        'Invalid output format: "xml". Valid formats: json, table'
       );
       expect(() => parseOutputFormat('csv')).toThrow(
-        'Invalid output format: "csv". Valid formats: json'
+        'Invalid output format: "csv". Valid formats: json, table'
       );
       expect(() => parseOutputFormat('')).toThrow(
-        'Invalid output format: "". Valid formats: json'
+        'Invalid output format: "". Valid formats: json, table'
+      );
+    });
+
+    it('should validate against a narrowed supported set', () => {
+      expect(parseOutputFormat('json', ['json'])).toBe('json');
+      expect(() => parseOutputFormat('table', ['json'])).toThrow(
+        'Invalid output format: "table". Valid formats: json'
       );
     });
   });
@@ -132,14 +153,203 @@ describe('output-format', () => {
     });
   });
 
-  describe('OUTPUT_FORMATS', () => {
-    it('should contain json format', () => {
-      expect(OUTPUT_FORMATS).toContain('json');
+  describe('resolveOutputFormat', () => {
+    it('resolves --format=json and --json identically', () => {
+      const viaFormat = resolveOutputFormat({ '--format': 'json' }, ['json']);
+      const viaAlias = resolveOutputFormat({ '--json': true }, ['json']);
+      expect(viaFormat).toEqual({ format: 'json' });
+      expect(viaAlias).toEqual({ format: 'json' });
     });
 
-    it('should be a readonly array', () => {
+    it('returns undefined format when no flag is set', () => {
+      expect(resolveOutputFormat({}, ['json', 'table'])).toEqual({
+        format: undefined,
+      });
+    });
+
+    it('allows the same format requested two ways', () => {
+      expect(
+        resolveOutputFormat({ '--format': 'json', '--json': true }, ['json'])
+      ).toEqual({ format: 'json' });
+    });
+
+    it('errors when two different formats are requested via aliases', () => {
+      const result = resolveOutputFormat({ '--json': true, '--table': true }, [
+        'json',
+        'table',
+      ]);
+      expect(result).toHaveProperty('error');
+      if ('error' in result) {
+        expect(result.error).toContain('Conflicting output formats');
+        expect(result.error).toContain('--json');
+        expect(result.error).toContain('--table');
+      }
+    });
+
+    it('errors when --format conflicts with an alias', () => {
+      const result = resolveOutputFormat(
+        { '--format': 'table', '--json': true },
+        ['json', 'table']
+      );
+      expect(result).toHaveProperty('error');
+      if ('error' in result) {
+        expect(result.error).toContain('--format=table');
+        expect(result.error).toContain('--json');
+      }
+    });
+
+    it('errors on an unsupported --format value', () => {
+      const result = resolveOutputFormat({ '--format': 'yaml' }, [
+        'json',
+        'table',
+      ]);
+      expect(result).toHaveProperty('error');
+      if ('error' in result) {
+        expect(result.error).toContain('Invalid output format: "yaml"');
+      }
+    });
+
+    it('is case-insensitive for --format', () => {
+      expect(resolveOutputFormat({ '--format': 'JSON' }, ['json'])).toEqual({
+        format: 'json',
+      });
+    });
+  });
+
+  describe('OUTPUT_FORMATS', () => {
+    it('should contain json and table formats', () => {
+      expect(OUTPUT_FORMATS).toContain('json');
+      expect(OUTPUT_FORMATS).toContain('table');
+    });
+
+    it('mirrors ALL_OUTPUT_FORMATS', () => {
       expect(Array.isArray(OUTPUT_FORMATS)).toBe(true);
-      expect(OUTPUT_FORMATS.length).toBe(1);
+      expect([...OUTPUT_FORMATS]).toEqual([...ALL_OUTPUT_FORMATS]);
+    });
+  });
+
+  describe('outputFormatOptions', () => {
+    it('generates a --format option plus one boolean alias per format', () => {
+      const opts = outputFormatOptions(['json', 'table']);
+      const format = opts.find(o => o.name === 'format');
+      expect(format).toMatchObject({
+        name: 'format',
+        shorthand: 'F',
+        type: String,
+        argument: 'json|table',
+        deprecated: false,
+      });
+
+      const json = opts.find(o => o.name === 'json');
+      const table = opts.find(o => o.name === 'table');
+      expect(json).toMatchObject({ type: Boolean, deprecated: false });
+      expect(table).toMatchObject({ type: Boolean, deprecated: false });
+      expect(json?.description).toBeTruthy();
+      expect(table?.description).toBeTruthy();
+    });
+
+    it('de-dupes repeated formats', () => {
+      const opts = outputFormatOptions(['json', 'json']);
+      const jsonAliases = opts.filter(o => o.name === 'json');
+      expect(jsonAliases).toHaveLength(1);
+      const format = opts.find(o => o.name === 'format');
+      expect(format?.argument).toBe('json');
+    });
+
+    it('defaults to all supported formats', () => {
+      const opts = outputFormatOptions();
+      const names = opts.map(o => o.name);
+      expect(names).toContain('format');
+      for (const format of ALL_OUTPUT_FORMATS) {
+        expect(names).toContain(format);
+      }
+    });
+  });
+
+  describe('end-to-end flag parsing', () => {
+    it('parses --json and --format for a json-only command', () => {
+      const spec = getFlagsSpecification(outputFormatOptions(['json']));
+
+      expect(parseArguments(['--json'], spec).flags['--json']).toBe(true);
+      expect(parseArguments(['--format', 'json'], spec).flags['--format']).toBe(
+        'json'
+      );
+      // A format the command didn't declare is not a registered flag.
+      expect(() => parseArguments(['--table'], spec)).toThrow();
+    });
+
+    it('parses --json and --table for a json+table command', () => {
+      const spec = getFlagsSpecification(
+        outputFormatOptions(['json', 'table'])
+      );
+
+      expect(parseArguments(['--json'], spec).flags['--json']).toBe(true);
+      expect(parseArguments(['--table'], spec).flags['--table']).toBe(true);
+      expect(parseArguments(['-F', 'table'], spec).flags['--format']).toBe(
+        'table'
+      );
+    });
+  });
+
+  describe('getCommandOptions', () => {
+    it('auto-merges output-format options from outputFormats', () => {
+      const options = getCommandOptions({
+        options: [],
+        outputFormats: ['json'],
+      });
+      const names = options.map(o => o.name);
+      expect(names).toEqual(['format', 'json']);
+    });
+
+    it('does not add format options when outputFormats is absent', () => {
+      const declared = [
+        { name: 'foo', shorthand: null, type: Boolean, deprecated: false },
+      ];
+      expect(getCommandOptions({ options: declared })).toEqual(declared);
+    });
+
+    it('lets an explicitly declared option win over a generated one', () => {
+      const declared = [
+        {
+          name: 'json',
+          shorthand: null,
+          type: Boolean,
+          deprecated: false,
+          description: 'custom json flag',
+        },
+      ];
+      const options = getCommandOptions({
+        options: declared,
+        outputFormats: ['json'],
+      });
+      const jsonOptions = options.filter(o => o.name === 'json');
+      expect(jsonOptions).toHaveLength(1);
+      expect(jsonOptions[0].description).toBe('custom json flag');
+    });
+
+    it('preserves declared non-format options alongside generated ones', () => {
+      const declared = [
+        { name: 'refresh', shorthand: null, type: Boolean, deprecated: false },
+      ];
+      const names = getCommandOptions({
+        options: declared,
+        outputFormats: ['json', 'table'],
+      }).map(o => o.name);
+      expect(names).toEqual(['refresh', 'format', 'json', 'table']);
+    });
+  });
+
+  describe('getCommandFlagsSpecification', () => {
+    it('parses generated aliases without listing them in options', () => {
+      const spec = getCommandFlagsSpecification({
+        options: [],
+        outputFormats: ['json', 'table'],
+      });
+      expect(parseArguments(['--json'], spec).flags['--json']).toBe(true);
+      expect(parseArguments(['--table'], spec).flags['--table']).toBe(true);
+      expect(parseArguments(['--format', 'json'], spec).flags['--format']).toBe(
+        'json'
+      );
     });
   });
 
@@ -154,11 +364,12 @@ describe('output-format', () => {
   });
 
   describe('jsonOption', () => {
-    it('should have correct properties', () => {
+    it('should have correct properties and no longer be deprecated', () => {
       expect(jsonOption.name).toBe('json');
       expect(jsonOption.shorthand).toBeNull();
       expect(jsonOption.type).toBe(Boolean);
-      expect(jsonOption.deprecated).toBe(true);
+      expect(jsonOption.deprecated).toBe(false);
+      expect(jsonOption.description).not.toContain('DEPRECATED');
     });
   });
 });

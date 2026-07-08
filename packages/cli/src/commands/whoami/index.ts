@@ -5,16 +5,16 @@ import { whoamiCommand } from './command';
 import getScope from '../../util/get-scope';
 import { parseArguments } from '../../util/get-args';
 import type Client from '../../util/client';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { getCommandFlagsSpecification } from '../../util/arg-common';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { WhoamiTelemetryClient } from '../../util/telemetry/commands/whoami';
-import { validateJsonOutput } from '../../util/output-format';
+import { resolveOutputFormat } from '../../util/output-format';
 
 export default async function whoami(client: Client): Promise<number> {
   let parsedArgs = null;
 
-  const flagsSpecification = getFlagsSpecification(whoamiCommand.options);
+  const flagsSpecification = getCommandFlagsSpecification(whoamiCommand);
 
   const telemetry = new WhoamiTelemetryClient({
     opts: {
@@ -35,13 +35,16 @@ export default async function whoami(client: Client): Promise<number> {
     return 0;
   }
 
-  const formatResult = validateJsonOutput(parsedArgs.flags);
-  if (!formatResult.valid) {
+  const formatResult = resolveOutputFormat(
+    parsedArgs.flags,
+    whoamiCommand.outputFormats
+  );
+  if ('error' in formatResult) {
     output.error(formatResult.error);
     return 1;
   }
-  const asJson = formatResult.jsonOutput;
-  telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
+  const asJson = formatResult.format === 'json';
+  telemetry.trackCliOptionFormat(formatResult.format);
 
   const scope = await getScope(client, { resolveLocalScope: true });
   const { user, team, globalTeam } = scope;

@@ -1,5 +1,4 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption } from '../../util/arg-common';
 
 const specUrlOption = {
   name: 'spec-url',
@@ -16,8 +15,8 @@ export const listSubcommand = {
   aliases: ['ls'],
   description: 'List all available API endpoints',
   arguments: [],
+  outputFormats: ['json', 'table'],
   options: [
-    formatOption,
     specUrlOption,
     {
       name: 'refresh',
@@ -34,7 +33,7 @@ export const listSubcommand = {
     },
     {
       name: 'List all endpoints as JSON',
-      value: `${packageName} api ls --format json`,
+      value: `${packageName} api ls --json`,
     },
     {
       name: 'List endpoints from a custom OpenAPI spec',

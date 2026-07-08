@@ -6,6 +6,37 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/**
+ * Stubs `fetch` to return a minimal custom OpenAPI spec with a single
+ * `GET /custom-only` endpoint, for exercising `api ls` output formats.
+ */
+function stubCustomSpecFetch(): void {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          openapi: '3.0.3',
+          info: { title: 'Custom API', version: '1.0.0' },
+          paths: {
+            '/custom-only': {
+              get: {
+                operationId: 'getCustomOnly',
+                summary: 'Custom only',
+                tags: ['custom'],
+              },
+            },
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }
+      )
+    )
+  );
+}
+
 describe('api', () => {
   describe('--help', () => {
     it('prints help message', async () => {
@@ -248,30 +279,7 @@ describe('api', () => {
 
   describe('--spec-url', () => {
     it('lists endpoints from the custom spec only', async () => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue(
-          new Response(
-            JSON.stringify({
-              openapi: '3.0.3',
-              info: { title: 'Custom API', version: '1.0.0' },
-              paths: {
-                '/custom-only': {
-                  get: {
-                    operationId: 'getCustomOnly',
-                    summary: 'Custom only',
-                    tags: ['custom'],
-                  },
-                },
-              },
-            }),
-            {
-              status: 200,
-              headers: { 'content-type': 'application/json' },
-            }
-          )
-        )
-      );
+      stubCustomSpecFetch();
 
       client.setArgv(
         'api',
@@ -293,6 +301,48 @@ describe('api', () => {
           operationId: 'getCustomOnly',
         }),
       ]);
+    });
+
+    it('outputs JSON with the --json alias', async () => {
+      stubCustomSpecFetch();
+
+      client.setArgv(
+        'api',
+        'ls',
+        '--spec-url',
+        'https://api.vercel.tools/openapi.json',
+        '--json'
+      );
+
+      const exitCode = await api(client);
+      expect(exitCode).toEqual(0);
+
+      const endpoints = JSON.parse(client.stdout.getFullOutput());
+      expect(endpoints).toEqual([
+        expect.objectContaining({
+          method: 'GET',
+          path: '/custom-only',
+          operationId: 'getCustomOnly',
+        }),
+      ]);
+    });
+
+    it('errors when --json and --format=table conflict', async () => {
+      stubCustomSpecFetch();
+
+      client.setArgv(
+        'api',
+        'ls',
+        '--spec-url',
+        'https://api.vercel.tools/openapi.json',
+        '--format',
+        'table',
+        '--json'
+      );
+
+      const exitCode = await api(client);
+      expect(exitCode).toEqual(1);
+      expect(client.getFullOutput()).toContain('Conflicting output formats');
     });
 
     it('prints a clear error when the custom URL is not an OpenAPI spec', async () => {

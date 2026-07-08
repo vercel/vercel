@@ -1259,6 +1259,11 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 deploym…
                                 is      
                                 complete
+       --json                   Output  
+                                as JSON 
+                                (alias  
+                                for     
+                                --forma…
   -l,  --logs                   Print   
                                 the     
                                 build   
@@ -1454,6 +1459,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
   -F,  --format <FORMAT>        Specify the output format (json)                
        --guidance               Receive command suggestions once deployment is  
                                 complete                                        
+       --json                   Output as JSON (alias for --format=json)        
   -l,  --logs                   Print the build logs                            
   -m,  --meta <KEY=VALUE>       Specify metadata for the deployment (e.g. \`-m   
                                 KEY1=value1 -m KEY2=value2\`)                    
@@ -1542,6 +1548,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
   -f,  --force                  Force a new deployment even if nothing has changed                                      
   -F,  --format <FORMAT>        Specify the output format (json)                                                        
        --guidance               Receive command suggestions once deployment is complete                                 
+       --json                   Output as JSON (alias for --format=json)                                                
   -l,  --logs                   Print the build logs                                                                    
   -m,  --meta <KEY=VALUE>       Specify metadata for the deployment (e.g. \`-m KEY1=value1 -m KEY2=value2\`)              
        --no-wait                Don't wait for the deployment to finish                                                 
@@ -3444,6 +3451,9 @@ exports[`help command > inspect help output snapshots > inspect help column widt
   -F,  --format <FORMAT>  Specify the   
                           output format 
                           (json)        
+       --json             Output as JSON
+                          (alias for    
+                          --format=json)
   -l,  --logs             Prints the    
                           build logs    
                           instead of the
@@ -3544,6 +3554,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                      
+       --json             Output as JSON (alias for --format=json)              
   -l,  --logs             Prints the build logs instead of the deployment       
                           summary                                               
        --timeout <TIME>   Time to wait for deployment completion [3m]           
@@ -3604,6 +3615,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON (alias for --format=json)                                                      
   -l,  --logs             Prints the build logs instead of the deployment summary                                       
        --timeout <TIME>   Time to wait for deployment completion [3m]                                                   
        --wait             Blocks until deployment completes                                                             
@@ -5860,6 +5872,7 @@ exports[`help command > project help output snapshots > project list help output
 
   -f,  --filter <NAME>    Filter projects by name (substring match)                                                     
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --json             Output as JSON (alias for --format=json)                                                      
   -N,  --next <MS>        Show next page of results                                                                     
        --update-required  A list of projects affected by an upcoming deprecation                                        
 
@@ -7567,9 +7580,12 @@ exports[`help command > whoami help output snapshots > whoami help column width 
 
   Options:
 
-  -F,  --format <FORMAT>  Specify the   
-                          output format 
-                          (json)        
+  -F,  --format <json>  Specify the     
+                        output format   
+                        (json)          
+       --json           Output as JSON  
+                        (alias for      
+                        --format=json)  
 
 
   Global Options:
@@ -7626,6 +7642,10 @@ exports[`help command > whoami help output snapshots > whoami help column width 
 
     $ vercel whoami
 
+  - Print the current user as JSON
+
+    $ vercel whoami --json
+
 "
 `;
 
@@ -7637,7 +7657,8 @@ exports[`help command > whoami help output snapshots > whoami help column width 
 
   Options:
 
-  -F,  --format <FORMAT>  Specify the output format (json)                      
+  -F,  --format <json>  Specify the output format (json)                        
+       --json           Output as JSON (alias for --format=json)                
 
 
   Global Options:
@@ -7662,6 +7683,10 @@ exports[`help command > whoami help output snapshots > whoami help column width 
 
     $ vercel whoami
 
+  - Print the current user as JSON
+
+    $ vercel whoami --json
+
 "
 `;
 
@@ -7673,7 +7698,8 @@ exports[`help command > whoami help output snapshots > whoami help column width 
 
   Options:
 
-  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+  -F,  --format <json>  Specify the output format (json)                                                                
+       --json           Output as JSON (alias for --format=json)                                                        
 
 
   Global Options:
@@ -7695,6 +7721,10 @@ exports[`help command > whoami help output snapshots > whoami help column width 
   - Shows the username of the currently logged in user
 
     $ vercel whoami
+
+  - Print the current user as JSON
+
+    $ vercel whoami --json
 
 "
 `;

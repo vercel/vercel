@@ -1,6 +1,9 @@
+import type arg from 'arg';
 import { getFlagsSpecification } from './get-flags-specification';
 import { getCommandNamePlain } from './pkg-name';
 import { normalizeFlagName, stripSensitiveAuthArgs } from './redact-args';
+import { ALL_OUTPUT_FORMATS, type OutputFormat } from './output-format';
+import type { Command, CommandOption } from '../commands/help';
 
 export const globalCommandOptions = [
   {
@@ -223,9 +226,129 @@ export const jsonOption = {
   name: 'json',
   shorthand: null,
   type: Boolean,
-  deprecated: true,
-  description: 'DEPRECATED: Use --format=json instead',
+  deprecated: false,
+  description: 'Output as JSON (alias for --format=json)',
 } as const;
+
+/**
+ * Boolean-alias option for each supported output format, e.g. `--json`.
+ * Defined as `const` objects so their literal `name`/`type` flow through
+ * `getFlagsSpecification` when spread into a command's `options`.
+ *
+ * Keep in sync with `ALL_OUTPUT_FORMATS` in `./output-format`.
+ */
+const OUTPUT_FORMAT_ALIAS_OPTIONS = {
+  json: {
+    name: 'json',
+    shorthand: null,
+    type: Boolean,
+    deprecated: false,
+    description: 'Output as JSON (alias for --format=json)',
+  },
+  table: {
+    name: 'table',
+    shorthand: null,
+    type: Boolean,
+    deprecated: false,
+    description: 'Output as a table (alias for --format=table)',
+  },
+} as const satisfies Record<OutputFormat, CommandOption>;
+
+/**
+ * Builds the CLI options that back a command's declared output formats.
+ *
+ * From a single declaration (e.g. `['json', 'table']`) this produces:
+ * - a `--format, -F <json|table>` string option, and
+ * - one boolean alias per format (`--json`, `--table`).
+ *
+ * The return type is a precise tuple so that spreading it into a command's
+ * `as const` `options` array preserves each option's literal `name`/`type`,
+ * keeping `flags['--json']` well-typed. Reading the resolved format is done
+ * once, via `resolveOutputFormat` in `./output-format`.
+ */
+type FormatSetOption = {
+  readonly name: 'format';
+  readonly shorthand: 'F';
+  readonly type: typeof String;
+  readonly argument: string;
+  readonly description: string;
+  readonly deprecated: false;
+};
+
+export function outputFormatOptions<const F extends readonly OutputFormat[]>(
+  formats: F = ALL_OUTPUT_FORMATS as unknown as F
+): [
+  FormatSetOption,
+  ...{ [K in keyof F]: (typeof OUTPUT_FORMAT_ALIAS_OPTIONS)[F[K]] },
+] {
+  const unique = [...new Set(formats)] as OutputFormat[];
+  const formatOptionForSet: FormatSetOption = {
+    name: 'format',
+    shorthand: 'F',
+    type: String,
+    argument: unique.join('|'),
+    description: `Specify the output format (${unique.join(', ')})`,
+    deprecated: false,
+  };
+
+  const aliases = unique.map(
+    format => OUTPUT_FORMAT_ALIAS_OPTIONS[format]
+  ) as unknown as {
+    [K in keyof F]: (typeof OUTPUT_FORMAT_ALIAS_OPTIONS)[F[K]];
+  };
+
+  return [formatOptionForSet, ...aliases];
+}
+
+/**
+ * Whether a command option is one of the generated output-format alias
+ * booleans (`--json`, `--table`, …).
+ */
+export function isOutputFormatAlias(name: string): name is OutputFormat {
+  return name in OUTPUT_FORMAT_ALIAS_OPTIONS;
+}
+
+/**
+ * The effective options for a command: its declared `options` plus the
+ * output-format options generated from `command.outputFormats` (if any).
+ *
+ * A command that declares `outputFormats` does NOT need to add
+ * `outputFormatOptions(...)` to its `options` array — the framework merges
+ * them here, so both flag parsing (`getCommandFlagsSpecification`) and help
+ * rendering see the generated `--format` / `--json` / `--table` flags.
+ *
+ * Options already declared explicitly win over generated ones with the same
+ * name, so a command can still override an individual flag if needed.
+ */
+export function getCommandOptions(
+  command: Pick<Command, 'options' | 'outputFormats'>
+): CommandOption[] {
+  if (!command.outputFormats || command.outputFormats.length === 0) {
+    return [...command.options];
+  }
+
+  const declaredNames = new Set(command.options.map(option => option.name));
+  const generated = outputFormatOptions(command.outputFormats).filter(
+    option => !declaredNames.has(option.name)
+  );
+
+  return [...command.options, ...generated];
+}
+
+/**
+ * Builds the `arg` flags specification for a command, including any
+ * output-format flags generated from `command.outputFormats`. Prefer this
+ * over `getFlagsSpecification(command.options)` for commands that declare
+ * `outputFormats`.
+ */
+export function getCommandFlagsSpecification(
+  command: Pick<Command, 'options' | 'outputFormats'>
+): arg.Spec {
+  // The merged options are widened to `CommandOption[]`, so the generic
+  // `ToArgSpec` result is a loose spec. Commands using this read flags via
+  // `resolveOutputFormat`, not typed keys, so returning `arg.Spec` is correct.
+  return getFlagsSpecification(getCommandOptions(command)) as arg.Spec;
+}
 
 export const nonInteractiveOption = {
   name: 'non-interactive',
