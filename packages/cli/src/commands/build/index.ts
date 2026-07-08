@@ -1458,6 +1458,9 @@ async function doBuild(
             cwd: buildWorkPath,
             expectsPreDeploy: Boolean(preDeployCmd),
             builderSpan,
+            // Tag every build-output line with the service so the build-container can
+            // attribute it. Only set when this build belongs to a service.
+            serviceName: service?.name,
           },
           builder,
           hasDetectedServices: getHasDetectedServices(),

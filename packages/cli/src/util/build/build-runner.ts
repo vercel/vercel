@@ -27,6 +27,13 @@ export interface BuildRunnerContext {
   expectsPreDeploy: boolean;
   /** The `vc.builder` span this build runs under; child spans/events attach to it. */
   builderSpan: Span;
+  /**
+   * When set, every stdout/stderr line the forked build produces is prefixed with
+   * `[vc:service:<name>] ` before reaching the terminal. The Vercel build-container strips
+   * this tag and uses it to attribute each build log line to a service. Only meaningful for
+   * subprocess builds; ignored by the in-process runner.
+   */
+  serviceName?: string;
 }
 
 export type RawBuildResult = BuildResultV2 | BuildResultV3 | BuildResultVX;

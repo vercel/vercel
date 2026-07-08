@@ -222,6 +222,41 @@ function rehydrateResult(result: BuildResultV2 | BuildResultV3): void {
   }
 }
 
+/**
+ * Prepends `[vc:service:<name>] ` to each complete line read from a child's stdout/stderr and
+ * forwards it to `dest`. Buffers an unterminated trailing line until more data arrives (or the
+ * `flush` on teardown), so the tag only ever lands at real line starts. Must stay in sync with
+ * the tag matcher in api/build-container/container/src/utils/logging.ts.
+ */
+export function createServiceLinePrefixer(
+  serviceName: string,
+  dest: Pick<NodeJS.WriteStream, 'write'>
+): { onData: (chunk: string) => void; flush: () => void } {
+  const tag = `[vc:service:${serviceName}] `;
+  let pending = '';
+  return {
+    onData(chunk: string) {
+      pending += chunk;
+      const newlineIndex = pending.lastIndexOf('\n');
+      if (newlineIndex === -1) return;
+      const complete = pending.slice(0, newlineIndex + 1);
+      pending = pending.slice(newlineIndex + 1);
+      const tagged = complete
+        .split('\n')
+        .slice(0, -1)
+        .map(line => `${tag}${line}`)
+        .join('\n');
+      dest.write(`${tagged}\n`);
+    },
+    flush() {
+      if (pending.length > 0) {
+        dest.write(`${tag}${pending}`);
+        pending = '';
+      }
+    },
+  };
+}
+
 /** Runs a builder in a forked worker process. */
 export class SubprocessBuildRunner extends BuildRunner {
   private child?: ChildProcess;
@@ -229,17 +264,32 @@ export class SubprocessBuildRunner extends BuildRunner {
   private diagnosticsResult?: BuilderDiagnostics;
 
   /**
+   * Line prefixers for the child's piped stdout/stderr, present only when `ctx.serviceName` is
+   * set. Flushed on teardown so a trailing partial line isn't lost.
+   */
+  private stdoutPrefixer?: ReturnType<typeof createServiceLinePrefixer>;
+
+  private stderrPrefixer?: ReturnType<typeof createServiceLinePrefixer>;
+
+  /**
    * Fork a worker, run one build, and return the deserialized result. `buildOptions.span` is
    * dropped (a class instance that can't be serialized); the caller keeps its own tracing.
    *
-   * The child inherits stdout/stderr so its build output reaches the terminal directly, matching
-   * the previous in-process behavior. When the build registers a pre-deploy command, the worker
-   * is kept alive: its `registerPreDeploy` callback runs the command in the worker later, when the
-   * command invokes the deferred callback. Teardown is owned by the caller (via `teardown()`), so
-   * a kept-alive worker is released even if that deferred callback is never reached.
+   * When `ctx.serviceName` is set, the child's stdout/stderr are piped so each line can be
+   * prefixed with the service tag before forwarding to the terminal (covering the builder's own
+   * output and any subprocess it spawns). Otherwise the child inherits stdout/stderr and writes
+   * directly, matching the previous in-process behavior.
+   *
+   * When the build registers a pre-deploy
+   * command, the worker is kept alive: its `registerPreDeploy` callback runs the command in the
+   * worker later, when the command invokes the deferred callback. Teardown is owned by the caller
+   * (via `teardown()`), so a kept-alive worker is released even if that deferred callback is never
+   * reached.
    */
   async build(): Promise<BuildResultV2 | BuildResultV3> {
     const workerPath = join(__dirname, 'builder-worker.cjs');
+
+    const { serviceName } = this.ctx;
 
     const child = fork(workerPath, [], {
       cwd: this.ctx.cwd,
@@ -249,8 +299,32 @@ export class SubprocessBuildRunner extends BuildRunner {
       // Buffers, cycles (e.g. `@vercel/next`'s `childProcesses`), and shared object identity
       // (one Lambda referenced by many outputs stays one instance) intact.
       serialization: 'advanced',
+      // Pipe stdout/stderr (keeping stdin inherited and the IPC channel) only when we need to
+      // tag lines; otherwise inherit so output goes straight to the terminal.
+      stdio: serviceName
+        ? ['inherit', 'pipe', 'pipe', 'ipc']
+        : ['inherit', 'inherit', 'inherit', 'ipc'],
     });
     this.child = child;
+
+    // When piping, read the child's streams line-by-line, prefix with the service tag, and
+    // forward to our own stdout/stderr. Flushed on teardown so a trailing partial line isn't lost.
+    this.stdoutPrefixer = serviceName
+      ? createServiceLinePrefixer(serviceName, process.stdout)
+      : undefined;
+    this.stderrPrefixer = serviceName
+      ? createServiceLinePrefixer(serviceName, process.stderr)
+      : undefined;
+    if (this.stdoutPrefixer && child.stdout) {
+      const prefixer = this.stdoutPrefixer;
+      child.stdout.setEncoding('utf8');
+      child.stdout.on('data', chunk => prefixer.onData(chunk));
+    }
+    if (this.stderrPrefixer && child.stderr) {
+      const prefixer = this.stderrPrefixer;
+      child.stderr.setEncoding('utf8');
+      child.stderr.on('data', chunk => prefixer.onData(chunk));
+    }
 
     // Wait for the worker's `ready` handshake before sending the build request.
     await new Promise<void>((resolve, reject) => {
@@ -443,6 +517,10 @@ export class SubprocessBuildRunner extends BuildRunner {
   teardown(): void {
     const { child } = this;
     if (!child) return;
+
+    // Emit any buffered trailing (unterminated) line before we stop reading the streams.
+    this.stdoutPrefixer?.flush();
+    this.stderrPrefixer?.flush();
 
     if (child.connected) child.disconnect();
     if (child.exitCode === null && child.signalCode === null) {
