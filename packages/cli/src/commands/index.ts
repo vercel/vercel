@@ -5,6 +5,7 @@ import { aiGatewayCommand } from './ai-gateway/command';
 import { alertsCommand } from './alerts/command';
 import { aliasCommand } from './alias/command';
 import { apiCommand } from './api/command';
+import { askCommand } from './ask/command';
 import { bisectCommand } from './bisect/command';
 import { buildCommand } from './build/command';
 import { buyCommand } from './buy/command';
@@ -74,6 +75,7 @@ const commandsStructs = [
   aliasCommand,
   activityCommand,
   apiCommand,
+  askCommand,
   blobCommand,
   bisectCommand,
   buildCommand,
