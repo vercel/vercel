@@ -2,6 +2,7 @@ import fs from 'fs';
 import { join } from 'path';
 import execa from 'execa';
 import { debug } from '@vercel/build-utils';
+import { getVenvPythonBin } from './utils';
 
 const scriptPath = join(__dirname, '..', 'templates', 'vc_fastapi_static.py');
 
@@ -18,22 +19,24 @@ export interface FastAPICollectStaticResult {
 }
 
 /**
- * Discover StaticFiles mounts by importing the entrypoint via a Python shim.
- * Uses `uv run --with fastapi` so native wheels are resolved for
- * the build host platform — no venv dependency.
+ * Discover StaticFiles mounts by importing the entrypoint via a Python shim
+ * run with the build venv Python. The venv already contains the user's
+ * fastapi/starlette dependencies installed during the build step.
  */
 export async function getFastAPIStaticMounts(
+  venvPath: string,
   entrypointAbs: string,
   variableName: string,
   env: NodeJS.ProcessEnv,
   workPath: string
 ): Promise<FastAPIStaticMount[]> {
+  const pythonPath = getVenvPythonBin(venvPath);
   let stdout: string;
   try {
     let stderr: string;
     ({ stdout, stderr } = await execa(
-      'uv',
-      ['run', '--with', 'fastapi', scriptPath, entrypointAbs, variableName],
+      pythonPath,
+      [scriptPath, entrypointAbs, variableName],
       { env, cwd: workPath }
     ));
     if (stderr) {
@@ -63,6 +66,7 @@ export async function getFastAPIStaticMounts(
  * Returns null when no StaticFiles mounts are found.
  */
 export async function runFastAPICollectStatic(
+  venvPath: string,
   workPath: string,
   env: NodeJS.ProcessEnv,
   outputStaticDir: string,
@@ -70,6 +74,7 @@ export async function runFastAPICollectStatic(
   variableName: string
 ): Promise<FastAPICollectStaticResult | null> {
   const mounts = await getFastAPIStaticMounts(
+    venvPath,
     entrypointAbs,
     variableName,
     env,

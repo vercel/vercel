@@ -301,6 +301,7 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
     const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
 
     const fastapiStatic = await runFastAPICollectStatic(
+      venvPath,
       workPath,
       pythonEnv,
       outputStaticDir,
