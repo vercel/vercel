@@ -83,7 +83,11 @@ import {
   sanitizeConsumerName,
 } from '@vercel/build-utils';
 import { getServiceCrons } from '../src/crons';
-import { entrypointToModule, detectPythonEntrypoint } from '../src/entrypoint';
+import {
+  entrypointToModule,
+  detectPythonEntrypoint,
+  detectEntrypoint,
+} from '../src/entrypoint';
 import execa from 'execa';
 
 function getBuildOutputV2(result: Awaited<ReturnType<typeof build>>) {
@@ -1970,6 +1974,86 @@ describe('pyproject.toml entrypoint detection', () => {
     expect(content.includes('other/server.py')).toBe(false);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+});
+
+describe('tool.vercel.entrypoint validation', () => {
+  let workPath: string;
+
+  beforeEach(() => {
+    workPath = path.join(
+      tmpdir(),
+      `python-tool-vercel-validation-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('hard-errors when the declared module does not exist', async () => {
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = "backend.api:app"\n'
+    );
+    // A detectable candidate exists, but the broken declaration must not
+    // silently fall back to it — that could build the wrong app.
+    fs.writeFileSync(path.join(workPath, 'main.py'), 'app = object()\n');
+
+    await expect(detectPythonEntrypoint('fastapi', workPath)).rejects.toThrow(
+      /"tool\.vercel\.entrypoint" in pyproject\.toml is "backend\.api:app" but no matching module file was found/
+    );
+  });
+
+  it('hard-errors when the declared value is not module:object format', async () => {
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = "main.py"\n'
+    );
+    fs.writeFileSync(path.join(workPath, 'main.py'), 'app = object()\n');
+
+    await expect(detectPythonEntrypoint('fastapi', workPath)).rejects.toThrow(
+      /no matching module file was found/
+    );
+  });
+
+  it('hard-errors when the declared value is not a string', async () => {
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = 42\n'
+    );
+
+    await expect(detectPythonEntrypoint('fastapi', workPath)).rejects.toThrow(
+      /must be a string in "module:object" format/
+    );
+  });
+
+  it('still resolves a valid declared entrypoint', async () => {
+    fs.mkdirSync(path.join(workPath, 'backend'), { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = "backend.api:app"\n'
+    );
+    fs.writeFileSync(
+      path.join(workPath, 'backend', 'api.py'),
+      'app = object()\n'
+    );
+
+    await expect(detectPythonEntrypoint('fastapi', workPath)).resolves.toEqual({
+      entrypoint: { entrypoint: 'backend/api.py', variableName: 'app' },
+    });
+  });
+
+  it('detectEntrypoint returns null instead of throwing for speculative detection', async () => {
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = "backend.api:app"\n'
+    );
+
+    await expect(
+      detectEntrypoint({ workPath, framework: 'fastapi' })
+    ).resolves.toBeNull();
   });
 });
 
