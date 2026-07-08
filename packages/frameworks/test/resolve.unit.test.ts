@@ -1,13 +1,30 @@
 import { join } from 'path';
-import { promises } from 'fs';
+import { promises, existsSync } from 'fs';
 import { tmpdir } from 'os';
 import {
+  frameworksManifest,
   partitionManifest,
   resolveFrameworkList,
   type FrameworkManifestEntry,
 } from '../src/frameworks';
 
 const { mkdtemp, readFile, rm, writeFile } = promises;
+
+describe('pinned manifest', () => {
+  it('exists (fetched by build.mjs, not checked into git)', () => {
+    expect(existsSync(join(__dirname, '..', 'src', 'frameworks.json'))).toBe(
+      true
+    );
+  });
+
+  it('is a non-empty, fully interpretable framework list', () => {
+    expect(frameworksManifest.length).toBeGreaterThan(0);
+    const { frameworks, requiresUpdate } =
+      partitionManifest(frameworksManifest);
+    expect(requiresUpdate).toEqual([]);
+    expect(frameworks.length).toBe(frameworksManifest.length);
+  });
+});
 
 function entry(
   overrides: Partial<FrameworkManifestEntry> & { slug: string }

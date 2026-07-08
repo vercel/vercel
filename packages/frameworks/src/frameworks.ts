@@ -1,3 +1,5 @@
+import { join } from 'path';
+import { readFileSync } from 'fs';
 import type { Framework } from './types';
 import {
   createFrameworks,
@@ -9,18 +11,28 @@ import {
   type ResolvedFrameworkList,
   type ResolveFrameworkListOptions,
 } from './resolve';
-import manifest from './frameworks.json';
 
 export * from './types';
 export * from './manifest';
 export * from './resolve';
 
+function loadPinnedManifest(): readonly FrameworkManifestEntry[] {
+  const path = join(__dirname, 'frameworks.json');
+  try {
+    return JSON.parse(readFileSync(path, 'utf8'));
+  } catch (error) {
+    throw new Error(
+      `Failed to load the pinned frameworks manifest at "${path}". It is fetched at build time — run \`pnpm build\` in packages/frameworks. ${error}`
+    );
+  }
+}
+
 /**
- * The pinned frameworks manifest, refreshed from the frameworks API at
- * build time (see build.mjs) and checked into git.
+ * The pinned frameworks manifest, fetched from the frameworks API at build
+ * time (see build.mjs).
  */
-export const frameworksManifest =
-  manifest as unknown as readonly FrameworkManifestEntry[];
+export const frameworksManifest: readonly FrameworkManifestEntry[] =
+  loadPinnedManifest();
 
 /**
  * Runtime overrides keyed by framework slug, for behavior that cannot be
