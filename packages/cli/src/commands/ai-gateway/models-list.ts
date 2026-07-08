@@ -2,15 +2,14 @@ import chalk from 'chalk';
 import table from '../../util/output/table';
 import type Client from '../../util/client';
 import { listModels, type Model } from '../../util/ai-gateway/models';
-import stamp from '../../util/output/stamp';
 import output from '../../output-manager';
 import { AiGatewayModelsListTelemetryClient } from '../../util/telemetry/commands/ai-gateway/models-list';
 import { modelsListSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { isAPIError } from '../../util/errors-ts';
 import { validateJsonOutput } from '../../util/output-format';
+import { renderResource } from '../../util/ai-gateway/output';
 
 export default async function list(client: Client, argv: string[]) {
   const telemetry = new AiGatewayModelsListTelemetryClient({
@@ -38,38 +37,17 @@ export default async function list(client: Client, argv: string[]) {
     output.error(formatResult.error);
     return 1;
   }
-  const asJson = formatResult.jsonOutput;
 
-  const lsStamp = stamp();
-  output.spinner('Fetching models');
-
-  let models: Model[];
-  try {
-    models = await listModels(client);
-  } catch (err: unknown) {
-    output.stopSpinner();
-    if (isAPIError(err)) {
-      output.error(err.message);
-      return 1;
-    }
-    throw err;
-  }
-
-  output.stopSpinner();
-
-  if (asJson) {
-    client.stdout.write(`${JSON.stringify({ models }, null, 2)}\n`);
-    return 0;
-  }
-
-  if (models.length === 0) {
-    output.log('No models found.');
-    return 0;
-  }
-
-  output.log(`Models ${lsStamp()}`);
-  client.stdout.write(printModelsTable(models));
-  return 0;
+  return renderResource<Model[]>(client, {
+    asJson: formatResult.jsonOutput,
+    spinnerText: 'Fetching models',
+    fetch: () => listModels(client),
+    toJSON: models => ({ models }),
+    isEmpty: models => models.length === 0,
+    emptyMessage: 'No models found.',
+    header: () => 'Models',
+    renderTable: printModelsTable,
+  });
 }
 
 function printModelsTable(models: Model[]) {

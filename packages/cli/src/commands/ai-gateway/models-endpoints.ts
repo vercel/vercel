@@ -4,17 +4,17 @@ import type Client from '../../util/client';
 import {
   listModelEndpoints,
   type ModelEndpoint,
+  type ModelWithEndpoints,
 } from '../../util/ai-gateway/models';
-import stamp from '../../util/output/stamp';
 import output from '../../output-manager';
 import { AiGatewayModelsEndpointsTelemetryClient } from '../../util/telemetry/commands/ai-gateway/models-endpoints';
 import { modelsEndpointsSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { isAPIError } from '../../util/errors-ts';
 import { getCommandName } from '../../util/pkg-name';
 import { validateJsonOutput } from '../../util/output-format';
+import { renderResource } from '../../util/ai-gateway/output';
 
 export default async function endpoints(client: Client, argv: string[]) {
   const telemetry = new AiGatewayModelsEndpointsTelemetryClient({
@@ -51,39 +51,17 @@ export default async function endpoints(client: Client, argv: string[]) {
     output.error(formatResult.error);
     return 1;
   }
-  const asJson = formatResult.jsonOutput;
 
-  const lsStamp = stamp();
-  output.spinner(`Fetching endpoints for ${model}`);
-
-  let data;
-  try {
-    data = await listModelEndpoints(client, model);
-  } catch (err: unknown) {
-    output.stopSpinner();
-    if (isAPIError(err)) {
-      output.error(err.message);
-      return 1;
-    }
-    throw err;
-  }
-
-  output.stopSpinner();
-
-  if (asJson) {
-    client.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
-    return 0;
-  }
-
-  const list = data?.endpoints ?? [];
-  if (list.length === 0) {
-    output.log(`No endpoints found for ${model}.`);
-    return 0;
-  }
-
-  output.log(`Endpoints for ${data.id} ${lsStamp()}`);
-  client.stdout.write(printEndpointsTable(list));
-  return 0;
+  return renderResource<ModelWithEndpoints>(client, {
+    asJson: formatResult.jsonOutput,
+    spinnerText: `Fetching endpoints for ${model}`,
+    fetch: () => listModelEndpoints(client, model),
+    toJSON: data => data,
+    isEmpty: data => (data?.endpoints ?? []).length === 0,
+    emptyMessage: `No endpoints found for ${model}.`,
+    header: data => `Endpoints for ${data.id}`,
+    renderTable: data => printEndpointsTable(data.endpoints ?? []),
+  });
 }
 
 const dash = () => chalk.gray('–');
