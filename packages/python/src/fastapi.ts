@@ -34,18 +34,23 @@ export async function getFastAPIStaticMounts(
   workPath: string
 ): Promise<FastAPIStaticMount[]> {
   const pythonPath = getVenvPythonBin(venvPath);
-  let stdout: string;
+  const outputPath = join(
+    workPath,
+    '.vercel',
+    'python',
+    'vc_fastapi_static_output.json'
+  );
+  await fs.promises.mkdir(join(workPath, '.vercel', 'python'), {
+    recursive: true,
+  });
   try {
-    let stderr: string;
-    ({ stdout, stderr } = await execa(
+    const { stderr } = await execa(
       pythonPath,
-      [scriptPath, entrypointAbs, variableName],
+      [scriptPath, entrypointAbs, variableName, outputPath],
       { env, cwd: workPath }
-    ));
+    );
     if (stderr) {
-      console.error(`${_STATIC_FILE_COLLECTION_ERROR_MESSAGE}`);
       debug(`FastAPI shim stderr:\n${stderr}`);
-      return [];
     }
   } catch (err: any) {
     console.error(_STATIC_FILE_COLLECTION_ERROR_MESSAGE);
@@ -55,13 +60,16 @@ export async function getFastAPIStaticMounts(
     return [];
   }
   try {
-    const parsed = JSON.parse(stdout) as FastAPIStaticMount[];
+    const raw = await fs.promises.readFile(outputPath, 'utf8');
+    const parsed = JSON.parse(raw) as FastAPIStaticMount[];
     debug(`FastAPI: discovered mounts: ${JSON.stringify(parsed)}`);
     return parsed;
   } catch {
     console.error(_STATIC_FILE_COLLECTION_ERROR_MESSAGE);
-    debug(`FastAPI: could not parse shim output: ${stdout}`);
+    debug(`FastAPI: could not read shim output file: ${outputPath}`);
     return [];
+  } finally {
+    await fs.promises.rm(outputPath, { force: true });
   }
 }
 
