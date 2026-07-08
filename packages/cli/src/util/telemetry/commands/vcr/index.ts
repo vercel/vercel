@@ -34,6 +34,24 @@ export class VcrTelemetryClient
     });
   }
 
+  trackCliSubcommandLogin(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'login',
+      value: actual,
+    });
+  }
+
+  trackCliArgumentEngine(value: string | undefined) {
+    if (value) {
+      // Engine is a bounded enum (docker|podman|buildah), so it is safe to
+      // record the actual value rather than redacting it.
+      this.trackCliArgument({
+        arg: 'engine',
+        value,
+      });
+    }
+  }
+
   trackCliSubcommandTag(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'tag',

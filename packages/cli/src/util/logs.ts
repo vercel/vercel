@@ -37,6 +37,34 @@ export function displayBuildLogs(
   return { promise, abortController };
 }
 
+export function collectBuildLogs(
+  client: Client,
+  deployment: Deployment,
+  follow: boolean = true
+): {
+  promise: Promise<BuildLog[]>;
+  abortController: AbortController;
+} {
+  const logs: BuildLog[] = [];
+  const abortController = new AbortController();
+  const promise = printEvents(
+    client,
+    deployment.id,
+    {
+      mode: 'logs',
+      onEvent: (event: BuildLog) => {
+        if (event.created) {
+          logs.push(event);
+        }
+      },
+      quiet: true,
+      findOpts: { direction: 'forward', follow },
+    },
+    abortController
+  ).then(() => logs);
+  return { promise, abortController };
+}
+
 export async function displayBuildLogsUntilFinalError(
   client: Client,
   deployment: Deployment,
