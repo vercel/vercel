@@ -5,6 +5,14 @@
     },
     {
       "path": "/",
+      "mustContain": "\"app_pyc\":true"
+    },
+    {
+      "path": "/",
+      "mustContain": "\"vendor_pyc\":true"
+    },
+    {
+      "path": "/",
       "mustContain": "\"ok\":true"
     }
   ]
