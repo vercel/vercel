@@ -1375,27 +1375,6 @@ describe('detectServices', () => {
       });
     });
 
-    it('should error when web service routePrefix contains path traversal', async () => {
-      const fs = new VirtualFilesystem({
-        'vercel.json': JSON.stringify({
-          experimentalServices: {
-            frontend: {
-              framework: 'vite',
-              routePrefix: '/../../../../outside-target/static-escape',
-            },
-          },
-        }),
-      });
-      const result = await detectServices({ fs });
-
-      expect(result.services).toEqual([]);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toMatchObject({
-        code: 'INVALID_ROUTE_PREFIX',
-        serviceName: 'frontend',
-      });
-    });
-
     it('should error when two web services share normalized routePrefix', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({

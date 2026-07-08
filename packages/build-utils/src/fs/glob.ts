@@ -4,7 +4,6 @@ import vanillaGlob_ from 'glob';
 import { promisify } from 'util';
 import { lstat, readlink, Stats } from 'fs-extra';
 import { normalizePath } from './normalize-path';
-import { hasParentDirectorySegment } from './path-containment';
 import FileFsRef from '../file-fs-ref';
 
 export interface GlobOptions {
@@ -33,12 +32,6 @@ export default async function glob(
 
   if (!path.isAbsolute(options.cwd)) {
     throw new Error(`basePath/cwd must be an absolute path (${options.cwd})`);
-  }
-
-  if (mountpoint && hasParentDirectorySegment(mountpoint)) {
-    throw new Error(
-      `Mountpoint "${mountpoint}" cannot contain path traversal segments`
-    );
   }
 
   const results: Record<string, FileFsRef> = {};

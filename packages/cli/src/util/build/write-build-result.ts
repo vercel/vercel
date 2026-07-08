@@ -38,8 +38,6 @@ import {
   isExperimentalService,
   isExperimentalServiceV2,
   isSymbolicLink,
-  assertPathWithinDirectory,
-  hasParentDirectorySegment,
 } from '@vercel/build-utils';
 import { getInternalServiceFunctionPath } from '@vercel/fs-detectors';
 import pipe from 'promisepipe';
@@ -315,11 +313,6 @@ async function writeBuildResultV2(args: {
 
   for (const [path, output] of Object.entries(buildResult.output)) {
     const normalizedPath = stripDuplicateSlashes(path);
-    if (hasParentDirectorySegment(normalizedPath)) {
-      throw new Error(
-        `Static output path "${path}" cannot contain path traversal segments`
-      );
-    }
     if (isContainerImage(output)) {
       injectServiceEnvVars(
         output,
@@ -637,9 +630,7 @@ async function writeStaticFile(
     overrides[fsPath] = override;
   }
 
-  const staticRoot = join(outputDir, 'static');
-  const dest = join(staticRoot, fsPath);
-  assertPathWithinDirectory(staticRoot, dest);
+  const dest = join(outputDir, 'static', fsPath);
   await fs.mkdirp(dirname(dest));
 
   // if already on disk hard link instead of copying
