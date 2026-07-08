@@ -179,6 +179,7 @@ export default class DevServer {
 
   public devCacheDir: string;
   private currentDevCommand?: string;
+  private initialDevCommandStarted = false;
   private caseSensitive: boolean;
   private apiDir: string | null;
   private apiExtensions: Set<string>;
@@ -947,9 +948,10 @@ export default class DevServer {
 
     this.envConfigs = { buildEnv, runEnv, allEnv };
 
-    // Preserve config-driven dev command restarts. Subscriber projects only
-    // defer the initial start until their sidecars are ready.
-    if (!this.hasSubscribers() || this.sidecarOrchestrator) {
+    // Restart the dev process if `devCommand` was modified via project
+    // settings overrides. The initial start lives in `start()`, so boot
+    // isn't serialized behind the dev server's port bind.
+    if (this.initialDevCommandStarted) {
       await this.runDevCommand();
     }
 
@@ -1139,6 +1141,14 @@ export default class DevServer {
     const vercelConfig = await this.getVercelConfig();
 
     let devCommandPromise: Promise<void> | undefined;
+    const startDevCommand = () => {
+      this.initialDevCommandStarted = true;
+      devCommandPromise = this.runDevCommand();
+      // Failures surface at the `await devCommandPromise` below; this only
+      // prevents an unhandled rejection in the interim.
+      void devCommandPromise.catch(() => {});
+    };
+
     if (this.shouldUseServicesOrchestrator()) {
       this.orchestrator = new ServicesOrchestrator({
         services: this.services || [],
@@ -1184,6 +1194,10 @@ export default class DevServer {
       } else {
         output.print(`  ${link(addressFormatted)}\n`);
       }
+    } else if (!this.hasSubscribers()) {
+      // Boot the dev command in parallel with file scanning, build-match
+      // setup, and watcher init instead of serializing behind its port bind.
+      startDevCommand();
     }
 
     const files = await getFiles(this.cwd, {});
@@ -1202,11 +1216,10 @@ export default class DevServer {
 
     await this.setupBuilderDevSidecars();
 
-    if (!this.shouldUseServicesOrchestrator()) {
-      devCommandPromise = this.runDevCommand();
-      // Startup continues in parallel below, but observe early failures until
-      // the promise is awaited once the proxy is ready.
-      void devCommandPromise.catch(() => {});
+    // Subscriber projects defer the dev command until the queue broker and
+    // sidecars can accept work enqueued during app boot.
+    if (!this.shouldUseServicesOrchestrator() && !devCommandPromise) {
+      startDevCommand();
     }
 
     // Builders that do not define a `shouldServe()` function need to be
