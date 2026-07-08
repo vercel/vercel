@@ -5,7 +5,6 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import getCommandFlags from '../../util/get-command-flags';
 import { getFlags, MAX_FLAGS_PAGE_LIMIT } from '../../util/flags/get-flags';
@@ -16,6 +15,7 @@ import { FlagsLsTelemetryClient } from '../../util/telemetry/commands/flags/ls';
 import { listSubcommand } from './command';
 import type { Flag } from '../../util/flags/types';
 import { formatProject } from '../../util/projects/format-project';
+import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
 export default async function ls(
   client: Client,
@@ -44,7 +44,9 @@ export default async function ls(
   const limit = flags['--limit'] as number | undefined;
   const next = flags['--next'] as string | undefined;
   const json = flags['--json'] as boolean | undefined;
+  const projectName = getProjectNameFromFlags(flags);
 
+  telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliOptionState(state);
   telemetryClient.trackCliOptionTag(tags);
   telemetryClient.trackCliOptionCreatedBy(createdBy);
@@ -63,12 +65,12 @@ export default async function ls(
     return 1;
   }
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
+      `Your codebase isn't linked to a project on Vercel. Pass --project <name>, or run ${getCommandName('link')} to link it.`
     );
     return 1;
   }

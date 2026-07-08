@@ -2516,6 +2516,10 @@ export const frameworks = [
     website: 'https://storybook.js.org',
     ignoreRuntimes: ['@vercel/next', '@vercel/node'],
     disableRootMiddleware: true,
+    // Storybook is a devDependency of many apps that deploy something else
+    // entirely, so detecting it is not evidence the user intends to deploy
+    // Storybook itself.
+    detectionConfidence: 'weak',
     detectors: {
       every: [
         {

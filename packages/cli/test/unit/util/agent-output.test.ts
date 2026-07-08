@@ -502,6 +502,30 @@ describe('buildCommandWithGlobalFlags', () => {
       'vercel --cwd /tmp/p --non-interactive integration resource remove r1 --disconnect-all --yes'
     );
   });
+
+  it('does not append a global flag the template already carries', () => {
+    const argv = ['node', 'vc.js', 'deploy', '--scope', 'vercel', '--yes'];
+    expect(
+      buildCommandWithGlobalFlags(
+        argv,
+        'deploy --project my-app --scope <team-slug> --yes'
+      )
+    ).toBe('vercel deploy --project my-app --scope <team-slug> --yes');
+  });
+
+  it('dedupes shorthand and long form of the same global flag', () => {
+    const argv = ['node', 'vc.js', 'deploy', '-S', 'vercel'];
+    expect(
+      buildCommandWithGlobalFlags(argv, 'deploy --scope <team-slug>')
+    ).toBe('vercel deploy --scope <team-slug>');
+  });
+
+  it('still appends globals absent from the template', () => {
+    const argv = ['node', 'vc.js', 'deploy', '--scope', 'vercel', '--yes'];
+    expect(buildCommandWithGlobalFlags(argv, 'link')).toBe(
+      'vercel link --scope vercel --yes'
+    );
+  });
 });
 
 describe('exitWithNonInteractiveError', () => {

@@ -102,6 +102,38 @@ export const removeSubcommand = {
   ],
 } as const;
 
+export const loginSubcommand = {
+  name: 'login',
+  aliases: [],
+  description:
+    'Authenticate a container tool (docker, podman, or buildah) with the Vercel Container Registry',
+  arguments: [
+    {
+      name: 'engine',
+      required: true,
+    },
+  ],
+  options: [projectScopeOption, formatOption],
+  examples: [
+    {
+      name: 'Log in with Docker',
+      value: `${packageName} vcr login docker`,
+    },
+    {
+      name: 'Log in with Podman',
+      value: `${packageName} vcr login podman`,
+    },
+    {
+      name: 'Log in with Buildah',
+      value: `${packageName} vcr login buildah`,
+    },
+    {
+      name: 'Log in for a specific project',
+      value: `${packageName} vcr login docker --project my-app`,
+    },
+  ],
+} as const;
+
 export const vcrCommand = {
   name: 'vcr',
   aliases: [],
@@ -113,6 +145,7 @@ export const vcrCommand = {
     inspectSubcommand,
     addSubcommand,
     removeSubcommand,
+    loginSubcommand,
     tagsAggregateCommand,
     imageAggregateCommand,
   ],

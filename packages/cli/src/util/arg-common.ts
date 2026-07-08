@@ -126,6 +126,7 @@ const SUBCOMMAND_FLAG_TAKES_VALUE = new Set([
   '--version', // redirects list --version
   '--search',
   '--format',
+  '--project',
   '--page',
   '--per-page',
 ]);

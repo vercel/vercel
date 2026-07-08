@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import open from 'open';
+import execa from 'execa';
 import integrationCommand from '../../../../src/commands/integration';
 import install from '../../../../src/commands/install';
 import pull from '../../../../src/commands/env/pull';
@@ -35,14 +36,22 @@ vi.mock(
   }
 );
 
+vi.mock('execa', () => {
+  return {
+    default: vi.fn().mockResolvedValue({ exitCode: 0 }),
+  };
+});
+
 const openMock = vi.mocked(open);
 const pullMock = vi.mocked(pull);
 const connectMock = vi.mocked(connectResourceToProject);
+const execaMock = vi.mocked(execa);
 
 beforeEach(() => {
   openMock.mockReset().mockResolvedValue(undefined as never);
   pullMock.mockClear();
   connectMock.mockClear();
+  execaMock.mockReset().mockResolvedValue({ exitCode: 0 } as never);
   // Mock Math.random to get predictable resource names (gray-apple suffix)
   vi.spyOn(Math, 'random').mockReturnValue(0);
 });
@@ -2574,6 +2583,94 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(0);
       // No JSON on stdout
       expect(client.stdout.getFullOutput()).toBe('');
+    });
+  });
+
+  describe('agent skills', () => {
+    beforeEach(() => {
+      useAutoProvision({ responseKey: 'provisioned' });
+    });
+
+    it('installs declared skills when the user accepts the prompt', async () => {
+      client.setArgv('integration', 'add', 'acme-skills');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+      await expect(client.stderr).toOutput(
+        'Install the agent skill so your AI tools can use Acme Product?'
+      );
+      client.stdin.write('y\n');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(execaMock).toHaveBeenCalledWith(
+        'npx',
+        [
+          '--yes',
+          'skills',
+          'add',
+          'https://github.com/shopify/shopify-ai-toolkit',
+          '--skill',
+          'shopify-dev',
+        ],
+        expect.objectContaining({ stdio: 'inherit', reject: false })
+      );
+    });
+
+    it('prints the install hint and does not run when declined', async () => {
+      client.setArgv('integration', 'add', 'acme-skills');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Install the agent skill so your AI tools can use Acme Product?'
+      );
+      client.stdin.write('n\n');
+
+      await expect(client.stderr).toOutput(
+        'npx skills add https://github.com/shopify/shopify-ai-toolkit --skill shopify-dev'
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(execaMock).not.toHaveBeenCalled();
+    });
+
+    it('auto-installs (no prompt) when non-interactive', async () => {
+      client.stdin.isTTY = false;
+      client.setArgv('integration', 'add', 'acme-skills');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      expect(execaMock).toHaveBeenCalledWith(
+        'npx',
+        [
+          '--yes',
+          'skills',
+          'add',
+          'https://github.com/shopify/shopify-ai-toolkit',
+          '--skill',
+          'shopify-dev',
+        ],
+        expect.objectContaining({ stdio: 'inherit', reject: false })
+      );
+    });
+
+    it('surfaces skills in --format=json and never runs them', async () => {
+      client.setArgv('integration', 'add', 'acme-skills', '--format=json');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+      expect(jsonOutput.skills).toEqual([
+        {
+          repoUrl: 'https://github.com/shopify/shopify-ai-toolkit',
+          skill: 'shopify-dev',
+          command:
+            'npx skills add https://github.com/shopify/shopify-ai-toolkit --skill shopify-dev',
+        },
+      ]);
+      expect(execaMock).not.toHaveBeenCalled();
     });
   });
 

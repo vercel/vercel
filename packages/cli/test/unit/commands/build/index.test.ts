@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import fs from 'fs-extra';
-import { join } from 'path';
+import { basename, join } from 'path';
 import {
   getWriteableDirectory,
   sanitizeConsumerName,
@@ -12,6 +12,7 @@ import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { execSync } from 'child_process';
+import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { vi } from 'vitest';
 import {
   detectBuilders,
@@ -508,6 +509,45 @@ describe.skipIf(flakey)('build', () => {
       { key: 'option:target', value: 'production' },
       { key: 'flag:yes', value: 'TRUE' },
     ]);
+  });
+
+  it('links before asking to pull settings in an unlinked directory', async () => {
+    const cwd = setupUnitFixture('commands/build/static-pull');
+    await fs.remove(join(cwd, '.vercel'));
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: basename(cwd),
+      name: basename(cwd),
+    });
+
+    const originalIsTTY = process.stdin.isTTY;
+    process.stdin.isTTY = true;
+    try {
+      client.cwd = cwd;
+      client.setArgv('build');
+      const exitCodePromise = build(client);
+
+      // The link flow runs before the pull question.
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Link directory to project?');
+      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Linked');
+
+      await expect(client.stderr).toOutput('No Project Settings found locally');
+      client.stdin.write('y\n');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      const projectJson = await fs.readJSON(join(cwd, '.vercel/project.json'));
+      expect(projectJson.projectId).toEqual(basename(cwd));
+    } finally {
+      process.stdin.isTTY = originalIsTTY;
+    }
   });
 
   it('should build root-level `middleware.js` and exclude from static files', async () => {
@@ -3215,7 +3255,7 @@ writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, nul
     ).toBe('backend output');
   });
 
-  it('should detect generated experimentalServicesV2 from default output when using --output', async () => {
+  it('should detect generated stable services routes from default output when using --output', async () => {
     const cwd = await getWriteableDirectory();
     const output = join(cwd, 'custom-output');
     await fs.ensureDir(join(cwd, '.vercel'));
@@ -3246,8 +3286,16 @@ writeFileSync(
   join(outputDir, 'config.json'),
   JSON.stringify({
     version: 3,
-    routes: [{ src: '^/api/(.*)$', service: 'backend' }],
-    experimentalServicesV2: {
+    routes: [
+      {
+        src: '^/api/(.*)$',
+        destination: {
+          type: 'service',
+          service: 'backend'
+        }
+      }
+    ],
+    services: {
       backend: {
         root: 'backend',
         entrypoint: 'package.json',
@@ -3290,7 +3338,15 @@ writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, nul
       }),
     });
     expect(config.routes).toEqual(
-      expect.arrayContaining([{ src: '^/api/(.*)$', service: 'backend' }])
+      expect.arrayContaining([
+        {
+          src: '^/api/(.*)$',
+          destination: {
+            type: 'service',
+            service: 'backend',
+          },
+        },
+      ])
     );
     expect(await fs.readFile(join(output, 'static/index.html'), 'utf8')).toBe(
       'root output'
@@ -3429,9 +3485,14 @@ writeFileSync(
     const cwd = fixture('static');
     const outputDir = join(cwd, '.vercel/output');
 
-    // Run the full CLI entry point so index.ts writes cli_traces.json
+    // Run the full CLI entry point so index.ts writes cli_traces.json.
+    // Framework detection is opt-in, so enable it to assert its spans.
     const cliPath = join(__dirname, '../../../../dist/vc.js');
-    execSync(`node ${cliPath} build`, { cwd, stdio: 'pipe' });
+    execSync(`node ${cliPath} build`, {
+      cwd,
+      stdio: 'pipe',
+      env: { ...process.env, VERCEL_FRAMEWORK_DETECTION: '1' },
+    });
 
     // Read trace events written to disk
     const tracePath = join(outputDir, 'diagnostics', 'cli_traces.json');
@@ -3471,9 +3532,13 @@ writeFileSync(
         { name: 'vc.doBuild', parent: 'vc' },
         { name: 'vc.loadEnv', parent: 'vc' },
         { name: 'vc.compileVercelConfig', parent: 'vc.doBuild' },
+        { name: 'vc.detectFirstDeploymentFramework', parent: 'vc.doBuild' },
+        { name: 'vc.detectAllFrameworks', parent: 'vc.doBuild' },
         { name: 'vc.detectBuilders', parent: 'vc.doBuild' },
         { name: 'vc.importBuilders', parent: 'vc.doBuild' },
         { name: 'vc.builder', parent: 'vc.doBuild' },
+        { name: 'vc.frameworkCrossCheck', parent: 'vc.doBuild' },
+        { name: 'vc.validateBuildOutput', parent: 'vc.doBuild' },
         { name: 'vc.finalizeBuildOutput', parent: 'vc.doBuild' },
         { name: 'vc.postCommand', parent: 'vc.cli' },
       ])
