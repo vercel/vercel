@@ -48,6 +48,15 @@ export class ListTelemetryClient
     }
   }
 
+  trackCliOptionLimit(limit: number | undefined) {
+    if (limit) {
+      this.trackCliOption({
+        option: 'limit',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliFlagProd(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('prod');

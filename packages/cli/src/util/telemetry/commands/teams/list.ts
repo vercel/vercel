@@ -15,6 +15,15 @@ export class TeamsListTelemetryClient
     }
   }
 
+  trackCliOptionLimit(value: number | undefined) {
+    if (value && value > 0) {
+      this.trackCliOption({
+        option: 'limit',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionUntil(value: string | undefined) {
     if (value) {
       this.trackCliOption({

@@ -96,6 +96,7 @@ export default async function list(client: Client) {
   telemetry.trackCliOptionEnvironment(parsedArgs.flags['--environment']);
   telemetry.trackCliOptionMeta(parsedArgs.flags['--meta']);
   telemetry.trackCliOptionNext(parsedArgs.flags['--next']);
+  telemetry.trackCliOptionLimit(parsedArgs.flags['--limit']);
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
   telemetry.trackCliOptionPolicy(parsedArgs.flags['--policy']);
   telemetry.trackCliOptionStatus(parsedArgs.flags['--status']);
@@ -240,9 +241,18 @@ export default async function list(client: Client) {
   }
 
   const nextTimestamp = parsedArgs.flags['--next'];
+  const limitFlag = parsedArgs.flags['--limit'];
+  const limit = limitFlag ?? 20;
 
   if (Number.isNaN(nextTimestamp)) {
     error('Please provide a number for flag `--next`');
+    return 1;
+  }
+  if (
+    typeof limitFlag === 'number' &&
+    (!Number.isInteger(limitFlag) || limitFlag < 1 || limitFlag > 100)
+  ) {
+    error('Please provide an integer from 1 to 100 for option --limit');
     return 1;
   }
 
@@ -258,7 +268,7 @@ export default async function list(client: Client) {
 
     debug('Fetching deployments');
 
-    const query = new URLSearchParams({ limit: '20' });
+    const query = new URLSearchParams({ limit: String(limit) });
     if (project) {
       query.set('projectId', project.id);
     }
@@ -285,10 +295,11 @@ export default async function list(client: Client) {
     }>(`/v6/deployments?${query}`)) {
       deployments.push(...chunk.deployments);
       pagination = chunk.pagination;
-      if (deployments.length >= 20) {
+      if (deployments.length >= limit) {
         break;
       }
     }
+    deployments.length = Math.min(deployments.length, limit);
 
     // we don't output the table headers if we have no deployments
     if (!deployments.length) {

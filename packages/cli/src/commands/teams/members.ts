@@ -53,6 +53,7 @@ export default async function members(
   }
 
   const next = parsedArgs.flags['--next'];
+  const limit = parsedArgs.flags['--limit'];
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
@@ -64,6 +65,13 @@ export default async function members(
     output.error('Please provide a number for flag `--next`');
     return 1;
   }
+  if (
+    typeof limit === 'number' &&
+    (!Number.isInteger(limit) || limit < 1 || limit > 100)
+  ) {
+    output.error('Please provide an integer from 1 to 100 for option --limit');
+    return 1;
+  }
 
   const teamId = client.config.currentTeam;
   if (!teamId) {
@@ -73,7 +81,7 @@ export default async function members(
     return 1;
   }
 
-  const query = new URLSearchParams({ limit: '20' });
+  const query = new URLSearchParams({ limit: String(limit ?? 20) });
   if (next) {
     query.set('next', String(next));
   }
@@ -101,7 +109,7 @@ export default async function members(
   ];
   client.stderr.write(`${table(rows, { hsep: 3 })}\n`);
 
-  if (pagination?.count === 20) {
+  if (pagination?.next) {
     const flags = getCommandFlags(parsedArgs.flags, ['--next', '-N']);
     const nextCmd = `${packageName} teams members${flags} --next ${pagination.next}`;
     output.log(`To display the next page run ${cmd(nextCmd)}`);
