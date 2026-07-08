@@ -177,4 +177,32 @@ describe('build()', () => {
       );
     });
   });
+
+  describe('routePrefix validation', () => {
+    it('should reject routePrefix values with path traversal segments', async () => {
+      const workPath = path.join(
+        __dirname,
+        'build-fixtures',
+        '11-build-output-v1'
+      );
+
+      await expect(
+        build({
+          files: {},
+          entrypoint: 'package.json',
+          repoRootPath: workPath,
+          workPath,
+          config: {
+            routePrefix: '/../../../../outside-target/static-escape',
+          },
+          meta: {
+            skipDownload: true,
+            cliVersion: '0.0.0',
+          },
+        })
+      ).rejects.toMatchObject({
+        code: 'STATIC_BUILD_UNSAFE_ROUTE_PREFIX',
+      });
+    });
+  });
 });

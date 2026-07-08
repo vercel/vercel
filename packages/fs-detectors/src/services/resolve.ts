@@ -13,6 +13,7 @@ import {
   isScheduleTriggeredService,
   JOB_TRIGGERS,
   JobTrigger,
+  hasParentDirectorySegment,
 } from '@vercel/build-utils';
 import {
   ENTRYPOINT_EXTENSIONS,
@@ -528,6 +529,21 @@ export function validateServiceConfig(
     return {
       code: 'RESERVED_ROUTE_PREFIX',
       message: `Web service "${name}" cannot use routePrefix "${configuredRoutePrefix}". The "${INTERNAL_SERVICE_PREFIX}" prefix is reserved for internal services routing.`,
+      serviceName: name,
+    };
+  }
+  if (
+    serviceType === 'web' &&
+    configuredRoutePrefix &&
+    hasParentDirectorySegment(
+      configuredRoutePrefix.startsWith('/')
+        ? configuredRoutePrefix.slice(1)
+        : configuredRoutePrefix
+    )
+  ) {
+    return {
+      code: 'INVALID_ROUTE_PREFIX',
+      message: `Web service "${name}" has invalid routePrefix "${configuredRoutePrefix}". Path traversal segments are not allowed.`,
       serviceName: name,
     };
   }
