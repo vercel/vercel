@@ -67,7 +67,9 @@ describe('getUpdateCommand', () => {
         '/home/user/.local/share/pnpm/global/v11/150b-19f23dfe656/node_modules/vercel/dist/vc.js'
       );
 
-      expect(await getUpdateCommand()).toEqual('pnpm i -g vercel@latest');
+      expect(await getUpdateCommand()).toEqual(
+        'pnpm i -g vercel@latest --allow-build=esbuild'
+      );
       expect(await isGlobal()).toBe(true);
     });
 
@@ -78,7 +80,9 @@ describe('getUpdateCommand', () => {
         '/home/user/.local/share/pnpm/global/5/node_modules/vercel/dist/vc.js'
       );
 
-      expect(await getUpdateCommand()).toEqual('pnpm i -g vercel@latest');
+      expect(await getUpdateCommand()).toEqual(
+        'pnpm i -g vercel@latest --allow-build=esbuild'
+      );
     });
 
     it('matches PNPM_HOME as a path prefix, not a substring', async () => {
@@ -94,7 +98,8 @@ describe('getUpdateCommand', () => {
       // always yields global pnpm; the repo fallback yields a local install.
       const updateCommand = await getUpdateCommand();
       const viaFastPath =
-        updateCommand === 'pnpm i -g vercel@latest' && (await isGlobal());
+        updateCommand === 'pnpm i -g vercel@latest --allow-build=esbuild' &&
+        (await isGlobal());
       // In the dev repo the fallback resolves a local pnpm install, so the
       // fast path result (global) would only appear if prefix matching leaked.
       expect(viaFastPath).toBe(false);
