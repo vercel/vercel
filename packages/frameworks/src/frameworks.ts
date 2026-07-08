@@ -1,5 +1,3 @@
-import { join } from 'path';
-import { readFileSync } from 'fs';
 import type { Framework } from './types';
 import {
   createFrameworks,
@@ -10,19 +8,10 @@ import {
 export * from './types';
 export * from './manifest';
 
-function loadPinnedManifest(): readonly FrameworkManifestEntry[] {
-  const path = join(__dirname, 'frameworks.json');
-  try {
-    return JSON.parse(readFileSync(path, 'utf8'));
-  } catch (error) {
-    throw new Error(
-      `Failed to load the pinned frameworks manifest at "${path}". It is fetched at build time — run \`pnpm build\` in packages/frameworks. ${error}`
-    );
-  }
-}
-
-export const frameworksManifest: readonly FrameworkManifestEntry[] =
-  loadPinnedManifest();
+// Fetched at build time by build.mjs. `require` (rather than fs) so that
+// bundlers inline it when this package is bundled into builders.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+export const frameworksManifest: readonly FrameworkManifestEntry[] = require('./frameworks.json');
 
 export const frameworkRuntimeOverrides: Record<
   string,
