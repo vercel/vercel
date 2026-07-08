@@ -894,6 +894,60 @@ describe('per-directory link resolution', () => {
     }
   );
 
+  // When the first build establishes the link itself (settings pulled
+  // mid-build), re-anchoring must happen on that same run — not only the next.
+  it.skipIf(process.platform === 'win32')(
+    'links and re-anchors on the very first build (link established mid-build)',
+    async () => {
+      const monorepoRoot = setupUnitFixture(
+        'commands/build/turborepo-hono-standalone'
+      );
+      const appDir = join(monorepoRoot, 'apps', 'api');
+      const output = join(appDir, '.vercel/output');
+
+      await execa('git', ['init'], { cwd: monorepoRoot });
+      await execa('pnpm', ['install', '--ignore-scripts'], {
+        cwd: monorepoRoot,
+      });
+
+      // Start unlinked so the build pulls settings and links mid-run.
+      await fs.remove(join(appDir, '.vercel'));
+
+      useUser();
+      useTeams('team_dummy');
+      // Named "api" so link auto-detection matches the directory basename.
+      useProject({
+        ...defaultProject,
+        id: 'api',
+        name: 'api',
+        framework: 'hono',
+        rootDirectory: 'apps/api',
+      });
+
+      client.cwd = appDir;
+      client.setArgv('build', '--yes');
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const projectJson = await fs.readJSON(
+        join(appDir, '.vercel', 'project.json')
+      );
+      expect(projectJson.projectId).toEqual('api');
+
+      const indexFuncDir = join(output, 'functions', 'index.func');
+      expect(await fs.pathExists(indexFuncDir)).toBe(true);
+      const vcConfig = await fs.readJSON(join(indexFuncDir, '.vc-config.json'));
+      expect(vcConfig.handler).toEqual('apps/api/src/index.js');
+
+      await expectModuleResolvesInIsolatedFunc(
+        indexFuncDir,
+        monorepoRoot,
+        'apps/api/src',
+        'hono'
+      );
+    }
+  );
+
   it.skipIf(process.platform === 'win32')(
     'recovers from a redundant rootDirectory restating the location (config #4)',
     async () => {

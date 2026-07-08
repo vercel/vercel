@@ -451,6 +451,12 @@ export default async function main(client: Client): Promise<number> {
     project = await readProjectSettings(vercelDir);
   }
 
+  // The settings pull above may have just established the link; re-read it
+  // so the re-anchoring below sees it.
+  if (!link) {
+    link = await getProjectLink(client, cwd, projectNameOrId, true);
+  }
+
   // A per-directory link (`<dir>/.vercel/project.json`) doesn't report a
   // `repoRoot` like a repo-level (`repo.json`) link does, so the build would
   // treat the linked subdirectory as the repo root. When an ancestor workspace
