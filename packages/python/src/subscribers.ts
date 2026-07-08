@@ -99,6 +99,14 @@ export function getSubscriberOutputPath(subscriberName: string): string {
   return `${SUBSCRIBER_OUTPUT_DIR}/${safePathSegment(subscriberName)}`;
 }
 
+/**
+ * Consumer group names are derived from the subscriber's declaration (via its
+ * canonical output path), not from where the built function lands, so the
+ * derived name is stable across zero-config and service builds. Queue
+ * delivery is at-least-once, so a rename (e.g. moving the subscriber module)
+ * costs at worst duplicate handling of retained messages — handlers are
+ * expected to use idempotency keys regardless.
+ */
 export function getSubscriberConsumerName(subscriberName: string): string {
   return sanitizeConsumerName(getSubscriberOutputPath(subscriberName));
 }

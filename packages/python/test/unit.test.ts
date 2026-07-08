@@ -2615,6 +2615,164 @@ describe('pyproject subscribers', () => {
   });
 });
 
+describe('pyproject.toml service entrypoint', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(
+      tmpdir(),
+      `python-pyproject-service-${Date.now()}`
+    );
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  const SUBSCRIBER_TOML = [
+    '[[tool.vercel.subscribers]]',
+    'entrypoint = "worker:app"',
+    'topics = ["invoices"]',
+  ];
+  const WORKER_CONSUMER = sanitizeConsumerName(
+    getSubscriberOutputPath('worker_app')
+  );
+
+  const WORKER_PY = new FileBlob({ data: 'app = object()\n' });
+  const MAIN_PY = new FileBlob({
+    data: 'def app(environ, start_response): pass\n',
+  });
+
+  function pyprojectBlob(lines: string[]): FileBlob {
+    return new FileBlob({
+      data: [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        '',
+        ...lines,
+        '',
+      ].join('\n'),
+    });
+  }
+
+  function buildService(files: Record<string, FileBlob>) {
+    return build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'pyproject.toml',
+      meta: { isDev: false },
+      config: { zeroConfig: true },
+      service: { name: 'backend' },
+      repoRootPath: mockWorkPath,
+    });
+  }
+
+  it('builds the declared web entrypoint plus subscribers', async () => {
+    const result = await buildService({
+      'main.py': MAIN_PY,
+      'worker.py': WORKER_PY,
+      'pyproject.toml': pyprojectBlob([
+        '[tool.vercel]',
+        'entrypoint = "main:app"',
+        '',
+        ...SUBSCRIBER_TOML,
+      ]),
+    });
+
+    const v2 = getBuildOutputV2(result) as any;
+    const workerPath = getSubscriberOutputPath('worker_app');
+
+    expect(v2.output.index).toBeDefined();
+    expect(v2.routes).toEqual([
+      { handle: 'filesystem' },
+      { src: '/(.*)', dest: '/index' },
+    ]);
+    expect(v2.output[workerPath]).toBeDefined();
+    expect(v2.output[workerPath].experimentalTriggers).toEqual([
+      { type: 'queue/v2beta', topic: 'invoices', consumer: WORKER_CONSUMER },
+    ]);
+    expect(v2.output[workerPath].environment.VERCEL_SERVICE_TYPE).toBe(
+      'worker'
+    );
+  });
+
+  it('builds subscribers only when no tool.vercel.entrypoint is declared', async () => {
+    const result = await buildService({
+      'worker.py': WORKER_PY,
+      'pyproject.toml': pyprojectBlob(SUBSCRIBER_TOML),
+    });
+
+    const v2 = getBuildOutputV2(result) as any;
+    const workerPath = getSubscriberOutputPath('worker_app');
+
+    expect(v2.output.index).toBeUndefined();
+    expect(v2.routes).toBeUndefined();
+    expect(v2.output[workerPath]).toBeDefined();
+    expect(v2.output[workerPath].experimentalTriggers).toEqual([
+      { type: 'queue/v2beta', topic: 'invoices', consumer: WORKER_CONSUMER },
+    ]);
+  });
+
+  it('does not auto-detect a web entrypoint in declared-only mode', async () => {
+    // main.py would be picked up by filename-based detection, but a
+    // "pyproject.toml" entrypoint builds only what the file declares.
+    const result = await buildService({
+      'main.py': MAIN_PY,
+      'worker.py': WORKER_PY,
+      'pyproject.toml': pyprojectBlob(SUBSCRIBER_TOML),
+    });
+
+    const v2 = getBuildOutputV2(result) as any;
+    expect(v2.output.index).toBeUndefined();
+    expect(v2.output[getSubscriberOutputPath('worker_app')]).toBeDefined();
+  });
+
+  it('fails when pyproject.toml declares nothing to build', async () => {
+    await expect(
+      buildService({
+        'main.py': MAIN_PY,
+        'pyproject.toml': pyprojectBlob([]),
+      })
+    ).rejects.toThrow(/declares nothing to build/);
+  });
+
+  it('fails when tool.vercel.entrypoint cannot be resolved', async () => {
+    await expect(
+      buildService({
+        'worker.py': WORKER_PY,
+        'pyproject.toml': pyprojectBlob([
+          '[tool.vercel]',
+          'entrypoint = "missing:app"',
+          '',
+          ...SUBSCRIBER_TOML,
+        ]),
+      })
+    ).rejects.toThrow(/no matching module file was found/);
+  });
+
+  it('fails for a pyproject.toml entrypoint outside the service root', async () => {
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files: {
+          'backend/pyproject.toml': pyprojectBlob(SUBSCRIBER_TOML),
+          'backend/worker.py': WORKER_PY,
+        },
+        entrypoint: 'backend/pyproject.toml',
+        meta: { isDev: false },
+        config: { zeroConfig: true },
+        service: { name: 'backend' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/must sit at the service root/);
+  });
+});
+
 describe('cron service build result', () => {
   let mockWorkPath: string;
 
