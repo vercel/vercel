@@ -2,18 +2,32 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
+import execa from 'execa';
 import {
   getFastAPIStaticMounts,
   runFastAPICollectStatic,
 } from '../src/fastapi';
+import { getVenvPythonBin } from '../src/utils';
 
-describe('FastAPI static files', () => {
+// The shim runs with the build venv Python. The build venv has cross-compiled
+// Linux wheels (pydantic_core), so tests only run on Linux where they load.
+describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
   let testDir: string;
+  let venvPath: string;
+  let pythonEnv: NodeJS.ProcessEnv;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     testDir = path.join(tmpdir(), `fastapi-static-${Date.now()}`);
+    venvPath = path.join(testDir, '.venv');
     fs.mkdirSync(testDir, { recursive: true });
-  });
+    await execa('uv', ['venv', venvPath, '--python', 'python3.12']);
+    await execa(
+      'uv',
+      ['pip', 'install', 'fastapi', '--python', getVenvPythonBin(venvPath)],
+      { env: { ...process.env, VIRTUAL_ENV: venvPath } }
+    );
+    pythonEnv = { ...process.env, VIRTUAL_ENV: venvPath };
+  }, 120_000);
 
   afterAll(() => {
     if (testDir && fs.existsSync(testDir)) fs.removeSync(testDir);
@@ -35,9 +49,10 @@ describe('FastAPI static files', () => {
     );
 
     const mounts = await getFastAPIStaticMounts(
+      venvPath,
       entrypointAbs,
       'app',
-      process.env,
+      pythonEnv,
       appDir
     );
 
@@ -63,9 +78,10 @@ describe('FastAPI static files', () => {
     );
 
     const mounts = await getFastAPIStaticMounts(
+      venvPath,
       entrypointAbs,
       'app',
-      process.env,
+      pythonEnv,
       appDir
     );
 
@@ -86,9 +102,10 @@ describe('FastAPI static files', () => {
     );
 
     const mounts = await getFastAPIStaticMounts(
+      venvPath,
       entrypointAbs,
       'app',
-      process.env,
+      pythonEnv,
       appDir
     );
 
@@ -112,8 +129,9 @@ describe('FastAPI static files', () => {
     );
 
     const result = await runFastAPICollectStatic(
+      venvPath,
       appDir,
-      process.env,
+      pythonEnv,
       outputDir,
       entrypointAbs,
       'app'
@@ -146,8 +164,9 @@ describe('FastAPI static files', () => {
     );
 
     const result = await runFastAPICollectStatic(
+      venvPath,
       appDir,
-      process.env,
+      pythonEnv,
       outputDir,
       entrypointAbs,
       'app'
