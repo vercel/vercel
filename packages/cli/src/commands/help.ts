@@ -3,6 +3,7 @@ import { LOGO, NAME } from '@vercel-internals/constants';
 import Table, { type CellOptions } from 'cli-table3';
 import { noBorderChars } from '../util/output/table';
 import { globalCommandOptions } from '../util/arg-common';
+import type { OutputFormat } from '../util/output-format';
 
 const INDENT = ' '.repeat(2);
 const NEWLINE = '\n';
@@ -40,6 +41,12 @@ export interface Command {
   readonly options: ReadonlyArray<CommandOption>;
   readonly examples: ReadonlyArray<CommandExample>;
   readonly disabledGlobalOptions?: ReadonlyArray<string>;
+  /**
+   * The output formats this command supports. When set, use
+   * `outputFormatOptions()` to generate the matching `--format` + boolean-alias
+   * options, and `resolveOutputFormat()` to read the resolved value.
+   */
+  readonly outputFormats?: ReadonlyArray<OutputFormat>;
 }
 
 // https://github.com/cli-table/cli-table3/pull/303 adds

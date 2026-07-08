@@ -1,6 +1,8 @@
 import { getFlagsSpecification } from './get-flags-specification';
 import { getCommandNamePlain } from './pkg-name';
 import { normalizeFlagName, stripSensitiveAuthArgs } from './redact-args';
+import { ALL_OUTPUT_FORMATS, type OutputFormat } from './output-format';
+import type { CommandOption } from '../commands/help';
 
 export const globalCommandOptions = [
   {
@@ -223,9 +225,56 @@ export const jsonOption = {
   name: 'json',
   shorthand: null,
   type: Boolean,
-  deprecated: true,
-  description: 'DEPRECATED: Use --format=json instead',
+  deprecated: false,
+  description: 'Output as JSON (alias for --format=json)',
 } as const;
+
+/**
+ * Human-readable descriptions for each supported output-format boolean alias.
+ * Keep in sync with `ALL_OUTPUT_FORMATS` in `./output-format`.
+ */
+const OUTPUT_FORMAT_ALIAS_DESCRIPTIONS: Record<OutputFormat, string> = {
+  json: 'Output as JSON (alias for --format=json)',
+  table: 'Output as a table (alias for --format=table)',
+};
+
+/**
+ * Builds the CLI options that back a command's declared output formats.
+ *
+ * From a single declaration (e.g. `['json', 'table']`) this produces:
+ * - a `--format, -F <json|table>` string option, and
+ * - one boolean alias per format (`--json`, `--table`).
+ *
+ * Spread the result into a command's `options` array. Reading the resolved
+ * format is done once, via `resolveOutputFormat` in `./output-format`.
+ */
+export function outputFormatOptions(
+  formats: readonly OutputFormat[] = ALL_OUTPUT_FORMATS
+): CommandOption[] {
+  const unique = [...new Set(formats)];
+  const options: CommandOption[] = [
+    {
+      name: 'format',
+      shorthand: 'F',
+      type: String,
+      argument: unique.join('|'),
+      description: `Specify the output format (${unique.join(', ')})`,
+      deprecated: false,
+    },
+  ];
+
+  for (const format of unique) {
+    options.push({
+      name: format,
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: OUTPUT_FORMAT_ALIAS_DESCRIPTIONS[format],
+    });
+  }
+
+  return options;
+}
 
 export const nonInteractiveOption = {
   name: 'non-interactive',
