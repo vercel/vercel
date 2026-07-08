@@ -1,4 +1,5 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeAll, afterAll } from 'vitest';
+import execa from 'execa';
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
@@ -7,12 +8,38 @@ import {
   resolveSubscriberSubscriptions,
   type Subscriber,
 } from '../src/subscribers';
+import { findUvInPath, UvRunner } from '../src/uv';
 import { getDevSidecars } from '../src';
-
-const pythonBin = process.env.PYTHON_BIN || 'python3';
 
 describe('dynamic subscriber topic detection (integration)', () => {
   let workDir: string;
+  let venvPath: string;
+  let uv: UvRunner;
+
+  beforeAll(async () => {
+    const uvPath = findUvInPath();
+    if (!uvPath) {
+      throw new Error('uv binary is required to run these tests');
+    }
+    uv = new UvRunner(uvPath);
+    // Detection runs through `uv run --active`, which resolves the
+    // interpreter from a venv; share one bare venv across all tests.
+    venvPath = path.join(
+      tmpdir(),
+      `subscriber-detect-venv-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    );
+    const args = ['venv', venvPath];
+    if (process.env.PYTHON_BIN) {
+      args.push('--python', process.env.PYTHON_BIN);
+    }
+    await execa(uvPath, args);
+  });
+
+  afterAll(async () => {
+    if (venvPath) {
+      await fs.remove(venvPath);
+    }
+  });
 
   afterEach(async () => {
     if (workDir) {
@@ -55,7 +82,8 @@ describe('dynamic subscriber topic detection (integration)', () => {
   function resolve(subscriber: Subscriber) {
     return resolveSubscriberSubscriptions({
       subscriber,
-      pythonBin,
+      uv,
+      venvPath,
       env: { ...process.env, PYTHONPATH: workDir },
       workPath: workDir,
     });
@@ -252,7 +280,7 @@ app = Worker()
     );
   });
 
-  it('fails when the interpreter cannot be launched', async () => {
+  it('fails when the detection subprocess cannot be launched', async () => {
     await setupWorkDir({
       'worker.py': 'app = object()\n',
       'pyproject.toml': pyprojectToml([
@@ -265,7 +293,8 @@ app = Worker()
     await expect(
       resolveSubscriberSubscriptions({
         subscriber,
-        pythonBin: '/nonexistent/python',
+        uv: new UvRunner('/nonexistent/uv'),
+        venvPath,
         env: process.env,
         workPath: workDir,
       })

@@ -1,12 +1,12 @@
 import { join } from 'path';
 import fs from 'fs';
-import execa from 'execa';
 import {
   NowBuildError,
   readConfigFile,
   sanitizeConsumerName,
   type TriggerEvent,
 } from '@vercel/build-utils';
+import type { UvRunner } from './uv';
 
 const MODULE_ATTR_RE =
   /^([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*):([A-Za-z_][\w]*)$/;
@@ -327,7 +327,8 @@ function getStaticSubscriberSubscriptions(
  */
 export async function resolveSubscriberSubscriptions(opts: {
   subscriber: Subscriber;
-  pythonBin: string;
+  uv: UvRunner;
+  venvPath: string;
   env: NodeJS.ProcessEnv;
   workPath: string;
 }): Promise<SubscriberSubscription[]> {
@@ -456,23 +457,31 @@ function mergedTrigger(
 
 /**
  * Call get_queue_subscriptions() on the subscriber entrypoint object via a
- * Python subprocess.
+ * Python subprocess run through `uv run` in the build venv.
  */
 async function detectSubscriptions(opts: {
   subscriber: Subscriber;
-  pythonBin: string;
+  uv: UvRunner;
+  venvPath: string;
   env: NodeJS.ProcessEnv;
   workPath: string;
 }): Promise<DetectionOutcome> {
-  const { subscriber, pythonBin, env, workPath } = opts;
+  const { subscriber, uv, venvPath, env, workPath } = opts;
 
   let stdout: string;
   try {
-    const result = await execa(
-      pythonBin,
-      ['-c', detectScript, subscriber.moduleName, subscriber.variableName],
-      { env, cwd: workPath }
-    );
+    const result = await uv.run({
+      venvPath,
+      cwd: workPath,
+      env,
+      args: [
+        'python',
+        '-c',
+        detectScript,
+        subscriber.moduleName,
+        subscriber.variableName,
+      ],
+    });
     stdout = result.stdout;
   } catch (err: any) {
     // The Python script writes structured JSON errors to stdout before

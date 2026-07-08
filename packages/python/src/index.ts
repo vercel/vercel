@@ -1026,7 +1026,8 @@ export const build: BuildVX = async ({
       subscriber,
       subscriptions: await resolveSubscriberSubscriptions({
         subscriber,
-        pythonBin: getVenvPythonBin(venvPath),
+        uv,
+        venvPath,
         env: pythonEnv,
         workPath,
       }),
