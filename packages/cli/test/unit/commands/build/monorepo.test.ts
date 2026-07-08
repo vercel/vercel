@@ -913,7 +913,9 @@ describe('per-directory link resolution', () => {
       // Start unlinked so the build pulls settings and links mid-run.
       await fs.remove(join(appDir, '.vercel'));
 
-      useUser();
+      // Northstar single-team: `--yes` no longer guesses among multiple
+      // choices, so the team must resolve unambiguously.
+      useUser({ version: 'northstar' });
       useTeams('team_dummy');
       // Named "api" so link auto-detection matches the directory basename.
       useProject({

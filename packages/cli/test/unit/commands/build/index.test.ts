@@ -515,7 +515,7 @@ describe.skipIf(flakey)('build', () => {
     const cwd = setupUnitFixture('commands/build/static-pull');
     await fs.remove(join(cwd, '.vercel'));
 
-    useUser();
+    useUser({ version: 'northstar' });
     useTeams('team_dummy');
     useProject({
       ...defaultProject,
@@ -530,11 +530,10 @@ describe.skipIf(flakey)('build', () => {
       client.setArgv('build');
       const exitCodePromise = build(client);
 
-      // The link flow runs before the pull question.
-      await expect(client.stderr).toOutput('Which team?');
-      client.stdin.write('\n');
-      await expect(client.stderr).toOutput('Link directory to project?');
-      client.stdin.write('y\n');
+      // The link flow runs before the pull question. The single team
+      // auto-selects; pick the detected folder-name match in the picker.
+      await expect(client.stderr).toOutput('Which project?');
+      client.events.keypress('enter');
       await expect(client.stderr).toOutput('Linked');
 
       await expect(client.stderr).toOutput('No Project Settings found locally');
