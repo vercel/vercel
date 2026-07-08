@@ -4,7 +4,9 @@ import nodeFetch from '../src/util/fetch';
 import { apiFetch } from './helpers/api-fetch';
 import fs from 'fs-extra';
 import sleep from '../src/util/sleep';
-import waitForPrompt from './helpers/wait-for-prompt';
+import waitForPrompt, {
+  answerTeamPromptThenWait,
+} from './helpers/wait-for-prompt';
 import { listTmpDirs } from './helpers/get-tmp-dir';
 import { teamPromise } from './helpers/get-account';
 import {
@@ -374,10 +376,8 @@ test('deploy from a nested directory', async () => {
   });
 
   await waitForPrompt(vc, 'Directory');
-  await waitForPrompt(vc, 'Which team?');
-  vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, 'Project?');
+  // Single-team accounts auto-select the team; answer the prompt only if shown.
+  await answerTeamPromptThenWait(vc, 'Project?');
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, `Name? (${projectName})`);
@@ -410,10 +410,8 @@ test('deploy from a nested directory with `--archive=tgz` option', async () => {
   );
 
   await waitForPrompt(vc, 'Directory');
-  await waitForPrompt(vc, 'Which team?');
-  vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, 'Project?');
+  // Single-team accounts auto-select the team; answer the prompt only if shown.
+  await answerTeamPromptThenWait(vc, 'Project?');
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, `Name? (${projectName})`);
