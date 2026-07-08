@@ -3,7 +3,7 @@ import { Separator } from '@inquirer/checkbox';
 import pluralize from 'pluralize';
 import { homedir } from 'os';
 import slugify from '@sindresorhus/slugify';
-import { basename, join } from 'path';
+import { basename, join, relative } from 'path';
 import { normalizePath, traverseUpDirectories } from '@vercel/build-utils';
 import { lstat, readJSON, outputJSON } from 'fs-extra';
 import toHumanPath from '../humanize-path';
@@ -15,7 +15,7 @@ import selectOrg from '../input/select-org';
 import { addToGitIgnore } from './add-to-gitignore';
 import type Client from '../client';
 import type { Framework } from '@vercel/frameworks';
-import type { Project } from '@vercel-internals/types';
+import type { Org, Project } from '@vercel-internals/types';
 import createProject from '../projects/create-project';
 import { detectProjects } from '../projects/detect-projects';
 import { repoInfoToUrl } from '../git/repo-info-to-url';
@@ -174,12 +174,19 @@ export async function linkRepoProject(
     orgId,
     orgSlug,
     remoteName,
+    directory: directoryOverride,
     successEmoji = 'link',
   }: {
     project: Project;
     orgId: string;
     orgSlug: string;
     remoteName: string;
+    /**
+     * Repo-relative directory for the entry. Defaults to the project's
+     * `rootDirectory`, which is only correct when the project is
+     * Git-connected to this repository.
+     */
+    directory?: string;
     successEmoji?: EmojiLabel;
   }
 ): Promise<RepoLink> {
@@ -188,7 +195,9 @@ export async function linkRepoProject(
     throw new Error('Could not determine Git repository root directory');
   }
 
-  const directory = normalizePath(project.rootDirectory || '.');
+  const directory = normalizePath(
+    directoryOverride ?? (project.rootDirectory || '.')
+  );
   const projectConfig: RepoProjectConfig = {
     id: project.id,
     name: project.name,
@@ -196,23 +205,9 @@ export async function linkRepoProject(
     orgId,
     orgSlug,
   };
-  const existingProjects = repoLink.repoConfig?.projects ?? [];
-  // Replace a stale entry for the same project, or a same-team entry at the
-  // same directory. Entries from other teams coexist — the same directory
-  // may be linked to projects in several teams.
-  const filteredProjects = existingProjects.filter(p => {
-    if (p.id === project.id) return false;
-    const sameTeam = (p.orgId ?? repoLink.repoConfig?.orgId) === orgId;
-    return !(sameTeam && normalizePath(p.directory) === directory);
-  });
-  const repoConfig: RepoProjectsConfig = {
-    remoteName,
-    projects: [...filteredProjects, projectConfig],
-  };
-
-  await outputJSON(repoLink.repoConfigPath, repoConfig, { spaces: 2 });
-  await writeReadme(repoLink.rootPath);
-  await addToGitIgnore(repoLink.rootPath);
+  const repoConfig = await mergeRepoProjects(repoLink, remoteName, [
+    projectConfig,
+  ]);
 
   output.print('\n');
   printAlignedLabel('Linked', `${orgSlug}/${project.name}`, { gutter: '✓' });
@@ -222,6 +217,118 @@ export async function linkRepoProject(
     repoConfigPath: repoLink.repoConfigPath,
     rootPath: repoLink.rootPath,
   };
+}
+
+export interface AutoLinkResult {
+  rootPath: string;
+  remoteName: string;
+  /** All Git-connected projects for this repo under the team. */
+  projects: Project[];
+  /** The repo.json entries written for those projects. */
+  entries: RepoProjectConfig[];
+  /** Projects whose root directory contains `cwd`. */
+  cwdMatches: Project[];
+}
+
+/**
+ * Links every project that is Git-connected to this repository under the
+ * given team, merging them into `.vercel/repo.json` (entries from other
+ * teams are preserved). Returns `undefined` when `cwd` is not inside a Git
+ * repository with a usable remote.
+ */
+export async function autoLinkRepoProjects(
+  client: Client,
+  cwd: string,
+  org: Org
+): Promise<AutoLinkResult | undefined> {
+  const repoLink = await getRepoLink(client, cwd);
+  if (!repoLink) return undefined;
+
+  // Always resolve the remote without prompting (preferring `origin`) —
+  // this flow is meant to remove questions, and the remote choice is
+  // low-stakes: a wrong guess just means no projects are found.
+  let remote: ResolvedGitRemote | undefined;
+  try {
+    remote = await resolveGitRemote(client, repoLink.rootPath, {
+      yes: true,
+      existingRemoteName: repoLink.repoConfig?.remoteName,
+    });
+  } catch (_) {
+    // The remote recorded in repo.json may no longer exist; re-resolve.
+    remote = await resolveGitRemote(client, repoLink.rootPath, { yes: true });
+  }
+  if (!remote) return undefined;
+
+  const projects = await fetchProjectsForRepoUrl(
+    client,
+    remote.repoUrl,
+    org.id
+  );
+  if (projects.length === 0) {
+    return {
+      rootPath: repoLink.rootPath,
+      remoteName: remote.remoteName,
+      projects: [],
+      entries: [],
+      cwdMatches: [],
+    };
+  }
+
+  const entries: RepoProjectConfig[] = projects.map(project => ({
+    id: project.id,
+    name: project.name,
+    directory: normalizePath(project.rootDirectory || '.'),
+    orgId: org.id,
+    orgSlug: org.slug,
+  }));
+  await mergeRepoProjects(repoLink, remote.remoteName, entries);
+
+  const matches = findProjectsFromPath(
+    entries,
+    normalizePath(relative(repoLink.rootPath, cwd)) || '.'
+  );
+  const cwdMatches = matches.flatMap(entry => {
+    const project = projects.find(p => p.id === entry.id);
+    return project ? [project] : [];
+  });
+
+  return {
+    rootPath: repoLink.rootPath,
+    remoteName: remote.remoteName,
+    projects,
+    entries,
+    cwdMatches,
+  };
+}
+
+/**
+ * Merges project entries into `.vercel/repo.json`, preserving existing
+ * entries (including those from other teams). Incoming entries replace
+ * existing ones with the same project ID.
+ */
+export async function mergeRepoProjects(
+  repoLink: RepoLink,
+  remoteName: string,
+  entries: RepoProjectConfig[]
+): Promise<RepoProjectsConfig> {
+  const existing = repoLink.repoConfig?.projects ?? [];
+  const legacyOrgId = repoLink.repoConfig?.orgId;
+  const incomingIds = new Set(entries.map(e => e.id));
+  const kept = existing
+    .filter(p => !incomingIds.has(p.id))
+    .map(p =>
+      // Materialize the deprecated top-level orgId onto kept entries so
+      // dropping it from the top level doesn't orphan them.
+      p.orgId || !legacyOrgId ? p : { ...p, orgId: legacyOrgId }
+    );
+  const repoConfig: RepoProjectsConfig = {
+    remoteName,
+    projects: [...kept, ...entries],
+  };
+  await outputJSON(repoLink.repoConfigPath, repoConfig, { spaces: 2 });
+  await writeReadme(repoLink.rootPath);
+  await addToGitIgnore(repoLink.rootPath);
+  return repoConfig;
 }
 
 /**

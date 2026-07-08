@@ -99,7 +99,7 @@ describe('linkRepoProject()', () => {
     return config.projects;
   }
 
-  it('replaces a same-team entry at the same directory', async () => {
+  it('keeps a same-team entry at the same directory (selection happens at use time)', async () => {
     const cwd = await setupRepo([
       { id: 'old', name: 'old', directory: 'apps/site', orgId: 'team_a' },
     ]);
@@ -112,7 +112,7 @@ describe('linkRepoProject()', () => {
     });
 
     const projects = await readProjects(cwd);
-    expect(projects.map(p => p.id)).toEqual(['new']);
+    expect(projects.map(p => p.id).sort()).toEqual(['new', 'old']);
   });
 
   it('keeps another team\u2019s entry at the same directory', async () => {
@@ -131,7 +131,7 @@ describe('linkRepoProject()', () => {
     expect(projects.map(p => p.id).sort()).toEqual(['mine', 'theirs']);
   });
 
-  it('treats a legacy top-level orgId as the entry\u2019s team', async () => {
+  it('materializes a legacy top-level orgId onto kept entries', async () => {
     const cwd = await setupRepo();
     await mkdirp(join(cwd, '.vercel'));
     await writeJSON(join(cwd, '.vercel', 'repo.json'), {
@@ -141,14 +141,21 @@ describe('linkRepoProject()', () => {
     });
 
     await linkRepoProject(client, cwd, {
-      project: fakeProject('new', 'apps/site'),
-      orgId: 'team_a',
-      orgSlug: 'team-a',
+      project: fakeProject('new', 'apps/other'),
+      orgId: 'team_b',
+      orgSlug: 'team-b',
       remoteName: 'origin',
     });
 
     const projects = await readProjects(cwd);
-    expect(projects.map(p => p.id)).toEqual(['new']);
+    expect(projects).toHaveLength(2);
+    // The kept legacy entry inherits the old top-level orgId, which is no
+    // longer written at the top level.
+    expect(projects.find(p => p.id === 'legacy')).toMatchObject({
+      orgId: 'team_a',
+    });
+    const config = await readJSON(join(cwd, '.vercel', 'repo.json'));
+    expect(config.orgId).toBeUndefined();
   });
 
   it('always replaces an entry with the same project id', async () => {

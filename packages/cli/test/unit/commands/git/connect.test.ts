@@ -101,9 +101,8 @@ describe('git connect', () => {
         await expect(client.stderr).toOutput('Which team?');
         client.stdin.write('\r');
 
-        // Unified flow: pick the detected folder-name match in the picker.
-        await expect(client.stderr).toOutput('Which project?');
-        client.events.keypress('enter');
+        // The repo's Git-connected project links automatically.
+        await expect(client.stderr).toOutput('Linked');
 
         await expect(client.stderr).toOutput(
           'Pull development environment variables into .env.local?'
@@ -209,9 +208,8 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\r');
 
-      // Unified flow: pick the detected folder-name match in the picker.
-      await expect(client.stderr).toOutput('Which project?');
-      client.events.keypress('enter');
+      // The repo's Git-connected project links automatically.
+      await expect(client.stderr).toOutput('Linked');
 
       await expect(client.stderr).toOutput(
         'Pull development environment variables into .env.local?'
@@ -264,9 +262,8 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\r');
 
-      // Unified flow: pick the detected folder-name match in the picker.
-      await expect(client.stderr).toOutput('Which project?');
-      client.events.keypress('enter');
+      // The repo's Git-connected project links automatically.
+      await expect(client.stderr).toOutput('Linked');
 
       await expect(client.stderr).toOutput(
         'Pull development environment variables into .env.local?'

@@ -2462,12 +2462,8 @@ describe('link', () => {
       client.cwd = projectDir;
       const exitCodePromise = link(client);
 
-      // Single team auto-selects; no team prompt.
-      await expect(client.stderr).toOutput(
-        `${repoProject.name} (linked by git)`
-      );
-      client.stdin.write('\n');
-
+      // Single team auto-selects; the Git-linked match resolves without a
+      // confirmation prompt.
       await expect(client.stderr).toOutput(
         `✓ Linked          ${team.slug}/${repoProject.name}`
       );
@@ -2494,7 +2490,7 @@ describe('link', () => {
       );
     });
 
-    it('should fall back to the folder name when no Git root-directory matches', async () => {
+    it('links repo projects, then falls back to the folder name for the cwd', async () => {
       useUser({ version: 'northstar' });
       const repoRoot = setupTmpDir();
       const projectDir = join(repoRoot, 'apps/web');
@@ -2536,11 +2532,13 @@ describe('link', () => {
       client.cwd = projectDir;
       const exitCodePromise = link(client);
 
-      // Single team auto-selects; no team prompt.
-      await expect(client.stderr).toOutput('web (folder name)');
-      expect(client.stderr.getFullOutput()).not.toContain(
-        otherRootProject.name
+      // The team's repo project is linked automatically even though it does
+      // not match the cwd…
+      await expect(client.stderr).toOutput(
+        `✓ Linked          1 project under ${team.slug}`
       );
+      // …then the cwd falls back to folder-name detection.
+      await expect(client.stderr).toOutput('web (folder name)');
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
@@ -2550,14 +2548,27 @@ describe('link', () => {
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
 
-      expect(
-        await readJSON(join(projectDir, '.vercel/project.json'))
-      ).toMatchObject({
-        orgId: team.id,
-        projectId: folderProject.id,
-        projectName: folderProject.name,
-      });
-      expect(await pathExists(join(repoRoot, '.vercel/repo.json'))).toBe(false);
+      // Both land in repo.json; no per-directory project.json is written.
+      const repoJson = await readJSON(join(repoRoot, '.vercel/repo.json'));
+      expect(repoJson.projects).toEqual([
+        {
+          directory: 'apps/api',
+          id: otherRootProject.id,
+          name: otherRootProject.name,
+          orgId: team.id,
+          orgSlug: team.slug,
+        },
+        {
+          directory: 'apps/web',
+          id: folderProject.id,
+          name: folderProject.name,
+          orgId: team.id,
+          orgSlug: team.slug,
+        },
+      ]);
+      expect(await pathExists(join(projectDir, '.vercel/project.json'))).toBe(
+        false
+      );
     });
 
     it('should search all projects under the selected team', async () => {
@@ -3010,15 +3021,15 @@ describe('link', () => {
         'Linked',
       ]);
 
-      // An explicit --project resolves directly and links this directory;
-      // no repo-style link is created for it.
-      expect(
-        await readJSON(join(projectDir, '.vercel/project.json'))
-      ).toMatchObject({
-        orgId: teamA.id,
-        projectId: expectedProject.id,
-      });
-      expect(await pathExists(join(repoRoot, '.vercel/repo.json'))).toBe(false);
+      // An explicit --project resolves against the repo projects; the link
+      // is recorded in repo.json (alongside the team's other repo project).
+      const repoJson = await readJSON(join(repoRoot, '.vercel/repo.json'));
+      expect(repoJson.projects.map((p: { id: string }) => p.id).sort()).toEqual(
+        [expectedProject.id, wrongProject.id].sort()
+      );
+      expect(await pathExists(join(projectDir, '.vercel/project.json'))).toBe(
+        false
+      );
     });
 
     it('should auto-link the Git match in the chosen team under --yes', async () => {

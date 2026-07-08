@@ -1,5 +1,5 @@
 import { remove } from 'fs-extra';
-import { join, basename } from 'path';
+import { join, basename, relative } from 'path';
 import { getPlatformEnv } from '@vercel/build-utils';
 import { LocalFileSystemDetector, getWorkspaces } from '@vercel/fs-detectors';
 import type {
@@ -14,7 +14,11 @@ import {
   VERCEL_DIR_README,
   VERCEL_DIR_PROJECT,
 } from '../projects/link';
-import { linkRepoProject } from './repo';
+import {
+  autoLinkRepoProjects,
+  linkRepoProject,
+  type AutoLinkResult,
+} from './repo';
 import createProject from '../projects/create-project';
 import type Client from '../client';
 import { printError } from '../error';
@@ -55,7 +59,6 @@ import {
   toProjectRootDirectory,
   type InferredServicesChoice,
 } from './services-setup';
-import { searchProjectsByRepoRoot } from '../projects/search-project-across-teams';
 import type { CrossTeamMatch } from '../projects/search-project-across-teams';
 import { isPromptCanceledError } from '../input/prompt-cancellation';
 
@@ -365,9 +368,9 @@ export default async function setupAndLink(
   output.print('\n');
 
   // Every command that establishes a link gets the same interactive flow:
-  // searchable team picker, then Git/folder project suggestions scoped to
-  // the chosen team. An explicit project name skips the suggestions and is
-  // resolved directly.
+  // searchable team picker, then automatic repo-wide linking of the team's
+  // Git-connected projects. An explicit project name skips the suggestions
+  // and is resolved directly.
   const interactive = isTTY && !nonInteractive;
   const searchableTeamPicker = interactive;
   const showProjectSuggestions = interactive && !gitProjectName;
@@ -376,6 +379,10 @@ export default async function setupAndLink(
   // When the team was auto-selected as the only choice, there is no other
   // team to go back to, so the project picker hides that option.
   let teamAutoSelected = false;
+  // Set when the directory is inside a Git repository with a usable remote;
+  // links are then recorded in the repo-level `repo.json` instead of a
+  // per-directory `project.json`.
+  let autoLink: AutoLinkResult | undefined;
   for (;;) {
     if (!org) {
       const orgMeta: { choiceCount?: number } = {};
@@ -392,26 +399,70 @@ export default async function setupAndLink(
       teamAutoSelected = orgMeta.choiceCount === 1;
     }
 
-    let repoMatches: CrossTeamMatch[] = [];
-    if (showProjectSuggestions) {
-      output.spinner('Searching for existing projects…', 1000);
-      try {
-        repoMatches = await searchProjectsByRepoRoot({
-          client,
-          cwd: path,
-          gitProjectName,
-          orgs: [org],
-          autoConfirm,
-          nonInteractive,
-        });
-      } catch (err) {
-        if (isPromptCanceledError(err)) {
-          throw err;
-        }
-        output.debug(`Git-linked project search failed: ${err}`);
-      } finally {
-        output.stopSpinner();
+    // Link every project that is Git-connected to this repository under
+    // the selected team, without asking. When the current directory is one
+    // of them, that project resolves automatically; otherwise fall through
+    // to the regular selection/creation flow (the rest stay linked).
+    autoLink = undefined;
+    output.spinner('Searching for existing projects…', 1000);
+    try {
+      autoLink = await autoLinkRepoProjects(client, path, org);
+    } catch (err) {
+      if (isPromptCanceledError(err)) {
+        throw err;
       }
+      output.debug(`Repo-wide project linking failed: ${err}`);
+    } finally {
+      output.stopSpinner();
+    }
+
+    if (autoLink && autoLink.entries.length > 0) {
+      let cwdMatches = autoLink.cwdMatches;
+      if (gitProjectName) {
+        cwdMatches = cwdMatches.filter(
+          p => p.id === gitProjectName || p.name === gitProjectName
+        );
+      }
+
+      let project: (typeof cwdMatches)[number] | undefined;
+      if (cwdMatches.length === 1) {
+        project = cwdMatches[0];
+      } else if (cwdMatches.length > 1 && interactive) {
+        project = await client.input.select({
+          message: 'Which project?',
+          choices: cwdMatches.map(p => ({ name: p.name, value: p })),
+        });
+      }
+
+      if (project) {
+        config.currentTeam = org.type === 'team' ? org.id : undefined;
+        const others = autoLink.entries.length - 1;
+        output.print('\n');
+        printAlignedLabel(
+          'Linked',
+          `${org.slug}/${project.name}${
+            others > 0
+              ? ` and ${others} other project${others === 1 ? '' : 's'}`
+              : ''
+          }`,
+          { gutter: '✓' }
+        );
+        await maybePullEnvAfterLink(client, path, autoConfirm, pullEnv);
+        return {
+          status: 'linked',
+          org,
+          project,
+          repoRoot: autoLink.rootPath,
+        };
+      }
+
+      const count = autoLink.entries.length;
+      output.print('\n');
+      printAlignedLabel(
+        'Linked',
+        `${count} project${count === 1 ? '' : 's'} under ${org.slug}`,
+        { gutter: '✓' }
+      );
     }
 
     try {
@@ -423,7 +474,7 @@ export default async function setupAndLink(
         false,
         showProjectSuggestions,
         searchableTeamPicker && !selectedOrg && !teamAutoSelected,
-        repoMatches
+        []
       );
     } catch (err) {
       if (
@@ -455,6 +506,23 @@ export default async function setupAndLink(
     });
   } else {
     const project = projectOrNewProjectName;
+
+    // Inside a Git repo, record the link in `repo.json` at the repo root
+    // (relative to which the project is expressed) instead of writing a
+    // per-directory `project.json`.
+    if (autoLink) {
+      config.currentTeam = org.type === 'team' ? org.id : undefined;
+      await linkRepoProject(client, path, {
+        project,
+        orgId: org.id,
+        orgSlug: org.slug,
+        remoteName: autoLink.remoteName,
+        directory: relative(autoLink.rootPath, path) || '.',
+        successEmoji,
+      });
+      await maybePullEnvAfterLink(client, path, autoConfirm, pullEnv);
+      return { status: 'linked', org, project, repoRoot: autoLink.rootPath };
+    }
 
     await linkFolderToProject(
       client,
@@ -654,6 +722,22 @@ export default async function setupAndLink(
       vercelAuth: vercelAuthSetting,
       v0,
     });
+
+    // Inside a Git repo, record the new project in `repo.json` at the repo
+    // root instead of writing a per-directory `project.json`.
+    if (autoLink) {
+      await linkRepoProject(client, path, {
+        project,
+        orgId: org.id,
+        orgSlug: org.slug,
+        remoteName: autoLink.remoteName,
+        directory:
+          relative(autoLink.rootPath, join(path, rootDirectory ?? '')) || '.',
+        successEmoji,
+      });
+      await connectGitRepository(client, path, project, autoConfirm, org);
+      return { status: 'linked', org, project, repoRoot: autoLink.rootPath };
+    }
 
     await linkFolderToProject(
       client,
