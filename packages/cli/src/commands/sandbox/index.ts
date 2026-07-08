@@ -1,11 +1,34 @@
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
+import getSubcommand from '../../util/get-subcommand';
+import { SandboxTelemetryClient } from '../../util/telemetry/commands/sandbox';
 
 type SandboxCliModule = {
   createApp(opts: { appName: string; withoutAuth: boolean }): {
     run(args: string[]): Promise<void>;
   };
 };
+
+const COMMAND_CONFIG: Record<string, string[]> = {};
+
+export default async function sandbox(client: Client): Promise<number> {
+  new SandboxTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
+  const argv = client.argv.slice(2);
+  const commandIndex = argv.indexOf('sandbox');
+  const sandboxArgs = commandIndex === -1 ? [] : argv.slice(commandIndex + 1);
+
+  const { subcommand } = getSubcommand(sandboxArgs, COMMAND_CONFIG);
+
+  switch (subcommand) {
+    default:
+      return runPassThrough(client, argv, commandIndex, sandboxArgs);
+  }
+}
 
 function getFlagValue(args: string[], names: string[]) {
   let value: string | undefined;
@@ -32,11 +55,13 @@ function getFlagValue(args: string[], names: string[]) {
   return value;
 }
 
-export default async function sandbox(client: Client) {
-  const argv = client.argv.slice(2);
-  const commandIndex = argv.indexOf('sandbox');
+async function runPassThrough(
+  client: Client,
+  argv: string[],
+  commandIndex: number,
+  sandboxArgs: string[]
+): Promise<number> {
   const rootArgs = commandIndex === -1 ? argv : argv.slice(0, commandIndex);
-  const sandboxArgs = commandIndex === -1 ? [] : argv.slice(commandIndex + 1);
   const scope = getFlagValue(rootArgs, ['--scope', '-S']);
   const team = getFlagValue(rootArgs, ['--team', '-T']);
   const token = getFlagValue(rootArgs, ['--token', '-t']);
