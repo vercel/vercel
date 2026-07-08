@@ -137,6 +137,7 @@ import {
   DEFAULT_VERCEL_CONFIG_FILENAME,
 } from '../../util/compile-vercel-config';
 import { help } from '../help';
+import { ensureLink } from '../../util/link/ensure-link';
 import { pullCommandLogic } from '../pull';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import { buildCommand } from './command';
@@ -413,6 +414,21 @@ export default async function main(client: Client): Promise<number> {
           )} to retrieve them. In non-interactive mode, set VERCEL_TOKEN for authentication.`
         );
         return 1;
+      }
+
+      // An unlinked directory gets the link flow first, so the pull
+      // question refers to a known project instead of linking as a side
+      // effect of the pull.
+      if (!link) {
+        const ensured = await ensureLink('build', client, cwd, {
+          projectName: projectNameOrId,
+          failIfNotFound: !!projectNameOrId,
+          pullEnv: false,
+        });
+        if (typeof ensured === 'number') {
+          return ensured;
+        }
+        link = await getProjectLink(client, cwd, projectNameOrId, true);
       }
 
       confirmed = await client.input.confirm(
