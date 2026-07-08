@@ -28,6 +28,9 @@ export interface AgentRunsQuery {
   pageSize?: number;
   search?: string;
   issue?: 'error';
+  issueCode?: string;
+  issueTool?: string;
+  groupBy?: 'issue';
   sessionStatus?: 'completed' | 'failed' | 'running' | 'waiting';
   runId?: string;
   trace?: boolean;
@@ -62,6 +65,15 @@ export function buildAgentRunsUrl(query: AgentRunsQuery): string {
   }
   if (query.issue) {
     url.searchParams.set('issue', query.issue);
+  }
+  if (query.issueCode) {
+    url.searchParams.set('issue_code', query.issueCode);
+  }
+  if (query.issueTool) {
+    url.searchParams.set('issue_tool', query.issueTool);
+  }
+  if (query.groupBy) {
+    url.searchParams.set('groupBy', query.groupBy);
   }
   if (query.sessionStatus) {
     url.searchParams.set('session_status', query.sessionStatus);

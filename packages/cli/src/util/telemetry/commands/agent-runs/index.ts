@@ -33,4 +33,11 @@ export class AgentRunsTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandIssues(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'issues',
+      value: actual,
+    });
+  }
 }

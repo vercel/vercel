@@ -209,6 +209,30 @@ export const projectsSubcommand = {
   ],
 } as const;
 
+export const issuesSubcommand = {
+  name: 'issues',
+  aliases: [],
+  description: 'List top Agent Run issue groups for a project',
+  arguments: [],
+  options: [
+    projectOption,
+    environmentOption,
+    sinceOption,
+    untilOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'List top issue groups for the linked project',
+      value: `${packageName} agent-runs issues`,
+    },
+    {
+      name: 'Print raw issue groups as JSON',
+      value: `${packageName} agent-runs issues --json`,
+    },
+  ],
+} as const;
+
 export const agentRunsCommand = {
   name: 'agent-runs',
   aliases: [],
@@ -219,6 +243,7 @@ export const agentRunsCommand = {
     inspectSubcommand,
     traceSubcommand,
     projectsSubcommand,
+    issuesSubcommand,
   ],
   options: [],
   examples: [
@@ -229,6 +254,10 @@ export const agentRunsCommand = {
     {
       name: 'List projects with Agent Runs activity',
       value: `${packageName} agent-runs projects`,
+    },
+    {
+      name: 'List top issue groups',
+      value: `${packageName} agent-runs issues`,
     },
     {
       name: 'Inspect an Agent Run',

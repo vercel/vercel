@@ -2,6 +2,7 @@ import { help, type Command } from '../help';
 import {
   agentRunsCommand,
   inspectSubcommand,
+  issuesSubcommand,
   listSubcommand,
   projectsSubcommand,
   traceSubcommand,
@@ -18,12 +19,14 @@ import list from './list';
 import inspect from './inspect';
 import trace from './trace';
 import projects from './projects';
+import issues from './issues';
 
 const COMMAND_CONFIG = {
   list: getCommandAliases(listSubcommand),
   inspect: getCommandAliases(inspectSubcommand),
   trace: getCommandAliases(traceSubcommand),
   projects: getCommandAliases(projectsSubcommand),
+  issues: getCommandAliases(issuesSubcommand),
 };
 
 export default async function agentRuns(client: Client): Promise<number> {
@@ -111,6 +114,15 @@ export default async function agentRuns(client: Client): Promise<number> {
       }
       telemetry.trackCliSubcommandProjects(subcommandOriginal);
       return await projects(client);
+    }
+    case 'issues': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('agent-runs', subcommandOriginal);
+        printHelp(issuesSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandIssues(subcommandOriginal);
+      return await issues(client);
     }
     default: {
       output.error(`Unknown subcommand: ${subcommandOriginal}`);
