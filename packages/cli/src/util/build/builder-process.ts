@@ -225,7 +225,7 @@ function rehydrateResult(result: BuildResultV2 | BuildResultV3): void {
 /**
  * Prepends `[vc:service:<name>] ` to each complete line read from a child's stdout/stderr and
  * forwards it to `dest`. Buffers an unterminated trailing line until more data arrives (or the
- * `flush` on teardown), so the tag only ever lands at real line starts. Must stay in sync with
+ * `flush` on stream end), so the tag only ever lands at real line starts. Must stay in sync with
  * the tag matcher in api/build-container/container/src/utils/logging.ts.
  */
 export function createServiceLinePrefixer(
@@ -265,7 +265,7 @@ export class SubprocessBuildRunner extends BuildRunner {
 
   /**
    * Line prefixers for the child's piped stdout/stderr, present only when `ctx.serviceName` is
-   * set. Flushed on teardown so a trailing partial line isn't lost.
+   * set. Flushed on each stream's `end` so a trailing partial line isn't lost.
    */
   private stdoutPrefixer?: ReturnType<typeof createServiceLinePrefixer>;
 
@@ -308,7 +308,7 @@ export class SubprocessBuildRunner extends BuildRunner {
     this.child = child;
 
     // When piping, read the child's streams line-by-line, prefix with the service tag, and
-    // forward to our own stdout/stderr. Flushed on teardown so a trailing partial line isn't lost.
+    // forward to our own stdout/stderr. Flushed on stream end so a trailing partial line isn't lost.
     this.stdoutPrefixer = serviceName
       ? createServiceLinePrefixer(serviceName, process.stdout)
       : undefined;
@@ -319,11 +319,18 @@ export class SubprocessBuildRunner extends BuildRunner {
       const prefixer = this.stdoutPrefixer;
       child.stdout.setEncoding('utf8');
       child.stdout.on('data', chunk => prefixer.onData(chunk));
+      // Flush the trailing (unterminated) line only once the stream reaches EOF, so we never
+      // split a line that is still arriving. The child's stdout/stderr are piped over separate
+      // file descriptors from the IPC channel, so data written just before the worker sends its
+      // `buildResult` message can still be sitting in the OS pipe buffer when the parent tears
+      // the worker down; flushing here (rather than in teardown) guarantees it isn't dropped.
+      child.stdout.on('end', () => prefixer.flush());
     }
     if (this.stderrPrefixer && child.stderr) {
       const prefixer = this.stderrPrefixer;
       child.stderr.setEncoding('utf8');
       child.stderr.on('data', chunk => prefixer.onData(chunk));
+      child.stderr.on('end', () => prefixer.flush());
     }
 
     // Wait for the worker's `ready` handshake before sending the build request.
@@ -517,10 +524,6 @@ export class SubprocessBuildRunner extends BuildRunner {
   teardown(): void {
     const { child } = this;
     if (!child) return;
-
-    // Emit any buffered trailing (unterminated) line before we stop reading the streams.
-    this.stdoutPrefixer?.flush();
-    this.stderrPrefixer?.flush();
 
     if (child.connected) child.disconnect();
     if (child.exitCode === null && child.signalCode === null) {
