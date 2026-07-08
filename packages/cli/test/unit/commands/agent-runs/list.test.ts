@@ -78,7 +78,7 @@ describe('agent-runs list', () => {
     );
   });
 
-  it('forwards search, pagination, environment, and time range params', async () => {
+  it('forwards search, issue, pagination, environment, and time range params', async () => {
     useLinkedProject();
     let receivedQuery: Record<string, string> | undefined;
     client.scenario.get('/api/observability/agent-runs', (req, res) => {
@@ -91,6 +91,8 @@ describe('agent-runs list', () => {
       'list',
       '--search',
       'checkout',
+      '--issue',
+      'error',
       '--page',
       '2',
       '--limit',
@@ -105,6 +107,7 @@ describe('agent-runs list', () => {
     expect(exitCode).toBe(0);
     expect(receivedQuery).toMatchObject({
       search: 'checkout',
+      issue: 'error',
       page: '2',
       pageSize: '50',
       environment: 'preview',
@@ -194,6 +197,16 @@ describe('agent-runs list', () => {
     );
   });
 
+  it('errors when --issue is not supported', async () => {
+    useLinkedProject();
+    client.setArgv('agent-runs', 'list', '--issue', 'policy_blocked');
+    const exitCode = await agentRuns(client);
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      '`--issue` currently supports only `error`.'
+    );
+  });
+
   it('emits a JSON error payload in non-interactive mode for invalid arguments', async () => {
     useLinkedProject();
     const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
@@ -243,13 +256,22 @@ describe('agent-runs list', () => {
       res.json({ runs: [] });
     });
 
-    client.setArgv('agent-runs', 'list', '--json', '--search', 'checkout');
+    client.setArgv(
+      'agent-runs',
+      'list',
+      '--json',
+      '--search',
+      'checkout',
+      '--issue',
+      'error'
+    );
     const exitCode = await agentRuns(client);
 
     expect(exitCode).toBe(0);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'subcommand:list', value: 'list' },
       { key: 'option:search', value: '[REDACTED]' },
+      { key: 'option:issue', value: 'error' },
       { key: 'flag:json', value: 'TRUE' },
     ]);
   });

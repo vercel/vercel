@@ -65,6 +65,14 @@ export const listSubcommand = {
       description: 'Search Agent Runs by title',
     },
     {
+      name: 'issue',
+      shorthand: null,
+      type: String,
+      argument: 'error',
+      deprecated: false,
+      description: 'Filter Agent Runs by issue type. Currently supports: error',
+    },
+    {
       name: 'page',
       shorthand: null,
       type: Number,

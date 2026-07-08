@@ -194,3 +194,12 @@ export function formatCount(value: number | undefined): string {
   if (value < 1_000_000) return `${(value / 1000).toFixed(1)}k`;
   return `${(value / 1_000_000).toFixed(1)}m`;
 }
+
+export function formatRate(value: number | undefined): string {
+  if (value === undefined) return PLACEHOLDER;
+  const percent = value * 100;
+  if (percent === 0) return '0%';
+  if (percent < 0.1) return '<0.1%';
+  if (percent < 10) return `${percent.toFixed(1)}%`;
+  return `${Math.round(percent)}%`;
+}

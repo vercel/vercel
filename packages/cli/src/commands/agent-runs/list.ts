@@ -51,6 +51,7 @@ export default async function list(client: Client): Promise<number> {
     '--since': since,
     '--until': until,
     '--search': search,
+    '--issue': issue,
     '--page': page,
     '--limit': limit,
     '--json': json,
@@ -62,12 +63,19 @@ export default async function list(client: Client): Promise<number> {
   telemetry.trackCliOptionSince(since);
   telemetry.trackCliOptionUntil(until);
   telemetry.trackCliOptionSearch(search);
+  telemetry.trackCliOptionIssue(issue);
   telemetry.trackCliOptionPage(page);
   telemetry.trackCliOptionLimit(limit);
   telemetry.trackCliFlagJson(json);
 
   if (until && !since) {
     return invalidArguments(client, '`--until` requires `--since`.');
+  }
+  if (issue && issue !== 'error') {
+    return invalidArguments(
+      client,
+      '`--issue` currently supports only `error`.'
+    );
   }
 
   const scope = await resolveAgentRunsScope(client, {
@@ -92,6 +100,7 @@ export default async function list(client: Client): Promise<number> {
       page,
       pageSize: limit,
       search,
+      issue: issue === 'error' ? 'error' : undefined,
     });
   } catch (err) {
     output.stopSpinner();

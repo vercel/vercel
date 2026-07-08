@@ -27,6 +27,7 @@ export interface AgentRunsQuery {
   page?: number;
   pageSize?: number;
   search?: string;
+  issue?: 'error';
   runId?: string;
   trace?: boolean;
 }
@@ -57,6 +58,9 @@ export function buildAgentRunsUrl(query: AgentRunsQuery): string {
   }
   if (query.search) {
     url.searchParams.set('search', query.search);
+  }
+  if (query.issue) {
+    url.searchParams.set('issue', query.issue);
   }
   if (query.runId) {
     url.searchParams.set('runId', query.runId);

@@ -18,6 +18,7 @@ import {
   asArray,
   formatCount,
   formatDurationMs,
+  formatRate,
   readNumber,
   readString,
 } from './format';
@@ -99,7 +100,7 @@ export default async function projects(client: Client): Promise<number> {
   );
 
   const rows = [
-    ['Project', 'Runs', 'Avg Duration'].map(header =>
+    ['Project', 'Runs', 'Errors', 'Error Rate', 'Avg Duration'].map(header =>
       chalk.bold(chalk.cyan(header))
     ),
     ...projectList.map(project => [
@@ -114,6 +115,8 @@ export default async function projects(client: Client): Promise<number> {
         ) ?? '-'
       ),
       formatCount(readNumber(project, 'runs', 'runCount', 'totalRuns')),
+      formatCount(readNumber(project, 'errors')),
+      formatRate(readNumber(project, 'errorRate')),
       chalk.gray(
         formatDurationMs(
           readNumber(

@@ -44,7 +44,15 @@ describe('agent-runs projects', () => {
     client.scenario.get('/api/observability/agent-runs', (req, res) => {
       receivedQuery = req.query;
       res.json({
-        projects: [{ projectName: 'my-app', runs: 5, avgDurationMs: 1234 }],
+        projects: [
+          {
+            projectName: 'my-app',
+            runs: 5,
+            errors: 1,
+            errorRate: 0.2,
+            avgDurationMs: 1234,
+          },
+        ],
       });
     });
 
@@ -61,6 +69,8 @@ describe('agent-runs projects', () => {
     const stdout = client.stdout.getFullOutput();
     expect(stdout).toContain('my-app');
     expect(stdout).toContain('5');
+    expect(stdout).toContain('1');
+    expect(stdout).toContain('20%');
   });
 
   it('works with --scope and no linked project', async () => {
