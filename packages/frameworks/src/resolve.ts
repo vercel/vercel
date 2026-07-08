@@ -49,6 +49,8 @@ export interface PartitionManifestOptions {
 }
 
 export interface ResolveFrameworkListOptions extends PartitionManifestOptions {
+  /** Skip the network and cache entirely and use the pinned manifest. */
+  skipRemote?: boolean;
   /** When omitted, no cache is read or written. */
   cacheDir?: string;
   /** Defaults to 24 hours. */
@@ -178,6 +180,7 @@ export async function resolveFrameworkList(
   options: ResolveFrameworkListOptions
 ): Promise<ResolvedFrameworkList> {
   const {
+    skipRemote = false,
     cacheDir,
     cacheTtl = DEFAULT_CACHE_TTL,
     fetchTimeout = DEFAULT_FETCH_TIMEOUT,
@@ -186,7 +189,7 @@ export async function resolveFrameworkList(
     ...partitionOptions
   } = options;
 
-  if (isRemoteFrameworksDisabled()) {
+  if (skipRemote || isRemoteFrameworksDisabled()) {
     return {
       ...partitionManifest(pinnedManifest, partitionOptions),
       source: 'pinned',

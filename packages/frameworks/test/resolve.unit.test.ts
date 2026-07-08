@@ -238,6 +238,21 @@ describe('resolveFrameworkList', () => {
     expect(result.source).toBe('pinned');
   });
 
+  it('uses the pinned manifest when skipRemote is set', async () => {
+    const fetchMock = stubFetch(() =>
+      Response.json([entry({ slug: 'remote' })])
+    );
+
+    const result = await resolveFrameworkList({
+      cacheDir,
+      pinnedManifest,
+      skipRemote: true,
+    });
+    expect(result.source).toBe('pinned');
+    expect(result.frameworks.map(f => f.slug)).toEqual(['pinned']);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('uses the pinned manifest when VERCEL_SKIP_REMOTE_FRAMEWORKS is set', async () => {
     const fetchMock = stubFetch(() =>
       Response.json([entry({ slug: 'remote' })])

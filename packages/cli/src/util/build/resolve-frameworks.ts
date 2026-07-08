@@ -14,6 +14,12 @@ import output from '../../output-manager';
 import { getCommandName } from '../pkg-name';
 import cliPkg from '../pkg';
 
+// Snapshot at module load, before `vc build` sets VERCEL=1 for framework
+// env detection. When already set we're in the Vercel build container,
+// which should use the pinned manifest: upgrade warnings are only useful
+// for local builds, and the container image is rebuilt regularly anyway.
+const IS_BUILD_CONTAINER = Boolean(process.env.VERCEL);
+
 let resolved: Promise<ResolvedFrameworkList> | undefined;
 
 /**
@@ -23,6 +29,7 @@ let resolved: Promise<ResolvedFrameworkList> | undefined;
 export function getResolvedFrameworks(): Promise<ResolvedFrameworkList> {
   if (!resolved) {
     resolved = resolveFrameworks({
+      skipRemote: IS_BUILD_CONTAINER,
       cacheDir: XDGAppPaths('com.vercel.cli').cache(),
       cliVersion: cliPkg.version,
     }).then(result => {
