@@ -240,7 +240,11 @@ describe('build()', () => {
           throw new Error('Unexpected `buildOutputVersion` in build result');
         }
 
-        expect(buildResult.output['admin/index.html']).toBeTruthy();
+        // `glob()` joins the mountpoint with `path.join`, so output keys use
+        // the platform separator (`admin\index.html` on Windows)
+        expect(
+          buildResult.output[path.join('admin', 'index.html')]
+        ).toBeTruthy();
       } finally {
         await remove(workPath);
       }
