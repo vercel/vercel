@@ -204,7 +204,21 @@ export const projectsSubcommand = {
   aliases: [],
   description: 'List projects in the current team with Agent Runs activity',
   arguments: [],
-  options: [environmentOption, sinceOption, untilOption, jsonOption],
+  options: [
+    environmentOption,
+    sinceOption,
+    untilOption,
+    {
+      name: 'stale-threshold',
+      shorthand: null,
+      type: Number,
+      argument: 'SECONDS',
+      deprecated: false,
+      description:
+        'Seconds without session activity before in-progress runs count as stale',
+    },
+    jsonOption,
+  ],
   examples: [
     {
       name: 'List projects with Agent Runs activity',

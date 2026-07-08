@@ -40,6 +40,15 @@ export class AgentRunsQueryTelemetryClient extends TelemetryClient {
     }
   }
 
+  trackCliOptionStaleThreshold(value: number | undefined) {
+    if (typeof value === 'number') {
+      this.trackCliOption({
+        option: 'stale-threshold',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliFlagJson(value: boolean | undefined) {
     if (value) {
       this.trackCliFlag('json');

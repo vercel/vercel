@@ -18,9 +18,11 @@ import {
   asArray,
   formatCount,
   formatDurationMs,
+  formatAge,
   formatRate,
   readNumber,
   readString,
+  readTimestampMs,
 } from './format';
 import { AgentProjectsTelemetryClient } from '../../util/telemetry/commands/agent-runs/projects';
 
@@ -44,15 +46,26 @@ export default async function projects(client: Client): Promise<number> {
     '--until': until,
     '--json': json,
     '--scope': scopeFlag,
+    '--stale-threshold': staleThreshold,
   } = parsedArgs.flags;
 
   telemetry.trackCliOptionEnvironment(environment);
   telemetry.trackCliOptionSince(since);
   telemetry.trackCliOptionUntil(until);
+  telemetry.trackCliOptionStaleThreshold(staleThreshold);
   telemetry.trackCliFlagJson(json);
 
   if (until && !since) {
     return invalidArguments(client, '`--until` requires `--since`.');
+  }
+  if (
+    typeof staleThreshold === 'number' &&
+    (!Number.isFinite(staleThreshold) || staleThreshold <= 0)
+  ) {
+    return invalidArguments(
+      client,
+      '`--stale-threshold` must be a positive number of seconds.'
+    );
   }
 
   const scope = await resolveAgentRunsScope(client, {
@@ -76,6 +89,7 @@ export default async function projects(client: Client): Promise<number> {
       environment,
       since,
       until,
+      staleThreshold,
     });
   } catch (err) {
     output.stopSpinner();
@@ -100,9 +114,17 @@ export default async function projects(client: Client): Promise<number> {
   );
 
   const rows = [
-    ['Project', 'Runs', 'Errors', 'Error Rate', 'Avg Duration'].map(header =>
-      chalk.bold(chalk.cyan(header))
-    ),
+    [
+      'Project',
+      'Runs',
+      'Errors',
+      'Error Rate',
+      'Running',
+      'Waiting',
+      'Stale',
+      'Last Issue',
+      'Avg Duration',
+    ].map(header => chalk.bold(chalk.cyan(header))),
     ...projectList.map(project => [
       chalk.bold(
         readString(
@@ -117,6 +139,10 @@ export default async function projects(client: Client): Promise<number> {
       formatCount(readNumber(project, 'runs', 'runCount', 'totalRuns')),
       formatCount(readNumber(project, 'errors')),
       formatRate(readNumber(project, 'errorRate')),
+      formatCount(readNumber(project, 'running')),
+      formatCount(readNumber(project, 'waiting')),
+      formatCount(readNumber(project, 'stale')),
+      formatAge(readTimestampMs(project, 'lastIssueAt')),
       chalk.gray(
         formatDurationMs(
           readNumber(

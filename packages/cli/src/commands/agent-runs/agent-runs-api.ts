@@ -33,6 +33,7 @@ export interface AgentRunsQuery {
   groupBy?: 'issue';
   sessionStatus?: 'completed' | 'failed' | 'running' | 'waiting';
   trigger?: 'slack' | 'http' | 'schedule' | 'manual' | 'unknown';
+  staleThreshold?: number;
   runId?: string;
   trace?: boolean;
 }
@@ -81,6 +82,12 @@ export function buildAgentRunsUrl(query: AgentRunsQuery): string {
   }
   if (query.trigger) {
     url.searchParams.set('trigger', query.trigger);
+  }
+  if (typeof query.staleThreshold === 'number') {
+    url.searchParams.set(
+      'stale_threshold',
+      String(Math.max(1, Math.floor(query.staleThreshold)))
+    );
   }
   if (query.runId) {
     url.searchParams.set('runId', query.runId);
