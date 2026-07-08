@@ -31,6 +31,8 @@ export interface RepoProjectConfig {
   name: string;
   directory: string;
   orgId?: string;
+  /** Team slug at link time, for display only (may go stale on rename). */
+  orgSlug?: string;
 }
 
 export interface RepoProjectsConfig {
@@ -192,11 +194,17 @@ export async function linkRepoProject(
     name: project.name,
     directory,
     orgId,
+    orgSlug,
   };
   const existingProjects = repoLink.repoConfig?.projects ?? [];
-  const filteredProjects = existingProjects.filter(
-    p => p.id !== project.id && normalizePath(p.directory) !== directory
-  );
+  // Replace a stale entry for the same project, or a same-team entry at the
+  // same directory. Entries from other teams coexist — the same directory
+  // may be linked to projects in several teams.
+  const filteredProjects = existingProjects.filter(p => {
+    if (p.id === project.id) return false;
+    const sameTeam = (p.orgId ?? repoLink.repoConfig?.orgId) === orgId;
+    return !(sameTeam && normalizePath(p.directory) === directory);
+  });
   const repoConfig: RepoProjectsConfig = {
     remoteName,
     projects: [...filteredProjects, projectConfig],
@@ -440,6 +448,7 @@ async function discoverRepoProjects(
       name: project.name,
       directory: normalizePath(project.rootDirectory || '.'),
       orgId: org.id,
+      orgSlug: org.slug,
     };
   });
 

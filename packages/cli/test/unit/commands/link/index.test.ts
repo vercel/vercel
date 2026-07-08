@@ -2485,6 +2485,7 @@ describe('link', () => {
             id: repoProject.id,
             name: repoProject.name,
             orgId: team.id,
+            orgSlug: team.slug,
           },
         ],
       });
@@ -2880,6 +2881,7 @@ describe('link', () => {
             id: projectA.id,
             name: projectA.name,
             orgId: teamA.id,
+            orgSlug: teamA.slug,
           },
         ],
       });
@@ -2947,6 +2949,7 @@ describe('link', () => {
           id: projectA.id,
           name: projectA.name,
           orgId: teamA.id,
+          orgSlug: teamA.slug,
         },
       ]);
     });

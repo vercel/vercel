@@ -124,10 +124,17 @@ async function getProjectLinkFromRepoLink(
   );
   let project: RepoProjectConfig | undefined;
 
+  // A repo may hold links from multiple teams; the same name can exist in
+  // several. Disambiguate name matches with the current team when set.
+  const matchByName = (candidates: RepoProjectConfig[], name: string) => {
+    const matches = candidates.filter(p => p.id === name || p.name === name);
+    if (matches.length <= 1) return matches[0];
+    const { currentTeam } = client.config;
+    return currentTeam ? matches.find(p => p.orgId === currentTeam) : undefined;
+  };
+
   if (projectName && projectNameIsExplicit) {
-    project = repoLink.repoConfig.projects.find(
-      p => p.id === projectName || p.name === projectName
-    );
+    project = matchByName(repoLink.repoConfig.projects, projectName);
   } else if (projects.length === 1) {
     project = projects[0];
   } else {
@@ -136,9 +143,7 @@ async function getProjectLinkFromRepoLink(
 
     // If --project flag was provided, match by ID or name
     if (projectName) {
-      project = selectableProjects.find(
-        p => p.id === projectName || p.name === projectName
-      );
+      project = matchByName(selectableProjects, projectName);
     }
 
     // Fall back to interactive selection if no project was found
@@ -150,11 +155,16 @@ async function getProjectLinkFromRepoLink(
           return null;
         }
       } else {
+        // Qualify with the team when entries span multiple teams
+        const orgIds = new Set(
+          selectableProjects.map(p => p.orgId ?? repoLink.repoConfig?.orgId)
+        );
         project = await client.input.select({
           message: `Please select a Project:`,
           choices: selectableProjects.map(p => ({
             value: p,
-            name: p.name,
+            name:
+              orgIds.size > 1 && p.orgSlug ? `${p.orgSlug}/${p.name}` : p.name,
           })),
         });
       }

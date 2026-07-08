@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { tmpdir } from 'node:os';
 import { join, normalize, sep } from 'node:path';
+import { mkdirp, readJSON, writeJSON } from 'fs-extra';
+import execa from 'execa';
+import type { Project } from '@vercel-internals/types';
+import { client } from '../../../mocks/client';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import type { RepoProjectConfig } from '../../../../src/util/link/repo';
 import {
   findProjectsFromPath,
   findRepoRoot,
+  linkRepoProject,
 } from '../../../../src/util/link/repo';
 
 // Root of `vercel/vercel` repo
@@ -67,5 +73,112 @@ describe('findProjectsFromPath()', () => {
   it('should return empty array when there are no matching Projects', () => {
     const actual = findProjectsFromPath([projects[1]], '.');
     expect(actual).toHaveLength(0);
+  });
+});
+
+describe('linkRepoProject()', () => {
+  function fakeProject(id: string, rootDirectory: string | null): Project {
+    return { id, name: id, rootDirectory } as Project;
+  }
+
+  async function setupRepo(existingProjects?: RepoProjectConfig[]) {
+    const cwd = setupTmpDir();
+    await execa('git', ['init'], { cwd });
+    if (existingProjects) {
+      await mkdirp(join(cwd, '.vercel'));
+      await writeJSON(join(cwd, '.vercel', 'repo.json'), {
+        remoteName: 'origin',
+        projects: existingProjects,
+      });
+    }
+    return cwd;
+  }
+
+  async function readProjects(cwd: string): Promise<RepoProjectConfig[]> {
+    const config = await readJSON(join(cwd, '.vercel', 'repo.json'));
+    return config.projects;
+  }
+
+  it('replaces a same-team entry at the same directory', async () => {
+    const cwd = await setupRepo([
+      { id: 'old', name: 'old', directory: 'apps/site', orgId: 'team_a' },
+    ]);
+
+    await linkRepoProject(client, cwd, {
+      project: fakeProject('new', 'apps/site'),
+      orgId: 'team_a',
+      orgSlug: 'team-a',
+      remoteName: 'origin',
+    });
+
+    const projects = await readProjects(cwd);
+    expect(projects.map(p => p.id)).toEqual(['new']);
+  });
+
+  it('keeps another team\u2019s entry at the same directory', async () => {
+    const cwd = await setupRepo([
+      { id: 'theirs', name: 'theirs', directory: 'apps/site', orgId: 'team_b' },
+    ]);
+
+    await linkRepoProject(client, cwd, {
+      project: fakeProject('mine', 'apps/site'),
+      orgId: 'team_a',
+      orgSlug: 'team-a',
+      remoteName: 'origin',
+    });
+
+    const projects = await readProjects(cwd);
+    expect(projects.map(p => p.id).sort()).toEqual(['mine', 'theirs']);
+  });
+
+  it('treats a legacy top-level orgId as the entry\u2019s team', async () => {
+    const cwd = await setupRepo();
+    await mkdirp(join(cwd, '.vercel'));
+    await writeJSON(join(cwd, '.vercel', 'repo.json'), {
+      remoteName: 'origin',
+      orgId: 'team_a',
+      projects: [{ id: 'legacy', name: 'legacy', directory: 'apps/site' }],
+    });
+
+    await linkRepoProject(client, cwd, {
+      project: fakeProject('new', 'apps/site'),
+      orgId: 'team_a',
+      orgSlug: 'team-a',
+      remoteName: 'origin',
+    });
+
+    const projects = await readProjects(cwd);
+    expect(projects.map(p => p.id)).toEqual(['new']);
+  });
+
+  it('always replaces an entry with the same project id', async () => {
+    const cwd = await setupRepo([
+      { id: 'proj', name: 'proj', directory: 'apps/old', orgId: 'team_a' },
+    ]);
+
+    await linkRepoProject(client, cwd, {
+      project: fakeProject('proj', 'apps/new'),
+      orgId: 'team_a',
+      orgSlug: 'team-a',
+      remoteName: 'origin',
+    });
+
+    const projects = await readProjects(cwd);
+    expect(projects).toHaveLength(1);
+    expect(projects[0]).toMatchObject({ id: 'proj', directory: 'apps/new' });
+  });
+
+  it('records the org slug for display', async () => {
+    const cwd = await setupRepo();
+
+    await linkRepoProject(client, cwd, {
+      project: fakeProject('proj', 'apps/site'),
+      orgId: 'team_a',
+      orgSlug: 'team-a',
+      remoteName: 'origin',
+    });
+
+    const projects = await readProjects(cwd);
+    expect(projects[0]).toMatchObject({ orgId: 'team_a', orgSlug: 'team-a' });
   });
 });
