@@ -110,7 +110,9 @@ async function sendPrompt(
   if (mode === 'json') {
     client.stdout.write(`${JSON.stringify({ type: 'session', sessionId })}\n`);
   } else {
-    output.spinner('Waiting for Vercel Agent…');
+    output.spinner(
+      opts.noWait ? 'Dispatching to Vercel Agent…' : 'Waiting for Vercel Agent…'
+    );
   }
 
   const response = await api.startTurn(sessionId, {
