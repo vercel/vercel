@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import {
+  chmodSync,
   copyFileSync,
   readFileSync,
   writeFileSync,
@@ -174,6 +175,21 @@ copyFileSync(
   new URL('fetch-dist-tags.cjs', distRoot)
 );
 copyFileSync(new URL('src/vc.js', repoRoot), new URL('vc.js', distRoot));
+
+// The sh dispatcher is the published bin. Stamp the build version so it can
+// avoid self-redirects, and ensure the exec bit survives for direct exec.
+{
+  const dispatcher = readFileSync(new URL('src/vc.sh', repoRoot), 'utf8');
+  const dest = new URL('vc.sh', distRoot);
+  writeFileSync(
+    dest,
+    dispatcher.replace(
+      'VERSION="0.0.0-dev"',
+      `VERSION=${JSON.stringify(pkg.version)}`
+    )
+  );
+  chmodSync(dest, 0o755);
+}
 
 // Generate version.mjs for fast --version lookup
 writeFileSync(

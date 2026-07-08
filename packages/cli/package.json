@@ -33,8 +33,8 @@
     "test:evals:local-fixture": "tsx evals/run.ts --local-fixture"
   },
   "bin": {
-    "vc": "./dist/vc.js",
-    "vercel": "./dist/vc.js"
+    "vc": "./dist/vc.sh",
+    "vercel": "./dist/vc.sh"
   },
   "files": [
     "dist"
