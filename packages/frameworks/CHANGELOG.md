@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.30.6
+
+### Patch Changes
+
+- 7bc4db0: [frameworks] Add Lovable platform framework and platform attribute
+
 ## 3.30.5
 
 ### Patch Changes

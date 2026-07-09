@@ -1,5 +1,12 @@
 # @vercel/static-build
 
+## 2.11.5
+
+### Patch Changes
+
+- 6b2cfc6: Reject routePrefix path traversal when mounting static build output
+  - @vercel/gatsby-plugin-vercel-builder@2.2.25
+
 ## 2.11.4
 
 ### Patch Changes
