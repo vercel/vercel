@@ -14,4 +14,13 @@ export class TeamsInviteTelemetryClient
       });
     }
   }
+
+  trackCliOptionRole(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'role',
+        value,
+      });
+    }
+  }
 }
