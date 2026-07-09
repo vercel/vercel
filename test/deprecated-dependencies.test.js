@@ -31,6 +31,7 @@ const DEPRECATED_ALLOWLIST = {
   'create-svelte': 'Dev dependency for testing, migration to sv planned',
   osenv: 'Transitive dependency, will be removed when upstream packages update',
   argv: 'Transitive dependency, no direct usage',
+  uuid: 'Transitive dependency from CLI/dev tooling and AWS SDK retry middleware',
 };
 
 /**

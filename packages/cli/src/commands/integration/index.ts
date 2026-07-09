@@ -13,6 +13,7 @@ import {
   acceptTermsSubcommand,
   addSubcommand,
   balanceSubcommand,
+  categoriesSubcommand,
   discoverSubcommand,
   guideSubcommand,
   installationsSubcommand,
@@ -20,12 +21,15 @@ import {
   listSubcommand,
   openSubcommand,
   removeSubcommand,
+  resourceSubcommand,
   updateSubcommand,
 } from './command';
+import { dispatchResourceSubcommand } from '../integration-resource';
 import { list } from './list';
 import { openIntegration } from './open-integration';
 import { remove } from './remove-integration';
 import { update } from './update-integration';
+import { categories } from './categories';
 import { discover } from './discover';
 import { guide } from './guide';
 import { printAddDynamicHelp } from './add-help';
@@ -44,10 +48,12 @@ const COMMAND_CONFIG = {
   open: getCommandAliases(openSubcommand),
   list: getCommandAliases(listSubcommand),
   installations: getCommandAliases(installationsSubcommand),
+  categories: getCommandAliases(categoriesSubcommand),
   discover: getCommandAliases(discoverSubcommand),
   guide: getCommandAliases(guideSubcommand),
   balance: getCommandAliases(balanceSubcommand),
   remove: getCommandAliases(removeSubcommand),
+  resource: getCommandAliases(resourceSubcommand),
   update: getCommandAliases(updateSubcommand),
 };
 
@@ -154,6 +160,15 @@ export default async function main(client: Client) {
       telemetry.trackCliSubcommandInstallations(subcommandOriginal);
       return installationsList(client, subArgs);
     }
+    case 'categories': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
+        printHelp(categoriesSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandCategories(subcommandOriginal);
+      return categories(client, subArgs);
+    }
     case 'discover': {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
@@ -198,6 +213,24 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return remove(client, subArgs);
+    }
+    case 'resource': {
+      if (subArgs.length === 0 && needHelp) {
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
+        printHelp(resourceSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandResource(subcommandOriginal);
+      // Synthetic parent so child help renders `vercel integration resource <sub>`
+      // instead of `vercel resource <sub>`.
+      const nestedParent = {
+        ...resourceSubcommand,
+        name: 'integration resource',
+      };
+      return dispatchResourceSubcommand(client, subArgs, !!needHelp, {
+        helpBreadcrumb: 'integration resource',
+        parentForChildHelp: nestedParent,
+      });
     }
     case 'update': {
       if (needHelp) {

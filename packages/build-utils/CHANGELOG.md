@@ -1,5 +1,312 @@
 # @vercel/build-utils
 
+## 13.32.2
+
+### Patch Changes
+
+- 6b49a17: Apply per-service `functions` config when building experimental V2 services. Previously, function configuration declared under `services.<name>.functions` in `vercel.json` (`experimentalTriggers`, `maxDuration`, `memory`, `architecture`, `regions`, `functionFailoverRegions`, `supportsCancellation`) was dropped at build time — only the top-level `functions` map was honored. The build now feeds each service's `functions` to its lambdas for both single-lambda builders (`@vercel/node`, etc., via `writeBuildResultV3`) and framework builders that read `config.functions` (e.g. `@vercel/next`, via the builder config). Derived `queue/v2beta` consumer groups are now scoped by the owning service name so two services that declare the same function path + topic no longer collide.
+
+## 13.32.1
+
+### Patch Changes
+
+- 8dc4702: Fix `vercel dev` for standalone Node servers, including projects without a `package.json`, and reuse the server process between requests.
+
+## 13.32.0
+
+### Minor Changes
+
+- 9fb2976: Add `services` as the canonical multi-service project configuration and keep `experimentalServicesV2` as a deprecated backwards-compatible alias.
+
+### Patch Changes
+
+- 186014d: Add an experimental container service runtime. A service with
+  `runtime: "container"` either builds its `Dockerfile`/`Containerfile` and pushes
+  the resulting OCI image to the Vercel Container Registry (VCR), or passes a
+  prebuilt image reference through as build output.
+
+  - **`@vercel/container`** (new builder): authenticates to VCR with the project's
+    `VERCEL_OIDC_TOKEN`, ensures the repository exists, builds and pushes the
+    image, and emits a digest-pinned reference in `handler` (container functions
+    are `type: "Lambda"` with `runtime: "container"`; the platform surfaces
+    `handler` as the image downstream). Uses `docker` on developer machines and
+    `buildah` (daemonless) in the Vercel build container behind a shared
+    `ContainerEngine` interface. Supports `vc dev` via `startDevServer` (local
+    build/run, env parity, log forwarding) and `prepareCache` for buildah layer
+    reuse between builds. Build flow is instrumented with tracing spans
+    (non-secret diagnostics) and debug logging gated on `BUILDER_DEBUG`.
+  - **`@vercel/build-utils`**: add the `ContainerImage` build-output type.
+  - **`@vercel/fs-detectors`**: resolve container services from `vercel.json`
+    (the `services` config and its deprecated `experimentalServices` /
+    `experimentalServicesV2` aliases). A `Dockerfile`, `Containerfile`, or
+    `*.dockerfile` entrypoint triggers a build; any other entrypoint is treated as
+    a prebuilt OCI image reference.
+  - **`vercel`**: wire container output into `vercel build` result writing and
+    config validation.
+
+  Buildah specifics in the build container: host networking for `RUN` steps,
+  native `overlay` storage on the XFS `/vercel` volume (deferring to the image's
+  `storage.conf`), zstd push compression, and registry credentials read from the
+  provisioned auth file when present. Several knobs are available for debugging:
+  `VERCEL_CONTAINER_ENGINE`, `VERCEL_VCR_STRICT_STORAGE`,
+  `VERCEL_VCR_DISABLE_LAYER_CACHE`, and `VERCEL_VCR_FORCE_LOGIN`.
+
+- cb0988f: Set the Node.js 20 discontinuation date to October 1, 2026.
+
+## 13.31.1
+
+### Patch Changes
+
+- 2158ab6: [vc dev] Add support to `experimentalServicesV2` for bindings in `vc dev`
+
+## 13.31.0
+
+### Minor Changes
+
+- 8dec9ea: Add deploy-manifest as an extension of project manifest.
+- 3afdb18: Emit project manifest for hugo, zola, jekyll, and middleman frameworks.
+- 04f830c: Autodetect Bun runtime if engines.bun is set.
+
+## 13.30.0
+
+### Minor Changes
+
+- 01e18e8: Add `hasFallback`, `htmlSize`, and `isDynamicRoute` to `Prerender`
+
+  These optional fields surface per-route PPR shell metadata in the Build Output so consumers can classify prerenders (e.g. full shell vs. empty shell vs. concrete prerender):
+
+  - `hasFallback` — whether a dynamic route template had a static fallback (`undefined` for concrete prerenders)
+  - `htmlSize` — byte size of the prerendered `.html` shell (`0` for an empty shell, `undefined` when there's no `.html`)
+  - `isDynamicRoute` — whether the entry came from a dynamic route template rather than a concrete prerender
+
+## 13.29.1
+
+### Patch Changes
+
+- 32a730e: Elevate maximum maxDuration to 1800s
+
+## 13.29.0
+
+### Minor Changes
+
+- 8d8e871: Evaluate the `maxDuration` upper bound at validation time so `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT` works regardless of import order.
+
+  The gate was read when `@vercel/build-utils`' `functionsSchema` was constructed and when the CLI compiled its `vercel.json` validator — both at module load. Any process that imports these modules before setting the env var baked in the default 900-second maximum and ignored the flag, failing with `Invalid vercel.json - functions[...].maxDuration should be <= 900`.
+
+  `@vercel/build-utils` now exposes `getFunctionsSchema()`, which reads the limit at call time (the existing `functionsSchema` const is kept but deprecated). The CLI builds and compiles its config validator lazily, caching one validator per resolved limit, so setting the variable after import takes effect. Default behavior is unchanged — the 900s maximum, the lower bound, and the integer check are all still enforced when the variable is unset.
+
+## 13.28.0
+
+### Minor Changes
+
+- 4e849dd: Add a per-route `hasPostponed` signal to `Prerender`.
+
+  `@vercel/build-utils` exposes a new optional `hasPostponed?: boolean` field on `Prerender` / `PrerenderOptions`. It is a tri-state: `true` when the route's `.meta` postponed state is present (React suspended during the build-time prerender), `false` when the framework prerendered a Prerender route without postponing, and `undefined` when the framework did not provide the signal.
+
+  `@vercel/next` populates it for app-router PPR routes (computed from the route's postponed state) and leaves it `undefined` for pages-router and other non-app-router prerenders. This is an additive, finer-grained signal — it does not change the existing `chain` / `experimentalStreamingLambdaPath` behavior — so downstream consumers can distinguish a route that actually postponed from one that has PPR machinery but fully prerendered (e.g. under `cacheComponents: true`).
+
+## 13.27.2
+
+### Patch Changes
+
+- c5eeb30: Gate the client-side 900-second `maxDuration` upper bound behind the `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT` environment variable. The limit is now owned by a single helper in `@vercel/build-utils` instead of being hardcoded in multiple validators. When the variable is set to `1`, the client-side maximum is skipped and validation defers to the server. Default behavior is unchanged — the maximum, the lower bound, and the integer check are all still enforced when the variable is unset.
+- 09c39af: Fix Node.js API entrypoint detection dropping functions whose source contains comment-like sequences (`/*`, `//`, `*/`) inside string, template, or regex literals — for example an `Accept: */*` header. Handler exports are now identified with the ES/CJS module lexers instead of stripping comments with regexes, so the contents of literals are never mistaken for comments.
+
+## 13.27.1
+
+### Patch Changes
+
+- 0a170fd: [services] wire `experimentalServicesV2` into `fs-detectors`.
+
+## 13.27.0
+
+### Minor Changes
+
+- 338cc35: Add isPackageInstalled util for detecting dependencies during build.
+  Fix Vercel Flags dependency detection for emitting datafiles during builds with OIDC tokens.
+
+## 13.26.6
+
+### Patch Changes
+
+- 3019788: [services] Remove the `services` field from `vercel.json` and the `VERCEL_USE_SERVICES` gate.
+- fe893ec: [services] Add `experimentalServicesV2` field to `vercel.json` implementing the new schema for services.
+
+## 13.26.5
+
+### Patch Changes
+
+- 1180675: Revert "[flags] fix dep detection for build embedding (#16242)"
+
+## 13.26.4
+
+### Patch Changes
+
+- 6495585: [services] drop top-level `env` support for the new `service-ref` shape for services.
+
+## 13.26.3
+
+### Patch Changes
+
+- b66bd3e: Fix prebuilt deployments failing with "invalid relative path" when using the `--standalone` flag in pnpm monorepos by skipping external node_modules symlinks and copying traced files at their logical paths instead.
+
+## 13.26.2
+
+### Patch Changes
+
+- 647c1e8: Cleanup getLambdaSupportsStreaming
+
+## 13.26.1
+
+### Patch Changes
+
+- fa25cb7: Fix config.framework in deserializeBuildOutput
+- 972cc84: Support workflow-triggered job services in queue infrastructure
+
+  Add `isWorkflowTriggeredService()` and `isQueueBackedService()` helpers so workflow services
+  are recognized by the queue broker, dev server, and build pipeline. Update Python runtime to
+  bootstrap workflow services as queue-backed workers.
+
+## 13.26.0
+
+### Minor Changes
+
+- 137e5d1: Allow builder V2 to expose startDevServer.
+
+### Patch Changes
+
+- bb61428: Include framework slug in output/config.json
+
+## 13.25.0
+
+### Minor Changes
+
+- fb0cb8d: Add normalized entrypoint detector for runtime builders.
+- 4fc110b: [services] add preDeployCommand for experimentalServices
+
+## 13.24.0
+
+### Minor Changes
+
+- d874af6: Add support for env vars injection that reference other services in `services` with an explicit `env` configuration.
+
+## 13.23.0
+
+### Minor Changes
+
+- 22f77b9: Add project manifest to node builder.
+
+### Patch Changes
+
+- 979d70a: [services] `services` schema support
+
+## 13.22.1
+
+### Patch Changes
+
+- f0d7d32: Disable response streaming for lambdas with `awsLambdaHandler` set inside `getLambdaSupportsStreaming`. This closes a gap where non-Node builders (e.g. `@vercel/redwood`) constructed `NodejsLambda` with `awsLambdaHandler` but no explicit `supportsResponseStreaming`, causing `finalizeLambda` to silently flip streaming on for AWS custom handlers. With the gate now enforced centrally in `finalizeLambda`, the equivalent `@vercel/node` build-time check from #16266 is consolidated away — all builders go through the same gate.
+
+## 13.22.0
+
+### Minor Changes
+
+- e53dd86: Add service type to project manifest.
+
+## 13.21.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [8e999cb]
+  - @vercel/python-analysis@0.11.1
+
+## 13.20.0
+
+### Minor Changes
+
+- Add framework to package manifest for python and backends builders. ([#16072](https://github.com/vercel/vercel/pull/16072))
+
+### Patch Changes
+
+- Add shared build output deserialization helpers for existing callers. ([#16072](https://github.com/vercel/vercel/pull/16072))
+
+## 13.19.1
+
+### Patch Changes
+
+- [build-utils] simplify streaming lambda check ([#15795](https://github.com/vercel/vercel/pull/15795))
+
+## 13.19.0
+
+### Minor Changes
+
+- [services] move Python workers to v2beta triggers with private routing ([#15920](https://github.com/vercel/vercel/pull/15920))
+
+### Patch Changes
+
+- Added a shared build result validation helper in `@vercel/build-utils` for existing callers. ([#16030](https://github.com/vercel/vercel/pull/16030))
+
+## 13.18.0
+
+### Minor Changes
+
+- Generate PROJECTMANIFEST in @vercel/backends for Node deployments. ([#15991](https://github.com/vercel/vercel/pull/15991))
+
+## 13.17.2
+
+### Patch Changes
+
+- [experimental-services] add new job service type support ([#15944](https://github.com/vercel/vercel/pull/15944))
+
+## 13.17.1
+
+### Patch Changes
+
+- Align deserialize logic with existing callers. ([#16002](https://github.com/vercel/vercel/pull/16002))
+
+## 13.17.0
+
+### Minor Changes
+
+- Support dynamically specifying crons from a python service ([#15930](https://github.com/vercel/vercel/pull/15930))
+
+## 13.16.0
+
+### Minor Changes
+
+- Add shared deserialization and build-result collection utilities. ([#15961](https://github.com/vercel/vercel/pull/15961))
+
+- Add root to experimentalServices to set a service's working directory. ([#15929](https://github.com/vercel/vercel/pull/15929))
+
+- Add a new flag to vercel deploy to let users deploy to hive ([#15892](https://github.com/vercel/vercel/pull/15892))
+
+## 13.15.0
+
+### Minor Changes
+
+- [services] allow multiple v2beta triggers for a single Lambda when config is coming from services ([#15890](https://github.com/vercel/vercel/pull/15890))
+
+### Patch Changes
+
+- Add deserialization utilities ([#15927](https://github.com/vercel/vercel/pull/15927))
+
+## 13.14.2
+
+### Patch Changes
+
+- Add `mount` support for experimental services across config validation and service resolution. ([#15882](https://github.com/vercel/vercel/pull/15882))
+
+## 13.14.1
+
+### Patch Changes
+
+- Restore `finalizeLambda()` to return `zipPath: null` for the default in-memory path, preserving the existing caller-facing result contract while keeping custom ZIP strategies supported. ([#15887](https://github.com/vercel/vercel/pull/15887))
+
+- feat(node): filter non-entrypoint Node.js files in `/api` directory ([#15873](https://github.com/vercel/vercel/pull/15873))
+
 ## 13.14.0
 
 ### Minor Changes

@@ -2,7 +2,7 @@
 
 Bare-bones evals infrastructure for the Vercel CLI using [@vercel/agent-eval](https://github.com/vercel-labs/agent-eval). Evals are colocated in `packages/cli/evals/` so CLI maintainers can own them. Scripts are in the CLI `package.json` (collocated with the `build` script).
 
-**Status:** Evals: **non-interactive** (prefer non-interactive flags for `vercel link`), **build** (run `vc build` on a minimal static site), **login-whoami** (verify CLI is logged in and `vercel whoami` returns the current user), **login-not-logged-in** (exercise the CLI behavior when no credentials are present and the user attempts to log in), **env/** (all env evals in one directory: **env/ls**, **env/add**, **env/pull**, **env/update**, **env/remove**). The runner discovers evals recursively in `evals/evals/` (any dir with PROMPT.md + EVAL.ts + package.json). If none are found it exits successfully; if any exist it runs `@vercel/agent-eval`. Add evals under `evals/evals/<name>/` (or nested, e.g. `evals/evals/env/add/`).
+**Status:** Evals: **non-interactive** (prefer non-interactive flags for `vercel link`), **link** (perform a fresh non-interactive `vc link` and verify linked project state), **build** (run `vc build` on a minimal static site), **login-whoami** (verify CLI is logged in and `vercel whoami` returns the current user), **login-not-logged-in** (exercise the CLI behavior when no credentials are present and the user attempts to log in), **env/** (all env evals in one directory: **env/ls**, **env/add**, **env/pull**, **env/update**, **env/remove**). The runner discovers evals recursively in `evals/evals/` (any dir with PROMPT.md + EVAL.ts + package.json). If none are found it exits successfully; if any exist it runs `@vercel/agent-eval`. Add evals under `evals/evals/<name>/` (or nested, e.g. `evals/evals/env/add/`).
 
 **Env evals and unique keys:** Evals that create env vars (env/add, env/update, env/remove) require a **unique variable name per run** (e.g. `EVAL_ADD_<timestamp>`, `EVAL_UPDATE_<timestamp>`, `EVAL_REMOVE_<timestamp>`) so concurrent or repeated runs do not overwrite the same variable. The prompt instructs the agent to choose such a key and write it to `env-key-used.txt`; the EVAL asserts the prefix.
 
@@ -26,11 +26,54 @@ packages/cli/
 From `packages/cli/`:
 
 - **`pnpm test:evals:dry`** — Preview what would run (no API calls, no credentials needed).
+- **`pnpm test:evals:local-fixture`** — Write dashboard-compatible fixture results under `evals/results/` (no agent, Vercel API, Neon, or database needed).
 - **`pnpm test:evals`** — Run evals (requires credentials; add evals first).
 
 To run a specific auth-state matrix locally, you can set:
 
 - `CLI_EVAL_AUTH_STATES=logged-in,not-logged-in` — run evals twice, once for each auth state (propagated as `CLI_EVAL_AUTH_STATE` for eval code).
+
+To run a subset locally, you can set:
+
+- `CLI_EVAL_EVALS=build,non-interactive` — run only the listed eval fixtures.
+- `CLI_EVAL_EXCLUDE=marketplace/install-neon-postgres,marketplace/multi-product-install` — skip fixtures that require unavailable marketplace providers or live resources.
+
+## Local Runs Without Neon Or A Database
+
+There are two useful local modes that do not require Neon or the centralized dashboard database:
+
+1. Preview the eval matrix and discovered fixtures:
+
+   ```bash
+   cd packages/cli
+   pnpm test:evals:dry
+   ```
+
+   Dry runs exit before Vercel env/OIDC setup, credential checks, setup hooks, and `agent-eval` execution.
+
+2. Generate local dashboard-ingestion fixtures:
+
+   ```bash
+   cd packages/cli
+   pnpm test:evals:local-fixture
+   ```
+
+   This writes files shaped like `agent-eval` output to `packages/cli/evals/results/cli-local/fixture/<timestamp>/...`, including one `summary.json` and `run-1/result.json` per eval. Use this to test result upload/transform tooling without running agents, Vercel CLI commands, Neon, or Postgres.
+
+For a real local agent run that avoids unavailable Neon/resource creation, skip the marketplace resource fixtures and keep the run to one matrix variant:
+
+```bash
+cd packages/cli
+CLI_EVAL_SKILLS_MODES=with-skills \
+CLI_EVAL_EXCLUDE=marketplace/install-neon-postgres,marketplace/multi-product-install \
+pnpm test:evals
+```
+
+That still requires `AI_GATEWAY_API_KEY` and either `VERCEL_OIDC_TOKEN` or `VERCEL_TOKEN`, because the agent and live Vercel CLI evals run. It does not require the centralized dashboard database; CI and local tooling upload or inspect the raw `evals/results/` folder separately.
+
+## Coverage Review
+
+See [`COVERAGE.md`](./COVERAGE.md) for the current eval strength assessment, newly added command coverage, and remaining high-value gaps.
 
 ## Using Local CLI Build
 

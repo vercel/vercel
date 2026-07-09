@@ -547,6 +547,7 @@ export async function serverBuild({
     }
   >();
 
+  let instrumentationHookBuildTrace;
   if (hasLambdas) {
     const initialTracingLabel = 'Traced Next.js server files in';
 
@@ -555,7 +556,6 @@ export async function serverBuild({
     let initialFileList: string[];
     let initialFileReasons: NodeFileTraceReasons;
     let nextServerBuildTrace;
-    let instrumentationHookBuildTrace;
 
     const useBundledServer = semver.gte(
       nextVersion,
@@ -623,6 +623,7 @@ export async function serverBuild({
         base: baseDir,
         cache: {},
         processCwd: entryPath,
+        moduleSyncCatchall: true,
         ignore: [
           ...requiredServerFilesManifest.ignore.map(file =>
             path.join(entryPath, file)
@@ -960,6 +961,7 @@ export async function serverBuild({
         base: baseDir,
         cache: traceCache,
         processCwd: projectDir,
+        moduleSyncCatchall: true,
       });
       traceResult.esmFileList.forEach(file => traceResult?.fileList.add(file));
       parentFilesMap = getFilesMapFromReasons(
@@ -1586,6 +1588,7 @@ export async function serverBuild({
     isCorrectMiddlewareOrder,
     functionsConfigManifest,
     requiredServerFilesManifest,
+    instrumentationHookBuildTrace: instrumentationHookBuildTrace,
   });
 
   const middleware = await getMiddlewareBundle({
@@ -2063,6 +2066,30 @@ export async function serverBuild({
 
       ...(isNextDataServerResolving
         ? [
+            // remove x-nextjs-data header for non _next/data requests
+            {
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                '/(?!_next/data(?:/|$))(.*)'
+              ),
+              has: [
+                {
+                  type: 'header',
+                  key: 'x-nextjs-data',
+                },
+              ],
+              transforms: [
+                {
+                  type: 'request.headers',
+                  op: 'delete',
+                  target: {
+                    key: 'x-nextjs-data',
+                  },
+                },
+              ],
+              continue: true,
+            },
             // ensure x-nextjs-data header is always present
             // if we are doing middleware next data resolving
             {
@@ -2958,7 +2985,7 @@ export async function serverBuild({
             },
           ]),
     ],
-    framework: { version: nextVersion },
+    framework: { slug: 'nextjs', version: nextVersion },
     flags: variantsManifest || undefined,
   };
 }

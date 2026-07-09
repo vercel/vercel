@@ -1,22 +1,26 @@
-import { writeFile } from 'fs/promises';
+import { readFile, writeFile } from 'fs/promises';
 import { basename, join } from 'path';
+import { parse as tomlParse, stringify as tomlStringify } from 'smol-toml';
 import {
   detectServices,
   LocalFileSystemDetector,
   type DetectServicesResult,
-  type ServicesConfig,
 } from '@vercel/fs-detectors';
+import type { InferredServicesConfig } from '@vercel/fs-detectors';
+import type { Rewrite } from '@vercel/routing-utils';
+import type { Services } from '@vercel/build-utils';
 import type { VercelConfig } from '../dev/types';
 import { compileVercelConfig } from '../compile-vercel-config';
+import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
 import { CantParseJSONFile } from '../errors-ts';
 import readJSONFile from '../read-json-file';
 import { validateConfig } from '../validate-config';
-import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
+import { createDetectEntrypoint } from './detect-entrypoint';
 
 export type ServicesConfigWriteBlocker = 'builds' | 'functions';
 
 /**
- * Check if vercel.json in the given directory has experimentalServices configured
+ * Check if vercel.json in the given directory has services configured
  * or VERCEL_USE_EXPERIMENTAL_SERVICES environment variable is set.
  */
 export async function isExperimentalServicesEnabled(
@@ -39,8 +43,11 @@ async function hasExperimentalServicesConfig(cwd: string): Promise<boolean> {
     );
     if (!config || config instanceof Error) return false;
     return (
-      config.experimentalServices != null &&
-      typeof config.experimentalServices === 'object'
+      (config.experimentalServices != null &&
+        typeof config.experimentalServices === 'object') ||
+      (config.services != null && typeof config.services === 'object') ||
+      (config.experimentalServicesV2 != null &&
+        typeof config.experimentalServicesV2 === 'object')
     );
   } catch {
     return false;
@@ -51,7 +58,7 @@ async function hasExperimentalServicesConfig(cwd: string): Promise<boolean> {
  * Detect services if experimental services are enabled.
  *
  * Returns the detection result if any of the following is true:
- * - vercel.json contains experimentalServices with valid services
+ * - vercel.json contains services or experimentalServices with valid services
  * - VERCEL_USE_EXPERIMENTAL_SERVICES env var is set (enables auto-detection of services)
  *
  * Returns null otherwise.
@@ -65,11 +72,14 @@ export async function tryDetectServices(
   }
 
   const fs = new LocalFileSystemDetector(cwd);
-  const result = await detectServices({ fs });
+  const result = await detectServices({
+    fs,
+    detectEntrypoint: createDetectEntrypoint(cwd),
+  });
 
   // No services configured
   const hasNoServicesError = result.errors.some(
-    e => e.code === 'NO_SERVICES_CONFIGURED'
+    e => e.code === 'NO_EXPERIMENTAL_SERVICES_CONFIGURED'
   );
   if (hasNoServicesError) {
     return null;
@@ -80,19 +90,16 @@ export async function tryDetectServices(
 
 export async function writeServicesConfig(
   cwd: string,
-  config: ServicesConfig
-): Promise<void> {
+  config: InferredServicesConfig
+): Promise<{ configFileName: string }> {
   const prepared = await prepareServicesConfigWrite(cwd, config);
-  await writeFile(
-    prepared.configPath,
-    JSON.stringify(prepared.config, null, 2) + '\n',
-    'utf8'
-  );
+  await writeFile(prepared.configPath, prepared.content, 'utf8');
+  return { configFileName: basename(prepared.configPath) };
 }
 
 export async function getServicesConfigWriteBlocker(
   cwd: string,
-  config: ServicesConfig
+  config: InferredServicesConfig
 ): Promise<ServicesConfigWriteBlocker | null> {
   try {
     await prepareServicesConfigWrite(cwd, config);
@@ -103,42 +110,63 @@ export async function getServicesConfigWriteBlocker(
 }
 
 function toProjectServicesConfigPatch(
-  config: ServicesConfig
-): Pick<VercelConfig, 'experimentalServices'> {
+  config: InferredServicesConfig
+): Pick<VercelConfig, 'services' | 'rewrites'> {
+  const services: Services = {};
+  for (const [name, svc] of Object.entries(config)) {
+    services[name] = {
+      root: svc.root,
+      ...(svc.framework ? { framework: svc.framework } : {}),
+      ...(svc.entrypoint ? { entrypoint: svc.entrypoint } : {}),
+    };
+  }
+  // Top-level rewrites route public traffic into web services by mountPath.
+  // Non-web services (workers, crons) don't get public HTTP rewrites.
+  // Ordered longest-first so specific paths match before catch-all.
+  const rewrites: Rewrite[] = Object.entries(config)
+    .filter(
+      ([, svc]) =>
+        typeof svc.mountPath === 'string' && (!svc.type || svc.type === 'web')
+    )
+    .sort(([, a], [, b]) => b.mountPath!.length - a.mountPath!.length)
+    .map(([name, svc]) => {
+      const mountPath = svc.mountPath!;
+      if (mountPath === '/') {
+        return {
+          source: '/(.*)',
+          destination: { type: 'service' as const, service: name },
+        };
+      }
+      const prefix = mountPath.startsWith('/') ? mountPath.slice(1) : mountPath;
+      return {
+        source: `/${prefix}(/.*)?`,
+        destination: { type: 'service' as const, service: name },
+      };
+    });
   return {
-    experimentalServices: config,
+    services,
+    ...(rewrites.length > 0 ? { rewrites } : {}),
   };
 }
 
 async function prepareServicesConfigWrite(
   cwd: string,
-  config: ServicesConfig
+  config: InferredServicesConfig
 ): Promise<{
   configPath: string;
-  config: VercelConfig;
+  content: string;
 }> {
   const compileResult = await compileVercelConfig(cwd);
   const configPath = join(cwd, 'vercel.json');
+
+  if (isVercelTomlEnabled() && compileResult.sourceFile === 'vercel.toml') {
+    return prepareTomlServicesConfigWrite(join(cwd, 'vercel.toml'), config);
+  }
 
   if (compileResult.wasCompiled) {
     throw new Error(
       `Cannot automatically update ${compileResult.sourceFile ?? 'the current Vercel config'}.`
     );
-  }
-
-  if (
-    compileResult.configPath &&
-    basename(compileResult.configPath) === 'now.json'
-  ) {
-    throw new Error('Cannot automatically update now.json.');
-  }
-
-  if (
-    isVercelTomlEnabled() &&
-    compileResult.configPath &&
-    basename(compileResult.configPath) === 'vercel.toml'
-  ) {
-    throw new Error('Cannot automatically update vercel.toml.');
   }
 
   let existingConfig: VercelConfig = {};
@@ -153,9 +181,19 @@ async function prepareServicesConfigWrite(
     existingConfig = result ?? {};
   }
 
+  const patch = toProjectServicesConfigPatch(config);
   const nextConfig: VercelConfig = {
     ...existingConfig,
-    ...toProjectServicesConfigPatch(config),
+    ...patch,
+    // Preserve existing user rewrites; append auto-detected service rewrites.
+    ...(patch.rewrites
+      ? {
+          rewrites: [
+            ...((existingConfig.rewrites as Rewrite[]) ?? []),
+            ...patch.rewrites,
+          ],
+        }
+      : {}),
   };
   const validationError = validateConfig(nextConfig);
   if (validationError) {
@@ -164,16 +202,57 @@ async function prepareServicesConfigWrite(
 
   return {
     configPath,
-    config: nextConfig,
+    content: JSON.stringify(nextConfig, null, 2) + '\n',
   };
+}
+
+async function prepareTomlServicesConfigWrite(
+  configPath: string,
+  config: InferredServicesConfig
+): Promise<{ configPath: string; content: string }> {
+  // Generate a toml file with our new config settings.
+  // Append the new settings to the old file contents *textually*,
+  // so that any formatting and comments are preserved.
+  const patch = toProjectServicesConfigPatch(config);
+  const patchKeys = Object.keys(patch);
+
+  let existingContent: string;
+  try {
+    existingContent = await readFile(configPath, 'utf8');
+  } catch {
+    existingContent = '';
+  }
+
+  // If there was existing content, make sure the keys don't overlap
+  // with our new keys, since could cause trouble.
+  if (existingContent.trim()) {
+    const existingParsed = tomlParse(existingContent);
+    const overlapping = patchKeys.filter(key => key in existingParsed);
+    if (overlapping.length > 0) {
+      const plural = overlapping.length > 1;
+      const keyList = overlapping.map(k => `"${k}"`).join(', ');
+      throw new Error(
+        `Cannot automatically update vercel.toml: key${plural ? 's' : ''} ${keyList} already exist${plural ? '' : 's'}.`
+      );
+    }
+  }
+
+  const patchToml = tomlStringify(patch);
+  const content = existingContent.trim()
+    ? existingContent.trimEnd() + '\n\n' + patchToml + '\n'
+    : patchToml + '\n';
+
+  return { configPath, content };
 }
 
 function getServicesConfigWriteBlockerFromError(
   error: unknown
 ): ServicesConfigWriteBlocker | null {
   switch ((error as { code?: string })?.code) {
+    case 'EXPERIMENTAL_SERVICES_AND_BUILDS':
     case 'SERVICES_AND_BUILDS':
       return 'builds';
+    case 'EXPERIMENTAL_SERVICES_AND_FUNCTIONS':
     case 'SERVICES_AND_FUNCTIONS':
       return 'functions';
     default:

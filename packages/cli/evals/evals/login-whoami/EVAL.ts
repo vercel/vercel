@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { test, expect } from 'vitest';
 
 function getShellCommands(): string[] {
@@ -23,4 +23,25 @@ test('agent used CLI to check authenticated user', () => {
     /\b(vercel|vc)\s+whoami\b/.test(command)
   );
   expect(whoamiCommands.length).toBeGreaterThan(0);
+  expect(
+    whoamiCommands.some(
+      command =>
+        command.includes('--format=json') ||
+        /--format\s+json\b/.test(command) ||
+        command.includes('--json')
+    )
+  ).toBe(true);
+});
+
+test('agent saved authenticated whoami JSON output', () => {
+  expect(existsSync('whoami-output.json')).toBe(true);
+
+  const output = JSON.parse(readFileSync('whoami-output.json', 'utf-8')) as {
+    username?: string;
+    email?: string;
+    name?: string;
+  };
+
+  expect(typeof output.username).toBe('string');
+  expect(output.username!.length).toBeGreaterThan(0);
 });

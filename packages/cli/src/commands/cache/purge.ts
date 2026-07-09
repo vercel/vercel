@@ -5,7 +5,7 @@ import { purgeSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandName } from '../../util/pkg-name';
-import { getLinkedProject } from '../../util/projects/link';
+import { getLinkedProjectOrFail } from '../../util/projects/get-linked-project-or-fail';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { CachePurgeTelemetryClient } from '../../util/telemetry/commands/cache/purge';
 
@@ -28,7 +28,10 @@ export default async function purge(
     return 1;
   }
 
-  const link = await getLinkedProject(client);
+  const projectName = parsedArgs.flags['--project'];
+  telemetry.trackCliOptionProject(projectName);
+
+  const link = await getLinkedProjectOrFail(client, projectName);
 
   if (link.status === 'not_linked') {
     output.error(
@@ -67,8 +70,9 @@ export default async function purge(
 
   if (!yes) {
     if (!process.stdin.isTTY) {
+      const projectFlag = projectName ? ` --project ${projectName}` : '';
       output.print(
-        `${msg}. To continue, run ${getCommandName('cache purge --yes')}.`
+        `${msg}. To continue, run ${getCommandName(`cache purge${projectFlag} --yes`)}.`
       );
       return 1;
     }

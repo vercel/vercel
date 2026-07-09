@@ -117,6 +117,8 @@ export default async function unblock(client: Client, argv: string[]) {
         ? 'all hosts'
         : rule.hostname;
 
+    output.stopSpinner();
+
     const confirmed = await confirmAction(
       client,
       parsed.flags['--yes'],
@@ -140,6 +142,7 @@ export default async function unblock(client: Client, argv: string[]) {
       {
         action: 'ip.remove',
         id: rule.id,
+        value: null,
       },
       { teamId }
     );

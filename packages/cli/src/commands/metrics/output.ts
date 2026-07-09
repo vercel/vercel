@@ -6,19 +6,41 @@ export function getRollupColumnName(
   metric: string,
   aggregation: string
 ): string {
-  return `${metric.replace(/\./g, '_')}_${aggregation}`;
+  // Aggregations can carry a field (e.g. `unique/visitor_id`); the API
+  // flattens both dots and slashes to underscores in column names.
+  return `${metric}_${aggregation}`.replace(/[./]/g, '_');
+}
+
+export function getResolvedOrderMetadata(
+  query: Pick<QueryMetadata, 'orderBy' | 'orderDirection'>,
+  response: Pick<MetricsQueryResponse, 'orderBy' | 'orderDirection'>
+): Pick<QueryMetadata, 'orderBy' | 'orderDirection'> {
+  const orderBy = query.orderBy ?? (response.orderBy ? 'count' : undefined);
+  const orderDirection = response.orderDirection ?? query.orderDirection;
+
+  return {
+    ...(orderBy ? { orderBy } : {}),
+    ...(orderDirection ? { orderDirection } : {}),
+  };
 }
 
 export function formatQueryJson(
   query: QueryMetadata,
   response: MetricsQueryResponse
 ): string {
+  const orderMetadata = getResolvedOrderMetadata(query, response);
+  const queryWithResponseMetadata: QueryMetadata = {
+    ...query,
+    ...orderMetadata,
+  };
+
   return JSON.stringify(
     {
-      query,
+      query: queryWithResponseMetadata,
       summary: response.summary ?? [],
       data: response.data ?? [],
       statistics: response.statistics ?? {},
+      ...orderMetadata,
     },
     null,
     2

@@ -18,6 +18,7 @@ export const PYTHON_FRAMEWORKS = [
   'flask',
   'django',
   'python', // Generic Python framework preset
+  'fasthtml',
 ] as const;
 
 export const RUNTIME_FRAMEWORKS = ['python'] as const;

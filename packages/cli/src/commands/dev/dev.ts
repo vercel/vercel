@@ -2,14 +2,16 @@ import chalk from 'chalk';
 import ms from 'ms';
 import { resolve, join } from 'path';
 import fs from 'fs-extra';
-import type { ResolvedService } from '@vercel/fs-detectors';
+import type { Service } from '@vercel/fs-detectors';
 
-import DevServer from '../../util/dev/server';
+import DevServer, { DevCommandExitError } from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
 import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
+import { printProjectNotFoundError } from '../../util/projects/project-not-found-error';
 import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
+import { findRepoRoot } from '../../util/link/repo';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import param from '../../util/output/param';
 import cmd from '../../util/output/cmd';
@@ -32,6 +34,7 @@ type Options = {
   '--listen': string;
   '--local': boolean;
   '--yes': boolean;
+  '--project': string;
 };
 
 export default async function dev(
@@ -46,8 +49,15 @@ export default async function dev(
 
   cwd = await resolveProjectCwd(cwd);
 
+  const projectNameOrId = opts['--project'];
+
   // retrieve dev command
-  let link = await getLinkedProject(client, cwd);
+  let link = await getLinkedProject(
+    client,
+    cwd,
+    projectNameOrId,
+    !!projectNameOrId
+  );
 
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
     if (opts['--local']) {
@@ -57,12 +67,14 @@ export default async function dev(
           '  - Project settings are defined by local configuration\n\n' +
           `To link your project, run ${getCommandName('dev')} without \`-L\` or \`--local\` or ${getCommandName('link')}.`
       );
+    } else if (projectNameOrId) {
+      await printProjectNotFoundError(client, projectNameOrId, 'dev');
+      return 1;
     } else {
       link = await setupAndLink(client, cwd, {
         autoConfirm: opts['--yes'],
         link,
         successEmoji: 'link',
-        setupMsg: 'Set up and develop',
         nonInteractive: client.nonInteractive,
       });
 
@@ -105,17 +117,31 @@ export default async function dev(
   let projectSettings: ProjectSettings | undefined;
   let envValues: Record<string, string> = {};
   let repoRoot: string | undefined;
+  let projectId: string | undefined;
+  let orgId: string | undefined;
   if (link.status === 'linked') {
     const { project, org } = link;
 
-    // If repo linked, update `cwd` to the repo root
+    // Resolve the effective repo root so that `rootDirectory` is always
+    // interpreted relative to the repository, not relative to wherever the
+    // user happened to run the command from. For repo links the root comes
+    // from `repo.json`; otherwise fall back to `findRepoRoot` (which walks
+    // up looking for `.git`). This avoids double-appending `rootDirectory`
+    // when the user runs `vercel dev` from inside the project folder.
     if (link.repoRoot) {
       repoRoot = cwd = link.repoRoot;
+    } else if (project.rootDirectory) {
+      const monorepoRoot = await findRepoRoot(cwd);
+      if (monorepoRoot) {
+        repoRoot = cwd = monorepoRoot;
+      }
     }
 
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
     projectSettings = project;
+    projectId = project.id;
+    orgId = org.id;
 
     if (project.rootDirectory) {
       cwd = join(cwd, project.rootDirectory);
@@ -125,12 +151,14 @@ export default async function dev(
       .env;
   }
 
-  let services: ResolvedService[] | undefined;
+  let services: Service[] | undefined;
+  let useImplicitServicesEnvInjection = true;
   const servicesResult = await tryDetectServices(cwd);
   const foundServices = servicesResult && servicesResult.services.length > 0;
   if (foundServices) {
-    displayDetectedServices(servicesResult.services);
     services = servicesResult.services;
+    displayDetectedServices(services);
+    useImplicitServicesEnvInjection = servicesResult.useImplicitEnvInjection;
   }
 
   let lockAcquired = false;
@@ -165,6 +193,9 @@ export default async function dev(
     envValues,
     repoRoot,
     services,
+    useImplicitServicesEnvInjection,
+    projectId,
+    orgId,
   });
 
   const controller = new AbortController();
@@ -186,20 +217,32 @@ export default async function dev(
         telemetry.trackOidcTokenRefresh(++refreshCount);
       }
     } catch (error) {
-      // Throw any error aside from an abort error.
-      if (!(error instanceof Error && error.name === 'AbortError')) {
-        throw error;
+      if (error instanceof Error && error.name === 'AbortError') {
+        output.debug('OIDC token refresh was aborted');
+        return;
       }
-      output.debug('OIDC token refresh was aborted');
+      // if on forced restart after OIDC refresh
+      // we can't restart a dev command, then we can only
+      // show the error and exit
+      if (error instanceof DevCommandExitError) {
+        output.error(error.message);
+        await cleanup(error.exitCode);
+        return;
+      }
+      throw error;
     }
   });
 
   let cleanupInProgress = false;
-  const cleanup = async (signal: string) => {
+  const cleanup = async (reason: string | number) => {
     if (cleanupInProgress) return;
     cleanupInProgress = true;
 
-    output.debug(`Received ${signal}, shutting down...`);
+    output.debug(
+      typeof reason === 'number'
+        ? `Exiting with code ${reason}, shutting down...`
+        : `Received ${reason}, shutting down...`
+    );
 
     clearTimeout(timeout);
     controller.abort();
@@ -210,14 +253,23 @@ export default async function dev(
 
     await devServer.stop();
 
-    let exitCode = 0;
-    switch (signal) {
-      case 'SIGINT':
-        exitCode = 130;
-        break;
-      case 'SIGTERM':
-        exitCode = 143;
-        break;
+    let exitCode: number;
+    if (typeof reason === 'number') {
+      exitCode = reason;
+    } else {
+      switch (reason) {
+        case 'SIGINT':
+          exitCode = 130;
+          break;
+        case 'SIGTERM':
+          exitCode = 143;
+          break;
+        case 'SIGHUP':
+          exitCode = 129;
+          break;
+        default:
+          exitCode = 0;
+      }
     }
 
     process.exit(exitCode);
@@ -225,6 +277,10 @@ export default async function dev(
 
   process.on('SIGTERM', async () => await cleanup('SIGTERM'));
   process.on('SIGINT', async () => await cleanup('SIGINT'));
+  // Run cleanup on terminal disconnect too; Node's default SIGHUP behavior is
+  // to terminate immediately, which would bypass async service shutdown and
+  // leave the synchronous 'exit' backstop as the only line of defense.
+  process.on('SIGHUP', async () => await cleanup('SIGHUP'));
 
   // If there is no Development Command, we must delete the
   // v3 Build Output because it will incorrectly be detected by

@@ -60,8 +60,8 @@ export async function findProjectRoot(
 /**
  * Resolve the effective project working directory.
  *
- * When experimental services are enabled (via env var or explicit
- * experimentalServices in vercel.json) and the current directory is inside
+ * When services are enabled (via env var or explicit services config)
+ * and the current directory is inside
  * a service subdirectory, this returns the project root instead so that
  * commands operate on the whole project rather than a single service.
  */
@@ -75,7 +75,7 @@ export async function resolveProjectCwd(cwd: string): Promise<string> {
   }
 
   const result = await tryDetectServices(projectRoot);
-  if (result && result.services.length > 0) {
+  if (result && (result.services?.length ?? 0) > 0) {
     output.debug(`Running from project root: ${chalk.cyan(projectRoot)}`);
     return projectRoot;
   }

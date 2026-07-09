@@ -101,6 +101,8 @@ class PollingWorker:
 
     def start(self) -> None:
         """Start the polling loop. Blocks until stop() is called."""
+        self.broker.emit_before("worker_boot", None)
+        self.broker.emit_after("worker_boot", None)
         while not self._stop_requested:
             self.run_once()
 
@@ -116,32 +118,22 @@ class PollingWorker:
             # Parse the envelope and convert to Dramatiq message
             dramatiq_message = _envelope_to_message(payload)
 
-            # Execute the task
+            # Execute the task. Retries are re-enqueued as
+            # separate messages by Dramatiq
             outcome = self._execute_message(dramatiq_message)
-            timeout_seconds = outcome.get("timeoutSeconds")
 
-            if timeout_seconds is not None:
-                queue_callback.change_visibility(
-                    self.queue_name,
-                    self.consumer_group,
-                    message_id,
-                    receipt_handle,
-                    int(timeout_seconds),
-                    timeout=self.timeout,
-                )
-            else:
-                queue_callback.delete_message(
-                    self.queue_name,
-                    self.consumer_group,
-                    message_id,
-                    receipt_handle,
-                    timeout=self.timeout,
-                )
+            queue_callback.delete_message(
+                self.queue_name,
+                self.consumer_group,
+                message_id,
+                receipt_handle,
+                timeout=self.timeout,
+            )
 
             if self.debug:
                 print(
-                    f"[dramatiq polling] completed task {dramatiq_message.actor_name} "
-                    f"(message {message_id})"
+                    f"[dramatiq polling] {outcome['status']} task "
+                    f"{dramatiq_message.actor_name} (message {message_id})"
                 )
 
         except Exception:
@@ -185,27 +177,7 @@ class PollingWorker:
                 raise
 
     def _execute_message(self, message: Message) -> dict[str, Any]:
-        """
-        Execute a Dramatiq message.
-
-        Returns:
-            {"ack": True} on success
-            {"timeoutSeconds": N} for retry
-        """
-        actor = self.broker.get_actor(message.actor_name)
-        if actor is None:
-            raise LookupError(f"Dramatiq actor not found: {message.actor_name!r}")
-
-        try:
-            # Execute the actor function directly
-            actor(*message.args, **message.kwargs)
-            return {"ack": True}
-        except dramatiq.Retry as exc:
-            # Handle retry with delay
-            delay = getattr(exc, "delay", None)
-            if delay is not None:
-                return {"timeoutSeconds": int(delay / 1000)}
-            return {"timeoutSeconds": 60}  # Default retry delay
+        return _execute_message(self.broker, message)
 
     def _debug_log_received(self, msg: queue_callback.ReceivedMessage) -> None:
         """Log received message details for debugging."""
@@ -231,3 +203,45 @@ class PollingWorker:
                 "[dramatiq polling] received message (unserialisable)",
                 {"messageId": msg["messageId"]},
             )
+
+
+def _execute_message(broker: VercelQueuesBroker, message: Message) -> dict[str, Any]:
+    """
+    Execute a Dramatiq message.
+
+    Depending on broker configuration it could schedule a retry
+    of a message if Retries middleware is configured.
+
+    Returns one of:
+        {"status": "success"} on success
+        {"status": "skipped"} when the message was explicitly skipped
+        {"status": "retried", "retries": n} when Dramatiq scheduled a retry
+        {"status": "failed", "exception": e} when Dramatiq decided that it's a final error
+    """
+    actor = broker.get_actor(message.actor_name)
+    if actor is None:
+        raise LookupError(f"Dramatiq actor not found: {message.actor_name!r}")
+
+    proxy = dramatiq.MessageProxy(message)
+
+    try:
+        broker.emit_before("process_message", proxy)
+        res = None
+        if not proxy.failed:
+            res = actor(*message.args, **message.kwargs)
+        broker.emit_after("process_message", proxy, result=res)
+        return {"status": "success"}
+    except dramatiq.middleware.SkipMessage as exc:
+        if proxy.failed:
+            proxy.stuff_exception(exc)
+        broker.emit_after("skip_message", proxy)
+        return {"status": "skipped"}
+    except Exception as exc:
+        proxy.stuff_exception(exc)
+        retries_before = message.options.get("retries", 0)
+        broker.emit_after("process_message", proxy, exception=exc)
+        if proxy.failed:
+            return {"status": "failed", "exception": exc}
+        if message.options.get("retries", 0) > retries_before:
+            return {"status": "retried", "retries": message.options["retries"]}
+        raise

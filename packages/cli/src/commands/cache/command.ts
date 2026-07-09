@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { yesOption } from '../../util/arg-common';
+import { projectOption, yesOption } from '../../util/arg-common';
 
 export const purgeSubcommand = {
   name: 'purge',
@@ -8,6 +8,7 @@ export const purgeSubcommand = {
   arguments: [],
   options: [
     yesOption,
+    projectOption,
     {
       name: 'type',
       description: 'Type of cache to purge',
@@ -40,6 +41,7 @@ export const invalidateSubcommand = {
   arguments: [],
   options: [
     yesOption,
+    projectOption,
     {
       name: 'tag',
       description: 'Tags to invalidate (comma-separated)',
@@ -80,6 +82,7 @@ export const dangerouslyDeleteSubcommand = {
   arguments: [],
   options: [
     yesOption,
+    projectOption,
     {
       name: 'tag',
       description: 'Tags to delete (comma-separated)',

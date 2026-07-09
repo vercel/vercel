@@ -6,7 +6,7 @@ import { info as esmFsRead } from "./lib/esm-fs-read";
 // @ts-expect-error
 import { info as cjsRequiringCjs } from "./lib/cjs-requiring-cjs";
 import { info as esmImportingCjs } from "@/esm-importing-cjs";
-import { echo as echoWithDep } from '@repo/echo-with-dep/src'
+import { echo as echoWithDep } from '@monorepo-parent-echo/index'
 import { greet } from '@repo/ts-utils'
 import { type User, DEFAULT_PAGE_SIZE } from '@repo/shared-types'
 import { sign } from "jsonwebtoken";

@@ -1,8 +1,22 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import upgrade from '../../../../src/commands/upgrade';
+import * as configFilesUtil from '../../../../src/util/config/files';
+
+const writeConfigSpy = vi.spyOn(configFilesUtil, 'writeToConfigFile');
 
 describe('upgrade', () => {
+  const originalVercelVcNative = process.env.VERCEL_VC_NATIVE;
+
+  afterEach(() => {
+    writeConfigSpy.mockClear();
+    if (originalVercelVcNative === undefined) {
+      delete process.env.VERCEL_VC_NATIVE;
+    } else {
+      process.env.VERCEL_VC_NATIVE = originalVercelVcNative;
+    }
+  });
+
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'upgrade';
@@ -35,6 +49,7 @@ describe('upgrade', () => {
     });
 
     it('prints upgrade information without executing', async () => {
+      delete process.env.VERCEL_VC_NATIVE;
       client.setArgv('upgrade', '--dry-run');
       const exitCode = await upgrade(client);
       expect(exitCode).toBe(0);
@@ -42,6 +57,20 @@ describe('upgrade', () => {
       await expect(client.stderr).toOutput('Current version:');
       await expect(client.stderr).toOutput('Installation type:');
       await expect(client.stderr).toOutput('Upgrade command:');
+      await expect(client.stderr).toOutput('Automatic updates: Disabled');
+    });
+
+    it('prints native upgrade command for vc-native installs', async () => {
+      process.env.VERCEL_VC_NATIVE = '1';
+      client.setArgv('upgrade', '--dry-run');
+
+      const exitCode = await upgrade(client);
+
+      expect(exitCode).toBe(0);
+      const output = client.stderr.getFullOutput();
+      expect(output).toContain('Upgrade command:');
+      expect(output).toContain('@vercel/vc-native@latest');
+      expect(output.split(' ')).not.toContain('vercel@latest');
     });
   });
 
@@ -60,6 +89,7 @@ describe('upgrade', () => {
     });
 
     it('outputs valid JSON', async () => {
+      delete process.env.VERCEL_VC_NATIVE;
       client.setArgv('upgrade', '--json');
       const exitCode = await upgrade(client);
       expect(exitCode).toBe(0);
@@ -70,7 +100,20 @@ describe('upgrade', () => {
       expect(json).toHaveProperty('currentVersion');
       expect(json).toHaveProperty('installationType');
       expect(json).toHaveProperty('upgradeCommand');
+      expect(json).toHaveProperty('autoUpdatesEnabled', false);
       expect(['global', 'local']).toContain(json.installationType);
+    });
+
+    it('outputs native upgrade command for vc-native installs', async () => {
+      process.env.VERCEL_VC_NATIVE = '1';
+      client.setArgv('upgrade', '--json');
+
+      const exitCode = await upgrade(client);
+
+      expect(exitCode).toBe(0);
+      const json = JSON.parse(client.stdout.getFullOutput());
+      expect(json.upgradeCommand).toContain('@vercel/vc-native@latest');
+      expect(json.upgradeCommand.split(' ')).not.toContain('vercel@latest');
     });
   });
 
@@ -100,7 +143,59 @@ describe('upgrade', () => {
       expect(json).toHaveProperty('currentVersion');
       expect(json).toHaveProperty('installationType');
       expect(json).toHaveProperty('upgradeCommand');
+      expect(json).toHaveProperty('autoUpdatesEnabled', false);
     });
+  });
+
+  describe('--enable-auto', () => {
+    it('enables automatic updates in the global config', async () => {
+      client.setArgv('upgrade', '--enable-auto');
+      const exitCode = await upgrade(client);
+
+      expect(exitCode).toBe(0);
+      expect(client.config.updates?.auto).toBe(true);
+      expect(writeConfigSpy).toHaveBeenCalledWith({
+        updates: { auto: true },
+      });
+      await expect(client.stderr).toOutput('Automatic CLI updates enabled.');
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:enable-auto',
+          value: 'TRUE',
+        },
+      ]);
+    });
+  });
+
+  describe('--disable-auto', () => {
+    it('disables automatic updates in the global config', async () => {
+      client.config = { updates: { auto: true } };
+      client.setArgv('upgrade', '--disable-auto');
+      const exitCode = await upgrade(client);
+
+      expect(exitCode).toBe(0);
+      expect(client.config.updates?.auto).toBe(false);
+      expect(writeConfigSpy).toHaveBeenCalledWith({
+        updates: { auto: false },
+      });
+      await expect(client.stderr).toOutput('Automatic CLI updates disabled.');
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:disable-auto',
+          value: 'TRUE',
+        },
+      ]);
+    });
+  });
+
+  it('rejects mutually exclusive auto-update flags', async () => {
+    client.setArgv('upgrade', '--enable-auto', '--disable-auto');
+    const result = await upgrade(client);
+
+    expect(result).toBe(1);
+    await expect(client.stderr).toOutput(
+      'Cannot use --enable-auto and --disable-auto together'
+    );
   });
 
   it('should reject invalid arguments', async () => {

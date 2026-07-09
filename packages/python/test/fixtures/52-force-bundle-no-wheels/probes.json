@@ -1,7 +1,7 @@
 {
   "probes": [
     {
-      "logMustContain": "Enabling runtime dependency installation"
+      "logMustContain": "optimizing dependencies"
     },
     {
       "logMustContain": "Force-bundling"

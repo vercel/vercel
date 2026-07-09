@@ -8,6 +8,12 @@ import type { SetupAndLinkOptions } from '../link/setup-and-link';
 import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
 import { outputActionRequired, buildCommandWithYes } from '../agent-output';
+import { printProjectNotFoundError } from '../projects/project-not-found-error';
+
+interface EnsureLinkOptions extends SetupAndLinkOptions {
+  /** When true, fail instead of setting up a project that is not linked. */
+  requireExistingLink?: boolean;
+}
 
 /**
  * Checks if a project is already linked and if not, links the project and
@@ -29,7 +35,7 @@ export async function ensureLink(
   commandName: string,
   client: Client,
   cwd: string,
-  opts: SetupAndLinkOptions = {}
+  opts: EnsureLinkOptions = {}
 ): Promise<ProjectLinked | number> {
   cwd = await resolveProjectCwd(cwd);
 
@@ -45,7 +51,15 @@ export async function ensureLink(
       // and the repo-linked project is ambiguous).
       link = { status: 'not_linked', org: null, project: null };
     } else {
-      link = await getLinkedProject(client, cwd, opts.projectName);
+      // `failIfNotFound` doubles as the opt-in for API-based name/ID
+      // resolution: both behaviors only apply when `projectName` came from
+      // an explicit user flag.
+      link = await getLinkedProject(
+        client,
+        cwd,
+        opts.projectName,
+        opts.failIfNotFound
+      );
     }
     opts.link = link;
   }
@@ -54,6 +68,24 @@ export async function ensureLink(
     (link.status === 'linked' && opts.forceDelete) ||
     link.status === 'not_linked'
   ) {
+    // Explicit `--project` was provided but could not be resolved; bail out
+    // before `setupAndLink` would offer to create a new project for a typo.
+    if (
+      link.status === 'not_linked' &&
+      opts.failIfNotFound &&
+      opts.projectName
+    ) {
+      await printProjectNotFoundError(client, opts.projectName, commandName);
+      return 1;
+    }
+
+    if (link.status === 'not_linked' && opts.requireExistingLink) {
+      output.error(
+        `Project is not linked. Run ${getCommandName('link')} first.`
+      );
+      return 1;
+    }
+
     link = await setupAndLink(client, cwd, opts);
 
     if (link.status === 'not_linked') {

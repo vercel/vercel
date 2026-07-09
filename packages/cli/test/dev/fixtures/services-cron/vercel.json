@@ -1,7 +1,8 @@
 {
   "experimentalServices": {
     "cron": {
-      "type": "cron",
+      "type": "job",
+      "trigger": "schedule",
       "runtime": "python",
       "entrypoint": "cron.task:run_cron_task",
       "schedule": "* * * * *"

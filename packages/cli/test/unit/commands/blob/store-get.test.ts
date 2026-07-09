@@ -2,17 +2,26 @@ import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import getStore from '../../../../src/commands/blob/store-get';
 import * as linkModule from '../../../../src/util/projects/link';
+import getScopeModule from '../../../../src/util/get-scope';
 import output from '../../../../src/output-manager';
-import dfns from 'date-fns';
+import format from 'date-fns/format';
 import type { BlobRWToken } from '../../../../src/util/blob/token';
 
 // Mock the external dependencies
 vi.mock('../../../../src/util/projects/link');
-vi.mock('../../../../src/util/blob/token');
+vi.mock('../../../../src/util/get-scope');
+vi.mock('../../../../src/util/blob/token', async () => {
+  const actual = await vi.importActual<
+    typeof import('../../../../src/util/blob/token')
+  >('../../../../src/util/blob/token');
+  return { ...actual, getBlobRWToken: vi.fn() };
+});
 vi.mock('../../../../src/output-manager');
-const formatSpy = vi.spyOn(dfns, 'format');
+vi.mock('date-fns/format');
+const formatSpy = vi.mocked(format);
 
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
+const mockedGetScope = vi.mocked(getScopeModule);
 const mockedOutput = vi.mocked(output);
 
 describe('blob store get', () => {
@@ -21,6 +30,7 @@ describe('blob store get', () => {
   const noToken: BlobRWToken = { success: false, error: 'No token found' };
   const token: BlobRWToken = {
     success: true,
+    kind: 'rw',
     token: 'vercel_blob_rw_123456_abcdefghijk',
   };
 
@@ -36,6 +46,7 @@ describe('blob store get', () => {
         updatedAt: 1672531200000, // 2023-01-01 00:00:00
         billingState: 'active',
         size: 1048576, // 1MB
+        count: 42,
       },
     });
 
@@ -53,6 +64,13 @@ describe('blob store get', () => {
       },
       org: { id: 'org_123', slug: 'my-org', type: 'user' },
     });
+
+    // Default getScope mock (used when project is not linked)
+    mockedGetScope.mockResolvedValue({
+      contextName: 'my-org',
+      team: { id: 'org_123', slug: 'my-org' },
+      user: { id: 'user_123', username: 'testuser', email: 'test@test.com' },
+    } as Awaited<ReturnType<typeof getScopeModule>>);
 
     formatSpy.mockImplementation(date => new Date(date).toISOString());
   });
@@ -112,7 +130,7 @@ describe('blob store get', () => {
 
       expect(exitCode).toBe(0);
       expect(textInputMock).toHaveBeenCalledWith({
-        message: 'Enter the ID of the blob store you want to remove',
+        message: 'Enter the ID of the blob store you want to get info about',
         validate: expect.any(Function),
       });
       expect(client.fetch).toHaveBeenCalledWith(
@@ -170,6 +188,7 @@ describe('blob store get', () => {
           updatedAt: 1672531200000, // 2023-01-01 00:00:00 UTC
           billingState: 'active',
           size: 2097152, // 2MB
+          count: 150,
         },
       });
 
@@ -182,7 +201,7 @@ describe('blob store get', () => {
       expect(exitCode).toBe(0);
       expect(mockedOutput.print).toHaveBeenCalledWith(
         expect.stringContaining(
-          'Blob Store: Display Test Store (store_display_test_123)\nBilling State: Active\nSize: 2MB\nAccess: Public\nCreated At: 2022-01-01T00:00:00.000Z\nUpdated At: 2023-01-01T00:00:00.000Z'
+          'Blob Store: Display Test Store (store_display_test_123)\nBilling State: Active\nBlob Count: 150\nSize: 2MB\nAccess: Public\nBase URL: display_test_123.public.blob.vercel-storage.com\nDashboard: https://vercel.com/my-org/~/stores/blob/store_display_test_123\nCreated At: 2022-01-01T00:00:00.000Z\nUpdated At: 2023-01-01T00:00:00.000Z'
         )
       );
       expect(formatSpy).toHaveBeenCalledWith(
@@ -192,6 +211,62 @@ describe('blob store get', () => {
       expect(formatSpy).toHaveBeenCalledWith(
         new Date(1672531200000),
         'MM/DD/YYYY HH:mm:ss.SS'
+      );
+    });
+
+    it('should show base URL for public stores', async () => {
+      client.fetch = vi.fn().mockResolvedValue({
+        store: {
+          id: 'store_rem5xG5LTyEHV6Fu',
+          name: 'My Public Store',
+          createdAt: 1640995200000,
+          updatedAt: 1672531200000,
+          billingState: 'active',
+          size: 1024,
+          count: 10,
+          access: 'public',
+        },
+      });
+
+      const exitCode = await getStore(
+        client,
+        ['store_rem5xG5LTyEHV6Fu'],
+        noToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedOutput.print).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Base URL: rem5xg5ltyehv6fu.public.blob.vercel-storage.com'
+        )
+      );
+    });
+
+    it('should show private base URL for private stores', async () => {
+      client.fetch = vi.fn().mockResolvedValue({
+        store: {
+          id: 'store_rem5xG5LTyEHV6Fu',
+          name: 'My Private Store',
+          createdAt: 1640995200000,
+          updatedAt: 1672531200000,
+          billingState: 'active',
+          size: 1024,
+          count: 10,
+          access: 'private',
+        },
+      });
+
+      const exitCode = await getStore(
+        client,
+        ['store_rem5xG5LTyEHV6Fu'],
+        noToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedOutput.print).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Base URL: rem5xg5ltyehv6fu.private.blob.vercel-storage.com'
+        )
       );
     });
 
@@ -205,6 +280,7 @@ describe('blob store get', () => {
           updatedAt: Date.now(),
           billingState: 'active',
           size: 1024,
+          count: 5,
         },
       });
 
@@ -229,6 +305,7 @@ describe('blob store get', () => {
             updatedAt: Date.now(),
             billingState,
             size: 1024,
+            count: 5,
           },
         });
 
@@ -259,6 +336,7 @@ describe('blob store get', () => {
           updatedAt: Date.now(),
           billingState: 'active',
           size,
+          count: 100,
         },
       });
 
@@ -266,6 +344,45 @@ describe('blob store get', () => {
       expect(exitCode).toBe(0);
       expect(mockedOutput.print).toHaveBeenCalledWith(
         expect.stringContaining(`Size: ${expected}`)
+      );
+    });
+
+    it('should show dashboard link when not linked but scope resolves a team', async () => {
+      mockedGetLinkedProject.mockResolvedValue({
+        status: 'not_linked',
+        org: null,
+        project: null,
+      });
+      mockedGetScope.mockResolvedValue({
+        contextName: 'my-team',
+        team: { id: 'team_123', slug: 'my-team' },
+        user: { id: 'user_123', username: 'testuser', email: 'test@test.com' },
+      } as Awaited<ReturnType<typeof getScopeModule>>);
+
+      client.fetch = vi.fn().mockResolvedValue({
+        store: {
+          id: 'store_display_test_123',
+          name: 'Display Test Store',
+          createdAt: 1640995200000,
+          updatedAt: 1672531200000,
+          billingState: 'active',
+          size: 1024,
+          count: 10,
+        },
+      });
+
+      const exitCode = await getStore(
+        client,
+        ['store_display_test_123'],
+        noToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedGetScope).toHaveBeenCalledWith(client);
+      expect(mockedOutput.print).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Dashboard: https://vercel.com/my-team/~/stores/blob/store_display_test_123'
+        )
       );
     });
   });
@@ -283,8 +400,9 @@ describe('blob store get', () => {
         const expectedStoreId = `store_${id}`;
 
         const exitCode = await getStore(client, [], {
-          token,
           success: true,
+          kind: 'rw',
+          token,
         });
         expect(exitCode).toBe(0);
         expect(client.fetch).toHaveBeenCalledWith(
@@ -479,6 +597,7 @@ describe('blob store get', () => {
           updatedAt: 1672531200000,
           billingState: 'active',
           size: 1024,
+          count: 25,
         },
         {
           id: 'store_format_test_456',
@@ -487,6 +606,7 @@ describe('blob store get', () => {
           updatedAt: 1640995200000,
           billingState: 'suspended',
           size: 0,
+          count: 0,
         },
       ];
 
@@ -508,7 +628,7 @@ describe('blob store get', () => {
 
       expect(exitCode).toBe(0);
       expect(textInputMock).toHaveBeenCalledWith({
-        message: 'Enter the ID of the blob store you want to remove',
+        message: 'Enter the ID of the blob store you want to get info about',
         validate: expect.any(Function),
       });
     });
@@ -627,6 +747,34 @@ describe('blob store get', () => {
           accountId: 'user_123',
         }
       );
+    });
+  });
+
+  describe('non-interactive mode (agents)', () => {
+    beforeEach(() => {
+      client.nonInteractive = true;
+      vi.spyOn(process, 'exit').mockImplementation(((_code?: number) => {
+        throw new Error('exit');
+      }) as () => never);
+    });
+
+    it('emits missing_arguments instead of prompting for a store id', async () => {
+      await expect(getStore(client, [], noToken)).rejects.toThrow('exit');
+
+      expect(textInputMock).not.toHaveBeenCalled();
+      const payload = JSON.parse(client.stdout.getFullOutput());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'missing_arguments',
+        message: expect.stringContaining('storeId'),
+      });
+    });
+
+    it('still works when the store id is provided', async () => {
+      const exitCode = await getStore(client, ['store_provided_123456'], token);
+
+      expect(exitCode).toBe(0);
+      expect(textInputMock).not.toHaveBeenCalled();
     });
   });
 });

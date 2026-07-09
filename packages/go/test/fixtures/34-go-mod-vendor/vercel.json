@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "builds": [{ "src": "api/*.go", "use": "@vercel/go" }],
+  "probes": [
+    {
+      "path": "/api",
+      "mustContain": "version:go1.21"
+    },
+    {
+      "path": "/api",
+      "mustContain": "vendored-dep"
+    }
+  ]
+}

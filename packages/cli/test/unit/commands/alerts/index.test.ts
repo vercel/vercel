@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import alerts from '../../../../src/commands/alerts';
 import * as linkModule from '../../../../src/util/projects/link';
@@ -44,15 +44,19 @@ describe('alerts', () => {
     mockTeamScope();
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('prints help output', async () => {
     client.setArgv('alerts', '--help');
 
     const exitCode = await alerts(client);
 
     expect(exitCode).toBe(0);
-    expect(client.stderr.getFullOutput()).toContain(
-      'List alerts for a project or team'
-    );
+    const helpOut = client.stderr.getFullOutput();
+    expect(helpOut).toContain('rules');
+    expect(helpOut).toContain('List alert groups');
     expect(client.stderr.getFullOutput()).toContain('--project');
   });
 
@@ -86,10 +90,12 @@ describe('alerts', () => {
     expect(requestQuery.teamId).toBe('team_dummy');
     expect(requestQuery.projectId).toBe('prj_alerts');
     expect(client.stderr.getFullOutput()).toContain('Title');
+    expect(client.stderr.getFullOutput()).toContain('Group id');
     expect(client.stderr.getFullOutput()).toContain('Started At');
     expect(client.stderr.getFullOutput()).toContain('Status');
     expect(client.stderr.getFullOutput()).toContain('Alerts');
     expect(client.stderr.getFullOutput()).toContain('Spike in requests');
+    expect(client.stderr.getFullOutput()).toContain('ag_1');
     expect(client.stderr.getFullOutput()).toContain('Mar');
     expect(client.stderr.getFullOutput()).toContain('2026');
   });
@@ -217,6 +223,45 @@ describe('alerts', () => {
     );
   });
 
+  it('emits agent JSON when --project is missing its value in non-interactive mode', async () => {
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code}`);
+    }) as () => never);
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    client.setArgv('alerts', '--project', '--cwd', '/tmp', '--non-interactive');
+    client.nonInteractive = true;
+
+    await expect(alerts(client)).rejects.toThrow('exit:1');
+    const payload = JSON.parse(
+      logSpy.mock.calls[logSpy.mock.calls.length - 1][0] as string
+    );
+    expect(payload.status).toBe('error');
+    expect(payload.reason).toBe('invalid_arguments');
+    expect(payload.message).toMatch(/--project/i);
+    expect(payload.next[0].command).toContain('alerts --project <name-or-id>');
+    expect(payload.next[0].command).toContain('--cwd /tmp');
+  });
+
+  it('emits agent JSON for list validation errors in non-interactive mode', async () => {
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code}`);
+    }) as () => never);
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    client.setArgv('alerts', '--all', '--project', 'x', '--non-interactive');
+    client.nonInteractive = true;
+
+    await expect(alerts(client)).rejects.toThrow('exit:1');
+    const payload = JSON.parse(
+      logSpy.mock.calls[logSpy.mock.calls.length - 1][0] as string
+    );
+    expect(payload.status).toBe('error');
+    expect(payload.reason).toBe('invalid_arguments');
+    expect(payload.message).toContain('Cannot specify both');
+    expect(payload.next[0].command).toContain('alerts --help');
+  });
+
   it('returns error when --since is after --until', async () => {
     client.setArgv(
       'alerts',
@@ -252,5 +297,22 @@ describe('alerts', () => {
     expect(client.stderr.getFullOutput()).toContain(
       '`--limit` must be an integer between 1 and 100.'
     );
+  });
+
+  it('inspect fetches a single alert group for the linked project', async () => {
+    let inspectPath = '';
+    client.scenario.get('/alerts/v3/groups/:groupId', (req, res) => {
+      inspectPath = req.path;
+      res.json({ id: 'grp_x', status: 'active' });
+    });
+
+    client.setArgv('alerts', 'inspect', 'grp_x');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    expect(inspectPath).toContain('/alerts/v3/groups/grp_x');
+    expect(client.stdout.getFullOutput()).toContain('"id"');
+    expect(client.stdout.getFullOutput()).toContain('grp_x');
   });
 });

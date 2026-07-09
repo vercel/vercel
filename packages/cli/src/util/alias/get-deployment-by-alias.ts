@@ -29,23 +29,12 @@ async function getAppLastDeployment(
 
 export async function getDeploymentForAlias(
   client: Client,
-  args: string[],
   localConfigPath: string | undefined,
   user: User,
   contextName: string,
   localConfig?: VercelConfig
 ) {
   output.spinner(`Fetching deployment to alias in ${chalk.bold(contextName)}`);
-
-  // When there are no args at all we try to get the targets from the config
-  if (args.length === 2) {
-    const [deploymentId] = args;
-    try {
-      return await getDeployment(client, contextName, deploymentId);
-    } finally {
-      output.stopSpinner();
-    }
-  }
 
   const appName =
     localConfig?.name ||

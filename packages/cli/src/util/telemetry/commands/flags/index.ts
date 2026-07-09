@@ -47,6 +47,21 @@ export class FlagsTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandSplit(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'split',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRollout(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rollout',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'rm',
@@ -78,6 +93,20 @@ export class FlagsTelemetryClient
   trackCliSubcommandSdkKeys(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'sdk-keys',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandSegments(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'segments',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRules(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules',
       value: actual,
     });
   }

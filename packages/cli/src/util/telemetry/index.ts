@@ -14,6 +14,7 @@ import {
   type PersistedCliSession,
   type PersistedCliSessionOptions,
 } from './session';
+import { isNativeBinaryInstall } from '../native-install';
 
 const LogLabel = `['telemetry']:`;
 const MAX_ERROR_SERVER_MESSAGE_LENGTH = 500;
@@ -112,6 +113,15 @@ export class TelemetryClient {
     this.track({
       key: `option:${eventData.option}`,
       value: eventData.value,
+    });
+  }
+
+  protected trackTargetEnvironment(
+    targetEnvironment: 'production' | 'preview'
+  ) {
+    this.track({
+      key: 'target_environment',
+      value: targetEnvironment,
     });
   }
 
@@ -225,6 +235,22 @@ export class TelemetryClient {
     }
   }
 
+  protected trackVercelPluginActiveSession() {
+    this.track({
+      key: 'vercel_plugin_active_session',
+      value: 'TRUE',
+    });
+  }
+
+  protected trackVercelPluginVersion(version: string | undefined) {
+    if (version) {
+      this.track({
+        key: 'vercel_plugin_version',
+        value: version,
+      });
+    }
+  }
+
   protected trackErrorStatus(status: number | string | undefined) {
     if (typeof status !== 'undefined') {
       this.track({
@@ -319,6 +345,21 @@ export class TelemetryClient {
       });
     }
   }
+
+  /**
+   * Tracks the --project option. Value is redacted because project names/IDs
+   * may be sensitive. Accepts `string | string[]` so commands with a repeatable
+   * `--project` can override. Not all commands support repeated `--project` flags
+   */
+  trackCliOptionProject(value: string | string[] | undefined) {
+    if (!value) return;
+    if (Array.isArray(value) && value.length === 0) return;
+
+    this.trackCliOption({
+      option: 'project',
+      value: this.redactedValue,
+    });
+  }
 }
 
 export class TelemetryEventStore {
@@ -405,6 +446,10 @@ export class TelemetryEventStore {
     return this.deviceId;
   }
 
+  get currentSessionId() {
+    return this.sessionId;
+  }
+
   get readonlyEvents() {
     return Array.from(this.events);
   }
@@ -483,17 +528,23 @@ export class TelemetryEventStore {
    * FIXME: handle max buffer size
    */
   async sendToSubprocess(payload: object, outputDebugEnabled: boolean) {
-    const args = [process.execPath, process.argv[0], process.argv[1]];
-    if (args[0] === args[1]) {
-      args.shift();
+    const flushArgs = ['telemetry', 'flush', JSON.stringify(payload)];
+    let nodeBinaryPath: string;
+    let script: string[];
+    if (isNativeBinaryInstall()) {
+      // In the standalone binary, `process.argv[1]` is a virtual snapshot path
+      // (e.g. `/snapshot/cli/pkg.js`) and the binary always runs its embedded
+      // entrypoint, so a script path argument would be parsed as a deploy path.
+      nodeBinaryPath = process.execPath;
+      script = flushArgs;
+    } else {
+      const args = [process.execPath, process.argv[0], process.argv[1]];
+      if (args[0] === args[1]) {
+        args.shift();
+      }
+      nodeBinaryPath = args[0];
+      script = [...args.slice(1), ...flushArgs];
     }
-    const nodeBinaryPath = args[0];
-    const script = [
-      ...args.slice(1),
-      'telemetry',
-      'flush',
-      JSON.stringify(payload),
-    ];
     // We need to disable telemetry in the subprocess, otherwise we'll end up in an infinite loop
     const env = cloneEnv(process.env, {
       VERCEL_TELEMETRY_DISABLED: '1',

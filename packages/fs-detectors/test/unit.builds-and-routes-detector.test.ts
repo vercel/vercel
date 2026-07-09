@@ -4,6 +4,8 @@ import type {
   RouteWithSrc as Source,
 } from '@vercel/routing-utils';
 import { join } from 'path';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
 import type { PackageJson } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -109,7 +111,8 @@ describe('Test `detectBuilders`', () => {
             routePrefix: '/',
           },
           cleanup: {
-            type: 'cron',
+            type: 'job',
+            trigger: 'schedule',
             entrypoint: 'jobs/cleanup.py',
             schedule: '0 0 * * *',
           },
@@ -145,12 +148,189 @@ describe('Test `detectBuilders`', () => {
     expect(rewriteRoutes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          src: '^/_svc/cleanup/crons/jobs/cleanup/cron$',
+          src: '^/_svc/cleanup/crons/.*$',
           dest: '/_svc/cleanup/index',
           check: true,
         }),
       ])
     );
+  });
+
+  it('should use services builders when services is configured without the services framework', async () => {
+    const workPath = join(
+      __dirname,
+      'fixtures',
+      'e2e',
+      '11-services-python-cron'
+    );
+    const { builders, services, errors, useImplicitEnvInjection } =
+      await detectBuilders([], undefined, {
+        services: {
+          web: {
+            root: '.',
+            runtime: 'python',
+            entrypoint: 'server.py',
+            rewrites: [{ source: '/(.*)', destination: '/$1' }],
+          },
+          api: {
+            root: '.',
+            runtime: 'python',
+            entrypoint: 'jobs/cleanup.py',
+            rewrites: [{ source: '/api/(.*)', destination: '/$1' }],
+          },
+        },
+        projectSettings: {
+          framework: null,
+        },
+        workPath,
+      });
+
+    expect(errors).toBeNull();
+    expect(useImplicitEnvInjection).toBe(false);
+    expect(services).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'web',
+        }),
+        expect.objectContaining({
+          name: 'api',
+        }),
+      ])
+    );
+    expect(services?.find(service => service.name === 'web')?.routePrefix).toBe(
+      undefined
+    );
+    expect(services?.find(service => service.name === 'api')?.routePrefix).toBe(
+      undefined
+    );
+    expect(builders).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          src: 'server.py',
+          use: '@vercel/python',
+        }),
+        expect.objectContaining({
+          src: 'jobs/cleanup.py',
+          use: '@vercel/python',
+        }),
+      ])
+    );
+  });
+
+  it('should error when the services framework is selected without experimentalServices', async () => {
+    const { builders, errors, defaultRoutes, rewriteRoutes } =
+      await detectBuilders(['package.json'], undefined, {
+        projectSettings: {
+          framework: 'services',
+        },
+      });
+
+    expect(builders).toBeNull();
+    expect(defaultRoutes).toBeNull();
+    expect(rewriteRoutes).toBeNull();
+    expect(errors).toEqual([
+      {
+        code: 'MISSING_EXPERIMENTAL_SERVICES',
+        message:
+          'Project framework is set to "services", but no services are declared. Add `experimentalServices` to vercel.json with at least one service, or change the project framework setting.',
+      },
+    ]);
+  });
+
+  it('should build experimentalServicesV2 services configured inline', async () => {
+    // `detectBuilders` resolves services against a real filesystem (workPath).
+    // V2 isn't deployable yet, so build using a temp dir
+    const workPath = mkdtempSync(join(tmpdir(), 'vc-services-v2-'));
+    try {
+      mkdirSync(join(workPath, 'api'), { recursive: true });
+      writeFileSync(
+        join(workPath, 'api', 'package.json'),
+        JSON.stringify({ dependencies: { express: '4.0.0' } })
+      );
+      mkdirSync(join(workPath, 'web'), { recursive: true });
+      writeFileSync(
+        join(workPath, 'web', 'package.json'),
+        JSON.stringify({ dependencies: { next: 'latest' } })
+      );
+
+      const { builders, errors, services } = await detectBuilders(
+        [],
+        undefined,
+        {
+          experimentalServicesV2: {
+            api: { root: 'api', framework: 'express' },
+            web: { root: 'web', framework: 'nextjs' },
+          },
+          projectSettings: {
+            framework: null,
+          },
+          workPath,
+        }
+      );
+
+      expect(errors).toBeNull();
+      expect(services).toHaveLength(2);
+      expect(services?.every(s => s.schema === 'experimentalServicesV2')).toBe(
+        true
+      );
+      expect(builders).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            src: 'api/index.js',
+            use: '@vercel/backends',
+          }),
+          expect.objectContaining({ use: '@vercel/next' }),
+        ])
+      );
+    } finally {
+      rmSync(workPath, { recursive: true, force: true });
+    }
+  });
+
+  it('should warn when api/ files exist but no service covers them', async () => {
+    const { warnings } = await detectBuilders(
+      ['api/index.py', 'pages/index.js', 'package.json', 'requirements.txt'],
+      undefined,
+      {
+        experimentalServices: {
+          frontend: {
+            framework: 'nextjs',
+            entrypoint: '.',
+            routePrefix: '/',
+          },
+        },
+        projectSettings: { framework: null },
+      }
+    );
+
+    expect(warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'api_dir_ignored' }),
+      ])
+    );
+  });
+
+  it('should not warn when a service explicitly covers the api/ directory', async () => {
+    const { warnings } = await detectBuilders(
+      ['api/index.py', 'pages/index.js', 'package.json', 'requirements.txt'],
+      undefined,
+      {
+        experimentalServices: {
+          frontend: {
+            framework: 'nextjs',
+            entrypoint: '.',
+            routePrefix: '/',
+          },
+          backend: {
+            entrypoint: 'api/index.py',
+            routePrefix: '/api',
+          },
+        },
+        projectSettings: { framework: null },
+      }
+    );
+
+    expect(warnings.every(w => w.code !== 'api_dir_ignored')).toBe(true);
   });
 
   it('should never select now.json src', async () => {
@@ -564,6 +744,34 @@ describe('Test `detectBuilders`', () => {
     });
   });
 
+  it('passes entrypoint functions config through to Python framework builders', async () => {
+    const functions = {
+      'app/main.py': {
+        memory: 512,
+        maxDuration: 30,
+      },
+    };
+
+    const { builders } = await invokeDetectBuildersAndThrow(
+      ['pyproject.toml', 'app/main.py'],
+      null,
+      {
+        functions,
+        projectSettings: { framework: 'fastapi' },
+      }
+    );
+
+    expect(builders).toContainEqual({
+      src: '<detect>',
+      use: '@vercel/python',
+      config: {
+        zeroConfig: true,
+        framework: 'fastapi',
+        functions,
+      },
+    });
+  });
+
   it('extend with functions', async () => {
     const pkg = {
       scripts: { build: 'next build' },
@@ -666,6 +874,67 @@ describe('Test `detectBuilders`', () => {
 
     expect(errors).toHaveLength(0);
     expect(builders.length).toBe(1);
+  });
+
+  it('rejects maxDuration above the default 1800s limit', async () => {
+    const functions = { 'pages/index.ts': { maxDuration: 1900 } };
+    const files = ['pages/index.ts'];
+    const { builders, errors } = await invokeDetectBuilders(files, null, {
+      functions,
+    });
+
+    expect(builders).toHaveLength(0);
+    expect(errors.length).toBe(1);
+    expect(errors[0].code).toBe('invalid_function_duration');
+  });
+
+  describe('with VERCEL_CLI_SKIP_MAX_DURATION_LIMIT=1', () => {
+    beforeEach(() => {
+      process.env.VERCEL_CLI_SKIP_MAX_DURATION_LIMIT = '1';
+    });
+
+    afterEach(() => {
+      delete process.env.VERCEL_CLI_SKIP_MAX_DURATION_LIMIT;
+    });
+
+    it('allows maxDuration above 1800s, deferring to server-side validation', async () => {
+      const pkg = {
+        scripts: { build: 'next build' },
+        dependencies: { next: '9.0.0' },
+      };
+      const functions = { 'pages/api/long.ts': { maxDuration: 1900 } };
+      const files = ['package.json', 'pages/index.js', 'pages/api/long.ts'];
+      const { builders, errors } = await invokeDetectBuilders(files, pkg, {
+        functions,
+      });
+
+      expect(errors).toHaveLength(0);
+      expect(builders.length).toBe(1);
+    });
+
+    it('still rejects a non-integer maxDuration', async () => {
+      const functions = { 'pages/index.ts': { maxDuration: 1.5 } };
+      const files = ['pages/index.ts'];
+      const { builders, errors } = await invokeDetectBuilders(files, null, {
+        functions,
+      });
+
+      expect(builders).toHaveLength(0);
+      expect(errors.length).toBe(1);
+      expect(errors[0].code).toBe('invalid_function_duration');
+    });
+
+    it('still rejects a maxDuration below 1', async () => {
+      const functions = { 'pages/index.ts': { maxDuration: 0 } };
+      const files = ['pages/index.ts'];
+      const { builders, errors } = await invokeDetectBuilders(files, null, {
+        functions,
+      });
+
+      expect(builders).toHaveLength(0);
+      expect(errors.length).toBe(1);
+      expect(errors[0].code).toBe('invalid_function_duration');
+    });
   });
 
   it('invalid function memory', async () => {
@@ -4109,6 +4378,21 @@ describe('Test `detectApiExtensions`', () => {
       expect(apiBuilders[0].src).toBe('api/index.ts');
     });
 
+    it('should not filter middleware files that export middleware function', async () => {
+      const files = ['api/index.ts', 'middleware.ts'];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const middlewareBuilders = (builders || []).filter(
+        b => b.config?.middleware === true
+      );
+
+      // Middleware file should still get a builder even though it doesn't
+      // match standard API handler export patterns
+      expect(middlewareBuilders).toHaveLength(1);
+      expect(middlewareBuilders[0].src).toBe('middleware.ts');
+    });
+
     it('should not filter entrypoints when env var is not set', async () => {
       delete process.env.VERCEL_NODE_FILTER_ENTRYPOINTS;
 
@@ -4122,6 +4406,61 @@ describe('Test `detectApiExtensions`', () => {
 
       // Without the env var, all files get builders (existing behavior)
       expect(apiBuilders).toHaveLength(2);
+    });
+  });
+
+  describe('Node.js entrypoint detection in monorepo', () => {
+    // Simulates a monorepo where workPath points to a nested workspace
+    // (e.g., apps/web). File paths passed to detectBuilders are always
+    // relative to workPath, mirroring how the CLI resolves them.
+    const workPath = join(
+      __dirname,
+      'fixtures',
+      '71-node-monorepo',
+      'apps',
+      'web'
+    );
+
+    beforeEach(() => {
+      process.env.VERCEL_NODE_FILTER_ENTRYPOINTS = '1';
+    });
+
+    afterEach(() => {
+      delete process.env.VERCEL_NODE_FILTER_ENTRYPOINTS;
+    });
+
+    it('should filter helpers and keep entrypoints in monorepo workspace', async () => {
+      const files = ['api/index.ts', 'api/helper.ts'];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const apiBuilders = (builders || []).filter(
+        b => b.src?.startsWith('api/') && b.use === '@vercel/node'
+      );
+
+      expect(apiBuilders).toHaveLength(1);
+      expect(apiBuilders[0].src).toBe('api/index.ts');
+    });
+
+    it('should not filter middleware in monorepo workspace', async () => {
+      const files = ['api/index.ts', 'api/helper.ts', 'middleware.ts'];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const apiBuilders = (builders || []).filter(
+        b => b.src?.startsWith('api/') && b.use === '@vercel/node'
+      );
+      const middlewareBuilders = (builders || []).filter(
+        b => b.config?.middleware === true
+      );
+
+      // Helper filtered, entrypoint kept
+      expect(apiBuilders).toHaveLength(1);
+      expect(apiBuilders[0].src).toBe('api/index.ts');
+
+      // Middleware preserved
+      expect(middlewareBuilders).toHaveLength(1);
+      expect(middlewareBuilders[0].src).toBe('middleware.ts');
     });
   });
 });

@@ -8,10 +8,8 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { alertsCommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
-import { getLinkedProject } from '../../util/projects/link';
-import getScope from '../../util/get-scope';
-import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
-import { ProjectNotFound, isAPIError } from '../../util/errors-ts';
+import { isAPIError } from '../../util/errors-ts';
+import { type AlertsScope, resolveAlertsScope } from './resolve-alerts-scope';
 import type { AlertsTelemetryClient } from '../../util/telemetry/commands/alerts';
 import {
   outputError,
@@ -21,7 +19,14 @@ import {
   validateOptionalIntegerRange,
   validateTimeBound,
   validateTimeOrder,
+  type ValidationError,
 } from '../../util/command-validation';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+  shouldEmitNonInteractiveCommandError,
+} from '../../util/agent-output';
+import { AGENT_REASON } from '../../util/agent-output-constants';
 
 interface ListFlags {
   '--type'?: string[];
@@ -32,11 +37,6 @@ interface ListFlags {
   '--until'?: string;
   '--limit'?: number;
   '--format'?: string;
-}
-
-interface AlertsScope {
-  teamId: string;
-  projectId?: string;
 }
 
 type ValidatedInputs = {
@@ -100,6 +100,42 @@ function handleApiError(
         ? `The alerts endpoint failed on the server (${err.status}). Re-run with --debug and share the x-vercel-id from the failed request.`
         : err.serverMessage || `API error (${err.status}).`;
 
+  const reason =
+    err.status === 401
+      ? 'not_authorized'
+      : err.status === 403
+        ? 'forbidden'
+        : err.status === 404
+          ? AGENT_REASON.NOT_FOUND
+          : err.status === 429
+            ? 'rate_limited'
+            : AGENT_REASON.API_ERROR;
+
+  outputAgentError(
+    client,
+    {
+      status: 'error',
+      reason,
+      message,
+      ...(err.status === 401 || err.status === 403
+        ? {
+            hint: 'Confirm team scope; use --scope <team-slug> if alerts belong to another team.',
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(client.argv, 'whoami'),
+                when: 'See current user and team',
+              },
+              {
+                command: buildCommandWithGlobalFlags(client.argv, 'alerts'),
+                when: 'Retry listing alerts after fixing scope or permissions',
+              },
+            ],
+          }
+        : {}),
+    },
+    1
+  );
+
   return outputError(client, jsonOutput, err.code || 'API_ERROR', message);
 }
 
@@ -107,84 +143,6 @@ function getDefaultRange(): { from: string; to: string } {
   const to = new Date();
   const from = new Date(to.getTime() - 24 * 60 * 60 * 1000);
   return { from: from.toISOString(), to: to.toISOString() };
-}
-
-async function resolveScope(
-  client: Client,
-  opts: { project?: string; all?: boolean; jsonOutput: boolean }
-): Promise<AlertsScope | number> {
-  if (opts.all || opts.project) {
-    const { team } = await getScope(client);
-    if (!team) {
-      return outputError(
-        client,
-        opts.jsonOutput,
-        'NO_TEAM',
-        'No team context found. Run `vercel switch` to select a team, or use `vercel link` in a project directory.'
-      );
-    }
-
-    if (opts.all) {
-      return {
-        teamId: team.id,
-      };
-    }
-
-    let projectResult: Awaited<ReturnType<typeof getProjectByNameOrId>>;
-    try {
-      projectResult = await getProjectByNameOrId(
-        client,
-        opts.project!,
-        team.id
-      );
-    } catch (err) {
-      if (isAPIError(err)) {
-        return outputError(
-          client,
-          opts.jsonOutput,
-          err.code || 'API_ERROR',
-          err.serverMessage ||
-            (err.status === 403
-              ? `You do not have permission to access project "${opts.project}" in team "${team.slug}".`
-              : `API error (${err.status}).`)
-        );
-      }
-      throw err;
-    }
-
-    if (projectResult instanceof ProjectNotFound) {
-      return outputError(
-        client,
-        opts.jsonOutput,
-        'PROJECT_NOT_FOUND',
-        `Project "${opts.project}" was not found in team "${team.slug}".`
-      );
-    }
-
-    return {
-      teamId: team.id,
-      projectId: projectResult.id,
-    };
-  }
-
-  const linkedProject = await getLinkedProject(client);
-  if (linkedProject.status === 'error') {
-    return linkedProject.exitCode;
-  }
-
-  if (linkedProject.status === 'not_linked') {
-    return outputError(
-      client,
-      opts.jsonOutput,
-      'NOT_LINKED',
-      'No linked project found. Run `vercel link` to link a project, or use --project <name> or --all.'
-    );
-  }
-
-  return {
-    teamId: linkedProject.org.id,
-    projectId: linkedProject.project.id,
-  };
 }
 
 function getGroupTitle(group: AlertGroup): string {
@@ -280,20 +238,51 @@ function getAlertsCount(group: AlertGroup): string {
   return String(group.alerts?.length ?? 0);
 }
 
+function validationFailureForAgents(
+  client: Client,
+  result: ValidationError,
+  jsonOutput: boolean
+): number {
+  if (shouldEmitNonInteractiveCommandError(client)) {
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: result.message,
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(client.argv, 'alerts --help'),
+            when: 'See valid `alerts` list flags and examples',
+          },
+        ],
+      },
+      1
+    );
+  }
+  return handleValidationError(result, jsonOutput, client);
+}
+
 function printGroups(groups: AlertGroup[]) {
   if (groups.length === 0) {
     output.log('No alerts found.');
     return;
   }
 
-  const headers = ['Title', 'Started At', 'Type', 'Status', 'Alerts'].map(h =>
-    chalk.cyan(h)
-  );
+  const headers = [
+    'Title',
+    'Group id',
+    'Started At',
+    'Type',
+    'Status',
+    'Alerts',
+  ].map(h => chalk.cyan(h));
 
   const rows = [
     headers,
     ...groups.map(group => [
       chalk.bold(getGroupTitle(group)),
+      chalk.dim(group.id || '-'),
       getStartedAt(group),
       group.type || '-',
       getStatus(group),
@@ -360,6 +349,48 @@ function parseFlags(client: Client): ListFlags | number {
     const parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
     return parsedArgs.flags as ListFlags;
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const projectFlagMissingArg =
+      msg.includes('--project') && msg.includes('requires argument');
+    if (shouldEmitNonInteractiveCommandError(client)) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: projectFlagMissingArg
+            ? '`--project` requires a project name or id (for example `--project my-app`).'
+            : msg,
+          next: projectFlagMissingArg
+            ? [
+                {
+                  command: buildCommandWithGlobalFlags(
+                    client.argv,
+                    'alerts --project <name-or-id>'
+                  ),
+                  when: 'Re-run with a project name or id (replace placeholder)',
+                },
+                {
+                  command: buildCommandWithGlobalFlags(
+                    client.argv,
+                    'alerts --help'
+                  ),
+                  when: 'See all `alerts` flags and examples',
+                },
+              ]
+            : [
+                {
+                  command: buildCommandWithGlobalFlags(
+                    client.argv,
+                    'alerts --help'
+                  ),
+                  when: 'See valid flags and examples',
+                },
+              ],
+        },
+        1
+      );
+    }
     printError(err);
     return 1;
   }
@@ -378,7 +409,7 @@ function resolveValidatedInputs(
     max: 100,
   });
   if (!limitResult.valid) {
-    return handleValidationError(limitResult, jsonOutput, client);
+    return validationFailureForAgents(client, limitResult, jsonOutput);
   }
 
   const mutualResult = validateAllProjectMutualExclusivity(
@@ -386,17 +417,17 @@ function resolveValidatedInputs(
     flags['--project']
   );
   if (!mutualResult.valid) {
-    return handleValidationError(mutualResult, jsonOutput, client);
+    return validationFailureForAgents(client, mutualResult, jsonOutput);
   }
 
   const sinceResult = validateTimeBound(flags['--since']);
   if (!sinceResult.valid) {
-    return handleValidationError(sinceResult, jsonOutput, client);
+    return validationFailureForAgents(client, sinceResult, jsonOutput);
   }
 
   const untilResult = validateTimeBound(flags['--until']);
   if (!untilResult.valid) {
-    return handleValidationError(untilResult, jsonOutput, client);
+    return validationFailureForAgents(client, untilResult, jsonOutput);
   }
 
   const timeOrderResult = validateTimeOrder(
@@ -404,7 +435,7 @@ function resolveValidatedInputs(
     untilResult.value
   );
   if (!timeOrderResult.valid) {
-    return handleValidationError(timeOrderResult, jsonOutput, client);
+    return validationFailureForAgents(client, timeOrderResult, jsonOutput);
   }
 
   return {
@@ -470,7 +501,7 @@ export default async function list(
     return validatedInputs;
   }
 
-  const scope = await resolveScope(client, {
+  const scope = await resolveAlertsScope(client, {
     project: flags['--project'],
     all: flags['--all'],
     jsonOutput,

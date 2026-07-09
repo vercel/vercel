@@ -9,6 +9,7 @@ import updateCmd from './update';
 import removeCmd from './remove';
 import itemsCmd from './items';
 import tokensCmd from './tokens';
+import backupsCmd from './backups';
 import {
   edgeConfigCommand,
   listSubcommand,
@@ -18,11 +19,13 @@ import {
   removeSubcommand,
   itemsSubcommand,
   tokensSubcommand,
+  backupsSubcommand,
 } from './command';
 import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { EdgeConfigTelemetryClient } from '../../util/telemetry/commands/edge-config';
 import output from '../../output-manager';
+import { applyLinkedProjectTeam } from './apply-linked-project-team';
 
 const COMMAND_CONFIG = {
   list: ['list', 'ls'],
@@ -32,6 +35,7 @@ const COMMAND_CONFIG = {
   remove: ['remove', 'rm', 'delete'],
   items: ['items'],
   tokens: ['tokens'],
+  backups: ['backups'],
 };
 
 export default async function main(client: Client): Promise<number> {
@@ -73,6 +77,17 @@ export default async function main(client: Client): Promise<number> {
       })
     );
     return 2;
+  }
+
+  // Edge Configs live at the team level. When the current directory is
+  // linked to a Vercel project, prefer that project's team over the
+  // globally-configured `currentTeam` so commands target the team the
+  // user is "in" — same convention as `vc env`, `vc crons`, etc.
+  if (!needHelp) {
+    const linkExitCode = await applyLinkedProjectTeam(client);
+    if (linkExitCode !== undefined) {
+      return linkExitCode;
+    }
   }
 
   switch (subcommand) {
@@ -118,6 +133,13 @@ export default async function main(client: Client): Promise<number> {
       }
       telemetry.trackCliSubcommandTokens(subcommandOriginal);
       return tokensCmd(client, args);
+    case 'backups':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('edge-config', subcommandOriginal);
+        return printHelp(backupsSubcommand);
+      }
+      telemetry.trackCliSubcommandBackups(subcommandOriginal);
+      return backupsCmd(client, args);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('edge-config', subcommandOriginal);

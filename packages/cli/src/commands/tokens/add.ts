@@ -15,6 +15,7 @@ import {
 } from '../../util/agent-output';
 import { AGENT_REASON } from '../../util/agent-output-constants';
 import { getCommandNamePlain } from '../../util/pkg-name';
+import { stripSensitiveAuthArgs } from '../../util/redact-args';
 
 interface CreateTokenResponse {
   token?: { id?: string; name?: string };
@@ -43,6 +44,11 @@ const USER_SCOPE_AGENT_HINT = `Creating a personal token requires a classic toke
 
 function normalizeApiMessage(message: string): string {
   return message.replace(/\s*\(\d{3}\)\s*$/, '').trim();
+}
+
+function getSanitizedRerunCommand(client: Client): string {
+  const rerunArgs = stripSensitiveAuthArgs(client.argv.slice(2));
+  return getCommandNamePlain(rerunArgs.join(' ').trim());
 }
 
 function isClassicTokenRequiredForCreateError(err: unknown): boolean {
@@ -164,7 +170,7 @@ export default async function add(
   } catch (err: unknown) {
     if (isClassicTokenRequiredForCreateError(err)) {
       await openTokensDashboardInBrowser(client);
-      const rerun = getCommandNamePlain(client.argv.slice(2).join(' ').trim());
+      const rerun = getSanitizedRerunCommand(client);
       if (shouldEmitNonInteractiveCommandError(client)) {
         outputAgentError(
           client,
@@ -190,7 +196,7 @@ export default async function add(
     }
     if (isTokenUserScopeRequiredError(err)) {
       await openTokensDashboardInBrowser(client);
-      const rerun = getCommandNamePlain(client.argv.slice(2).join(' ').trim());
+      const rerun = getSanitizedRerunCommand(client);
       const apiMessage = normalizeApiMessage(
         isAPIError(err) ? err.serverMessage || err.message : String(err)
       );

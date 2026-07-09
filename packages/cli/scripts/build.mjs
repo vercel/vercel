@@ -5,6 +5,7 @@ import {
   writeFileSync,
   mkdirSync,
   existsSync,
+  rmSync,
 } from 'node:fs';
 import { compileDevTemplates } from './compile-templates.mjs';
 import { createRequire } from 'node:module';
@@ -104,6 +105,11 @@ const entryPoints = [
 
 const distDir = join(cwd, 'dist');
 
+// esbuild writes hashed chunks but does not remove stale files from previous
+// builds. Clean the output directory first so package/binary artifacts only
+// include files referenced by the current build.
+rmSync(distDir, { recursive: true, force: true });
+
 // Ensure commands output directories exist
 for (const cmd of PRIORITY_COMMANDS) {
   const cmdDistDir = join(distDir, 'commands', cmd);
@@ -156,8 +162,16 @@ copyFileSync(
   new URL('commands/dev/builder-worker.cjs', distRoot)
 );
 copyFileSync(
+  new URL('src/util/dev/next-dev-websocket-shim-preload.cjs', repoRoot),
+  new URL('commands/dev/next-dev-websocket-shim-preload.cjs', distRoot)
+);
+copyFileSync(
   new URL('src/util/get-latest-version/get-latest-worker.cjs', repoRoot),
   new URL('get-latest-worker.cjs', distRoot)
+);
+copyFileSync(
+  new URL('src/util/get-latest-version/fetch-dist-tags.cjs', repoRoot),
+  new URL('fetch-dist-tags.cjs', distRoot)
 );
 copyFileSync(new URL('src/vc.js', repoRoot), new URL('vc.js', distRoot));
 

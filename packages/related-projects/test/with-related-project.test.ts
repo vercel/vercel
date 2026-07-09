@@ -1,26 +1,27 @@
 import { withRelatedProject } from '../src/with-related-project';
 import { relatedProjects } from '../src/related-projects';
 import type { VercelRelatedProjects } from '../src/types';
+import type { Mock } from 'vitest';
 
-jest.mock('../src/related-projects', () => ({
-  relatedProjects: jest.fn(),
+vi.mock('../src/related-projects', () => ({
+  relatedProjects: vi.fn(),
 }));
 
 describe('withRelatedProject', () => {
   const mockEnv = process.env;
 
   beforeEach(() => {
-    jest.resetModules();
+    vi.resetModules();
     process.env = { ...mockEnv };
   });
 
   afterEach(() => {
     process.env = mockEnv;
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('returns defaultHost if no related projects are found', () => {
-    (relatedProjects as jest.Mock).mockReturnValue([]);
+    (relatedProjects as Mock).mockReturnValue([]);
 
     expect(
       withRelatedProject({
@@ -38,7 +39,7 @@ describe('withRelatedProject', () => {
         preview: { branch: 'feature-branch' },
       },
     ];
-    (relatedProjects as jest.Mock).mockReturnValue(mockProjects);
+    (relatedProjects as Mock).mockReturnValue(mockProjects);
 
     expect(
       withRelatedProject({
@@ -57,7 +58,7 @@ describe('withRelatedProject', () => {
         preview: { branch: 'feature-branch' },
       },
     ];
-    (relatedProjects as jest.Mock).mockReturnValue(mockProjects);
+    (relatedProjects as Mock).mockReturnValue(mockProjects);
 
     expect(
       withRelatedProject({
@@ -76,7 +77,7 @@ describe('withRelatedProject', () => {
         preview: {},
       },
     ];
-    (relatedProjects as jest.Mock).mockReturnValue(mockProjects);
+    (relatedProjects as Mock).mockReturnValue(mockProjects);
 
     expect(
       withRelatedProject({
@@ -95,7 +96,7 @@ describe('withRelatedProject', () => {
         preview: { branch: 'feature-branch' },
       },
     ];
-    (relatedProjects as jest.Mock).mockReturnValue(mockProjects);
+    (relatedProjects as Mock).mockReturnValue(mockProjects);
 
     expect(
       withRelatedProject({
@@ -114,7 +115,7 @@ describe('withRelatedProject', () => {
         preview: { branch: 'feature-branch' },
       },
     ];
-    (relatedProjects as jest.Mock).mockReturnValue(mockProjects);
+    (relatedProjects as Mock).mockReturnValue(mockProjects);
 
     expect(
       withRelatedProject({
@@ -133,7 +134,7 @@ describe('withRelatedProject', () => {
         preview: { branch: 'feature-branch' },
       },
     ];
-    (relatedProjects as jest.Mock).mockReturnValue(mockProjects);
+    (relatedProjects as Mock).mockReturnValue(mockProjects);
 
     expect(
       withRelatedProject({
@@ -152,7 +153,7 @@ describe('withRelatedProject', () => {
         preview: { branch: 'feature-branch' },
       },
     ];
-    (relatedProjects as jest.Mock).mockReturnValue(mockProjects);
+    (relatedProjects as Mock).mockReturnValue(mockProjects);
 
     expect(
       withRelatedProject({
@@ -173,7 +174,7 @@ describe('withRelatedProject', () => {
         },
       },
     ];
-    (relatedProjects as jest.Mock).mockReturnValue(mockProjects);
+    (relatedProjects as Mock).mockReturnValue(mockProjects);
 
     expect(
       withRelatedProject({
@@ -195,7 +196,7 @@ describe('withRelatedProject', () => {
         },
       },
     ];
-    (relatedProjects as jest.Mock).mockReturnValue(mockProjects);
+    (relatedProjects as Mock).mockReturnValue(mockProjects);
 
     expect(
       withRelatedProject({

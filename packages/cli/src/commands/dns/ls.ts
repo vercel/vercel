@@ -151,7 +151,7 @@ export default async function ls(client: Client, argv: string[]) {
     );
     client.stdout.write(getDNSRecordsTable([{ domainName, records }]));
 
-    if (pagination && pagination.count === 20) {
+    if (pagination?.next) {
       const flags = getCommandFlags(opts, ['_', '--next']);
       output.log(
         `To display the next page run ${getCommandName(
@@ -175,7 +175,7 @@ export default async function ls(client: Client, argv: string[]) {
     )} ${chalk.gray(lsStamp())}`
   );
   output.log(getDNSRecordsTable(dnsRecords));
-  if (pagination && pagination.count === 20) {
+  if (pagination?.next) {
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
       `To display the next page run ${getCommandName(

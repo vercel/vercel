@@ -1,6 +1,17 @@
 import type { File, HasField, Chain } from './types';
 import { Lambda } from './lambda';
 
+function assertOptionalBoolean(
+  value: unknown,
+  name: string
+): asserts value is boolean | undefined {
+  if (value !== undefined && typeof value !== 'boolean') {
+    throw new Error(
+      `The \`${name}\` argument for \`Prerender\` must be a boolean or undefined.`
+    );
+  }
+}
+
 interface PrerenderOptions {
   expiration: number | false;
   staleExpiration?: number;
@@ -19,6 +30,10 @@ interface PrerenderOptions {
   chain?: Chain;
   exposeErrBody?: boolean;
   partialFallback?: boolean;
+  hasPostponed?: boolean;
+  hasFallback?: boolean;
+  htmlSize?: number;
+  isDynamicRoute?: boolean;
 }
 
 export class Prerender {
@@ -49,6 +64,32 @@ export class Prerender {
   public chain?: Chain;
   public exposeErrBody?: boolean;
   public partialFallback?: boolean;
+  /**
+   * Set to `true` when the route's `.meta` postponed state is present (React
+   * suspended during build prerender). `false` when the framework prerendered
+   * a Prerender route without postponing. `undefined` when the framework did
+   * not provide the signal.
+   */
+  public hasPostponed?: boolean;
+  /**
+   * `true` when the route's dynamic template had a static fallback page (the
+   * prerender-manifest `fallback` was a string). `false` for blocking/omitted
+   * dynamic templates (manifest `fallback` was `null`/`false`). `undefined` for
+   * concrete prerenders, where the notion of a fallback doesn't apply.
+   */
+  public hasFallback?: boolean;
+  /**
+   * Byte size on disk of the route's prerendered `.html` shell. `0` for an
+   * empty shell (PPR template that postponed everything). `undefined` when
+   * there's no `.html` on disk (pages router, route handlers, edge).
+   */
+  public htmlSize?: number;
+  /**
+   * `true` when this entry came from a dynamic route template (the
+   * prerender-manifest `dynamicRoutes` section: fallback, blocking, or omitted)
+   * rather than a concrete prerender.
+   */
+  public isDynamicRoute?: boolean;
 
   constructor({
     expiration,
@@ -68,11 +109,39 @@ export class Prerender {
     chain,
     exposeErrBody,
     partialFallback,
+    hasPostponed,
+    hasFallback,
+    htmlSize,
+    isDynamicRoute,
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
     this.staleExpiration = staleExpiration;
     this.sourcePath = sourcePath;
+    // These tri-state flags are assigned unconditionally (like
+    // `staleExpiration`) so `true` | `false` | `undefined` round-trips intact.
+    // Do not adopt the `partialFallback`/`exposeErrBody` idiom below, which
+    // collapses `false` into `undefined`: for `hasFallback`, `false` (blocking
+    // / omitted template) must stay distinct from `undefined` (concrete
+    // prerender, no fallback concept).
+    assertOptionalBoolean(hasPostponed, 'hasPostponed');
+    this.hasPostponed = hasPostponed;
+
+    assertOptionalBoolean(hasFallback, 'hasFallback');
+    this.hasFallback = hasFallback;
+
+    assertOptionalBoolean(isDynamicRoute, 'isDynamicRoute');
+    this.isDynamicRoute = isDynamicRoute;
+
+    if (
+      htmlSize !== undefined &&
+      (!Number.isInteger(htmlSize) || htmlSize < 0)
+    ) {
+      throw new Error(
+        'The `htmlSize` argument for `Prerender` must be a non-negative integer or undefined.'
+      );
+    }
+    this.htmlSize = htmlSize;
 
     this.lambda = lambda;
     if (this.lambda) {

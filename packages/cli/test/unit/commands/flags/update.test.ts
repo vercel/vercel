@@ -128,6 +128,53 @@ function createTestFlags(): Flag[] {
       seed: 67890,
       typeName: 'flag',
     },
+    {
+      id: 'flag_json999',
+      slug: 'layout-config',
+      description: 'A JSON feature flag',
+      kind: 'json',
+      state: 'active',
+      variants: [
+        {
+          id: 'light',
+          value: { theme: 'light', sidebar: false },
+          label: 'Light',
+        },
+        {
+          id: 'dark',
+          value: ['dark', 'compact'],
+          label: 'Dark',
+        },
+      ],
+      environments: {
+        production: {
+          active: true,
+          fallthrough: { type: 'variant', variantId: 'light' },
+          pausedOutcome: { type: 'variant', variantId: 'light' },
+          rules: [],
+        },
+        preview: {
+          active: true,
+          fallthrough: { type: 'variant', variantId: 'light' },
+          pausedOutcome: { type: 'variant', variantId: 'light' },
+          rules: [],
+        },
+        development: {
+          active: true,
+          fallthrough: { type: 'variant', variantId: 'light' },
+          pausedOutcome: { type: 'variant', variantId: 'light' },
+          rules: [],
+        },
+      },
+      createdAt: Date.now() - 172800000,
+      updatedAt: Date.now() - 7200000,
+      createdBy: 'user_123',
+      projectId: 'vercel-flags-test',
+      ownerId: 'team_dummy',
+      revision: 2,
+      seed: 67890,
+      typeName: 'flag',
+    },
   ];
 }
 
@@ -324,6 +371,53 @@ describe('flags update', () => {
       { id: 'small', value: 15, label: 'Medium' },
       { id: 'large', value: 20, label: 'Large' },
     ]);
+  });
+
+  it('updates JSON variants by value', async () => {
+    (client.stdin as any).isTTY = false;
+    client.setArgv(
+      'flags',
+      'update',
+      testFlags[3].slug,
+      '--variant',
+      '{"theme":"light","sidebar":false}',
+      '--value',
+      '{"theme":"light","sidebar":true}',
+      '--label',
+      'Light+'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(testFlags[3].variants).toMatchObject([
+      {
+        id: 'light',
+        value: { theme: 'light', sidebar: true },
+        label: 'Light+',
+      },
+      { id: 'dark', value: ['dark', 'compact'], label: 'Dark' },
+    ]);
+  });
+
+  it('rejects invalid JSON updates', async () => {
+    (client.stdin as any).isTTY = false;
+    client.setArgv(
+      'flags',
+      'update',
+      testFlags[3].slug,
+      '--variant',
+      'light',
+      '--value',
+      '{"theme":"light"'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'JSON variant values must be valid JSON'
+    );
   });
 
   it('allows label-only boolean updates when the value stays the same', async () => {

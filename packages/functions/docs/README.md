@@ -1,8 +1,10 @@
+**@vercel/functions**
+
+---
+
 # @vercel/functions
 
-## Table of contents
+## Modules
 
-### Modules
-
-- [index](modules/index.md)
-- [oidc](modules/oidc.md)
+- [index](index/README.md)
+- [oidc](oidc/README.md)

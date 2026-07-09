@@ -2,9 +2,7 @@ import open from 'open';
 import { errorToString } from '@vercel/error-utils';
 import output from '../../output-manager';
 import { isAPIError } from '../errors-ts';
-
-const getBillingUrl = (teamSlug: string) =>
-  `https://vercel.com/${teamSlug}/~/settings/billing`;
+import { getTeamBillingUrl } from '../billing-url';
 
 interface HandlePurchaseErrorOptions {
   /** When true (TTY), automatically opens the billing page in the browser for payment-related errors. */
@@ -17,7 +15,7 @@ function tryOpenBillingPage(
 ): void {
   if (!openBrowser) return;
   const billingUrl = teamSlug
-    ? getBillingUrl(teamSlug)
+    ? getTeamBillingUrl(teamSlug)
     : 'https://vercel.com/dashboard';
   void open(billingUrl).catch((err: unknown) => {
     output.debug(`Failed to open browser: ${err}`);
@@ -51,7 +49,7 @@ export function handlePurchaseError(
     }
     if (err.code === 'missing_stripe_customer') {
       const billingUrl = teamSlug
-        ? getBillingUrl(teamSlug)
+        ? getTeamBillingUrl(teamSlug)
         : 'https://vercel.com/dashboard';
       const dashboardHint = teamSlug
         ? ` Please add one: ${output.link(billingUrl, billingUrl)}`

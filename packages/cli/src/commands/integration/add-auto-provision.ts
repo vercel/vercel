@@ -1,8 +1,10 @@
 import chalk from 'chalk';
+import execa from 'execa';
 import { errorToString } from '@vercel/error-utils';
 import open from 'open';
 import output from '../../output-manager';
 import type Client from '../../util/client';
+import { canPrompt } from '../../util/flags/can-prompt';
 import getScope from '../../util/get-scope';
 import indent from '../../util/output/indent';
 import { autoProvisionResource } from '../../util/integration/auto-provision-resource';
@@ -11,6 +13,10 @@ import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { acceptTermsViaBrowser } from '../../util/integration/accept-terms-via-browser';
 import { promptForTermAcceptance } from '../../util/integration/prompt-for-terms';
 import { selectProduct } from '../../util/integration/select-product';
+import { resolveProductSkills } from '../../util/integration/skill-suggestion';
+import { runClaimForResource } from '../integration-resource/claim';
+import { getResources } from '../../util/integration-resource/get-resources';
+import { packageName } from '../../util/pkg-name';
 import type {
   AcceptedPolicies,
   AutoProvisionedResponse,
@@ -44,6 +50,8 @@ interface AddAutoProvisionOptions extends PostProvisionOptions {
   installationId?: string;
   commandName?: 'integration add' | 'install';
   asJson?: boolean;
+  claim?: boolean;
+  noClaim?: boolean;
 }
 
 export async function addAutoProvision(
@@ -471,6 +479,58 @@ export async function addAutoProvision(
     `${product.name} successfully provisioned: ${chalk.bold(resourceName)}`
   );
 
+  // Sandbox resources (e.g. Stripe, Shopify) require the user to claim the
+  // account in the provider UI to convert from sandbox to a real owned account.
+  const isSandbox = provisioned.resource.ownership === 'sandbox';
+  if (isSandbox && !options.noClaim) {
+    telemetry.trackCliFlagClaim(options.claim);
+    telemetry.trackCliFlagNoClaim(options.noClaim);
+
+    const shouldRunClaim =
+      options.claim || (client.stdin.isTTY && !options.asJson);
+
+    if (shouldRunClaim) {
+      let runClaim = !!options.claim;
+      if (!runClaim && client.stdin.isTTY) {
+        runClaim = await client.input.confirm(
+          `${chalk.bold(resourceName)} is a sandbox resource. Claim it now?`,
+          true
+        );
+      }
+
+      if (runClaim) {
+        try {
+          const allResources = await getResources(client);
+          const targetResource = allResources.find(
+            r => r.id === provisioned.resource.id
+          );
+          if (targetResource) {
+            await runClaimForResource(client, targetResource, {
+              suppressActionRequired: true,
+            });
+          } else {
+            output.warn(
+              `Could not locate the newly provisioned resource. Run \`${packageName} integration resource claim ${resourceName}\` to claim it.`
+            );
+          }
+        } catch (error) {
+          output.warn(
+            `Failed to start claim flow: ${(error as Error).message}. Run \`${packageName} integration resource claim ${resourceName}\` to retry.`
+          );
+        }
+      }
+    } else {
+      output.log(
+        `Sandbox resource — claim it with: ${chalk.cyan(`vercel integration resource claim ${resourceName}`)}`
+      );
+    }
+  } else if (isSandbox && options.noClaim) {
+    telemetry.trackCliFlagNoClaim(options.noClaim);
+    output.log(
+      `Sandbox resource — claim it later with: ${chalk.cyan(`vercel integration resource claim ${resourceName}`)}`
+    );
+  }
+
   const guideSlug =
     integration.products.length > 1
       ? `${integration.slug}/${product.slug}`
@@ -511,6 +571,60 @@ export async function addAutoProvision(
     }
   );
 
+  // Install the product's declared agent skills (from `agentSkills`). Install
+  // is the default: in an interactive terminal we ask first; non-interactive
+  // callers (agents, CI) can't be prompted, so they proceed with the default
+  // and auto-install. JSON mode never reaches here (read-only — `skills[]` is
+  // surfaced in the JSON payload instead).
+  const skills = resolveProductSkills(product);
+
+  if (skills.length && !options.asJson) {
+    const noun = skills.length === 1 ? 'the agent skill' : 'agent skills';
+
+    let runInstall = !canPrompt(client);
+    if (canPrompt(client)) {
+      runInstall = await client.input.confirm(
+        `Install ${noun} so your AI tools can use ${chalk.bold(product.name)}?`,
+        true
+      );
+    }
+
+    if (runInstall) {
+      output.log(`Installing ${noun} for ${chalk.bold(product.name)}…`);
+      for (const skill of skills) {
+        // Echo the command before running it, so the publisher code being
+        // executed is visible in interactive, CI, and agent transcripts.
+        output.log(indent(chalk.cyan(skill.command), 4));
+        // `--yes` is required: without it `npx` prompts to install the `skills`
+        // package and hangs in non-interactive (agent/CI) contexts.
+        const args = [
+          '--yes',
+          'skills',
+          'add',
+          skill.repoUrl,
+          ...(skill.skill ? ['--skill', skill.skill] : []),
+        ];
+        const result = await execa('npx', args, {
+          cwd: client.cwd,
+          stdio: 'inherit',
+          reject: false,
+        });
+        if (result.exitCode !== 0) {
+          output.warn(
+            `Failed to install ${skill.skill ?? skill.repoUrl}. Run it manually: ${chalk.cyan(skill.command)}`
+          );
+        }
+      }
+    } else {
+      output.log(
+        `Install ${noun} so your AI tools can use ${chalk.bold(product.name)}:`
+      );
+      for (const skill of skills) {
+        output.log(indent(chalk.cyan(skill.command), 4));
+      }
+    }
+  }
+
   if (options.asJson) {
     const warnings: string[] = [];
     if (setupResult.connectError) {
@@ -528,6 +642,9 @@ export async function addAutoProvision(
         name: provisioned.resource.name,
         status: provisioned.resource.status,
         externalResourceId: provisioned.resource.externalResourceId,
+        ...(provisioned.resource.ownership && {
+          ownership: provisioned.resource.ownership,
+        }),
       },
       integration: {
         id: provisioned.integration.id,
@@ -562,6 +679,7 @@ export async function addAutoProvision(
       environments: setupResult.environments,
       envPulled: setupResult.envPulled,
       guideCommand,
+      skills,
       warnings,
     };
 

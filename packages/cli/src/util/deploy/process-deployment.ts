@@ -15,7 +15,6 @@ import bytes from 'bytes';
 import chalk from 'chalk';
 import type { Agent } from 'http';
 import type Now from '../../util';
-import { emoji, prependEmoji } from '../emoji';
 import { displayBuildLogs, type BuildLog, parseLogLines } from '../logs';
 import { progress } from '../output/progress';
 import ua from '../ua';
@@ -24,21 +23,15 @@ import eraseLines from '../output/erase-lines';
 import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
 import type { ProjectNotFound } from '../errors-ts';
 import printEvents from '../events';
+import { printAlignedLabel } from '../output/print-aligned-label';
 
-function printInspectUrl(
-  inspectorUrl: string | null | undefined,
-  deployStamp: () => string
-) {
+function printInspectUrl(inspectorUrl: string | null | undefined) {
   if (!inspectorUrl) {
     return;
   }
 
-  output.print(
-    prependEmoji(
-      `Inspect: ${chalk.bold(inspectorUrl)} ${deployStamp()}`,
-      emoji('inspect')
-    ) + `\n`
-  );
+  // Timing belongs on the Build/Ready line, not on the URL line which is instant.
+  printAlignedLabel('Inspect', chalk.cyan(inspectorUrl));
 }
 
 export default async function processDeployment({
@@ -52,13 +45,12 @@ export default async function processDeployment({
   agent,
   manual,
   jsonOutput,
+  linkedProject,
   ...args
 }: {
   now: Now;
   path: string;
   requestBody: DeploymentOptions;
-  uploadStamp: () => string;
-  deployStamp: () => string;
   quiet: boolean;
   force?: boolean;
   withCache?: boolean;
@@ -76,12 +68,12 @@ export default async function processDeployment({
   bulkRedirectsPath?: string | null;
   manual?: boolean;
   jsonOutput?: boolean;
+  linkedProject?: Project;
 }) {
   const {
     now,
     path,
     requestBody,
-    deployStamp,
     force,
     withCache,
     quiet,
@@ -92,6 +84,12 @@ export default async function processDeployment({
   } = args;
 
   const client = now._client;
+
+  // The ▲ gutter belongs on the Aliased row, which only prints when we wait
+  // for alias assignment and domains are auto-assigned. When that row won't
+  // print (--no-wait, --skip-domain), fall back to ▲ on the Production row.
+  const aliasedRowWillPrint =
+    !noWait && requestBody.autoAssignCustomDomains !== false;
 
   const { env = {} } = requestBody;
   const token = now._token;
@@ -135,8 +133,9 @@ export default async function processDeployment({
     output.stopSpinner();
   }
 
-  let rollingRelease: ProjectRollingRelease | undefined;
-  let project: Project | ProjectNotFound | undefined;
+  let rollingRelease: ProjectRollingRelease | undefined =
+    linkedProject?.rollingRelease;
+  let project: Project | ProjectNotFound | undefined = linkedProject;
   let latestLogMessage = '';
 
   try {
@@ -150,7 +149,12 @@ export default async function processDeployment({
         output.debug(`Total files ${total.size}, ${missing.length} changed`);
 
         const missingSize = missing
-          .map((sha: string) => total.get(sha).data.length)
+          .map((sha: string) => {
+            const file = total.get(sha);
+            // Large files are streamed and have no in-memory `data`; fall back
+            // to the recorded `size`.
+            return file?.data?.length ?? file?.size ?? 0;
+          })
           .reduce((a: number, b: number) => a + b, 0);
         const totalSizeHuman = bytes.format(missingSize, { decimalPlaces: 1 });
 
@@ -190,9 +194,10 @@ export default async function processDeployment({
       }
 
       if (event.type === 'file-uploaded') {
+        const { file } = event.payload;
         output.debug(
-          `Uploaded: ${event.payload.file.names.join(' ')} (${bytes(
-            event.payload.file.data.length
+          `Uploaded: ${file.names.join(' ')} (${bytes(
+            file.data?.length ?? file.size ?? 0
           )})`
         );
       }
@@ -204,18 +209,15 @@ export default async function processDeployment({
 
         stopSpinner();
 
-        printInspectUrl(deployment.inspectorUrl, deployStamp);
+        printInspectUrl(deployment.inspectorUrl);
 
         const isProdDeployment = deployment.target === 'production';
         const previewUrl = `https://${deployment.url}`;
 
-        output.print(
-          prependEmoji(
-            `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
-              previewUrl
-            )} ${deployStamp()}`,
-            emoji(withFullLogs ? 'link' : 'loading')
-          ) + `\n`
+        printAlignedLabel(
+          isProdDeployment ? 'Production' : 'Preview',
+          chalk.cyan(previewUrl),
+          isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
         );
 
         if (!jsonOutput && (quiet || process.env.FORCE_TTY === '1')) {
@@ -227,7 +229,7 @@ export default async function processDeployment({
         }
 
         latestLogMessage =
-          deployment.readyState === 'QUEUED' ? 'Queued...' : 'Building...';
+          deployment.readyState === 'QUEUED' ? 'Queued…' : 'Building…';
 
         if (withFullLogs) {
           let promise: Promise<void>;
@@ -251,7 +253,7 @@ export default async function processDeployment({
                 const lines = parseLogLines(event);
                 const message = lines[0];
                 if (message) {
-                  latestLogMessage = `Building: ${message}`;
+                  latestLogMessage = message;
                   output.spinner(latestLogMessage, 0);
                 }
               },
@@ -268,7 +270,7 @@ export default async function processDeployment({
       }
 
       if (event.type === 'building' && !withFullLogs) {
-        output.spinner(latestLogMessage || 'Building...', 0);
+        output.spinner(latestLogMessage || 'Building…', 0);
       }
 
       if (event.type === 'canceled') {
@@ -282,7 +284,7 @@ export default async function processDeployment({
       }
 
       if (event.type === 'ready' && rollingRelease) {
-        output.spinner('Releasing...', 0);
+        output.spinner('Releasing…', 0);
         stopSpinner();
         return event.payload;
       }
@@ -298,25 +300,22 @@ export default async function processDeployment({
         process.stderr.write(eraseLines(2));
         const isProdDeployment = event.payload.target === 'production';
         const previewUrl = `https://${event.payload.url}`;
-        output.print(
-          prependEmoji(
-            `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
-              previewUrl
-            )} ${deployStamp()}`,
-            emoji('success')
-          ) + `\n`
+        printAlignedLabel(
+          isProdDeployment ? 'Production' : 'Preview',
+          chalk.cyan(previewUrl),
+          isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
         );
 
         if (v1ChecksPending || v2ChecksPending) {
-          output.spinner('Running Checks...', 0);
+          output.spinner('Running Checks…', 0);
         } else {
-          output.spinner('Completing...', 0);
+          output.spinner('Completing…', 0);
         }
       }
 
       // v1 checks running
       if (event.type === 'checks-running' && !withFullLogs) {
-        output.spinner('Running Checks...', 0);
+        output.spinner('Running Checks…', 0);
       }
 
       // v1 checks failed
@@ -367,12 +366,7 @@ export default async function processDeployment({
         ) {
           const primaryDomain = event.payload.alias[0];
           const prodUrl = `https://${primaryDomain}`;
-          output.print(
-            prependEmoji(
-              `Aliased: ${chalk.bold(prodUrl)} ${deployStamp()}`,
-              emoji('link')
-            ) + '\n'
-          );
+          printAlignedLabel('Aliased', chalk.cyan(prodUrl), { gutter: '▲' });
         }
 
         event.payload.indications = indications;
@@ -400,8 +394,14 @@ export function handleErrorSolvableWithArchive(error: unknown) {
       error.errorName.startsWith('api-upload-');
     const isTooManyFilesLimit =
       'code' in error && error.code === 'too_many_files';
+    // A file that exceeds the server's per-request upload limit is rejected
+    // with HTTP 413 "Request Entity Too Large". Archiving uploads the
+    // deployment in smaller chunks, which stays under that limit.
+    const isEntityTooLarge = /entity too large|payload too large/i.test(
+      error.message
+    );
 
-    if (isUploadRateLimit || isTooManyFilesLimit) {
+    if (isUploadRateLimit || isTooManyFilesLimit || isEntityTooLarge) {
       return new UploadErrorMissingArchive(
         `${error.message}\n${archiveSuggestionText}`
       );

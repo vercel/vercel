@@ -31,11 +31,18 @@ describe('selectOrg', () => {
       client.stdin.write('\x1B[B'); // Down arrow
       client.stdin.write('\r'); // Return key
       await expect(selectOrgPromise).resolves.toHaveProperty('id', team.id);
+
+      // Anti-regression: spinner copy was renamed from "Loading scopes…" to
+      // "Loading teams…". A regression to the old copy would break the rename.
+      const fullOutput = client.stderr.getFullOutput();
+      expect(fullOutput).not.toContain('Loading scopes');
+      expect(fullOutput).toContain('Loading teams');
     });
 
-    it('automatically selects the correct scope when autoconfirm flag is passed', async () => {
-      const selectOrgPromise = selectOrg(client, 'Select the scope', true);
-      await expect(selectOrgPromise).resolves.toHaveProperty('id', user.id);
+    it('resolves an explicit scope without prompting when autoconfirm is passed', async () => {
+      client.setArgv('deploy', '--scope', user.username);
+      const result = await selectOrg(client, 'Select the scope', true);
+      expect(result).toHaveProperty('id', user.id);
     });
 
     describe('with a selected team scope', () => {
@@ -62,8 +69,10 @@ describe('selectOrg', () => {
         await expect(selectOrgPromise).resolves.toHaveProperty('id', user.id);
       });
 
-      it('automatically selects the correct scope when autoconfirm flag is passed', async () => {
+      it('asks with the current team as the default when autoconfirm is passed', async () => {
         const selectOrgPromise = selectOrg(client, 'Select the scope', true);
+        await expect(client.stderr).toOutput('Select the scope');
+        client.stdin.write('\r'); // Return key selects the default (current team)
         await expect(selectOrgPromise).resolves.toHaveProperty('id', team.id);
       });
     });
@@ -163,12 +172,23 @@ describe('selectOrg', () => {
       logSpy.mockRestore();
     });
 
-    it('outputs action_required and exits even with single scope (no defaulting)', async () => {
+    it('returns the only team when a single choice exists (unambiguous)', async () => {
       // Single team only (northstar user + one team)
       user = useUser({ version: 'northstar' });
-      useTeam(); // only one team
+      const onlyTeam = useTeam(); // only one team
       client.nonInteractive = true;
       delete client.config.currentTeam;
+
+      const result = await selectOrg(client, 'Which scope?', false);
+      expect(result).toEqual({
+        type: 'team',
+        id: onlyTeam.id,
+        slug: onlyTeam.slug,
+      });
+    });
+
+    it('outputs action_required and exits when only the global team is set (currentTeam is not a signal)', async () => {
+      client.config.currentTeam = firstTeam.id;
 
       const exitSpy = vi
         .spyOn(process, 'exit')
@@ -183,22 +203,84 @@ describe('selectOrg', () => {
 
       const payload = JSON.parse(logSpy.mock.calls[0][0]);
       expect(isActionRequiredPayload(payload)).toBe(true);
-      expect(payload.choices.length).toBe(1);
+      expect(payload.reason).toBe('missing_scope');
       expect(exitSpy).toHaveBeenCalledWith(1);
 
       exitSpy.mockRestore();
       logSpy.mockRestore();
+      delete client.config.currentTeam;
     });
 
-    it('returns org when --scope/--team was passed (currentTeam set)', async () => {
-      client.config.currentTeam = firstTeam.id;
+    it('returns org when VERCEL_ORG_ID matches a team', async () => {
+      process.env.VERCEL_ORG_ID = firstTeam.id;
+      try {
+        const result = await selectOrg(client, 'Which scope?', false);
+        expect(result).toEqual({
+          type: 'team',
+          id: firstTeam.id,
+          slug: firstTeam.slug,
+        });
+      } finally {
+        delete process.env.VERCEL_ORG_ID;
+      }
+    });
+
+    it('returns org when vercel.json scope matches a team', async () => {
+      client.localConfig = { ...client.localConfig, scope: firstTeam.slug };
       const result = await selectOrg(client, 'Which scope?', false);
       expect(result).toEqual({
         type: 'team',
         id: firstTeam.id,
         slug: firstTeam.slug,
       });
+    });
+  });
+
+  describe('non-TTY mode (not non-interactive)', () => {
+    let firstTeam: ReturnType<typeof createTeam>;
+
+    beforeEach(() => {
+      user = useUser({ version: 'northstar' });
+      firstTeam = useTeam();
+      createTeam(); // second team so choices.length > 1
+      client.stdin.isTTY = false;
       delete client.config.currentTeam;
+    });
+
+    it('errors instead of guessing the global team under --yes', async () => {
+      client.config.currentTeam = firstTeam.id;
+
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await expect(selectOrg(client, 'Which scope?', true)).rejects.toThrow(
+        'process.exit(1)'
+      );
+
+      // Human error on stderr, no JSON payload without --non-interactive.
+      expect(logSpy).not.toHaveBeenCalled();
+      expect(client.stderr.getFullOutput()).toContain('Multiple teams found');
+      expect(client.stderr.getFullOutput()).toContain('--team <slug>');
+      expect(client.stderr.getFullOutput()).toContain('teams ls');
+      expect(exitSpy).toHaveBeenCalledWith(1);
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+      delete client.config.currentTeam;
+    });
+
+    it('returns org when --scope is present in argv under --yes', async () => {
+      client.setArgv('deploy', '--scope', firstTeam.slug);
+      const result = await selectOrg(client, 'Which scope?', true);
+      expect(result).toEqual({
+        type: 'team',
+        id: firstTeam.id,
+        slug: firstTeam.slug,
+      });
     });
   });
 

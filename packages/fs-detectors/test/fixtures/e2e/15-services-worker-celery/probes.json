@@ -13,16 +13,23 @@
     {
       "path": "/enqueue",
       "method": "POST",
-      "body": {},
+      "body": { "request_id": "probe-15-jobs" },
       "status": 200,
-      "mustContain": "ok"
+      "mustContain": "probe-15-jobs"
     },
     {
-      "path": "/_svc/worker/workers/worker/run/worker",
+      "path": "/status/jobs/probe-15-jobs",
+      "status": 200,
+      "mustContain": "probe-15-jobs",
+      "retries": 5,
+      "retryDelay": 2000
+    },
+    {
+      "path": "/_svc/worker/index",
       "method": "POST",
       "body": {},
-      "status": 400,
-      "mustContain": "error"
+      "status": 404,
+      "mustContain": "404 from Flask web service"
     },
     {
       "path": "/does-not-exist",

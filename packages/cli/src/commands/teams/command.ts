@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, nextOption } from '../../util/arg-common';
+import { formatOption, limitOption, nextOption } from '../../util/arg-common';
 
 export const requestSubcommand = {
   name: 'request',
@@ -67,6 +67,7 @@ export const listSubcommand = {
   arguments: [],
   options: [
     nextOption,
+    limitOption,
     formatOption,
     { name: 'since', shorthand: null, type: String, deprecated: true },
     { name: 'until', shorthand: null, type: String, deprecated: true },
@@ -97,6 +98,7 @@ export const switchSubcommand = {
       value: `${packageName} teams switch <slug>`,
     },
   ],
+  disabledGlobalOptions: ['token'],
 } as const;
 
 export const inviteSubcommand = {
@@ -123,12 +125,30 @@ export const inviteSubcommand = {
   ],
 } as const;
 
+export const ssoSubcommand = {
+  name: 'sso',
+  aliases: [],
+  description: 'Show SAML / SSO configuration for the current team',
+  arguments: [],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Human-readable SAML summary',
+      value: `${packageName} teams sso`,
+    },
+    {
+      name: 'JSON',
+      value: `${packageName} teams sso --format json`,
+    },
+  ],
+} as const;
+
 export const membersSubcommand = {
   name: 'members',
   aliases: ['member'],
   description: 'List members for the currently scoped team',
   arguments: [],
-  options: [nextOption, formatOption],
+  options: [nextOption, limitOption, formatOption],
   examples: [
     {
       name: 'List team members',
@@ -156,6 +176,7 @@ export const teamsCommand = {
     listSubcommand,
     requestSubcommand,
     switchSubcommand,
+    ssoSubcommand,
     membersSubcommand,
   ],
   options: [],

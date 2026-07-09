@@ -24,10 +24,10 @@ export class MetricsTelemetryClient
     }
   }
 
-  trackCliOptionMetric(v: string | undefined) {
+  trackCliArgumentMetricId(v: string | undefined) {
     if (v) {
-      this.trackCliOption({
-        option: 'metric',
+      this.trackCliArgument({
+        arg: 'metric-id',
         value: v,
       });
     }
@@ -60,12 +60,36 @@ export class MetricsTelemetryClient
     }
   }
 
-  trackCliOptionFilter(v: string | undefined) {
+  trackCliOptionOrderBy(v: string | undefined) {
     if (v) {
+      this.trackCliOption({
+        option: 'order-by',
+        value: v,
+      });
+    }
+  }
+
+  trackCliOptionOrder(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'order',
+        value: v,
+      });
+    }
+  }
+
+  trackCliOptionFilter(v: string[] | undefined) {
+    if (v && v.length > 0) {
       this.trackCliOption({
         option: 'filter',
         value: this.redactedValue,
       });
+    }
+  }
+
+  trackCliFlagProd(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('prod');
     }
   }
 
@@ -91,6 +115,15 @@ export class MetricsTelemetryClient
     if (v) {
       this.trackCliOption({
         option: 'granularity',
+        value: v,
+      });
+    }
+  }
+
+  trackCliOptionBucketTimezone(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'bucket-timezone',
         value: v,
       });
     }

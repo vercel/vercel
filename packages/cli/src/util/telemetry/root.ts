@@ -19,6 +19,20 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandAgentRuns(actual: string) {
+    this.trackCliCommand({
+      command: 'agent-runs',
+      value: actual,
+    });
+  }
+
+  trackCliCommandAiGateway(actual: string) {
+    this.trackCliCommand({
+      command: 'ai-gateway',
+      value: actual,
+    });
+  }
+
   trackCliCommandAlias(actual: string) {
     this.trackCliCommand({
       command: 'alias',
@@ -89,6 +103,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandConnex(actual: string) {
+    this.trackCliCommand({
+      command: 'connex',
+      value: actual,
+    });
+  }
+
   trackCliCommandContract(actual: string) {
     this.trackCliCommand({
       command: 'contract',
@@ -113,6 +134,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandDeploy(actual: string) {
     this.trackCliCommand({
       command: 'deploy',
+      value: actual,
+    });
+  }
+
+  trackCliCommandDeployHooks(actual: string) {
+    this.trackCliCommand({
+      command: 'deploy-hooks',
       value: actual,
     });
   }
@@ -278,6 +306,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandOauthApps(actual: string) {
+    this.trackCliCommand({
+      command: 'oauth-apps',
+      value: actual,
+    });
+  }
+
   trackCliCommandOpen(actual: string) {
     this.trackCliCommand({
       command: 'open',
@@ -390,6 +425,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandTraces(actual: string) {
+    this.trackCliCommand({
+      command: 'traces',
+      value: actual,
+    });
+  }
+
   trackCliCommandWhoami(actual: string) {
     this.trackCliCommand({
       command: 'whoami',
@@ -414,6 +456,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandUsage(actual: string) {
     this.trackCliCommand({
       command: 'usage',
+      value: actual,
+    });
+  }
+
+  trackCliCommandVcr(actual: string) {
+    this.trackCliCommand({
+      command: 'vcr',
       value: actual,
     });
   }
@@ -456,6 +505,14 @@ export class RootTelemetryClient extends TelemetryClient {
 
   trackDeviceId(deviceId: string | undefined) {
     super.trackDeviceId(deviceId);
+  }
+
+  trackVercelPluginActiveSession() {
+    super.trackVercelPluginActiveSession();
+  }
+
+  trackVercelPluginVersion(version: string | undefined) {
+    super.trackVercelPluginVersion(version);
   }
 
   trackErrorStatus(status: number | string | undefined) {

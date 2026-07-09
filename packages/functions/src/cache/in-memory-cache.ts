@@ -26,7 +26,7 @@ export class InMemoryCache implements RuntimeCache {
   async set(
     key: string,
     value: unknown,
-    options?: { ttl?: number; tags?: string[] }
+    options?: { name?: string; ttl?: number; tags?: string[] }
   ): Promise<void> {
     // JSON.stringify(undefined) returns undefined (not a string), so coerce to null
     const serialized = JSON.stringify(value ?? null);

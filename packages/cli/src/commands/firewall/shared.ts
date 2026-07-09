@@ -13,6 +13,7 @@ import type { Command } from '../help';
 import type { FirewallIpRule, FirewallRule } from '../../util/firewall/types';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import activateFirewallConfig from '../../util/firewall/activate-firewall-config';
+import stamp from '../../util/output/stamp';
 
 export interface ParsedSubcommand {
   args: string[];
@@ -189,7 +190,6 @@ export async function offerAutoPublish(
     );
 
     if (shouldPublish) {
-      const { default: stamp } = await import('../../util/output/stamp');
       const publishStamp = stamp();
       output.spinner('Publishing to production');
 
@@ -264,4 +264,33 @@ export function resolveRule(
   // Partial ID match
   const byPartialId = rules.filter(r => r.id.toLowerCase().includes(query));
   return byPartialId;
+}
+
+/**
+ * Print a warning about the potential impact of a rule's action.
+ * Called after staging adds, edits, and enables for deny/challenge/rate_limit actions.
+ */
+export function printActionImpactWarning(action: FirewallRule['action']): void {
+  const actionType = action.mitigate?.action;
+  if (!actionType) return;
+
+  switch (actionType) {
+    case 'deny':
+      output.warn(
+        'This rule will deny matching requests. Legitimate traffic may be blocked if conditions are too broad.'
+      );
+      break;
+    case 'challenge':
+      output.warn(
+        'This rule will challenge matching requests with a verification page. Some legitimate users or automated clients may be unable to complete the challenge.'
+      );
+      break;
+    case 'rate_limit':
+      output.warn(
+        'This rule will rate limit matching requests. Legitimate traffic may be throttled if the limit is too low or keys are too broad.'
+      );
+      break;
+    default:
+      break;
+  }
 }

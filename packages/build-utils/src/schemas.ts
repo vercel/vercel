@@ -1,3 +1,5 @@
+import { getMaxDurationSchema } from './max-duration';
+
 const triggerEventSchemaV1 = {
   type: 'object',
   properties: {
@@ -70,7 +72,7 @@ const triggerEventSchema = {
   oneOf: [triggerEventSchemaV1, triggerEventSchemaV2],
 };
 
-export const functionsSchema = {
+export const getFunctionsSchema = () => ({
   type: 'object',
   minProperties: 1,
   maxProperties: 50,
@@ -92,12 +94,7 @@ export const functionsSchema = {
           minimum: 128,
           maximum: 10240,
         },
-        maxDuration: {
-          oneOf: [
-            { type: 'integer', minimum: 1, maximum: 900 },
-            { type: 'string', enum: ['max'] },
-          ],
-        },
+        maxDuration: getMaxDurationSchema(),
         regions: {
           type: 'array',
           items: {
@@ -128,7 +125,15 @@ export const functionsSchema = {
       },
     },
   },
-};
+});
+
+/**
+ * @deprecated Evaluated once at module load, so it does not reflect
+ * `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT` when the variable is set after this
+ * module is first imported. Prefer {@link getFunctionsSchema}, which reads the
+ * limit at call time.
+ */
+export const functionsSchema = getFunctionsSchema();
 
 export const buildsSchema = {
   type: 'array',
@@ -172,6 +177,15 @@ export const packageManifestSchema = {
     runtime: {
       type: 'string',
       description: 'Runtime identifier, e.g. "python", "node".',
+    },
+    framework: {
+      type: 'string',
+      description: 'Detected framework slug, e.g. "fastapi", "flask", "hono".',
+    },
+    serviceType: {
+      type: 'string',
+      description:
+        'Service type: one of "web", "schedule", "queue", "workflow".',
     },
     runtimeVersion: {
       type: 'object',

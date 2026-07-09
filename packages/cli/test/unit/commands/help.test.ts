@@ -14,6 +14,7 @@ import * as env from '../../../src/commands/env/command';
 import * as git from '../../../src/commands/git/command';
 import { initCommand } from '../../../src/commands/init/command';
 import { inspectCommand } from '../../../src/commands/inspect/command';
+import * as connex from '../../../src/commands/connex/command';
 import * as integration from '../../../src/commands/integration/command';
 import * as integrationResource from '../../../src/commands/integration-resource/command';
 import { linkCommand } from '../../../src/commands/link/command';
@@ -270,6 +271,36 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('domains check help output snapshots', () => {
+      it('domains check help column width 120', () => {
+        expect(
+          help(domains.checkSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('domains price help output snapshots', () => {
+      it('domains price help column width 120', () => {
+        expect(
+          help(domains.priceSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('domains search help output snapshots', () => {
+      it('domains search help column width 120', () => {
+        expect(
+          help(domains.searchSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
     describe('domains inspect help output snapshots', () => {
       it('domains inspect help column width 120', () => {
         expect(
@@ -314,6 +345,16 @@ describe('help command', () => {
       it('domains transfer-in help column width 120', () => {
         expect(
           help(domains.transferInSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('domains verify help output snapshots', () => {
+      it('domains verify help column width 120', () => {
+        expect(
+          help(domains.verifySubcommand, {
             columns: 120,
             parent: domains.domainsCommand,
           })
@@ -415,6 +456,72 @@ describe('help command', () => {
     });
   });
 
+  describe('connex help output snapshots', () => {
+    it('connex help column width 80', () => {
+      expect(help(connex.connexCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    describe('connex create subcommand', () => {
+      it('connex create subcommand help column width 120', () => {
+        expect(
+          help(connex.createSubcommand, {
+            columns: 120,
+            parent: connex.connexCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('connex list subcommand', () => {
+      it('connex list subcommand help column width 120', () => {
+        expect(
+          help(connex.listSubcommand, {
+            columns: 120,
+            parent: connex.connexCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('connex token subcommand', () => {
+      it('connex token subcommand help column width 120', () => {
+        expect(
+          help(connex.tokenSubcommand, {
+            columns: 120,
+            parent: connex.connexCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('connex open subcommand', () => {
+      it('connex open subcommand help column width 120', () => {
+        expect(
+          help(connex.openSubcommand, {
+            columns: 120,
+            parent: connex.connexCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('connex attach subcommand', () => {
+      it('connex attach subcommand help column width 120', () => {
+        expect(
+          help(connex.attachSubcommand, {
+            columns: 120,
+            parent: connex.connexCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('connex detach subcommand', () => {
+      it('connex detach subcommand help column width 120', () => {
+        expect(
+          help(connex.detachSubcommand, {
+            columns: 120,
+            parent: connex.connexCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+  });
+
   describe('integration help output snapshots', () => {
     it('integration help column width 40', () => {
       expect(
@@ -465,6 +572,16 @@ describe('help command', () => {
       it('integration balance subcommand help column width 120', () => {
         expect(
           help(integration.balanceSubcommand, {
+            columns: 120,
+            parent: integration.integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('integration categories subcommand', () => {
+      it('integration categories subcommand help column width 120', () => {
+        expect(
+          help(integration.categoriesSubcommand, {
             columns: 120,
             parent: integration.integrationCommand,
           })
@@ -647,6 +764,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('project rename help output snapshots', () => {
+      it('project rename help column width 120', () => {
+        expect(
+          help(project.renameSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('promote help output snapshots', () => {
@@ -722,7 +849,10 @@ describe('help command', () => {
     describe('rollback status help output snapshots', () => {
       it('rollback status help column width 120', () => {
         expect(
-          help(rollback.rollbackCommand, { columns: 120 })
+          help(rollback.statusSubcommand, {
+            columns: 120,
+            parent: rollback.rollbackCommand,
+          })
         ).toMatchSnapshot();
       });
     });

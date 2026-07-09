@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { test, expect } from 'vitest';
 
 function getShellCommands(): string[] {
@@ -17,22 +17,44 @@ function getShellCommands(): string[] {
  * - When CLI_EVAL_AUTH_STATE=not-logged-in: whoami (may fail) then login, then whoami.
  * - When CLI_EVAL_AUTH_STATE=logged-in: whoami (and optionally login if needed).
  */
-test('agent used CLI for auth flow matching requested auth state', () => {
+test('agent checked unauthenticated and authenticated CLI behavior', () => {
   const commands = getShellCommands();
   expect(commands.length).toBeGreaterThan(0);
 
   const whoamiCommands = commands.filter(command =>
     /\b(vercel|vc)\s+whoami\b/.test(command)
   );
-  const loginCommands = commands.filter(command =>
-    /\b(vercel|vc)\s+login\b/.test(command)
-  );
+  expect(whoamiCommands.length).toBeGreaterThanOrEqual(2);
+  expect(
+    commands.some(
+      command =>
+        command.includes('VERCEL_TOKEN') &&
+        (command.includes('unset') || command.includes('env -u'))
+    )
+  ).toBe(true);
+  expect(
+    whoamiCommands.some(
+      command =>
+        command.includes('--format=json') ||
+        /--format\s+json\b/.test(command) ||
+        command.includes('--json')
+    )
+  ).toBe(true);
+});
 
-  expect(whoamiCommands.length).toBeGreaterThan(0);
+test('agent saved unauthenticated error and authenticated identity', () => {
+  expect(existsSync('whoami-not-logged-in.txt')).toBe(true);
+  expect(existsSync('whoami-after-auth.json')).toBe(true);
 
-  const authState = process.env.CLI_EVAL_AUTH_STATE ?? 'logged-in';
+  const unauthOutput = readFileSync('whoami-not-logged-in.txt', 'utf-8');
+  expect(unauthOutput.trim().length).toBeGreaterThan(0);
+  expect(
+    /not\s+logged\s+in|not\s+authenticated|login|auth/i.test(unauthOutput)
+  ).toBe(true);
 
-  if (authState === 'not-logged-in') {
-    expect(loginCommands.length).toBeGreaterThan(0);
-  }
+  const authOutput = JSON.parse(
+    readFileSync('whoami-after-auth.json', 'utf-8')
+  ) as { username?: string };
+  expect(typeof authOutput.username).toBe('string');
+  expect(authOutput.username!.length).toBeGreaterThan(0);
 });

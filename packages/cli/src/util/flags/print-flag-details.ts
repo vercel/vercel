@@ -1,15 +1,19 @@
 import chalk from 'chalk';
 import output from '../../output-manager';
 import formatDate from '../format-date';
+import { formatFlagConditionComparator } from './comparators';
 import { getFlagDashboardUrl } from './dashboard-url';
+import {
+  formatFlagOutcome,
+  formatFlagSplitWeights,
+  formatFlagVariantSummary,
+} from './format-flag-outcome';
 import { formatVariantValue } from './resolve-variant';
 import type {
   Flag,
   FlagCondition,
   FlagEnvironmentConfig,
-  FlagOutcome,
   FlagSettings,
-  FlagSplitOutcome,
   FlagVariant,
 } from './types';
 
@@ -88,7 +92,7 @@ export function printFlagEnvironmentDetails(
       const hasCustomConfiguration = hasCustomConfigurationEnabled(envConfig);
       const envSummary = hasCustomConfiguration
         ? 'custom'
-        : formatEnvironmentOutcome(envConfig.fallthrough, flag.variants);
+        : formatFlagOutcome(envConfig.fallthrough, flag.variants);
 
       output.print(`    ${chalk.bold(envName)}: ${envSummary}\n`);
 
@@ -98,10 +102,7 @@ export function printFlagEnvironmentDetails(
           envConfig.targets
         )) {
           const variant = flag.variants.find(v => v.id === variantId);
-          const variantSummary = formatEnvironmentVariantSummary(
-            variant,
-            variantId
-          );
+          const variantSummary = formatFlagVariantSummary(variant, variantId);
           for (const [entityKind, attributes] of Object.entries(entityKinds)) {
             for (const [attribute, values] of Object.entries(attributes)) {
               const valueList = values
@@ -126,7 +127,7 @@ export function printFlagEnvironmentDetails(
       if (envConfig.rules && envConfig.rules.length > 0) {
         output.print(`      ${chalk.dim('Rules:')}\n`);
         for (const rule of envConfig.rules) {
-          const outcome = formatEnvironmentOutcome(rule.outcome, flag.variants);
+          const outcome = formatFlagOutcome(rule.outcome, flag.variants);
           output.print(`        ${chalk.dim('→')} ${outcome}\n`);
           for (const condition of rule.conditions) {
             const { text, listItems } = formatCondition(condition, settings);
@@ -146,24 +147,31 @@ export function printFlagEnvironmentDetails(
           const defaultVariant = flag.variants.find(
             v => v.id === fallthrough.variantId
           );
-          const defaultSummary = formatEnvironmentVariantSummary(
+          const defaultSummary = formatFlagVariantSummary(
             defaultVariant,
             fallthrough.variantId
           );
           output.print(`      ${chalk.dim('Default:')} ${defaultSummary}\n`);
         } else if (fallthrough.type === 'split') {
-          const weights = formatSplitWeights(
+          const weights = formatFlagSplitWeights(
             fallthrough.weights,
             flag.variants
           );
           output.print(`      ${chalk.dim('Default split:')} ${weights}\n`);
+        } else if (fallthrough.type === 'rollout') {
+          output.print(
+            `      ${chalk.dim('Rollout:')} ${formatFlagOutcome(
+              fallthrough,
+              flag.variants
+            )}\n`
+          );
         }
       }
     } else {
       const pausedVariant = flag.variants.find(
         v => v.id === envConfig.pausedOutcome?.variantId
       );
-      const pausedSummary = formatEnvironmentVariantSummary(
+      const pausedSummary = formatFlagVariantSummary(
         pausedVariant,
         envConfig.pausedOutcome?.variantId || 'paused'
       );
@@ -231,60 +239,9 @@ function hasCustomConfigurationEnabled(
   return (
     Boolean(envConfig.targets && Object.keys(envConfig.targets).length > 0) ||
     envConfig.rules.length > 0 ||
-    envConfig.fallthrough.type === 'split'
+    envConfig.fallthrough.type === 'split' ||
+    envConfig.fallthrough.type === 'rollout'
   );
-}
-
-function formatEnvironmentOutcome(
-  outcome: FlagOutcome | FlagSplitOutcome,
-  variants: FlagVariant[]
-): string {
-  if (outcome.type === 'variant') {
-    const variant = variants.find(v => v.id === outcome.variantId);
-    return formatEnvironmentVariantSummary(variant, outcome.variantId);
-  }
-
-  if (outcome.type === 'split') {
-    const weights = formatSplitWeights(outcome.weights, variants);
-    return `split (${weights})`;
-  }
-
-  return 'unknown';
-}
-
-function formatSplitWeights(
-  weights: Record<string, number>,
-  variants: FlagVariant[]
-): string {
-  const total = Object.values(weights).reduce((sum, weight) => sum + weight, 0);
-
-  return Object.entries(weights)
-    .map(([id, weight]) => {
-      const variant = variants.find(v => v.id === id);
-      const summary = formatEnvironmentVariantSummary(variant, id);
-      const percentage = total > 0 ? (weight / total) * 100 : 0;
-      const formattedPercentage = Number.isInteger(percentage)
-        ? String(percentage)
-        : String(Number(percentage.toFixed(2)));
-
-      return `${summary}: ${formattedPercentage}%`;
-    })
-    .join(', ');
-}
-
-function formatEnvironmentVariantSummary(
-  variant: FlagVariant | undefined,
-  fallback: string
-): string {
-  if (!variant) {
-    return chalk.bold(fallback);
-  }
-
-  if (variant.label) {
-    return chalk.bold(variant.label);
-  }
-
-  return chalk.bold(formatVariantValue(variant.value));
 }
 
 function formatVariantListSummary(variant: FlagVariant): string {
@@ -307,14 +264,19 @@ function formatCondition(
     lhs = `${condition.lhs.kind}.${condition.lhs.attribute}`;
   }
 
-  const cmp = chalk.dim(formatComparison(condition.cmp));
+  const cmp = chalk.dim(
+    formatFlagConditionComparator(condition.cmp, condition.cmpOptions)
+  );
 
   if (condition.rhs === undefined || condition.rhs === null) {
     return { text: `${lhs} ${cmp}` };
   }
 
   if (typeof condition.rhs === 'object') {
-    if (condition.rhs.type === 'list' && Array.isArray(condition.rhs.items)) {
+    if (
+      (condition.rhs.type === 'list' || condition.rhs.type === 'list/inline') &&
+      Array.isArray(condition.rhs.items)
+    ) {
       const items = condition.rhs.items.map(item => {
         const itemValue =
           typeof item === 'object' && item !== null && 'value' in item
@@ -356,23 +318,4 @@ function formatCondition(
   }
 
   return { text: `${lhs} ${cmp} ${rhs}` };
-}
-
-function formatComparison(cmp: string): string {
-  const operators: Record<string, string> = {
-    eq: 'is',
-    oneOf: 'is in',
-    gt: 'is greater than',
-    gte: 'is greater than or equal to',
-    lt: 'is less than',
-    lte: 'is less than or equal to',
-    ex: 'has any value',
-    '!ex': 'has no value',
-    startsWith: 'starts with',
-    endsWith: 'ends with',
-    containsAnyOf: 'contains any of',
-    containsAllOf: 'contains all of',
-    containsNoneOf: 'contains none of',
-  };
-  return operators[cmp] || cmp;
 }

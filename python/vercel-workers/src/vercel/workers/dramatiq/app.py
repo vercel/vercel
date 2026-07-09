@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import math
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 from typing import Any
@@ -11,10 +10,10 @@ from ..asgi import build_asgi_app
 from ..exceptions import VQSError
 from ..wsgi import build_wsgi_app, status_reason
 from .broker import VercelQueuesBroker, _envelope_to_message
+from .worker import _execute_message
 
 try:
-    import dramatiq
-    from dramatiq.message import Message
+    import dramatiq  # noqa: F401
 except Exception as e:
     raise RuntimeError(
         "dramatiq is required to use vercel.workers.dramatiq. "
@@ -46,18 +45,12 @@ class DramatiqWorkerConfig:
     """
     Runtime config used by the callback route.
 
-    This controls how we receive/lock and retry messages.
+    This controls how we receive/lock messages.
     """
 
     visibility_timeout_seconds: int = 30
     visibility_refresh_interval_seconds: float = 10.0
     timeout: float | None = 10.0
-
-    # Retry policy for task exceptions.
-    max_retries: int = 3
-    retry_backoff_base_ms: int = 5000
-    retry_backoff_factor: float = 2.0
-    max_retry_delay_ms: int = 60 * 60 * 1000  # 1 hour
 
     @classmethod
     def from_broker_options(cls, broker: VercelQueuesBroker) -> DramatiqWorkerConfig:
@@ -92,60 +85,36 @@ def get_wsgi_app(broker: VercelQueuesBroker) -> WSGI:
 
         app = get_wsgi_app(broker)
     """
-    return build_wsgi_app(lambda raw_body: handle_queue_callback(broker, raw_body))
+    # WSGI has no lifespan protocol, so emit worker_boot eagerly.
+    broker.emit_before("worker_boot", None)
+    broker.emit_after("worker_boot", None)
+    return build_wsgi_app(
+        lambda raw_body, environ: handle_queue_callback(broker, raw_body, environ)
+    )
 
 
 def get_asgi_app(broker: VercelQueuesBroker) -> ASGI:
     """ASGI variant of get_wsgi_app()."""
-    return build_asgi_app(lambda raw_body: handle_queue_callback(broker, raw_body))
 
+    def _on_startup() -> None:
+        broker.emit_before("worker_boot", None)
+        broker.emit_after("worker_boot", None)
 
-def _retry_delay_ms(cfg: DramatiqWorkerConfig, attempt: int) -> int:
-    """
-    Compute retry delay with exponential backoff.
+    def _on_shutdown() -> None:
+        broker.emit_before("worker_shutdown", None)
+        broker.emit_after("worker_shutdown", None)
 
-    attempt is 1-based.
-    """
-    delay: float
-    base = float(cfg.retry_backoff_base_ms)
-    factor = float(cfg.retry_backoff_factor)
-    if attempt <= 1:
-        delay = base
-    else:
-        delay = base * math.pow(factor, attempt - 1)
-    if not math.isfinite(delay):
-        delay = float(cfg.max_retry_delay_ms)
-    return int(max(0, min(float(cfg.max_retry_delay_ms), delay)))
-
-
-def _execute_message(broker: VercelQueuesBroker, message: Message) -> dict[str, Any]:
-    """
-    Execute a Dramatiq message.
-
-    Returns:
-        {"ack": True} on success
-        {"timeoutSeconds": N} for retry
-    """
-    actor = broker.get_actor(message.actor_name)
-    if actor is None:
-        raise LookupError(f"Dramatiq actor not found: {message.actor_name!r}")
-
-    try:
-        # Execute the actor function directly
-        # Note: In a full implementation, we'd use Dramatiq's middleware pipeline
-        actor(*message.args, **message.kwargs)
-        return {"ack": True}
-    except dramatiq.Retry as exc:
-        # Handle retry with delay
-        delay = getattr(exc, "delay", None)
-        if delay is not None:
-            return {"timeoutSeconds": int(delay / 1000)}
-        return {"timeoutSeconds": 60}  # Default retry delay
+    return build_asgi_app(
+        lambda raw_body, environ: handle_queue_callback(broker, raw_body, environ),
+        on_startup=_on_startup,
+        on_shutdown=_on_shutdown,
+    )
 
 
 def handle_queue_callback(
     broker: VercelQueuesBroker,
     raw_body: bytes,
+    environ: dict[str, Any] | None = None,
 ) -> tuple[int, list[tuple[str, str]], bytes]:
     """
     Core callback handler shared by WSGI/ASGI wrappers.
@@ -156,15 +125,37 @@ def handle_queue_callback(
     cfg = DramatiqWorkerConfig.from_broker_options(broker)
 
     try:
-        queue_name, consumer_group, message_id = queue_callback.parse_cloudevent(raw_body)
+        is_v2beta = queue_callback.is_v2beta_callback(environ or {})
 
-        payload, delivery_count, created_at, receipt_handle = queue_callback.receive_message_by_id(
-            queue_name,
-            consumer_group,
-            message_id,
-            visibility_timeout_seconds=cfg.visibility_timeout_seconds,
-            timeout=cfg.timeout,
-        )
+        if is_v2beta:
+            v2 = queue_callback.parse_v2beta_callback(raw_body, environ or {})
+            # fetch the whole message if callback is metadata-only
+            v2 = queue_callback.resolve_v2beta_message(
+                v2,
+                visibility_timeout_seconds=cfg.visibility_timeout_seconds,
+                timeout=cfg.timeout,
+            )
+            queue_name = v2["queueName"]
+            consumer_group = v2["consumerGroup"]
+            message_id = v2["messageId"]
+            receipt_handle = v2["receiptHandle"]
+            delivery_count = v2["deliveryCount"]
+            created_at = v2["createdAt"]
+            payload: Any = v2["payload"]
+        else:
+            queue_name, consumer_group, message_id = queue_callback.parse_cloudevent(raw_body)
+            (
+                payload,
+                delivery_count,
+                created_at,
+                receipt_handle,
+            ) = queue_callback.receive_message_by_id(
+                queue_name,
+                consumer_group,
+                message_id,
+                visibility_timeout_seconds=cfg.visibility_timeout_seconds,
+                timeout=cfg.timeout,
+            )
 
         # Keep the message locked while executing.
         if receipt_handle:
@@ -182,145 +173,49 @@ def handle_queue_callback(
         # Parse the envelope and convert to Dramatiq message
         dramatiq_message = _envelope_to_message(payload)
 
-        try:
-            # Execute the task
-            outcome = _execute_message(broker, dramatiq_message)
-            timeout_seconds = outcome.get("timeoutSeconds")
+        # Dramatiq's Retries middleware (default for brokers) re-enqueues retries as
+        # separate delayed messages and marks the current one failed via message.fail(),
+        # so in the normal case the original message is acked and then deleted here
+        # and Vercel Queues does not redeliver it.
+        # If there's no Retries middleware, then it will raise exception and re-deliver
+        # because of 500
+        outcome = _execute_message(broker, dramatiq_message)
+        status = outcome["status"]
 
-            if timeout_seconds is not None:
-                if receipt_handle:
-                    _finalize_visibility(
-                        extender,
-                        lambda: queue_callback.change_visibility(
-                            queue_name,
-                            consumer_group,
-                            message_id,
-                            receipt_handle,
-                            int(timeout_seconds),
-                            timeout=cfg.timeout,
-                        ),
-                    )
-                body = json.dumps(
-                    {
-                        "ok": True,
-                        "delayed": True,
-                        "timeoutSeconds": int(timeout_seconds),
-                        "queue": queue_name,
-                        "consumer": consumer_group,
-                        "messageId": message_id,
-                        "deliveryCount": delivery_count,
-                        "createdAt": created_at,
-                    }
-                ).encode("utf-8")
-                return (
-                    200,
-                    [("Content-Type", "application/json"), ("Content-Length", str(len(body)))],
-                    body,
-                )
-
-            # Success: ack (delete) the message
-            if receipt_handle:
-                _finalize_visibility(
-                    extender,
-                    lambda: queue_callback.delete_message(
-                        queue_name,
-                        consumer_group,
-                        message_id,
-                        receipt_handle,
-                        timeout=cfg.timeout,
-                    ),
-                )
-
-            body = json.dumps(
-                {
-                    "ok": True,
-                    "queue": queue_name,
-                    "consumer": consumer_group,
-                    "messageId": message_id,
-                    "deliveryCount": delivery_count,
-                    "createdAt": created_at,
-                }
-            ).encode("utf-8")
-            return (
-                200,
-                [("Content-Type", "application/json"), ("Content-Length", str(len(body)))],
-                body,
+        if receipt_handle:
+            _finalize_visibility(
+                extender,
+                lambda: queue_callback.delete_message(
+                    queue_name,
+                    consumer_group,
+                    message_id,
+                    receipt_handle,
+                    timeout=cfg.timeout,
+                ),
             )
 
-        except KeyboardInterrupt:
-            raise
-        except Exception as exc:
-            # Handle task execution error with retry logic
-            attempt = delivery_count
+        body_payload: dict[str, Any] = {
+            "ok": status != "failed",
+            "status": status,
+            "queue": queue_name,
+            "consumer": consumer_group,
+            "messageId": message_id,
+            "deliveryCount": delivery_count,
+            "createdAt": created_at,
+        }
+        if status == "retried":
+            body_payload["retries"] = outcome.get("retries")
+        elif status == "failed":
+            exc = outcome.get("exception")
+            body_payload["error"] = str(exc)
+            body_payload["errorType"] = type(exc).__name__
 
-            if attempt < int(cfg.max_retries):
-                delay_ms = _retry_delay_ms(cfg, attempt)
-                delay_seconds = int(delay_ms / 1000)
-
-                if receipt_handle:
-                    _finalize_visibility(
-                        extender,
-                        lambda: queue_callback.change_visibility(
-                            queue_name,
-                            consumer_group,
-                            message_id,
-                            receipt_handle,
-                            int(delay_seconds),
-                            timeout=cfg.timeout,
-                        ),
-                    )
-
-                body = json.dumps(
-                    {
-                        "ok": True,
-                        "delayed": True,
-                        "timeoutSeconds": delay_seconds,
-                        "queue": queue_name,
-                        "consumer": consumer_group,
-                        "messageId": message_id,
-                        "deliveryCount": delivery_count,
-                        "createdAt": created_at,
-                        "error": str(exc),
-                        "errorType": type(exc).__name__,
-                    }
-                ).encode("utf-8")
-                return (
-                    200,
-                    [("Content-Type", "application/json"), ("Content-Length", str(len(body)))],
-                    body,
-                )
-
-            # Terminal failure: ack (delete) to prevent infinite retries
-            if receipt_handle:
-                _finalize_visibility(
-                    extender,
-                    lambda: queue_callback.delete_message(
-                        queue_name,
-                        consumer_group,
-                        message_id,
-                        receipt_handle,
-                        timeout=cfg.timeout,
-                    ),
-                )
-
-            body = json.dumps(
-                {
-                    "ok": False,
-                    "failed": True,
-                    "queue": queue_name,
-                    "consumer": consumer_group,
-                    "messageId": message_id,
-                    "deliveryCount": delivery_count,
-                    "createdAt": created_at,
-                    "error": str(exc),
-                    "errorType": type(exc).__name__,
-                }
-            ).encode("utf-8")
-            return (
-                200,
-                [("Content-Type", "application/json"), ("Content-Length", str(len(body)))],
-                body,
-            )
+        body = json.dumps(body_payload).encode("utf-8")
+        return (
+            200,
+            [("Content-Type", "application/json"), ("Content-Length", str(len(body)))],
+            body,
+        )
 
     except ValueError as exc:
         err = json.dumps(

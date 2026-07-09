@@ -1,15 +1,21 @@
-import bytes from 'bytes';
 import output from '../../output-manager';
-import type { BlobRWToken } from '../../util/blob/token';
+import { getStoreIdFromAuth, type BlobRWToken } from '../../util/blob/token';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { getLinkedProject } from '../../util/projects/link';
-import { getStoreSubcommand } from './command';
-import { format } from 'date-fns';
-import chalk from 'chalk';
+import getScope from '../../util/get-scope';
+import { getStoreInfoSubcommand } from './command';
 import { BlobGetStoreTelemetryClient } from '../../util/telemetry/commands/blob/store-get';
+import {
+  formatStoreDetails,
+  type StoreDetails,
+} from '../../util/blob/format-store';
+import {
+  outputAgentError,
+  buildCommandWithGlobalFlags,
+} from '../../util/agent-output';
 
 export default async function getStore(
   client: Client,
@@ -22,7 +28,9 @@ export default async function getStore(
     },
   });
 
-  const flagsSpecification = getFlagsSpecification(getStoreSubcommand.options);
+  const flagsSpecification = getFlagsSpecification(
+    getStoreInfoSubcommand.options
+  );
 
   let parsedArgs: ReturnType<typeof parseArguments<typeof flagsSpecification>>;
   try {
@@ -36,23 +44,42 @@ export default async function getStore(
     args: [storeIdArg],
   } = parsedArgs;
 
-  let storeId = storeIdArg;
-  if (!storeId && rwToken.success) {
-    const [, , , id] = rwToken.token.split('_');
+  const interactive = client.stdin.isTTY && !client.nonInteractive;
 
-    storeId = `store_${id}`;
+  let storeId: string | undefined = storeIdArg;
+  if (!storeId) {
+    storeId = getStoreIdFromAuth(rwToken) ?? undefined;
   }
 
   if (!storeId) {
-    storeId = await client.input.text({
-      message: 'Enter the ID of the blob store you want to remove',
-      validate: value => {
-        if (value.length !== 22) {
-          return 'ID must be 22 characters long';
-        }
-        return true;
-      },
-    });
+    if (interactive) {
+      storeId = await client.input.text({
+        message: 'Enter the ID of the blob store you want to get info about',
+        validate: value => {
+          if (value.length !== 22) {
+            return 'ID must be 22 characters long';
+          }
+          return true;
+        },
+      });
+    } else {
+      outputAgentError(client, {
+        status: 'error',
+        reason: 'missing_arguments',
+        message: 'Missing required argument: storeId.',
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'blob get-store <storeId>'
+            ),
+            when: 'get the blob store details',
+          },
+        ],
+      });
+      output.error('Missing required argument: storeId');
+      return 1;
+    }
   }
 
   telemetryClient.trackCliArgumentStoreId(storeId);
@@ -64,41 +91,22 @@ export default async function getStore(
 
     output.spinner('Getting blob store');
 
-    const store = await client.fetch<{
-      store: {
-        id: string;
-        name: string;
-        createdAt: number;
-        updatedAt: number;
-        billingState: string;
-        size: number;
-        region?: string;
-        access?: string;
-      };
-    }>(`/v1/storage/stores/${storeId}`, {
-      method: 'GET',
-      accountId: link.status === 'linked' ? link.org.id : undefined,
-    });
+    const accountId = link.status === 'linked' ? link.org.id : undefined;
 
-    const dateTimeFormat = 'MM/DD/YYYY HH:mm:ss.SS';
-
-    const regionInfo = store.store.region
-      ? `\nRegion: ${store.store.region}`
-      : '';
-
-    const accessInfo = `\nAccess: ${store.store.access === 'private' ? 'Private' : 'Public'}`;
-
-    output.print(
-      `Blob Store: ${chalk.bold(store.store.name)} (${chalk.dim(store.store.id)})
-Billing State: ${
-        store.store.billingState === 'active'
-          ? chalk.green('Active')
-          : chalk.red('Inactive')
+    const store = await client.fetch<{ store: StoreDetails }>(
+      `/v1/storage/stores/${storeId}`,
+      {
+        method: 'GET',
+        accountId,
       }
-Size: ${bytes(store.store.size)}${regionInfo}${accessInfo}
-Created At: ${format(new Date(store.store.createdAt), dateTimeFormat)}
-Updated At: ${format(new Date(store.store.updatedAt), dateTimeFormat)}\n`
     );
+
+    let teamSlug = link.status === 'linked' ? link.org.slug : undefined;
+    if (!teamSlug) {
+      const { team } = await getScope(client);
+      teamSlug = team?.slug;
+    }
+    output.print(formatStoreDetails(store.store, teamSlug));
   } catch (err) {
     printError(err);
     return 1;

@@ -25,6 +25,28 @@ Vercel’s AI Cloud is a unified platform for building modern applications, givi
 
 Get started by [importing a project](https://vercel.com/new), [choosing a template](https://vercel.com/templates), or using the [Vercel CLI](https://vercel.com/docs/cli). Then, `git push` to deploy.
 
+## Native CLI binaries
+
+The standard npm installation remains unchanged:
+
+```bash
+npm i -g vercel
+```
+
+Native CLI binaries are distributed separately and do not affect the `vercel` npm package. To opt into the native binary and replace existing global `vercel` and `vc` commands, install the native package explicitly:
+
+```bash
+npm i -g @vercel/vc-native --force
+```
+
+The `--force` flag allows npm to replace existing global `vercel` and `vc` bin links. Users who do not install `@vercel/vc-native` continue using the regular Node.js-based CLI from `npm i -g vercel`.
+
+Platform-specific packages are also available for direct installation when a specific binary is needed:
+
+```bash
+npm i -g @vercel/vc-native-darwin-x64 --force
+```
+
 ## Documentation
 
 For details on how to use Vercel, check out our [documentation](https://vercel.com/docs).

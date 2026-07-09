@@ -1,19 +1,23 @@
 import { posix as posixPath } from 'path';
 import toml from 'smol-toml';
-import type { Framework } from '@vercel/frameworks';
-import { frameworkList } from '@vercel/frameworks';
+import type { DetectEntrypointFn } from '@vercel/build-utils';
 import { detectFrameworks } from '../detect-framework';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
-  ExperimentalServiceConfig,
-  ExperimentalServices,
+  InferredServiceConfig,
+  InferredServicesConfig,
   ServiceDetectionError,
   ServiceDetectionWarning,
 } from './types';
-import { isFrontendFramework, inferRuntimeFromFramework } from './utils';
+import {
+  assignMountPaths,
+  DETECTION_FRAMEWORKS,
+  inferRuntimeFromFramework,
+  isFrontendFramework,
+} from './utils';
 
 export interface RailwayDetectResult {
-  services: ExperimentalServices | null;
+  services: InferredServicesConfig | null;
   errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
 }
@@ -67,11 +71,6 @@ const SKIP_DIRS = new Set([
   'CVS',
 ]);
 
-const DETECTION_FRAMEWORKS = frameworkList.filter(
-  (framework: Framework) =>
-    !framework.experimental || framework.runtimeFramework
-);
-
 /**
  * Detect Railway service configurations in the project.
  *
@@ -84,15 +83,16 @@ const DETECTION_FRAMEWORKS = frameworkList.filter(
  */
 export async function detectRailwayServices(options: {
   fs: DetectorFilesystem;
+  detectEntrypoint?: DetectEntrypointFn;
 }): Promise<RailwayDetectResult> {
-  const { fs } = options;
+  const { fs, detectEntrypoint } = options;
 
   const { configs, warnings } = await findRailwayConfigs(fs);
   if (configs.length === 0) {
     return { services: null, errors: [], warnings };
   }
 
-  const services: ExperimentalServices = {};
+  const services: InferredServicesConfig = {};
   const serviceDirs = new Map<string, string>();
   const errors: ServiceDetectionError[] = [];
 
@@ -106,8 +106,10 @@ export async function detectRailwayServices(options: {
       useExperimentalFrameworks: true,
     });
 
-    // we don't have write access to the FS, so can't just define an entrypoint,
-    // the best we can do is to suggest how to define a cron service properly
+    // we don't have write access to the FS, so can't just define an entrypoint.
+    // The best we can do is suggest a canonical schedule-triggered job service.
+    // Later there will be an option to execute arbitrary bash commands,
+    // so we would be able to automatically handle crons as well.
     if (cf.config.deploy?.cronSchedule) {
       const schedule = cf.config.deploy.cronSchedule;
       const runtime =
@@ -116,7 +118,8 @@ export async function detectRailwayServices(options: {
           : undefined;
 
       const hint: Record<string, string> = {
-        type: 'cron',
+        type: 'job',
+        trigger: 'schedule',
         schedule,
         entrypoint: '<path-to-handler>',
       };
@@ -128,7 +131,7 @@ export async function detectRailwayServices(options: {
         code: 'RAILWAY_CRON_HINT',
         message:
           `Found Railway cron in ${dirLabel}/ (schedule: "${schedule}"). ` +
-          `Vercel crons work with a file entrypoint. You can add the following to define this cron service:\n` +
+          `Vercel crons work with a file entrypoint. You can add the following to define this scheduled job service:\n` +
           `"${deriveServiceName(cf.dirPath)}": ${JSON.stringify(hint, null, 2)}`,
       });
       continue;
@@ -152,7 +155,7 @@ export async function detectRailwayServices(options: {
     if (frameworks.length === 0) {
       warnings.push({
         code: 'SERVICE_SKIPPED',
-        message: `Skipped service in ${dirLabel}/: no framework detected. Configure it manually in experimentalServices.`,
+        message: `Skipped service in ${dirLabel}/: no framework detected. Configure it manually in services.`,
       });
       continue;
     }
@@ -161,26 +164,38 @@ export async function detectRailwayServices(options: {
       const names = frameworks.map(f => f.name).join(', ');
       errors.push({
         code: 'MULTIPLE_FRAMEWORKS_SERVICE',
-        message: `Multiple frameworks detected in ${dirLabel}/: ${names}. Use explicit experimentalServices config.`,
+        message: `Multiple frameworks detected in ${dirLabel}/: ${names}. Use explicit services config.`,
         serviceName,
       });
       continue;
     }
 
     const framework = frameworks[0];
+    const slug = framework.slug ?? undefined;
 
-    let serviceConfig: ExperimentalServiceConfig = {};
-    serviceConfig.framework = framework.slug ?? undefined;
-    if (cf.dirPath !== '.') {
-      serviceConfig.entrypoint = cf.dirPath;
+    const serviceConfig: InferredServiceConfig = {
+      root: cf.dirPath,
+      framework: slug,
+    };
+
+    if (cf.dirPath !== '.' && detectEntrypoint && !isFrontendFramework(slug)) {
+      const detected = await detectEntrypoint({
+        workPath: cf.dirPath,
+        framework: slug,
+      });
+      if (detected) {
+        serviceConfig.entrypoint = detected.entrypoint;
+      }
     }
 
-    const buildCommand = combineBuildCommand(
-      cf.config.build?.buildCommand,
-      cf.config.deploy?.preDeployCommand
-    );
-    if (buildCommand) {
-      serviceConfig.buildCommand = buildCommand;
+    if (cf.config.build?.buildCommand) {
+      serviceConfig.buildCommand = cf.config.build.buildCommand;
+    }
+    const railwayPreDeploy = cf.config.deploy?.preDeployCommand;
+    if (railwayPreDeploy) {
+      serviceConfig.preDeployCommand = Array.isArray(railwayPreDeploy)
+        ? railwayPreDeploy.join(' && ')
+        : railwayPreDeploy;
     }
 
     services[serviceName] = serviceConfig;
@@ -195,7 +210,7 @@ export async function detectRailwayServices(options: {
     return { services: null, errors: [], warnings };
   }
 
-  warnings.push(...assignRoutePrefixes(services));
+  warnings.push(...assignMountPaths(services));
 
   return { services, errors: [], warnings };
 }
@@ -310,65 +325,4 @@ function deriveServiceName(dirPath: string): string {
   }
   const segments = dirPath.split('/');
   return segments[segments.length - 1];
-}
-
-function combineBuildCommand(
-  buildCommand: string | undefined,
-  preDeployCommand: string | string[] | undefined
-): string | undefined {
-  const preDeploy = Array.isArray(preDeployCommand)
-    ? preDeployCommand.join(' && ')
-    : preDeployCommand;
-
-  if (preDeploy && buildCommand) {
-    return `${buildCommand} && ${preDeploy}`;
-  } else if (preDeploy) {
-    return preDeploy;
-  } else {
-    return buildCommand;
-  }
-}
-
-/**
- * Assign route prefixes.
- *
- * A frontend service gets `/`, the rest get `/_/{name}`.
- * A single non-frontend service would also get `/`.
- * If no frontend service found, then multiple services get `/_/{name}`.
- *
- * Priority for `/`: single service or frontend > name "frontend" or "web" > alphabetical.
- */
-function assignRoutePrefixes(
-  services: ExperimentalServices
-): ServiceDetectionWarning[] {
-  const warnings: ServiceDetectionWarning[] = [];
-  const names = Object.keys(services);
-
-  if (names.length === 1) {
-    services[names[0]].routePrefix = '/';
-    return warnings;
-  }
-
-  const frontendNames = names.filter(name =>
-    isFrontendFramework(services[name].framework)
-  );
-
-  let rootName: string | null = null;
-  if (frontendNames.length === 1) {
-    rootName = frontendNames[0];
-  } else if (frontendNames.length > 1) {
-    rootName =
-      frontendNames.find(n => n === 'frontend' || n === 'web') ??
-      frontendNames.sort()[0];
-    warnings.push({
-      code: 'MULTIPLE_FRONTENDS',
-      message: `Multiple frontend services detected (${frontendNames.join(', ')}). "${rootName}" was assigned routePrefix "/". Adjust manually if a different service should be the root.`,
-    });
-  }
-
-  for (const name of names) {
-    services[name].routePrefix = name === rootName ? '/' : `/_/${name}`;
-  }
-
-  return warnings;
 }

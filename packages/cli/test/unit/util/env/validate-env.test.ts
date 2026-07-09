@@ -4,6 +4,7 @@ import {
   getEnvKeyWarnings,
   formatWarnings,
   hasOnlyWhitespaceWarnings,
+  normalizeStdinEnvValue,
   trimValue,
   getPublicPrefix,
   removePublicPrefix,
@@ -660,6 +661,22 @@ describe('validate-env', () => {
 
       expect(opts.promptForValue).toHaveBeenCalledTimes(2);
       expect(result.finalValue).toBe('good');
+    });
+  });
+
+  describe('normalizeStdinEnvValue', () => {
+    it('strips a trailing newline from a single-line stdin value', () => {
+      expect(normalizeStdinEnvValue('my-api-key\n')).toEqual({
+        value: 'my-api-key',
+        strippedTrailingNewline: true,
+      });
+    });
+
+    it('preserves multiline stdin values', () => {
+      expect(normalizeStdinEnvValue('line1\nline2\n')).toEqual({
+        value: 'line1\nline2\n',
+        strippedTrailingNewline: false,
+      });
     });
   });
 });

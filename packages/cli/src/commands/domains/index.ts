@@ -4,19 +4,28 @@ import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import add from './add';
 import buy from './buy';
+import check from './check';
 import transferIn from './transfer-in';
 import inspect from './inspect';
 import ls from './ls';
 import rm from './rm';
 import move from './move';
+import price from './price';
+import search from './search';
+import verify from './verify';
 import {
   addSubcommand,
   buySubcommand,
+  checkSubcommand,
   domainsCommand,
   inspectSubcommand,
+  listSubcommand,
   moveSubcommand,
+  priceSubcommand,
   removeSubcommand,
+  searchSubcommand,
   transferInSubcommand,
+  verifySubcommand,
 } from './command';
 import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -26,11 +35,15 @@ import output from '../../output-manager';
 const COMMAND_CONFIG = {
   add: ['add'],
   buy: ['buy'],
+  check: ['check'],
   inspect: ['inspect'],
   ls: ['ls', 'list'],
   move: ['move'],
+  price: ['price'],
+  search: ['search'],
   rm: ['rm', 'remove'],
   transferIn: ['transfer-in'],
+  verify: ['verify'],
 };
 
 export default async function main(client: Client) {
@@ -100,6 +113,27 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandBuy(subcommandOriginal);
       return buy(client, args);
+    case 'check':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(checkSubcommand);
+      }
+      telemetry.trackCliSubcommandCheck(subcommandOriginal);
+      return check(client, args);
+    case 'price':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(priceSubcommand);
+      }
+      telemetry.trackCliSubcommandPrice(subcommandOriginal);
+      return price(client, args);
+    case 'search':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(searchSubcommand);
+      }
+      telemetry.trackCliSubcommandSearch(subcommandOriginal);
+      return search(client, args);
     case 'rm':
       if (needHelp) {
         telemetry.trackCliFlagHelp('domains', subcommandOriginal);
@@ -114,10 +148,17 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandTransferIn(subcommandOriginal);
       return transferIn(client, args);
+    case 'verify':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(verifySubcommand);
+      }
+      telemetry.trackCliSubcommandVerify(subcommandOriginal);
+      return verify(client, args);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('domains', subcommandOriginal);
-        return printHelp(transferInSubcommand);
+        return printHelp(listSubcommand);
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return ls(client, args);

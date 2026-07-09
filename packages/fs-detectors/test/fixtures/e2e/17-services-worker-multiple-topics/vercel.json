@@ -12,8 +12,7 @@
     "worker": {
       "type": "worker",
       "entrypoint": "worker/run.py",
-      "topics": ["orders", "events"],
-      "consumer": "default"
+      "topics": ["orders", "events"]
     }
   }
 }

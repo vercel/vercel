@@ -158,13 +158,79 @@ export const tokensSubcommand = {
       name: 'remove',
       shorthand: null,
       type: [String],
-      argument: 'TOKEN',
+      argument: 'ID_OR_TOKEN',
       deprecated: false,
       description:
-        'Revoke one or more token strings (repeatable). Requires `--yes` in non-interactive mode',
+        'Revoke one or more tokens by id or plaintext token (repeatable). Requires `--yes` in non-interactive mode',
     },
   ],
   examples: [],
+} as const;
+
+export const backupsSubcommand = {
+  name: 'backups',
+  aliases: [],
+  description: 'List, inspect, or restore Edge Config backups',
+  arguments: [
+    {
+      name: 'id-or-slug',
+      required: true,
+    },
+  ],
+  options: [
+    formatOption,
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when restoring',
+    },
+    {
+      name: 'backup-version',
+      shorthand: null,
+      type: String,
+      argument: 'VERSION_ID',
+      deprecated: false,
+      description: 'Fetch a single backup by version id',
+    },
+    {
+      name: 'restore',
+      shorthand: null,
+      type: String,
+      argument: 'VERSION_ID',
+      deprecated: false,
+      description:
+        'Restore items from the backup version id. Requires confirmation because it updates live Edge Config items',
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      argument: 'NUMBER',
+      deprecated: false,
+      description: 'Maximum number of backups to list (0-50)',
+    },
+    {
+      name: 'next',
+      shorthand: null,
+      type: String,
+      argument: 'CURSOR',
+      deprecated: false,
+      description: 'Pagination cursor from a previous backup list response',
+    },
+  ],
+  examples: [
+    {
+      name: 'List backups for an Edge Config',
+      value: `${packageName} edge-config backups my-store`,
+    },
+    {
+      name: 'Inspect a backup as JSON',
+      value: `${packageName} edge-config backups my-store --backup-version <version-id> --format json`,
+    },
+    {
+      name: 'Restore a backup',
+      value: `${packageName} edge-config backups my-store --restore <version-id> --yes`,
+    },
+  ],
 } as const;
 
 export const edgeConfigCommand = {
@@ -180,6 +246,7 @@ export const edgeConfigCommand = {
     removeSubcommand,
     itemsSubcommand,
     tokensSubcommand,
+    backupsSubcommand,
   ],
   options: [],
   examples: [

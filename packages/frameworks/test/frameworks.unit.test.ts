@@ -2,13 +2,12 @@ import Ajv from 'ajv';
 import assert from 'assert';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { isString } from 'util';
 import nodeFetch from 'node-fetch';
-import { URL, URLSearchParams } from 'url';
+import { URL } from 'url';
 import frameworkList from '../src/frameworks';
 
 // bump timeout for Windows as network can be slower
-jest.setTimeout(15 * 1000);
+vi.setConfig({ testTimeout: 15 * 1000, hookTimeout: 15 * 1000 });
 
 const logoPrefix = 'https://api-frameworks.vercel.sh/framework-logos/';
 
@@ -202,18 +201,32 @@ const Schema = {
       supersedes: { type: 'array', items: { type: 'string' } },
       experimental: { type: 'boolean' },
       runtimeFramework: { type: 'boolean' },
+      detectionConfidence: { type: 'string', enum: ['weak', 'strong'] },
+      platform: {
+        type: 'object',
+        required: ['name', 'logo'],
+        additionalProperties: false,
+        properties: {
+          name: { type: 'string' },
+          logo: { type: 'string' },
+        },
+      },
     },
   },
 };
 
-async function getDeployment(host: string) {
-  const query = new URLSearchParams();
-  query.set('url', host);
-  const res = await nodeFetch(
-    `https://api.vercel.com/v11/deployments/get?${query}`
+async function isDemoPublic(demoUrl: string) {
+  const logsUrl = new URL('/_logs', demoUrl);
+  const res = await nodeFetch(logsUrl.toString(), {
+    redirect: 'manual',
+  });
+  const location = res.headers.get('location');
+
+  return (
+    res.status >= 300 &&
+    res.status < 400 &&
+    location === `https://vercel.com/deployments/${logsUrl.host}/logs`
   );
-  const body = await res.json();
-  return body;
 }
 
 describe('frameworks', () => {
@@ -221,13 +234,15 @@ describe('frameworks', () => {
     'dojo',
     'saber',
     'gridsome',
-    'sanity-v3',
+    'sanity',
     'scully',
     'solidstart',
-    'sanity', // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
+    'sanity-v2', // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
     'vuepress', // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
     'hydrogen',
     'storybook',
+    'eve', // examples/fixtures live in github.com/vercel/ash
+    'tanstack-start-lovable', // platform-import variant of tanstack-start
   ];
 
   it('ensure there is an example for every framework', async () => {
@@ -238,7 +253,7 @@ describe('frameworks', () => {
       .filter(f => !f.experimental) // Skip experimental frameworks
       .filter(f => !f.runtimeFramework) // Skip runtime frameworks (e.g. Python, Go)
       .map(f => f.slug)
-      .filter(isString)
+      .filter((slug): slug is string => typeof slug === 'string')
       .filter(slug => !skipExamples.includes(slug))
       .filter(f => existsSync(getExample(f)) === false);
 
@@ -315,10 +330,8 @@ describe('frameworks', () => {
       frameworkList
         .filter(f => typeof f.demo === 'string')
         .map(async f => {
-          const url = new URL(f.demo!);
-          const deployment = await getDeployment(url.hostname);
           assert.equal(
-            deployment.public,
+            await isDemoPublic(f.demo!),
             true,
             `Demo URL ${f.demo} is not "public". Disable "build logs and source protection" in project settings.`
           );

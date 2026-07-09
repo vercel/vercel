@@ -14,6 +14,12 @@ export interface ScopeContext {
   contextName: string;
   user: User;
   team: Team | null;
+  /**
+   * The team that's globally selected (via `vc switch` or as the northstar
+   * default), before any local project-link overrides are applied. This will
+   * differ from `team` when a linked project forces a different scope.
+   */
+  globalTeam: Team | null;
   linkedRepo: {
     repoConfig: RepoProjectsConfig;
     rootPath: string;
@@ -61,6 +67,17 @@ export default async function getScope(
     user.version === 'northstar' ? user.defaultTeamId : undefined;
   const currentTeamOrDefaultTeamId = client.config.currentTeam || defaultTeamId;
 
+  // A Northstar user has no usable personal scope, so their default team is the
+  // effective scope. The default is only persisted to `currentTeam` at login
+  // (see `updateCurrentTeamAfterLogin`), which means on any invocation where
+  // `currentTeam` isn't set we would otherwise resolve the default team for
+  // *display* but send requests with no `teamId` — silently scoping API calls
+  // to the (resource-less) personal account while the UI claims the team. Apply
+  // the default here so the effective request scope matches what we report.
+  if (!client.config.currentTeam && defaultTeamId) {
+    client.config.currentTeam = defaultTeamId;
+  }
+
   if (currentTeamOrDefaultTeamId && opts.getTeam !== false) {
     team = await getTeamById(client, currentTeamOrDefaultTeamId);
 
@@ -77,6 +94,7 @@ export default async function getScope(
 
   const explicitScopeProvided = detectExplicitScope(client);
   const globalTeamId = client.config.currentTeam;
+  const globalTeam = team;
 
   const cwd = client.cwd;
   let projectLink: { orgId: string; projectId: string } | null = null;
@@ -179,6 +197,7 @@ export default async function getScope(
     contextName: resolvedContextName,
     user,
     team: resolvedTeam,
+    globalTeam,
     linkedRepo: linkedRepoResult,
     isCrossTeamRepo,
     scopeMismatch,
@@ -204,7 +223,7 @@ export function applyScopeFromLink(client: Client, link: { org: Org }): void {
     : undefined;
 }
 
-function detectExplicitScope(client: Client): boolean {
+export function detectExplicitScope(client: Client): boolean {
   const argv = client.argv;
   for (const arg of argv) {
     if (
@@ -212,6 +231,7 @@ function detectExplicitScope(client: Client): boolean {
       arg === '--team' ||
       arg.startsWith('--scope=') ||
       arg.startsWith('--team=') ||
+      arg === '-S' ||
       arg === '-T'
     ) {
       return true;

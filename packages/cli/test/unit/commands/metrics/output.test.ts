@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import {
-  getRollupColumnName,
-  formatQueryJson,
   formatErrorJson,
+  formatQueryJson,
+  getRollupColumnName,
   handleApiError,
 } from '../../../../src/commands/metrics/output';
 import type { QueryMetadata } from '../../../../src/commands/metrics/types';
@@ -11,22 +11,31 @@ import type { QueryMetadata } from '../../../../src/commands/metrics/types';
 describe('output', () => {
   describe('getRollupColumnName', () => {
     it('should return metric-based column name', () => {
-      expect(getRollupColumnName('vercel.edge_requests.count', 'sum')).toBe(
-        'vercel_edge_requests_count_sum'
+      expect(getRollupColumnName('vercel.request.count', 'sum')).toBe(
+        'vercel_request_count_sum'
       );
     });
 
     it('should return custom column name', () => {
       expect(
-        getRollupColumnName('vercel.edge_requests.request_duration_ms', 'p95')
-      ).toBe('vercel_edge_requests_request_duration_ms_p95');
+        getRollupColumnName('vercel.request.route_cpu_duration_ms', 'p95')
+      ).toBe('vercel_request_route_cpu_duration_ms_p95');
+    });
+
+    it('should flatten field-qualified aggregations', () => {
+      expect(
+        getRollupColumnName(
+          'vercel.analytics_pageview.count',
+          'unique/visitor_id'
+        )
+      ).toBe('vercel_analytics_pageview_count_unique_visitor_id');
     });
   });
 
   describe('formatQueryJson', () => {
     it('should format full JSON response', () => {
       const query: QueryMetadata = {
-        metric: 'vercel.edge_requests.count',
+        metric: 'vercel.request.count',
         aggregation: 'sum',
         groupBy: [],
         filter: undefined,
@@ -50,7 +59,7 @@ describe('output', () => {
 
     it('should handle missing optional fields', () => {
       const query: QueryMetadata = {
-        metric: 'vercel.edge_requests.count',
+        metric: 'vercel.request.count',
         aggregation: 'sum',
         groupBy: [],
         filter: undefined,
@@ -66,6 +75,137 @@ describe('output', () => {
       expect(result.data).toEqual([]);
       expect(result.summary).toEqual([]);
       expect(result.statistics).toEqual({});
+    });
+
+    it('should include returned ordering metadata', () => {
+      const query: QueryMetadata = {
+        metric: 'vercel.request.count',
+        aggregation: 'sum',
+        groupBy: [],
+        filter: undefined,
+        startTime: '2025-01-15T10:00:00Z',
+        endTime: '2025-01-15T11:00:00Z',
+        granularity: { minutes: 1 } as const,
+      };
+
+      const result = JSON.parse(
+        formatQueryJson(query, {
+          summary: [],
+          statistics: {},
+          orderBy: 'defaultOrderingRollup',
+          orderDirection: 'desc',
+        })
+      );
+
+      expect(result.orderBy).toBe('count');
+      expect(result.orderDirection).toBe('desc');
+      expect(result.query.orderBy).toBe('count');
+      expect(result.query.orderDirection).toBe('desc');
+    });
+
+    it('should include returned count ordering metadata for Speed Insights', () => {
+      const query: QueryMetadata = {
+        metric: 'vercel.speed_insights.lcp_ms',
+        aggregation: 'p75',
+        groupBy: ['route'],
+        filter: undefined,
+        startTime: '2025-01-15T10:00:00Z',
+        endTime: '2025-01-15T11:00:00Z',
+        granularity: { minutes: 1 } as const,
+      };
+
+      const result = JSON.parse(
+        formatQueryJson(query, {
+          summary: [],
+          statistics: {},
+          orderBy: 'vercel_speed_insights_lcp_count_sum',
+          orderDirection: 'desc',
+        })
+      );
+
+      expect(result.orderBy).toBe('count');
+      expect(result.orderDirection).toBe('desc');
+      expect(result.query.orderBy).toBe('count');
+      expect(result.query.orderDirection).toBe('desc');
+    });
+
+    it('should display default response ordering as count', () => {
+      const query: QueryMetadata = {
+        metric: 'vercel.speed_insights.lcp_ms',
+        aggregation: 'p75',
+        groupBy: ['route'],
+        filter: undefined,
+        startTime: '2025-01-15T10:00:00Z',
+        endTime: '2025-01-15T11:00:00Z',
+        granularity: { minutes: 1 } as const,
+      };
+
+      const result = JSON.parse(
+        formatQueryJson(query, {
+          summary: [],
+          statistics: {},
+          orderBy: 'vercel_speed_insights_lcp_ms_p75',
+          orderDirection: 'desc',
+        })
+      );
+
+      expect(result.orderBy).toBe('count');
+      expect(result.orderDirection).toBe('desc');
+      expect(result.query.orderBy).toBe('count');
+      expect(result.query.orderDirection).toBe('desc');
+    });
+
+    it('should display implicit default ordering as event count for non-count metrics', () => {
+      const query: QueryMetadata = {
+        metric: 'vercel.request.route_cpu_duration_ms',
+        aggregation: 'p95',
+        groupBy: ['route'],
+        filter: undefined,
+        startTime: '2025-01-15T10:00:00Z',
+        endTime: '2025-01-15T11:00:00Z',
+        granularity: { minutes: 1 } as const,
+      };
+
+      const result = JSON.parse(
+        formatQueryJson(query, {
+          summary: [],
+          statistics: {},
+          orderBy: 'defaultOrderingRollup',
+          orderDirection: 'desc',
+        })
+      );
+
+      expect(result.orderBy).toBe('count');
+      expect(result.orderDirection).toBe('desc');
+      expect(result.query.orderBy).toBe('count');
+      expect(result.query.orderDirection).toBe('desc');
+    });
+
+    it('should keep explicit requested ordering metadata compact', () => {
+      const query: QueryMetadata = {
+        metric: 'vercel.request.count',
+        aggregation: 'sum',
+        groupBy: [],
+        filter: undefined,
+        startTime: '2025-01-15T10:00:00Z',
+        endTime: '2025-01-15T11:00:00Z',
+        granularity: { minutes: 1 } as const,
+        orderBy: 'value',
+      };
+
+      const result = JSON.parse(
+        formatQueryJson(query, {
+          summary: [],
+          statistics: {},
+          orderBy: 'vercel_request_count_sum',
+          orderDirection: 'desc',
+        })
+      );
+
+      expect(result.orderBy).toBe('value');
+      expect(result.orderDirection).toBe('desc');
+      expect(result.query.orderBy).toBe('value');
+      expect(result.query.orderDirection).toBe('desc');
     });
   });
 
@@ -83,14 +223,14 @@ describe('output', () => {
     it('should include allowedValues when provided', () => {
       const result = JSON.parse(
         formatErrorJson('UNKNOWN_METRIC', 'Unknown metric', [
-          'vercel.edge_requests.count',
-          'vercel.function_execution.count',
+          'vercel.request.count',
+          'vercel.function_invocation.count',
         ])
       );
 
       expect(result.error.allowedValues).toEqual([
-        'vercel.edge_requests.count',
-        'vercel.function_execution.count',
+        'vercel.request.count',
+        'vercel.function_invocation.count',
       ]);
     });
   });
@@ -103,8 +243,8 @@ describe('output', () => {
         {
           status: 400,
           code: 'UNKNOWN_METRIC',
-          serverMessage: 'Unknown metric "vercel.edge_requests".',
-          allowedValues: ['vercel.edge_requests.count'],
+          serverMessage: 'Unknown metric "vercel.request".',
+          allowedValues: ['vercel.request.count'],
         },
         true,
         client
@@ -113,12 +253,8 @@ describe('output', () => {
       expect(exitCode).toBe(1);
       const result = JSON.parse(client.stdout.getFullOutput());
       expect(result.error.code).toBe('UNKNOWN_METRIC');
-      expect(result.error.message).toBe(
-        'Unknown metric "vercel.edge_requests".'
-      );
-      expect(result.error.allowedValues).toEqual([
-        'vercel.edge_requests.count',
-      ]);
+      expect(result.error.message).toBe('Unknown metric "vercel.request".');
+      expect(result.error.allowedValues).toEqual(['vercel.request.count']);
     });
 
     it('should honor override messages while preserving allowedValues', () => {
