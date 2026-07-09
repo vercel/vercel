@@ -62,7 +62,7 @@ const issueTypeOption = {
   argument:
     'action_failed|action_rejected|step_failed|turn_failed|session_failed',
   deprecated: false,
-  description: 'Filter Agent Runs by issue fingerprint type',
+  description: 'Filter Agent Runs by platform-derived issue type',
 } as const;
 
 const issueSourceOption = {
