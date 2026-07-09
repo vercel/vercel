@@ -316,6 +316,7 @@ describe('startInteractiveShell', () => {
   });
 
   it('prepends sudo to the executed command but not the printed command', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error');
     const sandbox = fakeSandbox();
     const donePromise = startInteractiveShell({
       sandbox: sandbox as never,
@@ -333,6 +334,45 @@ describe('startInteractiveShell', () => {
     const startFrame = JSON.parse(ws.sent[0] as string);
     expect(startFrame.command).toBe('sudo');
     expect(startFrame.args).toEqual(['whoami']);
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('whoami')
+    );
+    expect(consoleErrorSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining('sudo')
+    );
+
+    ws.emit('close');
+    await donePromise;
+  });
+
+  it('sends a resize control frame over the ws on SIGWINCH', async () => {
+    const sandbox = fakeSandbox();
+    const donePromise = startInteractiveShell({
+      sandbox: sandbox as never,
+      execution: ['bash'],
+      envVars: {},
+      sudo: false,
+      skipExtendingTimeout: true,
+    });
+
+    await vi.waitFor(() => expect(wsInstances).toHaveLength(1));
+    const ws = wsInstances[0];
+    openSocket(ws);
+    await vi.waitFor(() => expect(ws.sent.length).toBeGreaterThan(0));
+
+    fakeStdout.columns = 120;
+    fakeStdout.rows = 40;
+    process.emit('SIGWINCH');
+
+    await vi.waitFor(() =>
+      expect(
+        ws.sent.some(
+          frame =>
+            frame === JSON.stringify({ type: 'resize', cols: 120, rows: 40 })
+        )
+      ).toBe(true)
+    );
 
     ws.emit('close');
     await donePromise;
