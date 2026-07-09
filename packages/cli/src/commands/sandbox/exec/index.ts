@@ -7,7 +7,10 @@ import { help } from '../../help';
 import output from '../../../output-manager';
 import { sandboxCommand } from '../command';
 import { execSubcommand } from './command';
-import { resolveSandboxTarget } from '../../../util/sandbox/target';
+import {
+  resolveSandboxTarget,
+  SandboxTargetError,
+} from '../../../util/sandbox/target';
 import { sandboxClient } from '../../../util/sandbox/client';
 import { execInSandbox } from '../../../util/sandbox/exec-core';
 import {
@@ -87,6 +90,6 @@ export default async function exec(
     return 0;
   } catch (err) {
     printError(err);
-    return 1;
+    return err instanceof SandboxTargetError ? err.exitCode : 1;
   }
 }

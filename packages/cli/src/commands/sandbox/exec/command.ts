@@ -45,7 +45,7 @@ export const execSubcommand = {
     },
     {
       name: 'tty',
-      shorthand: 't',
+      shorthand: null,
       type: Boolean,
       description:
         'Allocate a tty for an interactive command. This is a no-op.',

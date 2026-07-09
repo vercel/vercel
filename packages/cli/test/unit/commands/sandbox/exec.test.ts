@@ -4,6 +4,9 @@ import sandbox from '../../../../src/commands/sandbox';
 import * as linkModule from '../../../../src/util/projects/link';
 import * as getScopeModule from '../../../../src/util/get-scope';
 import * as getProjectModule from '../../../../src/util/projects/get-project-by-id-or-name';
+import { execSubcommand } from '../../../../src/commands/sandbox/exec/command';
+import { parseArguments } from '../../../../src/util/get-args';
+import { getFlagsSpecification } from '../../../../src/util/get-flags-specification';
 
 const { sandboxGet, execInSandbox } = vi.hoisted(() => ({
   sandboxGet: vi.fn(),
@@ -243,6 +246,21 @@ describe('sandbox exec', () => {
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain('Malformed duration');
     expect(execInSandbox).not.toHaveBeenCalled();
+  });
+
+  it('does not let -t shadow the global --token shorthand', () => {
+    const hasShortTty = execSubcommand.options.some(
+      opt => 'name' in opt && opt.name === 'tty' && opt.shorthand === 't'
+    );
+    expect(hasShortTty).toBe(false);
+
+    const { flags } = parseArguments(
+      ['-t', 'my-token', 'my-sandbox', 'echo', 'hi'],
+      getFlagsSpecification(execSubcommand.options)
+    );
+
+    expect(flags['--token']).toBe('my-token');
+    expect(flags['--tty']).toBeUndefined();
   });
 
   it('tracks subcommand invocation', async () => {
