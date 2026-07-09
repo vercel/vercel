@@ -90,6 +90,7 @@ import parseTarget from '../../util/parse-target';
 import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
+import { isOwnerLookupUnavailableLink } from '../../util/projects/link';
 import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
 import { displayBuildLogsUntilFinalError } from '../../util/logs';
 import { determineAgent } from '@vercel/detect-agent';
@@ -1128,6 +1129,7 @@ async function handleDefaultDeploy(
       projectNameOrId ?? parsedArguments.flags['--name'] ?? localConfig?.name,
     failIfNotFound: !!projectNameOrId,
     requireExistingLink: parsedArguments.flags['--dry'],
+    allowOwnerLookupFallback: true,
     v0: isV0,
   });
   if (typeof link === 'number') {
@@ -1200,7 +1202,17 @@ async function handleDefaultDeploy(
   // #endregion
 
   const contextName = org.slug;
-  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+  const ownerLookupUnavailable = isOwnerLookupUnavailableLink(link);
+  const currentTeam = ownerLookupUnavailable
+    ? undefined
+    : org.type === 'team'
+      ? org.id
+      : undefined;
+  if (currentTeam) {
+    client.config.currentTeam = currentTeam;
+  } else {
+    delete client.config.currentTeam;
+  }
 
   if (
     rootDirectory &&
@@ -1350,7 +1362,6 @@ async function handleDefaultDeploy(
   const regions = regionFlag.length > 0 ? regionFlag : localConfig.regions;
   // #endregion
 
-  const currentTeam = org.type === 'team' ? org.id : undefined;
   const now = new Now({
     client,
     currentTeam,

@@ -104,7 +104,7 @@ export default async function processDeployment({
   };
 
   const clientOptions: VercelClientOptions = {
-    teamId: org.type === 'team' ? org.id : undefined,
+    teamId: now.currentTeam ?? undefined,
     apiUrl: now._apiUrl,
     token,
     debug: output.isDebugEnabled(),
