@@ -2,6 +2,7 @@ import Ajv from 'ajv';
 import assert from 'assert';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { isString } from 'util';
 import nodeFetch from 'node-fetch';
 import { URL } from 'url';
 import frameworkList from '../src/frameworks';
@@ -202,15 +203,6 @@ const Schema = {
       experimental: { type: 'boolean' },
       runtimeFramework: { type: 'boolean' },
       detectionConfidence: { type: 'string', enum: ['weak', 'strong'] },
-      platform: {
-        type: 'object',
-        required: ['name', 'logo'],
-        additionalProperties: false,
-        properties: {
-          name: { type: 'string' },
-          logo: { type: 'string' },
-        },
-      },
     },
   },
 };
@@ -242,7 +234,6 @@ describe('frameworks', () => {
     'hydrogen',
     'storybook',
     'eve', // examples/fixtures live in github.com/vercel/ash
-    'tanstack-start-lovable', // platform-import variant of tanstack-start
   ];
 
   it('ensure there is an example for every framework', async () => {
@@ -253,7 +244,7 @@ describe('frameworks', () => {
       .filter(f => !f.experimental) // Skip experimental frameworks
       .filter(f => !f.runtimeFramework) // Skip runtime frameworks (e.g. Python, Go)
       .map(f => f.slug)
-      .filter((slug): slug is string => typeof slug === 'string')
+      .filter(isString)
       .filter(slug => !skipExamples.includes(slug))
       .filter(f => existsSync(getExample(f)) === false);
 

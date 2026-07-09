@@ -13,7 +13,7 @@
   },
   "license": "Apache-2.0",
   "scripts": {
-    "build": "node build.mjs",
+    "build": "node ../../utils/build.mjs",
     "test": "vitest run --config ../../vitest.config.mts",
     "test-unit": "pnpm test",
     "type-check": "tsc --noEmit",

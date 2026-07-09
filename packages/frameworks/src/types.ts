@@ -243,12 +243,4 @@ export interface Framework {
    * @example "weak"
    */
   detectionConfidence?: 'weak' | 'strong';
-  /**
-   * The platform the project was imported from, for framework presets that
-   * represent a platform-specific variant (e.g. TanStack Start via Lovable).
-   */
-  platform?: {
-    name: string;
-    logo: string;
-  };
 }
