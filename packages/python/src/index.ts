@@ -1303,7 +1303,9 @@ export const build: BuildVX = async ({
             return;
           }
 
+          // Clear staging output from any previous local build
           const stagingDir = join(workPath, '.vercel', 'python', 'pycache');
+          await fs.promises.rm(stagingDir, { recursive: true, force: true });
           await fs.promises.mkdir(stagingDir, { recursive: true });
 
           await builderSpan
