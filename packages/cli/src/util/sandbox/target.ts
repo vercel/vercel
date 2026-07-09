@@ -43,6 +43,14 @@ function failSandboxTarget(
  * by name-or-id within the team scope, otherwise the local `.vercel` link
  * is used.
  *
+ * Not wired to runtime yet — the only current references are this file's tests.
+ * Its consumers are the native command handlers added in later tasks/PRs:
+ * PR #2 (exec/create/connect/sh/fork/run), PR #3 (list/stop/remove/cp/snapshot/
+ * snapshots/sessions), PR #4 (config). Each handler calls it near the top and
+ * passes the result into the SDK client wrapper, e.g.:
+ *   const { token, teamId, projectId } = await resolveSandboxTarget(client, { project, team });
+ *   await sandboxClient.create({ token, teamId, projectId, ...flags });
+ *
  * @param opts.team An already-resolved team ID, expected to be passed by PR #2's native sandbox command tasks.
  */
 export async function resolveSandboxTarget(
