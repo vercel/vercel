@@ -207,8 +207,10 @@ async function printEvents(
     },
     {
       retries: 4,
-      // Don't let stream retry timers keep the CLI alive after polling wins.
-      unref: true,
+      // Don't let deploy stream retry timers keep the CLI alive after polling
+      // wins. Standalone log consumers await these retries, so their timers
+      // must remain referenced.
+      unref: Boolean(onAliasAssigned),
       onRetry: err => {
         // if we are retrying, we clear past logs
         if (!quiet && o) {
