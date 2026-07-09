@@ -1,5 +1,6 @@
 import type Client from '../client';
 
+// Keep in sync with the `role` enum for POST /v2/teams/{teamId}/members.
 export const TEAM_ROLES = [
   'OWNER',
   'MEMBER',
