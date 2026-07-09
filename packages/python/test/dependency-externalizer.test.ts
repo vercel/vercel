@@ -11,6 +11,8 @@ import {
   estimateBytecodeSize,
   getPackagesReachableOnPlatform,
   lambdaKnapsack,
+  planPublicPackagePacking,
+  EPHEMERAL_INSTALL_BUDGET_BYTES,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
   MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE,
@@ -1016,6 +1018,51 @@ version = "8.1.7"
     });
   });
 
+  describe('planPublicPackagePacking', () => {
+    const MB = 1024 * 1024;
+
+    it('chooses bytecode-first when requested and the public set fits the ephemeral budget', () => {
+      const plan = planPublicPackagePacking({
+        publicPackageSizes: new Map([
+          ['a', 100 * MB],
+          ['b', 200 * MB],
+        ]),
+        zipCapacity: 150 * MB,
+        bytecodeFirst: true,
+      });
+      expect(plan.packingMode).toBe('bytecode-first');
+      expect(plan.bundledPublic).toEqual([]);
+    });
+
+    it('falls back to knapsack when the public set exceeds the ephemeral budget', () => {
+      const plan = planPublicPackagePacking({
+        publicPackageSizes: new Map([
+          ['a', 200 * MB],
+          ['b', EPHEMERAL_INSTALL_BUDGET_BYTES],
+        ]),
+        zipCapacity: 210 * MB,
+        bytecodeFirst: true,
+      });
+      expect(plan.packingMode).toBe('knapsack');
+      // The knapsack bundles what fits the zip; the rest installs at cold
+      // start.
+      expect(plan.bundledPublic).toEqual(['a']);
+    });
+
+    it('uses knapsack when bytecode-first is not requested, regardless of size', () => {
+      const plan = planPublicPackagePacking({
+        publicPackageSizes: new Map([
+          ['a', 150 * MB],
+          ['b', 100 * MB],
+        ]),
+        zipCapacity: 160 * MB,
+        bytecodeFirst: false,
+      });
+      expect(plan.packingMode).toBe('knapsack');
+      expect(plan.bundledPublic).toEqual(['a']);
+    });
+  });
+
   describe('analyze', () => {
     const originalLargeFunctionsEnv =
       process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
@@ -1473,6 +1520,10 @@ version = "8.1.7"
       const result = await ext.generateBundle(files);
 
       expect(result.fellBackToFullBundle).toBe(true);
+      // Package lists are only reported for a generated runtime-install
+      // bundle; the fallback bundles everything.
+      expect(result.alwaysBundledPackages).toBeUndefined();
+      expect(result.bundledPublicPackages).toBeUndefined();
       // Every vendor file is bundled directly.
       expect(files['_vendor/pkg/__init__.py']).toBe(
         allVendorFiles['_vendor/pkg/__init__.py']

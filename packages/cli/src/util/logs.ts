@@ -1,4 +1,5 @@
 import type { Deployment } from '@vercel-internals/types';
+import type { DeploymentAliasAssignedEvent } from '@vercel/client';
 import chalk from 'chalk';
 import format from 'date-fns/format';
 import ms from 'ms';
@@ -17,7 +18,8 @@ type Printer = (l: string) => void;
 export function displayBuildLogs(
   client: Client,
   deployment: Deployment,
-  follow: boolean = true
+  follow: boolean = true,
+  onAliasAssigned?: (event: DeploymentAliasAssignedEvent) => void
 ): {
   promise: Promise<void>;
   abortController: AbortController;
@@ -29,6 +31,7 @@ export function displayBuildLogs(
     {
       mode: 'logs',
       onEvent: (event: BuildLog) => printBuildLog(event, output.print),
+      onAliasAssigned,
       quiet: false,
       findOpts: { direction: 'forward', follow },
     },

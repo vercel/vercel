@@ -203,6 +203,15 @@ const Schema = {
       experimental: { type: 'boolean' },
       runtimeFramework: { type: 'boolean' },
       detectionConfidence: { type: 'string', enum: ['weak', 'strong'] },
+      platform: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['name', 'logo'],
+        properties: {
+          name: { type: 'string' },
+          logo: { type: 'string' },
+        },
+      },
     },
   },
 };
@@ -234,6 +243,7 @@ describe('frameworks', () => {
     'hydrogen',
     'storybook',
     'eve', // examples/fixtures live in github.com/vercel/ash
+    'tanstack-start-lovable', // platform variant, no dedicated example
   ];
 
   it('ensure there is an example for every framework', async () => {
@@ -278,6 +288,16 @@ describe('frameworks', () => {
       .map(f => f.darkModeLogo)
       .filter(darkModeLogo => {
         return darkModeLogo && !darkModeLogo.startsWith(logoPrefix);
+      });
+
+    expect(invalid).toEqual([]);
+  });
+
+  it('ensure platform logo starts with url prefix', async () => {
+    const invalid = frameworkList
+      .map(f => (f as { platform?: { logo: string } }).platform?.logo)
+      .filter(logo => {
+        return logo && !logo.startsWith(logoPrefix);
       });
 
     expect(invalid).toEqual([]);

@@ -53,6 +53,8 @@ import {
   lambdaKnapsack,
   calculateBundleSize,
   estimateBytecodeSize,
+  RUNTIME_DEPS_DIR,
+  type GenerateBundleResult,
 } from './dependency-externalizer';
 import { isLargeFunctionsEnabled } from './large-functions';
 import {
@@ -83,8 +85,10 @@ import {
 import { containsTopLevelCallable } from '@vercel/python-analysis';
 import {
   collectAppBytecodeFiles,
+  collectAppPrefixBytecodeFiles,
   getCompileAllAppExcludeRegex,
   runCompileAll,
+  RUNTIME_PYCACHE_PREFIX,
   shouldCompileAll,
   type BytecodeCollectionResult,
 } from './compileall';
@@ -191,7 +195,7 @@ async function addVendorBytecodeWithinCapacity({
   capacity,
 }: {
   files: Files;
-  depExternalizer: PythonDependencyExternalizer;
+  depExternalizer: Pick<PythonDependencyExternalizer, 'collectBytecodeFiles'>;
   vendorDir: string;
   bytecodeInfo: BytecodeCollectionResult | undefined;
   capacity: number;
@@ -214,6 +218,71 @@ async function addVendorBytecodeWithinCapacity({
   });
   addFiles(files, selectedBytecode.files);
   return capacity - selectedBytecode.totalSize;
+}
+
+/**
+ * Add vendor bytecode within `capacity`, in tiers: earlier tiers get
+ * capacity first; packages outside every tier are never collected. A tier
+ * of `undefined` collects everything. Returns the remaining capacity.
+ */
+export async function addVendorBytecodeInTiers({
+  files,
+  depExternalizer,
+  vendorDir,
+  capacity,
+  vendorPackageTiers,
+}: {
+  files: Files;
+  depExternalizer: Pick<PythonDependencyExternalizer, 'collectBytecodeFiles'>;
+  vendorDir: string;
+  capacity: number;
+  vendorPackageTiers: (string[] | undefined)[];
+}): Promise<number> {
+  let remainingCapacity = capacity;
+  for (const tier of vendorPackageTiers) {
+    if (remainingCapacity <= 0) break;
+    if (tier && tier.length === 0) continue;
+    const bytecodeInfo = await depExternalizer.collectBytecodeFiles({
+      vendorDirName: vendorDir,
+      includePackages: tier,
+    });
+    remainingCapacity = await addVendorBytecodeWithinCapacity({
+      files,
+      depExternalizer,
+      vendorDir,
+      bytecodeInfo,
+      capacity: remainingCapacity,
+    });
+  }
+  return remainingCapacity;
+}
+
+/**
+ * Add vendor bytecode produced by a collector within `capacity`. When the
+ * full collection doesn't fit, knapsacks per-package sizes and re-collects
+ * only the selected packages. Returns the remaining capacity.
+ */
+export async function addCollectedVendorBytecode({
+  files,
+  capacity,
+  collect,
+}: {
+  files: Files;
+  capacity: number;
+  collect: (includePackages?: string[]) => Promise<BytecodeCollectionResult>;
+}): Promise<number> {
+  if (capacity <= 0) return capacity;
+  const info = await collect(undefined);
+  if (!info || info.totalSize <= 0) return capacity;
+  if (info.totalSize <= capacity) {
+    addFiles(files, info.files);
+    return capacity - info.totalSize;
+  }
+  const selected = lambdaKnapsack(info.perItemSizes, capacity);
+  if (selected.length === 0) return capacity;
+  const selectedInfo = await collect(selected);
+  addFiles(files, selectedInfo.files);
+  return capacity - selectedInfo.totalSize;
 }
 
 interface FrameworkHookContext {
@@ -1143,7 +1212,12 @@ export const build: BuildVX = async ({
       // Only .pyc for .py files already in the bundle are collected, so
       // excluded source can't re-enter as .pyc. Bytecode is a pure
       // optimization: failures are logged and the build continues.
-      const runCompileAllAndFillBytecode = async (capacityBytes: number) => {
+      // `vendorPackageTiers` restricts/prioritizes vendor collection;
+      // omitted = one unrestricted pass.
+      const runCompileAllAndFillBytecode = async (
+        capacityBytes: number,
+        vendorPackageTiers?: string[][]
+      ) => {
         try {
           await builderSpan
             .child('vc.builder.python.compileall')
@@ -1192,18 +1266,129 @@ export const build: BuildVX = async ({
             );
           }
 
-          const vendorBytecodeInfo = await depExternalizer.collectBytecodeFiles(
-            {
-              vendorDirName: vendorDir,
-            }
-          );
-          await addVendorBytecodeWithinCapacity({
+          await addVendorBytecodeInTiers({
             files,
             depExternalizer,
             vendorDir,
-            bytecodeInfo: vendorBytecodeInfo,
             capacity: remainingCapacity,
+            vendorPackageTiers: vendorPackageTiers ?? [undefined],
           });
+        } catch (err) {
+          console.log(
+            'Bytecode precompilation failed; continuing without precompiled bytecode.'
+          );
+          debug(`bytecode precompilation error details: ${err}`);
+        }
+      };
+
+      // Bytecode-first fill: ship a pycache-prefix tree covering the app,
+      // bundled vendor packages, and the packages installed into /tmp at
+      // cold start (safe: `uv sync --frozen` installs the exact versions
+      // the bytecode was compiled from). Failures degrade to no bytecode.
+      const runPrefixCompileAndFill = async (
+        bundleResult: GenerateBundleResult
+      ) => {
+        const pyMajor = pythonVersion.major;
+        const pyMinor = pythonVersion.minor;
+        if (pyMajor == null || pyMinor == null) return;
+        try {
+          // Skip the compile entirely when the zip has no slack for bytecode
+          // (e.g. very large always-bundled private packages).
+          const currentSize = await calculateBundleSize(files);
+          let remainingCapacity = BYTECODE_FILL_CEILING_BYTES - currentSize;
+          if (remainingCapacity <= 0) {
+            debug(
+              `skipping bytecode precompilation: no zip capacity remaining ` +
+                `(bundle is ${(currentSize / (1024 * 1024)).toFixed(2)} MB)`
+            );
+            return;
+          }
+
+          // Clear staging output from any previous local build
+          const stagingDir = join(workPath, '.vercel', 'python', 'pycache');
+          await fs.promises.rm(stagingDir, { recursive: true, force: true });
+          await fs.promises.mkdir(stagingDir, { recursive: true });
+
+          await builderSpan
+            .child('vc.builder.python.compileall')
+            .trace(async compileSpan => {
+              const sitePackageDirs = (
+                await getVenvSitePackagesDirs(venvPath)
+              ).filter(d => fs.existsSync(d));
+              const pythonBin = getVenvPythonBin(venvPath);
+
+              console.log('Compiling Python bytecode...');
+              await runCompileAll({
+                pythonBin,
+                filesOrDirectories: [workPath],
+                env: pythonEnv,
+                excludeRegex: getCompileAllAppExcludeRegex(workPath),
+                pycachePrefix: stagingDir,
+              });
+
+              await runCompileAll({
+                pythonBin,
+                filesOrDirectories: sitePackageDirs,
+                env: pythonEnv,
+                pycachePrefix: stagingDir,
+              });
+
+              compileSpan.setAttributes({
+                'python.compileall.enabled': 'true',
+                'python.compileall.mode': 'pycache-prefix',
+                'python.compileall.sitePackageDirectoryCount': String(
+                  sitePackageDirs.length
+                ),
+              });
+            });
+
+          const beforeCount = Object.keys(files).length;
+
+          // Tier 1: app source (always imported at cold start).
+          const appInfo = await collectAppPrefixBytecodeFiles({
+            stagingDir,
+            workPath,
+            files,
+            runtimeTaskRoot: '/var/task',
+            pythonMajor: pyMajor,
+            pythonMinor: pyMinor,
+          });
+          remainingCapacity = addBytecodeWithinCapacity(
+            files,
+            appInfo,
+            remainingCapacity
+          );
+
+          // Tier 2: bundled vendor packages, imported from /var/task/_vendor.
+          const alwaysBundled = bundleResult.alwaysBundledPackages ?? [];
+          remainingCapacity = await addCollectedVendorBytecode({
+            files,
+            capacity: remainingCapacity,
+            collect: include =>
+              depExternalizer.collectPrefixBytecodeFiles({
+                stagingDir,
+                runtimeRoot: `/var/task/${vendorDir}`,
+                includePackages: include ?? alwaysBundled,
+              }),
+          });
+
+          // Tier 3: externalized packages, installed into /tmp at cold start.
+          const externalized = bundleResult.externalizedPublicPackages ?? [];
+          await addCollectedVendorBytecode({
+            files,
+            capacity: remainingCapacity,
+            collect: include =>
+              depExternalizer.collectPrefixBytecodeFiles({
+                stagingDir,
+                runtimeRoot: `${RUNTIME_DEPS_DIR}/lib/python${pyMajor}.${pyMinor}/site-packages`,
+                includePackages: include ?? externalized,
+              }),
+          });
+
+          // Point the runtime at the tree only when bytecode shipped.
+          if (Object.keys(files).length > beforeCount) {
+            lambdaEnv.PYTHONPYCACHEPREFIX = RUNTIME_PYCACHE_PREFIX;
+          }
         } catch (err) {
           console.log(
             'Bytecode precompilation failed; continuing without precompiled bytecode.'
@@ -1221,14 +1406,35 @@ export const build: BuildVX = async ({
         // Pack the zip and defer the rest to runtime install. If it can't be
         // made to fit, generateBundle bundles everything for the large
         // functions path (which then takes compileall, below).
-        const { fellBackToFullBundle } =
-          await depExternalizer.generateBundle(files);
-        if (fellBackToFullBundle) {
+        const bytecodeFirst =
+          compileAllEnabled &&
+          pythonVersion.major != null &&
+          pythonVersion.minor != null;
+        const bundleResult = await depExternalizer.generateBundle(files, {
+          bytecodeFirst,
+        });
+        if (bundleResult.fellBackToFullBundle) {
           announceLargeFunction();
           if (compileAllEnabled) {
             await runCompileAllAndFillBytecode(
               MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
             );
+          }
+        } else if (bundleResult.packingMode === 'bytecode-first') {
+          await runPrefixCompileAndFill(bundleResult);
+        } else if (compileAllEnabled) {
+          // Knapsack packing (bytecode-first skipped or fell back): fill
+          // only the slack under the ceiling with bytecode for in-zip
+          // packages, and only when enough of it ships to justify the
+          // compile time. Always-bundled packages get capacity first.
+          const currentSize = await calculateBundleSize(files);
+          const capacity = BYTECODE_FILL_CEILING_BYTES - currentSize;
+          const estimate = await estimateBytecodeSize(files);
+          if (capacity >= BYTECODE_COVERAGE_FLOOR * estimate) {
+            await runCompileAllAndFillBytecode(BYTECODE_FILL_CEILING_BYTES, [
+              bundleResult.alwaysBundledPackages ?? [],
+              bundleResult.bundledPublicPackages ?? [],
+            ]);
           }
         }
       } else {
