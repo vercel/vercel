@@ -6,9 +6,13 @@ import {
   sanitizeConsumerName,
   type TriggerEvent,
 } from '@vercel/build-utils';
+import {
+  getModuleEntrypointName,
+  parseModuleEntrypoint,
+  resolveExistingEntrypoint,
+  safePathSegment,
+} from './module-entrypoint';
 
-const MODULE_ATTR_RE =
-  /^([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*):([A-Za-z_][\w]*)$/;
 const SUBSCRIBER_OUTPUT_DIR = '_py_subscribers';
 
 type SubscriberTriggerDefaults = Omit<
@@ -82,19 +86,6 @@ interface Pyproject {
   };
 }
 
-function safePathSegment(value: string): string {
-  return [...value]
-    .map(char => {
-      if (char === '_') {
-        return '__';
-      }
-      return /[A-Za-z0-9-]/.test(char)
-        ? char
-        : `_${char.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')}`;
-    })
-    .join('');
-}
-
 export function getSubscriberOutputPath(subscriberName: string): string {
   return `${SUBSCRIBER_OUTPUT_DIR}/${safePathSegment(subscriberName)}`;
 }
@@ -157,8 +148,13 @@ async function parseSubscriber(
     throw subscriberError(`${label} must define string field "entrypoint"`);
   }
 
-  const entrypoint = parseEntrypoint(label, config.entrypoint);
-  const name = getSubscriberName(entrypoint);
+  const entrypoint = parseModuleEntrypoint(config.entrypoint);
+  if (!entrypoint) {
+    throw subscriberError(
+      `${label} has invalid entrypoint "${config.entrypoint}". Use "module:object"`
+    );
+  }
+  const name = getModuleEntrypointName(entrypoint);
   const existingEntrypoint = await resolveExistingEntrypoint(
     workPath,
     entrypoint.filePath
@@ -177,50 +173,6 @@ async function parseSubscriber(
     topics: parseTopics(name, config.topics),
     triggerDefaults: parseTriggerDefaults(name, config),
   };
-}
-
-function getSubscriberName({
-  moduleName,
-  variableName,
-}: {
-  moduleName: string;
-  variableName: string;
-}): string {
-  return `${moduleName.replace(/\./g, '-')}_${variableName}`;
-}
-
-function parseEntrypoint(
-  name: string,
-  value: string
-): { moduleName: string; variableName: string; filePath: string } {
-  const match = MODULE_ATTR_RE.exec(value);
-  if (!match) {
-    throw subscriberError(
-      `subscriber "${name}" has invalid entrypoint "${value}". Use "module:object"`
-    );
-  }
-
-  return {
-    moduleName: match[1],
-    variableName: match[2],
-    filePath: `${match[1].replace(/\./g, '/')}.py`,
-  };
-}
-
-async function resolveExistingEntrypoint(
-  workPath: string,
-  filePath: string
-): Promise<string | null> {
-  const candidates = [filePath, filePath.replace(/\.py$/i, '/__init__.py')];
-  for (const candidate of candidates) {
-    try {
-      const stat = await fs.promises.stat(join(workPath, candidate));
-      if (stat.isFile()) {
-        return candidate;
-      }
-    } catch {}
-  }
-  return null;
 }
 
 function parseTopics(name: string, value: unknown): string[] {

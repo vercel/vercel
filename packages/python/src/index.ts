@@ -94,6 +94,13 @@ import {
   getSubscriberOutputPath,
   type Subscriber,
 } from './subscribers';
+import {
+  getPyprojectWorkflows,
+  getWorkflowConsumerName,
+  getWorkflowOutputPath,
+  WORKFLOW_TOPIC_PATTERN,
+  type PyprojectWorkflow,
+} from './workflows';
 
 const writeFile = fs.promises.writeFile;
 const PYTHON_ENTRYPOINT_DOCS_URL =
@@ -133,22 +140,45 @@ export async function getDevSidecars({
   }
 
   const subscribers = await getPyprojectSubscribers(workPath);
-  return subscribers.map(subscriber => ({
-    type: 'subscriber',
-    name: subscriber.name,
-    consumer: getSubscriberConsumerName(subscriber.name),
-    workspace: '.',
-    framework,
-    runtime: 'python',
-    builder: {
-      use: build.use,
-      src: subscriber.entrypoint,
-      config: {
-        handlerFunction: subscriber.variableName,
-      },
-    },
-    topics: getDevSubscriberTopics(subscriber),
-  }));
+  const workflows = await getPyprojectWorkflows(workPath);
+  return [
+    ...subscribers.map(
+      (subscriber): DevSubscriber => ({
+        type: 'subscriber',
+        name: subscriber.name,
+        consumer: getSubscriberConsumerName(subscriber.name),
+        workspace: '.',
+        framework,
+        runtime: 'python',
+        builder: {
+          use: build.use,
+          src: subscriber.entrypoint,
+          config: {
+            handlerFunction: subscriber.variableName,
+          },
+        },
+        topics: getDevSubscriberTopics(subscriber),
+      })
+    ),
+    ...workflows.map(
+      (workflow): DevSubscriber => ({
+        type: 'subscriber',
+        name: workflow.name,
+        consumer: getWorkflowConsumerName(workflow.name),
+        workspace: '.',
+        framework,
+        runtime: 'python',
+        builder: {
+          use: build.use,
+          src: workflow.entrypoint,
+          config: {
+            handlerFunction: workflow.variableName,
+          },
+        },
+        topics: [{ topic: WORKFLOW_TOPIC_PATTERN }],
+      })
+    ),
+  ];
 }
 
 function addFiles(target: Files, source: Files) {
@@ -553,6 +583,7 @@ export const build: BuildVX = async ({
   const framework = config?.framework;
   let shouldInstallVercelWorkers = config?.hasWorkerServices === true;
   let subscribers: Subscriber[] = [];
+  let workflows: PyprojectWorkflow[] = [];
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
@@ -572,17 +603,20 @@ export const build: BuildVX = async ({
     meta,
   });
 
-  // `tool.vercel.subscribers` declares queue subscribers for a standalone
-  // Python app and compiles them into additional Lambdas.
-  // It is intentionally scoped to non-service framework builds:
+  // `tool.vercel.subscribers` declares queue subscribers and
+  // `tool.vercel.workflows` declares the workflow entrypoint for a standalone
+  // Python app; both compile into additional Lambdas.
+  // They are intentionally scoped to non-service framework builds:
   //   - Service projects already own their process topology, so an implicit
   //     mechanism would be ambiguous (services can share one pyproject.toml,
-  //     which would duplicate subscribers across each service build).
+  //     which would duplicate these consumers across each service build).
   //   - Bare `api/**` functions build once per file sharing this workPath, so
-  //     emitting subscribers there would duplicate their outputs per build.
+  //     emitting these consumers there would duplicate their outputs per build.
   if (!service && isPythonFramework(framework)) {
     subscribers = await getPyprojectSubscribers(workPath);
-    shouldInstallVercelWorkers ||= subscribers.length > 0;
+    workflows = await getPyprojectWorkflows(workPath);
+    shouldInstallVercelWorkers ||=
+      subscribers.length > 0 || workflows.length > 0;
   }
 
   try {
@@ -1317,6 +1351,44 @@ export const build: BuildVX = async ({
     });
   }
 
+  const workflowLambdas: Record<string, Lambda> = {};
+
+  for (const workflow of workflows) {
+    const outputPath = getWorkflowOutputPath(workflow.name);
+    const experimentalTriggers: TriggerEvent[] = [
+      {
+        type: 'queue/v2beta',
+        topic: WORKFLOW_TOPIC_PATTERN,
+        consumer: getWorkflowConsumerName(workflow.name),
+      },
+    ];
+
+    workflowLambdas[outputPath] = new Lambda({
+      files: {
+        ...files,
+        [`${handlerPyFilename}.py`]: new FileBlob({
+          data: createRuntimeTrampoline({
+            moduleName: workflow.moduleName,
+            entrypoint: workflow.entrypoint,
+            vendorDir,
+            variableName: workflow.variableName,
+          }),
+        }),
+      },
+      handler: `${handlerPyFilename}.vc_handler`,
+      runtime: pythonVersion.runtime,
+      architecture: target.architecture,
+      environment: {
+        ...lambdaEnv,
+        VERCEL_HAS_WORKER_SERVICES: '1',
+        // Compatibility marker consumed by the current Python runtime.
+        VERCEL_SERVICE_TYPE: 'worker',
+      },
+      experimentalTriggers,
+      supportsResponseStreaming: true,
+    });
+  }
+
   // Write project manifest for diagnostics (best-effort, never fails the build).
   // Requires uv.lock to resolve versions and dependency graph.  Skipped in
   // `vercel dev` since the CLI only reads the manifest in `vercel build`.
@@ -1337,8 +1409,9 @@ export const build: BuildVX = async ({
     }
   }
 
-  // Subscribers only attach to framework apps or named services, both of which
-  // already take the V2 path below, so no early V3 return needs to consider them.
+  // Subscribers and workflows only attach to framework apps or named services,
+  // both of which already take the V2 path below, so no early V3 return needs
+  // to consider them.
   if (!isPythonFramework(framework) && !service?.name) {
     return { resultVersion: 3, result: { output } };
   }
@@ -1372,6 +1445,7 @@ export const build: BuildVX = async ({
       output: {
         [lambdaPath]: output,
         ...subscriberLambdas,
+        ...workflowLambdas,
         ...staticFiles,
       },
       ...(routes ? { routes } : {}),
