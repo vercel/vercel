@@ -22,12 +22,6 @@ export class SandboxTargetError extends Error {
   }
 }
 
-/**
- * `VERCEL_TOKEN` is applied to `client.authConfig.token` during CLI startup
- * (see src/index.ts), so it's covered by the primary source below.
- * `VERCEL_AUTH_TOKEN` is a back-compat fallback read directly by the
- * standalone `sandbox` package (see src/commands/sandbox/index.ts).
- */
 function resolveToken(client: Client): string | undefined {
   return client.authConfig.token ?? process.env.VERCEL_AUTH_TOKEN;
 }
@@ -48,6 +42,8 @@ function failSandboxTarget(
  * as resolveVcrScope/resolveAlertsScope: an explicit `--project` is resolved
  * by name-or-id within the team scope, otherwise the local `.vercel` link
  * is used.
+ *
+ * @param opts.team An already-resolved team ID, expected to be passed by PR #2's native sandbox command tasks.
  */
 export async function resolveSandboxTarget(
   client: Client,
@@ -100,7 +96,7 @@ export async function resolveSandboxTarget(
     if (projectResult instanceof ProjectNotFound) {
       failSandboxTarget(
         client,
-        AGENT_REASON.PROJECT_NOT_FOUND,
+        AGENT_REASON.NOT_FOUND,
         `Project "${opts.project}" was not found in the current team scope.`
       );
     }
@@ -111,9 +107,6 @@ export async function resolveSandboxTarget(
   const link = await getLinkedProject(client);
 
   if (link.status === 'error') {
-    // getLinkedProject already printed its own diagnostic (see
-    // ../projects/link.ts); surface its exitCode instead of the generic
-    // "run `vercel link`" message below, which would be misleading here.
     failSandboxTarget(
       client,
       AGENT_REASON.NOT_LINKED,

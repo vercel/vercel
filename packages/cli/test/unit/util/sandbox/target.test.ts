@@ -193,4 +193,25 @@ describe('resolveSandboxTarget', () => {
     ).rejects.toThrow(/belongs to team "other-team"/i);
     expect(getScopeModule.default).not.toHaveBeenCalled();
   });
+
+  it('resolves via the linked project when opts.team matches the linked project team', async () => {
+    vi.mocked(linkModule.getLinkedProject).mockResolvedValue({
+      status: 'linked',
+      project: {
+        id: 'proj_x',
+        name: 'proj-x',
+        accountId: 'team_x',
+        updatedAt: 0,
+        createdAt: 0,
+      } as never,
+      org: { id: 'team_x', slug: 'my-team', type: 'team' },
+    });
+
+    const t = await resolveSandboxTarget(fakeClient('tok'), {
+      team: 'team_x',
+    });
+
+    expect(t).toEqual({ token: 'tok', teamId: 'team_x', projectId: 'proj_x' });
+    expect(getScopeModule.default).not.toHaveBeenCalled();
+  });
 });
