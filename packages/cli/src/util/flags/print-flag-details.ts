@@ -1,18 +1,19 @@
 import chalk from 'chalk';
-import ms from 'ms';
 import output from '../../output-manager';
 import formatDate from '../format-date';
 import { formatFlagConditionComparator } from './comparators';
 import { getFlagDashboardUrl } from './dashboard-url';
+import {
+  formatFlagOutcome,
+  formatFlagSplitWeights,
+  formatFlagVariantSummary,
+} from './format-flag-outcome';
 import { formatVariantValue } from './resolve-variant';
 import type {
   Flag,
   FlagCondition,
   FlagEnvironmentConfig,
-  FlagOutcome,
-  FlagRolloutOutcome,
   FlagSettings,
-  FlagSplitOutcome,
   FlagVariant,
 } from './types';
 
@@ -91,7 +92,7 @@ export function printFlagEnvironmentDetails(
       const hasCustomConfiguration = hasCustomConfigurationEnabled(envConfig);
       const envSummary = hasCustomConfiguration
         ? 'custom'
-        : formatEnvironmentOutcome(envConfig.fallthrough, flag.variants);
+        : formatFlagOutcome(envConfig.fallthrough, flag.variants);
 
       output.print(`    ${chalk.bold(envName)}: ${envSummary}\n`);
 
@@ -101,10 +102,7 @@ export function printFlagEnvironmentDetails(
           envConfig.targets
         )) {
           const variant = flag.variants.find(v => v.id === variantId);
-          const variantSummary = formatEnvironmentVariantSummary(
-            variant,
-            variantId
-          );
+          const variantSummary = formatFlagVariantSummary(variant, variantId);
           for (const [entityKind, attributes] of Object.entries(entityKinds)) {
             for (const [attribute, values] of Object.entries(attributes)) {
               const valueList = values
@@ -129,7 +127,7 @@ export function printFlagEnvironmentDetails(
       if (envConfig.rules && envConfig.rules.length > 0) {
         output.print(`      ${chalk.dim('Rules:')}\n`);
         for (const rule of envConfig.rules) {
-          const outcome = formatEnvironmentOutcome(rule.outcome, flag.variants);
+          const outcome = formatFlagOutcome(rule.outcome, flag.variants);
           output.print(`        ${chalk.dim('→')} ${outcome}\n`);
           for (const condition of rule.conditions) {
             const { text, listItems } = formatCondition(condition, settings);
@@ -149,20 +147,20 @@ export function printFlagEnvironmentDetails(
           const defaultVariant = flag.variants.find(
             v => v.id === fallthrough.variantId
           );
-          const defaultSummary = formatEnvironmentVariantSummary(
+          const defaultSummary = formatFlagVariantSummary(
             defaultVariant,
             fallthrough.variantId
           );
           output.print(`      ${chalk.dim('Default:')} ${defaultSummary}\n`);
         } else if (fallthrough.type === 'split') {
-          const weights = formatSplitWeights(
+          const weights = formatFlagSplitWeights(
             fallthrough.weights,
             flag.variants
           );
           output.print(`      ${chalk.dim('Default split:')} ${weights}\n`);
         } else if (fallthrough.type === 'rollout') {
           output.print(
-            `      ${chalk.dim('Rollout:')} ${formatRolloutOutcome(
+            `      ${chalk.dim('Rollout:')} ${formatFlagOutcome(
               fallthrough,
               flag.variants
             )}\n`
@@ -173,7 +171,7 @@ export function printFlagEnvironmentDetails(
       const pausedVariant = flag.variants.find(
         v => v.id === envConfig.pausedOutcome?.variantId
       );
-      const pausedSummary = formatEnvironmentVariantSummary(
+      const pausedSummary = formatFlagVariantSummary(
         pausedVariant,
         envConfig.pausedOutcome?.variantId || 'paused'
       );
@@ -244,91 +242,6 @@ function hasCustomConfigurationEnabled(
     envConfig.fallthrough.type === 'split' ||
     envConfig.fallthrough.type === 'rollout'
   );
-}
-
-function formatEnvironmentOutcome(
-  outcome: FlagOutcome | FlagSplitOutcome | FlagRolloutOutcome,
-  variants: FlagVariant[]
-): string {
-  if (outcome.type === 'variant') {
-    const variant = variants.find(v => v.id === outcome.variantId);
-    return formatEnvironmentVariantSummary(variant, outcome.variantId);
-  }
-
-  if (outcome.type === 'split') {
-    const weights = formatSplitWeights(outcome.weights, variants);
-    return `split (${weights})`;
-  }
-
-  if (outcome.type === 'rollout') {
-    return formatRolloutOutcome(outcome, variants);
-  }
-
-  return 'unknown';
-}
-
-function formatSplitWeights(
-  weights: Record<string, number>,
-  variants: FlagVariant[]
-): string {
-  const total = Object.values(weights).reduce((sum, weight) => sum + weight, 0);
-
-  return Object.entries(weights)
-    .map(([id, weight]) => {
-      const variant = variants.find(v => v.id === id);
-      const summary = formatEnvironmentVariantSummary(variant, id);
-      const percentage = total > 0 ? (weight / total) * 100 : 0;
-      const formattedPercentage = Number.isInteger(percentage)
-        ? String(percentage)
-        : String(Number(percentage.toFixed(2)));
-
-      return `${summary}: ${formattedPercentage}%`;
-    })
-    .join(', ');
-}
-
-function formatEnvironmentVariantSummary(
-  variant: FlagVariant | undefined,
-  fallback: string
-): string {
-  if (!variant) {
-    return chalk.bold(fallback);
-  }
-
-  if (variant.label) {
-    return chalk.bold(variant.label);
-  }
-
-  return chalk.bold(formatVariantValue(variant.value));
-}
-
-function formatRolloutOutcome(
-  outcome: FlagRolloutOutcome,
-  variants: FlagVariant[]
-): string {
-  const fromVariant = variants.find(v => v.id === outcome.rollFromVariantId);
-  const toVariant = variants.find(v => v.id === outcome.rollToVariantId);
-  const defaultVariant = variants.find(v => v.id === outcome.defaultVariantId);
-  const stages = outcome.slots
-    .map(slot => {
-      const percentage = slot.promille / 1000;
-      const formattedPercentage = Number.isInteger(percentage)
-        ? String(percentage)
-        : String(Number(percentage.toFixed(3)));
-      return `${formattedPercentage}% for ${ms(slot.durationMs, { long: true })}`;
-    })
-    .join(', ');
-
-  return `${formatEnvironmentVariantSummary(
-    fromVariant,
-    outcome.rollFromVariantId
-  )} -> ${formatEnvironmentVariantSummary(
-    toVariant,
-    outcome.rollToVariantId
-  )}; ${stages}; then 100%; Fallback: ${formatEnvironmentVariantSummary(
-    defaultVariant,
-    outcome.defaultVariantId
-  )}`;
 }
 
 function formatVariantListSummary(variant: FlagVariant): string {
