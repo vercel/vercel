@@ -4,4 +4,12 @@ import type { sandboxCommand } from '../../../../commands/sandbox/command';
 
 export class SandboxTelemetryClient
   extends TelemetryClient
-  implements TelemetryMethods<typeof sandboxCommand> {}
+  implements TelemetryMethods<typeof sandboxCommand>
+{
+  trackCliSubcommandExec(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'exec',
+      value: actual,
+    });
+  }
+}

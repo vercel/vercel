@@ -103,7 +103,9 @@ describe('sandbox dispatcher', () => {
     const exitCode = await sandbox(client);
 
     expect(exitCode).toBe(0);
-    expect(getSubcommandSpy).toHaveBeenCalledWith(['list'], {});
+    expect(getSubcommandSpy).toHaveBeenCalledWith(['list'], {
+      exec: ['exec'],
+    });
     expect(telemetryConstructorSpy).toHaveBeenCalledWith({
       opts: { store: client.telemetryEventStore },
     });
@@ -111,6 +113,34 @@ describe('sandbox dispatcher', () => {
 
     vi.doUnmock('../../../../src/util/get-subcommand');
     vi.doUnmock('../../../../src/util/telemetry/commands/sandbox');
+  });
+
+  it('routes exec to the native handler instead of the pass-through', async () => {
+    vi.resetModules();
+    client.reset();
+    const run = vi.fn(async () => {});
+    vi.doMock('sandbox', () => ({ createApp: () => ({ run }) }));
+
+    const execHandler = vi.fn(async () => 0);
+    vi.doMock('../../../../src/commands/sandbox/exec', () => ({
+      default: execHandler,
+    }));
+
+    const { default: sandbox } = await import(
+      '../../../../src/commands/sandbox'
+    );
+
+    client.setArgv('sandbox', 'exec', 'my-sandbox', '--', 'echo', 'hi');
+    const exitCode = await sandbox(client);
+
+    expect(exitCode).toBe(0);
+    expect(execHandler).toHaveBeenCalledWith(
+      client,
+      expect.arrayContaining(['my-sandbox', 'echo', 'hi'])
+    );
+    expect(run).not.toHaveBeenCalled();
+
+    vi.doUnmock('../../../../src/commands/sandbox/exec');
   });
 
   it('returns 1 and prints the error when the pass-through throws', async () => {
