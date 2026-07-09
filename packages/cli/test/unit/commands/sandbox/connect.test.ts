@@ -222,3 +222,33 @@ describe.each([
     ]);
   });
 });
+
+describe('sandbox connect --timeout', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    client.reset();
+    mockLinkedProject();
+    mockTeamScope();
+    sandboxGet.mockResolvedValue(fakeSandbox);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('forwards --timeout and surfaces the execInSandbox mutual-exclusion error', async () => {
+    execInSandbox.mockRejectedValue(
+      new Error('--timeout cannot be combined with --interactive.')
+    );
+    client.setArgv('sandbox', 'connect', 'my-sandbox', '--timeout', '30s');
+    const exitCode = await sandbox(client);
+
+    expect(exitCode).toBe(1);
+    expect(execInSandbox).toHaveBeenCalledWith(
+      expect.objectContaining({ timeout: '30s' })
+    );
+    expect(client.stderr.getFullOutput()).toContain(
+      '--timeout cannot be combined with --interactive'
+    );
+  });
+});

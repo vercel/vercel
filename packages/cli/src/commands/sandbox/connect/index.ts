@@ -12,7 +12,11 @@ import {
 } from '../../../util/sandbox/target';
 import { sandboxClient } from '../../../util/sandbox/client';
 import { execInSandbox } from '../../../util/sandbox/exec-core';
-import { assertSandboxName, parseKeyValues } from '../../../util/sandbox/args';
+import {
+  assertSandboxName,
+  parseDuration,
+  parseKeyValues,
+} from '../../../util/sandbox/args';
 
 export default async function connect(
   client: Client,
@@ -44,6 +48,10 @@ export default async function connect(
   try {
     assertSandboxName(name);
 
+    const timeout = parsedArgs.flags['--timeout']
+      ? parseDuration(parsedArgs.flags['--timeout'])
+      : undefined;
+
     const { token, teamId, projectId } = await resolveSandboxTarget(client, {
       project: parsedArgs.flags['--project'],
     });
@@ -66,7 +74,7 @@ export default async function connect(
       skipExtendingTimeout: Boolean(parsedArgs.flags['--no-extend-timeout']),
       cwd: parsedArgs.flags['--workdir'],
       env: parseKeyValues(parsedArgs.flags['--env'] ?? []),
-      timeout: undefined,
+      timeout,
     });
 
     return 0;
