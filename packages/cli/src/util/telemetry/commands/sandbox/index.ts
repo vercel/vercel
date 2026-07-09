@@ -33,4 +33,11 @@ export class SandboxTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandFork(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'fork',
+      value: actual,
+    });
+  }
 }
