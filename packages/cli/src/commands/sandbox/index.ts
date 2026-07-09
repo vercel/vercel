@@ -5,6 +5,8 @@ import { getCommandAliases } from '..';
 import { SandboxTelemetryClient } from '../../util/telemetry/commands/sandbox';
 import { execSubcommand } from './exec/command';
 import exec from './exec';
+import { createSubcommand } from './create/command';
+import create from './create';
 
 type SandboxCliModule = {
   createApp(opts: { appName: string; withoutAuth: boolean }): {
@@ -18,6 +20,7 @@ type SandboxCliModule = {
 // config. Unregistered subcommands fall through to runPassThrough().
 const COMMAND_CONFIG: Record<string, string[]> = {
   exec: getCommandAliases(execSubcommand),
+  create: getCommandAliases(createSubcommand),
 };
 
 export default async function sandbox(client: Client): Promise<number> {
@@ -44,6 +47,9 @@ export default async function sandbox(client: Client): Promise<number> {
     case 'exec':
       telemetry.trackCliSubcommandExec(subcommandOriginal);
       return exec(client, args);
+    case 'create':
+      telemetry.trackCliSubcommandCreate(subcommandOriginal);
+      return create(client, args);
     default:
       return runPassThrough(client, argv, commandIndex, sandboxArgs);
   }

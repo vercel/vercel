@@ -15,12 +15,12 @@ describe('sandbox dispatcher', () => {
       '../../../../src/commands/sandbox'
     );
 
-    client.setArgv('sandbox', 'create', '--connect');
+    client.setArgv('sandbox', 'list', '--connect');
     const exitCode = await sandbox(client);
 
     expect(exitCode).toBe(0);
     expect(run).toHaveBeenCalledWith(
-      expect.arrayContaining(['create', '--connect'])
+      expect.arrayContaining(['list', '--connect'])
     );
   });
 
@@ -105,6 +105,7 @@ describe('sandbox dispatcher', () => {
     expect(exitCode).toBe(0);
     expect(getSubcommandSpy).toHaveBeenCalledWith(['list'], {
       exec: ['exec'],
+      create: ['create'],
     });
     expect(telemetryConstructorSpy).toHaveBeenCalledWith({
       opts: { store: client.telemetryEventStore },
@@ -143,6 +144,34 @@ describe('sandbox dispatcher', () => {
     vi.doUnmock('../../../../src/commands/sandbox/exec');
   });
 
+  it('routes create to the native handler instead of the pass-through', async () => {
+    vi.resetModules();
+    client.reset();
+    const run = vi.fn(async () => {});
+    vi.doMock('sandbox', () => ({ createApp: () => ({ run }) }));
+
+    const createHandler = vi.fn(async () => 0);
+    vi.doMock('../../../../src/commands/sandbox/create', () => ({
+      default: createHandler,
+    }));
+
+    const { default: sandbox } = await import(
+      '../../../../src/commands/sandbox'
+    );
+
+    client.setArgv('sandbox', 'create', '--connect');
+    const exitCode = await sandbox(client);
+
+    expect(exitCode).toBe(0);
+    expect(createHandler).toHaveBeenCalledWith(
+      client,
+      expect.arrayContaining(['--connect'])
+    );
+    expect(run).not.toHaveBeenCalled();
+
+    vi.doUnmock('../../../../src/commands/sandbox/create');
+  });
+
   it('returns 1 and prints the error when the pass-through throws', async () => {
     vi.resetModules();
     client.reset();
@@ -154,7 +183,7 @@ describe('sandbox dispatcher', () => {
       '../../../../src/commands/sandbox'
     );
 
-    client.setArgv('sandbox', 'create');
+    client.setArgv('sandbox', 'list');
     const exitCode = await sandbox(client);
 
     expect(exitCode).toBe(1);
