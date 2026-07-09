@@ -99,6 +99,7 @@ function renderDetail(run: UnknownRecord): string {
   rows.push(
     [chalk.bold('Trigger'), runTrigger(run)],
     [chalk.bold('Model'), runModel(run)],
+    [chalk.bold('Eve Version'), readString(run, 'eveVersion') ?? '-'],
     [chalk.bold('Started'), formatStartedAt(run)],
     [chalk.bold('Duration'), formatDurationMs(runDurationMs(run))]
   );

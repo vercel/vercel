@@ -58,6 +58,7 @@ describe('agent-runs inspect', () => {
         run: {
           id: 'run_001',
           status: 'completed',
+          eveVersion: '1.2.3',
           model: 'anthropic/claude-opus-4.8',
           trigger: 'api',
           createdAt: 1_718_000_000_000,
@@ -102,6 +103,7 @@ describe('agent-runs inspect', () => {
     const stdout = client.stdout.getFullOutput();
     expect(stdout).toContain('run_001');
     expect(stdout).toContain('Completed');
+    expect(stdout).toContain('1.2.3');
     expect(stdout).toContain('Issues');
     expect(stdout).toContain('ETIMEDOUT');
     expect(stdout).toContain('linear.createIssue');
