@@ -593,6 +593,9 @@ importers:
       undici:
         specifier: 5.29.0
         version: 5.29.0
+      ws:
+        specifier: 8.21.0
+        version: 8.21.0
       zod:
         specifier: 4.1.11
         version: 4.1.11
@@ -717,6 +720,9 @@ importers:
       '@types/write-json-file':
         specifier: 2.2.1
         version: 2.2.1
+      '@types/ws':
+        specifier: 8.18.1
+        version: 8.18.1
       '@types/yauzl-promise':
         specifier: 2.1.0
         version: 2.1.0

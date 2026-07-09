@@ -70,4 +70,54 @@ describe('sandboxClient', () => {
       sandboxClient.list({ token: 't', teamId: 'team_1' } as never)
     ).rejects.toThrow(/nope/);
   });
+
+  it('preserves the original APIError as the cause of the wrapped Error', async () => {
+    vi.resetModules();
+    const response = new Response('{"error":{"message":"not found"}}', {
+      status: 404,
+      statusText: 'Not Found',
+    });
+    Object.defineProperty(response, 'url', {
+      value: 'https://vercel.com/api/x',
+    });
+    const { APIError } =
+      await vi.importActual<typeof import('@vercel/sandbox')>(
+        '@vercel/sandbox'
+      );
+    const apiError = new APIError(response, {
+      json: { error: { message: 'not found' } },
+      text: '{}',
+    });
+    vi.doMock('@vercel/sandbox', async () => {
+      const actual =
+        await vi.importActual<typeof import('@vercel/sandbox')>(
+          '@vercel/sandbox'
+        );
+      return {
+        ...actual,
+        Sandbox: {
+          get: async () => {
+            throw apiError;
+          },
+        },
+      };
+    });
+    const { sandboxClient } = await import(
+      '../../../../src/util/sandbox/client'
+    );
+
+    let caught: unknown;
+    try {
+      await sandboxClient.get({
+        name: 'x',
+        token: 't',
+        teamId: 'team_1',
+      } as never);
+    } catch (err) {
+      caught = err;
+    }
+
+    expect(caught).toBeInstanceOf(Error);
+    expect((caught as Error).cause).toBe(apiError);
+  });
 });

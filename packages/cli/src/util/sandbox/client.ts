@@ -20,7 +20,7 @@ async function withErrorHandling<T>(factory: () => Promise<T>): Promise<T> {
     if (error instanceof APIError) {
       const message = await formatSandboxError(error);
       if (message) {
-        throw new Error(message);
+        throw new Error(message, { cause: error });
       }
     }
     throw error;

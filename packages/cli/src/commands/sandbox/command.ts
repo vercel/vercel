@@ -1,11 +1,24 @@
 import { packageName } from '../../util/pkg-name';
+import { execSubcommand } from './exec/command';
+import { createSubcommand } from './create/command';
+import { connectSubcommand } from './connect/command';
+import { shSubcommand } from './sh/command';
+import { forkSubcommand } from './fork/command';
+import { runSubcommand } from './run/command';
 
 export const sandboxCommand = {
   name: 'sandbox',
   aliases: [],
   description: 'Interact with Vercel Sandbox',
   arguments: [],
-  subcommands: [],
+  subcommands: [
+    execSubcommand,
+    createSubcommand,
+    connectSubcommand,
+    shSubcommand,
+    forkSubcommand,
+    runSubcommand,
+  ],
   options: [],
   examples: [
     {

@@ -78,6 +78,7 @@
     "sandbox": "3.4.0",
     "smol-toml": "1.5.2",
     "undici": "5.29.0",
+    "ws": "8.21.0",
     "zod": "4.1.11"
   },
   "devDependencies": {
@@ -121,6 +122,7 @@
     "@types/update-notifier": "5.1.0",
     "@types/which": "3.0.0",
     "@types/write-json-file": "2.2.1",
+    "@types/ws": "8.18.1",
     "@types/yauzl-promise": "2.1.0",
     "@vercel-internals/constants": "workspace:*",
     "@vercel-internals/get-package-json": "workspace:*",
