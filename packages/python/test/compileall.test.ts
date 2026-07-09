@@ -106,6 +106,20 @@ describe('shouldCompileAll', () => {
     );
   });
 
+  it('does not enable compileall when a pre-deploy command is configured', () => {
+    // A preDeployCommand can rewrite source after the build, which would make
+    // unchecked-hash bytecode stale, so precompilation must be skipped.
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+
+    expect(
+      shouldCompileAll({
+        isDev: false,
+        hasCustomCommand: false,
+        hasPreDeployCommand: true,
+      })
+    ).toBe(false);
+  });
+
   it('keeps the fill ceiling safely below the Lambda size threshold', () => {
     expect(BYTECODE_FILL_CEILING_BYTES).toBeLessThan(
       LAMBDA_SIZE_THRESHOLD_BYTES

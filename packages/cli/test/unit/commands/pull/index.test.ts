@@ -118,7 +118,9 @@ describe('pull', () => {
       return res.status(404).json({});
     });
 
-    useUser();
+    // Northstar + a single team: the team resolves unambiguously, since
+    // `--yes` no longer guesses a team when several are available.
+    useUser({ version: 'northstar' });
     useTeams('team_dummy');
     (client as { nonInteractive: boolean }).nonInteractive = false;
 
