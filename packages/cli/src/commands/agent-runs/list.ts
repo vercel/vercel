@@ -53,8 +53,9 @@ export default async function list(client: Client): Promise<number> {
     '--search': search,
     '--issue': issue,
     '--issue-code': issueCode,
+    '--issue-type': issueType,
+    '--issue-source': issueSource,
     '--issue-tool': issueTool,
-    '--session-status': sessionStatus,
     '--trigger': trigger,
     '--page': page,
     '--limit': limit,
@@ -69,8 +70,9 @@ export default async function list(client: Client): Promise<number> {
   telemetry.trackCliOptionSearch(search);
   telemetry.trackCliOptionIssue(issue);
   telemetry.trackCliOptionIssueCode(issueCode);
+  telemetry.trackCliOptionIssueType(issueType);
+  telemetry.trackCliOptionIssueSource(issueSource);
   telemetry.trackCliOptionIssueTool(issueTool);
-  telemetry.trackCliOptionSessionStatus(sessionStatus);
   telemetry.trackCliOptionTrigger(trigger);
   telemetry.trackCliOptionPage(page);
   telemetry.trackCliOptionLimit(limit);
@@ -86,23 +88,46 @@ export default async function list(client: Client): Promise<number> {
     );
   }
   if (
-    sessionStatus &&
-    sessionStatus !== 'completed' &&
-    sessionStatus !== 'failed' &&
-    sessionStatus !== 'running' &&
-    sessionStatus !== 'waiting'
+    issueType &&
+    issueType !== 'action_failed' &&
+    issueType !== 'action_rejected' &&
+    issueType !== 'step_failed' &&
+    issueType !== 'turn_failed' &&
+    issueType !== 'session_failed' &&
+    issueType !== 'policy_blocked'
   ) {
     return invalidArguments(
       client,
-      '`--session-status` supports `completed`, `failed`, `running`, or `waiting`.'
+      '`--issue-type` supports `action_failed`, `action_rejected`, `step_failed`, `turn_failed`, `session_failed`, or `policy_blocked`.'
     );
   }
-  const validatedSessionStatus =
-    sessionStatus === 'completed' ||
-    sessionStatus === 'failed' ||
-    sessionStatus === 'running' ||
-    sessionStatus === 'waiting'
-      ? sessionStatus
+  const validatedIssueType =
+    issueType === 'action_failed' ||
+    issueType === 'action_rejected' ||
+    issueType === 'step_failed' ||
+    issueType === 'turn_failed' ||
+    issueType === 'session_failed' ||
+    issueType === 'policy_blocked'
+      ? issueType
+      : undefined;
+  if (
+    issueSource &&
+    issueSource !== 'skill' &&
+    issueSource !== 'subagent' &&
+    issueSource !== 'tool' &&
+    issueSource !== 'workflow'
+  ) {
+    return invalidArguments(
+      client,
+      '`--issue-source` supports `skill`, `subagent`, `tool`, or `workflow`.'
+    );
+  }
+  const validatedIssueSource =
+    issueSource === 'skill' ||
+    issueSource === 'subagent' ||
+    issueSource === 'tool' ||
+    issueSource === 'workflow'
+      ? issueSource
       : undefined;
   if (
     trigger &&
@@ -150,8 +175,9 @@ export default async function list(client: Client): Promise<number> {
       search,
       issue: issue === 'error' ? 'error' : undefined,
       issueCode,
+      issueType: validatedIssueType,
+      issueSource: validatedIssueSource,
       issueTool,
-      sessionStatus: validatedSessionStatus,
       trigger: validatedTrigger,
     });
   } catch (err) {

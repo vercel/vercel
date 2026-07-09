@@ -51,6 +51,7 @@ describe('agent-runs issues', () => {
           {
             type: 'action_failed',
             code: 'ETIMEDOUT',
+            source: 'tool',
             tool: 'linear.createIssue',
             turns: 5,
             runs: 2,
@@ -106,6 +107,10 @@ describe('agent-runs issues', () => {
       'issues',
       '--issue-code',
       'ETIMEDOUT',
+      '--issue-type',
+      'action_failed',
+      '--issue-source',
+      'tool',
       '--issue-tool',
       'linear.createIssue'
     );
@@ -115,8 +120,30 @@ describe('agent-runs issues', () => {
     expect(receivedQuery).toMatchObject({
       groupBy: 'issue',
       issue_code: 'ETIMEDOUT',
+      issue_type: 'action_failed',
+      issue_source: 'tool',
       issue_tool: 'linear.createIssue',
     });
+  });
+
+  it('errors when --issue-type is not supported', async () => {
+    useLinkedProject();
+    client.setArgv('agent-runs', 'issues', '--issue-type', 'cancelled');
+    const exitCode = await agentRuns(client);
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      '`--issue-type` supports `action_failed`, `action_rejected`, `step_failed`, `turn_failed`, `session_failed`, or `policy_blocked`.'
+    );
+  });
+
+  it('errors when --issue-source is not supported', async () => {
+    useLinkedProject();
+    client.setArgv('agent-runs', 'issues', '--issue-source', 'browser');
+    const exitCode = await agentRuns(client);
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      '`--issue-source` supports `skill`, `subagent`, `tool`, or `workflow`.'
+    );
   });
 
   it('tracks telemetry for subcommand and flags', async () => {

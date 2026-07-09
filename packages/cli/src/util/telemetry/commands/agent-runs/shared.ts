@@ -40,20 +40,29 @@ export class AgentRunsQueryTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionStaleThreshold(value: number | undefined) {
-    if (typeof value === 'number') {
-      this.trackCliOption({
-        option: 'stale-threshold',
-        value: this.redactedValue,
-      });
-    }
-  }
-
   trackCliOptionIssueCode(value: string | undefined) {
     if (value) {
       this.trackCliOption({
         option: 'issue-code',
         value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionIssueType(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'issue-type',
+        value,
+      });
+    }
+  }
+
+  trackCliOptionIssueSource(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'issue-source',
+        value,
       });
     }
   }

@@ -34,7 +34,7 @@ const ISSUE_TYPE_LABEL: Record<string, string> = {
   policy_blocked: 'Policy blocked',
 };
 
-function issueType(group: UnknownRecord): string {
+function formatIssueType(group: UnknownRecord): string {
   const raw = readString(group, 'type');
   return raw ? (ISSUE_TYPE_LABEL[raw] ?? raw) : '-';
 }
@@ -67,6 +67,8 @@ export default async function issues(client: Client): Promise<number> {
     '--since': since,
     '--until': until,
     '--issue-code': issueCode,
+    '--issue-type': issueType,
+    '--issue-source': issueSource,
     '--issue-tool': issueTool,
     '--json': json,
     '--scope': scopeFlag,
@@ -77,12 +79,56 @@ export default async function issues(client: Client): Promise<number> {
   telemetry.trackCliOptionSince(since);
   telemetry.trackCliOptionUntil(until);
   telemetry.trackCliOptionIssueCode(issueCode);
+  telemetry.trackCliOptionIssueType(issueType);
+  telemetry.trackCliOptionIssueSource(issueSource);
   telemetry.trackCliOptionIssueTool(issueTool);
   telemetry.trackCliFlagJson(json);
 
   if (until && !since) {
     return invalidArguments(client, '`--until` requires `--since`.');
   }
+  if (
+    issueType &&
+    issueType !== 'action_failed' &&
+    issueType !== 'action_rejected' &&
+    issueType !== 'step_failed' &&
+    issueType !== 'turn_failed' &&
+    issueType !== 'session_failed' &&
+    issueType !== 'policy_blocked'
+  ) {
+    return invalidArguments(
+      client,
+      '`--issue-type` supports `action_failed`, `action_rejected`, `step_failed`, `turn_failed`, `session_failed`, or `policy_blocked`.'
+    );
+  }
+  const validatedIssueType =
+    issueType === 'action_failed' ||
+    issueType === 'action_rejected' ||
+    issueType === 'step_failed' ||
+    issueType === 'turn_failed' ||
+    issueType === 'session_failed' ||
+    issueType === 'policy_blocked'
+      ? issueType
+      : undefined;
+  if (
+    issueSource &&
+    issueSource !== 'skill' &&
+    issueSource !== 'subagent' &&
+    issueSource !== 'tool' &&
+    issueSource !== 'workflow'
+  ) {
+    return invalidArguments(
+      client,
+      '`--issue-source` supports `skill`, `subagent`, `tool`, or `workflow`.'
+    );
+  }
+  const validatedIssueSource =
+    issueSource === 'skill' ||
+    issueSource === 'subagent' ||
+    issueSource === 'tool' ||
+    issueSource === 'workflow'
+      ? issueSource
+      : undefined;
 
   const scope = await resolveAgentRunsScope(client, {
     scopeFlag,
@@ -106,6 +152,8 @@ export default async function issues(client: Client): Promise<number> {
       since,
       until,
       issueCode,
+      issueType: validatedIssueType,
+      issueSource: validatedIssueSource,
       issueTool,
       groupBy: 'issue',
     });
@@ -136,7 +184,7 @@ export default async function issues(client: Client): Promise<number> {
       header => chalk.bold(chalk.cyan(header))
     ),
     ...issueGroups.map(group => [
-      issueType(group),
+      formatIssueType(group),
       formatIssueTool(group),
       formatIssueCode(group),
       formatCount(readNumber(group, 'turns')),

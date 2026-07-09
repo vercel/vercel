@@ -52,7 +52,6 @@ describe('agent-runs projects', () => {
             errorRate: 0.2,
             running: 2,
             waiting: 1,
-            stale: 1,
             lastIssueAt: new Date(Date.now() - 60_000).toISOString(),
             avgDurationMs: 1234,
           },
@@ -77,36 +76,7 @@ describe('agent-runs projects', () => {
     expect(stdout).toContain('20%');
     expect(stdout).toContain('2');
     expect(stdout).toContain('1m ago');
-  });
-
-  it('forwards --stale-threshold as seconds', async () => {
-    mockedGetLinkedProject.mockResolvedValue({
-      status: 'linked',
-      project: {
-        id: 'prj_test',
-        name: 'agent-project',
-        accountId: 'team_dummy',
-        updatedAt: Date.now(),
-        createdAt: Date.now(),
-      },
-      org: { id: 'team_dummy', slug: 'my-team', type: 'team' },
-    } as Awaited<ReturnType<typeof linkModule.getLinkedProject>>);
-
-    let receivedQuery: Record<string, unknown> | undefined;
-    client.scenario.get('/api/observability/agent-runs', (req, res) => {
-      receivedQuery = req.query;
-      res.json({ projects: [] });
-    });
-
-    client.setArgv('agent-runs', 'projects', '--stale-threshold', '900');
-    const exitCode = await agentRuns(client);
-
-    expect(exitCode).toBe(0);
-    expect(receivedQuery).toMatchObject({
-      teamSlug: 'team_dummy',
-      view: 'team',
-      stale_threshold: '900',
-    });
+    expect(stdout).not.toContain('Stale');
   });
 
   it('works with --scope and no linked project', async () => {

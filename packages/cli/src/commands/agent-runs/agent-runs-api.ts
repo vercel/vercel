@@ -29,11 +29,17 @@ export interface AgentRunsQuery {
   search?: string;
   issue?: 'error';
   issueCode?: string;
+  issueType?:
+    | 'action_failed'
+    | 'action_rejected'
+    | 'step_failed'
+    | 'turn_failed'
+    | 'session_failed'
+    | 'policy_blocked';
+  issueSource?: 'skill' | 'subagent' | 'tool' | 'workflow';
   issueTool?: string;
   groupBy?: 'issue';
-  sessionStatus?: 'completed' | 'failed' | 'running' | 'waiting';
   trigger?: 'slack' | 'http' | 'schedule' | 'manual' | 'unknown';
-  staleThreshold?: number;
   runId?: string;
   trace?: boolean;
 }
@@ -71,23 +77,20 @@ export function buildAgentRunsUrl(query: AgentRunsQuery): string {
   if (query.issueCode) {
     url.searchParams.set('issue_code', query.issueCode);
   }
+  if (query.issueType) {
+    url.searchParams.set('issue_type', query.issueType);
+  }
+  if (query.issueSource) {
+    url.searchParams.set('issue_source', query.issueSource);
+  }
   if (query.issueTool) {
     url.searchParams.set('issue_tool', query.issueTool);
   }
   if (query.groupBy) {
     url.searchParams.set('groupBy', query.groupBy);
   }
-  if (query.sessionStatus) {
-    url.searchParams.set('session_status', query.sessionStatus);
-  }
   if (query.trigger) {
     url.searchParams.set('trigger', query.trigger);
-  }
-  if (typeof query.staleThreshold === 'number') {
-    url.searchParams.set(
-      'stale_threshold',
-      String(Math.max(1, Math.floor(query.staleThreshold)))
-    );
   }
   if (query.runId) {
     url.searchParams.set('runId', query.runId);

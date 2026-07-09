@@ -24,15 +24,6 @@ export class AgentRunsListTelemetryClient
     }
   }
 
-  trackCliOptionSessionStatus(value: string | undefined) {
-    if (value) {
-      this.trackCliOption({
-        option: 'session-status',
-        value,
-      });
-    }
-  }
-
   trackCliOptionTrigger(value: string | undefined) {
     if (value) {
       this.trackCliOption({

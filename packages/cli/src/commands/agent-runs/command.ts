@@ -55,6 +55,25 @@ const issueCodeOption = {
   description: 'Filter Agent Runs by issue code',
 } as const;
 
+const issueTypeOption = {
+  name: 'issue-type',
+  shorthand: null,
+  type: String,
+  argument:
+    'action_failed|action_rejected|step_failed|turn_failed|session_failed|policy_blocked',
+  deprecated: false,
+  description: 'Filter Agent Runs by issue fingerprint type',
+} as const;
+
+const issueSourceOption = {
+  name: 'issue-source',
+  shorthand: null,
+  type: String,
+  argument: 'skill|subagent|tool|workflow',
+  deprecated: false,
+  description: 'Filter Agent Runs by where the issue occurred',
+} as const;
+
 const issueToolOption = {
   name: 'issue-tool',
   shorthand: null,
@@ -91,15 +110,9 @@ export const listSubcommand = {
       description: 'Filter Agent Runs by issue type. Currently supports: error',
     },
     issueCodeOption,
+    issueTypeOption,
+    issueSourceOption,
     issueToolOption,
-    {
-      name: 'session-status',
-      shorthand: null,
-      type: String,
-      argument: 'completed|failed|running|waiting',
-      deprecated: false,
-      description: 'Filter Agent Runs by Eve session status',
-    },
     {
       name: 'trigger',
       shorthand: null,
@@ -224,21 +237,7 @@ export const projectsSubcommand = {
   aliases: [],
   description: 'List projects in the current team with Agent Runs activity',
   arguments: [],
-  options: [
-    environmentOption,
-    sinceOption,
-    untilOption,
-    {
-      name: 'stale-threshold',
-      shorthand: null,
-      type: Number,
-      argument: 'SECONDS',
-      deprecated: false,
-      description:
-        'Seconds without session activity before in-progress runs count as stale',
-    },
-    jsonOption,
-  ],
+  options: [environmentOption, sinceOption, untilOption, jsonOption],
   examples: [
     {
       name: 'List projects with Agent Runs activity',
@@ -262,6 +261,8 @@ export const issuesSubcommand = {
     sinceOption,
     untilOption,
     issueCodeOption,
+    issueTypeOption,
+    issueSourceOption,
     issueToolOption,
     jsonOption,
   ],

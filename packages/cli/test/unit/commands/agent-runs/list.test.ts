@@ -79,7 +79,7 @@ describe('agent-runs list', () => {
     );
   });
 
-  it('forwards search, issue, session status, trigger, pagination, environment, and time range params', async () => {
+  it('forwards search, issue, trigger, pagination, environment, and time range params', async () => {
     useLinkedProject();
     let receivedQuery: Record<string, string> | undefined;
     client.scenario.get('/api/observability/agent-runs', (req, res) => {
@@ -94,8 +94,6 @@ describe('agent-runs list', () => {
       'checkout',
       '--issue',
       'error',
-      '--session-status',
-      'failed',
       '--trigger',
       'slack',
       '--page',
@@ -113,12 +111,12 @@ describe('agent-runs list', () => {
     expect(receivedQuery).toMatchObject({
       search: 'checkout',
       issue: 'error',
-      session_status: 'failed',
       trigger: 'slack',
       page: '2',
       pageSize: '50',
       environment: 'preview',
     });
+    expect(receivedQuery).not.toHaveProperty('session_status');
     const nowSeconds = Math.floor(Date.now() / 1000);
     expect(Number(receivedQuery?.from)).toBeGreaterThan(0);
     expect(Number(receivedQuery?.to)).toBeGreaterThan(nowSeconds - 60);
@@ -142,6 +140,10 @@ describe('agent-runs list', () => {
       'error',
       '--issue-code',
       'ETIMEDOUT',
+      '--issue-type',
+      'action_failed',
+      '--issue-source',
+      'tool',
       '--issue-tool',
       'linear.createIssue'
     );
@@ -151,6 +153,8 @@ describe('agent-runs list', () => {
     expect(receivedQuery).toMatchObject({
       issue: 'error',
       issue_code: 'ETIMEDOUT',
+      issue_type: 'action_failed',
+      issue_source: 'tool',
       issue_tool: 'linear.createIssue',
     });
   });
@@ -242,13 +246,23 @@ describe('agent-runs list', () => {
     );
   });
 
-  it('errors when --session-status is not supported', async () => {
+  it('errors when --issue-type is not supported', async () => {
     useLinkedProject();
-    client.setArgv('agent-runs', 'list', '--session-status', 'cancelled');
+    client.setArgv('agent-runs', 'list', '--issue-type', 'cancelled');
     const exitCode = await agentRuns(client);
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
-      '`--session-status` supports `completed`, `failed`, `running`, or `waiting`.'
+      '`--issue-type` supports `action_failed`, `action_rejected`, `step_failed`, `turn_failed`, `session_failed`, or `policy_blocked`.'
+    );
+  });
+
+  it('errors when --issue-source is not supported', async () => {
+    useLinkedProject();
+    client.setArgv('agent-runs', 'list', '--issue-source', 'browser');
+    const exitCode = await agentRuns(client);
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      '`--issue-source` supports `skill`, `subagent`, `tool`, or `workflow`.'
     );
   });
 
@@ -319,12 +333,14 @@ describe('agent-runs list', () => {
       'checkout',
       '--issue',
       'error',
-      '--session-status',
-      'failed',
       '--trigger',
       'manual',
       '--issue-code',
       'ETIMEDOUT',
+      '--issue-type',
+      'action_failed',
+      '--issue-source',
+      'tool',
       '--issue-tool',
       'linear.createIssue'
     );
@@ -336,8 +352,9 @@ describe('agent-runs list', () => {
       { key: 'option:search', value: '[REDACTED]' },
       { key: 'option:issue', value: 'error' },
       { key: 'option:issue-code', value: '[REDACTED]' },
+      { key: 'option:issue-type', value: 'action_failed' },
+      { key: 'option:issue-source', value: 'tool' },
       { key: 'option:issue-tool', value: '[REDACTED]' },
-      { key: 'option:session-status', value: 'failed' },
       { key: 'option:trigger', value: 'manual' },
       { key: 'flag:json', value: 'TRUE' },
     ]);
