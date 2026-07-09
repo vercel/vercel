@@ -12,7 +12,10 @@ import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { acceptTermsViaBrowser } from '../../util/integration/accept-terms-via-browser';
 import { promptForTermAcceptance } from '../../util/integration/prompt-for-terms';
 import { selectProduct } from '../../util/integration/select-product';
-import { resolveProductSkills } from '../../util/integration/skill-suggestion';
+import {
+  resolveProductSkills,
+  type ResolvedSkill,
+} from '../../util/integration/skill-suggestion';
 import { runClaimForResource } from '../integration-resource/claim';
 import { getResources } from '../../util/integration-resource/get-resources';
 import { packageName } from '../../util/pkg-name';
@@ -570,14 +573,16 @@ export async function addAutoProvision(
     }
   );
 
-  // Install the product's declared agent skills (from `agentSkills`) in both
-  // interactive and non-interactive contexts. JSON mode never reaches here
-  // (read-only — `skills[]` is surfaced in the JSON payload instead).
+  // Install the product's declared agent skills (from `agentSkills`) in all
+  // modes, including --format=json, where the human-readable summary is
+  // suppressed and each skill's `installed` status is reported in the payload.
   const skills = resolveProductSkills(product);
+  const failedSkills: ResolvedSkill[] = [];
 
-  if (skills.length && !options.asJson) {
-    output.spinner(`Installing agent skills for ${product.name}...`);
-    let installed = 0;
+  if (skills.length) {
+    if (!options.asJson) {
+      output.spinner(`Installing agent skills for ${product.name}...`);
+    }
     for (const skill of skills) {
       // Both `--yes` flags are needed in non-interactive (agent/CI) contexts:
       // the first stops `npx` from prompting to install the `skills` package,
@@ -595,16 +600,18 @@ export async function addAutoProvision(
         stdio: 'pipe',
         reject: false,
       });
-      if (result.exitCode === 0) {
-        installed++;
-      } else {
+      if (result.exitCode !== 0) {
+        failedSkills.push(skill);
         output.debug(`skills add failed: ${result.stderr}`);
-        output.warn(
-          `Failed to install ${skill.skill ?? skill.repoUrl}. Run it manually: ${chalk.cyan(skill.command)}`
-        );
+        if (!options.asJson) {
+          output.warn(
+            `Failed to install ${skill.skill ?? skill.repoUrl}. Run it manually: ${chalk.cyan(skill.command)}`
+          );
+        }
       }
     }
-    if (installed > 0) {
+    const installed = skills.length - failedSkills.length;
+    if (installed > 0 && !options.asJson) {
       // Link to the page that renders the product's Agent Skills section: the
       // product page for multi-product integrations, the integration page
       // otherwise (single-product product pages are not linked in the UI).
@@ -633,6 +640,11 @@ export async function addAutoProvision(
     }
     if (setupResult.connected && !setupResult.envPulled && !options.noEnvPull) {
       warnings.push(ENV_PULL_FAILED_MESSAGE);
+    }
+    for (const skill of failedSkills) {
+      warnings.push(
+        `Failed to install ${skill.skill ?? skill.repoUrl}. Run it manually: ${skill.command}`
+      );
     }
 
     const jsonOutput: Record<string, unknown> = {
@@ -678,7 +690,10 @@ export async function addAutoProvision(
       environments: setupResult.environments,
       envPulled: setupResult.envPulled,
       guideCommand,
-      skills,
+      skills: skills.map(skill => ({
+        ...skill,
+        installed: !failedSkills.includes(skill),
+      })),
       warnings,
     };
 
