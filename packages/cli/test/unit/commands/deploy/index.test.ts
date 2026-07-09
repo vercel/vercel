@@ -2103,7 +2103,7 @@ describe('deploy', () => {
           readyState: 'BUILDING',
           aliasAssigned: false,
           target: 'production',
-          alias: ['my-streamed-app.vercel.app'],
+          alias: ['initial-streamed-app.vercel.app'],
         });
       });
 
@@ -2126,6 +2126,12 @@ describe('deploy', () => {
               type: 'alias-assigned',
               deploymentId,
               date: aliasAssigned,
+              alias: ['my-streamed-app.vercel.app'],
+              aliasError: null,
+              aliasWarning: {
+                code: 'alias_warning',
+                message: 'Alias warning from event',
+              },
             })}\n`
           );
         }
@@ -2139,6 +2145,9 @@ describe('deploy', () => {
       expect(exitCode).toEqual(0);
       expect(client.stderr.getFullOutput()).toContain(
         'Aliased         https://my-streamed-app.vercel.app'
+      );
+      expect(client.stderr.getFullOutput()).toContain(
+        'Alias warning from event'
       );
       expect(client.stderr.getFullOutput()).not.toContain('alias-assigned');
       expect(statusFetchCount).toBeLessThanOrEqual(1);

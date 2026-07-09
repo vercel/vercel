@@ -21,10 +21,23 @@ export interface Dictionary<T> {
 export const VALID_ARCHIVE_FORMATS = ['tgz'] as const;
 export type ArchiveFormat = (typeof VALID_ARCHIVE_FORMATS)[number];
 
+export interface DeploymentAliasError {
+  code: string;
+  message: string;
+}
+
+export interface DeploymentAliasWarning extends DeploymentAliasError {
+  link?: string;
+  action?: string;
+}
+
 export interface DeploymentAliasAssignedEvent {
   type: 'alias-assigned';
   deploymentId: string;
   date: number;
+  alias: string[];
+  aliasError: DeploymentAliasError | null;
+  aliasWarning: DeploymentAliasWarning | null;
 }
 
 export interface VercelClientOptions {
@@ -118,7 +131,8 @@ export interface Deployment {
   target: string;
   alias: string[];
   aliasAssigned: boolean | number | null;
-  aliasError: string | null;
+  aliasError: string | DeploymentAliasError | null;
+  aliasWarning?: DeploymentAliasWarning | null;
   checks?: Record<
     string,
     {

@@ -1,6 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import sleep from 'sleep-promise';
-import type { Deployment, VercelClientOptions } from '../src/types';
+import type {
+  Deployment,
+  DeploymentAliasAssignedEvent,
+  VercelClientOptions,
+} from '../src/types';
 import { checkDeploymentStatus } from '../src/check-deployment-status';
 
 const { mockFetch } = vi.hoisted(() => ({ mockFetch: vi.fn() }));
@@ -27,6 +31,20 @@ function mockDeployment(): Deployment {
     aliasAssigned: false,
     target: 'production',
   } as Deployment;
+}
+
+function mockAliasAssignedEvent(
+  overrides: Partial<DeploymentAliasAssignedEvent> = {}
+): DeploymentAliasAssignedEvent {
+  return {
+    type: 'alias-assigned',
+    deploymentId: 'dpl_123',
+    date: 1783370781619,
+    alias: ['final.vercel.app'],
+    aliasError: null,
+    aliasWarning: null,
+    ...overrides,
+  };
 }
 
 function mockClientOptions(): VercelClientOptions {
@@ -114,13 +132,27 @@ describe('checkDeploymentStatus()', () => {
     it('finishes from an existing signal without fetching the deployment', async () => {
       const date = 1783370781619;
       const controller = new AbortController();
-      controller.abort({
-        type: 'alias-assigned',
-        deploymentId: 'dpl_123',
-        date,
-      });
+      controller.abort(
+        mockAliasAssignedEvent({
+          date,
+          aliasWarning: {
+            code: 'alias_warning',
+            message: 'Alias warning',
+          },
+        })
+      );
 
-      const iterator = checkDeploymentStatus(mockDeployment(), {
+      const deployment = {
+        ...mockDeployment(),
+        alias: ['initial.vercel.app'],
+        aliasError: {
+          code: 'old_alias_error',
+          message: 'Old alias error',
+        },
+        aliasWarning: null,
+      };
+
+      const iterator = checkDeploymentStatus(deployment, {
         ...mockClientOptions(),
         aliasAssignedSignal: controller.signal,
       });
@@ -132,7 +164,12 @@ describe('checkDeploymentStatus()', () => {
           payload: expect.objectContaining({
             readyState: 'READY',
             aliasAssigned: date,
-            alias: ['test.vercel.app'],
+            alias: ['final.vercel.app'],
+            aliasError: null,
+            aliasWarning: {
+              code: 'alias_warning',
+              message: 'Alias warning',
+            },
             target: 'production',
             url: 'test.vercel.app',
           }),
@@ -174,11 +211,12 @@ describe('checkDeploymentStatus()', () => {
       const nextEvent = iterator.next();
       await Promise.resolve();
       expect(vi.getTimerCount()).toBe(1);
-      controller.abort({
-        type: 'alias-assigned',
-        deploymentId: 'dpl_123',
-        date,
-      });
+      controller.abort(
+        mockAliasAssignedEvent({
+          date,
+          alias: ['final.example.com'],
+        })
+      );
 
       await expect(nextEvent).resolves.toEqual({
         done: false,
@@ -188,7 +226,7 @@ describe('checkDeploymentStatus()', () => {
             readyState: 'READY',
             aliasAssigned: date,
             url: 'latest.vercel.app',
-            alias: ['latest.example.com'],
+            alias: ['final.example.com'],
           }),
         },
       });
@@ -224,11 +262,7 @@ describe('checkDeploymentStatus()', () => {
       const nextEvent = iterator.next();
       await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
 
-      controller.abort({
-        type: 'alias-assigned',
-        deploymentId: 'dpl_123',
-        date: 1783370781619,
-      });
+      controller.abort(mockAliasAssignedEvent());
 
       await expect(nextEvent).resolves.toEqual({
         done: false,
@@ -238,6 +272,40 @@ describe('checkDeploymentStatus()', () => {
         },
       });
       expect(statusSignal?.aborted).toBe(true);
+    });
+
+    it('continues polling for an incomplete stream event', async () => {
+      const controller = new AbortController();
+      controller.abort({
+        type: 'alias-assigned',
+        deploymentId: 'dpl_123',
+        date: 1783370781619,
+      });
+      const deployment = {
+        ...mockDeployment(),
+        readyState: 'READY',
+        aliasAssigned: 1783370781619,
+      };
+      const abortError = new Error('aborted');
+      abortError.name = 'AbortError';
+      mockFetch
+        .mockRejectedValueOnce(abortError)
+        .mockResolvedValueOnce(mockResponse(200, deployment));
+
+      const iterator = checkDeploymentStatus(mockDeployment(), {
+        ...mockClientOptions(),
+        aliasAssignedSignal: controller.signal,
+      });
+
+      await expect(iterator.next()).resolves.toEqual({
+        done: false,
+        value: { type: 'ready', payload: deployment },
+      });
+      await expect(iterator.next()).resolves.toEqual({
+        done: false,
+        value: { type: 'alias-assigned', payload: deployment },
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
     it('continues polling when no stream signal arrives', async () => {

@@ -25,6 +25,12 @@ describe('printEvents()', () => {
       type: 'alias-assigned' as const,
       deploymentId: 'dpl_123',
       date: 1783370781619,
+      alias: ['final.vercel.app'],
+      aliasError: null,
+      aliasWarning: {
+        code: 'alias_warning',
+        message: 'Alias warning',
+      },
     };
     const buildLog = {
       type: 'stdout',

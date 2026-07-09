@@ -43,7 +43,10 @@ function getAliasAssignedEvent(
   if (
     event?.type === 'alias-assigned' &&
     event.deploymentId === deploymentId &&
-    typeof event.date === 'number'
+    typeof event.date === 'number' &&
+    Array.isArray(event.alias) &&
+    'aliasError' in event &&
+    'aliasWarning' in event
   ) {
     return event;
   }
@@ -147,6 +150,9 @@ export async function* checkDeploymentStatus(
         ...deploymentState,
         readyState: 'READY',
         aliasAssigned: aliasAssignedEvent.date,
+        alias: aliasAssignedEvent.alias,
+        aliasError: aliasAssignedEvent.aliasError,
+        aliasWarning: aliasAssignedEvent.aliasWarning,
       };
 
       if (!finishedEvents.has('ready')) {
