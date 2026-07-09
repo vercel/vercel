@@ -34,6 +34,13 @@ import {
   type Runtime,
 } from '../../../util/sandbox/args';
 
+type CreateFlagsSpec = ReturnType<
+  typeof getFlagsSpecification<typeof createSubcommand.options>
+>;
+export type CreateFlags = ReturnType<
+  typeof parseArguments<CreateFlagsSpec>
+>['flags'];
+
 export interface CreateSandboxOptions {
   project?: string;
   name?: string;
@@ -151,6 +158,43 @@ export async function runCreate(
   return sandbox;
 }
 
+// Maps parsed create flags to CreateSandboxOptions. Consumed by `create` and,
+// via Task 9's `sh` command, by any subcommand that reuses the create flow.
+export function buildCreateOptions(flags: CreateFlags): CreateSandboxOptions {
+  return {
+    project: flags['--project'],
+    name: flags['--name'],
+    nonPersistent: Boolean(flags['--non-persistent']),
+    runtime: flags['--runtime'] ? parseRuntime(flags['--runtime']) : undefined,
+    image: flags['--image'],
+    timeout: parseDuration(flags['--timeout'] ?? '5m'),
+    vcpus:
+      flags['--vcpus'] !== undefined ? parseVcpus(flags['--vcpus']) : undefined,
+    ports: (flags['--publish-port'] ?? []).map(parsePort),
+    silent: Boolean(flags['--silent']),
+    snapshot: flags['--snapshot']
+      ? parseSnapshotId(flags['--snapshot'])
+      : undefined,
+    connect: Boolean(flags['--connect']),
+    env: parseKeyValues(flags['--env'] ?? []),
+    tags: parseKeyValues(flags['--tag'] ?? []),
+    snapshotExpiration: flags['--snapshot-expiration']
+      ? parseSnapshotExpiration(flags['--snapshot-expiration'])
+      : undefined,
+    keepLastSnapshots: flags['--keep-last-snapshots'],
+    keepLastSnapshotsFor: flags['--keep-last-snapshots-for']
+      ? parseSnapshotExpiration(flags['--keep-last-snapshots-for'])
+      : undefined,
+    deleteEvictedSnapshots: flags['--delete-evicted-snapshots'],
+    networkPolicy: flags['--network-policy']
+      ? parseNetworkPolicyMode(flags['--network-policy'])
+      : undefined,
+    allowedDomains: flags['--allowed-domain'] ?? [],
+    allowedCIDRs: flags['--allowed-cidr'] ?? [],
+    deniedCIDRs: flags['--denied-cidr'] ?? [],
+  };
+}
+
 export default async function create(
   client: Client,
   argv: string[]
@@ -177,44 +221,7 @@ export default async function create(
   }
 
   try {
-    const { flags } = parsedArgs;
-
-    await runCreate(client, {
-      project: flags['--project'],
-      name: flags['--name'],
-      nonPersistent: Boolean(flags['--non-persistent']),
-      runtime: flags['--runtime']
-        ? parseRuntime(flags['--runtime'])
-        : undefined,
-      image: flags['--image'],
-      timeout: parseDuration(flags['--timeout'] ?? '5m'),
-      vcpus:
-        flags['--vcpus'] !== undefined
-          ? parseVcpus(flags['--vcpus'])
-          : undefined,
-      ports: (flags['--publish-port'] ?? []).map(parsePort),
-      silent: Boolean(flags['--silent']),
-      snapshot: flags['--snapshot']
-        ? parseSnapshotId(flags['--snapshot'])
-        : undefined,
-      connect: Boolean(flags['--connect']),
-      env: parseKeyValues(flags['--env'] ?? []),
-      tags: parseKeyValues(flags['--tag'] ?? []),
-      snapshotExpiration: flags['--snapshot-expiration']
-        ? parseSnapshotExpiration(flags['--snapshot-expiration'])
-        : undefined,
-      keepLastSnapshots: flags['--keep-last-snapshots'],
-      keepLastSnapshotsFor: flags['--keep-last-snapshots-for']
-        ? parseSnapshotExpiration(flags['--keep-last-snapshots-for'])
-        : undefined,
-      deleteEvictedSnapshots: flags['--delete-evicted-snapshots'],
-      networkPolicy: flags['--network-policy']
-        ? parseNetworkPolicyMode(flags['--network-policy'])
-        : undefined,
-      allowedDomains: flags['--allowed-domain'] ?? [],
-      allowedCIDRs: flags['--allowed-cidr'] ?? [],
-      deniedCIDRs: flags['--denied-cidr'] ?? [],
-    });
+    await runCreate(client, buildCreateOptions(parsedArgs.flags));
 
     return 0;
   } catch (err) {

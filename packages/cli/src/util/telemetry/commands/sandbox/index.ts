@@ -26,4 +26,11 @@ export class SandboxTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandSh(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'sh',
+      value: actual,
+    });
+  }
 }

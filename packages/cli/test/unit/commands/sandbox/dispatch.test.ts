@@ -107,6 +107,7 @@ describe('sandbox dispatcher', () => {
       exec: ['exec'],
       create: ['create'],
       connect: ['connect', 'ssh', 'shell'],
+      sh: ['sh'],
     });
     expect(telemetryConstructorSpy).toHaveBeenCalledWith({
       opts: { store: client.telemetryEventStore },
@@ -203,6 +204,34 @@ describe('sandbox dispatcher', () => {
     expect(run).not.toHaveBeenCalled();
 
     vi.doUnmock('../../../../src/commands/sandbox/connect');
+  });
+
+  it('routes sh to the native handler instead of the pass-through', async () => {
+    vi.resetModules();
+    client.reset();
+    const run = vi.fn(async () => {});
+    vi.doMock('sandbox', () => ({ createApp: () => ({ run }) }));
+
+    const shHandler = vi.fn(async () => 0);
+    vi.doMock('../../../../src/commands/sandbox/sh', () => ({
+      default: shHandler,
+    }));
+
+    const { default: sandbox } = await import(
+      '../../../../src/commands/sandbox'
+    );
+
+    client.setArgv('sandbox', 'sh', '--runtime', 'node22');
+    const exitCode = await sandbox(client);
+
+    expect(exitCode).toBe(0);
+    expect(shHandler).toHaveBeenCalledWith(
+      client,
+      expect.arrayContaining(['--runtime', 'node22'])
+    );
+    expect(run).not.toHaveBeenCalled();
+
+    vi.doUnmock('../../../../src/commands/sandbox/sh');
   });
 
   it('returns 1 and prints the error when the pass-through throws', async () => {
