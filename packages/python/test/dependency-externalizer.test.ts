@@ -4,11 +4,11 @@ import path from 'path';
 import { tmpdir } from 'os';
 import {
   PythonDependencyExternalizer,
-  BYTECODE_COVERAGE_FLOOR,
   BYTECODE_FILL_CEILING_BYTES,
   PYC_TO_PY_RATIO,
   calculateBundleSize,
   estimateBytecodeSize,
+  shouldPrecompileBytecode,
   getPackagesReachableOnPlatform,
   lambdaKnapsack,
   planPublicPackagePacking,
@@ -300,70 +300,119 @@ describe('dependency externalizer support', () => {
     });
   });
 
-  describe('bytecode gate math (coverage floor)', () => {
-    const MB = 1024 * 1024;
-    const gatePasses = (bundleSize: number, pyBytes: number) => {
-      const capacity = BYTECODE_FILL_CEILING_BYTES - bundleSize;
-      const estimate = PYC_TO_PY_RATIO * pyBytes;
-      return capacity >= BYTECODE_COVERAGE_FLOOR * estimate;
-    };
-
-    it('compiles a 101MB all-Python app despite a partial fill', () => {
-      expect(gatePasses(101 * MB, 101 * MB)).toBe(true);
-    });
-
-    it('compiles all-Python apps up to the guaranteed zone boundary', () => {
-      // 220 - S >= 0.5 * 1.2 * S  =>  S <= 220 / 1.6 = 137.5MB
-      expect(gatePasses(137 * MB, 137 * MB)).toBe(true);
-      expect(gatePasses(138 * MB, 138 * MB)).toBe(false);
-    });
-
-    it('skips near-limit apps with low expected coverage', () => {
-      expect(gatePasses(219 * MB, 40 * MB)).toBe(false);
-      expect(gatePasses(200 * MB, 80 * MB)).toBe(false);
-    });
-
-    it('compiles binary-heavy near-limit apps with little .py', () => {
-      expect(gatePasses(200 * MB, 10 * MB)).toBe(true);
-    });
-
-    it('skips when the bundle exceeds the fill ceiling', () => {
-      expect(gatePasses(221 * MB, 0)).toBe(false);
-    });
-  });
-
-  describe('bytecode gate math for large functions (coverage floor)', () => {
+  describe('shouldPrecompileBytecode (coverage-floor gate)', () => {
     const MB = 1024 * 1024;
     const GB = 1024 * MB;
-    const gatePasses = (bundleSize: number, pyBytes: number) => {
-      const capacity = MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE - bundleSize;
-      const estimate = PYC_TO_PY_RATIO * pyBytes;
-      return capacity >= BYTECODE_COVERAGE_FLOOR * estimate;
-    };
 
-    it('compiles a typical large function with plenty of headroom', () => {
-      // 500MB bundle, 100MB of .py — 4.5GB headroom easily fits all bytecode
-      expect(gatePasses(500 * MB, 100 * MB)).toBe(true);
+    // Sizes are pre-populated on the refs so calculateBundleSize never
+    // stats the (nonexistent) paths. Every bundle carries a non-.py file
+    // that must not count toward the bytecode estimate.
+    const bundleWithPy = (pyBytes: number): Files => ({
+      'app.py': new FileFsRef({ fsPath: '/nonexistent/app.py', size: pyBytes }),
+      'native/lib.so': new FileFsRef({
+        fsPath: '/nonexistent/lib.so',
+        size: 50 * MB,
+      }),
     });
 
-    it('compiles when bytecode is small relative to headroom', () => {
-      // 4.9GB bundle, only 10MB of .py — 100MB headroom fits 12MB estimated
-      expect(gatePasses(4.9 * GB, 10 * MB)).toBe(true);
+    const gatePasses = (
+      capacityCeiling: number,
+      bundleSize: number,
+      pyBytes: number
+    ) =>
+      shouldPrecompileBytecode({
+        capacityCeiling,
+        bundleSize,
+        files: bundleWithPy(pyBytes),
+      });
+
+    describe('standard functions (fill ceiling)', () => {
+      const gate = (bundleSize: number, pyBytes: number) =>
+        gatePasses(BYTECODE_FILL_CEILING_BYTES, bundleSize, pyBytes);
+
+      it('compiles a 101MB all-Python app despite a partial fill', async () => {
+        expect(await gate(101 * MB, 101 * MB)).toBe(true);
+      });
+
+      it('compiles all-Python apps up to the guaranteed zone boundary', async () => {
+        // 220 - S >= 0.5 * 1.2 * S  =>  S <= 220 / 1.6 = 137.5MB
+        expect(await gate(137 * MB, 137 * MB)).toBe(true);
+        expect(await gate(138 * MB, 138 * MB)).toBe(false);
+      });
+
+      it('skips near-limit apps with low expected coverage', async () => {
+        expect(await gate(219 * MB, 40 * MB)).toBe(false);
+        expect(await gate(200 * MB, 80 * MB)).toBe(false);
+      });
+
+      it('compiles binary-heavy near-limit apps with little .py', async () => {
+        expect(await gate(200 * MB, 10 * MB)).toBe(true);
+      });
+
+      it('skips when the bundle exceeds the fill ceiling', async () => {
+        expect(await gate(221 * MB, 0)).toBe(false);
+      });
     });
 
-    it('skips near-cap bundles when estimated bytecode far exceeds capacity', () => {
-      // 4.9GB bundle, 400MB of .py — estimated bytecode is 480MB,
-      // 50% floor is 240MB, but only ~100MB headroom
-      expect(gatePasses(4.9 * GB, 400 * MB)).toBe(false);
+    describe('large functions (5GB cap)', () => {
+      const gate = (bundleSize: number, pyBytes: number) =>
+        gatePasses(MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE, bundleSize, pyBytes);
+
+      it('compiles a typical large function with plenty of headroom', async () => {
+        // 500MB bundle, 100MB of .py — 4.5GB headroom easily fits all bytecode
+        expect(await gate(500 * MB, 100 * MB)).toBe(true);
+      });
+
+      it('compiles when bytecode is small relative to headroom', async () => {
+        // 4.9GB bundle, only 10MB of .py — 100MB headroom fits 12MB estimated
+        expect(await gate(4.9 * GB, 10 * MB)).toBe(true);
+      });
+
+      it('skips near-cap bundles when estimated bytecode far exceeds capacity', async () => {
+        // 4.9GB bundle, 400MB of .py — estimated bytecode is 480MB,
+        // 50% floor is 240MB, but only ~100MB headroom
+        expect(await gate(4.9 * GB, 400 * MB)).toBe(false);
+      });
+
+      it('skips when the bundle exceeds the 5GB cap', async () => {
+        expect(await gate(5.1 * GB, 0)).toBe(false);
+      });
+
+      it('compiles a 4GB function with moderate .py content', async () => {
+        // 4GB bundle, 200MB of .py — 1GB headroom easily fits 240MB estimated
+        expect(await gate(4 * GB, 200 * MB)).toBe(true);
+      });
     });
 
-    it('skips when the bundle exceeds the 5GB cap', () => {
-      expect(gatePasses(5.1 * GB, 0)).toBe(false);
-    });
+    it('estimates from .py files only; non-.py bytes never gate', async () => {
+      // 10MB headroom. 20MB of .py estimates 24MB of bytecode (12MB floor),
+      // exceeding the headroom — skip.
+      expect(
+        await shouldPrecompileBytecode({
+          capacityCeiling: 100 * MB,
+          bundleSize: 90 * MB,
+          files: {
+            'app.py': new FileFsRef({
+              fsPath: '/nonexistent/app.py',
+              size: 20 * MB,
+            }),
+          },
+        })
+      ).toBe(false);
 
-    it('compiles a 4GB function with moderate .py content', () => {
-      // 4GB bundle, 200MB of .py — 1GB headroom easily fits 240MB estimated
-      expect(gatePasses(4 * GB, 200 * MB)).toBe(true);
+      // The same 20MB as native code estimates zero bytecode — compile.
+      expect(
+        await shouldPrecompileBytecode({
+          capacityCeiling: 100 * MB,
+          bundleSize: 90 * MB,
+          files: {
+            'native/lib.so': new FileFsRef({
+              fsPath: '/nonexistent/lib.so',
+              size: 20 * MB,
+            }),
+          },
+        })
+      ).toBe(true);
     });
   });
 

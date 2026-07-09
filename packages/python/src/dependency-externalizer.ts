@@ -1384,6 +1384,26 @@ export async function estimateBytecodeSize(files: Files): Promise<number> {
 }
 
 /**
+ * Decide whether running compileall is worthwhile: true when the capacity
+ * remaining under `capacityCeiling` fits at least BYTECODE_COVERAGE_FLOOR
+ * of the bytecode compileall is estimated to produce for the .py files in
+ * the bundle.
+ */
+export async function shouldPrecompileBytecode({
+  capacityCeiling,
+  bundleSize,
+  files,
+}: {
+  capacityCeiling: number;
+  bundleSize: number;
+  files: Files;
+}): Promise<boolean> {
+  const capacity = capacityCeiling - bundleSize;
+  const estimate = await estimateBytecodeSize(files);
+  return capacity >= BYTECODE_COVERAGE_FLOOR * estimate;
+}
+
+/**
  * Largest-first knapsack packing algorithm.
  *
  * Given a map of package names to sizes (in bytes) and a capacity,

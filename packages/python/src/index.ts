@@ -46,13 +46,12 @@ import {
 } from './install';
 import {
   PythonDependencyExternalizer,
-  BYTECODE_COVERAGE_FLOOR,
   BYTECODE_FILL_CEILING_BYTES,
   MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   lambdaKnapsack,
   calculateBundleSize,
-  estimateBytecodeSize,
+  shouldPrecompileBytecode,
   RUNTIME_DEPS_DIR,
   type GenerateBundleResult,
 } from './dependency-externalizer';
@@ -1213,12 +1212,10 @@ export const build: BuildVX = async ({
       // excluded source can't re-enter as .pyc. Bytecode is a pure
       // optimization: failures are logged and the build continues.
       // `vendorPackageTiers` restricts/prioritizes vendor collection;
-      // omitted = one unrestricted pass. `precomputedBundleSize` avoids
-      // re-walking the bundle when the caller already knows its size.
+      // omitted = one unrestricted pass.
       const runCompileAllAndFillBytecode = async (
         capacityBytes: number,
-        vendorPackageTiers?: string[][],
-        precomputedBundleSize?: number
+        vendorPackageTiers?: string[][]
       ) => {
         try {
           await builderSpan
@@ -1251,9 +1248,10 @@ export const build: BuildVX = async ({
               });
             });
 
-          let remainingCapacity =
-            capacityBytes -
-            (precomputedBundleSize ?? (await calculateBundleSize(files)));
+          // Cheap recount: calculateBundleSize caches sizes on the refs
+          // during the gate's earlier walk, so no stat syscalls happen here.
+          const currentSize = await calculateBundleSize(files);
+          let remainingCapacity = capacityBytes - currentSize;
 
           if (pythonVersion.major != null && pythonVersion.minor != null) {
             const appBytecodeInfo = await collectAppBytecodeFiles({
@@ -1290,14 +1288,18 @@ export const build: BuildVX = async ({
         currentBundleSize?: number,
         vendorPackageTiers?: string[][]
       ) => {
-        const size = currentBundleSize ?? (await calculateBundleSize(files));
-        const capacity = capacityCeiling - size;
-        const estimate = await estimateBytecodeSize(files);
-        if (capacity >= BYTECODE_COVERAGE_FLOOR * estimate) {
+        const bundleSize =
+          currentBundleSize ?? (await calculateBundleSize(files));
+        if (
+          await shouldPrecompileBytecode({
+            capacityCeiling,
+            bundleSize,
+            files,
+          })
+        ) {
           await runCompileAllAndFillBytecode(
             capacityCeiling,
-            vendorPackageTiers,
-            size
+            vendorPackageTiers
           );
         }
       };
