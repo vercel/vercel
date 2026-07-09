@@ -163,6 +163,30 @@ describe('buildNetworkPolicy', () => {
     });
   });
 
+  it('builds a subnets-only allow policy when only allowedCIDRs is given', () => {
+    expect(
+      buildNetworkPolicy({
+        allowedDomains: [],
+        allowedCIDRs: ['10.0.0.0/8'],
+        deniedCIDRs: [],
+      })
+    ).toEqual({
+      subnets: { allow: ['10.0.0.0/8'] },
+    });
+  });
+
+  it('builds a subnets-only deny policy when only deniedCIDRs is given', () => {
+    expect(
+      buildNetworkPolicy({
+        allowedDomains: [],
+        allowedCIDRs: [],
+        deniedCIDRs: ['10.1.0.0/16'],
+      })
+    ).toEqual({
+      subnets: { deny: ['10.1.0.0/16'] },
+    });
+  });
+
   it('throws when --network-policy is combined with list options', () => {
     expect(() =>
       buildNetworkPolicy({

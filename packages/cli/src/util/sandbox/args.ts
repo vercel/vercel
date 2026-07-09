@@ -120,6 +120,9 @@ export function parseNetworkPolicyMode(
   return value as 'allow-all' | 'deny-all';
 }
 
+// Unlike the source's `buildNetworkPolicy`, this returns `undefined` (not
+// `'allow-all'`) when no network flags are given. `create` (Task 7) must
+// apply `?? 'allow-all'`; `fork` must not, so it inherits the source policy.
 export function buildNetworkPolicy(opts: {
   networkPolicy?: 'allow-all' | 'deny-all';
   allowedDomains: string[];
