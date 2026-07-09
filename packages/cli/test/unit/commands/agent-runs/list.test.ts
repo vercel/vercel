@@ -27,6 +27,12 @@ function useLinkedProject() {
   } as Awaited<ReturnType<typeof linkModule.getLinkedProject>>);
 }
 
+function expectNoTelemetryEvent(key: string, value: string) {
+  expect(client.telemetryEventStore.readonlyEvents).not.toEqual(
+    expect.arrayContaining([expect.objectContaining({ key, value })])
+  );
+}
+
 const sampleRun = {
   id: 'run_001',
   status: 'completed',
@@ -72,7 +78,7 @@ describe('agent-runs list', () => {
     expect(receivedQuery).not.toHaveProperty('view');
     const stdout = client.stdout.getFullOutput();
     expect(stdout).toContain('run_001');
-    expect(stdout).toContain('Waiting');
+    expect(stdout).toContain('Completed');
     expect(stdout).toContain('anthropic/claude-opus-4.8');
     expect(client.stderr.getFullOutput()).toContain(
       'vercel agent-runs inspect <runId>'
@@ -200,13 +206,47 @@ describe('agent-runs list', () => {
       });
     });
 
-    client.setArgv('agent-runs', 'list');
+    client.setArgv(
+      'agent-runs',
+      'list',
+      '--search',
+      'checkout flow',
+      '--issue-source',
+      'remote_subagent',
+      '--trigger',
+      'slack',
+      '--limit',
+      '1',
+      '--since',
+      '1d'
+    );
     const exitCode = await agentRuns(client);
 
     expect(exitCode).toBe(0);
-    expect(client.stderr.getFullOutput()).toContain(
-      'Showing 1 of 3 Agent Runs'
-    );
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain('Showing 1 of 3 Agent Runs');
+    expect(stderr).toContain("--search 'checkout flow'");
+    expect(stderr).toContain('--issue error');
+    expect(stderr).toContain('--issue-source remote_subagent');
+    expect(stderr).toContain('--trigger slack');
+    expect(stderr).toContain('--limit 1');
+    expect(stderr).toContain('--page 2');
+  });
+
+  it('does not print a next-page hint on the last page', async () => {
+    useLinkedProject();
+    client.scenario.get('/api/observability/agent-runs', (_req, res) => {
+      res.json({
+        runs: [sampleRun],
+        pageInfo: { page: 2, pageSize: 2, total: 3 },
+      });
+    });
+
+    client.setArgv('agent-runs', 'list', '--page', '2', '--limit', '2');
+    const exitCode = await agentRuns(client);
+
+    expect(exitCode).toBe(0);
+    expect(client.stderr.getFullOutput()).not.toContain('for more');
   });
 
   it('uses --scope and --project without a linked project', async () => {
@@ -274,12 +314,13 @@ describe('agent-runs list', () => {
 
   it('errors when --issue is not supported', async () => {
     useLinkedProject();
-    client.setArgv('agent-runs', 'list', '--issue', 'policy_blocked');
+    client.setArgv('agent-runs', 'list', '--issue', 'rejection');
     const exitCode = await agentRuns(client);
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
       '`--issue` currently supports only `error`.'
     );
+    expectNoTelemetryEvent('option:issue', 'rejection');
   });
 
   it('errors when --issue-type is not supported', async () => {
@@ -288,8 +329,9 @@ describe('agent-runs list', () => {
     const exitCode = await agentRuns(client);
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
-      '`--issue-type` supports `action_failed`, `action_rejected`, `step_failed`, `turn_failed`, `session_failed`, or `policy_blocked`.'
+      '`--issue-type` supports `action_failed`, `action_rejected`, `step_failed`, `turn_failed`, or `session_failed`.'
     );
+    expectNoTelemetryEvent('option:issue-type', 'cancelled');
   });
 
   it('errors when --issue-source is not supported', async () => {
@@ -300,6 +342,7 @@ describe('agent-runs list', () => {
     expect(client.stderr.getFullOutput()).toContain(
       '`--issue-source` supports `remote_subagent`, `skill`, `subagent`, `tool`, or `workflow`.'
     );
+    expectNoTelemetryEvent('option:issue-source', 'browser');
   });
 
   it('errors when --trigger is not supported', async () => {
@@ -310,6 +353,7 @@ describe('agent-runs list', () => {
     expect(client.stderr.getFullOutput()).toContain(
       '`--trigger` supports `slack`, `http`, `schedule`, `manual`, or `unknown`.'
     );
+    expectNoTelemetryEvent('option:trigger', 'github');
   });
 
   it('emits a JSON error payload in non-interactive mode for invalid arguments', async () => {

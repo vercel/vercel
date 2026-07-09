@@ -31,7 +31,6 @@ const ISSUE_TYPE_LABEL: Record<string, string> = {
   step_failed: 'Step failed',
   turn_failed: 'Turn failed',
   session_failed: 'Session failed',
-  policy_blocked: 'Policy blocked',
 };
 
 function formatIssueType(group: UnknownRecord): string {
@@ -70,19 +69,10 @@ export default async function issues(client: Client): Promise<number> {
     '--issue-type': issueType,
     '--issue-source': issueSource,
     '--issue-tool': issueTool,
+    '--trigger': trigger,
     '--json': json,
     '--scope': scopeFlag,
   } = parsedArgs.flags;
-
-  telemetry.trackCliOptionProject(projectFlag);
-  telemetry.trackCliOptionEnvironment(environment);
-  telemetry.trackCliOptionSince(since);
-  telemetry.trackCliOptionUntil(until);
-  telemetry.trackCliOptionIssueCode(issueCode);
-  telemetry.trackCliOptionIssueType(issueType);
-  telemetry.trackCliOptionIssueSource(issueSource);
-  telemetry.trackCliOptionIssueTool(issueTool);
-  telemetry.trackCliFlagJson(json);
 
   if (until && !since) {
     return invalidArguments(client, '`--until` requires `--since`.');
@@ -93,12 +83,11 @@ export default async function issues(client: Client): Promise<number> {
     issueType !== 'action_rejected' &&
     issueType !== 'step_failed' &&
     issueType !== 'turn_failed' &&
-    issueType !== 'session_failed' &&
-    issueType !== 'policy_blocked'
+    issueType !== 'session_failed'
   ) {
     return invalidArguments(
       client,
-      '`--issue-type` supports `action_failed`, `action_rejected`, `step_failed`, `turn_failed`, `session_failed`, or `policy_blocked`.'
+      '`--issue-type` supports `action_failed`, `action_rejected`, `step_failed`, `turn_failed`, or `session_failed`.'
     );
   }
   const validatedIssueType =
@@ -106,8 +95,7 @@ export default async function issues(client: Client): Promise<number> {
     issueType === 'action_rejected' ||
     issueType === 'step_failed' ||
     issueType === 'turn_failed' ||
-    issueType === 'session_failed' ||
-    issueType === 'policy_blocked'
+    issueType === 'session_failed'
       ? issueType
       : undefined;
   if (
@@ -131,6 +119,38 @@ export default async function issues(client: Client): Promise<number> {
     issueSource === 'workflow'
       ? issueSource
       : undefined;
+  if (
+    trigger &&
+    trigger !== 'slack' &&
+    trigger !== 'http' &&
+    trigger !== 'schedule' &&
+    trigger !== 'manual' &&
+    trigger !== 'unknown'
+  ) {
+    return invalidArguments(
+      client,
+      '`--trigger` supports `slack`, `http`, `schedule`, `manual`, or `unknown`.'
+    );
+  }
+  const validatedTrigger =
+    trigger === 'slack' ||
+    trigger === 'http' ||
+    trigger === 'schedule' ||
+    trigger === 'manual' ||
+    trigger === 'unknown'
+      ? trigger
+      : undefined;
+
+  telemetry.trackCliOptionProject(projectFlag);
+  telemetry.trackCliOptionEnvironment(environment);
+  telemetry.trackCliOptionSince(since);
+  telemetry.trackCliOptionUntil(until);
+  telemetry.trackCliOptionIssueCode(issueCode);
+  telemetry.trackCliOptionIssueType(validatedIssueType);
+  telemetry.trackCliOptionIssueSource(validatedIssueSource);
+  telemetry.trackCliOptionIssueTool(issueTool);
+  telemetry.trackCliOptionTrigger(validatedTrigger);
+  telemetry.trackCliFlagJson(json);
 
   const scope = await resolveAgentRunsScope(client, {
     scopeFlag,
@@ -157,6 +177,7 @@ export default async function issues(client: Client): Promise<number> {
       issueType: validatedIssueType,
       issueSource: validatedIssueSource,
       issueTool,
+      trigger: validatedTrigger,
       groupBy: 'issue',
     });
   } catch (err) {
@@ -198,7 +219,7 @@ export default async function issues(client: Client): Promise<number> {
   client.stdout.write(`\n${table(rows, { hsep: 3 }).replace(/^/gm, '  ')}\n\n`);
 
   output.log(
-    `Run ${cmd('vercel agent-runs list --issue error --project <name>')} to list error-bearing runs.`
+    `Run ${cmd('vercel agent-runs list --issue error --project <name>')} to list issue-bearing runs.`
   );
   return 0;
 }

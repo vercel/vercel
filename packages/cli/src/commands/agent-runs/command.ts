@@ -60,7 +60,7 @@ const issueTypeOption = {
   shorthand: null,
   type: String,
   argument:
-    'action_failed|action_rejected|step_failed|turn_failed|session_failed|policy_blocked',
+    'action_failed|action_rejected|step_failed|turn_failed|session_failed',
   deprecated: false,
   description: 'Filter Agent Runs by issue fingerprint type',
 } as const;
@@ -264,6 +264,14 @@ export const issuesSubcommand = {
     issueTypeOption,
     issueSourceOption,
     issueToolOption,
+    {
+      name: 'trigger',
+      shorthand: null,
+      type: String,
+      argument: 'slack|http|schedule|manual|unknown',
+      deprecated: false,
+      description: 'Filter Agent Runs by trigger source',
+    },
     jsonOption,
   ],
   examples: [

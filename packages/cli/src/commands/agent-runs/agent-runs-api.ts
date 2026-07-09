@@ -34,8 +34,7 @@ export interface AgentRunsQuery {
     | 'action_rejected'
     | 'step_failed'
     | 'turn_failed'
-    | 'session_failed'
-    | 'policy_blocked';
+    | 'session_failed';
   issueSource?: 'remote_subagent' | 'skill' | 'subagent' | 'tool' | 'workflow';
   issueTool?: string;
   groupBy?: 'issue';

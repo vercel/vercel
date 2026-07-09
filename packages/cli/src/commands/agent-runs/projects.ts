@@ -106,8 +106,6 @@ export default async function projects(client: Client): Promise<number> {
       'Runs',
       'Errors',
       'Error Rate',
-      'Running',
-      'Waiting',
       'Last Issue',
       'Avg Duration',
     ].map(header => chalk.bold(chalk.cyan(header))),
@@ -125,8 +123,6 @@ export default async function projects(client: Client): Promise<number> {
       formatCount(readNumber(project, 'runs', 'runCount', 'totalRuns')),
       formatCount(readNumber(project, 'errors')),
       formatRate(readNumber(project, 'errorRate')),
-      formatCount(readNumber(project, 'running')),
-      formatCount(readNumber(project, 'waiting')),
       formatAge(readTimestampMs(project, 'lastIssueAt')),
       chalk.gray(
         formatDurationMs(

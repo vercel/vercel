@@ -1,4 +1,5 @@
 import { describe, beforeEach, afterEach, expect, it, vi } from 'vitest';
+import stripAnsi from 'strip-ansi';
 import { client } from '../../../mocks/client';
 import agentRuns from '../../../../src/commands/agent-runs';
 import * as linkModule from '../../../../src/util/projects/link';
@@ -50,8 +51,6 @@ describe('agent-runs projects', () => {
             runs: 5,
             errors: 1,
             errorRate: 0.2,
-            running: 2,
-            waiting: 1,
             lastIssueAt: new Date(Date.now() - 60_000).toISOString(),
             avgDurationMs: 1234,
           },
@@ -69,13 +68,17 @@ describe('agent-runs projects', () => {
       environment: 'production',
     });
     expect(receivedQuery).not.toHaveProperty('project');
-    const stdout = client.stdout.getFullOutput();
+    const stdout = stripAnsi(client.stdout.getFullOutput());
+    expect(stdout).toMatch(
+      /Project\s+Runs\s+Errors\s+Error Rate\s+Last Issue\s+Avg Duration/
+    );
     expect(stdout).toContain('my-app');
     expect(stdout).toContain('5');
     expect(stdout).toContain('1');
     expect(stdout).toContain('20%');
-    expect(stdout).toContain('2');
     expect(stdout).toContain('1m ago');
+    expect(stdout).not.toContain('Running');
+    expect(stdout).not.toContain('Waiting');
     expect(stdout).not.toContain('Stale');
   });
 

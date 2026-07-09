@@ -76,6 +76,15 @@ export class AgentRunsQueryTelemetryClient extends TelemetryClient {
     }
   }
 
+  trackCliOptionTrigger(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'trigger',
+        value,
+      });
+    }
+  }
+
   trackCliFlagJson(value: boolean | undefined) {
     if (value) {
       this.trackCliFlag('json');

@@ -27,6 +27,12 @@ function useLinkedProject() {
   } as Awaited<ReturnType<typeof linkModule.getLinkedProject>>);
 }
 
+function expectNoTelemetryEvent(key: string, value: string) {
+  expect(client.telemetryEventStore.readonlyEvents).not.toEqual(
+    expect.arrayContaining([expect.objectContaining({ key, value })])
+  );
+}
+
 describe('agent-runs issues', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -112,7 +118,9 @@ describe('agent-runs issues', () => {
       '--issue-source',
       'remote_subagent',
       '--issue-tool',
-      'deployment-reviewer'
+      'deployment-reviewer',
+      '--trigger',
+      'slack'
     );
     const exitCode = await agentRuns(client);
 
@@ -123,6 +131,7 @@ describe('agent-runs issues', () => {
       issue_type: 'action_failed',
       issue_source: 'remote_subagent',
       issue_tool: 'deployment-reviewer',
+      trigger: 'slack',
     });
   });
 
@@ -132,8 +141,9 @@ describe('agent-runs issues', () => {
     const exitCode = await agentRuns(client);
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
-      '`--issue-type` supports `action_failed`, `action_rejected`, `step_failed`, `turn_failed`, `session_failed`, or `policy_blocked`.'
+      '`--issue-type` supports `action_failed`, `action_rejected`, `step_failed`, `turn_failed`, or `session_failed`.'
     );
+    expectNoTelemetryEvent('option:issue-type', 'cancelled');
   });
 
   it('errors when --issue-source is not supported', async () => {
@@ -144,6 +154,18 @@ describe('agent-runs issues', () => {
     expect(client.stderr.getFullOutput()).toContain(
       '`--issue-source` supports `remote_subagent`, `skill`, `subagent`, `tool`, or `workflow`.'
     );
+    expectNoTelemetryEvent('option:issue-source', 'browser');
+  });
+
+  it('errors when --trigger is not supported', async () => {
+    useLinkedProject();
+    client.setArgv('agent-runs', 'issues', '--trigger', 'github');
+    const exitCode = await agentRuns(client);
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      '`--trigger` supports `slack`, `http`, `schedule`, `manual`, or `unknown`.'
+    );
+    expectNoTelemetryEvent('option:trigger', 'github');
   });
 
   it('tracks telemetry for subcommand and flags', async () => {
@@ -152,12 +174,13 @@ describe('agent-runs issues', () => {
       res.json({ issueGroups: [] });
     });
 
-    client.setArgv('agent-runs', 'issues', '--json');
+    client.setArgv('agent-runs', 'issues', '--json', '--trigger', 'manual');
     const exitCode = await agentRuns(client);
 
     expect(exitCode).toBe(0);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'subcommand:issues', value: 'issues' },
+      { key: 'option:trigger', value: 'manual' },
       { key: 'flag:json', value: 'TRUE' },
     ]);
   });

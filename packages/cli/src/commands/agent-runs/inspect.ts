@@ -50,18 +50,18 @@ function formatIssueSummary(run: UnknownRecord): string | undefined {
   const issueCount = readNumber(summary, 'issueCount');
   if (!summary || !issueCount || issueCount <= 0) return undefined;
 
-  const parts: string[] = [`${formatCount(issueCount)} issues`];
+  const parts: string[] = [formatCountNoun(issueCount, 'issue')];
   const errorCount = readNumber(summary, 'errorCount');
   const rejectedActionCount = readNumber(summary, 'rejectedActionCount');
   const failedTurnCount = readNumber(summary, 'failedTurnCount');
   if (errorCount && errorCount > 0) {
-    parts.push(`${formatCount(errorCount)} errors`);
+    parts.push(formatCountNoun(errorCount, 'error'));
   }
   if (rejectedActionCount && rejectedActionCount > 0) {
-    parts.push(`${formatCount(rejectedActionCount)} rejected`);
+    parts.push(formatCountNoun(rejectedActionCount, 'rejection'));
   }
   if (failedTurnCount && failedTurnCount > 0) {
-    parts.push(`${formatCount(failedTurnCount)} failed turns`);
+    parts.push(formatCountNoun(failedTurnCount, 'failed turn'));
   }
 
   const latestIssue =
@@ -86,6 +86,10 @@ function formatIssueSummary(run: UnknownRecord): string | undefined {
   }
 
   return parts.join(' / ');
+}
+
+function formatCountNoun(count: number, noun: string): string {
+  return `${formatCount(count)} ${count === 1 ? noun : `${noun}s`}`;
 }
 
 function renderDetail(run: UnknownRecord): string {
@@ -154,7 +158,7 @@ function renderDetail(run: UnknownRecord): string {
     sections.push(`${chalk.bold('Events')}\n${table(eventRows, { hsep: 3 })}`);
   }
 
-  const subagents = asArray(run.subagents ?? run.subAgents);
+  const subagents = asArray(run.subagentRuns ?? run.subagents ?? run.subAgents);
   if (subagents.length > 0) {
     const subagentRows = [
       ['Subagent', 'Status', 'Model', 'Tokens', 'Duration'].map(header =>

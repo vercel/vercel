@@ -63,21 +63,6 @@ export default async function list(client: Client): Promise<number> {
     '--scope': scopeFlag,
   } = parsedArgs.flags;
 
-  telemetry.trackCliOptionProject(projectFlag);
-  telemetry.trackCliOptionEnvironment(environment);
-  telemetry.trackCliOptionSince(since);
-  telemetry.trackCliOptionUntil(until);
-  telemetry.trackCliOptionSearch(search);
-  telemetry.trackCliOptionIssue(issue);
-  telemetry.trackCliOptionIssueCode(issueCode);
-  telemetry.trackCliOptionIssueType(issueType);
-  telemetry.trackCliOptionIssueSource(issueSource);
-  telemetry.trackCliOptionIssueTool(issueTool);
-  telemetry.trackCliOptionTrigger(trigger);
-  telemetry.trackCliOptionPage(page);
-  telemetry.trackCliOptionLimit(limit);
-  telemetry.trackCliFlagJson(json);
-
   if (until && !since) {
     return invalidArguments(client, '`--until` requires `--since`.');
   }
@@ -93,12 +78,11 @@ export default async function list(client: Client): Promise<number> {
     issueType !== 'action_rejected' &&
     issueType !== 'step_failed' &&
     issueType !== 'turn_failed' &&
-    issueType !== 'session_failed' &&
-    issueType !== 'policy_blocked'
+    issueType !== 'session_failed'
   ) {
     return invalidArguments(
       client,
-      '`--issue-type` supports `action_failed`, `action_rejected`, `step_failed`, `turn_failed`, `session_failed`, or `policy_blocked`.'
+      '`--issue-type` supports `action_failed`, `action_rejected`, `step_failed`, `turn_failed`, or `session_failed`.'
     );
   }
   const validatedIssueType =
@@ -106,8 +90,7 @@ export default async function list(client: Client): Promise<number> {
     issueType === 'action_rejected' ||
     issueType === 'step_failed' ||
     issueType === 'turn_failed' ||
-    issueType === 'session_failed' ||
-    issueType === 'policy_blocked'
+    issueType === 'session_failed'
       ? issueType
       : undefined;
   if (
@@ -152,6 +135,21 @@ export default async function list(client: Client): Promise<number> {
     trigger === 'unknown'
       ? trigger
       : undefined;
+
+  telemetry.trackCliOptionProject(projectFlag);
+  telemetry.trackCliOptionEnvironment(environment);
+  telemetry.trackCliOptionSince(since);
+  telemetry.trackCliOptionUntil(until);
+  telemetry.trackCliOptionSearch(search);
+  telemetry.trackCliOptionIssue(issue === 'error' ? issue : undefined);
+  telemetry.trackCliOptionIssueCode(issueCode);
+  telemetry.trackCliOptionIssueType(validatedIssueType);
+  telemetry.trackCliOptionIssueSource(validatedIssueSource);
+  telemetry.trackCliOptionIssueTool(issueTool);
+  telemetry.trackCliOptionTrigger(validatedTrigger);
+  telemetry.trackCliOptionPage(page);
+  telemetry.trackCliOptionLimit(limit);
+  telemetry.trackCliFlagJson(json);
 
   const scope = await resolveAgentRunsScope(client, {
     scopeFlag,
@@ -230,21 +228,51 @@ export default async function list(client: Client): Promise<number> {
   const pagination =
     readRecord(data, 'pageInfo') ?? readRecord(data, 'pagination');
   const total = readNumber(pagination, 'total', 'totalCount');
-  if (total !== undefined && total > runList.length) {
-    const nextPageArgs = [
-      'vercel agent-runs list',
-      scopeFlag ? `--scope ${scopeFlag}` : '',
-      projectFlag ? `--project ${projectFlag}` : '',
-      `--page ${(page ?? 1) + 1}`,
-    ]
-      .filter(Boolean)
-      .join(' ');
+  const currentPage = readNumber(pagination, 'page') ?? page ?? 1;
+  const pageSize =
+    readNumber(pagination, 'pageSize', 'limit') ?? limit ?? runList.length;
+  const consumedRuns = Math.max(0, currentPage - 1) * pageSize + runList.length;
+  if (total !== undefined && total > consumedRuns) {
+    const nextPageArgs = ['vercel agent-runs list'];
+    const pushFlag = (name: string, value: string | number | undefined) => {
+      if (value !== undefined && value !== '') {
+        nextPageArgs.push(`${name} ${shellQuoteArg(value)}`);
+      }
+    };
+    pushFlag('--scope', scopeFlag);
+    pushFlag('--project', projectFlag);
+    pushFlag('--environment', environment);
+    pushFlag('--since', since);
+    pushFlag('--until', until);
+    pushFlag('--search', search);
+    pushFlag(
+      '--issue',
+      issue === 'error' || issueCode || issueType || issueSource || issueTool
+        ? 'error'
+        : undefined
+    );
+    pushFlag('--issue-code', issueCode);
+    pushFlag('--issue-type', validatedIssueType);
+    pushFlag('--issue-source', validatedIssueSource);
+    pushFlag('--issue-tool', issueTool);
+    pushFlag('--trigger', validatedTrigger);
+    pushFlag('--limit', limit);
+    pushFlag('--page', currentPage + 1);
     output.log(
-      `Showing ${runList.length} of ${total} Agent Runs. Run ${cmd(nextPageArgs)} for more.`
+      `Showing ${runList.length} of ${total} Agent Runs. Run ${cmd(nextPageArgs.join(' '))} for more.`
     );
   }
   output.log(
     `Run ${cmd('vercel agent-runs inspect <runId>')} for run details.`
   );
   return 0;
+}
+
+function shellQuoteArg(value: string | number): string {
+  const text = String(value);
+  if (/^[A-Za-z0-9_./:@=-]+$/.test(text)) {
+    return text;
+  }
+
+  return `'${text.replace(/'/g, "'\\''")}'`;
 }
