@@ -372,11 +372,13 @@ export const fetchApi = async (
 
   debug(`${opts.method || 'GET'} ${url}`);
   time = Date.now();
-  const res = await nodeFetch(url, opts);
-  debug(`DONE in ${Date.now() - time}ms: ${opts.method || 'GET'} ${url}`);
-  semaphore.release();
-
-  return res;
+  try {
+    const res = await nodeFetch(url, opts);
+    debug(`DONE in ${Date.now() - time}ms: ${opts.method || 'GET'} ${url}`);
+    return res;
+  } finally {
+    semaphore.release();
+  }
 };
 
 export interface PreparedFile {
