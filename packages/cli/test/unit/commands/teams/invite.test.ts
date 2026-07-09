@@ -180,7 +180,13 @@ describe('teams invite', () => {
         throw new Error('exit');
       }) as () => never);
 
-      client.setArgv('teams', 'invite', 'nobody@example.com');
+      client.setArgv(
+        'teams',
+        'invite',
+        'nobody@example.com',
+        '--role',
+        'DEVELOPER'
+      );
       await expect(teams(client)).rejects.toThrow('exit');
 
       const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
@@ -188,6 +194,7 @@ describe('teams invite', () => {
       expect(payload.reason).toBe('user_not_found');
       expect(payload.message).toContain('nobody@example.com');
       expect(payload.next[0].command).toContain('teams invite');
+      expect(payload.next[0].command).toContain('--role DEVELOPER');
 
       logSpy.mockRestore();
       exitSpy.mockRestore();
