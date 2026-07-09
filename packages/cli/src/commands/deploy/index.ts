@@ -59,7 +59,6 @@ import {
 import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import getProjectName from '../../util/get-project-name';
 import getSubcommand from '../../util/get-subcommand';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
@@ -281,13 +280,9 @@ async function handleInitDeployment(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
-    projectName:
-      projectNameOrId ??
-      getProjectName({
-        nameParam: undefined,
-        nowConfig: localConfig,
-        paths,
-      }),
+    // Only explicit names: the folder-name fallback is derived inside
+    // `setupAndLink`, and passing it would suppress Git-match suggestions.
+    projectName: projectNameOrId ?? localConfig?.name,
     failIfNotFound: !!projectNameOrId,
     v0: isV0,
   });
@@ -844,11 +839,9 @@ async function handleContinueSubcommand(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm: true,
-    projectName: getProjectName({
-      nameParam: undefined,
-      nowConfig: localConfig,
-      paths,
-    }),
+    // Only explicit names: the folder-name fallback is derived inside
+    // `setupAndLink`, and passing it would suppress Git-match suggestions.
+    projectName: localConfig?.name,
   });
   if (typeof link === 'number') {
     return link;
@@ -1129,13 +1122,10 @@ async function handleDefaultDeploy(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
+    // Only explicit names: the folder-name fallback is derived inside
+    // `setupAndLink`, and passing it would suppress Git-match suggestions.
     projectName:
-      projectNameOrId ??
-      getProjectName({
-        nameParam: parsedArguments.flags['--name'],
-        nowConfig: localConfig,
-        paths,
-      }),
+      projectNameOrId ?? parsedArguments.flags['--name'] ?? localConfig?.name,
     failIfNotFound: !!projectNameOrId,
     requireExistingLink: parsedArguments.flags['--dry'],
     v0: isV0,
