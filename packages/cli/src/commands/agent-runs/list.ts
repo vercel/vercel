@@ -112,6 +112,7 @@ export default async function list(client: Client): Promise<number> {
       : undefined;
   if (
     issueSource &&
+    issueSource !== 'remote_subagent' &&
     issueSource !== 'skill' &&
     issueSource !== 'subagent' &&
     issueSource !== 'tool' &&
@@ -119,10 +120,11 @@ export default async function list(client: Client): Promise<number> {
   ) {
     return invalidArguments(
       client,
-      '`--issue-source` supports `skill`, `subagent`, `tool`, or `workflow`.'
+      '`--issue-source` supports `remote_subagent`, `skill`, `subagent`, `tool`, or `workflow`.'
     );
   }
   const validatedIssueSource =
+    issueSource === 'remote_subagent' ||
     issueSource === 'skill' ||
     issueSource === 'subagent' ||
     issueSource === 'tool' ||
@@ -173,7 +175,10 @@ export default async function list(client: Client): Promise<number> {
       page,
       pageSize: limit,
       search,
-      issue: issue === 'error' ? 'error' : undefined,
+      issue:
+        issue === 'error' || issueCode || issueType || issueSource || issueTool
+          ? 'error'
+          : undefined,
       issueCode,
       issueType: validatedIssueType,
       issueSource: validatedIssueSource,
@@ -222,7 +227,8 @@ export default async function list(client: Client): Promise<number> {
   ];
   client.stdout.write(`\n${table(rows, { hsep: 3 }).replace(/^/gm, '  ')}\n\n`);
 
-  const pagination = readRecord(data, 'pagination');
+  const pagination =
+    readRecord(data, 'pageInfo') ?? readRecord(data, 'pagination');
   const total = readNumber(pagination, 'total', 'totalCount');
   if (total !== undefined && total > runList.length) {
     const nextPageArgs = [

@@ -69,7 +69,7 @@ const issueSourceOption = {
   name: 'issue-source',
   shorthand: null,
   type: String,
-  argument: 'skill|subagent|tool|workflow',
+  argument: 'remote_subagent|skill|subagent|tool|workflow',
   deprecated: false,
   description: 'Filter Agent Runs by where the issue occurred',
 } as const;

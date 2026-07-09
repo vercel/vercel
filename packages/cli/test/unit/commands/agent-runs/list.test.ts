@@ -143,9 +143,9 @@ describe('agent-runs list', () => {
       '--issue-type',
       'action_failed',
       '--issue-source',
-      'tool',
+      'remote_subagent',
       '--issue-tool',
-      'linear.createIssue'
+      'deployment-reviewer'
     );
     const exitCode = await agentRuns(client);
 
@@ -154,8 +154,26 @@ describe('agent-runs list', () => {
       issue: 'error',
       issue_code: 'ETIMEDOUT',
       issue_type: 'action_failed',
-      issue_source: 'tool',
-      issue_tool: 'linear.createIssue',
+      issue_source: 'remote_subagent',
+      issue_tool: 'deployment-reviewer',
+    });
+  });
+
+  it('treats issue fingerprint filters as error filters', async () => {
+    useLinkedProject();
+    let receivedQuery: Record<string, string> | undefined;
+    client.scenario.get('/api/observability/agent-runs', (req, res) => {
+      receivedQuery = req.query as Record<string, string>;
+      res.json({ runs: [] });
+    });
+
+    client.setArgv('agent-runs', 'list', '--issue-source', 'remote_subagent');
+    const exitCode = await agentRuns(client);
+
+    expect(exitCode).toBe(0);
+    expect(receivedQuery).toMatchObject({
+      issue: 'error',
+      issue_source: 'remote_subagent',
     });
   });
 
@@ -171,6 +189,24 @@ describe('agent-runs list', () => {
 
     expect(exitCode).toBe(0);
     expect(JSON.parse(client.stdout.getFullOutput())).toEqual(payload);
+  });
+
+  it('reads dashboard pageInfo pagination', async () => {
+    useLinkedProject();
+    client.scenario.get('/api/observability/agent-runs', (_req, res) => {
+      res.json({
+        runs: [sampleRun],
+        pageInfo: { page: 1, pageSize: 1, total: 3 },
+      });
+    });
+
+    client.setArgv('agent-runs', 'list');
+    const exitCode = await agentRuns(client);
+
+    expect(exitCode).toBe(0);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Showing 1 of 3 Agent Runs'
+    );
   });
 
   it('uses --scope and --project without a linked project', async () => {
@@ -262,7 +298,7 @@ describe('agent-runs list', () => {
     const exitCode = await agentRuns(client);
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
-      '`--issue-source` supports `skill`, `subagent`, `tool`, or `workflow`.'
+      '`--issue-source` supports `remote_subagent`, `skill`, `subagent`, `tool`, or `workflow`.'
     );
   });
 

@@ -36,7 +36,7 @@ export interface AgentRunsQuery {
     | 'turn_failed'
     | 'session_failed'
     | 'policy_blocked';
-  issueSource?: 'skill' | 'subagent' | 'tool' | 'workflow';
+  issueSource?: 'remote_subagent' | 'skill' | 'subagent' | 'tool' | 'workflow';
   issueTool?: string;
   groupBy?: 'issue';
   trigger?: 'slack' | 'http' | 'schedule' | 'manual' | 'unknown';

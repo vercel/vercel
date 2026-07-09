@@ -110,9 +110,9 @@ describe('agent-runs issues', () => {
       '--issue-type',
       'action_failed',
       '--issue-source',
-      'tool',
+      'remote_subagent',
       '--issue-tool',
-      'linear.createIssue'
+      'deployment-reviewer'
     );
     const exitCode = await agentRuns(client);
 
@@ -121,8 +121,8 @@ describe('agent-runs issues', () => {
       groupBy: 'issue',
       issue_code: 'ETIMEDOUT',
       issue_type: 'action_failed',
-      issue_source: 'tool',
-      issue_tool: 'linear.createIssue',
+      issue_source: 'remote_subagent',
+      issue_tool: 'deployment-reviewer',
     });
   });
 
@@ -142,7 +142,7 @@ describe('agent-runs issues', () => {
     const exitCode = await agentRuns(client);
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
-      '`--issue-source` supports `skill`, `subagent`, `tool`, or `workflow`.'
+      '`--issue-source` supports `remote_subagent`, `skill`, `subagent`, `tool`, or `workflow`.'
     );
   });
 

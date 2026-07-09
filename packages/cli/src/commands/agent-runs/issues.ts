@@ -112,6 +112,7 @@ export default async function issues(client: Client): Promise<number> {
       : undefined;
   if (
     issueSource &&
+    issueSource !== 'remote_subagent' &&
     issueSource !== 'skill' &&
     issueSource !== 'subagent' &&
     issueSource !== 'tool' &&
@@ -119,10 +120,11 @@ export default async function issues(client: Client): Promise<number> {
   ) {
     return invalidArguments(
       client,
-      '`--issue-source` supports `skill`, `subagent`, `tool`, or `workflow`.'
+      '`--issue-source` supports `remote_subagent`, `skill`, `subagent`, `tool`, or `workflow`.'
     );
   }
   const validatedIssueSource =
+    issueSource === 'remote_subagent' ||
     issueSource === 'skill' ||
     issueSource === 'subagent' ||
     issueSource === 'tool' ||
