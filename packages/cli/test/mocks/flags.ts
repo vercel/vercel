@@ -6,6 +6,7 @@ import type {
   FlagSettings,
   Segment,
   SegmentMembershipOperation,
+  UpdateFlagRequest,
 } from '../../src/util/flags/types';
 
 export const defaultFlagSettings: FlagSettings = {
@@ -230,12 +231,15 @@ export function useFlags(
   flagsList: Flag[] = defaultFlags,
   sdkKeysList: SdkKey[] = defaultSdkKeys,
   settings: FlagSettings = defaultFlagSettings,
-  segmentsList: Segment[] = defaultSegments
+  segmentsList: Segment[] = defaultSegments,
+  onUpdateFlag?: (request: UpdateFlagRequest) => void,
+  onGetSettings?: () => void
 ) {
   // Get flag settings
   client.scenario.get(
     '/v1/projects/:projectId/feature-flags/settings',
     (_req, res) => {
+      onGetSettings?.();
       res.json(settings);
     }
   );
@@ -332,6 +336,7 @@ export function useFlags(
         f => f.id === flagIdOrSlug || f.slug === flagIdOrSlug
       );
       if (flagIndex !== -1) {
+        onUpdateFlag?.(req.body as UpdateFlagRequest);
         const flag = flagsList[flagIndex];
         const updatedFlag = {
           ...flag,

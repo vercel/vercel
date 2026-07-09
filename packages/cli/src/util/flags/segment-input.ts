@@ -387,14 +387,17 @@ function isRuleIdInput(input: string): boolean {
   );
 }
 
-function parseComparator(input: string): SegmentComparator {
+export function parseComparator(
+  input: string,
+  ruleLabel = 'segment rule'
+): SegmentComparator {
   const normalized = input.trim();
   const lowercase = normalized.toLowerCase();
   const comparator =
     OPERATOR_ALIASES[normalized] ?? OPERATOR_ALIASES[lowercase];
   if (!comparator) {
     throw new Error(
-      `Invalid segment rule operator "${input}". Valid operators: ${formatFlagConditionComparatorList()}.`
+      `Invalid ${ruleLabel} operator "${input}". Valid operators: ${formatFlagConditionComparatorList()}.`
     );
   }
   return comparator;
@@ -420,7 +423,7 @@ function parseEntityAttribute(input: string): {
   };
 }
 
-function parseConditionValue(
+export function parseConditionValue(
   input: string,
   comparator: SegmentComparator
 ): SegmentConditionValue {
