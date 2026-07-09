@@ -19,4 +19,11 @@ export class SandboxTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandConnect(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'connect',
+      value: actual,
+    });
+  }
 }

@@ -1,13 +1,14 @@
 import { packageName } from '../../util/pkg-name';
 import { execSubcommand } from './exec/command';
 import { createSubcommand } from './create/command';
+import { connectSubcommand } from './connect/command';
 
 export const sandboxCommand = {
   name: 'sandbox',
   aliases: [],
   description: 'Interact with Vercel Sandbox',
   arguments: [],
-  subcommands: [execSubcommand, createSubcommand],
+  subcommands: [execSubcommand, createSubcommand, connectSubcommand],
   options: [],
   examples: [
     {

@@ -7,6 +7,8 @@ import { execSubcommand } from './exec/command';
 import exec from './exec';
 import { createSubcommand } from './create/command';
 import create from './create';
+import { connectSubcommand } from './connect/command';
+import connect from './connect';
 
 type SandboxCliModule = {
   createApp(opts: { appName: string; withoutAuth: boolean }): {
@@ -21,6 +23,7 @@ type SandboxCliModule = {
 const COMMAND_CONFIG: Record<string, string[]> = {
   exec: getCommandAliases(execSubcommand),
   create: getCommandAliases(createSubcommand),
+  connect: getCommandAliases(connectSubcommand),
 };
 
 export default async function sandbox(client: Client): Promise<number> {
@@ -50,6 +53,9 @@ export default async function sandbox(client: Client): Promise<number> {
     case 'create':
       telemetry.trackCliSubcommandCreate(subcommandOriginal);
       return create(client, args);
+    case 'connect':
+      telemetry.trackCliSubcommandConnect(subcommandOriginal);
+      return connect(client, args);
     default:
       return runPassThrough(client, argv, commandIndex, sandboxArgs);
   }
