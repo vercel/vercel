@@ -106,6 +106,15 @@ describe('sandbox create', () => {
     expect(sandboxCreate.mock.calls[0][0]).not.toHaveProperty('image');
   });
 
+  it('throws for --vcpus 0', async () => {
+    client.setArgv('sandbox', 'create', '--vcpus', '0');
+    const exitCode = await sandbox(client);
+
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain('Invalid vCPU count: 0');
+    expect(sandboxCreate).not.toHaveBeenCalled();
+  });
+
   it('throws when both --image and --runtime are given', async () => {
     client.setArgv(
       'sandbox',
@@ -161,6 +170,7 @@ describe('sandbox create', () => {
 
     expect(exitCode).toBe(0);
     expect(printSandboxSummary).not.toHaveBeenCalled();
+    expect(mockedGetScope).not.toHaveBeenCalled();
   });
 
   it('prints the summary when --silent is omitted', async () => {
@@ -175,6 +185,7 @@ describe('sandbox create', () => {
         action: 'created',
       })
     );
+    expect(mockedGetScope).toHaveBeenCalled();
   });
 
   it('parses --tag flags into a key/value map', async () => {
@@ -191,6 +202,33 @@ describe('sandbox create', () => {
     expect(exitCode).toBe(0);
     expect(sandboxCreate).toHaveBeenCalledWith(
       expect.objectContaining({ tags: { env: 'staging', team: 'infra' } })
+    );
+  });
+
+  it('parses --env flags into a key/value map', async () => {
+    client.setArgv('sandbox', 'create', '--env', 'FOO=bar', '--env', 'BAZ=qux');
+    const exitCode = await sandbox(client);
+
+    expect(exitCode).toBe(0);
+    expect(sandboxCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ env: { FOO: 'bar', BAZ: 'qux' } })
+    );
+  });
+
+  it('parses --publish-port flags into a ports array', async () => {
+    client.setArgv(
+      'sandbox',
+      'create',
+      '--publish-port',
+      '3000',
+      '--publish-port',
+      '8080'
+    );
+    const exitCode = await sandbox(client);
+
+    expect(exitCode).toBe(0);
+    expect(sandboxCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ ports: [3000, 8080] })
     );
   });
 

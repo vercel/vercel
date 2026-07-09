@@ -51,7 +51,7 @@ export interface CreateSandboxOptions {
   snapshotExpiration?: string;
   keepLastSnapshots?: number;
   keepLastSnapshotsFor?: string;
-  deleteEvictedSnapshots?: 'true' | 'false';
+  deleteEvictedSnapshots?: string;
   networkPolicy?: 'allow-all' | 'deny-all';
   allowedDomains: string[];
   allowedCIDRs: string[];
@@ -87,7 +87,6 @@ export async function runCreate(
   const { token, teamId, projectId } = await resolveSandboxTarget(client, {
     project: opts.project,
   });
-  const { contextName } = await getScope(client);
 
   const persistent = !opts.nonPersistent;
   const resources = opts.vcpus ? { vcpus: opts.vcpus } : undefined;
@@ -141,6 +140,7 @@ export async function runCreate(
   assertInteractivePort(sandbox, 'created');
 
   if (!opts.silent) {
+    const { contextName } = await getScope(client);
     printSandboxSummary({ sandbox, contextName, action: 'created' });
   }
 
@@ -179,17 +179,6 @@ export default async function create(
   try {
     const { flags } = parsedArgs;
 
-    const deleteEvictedSnapshots = flags['--delete-evicted-snapshots'];
-    if (
-      deleteEvictedSnapshots !== undefined &&
-      deleteEvictedSnapshots !== 'true' &&
-      deleteEvictedSnapshots !== 'false'
-    ) {
-      throw new Error(
-        `Invalid --delete-evicted-snapshots value: ${deleteEvictedSnapshots}. Must be "true" or "false".`
-      );
-    }
-
     await runCreate(client, {
       project: flags['--project'],
       name: flags['--name'],
@@ -199,7 +188,10 @@ export default async function create(
         : undefined,
       image: flags['--image'],
       timeout: parseDuration(flags['--timeout'] ?? '5m'),
-      vcpus: flags['--vcpus'] ? parseVcpus(flags['--vcpus']) : undefined,
+      vcpus:
+        flags['--vcpus'] !== undefined
+          ? parseVcpus(flags['--vcpus'])
+          : undefined,
       ports: (flags['--publish-port'] ?? []).map(parsePort),
       silent: Boolean(flags['--silent']),
       snapshot: flags['--snapshot']
@@ -215,7 +207,7 @@ export default async function create(
       keepLastSnapshotsFor: flags['--keep-last-snapshots-for']
         ? parseSnapshotExpiration(flags['--keep-last-snapshots-for'])
         : undefined,
-      deleteEvictedSnapshots,
+      deleteEvictedSnapshots: flags['--delete-evicted-snapshots'],
       networkPolicy: flags['--network-policy']
         ? parseNetworkPolicyMode(flags['--network-policy'])
         : undefined,

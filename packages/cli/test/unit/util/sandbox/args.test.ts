@@ -220,6 +220,18 @@ describe('buildKeepLastSnapshots', () => {
     ).toBeUndefined();
   });
 
+  it('throws when deleteEvictedSnapshots is not "true" or "false"', () => {
+    expect(() =>
+      buildKeepLastSnapshots({
+        keepLastSnapshots: 3,
+        keepLastSnapshotsFor: undefined,
+        deleteEvictedSnapshots: 'yes',
+      })
+    ).toThrow(
+      /Invalid --delete-evicted-snapshots value: yes\. Must be "true" or "false"/
+    );
+  });
+
   it('throws when keepLastSnapshotsFor is given without keepLastSnapshots', () => {
     expect(() =>
       buildKeepLastSnapshots({

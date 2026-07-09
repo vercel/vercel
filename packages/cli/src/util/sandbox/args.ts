@@ -181,10 +181,20 @@ export interface KeepLastSnapshotsPayload {
 export function buildKeepLastSnapshots(opts: {
   keepLastSnapshots: number | undefined;
   keepLastSnapshotsFor: string | undefined;
-  deleteEvictedSnapshots: 'true' | 'false' | undefined;
+  deleteEvictedSnapshots: string | undefined;
 }): KeepLastSnapshotsPayload | undefined {
   const { keepLastSnapshots, keepLastSnapshotsFor, deleteEvictedSnapshots } =
     opts;
+
+  if (
+    deleteEvictedSnapshots !== undefined &&
+    deleteEvictedSnapshots !== 'true' &&
+    deleteEvictedSnapshots !== 'false'
+  ) {
+    throw new Error(
+      `Invalid --delete-evicted-snapshots value: ${deleteEvictedSnapshots}. Must be "true" or "false".`
+    );
+  }
 
   if (
     keepLastSnapshots !== undefined &&
