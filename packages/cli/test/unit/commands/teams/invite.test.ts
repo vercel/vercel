@@ -120,6 +120,14 @@ describe('teams invite', () => {
       expect(payload.status).toBe('error');
       expect(payload.reason).toBe('invalid_role');
       expect(payload.message).toContain('--role must be one of');
+      expect(payload.next).toEqual([
+        {
+          command: expect.stringContaining(
+            'teams invite <email> --role <ROLE>'
+          ),
+          when: 'to retry with a valid role',
+        },
+      ]);
 
       logSpy.mockRestore();
       exitSpy.mockRestore();

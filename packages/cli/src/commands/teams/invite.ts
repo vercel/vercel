@@ -95,12 +95,22 @@ export default async function invite(
   if (role !== undefined && !isTeamRole(role)) {
     const roles = TEAM_ROLES.join(', ');
     if (client.nonInteractive) {
+      const retryCmd = withGlobalFlags(
+        client,
+        'teams invite <email> --role <ROLE>'
+      );
       outputAgentError(
         client,
         {
           status: 'error',
           reason: AGENT_REASON.INVALID_ROLE,
           message: `--role must be one of ${roles}`,
+          next: [
+            {
+              command: retryCmd,
+              when: 'to retry with a valid role',
+            },
+          ],
         },
         1
       );
