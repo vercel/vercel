@@ -12,9 +12,8 @@ import {
 import {
   PythonDependencyExternalizer,
   RUNTIME_DEPS_DIR,
-  runtimeDepsSitePackagesDir,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
-  TRANSIENT_WHEEL_BUFFER_BYTES,
+  EPHEMERAL_INSTALL_BUDGET_BYTES,
 } from '../src/dependency-externalizer';
 
 const tmpDirs: string[] = [];
@@ -70,16 +69,11 @@ describe('pycache-prefix staging layout (real CPython)', () => {
 });
 
 describe('runtime deps constants', () => {
-  it('runtimeDepsSitePackagesDir mirrors the vc_init.py layout', () => {
-    expect(runtimeDepsSitePackagesDir(3, 12)).toBe(
-      '/tmp/_vc_deps/lib/python3.12/site-packages'
-    );
-  });
-
-  it('RUNTIME_DEPS_DIR stays in sync with vc_init.py', () => {
+  it('RUNTIME_DEPS_DIR and the site-packages layout stay in sync with vc_init.py', () => {
     // The bytecode-first bundle keys its /tmp bytecode tree on the install
-    // path hardcoded in the runtime bootstrap. If either side moves, the
-    // bytecode silently stops matching — pin them together here.
+    // path hardcoded in the runtime bootstrap (the builder inlines
+    // `${RUNTIME_DEPS_DIR}/lib/pythonX.Y/site-packages`). If either side
+    // moves, the bytecode silently stops matching — pin them together here.
     const vcInitPath = path.join(
       __dirname,
       '..',
@@ -93,11 +87,16 @@ describe('runtime deps constants', () => {
     );
     const source = fs.readFileSync(vcInitPath, 'utf8');
     expect(source).toContain(`_deps_dir = "${RUNTIME_DEPS_DIR}"`);
+    // _site_packages = os.path.join(_deps_dir, "lib", f"python{major}.{minor}",
+    // "site-packages")
+    expect(source).toMatch(
+      /_site_packages = os\.path\.join\(\s*_deps_dir,\s*"lib",\s*f"python\{sys\.version_info\.major\}\.\{sys\.version_info\.minor\}",\s*"site-packages",?\s*\)/
+    );
   });
 
-  it('leaves ephemeral headroom for transient wheel archives', () => {
-    expect(TRANSIENT_WHEEL_BUFFER_BYTES).toBeGreaterThan(0);
-    expect(TRANSIENT_WHEEL_BUFFER_BYTES).toBeLessThan(
+  it('packing-mode budget stays below ephemeral storage', () => {
+    expect(EPHEMERAL_INSTALL_BUDGET_BYTES).toBeGreaterThan(0);
+    expect(EPHEMERAL_INSTALL_BUDGET_BYTES).toBeLessThan(
       LAMBDA_EPHEMERAL_STORAGE_BYTES
     );
   });
@@ -152,7 +151,7 @@ describe('collectPrefixBytecodeFiles', () => {
       ]) as any,
     });
 
-    const runtimeRoot = runtimeDepsSitePackagesDir(3, 12);
+    const runtimeRoot = `${RUNTIME_DEPS_DIR}/lib/python3.12/site-packages`;
     const result = await ext.collectPrefixBytecodeFiles({
       stagingDir,
       runtimeRoot,

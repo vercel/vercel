@@ -80,21 +80,19 @@ export const BYTECODE_FILL_CEILING_BYTES =
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
 export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 500 * 1024 * 1024;
 
-// /tmp headroom for transient wheel archives during the cold-start
-// `uv sync` (steady-state usage is ~1x installed size via hardlinks).
-export const TRANSIENT_WHEEL_BUFFER_BYTES = 50 * 1024 * 1024;
+// /tmp budget used only to SELECT the packing mode (never to fail a
+// build): bytecode-first installs every public package into /tmp at cold
+// start, so it is skipped in favor of knapsack packing when the public set
+// exceeds this budget. The 50 MB margin absorbs the drift between the
+// build-time sum of file sizes and what the install actually occupies on
+// disk (block rounding, uv scratch); since falling back to knapsack only
+// costs bytecode coverage, erring conservative here is free.
+export const EPHEMERAL_INSTALL_BUDGET_BYTES =
+  LAMBDA_EPHEMERAL_STORAGE_BYTES - 50 * 1024 * 1024;
 
 // Cold-start install target. Must match `_deps_dir` in
 // python/vercel-runtime/src/vercel_runtime/vc_init.py.
 export const RUNTIME_DEPS_DIR = '/tmp/_vc_deps';
-
-/** Runtime site-packages dir populated by the cold-start `uv sync`. */
-export function runtimeDepsSitePackagesDir(
-  pythonMajor: number,
-  pythonMinor: number
-): string {
-  return `${RUNTIME_DEPS_DIR}/lib/python${pythonMajor}.${pythonMinor}/site-packages`;
-}
 
 // Size limit for large functions: all deps bundled directly (no runtime
 // install), served on Hive.
@@ -570,33 +568,22 @@ export class PythonDependencyExternalizer {
     );
 
     // bytecode-first bundles no public packages (all installed into /tmp at
-    // cold start), freeing zip capacity for bytecode. Only safe when the
-    // externalized set fits ephemeral storage with wheel-archive headroom.
-    let packingMode: PackingMode = 'knapsack';
-    if (options.bytecodeFirst) {
-      let externalizedSum = 0;
-      for (const size of publicPackageSizes.values()) {
-        externalizedSum += size;
-      }
-      const ephemeralBudget =
-        LAMBDA_EPHEMERAL_STORAGE_BYTES - TRANSIENT_WHEEL_BUFFER_BYTES;
-      if (externalizedSum <= ephemeralBudget) {
-        packingMode = 'bytecode-first';
-      } else {
-        debug(
-          `bytecode-first packing disabled: externalized set ` +
-            `(${(externalizedSum / (1024 * 1024)).toFixed(2)} MB) exceeds the ` +
-            `ephemeral storage budget ` +
-            `(${(ephemeralBudget / (1024 * 1024)).toFixed(2)} MB); ` +
-            `falling back to knapsack packing`
-        );
-      }
+    // cold start), freeing zip capacity for bytecode. Only chosen when the
+    // full public set fits the ephemeral install budget.
+    const { packingMode, bundledPublic } = planPublicPackagePacking({
+      publicPackageSizes,
+      zipCapacity: remainingCapacity,
+      bytecodeFirst: options.bytecodeFirst ?? false,
+    });
+    if (options.bytecodeFirst && packingMode === 'knapsack') {
+      debug(
+        `bytecode-first packing disabled: the public package set exceeds ` +
+          `the ephemeral install budget ` +
+          `(${(EPHEMERAL_INSTALL_BUDGET_BYTES / (1024 * 1024)).toFixed(2)} MB); ` +
+          `falling back to knapsack packing`
+      );
     }
 
-    const bundledPublic =
-      packingMode === 'bytecode-first'
-        ? []
-        : lambdaKnapsack(publicPackageSizes, remainingCapacity);
     const bundledPublicSet = new Set(bundledPublic.map(normalizePackageName));
     const externalizedPublic = externalizablePublic.filter(
       name => !bundledPublicSet.has(normalizePackageName(name))
@@ -1427,4 +1414,42 @@ export function lambdaKnapsack(
   }
 
   return bundled;
+}
+
+export interface PublicPackagePackingPlan {
+  packingMode: PackingMode;
+  /** Public packages selected for the zip (empty in bytecode-first mode). */
+  bundledPublic: string[];
+}
+
+/**
+ * Decide how public packages split between the zip and the cold-start
+ * install. bytecode-first bundles no public packages (freeing zip capacity
+ * for bytecode) and is only chosen when the full public set fits the
+ * ephemeral install budget. Otherwise knapsack packs the largest packages into
+ * the zip and only the remainder is installed into /tmp at cold start.
+ * Falling back costs bytecode coverage, never correctness.
+ */
+export function planPublicPackagePacking({
+  publicPackageSizes,
+  zipCapacity,
+  bytecodeFirst,
+}: {
+  publicPackageSizes: Map<string, number>;
+  zipCapacity: number;
+  bytecodeFirst: boolean;
+}): PublicPackagePackingPlan {
+  let totalPublicSize = 0;
+  for (const size of publicPackageSizes.values()) {
+    totalPublicSize += size;
+  }
+
+  if (bytecodeFirst && totalPublicSize <= EPHEMERAL_INSTALL_BUDGET_BYTES) {
+    return { packingMode: 'bytecode-first', bundledPublic: [] };
+  }
+
+  return {
+    packingMode: 'knapsack',
+    bundledPublic: lambdaKnapsack(publicPackageSizes, zipCapacity),
+  };
 }

@@ -155,6 +155,26 @@ export function derivePrefixPycRelPath(
 }
 
 /**
+ * Port of the root stripping CPython's `cache_from_source`
+ * applies in pycache-prefix mode (importlib/_bootstrap_external.py).
+ */
+function stripPycachePrefixRoot(head: string): string {
+  const pycachePathSeparators = new Set(['/', '\\']);
+  if (
+    head.length > 1 &&
+    head[1] === ':' &&
+    !pycachePathSeparators.has(head[0])
+  ) {
+    head = head.slice(2);
+  }
+  let start = 0;
+  while (start < head.length && pycachePathSeparators.has(head[start])) {
+    start++;
+  }
+  return head.slice(start);
+}
+
+/**
  * Staged `.pyc` path produced by compileall run with
  * PYTHONPYCACHEPREFIX=stagingDir for an absolute source path.
  */
@@ -165,7 +185,7 @@ export function deriveStagedPycFsPath(
   pythonMinor: number
 ): string | null {
   const rel = derivePrefixPycRelPath(
-    srcAbsPath.replace(/^[/\\]+/, ''),
+    stripPycachePrefixRoot(srcAbsPath),
     pythonMajor,
     pythonMinor
   );
@@ -183,7 +203,7 @@ export function derivePrefixPycBundlePath(
   pythonMinor: number
 ): string | null {
   const rel = derivePrefixPycRelPath(
-    runtimeAbsPath.replace(/^\/+/, ''),
+    stripPycachePrefixRoot(runtimeAbsPath),
     pythonMajor,
     pythonMinor
   );

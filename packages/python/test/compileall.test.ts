@@ -241,6 +241,22 @@ describe('pycache-prefix path derivation', () => {
     expect(deriveStagedPycFsPath('/staging', '/x/lib.so', 3, 12)).toBeNull();
   });
 
+  it('strips the Windows drive like CPython cache_from_source (vercel build on Windows)', () => {
+    const derived = deriveStagedPycFsPath(
+      '/staging',
+      'C:\\Users\\dev\\proj\\app.py',
+      3,
+      12
+    );
+    // CPython drops the drive and leading separators before joining onto
+    // the prefix, so the derived path must not retain "C:".
+    expect(derived).not.toBeNull();
+    expect(derived).not.toContain('C:');
+    expect(derived!.replaceAll('\\', '/')).toBe(
+      '/staging/Users/dev/proj/app.cpython-312.pyc'
+    );
+  });
+
   it('derives the zip bundle key from a runtime absolute path', () => {
     expect(
       derivePrefixPycBundlePath('/var/task/_vendor/pkg/mod.py', 3, 12)

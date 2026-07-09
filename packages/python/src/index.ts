@@ -51,7 +51,7 @@ import {
   lambdaKnapsack,
   calculateBundleSize,
   estimateBytecodeSize,
-  runtimeDepsSitePackagesDir,
+  RUNTIME_DEPS_DIR,
   type GenerateBundleResult,
 } from './dependency-externalizer';
 import { isLargeFunctionsEnabled } from './large-functions';
@@ -1248,6 +1248,18 @@ export const build: BuildVX = async ({
         const pyMinor = pythonVersion.minor;
         if (pyMajor == null || pyMinor == null) return;
         try {
+          // Skip the compile entirely when the zip has no slack for bytecode
+          // (e.g. very large always-bundled private packages).
+          const currentSize = await calculateBundleSize(files);
+          let remainingCapacity = BYTECODE_FILL_CEILING_BYTES - currentSize;
+          if (remainingCapacity <= 0) {
+            debug(
+              `skipping bytecode precompilation: no zip capacity remaining ` +
+                `(bundle is ${(currentSize / (1024 * 1024)).toFixed(2)} MB)`
+            );
+            return;
+          }
+
           const stagingDir = join(workPath, '.vercel', 'python', 'pycache');
           await fs.promises.mkdir(stagingDir, { recursive: true });
 
@@ -1284,8 +1296,6 @@ export const build: BuildVX = async ({
               });
             });
 
-          const currentSize = await calculateBundleSize(files);
-          let remainingCapacity = BYTECODE_FILL_CEILING_BYTES - currentSize;
           const beforeCount = Object.keys(files).length;
 
           // Tier 1: app source (always imported at cold start).
@@ -1324,7 +1334,7 @@ export const build: BuildVX = async ({
             collect: include =>
               depExternalizer.collectPrefixBytecodeFiles({
                 stagingDir,
-                runtimeRoot: runtimeDepsSitePackagesDir(pyMajor, pyMinor),
+                runtimeRoot: `${RUNTIME_DEPS_DIR}/lib/python${pyMajor}.${pyMinor}/site-packages`,
                 includePackages: include ?? externalized,
               }),
           });
