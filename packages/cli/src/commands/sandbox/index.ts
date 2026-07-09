@@ -9,9 +9,16 @@ type SandboxCliModule = {
   };
 };
 
+// Native subcommands (name -> aliases) are registered here as they are ported
+// off the standalone `sandbox` package: PR #2 adds exec/create/connect/sh/fork/
+// run, PR #3 adds list/stop/remove/cp/snapshot/snapshots/sessions, PR #4 adds
+// config. Empty for now, so every invocation falls through to runPassThrough().
 const COMMAND_CONFIG: Record<string, string[]> = {};
 
 export default async function sandbox(client: Client): Promise<number> {
+  // Instantiated here so each native `case` added in PR #2+ can call the
+  // matching telemetry.trackCliSubcommand* method. No native subcommands exist
+  // yet, so no track method is invoked.
   new SandboxTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -22,6 +29,11 @@ export default async function sandbox(client: Client): Promise<number> {
   const commandIndex = argv.indexOf('sandbox');
   const sandboxArgs = commandIndex === -1 ? [] : argv.slice(commandIndex + 1);
 
+  // Incremental dispatcher: getSubcommand matches the first sandbox arg against
+  // COMMAND_CONFIG. Each ported subcommand adds a `case` here (e.g.
+  // `case 'create': return create(client, args)`); anything not yet native hits
+  // `default` and is forwarded to the existing `sandbox` package. Intentionally
+  // default-only until PR #2 adds the first native case.
   const { subcommand } = getSubcommand(sandboxArgs, COMMAND_CONFIG);
 
   switch (subcommand) {
