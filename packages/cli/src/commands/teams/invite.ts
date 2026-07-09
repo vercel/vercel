@@ -89,9 +89,9 @@ export default async function invite(
     return 1;
   }
   const { args: emails } = parsedArgs;
-  const roleFlag = parsedArgs.flags['--role']?.trim().toUpperCase();
+  const role = parsedArgs.flags['--role']?.trim().toUpperCase();
 
-  if (roleFlag !== undefined && !isTeamRole(roleFlag)) {
+  if (role !== undefined && !isTeamRole(role)) {
     const roles = TEAM_ROLES.join(', ');
     if (client.nonInteractive) {
       outputAgentError(
@@ -107,8 +107,6 @@ export default async function invite(
     output.error(`${param('--role')} must be one of ${roles}`);
     return 1;
   }
-
-  const role = roleFlag;
 
   if (client.nonInteractive && emails.length === 0) {
     const fullArgs = client.argv.slice(2);
