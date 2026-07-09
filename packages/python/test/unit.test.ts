@@ -62,7 +62,7 @@ import {
   getInstalledPythonsFromFilesystem,
 } from '../src/version';
 import type { PythonConstraint, PythonPackage } from '@vercel/python-analysis';
-import { build, prepareCache } from '../src/index';
+import { build, getDevSidecars, prepareCache } from '../src/index';
 import type { BuildResultV3, BuildResultV2 } from '@vercel/build-utils';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import {
@@ -75,6 +75,7 @@ import {
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml } from '../src/install';
 import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
+import { getSubscriberOutputPath } from '../src/subscribers';
 import {
   FileBlob,
   Span,
@@ -82,7 +83,11 @@ import {
   sanitizeConsumerName,
 } from '@vercel/build-utils';
 import { getServiceCrons } from '../src/crons';
-import { entrypointToModule, detectPythonEntrypoint } from '../src/entrypoint';
+import {
+  entrypointToModule,
+  detectPythonEntrypoint,
+  detectEntrypoint,
+} from '../src/entrypoint';
 import execa from 'execa';
 
 function getBuildOutputV2(result: Awaited<ReturnType<typeof build>>) {
@@ -1972,6 +1977,109 @@ describe('pyproject.toml entrypoint detection', () => {
   });
 });
 
+describe('tool.vercel.entrypoint validation', () => {
+  let workPath: string;
+
+  beforeEach(() => {
+    workPath = path.join(
+      tmpdir(),
+      `python-tool-vercel-validation-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('hard-errors when the declared module does not exist', async () => {
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = "backend.api:app"\n'
+    );
+    // A detectable candidate exists, but the broken declaration must not
+    // silently fall back to it — that could build the wrong app.
+    fs.writeFileSync(path.join(workPath, 'main.py'), 'app = object()\n');
+
+    await expect(detectPythonEntrypoint('fastapi', workPath)).rejects.toThrow(
+      /"tool\.vercel\.entrypoint" in "pyproject\.toml" is "backend\.api:app" but no matching module file was found/
+    );
+  });
+
+  it('names the broken pyproject.toml relative to the repo root', async () => {
+    // Monorepos can contain several pyproject.toml files (one per service);
+    // the error must identify which one is broken.
+    const serviceRoot = path.join(workPath, 'backend');
+    fs.mkdirSync(serviceRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(serviceRoot, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = "api:app"\n'
+    );
+
+    await expect(
+      detectPythonEntrypoint(
+        'fastapi',
+        serviceRoot,
+        undefined,
+        undefined,
+        workPath
+      )
+    ).rejects.toThrow(
+      /"tool\.vercel\.entrypoint" in "backend[/\\]pyproject\.toml"/
+    );
+  });
+
+  it('hard-errors when the declared value is not module:object format', async () => {
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = "main.py"\n'
+    );
+    fs.writeFileSync(path.join(workPath, 'main.py'), 'app = object()\n');
+
+    await expect(detectPythonEntrypoint('fastapi', workPath)).rejects.toThrow(
+      /no matching module file was found/
+    );
+  });
+
+  it('hard-errors when the declared value is not a string', async () => {
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = 42\n'
+    );
+
+    await expect(detectPythonEntrypoint('fastapi', workPath)).rejects.toThrow(
+      /must be a string in "module:object" format/
+    );
+  });
+
+  it('still resolves a valid declared entrypoint', async () => {
+    fs.mkdirSync(path.join(workPath, 'backend'), { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = "backend.api:app"\n'
+    );
+    fs.writeFileSync(
+      path.join(workPath, 'backend', 'api.py'),
+      'app = object()\n'
+    );
+
+    await expect(detectPythonEntrypoint('fastapi', workPath)).resolves.toEqual({
+      entrypoint: { entrypoint: 'backend/api.py', variableName: 'app' },
+    });
+  });
+
+  it('detectEntrypoint returns null instead of throwing for speculative detection', async () => {
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = "backend.api:app"\n'
+    );
+
+    await expect(
+      detectEntrypoint({ workPath, framework: 'fastapi' })
+    ).resolves.toBeNull();
+  });
+});
+
 describe('entrypointToModule', () => {
   it('converts file paths to Python module notation', () => {
     expect(entrypointToModule('app.py')).toBe('app');
@@ -1979,6 +2087,9 @@ describe('entrypointToModule', () => {
       'backend.api.server'
     );
     expect(entrypointToModule('src/main.py')).toBe('src.main');
+    expect(entrypointToModule('workers/celery/__init__.py')).toBe(
+      'workers.celery'
+    );
   });
 
   it('handles backslashes on Windows-style paths', () => {
@@ -2311,7 +2422,86 @@ describe('pyproject subscribers', () => {
     }
   });
 
-  it('emits one queue/v2beta worker lambda per subscriber with all topics attached', async () => {
+  it('returns dev sidecars matching build consumer names', async () => {
+    const workerPackage = path.join(mockWorkPath, 'workers', 'celery');
+    fs.mkdirSync(workerPackage, { recursive: true });
+    fs.writeFileSync(
+      path.join(workerPackage, '__init__.py'),
+      'from celery import Celery\napp = Celery("worker")\n'
+    );
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        '',
+        '[[tool.vercel.subscribers]]',
+        'entrypoint = "workers.celery:app"',
+        'topics = ["celery"]',
+        'retry_after_seconds = 10',
+        'initial_delay_seconds = 0',
+        '',
+      ].join('\n')
+    );
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: {
+          use: '@vercel/python',
+          src: '<detect>',
+          config: { framework: 'fastapi' },
+        },
+      })
+    ).resolves.toEqual([
+      {
+        name: 'workers-celery_app',
+        type: 'subscriber',
+        consumer: sanitizeConsumerName(
+          getSubscriberOutputPath('workers-celery_app')
+        ),
+        workspace: '.',
+        framework: 'fastapi',
+        runtime: 'python',
+        builder: {
+          use: '@vercel/python',
+          src: 'workers/celery/__init__.py',
+          config: {
+            handlerFunction: 'app',
+          },
+        },
+        topics: [
+          {
+            topic: 'celery',
+            retryAfterSeconds: 10,
+            initialDelaySeconds: 0,
+          },
+        ],
+      },
+    ]);
+  });
+
+  it('only contributes dev sidecars for standalone Python framework builds', async () => {
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: { use: '@vercel/python', config: {} },
+      })
+    ).resolves.toEqual([]);
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: {
+          use: '@vercel/python',
+          config: { framework: 'fastapi', middleware: true },
+        },
+      })
+    ).resolves.toEqual([]);
+  });
+
+  it('emits one queue/v2beta Lambda per subscriber with all topics attached', async () => {
     const files = {
       'app.py': new FileBlob({
         data: 'def app(environ, start_response): pass\n',
@@ -2347,13 +2537,13 @@ describe('pyproject subscribers', () => {
     });
 
     const output = getBuildOutputV2(result).output as any;
-    const workerPath = '_py_subscribers/worker__app';
+    const workerPath = getSubscriberOutputPath('worker_app');
     const consumer = sanitizeConsumerName(workerPath);
 
     expect(output.index).toBeDefined();
     expect(output[workerPath]).toBeDefined();
-    expect(output['_py_subscribers/worker__app/celery']).toBeUndefined();
-    expect(output['_py_subscribers/worker__app/emails']).toBeUndefined();
+    expect(output[`${workerPath}/celery`]).toBeUndefined();
+    expect(output[`${workerPath}/emails`]).toBeUndefined();
     expect(output.index.environment.VERCEL_HAS_WORKER_SERVICES).toBe('1');
 
     const worker = output[workerPath];

@@ -3,6 +3,7 @@ import {
   allOption,
   confirmOption,
   formatOption,
+  limitOption,
   nextOption,
   yesOption,
 } from '../../util/arg-common';
@@ -55,6 +56,7 @@ export const listCommand = {
       deprecated: false,
     },
     nextOption,
+    limitOption,
     // this can be deprecated someday
     { name: 'prod', shorthand: null, type: Boolean, deprecated: false },
     yesOption,

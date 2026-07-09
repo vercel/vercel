@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.20.4
+
+### Patch Changes
+
+- 0f67a94: Include instrumentation for Node.js Middleware
+
 ## 4.20.3
 
 ### Patch Changes

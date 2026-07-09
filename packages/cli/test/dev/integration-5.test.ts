@@ -810,6 +810,72 @@ describe('[vercel dev] experimentalServicesV2 service bindings', () => {
   });
 });
 
+describe('[vercel dev] Pyproject queue subscribers', () => {
+  const resultsDir = join(
+    __dirname,
+    'fixtures',
+    'pyproject-subscriber',
+    '.results'
+  );
+
+  beforeEach(async () => {
+    await fs.remove(resultsDir);
+  });
+
+  test('[vercel dev] Celery tasks trigger pyproject subscribers', async () => {
+    const dir = fixture('pyproject-subscriber');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        // Both workers share one managed environment; an unrelated activated
+        // environment must not trip the multi-workspace guard.
+        env: {
+          VIRTUAL_ENV: join(process.cwd(), '.external-test-venv'),
+        },
+      },
+      ['--local']
+    );
+    try {
+      await readyResolver;
+
+      const enqueueRes = await nodeFetch(`http://localhost:${port}/enqueue`, {
+        method: 'POST',
+      });
+      expect(enqueueRes.status).toBe(200);
+
+      const highResultPath = join(resultsDir, 'high-priority.json');
+      const lowResultPath = join(resultsDir, 'low-priority.json');
+      let highResult: any = null;
+      let lowResult: any = null;
+      for (let i = 0; i < 30; i++) {
+        await sleep(500);
+        if (
+          (await fs.pathExists(highResultPath)) &&
+          (await fs.pathExists(lowResultPath))
+        ) {
+          highResult = await fs.readJson(highResultPath);
+          lowResult = await fs.readJson(lowResultPath);
+          break;
+        }
+      }
+
+      expect(highResult).toEqual({
+        requestId: 'dev-celery-high',
+        priority: 'high-priority',
+        sum: 42,
+      });
+      expect(lowResult).toEqual({
+        requestId: 'dev-celery-low',
+        priority: 'low-priority',
+        sum: 42,
+      });
+    } finally {
+      await dev.kill();
+    }
+  });
+});
+
 describe('[vercel dev] Worker service', () => {
   const resultsDir = join(__dirname, 'fixtures', 'services-worker', '.results');
 
