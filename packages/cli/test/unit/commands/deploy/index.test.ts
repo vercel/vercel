@@ -1942,11 +1942,16 @@ describe('deploy', () => {
         await expect(client.stderr).toOutput('? Which team?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Project?');
-        client.stdin.write('\n');
+        // Unified flow: the project picker replaces the create/link decision.
+        await expect(client.stderr).toOutput('Which project?');
+        client.events.keypress('down');
+        client.events.keypress('enter');
 
-        // The one expecation that the test is actually about!
-        await expect(client.stderr).toOutput(`Name? (${directoryName})`);
+        // The one expecation that the test is actually about! The picker's
+        // name prompt renders a back-navigation hint between `Name?` and the
+        // prefilled default, so assert the two pieces separately.
+        await expect(client.stderr).toOutput('Name?');
+        expect(client.stderr.getFullOutput()).toContain(`(${directoryName})`);
         client.stdin.write('\n');
         // Fixture has no detectable framework at the root, so the
         // root-directory prompt now fires (nested-monolith guard).

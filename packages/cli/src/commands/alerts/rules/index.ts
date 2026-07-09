@@ -19,9 +19,9 @@ export default async function rules(
   client: Client,
   argv: string[]
 ): Promise<number> {
-  if (argv.length === 0) {
+  if (argv.length === 0 || argv[0].startsWith('-')) {
     const lsFn = (await import('./ls')).default;
-    return lsFn(client, []);
+    return lsFn(client, argv);
   }
 
   const { subcommand, args, subcommandOriginal } = getSubcommand(

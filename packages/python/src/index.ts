@@ -22,12 +22,14 @@ import {
   BUILDER_INSTALLER_STEP,
   BUILDER_COMPILE_STEP,
   BUILDER_PRE_DEPLOY_STEP,
-  sanitizeConsumerName,
   getLambdaOptionsFromFunction,
   type BuildOptions,
   type GlobOptions,
   type BuildVX,
+  type DevSubscriber,
   type Files,
+  type GetDevSidecarsOptions,
+  type ServiceQueueTopic,
   type ShouldServe,
   type TriggerEvent,
   FileFsRef,
@@ -88,7 +90,8 @@ import {
 } from './compileall';
 import {
   getPyprojectSubscribers,
-  safePathSegment,
+  getSubscriberConsumerName,
+  getSubscriberOutputPath,
   type Subscriber,
 } from './subscribers';
 
@@ -106,6 +109,47 @@ import {
 export { detectEntrypoint } from './entrypoint';
 
 export const version = -1;
+
+function getDevSubscriberTopics(subscriber: Subscriber): ServiceQueueTopic[] {
+  const { retryAfterSeconds, initialDelaySeconds } = subscriber.triggerDefaults;
+  return subscriber.topics.map(topic => ({
+    topic,
+    ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
+    ...(initialDelaySeconds === undefined ? {} : { initialDelaySeconds }),
+  }));
+}
+
+export async function getDevSidecars({
+  workPath,
+  build,
+}: GetDevSidecarsOptions): Promise<DevSubscriber[]> {
+  const framework = build.config?.framework;
+  if (
+    build.config?.middleware === true ||
+    typeof framework !== 'string' ||
+    !isPythonFramework(framework)
+  ) {
+    return [];
+  }
+
+  const subscribers = await getPyprojectSubscribers(workPath);
+  return subscribers.map(subscriber => ({
+    type: 'subscriber',
+    name: subscriber.name,
+    consumer: getSubscriberConsumerName(subscriber.name),
+    workspace: '.',
+    framework,
+    runtime: 'python',
+    builder: {
+      use: build.use,
+      src: subscriber.entrypoint,
+      config: {
+        handlerFunction: subscriber.variableName,
+      },
+    },
+    topics: getDevSubscriberTopics(subscriber),
+  }));
+}
 
 function addFiles(target: Files, source: Files) {
   for (const [p, f] of Object.entries(source)) {
@@ -528,13 +572,12 @@ export const build: BuildVX = async ({
     meta,
   });
 
-  // `tool.vercel.subscribers` declares background workers for a standalone
-  // Python app and compiles them into additional queue-triggered Lambdas.
+  // `tool.vercel.subscribers` declares queue subscribers for a standalone
+  // Python app and compiles them into additional Lambdas.
   // It is intentionally scoped to non-service framework builds:
-  //   - `experimentalServices` projects already declare queue consumers as
-  //     first-class `worker`/`job` services, so a second implicit mechanism
-  //     would be redundant and ambiguous (services can share one pyproject.toml,
-  //     which would duplicate every subscriber across each service build).
+  //   - Service projects already own their process topology, so an implicit
+  //     mechanism would be ambiguous (services can share one pyproject.toml,
+  //     which would duplicate subscribers across each service build).
   //   - Bare `api/**` functions build once per file sharing this workPath, so
   //     emitting subscribers there would duplicate their outputs per build.
   if (!service && isPythonFramework(framework)) {
@@ -582,7 +625,8 @@ export const build: BuildVX = async ({
                 : handlerFunction,
           }
         : undefined,
-      service
+      service,
+      repoRootPath
     )) ?? undefined;
 
   if (detected?.error && detected?.baseDir === undefined) {
@@ -990,6 +1034,9 @@ export const build: BuildVX = async ({
   const compileAllEnabled = shouldCompileAll({
     isDev: meta.isDev,
     hasCustomCommand,
+    // A pre-deploy command can rewrite source after the build, which would make
+    // unchecked-hash precompiled bytecode stale; skip precompilation to avoid serving it.
+    hasPreDeployCommand: typeof preDeployCommand === 'string',
   });
 
   const predefinedExcludes = [
@@ -1233,9 +1280,8 @@ export const build: BuildVX = async ({
   const subscriberLambdas: Record<string, Lambda> = {};
 
   for (const subscriber of subscribers) {
-    const safeName = safePathSegment(subscriber.name);
-    const outputPath = `_py_subscribers/${safeName}`;
-    const consumer = sanitizeConsumerName(outputPath);
+    const outputPath = getSubscriberOutputPath(subscriber.name);
+    const consumer = getSubscriberConsumerName(subscriber.name);
     const experimentalTriggers: TriggerEvent[] = subscriber.topics.map(
       topic => ({
         type: 'queue/v2beta',
@@ -1263,6 +1309,7 @@ export const build: BuildVX = async ({
       environment: {
         ...lambdaEnv,
         VERCEL_HAS_WORKER_SERVICES: '1',
+        // Compatibility marker consumed by the current Python runtime.
         VERCEL_SERVICE_TYPE: 'worker',
       },
       experimentalTriggers,

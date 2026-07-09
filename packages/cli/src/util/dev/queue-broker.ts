@@ -84,6 +84,8 @@ interface DuplicateMessageRecord {
   expiresAt: number;
 }
 
+type QueueBrokerService = ExperimentalService & { consumer?: string };
+
 export class QueueBroker {
   private messages = new Map<string, StoredMessage>();
   private idempotencyRecords = new Map<string, IdempotencyRecord>();
@@ -93,19 +95,25 @@ export class QueueBroker {
   private tickTimer: ReturnType<typeof setInterval>;
 
   constructor(
-    services: ExperimentalService[],
+    services: QueueBrokerService[],
     private getServiceOrigin: (name: string) => string | null
   ) {
     for (const service of services) {
       if (!isQueueBackedService(service)) continue;
 
       const topicConfigs = getServiceQueueTopicConfigs(service);
+      const consumerGroup = service.consumer ?? service.name;
       for (const topicConfig of topicConfigs) {
         const topicPattern = topicConfig.topic;
-        const id = `${service.name}::${topicPattern}`;
+        const id = `${consumerGroup}::${topicPattern}`;
+        if (this.deliveryState.has(id)) {
+          throw new Error(
+            `Queue consumer "${consumerGroup}" is configured more than once for topic "${topicPattern}"`
+          );
+        }
         const group: ConsumerGroup = {
           id,
-          name: service.name,
+          name: consumerGroup,
           topicPattern,
           topicRegex: topicPatternToRegex(topicPattern),
           serviceOriginFn: () => this.getServiceOrigin(service.name),
@@ -263,7 +271,9 @@ export class QueueBroker {
       visibilityTimeoutSeconds?: number;
     }
   ): ReceivedMessage[] {
-    const group = this.consumerGroups.find(g => g.name === consumerGroup);
+    const group = this.consumerGroups.find(
+      g => g.name === consumerGroup && g.topicRegex.test(queueName)
+    );
     if (!group) return [];
 
     const groupDeliveries = this.deliveryState.get(group.id);

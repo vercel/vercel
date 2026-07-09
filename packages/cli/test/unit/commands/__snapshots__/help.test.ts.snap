@@ -5151,6 +5151,13 @@ exports[`help command > list help output snapshots > list help column width 40 1
                                output     
                                format     
                                (json)     
+       --limit <NUMBER>        Number of  
+                               results to 
+                               return per 
+                               page       
+                               (default:  
+                               20, max:   
+                               100)       
   -m,  --meta <KEY=VALUE>      Filter     
                                deployments
                                by metadata
@@ -5282,6 +5289,8 @@ exports[`help command > list help output snapshots > list help column width 80 1
   -a,  --all                   List resources across all projects                 
        --environment <TARGET>                                                     
   -F,  --format <FORMAT>       Specify the output format (json)                   
+       --limit <NUMBER>        Number of results to return per page (default: 20, 
+                               max: 100)                                          
   -m,  --meta <KEY=VALUE>      Filter deployments by metadata (e.g.: \`-m          
                                KEY=value\`). Can appear many times.                
   -N,  --next <MS>             Show next page of results                          
@@ -5354,6 +5363,7 @@ exports[`help command > list help output snapshots > list help column width 120 
   -a,  --all                   List resources across all projects                                                         
        --environment <TARGET>                                                                                             
   -F,  --format <FORMAT>       Specify the output format (json)                                                           
+       --limit <NUMBER>        Number of results to return per page (default: 20, max: 100)                               
   -m,  --meta <KEY=VALUE>      Filter deployments by metadata (e.g.: \`-m KEY=value\`). Can appear many times.              
   -N,  --next <MS>             Show next page of results                                                                  
   -p,  --policy <KEY=VALUE>    See deployments with provided Deployment Retention policies (e.g.: \`-p KEY=value\`). Can    
@@ -5860,6 +5870,7 @@ exports[`help command > project help output snapshots > project list help output
 
   -f,  --filter <NAME>    Filter projects by name (substring match)                                                     
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --limit <NUMBER>   Number of results to return per page (default: 20, max: 100)                                  
   -N,  --next <MS>        Show next page of results                                                                     
        --update-required  A list of projects affected by an upcoming deprecation                                        
 
@@ -7303,6 +7314,7 @@ exports[`help command > teams help output snapshots > teams list help output sna
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --limit <NUMBER>   Number of results to return per page (default: 20, max: 100)                                  
   -N,  --next <MS>        Show next page of results                                                                     
 
 
