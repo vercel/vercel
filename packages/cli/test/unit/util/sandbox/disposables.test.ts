@@ -6,6 +6,13 @@ import {
 } from '../../../../src/util/sandbox/disposables';
 import { ignoreAbortErrors } from '../../../../src/util/sandbox/abort-controller';
 
+describe('Symbol.dispose polyfill', () => {
+  it('defines Symbol.dispose and Symbol.asyncDispose', () => {
+    expect(typeof Symbol.dispose).not.toBe('undefined');
+    expect(typeof Symbol.asyncDispose).not.toBe('undefined');
+  });
+});
+
 describe('acquireRelease', () => {
   it('runs release with the acquired value on dispose', () => {
     const release = vi.fn();
@@ -13,6 +20,16 @@ describe('acquireRelease', () => {
     expect(release).not.toHaveBeenCalled();
     resource[Symbol.dispose]();
     expect(release).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+  });
+
+  it('runs release via a real `using` block on exit', () => {
+    const release = vi.fn();
+    {
+      using resource = acquireRelease(() => ({ id: 2 }), release);
+      expect(release).not.toHaveBeenCalled();
+      expect(resource.id).toBe(2);
+    }
+    expect(release).toHaveBeenCalledWith(expect.objectContaining({ id: 2 }));
   });
 });
 
@@ -22,6 +39,15 @@ describe('defer', () => {
     const disposable = defer(fn);
     expect(fn).not.toHaveBeenCalled();
     disposable[Symbol.dispose]();
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs fn via a real `using` block on exit', () => {
+    const fn = vi.fn();
+    {
+      using _disposable = defer(fn);
+      expect(fn).not.toHaveBeenCalled();
+    }
     expect(fn).toHaveBeenCalledTimes(1);
   });
 });
