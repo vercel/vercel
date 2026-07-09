@@ -4,6 +4,7 @@ import { createSubcommand } from './create/command';
 import { connectSubcommand } from './connect/command';
 import { shSubcommand } from './sh/command';
 import { forkSubcommand } from './fork/command';
+import { runSubcommand } from './run/command';
 
 export const sandboxCommand = {
   name: 'sandbox',
@@ -16,6 +17,7 @@ export const sandboxCommand = {
     connectSubcommand,
     shSubcommand,
     forkSubcommand,
+    runSubcommand,
   ],
   options: [],
   examples: [

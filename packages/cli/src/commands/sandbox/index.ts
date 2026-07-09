@@ -13,6 +13,8 @@ import { shSubcommand } from './sh/command';
 import sh from './sh';
 import { forkSubcommand } from './fork/command';
 import fork from './fork';
+import { runSubcommand } from './run/command';
+import run from './run';
 
 type SandboxCliModule = {
   createApp(opts: { appName: string; withoutAuth: boolean }): {
@@ -30,6 +32,7 @@ const COMMAND_CONFIG: Record<string, string[]> = {
   connect: getCommandAliases(connectSubcommand),
   sh: getCommandAliases(shSubcommand),
   fork: getCommandAliases(forkSubcommand),
+  run: getCommandAliases(runSubcommand),
 };
 
 export default async function sandbox(client: Client): Promise<number> {
@@ -68,6 +71,9 @@ export default async function sandbox(client: Client): Promise<number> {
     case 'fork':
       telemetry.trackCliSubcommandFork(subcommandOriginal);
       return fork(client, args);
+    case 'run':
+      telemetry.trackCliSubcommandRun(subcommandOriginal);
+      return run(client, args);
     default:
       return runPassThrough(client, argv, commandIndex, sandboxArgs);
   }

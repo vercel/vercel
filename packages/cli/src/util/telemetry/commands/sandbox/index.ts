@@ -40,4 +40,11 @@ export class SandboxTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandRun(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'run',
+      value: actual,
+    });
+  }
 }
