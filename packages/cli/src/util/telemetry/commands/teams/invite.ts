@@ -1,5 +1,6 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
+import { isTeamRole } from '../../../teams/invite-user-to-team';
 import type { inviteSubcommand } from '../../../../commands/teams/command';
 
 export class TeamsInviteTelemetryClient
@@ -19,7 +20,7 @@ export class TeamsInviteTelemetryClient
     if (value) {
       this.trackCliOption({
         option: 'role',
-        value,
+        value: isTeamRole(value) ? value : this.redactedValue,
       });
     }
   }
