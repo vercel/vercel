@@ -15,6 +15,8 @@ import {
   readString,
   withSpan,
 } from './util';
+import { detectRuntimeFamily, isBuildpackProject } from './buildpacks/detect';
+import { buildWithLifecycle } from './buildpacks/lifecycle';
 import { selectDevEngine } from './engines';
 import type {
   ContainerEngine,
@@ -143,7 +145,9 @@ async function resolveDevImage(
 ): Promise<string> {
   const { config, workPath, entrypoint } = options;
 
-  const entrypointRef = readString(entrypoint);
+  const rawEntrypointRef = readString(entrypoint);
+  const isDetect = rawEntrypointRef === '<detect>';
+  const entrypointRef = isDetect ? undefined : rawEntrypointRef;
   const dockerfileConfigured =
     entrypointRef && isDockerfileRef(entrypointRef)
       ? entrypointRef
@@ -156,16 +160,108 @@ async function resolveDevImage(
   const prebuiltImage =
     readString(config.handler) ?? (hasDockerfile ? undefined : entrypointRef);
 
+  // framework may be provided via options.config.framework / options.meta / service.meta
+  // when vercel.json explicitly says "framework": "container". Using it as the opt-in
+  // for the buildpack path, per requested wiring.
+  const framework =
+    (options as any).framework ??
+    (options as any).config?.framework ??
+    (options as any).meta?.framework ??
+    (options as any).service?.framework;
+
+  // -----------------------------------------------------------------------
+  // Dockerfile-less path — prebuilt image or lifecycle buildpacks (invisible)
+  // -----------------------------------------------------------------------
   if (!hasDockerfile) {
-    if (!prebuiltImage) {
+    if (prebuiltImage) {
+      span?.setAttributes({ 'container.dev_mode': 'prebuilt' });
+      emit(
+        out,
+        `▲ container  vercel dev: using prebuilt image ${prebuiltImage}`
+      );
+      return prebuiltImage;
+    }
+
+    // Resolve which kind of non-Dockerfile project this is.
+    //
+    // Your matrix:
+    //   node/bun → normal builders, NOT container
+    //   python   → normal builder, NOT container
+    //   go/rust/java/... → buildpack path (lifecycle/creator inside Paketo builder)
+    //   dockerfile → docker build (already handled above)
+    //
+    // For now wiring is framework-driven: vercel.json `"framework": "container"`
+    // forces buildpack path for testing non-Dockerfile projects. Without that,
+    // node/python (package.json / requirements.txt) should NOT become containers.
+    const family = detectRuntimeFamily({
+      workPath,
+      hasDockerfile: false,
+      entrypointRef: rawEntrypointRef,
+      framework,
+      handler: readString(config.handler),
+    });
+
+    if (family === 'passthrough' || family === 'unknown') {
+      // Node/python should never land here via the container preset. If they did,
+      // they'd have been claimed by @vercel/node or @vercel/python before we run.
+      // If framework was not set to "container", this is a misconfiguration.
+      const hint =
+        framework === 'container'
+          ? ''
+          : '\nHint: for non-Dockerfile container builds, set "framework": "container" in vercel.json for now (WIP: runtime-based detection).';
       throw new Error(
         'Container service must specify an entrypoint: a prebuilt OCI image ' +
-          'reference, or a Dockerfile path to run with `vercel dev`.'
+          'reference, or a Dockerfile path to run with `vercel dev`.' +
+          hint
       );
     }
-    span?.setAttributes({ 'container.dev_mode': 'prebuilt' });
-    emit(out, `▲ container  vercel dev: using prebuilt image ${prebuiltImage}`);
-    return prebuiltImage;
+
+    if (
+      family === 'buildpack' ||
+      isBuildpackProject({ workPath, hasDockerfile: false, framework })
+    ) {
+      const serviceName = options.service?.name ?? 'service';
+      const tag = devImageTag(serviceName);
+
+      const buildEnv = (options.meta?.buildEnv ?? {}) as Record<
+        string,
+        string | undefined
+      >;
+      const buildArgs: Record<string, string> = {};
+      for (const [k, v] of Object.entries(buildEnv)) {
+        if (typeof v === 'string') buildArgs[k] = v;
+      }
+
+      span?.setAttributes({
+        'container.dev_mode': 'buildpack',
+        'image.tag': tag,
+        'container.engine': engine.name,
+      });
+      emit(
+        out,
+        `▲ container  vercel dev: building ${tag} via buildpacks (${engine.name}, lifecycle/creator)`
+      );
+
+      await buildWithLifecycle(
+        engine,
+        {
+          workPath,
+          tag,
+          buildArgs,
+          serviceName,
+        },
+        engineOut(out),
+        span
+      );
+
+      emit(out, `▲ container  built ${tag} (buildpack)`);
+      return tag;
+    }
+
+    throw new Error(
+      'Container service must specify an entrypoint: a prebuilt OCI image ' +
+        'reference, or a Dockerfile path to run with `vercel dev`.'
+    );
   }
 
   if (!existsSync(dockerfilePath)) {

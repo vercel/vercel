@@ -8,6 +8,8 @@ import {
   TARGET_PLATFORM,
 } from './engines';
 import type { BuildPushParams } from './engines/types';
+import { detectRuntimeFamily, isBuildpackProject } from './buildpacks/detect';
+import { builderImageRef as buildpackBuilderRef } from './buildpacks/manifest';
 import { resolveOidcTokenForBuild } from './oidc';
 import { ensureRepository } from './registry';
 import {
@@ -74,6 +76,197 @@ function resolveImageTag(): string {
     return deploymentId.replace(/[^a-z0-9-_.]/gi, '-');
   }
   return `build-${Date.now().toString(36)}`;
+}
+
+async function buildViaBuildpackAndPush(params: {
+  workPath: string;
+  repository: string;
+  tag: string;
+  buildArgs?: Record<string, string>;
+  parentSpan?: Span;
+}): Promise<string> {
+  const engine = selectContainerEngine();
+  const builder = buildpackBuilderRef();
+
+  return withSpan(
+    params.parentSpan,
+    'container.buildpack.build_and_push',
+    {
+      'container.engine': engine.name,
+      'container.registry': VCR_REGISTRY,
+      'container.repository': params.repository,
+      'buildpack.builder': builder,
+    },
+    async buildSpan => {
+      const token = await withSpan(buildSpan, 'container.mint_oidc', {}, s =>
+        resolveOidcTokenForBuild(s)
+      );
+      const claims = decodeOidcClaims(token);
+      const username = claims.owner_id;
+      if (!username) {
+        throw new Error(
+          'VERCEL_OIDC_TOKEN is missing the `owner_id` claim required to authenticate to the container registry.'
+        );
+      }
+
+      const fullRepository = [
+        claims.owner,
+        claims.project,
+        params.repository,
+      ].join('/');
+      const imageRef = `${VCR_REGISTRY}/${fullRepository}:${params.tag}`;
+
+      buildSpan?.setAttributes({
+        'container.repository': fullRepository,
+        'image.tag': params.tag,
+        'image.ref': imageRef,
+        'registry.username': username,
+      });
+
+      return engine.withRuntime(buildSpan, async () => {
+        await withSpan(
+          buildSpan,
+          'container.ensure_toolchain_ready',
+          { 'container.engine': engine.name },
+          s => engine.ensureReady(s)
+        );
+
+        const forceLogin =
+          readString(process.env.VERCEL_VCR_FORCE_LOGIN) === '1';
+        const authFile = forceLogin ? undefined : existingRegistryAuthFile();
+        if (!authFile) {
+          step(`Authenticating to ${VCR_REGISTRY} as ${username}`);
+          await withSpan(
+            buildSpan,
+            'container.registry_login',
+            {
+              'container.registry': VCR_REGISTRY,
+              'registry.username': username,
+            },
+            () =>
+              engine.login({
+                contextDir: params.workPath,
+                dockerfilePath: `${params.workPath}/Dockerfile`,
+                imageRef,
+                registry: VCR_REGISTRY,
+                username,
+                token,
+                repository: params.repository,
+                buildArgs: params.buildArgs,
+                span: buildSpan,
+              })
+          );
+          done('authenticated');
+        }
+
+        await withSpan(
+          buildSpan,
+          'container.ensure_repository',
+          { 'container.repository': params.repository },
+          s => ensureRepository(params.repository, token, claims, s)
+        );
+
+        info(`Building image ${imageRef} via buildpacks (${builder})`);
+        const buildStart = Date.now();
+        step(
+          `buildpack build (platform=${TARGET_PLATFORM}, builder=${builder})`
+        );
+
+        // lifecycle/creator lives INSIDE the builder image at /cnb/lifecycle/creator.
+        // No host pack binary to vendor — matches the podman-private pattern:
+        // private engine (docker/podman/podman-private) is already selected via
+        // selectContainerEngine() and is already available through withRuntime.
+        const isBuild = Boolean(process.env.VERCEL_BUILD_IMAGE);
+        if (isBuild) {
+          const { run: runCmd } = await import('./util');
+          await runCmd('buildah', ['pull', builder], { quiet: false });
+          const envFlags: string[] = [];
+          for (const [k, v] of Object.entries(params.buildArgs ?? {})) {
+            envFlags.push('--env', `${k}=${v}`);
+          }
+          await runCmd(
+            'buildah',
+            [
+              'run',
+              '--volume',
+              `${params.workPath}:/workspace:ro`,
+              ...envFlags,
+              builder,
+              '--',
+              '/cnb/lifecycle/creator',
+              '-app=/workspace',
+              params.tag,
+            ],
+            { quiet: false }
+          );
+          await runCmd('buildah', ['tag', params.tag, imageRef], {
+            quiet: false,
+          });
+        } else {
+          const { buildWithLifecycle } = await import('./buildpacks/lifecycle');
+          const shimEngine = { name: engine.name } as any;
+          await buildWithLifecycle(
+            shimEngine,
+            {
+              workPath: params.workPath,
+              tag: params.tag,
+              buildArgs: params.buildArgs,
+              serviceName: params.repository,
+            },
+            { onStdout: undefined, onStderr: undefined },
+            buildSpan
+          );
+          const { run: runCmd } = await import('./util');
+          const bin =
+            engine.name === 'docker'
+              ? 'docker'
+              : engine.name === 'buildah'
+                ? 'buildah'
+                : 'podman';
+          await runCmd(bin, ['tag', params.tag, imageRef], {
+            quiet: true,
+          }).catch(() => {});
+        }
+
+        done(`built in ${elapsed(buildStart)}`);
+
+        const pushStart = Date.now();
+        step(`Pushing ${imageRef}`);
+        const digest = await withSpan(
+          buildSpan,
+          'container.push',
+          { 'image.ref': imageRef },
+          () =>
+            engine.push({
+              contextDir: params.workPath,
+              dockerfilePath: `${params.workPath}/Dockerfile`,
+              imageRef,
+              registry: VCR_REGISTRY,
+              username,
+              token,
+              repository: params.repository,
+              buildArgs: params.buildArgs,
+              span: buildSpan,
+            })
+        );
+        done(
+          digest
+            ? `pushed ${shortDigest(digest)} in ${elapsed(pushStart)}`
+            : `pushed in ${elapsed(pushStart)}`
+        );
+
+        const resolvedRef = digest
+          ? `${VCR_REGISTRY}/${fullRepository}@${digest}`
+          : imageRef;
+        buildSpan?.setAttributes({
+          'image.digest': digest,
+          'image.resolved_ref': resolvedRef,
+        });
+        info(`Image reference ${resolvedRef}`);
+        return resolvedRef;
+      });
+    }
+  );
 }
 
 async function buildAndPushImage(params: {
@@ -268,7 +461,9 @@ async function resolveImageHandler(
 ): Promise<string> {
   const { config, workPath, entrypoint, meta } = options;
 
-  const entrypointRef = readString(entrypoint);
+  const rawEntrypointRef = readString(entrypoint);
+  const isDetect = rawEntrypointRef === '<detect>';
+  const entrypointRef = isDetect ? undefined : rawEntrypointRef;
   // An entrypoint that names a Dockerfile (including the `Dockerfile.vercel` /
   // `Containerfile.vercel` opt-in markers) is built directly. Otherwise — e.g.
   // when the `container` framework preset resolves its entrypoint via
@@ -285,20 +480,84 @@ async function resolveImageHandler(
   const prebuiltImage =
     readString(config.handler) ?? (hasDockerfile ? undefined : entrypointRef);
 
+  const framework =
+    (options as any).framework ??
+    (config as any)?.framework ??
+    (meta as any)?.framework ??
+    (options as any).service?.framework;
+
   span?.setAttributes({
     'container.has_dockerfile': toTag(hasDockerfile),
     'container.is_dev': toTag(Boolean(meta?.isDev)),
+    'container.framework': framework,
   });
 
   if (!hasDockerfile) {
-    if (!prebuiltImage) {
-      throw new Error(
-        'Container service must specify an entrypoint: a prebuilt OCI image reference, or a Dockerfile path to build.'
-      );
+    if (prebuiltImage) {
+      span?.setAttributes({ 'container.mode': 'prebuilt' });
+      info(`Using prebuilt image ${prebuiltImage}`);
+      return prebuiltImage;
     }
-    span?.setAttributes({ 'container.mode': 'prebuilt' });
-    info(`Using prebuilt image ${prebuiltImage}`);
-    return prebuiltImage;
+
+    // Your matrix — framework-driven for now (vercel.json framework: container).
+    //   node/bun, python → NOT container (handled by @vercel/node, @vercel/python elsewhere)
+    //   go/rust/java etc → buildpack via lifecycle/creator
+    //   dockerfile → docker build (hasDockerfile branch below)
+    const family = detectRuntimeFamily({
+      workPath,
+      hasDockerfile: false,
+      entrypointRef: rawEntrypointRef,
+      framework,
+      handler: readString(config.handler),
+    });
+
+    const buildpackCandidate = isBuildpackProject({
+      workPath,
+      hasDockerfile: false,
+      framework,
+    });
+
+    // Explicit container framework opt-in always forces buildpack path for non-Dockerfile test.
+    const isFrameworkContainer =
+      (framework ?? '').toLowerCase() === 'container';
+
+    if (family === 'buildpack' || buildpackCandidate || isFrameworkContainer) {
+      if (meta?.isDev) {
+        const serviceName = options.service?.name ?? 'service';
+        const tag = devImageTag(serviceName);
+        span?.setAttributes({
+          'container.mode': 'buildpack-dev',
+          'image.tag': tag,
+        });
+        return tag;
+      }
+
+      const serviceName = options.service?.name;
+      const repository = sanitizeRepository(serviceName ?? 'service');
+      const tag = resolveImageTag();
+      const buildArgs = buildArgsFromEnv(meta?.buildEnv);
+      span?.setAttributes({
+        'container.mode': 'buildpack',
+        'container.repository': repository,
+        'image.tag': tag,
+      });
+      return buildViaBuildpackAndPush({
+        workPath,
+        repository,
+        tag,
+        buildArgs,
+        parentSpan: span,
+      });
+    }
+
+    const hint = isFrameworkContainer
+      ? ''
+      : '\nHint: for non-Dockerfile container builds, set "framework": "container" in vercel.json for now (WIP: runtime-based detection for go/rust/java).';
+
+    throw new Error(
+      'Container service must specify an entrypoint: a prebuilt OCI image reference, or a Dockerfile path to build.' +
+        hint
+    );
   }
 
   if (meta?.isDev) {

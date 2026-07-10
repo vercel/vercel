@@ -1173,6 +1173,10 @@ describe('@vercel/container', () => {
       // The very first Docker call is the daemon availability probe
       // (`docker info`). Simulate the daemon being down: it exits non-zero
       // with the classic connection error on stderr.
+      // Pin to docker explicitly so the multi-engine fallback (docker →
+      // podman → podman-private) doesn't try podman and mask the failure —
+      // this test asserts the docker-only fast fail path.
+      process.env.VERCEL_CONTAINER_ENGINE = 'docker';
       existsSyncMock.mockReturnValue(true); // Dockerfile present
       spawnMock.mockImplementation((cmd: string, args: string[]) => {
         if (cmd === 'docker' && args[0] === 'info') {
@@ -1196,6 +1200,8 @@ describe('@vercel/container', () => {
       const commands = commandsRun();
       expect(commands.some(c => c.startsWith('docker build'))).toBe(false);
       expect(commands.some(c => c.includes('docker run'))).toBe(false);
+
+      delete process.env.VERCEL_CONTAINER_ENGINE;
     });
 
     it('reports a daemon-down hint and the container name when run exits 125', async () => {
@@ -1250,6 +1256,260 @@ describe('@vercel/container', () => {
       expect(
         commandsRun().some(c => /^docker stop vercel-dev-api-/.test(c))
       ).toBe(true);
+    });
+  });
+
+  describe('buildpacks lifecycle (invisible to user)', () => {
+    // Non-Dockerfile path is driven by framework selection (vercel.json `framework: container`),
+    // per requested wiring:
+    //   node/bun → normal builders, NOT container
+    //   python   → normal builder, NOT container
+    //   go/rust/java etc → buildpack path via lifecycle/creator when framework=container (WIP: later auto-detect those runtimes without vercel.json)
+    //   dockerfile → docker build
+    //
+    // So tests below simulate a non-Dockerfile project that specifies `framework: container`
+    // in vercel.json; that explicit opt-in forces the buildpack path for now.
+    function makeExistsWithFiles(files: string[]) {
+      return (p: unknown) => {
+        if (typeof p !== 'string') return false;
+        const base = p.split('/').pop() ?? p;
+        return files.includes(base);
+      };
+    }
+
+    it('dev: non-Dockerfile + framework=container builds via lifecycle/creator (e.g. go project)', async () => {
+      // A Go service with go.mod, no Dockerfile, framework=container → buildpack.
+      existsSyncMock.mockImplementation(makeExistsWithFiles(['go.mod']));
+
+      const creatorInvocations: string[] = [];
+      let builtImageTag: string | undefined;
+
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        const argStr = args.join(' ');
+        if (cmd === 'docker' && args[0] === 'info')
+          return fakeChild('Server Version: 27.0.0\n');
+        if (cmd === 'docker' && args[0] === 'pull') return fakeChild('');
+        if (
+          cmd === 'docker' &&
+          args[0] === 'run' &&
+          argStr.includes('/cnb/lifecycle/creator')
+        ) {
+          creatorInvocations.push(`${cmd} ${argStr}`);
+          builtImageTag = args[args.length - 1];
+          return fakeChild('');
+        }
+        if (cmd === 'docker' && args[0] === 'run')
+          return fakeRunningChild(7001);
+        if (cmd === 'docker' && args.includes('inspect'))
+          return fakeChild('{"3000/tcp":{}}');
+        if (cmd === 'docker' && args[0] === 'port')
+          return fakeChild('127.0.0.1:58888\n');
+        return fakeChild('');
+      });
+
+      process.env.VERCEL_CONTAINER_ENGINE = 'docker';
+
+      const result = await startDevServer({
+        ...createBuildOptions({ runtime: 'container', framework: 'container' }),
+        entrypoint: '<detect>',
+        workPath: '/fake/go-project',
+        service: { name: 'api' },
+        framework: 'container',
+        meta: { isDev: true, framework: 'container' } as any,
+      } as any);
+
+      delete process.env.VERCEL_CONTAINER_ENGINE;
+
+      expect(result).toMatchObject({ port: 58888 });
+      expect(
+        creatorInvocations.some(c => /:ro\b/.test(c) && /\/workspace/.test(c))
+      ).toBe(true);
+      expect(creatorInvocations.some(c => /vercel-bp-cache-/.test(c))).toBe(
+        true
+      );
+      expect(creatorInvocations.some(c => /vercel-dev\/api:dev/.test(c))).toBe(
+        true
+      );
+      expect(builtImageTag).toBe('vercel-dev/api:dev');
+    });
+
+    it('dev: framework=container with project.toml builds even without go.mod/Cargo markers', async () => {
+      // Bare project that opts into containers via vercel.json framework=container,
+      // with an explicit project.toml CNB opt-in. No language marker required.
+      existsSyncMock.mockImplementation(makeExistsWithFiles(['project.toml']));
+
+      let creatorCalled = false;
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'docker' && args[0] === 'info') return fakeChild('Server');
+        if (cmd === 'docker' && args[0] === 'pull') return fakeChild('');
+        if (
+          cmd === 'docker' &&
+          args[0] === 'run' &&
+          args.join(' ').includes('/cnb/lifecycle/creator')
+        ) {
+          creatorCalled = true;
+          return fakeChild('');
+        }
+        if (cmd === 'docker' && args[0] === 'run')
+          return fakeRunningChild(7002);
+        if (cmd === 'docker' && args.includes('inspect'))
+          return fakeChild('{"3000/tcp":{}}');
+        if (cmd === 'docker' && args[0] === 'port')
+          return fakeChild('127.0.0.1:58889\n');
+        return fakeChild('');
+      });
+
+      process.env.VERCEL_CONTAINER_ENGINE = 'docker';
+
+      const result = await startDevServer({
+        ...createBuildOptions({ runtime: 'container', framework: 'container' }),
+        entrypoint: '<detect>',
+        workPath: '/fake/bare-project',
+        service: { name: 'web' },
+        framework: 'container',
+        meta: { isDev: true, framework: 'container' } as any,
+      } as any);
+
+      delete process.env.VERCEL_CONTAINER_ENGINE;
+
+      expect(creatorCalled).toBe(true);
+      expect(result).toMatchObject({ port: 58889 });
+    });
+
+    it('dev: framework=container + Cargo.toml → buildpack (rust) ', async () => {
+      existsSyncMock.mockImplementation(makeExistsWithFiles(['Cargo.toml']));
+
+      let creatorCalled = false;
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'docker' && args[0] === 'info') return fakeChild('Server');
+        if (cmd === 'docker' && args[0] === 'pull') return fakeChild('');
+        if (
+          cmd === 'docker' &&
+          args[0] === 'run' &&
+          args.join(' ').includes('/cnb/lifecycle/creator')
+        ) {
+          creatorCalled = true;
+          return fakeChild('');
+        }
+        if (cmd === 'docker' && args[0] === 'run')
+          return fakeRunningChild(7011);
+        if (cmd === 'docker' && args.includes('inspect'))
+          return fakeChild('{"3000/tcp":{}}');
+        if (cmd === 'docker' && args[0] === 'port')
+          return fakeChild('127.0.0.1:58891\n');
+        return fakeChild('');
+      });
+
+      process.env.VERCEL_CONTAINER_ENGINE = 'docker';
+
+      const result = await startDevServer({
+        ...createBuildOptions({ runtime: 'container', framework: 'container' }),
+        entrypoint: '<detect>',
+        workPath: '/fake/rust-project',
+        service: { name: 'api' },
+        framework: 'container',
+        meta: { isDev: true, framework: 'container' } as any,
+      } as any);
+
+      delete process.env.VERCEL_CONTAINER_ENGINE;
+
+      expect(creatorCalled).toBe(true);
+      expect(result).toMatchObject({ port: 58891 });
+    });
+
+    it('dev: node project (package.json) without framework=container is NOT a container project', async () => {
+      // package.json present, no Dockerfile, no framework=container → should NOT become a container.
+      // Node/bun have their own builders (@vercel/node). If user somehow reaches @vercel/container
+      // with a pure node project, we must not silently build it as a buildpack container — we error,
+      // signalling framework misconfiguration instead of hiding node under buildpacks.
+      existsSyncMock.mockImplementation(makeExistsWithFiles(['package.json']));
+
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'docker' && args[0] === 'info') return fakeChild('Server');
+        return fakeChild('');
+      });
+
+      process.env.VERCEL_CONTAINER_ENGINE = 'docker';
+
+      await expect(
+        startDevServer({
+          ...createBuildOptions({ runtime: 'container' }),
+          entrypoint: '<detect>',
+          workPath: '/fake/node-project',
+          service: { name: 'web' },
+          meta: { isDev: true } as any,
+        } as any)
+      ).rejects.toThrow(/must specify an entrypoint|framework.*container/i);
+
+      delete process.env.VERCEL_CONTAINER_ENGINE;
+    });
+
+    it('dev: Dockerfile takes precedence over framework=container + buildpack markers', async () => {
+      existsSyncMock.mockImplementation(
+        makeExistsWithFiles(['Dockerfile.vercel', 'go.mod'])
+      );
+
+      let creatorCalled = false;
+      let dockerBuildCalled = false;
+
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'docker' && args[0] === 'info') return fakeChild('Server');
+        if (cmd === 'docker' && args[0] === 'pull') return fakeChild('');
+        if (
+          cmd === 'docker' &&
+          args[0] === 'run' &&
+          args.join(' ').includes('/cnb/lifecycle/creator')
+        ) {
+          creatorCalled = true;
+          return fakeChild('');
+        }
+        if (cmd === 'docker' && args[0] === 'build') {
+          dockerBuildCalled = true;
+          return fakeChild('');
+        }
+        if (cmd === 'docker' && args[0] === 'run')
+          return fakeRunningChild(7003);
+        if (cmd === 'docker' && args.includes('inspect'))
+          return fakeChild('{"3000/tcp":{}}');
+        if (cmd === 'docker' && args[0] === 'port')
+          return fakeChild('127.0.0.1:58890\n');
+        return fakeChild('');
+      });
+
+      process.env.VERCEL_CONTAINER_ENGINE = 'docker';
+
+      await startDevServer({
+        ...createBuildOptions({ runtime: 'container', framework: 'container' }),
+        entrypoint: '<detect>',
+        workPath: '/fake/go-with-dockerfile',
+        service: { name: 'api' },
+        framework: 'container',
+        meta: { isDev: true, framework: 'container' } as any,
+      } as any);
+
+      delete process.env.VERCEL_CONTAINER_ENGINE;
+
+      expect(dockerBuildCalled).toBe(true);
+      expect(creatorCalled).toBe(false);
+    });
+
+    it('build: framework=container returns stable dev tag when meta.isDev (non-Dockerfile buildpack)', async () => {
+      const { build } = await import('../src');
+      existsSyncMock.mockImplementation(makeExistsWithFiles(['go.mod']));
+
+      const result = await build({
+        ...createBuildOptions({ runtime: 'container', framework: 'container' }),
+        entrypoint: '<detect>',
+        workPath: '/fake/go-project2',
+        service: { name: 'web' },
+        framework: 'container',
+        meta: { isDev: true, framework: 'container' } as any,
+      } as any);
+
+      const out = (result as any).output?.index;
+      expect(out?.handler).toBe('vercel-dev/web:dev');
+      expect(out?.runtime).toBe('container');
+      expect(spawnMock).not.toHaveBeenCalled();
     });
   });
 
