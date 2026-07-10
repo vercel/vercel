@@ -203,14 +203,22 @@ export default async function issues(client: Client): Promise<number> {
   );
 
   const rows = [
-    ['Type', 'Tool', 'Code', 'Turns', 'Runs', 'Last Seen', 'Sample Run'].map(
-      header => chalk.bold(chalk.cyan(header))
-    ),
+    [
+      'Type',
+      'Tool',
+      'Code',
+      'Occurrences',
+      'Runs',
+      'Last Seen',
+      'Sample Run',
+    ].map(header => chalk.bold(chalk.cyan(header))),
     ...issueGroups.map(group => [
       formatIssueType(group),
       formatIssueTool(group),
       formatIssueCode(group),
-      formatCount(readNumber(group, 'turns')),
+      formatCount(
+        readNumber(group, 'occurrences') ?? readNumber(group, 'turns')
+      ),
       formatCount(readNumber(group, 'runs')),
       chalk.gray(formatAge(readTimestampMs(group, 'lastSeenAt'))),
       chalk.bold(readString(group, 'sampleRunId') ?? '-'),

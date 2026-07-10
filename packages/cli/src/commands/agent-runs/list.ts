@@ -197,7 +197,16 @@ export default async function list(client: Client): Promise<number> {
 
   const runList = asArray(data.runs);
   if (runList.length === 0) {
-    if (search || since) {
+    if (
+      search ||
+      since ||
+      trigger ||
+      issue === 'error' ||
+      issueCode ||
+      issueType ||
+      issueSource ||
+      issueTool
+    ) {
       output.log('No Agent Runs match the current filters.');
     } else {
       output.log('No Agent Runs found.');
