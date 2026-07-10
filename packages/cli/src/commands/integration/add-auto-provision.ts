@@ -4,7 +4,6 @@ import { errorToString } from '@vercel/error-utils';
 import open from 'open';
 import output from '../../output-manager';
 import type Client from '../../util/client';
-import { canPrompt } from '../../util/flags/can-prompt';
 import getScope from '../../util/get-scope';
 import indent from '../../util/output/indent';
 import { autoProvisionResource } from '../../util/integration/auto-provision-resource';
@@ -13,7 +12,10 @@ import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { acceptTermsViaBrowser } from '../../util/integration/accept-terms-via-browser';
 import { promptForTermAcceptance } from '../../util/integration/prompt-for-terms';
 import { selectProduct } from '../../util/integration/select-product';
-import { resolveProductSkills } from '../../util/integration/skill-suggestion';
+import {
+  resolveProductSkills,
+  type ResolvedSkill,
+} from '../../util/integration/skill-suggestion';
 import { runClaimForResource } from '../integration-resource/claim';
 import { getResources } from '../../util/integration-resource/get-resources';
 import { packageName } from '../../util/pkg-name';
@@ -571,57 +573,61 @@ export async function addAutoProvision(
     }
   );
 
-  // Install the product's declared agent skills (from `agentSkills`). Install
-  // is the default: in an interactive terminal we ask first; non-interactive
-  // callers (agents, CI) can't be prompted, so they proceed with the default
-  // and auto-install. JSON mode never reaches here (read-only — `skills[]` is
-  // surfaced in the JSON payload instead).
+  // Install the product's declared agent skills (from `agentSkills`) in all
+  // modes, including --format=json, where the human-readable summary is
+  // suppressed and each skill's `installed` status is reported in the payload.
   const skills = resolveProductSkills(product);
+  const failedSkills: ResolvedSkill[] = [];
 
-  if (skills.length && !options.asJson) {
-    const noun = skills.length === 1 ? 'the agent skill' : 'agent skills';
-
-    let runInstall = !canPrompt(client);
-    if (canPrompt(client)) {
-      runInstall = await client.input.confirm(
-        `Install ${noun} so your AI tools can use ${chalk.bold(product.name)}?`,
-        true
-      );
+  if (skills.length) {
+    if (!options.asJson) {
+      output.spinner(`Installing agent skills for ${product.name}...`);
     }
-
-    if (runInstall) {
-      output.log(`Installing ${noun} for ${chalk.bold(product.name)}…`);
-      for (const skill of skills) {
-        // Echo the command before running it, so the publisher code being
-        // executed is visible in interactive, CI, and agent transcripts.
-        output.log(indent(chalk.cyan(skill.command), 4));
-        // `--yes` is required: without it `npx` prompts to install the `skills`
-        // package and hangs in non-interactive (agent/CI) contexts.
-        const args = [
-          '--yes',
-          'skills',
-          'add',
-          skill.repoUrl,
-          ...(skill.skill ? ['--skill', skill.skill] : []),
-        ];
-        const result = await execa('npx', args, {
-          cwd: client.cwd,
-          stdio: 'inherit',
-          reject: false,
-        });
-        if (result.exitCode !== 0) {
+    for (const skill of skills) {
+      // Both `--yes` flags are needed in non-interactive (agent/CI) contexts:
+      // the first stops `npx` from prompting to install the `skills` package,
+      // the second makes `skills add` accept its defaults instead of asking.
+      const args = [
+        '--yes',
+        'skills',
+        'add',
+        skill.repoUrl,
+        ...(skill.skill ? ['--skill', skill.skill] : []),
+        '--yes',
+      ];
+      const result = await execa('npx', args, {
+        cwd: client.cwd,
+        stdio: 'pipe',
+        reject: false,
+      });
+      if (result.exitCode !== 0) {
+        failedSkills.push(skill);
+        output.debug(`skills add failed: ${result.stderr}`);
+        if (!options.asJson) {
           output.warn(
             `Failed to install ${skill.skill ?? skill.repoUrl}. Run it manually: ${chalk.cyan(skill.command)}`
           );
         }
       }
-    } else {
+    }
+    const installed = skills.length - failedSkills.length;
+    if (installed > 0 && !options.asJson) {
+      // Link to the page that renders the product's Agent Skills section: the
+      // product page for multi-product integrations, the integration page
+      // otherwise (single-product product pages are not linked in the UI).
+      const marketplaceUrl =
+        integration.products.length > 1
+          ? `https://vercel.com/marketplace/${integration.slug}/${product.slug}`
+          : `https://vercel.com/marketplace/${integration.slug}`;
       output.log(
-        `Install ${noun} so your AI tools can use ${chalk.bold(product.name)}:`
+        `Installed ${installed} agent skill${installed === 1 ? '' : 's'} for ${chalk.bold(product.name)}`
       );
-      for (const skill of skills) {
-        output.log(indent(chalk.cyan(skill.command), 4));
-      }
+      output.log(
+        indent(
+          `Learn more: ${output.link(marketplaceUrl, marketplaceUrl, { fallback: false })}`,
+          2
+        )
+      );
     }
   }
 
@@ -634,6 +640,11 @@ export async function addAutoProvision(
     }
     if (setupResult.connected && !setupResult.envPulled && !options.noEnvPull) {
       warnings.push(ENV_PULL_FAILED_MESSAGE);
+    }
+    for (const skill of failedSkills) {
+      warnings.push(
+        `Failed to install ${skill.skill ?? skill.repoUrl}. Run it manually: ${skill.command}`
+      );
     }
 
     const jsonOutput: Record<string, unknown> = {
@@ -679,7 +690,10 @@ export async function addAutoProvision(
       environments: setupResult.environments,
       envPulled: setupResult.envPulled,
       guideCommand,
-      skills,
+      skills: skills.map(skill => ({
+        ...skill,
+        installed: !failedSkills.includes(skill),
+      })),
       warnings,
     };
 

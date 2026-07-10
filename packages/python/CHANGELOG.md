@@ -1,5 +1,18 @@
 # @vercel/python
 
+## 6.49.0
+
+### Minor Changes
+
+- dbefe95: Require Python `pyproject.toml` subscribers to be declared with `[[tool.vercel.subscribers]]` array entries instead of named subscriber tables.
+- 8b36776: Precompile Python bytecode for standard-size Lambda functions when enough of the estimated bytecode fits the remaining capacity, and allow bytecode precompilation when a custom build command is configured.
+- e12b1bd: Fail the build when `tool.vercel.entrypoint` in pyproject.toml is set but cannot be resolved, instead of silently falling back to filename-based entrypoint detection. A stale or typo'd declaration could previously build a different app than the one declared. Speculative detection (monorepo auto-detection, project linking) still degrades gracefully: one directory's broken config does not abort the sweep.
+
+### Patch Changes
+
+- 89ef74f: Skip bytecode precompilation when a service has a `preDeployCommand`. Precompiled bytecode uses `--invalidation-mode unchecked-hash`, which trusts the `.pyc` without re-checking the source at import — safe only because build output is normally immutable. A `preDeployCommand` runs after the build and can rewrite source files, leaving the already-compiled bytecode stale so the old source is served at runtime. Precompilation is now disabled for such services so the pre-deploy changes take effect.
+- 7b30856: Add `vercel dev` support for Python queue subscribers defined in `pyproject.toml`.
+
 ## 6.48.0
 
 ### Minor Changes

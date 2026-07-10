@@ -634,8 +634,8 @@ importers:
         specifier: 1.1.2
         version: 1.1.2
       '@types/async-retry':
-        specifier: 1.2.1
-        version: 1.2.1
+        specifier: 1.4.5
+        version: 1.4.5
       '@types/bytes':
         specifier: 3.0.0
         version: 3.0.0

@@ -124,8 +124,8 @@ const GLOBAL_FLAG_NAMES = new Set([
   // --token/-t are intentionally excluded and stripped via stripSensitiveAuthArgs.
 ]);
 
-/** Boolean globals: the next argv token is never their value (avoids eating a subcommand like `oauth-apps`). */
-const BOOLEAN_GLOBAL_FLAG_NAMES = new Set(['--yes', '-y', '--non-interactive']);
+/** Global flags that never consume a separate argv token as their value (unlike `--cwd path`). */
+const GLOBAL_FLAGS_BOOLEAN = new Set(['--yes', '-y', '--non-interactive']);
 
 /** Shorthand → long form for global flags, so `-S` and `--scope` dedupe as the same flag. */
 const GLOBAL_FLAG_SHORTHANDS: Record<string, string> = {
@@ -150,7 +150,7 @@ export function getGlobalFlagsFromArgv(argv: string[]): string[] {
     if (GLOBAL_FLAG_NAMES.has(name)) {
       out.push(arg);
       const takesSeparateValue =
-        !BOOLEAN_GLOBAL_FLAG_NAMES.has(name) &&
+        !GLOBAL_FLAGS_BOOLEAN.has(name) &&
         !arg.includes('=') &&
         i + 1 < args.length &&
         !args[i + 1].startsWith('-');
@@ -175,7 +175,7 @@ export function omitGlobalFlagsFromArgs(args: string[]): string[] {
     const name = arg.startsWith('--') ? arg.split('=')[0] : arg;
     if (GLOBAL_FLAG_NAMES.has(name)) {
       const skipSeparateValue =
-        !BOOLEAN_GLOBAL_FLAG_NAMES.has(name) &&
+        !GLOBAL_FLAGS_BOOLEAN.has(name) &&
         !arg.includes('=') &&
         i + 1 < safeArgs.length &&
         !safeArgs[i + 1].startsWith('-');

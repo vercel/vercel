@@ -1,5 +1,130 @@
 # vercel
 
+## 55.0.0
+
+### Major Changes
+
+- 8f10c0b: Require an explicit team signal when linking without a TTY. In non-interactive
+  mode or without a terminal, `vercel link` (and other commands that set up a
+  link) no longer fall back to the globally selected team from `vc switch` or the
+  login default, and `--yes` no longer guesses a team. The team now resolves only
+  from `--scope`/`--team`, the `scope` property in `vercel.json`,
+  `VERCEL_ORG_ID`, or a single available team; otherwise the command fails with
+  `action_required: missing_scope` (JSON in non-interactive mode) before any
+  project discovery runs, before a new project is created, and before the
+  existing `.vercel/project.json` is deleted. This also removes the slow
+  all-teams project search from non-interactive `vercel link` runs.
+- 8f10c0b: Every command that establishes a link — `vercel deploy`, `vercel pull`,
+  `vercel dev`, `vercel git connect`, and `vercel link` itself — now uses the
+  same flow: resolve the team first (explicit `--scope`/`--team`,
+  `vercel.json` `scope`, `VERCEL_ORG_ID`, a single available team, or the
+  searchable team picker), then offer project suggestions scoped to that team,
+  preferring projects linked to the local Git repository (which produce a
+  repo-style `.vercel/repo.json` link) over folder-name matches. The
+  cross-team project sweep and its SSO fallback prompt are removed entirely;
+  project discovery never queries teams other than the one that was resolved.
+  An explicit project name (`--project`, `--name`, or `vercel.json` `name`)
+  skips the suggestions and resolves directly within the team. An explicit
+  team signal now also skips the team prompt in every command, not just
+  `vercel link`.
+- 8f10c0b: `--yes` no longer selects a team on its own. It answers confirmations, not
+  data questions: when the account has multiple teams and no explicit signal
+  (`--scope`/`--team`, `vercel.json` `scope`, `VERCEL_ORG_ID`), an interactive
+  terminal now asks `Which team?` once and continues auto-confirmed, instead of
+  silently using the globally selected team from `vc switch` or the login
+  default. This also removes the all-teams project sweep from `vercel link
+--yes`; matches are resolved within the chosen team, and a single Git-linked
+  root-directory match still links automatically.
+
+### Minor Changes
+
+- 0922f27: Add `vercel integration resource inspect <resource>` (alias `status`) to show a marketplace resource's details and live status fetched fresh from the provider, rather than the cached status shown by `vercel integration list`. Supports `--format=json`.
+- 8f10c0b: `vercel link` now honors `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` as an
+  explicit project-owner pair: when both are set, the command resolves and
+  confirms exactly that pair without prompting and without `--yes`, and leaves
+  local link files untouched. An unresolvable pair errors instead of falling
+  back to prompts. The new-project `Name?` prompt also suggests a creatable
+  default: when the folder name is already a project in the selected team, it
+  suggests `<folder-name>-<short suffix>` instead of a name that can only fail
+  "Project already exists" validation.
+- 176d939: Add `vercel vcr login [engine]` to authenticate docker, podman, or buildah with the Vercel Container Registry using an OIDC token.
+
+### Patch Changes
+
+- 2522d0a: [ai-gateway] add `models ls` and `models endpoints` commands
+- 8e93bc1: Fix `vc build` behavior in an unlinked directory. The link flow now runs before the "Run `vercel pull`?" prompt instead of firing as a side effect of the pull, and the freshly-established link is picked up on the same run — previously the first build computed a wrong work path (e.g. `apps/api/apps/api`) that only corrected itself on a subsequent run.
+- 6b93f07: Add per-Builder install reasons to the `vc.installBuilders` trace span, distinguishing Builders that are not installed from ones whose entrypoint fails to load and from explicit version or range mismatches
+- 8f10c0b: Ask interactive `vercel link` users to choose a team before project discovery,
+  add searchable team and existing-project pickers, and allow Escape to cancel
+  prompts cleanly. After team selection, the project picker prioritizes projects
+  linked to the local Git repository with the matching Root Directory, then falls
+  back to an exact folder-name match before offering full project search or
+  project creation. Git matches persist the repository mapping in
+  `.vercel/repo.json`. The project-name prompt allows Up to return to the picker,
+  and project selection and search provide choices for returning to the previous
+  step. Explicit `--scope` and `--team` values skip the team prompt and restrict
+  project lookup to that team.
+- f03f001: Stopped showing the "Update available … Would you like to upgrade now?" prompt immediately after running `vercel upgrade`. The running process still holds the pre-upgrade version in memory, so the notifier would ask the user to upgrade again right after a successful upgrade.
+- f03f001: `vercel upgrade` no longer classifies the installation as local without positive evidence (a lockfile found above the CLI's install location). Previously, when the installation layout was not recognized, the upgrade defaulted to running `npm i vercel@latest` in the current working directory — silently adding `vercel` to whatever project (or home directory) the user happened to be standing in. Unrecognized layouts now degrade to a global npm upgrade, which runs from a temporary directory and cannot modify the current project.
+- f03f001: Fixed `vercel upgrade` misdetecting pnpm 11 global installs as local npm installs. pnpm 11 moved global packages to isolated directories under `PNPM_HOME/global/v11/` backed by the global virtual store, which the previous detection did not recognize — causing the upgrade to run `npm i vercel@latest` in the current working directory (creating a stray `node_modules`) while reporting success without upgrading the real installation. Detection now recognizes installs running from inside `PNPM_HOME`, and no longer crashes when the entrypoint path cannot be resolved on disk.
+- 8d25cea: Apply `functions` configuration (`memory`, `maxDuration`, `architecture`, `regions`, `functionFailoverRegions`, `experimentalTriggers`, `supportsCancellation`) to container runtime outputs. The `@vercel/container` builder now resolves matching `vercel.json` / per-service `functions` entries at build time, and the CLI writes those settings into the container `.vc-config.json`.
+- 067a068: Finish CLI deployments from alias-assigned build stream events while retaining deployment polling as a fallback.
+- 456d388: Add CLI support for managing conditional feature flag rules.
+
+  Example command runs:
+
+  ```bash
+  vercel flags rules ls my-feature --environment production
+  vercel flags rules ls my-feature --environment production --json
+  vercel flags rules add my-feature --environment production --condition user.plan:eq:pro --variant on
+  vercel flags rules add my-feature --environment production --condition segment:eq:seg_beta123 --variant on
+  vercel flags rules add my-feature --environment production --condition user.plan:eq:pro --by user.userId --weight off=90 --weight on=10 --position 1
+  vercel flags rules update my-feature rule_123 --environment production --condition user.plan:eq:enterprise
+  vercel flags rules update my-feature rule_123 --environment production --variant off
+  vercel flags rules move my-feature rule_123 --environment production --position 1
+  vercel flags rules remove my-feature rule_123 --environment production
+  ```
+
+- d213d27: Include build logs in `vercel inspect --logs --format json` output.
+- 3b98912: Add `--limit` support to additional paginated CLI list commands and preserve next-page hints when custom limits are used.
+- 8f10c0b: Skip the `Which team?` prompt when the account has exactly one team choice
+  (for example a token scoped to a single team). The resolved team is shown as
+  an aligned `Team` row instead, and the project picker hides
+  `Choose a different team` when there is no other team to choose. Team picker
+  labels now match `vc switch`: `Name (slug)`, a bold `(current)` marker, and a
+  lock for teams that require SSO.
+- 5b29d19: Forward alert rule scope and format flags to nested subcommands.
+- 7b30856: Add `vercel dev` support for Python queue subscribers defined in `pyproject.toml`.
+- c556d0d: Fix `vercel upgrade` on pnpm installs: pnpm v10+ requires approval to run dependency build scripts (e.g. esbuild's postinstall) and would prompt or skip them during the upgrade. Global pnpm upgrade commands now pre-approve the required build script via `--allow-build`, which applies to that single install only and persists no policy.
+- Updated dependencies [8d25cea]
+- Updated dependencies [6b2cfc6]
+- Updated dependencies [0f67a94]
+- Updated dependencies [dbefe95]
+- Updated dependencies [89ef74f]
+- Updated dependencies [8b36776]
+- Updated dependencies [e12b1bd]
+- Updated dependencies [7b30856]
+  - @vercel/container@0.0.5
+  - @vercel/static-build@2.11.5
+  - @vercel/next@4.20.4
+  - @vercel/python@6.49.0
+  - @vercel/build-utils@13.32.3
+  - @vercel/backends@0.8.22
+  - @vercel/elysia@0.1.99
+  - @vercel/express@0.1.113
+  - @vercel/fastify@0.1.102
+  - @vercel/go@3.10.2
+  - @vercel/h3@0.1.108
+  - @vercel/hono@0.2.102
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.82
+  - @vercel/nestjs@0.2.103
+  - @vercel/node@5.8.23
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.0
+
 ## 54.21.1
 
 ### Patch Changes
