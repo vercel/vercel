@@ -848,8 +848,6 @@ async function doBuild(
     normalizePath(relative(workPath, f))
   );
 
-  // Framework detection for the end-of-build cross-check, started here so it
-  // runs concurrently with the builders instead of adding latency.
   const detectedFrameworksPromise = span
     .child('vc.detectAllFrameworks', {
       enabled: String(isFrameworkDetectionEnabled()),
@@ -866,7 +864,7 @@ async function doBuild(
         });
         return slugs;
       } catch (err) {
-        output.debug(`Framework cross-check detection failed: ${err}`);
+        output.warn(`Framework cross-check detection failed: ${err}`);
         s.setAttributes({
           error: err instanceof Error ? err.message : String(err),
         });

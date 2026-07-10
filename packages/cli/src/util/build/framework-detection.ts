@@ -64,6 +64,11 @@ export interface DetectedFramework {
  * On a project's first deployment, detect the framework from the source code
  * and apply it to the in-memory `projectSettings` (mutated in place so the
  * caller's subsequent `detectBuilders` call sees it).
+ *
+ * This always runs when `VERCEL_FIRST_DEPLOYMENT=1` and no framework is
+ * configured, even when `VERCEL_FRAMEWORK_DETECTION` is not set, so new
+ * projects get a framework from their first build without needing the
+ * feature flag.
  */
 export async function detectFirstDeploymentFramework(options: {
   workPath: string;
@@ -71,10 +76,8 @@ export async function detectFirstDeploymentFramework(options: {
 }): Promise<DetectedFramework> {
   const { workPath, projectSettings } = options;
 
-  if (!isFrameworkDetectionEnabled()) {
-    return { status: 'skipped' };
-  }
-
+  // First-deployment detection is not gated by VERCEL_FRAMEWORK_DETECTION;
+  // it is gated only by VERCEL_FIRST_DEPLOYMENT and absence of configured framework.
   logDebug(
     `First deployment: evaluating framework detection (workPath="${workPath}", ` +
       `configuredFramework=${

@@ -116,7 +116,7 @@ describe('detectFirstDeploymentFramework()', () => {
     expect(projectSettings.framework).toBeNull();
   });
 
-  it('returns skipped when framework detection is not opted in', async () => {
+  it('detects even without opt-in when it is a first deployment', async () => {
     process.env.VERCEL_FIRST_DEPLOYMENT = '1';
     delete process.env.VERCEL_FRAMEWORK_DETECTION;
     const dir = await makeProjectDir({ dependencies: { next: '14.0.0' } });
@@ -129,8 +129,8 @@ describe('detectFirstDeploymentFramework()', () => {
       projectSettings,
     });
 
-    expect(result).toEqual({ status: 'skipped' });
-    expect(projectSettings.framework).toBeNull();
+    expect(result.status).toBe('detected');
+    expect(projectSettings.framework).toBe('nextjs');
   });
 
   it('returns skipped when a framework is already configured', async () => {
