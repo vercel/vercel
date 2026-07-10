@@ -99,6 +99,98 @@ async function main() {
     await fs.copyFile(srcTarballPath, destTarballPath);
   }
 
+  // Publish native optional-dep tarballs for preview installs.
+  // `utils/pack.ts` rewrites vercel's optionalDependencies to point at
+  // `https://<deployment>/tarballs/@vercel%2Fvc-native-*.tgz`. Those files
+  // must exist for `npx https://.../vercel.tgz` to fetch a matching native.
+  // If the preview did not build natives (dist-native absent), we skip;
+  // the trampoline falls back to JS because npm treats failed optional deps
+  // as non-fatal. When binaries exist we pack each staged native dir directly.
+  try {
+    const { execFile } = await import('child_process');
+    const { promisify } = await import('util');
+    const execFileAsync = promisify(execFile);
+    const nativeDistRoot = join(
+      repoRoot,
+      'packages',
+      'vc-native',
+      'dist-native'
+    );
+    const entries = await fs.readdir(nativeDistRoot, { withFileTypes: true });
+    let staged = 0;
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const fullDir = join(nativeDistRoot, entry.name);
+      const raw = await fs
+        .readFile(join(fullDir, 'package.json'), 'utf-8')
+        .catch(() => null);
+      if (!raw) continue;
+      const pkg = JSON.parse(raw);
+      if (!pkg.name?.startsWith('@vercel/vc-native-')) continue;
+      await fs.mkdir(tarballsDir, { recursive: true });
+      // `pnpm pack` respects `files` and writes `<name>-<version>.tgz` into
+      // the destination; we then rename to `<escaped>.tgz` to match the
+      // `%40vercel%2F...` URL that pack.ts emits.
+      const { stdout } = await execFileAsync(
+        'pnpm',
+        ['pack', '--pack-destination', tarballsDir, '--json'],
+        { cwd: fullDir }
+      );
+      try {
+        const info = JSON.parse(String(stdout).trim().split('\n').at(-1) ?? '');
+        // pnpm pack --json prints [{ name, version, filename }]
+        const filename = info?.[0]?.filename ?? info?.filename;
+        if (filename) {
+          const escaped = `${pkg.name.replace('@', '%40').replace('/', '%2F')}.tgz`;
+          const src = join(tarballsDir, String(filename).split('/').pop()!);
+          const dest = join(tarballsDir, escaped);
+          if (src !== dest) {
+            await fs.rename(src, dest).catch(async () => {
+              await fs.copyFile(src, dest);
+              await fs.rm(src, { force: true });
+            });
+          }
+        }
+      } catch {
+        // Best-effort: if --json parsing failed, fall back to plain copy by
+        // scanning the tarballs dir for the newest vercel-vc-native-*.tgz.
+        const files = await fs.readdir(tarballsDir);
+        const match = files
+          .filter(f => f.startsWith('vercel-vc-native-') && f.endsWith('.tgz'))
+          .sort()
+          .at(-1);
+        if (match) {
+          const escaped = `${pkg.name.replace('@', '%40').replace('/', '%2F')}.tgz`;
+          const src = join(tarballsDir, match);
+          const dest = join(tarballsDir, escaped);
+          if (src !== dest) {
+            await fs.copyFile(src, dest);
+            await fs.rm(src, { force: true });
+          }
+        }
+      }
+      staged++;
+    }
+    if (staged > 0) {
+      console.log(`Staged ${staged} native tarball(s) into ${tarballsDir}`);
+    } else {
+      console.log(
+        'No native tarballs staged (no dist-native match) — preview will be JS-only'
+      );
+    }
+  } catch (err: any) {
+    if (err?.code !== 'ENOENT') {
+      console.warn(
+        'Failed to stage native preview tarballs:',
+        err?.message ?? err
+      );
+    } else {
+      console.log(
+        'No native tarballs — preview will be JS-only (dist-native absent)'
+      );
+    }
+  }
+
   // Copy Python wheels to tarballs, preserving the original filename
   // (uv requires valid wheel tags in the filename for URL installs).
   // Write a well-known sidecar .json with full .whl name.

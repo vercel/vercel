@@ -22,5 +22,13 @@ and `ci:version:canary`, so `pnpm install --no-frozen-lockfile` in CI keeps
 the vercel tarball; npm/pnpm install only the matching os/cpu optionalDep,
 and the trampoline does `require.resolve(platformPkg)` to find it.
 
+Preview tarball flow also works: `utils/pack.ts` now rewrites optional native
+deps to `https://<deployment>/tarballs/%40vercel%2Fvc-native-*.tgz` so `npx
+https://.../tarballs/vercel.tgz` fetches a matching preview native when
+`dist-native` is present, and `api/_lib/script/build.ts` publishes those
+native tarballs alongside the main tarball. When no native is staged (most
+preview builds) the optional fetch fails non-fatally and the trampoline falls
+back to JS.
+
 `@vercel/vc-native` wrapper is unchanged in this PR and will be removed in
 a follow-up; `vercel` works standalone via its own bin and optionalDependencies.
