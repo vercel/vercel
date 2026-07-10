@@ -23,6 +23,10 @@ export function getOmniagentBaseUrl(): string {
   return process.env.VERCEL_OMNIAGENT_URL || DEFAULT_OMNIAGENT_URL;
 }
 
+function getSsoApiUrl(): string {
+  return process.env.VERCEL_SSO_API_URL || SSO_API_URL;
+}
+
 export class OmniagentApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -115,7 +119,7 @@ export class OmniagentApi {
 
     let response = await this.fetchOnce(url, opts);
 
-    if (isProtectionRedirect(response)) {
+    if (isProtectionChallenge(response)) {
       await this.resolveProtectionCookie(response, url);
       response = await this.fetchOnce(url, opts);
     }
@@ -171,7 +175,7 @@ export class OmniagentApi {
     }
 
     const hashedNonce = createHash('sha256').update(nonce).digest('hex');
-    const ssoUrl = `${SSO_API_URL}?url=${encodeURIComponent(
+    const ssoUrl = `${getSsoApiUrl()}?url=${encodeURIComponent(
       requestUrl
     )}&nonce=${hashedNonce}`;
     const sso = await fetch(ssoUrl, {
@@ -198,10 +202,18 @@ export class OmniagentApi {
   }
 }
 
-function isProtectionRedirect(response: Response): boolean {
+/**
+ * Detects the Vercel deployment protection challenge. Protection answers
+ * browser-style GET requests with a 302 redirect to the SSO endpoint, but
+ * requests carrying an `Authorization` header (like ours) receive a 401.
+ * Both variants set the `_vercel_sso_nonce` cookie used by the handshake.
+ */
+function isProtectionChallenge(response: Response): boolean {
+  const isChallengeStatus =
+    response.status === 401 ||
+    (response.status >= 300 && response.status < 400);
   return (
-    response.status >= 300 &&
-    response.status < 400 &&
+    isChallengeStatus &&
     getSetCookieValue(response, '_vercel_sso_nonce') !== null
   );
 }

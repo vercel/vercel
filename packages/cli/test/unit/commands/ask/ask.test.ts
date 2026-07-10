@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { describe, beforeEach, afterEach, expect, it } from 'vitest';
 import type { Request, Response } from 'express';
 import { client } from '../../../mocks/client';
@@ -81,6 +82,57 @@ describe('ask', () => {
 
   afterEach(() => {
     delete process.env.VERCEL_OMNIAGENT_URL;
+    delete process.env.VERCEL_SSO_API_URL;
+  });
+
+  it('completes the deployment protection SSO handshake on a 401 challenge', async () => {
+    useTeamScope();
+    process.env.VERCEL_SSO_API_URL = `${client.apiUrl}/sso-api`;
+
+    const NONCE = 'nonce123';
+    const JWT = 'jwt456';
+    const protectionCookie = `_vercel_sso_nonce=${NONCE}; _vercel_jwt=${JWT}`;
+    const seenCookies: Array<string | undefined> = [];
+    let ssoRequest: { url?: string; nonce?: string; cookie?: string } = {};
+
+    client.scenario.post('/api/sessions', (req: Request, res: Response) => {
+      seenCookies.push(req.headers.cookie);
+      if (req.headers.cookie !== protectionCookie) {
+        // Vercel deployment protection answers requests with an
+        // Authorization header using a 401 challenge (not a 302).
+        res.setHeader(
+          'set-cookie',
+          `_vercel_sso_nonce=${NONCE}; Max-Age=3600; Path=/; Secure; HttpOnly`
+        );
+        res.status(401).send('Authentication Required');
+        return;
+      }
+      res.json({ sessionId: SESSION_ID, url: `/sessions/${SESSION_ID}` });
+    });
+    client.scenario.get('/sso-api', (req: Request, res: Response) => {
+      ssoRequest = {
+        url: req.query.url as string,
+        nonce: req.query.nonce as string,
+        cookie: req.headers.cookie as string,
+      };
+      res.redirect(302, `${client.apiUrl}/api/sessions?_vercel_jwt=${JWT}`);
+    });
+    useTurnStream(answerParts);
+
+    client.setArgv('ask', 'Hello through protection');
+    const exitCode = await ask(client);
+
+    expect(exitCode).toBe(0);
+    // First request is challenged, the retry carries the handshake cookies.
+    expect(seenCookies).toEqual([undefined, protectionCookie]);
+    expect(ssoRequest.url).toBe(`${client.apiUrl}/api/sessions`);
+    expect(ssoRequest.nonce).toBe(
+      createHash('sha256').update(NONCE).digest('hex')
+    );
+    expect(ssoRequest.cookie).toContain('authorization=Bearer%20token_dummy');
+    expect(client.stdout.getFullOutput()).toBe(
+      'Your deployment failed because of a build error.\n'
+    );
   });
 
   it('creates a session, streams the answer, and prints a continuation hint', async () => {
