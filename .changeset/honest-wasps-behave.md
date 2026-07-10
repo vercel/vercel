@@ -2,4 +2,4 @@
 '@vercel/python': minor
 ---
 
-Collect fastapi static files to serve via CDN.
+Collect FastAPI frontend files to serve via the CDN while preserving higher-priority application routes.

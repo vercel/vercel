@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
@@ -9,21 +9,25 @@ import {
 } from '../src/fastapi';
 import { getVenvPythonBin } from '../src/utils';
 
-// The shim runs with the build venv Python. The build venv has cross-compiled
-// Linux wheels (pydantic_core), so tests only run on Linux where they load.
-describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
+describe('FastAPI frontend files', () => {
   let testDir: string;
   let venvPath: string;
   let pythonEnv: NodeJS.ProcessEnv;
 
   beforeAll(async () => {
-    testDir = path.join(tmpdir(), `fastapi-static-${Date.now()}`);
+    testDir = path.join(tmpdir(), `fastapi-frontend-${Date.now()}`);
     venvPath = path.join(testDir, '.venv');
     fs.mkdirSync(testDir, { recursive: true });
     await execa('uv', ['venv', venvPath, '--python', 'python3.12']);
     await execa(
       'uv',
-      ['pip', 'install', 'fastapi', '--python', getVenvPythonBin(venvPath)],
+      [
+        'pip',
+        'install',
+        'fastapi==0.139.0',
+        '--python',
+        getVenvPythonBin(venvPath),
+      ],
       { env: { ...process.env, VIRTUAL_ENV: venvPath } }
     );
     pythonEnv = { ...process.env, VIRTUAL_ENV: venvPath };
@@ -33,8 +37,8 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     if (testDir && fs.existsSync(testDir)) fs.removeSync(testDir);
   });
 
-  it('discovers a /static mount', async () => {
-    const appDir = path.join(testDir, 'app-discover');
+  it('does not collect ordinary StaticFiles mounts', async () => {
+    const appDir = path.join(testDir, 'ordinary-static');
     fs.mkdirSync(path.join(appDir, 'static'), { recursive: true });
     fs.writeFileSync(path.join(appDir, 'static', 'style.css'), 'body {}');
     const entrypointAbs = path.join(appDir, 'main.py');
@@ -56,15 +60,11 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
       appDir
     );
 
-    expect(mounts).toHaveLength(1);
-    expect(mounts[0].urlPath).toBe('/static');
-    expect(mounts[0].directory).toBe(
-      fs.realpathSync(path.join(appDir, 'static'))
-    );
+    expect(mounts).toEqual([]);
   });
 
-  it('discovers an app.frontend() mount', async () => {
-    const appDir = path.join(testDir, 'app-frontend');
+  it('discovers an app.frontend() registration', async () => {
+    const appDir = path.join(testDir, 'direct-frontend');
     fs.mkdirSync(path.join(appDir, 'dist'), { recursive: true });
     fs.writeFileSync(path.join(appDir, 'dist', 'index.html'), '<h1>Hello</h1>');
     const entrypointAbs = path.join(appDir, 'main.py');
@@ -85,20 +85,31 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
       appDir
     );
 
-    expect(mounts).toHaveLength(1);
-    expect(mounts[0].urlPath).toBe('/');
-    expect(mounts[0].directory).toBe(
-      fs.realpathSync(path.join(appDir, 'dist'))
-    );
+    expect(mounts).toEqual([
+      {
+        urlPath: '/',
+        directory: fs.realpathSync(path.join(appDir, 'dist')),
+        excludedPaths: [],
+      },
+    ]);
   });
 
-  it('returns empty when no StaticFiles mounts exist', async () => {
-    const appDir = path.join(testDir, 'app-no-static');
-    fs.mkdirSync(appDir, { recursive: true });
+  it('composes nested APIRouter prefixes', async () => {
+    const appDir = path.join(testDir, 'nested-router');
+    fs.mkdirSync(path.join(appDir, 'dist'), { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'dist', 'app.js'), 'console.log(1)');
     const entrypointAbs = path.join(appDir, 'main.py');
     fs.writeFileSync(
       entrypointAbs,
-      'from fastapi import FastAPI\napp = FastAPI()\n'
+      [
+        'from fastapi import APIRouter, FastAPI',
+        'app = FastAPI()',
+        'outer = APIRouter(prefix="/outer")',
+        'inner = APIRouter(prefix="/inner")',
+        'inner.frontend("/", directory="dist")',
+        'outer.include_router(inner, prefix="/child")',
+        'app.include_router(outer, prefix="/api")',
+      ].join('\n')
     );
 
     const mounts = await getFastAPIStaticMounts(
@@ -109,22 +120,88 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
       appDir
     );
 
-    expect(mounts).toHaveLength(0);
+    expect(mounts).toEqual([
+      {
+        urlPath: '/api/outer/child/inner',
+        directory: fs.realpathSync(path.join(appDir, 'dist')),
+        excludedPaths: [],
+      },
+    ]);
   });
 
-  it('copies static files to CDN output dir', async () => {
-    const appDir = path.join(testDir, 'app-collect');
-    const outputDir = path.join(testDir, 'output-collect');
-    fs.mkdirSync(path.join(appDir, 'static'), { recursive: true });
-    fs.writeFileSync(path.join(appDir, 'static', 'style.css'), 'body {}');
-    const entrypointAbs = path.join(appDir, 'main.py');
+  it('imports the entrypoint with its runtime package name', async () => {
+    const appDir = path.join(testDir, 'package-import');
+    const packageDir = path.join(appDir, 'backend');
+    fs.mkdirSync(path.join(appDir, 'dist'), { recursive: true });
+    fs.mkdirSync(packageDir, { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'dist', 'app.js'), 'console.log(1)');
+    fs.writeFileSync(path.join(packageDir, '__init__.py'), '');
+    fs.writeFileSync(
+      path.join(packageDir, 'settings.py'),
+      'FRONTEND_DIRECTORY = "dist"\n'
+    );
+    const entrypointAbs = path.join(packageDir, 'main.py');
     fs.writeFileSync(
       entrypointAbs,
       [
         'from fastapi import FastAPI',
-        'from fastapi.staticfiles import StaticFiles',
+        'from .settings import FRONTEND_DIRECTORY',
         'app = FastAPI()',
-        'app.mount("/static", StaticFiles(directory="static"), name="static")',
+        'app.frontend("/", directory=FRONTEND_DIRECTORY)',
+      ].join('\n')
+    );
+
+    const mounts = await getFastAPIStaticMounts(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    expect(mounts).toHaveLength(1);
+    expect(mounts[0].directory).toBe(
+      fs.realpathSync(path.join(appDir, 'dist'))
+    );
+  });
+
+  it('keeps files claimed by normal routes out of CDN output', async () => {
+    const appDir = path.join(testDir, 'route-collisions');
+    const distDir = path.join(appDir, 'dist');
+    const outputDir = path.join(appDir, 'output');
+    fs.mkdirSync(path.join(distDir, 'api'), { recursive: true });
+    fs.mkdirSync(path.join(distDir, 'api', 'included'), { recursive: true });
+    fs.mkdirSync(path.join(distDir, 'assets'), { recursive: true });
+    fs.mkdirSync(path.join(distDir, 'section'), { recursive: true });
+    fs.writeFileSync(path.join(distDir, 'api', 'collision.txt'), 'static');
+    fs.writeFileSync(
+      path.join(distDir, 'api', 'included', 'collision.txt'),
+      'static'
+    );
+    fs.writeFileSync(path.join(distDir, 'assets', 'app.js'), 'static');
+    fs.writeFileSync(path.join(distDir, 'section', 'index.html'), 'static');
+    fs.writeFileSync(path.join(distDir, 'docs'), 'static');
+    fs.writeFileSync(path.join(distDir, 'socket'), 'static');
+    fs.writeFileSync(path.join(distDir, 'safe.txt'), 'safe');
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import APIRouter, FastAPI',
+        'app = FastAPI()',
+        '@app.get("/api/collision.txt")',
+        'def collision(): return "api"',
+        '@app.post("/assets/{name}")',
+        'def dynamic(name: str): return name',
+        '@app.get("/section")',
+        'def section(): return "api"',
+        '@app.websocket("/socket")',
+        'async def socket(websocket): pass',
+        'included = APIRouter()',
+        '@included.get("/collision.txt")',
+        'def included_collision(): return "api"',
+        'app.include_router(included, prefix="/api/included")',
+        'app.frontend("/", directory="dist")',
       ].join('\n')
     );
 
@@ -138,28 +215,41 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     );
 
     expect(result).not.toBeNull();
-    expect(result!.collectedMounts).toContain('/static');
-    expect(fs.existsSync(path.join(outputDir, 'static', 'style.css'))).toBe(
-      true
+    expect(fs.existsSync(path.join(outputDir, 'safe.txt'))).toBe(true);
+    expect(fs.existsSync(path.join(outputDir, 'api', 'collision.txt'))).toBe(
+      false
     );
+    expect(
+      fs.existsSync(path.join(outputDir, 'api', 'included', 'collision.txt'))
+    ).toBe(false);
+    expect(fs.existsSync(path.join(outputDir, 'assets', 'app.js'))).toBe(false);
+    expect(fs.existsSync(path.join(outputDir, 'section', 'index.html'))).toBe(
+      false
+    );
+    expect(fs.existsSync(path.join(outputDir, 'docs'))).toBe(false);
+    expect(fs.existsSync(path.join(outputDir, 'socket'))).toBe(false);
   });
 
-  it('handles multiple mounts', async () => {
-    const appDir = path.join(testDir, 'app-multi');
-    const outputDir = path.join(testDir, 'output-multi');
-    fs.mkdirSync(path.join(appDir, 'static'), { recursive: true });
-    fs.mkdirSync(path.join(appDir, 'assets'), { recursive: true });
-    fs.writeFileSync(path.join(appDir, 'static', 'style.css'), 'body {}');
-    fs.writeFileSync(path.join(appDir, 'assets', 'app.js'), 'console.log(1)');
+  it('does not publish files shadowed by a more specific frontend', async () => {
+    const appDir = path.join(testDir, 'frontend-precedence');
+    const rootDir = path.join(appDir, 'root-dist');
+    const nestedDir = path.join(appDir, 'nested-dist');
+    const outputDir = path.join(appDir, 'output');
+    fs.mkdirSync(path.join(rootDir, 'admin'), { recursive: true });
+    fs.mkdirSync(nestedDir, { recursive: true });
+    fs.writeFileSync(path.join(rootDir, 'shared.txt'), 'root');
+    fs.writeFileSync(path.join(rootDir, 'admin', 'root-only.txt'), 'root');
+    fs.writeFileSync(path.join(nestedDir, 'nested-only.txt'), 'nested');
     const entrypointAbs = path.join(appDir, 'main.py');
     fs.writeFileSync(
       entrypointAbs,
       [
-        'from fastapi import FastAPI',
-        'from fastapi.staticfiles import StaticFiles',
+        'from fastapi import APIRouter, FastAPI',
         'app = FastAPI()',
-        'app.mount("/static", StaticFiles(directory="static"), name="static")',
-        'app.mount("/assets", StaticFiles(directory="assets"), name="assets")',
+        'app.frontend("/", directory="root-dist")',
+        'nested = APIRouter()',
+        'nested.frontend("/", directory="nested-dist")',
+        'app.include_router(nested, prefix="/admin")',
       ].join('\n')
     );
 
@@ -172,10 +262,13 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
       'app'
     );
 
-    expect(result!.collectedMounts).toEqual(['/static', '/assets']);
-    expect(fs.existsSync(path.join(outputDir, 'static', 'style.css'))).toBe(
-      true
+    expect(result?.collectedMounts).toEqual(['/', '/admin']);
+    expect(fs.existsSync(path.join(outputDir, 'shared.txt'))).toBe(true);
+    expect(fs.existsSync(path.join(outputDir, 'admin', 'root-only.txt'))).toBe(
+      false
     );
-    expect(fs.existsSync(path.join(outputDir, 'assets', 'app.js'))).toBe(true);
+    expect(
+      fs.existsSync(path.join(outputDir, 'admin', 'nested-only.txt'))
+    ).toBe(true);
   });
 });
