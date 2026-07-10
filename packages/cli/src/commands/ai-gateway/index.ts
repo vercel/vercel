@@ -5,11 +5,13 @@ import { printError } from '../../util/error';
 import apiKeys from './api-keys';
 import rules from './rules';
 import codingAgents from './coding-agents';
+import models from './models';
 import {
   aiGatewayCommand,
   apiKeysSubcommand,
   rulesSubcommand,
   codingAgentsSubcommand,
+  modelsSubcommand,
 } from './command';
 import { help } from '../help';
 import { getCommandAliases } from '..';
@@ -21,6 +23,7 @@ const COMMAND_CONFIG = {
   'api-keys': getCommandAliases(apiKeysSubcommand),
   rules: getCommandAliases(rulesSubcommand),
   'coding-agents': getCommandAliases(codingAgentsSubcommand),
+  models: getCommandAliases(modelsSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -64,6 +67,9 @@ export default async function main(client: Client) {
     case 'coding-agents':
       telemetry.trackCliSubcommandCodingAgents(subcommandOriginal);
       return codingAgents(client);
+    case 'models':
+      telemetry.trackCliSubcommandModels(subcommandOriginal);
+      return models(client);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('ai-gateway', subcommandOriginal);

@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import createLineIterator from 'line-async-iterator';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
@@ -10,7 +10,11 @@ import list, {
 import { join } from 'path';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import { useTeams, createTeam } from '../../../mocks/team';
-import { defaultProject, useProject } from '../../../mocks/project';
+import {
+  defaultProject,
+  useProject,
+  useUnknownProject,
+} from '../../../mocks/project';
 import { useDeployment } from '../../../mocks/deployment';
 import {
   parseSpacedTableRow,
@@ -37,6 +41,42 @@ describe('list', () => {
       expect(exitCode).toEqual(0);
 
       (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('outputs project_not_found JSON when the project argument does not resolve', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      useUnknownProject();
+      client.cwd = cwd;
+
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((
+        code?: number
+      ) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+
+      client.setArgv('list', 'does-not-exist', '--non-interactive');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      try {
+        await expect(list(client)).rejects.toThrow('exit:1');
+
+        const payload = JSON.parse(client.stdout.getFullOutput().trim());
+        expect(payload).toMatchObject({
+          status: 'error',
+          reason: 'project_not_found',
+          message: 'There is no project for "does-not-exist"',
+        });
+        expect(
+          payload.next?.some((n: { command: string }) =>
+            /project ls --filter does-not-exist/.test(n.command)
+          )
+        ).toBe(true);
+      } finally {
+        exitSpy.mockRestore();
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      }
     });
   });
 
@@ -266,12 +306,16 @@ describe('list', () => {
       useDeployment({ creator: user });
 
       client.cwd = fixture('with-team');
-      client.setArgv('list', '--next', '123456');
+      client.setArgv('list', '--next', '123456', '--limit', '5');
       await list(client);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'option:next',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'option:limit',
           value: '[REDACTED]',
         },
       ]);

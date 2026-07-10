@@ -270,6 +270,37 @@ describe('detectServices (services)', () => {
     expect(api.builder.config).toMatchObject({ handlerFunction: 'app' });
   });
 
+  it('auto-detects framework using service root when entrypoint is in a subdirectory', async () => {
+    const fs = new VirtualFilesystem({
+      'vercel.json': vercelJson({
+        experimentalServicesV2: {
+          backend: {
+            root: 'backend',
+            entrypoint: 'src/main.py',
+          },
+        },
+      }),
+      'backend/pyproject.toml': '[project]\ndependencies = ["fastapi"]\n',
+      'backend/src/main.py': 'from fastapi import FastAPI\napp = FastAPI()',
+    });
+
+    const result = await detectServices({ fs });
+
+    expect(result.errors).toEqual([]);
+    const [backend] = servicesV2(result.services);
+    expect(backend).toMatchObject({
+      name: 'backend',
+      framework: 'fastapi',
+      runtime: 'python',
+      entrypoint: 'src/main.py',
+    });
+    expect(backend.builder.use).toBe('@vercel/python');
+    expect(backend.builder.config).toMatchObject({
+      framework: 'fastapi',
+      workspace: 'backend',
+    });
+  });
+
   it('resolves a service rooted at the project root (".")', async () => {
     const fs = new VirtualFilesystem({
       'vercel.json': vercelJson({

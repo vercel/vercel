@@ -6,6 +6,7 @@
 
 // Non-priority commands - bundled together
 export { default as agent } from './commands/agent';
+export { default as agentRuns } from './commands/agent-runs';
 export { default as activity } from './commands/activity';
 export { default as aiGateway } from './commands/ai-gateway';
 export { default as alerts } from './commands/alerts';
@@ -40,7 +41,6 @@ export { default as logs } from './commands/logs';
 export { default as mcp } from './commands/mcp';
 export { default as metrics } from './commands/metrics';
 export { default as microfrontends } from './commands/microfrontends';
-export { default as oauthApps } from './commands/oauth-apps';
 export { default as open } from './commands/open';
 export { default as project } from './commands/project';
 export { default as promote } from './commands/promote';
@@ -60,5 +60,6 @@ export { default as telemetry } from './commands/telemetry';
 export { default as traces } from './commands/traces';
 export { default as upgrade } from './commands/upgrade';
 export { default as usage } from './commands/usage';
+export { default as vcr } from './commands/vcr';
 export { default as webhooks } from './commands/webhooks';
 export { default as whoami } from './commands/whoami';

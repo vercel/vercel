@@ -1,6 +1,9 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import flags from '../../../../src/commands/flags';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  removeProjectLink,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
@@ -16,6 +19,7 @@ describe('flags sdk-keys', () => {
       ...defaultProject,
       id: 'vercel-flags-test',
       name: 'vercel-flags-test',
+      accountId: 'team_dummy',
     });
     useFlags();
     const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
@@ -69,6 +73,31 @@ describe('flags sdk-keys', () => {
       client.setArgv('flags', 'sdk-keys', 'ls');
       const exitCode = await flags(client);
       expect(exitCode).toEqual(0);
+    });
+
+    it('lists SDK keys with --project when the cwd is not linked', async () => {
+      const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
+      removeProjectLink(cwd);
+      client.cwd = cwd;
+
+      client.setArgv(
+        'flags',
+        'sdk-keys',
+        'ls',
+        '--project',
+        'vercel-flags-test',
+        '--json'
+      );
+      const exitCode = await flags(client);
+
+      expect(exitCode).toEqual(0);
+      expect(JSON.parse(client.stdout.getFullOutput()).sdkKeys).toHaveLength(2);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:sdk-keys', value: 'sdk-keys' },
+        { key: 'subcommand:ls', value: 'ls' },
+        { key: 'option:project', value: '[REDACTED]' },
+        { key: 'flag:json', value: 'TRUE' },
+      ]);
     });
 
     it('renders the partial key value in the default table output', async () => {

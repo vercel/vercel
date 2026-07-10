@@ -4668,6 +4668,21 @@ exports[`help command > integration-resource help output snapshots > integration
                                                   …
                                                   …
                                                   …
+  inspect           resource                      …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  a
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
 
 
   Global Options:
@@ -4749,6 +4764,12 @@ exports[`help command > integration-resource help output snapshots > integration
                                                   by opening the        
                                                   provider claim URL in 
                                                   your browser          
+  inspect           resource                      Show live details and 
+                                                  status for a          
+                                                  marketplace           
+                                                  integration resource, 
+                                                  fetched fresh from the
+                                                  provider              
 
 
   Global Options:
@@ -4785,6 +4806,8 @@ exports[`help command > integration-resource help output snapshots > integration
   remove            resource                      Delete an integration resource                                
   claim             [resource]                    Claim a sandbox marketplace resource (e.g. Stripe, Shopify) by
                                                   opening the provider claim URL in your browser                
+  inspect           resource                      Show live details and status for a marketplace integration    
+                                                  resource, fetched fresh from the provider                     
 
 
   Global Options:
@@ -5128,6 +5151,13 @@ exports[`help command > list help output snapshots > list help column width 40 1
                                output     
                                format     
                                (json)     
+       --limit <NUMBER>        Number of  
+                               results to 
+                               return per 
+                               page       
+                               (default:  
+                               20, max:   
+                               100)       
   -m,  --meta <KEY=VALUE>      Filter     
                                deployments
                                by metadata
@@ -5259,6 +5289,8 @@ exports[`help command > list help output snapshots > list help column width 80 1
   -a,  --all                   List resources across all projects                 
        --environment <TARGET>                                                     
   -F,  --format <FORMAT>       Specify the output format (json)                   
+       --limit <NUMBER>        Number of results to return per page (default: 20, 
+                               max: 100)                                          
   -m,  --meta <KEY=VALUE>      Filter deployments by metadata (e.g.: \`-m          
                                KEY=value\`). Can appear many times.                
   -N,  --next <MS>             Show next page of results                          
@@ -5331,6 +5363,7 @@ exports[`help command > list help output snapshots > list help column width 120 
   -a,  --all                   List resources across all projects                                                         
        --environment <TARGET>                                                                                             
   -F,  --format <FORMAT>       Specify the output format (json)                                                           
+       --limit <NUMBER>        Number of results to return per page (default: 20, max: 100)                               
   -m,  --meta <KEY=VALUE>      Filter deployments by metadata (e.g.: \`-m KEY=value\`). Can appear many times.              
   -N,  --next <MS>             Show next page of results                                                                  
   -p,  --policy <KEY=VALUE>    See deployments with provided Deployment Retention policies (e.g.: \`-p KEY=value\`). Can    
@@ -5618,6 +5651,16 @@ exports[`help command > project help output snapshots > project help column widt
                                    …
                                    a
                                    …
+  update          [name]           …
+                                   …
+                                   …
+                                   …
+                                   …
+                                   …
+                                   …
+                                   …
+                                   …
+                                   …
   rename          name new-name    …
                                    a
                                    …
@@ -5709,6 +5752,8 @@ exports[`help command > project help output snapshots > project help column widt
                                    settings for a project                   
   web-analytics   [name]           Enable Web Analytics for a project       
   speed-insights  [name]           Enable Speed Insights for a project      
+  update          [name]           Update one or more project settings;     
+                                   omitted settings remain unchanged        
   rename          name new-name    Rename a project                         
   remove          name             Delete a project                         
   token           [name]           Get a development OIDC token for a       
@@ -5754,6 +5799,7 @@ exports[`help command > project help output snapshots > project help column widt
   protection      [action] [name]  Show or toggle deployment protection settings for a project                      
   web-analytics   [name]           Enable Web Analytics for a project                                               
   speed-insights  [name]           Enable Speed Insights for a project                                              
+  update          [name]           Update one or more project settings; omitted settings remain unchanged           
   rename          name new-name    Rename a project                                                                 
   remove          name             Delete a project                                                                 
   token           [name]           Get a development OIDC token for a project                                       
@@ -5824,6 +5870,7 @@ exports[`help command > project help output snapshots > project list help output
 
   -f,  --filter <NAME>    Filter projects by name (substring match)                                                     
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --limit <NUMBER>   Number of results to return per page (default: 20, max: 100)                                  
   -N,  --next <MS>        Show next page of results                                                                     
        --update-required  A list of projects affected by an upcoming deprecation                                        
 
@@ -7267,6 +7314,7 @@ exports[`help command > teams help output snapshots > teams list help output sna
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --limit <NUMBER>   Number of results to return per page (default: 20, max: 100)                                  
   -N,  --next <MS>        Show next page of results                                                                     
 
 

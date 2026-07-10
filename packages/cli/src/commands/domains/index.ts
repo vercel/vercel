@@ -19,6 +19,7 @@ import {
   checkSubcommand,
   domainsCommand,
   inspectSubcommand,
+  listSubcommand,
   moveSubcommand,
   priceSubcommand,
   removeSubcommand,
@@ -157,7 +158,7 @@ export default async function main(client: Client) {
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('domains', subcommandOriginal);
-        return printHelp(transferInSubcommand);
+        return printHelp(listSubcommand);
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return ls(client, args);

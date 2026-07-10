@@ -1,4 +1,5 @@
 import { agentCommand } from './agent/command';
+import { agentRunsCommand } from './agent-runs/command';
 import { activityCommand } from './activity/command';
 import { aiGatewayCommand } from './ai-gateway/command';
 import { alertsCommand } from './alerts/command';
@@ -38,7 +39,6 @@ import { logsCommand } from './logs/command';
 import { mcpCommand } from './mcp/command';
 import { metricsCommand } from './metrics/command';
 import { microfrontendsCommand } from './microfrontends/command';
-import { oauthAppsCommand } from './oauth-apps/command';
 import { openCommand } from './open/command';
 import { projectCommand } from './project/command';
 import { promoteCommand } from './promote/command';
@@ -58,6 +58,7 @@ import { telemetryCommand } from './telemetry/command';
 import { tracesCommand } from './traces/command';
 import { upgradeCommand } from './upgrade/command';
 import { usageCommand } from './usage/command';
+import { vcrCommand } from './vcr/command';
 import { whoamiCommand } from './whoami/command';
 import { blobCommand } from './blob/command';
 import { webhooksCommand } from './webhooks/command';
@@ -66,6 +67,7 @@ import output from '../output-manager';
 
 const commandsStructs = [
   agentCommand,
+  agentRunsCommand,
   aiGatewayCommand,
   alertsCommand,
   aliasCommand,
@@ -103,7 +105,6 @@ const commandsStructs = [
   logsCommand,
   mcpCommand,
   microfrontendsCommand,
-  oauthAppsCommand,
   openCommand,
   projectCommand,
   promoteCommand,
@@ -124,6 +125,7 @@ const commandsStructs = [
   upgradeCommand,
   webhooksCommand,
   usageCommand,
+  vcrCommand,
   whoamiCommand,
   // added because we don't have a full help command
   { name: 'help', aliases: [] },

@@ -6,6 +6,7 @@ import type {
 } from '@vercel-internals/types';
 import {
   type ArchiveFormat,
+  type DeploymentAliasAssignedEvent,
   type DeploymentOptions,
   type VercelClientOptions,
   createDeployment,
@@ -97,6 +98,11 @@ export default async function processDeployment({
     throw new Error('Missing authentication token');
   }
 
+  const aliasAssignedController = new AbortController();
+  const onAliasAssigned = (event: DeploymentAliasAssignedEvent) => {
+    aliasAssignedController.abort(event);
+  };
+
   const clientOptions: VercelClientOptions = {
     teamId: org.type === 'team' ? org.id : undefined,
     apiUrl: now._apiUrl,
@@ -115,6 +121,7 @@ export default async function processDeployment({
     projectName,
     bulkRedirectsPath,
     manual,
+    aliasAssignedSignal: aliasAssignedController.signal,
   };
 
   const deployingSpinnerVal = isSettingUpProject
@@ -236,7 +243,8 @@ export default async function processDeployment({
           ({ abortController, promise } = displayBuildLogs(
             client,
             deployment,
-            true
+            true,
+            onAliasAssigned
           ));
           promise.catch(error =>
             output.warn(`Failed to read build logs: ${error}`)
@@ -248,6 +256,7 @@ export default async function processDeployment({
             deployment.id,
             {
               mode: 'logs',
+              onAliasAssigned,
               onEvent: (event: BuildLog) => {
                 if (!event.created) return;
                 const lines = parseLogLines(event);
@@ -296,7 +305,8 @@ export default async function processDeployment({
         const v2ChecksPending =
           event.payload.checks?.['deployment-alias']?.state === 'pending';
 
-        stopSpinner();
+        // Keep the event stream open while polling waits for alias assignment.
+        output.stopSpinner();
         process.stderr.write(eraseLines(2));
         const isProdDeployment = event.payload.target === 'production';
         const previewUrl = `https://${event.payload.url}`;

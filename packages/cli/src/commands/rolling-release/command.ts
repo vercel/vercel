@@ -1,4 +1,4 @@
-import { yesOption } from '../../util/arg-common';
+import { projectOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const configureSubcommand = {
@@ -25,6 +25,7 @@ export const configureSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'cfg',
       shorthand: null,
@@ -94,6 +95,7 @@ export const startSubcommand = {
       description: 'The deploymentId or URL to target for the rolling release',
       required: true,
     },
+    projectOption,
     yesOption,
   ],
 } as const;
@@ -110,6 +112,7 @@ export const approveSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'dpl',
       shorthand: null,
@@ -139,6 +142,7 @@ export const abortSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'dpl',
       shorthand: null,
@@ -161,6 +165,7 @@ export const completeSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'dpl',
       shorthand: null,
@@ -182,7 +187,7 @@ export const fetchSubcommand = {
       value: `${packageName} rolling-release fetch`,
     },
   ],
-  options: [],
+  options: [projectOption],
 } as const;
 
 export const rollingReleaseCommand = {
