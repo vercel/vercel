@@ -16,26 +16,29 @@ vi.mock('ci-info', () => ({ default: { isCI: false } }));
 
 import type Client from '../../../../src/util/client';
 import {
+  type BiometricBinding,
   type BiometricHelperOptions,
+  biometricBindingFilePath,
   biometricKeyFilePath,
   deleteBiometricKey,
   getBiometricCapabilities,
+  readBiometricBinding,
   registerBiometricKey,
   resolveBiometricHelper,
   signBiometricChallenge,
+  writeBiometricBinding,
 } from '../../../../src/util/biometric/helper';
 
 let tmp: string;
 
 /**
  * Minimal `Client` stand-in for `resolveBiometricHelper`, which only reads
- * `stdin.isTTY` and `getGlobalPathConfig()`. Avoids importing the full mock
- * client (and its heavy workspace dependency graph) into this leaf unit test.
+ * `stdin.isTTY`. Avoids importing the full mock client (and its heavy
+ * workspace dependency graph) into this leaf unit test.
  */
-function makeClient(opts?: { isTTY?: boolean; globalConfig?: string }): Client {
+function makeClient(opts?: { isTTY?: boolean }): Client {
   return {
     stdin: { isTTY: opts?.isTTY ?? true },
-    getGlobalPathConfig: () => opts?.globalConfig ?? join(tmp, '.vercel'),
   } as unknown as Client;
 }
 
@@ -68,10 +71,59 @@ afterEach(() => {
 });
 
 describe('biometricKeyFilePath', () => {
-  it('places the blob under the global config directory', () => {
-    expect(biometricKeyFilePath('/home/me/.vercel')).toBe(
-      '/home/me/.vercel/biometric/step-up-key.blob'
+  it('scopes the blob to the user under the global config directory', () => {
+    expect(biometricKeyFilePath('/home/me/.vercel', 'user_123')).toBe(
+      '/home/me/.vercel/biometric/user_123/step-up-key.blob'
     );
+  });
+});
+
+describe('binding manifest', () => {
+  function makeBinding(
+    overrides?: Partial<BiometricBinding>
+  ): BiometricBinding {
+    return {
+      version: 1,
+      keyId: 'key-abc',
+      userId: 'user_123',
+      createdAt: 1700000000000,
+      policy: 'biometryCurrentSet',
+      ...overrides,
+    };
+  }
+
+  it('lives next to the key blob', () => {
+    expect(biometricBindingFilePath('/x/biometric/user_123/key.blob')).toBe(
+      '/x/biometric/user_123/binding.json'
+    );
+  });
+
+  it('round-trips a binding', async () => {
+    const keyFile = join(tmp, 'user_123', 'step-up-key.blob');
+    const binding = makeBinding();
+    await writeBiometricBinding(keyFile, binding);
+    expect(await readBiometricBinding(keyFile)).toEqual(binding);
+  });
+
+  it('returns null when no manifest exists', async () => {
+    expect(
+      await readBiometricBinding(join(tmp, 'nope', 'key.blob'))
+    ).toBeNull();
+  });
+
+  it('returns null for malformed JSON', async () => {
+    const keyFile = join(tmp, 'key.blob');
+    writeFileSync(biometricBindingFilePath(keyFile), 'not json');
+    expect(await readBiometricBinding(keyFile)).toBeNull();
+  });
+
+  it('returns null for a manifest missing required fields', async () => {
+    const keyFile = join(tmp, 'key.blob');
+    writeFileSync(
+      biometricBindingFilePath(keyFile),
+      JSON.stringify({ version: 1, keyId: 'k' })
+    );
+    expect(await readBiometricBinding(keyFile)).toBeNull();
   });
 });
 
@@ -146,6 +198,19 @@ describe('error normalization', () => {
     );
     const result = await registerBiometricKey(optionsFor(helper));
     expect(result).toMatchObject({ ok: false, reason: 'unsupported' });
+  });
+
+  it('preserves the key_invalidated code for enrollment-change recovery', async () => {
+    const helper = writeMockHelper(
+      `process.stdout.write(JSON.stringify({ ok: false, error: 'Key access control can no longer be satisfied.', code: 'key_invalidated' })); process.exit(1)`
+    );
+    const result = await signBiometricChallenge(optionsFor(helper), 'x');
+    expect(result).toEqual({
+      ok: false,
+      reason: 'error',
+      code: 'key_invalidated',
+      message: 'Key access control can no longer be satisfied.',
+    });
   });
 
   it('maps any other helper code to reason "error" while preserving the raw code', async () => {
@@ -237,14 +302,11 @@ describe('resolveBiometricHelper', () => {
     expect(result).toMatchObject({ ok: false, reason: 'unsupported' });
   });
 
-  it('resolves helper options when all preconditions are met', () => {
+  it('resolves the helper path when all preconditions are met', () => {
     setPlatform('darwin');
     const helper = writeMockHelper(`process.stdout.write('{}')`);
     process.env.VERCEL_BIOMETRIC_HELPER_PATH = helper;
     const result = resolveBiometricHelper(makeClient());
-    expect(result).toMatchObject({ ok: true, helperPath: helper });
-    if (result.ok) {
-      expect(result.keyFile).toContain('biometric');
-    }
+    expect(result).toEqual({ ok: true, helperPath: helper });
   });
 });

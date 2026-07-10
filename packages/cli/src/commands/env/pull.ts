@@ -223,17 +223,25 @@ export async function envPullCommandLogic(
   }
 
   // DEMO ONLY (gated by VERCEL_BIOMETRIC_DEMO): preview the Touch ID step-up UX
-  // before the API endpoints exist. This forces a local biometric prompt and
-  // verifies the signature locally — it is NOT the real server-verified flow
-  // and must never ship enabled by default.
+  // before the API endpoints exist. This forces a local biometric prompt, bound
+  // to the logged-in user, and verifies the signature locally — it is NOT the
+  // real server-verified flow and must never ship enabled by default.
+  //
+  // Blocking semantics: `unsupported` environments (non-macOS, npm build, CI,
+  // no TTY) skip the gate and behave like today; any other failure — canceled
+  // prompt, no fingerprint match, wrong user's key — aborts the command. The
+  // throw propagates to the command's error handler so every caller (env pull,
+  // vc pull, blob store) exits non-zero instead of silently continuing.
   if (process.env.VERCEL_BIOMETRIC_DEMO) {
     output.log('Pulling environment variables requires fresh authentication.');
     const stepUp = await stepUpWithBiometrics(client);
-    if (!stepUp.ok) {
-      output.error(`Biometric authentication failed: ${stepUp.message}`);
-      return;
+    if (stepUp.ok) {
+      output.success('Biometric authentication verified.');
+    } else if (stepUp.reason === 'unsupported') {
+      output.debug(`Biometric step-up skipped: ${stepUp.message}`);
+    } else {
+      throw new Error(`Biometric authentication failed: ${stepUp.message}`);
     }
-    output.success('Biometric authentication verified.');
   }
 
   const projectSlugLink = formatProject(link.org.slug, link.project.name);

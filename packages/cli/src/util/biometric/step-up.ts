@@ -1,11 +1,17 @@
 import { createVerify, randomBytes } from 'node:crypto';
 import type Client from '../client';
+import getUser from '../get-user';
 import output from '../../output-manager';
 import {
+  type BiometricHelperOptions,
+  biometricKeyFilePath,
+  deleteBiometricKey,
   getBiometricCapabilities,
+  readBiometricBinding,
   registerBiometricKey,
   resolveBiometricHelper,
   signBiometricChallenge,
+  writeBiometricBinding,
 } from './helper';
 
 /**
@@ -18,7 +24,7 @@ const SPKI_P256_PREFIX = Buffer.from(
 );
 
 export type StepUpResult =
-  | { ok: true; keyId: string }
+  | { ok: true; keyId: string; userId: string }
   | {
       ok: false;
       reason: 'unsupported' | 'canceled' | 'error';
@@ -44,12 +50,15 @@ function verifySignatureLocally(
     const spki = Buffer.concat([
       SPKI_P256_PREFIX,
       Buffer.from(publicKeyBase64url, 'base64url'),
-    ]);
+    ] as unknown as readonly Uint8Array[]);
     return createVerify('sha256')
-      .update(challenge)
+      .update(challenge as unknown as NodeJS.ArrayBufferView)
       .verify(
         { key: spki, format: 'der', type: 'spki' },
-        Buffer.from(signatureBase64url, 'base64url')
+        Buffer.from(
+          signatureBase64url,
+          'base64url'
+        ) as unknown as NodeJS.ArrayBufferView
       );
   } catch {
     return false;
@@ -57,8 +66,16 @@ function verifySignatureLocally(
 }
 
 /**
- * Drive a biometric step-up: ensure a Secure Enclave key exists, then prompt
- * Touch ID to sign a challenge.
+ * Drive a biometric step-up bound to the logged-in Vercel user: ensure a
+ * Secure Enclave key exists for that user, then prompt Touch ID to sign a
+ * challenge.
+ *
+ * "Bound to the user" means: the key blob lives in a per-user directory, and a
+ * binding manifest records which user the key was created for; a key whose
+ * binding names a different user is refused. macOS itself can only answer
+ * "did an enrolled finger match" — it has no notion of Vercel identity — so
+ * this binding is the client-side half, and the server-side key registration
+ * (Phase 3) makes it unforgeable.
  *
  * This is structured like the eventual production flow (resolve → capabilities
  * → register → challenge → sign → verify), but the challenge is generated
@@ -74,7 +91,31 @@ export async function stepUpWithBiometrics(
     return { ok: false, reason: resolved.reason, message: resolved.message };
   }
 
-  const caps = await getBiometricCapabilities(resolved);
+  let userId: string;
+  try {
+    userId = (await getUser(client)).id;
+  } catch {
+    return {
+      ok: false,
+      reason: 'error',
+      message:
+        'Could not determine the logged-in user for biometric step-up. Run `vercel whoami` to check your login.',
+    };
+  }
+  if (!/^[\w.-]+$/.test(userId)) {
+    return {
+      ok: false,
+      reason: 'error',
+      message: 'The logged-in user id cannot be used for biometric step-up.',
+    };
+  }
+
+  const options: BiometricHelperOptions = {
+    helperPath: resolved.helperPath,
+    keyFile: biometricKeyFilePath(client.getGlobalPathConfig(), userId),
+  };
+
+  const caps = await getBiometricCapabilities(options);
   if (!caps.ok) {
     return { ok: false, reason: caps.reason, message: caps.message };
   }
@@ -86,7 +127,7 @@ export async function stepUpWithBiometrics(
     };
   }
 
-  const registration = await registerBiometricKey(resolved);
+  const registration = await registerBiometricKey(options);
   if (!registration.ok) {
     return {
       ok: false,
@@ -95,12 +136,66 @@ export async function stepUpWithBiometrics(
     };
   }
 
+  // Enforce the user binding. The key file path is already per-user, so a
+  // mismatching manifest means the blob was copied or edited — refuse rather
+  // than repair. A missing/stale manifest for a matching layout is repaired
+  // (first registration, or the SE key was recreated out of band).
+  const binding = await readBiometricBinding(options.keyFile);
+  if (binding && binding.userId !== userId) {
+    return {
+      ok: false,
+      reason: 'error',
+      message:
+        'The biometric key on this machine belongs to a different Vercel user. Log in as that user, or delete the key directory under `~/.vercel/biometric` to start over.',
+    };
+  }
+  let publicKey = registration.registration.publicKey;
+  if (!binding || binding.keyId !== registration.registration.keyId) {
+    await writeBiometricBinding(options.keyFile, {
+      version: 1,
+      keyId: registration.registration.keyId,
+      userId,
+      createdAt: Date.now(),
+      policy: 'biometryCurrentSet',
+    });
+  }
+
   const challenge = randomBytes(32);
   output.log('Authorize this action with Touch ID…');
-  const signature = await signBiometricChallenge(
-    resolved,
+  let signature = await signBiometricChallenge(
+    options,
     challenge.toString('base64url')
   );
+
+  // .biometryCurrentSet invalidates the key whenever the Mac's fingerprint
+  // enrollment changes. In this client-only phase we recover by re-registering
+  // in place (trust-on-registration). Once the server verifies keys, recovery
+  // MUST instead require a full re-login — a silently re-registered key would
+  // defeat the binding.
+  if (!signature.ok && signature.code === 'key_invalidated') {
+    output.log(
+      'Your Mac’s fingerprint enrollment changed, which invalidated the Vercel Touch ID key. Re-registering…'
+    );
+    await deleteBiometricKey(options);
+    const rereg = await registerBiometricKey(options);
+    if (!rereg.ok) {
+      return { ok: false, reason: rereg.reason, message: rereg.message };
+    }
+    publicKey = rereg.registration.publicKey;
+    await writeBiometricBinding(options.keyFile, {
+      version: 1,
+      keyId: rereg.registration.keyId,
+      userId,
+      createdAt: Date.now(),
+      policy: 'biometryCurrentSet',
+    });
+    output.log('Authorize this action with Touch ID…');
+    signature = await signBiometricChallenge(
+      options,
+      challenge.toString('base64url')
+    );
+  }
+
   if (!signature.ok) {
     return {
       ok: false,
@@ -110,7 +205,7 @@ export async function stepUpWithBiometrics(
   }
 
   const verified = verifySignatureLocally(
-    registration.registration.publicKey,
+    publicKey,
     challenge,
     signature.signature.signature
   );
@@ -122,5 +217,5 @@ export async function stepUpWithBiometrics(
     };
   }
 
-  return { ok: true, keyId: signature.signature.keyId };
+  return { ok: true, keyId: signature.signature.keyId, userId };
 }

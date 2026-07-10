@@ -1,0 +1,9 @@
+{
+  "version": "20260304",
+  "runtime": "node",
+  "serviceType": "web",
+  "runtimeVersion": {
+    "resolved": "24"
+  },
+  "dependencies": []
+}

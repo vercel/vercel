@@ -92,6 +92,13 @@ func fail(_ error: Error) -> Never {
             code = "canceled"
         } else if nsError.domain == NSOSStatusErrorDomain && nsError.code == Int(errSecUserCanceled) {
             code = "canceled"
+        } else if nsError.domain == NSOSStatusErrorDomain && nsError.code == Int(errSecAuthFailed) {
+            // With .biometryCurrentSet, a change to the enrolled fingerprint set
+            // permanently invalidates the key's access control, and signing fails
+            // with errSecAuthFailed. Surface a stable code so the CLI can offer
+            // re-registration. (An exhausted/failed biometric match can also land
+            // here — recovery just re-prompts, so the worst case is a re-register.)
+            code = "key_invalidated"
         } else {
             code = nsError.domain
         }
@@ -191,10 +198,16 @@ func requireSecureEnclave() throws {
 
 func makeAccessControl() throws -> SecAccessControl {
     var error: Unmanaged<CFError>?
+    // .biometryCurrentSet pins the key to the fingerprint set enrolled at
+    // creation time: adding or removing any fingerprint afterwards permanently
+    // invalidates the key (signing fails with errSecAuthFailed, surfaced as
+    // "key_invalidated"). This is the closest macOS offers to "only the person
+    // who set this up", at the cost of forced re-registration when enrollment
+    // changes.
     guard let access = SecAccessControlCreateWithFlags(
         kCFAllocatorDefault,
         kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-        [.privateKeyUsage, .biometryAny],
+        [.privateKeyUsage, .biometryCurrentSet],
         &error
     ) else {
         throw error?.takeRetainedValue() ?? HelperError.message("Failed to create access control.")

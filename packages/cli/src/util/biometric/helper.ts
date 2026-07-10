@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
@@ -105,10 +106,75 @@ function unsupported(message: string): BiometricError {
 
 /**
  * The path the helper should use to persist its Secure Enclave key blob, scoped
- * to the CLI's global config directory.
+ * to the CLI's global config directory AND the logged-in Vercel user. Per-user
+ * scoping means switching accounts on one machine never reuses another
+ * account's key — the same binding the API will enforce server-side later.
  */
-export function biometricKeyFilePath(globalConfigDir: string): string {
-  return join(globalConfigDir, 'biometric', 'step-up-key.blob');
+export function biometricKeyFilePath(
+  globalConfigDir: string,
+  userId: string
+): string {
+  return join(globalConfigDir, 'biometric', userId, 'step-up-key.blob');
+}
+
+/**
+ * Records which Vercel user a Secure Enclave key was created for. This is
+ * client-side bookkeeping (anyone with file access can edit it) — the real,
+ * unforgeable binding arrives when the public key is registered with the API.
+ * Until then it keeps multi-account machines honest and gives step-up a
+ * structural place to enforce "key must belong to the logged-in user".
+ */
+export interface BiometricBinding {
+  version: 1;
+  keyId: string;
+  userId: string;
+  createdAt: number;
+  policy: 'biometryCurrentSet';
+}
+
+export function biometricBindingFilePath(keyFile: string): string {
+  return join(dirname(keyFile), 'binding.json');
+}
+
+/**
+ * Read the binding manifest next to the key blob. Missing, unreadable, or
+ * malformed manifests all return `null` — callers treat that as "no usable
+ * binding" and re-register rather than failing.
+ */
+export async function readBiometricBinding(
+  keyFile: string
+): Promise<BiometricBinding | null> {
+  let raw: string;
+  try {
+    raw = await readFile(biometricBindingFilePath(keyFile), 'utf8');
+  } catch {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(raw) as Partial<BiometricBinding>;
+    if (
+      parsed.version === 1 &&
+      typeof parsed.keyId === 'string' &&
+      typeof parsed.userId === 'string' &&
+      typeof parsed.createdAt === 'number'
+    ) {
+      return parsed as BiometricBinding;
+    }
+  } catch {
+    // fall through
+  }
+  return null;
+}
+
+export async function writeBiometricBinding(
+  keyFile: string,
+  binding: BiometricBinding
+): Promise<void> {
+  const path = biometricBindingFilePath(keyFile);
+  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+  await writeFile(path, `${JSON.stringify(binding, null, 2)}\n`, {
+    mode: 0o600,
+  });
 }
 
 /**
@@ -153,11 +219,13 @@ export function resolveHelperPath(): string | null {
  * Cheap, side-effect-free check of whether biometric step-up could even be
  * attempted in this environment. Does NOT verify Secure Enclave availability or
  * that a key exists — call {@link getBiometricCapabilities} for that. Returns
- * the resolved helper options when viable, or a normalized `unsupported` error.
+ * the helper path when viable, or a normalized `unsupported` error. The key
+ * file is NOT resolved here because it is scoped to the logged-in user, which
+ * requires a network lookup — see {@link biometricKeyFilePath}.
  */
 export function resolveBiometricHelper(
   client: Client
-): BiometricResult<BiometricHelperOptions> {
+): BiometricResult<{ helperPath: string }> {
   if (process.platform !== 'darwin') {
     return unsupported('Biometric step-up is only available on macOS.');
   }
@@ -175,11 +243,7 @@ export function resolveBiometricHelper(
     return unsupported('The biometric helper is not available in this build.');
   }
 
-  return {
-    ok: true,
-    helperPath,
-    keyFile: biometricKeyFilePath(client.getGlobalPathConfig()),
-  };
+  return { ok: true, helperPath };
 }
 
 function isHelperJsonError(value: unknown): value is HelperJsonError {
@@ -187,9 +251,11 @@ function isHelperJsonError(value: unknown): value is HelperJsonError {
     typeof value === 'object' &&
     value !== null &&
     'ok' in value &&
-    (value as { ok: unknown }).ok === false &&
-    typeof (value as { code: unknown }).code === 'string' &&
-    typeof (value as { error: unknown }).error === 'string'
+    value.ok === false &&
+    'code' in value &&
+    typeof value.code === 'string' &&
+    'error' in value &&
+    typeof value.error === 'string'
   );
 }
 

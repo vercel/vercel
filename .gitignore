@@ -53,3 +53,4 @@ junit.xml
 !packages/cli/test/unit/commands/target/**
 .claude/settings.local.json
 .pnpm-store
+.env*
