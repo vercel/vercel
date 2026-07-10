@@ -2417,6 +2417,7 @@ describe('pyproject subscribers', () => {
   });
 
   afterEach(() => {
+    vi.mocked(execa).mockReset();
     if (fs.existsSync(mockWorkPath)) {
       fs.removeSync(mockWorkPath);
     }
@@ -2527,6 +2528,13 @@ describe('pyproject subscribers', () => {
       }),
     } as Record<string, FileBlob>;
 
+    // Topic detection subprocess behavior is covered by
+    // subscriber-detect.test.ts; here the entrypoint reports "unsupported"
+    // so the explicit topics are trusted as-is.
+    vi.mocked(execa).mockResolvedValue({
+      stdout: JSON.stringify({ unsupported: true }),
+    } as any);
+
     const result = await build({
       workPath: mockWorkPath,
       files,
@@ -2576,6 +2584,46 @@ describe('pyproject subscribers', () => {
     }
     expect(handler.data.toString()).toContain(
       '"__VC_HANDLER_VARIABLE_NAME": "app"'
+    );
+  });
+
+  it('rejects explicit topics that the code does not declare', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'worker.py': new FileBlob({
+        data: 'app = object()\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "worker:app"',
+          'topics = ["celery", "orders"]',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    vi.mocked(execa).mockResolvedValue({
+      stdout: JSON.stringify({ subscriptions: [{ topic: 'celery' }] }),
+    } as any);
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'app.py',
+        meta: { isDev: false },
+        config: { framework: 'flask' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(
+      /subscriber "worker_app" declares topic "orders" but "worker\.app\.get_queue_subscriptions\(\)" does not declare it/
     );
   });
 

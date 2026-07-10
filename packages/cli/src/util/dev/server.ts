@@ -950,8 +950,12 @@ export default class DevServer {
 
     // Restart the dev process if `devCommand` was modified via project
     // settings overrides. The initial start lives in `start()`, so boot
-    // isn't serialized behind the dev server's port bind.
-    if (this.initialDevCommandStarted) {
+    // isn't serialized behind the dev server's port bind. Subscriber projects
+    // only defer restarts while their sidecars are not ready.
+    if (
+      this.initialDevCommandStarted &&
+      (!this.hasSubscribers() || this.sidecarOrchestrator)
+    ) {
       await this.runDevCommand();
     }
 

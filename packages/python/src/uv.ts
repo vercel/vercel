@@ -221,6 +221,30 @@ export class UvRunner {
   }
 
   /**
+   * Run a command inside the virtual environment via `uv run`.
+   *
+   * `--active` targets the venv indicated by VIRTUAL_ENV and `--no-sync`
+   * prevents uv from modifying the environment, so the command runs against
+   * the environment exactly as it was installed. Returns the captured
+   * stdout/stderr; on failure the thrown error retains the subprocess's
+   * stdout/stderr so callers can inspect structured output.
+   */
+  async run(options: {
+    venvPath: string;
+    cwd: string;
+    args: string[];
+    env?: NodeJS.ProcessEnv;
+  }): Promise<{ stdout: string; stderr: string }> {
+    const { venvPath, cwd, args, env } = options;
+    return this.runUvCmd(
+      ['run', '--active', '--no-sync', '--', ...args],
+      cwd,
+      venvPath,
+      env
+    );
+  }
+
+  /**
    * Prune the uv cache for CI: removes pre-built wheels and unzipped source
    * distributions while retaining source-built wheels.
    */
@@ -243,18 +267,28 @@ export class UvRunner {
   private async runUvCmd(
     args: string[],
     cwd: string,
-    venvPath: string
-  ): Promise<void> {
-    const pretty = `uv ${args.join(' ')}`;
+    venvPath: string,
+    baseEnv?: NodeJS.ProcessEnv
+  ): Promise<{ stdout: string; stderr: string }> {
+    // Elide long arguments (e.g. inline `python -c` scripts) from logs and
+    // error messages.
+    const pretty = `uv ${args
+      .map(arg => (arg.length > 100 ? `${arg.slice(0, 97)}...` : arg))
+      .join(' ')}`;
     debug(`Running "${pretty}"...`);
 
     try {
-      await execa(this.uvPath, args, {
+      const result = await execa(this.uvPath, args, {
         cwd,
-        env: this.getVenvEnv(venvPath),
+        env: this.getVenvEnv(venvPath, baseEnv),
       });
+      return { stdout: result?.stdout ?? '', stderr: result?.stderr ?? '' };
     } catch (err) {
-      const error: Error & { code?: unknown } = new Error(
+      const error: Error & {
+        code?: unknown;
+        stdout?: string;
+        stderr?: string;
+      } = new Error(
         `Failed to run "${pretty}": ${err instanceof Error ? err.message : String(err)}`
       );
       // retain code/signal to ensure it's treated as a build error
@@ -264,18 +298,29 @@ export class UvRunner {
         } else if ('signal' in err) {
           error.code = (err as { signal: string }).signal;
         }
+        // retain the subprocess output so callers can inspect structured
+        // results written before a non-zero exit
+        if ('stdout' in err) {
+          error.stdout = (err as { stdout: string }).stdout;
+        }
+        if ('stderr' in err) {
+          error.stderr = (err as { stderr: string }).stderr;
+        }
       }
 
       throw error;
     }
   }
 
-  private getVenvEnv(venvPath: string): NodeJS.ProcessEnv {
+  private getVenvEnv(
+    venvPath: string,
+    baseEnv: NodeJS.ProcessEnv = process.env
+  ): NodeJS.ProcessEnv {
     const binDir = isWin ? join(venvPath, 'Scripts') : join(venvPath, 'bin');
-    const existingPath = process.env.PATH || '';
+    const existingPath = baseEnv.PATH || process.env.PATH || '';
 
     return {
-      ...getProtectedUvEnv(process.env, this.uvCacheDir),
+      ...getProtectedUvEnv(baseEnv, this.uvCacheDir),
       VIRTUAL_ENV: venvPath,
       PATH: existingPath ? `${binDir}${pathDelimiter}${existingPath}` : binDir,
     };
