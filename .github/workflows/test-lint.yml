@@ -5,6 +5,7 @@ on:
 
 env:
   TURBO_REMOTE_ONLY: 'true'
+  TURBO_TEAM: 'zero-conf-vtest314'
   TURBO_TOKEN: ${{ secrets.VERCEL_TOKEN }}
   NODE_VERSION: '22'
 
