@@ -4,7 +4,7 @@
 
 Add native-first trampoline with JS fallback and remove postinstall
 
-`vercel` bin is now `bin/vercel.js`, a ~30ms ESM trampoline that tries to
+vercel bin is now `bin/vercel.js`, a ~30ms ESM trampoline that tries to
 resolve `@vercel/vc-native-{platform}-{arch}` via optionalDependencies
 (os/cpu-aware, so only one platform binary is downloaded) and spawns the
 native binary when present. Unsupported platforms, or installs where the
@@ -13,6 +13,14 @@ package manager omitted optionalDependencies, fall back to `dist/vc.js`
 
 This removes the need for `postinstall.mjs` which required `npm install
 --prefix /tmp` and is blocked by default on pnpm v10, and broke on Windows
-where `.bin/vercel.cmd` shims expect JS. `@vercel/vc-native` is unchanged
-in this PR and will be removed in a follow-up; `vercel` works standalone
-via its own bin and optionalDependencies.
+where `.bin/vercel.cmd` shims expect JS.
+
+Exact pinned versions for the optional native packages are synced by a
+new build step `utils/sync-native-optional-deps.js` wired into `ci:version`
+and `ci:version:canary`, so `pnpm install --no-frozen-lockfile` in CI keeps
+`pnpm-lock.yaml` and the tarball in sync. Natives are not bundled inside
+the vercel tarball; npm/pnpm install only the matching os/cpu optionalDep,
+and the trampoline does `require.resolve(platformPkg)` to find it.
+
+`@vercel/vc-native` wrapper is unchanged in this PR and will be removed in
+a follow-up; `vercel` works standalone via its own bin and optionalDependencies.
