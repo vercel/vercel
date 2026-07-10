@@ -15,7 +15,11 @@ import {
 import output from '../../output-manager';
 import { FlagsRulesCommandTelemetryClient } from '../../util/telemetry/commands/flags/rules';
 import { rulesMoveSubcommand } from './command';
-import { isExitCodeResult, resolveRulesCommandContext } from './rules-common';
+import {
+  isExitCodeResult,
+  resolveRulesCommandContext,
+  warnIfRuleChangesAreBypassed,
+} from './rules-common';
 
 export default async function rulesMove(
   client: Client,
@@ -90,7 +94,7 @@ export default async function rulesMove(
     );
 
     output.spinner(`Moving rule in ${context.environment}...`);
-    await updateFlag(client, context.projectId, flagArg, {
+    const updatedFlag = await updateFlag(client, context.projectId, flagArg, {
       environments: {
         [context.environment]: nextEnvConfig,
       },
@@ -101,6 +105,7 @@ export default async function rulesMove(
     output.success(
       `Rule ${chalk.bold(ruleId)} moved to position ${position} for ${chalk.bold(context.flag.slug)} in ${chalk.bold(context.environment)}`
     );
+    warnIfRuleChangesAreBypassed(updatedFlag, context.environment);
   } catch (err) {
     output.stopSpinner();
     printError(err);
