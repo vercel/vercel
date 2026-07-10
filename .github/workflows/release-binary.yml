@@ -17,7 +17,7 @@ permissions:
 env:
   TURBO_REMOTE_ONLY: 'true'
   TURBO_TEAM: 'vercel'
-  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
 concurrency:
   group: release-binary-${{ inputs.tag || github.ref }}
