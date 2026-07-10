@@ -589,13 +589,20 @@ export function createPodmanEngine(
       getStderrTail: () => string;
       getExitCode: () => number | null;
     }> {
+      // Docker accepts `-p 127.0.0.1:0:3000` for a random host port;
+      // Podman requires `-p 127.0.0.1::3000` (empty host port) for that.
+      // dev.ts passes hostPort=0 when the framework didn't request a fixed port.
+      const publish =
+        params.hostPort === 0 || params.hostPort === undefined
+          ? `127.0.0.1::${params.containerPort}`
+          : `127.0.0.1:${params.hostPort}:${params.containerPort}`;
       const args = [
         'run',
         '--rm',
         '--name',
         params.containerName,
         '-p',
-        `127.0.0.1:${params.hostPort}:${params.containerPort}`,
+        publish,
         '--env-file',
         params.envFile,
       ];
@@ -650,18 +657,33 @@ export function createPodmanEngine(
       _span?: Span
     ): Promise<number> {
       void out;
-      const { stdout } = await runPodman(engineOpts, [
-        'port',
-        containerName,
-        `${containerPort}/tcp`,
-      ]);
-      const m = stdout.match(/:(\d+)\s*$/m);
-      if (!m) {
-        throw new Error(
-          `Could not determine mapped host port for ${containerName} (${containerPort}/tcp). Got: ${stdout.trim()}`
+      try {
+        const { stdout } = await runPodman(
+          engineOpts,
+          ['port', containerName, `${containerPort}/tcp`],
+          { quiet: true }
         );
+        const m = stdout.match(/:(\d+)\s*$/m);
+        if (!m) {
+          throw new Error(
+            `Could not determine mapped host port for ${containerName} (${containerPort}/tcp). Got: ${stdout.trim()}`
+          );
+        }
+        return Number(m[1]);
+      } catch (err) {
+        const msg = (err as Error).message;
+        // Podman can transiently report "no such container" right after `podman run`
+        // even though the container is starting - dev.ts will retry this.
+        if (
+          /no container with name or id/i.test(msg) ||
+          /no such container/i.test(msg)
+        ) {
+          const e = err as Error & { code?: string };
+          e.code = 'TRANSIENT_NOT_FOUND';
+          throw e;
+        }
+        throw err;
       }
-      return Number(m[1]);
     },
 
     async devStop(
