@@ -267,12 +267,130 @@ export const modelsSubcommand = {
   examples: [],
 } as const;
 
+export const budgetsSetSubcommand = {
+  name: 'set',
+  aliases: [],
+  description:
+    'Create or update an AI Gateway budget (team by default, or a project via --project)',
+  arguments: [],
+  options: [
+    {
+      name: 'project',
+      shorthand: null,
+      type: String,
+      argument: 'NAME_OR_ID',
+      deprecated: false,
+      description:
+        'Set the budget for this project (name or id) instead of the team',
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      argument: 'AMOUNT',
+      deprecated: false,
+      description: 'Budget limit in dollars (minimum 1)',
+    },
+    {
+      name: 'refresh-period',
+      shorthand: null,
+      type: String,
+      argument: 'PERIOD',
+      deprecated: false,
+      description:
+        'Budget refresh cadence: daily, weekly, monthly, or none (default: monthly)',
+    },
+    {
+      name: 'include-byok',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Include BYOK usage in the budget (default: false)',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Set a team budget',
+      value: `${packageName} ai-gateway budgets set --limit 500 --refresh-period monthly`,
+    },
+    {
+      name: 'Set a project budget',
+      value: `${packageName} ai-gateway budgets set --project my-project --limit 200`,
+    },
+  ],
+} as const;
+
+export const budgetsListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List AI Gateway budgets',
+  arguments: [],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'List budgets',
+      value: `${packageName} ai-gateway budgets ls`,
+    },
+  ],
+} as const;
+
+export const budgetsRemoveSubcommand = {
+  name: 'remove',
+  aliases: ['rm', 'delete'],
+  description:
+    'Remove an AI Gateway budget (team by default, or a project via --project)',
+  arguments: [],
+  options: [
+    {
+      name: 'project',
+      shorthand: null,
+      type: String,
+      argument: 'NAME_OR_ID',
+      deprecated: false,
+      description:
+        'Remove the budget for this project (name or id) instead of the team',
+    },
+    yesOption,
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Remove the team budget',
+      value: `${packageName} ai-gateway budgets rm`,
+    },
+    {
+      name: 'Remove a project budget',
+      value: `${packageName} ai-gateway budgets rm --project my-project`,
+    },
+  ],
+} as const;
+
+export const budgetsSubcommand = {
+  name: 'budgets',
+  aliases: [],
+  description: 'Manage AI Gateway budgets (metered spend limits per scope)',
+  arguments: [],
+  subcommands: [
+    budgetsSetSubcommand,
+    budgetsListSubcommand,
+    budgetsRemoveSubcommand,
+  ],
+  options: [],
+  examples: [],
+} as const;
+
 export const aiGatewayCommand = {
   name: 'ai-gateway',
   aliases: [],
   description: 'Manage AI Gateway resources',
   arguments: [],
-  subcommands: [apiKeysSubcommand, rulesSubcommand, modelsSubcommand],
+  subcommands: [
+    apiKeysSubcommand,
+    budgetsSubcommand,
+    rulesSubcommand,
+    modelsSubcommand,
+  ],
   options: [],
   examples: [],
 } as const;
