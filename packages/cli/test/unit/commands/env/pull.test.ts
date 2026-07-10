@@ -539,17 +539,45 @@ describe('env pull', () => {
         'Downloading `development` environment variables for'
       );
       await expect(client.stderr).toOutput(
-        '  Changes:\n  + SPECIAL_FLAG (Updated)\n  + NEW_VAR\n  - TEST\n'
+        '  Changes:\n  + SPECIAL_FLAG (Updated)\n  + NEW_VAR\n\n> Kept TEST (defined locally, not found in the development Environment)'
       );
       await expect(client.stderr).toOutput(
         'Updated         .env.local file and added it to .gitignore'
       );
 
       await expect(pullPromise).resolves.toEqual(0);
+
+      const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'));
+      expect(rawDevEnv.toString()).toContain('TEST="hi"');
     } finally {
       client.setArgv('env', 'rm', 'NEW_VAR', '--yes');
       await env(client);
     }
+  });
+
+  it('should keep variables that only exist locally', async () => {
+    const cwd = setupUnitFixture('vercel-env-pull-delta');
+    client.cwd = cwd;
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'env-pull-delta',
+      name: 'env-pull-delta',
+    });
+
+    client.setArgv('env', 'pull', '--yes');
+    const pullPromise = env(client);
+    await expect(client.stderr).toOutput(
+      'Kept TEST (defined locally, not found in the development Environment)'
+    );
+    await expect(pullPromise).resolves.toEqual(0);
+
+    const rawDevEnv = (
+      await fs.readFile(path.join(cwd, '.env.local'))
+    ).toString();
+    expect(rawDevEnv).toContain('TEST="hi"');
+    expect(rawDevEnv).toContain('SPECIAL_FLAG="1"');
   });
 
   it('should not show a delta string when it fails to read a file', async () => {
