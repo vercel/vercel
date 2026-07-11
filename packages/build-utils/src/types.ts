@@ -54,6 +54,8 @@ export interface Config {
   middleware?: boolean;
   /** Owning service name; scopes per-function config such as the v2beta consumer. */
   serviceName?: string;
+  /** Copy FastAPI StaticFiles mounts to the CDN output. Defaults to true. */
+  fastapiStaticCDN?: boolean;
   [key: string]: unknown;
 }
 
