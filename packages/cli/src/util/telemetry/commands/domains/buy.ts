@@ -14,4 +14,10 @@ export class DomainsBuyTelemetryClient
       });
     }
   }
+
+  trackCliFlagVisa(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('visa');
+    }
+  }
 }

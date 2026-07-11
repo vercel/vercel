@@ -9,13 +9,19 @@ type OrderResponse = {
   orderId: string;
 };
 
+export type DomainPurchasePayment = {
+  provider: 'visa';
+  credential: string;
+};
+
 export default async function purchaseDomain(
   client: Client,
   name: string,
   expectedPrice: number,
   years: number,
   autoRenew: boolean = true,
-  contactInformation: ContactInformation
+  contactInformation: ContactInformation,
+  payment?: DomainPurchasePayment
 ) {
   const { team, contextName } = await getScope(client);
   const teamParam = team ? `?teamId=${team.slug}` : '';
@@ -29,6 +35,7 @@ export default async function purchaseDomain(
           autoRenew,
           years,
           contactInformation,
+          ...(payment ? { payment } : {}),
         },
         method: 'POST',
       }
@@ -52,6 +59,10 @@ export default async function purchaseDomain(
       }
     }
 
+    if (order.error?.code === 'visa_payment_failed') {
+      return new ERRORS.VisaPaymentError();
+    }
+
     if (order.error?.code === 'payment_failed') {
       return new ERRORS.DomainPaymentError();
     }
@@ -70,6 +81,9 @@ export default async function purchaseDomain(
       }
       if (err.code === 'tld_not_supported') {
         return new ERRORS.UnsupportedTLD(name);
+      }
+      if (err.code === 'visa_payment_failed') {
+        return new ERRORS.VisaPaymentError();
       }
       if (err.code === 'additional_contact_info_required') {
         return new ERRORS.TLDNotSupportedViaCLI(name);

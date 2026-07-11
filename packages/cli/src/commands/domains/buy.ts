@@ -17,6 +17,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import collectContactInformation from '../../util/domains/collect-contact-information';
+import getVisaCredential from '../../util/domains/get-visa-credential';
 import {
   openUrlInBrowserCommand,
   outputAgentError,
@@ -52,11 +53,13 @@ export default async function buy(client: Client, argv: string[]) {
     printError(error);
     return 1;
   }
-  const { args } = parsedArgs;
+  const { args, flags } = parsedArgs;
 
   const [domainName] = args;
+  const payWithVisa = !!flags['--visa'];
   const skipConfirmation = !!process.env.CI;
   telemetry.trackCliArgumentDomain(domainName);
+  telemetry.trackCliFlagVisa(payWithVisa);
 
   if (!domainName) {
     if (client.nonInteractive) {
@@ -205,6 +208,13 @@ export default async function buy(client: Client, argv: string[]) {
   // Collect contact information
   const contactInformation = await collectContactInformation(client);
 
+  // Collect the Visa payment credential (masked prompt; env var in tests/CI)
+  let payment;
+  if (payWithVisa) {
+    const credential = await getVisaCredential(client);
+    payment = { provider: 'visa' as const, credential };
+  }
+
   let buyResult;
   const purchaseStamp = stamp();
   output.spinner('Purchasing');
@@ -216,7 +226,8 @@ export default async function buy(client: Client, argv: string[]) {
       purchasePrice,
       years,
       autoRenew,
-      contactInformation
+      contactInformation,
+      payment
     );
   } catch (err: unknown) {
     output.error(
@@ -254,6 +265,13 @@ export default async function buy(client: Client, argv: string[]) {
 
   if (buyResult instanceof ERRORS.UnexpectedDomainPurchaseError) {
     output.error(`An unexpected error happened while performing the purchase.`);
+    return 1;
+  }
+
+  if (buyResult instanceof ERRORS.VisaPaymentError) {
+    output.error(
+      `Your Visa payment failed. The credential may be invalid, expired, or declined. Please try again.`
+    );
     return 1;
   }
 

@@ -254,6 +254,14 @@ function handleSetupDomainError<T>(error: SetupDomainError | T): T | 1 {
     return 1;
   }
 
+  if (error instanceof ERRORS.VisaPaymentError) {
+    output.error(
+      `You can't purchase the domain you're aliasing to since the Visa payment failed.`
+    );
+    output.print('  Please add a valid payment method and retry.\n');
+    return 1;
+  }
+
   if (error instanceof ERRORS.TLDNotSupportedViaCLI) {
     output.error(
       `The TLD for domain name ${error.meta.domain} is not supported via the CLI. Use the REST API or the dashboard to purchase.`

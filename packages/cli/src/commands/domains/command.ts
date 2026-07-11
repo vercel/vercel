@@ -206,8 +206,22 @@ export const buySubcommand = {
       required: true,
     },
   ],
-  options: [],
-  examples: [],
+  options: [
+    {
+      name: 'visa',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Pay with a Visa Intelligent Commerce credential instead of the card on file',
+    },
+  ],
+  examples: [
+    {
+      name: 'Purchase a domain paying with a Visa Intelligent Commerce credential',
+      value: `${packageName} domains buy example.com --visa`,
+    },
+  ],
 } as const;
 
 export const checkSubcommand = {

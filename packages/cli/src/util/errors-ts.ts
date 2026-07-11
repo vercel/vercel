@@ -449,6 +449,20 @@ export class DomainPaymentError extends NowError<'DOMAIN_PAYMENT_ERROR', {}> {
 }
 
 /**
+ * Returned when a Visa Intelligent Commerce payment fails (invalid,
+ * expired, or declined credential).
+ */
+export class VisaPaymentError extends NowError<'VISA_PAYMENT_ERROR', {}> {
+  constructor() {
+    super({
+      code: 'VISA_PAYMENT_ERROR',
+      meta: {},
+      message: `Your Visa payment failed. The credential may be invalid, expired, or declined.`,
+    });
+  }
+}
+
+/**
  * Returned during purchase in alias when the domain was purchased but the
  * order is pending so the alias can't be completed yet
  */
