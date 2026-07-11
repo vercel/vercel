@@ -2606,6 +2606,8 @@ describe('integration add (auto-provision)', () => {
           '--skill',
           'shopify-dev',
           '--yes',
+          '--metadata',
+          '{"origin":"vercel-cli","flow":"integration-install","integration":"acme-skills","product":"acme"}',
         ],
         expect.objectContaining({ stdio: 'pipe', reject: false })
       );
@@ -2633,6 +2635,8 @@ describe('integration add (auto-provision)', () => {
           '--skill',
           'shopify-dev',
           '--yes',
+          '--metadata',
+          '{"origin":"vercel-cli","flow":"integration-install","integration":"acme-skills","product":"acme"}',
         ],
         expect.objectContaining({ stdio: 'pipe', reject: false })
       );
@@ -2670,6 +2674,8 @@ describe('integration add (auto-provision)', () => {
           '--skill',
           'shopify-dev',
           '--yes',
+          '--metadata',
+          '{"origin":"vercel-cli","flow":"integration-install","integration":"acme-skills","product":"acme"}',
         ],
         expect.objectContaining({ stdio: 'pipe', reject: false })
       );
