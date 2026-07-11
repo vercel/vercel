@@ -131,6 +131,33 @@ The `buy` command **explicitly blocks non-interactive execution** (`client.nonIn
 
 ---
 
+### 1.6 The Top-Level `vc buy` Command Family
+
+The CLI also has a top-level `vercel buy` command (`src/commands/buy/`) with four subcommands:
+
+| Subcommand | Handler | API |
+|------------|---------|-----|
+| `buy credits <type> <amount>` | `src/commands/buy/credits.ts` | `POST /v1/billing/buy?source=cli` |
+| `buy addon <name> <quantity>` | `src/commands/buy/addon.ts` | `POST /v1/billing/buy?source=cli` |
+| `buy pro` | `src/commands/buy/pro.ts` | `POST /v1/billing/buy?source=cli` |
+| `buy domain <domain>` | `src/commands/buy/domain.ts` | Delegates to `domains buy` |
+
+The `credits`/`addon`/`pro` subcommands share `createPurchase()` (`src/util/buy/create-purchase.ts`) and `handlePurchaseError()` (`src/util/buy/handle-purchase-error.ts`), which already maps payment-related API codes (`missing_stripe_customer`, `payment_failed`, HTTP 402, etc.).
+
+**`vc buy domain` is a thin delegate** — it calls the `domains buy` handler directly:
+
+```typescript
+// src/commands/buy/domain.ts
+export default async function domain(client: Client, argv: string[]) {
+  // Delegate to the existing domains buy command
+  return domainsBuy(client, argv);
+}
+```
+
+This means adding a `--visa` flag to the `domains buy` handler automatically covers **both** `vc domains buy example.com --visa` and `vc buy domain example.com --visa`.
+
+---
+
 ## Part 2: Visa Integration Design
 
 ### 2.0 The Real Visa Ecosystem
@@ -240,11 +267,11 @@ For the **CLI side**, the integration contract is: collect a credential from the
 
 #### 2.2.3 Testing / CI: Environment Variable Override
 
-For **automated tests and CI only**, the credential can be provided via the `VERCEL_VISA_TOKEN` environment variable:
+For **automated tests and CI only**, the credential can be provided via the `VERCEL_VISA_CREDENTIAL` environment variable:
 
 ```bash
 # In a test .env or CI config
-VERCEL_VISA_TOKEN="test_vtok_hardcoded_for_ci"
+VERCEL_VISA_CREDENTIAL="test_vtok_hardcoded_for_ci"
 ```
 
 The resolution order inside `getVisaCredential()`:
@@ -252,16 +279,16 @@ The resolution order inside `getVisaCredential()`:
 ```typescript
 async function getVisaCredential(client: Client): Promise<string> {
   // 1. Testing/CI override
-  const envToken = process.env.VERCEL_VISA_TOKEN;
-  if (envToken) {
-    output.debug('Using Visa token from VERCEL_VISA_TOKEN environment variable');
-    return envToken;
+  const envCredential = process.env.VERCEL_VISA_CREDENTIAL;
+  if (envCredential) {
+    output.debug('Using Visa credential from VERCEL_VISA_CREDENTIAL environment variable');
+    return envCredential;
   }
 
   // 2. Live: interactive prompt (primary path)
   return client.input.password({
-    message: 'Visa payment token:',
-    validate: (val: string) => val.length > 0 || 'Visa token is required',
+    message: 'Visa payment credential:',
+    validate: (val: string) => val.length > 0 || 'Visa payment credential is required',
   });
 }
 ```
@@ -276,15 +303,15 @@ The Visa credential is passed in the **request body** of the purchase POST:
   "autoRenew": true,
   "years": 1,
   "contactInformation": { ... },
-  "paymentMethod": {
-    "type": "visa",
-    "token": "<vic-credential>"
+  "payment": {
+    "provider": "visa",
+    "credential": "<vic-credential>"
   }
 }
 ```
 
 The Vercel backend must be extended to:
-1. Accept this new `paymentMethod` field.
+1. Accept this new `payment` field.
 2. Redeem the VIC credential via the `@visa/api-client` (`VicApiClient.getTransactionCredentials()` or equivalent).
 3. Process the domain purchase using the obtained transaction credentials.
 
@@ -326,7 +353,7 @@ export const buySubcommand = {
 #### Environment Variables
 | Variable | Purpose | Used By |
 |----------|---------|---------|
-| `VERCEL_VISA_TOKEN` | VIC credential for testing/CI only | CLI (test harness) |
+| `VERCEL_VISA_CREDENTIAL` | VIC credential for testing/CI only | CLI (test harness) |
 | `VISA_VIC_API_KEY` | VIC API key | Vercel backend only |
 | `VISA_VIC_API_KEY_SS` | VIC API shared secret | Vercel backend only |
 | `VISA_MLE_SERVER_CERT` | MLE server certificate | Vercel backend only |
@@ -348,8 +375,7 @@ The domain name remains the only positional argument. Visa selection is a flag.
 |------|--------|
 | `src/commands/domains/command.ts` | Add `--visa` option to `buySubcommand.options` |
 | `src/commands/domains/buy.ts` | Parse `--visa` flag; collect Visa credential; pass to `purchaseDomain()` |
-| `src/util/domains/purchase-domain.ts` | Accept optional `paymentMethod` param; include in POST body |
-| `src/util/domains/purchase-domain-if-available.ts` | Optionally accept `paymentMethod` and forward to `purchaseDomain()` |
+| `src/util/domains/purchase-domain.ts` | Accept optional `payment` param; include in POST body |
 | `src/util/telemetry/commands/domains/buy.ts` | Add `trackCliFlagVisa()` method |
 | `src/util/errors-ts.ts` | Add Visa-specific error classes (if backend returns VIC-specific error codes) |
 
@@ -357,15 +383,15 @@ The domain name remains the only positional argument. Visa selection is a flag.
 
 | File | Purpose |
 |------|---------|
-| `src/util/domains/get-visa-credential.ts` | Prompts user for Visa payment token interactively (live), falls back to `VERCEL_VISA_TOKEN` env var (testing/CI) |
-| `test/unit/commands/domains/buy-visa.test.ts` | Tests for the `--visa` flow (uses `VERCEL_VISA_TOKEN` env var to provide credential in test harness) |
+| `src/util/domains/get-visa-credential.ts` | Prompts user for Visa payment token interactively (live), falls back to `VERCEL_VISA_CREDENTIAL` env var (testing/CI) |
+| `test/unit/commands/domains/buy-visa.test.ts` | Tests for the `--visa` flow (uses `VERCEL_VISA_CREDENTIAL` env var to provide credential in test harness) |
 
 #### Backend Work (Outside CLI Scope)
 
 The Vercel API backend needs to:
 1. Add `@visa/api-client` and `@visa/token-manager` as dependencies.
-2. Accept the `paymentMethod` field on `POST /v1/registrar/domains/{name}/buy`.
-3. When `paymentMethod.type === 'visa'`, use `VicApiClient` to redeem the credential and process the domain purchase via VIC payment rails instead of the account's default card.
+2. Accept the `payment` field on `POST /v1/registrar/domains/{name}/buy`.
+3. When `payment.provider === 'visa'`, use `VicApiClient` to redeem the credential and process the domain purchase via VIC payment rails instead of the account's default card.
 4. Return VIC-specific error codes in the API response for CLI-side error handling.
 
 ---
@@ -382,10 +408,10 @@ The Vercel API backend needs to:
 7. Prompt: "Auto renew?" (same as today)
 8. Collect contact information (same as today)
 9. NEW: Collect VIC credential via getVisaCredential(client):
-   a. If VERCEL_VISA_TOKEN env var is set → use it (testing/CI only)
+   a. If VERCEL_VISA_CREDENTIAL env var is set → use it (testing/CI only)
    b. Otherwise → prompt interactively with client.input.password() (live behavior)
 10. Call purchaseDomain(client, name, price, years, autoRenew, contact, { type: 'visa', token })
-11. POST /v1/registrar/domains/{name}/buy with paymentMethod in body
+11. POST /v1/registrar/domains/{name}/buy with payment in body
 12. Vercel backend redeems VIC credential (server-side VIC API calls)
 13. Poll for order (same as today)
 14. Handle success/failure (same as today, plus VIC-specific errors)
@@ -397,7 +423,7 @@ The Vercel API backend needs to:
 
 The current `buy` command **blocks non-interactive execution entirely**, and this does not change with `--visa`. Domain purchase is a financial commitment that requires explicit human confirmation. The `--visa` flag adds a credential prompt to the interactive flow but does not create a non-interactive path.
 
-For **testing/CI**, the `VERCEL_VISA_TOKEN` env var bypasses the interactive prompt for the credential only. The rest of the buy flow (price confirmation, auto-renew, contact info) still requires interactive input — these are handled by the test harness via `client.stdin.write()` in unit tests, just like the existing `buy.test.ts` does today.
+For **testing/CI**, the `VERCEL_VISA_CREDENTIAL` env var bypasses the interactive prompt for the credential only. The rest of the buy flow (price confirmation, auto-renew, contact info) still requires interactive input — these are handled by the test harness via `client.stdin.write()` in unit tests, just like the existing `buy.test.ts` does today.
 
 ---
 
@@ -425,7 +451,7 @@ These map to new error classes in `errors-ts.ts` or can reuse the existing `Doma
 - `GET /v1/registrar/orders/{orderId}`
 
 #### Modified Endpoint
-- `POST /v1/registrar/domains/{name}/buy` — Request body extended with optional `paymentMethod`:
+- `POST /v1/registrar/domains/{name}/buy` — Request body extended with optional `payment`:
 
 ```typescript
 interface PurchaseRequest {
@@ -433,14 +459,14 @@ interface PurchaseRequest {
   autoRenew: boolean;
   years: number;
   contactInformation: ContactInformation;
-  paymentMethod?: {
-    type: 'visa';
-    token: string;
+  payment?: {
+    provider: 'visa';
+    credential: string;
   };
 }
 ```
 
-When `paymentMethod` is omitted, the backend falls back to the account's default payment method (backward compatible).
+When `payment` is omitted, the backend falls back to the account's default payment method (backward compatible).
 
 ---
 
@@ -467,8 +493,8 @@ User: vercel domains buy example.com --visa
 │  7. collectContactInformation()     │
 │  8. getVisaCredential() [NEW]       │
 │     ├─ prompt: password input (live)│
-│     └─ env: VERCEL_VISA_TOKEN (CI)  │
-│  9. purchaseDomain(... paymentMethod)│
+│     └─ env: VERCEL_VISA_CREDENTIAL (CI)  │
+│  9. purchaseDomain(... payment)     │
 └────────────┬────────────────────────┘
              │
              ▼
@@ -477,7 +503,7 @@ User: vercel domains buy example.com --visa
 │  POST /v1/registrar/domains/        │
 │       {name}/buy?teamId=...         │
 │                                     │
-│  paymentMethod.type === 'visa' ?    │
+│  payment.provider === 'visa' ?      │
 │  ┌────────────────────────────────┐ │
 │  │ VicApiClient (server-side)     │ │
 │  │ @visa/api-client               │ │
@@ -504,10 +530,10 @@ User: vercel domains buy example.com --visa
 ### 2.10 Security Considerations
 
 1. **Never accept Visa credentials via CLI flags** — they would leak into shell history and `ps` output. The live path uses `client.input.password()` (masked interactive prompt) exclusively.
-2. **Env var is for testing only** — `VERCEL_VISA_TOKEN` exists so test suites and CI can exercise the payment path. It should be documented as a testing escape hatch, not a recommended production workflow.
+2. **Env var is for testing only** — `VERCEL_VISA_CREDENTIAL` exists so test suites and CI can exercise the payment path. It should be documented as a testing escape hatch, not a recommended production workflow.
 3. **VIC merchant credentials stay server-side** — the `VISA_VIC_API_KEY`, `VISA_MLE_*`, and other VIC merchant credentials are configured on the Vercel backend only. They must never be shipped in or required by the CLI.
 4. **MLE encryption** — the `@visa/api-client` handles automatic MLE encryption/decryption for VIC API calls. This is transparent to the CLI since it happens server-side.
-5. **Mask credentials in debug output** — if `output.debug()` logs request bodies, redact the `paymentMethod.token` field.
+5. **Mask credentials in debug output** — if `output.debug()` logs request bodies, redact the `payment.credential` field.
 6. **No credential persistence** — VIC credentials are collected fresh each time. They are not stored in CLI config files.
 
 ### 2.11 Open Questions (Visa CLI Beta)
@@ -584,9 +610,9 @@ New tests go in `test/unit/commands/domains/buy-visa.test.ts`. They follow the e
 
 **Key pattern for testing the Visa flow end-to-end:**
 
-1. Set `process.env.VERCEL_VISA_TOKEN` to a test value (avoids needing to mock the password prompt).
+1. Set `process.env.VERCEL_VISA_CREDENTIAL` to a test value (avoids needing to mock the password prompt).
 2. Mock all four API routes: price, availability, buy (POST), and orders (GET).
-3. Capture the POST body from the buy route to assert it contains `paymentMethod`.
+3. Capture the POST body from the buy route to assert it contains `payment`.
 4. Feed interactive input for the confirm/auto-renew/contact prompts via `client.stdin.write()`.
 5. Clean up the env var in `afterEach`.
 
@@ -611,13 +637,13 @@ describe('domains buy --visa', () => {
   });
 
   afterEach(() => {
-    delete process.env.VERCEL_VISA_TOKEN;
+    delete process.env.VERCEL_VISA_CREDENTIAL;
   });
 
-  it('should include paymentMethod in the purchase POST body', async () => {
+  it('should include payment in the purchase POST body', async () => {
     useUser();
 
-    process.env.VERCEL_VISA_TOKEN = 'test_vtok_abc123';
+    process.env.VERCEL_VISA_CREDENTIAL = 'test_vtok_abc123';
 
     let capturedBody: any;
 
@@ -702,10 +728,10 @@ describe('domains buy --visa', () => {
     const exitCode = await exitCodePromise;
     expect(exitCode).toBe(0);
 
-    // THE CRITICAL ASSERTION: paymentMethod was sent in the POST body
-    expect(capturedBody.paymentMethod).toEqual({
-      type: 'visa',
-      token: 'test_vtok_abc123',
+    // THE CRITICAL ASSERTION: payment was sent in the POST body
+    expect(capturedBody.payment).toEqual({
+      provider: 'visa',
+      credential: 'test_vtok_abc123',
     });
     expect(capturedBody.expectedPrice).toBe(100);
   });
@@ -714,8 +740,8 @@ describe('domains buy --visa', () => {
 
 **What this test validates:**
 - The `--visa` flag is parsed correctly.
-- `VERCEL_VISA_TOKEN` env var is read by `getVisaCredential()`.
-- The POST to `/v1/registrar/domains/{name}/buy` includes the `paymentMethod` field in the body alongside the existing fields (`expectedPrice`, `autoRenew`, `years`, `contactInformation`).
+- `VERCEL_VISA_CREDENTIAL` env var is read by `getVisaCredential()`.
+- The POST to `/v1/registrar/domains/{name}/buy` includes the `payment` field in the body alongside the existing fields (`expectedPrice`, `autoRenew`, `years`, `contactInformation`).
 - The rest of the purchase flow (polling, success output) works as before.
 
 ### 3.3 Running a Single Test
