@@ -1,10 +1,12 @@
 import path from 'path';
 import { execCli } from './helpers/exec';
-import nodeFetch from 'node-fetch';
+import nodeFetch from '../src/util/fetch';
 import { apiFetch } from './helpers/api-fetch';
 import fs from 'fs-extra';
 import sleep from '../src/util/sleep';
-import waitForPrompt from './helpers/wait-for-prompt';
+import waitForPrompt, {
+  answerTeamPromptThenWait,
+} from './helpers/wait-for-prompt';
 import { listTmpDirs } from './helpers/get-tmp-dir';
 import { teamPromise } from './helpers/get-account';
 import {
@@ -16,7 +18,7 @@ import type { CLIProcess } from './helpers/types';
 import { randomBytes } from 'crypto';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
-jest.setTimeout(TEST_TIMEOUT);
+vi.setConfig({ testTimeout: TEST_TIMEOUT, hookTimeout: TEST_TIMEOUT });
 
 const binaryPath = path.resolve(__dirname, '../scripts/start.js');
 
@@ -184,10 +186,11 @@ test('default command should work with --cwd option', async () => {
 
   const url = stdout;
 
-  const deploymentResult = await nodeFetch(`${url}/README.md`);
+  // Root README.md is intentionally excluded from zero-config static deployments.
+  const deploymentResult = await nodeFetch(`${url}/content.txt`);
   const body = await deploymentResult.text();
   expect(body).toEqual(
-    'readme contents for deploy-default-with-conflicting-sub-directory'
+    'root contents for deploy-default-with-conflicting-sub-directory'
   );
 });
 
@@ -291,7 +294,7 @@ test('[vc link] with vercel.json configuration overrides should create a valid d
   expect(json.buildCommand).toBe('mkdir public && echo "1" > public/index.txt');
 });
 
-test('deploy using only now.json with `redirects` defined', async () => {
+test('deploy using only vercel.json with `redirects` defined', async () => {
   const target = await setupE2EFixture('redirects-v2');
 
   const { exitCode, stdout, stderr } = await execCli(binaryPath, [
@@ -372,23 +375,19 @@ test('deploy from a nested directory', async () => {
     },
   });
 
-  await waitForPrompt(vc, /Set up and deploy[^?]+\?/);
-  vc.stdin?.write('yes\n');
-
-  await waitForPrompt(vc, 'Which scope should contain your project?');
+  await waitForPrompt(vc, 'Directory');
+  // Single-team accounts auto-select the team; answer the prompt only if shown.
+  await answerTeamPromptThenWait(vc, 'Project?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Link to existing project?');
-  vc.stdin?.write('no\n');
-
-  await waitForPrompt(vc, `What’s your project’s name? (${projectName})`);
+  await waitForPrompt(vc, `Name? (${projectName})`);
   vc.stdin?.write(`\n`);
 
-  await waitForPrompt(vc, 'In which directory is your code located?');
+  await waitForPrompt(vc, 'Code directory?');
   vc.stdin?.write('app\n');
 
   // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
+  await waitForPrompt(vc, 'Detected');
 
   vc.kill();
 });
@@ -410,23 +409,19 @@ test('deploy from a nested directory with `--archive=tgz` option', async () => {
     }
   );
 
-  await waitForPrompt(vc, /Set up and deploy[^?]+\?/);
-  vc.stdin?.write('yes\n');
-
-  await waitForPrompt(vc, 'Which scope should contain your project?');
+  await waitForPrompt(vc, 'Directory');
+  // Single-team accounts auto-select the team; answer the prompt only if shown.
+  await answerTeamPromptThenWait(vc, 'Project?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Link to existing project?');
-  vc.stdin?.write('no\n');
-
-  await waitForPrompt(vc, `What’s your project’s name? (${projectName})`);
+  await waitForPrompt(vc, `Name? (${projectName})`);
   vc.stdin?.write(`\n`);
 
-  await waitForPrompt(vc, 'In which directory is your code located?');
+  await waitForPrompt(vc, 'Code directory?');
   vc.stdin?.write('app\n');
 
   // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
+  await waitForPrompt(vc, 'Detected');
 
   vc.kill();
 });
@@ -498,22 +493,14 @@ test.skip('deploy `api-env` fixture and test `vercel env` command', async () => 
       cwd: target,
     });
 
-    await waitForPrompt(vc, "What's the name of the variable?");
+    await waitForPrompt(vc, 'Name?');
     vc.stdin?.write(`${promptEnvVar}\n`);
-    await waitForPrompt(vc, 'Mark as sensitive?');
+    await waitForPrompt(vc, 'Store as sensitive?');
     vc.stdin?.write('n\n');
-    await waitForPrompt(
-      vc,
-      chunk =>
-        chunk.includes("What's the value of") && chunk.includes(promptEnvVar)
-    );
+    await waitForPrompt(vc, 'Value?');
     vc.stdin?.write('my plaintext value\n');
 
-    await waitForPrompt(
-      vc,
-      chunk =>
-        chunk.includes('which Environments') && chunk.includes(promptEnvVar)
-    );
+    await waitForPrompt(vc, 'Environments?');
     vc.stdin?.write('a\n'); // select all
 
     const { exitCode, stdout, stderr } = await vc;

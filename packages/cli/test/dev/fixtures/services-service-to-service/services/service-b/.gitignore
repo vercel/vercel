@@ -1,0 +1,6 @@
+__pycache__/
+.venv/
+venv/
+.vercel/
+build/
+services_zc_service_to_service_services_b.egg-info/

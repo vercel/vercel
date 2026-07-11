@@ -9,17 +9,24 @@ import type {
   Config,
   BuilderFunctions,
   ExperimentalServices,
+  ExperimentalServicesV2,
+  Services,
   ProjectSettings,
   Service,
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
 import {
   isPythonEntrypoint,
+  isNodeEntrypoint,
   BACKEND_BUILDERS,
   UNIFIED_BACKEND_BUILDER,
   isExperimentalBackendsEnabled,
+  getMaxDurationLimit,
 } from '@vercel/build-utils';
-import { getServicesBuilders } from './services/get-services-builders';
+import {
+  getServicesBuilders,
+  warnIgnoredDirectories,
+} from './services/get-services-builders';
 
 /**
  * Pattern for finding all supported middleware files.
@@ -28,8 +35,21 @@ export const REGEX_MIDDLEWARE_FILES = 'middleware.[jt]s';
 
 /**
  * Pattern for files that the Vercel platform cares about separately from frameworks.
+ * These files are excluded from static file serving.
  */
-export const REGEX_VERCEL_PLATFORM_FILES = `api/**,package.json,${REGEX_MIDDLEWARE_FILES}`;
+export const REGEX_VERCEL_PLATFORM_FILES = [
+  'api/**',
+  'node_modules/**',
+  REGEX_MIDDLEWARE_FILES,
+  'package.json',
+  'package-lock.json',
+  'yarn.lock',
+  'pnpm-lock.yaml',
+  'bun.lock',
+  'bun.lockb',
+  '.gitignore',
+  'README.md',
+].join(',');
 
 /**
  * Pattern for non-Vercel platform files.
@@ -51,6 +71,8 @@ export interface Options {
   tag?: string;
   functions?: BuilderFunctions;
   experimentalServices?: ExperimentalServices;
+  services?: Services;
+  experimentalServicesV2?: ExperimentalServicesV2;
   ignoreBuildScript?: boolean;
   projectSettings?: ProjectSettings;
   cleanUrls?: boolean;
@@ -120,19 +142,63 @@ export async function detectBuilders(
   warnings: ErrorResponse[];
   hostRewriteRoutes?: Route[] | null;
   defaultRoutes: Route[] | null;
+  fallbackRoutes?: Route[] | null;
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
   services?: Service[];
+  experimentalServicesV2?: Services;
+  useImplicitEnvInjection?: boolean;
 }> {
-  const { experimentalServices: services, projectSettings = {} } = options;
+  const {
+    experimentalServices: experimentalServicesV1,
+    services,
+    experimentalServicesV2,
+    projectSettings = {},
+  } = options;
+  if (services != null && experimentalServicesV2 != null) {
+    return {
+      builders: null,
+      errors: [
+        {
+          code: 'SERVICES_AND_EXPERIMENTAL_SERVICES_V2',
+          message:
+            'The `services` option cannot be used in conjunction with its deprecated alias `experimentalServicesV2`. Please use only `services`.',
+        },
+      ],
+      warnings: [],
+      defaultRoutes: null,
+      redirectRoutes: null,
+      rewriteRoutes: null,
+      errorRoutes: null,
+    };
+  }
   const { framework } = projectSettings;
-  const hasServicesConfig = services != null && typeof services === 'object';
+  const servicesConfig = services ?? experimentalServicesV2;
+  const configuredServices = servicesConfig ?? experimentalServicesV1;
+  const configuredServicesType = servicesConfig
+    ? services
+      ? 'services'
+      : 'experimentalServicesV2'
+    : 'experimentalServices';
+  const hasServicesConfig =
+    configuredServices != null && typeof configuredServices === 'object';
 
   if (hasServicesConfig || framework === 'services') {
-    return getServicesBuilders({
+    const result = await getServicesBuilders({
       workPath: options.workPath,
+      configuredServices: configuredServices,
+      configuredServicesType,
+      projectFramework: framework,
     });
+
+    if (configuredServices != null) {
+      result.warnings.push(
+        ...warnIgnoredDirectories(files, configuredServices)
+      );
+    }
+
+    return result;
   }
 
   const errors: ErrorResponse[] = [];
@@ -263,7 +329,8 @@ export async function detectBuilders(
       buildCommand &&
       !fileName.includes('/') &&
       fileName !== 'now.json' &&
-      fileName !== 'vercel.json'
+      fileName !== 'vercel.json' &&
+      fileName !== 'vercel.toml'
     ) {
       fallbackEntrypoint = fileName;
     }
@@ -462,6 +529,24 @@ async function maybeGetApiBuilder(
   if (fileName.endsWith('.py') && options.workPath) {
     const fsPath = join(options.workPath, fileName);
     const isEntrypoint = await isPythonEntrypoint({ fsPath });
+    if (!isEntrypoint) {
+      return null;
+    }
+  }
+
+  // For Node.js files under api/, verify they are valid entrypoints before
+  // creating a builder. This only applies to api/ files — root-level platform
+  // files (middleware.js, proxy.js, etc.) use different export signatures and
+  // must not be filtered by API handler pattern detection.
+  const nodeExtensions = ['.js', '.mjs', '.ts', '.tsx'];
+  if (
+    fileName.startsWith('api/') &&
+    process.env.VERCEL_NODE_FILTER_ENTRYPOINTS === '1' &&
+    nodeExtensions.some(ext => fileName.endsWith(ext)) &&
+    options.workPath
+  ) {
+    const fsPath = join(options.workPath, fileName);
+    const isEntrypoint = await isNodeEntrypoint({ fsPath });
     if (!isEntrypoint) {
       return null;
     }
@@ -680,17 +765,25 @@ function validateFunctions({ functions = {} }: Options) {
       };
     }
 
+    // The upper bound is enforced by server-side validation; only apply a
+    // client-side maximum when it has not been skipped via
+    // `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT`. The lower bound and integer check
+    // are always enforced.
+    const maxDurationLimit = getMaxDurationLimit();
     if (
       func.maxDuration !== undefined &&
       func.maxDuration !== 'max' &&
       (func.maxDuration < 1 ||
-        func.maxDuration > 900 ||
+        (maxDurationLimit !== undefined &&
+          func.maxDuration > maxDurationLimit) ||
         !Number.isInteger(func.maxDuration))
     ) {
       return {
         code: 'invalid_function_duration',
         message:
-          'Functions must have a maxDuration between 1 and 900, or "max".',
+          maxDurationLimit !== undefined
+            ? `Functions must have a maxDuration between 1 and ${maxDurationLimit}, or "max".`
+            : 'Functions must have a positive integer maxDuration, or "max".',
       };
     }
 
@@ -784,9 +877,10 @@ function checkUnusedFunctions(
     frontendBuilder &&
     (isOfficialRuntime('express', frontendBuilder.use) ||
       isOfficialRuntime('hono', frontendBuilder.use) ||
+      isOfficialRuntime('python', frontendBuilder.use) ||
       isOfficialRuntime('backends', frontendBuilder.use))
   ) {
-    // Skip for backends because function names aren't statically defined
+    // Skip for runtimes that resolve function names inside the builder.
     return null;
   }
 

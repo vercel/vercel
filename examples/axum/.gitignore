@@ -1,2 +1,3 @@
 .vercel
 target
+.env*.local

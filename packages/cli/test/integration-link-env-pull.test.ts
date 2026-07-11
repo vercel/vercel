@@ -11,7 +11,7 @@ import {
 import formatOutput from './helpers/format-output';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
-jest.setTimeout(TEST_TIMEOUT);
+vi.setConfig({ testTimeout: TEST_TIMEOUT, hookTimeout: TEST_TIMEOUT });
 
 const binaryPath = path.resolve(__dirname, '../scripts/start.js');
 
@@ -35,7 +35,7 @@ afterAll(async () => {
   }
 });
 
-test('[vc link] should skip env pull prompt when creating new project', async () => {
+test('[vc link] should refresh OIDC when creating a new project', async () => {
   const dir = await setupE2EFixture('project-link-gitignore');
   const projectName = `link-env-pull-${Math.random().toString(36).split('.')[1]}`;
 
@@ -49,28 +49,22 @@ test('[vc link] should skip env pull prompt when creating new project', async ()
     },
   });
 
-  await waitForPrompt(vc, /Set up[^?]+\?/);
-  vc.stdin?.write('yes\n');
-
-  await waitForPrompt(vc, 'Which scope should contain your project?');
+  await waitForPrompt(vc, 'Project?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Link to existing project?');
+  await waitForPrompt(vc, `Name? (${projectName})`);
+  vc.stdin?.write('\n');
+
+  await waitForPrompt(vc, 'Code directory?');
+  vc.stdin?.write('\n');
+
+  await waitForPrompt(vc, 'Customize settings?');
   vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, `What’s your project’s name? (${projectName})`);
+  await waitForPrompt(vc, 'Customize advanced settings?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'In which directory is your code located?');
-  vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, 'Want to modify these settings?');
-  vc.stdin?.write('no\n');
-
-  await waitForPrompt(vc, 'Do you want to change additional project settings?');
-  vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, /Linked to/);
+  await waitForPrompt(vc, /Created\s+/);
 
   const { exitCode, stdout, stderr } = await vc;
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
@@ -78,14 +72,21 @@ test('[vc link] should skip env pull prompt when creating new project', async ()
   expect(await fs.pathExists(path.join(dir, '.vercel/project.json'))).toBe(
     true
   );
+  expect(await fs.readFile(path.join(dir, '.env.local'), 'utf8')).toMatch(
+    /^# Created by Vercel CLI\nVERCEL_OIDC_TOKEN="[^"\n]+"\n$/
+  );
 });
 
-test('[vc link] should not create .env.local when linking new project', async () => {
+test('[vc link] should preserve existing .env.local when refreshing OIDC', async () => {
   const dir = await setupE2EFixture('project-link-gitignore');
   const projectName = `link-env-decline-${Math.random().toString(36).split('.')[1]}`;
 
   await fs.remove(path.join(dir, '.vercel'));
-  await fs.remove(path.join(dir, '.env.local'));
+  await fs.writeFile(
+    path.join(dir, '.env.local'),
+    'LOCAL_ONLY=keep\nVERCEL_OIDC_TOKEN=stale-token\nTAIL=keep\n',
+    'utf8'
+  );
 
   const vc = execCli(binaryPath, ['link', `--project=${projectName}`], {
     cwd: dir,
@@ -94,28 +95,22 @@ test('[vc link] should not create .env.local when linking new project', async ()
     },
   });
 
-  await waitForPrompt(vc, /Set up[^?]+\?/);
-  vc.stdin?.write('yes\n');
-
-  await waitForPrompt(vc, 'Which scope should contain your project?');
+  await waitForPrompt(vc, 'Project?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Link to existing project?');
+  await waitForPrompt(vc, `Name? (${projectName})`);
+  vc.stdin?.write('\n');
+
+  await waitForPrompt(vc, 'Code directory?');
+  vc.stdin?.write('\n');
+
+  await waitForPrompt(vc, 'Customize settings?');
   vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, `What’s your project’s name? (${projectName})`);
+  await waitForPrompt(vc, 'Customize advanced settings?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'In which directory is your code located?');
-  vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, 'Want to modify these settings?');
-  vc.stdin?.write('no\n');
-
-  await waitForPrompt(vc, 'Do you want to change additional project settings?');
-  vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, /Linked to/);
+  await waitForPrompt(vc, /Created\s+/);
 
   const { exitCode, stdout, stderr } = await vc;
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
@@ -124,7 +119,11 @@ test('[vc link] should not create .env.local when linking new project', async ()
     true
   );
 
-  expect(await fs.pathExists(path.join(dir, '.env.local'))).toBe(false);
+  const envContents = await fs.readFile(path.join(dir, '.env.local'), 'utf8');
+  expect(envContents).toMatch(
+    /^LOCAL_ONLY=keep\nVERCEL_OIDC_TOKEN="[^"\n]+"\nTAIL=keep\n$/
+  );
+  expect(envContents).not.toContain('stale-token');
 });
 
 test('[vc link] should work with --yes flag and auto-confirm all prompts', async () => {
@@ -149,5 +148,8 @@ test('[vc link] should work with --yes flag and auto-confirm all prompts', async
 
   expect(await fs.pathExists(path.join(dir, '.vercel/project.json'))).toBe(
     true
+  );
+  expect(await fs.readFile(path.join(dir, '.env.local'), 'utf8')).toMatch(
+    /^# Created by Vercel CLI\nVERCEL_OIDC_TOKEN="[^"\n]+"\n$/
   );
 });

@@ -3,7 +3,7 @@ import type Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
-import { getLinkedProject } from '../../util/projects/link';
+import { getLinkedProjectOrFail } from '../../util/projects/get-linked-project-or-fail';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import { CronsLsTelemetryClient } from '../../util/telemetry/commands/crons/ls';
@@ -48,6 +48,8 @@ export default async function ls(client: Client, argv: string[]) {
   }
 
   telemetry.trackCliOptionFormat(opts['--format']);
+  const projectName = opts['--project'];
+  telemetry.trackCliOptionProject(projectName);
 
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
@@ -56,12 +58,12 @@ export default async function ls(client: Client, argv: string[]) {
   }
   const asJson = formatResult.jsonOutput;
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedProjectOrFail(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
-      `Your codebase isn't linked to a project on Vercel. ${client.nonInteractive ? `Run ${getCommandName('link --yes --team <team-id> --project <project-id>')} to link non-interactively.` : `Run ${getCommandName('link')} to begin.`}`
+      `Your codebase isn't linked to a project on Vercel. Pass --project <name>, or ${client.nonInteractive ? `run ${getCommandName('link --yes --team <team-id> --project <project-id>')} to link non-interactively.` : `run ${getCommandName('link')} to begin.`}`
     );
     return 1;
   }

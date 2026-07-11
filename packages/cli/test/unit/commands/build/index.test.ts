@@ -1,7 +1,10 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import fs from 'fs-extra';
-import { join } from 'path';
-import { getWriteableDirectory } from '@vercel/build-utils';
+import { basename, join } from 'path';
+import {
+  getWriteableDirectory,
+  sanitizeConsumerName,
+} from '@vercel/build-utils';
 import build from '../../../../src/commands/build';
 import cliPkg from '../../../../src/util/pkg';
 import { client } from '../../../mocks/client';
@@ -9,6 +12,7 @@ import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { execSync } from 'child_process';
+import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { vi } from 'vitest';
 import {
   detectBuilders,
@@ -22,6 +26,31 @@ const fixture = (name: string) =>
 
 const flakey =
   process.platform === 'win32' && process.version.startsWith('v22');
+
+async function createTempServicesProject(params: {
+  experimentalServices: Record<string, unknown>;
+  files: Record<string, string>;
+}) {
+  const cwd = await getWriteableDirectory();
+  await fs.ensureDir(join(cwd, '.vercel'));
+  await fs.writeJSON(join(cwd, '.vercel', 'project.json'), {
+    orgId: '.',
+    projectId: '.',
+    settings: {
+      framework: null,
+      installCommand: '',
+    },
+  });
+  await fs.writeJSON(join(cwd, 'vercel.json'), {
+    experimentalServices: params.experimentalServices,
+  });
+  await Promise.all(
+    Object.entries(params.files).map(([name, contents]) =>
+      fs.writeFile(join(cwd, name), contents)
+    )
+  );
+  return cwd;
+}
 
 describe.skipIf(flakey)('build', () => {
   beforeEach(() => {
@@ -482,6 +511,44 @@ describe.skipIf(flakey)('build', () => {
     ]);
   });
 
+  it('links before asking to pull settings in an unlinked directory', async () => {
+    const cwd = setupUnitFixture('commands/build/static-pull');
+    await fs.remove(join(cwd, '.vercel'));
+
+    useUser({ version: 'northstar' });
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: basename(cwd),
+      name: basename(cwd),
+    });
+
+    const originalIsTTY = process.stdin.isTTY;
+    process.stdin.isTTY = true;
+    try {
+      client.cwd = cwd;
+      client.setArgv('build');
+      const exitCodePromise = build(client);
+
+      // The link flow runs before the pull question. The single team
+      // auto-selects; pick the detected folder-name match in the picker.
+      await expect(client.stderr).toOutput('Which project?');
+      client.events.keypress('enter');
+      await expect(client.stderr).toOutput('Linked');
+
+      await expect(client.stderr).toOutput('No Project Settings found locally');
+      client.stdin.write('y\n');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      const projectJson = await fs.readJSON(join(cwd, '.vercel/project.json'));
+      expect(projectJson.projectId).toEqual(basename(cwd));
+    } finally {
+      process.stdin.isTTY = originalIsTTY;
+    }
+  });
+
   it('should build root-level `middleware.js` and exclude from static files', async () => {
     const cwd = fixture('middleware');
     const output = join(cwd, '.vercel/output');
@@ -860,7 +927,7 @@ describe.skipIf(flakey)('build', () => {
 
     // "static" directory contains static files
     const files = await fs.readdir(join(output, 'static'));
-    expect(files.sort()).toEqual(['index.html', 'package.json']);
+    expect(files.sort()).toEqual(['index.html']);
   });
 
   it('should set `VERCEL_ANALYTICS_ID` environment variable if Vercel Speed Insights is enabled', async () => {
@@ -1110,7 +1177,7 @@ describe.skipIf(flakey)('build', () => {
     ]);
   });
 
-  it('should include cron services in build output crons without the services framework setting', async () => {
+  it('should include legacy cron service type in build output crons', async () => {
     const cwd = fixture('with-services-cron');
     const output = join(cwd, '.vercel', 'output');
     client.cwd = cwd;
@@ -1118,17 +1185,248 @@ describe.skipIf(flakey)('build', () => {
     expect(exitCode).toBe(0);
 
     const config = await fs.readJSON(join(output, 'config.json'));
-    expect(config).toHaveProperty('crons', [
+    expect(config.crons).toEqual([
       {
         path: '/_svc/cleanup/crons/index/cron',
         schedule: '0 0 * * *',
       },
     ]);
     expect(config.routes).toContainEqual({
-      src: '^/_svc/cleanup/crons/index/cron$',
+      src: '^/_svc/cleanup/crons/.*$',
       dest: '/_svc/cleanup/index',
       check: true,
     });
+  });
+
+  it('should build multiple JS cron services from nested entrypoints', async () => {
+    // Two cron services in one fixture, each with its own nested
+    // entrypoint under `jobs/`. Verifies the cron URL path includes
+    // the nested directories, that each service builds its own lambda
+    // mounted at `_svc/{name}/index`, and that each lambda's
+    // dispatcher shim ends up alongside the bundled handler.
+    const cwd = fixture('with-services-cron-nested');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.crons).toEqual(
+      expect.arrayContaining([
+        {
+          path: '/_svc/cleanup/crons/jobs/cleanup/cron',
+          schedule: '0 0 * * *',
+        },
+        {
+          path: '/_svc/report/crons/jobs/report/cron',
+          schedule: '0 6 * * *',
+        },
+      ])
+    );
+
+    const cleanupConfig = await fs.readJSON(
+      join(output, 'functions/_svc/cleanup/index.func/.vc-config.json')
+    );
+    expect(cleanupConfig.handler).toContain('__vc_cron_dispatch');
+
+    const reportConfig = await fs.readJSON(
+      join(output, 'functions/_svc/report/index.func/.vc-config.json')
+    );
+    expect(reportConfig.handler).toContain('__vc_cron_dispatch');
+  });
+
+  it('should build a JS cron service through the cron dispatcher', async () => {
+    const cwd = fixture('with-services-cron-handler');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    // Same build-output as the legacy fixture
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.crons).toEqual([
+      {
+        path: '/_svc/cleanup/crons/index/cron',
+        schedule: '0 0 * * *',
+      },
+    ]);
+    expect(config.routes).toContainEqual({
+      src: '^/_svc/cleanup/crons/.*$',
+      dest: '/_svc/cleanup/index',
+      check: true,
+    });
+
+    // The lambda's handler points at the cron dispatcher shim, not the
+    // user file directly.
+    const funcDir = join(output, 'functions/_svc/cleanup/index.func');
+    const vcConfig = await fs.readJSON(join(funcDir, '.vc-config.json'));
+    expect(vcConfig.handler).toContain('__vc_cron_dispatch');
+
+    // The dispatcher shim file lives in the bundle and embeds the
+    // route table inline.
+    const shimFiles = (await fs.readdir(funcDir)).filter(name =>
+      name.includes('__vc_cron_dispatch')
+    );
+    expect(shimFiles).toHaveLength(1);
+    const shimSource = await fs.readFile(join(funcDir, shimFiles[0]), 'utf-8');
+    expect(shimSource).toContain(
+      `JSON.parse('{"/_svc/cleanup/crons/index/cron":"default"}')`
+    );
+  });
+
+  it('should include job service schedules and queue triggers in build output', async () => {
+    const cwd = fixture('with-services-job');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.crons).toEqual([
+      {
+        path: '/_svc/cleanup/crons/index/cron',
+        schedule: '0 0 * * *',
+      },
+    ]);
+
+    const vcConfig = await fs.readJSON(
+      join(output, 'functions/_svc/processor/index.func/.vc-config.json')
+    );
+    expect(vcConfig.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: 'orders',
+        consumer: '_S__svc_Sprocessor_Sindex',
+        retryAfterSeconds: 10,
+        initialDelaySeconds: 5,
+      },
+    ]);
+  });
+
+  it('should append services SPA fallback after builder output routes', async () => {
+    const cwd = await createTempServicesProject({
+      experimentalServices: {
+        api: {
+          framework: 'nitro',
+          entrypoint: '.',
+          routePrefix: '/',
+        },
+      },
+      files: {
+        'package.json': JSON.stringify({
+          scripts: {
+            build: 'node build.mjs',
+          },
+        }),
+        'build.mjs': `
+          import { mkdirSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+
+          const outputDir = join(process.cwd(), '.vercel', 'output');
+          mkdirSync(outputDir, { recursive: true });
+          writeFileSync(
+            join(outputDir, 'config.json'),
+            JSON.stringify({
+              version: 3,
+              routes: [
+                { handle: 'filesystem' },
+                { src: '/(.*)', dest: '/__server' },
+              ],
+            })
+          );
+        `,
+      },
+    });
+    const output = join(cwd, '.vercel/output');
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    const serverRouteIndex = config.routes.findIndex(
+      (route: { dest?: string }) => route.dest === '/__server'
+    );
+    const fallbackRouteIndex = config.routes.findIndex(
+      (route: { dest?: string }) => route.dest === '/index.html'
+    );
+
+    expect(serverRouteIndex).toBeGreaterThan(-1);
+    expect(fallbackRouteIndex).toBeGreaterThan(-1);
+    expect(serverRouteIndex).toBeLessThan(fallbackRouteIndex);
+  });
+
+  it('should fail build when schedule-triggered job uses a dynamic schedule without builder crons', async () => {
+    const cwd = await createTempServicesProject({
+      experimentalServices: {
+        cleanup: {
+          type: 'job',
+          trigger: 'schedule',
+          entrypoint: 'index.js',
+          schedule: '<dynamic>',
+        },
+      },
+      files: {
+        'index.js': `const { createServer } = require('node:http');
+
+createServer((_req, res) => {
+  res.statusCode = 200;
+  res.end('ok');
+}).listen(3000);
+`,
+      },
+    });
+    const output = join(cwd, '.vercel', 'output');
+
+    try {
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toBe(1);
+
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds.error.message).toContain(
+        'Dynamic cron schedules ("<dynamic>") are not yet supported for JavaScript/TypeScript services'
+      );
+    } finally {
+      // Tolerate EBUSY on Windows when the builder still holds file handles.
+      await fs.remove(cwd).catch(() => {});
+    }
+  });
+
+  it('should fail build when schedule-triggered job is not runtime-backed', async () => {
+    const cwd = await createTempServicesProject({
+      experimentalServices: {
+        cleanup: {
+          type: 'job',
+          trigger: 'schedule',
+          builder: '@vercel/static',
+          entrypoint: 'main.html',
+          schedule: '0 0 * * *',
+        },
+      },
+      files: {
+        'main.html':
+          '<!doctype html><html><body>scheduled static job</body></html>',
+      },
+    });
+    const output = join(cwd, '.vercel', 'output');
+
+    try {
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toBe(1);
+
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds.error).toMatchObject({
+        code: 'CRON_SERVICE_NO_CRONS',
+      });
+      expect(builds.error.message).toContain(
+        'The builder "@vercel/static" may not support scheduled services.'
+      );
+    } finally {
+      // Tolerate EBUSY on Windows when the builder still holds file handles.
+      await fs.remove(cwd).catch(() => {});
+    }
   });
 
   it('should fail build when CRON_SECRET contains invalid HTTP header characters', async () => {
@@ -1407,7 +1705,12 @@ describe.skipIf(flakey)('build', () => {
 
       const files = await fs.readdir(output);
       // we should NOT see `functions` because that means `middleware.ts` was processed
-      expect(files.sort()).toEqual(['builds.json', 'config.json', 'static']);
+      expect(files.sort()).toEqual([
+        'builds.json',
+        'config.json',
+        'diagnostics',
+        'static',
+      ]);
     } finally {
       delete process.env.STORYBOOK_DISABLE_TELEMETRY;
     }
@@ -1607,19 +1910,36 @@ describe.skipIf(flakey)('build', () => {
   });
 
   describe('flags-definitions', () => {
-    const definitionsDir = join(
-      fixture('static'),
-      'node_modules',
-      '@vercel',
-      'flags-definitions'
+    const FLAGS_DATAFILE_URL = 'https://flags.vercel.com/v1/datafile';
+    const spyOnFetch = () => vi.spyOn(globalThis, 'fetch');
+    let fetchSpy: ReturnType<typeof spyOnFetch>;
+
+    const findDefinitionsDir = (dir: string) =>
+      join(dir, 'node_modules', '@vercel', 'flags-definitions');
+
+    const definitionsDirs = ['static', 'with-vercel-flags'].map(name =>
+      findDefinitionsDir(fixture(name))
     );
 
-    beforeEach(() => {
-      vi.stubEnv('FLAGS', 'vf_server_test_fake_sdk_key_for_testing');
+    const getFetchUrl = (
+      input: Parameters<typeof globalThis.fetch>[0]
+    ): string => {
+      if (typeof input === 'string') {
+        return input;
+      }
+      return input instanceof URL ? input.href : input.url;
+    };
 
-      vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
-        const url = typeof input === 'string' ? input : input.toString();
-        if (url === 'https://flags.vercel.com/v1/datafile') {
+    const flagsFetchCalls = () =>
+      fetchSpy.mock.calls.filter(
+        ([input]) => getFetchUrl(input) === FLAGS_DATAFILE_URL
+      );
+
+    beforeEach(() => {
+      fetchSpy = spyOnFetch();
+      fetchSpy.mockImplementation(async input => {
+        const url = getFetchUrl(input);
+        if (url === FLAGS_DATAFILE_URL) {
           return new Response(JSON.stringify({ flags: [] }), {
             status: 200,
             headers: { 'content-type': 'application/json' },
@@ -1627,23 +1947,28 @@ describe.skipIf(flakey)('build', () => {
         }
         throw new Error(`Unexpected fetch call: ${url}`);
       });
-
-      fs.removeSync(definitionsDir);
     });
 
     afterEach(() => {
-      fs.removeSync(definitionsDir);
-      vi.restoreAllMocks();
+      for (const definitionsDir of definitionsDirs) {
+        fs.removeSync(definitionsDir);
+      }
+      fetchSpy.mockRestore();
+      vi.resetAllMocks();
       vi.unstubAllEnvs();
     });
 
-    it('should emit flags-definitions module by default', async () => {
+    it('should emit flags-definitions module with SDK key', async () => {
+      vi.stubEnv('FLAGS', 'vf_server_test_fake_sdk_key_for_testing');
+
       client.cwd = fixture('static');
+      const definitionsDir = findDefinitionsDir(client.cwd);
       client.setArgv('build', '--yes');
 
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
+      expect(flagsFetchCalls()).toHaveLength(1);
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
       expect(fs.existsSync(join(definitionsDir, 'index.d.ts'))).toBe(true);
       expect(fs.existsSync(join(definitionsDir, 'package.json'))).toBe(true);
@@ -1653,19 +1978,118 @@ describe.skipIf(flakey)('build', () => {
         join(definitionsDir, 'index.js'),
         'utf8'
       );
-      expect(indexJs).toContain('export function get(hashedSdkKey)');
+      expect(indexJs).toContain('export function get(key)');
     });
 
-    it('should not emit flags-definitions module when VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING=1', async () => {
-      vi.stubEnv('VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING', '1');
-
+    it('should not emit flags-definitions module without SDK key and flags dependencies', async () => {
       client.cwd = fixture('static');
+      const definitionsDir = findDefinitionsDir(client.cwd);
       client.setArgv('build', '--yes');
 
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
+      expect(flagsFetchCalls()).toHaveLength(0);
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
+    });
+
+    it('should not emit flags-definitions module with SDK key when VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING=1', async () => {
+      vi.stubEnv('FLAGS', 'vf_server_test_fake_sdk_key_for_testing');
+      vi.stubEnv('VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING', '1');
+
+      client.cwd = fixture('with-vercel-flags');
+      const definitionsDir = findDefinitionsDir(client.cwd);
+      client.setArgv('build', '--yes');
+
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      expect(flagsFetchCalls()).toHaveLength(0);
+      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
+    });
+
+    it('should emit flags-definitions module with SDK key when VERCEL_FLAGS_EMBED_DEFINITIONS=force-on', async () => {
+      vi.stubEnv('FLAGS', 'vf_server_test_fake_sdk_key_for_testing');
+      vi.stubEnv('VERCEL_FLAGS_EMBED_DEFINITIONS', 'force-on');
+
+      client.cwd = fixture('static');
+      const definitionsDir = findDefinitionsDir(client.cwd);
+      client.setArgv('build', '--yes');
+
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      expect(flagsFetchCalls()).toHaveLength(1);
+      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
+    });
+
+    it('should not emit flags-definitions module with SDK key when VERCEL_FLAGS_EMBED_DEFINITIONS=force-off', async () => {
+      vi.stubEnv('FLAGS', 'vf_server_test_fake_sdk_key_for_testing');
+      vi.stubEnv('VERCEL_FLAGS_EMBED_DEFINITIONS', 'force-off');
+
+      client.cwd = fixture('static');
+      const definitionsDir = findDefinitionsDir(client.cwd);
+      client.setArgv('build', '--yes');
+
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      expect(flagsFetchCalls()).toHaveLength(0);
+      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
+    });
+
+    it('should emit flags-definitions module with OIDC when VERCEL_FLAGS_EMBED_DEFINITIONS=force-on', async () => {
+      vi.stubEnv(
+        'VERCEL_OIDC_TOKEN',
+        'faketoken.eyJzdWIiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNTE2MjM5MDIyLCJwcm9qZWN0X2lkIjoicHJvamVjdF9pZCJ9.signature'
+      );
+      vi.stubEnv('VERCEL_FLAGS_EMBED_DEFINITIONS', 'force-on');
+
+      client.cwd = fixture('with-vercel-flags');
+      const definitionsDir = findDefinitionsDir(client.cwd);
+      client.setArgv('build', '--yes');
+
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      expect(flagsFetchCalls()).toHaveLength(1);
+      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
+    });
+
+    it('should not emit flags-definitions module with OIDC when VERCEL_FLAGS_EMBED_DEFINITIONS=force-off', async () => {
+      vi.stubEnv(
+        'VERCEL_OIDC_TOKEN',
+        'faketoken.eyJzdWIiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNTE2MjM5MDIyLCJwcm9qZWN0X2lkIjoicHJvamVjdF9pZCJ9.signature'
+      );
+      vi.stubEnv('VERCEL_FLAGS_EMBED_DEFINITIONS', 'force-off');
+
+      client.cwd = fixture('with-vercel-flags');
+      const definitionsDir = findDefinitionsDir(client.cwd);
+      client.setArgv('build', '--yes');
+
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      expect(flagsFetchCalls()).toHaveLength(0);
+      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
+    });
+
+    it('should emit flags-definitions module with OIDC and flags dependencies', async () => {
+      vi.stubEnv('FLAGS', undefined);
+      vi.stubEnv(
+        'VERCEL_OIDC_TOKEN',
+        'faketoken.eyJzdWIiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNTE2MjM5MDIyLCJwcm9qZWN0X2lkIjoicHJvamVjdF9pZCJ9.signature'
+      );
+
+      client.cwd = fixture('with-vercel-flags');
+      const definitionsDir = findDefinitionsDir(client.cwd);
+      client.setArgv('build', '--yes');
+
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      expect(flagsFetchCalls()).toHaveLength(1);
+      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
     });
   });
 
@@ -2257,6 +2681,790 @@ fs.writeFileSync(
     ]);
   });
 
+  it('should normalize vercel.json services to the V2 build output wire format', async () => {
+    const cwd = await getWriteableDirectory();
+    const output = join(cwd, '.vercel', 'output');
+    await fs.ensureDir(join(cwd, '.vercel'));
+    await fs.writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: '.',
+      projectId: '.',
+      settings: {
+        framework: null,
+        installCommand: '',
+      },
+    });
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      private: true,
+    });
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      services: {
+        ui: {
+          root: '.',
+          entrypoint: 'ui.js',
+          runtime: 'node',
+          rewrites: [{ source: '/(.*)', destination: '/$1' }],
+        },
+        backend: {
+          root: '.',
+          entrypoint: 'backend.js',
+          runtime: 'node',
+          rewrites: [{ source: '/backend/(.*)', destination: '/$1' }],
+        },
+      },
+    });
+    const server = `
+const { createServer } = require('node:http');
+
+createServer((_req, res) => {
+  res.statusCode = 200;
+  res.end('ok');
+}).listen(3000);
+`;
+    await fs.outputFile(join(cwd, 'ui.js'), server);
+    await fs.outputFile(join(cwd, 'backend.js'), server);
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    // `experimentalServicesV2` services are recorded in the `services` array,
+    // each tagged with its `schema` discriminant so consumers can tell V1 from
+    // V2 records.
+    expect(config.services).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          schema: 'experimentalServicesV2',
+          name: 'ui',
+          runtime: 'node',
+        }),
+        expect.objectContaining({
+          schema: 'experimentalServicesV2',
+          name: 'backend',
+          runtime: 'node',
+        }),
+      ])
+    );
+    expect(config.experimentalServicesV2).toEqual({
+      backend: expect.objectContaining({
+        root: '.',
+        runtime: 'node',
+        rewrites: [{ source: '/backend/(.*)', destination: '/$1' }],
+      }),
+      ui: expect.objectContaining({
+        root: '.',
+        runtime: 'node',
+        rewrites: [{ source: '/(.*)', destination: '/$1' }],
+      }),
+    });
+    expect(config.routes).toBeUndefined();
+    expect(
+      await fs.pathExists(
+        join(output, 'services/ui/functions/index.func/.vc-config.json')
+      )
+    ).toBe(true);
+    expect(
+      await fs.pathExists(
+        join(output, 'services/backend/functions/index.func/.vc-config.json')
+      )
+    ).toBe(true);
+    const uiConfig = await fs.readJSON(join(output, 'services/ui/config.json'));
+    expect(uiConfig.routes).toEqual(
+      expect.arrayContaining([
+        { handle: 'filesystem' },
+        expect.objectContaining({ dest: '/$1', check: true }),
+        expect.objectContaining({ dest: '/index' }),
+      ])
+    );
+    const backendConfig = await fs.readJSON(
+      join(output, 'services/backend/config.json')
+    );
+    expect(backendConfig.routes).toEqual(
+      expect.arrayContaining([
+        { handle: 'filesystem' },
+        expect.objectContaining({ dest: '/$1', check: true }),
+        expect.objectContaining({ dest: '/index' }),
+      ])
+    );
+    expect(await fs.pathExists(join(output, 'functions'))).toBe(false);
+  });
+
+  it('should apply per-service `functions` config to the service lambda', async () => {
+    const cwd = await getWriteableDirectory();
+    const output = join(cwd, '.vercel', 'output');
+    await fs.ensureDir(join(cwd, '.vercel'));
+    await fs.writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: '.',
+      projectId: '.',
+      settings: {
+        framework: null,
+        installCommand: '',
+      },
+    });
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      private: true,
+    });
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      services: {
+        worker: {
+          root: '.',
+          entrypoint: 'index.js',
+          runtime: 'node',
+          functions: {
+            'index.js': {
+              maxDuration: 30,
+              experimentalTriggers: [{ type: 'queue/v2beta', topic: 'orders' }],
+            },
+          },
+        },
+      },
+    });
+    await fs.outputFile(
+      join(cwd, 'index.js'),
+      `
+const { createServer } = require('node:http');
+
+createServer((_req, res) => {
+  res.statusCode = 200;
+  res.end('ok');
+}).listen(3000);
+`
+    );
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const vcConfig = await fs.readJSON(
+      join(output, 'services/worker/functions/index.func/.vc-config.json')
+    );
+    expect(vcConfig.maxDuration).toBe(30);
+    // Consumer is scoped by service name so it stays unique across services.
+    expect(vcConfig.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: 'orders',
+        consumer: sanitizeConsumerName('worker~index.js'),
+      },
+    ]);
+  });
+
+  it('should build experimentalServices discovered from generated Build Output config', async () => {
+    const cwd = await getWriteableDirectory();
+    const output = join(cwd, '.vercel', 'output');
+    await fs.ensureDir(join(cwd, '.vercel'));
+    await fs.writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: '.',
+      projectId: '.',
+      settings: {
+        framework: null,
+        installCommand: '',
+      },
+    });
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+    await fs.outputFile(
+      join(cwd, 'build.mjs'),
+      `
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const countPath = join(process.cwd(), 'build-count.txt');
+const count = existsSync(countPath) ? Number(readFileSync(countPath, 'utf8')) : 0;
+writeFileSync(countPath, String(count + 1));
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+mkdirSync(join(outputDir, 'static'), { recursive: true });
+writeFileSync(join(outputDir, 'static', 'index.html'), 'ok');
+writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    routes: [{ handle: 'filesystem' }],
+    experimentalServices: {
+      web: {
+        type: 'web',
+        root: '.',
+        framework: 'vite',
+        entrypoint: 'package.json',
+        mount: '/'
+      },
+      processor: {
+        type: 'job',
+        trigger: 'queue',
+        root: '.',
+        entrypoint: 'worker.js',
+        runtime: 'node',
+        topics: ['jobs']
+      }
+    }
+  }, null, 2)
+);
+`
+    );
+    await fs.outputFile(
+      join(cwd, 'worker.js'),
+      `
+const { createServer } = require('node:http');
+
+createServer((_req, res) => {
+  res.statusCode = 200;
+  res.end('ok');
+}).listen(3000);
+`
+    );
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.experimentalServices).toEqual({
+      processor: expect.objectContaining({
+        type: 'job',
+        trigger: 'queue',
+        entrypoint: 'worker.js',
+      }),
+      web: expect.objectContaining({
+        type: 'web',
+        framework: 'vite',
+        mount: '/',
+      }),
+    });
+    expect(config.services).toBeUndefined();
+    expect(await fs.readFile(join(cwd, 'build-count.txt'), 'utf8')).toBe('1');
+    expect(
+      await fs.pathExists(
+        join(output, 'functions/_svc/processor/index.func/.vc-config.json')
+      )
+    ).toBe(true);
+  });
+
+  it('should keep already-built generated experimentalServicesV2 output at root and nest new services', async () => {
+    const cwd = await getWriteableDirectory();
+    const output = join(cwd, '.vercel', 'output');
+    await fs.ensureDir(join(cwd, '.vercel'));
+    await fs.writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: '.',
+      projectId: '.',
+      settings: {
+        framework: null,
+        installCommand: '',
+      },
+    });
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      private: true,
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      rewrites: [{ source: '/docs/(.*)', destination: '/$1' }],
+    });
+    await fs.outputFile(
+      join(cwd, 'build.mjs'),
+      `
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const countPath = join(process.cwd(), 'build-count.txt');
+const count = existsSync(countPath) ? Number(readFileSync(countPath, 'utf8')) : 0;
+writeFileSync(countPath, String(count + 1));
+
+const immutableEnvVars = [
+  'VERCEL_IMMUTABLE_STATIC_FILES_ENABLED'
+];
+writeFileSync(
+  join(process.cwd(), 'root-immutable-env.json'),
+  JSON.stringify(
+    Object.fromEntries(
+      immutableEnvVars.map(name => [name, process.env[name] ?? null])
+    ),
+    null,
+    2
+  )
+);
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+mkdirSync(outputDir, { recursive: true });
+const staticDir = join(outputDir, 'static');
+mkdirSync(staticDir, { recursive: true });
+writeFileSync(join(staticDir, 'index.html'), 'root output');
+writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    routes: [
+      { src: '/generated/(.*)', dest: '/generated-output/$1' },
+      { src: '/backend/(.*)', service: 'backend' },
+      { src: '/ui/(.*)', service: 'ui' }
+    ],
+    experimentalServicesV2: {
+      ui: {
+        root: '.',
+        entrypoint: 'package.json',
+        framework: 'vite',
+        rewrites: [{ source: '/(.*)', destination: '/$1' }]
+      },
+      backend: {
+        root: 'backend',
+        entrypoint: 'package.json',
+        framework: 'vite',
+        rewrites: [{ source: '/backend/(.*)', destination: '/$1' }]
+      }
+    }
+  }, null, 2)
+);
+`
+    );
+    await fs.outputJSON(join(cwd, 'backend', 'package.json'), {
+      private: true,
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+    await fs.outputFile(
+      join(cwd, 'backend', 'build.mjs'),
+      `
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const immutableEnvVars = [
+  'VERCEL_IMMUTABLE_STATIC_FILES_ENABLED'
+];
+const immutableEnvValues = Object.fromEntries(
+  immutableEnvVars.map(name => [name, process.env[name] ?? null])
+);
+writeFileSync(
+  join(process.cwd(), 'service-immutable-env.json'),
+  JSON.stringify(immutableEnvValues, null, 2)
+);
+const leakedImmutableEnvVars = Object.entries(immutableEnvValues)
+  .filter(([, value]) => value !== null)
+  .map(([name]) => name);
+if (leakedImmutableEnvVars.length > 0) {
+  throw new Error(
+    'Immutable env leaked into service build: ' + leakedImmutableEnvVars.join(', ')
+  );
+}
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+const staticDir = join(outputDir, 'static');
+mkdirSync(staticDir, { recursive: true });
+writeFileSync(join(staticDir, 'backend.html'), 'backend output');
+writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, null, 2));
+`
+    );
+
+    const immutableEnvVars = ['VERCEL_IMMUTABLE_STATIC_FILES_ENABLED'];
+    const originalImmutableEnv = new Map(
+      immutableEnvVars.map(name => [name, process.env[name]])
+    );
+
+    try {
+      for (const name of immutableEnvVars) {
+        process.env[name] = '1';
+      }
+
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toBe(0);
+      await expect(client.stderr).toOutput(
+        'Detected already-built service "ui" from lazily generated `.vercel/output/config.json` (framework: vite, entrypoint: package.json). It will not be treated as a service because its build output already exists at the top level. Configure it in `vercel.json` as a `services` entry to remove this warning.'
+      );
+
+      const config = await fs.readJSON(join(output, 'config.json'));
+      // Only services actually treated as services are recorded in the
+      // `services` array. `ui` was already built at the root and skipped (see
+      // the warning asserted above), so it must NOT appear here; only the newly
+      // nested `backend` service is recorded, tagged with its `schema`.
+      expect(config.services).toEqual([
+        expect.objectContaining({
+          schema: 'experimentalServicesV2',
+          name: 'backend',
+        }),
+      ]);
+      expect(config.services).not.toContainEqual(
+        expect.objectContaining({ name: 'ui' })
+      );
+      expect(config.experimentalServices).toBeUndefined();
+      expect(config.experimentalServicesV2).toEqual({
+        backend: expect.objectContaining({
+          root: 'backend',
+          framework: 'vite',
+          rewrites: [{ source: '/backend/(.*)', destination: '/$1' }],
+        }),
+        ui: expect.objectContaining({
+          root: '.',
+          framework: 'vite',
+          rewrites: [{ source: '/(.*)', destination: '/$1' }],
+        }),
+      });
+      expect(config.routes).toEqual(
+        expect.arrayContaining([
+          { handle: 'filesystem' },
+          { src: '/generated/(.*)', dest: '/generated-output/$1' },
+          { src: '/backend/(.*)', service: 'backend' },
+          { src: '/ui/(.*)', service: 'ui' },
+          expect.objectContaining({ dest: '/$1', check: true }),
+        ])
+      );
+      expect(
+        config.routes.filter(
+          (route: { handle?: string }) => route.handle === 'filesystem'
+        )
+      ).toHaveLength(1);
+      expect(await fs.readFile(join(cwd, 'build-count.txt'), 'utf8')).toBe('1');
+      expect(await fs.readJSON(join(cwd, 'root-immutable-env.json'))).toEqual(
+        Object.fromEntries(immutableEnvVars.map(name => [name, '1']))
+      );
+      expect(
+        await fs.readJSON(join(cwd, 'backend', 'service-immutable-env.json'))
+      ).toEqual(Object.fromEntries(immutableEnvVars.map(name => [name, null])));
+      expect(await fs.readFile(join(output, 'static/index.html'), 'utf8')).toBe(
+        'root output'
+      );
+      expect(await fs.pathExists(join(output, 'services/ui'))).toBe(false);
+
+      const backendConfig = await fs.readJSON(
+        join(output, 'services/backend/config.json')
+      );
+      expect(backendConfig.routes).toEqual(
+        expect.arrayContaining([
+          { handle: 'filesystem' },
+          expect.objectContaining({ dest: '/$1', check: true }),
+        ])
+      );
+      expect(
+        backendConfig.routes.filter(
+          (route: { handle?: string }) => route.handle === 'filesystem'
+        )
+      ).toHaveLength(1);
+      expect(
+        await fs.readFile(
+          join(output, 'services/backend/static/backend.html'),
+          'utf8'
+        )
+      ).toBe('backend output');
+      expect(await fs.pathExists(join(output, 'functions'))).toBe(false);
+    } finally {
+      for (const [name, value] of originalImmutableEnv) {
+        if (value === undefined) {
+          delete process.env[name];
+        } else {
+          process.env[name] = value;
+        }
+      }
+    }
+  });
+
+  it('should detect generated services from build output config', async () => {
+    const cwd = await getWriteableDirectory();
+    const output = join(cwd, '.vercel', 'output');
+    await fs.ensureDir(join(cwd, '.vercel'));
+    await fs.writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: '.',
+      projectId: '.',
+      settings: {
+        framework: null,
+        installCommand: '',
+      },
+    });
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      private: true,
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+    await fs.outputFile(
+      join(cwd, 'build.mjs'),
+      `
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+mkdirSync(join(outputDir, 'static'), { recursive: true });
+writeFileSync(join(outputDir, 'static', 'index.html'), 'root output');
+writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    routes: [{ src: '^/api/(.*)$', service: 'backend' }],
+    services: {
+      backend: {
+        root: 'backend',
+        entrypoint: 'package.json',
+        framework: 'vite'
+      }
+    }
+  }, null, 2)
+);
+`
+    );
+    await fs.outputJSON(join(cwd, 'backend', 'package.json'), {
+      private: true,
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+    await fs.outputFile(
+      join(cwd, 'backend', 'build.mjs'),
+      `
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+mkdirSync(join(outputDir, 'static'), { recursive: true });
+writeFileSync(join(outputDir, 'static', 'backend.html'), 'backend output');
+writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, null, 2));
+`
+    );
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.experimentalServicesV2).toEqual({
+      backend: expect.objectContaining({
+        root: 'backend',
+        framework: 'vite',
+      }),
+    });
+    expect(config.services).toEqual([
+      expect.objectContaining({
+        schema: 'experimentalServicesV2',
+        name: 'backend',
+      }),
+    ]);
+    expect(config.routes).toEqual(
+      expect.arrayContaining([{ src: '^/api/(.*)$', service: 'backend' }])
+    );
+    expect(await fs.readFile(join(output, 'static/index.html'), 'utf8')).toBe(
+      'root output'
+    );
+    expect(
+      await fs.readFile(
+        join(output, 'services/backend/static/backend.html'),
+        'utf8'
+      )
+    ).toBe('backend output');
+  });
+
+  it('should detect generated stable services routes from default output when using --output', async () => {
+    const cwd = await getWriteableDirectory();
+    const output = join(cwd, 'custom-output');
+    await fs.ensureDir(join(cwd, '.vercel'));
+    await fs.writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: '.',
+      projectId: '.',
+      settings: {
+        framework: null,
+        installCommand: '',
+      },
+    });
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      private: true,
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+    await fs.outputFile(
+      join(cwd, 'build.mjs'),
+      `
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+mkdirSync(join(outputDir, 'static'), { recursive: true });
+writeFileSync(join(outputDir, 'static', 'index.html'), 'root output');
+writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    routes: [
+      {
+        src: '^/api/(.*)$',
+        destination: {
+          type: 'service',
+          service: 'backend'
+        }
+      }
+    ],
+    services: {
+      backend: {
+        root: 'backend',
+        entrypoint: 'package.json',
+        framework: 'vite'
+      }
+    }
+  }, null, 2)
+);
+`
+    );
+    await fs.outputJSON(join(cwd, 'backend', 'package.json'), {
+      private: true,
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+    await fs.outputFile(
+      join(cwd, 'backend', 'build.mjs'),
+      `
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+mkdirSync(join(outputDir, 'static'), { recursive: true });
+writeFileSync(join(outputDir, 'static', 'backend.html'), 'backend output');
+writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, null, 2));
+`
+    );
+
+    client.cwd = cwd;
+    client.setArgv('build', '--output', output);
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.experimentalServicesV2).toEqual({
+      backend: expect.objectContaining({
+        root: 'backend',
+        framework: 'vite',
+      }),
+    });
+    expect(config.routes).toEqual(
+      expect.arrayContaining([
+        {
+          src: '^/api/(.*)$',
+          destination: {
+            type: 'service',
+            service: 'backend',
+          },
+        },
+      ])
+    );
+    expect(await fs.readFile(join(output, 'static/index.html'), 'utf8')).toBe(
+      'root output'
+    );
+    expect(
+      await fs.readFile(
+        join(output, 'services/backend/static/backend.html'),
+        'utf8'
+      )
+    ).toBe('backend output');
+  });
+
+  it('should ignore generated experimentalServices when vercel.json configures experimentalServices', async () => {
+    const cwd = await getWriteableDirectory();
+    const output = join(cwd, '.vercel', 'output');
+    await fs.ensureDir(join(cwd, '.vercel'));
+    await fs.writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: '.',
+      projectId: '.',
+      settings: {
+        framework: null,
+        installCommand: '',
+      },
+    });
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      experimentalServices: {
+        web: {
+          type: 'web',
+          root: '.',
+          framework: 'vite',
+          entrypoint: 'package.json',
+          mount: '/',
+        },
+      },
+    });
+    await fs.outputFile(
+      join(cwd, 'build.mjs'),
+      `
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+mkdirSync(join(outputDir, 'static'), { recursive: true });
+writeFileSync(join(outputDir, 'static', 'index.html'), 'ok');
+writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    experimentalServices: {
+      generated: {
+        type: 'job',
+        trigger: 'queue',
+        root: '.',
+        entrypoint: 'missing.js',
+        runtime: 'node',
+        topics: ['jobs']
+      }
+    }
+  }, null, 2)
+);
+`
+    );
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.experimentalServices).toBeUndefined();
+    expect(config.services.map((s: any) => s.name)).toEqual(['web']);
+    expect(
+      await fs.pathExists(
+        join(output, 'functions/_svc/generated/index.func/.vc-config.json')
+      )
+    ).toBe(false);
+  });
+
+  it('should not generate catch-all routes for Python cron services', async () => {
+    const cwd = fixture('with-services-python-cron-no-catchall');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+
+    // Cron routes should only match their specific /_svc/ callback paths
+    const cronRoutes = (config.routes as any[]).filter(
+      (r: any) =>
+        typeof r.dest === 'string' &&
+        (r.dest.includes('/_svc/cleanup-minute/') ||
+          r.dest.includes('/_svc/cleanup-daily/'))
+    );
+    for (const route of cronRoutes) {
+      expect(route.src).toMatch(/\/_svc\//);
+    }
+  });
+
+  it('should run preDeployCommand after build succeeds', async () => {
+    const cwd = fixture('with-services-pre-deploy-command');
+    const sideEffectFile = join(cwd, 'pre-deploy-ran.txt');
+
+    await fs.remove(sideEffectFile);
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    expect(await fs.pathExists(sideEffectFile)).toBe(true);
+    expect(await fs.readFile(sideEffectFile, 'utf8')).toBe('ok');
+
+    await fs.remove(sideEffectFile);
+  });
+
   it('should not write trace spans for non-build commands', async () => {
     const cwd = fixture('static');
     const tracePath = join(cwd, '.vercel/output/diagnostics/cli_traces.json');
@@ -2276,9 +3484,14 @@ fs.writeFileSync(
     const cwd = fixture('static');
     const outputDir = join(cwd, '.vercel/output');
 
-    // Run the full CLI entry point so index.ts writes cli_traces.json
+    // Run the full CLI entry point so index.ts writes cli_traces.json.
+    // Framework detection is opt-in, so enable it to assert its spans.
     const cliPath = join(__dirname, '../../../../dist/vc.js');
-    execSync(`node ${cliPath} build`, { cwd, stdio: 'pipe' });
+    execSync(`node ${cliPath} build`, {
+      cwd,
+      stdio: 'pipe',
+      env: { ...process.env, VERCEL_FRAMEWORK_DETECTION: '1' },
+    });
 
     // Read trace events written to disk
     const tracePath = join(outputDir, 'diagnostics', 'cli_traces.json');
@@ -2318,12 +3531,63 @@ fs.writeFileSync(
         { name: 'vc.doBuild', parent: 'vc' },
         { name: 'vc.loadEnv', parent: 'vc' },
         { name: 'vc.compileVercelConfig', parent: 'vc.doBuild' },
+        { name: 'vc.detectFirstDeploymentFramework', parent: 'vc.doBuild' },
+        { name: 'vc.detectAllFrameworks', parent: 'vc.doBuild' },
         { name: 'vc.detectBuilders', parent: 'vc.doBuild' },
         { name: 'vc.importBuilders', parent: 'vc.doBuild' },
         { name: 'vc.builder', parent: 'vc.doBuild' },
+        { name: 'vc.frameworkCrossCheck', parent: 'vc.doBuild' },
+        { name: 'vc.validateBuildOutput', parent: 'vc.doBuild' },
         { name: 'vc.finalizeBuildOutput', parent: 'vc.doBuild' },
         { name: 'vc.postCommand', parent: 'vc.cli' },
       ])
     );
+  });
+
+  describe('--project', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('fails fast with a clean error when the project does not exist anywhere', async () => {
+      const cwd = await getWriteableDirectory();
+      useUser();
+      useTeams('team_dummy');
+      // No useProject() — every API lookup will 404.
+
+      client.cwd = cwd;
+      client.setArgv('build', '--project=does-not-exist');
+      const exitCodePromise = build(client);
+
+      await expect(client.stderr).toOutput(
+        'Project "does-not-exist" was not found'
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "build"').toEqual(1);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:project',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+
+    it('tracks --project telemetry as [REDACTED]', async () => {
+      const cwd = await getWriteableDirectory();
+      useUser();
+      useTeams('team_dummy');
+
+      client.cwd = cwd;
+      client.setArgv('build', '--project=my-app');
+      await build(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:project',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
   });
 });

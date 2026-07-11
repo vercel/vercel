@@ -22,6 +22,16 @@
       "body": {},
       "status": 200,
       "mustContain": "ok"
+    },
+    {
+      "path": "/random",
+      "status": 404,
+      "mustContain": "Not Found"
+    },
+    {
+      "path": "/dashboard/test",
+      "status": 404,
+      "mustContain": "Not Found"
     }
   ]
 }

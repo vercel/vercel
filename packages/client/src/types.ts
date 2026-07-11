@@ -7,6 +7,8 @@ import type {
   Cron,
   ExperimentalServices,
   ExperimentalServiceGroups,
+  ExperimentalServicesV2,
+  Services,
 } from '@vercel/build-utils';
 import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
 
@@ -18,6 +20,25 @@ export interface Dictionary<T> {
 
 export const VALID_ARCHIVE_FORMATS = ['tgz'] as const;
 export type ArchiveFormat = (typeof VALID_ARCHIVE_FORMATS)[number];
+
+export interface DeploymentAliasError {
+  code: string;
+  message: string;
+}
+
+export interface DeploymentAliasWarning extends DeploymentAliasError {
+  link?: string;
+  action?: string;
+}
+
+export interface DeploymentAliasAssignedEvent {
+  type: 'alias-assigned';
+  deploymentId: string;
+  date: number;
+  alias: string[];
+  aliasError: DeploymentAliasError | null;
+  aliasWarning: DeploymentAliasWarning | null;
+}
 
 export interface VercelClientOptions {
   token: string;
@@ -47,6 +68,11 @@ export interface VercelClientOptions {
    * that the user later continues the deployment with an API call.
    */
   manual?: boolean;
+  /**
+   * Aborted with a `DeploymentAliasAssignedEvent` when an existing deployment
+   * event stream observes alias assignment.
+   */
+  aliasAssignedSignal?: AbortSignal;
 }
 
 /** @deprecated Use VercelClientOptions instead. */
@@ -104,8 +130,17 @@ export interface Deployment {
   };
   target: string;
   alias: string[];
-  aliasAssigned: boolean;
-  aliasError: string | null;
+  aliasAssigned: boolean | number | null;
+  aliasError: string | DeploymentAliasError | null;
+  aliasWarning?: DeploymentAliasWarning | null;
+  checks?: Record<
+    string,
+    {
+      state: 'pending' | 'succeeded' | 'failed';
+      startedAt?: string;
+      completedAt?: string;
+    }
+  >;
   expiration?: number;
   proposedExpiration?: number;
   undeletedAt?: number;
@@ -148,7 +183,6 @@ export interface VercelConfig {
   name?: string;
   meta?: string[];
   version?: number;
-  public?: boolean;
   env?: Dictionary<string>;
   build?: {
     env?: Dictionary<string>;
@@ -189,6 +223,14 @@ export interface VercelConfig {
    * @experimental This feature is experimental and may change.
    */
   experimentalServiceGroups?: ExperimentalServiceGroups;
+  /**
+   * Configures multiple services in this project.
+   */
+  services?: Services;
+  /**
+   * @deprecated Use `services` instead.
+   */
+  experimentalServicesV2?: ExperimentalServicesV2;
 }
 
 export interface GitMetadata {
@@ -221,7 +263,6 @@ export interface DeploymentOptions {
   source?: string;
   target?: string;
   name?: string;
-  public?: boolean;
   meta?: Dictionary<string>;
   projectSettings?: ProjectSettings;
   gitMetadata?: GitMetadata;

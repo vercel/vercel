@@ -8,6 +8,36 @@ export default async function reauthenticate(
   client: Client,
   error: Pick<SAMLError, 'enforced' | 'scope' | 'teamId'>
 ): Promise<LoginResult> {
+  // The device code flow opens a browser when possible, prints the verification
+  // URL, and polls for human approval. It cannot succeed when the caller
+  // supplied an explicit token; respect that token instead of silently swapping
+  // it out.
+  const { tokenSource } = client.authConfig;
+  const reauthAction = error.enforced
+    ? 'SAML re-authentication is required'
+    : 'Re-authentication is required';
+
+  if (tokenSource === 'flag') {
+    throw new Error(
+      `${reauthAction} for ${bold(error.scope)} scope, but the token provided via \`--token\` does not have access. ` +
+        `Provide a token that is authorized for that scope.`
+    );
+  }
+
+  if (tokenSource === 'env') {
+    throw new Error(
+      `${reauthAction} for ${bold(error.scope)} scope, but the token provided via the VERCEL_TOKEN environment variable does not have access. ` +
+        `Set VERCEL_TOKEN to a token that is authorized for that scope.`
+    );
+  }
+
+  if (!client.stdin.isTTY && process.env.CI) {
+    throw new Error(
+      `${reauthAction} for ${bold(error.scope)} scope, but the current environment is non-interactive so the device-code flow cannot be completed. ` +
+        `Run \`vercel login\` in an interactive shell, or set VERCEL_TOKEN / pass \`--token\` with a token that is authorized for that scope.`
+    );
+  }
+
   if (error.teamId && error.enforced) {
     output.log(
       `You must re-authenticate with SAML to use ${bold(error.scope)} scope.`
@@ -30,11 +60,12 @@ export default async function reauthenticate(
 
   client.updateAuthConfig({
     token: tokens.access_token,
+    userId: undefined,
     expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
     refreshToken: tokens.refresh_token,
   });
 
-  client.writeToAuthConfigFile();
+  client.persistAuthConfig();
 
   output.success(`Authentication complete for ${bold(error.scope)} scope.`);
 

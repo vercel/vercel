@@ -4,8 +4,15 @@ import type FileBlob from './file-blob';
 import type { Lambda, LambdaArchitecture } from './lambda';
 import type { Prerender } from './prerender';
 import type { EdgeFunction } from './edge-function';
+import type { ContainerImage } from './container-image';
 import type { Span } from './trace';
-import type { HasField } from '@vercel/routing-utils';
+import type {
+  HasField,
+  Route,
+  Rewrite,
+  Redirect,
+  Header,
+} from '@vercel/routing-utils';
 
 export interface Env {
   [name: string]: string | undefined;
@@ -45,6 +52,8 @@ export interface Config {
   framework?: string | null;
   nodeVersion?: string;
   middleware?: boolean;
+  /** Owning service name; scopes per-function config such as the v2beta consumer. */
+  serviceName?: string;
   [key: string]: unknown;
 }
 
@@ -59,6 +68,7 @@ export interface Meta {
   filesRemoved?: string[];
   env?: Env;
   buildEnv?: Env;
+  port?: number;
   [key: string]: unknown;
 }
 
@@ -110,6 +120,13 @@ export interface BuildOptions {
   buildCallback?: (opts: Omit<BuildOptions, 'buildCallback'>) => Promise<void>;
 
   /**
+   * Called by the builder to register a callback that will execute the
+   * service's pre-deploy command. The CLI collects these and invokes
+   * them only after every builder has succeeded.
+   */
+  registerPreDeploy?: (callback: () => Promise<void>) => void;
+
+  /**
    * The current trace state from the internal vc tracing
    */
   span?: Span;
@@ -121,14 +138,18 @@ export interface BuildOptions {
   service?: {
     /** The service name as declared in the project configuration. */
     name?: string;
-    /** The service type (e.g., "web", "cron", "worker"). */
+    /** The service type (e.g., "web", "worker", "job"). */
     type?: ServiceType;
+    /** The job trigger type (e.g., "queue", "schedule", "workflow"). */
+    trigger?: JobTrigger;
     /** URL path prefix where the service is mounted (e.g., "/api"). */
     routePrefix?: string;
     /** Optional subdomain this service is mounted on (e.g., "api"). */
     subdomain?: string;
     /** Workspace directory for this service, relative to the project root. */
     workspace?: string;
+    /** Cron schedule expression(s) (e.g., "0 0 * * *"). Only present for cron services. */
+    schedule?: string | string[];
   };
 }
 
@@ -245,6 +266,18 @@ export interface StartDevServerSuccess {
    * dev server will forcefully be killed.
    */
   shutdown?: () => Promise<void>;
+
+  /**
+   * Whether the builder owns this dev server's lifecycle across requests.
+   * Persistent servers are still shut down when `vercel dev` exits.
+   */
+  persistent?: boolean;
+
+  /**
+   * Cron entries produced by the builder for this service.
+   * Used by the dev orchestrator to schedule cron triggers.
+   */
+  crons?: Cron[];
 }
 
 /**
@@ -309,6 +342,7 @@ export namespace PackageJson {
     node?: string;
     npm?: string;
     pnpm?: string;
+    bun?: string;
   }
 
   export interface PublishConfig {
@@ -449,6 +483,30 @@ export interface ProjectSettings {
   commandForIgnoringBuildStep?: string | null;
 }
 
+export interface GetDevSidecarsOptions {
+  workPath: string;
+  /** Original build configuration before source expansion or dev filtering. */
+  build: Builder;
+}
+
+export interface DevSubscriber {
+  type: 'subscriber';
+  name: string;
+  consumer: string;
+  workspace: string;
+  framework?: string;
+  runtime?: string;
+  builder: Builder;
+  topics: ServiceTopics;
+}
+
+export type DevSidecar = DevSubscriber;
+
+/** Returns additional processes that a builder needs alongside its primary dev server. */
+export type GetDevSidecars = (
+  options: GetDevSidecarsOptions
+) => Promise<DevSidecar[]>;
+
 /*
  * This is a builder whose build output version may dynamically change.
  */
@@ -459,6 +517,7 @@ export interface BuilderVX {
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
   startDevServer?: StartDevServer;
+  getDevSidecars?: GetDevSidecars;
 }
 
 export interface BuilderV2 {
@@ -467,6 +526,8 @@ export interface BuilderV2 {
   diagnostics?: Diagnostics;
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
+  startDevServer?: StartDevServer;
+  getDevSidecars?: GetDevSidecars;
 }
 
 export interface BuilderV3 {
@@ -476,6 +537,7 @@ export interface BuilderV3 {
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
   startDevServer?: StartDevServer;
+  getDevSidecars?: GetDevSidecars;
 }
 
 type ImageFormat = 'image/avif' | 'image/webp';
@@ -566,9 +628,31 @@ export interface Cron {
   schedule: string;
 }
 
-export interface Service {
+export interface ServiceQueueTopic {
+  topic: string;
+  retryAfterSeconds?: number;
+  initialDelaySeconds?: number;
+}
+
+export type ServiceTopics = string[] | ServiceQueueTopic[];
+export const JOB_TRIGGERS = ['queue', 'schedule', 'workflow'] as const;
+export type JobTrigger = (typeof JOB_TRIGGERS)[number];
+
+export interface ServiceRefEnvVar {
+  type: 'service-ref';
+  service: string;
+}
+
+// union (in the future) type to handle all possible variants
+export type EnvVar = ServiceRefEnvVar;
+
+export type EnvVars = Record<string, EnvVar>;
+
+export interface ExperimentalService {
+  schema: 'experimentalServices';
   name: string;
   type: ServiceType;
+  trigger?: JobTrigger;
   group?: string;
   workspace: string;
   entrypoint?: string;
@@ -577,30 +661,144 @@ export interface Service {
   runtime?: string;
   buildCommand?: string;
   installCommand?: string;
+  preDeployCommand?: string;
   /* web service config */
   routePrefix?: string;
   routePrefixSource?: 'configured' | 'generated';
   subdomain?: string;
-  /* cron service config */
-  schedule?: string;
-  /* optional handler for cron service in format of {module}:{callable} */
+  /* scheduled job config */
+  schedule?: string | string[];
+  /* optional handler for a schedule-triggered job in format of {module}:{callable} */
   handlerFunction?: string;
-  /* worker service config */
-  topics?: string[];
-  consumer?: string;
-  /** custom prefix to inject service URL env vars */
-  envPrefix?: string;
+  /* worker/job service config */
+  topics?: ServiceTopics;
+  /* environment variables declared by the user to be injected into this service. */
+  env?: EnvVars;
 }
 
-/**
- * Returns the topics a worker service subscribes to, defaulting to ['default'].
- */
-export function getWorkerTopics(config: {
-  topics?: string[];
-}): [string, ...string[]] {
-  return config.topics?.length
-    ? (config.topics as [string, ...string[]])
-    : ['default'];
+export interface ExperimentalServiceV2 {
+  schema: 'experimentalServicesV2';
+  name: string;
+  /** Path to the service root, relative to the project root. */
+  root: string;
+  framework?: string;
+  runtime?: string;
+  /** Resolved entrypoint, relative to the service root. */
+  entrypoint?: string;
+  /** Command override for `runtime: "container"` services. */
+  command?: string[];
+  /** Builder selected by the resolver. */
+  builder: Builder;
+  installCommand?: string;
+  buildCommand?: string;
+  devCommand?: string;
+  ignoreCommand?: string;
+  outputDirectory?: string;
+  /** Caller-side bindings to other services. */
+  bindings?: ExperimentalServiceV2Binding[];
+  /** Function configuration scoped to this service. */
+  functions?: BuilderFunctions;
+  /* Per-service route table. Applied only after top-level routing. */
+  headers?: Header[];
+  redirects?: Redirect[];
+  rewrites?: Rewrite[];
+  routes?: Route[];
+  cleanUrls?: boolean;
+  trailingSlash?: boolean;
+}
+
+export type Service = ExperimentalService | ExperimentalServiceV2;
+
+export function isExperimentalService(
+  service: Service
+): service is ExperimentalService {
+  return service.schema === 'experimentalServices';
+}
+
+export function isExperimentalServiceV2(
+  service: Service
+): service is ExperimentalServiceV2 {
+  return service.schema === 'experimentalServicesV2';
+}
+
+export function getServiceQueueTopicConfigs(config: {
+  type?: ServiceType;
+  topics?: ServiceTopics;
+}): ServiceQueueTopic[] {
+  if (Array.isArray(config.topics) && config.topics.length > 0) {
+    return typeof config.topics[0] === 'string'
+      ? (config.topics as string[]).map(topic => ({ topic }))
+      : (config.topics as ServiceQueueTopic[]);
+  }
+
+  return config.type === 'worker' ? [{ topic: 'default' }] : [];
+}
+
+export function getServiceQueueTopics(config: {
+  type?: ServiceType;
+  topics?: ServiceTopics;
+}): string[] {
+  return getServiceQueueTopicConfigs(config).map(topic => topic.topic);
+}
+
+export function isQueueTriggeredService(service: {
+  type?: ServiceType;
+  trigger?: JobTrigger;
+}): boolean {
+  return (
+    service.type === 'worker' ||
+    (service.type === 'job' && service.trigger === 'queue')
+  );
+}
+
+export function isScheduleTriggeredService(service: {
+  type?: ServiceType;
+  trigger?: JobTrigger;
+}): boolean {
+  return (
+    service.type === 'cron' ||
+    (service.type === 'job' && service.trigger === 'schedule')
+  );
+}
+
+export function isWorkflowTriggeredService(service: {
+  type?: ServiceType;
+  trigger?: JobTrigger;
+}): boolean {
+  return service.type === 'job' && service.trigger === 'workflow';
+}
+
+/** Returns true for any service that consumes queue messages (worker, queue-triggered job, workflow-triggered job). */
+export function isQueueBackedService(service: {
+  type?: ServiceType;
+  trigger?: JobTrigger;
+}): boolean {
+  return (
+    isQueueTriggeredService(service) || isWorkflowTriggeredService(service)
+  );
+}
+
+export type ReportedServiceType = 'web' | 'schedule' | 'queue' | 'workflow';
+
+export function getReportedServiceType(service: {
+  type?: ServiceType;
+  trigger?: JobTrigger;
+}): ReportedServiceType | undefined {
+  switch (service.type) {
+    case 'web':
+      return 'web';
+    case 'cron':
+      return 'schedule';
+    case 'worker':
+      return 'queue';
+    case 'job':
+      if (service.trigger === 'schedule') return 'schedule';
+      if (service.trigger === 'queue') return 'queue';
+      if (service.trigger === 'workflow') return 'workflow';
+      return undefined;
+    default:
+      return undefined;
+  }
 }
 
 /** The framework which created the function */
@@ -618,13 +816,14 @@ export interface BuildResultV2Typical {
   routes?: any[];
   images?: Images;
   output: {
-    [key: string]: File | Lambda | Prerender | EdgeFunction;
+    [key: string]: File | Lambda | Prerender | EdgeFunction | ContainerImage;
   };
   wildcard?: Array<{
     domain: string;
     value: string;
   }>;
   framework?: {
+    slug: string;
     version: string;
   };
   flags?: { definitions: FlagDefinitions };
@@ -636,6 +835,7 @@ export interface BuildResultV2Typical {
    * @example "abc123"
    */
   deploymentId?: string;
+  crons?: Cron[];
 }
 
 export type BuildResultVX =
@@ -648,6 +848,7 @@ export interface BuildResultV3 {
   // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
   routes?: any[];
   output: Lambda | EdgeFunction;
+  crons?: Cron[];
 }
 
 export type BuildVX = (options: BuildOptions) => Promise<BuildResultVX>;
@@ -775,9 +976,27 @@ export interface TriggerEvent extends TriggerEventBase {
   consumer: string;
 }
 
-export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';
+export type ServiceRuntime =
+  | 'node'
+  | 'python'
+  | 'go'
+  | 'rust'
+  | 'ruby'
+  | 'container';
 
-export type ServiceType = 'web' | 'cron' | 'worker';
+export type ServiceType = 'web' | 'cron' | 'worker' | 'job';
+
+export interface ExperimentalServiceMount {
+  /** URL path prefix where the service is mounted. */
+  path?: string;
+  /** Optional subdomain this service is mounted on. */
+  subdomain?: string;
+}
+
+export interface ServiceMount {
+  /** URL path prefix where the service is mounted. */
+  path: string;
+}
 
 /**
  * Configuration for a service in vercel.json.
@@ -785,8 +1004,15 @@ export type ServiceType = 'web' | 'cron' | 'worker';
  */
 export interface ExperimentalServiceConfig {
   type?: ServiceType;
+  trigger?: JobTrigger;
   /**
-   * Service entrypoint, relative to the project root.
+   * Path to the service's root directory relative to the project root.
+   * Should contain a manifest file (package.json, pyproject.toml, etc.).
+   * Defaults to ".".
+   */
+  root?: string;
+  /**
+   * Service entrypoint, relative to the service root directory.
    * Can be either a file path (runtime entrypoint) or a directory path
    * (service workspace for framework-based services).
    * @example "apps/web", "services/api/src/index.ts", "services/fastapi/main.py"
@@ -797,11 +1023,15 @@ export interface ExperimentalServiceConfig {
   framework?: string;
   /** Builder to use, e.g. @vercel/node, @vercel/python */
   builder?: string;
-  /** Specific lambda runtime to use, e.g. nodejs24.x, python3.14 */
+  /** Specific lambda runtime to use, e.g. nodejs24.x, python3.14, container */
   runtime?: string;
+  /** Optional command override for container image services. */
+  command?: string | string[];
 
+  workspace?: string;
   buildCommand?: string;
   installCommand?: string;
+  preDeployCommand?: string;
 
   /** Lambda config */
   memory?: number;
@@ -810,21 +1040,22 @@ export interface ExperimentalServiceConfig {
   excludeFiles?: string | string[];
 
   /* Web service config */
-  /** URL prefix for routing */
+  /** Preferred routing config alias for routePrefix/subdomain. */
+  mount?: string | ExperimentalServiceMount;
+  /** URL prefix for routing (deprecated, use mount instead) */
   routePrefix?: string;
   /** Subdomain this service should respond to (web services only). */
   subdomain?: string;
 
-  /* Cron service config */
-  /** Cron schedule expression (e.g., "0 0 * * *") */
-  schedule?: string;
+  /* Scheduled job config */
+  /** Cron schedule expression(s) (e.g., "0 0 * * *") */
+  schedule?: string | string[];
 
-  /* Worker service config */
-  topics?: string[];
-  consumer?: string;
+  /* Worker/job service config */
+  topics?: ServiceTopics;
 
-  /** Custom prefix to use to inject service URL env vars */
-  envPrefix?: string;
+  /* Environment variables to inject into this service env */
+  env?: EnvVars;
 }
 
 /**
@@ -843,3 +1074,102 @@ export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
  * }
  */
 export type ExperimentalServiceGroups = Record<string, string[]>;
+
+export interface ServiceBinding {
+  /** Must be `"service"` for Service-to-Service HTTP bindings. */
+  type: 'service';
+  /** Target service name from `services`. */
+  service: string;
+  /** Generated value shape, must be `"url"`. */
+  format: 'url';
+  /** Environment variable name that will store the generated value */
+  env: string;
+}
+
+/** Configuration for a service in `vercel.json#services`. */
+export interface ServiceConfig {
+  /** Path to the service root, relative to `vercel.json`. */
+  root: string;
+  /** Framework for this service. */
+  framework?: string;
+  /** Runtime for this service. */
+  runtime?: string;
+  /**
+   * Service entrypoint, relative to the service root directory.
+   * Can be a file path or a module specification (for Python).
+   * For `runtime: "container"`, a Dockerfile path (built & pushed) or a
+   * prebuilt OCI image reference.
+   */
+  entrypoint?: string;
+  /** Command override for `runtime: "container"` services. */
+  command?: string | string[];
+
+  /* Service-level build setting overrides. */
+  installCommand?: string;
+  buildCommand?: string;
+  devCommand?: string;
+  ignoreCommand?: string;
+  outputDirectory?: string;
+
+  /** Caller-side bindings that grant this service access to another service. */
+  bindings?: ServiceBinding[];
+
+  /** Function configuration scoped to this service root. */
+  functions?: BuilderFunctions;
+
+  /* Service's route table. Applied only after top-level routing. */
+  headers?: Header[];
+  redirects?: Redirect[];
+  rewrites?: Rewrite[];
+  routes?: Route[];
+  cleanUrls?: boolean;
+  trailingSlash?: boolean;
+}
+
+/** Map of service name to service configuration for `vercel.json#services`. */
+export type Services = Record<string, ServiceConfig>;
+
+/** @deprecated Use `ServiceBinding` instead. */
+export type ExperimentalServiceV2Binding = ServiceBinding;
+
+/** @deprecated Use `ServiceConfig` instead. */
+export type ExperimentalServiceV2Config = ServiceConfig;
+
+/** @deprecated Use `Services` instead. */
+export type ExperimentalServicesV2 = Services;
+
+/**
+ * Result of a runtime builder's normalized entrypoint detection.
+ *
+ * - `kind: 'file'` — `entrypoint` is a path relative to the scanned `workPath`
+ *   (e.g. `"src/index.ts"`, `"main.go"`, `"main.py"`).
+ * - `kind: 'py-module:attr'` — `entrypoint` is a Python `module:attr` reference
+ *   where the module is dot-separated and resolved relative to the scanned
+ *   `workPath` (e.g. `"main:app"`, `"src.main:app"`).
+ *
+ * @experimental This feature is experimental and may change.
+ */
+export type DetectedEntrypoint =
+  | { kind: 'file'; entrypoint: string }
+  | { kind: 'py-module:attr'; entrypoint: string }
+  | null;
+
+/**
+ * Input to a runtime builder's normalized entrypoint detector.
+ * @experimental This feature is experimental and may change.
+ */
+export interface DetectEntrypointOptions {
+  /** Path to the candidate service directory relative to project root. */
+  workPath: string;
+  /** Framework slug detected for this directory, if any. */
+  framework?: string;
+}
+
+/**
+ * Normalized entrypoint detector signature, implemented by each runtime builder
+ * and consumed by services auto-detection to populate suggested service configs.
+ * @experimental This feature is experimental and may change.
+ */
+export type DetectEntrypointFn = (
+  opts: DetectEntrypointOptions
+) => Promise<DetectedEntrypoint>;

@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import unittest
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any, cast
 from unittest.mock import patch
 
@@ -197,7 +197,7 @@ class TestCeleryAdapter(unittest.TestCase):
             with patch.object(
                 vwc_app.queue_callback,
                 "receive_message_by_id",
-                return_value=(payload, 1, "t", "ticket"),
+                return_value=(payload, 1, "t", "receipt-handle"),
             ):
                 with patch.object(
                     vwc_app.queue_callback,
@@ -233,27 +233,34 @@ class TestCeleryAdapter(unittest.TestCase):
         self.assertTrue(body["ok"])
         self.assertFalse(body["delayed"])
 
-    def test_get_asgi_app_post_callback_delays_until_eta_by_changing_visibility(self) -> None:
+    def test_get_asgi_app_post_callback_executes_task_with_eta_normally(self) -> None:
+        # ETA delays are handled at send time via Vqs-Delay-Seconds, not on receive
         raw_body = (
             b'{"type":"com.vercel.queue.v1beta","data":'
             b'{"queueName":"q","consumerGroup":"c","messageId":"m"}}'
         )
-        fixed_now = datetime(2025, 1, 1, 0, 0, 0, tzinfo=UTC)
-        eta = fixed_now + timedelta(seconds=123)
+        eta = datetime(2025, 1, 1, 0, 2, 3, tzinfo=UTC)
 
         class FakeVisibilityExtender:
+            instances: list = []
+
             def __init__(self, *args, **kwargs):
                 self.started = False
                 self.stopped = False
+                self.finalized = False
+                FakeVisibilityExtender.instances.append(self)
 
             def start(self) -> None:
                 self.started = True
 
             def finalize(self, fn) -> None:
+                self.finalized = True
                 fn()
 
             def stop(self) -> None:
                 self.stopped = True
+
+        FakeVisibilityExtender.instances = []
 
         class DummyTask:
             def __init__(self):
@@ -280,50 +287,40 @@ class TestCeleryAdapter(unittest.TestCase):
             "eta": eta.isoformat().replace("+00:00", "Z"),
         }
 
-        with patch.object(vwc_utils, "_now_utc", return_value=fixed_now):
+        with patch.object(
+            vwc_app.queue_callback,
+            "parse_cloudevent",
+            return_value=("q", "c", "m"),
+        ):
             with patch.object(
                 vwc_app.queue_callback,
-                "parse_cloudevent",
-                return_value=("q", "c", "m"),
+                "receive_message_by_id",
+                return_value=(payload, 1, "t", "receipt-handle"),
             ):
                 with patch.object(
                     vwc_app.queue_callback,
-                    "receive_message_by_id",
-                    return_value=(payload, 1, "t", "ticket"),
+                    "VisibilityExtender",
+                    FakeVisibilityExtender,
                 ):
-                    with patch.object(
-                        vwc_app.queue_callback,
-                        "VisibilityExtender",
-                        FakeVisibilityExtender,
-                    ):
-                        with patch.object(
-                            vwc_app.queue_callback,
-                            "change_visibility",
-                        ) as change_visibility:
-                            with patch.object(
-                                vwc_app.queue_callback,
-                                "delete_message",
-                            ) as delete_message:
-                                sent = asyncio.run(
-                                    self._asgi_request(
-                                        vwc.get_asgi_app(cast(Any, DummyCelery())),
-                                        method="POST",
-                                        path="/anything",
-                                        headers=[
-                                            (b"content-type", b"application/cloudevents+json"),
-                                        ],
-                                        body=raw_body,
-                                    ),
-                                )
+                    with patch.object(vwc_app.queue_callback, "delete_message") as delete_message:
+                        sent = asyncio.run(
+                            self._asgi_request(
+                                vwc.get_asgi_app(cast(Any, DummyCelery())),
+                                method="POST",
+                                path="/anything",
+                                headers=[
+                                    (b"content-type", b"application/cloudevents+json"),
+                                ],
+                                body=raw_body,
+                            ),
+                        )
 
-        self.assertEqual(task.calls, [])  # eta scheduling should not execute the task
-        change_visibility.assert_called()
-        delete_message.assert_not_called()
+        self.assertEqual(task.calls, [([1, 2], {}, "task-eta", True)])
+        delete_message.assert_called_once()
 
         body = json.loads(sent[1]["body"].decode("utf-8"))
         self.assertTrue(body["ok"])
-        self.assertTrue(body["delayed"])
-        self.assertEqual(body["timeoutSeconds"], 123)
+        self.assertFalse(body["delayed"])
 
 
 if __name__ == "__main__":

@@ -18,7 +18,7 @@ interface LambdaLike {
  */
 export function getLambdaPreloadScripts(
   lambda: LambdaLike,
-  buffer: Buffer,
+  buffer: { byteLength: number },
   options: BytecodeCachingOptions
 ) {
   const scripts: string[] = [];

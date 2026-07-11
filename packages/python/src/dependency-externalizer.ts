@@ -17,19 +17,89 @@ import {
   PythonAnalysisError,
   scanDistributions,
 } from '@vercel/python-analysis';
-import type { UvLockFile, UvLockPackage } from '@vercel/python-analysis';
+import type {
+  DistributionIndex,
+  UvLockFile,
+  UvLockPackage,
+} from '@vercel/python-analysis';
 import { getVenvSitePackagesDirs } from './install';
-import { getUvBinaryForBundling, UV_BUNDLE_DIR } from './uv';
-import { detectPlatform } from './utils';
+import {
+  downloadUvBinaryForTarget,
+  getUvBinaryForBundling,
+  UV_BUNDLE_DIR,
+} from './uv';
+import { detectTargetPlatform } from './platform-info';
+import {
+  derivePrefixPycBundlePath,
+  derivePycPath,
+  deriveStagedPycFsPath,
+  type BytecodeCollectionResult,
+} from './compileall';
+import { isLargeFunctionsEnabled } from './large-functions';
 
 const readFile = promisify(fs.readFile);
 
-// AWS Lambda uncompressed size limit is 250MB, but we use 245MB to leave room for Lambda layers
-export const LAMBDA_SIZE_THRESHOLD_BYTES = 245 * 1024 * 1024;
+/**
+ * Files that are never needed at runtime and can be safely stripped from the
+ * vendor directory to reduce bundle size:
+ *
+ * - `*.pyi`          – type stubs for static type checkers
+ * - `py.typed`       – PEP 561 marker for typed packages
+ * - `WHEEL`          – wheel format metadata (installer use only)
+ * - `INSTALLER`      – records which tool installed the package
+ * - `direct_url.json`– PEP 610 install provenance
+ */
+const STRIP_BASENAMES = new Set([
+  'py.typed',
+  'WHEEL',
+  'INSTALLER',
+  'direct_url.json',
+]);
+
+function shouldStripVendorFile(filePath: string): boolean {
+  const segments = filePath.split(sep);
+  if (segments.includes('__pycache__')) return true;
+  const name = segments[segments.length - 1] ?? '';
+  if (name.endsWith('.pyc') || name.endsWith('.pyi')) return true;
+  if (STRIP_BASENAMES.has(name)) return true;
+  return false;
+}
+
+// AWS Lambda uncompressed size limit is 250MB, but we use 225MB to leave room
+// for the Lambda layers (rusty runtime, lambdawrapper, OpenTelemetry collector)
+// that count toward the limit but aren't part of this bundle.
+export const LAMBDA_SIZE_THRESHOLD_BYTES = 225 * 1024 * 1024;
+
+// Bytecode fill target for standard-size functions, with a margin so the
+// fill can never push a function over the size limit.
+const BYTECODE_FILL_MARGIN_BYTES = 5 * 1024 * 1024;
+export const BYTECODE_FILL_CEILING_BYTES =
+  LAMBDA_SIZE_THRESHOLD_BYTES - BYTECODE_FILL_MARGIN_BYTES;
 
 // AWS Lambda ephemeral storage (/tmp) is 512MB. Use 500MB to leave a buffer
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
 export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 500 * 1024 * 1024;
+
+// /tmp budget used only to SELECT the packing mode (never to fail a
+// build): bytecode-first installs every public package into /tmp at cold
+// start, so it is skipped in favor of knapsack packing when the public set
+// exceeds this budget. The 50 MB margin absorbs the drift between the
+// build-time sum of file sizes and what the install actually occupies on
+// disk (block rounding, uv scratch); since falling back to knapsack only
+// costs bytecode coverage, erring conservative here is free.
+export const EPHEMERAL_INSTALL_BUDGET_BYTES =
+  LAMBDA_EPHEMERAL_STORAGE_BYTES - 50 * 1024 * 1024;
+
+// Cold-start install target. Must match `_deps_dir` in
+// python/vercel-runtime/src/vercel_runtime/vc_init.py.
+export const RUNTIME_DEPS_DIR = '/tmp/_vc_deps';
+
+// Size limit for large functions: all deps bundled directly (no runtime
+// install), served on Hive.
+export const MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE = 5 * 1024 * 1024 * 1024;
+
+const BUNDLING_DOCS_LINK =
+  'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled';
 
 interface PythonDependencyExternalizerOptions {
   venvPath: string;
@@ -38,8 +108,8 @@ interface PythonDependencyExternalizerOptions {
   uvLockPath: string | null;
   uvProjectDir: string | null;
   projectName: string | undefined;
-  pythonMajor: number;
-  pythonMinor: number;
+  pythonMajor: number | undefined;
+  pythonMinor: number | undefined;
   pythonPath: string;
   hasCustomCommand: boolean;
   alwaysBundlePackages?: string[];
@@ -51,6 +121,50 @@ interface DependencyAnalysis {
   totalBundleSize: number;
 }
 
+export type PackingMode = 'knapsack' | 'bytecode-first';
+
+// Package lists below are only set when the runtime-install bundle was
+// generated (no full-bundle fallback).
+export interface GenerateBundleResult {
+  fellBackToFullBundle: boolean;
+  /**
+   * `knapsack` bundles the largest public packages to minimize cold-start
+   * downloads; `bytecode-first` bundles only the mandatory set and reserves
+   * zip capacity for precompiled bytecode.
+   */
+  packingMode?: PackingMode;
+  /**
+   * Always in the zip: private, vercel-runtime, alwaysBundle, and
+   * wheel-less (force-bundled) packages.
+   */
+  alwaysBundledPackages?: string[];
+  /** Public packages bundled into the zip (empty in bytecode-first mode). */
+  bundledPublicPackages?: string[];
+  /** Public packages deferred to the cold-start install. */
+  externalizedPublicPackages?: string[];
+}
+
+interface GenerateBundleOptions {
+  /**
+   * Request bytecode-first packing. Falls back to knapsack packing when the
+   * externalized set would not safely fit Lambda ephemeral storage.
+   */
+  bytecodeFirst?: boolean;
+}
+
+interface AnalyzeOptions {
+  /**
+   * Invoked once the source-only bundle size is known, BEFORE any
+   * size-limit enforcement that may throw.  This guarantees the size is
+   * always observable (e.g. for telemetry) even for oversized bundles that
+   * subsequently fail the build.
+   */
+  onSized?: (info: {
+    totalSizeBytes: number;
+    runtimeInstallEnabled: boolean;
+  }) => void;
+}
+
 export class PythonDependencyExternalizer {
   private venvPath: string;
   private vendorDir: string;
@@ -58,13 +172,15 @@ export class PythonDependencyExternalizer {
   private uvLockPath: string | null;
   private uvProjectDir: string | null;
   private projectName: string | undefined;
-  private pythonMajor: number;
-  private pythonMinor: number;
+  private pythonMajor: number | undefined;
+  private pythonMinor: number | undefined;
   private pythonPath: string;
   private hasCustomCommand: boolean;
   private alwaysBundlePackages: string[];
 
   // Populated by analyze()
+  private sitePackageDirs: string[] = [];
+  private distributions: Map<string, DistributionIndex> = new Map();
   private allVendorFiles: Files = {};
   private totalBundleSize: number = 0;
   private analyzed = false;
@@ -87,18 +203,23 @@ export class PythonDependencyExternalizer {
     if (this.hasCustomCommand) {
       return false;
     }
-    const pythonOnHiveEnabled =
-      process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
-      process.env.VERCEL_PYTHON_ON_HIVE === 'true';
-    if (pythonOnHiveEnabled) {
-      return false;
-    } else if (
-      this.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
-      this.uvLockPath !== null
+    // Fits AWS Lambda directly, or there's no lock to defer from.
+    if (
+      this.totalBundleSize <= LAMBDA_SIZE_THRESHOLD_BYTES ||
+      this.uvLockPath === null
     ) {
-      return true;
+      return false;
     }
-    return false;
+    // Over the threshold with a lock to defer from. Large functions skip
+    // runtime install once deps exceed ephemeral storage (bundled for Hive);
+    // below that, runtime install still keeps it on Lambda.
+    if (
+      isLargeFunctionsEnabled() &&
+      this.totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES
+    ) {
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -106,9 +227,25 @@ export class PythonDependencyExternalizer {
    * and determine whether runtime installation is needed.
    * Must be called before generateBundle().
    */
-  async analyze(files: Files): Promise<DependencyAnalysis> {
-    this.allVendorFiles = await mirrorPackagesIntoVendor({
-      venvPath: this.venvPath,
+  async analyze(
+    files: Files,
+    options: AnalyzeOptions = {}
+  ): Promise<DependencyAnalysis> {
+    // Resolve site-packages dirs and scan distributions once.  Subsequent
+    // calls to mirrorPackagesIntoVendor() and calculatePerPackageSizes()
+    // read from these fields directly.
+    this.sitePackageDirs = await getVenvSitePackagesDirs(this.venvPath);
+    this.distributions = new Map<string, DistributionIndex>();
+    for (const dir of this.sitePackageDirs) {
+      try {
+        await fs.promises.access(dir);
+      } catch {
+        continue;
+      }
+      this.distributions.set(dir, await scanDistributions(dir));
+    }
+
+    this.allVendorFiles = await this.mirrorPackagesIntoVendor({
       vendorDirName: this.vendorDir,
     });
 
@@ -124,27 +261,55 @@ export class PythonDependencyExternalizer {
 
     const runtimeInstallEnabled = this.shouldEnableRuntimeInstall();
 
-    const pythonOnHiveEnabled =
-      process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
-      process.env.VERCEL_PYTHON_ON_HIVE === 'true';
+    const largeFunctionsEnabled = isLargeFunctionsEnabled();
 
+    // Surface the size BEFORE the size-limit checks below, which may throw.
+    // Otherwise oversized bundles would never report their size, biasing any
+    // size telemetry toward builds that fit the limit.
+    options.onSized?.({
+      totalSizeBytes: this.totalBundleSize,
+      runtimeInstallEnabled,
+    });
+
+    // Custom install commands can't use runtime install; enforced only when
+    // not bundling everything directly (large functions).
     if (
       this.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
       this.hasCustomCommand &&
-      !pythonOnHiveEnabled
+      !largeFunctionsEnabled
     ) {
       const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
         message:
-          `Total bundle size (${totalBundleSizeMB} MB) exceeds the Lambda size limit (${limitMB} MB).\n\n` +
-          `Runtime dependency installation is not available for projects that use a custom ` +
-          `build or install command, because custom commands may install dependencies that ` +
-          `are not tracked in uv.lock.\n\n` +
-          `To resolve this, either:\n` +
-          `  1. Remove the custom build/install command and let Vercel manage dependencies automatically\n` +
-          `  2. Reduce your dependency footprint to fit within the ${limitMB} MB limit`,
-        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+          `Total bundle size (${totalBundleSizeMB} MB) exceeds the maximum function size (${limitMB} MB).\n\n` +
+          `A custom install command prevents Vercel from optimizing your\n` +
+          `function bundle size automatically. To fix this, you can:\n` +
+          `  1. Remove unused dependencies from your project, or\n` +
+          `  2. Remove the custom install command so Vercel can optimize\n` +
+          `     the function bundle automatically.`,
+        link: BUNDLING_DOCS_LINK,
+        action: 'Learn More',
+      });
+    }
+
+    // Enforce the large-function size limit up front (faster than failing at
+    // ZIP time). `>=` matches the platform's uncompressed-size check.
+    if (
+      largeFunctionsEnabled &&
+      this.totalBundleSize >= MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
+    ) {
+      const limitMB = (
+        MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE /
+        (1024 * 1024)
+      ).toFixed(0);
+      throw new NowBuildError({
+        code: 'LAMBDA_SIZE_EXCEEDED',
+        message:
+          `Total bundle size (${totalBundleSizeMB} MB) exceeds the extended function size limit (${limitMB} MB).\n\n` +
+          `Consider removing unused dependencies or splitting your\n` +
+          `application into smaller functions.`,
+        link: BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
     }
@@ -161,73 +326,78 @@ export class PythonDependencyExternalizer {
    * Mutates `files` in place: adds vendor files (private + knapsack-selected
    * public), runtime config, and uv binary.
    * Must be called after analyze().
+   *
+   * If large functions are allowed and the bundle can't fit AWS Lambda, falls
+   * back to bundling everything for Hive and returns `fellBackToFullBundle:
+   * true` so the caller can apply the same compileall handling.
    */
-  async generateBundle(files: Files): Promise<void> {
+  async generateBundle(
+    files: Files,
+    options: GenerateBundleOptions = {}
+  ): Promise<GenerateBundleResult> {
     if (!this.analyzed) {
       throw new Error(
         'PythonDependencyExternalizer.analyze() must be called before generateBundle()'
       );
     }
     if (!this.uvLockPath || !this.uvProjectDir) {
-      throw new NowBuildError({
-        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
-        message:
-          'Runtime dependency installation requires a uv.lock file and project directory.',
-      });
+      // Invariant: shouldEnableRuntimeInstall() only returns true when
+      // uvLockPath is set, and uvProjectDir is always set alongside it, so this
+      // is an internal bug rather than a user-fixable condition.
+      throw new Error(
+        'generateBundle() requires uvLockPath and uvProjectDir to be set'
+      );
     }
 
     const totalBundleSizeMB = (this.totalBundleSize / (1024 * 1024)).toFixed(2);
 
-    console.log(
-      `Bundle size (${totalBundleSizeMB} MB) exceeds limit. ` +
-        `Enabling runtime dependency installation.`
-    );
+    // When set, a bundle that can't fit AWS Lambda is bundled for Hive instead
+    // of failing the build.
+    const largeFunctionsEnabled = isLargeFunctionsEnabled();
 
     // Verify total deps won't exceed Lambda ephemeral storage (512 MB)
     if (this.totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES) {
-      const ephemeralLimitMB = (
-        LAMBDA_EPHEMERAL_STORAGE_BYTES /
-        (1024 * 1024)
-      ).toFixed(0);
+      if (largeFunctionsEnabled) {
+        return this.bundleAllForHive(files);
+      }
+      const limitMB = (LAMBDA_EPHEMERAL_STORAGE_BYTES / (1024 * 1024)).toFixed(
+        0
+      );
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
         message:
-          `Total dependency size (${totalBundleSizeMB} MB) exceeds Lambda ephemeral storage ` +
-          `limit (${ephemeralLimitMB} MB). Even with runtime dependency installation, all ` +
-          `packages must fit within the ${ephemeralLimitMB} MB ephemeral storage available ` +
-          `to Lambda functions. Consider removing unused dependencies or splitting your ` +
-          `application into smaller functions.`,
-        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+          `Total bundle size (${totalBundleSizeMB} MB) exceeds the maximum function size (${limitMB} MB).\n\n` +
+          `Reduce the size of your dependencies or split your application into\n` +
+          `smaller functions.`,
+        link: BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
     }
 
-    // Read and parse the uv.lock file
+    // Read and parse the uv.lock file. Use a project-relative path in
+    // user-facing messages so we don't leak absolute build paths.
+    const relLockPath = relative(this.workPath, this.uvLockPath);
     let lockContent: string;
     try {
       lockContent = await readFile(this.uvLockPath, 'utf8');
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.log(
-          `Failed to read uv.lock file at "${this.uvLockPath}": ${error.message}`
-        );
-      } else {
-        console.log(
-          `Failed to read uv.lock file at "${this.uvLockPath}": ${String(error)}`
-        );
-      }
+      debug(
+        `Failed to read uv.lock at ${this.uvLockPath}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
       throw new NowBuildError({
         code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
-        message: `Failed to read uv.lock file at "${this.uvLockPath}"`,
+        message: `Failed to read the uv.lock file at "${relLockPath}".`,
       });
     }
     let lockFile: ReturnType<typeof parseUvLock>;
     try {
-      lockFile = parseUvLock(lockContent, this.uvLockPath);
+      lockFile = parseUvLock(lockContent, relLockPath);
     } catch (error: unknown) {
       if (error instanceof PythonAnalysisError) {
         if (error.fileContent) {
-          console.log(
+          debug(
             `Failed to parse "${error.path}". File content:\n${error.fileContent}`
           );
         }
@@ -282,20 +452,23 @@ export class PythonDependencyExternalizer {
     );
 
     if (externalizablePublic.length === 0) {
+      if (largeFunctionsEnabled) {
+        return this.bundleAllForHive(files);
+      }
       throw new NowBuildError({
         code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
         message:
-          `Bundle size exceeds the Lambda limit and requires runtime dependency installation, ` +
-          `but no public packages have compatible pre-built wheels for the Lambda platform.\n` +
-          `Runtime dependency installation requires packages to have binary wheels.\n\n` +
+          `Total bundle size (${totalBundleSizeMB} MB) exceeds the maximum function size and\n` +
+          `can't be optimized automatically because some dependencies don't\n` +
+          `provide a compatible pre-built wheel.\n\n` +
           `To fix this, either:\n` +
-          ` 1. Regenerate your lock file with: uv lock --upgrade, or\n` +
-          ` 2. Switch the problematic packages to ones that have pre-built wheels available`,
+          `  1. Regenerate your lock file with: uv lock --upgrade, or\n` +
+          `  2. Replace the packages that don't provide a pre-built wheel.`,
       });
     }
 
     // Calculate per-package sizes for public packages
-    const packageSizes = await calculatePerPackageSizes(this.venvPath);
+    const packageSizes = await this.calculatePerPackageSizes();
 
     // Calculate fixed overhead: source files + private packages + vercel-runtime
     // + packages without compatible wheels.
@@ -311,8 +484,7 @@ export class PythonDependencyExternalizer {
       ...this.alwaysBundlePackages,
       ...forceBundledDueToWheels,
     ];
-    const alwaysBundledFiles = await mirrorPackagesIntoVendor({
-      venvPath: this.venvPath,
+    const alwaysBundledFiles = await this.mirrorPackagesIntoVendor({
       vendorDirName: this.vendorDir,
       includePackages: alwaysBundled,
     });
@@ -327,15 +499,13 @@ export class PythonDependencyExternalizer {
     // This must be subtracted from capacity before running the knapsack
     // so we don't over-pack and exceed the Lambda size limit.
     let runtimeToolingOverhead = 0;
-    if (process.env.VERCEL_BUILD_IMAGE) {
-      try {
-        const uvBinaryPath = await getUvBinaryForBundling(this.pythonPath);
-        const uvStats = await fs.promises.stat(uvBinaryPath);
-        runtimeToolingOverhead = uvStats.size;
-      } catch {
-        // If we can't stat the binary, use a conservative estimate
-        runtimeToolingOverhead = 50 * 1024 * 1024; // 50 MB
-      }
+    try {
+      const uvBinaryPath = await this.resolveUvBinaryForBundling();
+      const uvStats = await fs.promises.stat(uvBinaryPath);
+      runtimeToolingOverhead = uvStats.size;
+    } catch {
+      // If we can't stat the binary, use a conservative estimate
+      runtimeToolingOverhead = 50 * 1024 * 1024; // 50 MB
     }
 
     // _runtime_config.json will always be written.  We don't know the exact
@@ -375,7 +545,19 @@ export class PythonDependencyExternalizer {
         `remaining capacity for public packages: ${(remainingCapacity / (1024 * 1024)).toFixed(2)} MB`
     );
 
-    // Build size map for externalizable public packages and run the knapsack algorithm
+    // The non-deferrable footprint (source + private/wheel-less packages +
+    // tooling) alone exceeds the threshold, so runtime install can't shrink the
+    // zip enough. Large functions bundle everything for Hive; otherwise the
+    // final-size check below throws.
+    if (largeFunctionsEnabled && remainingCapacity < 0) {
+      return this.bundleAllForHive(files);
+    }
+
+    console.log(
+      `Bundle size (${totalBundleSizeMB} MB) exceeds the standard size; optimizing dependencies.`
+    );
+
+    // Build size map for externalizable public packages.
     const externalizableSet = new Set(
       externalizablePublic.map(normalizePackageName)
     );
@@ -385,12 +567,31 @@ export class PythonDependencyExternalizer {
       )
     );
 
-    const bundledPublic = lambdaKnapsack(publicPackageSizes, remainingCapacity);
+    // bytecode-first bundles no public packages (all installed into /tmp at
+    // cold start), freeing zip capacity for bytecode. Only chosen when the
+    // full public set fits the ephemeral install budget.
+    const { packingMode, bundledPublic } = planPublicPackagePacking({
+      publicPackageSizes,
+      zipCapacity: remainingCapacity,
+      bytecodeFirst: options.bytecodeFirst ?? false,
+    });
+    if (options.bytecodeFirst && packingMode === 'knapsack') {
+      debug(
+        `bytecode-first packing disabled: the public package set exceeds ` +
+          `the ephemeral install budget ` +
+          `(${(EPHEMERAL_INSTALL_BUDGET_BYTES / (1024 * 1024)).toFixed(2)} MB); ` +
+          `falling back to knapsack packing`
+      );
+    }
+
+    const bundledPublicSet = new Set(bundledPublic.map(normalizePackageName));
+    const externalizedPublic = externalizablePublic.filter(
+      name => !bundledPublicSet.has(normalizePackageName(name))
+    );
 
     // Mirror the selected packages (always-bundled + knapsack-selected public)
     const allBundledPackages = [...alwaysBundled, ...bundledPublic];
-    const selectedVendorFiles = await mirrorPackagesIntoVendor({
-      venvPath: this.venvPath,
+    const selectedVendorFiles = await this.mirrorPackagesIntoVendor({
       vendorDirName: this.vendorDir,
       includePackages: allBundledPackages,
     });
@@ -437,54 +638,88 @@ export class PythonDependencyExternalizer {
       data: runtimeConfigData,
     });
 
-    // Skip uv bundling when running vercel build locally
-    if (process.env.VERCEL_BUILD_IMAGE) {
-      // Add the uv binary to the lambda zip
-      try {
-        const uvBinaryPath = await getUvBinaryForBundling(this.pythonPath);
+    // Add the uv binary to the Lambda zip.
+    try {
+      const uvBinaryPath = await this.resolveUvBinaryForBundling();
 
-        const uvBundleDir = join(this.workPath, UV_BUNDLE_DIR);
-        const uvLocalPath = join(uvBundleDir, 'uv');
-        await fs.promises.mkdir(uvBundleDir, { recursive: true });
-        await fs.promises.copyFile(uvBinaryPath, uvLocalPath);
-        await fs.promises.chmod(uvLocalPath, 0o755);
+      const uvBundleDir = join(this.workPath, UV_BUNDLE_DIR);
+      const uvLocalPath = join(uvBundleDir, 'uv');
+      await fs.promises.mkdir(uvBundleDir, { recursive: true });
+      await fs.promises.copyFile(uvBinaryPath, uvLocalPath);
+      await fs.promises.chmod(uvLocalPath, 0o755);
 
-        const uvBundlePath = `${UV_BUNDLE_DIR}/uv`;
-        files[uvBundlePath] = new FileFsRef({
-          fsPath: uvLocalPath,
-          mode: 0o100755, // Regular file + executable
-        });
-        debug(`Bundled uv binary from ${uvBinaryPath} to ${uvLocalPath}`);
-      } catch (err) {
-        throw new NowBuildError({
-          code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
-          message: `Failed to bundle uv binary for runtime installation: ${
-            err instanceof Error ? err.message : String(err)
-          }`,
-        });
-      }
+      const uvBundlePath = `${UV_BUNDLE_DIR}/uv`;
+      files[uvBundlePath] = new FileFsRef({
+        fsPath: uvLocalPath,
+        mode: 0o100755,
+      });
+      debug(`Bundled uv binary from ${uvBinaryPath} to ${uvLocalPath}`);
+    } catch (err) {
+      debug(
+        `Failed to bundle uv binary: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
+      throw new NowBuildError({
+        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+        message: 'Failed to prepare dependency tooling.',
+      });
     }
 
     // Final size verification – note that force-bundled wheel-incompatible packages
     // are included in the bundle, which can push total size over the threshold.
     // Allow 100 KB of tolerance for rounding and estimation discrepancies in the
     // knapsack capacity budget.  The actual AWS Lambda limit is 250 MB and we
-    // target 245 MB, so a slight overshoot here is safe.
+    // target 225 MB, so a slight overshoot here is safe.
     const finalBundleSize = await calculateBundleSize(files);
     if (finalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES + 100 * 1024) {
+      if (largeFunctionsEnabled) {
+        // Estimation overshoot past the threshold; bundle everything for Hive.
+        return this.bundleAllForHive(files);
+      }
       const finalSizeMB = (finalBundleSize / (1024 * 1024)).toFixed(2);
       const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
         message:
-          `Bundle size (${finalSizeMB} MB) exceeds Lambda limit (${limitMB} MB) even after ` +
-          `deferring public packages to runtime installation. This usually means your ` +
-          `private packages or source code are too large. Consider reducing the size of ` +
-          `private dependencies or splitting your application.`,
-        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+          `Total bundle size (${finalSizeMB} MB) exceeds the maximum function size (${limitMB} MB) even after\n` +
+          `optimizing dependencies.\n\n` +
+          `This usually means your source code or private packages are too\n` +
+          `large. Reduce their size or split your application into smaller\n` +
+          `functions.`,
+        link: BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
     }
+
+    return {
+      fellBackToFullBundle: false,
+      packingMode,
+      alwaysBundledPackages: alwaysBundled,
+      bundledPublicPackages: bundledPublic,
+      externalizedPublicPackages: externalizedPublic,
+    };
+  }
+
+  /**
+   * Discard any runtime-install artifacts added so far and bundle every
+   * dependency directly, for a function that will run on Hive. Returns the
+   * fell-back signal so the caller can apply the same compileall handling.
+   */
+  private bundleAllForHive(files: Files): { fellBackToFullBundle: true } {
+    for (const key of [
+      `${UV_BUNDLE_DIR}/_runtime_config.json`,
+      `${UV_BUNDLE_DIR}/uv`,
+      `${UV_BUNDLE_DIR}/pyproject.toml`,
+      `${UV_BUNDLE_DIR}/uv.lock`,
+    ]) {
+      delete files[key];
+    }
+    for (const [p, f] of Object.entries(this.allVendorFiles)) {
+      files[p] = f;
+    }
+    debug('Bundling all dependencies for the large functions path.');
+    return { fellBackToFullBundle: true };
   }
 
   /**
@@ -501,7 +736,13 @@ export class PythonDependencyExternalizer {
     lockFile: UvLockFile,
     publicPackageNames: string[]
   ): Promise<string[]> {
-    const platform = detectPlatform();
+    const platform = detectTargetPlatform();
+
+    // Skip wheel-compat filtering in dev; the bundle isn't deployed.
+    if (this.pythonMajor === undefined || this.pythonMinor === undefined) {
+      debug('Skipping wheel compatibility check: dev mode');
+      return [];
+    }
 
     // Determine which packages are actually reachable on the target platform
     // by traversing the dependency graph and evaluating environment markers.
@@ -586,6 +827,394 @@ export class PythonDependencyExternalizer {
     }
 
     return incompatible;
+  }
+
+  /** Resolve the uv binary for bundling (host binary on build image, downloaded on local). */
+  private async resolveUvBinaryForBundling(): Promise<string> {
+    if (process.env.VERCEL_BUILD_IMAGE) {
+      return getUvBinaryForBundling(this.pythonPath);
+    }
+    // Builds targeting arm64 run inside the build container where
+    // uv is preinstalled.
+    return downloadUvBinaryForTarget(
+      join(this.workPath, '.vercel', 'python', 'cache')
+    );
+  }
+
+  /**
+   * Mirror packages from site-packages into the _vendor directory.
+   *
+   * When `includePackages` is provided, only distributions whose normalized
+   * name is in the list are included.  When omitted, every distribution is
+   * included.
+   *
+   * Reads `this.sitePackageDirs` and `this.distributions` which are
+   * resolved once at the start of `analyze()`.
+   */
+  async mirrorPackagesIntoVendor({
+    vendorDirName,
+    includePackages,
+  }: {
+    vendorDirName: string;
+    includePackages?: string[];
+  }): Promise<Files> {
+    const vendorFiles: Files = {};
+
+    if (includePackages && includePackages.length === 0) {
+      return vendorFiles;
+    }
+
+    const includeSet = includePackages
+      ? new Set(includePackages.map(normalizePackageName))
+      : null;
+
+    // Collect all file entries first, then verify existence in parallel.
+    interface PendingEntry {
+      bundlePath: string;
+      srcFsPath: string;
+      recordSize: number | undefined;
+    }
+    const pending: PendingEntry[] = [];
+
+    for (const dir of this.sitePackageDirs!) {
+      const dirDistributions = this.distributions!.get(dir);
+      if (!dirDistributions) continue;
+
+      const resolvedDir = resolve(dir);
+      const dirPrefix = resolvedDir + sep;
+
+      for (const [name, dist] of dirDistributions) {
+        if (includeSet && !includeSet.has(name)) continue;
+
+        for (const { path: rawPath, size: recordSize } of dist.files) {
+          // Normalize forward slashes from RECORD (PEP 376) to platform separators.
+          const filePath = rawPath.replaceAll('/', sep);
+          // Skip files installed outside site-packages (e.g. ../../bin/fastapi)
+          if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
+            continue;
+          }
+          if (shouldStripVendorFile(filePath)) {
+            continue;
+          }
+          const srcFsPath = join(dir, filePath);
+          const bundlePath = join(vendorDirName, filePath).replace(/\\/g, '/');
+          pending.push({
+            bundlePath,
+            srcFsPath,
+            // RECORD sizes are bigint; convert to number for FileFsRef.
+            recordSize:
+              recordSize !== undefined && recordSize !== null
+                ? Number(recordSize)
+                : undefined,
+          });
+        }
+      }
+    }
+
+    // Verify file existence and resolve sizes in parallel.
+    // For files with a RECORD size, use fs.promises.access (cheaper than stat).
+    // For files without a RECORD size, use fs.promises.stat to get the size.
+    const results = await Promise.all(
+      pending.map(async ({ bundlePath, srcFsPath, recordSize }) => {
+        if (recordSize !== undefined) {
+          try {
+            await fs.promises.access(srcFsPath);
+            return { bundlePath, srcFsPath, size: recordSize };
+          } catch {
+            return null; // File missing on disk
+          }
+        } else {
+          try {
+            const stats = await fs.promises.stat(srcFsPath);
+            return { bundlePath, srcFsPath, size: stats.size };
+          } catch {
+            return null; // File missing on disk
+          }
+        }
+      })
+    );
+
+    for (const result of results) {
+      if (result) {
+        vendorFiles[result.bundlePath] = new FileFsRef({
+          fsPath: result.srcFsPath,
+          size: result.size,
+        });
+      }
+    }
+
+    debug(
+      `Mirrored ${Object.keys(vendorFiles).length} files` +
+        (includePackages ? ` from ${includePackages.length} packages` : '')
+    );
+    return vendorFiles;
+  }
+
+  /**
+   * Calculate the uncompressed size of each installed distribution.
+   *
+   * Returns a map of normalized package name to total size in bytes.
+   * Uses RECORD sizes when available, falling back to stat for files
+   * without a recorded size.  All stat calls run in parallel.
+   */
+  async calculatePerPackageSizes(): Promise<Map<string, number>> {
+    const sizes = new Map<string, number>();
+
+    for (const dir of this.sitePackageDirs!) {
+      const dirDistributions = this.distributions!.get(dir);
+      if (!dirDistributions) continue;
+
+      const resolvedDir = resolve(dir);
+      const dirPrefix = resolvedDir + sep;
+
+      for (const [name, dist] of dirDistributions) {
+        let knownSize = 0;
+        const statPromises: Promise<number>[] = [];
+
+        for (const { path: rawPath, size: recordSize } of dist.files) {
+          const filePath = rawPath.replaceAll('/', sep);
+          // Skip files outside site-packages
+          if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
+            continue;
+          }
+          if (shouldStripVendorFile(filePath)) {
+            continue;
+          }
+
+          if (recordSize !== undefined && recordSize !== null) {
+            knownSize += Number(recordSize);
+          } else {
+            statPromises.push(
+              fs.promises
+                .stat(join(dir, filePath))
+                .then(stats => stats.size)
+                .catch(() => 0)
+            );
+          }
+        }
+
+        const statSizes = await Promise.all(statPromises);
+        let totalSize = knownSize;
+        for (const s of statSizes) {
+          totalSize += s;
+        }
+
+        sizes.set(name, totalSize);
+      }
+    }
+
+    return sizes;
+  }
+
+  /**
+   * Collect pre-compiled `.pyc` bytecode files for vendor packages.
+   *
+   * For each `.py` file listed in a package's RECORD, derives the expected
+   * `__pycache__/*.cpython-XY.pyc` path and checks whether it exists on
+   * disk (i.e. whether `compileall` produced it).  Files that do not exist
+   * are silently skipped.
+   *
+   * Must be called after `analyze()` which populates `sitePackageDirs` and
+   * `distributions`.
+   */
+  async collectBytecodeFiles({
+    vendorDirName,
+    includePackages,
+  }: {
+    vendorDirName: string;
+    includePackages?: string[];
+  }): Promise<BytecodeCollectionResult> {
+    if (!this.sitePackageDirs || !this.distributions) {
+      throw new Error('collectBytecodeFiles() must be called after analyze()');
+    }
+    if (this.pythonMajor == null || this.pythonMinor == null) {
+      return { files: {}, totalSize: 0, perItemSizes: new Map() };
+    }
+
+    const includeSet = includePackages
+      ? new Set(includePackages.map(normalizePackageName))
+      : null;
+
+    interface PycPending {
+      bundlePath: string;
+      srcFsPath: string;
+      packageName: string;
+    }
+    const pending: PycPending[] = [];
+
+    for (const dir of this.sitePackageDirs) {
+      const dirDistributions = this.distributions.get(dir);
+      if (!dirDistributions) continue;
+
+      for (const [name, dist] of dirDistributions) {
+        if (includeSet && !includeSet.has(name)) continue;
+
+        for (const { path: rawPath } of dist.files) {
+          const pycRel = derivePycPath(
+            rawPath,
+            this.pythonMajor,
+            this.pythonMinor
+          );
+          if (!pycRel) continue;
+
+          const pycFilePath = pycRel.replaceAll('/', sep);
+          const srcFsPath = join(dir, pycFilePath);
+          const bundlePath = join(vendorDirName, pycFilePath).replace(
+            /\\/g,
+            '/'
+          );
+          pending.push({ bundlePath, srcFsPath, packageName: name });
+        }
+      }
+    }
+
+    // Stat all .pyc files in parallel.  Missing files (compileall
+    // may have skipped them) are silently dropped.
+    const results = await Promise.all(
+      pending.map(async ({ bundlePath, srcFsPath, packageName }) => {
+        try {
+          const stats = await fs.promises.stat(srcFsPath);
+          return { bundlePath, srcFsPath, size: stats.size, packageName };
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    const files: Files = {};
+    let totalSize = 0;
+    const perItemSizes = new Map<string, number>();
+
+    for (const result of results) {
+      if (!result) continue;
+      files[result.bundlePath] = new FileFsRef({
+        fsPath: result.srcFsPath,
+        size: result.size,
+      });
+      totalSize += result.size;
+      perItemSizes.set(
+        result.packageName,
+        (perItemSizes.get(result.packageName) ?? 0) + result.size
+      );
+    }
+
+    debug(
+      `Collected ${Object.keys(files).length} bytecode files` +
+        ` (${(totalSize / (1024 * 1024)).toFixed(2)} MB)` +
+        (includePackages ? ` from ${includePackages.length} packages` : '')
+    );
+    return { files, totalSize, perItemSizes };
+  }
+
+  /**
+   * Collect staged prefix `.pyc` files for vendor packages, keyed under
+   * `_vc_pycache/<runtimeRoot>/...` (`runtimeRoot` = `/var/task/_vendor`
+   * for bundled packages, the /tmp site-packages dir for externalized
+   * ones). Missing staged files are silently skipped. Must be called after
+   * `analyze()`.
+   */
+  async collectPrefixBytecodeFiles({
+    stagingDir,
+    runtimeRoot,
+    includePackages,
+  }: {
+    stagingDir: string;
+    runtimeRoot: string;
+    includePackages?: string[];
+  }): Promise<BytecodeCollectionResult> {
+    if (!this.sitePackageDirs || !this.distributions) {
+      throw new Error(
+        'collectPrefixBytecodeFiles() must be called after analyze()'
+      );
+    }
+    if (this.pythonMajor == null || this.pythonMinor == null) {
+      return { files: {}, totalSize: 0, perItemSizes: new Map() };
+    }
+
+    const includeSet = includePackages
+      ? new Set(includePackages.map(normalizePackageName))
+      : null;
+
+    interface PycPending {
+      bundlePath: string;
+      srcFsPath: string;
+      packageName: string;
+    }
+    const pending: PycPending[] = [];
+
+    for (const dir of this.sitePackageDirs) {
+      const dirDistributions = this.distributions.get(dir);
+      if (!dirDistributions) continue;
+
+      const resolvedDir = resolve(dir);
+      const dirPrefix = resolvedDir + sep;
+
+      for (const [name, dist] of dirDistributions) {
+        if (includeSet && !includeSet.has(name)) continue;
+
+        for (const { path: rawPath } of dist.files) {
+          if (!rawPath.endsWith('.py')) continue;
+          // Skip files installed outside site-packages (e.g. ../../bin/x).
+          const filePath = rawPath.replaceAll('/', sep);
+          if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
+            continue;
+          }
+
+          const srcFsPath = deriveStagedPycFsPath(
+            stagingDir,
+            join(dir, filePath),
+            this.pythonMajor,
+            this.pythonMinor
+          );
+          const bundlePath = derivePrefixPycBundlePath(
+            `${runtimeRoot}/${rawPath}`,
+            this.pythonMajor,
+            this.pythonMinor
+          );
+          if (!srcFsPath || !bundlePath) continue;
+
+          pending.push({ bundlePath, srcFsPath, packageName: name });
+        }
+      }
+    }
+
+    // Stat all staged .pyc files in parallel. Missing files (compileall
+    // may have skipped them) are silently dropped.
+    const results = await Promise.all(
+      pending.map(async ({ bundlePath, srcFsPath, packageName }) => {
+        try {
+          const stats = await fs.promises.stat(srcFsPath);
+          return { bundlePath, srcFsPath, size: stats.size, packageName };
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    const files: Files = {};
+    let totalSize = 0;
+    const perItemSizes = new Map<string, number>();
+
+    for (const result of results) {
+      if (!result) continue;
+      files[result.bundlePath] = new FileFsRef({
+        fsPath: result.srcFsPath,
+        size: result.size,
+      });
+      totalSize += result.size;
+      perItemSizes.set(
+        result.packageName,
+        (perItemSizes.get(result.packageName) ?? 0) + result.size
+      );
+    }
+
+    debug(
+      `Collected ${Object.keys(files).length} prefix bytecode files` +
+        ` (${(totalSize / (1024 * 1024)).toFixed(2)} MB)` +
+        ` for runtime root ${runtimeRoot}` +
+        (includePackages ? ` from ${includePackages.length} packages` : '')
+    );
+    return { files, totalSize, perItemSizes };
   }
 }
 
@@ -675,101 +1304,83 @@ export async function getPackagesReachableOnPlatform(
   return visited;
 }
 
-// Utility functions
-/**
- * Mirror packages from site-packages into the _vendor directory.
- *
- * When `includePackages` is provided, only distributions whose normalized
- * name is in the list are included.  When omitted, every distribution is
- * included.
- */
-export async function mirrorPackagesIntoVendor({
-  venvPath,
-  vendorDirName,
-  includePackages,
-}: {
-  venvPath: string;
-  vendorDirName: string;
-  includePackages?: string[];
-}): Promise<Files> {
-  const vendorFiles: Files = {};
-
-  if (includePackages && includePackages.length === 0) {
-    return vendorFiles;
-  }
-
-  const includeSet = includePackages
-    ? new Set(includePackages.map(normalizePackageName))
-    : null;
-
-  const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
-  for (const dir of sitePackageDirs) {
-    if (!fs.existsSync(dir)) continue;
-
-    const resolvedDir = resolve(dir);
-    const dirPrefix = resolvedDir + sep;
-    const distributions = await scanDistributions(dir);
-
-    for (const [name, dist] of distributions) {
-      if (includeSet && !includeSet.has(name)) continue;
-
-      for (const { path: rawPath } of dist.files) {
-        // Normalize forward slashes from RECORD (PEP 376) to platform separators.
-        const filePath = rawPath.replaceAll('/', sep);
-        // Skip files installed outside site-packages (e.g. ../../bin/fastapi)
-        if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
-          continue;
-        }
-        if (
-          filePath.endsWith('.pyc') ||
-          filePath.split(sep).includes('__pycache__')
-        ) {
-          continue;
-        }
-        const srcFsPath = join(dir, filePath);
-        // Skip files listed in RECORD but missing on disk (e.g. deleted by a custom install command)
-        if (!fs.existsSync(srcFsPath)) {
-          continue;
-        }
-        const bundlePath = join(vendorDirName, filePath).replace(/\\/g, '/');
-        vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
-      }
-    }
-  }
-
-  debug(
-    `Mirrored ${Object.keys(vendorFiles).length} files` +
-      (includePackages ? ` from ${includePackages.length} packages` : '')
-  );
-  return vendorFiles;
-}
-
 /**
  * Calculate the total uncompressed size of files in a Files object.
+ *
+ * Uses `file.size` when already populated (e.g. from RECORD metadata)
+ * to avoid redundant stat calls.  Remaining files are stat'd in
+ * parallel for throughput.
  */
-export async function calculateBundleSize(files: Files): Promise<number> {
-  let totalSize = 0;
+export async function calculateBundleSize(
+  files: Files,
+  filter?: (filePath: string) => boolean
+): Promise<number> {
+  let knownSize = 0;
+  const statPromises: Promise<number>[] = [];
 
   for (const filePath of Object.keys(files)) {
+    if (filter && !filter(filePath)) continue;
     const file = files[filePath];
     if ('fsPath' in file && file.fsPath) {
-      try {
-        const stats = await fs.promises.stat(file.fsPath);
-        totalSize += stats.size;
-      } catch (err) {
-        console.warn(
-          `Warning: Failed to stat file ${file.fsPath}, size will not be included in bundle calculation: ${err}`
+      const fsRef = file as FileFsRef;
+      if (typeof fsRef.size === 'number') {
+        // Size already known (populated from RECORD or prior stat).
+        knownSize += fsRef.size;
+      } else {
+        statPromises.push(
+          fs.promises
+            .stat(fsRef.fsPath)
+            .then(stats => {
+              // Cache so later passes (estimate, fill recount) skip the stat.
+              fsRef.size = stats.size;
+              return stats.size;
+            })
+            .catch(err => {
+              console.warn(
+                `Warning: Failed to stat file ${fsRef.fsPath}, size will not be included in bundle calculation: ${err}`
+              );
+              return 0;
+            })
         );
       }
     } else if ('data' in file) {
       // FileBlob with data
       const data = (file as { data: string | Buffer }).data;
-      totalSize +=
+      knownSize +=
         typeof data === 'string' ? Buffer.byteLength(data) : data.length;
     }
   }
 
+  const statSizes = await Promise.all(statPromises);
+  let totalSize = knownSize;
+  for (const s of statSizes) {
+    totalSize += s;
+  }
   return totalSize;
+}
+
+/**
+ * Expected .pyc-to-.py size ratio. Measured empirically on real venvs
+ * (1.06 and 1.14 across different dependency mixes); slightly high so the
+ * gate errs toward skipping marginal compiles.
+ */
+export const PYC_TO_PY_RATIO = 1.2;
+
+/**
+ * Minimum fraction of the estimated bytecode that must fit the remaining
+ * capacity to justify running compileall. Cold-start benefit is roughly
+ * proportional to coverage, so partial fills above this floor are worth it.
+ */
+export const BYTECODE_COVERAGE_FLOOR = 0.5;
+
+/**
+ * Estimate the total bytecode size compileall would produce for the .py
+ * files in the bundle. Used only to gate whether compiling is worthwhile;
+ * the fill itself measures real .pyc sizes.
+ */
+export async function estimateBytecodeSize(files: Files): Promise<number> {
+  const pyBytes = await calculateBundleSize(files, p => p.endsWith('.py'));
+  return PYC_TO_PY_RATIO * pyBytes;
 }
 
 /**
@@ -805,52 +1416,40 @@ export function lambdaKnapsack(
   return bundled;
 }
 
+export interface PublicPackagePackingPlan {
+  packingMode: PackingMode;
+  /** Public packages selected for the zip (empty in bytecode-first mode). */
+  bundledPublic: string[];
+}
+
 /**
- * Calculate the uncompressed size of each installed distribution.
- *
- * Returns a map of normalized package name to total size in bytes,
- * measured from the actual files on disk.
+ * Decide how public packages split between the zip and the cold-start
+ * install. bytecode-first bundles no public packages (freeing zip capacity
+ * for bytecode) and is only chosen when the full public set fits the
+ * ephemeral install budget. Otherwise knapsack packs the largest packages into
+ * the zip and only the remainder is installed into /tmp at cold start.
+ * Falling back costs bytecode coverage, never correctness.
  */
-async function calculatePerPackageSizes(
-  venvPath: string
-): Promise<Map<string, number>> {
-  const sizes = new Map<string, number>();
-  const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
-
-  for (const dir of sitePackageDirs) {
-    if (!fs.existsSync(dir)) continue;
-
-    const resolvedDir = resolve(dir);
-    const dirPrefix = resolvedDir + sep;
-    const distributions = await scanDistributions(dir);
-
-    for (const [name, dist] of distributions) {
-      let totalSize = 0;
-
-      for (const { path: rawPath } of dist.files) {
-        const filePath = rawPath.replaceAll('/', sep);
-        // Skip files outside site-packages
-        if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
-          continue;
-        }
-        // Skip .pyc and __pycache__
-        if (
-          filePath.endsWith('.pyc') ||
-          filePath.split(sep).includes('__pycache__')
-        ) {
-          continue;
-        }
-        try {
-          const stats = await fs.promises.stat(join(dir, filePath));
-          totalSize += stats.size;
-        } catch {
-          // File listed in RECORD but missing on disk; skip it
-        }
-      }
-
-      sizes.set(name, totalSize);
-    }
+export function planPublicPackagePacking({
+  publicPackageSizes,
+  zipCapacity,
+  bytecodeFirst,
+}: {
+  publicPackageSizes: Map<string, number>;
+  zipCapacity: number;
+  bytecodeFirst: boolean;
+}): PublicPackagePackingPlan {
+  let totalPublicSize = 0;
+  for (const size of publicPackageSizes.values()) {
+    totalPublicSize += size;
   }
 
-  return sizes;
+  if (bytecodeFirst && totalPublicSize <= EPHEMERAL_INSTALL_BUDGET_BYTES) {
+    return { packingMode: 'bytecode-first', bundledPublic: [] };
+  }
+
+  return {
+    packingMode: 'knapsack',
+    bundledPublic: lambdaKnapsack(publicPackageSizes, zipCapacity),
+  };
 }

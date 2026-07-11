@@ -1,5 +1,10 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, limitOption, nextOption } from '../../util/arg-common';
+import {
+  formatOption,
+  limitOption,
+  nextOption,
+  projectOption,
+} from '../../util/arg-common';
 
 export const typesSubcommand = {
   name: 'types',
@@ -67,11 +72,8 @@ export const activityCommand = {
       description: 'Show events before this date (ISO 8601 or relative).',
     },
     {
-      name: 'project',
+      ...projectOption,
       shorthand: 'p',
-      type: String,
-      argument: 'NAME_OR_ID',
-      deprecated: false,
       description:
         'Filter by project (overrides auto-detected linked project).',
     },

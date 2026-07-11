@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import execa from 'execa';
 import { errorToString } from '@vercel/error-utils';
 import open from 'open';
 import output from '../../output-manager';
@@ -6,11 +7,18 @@ import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import indent from '../../util/output/indent';
 import { autoProvisionResource } from '../../util/integration/auto-provision-resource';
-import { fetchIntegrationWithTelemetry } from '../../util/integration/fetch-integration';
+import { resolveAndFetchIntegration } from '../../util/integration/fetch-integration';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { acceptTermsViaBrowser } from '../../util/integration/accept-terms-via-browser';
 import { promptForTermAcceptance } from '../../util/integration/prompt-for-terms';
 import { selectProduct } from '../../util/integration/select-product';
+import {
+  resolveProductSkills,
+  type ResolvedSkill,
+} from '../../util/integration/skill-suggestion';
+import { runClaimForResource } from '../integration-resource/claim';
+import { getResources } from '../../util/integration-resource/get-resources';
+import { packageName } from '../../util/pkg-name';
 import type {
   AcceptedPolicies,
   AutoProvisionedResponse,
@@ -37,18 +45,20 @@ import {
 } from '../../util/integration/format-schema-help';
 import type { Metadata } from '../../util/integration/types';
 
-export interface AddAutoProvisionOptions extends PostProvisionOptions {
+interface AddAutoProvisionOptions extends PostProvisionOptions {
   metadata?: string[];
   productSlug?: string;
   billingPlanId?: string;
   installationId?: string;
   commandName?: 'integration add' | 'install';
   asJson?: boolean;
+  claim?: boolean;
+  noClaim?: boolean;
 }
 
 export async function addAutoProvision(
   client: Client,
-  integrationSlug: string,
+  integrationSlugOrQuery: string,
   resourceNameArg?: string,
   options: AddAutoProvisionOptions = {}
 ) {
@@ -76,19 +86,22 @@ export async function addAutoProvision(
   }
   client.config.currentTeam = team.id;
 
-  // Fetch integration
-  const integration = await fetchIntegrationWithTelemetry(
+  // Fetch integration (with discover fallback if slug not found)
+  const integration = await resolveAndFetchIntegration(
     client,
-    integrationSlug,
+    integrationSlugOrQuery,
     telemetry
   );
   if (!integration) {
     return 1;
   }
+  if (integration.productSlug && !options.productSlug) {
+    options.productSlug = integration.productSlug;
+  }
 
   if (!integration.products?.length) {
     output.error(
-      `Integration "${integrationSlug}" is not a Marketplace integration`
+      `Integration "${integration.slug}" is not a Marketplace integration`
     );
     return 1;
   }
@@ -100,10 +113,10 @@ export async function addAutoProvision(
     !client.stdin.isTTY
   ) {
     const choices = integration.products
-      .map(p => `  ${integrationSlug}/${p.slug}`)
+      .map(p => `  ${integration.slug}/${p.slug}`)
       .join('\n');
     output.error(
-      `Integration "${integrationSlug}" has multiple products. Specify one with:\n\n${choices}\n\nExample: vercel ${commandName} ${integrationSlug}/${integration.products[0].slug}`
+      `Integration "${integration.slug}" has multiple products. Specify one with:\n\n${choices}\n\nExample: vercel ${commandName} ${integration.slug}/${integration.products[0].slug}`
     );
     return 1;
   }
@@ -143,7 +156,6 @@ export async function addAutoProvision(
     product_slug: product.slug,
     team_id: team.id,
     source: 'cli',
-    is_auto_provision: true,
   };
 
   telemetry.trackMarketplaceEvent(
@@ -159,7 +171,7 @@ export async function addAutoProvision(
     `Product metadataSchema: ${JSON.stringify(product.metadataSchema, null, 2)}`
   );
 
-  // 3b. Check if integration is installed on this team
+  // Check if integration is installed on this team
   const teamInstallation = installations.find(
     i => i.ownerId === team.id && i.installationType === 'marketplace'
   );
@@ -356,8 +368,8 @@ export async function addAutoProvision(
       .map(line => `  - ${line}`)
       .join('\n');
     const slug = options.productSlug
-      ? `${integrationSlug}/${options.productSlug}`
-      : integrationSlug;
+      ? `${integration.slug}/${options.productSlug}`
+      : integration.slug;
     telemetry.trackMarketplaceEvent(
       'marketplace_install_flow_multiple_installations',
       {
@@ -366,7 +378,7 @@ export async function addAutoProvision(
       }
     );
     output.error(
-      `Multiple installations found for "${integrationSlug}":\n${installationsList}\n\nRe-run with --installation-id to select one, e.g.:\n  vercel ${commandName} ${slug} --installation-id ${result.installations[0].id}`
+      `Multiple installations found for "${integration.slug}":\n${installationsList}\n\nRe-run with --installation-id to select one, e.g.:\n  vercel ${commandName} ${slug} --installation-id ${result.installations[0].id}`
     );
     return 1;
   }
@@ -413,7 +425,7 @@ export async function addAutoProvision(
         `  Provide ${examples.join(' ')} to provision directly from the CLI.`
       );
       output.log(
-        `  Run \`vercel ${commandName} ${integrationSlug} --help\` for all metadata options.`
+        `  Run \`vercel ${commandName} ${integration.slug} --help\` for all metadata options.`
       );
       return 1;
     }
@@ -469,6 +481,58 @@ export async function addAutoProvision(
     `${product.name} successfully provisioned: ${chalk.bold(resourceName)}`
   );
 
+  // Sandbox resources (e.g. Stripe, Shopify) require the user to claim the
+  // account in the provider UI to convert from sandbox to a real owned account.
+  const isSandbox = provisioned.resource.ownership === 'sandbox';
+  if (isSandbox && !options.noClaim) {
+    telemetry.trackCliFlagClaim(options.claim);
+    telemetry.trackCliFlagNoClaim(options.noClaim);
+
+    const shouldRunClaim =
+      options.claim || (client.stdin.isTTY && !options.asJson);
+
+    if (shouldRunClaim) {
+      let runClaim = !!options.claim;
+      if (!runClaim && client.stdin.isTTY) {
+        runClaim = await client.input.confirm(
+          `${chalk.bold(resourceName)} is a sandbox resource. Claim it now?`,
+          true
+        );
+      }
+
+      if (runClaim) {
+        try {
+          const allResources = await getResources(client);
+          const targetResource = allResources.find(
+            r => r.id === provisioned.resource.id
+          );
+          if (targetResource) {
+            await runClaimForResource(client, targetResource, {
+              suppressActionRequired: true,
+            });
+          } else {
+            output.warn(
+              `Could not locate the newly provisioned resource. Run \`${packageName} integration resource claim ${resourceName}\` to claim it.`
+            );
+          }
+        } catch (error) {
+          output.warn(
+            `Failed to start claim flow: ${(error as Error).message}. Run \`${packageName} integration resource claim ${resourceName}\` to retry.`
+          );
+        }
+      }
+    } else {
+      output.log(
+        `Sandbox resource — claim it with: ${chalk.cyan(`vercel integration resource claim ${resourceName}`)}`
+      );
+    }
+  } else if (isSandbox && options.noClaim) {
+    telemetry.trackCliFlagNoClaim(options.noClaim);
+    output.log(
+      `Sandbox resource — claim it later with: ${chalk.cyan(`vercel integration resource claim ${resourceName}`)}`
+    );
+  }
+
   const guideSlug =
     integration.products.length > 1
       ? `${integration.slug}/${product.slug}`
@@ -509,6 +573,64 @@ export async function addAutoProvision(
     }
   );
 
+  // Install the product's declared agent skills (from `agentSkills`) in all
+  // modes, including --format=json, where the human-readable summary is
+  // suppressed and each skill's `installed` status is reported in the payload.
+  const skills = resolveProductSkills(product);
+  const failedSkills: ResolvedSkill[] = [];
+
+  if (skills.length) {
+    if (!options.asJson) {
+      output.spinner(`Installing agent skills for ${product.name}...`);
+    }
+    for (const skill of skills) {
+      // Both `--yes` flags are needed in non-interactive (agent/CI) contexts:
+      // the first stops `npx` from prompting to install the `skills` package,
+      // the second makes `skills add` accept its defaults instead of asking.
+      const args = [
+        '--yes',
+        'skills',
+        'add',
+        skill.repoUrl,
+        ...(skill.skill ? ['--skill', skill.skill] : []),
+        '--yes',
+      ];
+      const result = await execa('npx', args, {
+        cwd: client.cwd,
+        stdio: 'pipe',
+        reject: false,
+      });
+      if (result.exitCode !== 0) {
+        failedSkills.push(skill);
+        output.debug(`skills add failed: ${result.stderr}`);
+        if (!options.asJson) {
+          output.warn(
+            `Failed to install ${skill.skill ?? skill.repoUrl}. Run it manually: ${chalk.cyan(skill.command)}`
+          );
+        }
+      }
+    }
+    const installed = skills.length - failedSkills.length;
+    if (installed > 0 && !options.asJson) {
+      // Link to the page that renders the product's Agent Skills section: the
+      // product page for multi-product integrations, the integration page
+      // otherwise (single-product product pages are not linked in the UI).
+      const marketplaceUrl =
+        integration.products.length > 1
+          ? `https://vercel.com/marketplace/${integration.slug}/${product.slug}`
+          : `https://vercel.com/marketplace/${integration.slug}`;
+      output.log(
+        `Installed ${installed} agent skill${installed === 1 ? '' : 's'} for ${chalk.bold(product.name)}`
+      );
+      output.log(
+        indent(
+          `Learn more: ${output.link(marketplaceUrl, marketplaceUrl, { fallback: false })}`,
+          2
+        )
+      );
+    }
+  }
+
   if (options.asJson) {
     const warnings: string[] = [];
     if (setupResult.connectError) {
@@ -519,6 +641,11 @@ export async function addAutoProvision(
     if (setupResult.connected && !setupResult.envPulled && !options.noEnvPull) {
       warnings.push(ENV_PULL_FAILED_MESSAGE);
     }
+    for (const skill of failedSkills) {
+      warnings.push(
+        `Failed to install ${skill.skill ?? skill.repoUrl}. Run it manually: ${skill.command}`
+      );
+    }
 
     const jsonOutput: Record<string, unknown> = {
       resource: {
@@ -526,6 +653,9 @@ export async function addAutoProvision(
         name: provisioned.resource.name,
         status: provisioned.resource.status,
         externalResourceId: provisioned.resource.externalResourceId,
+        ...(provisioned.resource.ownership && {
+          ownership: provisioned.resource.ownership,
+        }),
       },
       integration: {
         id: provisioned.integration.id,
@@ -560,6 +690,10 @@ export async function addAutoProvision(
       environments: setupResult.environments,
       envPulled: setupResult.envPulled,
       guideCommand,
+      skills: skills.map(skill => ({
+        ...skill,
+        installed: !failedSkills.includes(skill),
+      })),
       warnings,
     };
 

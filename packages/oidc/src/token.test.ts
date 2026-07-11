@@ -4,8 +4,29 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 
+vi.mock('@vercel/cli-config', () => ({
+  getGlobalPathConfig: vi.fn(),
+  getLikelyEffectiveCredStorage: vi.fn(() => 'file'),
+}));
+vi.mock('@vercel/cli-exec', () => ({
+  execVercelCli: vi.fn(),
+  VercelCliError: class VercelCliError extends Error {
+    stderr?: string;
+
+    constructor(options: { message: string; stderr?: string }) {
+      super(options.message);
+      this.name = 'VercelCliError';
+      this.stderr = options.stderr;
+    }
+  },
+}));
 vi.mock('./token-io');
 
+import {
+  getGlobalPathConfig,
+  getLikelyEffectiveCredStorage,
+} from '@vercel/cli-config';
+import { execVercelCli, VercelCliError } from '@vercel/cli-exec';
 import { findRootDir, getUserDataDir } from './token-io';
 import * as tokenUtil from './token-util';
 import { refreshToken } from './token';
@@ -20,6 +41,7 @@ describe('refreshToken', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getLikelyEffectiveCredStorage).mockReturnValue('file');
 
     process.env.VERCEL_OIDC_TOKEN = undefined;
     const random = `test-${randomUUID()}`;
@@ -37,7 +59,10 @@ describe('refreshToken', () => {
     });
 
     // write the auth.json file to supply the auth token for the cli
-    fs.writeFileSync(path.join(cliDataDir, 'auth.json'), '{token: "test"}');
+    fs.writeFileSync(
+      path.join(cliDataDir, 'auth.json'),
+      JSON.stringify({ token: 'test' })
+    );
 
     // write the project.json file to supply the projectId
     fs.writeFileSync(
@@ -50,6 +75,7 @@ describe('refreshToken', () => {
     vi.spyOn(process, 'cwd').mockReturnValue(rootDir);
     vi.mocked(findRootDir).mockReturnValue(rootDir);
     vi.mocked(getUserDataDir).mockReturnValue(userDataDir);
+    vi.mocked(getGlobalPathConfig).mockReturnValue(cliDataDir);
 
     vi.spyOn(tokenUtil, 'getVercelToken').mockResolvedValue('test');
     vi.spyOn(tokenUtil, 'getVercelOidcToken').mockResolvedValue({
@@ -59,6 +85,15 @@ describe('refreshToken', () => {
       sub: 'test-sub',
       name: 'test-name',
       exp: Date.now() + 100000,
+    });
+    vi.mocked(execVercelCli).mockResolvedValue({
+      stdout: JSON.stringify({ token: 'cli-token' }),
+      stderr: '',
+      invocation: {
+        command: 'vercel',
+        commandArgs: [],
+        source: 'path',
+      },
     });
   });
 
@@ -77,6 +112,77 @@ describe('refreshToken', () => {
     const tokenPath = path.join(tokenDataDir, `${projectId}.json`);
     const token = JSON.parse(fs.readFileSync(tokenPath, 'utf8'));
     expect(token).toEqual({ token: 'test-token' });
+  });
+
+  test('should use cli-exec when keyring-backed credentials are likely', async () => {
+    vi.mocked(getLikelyEffectiveCredStorage).mockReturnValue('keyring');
+
+    await refreshToken();
+
+    expect(execVercelCli).toHaveBeenCalledWith([
+      'project',
+      'token',
+      projectId,
+      '--format=json',
+    ]);
+    expect(tokenUtil.getVercelToken).not.toHaveBeenCalled();
+    expect(tokenUtil.getVercelOidcToken).not.toHaveBeenCalled();
+    expect(process.env.VERCEL_OIDC_TOKEN).toBe('cli-token');
+  });
+
+  test('should pass scope to cli-exec when team is known', async () => {
+    const customTeamId = 'team_customscope123';
+
+    vi.mocked(getLikelyEffectiveCredStorage).mockReturnValue('keyring');
+
+    await refreshToken({ team: customTeamId, project: projectId });
+
+    expect(execVercelCli).toHaveBeenCalledWith([
+      'project',
+      'token',
+      projectId,
+      '--format=json',
+      '--scope',
+      customTeamId,
+    ]);
+  });
+
+  test('should fail with a cli-specific error for malformed cli json output', async () => {
+    vi.mocked(getLikelyEffectiveCredStorage).mockReturnValue('keyring');
+    vi.mocked(execVercelCli).mockResolvedValue({
+      stdout: JSON.stringify({ nope: 'missing-token' }),
+      stderr: '',
+      invocation: {
+        command: 'vercel',
+        commandArgs: [],
+        source: 'path',
+      },
+    });
+
+    await expect(refreshToken()).rejects.toThrow(
+      'Failed to refresh OIDC token with the Vercel CLI: Vercel OIDC token is malformed. Expected a string-valued token property.'
+    );
+  });
+
+  test('should include cli stderr when cli-exec fails', async () => {
+    vi.mocked(getLikelyEffectiveCredStorage).mockReturnValue('keyring');
+    vi.mocked(execVercelCli).mockRejectedValue(
+      new VercelCliError({
+        code: 'VERCEL_CLI_ERRORED',
+        message: 'Command failed with exit code 1',
+        stderr: 'Project not found for this scope',
+        exitCode: 1,
+        invocation: {
+          command: 'vercel',
+          commandArgs: [],
+          source: 'path',
+        },
+      })
+    );
+
+    await expect(refreshToken()).rejects.toThrow(
+      'Failed to refresh OIDC token with the Vercel CLI: Command failed with exit code 1\nProject not found for this scope'
+    );
   });
 
   test('should use provided team and project instead of reading project.json', async () => {

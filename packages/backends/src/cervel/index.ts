@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 import { rolldown } from './rolldown.js';
-import { typescript } from './typescript.js';
+import { typescript } from '../typescript.js';
 import { join } from 'node:path';
 import execa from 'execa';
 import { findEntrypoint, findEntrypointOrThrow } from '../find-entrypoint.js';
@@ -50,7 +50,11 @@ export const build = async (args: CervelBuildOptions) => {
     JSON.stringify({ handler: rolldownResult.result.handler }, null, 2)
   );
 
-  console.log(c.gray(`${c.bold(c.cyan('✓'))} Build complete`));
+  console.log(
+    c.gray(
+      `${c.bold(c.cyan('✓'))} Build complete — Using ${c.bold(entrypoint)} as the root entrypoint.`
+    )
+  );
 
   return { rolldownResult: rolldownResult.result };
 };

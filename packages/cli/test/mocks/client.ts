@@ -258,13 +258,18 @@ export class MockClient extends Client {
       supportsHyperlink: false,
     });
 
-    this.argv = [];
+    super.setArgv([]);
     this.authConfig = {
       token: 'token_dummy',
+      skipWrite: true,
     };
     this.config = {};
     this.localConfig = {};
     this.localConfigPath = undefined;
+    this.user = undefined;
+    this.userPromise = undefined;
+    this.teams = undefined;
+    this.teamsPromise = undefined;
 
     this.scenario = Router();
 
@@ -344,8 +349,16 @@ export class MockClient extends Client {
     });
   }
 
-  setArgv(...argv: string[]) {
-    this.argv = [process.execPath, 'cli.js', ...argv];
+  setArgv(argv: string[]): void;
+  setArgv(...argv: string[]): void;
+  setArgv(argvOrFirst?: string[] | string, ...rest: string[]) {
+    const argv = Array.isArray(argvOrFirst)
+      ? argvOrFirst
+      : typeof argvOrFirst === 'string'
+        ? [argvOrFirst, ...rest]
+        : [];
+
+    super.setArgv([process.execPath, 'cli.js', ...argv]);
 
     output.initialize({
       debug: argv.includes('--debug') || argv.includes('-d'),

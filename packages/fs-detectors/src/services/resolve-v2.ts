@@ -1,0 +1,529 @@
+import { posix as posixPath } from 'path';
+import { isNodeBackendFramework } from '@vercel/build-utils';
+import { frameworkList } from '@vercel/frameworks';
+import type {
+  ExperimentalServiceV2,
+  ExperimentalServiceV2Config,
+  ExperimentalServicesV2,
+  ServiceDetectionError,
+  ServiceRuntime,
+} from './types';
+import { RUNTIME_BUILDERS, STATIC_BUILDERS } from './types';
+import {
+  getServiceFs,
+  resolveEntrypointPath,
+  detectFrameworkFromWorkspace,
+  parsePyModuleAttrEntrypoint,
+} from './resolve';
+import {
+  getBuilderForRuntime,
+  inferRuntimeFromFramework,
+  inferServiceRuntime,
+  stripTrailingSlash,
+} from './utils';
+import type { DetectorFilesystem } from '../detectors/filesystem';
+
+const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
+
+const MAX_SERVICE_NAME_LENGTH = 64;
+const SERVICE_NAME_REGEX = /^[a-z]([a-z_-]*[a-z])?$/;
+
+function isValidServiceName(name: string): boolean {
+  return (
+    name.length <= MAX_SERVICE_NAME_LENGTH && SERVICE_NAME_REGEX.test(name)
+  );
+}
+
+function getInvalidServiceNameMessage(name: string): string {
+  return `Service name "${name}" is invalid. Names must be 1-${MAX_SERVICE_NAME_LENGTH} characters, start and end with a lowercase letter, and contain only lowercase letters, hyphens, and underscores.`;
+}
+
+/**
+ * The blessed Dockerfile names for container services: bare `Dockerfile` /
+ * `Containerfile` and the `.vercel` opt-in markers. Both the supplied-entrypoint
+ * check and the `runtime: "container"` auto-detection use this single set, so a
+ * suffixed name like `Dockerfile.prod` is never matched.
+ *
+ * Ordered so the `.vercel` opt-in markers are probed first during
+ * auto-detection: a project that ships both gets to use the `.vercel` marker as
+ * the explicit "deploy this as a container" signal, matching the `container`
+ * framework preset.
+ */
+const CONTAINER_ENTRYPOINT_CANDIDATES = [
+  'Dockerfile.vercel',
+  'Containerfile.vercel',
+  'Dockerfile',
+  'Containerfile',
+];
+
+const CONTAINER_ENTRYPOINT_BASENAMES = new Set(
+  CONTAINER_ENTRYPOINT_CANDIDATES.map(name => name.toLowerCase())
+);
+
+/**
+ * Whether a supplied `entrypoint` names a blessed Dockerfile, used to infer
+ * `runtime: "container"`. Matches only the basenames `Dockerfile`,
+ * `Containerfile`, `Dockerfile.vercel`, and `Containerfile.vercel` — a suffixed
+ * name such as `Dockerfile.prod` is not a container entrypoint.
+ */
+function isDockerfileEntrypoint(entrypoint: string): boolean {
+  return CONTAINER_ENTRYPOINT_BASENAMES.has(
+    posixPath.basename(entrypoint).toLowerCase()
+  );
+}
+
+/**
+ * Probe the service root for a blessed Dockerfile candidate. Returns the
+ * service-root-relative path of the first one that exists, or undefined.
+ */
+async function detectContainerEntrypoint(
+  serviceFs: DetectorFilesystem
+): Promise<string | undefined> {
+  for (const candidate of CONTAINER_ENTRYPOINT_CANDIDATES) {
+    if (await serviceFs.hasPath(candidate)) {
+      return candidate;
+    }
+  }
+  return undefined;
+}
+
+function normalizeContainerCommand(
+  command: string | string[] | undefined
+): string[] | undefined {
+  if (command === undefined) {
+    return undefined;
+  }
+  return Array.isArray(command) ? command : [command];
+}
+
+/**
+ * Resolve a container (`runtime: "container"`) service. Containers don't go
+ * through framework/entrypoint-extension detection: the entrypoint is a
+ * Dockerfile/Containerfile to build & push. When no entrypoint is supplied we
+ * probe the service root for a blessed Dockerfile candidate.
+ */
+async function resolveContainerServiceV2(
+  name: string,
+  config: ExperimentalServiceV2Config,
+  normalizedRoot: string,
+  serviceFs: DetectorFilesystem
+): Promise<{ service?: ExperimentalServiceV2; error?: ServiceDetectionError }> {
+  const isRoot = normalizedRoot === '.';
+
+  const entrypoint = config.entrypoint;
+  let dockerfile: string | undefined;
+  if (typeof entrypoint === 'string') {
+    // An explicit entrypoint must name a Dockerfile/Containerfile; there is no
+    // longer any prebuilt-image-reference entrypoint.
+    if (!isDockerfileEntrypoint(entrypoint)) {
+      return {
+        error: {
+          code: 'INVALID_SERVICE_CONFIG',
+          message: `Container service "${name}" has invalid "entrypoint" "${entrypoint}". It must name a Dockerfile or Containerfile.`,
+          serviceName: name,
+        },
+      };
+    }
+    dockerfile = posixPath.normalize(entrypoint);
+  } else {
+    // No entrypoint: auto-detect one of the blessed Dockerfile candidates in
+    // the service root.
+    dockerfile = await detectContainerEntrypoint(serviceFs);
+    if (!dockerfile) {
+      return {
+        error: {
+          code: 'MISSING_SERVICE_CONFIG',
+          message: `Container service "${name}" has no "entrypoint" and no ${CONTAINER_ENTRYPOINT_CANDIDATES.join(
+            ', '
+          )} was found in "${normalizedRoot}".`,
+          serviceName: name,
+        },
+      };
+    }
+  }
+
+  // builder.src is project-root-relative.
+  const builderSrc = isRoot
+    ? dockerfile
+    : posixPath.join(normalizedRoot, dockerfile);
+
+  const builderConfig: Record<string, unknown> = { zeroConfig: true };
+  if (!isRoot) {
+    builderConfig.workspace = normalizedRoot;
+  }
+  const command = normalizeContainerCommand(config.command);
+  if (command) {
+    builderConfig.command = command;
+  }
+
+  return {
+    service: {
+      schema: 'experimentalServicesV2',
+      name,
+      root: normalizedRoot,
+      runtime: 'container',
+      entrypoint: dockerfile,
+      command,
+      builder: {
+        src: builderSrc,
+        use: '@vercel/container',
+        config: builderConfig,
+      },
+      bindings: config.bindings,
+      functions: config.functions,
+      headers: config.headers,
+      redirects: config.redirects,
+      rewrites: config.rewrites,
+      routes: config.routes,
+      cleanUrls: config.cleanUrls,
+      trailingSlash: config.trailingSlash,
+    },
+  };
+}
+
+export function validateServiceConfigV2(
+  name: string,
+  config: ExperimentalServiceV2Config
+): ServiceDetectionError | null {
+  if (!isValidServiceName(name)) {
+    return {
+      code: 'INVALID_SERVICE_NAME',
+      message: getInvalidServiceNameMessage(name),
+      serviceName: name,
+    };
+  }
+  if (!config || typeof config !== 'object') {
+    return {
+      code: 'INVALID_SERVICE_CONFIG',
+      message: `Service "${name}" has an invalid configuration. Expected an object.`,
+      serviceName: name,
+    };
+  }
+  if (typeof config.root !== 'string' || config.root.length === 0) {
+    return {
+      code: 'MISSING_ROOT',
+      message: `Service "${name}" must specify a "root".`,
+      serviceName: name,
+    };
+  }
+  const normalizedRoot = posixPath.normalize(config.root);
+  if (normalizedRoot.startsWith('/')) {
+    return {
+      code: 'INVALID_ROOT',
+      message: `Service "${name}" has invalid "root" "${config.root}". Must be a relative path.`,
+      serviceName: name,
+    };
+  }
+  if (normalizedRoot === '..' || normalizedRoot.startsWith('../')) {
+    return {
+      code: 'INVALID_ROOT',
+      message: `Service "${name}" has invalid "root" "${config.root}". Must not escape the project root.`,
+      serviceName: name,
+    };
+  }
+  if (config.runtime && !(config.runtime in RUNTIME_BUILDERS)) {
+    return {
+      code: 'INVALID_RUNTIME',
+      message: `Service "${name}" has invalid runtime "${config.runtime}".`,
+      serviceName: name,
+    };
+  }
+  if (config.framework && !frameworksBySlug.has(config.framework)) {
+    return {
+      code: 'INVALID_FRAMEWORK',
+      message: `Service "${name}" has invalid framework "${config.framework}".`,
+      serviceName: name,
+    };
+  }
+  if (config.runtime && config.framework) {
+    const frameworkRuntime = inferRuntimeFromFramework(config.framework);
+    if (frameworkRuntime && frameworkRuntime !== config.runtime) {
+      return {
+        code: 'RUNTIME_FRAMEWORK_MISMATCH',
+        message:
+          `Service "${name}" has conflicting runtime/framework: runtime "${config.runtime}" is incompatible ` +
+          `with framework "${config.framework}" (runtime "${frameworkRuntime}").`,
+        serviceName: name,
+      };
+    }
+  }
+  return null;
+}
+
+export async function resolveConfiguredServiceV2(
+  name: string,
+  config: ExperimentalServiceV2Config,
+  fs: DetectorFilesystem
+): Promise<{ service?: ExperimentalServiceV2; error?: ServiceDetectionError }> {
+  // `posixPath.normalize` preserves trailing slashes ("frontend/" stays
+  // "frontend/"), which double-prefixes builder paths downstream. Strip it so
+  // "frontend/" and "frontend" resolve identically.
+  const normalizedRoot = stripTrailingSlash(posixPath.normalize(config.root));
+
+  // Scope the filesystem to the service root for entrypoint/framework detection
+  // (and container Dockerfile auto-detection). A root of "." is the project root
+  // itself, so there is nothing to chdir into.
+  const serviceFsResult =
+    normalizedRoot === '.'
+      ? { fs }
+      : await getServiceFs(fs, name, normalizedRoot);
+  if (serviceFsResult.error) {
+    return { error: serviceFsResult.error };
+  }
+  const serviceFs = serviceFsResult.fs;
+
+  // Container services are resolved separately: they don't go through
+  // framework/entrypoint-extension detection. Container intent is signalled by
+  // an explicit `runtime: "container"`, or by an entrypoint that names a
+  // Dockerfile/Containerfile.
+  const isContainer =
+    config.runtime === 'container' ||
+    (typeof config.entrypoint === 'string' &&
+      isDockerfileEntrypoint(config.entrypoint));
+  if (isContainer) {
+    return resolveContainerServiceV2(name, config, normalizedRoot, serviceFs);
+  }
+
+  // Resolve the entrypoint, Python `module:attr` references
+  // resolve against their underlying file.
+  const rawEntrypoint = config.entrypoint;
+  const moduleAttr =
+    typeof rawEntrypoint === 'string'
+      ? parsePyModuleAttrEntrypoint(rawEntrypoint)
+      : null;
+  let normalizedEntrypoint: string | undefined;
+  let entrypointIsDirectory = false;
+  if (typeof rawEntrypoint === 'string') {
+    const entrypointToResolve = moduleAttr
+      ? moduleAttr.filePath
+      : rawEntrypoint;
+    const resolved = await resolveEntrypointPath({
+      fs: serviceFs,
+      serviceName: name,
+      entrypoint: entrypointToResolve,
+    });
+    if (resolved.error) {
+      return { error: resolved.error };
+    }
+    normalizedEntrypoint = resolved.entrypoint?.normalized;
+    entrypointIsDirectory = Boolean(resolved.entrypoint?.isDirectory);
+  }
+
+  const entrypointFile =
+    entrypointIsDirectory || !normalizedEntrypoint
+      ? undefined
+      : normalizedEntrypoint;
+
+  let inferredRuntime = inferServiceRuntime({
+    runtime: config.runtime,
+    framework: config.framework,
+    entrypoint: entrypointFile,
+  });
+
+  let framework = config.framework;
+  let detectedFramework = false;
+  if (!framework) {
+    const workspace =
+      entrypointIsDirectory && normalizedEntrypoint
+        ? normalizedEntrypoint
+        : '.';
+    const detection = await detectFrameworkFromWorkspace({
+      fs: serviceFs,
+      workspace,
+      serviceName: name,
+      runtime: inferredRuntime,
+    });
+    if (detection.error) {
+      return { error: detection.error };
+    }
+    framework = detection.framework;
+    detectedFramework = Boolean(framework);
+    inferredRuntime = inferServiceRuntime({
+      runtime: config.runtime,
+      framework,
+      entrypoint: entrypointFile,
+    });
+  }
+
+  if (entrypointIsDirectory && !framework) {
+    return {
+      error: {
+        code: 'MISSING_SERVICE_FRAMEWORK',
+        message:
+          `Service "${name}" uses directory entrypoint "${config.entrypoint}" but no framework could be detected. ` +
+          `Specify "framework" explicitly or use a file entrypoint.`,
+        serviceName: name,
+      },
+    };
+  }
+
+  const frameworkRuntime = inferRuntimeFromFramework(framework);
+  if (detectedFramework && frameworkRuntime && !entrypointFile) {
+    return {
+      error: {
+        code: 'MISSING_SERVICE_CONFIG',
+        message: `Service "${name}" detected framework "${framework}" in "${normalizedRoot}" and must specify an "entrypoint" for runtime "${frameworkRuntime}".`,
+        serviceName: name,
+      },
+    };
+  }
+
+  const frameworkDefinition = framework
+    ? frameworksBySlug.get(framework)
+    : undefined;
+  let builderUse: string;
+  let builderSrc: string;
+  if (framework) {
+    builderUse = isNodeBackendFramework(framework)
+      ? '@vercel/backends'
+      : frameworkDefinition?.useRuntime?.use || '@vercel/static-build';
+    builderSrc =
+      entrypointFile || frameworkDefinition?.useRuntime?.src || 'package.json';
+  } else {
+    if (!inferredRuntime) {
+      if (config.buildCommand) {
+        // Match zero-config static-build detection: use package.json as the
+        // stable build source and let @vercel/static-build run buildCommand.
+        builderUse = '@vercel/static-build';
+        builderSrc = 'package.json';
+      } else {
+        // Match zero-config static detection: @vercel/static receives a glob
+        // entrypoint and owns its excluded-file filtering.
+        builderUse = '@vercel/static';
+        builderSrc = config.outputDirectory
+          ? posixPath.join(config.outputDirectory, '**')
+          : '**';
+      }
+    } else {
+      if (!entrypointFile) {
+        return {
+          error: {
+            code: 'MISSING_SERVICE_CONFIG',
+            message: `Service "${name}" must specify an "entrypoint" for runtime "${inferredRuntime}".`,
+            serviceName: name,
+          },
+        };
+      }
+      builderUse =
+        inferredRuntime === 'node'
+          ? '@vercel/backends'
+          : getBuilderForRuntime(inferredRuntime as ServiceRuntime);
+      builderSrc = entrypointFile;
+    }
+  }
+
+  // builder.src must be project-root-relative.
+  const isRoot = normalizedRoot === '.';
+  const projectRelativeSrc = isRoot
+    ? builderSrc
+    : posixPath.join(normalizedRoot, builderSrc);
+
+  // Services are built via the zero-config pipeline (multiple builders, merged routes).
+  // Ensure `zeroConfig` is set on the Builder spec so downstream steps (like
+  // CLI `writeBuildResultV3()`) can compute correct extensionless function paths.
+  const builderConfig: Record<string, unknown> = { zeroConfig: true };
+  if (builderUse === '@vercel/backends') {
+    builderConfig.serviceName = name;
+  }
+  if (framework) {
+    builderConfig.framework = framework;
+  }
+  if (config.outputDirectory) {
+    builderConfig.outputDirectory = config.outputDirectory;
+  }
+  if (!isRoot) {
+    builderConfig.workspace = normalizedRoot;
+  }
+  if (moduleAttr) {
+    builderConfig.handlerFunction = moduleAttr.attrName;
+  }
+
+  const runtime = STATIC_BUILDERS.has(builderUse) ? undefined : inferredRuntime;
+
+  return {
+    service: {
+      schema: 'experimentalServicesV2',
+      name,
+      root: normalizedRoot,
+      framework,
+      runtime,
+      entrypoint: entrypointFile,
+      builder: {
+        src: projectRelativeSrc,
+        use: builderUse,
+        config: builderConfig,
+      },
+      installCommand: config.installCommand,
+      buildCommand: config.buildCommand,
+      devCommand: config.devCommand,
+      ignoreCommand: config.ignoreCommand,
+      outputDirectory: config.outputDirectory,
+      bindings: config.bindings,
+      functions: config.functions,
+      headers: config.headers,
+      redirects: config.redirects,
+      rewrites: config.rewrites,
+      routes: config.routes,
+      cleanUrls: config.cleanUrls,
+      trailingSlash: config.trailingSlash,
+    },
+  };
+}
+
+export async function resolveAllConfiguredServicesV2(
+  services: ExperimentalServicesV2,
+  fs: DetectorFilesystem
+): Promise<{
+  services: ExperimentalServiceV2[];
+  errors: ServiceDetectionError[];
+}> {
+  const resolved: ExperimentalServiceV2[] = [];
+  const errors: ServiceDetectionError[] = [];
+
+  for (const name of Object.keys(services)) {
+    const config = services[name];
+
+    const validationError = validateServiceConfigV2(name, config);
+    if (validationError) {
+      errors.push(validationError);
+      continue;
+    }
+
+    const { service, error } = await resolveConfiguredServiceV2(
+      name,
+      config,
+      fs
+    );
+    if (error) {
+      errors.push(error);
+      continue;
+    }
+    if (service) {
+      resolved.push(service);
+    }
+  }
+
+  // every binding must reference a declared service.
+  const serviceNames = new Set(Object.keys(services));
+  for (const service of resolved) {
+    for (const binding of service.bindings ?? []) {
+      if (!isValidServiceName(binding.service)) {
+        errors.push({
+          code: 'INVALID_SERVICE_BINDING_NAME',
+          message: `Service "${service.name}" declares an invalid binding service name "${binding.service}". ${getInvalidServiceNameMessage(binding.service)}`,
+          serviceName: service.name,
+        });
+        continue;
+      }
+      if (!serviceNames.has(binding.service)) {
+        errors.push({
+          code: 'UNKNOWN_SERVICE_BINDING',
+          message: `Service "${service.name}" declares a binding to unknown service "${binding.service}".`,
+          serviceName: service.name,
+        });
+      }
+    }
+  }
+
+  return { services: resolved, errors };
+}

@@ -7,7 +7,9 @@ import {
   execCommand,
   FileBlob,
   FileFsRef,
+  generateProjectManifest,
   getEnvForPackageManager,
+  getReportedServiceType,
   getNodeVersion,
   glob,
   EdgeFunction,
@@ -81,6 +83,7 @@ export const build: BuildV2 = async ({
   repoRootPath,
   config,
   meta = {},
+  service,
 }) => {
   const { installCommand, buildCommand } = config;
 
@@ -142,6 +145,22 @@ export const build: BuildV2 = async ({
       { env: spawnEnv },
       meta,
       config.projectSettings?.createdAt
+    );
+  }
+
+  try {
+    await generateProjectManifest({
+      workPath: entrypointFsDirname,
+      nodeVersion,
+      cliType,
+      lockfilePath,
+      lockfileVersion,
+      framework: config.framework ?? undefined,
+      serviceType: service ? getReportedServiceType(service) : undefined,
+    });
+  } catch (err) {
+    debug(
+      `Failed to write remix manifest: ${err instanceof Error ? err.message : String(err)}`
     );
   }
 
@@ -465,7 +484,7 @@ module.exports = config;`;
       if (lockfilePath && lockfileRaw) {
         cleanupOps.push(
           fs
-            .writeFile(lockfilePath, lockfileRaw)
+            .writeFile(lockfilePath, Uint8Array.from(lockfileRaw))
             .then(() => debug(`Restored original "${lockfilePath}" file`))
         );
       }
@@ -616,7 +635,11 @@ module.exports = config;`;
     continue: true,
   });
 
-  return { routes, output, framework: { version: remixVersion } };
+  return {
+    routes,
+    output,
+    framework: { slug: 'remix', version: remixVersion },
+  };
 };
 
 function hasScript(scriptName: string, pkg: PackageJson | null) {

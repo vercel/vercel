@@ -7,13 +7,13 @@ const runBuildLambda = createRunBuildLambda(builder);
 
 const FOUR_MINUTES = 240000;
 
-const warnSpy = jest.spyOn(console, 'warn');
+const warnSpy = vi.spyOn(console, 'warn');
 
 beforeAll(() => {
   process.env.VERCEL_ANALYTICS_ID = 'test';
 });
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => vi.clearAllMocks());
 
 it(
   'Should build Gatsby without any configuration',

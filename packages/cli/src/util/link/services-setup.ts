@@ -2,6 +2,8 @@ import { normalizePath } from '@vercel/build-utils';
 import { join, relative } from 'path';
 import {
   detectServices,
+  isExperimentalService,
+  isExperimentalServiceV2,
   LocalFileSystemDetector,
   type DetectServicesResult,
   type Service,
@@ -18,6 +20,7 @@ import {
   type ServicesConfigWriteBlocker,
   writeServicesConfig,
 } from '../projects/detect-services';
+import { createDetectEntrypoint } from '../projects/detect-entrypoint';
 
 const SERVICES_DOCS_URL = 'https://vercel.com/docs/services';
 const INFERRED_SERVICES_PROMPT =
@@ -40,9 +43,13 @@ export async function getServicesSetupState(
 ): Promise<ServicesSetupState> {
   const detectServicesResult = await detectServices({
     fs: new LocalFileSystemDetector(workPath),
+    detectEntrypoint: createDetectEntrypoint(workPath),
   });
+  // `resolved` is undefined when no services are detected at all (common for
+  // empty or simple fixtures). Defensive optional chain avoids crashing the
+  // setup flow before any prompts can fire.
   const hasConfiguredServices =
-    detectServicesResult.resolved.source === 'configured';
+    detectServicesResult.resolved?.source === 'configured';
   const inferredServices = hasConfiguredServices
     ? null
     : detectServicesResult.inferred;
@@ -59,15 +66,20 @@ export async function getServicesSetupState(
 }
 
 export function displayConfiguredServicesSetup(
-  detectServicesResult: DetectServicesResult
+  detectServicesResult: DetectServicesResult,
+  configFileName = 'vercel.json'
 ): void {
-  if (detectServicesResult.services.length > 0) {
-    displayDetectedServices(detectServicesResult.services);
+  // display only `experimentalServices` for now
+  const v1Services = detectServicesResult.services.filter(
+    isExperimentalService
+  );
+  if (v1Services.length > 0) {
+    displayDetectedServices(v1Services);
   }
   if (detectServicesResult.errors.length > 0) {
     displayServiceErrors(detectServicesResult.errors);
   }
-  displayServicesConfigNote();
+  displayServicesConfigNote(configFileName);
 }
 
 function formatDetectedServicesSummary(services: Service[]): string {
@@ -128,8 +140,8 @@ export async function promptForInferredServicesSetup({
   if (autoConfirm) {
     choice = { type: 'services' };
   } else if (!nonInteractive) {
-    const webServices = inferred.services.filter(
-      service => service.type === 'web'
+    const webServices = inferred.services.filter(service =>
+      isExperimentalService(service) ? service.type === 'web' : true
     );
     const choices: Array<{ name: string; value: string }> = [
       {
@@ -168,12 +180,13 @@ export async function promptForInferredServicesSetup({
       const index = Number.parseInt(selected.slice('single-app:'.length), 10);
       const service = webServices[index];
       if (service) {
+        const serviceRoot = isExperimentalServiceV2(service)
+          ? service.root
+          : service.workspace;
         choice = {
           type: 'single-app',
           selectedPath:
-            service.workspace === '.'
-              ? workPath
-              : join(workPath, service.workspace),
+            serviceRoot === '.' ? workPath : join(workPath, serviceRoot),
         };
       }
     }
@@ -183,7 +196,10 @@ export async function promptForInferredServicesSetup({
     return choice;
   }
 
-  await writeServicesConfig(workPath, inferred.config);
-  output.log('Added services configuration to vercel.json.');
+  const { configFileName } = await writeServicesConfig(
+    workPath,
+    inferred.config
+  );
+  output.print(`  Added services configuration to ${configFileName}.\n`);
   return { type: 'services' };
 }

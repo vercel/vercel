@@ -1,5 +1,73 @@
 # @vercel/remix-builder
 
+## 5.9.1
+
+### Patch Changes
+
+- a5034c1: Fix React Router SPA subroute refreshes by routing the catch-all through `index.html` when no index SSR function is emitted.
+
+## 5.9.0
+
+### Minor Changes
+
+- 78e5d4f: Add project manifest to node frontend builders.
+
+## 5.8.6
+
+### Patch Changes
+
+- Updated dependencies [fddeb55]
+  - @vercel/error-utils@2.2.0
+
+## 5.8.5
+
+### Patch Changes
+
+- 2d918b8: Fix React Router `/__manifest` returning prerendered HTML when the root route is statically generated.
+
+  When `prerender()` emitted static HTML for the index route, the SSR function was removed from the catch-all target, so runtime-only paths like `/__manifest` fell through to the prerendered `index.html`. The builder now keeps the index SSR function for the catch-all, adds an explicit `/` → `/index.html` prerender rewrite, and skips overwriting prerendered `.data` artifacts.
+
+## 5.8.4
+
+### Patch Changes
+
+- ab0e5aa: Bump @vercel/nft to 1.10.0 and enable moduleSyncCatchall tracing in node, backends, and next builders.
+
+## 5.8.3
+
+### Patch Changes
+
+- Updated dependencies [eecd10d]
+  - @vercel/static-config@3.4.0
+
+## 5.8.2
+
+### Patch Changes
+
+- 744e96c: Serve React Router v7 prerendered routes from static HTML/data files instead of the SSR function.
+
+  Previously, when `react-router build` ran with `prerender()` configured, the prerendered HTML and `.data` files were emitted into the build output but the per-route SSR function was still installed at the same logical paths, so the filesystem handle resolved requests to the function instead of the static files.
+
+  The builder now scans the client output for prerender artifacts (`<path>.html` and `index.html` for the root) and, when found, skips the SSR function override and emits a pre-filesystem rewrite from `/<path>` to the prerendered HTML file. Routes that aren't prerendered continue to be served by the SSR function unchanged.
+
+## 5.8.1
+
+### Patch Changes
+
+- 97f87f7: Emit `.data` function entries for React Router single-fetch routes so per-route function config is preserved. Also emits a `_root.data` entry for the root index route, which uses that URL (not `/index.data`) for its single-fetch document loader.
+
+## 5.8.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/static-config@3.3.0
+  - @vercel/error-utils@2.1.0
+
 ## 5.7.2
 
 ### Patch Changes

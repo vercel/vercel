@@ -2,7 +2,16 @@ import open from 'open';
 import output from '../../output-manager';
 import sleep from '../sleep';
 import type Client from '../client';
+import {
+  buildCommandWithGlobalFlags,
+  buildIntegrationCommandTailFromArgv,
+  outputActionRequired,
+  shouldEmitNonInteractiveCommandError,
+} from '../agent-output';
+import { AGENT_REASON } from '../agent-output-constants';
+import { packageName } from '../pkg-name';
 import { fetchInstallations } from './fetch-installations';
+import { getMarketplacePolicyLinks } from './prompt-for-terms';
 import type { Integration, IntegrationInstallation } from './types';
 
 const POLL_INTERVAL_MS = 2000;
@@ -20,14 +29,47 @@ export async function acceptTermsViaBrowser(
   );
   url.searchParams.set('source', 'cli');
 
+  // Non-interactive mode (AI agent): emit structured action_required payload
+  // and exit 1. Done before opening a browser so AI agents / CI don't spawn
+  // one they have no way to interact with.
+  if (shouldEmitNonInteractiveCommandError(client)) {
+    const tail = buildIntegrationCommandTailFromArgv(client.argv);
+    const policyLinks = getMarketplacePolicyLinks(integration);
+    outputActionRequired(
+      client,
+      {
+        status: 'action_required',
+        reason: AGENT_REASON.INTEGRATION_TERMS_ACCEPTANCE_REQUIRED,
+        message: `Accept marketplace terms for "${integration.name}" in your browser before this install can finish. Open verification_uri to start. This command does not wait for acceptance in non-interactive mode.`,
+        verification_uri: url.href,
+        policy_links: policyLinks,
+        userActionRequired: true,
+        hint: `Read policy_links, complete verification_uri in the browser, then retry install from next[]. Confirm with ${packageName} integration installations.`,
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              tail,
+              packageName,
+              { prependGlobalFlags: true }
+            ),
+            when: 'Retry install after terms are accepted (browser or dashboard)',
+          },
+        ],
+      },
+      1
+    );
+  }
+
   output.log(
     'Opening browser for terms acceptance. Accept the terms to continue...'
   );
   output.log(`Visit this URL if the browser does not open: ${url.href}`);
-
-  open(url.href).catch((err: unknown) =>
-    output.debug(`Failed to open browser: ${err}`)
-  );
+  try {
+    await open(url.href);
+  } catch (err) {
+    output.debug(`Failed to open browser: ${err}`);
+  }
 
   output.spinner('Waiting for terms acceptance in browser...');
 

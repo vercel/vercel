@@ -51,6 +51,7 @@ import {
   LAMBDA_RESERVED_UNCOMPRESSED_SIZE,
   DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE,
   DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE_BUN,
+  DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE,
   INTERNAL_PAGES,
 } from './constants';
 import {
@@ -78,6 +79,36 @@ export function getMaxUncompressedLambdaSize(runtime: string): number {
   return runtime.startsWith('bun')
     ? DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE_BUN
     : DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE;
+}
+
+/**
+ * Internal env var enabling experimental large functions: an over-budget route
+ * is emitted as its own function under the higher
+ * {@link DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE} ceiling instead of being
+ * bundled. Read at call time (not module load) so the build environment can
+ * toggle it without a CLI upgrade, like `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT`.
+ *
+ * TODO: drop the gate and make this unconditional once the upstream build
+ * system fully supports functions above {@link DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE}.
+ */
+export const LARGE_FUNCTIONS_ENV = 'NEXT_EXPERIMENTAL_LARGE_FUNCTIONS';
+
+/** Whether large functions are enabled via {@link LARGE_FUNCTIONS_ENV}. */
+export function isLargeFunctionsEnabled(): boolean {
+  return Boolean(process.env[LARGE_FUNCTIONS_ENV]);
+}
+
+/**
+ * The uncompressed size ceiling for a lambda group: the higher large-function
+ * limit for large groups, otherwise the default per-runtime limit.
+ */
+export function getGroupMaxUncompressedLambdaSize(
+  runtime: string,
+  isLargeFunctions: boolean | undefined
+): number {
+  return isLargeFunctions
+    ? DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE
+    : getMaxUncompressedLambdaSize(runtime);
 }
 
 const skipDefaultLocaleRewrite = Boolean(
@@ -217,7 +248,10 @@ function normalizePage(page: string): string {
   return page;
 }
 
-export type Redirect = Rewrite & {
+export type Redirect = Omit<Rewrite, 'destination'> & {
+  // Redirects can't target a service, so `destination` stays a plain string
+  // (unlike `Rewrite['destination']`, which is `string | ServiceDestination`).
+  destination: string;
   statusCode?: number;
   permanent?: boolean;
 };
@@ -1887,6 +1921,12 @@ export type LambdaGroup = {
   isActionLambda?: boolean;
   isPages?: boolean;
   isApiLambda: boolean;
+  /**
+   * Whether this group is a single over-budget route emitted on its own and
+   * measured against {@link DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE}. Only
+   * set when large functions are enabled (see {@link isLargeFunctionsEnabled}).
+   */
+  isLargeFunctions?: boolean;
   pseudoLayer: PseudoLayer;
   pseudoLayerBytes: number;
   pseudoLayerUncompressedBytes: number;
@@ -1950,6 +1990,8 @@ export async function getPageLambdaGroups({
   nodeVersion: { runtime: string };
 }) {
   const groups: Array<LambdaGroup> = [];
+
+  const largeFunctionsEnabled = isLargeFunctionsEnabled();
 
   for (const page of pages) {
     const newPages = [...internalPages, page];
@@ -2041,10 +2083,46 @@ export async function getPageLambdaGroups({
       }
     }
 
-    let matchingGroup = experimentalAllowBundling
+    // A route is "large" when its own uncompressed size (shared base layer plus
+    // its traced files and the page) doesn't fit the per-runtime packing budget
+    // — the limit minus the headroom reserved for post-grouping files (launcher,
+    // manifests, etc.), so it can't be guaranteed to fit a normal function.
+    // `experimentalAllowBundling` defers bundling upstream, so the split is moot.
+    let isLargeFunction = false;
+    if (largeFunctionsEnabled && !experimentalAllowBundling) {
+      let standaloneUncompressedSize = initialPseudoLayerUncompressed;
+      const countedFiles = new Set<string>(
+        Object.keys(initialPseudoLayer.pseudoLayer)
+      );
+
+      for (const newPage of newPages) {
+        for (const file of Object.keys(pageTraces[newPage] || {})) {
+          if (!countedFiles.has(file)) {
+            countedFiles.add(file);
+            const item = tracedPseudoLayer[file] as PseudoFile;
+            standaloneUncompressedSize += item?.uncompressedSize || 0;
+          }
+        }
+        standaloneUncompressedSize += compressedPages[newPage].uncompressedSize;
+      }
+
+      // Mirrors the normal-pool merge check below (`< limit - reserved`): a
+      // route that would not fit that budget even on its own is large.
+      const normalBudget =
+        getMaxUncompressedLambdaSize(nodeVersion.runtime) -
+        LAMBDA_RESERVED_UNCOMPRESSED_SIZE;
+      isLargeFunction = standaloneUncompressedSize >= normalBudget;
+    }
+
+    // Both deferred bundling and large routes skip merging — fresh group below.
+    const skipGroupBundling = experimentalAllowBundling || isLargeFunction;
+
+    let matchingGroup = skipGroupBundling
       ? undefined
       : groups.find(group => {
           const matches =
+            // Never merge a normal route into a large (single-route) group.
+            (group.isLargeFunctions ?? false) === isLargeFunction &&
             group.maxDuration === opts.maxDuration &&
             group.memory === opts.memory &&
             compareRegions(group.regions, opts.regions) &&
@@ -2074,8 +2152,9 @@ export async function getPageLambdaGroups({
                 compressedPages[newPage].uncompressedSize;
             }
 
-            const maxLambdaSize = getMaxUncompressedLambdaSize(
-              nodeVersion.runtime
+            const maxLambdaSize = getGroupMaxUncompressedLambdaSize(
+              nodeVersion.runtime,
+              isLargeFunction
             );
             const underUncompressedLimit =
               newTracedFilesUncompressedSize <
@@ -2094,6 +2173,7 @@ export async function getPageLambdaGroups({
         ...opts,
         isPrerenders: isPrerenderRoute,
         isExperimentalPPR,
+        isLargeFunctions: isLargeFunction,
         isApiLambda: !!isApiPage(page) || !!isRouteHandlers,
         pseudoLayerBytes: initialPseudoLayer.pseudoLayerBytes,
         pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
@@ -2259,9 +2339,9 @@ export const detectLambdaLimitExceeding = async (
   },
   runtime: string
 ) => {
+  // Default limit for the headline message; each group is checked against its
+  // own ceiling below (large groups use the higher large-function limit).
   const maxLambdaSize = getMaxUncompressedLambdaSize(runtime);
-  // show debug info if within 5 MB of exceeding the limit
-  const UNCOMPRESSED_SIZE_LIMIT_CLOSE = maxLambdaSize - 5 * MIB;
 
   let numExceededLimit = 0;
   let numCloseToLimit = 0;
@@ -2270,10 +2350,17 @@ export const detectLambdaLimitExceeding = async (
   // pre-iterate to see if we are going to exceed the limit
   // or only get close so our first log line can be correct
   const filteredGroups = lambdaGroups.filter(group => {
-    const exceededLimit = group.pseudoLayerUncompressedBytes > maxLambdaSize;
+    const groupMaxLambdaSize = getGroupMaxUncompressedLambdaSize(
+      runtime,
+      group.isLargeFunctions
+    );
+    // show debug info if within 5 MB of exceeding the limit
+    const groupCloseLimit = groupMaxLambdaSize - 5 * MIB;
 
-    const closeToLimit =
-      group.pseudoLayerUncompressedBytes > UNCOMPRESSED_SIZE_LIMIT_CLOSE;
+    const exceededLimit =
+      group.pseudoLayerUncompressedBytes > groupMaxLambdaSize;
+
+    const closeToLimit = group.pseudoLayerUncompressedBytes > groupCloseLimit;
 
     if (
       closeToLimit ||
@@ -2503,6 +2590,25 @@ export const onPrerenderRoute =
       });
     }
 
+    // `fallbackRoutes` ∪ `blockingFallbackRoutes` ∪ `omittedRoutes` is exactly
+    // the prerender-manifest `dynamicRoutes` section, so these flags let us
+    // surface dynamic-template facts on the resulting `Prerender` outputs
+    // without re-reading the manifest:
+    //   - `isDynamicRoute`: this entry came from a dynamic template rather than
+    //     a concrete prerender.
+    //   - `hasFallback`: the template had a static fallback (`isFallback`),
+    //     `false` for blocking/omitted templates, `undefined` for concrete
+    //     prerenders where the concept doesn't apply.
+    // Named to avoid shadowing the imported `isDynamicRoute` helper used
+    // elsewhere in this function.
+    const routeIsDynamic = Boolean(isFallback || isBlocking || isOmitted);
+    let hasFallback: boolean | undefined;
+    if (isFallback) {
+      hasFallback = true;
+    } else if (isBlocking || isOmitted) {
+      hasFallback = false;
+    }
+
     // Get the route file as it'd be mounted in the builder output
     let routeFileNoExt = routeKey === '/' ? '/index' : routeKey;
     let origRouteFileNoExt = routeFileNoExt;
@@ -2644,11 +2750,35 @@ export const onPrerenderRoute =
     const isOmittedOrNotFound = isOmitted || isNotFound;
     let htmlFallbackFsRef: File | null = null;
 
+    // Byte size of the prerendered `.html` shell on disk, surfaced on the HTML
+    // `Prerender` below. Computed independently of the PPR/postpone branch so
+    // it covers all app routes (incl. blocking templates whose shell is 0
+    // bytes). A bare `statSync` in a try/catch is one syscall — `existsSync`
+    // would add a redundant `stat` — and naturally yields `undefined` when
+    // there's no `.html` (pages router, route handlers, edge).
+    let htmlSize: number | undefined;
+    if (appDir) {
+      try {
+        htmlSize = fs.statSync(
+          path.join(appDir, `${routeFileNoExt}.html`)
+        ).size;
+      } catch {
+        // No `.html` on disk for this route; leave `htmlSize` undefined.
+      }
+    }
+
     // If enabled, try to get the postponed route information from the file
     // system and use it to assemble the prerender.
     let postponedPrerender: string | undefined;
     let postponedState: string | null = null;
     let didPostpone = false;
+    // Tri-state postpone signal surfaced on the resulting `Prerender` objects:
+    // `true`/`false` only for app-router PPR routes whose `.meta` we actually
+    // inspect below, `undefined` everywhere else (pages router, non-PPR app
+    // routes, blocking routes). Distinct from `didPostpone`, which also
+    // requires the `.html` file to exist and can't distinguish "inspected, no
+    // postpone" from "never inspected".
+    let hasPostponed: boolean | undefined;
     if (
       renderingMode === RenderingMode.PARTIALLY_STATIC &&
       appDir &&
@@ -2656,6 +2786,7 @@ export const onPrerenderRoute =
       !isBlocking
     ) {
       postponedState = getHTMLPostponedState({ appDir, routeFileNoExt });
+      hasPostponed = Boolean(postponedState);
 
       const htmlPath = path.join(appDir, `${routeFileNoExt}.html`);
       if (fs.existsSync(htmlPath)) {
@@ -3108,6 +3239,10 @@ export const onPrerenderRoute =
           chain,
           allowHeader,
           partialFallback: partialFallback || undefined,
+          hasPostponed,
+          hasFallback,
+          htmlSize,
+          isDynamicRoute: routeIsDynamic,
 
           ...(isNotFound
             ? {
@@ -3158,6 +3293,9 @@ export const onPrerenderRoute =
           experimentalBypassFor,
           allowHeader,
           partialFallback: undefined,
+          hasPostponed,
+          hasFallback,
+          isDynamicRoute: routeIsDynamic,
 
           ...(isNotFound
             ? {
@@ -3263,6 +3401,9 @@ export const onPrerenderRoute =
               experimentalBypassFor,
               allowHeader,
               partialFallback: undefined,
+              hasPostponed,
+              hasFallback,
+              isDynamicRoute: routeIsDynamic,
               chain: {
                 outputPath: normalizePathData(outputPathData),
                 headers: routesManifest.ppr.chain.headers,
@@ -3391,6 +3532,9 @@ export const onPrerenderRoute =
                 group: prerenderGroup,
                 allowHeader,
                 partialFallback: undefined,
+                hasPostponed,
+                hasFallback,
+                isDynamicRoute: routeIsDynamic,
 
                 // These routes are always only static, so they should not
                 // permit any bypass unless it's for preview
@@ -3827,6 +3971,7 @@ export async function getNodeMiddleware({
   isCorrectMiddlewareOrder,
   functionsConfigManifest,
   requiredServerFilesManifest,
+  instrumentationHookBuildTrace,
 }: {
   config: Config;
   baseDir: string;
@@ -3843,6 +3988,7 @@ export async function getNodeMiddleware({
   routesManifest: RoutesManifest;
   functionsConfigManifest?: FunctionsConfigManifestV1;
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
+  instrumentationHookBuildTrace: any | undefined;
 }): Promise<null | {
   lambdas: Record<string, NodejsLambda>;
   routes: RouteWithSrc[];
@@ -3927,6 +4073,26 @@ export async function getNodeMiddleware({
       console.log('outside base dir', absolutePath);
     }
   });
+  if (instrumentationHookBuildTrace) {
+    // Node.js instrumentation exists
+    // For regular functions, this is added via required-server-files.json#files. But that isn't
+    // read for middleware (because the various files in there aren't actually needed).
+    instrumentationHookBuildTrace.files.map((file: string) => {
+      fileList.push(
+        path.relative(
+          baseDir,
+          path.join(entryPath, outputDirectory, 'server', file)
+        )
+      );
+    });
+    fileList.push(
+      path.relative(
+        baseDir,
+        path.join(entryPath, outputDirectory, 'server', 'instrumentation.js')
+      )
+    );
+  }
+
   const reasons = new Map();
 
   const tracedFiles: {

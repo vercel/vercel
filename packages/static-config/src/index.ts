@@ -39,6 +39,9 @@ export const BaseFunctionConfigSchema = {
     preferredRegion: {
       oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
     },
+    useWebApi: {
+      type: 'boolean',
+    },
   },
 } as const;
 

@@ -1,182 +1,192 @@
-import { describe, beforeEach, expect, it, vi } from 'vitest';
+import { describe, beforeEach, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import schema from '../../../../src/commands/metrics/schema';
 import { MetricsTelemetryClient } from '../../../../src/util/telemetry/commands/metrics';
 import getScope from '../../../../src/util/get-scope';
 
+import { vi } from 'vitest';
+
 vi.mock('../../../../src/util/get-scope');
+const mockedGetScope = vi.mocked(getScope);
+type ScopeResult = Awaited<ReturnType<typeof getScope>>;
 
 class MockTelemetry extends MetricsTelemetryClient {
   constructor() {
-    super({
-      opts: {
-        store: client.telemetryEventStore,
-      },
-    });
+    super({ opts: { store: client.telemetryEventStore } });
   }
 }
 
-const mockedGetScope = vi.mocked(getScope);
-
-function mockSchemaApi() {
-  client.scenario.get('/v1/observability/schema', (_req, res) => {
-    res.json({
-      events: [
-        { name: 'incomingRequest', description: 'Edge Requests' },
-        { name: 'functionExecution', description: 'Function Executions' },
-      ],
-    });
-  });
-
-  client.scenario.get(
-    '/v1/observability/schema/incomingRequest',
-    (_req, res) => {
-      res.json({
-        name: 'incomingRequest',
-        description: 'Edge Requests',
-        dimensions: [{ name: 'httpStatus', label: 'HTTP Status' }],
-        measures: [
-          {
-            name: 'count',
-            label: 'Count',
-            unit: 'count',
-            aggregations: ['sum', 'persecond', 'percent'],
-            defaultAggregation: 'sum',
-          },
-        ],
-      });
-    }
-  );
-
-  client.scenario.get(
-    '/v1/observability/schema/functionExecution',
-    (_req, res) => {
-      res.json({
-        name: 'functionExecution',
-        description: 'Function Executions',
-        dimensions: [],
-        measures: [],
-      });
-    }
-  );
-}
-
-describe('schema', () => {
+describe('metrics schema v2', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
     mockedGetScope.mockResolvedValue({
       contextName: 'my-team',
-      team: { id: 'team_dummy', slug: 'my-team' } as any,
-      user: { id: 'user_dummy' } as any,
-    });
-    mockSchemaApi();
+      team: { id: 'team_dummy', slug: 'my-team' },
+      user: { id: 'user_dummy' },
+    } as ScopeResult);
   });
 
-  describe('event list', () => {
-    it('should output table list of events', async () => {
-      client.setArgv('metrics', 'schema');
-
-      const exitCode = await schema(client, new MockTelemetry());
-
-      expect(exitCode).toBe(0);
-      const stderrOutput = client.stderr.getFullOutput();
-      expect(stderrOutput).toContain('Events found');
-      expect(stderrOutput).toContain('Event');
-      expect(stderrOutput).toContain('Description');
-      expect(stderrOutput).toContain('edgeRequest');
+  it('lists metrics by default', async () => {
+    client.scenario.get('/v2/observability/schema', (_req, res) => {
+      res.json({
+        metrics: [{ id: 'vercel.request.count', description: 'Count' }],
+      });
     });
+    client.setArgv('metrics', 'schema');
 
-    it('should output JSON list with --format=json', async () => {
-      client.setArgv('metrics', 'schema', '--format=json');
+    const exitCode = await schema(client, new MockTelemetry());
 
-      const exitCode = await schema(client, new MockTelemetry());
-
-      expect(exitCode).toBe(0);
-      const output = client.stdout.getFullOutput();
-      const parsed = JSON.parse(output);
-      expect(Array.isArray(parsed)).toBe(true);
-      expect(parsed[0]).toHaveProperty('name');
-      expect(parsed[0]).toHaveProperty('description');
-    });
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('1 Metric found');
+    expect(output).toContain('Metric');
+    expect(output).toContain('Description');
+    expect(output).toContain('vercel.request.count');
+    expect(output).toContain('Count');
   });
 
-  describe('event detail', () => {
-    it('should output table detail for a known event', async () => {
-      client.setArgv('metrics', 'schema', '--event', 'edgeRequest');
+  it('shows prefix detail with a positional metric', async () => {
+    client.scenario.get(
+      '/v2/observability/schema/vercel.request',
+      (_req, res) => {
+        res.json([
+          {
+            id: 'vercel.request.count',
+            description: 'Count',
+            dimensions: [
+              { name: 'route', label: 'Route' },
+              { name: 'http_status', label: 'HTTP Status' },
+            ],
+            unit: 'count',
+            aggregations: ['sum'],
+            defaultAggregation: 'sum',
+          },
+          {
+            id: 'vercel.request.route_cpu_duration_ms',
+            description: 'Request Duration',
+            dimensions: [
+              { name: 'route', label: 'Route' },
+              { name: 'http_status', label: 'HTTP Status' },
+              { name: 'cache_result', label: 'Cache Result' },
+            ],
+            unit: 'milliseconds',
+            aggregations: ['avg', 'p95'],
+            defaultAggregation: 'avg',
+          },
+        ]);
+      }
+    );
+    client.setArgv('metrics', 'schema', 'vercel.request');
 
-      const exitCode = await schema(client, new MockTelemetry());
+    const exitCode = await schema(client, new MockTelemetry());
 
-      expect(exitCode).toBe(0);
-      const stderrOutput = client.stderr.getFullOutput();
-      expect(stderrOutput).toContain('Event: edgeRequest');
-      expect(stderrOutput).toContain('Dimension');
-      expect(stderrOutput).toContain('Label');
-      expect(stderrOutput).toContain('Measure');
-      expect(stderrOutput).toContain('Unit');
-    });
-
-    it('should output JSON detail with --format=json', async () => {
-      client.setArgv(
-        'metrics',
-        'schema',
-        '--event',
-        'edgeRequest',
-        '--format=json'
-      );
-
-      const exitCode = await schema(client, new MockTelemetry());
-
-      expect(exitCode).toBe(0);
-      const output = client.stdout.getFullOutput();
-      const parsed = JSON.parse(output);
-      expect(parsed.event).toBe('edgeRequest');
-      expect(parsed.description).toBeDefined();
-      expect(parsed.dimensions).toBeDefined();
-      expect(parsed.measures).toBeDefined();
-      expect(parsed.measures[0].aggregations).toEqual([
-        'sum',
-        'persecond',
-        'percent',
-      ]);
-    });
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Shared dimensions:');
+    expect(output).toContain('route, http_status');
+    expect(output).toContain('Metric');
+    expect(output).toContain('Description');
+    expect(output).toContain('Unit');
+    expect(output).toContain('Aggregations');
+    expect(output).toContain('Dimensions');
+    expect(output).toContain('vercel.request.count');
+    expect(output).toContain('Count');
+    expect(output).toContain('count');
+    expect(output).toContain('sum (default)');
+    expect(output).toContain('vercel.request.route_cpu_duration_ms');
+    expect(output).toContain('Request Duration');
+    expect(output).toContain('milliseconds');
+    expect(output).toContain('avg (default), p95');
+    expect(output).toContain('+cache_result');
+    expect(output).toContain('—');
   });
 
-  describe('unknown event', () => {
-    it('should return error for unknown event', async () => {
-      client.setArgv('metrics', 'schema', '--event', 'bogus');
+  it('omits the dimensions column when no metric has extra dimensions', async () => {
+    client.scenario.get(
+      '/v2/observability/schema/vercel.request',
+      (_req, res) => {
+        res.json([
+          {
+            id: 'vercel.request.count',
+            description: 'Count',
+            dimensions: [
+              { name: 'route', label: 'Route' },
+              { name: 'http_status', label: 'HTTP Status' },
+            ],
+            unit: 'count',
+            aggregations: ['sum'],
+            defaultAggregation: 'sum',
+          },
+          {
+            id: 'vercel.request.route_cpu_duration_ms',
+            description: 'Request Duration',
+            dimensions: [
+              { name: 'route', label: 'Route' },
+              { name: 'http_status', label: 'HTTP Status' },
+            ],
+            unit: 'milliseconds',
+            aggregations: ['avg', 'p95'],
+            defaultAggregation: 'avg',
+          },
+        ]);
+      }
+    );
+    client.setArgv('metrics', 'schema', 'vercel.request');
 
-      const exitCode = await schema(client, new MockTelemetry());
+    const exitCode = await schema(client, new MockTelemetry());
 
-      expect(exitCode).toBe(1);
-      expect(client.stderr.getFullOutput()).toContain('Unknown event "bogus"');
-    });
-
-    it('should return JSON error with --format=json', async () => {
-      client.setArgv('metrics', 'schema', '--event', 'bogus', '--format=json');
-
-      const exitCode = await schema(client, new MockTelemetry());
-
-      expect(exitCode).toBe(1);
-      const output = client.stdout.getFullOutput();
-      const parsed = JSON.parse(output);
-      expect(parsed.error.code).toBe('UNKNOWN_EVENT');
-      expect(parsed.error.allowedValues).toContain('edgeRequest');
-    });
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Shared dimensions:');
+    expect(output).toContain('route, http_status');
+    expect(output).toContain('Metric');
+    expect(output).toContain('Description');
+    expect(output).toContain('Unit');
+    expect(output).toContain('Aggregations');
+    expect(output).not.toContain('Dimensions');
+    expect(output).toContain('Count');
+    expect(output).toContain('Request Duration');
+    expect(output).toContain('count');
+    expect(output).toContain('milliseconds');
+    expect(output).not.toContain('—');
   });
 
   describe('telemetry', () => {
-    it('should track event option', async () => {
-      client.setArgv('metrics', 'schema', '--event', 'edgeRequest');
+    it('should track metric argument', async () => {
+      client.scenario.get(
+        '/v2/observability/schema/vercel.request.count',
+        (_req, res) => {
+          res.json([
+            {
+              id: 'vercel.request.count',
+              description: 'Count',
+              dimensions: [
+                { name: 'route', label: 'Route' },
+                { name: 'http_status', label: 'HTTP Status' },
+              ],
+              unit: 'count',
+              aggregations: ['sum'],
+              defaultAggregation: 'sum',
+            },
+          ]);
+        }
+      );
+      client.setArgv('metrics', 'schema', 'vercel.request.count');
 
       await schema(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
       ]);
     });
 
     it('should track format option', async () => {
+      client.scenario.get('/v2/observability/schema', (_req, res) => {
+        res.json({
+          metrics: [{ id: 'vercel.request.count', description: 'Count' }],
+        });
+      });
       client.setArgv('metrics', 'schema', '--format=json');
 
       await schema(client, new MockTelemetry());

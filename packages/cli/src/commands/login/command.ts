@@ -41,4 +41,5 @@ export const loginCommand = {
       value: `${packageName} login`,
     },
   ],
+  disabledGlobalOptions: ['token'],
 } as const;

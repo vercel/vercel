@@ -18,7 +18,7 @@ import type {
 } from '../../util/integration/types';
 import type { Resource } from '../../util/integration-resource/types';
 
-export async function createThreshold(client: Client) {
+export async function createThreshold(client: Client, argv: string[]) {
   const telemetry = new IntegrationResourceCreateThresholdTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -31,7 +31,7 @@ export async function createThreshold(client: Client) {
   );
 
   try {
-    parsedArguments = parseArguments(client.argv.slice(3), flagsSpecification);
+    parsedArguments = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
     return 1;
@@ -150,14 +150,14 @@ function parseCreateThresholdArguments(
   passedArgs: string[],
   telemetry: IntegrationResourceCreateThresholdTelemetryClient
 ) {
-  if (passedArgs.length < 5) {
+  if (passedArgs.length < 4) {
     throw new Error('Missing arguments. See `--help` for details.');
   }
-  if (passedArgs.length > 5) {
+  if (passedArgs.length > 4) {
     throw new Error('Too many arguments. See `--help` for details.');
   }
 
-  const args = passedArgs.slice(1, 5);
+  const args = passedArgs.slice(0, 4);
 
   telemetry.trackCliArgumentResource(args[0]);
   telemetry.trackCliArgumentMinimum(args[1]);

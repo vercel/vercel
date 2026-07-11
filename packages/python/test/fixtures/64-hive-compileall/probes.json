@@ -1,0 +1,11 @@
+{
+  "probes": [
+    {
+      "logMustContain": "Compiling Python bytecode"
+    },
+    {
+      "path": "/",
+      "mustContain": "\"ok\":true"
+    }
+  ]
+}

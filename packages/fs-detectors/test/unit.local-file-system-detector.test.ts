@@ -35,7 +35,7 @@ describe('LocalFileSystemDetector', () => {
   });
 
   it('should call hasPath correctly', async () => {
-    const hasPathSpy = jest.spyOn(localFileSystem, '_hasPath');
+    const hasPathSpy = vi.spyOn(localFileSystem, '_hasPath');
     const hasPath = await Promise.all(
       filePaths.map(filePath => localFileSystem.hasPath(filePath))
     );

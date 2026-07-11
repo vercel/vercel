@@ -12,4 +12,16 @@ export class UpgradeTelemetryClient extends TelemetryClient {
       this.trackCliFlag('json');
     }
   }
+
+  trackCliFlagEnableAuto(enableAuto: boolean | undefined) {
+    if (enableAuto) {
+      this.trackCliFlag('enable-auto');
+    }
+  }
+
+  trackCliFlagDisableAuto(disableAuto: boolean | undefined) {
+    if (disableAuto) {
+      this.trackCliFlag('disable-auto');
+    }
+  }
 }

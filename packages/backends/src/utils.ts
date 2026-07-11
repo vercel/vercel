@@ -18,6 +18,9 @@ export async function downloadInstallAndBundle(
     [x: string]: string | undefined;
   };
   entrypointFsDirname: string;
+  cliType: Awaited<ReturnType<typeof scanParentDirs>>['cliType'];
+  lockfilePath: string | undefined;
+  lockfileVersion: number | undefined;
 }> {
   const { entrypoint, files, workPath, meta, config, repoRootPath } = args;
   await download(files, workPath, meta);
@@ -26,6 +29,7 @@ export async function downloadInstallAndBundle(
 
   const {
     cliType,
+    lockfilePath,
     lockfileVersion,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
@@ -62,19 +66,23 @@ export async function downloadInstallAndBundle(
       config.projectSettings?.createdAt
     );
   }
-  return { entrypointFsDirname, spawnEnv };
+  return {
+    entrypointFsDirname,
+    spawnEnv,
+    cliType,
+    lockfilePath,
+    lockfileVersion,
+  };
 }
 
 export async function maybeExecBuildCommand(
   args: Parameters<BuildV2>[0],
   {
     spawnEnv,
-    entrypointFsDirname,
   }: {
     spawnEnv: {
       [x: string]: string | undefined;
     };
-    entrypointFsDirname: string;
   }
 ) {
   const projectBuildCommand = args.config.projectSettings?.buildCommand;
@@ -100,8 +108,10 @@ export async function maybeExecBuildCommand(
   // I don't think we actually want to support vercel-build or now-build because those are hacks for controlling api folder builds
   const possibleScripts = ['build'];
 
+  // Run from the app root (workPath), not dirname(entrypoint), so `turbo build` /
+  // monorepo scripts match what users run locally and align with explicit buildCommand.
   return runPackageJsonScript(
-    entrypointFsDirname,
+    args.workPath,
     possibleScripts,
     { env: spawnEnv },
     args.config.projectSettings?.createdAt

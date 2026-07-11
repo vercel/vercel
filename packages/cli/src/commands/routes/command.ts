@@ -457,6 +457,7 @@ export const deleteSubcommand = {
     {
       name: 'name-or-id',
       required: true,
+      multiple: true,
     },
   ],
   options: [
@@ -839,7 +840,7 @@ export const editSubcommand = {
 export const exportSubcommand = {
   name: 'export',
   aliases: [],
-  description: 'Export routes in vercel.json or vercel.ts format',
+  description: 'Export routes to a vercel.json or vercel.ts file',
   arguments: [
     {
       name: 'name-or-id',
@@ -848,11 +849,11 @@ export const exportSubcommand = {
   ],
   options: [
     {
-      name: 'format',
-      description: 'Output format: json (default) or ts',
-      shorthand: null,
+      name: 'output',
+      description: 'Output file format: .json (default) or .ts',
+      shorthand: 'o',
       type: String,
-      argument: 'FORMAT',
+      argument: 'json|ts',
       deprecated: false,
     },
   ],
@@ -863,7 +864,7 @@ export const exportSubcommand = {
     },
     {
       name: 'Export as vercel.ts format',
-      value: `${packageName} routes export --format ts`,
+      value: `${packageName} routes export --output ts`,
     },
     {
       name: 'Export a specific route',

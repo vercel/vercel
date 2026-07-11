@@ -122,7 +122,7 @@ export interface LambdaOptionsWithZipBuffer extends LambdaOptionsBase {
 
 interface GetLambdaOptionsFromFunctionOptions {
   sourceFile: string;
-  config?: Pick<Config, 'functions'>;
+  config?: Pick<Config, 'functions' | 'serviceName'>;
 }
 
 function getDefaultLambdaArchitecture(
@@ -362,14 +362,6 @@ export class Lambda {
           `${prefix}.consumer cannot be empty`
         );
 
-        // v2beta allows only one trigger per function
-        if (trigger.type === 'queue/v2beta') {
-          assert(
-            experimentalTriggers.length === 1,
-            '"experimentalTriggers" can only have one item for queue/v2beta'
-          );
-        }
-
         // Validate optional queue configuration
         if (trigger.maxDeliveries !== undefined) {
           assert(
@@ -549,20 +541,41 @@ export async function getLambdaOptionsFromFunction({
   >
 > {
   if (config?.functions) {
+    // `pattern` is service-root-relative, so two services sharing a function
+    // path would derive the same consumer; scope it by service name.
+    const serviceName =
+      typeof config.serviceName === 'string' && config.serviceName !== ''
+        ? config.serviceName
+        : undefined;
     for (const [pattern, fn] of Object.entries(config.functions)) {
       if (sourceFile === pattern || minimatch(sourceFile, pattern)) {
+        const consumer = sanitizeConsumerName(
+          serviceName ? `${serviceName}~${pattern}` : pattern
+        );
         const experimentalTriggers: TriggerEvent[] | undefined =
           fn.experimentalTriggers?.map(
             (trigger: TriggerEventInput): TriggerEvent => {
               if (trigger.type === 'queue/v2beta') {
                 return {
                   ...trigger,
-                  consumer: sanitizeConsumerName(pattern),
+                  consumer,
                 };
               }
               return trigger;
             }
           );
+
+        // User-configured functions can only have one v2beta trigger.
+        // Services may attach multiple triggers programmatically.
+        if (
+          experimentalTriggers &&
+          experimentalTriggers.length > 1 &&
+          experimentalTriggers.some(t => t.type === 'queue/v2beta')
+        ) {
+          throw new Error(
+            `functions["${pattern}"].experimentalTriggers can only have one item for queue/v2beta`
+          );
+        }
 
         return {
           architecture: fn.architecture,

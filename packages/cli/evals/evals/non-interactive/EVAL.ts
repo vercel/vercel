@@ -1,14 +1,23 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { test, expect } from 'vitest';
 
-function getShellCommands(): string[] {
+type ShellCommand = {
+  command: string;
+  success?: boolean;
+};
+
+function getShellCommandEntries(): ShellCommand[] {
   const results = JSON.parse(
     readFileSync('__agent_eval__/results.json', 'utf-8')
   ) as {
-    o11y?: { shellCommands?: Array<{ command: string }> };
+    o11y?: { shellCommands?: ShellCommand[] };
   };
 
-  return (results.o11y?.shellCommands ?? []).map(c => c.command);
+  return results.o11y?.shellCommands ?? [];
+}
+
+function getShellCommands(): string[] {
+  return getShellCommandEntries().map(c => c.command);
 }
 
 /**
@@ -16,17 +25,23 @@ function getShellCommands(): string[] {
  * non-interactive flag (e.g. --yes or -y) when running the Vercel CLI,
  * as observed from the recorded shell commands.
  */
-test('agent used a non-interactive CLI command', () => {
+test('project is linked', () => {
+  expect(
+    existsSync('.vercel/project.json') || existsSync('.vercel/config.json')
+  ).toBe(true);
+});
+
+test('agent used vercel link non-interactively', () => {
   const commands = getShellCommands();
   expect(commands.length).toBeGreaterThan(0);
 
-  const cliCommands = commands.filter(command =>
-    /\b(vercel|vc)\b/.test(command)
+  const linkCommands = commands.filter(command =>
+    /\b(vercel|vc)\s+link\b/.test(command)
   );
-  expect(cliCommands.length).toBeGreaterThan(0);
+  expect(linkCommands.length).toBeGreaterThan(0);
 
   // Agent should prefer non-interactive flags so the command completes without prompts
-  const hasNonInteractive = cliCommands.some(command => {
+  const hasNonInteractive = linkCommands.some(command => {
     return (
       command.includes('--yes') ||
       /\s-y(\s|$)/.test(command) ||
@@ -35,4 +50,18 @@ test('agent used a non-interactive CLI command', () => {
     );
   });
   expect(hasNonInteractive).toBe(true);
+});
+
+test('agent wrote linked project note', () => {
+  if (existsSync('non-interactive-link.txt')) {
+    expect(
+      readFileSync('non-interactive-link.txt', 'utf-8').trim().length
+    ).toBeGreaterThan(0);
+    return;
+  }
+
+  const successfulLinkCommands = getShellCommandEntries().filter(
+    entry => /\b(vercel|vc)\s+link\b/.test(entry.command) && entry.success
+  );
+  expect(successfulLinkCommands.length).toBeGreaterThan(0);
 });

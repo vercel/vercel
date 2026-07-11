@@ -1,4 +1,3 @@
-/* eslint-env jest */
 const path = require('path');
 const cheerio = require('cheerio');
 const { deployAndTest, check } = require('../../utils');
@@ -28,8 +27,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   });
 
   // Flaky test - skip until fixed.
-  // eslint-disable-next-line jest/no-disabled-tests
-  it.skip.each([
+    it.skip.each([
     {
       title: 'should update content for prerendered path correctly',
       pathsToCheck: [

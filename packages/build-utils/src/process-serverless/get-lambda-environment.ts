@@ -20,7 +20,7 @@ interface LambdaLike {
  */
 export function getLambdaEnvironment(
   lambda: LambdaLike,
-  buffer: Buffer,
+  buffer: { byteLength: number },
   options: BytecodeCachingOptions
 ) {
   const environment: Record<string, string> = {};

@@ -179,6 +179,60 @@ describe('experimentalAllowBundling', () => {
     expect(lambda.files[join('api', 'hello.js')]).toBeDefined();
   });
 
+  it('should emit bundled handler config for rootDirectory projects', async () => {
+    process.env.VERCEL_API_FUNCTION_BUNDLING = '1';
+
+    const filesystem = await prepareFilesystem(
+      {
+        'api/test-direct-step-call.ts': `
+          import { add } from '../workflows/98_duplicate_case.js';
+
+          export async function POST(req: Request) {
+            const { x, y } = await req.json();
+            return Response.json({ result: await add(x, y) });
+          }
+        `,
+        'workflows/98_duplicate_case.js': `
+          export async function add(x, y) {
+            return x + y;
+          }
+        `,
+      },
+      'vercel-node-tests',
+      'workbench/example'
+    );
+
+    const buildResult = await build({
+      ...filesystem,
+      entrypoint: 'api/test-direct-step-call.ts',
+      config: { zeroConfig: true },
+      meta: { skipDownload: true },
+    });
+
+    const lambda = buildResult.output as NodejsLambda;
+    const handlerFile = lambda.files['___vc_bundled_api_handler.js'];
+
+    expect(lambda.handler).toBe('___vc_bundled_api_handler.js');
+    expect(handlerFile).toBeDefined();
+    expect(
+      lambda.files[
+        join('workbench', 'example', 'api', 'test-direct-step-call.js')
+      ]
+    ).toBeDefined();
+
+    // The entrypoint prefix should be inlined directly in the handler file
+    expect(lambda.files['___vc_bundled_api_config.json']).toBeUndefined();
+
+    if (!handlerFile || handlerFile.type !== 'FileBlob') {
+      throw new Error('Expected bundled handler to be a FileBlob');
+    }
+
+    const handlerContents = Buffer.isBuffer(handlerFile.data)
+      ? handlerFile.data.toString('utf8')
+      : handlerFile.data;
+    expect(handlerContents).toContain('"workbench/example"');
+  });
+
   it('should emit handle:hit routes with x-matched-path request header transforms when bundling is enabled', async () => {
     process.env.VERCEL_API_FUNCTION_BUNDLING = '1';
 
@@ -719,6 +773,104 @@ describe('bundling-handler with "type": "module" package', () => {
     });
     expect(res.status).toBe(200);
     expect(await res.text()).toBe('type-module-ok');
+  });
+});
+
+describe('bundling-handler with rootDirectory project', () => {
+  let fixtureDir: string;
+  let originalCwd: string;
+  let handler: (req: any, res: any) => Promise<void>;
+  let server: Server;
+  let baseUrl: string;
+
+  beforeAll(async () => {
+    fixtureDir = join(tmpdir(), `bundling-root-directory-test-${Date.now()}`);
+    await fs.mkdir(join(fixtureDir, 'workbench', 'example', 'api'), {
+      recursive: true,
+    });
+    await fs.mkdir(join(fixtureDir, 'workbench', 'example', 'workflows'), {
+      recursive: true,
+    });
+
+    process.env.VERCEL_ENTRYPOINT_PREFIX = 'workbench/example';
+
+    await fs.writeFile(
+      join(
+        fixtureDir,
+        'workbench',
+        'example',
+        'workflows',
+        '98_duplicate_case.js'
+      ),
+      `module.exports = { add: async (x, y) => x + y };`
+    );
+
+    await fs.writeFile(
+      join(
+        fixtureDir,
+        'workbench',
+        'example',
+        'api',
+        'test-direct-step-call.js'
+      ),
+      `const { add } = require('../workflows/98_duplicate_case.js');
+
+      module.exports = {
+        POST: async req => {
+        const { x, y } = await req.json();
+        return Response.json({ result: await add(x, y) });
+        },
+      };`
+    );
+
+    originalCwd = process.cwd();
+    process.chdir(fixtureDir);
+
+    const handlerPath = require.resolve('../../src/bundling-handler.js');
+    delete require.cache[handlerPath];
+    handler = require('../../src/bundling-handler.js');
+
+    server = createServer(async (req, res) => {
+      try {
+        await handler(req, res);
+      } catch (err: any) {
+        res.statusCode = 500;
+        res.end(err.message);
+      }
+    });
+
+    await new Promise<void>(resolve => {
+      server.listen(0, '127.0.0.1', resolve);
+    });
+    const addr = server.address();
+    if (typeof addr === 'object' && addr) {
+      baseUrl = `http://127.0.0.1:${addr.port}`;
+    }
+  });
+
+  afterAll(async () => {
+    delete process.env.VERCEL_ENTRYPOINT_PREFIX;
+    process.chdir(originalCwd);
+    if (server) {
+      await new Promise<void>((resolve, reject) =>
+        server.close(err => (err ? reject(err) : resolve()))
+      );
+    }
+    await fs.rm(fixtureDir, { recursive: true, force: true });
+  });
+
+  it('resolves workflow-style api routes from the rootDirectory prefix', async () => {
+    const res = await fetch(baseUrl + '/api/test-direct-step-call', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-matched-path': '/api/test-direct-step-call',
+      },
+      body: JSON.stringify({ x: 2, y: 3 }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ result: 5 });
   });
 });
 

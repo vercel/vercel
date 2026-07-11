@@ -78,7 +78,8 @@ export default async function (
   return function (p: string) {
     // we should not ignore now.json and vercel.json if it asked to.
     // we depend on these files for building the app with sourceless
-    if (p === 'now.json' || p === 'vercel.json') return false;
+    if (p === 'now.json' || p === 'vercel.json' || p === 'vercel.toml')
+      return false;
     return ignoreFilter.test(p).ignored;
   };
 }

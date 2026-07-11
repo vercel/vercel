@@ -6,23 +6,13 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { schemaSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
-import { validateEvent } from './validation';
-import {
-  fetchSchemaOrExit,
-  getEventNames,
-  getEvent,
-  type DimensionSchema,
-  type MeasureSchema,
-} from './schema-api';
-import {
-  formatSchemaListJson,
-  formatSchemaDetailJson,
-  formatErrorJson,
-} from './output';
+import { fetchMetricDetailOrExit, fetchMetricListOrExit } from './schema-api';
+import { formatErrorJson } from './output';
 import formatTable from '../../util/format-table';
 import indent from '../../util/output/indent';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
 import getScope from '../../util/get-scope';
+import type { MetricDetail, MetricListItem } from './types';
 
 export default async function schema(
   client: Client,
@@ -38,6 +28,9 @@ export default async function schema(
   }
 
   const flags = parsedArgs.flags;
+  const positionalArgs = parsedArgs.args.slice(1);
+  const positionalMetric =
+    positionalArgs[0] === 'schema' ? positionalArgs[1] : positionalArgs[0];
 
   // Validate output format
   const formatResult = validateJsonOutput(flags);
@@ -47,8 +40,8 @@ export default async function schema(
   }
   const jsonOutput = formatResult.jsonOutput;
 
-  const event = flags['--event'];
-  telemetry.trackCliOptionEvent(event);
+  const metric = positionalMetric;
+  telemetry.trackCliArgumentMetricId(metric);
   telemetry.trackCliOptionFormat(flags['--format']);
 
   const { team } = await getScope(client);
@@ -63,121 +56,139 @@ export default async function schema(
     return 1;
   }
 
-  const schemaData = await fetchSchemaOrExit(client, team.id, jsonOutput);
-  if (typeof schemaData === 'number') {
-    return schemaData;
-  }
-
-  if (event) {
-    // Event detail
-    const eventResult = validateEvent(schemaData, event);
-    if (!eventResult.valid) {
-      if (jsonOutput) {
-        client.stdout.write(
-          formatErrorJson(
-            eventResult.code,
-            eventResult.message,
-            eventResult.allowedValues
-          )
-        );
-      } else {
-        output.error(eventResult.message);
-        if (eventResult.allowedValues) {
-          output.print(
-            `\nAvailable events: ${eventResult.allowedValues.join(', ')}\n`
-          );
-        }
-      }
-      return 1;
+  if (metric) {
+    // Metric detail
+    const detailOrExitCode = await fetchMetricDetailOrExit(
+      client,
+      team.id,
+      metric,
+      jsonOutput
+    );
+    // fetchMetricDetailOrExit() returns a numeric exit code when it already
+    // handled the error output for us.
+    if (typeof detailOrExitCode === 'number') {
+      return detailOrExitCode;
     }
 
-    const eventData = getEvent(schemaData, event)!;
-    const eventWithName = { ...eventData, name: event };
-
     if (jsonOutput) {
-      client.stdout.write(formatSchemaDetailJson(eventWithName));
-    } else {
-      output.log(`Event: ${event} - ${eventData.description}`);
-
-      const dimTable = formatDimensionsTable(eventWithName.dimensions);
-      if (dimTable) {
-        output.print(dimTable);
-        output.print('\n');
-      }
-
-      const measTable = formatMeasuresTable(eventWithName.measures);
-      if (measTable) {
-        output.print(measTable);
-        output.print('\n');
-      }
+      client.stdout.write(JSON.stringify(detailOrExitCode, null, 2));
+      return 0;
     }
-  } else {
-    // Event list
-    const events = getEventNames(schemaData).map(name => ({
-      name,
-      description: getEvent(schemaData, name)!.description,
-    }));
 
-    if (jsonOutput) {
-      client.stdout.write(formatSchemaListJson(events));
-    } else {
-      output.log(`${plural('Event', events.length, true)} found`);
-      output.print(formatEventsTable(events));
+    output.log(`Metric: ${metric}`);
+    const metricsTable = formatMetricsTable(detailOrExitCode);
+    if (metricsTable) {
+      output.print(metricsTable);
       output.print('\n');
     }
+
+    return 0;
+  }
+
+  // Metric list
+  const metricsOrExitCode = await fetchMetricListOrExit(
+    client,
+    team.id,
+    jsonOutput
+  );
+  // fetchMetricListOrExit() returns a numeric exit code when it already
+  // handled the error output for us.
+  if (typeof metricsOrExitCode === 'number') {
+    return metricsOrExitCode;
+  }
+
+  if (jsonOutput) {
+    client.stdout.write(JSON.stringify(metricsOrExitCode, null, 2));
+  } else {
+    output.log(`${plural('Metric', metricsOrExitCode.length, true)} found`);
+    output.print(formatMetricListTable(metricsOrExitCode));
+    output.print('\n');
   }
 
   return 0;
 }
 
-function formatEventsTable(events: { name: string; description: string }[]) {
+function formatMetricListTable(metrics: MetricListItem[]) {
   return indent(
     formatTable(
-      ['Event', 'Description'],
+      ['Metric', 'Description'],
       ['l', 'l'],
-      [{ rows: events.map(e => [e.name, e.description]) }]
+      [{ rows: metrics.map(metric => [metric.id, metric.description]) }]
     ),
     1
   );
 }
 
-function formatDimensionsTable(dimensions: DimensionSchema[]) {
-  if (dimensions.length === 0) {
+function formatMetricsTable(metrics: MetricDetail[]) {
+  if (metrics.length === 0) {
     return null;
   }
-  return indent(
-    formatTable(
-      ['Dimension', 'Label'],
-      ['l', 'l'],
-      [
-        {
-          rows: dimensions.map(d => [d.name, d.label]),
-        },
-      ]
-    ),
-    1
+  const dimensionsByMetric = metrics.map(metric =>
+    metric.dimensions.map(dimension => dimension.name)
   );
-}
+  const sharedDimensions = dimensionsByMetric[0]!.filter(dimension =>
+    dimensionsByMetric.every(metricDimensions =>
+      metricDimensions.includes(dimension)
+    )
+  );
 
-function formatMeasuresTable(measures: MeasureSchema[]) {
-  if (measures.length === 0) {
-    return null;
-  }
-  return indent(
+  const rows = metrics.map(metric => {
+    const extraDimensions = metric.dimensions
+      .map(dimension => dimension.name)
+      .filter(dimension => !sharedDimensions.includes(dimension))
+      .map(dimension => `+${dimension}`);
+
+    const aggregations = metric.aggregations
+      .map(aggregation =>
+        aggregation === metric.defaultAggregation
+          ? `${aggregation} (default)`
+          : aggregation
+      )
+      .join(', ');
+
+    return {
+      metric: metric.id,
+      description: metric.description,
+      unit: metric.unit,
+      aggregations,
+      extraDimensions,
+    };
+  });
+
+  const hasExtraDimensions = rows.some(row => row.extraDimensions.length > 0);
+
+  const tableHeaders = hasExtraDimensions
+    ? ['Metric', 'Description', 'Unit', 'Aggregations', 'Dimensions']
+    : ['Metric', 'Description', 'Unit', 'Aggregations'];
+  const tableRows = rows.map(row =>
+    hasExtraDimensions
+      ? [
+          row.metric,
+          row.description,
+          row.unit,
+          row.aggregations,
+          row.extraDimensions.join(', ') || '—',
+        ]
+      : [row.metric, row.description, row.unit, row.aggregations]
+  );
+
+  const sharedDimensionsLine =
+    sharedDimensions.length > 0
+      ? metrics.length === 1
+        ? `Dimensions:\n  ${sharedDimensions.join(', ')}`
+        : `Shared dimensions:\n  ${sharedDimensions.join(', ')}`
+      : null;
+
+  const table = indent(
     formatTable(
-      ['Measure', 'Label', 'Unit', 'Aggregations'],
-      ['l', 'l', 'l', 'l'],
-      [
-        {
-          rows: measures.map(m => [
-            m.name,
-            m.label,
-            m.unit,
-            m.aggregations.join(', '),
-          ]),
-        },
-      ]
+      tableHeaders,
+      hasExtraDimensions ? ['l', 'l', 'l', 'l', 'l'] : ['l', 'l', 'l', 'l'],
+      [{ rows: tableRows }]
     ),
     1
   );
+
+  return sharedDimensionsLine
+    ? `\n${table}\n\n${sharedDimensionsLine}`
+    : `\n${table}`;
 }

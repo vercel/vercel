@@ -1,82 +1,10 @@
-import type { ValidationResult, ValidatedResult } from './types';
-import type { Schema } from './schema-api';
+import type {
+  OrderBy,
+  OrderDirection,
+  ValidationResult,
+  ValidatedResult,
+} from './types';
 import { validateAllProjectMutualExclusivity } from '../../util/command-validation';
-import {
-  getEventNames,
-  getEvent,
-  getMeasures,
-  getAggregations,
-  getDimensions,
-} from './schema-api';
-import type { Aggregation } from './types';
-
-export function validateEvent(schema: Schema, event: string): ValidationResult {
-  if (getEvent(schema, event)) {
-    return { valid: true };
-  }
-  return {
-    valid: false,
-    code: 'UNKNOWN_EVENT',
-    message: `Unknown event "${event}".`,
-    allowedValues: getEventNames(schema),
-  };
-}
-
-export function validateMeasure(
-  schema: Schema,
-  event: string,
-  measure: string
-): ValidationResult {
-  const measures = getMeasures(schema, event);
-  if (measures.some(m => m.name === measure)) {
-    return { valid: true };
-  }
-  return {
-    valid: false,
-    code: 'UNKNOWN_MEASURE',
-    message: `Measure "${measure}" is not available for event "${event}".`,
-    allowedValues: measures.map(m => m.name),
-  };
-}
-
-export function validateAggregation(
-  schema: Schema,
-  event: string,
-  measure: string,
-  aggregation: string
-): ValidatedResult<Aggregation> {
-  const aggs = getAggregations(schema, event, measure);
-  const found = aggs.find(agg => agg === aggregation);
-  if (found) {
-    return { valid: true, value: found };
-  }
-  return {
-    valid: false,
-    code: 'INVALID_AGGREGATION',
-    message: `Aggregation "${aggregation}" is not valid for measure "${measure}" on event "${event}".`,
-    allowedValues: [...aggs],
-  };
-}
-
-export function validateGroupBy(
-  schema: Schema,
-  event: string,
-  dims: string[]
-): ValidationResult {
-  const dimensions = getDimensions(schema, event);
-  for (const dim of dims) {
-    const found = dimensions.find(d => d.name === dim);
-    if (!found) {
-      return {
-        valid: false,
-        code: 'UNKNOWN_DIMENSION',
-        message: `Dimension "${dim}" is not available for event "${event}".`,
-        allowedValues: dimensions.map(d => d.name),
-      };
-    }
-  }
-  return { valid: true };
-}
 
 export function validateMutualExclusivity(
   all: boolean | undefined,
@@ -85,16 +13,54 @@ export function validateMutualExclusivity(
   return validateAllProjectMutualExclusivity(all, project);
 }
 
-export function validateRequiredEvent(
-  event: string | undefined
+export function validateRequiredMetric(
+  metric: string | undefined
 ): ValidatedResult<string> {
-  if (event) {
-    return { valid: true, value: event };
+  if (metric) {
+    return { valid: true, value: metric };
   }
   return {
     valid: false,
-    code: 'MISSING_EVENT',
+    code: 'MISSING_METRIC',
     message:
-      "Missing required flag --event. Specify the event type to query.\n\nRun 'vercel metrics schema' to see available events.",
+      "Missing required metric. Specify the metric to query.\n\nRun 'vercel metrics schema' to see available metrics.",
+  };
+}
+
+export function validateOrderDirection(
+  orderDirection: string | undefined
+): ValidatedResult<OrderDirection | undefined> {
+  if (orderDirection === undefined) {
+    return { valid: true, value: undefined };
+  }
+
+  if (orderDirection === 'asc' || orderDirection === 'desc') {
+    return { valid: true, value: orderDirection };
+  }
+
+  return {
+    valid: false,
+    code: 'INVALID_ORDER',
+    message: `Invalid order "${orderDirection}". Use "asc" or "desc".`,
+    allowedValues: ['asc', 'desc'],
+  };
+}
+
+export function validateOrderBy(
+  orderBy: string | undefined
+): ValidatedResult<OrderBy | undefined> {
+  if (orderBy === undefined) {
+    return { valid: true, value: undefined };
+  }
+
+  if (orderBy === 'value' || orderBy === 'count') {
+    return { valid: true, value: orderBy };
+  }
+
+  return {
+    valid: false,
+    code: 'INVALID_ORDER_BY',
+    message: `Invalid order-by "${orderBy}". Use "value" or "count".`,
+    allowedValues: ['value', 'count'],
   };
 }

@@ -23,9 +23,21 @@ const accessOption = {
   shorthand: 'a',
   type: String,
   deprecated: false,
-  description: 'Access level for the blob: public or private (default: public)',
+  description: 'Access level for the blob: public or private (required)',
   argument: 'String',
   choices: ['public', 'private'],
+} as const;
+
+import { yesOption } from '../../util/arg-common';
+
+const environmentOption = {
+  name: 'environment',
+  shorthand: 'e',
+  type: [String],
+  deprecated: false,
+  argument: 'ENV',
+  description:
+    'Environment to connect (can be repeated: production, preview, development). Defaults to all when --yes is used.',
 } as const;
 
 export const listSubcommand = {
@@ -136,15 +148,6 @@ export const putSubcommand = {
       description: 'Overwrite the file if it already exists (default: false)',
       argument: 'Boolean',
     },
-    {
-      name: 'force',
-      shorthand: 'f',
-      type: Boolean,
-      deprecated: true,
-      description:
-        'Overwrite the file if it already exists (deprecated, use --allow-overwrite)',
-      argument: 'Boolean',
-    },
     ifMatchOption,
   ],
   examples: [],
@@ -236,70 +239,214 @@ export const getSubcommand = {
   examples: [],
 } as const;
 
-export const addStoreSubcommand = {
-  name: 'add',
+export const signedTokenSubcommand = {
+  name: 'signed-token',
   aliases: [],
-  description: 'Add a new Blob store',
+  description: 'Issue a short-lived signed token for Blob operations',
+  arguments: [],
+  options: [
+    {
+      name: 'pathname',
+      shorthand: 'p',
+      type: String,
+      deprecated: false,
+      description: 'Pathname scope for the token. Defaults to "*" when omitted',
+      argument: 'STRING',
+    },
+    {
+      name: 'operation',
+      shorthand: 'o',
+      type: [String],
+      deprecated: false,
+      description: 'Allowed operation(s): get, head, put, delete (repeatable)',
+      argument: 'OPERATION',
+      choices: ['get', 'head', 'put', 'delete'],
+    },
+    {
+      name: 'valid-until',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description:
+        'Absolute expiration time as Unix timestamp in milliseconds (mutually exclusive with --valid-for)',
+      argument: 'TIMESTAMP_MS',
+    },
+    {
+      name: 'valid-for',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Relative duration before expiration (for example: 15m, 1h, 7d; mutually exclusive with --valid-until)',
+      argument: 'DURATION',
+    },
+    {
+      name: 'allowed-content-type',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description:
+        'Allowed content type(s) for put operations (repeatable, supports wildcards)',
+      argument: 'MIME_TYPE',
+    },
+    {
+      name: 'maximum-size-in-bytes',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Maximum upload size in bytes for put operations (max: 5TB)',
+      argument: 'BYTES',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output signed token payload as JSON',
+    },
+  ],
+  examples: [
+    {
+      name: 'Issue a signed token for reads',
+      value:
+        'vercel blob signed-token --pathname media/photo.jpg --operation get',
+    },
+    {
+      name: 'Issue a signed token for uploads with constraints',
+      value:
+        'vercel blob signed-token --pathname uploads/* --operation put --allowed-content-type image/* --maximum-size-in-bytes 10485760',
+    },
+  ],
+} as const;
+
+export const presignSubcommand = {
+  name: 'presign',
+  aliases: [],
+  description: 'Generate a presigned URL for Blob operations',
   arguments: [
     {
-      name: 'name',
-      required: false,
+      name: 'pathname',
+      required: true,
     },
   ],
   options: [
     accessOption,
     {
-      name: 'region',
-      shorthand: 'r',
+      name: 'operation',
+      shorthand: 'o',
       type: String,
       deprecated: false,
       description:
-        'Region to create the Blob store in (default: "iad1"). See https://vercel.com/docs/edge-network/regions#region-list for all available regions',
+        'Operation for the presigned URL: get, head, put, or delete (default: get)',
+      argument: 'OPERATION',
+      choices: ['get', 'head', 'put', 'delete'],
+    },
+    {
+      name: 'delegation-token',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Delegation token from `vercel blob signed-token` (must be used with --client-signing-token)',
       argument: 'STRING',
+    },
+    {
+      name: 'client-signing-token',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Signing secret/token from `vercel blob signed-token` (must be used with --delegation-token)',
+      argument: 'STRING',
+    },
+    {
+      name: 'valid-until',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description:
+        'Absolute expiration time as Unix timestamp in milliseconds (mutually exclusive with --valid-for)',
+      argument: 'TIMESTAMP_MS',
+    },
+    {
+      name: 'valid-for',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Relative duration before expiration (for example: 15m, 1h, 7d; mutually exclusive with --valid-until)',
+      argument: 'DURATION',
+    },
+    {
+      name: 'if-match',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'If-Match constraint for put or delete operations',
+      argument: 'STRING',
+    },
+    {
+      name: 'allow-overwrite',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Allow overwriting existing blobs (put only)',
+    },
+    {
+      name: 'add-random-suffix',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Add a random suffix to the pathname (put only)',
+    },
+    {
+      name: 'cache-control-max-age',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Cache-Control max-age in seconds (put only)',
+      argument: 'SECONDS',
+    },
+    {
+      name: 'allowed-content-type',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description: 'Allowed content type(s) for uploads (put only, repeatable)',
+      argument: 'MIME_TYPE',
+    },
+    {
+      name: 'maximum-size-in-bytes',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Maximum upload size in bytes (put only, max: 5TB)',
+      argument: 'BYTES',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output presign result as JSON',
     },
   ],
   examples: [
     {
-      name: 'Create a blob store (uses default region "iad1")',
-      value: 'vercel blob store add my-store',
+      name: 'Generate a presigned GET URL',
+      value: 'vercel blob presign media/photo.jpg --access public',
     },
     {
-      name: 'Create a blob store in a specific region',
-      value: 'vercel blob store add my-store --region cdg1',
+      name: 'Generate a presigned PUT URL with upload constraints',
+      value:
+        'vercel blob presign uploads/image.jpg --access private --operation put --allowed-content-type image/* --maximum-size-in-bytes 10485760',
     },
     {
-      name: 'Create a private blob store',
-      value: 'vercel blob store add my-private-store --access private',
+      name: 'Generate a presigned URL from existing signed-token output',
+      value:
+        'vercel blob presign uploads/image.jpg --access private --operation put --delegation-token <delegationToken> --client-signing-token <clientSigningToken>',
     },
   ],
-} as const;
-
-export const removeStoreSubcommand = {
-  name: 'remove',
-  aliases: ['rm'],
-  description: 'Remove a Blob store',
-  arguments: [
-    {
-      name: 'storeId',
-      required: false,
-    },
-  ],
-  options: [],
-  examples: [],
-} as const;
-
-export const getStoreSubcommand = {
-  name: 'get',
-  aliases: [],
-  description: 'Get a Blob store',
-  arguments: [
-    {
-      name: 'storeId',
-      required: false,
-    },
-  ],
-  options: [],
-  examples: [],
 } as const;
 
 export const createStoreSubcommand = {
@@ -323,19 +470,22 @@ export const createStoreSubcommand = {
         'Region to create the Blob store in (default: "iad1"). See https://vercel.com/docs/edge-network/regions#region-list for all available regions',
       argument: 'STRING',
     },
+    yesOption,
+    environmentOption,
   ],
   examples: [
     {
       name: 'Create a blob store (uses default region "iad1")',
-      value: 'vercel blob create-store my-store',
+      value: 'vercel blob create-store my-store --access private',
     },
     {
       name: 'Create a blob store in a specific region',
-      value: 'vercel blob create-store my-store --region cdg1',
+      value: 'vercel blob create-store my-store --access private --region cdg1',
     },
     {
-      name: 'Create a private blob store',
-      value: 'vercel blob create-store my-private-store --access private',
+      name: 'Create and connect to project in CI',
+      value:
+        'vercel blob create-store my-store --access private --yes --environment production --environment preview',
     },
   ],
 } as const;
@@ -350,7 +500,16 @@ export const deleteStoreSubcommand = {
       required: false,
     },
   ],
-  options: [],
+  options: [yesOption],
+  examples: [],
+} as const;
+
+export const emptyStoreSubcommand = {
+  name: 'empty-store',
+  aliases: [],
+  description: 'Delete all blobs in a Blob store',
+  arguments: [],
+  options: [yesOption],
   examples: [],
 } as const;
 
@@ -368,14 +527,45 @@ export const getStoreInfoSubcommand = {
   examples: [],
 } as const;
 
-export const storeSubcommand = {
-  name: 'store',
-  aliases: [],
-  description: 'Manage or create a Blob store',
+export const listStoresSubcommand = {
+  name: 'list-stores',
+  aliases: ['ls-stores'],
+  description: 'List all Blob stores',
   arguments: [],
-  subcommands: [addStoreSubcommand, removeStoreSubcommand, getStoreSubcommand],
-  options: [],
-  examples: [],
+  options: [
+    {
+      name: 'all',
+      shorthand: 'a',
+      type: Boolean,
+      deprecated: false,
+      description:
+        'List all blob stores for the team, not just the ones connected to the current project',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output results as JSON',
+    },
+    {
+      name: 'no-projects',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Hide the Projects column (table output only)',
+    },
+  ],
+  examples: [
+    {
+      name: 'List blob stores for the linked project',
+      value: 'vercel blob list-stores',
+    },
+    {
+      name: 'List all team blob stores as JSON',
+      value: 'vercel blob list-stores --all --json',
+    },
+  ],
 } as const;
 
 export const blobCommand = {
@@ -389,10 +579,13 @@ export const blobCommand = {
     getSubcommand,
     delSubcommand,
     copySubcommand,
+    signedTokenSubcommand,
+    presignSubcommand,
     createStoreSubcommand,
     deleteStoreSubcommand,
     getStoreInfoSubcommand,
-    storeSubcommand,
+    listStoresSubcommand,
+    emptyStoreSubcommand,
   ],
   options: [
     {
@@ -401,6 +594,24 @@ export const blobCommand = {
       type: String,
       deprecated: false,
       description: 'Read_Write_Token for the Blob store',
+      argument: 'String',
+    },
+    {
+      name: 'oidc-token',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'OIDC token for the Blob store (must be passed together with --store-id)',
+      argument: 'String',
+    },
+    {
+      name: 'store-id',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Blob store id, with or without the "store_" prefix (must be passed together with --oidc-token)',
       argument: 'String',
     },
   ],

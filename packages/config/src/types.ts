@@ -56,7 +56,7 @@ export type Framework =
   | 'flask'
   | 'fasthtml'
   | 'django'
-  | 'sanity-v3'
+  | 'sanity-v2'
   | 'sanity'
   | 'storybook'
   | 'nitro'
@@ -176,6 +176,19 @@ export interface CronJob {
   schedule: string;
   path: string;
 }
+
+export interface ServiceQueueTopic {
+  topic: string;
+  retryAfterSeconds?: number;
+  initialDelaySeconds?: number;
+}
+
+export interface ServiceRefEnvVar {
+  type: 'service-ref';
+  service: string;
+}
+
+export type EnvVar = ServiceRefEnvVar;
 
 export interface GitDeploymentConfig {
   [branch: string]: boolean;
@@ -478,10 +491,6 @@ export interface VercelConfig {
    */
   name?: string;
   /**
-   * Whether a deployment's source and logs are available publicly
-   */
-  public?: boolean;
-  /**
    * A list of redirect definitions.
    */
   redirects?: Redirect[];
@@ -563,17 +572,37 @@ export interface VercelConfig {
     string,
     {
       /**
-       * Service type: web, cron, or worker. Defaults to web.
+       * Service type: web, worker, or job. Defaults to web.
        */
-      type?: 'web' | 'cron' | 'worker';
+      type?: 'web' | 'cron' | 'worker' | 'job';
       /**
-       * Entry file for the service, relative to the workspace directory.
+       * Trigger for job services.
+       */
+      trigger?: 'queue' | 'schedule' | 'workflow';
+      /**
+       * Path to the service's root directory relative to the project root.
+       * Should contain a manifest file (package.json, pyproject.toml, etc.).
+       * Defaults to ".".
+       */
+      root?: string;
+      /**
+       * Entry file for the service, relative to the service root directory.
        */
       entrypoint?: string;
       /**
        * Path to the directory containing the service manifest file (package.json, pyproject.toml, etc.). Defaults to "." (project root).
+       * @deprecated Use `root` instead.
        */
       workspace?: string;
+      /**
+       * Preferred routing config alias for routePrefix/subdomain.
+       */
+      mount?:
+        | string
+        | {
+            path?: string;
+            subdomain?: string;
+          };
       /**
        * URL prefix for routing (web services only).
        */
@@ -603,6 +632,12 @@ export interface VercelConfig {
        */
       installCommand?: string;
       /**
+       * Command to run after build process succeed but before the deployment's
+       * output is uploaded. Runs during `vercel build` including local builds
+       * and builds on Vercel.
+       */
+      preDeployCommand?: string;
+      /**
        * Memory allocation in MB (128-10240).
        */
       memory?: number;
@@ -619,21 +654,17 @@ export interface VercelConfig {
        */
       excludeFiles?: string | string[];
       /**
-       * Cron schedule expression (e.g., "0 0 * * *"). Required for cron services.
+       * Cron schedule expression(s) (e.g., "0 0 * * *"). Required for schedule-triggered job services.
        */
       schedule?: string;
       /**
-       * Topic names for worker subscription.
+       * Topic names or queue topic configs for worker and queue-triggered job services.
        */
-      topics?: string[];
+      topics?: string[] | ServiceQueueTopic[];
       /**
-       * Consumer group name for worker subscription.
+       * Environment variables to inject into this service at build and runtime.
        */
-      consumer?: string;
-      /**
-       * Custom prefix to use to inject service URL env vars.
-       */
-      envPrefix?: string;
+      env?: Record<string, EnvVar>;
     }
   >;
   /**

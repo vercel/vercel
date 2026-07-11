@@ -19,6 +19,202 @@ const getRevertAliasConfigFile = () => {
     ],
   });
 };
+
+const getNextGeneratedNitroServiceFixture = servicesConfigKey => ({
+  '.vercel/project.json': JSON.stringify({
+    orgId: '.',
+    projectId: '.',
+    settings: {
+      framework: 'nextjs',
+    },
+  }),
+  'package.json': JSON.stringify({
+    private: true,
+    scripts: {
+      build:
+        servicesConfigKey === 'experimentalServicesV2'
+          ? 'next build && node write-experimental-services-v2.mjs'
+          : 'next build',
+    },
+    dependencies: {
+      next: 'latest',
+      react: 'latest',
+      'react-dom': 'latest',
+    },
+  }),
+  'pages/index.js':
+    'export default function Home() { return <p>Latest Next.js app</p>; }',
+  ...(servicesConfigKey === 'experimentalServicesV2'
+    ? {
+        'vercel.json': JSON.stringify({
+          experimentalServicesV2: {
+            web: {
+              root: '.',
+              entrypoint: 'package.json',
+              framework: 'nextjs',
+              rewrites: [{ source: '/(.*)', destination: '/$1' }],
+            },
+            'nitro-api': {
+              root: 'nitro',
+              entrypoint: 'package.json',
+              framework: 'nitro',
+              rewrites: [{ source: '/api/(.*)', destination: '/$1' }],
+            },
+          },
+        }),
+        'write-experimental-services-v2.mjs': `
+import fs from 'node:fs';
+import path from 'node:path';
+
+const servicesConfig = {
+  web: {
+    root: '.',
+    entrypoint: 'package.json',
+    framework: 'nextjs',
+    rewrites: [{ source: '/(.*)', destination: '/$1' }],
+  },
+  'nitro-api': {
+    root: 'nitro',
+    entrypoint: 'package.json',
+    framework: 'nitro',
+    rewrites: [{ source: '/api/(.*)', destination: '/$1' }],
+  },
+};
+
+const serviceRoutes = [
+  {
+    src: '/api/(.*)',
+    service: 'nitro-api',
+  },
+  {
+    src: '/(.*)',
+    service: 'web',
+  },
+];
+
+const outputDir = path.join(process.cwd(), '.vercel', 'output');
+const configPath = path.join(outputDir, 'config.json');
+let config = { version: 3 };
+try {
+  config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+} catch (error) {
+  if (error.code !== 'ENOENT') {
+    throw error;
+  }
+}
+
+fs.mkdirSync(outputDir, { recursive: true });
+fs.writeFileSync(
+  configPath,
+  JSON.stringify(
+    {
+      ...config,
+      version: 3,
+      routes: serviceRoutes,
+      experimentalServicesV2: servicesConfig,
+    },
+    null,
+    2
+  )
+);
+`,
+      }
+    : {}),
+  'next.config.js': `
+const fs = require('node:fs');
+const path = require('node:path');
+
+const servicesConfig =
+  ${JSON.stringify(servicesConfigKey)} === 'experimentalServicesV2'
+    ? {
+        web: {
+          root: '.',
+          entrypoint: 'package.json',
+          framework: 'nextjs',
+          rewrites: [{ source: '/(.*)', destination: '/$1' }],
+        },
+        'nitro-api': {
+          root: 'nitro',
+          entrypoint: 'package.json',
+          framework: 'nitro',
+          rewrites: [{ source: '/api/(.*)', destination: '/$1' }],
+        },
+      }
+    : {
+        web: {
+          type: 'web',
+          root: '.',
+          entrypoint: 'package.json',
+          framework: 'nextjs',
+          mount: '/',
+        },
+        'nitro-api': {
+          type: 'web',
+          root: 'nitro',
+          entrypoint: 'package.json',
+          framework: 'nitro',
+          mount: '/api',
+        },
+      };
+
+function writeExperimentalServicesConfig(projectDir) {
+  const outputDir = path.join(projectDir, '.vercel', 'output');
+  const configPath = path.join(outputDir, 'config.json');
+  let config = { version: 3 };
+  try {
+    config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  fs.mkdirSync(outputDir, { recursive: true });
+  fs.writeFileSync(
+    configPath,
+    JSON.stringify(
+      {
+        ...config,
+        version: 3,
+        ${JSON.stringify(servicesConfigKey)}: servicesConfig,
+      },
+      null,
+      2
+    )
+  );
+}
+
+writeExperimentalServicesConfig(__dirname);
+
+module.exports = {};
+`,
+  'nitro/package.json': JSON.stringify({
+    private: true,
+    scripts: {
+      build: 'nitro build',
+      dev: 'nitro dev',
+      prepare: 'nitro prepare',
+      preview: 'node .output/server/index.mjs',
+    },
+    devDependencies: {
+      nitropack: 'latest',
+    },
+  }),
+  'nitro/.npmrc': 'shamefully-hoist=true\nstrict-peer-dependencies=false\n',
+  'nitro/nitro.config.ts': `
+export default defineNitroConfig({
+  preset: 'vercel',
+  compatibilityDate: '2026-05-27',
+  srcDir: 'server'
+});
+`,
+  'nitro/server/routes/index.ts': `
+export default defineEventHandler(() => {
+  return 'nitro ok';
+});
+`,
+});
+
 module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
   const spec = {
     'static-single-file': {
@@ -30,11 +226,11 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'empty-directory': {},
     'config-scope-property-email': {
-      'now.json': `{ "scope": "${session}@zeit.pub", "builds": [ { "src": "*.html", "use": "@vercel/static" } ] }`,
+      'vercel.json': `{ "scope": "${session}@zeit.pub", "builds": [ { "src": "*.html", "use": "@vercel/static" } ] }`,
       'index.html': '<span>test scope email</span',
     },
     'config-scope-property-username': {
-      'now.json': `{ "scope": "${session}", "builds": [ { "src": "*.html", "use": "@vercel/static" } ] }`,
+      'vercel.json': `{ "scope": "${session}", "builds": [ { "src": "*.html", "use": "@vercel/static" } ] }`,
       'index.html': '<span>test scope username</span',
     },
     'builds-wrong': {
@@ -50,7 +246,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'index.html': '<h1>Should fail</h1>',
     },
     'builds-no-list': {
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         routes: [
           {
             src: '/(.*)',
@@ -63,7 +259,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       }),
     },
     'build-env': {
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         build: {
           env: {
             FOO: 'bar',
@@ -78,11 +274,11 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'now-revert-alias-1': {
       'index.json': JSON.stringify({ name: 'now-revert-alias-1' }),
-      'now.json': getRevertAliasConfigFile(),
+      'vercel.json': getRevertAliasConfigFile(),
     },
     'now-revert-alias-2': {
       'index.json': JSON.stringify({ name: 'now-revert-alias-2' }),
-      'now.json': getRevertAliasConfigFile(),
+      'vercel.json': getRevertAliasConfigFile(),
     },
     'now-dev-fail-dev-script': {
       'package.json': JSON.stringify(
@@ -144,18 +340,14 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'index.html': 'Static V2',
     },
     'redirects-v2': {
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         name: 'redirects-v2',
         redirects: [{ source: `/(.*)`, destination: 'https://example.com/$1' }],
       }),
     },
-    'deploy-with-only-readme-now-json': {
-      'now.json': JSON.stringify({ version: 2 }),
-      'README.md': 'readme contents',
-    },
     'deploy-with-only-readme-vercel-json': {
       'vercel.json': JSON.stringify({ version: 2 }),
-      'README.md': 'readme contents',
+      'content.txt': 'content file contents',
     },
     'deploy-default-with-sub-directory': {
       'vercel.json': JSON.stringify({ version: 2 }),
@@ -164,9 +356,10 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'deploy-default-with-conflicting-sub-directory': {
       'list/vercel.json': JSON.stringify({ version: 2 }),
-      'list/list/README.md': 'nested nested readme contents',
-      'list/README.md':
-        'readme contents for deploy-default-with-conflicting-sub-directory',
+      'list/list/content.txt':
+        'nested contents for deploy-default-with-conflicting-sub-directory',
+      'list/content.txt':
+        'root contents for deploy-default-with-conflicting-sub-directory',
     },
     'deploy-default-with-prebuilt-preview': {
       'vercel.json': JSON.stringify({ version: 2 }),
@@ -201,7 +394,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       }),
       'dir/index.html': '<h1>hello index</h1>',
       'dir/another.html': '<h1>hello another</h1>',
-      'dir/now.json': JSON.stringify({
+      'dir/vercel.json': JSON.stringify({
         name: 'nested-level',
       }),
     },
@@ -251,6 +444,11 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       }),
     },
     'zero-config-next-js-nested': {
+      // `pnpm-workspace.yaml` makes this fixture a workspace, which is what
+      // triggers the "Code directory?" prompt under
+      // the new input-root-directory behavior (prompt fires only when
+      // `getWorkspaces()` returns non-empty).
+      'pnpm-workspace.yaml': "packages:\n  - 'app'\n",
       'app/pages/index.js':
         'export default () => <div><h1>Now CLI test</h1><p>Zero-config + Next.js</p></div>',
       'app/package.json': JSON.stringify({
@@ -273,7 +471,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
           res.json({ memory: parseInt(process.env.AWS_LAMBDA_FUNCTION_MEMORY_SIZE) });
         };
       `,
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.js': {
             memory: 128,
@@ -287,7 +485,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
           res.json({ memory: parseInt(process.env.AWS_LAMBDA_FUNCTION_MEMORY_SIZE) });
         };
       `,
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.js': {
             memory: 123,
@@ -304,7 +502,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
           res.end('done');
         };
       `,
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.js': {
             memory: 128,
@@ -322,7 +520,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
           res.end('done');
         };
       `,
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.js': {
             memory: 128,
@@ -357,7 +555,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'github-and-scope-config': {
       'index.txt': 'I Am a Website!',
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         scope: 'i-do-not-exist',
         github: {
           autoAlias: true,
@@ -404,7 +602,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'project-root-directory': {
       'src/index.html': '<h1>I am a website.</h1>',
-      'src/now.json': JSON.stringify({
+      'src/vercel.json': JSON.stringify({
         rewrites: [
           {
             source: '/i-do-exist',
@@ -492,6 +690,10 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         },
       }),
     },
+    'vc-build-next-generated-nitro-service':
+      getNextGeneratedNitroServiceFixture('experimentalServices'),
+    'vc-build-next-generated-experimental-services-v2-nitro-service':
+      getNextGeneratedNitroServiceFixture('experimentalServicesV2'),
     'vercel-json-configuration-overrides': {
       'vercel.json': '{}',
       'package.json': '{}',

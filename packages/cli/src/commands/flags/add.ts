@@ -4,7 +4,6 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { createFlag } from '../../util/flags/create-flag';
 import output from '../../output-manager';
@@ -15,8 +14,11 @@ import { printFlagDetails } from '../../util/flags/print-flag-details';
 import type {
   CreateFlagRequest,
   FlagEnvironmentConfig,
+  FlagKind,
   FlagVariant,
+  FlagVariantValue,
 } from '../../util/flags/types';
+import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
 // Generate a variant ID (21 chars, alphanumeric)
 function variantId(size = 21): string {
@@ -58,28 +60,34 @@ export default async function create(
     return 1;
   }
 
-  const kind =
-    (flags['--kind'] as 'boolean' | 'string' | 'number') || 'boolean';
+  const kind = (flags['--kind'] as FlagKind | undefined) || 'boolean';
   const description = flags['--description'] as string | undefined;
   const variantInputs = (flags['--variant'] as string[] | undefined) || [];
+  const projectName = getProjectNameFromFlags(flags);
 
   telemetryClient.trackCliArgumentSlug(slug);
+  telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliOptionKind(kind);
   telemetryClient.trackCliOptionDescription(description);
 
-  if (kind !== 'boolean' && kind !== 'string' && kind !== 'number') {
+  if (
+    kind !== 'boolean' &&
+    kind !== 'string' &&
+    kind !== 'number' &&
+    kind !== 'json'
+  ) {
     output.error(
-      `Invalid kind: ${kind}. Must be one of: boolean, string, number`
+      `Invalid kind: ${kind}. Must be one of: boolean, string, number, json`
     );
     return 1;
   }
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
+      `Your codebase isn't linked to a project on Vercel. Pass --project <name>, or run ${getCommandName('link')} to link it.`
     );
     return 1;
   }
@@ -144,7 +152,7 @@ export default async function create(
 
 async function getVariants(
   client: Client,
-  kind: 'boolean' | 'string' | 'number',
+  kind: FlagKind,
   variantInputs: string[]
 ): Promise<FlagVariant[]> {
   if (kind === 'boolean') {
@@ -158,7 +166,9 @@ async function getVariants(
   }
 
   if (variantInputs.length > 0) {
-    return variantInputs.map(input => parseVariantInput(input, kind));
+    return variantInputs.map((input, index) =>
+      parseVariantInput(input, kind, index)
+    );
   }
 
   if (!client.stdin.isTTY) {
@@ -172,7 +182,7 @@ async function getVariants(
 
 async function collectVariantsInteractively(
   client: Client,
-  kind: 'string' | 'number'
+  kind: 'string' | 'number' | 'json'
 ): Promise<FlagVariant[]> {
   const variants: FlagVariant[] = [];
   let addAnother = true;
@@ -180,7 +190,10 @@ async function collectVariantsInteractively(
   while (addAnother || variants.length === 0) {
     const variantNumber = variants.length + 1;
     const valueInput = await client.input.text({
-      message: `Enter value for variant ${variantNumber}:`,
+      message:
+        kind === 'json'
+          ? `Enter JSON value for variant ${variantNumber}:`
+          : `Enter value for variant ${variantNumber}:`,
       validate: value => {
         const result = validateVariantValue(value, kind);
         return result === null ? true : result;
@@ -191,7 +204,11 @@ async function collectVariantsInteractively(
     });
 
     variants.push(
-      parseVariantInput(formatVariantInput(valueInput, label), kind)
+      parseVariantInput(
+        formatVariantInput(valueInput, label),
+        kind,
+        variants.length
+      )
     );
     addAnother = await client.input.confirm('Add another variant?', false);
   }
@@ -230,15 +247,10 @@ function formatVariantInput(valueInput: string, label: string): string {
 
 function parseVariantInput(
   input: string,
-  kind: 'string' | 'number'
+  kind: 'string' | 'number' | 'json',
+  index: number
 ): FlagVariant {
-  const separatorIndex = input.indexOf('=');
-  const rawValue =
-    separatorIndex === -1
-      ? input.trim()
-      : input.slice(0, separatorIndex).trim();
-  const rawLabel =
-    separatorIndex === -1 ? undefined : input.slice(separatorIndex + 1).trim();
+  const { rawValue, rawLabel } = splitVariantInput(input, kind);
 
   const validationError = validateVariantValue(rawValue, kind);
   if (validationError) {
@@ -248,14 +260,73 @@ function parseVariantInput(
   return {
     id: variantId(),
     value: parseVariantValue(rawValue, kind),
-    label: rawLabel || undefined,
+    label: getVariantLabel(rawLabel, kind, index),
     description: '',
   };
 }
 
+function splitVariantInput(
+  input: string,
+  kind: 'string' | 'number' | 'json'
+): { rawValue: string; rawLabel?: string } {
+  if (kind !== 'json') {
+    const separatorIndex = input.indexOf('=');
+    return {
+      rawValue:
+        separatorIndex === -1
+          ? input.trim()
+          : input.slice(0, separatorIndex).trim(),
+      rawLabel:
+        separatorIndex === -1
+          ? undefined
+          : input.slice(separatorIndex + 1).trim() || undefined,
+    };
+  }
+
+  const trimmed = input.trim();
+  if (isValidJsonVariantValue(trimmed)) {
+    return { rawValue: trimmed };
+  }
+
+  for (let index = trimmed.length - 1; index >= 0; index--) {
+    if (trimmed[index] !== '=') {
+      continue;
+    }
+
+    const rawValue = trimmed.slice(0, index).trim();
+    const rawLabel = trimmed.slice(index + 1).trim();
+    if (!rawValue || !isValidJsonVariantValue(rawValue)) {
+      continue;
+    }
+
+    return {
+      rawValue,
+      rawLabel: rawLabel || undefined,
+    };
+  }
+
+  return { rawValue: trimmed };
+}
+
+function getVariantLabel(
+  rawLabel: string | undefined,
+  kind: 'string' | 'number' | 'json',
+  index: number
+): string | undefined {
+  if (rawLabel) {
+    return rawLabel;
+  }
+
+  if (kind === 'json') {
+    return `Variant ${index + 1}`;
+  }
+
+  return undefined;
+}
+
 function validateVariantValue(
   value: string,
-  kind: 'string' | 'number'
+  kind: 'string' | 'number' | 'json'
 ): string | null {
   if (!value.trim()) {
     return 'value cannot be empty';
@@ -268,23 +339,29 @@ function validateVariantValue(
     }
   }
 
+  if (kind === 'json' && !isValidJsonVariantValue(value)) {
+    return 'JSON variants must be valid JSON';
+  }
+
   return null;
 }
 
 function parseVariantValue(
   value: string,
-  kind: 'string' | 'number'
-): string | number {
+  kind: 'string' | 'number' | 'json'
+): FlagVariantValue {
   if (kind === 'number') {
     return Number(value);
+  }
+
+  if (kind === 'json') {
+    return JSON.parse(value) as FlagVariantValue;
   }
 
   return value;
 }
 
-function getDefaultVariants(
-  kind: 'boolean' | 'string' | 'number'
-): FlagVariant[] {
+function getDefaultVariants(kind: FlagKind): FlagVariant[] {
   switch (kind) {
     case 'boolean':
       return [
@@ -303,6 +380,16 @@ function getDefaultVariants(
       ];
     case 'string':
     case 'number':
+    case 'json':
       throw new Error(`Default variants are not supported for kind: ${kind}`);
+  }
+}
+
+function isValidJsonVariantValue(value: string): boolean {
+  try {
+    JSON.parse(value);
+    return true;
+  } catch {
+    return false;
   }
 }

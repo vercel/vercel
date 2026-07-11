@@ -15,6 +15,20 @@ export class AlertsTelemetryClient
     }
   }
 
+  trackCliSubcommandInspect(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'inspect',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRules(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules',
+      value: actual,
+    });
+  }
+
   trackCliOptionType(v: string[] | undefined) {
     if (v && v.length > 0) {
       this.trackCliOption({
@@ -37,15 +51,6 @@ export class AlertsTelemetryClient
     if (v) {
       this.trackCliOption({
         option: 'until',
-        value: this.redactedValue,
-      });
-    }
-  }
-
-  trackCliOptionProject(v: string | undefined) {
-    if (v) {
-      this.trackCliOption({
-        option: 'project',
         value: this.redactedValue,
       });
     }

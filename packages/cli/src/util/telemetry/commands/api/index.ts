@@ -17,6 +17,15 @@ export class ApiTelemetryClient
     }
   }
 
+  trackCliArgumentOperationId(operationId: string | undefined) {
+    if (operationId) {
+      this.trackCliArgument({
+        arg: 'operationId',
+        value: operationId,
+      });
+    }
+  }
+
   trackCliOptionMethod(method: string | undefined) {
     if (method) {
       const validMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD'];
@@ -64,6 +73,15 @@ export class ApiTelemetryClient
       this.trackCliOption({
         option: 'input',
         value,
+      });
+    }
+  }
+
+  trackCliOptionSpecUrl(specUrl: string | undefined) {
+    if (specUrl) {
+      this.trackCliOption({
+        option: 'spec-url',
+        value: this.redactedValue,
       });
     }
   }

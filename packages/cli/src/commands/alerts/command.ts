@@ -1,5 +1,10 @@
-import { formatOption, limitOption } from '../../util/arg-common';
+import {
+  formatOption,
+  limitOption,
+  projectOption,
+} from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
+import { rulesAggregateCommand } from './rules/command';
 
 export const listSubcommand = {
   name: 'ls',
@@ -12,12 +17,51 @@ export const listSubcommand = {
   examples: [],
 } as const;
 
+export const inspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description: 'Show details for a single alert group',
+  arguments: [
+    {
+      name: 'groupId',
+      required: true,
+    },
+  ],
+  options: [
+    formatOption,
+    {
+      ...projectOption,
+      shorthand: 'p',
+      description:
+        'Filter by project (overrides auto-detected linked project).',
+    },
+    {
+      name: 'all',
+      shorthand: 'a',
+      type: Boolean,
+      deprecated: false,
+      description: 'Use team-wide scope (ignore linked project auto-scoping).',
+    },
+  ],
+  examples: [
+    {
+      name: 'Inspect a group in the linked project',
+      value: `${packageName} alerts inspect grp_abc123`,
+    },
+    {
+      name: 'Inspect as JSON',
+      value: `${packageName} alerts inspect grp_abc123 --format json`,
+    },
+  ],
+} as const;
+
 export const alertsCommand = {
   name: 'alerts',
   aliases: [],
-  description: 'List alerts for a project or team.',
+  description:
+    'List alert groups, inspect a group, or manage alert rules (see `alerts rules`).',
   arguments: [],
-  subcommands: [listSubcommand],
+  subcommands: [listSubcommand, inspectSubcommand, rulesAggregateCommand],
   options: [
     {
       name: 'type',
@@ -29,11 +73,8 @@ export const alertsCommand = {
         'Filter by alert type. Repeatable and comma-separated (for example --type usage_anomaly,error_anomaly).',
     },
     {
-      name: 'project',
+      ...projectOption,
       shorthand: 'p',
-      type: String,
-      argument: 'NAME_OR_ID',
-      deprecated: false,
       description:
         'Filter by project (overrides auto-detected linked project).',
     },

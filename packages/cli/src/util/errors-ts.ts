@@ -1,5 +1,5 @@
 import bytes from 'bytes';
-import type { Response } from 'node-fetch';
+import type { Response } from './fetch';
 import { NowBuildError } from '@vercel/build-utils';
 import { NowError } from './now-error';
 import code from './output/code';
@@ -19,6 +19,7 @@ export class APIError extends Error {
   slug?: string;
   action?: string;
   retryAfterMs?: number | 'never';
+  wwwAuthenticate?: string;
   [key: string]: any;
 
   constructor(message: string, response: Response, body?: object) {
@@ -26,6 +27,8 @@ export class APIError extends Error {
     this.message = `${message} (${response.status})`;
     this.status = response.status;
     this.serverMessage = message;
+    this.wwwAuthenticate =
+      response.headers.get('WWW-Authenticate') ?? undefined;
 
     if (body) {
       for (const field of Object.keys(body)) {
@@ -324,11 +327,11 @@ export class InvalidDeploymentId extends NowError<
   'INVALID_DEPLOYMENT_ID',
   { id: string }
 > {
-  constructor(id: string) {
+  constructor(id: string, message?: string | null) {
     super({
       code: 'INVALID_DEPLOYMENT_ID',
       meta: { id },
-      message: `The deployment id "${id}" is not valid.`,
+      message: message || `The deployment id "${id}" is not valid.`,
     });
   }
 }
@@ -733,10 +736,21 @@ export class ConflictingConfigFiles extends NowBuildError {
       code: 'CONFLICTING_CONFIG_FILES',
       message:
         message ||
-        'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.',
+        'Multiple config files found. Please use only one configuration file.',
       link: link || 'https://vercel.link/combining-old-and-new-config',
     });
     this.files = files;
+  }
+}
+
+export class DeprecatedNowJson extends NowBuildError {
+  constructor(_file: string) {
+    super({
+      code: 'DEPRECATED_NOW_JSON',
+      message:
+        'The `now.json` file is deprecated and no longer supported. Please rename it to `vercel.json`.',
+      link: 'https://vercel.com/docs/projects/project-configuration',
+    });
   }
 }
 
@@ -1048,11 +1062,25 @@ export class DeploymentsRateLimited extends NowError<
   }
 }
 
-export class BuildsRateLimited extends NowError<'BUILDS_RATE_LIMITED', {}> {
-  constructor(message: string) {
+export interface BuildsRateLimitedMeta {
+  /** Backend-provided call-to-action label (newer field). */
+  ctaLabel?: string;
+  /** Backend-provided call-to-action URL (newer field). */
+  ctaUrl?: string;
+  /** Legacy call-to-action label. */
+  action?: string;
+  /** Legacy call-to-action URL. */
+  link?: string;
+}
+
+export class BuildsRateLimited extends NowError<
+  'BUILDS_RATE_LIMITED',
+  BuildsRateLimitedMeta
+> {
+  constructor(message: string, meta: BuildsRateLimitedMeta = {}) {
     super({
       code: 'BUILDS_RATE_LIMITED',
-      meta: {},
+      meta,
       message,
     });
   }

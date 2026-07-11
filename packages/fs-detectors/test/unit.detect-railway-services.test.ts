@@ -1,5 +1,6 @@
 import { detectServices } from '../src';
 import { detectRailwayServices } from '../src/services/detect-railway';
+import type { DetectEntrypointFn } from '@vercel/build-utils';
 import VirtualFilesystem from './virtual-file-system';
 
 describe('detectRailwayServices', () => {
@@ -22,7 +23,7 @@ describe('detectRailwayServices', () => {
       expect(Object.keys(result.services!)).toHaveLength(1);
       expect(result.services!.web).toMatchObject({
         framework: 'nextjs',
-        routePrefix: '/',
+        mountPath: '/',
         buildCommand: 'npm run build',
       });
       expect(result.services!.web.entrypoint).toBeUndefined();
@@ -47,7 +48,7 @@ describe('detectRailwayServices', () => {
       expect(result.services).not.toBeNull();
       expect(result.services!.web).toMatchObject({
         framework: 'fastapi',
-        routePrefix: '/',
+        mountPath: '/',
         buildCommand: "echo 'test'",
       });
     });
@@ -66,7 +67,7 @@ describe('detectRailwayServices', () => {
       expect(result.services).not.toBeNull();
       expect(result.services!.web).toMatchObject({
         framework: 'nextjs',
-        routePrefix: '/',
+        mountPath: '/',
       });
       expect(result.services!.web.buildCommand).toBeUndefined();
     });
@@ -93,13 +94,13 @@ describe('detectRailwayServices', () => {
       expect(Object.keys(result.services!)).toHaveLength(2);
       expect(result.services!.web).toMatchObject({
         framework: 'nextjs',
-        entrypoint: 'web',
-        routePrefix: '/',
+        root: 'web',
+        mountPath: '/',
       });
       expect(result.services!.api).toMatchObject({
         framework: 'fastapi',
-        entrypoint: 'api',
-        routePrefix: '/_/api',
+        root: 'api',
+        mountPath: '/api/api',
         buildCommand: "echo 'test'",
       });
     });
@@ -130,12 +131,12 @@ describe('detectRailwayServices', () => {
 
       // "web" is preferred to be at /
       expect(result.services!.web).toMatchObject({
-        entrypoint: 'web',
-        routePrefix: '/',
+        root: 'web',
+        mountPath: '/',
       });
-      expect(result.services!.dashboard.routePrefix).toBe('/_/dashboard');
-      expect(result.services!.api.routePrefix).toBe('/_/api');
-      expect(result.services!.workers.routePrefix).toBe('/_/workers');
+      expect(result.services!.dashboard.mountPath).toBe('/api/dashboard');
+      expect(result.services!.api.mountPath).toBe('/api/api');
+      expect(result.services!.workers.mountPath).toBe('/api/workers');
 
       const warning = result.warnings.find(
         w => w.code === 'MULTIPLE_FRONTENDS'
@@ -204,8 +205,8 @@ describe('detectRailwayServices', () => {
     });
   });
 
-  describe('cron hints', () => {
-    it('should skip cron services and emit a hint with schedule and command', async () => {
+  describe('schedule-triggered job hints', () => {
+    it('should skip Railway scheduled jobs and emit a schedule-triggered job hint', async () => {
       const fs = new VirtualFilesystem({
         'web/railway.json': JSON.stringify({}),
         'web/package.json': JSON.stringify({
@@ -232,7 +233,8 @@ describe('detectRailwayServices', () => {
       const hint = result.warnings.find(w => w.code === 'RAILWAY_CRON_HINT');
       expect(hint).toBeDefined();
       expect(hint!.message).toContain('0 0 * * *');
-      expect(hint!.message).toContain('"type": "cron"');
+      expect(hint!.message).toContain('"type": "job"');
+      expect(hint!.message).toContain('"trigger": "schedule"');
       expect(hint!.message).toContain('"runtime": "python"');
     });
 
@@ -259,7 +261,7 @@ describe('detectRailwayServices', () => {
   });
 
   describe('preDeployCommand', () => {
-    it('should append preDeployCommand string to buildCommand', async () => {
+    it('should map preDeployCommand string to preDeployCommand field', async () => {
       const fs = new VirtualFilesystem({
         'railway.json': JSON.stringify({
           build: { buildCommand: 'npm run build' },
@@ -272,30 +274,11 @@ describe('detectRailwayServices', () => {
 
       const result = await detectRailwayServices({ fs });
 
-      expect(result.services!.web.buildCommand).toBe(
-        'npm run build && npm run db:migrate'
-      );
+      expect(result.services!.web.buildCommand).toBe('npm run build');
+      expect(result.services!.web.preDeployCommand).toBe('npm run db:migrate');
     });
 
-    it('should append preDeployCommand array to buildCommand', async () => {
-      const fs = new VirtualFilesystem({
-        'railway.json': JSON.stringify({
-          build: { buildCommand: 'npm run build' },
-          deploy: { preDeployCommand: ['npm run db:migrate'] },
-        }),
-        'package.json': JSON.stringify({
-          dependencies: { next: '14.0.0' },
-        }),
-      });
-
-      const result = await detectRailwayServices({ fs });
-
-      expect(result.services!.web.buildCommand).toBe(
-        'npm run build && npm run db:migrate'
-      );
-    });
-
-    it('should use preDeployCommand alone when no buildCommand', async () => {
+    it('should set preDeployCommand alone when no buildCommand', async () => {
       const fs = new VirtualFilesystem({
         'api/railway.json': JSON.stringify({
           deploy: { preDeployCommand: 'python manage.py migrate' },
@@ -306,7 +289,8 @@ describe('detectRailwayServices', () => {
 
       const result = await detectRailwayServices({ fs });
 
-      expect(result.services!.api.buildCommand).toBe(
+      expect(result.services!.api.buildCommand).toBeUndefined();
+      expect(result.services!.api.preDeployCommand).toBe(
         'python manage.py migrate'
       );
     });
@@ -324,6 +308,7 @@ describe('detectRailwayServices', () => {
       const result = await detectRailwayServices({ fs });
 
       expect(result.services!.web.buildCommand).toBe('npm run build');
+      expect(result.services!.web.preDeployCommand).toBeUndefined();
     });
   });
 
@@ -341,11 +326,11 @@ describe('detectRailwayServices', () => {
 
       const result = await detectRailwayServices({ fs });
 
-      expect(result.services!.web.routePrefix).toBe('/');
-      expect(result.services!.api.routePrefix).toBe('/_/api');
+      expect(result.services!.web.mountPath).toBe('/');
+      expect(result.services!.api.mountPath).toBe('/api/api');
     });
 
-    it('should assign all to /_/ when no frontend detected', async () => {
+    it('should assign all to /api/ when no frontend detected', async () => {
       const fs = new VirtualFilesystem({
         'beta/railway.json': JSON.stringify({}),
         'beta/pyproject.toml': '[project]\ndependencies = ["fastapi"]',
@@ -357,8 +342,8 @@ describe('detectRailwayServices', () => {
 
       const result = await detectRailwayServices({ fs });
 
-      expect(result.services!.alpha.routePrefix).toBe('/_/alpha');
-      expect(result.services!.beta.routePrefix).toBe('/_/beta');
+      expect(result.services!.alpha.mountPath).toBe('/api/alpha');
+      expect(result.services!.beta.mountPath).toBe('/api/beta');
     });
 
     it('should warn and pick first alphabetically when multiple frontends', async () => {
@@ -380,9 +365,9 @@ describe('detectRailwayServices', () => {
 
       expect(result.errors).toEqual([]);
       expect(result.services).not.toBeNull();
-      expect(result.services!['site-a'].routePrefix).toBe('/');
-      expect(result.services!['site-b'].routePrefix).toBe('/_/site-b');
-      expect(result.services!.api.routePrefix).toBe('/_/api');
+      expect(result.services!['site-a'].mountPath).toBe('/');
+      expect(result.services!['site-b'].mountPath).toBe('/api/site-b');
+      expect(result.services!.api.mountPath).toBe('/api/api');
 
       const warning = result.warnings.find(
         w => w.code === 'MULTIPLE_FRONTENDS'
@@ -407,8 +392,8 @@ describe('detectRailwayServices', () => {
       const result = await detectRailwayServices({ fs });
 
       expect(result.errors).toEqual([]);
-      expect(result.services!.web.routePrefix).toBe('/');
-      expect(result.services!.admin.routePrefix).toBe('/_/admin');
+      expect(result.services!.web.mountPath).toBe('/');
+      expect(result.services!.admin.mountPath).toBe('/api/admin');
     });
 
     it('should assign / to single service', async () => {
@@ -420,7 +405,7 @@ describe('detectRailwayServices', () => {
 
       const result = await detectRailwayServices({ fs });
 
-      expect(result.services!.api.routePrefix).toBe('/');
+      expect(result.services!.api.mountPath).toBe('/');
     });
   });
 
@@ -628,8 +613,8 @@ describe('detectServices with Railway detection', () => {
     expect(result.inferred).not.toBeNull();
     expect(result.inferred!.source).toBe('railway');
     expect(result.inferred!.services).toHaveLength(1);
-    expect(result.inferred!.services[0].routePrefix).toBe('/');
     expect(result.inferred!.services[0].name).toBe('backend');
+    expect(result.inferred!.config.backend.mountPath).toBe('/');
   });
 
   it('should prefer Vercel config over Railway', async () => {
@@ -638,7 +623,7 @@ describe('detectServices with Railway detection', () => {
         experimentalServices: {
           api: {
             entrypoint: 'api/main.py',
-            routePrefix: '/api',
+            mountPath: '/api',
           },
         },
       }),
@@ -651,5 +636,69 @@ describe('detectServices with Railway detection', () => {
 
     expect(result.source).toBe('configured');
     expect(result.inferred).toBeNull();
+  });
+
+  describe('with detectEntrypoint callback', () => {
+    it('emits root + entrypoint for runtime services', async () => {
+      const fs = new VirtualFilesystem({
+        'railway.json': JSON.stringify({
+          build: { buildCommand: 'npm run build' },
+        }),
+        'package.json': JSON.stringify({
+          dependencies: { next: '14.0.0' },
+        }),
+        'api/railway.json': JSON.stringify({}),
+        'api/pyproject.toml': '[project]\ndependencies = ["fastapi"]',
+        'api/main.py': 'from fastapi import FastAPI\napp = FastAPI()',
+      });
+
+      const detectEntrypoint: DetectEntrypointFn = async ({
+        workPath,
+        framework,
+      }) => {
+        expect(workPath).toBe('api');
+        expect(framework).toBe('fastapi');
+        return { kind: 'py-module:attr', entrypoint: 'main:app' };
+      };
+
+      const result = await detectRailwayServices({ fs, detectEntrypoint });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).not.toBeNull();
+      // root service stays as today (no dirPath, so no root/entrypoint).
+      expect(result.services!.web).toMatchObject({ framework: 'nextjs' });
+      expect(result.services!.web.entrypoint).toBeUndefined();
+      // Subdirectory service gets root + entrypoint instead of directory-as-entrypoint.
+      expect(result.services!.api).toEqual({
+        framework: 'fastapi',
+        root: 'api',
+        entrypoint: 'main:app',
+        mountPath: '/api/api',
+      });
+    });
+
+    it('omits entrypoint for frontend frameworks even with the callback', async () => {
+      const fs = new VirtualFilesystem({
+        'web/railway.json': JSON.stringify({}),
+        'web/package.json': JSON.stringify({
+          dependencies: { next: '14.0.0' },
+        }),
+      });
+
+      let invoked = false;
+      const detectEntrypoint: DetectEntrypointFn = async () => {
+        invoked = true;
+        return { kind: 'file', entrypoint: 'should-not-be-emitted.ts' };
+      };
+
+      const result = await detectRailwayServices({ fs, detectEntrypoint });
+
+      expect(invoked).toBe(false);
+      expect(result.services!.web).toMatchObject({
+        framework: 'nextjs',
+        root: 'web',
+      });
+      expect(result.services!.web.entrypoint).toBeUndefined();
+    });
   });
 });

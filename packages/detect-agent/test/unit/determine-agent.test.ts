@@ -10,6 +10,7 @@ describe('determineAgent', () => {
     vi.stubEnv('AI_AGENT', '');
     vi.stubEnv('CURSOR_TRACE_ID', '');
     vi.stubEnv('CURSOR_AGENT', '');
+    vi.stubEnv('CURSOR_EXTENSION_HOST_ROLE', '');
     vi.stubEnv('GEMINI_CLI', '');
     vi.stubEnv('CODEX_SANDBOX', '');
     vi.stubEnv('CODEX_CI', '');
@@ -50,6 +51,18 @@ describe('determineAgent', () => {
           isAgent: true,
           agent: { name: 'custom-agent' },
         });
+      });
+    });
+  });
+
+  describe('v0 detection', () => {
+    it('detects v0 from AI_AGENT=v0', async () => {
+      vi.stubEnv('AI_AGENT', 'v0');
+
+      const result = await determineAgent();
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.V0 },
       });
     });
   });
@@ -143,6 +156,17 @@ describe('determineAgent', () => {
       });
 
       it('detects cursor cli', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.CURSOR_CLI },
+        });
+      });
+    });
+
+    describe('CURSOR_EXTENSION_HOST_ROLE=agent-exec', () => {
+      it('detects cursor cli', async () => {
+        vi.stubEnv('CURSOR_EXTENSION_HOST_ROLE', 'agent-exec');
         const result = await determineAgent();
         expect(result).toEqual({
           isAgent: true,

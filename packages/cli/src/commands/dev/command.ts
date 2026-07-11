@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { confirmOption, yesOption } from '../../util/arg-common';
+import { confirmOption, projectOption, yesOption } from '../../util/arg-common';
 
 export const devCommand = {
   name: 'dev',
@@ -30,6 +30,7 @@ export const devCommand = {
     yesOption,
     { name: 'port', shorthand: 'p', type: String, deprecated: true },
     confirmOption,
+    projectOption,
   ],
   examples: [
     {

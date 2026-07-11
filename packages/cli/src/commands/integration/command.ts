@@ -1,9 +1,17 @@
-import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
+import { formatOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
+import {
+  claimSubcommand,
+  connectSubcommand,
+  createThresholdSubcommand,
+  disconnectSubcommand,
+  inspectSubcommand,
+  removeSubcommand as resourceRemoveSubcommand,
+} from '../integration-resource/command';
 
 export const addSubcommand = {
   name: 'add',
-  aliases: [],
+  aliases: ['install'],
   description: 'Installs a marketplace integration',
   arguments: [
     {
@@ -80,6 +88,22 @@ export const addSubcommand = {
       description:
         'Installation ID to use when multiple installations exist for the integration',
     },
+    {
+      name: 'claim',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'If the new resource is a sandbox (e.g. Stripe, Shopify), claim it immediately without prompting',
+    },
+    {
+      name: 'no-claim',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'If the new resource is a sandbox, skip the offer to claim it (only print a hint)',
+    },
     formatOption,
   ],
   examples: [
@@ -95,6 +119,13 @@ export const addSubcommand = {
       value: [
         `${packageName} integration add <integration>/<product>`,
         `${packageName} integration add acme/acme-redis`,
+      ],
+    },
+    {
+      name: 'Search by keyword (prompts to select a matching integration)',
+      value: [
+        `${packageName} integration add postgres`,
+        `${packageName} integration add redis`,
       ],
     },
     {
@@ -154,6 +185,33 @@ export const addSubcommand = {
   ],
 } as const;
 
+export const acceptTermsSubcommand = {
+  name: 'accept-terms',
+  aliases: [],
+  description:
+    'Accept marketplace legal terms for an integration and install it on the current team (installation only; no product resource). Requires an interactive terminal and human confirmation. Does not replace integrations that require a browser or device attestation.',
+  arguments: [
+    {
+      name: 'integration',
+      required: true,
+    },
+  ],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Accept terms interactively, then install on the team',
+      value: [
+        `${packageName} integration accept-terms <integration>`,
+        `${packageName} integration accept-terms neon`,
+      ],
+    },
+    {
+      name: 'Output result as JSON',
+      value: `${packageName} integration accept-terms neon --format=json`,
+    },
+  ],
+} as const;
+
 type FlagValue<T> = T extends readonly [StringConstructor]
   ? string[]
   : T extends StringConstructor
@@ -207,6 +265,39 @@ export const openSubcommand = {
         `${packageName} integration open acme --format=json`,
         `${packageName} integration open acme my-acme-store --format=json`,
       ],
+    },
+  ],
+} as const;
+
+export const installationsSubcommand = {
+  name: 'installations',
+  aliases: ['installation'],
+  description:
+    'List marketplace integration installations for the current team (account scope)',
+  arguments: [],
+  options: [
+    {
+      name: 'integration',
+      description: 'Limit to installations of this integration (slug or id)',
+      shorthand: 'i',
+      type: String,
+      deprecated: false,
+      argument: 'SLUG_OR_ID',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'List all marketplace installations for the team',
+      value: [`${packageName} integration installations`],
+    },
+    {
+      name: 'Filter by integration slug',
+      value: [`${packageName} integration installations --integration neon`],
+    },
+    {
+      name: 'JSON output',
+      value: [`${packageName} integration installations --format json`],
     },
   ],
 } as const;
@@ -277,7 +368,18 @@ export const discoverSubcommand = {
       required: false,
     },
   ],
-  options: [formatOption, jsonOption],
+  options: [
+    {
+      name: 'category',
+      shorthand: 'c',
+      type: [String],
+      deprecated: false,
+      argument: 'CATEGORY',
+      description:
+        'Filter integrations by category (can be repeated; e.g., -c storage -c authentication). Run `vercel integration categories` for valid slugs.',
+    },
+    formatOption,
+  ],
   examples: [
     {
       name: 'Discover marketplace integrations',
@@ -291,8 +393,49 @@ export const discoverSubcommand = {
       ],
     },
     {
+      name: 'Filter integrations by category',
+      value: [
+        `${packageName} integration discover --category storage`,
+        `${packageName} integration discover -c authentication`,
+      ],
+    },
+    {
+      name: 'Filter by multiple categories at once (repeat the flag)',
+      value: [
+        `${packageName} integration discover --category storage --category authentication`,
+        `${packageName} integration discover -c commerce -c payments -c authentication`,
+      ],
+    },
+    {
+      name: 'List available category slugs to use with --category',
+      value: [`${packageName} integration categories`],
+    },
+    {
       name: 'Discover marketplace integrations as JSON',
       value: [`${packageName} integration discover --format=json`],
+    },
+  ],
+} as const;
+
+export const categoriesSubcommand = {
+  name: 'categories',
+  aliases: [],
+  description:
+    'List marketplace integration categories (slugs valid for `integration discover --category`)',
+  arguments: [],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'List marketplace categories',
+      value: [`${packageName} integration categories`],
+    },
+    {
+      name: 'List categories as JSON',
+      value: [`${packageName} integration categories --format=json`],
+    },
+    {
+      name: 'Use a category slug to filter discover results',
+      value: [`${packageName} integration discover --category storage`],
     },
   ],
 } as const;
@@ -320,6 +463,90 @@ export const balanceSubcommand = {
     {
       name: 'Output as JSON',
       value: `${packageName} integration balance acme --format=json`,
+    },
+  ],
+} as const;
+
+export const updateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description:
+    'Update a marketplace integration installation (billing plan or which projects can access it). ' +
+    'Install, remove, and connect flows are separate (integration add, integration remove, integration-resource, env pull, etc.) — not part of update. ' +
+    'UI-only flows (OAuth in a browser, consent screens, marketplace purchase) may not map one-to-one to a single CLI flag; pass --plan and --authorization-id when the product requires them for billing changes. ' +
+    'Any extra fields on the configuration resource that the API exposes but this command PATCH body does not send are not covered until the API and CLI support them.',
+  arguments: [
+    {
+      name: 'integration',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'plan',
+      shorthand: 'p',
+      type: String,
+      deprecated: false,
+      argument: 'PLAN_ID',
+      description:
+        'Billing plan ID for integrations that support installation-level billing plans',
+    },
+    {
+      name: 'authorization-id',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      argument: 'ID',
+      description:
+        'Billing authorization ID when the platform requires it for plan changes',
+    },
+    {
+      name: 'projects',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      argument: 'PROJECT',
+      description:
+        'Project ID allowed to use this installation, or "all" for all projects (repeatable)',
+    },
+    {
+      name: 'installation-id',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      argument: 'ID',
+      description:
+        'Configuration ID when multiple marketplace installations exist for this integration',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Grant all team projects access to the integration',
+      value: [
+        `${packageName} integration update <integration> --projects all`,
+        `${packageName} integration update neon --projects all`,
+      ],
+    },
+    {
+      name: 'Limit access to specific projects',
+      value: `${packageName} integration update neon --projects prj_abc --projects prj_def`,
+    },
+    {
+      name: 'Change installation billing plan',
+      value: `${packageName} integration update acme --plan pro`,
+    },
+    {
+      name: 'Select installation when several exist',
+      value: `${packageName} integration update neon --installation-id icfg_xxx --projects all`,
+    },
+    {
+      name: 'Output result as JSON',
+      value: `${packageName} integration update neon --projects all --format=json`,
+    },
+    {
+      name: 'Non-interactive (JSON success and errors on stdout)',
+      value: `${packageName} integration update neon --projects all --non-interactive`,
     },
   ],
 } as const;
@@ -410,26 +637,66 @@ export const guideSubcommand = {
   ],
 } as const;
 
+export const resourceSubcommand = {
+  name: 'resource',
+  aliases: [],
+  description:
+    'Manage marketplace integration resources (connect, disconnect, remove, create-threshold, claim)',
+  options: [],
+  arguments: [],
+  subcommands: [
+    connectSubcommand,
+    createThresholdSubcommand,
+    disconnectSubcommand,
+    resourceRemoveSubcommand,
+    claimSubcommand,
+    inspectSubcommand,
+  ],
+  examples: [
+    {
+      name: 'Connect a resource to the current project',
+      value: `${packageName} integration resource connect my-acme-resource`,
+    },
+    {
+      name: 'Disconnect a resource from the current project',
+      value: `${packageName} integration resource disconnect my-acme-resource`,
+    },
+    {
+      name: 'Remove a resource (disconnecting all projects first)',
+      value: `${packageName} integration resource remove my-acme-resource --disconnect-all --yes`,
+    },
+  ],
+} as const;
+
 export const integrationCommand = {
   name: 'integration',
   aliases: [],
   description:
-    'Manage marketplace integrations. To manage individual resources (disconnect, remove), see `integration-resource`.',
+    'Manage marketplace integrations. To manage individual resources, see `vercel integration resource`.',
   options: [],
   arguments: [],
   subcommands: [
     addSubcommand,
+    acceptTermsSubcommand,
     balanceSubcommand,
+    categoriesSubcommand,
     discoverSubcommand,
     guideSubcommand,
+    installationsSubcommand,
     listSubcommand,
     openSubcommand,
+    resourceSubcommand,
+    updateSubcommand,
     removeSubcommand,
   ],
   examples: [
     {
       name: 'Install a specific product from an integration',
       value: `${packageName} integration add acme/acme-redis`,
+    },
+    {
+      name: 'Connect an existing resource to the current project',
+      value: `${packageName} integration resource connect my-acme-resource`,
     },
   ],
 } as const;

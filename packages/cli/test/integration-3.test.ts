@@ -6,8 +6,7 @@ import semVer from 'semver';
 import { homedir } from 'os';
 import { runNpmInstall } from '@vercel/build-utils';
 import { execCli } from './helpers/exec';
-import type { RequestInfo } from 'node-fetch';
-import nodeFetch from 'node-fetch';
+import nodeFetch, { type RequestInfo } from '../src/util/fetch';
 import fs from 'fs-extra';
 import { logo } from '../src/util/pkg-name';
 import sleep from '../src/util/sleep';
@@ -25,7 +24,7 @@ import { teamPromise, userPromise } from './helpers/get-account';
 import { apiFetch } from './helpers/api-fetch';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
-jest.setTimeout(TEST_TIMEOUT);
+vi.setConfig({ testTimeout: TEST_TIMEOUT, hookTimeout: TEST_TIMEOUT });
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 
@@ -161,12 +160,11 @@ test.skip('login with unregistered user', async () => {
   expect(last).toContain(goal);
 });
 
-// TODO: fix: --public does not make deployments public
 // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('ignore files specified in .nowignore', async () => {
   const directory = await setupE2EFixture('nowignore');
 
-  const args = ['--debug', '--public', '--name', session, '--yes'];
+  const args = ['--debug', '--name', session, '--yes'];
   const targetCall = await execCli(binaryPath, args, {
     cwd: directory,
   });
@@ -179,12 +177,11 @@ test.skip('ignore files specified in .nowignore', async () => {
   expect(presentFile.status).toBe(200);
 });
 
-// TODO: fix: --public does not make deployments public
 // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('ignore files specified in .nowignore via allowlist', async () => {
   const directory = await setupE2EFixture('nowignore-allowlist');
 
-  const args = ['--debug', '--public', '--name', session, '--yes'];
+  const args = ['--debug', '--name', session, '--yes'];
   const targetCall = await execCli(binaryPath, args, {
     cwd: directory,
   });
@@ -225,7 +222,6 @@ test.skip('domains inspect', async () => {
     directory,
     `--name=${projectName}`,
     '--yes',
-    '--public',
   ]);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
@@ -290,14 +286,12 @@ test('try to move an invalid domain', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
 });
 
-// TODO: fix: --public does not make deployments public
 // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('ensure we render a warning for deployments with no files', async () => {
   const directory = await setupE2EFixture('empty-directory');
 
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     directory,
-    '--public',
     '--name',
     session,
     '--yes',
@@ -324,7 +318,7 @@ test('ensure we render a prompt when deploying home directory', async () => {
 
   const { stderr, stdout, exitCode } = await execCli(
     binaryPath,
-    [directory, '--public', '--name', session, '--force'],
+    [directory, '--name', session, '--force'],
     {
       input: 'N\n',
     }
@@ -344,7 +338,6 @@ test('ensure the `scope` property works with email', async () => {
 
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     directory,
-    '--public',
     '--name',
     session,
     '--force',
@@ -374,7 +367,6 @@ test('ensure the `scope` property works with username', async () => {
 
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     directory,
-    '--public',
     '--name',
     session,
     '--force',
@@ -398,22 +390,21 @@ test('ensure the `scope` property works with username', async () => {
   expect(contentType).toBe('text/html; charset=utf-8');
 });
 
-test('try to create a builds deployments with wrong now.json', async () => {
+test('reject deprecated now.json during deploy', async () => {
   const directory = await setupE2EFixture('builds-wrong');
 
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     directory,
-    '--public',
     '--yes',
   ]);
 
   // Ensure the exit code is right
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(
-    'Error: Invalid now.json - should NOT have additional property `builder`. Did you mean `builds`?'
+    'Error: The `now.json` file is deprecated and no longer supported. Please rename it to `vercel.json`.'
   );
   expect(stderr).toContain(
-    'https://vercel.com/docs/concepts/projects/project-configuration'
+    'https://vercel.com/docs/projects/project-configuration'
   );
 });
 
@@ -422,7 +413,6 @@ test('try to create a builds deployments with wrong vercel.json', async () => {
 
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     directory,
-    '--public',
     '--yes',
   ]);
 
@@ -438,13 +428,9 @@ test('try to create a builds deployments with wrong vercel.json', async () => {
 test('try to create a builds deployments with wrong `build.env` property', async () => {
   const directory = await setupE2EFixture('builds-wrong-build-env');
 
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    ['--public', '--yes'],
-    {
-      cwd: directory,
-    }
-  );
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, ['--yes'], {
+    cwd: directory,
+  });
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(
@@ -460,7 +446,6 @@ test('create a builds deployments with no actual builds', async () => {
 
   const { exitCode, stdout, stderr } = await execCli(binaryPath, [
     directory,
-    '--public',
     '--name',
     session,
     '--force',
@@ -478,7 +463,7 @@ test('create a builds deployments with no actual builds', async () => {
 test('create a staging deployment', async () => {
   const directory = await setupE2EFixture('static-deployment');
 
-  const args = ['--debug', '--public', '--name', session];
+  const args = ['--debug', '--name', session];
   const targetCall = await execCli(binaryPath, [
     directory,
     '--target=staging',
@@ -500,7 +485,7 @@ test('create a staging deployment', async () => {
 test('create a production deployment', async () => {
   const directory = await setupE2EFixture('static-deployment');
 
-  const args = ['--debug', '--public', '--name', session];
+  const args = ['--debug', '--name', session];
   const targetCall = await execCli(binaryPath, [
     directory,
     '--target=production',
@@ -510,7 +495,7 @@ test('create a production deployment', async () => {
 
   expect(targetCall.exitCode, formatOutput(targetCall)).toBe(0);
   expect(targetCall.stderr).toMatch(/Setting target to production/gm);
-  expect(targetCall.stderr).toMatch(/Inspect: https:\/\/vercel.com\//gm);
+  expect(targetCall.stderr).toMatch(/Inspect[ ]+https:\/\/vercel\.com\//gm);
   expect(targetCall.stdout).toMatch(/https:\/\//gm);
 
   const { host: targetHost } = new URL(targetCall.stdout);
@@ -593,16 +578,6 @@ test('initialize example "angular"', async () => {
   ).toBe(true);
 });
 
-test('fail to add a domain without a project', async () => {
-  const output = await execCli(binaryPath, [
-    'domains',
-    'add',
-    'my-domain.vercel.app',
-  ]);
-  expect(output.exitCode, formatOutput(output)).toBe(1);
-  expect(output.stderr).toMatch(/expects two arguments/gm);
-});
-
 test('whoami', async () => {
   const user = await userPromise;
   const { exitCode, stdout, stderr } = await execCli(binaryPath, ['whoami']);
@@ -647,7 +622,6 @@ test('`vercel rm` removes a deployment', async () => {
   {
     const { exitCode, stdout, stderr } = await execCli(binaryPath, [
       directory,
-      '--public',
       '--name',
       session,
       '--force',
@@ -724,6 +698,100 @@ test('invalid deployment, projects and alias names', async () => {
   ]);
 });
 
+test('alias set accepts an alias URL as the first argument', async () => {
+  const directory = await setupE2EFixture('static-deployment');
+  const projectName = `alias-url-${session}`;
+  const firstAlias = `${projectName}-first.vercel.app`;
+  const secondAlias = `${projectName}-second.vercel.app`;
+  const thirdAlias = `${projectName}-third.vercel.app`;
+  const aliasesToRemove: string[] = [];
+
+  try {
+    const deployment = await execCli(binaryPath, [
+      directory,
+      '--name',
+      projectName,
+      '--force',
+      '--yes',
+    ]);
+
+    expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
+
+    const deploymentUrl = deployment.stdout.match(/https:\/\/[^\s",]+/)?.[0];
+    if (!deploymentUrl) {
+      throw new Error(formatOutput(deployment));
+    }
+
+    const firstAliasOutput = await execCli(binaryPath, [
+      'alias',
+      'set',
+      deploymentUrl,
+      firstAlias,
+    ]);
+    expect(firstAliasOutput.exitCode, formatOutput(firstAliasOutput)).toBe(0);
+    aliasesToRemove.push(firstAlias);
+
+    const secondAliasOutput = await execCli(binaryPath, [
+      'alias',
+      'set',
+      firstAlias,
+      secondAlias,
+    ]);
+    expect(secondAliasOutput.exitCode, formatOutput(secondAliasOutput)).toBe(0);
+    aliasesToRemove.push(secondAlias);
+
+    const thirdAliasOutput = await execCli(binaryPath, [
+      'alias',
+      'set',
+      `https://${firstAlias}`,
+      thirdAlias,
+    ]);
+    expect(thirdAliasOutput.exitCode, formatOutput(thirdAliasOutput)).toBe(0);
+    aliasesToRemove.push(thirdAlias);
+  } finally {
+    await Promise.all(
+      aliasesToRemove.map(alias =>
+        execCli(binaryPath, ['alias', 'rm', alias, '--yes'])
+      )
+    );
+  }
+});
+
+test.each([
+  {
+    name: 'malformed URL',
+    idOrUrl: 'https://%',
+    expectedIdOrUrl: 'https://%',
+    target: `malformed-source-url-${session}.vercel.app`,
+  },
+  {
+    name: 'unknown ID',
+    idOrUrl: `unknown-source-id-${session}`,
+    expectedIdOrUrl: `unknown-source-id-${session}`,
+    target: `unknown-source-id-${session}.vercel.app`,
+  },
+  {
+    name: 'unknown URL',
+    idOrUrl: `https://unknown-source-url-${session}.vercel.app`,
+    expectedIdOrUrl: `unknown-source-url-${session}.vercel.app`,
+    target: `unknown-source-url-target-${session}.vercel.app`,
+  },
+])('alias set rejects $name as the first argument', async ({
+  idOrUrl,
+  expectedIdOrUrl,
+  target,
+}: {
+  idOrUrl: string;
+  expectedIdOrUrl: string;
+  target: string;
+}) => {
+  const output = await execCli(binaryPath, ['alias', 'set', idOrUrl, target]);
+
+  expect(output.exitCode, formatOutput(output)).toBe(1);
+  expect(output.stderr).toContain(`Failed to find ID or URL`);
+  expect(output.stderr).toContain(expectedIdOrUrl);
+});
+
 test('vercel certs ls', async () => {
   const output = await execCli(binaryPath, ['certs', 'ls']);
 
@@ -753,12 +821,7 @@ test('vercel hasOwnProperty not a valid subcommand', async () => {
 
 test('create zero-config deployment', async () => {
   const fixturePath = await setupE2EFixture('zero-config-next-js');
-  const output = await execCli(binaryPath, [
-    fixturePath,
-    '--force',
-    '--public',
-    '--yes',
-  ]);
+  const output = await execCli(binaryPath, [fixturePath, '--force', '--yes']);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
@@ -783,12 +846,7 @@ test('next unsupported functions config shows warning link', async () => {
   const fixturePath = await setupE2EFixture(
     'zero-config-next-js-functions-warning'
   );
-  const output = await execCli(binaryPath, [
-    fixturePath,
-    '--force',
-    '--public',
-    '--yes',
-  ]);
+  const output = await execCli(binaryPath, [fixturePath, '--force', '--yes']);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toMatch(
@@ -868,7 +926,7 @@ test('invalid `--token`', async () => {
 
 test('deploy a Lambda with a specific runtime', async () => {
   const directory = await setupE2EFixture('lambda-with-php-runtime');
-  const output = await execCli(binaryPath, [directory, '--public', '--yes']);
+  const output = await execCli(binaryPath, [directory, '--yes']);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
@@ -893,7 +951,6 @@ test('use build-env', async () => {
 
   const { exitCode, stdout, stderr } = await execCli(binaryPath, [
     directory,
-    '--public',
     '--yes',
   ]);
 
@@ -941,13 +998,60 @@ test('should pass through exit code for CLI extension', async () => {
   expect(output.exitCode).toEqual(6);
 });
 
-test('default command should prompt login with empty auth.json', async () => {
-  const output = await execCli(binaryPath, ['-Q', '/tmp'], {
+test('default command should prompt login with empty credentials', async () => {
+  const globalConfigDir = getNewTmpDir();
+  await fs.writeJson(path.join(globalConfigDir, 'config.json'), {
+    credStorage: 'file',
+  });
+
+  const output = await execCli(binaryPath, ['-Q', globalConfigDir], {
     // execCli passes the token automatically, undo that functionality for this test
     token: false,
+    env: {
+      // Unset VERCEL_TOKEN so the env var doesn't bypass the login prompt
+      VERCEL_TOKEN: '',
+    },
   });
   expect(output.stderr, formatOutput(output)).toBeTruthy();
   expect(output.stderr).toContain(
     'Error: No existing credentials found. Please run `vercel login` or pass "--token"'
   );
+});
+
+test('invalid credStorage should fail with a config error', async () => {
+  const globalConfigDir = getNewTmpDir();
+  await fs.writeJson(path.join(globalConfigDir, 'config.json'), {
+    credStorage: 'keychain',
+  });
+
+  const output = await execCli(binaryPath, ['-Q', globalConfigDir], {
+    reject: false,
+    token: false,
+    env: {
+      VERCEL_TOKEN: '',
+    },
+  });
+
+  expect(output.exitCode, formatOutput(output)).toBe(1);
+  expect(output.stderr).toContain(
+    'An unexpected error occurred while trying to read the config'
+  );
+  expect(output.stderr).toContain(
+    'Invalid value for `credStorage`: "keychain". Expected one of: "auto", "file", "keyring".'
+  );
+});
+
+test('VERCEL_TOKEN env var should skip login prompt', async () => {
+  const [user] = await Promise.all([userPromise]);
+  const output = await execCli(binaryPath, ['whoami'], {
+    // Do not pass --token flag
+    token: false,
+    env: {
+      // Provide token via environment variable instead
+      VERCEL_TOKEN: process.env.VERCEL_TOKEN,
+    },
+  });
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).not.toContain('No existing credentials found');
+  expect(output.stdout).toContain(user.username);
 });

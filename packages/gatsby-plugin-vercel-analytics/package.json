@@ -29,6 +29,9 @@
   ],
   "license": "Apache-2.0",
   "devDependencies": {
-    "jest-junit": "16.0.0"
+    "vitest": "2.0.3"
+  },
+  "scripts": {
+    "vitest-run": "vitest -c ../../vitest.config.mts"
   }
 }

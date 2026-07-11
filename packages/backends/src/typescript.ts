@@ -1,17 +1,35 @@
 import { createRequire } from 'node:module';
-import { spawn } from 'node:child_process';
-import { extname, join } from 'node:path';
+import { dirname, extname, join, resolve } from 'node:path';
 import { Colors as c } from './cervel/utils.js';
 import { existsSync } from 'node:fs';
-import type { Span } from '@vercel/build-utils/dist/trace/index.js';
+import type {
+  CompilerOptions,
+  Diagnostic,
+  FormatDiagnosticsHost,
+} from 'typescript';
+import type { TypescriptOptions } from './cervel/types.js';
+
+/**
+ * Typecheck via the TypeScript compiler API (`createProgram`, `getPreEmitDiagnostics`),
+ * not by spawning the `tsc` binary.
+ *
+ * We only want to validate the deployment entrypoint and its import graph, not every
+ * file matched by `tsconfig` `include`. The CLI cannot combine `--project` with explicit
+ * root files (TS5042), so expressing 'project options + entry-only roots' in one `tsc`
+ * call requires a generated tsconfig on disk. Writing beside the user's config is
+ * invasive; a temp config elsewhere often breaks `node_modules` / `@types` resolution
+ * relative to the real project. The API lets us reuse `parseJsonConfigFileContent` (same
+ * options as `-p`) with explicit `rootNames`, no files written, and a compiler host whose
+ * current directory stays `workPath`.
+ *
+ * The `typescript` package is resolved with `require` from the user's app (peer dependency), not bundled.
+ */
 
 const require_ = createRequire(import.meta.url);
 
-export const typescript = (args: {
-  entrypoint: string;
-  workPath: string;
-  span: Span;
-}) => {
+type TypeScriptModule = typeof import('typescript');
+
+export const typescript = (args: TypescriptOptions) => {
   const { span } = args;
   const tsSpan = span.child('vc.builder.backends.tsCompile');
 
@@ -23,8 +41,8 @@ export const typescript = (args: {
       return;
     }
 
-    const tscPath = resolveTscPath(args);
-    if (!tscPath) {
+    const ts = resolveTypeScriptModule(args.workPath);
+    if (!ts) {
       console.log(
         c.gray(
           `${c.bold(c.cyan('✓'))} Typecheck skipped ${c.gray(
@@ -35,82 +53,96 @@ export const typescript = (args: {
       return null;
     }
 
-    return doTypeCheck(args, tscPath);
+    return doTypeCheck(args, ts);
   });
 };
 
 async function doTypeCheck(
   args: { entrypoint: string; workPath: string },
-  tscPath: string
+  ts: TypeScriptModule
 ): Promise<void> {
-  let stdout = '';
-  let stderr = '';
-
-  /**
-   * This might be subject to change.
-   * - if no tscPath, skip typecheck
-   * - if tsconfig, provide the tsconfig path
-   * - else provide the entrypoint path
-   */
-  const tscArgs = [
-    tscPath,
-    '--noEmit', // Force no emit even if tsconfig says otherwise
-    '--pretty',
-    '--allowJs',
-    '--esModuleInterop',
-    '--skipLibCheck',
-  ];
+  const entryAbsolute = resolve(args.workPath, args.entrypoint);
   const tsconfig = await findNearestTsconfig(args.workPath);
+
+  const formatDiagnostics = process.stdout.isTTY
+    ? ts.formatDiagnosticsWithColorAndContext
+    : ts.formatDiagnostics;
+  const diagnosticHost: FormatDiagnosticsHost = {
+    getNewLine: () => ts.sys.newLine,
+    getCanonicalFileName: (fileName: string) =>
+      ts.sys.useCaseSensitiveFileNames ? fileName : fileName.toLowerCase(),
+    getCurrentDirectory: () => args.workPath,
+  };
+
+  let options: CompilerOptions;
+  let parseDiagnostics: readonly Diagnostic[] = [];
+
   if (tsconfig) {
-    tscArgs.push('--project', tsconfig);
+    const configRead = ts.readConfigFile(tsconfig, ts.sys.readFile);
+    if (configRead.error) {
+      const message = formatDiagnostics([configRead.error], diagnosticHost);
+      console.error('\nTypeScript type check failed:\n');
+      console.error(message);
+      throw new Error('TypeScript type check failed');
+    }
+    const parsed = ts.parseJsonConfigFileContent(
+      configRead.config,
+      ts.sys,
+      dirname(tsconfig),
+      undefined,
+      tsconfig
+    );
+    parseDiagnostics = parsed.errors;
+    options = {
+      ...parsed.options,
+      noEmit: true,
+      skipLibCheck: true,
+      allowJs: true,
+      esModuleInterop: true,
+    };
   } else {
-    tscArgs.push(args.entrypoint);
+    options = {
+      noEmit: true,
+      skipLibCheck: true,
+      allowJs: true,
+      esModuleInterop: true,
+      target: ts.ScriptTarget.ES2022,
+      module: ts.ModuleKind.NodeNext,
+      moduleResolution: ts.ModuleResolutionKind.NodeNext,
+    };
   }
 
-  const child = spawn(process.execPath, tscArgs, {
-    cwd: args.workPath,
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+  const compilerHost = ts.createCompilerHost(options);
+  compilerHost.getCurrentDirectory = () => args.workPath;
 
-  child.stdout?.on('data', (data: Buffer) => {
-    stdout += data.toString();
-  });
+  const program = ts.createProgram([entryAbsolute], options, compilerHost);
+  const diagnostics = [
+    ...parseDiagnostics,
+    ...ts.getPreEmitDiagnostics(program),
+  ];
+  const errors = diagnostics.filter(
+    d => d.category === ts.DiagnosticCategory.Error
+  );
 
-  child.stderr?.on('data', (data: Buffer) => {
-    stderr += data.toString();
-  });
+  if (errors.length === 0) {
+    console.log(c.gray(`${c.bold(c.cyan('✓'))} Typecheck complete`));
+    return;
+  }
 
-  await new Promise<void>((resolve, reject) => {
-    child.on('close', code => {
-      if (code === 0) {
-        console.log(c.gray(`${c.bold(c.cyan('✓'))} Typecheck complete`));
-        resolve();
-      } else {
-        const output = stdout || stderr;
-        if (output) {
-          // Print the TypeScript errors directly
-          console.error('\nTypeScript type check failed:\n');
-          console.error(output);
-        }
-        reject(new Error('TypeScript type check failed'));
-      }
-    });
-    child.on('error', err => {
-      reject(err);
-    });
-  });
+  const output = formatDiagnostics(errors, diagnosticHost);
+  console.error('\nTypeScript type check failed:\n');
+  console.error(output);
+  throw new Error('TypeScript type check failed');
 }
 
-const resolveTscPath = (args: { entrypoint: string; workPath: string }) => {
+function resolveTypeScriptModule(workPath: string): TypeScriptModule | null {
   try {
-    const pkgPath = require_.resolve('typescript/bin/tsc', {
-      paths: [args.workPath],
-    });
-    return pkgPath;
+    const id = require_.resolve('typescript', { paths: [workPath] });
+    return require_(id) as TypeScriptModule;
   } catch (_e) {
     return null;
   }
-};
+}
 
 export const findNearestTsconfig = async (
   workPath: string

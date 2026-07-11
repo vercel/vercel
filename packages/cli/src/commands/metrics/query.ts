@@ -6,37 +6,29 @@ import output from '../../output-manager';
 import { metricsCommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import {
-  validateRequiredEvent,
-  validateEvent,
-  validateMeasure,
-  validateAggregation,
-  validateGroupBy,
   validateMutualExclusivity,
+  validateOrderBy,
+  validateOrderDirection,
+  validateRequiredMetric,
 } from './validation';
+import { fetchMetricDetailOrExit, getDefaultAggregation } from './schema-api';
 import {
-  getDefaultAggregation,
-  getMeasures,
-  getQueryEngineEventName,
-  fetchSchemaOrExit,
-} from './schema-api';
-import {
-  formatQueryJson,
   formatErrorJson,
+  formatQueryJson,
   getRollupColumnName,
+  handleApiError,
 } from './output';
 import { formatText } from './text-output';
-import {
-  computeGranularity,
-  roundTimeBoundaries,
-  toGranularityMsFromDuration,
-} from './time-utils';
+import { computeGranularity } from './time-utils';
 import { resolveTimeRange } from '../../util/time-utils';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
 import type {
+  Aggregation,
   Scope,
   ValidationError,
   MetricsQueryRequest,
   MetricsQueryResponse,
+  OrderBy,
 } from './types';
 import { getLinkedProject } from '../../util/projects/link';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
@@ -55,53 +47,42 @@ function handleValidationError(
   } else {
     output.error(result.message);
     if (result.allowedValues && result.allowedValues.length > 0) {
-      output.print(
-        `\nAvailable ${result.code === 'UNKNOWN_EVENT' ? 'events' : result.code === 'UNKNOWN_MEASURE' ? 'measures' : result.code === 'INVALID_AGGREGATION' ? 'aggregations' : 'dimensions'}: ${result.allowedValues.join(', ')}\n`
-      );
+      output.print(`\nAvailable values: ${result.allowedValues.join(', ')}\n`);
     }
   }
   return 1;
 }
 
-function handleApiError(
-  err: { status: number; code?: string; serverMessage?: string },
-  jsonOutput: boolean,
-  client: Client
-): number {
-  let code: string;
-  let message: string;
+const PRODUCTION_ENVIRONMENT_FILTER = "environment eq 'production'";
 
-  switch (err.status) {
-    case 402:
-      code = 'PAYMENT_REQUIRED';
-      message =
-        'This feature requires an Observability Plus subscription. Upgrade at https://vercel.com/dashboard/settings/billing';
-      break;
-    case 403:
-      code = 'FORBIDDEN';
-      message =
-        'You do not have permission to query metrics for this project/team.';
-      break;
-    case 500:
-      code = 'INTERNAL_ERROR';
-      message = 'An internal error occurred. Please try again later.';
-      break;
-    case 504:
-      code = 'TIMEOUT';
-      message =
-        'The query timed out. Try a shorter time range or fewer groups.';
-      break;
-    default:
-      code = err.code || 'BAD_REQUEST';
-      message = err.serverMessage || `API error (${err.status})`;
+function combineFilters(
+  filters: string[] | undefined,
+  prod: boolean | undefined
+): string | undefined {
+  const nonEmptyFilters = [
+    ...(filters?.filter(filter => filter.length > 0) ?? []),
+    ...(prod ? [PRODUCTION_ENVIRONMENT_FILTER] : []),
+  ];
+
+  if (nonEmptyFilters.length === 0) {
+    return undefined;
   }
 
-  if (jsonOutput) {
-    client.stdout.write(formatErrorJson(code, message));
-  } else {
-    output.error(message);
+  if (nonEmptyFilters.length === 1) {
+    return nonEmptyFilters[0];
   }
-  return 1;
+
+  return nonEmptyFilters.map(filter => `(${filter})`).join(' and ');
+}
+
+function getRequestOrderBy(
+  metric: string,
+  aggregation: string,
+  orderBy: OrderBy | undefined
+): string | undefined {
+  return orderBy === 'value'
+    ? getRollupColumnName(metric, aggregation)
+    : undefined;
 }
 
 async function resolveQueryScope(
@@ -120,7 +101,6 @@ async function resolveQueryScope(
     }
   | number
 > {
-  // --project or --all: resolve team context via getScope
   if (opts.project || opts.all) {
     const { team } = await getScope(client);
     if (!team) {
@@ -165,7 +145,6 @@ async function resolveQueryScope(
     };
   }
 
-  // Default: use linked project
   const linkedProject = await getLinkedProject(client);
   if (linkedProject.status === 'error') {
     return linkedProject.exitCode;
@@ -207,6 +186,9 @@ export default async function query(
   }
 
   const flags = parsedArgs.flags;
+  const positionalArgs = parsedArgs.args.slice(1);
+  const positionalMetric =
+    positionalArgs[0] === 'query' ? positionalArgs[1] : positionalArgs[0];
 
   // Validate output format
   const formatResult = validateJsonOutput(flags);
@@ -217,46 +199,69 @@ export default async function query(
   const jsonOutput = formatResult.jsonOutput;
 
   // Extract raw flag values
-  const eventFlag = flags['--event'];
-  const measure = flags['--measure'] ?? 'count';
+  const metricFlag = positionalMetric;
   const aggregationFlag = flags['--aggregation'];
   const groupBy = flags['--group-by'] ?? [];
   const limit = flags['--limit'];
-  const filter = flags['--filter'];
+  const orderByInput =
+    typeof flags['--order-by'] === 'string'
+      ? flags['--order-by'].trim().toLowerCase()
+      : undefined;
+  const orderInput =
+    typeof flags['--order'] === 'string'
+      ? flags['--order'].trim().toLowerCase()
+      : undefined;
+  const filters = flags['--filter'];
+  const prod = flags['--prod'];
+  const filter = combineFilters(filters, prod);
   const since = flags['--since'];
   const until = flags['--until'];
   const granularity = flags['--granularity'];
+  const bucketTimezone = flags['--bucket-timezone']?.trim();
   const project = flags['--project'];
   const all = flags['--all'];
 
   // Track telemetry
-  telemetry.trackCliOptionEvent(eventFlag);
-  telemetry.trackCliOptionMeasure(flags['--measure']);
+  telemetry.trackCliArgumentMetricId(metricFlag);
   telemetry.trackCliOptionAggregation(aggregationFlag);
   telemetry.trackCliOptionGroupBy(groupBy.length > 0 ? groupBy : undefined);
   telemetry.trackCliOptionLimit(limit);
-  telemetry.trackCliOptionFilter(filter);
+  telemetry.trackCliOptionOrderBy(orderByInput);
+  telemetry.trackCliOptionOrder(orderInput);
+  telemetry.trackCliOptionFilter(filters);
+  telemetry.trackCliFlagProd(prod);
   telemetry.trackCliOptionSince(since);
   telemetry.trackCliOptionUntil(until);
   telemetry.trackCliOptionGranularity(granularity);
+  telemetry.trackCliOptionBucketTimezone(bucketTimezone);
   telemetry.trackCliOptionProject(project);
   telemetry.trackCliFlagAll(all);
   telemetry.trackCliOptionFormat(flags['--format']);
 
-  // Validate --event (required)
-  const requiredResult = validateRequiredEvent(eventFlag);
-  if (!requiredResult.valid) {
-    return handleValidationError(requiredResult, jsonOutput, client);
+  const orderByResult = validateOrderBy(orderByInput);
+  if (!orderByResult.valid) {
+    return handleValidationError(orderByResult, jsonOutput, client);
   }
-  const event = requiredResult.value;
+  const orderByMode = orderByResult.value;
 
-  // Validate mutual exclusivity
+  // Validate that a metric id was provided.
+  const requiredMetric = validateRequiredMetric(metricFlag);
+  if (!requiredMetric.valid) {
+    return handleValidationError(requiredMetric, jsonOutput, client);
+  }
+  const metric = requiredMetric.value;
+
   const mutualResult = validateMutualExclusivity(all, project);
   if (!mutualResult.valid) {
     return handleValidationError(mutualResult, jsonOutput, client);
   }
 
-  // Resolve scope
+  const orderDirectionResult = validateOrderDirection(orderInput);
+  if (!orderDirectionResult.valid) {
+    return handleValidationError(orderDirectionResult, jsonOutput, client);
+  }
+  const orderDirection = orderDirectionResult.value;
+
   const scopeResult = await resolveQueryScope(client, {
     project,
     all,
@@ -267,39 +272,22 @@ export default async function query(
   }
   const { scope, accountId, teamName, projectName } = scopeResult;
 
-  const schemaData = await fetchSchemaOrExit(client, accountId, jsonOutput);
-  if (typeof schemaData === 'number') {
-    return schemaData;
+  const detailOrExitCode = await fetchMetricDetailOrExit(
+    client,
+    accountId,
+    metric,
+    jsonOutput
+  );
+  // fetchMetricDetailOrExit() returns a numeric exit code when it already
+  // handled the error output for us.
+  if (typeof detailOrExitCode === 'number') {
+    return detailOrExitCode;
   }
 
   const aggregationInput =
-    aggregationFlag ?? getDefaultAggregation(schemaData, event, measure);
-
-  const eventResult = validateEvent(schemaData, event);
-  if (!eventResult.valid) {
-    return handleValidationError(eventResult, jsonOutput, client);
-  }
-
-  const measureResult = validateMeasure(schemaData, event, measure);
-  if (!measureResult.valid) {
-    return handleValidationError(measureResult, jsonOutput, client);
-  }
-
-  const aggResult = validateAggregation(
-    schemaData,
-    event,
-    measure,
-    aggregationInput
-  );
-  if (!aggResult.valid) {
-    return handleValidationError(aggResult, jsonOutput, client);
-  }
-  const aggregation = aggResult.value;
-
-  const groupByResult = validateGroupBy(schemaData, event, groupBy);
-  if (!groupByResult.valid) {
-    return handleValidationError(groupByResult, jsonOutput, client);
-  }
+    aggregationFlag ?? getDefaultAggregation(detailOrExitCode, metric) ?? 'sum';
+  const aggregation = aggregationInput;
+  const orderBy = getRequestOrderBy(metric, aggregation, orderByMode);
 
   // Resolve time range
   let startTime: Date;
@@ -320,43 +308,39 @@ export default async function query(
   // too fine for the time range (granResult.adjusted will be true in that case).
   const rangeMs = endTime.getTime() - startTime.getTime();
   const granResult = computeGranularity(rangeMs, granularity);
-  if (granResult.adjusted && granResult.notice) {
+  if (!jsonOutput && granResult.adjusted && granResult.notice) {
     output.log(`Notice: ${granResult.notice}`);
   }
 
-  // Round start/end to granularity boundaries so every time bucket is complete.
-  // e.g. granularity=1h with range 14:23–16:47 rounds to 14:00–17:00.
-  const rounded = roundTimeBoundaries(
-    startTime,
-    endTime,
-    toGranularityMsFromDuration(granResult.duration)
-  );
-
   // Build request body
-  const rollupColumn = getRollupColumnName(measure, aggregation);
   const body: MetricsQueryRequest = {
-    reason: 'agent' as const,
     scope,
-    event: getQueryEngineEventName(schemaData, event),
-    rollups: { [rollupColumn]: { measure, aggregation } },
-    startTime: rounded.start.toISOString(),
-    endTime: rounded.end.toISOString(),
+    metric,
+    aggregation: aggregation as Aggregation,
+    startTime: startTime.toISOString(),
+    endTime: endTime.toISOString(),
     granularity: granResult.duration,
+    ...(bucketTimezone ? { bucketTimezone } : {}),
     ...(groupBy.length > 0 ? { groupBy } : {}),
     ...(filter ? { filter } : {}),
     limit: limit ?? 10,
+    ...(orderBy ? { orderBy } : {}),
+    ...(orderDirection ? { orderDirection } : {}),
   };
 
-  output.spinner('Querying metrics...');
+  if (!jsonOutput) {
+    output.spinner('Querying metrics...');
+  }
   let response: MetricsQueryResponse;
   try {
     response = await client.fetch<MetricsQueryResponse>(
-      '/v1/observability/query',
+      '/v2/observability/query',
       {
         method: 'POST',
         body: JSON.stringify(body),
         headers: { 'Content-Type': 'application/json' },
         accountId,
+        bailOn429: true,
       }
     );
   } catch (err: unknown) {
@@ -371,44 +355,47 @@ export default async function query(
     }
     return 1;
   } finally {
-    output.stopSpinner();
+    if (!jsonOutput) {
+      output.stopSpinner();
+    }
   }
 
-  // Format and output
   if (jsonOutput) {
     client.stdout.write(
       formatQueryJson(
         {
-          event,
-          measure,
-          aggregation,
+          metric,
+          aggregation: aggregation as Aggregation,
           groupBy,
           filter,
-          startTime: rounded.start.toISOString(),
-          endTime: rounded.end.toISOString(),
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
           granularity: granResult.duration,
+          ...(bucketTimezone ? { bucketTimezone } : {}),
+          ...(orderByMode ? { orderBy: orderByMode } : {}),
+          ...(orderDirection ? { orderDirection } : {}),
         },
         response
       )
     );
   } else {
-    const measureUnit = getMeasures(schemaData, event).find(
-      m => m.name === measure
-    )?.unit;
     client.stdout.write(
       formatText(response, {
-        event,
-        measure,
-        measureUnit,
-        aggregation,
+        metric,
+        metricUnit:
+          detailOrExitCode.find(item => item.id === metric)?.unit ?? 'count',
+        aggregation: aggregation as Aggregation,
         groupBy,
         filter,
         scope,
         projectName,
         teamName,
-        periodStart: rounded.start.toISOString(),
-        periodEnd: rounded.end.toISOString(),
+        periodStart: startTime.toISOString(),
+        periodEnd: endTime.toISOString(),
         granularity: granResult.duration,
+        bucketTimezone: bucketTimezone,
+        orderBy: orderByMode,
+        orderDirection,
       })
     );
   }

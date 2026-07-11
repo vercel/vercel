@@ -1,6 +1,8 @@
 import { TelemetryClient } from '../..';
 import type { blobCommand } from '../../../../commands/blob/command';
 import type { TelemetryMethods } from '../../types';
+export { BlobPresignTelemetryClient } from './presign';
+export { BlobSignedTokenTelemetryClient } from './signed-token';
 
 export class BlobTelemetryClient
   extends TelemetryClient
@@ -41,6 +43,20 @@ export class BlobTelemetryClient
     });
   }
 
+  trackCliSubcommandSignedToken(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'signed-token',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandPresign(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'presign',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandCreateStore(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'create-store',
@@ -62,17 +78,44 @@ export class BlobTelemetryClient
     });
   }
 
-  trackCliSubcommandStore(actual: string) {
+  trackCliSubcommandListStores(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'store',
+      subcommand: 'list-stores',
       value: actual,
     });
   }
 
-  trackCliOptionRwToken() {
-    this.trackCliOption({
-      option: '--rw-token',
-      value: this.redactedValue,
+  trackCliSubcommandEmptyStore(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'empty-store',
+      value: actual,
     });
+  }
+
+  trackCliOptionRwToken(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: '--rw-token',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionOidcToken(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: '--oidc-token',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionStoreId(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: '--store-id',
+        value: this.redactedValue,
+      });
+    }
   }
 }

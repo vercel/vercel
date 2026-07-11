@@ -76,12 +76,6 @@ export class BlobPutTelemetryClient
     }
   }
 
-  trackCliFlagForce(force: boolean | undefined) {
-    if (force) {
-      this.trackCliFlag('force');
-    }
-  }
-
   trackCliOptionIfMatch(ifMatch: string | undefined) {
     if (ifMatch) {
       this.trackCliOption({

@@ -1,5 +1,270 @@
 # @vercel/python
 
+## 6.49.0
+
+### Minor Changes
+
+- dbefe95: Require Python `pyproject.toml` subscribers to be declared with `[[tool.vercel.subscribers]]` array entries instead of named subscriber tables.
+- 8b36776: Precompile Python bytecode for standard-size Lambda functions when enough of the estimated bytecode fits the remaining capacity, and allow bytecode precompilation when a custom build command is configured.
+- e12b1bd: Fail the build when `tool.vercel.entrypoint` in pyproject.toml is set but cannot be resolved, instead of silently falling back to filename-based entrypoint detection. A stale or typo'd declaration could previously build a different app than the one declared. Speculative detection (monorepo auto-detection, project linking) still degrades gracefully: one directory's broken config does not abort the sweep.
+
+### Patch Changes
+
+- 89ef74f: Skip bytecode precompilation when a service has a `preDeployCommand`. Precompiled bytecode uses `--invalidation-mode unchecked-hash`, which trusts the `.pyc` without re-checking the source at import — safe only because build output is normally immutable. A `preDeployCommand` runs after the build and can rewrite source files, leaving the already-compiled bytecode stale so the old source is served at runtime. Precompilation is now disabled for such services so the pre-deploy changes take effect.
+- 7b30856: Add `vercel dev` support for Python queue subscribers defined in `pyproject.toml`.
+
+## 6.48.0
+
+### Minor Changes
+
+- 4097a62: Fix django services when using static assets and vc dev.
+
+## 6.47.3
+
+### Patch Changes
+
+- 62a884e: Simplify isolated `services` and `experimentalServicesV2` runtime outputs by emitting their function at `index` instead of `_svc/<service-name>/index`.
+
+## 6.47.2
+
+### Patch Changes
+
+- 34b2c4c: Apply `functions` config to Python framework builds using the resolved Python entrypoint.
+
+## 6.47.1
+
+### Patch Changes
+
+- 95d8879: python: restrict bytecode precompilation to large functions
+- 82b3c3c: python: update functions bundle size limits
+- 96e3137: Emit catch-all routes for services V2 so requests reach the Python Lambda
+- f5fe588: python: update log messages
+- f076559: python: support large functions on Hive via supportLargeFunctions and retire the python-on-hive size path
+
+## 6.47.0
+
+### Minor Changes
+
+- f530cd5: Add Python `pyproject.toml` subscriber support for queue-triggered worker Lambdas.
+
+## 6.46.1
+
+### Patch Changes
+
+- 480ee7c: Record the `python.bundle.totalSizeBytes` build span tag before the bundle size-limit checks, so oversized functions that exceed the limit (and fail the build) still report their size instead of being omitted from telemetry.
+
+## 6.46.0
+
+### Minor Changes
+
+- e84cf48: Produce an error message when the uv version is too old
+
+### Patch Changes
+
+- 0d9bc23: Scope `compileall` bytecode precompilation to Hive deployments. It now runs only when `VERCEL_PYTHON_ON_HIVE` is set and is gated behind `VERCEL_PYTHON_COMPILEALL` as an explicit opt-in flag (default off). The dev and custom-command guards are unchanged.
+
+## 6.45.1
+
+### Patch Changes
+
+- e9aa6f5: Remove hidden `--functions-beta` / `--no-functions-beta` deploy flags and the size-limit hint messaging
+
+## 6.45.0
+
+### Minor Changes
+
+- d712d41: Override uv's exclude-newer when install vercel-runtime/vercel-workers
+- dbb31fc: Override uv's exclude-newer when installing vercel-runtime/vercel-workers for dev server
+
+### Patch Changes
+
+- f7f0003: Refactor dev server dep injection to not be so duplicated
+
+## 6.44.1
+
+### Patch Changes
+
+- 4637f0a: Force Python bytecode precompilation to rewrite existing `.pyc` files with unchecked-hash invalidation.
+- c5d53d7: Use the in-repo `python/vercel-runtime` and `python/vercel-workers` source as the install target during monorepo `vercel build` runs (mirroring the existing dev-server behavior). This prevents CLI unit tests from depending on a PyPI release of a version that has not been published yet — the case that breaks Version Packages PRs that bump these packages.
+
+## 6.44.0
+
+### Minor Changes
+
+- 4f782b1: Support bytecode compilation for hive deployment path.
+
+## 6.43.3
+
+### Patch Changes
+
+- 0e04bc5: Reduce lambda threshold bytes when VERCEL_DEPLOYMENT_HAS_OTEL_LAYER is set.
+
+  When the deployments use the otel collector it can push the deployment over the limit since we don't account
+  for the size overhead added by this layer. Reduce the total uncompressed size for these types of deployments.
+
+## 6.43.2
+
+### Patch Changes
+
+- 1318682: minor performance improvements
+
+## 6.43.1
+
+### Patch Changes
+
+- 972cc84: Support workflow-triggered job services in queue infrastructure
+
+  Add `isWorkflowTriggeredService()` and `isQueueBackedService()` helpers so workflow services
+  are recognized by the queue broker, dev server, and build pipeline. Update Python runtime to
+  bootstrap workflow services as queue-backed workers.
+
+## 6.43.0
+
+### Minor Changes
+
+- 2cd64ea: Support `vc build` + `vc deploy --prebuilt` for Python functions. When building outside the Vercel build image, `uv sync` now targets `x86_64-unknown-linux-gnu` so Linux-compatible wheels are resolved. Downloads the Linux `uv` binary (with SHA-256 verification) for runtime dependency installation, and uses the Lambda target platform for PEP 508 marker evaluation and Prisma engine binary selection.
+
+## 6.42.0
+
+### Minor Changes
+
+- fb0cb8d: Add normalized entrypoint detector for runtime builders.
+
+## 6.41.0
+
+### Minor Changes
+
+- bf42168: Provide better suggestion for how to fix entry point error
+
+### Patch Changes
+
+- 94a214c: Use copy link mode for injected uv pip installs to avoid cross-device cache clone failures.
+
+## 6.40.0
+
+### Minor Changes
+
+- 22f77b9: Add project manifest to node builder.
+
+### Patch Changes
+
+- f93148b: Reduce redundant file stat and subprocess calls.
+- 979d70a: [services] `services` schema support
+
+## 6.39.0
+
+### Minor Changes
+
+- e53dd86: Add service type to project manifest.
+
+## 6.38.0
+
+### Minor Changes
+
+- fa5f57a: Enable Python build dependency caching by default.
+
+### Patch Changes
+
+- 8e29c9c: Improve Python entrypoint error messages and documentation links.
+- 2da36f3: Show a `--functions-beta`-aware hint at the Hive-extended 1 GB size-limit error path.
+
+## 6.37.0
+
+### Minor Changes
+
+- 25e84c6: Support specifying entrypoint in vercel.tool.entrypoint in pyproject.toml
+
+### Patch Changes
+
+- Updated dependencies [8e999cb]
+  - @vercel/python-analysis@0.11.1
+
+## 6.36.1
+
+### Patch Changes
+
+- 894e7d4: [python/vercel-workers] refactor framework-specific logic into vercel-workers
+
+## 6.36.0
+
+### Minor Changes
+
+- Add framework to package manifest for python and backends builders. ([#16072](https://github.com/vercel/vercel/pull/16072))
+
+### Patch Changes
+
+- Don't pass --python 3.0 to uv venv when running vc dev ([#16072](https://github.com/vercel/vercel/pull/16072))
+
+## 6.35.0
+
+### Minor Changes
+
+- [services] move Python workers to v2beta triggers with private routing ([#15920](https://github.com/vercel/vercel/pull/15920))
+
+## 6.34.0
+
+### Minor Changes
+
+- Generate PROJECTMANIFEST in @vercel/backends for Node deployments. ([#15991](https://github.com/vercel/vercel/pull/15991))
+
+## 6.33.3
+
+### Patch Changes
+
+- [experimental-services] add new job service type support ([#15944](https://github.com/vercel/vercel/pull/15944))
+
+## 6.33.2
+
+### Patch Changes
+
+- Update the error for custom installCommand builds >250MB. ([#15946](https://github.com/vercel/vercel/pull/15946))
+
+## 6.33.1
+
+### Patch Changes
+
+- Enable functions beta hint when flag is true ([#15965](https://github.com/vercel/vercel/pull/15965))
+
+- [services] don't catch all routes for non-web Python services ([#15960](https://github.com/vercel/vercel/pull/15960))
+
+- Remove duplicated error message. ([#16000](https://github.com/vercel/vercel/pull/16000))
+
+## 6.33.0
+
+### Minor Changes
+
+- Fix local builds when pinned Python version is not on PATH. ([#15897](https://github.com/vercel/vercel/pull/15897))
+
+- Support dynamically specifying crons from a python service ([#15930](https://github.com/vercel/vercel/pull/15930))
+
+## 6.32.0
+
+### Minor Changes
+
+- Add a new flag to vercel deploy to let users deploy to hive ([#15892](https://github.com/vercel/vercel/pull/15892))
+
+## 6.31.0
+
+### Minor Changes
+
+- Parse python module:variable entrypoint notation in experimentalServices for all service types. ([#15844](https://github.com/vercel/vercel/pull/15844))
+
+### Patch Changes
+
+- [python] set the `UV_PROJECT_ENVIRONMENT` and `UV_NO_DEV` env vars so that custom `installCommand` and `buildCommand` commands can be called without the `--active` and `--no-dev` flags ([#15715](https://github.com/vercel/vercel/pull/15715))
+
+## 6.30.1
+
+### Patch Changes
+
+- Replace subprocess calls with fs.existsSync ([#15913](https://github.com/vercel/vercel/pull/15913))
+
+## 6.30.0
+
+### Minor Changes
+
+- Enable caching for python builds using prepareCache ([#15634](https://github.com/vercel/vercel/pull/15634))
+
 ## 6.29.0
 
 ### Minor Changes

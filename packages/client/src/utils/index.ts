@@ -36,7 +36,7 @@ const EVENTS_ARRAY = [
   'notice',
   'tip',
   'canceled',
-  // Checks events
+  // v1 Checks events
   'checks-registered',
   'checks-completed',
   'checks-running',
@@ -44,6 +44,8 @@ const EVENTS_ARRAY = [
   'checks-conclusion-failed',
   'checks-conclusion-skipped',
   'checks-conclusion-canceled',
+  // v2 Checks events
+  'checks-v2-failed',
 ] as const;
 
 export type DeploymentEventType = (typeof EVENTS_ARRAY)[number];
@@ -370,11 +372,13 @@ export const fetchApi = async (
 
   debug(`${opts.method || 'GET'} ${url}`);
   time = Date.now();
-  const res = await nodeFetch(url, opts);
-  debug(`DONE in ${Date.now() - time}ms: ${opts.method || 'GET'} ${url}`);
-  semaphore.release();
-
-  return res;
+  try {
+    const res = await nodeFetch(url, opts);
+    debug(`DONE in ${Date.now() - time}ms: ${opts.method || 'GET'} ${url}`);
+    return res;
+  } finally {
+    semaphore.release();
+  }
 };
 
 export interface PreparedFile {
@@ -409,7 +413,7 @@ export const prepareFiles = (
 
       preparedFiles.push({
         file: isWin ? fileName.replace(/\\/g, '/') : fileName,
-        size: file.data?.byteLength || file.data?.length,
+        size: file.data?.byteLength ?? file.size,
         mode: file.mode,
         sha: sha || undefined,
       });
@@ -430,4 +434,4 @@ export function createDebug(debug?: boolean) {
 
   return () => {};
 }
-type Debug = ReturnType<typeof createDebug>;
+export type Debug = ReturnType<typeof createDebug>;

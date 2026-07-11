@@ -16,6 +16,7 @@ const AUGMENT_CLI = 'augment-cli' as const;
 const OPENCODE = 'opencode' as const;
 const GITHUB_COPILOT = 'github-copilot' as const;
 const GITHUB_COPILOT_CLI = 'github-copilot-cli' as const;
+const V0 = 'v0' as const;
 
 export type KnownAgentNames =
   | typeof CURSOR
@@ -29,7 +30,8 @@ export type KnownAgentNames =
   | typeof ANTIGRAVITY
   | typeof AUGMENT_CLI
   | typeof OPENCODE
-  | typeof GITHUB_COPILOT;
+  | typeof GITHUB_COPILOT
+  | typeof V0;
 
 export interface KnownAgentDetails {
   name: KnownAgentNames;
@@ -58,6 +60,7 @@ export const KNOWN_AGENTS = {
   AUGMENT_CLI,
   OPENCODE,
   GITHUB_COPILOT,
+  V0,
 } as const;
 
 export async function determineAgent(): Promise<AgentResult> {
@@ -68,6 +71,13 @@ export async function determineAgent(): Promise<AgentResult> {
         return {
           isAgent: true,
           agent: { name: GITHUB_COPILOT },
+        };
+      }
+
+      if (name === V0) {
+        return {
+          isAgent: true,
+          agent: { name: V0 },
         };
       }
 
@@ -82,7 +92,10 @@ export async function determineAgent(): Promise<AgentResult> {
     return { isAgent: true, agent: { name: CURSOR } };
   }
 
-  if (process.env.CURSOR_AGENT) {
+  if (
+    process.env.CURSOR_AGENT ||
+    process.env.CURSOR_EXTENSION_HOST_ROLE === 'agent-exec'
+  ) {
     return { isAgent: true, agent: { name: CURSOR_CLI } };
   }
 

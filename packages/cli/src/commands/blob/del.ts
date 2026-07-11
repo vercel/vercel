@@ -7,11 +7,12 @@ import { delSubcommand } from './command';
 import { BlobDelTelemetryClient } from '../../util/telemetry/commands/blob/del';
 import { printError } from '../../util/error';
 import { getCommandName } from '../../util/pkg-name';
+import { blobOpts, type BlobRWToken } from '../../util/blob/token';
 
 export default async function del(
   client: Client,
   argv: string[],
-  rwToken: string
+  auth: BlobRWToken
 ): Promise<number> {
   const telemetryClient = new BlobDelTelemetryClient({
     opts: {
@@ -47,7 +48,7 @@ export default async function del(
 
     output.spinner('Deleting blob');
 
-    await blob.del(args, { token: rwToken, ifMatch });
+    await blob.del(args, { ...blobOpts(auth), ifMatch });
   } catch (err) {
     output.error(`Error deleting blob: ${err}`);
     return 1;

@@ -22,6 +22,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { PullTelemetryClient } from '../../util/telemetry/commands/pull';
+import { autoInstallVercelPlugin } from '../../util/agent/auto-install-agentic';
 
 async function pullAllEnvFiles(
   environment: string,
@@ -96,14 +97,21 @@ export default async function main(client: Client) {
   telemetryClient.trackCliFlagProd(isProduction);
   telemetryClient.trackCliOptionGitBranch(parsedArgs.flags['--git-branch']);
   telemetryClient.trackCliOptionEnvironment(parsedArgs.flags['--environment']);
+  telemetryClient.trackCliOptionProject(parsedArgs.flags['--project']);
 
   const returnCode = await pullCommandLogic(
     client,
     cwd,
     autoConfirm,
     environment,
-    parsedArgs.flags
+    parsedArgs.flags,
+    parsedArgs.flags['--project']
   );
+
+  if (returnCode === 0 && !autoConfirm) {
+    await autoInstallVercelPlugin(client);
+  }
+
   return returnCode;
 }
 
@@ -112,11 +120,14 @@ export async function pullCommandLogic(
   cwd: string,
   autoConfirm: boolean,
   environment: string,
-  flags: PullCommandFlags
+  flags: PullCommandFlags,
+  projectNameOrId?: string
 ): Promise<number> {
   const link = await ensureLink('pull', client, cwd, {
     autoConfirm,
     pullEnv: false,
+    projectName: projectNameOrId,
+    failIfNotFound: !!projectNameOrId,
   });
   if (typeof link === 'number') {
     return link;

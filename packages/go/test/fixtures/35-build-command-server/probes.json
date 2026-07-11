@@ -1,0 +1,12 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "RANDOMNESS_PLACEHOLDER",
+      "responseHeaders": {
+        "content-type": "/application\\/json/"
+      }
+    }
+  ]
+}

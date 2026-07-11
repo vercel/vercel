@@ -129,6 +129,53 @@ function createTestFlags(): Flag[] {
       seed: 67890,
       typeName: 'flag',
     },
+    {
+      id: 'flag_json999',
+      slug: 'layout-config',
+      description: 'A JSON feature flag',
+      kind: 'json',
+      state: 'active',
+      variants: [
+        {
+          id: 'light',
+          value: { theme: 'light', sidebar: false },
+          label: 'Light',
+        },
+        {
+          id: 'dark',
+          value: ['dark', 'compact'],
+          label: 'Dark',
+        },
+      ],
+      environments: {
+        production: {
+          active: true,
+          fallthrough: { type: 'variant', variantId: 'light' },
+          pausedOutcome: { type: 'variant', variantId: 'light' },
+          rules: [],
+        },
+        preview: {
+          active: true,
+          fallthrough: { type: 'variant', variantId: 'light' },
+          pausedOutcome: { type: 'variant', variantId: 'light' },
+          rules: [],
+        },
+        development: {
+          active: true,
+          fallthrough: { type: 'variant', variantId: 'light' },
+          pausedOutcome: { type: 'variant', variantId: 'light' },
+          rules: [],
+        },
+      },
+      createdAt: Date.now() - 172800000,
+      updatedAt: Date.now() - 7200000,
+      createdBy: 'user_123',
+      projectId: 'vercel-flags-test',
+      ownerId: 'team_dummy',
+      revision: 2,
+      seed: 67890,
+      typeName: 'flag',
+    },
   ];
 }
 
@@ -307,6 +354,34 @@ describe('flags set', () => {
       active: false,
       pausedOutcome: { type: 'variant', variantId: 'large' },
       fallthrough: { type: 'variant', variantId: 'large' },
+    });
+  });
+
+  it('sets a JSON variant by value', async () => {
+    (client.stdin as any).isTTY = false;
+    client.setArgv(
+      'flags',
+      'set',
+      testFlags[3].slug,
+      '--environment',
+      'preview',
+      '--variant',
+      '["dark","compact"]'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      'Serving variant: ["dark","compact"] Dark'
+    );
+    expect((testFlags[3] as Flag & { message?: string }).message).toEqual(
+      'Set variant for preview via CLI'
+    );
+    expect(testFlags[3].environments.preview).toMatchObject({
+      active: false,
+      pausedOutcome: { type: 'variant', variantId: 'dark' },
+      fallthrough: { type: 'variant', variantId: 'dark' },
     });
   });
 
