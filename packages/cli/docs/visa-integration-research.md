@@ -23,10 +23,12 @@ const COMMAND_CONFIG = {
 ```
 
 When `vercel domains buy example.com` is invoked:
+
 - The parent parser uses `permissive: true` so `buy`-specific flags pass through.
 - `getSubcommand` matches `'buy'` → the `buy` handler in `src/commands/domains/buy.ts` is called with `(client, args)`.
 
 **Key files:**
+
 - `src/commands/domains/command.ts` — Subcommand metadata (currently `buySubcommand` has **no custom options/flags**).
 - `src/commands/domains/index.ts` — Router / entry point.
 - `src/commands/domains/buy.ts` — The `buy` handler (274 lines).
@@ -40,6 +42,7 @@ Authentication in `vercel domains buy` is **entirely implicit** — there is no 
 1. **Token storage**: When a user runs `vercel login`, an OAuth access token (and optionally a refresh token) is persisted to `~/.vercel/auth.json` via `client.authConfig`.
 
 2. **Token injection**: Every `client.fetch()` call automatically:
+
    - Calls `ensureAuthorized()` which checks if the access token is expired. If expired and a refresh token exists, it silently refreshes the token via OAuth.
    - Sets the `Authorization: Bearer <token>` header on every outgoing HTTP request.
 
@@ -55,12 +58,12 @@ Authentication in `vercel domains buy` is **entirely implicit** — there is no 
 
 The domain purchase flow calls **four Vercel API endpoints** via `client.fetch()`:
 
-| Step | Endpoint | Method | Called By | Purpose |
-|------|----------|--------|-----------|---------|
-| 1 | `GET /v1/registrar/domains/{name}/price` | GET | `getDomainPrice()` | Fetches `purchasePrice`, `renewalPrice`, `transferPrice`, `years` |
-| 2 | `GET /v1/registrar/domains/{name}/availability` | GET | `getDomainStatus()` | Returns `{ available: boolean }` |
-| 3 | `POST /v1/registrar/domains/{name}/buy?teamId=...` | POST | `purchaseDomain()` | Initiates purchase; body contains `{ expectedPrice, autoRenew, years, contactInformation }` |
-| 4 | `GET /v1/registrar/orders/{orderId}?teamId=...` | GET | `pollForOrder()` | Polls order status until `completed` or `failed` (500ms interval, 10s timeout) |
+| Step | Endpoint                                           | Method | Called By           | Purpose                                                                                     |
+| ---- | -------------------------------------------------- | ------ | ------------------- | ------------------------------------------------------------------------------------------- |
+| 1    | `GET /v1/registrar/domains/{name}/price`           | GET    | `getDomainPrice()`  | Fetches `purchasePrice`, `renewalPrice`, `transferPrice`, `years`                           |
+| 2    | `GET /v1/registrar/domains/{name}/availability`    | GET    | `getDomainStatus()` | Returns `{ available: boolean }`                                                            |
+| 3    | `POST /v1/registrar/domains/{name}/buy?teamId=...` | POST   | `purchaseDomain()`  | Initiates purchase; body contains `{ expectedPrice, autoRenew, years, contactInformation }` |
+| 4    | `GET /v1/registrar/orders/{orderId}?teamId=...`    | GET    | `pollForOrder()`    | Polls order status until `completed` or `failed` (500ms interval, 10s timeout)              |
 
 Steps 1 and 2 are called **in parallel** (`Promise.all`). Step 4 is a polling loop.
 
@@ -81,7 +84,7 @@ Steps 1 and 2 are called **in parallel** (`Promise.all`). Step 4 is a polling lo
     "state": "...",
     "zip": "...",
     "country": "US",
-    "companyName": "..."  // optional
+    "companyName": "..." // optional
   }
 }
 ```
@@ -105,6 +108,7 @@ Steps 1 and 2 are called **in parallel** (`Promise.all`). Step 4 is a polling lo
 ### 1.5 Success and Failure Handling
 
 #### Success Path
+
 1. `purchaseDomain()` POSTs to the buy endpoint → receives `{ orderId }`.
 2. `pollForOrder()` polls `GET /v1/registrar/orders/{orderId}` every 500ms (up to 10s).
 3. When `order.status === 'completed'` and the domain's status is `'completed'`, it fetches the domain details via `getDomain()`.
@@ -113,18 +117,20 @@ Steps 1 and 2 are called **in parallel** (`Promise.all`). Step 4 is a polling lo
 
 #### Failure Paths
 
-| Error Type | Trigger | CLI Message |
-|------------|---------|-------------|
-| `UnsupportedTLD` | API: `tld_not_supported` | "The TLD for domain name {name} is not supported." |
-| `TLDNotSupportedViaCLI` | API: `additional_contact_info_required` | "Purchased for the TLD ... not supported via the CLI." |
-| `InvalidDomain` | API: `invalid_domain` | "The domain {name} is not valid." |
-| `DomainNotAvailable` | API: `domain_not_available` | "The domain {name} is not available." |
+| Error Type                      | Trigger                                    | CLI Message                                                   |
+| ------------------------------- | ------------------------------------------ | ------------------------------------------------------------- |
+| `UnsupportedTLD`                | API: `tld_not_supported`                   | "The TLD for domain name {name} is not supported."            |
+| `TLDNotSupportedViaCLI`         | API: `additional_contact_info_required`    | "Purchased for the TLD ... not supported via the CLI."        |
+| `InvalidDomain`                 | API: `invalid_domain`                      | "The domain {name} is not valid."                             |
+| `DomainNotAvailable`            | API: `domain_not_available`                | "The domain {name} is not available."                         |
 | `UnexpectedDomainPurchaseError` | Polling timeout or `internal_server_error` | "An unexpected error happened while performing the purchase." |
-| `DomainPaymentError` | Order polling: `payment_failed` | "Your card was declined." |
-| Catch-all exception | Unexpected throw | "An unexpected error occurred while purchasing your domain." |
+| `DomainPaymentError`            | Order polling: `payment_failed`            | "Your card was declined."                                     |
+| Catch-all exception             | Unexpected throw                           | "An unexpected error occurred while purchasing your domain."  |
 
 #### Non-Interactive / Agent Mode
+
 The `buy` command **explicitly blocks non-interactive execution** (`client.nonInteractive`) with a structured error:
+
 - `reason: 'purchase_requires_user'`
 - Message: "Domain purchase cannot be performed non-interactively."
 - Suggests opening the Vercel dashboard or running the command interactively.
@@ -135,12 +141,12 @@ The `buy` command **explicitly blocks non-interactive execution** (`client.nonIn
 
 The CLI also has a top-level `vercel buy` command (`src/commands/buy/`) with four subcommands:
 
-| Subcommand | Handler | API |
-|------------|---------|-----|
+| Subcommand                    | Handler                       | API                               |
+| ----------------------------- | ----------------------------- | --------------------------------- |
 | `buy credits <type> <amount>` | `src/commands/buy/credits.ts` | `POST /v1/billing/buy?source=cli` |
-| `buy addon <name> <quantity>` | `src/commands/buy/addon.ts` | `POST /v1/billing/buy?source=cli` |
-| `buy pro` | `src/commands/buy/pro.ts` | `POST /v1/billing/buy?source=cli` |
-| `buy domain <domain>` | `src/commands/buy/domain.ts` | Delegates to `domains buy` |
+| `buy addon <name> <quantity>` | `src/commands/buy/addon.ts`   | `POST /v1/billing/buy?source=cli` |
+| `buy pro`                     | `src/commands/buy/pro.ts`     | `POST /v1/billing/buy?source=cli` |
+| `buy domain <domain>`         | `src/commands/buy/domain.ts`  | Delegates to `domains buy`        |
 
 The `credits`/`addon`/`pro` subcommands share `createPurchase()` (`src/util/buy/create-purchase.ts`) and `handlePurchaseError()` (`src/util/buy/handle-purchase-error.ts`), which already maps payment-related API codes (`missing_stripe_customer`, `payment_failed`, HTTP 402, etc.).
 
@@ -166,13 +172,14 @@ The Visa CLI ([visacli.sh](https://visacli.sh/)) is a beta product from Visa Cry
 
 The actual npm packages for integration live at [github.com/visa/ai](https://github.com/visa/ai):
 
-| Package | Purpose |
-|---------|---------|
-| `@visa/token-manager` | JWE token generation and management for MCP authentication |
-| `@visa/mcp-client` | MCP client for connecting to Visa MCP server with auto-auth |
-| `@visa/api-client` | API clients for VIC and VDP with X-Pay authentication and MLE (Message Level Encryption) |
+| Package               | Purpose                                                                                  |
+| --------------------- | ---------------------------------------------------------------------------------------- |
+| `@visa/token-manager` | JWE token generation and management for MCP authentication                               |
+| `@visa/mcp-client`    | MCP client for connecting to Visa MCP server with auto-auth                              |
+| `@visa/api-client`    | API clients for VIC and VDP with X-Pay authentication and MLE (Message Level Encryption) |
 
 The VIC platform's payment flow (per [Visa developer docs](https://developer.visa.com/capabilities/visa-intelligent-commerce)) uses five integrated services:
+
 1. **Tokenization** — agent-specific pass-through payment tokens (not raw card numbers)
 2. **Authentication** — step-up cardholder verification and Passkey setup
 3. **Payment Instructions** — controls ensuring payment requests match authenticated user instructions
@@ -180,6 +187,7 @@ The VIC platform's payment flow (per [Visa developer docs](https://developer.vis
 5. **Personalization** — user insights for recommendations
 
 The `VicApiClient` from `@visa/api-client` exposes these methods:
+
 - `enrollCard()` — enroll a card/token in VIC
 - `initiatePurchaseInstruction()` — create a purchase instruction
 - `updatePurchaseInstruction()` / `cancelPurchaseInstruction()`
@@ -195,6 +203,7 @@ The `VicApiClient` from `@visa/api-client` exposes these methods:
 **Recommendation: Extend the existing `domains buy` flow, do not fork it.**
 
 The existing flow is clean and modular:
+
 - `buy.ts` orchestrates the user-facing flow (validation, prompts, output).
 - `purchase-domain.ts` handles the API call and order polling.
 - `collect-contact-information.ts` gathers registrant details.
@@ -204,14 +213,18 @@ A Visa integration should add a **payment method selection layer** between the p
 Two approaches are viable:
 
 #### Approach A: `--visa` flag on `vercel domains buy` (Recommended)
+
 Add a `--visa` flag to `buySubcommand.options` in `command.ts`. When present:
+
 1. The CLI orchestrates the VIC purchase instruction flow to obtain transaction credentials.
 2. The purchase POST body includes the VIC transaction credentials as the payment method.
 
 #### Approach B: Separate `vercel visa` top-level command
+
 Creates `src/commands/visa/` with its own routing. This is heavier and only makes sense if Visa functionality spans beyond domain purchases (e.g., billing management, subscription upgrades).
 
 **Approach A is preferred** because:
+
 - The purchase is still a domain purchase — the Visa credential is just the payment instrument.
 - It avoids duplicating all the domain validation, pricing, and order-polling logic.
 - It follows the existing CLI pattern of feature flags on subcommands.
@@ -226,19 +239,19 @@ The integration involves **two sides**: the CLI-side VIC flow (obtaining payment
 
 The `@visa/token-manager` requires these environment variables (from Visa onboarding):
 
-| Variable | Source |
-|----------|--------|
-| `VISA_VIC_API_KEY` | VIC onboarding |
-| `VISA_VIC_API_KEY_SS` | VIC onboarding (shared secret) |
-| `VISA_EXTERNAL_CLIENT_ID` | VIC onboarding |
-| `VISA_EXTERNAL_APP_ID` | VIC onboarding |
-| `VISA_VTS_API_KEY` | VTS onboarding |
-| `VISA_VTS_API_KEY_SS` | VTS onboarding (shared secret) |
-| `VISA_MLE_SERVER_CERT` | User-generated (MLE certificate) |
-| `VISA_MLE_PRIVATE_KEY` | User-generated (MLE private key) |
-| `VISA_KEY_ID` | User-generated (MLE key ID) |
+| Variable                   | Source                                   |
+| -------------------------- | ---------------------------------------- |
+| `VISA_VIC_API_KEY`         | VIC onboarding                           |
+| `VISA_VIC_API_KEY_SS`      | VIC onboarding (shared secret)           |
+| `VISA_EXTERNAL_CLIENT_ID`  | VIC onboarding                           |
+| `VISA_EXTERNAL_APP_ID`     | VIC onboarding                           |
+| `VISA_VTS_API_KEY`         | VTS onboarding                           |
+| `VISA_VTS_API_KEY_SS`      | VTS onboarding (shared secret)           |
+| `VISA_MLE_SERVER_CERT`     | User-generated (MLE certificate)         |
+| `VISA_MLE_PRIVATE_KEY`     | User-generated (MLE private key)         |
+| `VISA_KEY_ID`              | User-generated (MLE key ID)              |
 | `USER_SIGNING_PRIVATE_KEY` | User-generated (RSA key for JWT signing) |
-| `VISA_MCP_BASE_URL` | Visa MCP endpoint (sandbox or prod) |
+| `VISA_MCP_BASE_URL`        | Visa MCP endpoint (sandbox or prod)      |
 
 These are **Vercel's credentials as a VIC-integrated merchant**, NOT the end-user's. They would be configured on the Vercel backend, not in the CLI.
 
@@ -259,6 +272,7 @@ The Vercel backend acts as the VIC merchant. The CLI sends the purchase details 
 The user has already authenticated via `visa-cli` ([visacli.sh](https://visacli.sh/)) and has a session token or payment token. The CLI collects this token and passes it to the Vercel backend, which redeems it via VIC APIs.
 
 **The exact mechanism depends on what Visa CLI's beta exposes.** The product is in beta and docs are limited. What we know for certain:
+
 - Visa CLI uses GitHub-based authentication for access
 - It promises "programmatic card payments without the pain of API keys"
 - The underlying platform is VIC with tokenized credentials
@@ -281,14 +295,17 @@ async function getVisaCredential(client: Client): Promise<string> {
   // 1. Testing/CI override
   const envCredential = process.env.VERCEL_VISA_CREDENTIAL;
   if (envCredential) {
-    output.debug('Using Visa credential from VERCEL_VISA_CREDENTIAL environment variable');
+    output.debug(
+      'Using Visa credential from VERCEL_VISA_CREDENTIAL environment variable'
+    );
     return envCredential;
   }
 
   // 2. Live: interactive prompt (primary path)
   return client.input.password({
     message: 'Visa payment credential:',
-    validate: (val: string) => val.length > 0 || 'Visa payment credential is required',
+    validate: (val: string) =>
+      val.length > 0 || 'Visa payment credential is required',
   });
 }
 ```
@@ -311,6 +328,7 @@ The Visa credential is passed in the **request body** of the purchase POST:
 ```
 
 The Vercel backend must be extended to:
+
 1. Accept this new `payment` field.
 2. Redeem the VIC credential via the `@visa/api-client` (`VicApiClient.getTransactionCredentials()` or equivalent).
 3. Process the domain purchase using the obtained transaction credentials.
@@ -351,18 +369,20 @@ export const buySubcommand = {
 ```
 
 #### Environment Variables
-| Variable | Purpose | Used By |
-|----------|---------|---------|
-| `VERCEL_VISA_CREDENTIAL` | VIC credential for testing/CI only | CLI (test harness) |
-| `VISA_VIC_API_KEY` | VIC API key | Vercel backend only |
-| `VISA_VIC_API_KEY_SS` | VIC API shared secret | Vercel backend only |
-| `VISA_MLE_SERVER_CERT` | MLE server certificate | Vercel backend only |
-| `VISA_MLE_PRIVATE_KEY` | MLE private key | Vercel backend only |
-| `VISA_KEY_ID` | MLE key identifier | Vercel backend only |
+
+| Variable                 | Purpose                            | Used By             |
+| ------------------------ | ---------------------------------- | ------------------- |
+| `VERCEL_VISA_CREDENTIAL` | VIC credential for testing/CI only | CLI (test harness)  |
+| `VISA_VIC_API_KEY`       | VIC API key                        | Vercel backend only |
+| `VISA_VIC_API_KEY_SS`    | VIC API shared secret              | Vercel backend only |
+| `VISA_MLE_SERVER_CERT`   | MLE server certificate             | Vercel backend only |
+| `VISA_MLE_PRIVATE_KEY`   | MLE private key                    | Vercel backend only |
+| `VISA_KEY_ID`            | MLE key identifier                 | Vercel backend only |
 
 The VIC merchant credentials (`VISA_*`) are **NOT** needed in the CLI — they belong on the Vercel backend. The CLI only collects the user-facing credential.
 
 #### No New Positional Arguments
+
 The domain name remains the only positional argument. Visa selection is a flag.
 
 ---
@@ -371,24 +391,25 @@ The domain name remains the only positional argument. Visa selection is a flag.
 
 #### Modified Files
 
-| File | Change |
-|------|--------|
-| `src/commands/domains/command.ts` | Add `--visa` option to `buySubcommand.options` |
-| `src/commands/domains/buy.ts` | Parse `--visa` flag; collect Visa credential; pass to `purchaseDomain()` |
-| `src/util/domains/purchase-domain.ts` | Accept optional `payment` param; include in POST body |
-| `src/util/telemetry/commands/domains/buy.ts` | Add `trackCliFlagVisa()` method |
-| `src/util/errors-ts.ts` | Add Visa-specific error classes (if backend returns VIC-specific error codes) |
+| File                                         | Change                                                                        |
+| -------------------------------------------- | ----------------------------------------------------------------------------- |
+| `src/commands/domains/command.ts`            | Add `--visa` option to `buySubcommand.options`                                |
+| `src/commands/domains/buy.ts`                | Parse `--visa` flag; collect Visa credential; pass to `purchaseDomain()`      |
+| `src/util/domains/purchase-domain.ts`        | Accept optional `payment` param; include in POST body                         |
+| `src/util/telemetry/commands/domains/buy.ts` | Add `trackCliFlagVisa()` method                                               |
+| `src/util/errors-ts.ts`                      | Add Visa-specific error classes (if backend returns VIC-specific error codes) |
 
 #### New Files
 
-| File | Purpose |
-|------|---------|
-| `src/util/domains/get-visa-credential.ts` | Prompts user for Visa payment token interactively (live), falls back to `VERCEL_VISA_CREDENTIAL` env var (testing/CI) |
-| `test/unit/commands/domains/buy-visa.test.ts` | Tests for the `--visa` flow (uses `VERCEL_VISA_CREDENTIAL` env var to provide credential in test harness) |
+| File                                          | Purpose                                                                                                               |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `src/util/domains/get-visa-credential.ts`     | Prompts user for Visa payment token interactively (live), falls back to `VERCEL_VISA_CREDENTIAL` env var (testing/CI) |
+| `test/unit/commands/domains/buy-visa.test.ts` | Tests for the `--visa` flow (uses `VERCEL_VISA_CREDENTIAL` env var to provide credential in test harness)             |
 
 #### Backend Work (Outside CLI Scope)
 
 The Vercel API backend needs to:
+
 1. Add `@visa/api-client` and `@visa/token-manager` as dependencies.
 2. Accept the `payment` field on `POST /v1/registrar/domains/{name}/buy`.
 3. When `payment.provider === 'visa'`, use `VicApiClient` to redeem the credential and process the domain purchase via VIC payment rails instead of the account's default card.
@@ -431,13 +452,13 @@ For **testing/CI**, the `VERCEL_VISA_CREDENTIAL` env var bypasses the interactiv
 
 New error scenarios to handle (exact API codes depend on Vercel backend implementation):
 
-| Error | Likely API Code | CLI Message |
-|-------|-----------------|-------------|
-| Invalid VIC credential | `visa_token_invalid` | "The Visa payment credential is invalid or expired." |
-| VIC payment declined | `visa_payment_declined` | "Your Visa payment was declined." |
-| VIC not supported for TLD | `visa_not_supported_for_tld` | "Visa payment is not supported for .{tld} domains." |
-| VIC service unavailable | `visa_service_unavailable` | "Visa payment service is currently unavailable. Try again later or use card on file." |
-| VIC authentication failed | `visa_auth_failed` | "Visa authentication failed. Please try again." |
+| Error                     | Likely API Code              | CLI Message                                                                           |
+| ------------------------- | ---------------------------- | ------------------------------------------------------------------------------------- |
+| Invalid VIC credential    | `visa_token_invalid`         | "The Visa payment credential is invalid or expired."                                  |
+| VIC payment declined      | `visa_payment_declined`      | "Your Visa payment was declined."                                                     |
+| VIC not supported for TLD | `visa_not_supported_for_tld` | "Visa payment is not supported for .{tld} domains."                                   |
+| VIC service unavailable   | `visa_service_unavailable`   | "Visa payment service is currently unavailable. Try again later or use card on file." |
+| VIC authentication failed | `visa_auth_failed`           | "Visa authentication failed. Please try again."                                       |
 
 These map to new error classes in `errors-ts.ts` or can reuse the existing `DomainPaymentError` with an extended message.
 
@@ -446,11 +467,13 @@ These map to new error classes in `errors-ts.ts` or can reuse the existing `Doma
 ### 2.8 API Surface Summary
 
 #### Existing Endpoints (No Change)
+
 - `GET /v1/registrar/domains/{name}/price`
 - `GET /v1/registrar/domains/{name}/availability`
 - `GET /v1/registrar/orders/{orderId}`
 
 #### Modified Endpoint
+
 - `POST /v1/registrar/domains/{name}/buy` — Request body extended with optional `payment`:
 
 ```typescript
@@ -598,15 +621,15 @@ New tests go in `test/unit/commands/domains/buy-visa.test.ts`. They follow the e
 
 **Test infrastructure the existing tests use** (available for Visa tests too):
 
-| Component | Import | What it does |
-|-----------|--------|-------------|
-| `client` | `../../../mocks/client` | Mock `Client` instance with an Express mock server, stdin/stderr streams, and telemetry store. Auto-resets between tests. |
-| `useUser()` | `../../../mocks/user` | Registers a `GET /v2/user` mock route. Required whenever the command calls `getScope(client)` (which calls `getUser`). |
-| `client.scenario.get(path, handler)` | (on `client`) | Register a mock GET route on the Express server backing `client.fetch()`. |
-| `client.scenario.post(path, handler)` | (on `client`) | Register a mock POST route. Capture `req.body` to assert on the request payload. |
-| `client.setArgv(...)` | (on `client`) | Set the argv that `buy.ts` will parse. |
-| `client.stdin.write(...)` | (on `client`) | Feed interactive input to prompts (confirm, text, password). |
-| `toOutput(text)` | (on `client.stderr`) | Wait up to 3s for `text` to appear in stderr output. |
+| Component                             | Import                  | What it does                                                                                                              |
+| ------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `client`                              | `../../../mocks/client` | Mock `Client` instance with an Express mock server, stdin/stderr streams, and telemetry store. Auto-resets between tests. |
+| `useUser()`                           | `../../../mocks/user`   | Registers a `GET /v2/user` mock route. Required whenever the command calls `getScope(client)` (which calls `getUser`).    |
+| `client.scenario.get(path, handler)`  | (on `client`)           | Register a mock GET route on the Express server backing `client.fetch()`.                                                 |
+| `client.scenario.post(path, handler)` | (on `client`)           | Register a mock POST route. Capture `req.body` to assert on the request payload.                                          |
+| `client.setArgv(...)`                 | (on `client`)           | Set the argv that `buy.ts` will parse.                                                                                    |
+| `client.stdin.write(...)`             | (on `client`)           | Feed interactive input to prompts (confirm, text, password).                                                              |
+| `toOutput(text)`                      | (on `client.stderr`)    | Wait up to 3s for `text` to appear in stderr output.                                                                      |
 
 **Key pattern for testing the Visa flow end-to-end:**
 
@@ -739,6 +762,7 @@ describe('domains buy --visa', () => {
 ```
 
 **What this test validates:**
+
 - The `--visa` flag is parsed correctly.
 - `VERCEL_VISA_CREDENTIAL` env var is read by `getVisaCredential()`.
 - The POST to `/v1/registrar/domains/{name}/buy` includes the `payment` field in the body alongside the existing fields (`expectedPrice`, `autoRenew`, `years`, `contactInformation`).
@@ -770,6 +794,7 @@ node packages/cli/dist/index.js domains buy example-domain.com --visa
 ```
 
 The interactive flow will prompt for:
+
 1. Purchase confirmation (price + years)
 2. Auto-renew confirmation
 3. Contact information (9 fields)
