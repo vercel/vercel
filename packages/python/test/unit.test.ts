@@ -1721,6 +1721,8 @@ describe('Django entrypoint discovery', () => {
           path.join(outputStaticDir, 'static', 'app.css'),
           'body {}'
         );
+        // A root static file must not replace the Lambda's reserved output key.
+        fs.writeFileSync(path.join(outputStaticDir, 'index'), 'static index');
         return {
           staticSourceDirs: [path.join(_workPath, 'static')],
           staticRoot: null,
@@ -1762,6 +1764,7 @@ describe('Django entrypoint discovery', () => {
     );
     const lambda = v2result.output['index'];
     expect(lambda).toBeDefined(); // Lambda keyed by entrypoint sans extension
+    expect(lambda).toHaveProperty('handler');
     expect((lambda as any).files?.['static/app.css']).toBeDefined(); // Included in Lambda bundle
     expect(v2result.output['static/app.css']).toBeDefined(); // Static file from collectstatic
 

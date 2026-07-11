@@ -1364,9 +1364,12 @@ export const build: BuildVX = async ({
     resultVersion: 2,
     result: {
       output: {
+        ...staticFiles,
+        // Runtime outputs must win key collisions with collected static files.
+        // A frontend file named `index`, for example, stays reachable through
+        // FastAPI instead of replacing the catch-all Lambda output.
         [lambdaPath]: output,
         ...subscriberLambdas,
-        ...staticFiles,
       },
       ...(routes ? { routes } : {}),
       crons,
