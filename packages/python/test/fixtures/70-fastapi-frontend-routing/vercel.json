@@ -1,8 +1,0 @@
-{
-  "build": {
-    "env": {
-      "VERCEL_CLI_VERSION": "vercel@https://vercel-mwoj722mv.vercel.sh/tarballs/vercel.tgz",
-      "VERCEL_RUNTIME_PYTHON": "vercel-runtime @ https://vercel-mwoj722mv.vercel.sh/tarballs/vercel_runtime-0.17.0.dev1783542030+490bbba-py3-none-any.whl"
-    }
-  }
-}

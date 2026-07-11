@@ -1,1 +1,0 @@
-{"probes":[{"path":"/static/index.html","status":200,"mustContain":"Hello World"}]}
