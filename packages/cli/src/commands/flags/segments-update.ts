@@ -3,7 +3,6 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import {
   buildCommandWithGlobalFlags,
@@ -36,6 +35,7 @@ import type {
   SegmentOperation,
   UpdateSegmentRequest,
 } from '../../util/flags/types';
+import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
 export default async function segmentsUpdate(
   client: Client,
@@ -67,8 +67,10 @@ export default async function segmentsUpdate(
   const addInputs = (flags['--add'] as string[] | undefined) ?? [];
   const removeInputs = (flags['--remove'] as string[] | undefined) ?? [];
   const json = flags['--json'] as boolean | undefined;
+  const projectName = getProjectNameFromFlags(flags);
 
   telemetryClient.trackCliArgumentSegment(segmentArg);
+  telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliOptionLabel(label);
   telemetryClient.trackCliOptionDescription(description);
   telemetryClient.trackCliOptionHint(hint);
@@ -77,7 +79,7 @@ export default async function segmentsUpdate(
   telemetryClient.trackCliOptionRemove(removeInputs);
   telemetryClient.trackCliFlagJson(json);
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
@@ -100,7 +102,7 @@ export default async function segmentsUpdate(
       return 1;
     }
     output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
+      `Your codebase isn't linked to a project on Vercel. Pass --project <name>, or run ${getCommandName('link')} to link it.`
     );
     return 1;
   }

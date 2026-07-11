@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.32.3
+
+### Patch Changes
+
+- 7b30856: Add `vercel dev` support for Python queue subscribers defined in `pyproject.toml`.
+
 ## 13.32.2
 
 ### Patch Changes

@@ -128,14 +128,21 @@ async function untracedInstallBuilders(
 export async function installBuilders(
   buildersDir: string,
   buildersToAdd: Set<string>,
-  span?: Span
+  span?: Span,
+  installReasons?: Map<string, string>
 ): Promise<Map<string, string>> {
   if (!span) {
     return untracedInstallBuilders(buildersDir, buildersToAdd);
   }
-  const installSpan = span.child('vc.installBuilders', {
+  const attributes: Record<string, string> = {
     packages: Array.from(buildersToAdd).join(','),
-  });
+  };
+  if (installReasons && installReasons.size > 0) {
+    attributes.reasons = Array.from(installReasons)
+      .map(([spec, reason]) => `${spec}=${reason}`)
+      .join(',');
+  }
+  const installSpan = span.child('vc.installBuilders', attributes);
   return installSpan.trace(async s => {
     try {
       return await untracedInstallBuilders(buildersDir, buildersToAdd);

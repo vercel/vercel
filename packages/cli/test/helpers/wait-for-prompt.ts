@@ -10,6 +10,58 @@ function getPromptErrorDetails(
   return `Waiting for:\n  "${assertion}"\nmost recent chunk was:\n  "${mostRecent}"`;
 }
 
+/**
+ * Answers the `Which team?` prompt if it appears and resolves once
+ * `nextPrompt` shows. Accounts with a single team auto-select it (the CLI
+ * prints an aligned `Team` row instead of prompting), so the team prompt
+ * must be treated as optional.
+ */
+export async function answerTeamPromptThenWait(
+  cp: CLIProcess,
+  nextPrompt: string | RegExp,
+  timeout?: number
+) {
+  let answeredTeam = false;
+  await waitForPrompt(
+    cp,
+    chunk => {
+      if (!answeredTeam && /Which team[^?]*\?/.test(chunk)) {
+        answeredTeam = true;
+        cp.stdin?.write('\n');
+        return false;
+      }
+      return typeof nextPrompt === 'string'
+        ? chunk.includes(nextPrompt)
+        : nextPrompt.test(chunk);
+    },
+    timeout
+  );
+}
+
+/**
+ * Tolerantly walks the link setup to project creation: answers `Which team?`
+ * if it appears, then handles either the unified `Which project?` picker
+ * (creation is the second choice) or the legacy `Project?` decision
+ * (creation is the default).
+ */
+export async function answerTeamPromptThenCreateProject(cp: CLIProcess) {
+  let answeredTeam = false;
+  let usesTeamFirstPicker = false;
+  await waitForPrompt(cp, chunk => {
+    if (!answeredTeam && /Which team[^?]*\?/.test(chunk)) {
+      answeredTeam = true;
+      cp.stdin?.write('\n');
+      return false;
+    }
+    usesTeamFirstPicker = chunk.includes('Which project?');
+    return usesTeamFirstPicker || chunk.includes('Project?');
+  });
+  if (usesTeamFirstPicker) {
+    cp.stdin?.write('\x1b[B');
+  }
+  cp.stdin?.write('\n');
+}
+
 export default async function waitForPrompt(
   cp: CLIProcess,
   rawAssertion: string | RegExp | ((chunk: string) => boolean),

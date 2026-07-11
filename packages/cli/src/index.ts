@@ -1114,10 +1114,6 @@ const main = async () => {
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).microfrontends;
           break;
-        case 'oauth-apps':
-          telemetry.trackCliCommandOauthApps(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).oauthApps;
-          break;
         case 'open':
           telemetry.trackCliCommandOpen(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).open;
@@ -1391,7 +1387,10 @@ async function promptAndUpgrade(
 
 main()
   .then(async exitCode => {
-    if (cachedLatest) {
+    // Skip the update notification after `vc upgrade`: the process still has
+    // the pre-upgrade version in memory, so it would prompt the user to
+    // upgrade again right after the upgrade completed.
+    if (cachedLatest && resolvedCommandForUpdate !== 'upgrade') {
       const originalExitCode = typeof exitCode === 'number' ? exitCode : 0;
 
       // Await the fresh registry lookup to verify the exact version before

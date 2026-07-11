@@ -1,5 +1,27 @@
 # @vercel/fs-detectors
 
+## 6.12.1
+
+### Patch Changes
+
+- Updated dependencies [7bc4db0]
+- Updated dependencies [7b30856]
+  - @vercel/frameworks@3.30.6
+  - @vercel/build-utils@13.32.3
+
+## 6.12.0
+
+### Minor Changes
+
+- 3992812: Fix service framework detection when entrypoint is in a subdir of service root.
+
+## 6.11.6
+
+### Patch Changes
+
+- Updated dependencies [85c897e]
+  - @vercel/frameworks@3.30.5
+
 ## 6.11.5
 
 ### Patch Changes

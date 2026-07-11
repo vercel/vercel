@@ -37,7 +37,6 @@ import {
   type Service,
   isExperimentalService,
   isExperimentalServiceV2,
-  isExternalSymlink,
   isSymbolicLink,
 } from '@vercel/build-utils';
 import { getInternalServiceFunctionPath } from '@vercel/fs-detectors';
@@ -210,6 +209,40 @@ function stripDuplicateSlashes(path: string): string {
   return normalize(path).replace(/(^\/|\/$)/g, '');
 }
 
+async function resolveFunctionConfiguration(
+  src: string,
+  vercelConfig: VercelConfig | null,
+  service?: Service
+): Promise<FunctionConfiguration> {
+  if (service && isExperimentalServiceV2(service) && service.functions) {
+    // `functions` keys are service-root-relative but `build.src` is
+    // project-relative; strip the root so patterns match.
+    let sourceFile = src;
+    const serviceRoot = stripDuplicateSlashes(service.root);
+    if (serviceRoot && serviceRoot !== '.') {
+      const prefix = `${serviceRoot}/`;
+      if (sourceFile.startsWith(prefix)) {
+        sourceFile = sourceFile.slice(prefix.length);
+      }
+    }
+    return getLambdaOptionsFromFunction({
+      sourceFile,
+      config: {
+        ...vercelConfig,
+        functions: service.functions,
+        serviceName: service.name,
+      },
+    });
+  }
+  if (vercelConfig) {
+    return getLambdaOptionsFromFunction({
+      sourceFile: src,
+      config: vercelConfig,
+    });
+  }
+  return {};
+}
+
 function getServiceOutputDir(outputDir: string, service: Service): string {
   return join(outputDir, 'services', service.name);
 }
@@ -274,6 +307,9 @@ async function writeBuildResultV2(args: {
 
   const existingFunctions = new Map<Lambda | EdgeFunction, string>();
   const overrides: Record<string, PathOverride> = {};
+  const functionConfiguration = build.src
+    ? await resolveFunctionConfiguration(build.src, vercelConfig, service)
+    : {};
 
   for (const [path, output] of Object.entries(buildResult.output)) {
     const normalizedPath = stripDuplicateSlashes(path);
@@ -283,7 +319,12 @@ async function writeBuildResultV2(args: {
         service && isExperimentalService(service) ? service : undefined,
         stripServiceRoutePrefix
       );
-      await writeContainerImage(outputDir, output, normalizedPath);
+      await writeContainerImage(
+        outputDir,
+        output,
+        normalizedPath,
+        functionConfiguration
+      );
     } else if (isLambda(output)) {
       injectServiceEnvVars(
         output,
@@ -483,34 +524,11 @@ async function writeBuildResultV3(args: {
     throw new Error(`Expected "build.src" to be a string`);
   }
 
-  let functionConfiguration: Awaited<
-    ReturnType<typeof getLambdaOptionsFromFunction>
-  > = {};
-  if (service && isExperimentalServiceV2(service) && service.functions) {
-    // `functions` keys are service-root-relative but `build.src` is
-    // project-relative; strip the root so patterns match.
-    let sourceFile = src;
-    const serviceRoot = stripDuplicateSlashes(service.root);
-    if (serviceRoot && serviceRoot !== '.') {
-      const prefix = `${serviceRoot}/`;
-      if (sourceFile.startsWith(prefix)) {
-        sourceFile = sourceFile.slice(prefix.length);
-      }
-    }
-    functionConfiguration = await getLambdaOptionsFromFunction({
-      sourceFile,
-      config: {
-        ...vercelConfig,
-        functions: service.functions,
-        serviceName: service.name,
-      },
-    });
-  } else if (vercelConfig) {
-    functionConfiguration = await getLambdaOptionsFromFunction({
-      sourceFile: src,
-      config: vercelConfig,
-    });
-  }
+  const functionConfiguration = await resolveFunctionConfiguration(
+    src,
+    vercelConfig,
+    service
+  );
 
   const ext = extname(src);
   // V2 services are already isolated under `services/<name>`, so scalar
@@ -532,7 +550,7 @@ async function writeBuildResultV3(args: {
       service && isExperimentalService(service) ? service : undefined,
       stripServiceRoutePrefix
     );
-    await writeContainerImage(outputDir, output, path);
+    await writeContainerImage(outputDir, output, path, functionConfiguration);
   } else if (isLambda(output)) {
     injectServiceEnvVars(
       output,
@@ -669,7 +687,8 @@ async function writeFunctionSymlink(
 async function writeContainerImage(
   outputDir: string,
   containerImage: ContainerImage,
-  path: string
+  path: string,
+  functionConfiguration?: FunctionConfiguration
 ) {
   const dest = join(outputDir, 'functions', `${path}.func`);
   // For `runtime: 'container'` the OCI image reference is carried in `handler`;
@@ -681,6 +700,24 @@ async function writeContainerImage(
     );
   }
 
+  const architecture =
+    functionConfiguration?.architecture ?? (containerImage as any).architecture;
+  const memory =
+    functionConfiguration?.memory ?? (containerImage as any).memory;
+  const maxDuration =
+    functionConfiguration?.maxDuration ?? (containerImage as any).maxDuration;
+  const regions =
+    functionConfiguration?.regions ?? (containerImage as any).regions;
+  const functionFailoverRegions =
+    functionConfiguration?.functionFailoverRegions ??
+    (containerImage as any).functionFailoverRegions;
+  const experimentalTriggers =
+    functionConfiguration?.experimentalTriggers ??
+    (containerImage as any).experimentalTriggers;
+  const supportsCancellation =
+    functionConfiguration?.supportsCancellation ??
+    (containerImage as any).supportsCancellation;
+
   await fs.mkdirp(dest);
   await fs.writeJSON(
     join(dest, '.vc-config.json'),
@@ -691,6 +728,15 @@ async function writeContainerImage(
       ...((containerImage as any).command
         ? { command: (containerImage as any).command }
         : {}),
+      ...(architecture !== undefined ? { architecture } : {}),
+      ...(memory !== undefined ? { memory } : {}),
+      ...(maxDuration !== undefined ? { maxDuration } : {}),
+      ...(regions !== undefined ? { regions } : {}),
+      ...(functionFailoverRegions !== undefined
+        ? { functionFailoverRegions }
+        : {}),
+      ...(experimentalTriggers !== undefined ? { experimentalTriggers } : {}),
+      ...(supportsCancellation !== undefined ? { supportsCancellation } : {}),
     },
     { spaces: 2 }
   );
@@ -722,17 +768,12 @@ async function writeEdgeFunction(
 
   await fs.mkdirp(dest);
   const ops: Promise<any>[] = [];
-  const sharedDest = join(outputDir, 'shared');
-  const { files, filePathMap, shared } = filesWithoutFsRefs(
+  const { files, filePathMap } = filesWithoutFsRefs(
     edgeFunction.files,
     repoRootPath,
-    sharedDest,
     standalone
   );
   ops.push(download(files, dest));
-  if (shared) {
-    ops.push(download(shared, sharedDest));
-  }
 
   const config = {
     runtime: 'edge',
@@ -784,19 +825,10 @@ async function writeLambda(
   const ops: Promise<any>[] = [];
   let filePathMap: Record<string, string> | undefined;
   if (lambda.files) {
-    const sharedDest = join(outputDir, 'shared');
     // `files` is defined
-    const f = filesWithoutFsRefs(
-      lambda.files,
-      repoRootPath,
-      sharedDest,
-      standalone
-    );
+    const f = filesWithoutFsRefs(lambda.files, repoRootPath, standalone);
     filePathMap = f.filePathMap;
     ops.push(download(f.files, dest));
-    if (f.shared) {
-      ops.push(download(f.shared, sharedDest));
-    }
   } else if (lambda.zipBuffer) {
     // Builders that use the deprecated `createLambda()` might only have `zipBuffer`
     ops.push(unzip(lambda.zipBuffer, dest));
@@ -1012,66 +1044,34 @@ export async function* findDirs(
 }
 
 /**
- * Re-anchors a Lambda file key that escapes the function root back inside it.
- *
- * When `vc build` runs from a monorepo subdirectory without a Root Directory
- * setting, the repo root is detected as the app directory while dependencies
- * are hoisted to the actual monorepo root above it. Builders then emit Lambda
- * file keys that climb out of the function root, e.g.
- * `../../node_modules/.pnpm/next@.../next/dist/.../server.runtime.prod.js`.
- *
- * Such keys cannot be used as zip entry names (`yazl` rejects any path
- * containing a `..` segment with "invalid relative path"), and they would not
- * resolve at runtime since nothing exists above a deployed function's root.
- * Stripping the leading `..` segments anchors the file inside the function
- * (e.g. `node_modules/.pnpm/.../server.runtime.prod.js`), matching the layout
- * a root-level build produces. Relative paths between these files (such as the
- * symlinks inside the pnpm store) are unaffected because every escaping key
- * shares the same leading prefix and is re-anchored consistently.
- */
-function stripParentSegments(path: string): string {
-  const normalized = normalizePath(path);
-  const segments = normalized.split('/');
-  let i = 0;
-  while (i < segments.length && segments[i] === '..') {
-    i++;
-  }
-  return segments.slice(i).join('/');
-}
-
-/**
  * Removes the `FileFsRef` instances from the `Files` object
  * and returns them in a JSON serializable map of repo root
  * relative paths to Lambda destination paths.
+ *
+ * In standalone mode the build is anchored at the repo root, so traced keys
+ * already sit inside the function; files (and package-manager symlinks) are
+ * written directly instead of being recorded in `filePathMap`.
  */
 export function filesWithoutFsRefs(
   files: Files,
   repoRootPath: string,
-  sharedDest?: string,
   standalone?: boolean
-): { files: Files; filePathMap?: Record<string, string>; shared?: Files } {
-  // When the build is anchored at the true repo root, traced keys already sit
-  // inside the function, so write files (and package-manager symlinks) directly
-  // instead of skipping symlinks / re-anchoring via `filePathMap`.
-  const repoRootResolved = process.env.VERCEL_RESOLVE_ROOT_DIRECTORY === '1';
+): { files: Files; filePathMap?: Record<string, string> } {
   // Directory symlinks whose descendants must not be materialized separately:
   // `download()` would write the descendants concurrently and could create a
   // real directory at the symlink's path before the symlink itself is written
   // (EEXIST -> readlink on a dir -> EINVAL). Only the symlink is kept; its
   // target still points at the real files elsewhere in the function.
-  const symlinkDirs =
-    repoRootResolved && standalone && sharedDest
-      ? Object.entries(files)
-          .filter(([, f]) => f.type === 'FileFsRef' && isSymbolicLink(f.mode))
-          .map(([p]) => `${normalizePath(p)}/`)
-      : [];
+  const symlinkDirs = standalone
+    ? Object.entries(files)
+        .filter(([, f]) => f.type === 'FileFsRef' && isSymbolicLink(f.mode))
+        .map(([p]) => `${normalizePath(p)}/`)
+    : [];
   let filePathMap: Record<string, string> | undefined;
   const out: Files = {};
-  const shared: Files = {};
   for (const [path, file] of Object.entries(files)) {
     if (file.type === 'FileFsRef') {
-      if (!filePathMap) filePathMap = {};
-      if (standalone && sharedDest && repoRootResolved) {
+      if (standalone) {
         // Keep symlinks so bare imports resolve at runtime, but drop any entry
         // nested under a symlink (the symlink's target holds the real files).
         const normalized = normalizePath(path);
@@ -1079,18 +1079,8 @@ export function filesWithoutFsRefs(
           continue;
         }
         out[normalized] = file;
-      } else if (standalone && sharedDest) {
-        // Skip symlinks pointing outside the app (rejected on deploy) and
-        // re-anchor escaping keys into the function via `filePathMap`/`shared`.
-        if (isExternalSymlink(file)) {
-          continue;
-        }
-        const funcPath = stripParentSegments(path);
-        shared[funcPath] = file;
-        filePathMap[funcPath] = normalizePath(
-          relative(repoRootPath, join(sharedDest, funcPath))
-        );
       } else {
+        if (!filePathMap) filePathMap = {};
         filePathMap[normalizePath(path)] = normalizePath(
           relative(repoRootPath, file.fsPath)
         );
@@ -1099,5 +1089,5 @@ export function filesWithoutFsRefs(
       out[path] = file;
     }
   }
-  return { files: out, filePathMap, shared };
+  return { files: out, filePathMap };
 }

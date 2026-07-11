@@ -25,8 +25,10 @@ import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name'
 import { formatProject } from '../../util/projects/format-project';
 import { formatEnvironment } from '../../util/target/format-environment';
 import { ListTelemetryClient } from '../../util/telemetry/commands/list';
+import { exitWithNonInteractiveError } from '../../util/agent-output';
 import { validateLsArgs } from '../../util/validate-ls-args';
 import { validateJsonOutput } from '../../util/output-format';
+import { getPaginationOpts } from '../../util/get-pagination-opts';
 import type {
   Deployment,
   PaginationOptions,
@@ -95,6 +97,7 @@ export default async function list(client: Client) {
   telemetry.trackCliOptionEnvironment(parsedArgs.flags['--environment']);
   telemetry.trackCliOptionMeta(parsedArgs.flags['--meta']);
   telemetry.trackCliOptionNext(parsedArgs.flags['--next']);
+  telemetry.trackCliOptionLimit(parsedArgs.flags['--limit']);
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
   telemetry.trackCliOptionPolicy(parsedArgs.flags['--policy']);
   telemetry.trackCliOptionStatus(parsedArgs.flags['--status']);
@@ -198,6 +201,10 @@ export default async function list(client: Client) {
     }
     const p = await getProjectByNameOrId(client, app);
     if (p instanceof ProjectNotFound) {
+      exitWithNonInteractiveError(client, p, 1, {
+        variant: 'list',
+        projectName: app,
+      });
       error(`The provided argument "${app}" is not a valid project name`);
       return 1;
     }
@@ -234,12 +241,15 @@ export default async function list(client: Client) {
     }
   }
 
-  const nextTimestamp = parsedArgs.flags['--next'];
-
-  if (Number.isNaN(nextTimestamp)) {
-    error('Please provide a number for flag `--next`');
+  let nextTimestamp;
+  let limitFlag;
+  try {
+    [nextTimestamp, limitFlag] = getPaginationOpts(parsedArgs.flags);
+  } catch (err: unknown) {
+    printError(err);
     return 1;
   }
+  const limit = limitFlag ?? 20;
 
   const projectSlugLink = project
     ? formatProject(contextName, project.name)
@@ -253,7 +263,7 @@ export default async function list(client: Client) {
 
     debug('Fetching deployments');
 
-    const query = new URLSearchParams({ limit: '20' });
+    const query = new URLSearchParams({ limit: String(limit) });
     if (project) {
       query.set('projectId', project.id);
     }
@@ -280,10 +290,11 @@ export default async function list(client: Client) {
     }>(`/v6/deployments?${query}`)) {
       deployments.push(...chunk.deployments);
       pagination = chunk.pagination;
-      if (deployments.length >= 20) {
+      if (deployments.length >= limit) {
         break;
       }
     }
+    deployments.length = Math.min(deployments.length, limit);
 
     // we don't output the table headers if we have no deployments
     if (!deployments.length) {

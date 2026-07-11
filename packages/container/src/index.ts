@@ -1,4 +1,5 @@
 import type { BuildOptions, BuildResultV2, Span } from '@vercel/build-utils';
+import { getLambdaOptionsFromFunction } from '@vercel/build-utils';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import {
@@ -32,6 +33,14 @@ export const version = 2;
 
 export { startDevServer } from './dev';
 export { prepareCache } from './prepare-cache';
+
+function resolveFunctionSourceFile(options: BuildOptions): string {
+  const entrypoint = readString(options.entrypoint) ?? '';
+  if (entrypoint === '<detect>') {
+    return findDockerfile(options.workPath) ?? entrypoint;
+  }
+  return entrypoint;
+}
 
 function normalizeCommand(command: unknown): string[] | undefined {
   if (typeof command === 'string') {
@@ -371,6 +380,11 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
     span => resolveImageHandler(options, span)
   );
 
+  const lambdaOptions = await getLambdaOptionsFromFunction({
+    sourceFile: resolveFunctionSourceFile(options),
+    config: options.config,
+  });
+
   const command = normalizeCommand(options.config.command);
 
   // Do a normal build: the function lands at the natural `index` path and a
@@ -398,6 +412,7 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
         runtime: 'container',
         environment: {},
         ...(command ? { command } : {}),
+        ...lambdaOptions,
       } as any,
     },
   };

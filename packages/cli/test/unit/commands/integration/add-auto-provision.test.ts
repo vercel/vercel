@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import open from 'open';
+import execa from 'execa';
 import integrationCommand from '../../../../src/commands/integration';
 import install from '../../../../src/commands/install';
 import pull from '../../../../src/commands/env/pull';
@@ -35,14 +36,22 @@ vi.mock(
   }
 );
 
+vi.mock('execa', () => {
+  return {
+    default: vi.fn().mockResolvedValue({ exitCode: 0 }),
+  };
+});
+
 const openMock = vi.mocked(open);
 const pullMock = vi.mocked(pull);
 const connectMock = vi.mocked(connectResourceToProject);
+const execaMock = vi.mocked(execa);
 
 beforeEach(() => {
   openMock.mockReset().mockResolvedValue(undefined as never);
   pullMock.mockClear();
   connectMock.mockClear();
+  execaMock.mockReset().mockResolvedValue({ exitCode: 0 } as never);
   // Mock Math.random to get predictable resource names (gray-apple suffix)
   vi.spyOn(Math, 'random').mockReturnValue(0);
 });
@@ -2574,6 +2583,122 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(0);
       // No JSON on stdout
       expect(client.stdout.getFullOutput()).toBe('');
+    });
+  });
+
+  describe('agent skills', () => {
+    beforeEach(() => {
+      useAutoProvision({ responseKey: 'provisioned' });
+    });
+
+    it('auto-installs declared skills without prompting', async () => {
+      client.setArgv('integration', 'add', 'acme-skills');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      expect(execaMock).toHaveBeenCalledWith(
+        'npx',
+        [
+          '--yes',
+          'skills',
+          'add',
+          'https://github.com/shopify/shopify-ai-toolkit',
+          '--skill',
+          'shopify-dev',
+          '--yes',
+        ],
+        expect.objectContaining({ stdio: 'pipe', reject: false })
+      );
+      await expect(client.stderr).toOutput(
+        'Installed 1 agent skill for Acme Product'
+      );
+      await expect(client.stderr).toOutput(
+        'Learn more: https://vercel.com/marketplace/acme-skills'
+      );
+    });
+
+    it('auto-installs when non-interactive', async () => {
+      client.stdin.isTTY = false;
+      client.setArgv('integration', 'add', 'acme-skills');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      expect(execaMock).toHaveBeenCalledWith(
+        'npx',
+        [
+          '--yes',
+          'skills',
+          'add',
+          'https://github.com/shopify/shopify-ai-toolkit',
+          '--skill',
+          'shopify-dev',
+          '--yes',
+        ],
+        expect.objectContaining({ stdio: 'pipe', reject: false })
+      );
+      await expect(client.stderr).toOutput(
+        'Installed 1 agent skill for Acme Product'
+      );
+    });
+
+    it('falls back to the manual command when the install fails', async () => {
+      execaMock.mockResolvedValue({ exitCode: 1, stderr: 'boom' } as never);
+      client.setArgv('integration', 'add', 'acme-skills');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      await expect(client.stderr).toOutput(
+        'Failed to install shopify-dev. Run it manually: npx skills add https://github.com/shopify/shopify-ai-toolkit --skill shopify-dev'
+      );
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Installed 1 agent skill'
+      );
+    });
+
+    it('installs skills in --format=json and reports their status', async () => {
+      client.setArgv('integration', 'add', 'acme-skills', '--format=json');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      expect(execaMock).toHaveBeenCalledWith(
+        'npx',
+        [
+          '--yes',
+          'skills',
+          'add',
+          'https://github.com/shopify/shopify-ai-toolkit',
+          '--skill',
+          'shopify-dev',
+          '--yes',
+        ],
+        expect.objectContaining({ stdio: 'pipe', reject: false })
+      );
+      const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+      expect(jsonOutput.skills).toEqual([
+        {
+          repoUrl: 'https://github.com/shopify/shopify-ai-toolkit',
+          skill: 'shopify-dev',
+          command:
+            'npx skills add https://github.com/shopify/shopify-ai-toolkit --skill shopify-dev',
+          installed: true,
+        },
+      ]);
+      expect(jsonOutput.warnings).toEqual([]);
+    });
+
+    it('reports failed installs in --format=json warnings', async () => {
+      execaMock.mockResolvedValue({ exitCode: 1, stderr: 'boom' } as never);
+      client.setArgv('integration', 'add', 'acme-skills', '--format=json');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+      expect(jsonOutput.skills).toEqual([
+        expect.objectContaining({ skill: 'shopify-dev', installed: false }),
+      ]);
+      expect(jsonOutput.warnings).toEqual([
+        'Failed to install shopify-dev. Run it manually: npx skills add https://github.com/shopify/shopify-ai-toolkit --skill shopify-dev',
+      ]);
     });
   });
 
