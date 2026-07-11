@@ -9,7 +9,10 @@ import getUser from '../../util/get-user';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { email as regexEmail } from '../../util/input/regexes';
 import getTeams from '../../util/teams/get-teams';
-import inviteUserToTeam from '../../util/teams/invite-user-to-team';
+import inviteUserToTeam, {
+  isTeamRole,
+  TEAM_ROLES,
+} from '../../util/teams/invite-user-to-team';
 import { isAPIError } from '../../util/errors-ts';
 import { errorToString, isError } from '@vercel/error-utils';
 import { TeamsInviteTelemetryClient } from '../../util/telemetry/commands/teams/invite';
@@ -26,6 +29,7 @@ import {
   getGlobalFlagsOnlyFromArgs,
   getSameSubcommandSuggestionFlags,
 } from '../../util/arg-common';
+import { AGENT_REASON } from '../../util/agent-output-constants';
 
 /** Append global argv flags (--cwd, --non-interactive, etc.) so agents can re-run with same context. */
 function withGlobalFlags(client: Client, commandTemplate: string): string {
@@ -86,6 +90,34 @@ export default async function invite(
     return 1;
   }
   const { args: emails } = parsedArgs;
+  const role = parsedArgs.flags['--role']?.trim().toUpperCase();
+
+  if (role !== undefined && !isTeamRole(role)) {
+    const roles = TEAM_ROLES.join(', ');
+    if (client.nonInteractive) {
+      const retryCmd = withGlobalFlags(
+        client,
+        'teams invite <email> --role <ROLE>'
+      );
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: AGENT_REASON.INVALID_ROLE,
+          message: `--role must be one of ${roles}`,
+          next: [
+            {
+              command: retryCmd,
+              when: 'to retry with a valid role',
+            },
+          ],
+        },
+        1
+      );
+    }
+    output.error(`${param('--role')} must be one of ${roles}`);
+    return 1;
+  }
 
   if (client.nonInteractive && emails.length === 0) {
     const fullArgs = client.argv.slice(2);
@@ -158,6 +190,7 @@ export default async function invite(
   );
 
   telemetry.trackCliArgumentEmail(emails);
+  telemetry.trackCliOptionRole(role);
 
   if (emails.length > 0) {
     for (const email of emails) {
@@ -167,7 +200,12 @@ export default async function invite(
         let userInfo = null;
 
         try {
-          const res = await inviteUserToTeam(client, currentTeam.id, email);
+          const res = await inviteUserToTeam(
+            client,
+            currentTeam.id,
+            email,
+            role
+          );
           userInfo = res.username;
         } catch (err: unknown) {
           if (isAPIError(err) && err.code === 'user_not_found') {
@@ -238,7 +276,8 @@ export default async function invite(
         const { username } = await inviteUserToTeam(
           client,
           currentTeam.id,
-          email
+          email,
+          role
         );
         email = `${email}${username ? ` (${username})` : ''} ${elapsed()}`;
         emails.push(email);

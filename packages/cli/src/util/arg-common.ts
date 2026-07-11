@@ -129,6 +129,7 @@ const SUBCOMMAND_FLAG_TAKES_VALUE = new Set([
   '--project',
   '--page',
   '--per-page',
+  '--role',
 ]);
 
 function suggestionFlagTakesSeparateValue(flagName: string): boolean {

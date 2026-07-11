@@ -59,12 +59,79 @@ describe('teams invite', () => {
     it('succeeds when emails are provided', async () => {
       client.nonInteractive = true;
       client.config = { currentTeam: currentTeamId };
-      client.scenario.post(`/teams/${currentTeamId}/members`, (_req, res) => {
+      client.scenario.post(`/teams/${currentTeamId}/members`, (req, res) => {
+        expect(req.body).toEqual({ email: 'me@example.com' });
         return res.json({ username: 'person1' });
       });
       client.setArgv('teams', 'invite', 'me@example.com');
       const exitCode = await teams(client);
       expect(exitCode).toBe(0);
+    });
+
+    it('passes a normalized role in the request and tracks it', async () => {
+      client.nonInteractive = true;
+      client.config = { currentTeam: currentTeamId };
+      client.scenario.post(`/teams/${currentTeamId}/members`, (req, res) => {
+        expect(req.body).toEqual({
+          email: 'me@example.com',
+          role: 'DEVELOPER',
+        });
+        return res.json({ username: 'person1' });
+      });
+      client.setArgv(
+        'teams',
+        'invite',
+        'me@example.com',
+        '--role',
+        'developer'
+      );
+
+      await expect(teams(client)).resolves.toBe(0);
+      await expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:invite',
+          value: 'invite',
+        },
+        {
+          key: 'argument:email',
+          value: 'ONE',
+        },
+        {
+          key: 'option:role',
+          value: 'DEVELOPER',
+        },
+      ]);
+    });
+
+    it('rejects an invalid role before inviting', async () => {
+      client.nonInteractive = true;
+      client.config = { currentTeam: currentTeamId };
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv('teams', 'invite', 'me@example.com', '--role', 'invalid');
+      await expect(teams(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('invalid_role');
+      expect(payload.message).toContain('--role must be one of');
+      expect(payload.next).toEqual([
+        {
+          command: expect.stringContaining(
+            'teams invite <email> --role <ROLE>'
+          ),
+          when: 'to retry with a valid role',
+        },
+      ]);
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
     });
 
     it('outputs team_scope_required with global flags in next when no team scope', async () => {
@@ -121,7 +188,13 @@ describe('teams invite', () => {
         throw new Error('exit');
       }) as () => never);
 
-      client.setArgv('teams', 'invite', 'nobody@example.com');
+      client.setArgv(
+        'teams',
+        'invite',
+        'nobody@example.com',
+        '--role',
+        'DEVELOPER'
+      );
       await expect(teams(client)).rejects.toThrow('exit');
 
       const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
@@ -129,6 +202,7 @@ describe('teams invite', () => {
       expect(payload.reason).toBe('user_not_found');
       expect(payload.message).toContain('nobody@example.com');
       expect(payload.next[0].command).toContain('teams invite');
+      expect(payload.next[0].command).toContain('--role DEVELOPER');
 
       logSpy.mockRestore();
       exitSpy.mockRestore();

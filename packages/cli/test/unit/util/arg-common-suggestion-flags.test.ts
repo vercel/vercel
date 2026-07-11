@@ -6,11 +6,21 @@ import {
 
 describe('getSameSubcommandSuggestionFlags', () => {
   it('preserves subcommand value flags and globals for same-command suggestions', () => {
-    const afterAdd = ['--slug', 'acme', '--cwd', '/tmp', '--non-interactive'];
+    const afterAdd = [
+      '--slug',
+      'acme',
+      '--role',
+      'DEVELOPER',
+      '--cwd',
+      '/tmp',
+      '--non-interactive',
+    ];
     const out = getSameSubcommandSuggestionFlags(afterAdd);
     expect(out).toEqual([
       '--slug',
       'acme',
+      '--role',
+      'DEVELOPER',
       '--cwd',
       '/tmp',
       '--non-interactive',
