@@ -51,11 +51,7 @@ export default async function list(client: Client): Promise<number> {
     '--since': since,
     '--until': until,
     '--search': search,
-    '--issue': issue,
-    '--issue-code': issueCode,
-    '--issue-type': issueType,
-    '--issue-source': issueSource,
-    '--issue-tool': issueTool,
+    '--errors': errors,
     '--trigger': trigger,
     '--page': page,
     '--limit': limit,
@@ -66,54 +62,6 @@ export default async function list(client: Client): Promise<number> {
   if (until && !since) {
     return invalidArguments(client, '`--until` requires `--since`.');
   }
-  if (issue && issue !== 'error') {
-    return invalidArguments(
-      client,
-      '`--issue` currently supports only `error`.'
-    );
-  }
-  if (
-    issueType &&
-    issueType !== 'action_failed' &&
-    issueType !== 'action_rejected' &&
-    issueType !== 'step_failed' &&
-    issueType !== 'turn_failed' &&
-    issueType !== 'session_failed'
-  ) {
-    return invalidArguments(
-      client,
-      '`--issue-type` supports `action_failed`, `action_rejected`, `step_failed`, `turn_failed`, or `session_failed`.'
-    );
-  }
-  const validatedIssueType =
-    issueType === 'action_failed' ||
-    issueType === 'action_rejected' ||
-    issueType === 'step_failed' ||
-    issueType === 'turn_failed' ||
-    issueType === 'session_failed'
-      ? issueType
-      : undefined;
-  if (
-    issueSource &&
-    issueSource !== 'remote_subagent' &&
-    issueSource !== 'skill' &&
-    issueSource !== 'subagent' &&
-    issueSource !== 'tool' &&
-    issueSource !== 'workflow'
-  ) {
-    return invalidArguments(
-      client,
-      '`--issue-source` supports `remote_subagent`, `skill`, `subagent`, `tool`, or `workflow`.'
-    );
-  }
-  const validatedIssueSource =
-    issueSource === 'remote_subagent' ||
-    issueSource === 'skill' ||
-    issueSource === 'subagent' ||
-    issueSource === 'tool' ||
-    issueSource === 'workflow'
-      ? issueSource
-      : undefined;
   if (
     trigger &&
     trigger !== 'slack' &&
@@ -141,11 +89,7 @@ export default async function list(client: Client): Promise<number> {
   telemetry.trackCliOptionSince(since);
   telemetry.trackCliOptionUntil(until);
   telemetry.trackCliOptionSearch(search);
-  telemetry.trackCliOptionIssue(issue === 'error' ? issue : undefined);
-  telemetry.trackCliOptionIssueCode(issueCode);
-  telemetry.trackCliOptionIssueType(validatedIssueType);
-  telemetry.trackCliOptionIssueSource(validatedIssueSource);
-  telemetry.trackCliOptionIssueTool(issueTool);
+  telemetry.trackCliFlagErrors(errors);
   telemetry.trackCliOptionTrigger(validatedTrigger);
   telemetry.trackCliOptionPage(page);
   telemetry.trackCliOptionLimit(limit);
@@ -173,14 +117,7 @@ export default async function list(client: Client): Promise<number> {
       page,
       pageSize: limit,
       search,
-      issue:
-        issue === 'error' || issueCode || issueType || issueSource || issueTool
-          ? 'error'
-          : undefined,
-      issueCode,
-      issueType: validatedIssueType,
-      issueSource: validatedIssueSource,
-      issueTool,
+      executionError: Boolean(errors),
       trigger: validatedTrigger,
     });
   } catch (err) {
@@ -197,16 +134,7 @@ export default async function list(client: Client): Promise<number> {
 
   const runList = asArray(data.runs);
   if (runList.length === 0) {
-    if (
-      search ||
-      since ||
-      trigger ||
-      issue === 'error' ||
-      issueCode ||
-      issueType ||
-      issueSource ||
-      issueTool
-    ) {
+    if (search || since || trigger || errors) {
       output.log('No Agent Runs match the current filters.');
     } else {
       output.log('No Agent Runs found.');
@@ -248,22 +176,18 @@ export default async function list(client: Client): Promise<number> {
         nextPageArgs.push(`${name} ${shellQuoteArg(value)}`);
       }
     };
+    const pushBooleanFlag = (name: string, value: boolean | undefined) => {
+      if (value) {
+        nextPageArgs.push(name);
+      }
+    };
     pushFlag('--scope', scopeFlag);
     pushFlag('--project', projectFlag);
     pushFlag('--environment', environment);
     pushFlag('--since', since);
     pushFlag('--until', until);
     pushFlag('--search', search);
-    pushFlag(
-      '--issue',
-      issue === 'error' || issueCode || issueType || issueSource || issueTool
-        ? 'error'
-        : undefined
-    );
-    pushFlag('--issue-code', issueCode);
-    pushFlag('--issue-type', validatedIssueType);
-    pushFlag('--issue-source', validatedIssueSource);
-    pushFlag('--issue-tool', issueTool);
+    pushBooleanFlag('--errors', errors);
     pushFlag('--trigger', validatedTrigger);
     pushFlag('--limit', limit);
     pushFlag('--page', currentPage + 1);

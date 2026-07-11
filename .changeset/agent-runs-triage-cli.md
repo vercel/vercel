@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Add Agent Runs triage filters, issue-group output, detail issue summaries, and fleet-health project columns to the CLI.
+Add Agent Runs execution-error filtering and project error-rate rollups to the CLI.

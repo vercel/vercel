@@ -43,55 +43,6 @@ function formatStartedAt(run: UnknownRecord): string {
   return `${formatAge(startedAt)} ${chalk.gray(formatTimestamp(startedAt))}`;
 }
 
-function formatIssueSummary(run: UnknownRecord): string | undefined {
-  const detailIssueSummary = readRecord(run, 'detailIssueSummary');
-  const issueSummary = readRecord(run, 'issueSummary');
-  const summary = detailIssueSummary ?? issueSummary;
-  const issueCount = readNumber(summary, 'issueCount');
-  if (!summary || !issueCount || issueCount <= 0) return undefined;
-
-  const parts: string[] = [formatCountNoun(issueCount, 'issue')];
-  const errorCount = readNumber(summary, 'errorCount');
-  const rejectedActionCount = readNumber(summary, 'rejectedActionCount');
-  const failedTurnCount = readNumber(summary, 'failedTurnCount');
-  if (errorCount && errorCount > 0) {
-    parts.push(formatCountNoun(errorCount, 'error'));
-  }
-  if (rejectedActionCount && rejectedActionCount > 0) {
-    parts.push(formatCountNoun(rejectedActionCount, 'rejection'));
-  }
-  if (failedTurnCount && failedTurnCount > 0) {
-    parts.push(formatCountNoun(failedTurnCount, 'failed turn'));
-  }
-
-  const latestIssue =
-    readRecord(detailIssueSummary, 'latestIssue') ?? detailIssueSummary;
-  const latestCode =
-    readString(latestIssue, 'code') ??
-    readString(issueSummary, 'lastIssueCode');
-  const latestTool =
-    readString(latestIssue, 'tool') ??
-    readString(issueSummary, 'lastIssueTool');
-  const latestAt =
-    readTimestampMs(latestIssue, 'occurredAt') ??
-    readTimestampMs(issueSummary, 'lastIssueAt');
-  const latestParts = [
-    latestCode ? `code ${latestCode}` : undefined,
-    latestTool ? `tool ${latestTool}` : undefined,
-    latestAt !== undefined ? formatTimestamp(latestAt) : undefined,
-  ].filter(Boolean);
-
-  if (latestParts.length > 0) {
-    parts.push(`${chalk.gray('latest')} ${latestParts.join(' · ')}`);
-  }
-
-  return parts.join(' / ');
-}
-
-function formatCountNoun(count: number, noun: string): string {
-  return `${formatCount(count)} ${count === 1 ? noun : `${noun}s`}`;
-}
-
 function renderDetail(run: UnknownRecord): string {
   const usage = readRecord(run, 'usage');
   const rows: string[][] = [
@@ -107,10 +58,6 @@ function renderDetail(run: UnknownRecord): string {
     [chalk.bold('Started'), formatStartedAt(run)],
     [chalk.bold('Duration'), formatDurationMs(runDurationMs(run))]
   );
-  const issueSummary = formatIssueSummary(run);
-  if (issueSummary) {
-    rows.push([chalk.bold('Issues'), issueSummary]);
-  }
   const input = readNumber(usage, 'inputTokens', 'promptTokens', 'input');
   const outputTokens = readNumber(
     usage,

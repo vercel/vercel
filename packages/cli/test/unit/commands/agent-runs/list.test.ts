@@ -85,7 +85,7 @@ describe('agent-runs list', () => {
     );
   });
 
-  it('forwards search, issue, trigger, pagination, environment, and time range params', async () => {
+  it('forwards search, errors, trigger, pagination, environment, and time range params', async () => {
     useLinkedProject();
     let receivedQuery: Record<string, string> | undefined;
     client.scenario.get('/api/observability/agent-runs', (req, res) => {
@@ -98,8 +98,7 @@ describe('agent-runs list', () => {
       'list',
       '--search',
       'checkout',
-      '--issue',
-      'error',
+      '--errors',
       '--trigger',
       'slack',
       '--page',
@@ -116,7 +115,7 @@ describe('agent-runs list', () => {
     expect(exitCode).toBe(0);
     expect(receivedQuery).toMatchObject({
       search: 'checkout',
-      issue: 'error',
+      executionError: '1',
       trigger: 'slack',
       page: '2',
       pageSize: '50',
@@ -129,58 +128,6 @@ describe('agent-runs list', () => {
     expect(client.stderr.getFullOutput()).toContain(
       'No Agent Runs match the current filters.'
     );
-  });
-
-  it('forwards issue fingerprint filters', async () => {
-    useLinkedProject();
-    let receivedQuery: Record<string, string> | undefined;
-    client.scenario.get('/api/observability/agent-runs', (req, res) => {
-      receivedQuery = req.query as Record<string, string>;
-      res.json({ runs: [] });
-    });
-
-    client.setArgv(
-      'agent-runs',
-      'list',
-      '--issue',
-      'error',
-      '--issue-code',
-      'ETIMEDOUT',
-      '--issue-type',
-      'action_failed',
-      '--issue-source',
-      'remote_subagent',
-      '--issue-tool',
-      'deployment-reviewer'
-    );
-    const exitCode = await agentRuns(client);
-
-    expect(exitCode).toBe(0);
-    expect(receivedQuery).toMatchObject({
-      issue: 'error',
-      issue_code: 'ETIMEDOUT',
-      issue_type: 'action_failed',
-      issue_source: 'remote_subagent',
-      issue_tool: 'deployment-reviewer',
-    });
-  });
-
-  it('treats issue fingerprint filters as error filters', async () => {
-    useLinkedProject();
-    let receivedQuery: Record<string, string> | undefined;
-    client.scenario.get('/api/observability/agent-runs', (req, res) => {
-      receivedQuery = req.query as Record<string, string>;
-      res.json({ runs: [] });
-    });
-
-    client.setArgv('agent-runs', 'list', '--issue-source', 'remote_subagent');
-    const exitCode = await agentRuns(client);
-
-    expect(exitCode).toBe(0);
-    expect(receivedQuery).toMatchObject({
-      issue: 'error',
-      issue_source: 'remote_subagent',
-    });
   });
 
   it('prints the raw response with --json', async () => {
@@ -211,8 +158,7 @@ describe('agent-runs list', () => {
       'list',
       '--search',
       'checkout flow',
-      '--issue-source',
-      'remote_subagent',
+      '--errors',
       '--trigger',
       'slack',
       '--limit',
@@ -226,8 +172,7 @@ describe('agent-runs list', () => {
     const stderr = client.stderr.getFullOutput();
     expect(stderr).toContain('Showing 1 of 3 Agent Runs');
     expect(stderr).toContain("--search 'checkout flow'");
-    expect(stderr).toContain('--issue error');
-    expect(stderr).toContain('--issue-source remote_subagent');
+    expect(stderr).toContain('--errors');
     expect(stderr).toContain('--trigger slack');
     expect(stderr).toContain('--limit 1');
     expect(stderr).toContain('--page 2');
@@ -312,39 +257,6 @@ describe('agent-runs list', () => {
     );
   });
 
-  it('errors when --issue is not supported', async () => {
-    useLinkedProject();
-    client.setArgv('agent-runs', 'list', '--issue', 'rejection');
-    const exitCode = await agentRuns(client);
-    expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain(
-      '`--issue` currently supports only `error`.'
-    );
-    expectNoTelemetryEvent('option:issue', 'rejection');
-  });
-
-  it('errors when --issue-type is not supported', async () => {
-    useLinkedProject();
-    client.setArgv('agent-runs', 'list', '--issue-type', 'cancelled');
-    const exitCode = await agentRuns(client);
-    expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain(
-      '`--issue-type` supports `action_failed`, `action_rejected`, `step_failed`, `turn_failed`, or `session_failed`.'
-    );
-    expectNoTelemetryEvent('option:issue-type', 'cancelled');
-  });
-
-  it('errors when --issue-source is not supported', async () => {
-    useLinkedProject();
-    client.setArgv('agent-runs', 'list', '--issue-source', 'browser');
-    const exitCode = await agentRuns(client);
-    expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain(
-      '`--issue-source` supports `remote_subagent`, `skill`, `subagent`, `tool`, or `workflow`.'
-    );
-    expectNoTelemetryEvent('option:issue-source', 'browser');
-  });
-
   it('errors when --trigger is not supported', async () => {
     useLinkedProject();
     client.setArgv('agent-runs', 'list', '--trigger', 'github');
@@ -411,18 +323,9 @@ describe('agent-runs list', () => {
       '--json',
       '--search',
       'checkout',
-      '--issue',
-      'error',
+      '--errors',
       '--trigger',
-      'manual',
-      '--issue-code',
-      'ETIMEDOUT',
-      '--issue-type',
-      'action_failed',
-      '--issue-source',
-      'tool',
-      '--issue-tool',
-      'linear.createIssue'
+      'manual'
     );
     const exitCode = await agentRuns(client);
 
@@ -430,11 +333,7 @@ describe('agent-runs list', () => {
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'subcommand:list', value: 'list' },
       { key: 'option:search', value: '[REDACTED]' },
-      { key: 'option:issue', value: 'error' },
-      { key: 'option:issue-code', value: '[REDACTED]' },
-      { key: 'option:issue-type', value: 'action_failed' },
-      { key: 'option:issue-source', value: 'tool' },
-      { key: 'option:issue-tool', value: '[REDACTED]' },
+      { key: 'flag:errors', value: 'TRUE' },
       { key: 'option:trigger', value: 'manual' },
       { key: 'flag:json', value: 'TRUE' },
     ]);

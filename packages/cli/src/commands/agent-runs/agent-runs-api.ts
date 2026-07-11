@@ -27,17 +27,7 @@ export interface AgentRunsQuery {
   page?: number;
   pageSize?: number;
   search?: string;
-  issue?: 'error';
-  issueCode?: string;
-  issueType?:
-    | 'action_failed'
-    | 'action_rejected'
-    | 'step_failed'
-    | 'turn_failed'
-    | 'session_failed';
-  issueSource?: 'remote_subagent' | 'skill' | 'subagent' | 'tool' | 'workflow';
-  issueTool?: string;
-  groupBy?: 'issue';
+  executionError?: boolean;
   trigger?: 'slack' | 'http' | 'schedule' | 'manual' | 'unknown';
   runId?: string;
   trace?: boolean;
@@ -70,23 +60,8 @@ export function buildAgentRunsUrl(query: AgentRunsQuery): string {
   if (query.search) {
     url.searchParams.set('search', query.search);
   }
-  if (query.issue) {
-    url.searchParams.set('issue', query.issue);
-  }
-  if (query.issueCode) {
-    url.searchParams.set('issue_code', query.issueCode);
-  }
-  if (query.issueType) {
-    url.searchParams.set('issue_type', query.issueType);
-  }
-  if (query.issueSource) {
-    url.searchParams.set('issue_source', query.issueSource);
-  }
-  if (query.issueTool) {
-    url.searchParams.set('issue_tool', query.issueTool);
-  }
-  if (query.groupBy) {
-    url.searchParams.set('groupBy', query.groupBy);
+  if (query.executionError) {
+    url.searchParams.set('executionError', '1');
   }
   if (query.trigger) {
     url.searchParams.set('trigger', query.trigger);

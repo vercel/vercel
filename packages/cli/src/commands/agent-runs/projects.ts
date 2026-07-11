@@ -18,11 +18,9 @@ import {
   asArray,
   formatCount,
   formatDurationMs,
-  formatAge,
   formatRate,
   readNumber,
   readString,
-  readTimestampMs,
 } from './format';
 import { AgentProjectsTelemetryClient } from '../../util/telemetry/commands/agent-runs/projects';
 
@@ -101,14 +99,9 @@ export default async function projects(client: Client): Promise<number> {
   );
 
   const rows = [
-    [
-      'Project',
-      'Runs',
-      'Errors',
-      'Error Rate',
-      'Last Issue',
-      'Avg Duration',
-    ].map(header => chalk.bold(chalk.cyan(header))),
+    ['Project', 'Runs', 'Errors', 'Error Rate', 'Avg Duration'].map(header =>
+      chalk.bold(chalk.cyan(header))
+    ),
     ...projectList.map(project => [
       chalk.bold(
         readString(
@@ -123,7 +116,6 @@ export default async function projects(client: Client): Promise<number> {
       formatCount(readNumber(project, 'runs', 'runCount', 'totalRuns')),
       formatCount(readNumber(project, 'errors')),
       formatRate(readNumber(project, 'errorRate')),
-      formatAge(readTimestampMs(project, 'lastIssueAt')),
       chalk.gray(
         formatDurationMs(
           readNumber(

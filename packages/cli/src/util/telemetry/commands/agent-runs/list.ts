@@ -15,12 +15,9 @@ export class AgentRunsListTelemetryClient
     }
   }
 
-  trackCliOptionIssue(value: string | undefined) {
+  trackCliFlagErrors(value: boolean | undefined) {
     if (value) {
-      this.trackCliOption({
-        option: 'issue',
-        value,
-      });
+      this.trackCliFlag('errors');
     }
   }
 

@@ -51,7 +51,6 @@ describe('agent-runs projects', () => {
             runs: 5,
             errors: 1,
             errorRate: 0.2,
-            lastIssueAt: new Date(Date.now() - 60_000).toISOString(),
             avgDurationMs: 1234,
           },
         ],
@@ -70,13 +69,13 @@ describe('agent-runs projects', () => {
     expect(receivedQuery).not.toHaveProperty('project');
     const stdout = stripAnsi(client.stdout.getFullOutput());
     expect(stdout).toMatch(
-      /Project\s+Runs\s+Errors\s+Error Rate\s+Last Issue\s+Avg Duration/
+      /Project\s+Runs\s+Errors\s+Error Rate\s+Avg Duration/
     );
     expect(stdout).toContain('my-app');
     expect(stdout).toContain('5');
     expect(stdout).toContain('1');
     expect(stdout).toContain('20%');
-    expect(stdout).toContain('1m ago');
+    expect(stdout).toContain('1.2s');
     expect(stdout).not.toContain('Running');
     expect(stdout).not.toContain('Waiting');
     expect(stdout).not.toContain('Stale');

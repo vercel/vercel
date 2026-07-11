@@ -46,43 +46,6 @@ const jsonOption = {
   description: 'Print the raw API response as JSON to stdout',
 } as const;
 
-const issueCodeOption = {
-  name: 'issue-code',
-  shorthand: null,
-  type: String,
-  argument: 'CODE',
-  deprecated: false,
-  description: 'Filter Agent Runs by issue code',
-} as const;
-
-const issueTypeOption = {
-  name: 'issue-type',
-  shorthand: null,
-  type: String,
-  argument:
-    'action_failed|action_rejected|step_failed|turn_failed|session_failed',
-  deprecated: false,
-  description: 'Filter Agent Runs by platform-derived issue type',
-} as const;
-
-const issueSourceOption = {
-  name: 'issue-source',
-  shorthand: null,
-  type: String,
-  argument: 'remote_subagent|skill|subagent|tool|workflow',
-  deprecated: false,
-  description: 'Filter Agent Runs by where the issue occurred',
-} as const;
-
-const issueToolOption = {
-  name: 'issue-tool',
-  shorthand: null,
-  type: String,
-  argument: 'TOOL',
-  deprecated: false,
-  description: 'Filter Agent Runs by issue tool name',
-} as const;
-
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
@@ -102,17 +65,12 @@ export const listSubcommand = {
       description: 'Search Agent Runs by title',
     },
     {
-      name: 'issue',
+      name: 'errors',
       shorthand: null,
-      type: String,
-      argument: 'error',
+      type: Boolean,
       deprecated: false,
-      description: 'Filter Agent Runs by issue type. Currently supports: error',
+      description: 'Filter Agent Runs to runs with execution errors',
     },
-    issueCodeOption,
-    issueTypeOption,
-    issueSourceOption,
-    issueToolOption,
     {
       name: 'trigger',
       shorthand: null,
@@ -250,42 +208,6 @@ export const projectsSubcommand = {
   ],
 } as const;
 
-export const issuesSubcommand = {
-  name: 'issues',
-  aliases: [],
-  description: 'List top Agent Run issue groups for a project',
-  arguments: [],
-  options: [
-    projectOption,
-    environmentOption,
-    sinceOption,
-    untilOption,
-    issueCodeOption,
-    issueTypeOption,
-    issueSourceOption,
-    issueToolOption,
-    {
-      name: 'trigger',
-      shorthand: null,
-      type: String,
-      argument: 'slack|http|schedule|manual|unknown',
-      deprecated: false,
-      description: 'Filter Agent Runs by trigger source',
-    },
-    jsonOption,
-  ],
-  examples: [
-    {
-      name: 'List top issue groups for the linked project',
-      value: `${packageName} agent-runs issues`,
-    },
-    {
-      name: 'Print raw issue groups as JSON',
-      value: `${packageName} agent-runs issues --json`,
-    },
-  ],
-} as const;
-
 export const agentRunsCommand = {
   name: 'agent-runs',
   aliases: [],
@@ -296,7 +218,6 @@ export const agentRunsCommand = {
     inspectSubcommand,
     traceSubcommand,
     projectsSubcommand,
-    issuesSubcommand,
   ],
   options: [],
   examples: [
@@ -307,10 +228,6 @@ export const agentRunsCommand = {
     {
       name: 'List projects with Agent Runs activity',
       value: `${packageName} agent-runs projects`,
-    },
-    {
-      name: 'List top issue groups',
-      value: `${packageName} agent-runs issues`,
     },
     {
       name: 'Inspect an Agent Run',
