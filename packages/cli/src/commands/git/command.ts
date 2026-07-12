@@ -42,9 +42,52 @@ export const disconnectSubcommand = {
 export const gitCommand = {
   name: 'git',
   aliases: [],
-  description: 'Manage your Git repository connection to the current Project',
-  arguments: [],
+  description:
+    'Manage your Git repository connection to the current Project. Also acts as a Git passthrough: `vc git push` (and other git commands) runs Git and, on push, tracks Vercel deployments for linked projects.',
+  arguments: [
+    {
+      name: 'git-args',
+      required: false,
+    },
+  ],
   subcommands: [connectSubcommand, disconnectSubcommand],
-  options: [],
-  examples: [],
+  options: [
+    {
+      name: 'no-attach',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Do not poll or attach to deployments after `git push`; just run Git and exit',
+    },
+    {
+      name: 'logs',
+      shorthand: 'l',
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Stream build logs for the current-directory project after `git push` (default: auto when cwd is inside a linked project rootDirectory)',
+    },
+    {
+      name: 'no-logs',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Do not stream build logs even when attached to a deployment',
+    },
+  ],
+  examples: [
+    {
+      name: 'Push and watch linked Vercel deployments',
+      value: `${packageName} git push`,
+    },
+    {
+      name: 'Push without attaching to deployments',
+      value: `${packageName} git push --no-attach`,
+    },
+    {
+      name: 'Run any Git command through Vercel CLI',
+      value: `${packageName} git status`,
+    },
+  ],
 } as const;

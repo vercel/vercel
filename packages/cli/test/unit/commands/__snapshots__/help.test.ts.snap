@@ -3117,10 +3117,14 @@ exports[`help command > git help output snapshots > git disconnect help output s
 
 exports[`help command > git help output snapshots > git help column width 40 1`] = `
 "
-  ▲ vercel git command
+  ▲ vercel git [git-args] [options]
 
   Manage your Git repository connection 
-  to the current Project                
+  to the current Project. Also acts as  
+  a Git passthrough: \`vc git push\` (and 
+  other git commands) runs Git and, on  
+  push, tracks Vercel deployments for   
+  linked projects.                      
 
   Commands:
 
@@ -3141,6 +3145,23 @@ exports[`help command > git help output snapshots > git help column width 40 1`]
                          from your 
                          Vercel    
                          Project   
+
+
+  Options:
+
+  -l,  --logs       Stream build logs for the
+                    current-directory project
+                    after \`git push\`         
+                    (default: auto when cwd  
+                    is inside a linked       
+                    project rootDirectory)   
+       --no-attach  Do not poll or attach to 
+                    deployments after \`git   
+                    push\`; just run Git and  
+                    exit                     
+       --no-logs    Do not stream build logs 
+                    even when attached to a  
+                    deployment               
 
 
   Global Options:
@@ -3191,14 +3212,30 @@ exports[`help command > git help output snapshots > git help column width 40 1`]
                               number    
 
 
+  Examples:
+
+  - Push and watch linked Vercel deployments
+
+    $ vercel git push
+
+  - Push without attaching to deployments
+
+    $ vercel git push --no-attach
+
+  - Run any Git command through Vercel CLI
+
+    $ vercel git status
+
 "
 `;
 
 exports[`help command > git help output snapshots > git help column width 80 1`] = `
 "
-  ▲ vercel git command
+  ▲ vercel git [git-args] [options]
 
-  Manage your Git repository connection to the current Project                  
+  Manage your Git repository connection to the current Project. Also acts as a  
+  Git passthrough: \`vc git push\` (and other git commands) runs Git and, on      
+  push, tracks Vercel deployments for linked projects.                          
 
   Commands:
 
@@ -3206,6 +3243,16 @@ exports[`help command > git help output snapshots > git help column width 80 1`]
                          or provide the remote URL to your Git repository  
   disconnect             Disconnect the Git repository from your Vercel    
                          Project                                           
+
+
+  Options:
+
+  -l,  --logs       Stream build logs for the current-directory project after \`git   
+                    push\` (default: auto when cwd is inside a linked project         
+                    rootDirectory)                                                   
+       --no-attach  Do not poll or attach to deployments after \`git push\`; just run  
+                    Git and exit                                                     
+       --no-logs    Do not stream build logs even when attached to a deployment      
 
 
   Global Options:
@@ -3224,20 +3271,43 @@ exports[`help command > git help output snapshots > git help column width 80 1`]
   -v,  --version              Output the version number                         
 
 
+  Examples:
+
+  - Push and watch linked Vercel deployments
+
+    $ vercel git push
+
+  - Push without attaching to deployments
+
+    $ vercel git push --no-attach
+
+  - Run any Git command through Vercel CLI
+
+    $ vercel git status
+
 "
 `;
 
 exports[`help command > git help output snapshots > git help column width 120 1`] = `
 "
-  ▲ vercel git command
+  ▲ vercel git [git-args] [options]
 
-  Manage your Git repository connection to the current Project                                                          
+  Manage your Git repository connection to the current Project. Also acts as a Git passthrough: \`vc git push\` (and      
+  other git commands) runs Git and, on push, tracks Vercel deployments for linked projects.                             
 
   Commands:
 
   connect     [git-url]  Connect your Vercel Project to your Git repository or provide the remote URL to your Git  
                          repository                                                                                
   disconnect             Disconnect the Git repository from your Vercel Project                                    
+
+
+  Options:
+
+  -l,  --logs       Stream build logs for the current-directory project after \`git push\` (default: auto when cwd is inside a 
+                    linked project rootDirectory)                                                                            
+       --no-attach  Do not poll or attach to deployments after \`git push\`; just run Git and exit                             
+       --no-logs    Do not stream build logs even when attached to a deployment                                              
 
 
   Global Options:
@@ -3253,6 +3323,20 @@ exports[`help command > git help output snapshots > git help column width 120 1`
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
+
+  Examples:
+
+  - Push and watch linked Vercel deployments
+
+    $ vercel git push
+
+  - Push without attaching to deployments
+
+    $ vercel git push --no-attach
+
+  - Run any Git command through Vercel CLI
+
+    $ vercel git status
 
 "
 `;
