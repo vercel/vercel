@@ -1854,6 +1854,7 @@ createServer((_req, res) => {
       ...defaultProject,
       id: 'QmX6P93ChNDoZP',
       name: 'monorepo-marketing',
+      accountId: 'team_dummy',
       rootDirectory: 'marketing',
       outputDirectory: 'dist',
       framework: null,
@@ -1861,6 +1862,26 @@ createServer((_req, res) => {
     output = join(cwd, 'marketing/.vercel/output');
     client.cwd = join(cwd, 'marketing');
     client.setArgv('build', '--yes');
+    exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+    delete process.env.__VERCEL_BUILD_RUNNING;
+
+    files = await fs.readdir(join(output, 'static'));
+    expect(files.sort()).toEqual(['index.txt']);
+    expect(
+      (await fs.readFile(join(output, 'static/index.txt'), 'utf8')).trim()
+    ).toEqual('marketing');
+
+    // Explicit scope resolves the project through the API, then recovers the
+    // matching repo link so the build still runs from the selected directory.
+    client.config.currentTeam = 'team_dummy';
+    client.cwd = join(cwd, 'marketing');
+    client.setArgv(
+      'build',
+      '--project=monorepo-marketing',
+      '--scope=team-dummy',
+      '--yes'
+    );
     exitCode = await build(client);
     expect(exitCode).toEqual(0);
     delete process.env.__VERCEL_BUILD_RUNNING;
@@ -3578,6 +3599,7 @@ writeFileSync(
         cwd: await fs.realpath(cwd),
         projectName: 'does-not-exist',
         projectNameIsExplicit: true,
+        scopeIsExplicit: false,
       });
       getLinkedProjectSpy.mockRestore();
 
@@ -3587,6 +3609,35 @@ writeFileSync(
           value: '[REDACTED]',
         },
       ]);
+    });
+
+    it('uses the resolved explicit scope instead of a conflicting local link', async () => {
+      const cwd = await getWriteableDirectory();
+      const scopedProject = {
+        ...defaultProject,
+        id: 'prj_scoped',
+        name: 'scoped-project',
+        accountId: 'team_scope',
+      };
+      let requestedTeamId: unknown;
+
+      useUser();
+      useTeams('team_scope');
+      client.config.currentTeam = 'team_scope';
+      client.scenario.get('/v9/projects/scoped-project', (req, res) => {
+        requestedTeamId = req.query.teamId;
+        res.json(scopedProject);
+      });
+      await fs.outputJSON(join(cwd, '.vercel', 'project.json'), {
+        orgId: 'team_stale',
+        projectId: 'prj_stale',
+      });
+
+      client.cwd = cwd;
+      client.setArgv('build', '--project=scoped-project', '--scope=team-scope');
+      await build(client);
+
+      expect(requestedTeamId).toEqual('team_scope');
     });
 
     it('tracks --project telemetry as [REDACTED]', async () => {

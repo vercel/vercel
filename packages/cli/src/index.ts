@@ -791,11 +791,17 @@ const main = async () => {
     parsedArgs.flags['--scope'] ||
     parsedArgs.flags['--team'] ||
     localConfig?.scope;
+  const separatorIndex = client.argv.indexOf('--');
+  const cliArgs =
+    separatorIndex === -1 ? client.argv : client.argv.slice(0, separatorIndex);
+  const buildNeedsRemoteProjectScope =
+    targetCommand === 'build' &&
+    cliArgs.some(arg => arg === '--project' || arg.startsWith('--project='));
 
   if (
     typeof scope === 'string' &&
     targetCommand !== 'login' &&
-    targetCommand !== 'build' &&
+    (targetCommand !== 'build' || buildNeedsRemoteProjectScope) &&
     targetCommand !== 'sandbox'
   ) {
     let user = null;

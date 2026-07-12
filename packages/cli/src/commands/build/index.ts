@@ -120,6 +120,7 @@ import {
 } from '../../util/projects/link';
 import { printProjectNotFoundError } from '../../util/projects/project-not-found-error';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
+import { detectExplicitScope } from '../../util/get-scope';
 import {
   pickOverrides,
   readProjectSettings,
@@ -330,11 +331,15 @@ export default async function main(client: Client): Promise<number> {
   }
 
   const projectNameOrId = parsedArgs.flags['--project'];
+  const hasExplicitScope =
+    Boolean(projectNameOrId) && detectExplicitScope(client);
 
   // If repo linked, update `cwd` to the repo root
-  let link = await rootSpan
-    .child('vc.getProjectLink')
-    .trace(() => getProjectLink(client, cwd, projectNameOrId, true));
+  let link = hasExplicitScope
+    ? null
+    : await rootSpan
+        .child('vc.getProjectLink')
+        .trace(() => getProjectLink(client, cwd, projectNameOrId, true));
 
   // No local link matched `--project`; resolve via API before the
   // settings-pull prompt would silently re-link to the wrong project.
@@ -343,12 +348,14 @@ export default async function main(client: Client): Promise<number> {
       cwd,
       projectName: projectNameOrId,
       projectNameIsExplicit: true,
+      scopeIsExplicit: hasExplicitScope,
     });
     if (linkedFromApi.status === 'linked') {
       link = {
         projectId: linkedFromApi.project.id,
         orgId: linkedFromApi.org.id,
         repoRoot: linkedFromApi.repoRoot,
+        projectRootDirectory: linkedFromApi.projectRootDirectory,
       };
     } else if (linkedFromApi.status === 'error') {
       return linkedFromApi.exitCode;
