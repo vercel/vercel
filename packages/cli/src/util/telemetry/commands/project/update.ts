@@ -40,6 +40,10 @@ export class ProjectUpdateTelemetryClient
     this.trackSettingOption('output-directory', value);
   }
 
+  trackCliOptionRootDirectory(value: string | undefined) {
+    this.trackSettingOption('root-directory', value);
+  }
+
   trackCliOptionAutoDetect(value: [string] | undefined) {
     if (value?.length) {
       this.trackCliOption({
