@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import git from '../../../../src/commands/git';
 import { client } from '../../../mocks/client';
 
@@ -27,7 +27,6 @@ describe('git', () => {
   });
 
   describe('passthrough', () => {
-
     it('passes through unknown args to git and returns its exit code', async () => {
       // We can't easily mock the already-imported spawn without vi.mock hoisting,
       // so test the routing: unknown subcommand should not return 2 (help) anymore.
@@ -64,8 +63,44 @@ describe('git', () => {
       await git(client);
 
       const events = client.telemetryEventStore.readonlyEvents;
-      const hasPassthrough = events.some(e => e.key === 'subcommand:passthrough');
+      const hasPassthrough = events.some(
+        e => e.key === 'subcommand:passthrough'
+      );
       expect(hasPassthrough).toBe(true);
+    });
+
+    it('shows deployment summary after git status without changing exit code', async () => {
+      // Exercise the new branch deployment summary path. We don't have a linked
+      // .vercel/repo.json in the temp repo, so summary should gracefully skip
+      // and exit code should still equal git's.
+      const { mkdtempSync } = await import('fs');
+      const { tmpdir } = await import('os');
+      const { execSync } = await import('child_process');
+      const { join } = await import('path');
+      const dir = mkdtempSync(join(tmpdir(), 'vc-git-test-status-'));
+      execSync('git init -q', { cwd: dir });
+      execSync('git checkout -b feature-branch -q', { cwd: dir });
+      client.cwd = dir;
+
+      client.setArgv('git', 'status');
+      const exitCode = await git(client);
+
+      expect(exitCode).toBe(0);
+      // Should not throw even without link config
+    });
+
+    it('preserves git status exit code for non-zero git failure', async () => {
+      const { mkdtempSync } = await import('fs');
+      const { tmpdir } = await import('os');
+      const { join } = await import('path');
+      const dir = mkdtempSync(join(tmpdir(), 'vc-git-test-fail-'));
+      // Intentionally NOT init git, so `git status` fails with 128
+      client.cwd = dir;
+
+      client.setArgv('git', 'status');
+      const exitCode = await git(client);
+
+      expect([128, 1]).toContain(exitCode);
     });
   });
 });

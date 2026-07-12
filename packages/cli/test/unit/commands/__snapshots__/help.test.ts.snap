@@ -3121,10 +3121,11 @@ exports[`help command > git help output snapshots > git help column width 40 1`]
 
   Manage your Git repository connection 
   to the current Project. Also acts as  
-  a Git passthrough: \`vc git push\` (and 
-  other git commands) runs Git and, on  
-  push, tracks Vercel deployments for   
-  linked projects.                      
+  a Git passthrough: \`vc git push\` runs 
+  Git and tracks Vercel deployments for 
+  linked projects; \`vc git status\`      
+  shows Git status plus latest Vercel   
+  deployments for the current branch.   
 
   Commands:
 
@@ -3214,6 +3215,10 @@ exports[`help command > git help output snapshots > git help column width 40 1`]
 
   Examples:
 
+  - Show Git status with Vercel deployments for this branch
+
+    $ vercel git status
+
   - Push and watch linked Vercel deployments
 
     $ vercel git push
@@ -3224,7 +3229,7 @@ exports[`help command > git help output snapshots > git help column width 40 1`]
 
   - Run any Git command through Vercel CLI
 
-    $ vercel git status
+    $ vercel git log --oneline -n 10
 
 "
 `;
@@ -3234,8 +3239,9 @@ exports[`help command > git help output snapshots > git help column width 80 1`]
   ▲ vercel git [git-args] [options]
 
   Manage your Git repository connection to the current Project. Also acts as a  
-  Git passthrough: \`vc git push\` (and other git commands) runs Git and, on      
-  push, tracks Vercel deployments for linked projects.                          
+  Git passthrough: \`vc git push\` runs Git and tracks Vercel deployments for     
+  linked projects; \`vc git status\` shows Git status plus latest Vercel          
+  deployments for the current branch.                                           
 
   Commands:
 
@@ -3273,6 +3279,10 @@ exports[`help command > git help output snapshots > git help column width 80 1`]
 
   Examples:
 
+  - Show Git status with Vercel deployments for this branch
+
+    $ vercel git status
+
   - Push and watch linked Vercel deployments
 
     $ vercel git push
@@ -3283,7 +3293,7 @@ exports[`help command > git help output snapshots > git help column width 80 1`]
 
   - Run any Git command through Vercel CLI
 
-    $ vercel git status
+    $ vercel git log --oneline -n 10
 
 "
 `;
@@ -3292,8 +3302,9 @@ exports[`help command > git help output snapshots > git help column width 120 1`
 "
   ▲ vercel git [git-args] [options]
 
-  Manage your Git repository connection to the current Project. Also acts as a Git passthrough: \`vc git push\` (and      
-  other git commands) runs Git and, on push, tracks Vercel deployments for linked projects.                             
+  Manage your Git repository connection to the current Project. Also acts as a Git passthrough: \`vc git push\` runs Git  
+  and tracks Vercel deployments for linked projects; \`vc git status\` shows Git status plus latest Vercel deployments    
+  for the current branch.                                                                                               
 
   Commands:
 
@@ -3326,6 +3337,10 @@ exports[`help command > git help output snapshots > git help column width 120 1`
 
   Examples:
 
+  - Show Git status with Vercel deployments for this branch
+
+    $ vercel git status
+
   - Push and watch linked Vercel deployments
 
     $ vercel git push
@@ -3336,7 +3351,7 @@ exports[`help command > git help output snapshots > git help column width 120 1`
 
   - Run any Git command through Vercel CLI
 
-    $ vercel git status
+    $ vercel git log --oneline -n 10
 
 "
 `;

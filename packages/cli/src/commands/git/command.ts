@@ -43,7 +43,7 @@ export const gitCommand = {
   name: 'git',
   aliases: [],
   description:
-    'Manage your Git repository connection to the current Project. Also acts as a Git passthrough: `vc git push` (and other git commands) runs Git and, on push, tracks Vercel deployments for linked projects.',
+    'Manage your Git repository connection to the current Project. Also acts as a Git passthrough: `vc git push` runs Git and tracks Vercel deployments for linked projects; `vc git status` shows Git status plus latest Vercel deployments for the current branch.',
   arguments: [
     {
       name: 'git-args',
@@ -73,10 +73,15 @@ export const gitCommand = {
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Do not stream build logs even when attached to a deployment',
+      description:
+        'Do not stream build logs even when attached to a deployment',
     },
   ],
   examples: [
+    {
+      name: 'Show Git status with Vercel deployments for this branch',
+      value: `${packageName} git status`,
+    },
     {
       name: 'Push and watch linked Vercel deployments',
       value: `${packageName} git push`,
@@ -87,7 +92,7 @@ export const gitCommand = {
     },
     {
       name: 'Run any Git command through Vercel CLI',
-      value: `${packageName} git status`,
+      value: `${packageName} git log --oneline -n 10`,
     },
   ],
 } as const;

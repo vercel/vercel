@@ -1,5 +1,6 @@
 import { spawn } from 'child_process';
 import chalk from 'chalk';
+import ms from 'ms';
 import { relative } from 'path';
 import type Client from '../../util/client';
 import { getRepoLink, findProjectsFromPath } from '../../util/link/repo';
@@ -109,16 +110,17 @@ async function spawnGit(
   return { exitCode, usedShas };
 }
 
-async function tryGetRefShas(
-  cwd: string
-): Promise<Map<string, string>> {
+async function tryGetRefShas(cwd: string): Promise<Map<string, string>> {
   const { execSync } = await import('child_process');
   try {
-    const out = execSync('git for-each-ref --format="%(refname) %(objectname)" refs/heads', {
-      cwd,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    });
+    const out = execSync(
+      'git for-each-ref --format="%(refname) %(objectname)" refs/heads',
+      {
+        cwd,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }
+    );
     const map = new Map<string, string>();
     for (const line of out.trim().split('\n')) {
       if (!line.trim()) continue;
@@ -160,9 +162,7 @@ async function tryGetCurrentBranch(cwd: string): Promise<string | undefined> {
   }
 }
 
-async function resolveAllLinkedProjects(
-  client: Client
-): Promise<{
+async function resolveAllLinkedProjects(client: Client): Promise<{
   repoRoot: string;
   projects: ProjectWithMeta[];
   cwdRelativePath: string;
@@ -292,7 +292,12 @@ async function findLatestGitDeploymentForProject(
           continue;
         }
         // Only consider git-triggered deployments, unless user manually triggered but with same sha
-        if (dep.source && dep.source !== 'git' && dep.source !== 'import/repo' && dep.source !== 'clone/repo') {
+        if (
+          dep.source &&
+          dep.source !== 'git' &&
+          dep.source !== 'import/repo' &&
+          dep.source !== 'clone/repo'
+        ) {
           // allow if sha matches anyway (e.g., cli deployment from same sha? we still want to show)
           // but prefer git
         }
@@ -341,7 +346,9 @@ async function pollForProjectsDeployments(opts: {
   const found = new Map<string, Deployment>();
 
   // initial banner
-  output.log(`Triggered git push. Polling ${projects.length} linked project${projects.length === 1 ? '' : 's'} for new deployments...`);
+  output.log(
+    `Triggered git push. Polling ${projects.length} linked project${projects.length === 1 ? '' : 's'} for new deployments...`
+  );
 
   // Determine "current" project(s) based on cwd match using findProjectsFromPath logic
   const cwdMatchedIds = new Set(
@@ -352,8 +359,9 @@ async function pollForProjectsDeployments(opts: {
   while (Date.now() < deadline && pending.size > 0) {
     const checks = Array.from(pending.values()).map(async proj => {
       // Ensure team context for fetch
-      client.config.currentTeam =
-        proj.orgIdResolved.startsWith('team_') ? proj.orgIdResolved : undefined;
+      client.config.currentTeam = proj.orgIdResolved.startsWith('team_')
+        ? proj.orgIdResolved
+        : undefined;
       const dep = await findLatestGitDeploymentForProject(
         client,
         proj,
@@ -371,7 +379,8 @@ async function pollForProjectsDeployments(opts: {
         found.set(proj.id, dep);
         pending.delete(proj.id);
         const url = dep.url ? `https://${dep.url}` : dep.id;
-        const targetLabel = dep.target === 'production' ? 'Production' : dep.target || 'Preview';
+        const targetLabel =
+          dep.target === 'production' ? 'Production' : dep.target || 'Preview';
         const orgSlug = proj.orgSlug ? `${proj.orgSlug}/` : '';
         output.print(
           `${prependEmoji(
@@ -413,6 +422,202 @@ async function pollForProjectsDeployments(opts: {
   return { found, cwdMatchedIds };
 }
 
+function formatAge(createdAt?: number): string {
+  if (!createdAt) return '';
+  const age = Date.now() - createdAt;
+  if (age < 0) return 'now';
+  if (age < 1000) return 'just now';
+  return ms(age) + ' ago';
+}
+
+function deploymentStateIcon(state?: string): {
+  icon: string;
+  color: (s: string) => string;
+} {
+  switch (state) {
+    case 'READY':
+      return { icon: '●', color: chalk.green };
+    case 'ERROR':
+      return { icon: '●', color: chalk.red };
+    case 'BUILDING':
+    case 'INITIALIZING':
+    case 'QUEUED':
+      return { icon: '●', color: chalk.yellow };
+    case 'CANCELED':
+      return { icon: '○', color: chalk.gray };
+    default:
+      return { icon: '○', color: chalk.gray };
+  }
+}
+
+function getBranchFromDeployment(dep: Deployment): string | undefined {
+  // gitSource.ref is often like "refs/heads/<branch>" or just "<branch>"
+  // gitSource.slug is usually branch name for PRs; sourceRef branch in some APIs
+  const raw =
+    dep.gitSource?.ref ||
+    dep.gitSource?.slug ||
+    (dep as any)?.sourceCommit?.ref ||
+    dep.meta?.githubCommitRef ||
+    dep.meta?.gitlabCommitRef;
+  if (!raw) return undefined;
+  return raw.replace(/^refs\/heads\//, '');
+}
+
+async function fetchLatestDeploymentsForBranch(
+  client: Client,
+  project: ProjectWithMeta,
+  branch: string | undefined,
+  limit = 5
+): Promise<Deployment[]> {
+  const query = new URLSearchParams({
+    projectId: project.id,
+    limit: String(limit),
+  });
+  try {
+    for await (const chunk of client.fetchPaginated<{
+      deployments: Deployment[];
+    }>(`/v6/deployments?${query}`, {
+      accountId: project.orgIdResolved,
+    })) {
+      if (!branch) {
+        // No branch filter, return whatever we got (newest first)
+        return chunk.deployments;
+      }
+      const filtered = chunk.deployments.filter(d => {
+        const b = getBranchFromDeployment(d);
+        if (!b) {
+          // If no branch info but source=git and we have no other heuristic,
+          // include it if it's very recent? For status summary we prefer branch match.
+          // Still include if source !== 'git' is false? Simpler: exclude when branch requested.
+          return false;
+        }
+        return b === branch;
+      });
+      if (filtered.length > 0) {
+        return filtered;
+      }
+      // If first page had zero matches for this branch, try one more page before giving up
+      // (keep loop by returning [] and letting caller decide, but we break after 2 pages anyway)
+      // Fall back to unfiltered if nothing matched at all after scanning?
+      // For UX we show nothing rather than wrong branch.
+      // Continue to next chunk only if we explicitly want deeper scan – we keep to 2 pages.
+      // So break here to avoid unnecessary fetching when likely no deployment.
+      const hasBranchInChunk = chunk.deployments.some(d =>
+        Boolean(getBranchFromDeployment(d))
+      );
+      if (!hasBranchInChunk) {
+        // chunk had no branch info at all – likely API shape change, return raw
+        return chunk.deployments;
+      }
+      // else chunk had branch info but none matched → try one more page
+      // by fetching again outside loop we already break after 1 iteration in current paginated impl,
+      // so just return filtered (empty).
+      return filtered;
+    }
+  } catch (err) {
+    output.debug(
+      `failed to fetch branch deployments for ${project.name}: ${err}`
+    );
+  }
+  return [];
+}
+
+async function showBranchDeploymentSummary(opts: {
+  client: Client;
+  projects: ProjectWithMeta[];
+  cwdRelativePath: string;
+  branch: string | undefined;
+  headSha?: string;
+}) {
+  const { client, projects, cwdRelativePath, branch, headSha } = opts;
+
+  // Determine cwd-matched projects (deepest)
+  const cwdMatched = findProjectsFromPath(projects, cwdRelativePath);
+  // If cwd is repo root and projects are all in subdirs with directory '.'? Then findProjects returns all '.'?
+  // findProjectsFromPath returns matches for '.' as any path, so root will match all root-dir projects.
+  // That's fine: we show summary for all when at root, or filtered when inside subdir.
+
+  const projectsToShow = cwdMatched.length > 0 ? cwdMatched : projects;
+
+  if (projectsToShow.length === 0) return;
+
+  const titleBranch = branch ? chalk.bold(branch) : chalk.dim('current branch');
+  output.print(`\n${chalk.bold('Vercel Deployments')} for ${titleBranch}`);
+  if (headSha) {
+    output.print(` ${chalk.dim(headSha.slice(0, 7))}`);
+  }
+  output.print(`\n`);
+
+  // Sort by directory depth for stable display (shallow first, then alpha)
+  const sorted = [...projectsToShow].sort((a, b) => {
+    const da = a.directory.split('/').length;
+    const db = b.directory.split('/').length;
+    if (da !== db) return da - db;
+    return a.name.localeCompare(b.name);
+  });
+
+  const results = await Promise.all(
+    sorted.map(async proj => {
+      client.config.currentTeam = proj.orgIdResolved.startsWith('team_')
+        ? proj.orgIdResolved
+        : undefined;
+      const deps = await fetchLatestDeploymentsForBranch(
+        client,
+        proj,
+        branch,
+        5
+      );
+      return { proj, deps };
+    })
+  );
+
+  let anyDeploys = false;
+  for (const { proj, deps } of results) {
+    const orgSlug = proj.orgSlug ? `${proj.orgSlug}/` : '';
+    const header = `${chalk.bold(orgSlug + proj.name)} ${chalk.dim(`(${proj.directory})`)}`;
+    if (deps.length === 0) {
+      output.print(
+        `  ${chalk.dim('–')} ${header} ${chalk.dim(branch ? `no deployments for ${branch}` : 'no deployments')}\n`
+      );
+      continue;
+    }
+    anyDeploys = true;
+    output.print(`  ${header}\n`);
+    for (const dep of deps) {
+      const { icon, color } = deploymentStateIcon(dep.readyState);
+      const target =
+        dep.target === 'production' ? 'Production' : dep.target || 'Preview';
+      const url = dep.url ? `https://${dep.url}` : dep.id;
+      const shaShort =
+        dep.gitSource?.sha?.slice(0, 7) ||
+        dep.meta?.githubCommitSha?.slice(0, 7) ||
+        '';
+      const isHead = Boolean(
+        headSha && shaShort && headSha.startsWith(shaShort)
+      );
+      const age = formatAge(dep.createdAt);
+      output.print(
+        `    ${color(icon)} ${chalk.dim(`[${dep.readyState || 'UNKNOWN'}]`)} ${chalk.cyan(url)} ${chalk.dim(target)}${shaShort ? ` ${chalk.dim(shaShort)}` : ''}${isHead ? chalk.green(' ← HEAD') : ''} ${chalk.dim(age)}\n`
+      );
+      if (dep.inspectorUrl) {
+        output.print(
+          `      ${chalk.dim('Inspect:')} ${chalk.cyan(dep.inspectorUrl)}\n`
+        );
+      }
+    }
+  }
+
+  if (!anyDeploys) {
+    output.print(
+      `\n  ${chalk.dim(`No deployments found. Push to trigger one, or run ${chalk.cyan('vc deploy')} for manual.`)}\n`
+    );
+  } else {
+    output.print(
+      `\n  ${chalk.dim(`Run ${chalk.cyan('vc ls')} or ${chalk.cyan('vc inspect <url>')} for more details.`)}\n`
+    );
+  }
+}
+
 async function streamDeploymentUntilReady(
   client: Client,
   deployment: Deployment,
@@ -445,7 +650,6 @@ async function streamDeploymentUntilReady(
   }
 
   // Poll readyState
-  const contextName = project.orgSlug || project.orgIdResolved;
   while (true) {
     // We need getDeployment utility; avoid import cycle by fetching directly
     try {
@@ -550,7 +754,9 @@ export default async function gitPassthrough(
 
   if (gitArgs.length === 0) {
     // show help if bare `vc git`
-    output.print(`Usage: vc git <git-args>  (passthrough) or vc git connect|disconnect\n`);
+    output.print(
+      `Usage: vc git <git-args>  (passthrough) or vc git connect|disconnect\n`
+    );
     return 2;
   }
 
@@ -577,14 +783,39 @@ export default async function gitPassthrough(
     return 1;
   }
 
-  // If not push, or git failed, or --no-attach, just return git exit code
-  if (!push || gitExit !== 0 || wrapperFlags.noAttach) {
-    if (!push && gitExit === 0) {
-      // optionally hint
-      if (gitArgs[0] !== 'push') {
-        output.debug(`git ${gitArgs.join(' ')} completed (exit ${gitExit}), no deployment polling`);
+  const isStatus = gitArgs[0] === 'status';
+
+  // If not push, handle status summary before returning
+  if (!push) {
+    if (gitExit === 0 && isStatus) {
+      // Don't block on summary errors — always preserve git exit code
+      try {
+        const branch = await tryGetCurrentBranch(client.cwd).catch(
+          () => undefined
+        );
+        const headSha = await tryGetHeadSha(client.cwd).catch(() => undefined);
+        const repoInfo = await resolveAllLinkedProjects(client);
+        if (repoInfo) {
+          await showBranchDeploymentSummary({
+            client,
+            projects: repoInfo.projects,
+            cwdRelativePath: repoInfo.cwdRelativePath,
+            branch,
+            headSha,
+          });
+        }
+      } catch (e) {
+        output.debug(`status deployment summary failed: ${e}`);
       }
+    } else if (gitExit === 0) {
+      output.debug(
+        `git ${gitArgs.join(' ')} completed (exit ${gitExit}), no deployment polling`
+      );
     }
+    return gitExit;
+  }
+
+  if (gitExit !== 0 || wrapperFlags.noAttach) {
     return gitExit;
   }
 
@@ -636,7 +867,9 @@ export default async function gitPassthrough(
     const candidates = Array.from(cwdMatchedIds)
       .map(id => projects.find(p => p.id === id)!)
       .filter(Boolean)
-      .sort((a, b) => b.directory.split('/').length - a.directory.split('/').length);
+      .sort(
+        (a, b) => b.directory.split('/').length - a.directory.split('/').length
+      );
     for (const c of candidates) {
       if (found.has(c.id)) {
         primaryProjectId = c.id;
