@@ -219,6 +219,16 @@ async function printEvents(
           o = 0;
         }
 
+        const msg = String((err as any)?.message || err || '');
+        // Suppress noisy repeated 404 while events endpoint warms up for a new
+        // git-triggered deployment. readyState polling still progresses and
+        // deploy will eventually be READY; log as debug instead of user-visible.
+        // The caller (git push passthrough) will retry the tail once BUILDING.
+        if (msg.includes('404') && msg.toLowerCase().includes('deployment')) {
+          debug(`Deployment events transient 404 (will retry): ${msg}`);
+          return;
+        }
+
         log(`Deployment events polling error: ${err.message}`);
       },
     }

@@ -15,15 +15,41 @@ import stamp from '../../util/output/stamp';
 import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import link from '../../util/output/link';
 import sleepLib from '../../util/sleep';
-import { prependEmoji } from '../../util/emoji';
 
 const GIT_TRIGGER_TIMEOUT_MS = 120_000; // 2 minutes to notice new git deployment
 const GIT_POLL_INTERVAL_MS = 3_000;
 const READY_POLL_INTERVAL_MS = 3_000;
 
+// Keep API pressure bounded when a monorepo links dozens of projects.
+// 6 concurrent fetches is a good tradeoff: fast enough for 30 projects (~5 waves),
+// low enough to avoid 429s when every poll iteration fans out.
+const GIT_PROJECT_FETCH_CONCURRENCY = 6;
+const GIT_ORG_FETCH_CONCURRENCY = 6;
+
 interface ProjectWithMeta extends RepoProjectConfig {
   orgIdResolved: string;
   orgSlug?: string;
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  fn: (item: T, index: number) => Promise<R>,
+  concurrency: number
+): Promise<R[]> {
+  if (items.length === 0) return [];
+  const results = new Array<R>(items.length);
+  let next = 0;
+  const workers = Array(Math.min(concurrency, items.length))
+    .fill(0)
+    .map(async () => {
+      while (true) {
+        const i = next++;
+        if (i >= items.length) break;
+        results[i] = await fn(items[i], i);
+      }
+    });
+  await Promise.all(workers);
+  return results;
 }
 
 interface PushInfo {
@@ -183,21 +209,31 @@ async function resolveAllLinkedProjects(client: Client): Promise<{
       });
     }
 
-    // resolve org slugs in parallel (best-effort)
-    await Promise.all(
-      allProjects.map(async proj => {
+    // resolve org slugs with limited concurrency (best-effort) so 30 projects doesn't slam /v2/teams.
+    await mapWithConcurrency(
+      allProjects,
+      async proj => {
         try {
           const org = await getOrgById(client, proj.orgIdResolved);
           if (org) proj.orgSlug = org.slug;
         } catch {
           // ignore
         }
-      })
+      },
+      GIT_ORG_FETCH_CONCURRENCY
     );
+
+    // De-dupe by project id in case repo.json has duplicates; keep first occurrence.
+    const seen = new Set<string>();
+    const deduped = allProjects.filter(p => {
+      if (seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
 
     return {
       repoRoot: repoLink.rootPath,
-      projects: allProjects,
+      projects: deduped,
       cwdRelativePath: cwdRelative,
     };
   }
@@ -345,59 +381,117 @@ async function pollForProjectsDeployments(opts: {
   );
   const found = new Map<string, Deployment>();
 
-  // initial banner
   output.log(
     `Triggered git push. Polling ${projects.length} linked project${projects.length === 1 ? '' : 's'} for new deployments...`
   );
 
-  // Determine "current" project(s) based on cwd match using findProjectsFromPath logic
   const cwdMatchedIds = new Set(
-    findProjectsFromPath(projects, cwdRelativePath).map(p => p.id)
+    (
+      findProjectsFromPath(
+        projects as unknown as RepoProjectConfig[],
+        cwdRelativePath
+      ) as unknown as ProjectWithMeta[]
+    ).map(p => p.id)
   );
 
-  // Poll loop
-  while (Date.now() < deadline && pending.size > 0) {
-    const checks = Array.from(pending.values()).map(async proj => {
-      // Ensure team context for fetch
-      client.config.currentTeam = proj.orgIdResolved.startsWith('team_')
-        ? proj.orgIdResolved
-        : undefined;
-      const dep = await findLatestGitDeploymentForProject(
-        client,
-        proj,
-        shas,
-        branchHint,
-        since
-      );
-      return { proj, dep };
-    });
+  const noticeTruncated = (n: number) => {
+    if (n <= 10) return;
+    // Don't spam: once up front is enough for 30-project case
+    output.print(
+      `  ${chalk.dim(`Tracking ${n} projects; showing links as they appear. Full list in Vercel dashboard.`)}\n`
+    );
+  };
+  noticeTruncated(projects.length);
 
-    const results = await Promise.all(checks);
+  // Poll loop: bounded concurrency so 30 projects doesn't 429.
+  // Also cap banner lines so 30 finds doesn't flood terminal.
+  let linesPrinted = 0;
+  const MAX_INLINE_PROJECTS = 12;
+  let deferredOverflow = 0;
 
-    for (const { proj, dep } of results) {
-      if (dep) {
-        found.set(proj.id, dep);
-        pending.delete(proj.id);
-        const url = dep.url ? `https://${dep.url}` : dep.id;
-        const targetLabel =
-          dep.target === 'production' ? 'Production' : dep.target || 'Preview';
-        const orgSlug = proj.orgSlug ? `${proj.orgSlug}/` : '';
+  const flushFound = (
+    items: Array<{ proj: ProjectWithMeta; dep: Deployment }>
+  ) => {
+    for (const { proj, dep } of items) {
+      found.set(proj.id, dep);
+      pending.delete(proj.id);
+      const url = dep.url ? `https://${dep.url}` : dep.id;
+      const targetLabel =
+        dep.target === 'production' ? 'Production' : dep.target || 'Preview';
+      const orgSlug = proj.orgSlug ? `${proj.orgSlug}/` : '';
+
+      const isProd = dep.target === 'production';
+      if (linesPrinted < MAX_INLINE_PROJECTS) {
+        if (isProd) {
+          printAlignedLabel(
+            'Production',
+            chalk.cyan(`https://${url.replace(/^https?:\/\//, '')}`),
+            { gutter: '▲' }
+          );
+        } else {
+          printAlignedLabel('Preview', chalk.cyan(url));
+        }
         output.print(
-          `${prependEmoji(
-            `${chalk.bold(orgSlug + proj.name)} (${proj.directory}) → ${targetLabel}: ${chalk.cyan(url)} ${chalk.dim(`[${dep.readyState}]`)}`,
-            dep.readyState === 'READY' ? 'success' : 'notice'
-          )}\n`
+          `  ${chalk.dim(`${orgSlug}${proj.name} (${proj.directory}) ${targetLabel} [${dep.readyState}]`)}\n`
         );
         if (dep.inspectorUrl) {
           printAlignedLabel('Inspect', chalk.cyan(dep.inspectorUrl));
         }
-        // Link print
-        if (dep.url) {
-          const nice = `https://${dep.url}`;
-          output.debug(`deployment link: ${nice}`);
-        }
+        linesPrinted++;
+      } else {
+        deferredOverflow++;
       }
+      output.debug(`deployment link: ${url}`);
     }
+    if (deferredOverflow > 0 && pending.size === 0) {
+      // Final overflow summary
+      output.print(
+        `  ${chalk.dim(`… +${deferredOverflow} more deployments (run ${chalk.cyan('vc ls')} or open dashboard to see all)`)}\n`
+      );
+      deferredOverflow = -1; // don't print again
+    }
+  };
+
+  while (Date.now() < deadline && pending.size > 0) {
+    const pendingArr = Array.from(pending.values());
+
+    // Capture per-project team context ahead of concurrency (client.config.currentTeam is mutable)
+    // so each fetch uses the right account scoping.
+    const checks: Array<{ proj: ProjectWithMeta; dep: Deployment | null }> =
+      await mapWithConcurrency(
+        pendingArr,
+        async proj => {
+          const teamId = proj.orgIdResolved.startsWith('team_')
+            ? proj.orgIdResolved
+            : undefined;
+          // We don't rely on global client.config.currentTeam here; we pass accountId
+          // explicitly. But set currentTeam too for any downstream that still reads it,
+          // behind a tiny critical section using a cloned view.
+          // Since client isn't thread-safe for currentTeam, we save/restore.
+          const prevTeam = client.config.currentTeam;
+          try {
+            if (teamId) client.config.currentTeam = teamId;
+            else client.config.currentTeam = undefined;
+            const dep = await findLatestGitDeploymentForProject(
+              client,
+              proj,
+              shas,
+              branchHint,
+              since
+            );
+            return { proj, dep };
+          } finally {
+            client.config.currentTeam = prevTeam;
+          }
+        },
+        GIT_PROJECT_FETCH_CONCURRENCY
+      );
+
+    const newlyFound: Array<{ proj: ProjectWithMeta; dep: Deployment }> = [];
+    for (const { proj, dep } of checks) {
+      if (dep) newlyFound.push({ proj, dep });
+    }
+    if (newlyFound.length > 0) flushFound(newlyFound);
 
     if (pending.size === 0) break;
 
@@ -405,16 +499,33 @@ async function pollForProjectsDeployments(opts: {
   }
 
   if (pending.size > 0) {
-    for (const proj of pending.values()) {
+    // For large monorepos, collapse the "no deployment" tail so 30 lines doesn't become 30 warnings.
+    if (pending.size > 8) {
       output.print(
-        `${chalk.dim('–')} ${chalk.bold(proj.name)} (${proj.directory}) ${chalk.dim('no new deployment detected (may be ignored by git config / no changes)')}\n`
+        `  ${chalk.dim('–')} ${chalk.dim(`${pending.size} projects`)} ${chalk.dim('had no new deployment detected (may be ignored by git config / no changes, or still queuing).')}\n`
       );
+      output.print(
+        `  ${chalk.dim(
+          `Those projects: ${Array.from(pending.values())
+            .slice(0, 8)
+            .map(p => p.name)
+            .join(', ')}${pending.size > 8 ? ', …' : ''}`
+        )}\n`
+      );
+      if (output.isDebugEnabled()) {
+        for (const proj of pending.values()) {
+          output.debug(`no deployment for ${proj.name} (${proj.directory})`);
+        }
+      }
+    } else {
+      for (const proj of pending.values()) {
+        output.print(
+          `  ${chalk.dim('–')} ${chalk.bold(proj.name)} ${chalk.dim(`(${proj.directory})`)} ${chalk.dim('no new deployment detected (may be ignored by git config / no changes)')}\n`
+        );
+      }
     }
   }
 
-  // Now decide logs
-  // Logic: only stream logs if cwd is inside a given project, and that project has a deployment found and is building.
-  // If multiple cwdMatched, pick the deepest.
   if (found.size === 0) {
     return { found, cwdMatchedIds };
   }
@@ -531,24 +642,25 @@ async function showBranchDeploymentSummary(opts: {
 }) {
   const { client, projects, cwdRelativePath, branch, headSha } = opts;
 
-  // Determine cwd-matched projects (deepest)
-  const cwdMatched = findProjectsFromPath(projects, cwdRelativePath);
-  // If cwd is repo root and projects are all in subdirs with directory '.'? Then findProjects returns all '.'?
-  // findProjectsFromPath returns matches for '.' as any path, so root will match all root-dir projects.
-  // That's fine: we show summary for all when at root, or filtered when inside subdir.
-
-  const projectsToShow = cwdMatched.length > 0 ? cwdMatched : projects;
+  // findProjectsFromPath is typed for RepoProjectConfig, but ProjectWithMeta extends it
+  // so casting via unknown is safe here – we only read extra fields for org routing.
+  const cwdMatched = findProjectsFromPath(
+    projects as unknown as RepoProjectConfig[],
+    cwdRelativePath
+  ) as unknown as ProjectWithMeta[];
+  const projectsToShow: ProjectWithMeta[] =
+    cwdMatched.length > 0 ? cwdMatched : projects;
 
   if (projectsToShow.length === 0) return;
 
   const titleBranch = branch ? chalk.bold(branch) : chalk.dim('current branch');
+  // Blank line separator from git output, then section heading using cli-ux pattern: no gutter for section, bold title
   output.print(`\n${chalk.bold('Vercel Deployments')} for ${titleBranch}`);
   if (headSha) {
     output.print(` ${chalk.dim(headSha.slice(0, 7))}`);
   }
   output.print(`\n`);
 
-  // Sort by directory depth for stable display (shallow first, then alpha)
   const sorted = [...projectsToShow].sort((a, b) => {
     const da = a.directory.split('/').length;
     const db = b.directory.split('/').length;
@@ -556,55 +668,79 @@ async function showBranchDeploymentSummary(opts: {
     return a.name.localeCompare(b.name);
   });
 
-  const results = await Promise.all(
-    sorted.map(async proj => {
-      client.config.currentTeam = proj.orgIdResolved.startsWith('team_')
-        ? proj.orgIdResolved
-        : undefined;
-      const deps = await fetchLatestDeploymentsForBranch(
-        client,
-        proj,
-        branch,
-        5
-      );
-      return { proj, deps };
-    })
+  // Also cap status fetch concurrency for big monorepos (git status path)
+  const results = await mapWithConcurrency(
+    sorted,
+    async proj => {
+      const prevTeam = client.config.currentTeam;
+      try {
+        client.config.currentTeam = proj.orgIdResolved.startsWith('team_')
+          ? proj.orgIdResolved
+          : undefined;
+        const deps = await fetchLatestDeploymentsForBranch(
+          client,
+          proj,
+          branch,
+          5
+        );
+        return { proj, deps };
+      } finally {
+        client.config.currentTeam = prevTeam;
+      }
+    },
+    GIT_PROJECT_FETCH_CONCURRENCY
   );
 
+  const MAX_STATUS_INLINE = 10;
   let anyDeploys = false;
+  let inlineShown = 0;
+  let overflow = 0;
   for (const { proj, deps } of results) {
     const orgSlug = proj.orgSlug ? `${proj.orgSlug}/` : '';
     const header = `${chalk.bold(orgSlug + proj.name)} ${chalk.dim(`(${proj.directory})`)}`;
     if (deps.length === 0) {
-      output.print(
-        `  ${chalk.dim('–')} ${header} ${chalk.dim(branch ? `no deployments for ${branch}` : 'no deployments')}\n`
-      );
+      if (inlineShown < MAX_STATUS_INLINE) {
+        output.print(
+          `  ${chalk.dim('–')} ${header} ${chalk.dim(branch ? `no deployments for ${branch}` : 'no deployments')}\n`
+        );
+      }
+      inlineShown++;
       continue;
     }
     anyDeploys = true;
-    output.print(`  ${header}\n`);
-    for (const dep of deps) {
-      const { icon, color } = deploymentStateIcon(dep.readyState);
-      const target =
-        dep.target === 'production' ? 'Production' : dep.target || 'Preview';
-      const url = dep.url ? `https://${dep.url}` : dep.id;
-      const shaShort =
-        dep.gitSource?.sha?.slice(0, 7) ||
-        dep.meta?.githubCommitSha?.slice(0, 7) ||
-        '';
-      const isHead = Boolean(
-        headSha && shaShort && headSha.startsWith(shaShort)
-      );
-      const age = formatAge(dep.createdAt);
-      output.print(
-        `    ${color(icon)} ${chalk.dim(`[${dep.readyState || 'UNKNOWN'}]`)} ${chalk.cyan(url)} ${chalk.dim(target)}${shaShort ? ` ${chalk.dim(shaShort)}` : ''}${isHead ? chalk.green(' ← HEAD') : ''} ${chalk.dim(age)}\n`
-      );
-      if (dep.inspectorUrl) {
-        output.print(
-          `      ${chalk.dim('Inspect:')} ${chalk.cyan(dep.inspectorUrl)}\n`
+    if (inlineShown < MAX_STATUS_INLINE) {
+      output.print(`  ${header}\n`);
+      for (const dep of deps) {
+        const { icon, color } = deploymentStateIcon(dep.readyState);
+        const target =
+          dep.target === 'production' ? 'Production' : dep.target || 'Preview';
+        const url = dep.url ? `https://${dep.url}` : dep.id;
+        const shaShort =
+          dep.gitSource?.sha?.slice(0, 7) ||
+          dep.meta?.githubCommitSha?.slice(0, 7) ||
+          '';
+        const isHead = Boolean(
+          headSha && shaShort && headSha.startsWith(shaShort)
         );
+        const age = formatAge(dep.createdAt);
+        output.print(
+          `    ${color(icon)} ${chalk.dim(`[${dep.readyState || 'UNKNOWN'}]`)} ${chalk.cyan(url)} ${chalk.dim(target)}${shaShort ? ` ${chalk.dim(shaShort)}` : ''}${isHead ? chalk.green(' ← HEAD') : ''} ${chalk.dim(age)}\n`
+        );
+        if (dep.inspectorUrl) {
+          output.print(
+            `      ${chalk.dim('Inspect:')} ${link(dep.inspectorUrl)}\n`
+          );
+        }
       }
+      inlineShown++;
+    } else {
+      overflow++;
     }
+  }
+  if (overflow > 0) {
+    output.print(
+      `  ${chalk.dim(`… +${overflow} more projects not shown (run ${chalk.cyan('vc ls')} for full list)`)}\n`
+    );
   }
 
   if (!anyDeploys) {
@@ -618,6 +754,30 @@ async function showBranchDeploymentSummary(opts: {
   }
 }
 
+async function fetchDeploymentByIdWithFallback(
+  client: Client,
+  id: string,
+  accountId: string
+): Promise<Deployment> {
+  try {
+    return await client.fetch<Deployment>(
+      `/v13/deployments/${encodeURIComponent(id)}`,
+      { accountId }
+    );
+  } catch (firstErr: any) {
+    const status = (firstErr && (firstErr.status || firstErr.statusCode)) || 0;
+    const msg = String(firstErr?.message || '');
+    if (status === 404 || msg.includes('404')) {
+      output.debug(`v13 fetch 404 for ${id}, falling back to v6: ${msg}`);
+      return await client.fetch<Deployment>(
+        `/v6/deployments/${encodeURIComponent(id)}`,
+        { accountId }
+      );
+    }
+    throw firstErr;
+  }
+}
+
 async function streamDeploymentUntilReady(
   client: Client,
   deployment: Deployment,
@@ -626,50 +786,158 @@ async function streamDeploymentUntilReady(
 ): Promise<Deployment> {
   let current = deployment;
   const deployStamp = stamp();
-  // set currentTeam appropriately
-  client.config.currentTeam = project.orgIdResolved.startsWith('team_')
-    ? project.orgIdResolved
-    : undefined;
+  const isTeam = project.orgIdResolved.startsWith('team_');
+  client.config.currentTeam = isTeam ? project.orgIdResolved : undefined;
 
   let abortController: AbortController | undefined;
-  if (shouldStreamLogs) {
+  let logPromise: Promise<void> | undefined;
+  let logRetryTimer: ReturnType<typeof setTimeout> | undefined;
+  let logAttempt = 0;
+  let awaitingReady = true;
+
+  const MAX_LOG_RETRIES_BEFORE_READY = 6; // covers ~ 24s of 404 warmup
+
+  const startLogTail = (dep: Deployment) => {
+    if (abortController) {
+      // Clean previous controller before reattaching
+      try {
+        abortController.abort();
+      } catch {}
+      abortController = undefined;
+    }
+    logAttempt++;
     try {
       const { promise, abortController: ac } = displayBuildLogs(
         client,
-        current,
+        dep,
         true
       );
       abortController = ac;
-      // don't await yet – we will poll status alongside
-      promise.catch(e => {
-        output.debug(`log stream error for ${project.name}: ${e}`);
+      logPromise = promise;
+      promise.catch(err => {
+        const msg = String((err as any)?.message || err || '');
+        const is404 =
+          msg.includes('404') && msg.toLowerCase().includes('deployment');
+        if (
+          is404 &&
+          awaitingReady &&
+          logAttempt <= MAX_LOG_RETRIES_BEFORE_READY
+        ) {
+          output.debug(
+            `log stream 404 for ${project.name} ${dep.id} attempt ${logAttempt}/${MAX_LOG_RETRIES_BEFORE_READY}, retrying in background`
+          );
+          // Schedule background retry — don't surface to user yet
+          if (!logRetryTimer) {
+            logRetryTimer = setTimeout(() => {
+              logRetryTimer = undefined;
+              if (!awaitingReady) return;
+              startLogTail(current);
+            }, 4000);
+          }
+          return;
+        }
+        if (is404) {
+          output.debug(
+            `log stream giving up after ${logAttempt} attempts for ${project.name} ${dep.id}: ${msg}`
+          );
+          // Don't warn — readyState polling still continues and we have inspect fallback
+          return;
+        }
+        output.warn(`Failed to read build logs: ${msg}`);
+        output.debug(`log stream error for ${project.name}: ${err}`);
       });
     } catch (e) {
       output.debug(`failed to start log stream: ${e}`);
+      if (awaitingReady && logAttempt < MAX_LOG_RETRIES_BEFORE_READY) {
+        if (!logRetryTimer) {
+          logRetryTimer = setTimeout(() => {
+            logRetryTimer = undefined;
+            startLogTail(current);
+          }, 3000);
+        }
+      }
     }
+  };
+
+  if (shouldStreamLogs) {
+    // Git deploys: events endpoint may not be indexed immediately.
+    // Start right away — printEvents will stream if available, 404-catch above will schedule retries.
+    // Don't await delay: start immediately so we don't miss early build lines.
+    startLogTail(current);
   }
 
   // Poll readyState
+  let consecutive404 = 0;
   while (true) {
-    // We need getDeployment utility; avoid import cycle by fetching directly
     try {
-      const fresh = await client.fetch<Deployment>(
-        `/v13/deployments/${encodeURIComponent(current.id)}`,
-        { accountId: project.orgIdResolved }
+      const fresh = await fetchDeploymentByIdWithFallback(
+        client,
+        current.id,
+        project.orgIdResolved
       );
       current = fresh;
+      consecutive404 = 0;
+
+      // If initial log tail 404'd, re-attach as soon as BUILDING
+      if (
+        shouldStreamLogs &&
+        !abortController &&
+        (current.readyState === 'BUILDING' ||
+          current.readyState === 'INITIALIZING' ||
+          current.readyState === 'QUEUED')
+      ) {
+        startLogTail(current);
+      }
+
       const state = current.readyState;
       if (state === 'READY' || state === 'ERROR' || state === 'CANCELED') {
         break;
       }
-      // update spinner-like line? reuse printAlignedLabel? Instead just debug spinner
-      output.spinner(
-        `Building ${chalk.bold(project.name)} ${chalk.dim(`[${state}]`)}`
-      );
-    } catch (e) {
+      if (!shouldStreamLogs) {
+        output.spinner(
+          `Building ${chalk.bold(project.name)} ${chalk.dim(`[${state}]`)}`
+        );
+      }
+    } catch (e: any) {
+      const msg = String(e?.message || e || '');
+      const is404 = msg.includes('404');
+      if (is404) {
+        consecutive404++;
+        // Also try to re-attach log tail during 404 warmup — events may still be absent but ready
+        // poll will recover. Don't spam but keep one retry in flight.
+        if (shouldStreamLogs && !abortController && !logRetryTimer) {
+          logRetryTimer = setTimeout(() => {
+            logRetryTimer = undefined;
+            if (!awaitingReady) return;
+            startLogTail(current);
+          }, 4000);
+        }
+        if (consecutive404 >= 5) {
+          output.debug(
+            `giving up polling deployment ${current.id} after ${consecutive404} consecutive 404s`
+          );
+          output.warn(
+            `Deployment ${chalk.bold(current.id)} not found (404). It may still be building — try ${chalk.cyan(
+              'vc inspect ' + current.id + ' --logs'
+            )} or ${link(
+              current.inspectorUrl ||
+                `https://vercel.com/${project.orgSlug || ''}/${project.name}/${current.id}`
+            )}`
+          );
+          break;
+        }
+      } else {
+        consecutive404 = 0;
+      }
       output.debug(`failed to poll deployment ${current.id}: ${e}`);
     }
     await sleepLib(READY_POLL_INTERVAL_MS);
+  }
+
+  awaitingReady = false;
+  if (logRetryTimer) {
+    clearTimeout(logRetryTimer);
+    logRetryTimer = undefined;
   }
 
   if (abortController) {
@@ -677,11 +945,27 @@ async function streamDeploymentUntilReady(
       abortController.abort();
     } catch {}
     output.stopSpinner();
+    if (logPromise) {
+      try {
+        await Promise.race([logPromise.catch(() => {}), sleepLib(800)]);
+      } catch {}
+    }
   } else {
     output.stopSpinner();
+    if (shouldStreamLogs) {
+      // Only warn when we truly never attached — user-facing hint with inspect fallback
+      output.print(
+        `${chalk.dim('Build logs unavailable via events stream (may be warming up).')}\n`
+      );
+      output.print(
+        `  ${chalk.dim('Inspect:')} ${link(
+          current.inspectorUrl ||
+            `https://vercel.com/${project.orgSlug || ''}/${project.name}/${current.id}`
+        )}  ${chalk.dim(`or ${chalk.cyan('vc inspect ' + current.id + ' --logs')}`)}\n`
+      );
+    }
   }
 
-  // print final status similar to vc deploy output
   try {
     await printDeploymentStatus(
       client,
@@ -700,7 +984,6 @@ async function streamDeploymentUntilReady(
       false
     );
   } catch {
-    // fallback minimal
     output.print(
       `\n${current.readyState === 'READY' ? chalk.green('✓') : chalk.red('✗')} ${chalk.bold(
         project.name
@@ -710,9 +993,8 @@ async function streamDeploymentUntilReady(
     );
   }
 
-  // Inspector link already printed by printDeploymentStatus? Print anyway
   if (current.inspectorUrl) {
-    output.print(`  Inspect: ${link(current.inspectorUrl)}\n`);
+    printAlignedLabel('Inspect', link(current.inspectorUrl));
   }
 
   return current;
@@ -847,51 +1129,94 @@ export default async function gitPassthrough(
     return gitExit;
   }
 
-  // Show links already printed. Now handle log streaming.
-  // Determine if we should stream logs.
-  // Rules: show logs only if cwd is inside a linked project (cwdMatchedIds non-empty)
-  // AND that project's deployment is building/queued.
-  // --logs forces it for cwd-matched project even if maybe not building? we still stream if building.
-  // --no-logs disables.
-  const shouldAutoLog = cwdMatchedIds.size > 0 && !wrapperFlags.noLogs;
-  const shouldForceLog = wrapperFlags.logs && cwdMatchedIds.size > 0;
-
   if (wrapperFlags.noLogs) {
     return gitExit;
   }
 
-  // Pick project to stream: deepest matching cwd project that has deployment
+  // Determine if we should stream logs.
+  // Rules (cli-ux):
+  //  - default: stream if cwd is inside a linked project (cwdMatchedIds non-empty)
+  //  - --logs forces stream for cwd-matched, even if READY/ERROR (will show what we have + inspect fallback)
+  //  - --no-logs disables entirely, handled above
+  const shouldAutoLog = !wrapperFlags.noLogs;
+  const shouldForceLog = wrapperFlags.logs;
+
+  // Pick project to stream: deepest matching cwd project that has deployment.
+  // Fallbacks when cwd is repo root:
+  //   - if cwdRelativePath === '.' or cwdMatchedIds empty but exactly one deployment found, attach to that one
+  //   - if cwdMatchedIds empty and multiple found but one project has directory '.' (common single-root repo), attach to that
   let primaryProjectId: string | undefined;
-  if (cwdMatchedIds.size > 0) {
-    // sort by directory depth desc
-    const candidates = Array.from(cwdMatchedIds)
+
+  const pickDeepest = (ids: Iterable<string>) => {
+    const candidates = Array.from(ids)
       .map(id => projects.find(p => p.id === id)!)
       .filter(Boolean)
       .sort(
         (a, b) => b.directory.split('/').length - a.directory.split('/').length
       );
     for (const c of candidates) {
-      if (found.has(c.id)) {
-        primaryProjectId = c.id;
-        break;
-      }
+      if (found.has(c.id)) return c.id;
     }
-    // If --logs forced but no deployment yet for cwd project, we already would have shown no deployment message.
-    // No extra work.
+    return undefined;
+  };
+
+  if (cwdMatchedIds.size > 0) {
+    primaryProjectId = pickDeepest(cwdMatchedIds);
   }
 
-  // If no cwd match but --logs was passed explicitly, warn?
+  if (!primaryProjectId) {
+    // repo root / un-nested monorepo cwd: try smart defaults so "never picked up log stream" doesn't happen
+    const isRootCwd =
+      cwdRelativePath === '.' ||
+      cwdRelativePath === '' ||
+      cwdRelativePath === '/';
+    if (isRootCwd) {
+      if (found.size === 1) {
+        primaryProjectId = Array.from(found.keys())[0];
+      } else {
+        // Prefer projects with directory '.' or '' (root projects)
+        const rootDirCandidates = projects.filter(
+          p =>
+            (p.directory === '.' ||
+              p.directory === '' ||
+              p.directory === '/') &&
+            found.has(p.id)
+        );
+        if (rootDirCandidates.length === 1) {
+          primaryProjectId = rootDirCandidates[0].id;
+        } else if (rootDirCandidates.length === 0) {
+          // No root project — pick the most recently updated found deployment by primacy?
+          // Deepest found is still the best guess for typical usage.
+          primaryProjectId = pickDeepest(found.keys());
+        } else {
+          // Multiple root candidates — pick deepest (they're all same depth 0, so first alphabetical wins deterministically)
+          primaryProjectId = pickDeepest(rootDirCandidates.map(p => p.id));
+        }
+      }
+    }
+  }
+
   if (wrapperFlags.logs && !primaryProjectId) {
     output.warn(
       `No deployment is attached to the current directory (cwd: ${chalk.dim(
         cwdRelativePath
-      )}). Build logs are only shown when cwd is inside a linked project directory.`
+      )}). Build logs are only shown when cwd is inside a linked project directory — or at repo root when a single project matches.`
     );
     return gitExit;
   }
 
   if (!primaryProjectId) {
-    // No cwd-matched deployment to tail, just exit. Links already shown.
+    // No cwd-matched deployment to tail, and no safe root fallback — links already shown.
+    // Preserve git exit code. Hint user how to get logs explicitly.
+    if (found.size === 1) {
+      const onlyId = Array.from(found.keys())[0];
+      const onlyDep = found.get(onlyId)!;
+      output.print(
+        `\n  ${chalk.dim(`→ Build logs not auto-attached (cwd outside project root). Try:`)} ${chalk.cyan(
+          `vc inspect ${onlyDep.id} --logs`
+        )}\n`
+      );
+    }
     return gitExit;
   }
 
@@ -915,6 +1240,7 @@ export default async function gitPassthrough(
   }
 
   output.print('\n');
+  // Use log() which already emits "> …" at col 0 — don't add another ">" manually; cli-ux forbids double gutters.
   output.log(
     `Attaching to deployment for ${chalk.bold(primaryProj.name)} ${chalk.dim(
       `(${primaryProj.directory})`
