@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import type { CodingAgent, EnvExport } from '../types';
 import { mergeJson, pathExists } from '../config-files';
 import { GATEWAY_API_KEY_ENV } from '../gateway';
@@ -20,7 +20,7 @@ import { GATEWAY_API_KEY_ENV } from '../gateway';
  */
 function defaultConfigPath(home: string): string {
   const xdg = process.env.XDG_CONFIG_HOME;
-  const base = xdg && xdg.startsWith('/') ? xdg : join(home, '.config');
+  const base = xdg && isAbsolute(xdg) ? xdg : join(home, '.config');
   return join(base, 'opencode', 'opencode.json');
 }
 
