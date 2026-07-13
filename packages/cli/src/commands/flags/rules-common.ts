@@ -3,6 +3,7 @@ import type Client from '../../util/client';
 import { getCommandName } from '../../util/pkg-name';
 import { getFlag, getFlagSettings } from '../../util/flags/get-flags';
 import { resolveFlagEnvironment } from '../../util/flags/environment-variant';
+import { formatVariantForDisplay } from '../../util/flags/resolve-variant';
 import { getLinkedProject } from '../../util/projects/link';
 import output from '../../output-manager';
 import type {
@@ -86,4 +87,29 @@ export function isExitCodeResult(
   result: RulesCommandContext | { exitCode: number }
 ): result is { exitCode: number } {
   return 'exitCode' in result;
+}
+
+export function warnIfRuleChangesAreBypassed(
+  flag: Flag,
+  environment: string
+): void {
+  const envConfig = flag.environments[environment];
+  if (!envConfig) {
+    return;
+  }
+
+  if (envConfig.active) {
+    return;
+  }
+
+  const variantId = envConfig.pausedOutcome?.variantId;
+  const variant = flag.variants.find(candidate => candidate.id === variantId);
+  const serving = variant
+    ? formatVariantForDisplay(variant)
+    : variantId
+      ? chalk.bold(variantId)
+      : 'a fixed variant';
+  output.print(
+    `${chalk.yellow('!')} This rule update was saved, but ${chalk.bold(environment)} is serving ${serving}. Rule changes will not affect flag evaluation until the environment uses targeting again.\n`
+  );
 }
