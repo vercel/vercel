@@ -8,30 +8,30 @@ import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
 describe('env add', () => {
+  let testProject: Parameters<typeof useProject>[0];
+
   beforeEach(() => {
     useUser();
     useTeams('team_dummy');
-    useProject(
+    testProject = {
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+    };
+    useProject(testProject, [
+      ...envs,
       {
-        ...defaultProject,
-        id: 'vercel-env-pull',
-        name: 'vercel-env-pull',
+        type: 'encrypted',
+        id: '781dt89g8r2h789g',
+        key: 'REDIS_CONNECTION_STRING',
+        value: 'redis://abc123@redis.example.dev:6379',
+        target: ['development'],
+        gitBranch: undefined,
+        configurationId: null,
+        updatedAt: 1557241361455,
+        createdAt: 1557241361455,
       },
-      [
-        ...envs,
-        {
-          type: 'encrypted',
-          id: '781dt89g8r2h789g',
-          key: 'REDIS_CONNECTION_STRING',
-          value: 'redis://abc123@redis.example.dev:6379',
-          target: ['development'],
-          gitBranch: undefined,
-          configurationId: null,
-          updatedAt: 1557241361455,
-          createdAt: 1557241361455,
-        },
-      ]
-    );
+    ]);
     const cwd = setupUnitFixture('vercel-env-pull');
     client.cwd = cwd;
   });
@@ -858,28 +858,66 @@ describe('env add', () => {
 
     describe('[environment]', () => {
       it('should redact custom [environment] values', async () => {
+        testProject.customEnvironments = [
+          {
+            id: 'env_1234abcd5678efgh',
+            slug: 'custom-env-name',
+            createdAt: 1717176548879,
+            updatedAt: 1717176548879,
+            type: 'preview',
+            description: '',
+            branchMatcher: {
+              type: 'endsWith',
+              pattern: 'custom',
+            },
+          },
+        ];
+        const envName = 'environment-variable';
+        try {
+          client.setArgv('env', 'add', envName, 'custom-env-name');
+          const exitCodePromise = env(client);
+          await expect(client.stderr).toOutput('Store as sensitive?');
+          client.stdin.write('n\n');
+          await expect(client.stderr).toOutput('Value?');
+          client.stdin.write('testvalue\n');
+          await expect(exitCodePromise).resolves.toEqual(0);
+
+          const savedEnv = envs.find(currentEnv => currentEnv.key === envName);
+          expect(savedEnv?.customEnvironmentIds).toEqual([
+            'env_1234abcd5678efgh',
+          ]);
+
+          expect(client.telemetryEventStore).toHaveTelemetryEvents([
+            {
+              key: `subcommand:add`,
+              value: 'add',
+            },
+            {
+              key: `argument:name`,
+              value: '[REDACTED]',
+            },
+            {
+              key: `argument:environment`,
+              value: '[REDACTED]',
+            },
+          ]);
+        } finally {
+          const savedEnvIndex = envs.findIndex(
+            currentEnv => currentEnv.key === envName
+          );
+          if (savedEnvIndex !== -1) {
+            envs.splice(savedEnvIndex, 1);
+          }
+        }
+      });
+
+      it('errors on an unknown environment name', async () => {
         client.setArgv('env', 'add', 'environment-variable', 'custom-env-name');
         const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput('Store as sensitive?');
-        client.stdin.write('n\n');
-        await expect(client.stderr).toOutput('Value?');
-        client.stdin.write('testvalue\n');
-        await expect(exitCodePromise).resolves.toEqual(0);
-
-        expect(client.telemetryEventStore).toHaveTelemetryEvents([
-          {
-            key: `subcommand:add`,
-            value: 'add',
-          },
-          {
-            key: `argument:name`,
-            value: '[REDACTED]',
-          },
-          {
-            key: `argument:environment`,
-            value: '[REDACTED]',
-          },
-        ]);
+        await expect(client.stderr).toOutput(
+          'Invalid environment: custom-env-name'
+        );
+        await expect(exitCodePromise).resolves.toEqual(1);
       });
 
       describe('[gitBranch]', () => {
