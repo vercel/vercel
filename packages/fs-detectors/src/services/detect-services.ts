@@ -275,8 +275,7 @@ export async function detectServices(
     errors: [
       {
         code: 'NO_EXPERIMENTAL_SERVICES_CONFIGURED',
-        message:
-          'No services configured. Add `experimentalServices` to vercel.json.',
+        message: 'No services configured. Add `services` to vercel.json.',
       },
     ],
     warnings: [],
