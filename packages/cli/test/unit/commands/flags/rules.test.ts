@@ -258,12 +258,13 @@ describe('flags rules', () => {
     expect(exitCode).toEqual(0);
     expect(patchBodies).toHaveLength(1);
     const output = stripAnsi(client.stderr.getFullOutput());
-    expect(output).toContain(
-      'This rule update was saved, but production is serving false Off.'
+    expect(output).toMatch(
+      /^! This rule update was saved, but production is serving false Off\./m
     );
     expect(output).toContain(
       'Rule changes will not affect flag evaluation until the environment uses targeting again.'
     );
+    expect(output).not.toContain('WARNING!');
   });
 
   it('preserves a paused environment when adding a rule', async () => {
@@ -299,8 +300,8 @@ describe('flags rules', () => {
         },
       ],
     });
-    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
-      'This rule update was saved, but preview is serving false Off.'
+    expect(stripAnsi(client.stderr.getFullOutput())).toMatch(
+      /^! This rule update was saved, but preview is serving false Off\./m
     );
   });
 

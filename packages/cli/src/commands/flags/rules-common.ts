@@ -109,7 +109,7 @@ export function warnIfRuleChangesAreBypassed(
     : variantId
       ? chalk.bold(variantId)
       : 'a fixed variant';
-  output.warn(
-    `This rule update was saved, but ${chalk.bold(environment)} is serving ${serving}. Rule changes will not affect flag evaluation until the environment uses targeting again.`
+  output.print(
+    `${chalk.yellow('!')} This rule update was saved, but ${chalk.bold(environment)} is serving ${serving}. Rule changes will not affect flag evaluation until the environment uses targeting again.\n`
   );
 }
