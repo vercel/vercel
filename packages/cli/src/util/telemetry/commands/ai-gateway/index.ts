@@ -20,6 +20,13 @@ export class AiGatewayTelemetryClient
     });
   }
 
+  trackCliSubcommandCodingAgents(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'coding-agents',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandModels(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'models',

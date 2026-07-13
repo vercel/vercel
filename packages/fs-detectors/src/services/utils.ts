@@ -228,6 +228,15 @@ export function inferServiceRuntime(config: {
 
   // Infer from entrypoint extension
   if (config.entrypoint) {
+    // "pyproject.toml" is the declared-services entrypoint for Python: the
+    // service builds exactly what `[tool.vercel]` in that file declares
+    // (web entrypoint and/or subscribers), with no auto-detection.
+    if (
+      config.entrypoint === 'pyproject.toml' ||
+      config.entrypoint.endsWith('/pyproject.toml')
+    ) {
+      return 'python';
+    }
     for (const [ext, runtime] of Object.entries(ENTRYPOINT_EXTENSIONS)) {
       if (config.entrypoint.endsWith(ext)) {
         return runtime;
