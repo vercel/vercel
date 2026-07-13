@@ -71,13 +71,35 @@ export async function runMachine(args: {
   // Idempotent by default: if nothing needs writing and we weren't asked to
   // reconfigure, report the no-op without minting a fresh key.
   if (args.alreadyConfigured && !args.reconfigure) {
+    let message =
+      'All selected agents are already configured for the AI Gateway. Pass --reconfigure to rotate the key.';
+    // A provided key on a Keychain setup: refresh the stored secret in place,
+    // mirroring the interactive flow (the config files never carry the key).
+    if (args.useKeychain && args.keySource) {
+      if (!storeKeyInKeychain(args.keySource.key)) {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              status: AGENT_STATUS.ERROR,
+              reason: 'keychain_error',
+              message:
+                'Failed to update the key in the macOS Keychain. Re-run with --no-keychain to write it to the config files instead.',
+            },
+            null,
+            2
+          )}\n`
+        );
+        return 1;
+      }
+      message =
+        'All selected agents are already configured; updated the macOS Keychain with the provided key.';
+    }
     client.stdout.write(
       `${JSON.stringify(
         {
           status: AGENT_STATUS.OK,
           reason: 'already_configured',
-          message:
-            'All selected agents are already configured for the AI Gateway. Pass --reconfigure to rotate the key.',
+          message,
           configured: [],
           skipped: [],
         },
@@ -86,6 +108,26 @@ export async function runMachine(args: {
       )}\n`
     );
     return 0;
+  }
+
+  const applicable = previewPlan.changes.filter(
+    c =>
+      (c.status === 'create' || c.status === 'update') && c.format !== 'shell'
+  );
+  if (applicable.length === 0 && errored.length > 0) {
+    client.stdout.write(
+      `${JSON.stringify(
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: 'unparseable_config',
+          message: "Couldn't write any agent configurations.",
+          skipped,
+        },
+        null,
+        2
+      )}\n`
+    );
+    return 1;
   }
 
   let key: string;

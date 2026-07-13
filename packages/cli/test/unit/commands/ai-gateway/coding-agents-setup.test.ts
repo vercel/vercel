@@ -187,88 +187,102 @@ describe('ai-gateway coding-agents setup', () => {
       expect(out.configured[0].action).toBe('created');
     });
 
-    it('configures Codex with the responses wire API and a shell export', async () => {
-      useUser();
-      client.nonInteractive = true;
-      client.setArgv(
-        'ai-gateway',
-        'coding-agents',
-        'setup',
-        '--key',
-        'vck_DummyKey0002',
-        '--agent',
-        'codex'
-      );
+    // Shell rc management is intentionally skipped on Windows.
+    it.skipIf(process.platform === 'win32')(
+      'configures Codex with the responses wire API and a shell export',
+      async () => {
+        useUser();
+        client.nonInteractive = true;
+        client.setArgv(
+          'ai-gateway',
+          'coding-agents',
+          'setup',
+          '--key',
+          'vck_DummyKey0002',
+          '--agent',
+          'codex'
+        );
 
-      const exitCode = await aiGateway(client);
-      expect(exitCode).toBe(0);
+        const exitCode = await aiGateway(client);
+        expect(exitCode).toBe(0);
 
-      const toml = tomlParse(readFileSync(codexConfigPath(), 'utf8')) as any;
-      expect(toml.model_provider).toBe('vercel');
-      // We never pin a default model — only the provider/URL/auth are set up.
-      expect(toml.model).toBeUndefined();
-      expect(toml.model_providers.vercel.base_url).toBe(
-        'https://ai-gateway.vercel.sh/v1'
-      );
-      expect(toml.model_providers.vercel.wire_api).toBe('responses');
-      expect(toml.model_providers.vercel.env_key).toBe('AI_GATEWAY_API_KEY');
+        const toml = tomlParse(readFileSync(codexConfigPath(), 'utf8')) as any;
+        expect(toml.model_provider).toBe('vercel');
+        // We never pin a default model — only the provider/URL/auth are set up.
+        expect(toml.model).toBeUndefined();
+        expect(toml.model_providers.vercel.base_url).toBe(
+          'https://ai-gateway.vercel.sh/v1'
+        );
+        expect(toml.model_providers.vercel.wire_api).toBe('responses');
+        expect(toml.model_providers.vercel.env_key).toBe('AI_GATEWAY_API_KEY');
 
-      const bashrc = readFileSync(bashrcPath(), 'utf8');
-      expect(bashrc).toContain('# >>> vercel ai-gateway >>>');
-      expect(bashrc).toContain("export AI_GATEWAY_API_KEY='vck_DummyKey0002'");
-    });
+        const bashrc = readFileSync(bashrcPath(), 'utf8');
+        expect(bashrc).toContain('# >>> vercel ai-gateway >>>');
+        expect(bashrc).toContain(
+          "export AI_GATEWAY_API_KEY='vck_DummyKey0002'"
+        );
+      }
+    );
 
-    it('appends the rc block a blank line after existing user content', async () => {
-      useUser();
-      client.nonInteractive = true;
-      writeFileSync(bashrcPath(), '# my rc\nalias ll="ls -la"\n');
-      client.setArgv(
-        'ai-gateway',
-        'coding-agents',
-        'setup',
-        '--key',
-        'vck_DummyKey0018',
-        '--agent',
-        'codex'
-      );
+    // Shell rc management is intentionally skipped on Windows.
+    it.skipIf(process.platform === 'win32')(
+      'appends the rc block a blank line after existing user content',
+      async () => {
+        useUser();
+        client.nonInteractive = true;
+        writeFileSync(bashrcPath(), '# my rc\nalias ll="ls -la"\n');
+        client.setArgv(
+          'ai-gateway',
+          'coding-agents',
+          'setup',
+          '--key',
+          'vck_DummyKey0018',
+          '--agent',
+          'codex'
+        );
 
-      expect(await aiGateway(client)).toBe(0);
-      // The exact bytes: the block reads as its own section, never as a tail
-      // of the user's last block.
-      expect(readFileSync(bashrcPath(), 'utf8')).toBe(
-        [
-          '# my rc',
-          'alias ll="ls -la"',
-          '',
-          '# >>> vercel ai-gateway >>>',
-          '# Managed by `vercel ai-gateway coding-agents setup` — safe to remove this block.',
-          "export AI_GATEWAY_API_KEY='vck_DummyKey0018'",
-          '# <<< vercel ai-gateway <<<',
-          '',
-        ].join('\n')
-      );
-    });
+        expect(await aiGateway(client)).toBe(0);
+        // The exact bytes: the block reads as its own section, never as a tail
+        // of the user's last block.
+        expect(readFileSync(bashrcPath(), 'utf8')).toBe(
+          [
+            '# my rc',
+            'alias ll="ls -la"',
+            '',
+            '# >>> vercel ai-gateway >>>',
+            '# Managed by `vercel ai-gateway coding-agents setup` — safe to remove this block.',
+            "export AI_GATEWAY_API_KEY='vck_DummyKey0018'",
+            '# <<< vercel ai-gateway <<<',
+            '',
+          ].join('\n')
+        );
+      }
+    );
 
-    it('shell-escapes a key with special characters', async () => {
-      useUser();
-      client.nonInteractive = true;
-      const trickyKey = 'vck_a$b`c\'d"e';
-      client.setArgv(
-        'ai-gateway',
-        'coding-agents',
-        'setup',
-        '--key',
-        trickyKey,
-        '--agent',
-        'codex'
-      );
+    // Shell rc management is intentionally skipped on Windows.
+    it.skipIf(process.platform === 'win32')(
+      'shell-escapes a key with special characters',
+      async () => {
+        useUser();
+        client.nonInteractive = true;
+        const trickyKey = 'vck_a$b`c\'d"e';
+        client.setArgv(
+          'ai-gateway',
+          'coding-agents',
+          'setup',
+          '--key',
+          trickyKey,
+          '--agent',
+          'codex'
+        );
 
-      expect(await aiGateway(client)).toBe(0);
-      const bashrc = readFileSync(bashrcPath(), 'utf8');
-      expect(bashrc).toContain(
-        `export AI_GATEWAY_API_KEY='vck_a$b\`c'\\''d"e'`
-      );
-    });
+        expect(await aiGateway(client)).toBe(0);
+        const bashrc = readFileSync(bashrcPath(), 'utf8');
+        expect(bashrc).toContain(
+          `export AI_GATEWAY_API_KEY='vck_a$b\`c'\\''d"e'`
+        );
+      }
+    );
 
     it('configures OpenCode with the native vercel provider', async () => {
       useUser();
@@ -621,6 +635,61 @@ describe('ai-gateway coding-agents setup', () => {
 
       expect(await aiGateway(client)).toBe(1);
       await expect(client.stderr).toOutput('No coding agents detected');
+    });
+  });
+
+  describe('non-interactive agent selection', () => {
+    it('configures only the detected agents when none are named', async () => {
+      useUser();
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0011'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      expect(existsSync(claudeSettingsPath())).toBe(true);
+      // Undetected agents are left alone.
+      expect(existsSync(codexConfigPath())).toBe(false);
+      expect(existsSync(opencodeConfigPath())).toBe(false);
+      expect(existsSync(piAuthPath())).toBe(false);
+
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.configured).toHaveLength(1);
+    });
+
+    it('errors when nothing is detected and no agent is named', async () => {
+      useUser();
+      client.nonInteractive = true;
+      // The mock throws to simulate process.exit terminating; assert on the
+      // spy and the emitted payload rather than the return value.
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((
+        _code?: number
+      ) => {
+        throw new Error('exit');
+      }) as () => never);
+      try {
+        client.setArgv(
+          'ai-gateway',
+          'coding-agents',
+          'setup',
+          '--key',
+          'vck_DummyKey0012'
+        );
+        await aiGateway(client).catch(() => {});
+
+        expect(exitSpy).toHaveBeenCalledWith(1);
+        const out = JSON.parse(client.stdout.getFullOutput());
+        expect(out.status).toBe('error');
+        expect(out.message).toContain('No coding agents detected');
+        expect(existsSync(codexConfigPath())).toBe(false);
+      } finally {
+        exitSpy.mockRestore();
+      }
     });
   });
 
@@ -1140,10 +1209,49 @@ describe('ai-gateway coding-agents setup', () => {
         'Failed to update the key in the macOS Keychain'
       );
     });
+
+    it('refreshes the Keychain on a non-interactive re-run with a new key', async () => {
+      useUser();
+      keychainState.available = true;
+      client.nonInteractive = true;
+
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_OldKey0031',
+        '--agent',
+        'claude-code'
+      );
+      expect(await aiGateway(client)).toBe(0);
+      expect(keychainState.stored).toEqual(['vck_OldKey0031']);
+      const stdoutAfterFirst = client.stdout.getFullOutput().length;
+
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_NewKey0032',
+        '--agent',
+        'claude-code'
+      );
+      expect(await aiGateway(client)).toBe(0);
+      expect(keychainState.stored).toEqual([
+        'vck_OldKey0031',
+        'vck_NewKey0032',
+      ]);
+      const out = JSON.parse(
+        client.stdout.getFullOutput().slice(stdoutAfterFirst)
+      );
+      expect(out.reason).toBe('already_configured');
+      expect(out.message).toContain('updated the macOS Keychain');
+    });
   });
 
   describe('safety', () => {
-    it('skips a malformed config instead of clobbering it', async () => {
+    it('skips a malformed config instead of clobbering it, and fails the run', async () => {
       useUser();
       client.nonInteractive = true;
       mkdirSync(join(home, '.claude'), { recursive: true });
@@ -1158,17 +1266,112 @@ describe('ai-gateway coding-agents setup', () => {
         '--agent',
         'claude-code'
       );
+      // Nothing could be configured, so the run reports failure.
       const exitCode = await aiGateway(client);
-      expect(exitCode).toBe(0);
+      expect(exitCode).toBe(1);
 
       // File untouched.
       expect(readFileSync(claudeSettingsPath(), 'utf8')).toBe(
         '{ this is not json'
       );
       const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.status).toBe('error');
       expect(
         out.skipped.some((s: any) => s.reason === 'unparseable_config')
       ).toBe(true);
+    });
+
+    it('does not create an API key when nothing can be written', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      writeFileSync(claudeSettingsPath(), '{ this is not json', 'utf8');
+
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--agent',
+        'claude-code'
+      );
+      expect(await aiGateway(client)).toBe(1);
+      expect(lastCreateBody).toBeUndefined();
+    });
+
+    it('exits 1 when the only config cannot be written (interactive)', async () => {
+      useUser();
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      writeFileSync(claudeSettingsPath(), '{ this is not json', 'utf8');
+
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--yes',
+        '--key',
+        'vck_DummyKey0013',
+        '--agent',
+        'claude-code'
+      );
+      expect(await aiGateway(client)).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        "Couldn't write any agent configurations"
+      );
+    });
+
+    it('still configures the healthy agents when one config is malformed', async () => {
+      useUser();
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      writeFileSync(claudeSettingsPath(), '{ this is not json', 'utf8');
+
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0014',
+        '--agent',
+        'claude-code',
+        '--agent',
+        'codex'
+      );
+      expect(await aiGateway(client)).toBe(0);
+      expect(existsSync(codexConfigPath())).toBe(true);
+
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.status).toBe('ok');
+      expect(out.configured.length).toBeGreaterThan(0);
+      expect(
+        out.skipped.some((s: any) => s.reason === 'unparseable_config')
+      ).toBe(true);
+    });
+
+    it('exits 1 without minting when only the shell export would be written', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.codex'), { recursive: true });
+      writeFileSync(codexConfigPath(), 'not = = toml', 'utf8');
+
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--agent',
+        'codex'
+      );
+      // The .bashrc export alone must not count as a successful configuration.
+      expect(await aiGateway(client)).toBe(1);
+      expect(lastCreateBody).toBeUndefined();
+      expect(existsSync(bashrcPath())).toBe(false);
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.status).toBe('error');
     });
 
     it('never prints the full key — only a masked form', async () => {
@@ -1622,6 +1825,77 @@ describe('ai-gateway coding-agents setup', () => {
       process.env.SHELL = '/bin/bash';
       const custom = join(home, 'custom', 'rc');
       expect(detectShellRc(home, custom)).toBe(custom);
+    });
+  });
+
+  describe('windows', () => {
+    const realPlatform = process.platform;
+    afterEach(() => {
+      Object.defineProperty(process, 'platform', {
+        value: realPlatform,
+        configurable: true,
+      });
+    });
+
+    it('skips shell setup and reports the env var instead', async () => {
+      Object.defineProperty(process, 'platform', {
+        value: 'win32',
+        configurable: true,
+      });
+      const plan = await buildSetupPlan([codex], {
+        apiKey: 'vck_x',
+        home,
+        useKeychain: false,
+      });
+      expect(plan.changes.find(c => c.format === 'shell')).toBeUndefined();
+      expect(plan.shellRcPath).toBeUndefined();
+      expect(
+        plan.notes.some(n =>
+          n.notes.some(l => l.includes('AI_GATEWAY_API_KEY'))
+        )
+      ).toBe(true);
+    });
+
+    it('honors an explicit --shell-rc override on Windows', async () => {
+      Object.defineProperty(process, 'platform', {
+        value: 'win32',
+        configurable: true,
+      });
+      const rc = join(home, '.bashrc');
+      const plan = await buildSetupPlan([codex], {
+        apiKey: 'vck_x',
+        home,
+        useKeychain: false,
+        shellRcOverride: rc,
+      });
+      expect(plan.changes.find(c => c.format === 'shell')?.path).toBe(rc);
+    });
+
+    it('prints a created key once when no file can carry it', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      Object.defineProperty(process, 'platform', {
+        value: 'win32',
+        configurable: true,
+      });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--yes',
+        '--agent',
+        'codex'
+      );
+      expect(await aiGateway(client)).toBe(0);
+
+      // config.toml only names the env var; the key itself is only in the
+      // one-time stdout line.
+      expect(readFileSync(codexConfigPath(), 'utf8')).not.toContain(
+        CREATED_KEY
+      );
+      expect(client.stdout.getFullOutput()).toContain(CREATED_KEY);
     });
   });
 
