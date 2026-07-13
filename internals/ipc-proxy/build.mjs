@@ -32,7 +32,7 @@ const TARGETS = [
 
 async function hasSystemGo() {
   try {
-    const { stdout } = await execa('go', ['version']);
+    const { stdout } = await execa('go', ['version'], { timeout: 10_000 });
     const versionMatch = stdout.match(/go(\d+)\.(\d+)/);
     if (!versionMatch?.[1] || !versionMatch[2]) return false;
 
@@ -67,7 +67,17 @@ async function downloadGo() {
   });
 
   if (await pathExists(goBin)) {
-    return overrides();
+    try {
+      // Guard against a truncated / corrupted download (the failure seen in CI:
+      // `package context is not in std (.../src/context)`). A valid GOROOT
+      // always contains `src/context/context.go`.
+      const { readFile } = await import('node:fs/promises');
+      await readFile(join(destDir, 'src', 'context', 'context.go'));
+      return overrides();
+    } catch {
+      // Corrupted cache: re-download.
+      await remove(destDir);
+    }
   }
 
   const filename = `go${GO_VERSION}.${goPlatform}-${goArch}.tar.gz`;
@@ -78,19 +88,45 @@ async function downloadGo() {
   await remove(destDir);
   await mkdirp(destDir);
 
-  const res = await fetch(url);
-  if (!res.ok || !res.body) {
-    throw new Error(`Failed to download Go: ${url} (${res.status})`);
+  const maxAttempts = 3;
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(120_000) });
+      if (!res.ok || !res.body) {
+        throw new Error(`Failed to download Go: ${url} (${res.status})`);
+      }
+
+      await new Promise((resolve, reject) => {
+        const body = Readable.fromWeb(res.body);
+        const extractor = extract({ cwd: destDir, strip: 1 });
+        body.on('error', reject);
+        extractor.on('error', reject);
+        extractor.on('finish', resolve);
+        body.pipe(extractor);
+      });
+
+      lastError = undefined;
+      break;
+    } catch (err) {
+      lastError = err;
+      // Clean slate before retry so a partial extraction doesn't poison the next attempt.
+      await remove(destDir).catch(() => {});
+      await mkdirp(destDir);
+      if (attempt < maxAttempts) {
+        const backoff = attempt * 1500;
+        console.log(`Go download failed (attempt ${attempt}/${maxAttempts}): ${err}`);
+        console.log(`Retrying in ${backoff}ms...`);
+        await new Promise(r => setTimeout(r, backoff));
+      }
+    }
   }
 
-  await new Promise((resolve, reject) => {
-    const body = Readable.fromWeb(res.body);
-    const extractor = extract({ cwd: destDir, strip: 1 });
-    body.on('error', reject);
-    extractor.on('error', reject);
-    extractor.on('finish', resolve);
-    body.pipe(extractor);
-  });
+  if (lastError) {
+    throw new Error(
+      `Failed to download Go after ${maxAttempts} attempts: ${lastError?.message ?? lastError}`
+    );
+  }
 
   return overrides();
 }

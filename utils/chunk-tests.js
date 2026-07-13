@@ -150,6 +150,16 @@ const RUST_BUILD_ROOTS = new Set([
   '@vercel/build-utils',
 ]);
 
+// Packages whose build requires the Go toolchain.
+// `@vercel-internals/ipc-proxy` compiles cross-arch proxy binaries during its
+// build step; `@vercel/go` depends on it and copies those binaries. The `vercel`
+// CLI depends on `@vercel/go`, so its build transitively needs Go as well.
+// Like Rust above, we enumerate roots and mark direct dependents as needing Go.
+const GO_BUILD_ROOTS = new Set([
+  '@vercel-internals/ipc-proxy',
+  '@vercel/go',
+]);
+
 function readPackageManifest(rootPath, packageJsonPath) {
   const manifest = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   const allDeps = {
@@ -159,11 +169,15 @@ function readPackageManifest(rootPath, packageJsonPath) {
   const needsRust =
     RUST_BUILD_ROOTS.has(manifest.name) ||
     Object.keys(allDeps).some(dep => RUST_BUILD_ROOTS.has(dep));
+  const needsGo =
+    GO_BUILD_ROOTS.has(manifest.name) ||
+    Object.keys(allDeps).some(dep => GO_BUILD_ROOTS.has(dep));
   return {
     packagePath: path.relative(rootPath, path.dirname(packageJsonPath)),
     packageJson: manifest,
     packageName: manifest.name,
     needsRust,
+    needsGo,
   };
 }
 
@@ -374,7 +388,7 @@ async function getChunkedTests() {
         affectedPackageSet.size === 0 || affectedPackageSet.has(packageName)
       );
     })
-    .forEach(({ packageJson, packageName, packagePath, needsRust }) => {
+    .forEach(({ packageJson, packageName, packagePath, needsRust, needsGo }) => {
       for (const scriptName of scripts) {
         const patterns = getScriptTestPatterns(packageJson, scriptName);
         if (patterns.length === 0) {
@@ -393,6 +407,7 @@ async function getChunkedTests() {
         const packagePathAndName = `${packagePath},${packageName}`;
         testsToRun[packagePathAndName] = testsToRun[packagePathAndName] || {
           needsRust,
+          needsGo,
         };
         testsToRun[packagePathAndName][scriptName] = testPaths;
       }
@@ -401,9 +416,9 @@ async function getChunkedTests() {
   const chunkedTests = Object.entries(testsToRun).flatMap(
     ([packagePathAndName, scriptNames]) => {
       const [packagePath, packageName] = packagePathAndName.split(',');
-      const { needsRust } = scriptNames;
+      const { needsRust, needsGo } = scriptNames;
       return Object.entries(scriptNames).flatMap(([scriptName, testPaths]) => {
-        if (scriptName === 'needsRust') return [];
+        if (scriptName === 'needsRust' || scriptName === 'needsGo') return [];
         const runnerOptions = getRunnerOptions(scriptName, packageName);
         const {
           runners,
@@ -453,6 +468,7 @@ async function getChunkedTests() {
                   allChunksLength: allChunks.length,
                   useEnvPaths,
                   needsRust,
+                  needsGo,
                   label,
                 };
               });
