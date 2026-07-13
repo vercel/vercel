@@ -81,6 +81,12 @@ export const AGENT_REASON = {
   INVALID_BUDGET: 'invalid_budget',
   INVALID_REFRESH_PERIOD: 'invalid_refresh_period',
   INVALID_EXPIRATION: 'invalid_expiration',
+  /**
+   * Every selected agent needs explicit `--agent`/`--all` consent (see the
+   * payload's skipped[]). `--yes` does not grant it, so this is deliberately
+   * not `confirmation_required` — re-running with --yes would loop forever.
+   */
+  REQUIRES_CONSENT: 'requires_consent',
   // Redirects
   REDIRECT_NOT_FOUND: 'redirect_not_found',
   VERSION_NOT_FOUND: 'version_not_found',

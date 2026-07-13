@@ -33,10 +33,6 @@ import {
   keychainLookup,
 } from '../../../../src/util/ai-gateway/coding-agents/keychain';
 
-// Shell rc management is skipped on Windows (buildSetupPlan emits a note
-// instead), so tests asserting on the planned shell block cannot run there.
-const itSkipOnWindows = it.skipIf(process.platform === 'win32');
-
 // A pass-through mock of the keychain module: tests that set `available` get a
 // fake in-memory keychain (usable on Linux CI); everything else hits the real
 // implementation.
@@ -69,6 +65,15 @@ vi.mock(
     };
   }
 );
+
+// Desktop-app detection defaults to "not installed" so a developer's real
+// /Applications never leaks warnings into unrelated tests.
+const desktopState = vi.hoisted(() => ({ codex: false }));
+
+vi.mock('../../../../src/util/ai-gateway/coding-agents/desktop-apps', () => ({
+  isMacAppInstalled: (bundleName: string) =>
+    bundleName === 'Codex.app' ? desktopState.codex : false,
+}));
 
 const CREATED_KEY = 'vck_CreatedSecretKey1234';
 const mockApiKeyResponse = {
@@ -115,6 +120,7 @@ beforeEach(() => {
   keychainState.available = undefined;
   keychainState.stored.length = 0;
   keychainState.storeResult = true;
+  desktopState.codex = false;
   home = mkdtempSync(join(tmpdir(), 'vc-setup-agents-'));
   savedEnv = {
     HOME: process.env.HOME,
@@ -340,7 +346,8 @@ describe('ai-gateway coding-agents setup', () => {
       expect(cfg.provider.vercel.options.apiKey).toBe('vck_Minified001');
     });
 
-    itSkipOnWindows(
+    // Keychain-backed shell exports only exist on macOS (no shell rc on Windows).
+    it.skipIf(process.platform === 'win32')(
       'keeps the OpenCode key out of the config under keychain',
       async () => {
         const secret = 'vck_OpenCodeKeychain';
@@ -709,7 +716,8 @@ describe('ai-gateway coding-agents setup', () => {
       expect(keychainLookup()).toContain('security find-generic-password');
     });
 
-    itSkipOnWindows(
+    // Keychain-backed shell exports only exist on macOS (no shell rc on Windows).
+    it.skipIf(process.platform === 'win32')(
       'keeps the secret out of the configs and reads it from the shell',
       async () => {
         const secret = 'vck_KeychainSecret321';
@@ -747,7 +755,8 @@ describe('ai-gateway coding-agents setup', () => {
       expect(claude?.next).toContain(secret);
     });
 
-    itSkipOnWindows(
+    // Keychain-backed shell exports only exist on macOS (no shell rc on Windows).
+    it.skipIf(process.platform === 'win32')(
       'reads the Codex env key from the Keychain instead of the config',
       async () => {
         const secret = 'vck_KeychainSecret321';
@@ -1914,6 +1923,390 @@ describe('ai-gateway coding-agents setup', () => {
     });
   });
 
+  describe('desktop-app consent', () => {
+    it('asks before configuring Codex when its desktop app is installed', async () => {
+      useUser();
+      desktopState.codex = true;
+      mkdirSync(join(home, '.codex'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0020',
+        '--agent',
+        'codex'
+      );
+
+      const exitCodePromise = aiGateway(client);
+      await expect(client.stderr).toOutput(
+        'The Codex desktop app will stop working'
+      );
+      await expect(client.stderr).toOutput('Configure Codex anyway?');
+      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Apply these changes?');
+      client.stdin.write('\n');
+
+      expect(await exitCodePromise).toBe(0);
+      const toml = tomlParse(readFileSync(codexConfigPath(), 'utf8')) as any;
+      expect(toml.model_provider).toBe('vercel');
+    });
+
+    it('declining skips the agent and configures the rest', async () => {
+      useUser();
+      desktopState.codex = true;
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      mkdirSync(join(home, '.codex'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0021',
+        '--agent',
+        'claude-code',
+        '--agent',
+        'codex'
+      );
+
+      const exitCodePromise = aiGateway(client);
+      await expect(client.stderr).toOutput('Configure Codex anyway?');
+      client.stdin.write('\n'); // default No
+      await expect(client.stderr).toOutput('Skipped Codex');
+      await expect(client.stderr).toOutput('Apply these changes?');
+      client.stdin.write('\n');
+
+      expect(await exitCodePromise).toBe(0);
+      expect(existsSync(claudeSettingsPath())).toBe(true);
+      // Codex was left completely untouched.
+      expect(existsSync(codexConfigPath())).toBe(false);
+      expect(existsSync(bashrcPath())).toBe(false);
+    });
+
+    it('declining the only agent ends the run before the key interview even starts', async () => {
+      useTeam();
+      useUser();
+      useCreateApiKey();
+      desktopState.codex = true;
+      mkdirSync(join(home, '.codex'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--agent',
+        'codex'
+      );
+
+      const exitCodePromise = aiGateway(client);
+      // Consent is the FIRST question — declining costs no setup answers and
+      // no team round trip.
+      await expect(client.stderr).toOutput('Configure Codex anyway?');
+      client.stdin.write('\n'); // default No
+
+      expect(await exitCodePromise).toBe(0);
+      await expect(client.stderr).toOutput('Nothing to configure');
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).not.toContain('use with your coding agents');
+      expect(stderr).not.toContain('What team should the API key be under?');
+      expect(stderr).not.toContain('Set a spend limit');
+      expect(stderr).not.toContain('Set an expiration');
+      // No key was minted for a run that configured nothing.
+      expect(lastCreateBody).toBeUndefined();
+      expect(existsSync(codexConfigPath())).toBe(false);
+    });
+
+    it('--yes with an explicit --agent consents but still warns', async () => {
+      useUser();
+      desktopState.codex = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--yes',
+        '--key',
+        'vck_DummyKey0022',
+        '--agent',
+        'codex'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        'The Codex desktop app will stop working'
+      );
+      expect(existsSync(codexConfigPath())).toBe(true);
+    });
+
+    it('--yes without naming the agent skips it with a hint', async () => {
+      useUser();
+      desktopState.codex = true;
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      mkdirSync(join(home, '.codex'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--yes',
+        '--key',
+        'vck_DummyKey0023'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Pass --agent codex to configure it anyway'
+      );
+      expect(existsSync(claudeSettingsPath())).toBe(true);
+      expect(existsSync(codexConfigPath())).toBe(false);
+    });
+
+    it('emits warnings in the JSON payload for an explicit agent', async () => {
+      useUser();
+      desktopState.codex = true;
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0024',
+        '--agent',
+        'codex'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.status).toBe('ok');
+      expect(out.warnings).toEqual([
+        expect.objectContaining({ agent: 'codex', code: 'desktop_app_breaks' }),
+      ]);
+      expect(out.configured.length).toBeGreaterThan(0);
+    });
+
+    it('fails non-interactively with a self-contained payload when every detected agent needs consent', async () => {
+      useUser();
+      desktopState.codex = true;
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.codex'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0025'
+      );
+
+      expect(await aiGateway(client)).toBe(1);
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.status).toBe('error');
+      // Not 'confirmation_required': --yes can't grant consent, so agents that
+      // auto-retry confirmation failures with --yes must not loop here.
+      expect(out.reason).toBe('requires_consent');
+      expect(out.message).toContain('--agent codex');
+      expect(out.warnings).toEqual([
+        expect.objectContaining({ agent: 'codex', code: 'desktop_app_breaks' }),
+      ]);
+      expect(out.skipped).toEqual([
+        expect.objectContaining({
+          target: 'codex',
+          reason: 'requires_consent',
+        }),
+      ]);
+      // The suggested command replays the original invocation — same key
+      // intent (redacted), same flags — with only the consent flags appended.
+      expect(out.next[0].command).toBe(
+        'vercel ai-gateway coding-agents setup --key <key> --agent codex'
+      );
+      // The suggested command must never carry key material.
+      expect(JSON.stringify(out)).not.toContain('vck_');
+      expect(existsSync(codexConfigPath())).toBe(false);
+    });
+
+    it('--all counts as explicit consent', async () => {
+      useUser();
+      desktopState.codex = true;
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.codex'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--all',
+        '--key',
+        'vck_DummyKey0030'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.status).toBe('ok');
+      expect(out.warnings).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            agent: 'codex',
+            code: 'desktop_app_breaks',
+          }),
+        ])
+      );
+      expect(
+        out.skipped.filter((s: any) => s.reason === 'requires_consent')
+      ).toEqual([]);
+      expect(existsSync(codexConfigPath())).toBe(true);
+    });
+
+    it('skips a detected-but-unnamed agent in JSON mode and configures the rest', async () => {
+      useUser();
+      desktopState.codex = true;
+      client.nonInteractive = true;
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      mkdirSync(join(home, '.codex'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0026'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(
+        out.skipped.some(
+          (s: any) => s.target === 'codex' && s.reason === 'requires_consent'
+        )
+      ).toBe(true);
+      // The skipped agent's structured warning code survives on the success
+      // payload — consumers don't have to parse it out of skipped[].message.
+      expect(out.warnings).toEqual([
+        expect.objectContaining({ agent: 'codex', code: 'desktop_app_breaks' }),
+      ]);
+      expect(existsSync(claudeSettingsPath())).toBe(true);
+      expect(existsSync(codexConfigPath())).toBe(false);
+    });
+
+    it('an interactive --yes dry run predicts the failure a real run would hit', async () => {
+      useUser();
+      keychainState.available = false;
+      desktopState.codex = true;
+      mkdirSync(join(home, '.codex'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--yes',
+        '--dry-run',
+        '--key',
+        'vck_DummyKey0034'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      const stderr = client.stderr.getFullOutput();
+      // The preview states the real outcome: a refusal, not a benign skip.
+      expect(stderr).toContain('a real run would fail');
+      expect(stderr).toContain('Pass --agent codex');
+      expect(existsSync(codexConfigPath())).toBe(false);
+    });
+
+    it('carries warnings and consent skips through a JSON dry run', async () => {
+      useUser();
+      desktopState.codex = true;
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--dry-run',
+        '--key',
+        'vck_DummyKey0027',
+        '--agent',
+        'codex'
+      );
+      expect(await aiGateway(client)).toBe(0);
+      const explicitOut = JSON.parse(client.stdout.getFullOutput());
+      expect(explicitOut.reason).toBe('dry_run');
+      expect(explicitOut.warnings).toHaveLength(1);
+
+      const stdoutAfterFirst = client.stdout.getFullOutput().length;
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      mkdirSync(join(home, '.codex'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--dry-run',
+        '--key',
+        'vck_DummyKey0027'
+      );
+      expect(await aiGateway(client)).toBe(0);
+      const implicitOut = JSON.parse(
+        client.stdout.getFullOutput().slice(stdoutAfterFirst)
+      );
+      expect(
+        implicitOut.skipped.some((s: any) => s.reason === 'requires_consent')
+      ).toBe(true);
+      // The surviving agent's changes are still previewed…
+      expect(implicitOut.changes.length).toBeGreaterThan(0);
+      // …but none of the consent-skipped agent's.
+      expect(
+        implicitOut.changes.every((c: any) => !c.file.includes('.codex'))
+      ).toBe(true);
+    });
+
+    it('warns during an interactive dry run without prompting', async () => {
+      useUser();
+      desktopState.codex = true;
+      mkdirSync(join(home, '.codex'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--dry-run',
+        '--key',
+        'vck_DummyKey0028',
+        '--agent',
+        'codex'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      const stderr = client.stderr.getFullOutput();
+      // The warning reads loss first, then the cause lines, then how to
+      // revert — each cause sentence on its own line.
+      const impactAt = stderr.indexOf(
+        'The Codex desktop app will stop working'
+      );
+      const whyAt = stderr.indexOf('cannot use custom model providers');
+      const whyLine2At = stderr.indexOf('\n  The Codex CLI keeps working.');
+      // The undo instruction names the resolved file, not a bare filename.
+      const undoAt = stderr.indexOf(
+        `To undo: remove the model_provider line from ${codexConfigPath()}`
+      );
+      expect(impactAt).toBeGreaterThanOrEqual(0);
+      expect(whyAt).toBeGreaterThan(impactAt);
+      expect(whyLine2At).toBeGreaterThan(whyAt);
+      expect(undoAt).toBeGreaterThan(whyLine2At);
+      // The old single-paragraph warning is gone.
+      expect(stderr).not.toContain('The Codex desktop app is installed');
+      expect(stderr).not.toContain('Configure Codex anyway?');
+      expect(existsSync(codexConfigPath())).toBe(false);
+    });
+
+    it('stays silent and additive when no desktop app is installed', async () => {
+      useUser();
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0029',
+        '--agent',
+        'codex'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+      const out = JSON.parse(client.stdout.getFullOutput());
+      expect(out.warnings).toEqual([]);
+      expect(client.stderr.getFullOutput()).not.toContain('desktop app');
+    });
+  });
+
   describe('reconfigure', () => {
     it('re-running with the same key is a no-op and mints no new key', async () => {
       useUser();
@@ -2010,7 +2403,8 @@ describe('ai-gateway coding-agents setup', () => {
       ).toBe(true);
     });
 
-    itSkipOnWindows(
+    // Shell env blocks only exist off Windows (shell rc management is disabled there).
+    it.skipIf(process.platform === 'win32')(
       'shares a single deduped env block across multiple agents',
       async () => {
         const plan = await buildSetupPlan([claudeCode, codex, opencode], {
