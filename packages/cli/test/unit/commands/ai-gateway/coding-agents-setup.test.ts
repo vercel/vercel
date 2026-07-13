@@ -755,19 +755,23 @@ describe('ai-gateway coding-agents setup', () => {
       expect(claude?.next).toContain(secret);
     });
 
-    it('reads the Codex env key from the Keychain instead of the config', async () => {
-      const secret = 'vck_KeychainSecret321';
-      const plan = await buildSetupPlan([codex], {
-        apiKey: secret,
-        home,
-        useKeychain: true,
-      });
+    // Keychain-backed shell exports only exist on macOS (no shell rc on Windows).
+    it.skipIf(process.platform === 'win32')(
+      'reads the Codex env key from the Keychain instead of the config',
+      async () => {
+        const secret = 'vck_KeychainSecret321';
+        const plan = await buildSetupPlan([codex], {
+          apiKey: secret,
+          home,
+          useKeychain: true,
+        });
 
-      const shell = plan.changes.find(c => c.format === 'shell');
-      expect(shell?.next).toContain('security find-generic-password');
-      expect(shell?.next).toContain('export AI_GATEWAY_API_KEY=');
-      expect(shell?.next).not.toContain(secret);
-    });
+        const shell = plan.changes.find(c => c.format === 'shell');
+        expect(shell?.next).toContain('security find-generic-password');
+        expect(shell?.next).toContain('export AI_GATEWAY_API_KEY=');
+        expect(shell?.next).not.toContain(secret);
+      }
+    );
   });
 
   describe('key options', () => {
@@ -2399,29 +2403,35 @@ describe('ai-gateway coding-agents setup', () => {
       ).toBe(true);
     });
 
-    it('shares a single deduped env block across multiple agents', async () => {
-      const plan = await buildSetupPlan([claudeCode, codex, opencode], {
-        apiKey: 'vck_multi',
-        home,
-        useKeychain: true,
-      });
+    // Shell env blocks only exist off Windows (shell rc management is disabled there).
+    it.skipIf(process.platform === 'win32')(
+      'shares a single deduped env block across multiple agents',
+      async () => {
+        const plan = await buildSetupPlan([claudeCode, codex, opencode], {
+          apiKey: 'vck_multi',
+          home,
+          useKeychain: true,
+        });
 
-      // One config file per agent.
-      expect(plan.changes.some(c => c.label === 'Claude Code settings')).toBe(
-        true
-      );
-      expect(plan.changes.some(c => c.label === 'Codex config')).toBe(true);
-      expect(plan.changes.some(c => c.label === 'OpenCode config')).toBe(true);
+        // One config file per agent.
+        expect(plan.changes.some(c => c.label === 'Claude Code settings')).toBe(
+          true
+        );
+        expect(plan.changes.some(c => c.label === 'Codex config')).toBe(true);
+        expect(plan.changes.some(c => c.label === 'OpenCode config')).toBe(
+          true
+        );
 
-      // A single shared shell block. Codex and OpenCode both want
-      // AI_GATEWAY_API_KEY — it's exported once (deduped) — and Claude Code
-      // contributes ANTHROPIC_AUTH_TOKEN.
-      const shells = plan.changes.filter(c => c.format === 'shell');
-      expect(shells).toHaveLength(1);
-      const gateway = shells[0].next?.match(/AI_GATEWAY_API_KEY/g) ?? [];
-      expect(gateway).toHaveLength(1);
-      expect(shells[0].next).toContain('ANTHROPIC_AUTH_TOKEN');
-    });
+        // A single shared shell block. Codex and OpenCode both want
+        // AI_GATEWAY_API_KEY — it's exported once (deduped) — and Claude Code
+        // contributes ANTHROPIC_AUTH_TOKEN.
+        const shells = plan.changes.filter(c => c.format === 'shell');
+        expect(shells).toHaveLength(1);
+        const gateway = shells[0].next?.match(/AI_GATEWAY_API_KEY/g) ?? [];
+        expect(gateway).toHaveLength(1);
+        expect(shells[0].next).toContain('ANTHROPIC_AUTH_TOKEN');
+      }
+    );
 
     it('skips a malformed Codex config instead of clobbering it', async () => {
       mkdirSync(join(home, '.codex'), { recursive: true });
