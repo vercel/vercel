@@ -1,4 +1,11 @@
-import { readFile, writeFile, mkdir, copyFile, access } from 'node:fs/promises';
+import {
+  readFile,
+  writeFile,
+  mkdir,
+  copyFile,
+  access,
+  lstat,
+} from 'node:fs/promises';
 import { isDeepStrictEqual } from 'node:util';
 import { dirname } from 'node:path';
 import { parse as tomlParse, stringify as tomlStringify } from 'smol-toml';
@@ -12,6 +19,15 @@ export async function pathExists(path: string): Promise<boolean> {
   try {
     await access(path);
     return true;
+  } catch {
+    return false;
+  }
+}
+
+/** True when `path` is a symlink — `writeConfigFile` follows it, so the plan flags it. */
+export async function isSymlink(path: string): Promise<boolean> {
+  try {
+    return (await lstat(path)).isSymbolicLink();
   } catch {
     return false;
   }
