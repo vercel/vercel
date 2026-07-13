@@ -5,6 +5,7 @@ import {
   backupFile,
   writeConfigFile,
   upsertManagedBlock,
+  isSymlink,
 } from './config-files';
 import { KEY_PLACEHOLDER } from './gateway';
 import { keychainLookup } from './keychain';
@@ -21,6 +22,7 @@ export interface PlannedChange {
   status: ChangeStatus;
   error?: string;
   mode?: number;
+  symlink?: boolean;
 }
 
 export interface AgentNotes {
@@ -204,6 +206,7 @@ export async function buildSetupPlan(
   const changes: PlannedChange[] = [];
   for (const [path, entry] of byPath) {
     const current = await readFileOrNull(path);
+    const symlink = await isSymlink(path);
     let next: string | null = null;
     let status: ChangeStatus;
     let error: string | undefined;
@@ -239,6 +242,7 @@ export async function buildSetupPlan(
       next,
       status,
       error,
+      symlink,
     });
   }
 
