@@ -65,7 +65,7 @@ import { webhooksCommand } from './webhooks/command';
 import type { Command } from './help';
 import output from '../output-manager';
 
-const commandsStructs = [
+const commandsStructs: Command[] = [
   agentCommand,
   agentRunsCommand,
   aiGatewayCommand,
@@ -128,7 +128,14 @@ const commandsStructs = [
   vcrCommand,
   whoamiCommand,
   // added because we don't have a full help command
-  { name: 'help', aliases: [] },
+  {
+    name: 'help',
+    aliases: [],
+    description: 'Show help output for a command',
+    arguments: [],
+    options: [],
+    examples: [],
+  },
 ];
 
 if (process.env.FF_GUIDANCE_MODE) {
@@ -142,6 +149,19 @@ commandsStructs.push(connexCommand);
 export function getCommandAliases(command: Pick<Command, 'name' | 'aliases'>) {
   return [command.name].concat(command.aliases);
 }
+
+/**
+ * Every registered command structure. Used by the API endpoint policy check
+ * (`test/unit/util/api-endpoint-policy.test.ts`) and the beta command warning.
+ */
+export const commandStructs: ReadonlyArray<Command> = commandsStructs;
+
+/**
+ * Canonical command name -> command structure.
+ */
+export const commandStructsByName = new Map<string, Command>(
+  commandsStructs.map(command => [command.name, command])
+);
 
 export const commands = new Map();
 for (const command of commandsStructs) {

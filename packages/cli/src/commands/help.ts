@@ -40,6 +40,24 @@ export interface Command {
   readonly options: ReadonlyArray<CommandOption>;
   readonly examples: ReadonlyArray<CommandExample>;
   readonly disabledGlobalOptions?: ReadonlyArray<string>;
+  /**
+   * The Vercel REST API endpoints this command (not its subcommands) calls,
+   * as `"METHOD /path"` strings, e.g. `"GET /v9/projects/:idOrName"`.
+   * Path parameters may use `:param` or `{param}` syntax.
+   *
+   * Required for new commands and subcommands. Enforced by
+   * `test/unit/util/api-endpoint-policy.test.ts`: commands whose endpoints
+   * are not part of the public OpenAPI spec must be marked `beta`.
+   * Use an empty array for commands that do not call the Vercel API.
+   */
+  readonly endpoints?: ReadonlyArray<string>;
+  /**
+   * Marks this command or subcommand as beta. Beta commands print a warning
+   * at invocation time telling users the command may still change.
+   * Required whenever `endpoints` contains an endpoint that is not in the
+   * public OpenAPI spec (https://openapi.vercel.sh).
+   */
+  readonly beta?: true;
 }
 
 // https://github.com/cli-table/cli-table3/pull/303 adds
