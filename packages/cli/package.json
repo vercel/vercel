@@ -74,7 +74,6 @@
     "jose": "5.9.6",
     "jsonc-parser": "3.3.1",
     "luxon": "^3.4.0",
-    "proxy-agent": "6.4.0",
     "sandbox": "3.4.0",
     "smol-toml": "1.5.2",
     "undici": "5.29.0",
