@@ -467,14 +467,16 @@ export default async function add(client: Client, argv: string[]) {
         const standardAvailable = choices
           .map(c => c.value)
           .filter(v => isValidEnvTarget(v));
-        if (standardAvailable.length > 1) {
+        const multiTargets = opts['--sensitive']
+          ? standardAvailable.filter(t => t !== 'development')
+          : standardAvailable;
+        if (multiTargets.length > 1) {
           next.push(
             multiTargetSuggestion(
               client.argv,
               envName || '<name>',
-              standardAvailable,
-              standardAvailable.includes('development') &&
-                !opts['--no-sensitive']
+              multiTargets,
+              multiTargets.includes('development') && !opts['--no-sensitive']
             )
           );
         }
@@ -975,9 +977,10 @@ export default async function add(client: Client, argv: string[]) {
       const standardAvailable = choices
         .map(c => c.value)
         .filter(v => isValidEnvTarget(v));
-      const multiTargets = policyOn
-        ? standardAvailable.filter(t => t !== 'development')
-        : standardAvailable;
+      const multiTargets =
+        policyOn || forceSensitive
+          ? standardAvailable.filter(t => t !== 'development')
+          : standardAvailable;
       const next: Array<{ command: string; when?: string }> = [];
       if (multiTargets.length > 1) {
         next.push(

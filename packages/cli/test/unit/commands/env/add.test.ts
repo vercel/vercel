@@ -1589,6 +1589,43 @@ describe('env add', () => {
         logSpy.mockRestore();
       });
 
+      it('keeps explicit --sensitive and drops Development from the multi-target suggestion', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          'SENSITIVE_MISSING_ENV',
+          '--value',
+          'v',
+          '--sensitive',
+          '--yes'
+        );
+        await expect(env(client)).rejects.toThrow('exit');
+
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload.missing).toContain('missing_environment');
+        const commands = payload.next.map(
+          (n: { command: string }) => n.command
+        );
+        const multi = commands.find((c: string) =>
+          c.includes('production,preview')
+        );
+        expect(multi).toBeDefined();
+        expect(multi).not.toContain('development');
+        expect(multi).not.toContain('--no-sensitive');
+        expect(multi).toContain('--sensitive');
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
+
       it('includes a comma-separated suggestion when environment is missing (non-interactive)', async () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');
