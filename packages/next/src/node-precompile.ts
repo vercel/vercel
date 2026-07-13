@@ -34,7 +34,11 @@ const CJS_TYPE = 0;
 // The CommonJS module wrapper parameters Node compiles each module with.
 const CJS_PARAMS = ['exports', 'require', 'module', '__filename', '__dirname'];
 // Directory (relative to the Lambda task root) holding the generated cache.
-const CACHE_DIR = '.vercel/node-compile-cache';
+// NOTE: must NOT live under `.vercel/` — the CLI's `writeLambda` band-aid
+// (packages/cli/src/util/build/write-build-result.ts) deletes the entire
+// `.vercel` directory from a function's output unless it contains a `cache`
+// child, which would silently drop this whole cache.
+const CACHE_DIR = '.node-compile-cache';
 
 export function isNodePrecompileEnabled(): boolean {
   return process.env.ENABLE_NODE_PRECOMPILE === '1';
