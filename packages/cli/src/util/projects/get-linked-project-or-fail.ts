@@ -35,12 +35,11 @@ export async function getLinkedProjectOrFail(
   client: Client,
   projectName?: string
 ): Promise<ProjectLinkResult> {
-  const link = await getLinkedProject(
-    client,
-    client.cwd,
+  const link = await getLinkedProject(client, {
+    cwd: client.cwd,
     projectName,
-    Boolean(projectName)
-  );
+    apiFallback: Boolean(projectName),
+  });
 
   if (link.status === 'not_linked' && projectName) {
     await printProjectNotFoundError(

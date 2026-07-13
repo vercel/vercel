@@ -13,6 +13,8 @@ import { type fs, vol } from 'memfs';
 import { useUser } from '../../../mocks/user';
 import { useTeams } from '../../../mocks/team';
 import { useProject } from '../../../mocks/project';
+import * as linkModule from '../../../../src/util/projects/link';
+import { normalize } from 'path';
 
 const { mockStart, devServerInstances, mockedRepoRoots } = vi.hoisted(() => ({
   mockStart: vi.fn<() => void>(),
@@ -409,12 +411,19 @@ describe('dev', () => {
 
   describe('project/org IDs', () => {
     it('passes the linked project and org IDs to DevServer', async () => {
+      const getLinkedProjectSpy = vi.spyOn(linkModule, 'getLinkedProject');
       client.setArgv('dev', projectPath);
       const exitCodePromise = dev(client);
 
       await expect(exitCodePromise).resolves.toEqual(undefined);
       expect(devServerInstances).toHaveLength(1);
       expect(devServerInstances[0]).toMatchObject({ projectId, orgId });
+      expect(getLinkedProjectSpy).toHaveBeenCalledWith(client, {
+        cwd: normalize(projectPath),
+        projectName: undefined,
+        apiFallback: false,
+      });
+      getLinkedProjectSpy.mockRestore();
     });
 
     it('omits the IDs for unlinked projects in --local mode', async () => {

@@ -14,6 +14,7 @@ import { useUser } from '../../../mocks/user';
 import { execSync } from 'child_process';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { vi } from 'vitest';
+import * as linkModule from '../../../../src/util/projects/link';
 import {
   detectBuilders,
   REGEX_NON_VERCEL_PLATFORM_FILES,
@@ -3555,6 +3556,7 @@ writeFileSync(
 
     it('fails fast with a clean error when the project does not exist anywhere', async () => {
       const cwd = await getWriteableDirectory();
+      const getLinkedProjectSpy = vi.spyOn(linkModule, 'getLinkedProject');
       useUser();
       useTeams('team_dummy');
       // No useProject() — every API lookup will 404.
@@ -3568,6 +3570,12 @@ writeFileSync(
       );
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "build"').toEqual(1);
+      expect(getLinkedProjectSpy).toHaveBeenCalledWith(client, {
+        cwd: await fs.realpath(cwd),
+        projectName: 'does-not-exist',
+        apiFallback: true,
+      });
+      getLinkedProjectSpy.mockRestore();
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

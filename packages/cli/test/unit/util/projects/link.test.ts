@@ -65,7 +65,7 @@ describe('getLinkedProject', () => {
     let link: UnPromisify<ReturnType<typeof getLinkedProject>> | undefined;
     let error: Error | undefined;
     try {
-      link = await getLinkedProject(client, cwd);
+      link = await getLinkedProject(client, { cwd });
     } catch (err) {
       error = err as Error;
     }
@@ -94,7 +94,7 @@ describe('getLinkedProject', () => {
     let link: UnPromisify<ReturnType<typeof getLinkedProject>> | undefined;
     let error: Error | undefined;
     try {
-      link = await getLinkedProject(client, cwd);
+      link = await getLinkedProject(client, { cwd });
     } catch (err) {
       error = err as Error;
     }
@@ -123,7 +123,7 @@ describe('getLinkedProject', () => {
     let link: UnPromisify<ReturnType<typeof getLinkedProject>> | undefined;
     let error: Error | undefined;
     try {
-      link = await getLinkedProject(client, cwd);
+      link = await getLinkedProject(client, { cwd });
     } catch (err) {
       error = err as Error;
     }
@@ -152,7 +152,7 @@ describe('getLinkedProject', () => {
     let link: UnPromisify<ReturnType<typeof getLinkedProject>> | undefined;
     let error: Error | undefined;
     try {
-      link = await getLinkedProject(client, cwd);
+      link = await getLinkedProject(client, { cwd });
     } catch (err) {
       error = err as Error;
     }
@@ -178,7 +178,7 @@ describe('getLinkedProject', () => {
       name: 'vercel-pull-next',
     });
 
-    const link = await getLinkedProject(client, cwd);
+    const link = await getLinkedProject(client, { cwd });
     if (link.status !== 'linked') {
       throw new Error('Expected to be linked');
     }
@@ -200,7 +200,9 @@ describe('getLinkedProject', () => {
       id: 'QmbKpqpiUqbcke',
       name: 'monorepo-dashboard',
     });
-    let link = await getLinkedProject(client, join(cwd, 'dashboard'));
+    let link = await getLinkedProject(client, {
+      cwd: join(cwd, 'dashboard'),
+    });
     if (link.status !== 'linked') {
       throw new Error('Expected to be linked');
     }
@@ -215,7 +217,9 @@ describe('getLinkedProject', () => {
       id: 'QmX6P93ChNDoZP',
       name: 'monorepo-marketing',
     });
-    link = await getLinkedProject(client, join(cwd, 'marketing/subdir'));
+    link = await getLinkedProject(client, {
+      cwd: join(cwd, 'marketing/subdir'),
+    });
     if (link.status !== 'linked') {
       throw new Error('Expected to be linked');
     }
@@ -230,7 +234,7 @@ describe('getLinkedProject', () => {
       id: 'QmScb7GPQt6gsS',
       name: 'monorepo-blog',
     });
-    link = await getLinkedProject(client, join(cwd, 'blog'));
+    link = await getLinkedProject(client, { cwd: join(cwd, 'blog') });
     if (link.status !== 'linked') {
       throw new Error('Expected to be linked');
     }
@@ -281,7 +285,7 @@ describe('getLinkedProject', () => {
     });
 
     const selectSpy = vi.spyOn(client.input, 'select');
-    const link = await getLinkedProject(client, cwd);
+    const link = await getLinkedProject(client, { cwd });
 
     // If repo.json was consulted, we'd have prompted to disambiguate.
     expect(selectSpy).not.toHaveBeenCalled();
@@ -313,7 +317,11 @@ describe('getLinkedProject', () => {
       accountId: 'team_dummy',
     });
 
-    const link = await getLinkedProject(client, cwd, 'explicit-project', true);
+    const link = await getLinkedProject(client, {
+      cwd,
+      projectName: 'explicit-project',
+      apiFallback: true,
+    });
     if (link.status !== 'linked') {
       throw new Error('Expected to be linked');
     }
@@ -332,12 +340,11 @@ describe('getLinkedProject', () => {
       name: 'monorepo-marketing',
     });
 
-    const link = await getLinkedProject(
-      client,
-      join(cwd, 'dashboard'),
-      'monorepo-marketing',
-      true
-    );
+    const link = await getLinkedProject(client, {
+      cwd: join(cwd, 'dashboard'),
+      projectName: 'monorepo-marketing',
+      apiFallback: true,
+    });
     if (link.status !== 'linked') {
       throw new Error('Expected to be linked');
     }
@@ -356,7 +363,9 @@ describe('getLinkedProject', () => {
       id: 'QmbKpqpiUqbcke',
       name: 'monorepo-dashboard',
     });
-    const link = await getLinkedProject(client, join(cwd, 'dashboard'));
+    const link = await getLinkedProject(client, {
+      cwd: join(cwd, 'dashboard'),
+    });
     if (link.status !== 'linked') {
       throw new Error('Expected to be linked');
     }
@@ -378,7 +387,7 @@ describe('getLinkedProject', () => {
       name: 'monorepo-dashboard',
     });
 
-    const linkPromise = getLinkedProject(client, cwd);
+    const linkPromise = getLinkedProject(client, { cwd });
 
     // wait for prompt
     await expect(client.stderr).toOutput('Please select a Project:');
@@ -408,7 +417,10 @@ describe('getLinkedProject', () => {
     });
 
     // When projectName is provided, it should auto-select without prompting
-    const link = await getLinkedProject(client, cwd, 'monorepo-marketing');
+    const link = await getLinkedProject(client, {
+      cwd,
+      projectName: 'monorepo-marketing',
+    });
     if (link.status !== 'linked') {
       throw new Error('Expected to be linked');
     }
@@ -430,7 +442,10 @@ describe('getLinkedProject', () => {
     });
 
     // When projectName is provided, it should auto-select without prompting
-    const link = await getLinkedProject(client, cwd, 'monorepo-blog');
+    const link = await getLinkedProject(client, {
+      cwd,
+      projectName: 'monorepo-blog',
+    });
     if (link.status !== 'linked') {
       throw new Error('Expected to be linked');
     }
@@ -452,7 +467,10 @@ describe('getLinkedProject', () => {
     });
 
     const selectSpy = vi.spyOn(client.input, 'select');
-    const link = await getLinkedProject(client, cwd, 'QmX6P93ChNDoZP');
+    const link = await getLinkedProject(client, {
+      cwd,
+      projectName: 'QmX6P93ChNDoZP',
+    });
     expect(selectSpy).not.toHaveBeenCalled();
     selectSpy.mockRestore();
 
@@ -475,12 +493,11 @@ describe('getLinkedProject', () => {
       accountId: 'team_dummy',
     });
 
-    const link = await getLinkedProject(
-      client,
+    const link = await getLinkedProject(client, {
       cwd,
-      'api-fallback-project',
-      true
-    );
+      projectName: 'api-fallback-project',
+      apiFallback: true,
+    });
     if (link.status !== 'linked') {
       throw new Error('Expected to be linked');
     }
@@ -497,12 +514,11 @@ describe('getLinkedProject', () => {
     useTeams('team_dummy');
     // Intentionally no useProject — every API lookup 404s.
 
-    const link = await getLinkedProject(
-      client,
+    const link = await getLinkedProject(client, {
       cwd,
-      'definitely-missing',
-      true
-    );
+      projectName: 'definitely-missing',
+      apiFallback: true,
+    });
     expect(link.status).toEqual('not_linked');
   });
 
@@ -512,7 +528,7 @@ describe('getLinkedProject', () => {
     useUser();
     useTeams('team_dummy');
 
-    const link = await getLinkedProject(client, cwd);
+    const link = await getLinkedProject(client, { cwd });
     expect(link.status).toEqual('not_linked');
   });
 
@@ -530,7 +546,10 @@ describe('getLinkedProject', () => {
 
     // Protects callers like `vercel deploy` that pass a directory-derived
     // `projectName` and rely on `setupAndLink` running interactively.
-    const link = await getLinkedProject(client, cwd, 'no-link-implicit-name');
+    const link = await getLinkedProject(client, {
+      cwd,
+      projectName: 'no-link-implicit-name',
+    });
     expect(link.status).toEqual('not_linked');
   });
 });
