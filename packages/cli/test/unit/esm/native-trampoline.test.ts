@@ -1,90 +1,119 @@
 import { describe, expect, it } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  writeFileSync,
+} from 'node:fs';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createRequire } from 'node:module';
-import { readFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 
 /**
- * Validates the native-resolution logic in `src/vc.js` (copied to
- * `dist/vc.js` at build time). Part 1 of the native-first rollout: no
- * optionalDependencies are wired, so resolveNative() must return null in a
- * normal install and the CLI no-ops into the existing JS CLI. Part 2 will
- * wire the release flow to publish natives, activating the spawn path.
+ * Behavioral tests for the native-resolution logic in `dist/vc.js`.
+ *
+ * These spawn the real built CLI as a subprocess inside a production-like
+ * install layout (vercel + @vercel/vc-native-* as siblings in node_modules),
+ * so they exercise the actual `resolveNative()` + `spawnSync()` code — not a
+ * re-implementation.
+ *
+ * In production, `createRequire(import.meta.url)` inside `dist/vc.js` is
+ * anchored at `node_modules/vercel/dist/vc.js` and resolves the native
+ * package by walking up to `node_modules/@vercel/vc-native-*`. The test
+ * mirrors that topology so resolution behaves identically.
+ *
+ * Part 1 of 2: no optionalDependencies are wired, so with no native package
+ * present the CLI must no-op into JS. When a fake native is installed as a
+ * sibling, the CLI spawns it and exits with its exit code.
  */
 
-const cliRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
-const vcSrc = await readFile(join(cliRoot, 'src', 'vc.js'), 'utf8');
+const here = dirname(fileURLToPath(import.meta.url));
+const cliRoot = join(here, '..', '..', '..');
+const distDir = join(cliRoot, 'dist');
+const binName = process.platform === 'win32' ? 'vercel.exe' : 'vercel';
 
-// Re-implement resolveNative against a fake package root so we can exercise
-// the resolution logic without a real native package on disk.
-function resolveNative(opts: { root: string; platform: string; arch: string }) {
-  const pkgName = `@vercel/vc-native-${opts.platform}-${opts.arch}`;
-  const binName = opts.platform === 'win32' ? 'vercel.exe' : 'vercel';
-  const require = createRequire(join(opts.root, 'package.json'));
-  try {
-    const dir = dirname(require.resolve(`${pkgName}/package.json`));
-    const a = join(dir, 'bin', binName);
-    if (existsSync(a)) return a;
-    const b = join(dir, binName);
-    if (existsSync(b)) return b;
-  } catch {}
-  return null;
+// Build a production-like install layout in a temp dir:
+//   tmp/node_modules/vercel/dist/vc.js (+ version.mjs)
+//   tmp/node_modules/@vercel/vc-native-{platform}-{arch}/bin/vercel
+function buildInstall(opts: {
+  platform: string;
+  arch: string;
+  body?: string;
+  executable?: boolean;
+}) {
+  const root = mkdtempSync(join(tmpdir(), 'vc-install-'));
+  const nm = join(root, 'node_modules');
+  // Copy the built CLI so createRequire is anchored at a vercel/dist path,
+  // exactly like a real install.
+  const vercelDist = join(nm, 'vercel', 'dist');
+  mkdirSync(vercelDist, { recursive: true });
+  copyFileSync(join(distDir, 'vc.js'), join(vercelDist, 'vc.js'));
+  if (existsSync(join(distDir, 'version.mjs'))) {
+    copyFileSync(join(distDir, 'version.mjs'), join(vercelDist, 'version.mjs'));
+  }
+
+  if (opts.body) {
+    const pkgName = `@vercel/vc-native-${opts.platform}-${opts.arch}`;
+    const pkgDir = join(nm, pkgName);
+    mkdirSync(join(pkgDir, 'bin'), { recursive: true });
+    writeFileSync(
+      join(pkgDir, 'package.json'),
+      JSON.stringify({ name: pkgName, version: '55.0.0' })
+    );
+    const binPath = join(pkgDir, 'bin', binName);
+    writeFileSync(binPath, opts.body);
+    chmodSync(binPath, opts.executable === false ? 0o644 : 0o755);
+  }
+  return { root, vcJs: join(vercelDist, 'vc.js') };
 }
 
-describe('src/vc.js native resolution (part 1 no-op)', () => {
-  it('contains the native-first spawn + JS fallback logic', () => {
-    expect(vcSrc).toContain('resolveNative');
-    expect(vcSrc).toContain('spawnSync');
-    // Falls through to the JS CLI via a relative import (no absolute path
-    // that would break on Windows with ERR_UNSUPPORTED_ESM_URL_SCHEME).
-    expect(vcSrc).toContain("await import('./index.js')");
-  });
-
-  it('does not use pathToFileURL (not needed with a relative import)', () => {
-    expect(vcSrc).not.toContain('pathToFileURL');
-  });
-
+describe('dist/vc.js native resolution (part 1 no-op)', () => {
   it('no-ops to JS when no native package is installed', () => {
-    // A normal install has no @vercel/vc-native-* optional dep in part 1,
-    // so resolveNative() must return null and the CLI runs as JS.
-    const root = mkdtempSync(join(tmpdir(), 'vc-native-test-'));
-    expect(
-      resolveNative({ root, platform: process.platform, arch: process.arch })
-    ).toBeNull();
+    const { vcJs } = buildInstall({
+      platform: process.platform,
+      arch: process.arch,
+    });
+    const r = spawnSync(process.execPath, [vcJs, '--version'], {
+      encoding: 'utf8',
+    });
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim()).toBe('55.0.0');
   });
 
-  it('resolves a native binary when the package layout exists', () => {
-    const root = mkdtempSync(join(tmpdir(), 'vc-native-test-'));
-    const pkgDir = join(
-      root,
-      'node_modules',
-      '@vercel',
-      'vc-native-darwin-arm64'
-    );
-    mkdirSync(join(pkgDir, 'bin'), { recursive: true });
-    writeFileSync(
-      join(pkgDir, 'package.json'),
-      '{"name":"@vercel/vc-native-darwin-arm64"}'
-    );
-    writeFileSync(join(pkgDir, 'bin', 'vercel'), '');
-    const result = resolveNative({ root, platform: 'darwin', arch: 'arm64' });
-    expect(result).not.toBeNull();
-    expect(result).toContain('vercel');
-  });
+  it.runIf(process.platform !== 'win32')(
+    'spawns the native binary and exits with its exit code',
+    () => {
+      const { vcJs } = buildInstall({
+        platform: process.platform,
+        arch: process.arch,
+        body: '#!/bin/sh\necho NATIVE_RAN\nexit 7\n',
+      });
+      const r = spawnSync(process.execPath, [vcJs, '--version'], {
+        encoding: 'utf8',
+      });
+      expect(r.status).toBe(7);
+      expect(r.stdout.trim()).toBe('NATIVE_RAN');
+    }
+  );
 
-  it('uses vercel.exe bin name on win32', () => {
-    const root = mkdtempSync(join(tmpdir(), 'vc-native-test-'));
-    const pkgDir = join(root, 'node_modules', '@vercel', 'vc-native-win32-x64');
-    mkdirSync(join(pkgDir, 'bin'), { recursive: true });
-    writeFileSync(
-      join(pkgDir, 'package.json'),
-      '{"name":"@vercel/vc-native-win32-x64"}'
-    );
-    writeFileSync(join(pkgDir, 'bin', 'vercel.exe'), '');
-    const result = resolveNative({ root, platform: 'win32', arch: 'x64' });
-    expect(result).not.toBeNull();
-    expect(result).toMatch(/vercel\.exe$/);
-  });
+  it.runIf(process.platform !== 'win32')(
+    'falls through to JS when the native binary is not executable',
+    () => {
+      const { vcJs } = buildInstall({
+        platform: process.platform,
+        arch: process.arch,
+        body: '#!/bin/sh\necho NATIVE_RAN\nexit 7\n',
+        executable: false,
+      });
+      const r = spawnSync(process.execPath, [vcJs, '--version'], {
+        encoding: 'utf8',
+      });
+      // EACCES fall-through hits the JS --version fast path.
+      expect(r.status).toBe(0);
+      expect(r.stdout.trim()).toBe('55.0.0');
+    }
+  );
 });
