@@ -346,24 +346,28 @@ describe('ai-gateway coding-agents setup', () => {
       expect(cfg.provider.vercel.options.apiKey).toBe('vck_Minified001');
     });
 
-    it('keeps the OpenCode key out of the config under keychain', async () => {
-      const secret = 'vck_OpenCodeKeychain';
-      const plan = await buildSetupPlan([opencode], {
-        apiKey: secret,
-        home,
-        useKeychain: true,
-      });
+    // Keychain-backed shell exports only exist on macOS (no shell rc on Windows).
+    it.skipIf(process.platform === 'win32')(
+      'keeps the OpenCode key out of the config under keychain',
+      async () => {
+        const secret = 'vck_OpenCodeKeychain';
+        const plan = await buildSetupPlan([opencode], {
+          apiKey: secret,
+          home,
+          useKeychain: true,
+        });
 
-      // The provider is declared, but the key is not embedded…
-      const cfg = plan.changes.find(c => c.label === 'OpenCode config');
-      expect(cfg?.next).toContain('vercel');
-      expect(cfg?.next).not.toContain(secret);
-      // …it's resolved from AI_GATEWAY_API_KEY via the Keychain at runtime.
-      const shell = plan.changes.find(c => c.format === 'shell');
-      expect(shell?.next).toContain('export AI_GATEWAY_API_KEY=');
-      expect(shell?.next).toContain('security find-generic-password');
-      expect(shell?.next).not.toContain(secret);
-    });
+        // The provider is declared, but the key is not embedded…
+        const cfg = plan.changes.find(c => c.label === 'OpenCode config');
+        expect(cfg?.next).toContain('vercel');
+        expect(cfg?.next).not.toContain(secret);
+        // …it's resolved from AI_GATEWAY_API_KEY via the Keychain at runtime.
+        const shell = plan.changes.find(c => c.format === 'shell');
+        expect(shell?.next).toContain('export AI_GATEWAY_API_KEY=');
+        expect(shell?.next).toContain('security find-generic-password');
+        expect(shell?.next).not.toContain(secret);
+      }
+    );
 
     it('configures Pi via the native vercel-ai-gateway auth entry (0600)', async () => {
       useUser();
@@ -712,26 +716,32 @@ describe('ai-gateway coding-agents setup', () => {
       expect(keychainLookup()).toContain('security find-generic-password');
     });
 
-    it('keeps the secret out of the configs and reads it from the shell', async () => {
-      const secret = 'vck_KeychainSecret321';
-      const plan = await buildSetupPlan([claudeCode], {
-        apiKey: secret,
-        home,
-        useKeychain: true,
-      });
+    // Keychain-backed shell exports only exist on macOS (no shell rc on Windows).
+    it.skipIf(process.platform === 'win32')(
+      'keeps the secret out of the configs and reads it from the shell',
+      async () => {
+        const secret = 'vck_KeychainSecret321';
+        const plan = await buildSetupPlan([claudeCode], {
+          apiKey: secret,
+          home,
+          useKeychain: true,
+        });
 
-      // The env-based agent resolves its var from the Keychain at runtime.
-      const shell = plan.changes.find(c => c.format === 'shell');
-      expect(shell?.next).toContain('security find-generic-password');
-      expect(shell?.next).toContain('export ANTHROPIC_AUTH_TOKEN=');
-      expect(shell?.next).not.toContain(secret);
+        // The env-based agent resolves its var from the Keychain at runtime.
+        const shell = plan.changes.find(c => c.format === 'shell');
+        expect(shell?.next).toContain('security find-generic-password');
+        expect(shell?.next).toContain('export ANTHROPIC_AUTH_TOKEN=');
+        expect(shell?.next).not.toContain(secret);
 
-      // Claude's token is no longer embedded in settings.json.
-      const claude = plan.changes.find(c => c.label === 'Claude Code settings');
-      expect(claude?.next).toContain('ANTHROPIC_BASE_URL');
-      expect(claude?.next).not.toContain('ANTHROPIC_AUTH_TOKEN');
-      expect(claude?.next).not.toContain(secret);
-    });
+        // Claude's token is no longer embedded in settings.json.
+        const claude = plan.changes.find(
+          c => c.label === 'Claude Code settings'
+        );
+        expect(claude?.next).toContain('ANTHROPIC_BASE_URL');
+        expect(claude?.next).not.toContain('ANTHROPIC_AUTH_TOKEN');
+        expect(claude?.next).not.toContain(secret);
+      }
+    );
 
     it('embeds the key directly when keychain is off', async () => {
       const secret = 'vck_PlainSecret654';
