@@ -1919,7 +1919,7 @@ export const frameworks = [
     slug: 'modulato',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/modulato.svg',
     tagline:
-      'Modulato is a visual-design-first React framework for marketing websites leveraging custom transitions and animations.',
+      'Modulato is a visual-design-first React framework for making websites, leveraging custom transitions and animations.',
     description: 'A Modulato site, animation-first and server-rendered.',
     website: 'https://modulato.org',
     supersedes: ['vite'],
