@@ -81,7 +81,9 @@ export function normalizeEndpoint(endpoint: CommandEndpoint): string {
   const segments = path
     .split('/')
     .map(segment =>
-      segment.startsWith(':') || /^\{.*\}$/.test(segment) ? '{}' : segment
+      segment.startsWith(':') || segment === '{}' || /^\{.*\}$/.test(segment)
+        ? '{}'
+        : segment
     );
   return `${endpoint.method.toUpperCase()} ${segments.join('/')}`;
 }
@@ -168,6 +170,9 @@ export interface PolicyViolation {
  * 2. Declared endpoints must be well formed.
  * 3. Any command that declares an endpoint outside the public OpenAPI spec
  *    must be marked `beta: true`.
+ *
+ * Fetch call-site coverage (declared endpoints must match `client.fetch`
+ * usage) is enforced separately by `evaluateEndpointCoverage`.
  */
 export function evaluatePolicy(
   commands: ReadonlyArray<Command>,

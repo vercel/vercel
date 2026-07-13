@@ -18,6 +18,11 @@ import {
   validateEndpointFormat,
 } from '../../../src/util/api-endpoint-policy/policy';
 import {
+  evaluateEndpointCoverage,
+  coverageGap,
+} from '../../../src/util/api-endpoint-policy/endpoint-coverage';
+import { extractFetchesFromSource } from '../../../src/util/api-endpoint-policy/extract-fetches';
+import {
   findBetaCommandPath,
   maybePrintBetaWarning,
   printBetaWarning,
@@ -45,10 +50,13 @@ function makeCommand(overrides: Partial<Command> & { name: string }): Command {
 
 describe('API endpoint policy (see packages/cli/docs/api-endpoint-policy.md)', () => {
   it('every command and subcommand declares its API endpoints, and commands using private endpoints are marked beta', () => {
-    const violations = evaluatePolicy(commandStructs, {
-      grandfathered: GRANDFATHERED,
-      publicEndpoints: PUBLIC_ENDPOINTS,
-    });
+    const violations = [
+      ...evaluatePolicy(commandStructs, {
+        grandfathered: GRANDFATHERED,
+        publicEndpoints: PUBLIC_ENDPOINTS,
+      }),
+      ...evaluateEndpointCoverage(commandStructs),
+    ];
     const message = violations
       .map(violation => `- ${violation.message}`)
       .join('\n');
@@ -339,5 +347,63 @@ describe('beta command warning', () => {
       expect(findBetaCommandPath(registry, 'apps', [])).toBeNull();
       expect(findBetaCommandPath(registry, 'missing', [])).toBeNull();
     });
+  });
+});
+
+describe('client.fetch call-site extraction', () => {
+  it('extracts method and path from literal and template fetch calls', () => {
+    const source = `
+      async function run(client: { fetch: Function }) {
+        await client.fetch('/v2/user');
+        await client.fetch(\`/v9/projects/\${id}/link\`, { method: 'POST' });
+        await client.fetch('/v1/thing/' + id, { method: 'DELETE' });
+      }
+    `;
+    const fetches = extractFetchesFromSource('example.ts', source);
+    expect(fetches).toEqual([
+      expect.objectContaining({ method: 'GET', path: '/v2/user', line: 3 }),
+      expect.objectContaining({
+        method: 'POST',
+        path: '/v9/projects/{}/link',
+        line: 4,
+      }),
+    ]);
+  });
+
+  it('flags undeclared fetch call sites as coverage gaps', () => {
+    const missing = coverageGap(
+      [{ method: 'GET', path: '/v2/user' }],
+      [
+        {
+          method: 'GET',
+          path: '/v2/user',
+          file: 'a.ts',
+          line: 1,
+        },
+        {
+          method: 'POST',
+          path: '/v1/oauth-apps/installations',
+          file: 'a.ts',
+          line: 2,
+        },
+      ]
+    );
+    expect(missing).toHaveLength(1);
+    expect(missing[0].path).toBe('/v1/oauth-apps/installations');
+  });
+
+  it('does not report a gap when declaration uses :param and call uses interpolation', () => {
+    const missing = coverageGap(
+      [{ method: 'POST', path: '/v2/projects/:idOrName/deploy-hooks' }],
+      [
+        {
+          method: 'POST',
+          path: '/v2/projects/{}/deploy-hooks',
+          file: 'create.ts',
+          line: 10,
+        },
+      ]
+    );
+    expect(missing).toEqual([]);
   });
 });
