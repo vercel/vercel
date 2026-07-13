@@ -106,7 +106,8 @@ describe('rolling-release configure', () => {
     expect(mockedGetLinkedProject).toHaveBeenCalledWith(client, {
       cwd: client.cwd,
       projectName: 'my-project',
-      apiFallback: true,
+      projectNameIsExplicit: true,
+      scopeIsExplicit: false,
     });
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'option:project', value: '[REDACTED]' },

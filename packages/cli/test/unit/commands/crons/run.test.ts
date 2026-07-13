@@ -278,7 +278,8 @@ describe('crons run', () => {
       expect(mockedGetLinkedProject).toHaveBeenCalledWith(client, {
         cwd: client.cwd,
         projectName: 'crons-project',
-        apiFallback: true,
+        projectNameIsExplicit: true,
+        scopeIsExplicit: false,
       });
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:run', value: 'run' },

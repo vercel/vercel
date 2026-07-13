@@ -1,27 +1,12 @@
 import type Client from '../client';
 import type { ProjectLinkResult } from '@vercel-internals/types';
-import { omitGlobalFlagsFromArgs } from '../agent-output';
-import { getLinkedProject } from './link';
-import { printProjectNotFoundError } from './project-not-found-error';
+import { resolveProjectContext } from './resolve-project-context';
 
 /**
- * Returns the invoking command path (e.g. `flags ls`) from argv: the leading
- * positional tokens once global flags are removed. Used to build a runnable
- * retry command in the "project not found" suggestion.
- */
-function getInvokingCommandFromArgv(argv: string[]): string {
-  const args = omitGlobalFlagsFromArgs(argv.slice(2));
-  const positionals: string[] = [];
-  for (const arg of args) {
-    if (arg.startsWith('-')) {
-      break;
-    }
-    positionals.push(arg);
-  }
-  return positionals.join(' ');
-}
-
-/**
+ * Compatibility entry point for commands that have not migrated to
+ * `resolveProjectContext()` yet. New project-aware commands should use the
+ * shared resolver directly.
+ *
  * Resolves the project for commands that accept `--project` outside a linked
  * directory.
  *
@@ -35,20 +20,8 @@ export async function getLinkedProjectOrFail(
   client: Client,
   projectName?: string
 ): Promise<ProjectLinkResult> {
-  const link = await getLinkedProject(client, {
-    cwd: client.cwd,
-    projectName,
-    apiFallback: Boolean(projectName),
+  return resolveProjectContext({
+    client,
+    projectNameOrId: projectName,
   });
-
-  if (link.status === 'not_linked' && projectName) {
-    await printProjectNotFoundError(
-      client,
-      projectName,
-      getInvokingCommandFromArgv(client.argv)
-    );
-    return { status: 'error', exitCode: 1 };
-  }
-
-  return link;
 }

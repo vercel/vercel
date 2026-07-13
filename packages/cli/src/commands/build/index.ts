@@ -342,7 +342,7 @@ export default async function main(client: Client): Promise<number> {
     const linkedFromApi = await getLinkedProject(client, {
       cwd,
       projectName: projectNameOrId,
-      apiFallback: true,
+      projectNameIsExplicit: true,
     });
     if (linkedFromApi.status === 'linked') {
       link = {
@@ -353,7 +353,12 @@ export default async function main(client: Client): Promise<number> {
     } else if (linkedFromApi.status === 'error') {
       return linkedFromApi.exitCode;
     } else {
-      await printProjectNotFoundError(client, projectNameOrId, 'build');
+      await printProjectNotFoundError(
+        client,
+        projectNameOrId,
+        'build',
+        linkedFromApi.orgId
+      );
       return 1;
     }
   }

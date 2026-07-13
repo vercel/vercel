@@ -421,7 +421,8 @@ describe('dev', () => {
       expect(getLinkedProjectSpy).toHaveBeenCalledWith(client, {
         cwd: normalize(projectPath),
         projectName: undefined,
-        apiFallback: false,
+        projectNameIsExplicit: false,
+        scopeIsExplicit: false,
       });
       getLinkedProjectSpy.mockRestore();
     });

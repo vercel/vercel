@@ -29,6 +29,7 @@ import { tryDetectServices } from '../../util/projects/detect-services';
 import { displayDetectedServices } from '../../util/input/display-services';
 import { acquireDevLock, releaseDevLock } from '../../util/dev/dev-lock';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
+import { detectExplicitScope } from '../../util/get-scope';
 
 type Options = {
   '--listen': string;
@@ -55,7 +56,8 @@ export default async function dev(
   let link = await getLinkedProject(client, {
     cwd,
     projectName: projectNameOrId,
-    apiFallback: Boolean(projectNameOrId),
+    projectNameIsExplicit: Boolean(projectNameOrId),
+    scopeIsExplicit: detectExplicitScope(client),
   });
 
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
@@ -67,7 +69,12 @@ export default async function dev(
           `To link your project, run ${getCommandName('dev')} without \`-L\` or \`--local\` or ${getCommandName('link')}.`
       );
     } else if (projectNameOrId) {
-      await printProjectNotFoundError(client, projectNameOrId, 'dev');
+      await printProjectNotFoundError(
+        client,
+        projectNameOrId,
+        'dev',
+        link.orgId
+      );
       return 1;
     } else {
       link = await setupAndLink(client, cwd, {

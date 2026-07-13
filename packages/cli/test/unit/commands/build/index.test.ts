@@ -8,7 +8,11 @@ import {
 import build from '../../../../src/commands/build';
 import cliPkg from '../../../../src/util/pkg';
 import { client } from '../../../mocks/client';
-import { defaultProject, useProject } from '../../../mocks/project';
+import {
+  defaultProject,
+  useProject,
+  useUnknownProject,
+} from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { execSync } from 'child_process';
@@ -3559,7 +3563,7 @@ writeFileSync(
       const getLinkedProjectSpy = vi.spyOn(linkModule, 'getLinkedProject');
       useUser();
       useTeams('team_dummy');
-      // No useProject() — every API lookup will 404.
+      useUnknownProject();
 
       client.cwd = cwd;
       client.setArgv('build', '--project=does-not-exist');
@@ -3573,7 +3577,7 @@ writeFileSync(
       expect(getLinkedProjectSpy).toHaveBeenCalledWith(client, {
         cwd: await fs.realpath(cwd),
         projectName: 'does-not-exist',
-        apiFallback: true,
+        projectNameIsExplicit: true,
       });
       getLinkedProjectSpy.mockRestore();
 
@@ -3589,6 +3593,7 @@ writeFileSync(
       const cwd = await getWriteableDirectory();
       useUser();
       useTeams('team_dummy');
+      useUnknownProject();
 
       client.cwd = cwd;
       client.setArgv('build', '--project=my-app');
