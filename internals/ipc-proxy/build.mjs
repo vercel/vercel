@@ -62,15 +62,19 @@ async function downloadGo() {
     );
   }
 
-  // Hard guard for CI: prefer explicit failure over implicit download that can
-  // hang and burn 60-120m of runner time. CI jobs should have Go preinstalled
-  // via actions/setup-go when needsGo is true (see test.yml + chunk-tests.js).
-  // Local devs who truly need the fallback can still use it.
-  if (process.env.CI) {
+  // Hard guard for GitHub Actions: prefer explicit failure over implicit
+  // download that can hang and burn 60-120m of runner time. GitHub Actions jobs
+  // should have Go preinstalled via actions/setup-go when needsGo is true (see
+  // test.yml + chunk-tests.js). This is scoped to GITHUB_ACTIONS specifically
+  // (not the broader CI flag) so other CI environments — e.g. the Vercel
+  // deployment build, which sets CI but has no needsGo matrix and no
+  // preinstalled Go — can still use the timeout/retry-protected download
+  // fallback below. Local devs who truly need the fallback can also use it.
+  if (process.env.GITHUB_ACTIONS) {
     throw new Error(
       `Go >= ${GO_VERSION} is required to build @vercel-internals/ipc-proxy but was not found on PATH. ` +
-        'In CI this indicates needsGo was not set for this job — add the package to GO_BUILD_ROOTS or fix transitive needsGo propagation. ' +
-        'Locally, install Go from https://go.dev/dl/ or unset CI.'
+        'In GitHub Actions this indicates needsGo was not set for this job — add the package to GO_BUILD_ROOTS or fix transitive needsGo propagation in utils/chunk-tests.js. ' +
+        'In the Vercel deployment preview build this should not happen; if it does, ensure Go is cached or preinstalled in that build environment.'
     );
   }
 
