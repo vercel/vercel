@@ -33,20 +33,12 @@
     "test:evals:local-fixture": "tsx evals/run.ts --local-fixture"
   },
   "bin": {
-    "vc": "./bin/vercel.js",
-    "vercel": "./bin/vercel.js"
+    "vc": "./dist/vc.js",
+    "vercel": "./dist/vc.js"
   },
   "files": [
-    "bin",
     "dist"
   ],
-  "optionalDependencies": {
-    "@vercel/vc-native-darwin-arm64": "55.0.0",
-    "@vercel/vc-native-darwin-x64": "55.0.0",
-    "@vercel/vc-native-linux-arm64": "55.0.0",
-    "@vercel/vc-native-linux-x64": "55.0.0",
-    "@vercel/vc-native-win32-x64": "55.0.0"
-  },
   "engines": {
     "node": ">= 18"
   },

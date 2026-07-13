@@ -978,22 +978,6 @@ importers:
       yauzl-promise:
         specifier: 2.1.3
         version: 2.1.3
-    optionalDependencies:
-      '@vercel/vc-native-darwin-arm64':
-        specifier: 55.0.0
-        version: 55.0.0
-      '@vercel/vc-native-darwin-x64':
-        specifier: 55.0.0
-        version: 55.0.0
-      '@vercel/vc-native-linux-arm64':
-        specifier: 55.0.0
-        version: 55.0.0
-      '@vercel/vc-native-linux-x64':
-        specifier: 55.0.0
-        version: 55.0.0
-      '@vercel/vc-native-win32-x64':
-        specifier: 55.0.0
-        version: 55.0.0
 
   packages/cli-auth:
     dependencies:
@@ -6116,6 +6100,9 @@ packages:
   '@tybys/wasm-util@0.10.2':
     resolution: {integrity: sha512-RoBvJ2X0wuKlWFIjrwffGw1IqZHKQqzIchKaadZZfnNpsAYp2mM0h36JtPCjNDAHGgYez/15uMBpfGwchhiMgg==}
 
+  '@types/async-retry@1.2.1':
+    resolution: {integrity: sha512-yMQ6CVgICWtyFNBqJT3zqOc+TnqqEPLo4nKJNPFwcialiylil38Ie6q1ENeFTjvaLOkVim9K5LisHgAKJWidGQ==}
+
   '@types/async-retry@1.4.5':
     resolution: {integrity: sha512-YrdjSD+yQv7h6d5Ip+PMxh3H6ZxKyQk0Ts+PvaNRInxneG9PFVZjFg77ILAN+N6qYf7g4giSJ1l+ZjQ1zeegvA==}
 
@@ -6784,31 +6771,6 @@ packages:
         optional: true
       typescript:
         optional: true
-
-  '@vercel/vc-native-darwin-arm64@55.0.0':
-    resolution: {integrity: sha512-evqhFbNqUxk5csmbSil6Q6PWq25qnGk3v9Hp6Lpo0QmNOPaM8RNRbzREB0WXErnFceQB78FGdkVAUa8zxPC3QA==}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@vercel/vc-native-darwin-x64@55.0.0':
-    resolution: {integrity: sha512-EsicjNCrVoIoJht6U7dXK4WvFG74sHniNuGzz0rIl40LEduesAvHW4t0cMsSECfpFMqxMOAlwZQmhKEOEpYR6Q==}
-    cpu: [x64]
-    os: [darwin]
-
-  '@vercel/vc-native-linux-arm64@55.0.0':
-    resolution: {integrity: sha512-Mlz5WS+Aa0Db4nLKBYlWk7y2PfmOa5usuo2cFx8EzLPc2IZAmiGrjLflMEfJ6xIdDI6mQnaZK4YXddcvkK8c/g==}
-    cpu: [arm64]
-    os: [linux]
-
-  '@vercel/vc-native-linux-x64@55.0.0':
-    resolution: {integrity: sha512-baS9mKtmB9pbVsPQIX428h0S7aMzTCjLaZ1kKqqi0/aStx5Wf+9/BcBzo31HsbzTYBUcdzqrV59WVMJNNll/3w==}
-    cpu: [x64]
-    os: [linux]
-
-  '@vercel/vc-native-win32-x64@55.0.0':
-    resolution: {integrity: sha512-JenIgM3NjFH7yBW1h8PXWh4nuDpYwqurxSNOmfnyaN2Ebu8+xMA61V2Wh/ndCEPPYpY5a7oF6XNC3gHcHlOlmg==}
-    cpu: [x64]
-    os: [win32]
 
   '@vitest/coverage-v8@2.0.3':
     resolution: {integrity: sha512-53d+6jXFdYbasXBmsL6qaGIfcY5eBQq0sP57AjdasOcSiGNj4qxkkpDKIitUNfjxcfAfUfQ8BD0OR2fSey64+g==}
@@ -16479,6 +16441,8 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
+  '@types/async-retry@1.2.1': {}
+
   '@types/async-retry@1.4.5':
     dependencies:
       '@types/retry': 0.12.5
@@ -17376,21 +17340,6 @@ snapshots:
       - eslint-plugin-import-x
       - jest
       - supports-color
-
-  '@vercel/vc-native-darwin-arm64@55.0.0':
-    optional: true
-
-  '@vercel/vc-native-darwin-x64@55.0.0':
-    optional: true
-
-  '@vercel/vc-native-linux-arm64@55.0.0':
-    optional: true
-
-  '@vercel/vc-native-linux-x64@55.0.0':
-    optional: true
-
-  '@vercel/vc-native-win32-x64@55.0.0':
-    optional: true
 
   '@vitest/coverage-v8@2.0.3(vitest@2.0.3(@edge-runtime/vm@3.2.0)(@types/node@20.11.0)(terser@5.48.0))':
     dependencies:
