@@ -16,19 +16,62 @@ import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import link from '../../util/output/link';
 import sleepLib from '../../util/sleep';
 
-const GIT_TRIGGER_TIMEOUT_MS = 120_000; // 2 minutes to notice new git deployment
-const GIT_POLL_INTERVAL_MS = 3_000;
+/**
+ * Trigger wait budgets.
+ *
+ * Long blocking after `git push` feels wrong, especially in non-TTY / CI.
+ * Platform typically creates git-triggered Deployments in 5-15s but can take
+ * 30-60s for borderline-large monorepos (30+ links) where webhook fanout is slow.
+ *
+ * Rules:
+ *  - single project  → give server a little more time since log tail is the main value
+ *  - multi project   → shorter, because the user just wants a summary; grace window
+ *                      covers staggered triggers without holding the terminal for 2m.
+ *  - non-TTY / CI / nonInteractive → never block for logs; shortest poll so `vc git push`
+ *                      still returns fast and preserves `git push` semantics.
+ */
+const GIT_TRIGGER_TIMEOUT_SINGLE_TTY_MS = 60_000;
+const GIT_TRIGGER_TIMEOUT_MULTI_TTY_MS = 35_000;
+const GIT_TRIGGER_TIMEOUT_NON_TTY_MS = 12_000;
+
+const GIT_POLL_INTERVAL_MS = 2_500;
+const GIT_POLL_BACKOFF_AFTER_MS = 14_000;
+const GIT_POLL_BACKOFF_INTERVAL_MS = 5_000;
 const READY_POLL_INTERVAL_MS = 3_000;
 
-// Keep API pressure bounded when a monorepo links dozens of projects.
-// 6 concurrent fetches is a good tradeoff: fast enough for 30 projects (~5 waves),
-// low enough to avoid 429s when every poll iteration fans out.
+// Grace window after first find: covers "1 deploy started right away, 1 took a bit longer".
+// Capped at small values so multi-project TTY doesn't feel like 2 extra minutes.
+const GRACE_EXTRA_SINGLE_MS = 12_000;
+const GRACE_EXTRA_MULTI_MS = 18_000;
+const GRACE_EXTRA_NON_TTY_MS = 5_000;
+
+// Concurrency caps stay low — with many fewer waves now (12-35s rather than 120s),
+// a small concurrency prevents 429s when 30 projects each request /v6/deployments + /v9/projects.
 const GIT_PROJECT_FETCH_CONCURRENCY = 6;
-const GIT_ORG_FETCH_CONCURRENCY = 6;
+const GIT_ORG_FETCH_CONCURRENCY = 4;
+
+type DeployDecisionReason =
+  | 'gitDisabled' // git.deploymentEnabled = false (or per-branch false)
+  | 'ignoredByGitConfig' // explicit per-branch mapping disables
+  | 'ignoreCommand' // vercel.json / ProjectSettings.commandForIgnoringBuildStep exited 0
+  | 'ignoreCommandMissing' // undecidable locally — server decided to skip via ignoreCommand
+  | 'rootDirectoryNoChange' // monorepo heuristic: no change in rootDirectory (best effort)
+  | 'sourceless' // project.link.sourceless
+  | 'noGitLink' // project has no link at all (manual only)
+  | 'unknown';
+
+interface DeployDecision {
+  shouldDeploy: boolean;
+  reason: DeployDecisionReason;
+  detail?: string; // human hint: e.g. "git.deploymentEnabled[main]=false"
+}
 
 interface ProjectWithMeta extends RepoProjectConfig {
   orgIdResolved: string;
   orgSlug?: string;
+  // enriched after we fetch /v9/projects/{id} once — optional so we don't have to fetch for every flow
+  _project?: import('@vercel-internals/types').Project;
+  _decision?: DeployDecision | undefined;
 }
 
 async function mapWithConcurrency<T, R>(
@@ -270,6 +313,149 @@ async function resolveAllLinkedProjects(client: Client): Promise<{
   return null;
 }
 
+/**
+ * Heuristic evaluation of whether a project _elected_ not to deploy for this push.
+ *
+ * Today the platform has no "negative deployment" record — when a push is ignored
+ * because of `git.deploymentEnabled=false`, per-branch mapping, `ignoreCommand`
+ * exiting 0, `rootDirectory` with no changes, or a `sourceless` project, the API
+ * simply creates no Deployment. So we can only infer locally. The logic:
+ *  - fetch `/v9/projects/{id}` to get `link`, `rootDirectory`, `commandForIgnoringBuildStep`, git config
+ *  - apply rules that are stable across Dashboard / vercel.json
+ *  - when we can't evaluate (ignoreCommand needs server-side shell, root dir diff needs server file list),
+ *    return `unknown` — caller should phrase as "no new deployment detected (may be ignored …)"
+ *
+ * This is intentionally best-effort: if the server ever surfaces a decision endpoint
+ * (`…/should-deploy` / `…/git-decision`), `pollForProjectsDeployments` can promote
+ * this to that endpoint without changing the UI contract.
+ */
+async function evaluateDeployDecision(
+  client: Client,
+  project: ProjectWithMeta,
+  branchHint?: string
+): Promise<DeployDecision | undefined> {
+  if (project._decision) return project._decision;
+
+  let full: any;
+  try {
+    full = project._project;
+    if (!full) {
+      const { default: getProjectByNameOrId } = await import(
+        '../../util/projects/get-project-by-id-or-name'
+      );
+      full = await getProjectByNameOrId(
+        client,
+        project.id,
+        project.orgIdResolved
+      );
+      if (full && typeof full === 'object' && 'id' in full) {
+        project._project = full;
+      } else {
+        return undefined;
+      }
+    }
+  } catch (e) {
+    output.debug(
+      `evaluateDeployDecision: fetch project ${project.id} failed: ${e}`
+    );
+    return undefined;
+  }
+
+  const link = full?.link as any;
+  const git = (full?.git ?? full?.gitConfig ?? full?.link?.git) as any;
+  const vercelJson = (full?.vercelJson ?? {}) as any;
+
+  // No git wiring ⇒ project never auto-deploys on git push (manual/cli only)
+  if (!link) {
+    return {
+      shouldDeploy: false,
+      reason: 'noGitLink',
+      detail: 'project is not connected to a Git repo (no link)',
+    };
+  }
+  if (link.sourceless) {
+    return {
+      shouldDeploy: false,
+      reason: 'sourceless',
+      detail: 'project is sourceless / template-only',
+    };
+  }
+
+  // git.deploymentEnabled may live in:
+  // - project.link.deploymentEnabled (some API shapes)
+  // - vercel.json `git.deploymentEnabled`
+  // - Dashboard Project Settings → Git → Deployments
+  // Normalize: boolean | Record<branch, boolean>
+  const rawDeploymentEnabled =
+    (git?.deploymentEnabled as boolean | Record<string, boolean> | undefined) ??
+    (vercelJson?.git?.deploymentEnabled as
+      | boolean
+      | Record<string, boolean>
+      | undefined);
+
+  if (rawDeploymentEnabled === false) {
+    return {
+      shouldDeploy: false,
+      reason: 'gitDisabled',
+      detail: 'git.deploymentEnabled=false',
+    };
+  }
+  if (
+    rawDeploymentEnabled &&
+    typeof rawDeploymentEnabled === 'object' &&
+    branchHint
+  ) {
+    const v = (rawDeploymentEnabled as Record<string, boolean>)[branchHint];
+    if (v === false) {
+      return {
+        shouldDeploy: false,
+        reason: 'ignoredByGitConfig',
+        detail: `git.deploymentEnabled[${branchHint}]=false`,
+      };
+    }
+  }
+
+  // ignoreCommand — if defined, server will skip deploy when it exits 0 or with matched code.
+  // We can't evaluate the command locally without reproducing the full FS, so mark as
+  // "maybe ignored by ignoreCommand" via `ignoreCommandMissing`, preserving the existing generic text
+  // but letting caller label it: "skipped locally? unknown; dashboard may say ignored by Ignore Build Step".
+  const ignoreCommand =
+    full?.commandForIgnoringBuildStep ??
+    vercelJson?.ignoreCommand ??
+    git?.ignoreCommand ??
+    null;
+  if (ignoreCommand) {
+    // We deliberately do not return a hard false here — if a deployment _did_ occur we don't
+    // want to claim it was skipped. For the pending remainder set (no deployment found after timeout),
+    // caller will surface this as the most likely explanation.
+    // Store as soft hint; poller still keeps polling until deadline unless we switch to per-project
+    // "shouldDeploy=false" hard-skip (which we only do for gitDisabled / sourceless).
+    // So mark via detail but keep shouldDeploy true-ish → converted to soft reason in caller's render.
+    return {
+      shouldDeploy: true, // allow polling to continue; render layer will show soft reason
+      reason: 'ignoreCommandMissing',
+      detail: `project has ignoreCommand (${typeof ignoreCommand === 'string' ? ignoreCommand.slice(0, 60) : 'configured'}) — may have elected not to deploy`,
+    };
+  }
+
+  // rootDirectory: if monorepo and this push touched only other dirs, server may skip.
+  // We can't compute file diff server-side without asking for changed files list.
+  // Report as unknown — caller will phrase as "no changes in rootDirectory?"
+  if (
+    full?.rootDirectory &&
+    full.rootDirectory !== '.' &&
+    full.rootDirectory !== ''
+  ) {
+    return {
+      shouldDeploy: true,
+      reason: 'rootDirectoryNoChange',
+      detail: `rootDirectory=${full.rootDirectory} — server may have skipped due to no file changes`,
+    };
+  }
+
+  return { shouldDeploy: true, reason: 'unknown' };
+}
+
 function isMatchingDeploymentForSha(
   dep: Deployment,
   shas: Set<string>,
@@ -371,15 +557,81 @@ async function pollForProjectsDeployments(opts: {
   shas: Set<string>;
   branchHint?: string;
   cwdRelativePath: string;
+  isSingleProject?: boolean;
+  ttyMode?: 'tty' | 'non-tty';
 }) {
-  const { client, projects, shas, branchHint, cwdRelativePath } = opts;
+  const {
+    client,
+    projects,
+    shas,
+    branchHint,
+    cwdRelativePath,
+    isSingleProject,
+    ttyMode,
+  } = opts;
   const since = Date.now();
-  const deadline = since + GIT_TRIGGER_TIMEOUT_MS;
+  const effectiveTty = ttyMode ?? 'tty';
+  const timeoutMs =
+    effectiveTty === 'non-tty'
+      ? GIT_TRIGGER_TIMEOUT_NON_TTY_MS
+      : isSingleProject
+        ? GIT_TRIGGER_TIMEOUT_SINGLE_TTY_MS
+        : GIT_TRIGGER_TIMEOUT_MULTI_TTY_MS;
+  const deadline = since + timeoutMs;
+  const graceExtraMs =
+    effectiveTty === 'non-tty'
+      ? GRACE_EXTRA_NON_TTY_MS
+      : isSingleProject
+        ? GRACE_EXTRA_SINGLE_MS
+        : GRACE_EXTRA_MULTI_MS;
+
+  // We want to distinguish "will never deploy" from "still queuing".
+  // The platform has no negative-deployment record, so we do a best-effort local evaluation:
+  // fetch /v9/projects/{id} in the background (concurrency-capped) and compute DeployDecision.
+  // Projects whose decision is a hard "shouldDeploy=false" (gitDisabled, sourceless, noGitLink, per-branch false)
+  // are moved out of `pending` early with a precise reason, instead of waiting 2 minutes.
+  const decisionsEvaluated = new Map<string, DeployDecision>();
+  let decisionsInFlight: Promise<void> | undefined;
+
+  const evaluateDecisionsInBackground = () => {
+    if (decisionsInFlight) return decisionsInFlight;
+    decisionsInFlight = (async () => {
+      await mapWithConcurrency(
+        projects,
+        async proj => {
+          const prevTeam = client.config.currentTeam;
+          try {
+            const teamId = proj.orgIdResolved.startsWith('team_')
+              ? proj.orgIdResolved
+              : undefined;
+            if (teamId) client.config.currentTeam = teamId;
+            else client.config.currentTeam = undefined;
+            const d = await evaluateDeployDecision(client, proj, branchHint);
+            if (d) decisionsEvaluated.set(proj.id, d);
+          } catch {
+          } finally {
+            client.config.currentTeam = prevTeam;
+          }
+        },
+        GIT_PROJECT_FETCH_CONCURRENCY
+      );
+    })();
+    return decisionsInFlight;
+  };
+  // kick off without awaiting — poll loop starts right away and uses whatever we already know
+  void evaluateDecisionsInBackground();
 
   const pending = new Map<string, ProjectWithMeta>(
     projects.map(p => [p.id, p])
   );
   const found = new Map<string, Deployment>();
+  const skippedHard = new Map<string, DeployDecision>(); // decided won't deploy (precise)
+  const skippedSoft = new Map<string, DeployDecision>(); // may have skipped via ignoreCommand / rootDir heuristics
+
+  // See comment block at top of file: grace window after first find accounts for
+  // "one deploy started right away, another took a bit longer" without holding the
+  // terminal for the full trigger timeout. Duration varies by TTY / single distinction.
+  let firstFoundAt = 0;
 
   output.log(
     `Triggered git push. Polling ${projects.length} linked project${projects.length === 1 ? '' : 's'} for new deployments...`
@@ -396,18 +648,35 @@ async function pollForProjectsDeployments(opts: {
 
   const noticeTruncated = (n: number) => {
     if (n <= 10) return;
-    // Don't spam: once up front is enough for 30-project case
     output.print(
       `  ${chalk.dim(`Tracking ${n} projects; showing links as they appear. Full list in Vercel dashboard.`)}\n`
     );
   };
   noticeTruncated(projects.length);
 
-  // Poll loop: bounded concurrency so 30 projects doesn't 429.
-  // Also cap banner lines so 30 finds doesn't flood terminal.
   let linesPrinted = 0;
   const MAX_INLINE_PROJECTS = 12;
   let deferredOverflow = 0;
+
+  const formatDecisionLine = (proj: ProjectWithMeta, d: DeployDecision) => {
+    switch (d.reason) {
+      case 'gitDisabled':
+        return `${chalk.dim('–')} ${chalk.bold(proj.name)} ${chalk.dim(`(${proj.directory})`)} ${chalk.dim('skipped — git.deploymentEnabled=false')}`;
+      case 'ignoredByGitConfig':
+        return `${chalk.dim('–')} ${chalk.bold(proj.name)} ${chalk.dim(`(${proj.directory})`)} ${chalk.dim(`skipped — ${d.detail || 'disabled for this branch'}`)}`;
+      case 'noGitLink':
+        return `${chalk.dim('–')} ${chalk.bold(proj.name)} ${chalk.dim(`(${proj.directory})`)} ${chalk.dim('not connected to git (manual deploys only)')}`;
+      case 'sourceless':
+        return `${chalk.dim('–')} ${chalk.bold(proj.name)} ${chalk.dim(`(${proj.directory})`)} ${chalk.dim('sourceless project — no git deploys')}`;
+      case 'ignoreCommandMissing':
+        // soft: only shown after polling exhausted
+        return `${chalk.dim('–')} ${chalk.bold(proj.name)} ${chalk.dim(`(${proj.directory})`)} ${chalk.dim('no new deployment (likely ignoreCommand — check dashboard Build settings)')}`;
+      case 'rootDirectoryNoChange':
+        return `${chalk.dim('–')} ${chalk.bold(proj.name)} ${chalk.dim(`(${proj.directory})`)} ${chalk.dim('no new deployment (no changes in rootDirectory?)')}`;
+      default:
+        return `${chalk.dim('–')} ${chalk.bold(proj.name)} ${chalk.dim(`(${proj.directory})`)} ${chalk.dim(d.detail || 'no new deployment detected')}`;
+    }
+  };
 
   const flushFound = (
     items: Array<{ proj: ProjectWithMeta; dep: Deployment }>
@@ -415,6 +684,7 @@ async function pollForProjectsDeployments(opts: {
     for (const { proj, dep } of items) {
       found.set(proj.id, dep);
       pending.delete(proj.id);
+      if (firstFoundAt === 0) firstFoundAt = Date.now();
       const url = dep.url ? `https://${dep.url}` : dep.id;
       const targetLabel =
         dep.target === 'production' ? 'Production' : dep.target || 'Preview';
@@ -444,19 +714,75 @@ async function pollForProjectsDeployments(opts: {
       output.debug(`deployment link: ${url}`);
     }
     if (deferredOverflow > 0 && pending.size === 0) {
-      // Final overflow summary
       output.print(
         `  ${chalk.dim(`… +${deferredOverflow} more deployments (run ${chalk.cyan('vc ls')} or open dashboard to see all)`)}\n`
       );
-      deferredOverflow = -1; // don't print again
+      deferredOverflow = -1;
     }
   };
 
+  const flushSkippedHard = (
+    items: Array<{ proj: ProjectWithMeta; decision: DeployDecision }>
+  ) => {
+    for (const { proj, decision } of items) {
+      if (pending.has(proj.id)) {
+        pending.delete(proj.id);
+        skippedHard.set(proj.id, decision);
+        if (linesPrinted < MAX_INLINE_PROJECTS) {
+          output.print(`  ${formatDecisionLine(proj, decision)}\n`);
+          linesPrinted++;
+        } else {
+          deferredOverflow++;
+        }
+      }
+    }
+  };
+
+  let iteration = 0;
   while (Date.now() < deadline && pending.size > 0) {
+    iteration++;
+    // Grace window: once at least one deployment landed, allow a short extra window for
+    // stragglers — shorter in single-project TTY (logs matter more than other projects)
+    // and non-TTY (return fast). Uses the precomputed graceExtraMs which already varies by mode.
+    if (found.size > 0 && firstFoundAt > 0) {
+      const graceDeadline = Math.min(deadline, firstFoundAt + graceExtraMs);
+      if (
+        Date.now() >= graceDeadline &&
+        pending.size > 0 &&
+        projects.length > 1
+      ) {
+        // Collect soft reasons before bailing
+        // Wait briefly for decision fetch to finish to give better messages
+        if (decisionsInFlight) {
+          try {
+            await Promise.race([decisionsInFlight, sleepLib(1500)]);
+          } catch {}
+        }
+        for (const proj of pending.values()) {
+          const d = decisionsEvaluated.get(proj.id);
+          if (d) {
+            if (
+              !d.shouldDeploy &&
+              (d.reason === 'gitDisabled' ||
+                d.reason === 'ignoredByGitConfig' ||
+                d.reason === 'noGitLink' ||
+                d.reason === 'sourceless')
+            ) {
+              skippedHard.set(proj.id, d);
+            } else if (
+              d.reason === 'ignoreCommandMissing' ||
+              d.reason === 'rootDirectoryNoChange'
+            ) {
+              skippedSoft.set(proj.id, d);
+            }
+          }
+        }
+        break; // stop ticking, fall through to tail rendering
+      }
+    }
+
     const pendingArr = Array.from(pending.values());
 
-    // Capture per-project team context ahead of concurrency (client.config.currentTeam is mutable)
-    // so each fetch uses the right account scoping.
     const checks: Array<{ proj: ProjectWithMeta; dep: Deployment | null }> =
       await mapWithConcurrency(
         pendingArr,
@@ -464,10 +790,6 @@ async function pollForProjectsDeployments(opts: {
           const teamId = proj.orgIdResolved.startsWith('team_')
             ? proj.orgIdResolved
             : undefined;
-          // We don't rely on global client.config.currentTeam here; we pass accountId
-          // explicitly. But set currentTeam too for any downstream that still reads it,
-          // behind a tiny critical section using a cloned view.
-          // Since client isn't thread-safe for currentTeam, we save/restore.
           const prevTeam = client.config.currentTeam;
           try {
             if (teamId) client.config.currentTeam = teamId;
@@ -493,44 +815,161 @@ async function pollForProjectsDeployments(opts: {
     }
     if (newlyFound.length > 0) flushFound(newlyFound);
 
-    if (pending.size === 0) break;
-
-    await sleepLib(GIT_POLL_INTERVAL_MS);
-  }
-
-  if (pending.size > 0) {
-    // For large monorepos, collapse the "no deployment" tail so 30 lines doesn't become 30 warnings.
-    if (pending.size > 8) {
-      output.print(
-        `  ${chalk.dim('–')} ${chalk.dim(`${pending.size} projects`)} ${chalk.dim('had no new deployment detected (may be ignored by git config / no changes, or still queuing).')}\n`
-      );
-      output.print(
-        `  ${chalk.dim(
-          `Those projects: ${Array.from(pending.values())
-            .slice(0, 8)
-            .map(p => p.name)
-            .join(', ')}${pending.size > 8 ? ', …' : ''}`
-        )}\n`
-      );
-      if (output.isDebugEnabled()) {
-        for (const proj of pending.values()) {
-          output.debug(`no deployment for ${proj.name} (${proj.directory})`);
+    // After first tick, allow hard-skipped projects to drop out early with a precise reason,
+    // so 30-project monorepo doesn't wait 2m for 25 projects that elected not to deploy.
+    if (iteration >= 1 && decisionsEvaluated.size > 0) {
+      const toSkip: Array<{ proj: ProjectWithMeta; decision: DeployDecision }> =
+        [];
+      for (const proj of pending.values()) {
+        const d = decisionsEvaluated.get(proj.id);
+        if (!d) continue;
+        if (
+          !d.shouldDeploy &&
+          (d.reason === 'gitDisabled' ||
+            d.reason === 'ignoredByGitConfig' ||
+            d.reason === 'noGitLink' ||
+            d.reason === 'sourceless')
+        ) {
+          toSkip.push({ proj, decision: d });
         }
       }
-    } else {
-      for (const proj of pending.values()) {
-        output.print(
-          `  ${chalk.dim('–')} ${chalk.bold(proj.name)} ${chalk.dim(`(${proj.directory})`)} ${chalk.dim('no new deployment detected (may be ignored by git config / no changes)')}\n`
-        );
+      if (toSkip.length > 0) flushSkippedHard(toSkip);
+    }
+
+    if (pending.size === 0) break;
+
+    const elapsed = Date.now() - since;
+    const sleepMs =
+      elapsed >= GIT_POLL_BACKOFF_AFTER_MS
+        ? GIT_POLL_BACKOFF_INTERVAL_MS
+        : GIT_POLL_INTERVAL_MS;
+    await sleepLib(sleepMs);
+  }
+
+  // Make sure decision fetch finishes before we render the tail, so we can give precise reasons
+  if (decisionsInFlight && (pending.size > 0 || skippedSoft.size === 0)) {
+    try {
+      await Promise.race([decisionsInFlight, sleepLib(1200)]);
+    } catch {}
+    // re-bin any remaining pending via newly available decisions
+    for (const proj of pending.values()) {
+      const d = decisionsEvaluated.get(proj.id);
+      if (!d) continue;
+      if (!d.shouldDeploy) skippedHard.set(proj.id, d);
+      else if (
+        d.reason === 'ignoreCommandMissing' ||
+        d.reason === 'rootDirectoryNoChange'
+      ) {
+        skippedSoft.set(proj.id, d);
       }
     }
   }
 
-  if (found.size === 0) {
-    return { found, cwdMatchedIds };
+  if (pending.size > 0 || skippedHard.size > 0 || skippedSoft.size > 0) {
+    const allRemaining = [...pending.values()];
+    const allReasonsMap = new Map<string, DeployDecision>();
+    for (const [id, d] of skippedHard) allReasonsMap.set(id, d);
+    for (const [id, d] of skippedSoft) allReasonsMap.set(id, d);
+    // also attach any evaluated decision for plain pending so we can label it
+    for (const proj of allRemaining) {
+      const d = decisionsEvaluated.get(proj.id) ?? allReasonsMap.get(proj.id);
+      if (d) allReasonsMap.set(proj.id, d);
+    }
+
+    if (allRemaining.length + skippedHard.size > 8) {
+      // Large remaining set — collapse + show a few sampled reasons
+      const total = allRemaining.length + skippedHard.size;
+      const reasonCounts = new Map<DeployDecisionReason, number>();
+      for (const d of allReasonsMap.values()) {
+        reasonCounts.set(d.reason, (reasonCounts.get(d.reason) ?? 0) + 1);
+      }
+      const sortedReasons = Array.from(reasonCounts.entries())
+        .filter(([r]) => r !== 'unknown')
+        .sort((a, b) => b[1] - a[1]);
+
+      // Compact tail
+      const sample = [
+        ...allRemaining,
+        ...Array.from(skippedHard.keys())
+          .map(id => projects.find(p => p.id === id)!)
+          .filter(Boolean),
+      ].slice(0, 8);
+
+      if (skippedHard.size === 0) {
+        output.print(
+          `  ${chalk.dim('–')} ${chalk.dim(`${total} projects`)} ${chalk.dim('had no new deployment detected')}${sortedReasons.length ? chalk.dim(` (${sortedReasons.map(([r, n]) => `${r}:${n}`).join(', ')})`) : ''}. ${chalk.dim('Likely: ignored by git config / ignoreCommand / rootDirectory no changes, or still queuing.')}\n`
+        );
+      } else {
+        output.print(
+          `  ${chalk.dim('–')} ${chalk.dim(`${total} projects`)} ${chalk.dim('did not produce a new deployment')}${sortedReasons.length ? chalk.dim(` — ${sortedReasons.map(([r, n]) => `${r}×${n}`).join(', ')}`) : ''}\n`
+        );
+      }
+      output.print(
+        `  ${chalk.dim(
+          `Sample: ${sample.map(p => p.name).join(', ')}${total > 8 ? ', …' : ''}`
+        )}\n`
+      );
+      if (sortedReasons.length > 0) {
+        // One more line hinting most common
+        const [topReason] = sortedReasons[0];
+        if (topReason === 'gitDisabled') {
+          output.print(
+            `  ${chalk.dim(`Tip: many projects have ${chalk.bold('git.deploymentEnabled=false')} — enable in vercel.json or Dashboard Git settings.`)}\n`
+          );
+        } else if (topReason === 'ignoreCommandMissing') {
+          output.print(
+            `  ${chalk.dim(`Tip: projects with an ${chalk.bold('Ignore Build Step')} may be intentionally skipping — check Dashboard → Build Settings.`)}\n`
+          );
+        } else if (topReason === 'ignoredByGitConfig') {
+          output.print(
+            `  ${chalk.dim(`Tip: per-branch git config disabled deploys for ${chalk.bold(branchHint || 'this branch')} — check ${chalk.bold('vercel.json → git.deploymentEnabled')} mapping.`)}\n`
+          );
+        }
+      }
+      if (output.isDebugEnabled()) {
+        for (const proj of allRemaining) {
+          const d = decisionsEvaluated.get(proj.id);
+          output.debug(
+            `no deployment for ${proj.name} (${proj.directory}) decision=${d?.reason ?? 'unknown'} detail=${d?.detail ?? ''}`
+          );
+        }
+      }
+    } else {
+      // Small tail — line per project with precise reason when available
+      for (const proj of allRemaining) {
+        const d = decisionsEvaluated.get(proj.id) ?? allReasonsMap.get(proj.id);
+        if (d && d.reason !== 'unknown') {
+          output.print(`  ${formatDecisionLine(proj, d)}\n`);
+        } else if (d) {
+          output.print(
+            `  ${chalk.dim('–')} ${chalk.bold(proj.name)} ${chalk.dim(`(${proj.directory})`)} ${chalk.dim('no new deployment detected (may be ignored by git config / no changes)')}\n`
+          );
+        } else {
+          output.print(
+            `  ${chalk.dim('–')} ${chalk.bold(proj.name)} ${chalk.dim(`(${proj.directory})`)} ${chalk.dim('no new deployment detected (may be ignored by git config / no changes)')}\n`
+          );
+        }
+      }
+      for (const [id, d] of skippedHard) {
+        const proj = projects.find(p => p.id === id);
+        if (!proj) continue;
+        output.print(`  ${formatDecisionLine(proj, d)}\n`);
+      }
+      for (const [id, d] of skippedSoft) {
+        const proj = projects.find(p => p.id === id);
+        if (!proj) continue;
+        // soft only shown when we truly have no deploy — avoids noisy lines during grace window
+        if (pending.has(id)) continue; // already printed via generic tail above
+        output.print(`  ${formatDecisionLine(proj, d)}\n`);
+      }
+    }
   }
 
-  return { found, cwdMatchedIds };
+  return {
+    found,
+    cwdMatchedIds,
+    skipped: skippedHard as Map<string, DeployDecision> & Map<string, any>,
+  };
 }
 
 function formatAge(createdAt?: number): string {
@@ -1116,13 +1555,59 @@ export default async function gitPassthrough(
 
   const { projects, cwdRelativePath } = repoInfo;
 
-  // Poll
+  // Infer TTY / non-TTY semantics for timeout & log policy.
+  // - client.nonInteractive may be true inside CI / `vc --yes`
+  // - stdout/stderr !isTTY happens when `vc git push | tee` or when caller is a program
+  // Behavior matrix:
+  //   single + tty         → up to 60s trigger, 12s grace, auto-logs
+  //   single + non-tty     → 12s trigger, 5s grace, NO log streaming (programmatic must use --logs to opt-in)
+  //   multi + tty          → 35s trigger, 18s grace after first find (staggered monorepo), no auto log streaming
+  //   multi + non-tty      → 12s trigger, 5s grace, summary-only
+  const isStdoutTTY = Boolean(client.stdout?.isTTY ?? process.stdout.isTTY);
+  const isStderrTTY =
+    typeof process.stderr.isTTY === 'boolean' ? process.stderr.isTTY : true;
+  const effectiveNonInteractive =
+    Boolean((client as any).nonInteractive) || !isStdoutTTY;
+  const ttyMode: 'tty' | 'non-tty' = effectiveNonInteractive
+    ? 'non-tty'
+    : 'tty';
+
+  // Heuristically decide single vs multi *before* polling so we can pick the right budget
+  // and avoid blocking 60s when this is really a 30-project monorepo.
+  // If cwdRelativePath maps to exactly one project via findProjectsFromPath, treat as single UX
+  // even if repo.json has many entries — user's intent is "I am in one project".
+  let isSingleProjectHeuristic = repoInfo.projects.length === 1;
+  let cwdMatchedIdsHint: Set<string> | undefined;
+  if (!isSingleProjectHeuristic) {
+    try {
+      const matched = findProjectsFromPath(
+        repoInfo.projects as unknown as RepoProjectConfig[],
+        cwdRelativePath
+      );
+      if (matched.length === 1) {
+        isSingleProjectHeuristic = true;
+        cwdMatchedIdsHint = new Set(matched.map(p => p.id));
+      }
+    } catch {
+      // never block push UX
+    }
+  }
+
+  if (ttyMode === 'non-tty') {
+    output.debug(
+      `git push detected but stdout !isTTY (or nonInteractive); using short timeouts: ${!isStdoutTTY ? 'stdout!isTTY' : 'nonInteractive'} ${!isStderrTTY ? '+ stderr!isTTY' : ''}`
+    );
+  }
+
+  // Poll — with grace window and skip-reason detection handled inside.
   const { found, cwdMatchedIds } = await pollForProjectsDeployments({
     client,
     projects,
     shas,
     branchHint,
     cwdRelativePath,
+    isSingleProject: isSingleProjectHeuristic,
+    ttyMode,
   });
 
   if (found.size === 0) {
@@ -1133,19 +1618,36 @@ export default async function gitPassthrough(
     return gitExit;
   }
 
-  // Determine if we should stream logs.
-  // Rules (cli-ux):
-  //  - default: stream if cwd is inside a linked project (cwdMatchedIds non-empty)
-  //  - --logs forces stream for cwd-matched, even if READY/ERROR (will show what we have + inspect fallback)
-  //  - --no-logs disables entirely, handled above
-  const shouldAutoLog = !wrapperFlags.noLogs;
+  // ── TTY-aware log policy ───────────────────────────────────────────────
+  // - non-TTY (piped, CI, --yes, programmatic): NEVER auto-stream logs — blocks don't compose well with pipes.
+  //   `vc git push` in that mode preserves plain `git push` exit code and returns quickly; caller can
+  //   explicitly opt in with --logs if they really want streamed logs in non-TTY (we still stream if --logs).
+  // - tty: single repo → stream logs; multi → summary only (as requested), unless --logs forces cwd-matched.
+  const shouldAutoLogBase = !wrapperFlags.noLogs;
   const shouldForceLog = wrapperFlags.logs;
+  const shouldAutoLog =
+    ttyMode === 'non-tty'
+      ? shouldForceLog /* only when user forced */
+      : shouldAutoLogBase;
 
-  // Pick project to stream: deepest matching cwd project that has deployment.
-  // Fallbacks when cwd is repo root:
-  //   - if cwdRelativePath === '.' or cwdMatchedIds empty but exactly one deployment found, attach to that one
-  //   - if cwdMatchedIds empty and multiple found but one project has directory '.' (common single-root repo), attach to that
-  let primaryProjectId: string | undefined;
+  if (ttyMode === 'non-tty' && shouldAutoLogBase && !shouldForceLog) {
+    // In non-TTY we suppress the implicit "Attaching to deployment ..." line entirely —
+    // machine consumers don't want spinner/logs. Still show deployment URLs (already printed by poller).
+    output.debug(
+      'non-TTY detected: skipping auto log attach (use --logs to force)'
+    );
+  }
+
+  // ── single vs multi UX (your request) ──────────────────────────────────
+  // isSingleProjectHeuristic already computed before poll for timeout reasons;
+  // recompute definitive version now that we know `found` (same logic, but prefer found evidence).
+  const isSingleProjectRepo =
+    isSingleProjectHeuristic ||
+    // repo.json may list 30 but cwd matched only one deepest — still single UX for that cwd.
+    // Use hint if poll returned a definitive cwdMatchedIds that differs from early estimate.
+    (cwdMatchedIds.size === 1 &&
+      projects.length > 1 &&
+      Array.from(cwdMatchedIds).some(id => found.has(id)));
 
   const pickDeepest = (ids: Iterable<string>) => {
     const candidates = Array.from(ids)
@@ -1160,12 +1662,132 @@ export default async function gitPassthrough(
     return undefined;
   };
 
+  if (!isSingleProjectRepo) {
+    // Multi-project path: summary table, no log streaming by default.
+    // In non-TTY, this is the *only* path (single repo in non-TTY is also summarized below
+    // before log logic). Here we own the full table — even for overflow-hidden items,
+    // re-render a compact complete list so callers in CI get deterministic parsable output.
+    const foundEntries = Array.from(found.entries());
+    const sortedFound = foundEntries
+      .map(([id, dep]) => ({ proj: projects.find(p => p.id === id)!, dep }))
+      .filter(x => x.proj)
+      .sort((a, b) => {
+        const aProd = a.dep.target === 'production' ? 0 : 1;
+        const bProd = b.dep.target === 'production' ? 0 : 1;
+        if (aProd !== bProd) return aProd - bProd;
+        const depth = (p: ProjectWithMeta) => p.directory.split('/').length;
+        const dd = depth(a.proj) - depth(b.proj);
+        if (dd !== 0) return dd;
+        return a.proj.name.localeCompare(b.proj.name);
+      });
+
+    // In non-TTY / piped we still print, but avoid chalk.bold where possible for machine readers?
+    // Keep visual but parsable: state icon + url is stable.
+    if (ttyMode !== 'non-tty') {
+      output.print(
+        `\n${chalk.bold('Deployments for')} ${chalk.bold(branchHint || 'this push')}\n`
+      );
+    } else {
+      output.print(
+        `\nDeployments for ${branchHint || 'this push'} (${found.size}):\n`
+      );
+    }
+    const maxName = Math.min(
+      32,
+      Math.max(...sortedFound.map(({ proj }) => proj.name.length), 10)
+    );
+    for (const { proj, dep } of sortedFound) {
+      const { icon, color } = deploymentStateIcon(dep.readyState);
+      const orgSlug = proj.orgSlug ? `${proj.orgSlug}/` : '';
+      const url = dep.url ? `https://${dep.url}` : dep.id;
+      const target =
+        dep.target === 'production' ? 'Production' : dep.target || 'Preview';
+      const namePadded =
+        ttyMode === 'non-tty' ? proj.name : proj.name.padEnd(maxName);
+      if (ttyMode === 'non-tty') {
+        // Plain, machine-friendly: name <url> [state] target
+        output.print(
+          `${namePadded} ${url} [${dep.readyState || 'UNKNOWN'}] ${target}\n`
+        );
+        if (dep.inspectorUrl) {
+          output.print(`  Inspect: ${dep.inspectorUrl}\n`);
+        }
+      } else {
+        output.print(
+          `  ${color(icon)} ${chalk.bold(namePadded)} ${chalk.dim(`(${proj.directory})`)}  ${chalk.cyan(url)} ${chalk.dim(`· ${target} · [${dep.readyState || 'UNKNOWN'}]`)}\n`
+        );
+        if (dep.inspectorUrl) {
+          output.print(
+            `    ${chalk.dim(`${orgSlug}${proj.name} Inspect:`)} ${link(dep.inspectorUrl)}\n`
+          );
+        }
+      }
+    }
+
+    // Only hint about logs in TTY — non-TTY caller piped vc git push
+    if (ttyMode === 'non-tty') {
+      output.print(
+        `\n${found.size} deployment(s) triggered. In non-interactive mode, logs are not streamed. Run with ${chalk.cyan('vc git push --logs')} or ${chalk.cyan('vc inspect <url> --logs')}.\n`
+      );
+    } else {
+      output.print(
+        `\n  ${chalk.dim(`All ${found.size} deployment(s) triggered. Logs not streamed for multi-project push.`)} ${chalk.dim(`Use:`)} ${chalk.cyan('vc inspect <url> --logs')} ${chalk.dim('or rerun from inside a project directory to stream that project. Or:')} ${chalk.cyan(`vc git push --logs`)} ${chalk.dim('(forces streaming for cwd-matched project).')}\n`
+      );
+    }
+
+    if (shouldForceLog) {
+      // Explicit opt-in from vc git push --logs even in multi-project repo:
+      // stream logs for the cwd-matched deepest project only (if any). This respects
+      // the "don't spam one project's logs across 30 lines" rule by picking one.
+      const forcedId = pickDeepest(cwdMatchedIdsHint ?? cwdMatchedIds);
+      if (forcedId) {
+        const forcedProj = projects.find(p => p.id === forcedId);
+        const forcedDep = found.get(forcedId);
+        if (forcedProj && forcedDep) {
+          output.print('\n');
+          output.log(
+            `--logs: streaming build logs for ${chalk.bold(forcedProj.name)} ${chalk.dim(`(${forcedProj.directory})`)} ${chalk.dim('(other projects continue server-side)')}`
+          );
+          try {
+            await streamDeploymentUntilReady(
+              client,
+              forcedDep,
+              forcedProj,
+              true
+            );
+          } catch (err: any) {
+            output.debug(`forced stream failed: ${err?.stack || err}`);
+          }
+        }
+      }
+    }
+
+    return gitExit;
+  }
+
+  // ── Single-project path: normal output plus logs (TTY-only by default) ──────
+  // Non-TTY: short-circuit to summary line — don't block on log tail, preserve git exit semantics.
+  if (ttyMode === 'non-tty' && !shouldForceLog) {
+    const onlyId = Array.from(found.keys())[0];
+    const onlyDep = onlyId ? found.get(onlyId) : undefined;
+    if (onlyDep) {
+      const url = onlyDep.url ? `https://${onlyDep.url}` : onlyDep.id;
+      output.print(
+        `Deployment triggered: ${url} [${onlyDep.readyState}] ${onlyDep.inspectorUrl ? `Inspect: ${onlyDep.inspectorUrl}` : ''}\n`
+      );
+    }
+    // Don't attach logs in non-TTY unless --logs — return quickly.
+    return gitExit;
+  }
+
+  let primaryProjectId: string | undefined;
   if (cwdMatchedIds.size > 0) {
     primaryProjectId = pickDeepest(cwdMatchedIds);
+  } else if (cwdMatchedIdsHint && cwdMatchedIdsHint.size > 0) {
+    primaryProjectId = pickDeepest(cwdMatchedIdsHint);
   }
 
   if (!primaryProjectId) {
-    // repo root / un-nested monorepo cwd: try smart defaults so "never picked up log stream" doesn't happen
     const isRootCwd =
       cwdRelativePath === '.' ||
       cwdRelativePath === '' ||
@@ -1174,7 +1796,6 @@ export default async function gitPassthrough(
       if (found.size === 1) {
         primaryProjectId = Array.from(found.keys())[0];
       } else {
-        // Prefer projects with directory '.' or '' (root projects)
         const rootDirCandidates = projects.filter(
           p =>
             (p.directory === '.' ||
@@ -1185,11 +1806,8 @@ export default async function gitPassthrough(
         if (rootDirCandidates.length === 1) {
           primaryProjectId = rootDirCandidates[0].id;
         } else if (rootDirCandidates.length === 0) {
-          // No root project — pick the most recently updated found deployment by primacy?
-          // Deepest found is still the best guess for typical usage.
           primaryProjectId = pickDeepest(found.keys());
         } else {
-          // Multiple root candidates — pick deepest (they're all same depth 0, so first alphabetical wins deterministically)
           primaryProjectId = pickDeepest(rootDirCandidates.map(p => p.id));
         }
       }
@@ -1206,8 +1824,6 @@ export default async function gitPassthrough(
   }
 
   if (!primaryProjectId) {
-    // No cwd-matched deployment to tail, and no safe root fallback — links already shown.
-    // Preserve git exit code. Hint user how to get logs explicitly.
     if (found.size === 1) {
       const onlyId = Array.from(found.keys())[0];
       const onlyDep = found.get(onlyId)!;
@@ -1223,14 +1839,12 @@ export default async function gitPassthrough(
   const primaryProj = projects.find(p => p.id === primaryProjectId)!;
   const primaryDep = found.get(primaryProjectId)!;
 
-  // If deployment is already done and user didn't force logs, skip streaming
   if (
     (primaryDep.readyState === 'READY' ||
       primaryDep.readyState === 'ERROR' ||
       primaryDep.readyState === 'CANCELED') &&
     !shouldForceLog
   ) {
-    // short-circuit still prints final status already done via pollFor...? It printed initial line but not full status. Print final.
     if (primaryDep.readyState !== 'READY') {
       output.print(
         `${chalk.yellow('⚠')} ${chalk.bold(primaryProj.name)} deployment finished with ${primaryDep.readyState}\n`
@@ -1240,7 +1854,6 @@ export default async function gitPassthrough(
   }
 
   output.print('\n');
-  // Use log() which already emits "> …" at col 0 — don't add another ">" manually; cli-ux forbids double gutters.
   output.log(
     `Attaching to deployment for ${chalk.bold(primaryProj.name)} ${chalk.dim(
       `(${primaryProj.directory})`
@@ -1256,10 +1869,7 @@ export default async function gitPassthrough(
     );
   } catch (err: any) {
     output.debug(`stream failed: ${err?.stack || err}`);
-    // don't fail the git push exit code because deployment continues server-side
   }
-
-  // For other projects, we already showed links; we don't stream them.
 
   return gitExit;
 }
