@@ -455,6 +455,14 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
     const entrypointAbs = join(workPath, entrypointRel);
     const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
 
+    const cdnEnv = process.env.VERCEL_FASTAPI_STATIC_CDN?.toLowerCase();
+    if (cdnEnv !== '1' && cdnEnv !== 'true') {
+      debug(
+        'FastAPI: VERCEL_FASTAPI_STATIC_CDN not set, skipping static CDN collection'
+      );
+      return;
+    }
+
     const fastapiStatic = await runFastAPICollectStatic(
       venvPath,
       workPath,
