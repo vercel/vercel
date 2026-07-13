@@ -40,6 +40,7 @@ import { mcpCommand } from './mcp/command';
 import { metricsCommand } from './metrics/command';
 import { microfrontendsCommand } from './microfrontends/command';
 import { openCommand } from './open/command';
+import { coverageDemoCommand } from './coverage-demo/command';
 import { projectCommand } from './project/command';
 import { promoteCommand } from './promote/command';
 import { pullCommand } from './pull/command';
@@ -106,6 +107,7 @@ const commandsStructs: Command[] = [
   mcpCommand,
   microfrontendsCommand,
   openCommand,
+  coverageDemoCommand,
   projectCommand,
   promoteCommand,
   pullCommand,
