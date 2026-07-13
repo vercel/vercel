@@ -187,88 +187,102 @@ describe('ai-gateway coding-agents setup', () => {
       expect(out.configured[0].action).toBe('created');
     });
 
-    it('configures Codex with the responses wire API and a shell export', async () => {
-      useUser();
-      client.nonInteractive = true;
-      client.setArgv(
-        'ai-gateway',
-        'coding-agents',
-        'setup',
-        '--key',
-        'vck_DummyKey0002',
-        '--agent',
-        'codex'
-      );
+    // Shell rc management is intentionally skipped on Windows.
+    it.skipIf(process.platform === 'win32')(
+      'configures Codex with the responses wire API and a shell export',
+      async () => {
+        useUser();
+        client.nonInteractive = true;
+        client.setArgv(
+          'ai-gateway',
+          'coding-agents',
+          'setup',
+          '--key',
+          'vck_DummyKey0002',
+          '--agent',
+          'codex'
+        );
 
-      const exitCode = await aiGateway(client);
-      expect(exitCode).toBe(0);
+        const exitCode = await aiGateway(client);
+        expect(exitCode).toBe(0);
 
-      const toml = tomlParse(readFileSync(codexConfigPath(), 'utf8')) as any;
-      expect(toml.model_provider).toBe('vercel');
-      // We never pin a default model — only the provider/URL/auth are set up.
-      expect(toml.model).toBeUndefined();
-      expect(toml.model_providers.vercel.base_url).toBe(
-        'https://ai-gateway.vercel.sh/v1'
-      );
-      expect(toml.model_providers.vercel.wire_api).toBe('responses');
-      expect(toml.model_providers.vercel.env_key).toBe('AI_GATEWAY_API_KEY');
+        const toml = tomlParse(readFileSync(codexConfigPath(), 'utf8')) as any;
+        expect(toml.model_provider).toBe('vercel');
+        // We never pin a default model — only the provider/URL/auth are set up.
+        expect(toml.model).toBeUndefined();
+        expect(toml.model_providers.vercel.base_url).toBe(
+          'https://ai-gateway.vercel.sh/v1'
+        );
+        expect(toml.model_providers.vercel.wire_api).toBe('responses');
+        expect(toml.model_providers.vercel.env_key).toBe('AI_GATEWAY_API_KEY');
 
-      const bashrc = readFileSync(bashrcPath(), 'utf8');
-      expect(bashrc).toContain('# >>> vercel ai-gateway >>>');
-      expect(bashrc).toContain("export AI_GATEWAY_API_KEY='vck_DummyKey0002'");
-    });
+        const bashrc = readFileSync(bashrcPath(), 'utf8');
+        expect(bashrc).toContain('# >>> vercel ai-gateway >>>');
+        expect(bashrc).toContain(
+          "export AI_GATEWAY_API_KEY='vck_DummyKey0002'"
+        );
+      }
+    );
 
-    it('appends the rc block a blank line after existing user content', async () => {
-      useUser();
-      client.nonInteractive = true;
-      writeFileSync(bashrcPath(), '# my rc\nalias ll="ls -la"\n');
-      client.setArgv(
-        'ai-gateway',
-        'coding-agents',
-        'setup',
-        '--key',
-        'vck_DummyKey0018',
-        '--agent',
-        'codex'
-      );
+    // Shell rc management is intentionally skipped on Windows.
+    it.skipIf(process.platform === 'win32')(
+      'appends the rc block a blank line after existing user content',
+      async () => {
+        useUser();
+        client.nonInteractive = true;
+        writeFileSync(bashrcPath(), '# my rc\nalias ll="ls -la"\n');
+        client.setArgv(
+          'ai-gateway',
+          'coding-agents',
+          'setup',
+          '--key',
+          'vck_DummyKey0018',
+          '--agent',
+          'codex'
+        );
 
-      expect(await aiGateway(client)).toBe(0);
-      // The exact bytes: the block reads as its own section, never as a tail
-      // of the user's last block.
-      expect(readFileSync(bashrcPath(), 'utf8')).toBe(
-        [
-          '# my rc',
-          'alias ll="ls -la"',
-          '',
-          '# >>> vercel ai-gateway >>>',
-          '# Managed by `vercel ai-gateway coding-agents setup` — safe to remove this block.',
-          "export AI_GATEWAY_API_KEY='vck_DummyKey0018'",
-          '# <<< vercel ai-gateway <<<',
-          '',
-        ].join('\n')
-      );
-    });
+        expect(await aiGateway(client)).toBe(0);
+        // The exact bytes: the block reads as its own section, never as a tail
+        // of the user's last block.
+        expect(readFileSync(bashrcPath(), 'utf8')).toBe(
+          [
+            '# my rc',
+            'alias ll="ls -la"',
+            '',
+            '# >>> vercel ai-gateway >>>',
+            '# Managed by `vercel ai-gateway coding-agents setup` — safe to remove this block.',
+            "export AI_GATEWAY_API_KEY='vck_DummyKey0018'",
+            '# <<< vercel ai-gateway <<<',
+            '',
+          ].join('\n')
+        );
+      }
+    );
 
-    it('shell-escapes a key with special characters', async () => {
-      useUser();
-      client.nonInteractive = true;
-      const trickyKey = 'vck_a$b`c\'d"e';
-      client.setArgv(
-        'ai-gateway',
-        'coding-agents',
-        'setup',
-        '--key',
-        trickyKey,
-        '--agent',
-        'codex'
-      );
+    // Shell rc management is intentionally skipped on Windows.
+    it.skipIf(process.platform === 'win32')(
+      'shell-escapes a key with special characters',
+      async () => {
+        useUser();
+        client.nonInteractive = true;
+        const trickyKey = 'vck_a$b`c\'d"e';
+        client.setArgv(
+          'ai-gateway',
+          'coding-agents',
+          'setup',
+          '--key',
+          trickyKey,
+          '--agent',
+          'codex'
+        );
 
-      expect(await aiGateway(client)).toBe(0);
-      const bashrc = readFileSync(bashrcPath(), 'utf8');
-      expect(bashrc).toContain(
-        `export AI_GATEWAY_API_KEY='vck_a$b\`c'\\''d"e'`
-      );
-    });
+        expect(await aiGateway(client)).toBe(0);
+        const bashrc = readFileSync(bashrcPath(), 'utf8');
+        expect(bashrc).toContain(
+          `export AI_GATEWAY_API_KEY='vck_a$b\`c'\\''d"e'`
+        );
+      }
+    );
 
     it('configures OpenCode with the native vercel provider', async () => {
       useUser();
