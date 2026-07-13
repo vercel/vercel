@@ -1,4 +1,4 @@
-import { ChildProcess, fork } from 'node:child_process';
+import { type ChildProcess, fork } from 'node:child_process';
 import { readFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import {
