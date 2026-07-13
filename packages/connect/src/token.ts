@@ -50,6 +50,15 @@ export interface ConnectTokenParams {
 
 export interface ConnectTokenResponse {
   token: string;
+  /**
+   * Per-issuance identifier for this token (`stk_…`). A new id is assigned each
+   * time a token is issued — including on refresh — and stays stable for that
+   * issued token's lifetime. Use it to correlate a token with its usage in
+   * Vercel observability/billing data (e.g. usage facts and drains). It is not
+   * the token itself and is safe to log. Optional: absent from responses served
+   * by Vercel API versions that predate this field.
+   */
+  tokenId?: string;
   /** Token expiration timestamp in milliseconds since epoch. */
   expiresAt: number;
   connector: {
