@@ -10,6 +10,7 @@ import {
   getIdentity,
   PASSPORT_COOKIE_NAME,
   PASSPORT_HEADER_NAME,
+  PASSPORT_RESOURCE_HEADER_NAME,
 } from '../../src';
 
 function createToken(payload: Record<string, unknown>): string {
@@ -129,6 +130,67 @@ describe('getIdentity', () => {
       tokenSource: 'header',
       verified: true,
     });
+  });
+
+  test('verifies a resource-bound delegated preview identity', async () => {
+    const resource =
+      'owner:team_123:project:prj_123:sandbox:sbx_123:host:preview.example';
+    const token = createToken({ ...payload, resource });
+    const identity = await getIdentity(
+      new Headers({
+        [PASSPORT_HEADER_NAME]: token,
+        [PASSPORT_RESOURCE_HEADER_NAME]: resource,
+      }),
+      { verifyOptions }
+    );
+
+    expect(identity?.resource).toBe(resource);
+    expect(identity?.verified).toBe(true);
+  });
+
+  test('rejects a resource-bound token without trusted resource context', async () => {
+    const resource =
+      'owner:team_123:project:prj_123:sandbox:sbx_123:host:preview.example';
+    const token = createToken({ ...payload, resource });
+
+    await expect(
+      getIdentity(new Headers({ [PASSPORT_HEADER_NAME]: token }), {
+        verifyOptions,
+      })
+    ).rejects.toThrow(
+      `Expected ${PASSPORT_RESOURCE_HEADER_NAME} to be set or verifyOptions.resource to be provided for a resource-bound Passport token.`
+    );
+  });
+
+  test('rejects a resource-bound token for another sandbox', async () => {
+    const resource =
+      'owner:team_123:project:prj_123:sandbox:sbx_123:host:preview.example';
+    const token = createToken({ ...payload, resource });
+
+    await expect(
+      getIdentity(
+        new Headers({
+          [PASSPORT_HEADER_NAME]: token,
+          [PASSPORT_RESOURCE_HEADER_NAME]:
+            'owner:team_123:project:prj_123:sandbox:sbx_other:host:preview.example',
+        }),
+        { verifyOptions }
+      )
+    ).rejects.toThrow(
+      'Expected Passport token resource claim to be "owner:team_123:project:prj_123:sandbox:sbx_other:host:preview.example".'
+    );
+  });
+
+  test('accepts an explicitly provided delegated preview resource', async () => {
+    const resource =
+      'owner:team_123:project:prj_123:sandbox:sbx_123:host:preview.example';
+    const token = createToken({ ...payload, resource });
+    const identity = await getIdentity(
+      new Headers({ [PASSPORT_HEADER_NAME]: token }),
+      { verifyOptions: { ...verifyOptions, resource } }
+    );
+
+    expect(identity?.resource).toBe(resource);
   });
 
   test('falls back to an explicitly provided Passport cookie', async () => {
