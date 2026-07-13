@@ -152,7 +152,13 @@ export default async function alerts(client: Client): Promise<number> {
     case 'rules': {
       telemetry.trackCliSubcommandRules(args[0] ?? 'ls');
       const rulesFn = (await import('./rules')).default;
-      return rulesFn(client, args);
+      const rulesArgs = [...args];
+      const project = parsedArgs.flags['--project'];
+      const format = parsedArgs.flags['--format'];
+      if (project) rulesArgs.push('--project', project);
+      if (parsedArgs.flags['--all']) rulesArgs.push('--all');
+      if (format) rulesArgs.push('--format', format);
+      return rulesFn(client, rulesArgs);
     }
     default: {
       telemetry.trackCliSubcommandLs(subcommandOriginal);

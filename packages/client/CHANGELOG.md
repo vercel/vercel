@@ -1,5 +1,20 @@
 # @vercel/client
 
+## 17.6.5
+
+### Patch Changes
+
+- Updated dependencies [607f0ef]
+  - @vercel/build-utils@13.33.0
+
+## 17.6.4
+
+### Patch Changes
+
+- 067a068: Finish CLI deployments from alias-assigned build stream events while retaining deployment polling as a fallback.
+- Updated dependencies [7b30856]
+  - @vercel/build-utils@13.32.3
+
 ## 17.6.3
 
 ### Patch Changes

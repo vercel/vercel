@@ -1,5 +1,31 @@
 # @vercel/python
 
+## 6.50.0
+
+### Minor Changes
+
+- 7bbfd48: Support `"entrypoint": "pyproject.toml"` for services. A service may now set `entrypoint: "pyproject.toml"` to build exactly what that file declares: the web app from `tool.vercel.entrypoint` (when present) and queue subscribers from `[[tool.vercel.subscribers]]`. Filename-based entrypoint auto-detection never runs in this mode, and subscribers-only services (no web function) are supported.
+- f11c4c4: Bytecode-first packing for runtime-dependency-install builds (>225 MB) when `VERCEL_PYTHON_COMPILEALL` is enabled.
+
+  The zip bundles only the mandatory packages plus a `sys.pycache_prefix` bytecode tree covering the app and all dependencies including those installed into `/tmp` at cold start, and defers every other public package to the cold-start `uv sync`. Falls back to knapsack packing (now with a slack-capacity bytecode fill) when the externalized set would not fit Lambda ephemeral storage.
+
+### Patch Changes
+
+- 9637ae6: Add support for declaring the workflow entrypoint via `tool.vercel.workflows` in `pyproject.toml`.
+
+## 6.49.0
+
+### Minor Changes
+
+- dbefe95: Require Python `pyproject.toml` subscribers to be declared with `[[tool.vercel.subscribers]]` array entries instead of named subscriber tables.
+- 8b36776: Precompile Python bytecode for standard-size Lambda functions when enough of the estimated bytecode fits the remaining capacity, and allow bytecode precompilation when a custom build command is configured.
+- e12b1bd: Fail the build when `tool.vercel.entrypoint` in pyproject.toml is set but cannot be resolved, instead of silently falling back to filename-based entrypoint detection. A stale or typo'd declaration could previously build a different app than the one declared. Speculative detection (monorepo auto-detection, project linking) still degrades gracefully: one directory's broken config does not abort the sweep.
+
+### Patch Changes
+
+- 89ef74f: Skip bytecode precompilation when a service has a `preDeployCommand`. Precompiled bytecode uses `--invalidation-mode unchecked-hash`, which trusts the `.pyc` without re-checking the source at import — safe only because build output is normally immutable. A `preDeployCommand` runs after the build and can rewrite source files, leaving the already-compiled bytecode stale so the old source is served at runtime. Precompilation is now disabled for such services so the pre-deploy changes take effect.
+- 7b30856: Add `vercel dev` support for Python queue subscribers defined in `pyproject.toml`.
+
 ## 6.48.0
 
 ### Minor Changes

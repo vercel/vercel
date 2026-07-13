@@ -19,7 +19,7 @@ When adding a durable contract, add a row to `SKILL.md` so agents load it only f
 `vc link` target resolution order:
 
 1. Local link state: already linked, stale link, repo link, env link.
-2. Intended team: explicit `--team`/`--scope`, current config, one safe choice, otherwise ask or fail.
+2. Intended team: the team resolves only from an explicit signal (`--team`/`--scope`, `vercel.json` `scope`, `VERCEL_ORG_ID`), a single available choice, or the `Which team?` prompt. The globally selected team (`vc switch`, login default) is never a signal, and `--yes` does not substitute for one: `--yes` answers confirmations, not data questions, so with multiple teams and no signal a TTY still asks and non-TTY fails with `missing_scope`. `--yes` never triggers cross-team discovery.
 3. Intended project: explicit `--project`, repo-root match, exact folder-name match, selected existing project, or new project.
 4. Project root: inferred root, selected root, or cwd.
 5. Settings: detected framework/settings, explicit overrides, or defaults.
@@ -27,19 +27,25 @@ When adding a durable contract, add a row to `SKILL.md` so agents load it only f
 
 Rules:
 
+- Every command that establishes a link (`vc link`, `vc deploy`, `vc pull`, `vc dev`, `vc git connect`, …) uses the same flow: team first (explicit signal, single choice, or searchable picker), then project suggestions scoped to the chosen team. There is no cross-team project sweep. An explicit project name (`--project`, `--name`, `vercel.json` `name`) skips the suggestions and resolves directly within the team.
 - Before mutation, know whether linking existing project or creating a new one.
 - Running `vc link` is setup intent; do not ask a vague setup-intent prompt.
+- In direct interactive `vc link`, resolve the team before searching for or selecting a project. An explicit `--team`/`--scope` skips the team prompt and restricts project discovery to that team.
+- When exactly one team choice exists, skip `Which team?` and print an aligned `Team` row as resolved state instead; prompts are for decisions, rows are for facts. Hide `Choose a different team` when the team was auto-selected this way.
+- Direct interactive team selection supports case-insensitive substring search by team name or slug.
+- After team selection, direct interactive `vc link` first checks the selected team for a project linked to the local Git repository with the deepest matching Root Directory. Show those matches as `(linked by git)`. Only when none match, fall back to an exact folder-name match. Follow detected matches with `Search all projects`, `Create a new project`, and `Choose a different team`. Do not dump the team's full project list until the user chooses search.
+- Project search includes `Back to project options`; choosing it returns to the project picker without changing the selected team. It renders after a separator at the end of the unfiltered list and alone when a search has no matches; a search term with matches filters it out. Never float it mid-list.
+- After choosing `Create a new project`, show `Press ↑ to return to project options` on `Name?`. Up returns to the project picker without changing the selected team; Escape still cancels the command.
+- Existing-project selection supports case-insensitive substring search. For teams with more than 100 projects, query `/v9/projects?search=<term>&limit=20` within the selected team and cancel stale requests as the query changes.
+- Include teams that require SSO in the explicit team picker. Selecting one may trigger SSO reauthentication on the first scoped project request; automatic cross-team discovery continues to skip those teams.
+- Escape cancels any active direct `vc link` prompt, exits successfully, and prints `Canceled.` without continuing to later prompts or mutations.
+- Without a TTY or in non-interactive mode, a missing team signal fails before any project discovery, project creation, or deletion of the existing local link: `action_required: missing_scope` JSON in non-interactive mode, a plain missing-scope error otherwise. Report missing data (team) before missing consent (`--yes`).
+- When both `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` are set, `vc link` resolves and confirms exactly that pair without prompting and without `--yes`, prints aligned `Directory`/`Source`/`✓ Linked` rows with `Source` naming the env vars, and leaves local link files untouched (the env link itself is what other commands read). An unresolvable pair errors; it never falls back to prompts or guesses.
+- The new-project `Name?` default must be creatable: when the slugified folder name is already a project in the selected team, suggest `<folder-name>-<4-char suffix>` instead of a default that can only fail `Project already exists` validation.
 - Do not ask `Link to existing project?` when no concrete project is shown. Ask `Project?` with `Create new project` and `Link existing project` choices instead.
 - Do not create a project from a user-supplied `--project` value that was not found.
-- Folder-name matches across teams are lower confidence than repo-root or explicit matches.
-- Cross-team matches need visible team/search context before linking.
-- Print searched-team scope only when search scope affects interpretation, such as multiple teams or manual SSO fallback. Keep it dim and compact: `Searched 13 teams`, not a wrapped list of team slugs. Do not add it to a one-team happy path.
-- Existing-project matches show `Directory` once as setup state, then `Found existing project` as a status heading and aligned `Project` before confirmation. If no setup-state `Directory` row exists, include `Directory` in the found-project block instead.
-- Repository matches show `Found existing project`, then aligned `Project` and `Source` rows before confirmation.
-- Ask for the link action after preview rows: `Link directory to project?` or `Link repository to project?`. Do not ask `Link to this project?` after the values are already visible.
-- When without-SSO team search finds no match, show `Searched {count} teams available without SSO`, then `No matching projects found`, then ask `Select teams that require SSO`.
-- Use a manual team multiselect for the SSO fallback because each selected team may require the user to log in through SSO.
-- Keep checkbox instructions inline, dim, and unwrapped: `<space> select, <enter> confirm, <a> toggle all, <i> invert`.
+- Existing-project confirmation paths outside the direct project chooser show `Directory` once as setup state, then `Found existing project` as a status heading and aligned `Project` before confirmation. If no setup-state `Directory` row exists, include `Directory` in the found-project block instead.
+- Ask for the link action after preview rows: `Link directory to project?`. Do not ask `Link to this project?` after the values are already visible.
 - Use `requires SSO` / `teams that require SSO`; do not use `SSO-protected` in new human copy.
 - `--scope` may remain compatibility input; user-facing copy uses `team`.
 - Use `Which team?`, `Name?`, `Customize settings?`, and `Loading teams…`.
@@ -61,32 +67,42 @@ Current gaps to migrate incrementally:
 
 Link prompt map:
 
-| State                              | Human prompt/output                                                                                                                | Non-interactive                        |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Multiple teams                     | `Which team?`                                                                                                                      | `action_required: missing_team`        |
-| One existing project match         | `Directory`, `Found existing project`, aligned `Project`, then `Link directory to project?`                                        | link only for explicit/repo-root match |
-| One repository project match       | `Directory`, optional search-status rows, `Found existing project`, aligned `Project`/`Source`, then `Link repository to project?` | link only for explicit/repo-root match |
-| Multiple project matches           | aligned `Projects` summary, then `Project?`                                                                                        | `action_required: ambiguous_project`   |
-| No without-SSO match, SSO required | `Searched {count} teams available without SSO`, `No matching projects found`, then `Select teams that require SSO`                 | skip unless explicitly requested       |
-| No project match                   | `Project?` with `Create new project` / `Link existing project`, then `Name?` when creating                                         | require `--yes` or `project_not_found` |
-| Root choices exist                 | `Code directory?`                                                                                                                  | require root flag/config/payload       |
-| Settings differ                    | `Customize settings?`                                                                                                              | require flags/config/payload           |
-| Optional env pull                  | `Pull development environment variables into .env.local?`                                                                          | skip unless explicitly requested       |
-| Stale/deleted link                 | show stale link, then concrete relink choice                                                                                       | `action_required: stale_link`          |
+| State                              | Human prompt/output                                                                                                                                                                  | Non-interactive                        |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
+| Multiple teams                     | searchable `Which team?` before project discovery                                                                                                                                    | `action_required: missing_scope` unless explicit signal or single choice |
+| Single team                        | no prompt; aligned `Team` row, then project discovery                                                                                                                                | proceeds with that team                |
+| One folder-name project match      | `Which project?` with the match labeled `(folder name)`, then search/create choices                                                                                                  | link only for explicit/repo-root match |
+| One repository project match       | direct interactive: `Which project?` with the match labeled `(linked by git)`; other paths: `Found existing project`, aligned `Project`/`Source`, then `Link repository to project?` | link only for explicit/repo-root match |
+| No project match                   | `Which project?` with `Search all projects` / `Create a new project`, then `Name?` when creating                                                                                     | require `--yes` or `project_not_found` |
+| Root choices exist                 | `Code directory?`                                                                                                                                                                    | require root flag/config/payload       |
+| Settings differ                    | `Customize settings?`                                                                                                                                                                | require flags/config/payload           |
+| Optional env pull                  | `Pull development environment variables into .env.local?`                                                                                                                            | skip unless explicitly requested       |
+| Stale/deleted link                 | show stale link, then concrete relink choice                                                                                                                                         | `action_required: stale_link`          |
 
 Link acceptance matrix:
 
 - already linked no-op / relink behavior
 - stale/deleted project link
-- one team and many teams
+- one team and many teams, with team selection before project discovery
+- team search by name and slug
+- returning from project selection to team selection
+- local and API-backed existing-project search within the selected team
+- returning from project search to project options
+- selected-team Git repository and Root Directory match before folder-name fallback
+- exact folder-name suggestion before full project search
+- explicit selection of a team that requires SSO
+- Escape cancellation from team, project, and setup prompts without mutation
+- Up from the new-project `Name?` prompt returns to project selection without repeating team selection or project discovery
 - explicit `--team`
 - explicit valid and missing `--project`
 - repo-root and folder-name matches
-- multiple project matches across teams
-- no match in teams available without SSO, then manual selection/search for teams that require SSO
 - no match plus create project
 - monorepo/root-directory selection
 - non-TTY and `--non-interactive`
+- non-TTY/non-interactive with multiple teams and no signal errors `missing_scope` (even with `--yes`), preserving any existing local link
+- non-TTY/non-interactive with a single team, explicit `--team`/`--scope`, `vercel.json` `scope`, or `VERCEL_ORG_ID` proceeds
+- `VERCEL_ORG_ID` + `VERCEL_PROJECT_ID` pair links without prompts or `--yes`, preserving local link files; an unknown pair errors
+- new-project `Name?` default is suffixed when the folder name is taken and plain when available
 - JSON-only stdout
 - `--yes` default path creates no duplicate resources on retry
 - primary completed-phase gutter: `✓ Linked`, `✓ Created`, or `✓ Added`; no `▲` on setup/link rows

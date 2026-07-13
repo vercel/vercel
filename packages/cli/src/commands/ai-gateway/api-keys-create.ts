@@ -13,9 +13,11 @@ import { isAPIError } from '../../util/errors-ts';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
-import type { AiGatewayQuota } from '../../util/ai-gateway/create-api-key';
-
-const VALID_REFRESH_PERIODS = ['daily', 'weekly', 'monthly', 'none'] as const;
+import {
+  buildQuota,
+  isValidRefreshPeriod,
+  VALID_REFRESH_PERIODS,
+} from '../../util/ai-gateway/quota';
 
 export default async function create(client: Client, argv: string[]) {
   const telemetry = new AiGatewayApiKeysCreateTelemetryClient({
@@ -69,12 +71,7 @@ export default async function create(client: Client, argv: string[]) {
   }
 
   // Validate --refresh-period if provided
-  if (
-    refreshPeriod &&
-    !VALID_REFRESH_PERIODS.includes(
-      refreshPeriod as (typeof VALID_REFRESH_PERIODS)[number]
-    )
-  ) {
+  if (refreshPeriod && !isValidRefreshPeriod(refreshPeriod)) {
     const message = `Invalid refresh period "${refreshPeriod}". Must be one of: ${VALID_REFRESH_PERIODS.join(', ')}.`;
     outputAgentError(
       client,
@@ -97,18 +94,7 @@ export default async function create(client: Client, argv: string[]) {
   }
 
   // Build aiGatewayQuota only when any quota flag is provided
-  const effectiveRefreshPeriod =
-    refreshPeriod && refreshPeriod !== 'none' ? refreshPeriod : undefined;
-  const aiGatewayQuota: AiGatewayQuota | undefined =
-    budget !== undefined || effectiveRefreshPeriod || includeByok
-      ? {
-          ...(budget !== undefined && { limitAmount: budget }),
-          ...(effectiveRefreshPeriod && {
-            refreshPeriod: effectiveRefreshPeriod,
-          }),
-          ...(includeByok && { includeByokInQuota: true }),
-        }
-      : undefined;
+  const aiGatewayQuota = buildQuota({ budget, refreshPeriod, includeByok });
 
   // Ensure a team is selected; fail in non-interactive/piped mode if missing
   if (!client.config.currentTeam) {
