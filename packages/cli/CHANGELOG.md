@@ -1,5 +1,19 @@
 # vercel
 
+## 56.1.0
+
+### Minor Changes
+
+- fac79dc: Make the CLI bin native-aware: resolve and spawn a `@vercel/vc-native-*`
+  binary when present, otherwise no-op into the existing JS CLI. Part 1 of 2;
+  no optionalDependencies are wired yet, so this release is a no-op that
+  confirms the JS path is unaffected. Part 2 wires the release flow to
+  publish natives before vercel.
+
+### Patch Changes
+
+- e01c1d2: Harden filesystem trust boundaries: `vercel init` no longer materializes symlink or hardlink entries from downloaded example archives (blocking tar link-following path traversal, CVE-2024-12905 / CVE-2025-48387, and upgrading `tar-fs` to 1.16.5), the deploy root-directory check now normalizes paths before the containment test so a sibling directory sharing the project's path prefix can no longer be selected, and `ai-gateway coding-agents setup` now flags in its plan when a target config path is a symlink so the approval prompt reflects the file the write actually lands on.
+
 ## 56.0.0
 
 ### Major Changes
