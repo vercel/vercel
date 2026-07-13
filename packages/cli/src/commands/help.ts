@@ -45,10 +45,10 @@ export interface Command {
    * as `"METHOD /path"` strings, e.g. `"GET /v9/projects/:idOrName"`.
    * Path parameters may use `:param` or `{param}` syntax.
    *
-   * Required for new commands and subcommands. Enforced by
-   * `test/unit/util/api-endpoint-policy.test.ts`: commands whose endpoints
-   * are not part of the public OpenAPI spec must be marked `beta`.
-   * Use an empty array for commands that do not call the Vercel API.
+   * Required for new commands and subcommands, and must not be empty —
+   * parent commands that only route to subcommands omit the field instead.
+   * Enforced by `test/unit/util/api-endpoint-policy.test.ts`: commands whose
+   * endpoints are not part of the public OpenAPI spec must be marked `beta`.
    */
   readonly endpoints?: ReadonlyArray<string>;
   /**

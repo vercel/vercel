@@ -109,7 +109,6 @@ describe('API endpoint policy (see packages/cli/docs/api-endpoint-policy.md)', (
         [
           makeCommand({
             name: 'old-command',
-            endpoints: [],
             subcommands: [makeCommand({ name: 'new-subcommand' })],
           }),
         ],
@@ -122,9 +121,41 @@ describe('API endpoint policy (see packages/cli/docs/api-endpoint-policy.md)', (
       expect(violations[0].commandPath).toBe('old-command new-subcommand');
     });
 
-    it('accepts an empty endpoints list for commands that do not call the API', () => {
+    it('rejects an empty endpoints list', () => {
       const violations = evaluatePolicy(
-        [makeCommand({ name: 'local-only', endpoints: [] })],
+        [makeCommand({ name: 'sneaky', endpoints: [] })],
+        { grandfathered: emptyBaseline, publicEndpoints: PUBLIC_ENDPOINTS }
+      );
+      expect(violations).toHaveLength(1);
+      expect(violations[0].message).toContain(
+        'empty `endpoints` list, which would bypass'
+      );
+    });
+
+    it('rejects an empty endpoints list even on grandfathered commands', () => {
+      const violations = evaluatePolicy(
+        [makeCommand({ name: 'sneaky', endpoints: [] })],
+        {
+          grandfathered: new Set(['sneaky']),
+          publicEndpoints: PUBLIC_ENDPOINTS,
+        }
+      );
+      expect(violations).toHaveLength(1);
+    });
+
+    it('lets parent commands that only route to subcommands omit endpoints', () => {
+      const violations = evaluatePolicy(
+        [
+          makeCommand({
+            name: 'parent',
+            subcommands: [
+              makeCommand({
+                name: 'child',
+                endpoints: ['GET /v9/projects/:idOrName'],
+              }),
+            ],
+          }),
+        ],
         { grandfathered: emptyBaseline, publicEndpoints: PUBLIC_ENDPOINTS }
       );
       expect(violations).toEqual([]);
