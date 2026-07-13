@@ -212,8 +212,15 @@ async function resolveDevImage(
   const hasDockerfile =
     dockerfileConfigured !== undefined || existsSync(dockerfilePath);
 
+  // `<detect>` is a sentinel from @vercel/fs-detectors meaning "no Dockerfile
+  // found — let the builder figure it out." It must never be treated as a
+  // prebuilt OCI image reference, otherwise the buildpack path below is
+  // skipped and the sentinel leaks into the container run command.
+  const isDetectSentinel = entrypointRef === '<detect>';
+
   const prebuiltImage =
-    readString(config.handler) ?? (hasDockerfile ? undefined : entrypointRef);
+    readString(config.handler) ??
+    (hasDockerfile || isDetectSentinel ? undefined : entrypointRef);
 
   if (!hasDockerfile) {
     if (!prebuiltImage) {

@@ -1365,5 +1365,74 @@ describe('@vercel/container', () => {
       existsSyncMock.mockReturnValue(false);
       expect(isPhpBuildpackProject('/')).toBe(false);
     });
+
+    it('does not treat `<detect>` as a prebuilt image when buildpacks are disabled', async () => {
+      // Without VERCEL_BUILDPACKS=1, `<detect>` with no Dockerfile must error
+      // clearly — never silently pass `<detect>` through as an image reference.
+      delete process.env.VERCEL_BUILDPACKS;
+      existsSyncMock.mockReturnValue(false); // no Dockerfile, no PHP markers
+
+      await expect(
+        build({
+          ...createBuildOptions({}),
+          entrypoint: '<detect>',
+        })
+      ).rejects.toThrow(/Container service must specify an entrypoint/);
+    });
+
+    it('does not treat `<detect>` as a prebuilt image when buildpacks are enabled but no PHP markers', async () => {
+      // Flag on but no PHP source files → must still error, not leak `<detect>`.
+      process.env.VERCEL_BUILDPACKS = '1';
+      existsSyncMock.mockReturnValue(false);
+
+      await expect(
+        build({
+          ...createBuildOptions({}),
+          entrypoint: '<detect>',
+        })
+      ).rejects.toThrow(/Container service must specify an entrypoint/);
+    });
+
+    it('throws for `<detect>` buildpack cloud build (not yet supported)', async () => {
+      // Flag on + PHP markers present → buildpack path is taken, but cloud
+      // builds are not yet wired. Must throw the "not yet supported" error,
+      // not silently use `<detect>` as a prebuilt image.
+      process.env.VERCEL_BUILDPACKS = '1';
+      existsSyncMock.mockImplementation((p: string) => {
+        if (p === '/index.php') return true;
+        return false; // no Dockerfile, no other markers
+      });
+
+      await expect(
+        build({
+          ...createBuildOptions({}),
+          entrypoint: '<detect>',
+        })
+      ).rejects.toThrow(/not yet supported for deployments/);
+    });
+
+    it('returns a local tag for `<detect>` buildpack dev build', async () => {
+      // Dev + flag on + PHP markers → must return a local tag, not `<detect>`.
+      process.env.VERCEL_BUILDPACKS = '1';
+      existsSyncMock.mockImplementation((p: string) => {
+        if (p === '/index.php') return true;
+        return false;
+      });
+
+      const result = expectTypicalBuildResult(
+        await build({
+          ...createBuildOptions({ runtime: 'container' }),
+          entrypoint: '<detect>',
+          service: { name: 'web' },
+          meta: { isDev: true },
+        } as any)
+      );
+
+      expect(result.output.index).toMatchObject({
+        runtime: 'container',
+      });
+      expect(result.output.index.handler).not.toBe('<detect>');
+      expect(result.output.index.handler).toMatch(/^vercel-dev\/web:dev$/);
+    });
   });
 });
