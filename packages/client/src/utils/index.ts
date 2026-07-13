@@ -1,13 +1,13 @@
 import { FilesMap } from './hashes';
 import nodeFetch, { RequestInit } from 'node-fetch';
-import { join, sep, relative, basename } from 'path';
+import { join, sep, relative, basename, isAbsolute, resolve } from 'path';
 import { URL } from 'url';
 import ignore from 'ignore';
 import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
 import { VercelClientOptions, VercelConfig } from '../types';
 import { Sema } from 'async-sema';
-import { readFile, stat } from 'fs-extra';
+import { readFile, realpath, stat } from 'fs-extra';
 import readdir from './readdir-recursive';
 import {
   findConfig as findMicrofrontendsConfig,
@@ -80,6 +80,14 @@ const maybeRead = async function <T>(path: string, default_: T) {
     return default_;
   }
 };
+
+function isPathInsideOrEqual(parent: string, child: string): boolean {
+  const rel = relative(parent, child);
+  return (
+    rel === '' ||
+    (rel !== '..' && !rel.startsWith(`..${sep}`) && !isAbsolute(rel))
+  );
+}
 
 export async function buildFileTree(
   path: string | string[],
@@ -175,37 +183,48 @@ export async function buildFileTree(
     // Include bulkRedirectsPath file or directory if specified (for prebuilt deployments)
     if (prebuilt && bulkRedirectsPath) {
       try {
-        const projectRoot = path;
-        const bulkRedirectsFullPath = join(
+        const projectRoot = resolve(path);
+        const bulkRedirectsFullPath = resolve(
           projectRoot,
           rootDirectory || '',
           bulkRedirectsPath
         );
 
         // Validate that the resolved path stays within the project root
-        const relativeFromRoot = relative(projectRoot, bulkRedirectsFullPath);
-        if (relativeFromRoot.startsWith('..')) {
+        if (!isPathInsideOrEqual(projectRoot, bulkRedirectsFullPath)) {
           debug(
             `Skipping bulk redirects path "${bulkRedirectsPath}" - path traversal detected (resolves outside project root)`
           );
         } else {
           try {
-            const stats = await stat(bulkRedirectsFullPath);
-            if (stats.isDirectory()) {
-              // If it's a directory, recursively include all files
-              const dirFiles = await readdir(bulkRedirectsFullPath, []);
-              for (const file of dirFiles) {
-                refs.add(file);
+            const [realProjectRoot, realBulkRedirectsPath] = await Promise.all([
+              realpath(projectRoot),
+              realpath(bulkRedirectsFullPath),
+            ]);
+            if (
+              !isPathInsideOrEqual(realProjectRoot, realBulkRedirectsPath)
+            ) {
+              debug(
+                `Skipping bulk redirects path "${bulkRedirectsPath}" - symlink resolves outside project root`
+              );
+            } else {
+              const stats = await stat(bulkRedirectsFullPath);
+              if (stats.isDirectory()) {
+                // If it's a directory, recursively include all files
+                const dirFiles = await readdir(bulkRedirectsFullPath, []);
+                for (const file of dirFiles) {
+                  refs.add(file);
+                }
+                debug(
+                  `Including ${dirFiles.length} files from bulk redirects directory "${bulkRedirectsPath}" in deployment`
+                );
+              } else if (stats.isFile()) {
+                // If it's a file, include it directly
+                refs.add(bulkRedirectsFullPath);
+                debug(
+                  `Including bulk redirects file "${bulkRedirectsPath}" in deployment`
+                );
               }
-              debug(
-                `Including ${dirFiles.length} files from bulk redirects directory "${bulkRedirectsPath}" in deployment`
-              );
-            } else if (stats.isFile()) {
-              // If it's a file, include it directly
-              refs.add(bulkRedirectsFullPath);
-              debug(
-                `Including bulk redirects file "${bulkRedirectsPath}" in deployment`
-              );
             }
           } catch (_e) {
             debug(`Bulk redirects path "${bulkRedirectsPath}" not found`);

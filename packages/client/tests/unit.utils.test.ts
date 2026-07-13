@@ -1,4 +1,5 @@
 import { join, resolve } from 'path';
+import { tmpdir } from 'os';
 import fs from 'fs-extra';
 import { buildFileTree } from '../src/utils';
 import { describe, expect, it } from 'vitest';
@@ -289,6 +290,50 @@ describe('buildFileTree()', () => {
     const normalizedFileList = normalizeWindowsPaths(fileList);
     for (const expectedFile of normalizeWindowsPaths(expectedFiles)) {
       expect(normalizedFileList).toContain(expectedFile);
+    }
+  });
+
+  it('should not include files from a bulkRedirectsPath symlink outside the project root', async () => {
+    const cwd = await fs.mkdtemp(join(tmpdir(), 'vercel-client-'));
+    const outsideDir = await fs.mkdtemp(join(tmpdir(), 'vercel-outside-'));
+
+    try {
+      await fs.outputFile(join(cwd, '.vercel/output/static/index.txt'), 'ok');
+      await fs.outputFile(join(outsideDir, 'secret.json'), 'secret');
+      try {
+        await fs.symlink(
+          outsideDir,
+          join(cwd, 'redirects'),
+          process.platform === 'win32' ? 'junction' : 'dir'
+        );
+      } catch (error: any) {
+        if (process.platform === 'win32' && error.code === 'EPERM') {
+          return;
+        }
+        throw error;
+      }
+
+      const { fileList } = await buildFileTree(
+        cwd,
+        {
+          isDirectory: true,
+          prebuilt: true,
+          vercelOutputDir: join(cwd, '.vercel/output'),
+          bulkRedirectsPath: 'redirects',
+        },
+        noop
+      );
+
+      const normalizedFileList = normalizeWindowsPaths(fileList);
+      expect(normalizedFileList).toContain(
+        normalizeWindowsPaths([join(cwd, '.vercel/output/static/index.txt')])[0]
+      );
+      expect(normalizedFileList).not.toContain(
+        normalizeWindowsPaths([join(cwd, 'redirects/secret.json')])[0]
+      );
+    } finally {
+      await fs.remove(cwd);
+      await fs.remove(outsideDir);
     }
   });
 });
