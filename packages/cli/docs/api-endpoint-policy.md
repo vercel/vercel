@@ -55,16 +55,15 @@ warning lives) telling users the command is still in flux and may change.
 Prefer moving the endpoint to the public spec over shipping beta commands
 long-term. Coordinate with the API team that owns the endpoint.
 
-## The public spec snapshot
+## How the public spec is checked
 
-The policy check compares declarations against a committed snapshot,
-`src/util/api-endpoint-policy/public-endpoints.json`. If an endpoint was
-recently made public and the check still flags it, refresh the snapshot in
-the same PR:
-
-```sh
-node scripts/update-public-endpoints.mjs
-```
+The policy check fetches the live public OpenAPI spec from
+https://openapi.vercel.sh at test time (`fetchPublicEndpoints()` in
+`src/util/api-endpoint-policy/policy.ts`) and compares declarations against
+its operations. There is no committed snapshot, so an endpoint that has just
+been moved to the public spec is picked up on the next test run, and a
+network failure fails the check loudly instead of silently misclassifying
+endpoints.
 
 ## Grandfathered commands
 

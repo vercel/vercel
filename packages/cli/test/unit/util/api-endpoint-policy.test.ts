@@ -1,8 +1,17 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import {
+  describe,
+  expect,
+  it,
+  vi,
+  beforeAll,
+  beforeEach,
+  afterEach,
+} from 'vitest';
 import type { Command } from '../../../src/commands/help';
 import { commandStructs } from '../../../src/commands';
 import {
   evaluatePolicy,
+  fetchPublicEndpoints,
   flattenCommands,
   isPublicEndpoint,
   normalizeEndpoint,
@@ -14,11 +23,14 @@ import {
   printBetaWarning,
 } from '../../../src/util/api-endpoint-policy/beta-warning';
 import grandfathered from '../../../src/util/api-endpoint-policy/grandfathered-commands.json';
-import publicEndpoints from '../../../src/util/api-endpoint-policy/public-endpoints.json';
 import output from '../../../src/output-manager';
 
 const GRANDFATHERED = new Set<string>(grandfathered.commands);
-const PUBLIC_ENDPOINTS = new Set<string>(publicEndpoints.endpoints);
+let PUBLIC_ENDPOINTS: ReadonlySet<string>;
+
+beforeAll(async () => {
+  PUBLIC_ENDPOINTS = await fetchPublicEndpoints();
+}, 30_000);
 
 function makeCommand(overrides: Partial<Command> & { name: string }): Command {
   return {
