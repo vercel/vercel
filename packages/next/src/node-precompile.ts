@@ -83,6 +83,7 @@ function cacheFileName(absPath: string): string {
 export async function generateNodePrecompileFiles(
   files: Files
 ): Promise<Files> {
+  const start = Date.now();
   const root = taskRoot();
   const tag = cacheTag();
   const out: Files = {};
@@ -140,7 +141,8 @@ export async function generateNodePrecompileFiles(
   if (count === 0) return {};
 
   debug(
-    `Node precompile: generated V8 compile cache for ${count} files (${totalBytes} bytes)`
+    `Node precompile: generated V8 compile cache for ${count} files ` +
+      `(${totalBytes} bytes) in ${Date.now() - start}ms`
   );
   return out;
 }
