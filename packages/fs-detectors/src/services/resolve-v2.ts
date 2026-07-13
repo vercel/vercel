@@ -130,15 +130,31 @@ async function resolveContainerServiceV2(
     // the service root.
     dockerfile = await detectContainerEntrypoint(serviceFs);
     if (!dockerfile) {
-      return {
-        error: {
-          code: 'MISSING_SERVICE_CONFIG',
-          message: `Container service "${name}" has no "entrypoint" and no ${CONTAINER_ENTRYPOINT_CANDIDATES.join(
-            ', '
-          )} was found in "${normalizedRoot}".`,
-          serviceName: name,
-        },
-      };
+      // Buildpack path: when VERCEL_BUILDPACKS=1 and the service root has PHP
+      // source markers, use `<detect>` as the entrypoint. @vercel/container
+      // will build via Paketo's lifecycle/creator instead of a Dockerfile.
+      if (process.env.VERCEL_BUILDPACKS === '1') {
+        const hasPhpMarker = await Promise.all(
+          ['composer.json', 'server.php', 'index.php'].map(f =>
+            serviceFs.hasPath(f)
+          )
+        );
+        if (hasPhpMarker.some(Boolean)) {
+          dockerfile = '<detect>';
+        }
+      }
+
+      if (!dockerfile) {
+        return {
+          error: {
+            code: 'MISSING_SERVICE_CONFIG',
+            message: `Container service "${name}" has no "entrypoint" and no ${CONTAINER_ENTRYPOINT_CANDIDATES.join(
+              ', '
+            )} was found in "${normalizedRoot}".`,
+            serviceName: name,
+          },
+        };
+      }
     }
   }
 

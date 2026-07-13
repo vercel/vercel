@@ -3,7 +3,15 @@ import { sanitizeConsumerName } from '@vercel/build-utils';
 import { EventEmitter } from 'node:events';
 import { readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { build, prepareCache, startDevServer } from '../src';
 import { __resetStorageDriverCache } from '../src/storage-driver';
 import { __resetRunningContainers } from '../src/dev';
@@ -1284,6 +1292,78 @@ describe('@vercel/container', () => {
       existsSyncMock.mockReturnValue(false); // graphroot missing
       const result = await prepareCache(baseOpts);
       expect(result).toEqual({});
+    });
+  });
+
+  describe('buildpack detection', () => {
+    let isPhpBuildpackProject: (workPath: string) => boolean;
+    let isBuildpacksEnabled: () => boolean;
+
+    beforeAll(async () => {
+      const mod = await import('../src/buildpacks/detect');
+      isPhpBuildpackProject = mod.isPhpBuildpackProject;
+      isBuildpacksEnabled = mod.isBuildpacksEnabled;
+    });
+
+    afterEach(() => {
+      delete process.env.VERCEL_BUILDPACKS;
+    });
+
+    it('isBuildpacksEnabled returns false without flag', () => {
+      delete process.env.VERCEL_BUILDPACKS;
+      expect(isBuildpacksEnabled()).toBe(false);
+    });
+
+    it('isBuildpacksEnabled returns true when VERCEL_BUILDPACKS=1', () => {
+      process.env.VERCEL_BUILDPACKS = '1';
+      expect(isBuildpacksEnabled()).toBe(true);
+    });
+
+    it('isPhpBuildpackProject returns false without feature flag', () => {
+      delete process.env.VERCEL_BUILDPACKS;
+      existsSyncMock.mockImplementation((p: string) => {
+        if (p === '/server.php') return true;
+        return false;
+      });
+      expect(isPhpBuildpackProject('/')).toBe(false);
+    });
+
+    it('isPhpBuildpackProject returns true with server.php and flag on', () => {
+      process.env.VERCEL_BUILDPACKS = '1';
+      existsSyncMock.mockImplementation((p: string) => {
+        if (p === '/server.php') return true;
+        if (p === '/Dockerfile') return false;
+        if (p === '/Dockerfile.vercel') return false;
+        if (p === '/Containerfile') return false;
+        if (p === '/Containerfile.vercel') return false;
+        return false;
+      });
+      expect(isPhpBuildpackProject('/')).toBe(true);
+    });
+
+    it('isPhpBuildpackProject returns true with composer.json and flag on', () => {
+      process.env.VERCEL_BUILDPACKS = '1';
+      existsSyncMock.mockImplementation((p: string) => {
+        if (p === '/composer.json') return true;
+        return false;
+      });
+      expect(isPhpBuildpackProject('/')).toBe(true);
+    });
+
+    it('isPhpBuildpackProject returns false when Dockerfile exists', () => {
+      process.env.VERCEL_BUILDPACKS = '1';
+      existsSyncMock.mockImplementation((p: string) => {
+        if (p === '/Dockerfile') return true;
+        if (p === '/server.php') return true;
+        return false;
+      });
+      expect(isPhpBuildpackProject('/')).toBe(false);
+    });
+
+    it('isPhpBuildpackProject returns false with no PHP markers', () => {
+      process.env.VERCEL_BUILDPACKS = '1';
+      existsSyncMock.mockReturnValue(false);
+      expect(isPhpBuildpackProject('/')).toBe(false);
     });
   });
 });

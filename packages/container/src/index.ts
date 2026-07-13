@@ -8,6 +8,7 @@ import {
   TARGET_PLATFORM,
 } from './engines';
 import type { BuildPushParams } from './engines/types';
+import { isPhpBuildpackProject } from './buildpacks/detect';
 import { resolveOidcTokenForBuild } from './oidc';
 import { ensureRepository } from './registry';
 import {
@@ -292,6 +293,30 @@ async function resolveImageHandler(
 
   if (!hasDockerfile) {
     if (!prebuiltImage) {
+      // Buildpack path: when VERCEL_BUILDPACKS=1 and the project has PHP source
+      // markers, build via Paketo lifecycle/creator instead of a Dockerfile.
+      if (isPhpBuildpackProject(workPath)) {
+        if (meta?.isDev) {
+          const serviceName = options.service?.name ?? 'service';
+          const tag = devImageTag(serviceName);
+          span?.setAttributes({
+            'container.mode': 'buildpack-dev',
+            'image.tag': tag,
+          });
+          return tag;
+        }
+
+        // Cloud buildpack builds are not yet supported in this POC.
+        // The dev path above proves the lifecycle/creator flow end-to-end.
+        // Cloud support requires wiring buildWithLifecycle through the VCR
+        // push pipeline — see BUILDPACK_PHP_POC.md.
+        throw new Error(
+          'Buildpack-based container builds are not yet supported for ' +
+            'deployments. Add a Dockerfile to deploy this service, or use ' +
+            '`vercel dev` to test locally with VERCEL_BUILDPACKS=1.'
+        );
+      }
+
       throw new Error(
         'Container service must specify an entrypoint: a prebuilt OCI image reference, or a Dockerfile path to build.'
       );

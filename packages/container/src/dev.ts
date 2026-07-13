@@ -93,7 +93,7 @@ function writeEnvFile(env: Record<string, string>): string {
  * than writing to `process.stderr` directly (which would print unprefixed and
  * interleave with other services).
  */
-interface DevOutput {
+export interface DevOutput {
   onStdout?: (data: Buffer) => void;
   onStderr?: (data: Buffer) => void;
 }
@@ -217,6 +217,38 @@ async function resolveDevImage(
 
   if (!hasDockerfile) {
     if (!prebuiltImage) {
+      // Buildpack path: when VERCEL_BUILDPACKS=1 and the project has PHP source
+      // markers (composer.json, server.php, index.php), build via Paketo's
+      // lifecycle/creator instead of requiring a Dockerfile.
+      const { isPhpBuildpackProject } = await import('./buildpacks/detect');
+      if (isPhpBuildpackProject(workPath)) {
+        const serviceName = options.service?.name ?? 'service';
+        const tag = devImageTag(serviceName);
+        const buildEnv = (options.meta?.buildEnv ?? {}) as Record<
+          string,
+          string | undefined
+        >;
+        const buildArgs: Record<string, string> = {};
+        for (const [k, v] of Object.entries(buildEnv)) {
+          if (typeof v === 'string') buildArgs[k] = v;
+        }
+
+        span?.setAttributes({
+          'container.dev_mode': 'buildpack',
+          'image.tag': tag,
+        });
+        emit(
+          out,
+          `▲ container  vercel dev: building ${tag} via buildpacks (lifecycle/creator)`
+        );
+
+        const { buildWithLifecycle } = await import('./buildpacks/lifecycle');
+        await buildWithLifecycle({ workPath, tag, buildArgs }, out, span);
+
+        emit(out, `▲ container  built ${tag} (buildpack)`);
+        return tag;
+      }
+
       throw new Error(
         'Container service must specify an entrypoint: a prebuilt OCI image ' +
           'reference, or a Dockerfile path to run with `vercel dev`.'
