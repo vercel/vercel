@@ -1,4 +1,5 @@
 import type { Command } from '../../commands/help';
+import { OPENAPI_URL, FETCH_TIMEOUT_MS } from '../openapi/constants';
 
 export const HTTP_METHODS = [
   'GET',
@@ -75,11 +76,62 @@ export function normalizeEndpoint(endpoint: string): string {
 }
 
 /**
+ * Fetches the public Vercel OpenAPI spec and returns its operations as
+ * normalized `"METHOD /path"` entries.
+ *
+ * Throws when the spec cannot be fetched or contains no operations, so the
+ * policy check fails loudly instead of silently treating every endpoint as
+ * private (or public).
+ */
+export async function fetchPublicEndpoints(
+  specUrl: string = OPENAPI_URL
+): Promise<Set<string>> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  let spec: { paths?: Record<string, Record<string, unknown>> };
+  try {
+    const response = await fetch(specUrl, {
+      headers: { accept: 'application/json' },
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch the public OpenAPI spec from ${specUrl}: HTTP ${response.status}`
+      );
+    }
+    spec = (await response.json()) as {
+      paths?: Record<string, Record<string, unknown>>;
+    };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  const methods = new Set<string>(
+    HTTP_METHODS.map(method => method.toLowerCase())
+  );
+  const endpoints = new Set<string>();
+  for (const [path, pathItem] of Object.entries(spec.paths ?? {})) {
+    for (const method of Object.keys(pathItem)) {
+      if (methods.has(method)) {
+        endpoints.add(normalizeEndpoint(`${method.toUpperCase()} ${path}`));
+      }
+    }
+  }
+
+  if (endpoints.size === 0) {
+    throw new Error(
+      `The public OpenAPI spec from ${specUrl} contains no operations`
+    );
+  }
+  return endpoints;
+}
+
+/**
  * Whether an endpoint declaration is part of the public OpenAPI spec.
  *
  * @param endpoint - declaration such as `"GET /v9/projects/:idOrName"`
  * @param publicEndpoints - normalized `"METHOD /path"` entries from the
- * public spec (see `public-endpoints.json`)
+ * public spec (see `fetchPublicEndpoints`)
  */
 export function isPublicEndpoint(
   endpoint: string,
@@ -163,9 +215,7 @@ export function evaluatePolicy(
           `"${path}" calls API endpoints that are not in the public ` +
           `OpenAPI spec (${privateEndpoints.join(', ')}) and must be ` +
           'marked `beta: true` on its command definition, or the ' +
-          'endpoints must be moved to the public spec first. If the ' +
-          'endpoint was recently made public, refresh the snapshot with ' +
-          '`node scripts/update-public-endpoints.mjs`. See ' +
+          'endpoints must be moved to the public spec first. See ' +
           'packages/cli/docs/api-endpoint-policy.md',
       });
     }
