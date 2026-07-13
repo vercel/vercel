@@ -22,7 +22,11 @@ import {
 import output from '../../output-manager';
 import { FlagsRulesCommandTelemetryClient } from '../../util/telemetry/commands/flags/rules';
 import { rulesUpdateSubcommand } from './command';
-import { isExitCodeResult, resolveRulesCommandContext } from './rules-common';
+import {
+  isExitCodeResult,
+  resolveRulesCommandContext,
+  warnIfRuleChangesAreBypassed,
+} from './rules-common';
 
 export default async function rulesUpdate(
   client: Client,
@@ -157,7 +161,7 @@ export default async function rulesUpdate(
     );
 
     output.spinner(`Updating rule in ${context.environment}...`);
-    await updateFlag(client, context.projectId, flagArg, {
+    const updatedFlag = await updateFlag(client, context.projectId, flagArg, {
       environments: {
         [context.environment]: nextEnvConfig,
       },
@@ -180,6 +184,7 @@ export default async function rulesUpdate(
         context.flag.variants
       )}`
     );
+    warnIfRuleChangesAreBypassed(updatedFlag, context.environment);
   } catch (err) {
     output.stopSpinner();
     printError(err);

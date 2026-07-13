@@ -85,6 +85,12 @@ export function printPlan(
     output.print(
       `  ${verb === 'create' ? chalk.green('+') : '~'} ${chalk.bold(change.label)} (${verb})  ${chalk.dim(change.path)}\n`
     );
+    // The write follows the symlink to its target; surface that before approval.
+    if (change.symlink) {
+      output.print(
+        `    ${chalk.yellow('↳ warning:')} this path is a symlink — the write will follow it to its target\n`
+      );
+    }
     // An existing file is copied to `<path>.bak` before it's overwritten;
     // surface that side effect in the preview unless backups are disabled.
     if (opts.backup && change.current !== null) {
