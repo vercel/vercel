@@ -97,8 +97,9 @@ export interface PolicyViolation {
  * Evaluates the API endpoint policy over a command tree:
  *
  * 1. Commands and subcommands that are not grandfathered must declare
- *    `endpoints` (an empty array is valid for commands that do not call the
- *    Vercel API).
+ *    `endpoints`, and the list must not be empty — an empty list would
+ *    bypass the policy. Parent commands that only route to subcommands may
+ *    omit the field; their subcommands are checked individually.
  * 2. Declared endpoints must be well formed.
  * 3. Any command that declares an endpoint outside the public OpenAPI spec
  *    must be marked `beta: true`.
@@ -113,17 +114,30 @@ export function evaluatePolicy(
   const violations: PolicyViolation[] = [];
 
   for (const { path, command } of flattenCommands(commands)) {
+    const isRouter = (command.subcommands?.length ?? 0) > 0;
+
     if (command.endpoints === undefined) {
-      if (!options.grandfathered.has(path)) {
+      if (!options.grandfathered.has(path) && !isRouter) {
         violations.push({
           commandPath: path,
           message:
             `"${path}" must declare the API endpoints it calls via the ` +
-            '`endpoints` field on its command definition. Use an empty ' +
-            'array if it does not call the Vercel API. See ' +
+            '`endpoints` field on its command definition. See ' +
             'packages/cli/docs/api-endpoint-policy.md',
         });
       }
+      continue;
+    }
+
+    if (command.endpoints.length === 0) {
+      violations.push({
+        commandPath: path,
+        message:
+          `"${path}" declares an empty \`endpoints\` list, which would ` +
+          'bypass the API endpoint policy. Declare the endpoints the ' +
+          'command actually calls. See ' +
+          'packages/cli/docs/api-endpoint-policy.md',
+      });
       continue;
     }
 

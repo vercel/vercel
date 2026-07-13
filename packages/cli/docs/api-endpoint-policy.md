@@ -26,9 +26,13 @@ export const installSubcommand = {
 
 - Format is `"METHOD /path"`. Path parameters may use `:param` or `{param}`.
 - Declare the endpoints called by that specific command/subcommand (helpers it
-  invokes included). A parent command that only routes to subcommands
-  typically declares `endpoints: []`.
-- Use an empty array for commands that do not call the Vercel API at all.
+  invokes included).
+- The list must not be empty — an empty list would bypass the policy.
+  Parent commands that only route to subcommands omit the `endpoints` field;
+  each subcommand is checked individually.
+- Leaf commands that call no Vercel API at all are intentionally not given an
+  exemption. If you are adding one, raise it with the CLI maintainers so the
+  policy can be extended deliberately rather than silently bypassed.
 
 ## Private endpoints require `beta: true`
 
