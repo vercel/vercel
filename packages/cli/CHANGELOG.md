@@ -1,5 +1,63 @@
 # vercel
 
+## 56.0.0
+
+### Major Changes
+
+- 4998ec8: `vercel routes export` now uses `--output` (`-o`) instead of `--format` to select the output file format (`json` or `ts`, dotted forms like `.ts` also accepted). This frees `--format` to align with the standard output-format convention used by other commands. Update any scripts from `routes export --format ts` to `routes export --output ts`.
+
+### Minor Changes
+
+- 5ae15fa: Add `vercel ai-gateway coding-agents setup` to connect Claude Code to the AI Gateway from an existing API key (`--key`): it sets the gateway base URL and authentication in `~/.claude/settings.json` (honoring `CLAUDE_CONFIG_DIR`), never pins a default model, is idempotent, masks the key in output, skips unparseable configs instead of clobbering them, edits existing config files in place so your own keys and formatting are untouched, and emits a structured JSON result in non-interactive mode.
+- 24c2b3c: Automatically install a marketplace product's declared agent skills after `vercel integration add` provisions it, replacing the interactive confirmation prompt. The transcript ends with an install summary linking to the product's marketplace page, and failed installs fall back to printing the manual `npx skills add` command.
+- 607f0ef: Add service information to deploy-manifest.
+- 8642a47: Remove the `vercel oauth-apps` sub-command, reverting the OAuth / connected apps parity scope.
+- 57e2091: `vercel env pull` now keeps variables that only exist in the local env file instead of deleting them. Kept variables are listed in the command output. CLI-managed variables (`VERCEL_OIDC_TOKEN` and analytics IDs) are still removed when they no longer exist upstream.
+
+### Patch Changes
+
+- 2a403e2: Add Codex support to `vercel ai-gateway coding-agents setup`. It writes a `vercel` model provider to `~/.codex/config.toml` (OpenAI-compatible base URL, `responses` wire API) without pinning a default model, and exports the gateway API key via your shell rc (honoring `CODEX_HOME` and fish/`ZDOTDIR`). Merging into an existing `config.toml` edits assignments in place, preserving your comments and formatting.
+- 683f013: `ai-gateway coding-agents setup` can now **provision a key** for you: run it without `--key` and it creates an AI Gateway API key (prompting for the owning team and a name, or using `--name`/`--scope` and the current scope with `--yes`), then writes that key into the agent configs.
+
+  Re-running when everything is already set up is no longer a dead end: it prompts to **rotate the key or switch team**, and `--reconfigure` does the same non-interactively (useful for a rotated or expired key, or a different org). A plain re-run stays a no-op.
+
+- e64b222: `ai-gateway coding-agents setup` now detects the Codex desktop app and asks for consent before configuring Codex, since the desktop app cannot use custom model providers and stops working when one is set (the Codex CLI keeps working). Non-interactive and `--yes` runs configure Codex only when it is explicitly requested with `--agent`/`--all`; JSON output gains a `warnings` array and a `requires_consent` skip reason, and a run refused for lack of consent exits 1 with a self-contained `requires_consent` error payload (structured warnings, skip entries, and a runnable `next[]` command). A declined agent's configuration is left untouched.
+- 7190684: `ai-gateway coding-agents setup` now configures only the agents detected on the machine when run non-interactively without `--agent`/`--all`, exits with code 1 (without creating an API key) when no agent configuration can be written, and on Windows reports the environment variable to set instead of writing a shell file that is never loaded (unless `--shell-rc` is passed explicitly). Non-interactive re-runs with `--key` on an already-configured macOS Keychain setup now refresh the stored key instead of silently keeping the old one.
+- 097395b: `ai-gateway coding-agents setup` can now put **limits** on a key it creates: a spend cap (`--budget` with `--refresh-period` / `--include-byok`) and an expiry (`--expiration` `7d|30d|60d|90d|1y|none`). Interactively it asks whether to set each. The limits are sent only when creating a key; reusing one with `--key` is unaffected.
+- fcdf5cd: Store the `coding-agents setup` API key in the macOS login Keychain instead of writing it into plaintext config files. When available it's used automatically: env-based agents resolve the key from the shell at runtime (a managed shell-rc block runs `security find-generic-password`), so the secret never lands in a config file. Pass `--no-keychain`, or run off macOS, to embed the key directly; it also falls back to embedding if the Keychain write fails.
+- c66bae3: Add OpenCode support to `vercel ai-gateway coding-agents setup`. It supplies the gateway API key to OpenCode's native `vercel` provider in `~/.config/opencode/opencode.json` (honoring `XDG_CONFIG_HOME`) without pinning a default model. With the macOS Keychain in use, the key is kept out of the config and resolved from `AI_GATEWAY_API_KEY` (exported from the shell rc) at runtime instead.
+- 2ffbf59: Add Pi support to `vercel ai-gateway coding-agents setup`. It writes the gateway credential to Pi's native `vercel-ai-gateway` auth entry in `~/.pi/agent/auth.json` (created `0600`, honoring `PI_CODING_AGENT_DIR`) without pinning a default model.
+- bb16ec9: `ai-gateway coding-agents setup` now previews before it writes. `--dry-run` and the pre-apply summary show the planned per-file changes as a masked diff, the resolved key/quota/expiry, and the `.bak` backups it would create (suppressed with `--no-backup`), then ask for confirmation before applying. For non-standard setups, `--agent-config <id>=<path>` overrides an agent's config-file location and `--shell-rc <path>` the shell rc; interactively it offers a custom path when an agent isn't found at its default location.
+- 35fba40: Attribute marketplace agent-skill auto-installs in the skills CLI's install telemetry by passing `--metadata` (origin, flow, integration and product slugs) to the `npx skills add` invocation. Older skills versions (< 1.5.16) ignore the flag and install unchanged.
+- fd8e544: Preserve an environment's serving mode when feature flag rules are added,
+  updated, moved, or removed. When the environment is serving a fixed variant,
+  the CLI identifies that variant and warns that rule changes will not affect flag
+  evaluation until the environment uses targeting again.
+- Updated dependencies [607f0ef]
+- Updated dependencies [7bbfd48]
+- Updated dependencies [9637ae6]
+- Updated dependencies [f11c4c4]
+  - @vercel/build-utils@13.33.0
+  - @vercel/python@6.50.0
+  - @vercel/backends@0.8.23
+  - @vercel/container@0.0.5
+  - @vercel/elysia@0.1.100
+  - @vercel/express@0.1.114
+  - @vercel/fastify@0.1.103
+  - @vercel/go@3.10.2
+  - @vercel/h3@0.1.109
+  - @vercel/hono@0.2.103
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.83
+  - @vercel/nestjs@0.2.104
+  - @vercel/next@4.20.4
+  - @vercel/node@5.8.24
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.0
+  - @vercel/static-build@2.11.6
+
 ## 55.0.0
 
 ### Major Changes
