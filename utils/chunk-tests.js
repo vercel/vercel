@@ -156,10 +156,7 @@ const RUST_BUILD_ROOTS = new Set([
 // We walk the dep graph transitively — matching the way turbo builds
 // dependencies — so indirect consumers like `vercel` get needsGo even when
 // @vercel/go is a workspace dep but @vercel-internals/ipc-proxy is not direct.
-const GO_BUILD_ROOTS = new Set([
-  '@vercel-internals/ipc-proxy',
-  '@vercel/go',
-]);
+const GO_BUILD_ROOTS = new Set(['@vercel-internals/ipc-proxy', '@vercel/go']);
 
 function directNeeds(manifest, roots) {
   if (roots.has(manifest.name)) return true;
@@ -176,9 +173,7 @@ function computeTransitiveNeeds(manifests, roots) {
       ...packageJson.dependencies,
       ...packageJson.devDependencies,
     };
-    const deps = new Set(
-      Object.keys(allDeps).filter(d => knownNames.has(d))
-    );
+    const deps = new Set(Object.keys(allDeps).filter(d => knownNames.has(d)));
     nameToDeps.set(packageName, deps);
   }
 
@@ -462,30 +457,32 @@ async function getChunkedTests() {
         affectedPackageSet.size === 0 || affectedPackageSet.has(packageName)
       );
     })
-    .forEach(({ packageJson, packageName, packagePath, needsRust, needsGo }) => {
-      for (const scriptName of scripts) {
-        const patterns = getScriptTestPatterns(packageJson, scriptName);
-        if (patterns.length === 0) {
-          continue;
-        }
+    .forEach(
+      ({ packageJson, packageName, packagePath, needsRust, needsGo }) => {
+        for (const scriptName of scripts) {
+          const patterns = getScriptTestPatterns(packageJson, scriptName);
+          if (patterns.length === 0) {
+            continue;
+          }
 
-        const testPaths = getTestPathsForPackage(
-          rootPath,
-          packagePath,
-          patterns
-        );
-        if (testPaths.length === 0) {
-          continue;
-        }
+          const testPaths = getTestPathsForPackage(
+            rootPath,
+            packagePath,
+            patterns
+          );
+          if (testPaths.length === 0) {
+            continue;
+          }
 
-        const packagePathAndName = `${packagePath},${packageName}`;
-        testsToRun[packagePathAndName] = testsToRun[packagePathAndName] || {
-          needsRust,
-          needsGo,
-        };
-        testsToRun[packagePathAndName][scriptName] = testPaths;
+          const packagePathAndName = `${packagePath},${packageName}`;
+          testsToRun[packagePathAndName] = testsToRun[packagePathAndName] || {
+            needsRust,
+            needsGo,
+          };
+          testsToRun[packagePathAndName][scriptName] = testPaths;
+        }
       }
-    });
+    );
 
   const chunkedTests = Object.entries(testsToRun).flatMap(
     ([packagePathAndName, scriptNames]) => {
