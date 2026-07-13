@@ -9,6 +9,7 @@ import {
   FileFsRef,
   FileRef,
   type TraceEvent,
+  type Meta,
 } from '@vercel/build-utils';
 import output from '../../output-manager';
 import { BuildRunner } from './build-runner';
@@ -65,6 +66,8 @@ interface BuildMessageResult {
   hasPreDeploy?: boolean;
   /** Trace events the builder recorded in the worker, to report under the parent span. */
   traceEvents?: TraceEvent[];
+  /** Builders share state via a meta object, so this needs sending back after the build. */
+  meta?: Meta;
   /** A plain object form of the worker's Error (all props enumerable); see `toError`. */
   error?: object;
 }
@@ -297,6 +300,14 @@ export class SubprocessBuildRunner extends BuildRunner {
       this.diagnosticsResult = message.diagnostics
         ? rehydrateDiagnostics(message.diagnostics)
         : undefined;
+
+      // The worker mutated a structured-clone copy of `meta` (builders share state through it,
+      // e.g. `runNpmInstallSet` for install dedup). Merge those mutations back into the shared
+      // `meta` so later builds see them — the cross-process equivalent of the in-process path
+      // sharing `meta` by reference. Shallow by design: builder meta state is flat keys/Sets.
+      if (this.ctx.buildOptions.meta && message.meta) {
+        Object.assign(this.ctx.buildOptions.meta, message.meta);
+      }
 
       if (message.hasPreDeploy) {
         // The build registered a pre-deploy callback, so the worker is kept alive to run it.

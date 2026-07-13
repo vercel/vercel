@@ -238,6 +238,9 @@ async function processMessage(message) {
     result,
     diagnostics,
     hasPreDeploy,
+    // Builders share state through `meta` (e.g. runNpmInstall's dedup set). This worker had a
+    // structured-clone copy, so send it back for the parent to merge into the shared meta.
+    meta: buildOptions.meta,
     traceEvents: drainTraceEvents(),
   });
 }

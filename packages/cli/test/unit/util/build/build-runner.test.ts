@@ -172,6 +172,38 @@ describe('build-runner', () => {
       );
     });
 
+    it('merges the meta the worker mutated back into the shared meta object', async () => {
+      // Builders share state through `meta` (e.g. runNpmInstall's dedup set). The worker mutated
+      // its structured-clone copy; the runner must fold those changes back into the parent's
+      // shared `meta` so later builds see them.
+      const sharedMeta = {
+        runNpmInstallSet: new Set<string>(['/root/package.json']),
+      };
+      driveBuild({
+        result: { output: {} },
+        meta: {
+          runNpmInstallSet: new Set(['/app/package.json']),
+          compiledToCommonJS: true,
+        },
+      });
+      const runner = new SubprocessBuildRunner(
+        makeContext({
+          buildOptions: {
+            entrypoint: 'index.js',
+            meta: sharedMeta,
+          } as unknown as BuildOptions,
+        })
+      );
+
+      await runner.build();
+
+      // Shallow merge: the worker's returned meta values land on the shared object.
+      expect(sharedMeta).toMatchObject({
+        runNpmInstallSet: new Set(['/app/package.json']),
+        compiledToCommonJS: true,
+      });
+    });
+
     it('re-prototypes outputs and preserves a Lambda shared across Prerenders', async () => {
       // Structured-clone IPC keeps `lambda` as ONE instance shared by both Prerenders and the
       // top-level key; the runner must restore prototypes without cloning, so writeBuildResult's

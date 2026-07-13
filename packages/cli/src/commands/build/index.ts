@@ -87,7 +87,7 @@ import {
   type BuildRunner,
   type BuildRunnerContext,
   InprocessBuildRunner,
-  RawBuildResult,
+  type RawBuildResult,
 } from '../../util/build/build-runner';
 import {
   canBuildInSubprocess,
@@ -1151,6 +1151,7 @@ async function doBuild(
   const meta: Meta = {
     skipDownload: true,
     cliVersion: cliPkg.version,
+    runNpmInstallSet: new Set<string>(),
   };
 
   // Execute Builders for detected entrypoints
