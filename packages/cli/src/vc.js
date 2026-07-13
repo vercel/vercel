@@ -12,9 +12,8 @@ try {
 
 // Native-first: spawn a @vercel/vc-native-{platform}-{arch} binary when
 // present and exit with its result, otherwise fall through to the JS CLI.
-// Part 1 of 2: no optionalDependencies are wired yet, so resolveNative()
-// always returns null here and the CLI runs as JS. Part 2 will wire the
-// release flow to publish natives before vercel, activating this path.
+// The native package is declared as an os/cpu-filtered optionalDependency
+// so at most one platform binary downloads per install.
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { existsSync } from 'node:fs';
@@ -46,6 +45,7 @@ if (bin) {
     windowsHide: true,
   });
   if (r.error && (r.error.code === 'ENOENT' || r.error.code === 'EACCES')) {
+    delete process.env.VERCEL_VC_NATIVE;
     // fall through to JS
   } else {
     if (r.error) {
