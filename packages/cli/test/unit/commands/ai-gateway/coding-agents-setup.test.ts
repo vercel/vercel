@@ -33,6 +33,10 @@ import {
   keychainLookup,
 } from '../../../../src/util/ai-gateway/coding-agents/keychain';
 
+// Shell rc management is skipped on Windows (buildSetupPlan emits a note
+// instead), so tests asserting on the planned shell block cannot run there.
+const itSkipOnWindows = it.skipIf(process.platform === 'win32');
+
 // A pass-through mock of the keychain module: tests that set `available` get a
 // fake in-memory keychain (usable on Linux CI); everything else hits the real
 // implementation.
@@ -336,24 +340,27 @@ describe('ai-gateway coding-agents setup', () => {
       expect(cfg.provider.vercel.options.apiKey).toBe('vck_Minified001');
     });
 
-    it('keeps the OpenCode key out of the config under keychain', async () => {
-      const secret = 'vck_OpenCodeKeychain';
-      const plan = await buildSetupPlan([opencode], {
-        apiKey: secret,
-        home,
-        useKeychain: true,
-      });
+    itSkipOnWindows(
+      'keeps the OpenCode key out of the config under keychain',
+      async () => {
+        const secret = 'vck_OpenCodeKeychain';
+        const plan = await buildSetupPlan([opencode], {
+          apiKey: secret,
+          home,
+          useKeychain: true,
+        });
 
-      // The provider is declared, but the key is not embedded…
-      const cfg = plan.changes.find(c => c.label === 'OpenCode config');
-      expect(cfg?.next).toContain('vercel');
-      expect(cfg?.next).not.toContain(secret);
-      // …it's resolved from AI_GATEWAY_API_KEY via the Keychain at runtime.
-      const shell = plan.changes.find(c => c.format === 'shell');
-      expect(shell?.next).toContain('export AI_GATEWAY_API_KEY=');
-      expect(shell?.next).toContain('security find-generic-password');
-      expect(shell?.next).not.toContain(secret);
-    });
+        // The provider is declared, but the key is not embedded…
+        const cfg = plan.changes.find(c => c.label === 'OpenCode config');
+        expect(cfg?.next).toContain('vercel');
+        expect(cfg?.next).not.toContain(secret);
+        // …it's resolved from AI_GATEWAY_API_KEY via the Keychain at runtime.
+        const shell = plan.changes.find(c => c.format === 'shell');
+        expect(shell?.next).toContain('export AI_GATEWAY_API_KEY=');
+        expect(shell?.next).toContain('security find-generic-password');
+        expect(shell?.next).not.toContain(secret);
+      }
+    );
 
     it('configures Pi via the native vercel-ai-gateway auth entry (0600)', async () => {
       useUser();
@@ -702,26 +709,31 @@ describe('ai-gateway coding-agents setup', () => {
       expect(keychainLookup()).toContain('security find-generic-password');
     });
 
-    it('keeps the secret out of the configs and reads it from the shell', async () => {
-      const secret = 'vck_KeychainSecret321';
-      const plan = await buildSetupPlan([claudeCode], {
-        apiKey: secret,
-        home,
-        useKeychain: true,
-      });
+    itSkipOnWindows(
+      'keeps the secret out of the configs and reads it from the shell',
+      async () => {
+        const secret = 'vck_KeychainSecret321';
+        const plan = await buildSetupPlan([claudeCode], {
+          apiKey: secret,
+          home,
+          useKeychain: true,
+        });
 
-      // The env-based agent resolves its var from the Keychain at runtime.
-      const shell = plan.changes.find(c => c.format === 'shell');
-      expect(shell?.next).toContain('security find-generic-password');
-      expect(shell?.next).toContain('export ANTHROPIC_AUTH_TOKEN=');
-      expect(shell?.next).not.toContain(secret);
+        // The env-based agent resolves its var from the Keychain at runtime.
+        const shell = plan.changes.find(c => c.format === 'shell');
+        expect(shell?.next).toContain('security find-generic-password');
+        expect(shell?.next).toContain('export ANTHROPIC_AUTH_TOKEN=');
+        expect(shell?.next).not.toContain(secret);
 
-      // Claude's token is no longer embedded in settings.json.
-      const claude = plan.changes.find(c => c.label === 'Claude Code settings');
-      expect(claude?.next).toContain('ANTHROPIC_BASE_URL');
-      expect(claude?.next).not.toContain('ANTHROPIC_AUTH_TOKEN');
-      expect(claude?.next).not.toContain(secret);
-    });
+        // Claude's token is no longer embedded in settings.json.
+        const claude = plan.changes.find(
+          c => c.label === 'Claude Code settings'
+        );
+        expect(claude?.next).toContain('ANTHROPIC_BASE_URL');
+        expect(claude?.next).not.toContain('ANTHROPIC_AUTH_TOKEN');
+        expect(claude?.next).not.toContain(secret);
+      }
+    );
 
     it('embeds the key directly when keychain is off', async () => {
       const secret = 'vck_PlainSecret654';
@@ -735,19 +747,22 @@ describe('ai-gateway coding-agents setup', () => {
       expect(claude?.next).toContain(secret);
     });
 
-    it('reads the Codex env key from the Keychain instead of the config', async () => {
-      const secret = 'vck_KeychainSecret321';
-      const plan = await buildSetupPlan([codex], {
-        apiKey: secret,
-        home,
-        useKeychain: true,
-      });
+    itSkipOnWindows(
+      'reads the Codex env key from the Keychain instead of the config',
+      async () => {
+        const secret = 'vck_KeychainSecret321';
+        const plan = await buildSetupPlan([codex], {
+          apiKey: secret,
+          home,
+          useKeychain: true,
+        });
 
-      const shell = plan.changes.find(c => c.format === 'shell');
-      expect(shell?.next).toContain('security find-generic-password');
-      expect(shell?.next).toContain('export AI_GATEWAY_API_KEY=');
-      expect(shell?.next).not.toContain(secret);
-    });
+        const shell = plan.changes.find(c => c.format === 'shell');
+        expect(shell?.next).toContain('security find-generic-password');
+        expect(shell?.next).toContain('export AI_GATEWAY_API_KEY=');
+        expect(shell?.next).not.toContain(secret);
+      }
+    );
   });
 
   describe('key options', () => {
@@ -1995,29 +2010,34 @@ describe('ai-gateway coding-agents setup', () => {
       ).toBe(true);
     });
 
-    it('shares a single deduped env block across multiple agents', async () => {
-      const plan = await buildSetupPlan([claudeCode, codex, opencode], {
-        apiKey: 'vck_multi',
-        home,
-        useKeychain: true,
-      });
+    itSkipOnWindows(
+      'shares a single deduped env block across multiple agents',
+      async () => {
+        const plan = await buildSetupPlan([claudeCode, codex, opencode], {
+          apiKey: 'vck_multi',
+          home,
+          useKeychain: true,
+        });
 
-      // One config file per agent.
-      expect(plan.changes.some(c => c.label === 'Claude Code settings')).toBe(
-        true
-      );
-      expect(plan.changes.some(c => c.label === 'Codex config')).toBe(true);
-      expect(plan.changes.some(c => c.label === 'OpenCode config')).toBe(true);
+        // One config file per agent.
+        expect(plan.changes.some(c => c.label === 'Claude Code settings')).toBe(
+          true
+        );
+        expect(plan.changes.some(c => c.label === 'Codex config')).toBe(true);
+        expect(plan.changes.some(c => c.label === 'OpenCode config')).toBe(
+          true
+        );
 
-      // A single shared shell block. Codex and OpenCode both want
-      // AI_GATEWAY_API_KEY — it's exported once (deduped) — and Claude Code
-      // contributes ANTHROPIC_AUTH_TOKEN.
-      const shells = plan.changes.filter(c => c.format === 'shell');
-      expect(shells).toHaveLength(1);
-      const gateway = shells[0].next?.match(/AI_GATEWAY_API_KEY/g) ?? [];
-      expect(gateway).toHaveLength(1);
-      expect(shells[0].next).toContain('ANTHROPIC_AUTH_TOKEN');
-    });
+        // A single shared shell block. Codex and OpenCode both want
+        // AI_GATEWAY_API_KEY — it's exported once (deduped) — and Claude Code
+        // contributes ANTHROPIC_AUTH_TOKEN.
+        const shells = plan.changes.filter(c => c.format === 'shell');
+        expect(shells).toHaveLength(1);
+        const gateway = shells[0].next?.match(/AI_GATEWAY_API_KEY/g) ?? [];
+        expect(gateway).toHaveLength(1);
+        expect(shells[0].next).toContain('ANTHROPIC_AUTH_TOKEN');
+      }
+    );
 
     it('skips a malformed Codex config instead of clobbering it', async () => {
       mkdirSync(join(home, '.codex'), { recursive: true });
