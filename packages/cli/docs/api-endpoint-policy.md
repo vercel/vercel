@@ -18,13 +18,15 @@ export const installSubcommand = {
   name: 'install',
   // ...
   endpoints: [
-    'GET /v1/integrations/integration/:slug',
-    'POST /v1/integrations/installations',
+    { method: 'GET', path: '/v1/integrations/integration/:slug' },
+    { method: 'POST', path: '/v1/integrations/installations' },
   ],
 } as const;
 ```
 
-- Format is `"METHOD /path"`. Path parameters may use `:param` or `{param}`.
+- Each entry is a `CommandEndpoint` object (see `src/commands/help.ts`) with
+  a `method` (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, or `HEAD`) and a
+  `path`. Path parameters may use `:param` or `{param}`.
 - Declare the endpoints called by that specific command/subcommand (helpers it
   invokes included).
 - The list must not be empty — an empty list would bypass the policy.

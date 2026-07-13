@@ -72,34 +72,61 @@ describe('API endpoint policy (see packages/cli/docs/api-endpoint-policy.md)', (
 
   describe('endpoint declarations', () => {
     it('validates endpoint format', () => {
-      expect(validateEndpointFormat('GET /v9/projects/:idOrName')).toBeNull();
-      expect(validateEndpointFormat('DELETE /v1/thing/{id}')).toBeNull();
-      expect(validateEndpointFormat('FETCH /v9/projects')).not.toBeNull();
-      expect(validateEndpointFormat('GET v9/projects')).not.toBeNull();
-      expect(validateEndpointFormat('/v9/projects')).not.toBeNull();
+      expect(
+        validateEndpointFormat({
+          method: 'GET',
+          path: '/v9/projects/:idOrName',
+        })
+      ).toBeNull();
+      expect(
+        validateEndpointFormat({ method: 'DELETE', path: '/v1/thing/{id}' })
+      ).toBeNull();
+      expect(
+        validateEndpointFormat({
+          method: 'FETCH' as never,
+          path: '/v9/projects',
+        })
+      ).not.toBeNull();
+      expect(
+        validateEndpointFormat({ method: 'GET', path: 'v9/projects' })
+      ).not.toBeNull();
+      expect(
+        validateEndpointFormat({ method: 'GET', path: '/v9 /projects' })
+      ).not.toBeNull();
     });
 
     it('normalizes parameter syntaxes to a comparable form', () => {
-      expect(normalizeEndpoint('GET /v9/projects/:idOrName')).toBe(
-        'GET /v9/projects/{}'
-      );
-      expect(normalizeEndpoint('get /v9/projects/{idOrName}/')).toBe(
-        'GET /v9/projects/{}'
-      );
-      expect(normalizeEndpoint('POST /v13/deployments?forceNew=1')).toBe(
-        'POST /v13/deployments'
-      );
+      expect(
+        normalizeEndpoint({ method: 'GET', path: '/v9/projects/:idOrName' })
+      ).toBe('GET /v9/projects/{}');
+      expect(
+        normalizeEndpoint({ method: 'GET', path: '/v9/projects/{idOrName}/' })
+      ).toBe('GET /v9/projects/{}');
+      expect(
+        normalizeEndpoint({
+          method: 'POST',
+          path: '/v13/deployments?forceNew=1',
+        })
+      ).toBe('POST /v13/deployments');
     });
 
-    it('matches declarations against the public spec snapshot', () => {
+    it('matches declarations against the public spec', () => {
       // stable, long-public endpoints
       expect(
-        isPublicEndpoint('GET /v9/projects/:idOrName', PUBLIC_ENDPOINTS)
+        isPublicEndpoint(
+          { method: 'GET', path: '/v9/projects/:idOrName' },
+          PUBLIC_ENDPOINTS
+        )
       ).toBe(true);
-      expect(isPublicEndpoint('GET /v2/user', PUBLIC_ENDPOINTS)).toBe(true);
+      expect(
+        isPublicEndpoint({ method: 'GET', path: '/v2/user' }, PUBLIC_ENDPOINTS)
+      ).toBe(true);
       // never-public endpoint
       expect(
-        isPublicEndpoint('GET /v1/oauth-apps/installations', PUBLIC_ENDPOINTS)
+        isPublicEndpoint(
+          { method: 'GET', path: '/v1/oauth-apps/installations' },
+          PUBLIC_ENDPOINTS
+        )
       ).toBe(false);
     });
   });
@@ -163,7 +190,7 @@ describe('API endpoint policy (see packages/cli/docs/api-endpoint-policy.md)', (
             subcommands: [
               makeCommand({
                 name: 'child',
-                endpoints: ['GET /v9/projects/:idOrName'],
+                endpoints: [{ method: 'GET', path: '/v9/projects/:idOrName' }],
               }),
             ],
           }),
@@ -178,7 +205,9 @@ describe('API endpoint policy (see packages/cli/docs/api-endpoint-policy.md)', (
         [
           makeCommand({
             name: 'apps',
-            endpoints: ['GET /v1/oauth-apps/installations'],
+            endpoints: [
+              { method: 'GET', path: '/v1/oauth-apps/installations' },
+            ],
           }),
         ],
         { grandfathered: emptyBaseline, publicEndpoints: PUBLIC_ENDPOINTS }
@@ -193,7 +222,9 @@ describe('API endpoint policy (see packages/cli/docs/api-endpoint-policy.md)', (
           makeCommand({
             name: 'apps',
             beta: true,
-            endpoints: ['GET /v1/oauth-apps/installations'],
+            endpoints: [
+              { method: 'GET', path: '/v1/oauth-apps/installations' },
+            ],
           }),
         ],
         { grandfathered: emptyBaseline, publicEndpoints: PUBLIC_ENDPOINTS }
@@ -206,7 +237,7 @@ describe('API endpoint policy (see packages/cli/docs/api-endpoint-policy.md)', (
         [
           makeCommand({
             name: 'projects',
-            endpoints: ['GET /v9/projects/:idOrName'],
+            endpoints: [{ method: 'GET', path: '/v9/projects/:idOrName' }],
           }),
         ],
         { grandfathered: emptyBaseline, publicEndpoints: PUBLIC_ENDPOINTS }
@@ -216,7 +247,12 @@ describe('API endpoint policy (see packages/cli/docs/api-endpoint-policy.md)', (
 
     it('rejects malformed endpoint declarations', () => {
       const violations = evaluatePolicy(
-        [makeCommand({ name: 'bad', endpoints: ['v9/projects'] })],
+        [
+          makeCommand({
+            name: 'bad',
+            endpoints: [{ method: 'GET', path: 'v9/projects' }],
+          }),
+        ],
         { grandfathered: emptyBaseline, publicEndpoints: PUBLIC_ENDPOINTS }
       );
       expect(violations).toHaveLength(1);
