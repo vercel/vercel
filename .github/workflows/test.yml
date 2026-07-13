@@ -16,8 +16,6 @@ permissions:
 env:
   VERCEL_TELEMETRY_DISABLED: '1'
   TURBO_REMOTE_ONLY: 'true'
-  TURBO_TEAM: 'zero-conf-vtest314'
-  TURBO_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -27,6 +25,10 @@ jobs:
   setup:
     name: Find Changes
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      statuses: write
     outputs:
       unitTests: ${{ steps['set-tests'].outputs['unitTests'] }}
       e2eTests: ${{ steps['set-tests'].outputs['e2eTests'] }}
@@ -73,6 +75,10 @@ jobs:
           fetch-depth: 0
           ref: ${{ steps.pr-context.outputs.headSha }}
           token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup Turborepo Remote Cache
+        uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
+        with:
+          team: ${{ vars.TURBO_TEAM }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -252,6 +258,9 @@ jobs:
     timeout-minutes: 120
     runs-on: ${{ matrix.runner }}
     name: Unit / ${{ matrix.label }}
+    permissions:
+      contents: read
+      id-token: write
     if: ${{ needs.setup.outputs['unitTests'] != '[]' }}
     needs:
       - setup
@@ -265,6 +274,10 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ needs.setup.outputs.headSha }}
+      - name: Setup Turborepo Remote Cache
+        uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
+        with:
+          team: ${{ vars.TURBO_TEAM }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
@@ -383,6 +396,11 @@ jobs:
     timeout-minutes: 120
     runs-on: ${{ matrix.runner }}
     name: E2E / ${{ matrix.label }}
+    permissions:
+      contents: read
+      deployments: read
+      id-token: write
+      statuses: read
     if: ${{ needs.setup.outputs['e2eTests'] != '[]' }}
     needs:
       - setup
@@ -396,6 +414,10 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ needs.setup.outputs.headSha }}
+      - name: Setup Turborepo Remote Cache
+        uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
+        with:
+          team: ${{ vars.TURBO_TEAM }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
