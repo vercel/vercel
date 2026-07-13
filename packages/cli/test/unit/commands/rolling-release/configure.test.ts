@@ -103,12 +103,11 @@ describe('rolling-release configure', () => {
 
     expect(exitCode).toBe(0);
     expect(patchBody).toEqual({ enabled: false });
-    expect(mockedGetLinkedProject).toHaveBeenCalledWith(
-      client,
-      client.cwd,
-      'my-project',
-      true
-    );
+    expect(mockedGetLinkedProject).toHaveBeenCalledWith(client, {
+      cwd: client.cwd,
+      projectName: 'my-project',
+      apiFallback: true,
+    });
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'option:project', value: '[REDACTED]' },
       { key: 'flag:disable', value: 'TRUE' },

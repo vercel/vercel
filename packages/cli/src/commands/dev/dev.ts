@@ -52,12 +52,11 @@ export default async function dev(
   const projectNameOrId = opts['--project'];
 
   // retrieve dev command
-  let link = await getLinkedProject(
-    client,
+  let link = await getLinkedProject(client, {
     cwd,
-    projectNameOrId,
-    !!projectNameOrId
-  );
+    projectName: projectNameOrId,
+    apiFallback: Boolean(projectNameOrId),
+  });
 
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
     if (opts['--local']) {

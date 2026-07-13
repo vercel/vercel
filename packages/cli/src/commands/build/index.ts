@@ -339,12 +339,11 @@ export default async function main(client: Client): Promise<number> {
   // No local link matched `--project`; resolve via API before the
   // settings-pull prompt would silently re-link to the wrong project.
   if (projectNameOrId && !link) {
-    const linkedFromApi = await getLinkedProject(
-      client,
+    const linkedFromApi = await getLinkedProject(client, {
       cwd,
-      projectNameOrId,
-      true
-    );
+      projectName: projectNameOrId,
+      apiFallback: true,
+    });
     if (linkedFromApi.status === 'linked') {
       link = {
         projectId: linkedFromApi.project.id,

@@ -284,18 +284,24 @@ async function hasProjectLink(
   return false;
 }
 
-export async function getLinkedProject(
-  client: Client,
-  path = client.cwd,
-  projectName?: string,
+export interface GetLinkedProjectOptions {
+  cwd?: string;
+  projectName?: string;
   /**
    * When `true`, resolve `projectName` via the API if no local link matches.
    * Only enable for explicit user-supplied names (e.g. `--project`) so that
    * implicit `projectName` defaults (like a directory basename) keep their
    * existing `not_linked` → `setupAndLink` flow.
    */
-  apiFallback?: boolean
+  apiFallback?: boolean;
+}
+
+export async function getLinkedProject(
+  client: Client,
+  options: GetLinkedProjectOptions = {}
 ): Promise<ProjectLinkResult> {
+  let path = options.cwd ?? client.cwd;
+  const { projectName, apiFallback } = options;
   path = await resolveProjectCwd(path);
 
   const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');

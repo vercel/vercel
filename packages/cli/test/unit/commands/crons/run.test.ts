@@ -275,12 +275,11 @@ describe('crons run', () => {
       const exitCode = await crons(client);
 
       expect(exitCode).toEqual(0);
-      expect(mockedGetLinkedProject).toHaveBeenCalledWith(
-        client,
-        client.cwd,
-        'crons-project',
-        true
-      );
+      expect(mockedGetLinkedProject).toHaveBeenCalledWith(client, {
+        cwd: client.cwd,
+        projectName: 'crons-project',
+        apiFallback: true,
+      });
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:run', value: 'run' },
         { key: 'option:project', value: '[REDACTED]' },

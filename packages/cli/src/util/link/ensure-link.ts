@@ -54,12 +54,11 @@ export async function ensureLink(
       // `failIfNotFound` doubles as the opt-in for API-based name/ID
       // resolution: both behaviors only apply when `projectName` came from
       // an explicit user flag.
-      link = await getLinkedProject(
-        client,
+      link = await getLinkedProject(client, {
         cwd,
-        opts.projectName,
-        opts.failIfNotFound
-      );
+        projectName: opts.projectName,
+        apiFallback: opts.failIfNotFound,
+      });
     }
     opts.link = link;
   }
