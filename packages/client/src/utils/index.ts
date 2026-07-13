@@ -1,13 +1,13 @@
 import { FilesMap } from './hashes';
 import nodeFetch, { RequestInit } from 'node-fetch';
-import { join, sep, relative, basename } from 'path';
+import { join, sep, relative, basename, isAbsolute, resolve } from 'path';
 import { URL } from 'url';
 import ignore from 'ignore';
 import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
 import { VercelClientOptions, VercelConfig } from '../types';
 import { Sema } from 'async-sema';
-import { readFile, stat } from 'fs-extra';
+import { readFile, realpath, stat } from 'fs-extra';
 import readdir from './readdir-recursive';
 import {
   findConfig as findMicrofrontendsConfig,
@@ -126,6 +126,7 @@ export async function buildFileTree(
     if (prebuilt) {
       // Traverse over the `.vc-config.json` files and include
       // the files referenced by the "filePathMap" properties
+      const realRoot = await realpath(path);
       const vcConfigFilePaths = fileList.filter(
         file => basename(file) === '.vc-config.json'
       );
@@ -134,8 +135,35 @@ export async function buildFileTree(
           const configJson = await readFile(p, 'utf8');
           const config = JSON.parse(configJson);
           if (!config.filePathMap) return;
-          for (const v of Object.values(config.filePathMap) as string[]) {
-            refs.add(join(path, v));
+          for (const v of Object.values(config.filePathMap)) {
+            if (typeof v !== 'string') continue;
+            const ref = resolve(path, v);
+            const relativeRef = relative(path, ref);
+            if (
+              relativeRef === '..' ||
+              relativeRef.startsWith(`..${sep}`) ||
+              isAbsolute(relativeRef)
+            ) {
+              debug(`Skipping filePathMap reference outside project: ${v}`);
+              continue;
+            }
+            try {
+              const realRef = await realpath(ref);
+              const relativeRealRef = relative(realRoot, realRef);
+              if (
+                relativeRealRef === '..' ||
+                relativeRealRef.startsWith(`..${sep}`) ||
+                isAbsolute(relativeRealRef)
+              ) {
+                debug(
+                  `Skipping filePathMap reference resolving outside project: ${v}`
+                );
+                continue;
+              }
+            } catch (_) {
+              // Preserve the existing downstream behavior for unresolved refs.
+            }
+            refs.add(ref);
           }
         })
       );

@@ -1,0 +1,6 @@
+{
+  "filePathMap": {
+    "server.js": "server.js",
+    "secret.txt": "../prebuilt-filepathmap-secret.txt"
+  }
+}

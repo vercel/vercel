@@ -1,4 +1,5 @@
 import { join, resolve } from 'path';
+import { tmpdir } from 'os';
 import fs from 'fs-extra';
 import { buildFileTree } from '../src/utils';
 import { describe, expect, it } from 'vitest';
@@ -144,6 +145,93 @@ describe('buildFileTree()', () => {
     expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
       normalizeWindowsPaths(ignoreList).sort()
     );
+  });
+
+  it('should ignore prebuilt filePathMap references outside the project root', async () => {
+    const cwd = fixture('prebuilt-filepathmap-boundary');
+    const { fileList } = await buildFileTree(
+      cwd,
+      {
+        isDirectory: true,
+        prebuilt: true,
+        vercelOutputDir: join(cwd, '.vercel/output'),
+      },
+      noop
+    );
+
+    const expectedFileList = toAbsolutePaths(cwd, [
+      '.vercel/output/functions/api/index.func/.vc-config.json',
+      '.vercel/output/static/index.txt',
+      'server.js',
+    ]);
+    expect(normalizeWindowsPaths(fileList).sort()).toEqual(
+      normalizeWindowsPaths(expectedFileList).sort()
+    );
+    expect(normalizeWindowsPaths(fileList)).not.toContain(
+      normalizeWindowsPaths([
+        join(cwd, '..', 'prebuilt-filepathmap-secret.txt'),
+      ])[0]
+    );
+  });
+
+  it('should ignore prebuilt filePathMap references that escape through symlinked directories', async () => {
+    const root = await fs.mkdtemp(join(tmpdir(), 'prebuilt-filepathmap-'));
+    try {
+      const cwd = join(root, 'project');
+      const outside = join(root, 'outside');
+      const outputDir = join(cwd, '.vercel/output');
+      const functionDir = join(outputDir, 'functions/api/index.func');
+
+      await fs.mkdirp(functionDir);
+      await fs.mkdirp(join(outputDir, 'static'));
+      await fs.mkdirp(outside);
+      await fs.writeFile(join(cwd, 'server.js'), 'module.exports = {};');
+      await fs.writeFile(join(outputDir, 'static/index.txt'), 'static');
+      await fs.writeFile(join(outside, 'secret.txt'), 'secret');
+
+      try {
+        await fs.symlink(
+          outside,
+          join(cwd, 'linkdir'),
+          process.platform === 'win32' ? 'junction' : 'dir'
+        );
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException).code;
+        if (code === 'EPERM' || code === 'EACCES' || code === 'ENOTSUP') {
+          return;
+        }
+        throw err;
+      }
+
+      await fs.writeFile(
+        join(functionDir, '.vc-config.json'),
+        JSON.stringify({
+          filePathMap: {
+            'server.js': 'server.js',
+            'secret.txt': 'linkdir/secret.txt',
+          },
+        })
+      );
+
+      const { fileList } = await buildFileTree(
+        cwd,
+        {
+          isDirectory: true,
+          prebuilt: true,
+          vercelOutputDir: outputDir,
+        },
+        noop
+      );
+
+      expect(normalizeWindowsPaths(fileList)).toContain(
+        normalizeWindowsPaths([join(cwd, 'server.js')])[0]
+      );
+      expect(normalizeWindowsPaths(fileList)).not.toContain(
+        normalizeWindowsPaths([join(cwd, 'linkdir/secret.txt')])[0]
+      );
+    } finally {
+      await fs.remove(root);
+    }
   });
 
   it('monorepo - should find root files but ignore `.vercel/output` files when prebuilt=false', async () => {
