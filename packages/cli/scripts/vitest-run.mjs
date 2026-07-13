@@ -36,10 +36,14 @@ const files = envFiles.length > 0 ? envFiles : process.argv.slice(2);
 const CHUNK_TIMEOUT_MS = 20 * 60 * 1000; // total wall clock for the chunk
 const GRACE_MS = 15_000; // after SIGTERM -> SIGKILL
 
-const child = spawn(process.execPath, [vitestBin, '--config', './vitest.config.mts', ...files], {
-  stdio: 'inherit',
-  shell: false,
-});
+const child = spawn(
+  process.execPath,
+  [vitestBin, '--config', './vitest.config.mts', ...files],
+  {
+    stdio: 'inherit',
+    shell: false,
+  }
+);
 
 let timedOut = false;
 let hardKillTimer = null;
@@ -55,7 +59,9 @@ const chunkTimer = setTimeout(() => {
     } catch {}
   }
   hardKillTimer = setTimeout(() => {
-    console.error('[vitest-run] still alive after grace period — sending SIGKILL');
+    console.error(
+      '[vitest-run] still alive after grace period — sending SIGKILL'
+    );
     try {
       child.kill('SIGKILL');
     } catch {}
