@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { join } from 'path';
+import { writeFile } from 'fs/promises';
 import { mkdirp, writeJSON } from 'fs-extra';
 import {
   getLinkFromDir,
@@ -7,7 +8,11 @@ import {
 } from '../../../../src/util/projects/link';
 import { client } from '../../../mocks/client';
 
-import { defaultProject, useProject } from '../../../mocks/project';
+import {
+  defaultProject,
+  useProject,
+  useUnknownProject,
+} from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
@@ -317,16 +322,53 @@ describe('getLinkedProject', () => {
       accountId: 'team_dummy',
     });
 
-    const link = await getLinkedProject(client, {
-      cwd,
-      projectName: 'explicit-project',
-      apiFallback: true,
-    });
-    if (link.status !== 'linked') {
-      throw new Error('Expected to be linked');
+    process.env.VERCEL_ORG_ID = 'team_dummy';
+    process.env.VERCEL_PROJECT_ID = 'stale-project';
+    try {
+      const link = await getLinkedProject(client, {
+        cwd,
+        projectName: 'explicit-project',
+        projectNameIsExplicit: true,
+      });
+      if (link.status !== 'linked') {
+        throw new Error('Expected to be linked');
+      }
+      expect(link.project.id).toEqual('explicit-project');
+      expect(link.repoRoot).toBeUndefined();
+    } finally {
+      delete process.env.VERCEL_ORG_ID;
+      delete process.env.VERCEL_PROJECT_ID;
     }
-    expect(link.project.id).toEqual('explicit-project');
-    expect(link.repoRoot).toBeUndefined();
+  });
+
+  it('should ignore malformed local metadata when environment IDs provide the scope', async () => {
+    const cwd = setupTmpDir('env-scope-malformed-project-json');
+    const vercelDir = join(cwd, '.vercel');
+    await mkdirp(vercelDir);
+    await writeFile(join(vercelDir, 'project.json'), '{ malformed');
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'explicit-project',
+      name: 'explicit-project',
+      accountId: 'team_dummy',
+    });
+
+    process.env.VERCEL_ORG_ID = 'team_dummy';
+    process.env.VERCEL_PROJECT_ID = 'stale-project';
+    try {
+      const link = await getLinkedProject(client, {
+        cwd,
+        projectName: 'explicit-project',
+        projectNameIsExplicit: true,
+      });
+      expect(link.status).toEqual('linked');
+    } finally {
+      delete process.env.VERCEL_ORG_ID;
+      delete process.env.VERCEL_PROJECT_ID;
+    }
   });
 
   it('should let explicit projectName override repo path auto-selection', async () => {
@@ -334,22 +376,86 @@ describe('getLinkedProject', () => {
 
     useUser();
     useTeams('team_dummy');
-    useProject({
+    client.config.currentTeam = 'team_default';
+    let requestedTeamId: unknown;
+    const project = {
       ...defaultProject,
       id: 'QmX6P93ChNDoZP',
       name: 'monorepo-marketing',
+      accountId: 'team_dummy',
+    };
+    client.scenario.get('/v9/projects/monorepo-marketing', (req, res) => {
+      requestedTeamId = req.query.teamId;
+      res.json(project);
     });
 
     const link = await getLinkedProject(client, {
       cwd: join(cwd, 'dashboard'),
       projectName: 'monorepo-marketing',
-      apiFallback: true,
+      projectNameIsExplicit: true,
     });
     if (link.status !== 'linked') {
       throw new Error('Expected to be linked');
     }
     expect(link.project.id).toEqual('QmX6P93ChNDoZP');
     expect(link.repoRoot).toEqual(cwd);
+    expect(link.projectRootDirectory).toEqual('marketing');
+    expect(requestedTeamId).toEqual('team_dummy');
+  });
+
+  it('should constrain explicit project lookup to the selected scope', async () => {
+    const cwd = setupTmpDir('explicit-project-scope');
+    const project = {
+      ...defaultProject,
+      id: 'prj_scoped',
+      name: 'scoped-project',
+      accountId: 'team_scope',
+    };
+    let requestedTeamId: unknown;
+
+    useUser();
+    useTeams('team_scope');
+    client.config.currentTeam = 'team_scope';
+    client.scenario.get('/v9/projects/scoped-project', (req, res) => {
+      requestedTeamId = req.query.teamId;
+      res.json(project);
+    });
+
+    const link = await getLinkedProject(client, {
+      cwd,
+      projectName: 'scoped-project',
+      projectNameIsExplicit: true,
+      scopeIsExplicit: true,
+    });
+
+    expect(requestedTeamId).toEqual('team_scope');
+    expect(link.status).toEqual('linked');
+  });
+
+  it('should ignore conflicting local metadata when scope is explicit', async () => {
+    const cwd = setupTmpDir('explicit-scope-conflicting-metadata');
+    await mkdirp(join(cwd, '.vercel'));
+    await mkdirp(join(cwd, '.now'));
+    const project = {
+      ...defaultProject,
+      id: 'prj_explicit',
+      name: 'explicit-project',
+      accountId: 'team_scope',
+    };
+
+    useUser();
+    useTeams('team_scope');
+    client.config.currentTeam = 'team_scope';
+    useProject(project);
+
+    const link = await getLinkedProject(client, {
+      cwd,
+      projectName: 'explicit-project',
+      projectNameIsExplicit: true,
+      scopeIsExplicit: true,
+    });
+
+    expect(link.status).toEqual('linked');
   });
 
   it('should return link with legacy `repo.json` (top-level orgId)', async () => {
@@ -481,7 +587,7 @@ describe('getLinkedProject', () => {
     expect(link.repoRoot).toEqual(cwd);
   });
 
-  it('should resolve project via API when projectName is provided, apiFallback is true, and no local link exists', async () => {
+  it('should resolve an explicit projectName via API when no local link exists', async () => {
     const cwd = setupTmpDir('no-local-link');
 
     useUser();
@@ -496,7 +602,7 @@ describe('getLinkedProject', () => {
     const link = await getLinkedProject(client, {
       cwd,
       projectName: 'api-fallback-project',
-      apiFallback: true,
+      projectNameIsExplicit: true,
     });
     if (link.status !== 'linked') {
       throw new Error('Expected to be linked');
@@ -507,19 +613,33 @@ describe('getLinkedProject', () => {
     expect(link.repoRoot).toBeUndefined();
   });
 
-  it('should return not_linked when projectName is provided, apiFallback is true, and the project does not exist anywhere', async () => {
+  it('should not fall back when an explicit projectName does not exist', async () => {
     const cwd = setupTmpDir('no-local-link-not-found');
 
     useUser();
     useTeams('team_dummy');
-    // Intentionally no useProject — every API lookup 404s.
-
-    const link = await getLinkedProject(client, {
-      cwd,
-      projectName: 'definitely-missing',
-      apiFallback: true,
+    useProject({
+      ...defaultProject,
+      id: 'env-project',
+      name: 'env-project',
+      accountId: 'team_dummy',
     });
-    expect(link.status).toEqual('not_linked');
+    useUnknownProject();
+
+    process.env.VERCEL_ORG_ID = 'team_dummy';
+    process.env.VERCEL_PROJECT_ID = 'env-project';
+    try {
+      const link = await getLinkedProject(client, {
+        cwd,
+        projectName: 'definitely-missing',
+        projectNameIsExplicit: true,
+      });
+      expect(link.status).toEqual('not_linked');
+      expect(link.orgId).toEqual('team_dummy');
+    } finally {
+      delete process.env.VERCEL_ORG_ID;
+      delete process.env.VERCEL_PROJECT_ID;
+    }
   });
 
   it('should not call API fallback when no projectName is provided', async () => {
@@ -532,7 +652,7 @@ describe('getLinkedProject', () => {
     expect(link.status).toEqual('not_linked');
   });
 
-  it('should not call API fallback when projectName is provided but apiFallback is not enabled', async () => {
+  it('should not call the API when projectName is implicit', async () => {
     const cwd = setupTmpDir('no-link-implicit-name');
 
     useUser();

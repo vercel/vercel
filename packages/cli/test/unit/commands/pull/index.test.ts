@@ -5,7 +5,11 @@ import path from 'path';
 import pull from '../../../../src/commands/pull';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
-import { defaultProject, useProject } from '../../../mocks/project';
+import {
+  defaultProject,
+  useProject,
+  useUnknownProject,
+} from '../../../mocks/project';
 import { useTeams, createTeam } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
@@ -477,7 +481,7 @@ describe('pull', () => {
       const cwd = setupUnitFixture('vercel-pull-unlinked');
       useUser();
       useTeams('team_dummy');
-      // No useProject() — every GET /v9/projects/* will 404.
+      useUnknownProject();
 
       client.setArgv('pull', '--yes', '--project=does-not-exist', cwd);
       const exitCodePromise = pull(client);
