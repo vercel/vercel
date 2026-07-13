@@ -64,6 +64,50 @@ describe('startAuthorization', () => {
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it('requires a Passport token for a Passport subject', async () => {
+    await expect(
+      startAuthorization(CONNECTOR, { subject: { type: 'passport' } })
+    ).rejects.toThrow(
+      'passportToken is required when subject.type is "passport"'
+    );
+
+    expect(getVercelOidcToken).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('sends Passport identity alongside project OIDC', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        request: 'req_passport',
+        verifier: 'verifier_passport',
+        url: 'https://connect.vercel.com/authorize/req_passport',
+      })
+    );
+
+    await startAuthorization(
+      CONNECTOR,
+      { subject: { type: 'passport' } },
+      {
+        vercelToken: 'project_oidc',
+        passportToken: 'verified_passport_token',
+        passportResource: 'owner:team_1:project:prj_1:sandbox:sbx_1:host:vm',
+      }
+    );
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.headers).toEqual({
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer project_oidc',
+      'x-vercel-oidc-passport-token': 'verified_passport_token',
+      'x-vercel-passport-resource':
+        'owner:team_1:project:prj_1:sandbox:sbx_1:host:vm',
+    });
+    expect(JSON.parse(init.body as string)).toEqual({
+      subject: { type: 'passport' },
+    });
+  });
 });
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {

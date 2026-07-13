@@ -30,6 +30,35 @@ const token = await getToken(process.env.CONNECTOR_LINEAR!, {
 });
 ```
 
+When Passport authenticates the current request, pass its verified token as a
+second credential. The project OIDC token still authenticates the calling
+Vercel project, while Passport identifies the user whose Connect grant should
+be used:
+
+```ts
+import { getToken } from '@vercel/connect';
+import { getIdentity } from '@vercel/passport';
+
+const identity = await getIdentity(undefined, { development: false });
+
+if (!identity?.verified || !identity.token) {
+  throw new Error('Passport authentication required');
+}
+
+const token = await getToken(
+  'google/calendar',
+  { subject: { type: 'passport' } },
+  {
+    passportToken: identity.token,
+    passportResource: identity.resource,
+  }
+);
+```
+
+`passportToken` and `passportResource` must come from the same verified
+`PassportIdentity`. The SDK forwards them alongside the project OIDC bearer
+and does not cache Passport-scoped token responses in process memory.
+
 ### Chat SDK
 
 Spread the helper into the matching `create*Adapter` factory. Each helper

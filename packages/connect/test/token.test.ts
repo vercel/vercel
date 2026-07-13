@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ConnectError,
   deleteTokenCacheEntry,
+  getToken,
   getTokenResponse,
   revokeToken,
   UserAuthorizationRequiredError,
@@ -103,6 +104,118 @@ describe('revokeToken', () => {
       statusText: 'Forbidden',
       message: 'Missing permission to revoke tokens',
     });
+  });
+
+  it('requires and forwards Passport identity for a Passport subject', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(RESULT));
+    const params = { subject: { type: 'passport' as const } };
+
+    await expect(revokeToken(CONNECTOR, params)).rejects.toThrow(
+      'passportToken is required when subject.type is "passport"'
+    );
+
+    await revokeToken(CONNECTOR, params, {
+      vercelToken: 'project_oidc',
+      passportToken: 'verified_passport_token',
+      passportResource: 'owner:team_1:project:prj_1:sandbox:sbx_1:host:vm',
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.headers).toEqual({
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer project_oidc',
+      'x-vercel-oidc-passport-token': 'verified_passport_token',
+      'x-vercel-passport-resource':
+        'owner:team_1:project:prj_1:sandbox:sbx_1:host:vm',
+    });
+  });
+});
+
+describe('Passport token subjects', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    vi.mocked(getVercelOidcToken).mockResolvedValue('project_oidc');
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('requires a Passport token before resolving project OIDC', async () => {
+    await expect(
+      getToken(CONNECTOR, { subject: { type: 'passport' } })
+    ).rejects.toThrow(
+      'passportToken is required when subject.type is "passport"'
+    );
+
+    expect(getVercelOidcToken).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('sends Passport identity alongside project OIDC', async () => {
+    fetchMock.mockResolvedValue(tokenResponse('tok_passport'));
+
+    await expect(
+      getToken(
+        CONNECTOR,
+        { subject: { type: 'passport' } },
+        { passportToken: 'verified_passport_token' }
+      )
+    ).resolves.toBe('tok_passport');
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.headers).toEqual({
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer project_oidc',
+      'x-vercel-oidc-passport-token': 'verified_passport_token',
+    });
+    expect(JSON.parse(init.body as string)).toEqual({
+      subject: { type: 'passport' },
+    });
+  });
+
+  it('does not cache Passport-scoped results across users', async () => {
+    fetchMock
+      .mockResolvedValueOnce(tokenResponse('tok_user_a'))
+      .mockResolvedValueOnce(tokenResponse('tok_user_b'));
+    const params = { subject: { type: 'passport' as const } };
+
+    const userA = await getTokenResponse(CONNECTOR, params, {
+      passportToken: 'passport_user_a',
+    });
+    const userB = await getTokenResponse(CONNECTOR, params, {
+      passportToken: 'passport_user_b',
+    });
+
+    expect(userA.token).toBe('tok_user_a');
+    expect(userB.token).toBe('tok_user_b');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][1].headers).toMatchObject({
+      'x-vercel-oidc-passport-token': 'passport_user_a',
+    });
+    expect(fetchMock.mock.calls[1][1].headers).toMatchObject({
+      'x-vercel-oidc-passport-token': 'passport_user_b',
+    });
+  });
+
+  it('does not forward a Passport token for another subject type', async () => {
+    fetchMock.mockResolvedValue(tokenResponse('tok_user'));
+
+    await getTokenResponse(
+      CONNECTOR,
+      { subject: { type: 'user', id: 'not_passport' } },
+      { passportToken: 'must_not_be_forwarded' }
+    );
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.headers).not.toHaveProperty('x-vercel-oidc-passport-token');
   });
 });
 

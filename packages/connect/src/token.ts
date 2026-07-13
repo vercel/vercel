@@ -1,12 +1,17 @@
 import { getVercelOidcToken } from '@vercel/oidc';
 import type { ConnectAuthorizationDetail } from './authorization-details.js';
+import {
+  isPassportSubject,
+  passportAuthorizationHeaders,
+} from './internal/passport.js';
 
-export type ConnectSubjectType = 'app' | 'user' | 'jwt-bearer';
+export type ConnectSubjectType = 'app' | 'user' | 'jwt-bearer' | 'passport';
 
 export type ConnectTokenSubject =
   | ConnectAppTokenSubject
   | ConnectUserTokenSubject
-  | ConnectJwtBearerTokenSubject;
+  | ConnectJwtBearerTokenSubject
+  | ConnectPassportTokenSubject;
 
 export interface ConnectAppTokenSubject {
   type: 'app';
@@ -26,6 +31,25 @@ export interface ConnectJwtBearerTokenSubject {
   /** Defaults to the connector's OAuth token endpoint. */
   aud?: string;
   additionalClaims?: Record<string, unknown>;
+}
+
+/**
+ * Use the identity in the verified Passport token supplied through
+ * {@link ConnectOptions.passportToken}.
+ */
+export interface ConnectPassportTokenSubject {
+  type: 'passport';
+}
+
+export interface ConnectPassportOptions {
+  /**
+   * Raw token from a verified `PassportIdentity`. The Connect API validates
+   * the token again before using its identity.
+   */
+  passportToken: string;
+
+  /** Resource returned with a resource-bound Passport identity. */
+  passportResource?: string;
 }
 
 export interface ConnectTokenParams {
@@ -114,7 +138,7 @@ export class ConnectorInstallationRequiredError extends ConnectError {
   }
 }
 
-export interface ConnectOptions {
+export interface ConnectOptions extends Partial<ConnectPassportOptions> {
   vercelToken?: string;
 
   /**
@@ -127,6 +151,10 @@ export interface ConnectOptions {
    * needs Connect to re-validate the grant on this call — a revoked grant
    * then surfaces as `no_token` / `user_authorization_required` instead of
    * a stale bearer.
+   *
+   * Passport subjects always bypass the in-process cache, regardless of this
+   * option, because their identity lives in `passportToken` rather than in the
+   * cache-keyed request parameters.
    */
   forceRefresh?: boolean;
 }
@@ -145,20 +173,27 @@ export async function getTokenResponse(
   params: ConnectTokenParams,
   options?: ConnectOptions
 ): Promise<ConnectTokenResponse> {
+  const passportHeaders = passportAuthorizationHeaders(params.subject, options);
+  const passportSubject = isPassportSubject(params.subject);
   const bufferMs = params.validityBufferMs ?? DEFAULT_VALIDITY_BUFFER_MS;
-  const cacheKey = tokenCacheKey(connector, params);
+  let cacheKey: string | undefined;
 
-  if (options?.forceRefresh) {
-    cache.delete(cacheKey);
-  } else {
-    const cached = cache.get(cacheKey);
-    if (cached) {
-      const now = Date.now();
-      if (cached.response.expiresAt - now > bufferMs) {
-        cached.lastUsed = now;
-        return cached.response;
-      }
+  // A Passport subject is identified by the separately supplied bearer, not
+  // by `params`. Never cache its response or put the raw bearer in a key.
+  if (!passportSubject) {
+    cacheKey = tokenCacheKey(connector, params);
+    if (options?.forceRefresh) {
       cache.delete(cacheKey);
+    } else {
+      const cached = cache.get(cacheKey);
+      if (cached) {
+        const now = Date.now();
+        if (cached.response.expiresAt - now > bufferMs) {
+          cached.lastUsed = now;
+          return cached.response;
+        }
+        cache.delete(cacheKey);
+      }
     }
   }
 
@@ -172,6 +207,7 @@ export async function getTokenResponse(
       Accept: 'application/json',
       'Content-Type': 'application/json',
       Authorization: `Bearer ${vercelToken}`,
+      ...passportHeaders,
     },
     body: JSON.stringify(params),
   });
@@ -182,10 +218,12 @@ export async function getTokenResponse(
 
   const data: ConnectTokenResponse = await response.json();
 
-  if (cache.size >= MAX_CACHE_SIZE) {
-    evictLru();
+  if (cacheKey !== undefined) {
+    if (cache.size >= MAX_CACHE_SIZE) {
+      evictLru();
+    }
+    cache.set(cacheKey, { response: data, lastUsed: Date.now() });
   }
-  cache.set(cacheKey, { response: data, lastUsed: Date.now() });
 
   return data;
 }
@@ -198,6 +236,7 @@ export async function revokeToken(
   },
   options?: ConnectOptions
 ): Promise<void> {
+  const passportHeaders = passportAuthorizationHeaders(params.subject, options);
   const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
   const endpoint = `https://api.vercel.com/v1/connect/connectors/${encodeURIComponent(connector)}/tokens`;
 
@@ -207,6 +246,7 @@ export async function revokeToken(
       Accept: 'application/json',
       'Content-Type': 'application/json',
       Authorization: `Bearer ${vercelToken}`,
+      ...passportHeaders,
     },
     body: JSON.stringify(params),
   });
