@@ -54,7 +54,8 @@ export interface SettingValue {
 
 export type Setting = SettingValue | SettingPlaceholder;
 
-export type Redirect = Rewrite & {
+export type Redirect = Omit<Rewrite, 'destination'> & {
+  destination: string;
   statusCode?: number;
   permanent?: boolean;
 };
@@ -234,4 +235,21 @@ export interface Framework {
    * @example true
    */
   runtimeFramework?: boolean;
+  /**
+   * How much confidence a positive detection carries. Defaults to `strong`.
+   * `weak` means the detection is commonly incidental (e.g. Storybook as a
+   * devDependency of an app that deploys something else), so it should not
+   * be used to suggest this framework as an override.
+   * @example "weak"
+   */
+  detectionConfidence?: 'weak' | 'strong';
+  /**
+   * The third-party platform a framework variant is associated with (e.g.
+   * projects imported from Lovable). Used to attribute a framework entry to
+   * its source platform.
+   */
+  platform?: {
+    name: string;
+    logo: string;
+  };
 }

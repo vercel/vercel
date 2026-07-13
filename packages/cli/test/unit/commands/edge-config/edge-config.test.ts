@@ -345,6 +345,150 @@ describe('edge-config', () => {
     }
   });
 
+  it('lists backups in table output', async () => {
+    client.scenario.get('/v1/edge-config', (_req, res) => {
+      res.json([{ id: 'ecfg_backups', slug: 'my-store' }]);
+    });
+    client.scenario.get('/v1/edge-config/ecfg_backups/backups', (req, res) => {
+      expect(req.query.teamId).toBe('team_ec_test');
+      expect(req.query.limit).toBe('2');
+      expect(req.query.next).toBe('cursor_in');
+      expect(req.query.metadata).toBe('true');
+      res.json({
+        backups: [
+          {
+            id: 'backup_version_1',
+            lastModified: 1_713_528_000_000,
+            metadata: {
+              updatedBy: 'user_123',
+              itemsCount: 3,
+              itemsBytes: 128,
+            },
+          },
+        ],
+        pagination: { hasNext: true, next: 'cursor_next' },
+      });
+    });
+    client.setArgv(
+      'edge-config',
+      'backups',
+      'my-store',
+      '--limit',
+      '2',
+      '--next',
+      'cursor_in'
+    );
+    const exitCode = await edgeConfig(client);
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('backup_version_1');
+    expect(output).not.toContain('updated by');
+    expect(output).not.toContain('user_123');
+    expect(output).toContain(
+      'edge-config backups my-store --limit 2 --next cursor_next'
+    );
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:backups', value: 'backups' },
+      { key: 'argument:id-or-slug', value: 'my-store' },
+      { key: 'option:limit', value: '2' },
+      { key: 'option:next', value: '[REDACTED]' },
+    ]);
+  });
+
+  it('gets a backup by version id as JSON', async () => {
+    client.scenario.get('/v1/edge-config', (_req, res) => {
+      res.json([{ id: 'ecfg_backup_get', slug: 'my-store' }]);
+    });
+    client.scenario.get(
+      '/v1/edge-config/ecfg_backup_get/backups/backup_version_get',
+      (req, res) => {
+        expect(req.query.teamId).toBe('team_ec_test');
+        res.json({
+          id: 'backup_version_get',
+          lastModified: 1_713_528_000_000,
+          backup: {
+            slug: 'my-store',
+            digest: 'digest_a',
+            updatedAt: 1_713_528_000_000,
+            items: {
+              flag: {
+                value: true,
+                createdAt: 1_713_528_000_000,
+                updatedAt: 1_713_528_000_000,
+              },
+            },
+          },
+          metadata: { itemsCount: 1, itemsBytes: 64 },
+        });
+      }
+    );
+
+    client.setArgv(
+      'edge-config',
+      'backups',
+      'my-store',
+      '--backup-version',
+      'backup_version_get',
+      '--format',
+      'json'
+    );
+    const exitCode = await edgeConfig(client);
+    expect(exitCode).toBe(0);
+    const out = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(out.backup.digest).toBe('digest_a');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:backups', value: 'backups' },
+      { key: 'argument:id-or-slug', value: 'my-store' },
+      { key: 'option:backup-version', value: 'backup_version_get' },
+      { key: 'option:format', value: 'json' },
+    ]);
+  });
+
+  it('restores a backup by version id', async () => {
+    client.scenario.get('/v1/edge-config', (_req, res) => {
+      res.json([{ id: 'ecfg_backup_restore', slug: 'my-store' }]);
+    });
+    client.scenario.post(
+      '/v1/edge-config/ecfg_backup_restore/backups/backup_version_restore/restore',
+      (req, res) => {
+        expect(req.query.teamId).toBe('team_ec_test');
+        res.json({
+          status: 'ok',
+          restoredFrom: 'backup_version_restore',
+          previousDigest: 'digest_before',
+          digest: 'digest_after',
+        });
+      }
+    );
+
+    client.setArgv(
+      'edge-config',
+      'backups',
+      'my-store',
+      '--restore',
+      'backup_version_restore',
+      '--yes',
+      '--format',
+      'json'
+    );
+    const exitCode = await edgeConfig(client);
+    expect(exitCode).toBe(0);
+    const out = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(out).toEqual({
+      status: 'ok',
+      restoredFrom: 'backup_version_restore',
+      previousDigest: 'digest_before',
+      digest: 'digest_after',
+    });
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:backups', value: 'backups' },
+      { key: 'argument:id-or-slug', value: 'my-store' },
+      { key: 'option:restore', value: 'backup_version_restore' },
+      { key: 'flag:yes', value: 'TRUE' },
+      { key: 'option:format', value: 'json' },
+    ]);
+  });
+
   it('validates --patch before slug rename when both --slug and --patch are provided', async () => {
     let putCalled = false;
     client.scenario.put('/v1/edge-config/ecfg_update_order', (_req, res) => {

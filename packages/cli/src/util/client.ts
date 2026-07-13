@@ -24,13 +24,14 @@ import fetch, {
   Headers,
   type RequestInit,
   type Response,
-} from 'node-fetch';
+} from './fetch';
+import pkg from './pkg';
 import ua from './ua';
 import responseError from './response-error';
 import printIndications from './print-indications';
 import reauthenticate from './login/reauthenticate';
 import type { SAMLError } from './login/types';
-import { writeToAuthConfigFile, writeToConfigFile } from './config/files';
+import { persistAuthConfig, writeToConfigFile } from './config/files';
 import type { TelemetryEventStore } from './telemetry';
 import type { Span } from '@vercel/build-utils';
 import type {
@@ -53,6 +54,12 @@ import type { z } from 'zod';
 import output from '../output-manager';
 import { parseArguments } from './get-args';
 import { processTokenResponse, refreshTokenRequest } from './oauth';
+import {
+  PromptBackError,
+  PromptCanceledError,
+} from './input/prompt-cancellation';
+
+const DOMAINS_API_PATH = /^\/v\d+\/(?:domains|registrar)(?:\/|$)/;
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -61,6 +68,10 @@ const isSAMLError = (v: any): v is SAMLError => {
 type ParsedArgsCache = {
   args: string[];
   flags: Record<string, string | boolean | undefined>;
+};
+
+type CancelablePrompt<T> = Promise<T> & {
+  cancel?: () => void;
 };
 
 export interface FetchOptions extends Omit<RequestInit, 'body'> {
@@ -142,6 +153,8 @@ export default class Client extends EventEmitter implements Stdio {
   /** Track if we've already logged the token source debug message */
   private _loggedTokenSource: boolean = false;
   private _parsedArgsCache?: ParsedArgsCache;
+  private escapePromptCancellationDepth = 0;
+  private promptBackNavigationDepth = 0;
   /** Request-scoped identity caches used to avoid repeated scope lookups. */
   user?: User;
   userPromise?: Promise<User>;
@@ -173,35 +186,114 @@ export default class Client extends EventEmitter implements Stdio {
     };
     this.input = {
       text: (opts: Parameters<typeof input>[0]) =>
-        input({ theme, ...opts }, { input: this.stdin, output: this.stderr }),
+        this.runPrompt(
+          input({ theme, ...opts }, { input: this.stdin, output: this.stderr })
+        ),
       password: (opts: Parameters<typeof password>[0]) =>
-        password(
-          { theme, ...opts },
-          { input: this.stdin, output: this.stderr }
+        this.runPrompt(
+          password(
+            { theme, ...opts },
+            { input: this.stdin, output: this.stderr }
+          )
         ),
       checkbox: <T>(opts: Parameters<typeof checkbox<T>>[0]) =>
-        checkbox<T>(
-          { theme, ...opts },
-          { input: this.stdin, output: this.stderr }
+        this.runPrompt(
+          checkbox<T>(
+            { theme, ...opts },
+            { input: this.stdin, output: this.stderr }
+          )
         ),
       expand: (opts: Parameters<typeof expand>[0]) =>
-        expand({ theme, ...opts }, { input: this.stdin, output: this.stderr }),
+        this.runPrompt(
+          expand({ theme, ...opts }, { input: this.stdin, output: this.stderr })
+        ),
       confirm: (message: string, default_value: boolean) =>
-        confirm(
-          { theme, message, default: default_value },
-          { input: this.stdin, output: this.stderr }
+        this.runPrompt(
+          confirm(
+            { theme, message, default: default_value },
+            { input: this.stdin, output: this.stderr }
+          )
         ),
       select: <T>(opts: Parameters<typeof select<T>>[0]) =>
-        select<T>(
-          { theme, ...opts },
-          { input: this.stdin, output: this.stderr }
+        this.runPrompt(
+          select<T>(
+            { theme, ...opts },
+            { input: this.stdin, output: this.stderr }
+          )
         ),
       search: <T>(opts: Parameters<typeof search<T>>[0]) =>
-        search<T>(
-          { theme, ...opts },
-          { input: this.stdin, output: this.stderr }
+        this.runPrompt(
+          search<T>(
+            { theme, ...opts },
+            { input: this.stdin, output: this.stderr }
+          )
         ),
     };
+  }
+
+  async withEscapePromptCancellation<T>(run: () => Promise<T>): Promise<T> {
+    this.escapePromptCancellationDepth++;
+    try {
+      return await run();
+    } finally {
+      this.escapePromptCancellationDepth--;
+    }
+  }
+
+  async withPromptBackNavigation<T>(run: () => Promise<T>): Promise<T> {
+    this.promptBackNavigationDepth++;
+    try {
+      return await run();
+    } finally {
+      this.promptBackNavigationDepth--;
+    }
+  }
+
+  private runPrompt<T>(prompt: CancelablePrompt<T>): Promise<T> {
+    const escapeCancellationEnabled = this.escapePromptCancellationDepth > 0;
+    const backNavigationEnabled = this.promptBackNavigationDepth > 0;
+
+    if (
+      (!escapeCancellationEnabled && !backNavigationEnabled) ||
+      !this.stdin.isTTY ||
+      !prompt.cancel
+    ) {
+      return prompt;
+    }
+
+    let cancellation: 'escape' | 'back' | undefined;
+    const onKeypress = (
+      _input: string | undefined,
+      key: { name?: string } | undefined
+    ) => {
+      if (
+        key?.name === 'escape' &&
+        escapeCancellationEnabled &&
+        !cancellation
+      ) {
+        cancellation = 'escape';
+        prompt.cancel?.();
+      } else if (key?.name === 'up' && backNavigationEnabled && !cancellation) {
+        cancellation = 'back';
+        prompt.cancel?.();
+      }
+    };
+
+    this.stdin.on('keypress', onKeypress);
+
+    return prompt
+      .catch(error => {
+        if (cancellation === 'escape') {
+          throw new PromptCanceledError();
+        }
+        if (cancellation === 'back') {
+          throw new PromptBackError();
+        }
+        throw error;
+      })
+      .finally(() => {
+        this.stdin.off('keypress', onKeypress);
+      });
   }
 
   get argv(): string[] {
@@ -274,7 +366,7 @@ export default class Client extends EventEmitter implements Stdio {
     if (!hasRefreshToken(authConfig)) {
       output.debug('No refresh token found, emptying auth config.');
       this.emptyAuthConfig();
-      this.writeToAuthConfigFile();
+      this.persistAuthConfig();
       return;
     }
 
@@ -289,7 +381,7 @@ export default class Client extends EventEmitter implements Stdio {
     if (tokensError) {
       output.debug('Error refreshing token, emptying auth config.');
       this.emptyAuthConfig();
-      this.writeToAuthConfigFile();
+      this.persistAuthConfig();
       return;
     }
 
@@ -304,7 +396,7 @@ export default class Client extends EventEmitter implements Stdio {
       this.updateAuthConfig({ refreshToken: tokens.refresh_token });
     }
 
-    this.writeToAuthConfigFile();
+    this.persistAuthConfig();
     this.writeToConfigFile();
 
     output.debug('Tokens refreshed successfully.');
@@ -374,8 +466,8 @@ export default class Client extends EventEmitter implements Stdio {
     this.authConfig = this.authConfig.skipWrite ? { skipWrite: true } : {};
   }
 
-  writeToAuthConfigFile() {
-    writeToAuthConfigFile(this.authConfig);
+  persistAuthConfig() {
+    persistAuthConfig(this.authConfig, this.config);
   }
 
   /**
@@ -468,9 +560,20 @@ export default class Client extends EventEmitter implements Stdio {
 
     const headers = new Headers(opts.headers);
     headers.set('user-agent', ua);
+    if (DOMAINS_API_PATH.test(url.pathname)) {
+      headers.set('x-vercel-cli-version', pkg.version);
+    }
     if (this.agentName) {
       headers.set('x-ai-agent', this.agentName);
     }
+    headers.set(
+      'x-vercel-cli-session-id',
+      this.telemetryEventStore.currentSessionId
+    );
+    headers.set(
+      'x-vercel-cli-invocation-id',
+      this.telemetryEventStore.currentInvocationId
+    );
 
     await this.ensureAuthorized();
 
@@ -497,7 +600,7 @@ export default class Client extends EventEmitter implements Stdio {
           return `#${requestId} → ${opts.method || 'GET'} ${url.href}`;
         }
       },
-      fetch(url, { agent: this.agent, ...opts, headers, body })
+      fetch(url, { ...opts, headers, body })
     );
   }
 

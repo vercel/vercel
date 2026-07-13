@@ -5,8 +5,8 @@ on:
 
 env:
   TURBO_REMOTE_ONLY: 'true'
-  TURBO_TEAM: 'vercel'
-  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: 'zero-conf-vtest314'
+  TURBO_TOKEN: ${{ secrets.VERCEL_TOKEN }}
   NODE_VERSION: '22'
 
 concurrency:
@@ -26,8 +26,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - run: git fetch origin ${{ github.event.pull_request.head.sha }}:pr-${{ github.event.pull_request.number }}
       - run: git checkout pr-${{ github.event.pull_request.number }}
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
+      - name: install pnpm@10.29.3
+        run: npm i -g pnpm@10.29.3
       - run: pnpm install
       # Enforce a changeset file to be present
       - run: pnpm exec changeset status --since=main
@@ -46,11 +46,11 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0
+        uses: dtolnay/rust-toolchain@a75363d06101555fc97c6c7e1e65670b99104d98 # 1.96.1
         with:
           targets: wasm32-wasip2
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
+      - name: install pnpm@10.29.3
+        run: npm i -g pnpm@10.29.3
       - run: pnpm install
       - name: Biome lint
         run: pnpm run lint

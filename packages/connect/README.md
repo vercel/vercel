@@ -2,10 +2,13 @@
 
 SDK for obtaining scoped tokens for third-party services on behalf of apps or users. Authenticates the calling Vercel project via [`@vercel/oidc`](https://www.npmjs.com/package/@vercel/oidc) and exchanges the OIDC token for a Vercel Connect-issued credential.
 
-Four entrypoints, all ESM:
+Seven entrypoints, all ESM:
 
 - `@vercel/connect` — core token / authorization SDK
-- `@vercel/connect/ash` — adapter helpers for [Ash](https://github.com/vercel/ash) connections (optional peer: `experimental-ash`)
+- `@vercel/connect/chat` — adapter helpers for the [Chat SDK](https://chat-sdk.dev) (`chat`): `connectSlackAdapter`, `connectGitHubAdapter`, `connectLinearAdapter` (no Chat SDK dependency — returns structural config)
+- `@vercel/connect/ai-sdk` — [Vercel AI SDK](https://ai-sdk.dev) glue: re-exports `connectAuthProvider` for MCP transports (optional peers: `ai`, `@ai-sdk/mcp`)
+- `@vercel/connect/mcp` — canonical MCP-spec `OAuthClientProvider` for any MCP client (optional peer: `@ai-sdk/mcp`)
+- `@vercel/connect/eve` — adapter helpers for [Eve](https://github.com/vercel/eve) connections (optional peer: `eve`)
 - `@vercel/connect/betterauth` — [Better Auth](https://www.better-auth.com/) `genericOAuth` provider (optional peer: `better-auth`)
 - `@vercel/connect/authjs` — [Auth.js](https://authjs.dev/) `OAuth2Config` provider (optional peer: `@auth/core`)
 
@@ -27,17 +30,81 @@ const token = await getToken(process.env.CONNECTOR_LINEAR!, {
 });
 ```
 
-### Ash
+### Chat SDK
+
+Spread the helper into the matching `create*Adapter` factory. Each helper
+wires both outbound app-scoped tokens and inbound Connect trigger-forwarded
+webhook verification (Vercel OIDC), so no provider secret lives in your env.
 
 ```ts
-import { defineMcpClientConnection } from 'experimental-ash/connections';
-import { connect } from '@vercel/connect/ash';
+import { createSlackAdapter } from '@chat-adapter/slack';
+import { connectSlackAdapter } from '@vercel/connect/chat';
+
+createSlackAdapter({
+  ...connectSlackAdapter('slack/acme-slack'),
+  userName: 'my-bot',
+});
+```
+
+`connectGitHubAdapter` (`installationToken`) and `connectLinearAdapter`
+(`accessToken`) follow the same shape. See the
+[Chat SDK integration guide](https://github.com/vercel/vercel/blob/main/packages/connect/docs/chat-integration.md)
+for connector setup, trigger forwarding, and per-platform examples.
+
+### Vercel AI SDK + MCP
+
+```ts
+import { createMCPClient } from '@ai-sdk/mcp';
+import { streamText } from 'ai';
+import {
+  connectAuthProvider,
+  ConsentRequiredError,
+} from '@vercel/connect/ai-sdk';
+
+const mcp = await createMCPClient({
+  transport: {
+    type: 'http',
+    url: 'https://mcp.linear.app',
+    authProvider: connectAuthProvider('oauth/linear', {
+      subject: { type: 'user', id: 'user_123' },
+    }),
+  },
+});
+
+try {
+  const result = await streamText({
+    model: 'openai/gpt-5.4',
+    tools: await mcp.tools(),
+    prompt,
+  });
+  return result.toUIMessageStreamResponse();
+} catch (err) {
+  if (err instanceof ConsentRequiredError) return Response.redirect(err.url);
+  throw err;
+}
+```
+
+Tool-call approval (Human-in-the-Loop) is independent of Connect — use the AI
+SDK's `toolApproval` option or `wrapMcpTools` from `@ai-sdk/policy-opa`.
+
+Non-AI-SDK MCP clients (the official MCP TypeScript SDK, Mastra, etc.)
+can import the same `connectAuthProvider` from `@vercel/connect/mcp`.
+
+### eve
+
+```ts
+import { defineMcpClientConnection } from 'eve/connections';
+import { connect } from '@vercel/connect/eve';
 
 export default defineMcpClientConnection({
   url: 'https://mcp.linear.app/sse',
   auth: connect('linear'),
 });
 ```
+
+By default, `connect()` provisions or links the connector for the deploying
+Vercel project on first use. Pass `autoProvision: false` when the connector is
+managed elsewhere.
 
 ### Better Auth
 
@@ -56,4 +123,4 @@ import { connect } from '@vercel/connect/authjs';
 const providers = [connect({ connector: 'linear' })];
 ```
 
-See the source under `src/` for the full API (additional helpers like `getTokenResponse`, `startAuthorization`, typed error classes, and per-adapter options).
+See the source under `src/` for the full API (additional helpers like `revokeToken`, `getTokenResponse`, `startAuthorization`, typed error classes, and per-adapter options).

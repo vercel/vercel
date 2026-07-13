@@ -1,5 +1,96 @@
 # @vercel/elysia
 
+## 0.1.99
+
+### Patch Changes
+
+- @vercel/node@5.8.23
+
+## 0.1.98
+
+### Patch Changes
+
+- @vercel/node@5.8.22
+
+## 0.1.97
+
+### Patch Changes
+
+- @vercel/node@5.8.21
+
+## 0.1.96
+
+### Patch Changes
+
+- @vercel/node@5.8.20
+
+## 0.1.95
+
+### Patch Changes
+
+- Updated dependencies [2158ab6]
+  - @vercel/node@5.8.19
+
+## 0.1.94
+
+### Patch Changes
+
+- @vercel/node@5.8.18
+
+## 0.1.93
+
+### Patch Changes
+
+- @vercel/node@5.8.17
+
+## 0.1.92
+
+### Patch Changes
+
+- @vercel/node@5.8.16
+
+## 0.1.91
+
+### Patch Changes
+
+- @vercel/node@5.8.15
+
+## 0.1.90
+
+### Patch Changes
+
+- @vercel/node@5.8.14
+
+## 0.1.89
+
+### Patch Changes
+
+- @vercel/node@5.8.13
+
+## 0.1.88
+
+### Patch Changes
+
+- @vercel/node@5.8.12
+
+## 0.1.87
+
+### Patch Changes
+
+- @vercel/node@5.8.11
+
+## 0.1.86
+
+### Patch Changes
+
+- @vercel/node@5.8.10
+
+## 0.1.85
+
+### Patch Changes
+
+- @vercel/node@5.8.9
+
 ## 0.1.84
 
 ### Patch Changes

@@ -5,7 +5,10 @@ import {
   download,
   EdgeFunction,
   execCommand,
+  generateProjectManifest,
   getEnvForPackageManager,
+  getNodeVersion,
+  getReportedServiceType,
   getPrefixedEnvVars,
   glob,
   readConfigFile,
@@ -23,6 +26,7 @@ export const build: BuildV2 = async ({
   workPath,
   config,
   meta = {},
+  service,
 }) => {
   const { installCommand, buildCommand } = config;
 
@@ -40,8 +44,16 @@ export const build: BuildV2 = async ({
   const mountpoint = dirname(entrypoint);
   const entrypointDir = join(workPath, mountpoint);
 
+  const nodeVersion = await getNodeVersion(
+    entrypointDir,
+    undefined,
+    config,
+    meta
+  );
+
   const {
     cliType,
+    lockfilePath,
     lockfileVersion,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
@@ -73,6 +85,22 @@ export const build: BuildV2 = async ({
       { env: spawnEnv },
       meta,
       config.projectSettings?.createdAt
+    );
+  }
+
+  try {
+    await generateProjectManifest({
+      workPath: entrypointDir,
+      nodeVersion,
+      cliType,
+      lockfilePath,
+      lockfileVersion,
+      framework: config.framework ?? undefined,
+      serviceType: service ? getReportedServiceType(service) : undefined,
+    });
+  } catch (err) {
+    debug(
+      `Failed to write hydrogen manifest: ${err instanceof Error ? err.message : String(err)}`
     );
   }
 

@@ -84,4 +84,67 @@ describe('@vercel/vc-native shim', () => {
       expect(stdout.trim()).toBe('native shim ok:arg-one,arg-two');
     }
   });
+
+  test('bin launcher falls back to the platform package binary when postinstall did not run', async () => {
+    const packageName = packageNames[process.platform]?.[process.arch];
+    if (!packageName || process.platform === 'win32') {
+      return;
+    }
+
+    const root = mkdtempSync(join(tmpdir(), 'vc-native-launcher-'));
+    const wrapperDir = join(root, 'node_modules', '@vercel', 'vc-native');
+    const platformDir = join(root, 'node_modules', ...packageName.split('/'));
+
+    await mkdir(join(wrapperDir, 'bin'), { recursive: true });
+    await mkdir(join(platformDir, 'bin'), { recursive: true });
+    await copyFile(
+      join(packageRoot, 'bin', 'vercel'),
+      join(wrapperDir, 'bin', 'vercel.exe')
+    );
+    await writeFile(
+      join(platformDir, 'package.json'),
+      JSON.stringify({ name: packageName })
+    );
+
+    const binaryPath = join(platformDir, 'bin', 'vercel');
+    await writeFile(
+      binaryPath,
+      '#!/usr/bin/env node\nconsole.log("native launcher ok:" + process.argv.slice(2).join(","));\nprocess.exit(7);\n'
+    );
+    await chmod(binaryPath, 0o755);
+
+    const launcher = join(wrapperDir, 'bin', 'vercel.exe');
+    await chmod(launcher, 0o755);
+    const result = await execFileAsync(process.execPath, [
+      launcher,
+      'arg-one',
+      'arg-two',
+    ]).catch(error => error);
+
+    expect(result.stdout.trim()).toBe('native launcher ok:arg-one,arg-two');
+    expect(result.code).toBe(7);
+  });
+
+  test('bin launcher reports a missing platform package', async () => {
+    if (process.platform === 'win32') {
+      return;
+    }
+
+    const root = mkdtempSync(join(tmpdir(), 'vc-native-launcher-missing-'));
+    const wrapperDir = join(root, 'node_modules', '@vercel', 'vc-native');
+    await mkdir(join(wrapperDir, 'bin'), { recursive: true });
+    await copyFile(
+      join(packageRoot, 'bin', 'vercel'),
+      join(wrapperDir, 'bin', 'vercel.exe')
+    );
+
+    const result = await execFileAsync(process.execPath, [
+      join(wrapperDir, 'bin', 'vercel.exe'),
+    ]).catch(error => error);
+
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain(
+      'The native Vercel CLI binary was not installed'
+    );
+  });
 });

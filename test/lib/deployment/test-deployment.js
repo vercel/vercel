@@ -39,9 +39,155 @@ const DEPLOYMENT_LOG_FETCH_ATTEMPTS = Math.ceil(
   15000 / DEPLOYMENT_LOG_FETCH_RETRY_DELAY_MS
 );
 
+/**
+ * Run a declarative WebSocket probe against a deployment.
+ *
+ * Probe shape (under the `websocket` key of a probe):
+ *   {
+ *     "path": "/ws",                       // required, the upgrade path
+ *     "send": ["hello", "world"],          // optional, text frames to send
+ *     "receive": ["echo:hello", ...],      // optional, exact ordered replies
+ *     "receiveMustContain": ["partial"],   // optional, substring (ordered)
+ *     "status": 101,                        // optional, expected upgrade status
+ *     "headers": { "x-foo": "bar" },       // optional, extra upgrade headers
+ *     "subprotocols": ["v1"],              // optional
+ *     "timeout": 20000                      // optional, ms
+ *   }
+ *
+ * One of `receive` or `receiveMustContain` should be provided. The probe sends
+ * each `send` frame in order, waiting for a reply between frames, and asserts
+ * the upgrade status and the received frames.
+ */
+async function runWebSocketProbe(spec, deploymentUrl) {
+  // Lazily require so non-WebSocket probes don't load the module.
+  const WebSocket = require('ws');
+
+  assert(spec.path, 'websocket probe must specify a "path"');
+  const send = spec.send || [];
+  const expectExact = spec.receive;
+  const expectContains = spec.receiveMustContain;
+  assert(
+    expectExact || expectContains,
+    'websocket probe must specify "receive" or "receiveMustContain"'
+  );
+  const expectedCount = (expectExact || expectContains).length;
+  const expectedStatus = spec.status || 101;
+  const timeout = spec.timeout || 20000;
+
+  const scheme = deploymentUrl.startsWith('localhost') ? 'ws' : 'wss';
+  const wsUrl = `${scheme}://${deploymentUrl}${spec.path}`;
+  console.log('testing websocket', wsUrl);
+
+  const { received, upgradeStatus } = await new Promise((resolve, reject) => {
+    const socket = new WebSocket(wsUrl, spec.subprotocols || [], {
+      headers: spec.headers || {},
+    });
+    const got = [];
+    let index = 0;
+    let status = 0;
+
+    const timer = setTimeout(() => {
+      try {
+        socket.terminate();
+      } catch (_) {
+        // ignore
+      }
+      reject(
+        new Error(
+          `WebSocket ${wsUrl} timed out after ${timeout}ms ` +
+            `(upgrade status ${status}, received ${JSON.stringify(got)})`
+        )
+      );
+    }, timeout);
+
+    const maybeFinish = () => {
+      if (got.length >= expectedCount) {
+        clearTimeout(timer);
+        try {
+          socket.close();
+        } catch (_) {
+          // ignore
+        }
+        resolve({ received: got, upgradeStatus: status });
+      }
+    };
+
+    socket.on('upgrade', res => {
+      status = res.statusCode;
+    });
+    socket.on('open', () => {
+      if (send.length > 0) {
+        socket.send(send[index]);
+      } else {
+        // No frames to send; wait for server-initiated messages.
+        maybeFinish();
+      }
+    });
+    socket.on('message', data => {
+      got.push(data.toString());
+      index += 1;
+      if (index < send.length) {
+        socket.send(send[index]);
+      }
+      maybeFinish();
+    });
+    socket.on('close', () => {
+      clearTimeout(timer);
+      resolve({ received: got, upgradeStatus: status });
+    });
+    socket.on('unexpected-response', (_req, res) => {
+      clearTimeout(timer);
+      reject(
+        new Error(
+          `WebSocket upgrade failed for ${wsUrl}: HTTP ${res.statusCode}`
+        )
+      );
+    });
+    socket.on('error', err => {
+      clearTimeout(timer);
+      reject(err);
+    });
+  });
+
+  assert.strictEqual(
+    upgradeStatus,
+    expectedStatus,
+    `WebSocket ${wsUrl} expected upgrade status ${expectedStatus}, got ${upgradeStatus}`
+  );
+
+  if (expectExact) {
+    assert.deepStrictEqual(
+      received,
+      expectExact,
+      `WebSocket ${wsUrl} unexpected frames. Expected ${JSON.stringify(
+        expectExact
+      )}, got ${JSON.stringify(received)}`
+    );
+  } else {
+    assert.strictEqual(
+      received.length,
+      expectContains.length,
+      `WebSocket ${wsUrl} expected ${expectContains.length} frames, got ${received.length}: ${JSON.stringify(received)}`
+    );
+    expectContains.forEach((needle, i) => {
+      assert(
+        received[i].includes(needle),
+        `WebSocket ${wsUrl} frame ${i} (${JSON.stringify(received[i])}) does not contain ${JSON.stringify(needle)}`
+      );
+    });
+  }
+
+  console.log('finished testing websocket', wsUrl, JSON.stringify(received));
+}
+
 async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
   if (probe.delay) {
     await new Promise(resolve => setTimeout(resolve, probe.delay));
+    return;
+  }
+
+  if (probe.websocket) {
+    await runWebSocketProbe(probe.websocket, deploymentUrl);
     return;
   }
 

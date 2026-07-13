@@ -1,5 +1,59 @@
 # @vercel/functions
 
+## 3.7.5
+
+### Patch Changes
+
+- Updated dependencies [d29a8f9]
+  - @vercel/oidc@3.8.0
+
+## 3.7.4
+
+### Patch Changes
+
+- Updated dependencies [fb93ff6]
+  - @vercel/oidc@3.7.1
+
+## 3.7.3
+
+### Patch Changes
+
+- Updated dependencies [415fde0]
+  - @vercel/oidc@3.7.0
+
+## 3.7.2
+
+### Patch Changes
+
+- 071569d: Add a `maxPayload` option to `experimental_upgradeWebSocket()`, defaulting to 256 KiB.
+  - @vercel/oidc@3.6.2
+
+## 3.7.1
+
+### Patch Changes
+
+- a7f1f7c: Make `ws` an optional peer dependency
+
+## 3.7.0
+
+### Minor Changes
+
+- 3f3ef14: Add `experimental_upgradeWebSocket()` API
+
+## 3.6.3
+
+### Patch Changes
+
+- Updated dependencies [01cf6c2]
+  - @vercel/oidc@3.6.1
+
+## 3.6.2
+
+### Patch Changes
+
+- Updated dependencies [fddeb55]
+  - @vercel/oidc@3.6.0
+
 ## 3.6.1
 
 ### Patch Changes

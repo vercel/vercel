@@ -1,5 +1,8 @@
-import { yesOption } from '../../util/arg-common';
+import { projectOption, yesOption } from '../../util/arg-common';
+import { formatFlagConditionComparatorList } from '../../util/flags/comparators';
 import { packageName } from '../../util/pkg-name';
+
+const segmentRuleOperatorDescription = `Valid operators: ${formatFlagConditionComparatorList()}`;
 
 export const listSubcommand = {
   name: 'list',
@@ -8,6 +11,7 @@ export const listSubcommand = {
   default: true,
   arguments: [],
   options: [
+    projectOption,
     {
       name: 'state',
       shorthand: 's',
@@ -15,6 +19,49 @@ export const listSubcommand = {
       deprecated: false,
       description: 'Filter flags by state (active or archived)',
       argument: 'STATE',
+    },
+    {
+      name: 'tag',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description: 'Filter flags by tag (repeatable; all must match)',
+      argument: 'TAG',
+    },
+    {
+      name: 'created-by',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Filter flags by the id of the user or team that created them',
+      argument: 'ID',
+    },
+    {
+      name: 'maintainer-id',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description:
+        'Filter flags by maintainer user id (repeatable; any may match)',
+      argument: 'ID',
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description:
+        'Return a single page of at most NUMBER flags (1-100) instead of all',
+      argument: 'NUMBER',
+    },
+    {
+      name: 'next',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Pagination cursor from a previous list response',
+      argument: 'CURSOR',
     },
     {
       name: 'json',
@@ -34,6 +81,18 @@ export const listSubcommand = {
       value: `${packageName} flags ls --state archived`,
     },
     {
+      name: 'Filter flags by tag, creator, and maintainer',
+      value: `${packageName} flags ls --tag checkout --created-by user_123 --maintainer-id user_456`,
+    },
+    {
+      name: 'List the first page of 10 flags',
+      value: `${packageName} flags ls --limit 10`,
+    },
+    {
+      name: 'List the next page using the cursor from the previous page',
+      value: `${packageName} flags ls --limit 10 --next <cursor>`,
+    },
+    {
       name: 'List flags as JSON',
       value: `${packageName} flags ls --json`,
     },
@@ -50,7 +109,7 @@ export const inspectSubcommand = {
       required: true,
     },
   ],
-  options: [],
+  options: [projectOption],
   examples: [
     {
       name: 'Show details of a feature flag',
@@ -70,6 +129,7 @@ export const createSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'kind',
       shorthand: 'k',
@@ -127,7 +187,7 @@ export const openSubcommand = {
       required: false,
     },
   ],
-  options: [],
+  options: [projectOption],
   examples: [
     {
       name: 'Open the project feature flags dashboard',
@@ -151,6 +211,7 @@ export const updateSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'variant',
       shorthand: 'v',
@@ -211,6 +272,7 @@ export const setSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -265,6 +327,7 @@ export const splitSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -338,6 +401,7 @@ export const rolloutSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -426,6 +490,323 @@ export const rolloutSubcommand = {
   ],
 } as const;
 
+const ruleConditionDescription = `Rule condition as ENTITY.ATTRIBUTE:OPERATOR:VALUE or segment:OPERATOR:SEGMENT. Repeatable; semicolon-separated conditions are also supported. ${segmentRuleOperatorDescription}`;
+
+const ruleOutcomeOptions = [
+  {
+    name: 'variant',
+    shorthand: 'v',
+    type: String,
+    deprecated: false,
+    description: 'Variant ID or value to serve when the rule matches',
+    argument: 'VARIANT',
+  },
+  {
+    name: 'by',
+    shorthand: null,
+    type: String,
+    deprecated: false,
+    description:
+      'Entity attribute used for split or rollout bucketing, in the form entity.attribute',
+    argument: 'ENTITY.ATTRIBUTE',
+  },
+  {
+    name: 'weight',
+    shorthand: 'w',
+    type: [String],
+    deprecated: false,
+    description:
+      'Split weight ratio as VARIANT=WEIGHT. Repeat for each variant.',
+    argument: 'VARIANT=WEIGHT',
+  },
+  {
+    name: 'default-variant',
+    shorthand: null,
+    type: String,
+    deprecated: false,
+    description:
+      'Fallback variant for split or rollout outcomes when the bucketing attribute is unavailable',
+    argument: 'VARIANT',
+  },
+  {
+    name: 'from-variant',
+    shorthand: null,
+    type: String,
+    deprecated: false,
+    description: 'Variant to roll away from for rollout outcomes',
+    argument: 'VARIANT',
+  },
+  {
+    name: 'to-variant',
+    shorthand: null,
+    type: String,
+    deprecated: false,
+    description: 'Variant to roll towards for rollout outcomes',
+    argument: 'VARIANT',
+  },
+  {
+    name: 'stage',
+    shorthand: 's',
+    type: [String],
+    deprecated: false,
+    description:
+      'Add a rollout stage as PERCENTAGE,DURATION. Can be specified multiple times.',
+    argument: 'PERCENTAGE,DURATION',
+  },
+  {
+    name: 'start',
+    shorthand: null,
+    type: String,
+    deprecated: false,
+    description:
+      'When the rollout should start: "now", a relative time like "1h", or an ISO 8601 datetime',
+    argument: 'TIME',
+  },
+] as const;
+
+const ruleMessageOption = {
+  name: 'message',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description: 'Optional revision message for the update',
+  argument: 'TEXT',
+} as const;
+
+export const rulesListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List conditional rules for a feature flag environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment to list rules for (production, preview, or development)',
+      argument: 'ENV',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'List production rules for a flag',
+      value: `${packageName} flags rules ls my-feature --environment production`,
+    },
+    {
+      name: 'List rules as JSON',
+      value: `${packageName} flags rules ls my-feature -e production --json`,
+    },
+  ],
+} as const;
+
+export const rulesAddSubcommand = {
+  name: 'add',
+  aliases: [],
+  description: 'Add a conditional rule to a feature flag environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment to add the rule to (production, preview, or development)',
+      argument: 'ENV',
+    },
+    {
+      name: 'condition',
+      shorthand: 'c',
+      type: [String],
+      deprecated: false,
+      description: ruleConditionDescription,
+      argument: 'CONDITION',
+    },
+    ...ruleOutcomeOptions,
+    {
+      name: 'position',
+      shorthand: 'p',
+      type: Number,
+      deprecated: false,
+      description: '1-based position for the new rule (defaults to last)',
+      argument: 'N',
+    },
+    ruleMessageOption,
+  ],
+  examples: [
+    {
+      name: 'Add a variant rule',
+      value: `${packageName} flags rules add my-feature --environment production --condition user.plan:eq:pro --variant on`,
+    },
+    {
+      name: 'Add a segment rule',
+      value: `${packageName} flags rules add my-feature -e production --condition segment:eq:seg_beta123 --variant on`,
+    },
+    {
+      name: 'Add a split rule at the top',
+      value: `${packageName} flags rules add my-feature -e production --condition user.plan:eq:pro --by user.userId --weight off=90 --weight on=10 --position 1`,
+    },
+  ],
+} as const;
+
+export const rulesUpdateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description: 'Update a conditional rule in a feature flag environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+    {
+      name: 'rule',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment containing the rule (production, preview, or development)',
+      argument: 'ENV',
+    },
+    {
+      name: 'condition',
+      shorthand: 'c',
+      type: [String],
+      deprecated: false,
+      description: 'Replace rule conditions. ' + ruleConditionDescription,
+      argument: 'CONDITION',
+    },
+    ...ruleOutcomeOptions,
+    ruleMessageOption,
+  ],
+  examples: [
+    {
+      name: 'Replace rule conditions',
+      value: `${packageName} flags rules update my-feature rule_123 --environment production --condition user.plan:eq:enterprise`,
+    },
+    {
+      name: 'Update a rule outcome',
+      value: `${packageName} flags rules update my-feature rule_123 -e production --variant off`,
+    },
+  ],
+} as const;
+
+export const rulesRemoveSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Remove a conditional rule from a feature flag environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+    {
+      name: 'rule',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment containing the rule (production, preview, or development)',
+      argument: 'ENV',
+    },
+    ruleMessageOption,
+  ],
+  examples: [
+    {
+      name: 'Remove a rule',
+      value: `${packageName} flags rules rm my-feature rule_123 --environment production`,
+    },
+  ],
+} as const;
+
+export const rulesMoveSubcommand = {
+  name: 'move',
+  aliases: [],
+  description: 'Move a conditional rule within a feature flag environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+    {
+      name: 'rule',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment containing the rule (production, preview, or development)',
+      argument: 'ENV',
+    },
+    {
+      name: 'position',
+      shorthand: 'p',
+      type: Number,
+      deprecated: false,
+      description: '1-based destination position for the rule',
+      argument: 'N',
+    },
+    ruleMessageOption,
+  ],
+  examples: [
+    {
+      name: 'Move a rule to the top',
+      value: `${packageName} flags rules move my-feature rule_123 --environment production --position 1`,
+    },
+  ],
+} as const;
+
+export const rulesSubcommand = {
+  name: 'rules',
+  aliases: [],
+  description: 'Manage conditional rules for feature flags',
+  arguments: [],
+  subcommands: [
+    rulesListSubcommand,
+    rulesAddSubcommand,
+    rulesUpdateSubcommand,
+    rulesRemoveSubcommand,
+    rulesMoveSubcommand,
+  ],
+  options: [],
+  examples: [],
+} as const;
+
 export const removeSubcommand = {
   name: 'remove',
   aliases: ['rm'],
@@ -437,6 +818,7 @@ export const removeSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when deleting a flag',
@@ -465,6 +847,7 @@ export const archiveSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when archiving a flag',
@@ -494,6 +877,7 @@ export const disableSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -549,6 +933,7 @@ export const enableSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -579,6 +964,272 @@ export const enableSubcommand = {
   ],
 } as const;
 
+export const segmentsListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List all feature flag segments for the current project',
+  arguments: [],
+  options: [
+    projectOption,
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'List all segments',
+      value: `${packageName} flags segments ls`,
+    },
+    {
+      name: 'List segments as JSON',
+      value: `${packageName} flags segments ls --json`,
+    },
+  ],
+} as const;
+
+export const segmentsInspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description: 'Display information about a feature flag segment',
+  arguments: [
+    {
+      name: 'segment',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'Show details of a segment',
+      value: `${packageName} flags segments inspect beta-users`,
+    },
+    {
+      name: 'Show segment data as JSON',
+      value: `${packageName} flags segments inspect beta-users --json`,
+    },
+  ],
+} as const;
+
+export const segmentsCreateSubcommand = {
+  name: 'create',
+  aliases: ['add'],
+  description: 'Create a feature flag segment',
+  arguments: [
+    {
+      name: 'slug',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'label',
+      shorthand: 'l',
+      type: String,
+      deprecated: false,
+      description: 'Human-readable label for the segment',
+      argument: 'LABEL',
+    },
+    {
+      name: 'description',
+      shorthand: 'd',
+      type: String,
+      deprecated: false,
+      description: 'Description of the segment',
+      argument: 'TEXT',
+    },
+    {
+      name: 'hint',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Hint describing who belongs in the segment',
+      argument: 'TEXT',
+    },
+    {
+      name: 'data',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Full segment data JSON with rules, include, and exclude fields',
+      argument: 'JSON',
+    },
+    {
+      name: 'add',
+      shorthand: 'a',
+      type: [String],
+      deprecated: false,
+      description: `Add include:ENTITY.ATTRIBUTE=VALUE, exclude:ENTITY.ATTRIBUTE=VALUE, or rule:ENTITY.ATTRIBUTE:OPERATOR:VALUE; repeatable. ${segmentRuleOperatorDescription}`,
+      argument: 'TARGET',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output the created segment as JSON',
+    },
+  ],
+  examples: [
+    {
+      name: 'Create a segment with included users',
+      value: `${packageName} flags segments create beta-users --label "Beta users" --add include:user.id=user_123 --add include:user.id=user_456`,
+    },
+    {
+      name: 'Create a segment from rules',
+      value: `${packageName} flags segments create enterprise-users --label "Enterprise users" --add rule:user.plan:eq:enterprise`,
+    },
+    {
+      name: 'Create a segment from full JSON data',
+      value: `${packageName} flags segments create staff --label Staff --data '{"rules":[],"include":{"user":{"email":[{"value":"me@company.com"}]}},"exclude":{}}'`,
+    },
+  ],
+} as const;
+
+export const segmentsUpdateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description: 'Update a feature flag segment',
+  arguments: [
+    {
+      name: 'segment',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'label',
+      shorthand: 'l',
+      type: String,
+      deprecated: false,
+      description: 'New human-readable label for the segment',
+      argument: 'LABEL',
+    },
+    {
+      name: 'description',
+      shorthand: 'd',
+      type: String,
+      deprecated: false,
+      description: 'New description for the segment',
+      argument: 'TEXT',
+    },
+    {
+      name: 'hint',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'New hint for the segment',
+      argument: 'TEXT',
+    },
+    {
+      name: 'data',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Replace the full segment data JSON with rules, include, and exclude fields',
+      argument: 'JSON',
+    },
+    {
+      name: 'add',
+      shorthand: 'a',
+      type: [String],
+      deprecated: false,
+      description: `Add include:ENTITY.ATTRIBUTE=VALUE, exclude:ENTITY.ATTRIBUTE=VALUE, or rule:ENTITY.ATTRIBUTE:OPERATOR:VALUE; repeatable. ${segmentRuleOperatorDescription}`,
+      argument: 'TARGET',
+    },
+    {
+      name: 'remove',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description: `Remove include:ENTITY.ATTRIBUTE=VALUE, exclude:ENTITY.ATTRIBUTE=VALUE, rule:ENTITY.ATTRIBUTE:OPERATOR:VALUE, or rule:RULE_ID; repeatable. ${segmentRuleOperatorDescription}`,
+      argument: 'TARGET',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output the updated segment as JSON',
+    },
+  ],
+  examples: [
+    {
+      name: 'Rename a segment',
+      value: `${packageName} flags segments update beta-users --label "Early access users"`,
+    },
+    {
+      name: 'Add and remove included users',
+      value: `${packageName} flags segments update beta-users --add include:user.id=user_789 --remove include:user.id=user_123`,
+    },
+    {
+      name: 'Add and remove rules',
+      value: `${packageName} flags segments update enterprise-users --add rule:user.email:ends-with:@company.com --remove rule:user.plan:eq:pro`,
+    },
+  ],
+} as const;
+
+export const segmentsRemoveSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Delete a feature flag segment',
+  arguments: [
+    {
+      name: 'segment',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when deleting a segment',
+    },
+  ],
+  examples: [
+    {
+      name: 'Delete a segment',
+      value: `${packageName} flags segments rm beta-users`,
+    },
+    {
+      name: 'Delete without confirmation',
+      value: `${packageName} flags segments rm beta-users --yes`,
+    },
+  ],
+} as const;
+
+export const segmentsSubcommand = {
+  name: 'segments',
+  aliases: [],
+  description: 'Manage feature flag segments',
+  arguments: [],
+  subcommands: [
+    segmentsListSubcommand,
+    segmentsInspectSubcommand,
+    segmentsCreateSubcommand,
+    segmentsUpdateSubcommand,
+    segmentsRemoveSubcommand,
+  ],
+  options: [],
+  examples: [],
+} as const;
+
 // SDK Keys subcommands
 export const sdkKeysListSubcommand = {
   name: 'list',
@@ -586,6 +1237,7 @@ export const sdkKeysListSubcommand = {
   description: 'List all SDK keys for the current project',
   arguments: [],
   options: [
+    projectOption,
     {
       name: 'json',
       shorthand: null,
@@ -612,6 +1264,7 @@ export const sdkKeysAddSubcommand = {
   description: 'Create a new SDK key',
   arguments: [],
   options: [
+    projectOption,
     {
       name: 'type',
       // No shorthand: `-t` is already used globally for `--token`
@@ -661,6 +1314,7 @@ export const sdkKeysRemoveSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when deleting an SDK key',
@@ -750,9 +1404,6 @@ export const flagsCommand = {
   name: 'flags',
   aliases: [],
   description: 'Manage feature flags for a Vercel project',
-  // Hidden during initial rollout. Will be unhidden once the feature is
-  // generally available and public documentation is published.
-  hidden: true,
   arguments: [],
   subcommands: [
     listSubcommand,
@@ -767,6 +1418,8 @@ export const flagsCommand = {
     archiveSubcommand,
     disableSubcommand,
     enableSubcommand,
+    rulesSubcommand,
+    segmentsSubcommand,
     sdkKeysSubcommand,
     prepareSubcommand,
     overrideSubcommand,

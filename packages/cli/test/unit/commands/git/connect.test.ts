@@ -1,6 +1,7 @@
 import { describe, beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { join } from 'path';
 import fs from 'fs-extra';
+import stripAnsi from 'strip-ansi';
 import { useUser } from '../../../mocks/user';
 import { useTeams, createTeam } from '../../../mocks/team';
 import { defaultProject, useProject } from '../../../mocks/project';
@@ -68,8 +69,9 @@ describe('git connect', () => {
 
   describe('connecting an unlinked project', () => {
     const cwd = fixture('unlinked');
+    let user: ReturnType<typeof useUser>;
     beforeEach(async () => {
-      useUser();
+      user = useUser();
       useTeams('team_dummy');
       useProject({
         ...defaultProject,
@@ -83,6 +85,8 @@ describe('git connect', () => {
     });
 
     afterEach(async () => {
+      delete process.env.VERCEL_ORG_ID;
+      delete process.env.VERCEL_PROJECT_ID;
       await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
     });
 
@@ -92,16 +96,17 @@ describe('git connect', () => {
         client.setArgv('git', 'connect', remoteUrl);
         const gitPromise = git(client);
 
-        await expect(client.stderr).toOutput('Set up');
+        await expect(client.stderr).toOutput('Directory');
 
         await expect(client.stderr).toOutput('Which team?');
         client.stdin.write('\r');
 
-        await expect(client.stderr).toOutput('Found project');
-        client.stdin.write('y\n');
+        // Unified flow: pick the detected folder-name match in the picker.
+        await expect(client.stderr).toOutput('Which project?');
+        client.events.keypress('enter');
 
         await expect(client.stderr).toOutput(
-          'Would you like to pull environment variables now?'
+          'Pull development environment variables into .env.local?'
         );
         client.stdin.write('n\n');
 
@@ -118,6 +123,9 @@ describe('git connect', () => {
         await expect(client.stderr).toOutput('Connected');
 
         expect(exitCode).toEqual(0);
+        expect(client.stderr.getFullOutput()).not.toContain(
+          'Would you like to pull environment variables now?'
+        );
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
             key: 'subcommand:connect',
@@ -133,6 +141,10 @@ describe('git connect', () => {
 
     describe('--yes', () => {
       it('tracks telemetry', async () => {
+        // `--yes` no longer guesses a team; the env pair is the explicit
+        // signal and resolves the link without prompting.
+        process.env.VERCEL_ORG_ID = user.id;
+        process.env.VERCEL_PROJECT_ID = 'unlinked';
         client.setArgv('git', 'connect', '--yes');
         const gitPromise = git(client);
 
@@ -152,16 +164,16 @@ describe('git connect', () => {
             key: 'flag:yes',
             value: 'TRUE',
           },
-          {
-            key: 'flag:yes',
-            value: 'TRUE',
-          },
         ]);
       });
     });
 
     describe('--confirm', () => {
       it('tracks telemetry', async () => {
+        // `--yes` no longer guesses a team; the env pair is the explicit
+        // signal and resolves the link without prompting.
+        process.env.VERCEL_ORG_ID = user.id;
+        process.env.VERCEL_PROJECT_ID = 'unlinked';
         client.setArgv('git', 'connect', '--confirm');
         const gitPromise = git(client);
 
@@ -182,10 +194,6 @@ describe('git connect', () => {
             key: 'flag:confirm',
             value: 'TRUE',
           },
-          {
-            key: 'flag:yes',
-            value: 'TRUE',
-          },
         ]);
       });
     });
@@ -196,16 +204,17 @@ describe('git connect', () => {
       client.setArgv('git', 'connect');
       const gitPromise = git(client);
 
-      await expect(client.stderr).toOutput('Set up');
+      await expect(client.stderr).toOutput('Directory');
 
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\r');
 
-      await expect(client.stderr).toOutput('Found project');
-      client.stdin.write('y\n');
+      // Unified flow: pick the detected folder-name match in the picker.
+      await expect(client.stderr).toOutput('Which project?');
+      client.events.keypress('enter');
 
       await expect(client.stderr).toOutput(
-        'Would you like to pull environment variables now?'
+        'Pull development environment variables into .env.local?'
       );
       client.stdin.write('n\n');
 
@@ -217,6 +226,9 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput('Connected');
 
       expect(exitCode).toEqual(0);
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Would you like to pull environment variables now?'
+      );
 
       const project: Project = await client.fetch(`/v8/projects/unlinked`);
       expect(project.link).toMatchObject({
@@ -247,16 +259,17 @@ describe('git connect', () => {
       client.setArgv('git', 'connect', 'https://github.com/user2/repo2');
       const gitPromise = git(client);
 
-      await expect(client.stderr).toOutput('Set up');
+      await expect(client.stderr).toOutput('Directory');
 
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\r');
 
-      await expect(client.stderr).toOutput('Found project');
-      client.stdin.write('y\n');
+      // Unified flow: pick the detected folder-name match in the picker.
+      await expect(client.stderr).toOutput('Which project?');
+      client.events.keypress('enter');
 
       await expect(client.stderr).toOutput(
-        'Would you like to pull environment variables now?'
+        'Pull development environment variables into .env.local?'
       );
       client.stdin.write('n\n');
 
@@ -273,6 +286,9 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput('Connected');
 
       expect(exitCode).toEqual(0);
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Would you like to pull environment variables now?'
+      );
 
       const project: Project = await client.fetch(`/v8/projects/unlinked`);
       expect(project.link).toMatchObject({
@@ -516,6 +532,116 @@ describe('git connect', () => {
     }
   });
 
+  describe('repo_links_exceeded_limit errors', () => {
+    const limitErrorBase = {
+      code: 'repo_links_exceeded_limit',
+      message: 'A Git Repository cannot be connected to more than 10 Projects.',
+      action: 'Learn More',
+      link: 'https://vercel.link/repository-connection-limit',
+      repo: 'user/repo',
+    };
+
+    // Registered BEFORE useProject so this route wins over the default
+    // link-route stub that useProject installs.
+    const useRepoLinkLimitError = (body: Record<string, unknown>) => {
+      client.scenario.post(`/v9/projects/new-connection/link`, (_req, res) => {
+        res.status(400).json({ error: body });
+      });
+    };
+
+    const connectAndExpect = async (
+      body: Record<string, unknown>,
+      expectedOutput: string
+    ) => {
+      const cwd = fixture('new-connection');
+      client.cwd = cwd;
+      try {
+        await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+        useRepoLinkLimitError(body);
+        useUser();
+        useTeams('team_dummy');
+        useProject({
+          ...defaultProject,
+          id: 'new-connection',
+          name: 'new-connection',
+        });
+        client.setArgv('git', 'connect', '--yes');
+        const gitPromise = git(client);
+
+        await expect(client.stderr).toOutput(
+          `Connecting GitHub repository: https://github.com/user/repo`
+        );
+        await expect(client.stderr).toOutput(expectedOutput);
+
+        const exitCode = await gitPromise;
+        expect(exitCode).toEqual(1);
+      } finally {
+        await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
+      }
+    };
+
+    it('prints the upgrade call to action when provided', async () => {
+      await connectAndExpect(
+        {
+          ...limitErrorBase,
+          currentPlan: 'hobby',
+          limit: 10,
+          linked: 10,
+          nextTierLimit: 150,
+          ctaLabel: 'Upgrade to Pro',
+          ctaUrl:
+            'https://vercel.com/dashboard?upgradeToPro=repo-link-limit&upgradeToProTeamScope=my-team',
+          docsUrl:
+            'https://vercel.com/docs/errors/error-list#repository-connection-limitation',
+        },
+        `Error: A Git Repository cannot be connected to more than 10 Projects. (400)\nUpgrade to Pro: https://vercel.com/dashboard?upgradeToPro=repo-link-limit&upgradeToProTeamScope=my-team`
+      );
+    });
+
+    it('prints the limit-increase call to action when provided', async () => {
+      await connectAndExpect(
+        {
+          ...limitErrorBase,
+          message:
+            'A Git Repository cannot be connected to more than 150 Projects.',
+          currentPlan: 'pro',
+          limit: 150,
+          linked: 150,
+          nextTierLimit: null,
+          ctaLabel: 'Request a Limit Increase',
+          ctaUrl: 'https://vercel.com/help?teamSlug=my-team',
+        },
+        `Error: A Git Repository cannot be connected to more than 150 Projects. (400)\nRequest a Limit Increase: https://vercel.com/help?teamSlug=my-team`
+      );
+    });
+
+    it('uses the same call-to-action line for a custom-limit (raised) enterprise payload', async () => {
+      // 300 is a custom/raised override (the default enterprise limit is 150);
+      // the CLI just echoes whatever limit/message the API sends.
+      await connectAndExpect(
+        {
+          ...limitErrorBase,
+          message:
+            'A Git Repository cannot be connected to more than 300 Projects.',
+          currentPlan: 'enterprise',
+          limit: 300,
+          linked: 300,
+          nextTierLimit: null,
+          ctaLabel: 'Request a Limit Increase',
+          ctaUrl: 'https://vercel.com/help?teamSlug=enterprise-team',
+        },
+        `Error: A Git Repository cannot be connected to more than 300 Projects. (400)\nRequest a Limit Increase: https://vercel.com/help?teamSlug=enterprise-team`
+      );
+    });
+
+    it('falls back to the action/link fields when no call to action is provided', async () => {
+      await connectAndExpect(
+        { ...limitErrorBase },
+        `Error: A Git Repository cannot be connected to more than 10 Projects. (400)\nLearn More: https://vercel.link/repository-connection-limit`
+      );
+    });
+  });
+
   it('should connect the default option of multiple remotes', async () => {
     const cwd = fixture('multiple-remotes');
     client.cwd = cwd;
@@ -668,10 +794,13 @@ describe('git connect', () => {
       const gitPromise = git(client);
 
       await expect(client.stderr).toOutput(
-        `Found multiple Git repositories in your local Git config:\n  • origin: https://github.com/user/repo.git\n  • secondary: https://github.com/user/repo2.git`
+        `Found multiple Git repositories in your local Git config:`
       );
       await expect(client.stderr).toOutput(
         `Do you still want to connect https://github.com/user3/repo3? (y/N)`
+      );
+      expect(stripAnsi(client.stderr.getFullOutput())).toMatch(
+        /Found multiple Git repositories in your local Git config:\n\s{0,2}• origin: https:\/\/github\.com\/user\/repo\.git\n\s{0,2}• secondary: https:\/\/github\.com\/user\/repo2\.git/
       );
       client.stdin.write('y\n');
 

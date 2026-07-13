@@ -4,6 +4,9 @@ import type {
   SdkKey,
   CreatedSdkKey,
   FlagSettings,
+  Segment,
+  SegmentMembershipOperation,
+  UpdateFlagRequest,
 } from '../../src/util/flags/types';
 
 export const defaultFlagSettings: FlagSettings = {
@@ -164,26 +167,118 @@ export const defaultSdkKeys: SdkKey[] = [
   },
 ];
 
+export const defaultSegments: Segment[] = [
+  {
+    id: 'seg_beta123',
+    slug: 'beta-users',
+    label: 'Beta users',
+    description: 'Users opted into the beta',
+    usedByFlags: ['my-feature'],
+    usedBySegments: [],
+    data: {
+      rules: [
+        {
+          id: 'rule_plan',
+          conditions: [
+            {
+              lhs: { type: 'entity', kind: 'user', attribute: 'plan' },
+              cmp: 'eq',
+              rhs: 'pro',
+            },
+          ],
+          outcome: { type: 'all' },
+        },
+      ],
+      include: {
+        user: {
+          id: [{ value: 'user_123', note: 'founder' }],
+        },
+      },
+      exclude: {},
+    },
+    hint: 'Users opted into the beta',
+    createdAt: Date.now() - 86400000,
+    updatedAt: Date.now() - 3600000,
+    createdBy: 'user_123',
+    projectId: 'vercel-flags-test',
+    typeName: 'segment',
+  },
+  {
+    id: 'seg_staff456',
+    slug: 'staff',
+    label: 'Staff',
+    usedByFlags: [],
+    usedBySegments: [],
+    data: {
+      rules: [],
+      include: {
+        user: {
+          email: [{ value: 'me@company.com' }],
+        },
+      },
+      exclude: {},
+    },
+    hint: 'Internal staff',
+    createdAt: Date.now() - 172800000,
+    updatedAt: Date.now() - 7200000,
+    createdBy: 'user_123',
+    projectId: 'vercel-flags-test',
+    typeName: 'segment',
+  },
+];
+
 export function useFlags(
   flagsList: Flag[] = defaultFlags,
   sdkKeysList: SdkKey[] = defaultSdkKeys,
-  settings: FlagSettings = defaultFlagSettings
+  settings: FlagSettings = defaultFlagSettings,
+  segmentsList: Segment[] = defaultSegments,
+  onUpdateFlag?: (request: UpdateFlagRequest) => void,
+  onGetSettings?: () => void
 ) {
   // Get flag settings
   client.scenario.get(
     '/v1/projects/:projectId/feature-flags/settings',
     (_req, res) => {
+      onGetSettings?.();
       res.json(settings);
     }
   );
 
-  // List flags
+  // List flags (v2: paginated, supports tag/createdBy/maintainerId filters)
   client.scenario.get(
-    '/v1/projects/:projectId/feature-flags/flags',
+    '/v2/projects/:projectId/feature-flags/flags',
     (req, res) => {
       const state = req.query.state || 'active';
-      const filteredFlags = flagsList.filter(f => f.state === state);
-      res.json({ data: filteredFlags });
+      const createdBy = req.query.createdBy as string | undefined;
+      const tags = toArray(req.query.tags);
+      const maintainerIds = toArray(req.query.maintainerIds);
+
+      let filteredFlags = flagsList.filter(f => f.state === state);
+      if (createdBy) {
+        filteredFlags = filteredFlags.filter(f => f.createdBy === createdBy);
+      }
+      if (tags.length > 0) {
+        filteredFlags = filteredFlags.filter(f =>
+          tags.every(tag => (f.tags ?? []).includes(tag))
+        );
+      }
+      if (maintainerIds.length > 0) {
+        filteredFlags = filteredFlags.filter(f =>
+          maintainerIds.some(id => (f.maintainerIds ?? []).includes(id))
+        );
+      }
+
+      // The CLI always sends `limit`; fall back to a single full page otherwise.
+      const limit = req.query.limit
+        ? Number(req.query.limit)
+        : filteredFlags.length;
+      const offset = req.query.cursor ? Number(req.query.cursor) : 0;
+      const page = filteredFlags.slice(offset, offset + limit);
+      const nextOffset = offset + limit;
+      const next =
+        nextOffset < filteredFlags.length ? String(nextOffset) : null;
+
+      res.json({ data: page, pagination: { next } });
     }
   );
 
@@ -241,6 +336,7 @@ export function useFlags(
         f => f.id === flagIdOrSlug || f.slug === flagIdOrSlug
       );
       if (flagIndex !== -1) {
+        onUpdateFlag?.(req.body as UpdateFlagRequest);
         const flag = flagsList[flagIndex];
         const updatedFlag = {
           ...flag,
@@ -285,6 +381,147 @@ export function useFlags(
         res.status(204).send();
       } else {
         res.status(404).json({ error: { message: 'Flag not found' } });
+      }
+    }
+  );
+
+  // List segments
+  client.scenario.get(
+    '/v1/projects/:projectId/feature-flags/segments',
+    (_req, res) => {
+      res.json({ data: segmentsList });
+    }
+  );
+
+  // Get single segment
+  client.scenario.get(
+    '/v1/projects/:projectId/feature-flags/segments/:segmentIdOrSlug',
+    (req, res) => {
+      const { segmentIdOrSlug } = req.params;
+      const segment = segmentsList.find(
+        s => s.id === segmentIdOrSlug || s.slug === segmentIdOrSlug
+      );
+      if (segment) {
+        res.json(segment);
+      } else {
+        res.status(404).json({ error: { message: 'Segment not found' } });
+      }
+    }
+  );
+
+  // Create segment
+  client.scenario.put(
+    '/v1/projects/:projectId/feature-flags/segments',
+    (req, res) => {
+      const newSegment: Segment = {
+        id: `seg_${Date.now()}`,
+        slug: req.body.slug,
+        label: req.body.label,
+        description: req.body.description,
+        usedByFlags: [],
+        usedBySegments: [],
+        data: req.body.data,
+        hint: req.body.hint,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        createdBy: 'user_123',
+        projectId: req.params.projectId,
+        typeName: 'segment',
+      };
+      segmentsList.push(newSegment);
+      res.status(201).json(newSegment);
+    }
+  );
+
+  // Update segment
+  client.scenario.patch(
+    '/v1/projects/:projectId/feature-flags/segments/:segmentIdOrSlug',
+    (req, res) => {
+      const { segmentIdOrSlug } = req.params;
+      const segmentIndex = segmentsList.findIndex(
+        s => s.id === segmentIdOrSlug || s.slug === segmentIdOrSlug
+      );
+      if (segmentIndex === -1) {
+        res.status(404).json({ error: { message: 'Segment not found' } });
+        return;
+      }
+
+      const segment = segmentsList[segmentIndex];
+      const updatedSegment: Segment = {
+        ...segment,
+        ...req.body,
+        data: req.body.data || segment.data,
+        updatedAt: Date.now(),
+      };
+
+      if (req.body.operations) {
+        updatedSegment.data = applySegmentOperationsForMock(
+          updatedSegment.data,
+          req.body.operations
+        );
+      }
+
+      segmentsList[segmentIndex] = updatedSegment;
+      res.json(updatedSegment);
+    }
+  );
+
+  // Delete segment
+  client.scenario.delete(
+    '/v1/projects/:projectId/feature-flags/segments/:segmentIdOrSlug',
+    (req, res) => {
+      const { segmentIdOrSlug } = req.params;
+      const segmentIndex = segmentsList.findIndex(
+        s => s.id === segmentIdOrSlug || s.slug === segmentIdOrSlug
+      );
+      if (segmentIndex !== -1) {
+        const segment = segmentsList[segmentIndex];
+        if (
+          (segment.usedByFlags?.length ?? 0) > 0 ||
+          (segment.usedBySegments?.length ?? 0) > 0
+        ) {
+          const flags = (segment.usedByFlags ?? []).map(reference => {
+            const flag = flagsList.find(
+              item => item.id === reference || item.slug === reference
+            );
+            return flag
+              ? { id: flag.id, name: flag.slug, slug: flag.slug }
+              : { id: reference };
+          });
+          const segments = (segment.usedBySegments ?? []).map(reference => {
+            const usedBySegment = segmentsList.find(
+              item => item.id === reference || item.slug === reference
+            );
+            return usedBySegment
+              ? {
+                  id: usedBySegment.id,
+                  label: usedBySegment.label,
+                  name: usedBySegment.label,
+                  slug: usedBySegment.slug,
+                }
+              : { id: reference };
+          });
+          const message =
+            flags.length > 0 && segments.length > 0
+              ? 'Segment is still in use by flags and segments'
+              : flags.length > 0
+                ? 'Segment is still in use by flags'
+                : 'Segment is still in use by segments';
+
+          res.status(400).json({
+            error: {
+              code: 'SEGMENT_IN_USE',
+              message,
+              usedBy: { flags, segments },
+            },
+          });
+          return;
+        }
+
+        segmentsList.splice(segmentIndex, 1);
+        res.status(204).send();
+      } else {
+        res.status(404).json({ error: { message: 'Segment not found' } });
       }
     }
   );
@@ -347,5 +584,43 @@ export function useFlags(
     }
   );
 
-  return { flags: flagsList, sdkKeys: sdkKeysList };
+  return { flags: flagsList, sdkKeys: sdkKeysList, segments: segmentsList };
+}
+
+function toArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map(String);
+  }
+  if (typeof value === 'string') {
+    return [value];
+  }
+  return [];
+}
+
+function applySegmentOperationsForMock(
+  data: Segment['data'],
+  operations: SegmentMembershipOperation[]
+): Segment['data'] {
+  const next: Segment['data'] = {
+    rules: structuredClone(data.rules ?? []),
+    include: structuredClone(data.include ?? {}),
+    exclude: structuredClone(data.exclude ?? {}),
+  };
+
+  for (const operation of operations) {
+    const map = next[operation.field] ?? {};
+    const entityValues = map[operation.entity] ?? {};
+    const values = entityValues[operation.attribute] ?? [];
+    if (operation.action === 'add') {
+      entityValues[operation.attribute] = values.concat(operation.value);
+    } else {
+      entityValues[operation.attribute] = values.filter(
+        value => value.value !== operation.value.value
+      );
+    }
+    map[operation.entity] = entityValues;
+    next[operation.field] = map;
+  }
+
+  return next;
 }

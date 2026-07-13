@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption } from '../../util/arg-common';
+import { formatOption, projectOption } from '../../util/arg-common';
 
 export const addSubcommand = {
   name: 'add',
@@ -42,7 +42,7 @@ export const listSubcommand = {
   description: 'List all cron jobs for a project',
   default: true,
   arguments: [],
-  options: [formatOption],
+  options: [formatOption, projectOption],
   examples: [
     {
       name: 'List all cron jobs',
@@ -65,7 +65,7 @@ export const runSubcommand = {
       required: false,
     },
   ],
-  options: [],
+  options: [projectOption],
   examples: [
     {
       name: 'Trigger a specific cron job',

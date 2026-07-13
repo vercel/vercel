@@ -1,5 +1,73 @@
 # @vercel/next
 
+## 4.20.4
+
+### Patch Changes
+
+- 0f67a94: Include instrumentation for Node.js Middleware
+
+## 4.20.3
+
+### Patch Changes
+
+- 6dbc280: [next] Update to latest Next.js adapter
+
+## 4.20.2
+
+### Patch Changes
+
+- e05ed3c: Add support for stable Cache Components without experimental PPR
+
+## 4.20.1
+
+### Patch Changes
+
+- d538795: Revert update to latest Next.js adapter
+
+## 4.20.0
+
+### Minor Changes
+
+- 68ed45c: Add opt-in handling for routes that individually do not fit the default uncompressed function budget.
+
+  When `NEXT_EXPERIMENTAL_LARGE_FUNCTIONS` is set, any route whose own uncompressed size exceeds the default per-runtime packing budget (e.g. 225 MiB on Node) is emitted as its own function under a higher 5 GiB ceiling rather than bundled. Such routes are never bundled together or with normal routes; the default bundling pool is unchanged.
+
+  The gate is read at build time and defaults to off, so behavior is unchanged unless the env var is set. It relies on the upstream build system supporting functions above the default uncompressed limit.
+
+## 4.19.1
+
+### Patch Changes
+
+- bc6f22f: Upgrade to the latest Next.js adapter
+
+## 4.19.0
+
+### Minor Changes
+
+- 01e18e8: Add `hasFallback`, `htmlSize`, and `isDynamicRoute` to `Prerender`
+
+  These optional fields surface per-route PPR shell metadata in the Build Output so consumers can classify prerenders (e.g. full shell vs. empty shell vs. concrete prerender):
+
+  - `hasFallback` — whether a dynamic route template had a static fallback (`undefined` for concrete prerenders)
+  - `htmlSize` — byte size of the prerendered `.html` shell (`0` for an empty shell, `undefined` when there's no `.html`)
+  - `isDynamicRoute` — whether the entry came from a dynamic route template rather than a concrete prerender
+
+## 4.18.0
+
+### Minor Changes
+
+- 78e5d4f: Add project manifest to node frontend builders.
+
+## 4.17.6
+
+### Patch Changes
+
+- 4e849dd: Add a per-route `hasPostponed` signal to `Prerender`.
+
+  `@vercel/build-utils` exposes a new optional `hasPostponed?: boolean` field on `Prerender` / `PrerenderOptions`. It is a tri-state: `true` when the route's `.meta` postponed state is present (React suspended during the build-time prerender), `false` when the framework prerendered a Prerender route without postponing, and `undefined` when the framework did not provide the signal.
+
+  `@vercel/next` populates it for app-router PPR routes (computed from the route's postponed state) and leaves it `undefined` for pages-router and other non-app-router prerenders. This is an additive, finer-grained signal — it does not change the existing `chain` / `experimentalStreamingLambdaPath` behavior — so downstream consumers can distinguish a route that actually postponed from one that has PPR machinery but fully prerendered (e.g. under `cacheComponents: true`).
+
 ## 4.17.5
 
 ### Patch Changes

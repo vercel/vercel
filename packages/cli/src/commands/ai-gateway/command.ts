@@ -1,4 +1,5 @@
 import { packageName } from '../../util/pkg-name';
+import { formatOption, yesOption } from '../../util/arg-common';
 
 export const createSubcommand = {
   name: 'create',
@@ -61,12 +62,374 @@ export const apiKeysSubcommand = {
   examples: [],
 } as const;
 
+export const rulesAddSubcommand = {
+  name: 'add',
+  aliases: [],
+  description: 'Add an AI Gateway routing rule',
+  arguments: [],
+  options: [
+    {
+      name: 'type',
+      shorthand: null,
+      type: String,
+      argument: 'TYPE',
+      deprecated: false,
+      description: 'Rule type: rewrite or deny',
+    },
+    {
+      name: 'source',
+      shorthand: null,
+      type: String,
+      argument: 'MODEL',
+      deprecated: false,
+      description: 'Model the rule matches (e.g. anthropic/claude-sonnet-4.5)',
+    },
+    {
+      name: 'destination',
+      shorthand: null,
+      type: String,
+      argument: 'MODEL',
+      deprecated: false,
+      description: 'Target model a rewrite rule routes to',
+    },
+    {
+      name: 'reason',
+      shorthand: null,
+      type: String,
+      argument: 'TEXT',
+      deprecated: false,
+      description: 'Reason surfaced when the rule applies',
+    },
+    {
+      name: 'description',
+      shorthand: null,
+      type: String,
+      argument: 'TEXT',
+      deprecated: false,
+      description: 'Human-readable description of the rule',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Rewrite one model to another',
+      value: `${packageName} ai-gateway rules add --type rewrite --source anthropic/claude-fable-5 --destination anthropic/claude-opus-4.8`,
+    },
+    {
+      name: 'Deny a model',
+      value: `${packageName} ai-gateway rules add --type deny --source openai/gpt-4o`,
+    },
+  ],
+} as const;
+
+export const rulesListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List AI Gateway routing rules',
+  arguments: [],
+  options: [
+    {
+      name: 'include-disabled',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Include disabled rules',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'List routing rules',
+      value: `${packageName} ai-gateway rules ls`,
+    },
+  ],
+} as const;
+
+export const rulesEditSubcommand = {
+  name: 'edit',
+  aliases: [],
+  description: 'Edit an AI Gateway routing rule',
+  arguments: [{ name: 'ruleId', required: true }],
+  options: [
+    {
+      name: 'enable',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Enable the rule',
+    },
+    {
+      name: 'disable',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Disable the rule',
+    },
+    {
+      name: 'destination',
+      shorthand: null,
+      type: String,
+      argument: 'MODEL',
+      deprecated: false,
+      description: 'Target model a rewrite rule routes to',
+    },
+    {
+      name: 'reason',
+      shorthand: null,
+      type: String,
+      argument: 'TEXT',
+      deprecated: false,
+      description: 'Reason surfaced when the rule applies',
+    },
+    {
+      name: 'description',
+      shorthand: null,
+      type: String,
+      argument: 'TEXT',
+      deprecated: false,
+      description: 'Human-readable description of the rule',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Disable a rule',
+      value: `${packageName} ai-gateway rules edit rule_123 --disable`,
+    },
+  ],
+} as const;
+
+export const rulesRemoveSubcommand = {
+  name: 'remove',
+  aliases: ['rm', 'delete'],
+  description: 'Remove an AI Gateway routing rule',
+  arguments: [{ name: 'ruleId', required: true }],
+  options: [yesOption, formatOption],
+  examples: [
+    {
+      name: 'Remove a rule',
+      value: `${packageName} ai-gateway rules rm rule_123`,
+    },
+  ],
+} as const;
+
+export const rulesSubcommand = {
+  name: 'rules',
+  aliases: [],
+  description:
+    'Manage AI Gateway routing rules (Beta).\n\nAI Gateway routing rules are in beta and may change before general availability. Avoid relying on them in production.',
+  arguments: [],
+  subcommands: [
+    rulesAddSubcommand,
+    rulesListSubcommand,
+    rulesEditSubcommand,
+    rulesRemoveSubcommand,
+  ],
+  options: [],
+  examples: [],
+} as const;
+
+export const setupSubcommand = {
+  name: 'setup',
+  aliases: [],
+  description:
+    'Connect local coding agents (Claude Code, Codex, OpenCode, Pi) to the AI Gateway',
+  arguments: [],
+  options: [
+    {
+      name: 'agent',
+      shorthand: null,
+      type: [String],
+      argument: 'NAME',
+      deprecated: false,
+      description:
+        'Coding agent to configure, repeatable (claude-code, codex, opencode, pi)',
+    },
+    {
+      name: 'all',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Configure every supported coding agent',
+    },
+    {
+      name: 'key',
+      shorthand: null,
+      type: String,
+      argument: 'KEY',
+      deprecated: false,
+      description: 'Use an existing AI Gateway API key instead of creating one',
+    },
+    {
+      name: 'budget',
+      shorthand: null,
+      type: Number,
+      argument: 'AMOUNT',
+      deprecated: false,
+      description:
+        'Quota budget in dollars for a newly created key (minimum 1)',
+    },
+    {
+      name: 'refresh-period',
+      shorthand: null,
+      type: String,
+      argument: 'PERIOD',
+      deprecated: false,
+      description:
+        'Quota refresh cadence for a new key: daily, weekly, monthly, or none',
+    },
+    {
+      name: 'include-byok',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Include BYOK usage in the new key quota',
+    },
+    {
+      name: 'expiration',
+      shorthand: null,
+      type: String,
+      argument: 'PERIOD',
+      deprecated: false,
+      description:
+        'Expiry for a new key: 7d, 30d, 60d, 90d, 1y, or none (default: none)',
+    },
+    {
+      name: 'name',
+      shorthand: null,
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+      description: 'Name for a newly created API key',
+    },
+    {
+      name: 'reconfigure',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Re-run even if already configured, to rotate the key or switch team',
+    },
+    {
+      name: 'dry-run',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Show what would change without writing any files',
+    },
+    {
+      name: 'no-backup',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Do not write .bak backups of changed files',
+    },
+    {
+      name: 'no-keychain',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Always write the key into config files instead of the macOS Keychain',
+    },
+    {
+      name: 'agent-config',
+      shorthand: null,
+      type: [String],
+      argument: 'AGENT=PATH',
+      deprecated: false,
+      description:
+        "Override an agent's config file path, e.g. claude-code=/path/settings.json (repeatable)",
+    },
+    {
+      name: 'shell-rc',
+      shorthand: null,
+      type: String,
+      argument: 'PATH',
+      deprecated: false,
+      description: 'Shell rc file to write the env exports into',
+    },
+    yesOption,
+  ],
+  examples: [
+    {
+      name: 'Connect all detected coding agents (creates a key)',
+      value: `${packageName} ai-gateway coding-agents setup`,
+    },
+    {
+      name: 'Connect specific agents with a budgeted key',
+      value: `${packageName} ai-gateway coding-agents setup --agent claude-code --budget 500 --refresh-period monthly`,
+    },
+    {
+      name: 'Rotate the key on an already-configured setup',
+      value: `${packageName} ai-gateway coding-agents setup --reconfigure`,
+    },
+    {
+      name: 'Reuse an existing key and preview changes only',
+      value: `${packageName} ai-gateway coding-agents setup --key <key> --dry-run`,
+    },
+  ],
+} as const;
+
+export const codingAgentsSubcommand = {
+  name: 'coding-agents',
+  aliases: [],
+  description: 'Connect local coding agents to the AI Gateway',
+  arguments: [],
+  subcommands: [setupSubcommand],
+  options: [],
+  examples: [],
+} as const;
+
+export const modelsListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List AI Gateway models',
+  arguments: [],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'List available models',
+      value: `${packageName} ai-gateway models ls`,
+    },
+  ],
+} as const;
+
+export const modelsEndpointsSubcommand = {
+  name: 'endpoints',
+  aliases: [],
+  description: 'List provider endpoints for an AI Gateway model',
+  arguments: [{ name: 'model', required: true }],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'List provider endpoints for a model',
+      value: `${packageName} ai-gateway models endpoints anthropic/claude-opus-4.8`,
+    },
+  ],
+} as const;
+
+export const modelsSubcommand = {
+  name: 'models',
+  aliases: [],
+  description: 'Manage AI Gateway models',
+  arguments: [],
+  subcommands: [modelsListSubcommand, modelsEndpointsSubcommand],
+  options: [],
+  examples: [],
+} as const;
+
 export const aiGatewayCommand = {
   name: 'ai-gateway',
   aliases: [],
   description: 'Manage AI Gateway resources',
   arguments: [],
-  subcommands: [apiKeysSubcommand],
+  subcommands: [
+    apiKeysSubcommand,
+    rulesSubcommand,
+    codingAgentsSubcommand,
+    modelsSubcommand,
+  ],
   options: [],
   examples: [],
 } as const;

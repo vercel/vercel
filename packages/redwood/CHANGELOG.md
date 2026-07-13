@@ -1,5 +1,11 @@
 # @vercel/redwood
 
+## 2.5.0
+
+### Minor Changes
+
+- 78e5d4f: Add project manifest to node frontend builders.
+
 ## 2.4.15
 
 ### Patch Changes

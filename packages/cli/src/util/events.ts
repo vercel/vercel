@@ -2,11 +2,13 @@
 import { URLSearchParams } from 'url';
 
 // Packages
+import type { DeploymentAliasAssignedEvent } from '@vercel/client';
 import retry from 'async-retry';
 import jsonlines from 'jsonlines';
 import { eraseLines } from 'ansi-escapes';
 
 import type Client from './client';
+import { toNodeReadable } from './fetch';
 import getDeployment from './get-deployment';
 import getScope from './get-scope';
 
@@ -24,6 +26,7 @@ export interface FindOpts {
 export interface PrintEventsOptions {
   mode: 'deploy' | string;
   onEvent: (event: BuildLog) => void;
+  onAliasAssigned?: (event: DeploymentAliasAssignedEvent) => void;
   quiet?: boolean;
   findOpts: FindOpts;
 }
@@ -31,7 +34,7 @@ export interface PrintEventsOptions {
 async function printEvents(
   client: Client,
   urlOrDeploymentId: string,
-  { mode, onEvent, quiet, findOpts }: PrintEventsOptions,
+  { mode, onEvent, onAliasAssigned, quiet, findOpts }: PrintEventsOptions,
   abortController?: AbortController
 ) {
   const { log, debug } = output;
@@ -60,12 +63,11 @@ async function printEvents(
       try {
         const eventsRes = await client.fetch(eventsUrl, {
           json: false,
-          // @ts-expect-error: typescript is getting confused with the signal types from node (web & server) and node-fetch (server only)
           signal: abortController?.signal,
         });
 
         if (eventsRes.ok) {
-          const readable = eventsRes.body;
+          const readable = toNodeReadable(eventsRes.body);
 
           // handle the event stream and make the promise get rejected
           // if errors occur so we can retry
@@ -112,6 +114,13 @@ async function printEvents(
             let latestLogDate = 0;
 
             const onData = (data: any) => {
+              if (data.type === 'alias-assigned') {
+                if (data.deploymentId === urlOrDeploymentId) {
+                  onAliasAssigned?.(data);
+                }
+                return;
+              }
+
               const { event, payload, date } = data;
               if (event === 'state' && payload.value === 'READY') {
                 if (mode === 'deploy') {
@@ -149,16 +158,31 @@ async function printEvents(
                 since: latestLogDate,
               };
 
-              setTimeout(() => {
+              const retryTimeout = setTimeout(() => {
+                abortController?.signal.removeEventListener('abort', onAbort);
                 if (abortController?.signal.aborted) return;
                 // retry without maximum amount nor clear past logs etc
-                printEvents(client, urlOrDeploymentId, {
-                  mode,
-                  onEvent,
-                  quiet,
-                  findOpts: retryFindOpts,
-                }).then(resolve, reject);
+                printEvents(
+                  client,
+                  urlOrDeploymentId,
+                  {
+                    mode,
+                    onEvent,
+                    onAliasAssigned,
+                    quiet,
+                    findOpts: retryFindOpts,
+                  },
+                  abortController
+                ).then(resolve, reject);
               }, 2000);
+
+              const onAbort = () => {
+                clearTimeout(retryTimeout);
+                finish();
+              };
+              abortController?.signal.addEventListener('abort', onAbort, {
+                once: true,
+              });
             };
 
             stream.on('end', finish);
@@ -183,6 +207,10 @@ async function printEvents(
     },
     {
       retries: 4,
+      // Don't let deploy stream retry timers keep the CLI alive after polling
+      // wins. Standalone log consumers await these retries, so their timers
+      // must remain referenced.
+      unref: Boolean(onAliasAssigned),
       onRetry: err => {
         // if we are retrying, we clear past logs
         if (!quiet && o) {

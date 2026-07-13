@@ -1,4 +1,5 @@
 import os from 'node:os';
+import { spawn } from 'node:child_process';
 import {
   describe,
   expect,
@@ -12,6 +13,14 @@ import {
 import { TelemetryEventStore } from '../../src/util/telemetry';
 import { RootTelemetryClient } from '../../src/util/telemetry/root';
 import output from '../../src/output-manager';
+
+vi.mock('node:child_process', async importOriginal => {
+  const actual = await importOriginal<typeof import('node:child_process')>();
+  return {
+    ...actual,
+    spawn: vi.fn(() => ({ unref: vi.fn() })),
+  };
+});
 
 import './test/mocks/matchers/index';
 
@@ -210,6 +219,50 @@ describe('main', () => {
             );
           });
         });
+      });
+    });
+
+    describe('sendToSubprocess', () => {
+      const payload = { headers: {}, body: [] };
+
+      beforeEach(() => {
+        vi.mocked(spawn).mockClear();
+      });
+
+      it('re-invokes the CLI script through Node when running from source', async () => {
+        const telemetryEventStore = new TelemetryEventStore({
+          isDebug: false,
+          config: {},
+        });
+
+        await telemetryEventStore.sendToSubprocess(payload, false);
+
+        expect(spawn).toHaveBeenCalledTimes(1);
+        const [binary, args] = vi.mocked(spawn).mock.calls[0];
+        expect(binary).toBe(process.argv[0]);
+        expect(args).toEqual([
+          process.argv[1],
+          'telemetry',
+          'flush',
+          JSON.stringify(payload),
+        ]);
+      });
+
+      it('omits the script path when running as the native binary', async () => {
+        // In the standalone binary, process.argv[1] is a virtual snapshot
+        // path; passing it as an argument would be parsed as a deploy path.
+        vi.stubEnv('VERCEL_VC_NATIVE', '1');
+        const telemetryEventStore = new TelemetryEventStore({
+          isDebug: false,
+          config: {},
+        });
+
+        await telemetryEventStore.sendToSubprocess(payload, false);
+
+        expect(spawn).toHaveBeenCalledTimes(1);
+        const [binary, args] = vi.mocked(spawn).mock.calls[0];
+        expect(binary).toBe(process.execPath);
+        expect(args).toEqual(['telemetry', 'flush', JSON.stringify(payload)]);
       });
     });
   });

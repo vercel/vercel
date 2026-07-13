@@ -10,7 +10,9 @@ minimumReleaseAge: 2880 # 2 days
 
 minimumReleaseAgeExclude:
   - '@next/*'
+  - '@next-community/adapter-vercel'
   - '@turbo/*'
   - '@vercel/*'
   - 'next'
+  - 'sandbox'
   - 'turbo'

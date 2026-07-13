@@ -225,6 +225,39 @@ describe('connex token', () => {
     expect(exitCode).toBe(1);
   });
 
+  it('should forward --scopes and --installation-id into the authorize URL', async () => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
+      res.statusCode = 422;
+      res.json({
+        error: {
+          code: 'user_authorization_required',
+          message: 'User authorization required',
+        },
+      });
+    });
+
+    client.setArgv(
+      'connect',
+      'token',
+      'scl_abc123',
+      '--scopes',
+      'chat:write,channels:read',
+      '--installation-id',
+      'inst_42'
+    );
+    (client.stdout as any).isTTY = false;
+
+    const exitCode = await connect(client);
+
+    // Params follow tokenParams insertion order (installationId, then
+    // scopes); query-param order is not semantically significant. scopes are
+    // comma-joined; URLSearchParams encodes the colon as %3A and comma as %2C.
+    await expect(client.stderr).toOutput(
+      'installationId=inst_42&scopes=chat%3Awrite%2Cchannels%3Aread'
+    );
+    expect(exitCode).toBe(1);
+  });
+
   it('should fail fast and print install URL when stdin is not a TTY', async () => {
     client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
       res.statusCode = 422;

@@ -114,6 +114,11 @@ export class DeployTelemetryClient
       this.trackCliFlag('no-wait');
     }
   }
+  trackCliFlagDry(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('dry');
+    }
+  }
   trackCliFlagPrebuilt(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('prebuilt');
@@ -174,17 +179,6 @@ export class DeployTelemetryClient
         option: 'format',
         value: format,
       });
-    }
-  }
-
-  trackCliFlagFunctionsBeta(flag: boolean | undefined) {
-    if (flag) {
-      this.trackCliFlag('functions-beta');
-    }
-  }
-  trackCliFlagNoFunctionsBeta(flag: boolean | undefined) {
-    if (flag) {
-      this.trackCliFlag('no-functions-beta');
     }
   }
 

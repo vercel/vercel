@@ -1,5 +1,27 @@
 # vercel-runtime
 
+## 0.16.0
+
+### Minor Changes
+
+- ee389a1: Support WebSockets for WSGI apps (e.g. Flask via `flask-sock`). The runtime now
+  exposes the raw connection socket in the WSGI `environ` as `werkzeug.socket` /
+  `gunicorn.socket` for WebSocket upgrade requests, and ends the request lifecycle
+  once the `101` handshake is written so the platform can begin bidirectional
+  streaming — matching the ASGI `websocket.accept` behavior.
+
+## 0.15.0
+
+### Minor Changes
+
+- fe6d98b: Add WebSocket support for Python ASGI applications via vendored wsproto
+
+## 0.14.2
+
+### Patch Changes
+
+- 76aeb97: Decode `Transfer-Encoding: chunked` WSGI request bodies that arrive without a `Content-Length`, and strip the hop-by-hop framing header from the WSGI environ (PEP 3333).
+
 ## 0.14.1
 
 ### Patch Changes

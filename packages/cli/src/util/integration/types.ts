@@ -85,6 +85,8 @@ export interface IntegrationProduct {
   guides?: IntegrationGuide[];
   snippets?: IntegrationSnippet[];
   resourceLinks?: IntegrationResourceLink[];
+  /** Public GitHub `SKILL.md` links used to suggest `npx skills add …` after provisioning. */
+  agentSkills?: string[];
 }
 
 type InstallationType = 'marketplace' | 'external';
@@ -199,7 +201,7 @@ interface AutoProvisionResource {
   externalResourceId: string;
   name: string;
   status: string;
-  ownership?: unknown;
+  ownership?: 'sandbox' | 'owned' | 'linked';
   secretKeys?: string[];
 }
 

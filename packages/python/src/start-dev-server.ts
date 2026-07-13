@@ -1,5 +1,11 @@
 import { spawn } from 'child_process';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import {
+  existsSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+  mkdirSync,
+} from 'fs';
 import { join, delimiter, dirname, basename } from 'path';
 import type { ChildProcess } from 'child_process';
 import type { PythonFramework, StartDevServer } from '@vercel/build-utils';
@@ -25,7 +31,7 @@ import {
   getVenvPythonBin,
   getVenvBinDir,
 } from './utils';
-import { findUvBinary, getProtectedUvEnv } from './uv';
+import { findUvBinary, getProtectedUvEnv, checkUvBinaryVersion } from './uv';
 import {
   discoverPackage,
   detectInstallSource,
@@ -124,7 +130,7 @@ async function getReachableHost(port: number): Promise<string | false> {
   return results.find(Boolean) || false;
 }
 
-interface SyncDependenciesOptions {
+interface DevPythonOptions {
   workPath: string;
   uvPath: string | null;
   pythonBin: string;
@@ -133,6 +139,33 @@ interface SyncDependenciesOptions {
   onStderr?: (buf: Buffer) => void;
 }
 
+async function dedupePendingOperation<T>(
+  operations: Map<string, Promise<T>>,
+  key: string,
+  operation: () => Promise<T>
+): Promise<T> {
+  const existing = operations.get(key);
+  if (existing) {
+    return existing;
+  }
+
+  const pending = operation();
+  operations.set(key, pending);
+
+  try {
+    return await pending;
+  } finally {
+    if (operations.get(key) === pending) {
+      operations.delete(key);
+    }
+  }
+}
+
+// Multiple services in one workspace share a managed virtualenv and manifest.
+// Keep their startup paths from mutating those shared resources concurrently.
+const PENDING_MANAGED_VENV_CREATIONS = new Map<string, Promise<void>>();
+const PENDING_DEPENDENCY_SYNCS = new Map<string, Promise<void>>();
+
 async function syncDependencies({
   workPath,
   uvPath,
@@ -140,7 +173,7 @@ async function syncDependencies({
   env,
   onStdout,
   onStderr,
-}: SyncDependenciesOptions): Promise<void> {
+}: DevPythonOptions): Promise<void> {
   const pythonPackage = await discoverPackage({
     entrypointDir: workPath,
     rootDir: workPath,
@@ -309,215 +342,101 @@ async function runSync({
   });
 }
 
-interface InstallVercelRuntimeOptions {
-  workPath: string;
-  uvPath: string | null;
-  pythonBin: string;
-  env: NodeJS.ProcessEnv;
-  onStdout?: (buf: Buffer) => void;
-  onStderr?: (buf: Buffer) => void;
+// Services in one workspace share this install target. Besides deduplicating
+// concurrent installs, remember successful installs for the dev session so a
+// later service does not rewrite site-packages underneath running workers.
+const PENDING_INSTALLS = new Map<string, Promise<void>>();
+const COMPLETED_INSTALLS = new Set<string>();
+
+interface InjectedPackageSpec {
+  name: 'vercel-runtime' | 'vercel-workers';
+  pinnedVersion: string;
+  envOverride: string | undefined;
 }
 
-const PENDING_RUNTIME_INSTALLS = new Map<string, Promise<void>>();
-const PENDING_WORKERS_INSTALLS = new Map<string, Promise<void>>();
-
-async function installVercelRuntime({
-  workPath,
-  uvPath,
-  pythonBin,
-  env,
-  onStdout,
-  onStderr,
-}: InstallVercelRuntimeOptions): Promise<void> {
-  const targetDir = join(workPath, '.vercel', 'python');
-
-  let pending = PENDING_RUNTIME_INSTALLS.get(targetDir);
-  if (!pending) {
-    pending = doInstallVercelRuntime({
-      targetDir,
-      workPath,
-      uvPath,
-      pythonBin,
-      env,
-      onStdout,
-      onStderr,
-    });
-    PENDING_RUNTIME_INSTALLS.set(targetDir, pending);
-    pending.finally(() => PENDING_RUNTIME_INSTALLS.delete(targetDir));
-  }
-  await pending;
-}
-
-async function doInstallVercelRuntime({
-  targetDir,
-  workPath,
-  uvPath,
-  pythonBin,
-  env,
-  onStdout,
-  onStderr,
-}: InstallVercelRuntimeOptions & { targetDir: string }): Promise<void> {
-  mkdirSync(targetDir, { recursive: true });
-
-  // Check if we're running from a dev build
-  // so that we can use the local version instead
-  // of installing from pypi
-  const localRuntimeDir = join(
-    __dirname,
-    '..',
-    '..',
-    '..',
-    'python',
-    'vercel-runtime'
-  );
-  const isLocalDev = existsSync(join(localRuntimeDir, 'pyproject.toml'));
-
-  const runtimeDep =
-    env.VERCEL_RUNTIME_PYTHON ||
-    (isLocalDev
-      ? localRuntimeDir
-      : `vercel-runtime==${VERCEL_RUNTIME_VERSION}`);
-
-  // Skip install if the exact pypi version is already present,
-  // local dev builds and explicitly specified version
-  // always reinstall to pick up possible source changes
-  if (!isLocalDev && !env.VERCEL_RUNTIME_PYTHON) {
-    const distInfo = join(
-      targetDir,
-      `vercel_runtime-${VERCEL_RUNTIME_VERSION}.dist-info`
+function hasInstalledDistribution(targetDir: string, packageName: string) {
+  const prefix = `${packageName.replace('-', '_')}-`;
+  try {
+    return readdirSync(targetDir).some(
+      entry => entry.startsWith(prefix) && entry.endsWith('.dist-info')
     );
-    if (existsSync(distInfo)) {
-      debug(
-        `vercel-runtime ${VERCEL_RUNTIME_VERSION} already installed, skipping`
-      );
-      return;
-    }
+  } catch {
+    return false;
   }
+}
 
-  debug(
-    `Installing vercel-runtime into ${targetDir} (type: ${isLocalDev ? 'local' : 'pypi'}, source: ${runtimeDep})`
-  );
+async function installInjectedDevPackage(
+  pkg: InjectedPackageSpec,
+  opts: DevPythonOptions
+): Promise<void> {
+  const targetDir = join(opts.workPath, '.vercel', 'python');
+  const source = pkg.envOverride || pkg.pinnedVersion;
+  const key = `${targetDir}:${pkg.name}:${source}`;
 
-  const pip = uvPath
-    ? { cmd: uvPath, prefix: ['pip', 'install'] }
-    : { cmd: pythonBin, prefix: ['-m', 'pip', 'install'] };
+  if (
+    COMPLETED_INSTALLS.has(key) &&
+    hasInstalledDistribution(targetDir, pkg.name)
+  ) {
+    return;
+  }
+  COMPLETED_INSTALLS.delete(key);
 
-  const spawnArgs = [...pip.prefix, '--target', targetDir, runtimeDep];
-
-  await new Promise<void>((resolve, reject) => {
-    const child = spawn(pip.cmd, spawnArgs, {
-      cwd: workPath,
-      env: getProtectedUvEnv(env),
-      stdio: ['inherit', 'pipe', 'pipe'],
-    });
-
-    child.stdout?.on('data', (data: Buffer) => {
-      if (onStdout) {
-        onStdout(data);
-      } else {
-        debug(data.toString());
-      }
-    });
-
-    child.stderr?.on('data', (data: Buffer) => {
-      if (onStderr) {
-        onStderr(data);
-      } else {
-        debug(data.toString());
-      }
-    });
-
-    child.on('error', reject);
-    child.on('exit', (code, signal) => {
-      if (code === 0) {
-        resolve();
-      } else {
-        reject(
-          new Error(
-            `Installing vercel-runtime failed with code ${code}, signal ${signal}`
-          )
-        );
-      }
-    });
+  await dedupePendingOperation(PENDING_INSTALLS, key, async () => {
+    await doInstallInjectedDevPackage(pkg, { ...opts, targetDir });
+    COMPLETED_INSTALLS.add(key);
   });
 }
 
-async function installVercelWorkers({
-  workPath,
-  uvPath,
-  pythonBin,
-  env,
-  onStdout,
-  onStderr,
-}: InstallVercelRuntimeOptions): Promise<void> {
-  const targetDir = join(workPath, '.vercel', 'python');
-
-  let pending = PENDING_WORKERS_INSTALLS.get(targetDir);
-  if (!pending) {
-    pending = doInstallVercelWorkers({
-      targetDir,
-      workPath,
-      uvPath,
-      pythonBin,
-      env,
-      onStdout,
-      onStderr,
-    });
-    PENDING_WORKERS_INSTALLS.set(targetDir, pending);
-    pending.finally(() => PENDING_WORKERS_INSTALLS.delete(targetDir));
-  }
-  await pending;
-}
-
-async function doInstallVercelWorkers({
-  targetDir,
-  workPath,
-  uvPath,
-  pythonBin,
-  env,
-  onStdout,
-  onStderr,
-}: InstallVercelRuntimeOptions & { targetDir: string }): Promise<void> {
+async function doInstallInjectedDevPackage(
+  pkg: InjectedPackageSpec,
+  opts: DevPythonOptions & { targetDir: string }
+): Promise<void> {
+  const { targetDir, workPath, uvPath, pythonBin, env, onStdout, onStderr } =
+    opts;
   mkdirSync(targetDir, { recursive: true });
 
-  const localWorkersDir = join(
-    __dirname,
-    '..',
-    '..',
-    '..',
-    'python',
-    'vercel-workers'
-  );
-  const isLocalDev = existsSync(join(localWorkersDir, 'pyproject.toml'));
+  const localDir = join(__dirname, '..', '..', '..', 'python', pkg.name);
+  const isLocalDev = existsSync(join(localDir, 'pyproject.toml'));
 
-  const workersDep =
-    env.VERCEL_WORKERS_PYTHON ||
-    (isLocalDev
-      ? localWorkersDir
-      : `vercel-workers==${VERCEL_WORKERS_VERSION}`);
+  const dep =
+    pkg.envOverride ||
+    (isLocalDev ? localDir : `${pkg.name}==${pkg.pinnedVersion}`);
 
-  if (!isLocalDev && !env.VERCEL_WORKERS_PYTHON) {
+  // Skip install if the exact pypi version is already present. Local dev
+  // builds and overrides always reinstall to pick up possible source changes.
+  if (!isLocalDev && !pkg.envOverride) {
+    const distInfoName = pkg.name.replace('-', '_');
     const distInfo = join(
       targetDir,
-      `vercel_workers-${VERCEL_WORKERS_VERSION}.dist-info`
+      `${distInfoName}-${pkg.pinnedVersion}.dist-info`
     );
     if (existsSync(distInfo)) {
-      debug(
-        `vercel-workers ${VERCEL_WORKERS_VERSION} already installed, skipping`
-      );
+      debug(`${pkg.name} ${pkg.pinnedVersion} already installed, skipping`);
       return;
     }
   }
 
   debug(
-    `Installing vercel-workers into ${targetDir} (type: ${isLocalDev ? 'local' : 'pypi'}, source: ${workersDep})`
+    `Installing ${pkg.name} into ${targetDir} (type: ${isLocalDev ? 'local' : 'pypi'}, source: ${dep})`
   );
 
   const pip = uvPath
     ? { cmd: uvPath, prefix: ['pip', 'install'] }
     : { cmd: pythonBin, prefix: ['-m', 'pip', 'install'] };
 
-  const spawnArgs = [...pip.prefix, '--target', targetDir, workersDep];
+  // Override exclude-newer so a project-level date constraint doesn't
+  // block installation of a recently-published injected package.
+  const excludeOverride = uvPath
+    ? ['--exclude-newer-package', `${pkg.name}=false`]
+    : [];
+
+  const spawnArgs = [
+    ...pip.prefix,
+    '--target',
+    targetDir,
+    ...excludeOverride,
+    dep,
+  ];
 
   await new Promise<void>((resolve, reject) => {
     const child = spawn(pip.cmd, spawnArgs, {
@@ -549,7 +468,7 @@ async function doInstallVercelWorkers({
       } else {
         reject(
           new Error(
-            `Installing vercel-workers failed with code ${code}, signal ${signal}`
+            `Installing ${pkg.name} failed with code ${code}, signal ${signal}`
           )
         );
       }
@@ -694,6 +613,15 @@ async function getMultiServicePythonRunner(
   systemPython: string,
   uvPath: string | null
 ): Promise<PythonRunner> {
+  const venvPath = join(workPath, '.venv');
+
+  // A sibling service may already be creating this workspace's virtualenv.
+  // Wait before probing it so we never observe a partially-created environment.
+  const pendingCreation = PENDING_MANAGED_VENV_CREATIONS.get(venvPath);
+  if (pendingCreation) {
+    await pendingCreation;
+  }
+
   // Use an existing .venv/venv if present and allowed (single Python service in a project).
   const { pythonCmd, venvRoot } = useVirtualEnv(workPath, env, systemPython);
   if (venvRoot) {
@@ -701,14 +629,16 @@ async function getMultiServicePythonRunner(
     return { command: pythonCmd, args: [] };
   }
 
-  // Create a per-service .venv, so deps are managed separately.
-  const venvPath = join(workPath, '.venv');
-  await ensureVenv({
-    pythonVersion: { pythonPath: systemPython },
-    venvPath,
-    uvPath,
-    quiet: true,
-  });
+  // Create one managed .venv per workspace. Parallel services reuse the same
+  // in-flight creation rather than invoking uv against the directory together.
+  await dedupePendingOperation(PENDING_MANAGED_VENV_CREATIONS, venvPath, () =>
+    ensureVenv({
+      pythonVersion: { pythonPath: systemPython },
+      venvPath,
+      uvPath,
+      quiet: true,
+    })
+  );
   debug(`Created virtualenv at ${venvPath} for multi-service dev`);
 
   const pythonBin = getVenvPythonBin(venvPath);
@@ -778,8 +708,8 @@ export const startDevServer: StartDevServer = async opts => {
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
   const entrypoint = rawEntrypoint === '<detect>' ? undefined : rawEntrypoint;
 
-  // For schedule-triggered job and worker services, use the raw entrypoint directly, because
-  // they don't export app/application so standard detection would skip them.
+  // For non-web background processes, use the raw entrypoint directly because
+  // they don't export app/application, so standard detection would skip them.
   let resolved: PythonEntrypoint | undefined;
   const handlerFunction =
     typeof config?.handlerFunction === 'string'
@@ -800,14 +730,15 @@ export const startDevServer: StartDevServer = async opts => {
               : handlerFunction,
         }
       : undefined,
-    service
+    service,
+    opts.repoRootPath
   );
+  let hookResult: Awaited<ReturnType<typeof runFrameworkHook>> | undefined;
   if (detected?.entrypoint) {
     resolved = detected.entrypoint;
   } else {
-    const hookResult = await runFrameworkHook(framework, {
+    hookResult = await runFrameworkHook(framework, {
       pythonEnv: env,
-      projectDir: join(workPath, detected?.baseDir ?? ''),
       workPath,
       entrypoint,
       detected: detected ?? undefined,
@@ -849,6 +780,9 @@ export const startDevServer: StartDevServer = async opts => {
   try {
     const { pythonPath: systemPython } = getDefaultPythonVersion(meta);
     const uvPath = await findUvBinary(systemPython);
+    if (uvPath) {
+      checkUvBinaryVersion(uvPath);
+    }
     const venv = isInVirtualEnv();
     const serviceCount = (meta.serviceCount as number | undefined) ?? 0;
     const pythonServiceCount =
@@ -912,6 +846,15 @@ export const startDevServer: StartDevServer = async opts => {
       }
     }
 
+    const devOpts: DevPythonOptions = {
+      workPath,
+      uvPath,
+      pythonBin: spawnCommand,
+      env,
+      onStdout,
+      onStderr,
+    };
+
     if (meta.syncDependencies) {
       const gray = '\x1b[90m';
       const reset = '\x1b[0m';
@@ -922,34 +865,31 @@ export const startDevServer: StartDevServer = async opts => {
         console.log(syncMessage);
       }
 
-      await syncDependencies({
-        workPath,
-        uvPath,
-        pythonBin: spawnCommand,
-        env,
-        onStdout,
-        onStderr,
-      });
+      await dedupePendingOperation(PENDING_DEPENDENCY_SYNCS, workPath, () =>
+        syncDependencies(devOpts)
+      );
     }
 
     // vercel-runtime is a separate dependency that we need to install into .vercel/python/
     // so the dev shim can import it without messing with project's manifest (and possibly uv)
-    await installVercelRuntime({
-      workPath,
-      uvPath,
-      pythonBin: spawnCommand,
-      env,
-    });
+    await installInjectedDevPackage(
+      {
+        name: 'vercel-runtime',
+        pinnedVersion: VERCEL_RUNTIME_VERSION,
+        envOverride: env.VERCEL_RUNTIME_PYTHON,
+      },
+      devOpts
+    );
 
     if (hasWorkerServicesEnabled(env)) {
-      await installVercelWorkers({
-        workPath,
-        uvPath,
-        pythonBin: spawnCommand,
-        env,
-        onStdout,
-        onStderr,
-      });
+      await installInjectedDevPackage(
+        {
+          name: 'vercel-workers',
+          pinnedVersion: VERCEL_WORKERS_VERSION,
+          envOverride: env.VERCEL_WORKERS_PYTHON,
+        },
+        devOpts
+      );
     }
 
     // Detect crons before spawning so we can set __VC_CRON_ROUTES.
@@ -996,6 +936,10 @@ export const startDevServer: StartDevServer = async opts => {
 
       if (devShim.extraPythonPath) {
         pathParts.push(devShim.extraPythonPath);
+      }
+
+      if (hookResult?.extraPythonPath) {
+        pathParts.push(hookResult.extraPythonPath);
       }
 
       const existingPythonPath = env.PYTHONPATH || '';

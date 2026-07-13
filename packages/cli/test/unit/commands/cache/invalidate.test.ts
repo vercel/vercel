@@ -4,7 +4,10 @@ import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeam } from '../../../mocks/team';
-import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
+import {
+  removeProjectLink,
+  setupTmpDir,
+} from '../../../helpers/setup-unit-fixture';
 import { basename, join } from 'path';
 import { outputFile } from 'fs-extra';
 
@@ -20,6 +23,7 @@ describe('cache invalidate', () => {
       ...defaultProject,
       id: projectId,
       name: projectId,
+      accountId: 'team_dummy',
     });
     await outputFile(
       join(cwd, '.vercel', 'project.json'),
@@ -61,6 +65,35 @@ describe('cache invalidate', () => {
     await expect(client.stderr).toOutput(
       'Successfully invalidated all cached content associated with tag foo'
     );
+  });
+
+  it('should succeed with --project when cwd is not linked', async () => {
+    removeProjectLink(client.cwd);
+    client.scenario.post(`/v1/edge-cache/invalidate-by-tags`, (req, res) => {
+      expect(req.query.projectIdOrName).toEqual(projectId);
+      expect(req.body).toEqual({
+        tags: 'foo',
+      });
+      res.end();
+    });
+
+    client.setArgv(
+      'cache',
+      'invalidate',
+      '--project',
+      projectId,
+      '--tag=foo',
+      '--yes'
+    );
+    const exitCode = await cache(client);
+
+    expect(exitCode).toEqual(0);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:invalidate', value: 'invalidate' },
+      { key: 'option:project', value: '[REDACTED]' },
+      { key: 'flag:yes', value: 'TRUE' },
+      { key: 'option:tag', value: 'foo' },
+    ]);
   });
 
   it('should succeed with multiple tags', async () => {

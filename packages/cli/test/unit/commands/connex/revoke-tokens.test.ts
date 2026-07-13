@@ -133,6 +133,37 @@ describe('connex revoke-tokens', () => {
     expect(client.stderr.getFullOutput()).toContain('Confirmation required');
   });
 
+  it('strips ansi from the connector name in output', async () => {
+    client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+      res.json({
+        id: CONNECTOR_ID,
+        uid: CONNECTOR_UID,
+        name: 'Evil\x1b[2J Bot',
+      });
+    });
+    client.scenario.delete(
+      '/v1/connect/connectors/:clientId/tokens',
+      (_req, res) => {
+        res.json(DEFAULT_REVOKE_RESULT);
+      }
+    );
+
+    client.setArgv(
+      'connect',
+      'revoke-tokens',
+      CONNECTOR_ID,
+      '--my-tokens',
+      '--yes'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain('Evil Bot');
+    expect(stderr).not.toContain('\x1b[2J');
+  });
+
   it('revokes my tokens with --my-tokens --yes and sends the correct body', async () => {
     let requestBody: unknown;
 

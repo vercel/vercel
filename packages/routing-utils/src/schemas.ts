@@ -12,6 +12,37 @@ const mitigateSchema = {
   },
 } as const;
 
+const serviceNameSchema = {
+  description: 'A service name identifier.',
+  type: 'string',
+  minLength: 1,
+  maxLength: 64,
+  pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+} as const;
+
+const serviceDestinationSchema = {
+  description:
+    'A service-targeted destination that delegates routing into a named service from `services`. Identified by the presence of `service`.',
+  type: 'object',
+  additionalProperties: false,
+  required: ['service'],
+  properties: {
+    type: {
+      description:
+        'Optional explicit format marker. The destination shape is identified by the `service` property, so `type` is no longer required. When present it must be `service`.',
+      type: 'string',
+      enum: ['service'],
+    },
+    service: serviceNameSchema,
+    path: {
+      description:
+        'Routing-only path used to select a route inside the target service. It does not mutate the URL observed by user code.',
+      type: 'string',
+      maxLength: 4096,
+    },
+  },
+} as const;
+
 const matchableValueSchema = {
   description:
     'A value to match against. Can be a string (regex) or a condition operation object',
@@ -139,20 +170,25 @@ export const hasSchema = {
   },
 } as const;
 
-const transformsSchema = {
+export const transformsSchema = {
   description:
-    'A list of transform rules to adjust the query parameters of a request or HTTP headers of request or response',
+    'A list of transform rules to adjust a request path, request query parameters, or request/response headers',
   type: 'array',
   minItems: 1,
   items: {
     type: 'object',
     additionalProperties: false,
-    required: ['type', 'op', 'target'],
+    required: ['type', 'op'],
     properties: {
       type: {
         description: 'The scope of the transform to apply',
         type: 'string',
-        enum: ['request.headers', 'request.query', 'response.headers'],
+        enum: [
+          'request.headers',
+          'request.query',
+          'response.headers',
+          'request.path',
+        ],
       },
       op: {
         description: 'The operation to perform on the target',
@@ -344,7 +380,92 @@ const transformsSchema = {
           },
         },
       },
+      {
+        if: {
+          required: ['type'],
+          properties: {
+            type: {
+              enum: ['request.headers', 'request.query', 'response.headers'],
+            },
+          },
+        },
+        // biome-ignore lint/suspicious/noThenProperty: JSON Schema if/then keyword
+        then: {
+          required: ['target'],
+        },
+      },
+      {
+        if: {
+          required: ['type'],
+          properties: {
+            type: {
+              enum: ['request.path'],
+            },
+          },
+        },
+        // biome-ignore lint/suspicious/noThenProperty: JSON Schema if/then keyword
+        then: {
+          required: ['args'],
+          not: {
+            required: ['target'],
+          },
+          properties: {
+            op: {
+              enum: ['set'],
+            },
+            args: {
+              description:
+                'The runtime-visible request path. Must be an origin-form path without query or fragment.',
+              type: 'string',
+              maxLength: 2048,
+              pattern: '^/(?!/)(?!.*[?#\\s\\x00-\\x1F\\x7F]).*$',
+            },
+          },
+        },
+      },
     ],
+  },
+} as const;
+
+const rewriteTransformsSchema = {
+  description:
+    'A list of request path transforms using path-to-regexp parameters.',
+  type: 'array',
+  minItems: 1,
+  items: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['type', 'op', 'args'],
+    properties: {
+      type: {
+        description: 'The request path to expose to the target runtime',
+        type: 'string',
+        enum: ['request.path'],
+      },
+      op: {
+        description: 'Replace the runtime-visible request path',
+        type: 'string',
+        enum: ['set'],
+      },
+      args: {
+        description:
+          'An origin-form request path. Route parameters use path-to-regexp syntax such as `/:path*`.',
+        type: 'string',
+        maxLength: 2048,
+        pattern: '^/(?!/)(?!.*[?#\\s\\x00-\\x1F\\x7F]).*$',
+      },
+      env: {
+        description:
+          'An array of environment variable names that should be replaced at runtime in the args value',
+        type: 'array',
+        minItems: 1,
+        maxItems: 64,
+        items: {
+          type: 'string',
+          maxLength: 256,
+        },
+      },
+    },
   },
 } as const;
 
@@ -376,8 +497,10 @@ export const routesSchema = {
             maxLength: 4096,
           },
           destination: {
-            type: 'string',
-            maxLength: 4096,
+            anyOf: [
+              { type: 'string', maxLength: 4096 },
+              serviceDestinationSchema,
+            ],
           },
           headers: {
             type: 'object',
@@ -531,10 +654,10 @@ export const rewritesSchema = {
       },
       destination: {
         description:
-          'An absolute pathname to an existing resource or an external URL.',
-        type: 'string',
-        maxLength: 4096,
+          'An absolute pathname to an existing resource, an external URL, or a service-targeted destination object.',
+        anyOf: [{ type: 'string', maxLength: 4096 }, serviceDestinationSchema],
       },
+      transforms: rewriteTransformsSchema,
       has: hasSchema,
       missing: hasSchema,
       statusCode: {

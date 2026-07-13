@@ -1,5 +1,96 @@
 # @vercel/hono
 
+## 0.2.102
+
+### Patch Changes
+
+- @vercel/node@5.8.23
+
+## 0.2.101
+
+### Patch Changes
+
+- @vercel/node@5.8.22
+
+## 0.2.100
+
+### Patch Changes
+
+- @vercel/node@5.8.21
+
+## 0.2.99
+
+### Patch Changes
+
+- @vercel/node@5.8.20
+
+## 0.2.98
+
+### Patch Changes
+
+- Updated dependencies [2158ab6]
+  - @vercel/node@5.8.19
+
+## 0.2.97
+
+### Patch Changes
+
+- @vercel/node@5.8.18
+
+## 0.2.96
+
+### Patch Changes
+
+- @vercel/node@5.8.17
+
+## 0.2.95
+
+### Patch Changes
+
+- @vercel/node@5.8.16
+
+## 0.2.94
+
+### Patch Changes
+
+- @vercel/node@5.8.15
+
+## 0.2.93
+
+### Patch Changes
+
+- @vercel/node@5.8.14
+
+## 0.2.92
+
+### Patch Changes
+
+- @vercel/node@5.8.13
+
+## 0.2.91
+
+### Patch Changes
+
+- @vercel/node@5.8.12
+
+## 0.2.90
+
+### Patch Changes
+
+- @vercel/node@5.8.11
+
+## 0.2.89
+
+### Patch Changes
+
+- @vercel/node@5.8.10
+
+## 0.2.88
+
+### Patch Changes
+
+- @vercel/node@5.8.9
+
 ## 0.2.87
 
 ### Patch Changes

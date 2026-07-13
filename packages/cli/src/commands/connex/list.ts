@@ -3,6 +3,7 @@ import output from '../../output-manager';
 import type Client from '../../util/client';
 import { validateJsonOutput } from '../../util/output-format';
 import { printError } from '../../util/error';
+import { sanitizeForTerminal } from '../../util/connex/sanitize';
 import { selectConnexTeam } from '../../util/connex/select-team';
 import { getLinkedProject } from '../../util/projects/link';
 import table from '../../util/output/table';
@@ -179,7 +180,7 @@ export async function list(
       return item;
     });
     client.stdout.write(
-      `${JSON.stringify({ clients: jsonClients, cursor: response.cursor }, null, 2)}\n`
+      `${JSON.stringify({ connectors: jsonClients, cursor: response.cursor }, null, 2)}\n`
     );
     return 0;
   }
@@ -207,16 +208,17 @@ export async function list(
   }
   const rows = clients.map(c => {
     const row = [
-      c.uid || chalk.gray('–'),
+      sanitizeForTerminal(c.uid || '') || chalk.gray('–'),
       c.id,
-      c.name || chalk.gray('–'),
-      c.typeName || c.type,
+      sanitizeForTerminal(c.name || '') || chalk.gray('–'),
+      sanitizeForTerminal(c.typeName || c.type),
     ];
     if (unscoped) {
       const projectsInclude = c.includes?.projects;
       const names = (projectsInclude?.items ?? [])
         .map(p => p.project?.name)
-        .filter((n): n is string => Boolean(n));
+        .filter((n): n is string => Boolean(n))
+        .map(sanitizeForTerminal);
       const more = projectsInclude?.hasMore === true;
       let cell: string;
       if (names.length === 0 && !more) {

@@ -1,11 +1,9 @@
 import chalk from 'chalk';
-import { outputFile } from 'fs-extra';
+import { outputFile, readFile } from 'fs-extra';
 import { closeSync, openSync, readSync } from 'fs';
 import { resolve } from 'path';
 import type Client from '../../util/client';
-import { emoji, prependEmoji } from '../../util/emoji';
 import param from '../../util/output/param';
-import stamp from '../../util/output/stamp';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import {
   type EnvRecordsSource,
@@ -15,6 +13,8 @@ import {
   buildDeltaString,
   createEnvObject,
 } from '../../util/env/diff-env-files';
+import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
+import { updateOidcTokenContents } from '../../util/env/update-oidc-token-contents';
 import { isErrnoException } from '@vercel/error-utils';
 import { addToGitIgnore } from '../../util/link/add-to-gitignore';
 import JSONparse from 'json-parse-better-errors';
@@ -37,8 +37,14 @@ import {
   outputActionRequired,
   outputAgentError,
 } from '../../util/agent-output';
+import { printAlignedLabel } from '../../util/output/print-aligned-label';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
+
+export interface EnvPullOptions {
+  /** Refresh only VERCEL_OIDC_TOKEN while preserving all other file content. */
+  oidcTokenOnly?: boolean;
+}
 
 function readHeadSync(path: string, length: number) {
   const buffer = Buffer.alloc(length);
@@ -76,7 +82,8 @@ const VARIABLES_TO_IGNORE = [
 export default async function pull(
   client: Client,
   argv: string[],
-  source: EnvRecordsSource = 'vercel-cli:env:pull'
+  source: EnvRecordsSource = 'vercel-cli:env:pull',
+  options: EnvPullOptions = {}
 ) {
   const telemetryClient = new EnvPullTelemetryClient({
     opts: {
@@ -170,7 +177,8 @@ export default async function pull(
     gitBranch,
     client.cwd,
     source,
-    deploymentId
+    deploymentId,
+    options
   );
 
   return 0;
@@ -185,15 +193,16 @@ export async function envPullCommandLogic(
   gitBranch: string | undefined,
   cwd: string,
   source: EnvRecordsSource,
-  deploymentId?: string
+  deploymentId?: string,
+  { oidcTokenOnly = false }: EnvPullOptions = {}
 ) {
   const fullPath = resolve(cwd, filename);
   const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
   const exists = typeof head !== 'undefined';
 
-  if (head === CONTENTS_PREFIX) {
+  if (head === CONTENTS_PREFIX && !oidcTokenOnly) {
     output.log(`Overwriting existing ${chalk.bold(filename)} file`);
-  } else if (exists && !skipConfirmation) {
+  } else if (exists && !skipConfirmation && !oidcTokenOnly) {
     if (client.nonInteractive) {
       outputActionRequired(client, {
         status: 'action_required',
@@ -246,19 +255,22 @@ export async function envPullCommandLogic(
 
   const projectSlugLink = formatProject(link.org.slug, link.project.name);
 
-  const downloadMessage = gitBranch
-    ? `Downloading \`${chalk.cyan(
-        environment
-      )}\` Environment Variables for ${projectSlugLink} and any overrides for branch ${chalk.cyan(
-        gitBranch
-      )}`
-    : `Downloading \`${chalk.cyan(
-        environment
-      )}\` Environment Variables for ${projectSlugLink}`;
+  const downloadMessage = oidcTokenOnly
+    ? `Downloading a fresh \`${chalk.cyan(
+        VERCEL_OIDC_TOKEN
+      )}\` for ${projectSlugLink}`
+    : gitBranch
+      ? `Downloading \`${chalk.cyan(
+          environment
+        )}\` environment variables for ${projectSlugLink} and any overrides for branch ${chalk.cyan(
+          gitBranch
+        )}`
+      : `Downloading \`${chalk.cyan(
+          environment
+        )}\` environment variables for ${projectSlugLink}`;
 
   output.log(downloadMessage);
 
-  const pullStamp = stamp();
   output.spinner('Downloading');
 
   const pullId = deploymentId || link.project.id;
@@ -274,28 +286,56 @@ export async function envPullCommandLogic(
 
   let deltaString = '';
   let oldEnv;
-  if (exists) {
+  if (exists && !oidcTokenOnly) {
     oldEnv = await createEnvObject(fullPath);
+  }
+
+  let contents: string;
+  let fileChanged = true;
+  const keptLocalKeys: string[] = [];
+
+  if (oidcTokenOnly) {
+    const existingContents = exists ? await readFile(fullPath, 'utf8') : '';
+    contents = updateOidcTokenContents(
+      existingContents,
+      records[VERCEL_OIDC_TOKEN] || undefined
+    );
+    fileChanged = contents !== existingContents;
+  } else {
+    const mergedRecords: Record<string, string | undefined> = { ...records };
     if (oldEnv) {
-      // Removes any double quotes from `records`, if they exist
-      // We need this because double quotes are stripped from the local .env file,
-      // but `records` is already in the form of a JSON object that doesn't filter
-      // double quotes.
-      const newEnv = JSONparse(JSON.stringify(records).replace(/\\"/g, ''));
+      for (const [key, value] of Object.entries(oldEnv)) {
+        if (
+          !(key in mergedRecords) &&
+          key !== VERCEL_OIDC_TOKEN &&
+          !VARIABLES_TO_IGNORE.includes(key)
+        ) {
+          mergedRecords[key] = value;
+          keptLocalKeys.push(key);
+        }
+      }
+    }
+
+    contents =
+      CONTENTS_PREFIX +
+      Object.keys(mergedRecords)
+        .sort()
+        .filter(key => !VARIABLES_TO_IGNORE.includes(key))
+        .map(key => `${key}="${escapeValue(mergedRecords[key])}"`)
+        .join('\n') +
+      '\n';
+
+    if (oldEnv) {
+      const newEnv = JSONparse(
+        JSON.stringify(mergedRecords).replace(/\\"/g, '')
+      );
       deltaString = buildDeltaString(oldEnv, newEnv);
     }
   }
 
-  const contents =
-    CONTENTS_PREFIX +
-    Object.keys(records)
-      .sort()
-      .filter(key => !VARIABLES_TO_IGNORE.includes(key))
-      .map(key => `${key}="${escapeValue(records[key])}"`)
-      .join('\n') +
-    '\n';
-
-  await outputFile(fullPath, contents, 'utf8');
+  if (fileChanged) {
+    await outputFile(fullPath, contents, 'utf8');
+  }
 
   if (deltaString) {
     output.print('\n' + deltaString);
@@ -303,8 +343,20 @@ export async function envPullCommandLogic(
     output.log('No changes found.');
   }
 
+  if (keptLocalKeys.length > 0) {
+    output.log(
+      `Kept ${keptLocalKeys
+        .sort()
+        .map(key => chalk.bold(key))
+        .join(', ')} (defined locally, not found in the ${chalk.cyan(
+        environment
+      )} Environment)`
+    );
+  }
+
   let isGitIgnoreUpdated = false;
-  if (filename === '.env.local') {
+  const fileExistsAfterPull = exists || contents.length > 0;
+  if (filename === '.env.local' && fileExistsAfterPull) {
     // When the file is `.env.local`, we also add it to `.gitignore`
     // to avoid accidentally committing it to git.
     // We use '.env*' to match the default .gitignore from
@@ -314,13 +366,20 @@ export async function envPullCommandLogic(
     isGitIgnoreUpdated = await addToGitIgnore(rootPath, '.env*');
   }
 
-  output.print(
-    `${prependEmoji(
-      `${exists ? 'Updated' : 'Created'} ${chalk.bold(filename)} file ${
-        isGitIgnoreUpdated ? 'and added it to .gitignore' : ''
-      } ${chalk.gray(pullStamp())}`,
-      emoji('success')
-    )}\n`
+  if (!fileChanged && !isGitIgnoreUpdated) {
+    output.stopSpinner();
+    return;
+  }
+
+  output.print('\n');
+  if (!fileChanged) {
+    printAlignedLabel('Updated', `.gitignore for ${filename}`, { gutter: '✓' });
+    return;
+  }
+  printAlignedLabel(
+    exists ? 'Updated' : 'Created',
+    `${filename} file${isGitIgnoreUpdated ? ' and added it to .gitignore' : ''}`,
+    { gutter: '✓' }
   );
 }
 
@@ -363,7 +422,7 @@ async function pullEnvRecordsForEnvPull(
       userId: undefined,
       expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
     });
-    client.writeToAuthConfigFile();
+    client.persistAuthConfig();
 
     output.spinner('Downloading');
     return await pullEnvRecords(client, pullId, source, options);

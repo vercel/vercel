@@ -372,11 +372,13 @@ export const fetchApi = async (
 
   debug(`${opts.method || 'GET'} ${url}`);
   time = Date.now();
-  const res = await nodeFetch(url, opts);
-  debug(`DONE in ${Date.now() - time}ms: ${opts.method || 'GET'} ${url}`);
-  semaphore.release();
-
-  return res;
+  try {
+    const res = await nodeFetch(url, opts);
+    debug(`DONE in ${Date.now() - time}ms: ${opts.method || 'GET'} ${url}`);
+    return res;
+  } finally {
+    semaphore.release();
+  }
 };
 
 export interface PreparedFile {
@@ -411,7 +413,7 @@ export const prepareFiles = (
 
       preparedFiles.push({
         file: isWin ? fileName.replace(/\\/g, '/') : fileName,
-        size: file.data?.byteLength || file.data?.length,
+        size: file.data?.byteLength ?? file.size,
         mode: file.mode,
         sha: sha || undefined,
       });
@@ -432,4 +434,4 @@ export function createDebug(debug?: boolean) {
 
   return () => {};
 }
-type Debug = ReturnType<typeof createDebug>;
+export type Debug = ReturnType<typeof createDebug>;

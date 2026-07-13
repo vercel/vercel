@@ -494,19 +494,43 @@ describe('buildCommandWithGlobalFlags', () => {
     expect(
       buildCommandWithGlobalFlags(
         argv,
-        'integration-resource remove r1 --disconnect-all --yes',
+        'integration resource remove r1 --disconnect-all --yes',
         'vercel',
         { prependGlobalFlags: true, excludeFlags: ['--yes', '-y'] }
       )
     ).toBe(
-      'vercel --cwd /tmp/p --non-interactive integration-resource remove r1 --disconnect-all --yes'
+      'vercel --cwd /tmp/p --non-interactive integration resource remove r1 --disconnect-all --yes'
+    );
+  });
+
+  it('does not append a global flag the template already carries', () => {
+    const argv = ['node', 'vc.js', 'deploy', '--scope', 'vercel', '--yes'];
+    expect(
+      buildCommandWithGlobalFlags(
+        argv,
+        'deploy --project my-app --scope <team-slug> --yes'
+      )
+    ).toBe('vercel deploy --project my-app --scope <team-slug> --yes');
+  });
+
+  it('dedupes shorthand and long form of the same global flag', () => {
+    const argv = ['node', 'vc.js', 'deploy', '-S', 'vercel'];
+    expect(
+      buildCommandWithGlobalFlags(argv, 'deploy --scope <team-slug>')
+    ).toBe('vercel deploy --scope <team-slug>');
+  });
+
+  it('still appends globals absent from the template', () => {
+    const argv = ['node', 'vc.js', 'deploy', '--scope', 'vercel', '--yes'];
+    expect(buildCommandWithGlobalFlags(argv, 'link')).toBe(
+      'vercel link --scope vercel --yes'
     );
   });
 });
 
 describe('exitWithNonInteractiveError', () => {
   it('emits JSON when argv includes --non-interactive even if client.nonInteractive is false', async () => {
-    const { Response } = await import('node-fetch');
+    const { Response } = await import('../../../src/util/fetch');
     const res = new Response(
       JSON.stringify({
         error: { code: 'not_found', message: 'Project not found.' },
@@ -578,7 +602,7 @@ describe('exitWithNonInteractiveError', () => {
   });
 
   it('includes action and resource from a 403 APIError', async () => {
-    const { Response } = await import('node-fetch');
+    const { Response } = await import('../../../src/util/fetch');
     const res = new Response(
       JSON.stringify({
         error: {
@@ -628,7 +652,7 @@ describe('exitWithNonInteractiveError', () => {
   });
 
   it('omits action and resource from a 404 APIError', async () => {
-    const { Response } = await import('node-fetch');
+    const { Response } = await import('../../../src/util/fetch');
     const res = new Response(
       JSON.stringify({
         error: { code: 'not_found', message: 'Not found.' },
@@ -666,50 +690,5 @@ describe('exitWithNonInteractiveError', () => {
     expect(payload).not.toHaveProperty('resource');
 
     vi.restoreAllMocks();
-  });
-});
-
-describe('getGlobalFlagsFromArgv', () => {
-  it('does not treat the subcommand after --non-interactive as a flag value', () => {
-    expect(
-      getGlobalFlagsFromArgv([
-        'node',
-        'vc.js',
-        '--non-interactive',
-        'oauth-apps',
-        'register',
-        '--name',
-        'x',
-      ])
-    ).toEqual(['--non-interactive']);
-  });
-
-  it('collects --cwd and --non-interactive from anywhere in argv', () => {
-    expect(
-      getGlobalFlagsFromArgv([
-        'node',
-        'vc.js',
-        'oauth-apps',
-        'register',
-        '--name',
-        'display-name',
-        '--cwd=/tmp/proj',
-        '--non-interactive',
-      ])
-    ).toEqual(['--cwd=/tmp/proj', '--non-interactive']);
-  });
-
-  it('never includes token flags from argv', () => {
-    expect(
-      getGlobalFlagsFromArgv([
-        'node',
-        'vc.js',
-        'deploy',
-        '--cwd=/tmp/proj',
-        '--token',
-        'secret-token',
-        '--non-interactive',
-      ])
-    ).toEqual(['--cwd=/tmp/proj', '--non-interactive']);
   });
 });

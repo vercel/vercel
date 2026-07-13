@@ -4,6 +4,8 @@ import getScope from '../../util/get-scope';
 import { getLinkedProject } from '../../util/projects/link';
 import type { Resource } from '../../util/integration-resource/types';
 import { getResources } from '../../util/integration-resource/get-resources';
+import { isSandboxResource } from '../../util/integration-resource/claim-status';
+import { packageName } from '../../util/pkg-name';
 import { listSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
@@ -11,9 +13,12 @@ import { printError } from '../../util/error';
 import { validateJsonOutput } from '../../util/output-format';
 import { validateLsArgs } from '../../util/validate-ls-args';
 import table from '../../util/output/table';
-import title from 'title';
 import type { Team } from '@vercel-internals/types';
 import { buildSSOLink } from '../../util/integration/build-sso-link';
+import {
+  resourceLink,
+  resourceStatus,
+} from '../../util/integration-resource/format';
 import { IntegrationListTelemetryClient } from '../../util/telemetry/commands/integration/list';
 import output from '../../output-manager';
 
@@ -143,8 +148,11 @@ export async function list(client: Client) {
         integration: resource.product?.slug,
         configurationId: resource.product?.integrationConfigurationId,
         projects: resource.projectsMetadata?.map(project => project.name),
+        isSandbox: isSandboxResource(resource),
       };
     });
+
+  const sandboxCount = results.filter(r => r.isSandbox).length;
 
   telemetry.trackCliOptionIntegration(
     parsedArguments.flags['--integration'],
@@ -153,14 +161,20 @@ export async function list(client: Client) {
 
   if (asJson) {
     output.stopSpinner();
-    const jsonResources = results.map(result => ({
-      id: result.id,
-      name: result.name,
-      status: result.status,
-      product: result.product,
-      installationId: result.configurationId,
-      projects: result.projects,
-    }));
+    const jsonResources = results.map(result => {
+      const obj: Record<string, unknown> = {
+        id: result.id,
+        name: result.name,
+        status: result.status,
+        product: result.product,
+        installationId: result.configurationId,
+        projects: result.projects,
+      };
+      if (result.isSandbox) {
+        obj.claim_status = 'sandbox';
+      }
+      return obj;
+    });
     client.stdout.write(
       `${JSON.stringify({ resources: jsonResources }, null, 2)}\n`
     );
@@ -184,7 +198,7 @@ export async function list(client: Client) {
         ),
         ...results.map(result => [
           resourceLink(contextName, result) ?? chalk.gray('–'),
-          resourceStatus(result.status ?? '–'),
+          resourceStatus(result.status ?? '–', result.isSandbox),
           result.product ?? chalk.gray('–'),
           integrationLink(result, team) ?? chalk.gray('–'),
           chalk.grey(
@@ -195,44 +209,16 @@ export async function list(client: Client) {
       { hsep: 8 }
     )}`
   );
+
+  if (sandboxCount > 0) {
+    const noun = sandboxCount === 1 ? 'resource' : 'resources';
+    output.log(`${sandboxCount} sandbox ${noun} can be claimed.`);
+    output.print(
+      `  Run \`${packageName} integration resource claim <name>\` to claim one.\n`
+    );
+  }
+
   return 0;
-}
-
-// Builds a string with an appropriately coloured indicator
-function resourceStatus(status: string) {
-  const CIRCLE = '● ';
-  const statusTitleCase = title(status);
-  switch (status) {
-    case 'initializing':
-      return chalk.yellow(CIRCLE) + statusTitleCase;
-    case 'error':
-      return chalk.red(CIRCLE) + statusTitleCase;
-    case 'available':
-      return chalk.green(CIRCLE) + statusTitleCase;
-    case 'suspended':
-      return chalk.white(CIRCLE) + statusTitleCase;
-    case 'limits-exceeded-suspended':
-      return `${chalk.white(CIRCLE)}Limits exceeded`;
-    default:
-      return chalk.gray(statusTitleCase);
-  }
-}
-
-// Builds a deep link to the vercel dashboard resource page
-function resourceLink(
-  orgSlug: string,
-  resource: { id: string; name?: string }
-): string | undefined {
-  if (!resource.name) {
-    return;
-  }
-
-  const projectUrl = `https://vercel.com/${orgSlug}/~`;
-  return output.link(
-    resource.name,
-    `${projectUrl}/stores/integration/${resource.id}`,
-    { fallback: () => resource.name ?? '–', color: false }
-  );
 }
 
 // Builds a deep link to the integration dashboard

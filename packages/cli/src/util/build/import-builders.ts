@@ -36,7 +36,7 @@ export interface BuilderWithPkg {
 }
 
 type ResolveBuildersResult =
-  | { buildersToAdd: Set<string> }
+  | { buildersToAdd: Set<string>; installReasons: Map<string, string> }
   | { builders: Map<string, BuilderWithPkg> };
 
 // Get a real `require()` reference that esbuild won't mutate
@@ -56,11 +56,12 @@ export async function importBuilders(
   let importResult = await resolveBuilders(buildersDir, builderSpecs);
 
   if ('buildersToAdd' in importResult) {
-    const { buildersToAdd } = importResult;
+    const { buildersToAdd, installReasons } = importResult;
     const installResult = await installBuilders(
       buildersDir,
       buildersToAdd,
-      span
+      span,
+      installReasons
     );
 
     importResult = await resolveBuilders(
@@ -84,6 +85,22 @@ export async function importBuilders(
   return importResult.builders;
 }
 
+/**
+ * Extracts the module ID from a `MODULE_NOT_FOUND` error message when it is
+ * a package-style ID (not a filesystem path), for use in trace attributes.
+ */
+function missingModuleId(err: Error): string | undefined {
+  const match = /Cannot find module '([^']+)'/.exec(err.message);
+  const id = match?.[1];
+  if (!id) {
+    return undefined;
+  }
+  if (id.startsWith('/') || id.startsWith('.') || /^[A-Za-z]:[\\/]/.test(id)) {
+    return undefined;
+  }
+  return id.replace(/[,=]/g, '_').slice(0, 100);
+}
+
 async function resolveBuilders(
   buildersDir: string,
   builderSpecs: Set<string>,
@@ -91,6 +108,7 @@ async function resolveBuilders(
 ): Promise<ResolveBuildersResult> {
   const builders = new Map<string, BuilderWithPkg>();
   const buildersToAdd = new Set<string>();
+  const installReasons = new Map<string, string>();
 
   for (const spec of builderSpecs) {
     const resolvedSpec = resolvedSpecs?.get(spec) || spec;
@@ -101,6 +119,7 @@ async function resolveBuilders(
       // A URL was specified - will need to install it and resolve the
       // proper package name from the written `package.json` file
       buildersToAdd.add(spec);
+      installReasons.set(spec, 'url-spec');
       continue;
     }
 
@@ -116,6 +135,7 @@ async function resolveBuilders(
       continue;
     }
 
+    let entrypointLoadFailed = false;
     try {
       let pkgPath: string | undefined;
       let builderPkg: PackageJson | undefined;
@@ -159,6 +179,7 @@ async function resolveBuilders(
           `Installed version "${name}@${builderPkg.version}" does not match "${parsed.rawSpec}"`
         );
         buildersToAdd.add(spec);
+        installReasons.set(spec, 'version-mismatch');
         continue;
       }
 
@@ -172,13 +193,23 @@ async function resolveBuilders(
           `Installed version "${name}@${builderPkg.version}" is not compatible with "${parsed.rawSpec}"`
         );
         buildersToAdd.add(spec);
+        installReasons.set(spec, 'range-mismatch');
         continue;
       }
 
       // TODO: handle `parsed.type === 'tag'` ("latest" vs. anything else?)
       const path = join(dirname(pkgPath), builderPkg.main || 'index.js');
 
-      const builder = require_(path);
+      let builder;
+      try {
+        builder = require_(path);
+      } catch (requireErr: unknown) {
+        // The Builder's `package.json` was found but loading its entrypoint
+        // failed — track separately from "not installed" so traces can tell
+        // a broken installation apart from a missing one.
+        entrypointLoadFailed = true;
+        throw requireErr;
+      }
 
       const dynamicallyInstalled = pkgPath.startsWith(buildersDir);
 
@@ -200,6 +231,17 @@ async function resolveBuilders(
       if (err.code === 'MODULE_NOT_FOUND' && !resolvedSpecs) {
         output.debug(`Failed to import "${name}": ${err}`);
         buildersToAdd.add(spec);
+        if (entrypointLoadFailed) {
+          const missing = missingModuleId(err);
+          installReasons.set(
+            spec,
+            missing
+              ? `entrypoint-load-failed:${missing}`
+              : 'entrypoint-load-failed'
+          );
+        } else {
+          installReasons.set(spec, 'not-installed');
+        }
       } else {
         err.message = `Importing "${name}": ${err.message}`;
         throw err;
@@ -209,7 +251,7 @@ async function resolveBuilders(
 
   // Add any Builders that are not yet present into `.vercel/builders`
   if (buildersToAdd.size > 0) {
-    return { buildersToAdd };
+    return { buildersToAdd, installReasons };
   }
 
   return { builders };

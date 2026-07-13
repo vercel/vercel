@@ -9,7 +9,7 @@ import {
   validateResponseHeaders,
 } from './utils';
 import assert from 'assert';
-import nodeFetch from 'node-fetch';
+import nodeFetch from '../../src/util/fetch';
 
 test(
   '[vercel dev] temporary directory listing',
@@ -644,15 +644,14 @@ describe('[vercel dev] Multi-service with experimentalServices', () => {
   });
 });
 
-describe('[vercel dev] Multi-service with services', () => {
-  test('[vercel dev] explicit config: service-to-service communication', async () => {
-    const dir = fixture('services-service-to-service');
+describe('[vercel dev] Multi-service with experimentalServicesV2', () => {
+  test('[vercel dev] service routing', async () => {
+    const dir = fixture('services-v2-frontend-backend');
     const { dev, port, readyResolver } = await testFixture(
       dir,
       {
         skipNpmInstall: true,
         env: {
-          VERCEL_USE_SERVICES: '1',
           VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
         },
       },
@@ -662,87 +661,114 @@ describe('[vercel dev] Multi-service with services', () => {
     try {
       await readyResolver;
 
-      // Service B responds independently
-      const serviceBRes = await nodeFetch(`http://localhost:${port}/api/b/`);
-      expect(serviceBRes.status).toBe(200);
-      const serviceBJson = await serviceBRes.json();
-      expect(serviceBJson).toHaveProperty('service', 'service-b');
-      expect(serviceBJson).toHaveProperty('message', 'Hello from service-b');
-
-      // Service A responds independently
-      const serviceARes = await nodeFetch(`http://localhost:${port}/api/a/`);
-      expect(serviceARes.status).toBe(200);
-      const serviceAJson = await serviceARes.json();
-      expect(serviceAJson).toHaveProperty('service', 'service-a');
-
-      // Service A calls Service B (service-to-service communication)
-      const callRes = await nodeFetch(
-        `http://localhost:${port}/api/a/call-service-b`
+      // /api/:path + headers rule
+      const noPath = await nodeFetch(
+        `http://localhost:${port}/api/echo?foo=bar`
       );
-      expect(callRes.status).toBe(200);
-      const callJson = await callRes.json();
-      expect(callJson).toHaveProperty('service', 'service-a');
-      expect(callJson).toHaveProperty('from_service_b');
-      expect(callJson.from_service_b).toHaveProperty('service', 'service-b');
-      expect(callJson.from_service_b).toHaveProperty(
-        'message',
-        'Hello from service-b'
-      );
-
-      // Frontend loads and received service URL env vars
-      const frontendRes = await nodeFetch(`http://localhost:${port}/`);
-      expect(frontendRes.status).toBe(200);
-      const frontendHtml = await frontendRes.text();
-      expect(frontendHtml).toContain('<h1>Service Dashboard</h1>');
-      expect(frontendHtml).toContain('/api/a');
-      expect(frontendHtml).toContain('/api/b');
-    } finally {
-      await dev.kill();
-    }
-  });
-
-  test('[vercel dev] env precedence: shell env beats per-service ref', async () => {
-    const dir = fixture('services-service-to-service');
-    const { dev, port, readyResolver } = await testFixture(
-      dir,
-      {
-        skipNpmInstall: true,
-        env: {
-          VERCEL_USE_SERVICES: '1',
-          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
-          ECHO_VAR: 'http://from-shell',
-        },
-      },
-      ['--local']
-    );
-
-    try {
-      await readyResolver;
-
-      const res = await nodeFetch(
-        `http://localhost:${port}/api/a/env?name=ECHO_VAR`
-      );
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expect(json).toEqual({
-        name: 'ECHO_VAR',
-        value: 'http://from-shell',
+      validateResponseHeaders(noPath);
+      expect(noPath.status).toBe(200);
+      expect(noPath.headers.get('x-backend-service')).toBe('backend');
+      const noPathJson = await noPath.json();
+      expect(noPathJson).toMatchObject({
+        service: 'backend',
+        received_path: '/api/echo',
+        received_query: 'foo=bar',
       });
+
+      // /svc/:path top-level + header rule because of per-service /api/(.*)
+      const withPath = await nodeFetch(`http://localhost:${port}/svc/echo`);
+      validateResponseHeaders(withPath);
+      expect(withPath.headers.get('x-backend-service')).toBe('backend');
+      const withPathJson = await withPath.json();
+      expect(withPathJson).toHaveProperty('received_path', '/svc/echo');
+
+      // top-level + per-service rewrites redirect
+      const redirect = await nodeFetch(`http://localhost:${port}/api/old`, {
+        redirect: 'manual',
+      });
+      expect(redirect.status).toBe(308);
+      expect(redirect.headers.get('location')).toBe('/api/new');
+
+      // top-level + per-service routes redirect
+      const routeRedirect = await nodeFetch(
+        `http://localhost:${port}/api/legacy`,
+        { redirect: 'manual' }
+      );
+      expect(routeRedirect.status).toBe(308);
+      expect(routeRedirect.headers.get('location')).toBe('/api/new');
+
+      // top-level rule for /svc + per-service rewrites redirect for /api/
+      const pathRedirect = await nodeFetch(`http://localhost:${port}/svc/old`, {
+        redirect: 'manual',
+      });
+      expect(pathRedirect.status).toBe(308);
+      expect(pathRedirect.headers.get('location')).toBe('/api/new');
+
+      // route transforms
+      const transformed = await nodeFetch(
+        `http://localhost:${port}/transform/echo?foo=bar`
+      );
+      validateResponseHeaders(transformed);
+      expect(transformed.status).toBe(200);
+      expect(transformed.headers.get('x-resp-injected')).toBe('resp');
+      expect(transformed.headers.get('x-overridden')).toBe('overridden');
+      // a transform declared on the service-marker route is a marker-only
+      // handoff in the proxy and must not be applied here either
+      expect(transformed.headers.get('x-marker-should-not-apply')).toBeNull();
+      const transformedJson = await transformed.json();
+      expect(transformedJson).toMatchObject({
+        service: 'backend',
+        received_path: '/api/echo',
+        received_x_injected: 'hdr',
+      });
+      expect(transformedJson.received_query).toContain('foo=bar');
+      expect(transformedJson.received_query).toContain('injected=yes');
+
+      // a non-redirect status route (410) proceeds past the transform step, so
+      // its own `response.headers` transform DOES apply — the proxy's
+      // handle_status only finishes routing for redirects.
+      const gone = await nodeFetch(`http://localhost:${port}/gone`);
+      expect(gone.status).toBe(410);
+      expect(gone.headers.get('x-gone-resp')).toBe('1');
+
+      // a redirect route, by contrast, exits before its own transforms run.
+      const oldRedirect = await nodeFetch(`http://localhost:${port}/old`, {
+        redirect: 'manual',
+      });
+      expect(oldRedirect.status).toBe(308);
+      expect(oldRedirect.headers.get('location')).toBe('/new');
+      expect(oldRedirect.headers.get('x-should-not-apply')).toBeNull();
+
+      // a `request.path` transform declared directly on a service rewrite is a
+      // no-op
+      const markerNoop = await nodeFetch(`http://localhost:${port}/rw/echo`);
+      validateResponseHeaders(markerNoop);
+      expect(markerNoop.status).toBe(200);
+      const markerNoopJson = await markerNoop.json();
+      expect(markerNoopJson).toMatchObject({
+        service: 'backend',
+        received_path: '/rw/echo',
+      });
+
+      // frontend handler
+      const frontend = await nodeFetch(`http://localhost:${port}/`);
+      validateResponseHeaders(frontend);
+      const frontendHtml = await frontend.text();
+      expect(frontendHtml).toContain('Frontend in frontend/ directory');
     } finally {
       await dev.kill();
     }
   });
 });
 
-describe('[vercel dev] Multi-service auto-detection', () => {
-  test('[vercel dev] auto-detect: frontend at root + backend/', async () => {
-    const dir = fixture('services-zc-root-backend');
+describe('[vercel dev] experimentalServicesV2 service bindings', () => {
+  test('[vercel dev] bindings for different runtime services', async () => {
+    const dir = fixture('services-v2-bindings');
     const { dev, port, readyResolver } = await testFixture(
       dir,
       {
         skipNpmInstall: true,
         env: {
-          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
           VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
         },
       },
@@ -752,232 +778,98 @@ describe('[vercel dev] Multi-service auto-detection', () => {
     try {
       await readyResolver;
 
-      // Backend service is routed to /_/backend
-      const backendRes = await nodeFetch(`http://localhost:${port}/_/backend/`);
-      validateResponseHeaders(backendRes);
-      const backendJson = await backendRes.json();
-      expect(backendJson).toHaveProperty(
-        'message',
-        'Hello from auto-detected backend!'
-      );
-      expect(backendJson).toHaveProperty('service', 'backend');
+      // Each binding env var is injected as a local URL base with no trailing slash.
+      const info = await nodeFetch(`http://localhost:${port}/binding-info`);
+      expect(info.status).toBe(200);
+      const infoJson = await info.json();
+      expect(infoJson.node_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+      expect(infoJson.py_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+      expect(infoJson.go_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+      expect(infoJson.ruby_api_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
 
-      // Test another backend endpoint
-      const statusRes = await nodeFetch(
-        `http://localhost:${port}/_/backend/status`
-      );
-      validateResponseHeaders(statusRes);
-      const statusJson = await statusRes.json();
-      expect(statusJson).toHaveProperty('status', 'ok');
+      // The gateway reaches each internal service (one per runtime) through its
+      // binding. None of the targets are publicly routed.
+      const nodeRes = await nodeFetch(`http://localhost:${port}/call/node`);
+      expect(nodeRes.status).toBe(200);
+      expect((await nodeRes.text()).trim()).toBe('node_api: ok');
 
-      // Frontend at root
-      const frontendRes = await nodeFetch(`http://localhost:${port}/`);
-      validateResponseHeaders(frontendRes);
-      const frontendHtml = await frontendRes.text();
-      expect(frontendHtml).toContain('<h1>Auto-Detected Frontend at Root</h1>');
+      const pyRes = await nodeFetch(`http://localhost:${port}/call/py`);
+      expect(pyRes.status).toBe(200);
+      expect(await pyRes.json()).toMatchObject({ service: 'py_api', ok: true });
+
+      const goRes = await nodeFetch(`http://localhost:${port}/call/go`);
+      expect(goRes.status).toBe(200);
+      expect((await goRes.text()).trim()).toBe('go_api: pong');
+
+      const rubyRes = await nodeFetch(`http://localhost:${port}/call/ruby`);
+      expect(rubyRes.status).toBe(200);
+      expect((await rubyRes.text()).trim()).toBe('ruby_api: ok');
     } finally {
       await dev.kill();
     }
   });
+});
 
-  test('[vercel dev] auto-detect: frontend/ + backend/', async () => {
-    const dir = fixture('services-zc-frontend-backend');
-    const { dev, port, readyResolver } = await testFixture(
-      dir,
-      {
-        skipNpmInstall: true,
-        env: {
-          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
-          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
-        },
-      },
-      ['--local']
-    );
+describe('[vercel dev] Pyproject queue subscribers', () => {
+  const resultsDir = join(
+    __dirname,
+    'fixtures',
+    'pyproject-subscriber',
+    '.results'
+  );
 
-    try {
-      await readyResolver;
-
-      // Backend service is routed to /_/backend
-      const backendRes = await nodeFetch(`http://localhost:${port}/_/backend/`);
-      validateResponseHeaders(backendRes);
-      const backendJson = await backendRes.json();
-      expect(backendJson).toHaveProperty(
-        'message',
-        'Hello from backend service!'
-      );
-      expect(backendJson).toHaveProperty('service', 'backend');
-
-      // Test another backend endpoint
-      const dataRes = await nodeFetch(
-        `http://localhost:${port}/_/backend/data`
-      );
-      validateResponseHeaders(dataRes);
-      const dataJson = await dataRes.json();
-      expect(dataJson).toHaveProperty('items');
-      expect(dataJson.items).toHaveLength(3);
-
-      // Frontend service at root
-      const frontendRes = await nodeFetch(`http://localhost:${port}/`);
-      validateResponseHeaders(frontendRes);
-      const frontendHtml = await frontendRes.text();
-      expect(frontendHtml).toContain(
-        '<h1>Frontend in frontend/ directory</h1>'
-      );
-    } finally {
-      await dev.kill();
-    }
+  beforeEach(async () => {
+    await fs.remove(resultsDir);
   });
 
-  test('[vercel dev] auto-detect: frontend/ + services/', async () => {
-    const dir = fixture('services-zc-frontend-services');
+  test('[vercel dev] Celery tasks trigger pyproject subscribers', async () => {
+    const dir = fixture('pyproject-subscriber');
     const { dev, port, readyResolver } = await testFixture(
       dir,
       {
         skipNpmInstall: true,
+        // Both workers share one managed environment; an unrelated activated
+        // environment must not trip the multi-workspace guard.
         env: {
-          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
-          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+          VIRTUAL_ENV: join(process.cwd(), '.external-test-venv'),
         },
       },
       ['--local']
     );
-
     try {
       await readyResolver;
 
-      // FastAPI service
-      const fastapiRes = await nodeFetch(
-        `http://localhost:${port}/_/service-fastapi/`
-      );
-      expect(fastapiRes.status).toBe(200);
-      const fastapiJson = await fastapiRes.json();
-      expect(fastapiJson).toHaveProperty('framework', 'fastapi');
-      expect(fastapiJson).toHaveProperty('service', 'service-fastapi');
+      const enqueueRes = await nodeFetch(`http://localhost:${port}/enqueue`, {
+        method: 'POST',
+      });
+      expect(enqueueRes.status).toBe(200);
 
-      // Flask service
-      const flaskRes = await nodeFetch(
-        `http://localhost:${port}/_/service-flask/`
-      );
-      expect(flaskRes.status).toBe(200);
-      const flaskJson = await flaskRes.json();
-      expect(flaskJson).toHaveProperty('framework', 'flask');
-      expect(flaskJson).toHaveProperty('service', 'service-flask');
+      const highResultPath = join(resultsDir, 'high-priority.json');
+      const lowResultPath = join(resultsDir, 'low-priority.json');
+      let highResult: any = null;
+      let lowResult: any = null;
+      for (let i = 0; i < 30; i++) {
+        await sleep(500);
+        if (
+          (await fs.pathExists(highResultPath)) &&
+          (await fs.pathExists(lowResultPath))
+        ) {
+          highResult = await fs.readJson(highResultPath);
+          lowResult = await fs.readJson(lowResultPath);
+          break;
+        }
+      }
 
-      // Frontend service at root
-      const frontendRes = await nodeFetch(`http://localhost:${port}/`);
-      expect(frontendRes.status).toBe(200);
-      const frontendHtml = await frontendRes.text();
-      expect(frontendHtml).toContain(
-        '<h1>Frontend with services/ directory</h1>'
-      );
-    } finally {
-      await dev.kill();
-    }
-  });
-
-  test('[vercel dev] auto-detect: apps/web/ + services/ (monorepo)', async () => {
-    const dir = fixture('services-zc-apps-services');
-    const { dev, port, readyResolver } = await testFixture(
-      dir,
-      {
-        skipNpmInstall: true,
-        env: {
-          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
-          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
-        },
-      },
-      ['--local']
-    );
-
-    try {
-      await readyResolver;
-
-      // FastAPI service
-      const fastapiRes = await nodeFetch(
-        `http://localhost:${port}/_/service-fastapi/`
-      );
-      expect(fastapiRes.status).toBe(200);
-      const fastapiJson = await fastapiRes.json();
-      expect(fastapiJson).toHaveProperty('framework', 'fastapi');
-      expect(fastapiJson).toHaveProperty('service', 'service-fastapi');
-
-      // Flask service
-      const flaskRes = await nodeFetch(
-        `http://localhost:${port}/_/service-flask/`
-      );
-      expect(flaskRes.status).toBe(200);
-      const flaskJson = await flaskRes.json();
-      expect(flaskJson).toHaveProperty('framework', 'flask');
-      expect(flaskJson).toHaveProperty('service', 'service-flask');
-
-      // Frontend service at root (from apps/web)
-      const frontendRes = await nodeFetch(`http://localhost:${port}/`);
-      expect(frontendRes.status).toBe(200);
-      const frontendHtml = await frontendRes.text();
-      expect(frontendHtml).toContain(
-        '<h1>Frontend in apps/web/ (monorepo)</h1>'
-      );
-    } finally {
-      await dev.kill();
-    }
-  });
-
-  test('[vercel dev] auto-detect: service-to-service communication', async () => {
-    const dir = fixture('services-zc-service-to-service');
-    const { dev, port, readyResolver } = await testFixture(
-      dir,
-      {
-        skipNpmInstall: true,
-        env: {
-          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
-          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
-        },
-      },
-      ['--local']
-    );
-
-    try {
-      await readyResolver;
-
-      // Service B responds independently
-      const serviceBRes = await nodeFetch(
-        `http://localhost:${port}/_/service-b/`
-      );
-      expect(serviceBRes.status).toBe(200);
-      const serviceBJson = await serviceBRes.json();
-      expect(serviceBJson).toHaveProperty('service', 'service-b');
-      expect(serviceBJson).toHaveProperty('message', 'Hello from service-b');
-
-      // Service A responds independently
-      const serviceARes = await nodeFetch(
-        `http://localhost:${port}/_/service-a/`
-      );
-      expect(serviceARes.status).toBe(200);
-      const serviceAJson = await serviceARes.json();
-      expect(serviceAJson).toHaveProperty('service', 'service-a');
-
-      // Service A calls Service B (service-to-service communication via
-      // legacy implicit `SERVICE_B_URL` env var)
-      const callRes = await nodeFetch(
-        `http://localhost:${port}/_/service-a/call-service-b`
-      );
-      expect(callRes.status).toBe(200);
-      const callJson = await callRes.json();
-      expect(callJson).toHaveProperty('service', 'service-a');
-      expect(callJson).toHaveProperty('from_service_b');
-      expect(callJson.from_service_b).toHaveProperty('service', 'service-b');
-      expect(callJson.from_service_b).toHaveProperty(
-        'message',
-        'Hello from service-b'
-      );
-
-      // Frontend loads and received legacy implicit prefixed URL env vars
-      const frontendRes = await nodeFetch(`http://localhost:${port}/`);
-      expect(frontendRes.status).toBe(200);
-      const frontendHtml = await frontendRes.text();
-      expect(frontendHtml).toContain('<h1>Service Dashboard</h1>');
-      expect(frontendHtml).toContain('/_/service-a');
-      expect(frontendHtml).toContain('/_/service-b');
+      expect(highResult).toEqual({
+        requestId: 'dev-celery-high',
+        priority: 'high-priority',
+        sum: 42,
+      });
+      expect(lowResult).toEqual({
+        requestId: 'dev-celery-low',
+        priority: 'low-priority',
+        sum: 42,
+      });
     } finally {
       await dev.kill();
     }

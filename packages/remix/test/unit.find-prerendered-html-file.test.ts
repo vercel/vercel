@@ -164,6 +164,37 @@ describe('react-router runtime route resolution with prerendered index', () => {
   });
 });
 
+function getSimulatedCatchAllDest(hasReactRouterIndexFunction: boolean) {
+  return hasReactRouterIndexFunction ? getReactRouterCatchAllDest() : '/';
+}
+
+describe('react-router SPA build output', () => {
+  const staticFiles = new Set(['index.html', 'assets/app.js']);
+
+  function simulateSpaBuildOutput() {
+    return {
+      catchAllDest: getSimulatedCatchAllDest(false),
+    };
+  }
+
+  it('routes the catch-all through `/` when no index SSR function exists', () => {
+    const { catchAllDest } = simulateSpaBuildOutput();
+    expect(catchAllDest).toBe('/');
+  });
+
+  it('serves `index.html` for SPA subroute refreshes', () => {
+    const { catchAllDest } = simulateSpaBuildOutput();
+    expect(
+      resolveReactRouterRequest('/dashboard/settings', {
+        prerenderRewrites: [],
+        catchAllDest,
+        hasIndexSsrFunction: false,
+        staticFiles,
+      })
+    ).toBe('static-html');
+  });
+});
+
 // Integration-style assertion that mirrors the per-route loop in
 // `build-vite.ts` for React Router. Given a synthetic route manifest and a
 // set of static-file keys that mimic what `prerender()` would have written
@@ -220,6 +251,7 @@ describe('react-router prerender build output', () => {
     const dataAssignments: { dataPath: string; kind: 'function' }[] = [];
     const prerenderRewrites: { src: string; dest: string }[] = [];
     const dynamicRules: { src: string; dest: string }[] = [];
+    let hasReactRouterIndexFunction = false;
 
     for (const route of Object.values(routes)) {
       const { path, rePath } = getPathFromRoute(route, routes);
@@ -235,6 +267,9 @@ describe('react-router prerender build output', () => {
       }
 
       assignments.push({ kind: 'function', path });
+      if (path === 'index') {
+        hasReactRouterIndexFunction = true;
+      }
       for (const dataPath of getReactRouterDataPaths(path)) {
         if (!staticFileKeys.has(dataPath)) {
           dataAssignments.push({ dataPath, kind: 'function' });
@@ -255,7 +290,7 @@ describe('react-router prerender build output', () => {
       dataAssignments,
       prerenderRewrites,
       dynamicRules,
-      catchAllDest: getReactRouterCatchAllDest(),
+      catchAllDest: getSimulatedCatchAllDest(hasReactRouterIndexFunction),
     };
   }
 

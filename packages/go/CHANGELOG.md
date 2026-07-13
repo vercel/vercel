@@ -1,5 +1,47 @@
 # @vercel/go
 
+## 3.10.2
+
+### Patch Changes
+
+- 62a884e: Simplify isolated `services` and `experimentalServicesV2` runtime outputs by emitting their function at `index` instead of `_svc/<service-name>/index`.
+
+## 3.10.1
+
+### Patch Changes
+
+- 4b90a10: Route requests for named V2 standalone Go services to their internal function.
+
+## 3.10.0
+
+### Minor Changes
+
+- e6759d0: Add WebSocket upgrade support for standalone Go servers.
+
+## 3.9.2
+
+### Patch Changes
+
+- 2158ab6: [vc dev] Add support to `experimentalServicesV2` for bindings in `vc dev`
+
+## 3.9.1
+
+### Patch Changes
+
+- 94671a4: [go] Supervise the user server after startup in standalone server mode. If the user's server process exits after the `server-started` handshake, the bootstrap now reports an `unrecoverable-error` over IPC with the child's exit code, so the platform can recycle the instance instead of leaving it serving 502s while the health check still reports OK.
+- d4547af: Fix `vc dev` for standalone Go server mode:
+  - matching the real Go entrypoint when the framework preset's placeholder src does not exist
+  - serve all request paths
+  - keep a persistent dev server across requests instead of respawning `go run` per request, and wait for the server port to be ready instead of a fixed 2s window
+
+## 3.9.0
+
+### Minor Changes
+
+- 0c4ea01: Refactor: extract the standalone-server IPC proxy into a shared `@vercel-internals/ipc-proxy` package.
+
+  The proxy is now compiled once into prebuilt static binaries (shipped per-architecture) and reused by compiled runtimes, instead of being compiled at deploy time. No change to deployed behavior.
+
 ## 3.8.0
 
 ### Minor Changes

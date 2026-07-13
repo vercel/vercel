@@ -1,0 +1,23 @@
+[project]
+name = "pyproject-subscriber"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi",
+  "celery>=5.6.3",
+]
+
+[tool.setuptools]
+packages = ["worker_a"]
+py-modules = ["main", "worker_b", "worker_result"]
+
+[tool.vercel]
+entrypoint = "main:app"
+
+[[tool.vercel.subscribers]]
+entrypoint = "worker_a:app"
+topics = ["high-priority"]
+
+[[tool.vercel.subscribers]]
+entrypoint = "worker_b:app"
+topics = ["low-priority"]

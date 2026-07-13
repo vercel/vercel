@@ -97,6 +97,20 @@ export class FlagsTelemetryClient
     });
   }
 
+  trackCliSubcommandSegments(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'segments',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRules(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandPrepare(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'prepare',

@@ -1,7 +1,6 @@
 import { readFileSync } from 'fs';
 import { basename } from 'path';
 import chalk from 'chalk';
-import FormData from 'form-data';
 import type Client from '../../util/client';
 import output from '../../output-manager';
 import {
@@ -185,14 +184,14 @@ export default async function upload(client: Client, argv: string[]) {
         form.append('name', versionName);
       }
 
-      form.append('bulkRedirectsFile', csvContent, {
-        filename: fileName,
-        contentType: 'text/csv',
-      });
+      form.append(
+        'bulkRedirectsFile',
+        new Blob([new Uint8Array(csvContent)], { type: 'text/csv' }),
+        fileName
+      );
 
       result = await client.fetch(url, {
         method: 'PUT',
-        headers: form.getHeaders(),
         body: form,
       });
     } else {

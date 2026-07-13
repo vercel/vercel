@@ -37,6 +37,8 @@ exports[`base level help output > help 1`] = `
 
       activity                         List user activity events
       agent                [init]      Generate AGENTS.md with Vercel best practices
+      ai-gateway           [cmd]       Manage AI Gateway resources
+      agent-runs           [cmd]       Inspect Agent Runs observability data
       alerts                           List alerts for a project or team
       alias                [cmd]       Manages your domain aliases
       api                  [endpoint]  Make authenticated HTTP requests to the Vercel API [beta]
@@ -51,23 +53,30 @@ exports[`base level help output > help 1`] = `
       deploy-hooks         [cmd]       Manage deploy hooks for Git-triggered builds
       dns                  [name]      Manages your DNS records
       domains              [name]      Manages your domain names
+      edge-config          [cmd]       Manage Edge Config stores
       firewall             [cmd]       Manages Vercel Firewall configuration and custom rules
+      flags                [cmd]       Manage feature flags for a Vercel project
       httpstat             path        Visualize HTTP timing statistics for deployments
       logs                 [url]       Displays the logs for a deployment
       metrics              <metric>    Queries observability metrics for your project or team
       mcp                              Set up MCP agents and configuration
       microfrontends                   Manages your microfrontends
+      oauth-apps           [cmd]       Register Vercel Apps (OAuth) and manage team installations
       projects                         Manages your Projects
       redirects            [cmd]       Manages redirects for your current Project
       rm | remove          [id]        Removes a deployment
       routes               [cmd]       Manages routing rules for your current Project
       rr | rolling-release [cmd]       Manage rolling releases for gradual traffic shifting
+      sandbox                          Interact with Vercel Sandbox
       skills               [query]     Discover agent skills relevant to your project
       target               [cmd]       Manage custom environments for your Project
       teams                            Manages your teams
       telemetry            [cmd]       Enable or disable telemetry collection
+      tokens               [cmd]       Manage your personal Vercel authentication tokens
+      traces               [cmd]       Fetch and capture traces for your project's deployment
       upgrade                          Upgrade the Vercel CLI to the latest version
       usage                            Show billing usage for the current billing period
+      vcr                  [cmd]       Manages your Container Registry repositories and images
       webhooks             [cmd]       Manages webhooks [beta]
       whoami                           Shows the username of the currently logged in user
 

@@ -6,6 +6,7 @@ import type {
 } from '@vercel-internals/types';
 import {
   type ArchiveFormat,
+  type DeploymentAliasAssignedEvent,
   type DeploymentOptions,
   type VercelClientOptions,
   createDeployment,
@@ -45,7 +46,6 @@ export default async function processDeployment({
   agent,
   manual,
   jsonOutput,
-  functionsBeta,
   linkedProject,
   ...args
 }: {
@@ -69,7 +69,6 @@ export default async function processDeployment({
   bulkRedirectsPath?: string | null;
   manual?: boolean;
   jsonOutput?: boolean;
-  functionsBeta?: boolean;
   linkedProject?: Project;
 }) {
   const {
@@ -87,11 +86,22 @@ export default async function processDeployment({
 
   const client = now._client;
 
+  // The ▲ gutter belongs on the Aliased row, which only prints when we wait
+  // for alias assignment and domains are auto-assigned. When that row won't
+  // print (--no-wait, --skip-domain), fall back to ▲ on the Production row.
+  const aliasedRowWillPrint =
+    !noWait && requestBody.autoAssignCustomDomains !== false;
+
   const { env = {} } = requestBody;
   const token = now._token;
   if (!token) {
     throw new Error('Missing authentication token');
   }
+
+  const aliasAssignedController = new AbortController();
+  const onAliasAssigned = (event: DeploymentAliasAssignedEvent) => {
+    aliasAssignedController.abort(event);
+  };
 
   const clientOptions: VercelClientOptions = {
     teamId: org.type === 'team' ? org.id : undefined,
@@ -111,6 +121,7 @@ export default async function processDeployment({
     projectName,
     bulkRedirectsPath,
     manual,
+    aliasAssignedSignal: aliasAssignedController.signal,
   };
 
   const deployingSpinnerVal = isSettingUpProject
@@ -145,7 +156,12 @@ export default async function processDeployment({
         output.debug(`Total files ${total.size}, ${missing.length} changed`);
 
         const missingSize = missing
-          .map((sha: string) => total.get(sha).data.length)
+          .map((sha: string) => {
+            const file = total.get(sha);
+            // Large files are streamed and have no in-memory `data`; fall back
+            // to the recorded `size`.
+            return file?.data?.length ?? file?.size ?? 0;
+          })
           .reduce((a: number, b: number) => a + b, 0);
         const totalSizeHuman = bytes.format(missingSize, { decimalPlaces: 1 });
 
@@ -185,9 +201,10 @@ export default async function processDeployment({
       }
 
       if (event.type === 'file-uploaded') {
+        const { file } = event.payload;
         output.debug(
-          `Uploaded: ${event.payload.file.names.join(' ')} (${bytes(
-            event.payload.file.data.length
+          `Uploaded: ${file.names.join(' ')} (${bytes(
+            file.data?.length ?? file.size ?? 0
           )})`
         );
       }
@@ -207,7 +224,7 @@ export default async function processDeployment({
         printAlignedLabel(
           isProdDeployment ? 'Production' : 'Preview',
           chalk.cyan(previewUrl),
-          isProdDeployment ? { gutter: '▲' } : {}
+          isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
         );
 
         if (!jsonOutput && (quiet || process.env.FORCE_TTY === '1')) {
@@ -226,7 +243,8 @@ export default async function processDeployment({
           ({ abortController, promise } = displayBuildLogs(
             client,
             deployment,
-            true
+            true,
+            onAliasAssigned
           ));
           promise.catch(error =>
             output.warn(`Failed to read build logs: ${error}`)
@@ -238,6 +256,7 @@ export default async function processDeployment({
             deployment.id,
             {
               mode: 'logs',
+              onAliasAssigned,
               onEvent: (event: BuildLog) => {
                 if (!event.created) return;
                 const lines = parseLogLines(event);
@@ -286,14 +305,15 @@ export default async function processDeployment({
         const v2ChecksPending =
           event.payload.checks?.['deployment-alias']?.state === 'pending';
 
-        stopSpinner();
+        // Keep the event stream open while polling waits for alias assignment.
+        output.stopSpinner();
         process.stderr.write(eraseLines(2));
         const isProdDeployment = event.payload.target === 'production';
         const previewUrl = `https://${event.payload.url}`;
         printAlignedLabel(
           isProdDeployment ? 'Production' : 'Preview',
           chalk.cyan(previewUrl),
-          isProdDeployment ? { gutter: '▲' } : {}
+          isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
         );
 
         if (v1ChecksPending || v2ChecksPending) {
@@ -322,16 +342,6 @@ export default async function processDeployment({
       // Handle error events
       if (event.type === 'error') {
         stopSpinner();
-
-        // Check if solvable with --functions-beta
-        if (!functionsBeta) {
-          const maybeSizeError = handleErrorSolvableWithFunctionsBeta(
-            event.payload
-          );
-          if (maybeSizeError) {
-            throw maybeSizeError;
-          }
-        }
 
         if (!archive) {
           const maybeError = handleErrorSolvableWithArchive(event.payload);
@@ -379,36 +389,6 @@ export default async function processDeployment({
   }
 }
 
-export class FunctionsSizeLimitError extends Error {
-  link =
-    'https://vercel.com/docs/functions/runtimes/python#extended-size-limits-with-functions-beta';
-}
-
-export function handleErrorSolvableWithFunctionsBeta(error: unknown) {
-  if (isErrorLike(error)) {
-    // Primary: match the Python-specific error code
-    const isLambdaSizeExceeded =
-      'errorCode' in error && error.errorCode === 'LAMBDA_SIZE_EXCEEDED';
-    // Fallback: match error message pattern for resilience
-    const isMessageMatch =
-      !isLambdaSizeExceeded &&
-      'errorMessage' in error &&
-      typeof error.errorMessage === 'string' &&
-      error.errorMessage.includes('exceeds') &&
-      (error.errorMessage.includes('Lambda size limit') ||
-        error.errorMessage.includes('Lambda ephemeral storage') ||
-        error.errorMessage.includes('exceeds Lambda limit'));
-
-    if (isLambdaSizeExceeded || isMessageMatch) {
-      return new FunctionsSizeLimitError(
-        (error as any).errorMessage ||
-          (error as any).message ||
-          'Function build exceeded the maximum size limit.'
-      );
-    }
-  }
-}
-
 export const archiveSuggestionText =
   'Try using `--archive=tgz` to limit the amount of files you upload.';
 
@@ -424,8 +404,14 @@ export function handleErrorSolvableWithArchive(error: unknown) {
       error.errorName.startsWith('api-upload-');
     const isTooManyFilesLimit =
       'code' in error && error.code === 'too_many_files';
+    // A file that exceeds the server's per-request upload limit is rejected
+    // with HTTP 413 "Request Entity Too Large". Archiving uploads the
+    // deployment in smaller chunks, which stays under that limit.
+    const isEntityTooLarge = /entity too large|payload too large/i.test(
+      error.message
+    );
 
-    if (isUploadRateLimit || isTooManyFilesLimit) {
+    if (isUploadRateLimit || isTooManyFilesLimit || isEntityTooLarge) {
       return new UploadErrorMissingArchive(
         `${error.message}\n${archiveSuggestionText}`
       );

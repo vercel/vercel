@@ -29,15 +29,9 @@ export async function acceptTermsViaBrowser(
   );
   url.searchParams.set('source', 'cli');
 
-  output.log(
-    'Opening browser for terms acceptance. Accept the terms to continue...'
-  );
-  output.log(`Visit this URL if the browser does not open: ${url.href}`);
-
-  open(url.href).catch((err: unknown) =>
-    output.debug(`Failed to open browser: ${err}`)
-  );
-
+  // Non-interactive mode (AI agent): emit structured action_required payload
+  // and exit 1. Done before opening a browser so AI agents / CI don't spawn
+  // one they have no way to interact with.
   if (shouldEmitNonInteractiveCommandError(client)) {
     const tail = buildIntegrationCommandTailFromArgv(client.argv);
     const policyLinks = getMarketplacePolicyLinks(integration);
@@ -46,7 +40,7 @@ export async function acceptTermsViaBrowser(
       {
         status: 'action_required',
         reason: AGENT_REASON.INTEGRATION_TERMS_ACCEPTANCE_REQUIRED,
-        message: `Accept marketplace terms for "${integration.name}" in your browser before this install can finish. A browser window was opened (or open verification_uri manually). This command does not wait for acceptance in non-interactive mode.`,
+        message: `Accept marketplace terms for "${integration.name}" in your browser before this install can finish. Open verification_uri to start. This command does not wait for acceptance in non-interactive mode.`,
         verification_uri: url.href,
         policy_links: policyLinks,
         userActionRequired: true,
@@ -65,6 +59,16 @@ export async function acceptTermsViaBrowser(
       },
       1
     );
+  }
+
+  output.log(
+    'Opening browser for terms acceptance. Accept the terms to continue...'
+  );
+  output.log(`Visit this URL if the browser does not open: ${url.href}`);
+  try {
+    await open(url.href);
+  } catch (err) {
+    output.debug(`Failed to open browser: ${err}`);
   }
 
   output.spinner('Waiting for terms acceptance in browser...');

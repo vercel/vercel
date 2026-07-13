@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import execa from 'execa';
 import { errorToString } from '@vercel/error-utils';
 import open from 'open';
 import output from '../../output-manager';
@@ -11,6 +12,13 @@ import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { acceptTermsViaBrowser } from '../../util/integration/accept-terms-via-browser';
 import { promptForTermAcceptance } from '../../util/integration/prompt-for-terms';
 import { selectProduct } from '../../util/integration/select-product';
+import {
+  resolveProductSkills,
+  type ResolvedSkill,
+} from '../../util/integration/skill-suggestion';
+import { runClaimForResource } from '../integration-resource/claim';
+import { getResources } from '../../util/integration-resource/get-resources';
+import { packageName } from '../../util/pkg-name';
 import type {
   AcceptedPolicies,
   AutoProvisionedResponse,
@@ -44,6 +52,8 @@ interface AddAutoProvisionOptions extends PostProvisionOptions {
   installationId?: string;
   commandName?: 'integration add' | 'install';
   asJson?: boolean;
+  claim?: boolean;
+  noClaim?: boolean;
 }
 
 export async function addAutoProvision(
@@ -471,6 +481,58 @@ export async function addAutoProvision(
     `${product.name} successfully provisioned: ${chalk.bold(resourceName)}`
   );
 
+  // Sandbox resources (e.g. Stripe, Shopify) require the user to claim the
+  // account in the provider UI to convert from sandbox to a real owned account.
+  const isSandbox = provisioned.resource.ownership === 'sandbox';
+  if (isSandbox && !options.noClaim) {
+    telemetry.trackCliFlagClaim(options.claim);
+    telemetry.trackCliFlagNoClaim(options.noClaim);
+
+    const shouldRunClaim =
+      options.claim || (client.stdin.isTTY && !options.asJson);
+
+    if (shouldRunClaim) {
+      let runClaim = !!options.claim;
+      if (!runClaim && client.stdin.isTTY) {
+        runClaim = await client.input.confirm(
+          `${chalk.bold(resourceName)} is a sandbox resource. Claim it now?`,
+          true
+        );
+      }
+
+      if (runClaim) {
+        try {
+          const allResources = await getResources(client);
+          const targetResource = allResources.find(
+            r => r.id === provisioned.resource.id
+          );
+          if (targetResource) {
+            await runClaimForResource(client, targetResource, {
+              suppressActionRequired: true,
+            });
+          } else {
+            output.warn(
+              `Could not locate the newly provisioned resource. Run \`${packageName} integration resource claim ${resourceName}\` to claim it.`
+            );
+          }
+        } catch (error) {
+          output.warn(
+            `Failed to start claim flow: ${(error as Error).message}. Run \`${packageName} integration resource claim ${resourceName}\` to retry.`
+          );
+        }
+      }
+    } else {
+      output.log(
+        `Sandbox resource — claim it with: ${chalk.cyan(`vercel integration resource claim ${resourceName}`)}`
+      );
+    }
+  } else if (isSandbox && options.noClaim) {
+    telemetry.trackCliFlagNoClaim(options.noClaim);
+    output.log(
+      `Sandbox resource — claim it later with: ${chalk.cyan(`vercel integration resource claim ${resourceName}`)}`
+    );
+  }
+
   const guideSlug =
     integration.products.length > 1
       ? `${integration.slug}/${product.slug}`
@@ -511,6 +573,78 @@ export async function addAutoProvision(
     }
   );
 
+  // Install the product's declared agent skills (from `agentSkills`) in all
+  // modes, including --format=json, where the human-readable summary is
+  // suppressed and each skill's `installed` status is reported in the payload.
+  const skills = resolveProductSkills(product);
+  const failedSkills: ResolvedSkill[] = [];
+
+  if (skills.length) {
+    if (!options.asJson) {
+      output.spinner(`Installing agent skills for ${product.name}...`);
+    }
+    // Provenance for the skills CLI's install telemetry: attributes the
+    // install to the marketplace flow and its integration/product. Everything
+    // else (agent, CI, versions) is detected by the skills CLI itself.
+    const skillsTelemetryMetadata = JSON.stringify({
+      origin: 'vercel-cli',
+      flow: 'integration-install',
+      integration: integration.slug,
+      product: product.slug,
+    });
+    for (const skill of skills) {
+      // Both `--yes` flags are needed in non-interactive (agent/CI) contexts:
+      // the first stops `npx` from prompting to install the `skills` package,
+      // the second makes `skills add` accept its defaults instead of asking.
+      // `--metadata` requires skills >= 1.5.16; older resolved versions
+      // silently ignore the flag and still install successfully (verified
+      // against 1.5.15), so no attribution is logged but nothing fails.
+      const args = [
+        '--yes',
+        'skills',
+        'add',
+        skill.repoUrl,
+        ...(skill.skill ? ['--skill', skill.skill] : []),
+        '--yes',
+        '--metadata',
+        skillsTelemetryMetadata,
+      ];
+      const result = await execa('npx', args, {
+        cwd: client.cwd,
+        stdio: 'pipe',
+        reject: false,
+      });
+      if (result.exitCode !== 0) {
+        failedSkills.push(skill);
+        output.debug(`skills add failed: ${result.stderr}`);
+        if (!options.asJson) {
+          output.warn(
+            `Failed to install ${skill.skill ?? skill.repoUrl}. Run it manually: ${chalk.cyan(skill.command)}`
+          );
+        }
+      }
+    }
+    const installed = skills.length - failedSkills.length;
+    if (installed > 0 && !options.asJson) {
+      // Link to the page that renders the product's Agent Skills section: the
+      // product page for multi-product integrations, the integration page
+      // otherwise (single-product product pages are not linked in the UI).
+      const marketplaceUrl =
+        integration.products.length > 1
+          ? `https://vercel.com/marketplace/${integration.slug}/${product.slug}`
+          : `https://vercel.com/marketplace/${integration.slug}`;
+      output.log(
+        `Installed ${installed} agent skill${installed === 1 ? '' : 's'} for ${chalk.bold(product.name)}`
+      );
+      output.log(
+        indent(
+          `Learn more: ${output.link(marketplaceUrl, marketplaceUrl, { fallback: false })}`,
+          2
+        )
+      );
+    }
+  }
+
   if (options.asJson) {
     const warnings: string[] = [];
     if (setupResult.connectError) {
@@ -521,6 +655,11 @@ export async function addAutoProvision(
     if (setupResult.connected && !setupResult.envPulled && !options.noEnvPull) {
       warnings.push(ENV_PULL_FAILED_MESSAGE);
     }
+    for (const skill of failedSkills) {
+      warnings.push(
+        `Failed to install ${skill.skill ?? skill.repoUrl}. Run it manually: ${skill.command}`
+      );
+    }
 
     const jsonOutput: Record<string, unknown> = {
       resource: {
@@ -528,6 +667,9 @@ export async function addAutoProvision(
         name: provisioned.resource.name,
         status: provisioned.resource.status,
         externalResourceId: provisioned.resource.externalResourceId,
+        ...(provisioned.resource.ownership && {
+          ownership: provisioned.resource.ownership,
+        }),
       },
       integration: {
         id: provisioned.integration.id,
@@ -562,6 +704,10 @@ export async function addAutoProvision(
       environments: setupResult.environments,
       envPulled: setupResult.envPulled,
       guideCommand,
+      skills: skills.map(skill => ({
+        ...skill,
+        installed: !failedSkills.includes(skill),
+      })),
       warnings,
     };
 

@@ -56,7 +56,7 @@ export type Framework =
   | 'flask'
   | 'fasthtml'
   | 'django'
-  | 'sanity-v3'
+  | 'sanity-v2'
   | 'sanity'
   | 'storybook'
   | 'nitro'
@@ -490,10 +490,6 @@ export interface VercelConfig {
    * A name for the deployment
    */
   name?: string;
-  /**
-   * Whether a deployment's source and logs are available publicly
-   */
-  public?: boolean;
   /**
    * A list of redirect definitions.
    */

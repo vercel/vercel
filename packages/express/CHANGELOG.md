@@ -1,5 +1,136 @@
 # @vercel/express
 
+## 0.1.113
+
+### Patch Changes
+
+- @vercel/node@5.8.23
+- @vercel/cervel@0.1.30
+
+## 0.1.112
+
+### Patch Changes
+
+- @vercel/cervel@0.1.29
+
+## 0.1.111
+
+### Patch Changes
+
+- @vercel/node@5.8.22
+- @vercel/cervel@0.1.28
+
+## 0.1.110
+
+### Patch Changes
+
+- @vercel/cervel@0.1.27
+- @vercel/node@5.8.21
+
+## 0.1.109
+
+### Patch Changes
+
+- @vercel/cervel@0.1.26
+- @vercel/node@5.8.21
+
+## 0.1.108
+
+### Patch Changes
+
+- @vercel/cervel@0.1.25
+- @vercel/node@5.8.20
+
+## 0.1.107
+
+### Patch Changes
+
+- Updated dependencies [2158ab6]
+  - @vercel/node@5.8.19
+  - @vercel/cervel@0.1.24
+
+## 0.1.106
+
+### Patch Changes
+
+- @vercel/node@5.8.18
+- @vercel/cervel@0.1.23
+
+## 0.1.105
+
+### Patch Changes
+
+- @vercel/cervel@0.1.22
+
+## 0.1.104
+
+### Patch Changes
+
+- @vercel/cervel@0.1.21
+
+## 0.1.103
+
+### Patch Changes
+
+- @vercel/cervel@0.1.20
+- @vercel/node@5.8.17
+
+## 0.1.102
+
+### Patch Changes
+
+- @vercel/node@5.8.16
+- @vercel/cervel@0.1.19
+
+## 0.1.101
+
+### Patch Changes
+
+- @vercel/node@5.8.15
+- @vercel/cervel@0.1.18
+
+## 0.1.100
+
+### Patch Changes
+
+- @vercel/node@5.8.14
+- @vercel/cervel@0.1.17
+
+## 0.1.99
+
+### Patch Changes
+
+- @vercel/node@5.8.13
+- @vercel/cervel@0.1.16
+
+## 0.1.98
+
+### Patch Changes
+
+- @vercel/cervel@0.1.15
+- @vercel/node@5.8.12
+
+## 0.1.97
+
+### Patch Changes
+
+- @vercel/node@5.8.11
+- @vercel/cervel@0.1.14
+
+## 0.1.96
+
+### Patch Changes
+
+- @vercel/node@5.8.10
+- @vercel/cervel@0.1.13
+
+## 0.1.95
+
+### Patch Changes
+
+- @vercel/node@5.8.9
+- @vercel/cervel@0.1.12
+
 ## 0.1.94
 
 ### Patch Changes

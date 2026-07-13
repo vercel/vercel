@@ -11,6 +11,7 @@ import os
 import pathlib
 import shutil
 import socket
+import struct
 import sys
 import tempfile
 import unittest
@@ -236,6 +237,212 @@ async def _http_post(
     return await asyncio.to_thread(
         _http_request, port, "POST", path, body, headers
     )
+
+
+class _SocketBuffer:
+    def __init__(self, sock: socket.socket) -> None:
+        self._sock = sock
+        self._buffer = bytearray()
+
+    def read_until(self, marker: bytes) -> bytes:
+        while marker not in self._buffer:
+            chunk = self._sock.recv(4096)
+            if not chunk:
+                raise ConnectionError("socket closed before expected data")
+            self._buffer.extend(chunk)
+
+        end = self._buffer.index(marker) + len(marker)
+        data = bytes(self._buffer[:end])
+        del self._buffer[:end]
+        return data
+
+    def read_exact(self, size: int) -> bytes:
+        while len(self._buffer) < size:
+            chunk = self._sock.recv(4096)
+            if not chunk:
+                raise ConnectionError("socket closed before expected data")
+            self._buffer.extend(chunk)
+
+        data = bytes(self._buffer[:size])
+        del self._buffer[:size]
+        return data
+
+
+def _encode_client_ws_frame(opcode: int, payload: bytes = b"") -> bytes:
+    frame = bytearray([0x80 | opcode])
+    payload_length = len(payload)
+
+    if payload_length < 126:
+        frame.append(0x80 | payload_length)
+    elif payload_length < 1 << 16:
+        frame.append(0x80 | 126)
+        frame.extend(struct.pack("!H", payload_length))
+    else:
+        frame.append(0x80 | 127)
+        frame.extend(struct.pack("!Q", payload_length))
+
+    mask = os.urandom(4)
+    frame.extend(mask)
+    frame.extend(byte ^ mask[index % 4] for index, byte in enumerate(payload))
+    return bytes(frame)
+
+
+def _read_ws_frame(reader: _SocketBuffer) -> tuple[int, bytes]:
+    first, second = reader.read_exact(2)
+    opcode = first & 0x0F
+    payload_length = second & 0x7F
+    has_mask = bool(second & 0x80)
+
+    if payload_length == 126:
+        payload_length = struct.unpack("!H", reader.read_exact(2))[0]
+    elif payload_length == 127:
+        payload_length = struct.unpack("!Q", reader.read_exact(8))[0]
+
+    mask = reader.read_exact(4) if has_mask else b""
+    payload = reader.read_exact(payload_length) if payload_length else b""
+
+    if has_mask:
+        payload = bytes(
+            byte ^ mask[index % 4] for index, byte in enumerate(payload)
+        )
+
+    return opcode, payload
+
+
+def _build_websocket_request(
+    port: int,
+    path: str = "/ws",
+    headers: dict[str, str] | None = None,
+) -> bytes:
+    key = base64.b64encode(os.urandom(16)).decode("ascii")
+    request_headers = {
+        "Host": f"127.0.0.1:{port}",
+        "Upgrade": "websocket",
+        "Connection": "Upgrade",
+        "Sec-WebSocket-Key": key,
+        "Sec-WebSocket-Version": "13",
+        **(headers or {}),
+    }
+
+    request_lines = [f"GET {path} HTTP/1.1"]
+    request_lines.extend(
+        f"{name}: {value}" for name, value in request_headers.items()
+    )
+    return ("\r\n".join([*request_lines, "", ""])).encode("ascii")
+
+
+class _WebSocketClient:
+    def __init__(self, sock: socket.socket, reader: _SocketBuffer) -> None:
+        self._sock = sock
+        self._reader = reader
+
+    @classmethod
+    def connect(
+        cls,
+        port: int,
+        path: str = "/ws",
+        headers: dict[str, str] | None = None,
+    ) -> tuple[_WebSocketClient, str]:
+        sock = socket.create_connection(("127.0.0.1", port), timeout=5)
+        sock.settimeout(5)
+        reader = _SocketBuffer(sock)
+
+        try:
+            sock.sendall(_build_websocket_request(port, path, headers))
+
+            response = reader.read_until(b"\r\n\r\n")
+            if b"sec-websocket-accept:" not in response.lower():
+                raise AssertionError(
+                    "websocket upgrade response missing accept header"
+                )
+
+            status_line = response.split(b"\r\n", maxsplit=1)[0].decode("ascii")
+            return cls(sock, reader), status_line
+        except Exception:
+            sock.close()
+            raise
+
+    def read_text(self) -> str:
+        opcode, payload = _read_ws_frame(self._reader)
+        if opcode != 0x1:
+            raise AssertionError(f"expected text frame, got opcode {opcode}")
+        return payload.decode("utf-8")
+
+    def send_text(self, text: str) -> None:
+        self._sock.sendall(_encode_client_ws_frame(0x1, text.encode("utf-8")))
+
+    def close(self) -> None:
+        if self._sock.fileno() == -1:
+            return
+
+        with contextlib.suppress(OSError):
+            self._sock.sendall(
+                _encode_client_ws_frame(0x8, struct.pack("!H", 1000))
+            )
+
+        with contextlib.suppress(ConnectionError, OSError, socket.timeout):
+            _read_ws_frame(self._reader)
+
+        with contextlib.suppress(OSError):
+            self._sock.close()
+
+
+def _dechunk(data: bytes) -> bytes:
+    out = b""
+    while data:
+        size_line, _, rest = data.partition(b"\r\n")
+        size = int(size_line.split(b";")[0], 16)
+        if size == 0:
+            break
+        out += rest[:size]
+        data = rest[size + 2 :]
+    return out
+
+
+def _raw_chunked_post(
+    port: int,
+    path: str,
+    body: bytes,
+    headers: dict[str, str] | None = None,
+) -> tuple[int, bytes]:
+    """Send a POST with a chunked body and NO Content-Length over a raw socket.
+
+    ``http.client`` always adds a Content-Length (or does its own chunking),
+    so to reproduce the proxy behaviour we write the raw HTTP/1.1 request.
+    Returns ``(status_code, response_body)``.
+    """
+    hdrs = {
+        "Host": "lambda",
+        "x-vercel-internal-invocation-id": "test-inv-1",
+        "x-vercel-internal-request-id": "42",
+        "x-vercel-internal-span-id": "span-1",
+        "x-vercel-internal-trace-id": "trace-1",
+        "Content-Type": "application/json",
+        "Transfer-Encoding": "chunked",
+        **(headers or {}),
+    }
+    request_line = f"POST {path} HTTP/1.1\r\n"
+    header_block = "".join(f"{k}: {v}\r\n" for k, v in hdrs.items())
+    chunk = f"{len(body):x}\r\n".encode() + body + b"\r\n0\r\n\r\n"
+    raw = request_line.encode() + header_block.encode() + b"\r\n" + chunk
+
+    with socket.create_connection(("127.0.0.1", port), timeout=10) as sock:
+        sock.sendall(raw)
+        sock.shutdown(socket.SHUT_WR)
+        buf = b""
+        while True:
+            part = sock.recv(65536)
+            if not part:
+                break
+            buf += part
+
+    head, _, resp_body = buf.partition(b"\r\n\r\n")
+    status_line = head.split(b"\r\n", 1)[0]
+    status_code = int(status_line.split(b" ")[1])
+    # If the response itself is chunked, strip framing for the assertion.
+    if b"transfer-encoding: chunked" in head.lower():
+        resp_body = _dechunk(resp_body)
+    return status_code, resp_body
 
 
 async def _read_stderr(
@@ -470,6 +677,31 @@ class TestWSGIApp(_RuntimeTestCase):
                 "GET /search?q=test",
             )
 
+    async def test_wsgi_chunked_post_without_content_length(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wsgi_echo_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            body = json.dumps({"message": "hello"}).encode()
+            status, resp = await asyncio.to_thread(
+                _raw_chunked_post, port, "/api/test", body
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(
+                json.loads(resp.decode()),
+                {"received": body.decode(), "path": "/api/test"},
+            )
+
     async def test_wsgi_closeable_response(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint(
             "wsgi_closeable_app.py", self.tmp_path
@@ -560,6 +792,123 @@ class TestWSGIApp(_RuntimeTestCase):
                 "x-vercel-sc-runtime-cache",
             ):
                 self.assertNotIn(sc_header, seen)
+
+    async def test_wsgi_websocket_ends_request_after_handshake(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wsgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            client: _WebSocketClient | None = None
+            try:
+                client, status_line = await asyncio.to_thread(
+                    _WebSocketClient.connect,
+                    port,
+                    "/ws",
+                    {
+                        "x-vercel-internal-invocation-id": "test-inv-ws",
+                        "x-vercel-internal-request-id": "42",
+                        "x-vercel-internal-span-id": "span-ws",
+                        "x-vercel-internal-trace-id": "trace-ws",
+                    },
+                )
+                self.assertEqual(
+                    status_line, "HTTP/1.1 101 Switching Protocols"
+                )
+                assert client is not None
+
+                hs = await self.n1.wait_for_message(
+                    HandlerStartedMessage, timeout=5.0
+                )
+                self.assertEqual(
+                    hs.payload.context.invocation_id, "test-inv-ws"
+                )
+                self.assertEqual(hs.payload.context.request_id, 42)
+
+                # The "end" message must arrive right after the 101 handshake,
+                # before the (still open) connection echoes any frames.
+                end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
+                self.assertEqual(
+                    end.payload.context.invocation_id, "test-inv-ws"
+                )
+                self.assertEqual(end.payload.context.request_id, 42)
+
+                # The upgraded socket remains fully usable past the end.
+                await asyncio.to_thread(client.send_text, "ping")
+                self.assertEqual(
+                    await asyncio.to_thread(client.read_text), "echo:ping"
+                )
+                await asyncio.to_thread(client.send_text, "again")
+                self.assertEqual(
+                    await asyncio.to_thread(client.read_text), "echo:again"
+                )
+            finally:
+                if client is not None:
+                    await asyncio.to_thread(client.close)
+
+    async def test_wsgi_websocket_emits_single_end_message(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wsgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            client, _status_line = await asyncio.to_thread(
+                _WebSocketClient.connect,
+                port,
+                "/ws",
+                {"x-vercel-internal-invocation-id": "test-inv-single"},
+            )
+            try:
+                await self.n1.wait_for_message(EndMessage, timeout=5.0)
+            finally:
+                await asyncio.to_thread(client.close)
+
+            # Closing the connection (WSGI app returns) must not emit a second
+            # "end" message via the handle_one_request finally block.
+            with self.assertRaises(TimeoutError):
+                await self.n1.wait_for_message(EndMessage, timeout=1.0)
+
+    async def test_wsgi_non_upgrade_request_still_works(self) -> None:
+        # A regular request to a WebSocket-capable app must take the normal
+        # WSGI path and emit exactly one "end" message via the finally block.
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wsgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/plain")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "not a websocket")
+
+            await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
 
 
 class TestASGIApp(_RuntimeTestCase):
@@ -699,6 +1048,189 @@ class TestASGIApp(_RuntimeTestCase):
                 "x-vercel-sc-runtime-cache",
             ):
                 self.assertNotIn(sc_header, seen)
+
+    async def test_asgi_websocket_ends_request_after_handshake(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_ROUTE_PREFIX_STRIP": "1",
+                "VERCEL_SERVICE_ROUTE_PREFIX": "/_svc/backend",
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            client: _WebSocketClient | None = None
+            try:
+                client, status_line = await asyncio.to_thread(
+                    _WebSocketClient.connect,
+                    port,
+                    "/_svc/backend/ws",
+                    {
+                        "x-vercel-internal-invocation-id": "test-inv-1",
+                        "x-vercel-internal-request-id": "42",
+                        "x-vercel-internal-span-id": "span-1",
+                        "x-vercel-internal-trace-id": "trace-1",
+                        "x-vercel-internal-oidc-token": "oidc-secret",
+                    },
+                )
+
+                self.assertEqual(
+                    status_line, "HTTP/1.1 101 Switching Protocols"
+                )
+                assert client is not None
+
+                scope_data = json.loads(
+                    await asyncio.to_thread(client.read_text)
+                )
+                self.assertEqual(scope_data["path"], "/ws")
+                self.assertEqual(scope_data["root_path"], "/_svc/backend")
+                self.assertFalse(scope_data["has_internal_invocation_id"])
+                self.assertFalse(scope_data["has_internal_request_id"])
+                self.assertFalse(scope_data["has_internal_span_id"])
+                self.assertFalse(scope_data["has_internal_trace_id"])
+                self.assertEqual(scope_data["oidc_token"], "oidc-secret")
+
+                hs = await self.n1.wait_for_message(
+                    HandlerStartedMessage, timeout=5.0
+                )
+                self.assertGreater(hs.payload.handler_started_at, 0)
+                self.assertEqual(hs.payload.context.invocation_id, "test-inv-1")
+                self.assertEqual(hs.payload.context.request_id, 42)
+
+                end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
+                self.assertEqual(
+                    end.payload.context.invocation_id, "test-inv-1"
+                )
+                self.assertEqual(end.payload.context.request_id, 42)
+
+                # The request should be complete at the 101 upgrade boundary
+                # while the upgraded socket remains fully usable.
+                await asyncio.to_thread(client.send_text, "ping")
+                self.assertEqual(
+                    await asyncio.to_thread(client.read_text), "echo:ping"
+                )
+            finally:
+                if client is not None:
+                    await asyncio.to_thread(client.close)
+
+    async def test_asgi_websocket_server_close_ends_request(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            client: _WebSocketClient | None = None
+            try:
+                client, status_line = await asyncio.to_thread(
+                    _WebSocketClient.connect,
+                    port,
+                    "/server-close",
+                    {
+                        "x-vercel-internal-invocation-id": "test-inv-sc",
+                        "x-vercel-internal-request-id": "99",
+                        "x-vercel-internal-span-id": "span-sc",
+                        "x-vercel-internal-trace-id": "trace-sc",
+                    },
+                )
+                self.assertEqual(
+                    status_line, "HTTP/1.1 101 Switching Protocols"
+                )
+                assert client is not None
+
+                # Server sends close frame immediately after accept.
+                # Read the close frame (opcode 0x8).
+                opcode, _payload = await asyncio.to_thread(
+                    _read_ws_frame, client._reader
+                )
+                self.assertEqual(opcode, 0x8)
+
+                # The IPC end message should still be emitted via the
+                # websocket.close path in send_wrapper.
+                end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
+                self.assertEqual(
+                    end.payload.context.invocation_id, "test-inv-sc"
+                )
+            finally:
+                if client is not None:
+                    await asyncio.to_thread(client.close)
+
+    async def test_asgi_websocket_reject_ends_request(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            # Attempt a WebSocket upgrade to /reject; the app responds
+            # with an HTTP 403 via websocket.http.response.{start,body}.
+            sock = socket.create_connection(("127.0.0.1", port), timeout=5)
+            try:
+                sock.sendall(
+                    _build_websocket_request(
+                        port,
+                        "/reject",
+                        {
+                            "x-vercel-internal-invocation-id": "test-inv-rej",
+                            "x-vercel-internal-request-id": "77",
+                            "x-vercel-internal-span-id": "span-rej",
+                            "x-vercel-internal-trace-id": "trace-rej",
+                        },
+                    )
+                )
+                sock.settimeout(5)
+                buf = b""
+                status_line = ""
+                body = b""
+                while True:
+                    chunk = await asyncio.to_thread(sock.recv, 4096)
+                    if not chunk:
+                        break
+                    buf += chunk
+                    if b"\r\n\r\n" in buf:
+                        head, _, body = buf.partition(b"\r\n\r\n")
+                        status_line = head.split(b"\r\n", 1)[0].decode()
+                        if b"transfer-encoding: chunked" in head.lower():
+                            body = _dechunk(body)
+                        if body:
+                            break
+
+                self.assertIn("403", status_line)
+                self.assertEqual(body, b"forbidden")
+            finally:
+                sock.close()
+
+            # The IPC end message should be emitted via the
+            # websocket.http.response.body path in send_wrapper.
+            end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
+            self.assertEqual(end.payload.context.invocation_id, "test-inv-rej")
 
 
 class TestCronService(_RuntimeTestCase):

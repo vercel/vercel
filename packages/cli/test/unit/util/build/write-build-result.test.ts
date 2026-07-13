@@ -1,8 +1,160 @@
 import { join } from 'path';
-import { glob, FileBlob, FileFsRef } from '@vercel/build-utils';
+import {
+  glob,
+  FileBlob,
+  FileFsRef,
+  getWriteableDirectory,
+  Lambda,
+  type BuilderV2,
+  type BuilderV3,
+} from '@vercel/build-utils';
 import { describe, expect, it } from 'vitest';
 import fs from 'fs-extra';
-import { filesWithoutFsRefs } from '../../../../src/util/build/write-build-result';
+import {
+  filesWithoutFsRefs,
+  writeBuildResult,
+} from '../../../../src/util/build/write-build-result';
+
+describe('writeBuildResult()', () => {
+  it('writes isolated V2 service functions at index', async () => {
+    const workPath = await getWriteableDirectory();
+    const outputDir = join(workPath, '.vercel', 'output');
+    const build = {
+      src: 'app.rb',
+      use: '@vercel/ruby',
+      config: { zeroConfig: true },
+    };
+    const runtimeBuilder: BuilderV3 = {
+      version: 3,
+      build: async () => {
+        throw new Error('not used by writeBuildResult');
+      },
+    };
+
+    try {
+      await writeBuildResult({
+        repoRootPath: workPath,
+        outputDir,
+        buildResult: {
+          output: new Lambda({
+            files: {
+              'app.rb': new FileBlob({
+                data: 'run ->(_env) { [200, {}, []] }',
+              }),
+            },
+            handler: 'app.handler',
+            runtime: 'ruby3.3',
+          }),
+        },
+        build,
+        builder: runtimeBuilder,
+        builderPkg: { name: '@vercel/ruby' },
+        vercelConfig: null,
+        standalone: false,
+        workPath,
+        service: {
+          schema: 'experimentalServicesV2',
+          name: 'api',
+          root: '.',
+          runtime: 'ruby',
+          entrypoint: 'app.rb',
+          builder: build,
+        },
+        nestServiceOutput: true,
+      });
+
+      expect(
+        await fs.pathExists(
+          join(outputDir, 'services/api/functions/index.func/.vc-config.json')
+        )
+      ).toBe(true);
+      expect(
+        await fs.pathExists(
+          join(
+            outputDir,
+            'services/api/functions/_svc/api/index.func/.vc-config.json'
+          )
+        )
+      ).toBe(false);
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
+
+  it('writes container function configuration to .vc-config.json', async () => {
+    const workPath = await getWriteableDirectory();
+    const outputDir = join(workPath, '.vercel', 'output');
+    const build = {
+      src: 'Dockerfile.vercel',
+      use: '@vercel/container',
+      config: {
+        zeroConfig: true,
+        functions: {
+          'Dockerfile.vercel': {
+            memory: 2048,
+            maxDuration: 60,
+            regions: ['iad1'],
+          },
+        },
+      },
+    };
+    const runtimeBuilder: BuilderV2 = {
+      version: 2,
+      build: async () => {
+        throw new Error('not used by writeBuildResult');
+      },
+    };
+
+    try {
+      await writeBuildResult({
+        repoRootPath: workPath,
+        outputDir,
+        buildResult: {
+          routes: [{ handle: 'filesystem' }, { src: '/(.*)', dest: '/index' }],
+          output: {
+            index: {
+              type: 'Lambda',
+              files: {},
+              handler: 'docker.io/library/nginx:1.27',
+              runtime: 'container',
+              environment: {},
+              memory: 2048,
+              maxDuration: 60,
+              regions: ['iad1'],
+            },
+          },
+        } as unknown as import('@vercel/build-utils').BuildResultV2,
+        build,
+        builder: runtimeBuilder,
+        builderPkg: { name: '@vercel/container' },
+        vercelConfig: {
+          functions: {
+            'Dockerfile.vercel': {
+              memory: 2048,
+              maxDuration: 60,
+              regions: ['iad1'],
+            },
+          },
+        },
+        standalone: false,
+        workPath,
+      });
+
+      const vcConfig = await fs.readJSON(
+        join(outputDir, 'functions/index.func/.vc-config.json')
+      );
+      expect(vcConfig).toMatchObject({
+        handler: 'docker.io/library/nginx:1.27',
+        runtime: 'container',
+        memory: 2048,
+        maxDuration: 60,
+        regions: ['iad1'],
+      });
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
+});
 
 describe('filesWithoutFsRefs()', () => {
   it('should create `filePathMap` with normalized POSIX paths', async () => {
@@ -41,18 +193,21 @@ describe('filesWithoutFsRefs()', () => {
     expect(filePathMap['package.json']).toEqual('package.json');
   });
 
-  it('should omit external symlinks from standalone shared output', async () => {
+  it('keeps the symlink but drops its descendants in standalone mode', async () => {
     if (process.platform === 'win32') {
       return;
     }
 
-    const root = await fs.mkdtemp(join(__dirname, 'standalone-symlink-'));
+    // The build is anchored at the repo root, so the symlink is preserved
+    // instead of skipped. Its descendants must NOT also be written, or
+    // `download()` can race and create a real directory at the symlink's path
+    // (EEXIST -> readlink on a dir -> EINVAL).
+    const root = await fs.mkdtemp(join(__dirname, 'resolved-root-symlink-'));
     const pnpmStore = join(
       root,
       'node_modules/.pnpm/next@1.0.0/node_modules/next'
     );
     const appNodeModules = join(root, 'apps/web/node_modules');
-    const sharedDest = join(root, 'apps/web/.vercel/output/shared');
 
     await fs.mkdirp(pnpmStore);
     await fs.writeFile(join(pnpmStore, 'server.js'), 'module.exports = {}');
@@ -62,29 +217,43 @@ describe('filesWithoutFsRefs()', () => {
       join(appNodeModules, 'next')
     );
 
-    const tracedFile = await FileFsRef.fromFsPath({
-      fsPath: join(appNodeModules, 'next/server.js'),
-    });
-    const externalSymlink = await FileFsRef.fromFsPath({
+    const symlink = await FileFsRef.fromFsPath({
       fsPath: join(appNodeModules, 'next'),
     });
+    // A traced descendant reached through the symlink (the failure case).
+    const descendant = await FileFsRef.fromFsPath({
+      fsPath: join(appNodeModules, 'next/server.js'),
+    });
+    // The real bytes, anchored in the function (not under the symlink).
+    const realFile = await FileFsRef.fromFsPath({
+      fsPath: join(pnpmStore, 'server.js'),
+    });
+    const storeKey =
+      'node_modules/.pnpm/next@1.0.0/node_modules/next/server.js';
+    // A sibling package whose name shares the symlink's prefix. It must NOT be
+    // dropped: `node_modules/next-auth` is not nested under the `next` symlink,
+    // which is why the descendant check matches on a trailing slash.
+    const siblingFile = await FileFsRef.fromFsPath({ fsPath: __filename });
+    const siblingKey = 'apps/web/node_modules/next-auth/index.js';
 
-    const { shared = {}, filePathMap = {} } = filesWithoutFsRefs(
+    const { files } = filesWithoutFsRefs(
       {
-        'node_modules/next': externalSymlink,
-        'node_modules/next/server.js': tracedFile,
+        'apps/web/node_modules/next': symlink,
+        'apps/web/node_modules/next/server.js': descendant,
+        [siblingKey]: siblingFile,
+        [storeKey]: realFile,
       },
       root,
-      sharedDest,
       true
     );
 
-    expect(shared['node_modules/next']).toBeUndefined();
-    expect(shared['node_modules/next/server.js']).toBeDefined();
-    expect(filePathMap['node_modules/next']).toBeUndefined();
-    expect(filePathMap['node_modules/next/server.js']).toEqual(
-      'apps/web/.vercel/output/shared/node_modules/next/server.js'
-    );
+    // The symlink itself is kept, its descendant is dropped, and the real
+    // file (the symlink's target) is kept.
+    expect(files['apps/web/node_modules/next']).toBe(symlink);
+    expect(files['apps/web/node_modules/next/server.js']).toBeUndefined();
+    expect(files[storeKey]).toBe(realFile);
+    // The similarly-named sibling package is unaffected.
+    expect(files[siblingKey]).toBe(siblingFile);
 
     await fs.remove(root);
   });

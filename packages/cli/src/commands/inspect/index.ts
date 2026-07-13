@@ -3,23 +3,28 @@ import { isErrnoException } from '@vercel/error-utils';
 import chalk from 'chalk';
 import ms from 'ms';
 import title from 'title';
-import { URL } from 'url';
 import type Client from '../../util/client';
 import { isDeploying } from '../../util/deploy/is-deploying';
-import { displayBuildLogs } from '../../util/logs';
+import {
+  type BuildLog,
+  collectBuildLogs,
+  displayBuildLogs,
+} from '../../util/logs';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import getScope from '../../util/get-scope';
+import getScope, { detectExplicitScope } from '../../util/get-scope';
 import readStandardInput from '../../util/input/read-standard-input';
 import buildsList from '../../util/output/builds';
 import elapsed from '../../util/output/elapsed';
 import indent from '../../util/output/indent';
 import { validateJsonOutput } from '../../util/output-format';
 import routesList from '../../util/output/routes';
+import { parseDeploymentUrl } from '../../util/parse-deployment-url';
 import { getCommandName } from '../../util/pkg-name';
 import sleep from '../../util/sleep';
+import getTeams from '../../util/teams/get-teams';
 import { help } from '../help';
 import { inspectCommand } from './command';
 import output from '../../output-manager';
@@ -89,6 +94,19 @@ export default async function inspect(client: Client) {
 
   let contextName: string | null = null;
 
+  // Parse the deployment URL to extract scope and normalize deployment ID
+  const parsed = parseDeploymentUrl(deploymentIdOrHost);
+  deploymentIdOrHost = parsed.deploymentIdOrHost;
+  // If a scope was extracted from a dashboard URL and no explicit scope was provided,
+  // use the scope from the URL
+  if (parsed.scope && !detectExplicitScope(client)) {
+    const teams = await getTeams(client);
+    const team = teams.find(t => t.slug === parsed.scope);
+    if (team) {
+      client.config.currentTeam = team.id;
+    }
+  }
+
   try {
     ({ contextName } = await getScope(client));
   } catch (err: unknown) {
@@ -113,26 +131,44 @@ export default async function inspect(client: Client) {
   }
   const asJson = formatResult.jsonOutput;
   const startTimestamp = Date.now();
-
-  try {
-    deploymentIdOrHost = new URL(deploymentIdOrHost).hostname;
-  } catch {}
-  output.spinner(
-    `Fetching deployment "${deploymentIdOrHost}" in ${chalk.bold(contextName)}`
-  );
+  if (!(asJson && withLogs)) {
+    output.spinner(
+      `Fetching deployment "${deploymentIdOrHost}" in ${chalk.bold(
+        contextName
+      )}`
+    );
+  }
 
   // resolve the deployment, since we might have been given an alias
   let deployment = await getDeployment(client, contextName, deploymentIdOrHost);
 
   let abortController: AbortController | undefined;
-  if (withLogs && !asJson) {
-    let promise: Promise<void>;
-    ({ abortController, promise } = displayBuildLogs(client, deployment, wait));
-    if (wait) {
-      // when waiting for the deployment's end, we don't wait for the logs to finish
-      promise.catch(error => warn(`Failed to read build logs: ${error}`));
+  let buildLogsPromise: Promise<BuildLog[]> | undefined;
+  if (withLogs) {
+    if (asJson) {
+      let promise: Promise<BuildLog[]>;
+      ({ abortController, promise } = collectBuildLogs(
+        client,
+        deployment,
+        wait
+      ));
+      buildLogsPromise = promise.catch(error => {
+        warn(`Failed to read build logs: ${error}`);
+        return [];
+      });
     } else {
-      await promise;
+      let promise: Promise<void>;
+      ({ abortController, promise } = displayBuildLogs(
+        client,
+        deployment,
+        wait
+      ));
+      if (wait) {
+        // when waiting for the deployment's end, we don't wait for the logs to finish
+        promise.catch(error => warn(`Failed to read build logs: ${error}`));
+      } else {
+        await promise;
+      }
     }
   }
   while (wait) {
@@ -152,7 +188,11 @@ export default async function inspect(client: Client) {
 
   if (asJson) {
     output.stopSpinner();
-    await printJson({ deployment, contextName, client });
+    if (withLogs) {
+      printLogsJson(client, (await buildLogsPromise) ?? []);
+    } else {
+      await printJson({ deployment, contextName, client });
+    }
   } else if (withLogs) {
     print(`${chalk.cyan('status')}\t${stateString(deployment.readyState)}\n`);
   } else {
@@ -317,6 +357,10 @@ async function printJson({
   };
 
   client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+}
+
+function printLogsJson(client: Client, logs: BuildLog[]): void {
+  client.stdout.write(`${JSON.stringify(logs, null, 2)}\n`);
 }
 
 function exitCode(state: Deployment['readyState']) {

@@ -6,12 +6,15 @@ import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import alerts from '../../../../src/commands/alerts';
 import * as linkModule from '../../../../src/util/projects/link';
 import * as getScopeModule from '../../../../src/util/get-scope';
+import * as getProjectModule from '../../../../src/util/projects/get-project-by-id-or-name';
 
 vi.mock('../../../../src/util/projects/link');
 vi.mock('../../../../src/util/get-scope');
+vi.mock('../../../../src/util/projects/get-project-by-id-or-name');
 
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
 const mockedGetScope = vi.mocked(getScopeModule.default);
+const mockedGetProject = vi.mocked(getProjectModule.default);
 
 let tmpDir: string;
 
@@ -74,6 +77,55 @@ describe('alerts rules', () => {
     expect(path).toContain('/alerts/v2/alert-rules');
     expect(client.stderr.getFullOutput()).toContain('ar_1');
     expect(client.stderr.getFullOutput()).toContain('My rule');
+  });
+
+  it('lists team-wide alert rules without a linked project', async () => {
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'not_linked',
+      org: null,
+      project: null,
+    });
+    client.scenario.get('/alerts/v2/alert-rules', (req, res) => {
+      expect(req.query.teamId).toBe('team_dummy');
+      expect(req.query.projectId).toBeUndefined();
+      res.json([{ id: 'ar_1', name: 'Team rule', teamId: 'team_dummy' }]);
+    });
+
+    client.setArgv('alerts', 'rules', '--all', '--format', 'json');
+
+    const exitCode = await alerts(client);
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      rules: [{ id: 'ar_1', name: 'Team rule', teamId: 'team_dummy' }],
+    });
+    expect(mockedGetLinkedProject).not.toHaveBeenCalled();
+  });
+
+  it('lists alert rules for an explicit project', async () => {
+    mockedGetProject.mockResolvedValue({ id: 'prj_explicit' } as any);
+    client.scenario.get('/alerts/v2/alert-rules', (req, res) => {
+      expect(req.query.teamId).toBe('team_dummy');
+      expect(req.query.projectId).toBe('prj_explicit');
+      res.json([]);
+    });
+
+    client.setArgv(
+      'alerts',
+      'rules',
+      '--project',
+      'explicit-project',
+      '--format',
+      'json'
+    );
+
+    const exitCode = await alerts(client);
+    expect(exitCode).toBe(0);
+    expect(mockedGetProject).toHaveBeenCalledWith(
+      client,
+      'explicit-project',
+      'team_dummy'
+    );
+    expect(mockedGetLinkedProject).not.toHaveBeenCalled();
   });
 
   it('creates a rule with POST', async () => {

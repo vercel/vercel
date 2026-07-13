@@ -1,5 +1,148 @@
 # @vercel/backends
 
+## 0.8.22
+
+### Patch Changes
+
+- Updated dependencies [7b30856]
+  - @vercel/build-utils@13.32.3
+
+## 0.8.21
+
+### Patch Changes
+
+- cbf22bf: Reject services that opt into the Edge Runtime. A service entrypoint exporting `config.runtime = 'edge'` (or `'experimental-edge'`) was previously ignored and silently built as a Node function; the build now fails with a clear `EDGE_RUNTIME_UNSUPPORTED_IN_SERVICES` error.
+
+## 0.8.20
+
+### Patch Changes
+
+- Updated dependencies [6b49a17]
+  - @vercel/build-utils@13.32.2
+
+## 0.8.19
+
+### Patch Changes
+
+- 62a884e: Simplify isolated `services` and `experimentalServicesV2` runtime outputs by emitting their function at `index` instead of `_svc/<service-name>/index`.
+
+## 0.8.18
+
+### Patch Changes
+
+- 8dc4702: Fix `vercel dev` for standalone Node servers, including projects without a `package.json`, and reuse the server process between requests.
+- Updated dependencies [8dc4702]
+  - @vercel/build-utils@13.32.1
+
+## 0.8.17
+
+### Patch Changes
+
+- fdb6121: Fix build failure when `outputDirectory` is set to the project root (e.g. `.`). The builder no longer globs the working tree as build output in that case, avoiding tracing errors from package-manager symlinks in `node_modules`.
+- Updated dependencies [9fb2976]
+- Updated dependencies [186014d]
+- Updated dependencies [cb0988f]
+  - @vercel/build-utils@13.32.0
+
+## 0.8.16
+
+### Patch Changes
+
+- Updated dependencies [2158ab6]
+  - @vercel/build-utils@13.31.1
+
+## 0.8.15
+
+### Patch Changes
+
+- Updated dependencies [8dec9ea]
+- Updated dependencies [3afdb18]
+- Updated dependencies [04f830c]
+  - @vercel/build-utils@13.31.0
+
+## 0.8.14
+
+### Patch Changes
+
+- c453e66: Trace CommonJS package entrypoints used by Rolldown shims so pnpm-symlinked dependencies are included in Node function output.
+
+## 0.8.13
+
+### Patch Changes
+
+- 4421ad9: Allow the Node framework preset to work without a `package.json`. The `node`
+  framework is now detected from a `server.*` entrypoint alone, and the
+  `@vercel/backends` builder defaults the module format to ESM (`"module"`) when
+  no `package.json` is present instead of erroring with "Unable to resolve format".
+
+## 0.8.12
+
+### Patch Changes
+
+- 52f005f: Fix a `@vercel/backends` performance regression. Passing `stat`/`readlink`/`readFile` overrides to `nodeFileTrace` replaces @vercel/nft's internal `CachedFileSystem`, so repeated (mostly missing) path probes during module resolution became uncached syscalls that throw on every miss. The `stat`/`readlink` overrides are now only applied when there are in-memory rolldown output files to serve, and all fs overrides are memoized (including negative results) to restore nft's caching.
+- 2d2aad9: Fix corruption of native addon (`.node`) and other binary files during file tracing. Traced files were read as UTF-8 strings, which mangled non-text bytes and caused runtime errors such as `ELF file's phentsize not the expected size` (e.g. with `argon2` on pnpm). Binary files are now preserved byte-for-byte.
+- Updated dependencies [01e18e8]
+  - @vercel/build-utils@13.30.0
+
+## 0.8.11
+
+### Patch Changes
+
+- Updated dependencies [32a730e]
+  - @vercel/build-utils@13.29.1
+
+## 0.8.10
+
+### Patch Changes
+
+- Updated dependencies [8d8e871]
+  - @vercel/build-utils@13.29.0
+
+## 0.8.9
+
+### Patch Changes
+
+- Updated dependencies [4e849dd]
+  - @vercel/build-utils@13.28.0
+
+## 0.8.8
+
+### Patch Changes
+
+- Updated dependencies [c5eeb30]
+- Updated dependencies [09c39af]
+  - @vercel/build-utils@13.27.2
+
+## 0.8.7
+
+### Patch Changes
+
+- aeb5bfa: Trace runtime dependencies from both TypeScript sources and rolldown output chunks. NFT picks the `require` vs `import` exports condition based on the parent file's parse result, so source-only tracing miscategorises packages whose conditional exports point at different files (e.g. `@planetscale/database` -> `dist/index.js` for `import`, `dist/cjs/index.js` for `require`). A CJS bundle that did `require('@planetscale/database')` at runtime would fail with `Cannot find module` because the CJS variant was never traced or uploaded.
+- Updated dependencies [0a170fd]
+  - @vercel/build-utils@13.27.1
+
+## 0.8.6
+
+### Patch Changes
+
+- Updated dependencies [338cc35]
+  - @vercel/build-utils@13.27.0
+
+## 0.8.5
+
+### Patch Changes
+
+- Updated dependencies [3019788]
+- Updated dependencies [fe893ec]
+  - @vercel/build-utils@13.26.6
+
+## 0.8.4
+
+### Patch Changes
+
+- Updated dependencies [1180675]
+  - @vercel/build-utils@13.26.5
+
 ## 0.8.3
 
 ### Patch Changes

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import type { Service } from '@vercel/fs-detectors';
+import type { ExperimentalService } from '@vercel/fs-detectors';
+import type { ServiceQueueTopic, ServiceTopics } from '@vercel/build-utils';
 import {
   QueueBroker,
   topicPatternToRegex,
@@ -9,53 +10,51 @@ vi.mock('../../../../src/output-manager', () => ({
   default: { debug: vi.fn(), debugEnabled: false },
 }));
 
-vi.mock('node-fetch', () => ({
-  default: vi.fn().mockResolvedValue({ ok: true, status: 200 }),
+vi.mock('../../../../src/util/fetch', () => ({
+  directFetch: vi.fn().mockResolvedValue({ ok: true, status: 200 }),
 }));
 
-import nodeFetch from 'node-fetch';
-const mockFetch = vi.mocked(nodeFetch);
+import { directFetch } from '../../../../src/util/fetch';
+const mockFetch = vi.mocked(directFetch);
 
 function makeWorkerService(
   name: string,
-  topics: string[] = ['default']
-): Service {
+  topics: ServiceTopics = ['default']
+): ExperimentalService {
   return {
+    schema: 'experimentalServices',
     name,
     type: 'worker',
-    consumer: name,
     workspace: '.',
     builder: { src: 'index.ts', use: '@vercel/node' },
     topics,
-  } as Service;
+  } as ExperimentalService;
 }
 
 function makeQueueJobService(
   name: string,
-  topics: Array<{
-    topic: string;
-    retryAfterSeconds?: number;
-    initialDelaySeconds?: number;
-  }>
-): Service {
+  topics: ServiceQueueTopic[]
+): ExperimentalService {
   return {
+    schema: 'experimentalServices',
     name,
     type: 'job',
     trigger: 'queue',
     workspace: '.',
     builder: { src: 'index.ts', use: '@vercel/node' },
     topics,
-  } as Service;
+  } as ExperimentalService;
 }
 
-function makeWebService(name: string): Service {
+function makeWebService(name: string): ExperimentalService {
   return {
+    schema: 'experimentalServices',
     name,
     type: 'web',
     routePrefix: '/',
     workspace: '.',
     builder: { src: 'index.ts', use: '@vercel/node' },
-  } as Service;
+  } as ExperimentalService;
 }
 
 /** Extract headers from a specific mockFetch call (defaults to the last one). */
@@ -126,6 +125,27 @@ describe('QueueBroker', () => {
     vi.useRealTimers();
   });
 
+  it('rejects duplicate consumer and topic pairs', () => {
+    expect(
+      () =>
+        new QueueBroker(
+          [
+            {
+              ...makeWorkerService('worker-a', ['jobs']),
+              consumer: 'shared-consumer',
+            },
+            {
+              ...makeWorkerService('worker-b', ['jobs']),
+              consumer: 'shared-consumer',
+            },
+          ],
+          getServiceOrigin
+        )
+    ).toThrow(
+      'Queue consumer "shared-consumer" is configured more than once for topic "jobs"'
+    );
+  });
+
   describe('enqueue', () => {
     it('returns unique messageIds', () => {
       broker = new QueueBroker(
@@ -147,6 +167,99 @@ describe('QueueBroker', () => {
       expect(r1.messageId).toBeTruthy();
       expect(r2.messageId).toBeTruthy();
       expect(r1.messageId).not.toBe(r2.messageId);
+    });
+
+    it('deduplicates idempotency keys within a queue', async () => {
+      broker = new QueueBroker(
+        [makeWorkerService('worker-a', ['orders'])],
+        getServiceOrigin
+      );
+
+      const first = broker.enqueue(
+        'orders',
+        Buffer.from('{"attempt":1}'),
+        'application/json',
+        { idempotencyKey: 'order-123' }
+      );
+      const duplicate = broker.enqueue(
+        'orders',
+        Buffer.from('{"attempt":2}'),
+        'application/json',
+        { idempotencyKey: 'order-123' }
+      );
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(duplicate.messageId).not.toBe(first.messageId);
+      expect(
+        broker.getOriginalMessageIdForDuplicate('orders', duplicate.messageId)
+      ).toBe(first.messageId);
+      expect(mockFetch).toHaveBeenCalledOnce();
+      expect((mockFetch.mock.calls[0][1] as any).body.toString()).toBe(
+        '{"attempt":1}'
+      );
+    });
+
+    it('scopes idempotency keys to a queue', async () => {
+      broker = new QueueBroker(
+        [makeWorkerService('worker-a', ['*'])],
+        getServiceOrigin
+      );
+
+      const first = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json',
+        { idempotencyKey: 'shared-key' }
+      );
+      const second = broker.enqueue(
+        'events',
+        Buffer.from('{}'),
+        'application/json',
+        { idempotencyKey: 'shared-key' }
+      );
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(second.messageId).not.toBe(first.messageId);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('expires idempotency keys with message retention', async () => {
+      broker = new QueueBroker(
+        [makeWorkerService('worker-a', ['orders'])],
+        getServiceOrigin
+      );
+
+      const first = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json',
+        { idempotencyKey: 'expiring-key', retentionSeconds: 60 }
+      );
+      const duplicate = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json',
+        { idempotencyKey: 'expiring-key', retentionSeconds: 60 }
+      );
+
+      expect(
+        broker.getOriginalMessageIdForDuplicate('orders', duplicate.messageId)
+      ).toBe(first.messageId);
+
+      await vi.advanceTimersByTimeAsync(60_001);
+      const afterExpiration = broker.enqueue(
+        'orders',
+        Buffer.from('{}'),
+        'application/json',
+        { idempotencyKey: 'expiring-key', retentionSeconds: 60 }
+      );
+
+      expect(
+        broker.getOriginalMessageIdForDuplicate(
+          'orders',
+          afterExpiration.messageId
+        )
+      ).toBeNull();
     });
 
     it('dispatches CloudEvent to matching worker', async () => {
@@ -174,6 +287,24 @@ describe('QueueBroker', () => {
       expect(headers['ce-vqsmessageid']).toBe(messageId);
       expect(headers['ce-vqsreceipthandle']).toBeTruthy();
       expect(headers['content-type']).toBe('application/json');
+    });
+
+    it('routes by service name while identifying its queue consumer', async () => {
+      broker = new QueueBroker(
+        [
+          {
+            ...makeWorkerService('celery-worker', ['tasks']),
+            consumer: 'celery-consumer',
+          },
+        ],
+        getServiceOrigin
+      );
+
+      broker.enqueue('tasks', Buffer.from('{}'), 'application/json');
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(getServiceOrigin).toHaveBeenCalledWith('celery-worker');
+      expect(callHeaders()['ce-vqsconsumergroup']).toBe('celery-consumer');
     });
 
     it('dispatches to multiple matching consumer groups', async () => {
@@ -365,6 +496,25 @@ describe('QueueBroker', () => {
       );
 
       expect(broker.receiveById(messageId, 'unknown-group')).toBeNull();
+    });
+  });
+
+  describe('receiveMessages', () => {
+    it('selects the matching topic for a multi-topic consumer', () => {
+      broker = new QueueBroker(
+        [makeWorkerService('multi-worker', ['orders', 'events'])],
+        getServiceOrigin
+      );
+
+      broker.enqueue('events', Buffer.from('{"kind":"event"}'), 'text/plain', {
+        delaySeconds: 1,
+      });
+      vi.setSystemTime(Date.now() + 2_000);
+
+      const messages = broker.receiveMessages('events', 'multi-worker');
+      expect(messages).toHaveLength(1);
+      expect(messages[0].payload.toString()).toBe('{"kind":"event"}');
+      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 

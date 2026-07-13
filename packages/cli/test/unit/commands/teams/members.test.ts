@@ -16,6 +16,7 @@ describe('teams members', () => {
     client.config.currentTeam = 'team_123';
     client.scenario.get('/v2/teams/:teamId/members', (req, res) => {
       expect(req.params.teamId).toBe('team_123');
+      expect(req.query.limit).toBe('5');
       res.json({
         members: [
           {
@@ -27,7 +28,7 @@ describe('teams members', () => {
         ],
       });
     });
-    client.setArgv('teams', 'members');
+    client.setArgv('teams', 'members', '--limit', '5');
 
     const exitCode = await teams(client);
     expect(exitCode).toBe(0);

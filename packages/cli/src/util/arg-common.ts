@@ -126,6 +126,7 @@ const SUBCOMMAND_FLAG_TAKES_VALUE = new Set([
   '--version', // redirects list --version
   '--search',
   '--format',
+  '--project',
   '--page',
   '--per-page',
 ]);
@@ -250,6 +251,24 @@ export const projectOption = {
   argument: 'NAME_OR_ID',
   description: 'Project name or ID (defaults to the linked project)',
   deprecated: false,
+} as const;
+
+export const deploymentOption = {
+  name: 'deployment',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description: 'The deployment ID or URL to target',
+  argument: 'ID|URL',
+} as const;
+
+export const protectionBypassOption = {
+  name: 'protection-bypass',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description: 'Protection bypass secret for accessing protected deployments',
+  argument: 'SECRET',
 } as const;
 
 type GlobalOpt = (typeof globalCommandOptions)[number];

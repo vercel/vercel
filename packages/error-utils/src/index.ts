@@ -32,6 +32,19 @@ interface ErrorLike {
   stack?: string;
 }
 
+type UtilWithSystemErrorMessage = typeof util & {
+  getSystemErrorMessage?: (errno: number) => string;
+};
+
+const nativeGetSystemErrorMessage = (util as UtilWithSystemErrorMessage)
+  .getSystemErrorMessage;
+
+const getSystemErrorMessageFallback = (errno: number): string => {
+  return (
+    util.getSystemErrorMap().get(errno)?.[1] ?? `Unknown system error ${errno}`
+  );
+};
+
 /**
  * A type guard for error-like objects.
  */
@@ -48,6 +61,20 @@ export const errorToString = (error: unknown, fallback?: string): string => {
   if (typeof error === 'string') return error;
 
   return fallback ?? 'An unknown error has ocurred.';
+};
+
+export const getSystemErrorMessage =
+  nativeGetSystemErrorMessage ?? getSystemErrorMessageFallback;
+
+export const errorToStringFriendly = (
+  error: unknown,
+  fallback?: string
+): string => {
+  if (isErrnoException(error) && typeof error.errno === 'number') {
+    return getSystemErrorMessage(error.errno);
+  }
+
+  return errorToString(error, fallback);
 };
 
 /**

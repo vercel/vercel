@@ -7,8 +7,8 @@ on:
 
 env:
   TURBO_REMOTE_ONLY: 'true'
-  TURBO_TEAM: 'vercel'
-  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: 'zero-conf-vtest314'
+  TURBO_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -40,7 +40,7 @@ jobs:
           node-version: 24
 
       - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0
+        uses: dtolnay/rust-toolchain@a75363d06101555fc97c6c7e1e65670b99104d98 # 1.96.1
         with:
           targets: wasm32-wasip2
 
@@ -57,8 +57,8 @@ jobs:
       - name: install npm@11
         run: npm i -g npm@11
 
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
+      - name: install pnpm@10.29.3
+        run: npm i -g pnpm@10.29.3
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
@@ -70,11 +70,11 @@ jobs:
 
       - name: Create Release Pull Request or Publish to npm
         id: changesets
-        uses: changesets/action@6a0a831ff30acef54f2c6aa1cbbc1096b066edaf
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
           version: pnpm ci:version
           publish: pnpm ci:publish # npm publish
-          commitMode: "github-api" # allows release commits and tags to be signed using $GITHUB_TOKEN
+          commitMode: 'github-api' # allows release commits and tags to be signed using $GITHUB_TOKEN
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
