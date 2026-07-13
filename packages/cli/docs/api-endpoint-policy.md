@@ -57,6 +57,24 @@ warning lives) telling users the command is still in flux and may change.
 Prefer moving the endpoint to the public spec over shipping beta commands
 long-term. Coordinate with the API team that owns the endpoint.
 
+## Declarations must match `client.fetch` call sites
+
+Declaring the wrong (or incomplete) list must not be a way to bypass the
+policy. For every command that declares `endpoints`, CI also runs a static
+check (`evaluateEndpointCoverage` in
+`src/util/api-endpoint-policy/endpoint-coverage.ts`) that:
+
+1. Finds the command's implementation under `src/commands/<name>/` and
+   `src/util/<name>/` (subcommand entry files for nested commands).
+2. Extracts resolvable `client.fetch(...)` call sites (string literals and
+   template literals; interpolations become `{}` path segments).
+3. Fails if any extracted call is missing from the `endpoints` declaration.
+
+Dynamic paths (variables, string concatenation) cannot be verified and are
+skipped — still declare them. Shared helpers outside the command's
+`commands/<name>` / `util/<name>` trees are also out of scope for this
+check; prefer keeping fetches local or declaring what those helpers call.
+
 ## How the public spec is checked
 
 The policy check fetches the live public OpenAPI spec from
