@@ -29,6 +29,16 @@ export interface CommandExample {
   readonly name: string;
   readonly value: string | ReadonlyArray<string>;
 }
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD';
+export interface CommandEndpoint {
+  /** HTTP method of the API call, e.g. `'GET'` */
+  readonly method: HttpMethod;
+  /**
+   * API path. Path parameters may use `:param` or `{param}` syntax,
+   * e.g. `'/v9/projects/:idOrName'`.
+   */
+  readonly path: string;
+}
 export interface Command {
   readonly name: string;
   readonly aliases: ReadonlyArray<string>;
@@ -42,15 +52,14 @@ export interface Command {
   readonly disabledGlobalOptions?: ReadonlyArray<string>;
   /**
    * The Vercel REST API endpoints this command (not its subcommands) calls,
-   * as `"METHOD /path"` strings, e.g. `"GET /v9/projects/:idOrName"`.
-   * Path parameters may use `:param` or `{param}` syntax.
+   * e.g. `{ method: 'GET', path: '/v9/projects/:idOrName' }`.
    *
    * Required for new commands and subcommands, and must not be empty —
    * parent commands that only route to subcommands omit the field instead.
    * Enforced by `test/unit/util/api-endpoint-policy.test.ts`: commands whose
    * endpoints are not part of the public OpenAPI spec must be marked `beta`.
    */
-  readonly endpoints?: ReadonlyArray<string>;
+  readonly endpoints?: ReadonlyArray<CommandEndpoint>;
   /**
    * Marks this command or subcommand as beta. Beta commands print a warning
    * at invocation time telling users the command may still change.

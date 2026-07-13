@@ -1,16 +1,14 @@
-import type { Command } from '../../commands/help';
+import type { Command, CommandEndpoint, HttpMethod } from '../../commands/help';
 import { OPENAPI_URL, FETCH_TIMEOUT_MS } from '../openapi/constants';
 
-export const HTTP_METHODS = [
+export const HTTP_METHODS: ReadonlyArray<HttpMethod> = [
   'GET',
   'POST',
   'PUT',
   'PATCH',
   'DELETE',
   'HEAD',
-] as const;
-
-const ENDPOINT_RE = new RegExp(`^(${HTTP_METHODS.join('|')}) /\\S*$`);
+];
 
 export interface FlattenedCommand {
   /** Space separated command path, e.g. `"deploy-hooks create"` */
@@ -38,32 +36,45 @@ export function flattenCommands(
 }
 
 /**
- * Returns `null` when the endpoint declaration is well formed
- * (`"METHOD /path"`), otherwise a description of the problem.
+ * Formats an endpoint declaration for error messages.
  */
-export function validateEndpointFormat(endpoint: string): string | null {
-  if (!ENDPOINT_RE.test(endpoint)) {
+export function formatEndpoint(endpoint: CommandEndpoint): string {
+  return `${endpoint.method} ${endpoint.path}`;
+}
+
+/**
+ * Returns `null` when the endpoint declaration is well formed, otherwise a
+ * description of the problem. Guards against malformed declarations sneaking
+ * past the type system (e.g. from `as const` casts or untyped literals).
+ */
+export function validateEndpointFormat(
+  endpoint: CommandEndpoint
+): string | null {
+  if (!HTTP_METHODS.includes(endpoint.method)) {
     return (
-      `"${endpoint}" must look like "METHOD /path" where METHOD is one of ` +
-      `${HTTP_METHODS.join(', ')} and the path starts with "/"`
+      `"${formatEndpoint(endpoint)}" has method "${endpoint.method}"; ` +
+      `expected one of ${HTTP_METHODS.join(', ')}`
+    );
+  }
+  if (!/^\/\S*$/.test(endpoint.path)) {
+    return (
+      `"${formatEndpoint(endpoint)}" has an invalid path; it must start ` +
+      'with "/" and contain no whitespace'
     );
   }
   return null;
 }
 
 /**
- * Normalizes an endpoint declaration so that declarations and OpenAPI spec
- * entries can be compared: uppercases the method, strips query strings and
- * trailing slashes, and replaces `:param` / `{param}` path segments with
- * `{}`.
+ * Normalizes an endpoint so that declarations and OpenAPI spec entries can
+ * be compared: strips query strings and trailing slashes, and replaces
+ * `:param` / `{param}` path segments with `{}`.
  *
- * `"get /v9/projects/:idOrName/"` and `"GET /v9/projects/{id}"` both
- * normalize to `"GET /v9/projects/{}"`.
+ * `/v9/projects/:idOrName/` and `/v9/projects/{id}` both normalize to
+ * `"GET /v9/projects/{}"` (for a GET endpoint).
  */
-export function normalizeEndpoint(endpoint: string): string {
-  const spaceIdx = endpoint.indexOf(' ');
-  const method = endpoint.slice(0, spaceIdx).toUpperCase();
-  let path = endpoint.slice(spaceIdx + 1).split('?')[0];
+export function normalizeEndpoint(endpoint: CommandEndpoint): string {
+  let path = endpoint.path.split('?')[0];
   if (path.length > 1 && path.endsWith('/')) {
     path = path.slice(0, -1);
   }
@@ -72,7 +83,7 @@ export function normalizeEndpoint(endpoint: string): string {
     .map(segment =>
       segment.startsWith(':') || /^\{.*\}$/.test(segment) ? '{}' : segment
     );
-  return `${method} ${segments.join('/')}`;
+  return `${endpoint.method.toUpperCase()} ${segments.join('/')}`;
 }
 
 /**
@@ -106,14 +117,15 @@ export async function fetchPublicEndpoints(
     clearTimeout(timeoutId);
   }
 
-  const methods = new Set<string>(
-    HTTP_METHODS.map(method => method.toLowerCase())
+  const methodsByLowercase = new Map<string, HttpMethod>(
+    HTTP_METHODS.map(method => [method.toLowerCase(), method])
   );
   const endpoints = new Set<string>();
   for (const [path, pathItem] of Object.entries(spec.paths ?? {})) {
-    for (const method of Object.keys(pathItem)) {
-      if (methods.has(method)) {
-        endpoints.add(normalizeEndpoint(`${method.toUpperCase()} ${path}`));
+    for (const key of Object.keys(pathItem)) {
+      const method = methodsByLowercase.get(key);
+      if (method) {
+        endpoints.add(normalizeEndpoint({ method, path }));
       }
     }
   }
@@ -129,12 +141,13 @@ export async function fetchPublicEndpoints(
 /**
  * Whether an endpoint declaration is part of the public OpenAPI spec.
  *
- * @param endpoint - declaration such as `"GET /v9/projects/:idOrName"`
+ * @param endpoint - declaration such as
+ * `{ method: 'GET', path: '/v9/projects/:idOrName' }`
  * @param publicEndpoints - normalized `"METHOD /path"` entries from the
  * public spec (see `fetchPublicEndpoints`)
  */
 export function isPublicEndpoint(
-  endpoint: string,
+  endpoint: CommandEndpoint,
   publicEndpoints: ReadonlySet<string>
 ): boolean {
   return publicEndpoints.has(normalizeEndpoint(endpoint));
@@ -204,7 +217,7 @@ export function evaluatePolicy(
         continue;
       }
       if (!isPublicEndpoint(endpoint, options.publicEndpoints)) {
-        privateEndpoints.push(endpoint);
+        privateEndpoints.push(formatEndpoint(endpoint));
       }
     }
 
