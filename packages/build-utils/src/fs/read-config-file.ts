@@ -3,9 +3,16 @@ import { parse as tomlParse } from 'smol-toml';
 import { readFile } from 'fs-extra';
 import { isErrnoException } from '@vercel/error-utils';
 import { join } from 'path';
-import type { PackageJson } from '../types';
+import type { EntrypointDetectorFilesystem, PackageJson } from '../types';
 
-async function readFileOrNull(file: string) {
+async function readFileOrNull(file: string, fs?: EntrypointDetectorFilesystem) {
+  if (fs) {
+    try {
+      return await fs.readFile(file);
+    } catch {
+      return null;
+    }
+  }
   try {
     const data = await readFile(file);
     return data;
@@ -17,17 +24,17 @@ async function readFileOrNull(file: string) {
       throw error;
     }
   }
-
   return null;
 }
 
 export async function readConfigFile<T>(
-  files: string | string[]
+  files: string | string[],
+  fs?: EntrypointDetectorFilesystem
 ): Promise<T | null> {
   files = Array.isArray(files) ? files : [files];
 
   for (const name of files) {
-    const data = await readFileOrNull(name);
+    const data = await readFileOrNull(name, fs);
 
     if (data) {
       const str = data.toString('utf8');

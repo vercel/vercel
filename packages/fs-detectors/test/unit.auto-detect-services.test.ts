@@ -607,6 +607,9 @@ describe('autoDetectServices with detectEntrypoint callback', () => {
 
     await autoDetectServices({ fs, detectEntrypoint });
 
-    expect(calls).toEqual([{ workPath: 'backend', framework: 'fastapi' }]);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].workPath).toBe('backend');
+    expect(calls[0].framework).toBe('fastapi');
+    expect(calls[0].fs).toBeDefined();
   });
 });
