@@ -8,7 +8,7 @@ import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
 describe('env add', () => {
-  let testProject: Parameters<typeof useProject>[0];
+  let testProject: NonNullable<Parameters<typeof useProject>[0]>;
 
   beforeEach(() => {
     useUser();
