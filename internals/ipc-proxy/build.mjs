@@ -137,7 +137,9 @@ async function downloadGo() {
       await mkdirp(destDir);
       if (attempt < maxAttempts) {
         const backoff = attempt * 1500;
-        console.log(`Go download failed (attempt ${attempt}/${maxAttempts}): ${err}`);
+        console.log(
+          `Go download failed (attempt ${attempt}/${maxAttempts}): ${err}`
+        );
         console.log(`Retrying in ${backoff}ms...`);
         await new Promise(r => setTimeout(r, backoff));
       }
