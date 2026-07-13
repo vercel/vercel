@@ -76,9 +76,14 @@ function buildInstall(opts: {
   return { root, vcJs: join(vercelDist, 'vc.js') };
 }
 
-// Strip VITEST/NODE_PATH vars so require.resolve inside the temp vc.js
-// doesn't leak the repo's pnpm store (which on main currently has no
-// optionalDep but will once part 2 lands).
+// spawnSync inherits the parent env by default. Vitest's fork sets
+// NODE_PATH / NODE_OPTIONS etc so that its module resolver can find
+// repo packages. That leaks into the child vc.js, causing
+// `require.resolve('@vercel/vc-native-...')` to find the *real* native
+// binary in the repo's pnpm store even when the temp install has no
+// native package — making the no-op test spawn the real native binary
+// and hang (native + inherited stdio under vitest doesn't exit cleanly).
+// Strip those vars so resolution is isolated to the temp layout.
 function cleanEnv() {
   const {
     NODE_PATH: _np,
@@ -87,6 +92,7 @@ function cleanEnv() {
     VITEST_POOL_ID: _vp,
     ...rest
   } = process.env as Record<string, string | undefined>;
+  // Keep only string values; vitest types include undefined.
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(rest)) if (v != null) out[k] = v;
   return out;

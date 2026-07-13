@@ -17,7 +17,9 @@ describe('vc.js version banner', () => {
     );
 
     // Strip NODE_PATH / VITEST vars so require.resolve inside the temp
-    // vc.js does not leak the repo's pnpm store native binary.
+    // vc.js does not leak the repo's real native binary via pnpm store.
+    // Otherwise src/vc.js (which spawns @vercel/vc-native when found) would
+    // try to spawn the real native instead of no-oping to JS for this test.
     const {
       NODE_PATH: _np,
       NODE_OPTIONS: _no,

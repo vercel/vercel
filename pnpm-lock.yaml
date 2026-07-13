@@ -981,6 +981,22 @@ importers:
       yauzl-promise:
         specifier: 2.1.3
         version: 2.1.3
+    optionalDependencies:
+      '@vercel/vc-native-darwin-arm64':
+        specifier: 56.1.0
+        version: 56.1.0
+      '@vercel/vc-native-darwin-x64':
+        specifier: 56.1.0
+        version: 56.1.0
+      '@vercel/vc-native-linux-arm64':
+        specifier: 56.1.0
+        version: 56.1.0
+      '@vercel/vc-native-linux-x64':
+        specifier: 56.1.0
+        version: 56.1.0
+      '@vercel/vc-native-win32-x64':
+        specifier: 56.1.0
+        version: 56.1.0
 
   packages/cli-auth:
     dependencies:
@@ -6771,6 +6787,31 @@ packages:
         optional: true
       typescript:
         optional: true
+
+  '@vercel/vc-native-darwin-arm64@56.1.0':
+    resolution: {integrity: sha512-mVNEhRkBpT17RG5JwO3Pn34DyIquF1Kv/SXl3kW2xXTFQPUgZ/XvGZGuUdGRe2tkmsVG35nHhYg9vAUcqVxzYg==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@vercel/vc-native-darwin-x64@56.1.0':
+    resolution: {integrity: sha512-FsIwXx+geRkaHOr0civwSnxBVxcnVz5FGFlZ1NnIzYqsvUkU2JpjGLPfnuGZxlaPEfr24W+B7NqLjxXYf9WIEQ==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@vercel/vc-native-linux-arm64@56.1.0':
+    resolution: {integrity: sha512-zg4HxQH3Not6Dd/+15PRWxVywKGZ6buwJerslBS5imFnAqtaTOFcToP2RtjqJuFl5DVsDRBMBstJmJcRfwwG8A==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@vercel/vc-native-linux-x64@56.1.0':
+    resolution: {integrity: sha512-s/hOBu2vBdt3PBC9cioee3bUZVkV0Sd15f6ji7Z0apT6vd27GVAe0R0EBC1NX5nYa4OUSVZMDyS7P2vLOH8V7w==}
+    cpu: [x64]
+    os: [linux]
+
+  '@vercel/vc-native-win32-x64@56.1.0':
+    resolution: {integrity: sha512-+hqZPedIrvqWAheEuSUzQ19YyOUHfjKl+N6vHo8mcIWU6oxcBWslB8MkQYcoytYJWXUHqBrZCM24dj4+ffmN6g==}
+    cpu: [x64]
+    os: [win32]
 
   '@vitest/coverage-v8@2.0.3':
     resolution: {integrity: sha512-53d+6jXFdYbasXBmsL6qaGIfcY5eBQq0sP57AjdasOcSiGNj4qxkkpDKIitUNfjxcfAfUfQ8BD0OR2fSey64+g==}
@@ -17341,6 +17382,21 @@ snapshots:
       - eslint-plugin-import-x
       - jest
       - supports-color
+
+  '@vercel/vc-native-darwin-arm64@56.1.0':
+    optional: true
+
+  '@vercel/vc-native-darwin-x64@56.1.0':
+    optional: true
+
+  '@vercel/vc-native-linux-arm64@56.1.0':
+    optional: true
+
+  '@vercel/vc-native-linux-x64@56.1.0':
+    optional: true
+
+  '@vercel/vc-native-win32-x64@56.1.0':
+    optional: true
 
   '@vitest/coverage-v8@2.0.3(vitest@2.0.3(@edge-runtime/vm@3.2.0)(@types/node@20.11.0)(terser@5.48.0))':
     dependencies:
