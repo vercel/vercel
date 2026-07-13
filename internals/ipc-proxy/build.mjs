@@ -48,11 +48,29 @@ async function hasSystemGo() {
 
 // Fallback for environments without Go on PATH. Returns env overrides merged
 // onto `process.env`. Unix-only: the `.tar.gz` archive isn't the Windows format.
+//
+// NOTE: CI should never reach here — utils/chunk-tests.js marks CLI and other
+// dependents with needsGo so actions/setup-go installs Go before pnpm install.
+// This fallback is for local dev / non-CI environments. It must not hang
+// indefinitely: CI-level hang seen in 29276172195 was an unbounded fetch to
+// dl.google.com stalling on macOS runners without system Go.
 async function downloadGo() {
   if (process.platform === 'win32') {
     throw new Error(
       'Go >= 1.23 is required to build the IPC proxy but was not found on PATH. ' +
         'Please install Go: https://go.dev/dl/'
+    );
+  }
+
+  // Hard guard for CI: prefer explicit failure over implicit download that can
+  // hang and burn 60-120m of runner time. CI jobs should have Go preinstalled
+  // via actions/setup-go when needsGo is true (see test.yml + chunk-tests.js).
+  // Local devs who truly need the fallback can still use it.
+  if (process.env.CI) {
+    throw new Error(
+      `Go >= ${GO_VERSION} is required to build @vercel-internals/ipc-proxy but was not found on PATH. ` +
+        'In CI this indicates needsGo was not set for this job — add the package to GO_BUILD_ROOTS or fix transitive needsGo propagation. ' +
+        'Locally, install Go from https://go.dev/dl/ or unset CI.'
     );
   }
 
