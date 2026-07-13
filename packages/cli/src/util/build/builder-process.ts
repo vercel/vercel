@@ -1,8 +1,7 @@
-import { fork } from 'node:child_process';
+import { ChildProcess, fork } from 'node:child_process';
 import { readFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  type BuildOptions,
   type BuildResultV2,
   type BuildResultV3,
   Lambda,
@@ -12,35 +11,32 @@ import {
   type TraceEvent,
 } from '@vercel/build-utils';
 import output from '../../output-manager';
+import { BuildRunner } from './build-runner';
 
 /**
  * Runs a builder's `build()` in a forked child process for `vc build`, modeled after the
  * builder worker used by `vc dev`.
  *
- * Why out-of-process: the child is forked with piped stdout/stderr, and its own isolated env,
+ * Why out-of-process: a child process has its own isolated stdout/stderr and env,
  * unlocking accurate attribution of every output line the build produces — including output
  * from subprocesses the builder spawns with `stdio: 'inherit'` (e.g. `next build`), which write
  * to the child's real file descriptors - and safe parallel builds in the future.
  *
  * The child side lives in `./builder-worker.cjs`. This module owns the parent half of the IPC
  * contract: send `{ type: 'build', requirePath, buildOptions }`, await `{ type: 'buildResult',
- * result | error }`, then rehydrate the serialized File/Lambda outputs into real instances.
+ * result | error }`, then re-prototype the File/Lambda outputs into real instances. The channel
+ * uses `serialization: 'advanced'` (V8 structured clone), so Buffers, cycles, and shared object
+ * identity survive transport — only class prototypes must be restored on this side.
  */
 
-/** JSON-ified Buffer as serialized by Node.js IPC. */
-interface SerializedBuffer {
-  type: 'Buffer';
-  data: number[];
-}
-
 /**
- * A serialized FileBlob. Its `data` is a string (passed through as-is), a JSON-ified Buffer
- * (`{type:'Buffer',data:[...]}` from IPC), or absent when the Buffer was too large and was
+ * A serialized FileBlob. Under structured-clone IPC its `data` arrives as a real Buffer (or a
+ * plain string, passed through as-is), or is absent when the Buffer was too large and was
  * spilled to `dataPath`.
  */
 interface SerializedFileBlob {
   type: 'FileBlob';
-  data?: string | SerializedBuffer;
+  data?: string | Buffer;
   dataPath?: string;
   [key: string]: unknown;
 }
@@ -69,6 +65,7 @@ interface BuildMessageResult {
   hasPreDeploy?: boolean;
   /** Trace events the builder recorded in the worker, to report under the parent span. */
   traceEvents?: TraceEvent[];
+  /** A plain object form of the worker's Error (all props enumerable); see `toError`. */
   error?: object;
 }
 
@@ -76,23 +73,22 @@ interface PreDeployMessageResult {
   type: 'preDeployResult';
   /** Trace events the pre-deploy step recorded (e.g. `vc.builder.preDeploy`). */
   traceEvents?: TraceEvent[];
+  /** A plain object form of the worker's Error (all props enumerable); see `toError`. */
   error?: object;
+}
+
+/**
+ * Coerce an error received from the worker into a real Error. Under structured-clone IPC it
+ * already arrives as an Error instance (with `message`/`stack` preserved), so it's returned
+ * as-is; anything else is wrapped so downstream `toEnumerableError`/`.message` access is safe.
+ */
+function toError(error: object | undefined): Error {
+  if (error instanceof Error) return error;
+  return Object.assign(new Error(), error);
 }
 
 /** A builder's rehydrated diagnostics: a map of filename → File instance. */
 export type BuilderDiagnostics = Record<string, FileFsRef | FileBlob | FileRef>;
-
-export interface BuildInSubprocessResult {
-  buildResult: BuildResultV2 | BuildResultV3;
-  diagnostics?: BuilderDiagnostics;
-  /**
-   * When the build registered a pre-deploy command, the worker is kept alive to run it later.
-   * Call `runPreDeploy()` after all builds succeed (it runs the callback in the worker, with the
-   * builder-computed env it captured). When there's no pre-deploy, the worker is already torn
-   * down and this is undefined.
-   */
-  runPreDeploy?: () => Promise<void>;
-}
 
 /**
  * Whether a build can run in a forked worker:
@@ -124,7 +120,7 @@ function rehydrateFile(obj: SerializedFile): FileFsRef | FileBlob | FileRef {
       obj
     );
     if (obj.dataPath) {
-      // Large Buffer that was spilled to a temp file by the worker.
+      // Large Buffer that the worker spilled to a temp file; read it back and clean up.
       blob.data = readFileSync(obj.dataPath);
       try {
         unlinkSync(obj.dataPath);
@@ -132,13 +128,8 @@ function rehydrateFile(obj: SerializedFile): FileFsRef | FileBlob | FileRef {
         // best-effort temp cleanup
       }
       delete (blob as { dataPath?: string }).dataPath;
-    } else if (typeof obj.data === 'string') {
-      // FileBlob.data may be a plain string; IPC passes it through unchanged.
-      blob.data = obj.data;
-    } else if (obj.data) {
-      // A Buffer, serialized by IPC as { type: 'Buffer', data: number[] }.
-      blob.data = Buffer.from(obj.data.data);
     }
+    // Otherwise `data` (a string or a real Buffer) made it across structured-clone IPC intact.
     return blob;
   }
   if (obj.type === 'FileRef') {
@@ -169,40 +160,30 @@ function rehydrateDiagnostics(
 }
 
 /**
- * Rehydrate a single Lambda/EdgeFunction/Prerender/File output from its serialized form.
- * Objects the worker tagged with a `__sharedId` are registered in `sharedRefs` so later
- * `{ __sharedRef }` sentinels (including nested `Prerender.lambda` references) can be
- * resolved back to the one shared instance.
+ * Re-prototype a single Lambda/EdgeFunction/Prerender/File output in place. Under structured-
+ * clone IPC the object graph — including Lambdas shared across many outputs — arrives intact;
+ * we only need to restore prototypes. Rehydrating in place keeps shared instances identical,
+ * which writeBuildResult relies on for symlink dedup. `seen` guards against re-visiting a
+ * shared instance (and against cycles).
  */
-function rehydrateOutput(
-  output: unknown,
-  sharedRefs: Map<number, object>
-): void {
-  if (!output || typeof output !== 'object') return;
+function rehydrateOutput(output: unknown, seen: Set<object>): void {
+  if (!output || typeof output !== 'object' || seen.has(output)) return;
+  seen.add(output);
   const obj = output as {
     type?: string;
     files?: Record<string, SerializedFile>;
     lambda?: unknown;
     fallback?: unknown;
-    __sharedId?: number;
   };
-  if (typeof obj.__sharedId === 'number') {
-    sharedRefs.set(obj.__sharedId, obj);
-    delete obj.__sharedId;
-  }
   if (obj.type === 'Lambda') {
     rehydrateFiles(obj.files);
     Object.setPrototypeOf(obj, Lambda.prototype);
   } else if (obj.type === 'EdgeFunction') {
     rehydrateFiles(obj.files);
   } else if (obj.type === 'Prerender') {
-    // Prerender wraps a Lambda and a fallback File, each needing rehydration. A shared
-    // `.lambda` arrives as a sentinel that we resolve in a second pass (see below), so
-    // only rehydrate it here when it's a real (first-encountered) object.
-    if (obj.lambda && !isSharedRef(obj.lambda)) {
-      rehydrateOutput(obj.lambda, sharedRefs);
-    }
-    if (obj.fallback) rehydrateOutput(obj.fallback, sharedRefs);
+    // Prerender wraps a Lambda (routinely shared across many Prerenders) and a fallback File.
+    if (obj.lambda) rehydrateOutput(obj.lambda, seen);
+    if (obj.fallback) rehydrateOutput(obj.fallback, seen);
   } else if (
     obj.type === 'FileFsRef' ||
     obj.type === 'FileBlob' ||
@@ -211,18 +192,6 @@ function rehydrateOutput(
     const rehydrated = rehydrateFile(obj as SerializedFile);
     Object.assign(obj, rehydrated);
     Object.setPrototypeOf(obj, Object.getPrototypeOf(rehydrated));
-  }
-}
-
-/** Replace any `{ __sharedRef }` sentinel nested inside an output with its shared instance. */
-function resolveNestedSharedRefs(
-  output: unknown,
-  sharedRefs: Map<number, object>
-): void {
-  if (!output || typeof output !== 'object') return;
-  const obj = output as { type?: string; lambda?: unknown };
-  if (obj.type === 'Prerender' && isSharedRef(obj.lambda)) {
-    obj.lambda = sharedRefs.get(obj.lambda.__sharedRef);
   }
 }
 
@@ -236,120 +205,146 @@ function rehydrateResult(result: BuildResultV2 | BuildResultV3): void {
       : result;
   const output = (unwrapped as { output?: unknown }).output;
   if (!output) return;
-  const sharedRefs = new Map<number, object>();
+  const seen = new Set<object>();
   if ((output as { type?: string }).type) {
     // V3: a single output.
-    rehydrateOutput(output, sharedRefs);
+    rehydrateOutput(output, seen);
   } else {
-    // V2: a map of named outputs. First rehydrate every real (non-sentinel) output,
-    // registering each `__sharedId`-tagged instance. Then resolve `{ __sharedRef }`
-    // sentinels — both top-level map entries and nested `Prerender.lambda` references —
-    // back to the one shared instance so writeBuildResult's identity-based symlink dedup
-    // works across the process boundary.
-    const map = output as Record<string, unknown>;
-    for (const value of Object.values(map)) {
-      if (!isSharedRef(value)) rehydrateOutput(value, sharedRefs);
-    }
-    for (const key of Object.keys(map)) {
-      const value = map[key];
-      if (isSharedRef(value)) {
-        map[key] = sharedRefs.get(value.__sharedRef);
-      } else {
-        resolveNestedSharedRefs(value, sharedRefs);
-      }
+    // V2: a map of named outputs. A Lambda/EdgeFunction may appear under many keys and as the
+    // nested `.lambda` of many Prerenders; structured clone kept those as one instance, so a
+    // single seen-guarded walk re-prototypes each exactly once and preserves shared identity.
+    for (const value of Object.values(output as Record<string, unknown>)) {
+      rehydrateOutput(value, seen);
     }
   }
 }
 
-function isSharedRef(value: unknown): value is { __sharedRef: number } {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as { __sharedRef?: unknown }).__sharedRef === 'number'
-  );
-}
+/** Runs a builder in a forked worker process. */
+export class SubprocessBuildRunner extends BuildRunner {
+  private child?: ChildProcess;
 
-export interface BuildInSubprocessOptions {
-  /** Absolute path to the builder module entrypoint (BuilderWithPkg.path). */
-  requirePath: string;
-  buildOptions: BuildOptions;
-  /** Fully-computed environment for the child (replaces the parent's per-build env mutation). */
-  env: NodeJS.ProcessEnv;
-  cwd: string;
+  private diagnosticsResult?: BuilderDiagnostics;
+
   /**
-   * Whether this build has a configured pre-deploy command. When true, the worker wires a
-   * `registerPreDeploy` into buildOptions and stays alive after the build so its callback can be
-   * run later via the returned `runPreDeploy`.
+   * Fork a worker, run one build, and return the deserialized result. `buildOptions.span` is
+   * dropped (a class instance that can't be serialized); the caller keeps its own tracing.
+   *
+   * The child inherits stdout/stderr so its build output reaches the terminal directly, matching
+   * the previous in-process behavior. When the build registers a pre-deploy command, the worker
+   * is kept alive: its `registerPreDeploy` callback runs the command in the worker later, when the
+   * command invokes the deferred callback. Teardown is owned by the caller (via `teardown()`), so
+   * a kept-alive worker is released even if that deferred callback is never reached.
    */
-  expectsPreDeploy?: boolean;
-  /**
-   * Called with the trace events the builder recorded in the worker (on success and failure),
-   * so the caller can report them under its `vc.builder` span (via Span.reportChildEvents, which
-   * reparents the roots). Kept as a callback rather than a return value so failed builds still
-   * surface their spans without polluting the thrown error.
-   */
-  reportTraceEvents?: (events: TraceEvent[]) => void;
-}
+  async build(): Promise<BuildResultV2 | BuildResultV3> {
+    const workerPath = join(__dirname, 'builder-worker.cjs');
 
-/**
- * Fork a worker, run one build, and return the deserialized result. `buildOptions.span` is
- * dropped (a class instance that can't be serialized); the caller keeps its own tracing.
- *
- * The child inherits stdout/stderr so its build output reaches the terminal directly, matching
- * the previous in-process behavior.
- */
-export async function buildInSubprocess({
-  requirePath,
-  buildOptions,
-  env,
-  cwd,
-  expectsPreDeploy,
-  reportTraceEvents,
-}: BuildInSubprocessOptions): Promise<BuildInSubprocessResult> {
-  const workerPath = join(__dirname, 'builder-worker.cjs');
-
-  // `span` is a class instance with methods — not serializable. Send everything else.
-  const { span: _span, ...serializableBuildOptions } = buildOptions;
-
-  const child = fork(workerPath, [], {
-    cwd,
-    execArgv: [],
-    env,
-  });
-
-  const teardown = () => {
-    if (child.connected) child.disconnect();
-    if (child.exitCode === null && child.signalCode === null) {
-      child.kill();
-    }
-    output.debug(`Build subprocess for "${buildOptions.entrypoint}" finished`);
-  };
-
-  // Wait for the worker's `ready` handshake before sending the build request.
-  await new Promise<void>((resolve, reject) => {
-    child.once('message', data => {
-      if (
-        data !== null &&
-        typeof data === 'object' &&
-        (data as { type: string }).type !== 'ready'
-      ) {
-        reject(new Error('Did not get "ready" event from builder'));
-      } else {
-        resolve();
-      }
+    const child = fork(workerPath, [], {
+      cwd: this.ctx.cwd,
+      execArgv: [],
+      env: process.env,
+      // V8 structured clone (not the default JSON) so the build result rides across with its
+      // Buffers, cycles (e.g. `@vercel/next`'s `childProcesses`), and shared object identity
+      // (one Lambda referenced by many outputs stays one instance) intact.
+      serialization: 'advanced',
     });
-    child.once('error', reject);
-  });
+    this.child = child;
 
-  try {
+    // Wait for the worker's `ready` handshake before sending the build request.
+    await new Promise<void>((resolve, reject) => {
+      function onMessage(data: unknown) {
+        cleanup();
+        if (
+          data !== null &&
+          typeof data === 'object' &&
+          (data as { type: string }).type !== 'ready'
+        ) {
+          reject(new Error('Did not get "ready" event from builder'));
+        } else {
+          resolve();
+        }
+      }
+      function onError(err: Error) {
+        cleanup();
+        reject(err);
+      }
+      function onExit(code: number | null, signal: string | null) {
+        // The worker exited before sending `ready` (e.g. crashed on load). `error` only
+        // fires for spawn/send failures, not for a process that started and then exited, so
+        // without this the handshake would hang forever.
+        cleanup();
+        reject(
+          new Error(
+            `Builder exited with ${signal || code} before sending ready event`
+          )
+        );
+      }
+      function cleanup() {
+        child.removeListener('message', onMessage);
+        child.removeListener('error', onError);
+        child.removeListener('close', onExit);
+      }
+      child.on('message', onMessage);
+      child.on('error', onError);
+      child.on('close', onExit);
+    });
+
+    try {
+      const message = await this._runBuild();
+
+      const buildResult = message.result;
+      rehydrateResult(buildResult);
+
+      this.diagnosticsResult = message.diagnostics
+        ? rehydrateDiagnostics(message.diagnostics)
+        : undefined;
+
+      if (message.hasPreDeploy) {
+        // The build registered a pre-deploy callback, so the worker is kept alive to run it.
+        // Wire it to the shared pre-deploy mechanism (same as in-process builds); it runs the
+        // callback in the worker, with the builder-computed env it captured, then releases the
+        // worker.
+        // Note: The caller should also do an unconditional teardown of all runners as a safety
+        // net for when this callback never runs (e.g. a sibling build threw first).
+        this.ctx.buildOptions.registerPreDeploy?.(() =>
+          this._runPreDeploy().finally(() => this.teardown())
+        );
+      } else {
+        this.teardown();
+      }
+
+      return buildResult;
+    } catch (err) {
+      this.teardown();
+      throw err;
+    }
+  }
+
+  private _runBuild() {
+    const child = this.child;
+    if (!child) {
+      throw new Error('subprocess not initialised before build');
+    }
+
+    // Structured clone throws on functions and class instances, so drop the fields that carry
+    // them: `span` (a Span instance — the worker reconstructs its own), and `registerPreDeploy`
+    // (a callback — the worker wires its own from `expectsPreDeploy`). `buildCallback` never
+    // reaches this path (canBuildInSubprocess excludes builds that set it). Everything else is
+    // plain data and clones fine.
+    const {
+      span: _span,
+      registerPreDeploy: _registerPreDeploy,
+      ...serializableBuildOptions
+    } = this.ctx.buildOptions;
+    const builderSpan = this.ctx.builderSpan;
+
     child.send({
       type: 'build',
-      requirePath,
+      requirePath: this.ctx.requirePath,
       buildOptions: serializableBuildOptions,
-      expectsPreDeploy: Boolean(expectsPreDeploy),
+      expectsPreDeploy: Boolean(this.ctx.expectsPreDeploy),
     });
 
-    const message = await new Promise<
+    return new Promise<
       BuildMessageResult & { result: BuildResultV2 | BuildResultV3 }
     >((resolve, reject) => {
       function onMessage(msg: BuildMessageResult) {
@@ -358,7 +353,9 @@ export async function buildInSubprocess({
           // Report spans the build recorded (even on failure) so forked builds keep trace
           // fidelity. Done here, not by attaching to the error, so the error stays a clean
           // object when serialized into builds.json.
-          if (msg.traceEvents) reportTraceEvents?.(msg.traceEvents);
+          if (msg.traceEvents) {
+            builderSpan?.reportChildEvents(msg.traceEvents);
+          }
           if (msg.result) {
             resolve(
               msg as BuildMessageResult & {
@@ -366,7 +363,7 @@ export async function buildInSubprocess({
               }
             );
           } else {
-            reject(Object.assign(new Error(), msg.error));
+            reject(toError(msg.error));
           }
         } else {
           reject(new Error(`Got unexpected message type: ${msg.type}`));
@@ -381,58 +378,70 @@ export async function buildInSubprocess({
         );
       }
       function cleanup() {
-        child.removeListener('close', onExit);
-        child.removeListener('message', onMessage);
+        child!.removeListener('close', onExit);
+        child!.removeListener('message', onMessage);
+      }
+      child.once('close', onExit);
+      child.once('message', onMessage);
+    });
+  }
+
+  private _runPreDeploy() {
+    const child = this.child;
+    if (!child) {
+      throw new Error('subprocess not initialised before predeploy');
+    }
+
+    const builderSpan = this.ctx.builderSpan;
+
+    return new Promise<void>((resolve, reject) => {
+      function onMessage(msg: PreDeployMessageResult) {
+        if (msg.type !== 'preDeployResult') return;
+        cleanup();
+        // Report spans the pre-deploy step recorded (success or failure) before settling.
+        if (msg.traceEvents) {
+          builderSpan?.reportChildEvents(msg.traceEvents);
+        }
+        if (msg.error) {
+          reject(toError(msg.error));
+        } else resolve();
+      }
+      function onExit(code: number | null, signal: string | null) {
+        cleanup();
+        reject(
+          new Error(
+            `Builder exited with ${signal || code} before running pre-deploy`
+          )
+        );
+      }
+      function cleanup() {
+        child!.removeListener('close', onExit);
+        child!.removeListener('message', onMessage);
       }
       child.on('close', onExit);
       child.on('message', onMessage);
+
+      child.send({ type: 'runPreDeploy' });
     });
+  }
 
-    const buildResult = message.result;
-    rehydrateResult(buildResult);
-    const diagnostics = message.diagnostics
-      ? rehydrateDiagnostics(message.diagnostics)
-      : undefined;
+  async diagnostics(): Promise<BuilderDiagnostics | undefined> {
+    return this.diagnosticsResult;
+  }
 
-    if (!message.hasPreDeploy) {
-      teardown();
-      return { buildResult, diagnostics };
+  teardown(): void {
+    const { child } = this;
+    if (!child) return;
+
+    if (child.connected) child.disconnect();
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill();
     }
+    output.debug(
+      `Build subprocess for "${this.ctx.buildOptions.entrypoint}" finished`
+    );
 
-    // The build registered a pre-deploy callback. Keep the worker alive and hand back a
-    // trigger the caller runs after all builds succeed; it runs the callback in the worker
-    // (with the env it captured) and then tears the worker down.
-    const runPreDeploy = () =>
-      new Promise<void>((resolve, reject) => {
-        function onMessage(msg: PreDeployMessageResult) {
-          if (msg.type !== 'preDeployResult') return;
-          cleanup();
-          // Report spans the pre-deploy step recorded (success or failure) before settling.
-          if (msg.traceEvents) reportTraceEvents?.(msg.traceEvents);
-          if (msg.error) reject(Object.assign(new Error(), msg.error));
-          else resolve();
-        }
-        function onExit(code: number | null, signal: string | null) {
-          cleanup();
-          reject(
-            new Error(
-              `Builder exited with ${signal || code} before running pre-deploy`
-            )
-          );
-        }
-        function cleanup() {
-          child.removeListener('close', onExit);
-          child.removeListener('message', onMessage);
-          teardown();
-        }
-        child.on('close', onExit);
-        child.on('message', onMessage);
-        child.send({ type: 'runPreDeploy' });
-      });
-
-    return { buildResult, diagnostics, runPreDeploy };
-  } catch (err) {
-    teardown();
-    throw err;
+    // Clear the reference so any later teardown() call is a no-op.
+    this.child = undefined;
   }
 }

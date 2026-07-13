@@ -15,10 +15,10 @@
  * command, so it must only `require` `@vercel/build-utils` and Node built-ins.
  */
 const { FileFsRef, Span } = require('@vercel/build-utils');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const crypto = require('crypto');
+const fs = require('node:fs');
+const path = require('node:path');
+const os = require('node:os');
+const crypto = require('node:crypto');
 
 // Trace events produced by the builder's own spans (children of buildOptions.span) are collected
 // here and shipped back to the parent, which reports them under its `vc.builder` span so forked
@@ -35,8 +35,8 @@ function drainTraceEvents() {
 }
 
 // Above this size a FileBlob's Buffer is written to a temp file rather than sent inline over
-// IPC. JSON-serializing a large Buffer amplifies memory badly (each byte becomes an array
-// element), which can OOM the process.
+// IPC. Even under structured-clone serialization the whole Buffer is copied into a single IPC
+// message; spilling very large blobs to disk bounds that per-message memory spike.
 const BLOB_FILE_THRESHOLD = 256 * 1024 * 1024; // 256MB
 
 process.on('unhandledRejection', err => {
@@ -54,26 +54,38 @@ let preDeployCallback;
 
 process.on('message', onMessage);
 
+// Convert an Error into a plain object with all its properties enumerable. Structured-clone IPC
+// reconstructs a native Error but keeps only `name`/`message`/`stack` — custom props a builder
+// sets (e.g. NowBuildError's `code`/`link`, which the parent writes into builds.json) would be
+// dropped. A plain object clones losslessly; the parent rebuilds an Error from it.
+function serializeError(err) {
+  if (!err || typeof err !== 'object') return err;
+  const plain = { name: err.name, message: err.message, stack: err.stack };
+  for (const key of Object.getOwnPropertyNames(err)) {
+    plain[key] = err[key];
+  }
+  return plain;
+}
+
 function onMessage(message) {
   if (message && message.type === 'runPreDeploy') {
     runPreDeploy();
     return;
   }
   processMessage(message).catch(err => {
-    Object.defineProperty(err, 'message', { enumerable: true });
-    Object.defineProperty(err, 'stack', { enumerable: true });
     process.removeListener('message', onMessage);
-    // Ship whatever spans were recorded before the failure so failed builds still trace.
     process.send(
-      { type: 'buildResult', error: err, traceEvents: drainTraceEvents() },
+      {
+        type: 'buildResult',
+        error: serializeError(err),
+        traceEvents: drainTraceEvents(),
+      },
       () => process.exit(1)
     );
   });
 }
 
 function runPreDeploy() {
-  // The pre-deploy callback records its own spans (e.g. `vc.builder.preDeploy`) into the (now
-  // drained) buffer; ship those back so they nest under the parent's `vc.builder` span.
   Promise.resolve()
     .then(() => preDeployCallback?.())
     .then(
@@ -83,12 +95,10 @@ function runPreDeploy() {
           () => process.exit(0)
         ),
       err => {
-        Object.defineProperty(err, 'message', { enumerable: true });
-        Object.defineProperty(err, 'stack', { enumerable: true });
         process.send(
           {
             type: 'preDeployResult',
-            error: err,
+            error: serializeError(err),
             traceEvents: drainTraceEvents(),
           },
           () => process.exit(1)
@@ -153,9 +163,6 @@ async function processMessage(message) {
 
   const result = await builder.build(buildOptions);
 
-  // `@vercel/next` sets this; it is circular and cannot be JSON-serialized.
-  delete result.childProcesses;
-
   // Locate the concrete V2/V3 result and its version WITHOUT unwrapping the wire payload:
   // the parent (and writeBuildResult) still expect a BuildResultVX wrapper for
   // `builder.version === -1` builders, so we serialize the inner outputs in place and send
@@ -167,29 +174,21 @@ async function processMessage(message) {
     concrete = result.result;
   }
 
-  // Prepare each output for IPC. Lambda/EdgeFunction carry a `files` map; Prerender wraps a
-  // `lambda` (with its own `files`) and a `fallback` file. serializeFiles only spills
-  // oversized FileBlob Buffers to temp files — everything else rides IPC as-is.
-  const serializeOutput = (output, dedup) => {
-    if (!output || typeof output !== 'object') return;
+  // The IPC channel uses `serialization: 'advanced'` (V8 structured clone), which preserves
+  // Buffers, cycles (e.g. `@vercel/next`'s `result.childProcesses`), and shared object identity
+  // — the same Lambda referenced by many V2 keys or many `Prerender.lambda` fields arrives as
+  // ONE instance, which writeBuildResult relies on for symlink dedup. So the only remaining job
+  // here is spilling oversized FileBlob Buffers to temp files (see serializeFiles). We still walk
+  // every reachable `files` map, using `seen` so a shared Lambda is spilled at most once.
+  const seen = new Set();
+  const serializeOutput = output => {
+    if (!output || typeof output !== 'object' || seen.has(output)) return;
+    seen.add(output);
     if (output.type === 'Lambda' || output.type === 'EdgeFunction') {
       serializeFiles(output.files);
     } else if (output.type === 'Prerender') {
-      // A single Lambda instance is routinely shared as the `.lambda` of many
-      // Prerender outputs (e.g. `@vercel/next` groups prerendered/ISR routes and
-      // an HTML prerender with its `.rsc` data prerender onto one Lambda). That
-      // shared identity — which writeBuildResult uses to emit a symlink instead of
-      // a duplicate function — is only preserved across IPC if we dedup nested
-      // lambdas too (`dedup` is provided for the V2 output map). Without it every
-      // prerender route ships a full copy of the same function.
-      if (output.lambda) {
-        const deduped = dedup ? dedup(output.lambda) : output.lambda;
-        if (deduped !== output.lambda) {
-          output.lambda = deduped;
-        } else {
-          serializeFiles(output.lambda.files);
-        }
-      }
+      // Prerender wraps a `lambda` (with its own `files`) and a `fallback` file.
+      if (output.lambda) serializeOutput(output.lambda);
       if (output.fallback) serializeFiles({ fallback: output.fallback });
     }
   };
@@ -200,38 +199,8 @@ async function processMessage(message) {
     if (effectiveVersion === 3) {
       serializeOutput(concrete.output);
     } else {
-      // A V2 output map can reference the SAME Lambda/EdgeFunction instance in
-      // multiple places — under multiple top-level keys, and (crucially) as the
-      // nested `.lambda` of many Prerender outputs. writeBuildResult relies on that
-      // shared identity to emit a symlink instead of a duplicate function. JSON/IPC
-      // would clone each reference into a distinct object and break the dedup, so on
-      // the first time we see an object we tag it with a `__sharedId` and every later
-      // reference is replaced by a `{ __sharedRef: <id> }` sentinel the parent
-      // resolves back to the one instance after deserialization.
-      const seen = new Map();
-      let nextSharedId = 0;
-      // Returns the value unchanged on first encounter (tagging it so the parent can
-      // register it by id), or a sentinel referencing that first encounter.
-      const dedup = value => {
-        const existingId = seen.get(value);
-        if (existingId !== undefined) {
-          return { __sharedRef: existingId };
-        }
-        const id = nextSharedId++;
-        seen.set(value, id);
-        value.__sharedId = id;
-        return value;
-      };
-      for (const key of Object.keys(concrete.output)) {
-        const value = concrete.output[key];
-        if (value && typeof value === 'object') {
-          const deduped = dedup(value);
-          if (deduped !== value) {
-            concrete.output[key] = deduped;
-            continue;
-          }
-        }
-        serializeOutput(value, dedup);
+      for (const value of Object.values(concrete.output)) {
+        serializeOutput(value);
       }
     }
   }

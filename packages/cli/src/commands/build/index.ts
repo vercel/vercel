@@ -49,6 +49,9 @@ import {
   type Lambda,
   type TriggerEvent,
   sanitizeConsumerName,
+  type BuilderV2,
+  type BuilderV3,
+  type BuilderVX,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
@@ -81,9 +84,14 @@ import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import {
-  buildInSubprocess,
-  type BuilderDiagnostics,
+  type BuildRunner,
+  type BuildRunnerContext,
+  InprocessBuildRunner,
+  RawBuildResult,
+} from '../../util/build/build-runner';
+import {
   canBuildInSubprocess,
+  SubprocessBuildRunner,
 } from '../../util/build/builder-process';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
 import {
@@ -695,6 +703,28 @@ export default async function main(client: Client): Promise<number> {
   }
 }
 
+function dispatchBuildRunner({
+  ctx,
+  builder,
+  hasDetectedServices,
+  builderPath,
+  hasBuildCallback,
+}: {
+  ctx: BuildRunnerContext;
+  builder: BuilderV2 | BuilderV3 | BuilderVX;
+  hasDetectedServices: boolean;
+  builderPath: string;
+  hasBuildCallback: boolean;
+}): BuildRunner {
+  return canBuildInSubprocess({
+    hasDetectedServices,
+    builderPath,
+    hasBuildCallback,
+  })
+    ? new SubprocessBuildRunner(ctx)
+    : new InprocessBuildRunner(ctx, builder);
+}
+
 /**
  * Execute the Project's builders. If this function throws an error,
  * then it will be serialized into the `builds.json` manifest file.
@@ -1161,6 +1191,12 @@ async function doBuild(
     callback?: () => Promise<void>;
   }[] = [];
 
+  // Every runner started across both runBuilders calls, so all subprocess workers
+  // — including pre-deploy workers kept alive past their build — can be torn down
+  // unconditionally after the deferred pre-deploy loop, even if a build or a
+  // pre-deploy callback throws.
+  const liveRunners = new Set<BuildRunner>();
+
   const runBuilders = async (buildsToRun: Builder[]) => {
     await addBuildsToBuildJson(buildsToRun);
 
@@ -1408,47 +1444,31 @@ async function doBuild(
         }
         let buildResult: BuildResultV2 | BuildResultV3;
         let rawBuildResult: BuildResultV2 | BuildResultV3 | BuildResultVX;
-        // Diagnostics from a forked build come back over IPC alongside the result; for
-        // in-process builds we call `builder.diagnostics()` ourselves in the `finally` below.
-        let subprocessDiagnostics: BuilderDiagnostics | undefined;
         // Run the builder in a forked worker when possible, so its output (including
         // subprocesses it spawns) can be captured and prefixed per line, and so builds are
         // isolated. Scoped to multi-service deployments for now; single-project builds and
         // builders that can't cross the process boundary (see canBuildInSubprocess: the built-in
-        // `@vercel/static`, and builds that register a build callback) stay in-process.
-        const subprocessEligible = canBuildInSubprocess({
+        // `@vercel/static`, and builds that register a build callback) stay in-process. The
+        // runner is tracked in `liveRunners` so its worker is torn down unconditionally later.
+        const runner = dispatchBuildRunner({
+          ctx: {
+            requirePath: builderWithPkg.path,
+            buildOptions,
+            cwd: buildWorkPath,
+            expectsPreDeploy: Boolean(preDeployCmd),
+            builderSpan,
+          },
+          builder,
           hasDetectedServices: getHasDetectedServices(),
           builderPath: builderWithPkg.path,
           hasBuildCallback: Boolean(buildOptions.buildCallback),
         });
+        liveRunners.add(runner);
+
         try {
-          rawBuildResult = await builderSpan.trace<
-            BuildResultV2 | BuildResultV3 | BuildResultVX
-          >(async () => {
-            if (subprocessEligible) {
-              const outcome = await buildInSubprocess({
-                requirePath: builderWithPkg.path,
-                buildOptions,
-                env: process.env,
-                cwd: buildWorkPath,
-                expectsPreDeploy: Boolean(preDeployCmd),
-                // Report the builder's in-worker spans under this `vc.builder` span so forked
-                // builds keep full trace fidelity (called on success and failure).
-                // reportChildEvents reparents the worker's root span under `vc.builder`.
-                reportTraceEvents: events =>
-                  builderSpan.reportChildEvents(events),
-              });
-              subprocessDiagnostics = outcome.diagnostics;
-              // A forked build with a pre-deploy keeps its worker alive; route the deferred
-              // pre-deploy through the worker handle instead of the in-process callback.
-              if (outcome.runPreDeploy && preDeployEntry) {
-                preDeployEntry.callback = outcome.runPreDeploy;
-              }
-              // The worker unwraps BuildResultVX itself, so this is always V2/V3.
-              return outcome.buildResult;
-            }
-            return builder.build(buildOptions);
-          });
+          rawBuildResult = await builderSpan.trace<RawBuildResult>(() =>
+            runner.build()
+          );
           if (builder.version === -1 && 'resultVersion' in rawBuildResult) {
             const vx = rawBuildResult as BuildResultVX;
             buildResult = vx.result;
@@ -1488,14 +1508,7 @@ async function doBuild(
           }
           // Make sure we don't fail the build
           try {
-            // A forked build already ran `diagnostics()` in the worker (traced there, with the
-            // span shipped back), so just use those Files. Only call — and trace — diagnostics
-            // in-process for builds that didn't fork.
-            const builderDiagnostics = subprocessEligible
-              ? subprocessDiagnostics
-              : await builderSpan
-                  .child('vc.builder.diagnostics')
-                  .trace(async () => await builder.diagnostics?.(buildOptions));
+            const builderDiagnostics = await runner.diagnostics();
             if (builderDiagnostics) {
               const prefix =
                 service && serviceWorkspace && serviceWorkspace !== '.'
@@ -1901,166 +1914,184 @@ async function doBuild(
     }
   };
 
-  await runBuilders(builds);
-  await flushOps();
+  // Guarantee every subprocess worker is torn down once builds and the deferred
+  // pre-deploy loop are done — including workers kept alive for a pre-deploy whose
+  // callback is never reached because a later build or another pre-deploy threw.
+  try {
+    await runBuilders(builds);
+    await flushOps();
 
-  if (
-    !hasExperimentalServicesV1ConfiguredInVercelConfig &&
-    !hasExperimentalServicesV2ConfiguredInVercelConfig
-  ) {
-    const generatedConfigPath = join(outputDir, 'config.json');
-    const generatedConfig =
-      await readJSONFile<BuildOutputConfig>(generatedConfigPath);
-    if (generatedConfig instanceof CantParseJSONFile) {
-      throw generatedConfig;
-    }
-
-    const defaultGeneratedOutputDir = join(workPath, OUTPUT_DIR);
-    const generatedConfigs = [generatedConfig];
-    if (resolve(outputDir) !== resolve(defaultGeneratedOutputDir)) {
-      const defaultGeneratedConfig = await readJSONFile<BuildOutputConfig>(
-        join(defaultGeneratedOutputDir, 'config.json')
-      );
-      if (defaultGeneratedConfig instanceof CantParseJSONFile) {
-        throw defaultGeneratedConfig;
+    if (
+      !hasExperimentalServicesV1ConfiguredInVercelConfig &&
+      !hasExperimentalServicesV2ConfiguredInVercelConfig
+    ) {
+      const generatedConfigPath = join(outputDir, 'config.json');
+      const generatedConfig =
+        await readJSONFile<BuildOutputConfig>(generatedConfigPath);
+      if (generatedConfig instanceof CantParseJSONFile) {
+        throw generatedConfig;
       }
-      generatedConfigs.push(defaultGeneratedConfig);
-    }
 
-    const generatedServicesConfig = getGeneratedServicesConfig([
-      ...generatedConfigs,
-      ...buildResults.values(),
-    ]);
-    const generatedExperimentalServicesV1Config =
-      getGeneratedExperimentalServicesV1Config([
+      const defaultGeneratedOutputDir = join(workPath, OUTPUT_DIR);
+      const generatedConfigs = [generatedConfig];
+      if (resolve(outputDir) !== resolve(defaultGeneratedOutputDir)) {
+        const defaultGeneratedConfig = await readJSONFile<BuildOutputConfig>(
+          join(defaultGeneratedOutputDir, 'config.json')
+        );
+        if (defaultGeneratedConfig instanceof CantParseJSONFile) {
+          throw defaultGeneratedConfig;
+        }
+        generatedConfigs.push(defaultGeneratedConfig);
+      }
+
+      const generatedServicesConfig = getGeneratedServicesConfig([
         ...generatedConfigs,
         ...buildResults.values(),
       ]);
+      const generatedExperimentalServicesV1Config =
+        getGeneratedExperimentalServicesV1Config([
+          ...generatedConfigs,
+          ...buildResults.values(),
+        ]);
 
-    if (generatedServicesConfig || generatedExperimentalServicesV1Config) {
-      if (generatedServicesConfig) {
-        nestExperimentalServicesV2Output = true;
-      }
-      detectedExperimentalServicesV1Config =
-        generatedExperimentalServicesV1Config;
-      detectedExperimentalServicesV2Config = generatedServicesConfig;
-      detectedExperimentalServicesV2RootRoutes = generatedServicesConfig
-        ? generatedConfigs.find(
-            config =>
-              (hasGeneratedServicesConfig(config) ||
-                hasNonEmptyObject(config?.experimentalServicesV2)) &&
-              Array.isArray(config?.routes)
-          )?.routes
-        : undefined;
-      const generatedBuilders = await span
-        .child('vc.detectGeneratedServices')
-        .trace(() =>
-          detectBuilders(files, pkg, {
-            ...localConfig,
-            ...(generatedServicesConfig
-              ? {
-                  services: generatedServicesConfig,
-                  experimentalServicesV2: undefined,
-                }
-              : {
-                  experimentalServicesV2: undefined,
-                  experimentalServices: generatedExperimentalServicesV1Config,
-                }),
-            projectSettings,
-            ignoreBuildScript: true,
-            featHandleMiss: true,
-            workPath,
-          })
-        );
-
-      if (generatedBuilders.errors && generatedBuilders.errors.length > 0) {
-        throw generatedBuilders.errors[0];
-      }
-
-      for (const w of generatedBuilders.warnings) {
-        output.warn(w.message, null, w.link, w.action || 'Learn More');
-      }
-
-      detectedResolvedServices = generatedBuilders.services;
-      if (!detectedResolvedServices || detectedResolvedServices.length === 0) {
-        detectedResolvedServices = undefined;
-        detectedServices = undefined;
-      } else {
-        detectedServices = detectedResolvedServices.filter(
-          isExperimentalService
-        );
-        if (detectedServices.length > 0) {
-          appendExperimentalServicesV1Routes(detectedServices);
+      if (generatedServicesConfig || generatedExperimentalServicesV1Config) {
+        if (generatedServicesConfig) {
+          nestExperimentalServicesV2Output = true;
         }
-      }
+        detectedExperimentalServicesV1Config =
+          generatedExperimentalServicesV1Config;
+        detectedExperimentalServicesV2Config = generatedServicesConfig;
+        detectedExperimentalServicesV2RootRoutes = generatedServicesConfig
+          ? generatedConfigs.find(
+              config =>
+                (hasGeneratedServicesConfig(config) ||
+                  hasNonEmptyObject(config?.experimentalServicesV2)) &&
+                Array.isArray(config?.routes)
+            )?.routes
+          : undefined;
+        const generatedBuilders = await span
+          .child('vc.detectGeneratedServices')
+          .trace(() =>
+            detectBuilders(files, pkg, {
+              ...localConfig,
+              ...(generatedServicesConfig
+                ? {
+                    services: generatedServicesConfig,
+                    experimentalServicesV2: undefined,
+                  }
+                : {
+                    experimentalServicesV2: undefined,
+                    experimentalServices: generatedExperimentalServicesV1Config,
+                  }),
+              projectSettings,
+              ignoreBuildScript: true,
+              featHandleMiss: true,
+              workPath,
+            })
+          );
 
-      if (
-        detectedServices &&
-        detectedServices.length > 0 &&
-        generatedBuilders.useImplicitEnvInjection
-      ) {
-        const serviceUrlEnvVars = getExperimentalServiceUrlEnvVars({
-          services: detectedServices,
-          frameworkList,
-          currentEnv: process.env,
-          deploymentUrl: process.env.VERCEL_URL,
-        });
-        for (const [key, value] of Object.entries(serviceUrlEnvVars)) {
-          process.env[key] = value;
-          output.debug(`Injected service URL env var: ${key}=${value}`);
+        if (generatedBuilders.errors && generatedBuilders.errors.length > 0) {
+          throw generatedBuilders.errors[0];
         }
-      }
 
-      const buildsToRun: Builder[] = [];
-      const seenBuildsToRun = new Set<string>();
-      // Only record services we actually treat as services. A generated service
-      // whose builder already ran at the project root is warned about and
-      // skipped (no service output is produced for it), so it must not leak into
-      // `config.json`'s `services` array.
-      const recordedServices: Service[] = [];
-      for (const service of detectedResolvedServices || []) {
-        const alreadyExecutedBuild = getAlreadyExecutedBuild(service.builder);
-        if (alreadyExecutedBuild) {
-          if (generatedServicesConfig) {
-            output.warn(getGeneratedServiceAlreadyBuiltWarning(service));
+        for (const w of generatedBuilders.warnings) {
+          output.warn(w.message, null, w.link, w.action || 'Learn More');
+        }
+
+        detectedResolvedServices = generatedBuilders.services;
+        if (
+          !detectedResolvedServices ||
+          detectedResolvedServices.length === 0
+        ) {
+          detectedResolvedServices = undefined;
+          detectedServices = undefined;
+        } else {
+          detectedServices = detectedResolvedServices.filter(
+            isExperimentalService
+          );
+          if (detectedServices.length > 0) {
+            appendExperimentalServicesV1Routes(detectedServices);
+          }
+        }
+
+        if (
+          detectedServices &&
+          detectedServices.length > 0 &&
+          generatedBuilders.useImplicitEnvInjection
+        ) {
+          const serviceUrlEnvVars = getExperimentalServiceUrlEnvVars({
+            services: detectedServices,
+            frameworkList,
+            currentEnv: process.env,
+            deploymentUrl: process.env.VERCEL_URL,
+          });
+          for (const [key, value] of Object.entries(serviceUrlEnvVars)) {
+            process.env[key] = value;
+            output.debug(`Injected service URL env var: ${key}=${value}`);
+          }
+        }
+
+        const buildsToRun: Builder[] = [];
+        const seenBuildsToRun = new Set<string>();
+        // Only record services we actually treat as services. A generated service
+        // whose builder already ran at the project root is warned about and
+        // skipped (no service output is produced for it), so it must not leak into
+        // `config.json`'s `services` array.
+        const recordedServices: Service[] = [];
+        for (const service of detectedResolvedServices || []) {
+          const alreadyExecutedBuild = getAlreadyExecutedBuild(service.builder);
+          if (alreadyExecutedBuild) {
+            if (generatedServicesConfig) {
+              output.warn(getGeneratedServiceAlreadyBuiltWarning(service));
+              continue;
+            }
+            serviceByBuilder.set(alreadyExecutedBuild, service);
+            recordedServices.push(service);
             continue;
           }
-          serviceByBuilder.set(alreadyExecutedBuild, service);
+          const serviceBuilderIdentity = getBuilderIdentity(service.builder);
+          if (
+            serviceBuilderIdentity &&
+            !seenBuildsToRun.has(serviceBuilderIdentity)
+          ) {
+            serviceByBuilder.set(service.builder, service);
+            seenBuildsToRun.add(serviceBuilderIdentity);
+            buildsToRun.push(service.builder);
+          }
           recordedServices.push(service);
-          continue;
         }
-        const serviceBuilderIdentity = getBuilderIdentity(service.builder);
-        if (
-          serviceBuilderIdentity &&
-          !seenBuildsToRun.has(serviceBuilderIdentity)
-        ) {
-          serviceByBuilder.set(service.builder, service);
-          seenBuildsToRun.add(serviceBuilderIdentity);
-          buildsToRun.push(service.builder);
-        }
-        recordedServices.push(service);
-      }
-      servicesToRecord =
-        recordedServices.length > 0 ? recordedServices : undefined;
+        servicesToRecord =
+          recordedServices.length > 0 ? recordedServices : undefined;
 
-      if (buildsToRun.length > 0) {
-        await runBuilders(buildsToRun);
+        if (buildsToRun.length > 0) {
+          await runBuilders(buildsToRun);
+        }
       }
     }
-  }
 
-  // Run pre-deploy commands after all builders succeeded.
-  // A builder is responsible for handling preDeployCommand, so
-  // it will actually own its env, tracing, etc.
-  // We do not fire them during the build itself, because not all builds
-  // might succeed and be actually deployed.
-  for (const entry of preDeployEntries) {
-    if (entry.callback) {
-      await entry.callback();
-    } else {
-      output.warn(
-        `Service "${entry.service}" has a preDeployCommand but its builder does not support it. The command was not executed.`
-      );
+    // Run pre-deploy commands after all builders succeeded.
+    // A builder is responsible for handling preDeployCommand, so
+    // it will actually own its env, tracing, etc.
+    // We do not fire them during the build itself, because not all builds
+    // might succeed and be actually deployed.
+    for (const entry of preDeployEntries) {
+      if (entry.callback) {
+        await entry.callback();
+      } else {
+        output.warn(
+          `Service "${entry.service}" has a preDeployCommand but its builder does not support it. The command was not executed.`
+        );
+      }
+    }
+  } finally {
+    for (const runner of liveRunners) {
+      try {
+        runner.teardown();
+      } catch (err) {
+        output.debug(
+          `Runner teardown failed: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
     }
   }
 
