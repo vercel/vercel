@@ -108,6 +108,26 @@ function getBuildOutputV3(result: Awaited<ReturnType<typeof build>>) {
   return (result as any).result.output as BuildResultV3['output'];
 }
 
+function mockWorkflowNamespace(
+  namespace: string | null | Record<string, string | null>
+) {
+  vi.mocked(execa).mockImplementation(async (_command, args) => {
+    if (
+      Array.isArray(args) &&
+      args[0] === '-c' &&
+      (args.length === 4 || args[2] === '--source')
+    ) {
+      const variableName = args[args.length - 1];
+      const detected =
+        typeof namespace === 'object' && namespace !== null
+          ? namespace[variableName]
+          : namespace;
+      return { stdout: JSON.stringify({ namespace: detected }) } as any;
+    }
+    return { stdout: '' } as any;
+  });
+}
+
 /**
  * Build a PythonConstraint from a PEP 440 version specifier string.
  * Handles exact versions ("3.9"), specifiers (">=3.10,<3.12"), and
@@ -2626,9 +2646,11 @@ describe('pyproject.toml service entrypoint', () => {
     );
     fs.mkdirSync(mockWorkPath, { recursive: true });
     makeMockPython('3.11');
+    mockWorkflowNamespace(null);
   });
 
   afterEach(() => {
+    vi.mocked(execa).mockReset();
     if (fs.existsSync(mockWorkPath)) {
       fs.removeSync(mockWorkPath);
     }
@@ -2812,9 +2834,11 @@ describe('pyproject workflows', () => {
     mockWorkPath = path.join(tmpdir(), `python-workflows-${Date.now()}`);
     fs.mkdirSync(mockWorkPath, { recursive: true });
     makeMockPython('3.11');
+    mockWorkflowNamespace(null);
   });
 
   afterEach(() => {
+    vi.mocked(execa).mockReset();
     if (fs.existsSync(mockWorkPath)) {
       fs.removeSync(mockWorkPath);
     }
@@ -2869,6 +2893,37 @@ describe('pyproject workflows', () => {
         topics: [{ topic: '__wkf_*' }],
       },
     ]);
+  });
+
+  it('returns dev sidecars subscribed to the namespaced workflow topic', async () => {
+    mockWorkflowNamespace('billing');
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'flows.py'),
+      'from vercel.workflow import Workflows\nworkflows = Workflows(namespace="billing")\n'
+    );
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        '',
+        '[[tool.vercel.workflows]]',
+        'entrypoint = "flows:workflows"',
+        '',
+      ].join('\n')
+    );
+
+    const sidecars = await getDevSidecars({
+      workPath: mockWorkPath,
+      build: {
+        use: '@vercel/python',
+        src: '<detect>',
+        config: { framework: 'fastapi' },
+      },
+    });
+
+    expect(sidecars[0].topics).toEqual([{ topic: '__billing_wkf_*' }]);
   });
 
   it('emits one queue/v2beta Lambda consuming the workflow topic pattern', async () => {
@@ -2928,7 +2983,103 @@ describe('pyproject workflows', () => {
     );
   });
 
-  it('rejects more than one workflow entrypoint', async () => {
+  it('uses the workflow namespace for the queue trigger', async () => {
+    mockWorkflowNamespace('billing');
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'flows.py': new FileBlob({
+        data: [
+          'from vercel.workflow import Workflows',
+          'workflows = Workflows(namespace="billing")',
+          '',
+        ].join('\n'),
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[[tool.vercel.workflows]]',
+          'entrypoint = "flows:workflows"',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: false },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const workflowPath = getWorkflowOutputPath('flows_workflows');
+    const workflow = (getBuildOutputV2(result).output as any)[workflowPath];
+    expect(workflow.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: '__billing_wkf_*',
+        consumer: sanitizeConsumerName(workflowPath),
+      },
+    ]);
+  });
+
+  it('builds multiple workflow entrypoints with distinct namespaces', async () => {
+    mockWorkflowNamespace({
+      workflows: 'billing',
+      more: 'fulfillment',
+    });
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'flows.py': new FileBlob({
+        data: 'workflows = object()\nmore = object()\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[[tool.vercel.workflows]]',
+          'entrypoint = "flows:workflows"',
+          '',
+          '[[tool.vercel.workflows]]',
+          'entrypoint = "flows:more"',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: false },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const output = getBuildOutputV2(result).output as any;
+    expect(
+      output[getWorkflowOutputPath('flows_workflows')].experimentalTriggers
+    ).toEqual([expect.objectContaining({ topic: '__billing_wkf_*' })]);
+    expect(
+      output[getWorkflowOutputPath('flows_more')].experimentalTriggers
+    ).toEqual([expect.objectContaining({ topic: '__fulfillment_wkf_*' })]);
+  });
+
+  it('rejects workflow entrypoints with the same namespace', async () => {
+    mockWorkflowNamespace({
+      workflows: 'billing',
+      more: 'billing',
+    });
     const files = {
       'app.py': new FileBlob({
         data: 'def app(environ, start_response): pass\n',
@@ -2961,7 +3112,7 @@ describe('pyproject workflows', () => {
         config: { framework: 'flask' },
         repoRootPath: mockWorkPath,
       })
-    ).rejects.toThrow(/must declare a single entrypoint/);
+    ).rejects.toThrow(/both use namespace "billing"/);
   });
 
   it('rejects topics because workflow topics are implicit', async () => {
