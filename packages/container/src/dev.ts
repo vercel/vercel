@@ -16,7 +16,7 @@ import {
   withSpan,
 } from './util';
 import { detectRuntimeFamily, isBuildpackProject } from './buildpacks/detect';
-import { buildWithLifecycle } from './buildpacks/lifecycle';
+import { buildDevImage } from './buildpacks/lifecycle';
 import { selectDevEngine } from './engines';
 import type {
   ContainerEngine,
@@ -242,7 +242,7 @@ async function resolveDevImage(
         `▲ container  vercel dev: building ${tag} via buildpacks (${engine.name}, lifecycle/creator)`
       );
 
-      await buildWithLifecycle(
+      await buildDevImage(
         engine,
         {
           workPath,
@@ -462,7 +462,17 @@ export async function startDevServer(
 
   const startPromise = startContainer(options, reuseKey)
     .catch(err => {
-      recordStickyFailure(reuseKey, err as Error);
+      // Only record sticky failures for container *crash* errors (the
+      // container actually ran then exited badly). Pre-run failures (daemon
+      // down, no engine available, build/network errors, port-publish
+      // timeout) should NOT become sticky — they are often transient and the
+      // next request should re-probe rather than throwing a stale error.
+      const msg = (err as Error).message;
+      const isContainerCrash =
+        /exited \(code \d+\) before becoming ready/i.test(msg);
+      if (isContainerCrash) {
+        recordStickyFailure(reuseKey, err as Error);
+      }
       throw err;
     })
     .finally(() => {

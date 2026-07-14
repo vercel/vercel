@@ -758,7 +758,7 @@ export async function ensurePrivateMachine(
       await run(bin, ['info'], { quiet: true, env: privateEnv() });
     } catch (err) {
       const msg = (err as Error).message;
-      if (/subuid|subgid|/i.test(msg)) {
+      if (/subuid|subgid/i.test(msg)) {
         throw new Error(
           [
             'Podman installed privately but cannot run rootless containers:',

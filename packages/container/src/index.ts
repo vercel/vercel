@@ -85,6 +85,12 @@ async function buildViaBuildpackAndPush(params: {
   buildArgs?: Record<string, string>;
   parentSpan?: Span;
 }): Promise<string> {
+  // Cloud buildpack builds run inside the Vercel build container, which uses
+  // buildah (daemonless). The buildAndPushCloudImage function handles the full
+  // sequence: pull builder → buildah from → buildah run creator → buildah rm →
+  // push OCI layout directly to registry. No engine abstraction needed — the
+  // Dockerfile path uses the engine for build/push, but buildpacks have their
+  // own build path that doesn't fit the engine.build/push interface.
   const engine = selectContainerEngine();
   const builder = buildpackBuilderRef();
 
@@ -145,23 +151,24 @@ async function buildViaBuildpackAndPush(params: {
           s => engine.verifyStorage?.(s) ?? Promise.resolve()
         );
 
+        // Registry auth: use provisioned auth file when available (build
+        // container), otherwise login explicitly.
         const forceLogin =
           readString(process.env.VERCEL_VCR_FORCE_LOGIN) === '1';
         const authFile = forceLogin ? undefined : existingRegistryAuthFile();
-        const buildParams: BuildPushParams = {
-          contextDir: params.workPath,
-          dockerfilePath: `${params.workPath}/Dockerfile`,
-          imageRef,
-          registry: VCR_REGISTRY,
-          username,
-          token,
-          repository: params.repository,
-          buildArgs: params.buildArgs,
-          span: buildSpan,
-        };
-
         if (!authFile) {
           step(`Authenticating to ${VCR_REGISTRY} as ${username}`);
+          const buildParams: BuildPushParams = {
+            contextDir: params.workPath,
+            dockerfilePath: `${params.workPath}/Dockerfile`,
+            imageRef,
+            registry: VCR_REGISTRY,
+            username,
+            token,
+            repository: params.repository,
+            buildArgs: params.buildArgs,
+            span: buildSpan,
+          };
           await withSpan(
             buildSpan,
             'container.registry_login',
@@ -190,83 +197,27 @@ async function buildViaBuildpackAndPush(params: {
         );
 
         info(`Building image ${imageRef} via buildpacks (${builder})`);
-        const buildStart = Date.now();
-        step(
-          `buildpack build (platform=${TARGET_PLATFORM}, builder=${builder})`
+
+        // buildAndPushCloudImage handles the full buildah lifecycle:
+        // pull → from → run creator → rm → push OCI layout to registry.
+        // It returns the digest, and pushes directly — no separate
+        // engine.push call needed.
+        const { buildAndPushCloudImage } = await import(
+          './buildpacks/lifecycle'
         );
-
-        // Unified lifecycle path — works for buildah (cloud P0), docker, and podman.
-        // buildWithLifecycle handles staging (filtered copy to avoid node_modules
-        // symlink contamination), env mapping, platform, OCI layout export, and
-        // CNB experimental flags. Cloud uses buildah-layout mode:
-        //   builder pull → buildah run --volume $staged:/workspace -v $layout:/layout
-        //   ... /cnb/lifecycle/creator --layout --layout-dir=/layout ... $tag
-        //   → buildah pull oci:$layout (import) → buildah tag (idempotent)
-        // Image ends up in engine's store as `params.tag`, same as docker build.
-        const { buildWithLifecycle } = await import('./buildpacks/lifecycle');
-
-        // For cloud push we need the image tagged as `imageRef` (vcr.vercel.com/...) too,
-        // so `engine.push(imageRef)` works whether the lifecycle output was $tag or layout-imported.
-        // For buildah the outputMode is buildah-layout → output is already in same buildah store;
-        // for docker it's `daemon` (image store), for podman it's `layout` (podman store).
-        //
-        // After lifecycle, ensure imageRef exists: `buildah tag $tag $imageRef` / `docker tag` / `podman tag`.
-        // Then push can proceed as usual with engine.push.
-        await buildWithLifecycle(
-          engine,
+        const buildStart = Date.now();
+        const digest = await buildAndPushCloudImage(
           {
             workPath: params.workPath,
             tag: params.tag,
+            imageRef,
             buildArgs: params.buildArgs,
             serviceName: params.repository,
-            // buildah (cloud) → buildah-layout (OCI layout export → import), enable restore for layer cache reuse
-            // docker/podman paths also valid via explicit engine override, but local dev prefers `layout`/`daemon`
-            outputMode:
-              engine.name === 'buildah' ? 'buildah-layout' : undefined,
-            skipRestore: false, // cloud: enable restore so prepareCache + warm store actually reuse layers
+            builder,
           },
-          { onStdout: undefined, onStderr: undefined },
           buildSpan
         );
-
-        // Tag local tag → full vcr ref so push can find it. This is safe/idempotent for all engines.
-        // buildah's storage args are injected inside buildWithLifecycle/runEngine already; here we go direct
-        // via engine abstraction path by using `run` with buildahStorageArgs for symmetry, or just `engine` wrapper.
-        // Simplest: reuse `run` helper with explicit bin; buildah path appends storage args via buildahStorageArgs wrapper
-        // in runEngine, but outside lifecycle we need to handle storage ourselves.
-        if (params.tag !== imageRef) {
-          const { run: runCmd } = await import('./util');
-          if (engine.name === 'buildah') {
-            const { buildahStorageArgs: storageArgs } = await import(
-              './storage-driver'
-            );
-            const sargs = await storageArgs();
-            await runCmd('buildah', [...sargs, 'tag', params.tag, imageRef], {
-              quiet: true,
-            }).catch(() => {});
-          } else {
-            const bin = engine.name === 'docker' ? 'docker' : 'podman';
-            await runCmd(bin, ['tag', params.tag, imageRef], {
-              quiet: true,
-            }).catch(() => {});
-          }
-        }
-
-        done(`built in ${elapsed(buildStart)}`);
-
-        const pushStart = Date.now();
-        step(`Pushing ${imageRef}`);
-        const digest = await withSpan(
-          buildSpan,
-          'container.push',
-          { 'image.ref': imageRef },
-          () => engine.push(buildParams)
-        );
-        done(
-          digest
-            ? `pushed ${shortDigest(digest)} in ${elapsed(pushStart)}`
-            : `pushed in ${elapsed(pushStart)}`
-        );
+        done(`built and pushed in ${elapsed(buildStart)}`);
 
         await withSpan(
           buildSpan,

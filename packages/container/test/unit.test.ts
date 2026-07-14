@@ -1511,6 +1511,106 @@ describe('@vercel/container', () => {
       expect(out?.runtime).toBe('container');
       expect(spawnMock).not.toHaveBeenCalled();
     });
+
+    it('cloud: buildpack build uses correct buildah from → run → rm → push sequence', async () => {
+      // The cloud path must use `buildah from <builder>` to create a working
+      // container, then `buildah run <ctr>` (NOT `buildah run <image>`),
+      // then `buildah rm <ctr>`, then push the OCI layout directly.
+      // This is the fix for review comment #3 (buildah run requires a
+      // working container, not an image ref).
+      process.env.VERCEL_BUILD_IMAGE = 'al2023';
+      process.env.VERCEL_OIDC_TOKEN = fakeOidcToken();
+      existsSyncMock.mockImplementation(makeExistsWithFiles(['go.mod']));
+
+      const fetchMock = vi.fn();
+      stubRegistryFetch(fetchMock);
+      vi.stubGlobal('fetch', fetchMock);
+
+      const digest = `sha256:${'f'.repeat(64)}`;
+      const buildahCalls: string[] = [];
+
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        const argStr = args.join(' ');
+        if (cmd === 'buildah') {
+          buildahCalls.push(argStr);
+          if (args.includes('info')) {
+            return fakeChild(
+              JSON.stringify({
+                store: {
+                  GraphRoot: '/vercel/.containers/storage',
+                  RunRoot: '/run/containers/storage',
+                  GraphDriverName: 'overlay',
+                  GraphStatus: { 'Backing Filesystem': 'xfs' },
+                },
+              })
+            );
+          }
+          if (args.includes('from')) {
+            // buildah from outputs the working container name on stdout
+            return fakeChild('buildah-working-container-123\n');
+          }
+          if (args.includes('push')) {
+            const digestIdx = args.indexOf('--digestfile');
+            if (digestIdx >= 0) {
+              writeFileSync(args[digestIdx + 1], `${digest}\n`);
+            }
+            return fakeChild('');
+          }
+          return fakeChild('');
+        }
+        return fakeChild('');
+      });
+
+      const result = expectTypicalBuildResult(
+        await build({
+          ...createBuildOptions({
+            runtime: 'container',
+            framework: 'container',
+          }),
+          entrypoint: '<detect>',
+          workPath: '/fake/go-cloud',
+          service: { name: 'api' },
+          framework: 'container',
+        } as any)
+      );
+
+      // Image reference should include the digest from the push
+      expect(result.output.index).toMatchObject({
+        handler: `vcr.vercel.com/acme/my-app/api@${digest}`,
+      });
+
+      // Verify the correct buildah sequence:
+      // 1. `from` must be called to create a working container
+      const fromCall = buildahCalls.find(c => c.split(/\s+/).includes('from'));
+      expect(fromCall).toBeDefined();
+      expect(fromCall).toContain('--platform linux/amd64');
+
+      // 2. `run` must reference the working container (from stdout), NOT the
+      //    builder image ref — this was the original bug
+      const runCall = buildahCalls.find(c => c.split(/\s+/).includes('run'));
+      expect(runCall).toBeDefined();
+      expect(runCall).toContain('buildah-working-container-123');
+      expect(runCall).not.toContain('paketobuildpacks/builder-jammy-base');
+      expect(runCall).toContain('/cnb/lifecycle/creator');
+      expect(runCall).toContain('--layout');
+      expect(runCall).toContain('--layout-dir=/layout');
+
+      // 3. `rm` must clean up the working container
+      const rmCall = buildahCalls.find(c => c.split(/\s+/).includes('rm'));
+      expect(rmCall).toBeDefined();
+      expect(rmCall).toContain('buildah-working-container-123');
+
+      // 4. `push` must push the OCI layout directly to the registry ref
+      const pushCall = buildahCalls.find(c => c.split(/\s+/).includes('push'));
+      expect(pushCall).toBeDefined();
+      expect(pushCall).toContain('oci:');
+      expect(pushCall).toContain('vcr.vercel.com/acme/my-app/api');
+
+      // No `tag` command — the layout is pushed directly, no import/tag dance
+      expect(buildahCalls.some(c => c.split(/\s+/).includes('tag'))).toBe(
+        false
+      );
+    });
   });
 
   describe('prepareCache', () => {

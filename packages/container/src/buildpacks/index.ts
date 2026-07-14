@@ -5,7 +5,9 @@ export {
   LIFECYCLE_VENDOR_VERSION,
 } from './manifest';
 export {
-  buildWithLifecycle,
-  type LifecycleBuildParams,
-  type LifecycleBuildResult,
+  buildDevImage,
+  buildAndPushCloudImage,
+  type BuildpackBuildParams,
+  type BuildpackBuildResult,
+  type CloudBuildParams,
 } from './lifecycle';
