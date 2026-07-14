@@ -223,10 +223,33 @@ async function resolveFollowDeployment({
   output.stopSpinner();
 
   if (!branchDeployment) {
-    output.error(
-      `No deployments found for branch "${branch}". Deploy this branch first or specify a deployment with ${chalk.bold('--deployment')}.`
+    // Deployments created without git metadata (e.g. CLI or API deploys from
+    // repos without a recognized git remote) never match the branch lookup,
+    // so fall back to the latest production deployment.
+    output.debug(
+      `No deployments found for branch "${branch}", falling back to the latest production deployment`
     );
-    return { exitCode: 1 };
+    output.spinner('Finding latest production deployment', 1000);
+    const productionDeployment = await getLatestProductionDeployment(
+      client,
+      projectId
+    );
+    output.stopSpinner();
+
+    if (!productionDeployment) {
+      output.error(
+        `No deployments found for branch "${branch}" and no READY production deployments found for ${formatProject(orgSlug, projectSlug)}. Deploy first or specify a deployment with ${chalk.bold('--deployment')}.`
+      );
+      return { exitCode: 1 };
+    }
+
+    output.debug(
+      `Found latest production deployment ${productionDeployment.id} (${productionDeployment.url})`
+    );
+    return {
+      deploymentId: productionDeployment.id,
+      label: 'latest production deployment',
+    };
   }
 
   output.debug(`Found deployment ${branchDeployment.id} for branch ${branch}`);

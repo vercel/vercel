@@ -1307,6 +1307,48 @@ describe('logs', () => {
       });
     });
 
+    it('should fall back to the latest production deployment when no deployments match the branch', async () => {
+      const user = useUser();
+      const productionDeployment = useLogsDeployment(user);
+
+      const deploymentQueries: Array<Record<string, unknown>> = [];
+      client.scenario.get('/v6/deployments', (req, res) => {
+        deploymentQueries.push({ ...req.query });
+        if (req.query.target === 'production') {
+          res.json({
+            deployments: [
+              { uid: productionDeployment.id, url: productionDeployment.url },
+            ],
+          });
+          return;
+        }
+        res.json({ deployments: [] });
+      });
+
+      client.scenario.get(
+        `/v1/projects/prj_logstest/deployments/${productionDeployment.id}/runtime-logs`,
+        (_req, res) => {
+          res.status(200);
+          res.end();
+        }
+      );
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--follow', '--branch', 'main');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(
+        deploymentQueries.some(q => q['meta-githubCommitRef'] === 'main')
+      ).toEqual(true);
+      expect(deploymentQueries.some(q => q.target === 'production')).toEqual(
+        true
+      );
+      await expect(client.stderr).toOutput(
+        `Streaming logs for latest production deployment ${productionDeployment.id}`
+      );
+    });
+
     it('should error when --follow is used with --no-branch and no deployment', async () => {
       client.cwd = fixture('linked-project');
       client.setArgv('logs', '--follow', '--no-branch');
