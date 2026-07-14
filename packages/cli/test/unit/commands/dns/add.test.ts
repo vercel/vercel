@@ -65,6 +65,40 @@ describe('dns add', () => {
         'Success! DNS record for domain example.com (rec_123) created'
       );
     });
+
+    it('succeeds when adding a value-based DS record', async () => {
+      client.nonInteractive = true;
+      let posted: unknown;
+      client.scenario.post(`/v3/domains/:domain?/records`, (req, res) => {
+        posted = req.body;
+        res.json({ uid: 'rec_ds' });
+      });
+      client.setArgv(
+        'dns',
+        'add',
+        'example.com',
+        'sub',
+        'DS',
+        '2371 13 2 5be1a3f7'
+      );
+      const exitCode = await dns(client);
+      expect(exitCode).toBe(0);
+      expect(posted).toMatchObject({
+        name: 'sub',
+        type: 'DS',
+        value: '2371 13 2 5be1a3f7',
+      });
+      await expect(client.stderr).toOutput(
+        'Success! DNS record for domain example.com (rec_ds) created'
+      );
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:add', value: 'add' },
+        { key: 'argument:domain', value: '[REDACTED]' },
+        { key: 'argument:name', value: '[REDACTED]' },
+        { key: 'argument:type', value: 'DS' },
+        { key: 'argument:values', value: '[REDACTED]' },
+      ]);
+    });
   });
 
   it('tracks arguments', async () => {
