@@ -83,7 +83,12 @@ jobs:
           key: node-runtime-${{ env.VERCEL_CLI_NODE_VERSION }}-${{ env.VERCEL_CLI_NODE_PLATFORM }}-${{ env.VERCEL_CLI_NODE_ARCH }}-${{ hashFiles('packages/cli/scripts/build-binary-node.mjs', 'packages/cli/scripts/patch-node-source.mjs', 'turbo.node-runtime.json') }}
 
       - name: Build custom Node runtime
-        run: pnpm turbo --no-update-notifier --root-turbo-json turbo.node-runtime.json run //#build-binary-node --output-logs=new-only
+        # Run build-binary-node.mjs directly instead of via turbo. Turbo adds
+        # ~14 min of overhead (hashing 58 packages + remote cache checks) before
+        # the single root task runs, while the actual compile with 32 cores
+        # takes only seconds. The script's isExpectedNode fast-path exits in
+        # <1s when the GHA cache restored the binary.
+        run: node packages/cli/scripts/build-binary-node.mjs
 
       - name: Build workspace packages
         run: pnpm build
