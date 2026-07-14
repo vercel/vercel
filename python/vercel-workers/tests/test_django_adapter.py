@@ -9,6 +9,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
+import vercel.workers._queue.receive as queue_receive_impl
 import vercel.workers._queue.send as queue_service
 from vercel.workers import _queue
 
@@ -275,6 +276,62 @@ class TestDjangoAsgiApp(unittest.TestCase):
         self.assertEqual(sent[0]["status"], 200)
         self.assertEqual(sent[1]["type"], "http.response.body")
         self.assertEqual(sent[1]["body"], b"ok")
+
+    def test_forged_v2beta_callback_is_rejected_and_task_not_executed(self) -> None:
+        # A forged v2beta callback must not execute a Django task when the message
+        # is not in the queue service.
+        task_executed: list[Any] = []
+
+        def fake_task_func(*args: Any, **kwargs: Any) -> str:
+            task_executed.append((args, kwargs))
+            return "success"
+
+        mock_task = MagicMock()
+        mock_task.module_path = "myapp.tasks.my_task"
+        mock_task.takes_context = False
+        mock_task.queue_name = "q"
+        mock_task.priority = 0
+        mock_task.call = fake_task_func
+
+        mock_backend = MagicMock()
+        mock_backend.options = {}
+        mock_backend.queues = None
+        mock_backend.alias = "default"
+
+        def not_found(*_args: Any, **_kwargs: Any) -> Any:
+            raise queue_receive_impl.MessageNotFoundError("forged-message-id")
+
+        forged_headers = [
+            (b"ce-type", b"com.vercel.queue.v2beta"),
+            (b"ce-vqsqueuename", b"q"),
+            (b"ce-vqsconsumergroup", b"c"),
+            (b"ce-vqsmessageid", b"forged-message-id"),
+            (b"ce-vqsreceipthandle", b"forged-receipt-handle"),
+            (b"ce-vqsdeliverycount", b"1"),
+            (b"content-type", b"application/json"),
+        ]
+
+        async def run() -> list[dict]:
+            with (
+                patch.object(vwd_app, "_resolve_backend", return_value=mock_backend),
+                patch.object(
+                    queue_receive_impl,
+                    "receive_message_by_id",
+                    side_effect=not_found,
+                ),
+            ):
+                app = vwd_app.get_asgi_app(backend_alias="default")
+                return await self._asgi_request(
+                    app,
+                    method="POST",
+                    path="/callback",
+                    headers=forged_headers,
+                    body=b'{"vercel":{"kind":"django-tasks","version":1}}',
+                )
+
+        sent = asyncio.run(run())
+        self.assertEqual(sent[0]["status"], 404)
+        self.assertEqual(task_executed, [])
 
     def test_rejects_non_cloudevents_json(self) -> None:
         """Test that non-CloudEvents content type is rejected."""

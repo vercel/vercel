@@ -83,23 +83,25 @@ def _resolve_duration_alias(
     return _duration_to_seconds(name, duration if duration is not None else seconds)
 
 
-def get_queue_base_url() -> str:
+def get_queue_base_url(region: str | None = None) -> str:
     """
     Return the base URL for the Vercel Queue Service API.
 
     Mirrors the JS client behaviour:
-      - VERCEL_QUEUE_BASE_URL environment variable
-      - if VERCEL_REGION environment variable is set then routes to
-        region specific endpoint, e.g. "https://iad1.vercel-queue.com"
+      - VERCEL_QUEUE_BASE_URL environment variable (dev/proxy; wins outright)
+      - an explicit ``region`` (e.g. from a callback's ``ce-vqsregion`` header),
+        routing to that shard, e.g. "https://iad1.vercel-queue.com"
+      - if VERCEL_REGION environment variable is set then routes to that
+        region's endpoint
       - otherwise to "https://vercel-queue.com"
     """
     base_url = os.environ.get("VERCEL_QUEUE_BASE_URL")
     if base_url:
         return base_url.rstrip("/")
 
-    region = os.environ.get("VERCEL_REGION")
-    if region:
-        return f"https://{region}.vercel-queue.com"
+    resolved_region = region or os.environ.get("VERCEL_REGION")
+    if resolved_region:
+        return f"https://{resolved_region}.vercel-queue.com"
     else:
         return "https://vercel-queue.com"
 

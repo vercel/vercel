@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import io
 import json
 import unittest
 from dataclasses import dataclass
@@ -23,7 +24,7 @@ from vercel.workers._queue.subscribe import (
     select_subscriptions,
 )
 from vercel.workers.client import WorkerJSONEncoder
-from vercel.workers.exceptions import TokenResolutionError
+from vercel.workers.exceptions import MessageNotFoundError, TokenResolutionError
 
 
 class CreateUserPayload(BaseModel):
@@ -328,6 +329,11 @@ class TestWorkerDirectives(unittest.TestCase):
         queue_client.subscribe(topic="q")(worker)
 
         with (
+            patch.object(
+                queue_receive_impl,
+                "receive_message_by_id",
+                return_value=({"ok": True}, 1, "now", "receipt"),
+            ),
             patch.object(queue_client.callback, "change_visibility") as change_visibility,
             patch.object(queue_client.callback, "delete_message") as delete_message,
         ):
@@ -337,7 +343,7 @@ class TestWorkerDirectives(unittest.TestCase):
             )
 
         self.assertEqual(status, 200)
-        change_visibility.assert_called_once_with("q", "c", "m", "receipt", 120)
+        change_visibility.assert_called_once_with("q", "c", "m", "receipt", 120, region=None)
         delete_message.assert_not_called()
 
     def test_retry_after_raise_delays_message(self) -> None:
@@ -347,6 +353,11 @@ class TestWorkerDirectives(unittest.TestCase):
         queue_client.subscribe(topic="q")(worker)
 
         with (
+            patch.object(
+                queue_receive_impl,
+                "receive_message_by_id",
+                return_value=({"ok": True}, 1, "now", "receipt"),
+            ),
             patch.object(queue_client.callback, "change_visibility") as change_visibility,
             patch.object(queue_client.callback, "delete_message") as delete_message,
         ):
@@ -356,7 +367,7 @@ class TestWorkerDirectives(unittest.TestCase):
             )
 
         self.assertEqual(status, 200)
-        change_visibility.assert_called_once_with("q", "c", "m", "receipt", 30)
+        change_visibility.assert_called_once_with("q", "c", "m", "receipt", 30, region=None)
         delete_message.assert_not_called()
 
     def test_dict_return_is_not_a_retry_directive(self) -> None:
@@ -366,6 +377,11 @@ class TestWorkerDirectives(unittest.TestCase):
         queue_client.subscribe(topic="q")(worker)
 
         with (
+            patch.object(
+                queue_receive_impl,
+                "receive_message_by_id",
+                return_value=({"ok": True}, 1, "now", "receipt"),
+            ),
             patch.object(queue_client.callback, "change_visibility") as change_visibility,
             patch.object(queue_client.callback, "delete_message") as delete_message,
         ):
@@ -375,7 +391,7 @@ class TestWorkerDirectives(unittest.TestCase):
             )
 
         self.assertEqual(status, 200)
-        delete_message.assert_called_once_with("q", "c", "m", "receipt")
+        delete_message.assert_called_once_with("q", "c", "m", "receipt", region=None)
         change_visibility.assert_not_called()
 
     def test_ack_return_deletes_message(self) -> None:
@@ -385,6 +401,11 @@ class TestWorkerDirectives(unittest.TestCase):
         queue_client.subscribe(topic="q")(worker)
 
         with (
+            patch.object(
+                queue_receive_impl,
+                "receive_message_by_id",
+                return_value=({"ok": True}, 1, "now", "receipt"),
+            ),
             patch.object(queue_client.callback, "change_visibility") as change_visibility,
             patch.object(queue_client.callback, "delete_message") as delete_message,
         ):
@@ -394,7 +415,7 @@ class TestWorkerDirectives(unittest.TestCase):
             )
 
         self.assertEqual(status, 200)
-        delete_message.assert_called_once_with("q", "c", "m", "receipt")
+        delete_message.assert_called_once_with("q", "c", "m", "receipt", region=None)
         change_visibility.assert_not_called()
 
     def test_ack_raise_deletes_message(self) -> None:
@@ -404,6 +425,11 @@ class TestWorkerDirectives(unittest.TestCase):
         queue_client.subscribe(topic="q")(worker)
 
         with (
+            patch.object(
+                queue_receive_impl,
+                "receive_message_by_id",
+                return_value=({"ok": True}, 1, "now", "receipt"),
+            ),
             patch.object(queue_client.callback, "change_visibility") as change_visibility,
             patch.object(queue_client.callback, "delete_message") as delete_message,
         ):
@@ -413,8 +439,250 @@ class TestWorkerDirectives(unittest.TestCase):
             )
 
         self.assertEqual(status, 200)
-        delete_message.assert_called_once_with("q", "c", "m", "receipt")
+        delete_message.assert_called_once_with("q", "c", "m", "receipt", region=None)
         change_visibility.assert_not_called()
+
+
+def _wsgi_post(
+    app: Any,
+    *,
+    environ_extra: dict[str, str],
+    body: bytes,
+    path: str = "/callback",
+) -> tuple[str, bytes]:
+    """Drive a WSGI app through a POST request and return (status, body)."""
+    environ: dict[str, Any] = {
+        "REQUEST_METHOD": "POST",
+        "PATH_INFO": path,
+        "wsgi.input": io.BytesIO(body),
+        "CONTENT_LENGTH": str(len(body)),
+        **environ_extra,
+    }
+    captured: dict[str, Any] = {}
+
+    def start_response(status: str, headers: list[tuple[str, str]]) -> None:
+        captured["status"] = status
+        captured["headers"] = headers
+
+    result = app(environ, start_response)
+    return captured["status"], b"".join(result)
+
+
+# A forged v2beta callback: valid-looking Ce-Vqs* headers plus an attacker-chosen
+# inline body and receipt handle.
+_FORGED_V2BETA_ENVIRON: dict[str, str] = {
+    "CONTENT_TYPE": "application/json",
+    "HTTP_CE_TYPE": "com.vercel.queue.v2beta",
+    "HTTP_CE_VQSQUEUENAME": "q",
+    "HTTP_CE_VQSCONSUMERGROUP": "c",
+    "HTTP_CE_VQSMESSAGEID": "forged-message-id",
+    "HTTP_CE_VQSRECEIPTHANDLE": "forged-receipt-handle",
+    "HTTP_CE_VQSDELIVERYCOUNT": "1",
+    "HTTP_CE_VQSCREATEDAT": "now",
+}
+_FORGED_V2BETA_BODY = b'{"leak":"env-secrets"}'
+
+
+class TestV2BetaCallbackAuthentication(unittest.TestCase):
+    """Forged v2beta callbacks must not run workers."""
+
+    def setUp(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def tearDown(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def test_forged_v2beta_request_is_rejected_and_worker_not_invoked(self) -> None:
+        calls: list[Any] = []
+
+        def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            calls.append(message)
+
+        queue_client.subscribe(topic="q")(worker)
+
+        # The queue service has no such message: a forged id 404s on re-fetch.
+        def not_found(*_args: Any, **_kwargs: Any) -> Any:
+            raise MessageNotFoundError("forged-message-id")
+
+        with (
+            patch.object(queue_receive_impl, "receive_message_by_id", side_effect=not_found),
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+            patch.object(queue_client.callback, "change_visibility") as change_visibility,
+        ):
+            status, body = _wsgi_post(
+                queue_client.get_wsgi_app(),
+                environ_extra=_FORGED_V2BETA_ENVIRON,
+                body=_FORGED_V2BETA_BODY,
+            )
+
+        self.assertTrue(status.startswith("404"), status)
+        self.assertEqual(calls, [])
+        delete_message.assert_not_called()
+        change_visibility.assert_not_called()
+
+    def test_authentic_v2beta_request_executes_worker_with_authoritative_payload(self) -> None:
+        calls: list[Any] = []
+
+        def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            calls.append(message)
+
+        queue_client.subscribe(topic="q")(worker)
+
+        # The authoritative payload comes from the queue service, NOT the request body.
+        with (
+            patch.object(
+                queue_receive_impl,
+                "receive_message_by_id",
+                return_value=({"real": "payload"}, 1, "now", "server-receipt"),
+            ),
+            patch.object(queue_client.callback, "delete_message"),
+            patch.object(queue_client.callback, "change_visibility"),
+        ):
+            status, _body = _wsgi_post(
+                queue_client.get_wsgi_app(),
+                environ_extra=_FORGED_V2BETA_ENVIRON,
+                body=_FORGED_V2BETA_BODY,
+            )
+
+        self.assertTrue(status.startswith("200"), status)
+        # Worker ran with the server payload; the attacker's inline body was ignored.
+        self.assertEqual(calls, [{"real": "payload"}])
+
+    def test_v1beta_forged_request_is_rejected_and_worker_not_invoked(self) -> None:
+        calls: list[Any] = []
+
+        def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            calls.append(message)
+
+        queue_client.subscribe(topic="q")(worker)
+
+        raw_body = json.dumps(
+            {
+                "type": "com.vercel.queue.v1beta",
+                "data": {"queueName": "q", "consumerGroup": "c", "messageId": "forged"},
+            },
+        ).encode()
+
+        def not_found(*_args: Any, **_kwargs: Any) -> Any:
+            raise MessageNotFoundError("forged")
+
+        with (
+            patch.object(queue_client.callback, "receive_message_by_id", side_effect=not_found),
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+        ):
+            status, _body = _wsgi_post(
+                queue_client.get_wsgi_app(),
+                environ_extra={"CONTENT_TYPE": "application/cloudevents+json"},
+                body=raw_body,
+            )
+
+        self.assertTrue(status.startswith("404"), status)
+        self.assertEqual(calls, [])
+        delete_message.assert_not_called()
+
+
+class _CapturingResponse:
+    # Only status_code is read: a 404 raises before any other attribute is touched.
+    status_code = 404
+
+
+class _CapturingHttpxClient:
+    """Captures the URL of the re-fetch request, then returns a 404."""
+
+    urls: list[str] = []
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        pass
+
+    def __enter__(self) -> _CapturingHttpxClient:
+        return self
+
+    def __exit__(self, *args: Any) -> Literal[False]:
+        return False
+
+    def post(self, url: str, **kwargs: Any) -> _CapturingResponse:
+        _CapturingHttpxClient.urls.append(url)
+        return _CapturingResponse()
+
+
+class TestV2BetaRegionRouting(unittest.TestCase):
+    """The authoritative re-fetch must target the message's regional VQS shard."""
+
+    def setUp(self) -> None:
+        queue_client._subscriptions.clear()
+        _CapturingHttpxClient.urls.clear()
+
+    def tearDown(self) -> None:
+        queue_client._subscriptions.clear()
+        _CapturingHttpxClient.urls.clear()
+
+    def test_ce_vqsregion_header_routes_refetch_to_that_region(self) -> None:
+        queue_client.subscribe(topic="q")(lambda message, metadata: None)
+
+        environ = {**_FORGED_V2BETA_ENVIRON, "HTTP_CE_VQSREGION": "iad1"}
+
+        with (
+            patch.dict(queue_service.os.environ, {"VERCEL_QUEUE_TOKEN": "tok"}, clear=True),
+            patch.object(queue_receive_impl.httpx, "Client", _CapturingHttpxClient),
+        ):
+            status, _body = _wsgi_post(
+                queue_client.get_wsgi_app(),
+                environ_extra=environ,
+                body=_FORGED_V2BETA_BODY,
+            )
+
+        # 404 because the fake queue service has no such message, but the URL it
+        # was fetched from must be the iad1 shard, not the worker's default host.
+        self.assertTrue(status.startswith("404"), status)
+        self.assertEqual(len(_CapturingHttpxClient.urls), 1)
+        self.assertTrue(
+            _CapturingHttpxClient.urls[0].startswith("https://iad1.vercel-queue.com"),
+            _CapturingHttpxClient.urls[0],
+        )
+
+    def test_ce_vqsregion_routes_ack_to_that_region(self) -> None:
+        # The receipt handle is region-scoped, so the ack must target the same shard.
+        queue_client.subscribe(topic="q")(lambda message, metadata: None)
+
+        environ = {**_FORGED_V2BETA_ENVIRON, "HTTP_CE_VQSREGION": "iad1"}
+
+        with (
+            patch.object(
+                queue_receive_impl,
+                "receive_message_by_id",
+                return_value=({"real": "payload"}, 1, "now", "server-receipt"),
+            ),
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+            patch.object(queue_client.callback, "change_visibility"),
+        ):
+            status, _body = _wsgi_post(
+                queue_client.get_wsgi_app(),
+                environ_extra=environ,
+                body=_FORGED_V2BETA_BODY,
+            )
+
+        self.assertTrue(status.startswith("200"), status)
+        delete_message.assert_called_once_with(
+            "q", "c", "forged-message-id", "server-receipt", region="iad1"
+        )
+
+    def test_invalid_ce_vqsregion_header_is_rejected(self) -> None:
+        calls: list[Any] = []
+        queue_client.subscribe(topic="q")(lambda message, metadata: calls.append(message))
+
+        environ = {**_FORGED_V2BETA_ENVIRON, "HTTP_CE_VQSREGION": "not-a-region"}
+
+        with patch.object(queue_receive_impl.httpx, "Client", _CapturingHttpxClient):
+            status, _body = _wsgi_post(
+                queue_client.get_wsgi_app(),
+                environ_extra=environ,
+                body=_FORGED_V2BETA_BODY,
+            )
+
+        # Malformed region → 400, no re-fetch attempted, worker never runs.
+        self.assertTrue(status.startswith("400"), status)
+        self.assertEqual(_CapturingHttpxClient.urls, [])
+        self.assertEqual(calls, [])
 
 
 class TestWorkerJSONEncoder(unittest.TestCase):

@@ -204,6 +204,7 @@ def receive_message_by_id(
     *,
     visibility_timeout_seconds: int | None = None,
     timeout: float | None = 10.0,
+    region: str | None = None,
 ) -> tuple[Any, int, str, str]:
     """
     Minimal receive-by-id:
@@ -211,9 +212,13 @@ def receive_message_by_id(
       POST {base_url}{base_path}/{queue_name}/consumer/{consumer_group}/id/{messageId}
       Accept: multipart/mixed
 
+    ``region`` routes the request to a specific regional VQS shard (e.g. from a
+    callback's ``ce-vqsregion`` header); when omitted the worker's default
+    region is used.
+
     Returns (payload, delivery_count, created_at, receipt_handle).
     """
-    base_url = get_queue_base_url().rstrip("/")
+    base_url = get_queue_base_url(region).rstrip("/")
     base_path = get_queue_base_path()
     auth_token = get_queue_token(None)
 
@@ -297,29 +302,24 @@ def resolve_v2beta_message(
     timeout: float | None = 10.0,
 ) -> ParsedV2BetaCallback:
     """
-    Ensure a parsed v2beta callback carries a payload and receipt handle.
+    Fetch the authoritative message for a v2beta callback from the queue service.
 
-    Vercel Queues v2beta can delivers messages in 2 modes:
+    A v2beta callback's headers and body are attacker-reachable, so the inline
+    payload/receipt handle are never trusted: the message is always re-fetched
+    by id via ``receive_message_by_id`` (authenticated with the queue token),
+    the same as the v1beta path. A request whose message id is not in the queue
+    service fails closed and never reaches a worker.
 
-    - Inline: the HTTP body carries the payload and
-      ``ce-vqsreceipthandle`` / ``ce-vqsdeliverycount`` / ``ce-vqscreatedat``
-      headers are present.
-    - Metadata-only: the HTTP body is empty and the payload-related headers
-      are absent. The SDK is expected to call ``receive_message_by_id``
-      to fetch the message body and obtain a receipt handle.
-
-    Returns the input unchanged when the inline mode delivered everything;
-    otherwise returns a new dict augmented with the fetched fields.
+    Returns a new dict with the authoritative payload, receipt handle,
+    delivery count and creation timestamp.
     """
-    if parsed["receiptHandle"]:
-        return parsed
-
     payload, delivery_count, created_at, receipt_handle = receive_message_by_id(
         parsed["queueName"],
         parsed["consumerGroup"],
         parsed["messageId"],
         visibility_timeout_seconds=visibility_timeout_seconds,
         timeout=timeout,
+        region=parsed.get("region"),
     )
     return {
         **parsed,
@@ -337,8 +337,9 @@ def delete_message(
     receipt_handle: str,
     *,
     timeout: float | None = 10.0,
+    region: str | None = None,
 ) -> None:
-    base_url = get_queue_base_url().rstrip("/")
+    base_url = get_queue_base_url(region).rstrip("/")
     base_path = get_queue_base_path()
     auth_token = get_queue_token(None)
 
@@ -383,8 +384,9 @@ def change_visibility(
     visibility_timeout_seconds: int,
     *,
     timeout: float | None = 10.0,
+    region: str | None = None,
 ) -> None:
-    base_url = get_queue_base_url().rstrip("/")
+    base_url = get_queue_base_url(region).rstrip("/")
     base_path = get_queue_base_path()
     auth_token = get_queue_token(None)
 
@@ -447,6 +449,7 @@ class VisibilityExtender:
         refresh_interval_seconds: float,
         timeout: float | None = 10.0,
         debug: bool = False,
+        region: str | None = None,
     ) -> None:
         self.queue_name = queue_name
         self.consumer_group = consumer_group
@@ -456,6 +459,7 @@ class VisibilityExtender:
         self.refresh_interval_seconds = float(refresh_interval_seconds)
         self.timeout = timeout
         self.debug = debug
+        self.region = region
 
         self._stop = threading.Event()
         self._lock = threading.Lock()
@@ -497,6 +501,7 @@ class VisibilityExtender:
                         self.receipt_handle,
                         int(self.visibility_timeout_seconds),
                         timeout=self.timeout,
+                        region=self.region,
                     )
                 except Exception as exc:  # noqa: BLE001
                     if self.debug:

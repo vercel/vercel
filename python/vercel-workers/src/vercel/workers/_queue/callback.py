@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from vercel.workers._queue.types import (
@@ -10,6 +11,10 @@ from vercel.workers._queue.types import (
 )
 
 CLOUD_EVENT_TYPE_V2BETA = "com.vercel.queue.v2beta"
+
+# Vercel region code, e.g. "iad1"; matches the @vercel/queue SDK validation.
+# Guards against injecting an attacker-controlled header value into the VQS URL.
+_REGION_PATTERN = re.compile(r"^[a-z]{2,5}[0-9]{1,2}$")
 
 
 def _get_environ_header(environ: dict[str, Any], name: str, default: str = "") -> str:
@@ -64,7 +69,7 @@ def parse_v2beta_callback(
     else:
         payload = raw_body
 
-    return {
+    parsed: ParsedV2BetaCallback = {
         "queueName": queue_name,
         "consumerGroup": consumer_group,
         "messageId": message_id,
@@ -73,6 +78,16 @@ def parse_v2beta_callback(
         "createdAt": created_at,
         "payload": payload,
     }
+
+    # Carry the region so the re-fetch targets the shard the message lives on,
+    # not the worker's default region.
+    region = _get_environ_header(environ, "Ce-Vqsregion")
+    if region:
+        if not _REGION_PATTERN.fullmatch(region):
+            raise ValueError(f'invalid "ce-vqsregion" header: "{region}"')
+        parsed["region"] = region
+
+    return parsed
 
 
 def parse_cloudevent(body: bytes) -> tuple[str, str, str]:

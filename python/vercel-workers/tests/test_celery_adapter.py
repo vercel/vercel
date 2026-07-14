@@ -7,10 +7,12 @@ from datetime import UTC, datetime
 from typing import Any, cast
 from unittest.mock import patch
 
+import vercel.workers._queue.receive as queue_receive_impl
 import vercel.workers.celery as vwc
 import vercel.workers.celery.app as vwc_app
 import vercel.workers.celery.transport as vwc_transport
 import vercel.workers.celery.utils as vwc_utils
+from vercel.workers.exceptions import MessageNotFoundError
 
 
 class TestCeleryAdapter(unittest.TestCase):
@@ -143,6 +145,52 @@ class TestCeleryAdapter(unittest.TestCase):
         self.assertEqual(sent[0]["type"], "http.response.start")
         self.assertEqual(sent[0]["status"], 400)
         self.assertIn(b"Invalid content type", sent[1]["body"])
+
+    def test_forged_v2beta_callback_is_rejected_and_task_not_executed(self) -> None:
+        # A forged v2beta callback must not execute a Celery task when the message
+        # is not in the queue service.
+        class DummyTask:
+            def __init__(self) -> None:
+                self.calls: list[Any] = []
+
+            def apply(self, *, args, kwargs, task_id, throw):
+                self.calls.append((args, kwargs, task_id, throw))
+
+        task = DummyTask()
+
+        class DummyConf:
+            broker_transport_options: dict = {}
+
+        class DummyCelery:
+            conf = DummyConf()
+            tasks = {"tasks.add": task}
+
+        def not_found(*_args: Any, **_kwargs: Any) -> Any:
+            raise MessageNotFoundError("forged-message-id")
+
+        forged_headers = [
+            (b"ce-type", b"com.vercel.queue.v2beta"),
+            (b"ce-vqsqueuename", b"q"),
+            (b"ce-vqsconsumergroup", b"c"),
+            (b"ce-vqsmessageid", b"forged-message-id"),
+            (b"ce-vqsreceipthandle", b"forged-receipt-handle"),
+            (b"ce-vqsdeliverycount", b"1"),
+            (b"content-type", b"application/json"),
+        ]
+
+        with patch.object(queue_receive_impl, "receive_message_by_id", side_effect=not_found):
+            sent = asyncio.run(
+                self._asgi_request(
+                    vwc.get_asgi_app(cast(Any, DummyCelery())),
+                    method="POST",
+                    path="/callback",
+                    headers=forged_headers,
+                    body=b'{"vercel":{"kind":"celery","version":1},"task":"tasks.add","args":[1]}',
+                ),
+            )
+
+        self.assertEqual(sent[0]["status"], 404)
+        self.assertEqual(task.calls, [])
 
     def test_get_asgi_app_post_callback_executes_task_and_deletes_message(self) -> None:
         raw_body = (

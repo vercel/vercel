@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Any, TypedDict, TypeGuard
+from typing import Any, NotRequired, TypedDict, TypeGuard
 from uuid import UUID
 
 
@@ -65,6 +65,9 @@ class ParsedV2BetaCallback(TypedDict):
     deliveryCount: int
     createdAt: str
     payload: Any
+    # Regional shard from the ``ce-vqsregion`` header, used to route the
+    # re-fetch; absent when the header is not sent.
+    region: NotRequired[str]
 
 
 class CloudEventData(TypedDict):

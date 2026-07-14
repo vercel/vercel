@@ -18,6 +18,7 @@ pytest.importorskip("dramatiq")
 import dramatiq
 from dramatiq.message import Message
 
+import vercel.workers._queue.receive as queue_receive_impl
 from vercel.workers import _queue
 from vercel.workers.dramatiq import (
     DramatiqWorkerConfig,
@@ -32,6 +33,7 @@ from vercel.workers.dramatiq.broker import (
     _message_to_envelope,
 )
 from vercel.workers.dramatiq.worker import _execute_message
+from vercel.workers.exceptions import MessageNotFoundError
 
 
 class TestVercelQueuesBrokerOptions:
@@ -756,3 +758,39 @@ class TestRetriesCallbackBehaviour:
         mock_qc.delete_message.assert_called_once()
         # Terminal failure does not re-enqueue.
         mock_send.assert_not_called()
+
+
+class TestForgedV2BetaCallback:
+    """Forged v2beta callbacks must not run actors."""
+
+    def test_forged_v2beta_callback_is_rejected_and_actor_not_executed(self) -> None:
+        executed: list[Any] = []
+
+        broker = VercelQueuesBroker()
+
+        @dramatiq.actor(broker=broker, queue_name="q")
+        def forged_actor() -> None:
+            executed.append(True)
+
+        forged_environ = {
+            "HTTP_CE_TYPE": "com.vercel.queue.v2beta",
+            "HTTP_CE_VQSQUEUENAME": "q",
+            "HTTP_CE_VQSCONSUMERGROUP": "c",
+            "HTTP_CE_VQSMESSAGEID": "forged-message-id",
+            "HTTP_CE_VQSRECEIPTHANDLE": "forged-receipt-handle",
+            "HTTP_CE_VQSDELIVERYCOUNT": "1",
+            "CONTENT_TYPE": "application/json",
+        }
+
+        def not_found(*_args: Any, **_kwargs: Any) -> Any:
+            raise MessageNotFoundError("forged-message-id")
+
+        with patch.object(queue_receive_impl, "receive_message_by_id", side_effect=not_found):
+            status_code, _headers, _body = handle_queue_callback(
+                broker,
+                b'{"queue_name":"q","actor_name":"forged_actor","args":[],"kwargs":{}}',
+                forged_environ,
+            )
+
+        assert status_code == 404
+        assert executed == []

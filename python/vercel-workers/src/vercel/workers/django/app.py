@@ -164,6 +164,7 @@ def handle_queue_callback(
 
     try:
         is_v2beta = queue_callback.is_v2beta_callback(environ or {})
+        region: str | None = None
 
         v2: queue_callback.ParsedV2BetaCallback | None = None
         if is_v2beta:
@@ -197,6 +198,7 @@ def handle_queue_callback(
             delivery_count = v2["deliveryCount"]
             created_at = v2["createdAt"]
             payload: Any = v2["payload"]
+            region = v2.get("region")
         else:
             (
                 payload,
@@ -221,6 +223,7 @@ def handle_queue_callback(
                 visibility_timeout_seconds=cfg.visibility_timeout_seconds,
                 refresh_interval_seconds=cfg.visibility_refresh_interval_seconds,
                 timeout=cfg.timeout,
+                region=region,
             )
             extender.start()
 
@@ -293,6 +296,7 @@ def handle_queue_callback(
                             receipt_handle,
                             int(delay_seconds),
                             timeout=cfg.timeout,
+                            region=region,
                         ),
                     )
                 body = json.dumps(
@@ -326,6 +330,7 @@ def handle_queue_callback(
                         message_id,
                         receipt_handle,
                         timeout=cfg.timeout,
+                        region=region,
                     ),
                 )
             body = json.dumps(
@@ -358,6 +363,7 @@ def handle_queue_callback(
                     message_id,
                     receipt_handle,
                     timeout=cfg.timeout,
+                    region=region,
                 ),
             )
 

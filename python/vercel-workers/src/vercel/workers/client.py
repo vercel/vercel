@@ -114,6 +114,7 @@ def _delete_message_sync(
     message_id: str,
     receipt_handle: str,
     extender: callback.VisibilityExtender | None,
+    region: str | None = None,
 ) -> None:
     if extender is not None:
         extender.finalize(
@@ -122,6 +123,7 @@ def _delete_message_sync(
                 consumer_group,
                 message_id,
                 receipt_handle,
+                region=region,
             ),
         )
     else:
@@ -130,6 +132,7 @@ def _delete_message_sync(
             consumer_group,
             message_id,
             receipt_handle,
+            region=region,
         )
 
 
@@ -218,6 +221,7 @@ def _handle_queue_callback(
         receipt_handle = ""
         delivery_count = 0
         created_at = ""
+        region: str | None = None
 
         v2: callback.ParsedV2BetaCallback | None = None
         if is_v2beta:
@@ -250,6 +254,7 @@ def _handle_queue_callback(
             delivery_count = v2["deliveryCount"]
             created_at = v2["createdAt"]
             payload = v2["payload"]
+            region = v2.get("region")
         else:
             payload, delivery_count, created_at, receipt_handle = callback.receive_message_by_id(
                 queue_name,
@@ -274,6 +279,7 @@ def _handle_queue_callback(
                 receipt_handle,
                 visibility_timeout_seconds=visibility_timeout_seconds,
                 refresh_interval_seconds=refresh_interval_seconds,
+                region=region,
             )
             extender.start()
 
@@ -294,6 +300,7 @@ def _handle_queue_callback(
                             message_id,
                             receipt_handle,
                             int(timeout_seconds),
+                            region=region,
                         ),
                     )
                 else:
@@ -303,6 +310,7 @@ def _handle_queue_callback(
                         message_id,
                         receipt_handle,
                         int(timeout_seconds),
+                        region=region,
                     )
             else:
                 _delete_message_sync(
@@ -311,6 +319,7 @@ def _handle_queue_callback(
                     message_id,
                     receipt_handle,
                     extender,
+                    region,
                 )
 
         return json_response(200, {"ok": True})
