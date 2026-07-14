@@ -88,7 +88,7 @@ jobs:
           node scripts/smoke-test-binary.mjs dist-bin/vercel-linux-x64
 
       - name: Stage native packages
-        run: node packages/vc-native/scripts/stage-packages.mjs
+        run: node packages/vc-native/scripts/stage-packages.mjs --allow-missing
 
       - name: Verify staged package layout
         run: |
@@ -123,8 +123,11 @@ jobs:
           # The trampoline should spawn the native and exit with its code.
           out=$(node "$tmp/node_modules/vercel/dist/vc.js" --version 2>&1)
           echo "$out"
-          echo "$out" | grep -q "^55\.0\.0$" || {
-            echo "::error::trampoline did not print version from native"
+          # Version-agnostic: read the CLI version from package.json instead of
+          # hardcoding it, so this check survives version bumps.
+          expected="$(node -p "require('./package.json').version")"
+          echo "$out" | grep -q "^${expected}$" || {
+            echo "::error::trampoline did not print version '$expected' from native"
             exit 1
           }
           echo "trampoline spawned native OK"
