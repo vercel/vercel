@@ -127,7 +127,8 @@ export const logsCommand = {
       shorthand: 'x',
       type: Boolean,
       deprecated: false,
-      description: 'Show full log message below each request line',
+      description:
+        'Show full log message below each request line (default when output is not a TTY)',
     },
     {
       name: 'branch',

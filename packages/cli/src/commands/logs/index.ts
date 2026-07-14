@@ -781,6 +781,10 @@ export default async function logs(client: Client) {
     ? client.stderr.columns || 120
     : 120;
 
+  // Non-interactive consumers (agents, pipes, CI) get full log messages by
+  // default, as if --expand was passed
+  const expand = expandOption || !client.stderr.isTTY;
+
   const logs: RequestLogEntry[] = [];
   try {
     for await (const log of fetchAllRequestLogs(client, {
@@ -879,7 +883,7 @@ export default async function logs(client: Client) {
         },
       ];
 
-      const columns: ColumnDef<RowData>[] = expandOption
+      const columns: ColumnDef<RowData>[] = expand
         ? baseColumns
         : [
             ...baseColumns,
@@ -907,7 +911,7 @@ export default async function logs(client: Client) {
         rows: rowData,
         tableWidth: terminalWidth,
         formatHeader: header => chalk.dim(header),
-        formatRow: expandOption
+        formatRow: expand
           ? (rowStr, row) => {
               if (row.logs.length > 0) {
                 const renderedLogs = row.logs

@@ -218,6 +218,34 @@ describe('logs', () => {
       expect(output).toContain('--json');
     });
 
+    it('should expand full log messages when stderr is not a TTY', async () => {
+      const longMessage = `Error: iMessage webhook failed ${'x'.repeat(300)}`;
+      client.scenario.get('/api/logs/request-logs', (_req, res) => {
+        res.json({
+          rows: [
+            {
+              ...createMockLog(),
+              logs: [
+                { level: 'info', message: 'workflow call started' },
+                { level: 'error', message: longMessage },
+              ],
+            },
+          ],
+          hasMoreRows: false,
+        });
+      });
+
+      client.stderr.isTTY = false;
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.getFullOutput();
+      expect(output).toContain(longMessage);
+      expect(output).toContain('workflow call started');
+    });
+
     it('should display "no logs found" when empty', async () => {
       useRequestLogs([]);
 
