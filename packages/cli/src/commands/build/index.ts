@@ -756,11 +756,15 @@ async function doBuild(
     compileResult.configPath ||
     join(workPath, 'vercel.json');
 
-  const [pkg, vercelConfig, hasInstrumentation] = await Promise.all([
-    readJSONFile<PackageJson>(join(workPath, 'package.json')),
-    readJSONFile<VercelConfig>(vercelConfigPath),
-    detectInstrumentation(new LocalFileSystemDetector(workPath)),
-  ]);
+  const [pkg, vercelConfig, hasInstrumentation] = await span
+    .child('vc.readConfigInputs')
+    .trace(() =>
+      Promise.all([
+        readJSONFile<PackageJson>(join(workPath, 'package.json')),
+        readJSONFile<VercelConfig>(vercelConfigPath),
+        detectInstrumentation(new LocalFileSystemDetector(workPath)),
+      ])
+    );
 
   if (pkg instanceof CantParseJSONFile) throw pkg;
   if (vercelConfig instanceof CantParseJSONFile) throw vercelConfig;
@@ -828,10 +832,17 @@ async function doBuild(
     projectSettings.rootDirectory !== null &&
     projectSettings.rootDirectory !== '.'
   ) {
-    await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
+    await span
+      .child('vc.setMonorepoDefaultSettings')
+      .trace(() => setMonorepoDefaultSettings(cwd, workPath, projectSettings));
   }
 
-  if (await shouldEmbedFlagsDefinitions(cwd)) {
+  await span.child('vc.prepareFlagsDefinitions').trace(async s => {
+    const shouldEmbed = await shouldEmbedFlagsDefinitions(cwd);
+    s.setAttributes({ shouldEmbed: String(shouldEmbed) });
+    if (!shouldEmbed) {
+      return;
+    }
     const { prepareFlagsDefinitions } = await import(
       '@vercel/prepare-flags-definitions'
     );
@@ -841,12 +852,16 @@ async function doBuild(
       userAgentSuffix: ua,
       output,
     });
-  }
+  });
 
   // Get a list of source files
-  const files = (await getFiles(workPath, {})).map(f =>
-    normalizePath(relative(workPath, f))
-  );
+  const files = await span.child('vc.getFiles').trace(async s => {
+    const result = (await getFiles(workPath, {})).map(f =>
+      normalizePath(relative(workPath, f))
+    );
+    s.setAttributes({ fileCount: String(result.length) });
+    return result;
+  });
 
   // Framework detection for the end-of-build cross-check, started here so it
   // runs concurrently with the builders instead of adding latency.
@@ -1057,12 +1072,18 @@ async function doBuild(
     .trace(() => importBuilders(builderSpecs, cwd, span));
 
   // Populate Files -> FileFsRef mapping
-  const filesMap: Files = {};
-  for (const path of files) {
-    const fsPath = join(workPath, path);
-    const { mode } = await fs.stat(fsPath);
-    filesMap[path] = new FileFsRef({ mode, fsPath });
-  }
+  const filesMap: Files = await span
+    .child('vc.populateFilesMap')
+    .trace(async s => {
+      const map: Files = {};
+      for (const path of files) {
+        const fsPath = join(workPath, path);
+        const { mode } = await fs.stat(fsPath);
+        map[path] = new FileFsRef({ mode, fsPath });
+      }
+      s.setAttributes({ fileCount: String(files.length) });
+      return map;
+    });
 
   const buildStamp = stamp();
 
