@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.33.0
+
+### Minor Changes
+
+- 607f0ef: Add service information to deploy-manifest.
+
 ## 13.32.3
 
 ### Patch Changes

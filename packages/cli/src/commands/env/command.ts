@@ -93,7 +93,7 @@ export const addSubcommand = {
   ],
   examples: [
     {
-      name: 'Add a new variable to all Environments',
+      name: 'Add a new variable (prompts for value and Environments)',
       value: [
         `${packageName} env add <name>`,
         `${packageName} env add API_TOKEN`,
@@ -104,6 +104,13 @@ export const addSubcommand = {
       value: [
         `${packageName} env add <name> ${targetPlaceholder}`,
         `${packageName} env add DB_PASS production`,
+      ],
+    },
+    {
+      name: 'Add one variable to multiple Environments (comma-separated)',
+      value: [
+        `${packageName} env add <name> <environment>[,<environment>]`,
+        `${packageName} env add API_URL production,preview,development`,
       ],
     },
     {
@@ -374,6 +381,10 @@ export const envCommand = {
     {
       name: 'Run a command with Environment Variables from the linked Project',
       value: `${packageName} env run -- <command>`,
+    },
+    {
+      name: 'Add one variable to multiple Environments',
+      value: `${packageName} env add API_URL production,preview,development`,
     },
   ],
 } as const;

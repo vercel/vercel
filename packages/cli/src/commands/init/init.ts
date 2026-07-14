@@ -145,7 +145,12 @@ async function extractExample(
       }
 
       await new Promise((resolve, reject) => {
-        const extractor = tar.extract(folder);
+        const extractor = tar.extract(folder, {
+          // Drop symlink/hardlink entries: they're the tar link-following
+          // traversal vector (CVE-2024-12905 / CVE-2025-48387).
+          ignore: (_name, header) =>
+            header?.type !== 'file' && header?.type !== 'directory',
+        });
         const body = toNodeReadable(res.body);
         body.on('error', reject);
         extractor.on('error', reject);
