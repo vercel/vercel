@@ -12,6 +12,10 @@ on:
       - '.github/workflows/release-binary.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+
 concurrency:
   group: validate-binary-${{ github.ref }}
   cancel-in-progress: true
@@ -37,6 +41,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Setup Turborepo Remote Cache
+        uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
+        with:
+          team: ${{ vars.TURBO_TEAM }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -113,6 +122,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Setup Turborepo Remote Cache
+        uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
+        with:
+          team: ${{ vars.TURBO_TEAM }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
