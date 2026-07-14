@@ -1337,8 +1337,10 @@ describe('logs', () => {
 
     it('should fall back to the latest production deployment when no deployments match the branch', async () => {
       const user = useUser();
-      const productionDeployment = useLogsDeployment(user);
 
+      // Register before useLogsDeployment(), whose catch-all
+      // `/:version/deployments` route would otherwise handle this path
+      let productionDeployment: ReturnType<typeof useLogsDeployment>;
       const deploymentQueries: Array<Record<string, unknown>> = [];
       client.scenario.get('/v6/deployments', (req, res) => {
         deploymentQueries.push({ ...req.query });
@@ -1352,6 +1354,8 @@ describe('logs', () => {
         }
         res.json({ deployments: [] });
       });
+
+      productionDeployment = useLogsDeployment(user);
 
       client.scenario.get(
         `/v1/projects/prj_logstest/deployments/${productionDeployment.id}/runtime-logs`,
