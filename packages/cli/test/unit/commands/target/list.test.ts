@@ -116,7 +116,7 @@ describe('target ls', () => {
     });
   });
 
-  it('lists targets with --project when the cwd is not linked', async () => {
+  it('lists targets for the project selected by --project', async () => {
     useUser();
     useTeams('team_dummy');
     useProject({

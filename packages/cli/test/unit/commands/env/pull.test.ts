@@ -76,7 +76,7 @@ describe('env pull', () => {
     });
   });
 
-  it('pulls with --project when the cwd is not linked', async () => {
+  it('pulls variables from the project selected by --project', async () => {
     useUser();
     useTeams('team_dummy');
     useProject({

@@ -55,7 +55,7 @@ describe('env rm', () => {
     });
   });
 
-  it('removes a variable with --project when the cwd is not linked', async () => {
+  it('removes a variable from the project selected by --project', async () => {
     client.cwd = setupTmpDir();
     client.config.currentTeam = 'team_dummy';
     useProject(

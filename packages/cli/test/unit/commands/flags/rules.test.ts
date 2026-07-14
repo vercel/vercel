@@ -108,7 +108,7 @@ describe('flags rules', () => {
     ]);
   });
 
-  it('lists rules with --project when the cwd is not linked', async () => {
+  it('lists rules for the project selected by --project', async () => {
     client.cwd = setupTmpDir();
     client.config.currentTeam = 'team_dummy';
     useProject({

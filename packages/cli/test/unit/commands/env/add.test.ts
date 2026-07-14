@@ -57,7 +57,7 @@ describe('env add', () => {
     });
   });
 
-  it('adds a variable with --project when the cwd is not linked', async () => {
+  it('adds a variable to the project selected by --project', async () => {
     client.cwd = setupTmpDir();
     client.config.currentTeam = 'team_dummy';
     useProject({

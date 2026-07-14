@@ -67,7 +67,7 @@ describe('firewall overview', () => {
     expect(fullOutput).toContain('System Bypass');
   });
 
-  it('shows the overview with --project when the cwd is not linked', async () => {
+  it('shows the overview for the project selected by --project', async () => {
     client.cwd = setupTmpDir();
     client.config.currentTeam = 'team_dummy';
     useProject({

@@ -37,7 +37,7 @@ describe('routes enable', () => {
     await expect(client.stderr).toOutput('Enabled');
   });
 
-  it('enables a route with --project when the cwd is not linked', async () => {
+  it('enables a route for the project selected by --project', async () => {
     client.cwd = setupTmpDir();
     client.config.currentTeam = 'team_dummy';
     useProject({

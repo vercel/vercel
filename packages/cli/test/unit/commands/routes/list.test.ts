@@ -53,7 +53,7 @@ describe('routes list', () => {
     await expect(client.stderr).toOutput('3 Routes found');
   });
 
-  it('lists routes with --project when the cwd is not linked', async () => {
+  it('lists routes for the project selected by --project', async () => {
     client.cwd = setupTmpDir();
     client.config.currentTeam = 'team_dummy';
     useProject({

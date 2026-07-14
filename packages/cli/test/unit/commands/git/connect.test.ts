@@ -305,7 +305,7 @@ describe('git connect', () => {
     }
   });
 
-  it('connects an explicitly selected project without linking the cwd', async () => {
+  it('connects the project selected by --project', async () => {
     useUser();
     useTeams('team_dummy');
     useProject({

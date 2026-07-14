@@ -572,7 +572,7 @@ describe('redirects add', () => {
       client.nonInteractive = false;
     });
 
-    it('adds with --project when the cwd is not linked', async () => {
+    it('adds a redirect to the project selected by --project', async () => {
       mockGetVersions();
       mockPutRedirects();
       client.cwd = setupTmpDir();

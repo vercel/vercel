@@ -50,7 +50,7 @@ describe('firewall rules enable', () => {
     expect(lastPatchBody.value.active).toBe(true);
   });
 
-  it('enables a rule with --project when the cwd is not linked', async () => {
+  it('enables a rule for the project selected by --project', async () => {
     const active = createConfig({ rules: [createRule(3)] });
     useListFirewallConfigs(active, null);
     usePatchDraft();

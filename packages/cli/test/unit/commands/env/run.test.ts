@@ -130,7 +130,7 @@ describe('env run', () => {
   });
 
   describe('running commands', () => {
-    it('runs with --project when the cwd is not linked', async () => {
+    it('runs with variables from the project selected by --project', async () => {
       useUser();
       useTeams('team_dummy');
       useProject({

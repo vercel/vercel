@@ -111,7 +111,7 @@ describe('git disconnect', () => {
     }
   });
 
-  it('disconnects an explicitly selected project without linking the cwd', async () => {
+  it('disconnects the project selected by --project', async () => {
     useUser();
     useTeams('team_dummy');
     const project = useProject({

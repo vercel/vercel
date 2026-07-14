@@ -49,7 +49,7 @@ describe('redirects list', () => {
     await expect(client.stderr).toOutput('3 Redirects found');
   });
 
-  it('lists redirects with --project when the cwd is not linked', async () => {
+  it('lists redirects for the project selected by --project', async () => {
     client.cwd = setupTmpDir();
     client.config.currentTeam = 'team_dummy';
     useProject({
