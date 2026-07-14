@@ -184,41 +184,36 @@ export async function* uploadFiles(options: {
         let body: Readable;
         let contentLength: number;
 
+        // Count bytes for progress reporting as chunks flow through, instead
+        // of intercepting reads: native `fetch` may drain the entire stream
+        // in a single `read()`, which would collapse progress to one jump.
+        const counter = new Transform({
+          transform(chunk, _encoding, callback) {
+            uploadProgress.bytesUploaded += chunk.length;
+            uploadProgress.emit('progress');
+            callback(null, chunk);
+          },
+        });
+
         if (typeof data !== 'undefined') {
           contentLength = data.length;
 
           // Split the in-memory buffer out into chunks.
-          const buffered = new Readable();
-          const originalRead = buffered.read.bind(buffered);
-          buffered.read = function (...args) {
-            const chunk = originalRead(...args);
-            if (chunk) {
-              uploadProgress.bytesUploaded += chunk.length;
-              uploadProgress.emit('progress');
-            }
-            return chunk;
-          };
-
           const chunkSize = 16384; /* 16kb - default Node.js `highWaterMark` */
-          for (let i = 0; i < data.length; i += chunkSize) {
-            const chunk = data.slice(i, i + chunkSize);
-            buffered.push(chunk);
+          function* chunks() {
+            for (let i = 0; i < data!.length; i += chunkSize) {
+              yield data!.slice(i, i + chunkSize);
+            }
           }
-          buffered.push(null);
-          body = buffered;
+          const buffered = Readable.from(chunks());
+          buffered.on('error', err => counter.destroy(err));
+          body = buffered.pipe(counter);
         } else if (typeof size === 'number') {
           // File too large to hold in memory (see hashes.ts): stream it from
           // disk. A fresh stream is created on each `retry` attempt, and bytes
           // are counted as they flow through for progress reporting.
           contentLength = size;
           const fileStream = createReadStream(names[0]);
-          const counter = new Transform({
-            transform(chunk, _encoding, callback) {
-              uploadProgress.bytesUploaded += chunk.length;
-              uploadProgress.emit('progress');
-              callback(null, chunk);
-            },
-          });
           fileStream.on('error', err => counter.destroy(err));
           counter.on('close', () => fileStream.destroy());
           body = fileStream.pipe(counter);
