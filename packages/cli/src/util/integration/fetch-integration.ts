@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import output from '../../output-manager';
+import didYouMean from '../did-you-mean';
 import type { IntegrationAddTelemetryClient } from '../telemetry/commands/integration/add';
 import type Client from '../client';
 import type { Integration } from './types';
@@ -113,15 +114,46 @@ export async function resolveAndFetchIntegration(
 
   const matches = entries.filter(entry => matchesSearchTerm(entry, slug));
 
-  if (!matches.length) {
-    output.error(
-      `No integration found matching "${slug}". Run ${chalk.cyan('vercel integration discover')} to browse available integrations.`
-    );
-    telemetry.trackCliArgumentIntegration(slug, false);
-    return null;
-  }
+  const discoverHint = `Run ${chalk.cyan('vercel integration discover')} to browse available integrations.`;
 
-  if (matches.length === 1) {
+  if (!matches.length) {
+    // No substring match — fall back to a fuzzy "did you mean" search against
+    // known slugs to catch typos (e.g. "noen" -> "neon").
+    const slugCandidates = [...new Set(entries.map(entry => entry.slug))];
+    const suggestion = didYouMean(slug.toLowerCase(), slugCandidates, 0.7);
+
+    if (!suggestion) {
+      output.error(`No integration found matching "${slug}". ${discoverHint}`);
+      telemetry.trackCliArgumentIntegration(slug, false);
+      return null;
+    }
+
+    const suggested = entries.find(entry => entry.slug === suggestion);
+    const suggestionLabel = suggested
+      ? `${chalk.bold(suggested.name)} (${suggestion})`
+      : chalk.bold(suggestion);
+
+    // Non-interactive (agent/CI): surface the suggestion plus discover hint and stop.
+    if (client.stdin.isTTY !== true) {
+      output.error(
+        `No integration found matching "${slug}". Did you mean "${suggestion}"? ${discoverHint}`
+      );
+      telemetry.trackCliArgumentIntegration(slug, false);
+      return null;
+    }
+
+    // Interactive: offer to install the closest match, but still point at discover.
+    output.log(`No integration found matching "${slug}". ${discoverHint}`);
+    const confirmed = await client.input.confirm(
+      `Did you mean ${suggestionLabel}? Install it?`,
+      true
+    );
+    if (!confirmed) {
+      telemetry.trackCliArgumentIntegration(slug, false);
+      return null;
+    }
+    slug = suggestion;
+  } else if (matches.length === 1) {
     const match = matches[0];
     if (client.stdin.isTTY === true) {
       const confirmed = await client.input.confirm(

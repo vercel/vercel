@@ -2855,6 +2855,42 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(1);
     });
 
+    it('should suggest the closest match on a typo and install on confirm', async () => {
+      client.setArgv('integration', 'add', 'noen');
+      const exitCodePromise = integrationCommand(client);
+
+      // Still points the user at the full list of integrations...
+      await expect(client.stderr).toOutput(
+        'No integration found matching "noen". Run vercel integration discover to browse available integrations.'
+      );
+      // ...and proposes the closest slug.
+      await expect(client.stderr).toOutput(
+        'Did you mean Neon Postgres (neon)?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Neon Postgres successfully provisioned'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should suggest the closest match in non-TTY mode without prompting', async () => {
+      (client.stdin as any).isTTY = false;
+      client.setArgv('integration', 'add', 'noen');
+      const exitCodePromise = integrationCommand(client);
+
+      // A single error carries both the suggestion and the discover instructions.
+      await expect(client.stderr).toOutput(
+        'No integration found matching "noen". Did you mean "neon"? Run vercel integration discover to browse available integrations.'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+    });
+
     it('should list matches in non-TTY mode', async () => {
       (client.stdin as any).isTTY = false;
       client.setArgv('integration', 'add', 'postgres');
