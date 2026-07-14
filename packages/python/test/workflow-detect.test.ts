@@ -8,9 +8,7 @@ import {
   getWorkflowTopicPattern,
 } from '../src/workflows';
 
-const pythonBin =
-  process.env.PYTHON_BIN ||
-  (process.platform === 'win32' ? 'python' : 'python3');
+const uvPath = process.env.UV_BIN || 'uv';
 
 describe('workflow namespace detection', () => {
   let workDir: string;
@@ -43,7 +41,8 @@ describe('workflow namespace detection', () => {
 
   function detect(variableName = 'workflows') {
     return detectWorkflowNamespace({
-      pythonBin,
+      uvPath,
+      uvRunArgs: ['--no-project'],
       env: process.env,
       workPath: workDir,
       moduleName: 'flows',
@@ -53,7 +52,8 @@ describe('workflow namespace detection', () => {
 
   function detectFromSource(variableName = 'workflows') {
     return detectWorkflowNamespaceFromSource({
-      pythonBin,
+      uvPath,
+      uvRunArgs: ['--no-project'],
       env: process.env,
       workPath: workDir,
       entrypoint: 'flows.py',

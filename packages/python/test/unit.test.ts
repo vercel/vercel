@@ -112,10 +112,11 @@ function mockWorkflowNamespace(
   namespace: string | null | Record<string, string | null>
 ) {
   vi.mocked(execa).mockImplementation(async (_command, args) => {
+    const pythonCodeIndex = Array.isArray(args) ? args.indexOf('-c') : -1;
     if (
       Array.isArray(args) &&
-      args[0] === '-c' &&
-      (args.length === 4 || args[2] === '--source')
+      pythonCodeIndex !== -1 &&
+      args.length - pythonCodeIndex >= 4
     ) {
       const variableName = args[args.length - 1];
       const detected =

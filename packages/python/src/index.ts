@@ -149,11 +149,18 @@ export async function getDevSidecars({
   const subscribers = await getPyprojectSubscribers(workPath);
   let workflows = await getPyprojectWorkflows(workPath);
   if (workflows.length > 0) {
+    const uvPath = findUvInPath();
+    if (!uvPath) {
+      throw new NowBuildError({
+        code: 'PYTHON_UV_NOT_FOUND',
+        message:
+          'uv is required to inspect Python workflow namespaces during local development.',
+      });
+    }
     workflows = await detectWorkflowNamespacesFromSource({
       workflows,
-      pythonBin:
-        process.env.PYTHON_BIN ||
-        (process.platform === 'win32' ? 'python' : 'python3'),
+      uvPath,
+      uvRunArgs: ['--no-project'],
       env: process.env,
       workPath,
     });
@@ -1106,7 +1113,8 @@ export const build: BuildVX = async ({
   if (workflows.length > 0) {
     workflows = await detectWorkflowNamespaces({
       workflows,
-      pythonBin: getVenvPythonBin(venvPath),
+      uvPath: uv.getPath(),
+      uvRunArgs: ['--active', '--no-sync'],
       env: pythonEnv,
       workPath,
     });

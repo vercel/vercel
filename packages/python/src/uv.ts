@@ -58,6 +58,36 @@ export function getUvCacheDir(workPath: string): string {
   return join(workPath, ...UV_CACHE_DIR_SUBPATH);
 }
 
+export async function runUvCommand(options: {
+  uvPath: string;
+  args: string[];
+  cwd: string;
+  env?: NodeJS.ProcessEnv;
+}): Promise<{ stdout: string; stderr: string }> {
+  const { uvPath, args, cwd, env } = options;
+  debug(`Running "uv ${args.join(' ')}" in ${cwd}...`);
+  return execa(uvPath, args, {
+    cwd,
+    env: getProtectedUvEnv(env),
+  });
+}
+
+export async function runUvPythonCommand(options: {
+  uvPath: string;
+  args: string[];
+  cwd: string;
+  env?: NodeJS.ProcessEnv;
+  uvRunArgs?: string[];
+}): Promise<{ stdout: string; stderr: string }> {
+  const { uvPath, args, cwd, env, uvRunArgs = [] } = options;
+  return runUvCommand({
+    uvPath,
+    args: ['run', ...uvRunArgs, 'python', ...args],
+    cwd,
+    env,
+  });
+}
+
 export class UvRunner {
   private uvPath: string;
   private uvCacheDir?: string;
@@ -246,10 +276,11 @@ export class UvRunner {
     venvPath: string
   ): Promise<void> {
     const pretty = `uv ${args.join(' ')}`;
-    debug(`Running "${pretty}"...`);
 
     try {
-      await execa(this.uvPath, args, {
+      await runUvCommand({
+        uvPath: this.uvPath,
+        args,
         cwd,
         env: this.getVenvEnv(venvPath),
       });

@@ -1,6 +1,5 @@
 import { join } from 'path';
 import fs from 'fs';
-import execa from 'execa';
 import {
   NowBuildError,
   readConfigFile,
@@ -12,6 +11,7 @@ import {
   resolveExistingEntrypoint,
   safePathSegment,
 } from './module-entrypoint';
+import { runUvPythonCommand } from './uv';
 
 const WORKFLOW_OUTPUT_DIR = '_py_workflows';
 const WORKFLOW_NAMESPACE_PATTERN = /^[a-z][a-z0-9]*$/;
@@ -72,16 +72,18 @@ export function getWorkflowTopicPattern(namespace?: string | null): string {
 
 export async function detectWorkflowNamespaces(opts: {
   workflows: PyprojectWorkflow[];
-  pythonBin: string;
+  uvPath: string;
+  uvRunArgs?: string[];
   env: NodeJS.ProcessEnv;
   workPath: string;
 }): Promise<PyprojectWorkflow[]> {
-  const { workflows, pythonBin, env, workPath } = opts;
+  const { workflows, uvPath, uvRunArgs, env, workPath } = opts;
   const detected = await Promise.all(
     workflows.map(async workflow => ({
       ...workflow,
       namespace: await detectWorkflowNamespace({
-        pythonBin,
+        uvPath,
+        uvRunArgs,
         env,
         workPath,
         moduleName: workflow.moduleName,
@@ -95,16 +97,18 @@ export async function detectWorkflowNamespaces(opts: {
 
 export async function detectWorkflowNamespacesFromSource(opts: {
   workflows: PyprojectWorkflow[];
-  pythonBin: string;
+  uvPath: string;
+  uvRunArgs?: string[];
   env: NodeJS.ProcessEnv;
   workPath: string;
 }): Promise<PyprojectWorkflow[]> {
-  const { workflows, pythonBin, env, workPath } = opts;
+  const { workflows, uvPath, uvRunArgs, env, workPath } = opts;
   const detected = await Promise.all(
     workflows.map(async workflow => ({
       ...workflow,
       namespace: await detectWorkflowNamespaceFromSource({
-        pythonBin,
+        uvPath,
+        uvRunArgs,
         env,
         workPath,
         entrypoint: workflow.entrypoint,
@@ -117,15 +121,17 @@ export async function detectWorkflowNamespacesFromSource(opts: {
 }
 
 export async function detectWorkflowNamespace(opts: {
-  pythonBin: string;
+  uvPath: string;
+  uvRunArgs?: string[];
   env: NodeJS.ProcessEnv;
   workPath: string;
   moduleName: string;
   variableName: string;
 }): Promise<string | null> {
-  const { pythonBin, env, workPath, moduleName, variableName } = opts;
+  const { uvPath, uvRunArgs, env, workPath, moduleName, variableName } = opts;
   return runWorkflowNamespaceDetection({
-    pythonBin,
+    uvPath,
+    uvRunArgs,
     env,
     workPath,
     args: [moduleName, variableName],
@@ -134,15 +140,17 @@ export async function detectWorkflowNamespace(opts: {
 }
 
 export async function detectWorkflowNamespaceFromSource(opts: {
-  pythonBin: string;
+  uvPath: string;
+  uvRunArgs?: string[];
   env: NodeJS.ProcessEnv;
   workPath: string;
   entrypoint: string;
   variableName: string;
 }): Promise<string | null> {
-  const { pythonBin, env, workPath, entrypoint, variableName } = opts;
+  const { uvPath, uvRunArgs, env, workPath, entrypoint, variableName } = opts;
   return runWorkflowNamespaceDetection({
-    pythonBin,
+    uvPath,
+    uvRunArgs,
     env,
     workPath,
     args: ['--source', entrypoint, variableName],
@@ -151,16 +159,20 @@ export async function detectWorkflowNamespaceFromSource(opts: {
 }
 
 async function runWorkflowNamespaceDetection(opts: {
-  pythonBin: string;
+  uvPath: string;
+  uvRunArgs?: string[];
   env: NodeJS.ProcessEnv;
   workPath: string;
   args: string[];
   entrypointLabel: string;
 }): Promise<string | null> {
-  const { pythonBin, env, workPath, args, entrypointLabel } = opts;
+  const { uvPath, uvRunArgs, env, workPath, args, entrypointLabel } = opts;
   let stdout: string;
   try {
-    const result = await execa(pythonBin, ['-c', namespaceScript, ...args], {
+    const result = await runUvPythonCommand({
+      uvPath,
+      uvRunArgs,
+      args: ['-c', namespaceScript, ...args],
       cwd: workPath,
       env: {
         ...env,
