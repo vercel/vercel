@@ -10,6 +10,16 @@ import { describe, expect, test } from 'vitest';
 const execFileAsync = promisify(execFile);
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 
+// Vitest injects a NODE_PATH into children that points into the repo's pnpm
+// store, so `require.resolve('@vercel/vc-native-*')` inside the launcher can
+// find the real platform package even when the temp layout has none — making
+// the missing-package negative test spawn the real native binary and hang.
+// Strip NODE_PATH so resolution is isolated to the temp install layout.
+function isolatedEnv() {
+  const { NODE_PATH: _np, ...rest } = process.env;
+  return rest;
+}
+
 const packageNames = {
   darwin: {
     arm64: '@vercel/vc-native-darwin-arm64',
@@ -138,9 +148,11 @@ describe('@vercel/vc-native shim', () => {
       join(wrapperDir, 'bin', 'vercel.exe')
     );
 
-    const result = await execFileAsync(process.execPath, [
-      join(wrapperDir, 'bin', 'vercel.exe'),
-    ]).catch(error => error);
+    const result = await execFileAsync(
+      process.execPath,
+      [join(wrapperDir, 'bin', 'vercel.exe')],
+      { env: isolatedEnv() }
+    ).catch(error => error);
 
     expect(result.code).toBe(1);
     expect(result.stderr).toContain(
