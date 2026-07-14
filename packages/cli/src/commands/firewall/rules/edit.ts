@@ -30,7 +30,6 @@ import type { FirewallRule } from '../../../util/firewall/types';
 import { runInteractiveEditLoop } from './edit-interactive';
 import stamp from '../../../util/output/stamp';
 import { outputAgentError } from '../../../util/agent-output';
-import { getCommandName } from '../../../util/pkg-name';
 
 export default async function edit(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(
@@ -64,7 +63,7 @@ export default async function edit(client: Client, argv: string[]) {
 
     if (client.nonInteractive || !client.stdin.isTTY) {
       output.error(
-        `Missing required argument: <name-or-id>. Run ${chalk.cyan(getCommandName('firewall rules list'))} to see all rules.`
+        `Missing required argument: <name-or-id>. Run ${chalk.cyan(withGlobalFlags(client, 'firewall rules list'))} to see all rules.`
       );
       return 1;
     }
@@ -96,7 +95,7 @@ export default async function edit(client: Client, argv: string[]) {
 
   if (matches.length === 0) {
     output.error(
-      `No rule found for "${identifier}". Run ${chalk.cyan(getCommandName('firewall rules list'))} to view all rules.`
+      `No rule found for "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'firewall rules list'))} to view all rules.`
     );
     return 1;
   }

@@ -23,10 +23,9 @@ import {
 } from '../../util/routes/ai-transform';
 import { runInteractiveEditLoop } from './edit-interactive';
 import stamp from '../../util/output/stamp';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
-import { getGlobalFlagsAndProjectFromArgs } from '../../util/arg-common';
+import { getCommandNameWithGlobalFlagsAndProject } from '../../util/arg-common';
 import { RoutesAddTelemetryClient } from '../../util/telemetry/commands/routes';
 import {
   MAX_NAME_LENGTH,
@@ -52,8 +51,7 @@ import type {
 } from '../../util/routes/types';
 
 function withGlobalFlags(client: Client, commandTemplate: string): string {
-  const flags = getGlobalFlagsAndProjectFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+  return getCommandNameWithGlobalFlagsAndProject(commandTemplate, client.argv);
 }
 
 /**
@@ -295,7 +293,7 @@ export default async function add(client: Client, argv: string[]) {
       );
     }
     output.error(
-      `Route name is required when using --yes. Usage: ${getCommandName('routes add "Route Name" --src "/path" --action rewrite --dest "/destination" --yes')}`
+      `Route name is required when using --yes. Usage: ${withGlobalFlags(client, 'routes add "Route Name" --src "/path" --action rewrite --dest "/destination" --yes')}`
     );
     return 1;
   } else {
@@ -379,7 +377,7 @@ export default async function add(client: Client, argv: string[]) {
       );
     }
     output.error(
-      `Source path is required when using --yes. Usage: ${getCommandName('routes add "Name" --src "/path" --action rewrite --dest "/dest" --yes')}`
+      `Source path is required when using --yes. Usage: ${withGlobalFlags(client, 'routes add "Name" --src "/path" --action rewrite --dest "/dest" --yes')}`
     );
     return 1;
   } else {
@@ -1025,7 +1023,7 @@ async function handleAIAdd(
       );
     }
     output.error(
-      `Cannot interactively confirm route creation in a non-TTY environment. Use full route flags with ${getCommandName('routes add <name> --src ... --yes')}, or run in a TTY.`
+      `Cannot interactively confirm route creation in a non-TTY environment. Use full route flags with ${withGlobalFlags(client, 'routes add <name> --src ... --yes')}, or run in a TTY.`
     );
     return 1;
   }

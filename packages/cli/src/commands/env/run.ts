@@ -10,7 +10,7 @@ import { resolveProjectContext } from '../../util/projects/resolve-project-conte
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import parseTarget from '../../util/parse-target';
 import { getCommandName } from '../../util/pkg-name';
-import { TelemetryClient } from '../../util/telemetry';
+import type { EnvTelemetryClient } from '../../util/telemetry/commands/env';
 
 /**
  * Parses argv for the run subcommand, splitting on `--` to separate
@@ -45,7 +45,10 @@ export function needsHelpForRun(client: Client): boolean {
   }
 }
 
-export default async function run(client: Client): Promise<number> {
+export default async function run(
+  client: Client,
+  telemetry: EnvTelemetryClient
+): Promise<number> {
   const { vercelArgs, userCommand } = parseRunArgs(client.argv);
 
   let parsedArgs;
@@ -65,11 +68,9 @@ export default async function run(client: Client): Promise<number> {
     return 1;
   }
 
-  // Get the linked project
+  // Resolve the selected project
   const projectName = parsedArgs.flags['--project'];
-  new TelemetryClient({
-    opts: { store: client.telemetryEventStore },
-  }).trackCliOptionProject(projectName);
+  telemetry.trackCliOptionProject(projectName);
 
   const link = await resolveProjectContext({
     client,

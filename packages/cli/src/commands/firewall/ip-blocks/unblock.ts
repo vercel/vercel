@@ -12,7 +12,6 @@ import {
 } from '../shared';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
-import { getCommandName } from '../../../util/pkg-name';
 import stamp from '../../../util/output/stamp';
 import { outputAgentError } from '../../../util/agent-output';
 
@@ -61,7 +60,7 @@ export default async function unblock(client: Client, argv: string[]) {
 
     if (matches.length === 0) {
       output.error(
-        `No IP block found for "${identifier}". Run ${chalk.cyan(getCommandName('firewall ip-blocks list'))} to view all rules.`
+        `No IP block found for "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'firewall ip-blocks list'))} to view all rules.`
       );
       return 1;
     }

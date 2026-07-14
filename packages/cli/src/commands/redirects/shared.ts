@@ -10,9 +10,8 @@ import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
 import type { Command } from '../help';
 import { TelemetryClient } from '../../util/telemetry';
 import {
-  GLOBAL_CLI_FLAG_NAMES,
+  getCommandNameWithGlobalFlagsAndProject,
   getGlobalFlagsAndProjectFromArgs,
-  globalCliFlagTakesValue,
 } from '../../util/arg-common';
 
 export interface ParsedSubcommand {
@@ -24,8 +23,7 @@ export function withGlobalFlags(
   client: Client,
   commandTemplate: string
 ): string {
-  const flags = getGlobalFlagsAndProjectFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+  return getCommandNameWithGlobalFlagsAndProject(commandTemplate, client.argv);
 }
 
 export async function parseSubcommandArgs(
@@ -124,19 +122,6 @@ export function isValidUrl(url: string): boolean {
 }
 
 /**
- * Flags that belong only to redirects add/upload/remove. Forwarding them into
- * suggested `redirects list`, `redirects promote`, or `redirects list-versions`
- * commands causes parse errors for agents.
- */
-const REDIRECTS_SUBCOMMAND_EXCLUSIVE_FLAGS = new Set([
-  '--status',
-  '--case-sensitive',
-  '--preserve-query-params',
-  '--name',
-  '--overwrite',
-]);
-
-/**
  * Slice argv after `vercel` (i.e. client.argv.slice(2)) starting after the
  * given redirects subcommand name.
  */
@@ -155,56 +140,7 @@ export function getArgsAfterRedirectsSubcommand(
 export function getRedirectGlobalFlagsOnly(
   afterSubcommandArgs: string[]
 ): string[] {
-  const out: string[] = [];
-  for (let i = 0; i < afterSubcommandArgs.length; i++) {
-    const a = afterSubcommandArgs[i];
-    if (!a.startsWith('-')) continue;
-
-    let name = a;
-    const hasEq = a.includes('=');
-    if (hasEq) {
-      name = a.slice(0, a.indexOf('='));
-    }
-
-    if (REDIRECTS_SUBCOMMAND_EXCLUSIVE_FLAGS.has(name)) {
-      if (
-        !hasEq &&
-        (name === '--status' || name === '--name') &&
-        i + 1 < afterSubcommandArgs.length &&
-        !afterSubcommandArgs[i + 1].startsWith('-')
-      ) {
-        i++;
-      }
-      continue;
-    }
-
-    if (name === '--project') {
-      out.push(a);
-      if (
-        !hasEq &&
-        i + 1 < afterSubcommandArgs.length &&
-        !afterSubcommandArgs[i + 1].startsWith('-')
-      ) {
-        out.push(afterSubcommandArgs[++i]);
-      }
-      continue;
-    }
-
-    if (!GLOBAL_CLI_FLAG_NAMES.has(name)) {
-      continue;
-    }
-
-    out.push(a);
-    if (!hasEq && globalCliFlagTakesValue(name)) {
-      if (
-        i + 1 < afterSubcommandArgs.length &&
-        !afterSubcommandArgs[i + 1].startsWith('-')
-      ) {
-        out.push(afterSubcommandArgs[++i]);
-      }
-    }
-  }
-  return out;
+  return getGlobalFlagsAndProjectFromArgs(afterSubcommandArgs);
 }
 
 /**

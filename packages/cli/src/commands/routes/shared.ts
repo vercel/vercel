@@ -8,7 +8,10 @@ import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { outputAgentError, buildCommandWithYes } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
-import { getGlobalFlagsAndProjectFromArgs } from '../../util/arg-common';
+import {
+  getCommandNameWithGlobalFlagsAndProject,
+  getGlobalFlagsAndProjectFromArgs,
+} from '../../util/arg-common';
 import type { Command } from '../help';
 import { TelemetryClient } from '../../util/telemetry';
 import {
@@ -32,8 +35,7 @@ export function withGlobalFlags(
   client: Client,
   commandTemplate: string
 ): string {
-  const flags = getGlobalFlagsAndProjectFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+  return getCommandNameWithGlobalFlagsAndProject(commandTemplate, client.argv);
 }
 
 /**
@@ -550,6 +552,7 @@ export async function resolveRoutes(
  * Find a version by ID, supporting partial ID matching.
  */
 export function findVersionById(
+  client: Client,
   versions: RouteVersion[],
   identifier: string
 ):
@@ -560,7 +563,7 @@ export function findVersionById(
   if (matchingVersions.length === 0) {
     return {
       error: `Version "${identifier}" not found. Run ${chalk.cyan(
-        getCommandName('routes list-versions')
+        withGlobalFlags(client, 'routes list-versions')
       )} to see available versions.`,
     };
   }

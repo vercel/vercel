@@ -74,6 +74,10 @@ describe('getGlobalFlagsAndProjectFromArgs', () => {
         '--',
         '--project',
         'child-project',
+        '--scope',
+        'child-scope',
+        '--cwd',
+        '/tmp/child',
       ])
     ).toEqual(['--cwd', '/tmp/project']);
   });

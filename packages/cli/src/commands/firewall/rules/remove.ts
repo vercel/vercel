@@ -16,7 +16,6 @@ import { outputAgentError } from '../../../util/agent-output';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
 import stamp from '../../../util/output/stamp';
-import { getCommandName } from '../../../util/pkg-name';
 
 export default async function remove(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(
@@ -78,7 +77,7 @@ export default async function remove(client: Client, argv: string[]) {
         );
       }
       output.error(
-        `Rule name or ID is required. Usage: ${getCommandName('firewall rules remove <name-or-id> --yes')}`
+        `Rule name or ID is required. Usage: ${withGlobalFlags(client, 'firewall rules remove <name-or-id> --yes')}`
       );
       return 1;
     }
@@ -104,7 +103,7 @@ export default async function remove(client: Client, argv: string[]) {
   if (matches.length === 0) {
     output.stopSpinner();
     output.error(
-      `No rule found for "${identifier}". Run ${chalk.cyan(getCommandName('firewall rules list'))} to view all rules.`
+      `No rule found for "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'firewall rules list'))} to view all rules.`
     );
     return 1;
   }

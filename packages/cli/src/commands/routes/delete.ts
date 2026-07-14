@@ -15,7 +15,6 @@ import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import deleteRoutes from '../../util/routes/delete-routes';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
 import { getRouteTypeLabel } from '../../util/routes/types';
 
 export default async function deleteRoute(client: Client, argv: string[]) {
@@ -52,7 +51,7 @@ export default async function deleteRoute(client: Client, argv: string[]) {
       );
     }
     output.error(
-      `At least one route name or ID is required. Usage: ${getCommandName('routes delete <name-or-id> [...]')}`
+      `At least one route name or ID is required. Usage: ${withGlobalFlags(client, 'routes delete <name-or-id> [...]')}`
     );
     return 1;
   }

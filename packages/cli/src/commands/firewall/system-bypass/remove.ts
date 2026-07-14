@@ -13,7 +13,6 @@ import {
   validateBypassIp,
   validateHostname,
 } from '../../../util/firewall/validate';
-import { getCommandName } from '../../../util/pkg-name';
 import stamp from '../../../util/output/stamp';
 import { outputAgentError } from '../../../util/agent-output';
 
@@ -92,7 +91,7 @@ export default async function remove(client: Client, argv: string[]) {
     const error = e as { status?: number; message?: string };
     if (error.status === 404) {
       output.error(
-        `No bypass rule found for ${chalk.bold(ip)}. Run ${chalk.cyan(getCommandName('firewall system-bypass list'))} to view all rules.`
+        `No bypass rule found for ${chalk.bold(ip)}. Run ${chalk.cyan(withGlobalFlags(client, 'firewall system-bypass list'))} to view all rules.`
       );
       return 1;
     }

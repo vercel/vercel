@@ -14,7 +14,6 @@ import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import editRoute from '../../util/routes/edit-route';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
 
 export default async function enable(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, enableSubcommand, client);
@@ -51,7 +50,7 @@ export default async function enable(client: Client, argv: string[]) {
       );
     }
     output.error(
-      `Route name or ID is required. Usage: ${getCommandName('routes enable <name-or-id>')}`
+      `Route name or ID is required. Usage: ${withGlobalFlags(client, 'routes enable <name-or-id>')}`
     );
     return 1;
   }
@@ -109,7 +108,7 @@ export default async function enable(client: Client, argv: string[]) {
     }
     output.error(
       `No route found matching "${identifier}". Run ${chalk.cyan(
-        getCommandName('routes list')
+        withGlobalFlags(client, 'routes list')
       )} to see all routes.`
     );
     return 1;

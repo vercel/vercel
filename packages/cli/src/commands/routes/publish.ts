@@ -13,7 +13,6 @@ import getRouteVersions from '../../util/routes/get-route-versions';
 import updateRouteVersion from '../../util/routes/update-route-version';
 import getRoutes from '../../util/routes/get-routes';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 
 export default async function publish(client: Client, argv: string[]) {
@@ -34,7 +33,7 @@ export default async function publish(client: Client, argv: string[]) {
   if (!version) {
     output.warn(
       `No staged changes to publish. Make changes first with ${chalk.cyan(
-        getCommandName('routes add')
+        withGlobalFlags(client, 'routes add')
       )}.`
     );
     return 0;

@@ -25,7 +25,6 @@ import type {
 } from '../../../util/firewall/types';
 import stamp from '../../../util/output/stamp';
 import { outputAgentError } from '../../../util/agent-output';
-import { getCommandName } from '../../../util/pkg-name';
 import { handleAIAdd } from './add-ai';
 import { addInteractive } from './add-interactive';
 
@@ -291,7 +290,7 @@ async function handleFlagAdd(
   const name = parsed.args[0] as string | undefined;
   if (!name) {
     output.error(
-      `Missing rule name. Provide as the first argument: ${chalk.cyan(getCommandName('firewall rules add "Rule name" --condition ...'))}`
+      `Missing rule name. Provide as the first argument: ${chalk.cyan(withGlobalFlags(client, 'firewall rules add "Rule name" --condition ...'))}`
     );
     return 1;
   }

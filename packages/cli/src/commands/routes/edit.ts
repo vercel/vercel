@@ -32,7 +32,6 @@ import {
   printGeneratedRoutePreview,
 } from '../../util/routes/ai-transform';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
 import { hasAnyTransformFlags } from '../../util/routes/interactive';
 import type { RoutingRule } from '../../util/routes/types';
 
@@ -136,7 +135,7 @@ export default async function edit(client: Client, argv: string[]) {
       );
     }
     output.error(
-      `Route name or ID is required. Usage: ${getCommandName('routes edit <name-or-id>')}`
+      `Route name or ID is required. Usage: ${withGlobalFlags(client, 'routes edit <name-or-id>')}`
     );
     return 1;
   }
@@ -348,7 +347,7 @@ export default async function edit(client: Client, argv: string[]) {
         );
       }
       output.error(
-        `No edit flags provided. When running non-interactively, use flags like --name, --dest, --src, etc. Run ${getCommandName('routes edit --help')} for all options.`
+        `No edit flags provided. When running non-interactively, use flags like --name, --dest, --src, etc. Run ${withGlobalFlags(client, 'routes edit --help')} for all options.`
       );
       return 1;
     }
@@ -532,7 +531,7 @@ async function handleAIEdit(
 
   if (!client.stdin.isTTY) {
     output.error(
-      `Cannot interactively confirm route changes in a non-TTY environment. Use ${getCommandName('routes edit <name-or-id> --ai "..." --yes')} to skip confirmation.`
+      `Cannot interactively confirm route changes in a non-TTY environment. Use ${withGlobalFlags(client, 'routes edit <name-or-id> --ai "..." --yes')} to skip confirmation.`
     );
     return 1;
   }

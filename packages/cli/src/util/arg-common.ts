@@ -316,14 +316,13 @@ export function getGlobalFlagsOnlyFromArgs(args: string[]): string[] {
  * commands that operate on the same project.
  */
 export function getGlobalFlagsAndProjectFromArgs(args: string[]): string[] {
-  const safeArgs = stripSensitiveAuthArgs(args);
+  const delimiterIndex = args.indexOf('--');
+  const cliArgs = delimiterIndex === -1 ? args : args.slice(0, delimiterIndex);
+  const safeArgs = stripSensitiveAuthArgs(cliArgs);
   const out = getGlobalFlagsOnlyFromArgs(safeArgs);
 
   for (let i = 0; i < safeArgs.length; i++) {
     const arg = safeArgs[i];
-    if (arg === '--') {
-      break;
-    }
     if (arg.startsWith('--project=')) {
       out.push(arg);
       break;
@@ -349,5 +348,17 @@ export function getCommandNameWithGlobalFlags(
   argv: string[]
 ): string {
   const flags = getGlobalFlagsOnlyFromArgs(argv.slice(2));
+  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+}
+
+/**
+ * Builds a suggested command with global CLI flags and an explicit project
+ * selector preserved from argv.
+ */
+export function getCommandNameWithGlobalFlagsAndProject(
+  commandTemplate: string,
+  argv: string[]
+): string {
+  const flags = getGlobalFlagsAndProjectFromArgs(argv.slice(2));
   return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
 }

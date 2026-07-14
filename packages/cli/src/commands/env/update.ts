@@ -25,6 +25,7 @@ import { updateSubcommand } from './command';
 import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import getTeamById from '../../util/teams/get-team-by-id';
 import type { ProjectEnvVariable } from '@vercel-internals/types';
+import { getGlobalFlagsAndProjectFromArgs } from '../../util/arg-common';
 
 function selectedEnvTargetsDevelopment(env: ProjectEnvVariable): boolean {
   if (typeof env.target === 'string') return env.target === 'development';
@@ -238,23 +239,21 @@ export default async function update(client: Client, argv: string[]) {
   const matchingEnvs = envs.filter(r => r.key === envName);
 
   if (matchingEnvs.length === 0) {
+    const listFlags = getGlobalFlagsAndProjectFromArgs(client.argv.slice(2));
+    const listArgs = `env ls ${listFlags.join(' ')}`.trim();
     if (client.nonInteractive) {
       outputAgentError(
         client,
         {
           status: 'error',
           reason: 'env_not_found',
-          message: `The variable ${envName} was not found. Run ${getCommandNamePlain(
-            'env ls'
-          )} to see all available Environment Variables.`,
+          message: `The variable ${envName} was not found. Run ${getCommandNamePlain(listArgs)} to see all available Environment Variables.`,
         },
         1
       );
     }
     output.error(
-      `The variable ${param(envName)} was not found. Run ${getCommandName(
-        `env ls`
-      )} to see all available Environment Variables.`
+      `The variable ${param(envName)} was not found. Run ${getCommandName(listArgs)} to see all available Environment Variables.`
     );
     return 1;
   }

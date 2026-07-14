@@ -8,7 +8,10 @@ import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { outputAgentError, buildCommandWithYes } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
-import { getGlobalFlagsAndProjectFromArgs } from '../../util/arg-common';
+import {
+  getCommandNameWithGlobalFlagsAndProject,
+  getGlobalFlagsAndProjectFromArgs,
+} from '../../util/arg-common';
 import type { Command } from '../help';
 import type { FirewallIpRule, FirewallRule } from '../../util/firewall/types';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
@@ -28,8 +31,7 @@ export function withGlobalFlags(
   client: Client,
   commandTemplate: string
 ): string {
-  const flags = getGlobalFlagsAndProjectFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+  return getCommandNameWithGlobalFlagsAndProject(commandTemplate, client.argv);
 }
 
 export async function parseSubcommandArgs(

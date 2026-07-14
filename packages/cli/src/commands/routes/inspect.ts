@@ -12,10 +12,9 @@ import {
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import stamp from '../../util/output/stamp';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
-import { getGlobalFlagsAndProjectFromArgs } from '../../util/arg-common';
+import { getCommandNameWithGlobalFlagsAndProject } from '../../util/arg-common';
 import {
   getRouteTypeLabel,
   getSrcSyntaxLabel,
@@ -25,8 +24,7 @@ import {
 } from '../../util/routes/types';
 
 function withGlobalFlags(client: Client, commandTemplate: string): string {
-  const flags = getGlobalFlagsAndProjectFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+  return getCommandNameWithGlobalFlagsAndProject(commandTemplate, client.argv);
 }
 
 export default async function inspect(client: Client, argv: string[]) {
@@ -68,7 +66,7 @@ export default async function inspect(client: Client, argv: string[]) {
       return 1;
     }
     output.error(
-      `Missing route name or ID. Usage: ${chalk.cyan(getCommandName('routes inspect <name-or-id>'))}`
+      `Missing route name or ID. Usage: ${chalk.cyan(withGlobalFlags(client, 'routes inspect <name-or-id>'))}`
     );
     return 1;
   }
@@ -115,7 +113,7 @@ export default async function inspect(client: Client, argv: string[]) {
     }
     output.error(
       `No route found matching "${identifier}". Run ${chalk.cyan(
-        getCommandName('routes list')
+        withGlobalFlags(client, 'routes list')
       )} to see all routes.`
     );
     return 1;

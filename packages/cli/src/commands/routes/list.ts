@@ -166,7 +166,7 @@ export default async function list(client: Client, argv: string[]) {
     const { versions } = await getRouteVersions(client, project.id, {
       teamId,
     });
-    const result = findVersionById(versions, versionIdFlag);
+    const result = findVersionById(client, versions, versionIdFlag);
 
     if (result.error || !result.version) {
       const msg = result.error ?? 'Version not found';

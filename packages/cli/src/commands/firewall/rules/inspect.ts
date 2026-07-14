@@ -11,7 +11,6 @@ import {
 } from '../shared';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
 import { formatRuleDetail } from '../../../util/firewall/format';
-import { getCommandName } from '../../../util/pkg-name';
 import { outputAgentError } from '../../../util/agent-output';
 
 export default async function inspect(client: Client, argv: string[]) {
@@ -50,7 +49,7 @@ export default async function inspect(client: Client, argv: string[]) {
       );
     }
     output.error(
-      `Rule name or ID is required. Usage: ${getCommandName('firewall rules inspect <name-or-id>')}`
+      `Rule name or ID is required. Usage: ${withGlobalFlags(client, 'firewall rules inspect <name-or-id>')}`
     );
     return 1;
   }
@@ -92,7 +91,7 @@ export default async function inspect(client: Client, argv: string[]) {
         );
       }
       output.error(
-        `No rule found for "${identifier}". Run ${chalk.cyan(getCommandName('firewall rules list'))} to view all rules.`
+        `No rule found for "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'firewall rules list'))} to view all rules.`
       );
       return 1;
     }
