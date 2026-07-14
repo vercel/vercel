@@ -26,6 +26,10 @@ jobs:
   stage-and-verify:
     name: Stage + verify native package
     runs-on: ubuntu-latest-32-core-oss
+    env:
+      VERCEL_CLI_NODE_VERSION: 24.14.1
+      VERCEL_CLI_NODE_PLATFORM: linux
+      VERCEL_CLI_NODE_ARCH: x64
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -65,11 +69,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Restore custom Node runtime
+        id: node-runtime-cache
+        uses: actions/cache@v4
+        with:
+          path: packages/cli/.node-runtime
+          # Cache key is deterministic per node version + platform + arch +
+          # the build/patch scripts. On a hit, build-binary-node.mjs detects
+          # the existing binary (isExpectedNode fast-path) and exits in <1s,
+          # skipping the ~12 min Node compile. The turbo remote cache does
+          # not reliably store this artifact (the stripped binary is too
+          # large), so this GHA cache is the primary cache for the runtime.
+          key: node-runtime-${{ env.VERCEL_CLI_NODE_VERSION }}-${{ env.VERCEL_CLI_NODE_PLATFORM }}-${{ env.VERCEL_CLI_NODE_ARCH }}-${{ hashFiles('packages/cli/scripts/build-binary-node.mjs', 'packages/cli/scripts/patch-node-source.mjs', 'turbo.node-runtime.json') }}
+
       - name: Build custom Node runtime
-        env:
-          VERCEL_CLI_NODE_VERSION: 24.14.1
-          VERCEL_CLI_NODE_PLATFORM: linux
-          VERCEL_CLI_NODE_ARCH: x64
         run: pnpm turbo --no-update-notifier --root-turbo-json turbo.node-runtime.json run //#build-binary-node --output-logs=new-only
 
       - name: Build workspace packages
