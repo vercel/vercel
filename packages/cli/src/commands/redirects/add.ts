@@ -30,7 +30,7 @@ export default async function add(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, addSubcommand);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

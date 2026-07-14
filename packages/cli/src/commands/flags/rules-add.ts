@@ -86,6 +86,7 @@ export default async function rulesAdd(
   telemetryClient.trackCliOptionStart(start);
   telemetryClient.trackCliOptionPosition(position);
   telemetryClient.trackCliOptionMessage(message);
+  telemetryClient.trackCliOptionProject(flags['--project']);
 
   const outcomeOptions = {
     variantSelector,
@@ -108,6 +109,7 @@ export default async function rulesAdd(
 
   try {
     const context = await resolveRulesCommandContext(client, {
+      projectName: parsedArgs.flags['--project'],
       flagArg,
       environment,
       promptMessage: 'Select an environment to add the rule to:',

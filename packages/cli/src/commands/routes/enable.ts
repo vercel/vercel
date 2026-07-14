@@ -20,7 +20,7 @@ export default async function enable(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, enableSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

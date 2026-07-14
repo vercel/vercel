@@ -88,7 +88,7 @@ export default async function add(client: Client, argv: string[]) {
     }
 
     // AI mode
-    const link = await ensureProjectLink(client);
+    const link = await ensureProjectLink(client, parsed.flags['--project']);
     if (typeof link === 'number') return link;
     const { project, org } = link;
     const teamId = org.type === 'team' ? org.id : undefined;
@@ -130,7 +130,7 @@ export default async function add(client: Client, argv: string[]) {
       ],
     });
 
-    const link = await ensureProjectLink(client);
+    const link = await ensureProjectLink(client, parsed.flags['--project']);
     if (typeof link === 'number') return link;
     const { project, org } = link;
     const teamId = org.type === 'team' ? org.id : undefined;
@@ -399,7 +399,11 @@ async function createRule(
   parsed: { args: string[]; flags: Record<string, unknown> },
   rule: Omit<FirewallRule, 'id'>
 ): Promise<number> {
-  const link = await ensureProjectLink(client);
+  const projectName = parsed.flags['--project'];
+  const link = await ensureProjectLink(
+    client,
+    typeof projectName === 'string' ? projectName : undefined
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

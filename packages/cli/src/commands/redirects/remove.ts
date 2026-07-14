@@ -21,6 +21,7 @@ import {
   getArgsAfterRedirectsSubcommand,
   getRedirectGlobalFlagsOnly,
   getRedirectPromoteSuggestionFlags,
+  withGlobalFlags,
 } from './shared';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import deleteRedirects from '../../util/redirects/delete-redirects';
@@ -59,7 +60,7 @@ export default async function remove(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -178,7 +179,7 @@ export default async function remove(client: Client, argv: string[]) {
         ],
       }),
       ...(existingStagingVersion && {
-        hint: `Review staged changes with ${getCommandNamePlain('redirects list --staging')} before promoting.`,
+        hint: `Review staged changes with ${withGlobalFlags(client, 'redirects list --staging')} before promoting.`,
       }),
     };
     client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);

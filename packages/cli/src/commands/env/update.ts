@@ -22,7 +22,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { updateSubcommand } from './command';
-import { getLinkedProject } from '../../util/projects/link';
+import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import getTeamById from '../../util/teams/get-team-by-id';
 import type { ProjectEnvVariable } from '@vercel-internals/types';
 
@@ -180,7 +180,12 @@ export default async function update(client: Client, argv: string[]) {
     }
   }
 
-  const link = await getLinkedProject(client);
+  telemetryClient.trackCliOptionProject(opts['--project']);
+
+  const link = await resolveProjectContext({
+    client,
+    projectNameOrId: opts['--project'],
+  });
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {

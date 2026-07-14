@@ -3,17 +3,18 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
+import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { outputAgentError, buildCommandWithYes } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getGlobalFlagsAndProjectFromArgs } from '../../util/arg-common';
 import type { Command } from '../help';
 import type { FirewallIpRule, FirewallRule } from '../../util/firewall/types';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import activateFirewallConfig from '../../util/firewall/activate-firewall-config';
 import stamp from '../../util/output/stamp';
+import { TelemetryClient } from '../../util/telemetry';
 
 export interface ParsedSubcommand {
   args: string[];
@@ -27,7 +28,7 @@ export function withGlobalFlags(
   client: Client,
   commandTemplate: string
 ): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+  const flags = getGlobalFlagsAndProjectFromArgs(client.argv.slice(2));
   return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
 }
 
@@ -47,7 +48,7 @@ export async function parseSubcommandArgs(
   } catch (err) {
     if (client?.nonInteractive) {
       const rawMessage = err instanceof Error ? err.message : String(err);
-      const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+      const flags = getGlobalFlagsAndProjectFromArgs(client.argv.slice(2));
       outputAgentError(
         client,
         {
@@ -74,14 +75,20 @@ export async function parseSubcommandArgs(
   return parsedArgs;
 }
 
-export async function ensureProjectLink(client: Client) {
-  const link = await getLinkedProject(client);
+export async function ensureProjectLink(client: Client, projectName?: string) {
+  new TelemetryClient({
+    opts: { store: client.telemetryEventStore },
+  }).trackCliOptionProject(projectName);
+  const link = await resolveProjectContext({
+    client,
+    projectNameOrId: projectName,
+  });
 
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     if (client.nonInteractive) {
-      const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+      const flags = getGlobalFlagsAndProjectFromArgs(client.argv.slice(2));
       const cmd = getCommandNamePlain(`link ${flags.join(' ')}`.trim());
       outputAgentError(
         client,
@@ -174,7 +181,7 @@ export async function offerAutoPublish(
   opts: { teamId?: string; skipPrompts?: boolean }
 ): Promise<void> {
   output.print(
-    `\n  ${chalk.gray(`This change is staged. Run ${chalk.cyan(getCommandName('firewall publish'))} to make it live, or ${chalk.cyan(getCommandName('firewall discard'))} to undo.`)}\n`
+    `\n  ${chalk.gray(`This change is staged. Run ${chalk.cyan(withGlobalFlags(client, 'firewall publish'))} to make it live, or ${chalk.cyan(withGlobalFlags(client, 'firewall discard'))} to undo.`)}\n`
   );
 
   if (
@@ -209,7 +216,7 @@ export async function offerAutoPublish(
     }
   } else if (hadExistingDraft) {
     output.warn(
-      `There are other draft changes. Review with ${chalk.cyan(getCommandName('firewall diff'))} before publishing.`
+      `There are other draft changes. Review with ${chalk.cyan(withGlobalFlags(client, 'firewall diff'))} before publishing.`
     );
   }
 }

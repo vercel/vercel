@@ -584,6 +584,7 @@ export const rulesListSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -624,6 +625,7 @@ export const rulesAddSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -683,6 +685,7 @@ export const rulesUpdateSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -730,6 +733,7 @@ export const rulesRemoveSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',
@@ -764,6 +768,7 @@ export const rulesMoveSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       shorthand: 'e',

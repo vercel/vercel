@@ -40,7 +40,7 @@ export default async function edit(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, editSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -200,9 +200,7 @@ export default async function edit(client: Client, argv: string[]) {
       );
     }
     output.error(
-      `No route found matching "${identifier}". Run ${chalk.cyan(
-        getCommandName('routes list')
-      )} to see all routes.`
+      `No route found matching "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'routes list'))} to see all routes.`
     );
     return 1;
   }

@@ -81,7 +81,7 @@ export default async function exportRoutes(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, exportSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

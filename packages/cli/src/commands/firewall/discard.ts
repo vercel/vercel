@@ -18,7 +18,7 @@ export default async function discard(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, discardSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

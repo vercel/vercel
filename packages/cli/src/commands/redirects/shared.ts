@@ -2,20 +2,30 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
+import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
 import type { Command } from '../help';
+import { TelemetryClient } from '../../util/telemetry';
 import {
   GLOBAL_CLI_FLAG_NAMES,
+  getGlobalFlagsAndProjectFromArgs,
   globalCliFlagTakesValue,
 } from '../../util/arg-common';
 
 export interface ParsedSubcommand {
   args: string[];
   flags: { [key: string]: any };
+}
+
+export function withGlobalFlags(
+  client: Client,
+  commandTemplate: string
+): string {
+  const flags = getGlobalFlagsAndProjectFromArgs(client.argv.slice(2));
+  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
 }
 
 export async function parseSubcommandArgs(
@@ -48,8 +58,14 @@ export function validateRequiredArgs(
   return null;
 }
 
-export async function ensureProjectLink(client: Client) {
-  const link = await getLinkedProject(client);
+export async function ensureProjectLink(client: Client, projectName?: string) {
+  new TelemetryClient({
+    opts: { store: client.telemetryEventStore },
+  }).trackCliOptionProject(projectName);
+  const link = await resolveProjectContext({
+    client,
+    projectNameOrId: projectName,
+  });
 
   if (link.status === 'error') {
     return link.exitCode;
@@ -162,6 +178,18 @@ export function getRedirectGlobalFlagsOnly(
       continue;
     }
 
+    if (name === '--project') {
+      out.push(a);
+      if (
+        !hasEq &&
+        i + 1 < afterSubcommandArgs.length &&
+        !afterSubcommandArgs[i + 1].startsWith('-')
+      ) {
+        out.push(afterSubcommandArgs[++i]);
+      }
+      continue;
+    }
+
     if (!GLOBAL_CLI_FLAG_NAMES.has(name)) {
       continue;
     }
@@ -203,7 +231,18 @@ export function buildRedirectsSuggestionFlags(
   options: { ensureYes?: boolean } = {}
 ): string[] {
   const after = getArgsAfterRedirectsSubcommand(fullArgs, subcommand);
-  const flagParts = after.filter(a => a.startsWith('-'));
+  const flagParts: string[] = [];
+  for (let i = 0; i < after.length; i++) {
+    if (!after[i].startsWith('-')) continue;
+    flagParts.push(after[i]);
+    if (
+      after[i] === '--project' &&
+      i + 1 < after.length &&
+      !after[i + 1].startsWith('-')
+    ) {
+      flagParts.push(after[++i]);
+    }
+  }
   if (
     options.ensureYes !== false &&
     !flagParts.some(a => a === '--yes' || a === '-y')

@@ -14,7 +14,7 @@ export default async function listVersions(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, listVersionsSubcommand);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

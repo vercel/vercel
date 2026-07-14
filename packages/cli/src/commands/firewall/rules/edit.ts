@@ -43,7 +43,7 @@ export default async function edit(client: Client, argv: string[]) {
 
   let identifier = parsed.args[0] as string | undefined;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

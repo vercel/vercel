@@ -45,6 +45,7 @@ export default async function rulesLs(
   telemetryClient.trackCliArgumentFlag(flagArg);
   telemetryClient.trackCliOptionEnvironment(environment);
   telemetryClient.trackCliFlagJson(json);
+  telemetryClient.trackCliOptionProject(flags['--project']);
 
   if (!flagArg) {
     output.error('Please provide a flag slug or ID to list rules for');
@@ -56,6 +57,7 @@ export default async function rulesLs(
 
   try {
     const context = await resolveRulesCommandContext(client, {
+      projectName: parsedArgs.flags['--project'],
       flagArg,
       environment,
       promptMessage: 'Select an environment to list rules for:',
@@ -84,11 +86,14 @@ export default async function rulesLs(
       ? `${context.environment} (reuses ${effectiveEnvironment.inheritedFrom})`
       : context.environment;
     if (rules.length === 0) {
+      const projectFlag = flags['--project']
+        ? ` --project ${flags['--project']}`
+        : '';
       output.log(
         `No conditional rules found for ${chalk.bold(context.flag.slug)} in ${environmentLabel} ${chalk.gray(lsStamp())}`
       );
       output.log(
-        `\nAdd one with: ${getCommandName('flags rules add ' + context.flag.slug + ' --environment ' + context.environment + ' --condition user.plan:eq:pro --variant on')}`
+        `\nAdd one with: ${getCommandName('flags rules add ' + context.flag.slug + ' --environment ' + context.environment + ' --condition user.plan:eq:pro --variant on' + projectFlag)}`
       );
       return 0;
     }

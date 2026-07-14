@@ -312,6 +312,35 @@ export function getGlobalFlagsOnlyFromArgs(args: string[]): string[] {
 }
 
 /**
+ * Collects global CLI flags and an explicit project selector for suggested
+ * commands that operate on the same project.
+ */
+export function getGlobalFlagsAndProjectFromArgs(args: string[]): string[] {
+  const safeArgs = stripSensitiveAuthArgs(args);
+  const out = getGlobalFlagsOnlyFromArgs(safeArgs);
+
+  for (let i = 0; i < safeArgs.length; i++) {
+    const arg = safeArgs[i];
+    if (arg === '--') {
+      break;
+    }
+    if (arg.startsWith('--project=')) {
+      out.push(arg);
+      break;
+    }
+    if (arg === '--project') {
+      const value = safeArgs[i + 1];
+      if (value && !value.startsWith('-')) {
+        out.push(arg, value);
+      }
+      break;
+    }
+  }
+
+  return out;
+}
+
+/**
  * Builds a suggested command with only global CLI flags preserved from argv.
  * Useful for agent next[] hints that should keep context flags like --cwd.
  */

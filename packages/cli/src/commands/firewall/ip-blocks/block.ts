@@ -63,7 +63,7 @@ export default async function block(client: Client, argv: string[]) {
     }
   }
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getGlobalFlagsAndProjectFromArgs,
   getGlobalFlagsOnlyFromArgs,
   getSameSubcommandSuggestionFlags,
 } from '../../../src/util/arg-common';
@@ -46,6 +47,35 @@ describe('getSameSubcommandSuggestionFlags', () => {
     const args = ['--slug', 'acme', '--token', '-secret-token', '--yes'];
     const out = getSameSubcommandSuggestionFlags(args);
     expect(out).toEqual(['--slug', 'acme', '--yes']);
+  });
+});
+
+describe('getGlobalFlagsAndProjectFromArgs', () => {
+  it('preserves project context while removing unrelated and sensitive flags', () => {
+    expect(
+      getGlobalFlagsAndProjectFromArgs([
+        '--project',
+        'payments-api',
+        '--cwd',
+        '/tmp/project',
+        '--token',
+        'secret',
+        '--status',
+        '301',
+      ])
+    ).toEqual(['--cwd', '/tmp/project', '--project', 'payments-api']);
+  });
+
+  it('ignores project flags passed to a child command', () => {
+    expect(
+      getGlobalFlagsAndProjectFromArgs([
+        '--cwd',
+        '/tmp/project',
+        '--',
+        '--project',
+        'child-project',
+      ])
+    ).toEqual(['--cwd', '/tmp/project']);
   });
 });
 

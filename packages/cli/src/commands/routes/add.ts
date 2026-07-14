@@ -26,7 +26,7 @@ import stamp from '../../util/output/stamp';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getGlobalFlagsAndProjectFromArgs } from '../../util/arg-common';
 import { RoutesAddTelemetryClient } from '../../util/telemetry/commands/routes';
 import {
   MAX_NAME_LENGTH,
@@ -52,7 +52,7 @@ import type {
 } from '../../util/routes/types';
 
 function withGlobalFlags(client: Client, commandTemplate: string): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+  const flags = getGlobalFlagsAndProjectFromArgs(client.argv.slice(2));
   return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
 }
 
@@ -127,7 +127,7 @@ export default async function add(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, addSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
