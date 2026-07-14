@@ -343,11 +343,19 @@ class VercelQueuesBackend(BaseTaskBackend):
             "kwargs": kwargs_json,
         }
 
+        # Compute send-time delay from run_after if present.
+        delay_seconds: int | None = None
+        if task.run_after is not None:
+            delta = (task.run_after - datetime.now(UTC)).total_seconds()
+            if delta > 0:
+                delay_seconds = int(delta)
+
         # Enqueue to the Vercel queue named after Django's queue_name.
         send_result = send(
             task.queue_name,
             envelope,
             retention_seconds=self._cfg.retention_seconds,
+            delay_seconds=delay_seconds,
             deployment_id=self._cfg.deployment_id,
             token=self._cfg.token,
             base_url=self._cfg.base_url,
@@ -414,11 +422,19 @@ class VercelQueuesBackend(BaseTaskBackend):
             "kwargs": kwargs_json,
         }
 
+        # Compute send-time delay from run_after if present.
+        delay_seconds: int | None = None
+        if task.run_after is not None:
+            delta = (task.run_after - datetime.now(UTC)).total_seconds()
+            if delta > 0:
+                delay_seconds = int(delta)
+
         # Enqueue using async send.
         send_result = await send_async(
             task.queue_name,
             envelope,
             retention_seconds=self._cfg.retention_seconds,
+            delay_seconds=delay_seconds,
             deployment_id=self._cfg.deployment_id,
             token=self._cfg.token,
             base_url=self._cfg.base_url,

@@ -3,12 +3,14 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import warnings
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from functools import wraps
 from typing import Any, Protocol, TypedDict, overload
+from urllib.parse import quote
 from uuid import UUID, uuid4
 
 import httpx
@@ -79,9 +81,12 @@ class WorkerCallable(Protocol):
 
 
 class SendMessageResult(TypedDict):
-    """Result of successfully sending a message to the queue."""
+    """Result of sending a message to the queue.
 
-    messageId: str
+    ``messageId`` is ``None`` when the server returns 202 (deferred delivery).
+    """
+
+    messageId: str | None
 
 
 @dataclass
@@ -176,22 +181,6 @@ def subscribe(
 def has_subscriptions() -> bool:
     """Return True if any worker functions have been registered via @subscribe."""
     return bool(_subscriptions)
-
-
-def _get_header(environ: dict[str, Any], name: str) -> str | None:
-    """
-    Look up a HTTP header from the WSGI environ by its canonical name.
-
-    Example: name="Vqs-Queue-Name" -> environ["HTTP_VQS_QUEUE_NAME"].
-    """
-    key = "HTTP_" + name.upper().replace("-", "_")
-    value = environ.get(key)
-    if value is None:
-        return None
-    # WSGI may give bytes in some servers
-    if isinstance(value, bytes):
-        return value.decode("latin1")
-    return str(value)
 
 
 def _select_subscriptions(
@@ -319,7 +308,7 @@ def handle_queue_callback(raw_body: bytes) -> tuple[int, list[tuple[str, str]], 
                 },
             )
 
-        payload, delivery_count, created_at, ticket = callback.receive_message_by_id(
+        payload, delivery_count, created_at, receipt_handle = callback.receive_message_by_id(
             queue_name,
             consumer_group,
             message_id,
@@ -334,12 +323,12 @@ def handle_queue_callback(raw_body: bytes) -> tuple[int, list[tuple[str, str]], 
             "consumer": consumer_group,
         }
 
-        if ticket:
+        if receipt_handle:
             extender = callback.VisibilityExtender(
                 queue_name,
                 consumer_group,
                 message_id,
-                ticket,
+                receipt_handle,
                 visibility_timeout_seconds=visibility_timeout_seconds,
                 refresh_interval_seconds=refresh_interval_seconds,
             )
@@ -347,7 +336,7 @@ def handle_queue_callback(raw_body: bytes) -> tuple[int, list[tuple[str, str]], 
 
         # Execute subscribers and ack/delay accordingly.
         timeout_seconds = _invoke_subscriptions(payload, metadata)
-        if ticket:
+        if receipt_handle:
             if timeout_seconds is not None:
                 if extender is not None:
                     extender.finalize(
@@ -355,7 +344,7 @@ def handle_queue_callback(raw_body: bytes) -> tuple[int, list[tuple[str, str]], 
                             queue_name,
                             consumer_group,
                             message_id,
-                            ticket,
+                            receipt_handle,
                             int(timeout_seconds),
                         ),
                     )
@@ -364,7 +353,7 @@ def handle_queue_callback(raw_body: bytes) -> tuple[int, list[tuple[str, str]], 
                         queue_name,
                         consumer_group,
                         message_id,
-                        ticket,
+                        receipt_handle,
                         int(timeout_seconds),
                     )
             else:
@@ -374,7 +363,7 @@ def handle_queue_callback(raw_body: bytes) -> tuple[int, list[tuple[str, str]], 
                             queue_name,
                             consumer_group,
                             message_id,
-                            ticket,
+                            receipt_handle,
                         ),
                     )
                 else:
@@ -382,7 +371,7 @@ def handle_queue_callback(raw_body: bytes) -> tuple[int, list[tuple[str, str]], 
                         queue_name,
                         consumer_group,
                         message_id,
-                        ticket,
+                        receipt_handle,
                     )
 
         return json_response(200, {"ok": True})
@@ -432,13 +421,13 @@ def get_queue_base_url() -> str:
 
 def get_queue_base_path() -> str:
     """
-    Return the base path for the queue API endpoints.
+    Return the base path for the queue V3 API endpoints.
 
     Mirrors the JS client behaviour:
       - VERCEL_QUEUE_BASE_PATH environment variable
-      - default to "/api/v2/messages"
+      - default to "/api/v3/topic"
     """
-    base_path = os.environ.get("VERCEL_QUEUE_BASE_PATH", "/api/v2/messages")
+    base_path = os.environ.get("VERCEL_QUEUE_BASE_PATH", "/api/v3/topic")
     if not base_path.startswith("/"):
         base_path = "/" + base_path
     return base_path
@@ -520,6 +509,7 @@ def send(
     *,
     idempotency_key: str | None = None,
     retention_seconds: int | None = None,
+    delay_seconds: int | None = None,
     deployment_id: str | None = None,
     token: str | None = None,
     base_url: str | None = None,
@@ -545,12 +535,13 @@ def send(
         payload: Message payload. For the default JSON content type this must be JSON-serialisable.
         idempotency_key: Optional key to deduplicate submissions (``Vqs-Idempotency-Key`` header).
         retention_seconds: Optional message retention time in seconds (``Vqs-Retention-Seconds``).
+        delay_seconds: Optional delay before the message becomes visible (``Vqs-Delay-Seconds``).
         deployment_id: Optional deployment identifier (``Vqs-Deployment-Id``).
         token: Authentication token. If omitted, falls back to ``VERCEL_QUEUE_TOKEN`` env var.
         base_url: Override base URL for the queue API. Defaults to ``VERCEL_QUEUE_BASE_URL`` or
             ``https://vercel-queue.com``.
         base_path: Override base path for the messages endpoint. Defaults to
-            ``VERCEL_QUEUE_BASE_PATH`` or ``/api/v2/messages``.
+            ``VERCEL_QUEUE_BASE_PATH`` or ``/api/v3/topic``.
         content_type: MIME type of the payload. Defaults to ``application/json``.
         timeout: Optional request timeout in seconds.
         headers: Additional headers to include in all requests.
@@ -574,7 +565,6 @@ def send(
         "Authorization": f"Bearer {auth_token}",
         "Content-Type": content_type,
     } | (headers or {})
-    headers["Vqs-Queue-Name"] = queue_name
 
     deployment_id = deployment_id or os.environ.get("VERCEL_DEPLOYMENT_ID")
     if deployment_id:
@@ -585,6 +575,9 @@ def send(
 
     if retention_seconds is not None:
         headers["Vqs-Retention-Seconds"] = str(retention_seconds)
+
+    if delay_seconds is not None:
+        headers["Vqs-Delay-Seconds"] = str(delay_seconds)
 
     # Basic payload handling: default to JSON, but allow callers to provide their own
     # serialisation if they change the content type.
@@ -598,7 +591,7 @@ def send(
             "for structured data use the default JSON content type.",
         )
 
-    url = f"{resolved_base_url}{resolved_base_path}"
+    url = f"{resolved_base_url}{resolved_base_path}/{quote(queue_name, safe='')}"
 
     with httpx.Client(timeout=timeout) as client:
         response = client.post(url, content=body, headers=headers)
@@ -616,12 +609,22 @@ def send(
         msg = response.text or f"Server error: {response.status_code} {response.reason_phrase}"
         raise InternalServerError(msg)
 
-    try:
-        response.raise_for_status()
-    except httpx.HTTPStatusError as exc:  # pragma: no cover - defensive
-        raise RuntimeError(
-            f"Failed to send message: {exc.response.status_code} {exc.response.reason_phrase}",
-        ) from exc
+    if response.status_code not in {201, 202}:
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:  # pragma: no cover - defensive
+            raise RuntimeError(
+                f"Failed to send message: {exc.response.status_code} {exc.response.reason_phrase}",
+            ) from exc
+
+    if response.status_code == 202:
+        warnings.warn(
+            "message was accepted but delivery is deferred (202 Accepted). "
+            "This usually means the queue is configured with a delay or the "
+            "message is pending consumer discovery.",
+            stacklevel=2,
+        )
+        return {"messageId": None}
 
     data = response.json()
     if not isinstance(data, dict) or "messageId" not in data:
@@ -636,6 +639,7 @@ async def send_async(
     *,
     idempotency_key: str | None = None,
     retention_seconds: int | None = None,
+    delay_seconds: int | None = None,
     deployment_id: str | None = None,
     token: str | None = None,
     base_url: str | None = None,
@@ -654,12 +658,13 @@ async def send_async(
         payload: Message payload. For the default JSON content type this must be JSON-serialisable.
         idempotency_key: Optional key to deduplicate submissions (``Vqs-Idempotency-Key`` header).
         retention_seconds: Optional message retention time in seconds (``Vqs-Retention-Seconds``).
+        delay_seconds: Optional delay before the message becomes visible (``Vqs-Delay-Seconds``).
         deployment_id: Optional deployment identifier (``Vqs-Deployment-Id``).
         token: Authentication token. If omitted, falls back to ``VERCEL_QUEUE_TOKEN`` env var.
         base_url: Override base URL for the queue API. Defaults to ``VERCEL_QUEUE_BASE_URL`` or
             ``https://vercel-queue.com``.
         base_path: Override base path for the messages endpoint. Defaults to
-            ``VERCEL_QUEUE_BASE_PATH`` or ``/api/v2/messages``.
+            ``VERCEL_QUEUE_BASE_PATH`` or ``/api/v3/topic``.
         content_type: MIME type of the payload. Defaults to ``application/json``.
         timeout: Optional request timeout in seconds.
         headers: Additional headers to include in all requests.
@@ -676,7 +681,6 @@ async def send_async(
         "Authorization": f"Bearer {auth_token}",
         "Content-Type": content_type,
     } | (headers or {})
-    headers["Vqs-Queue-Name"] = queue_name
 
     deployment_id = deployment_id or os.environ.get("VERCEL_DEPLOYMENT_ID")
     if deployment_id:
@@ -687,6 +691,9 @@ async def send_async(
 
     if retention_seconds is not None:
         headers["Vqs-Retention-Seconds"] = str(retention_seconds)
+
+    if delay_seconds is not None:
+        headers["Vqs-Delay-Seconds"] = str(delay_seconds)
 
     # Basic payload handling: default to JSON, but allow callers to provide their own
     # serialisation if they change the content type.
@@ -700,7 +707,7 @@ async def send_async(
             "for structured data use the default JSON content type.",
         )
 
-    url = f"{resolved_base_url}{resolved_base_path}"
+    url = f"{resolved_base_url}{resolved_base_path}/{quote(queue_name, safe='')}"
 
     async with httpx.AsyncClient(timeout=timeout) as client:
         response = await client.post(url, content=body, headers=headers)
@@ -718,12 +725,22 @@ async def send_async(
         msg = response.text or f"Server error: {response.status_code} {response.reason_phrase}"
         raise InternalServerError(msg)
 
-    try:
-        response.raise_for_status()
-    except httpx.HTTPStatusError as exc:  # pragma: no cover - defensive
-        raise RuntimeError(
-            f"Failed to send message: {exc.response.status_code} {exc.response.reason_phrase}",
-        ) from exc
+    if response.status_code not in {201, 202}:
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:  # pragma: no cover - defensive
+            raise RuntimeError(
+                f"Failed to send message: {exc.response.status_code} {exc.response.reason_phrase}",
+            ) from exc
+
+    if response.status_code == 202:
+        warnings.warn(
+            "message was accepted but delivery is deferred (202 Accepted). "
+            "This usually means the queue is configured with a delay or the "
+            "message is pending consumer discovery.",
+            stacklevel=2,
+        )
+        return {"messageId": None}
 
     data = response.json()
     if not isinstance(data, dict) or "messageId" not in data:

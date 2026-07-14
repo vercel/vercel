@@ -6,23 +6,13 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { schemaSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
-import { validateEvent } from './validation';
-import {
-  fetchSchemaOrExit,
-  getEventNames,
-  getEvent,
-  type DimensionSchema,
-  type MeasureSchema,
-} from './schema-api';
-import {
-  formatSchemaListJson,
-  formatSchemaDetailJson,
-  formatErrorJson,
-} from './output';
+import { fetchMetricDetailOrExit, fetchMetricListOrExit } from './schema-api';
+import { formatErrorJson } from './output';
 import formatTable from '../../util/format-table';
 import indent from '../../util/output/indent';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
 import getScope from '../../util/get-scope';
+import type { MetricDetail, MetricListItem } from './types';
 
 export default async function schema(
   client: Client,
@@ -47,8 +37,8 @@ export default async function schema(
   }
   const jsonOutput = formatResult.jsonOutput;
 
-  const event = flags['--event'];
-  telemetry.trackCliOptionEvent(event);
+  const metric = flags['--metric'];
+  telemetry.trackCliOptionMetric(metric);
   telemetry.trackCliOptionFormat(flags['--format']);
 
   const { team } = await getScope(client);
@@ -63,117 +53,92 @@ export default async function schema(
     return 1;
   }
 
-  const schemaData = await fetchSchemaOrExit(client, team.id, jsonOutput);
-  if (typeof schemaData === 'number') {
-    return schemaData;
-  }
-
-  if (event) {
-    // Event detail
-    const eventResult = validateEvent(schemaData, event);
-    if (!eventResult.valid) {
-      if (jsonOutput) {
-        client.stdout.write(
-          formatErrorJson(
-            eventResult.code,
-            eventResult.message,
-            eventResult.allowedValues
-          )
-        );
-      } else {
-        output.error(eventResult.message);
-        if (eventResult.allowedValues) {
-          output.print(
-            `\nAvailable events: ${eventResult.allowedValues.join(', ')}\n`
-          );
-        }
-      }
-      return 1;
+  if (metric) {
+    // Metric detail
+    const detailOrExitCode = await fetchMetricDetailOrExit(
+      client,
+      team.id,
+      metric,
+      jsonOutput
+    );
+    // fetchMetricDetailOrExit() returns a numeric exit code when it already
+    // handled the error output for us.
+    if (typeof detailOrExitCode === 'number') {
+      return detailOrExitCode;
     }
 
-    const eventData = getEvent(schemaData, event)!;
-    const eventWithName = { ...eventData, name: event };
-
     if (jsonOutput) {
-      client.stdout.write(formatSchemaDetailJson(eventWithName));
-    } else {
-      output.log(`Event: ${event} - ${eventData.description}`);
-
-      const dimTable = formatDimensionsTable(eventWithName.dimensions);
-      if (dimTable) {
-        output.print(dimTable);
-        output.print('\n');
-      }
-
-      const measTable = formatMeasuresTable(eventWithName.measures);
-      if (measTable) {
-        output.print(measTable);
-        output.print('\n');
-      }
+      client.stdout.write(JSON.stringify(detailOrExitCode, null, 2));
+      return 0;
     }
-  } else {
-    // Event list
-    const events = getEventNames(schemaData).map(name => ({
-      name,
-      description: getEvent(schemaData, name)!.description,
-    }));
 
-    if (jsonOutput) {
-      client.stdout.write(formatSchemaListJson(events));
-    } else {
-      output.log(`${plural('Event', events.length, true)} found`);
-      output.print(formatEventsTable(events));
+    output.log(`Metric: ${metric}`);
+    const metricsTable = formatMetricsTable(detailOrExitCode);
+    if (metricsTable) {
+      output.print(metricsTable);
       output.print('\n');
     }
+
+    return 0;
+  }
+
+  // Metric list
+  const metricsOrExitCode = await fetchMetricListOrExit(
+    client,
+    team.id,
+    jsonOutput
+  );
+  // fetchMetricListOrExit() returns a numeric exit code when it already
+  // handled the error output for us.
+  if (typeof metricsOrExitCode === 'number') {
+    return metricsOrExitCode;
+  }
+
+  if (jsonOutput) {
+    client.stdout.write(JSON.stringify(metricsOrExitCode, null, 2));
+  } else {
+    output.log(`${plural('Metric', metricsOrExitCode.length, true)} found`);
+    output.print(formatMetricListTable(metricsOrExitCode));
+    output.print('\n');
   }
 
   return 0;
 }
 
-function formatEventsTable(events: { name: string; description: string }[]) {
+function formatMetricListTable(metrics: MetricListItem[]) {
   return indent(
     formatTable(
-      ['Event', 'Description'],
+      ['Metric', 'Description'],
       ['l', 'l'],
-      [{ rows: events.map(e => [e.name, e.description]) }]
+      [{ rows: metrics.map(metric => [metric.id, metric.description]) }]
     ),
     1
   );
 }
 
-function formatDimensionsTable(dimensions: DimensionSchema[]) {
-  if (dimensions.length === 0) {
+function formatMetricsTable(metrics: MetricDetail[]) {
+  if (metrics.length === 0) {
     return null;
   }
   return indent(
     formatTable(
-      ['Dimension', 'Label'],
-      ['l', 'l'],
+      ['Metric', 'Description', 'Dimensions', 'Unit', 'Aggregations'],
+      ['l', 'l', 'l', 'l', 'l'],
       [
         {
-          rows: dimensions.map(d => [d.name, d.label]),
-        },
-      ]
-    ),
-    1
-  );
-}
-
-function formatMeasuresTable(measures: MeasureSchema[]) {
-  if (measures.length === 0) {
-    return null;
-  }
-  return indent(
-    formatTable(
-      ['Measure', 'Label', 'Unit', 'Aggregations'],
-      ['l', 'l', 'l', 'l'],
-      [
-        {
-          rows: measures.map(m => [
-            m.name,
-            m.label,
-            m.unit,
-            m.aggregations.join(', '),
+          rows: metrics.map(metric => [
+            metric.id,
+            metric.description,
+            metric.dimensions.map(dimension => dimension.name).join(', ') ||
+              '—',
+            metric.unit,
+            metric.aggregations
+              .map(aggregation =>
+                aggregation === metric.defaultAggregation
+                  ? `${aggregation} (default)`
+                  : aggregation
+              )
+              .join(', '),
           ]),
         },
       ]

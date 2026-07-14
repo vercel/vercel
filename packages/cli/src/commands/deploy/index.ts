@@ -24,6 +24,7 @@ import { compileVercelConfig } from '../../util/compile-vercel-config';
 import { createGitMeta } from '../../util/create-git-meta';
 import createDeploy from '../../util/deploy/create-deploy';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
+import { getDeploymentCheckRuns } from '../../util/deploy/get-deployment-check-runs';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
 import { isValidArchive } from '../../util/deploy/validate-archive-format';
@@ -585,6 +586,12 @@ async function handleInitDeployment(
       return 1;
     }
 
+    // Deployment Checks: deployment-alias check failed
+    if (deployment.checks?.['deployment-alias']?.state === 'failed') {
+      return handleFailedCheckRuns(client, deployment, asJson);
+    }
+
+    // v1 checks: uses checksConclusion from the deployment object
     if (deployment.checksConclusion === 'failed') {
       const { checks } = await getDeploymentChecks(client, deployment.id);
       const counters = new Map<string, number>();
@@ -1445,6 +1452,12 @@ async function handleDefaultDeploy(
       return 1;
     }
 
+    // Deployment Checks: deployment-alias check failed
+    if (deployment.checks?.['deployment-alias']?.state === 'failed') {
+      return handleFailedCheckRuns(client, deployment, asJson);
+    }
+
+    // v1 checks: uses checksConclusion from the deployment object
     if (deployment.checksConclusion === 'failed') {
       const { checks } = await getDeploymentChecks(client, deployment.id);
       const counters = new Map<string, number>();
@@ -2017,6 +2030,11 @@ async function handleContinueDeployment({
         }
       }
 
+      if (event.type === 'checks-v2-failed') {
+        output.stopSpinner();
+        return handleFailedCheckRuns(client, event.payload, false);
+      }
+
       if (event.type === 'error') {
         output.stopSpinner();
         const payload = event.payload;
@@ -2063,4 +2081,81 @@ function getDeploymentOutputJson(
     deploymentApiUrl: `${apiUrl}/v13/deployments/${deployment.id}`,
     ...(error ? { error } : {}),
   };
+}
+
+// v2 checks: fetch check runs and print failures
+async function handleFailedCheckRuns(
+  client: Client,
+  deployment: {
+    id: string;
+    url: string;
+    inspectorUrl?: string | null;
+    readyState: string;
+    target?: string | null;
+  },
+  asJson: boolean
+): Promise<number> {
+  const { runs } = await getDeploymentCheckRuns(client, deployment.id);
+
+  const failedRuns = (runs ?? []).filter(run => run.conclusion === 'failed');
+  const counters = new Map<string, number>();
+  (runs ?? []).forEach(r => {
+    counters.set(r.conclusion, (counters.get(r.conclusion) ?? 0) + 1);
+  });
+  const counterList = Array.from(counters)
+    .map(([name, no]) => `${no} ${name}`)
+    .join(', ');
+
+  const message = `Running Checks: ${counterList}`;
+
+  const getSourceKind = (run: { source: { kind: string } | string }) =>
+    typeof run.source === 'object' ? run.source.kind : run.source;
+  const getJobName = (run: {
+    source: { kind: string; jobName?: string } | string;
+  }) => (typeof run.source === 'object' ? run.source.jobName : undefined);
+
+  if (asJson) {
+    output.stopSpinner();
+    const deploymentJson = getDeploymentOutputJson(deployment, client.apiUrl, {
+      name: 'CHECKS_FAILED',
+      message,
+    });
+    const payload = client.nonInteractive
+      ? {
+          status: AGENT_STATUS.ERROR,
+          reason: 'checks_failed',
+          message,
+          deployment: deploymentJson,
+          failedCheckRuns: failedRuns.map(run => ({
+            id: run.id,
+            name: run.name,
+            conclusion: run.conclusion,
+            source: run.source,
+            logsEndpoint: `/v2/deployments/${deployment.id}/check-runs/${run.id}/logs${client.config.currentTeam ? `?teamId=${client.config.currentTeam}` : ''}`,
+          })),
+          next: [
+            {
+              command: getCommandNameWithGlobalFlags('deploy', client.argv),
+              when: 'retry deploy after fixing check failures',
+            },
+          ],
+        }
+      : deploymentJson;
+    client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+  } else {
+    output.error(message);
+    for (const run of failedRuns) {
+      const jobName = getJobName(run);
+      const dashboardUrl =
+        getSourceKind(run) === 'vercel' && deployment.inspectorUrl && jobName
+          ? `${deployment.inspectorUrl}?logsTab=${encodeURIComponent(jobName)}`
+          : (deployment.inspectorUrl ?? null);
+      const label = dashboardUrl
+        ? output.link(run.name, dashboardUrl)
+        : run.name;
+      output.print(`  ${chalk.red('✗')} ${label}\n`);
+    }
+  }
+
+  return 1;
 }

@@ -6,7 +6,7 @@ import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import indent from '../../util/output/indent';
 import { autoProvisionResource } from '../../util/integration/auto-provision-resource';
-import { fetchIntegrationWithTelemetry } from '../../util/integration/fetch-integration';
+import { resolveAndFetchIntegration } from '../../util/integration/fetch-integration';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { acceptTermsViaBrowser } from '../../util/integration/accept-terms-via-browser';
 import { promptForTermAcceptance } from '../../util/integration/prompt-for-terms';
@@ -37,7 +37,7 @@ import {
 } from '../../util/integration/format-schema-help';
 import type { Metadata } from '../../util/integration/types';
 
-export interface AddAutoProvisionOptions extends PostProvisionOptions {
+interface AddAutoProvisionOptions extends PostProvisionOptions {
   metadata?: string[];
   productSlug?: string;
   billingPlanId?: string;
@@ -48,7 +48,7 @@ export interface AddAutoProvisionOptions extends PostProvisionOptions {
 
 export async function addAutoProvision(
   client: Client,
-  integrationSlug: string,
+  integrationSlugOrQuery: string,
   resourceNameArg?: string,
   options: AddAutoProvisionOptions = {}
 ) {
@@ -76,19 +76,22 @@ export async function addAutoProvision(
   }
   client.config.currentTeam = team.id;
 
-  // Fetch integration
-  const integration = await fetchIntegrationWithTelemetry(
+  // Fetch integration (with discover fallback if slug not found)
+  const integration = await resolveAndFetchIntegration(
     client,
-    integrationSlug,
+    integrationSlugOrQuery,
     telemetry
   );
   if (!integration) {
     return 1;
   }
+  if (integration.productSlug && !options.productSlug) {
+    options.productSlug = integration.productSlug;
+  }
 
   if (!integration.products?.length) {
     output.error(
-      `Integration "${integrationSlug}" is not a Marketplace integration`
+      `Integration "${integration.slug}" is not a Marketplace integration`
     );
     return 1;
   }
@@ -100,10 +103,10 @@ export async function addAutoProvision(
     !client.stdin.isTTY
   ) {
     const choices = integration.products
-      .map(p => `  ${integrationSlug}/${p.slug}`)
+      .map(p => `  ${integration.slug}/${p.slug}`)
       .join('\n');
     output.error(
-      `Integration "${integrationSlug}" has multiple products. Specify one with:\n\n${choices}\n\nExample: vercel ${commandName} ${integrationSlug}/${integration.products[0].slug}`
+      `Integration "${integration.slug}" has multiple products. Specify one with:\n\n${choices}\n\nExample: vercel ${commandName} ${integration.slug}/${integration.products[0].slug}`
     );
     return 1;
   }
@@ -143,7 +146,6 @@ export async function addAutoProvision(
     product_slug: product.slug,
     team_id: team.id,
     source: 'cli',
-    is_auto_provision: true,
   };
 
   telemetry.trackMarketplaceEvent(
@@ -159,7 +161,7 @@ export async function addAutoProvision(
     `Product metadataSchema: ${JSON.stringify(product.metadataSchema, null, 2)}`
   );
 
-  // 3b. Check if integration is installed on this team
+  // Check if integration is installed on this team
   const teamInstallation = installations.find(
     i => i.ownerId === team.id && i.installationType === 'marketplace'
   );
@@ -356,8 +358,8 @@ export async function addAutoProvision(
       .map(line => `  - ${line}`)
       .join('\n');
     const slug = options.productSlug
-      ? `${integrationSlug}/${options.productSlug}`
-      : integrationSlug;
+      ? `${integration.slug}/${options.productSlug}`
+      : integration.slug;
     telemetry.trackMarketplaceEvent(
       'marketplace_install_flow_multiple_installations',
       {
@@ -366,7 +368,7 @@ export async function addAutoProvision(
       }
     );
     output.error(
-      `Multiple installations found for "${integrationSlug}":\n${installationsList}\n\nRe-run with --installation-id to select one, e.g.:\n  vercel ${commandName} ${slug} --installation-id ${result.installations[0].id}`
+      `Multiple installations found for "${integration.slug}":\n${installationsList}\n\nRe-run with --installation-id to select one, e.g.:\n  vercel ${commandName} ${slug} --installation-id ${result.installations[0].id}`
     );
     return 1;
   }
@@ -413,7 +415,7 @@ export async function addAutoProvision(
         `  Provide ${examples.join(' ')} to provision directly from the CLI.`
       );
       output.log(
-        `  Run \`vercel ${commandName} ${integrationSlug} --help\` for all metadata options.`
+        `  Run \`vercel ${commandName} ${integration.slug} --help\` for all metadata options.`
       );
       return 1;
     }

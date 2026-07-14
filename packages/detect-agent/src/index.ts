@@ -82,7 +82,10 @@ export async function determineAgent(): Promise<AgentResult> {
     return { isAgent: true, agent: { name: CURSOR } };
   }
 
-  if (process.env.CURSOR_AGENT) {
+  if (
+    process.env.CURSOR_AGENT ||
+    process.env.CURSOR_EXTENSION_HOST_ROLE === 'agent-exec'
+  ) {
     return { isAgent: true, agent: { name: CURSOR_CLI } };
   }
 

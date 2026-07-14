@@ -188,6 +188,66 @@ describe('logs-v2 utility', () => {
         since: isoDate,
       });
     });
+
+    it('should include all request logs in the result', async () => {
+      client.scenario.get('/api/logs/request-logs', (_req, res) => {
+        res.json({
+          rows: [
+            createMockApiLog({
+              logs: [
+                { level: 'info', message: 'first message' },
+                { level: 'error', message: 'actual error' },
+              ],
+            }),
+          ],
+          hasMoreRows: false,
+        });
+      });
+
+      const result = await fetchRequestLogs(client, {
+        projectId: 'prj_test',
+        ownerId: 'team_test',
+        level: ['error'],
+      });
+
+      expect(result.logs[0].logs).toEqual([
+        {
+          level: 'info',
+          message: 'first message',
+          messageTruncated: undefined,
+        },
+        {
+          level: 'error',
+          message: 'actual error',
+          messageTruncated: undefined,
+        },
+      ]);
+    });
+
+    it('should use a matching error log as the display log when filtering by level', async () => {
+      client.scenario.get('/api/logs/request-logs', (_req, res) => {
+        res.json({
+          rows: [
+            createMockApiLog({
+              logs: [
+                { level: 'info', message: 'first message' },
+                { level: 'error', message: 'actual error' },
+              ],
+            }),
+          ],
+          hasMoreRows: false,
+        });
+      });
+
+      const result = await fetchRequestLogs(client, {
+        projectId: 'prj_test',
+        ownerId: 'team_test',
+        level: ['error'],
+      });
+
+      expect(result.logs[0].level).toEqual('error');
+      expect(result.logs[0].message).toEqual('actual error');
+    });
   });
 
   describe('fetchAllRequestLogs', () => {

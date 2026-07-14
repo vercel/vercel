@@ -36,7 +36,7 @@ const EVENTS_ARRAY = [
   'notice',
   'tip',
   'canceled',
-  // Checks events
+  // v1 Checks events
   'checks-registered',
   'checks-completed',
   'checks-running',
@@ -44,6 +44,8 @@ const EVENTS_ARRAY = [
   'checks-conclusion-failed',
   'checks-conclusion-skipped',
   'checks-conclusion-canceled',
+  // v2 Checks events
+  'checks-v2-failed',
 ] as const;
 
 export type DeploymentEventType = (typeof EVENTS_ARRAY)[number];

@@ -162,6 +162,7 @@ export {
 } from './framework-helpers';
 
 export * from './python';
+export * from './node-entrypoint';
 
 export {
   getEncryptedEnv,

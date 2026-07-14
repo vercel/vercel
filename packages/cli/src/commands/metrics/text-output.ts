@@ -48,8 +48,7 @@ interface SummaryTableOptions {
 }
 
 interface MetadataHeaderOptions {
-  event: string;
-  measure: string;
+  metric: string;
   aggregation: Aggregation;
   periodStart: string;
   periodEnd: string;
@@ -63,9 +62,8 @@ interface MetadataHeaderOptions {
 }
 
 export interface FormatTextOptions {
-  event: string;
-  measure: string;
-  measureUnit?: string;
+  metric: string;
+  metricUnit?: string;
   aggregation: Aggregation;
   groupBy: string[];
   filter?: string;
@@ -640,7 +638,7 @@ export function formatMetadataHeader(opts: MetadataHeaderOptions): string {
   const rows: Array<{ key: string; value: string }> = [
     {
       key: 'Metric',
-      value: `${opts.event} / ${opts.measure} ${opts.aggregation}`,
+      value: `${opts.metric} ${opts.aggregation}`,
     },
     {
       key: 'Period',
@@ -811,9 +809,9 @@ export function formatText(
   response: MetricsQueryResponse,
   opts: FormatTextOptions
 ): string {
-  const rollupColumn = getRollupColumnName(opts.measure, opts.aggregation);
+  const rollupColumn = getRollupColumnName(opts.metric, opts.aggregation);
   const { displayUnit, measureType } = getEffectiveDisplay(
-    opts.measureUnit,
+    opts.metricUnit,
     opts.aggregation
   );
   const granularityMs = toGranularityMsFromDuration(opts.granularity);
@@ -828,8 +826,7 @@ export function formatText(
   );
 
   const metadata = formatMetadataHeader({
-    event: opts.event,
-    measure: opts.measure,
+    metric: opts.metric,
     aggregation: opts.aggregation,
     periodStart: opts.periodStart,
     periodEnd: opts.periodEnd,

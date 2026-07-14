@@ -3,10 +3,11 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from ..client import send
-from .utils import _extract_task_from_kombu_message
+from .utils import _extract_task_from_kombu_message, _parse_iso_datetime
 
 try:
     from kombu.transport import TRANSPORT_ALIASES, virtual  # type: ignore[import-untyped]
@@ -69,7 +70,7 @@ class TransportConfig:
                 "use_task_id_as_idempotency_key": True,
                 "token": "...",
                 "base_url": "https://vercel-queue.com",
-                "base_path": "/api/v2/messages",
+                "base_path": "/api/v3/topic",
                 "retention_seconds": 86400,
                 "deployment_id": "...",
                 "timeout": 10.0,
@@ -157,6 +158,14 @@ class Channel(virtual.Channel):
         # Use Celery's task id for idempotency by default.
         idempotency_key = task_id if self._cfg.use_task_id_as_idempotency_key else None
 
+        # Compute send-time delay from ETA if present.
+        delay_seconds: int | None = None
+        eta = _parse_iso_datetime(envelope.get("eta"))
+        if eta is not None:
+            delta = (eta - datetime.now(UTC)).total_seconds()
+            if delta > 0:
+                delay_seconds = int(delta)
+
         if os.environ.get("VWC_DEBUG_PUBLISH") not in {None, "", "0", "false", "FALSE"}:
             try:
                 print(
@@ -183,6 +192,7 @@ class Channel(virtual.Channel):
             envelope,
             idempotency_key=idempotency_key,
             retention_seconds=self._cfg.retention_seconds,
+            delay_seconds=delay_seconds,
             deployment_id=self._cfg.deployment_id,
             token=self._cfg.token,
             base_url=self._cfg.base_url,

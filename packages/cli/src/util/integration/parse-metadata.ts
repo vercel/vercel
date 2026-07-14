@@ -6,7 +6,7 @@ import {
 } from './format-schema-help';
 import type { Metadata, MetadataSchema } from './types';
 
-export interface ParseMetadataResult {
+interface ParseMetadataResult {
   metadata: Metadata;
   errors: string[];
 }

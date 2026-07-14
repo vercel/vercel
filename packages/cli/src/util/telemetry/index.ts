@@ -5,8 +5,18 @@ import output from '../../output-manager';
 import { spawn } from 'node:child_process';
 import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 import { cloneEnv } from '@vercel/build-utils';
+import {
+  getOrCreatePersistedCliDevice,
+  getOrCreatePersistedCliSession,
+  type PersistedCliDevice,
+  type PersistedCliDeviceOptions,
+  touchPersistedCliSession,
+  type PersistedCliSession,
+  type PersistedCliSessionOptions,
+} from './session';
 
 const LogLabel = `['telemetry']:`;
+const MAX_ERROR_SERVER_MESSAGE_LENGTH = 500;
 
 interface Args {
   opts: Options;
@@ -188,6 +198,82 @@ export class TelemetryClient {
     });
   }
 
+  protected trackProjectId(projectId: string | undefined) {
+    if (projectId) {
+      this.track({
+        key: 'project_id',
+        value: projectId,
+      });
+    }
+  }
+
+  protected trackInvocationId(invocationId: string | undefined) {
+    if (invocationId) {
+      this.track({
+        key: 'invocation_id',
+        value: invocationId,
+      });
+    }
+  }
+
+  protected trackDeviceId(deviceId: string | undefined) {
+    if (deviceId) {
+      this.track({
+        key: 'device_id',
+        value: deviceId,
+      });
+    }
+  }
+
+  protected trackErrorStatus(status: number | string | undefined) {
+    if (typeof status !== 'undefined') {
+      this.track({
+        key: 'error_status',
+        value: String(status),
+      });
+    }
+  }
+
+  protected trackErrorCode(code: string | undefined) {
+    if (code) {
+      this.track({
+        key: 'error_code',
+        value: code,
+      });
+    }
+  }
+
+  protected trackErrorSlug(slug: string | undefined) {
+    if (slug) {
+      this.track({
+        key: 'error_slug',
+        value: slug,
+      });
+    }
+  }
+
+  protected trackErrorAction(action: string | undefined) {
+    if (action) {
+      this.track({
+        key: 'error_action',
+        value: action,
+      });
+    }
+  }
+
+  protected trackErrorServerMessage(serverMessage: string | undefined) {
+    if (serverMessage) {
+      const normalizedServerMessage = serverMessage.trim().replace(/\s+/g, ' ');
+      this.track({
+        key: 'error_server_message',
+        value: normalizedServerMessage.slice(
+          0,
+          MAX_ERROR_SERVER_MESSAGE_LENGTH
+        ),
+      });
+    }
+  }
+
   protected trackExtension() {
     this.track({
       key: 'extension',
@@ -239,16 +325,42 @@ export class TelemetryEventStore {
   private events: Event[];
   private isDebug: boolean;
   private sessionId: string;
+  private invocationId: string;
+  private deviceId: string;
   private teamId = 'NO_TEAM_ID';
   private userId = 'NO_USER_ID';
   private projectId = 'NO_PROJECT_ID';
   private config: GlobalConfig['telemetry'];
+  private cliDevice?: PersistedCliDevice;
+  private cliSession?: PersistedCliSession;
+  private cliDeviceOptions?: PersistedCliDeviceOptions;
+  private cliSessionOptions?: PersistedCliSessionOptions;
 
-  constructor(opts?: { isDebug?: boolean; config: GlobalConfig['telemetry'] }) {
+  constructor(opts?: {
+    isDebug?: boolean;
+    config: GlobalConfig['telemetry'];
+    cliDevice?: PersistedCliDeviceOptions;
+    cliSession?: PersistedCliSessionOptions;
+  }) {
     this.isDebug = opts?.isDebug || false;
-    this.sessionId = randomUUID();
     this.events = [];
     this.config = opts?.config;
+    this.cliDeviceOptions = opts?.cliDevice;
+    this.cliSessionOptions = opts?.cliSession;
+    this.invocationId = randomUUID();
+    this.deviceId = randomUUID();
+
+    if (this.cliDeviceOptions) {
+      this.cliDevice = getOrCreatePersistedCliDevice(this.cliDeviceOptions);
+      this.deviceId = this.cliDevice.id;
+    }
+
+    if (this.cliSessionOptions) {
+      this.cliSession = getOrCreatePersistedCliSession(this.cliSessionOptions);
+      this.sessionId = this.cliSession.id;
+    } else {
+      this.sessionId = randomUUID();
+    }
   }
 
   add(event: Event) {
@@ -281,6 +393,18 @@ export class TelemetryEventStore {
     return this.userId !== 'NO_USER_ID';
   }
 
+  get currentProjectId() {
+    return this.projectId;
+  }
+
+  get currentInvocationId() {
+    return this.invocationId;
+  }
+
+  get currentDeviceId() {
+    return this.deviceId;
+  }
+
   get readonlyEvents() {
     return Array.from(this.events);
   }
@@ -298,6 +422,13 @@ export class TelemetryEventStore {
   }
 
   async save() {
+    if (this.cliSession && this.cliSessionOptions) {
+      this.cliSession = touchPersistedCliSession(
+        this.cliSessionOptions,
+        this.cliSession
+      );
+    }
+
     if (this.isDebug) {
       // Intentionally not using `output.debug` as it will
       // not write to stderr unless it is run with `--debug`

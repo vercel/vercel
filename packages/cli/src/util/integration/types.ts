@@ -20,7 +20,7 @@ export interface MetadataSchemaProperty {
   'ui:read-only'?: 'create' | Expression | boolean | string;
 }
 
-export interface Expression {
+interface Expression {
   expr: string;
 }
 
@@ -28,19 +28,17 @@ export type Metadata = Record<
   string,
   string | number | boolean | string[] | number[] | undefined
 >;
-export type MetadataEntry = Readonly<[string, Metadata[string]]>;
-
 export interface MetadataSchema {
   type: 'object';
   properties: Record<string, MetadataSchemaProperty>;
   required?: string[];
 }
 
-export type IntegrationProductProtocolBase = {
+type IntegrationProductProtocolBase = {
   status: 'enabled' | 'disabled';
 };
 
-export type StorageIntegrationProtocol = IntegrationProductProtocolBase & {
+type StorageIntegrationProtocol = IntegrationProductProtocolBase & {
   repl?: {
     enabled: boolean;
     supportsReadOnlyMode: boolean;
@@ -48,9 +46,9 @@ export type StorageIntegrationProtocol = IntegrationProductProtocolBase & {
   };
 };
 
-export type VideoIntegrationProtocol = IntegrationProductProtocolBase;
+type VideoIntegrationProtocol = IntegrationProductProtocolBase;
 
-export interface IntegrationGuideStep {
+interface IntegrationGuideStep {
   title: string;
   content: string;
   actions?: { type: string }[];
@@ -89,7 +87,7 @@ export interface IntegrationProduct {
   resourceLinks?: IntegrationResourceLink[];
 }
 
-export type InstallationType = 'marketplace' | 'external';
+type InstallationType = 'marketplace' | 'external';
 
 export interface Configuration {
   id: string;
@@ -133,7 +131,6 @@ export interface BillingPlan {
   cost?: string;
   description: string;
   paymentMethodRequired: boolean;
-  preauthorizationAmount?: number;
   minimumAmount?: string;
   maximumAmount?: string;
   details: {
@@ -171,29 +168,13 @@ export interface PrepaymentCreditThreshold {
   maximumAmountPerPeriodInCents?: number;
 }
 
-export interface MarketplaceBillingAuthorizationState {
-  id: string;
-  ownerId: string;
-  integrationId: string;
-  integrationConfigurationId?: string;
-  billingPlanId?: string;
-  amountCent: number;
-  status: 'pending' | 'requires_action' | 'succeeded' | 'failed';
-  reason?: string;
-  paymentIntent?: {
-    clientSecret?: string | null;
-  };
-  createdAt: number;
-  updatedAt: number;
-}
-
 // Auto-provision types
 
 export type AcceptedPolicies = Partial<
   Record<'toc' | 'privacy' | 'eula', string>
 >;
 
-export interface AutoProvisionIntegration {
+interface AutoProvisionIntegration {
   id: string;
   slug: string;
   name: string;
@@ -204,7 +185,7 @@ export interface AutoProvisionIntegration {
   };
 }
 
-export interface AutoProvisionProduct {
+interface AutoProvisionProduct {
   id: string;
   slug: string;
   name: string;
@@ -213,7 +194,7 @@ export interface AutoProvisionProduct {
   metadataSchema: MetadataSchema;
 }
 
-export interface AutoProvisionResource {
+interface AutoProvisionResource {
   id: string;
   externalResourceId: string;
   name: string;
@@ -231,7 +212,7 @@ export interface AutoProvisionedResponse {
   billingPlan: BillingPlan | null;
 }
 
-export interface AutoProvisionInstallationInfo {
+interface AutoProvisionInstallationInfo {
   id: string;
   type?: 'marketplace' | 'external';
   externalId?: string;

@@ -15,8 +15,8 @@ from vercel.workers.exceptions import TokenResolutionError
 
 
 class _FakeResponse:
-    status_code = 200
-    reason_phrase = "OK"
+    status_code = 201
+    reason_phrase = "Created"
     text = ""
 
     def raise_for_status(self) -> None:
@@ -45,10 +45,11 @@ class _FakeHttpxClient:
         self,
         url: str,  # noqa: ARG002
         *,
-        content: bytes,
-        headers: dict,  # noqa: ARG002  # pyright: ignore[reportMissingTypeArgument]
+        content: bytes | None = None,
+        headers: dict | None = None,  # noqa: ARG002  # pyright: ignore[reportMissingTypeArgument]
     ) -> _FakeResponse:
-        _FakeHttpxClient.captured_bodies.append(content)
+        if content is not None:
+            _FakeHttpxClient.captured_bodies.append(content)
         return self.response
 
 
@@ -78,7 +79,7 @@ class TestCallbackAndClientEdgeCases(unittest.TestCase):
                                     "Content-Type": "text/plain",
                                     "Vqs-Delivery-Count": "2",
                                     "Vqs-Timestamp": "2025-01-01T00:00:00Z",
-                                    "Vqs-Ticket": "ticket-123",
+                                    "Vqs-Receipt-Handle": "receipt-handle-123",
                                 },
                                 b"not-json",
                             ),
@@ -94,7 +95,7 @@ class TestCallbackAndClientEdgeCases(unittest.TestCase):
         self.assertEqual(payload, b"not-json")
         self.assertEqual(delivery_count, 2)
         self.assertEqual(created_at, "2025-01-01T00:00:00Z")
-        self.assertEqual(ticket, "ticket-123")
+        self.assertEqual(ticket, "receipt-handle-123")
 
     def test_get_queue_token_error_message_is_string(self) -> None:
         with patch.dict(queue_client.os.environ, {}, clear=True):

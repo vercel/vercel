@@ -20,6 +20,7 @@ export { default as crons } from './commands/crons';
 export { default as curl } from './commands/curl';
 export { default as dns } from './commands/dns';
 export { default as domains } from './commands/domains';
+export { default as firewall } from './commands/firewall';
 export { default as edgeConfig } from './commands/edge-config';
 export { default as flags } from './commands/flags';
 export { default as git } from './commands/git';

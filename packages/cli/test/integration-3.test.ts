@@ -945,9 +945,28 @@ test('default command should prompt login with empty auth.json', async () => {
   const output = await execCli(binaryPath, ['-Q', '/tmp'], {
     // execCli passes the token automatically, undo that functionality for this test
     token: false,
+    env: {
+      // Unset VERCEL_TOKEN so the env var doesn't bypass the login prompt
+      VERCEL_TOKEN: '',
+    },
   });
   expect(output.stderr, formatOutput(output)).toBeTruthy();
   expect(output.stderr).toContain(
     'Error: No existing credentials found. Please run `vercel login` or pass "--token"'
   );
+});
+
+test('VERCEL_TOKEN env var should skip login prompt', async () => {
+  const [user] = await Promise.all([userPromise]);
+  const output = await execCli(binaryPath, ['whoami'], {
+    // Do not pass --token flag
+    token: false,
+    env: {
+      // Provide token via environment variable instead
+      VERCEL_TOKEN: process.env.VERCEL_TOKEN,
+    },
+  });
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).not.toContain('No existing credentials found');
+  expect(output.stdout).toContain(user.username);
 });

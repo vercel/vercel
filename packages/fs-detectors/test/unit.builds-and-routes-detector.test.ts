@@ -4059,4 +4059,69 @@ describe('Test `detectApiExtensions`', () => {
     expect(result.has('.rb')).toBe(true);
     expect(result.has('.rs')).toBe(true);
   });
+
+  describe('Node.js entrypoint detection with workPath', () => {
+    const workPath = join(__dirname, 'fixtures', '70-node-api-dir-files');
+
+    beforeEach(() => {
+      process.env.VERCEL_NODE_FILTER_ENTRYPOINTS = '1';
+    });
+
+    afterEach(() => {
+      delete process.env.VERCEL_NODE_FILTER_ENTRYPOINTS;
+    });
+
+    it('should create builders for valid Node.js entrypoints and skip helpers', async () => {
+      const files = [
+        'api/index.ts',
+        'api/helper.ts',
+        'api/get-handler.ts',
+        'api/server.js',
+      ];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const apiBuilders = (builders || []).filter(
+        b => b.src?.startsWith('api/') && b.use === '@vercel/node'
+      );
+
+      const apiSources = apiBuilders.map(b => b.src);
+
+      // Valid entrypoints should get builders
+      expect(apiSources).toContain('api/index.ts');
+      expect(apiSources).toContain('api/get-handler.ts');
+      expect(apiSources).toContain('api/server.js');
+
+      // Helper file should NOT get a builder
+      expect(apiSources).not.toContain('api/helper.ts');
+    });
+
+    it('should skip helpers but still detect api directory', async () => {
+      const files = ['api/index.ts', 'api/helper.ts'];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const apiBuilders = (builders || []).filter(
+        b => b.src?.startsWith('api/') && b.use === '@vercel/node'
+      );
+
+      expect(apiBuilders).toHaveLength(1);
+      expect(apiBuilders[0].src).toBe('api/index.ts');
+    });
+
+    it('should not filter entrypoints when env var is not set', async () => {
+      delete process.env.VERCEL_NODE_FILTER_ENTRYPOINTS;
+
+      const files = ['api/index.ts', 'api/helper.ts'];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const apiBuilders = (builders || []).filter(
+        b => b.src?.startsWith('api/') && b.use === '@vercel/node'
+      );
+
+      // Without the env var, all files get builders (existing behavior)
+      expect(apiBuilders).toHaveLength(2);
+    });
+  });
 });

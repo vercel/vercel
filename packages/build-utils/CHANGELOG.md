@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.14.0
+
+### Minor Changes
+
+- Support configuration via vercel.toml ([#15750](https://github.com/vercel/vercel/pull/15750))
+
 ## 13.13.0
 
 ### Minor Changes
