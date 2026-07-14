@@ -155,7 +155,6 @@ interface ResolveFollowDeploymentOptions {
   branch?: string;
   client: Client;
   logsTarget: LogsTarget;
-  noBranch?: boolean;
 }
 
 type ResolveFollowDeploymentResult =
@@ -166,17 +165,17 @@ async function resolveFollowDeployment({
   branch,
   client,
   logsTarget,
-  noBranch,
 }: ResolveFollowDeploymentOptions): Promise<ResolveFollowDeploymentResult> {
-  const { deployment, orgSlug, projectId, projectSlug, targetSource } =
-    logsTarget;
+  const { deployment, orgSlug, projectId, projectSlug } = logsTarget;
   const deploymentId = deployment?.id;
 
   if (deploymentId) {
     return { deploymentId, label: 'deployment' };
   }
 
-  if (targetSource === 'explicit-project' && !branch) {
+  // Without a branch to match (--no-branch, explicit project, or no git
+  // branch detected), stream the latest production deployment
+  if (!branch) {
     output.spinner('Finding latest production deployment', 1000);
     const productionDeployment = await getLatestProductionDeployment(
       client,
@@ -198,20 +197,6 @@ async function resolveFollowDeployment({
       deploymentId: productionDeployment.id,
       label: 'latest production deployment',
     };
-  }
-
-  if (noBranch) {
-    output.error(
-      `The ${chalk.bold('--follow')} flag requires a deployment. Specify one with ${chalk.bold('--deployment')} or remove ${chalk.bold('--no-branch')} to auto-detect from the current git branch.`
-    );
-    return { exitCode: 1 };
-  }
-
-  if (!branch) {
-    output.error(
-      `The ${chalk.bold('--follow')} flag requires a deployment. Specify one with ${chalk.bold('--deployment')} or run from within a git repository.`
-    );
-    return { exitCode: 1 };
   }
 
   output.spinner(`Finding latest deployment for branch "${branch}"`, 1000);
@@ -713,7 +698,6 @@ export default async function logs(client: Client) {
       branch: branchOption,
       client,
       logsTarget,
-      noBranch: noBranchFlagValue,
     });
     if ('exitCode' in followDeployment) {
       return followDeployment.exitCode;

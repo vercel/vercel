@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Fall back to the latest production deployment when `vercel logs --follow` finds no deployments matching the current git branch, instead of erroring. Deployments created without git metadata (e.g. CLI or API deploys from repos without a recognized git remote) never match the branch lookup, which previously made `logs --follow` fail even when production deployments existed.
+`vercel logs --follow` now falls back to the latest READY production deployment instead of erroring when no deployment can be resolved from the current git branch — whether the branch lookup finds no matching deployments (e.g. deployments created without git metadata), no git branch can be detected (not a git repo, or no commits yet), or `--no-branch` is passed.

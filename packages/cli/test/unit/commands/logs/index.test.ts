@@ -1381,14 +1381,40 @@ describe('logs', () => {
       );
     });
 
-    it('should error when --follow is used with --no-branch and no deployment', async () => {
+    it('should stream the latest production deployment with --no-branch', async () => {
+      const user = useUser();
+
+      // Register before useLogsDeployment(), whose catch-all
+      // `/:version/deployments` route would otherwise handle this path
+      let productionDeployment: ReturnType<typeof useLogsDeployment>;
+      let requestedTarget: string | undefined;
+      client.scenario.get('/v6/deployments', (req, res) => {
+        requestedTarget = req.query.target as string | undefined;
+        res.json({
+          deployments: [
+            { uid: productionDeployment.id, url: productionDeployment.url },
+          ],
+        });
+      });
+
+      productionDeployment = useLogsDeployment(user);
+
+      client.scenario.get(
+        `/v1/projects/prj_logstest/deployments/${productionDeployment.id}/runtime-logs`,
+        (_req, res) => {
+          res.status(200);
+          res.end();
+        }
+      );
+
       client.cwd = fixture('linked-project');
       client.setArgv('logs', '--follow', '--no-branch');
       const exitCode = await logs(client);
 
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(0);
+      expect(requestedTarget).toEqual('production');
       await expect(client.stderr).toOutput(
-        '--follow flag requires a deployment'
+        `Streaming logs for latest production deployment ${productionDeployment.id}`
       );
     });
 
@@ -1475,6 +1501,29 @@ describe('logs', () => {
     });
 
     it('should track telemetry for --follow flag', async () => {
+      const user = useUser();
+
+      // Register before useLogsDeployment(), whose catch-all
+      // `/:version/deployments` route would otherwise handle this path
+      let productionDeployment: ReturnType<typeof useLogsDeployment>;
+      client.scenario.get('/v6/deployments', (_req, res) => {
+        res.json({
+          deployments: [
+            { uid: productionDeployment.id, url: productionDeployment.url },
+          ],
+        });
+      });
+
+      productionDeployment = useLogsDeployment(user);
+
+      client.scenario.get(
+        `/v1/projects/prj_logstest/deployments/${productionDeployment.id}/runtime-logs`,
+        (_req, res) => {
+          res.status(200);
+          res.end();
+        }
+      );
+
       client.cwd = fixture('linked-project');
       // Use --no-branch to avoid branch detection and deployment lookup
       client.setArgv('logs', '--follow', '--no-branch');
