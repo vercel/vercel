@@ -1,9 +1,9 @@
-import { TelemetryClient } from '../..';
+import { BlobAuthTelemetryClient } from './auth';
 import type { signedTokenSubcommand } from '../../../../commands/blob/command';
 import type { TelemetryMethods } from '../../types';
 
 export class BlobSignedTokenTelemetryClient
-  extends TelemetryClient
+  extends BlobAuthTelemetryClient
   implements TelemetryMethods<typeof signedTokenSubcommand>
 {
   trackCliOptionPathname(value: string | undefined) {

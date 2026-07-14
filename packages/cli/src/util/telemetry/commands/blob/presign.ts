@@ -1,9 +1,9 @@
-import { TelemetryClient } from '../..';
+import { BlobAuthTelemetryClient } from './auth';
 import type { presignSubcommand } from '../../../../commands/blob/command';
 import type { TelemetryMethods } from '../../types';
 
 export class BlobPresignTelemetryClient
-  extends TelemetryClient
+  extends BlobAuthTelemetryClient
   implements TelemetryMethods<typeof presignSubcommand>
 {
   trackCliArgumentPathname(value: string | undefined) {
