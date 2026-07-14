@@ -19,7 +19,11 @@ import {
 import output from '../../output-manager';
 import { FlagsRulesCommandTelemetryClient } from '../../util/telemetry/commands/flags/rules';
 import { rulesAddSubcommand } from './command';
-import { isExitCodeResult, resolveRulesCommandContext } from './rules-common';
+import {
+  isExitCodeResult,
+  resolveRulesCommandContext,
+  warnIfRuleChangesAreBypassed,
+} from './rules-common';
 
 export default async function rulesAdd(
   client: Client,
@@ -134,7 +138,7 @@ export default async function rulesAdd(
     );
 
     output.spinner(`Adding rule to ${context.environment}...`);
-    await updateFlag(client, context.projectId, flagArg, {
+    const updatedFlag = await updateFlag(client, context.projectId, flagArg, {
       environments: {
         [context.environment]: nextEnvConfig,
       },
@@ -152,6 +156,7 @@ export default async function rulesAdd(
         context.flag.variants
       )}`
     );
+    warnIfRuleChangesAreBypassed(updatedFlag, context.environment);
   } catch (err) {
     output.stopSpinner();
     printError(err);

@@ -365,7 +365,6 @@ function buildRulesEnvironmentConfig(
 ): FlagEnvironmentConfig {
   const nextConfig: FlagEnvironmentConfig = {
     ...envConfig,
-    active: true,
     rules,
   };
 

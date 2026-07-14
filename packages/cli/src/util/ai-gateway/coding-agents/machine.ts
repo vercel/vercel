@@ -61,6 +61,7 @@ export async function runMachine(args: {
                 : c.status === 'update'
                   ? 'would_update'
                   : c.status,
+            ...(c.symlink ? { symlink: true } : {}),
           })),
           skipped,
           warnings: args.warnings,

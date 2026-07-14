@@ -200,9 +200,74 @@ describe('flags rules', () => {
       pausedOutcome: { type: 'variant', variantId: 'off' },
     });
     expect(settingsRequests).toEqual(0);
+    expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
+      'This rule update was saved'
+    );
   });
 
-  it('activates a paused environment when adding a rule', async () => {
+  it.each([
+    {
+      action: 'adding',
+      argv: [
+        'add',
+        'my-feature',
+        '--environment',
+        'production',
+        '--condition',
+        'user.plan:eq:enterprise',
+        '--variant',
+        'on',
+      ],
+    },
+    {
+      action: 'updating',
+      argv: [
+        'update',
+        'my-feature',
+        'rule_1',
+        '--environment',
+        'production',
+        '--condition',
+        'user.plan:eq:enterprise',
+      ],
+    },
+    {
+      action: 'moving',
+      argv: [
+        'move',
+        'my-feature',
+        'rule_2',
+        '--environment',
+        'production',
+        '--position',
+        '1',
+      ],
+    },
+    {
+      action: 'removing',
+      argv: ['rm', 'my-feature', 'rule_1', '--environment', 'production'],
+    },
+  ])('warns after $action a rule while the environment serves a fixed variant', async ({
+    argv,
+  }) => {
+    testFlags[0].environments.production.active = false;
+    client.setArgv('flags', 'rules', ...argv);
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(patchBodies).toHaveLength(1);
+    const output = stripAnsi(client.stderr.getFullOutput());
+    expect(output).toMatch(
+      /^! This rule update was saved, but production is serving false Off\./m
+    );
+    expect(output).toContain(
+      'Rule changes will not affect flag evaluation until the environment uses targeting again.'
+    );
+    expect(output).not.toContain('WARNING!');
+  });
+
+  it('preserves a paused environment when adding a rule', async () => {
     testFlags[0].environments.preview.active = false;
 
     client.setArgv(
@@ -222,19 +287,22 @@ describe('flags rules', () => {
 
     expect(exitCode).toEqual(0);
     expect(testFlags[0].environments.preview).toMatchObject({
-      active: true,
+      active: false,
       fallthrough: { type: 'variant', variantId: 'on' },
       pausedOutcome: { type: 'variant', variantId: 'off' },
     });
     expect(testFlags[0].environments.preview.rules).toHaveLength(1);
     expect(patchBodies[0].environments?.preview).toMatchObject({
-      active: true,
+      active: false,
       rules: [
         {
           outcome: { type: 'variant', variantId: 'on' },
         },
       ],
     });
+    expect(stripAnsi(client.stderr.getFullOutput())).toMatch(
+      /^! This rule update was saved, but preview is serving false Off\./m
+    );
   });
 
   it('adds a rule on top of inherited rules and disables reuse', async () => {
@@ -281,6 +349,9 @@ describe('flags rules', () => {
       environment: 'preview',
     });
     expect(testFlags[0].environments.production.active).toEqual(true);
+    expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
+      'This rule update was saved'
+    );
   });
 
   it('adds a segment condition with a split outcome', async () => {
