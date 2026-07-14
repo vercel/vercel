@@ -1,5 +1,24 @@
 # vercel
 
+## 56.2.0
+
+### Minor Changes
+
+- 997d319: `vercel env add` now accepts a comma-separated list of environments to create a single Environment Variable entry spanning multiple targets, e.g. `vercel env add API_URL production,preview,development`. Invalid environment names fail locally with a clear error (`invalid_environment` in non-interactive mode), custom Environment slugs are resolved to ids, and a Git branch is rejected unless Preview is the only target. Non-interactive `missing_environment`, `missing_requirements`, and sensitivity-conflict payloads now suggest the multi-target command form.
+
+### Patch Changes
+
+- e6b11f0: Add finer-grained `vc.doBuild` spans (`vc.readConfigInputs`, `vc.prepareFlagsDefinitions`, `vc.getFiles`, `vc.populateFilesMap`, and `vc.setMonorepoDefaultSettings`) so build-container traces can attribute previously unaccounted CLI orchestration time.
+- 383c0a0: Fix native-trampoline test hardcoding 55.0.0 that broke after version bump to 56.1.0.
+
+  The test now reads the version from packages/cli/package.json and strips
+  NODE_PATH/VITEST env vars so require.resolve inside the temp install does
+  not leak the repo's pnpm store. Also fixes VERCEL_VC_NATIVE leak on
+  ENOENT/EACCES fallback (JS fallback was mislabeled as "(native)") and
+  updates the stale Part-1 comment in src/vc.js.
+
+- 351a9b6: Exclude `vercel.ts` config file variants from static file serving
+
 ## 56.1.0
 
 ### Minor Changes
