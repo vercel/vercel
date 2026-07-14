@@ -283,7 +283,7 @@ jobs:
           node-version: ${{ matrix.nodeVersion }}
 
       - name: Setup Go toolchain
-        if: ${{ matrix.packageName == '@vercel-internals/ipc-proxy' }}
+        if: ${{ matrix.needsGo == true }}
         uses: actions/setup-go@v6
         with:
           go-version: '1.23.12'
@@ -344,6 +344,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Test ${{matrix.packageName}}
+        timeout-minutes: 25
         run: |
           attempt=1
           max_attempts=2
@@ -421,6 +422,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
+
+      - name: Setup Go toolchain
+        if: ${{ matrix.needsGo == true }}
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.23.12'
+          cache: false
+
+      - name: Setup Rust toolchain
+        if: ${{ matrix.needsRust == true }}
+        uses: dtolnay/rust-toolchain@a75363d06101555fc97c6c7e1e65670b99104d98 # 1.96.1
+        with:
+          targets: wasm32-wasip2
 
       # yarn 1.22.21 introduced a Corepack bug when running tests.
       # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
@@ -523,6 +537,7 @@ jobs:
             echo "$env_var=$package_name @ $DEPLOYMENT_URL/tarballs/$wheel_name" >> "$GITHUB_ENV"
           done
       - name: Test ${{matrix.packageName}}
+        timeout-minutes: 35
         run: |
           attempt=1
           max_attempts=2

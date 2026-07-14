@@ -2679,7 +2679,7 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
   Examples:
 
-  - Add a new variable to all Environments
+  - Add a new variable (prompts for value and Environments)
 
     $ vercel env add <name>
     $ vercel env add API_TOKEN
@@ -2688,6 +2688,11 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
     $ vercel env add <name> <production | preview | development>
     $ vercel env add DB_PASS production
+
+  - Add one variable to multiple Environments (comma-separated)
+
+    $ vercel env add <name> <environment>[,<environment>]
+    $ vercel env add API_URL production,preview,development
 
   - Override an existing Environment Variable of same target (production, preview, deployment)
 
@@ -2834,6 +2839,10 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
 
     $ vercel env run -- <command>
 
+  - Add one variable to multiple Environments
+
+    $ vercel env add API_URL production,preview,development
+
 "
 `;
 
@@ -2883,6 +2892,10 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
 
     $ vercel env run -- <command>
 
+  - Add one variable to multiple Environments
+
+    $ vercel env add API_URL production,preview,development
+
 "
 `;
 
@@ -2923,6 +2936,10 @@ exports[`help command > env help output snapshots > env help column width 120 1`
   - Run a command with Environment Variables from the linked Project
 
     $ vercel env run -- <command>
+
+  - Add one variable to multiple Environments
+
+    $ vercel env add API_URL production,preview,development
 
 "
 `;

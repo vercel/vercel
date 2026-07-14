@@ -931,8 +931,8 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       tar-fs:
-        specifier: 1.16.3
-        version: 1.16.3
+        specifier: 1.16.5
+        version: 1.16.5
       title:
         specifier: 3.4.1
         version: 3.4.1
@@ -11977,6 +11977,9 @@ packages:
 
   tar-fs@1.16.3:
     resolution: {integrity: sha512-NvCeXpYx7OsmOh8zIOP/ebG55zZmxLE0etfWRbWok+q2Qo8x/vOR/IJT1taADXPe+jsiu9axDb3X4B+iIgNlKw==}
+
+  tar-fs@1.16.5:
+    resolution: {integrity: sha512-1ergVCCysmwHQNrOS+Pjm4DQ4nrGp43+Xnu4MRGjCnQu/m3hEgLNS78d5z+B8OJ1hN5EejJdCSFZE1oM6AQXAQ==}
 
   tar-fs@2.0.0:
     resolution: {integrity: sha512-vaY0obB6Om/fso8a8vakQBzwholQ7v5+uy+tF3Ozvxv1KNezmVQAiWtcNmMHFSFPqL3dJA8ha6gdtFbfX9mcxA==}
@@ -23354,6 +23357,13 @@ snapshots:
       - typescript
 
   tar-fs@1.16.3:
+    dependencies:
+      chownr: 1.1.4
+      mkdirp: 0.5.6
+      pump: 1.0.3
+      tar-stream: 1.6.2
+
+  tar-fs@1.16.5:
     dependencies:
       chownr: 1.1.4
       mkdirp: 0.5.6
