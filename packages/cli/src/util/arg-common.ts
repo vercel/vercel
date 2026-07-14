@@ -340,6 +340,23 @@ export function getGlobalFlagsAndProjectFromArgs(args: string[]): string[] {
 }
 
 /**
+ * Returns the explicit project selector from CLI arguments, ignoring arguments
+ * passed to a child command after `--`.
+ */
+export function getProjectOptionFromArgs(args: string[]): string | undefined {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--') return undefined;
+    if (arg.startsWith('--project=')) return arg.slice('--project='.length);
+    if (arg === '--project') {
+      const value = args[i + 1];
+      return value && !value.startsWith('-') ? value : undefined;
+    }
+  }
+  return undefined;
+}
+
+/**
  * Builds a suggested command with only global CLI flags preserved from argv.
  * Useful for agent next[] hints that should keep context flags like --cwd.
  */

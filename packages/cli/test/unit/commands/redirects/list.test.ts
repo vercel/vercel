@@ -63,6 +63,10 @@ describe('redirects list', () => {
 
     await expect(redirects(client)).resolves.toEqual(0);
     await expect(client.stderr).toOutput('3 Redirects found');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'option:project', value: '[REDACTED]' },
+      { key: 'subcommand:list', value: 'list' },
+    ]);
   });
 
   it('should list redirects using ls alias', async () => {

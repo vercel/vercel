@@ -75,6 +75,11 @@ describe('firewall rules enable', () => {
 
     await expect(firewall(client)).resolves.toEqual(0);
     await expect(client.stderr).toOutput('Enabled');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'option:project', value: '[REDACTED]' },
+      { key: 'subcommand:rules', value: 'rules' },
+      { key: 'subcommand:rules:enable', value: 'enable' },
+    ]);
   });
 
   it('should report already enabled', async () => {

@@ -2,13 +2,9 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { resolveProjectContext } from '../../util/projects/resolve-project-context';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
-import { outputAgentError } from '../../util/agent-output';
-import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
 import type { Command } from '../help';
-import { TelemetryClient } from '../../util/telemetry';
+import { ensureProjectLink as ensureProjectLinkForCommand } from '../../util/projects/ensure-project-link';
 import {
   getCommandNameWithGlobalFlagsAndProject,
   getGlobalFlagsAndProjectFromArgs,
@@ -56,41 +52,12 @@ export function validateRequiredArgs(
   return null;
 }
 
-export async function ensureProjectLink(client: Client, projectName?: string) {
-  new TelemetryClient({
-    opts: { store: client.telemetryEventStore },
-  }).trackCliOptionProject(projectName);
-  const link = await resolveProjectContext({
+export function ensureProjectLink(client: Client, projectName?: string) {
+  return ensureProjectLinkForCommand({
     client,
-    projectNameOrId: projectName,
+    commandName: 'redirects',
+    projectName,
   });
-
-  if (link.status === 'error') {
-    return link.exitCode;
-  } else if (link.status === 'not_linked') {
-    if (client.nonInteractive) {
-      const linkCmd = getCommandNamePlain('link');
-      outputAgentError(
-        client,
-        {
-          status: AGENT_STATUS.ERROR,
-          reason: AGENT_REASON.NOT_LINKED,
-          message: `Your codebase isn't linked to a project on Vercel. Run ${linkCmd} to begin.`,
-          next: [{ command: linkCmd }],
-        },
-        1
-      );
-    }
-    output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
-    );
-    return 1;
-  }
-
-  client.config.currentTeam =
-    link.org.type === 'team' ? link.org.id : undefined;
-
-  return link;
 }
 
 export async function confirmAction(

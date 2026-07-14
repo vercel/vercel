@@ -67,6 +67,10 @@ describe('routes list', () => {
 
     await expect(routes(client)).resolves.toEqual(0);
     await expect(client.stderr).toOutput('3 Routes found');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'option:project', value: '[REDACTED]' },
+      { key: 'subcommand:list', value: 'list' },
+    ]);
   });
 
   it('should list routes using ls alias', async () => {

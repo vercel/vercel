@@ -3,8 +3,7 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { resolveProjectContext } from '../../util/projects/resolve-project-context';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { outputAgentError, buildCommandWithYes } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
@@ -13,7 +12,7 @@ import {
   getGlobalFlagsAndProjectFromArgs,
 } from '../../util/arg-common';
 import type { Command } from '../help';
-import { TelemetryClient } from '../../util/telemetry';
+import { ensureProjectLink as ensureProjectLinkForCommand } from '../../util/projects/ensure-project-link';
 import {
   getRouteTypeLabel,
   isTargetTransform,
@@ -140,50 +139,12 @@ export async function parseSubcommandArgs(
   return parsedArgs;
 }
 
-export async function ensureProjectLink(client: Client, projectName?: string) {
-  new TelemetryClient({
-    opts: { store: client.telemetryEventStore },
-  }).trackCliOptionProject(projectName);
-  const link = await resolveProjectContext({
+export function ensureProjectLink(client: Client, projectName?: string) {
+  return ensureProjectLinkForCommand({
     client,
-    projectNameOrId: projectName,
+    commandName: 'routes',
+    projectName,
   });
-
-  if (link.status === 'error') {
-    return link.exitCode;
-  } else if (link.status === 'not_linked') {
-    if (client.nonInteractive) {
-      const flags = getGlobalFlagsAndProjectFromArgs(client.argv.slice(2));
-      const cmd = getCommandNamePlain(`link ${flags.join(' ')}`.trim());
-      outputAgentError(
-        client,
-        {
-          status: AGENT_STATUS.ERROR,
-          reason: AGENT_REASON.NOT_LINKED,
-          userActionRequired: true,
-          message:
-            'Your codebase is not linked to a Vercel project. Run link first, then retry routes commands.',
-          next: [
-            {
-              command: cmd,
-              when: 'to link this directory to a project',
-            },
-          ],
-        },
-        1
-      );
-      return 1;
-    }
-    output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
-    );
-    return 1;
-  }
-
-  client.config.currentTeam =
-    link.org.type === 'team' ? link.org.id : undefined;
-
-  return link;
 }
 
 export async function confirmAction(
