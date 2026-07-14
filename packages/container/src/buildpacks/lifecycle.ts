@@ -1,38 +1,104 @@
 import type { Span } from '@vercel/build-utils';
+import {
+  cpSync,
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  statSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { buildahStorageArgs } from '../storage-driver';
+import { TARGET_PLATFORM } from '../engines/types';
 import type { ContainerEngine, DevOutput } from '../engines/types';
 import { debug, run, step, done, withSpan } from '../util';
 import { builderImageRef, LIFECYCLE_VENDOR_VERSION } from './manifest';
 
 /**
+ * Directories/files that must NOT be copied into the buildpack staging dir.
+ * - host node_modules (pnpm symlink layout) confuses Paketo's npm-install:
+ *   triggers "npm rebuild" path and "isDescendantOf" null errors.
+ * - dist / .vercel / .git / .turbo are build outputs or VCS, not source.
+ * - .pnpm-store is never needed inside container.
+ */
+const STAGE_EXCLUDES = new Set([
+  'node_modules',
+  '.git',
+  '.vercel',
+  '.turbo',
+  '.next',
+  '.output',
+  'dist',
+  '.pnpm-store',
+  '.vercel_build_output',
+]);
+
+function stageWorkspace(src: string): string {
+  const dest = mkdtempSync(join(tmpdir(), 'vercel-bp-work-'));
+  const entries = readdirSync(src);
+  for (const name of entries) {
+    if (STAGE_EXCLUDES.has(name)) continue;
+    if (name === '.DS_Store' || name.endsWith('.log')) continue;
+    const from = join(src, name);
+    const to = join(dest, name);
+    try {
+      const st = statSync(from);
+      if (st.isDirectory()) {
+        cpSync(from, to, {
+          recursive: true,
+          filter: (srcPath: string) =>
+            !srcPath.includes(`${src}/` + 'node_modules'),
+        });
+      } else {
+        cpSync(from, to);
+      }
+    } catch (err) {
+      debug(`stageWorkspace: skip ${name}: ${(err as Error).message}`);
+    }
+  }
+  if (
+    !existsSync(join(dest, 'project.toml')) &&
+    existsSync(join(src, 'project.toml'))
+  ) {
+    try {
+      cpSync(join(src, 'project.toml'), join(dest, 'project.toml'));
+    } catch {}
+  }
+  return dest;
+}
+
+/**
  * Lifecycle-first buildpack path — no `pack` CLI, no host binary.
  *
- * Uses the builder image's embedded `/cnb/lifecycle/creator` via the already
- * selected container engine (docker / podman / podman-private).
+ * Builder image has `/cnb/lifecycle/creator` embedded.
  *
- * Flow (invisible to user):
- *   1. engine already ensures podman-private is installed + machine running on macOS
- *   2. pull builder image (cached by engine's private image store)
- *   3. run: builder /cnb/lifecycle/creator -app=/workspace ...
- *   4. tag output as $devImageTag (e.g. vercel-dev/service:dev)
- *   5. return $tag → existing `engine.devRun` launches it like any other dev image
+ * Local:
+ *   docker        → `docker run -v $work:/workspace -v /var/run/docker.sock:/var/run/docker.sock ... $builder /cnb/lifecycle/creator -daemon ... $tag`
+ *   podman/private→ `podman run -v $work:/workspace -v $layout:/layout ... $builder /cnb/lifecycle/creator --layout --layout-dir=/layout ... $tag` + `podman pull oci:$layout`
  *
- * Reference (pack does approximately the same, but with extra indirection):
- *   https://buildpacks.io/docs/for-app-developers/how-it-works/
- *   `pack build $tag --builder $builder --path $workPath`
- *   expands to roughly:
- *   `docker run --privileged builder /cnb/lifecycle/creator -app=/workspace -cache-dir=...`
+ * Cloud (buildah — P0):
+ *   - Pull builder with `buildah pull --platform linux/amd64 $builder` (storage args from buildahStorageArgs, graphRoot=/vercel/.containers/storage)
+ *   - Run creator daemonless: `buildah run --volume $staged:/workspace --volume $layout:/layout --volume $cache:/cache --env ... $builder -- /cnb/lifecycle/creator -app=/workspace -cache-dir=/cache --layout --layout-dir=/layout $tag`
+ *   - Import OCI layout: `buildah pull oci:$layoutDir` → image exists as $tag in buildah store, ready for `buildah push` (with zstd)
+ *
+ * Zero extra binaries: no pack, no skopeo required for buildah path (podman path keeps skopeo fallback).
  */
+
+export type OutputMode = 'daemon' | 'layout' | 'buildah-layout';
 
 export interface LifecycleBuildParams {
   workPath: string;
   tag: string;
-  /** Project build env forwarded as CNB env vars (BP_*, etc). */
   buildArgs?: Record<string, string>;
-  /** Explicit builder override; defaults to manifest.builderImageRef(). */
   builder?: string;
-  /** Service name, used for cache volume naming. */
   serviceName?: string;
+  outputMode?: OutputMode;
+  /**
+   * true = pass -skip-restore (dev first build, no cache). false/undefined = enable restore (cloud, layer cache reuse).
+   * Default: buildah → false (cloud wants restore), others → true (dev).
+   */
+  skipRestore?: boolean;
 }
 
 export interface LifecycleBuildResult {
@@ -44,14 +110,22 @@ export interface LifecycleBuildResult {
 function mapBuildArgsToEnvFlags(
   buildArgs: Record<string, string> | undefined
 ): string[] {
-  // Buildpacks consume env vars, not --build-arg. Forward everything as -e KEY
-  // plus expose via env file. For lifecycle/creator specifically we pass via
-  // `-e KEY=VAL` into the creator container's env, which buildpacks read.
   const flags: string[] = [];
   for (const [k, v] of Object.entries(buildArgs ?? {})) {
     flags.push('-e', `${k}=${v}`);
   }
   return flags;
+}
+
+function resolveOutputMode(
+  engine: ContainerEngine,
+  explicit?: OutputMode
+): OutputMode {
+  if (explicit) return explicit;
+  if (engine.name === 'buildah') return 'buildah-layout';
+  if (engine.name === 'docker') return 'daemon';
+  if (engine.name.startsWith('podman')) return 'layout';
+  return 'layout';
 }
 
 async function runEngine(
@@ -60,21 +134,22 @@ async function runEngine(
   out: DevOutput,
   opts?: { env?: NodeJS.ProcessEnv }
 ): Promise<void> {
-  // Engine types expose devBuild/devRun as `docker/podman build/run`.
-  // For the creator step we need a generic `run` invocation on the underlying
-  // binary. We re-use util.run with engine's bin + env resolution.
-  //
-  // To stay decoupled, we resolve bin/env from the engine instance via the
-  // same helpers podman.ts uses. For docker engine bin is always "docker".
-  // For podman engines we import private bin/env if isolated.
   const { spawn } = await import('node:child_process');
   const isPodman = engine.name === 'podman' || engine.name === 'podman-private';
+  const isBuildah = engine.name === 'buildah';
 
-  // Resolve underlying bin + env the same way podman.ts factory does.
   let bin: string;
   let env: NodeJS.ProcessEnv | undefined;
-  if (isPodman) {
-    // Dynamic import avoids cycles (private.ts does not import podman.ts).
+  let storagePrepend: string[] = [];
+
+  if (isBuildah) {
+    bin = 'buildah';
+    try {
+      storagePrepend = await buildahStorageArgs();
+    } catch {
+      storagePrepend = [];
+    }
+  } else if (isPodman) {
     const mod = await import('../engines/podman');
     if (engine.name === 'podman-private') {
       bin = mod.privateBin();
@@ -90,10 +165,15 @@ async function runEngine(
     ...(opts?.env ?? env ?? process.env),
   } as NodeJS.ProcessEnv;
 
-  debug(`exec: ${bin} ${args.join(' ')} [buildpack lifecycle]`);
+  // buildah CLI: `buildah [--root ... --runroot ... --registries-conf ... --storage-driver ...] <verb> ...`
+  // verb must come AFTER global storage flags.
+  const execArgs =
+    isBuildah && storagePrepend.length ? [...storagePrepend, ...args] : args;
+
+  debug(`exec: ${bin} ${execArgs.join(' ')} [buildpack lifecycle]`);
 
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(bin, args, {
+    const child = spawn(bin, execArgs, {
       env: mergedEnv,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -118,18 +198,11 @@ async function runEngine(
     });
     child.on('close', code => {
       if (code === 0) resolve();
-      else reject(new Error(`\`${bin} ${args[0]}\` exited ${code}`));
+      else reject(new Error(`\`${bin} ${execArgs[0]}\` exited ${code}`));
     });
   });
 }
 
-/**
- * Build an app directory into an OCI image using lifecycle/creator inside
- * the builder image — no host pack binary required.
- *
- * Invisible to the user: called from `resolveDevImage` when no Dockerfile is
- * found but source markers indicate a buildpack project.
- */
 export async function buildWithLifecycle(
   engine: ContainerEngine,
   params: LifecycleBuildParams,
@@ -148,20 +221,34 @@ export async function buildWithLifecycle(
     },
     async s => {
       const builder = params.builder ?? builderImageRef();
-      const cacheVol = `vercel-bp-cache-${(
-        params.serviceName ?? 'app'
-      ).toLowerCase()}`;
-      // Ephemeral layer cache directory inside a named volume — lifecycle writes
-      // buildpack layer cache here; volume survives across dev rebuilds for faster
-      // incremental builds. Second mount is source + result image tag.
+      const outputMode = resolveOutputMode(engine, params.outputMode);
+      const isPodmanLike = engine.name.startsWith('podman');
+      const isDocker = engine.name === 'docker';
+      const isBuildah = engine.name === 'buildah';
+      const isLayout =
+        outputMode === 'layout' || outputMode === 'buildah-layout';
 
-      // Ensure builder is pulled (engine's pull is cached; first pull ~300MB on
-      // jammy-base, subsequent is instant). Use engine login flow if builder is
-      // in a private registry (future: GHCR auth via OIDC).
-      step(`Pulling buildpack builder ${builder} (first run ~300MB, cached)`);
+      const cacheVol = `vercel-bp-cache-${(params.serviceName ?? 'app').toLowerCase()}`;
+
+      const wantPlatform = isBuildah
+        ? TARGET_PLATFORM
+        : process.arch === 'arm64'
+          ? 'linux/arm64'
+          : 'linux/amd64';
+
+      // ── pull builder (cache by engine image store) ─────────────────
+      step(
+        `Pulling buildpack builder ${builder} (first run ~300MB, cached, platform=${wantPlatform})`
+      );
       try {
-        if (engine.name === 'podman' || engine.name === 'podman-private') {
-          // Podman pull via internal run helper so we reuse privateEnv().
+        if (isBuildah) {
+          // buildah pull with storage args, platform forced to linux/amd64
+          await runEngine(
+            engine,
+            ['pull', '--platform', wantPlatform, builder],
+            out
+          );
+        } else if (isPodmanLike) {
           const { privateBin, privateEnv } = await import('../engines/podman');
           const bin =
             engine.name === 'podman-private' ? privateBin() : 'podman';
@@ -169,193 +256,262 @@ export async function buildWithLifecycle(
             engine.name === 'podman-private'
               ? (privateEnv() as NodeJS.ProcessEnv)
               : undefined;
-          await run(bin, ['pull', builder], {
+          await run(bin, ['pull', '--platform', wantPlatform, builder], {
             env,
             quiet: false,
           });
         } else {
-          await run('docker', ['pull', builder], { quiet: false });
+          await run('docker', ['pull', '--platform', wantPlatform, builder], {
+            quiet: false,
+          });
         }
         done(`builder ready: ${builder}`);
-        s?.setAttributes({ 'buildpack.builder_pulled': 'true' });
+        s?.setAttributes({
+          'buildpack.builder_pulled': 'true',
+          'buildpack.output_mode': outputMode,
+        });
       } catch (err) {
         debug(
           `builder pull failed (may already be cached / network issue): ${(err as Error).message}`
         );
-        // lifecycle creator will fail quickly with a clear message if builder
-        // image is genuinely missing; don't block here.
         s?.setAttributes({
           'buildpack.builder_pull_error': (err as Error).message,
         });
+        // Don't fail the build if pull fails but image already exists locally.
+        // runEngine will fail later with a clearer error if the image is truly missing.
       }
 
-      // Creator invocation.
-      //
-      // Notes:
-      // - --privileged is often required by Paketo builders for certain buildpacks (apt, etc).
-      //   Podman rootless needs --privileged for reexec helpers. Match `pack build --trust-builder`.
-      // - CNB platform dir /platform/env is populated from our buildArgs env.
-      // - We mount the app at /workspace (CNB convention).
-      // - We run as the same UID (Paketo builders expect non-root 1000/vcap).
-      // - -v cache: lifecycle writes layer + launch caches there for incremental builds.
-      // - Image is written to daemon via `creator` (default). No export needed.
-      //
-      // Authoritative lifecycle docs:
-      //   https://buildpacks.io/docs/for-app-developers/how-it-works/
-      //   /cnb/lifecycle/creator -help
-      //
-      // To discover creator flags on a repo with Docker:
-      //   docker run --rm --entrypoint /cnb/lifecycle/creator $builder --help
+      // ── staging ───────────────────────────────────────────────────
+      let stagedDir: string | undefined;
+      let effectiveWorkPath = params.workPath;
+      try {
+        stagedDir = stageWorkspace(params.workPath);
+        effectiveWorkPath = stagedDir;
+        debug(
+          `buildpack staging dir: ${stagedDir} (filtered copy of ${params.workPath})`
+        );
+      } catch (err) {
+        debug(
+          `buildpack stage copy failed, falling back to direct mount: ${(err as Error).message}`
+        );
+      }
 
       const envFlags = mapBuildArgsToEnvFlags(params.buildArgs);
-
-      // Buildpack caches volume (named, so it survives `vercel dev` restarts).
-      // Podman --rm doesn't remove named volumes, only anonymous. Good: faster rebuilds.
-      const cacheMount = `${cacheVol}:/cache`;
-      const cacheArgs =
-        engine.name.startsWith('podman') && process.platform === 'win32'
-          ? [] // Windows filter: named volume fine, just not path syntax adjacent issues.
-          : ['-v', cacheMount];
-
-      // For dev we want the final app image to run with PORT env injected via --env-file
-      // later (dev.go's merge). So creator doesn't need PORT; dev.ts will inject it at run time.
-
-      const creatorArgs = [
-        'run',
-        '--rm',
-        // Lifecycle reads CNB platform env from /platform/env automatically; we pass
-        // build args as container env (-e) so buildpacks can consume them (BP_NODE_VERSION etc).
-        ...envFlags,
-        '-v',
-        `${params.workPath}:/workspace:ro`,
-        ...cacheArgs,
-        // Output image: `creator` as of lifecycle 0.14+ can write to daemon directly when run in a
-        // container that can talk to docker.sock. We instead use the "daemonless" local export pattern:
-        // mount the Docker/Podman socket so creator can push to daemon. For Podman the socket path
-        // is engine-managed in privateEnv() (CONTAINER_HOST not set, Podman finds it via XDG runtime).
-        //
-        // Simpler invariant for v1: use `--privileged --env DOCKER_HOST` passthrough — Paketo's run image
-        // doesn't need it, but some buildpacks invoke docker themselves during build for sidecars.
-        // We keep it off by default; enable if buildpacks require it.
-        //
-        // Output: final image is written via `-cache-image` + local export. For dev we want a local
-        // image tag, so we rely on builder having `creator` that writes to the daemon we run against
-        // when we mount the engine socket.
+      const npmWorkaroundFlags: string[] = [
+        '-e',
+        'NPM_CONFIG_CACHE=/tmp/npmcache',
+        '-e',
+        'BP_NPM_VERSION=11.4.2',
+        '-e',
+        'COREPACK_ENABLE_DOWNLOAD_PROMPT=0',
       ];
 
-      // Socket mount: needed so the creator process inside the builder image can
-      // push the resulting app image back into the host engine's image store.
-      // Podman-private keeps its socket under XDG_RUNTIME_DIR inside private data dir.
-      if (engine.name === 'podman-private') {
-        const { privateDataDir } = await import('../engines/podman');
-        const sockPaths = [
-          join(privateDataDir(), 'podman', 'machine', 'vercel', 'podman.sock'),
-          join(privateDataDir(), 'run', 'podman', 'podman.sock'),
-        ];
-        // Podman Machine (macOS) socket lives somewhere under privateDataDir.
-        // Try a shallow search if fixed paths miss.
-        let sock = sockPaths.find(p => {
-          try {
-            const { existsSync: ex } =
-              require('node:fs') as typeof import('node:fs');
-            return ex(p);
-          } catch {
-            return false;
-          }
-        });
-        if (!sock) {
-          try {
-            const { readdirSync, existsSync: ex } = await import('node:fs');
-            const base = join(privateDataDir(), 'podman', 'machine');
-            if (ex(base)) {
-              const entries = readdirSync(base);
-              for (const e of entries) {
-                const cand = join(base, e, 'podman.sock');
-                if (ex(cand)) {
-                  sock = cand;
-                  break;
-                }
-              }
-            }
-          } catch {}
-        }
-        if (sock) {
-          creatorArgs.push('-v', `${sock}:/run/podman/podman.sock`);
-          creatorArgs.push('-e', 'DOCKER_HOST=unix:///run/podman/podman.sock');
-        }
-      } else if (engine.name === 'podman') {
-        try {
-          const { existsSync: ex } = await import('node:fs');
-          const candidates = [
-            `${process.env.XDG_RUNTIME_DIR ?? `/run/user/${process.getuid?.() ?? 1000}`}/podman/podman.sock`,
-            `${process.env.HOME}/.local/share/containers/podman/machine/podman.sock`,
-          ];
-          const sock = candidates.find(p => {
-            try {
-              return ex(p);
-            } catch {
-              return false;
-            }
-          });
-          if (sock) {
-            creatorArgs.push('-v', `${sock}:/run/podman/podman.sock`);
-            creatorArgs.push(
-              '-e',
-              'DOCKER_HOST=unix:///run/podman/podman.sock'
-            );
-          }
-        } catch {}
+      // buildah run does NOT support --platform or --rm (container is transient by default in buildah run).
+      // docker/podman do.
+      const platformFlag = isBuildah
+        ? []
+        : isDocker || isPodmanLike
+          ? ['--platform', wantPlatform]
+          : [];
+      const runExtra = isBuildah ? [] : ['--rm'];
+
+      const workspaceMount = `${effectiveWorkPath}:/workspace:ro`;
+
+      // cache mount: docker/podman use named volume, buildah uses host tmpdir (daemonless, no volume abstraction needed for P0)
+      let cacheArgs: string[] = [];
+      let buildahCacheDir: string | undefined;
+      if (isBuildah) {
+        buildahCacheDir = mkdtempSync(join(tmpdir(), 'vercel-bp-cache-'));
+        cacheArgs = ['-v', `${buildahCacheDir}:/cache`];
+        debug(`buildpack buildah cache dir: ${buildahCacheDir}`);
       } else {
-        // docker-engine: mount docker.sock so creator can write final image to daemon
+        const cacheMount = `${cacheVol}:/cache`;
+        cacheArgs =
+          isPodmanLike && process.platform === 'win32'
+            ? []
+            : ['-v', cacheMount];
+      }
+
+      // buildah run: `buildah run [options] <ctr-or-image> [--] <command>`
+      // Must separate run options / image from creator command with explicit `--` so buildah doesn't try to parse
+      // creator flags as its own.
+      const creatorArgs: string[] = [
+        'run',
+        ...runExtra,
+        ...platformFlag,
+        ...envFlags,
+        ...npmWorkaroundFlags,
+        '-v',
+        workspaceMount,
+      ];
+
+      if (cacheArgs.length) creatorArgs.push(...cacheArgs);
+
+      if (isDocker) {
         const dockerSock = '/var/run/docker.sock';
         try {
-          const { existsSync: ex } = await import('node:fs');
-          if (ex(dockerSock)) {
+          if (existsSync(dockerSock)) {
             creatorArgs.push('-v', `${dockerSock}:/var/run/docker.sock`);
           }
         } catch {}
       }
 
-      // The actual creator invocation inside the builder.
+      creatorArgs.push('-e', 'CNB_PLATFORM_API=0.13');
+      creatorArgs.push('-e', 'CNB_EXPERIMENTAL_MODE=warn');
+
+      let layoutHostDir: string | undefined;
+      if (isLayout) {
+        layoutHostDir = mkdtempSync(join(tmpdir(), 'vercel-bp-layout-'));
+        debug(`buildpack layout dir: ${layoutHostDir}`);
+        creatorArgs.push('-v', `${layoutHostDir}:/layout`);
+      }
+
+      // skip-restore logic: cloud (buildah) wants restore enabled for layer cache reuse (prepareCache + buildah store warm).
+      // dev wants skip-restore for first build (empty volume).
+      const shouldSkipRestore =
+        params.skipRestore !== undefined ? params.skipRestore : !isBuildah;
+
+      if (isBuildah) {
+        creatorArgs.push(builder, '--', '/cnb/lifecycle/creator');
+      } else {
+        creatorArgs.push(builder, '/cnb/lifecycle/creator');
+      }
       creatorArgs.push(
-        builder,
-        '/cnb/lifecycle/creator',
         '-app=/workspace',
         '-cache-dir=/cache',
-        // Launch cache dir defaults to /cache inside volume; reuse same volume for both.
-        '-launch-cache-dir=/cache',
-        // Previous image for restore/dedupe — intentionally omitted on first build,
-        // lifecycle RESTORE will skip cleanly if not provided. We can add
-        // `-skip-restore` on first build for speed later.
+        ...(shouldSkipRestore ? ['-skip-restore'] : []),
+        ...(isLayout
+          ? (['--layout', '--layout-dir=/layout'] as string[])
+          : (['-daemon'] as string[])),
         params.tag
       );
 
-      step(`Building with buildpacks (${builder}) → ${params.tag}`);
+      step(
+        `Building with buildpacks (${builder}) → ${params.tag} [${outputMode}]`
+      );
       try {
         await runEngine(engine, creatorArgs, out);
-        done(`built ${params.tag} via buildpack lifecycle`);
+
+        if (isLayout && layoutHostDir) {
+          step(`Importing buildpack image ${params.tag} from OCI layout`);
+          if (isBuildah) {
+            // buildah stores images in its own store under /vercel/.containers/storage in cloud.
+            // `buildah pull oci:$dir` imports the layout-dir written by creator.
+            try {
+              await runEngine(
+                engine,
+                ['pull', '--quiet', `oci:${layoutHostDir}`],
+                out
+              );
+              // Ensure the imported image is addressable by the expected tag.
+              // Creator writes index.json with `org.opencontainers.image.ref.name=$tag`, so pull should already tag it,
+              // but we tag explicitly to be safe — idempotent.
+              await runEngine(
+                engine,
+                ['tag', params.tag, params.tag],
+                out
+              ).catch(() => {});
+            } finally {
+              try {
+                rmSync(layoutHostDir, { recursive: true, force: true });
+              } catch {}
+              if (buildahCacheDir) {
+                try {
+                  rmSync(buildahCacheDir, { recursive: true, force: true });
+                } catch {}
+              }
+            }
+          } else {
+            // podman / podman-private path (local dev) — existing logic with skopeo fallback.
+            try {
+              const { privateBin, privateEnv } = await import(
+                '../engines/podman'
+              );
+              const bin =
+                engine.name === 'podman-private' ? privateBin() : 'podman';
+              const env =
+                engine.name === 'podman-private'
+                  ? (privateEnv() as NodeJS.ProcessEnv)
+                  : undefined;
+
+              await run(bin, ['pull', '--quiet', `oci:${layoutHostDir}`], {
+                env,
+                quiet: false,
+              });
+              await run(bin, ['tag', params.tag, params.tag], {
+                env,
+                quiet: true,
+              }).catch(() => {});
+            } catch (importErr) {
+              debug(
+                `OCI layout import failed, falling back to skopeo: ${(importErr as Error).message}`
+              );
+              try {
+                await run(
+                  'skopeo',
+                  [
+                    'copy',
+                    `oci:${layoutHostDir}`,
+                    `containers-storage:${params.tag}`,
+                  ],
+                  { quiet: false }
+                );
+              } catch (skopeoErr) {
+                throw new Error(
+                  `OCI layout at ${layoutHostDir} could not be imported as ${params.tag}: ${(importErr as Error).message}. skopeo fallback also failed: ${(skopeoErr as Error).message}`
+                );
+              }
+            } finally {
+              try {
+                rmSync(layoutHostDir, { recursive: true, force: true });
+              } catch {}
+            }
+          }
+        }
+
+        done(`built ${params.tag} via buildpack lifecycle [${outputMode}]`);
       } catch (err) {
         const msg = (err as Error).message;
-        // Provide actionable diagnostics for common failure modes.
+        for (const d of [stagedDir, layoutHostDir, buildahCacheDir]) {
+          if (!d) continue;
+          try {
+            rmSync(d, { recursive: true, force: true });
+          } catch {}
+        }
         const hint = /no space left|disk quota/i.test(msg)
           ? `\n\nBuildpack builder cache volume "${cacheVol}" may be full. Try:\n  ${engine.name === 'docker' ? 'docker' : 'podman'} volume rm ${cacheVol}\n  and re-run vercel dev.`
           : /permission denied|socket/i.test(msg)
             ? `\n\nLifecycle could not write the image to the container engine.\nEnsure ${engine.name} is running and its socket is accessible, then re-run vercel dev.`
             : /detect.*fail|no.*buildpack.*detected/i.test(msg)
               ? `\n\nNo buildpack matched this project. Ensure it has a language marker (package.json, requirements.txt, go.mod, etc) or add a project.toml.\nAdd a Dockerfile to disable buildpack detection and use Docker instead.`
-              : '';
+              : /sizeCalculation|maxSize|maxEntrySize|lru-cache/i.test(msg)
+                ? `\n\nHit known npm/cacache bug with Node ≥22 / npm ≥10.9 in Paketo npm-install 2.3.25.\nWorkaround (applied by @vercel/container now): sets NPM_CONFIG_CACHE=/tmp/npmcache\nand BP_NPM_VERSION=11.4.2; staging removes host node_modules. If it persists, try:\n  rm -rf node_modules dist && npm i --package-lock-only && vercel dev\nand ensure you're on @vercel/container ≥ with this fix.`
+                : '';
         throw new Error(
           [
-            `Buildpack build failed via lifecycle/creator (${builder}).`,
+            `Buildpack build failed via lifecycle/creator (${builder}) [${outputMode}].`,
             '',
-            `Command roughly: ${engine.name === 'docker' ? 'docker' : 'podman'} run --rm -v $PWD:/workspace ${builder} /cnb/lifecycle/creator -app=/workspace … ${params.tag}`,
+            `Command roughly: ${engine.name} run --rm -v $PWD:/workspace ${builder} /cnb/lifecycle/creator -app=/workspace … ${params.tag}`,
             '',
             `Underlying error: ${msg}${hint}`,
             '',
-            `Buildpack project is ${params.workPath}`,
+            `Buildpack project is ${params.workPath}${stagedDir ? ` (staged as ${stagedDir})` : ''}`,
             `To disable buildpacks for this project, add an empty Dockerfile.`,
           ].join('\n')
         );
+      }
+
+      for (const d of [stagedDir, buildahCacheDir]) {
+        if (!d) continue;
+        try {
+          rmSync(d, { recursive: true, force: true });
+        } catch {}
+      }
+      // layoutHostDir already cleaned in import block; double-clean safe.
+      if (layoutHostDir) {
+        try {
+          rmSync(layoutHostDir, { recursive: true, force: true });
+        } catch {}
       }
 
       return {

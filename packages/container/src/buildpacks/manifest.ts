@@ -18,6 +18,10 @@
  *   VERCEL_BUILDPACK_BUILDER=ghcr.io/my/org/builder:dev
  */
 
+// jammy-base is multi-arch (amd64+arm64) but some mirrors/shims still only have
+// amd64. Default to the canonical multi-arch ref — engine pull will grab host arch
+// when the manifest list exists, else fall back to amd64 container (still runs under
+// podman machine's linux/arm64 VM via qemu if needed, slower but works).
 const DEFAULT_BUILDER = 'paketobuildpacks/builder-jammy-base:latest';
 
 // For lifecycle version tracking / diagnostics only — not downloaded directly

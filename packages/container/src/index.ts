@@ -131,9 +131,35 @@ async function buildViaBuildpackAndPush(params: {
           s => engine.ensureReady(s)
         );
 
+        await withSpan(
+          buildSpan,
+          'container.toolchain_diagnostics',
+          { 'container.engine': engine.name },
+          s => engine.logDiagnostics(s)
+        );
+
+        await withSpan(
+          buildSpan,
+          'container.verify_storage',
+          { 'container.engine': engine.name },
+          s => engine.verifyStorage?.(s) ?? Promise.resolve()
+        );
+
         const forceLogin =
           readString(process.env.VERCEL_VCR_FORCE_LOGIN) === '1';
         const authFile = forceLogin ? undefined : existingRegistryAuthFile();
+        const buildParams: BuildPushParams = {
+          contextDir: params.workPath,
+          dockerfilePath: `${params.workPath}/Dockerfile`,
+          imageRef,
+          registry: VCR_REGISTRY,
+          username,
+          token,
+          repository: params.repository,
+          buildArgs: params.buildArgs,
+          span: buildSpan,
+        };
+
         if (!authFile) {
           step(`Authenticating to ${VCR_REGISTRY} as ${username}`);
           await withSpan(
@@ -143,20 +169,17 @@ async function buildViaBuildpackAndPush(params: {
               'container.registry': VCR_REGISTRY,
               'registry.username': username,
             },
-            () =>
-              engine.login({
-                contextDir: params.workPath,
-                dockerfilePath: `${params.workPath}/Dockerfile`,
-                imageRef,
-                registry: VCR_REGISTRY,
-                username,
-                token,
-                repository: params.repository,
-                buildArgs: params.buildArgs,
-                span: buildSpan,
-              })
+            () => engine.login(buildParams)
           );
           done('authenticated');
+        } else {
+          debug(`registry auth file present: ${authFile}`);
+          step(`Using registry credentials from ${authFile}`);
+          buildSpan?.setAttributes({
+            'registry.auth_file': authFile,
+            'registry.login_skipped': toTag(true),
+          });
+          done('authenticated via provisioned credentials');
         }
 
         await withSpan(
@@ -172,60 +195,61 @@ async function buildViaBuildpackAndPush(params: {
           `buildpack build (platform=${TARGET_PLATFORM}, builder=${builder})`
         );
 
-        // lifecycle/creator lives INSIDE the builder image at /cnb/lifecycle/creator.
-        // No host pack binary to vendor — matches the podman-private pattern:
-        // private engine (docker/podman/podman-private) is already selected via
-        // selectContainerEngine() and is already available through withRuntime.
-        const isBuild = Boolean(process.env.VERCEL_BUILD_IMAGE);
-        if (isBuild) {
+        // Unified lifecycle path — works for buildah (cloud P0), docker, and podman.
+        // buildWithLifecycle handles staging (filtered copy to avoid node_modules
+        // symlink contamination), env mapping, platform, OCI layout export, and
+        // CNB experimental flags. Cloud uses buildah-layout mode:
+        //   builder pull → buildah run --volume $staged:/workspace -v $layout:/layout
+        //   ... /cnb/lifecycle/creator --layout --layout-dir=/layout ... $tag
+        //   → buildah pull oci:$layout (import) → buildah tag (idempotent)
+        // Image ends up in engine's store as `params.tag`, same as docker build.
+        const { buildWithLifecycle } = await import('./buildpacks/lifecycle');
+
+        // For cloud push we need the image tagged as `imageRef` (vcr.vercel.com/...) too,
+        // so `engine.push(imageRef)` works whether the lifecycle output was $tag or layout-imported.
+        // For buildah the outputMode is buildah-layout → output is already in same buildah store;
+        // for docker it's `daemon` (image store), for podman it's `layout` (podman store).
+        //
+        // After lifecycle, ensure imageRef exists: `buildah tag $tag $imageRef` / `docker tag` / `podman tag`.
+        // Then push can proceed as usual with engine.push.
+        await buildWithLifecycle(
+          engine,
+          {
+            workPath: params.workPath,
+            tag: params.tag,
+            buildArgs: params.buildArgs,
+            serviceName: params.repository,
+            // buildah (cloud) → buildah-layout (OCI layout export → import), enable restore for layer cache reuse
+            // docker/podman paths also valid via explicit engine override, but local dev prefers `layout`/`daemon`
+            outputMode:
+              engine.name === 'buildah' ? 'buildah-layout' : undefined,
+            skipRestore: false, // cloud: enable restore so prepareCache + warm store actually reuse layers
+          },
+          { onStdout: undefined, onStderr: undefined },
+          buildSpan
+        );
+
+        // Tag local tag → full vcr ref so push can find it. This is safe/idempotent for all engines.
+        // buildah's storage args are injected inside buildWithLifecycle/runEngine already; here we go direct
+        // via engine abstraction path by using `run` with buildahStorageArgs for symmetry, or just `engine` wrapper.
+        // Simplest: reuse `run` helper with explicit bin; buildah path appends storage args via buildahStorageArgs wrapper
+        // in runEngine, but outside lifecycle we need to handle storage ourselves.
+        if (params.tag !== imageRef) {
           const { run: runCmd } = await import('./util');
-          await runCmd('buildah', ['pull', builder], { quiet: false });
-          const envFlags: string[] = [];
-          for (const [k, v] of Object.entries(params.buildArgs ?? {})) {
-            envFlags.push('--env', `${k}=${v}`);
+          if (engine.name === 'buildah') {
+            const { buildahStorageArgs: storageArgs } = await import(
+              './storage-driver'
+            );
+            const sargs = await storageArgs();
+            await runCmd('buildah', [...sargs, 'tag', params.tag, imageRef], {
+              quiet: true,
+            }).catch(() => {});
+          } else {
+            const bin = engine.name === 'docker' ? 'docker' : 'podman';
+            await runCmd(bin, ['tag', params.tag, imageRef], {
+              quiet: true,
+            }).catch(() => {});
           }
-          await runCmd(
-            'buildah',
-            [
-              'run',
-              '--volume',
-              `${params.workPath}:/workspace:ro`,
-              ...envFlags,
-              builder,
-              '--',
-              '/cnb/lifecycle/creator',
-              '-app=/workspace',
-              params.tag,
-            ],
-            { quiet: false }
-          );
-          await runCmd('buildah', ['tag', params.tag, imageRef], {
-            quiet: false,
-          });
-        } else {
-          const { buildWithLifecycle } = await import('./buildpacks/lifecycle');
-          const shimEngine = { name: engine.name } as any;
-          await buildWithLifecycle(
-            shimEngine,
-            {
-              workPath: params.workPath,
-              tag: params.tag,
-              buildArgs: params.buildArgs,
-              serviceName: params.repository,
-            },
-            { onStdout: undefined, onStderr: undefined },
-            buildSpan
-          );
-          const { run: runCmd } = await import('./util');
-          const bin =
-            engine.name === 'docker'
-              ? 'docker'
-              : engine.name === 'buildah'
-                ? 'buildah'
-                : 'podman';
-          await runCmd(bin, ['tag', params.tag, imageRef], {
-            quiet: true,
-          }).catch(() => {});
         }
 
         done(`built in ${elapsed(buildStart)}`);
@@ -236,23 +260,19 @@ async function buildViaBuildpackAndPush(params: {
           buildSpan,
           'container.push',
           { 'image.ref': imageRef },
-          () =>
-            engine.push({
-              contextDir: params.workPath,
-              dockerfilePath: `${params.workPath}/Dockerfile`,
-              imageRef,
-              registry: VCR_REGISTRY,
-              username,
-              token,
-              repository: params.repository,
-              buildArgs: params.buildArgs,
-              span: buildSpan,
-            })
+          () => engine.push(buildParams)
         );
         done(
           digest
             ? `pushed ${shortDigest(digest)} in ${elapsed(pushStart)}`
             : `pushed in ${elapsed(pushStart)}`
+        );
+
+        await withSpan(
+          buildSpan,
+          'container.report_storage',
+          { 'container.engine': engine.name },
+          s => engine.reportStorage?.(s) ?? Promise.resolve()
         );
 
         const resolvedRef = digest
