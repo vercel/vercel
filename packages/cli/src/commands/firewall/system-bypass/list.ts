@@ -6,6 +6,7 @@ import {
   parseSubcommandArgs,
   ensureProjectLink,
   outputJson,
+  resolveJsonOutput,
   withGlobalFlags,
 } from '../shared';
 import getBypass from '../../../util/firewall/get-bypass';
@@ -23,6 +24,9 @@ export default async function list(client: Client, argv: string[]) {
     'system-bypass list'
   );
   if (typeof parsed === 'number') return parsed;
+
+  const outputFormat = resolveJsonOutput(parsed.flags);
+  if (typeof outputFormat === 'number') return outputFormat;
 
   const link = await ensureProjectLink(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
@@ -42,7 +46,7 @@ export default async function list(client: Client, argv: string[]) {
     // Filter out system mitigations bypass entries (0.0.0.0/0, ::/0)
     const bypasses = allBypasses.filter(b => !isAllSourcesBypass(b.Ip));
 
-    if (parsed.flags['--json']) {
+    if (outputFormat.jsonOutput) {
       outputJson(client, bypasses);
       return 0;
     }

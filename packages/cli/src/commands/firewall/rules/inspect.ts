@@ -7,6 +7,7 @@ import {
   ensureProjectLink,
   resolveRule,
   outputJson,
+  resolveJsonOutput,
   withGlobalFlags,
 } from '../shared';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
@@ -21,6 +22,9 @@ export default async function inspect(client: Client, argv: string[]) {
     'rules inspect'
   );
   if (typeof parsed === 'number') return parsed;
+
+  const outputFormat = resolveJsonOutput(parsed.flags);
+  if (typeof outputFormat === 'number') return outputFormat;
 
   const identifier = parsed.args[0];
   if (!identifier) {
@@ -142,7 +146,7 @@ export default async function inspect(client: Client, argv: string[]) {
       rule = selected;
     }
 
-    if (parsed.flags['--json']) {
+    if (outputFormat.jsonOutput) {
       outputJson(client, rule);
       return 0;
     }

@@ -154,4 +154,25 @@ describe('firewall overview', () => {
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
   });
+
+  it.each([
+    ['--format=json'],
+    ['--format', 'json'],
+    ['--json', '--format=json'],
+  ])('should output JSON with %s', async (...args) => {
+    const active = createConfig({ firewallEnabled: true });
+    useListFirewallConfigs(active, null);
+    useGetBypass([]);
+
+    client.setArgv('firewall', 'overview', ...args);
+    await expect(firewall(client)).resolves.toEqual(0);
+    expect(() => JSON.parse(client.stdout.getFullOutput())).not.toThrow();
+  });
+
+  it('should reject an unsupported output format before fetching the project', async () => {
+    client.setArgv('firewall', 'overview', '--format', 'yaml');
+
+    await expect(firewall(client)).resolves.toEqual(2);
+    await expect(client.stderr).toOutput('Invalid output format: "yaml"');
+  });
 });

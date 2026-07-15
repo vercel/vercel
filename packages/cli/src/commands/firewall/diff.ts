@@ -6,6 +6,7 @@ import {
   parseSubcommandArgs,
   ensureProjectLink,
   outputJson,
+  resolveJsonOutput,
   withGlobalFlags,
 } from './shared';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
@@ -15,6 +16,9 @@ import { outputAgentError } from '../../util/agent-output';
 export default async function diff(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, diffSubcommand, client);
   if (typeof parsed === 'number') return parsed;
+
+  const outputFormat = resolveJsonOutput(parsed.flags);
+  if (typeof outputFormat === 'number') return outputFormat;
 
   const link = await ensureProjectLink(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
@@ -30,7 +34,7 @@ export default async function diff(client: Client, argv: string[]) {
     });
 
     if (!draft || draft.changes.length === 0) {
-      if (parsed.flags['--json']) {
+      if (outputFormat.jsonOutput) {
         outputJson(client, { changes: [] });
         return 0;
       }
@@ -38,7 +42,7 @@ export default async function diff(client: Client, argv: string[]) {
       return 0;
     }
 
-    if (parsed.flags['--json']) {
+    if (outputFormat.jsonOutput) {
       outputJson(client, { changes: draft.changes });
       return 0;
     }

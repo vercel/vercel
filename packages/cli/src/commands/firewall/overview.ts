@@ -6,6 +6,7 @@ import {
   parseSubcommandArgs,
   ensureProjectLink,
   outputJson,
+  resolveJsonOutput,
   withGlobalFlags,
 } from './shared';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
@@ -20,6 +21,9 @@ import type { ProjectSecurityResponse } from '../../util/firewall/types';
 export default async function overview(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, overviewSubcommand, client);
   if (typeof parsed === 'number') return parsed;
+
+  const outputFormat = resolveJsonOutput(parsed.flags);
+  if (typeof outputFormat === 'number') return outputFormat;
 
   const link = await ensureProjectLink(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
@@ -46,7 +50,7 @@ export default async function overview(client: Client, argv: string[]) {
       activeUntil: freshProject.security?.attackModeActiveUntil,
     };
 
-    if (parsed.flags['--json']) {
+    if (outputFormat.jsonOutput) {
       outputJson(client, {
         active,
         draft,

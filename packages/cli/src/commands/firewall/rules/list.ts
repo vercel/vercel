@@ -6,6 +6,7 @@ import {
   parseSubcommandArgs,
   ensureProjectLink,
   outputJson,
+  resolveJsonOutput,
   withGlobalFlags,
 } from '../shared';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
@@ -24,6 +25,9 @@ export default async function list(client: Client, argv: string[]) {
     'rules list'
   );
   if (typeof parsed === 'number') return parsed;
+
+  const outputFormat = resolveJsonOutput(parsed.flags);
+  if (typeof outputFormat === 'number') return outputFormat;
 
   const link = await ensureProjectLink(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
@@ -44,7 +48,7 @@ export default async function list(client: Client, argv: string[]) {
 
     const annotated = annotateRules(activeRules, draftRules, changes);
 
-    if (parsed.flags['--json']) {
+    if (outputFormat.jsonOutput) {
       outputJson(client, {
         rules: annotated.map(a => ({
           ...a.rule,

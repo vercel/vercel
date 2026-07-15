@@ -20,6 +20,7 @@ import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import activateFirewallConfig from '../../util/firewall/activate-firewall-config';
 import stamp from '../../util/output/stamp';
 import { ensureProjectLink as ensureProjectLinkForCommand } from '../../util/projects/ensure-project-link';
+import { validateJsonOutput } from '../../util/output-format';
 
 /**
  * Plain suggested command with global flags from argv (--cwd, --non-interactive, etc.).
@@ -114,6 +115,18 @@ export async function confirmAction(
 export function outputJson(client: Client, data: unknown): void {
   output.stopSpinner();
   client.stdout.write(JSON.stringify(data, null, 2) + '\n');
+}
+
+export function resolveJsonOutput(flags: {
+  '--format'?: string;
+  '--json'?: boolean;
+}): { jsonOutput: boolean } | number {
+  const result = validateJsonOutput(flags);
+  if (!result.valid) {
+    output.error(result.error);
+    return 2;
+  }
+  return { jsonOutput: result.jsonOutput };
 }
 
 /**

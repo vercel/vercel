@@ -1,5 +1,10 @@
 import { packageName } from '../../util/pkg-name';
-import { projectOption, yesOption } from '../../util/arg-common';
+import {
+  formatOption,
+  jsonOption,
+  projectOption,
+  yesOption,
+} from '../../util/arg-common';
 
 export const overviewSubcommand = {
   name: 'overview',
@@ -7,16 +12,7 @@ export const overviewSubcommand = {
   description:
     "Show a summary of your project's firewall configuration, including active rules, IP blocks, bypasses, and any unpublished draft changes",
   arguments: [],
-  options: [
-    projectOption,
-    {
-      name: 'json',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      description: 'Output as JSON',
-    },
-  ],
+  options: [projectOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Show firewall overview',
@@ -31,16 +27,7 @@ export const diffSubcommand = {
   description:
     'Show draft changes that have been made but are not yet published to production',
   arguments: [],
-  options: [
-    projectOption,
-    {
-      name: 'json',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      description: 'Output as JSON',
-    },
-  ],
+  options: [projectOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Show unpublished changes',
@@ -94,16 +81,7 @@ export const systemBypassListSubcommand = {
   description:
     'List all system bypass rules that allow specific IPs to skip firewall checks',
   arguments: [],
-  options: [
-    projectOption,
-    {
-      name: 'json',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      description: 'Output as JSON',
-    },
-  ],
+  options: [projectOption, formatOption, jsonOption],
   examples: [
     {
       name: 'List bypass rules',
@@ -208,16 +186,7 @@ export const ipBlocksListSubcommand = {
   description:
     'List all IP blocking rules, including any unpublished draft changes',
   arguments: [],
-  options: [
-    projectOption,
-    {
-      name: 'json',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      description: 'Output as JSON',
-    },
-  ],
+  options: [projectOption, formatOption, jsonOption],
   examples: [
     {
       name: 'List IP blocking rules',
@@ -347,13 +316,8 @@ export const rulesListSubcommand = {
       deprecated: false,
       description: 'Show full condition details for each rule',
     },
-    {
-      name: 'json',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      description: 'Output as JSON',
-    },
+    formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -373,16 +337,7 @@ export const rulesInspectSubcommand = {
   description:
     'Show the full configuration of a custom firewall rule, including conditions, action, and rate limit settings',
   arguments: [{ name: 'name-or-id', required: true }],
-  options: [
-    projectOption,
-    {
-      name: 'json',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      description: 'Output as JSON',
-    },
-  ],
+  options: [projectOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Inspect a rule by name',
