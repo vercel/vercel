@@ -13,6 +13,48 @@ const DEFAULT_CLI_SRC_ROOT = path.resolve(
   '../../'
 );
 
+/**
+ * Display command name → on-disk directory under `commands/` / `util/`.
+ * (`vc connect` lives in `commands/connex/`.)
+ */
+const COMMAND_DIR_ALIASES: Readonly<Record<string, string>> = {
+  connect: 'connex',
+};
+
+/**
+ * Per top-level command: leaf CLI name → alternate source basenames
+ * (without `.ts`) when the filename does not match the subcommand name.
+ */
+const LEAF_FILE_ALIASES: Readonly<
+  Record<string, Readonly<Record<string, readonly string[]>>>
+> = {
+  blob: {
+    'create-store': ['store-add'],
+    'delete-store': ['store-remove'],
+    'empty-store': ['store-empty'],
+    'get-store': ['store-get'],
+    'list-stores': ['store-list'],
+  },
+  'deploy-hooks': {
+    list: ['ls'],
+    remove: ['rm'],
+  },
+  project: {
+    remove: ['rm'],
+  },
+  integration: {
+    open: ['open-integration'],
+    remove: ['remove-integration'],
+    update: ['update-integration'],
+  },
+  'integration-resource': {
+    remove: ['remove-resource'],
+  },
+  alerts: {
+    inspect: ['rule-inspect'],
+  },
+};
+
 export interface CoverageOptions {
   /** Absolute path to `packages/cli/src`. */
   readonly cliSrcRoot?: string;
@@ -41,6 +83,29 @@ export function extractCommandFetches(
 }
 
 /**
+ * Maps a flattened command path to its on-disk top-level directory and the
+ * remaining path segments under that directory.
+ */
+export function resolveCommandFilesystemPath(commandPath: string): {
+  readonly topDir: string;
+  readonly segments: readonly string[];
+} {
+  const parts = commandPath.split(' ').filter(Boolean);
+  let top = parts[0] ?? '';
+  let segments = parts.slice(1);
+
+  // Nested `integration resource …` is implemented under
+  // `commands/integration-resource/`, not `commands/integration/resource/`.
+  if (top === 'integration' && segments[0] === 'resource') {
+    top = 'integration-resource';
+    segments = segments.slice(1);
+  }
+
+  top = COMMAND_DIR_ALIASES[top] ?? top;
+  return { topDir: top, segments };
+}
+
+/**
  * Resolves TypeScript source files that implement a command / subcommand.
  */
 export function resolveCommandSourceFiles(
@@ -48,10 +113,9 @@ export function resolveCommandSourceFiles(
   command: Command,
   cliSrcRoot: string
 ): string[] {
-  const parts = commandPath.split(' ');
-  const top = parts[0];
-  const commandDir = path.join(cliSrcRoot, 'commands', top);
-  const utilDir = path.join(cliSrcRoot, 'util', top);
+  const { topDir, segments } = resolveCommandFilesystemPath(commandPath);
+  const commandDir = path.join(cliSrcRoot, 'commands', topDir);
+  const utilDir = path.join(cliSrcRoot, 'util', topDir);
 
   if (!fs.existsSync(commandDir)) {
     return [];
@@ -60,32 +124,20 @@ export function resolveCommandSourceFiles(
   const siblingNames = new Set(
     (command.subcommands ?? []).map(subcommand => subcommand.name)
   );
-  const parentSiblingNames = listSiblingSubcommandNames(commandDir, parts);
+  const parentSiblingNames = listSiblingSubcommandNames(commandDir, segments);
 
   let entries: string[];
-  if (parts.length === 1) {
+  if (segments.length === 0) {
     entries = listTsFiles(commandDir);
   } else {
-    const leaf = parts[parts.length - 1];
-    entries = [
-      path.join(commandDir, `${leaf}.ts`),
-      path.join(commandDir, leaf, 'index.ts'),
-      ...listTsFiles(path.join(commandDir, leaf)),
-    ].filter(file => fs.existsSync(file) && fs.statSync(file).isFile());
+    entries = resolveLeafEntries(commandDir, topDir, segments);
   }
 
   if (fs.existsSync(utilDir)) {
-    if (parts.length === 1) {
+    if (segments.length === 0) {
       entries.push(...listTsFiles(utilDir));
     } else {
-      const leaf = parts[parts.length - 1];
-      entries.push(
-        ...[
-          path.join(utilDir, `${leaf}.ts`),
-          path.join(utilDir, leaf, 'index.ts'),
-          ...listTsFiles(path.join(utilDir, leaf)),
-        ].filter(file => fs.existsSync(file) && fs.statSync(file).isFile())
-      );
+      entries.push(...resolveLeafEntries(utilDir, topDir, segments));
     }
   }
 
@@ -93,22 +145,66 @@ export function resolveCommandSourceFiles(
     fs.existsSync(root)
   );
   const excludeNames = new Set([...parentSiblingNames, ...siblingNames]);
-  if (parts.length > 1) {
-    excludeNames.delete(parts[parts.length - 1]);
+  if (segments.length > 0) {
+    const leaf = segments[segments.length - 1];
+    excludeNames.delete(leaf);
+    for (const alias of LEAF_FILE_ALIASES[topDir]?.[leaf] ?? []) {
+      excludeNames.delete(alias);
+    }
   }
 
   return collectWithImports(entries, allowedRoots, commandDir, excludeNames);
 }
 
+function resolveLeafEntries(
+  rootDir: string,
+  topDir: string,
+  segments: readonly string[]
+): string[] {
+  const leaf = segments[segments.length - 1];
+  const nestedDir = path.join(rootDir, ...segments.slice(0, -1));
+  const leafAliases = LEAF_FILE_ALIASES[topDir]?.[leaf] ?? [];
+  const basenames = [leaf, ...leafAliases];
+
+  const candidates: string[] = [];
+  for (const base of basenames) {
+    candidates.push(
+      path.join(nestedDir, `${base}.ts`),
+      path.join(nestedDir, base, 'index.ts'),
+      ...listTsFiles(path.join(nestedDir, base))
+    );
+    // Also try leaf at the command root (legacy flat layout).
+    if (segments.length > 1) {
+      candidates.push(
+        path.join(rootDir, `${base}.ts`),
+        path.join(rootDir, base, 'index.ts')
+      );
+    }
+  }
+
+  return candidates.filter(
+    file => fs.existsSync(file) && fs.statSync(file).isFile()
+  );
+}
+
 function listSiblingSubcommandNames(
   commandDir: string,
-  parts: string[]
+  segments: readonly string[]
 ): Set<string> {
-  if (parts.length < 2 || !fs.existsSync(commandDir)) {
+  if (segments.length === 0 || !fs.existsSync(commandDir)) {
+    return new Set();
+  }
+  // Siblings live next to the leaf: under the nested parent dir when the
+  // command path has intermediate segments (e.g. `alerts rules inspect`).
+  const siblingDir =
+    segments.length === 1
+      ? commandDir
+      : path.join(commandDir, ...segments.slice(0, -1));
+  if (!fs.existsSync(siblingDir)) {
     return new Set();
   }
   const names = new Set<string>();
-  for (const entry of fs.readdirSync(commandDir, { withFileTypes: true })) {
+  for (const entry of fs.readdirSync(siblingDir, { withFileTypes: true })) {
     if (entry.name === 'command.ts' || entry.name === 'index.ts') {
       continue;
     }

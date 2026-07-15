@@ -240,4 +240,25 @@ describe('client.fetch call-site extraction', () => {
       }),
     ]);
   });
+
+  it('resolves local url bindings and ignores query-only interpolations', () => {
+    const source = `
+      async function run(client: { fetch: Function }, query: string) {
+        const url = \`/v1/connect/connectors\${query ? \`?\${query}\` : ''}\`;
+        await client.fetch(url);
+        await client.fetch(\`/v9/projects/\${id}\`);
+      }
+    `;
+    const fetches = extractFetchesFromSource('example.ts', source);
+    expect(fetches).toEqual([
+      expect.objectContaining({
+        method: 'GET',
+        path: '/v1/connect/connectors',
+      }),
+      expect.objectContaining({
+        method: 'GET',
+        path: '/v9/projects/{}',
+      }),
+    ]);
+  });
 });

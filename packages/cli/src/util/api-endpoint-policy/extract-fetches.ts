@@ -32,6 +32,7 @@ export function extractFetchesFromSource(
     ts.ScriptKind.TS
   );
   const out: ExtractedFetch[] = [];
+  const localPaths = collectLocalPathBindings(sourceFile);
 
   const visit = (node: ts.Node) => {
     if (
@@ -41,7 +42,11 @@ export function extractFetchesFromSource(
       if (node.expression.name.text === 'fetch' && node.arguments.length > 0) {
         const pathArg = node.arguments[0];
         const optsArg = node.arguments[1];
-        const extractedPath = extractPathExpression(pathArg);
+        const extractedPath =
+          extractPathExpression(pathArg) ??
+          (ts.isIdentifier(pathArg)
+            ? (localPaths.get(pathArg.text) ?? null)
+            : null);
         if (extractedPath) {
           const method = extractMethod(optsArg) ?? 'GET';
           const { line } = sourceFile.getLineAndCharacterOfPosition(
@@ -76,13 +81,43 @@ function extractPathExpression(node: ts.Expression): string | null {
   if (ts.isTemplateExpression(node)) {
     let path = node.head.text;
     for (const span of node.templateSpans) {
-      path += '{}';
+      // Path-segment interpolations look like `.../${id}` / `.../${id}/...`.
+      // Suffix interpolations (`...${query}`, optional `?${...}`) are ignored
+      // so they do not produce a bogus trailing `{}` segment.
+      if (path.endsWith('/')) {
+        path += '{}';
+      }
       path += span.literal.text;
     }
     return path.startsWith('/') ? path : null;
   }
 
   return null;
+}
+
+/**
+ * Maps simple `const url = '/...'` / template bindings in a file so
+ * `client.fetch(url)` call sites can be attributed.
+ */
+function collectLocalPathBindings(
+  sourceFile: ts.SourceFile
+): Map<string, string> {
+  const bindings = new Map<string, string>();
+
+  const visit = (node: ts.Node) => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+      if (node.initializer) {
+        const path = extractPathExpression(node.initializer);
+        if (path) {
+          bindings.set(node.name.text, path);
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+
+  visit(sourceFile);
+  return bindings;
 }
 
 function extractMethod(node: ts.Expression | undefined): HttpMethod | null {

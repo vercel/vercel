@@ -13,7 +13,10 @@ a violation makes the PR unmergeable.
 For every non-grandfathered leaf command/subcommand, the test:
 
 1. Finds implementation files under `src/commands/<name>/` and
-   `src/util/<name>/` (subcommand entry files for nested commands).
+   `src/util/<name>/` (subcommand entry files for nested commands). A few
+   display-name → directory mismatches are remapped (e.g. `connect` →
+   `connex`, `integration resource …` → `integration-resource/`, blob
+   `delete-store` → `store-remove.ts`).
 2. Statically extracts resolvable `client.fetch(...)` call sites (string
    literals and template literals; interpolations become `{}` path segments).
 3. Fails if any extracted call is missing from the live public OpenAPI spec.
@@ -29,9 +32,10 @@ with CLI maintainers rather than extending the grandfathered list casually.
 
 ## Limits of static extraction
 
-Dynamic paths (variables, string concatenation) and fetches in shared helpers
-outside `commands/<name>` / `util/<name>` are out of scope for this check.
-Keep fetches local when possible so the policy can see them.
+Dynamic paths (variables that are not a simple local `const url = '/...'`
+binding, string concatenation) and fetches in shared helpers outside
+`commands/<name>` / `util/<name>` are out of scope for this check. Keep
+fetches local when possible so the policy can see them.
 
 ## How the public spec is loaded
 
