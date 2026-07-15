@@ -43,16 +43,17 @@ export function resolveHelpCommand(
 
   let parent: Command | undefined;
   for (const segment of commandPath.slice(1)) {
-    const child = command.subcommands?.find(candidate =>
-      matchesCommand(candidate, segment)
+    const currentCommand: Command = command;
+    const child: Command | undefined = currentCommand.subcommands?.find(
+      candidate => matchesCommand(candidate, segment)
     );
     if (!child) {
-      if (command.subcommands?.length) {
+      if (currentCommand.subcommands?.length) {
         return null;
       }
       break;
     }
-    parent = command;
+    parent = currentCommand;
     command = child;
   }
 
