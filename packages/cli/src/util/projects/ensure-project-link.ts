@@ -4,15 +4,19 @@ import { getGlobalFlagsOnlyFromArgs } from '../arg-common';
 import { outputAgentError } from '../agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../agent-output-constants';
 import { getCommandName, getCommandNamePlain } from '../pkg-name';
-import { getLinkedProject } from './link';
+import { resolveProjectContext } from './resolve-project-context';
 
 export type ProjectLinkCommand = 'redirects' | 'routes' | 'firewall';
 
 export async function ensureProjectLink(
   client: Client,
-  command: ProjectLinkCommand
+  command: ProjectLinkCommand,
+  projectName?: string
 ) {
-  const link = await getLinkedProject(client);
+  const link = await resolveProjectContext({
+    client,
+    projectNameOrId: projectName,
+  });
 
   if (link.status === 'error') {
     return link.exitCode;

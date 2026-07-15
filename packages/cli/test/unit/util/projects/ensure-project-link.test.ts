@@ -3,10 +3,10 @@ import { client } from '../../../mocks/client';
 import { defaultProject } from '../../../mocks/project';
 import { ensureProjectLink } from '../../../../src/util/projects/ensure-project-link';
 import * as agentOutput from '../../../../src/util/agent-output';
-import * as linkModule from '../../../../src/util/projects/link';
+import * as projectContextModule from '../../../../src/util/projects/resolve-project-context';
 
-vi.mock('../../../../src/util/projects/link', () => ({
-  getLinkedProject: vi.fn(),
+vi.mock('../../../../src/util/projects/resolve-project-context', () => ({
+  resolveProjectContext: vi.fn(),
 }));
 
 vi.mock('../../../../src/util/agent-output', async importOriginal => {
@@ -18,7 +18,9 @@ vi.mock('../../../../src/util/agent-output', async importOriginal => {
   };
 });
 
-const getLinkedProject = vi.mocked(linkModule.getLinkedProject);
+const resolveProjectContext = vi.mocked(
+  projectContextModule.resolveProjectContext
+);
 const outputAgentError = vi.mocked(agentOutput.outputAgentError);
 
 describe('ensureProjectLink', () => {
@@ -27,7 +29,7 @@ describe('ensureProjectLink', () => {
   });
 
   it('returns link errors unchanged', async () => {
-    getLinkedProject.mockResolvedValue({
+    resolveProjectContext.mockResolvedValue({
       status: 'error',
       exitCode: 2,
     });
@@ -41,14 +43,35 @@ describe('ensureProjectLink', () => {
       org: { id: 'team_123', slug: 'acme', type: 'team' as const },
       project: { ...defaultProject, id: 'project_123', name: 'site' },
     };
-    getLinkedProject.mockResolvedValue(link);
+    resolveProjectContext.mockResolvedValue(link);
 
     await expect(ensureProjectLink(client, 'routes')).resolves.toBe(link);
+    expect(resolveProjectContext).toHaveBeenCalledWith({
+      client,
+      projectNameOrId: undefined,
+    });
     expect(client.config.currentTeam).toBe('team_123');
   });
 
+  it('passes an explicit project to the shared resolver', async () => {
+    const link = {
+      status: 'linked' as const,
+      org: { id: 'team_123', slug: 'acme', type: 'team' as const },
+      project: { ...defaultProject, id: 'project_123', name: 'site' },
+    };
+    resolveProjectContext.mockResolvedValue(link);
+
+    await expect(
+      ensureProjectLink(client, 'routes', 'payments-api')
+    ).resolves.toBe(link);
+    expect(resolveProjectContext).toHaveBeenCalledWith({
+      client,
+      projectNameOrId: 'payments-api',
+    });
+  });
+
   it('preserves the redirects non-interactive error payload', async () => {
-    getLinkedProject.mockResolvedValue({
+    resolveProjectContext.mockResolvedValue({
       status: 'not_linked',
       org: null,
       project: null,
@@ -73,7 +96,7 @@ describe('ensureProjectLink', () => {
     'routes',
     'firewall',
   ] as const)('preserves the %s non-interactive error payload and global flags', async command => {
-    getLinkedProject.mockResolvedValue({
+    resolveProjectContext.mockResolvedValue({
       status: 'not_linked',
       org: null,
       project: null,
