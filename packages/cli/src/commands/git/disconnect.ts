@@ -10,6 +10,7 @@ import { printError } from '../../util/error';
 import { GitDisconnectTelemetryClient } from '../../util/telemetry/commands/git/disconnect';
 import type Client from '../../util/client';
 import { ensureLink } from '../../util/link/ensure-link';
+import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 
 export default async function disconnect(client: Client, argv: string[]) {
   let parsedArgs;
@@ -31,6 +32,7 @@ export default async function disconnect(client: Client, argv: string[]) {
   });
   telemetry.trackCliFlagConfirm(opts['--confirm']);
   telemetry.trackCliFlagYes(opts['--yes']);
+  telemetry.trackCliOptionProject(opts['--project']);
 
   if ('--confirm' in opts) {
     output.warn('`--confirm` is deprecated, please use `--yes` instead');
@@ -47,9 +49,21 @@ export default async function disconnect(client: Client, argv: string[]) {
   }
 
   const autoConfirm = Boolean(parsedArgs.flags['--yes']);
-  const linkedProject = await ensureLink('git', client, client.cwd, {
-    autoConfirm,
-  });
+  let linkedProject;
+  if (opts['--project']) {
+    const resolvedProject = await resolveProjectContext({
+      client,
+      projectNameOrId: opts['--project'],
+    });
+    if (resolvedProject.status !== 'linked') {
+      return resolvedProject.status === 'error' ? resolvedProject.exitCode : 1;
+    }
+    linkedProject = resolvedProject;
+  } else {
+    linkedProject = await ensureLink('git', client, client.cwd, {
+      autoConfirm,
+    });
+  }
   if (typeof linkedProject === 'number') {
     return linkedProject;
   }
