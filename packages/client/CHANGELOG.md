@@ -1,5 +1,18 @@
 # @vercel/client
 
+## 18.0.0
+
+### Major Changes
+
+- def07fc: Migrate `@vercel/client` and `@vercel/build-utils` from `node-fetch` to native `fetch`. This removes the last `url.parse()` usage from the CLI bundle, which triggered a `DEP0169` DeprecationWarning on Node 24 (visible in the standalone binary during `vercel deploy`).
+
+  BREAKING CHANGE (`@vercel/client`): the `agent?: http.Agent` option was replaced with `dispatcher?: FetchDispatcher` (an undici dispatcher, e.g. `undici.ProxyAgent`), since native `fetch` does not support Node.js HTTP agents. The CLI now threads its proxy-aware dispatcher through automatically, so `HTTP_PROXY`/`HTTPS_PROXY` behavior is unchanged for CLI users.
+
+### Patch Changes
+
+- Updated dependencies [def07fc]
+  - @vercel/build-utils@13.33.1
+
 ## 17.6.5
 
 ### Patch Changes
