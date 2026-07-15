@@ -305,6 +305,30 @@ describe('git connect', () => {
     }
   });
 
+  it('connects the project selected by --project', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'explicit-project',
+      name: 'explicit-project',
+      accountId: 'team_dummy',
+    });
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    client.setArgv(
+      'git',
+      'connect',
+      'https://github.com/user2/repo2',
+      '--project',
+      'explicit-project',
+      '--yes'
+    );
+
+    await expect(git(client)).resolves.toEqual(0);
+    await expect(client.stderr).toOutput('Connected');
+  });
+
   it('should fail when there is no git config', async () => {
     client.cwd = fixture('no-git-config');
     useUser();
