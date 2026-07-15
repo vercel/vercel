@@ -6,7 +6,6 @@ import { ensureLink } from '../../util/link/ensure-link';
 import getScope from '../../util/get-scope';
 import { getOrCreateDeploymentProtectionToken } from './bypass-token';
 import { getLinkedProject } from '../../util/projects/link';
-import { getDeploymentUrlById } from './deployment-url';
 import toHost from '../../util/to-host';
 import getTeams from '../../util/teams/get-teams';
 import type {
@@ -21,6 +20,7 @@ import { help } from '../help';
 import { getCommandName } from '../../util/pkg-name';
 import type { Command } from '../help';
 import type arg from 'arg';
+import getDeployment from '../../util/get-deployment';
 
 export interface DeploymentUrlOptions {
   deploymentFlag?: string;
@@ -448,7 +448,7 @@ export async function getDeploymentUrlAndToken(
 ): Promise<DeploymentUrlResult | number> {
   const { deploymentFlag, protectionBypassFlag, autoConfirm } = options;
 
-  let link;
+  let link: ProjectLinked;
   let scope;
 
   try {
@@ -465,68 +465,80 @@ export async function getDeploymentUrlAndToken(
     throw err;
   }
 
-  try {
-    link = await ensureLink(commandName, client, client.cwd, {
-      autoConfirm,
-    });
-  } catch (err: unknown) {
-    if (isErrnoException(err) && err.code === 'NOT_AUTHORIZED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
-
-  if (typeof link === 'number') {
-    return link;
-  }
-
-  const { project } = link;
-
-  const linkedProject = await getLinkedProject(client, { cwd: client.cwd });
-
-  if (linkedProject.status !== 'linked') {
-    output.error('This command requires a linked project. Please run:');
-    output.print('  vercel link');
-    return 1;
-  }
-
-  if (!linkedProject.project || !linkedProject.org) {
-    output.error('Failed to get project information');
-    return 1;
-  }
-
-  /** this is a url like `test-express-5.vercel.app` */
-  const preferredAlias = linkedProject.project.targets?.production?.alias?.[0];
-  /**
-   * this is a url like `test-express-5-yw3u1f2bj-uncurated-tests.vercel.app`
-   *
-   * we're using it as a fallback because as a deployment rolls out there can be a race on getting the `preferredAlias`
-   */
-  const backupAlias = linkedProject.project.latestDeployments?.[0]?.url;
-  const target = preferredAlias || backupAlias;
-
   let baseUrl: string;
 
   if (deploymentFlag) {
-    // Get the accountId from the scope (team or user)
-    const accountId = scope.team?.id || scope.user.id;
-    const deploymentUrl = await getDeploymentUrlById(
-      client,
-      deploymentFlag,
-      accountId
-    );
-    if (!deploymentUrl) {
+    const deploymentSelector =
+      deploymentFlag.includes('.') || deploymentFlag.startsWith('dpl_')
+        ? deploymentFlag
+        : `dpl_${deploymentFlag}`;
+    let deployment: Deployment;
+    try {
+      deployment = await getDeployment(
+        client,
+        scope.contextName,
+        deploymentSelector
+      );
+    } catch (err) {
+      output.debug(`Failed to resolve deployment: ${err}`);
       output.error(`No deployment found for ID "${deploymentFlag}"`);
       return 1;
     }
-    baseUrl = deploymentUrl;
-  } else if (target) {
-    baseUrl = `https://${target}`;
+
+    if (!deployment.url || !deployment.projectId || !deployment.ownerId) {
+      output.error(
+        `Deployment "${deploymentFlag}" is missing project metadata`
+      );
+      return 1;
+    }
+
+    const project = await client.fetch<Project>(
+      `/v9/projects/${encodeURIComponent(deployment.projectId)}`,
+      { accountId: deployment.ownerId }
+    );
+    link = {
+      status: 'linked',
+      project,
+      org: orgFromOwner(deployment.ownerId, scope.contextName),
+    };
+    baseUrl = `https://${deployment.url}`;
   } else {
-    throw new Error('No deployment URL found for the project');
+    let ensuredLink;
+    try {
+      ensuredLink = await ensureLink(commandName, client, client.cwd, {
+        autoConfirm,
+      });
+    } catch (err: unknown) {
+      if (isErrnoException(err) && err.code === 'NOT_AUTHORIZED') {
+        output.error(err.message);
+        return 1;
+      }
+
+      throw err;
+    }
+
+    if (typeof ensuredLink === 'number') {
+      return ensuredLink;
+    }
+
+    const linkedProject = await getLinkedProject(client, { cwd: client.cwd });
+    if (linkedProject.status !== 'linked') {
+      output.error('This command requires a linked project. Please run:');
+      output.print('  vercel link');
+      return 1;
+    }
+
+    link = linkedProject;
+    const preferredAlias = link.project.targets?.production?.alias?.[0];
+    const backupAlias = link.project.latestDeployments?.[0]?.url;
+    const target = preferredAlias || backupAlias;
+    if (!target) {
+      throw new Error('No deployment URL found for the project');
+    }
+    baseUrl = `https://${target}`;
   }
+
+  const { project } = link;
 
   const fullUrl = `${baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
 

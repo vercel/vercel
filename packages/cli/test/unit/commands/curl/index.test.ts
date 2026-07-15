@@ -11,6 +11,8 @@ import { useProject } from '../../../mocks/project';
 import { useTeams, createTeam } from '../../../mocks/team';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import * as linkModule from '../../../../src/util/projects/link';
+import { existsSync } from 'fs';
+import { join } from 'path';
 
 const MOCK_ACCOUNT_ID = 'team_test123';
 
@@ -296,6 +298,60 @@ describe('curl', () => {
   });
 
   describe('--deployment flag', () => {
+    it('targets an explicit deployment without linking the directory', async () => {
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+      useUser();
+      useTeams('team_dummy');
+      useProject({ id: 'explicit-project', name: 'explicit-project' });
+      client.scenario.get('/v13/deployments/dpl_EXPLICIT123', (_req, res) => {
+        res.json({
+          id: 'dpl_EXPLICIT123',
+          url: 'explicit-project-abc123.vercel.app',
+          projectId: 'explicit-project',
+          ownerId: 'team_dummy',
+        });
+      });
+
+      client.setArgv(
+        'curl',
+        '/api/hello',
+        '--deployment',
+        'dpl_EXPLICIT123',
+        '--protection-bypass',
+        'test-secret'
+      );
+
+      await expect(curl(client)).resolves.toEqual(0);
+      expect(existsSync(join(cwd, '.vercel'))).toBe(false);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        expect.arrayContaining([
+          'https://explicit-project-abc123.vercel.app/api/hello',
+        ]),
+        expect.any(Object)
+      );
+    });
+
+    it('does not fall back to a linked project for an unknown deployment', async () => {
+      await setupLinkedProject();
+
+      client.setArgv(
+        'curl',
+        '/api/hello',
+        '--deployment',
+        'dpl_UNKNOWN',
+        '--protection-bypass',
+        'test-secret'
+      );
+
+      await expect(curl(client)).resolves.toEqual(1);
+      expect(spawnMock).not.toHaveBeenCalled();
+      await expect(client.stderr).toOutput(
+        'No deployment found for ID "dpl_UNKNOWN"'
+      );
+    });
+
     it('should resolve full URL auth from aliases without querying limited teams', async () => {
       useUser();
       const [team] = useTeams('team_active') as ReturnType<typeof createTeam>[];
@@ -381,6 +437,17 @@ describe('curl', () => {
 
     it('should accept a full deployment URL', async () => {
       await setupLinkedProject();
+
+      client.scenario.get(
+        '/v13/deployments/deployment-xyz789.vercel.app',
+        (_req, res) => {
+          res.json({
+            url: 'deployment-xyz789.vercel.app',
+            projectId: 'static',
+            ownerId: 'team_dummy',
+          });
+        }
+      );
 
       client.setArgv(
         'curl',
@@ -637,6 +704,8 @@ describe('curl', () => {
       client.scenario.get('/v13/deployments/dpl_ABC123', (_req, res) => {
         res.json({
           url: 'deployment-abc123.vercel.app',
+          projectId: 'static',
+          ownerId: 'team_dummy',
         });
       });
 
@@ -675,6 +744,8 @@ describe('curl', () => {
       client.scenario.get('/v13/deployments/dpl_ABC123', (_req, res) => {
         res.json({
           url: 'deployment-abc123.vercel.app',
+          projectId: 'static',
+          ownerId: 'team_dummy',
         });
       });
 
@@ -737,6 +808,8 @@ describe('curl', () => {
       client.scenario.get('/v13/deployments/dpl_XYZ789', (_req, res) => {
         res.json({
           url: 'deployment-xyz789.vercel.app',
+          projectId: 'static',
+          ownerId: 'team_dummy',
         });
       });
 
