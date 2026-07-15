@@ -492,10 +492,17 @@ export async function getDeploymentUrlAndToken(
       return 1;
     }
 
-    const project = await client.fetch<Project>(
-      `/v9/projects/${encodeURIComponent(deployment.projectId)}`,
-      { accountId: deployment.ownerId }
-    );
+    let project: Project;
+    try {
+      project = await client.fetch<Project>(
+        `/v9/projects/${encodeURIComponent(deployment.projectId)}`,
+        { accountId: deployment.ownerId }
+      );
+    } catch (err) {
+      output.debug(`Failed to resolve deployment project: ${err}`);
+      output.error(`Failed to load project for deployment "${deploymentFlag}"`);
+      return 1;
+    }
     link = {
       status: 'linked',
       project,

@@ -352,6 +352,30 @@ describe('curl', () => {
       );
     });
 
+    it('reports a clean error when the deployment project cannot be loaded', async () => {
+      useUser();
+      useTeams('team_dummy');
+      client.scenario.get('/v13/deployments/dpl_EXPLICIT123', (_req, res) => {
+        res.json({
+          id: 'dpl_EXPLICIT123',
+          url: 'explicit-project-abc123.vercel.app',
+          projectId: 'explicit-project',
+          ownerId: 'team_dummy',
+        });
+      });
+      client.scenario.get('/v9/projects/explicit-project', (_req, res) => {
+        res.status(500).json({ error: { message: 'Internal Server Error' } });
+      });
+
+      client.setArgv('curl', '/api/hello', '--deployment', 'dpl_EXPLICIT123');
+
+      await expect(curl(client)).resolves.toEqual(1);
+      expect(spawnMock).not.toHaveBeenCalled();
+      await expect(client.stderr).toOutput(
+        'Failed to load project for deployment "dpl_EXPLICIT123"'
+      );
+    });
+
     it('should resolve full URL auth from aliases without querying limited teams', async () => {
       useUser();
       const [team] = useTeams('team_active') as ReturnType<typeof createTeam>[];
