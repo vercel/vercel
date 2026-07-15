@@ -28,12 +28,21 @@ describe('resolveHelpCommand', () => {
     ).toBe(null);
   });
 
-  it('stops at positional and invalid command segments', () => {
+  it('leaves invalid nested command structures to the command router', () => {
     expect(
       resolveHelpCommand(
         ['flags', 'rules', 'unknown', 'list', '--help'],
         commandDefinitions
+      )
+    ).toBeNull();
+  });
+
+  it('allows positional arguments after a leaf command', () => {
+    expect(
+      resolveHelpCommand(
+        ['inspect', 'my-deployment.vercel.app', '--help'],
+        commandDefinitions
       )?.command?.name
-    ).toBe('rules');
+    ).toBe('inspect');
   });
 });

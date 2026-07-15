@@ -47,6 +47,9 @@ export function resolveHelpCommand(
       matchesCommand(candidate, segment)
     );
     if (!child) {
+      if (command.subcommands?.length) {
+        return null;
+      }
       break;
     }
     parent = command;
