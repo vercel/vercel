@@ -613,6 +613,32 @@ describe('formatVersionDataDiff', () => {
     `);
   });
 
+  it('tolerates legacy added and removed environments without rules', () => {
+    const before = createVersionData();
+    const after = createVersionData();
+    const addedEnvironment = createEnvironment({
+      fallthrough: { type: 'variant', variantId: 'on' },
+    });
+
+    delete (before.environments.development as Partial<FlagEnvironmentConfig>)
+      .rules;
+    delete (addedEnvironment as Partial<FlagEnvironmentConfig>).rules;
+    after.environments['custom-preview'] = addedEnvironment;
+    delete after.environments.development;
+
+    expect(render(before, after)).toMatchInlineSnapshot(`
+      "  Development
+          - Environment removed
+            Status: active
+            Fallthrough: Serve On
+
+        Custom-preview
+          + Environment added
+            Status: active
+            Fallthrough: Serve On"
+    `);
+  });
+
   it('falls back for unknown future fields without hiding them', () => {
     const before = createVersionData() as FlagVersion['data'] & {
       removedUnknown?: string;

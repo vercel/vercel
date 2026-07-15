@@ -546,12 +546,10 @@ function appendEnvironmentSummary(
       indent
     )
   );
-  if (environment.rules.length > 0) {
+  const ruleCount = environment.rules?.length ?? 0;
+  if (ruleCount > 0) {
     lines.push(
-      line(
-        `${chalk.dim('Rules:')} ${chalk.bold(String(environment.rules.length))}`,
-        indent
-      )
+      line(`${chalk.dim('Rules:')} ${chalk.bold(String(ruleCount))}`, indent)
     );
   }
   const targets = formatTargets(environment.targets, variants);
