@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import { ensureProjectLink } from '../../util/projects/ensure-project-link';
 import output from '../../output-manager';
 import {
   outputActionRequired,
@@ -15,6 +14,7 @@ import {
 import { promoteSubcommand } from './command';
 import {
   parseSubcommandArgs,
+  ensureProjectLink,
   confirmAction,
   getArgsAfterRedirectsSubcommand,
   getRedirectGlobalFlagsOnly,
@@ -68,7 +68,7 @@ export default async function promote(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await ensureProjectLink(client, 'redirects');
+  const link = await ensureProjectLink(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
