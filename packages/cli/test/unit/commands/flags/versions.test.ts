@@ -46,7 +46,7 @@ describe('flags versions', () => {
     client.cwd = cwd;
   });
 
-  it('prints help for the versions diff subcommand', async () => {
+  it('prints help for the versions diff subcommand and tracks telemetry', async () => {
     client.setArgv('flags', 'versions', 'diff', '--help');
     const exitCode = await flags(client);
 
@@ -57,9 +57,13 @@ describe('flags versions', () => {
     );
     expect(output).toContain('--revision <NUMBER>');
     expect(output).not.toContain('Missing required argument');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:versions', value: 'versions' },
+      { key: 'flag:help', value: 'flags versions:diff' },
+    ]);
   });
 
-  it('tracks versions subcommand and options', async () => {
+  it('tracks the default versions list subcommand and options', async () => {
     client.setArgv(
       'flags',
       'versions',
@@ -85,6 +89,46 @@ describe('flags versions', () => {
     ]);
   });
 
+  it.each([
+    'list',
+    'ls',
+  ])('tracks the explicit versions %s subcommand', async subcommand => {
+    client.setArgv(
+      'flags',
+      'versions',
+      subcommand,
+      'my-feature',
+      '--limit',
+      '1'
+    );
+    await flags(client);
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:versions', value: 'versions' },
+      { key: 'subcommand:list', value: subcommand },
+      { key: 'argument:flag', value: '[REDACTED]' },
+      { key: 'option:limit', value: '1' },
+    ]);
+  });
+
+  it('redacts custom environments in telemetry', async () => {
+    client.setArgv(
+      'flags',
+      'versions',
+      'my-feature',
+      '--environment',
+      'customer-preview'
+    );
+    await flags(client);
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:versions', value: 'versions' },
+      { key: 'subcommand:list', value: 'default' },
+      { key: 'argument:flag', value: '[REDACTED]' },
+      { key: 'option:environment', value: '[REDACTED]' },
+    ]);
+  });
+
   it('tracks versions diff subcommand and options', async () => {
     client.setArgv(
       'flags',
@@ -93,6 +137,8 @@ describe('flags versions', () => {
       'my-feature',
       '--revision',
       '3',
+      '--project',
+      'vercel-flags-test',
       '--json'
     );
     await flags(client);
@@ -101,6 +147,7 @@ describe('flags versions', () => {
       { key: 'subcommand:versions', value: 'versions' },
       { key: 'subcommand:diff', value: 'diff' },
       { key: 'argument:flag', value: '[REDACTED]' },
+      { key: 'option:project', value: '[REDACTED]' },
       { key: 'option:revision', value: '3' },
       { key: 'flag:json', value: 'TRUE' },
     ]);
