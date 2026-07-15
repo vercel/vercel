@@ -1,9 +1,10 @@
 import chalk from 'chalk';
+import { withGlobalFlags } from '../../../util/agent-output';
 import type Client from '../../../util/client';
 import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
 import output from '../../../output-manager';
 import { attackModeEnableSubcommand } from '../command';
-import { parseSubcommandArgs, confirmAction, withGlobalFlags } from '../shared';
+import { parseSubcommandArgs, confirmAction } from '../shared';
 import updateAttackMode from '../../../util/firewall/update-attack-mode';
 import stamp from '../../../util/output/stamp';
 import { outputAgentError } from '../../../util/agent-output';

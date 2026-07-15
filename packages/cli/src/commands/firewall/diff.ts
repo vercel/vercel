@@ -1,9 +1,10 @@
 import chalk from 'chalk';
+import { withGlobalFlags } from '../../util/agent-output';
 import type Client from '../../util/client';
 import { ensureProjectLink } from '../../util/projects/ensure-project-link';
 import output from '../../output-manager';
 import { diffSubcommand } from './command';
-import { parseSubcommandArgs, outputJson, withGlobalFlags } from './shared';
+import { parseSubcommandArgs, outputJson } from './shared';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import { formatDiffOutput } from '../../util/firewall/format';
 import { getCommandName } from '../../util/pkg-name';

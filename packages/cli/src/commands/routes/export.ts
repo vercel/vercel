@@ -1,8 +1,9 @@
 import type Client from '../../util/client';
+import { withGlobalFlags } from '../../util/agent-output';
 import { ensureProjectLink } from '../../util/projects/ensure-project-link';
 import output from '../../output-manager';
 import { exportSubcommand } from './command';
-import { parseSubcommandArgs, withGlobalFlags } from './shared';
+import { parseSubcommandArgs } from './shared';
 import { outputAgentError } from '../../util/agent-output';
 import getRoutes from '../../util/routes/get-routes';
 import { getCommandName } from '../../util/pkg-name';

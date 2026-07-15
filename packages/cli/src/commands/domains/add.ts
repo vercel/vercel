@@ -28,14 +28,8 @@ import {
   outputActionRequired,
   outputAgentError,
   outputAgentSuccess,
+  withGlobalFlags,
 } from '../../util/agent-output';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
-import { getCommandNamePlain } from '../../util/pkg-name';
-
-function withGlobalFlags(client: Client, commandTemplate: string): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
-}
 
 const VERCEL_DOMAINS_DASHBOARD = 'https://vercel.com/dashboard/domains';
 

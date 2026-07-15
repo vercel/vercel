@@ -75,7 +75,7 @@ import {
 } from '@vercel/routing-utils';
 
 import output from '../../output-manager';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
@@ -152,7 +152,7 @@ function buildCommandWithGlobalFlags(
   baseSubcommand: string,
   argv: string[]
 ): string {
-  const globalFlags = getGlobalFlagsOnlyFromArgs(argv.slice(2));
+  const globalFlags = getGlobalFlagsFromArgs(argv.slice(2));
   const full = globalFlags.length
     ? `${baseSubcommand} ${globalFlags.join(' ')}`
     : baseSubcommand;

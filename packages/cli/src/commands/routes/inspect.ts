@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { withGlobalFlags } from '../../util/agent-output';
 import type Client from '../../util/client';
 import { ensureProjectLink } from '../../util/projects/ensure-project-link';
 import output from '../../output-manager';
@@ -12,10 +13,9 @@ import {
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import stamp from '../../util/output/stamp';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import {
   getRouteTypeLabel,
   getSrcSyntaxLabel,
@@ -23,11 +23,6 @@ import {
   type RoutingRule,
   type Transform,
 } from '../../util/routes/types';
-
-function withGlobalFlags(client: Client, commandTemplate: string): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
-}
 
 export default async function inspect(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, inspectSubcommand, client);

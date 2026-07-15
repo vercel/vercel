@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Prepare shared CLI helpers for explicit project selection.
+Consolidate suggested command helpers and support preserving explicit project context.

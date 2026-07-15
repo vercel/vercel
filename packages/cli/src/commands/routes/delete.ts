@@ -1,14 +1,10 @@
 import chalk from 'chalk';
+import { withGlobalFlags } from '../../util/agent-output';
 import type Client from '../../util/client';
 import { ensureProjectLink } from '../../util/projects/ensure-project-link';
 import output from '../../output-manager';
 import { deleteSubcommand } from './command';
-import {
-  parseSubcommandArgs,
-  resolveRoutes,
-  offerAutoPromote,
-  withGlobalFlags,
-} from './shared';
+import { parseSubcommandArgs, resolveRoutes, offerAutoPromote } from './shared';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
 import getRoutes from '../../util/routes/get-routes';

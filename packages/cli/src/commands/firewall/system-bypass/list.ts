@@ -1,9 +1,10 @@
 import chalk from 'chalk';
+import { withGlobalFlags } from '../../../util/agent-output';
 import type Client from '../../../util/client';
 import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
 import output from '../../../output-manager';
 import { systemBypassListSubcommand } from '../command';
-import { parseSubcommandArgs, outputJson, withGlobalFlags } from '../shared';
+import { parseSubcommandArgs, outputJson } from '../shared';
 import getBypass from '../../../util/firewall/get-bypass';
 import {
   formatBypassTable,

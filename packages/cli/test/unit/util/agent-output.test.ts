@@ -526,6 +526,51 @@ describe('buildCommandWithGlobalFlags', () => {
       'vercel link --scope vercel --yes'
     );
   });
+
+  it.each([
+    [['--project', 'payments-api'], '--project payments-api'],
+    [['--project=payments-api'], '--project=payments-api'],
+  ])('optionally preserves an explicit project selector', (project, expected) => {
+    const argv = [
+      'node',
+      'vc.js',
+      'routes',
+      'list',
+      '--cwd',
+      '/tmp/project',
+      ...project,
+    ];
+
+    expect(
+      buildCommandWithGlobalFlags(argv, 'routes list', undefined, {
+        globalFlags: 'all',
+        preserveProject: true,
+      })
+    ).toBe(`vercel routes list --cwd /tmp/project ${expected}`);
+  });
+
+  it('does not preserve authentication or child-command project options', () => {
+    const argv = [
+      'node',
+      'vc.js',
+      'env',
+      'run',
+      '--cwd',
+      '/tmp/project',
+      '--token',
+      'secret',
+      '--',
+      '--project',
+      'child-project',
+    ];
+
+    expect(
+      buildCommandWithGlobalFlags(argv, 'env run', undefined, {
+        globalFlags: 'all',
+        preserveProject: true,
+      })
+    ).toBe('vercel env run --cwd /tmp/project');
+  });
 });
 
 describe('exitWithNonInteractiveError', () => {

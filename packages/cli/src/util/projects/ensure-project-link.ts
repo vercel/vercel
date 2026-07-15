@@ -1,6 +1,6 @@
 import type Client from '../client';
 import output from '../../output-manager';
-import { getGlobalFlagsOnlyFromArgs } from '../arg-common';
+import { getGlobalFlagsFromArgs } from '../arg-common';
 import { outputAgentError } from '../agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../agent-output-constants';
 import { getCommandName, getCommandNamePlain } from '../pkg-name';
@@ -35,7 +35,7 @@ export async function ensureProjectLink(
           1
         );
       } else {
-        const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+        const flags = getGlobalFlagsFromArgs(client.argv.slice(2));
         const cmd = getCommandNamePlain(`link ${flags.join(' ')}`.trim());
         outputAgentError(
           client,

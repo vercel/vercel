@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { withGlobalFlags } from '../../../util/agent-output';
 import type Client from '../../../util/client';
 import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
 import output from '../../../output-manager';
@@ -8,7 +9,6 @@ import {
   resolveRule,
   detectExistingDraft,
   offerAutoPublish,
-  withGlobalFlags,
 } from '../shared';
 import { formatActionDisplay } from '../../../util/firewall/format';
 import { outputAgentError } from '../../../util/agent-output';

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  getGlobalFlagsAndProjectFromArgs,
-  getGlobalFlagsOnlyFromArgs,
+  getGlobalFlagsFromArgs,
   getProjectOptionFromArgs,
   getSameSubcommandSuggestionFlags,
 } from '../../../src/util/arg-common';
@@ -68,43 +67,49 @@ describe('getProjectOptionFromArgs', () => {
   });
 });
 
-describe('getGlobalFlagsAndProjectFromArgs', () => {
+describe('getGlobalFlagsFromArgs with project context', () => {
   it('preserves project context while removing unrelated and sensitive flags', () => {
     expect(
-      getGlobalFlagsAndProjectFromArgs([
-        '--project',
-        'payments-api',
-        '--cwd',
-        '/tmp/project',
-        '--token',
-        'secret',
-        '--status',
-        '301',
-      ])
+      getGlobalFlagsFromArgs(
+        [
+          '--project',
+          'payments-api',
+          '--cwd',
+          '/tmp/project',
+          '--token',
+          'secret',
+          '--status',
+          '301',
+        ],
+        { preserveProject: true }
+      )
     ).toEqual(['--cwd', '/tmp/project', '--project', 'payments-api']);
   });
 
   it('ignores project flags passed to a child command', () => {
     expect(
-      getGlobalFlagsAndProjectFromArgs([
-        '--cwd',
-        '/tmp/project',
-        '--',
-        '--project',
-        'child-project',
-        '--scope',
-        'child-scope',
-        '--cwd',
-        '/tmp/child',
-      ])
+      getGlobalFlagsFromArgs(
+        [
+          '--cwd',
+          '/tmp/project',
+          '--',
+          '--project',
+          'child-project',
+          '--scope',
+          'child-scope',
+          '--cwd',
+          '/tmp/child',
+        ],
+        { preserveProject: true }
+      )
     ).toEqual(['--cwd', '/tmp/project']);
   });
 });
 
-describe('getGlobalFlagsOnlyFromArgs', () => {
+describe('getGlobalFlagsFromArgs', () => {
   it('drops subcommand-specific flags when suggesting a different command', () => {
     const afterAdd = ['--slug', 'acme', '--cwd', '/tmp', '--status', '301'];
-    const out = getGlobalFlagsOnlyFromArgs(afterAdd);
+    const out = getGlobalFlagsFromArgs(afterAdd);
     expect(out).toContain('--cwd');
     expect(out).toContain('/tmp');
     expect(out).not.toContain('--slug');
@@ -123,13 +128,13 @@ describe('getGlobalFlagsOnlyFromArgs', () => {
       '-t=other-secret',
       '--yes',
     ];
-    const out = getGlobalFlagsOnlyFromArgs(afterAdd);
+    const out = getGlobalFlagsFromArgs(afterAdd);
     expect(out).toEqual(['--cwd', '/tmp', '--non-interactive']);
   });
 
   it('strips shorthand -t values that start with a dash', () => {
     const afterAdd = ['--cwd', '/tmp', '-t', '-secret-token', '--yes'];
-    const out = getGlobalFlagsOnlyFromArgs(afterAdd);
+    const out = getGlobalFlagsFromArgs(afterAdd);
     expect(out).toEqual(['--cwd', '/tmp']);
   });
 });

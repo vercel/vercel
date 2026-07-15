@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { withGlobalFlags } from '../../util/agent-output';
 import plural from 'pluralize';
 import type Client from '../../util/client';
 import { ensureProjectLink } from '../../util/projects/ensure-project-link';
@@ -9,7 +10,6 @@ import {
   findVersionById,
   formatCondition,
   formatTransform,
-  withGlobalFlags,
 } from './shared';
 import { outputAgentError } from '../../util/agent-output';
 import getRoutes from '../../util/routes/get-routes';

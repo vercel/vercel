@@ -3,6 +3,7 @@ import type Client from './client';
 import { isAPIError, LinkRequiredError, ProjectNotFound } from './errors-ts';
 import { packageName } from './pkg-name';
 import { stripSensitiveAuthArgs } from './redact-args';
+import { getGlobalFlagsFromArgs, globalCliFlagTakesValue } from './arg-common';
 
 /**
  * Structured payload for "action required" (e.g. scope choice, login passcode).
@@ -142,7 +143,10 @@ function canonicalGlobalFlagName(name: string): string {
  * Returns global flag args from argv so suggested commands can include them (e.g. --cwd, --non-interactive).
  */
 export function getGlobalFlagsFromArgv(argv: string[]): string[] {
-  const args = stripSensitiveAuthArgs(argv.slice(2));
+  const args = getGlobalFlagsFromArgs(argv.slice(2), {
+    preserveConfig: true,
+    preserveYes: true,
+  });
   const out: string[] = [];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -150,7 +154,7 @@ export function getGlobalFlagsFromArgv(argv: string[]): string[] {
     if (GLOBAL_FLAG_NAMES.has(name)) {
       out.push(arg);
       const takesSeparateValue =
-        !GLOBAL_FLAGS_BOOLEAN.has(name) &&
+        globalCliFlagTakesValue(name) &&
         !arg.includes('=') &&
         i + 1 < args.length &&
         !args[i + 1].startsWith('-');
@@ -209,6 +213,10 @@ export interface BuildCommandWithGlobalFlagsOptions {
   excludeFlags?: string[];
   /** Place preserved flags after `vercel` and before the subcommand (recommended for copy-paste). */
   prependGlobalFlags?: boolean;
+  /** Preserve an explicit command-level --project selector. */
+  preserveProject?: boolean;
+  /** Preserve the complete global option set used by older command helpers. */
+  globalFlags?: 'retry-context' | 'all';
 }
 
 /**
@@ -222,7 +230,19 @@ export function buildCommandWithGlobalFlags(
   pkgName: string = packageName,
   options?: BuildCommandWithGlobalFlagsOptions
 ): string {
-  let preserved = getGlobalFlagsFromArgv(argv);
+  let preserved =
+    options?.globalFlags === 'all'
+      ? getGlobalFlagsFromArgs(argv.slice(2), {
+          preserveProject: options.preserveProject,
+        })
+      : getGlobalFlagsFromArgv(argv);
+  if (options?.globalFlags !== 'all' && options?.preserveProject) {
+    const globalArgs = getGlobalFlagsFromArgs(argv.slice(2));
+    const contextArgs = getGlobalFlagsFromArgs(argv.slice(2), {
+      preserveProject: true,
+    });
+    preserved.push(...contextArgs.slice(globalArgs.length));
+  }
   // Flags the template already carries must not be appended again: a template
   // like `deploy --scope <team-slug>` plus a preserved `--scope my-team` would
   // suggest a command with two conflicting --scope values.
@@ -262,6 +282,26 @@ export function buildCommandWithGlobalFlags(
     return `${pkgName} ${preserved.join(' ')} ${commandTemplate}`;
   }
   return `${base} ${preserved.join(' ')}`;
+}
+
+/**
+ * Builds a suggested command from a client invocation using the complete
+ * global option set historically preserved by command-local helpers.
+ */
+export function withGlobalFlags(
+  client: Client,
+  commandTemplate: string,
+  preserveProject = false
+): string {
+  return buildCommandWithGlobalFlags(
+    client.argv,
+    commandTemplate,
+    packageName,
+    {
+      globalFlags: 'all',
+      preserveProject,
+    }
+  );
 }
 
 /**

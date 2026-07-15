@@ -16,18 +16,10 @@ import { getCommandNamePlain } from '../../util/pkg-name';
 import {
   outputActionRequired,
   outputAgentError,
+  withGlobalFlags,
 } from '../../util/agent-output';
-import {
-  getGlobalFlagsOnlyFromArgs,
-  getSameSubcommandSuggestionFlags,
-} from '../../util/arg-common';
+import { getSameSubcommandSuggestionFlags } from '../../util/arg-common';
 import { getLinkFromDir, getVercelDirectory } from '../../util/projects/link';
-
-/** Append global argv flags (--cwd, --non-interactive, etc.) so agents can re-run with same context. */
-function withGlobalFlags(client: Client, commandTemplate: string): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
-}
 
 const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
   if (team) {

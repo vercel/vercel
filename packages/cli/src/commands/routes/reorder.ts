@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { withGlobalFlags } from '../../util/agent-output';
 import type Client from '../../util/client';
 import { ensureProjectLink } from '../../util/projects/ensure-project-link';
 import output from '../../output-manager';
@@ -8,7 +9,6 @@ import {
   resolveRoute,
   parsePosition,
   offerAutoPromote,
-  withGlobalFlags,
   shellQuoteRouteIdentifierForSuggestion,
 } from './shared';
 import { outputAgentError } from '../../util/agent-output';

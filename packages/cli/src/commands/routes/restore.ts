@@ -9,14 +9,13 @@ import {
   validateRequiredArgs,
   printDiffSummary,
   findVersionById,
-  withGlobalFlags,
 } from './shared';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import updateRouteVersion from '../../util/routes/update-route-version';
 import getRoutes from '../../util/routes/get-routes';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
-import { outputAgentError } from '../../util/agent-output';
+import { outputAgentError, withGlobalFlags } from '../../util/agent-output';
 
 export default async function restore(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, restoreSubcommand, client);

@@ -1,14 +1,10 @@
 import chalk from 'chalk';
+import { withGlobalFlags } from '../../util/agent-output';
 import type Client from '../../util/client';
 import { ensureProjectLink } from '../../util/projects/ensure-project-link';
 import output from '../../output-manager';
 import { discardSubcommand } from './command';
-import {
-  parseSubcommandArgs,
-  confirmAction,
-  printDiffSummary,
-  withGlobalFlags,
-} from './shared';
+import { parseSubcommandArgs, confirmAction, printDiffSummary } from './shared';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import updateRouteVersion from '../../util/routes/update-route-version';
 import getRoutes from '../../util/routes/get-routes';

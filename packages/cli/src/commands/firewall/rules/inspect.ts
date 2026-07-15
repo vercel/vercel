@@ -1,14 +1,10 @@
 import chalk from 'chalk';
+import { withGlobalFlags } from '../../../util/agent-output';
 import type Client from '../../../util/client';
 import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
 import output from '../../../output-manager';
 import { rulesInspectSubcommand } from '../command';
-import {
-  parseSubcommandArgs,
-  resolveRule,
-  outputJson,
-  withGlobalFlags,
-} from '../shared';
+import { parseSubcommandArgs, resolveRule, outputJson } from '../shared';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
 import { formatRuleDetail } from '../../../util/firewall/format';
 import { getCommandName } from '../../../util/pkg-name';
