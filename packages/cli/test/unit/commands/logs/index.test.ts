@@ -1374,8 +1374,12 @@ describe('logs', () => {
   });
 
   describe('--follow option', () => {
+    // The scenario router serves the first-registered `/v2/user` handler, so
+    // tests that assert on the current user's id must reuse this user instead
+    // of calling useUser() again.
+    let user: ReturnType<typeof useUser>;
     beforeEach(() => {
-      useUser();
+      user = useUser();
       useTeams('team_dummy');
       useProject({
         ...defaultProject,
@@ -1430,8 +1434,6 @@ describe('logs', () => {
     });
 
     it('should stream your latest deployment with --no-branch', async () => {
-      const user = useUser();
-
       // Register before useLogsDeployment(), whose catch-all
       // `/:version/deployments` route would otherwise handle this path
       let latestDeployment: ReturnType<typeof useLogsDeployment>;
