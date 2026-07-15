@@ -10,6 +10,7 @@ import {
   findVersionById,
   formatCondition,
   formatTransform,
+  withGlobalFlags as withProjectGlobalFlags,
 } from './shared';
 import { outputAgentError } from '../../util/agent-output';
 import getRoutes from '../../util/routes/get-routes';
@@ -56,7 +57,7 @@ export default async function list(client: Client, argv: string[]) {
           status: 'error',
           reason: 'invalid_arguments',
           message: msg,
-          next: [{ command: withGlobalFlags(client, 'routes list') }],
+          next: [{ command: withProjectGlobalFlags(client, 'routes list') }],
         });
         process.exit(1);
       }
@@ -72,7 +73,7 @@ export default async function list(client: Client, argv: string[]) {
         status: 'error',
         reason: 'invalid_arguments',
         message: msg,
-        next: [{ command: withGlobalFlags(client, 'routes list') }],
+        next: [{ command: withProjectGlobalFlags(client, 'routes list') }],
       });
       process.exit(1);
     }
@@ -88,7 +89,9 @@ export default async function list(client: Client, argv: string[]) {
         status: 'error',
         reason: 'invalid_arguments',
         message: msg,
-        next: [{ command: withGlobalFlags(client, 'routes list --diff') }],
+        next: [
+          { command: withProjectGlobalFlags(client, 'routes list --diff') },
+        ],
       });
       process.exit(1);
     }
@@ -114,7 +117,7 @@ export default async function list(client: Client, argv: string[]) {
           status: 'error',
           reason: 'not_found',
           message: msg,
-          next: [{ command: withGlobalFlags(client, 'routes list') }],
+          next: [{ command: withProjectGlobalFlags(client, 'routes list') }],
         });
         process.exit(1);
       }
@@ -144,8 +147,8 @@ export default async function list(client: Client, argv: string[]) {
           reason: 'not_found',
           message: msg,
           next: [
-            { command: withGlobalFlags(client, 'routes list') },
-            { command: withGlobalFlags(client, 'routes add') },
+            { command: withProjectGlobalFlags(client, 'routes list') },
+            { command: withProjectGlobalFlags(client, 'routes add') },
           ],
         });
         process.exit(1);
@@ -175,7 +178,11 @@ export default async function list(client: Client, argv: string[]) {
           status: 'error',
           reason: 'not_found',
           message: msg,
-          next: [{ command: withGlobalFlags(client, 'routes list-versions') }],
+          next: [
+            {
+              command: withProjectGlobalFlags(client, 'routes list-versions'),
+            },
+          ],
         });
         process.exit(1);
       }
