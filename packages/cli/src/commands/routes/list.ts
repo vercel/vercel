@@ -2,11 +2,11 @@ import chalk from 'chalk';
 import { withGlobalFlags } from '../../util/agent-output';
 import plural from 'pluralize';
 import type Client from '../../util/client';
-import { ensureProjectLink } from '../../util/projects/ensure-project-link';
 import output from '../../output-manager';
 import { listSubcommand } from './command';
 import {
   parseSubcommandArgs,
+  ensureProjectLink,
   findVersionById,
   formatCondition,
   formatTransform,
@@ -16,7 +16,6 @@ import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
-import { getCommandName } from '../../util/pkg-name';
 import {
   getRouteTypeLabel,
   getSrcSyntaxLabel,
@@ -29,7 +28,7 @@ export default async function list(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, listSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client, 'routes');
+  const link = await ensureProjectLink(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -138,7 +137,7 @@ export default async function list(client: Client, argv: string[]) {
     const stagingVersion = versions.find(v => v.isStaging);
 
     if (!stagingVersion) {
-      const msg = `No staged changes to diff. Run ${getCommandName('routes add')} or ${getCommandName('routes edit')} to make changes.`;
+      const msg = `No staged changes to diff. Run ${withGlobalFlags(client, 'routes add')} or ${withGlobalFlags(client, 'routes edit')} to make changes.`;
       if (client.nonInteractive) {
         outputAgentError(client, {
           status: 'error',
@@ -152,9 +151,7 @@ export default async function list(client: Client, argv: string[]) {
         process.exit(1);
       }
       output.error(
-        `No staged changes to diff. Run ${chalk.cyan(
-          getCommandName('routes add')
-        )} or ${chalk.cyan(getCommandName('routes edit'))} to make changes.`
+        `No staged changes to diff. Run ${chalk.cyan(withGlobalFlags(client, 'routes add'))} or ${chalk.cyan(withGlobalFlags(client, 'routes edit'))} to make changes.`
       );
       return 1;
     }
@@ -169,7 +166,7 @@ export default async function list(client: Client, argv: string[]) {
     const { versions } = await getRouteVersions(client, project.id, {
       teamId,
     });
-    const result = findVersionById(versions, versionIdFlag);
+    const result = findVersionById(client, versions, versionIdFlag);
 
     if (result.error || !result.version) {
       const msg = result.error ?? 'Version not found';
