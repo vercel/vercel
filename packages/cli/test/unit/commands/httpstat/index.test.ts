@@ -212,6 +212,17 @@ describe('httpstat', () => {
     it('should accept a full deployment URL', async () => {
       await setupLinkedProject();
 
+      client.scenario.get(
+        '/v13/deployments/deployment-xyz789.vercel.app',
+        (_req, res) => {
+          res.json({
+            url: 'deployment-xyz789.vercel.app',
+            projectId: 'static',
+            ownerId: 'team_dummy',
+          });
+        }
+      );
+
       client.setArgv(
         'httpstat',
         '/api/hello',
@@ -341,6 +352,8 @@ describe('httpstat', () => {
       client.scenario.get('/v13/deployments/dpl_ABC123', (_req, res) => {
         res.json({
           url: 'deployment-abc123.vercel.app',
+          projectId: 'static',
+          ownerId: 'team_dummy',
         });
       });
 
@@ -378,6 +391,8 @@ describe('httpstat', () => {
       client.scenario.get('/v13/deployments/dpl_ABC123', (_req, res) => {
         res.json({
           url: 'deployment-abc123.vercel.app',
+          projectId: 'static',
+          ownerId: 'team_dummy',
         });
       });
 
