@@ -9,7 +9,10 @@ import {
 } from '../../../mocks/routes';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 
 describe('routes list', () => {
   beforeEach(() => {
@@ -48,6 +51,26 @@ describe('routes list', () => {
     const exitCode = await routes(client);
     expect(exitCode, 'exit code for "routes list"').toEqual(0);
     await expect(client.stderr).toOutput('3 Routes found');
+  });
+
+  it('lists routes for the project selected by --project', async () => {
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject({
+      ...defaultProject,
+      id: 'explicit-routes',
+      name: 'explicit-routes',
+      accountId: 'team_dummy',
+    });
+    useRoutes(3);
+    client.setArgv('routes', 'list', '--project', 'explicit-routes');
+
+    await expect(routes(client)).resolves.toEqual(0);
+    await expect(client.stderr).toOutput('3 Routes found');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'option:project', value: '[REDACTED]' },
+      { key: 'subcommand:list', value: 'list' },
+    ]);
   });
 
   it('should list routes using ls alias', async () => {
