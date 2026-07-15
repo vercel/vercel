@@ -139,6 +139,11 @@ commandsStructs.push(metricsCommand);
 
 commandsStructs.push(connexCommand);
 
+export const commandDefinitions: ReadonlyArray<Command> =
+  commandsStructs.filter(
+    (command): command is Command => 'description' in command
+  );
+
 export function getCommandAliases(command: Pick<Command, 'name' | 'aliases'>) {
   return [command.name].concat(command.aliases);
 }
