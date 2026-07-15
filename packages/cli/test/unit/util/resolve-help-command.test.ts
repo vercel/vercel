@@ -1,0 +1,39 @@
+import { describe, expect, it } from 'vitest';
+import { commandDefinitions } from '../../../src/commands';
+import { resolveHelpCommand } from '../../../src/util/resolve-help-command';
+
+describe('resolveHelpCommand', () => {
+  it.each([
+    [['--help'], undefined],
+    [['-h'], undefined],
+    [['help'], undefined],
+    [['h'], undefined],
+    [['flags', '--help'], 'flags'],
+    [['flags', '-h'], 'flags'],
+    [['help', 'flags'], 'flags'],
+    [['h', 'flags'], 'flags'],
+    [['flags', 'rules', 'list', '--help'], 'list'],
+    [['flags', '--help', 'rules', 'list'], 'list'],
+    [['help', 'flags', 'rules', 'list'], 'list'],
+    [['h', 'flags', 'rules', 'list'], 'list'],
+  ])('resolves %j', (args, expectedName) => {
+    expect(resolveHelpCommand(args, commandDefinitions)?.command?.name).toBe(
+      expectedName
+    );
+  });
+
+  it('does not resolve child-process help', () => {
+    expect(
+      resolveHelpCommand(['curl', '--', '--help'], commandDefinitions)
+    ).toBe(null);
+  });
+
+  it('stops at positional and invalid command segments', () => {
+    expect(
+      resolveHelpCommand(
+        ['flags', 'rules', 'unknown', 'list', '--help'],
+        commandDefinitions
+      )?.command?.name
+    ).toBe('rules');
+  });
+});

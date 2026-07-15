@@ -43,7 +43,7 @@ import getLatestVersion, {
 import { URL } from 'url';
 import { getSentry } from './util/get-sentry';
 import hp from './util/humanize-path';
-import { commands, commandNames } from './commands';
+import { commandDefinitions, commands, commandNames } from './commands';
 import { handleCommandTypo } from './util/handle-command-typo';
 import { matchesCliApiTag } from './util/openapi/matches-cli-api-tag';
 import { tryOpenApiFallback } from './util/openapi';
@@ -98,6 +98,8 @@ import {
   type TraceEvent,
 } from '@vercel/build-utils';
 import { mkdir, writeFile } from 'fs/promises';
+import { help as commandHelp } from './commands/help';
+import { resolveHelpCommand } from './util/resolve-help-command';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -222,6 +224,19 @@ const main = async () => {
   } catch (err: unknown) {
     printError(err);
     return 1;
+  }
+
+  const resolvedHelp = resolveHelpCommand(
+    process.argv.slice(2),
+    commandDefinitions
+  );
+  if (resolvedHelp) {
+    output.print(
+      resolvedHelp.command
+        ? commandHelp(resolvedHelp.command, { parent: resolvedHelp.parent })
+        : help()
+    );
+    return 0;
   }
 
   const localConfigPath = parsedArgs.flags['--local-config'];
