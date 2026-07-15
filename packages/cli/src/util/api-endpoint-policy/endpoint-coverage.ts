@@ -1,18 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Command, CommandEndpoint } from '../../commands/help';
+import type { Command } from '../../commands/help';
 import {
   collectRelativeImports,
   extractFetchesFromFile,
-  toCommandEndpoint,
   type ExtractedFetch,
 } from './extract-fetches';
-import {
-  formatEndpoint,
-  normalizeEndpoint,
-  type PolicyViolation,
-} from './policy';
 
 const DEFAULT_CLI_SRC_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -24,97 +18,26 @@ export interface CoverageOptions {
   readonly cliSrcRoot?: string;
 }
 
+export type ExtractCommandFetches = (
+  commandPath: string,
+  command: Command
+) => ExtractedFetch[];
+
 /**
- * For commands that declare `endpoints`, statically extract `client.fetch`
- * call sites from the command's implementation files and fail when any
- * resolvable call is missing from the declaration.
+ * Statically extract resolvable `client.fetch` call sites from a command's
+ * implementation files under `commands/<top>/` and `util/<top>/`.
  *
- * Scope is intentionally limited to `commands/<top>/` and `util/<top>/`
- * (plus relative imports within those trees) so shared helpers outside the
- * command's area are not falsely attributed. Dynamic / unresolvable paths
- * are skipped — they must still be declared manually.
+ * Dynamic / unresolvable paths are skipped. Shared helpers outside those
+ * trees are out of scope.
  */
-export function evaluateEndpointCoverage(
-  commands: ReadonlyArray<Command>,
+export function extractCommandFetches(
+  commandPath: string,
+  command: Command,
   options: CoverageOptions = {}
-): PolicyViolation[] {
-  const cliSrcRoot = options.cliSrcRoot ?? DEFAULT_CLI_SRC_ROOT;
-  const violations: PolicyViolation[] = [];
-
-  for (const { path: commandPath, command } of flattenForCoverage(commands)) {
-    if (!command.endpoints || command.endpoints.length === 0) {
-      continue;
-    }
-
-    const files = resolveCommandSourceFiles(commandPath, command, cliSrcRoot);
-    if (files.length === 0) {
-      continue;
-    }
-
-    const extracted = files.flatMap(file => extractFetchesFromFile(file));
-    if (extracted.length === 0) {
-      continue;
-    }
-
-    const declared = new Set(
-      command.endpoints.map(endpoint => normalizeEndpoint(endpoint))
-    );
-    const missing = uniqueMissing(extracted, declared);
-
-    if (missing.length > 0) {
-      const details = missing
-        .map(fetch => {
-          const endpoint = formatEndpoint(toCommandEndpoint(fetch));
-          const location = `${path.relative(cliSrcRoot, fetch.file)}:${fetch.line}`;
-          return `${endpoint} (${location})`;
-        })
-        .join(', ');
-      violations.push({
-        commandPath,
-        message:
-          `"${commandPath}" calls API endpoints that are not listed in ` +
-          `its \`endpoints\` declaration (${details}). Add them to the ` +
-          'declaration (and mark `beta: true` if any are private). See ' +
-          'packages/cli/docs/api-endpoint-policy.md',
-      });
-    }
-  }
-
-  return violations;
-}
-
-function flattenForCoverage(
-  commands: ReadonlyArray<Command>,
-  parentPath = ''
-): Array<{ path: string; command: Command }> {
-  const out: Array<{ path: string; command: Command }> = [];
-  for (const command of commands) {
-    const commandPath = parentPath
-      ? `${parentPath} ${command.name}`
-      : command.name;
-    out.push({ path: commandPath, command });
-    if (command.subcommands) {
-      out.push(...flattenForCoverage(command.subcommands, commandPath));
-    }
-  }
-  return out;
-}
-
-function uniqueMissing(
-  extracted: ReadonlyArray<ExtractedFetch>,
-  declared: ReadonlySet<string>
 ): ExtractedFetch[] {
-  const seen = new Set<string>();
-  const missing: ExtractedFetch[] = [];
-  for (const fetch of extracted) {
-    const key = normalizeEndpoint(toCommandEndpoint(fetch));
-    if (declared.has(key) || seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    missing.push(fetch);
-  }
-  return missing;
+  const cliSrcRoot = options.cliSrcRoot ?? DEFAULT_CLI_SRC_ROOT;
+  const files = resolveCommandSourceFiles(commandPath, command, cliSrcRoot);
+  return files.flatMap(file => extractFetchesFromFile(file));
 }
 
 /**
@@ -137,9 +60,6 @@ export function resolveCommandSourceFiles(
   const siblingNames = new Set(
     (command.subcommands ?? []).map(subcommand => subcommand.name)
   );
-  // When checking a subcommand, siblings are the parent's other subcommands —
-  // we only know the leaf's own subcommands here. Re-derive siblings from the
-  // parent directory's known command files instead when needed.
   const parentSiblingNames = listSiblingSubcommandNames(commandDir, parts);
 
   let entries: string[];
@@ -312,15 +232,4 @@ function resolveImportToFileLocal(
     }
   }
   return null;
-}
-
-/** @internal exported for tests */
-export function coverageGap(
-  declared: ReadonlyArray<CommandEndpoint>,
-  extracted: ReadonlyArray<ExtractedFetch>
-): ExtractedFetch[] {
-  const declaredKeys = new Set(
-    declared.map(endpoint => normalizeEndpoint(endpoint))
-  );
-  return uniqueMissing(extracted, declaredKeys);
 }

@@ -44,7 +44,6 @@ import { URL } from 'url';
 import { getSentry } from './util/get-sentry';
 import hp from './util/humanize-path';
 import { commands, commandNames } from './commands';
-import { maybePrintBetaWarning } from './util/api-endpoint-policy/beta-warning';
 import { handleCommandTypo } from './util/handle-command-typo';
 import { matchesCliApiTag } from './util/openapi/matches-cli-api-tag';
 import { tryOpenApiFallback } from './util/openapi';
@@ -1231,7 +1230,6 @@ const main = async () => {
       }
 
       resolvedCommandForUpdate = targetCommand;
-      maybePrintBetaWarning(targetCommand, parsedArgs.args.slice(3));
       exitCode = await rootSpan
         .child('vc.cli.command', { command: subcommand || 'deploy' })
         .trace(() => func(client));

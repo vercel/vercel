@@ -152,7 +152,7 @@ export function getCommandAliases(command: Pick<Command, 'name' | 'aliases'>) {
 
 /**
  * Every registered command structure. Used by the API endpoint policy check
- * (`test/unit/util/api-endpoint-policy.test.ts`) and the beta command warning.
+ * (`test/unit/util/api-endpoint-policy.test.ts`).
  */
 export const commandStructs: ReadonlyArray<Command> = commandsStructs;
 

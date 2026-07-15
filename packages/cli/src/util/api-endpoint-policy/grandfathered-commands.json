@@ -1,5 +1,5 @@
 {
-  "//": "Commands that existed before the API endpoint policy was introduced (2026-07-13). Do not add new entries; new commands must declare `endpoints` instead. Entries may be removed as commands adopt endpoint declarations.",
+  "//": "Commands that existed before the API endpoint policy was introduced (2026-07-13). Do not add new entries; new leaf commands are checked via static client.fetch extraction instead. Entries may be removed when a command no longer needs the exemption.",
   "commands": [
     "activity",
     "activity ls",

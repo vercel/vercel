@@ -1,12 +1,4 @@
-import {
-  describe,
-  expect,
-  it,
-  vi,
-  beforeAll,
-  beforeEach,
-  afterEach,
-} from 'vitest';
+import { describe, expect, it, beforeAll } from 'vitest';
 import type { Command } from '../../../src/commands/help';
 import { commandStructs } from '../../../src/commands';
 import {
@@ -17,18 +9,9 @@ import {
   normalizeEndpoint,
   validateEndpointFormat,
 } from '../../../src/util/api-endpoint-policy/policy';
-import {
-  evaluateEndpointCoverage,
-  coverageGap,
-} from '../../../src/util/api-endpoint-policy/endpoint-coverage';
 import { extractFetchesFromSource } from '../../../src/util/api-endpoint-policy/extract-fetches';
-import {
-  findBetaCommandPath,
-  maybePrintBetaWarning,
-  printBetaWarning,
-} from '../../../src/util/api-endpoint-policy/beta-warning';
+import type { ExtractedFetch } from '../../../src/util/api-endpoint-policy/extract-fetches';
 import grandfathered from '../../../src/util/api-endpoint-policy/grandfathered-commands.json';
-import output from '../../../src/output-manager';
 
 const GRANDFATHERED = new Set<string>(grandfathered.commands);
 let PUBLIC_ENDPOINTS: ReadonlySet<string>;
@@ -45,18 +28,24 @@ function makeCommand(overrides: Partial<Command> & { name: string }): Command {
     options: [],
     examples: [],
     ...overrides,
-  } as Command;
+  };
+}
+
+function fetch(
+  method: ExtractedFetch['method'],
+  path: string,
+  file = 'index.ts',
+  line = 1
+): ExtractedFetch {
+  return { method, path, file, line };
 }
 
 describe('API endpoint policy (see packages/cli/docs/api-endpoint-policy.md)', () => {
-  it('every command and subcommand declares its API endpoints, and commands using private endpoints are marked beta', () => {
-    const violations = [
-      ...evaluatePolicy(commandStructs, {
-        grandfathered: GRANDFATHERED,
-        publicEndpoints: PUBLIC_ENDPOINTS,
-      }),
-      ...evaluateEndpointCoverage(commandStructs),
-    ];
+  it('new (non-grandfathered) commands do not call private OpenAPI endpoints', () => {
+    const violations = evaluatePolicy(commandStructs, {
+      grandfathered: GRANDFATHERED,
+      publicEndpoints: PUBLIC_ENDPOINTS,
+    });
     const message = violations
       .map(violation => `- ${violation.message}`)
       .join('\n');
@@ -78,7 +67,7 @@ describe('API endpoint policy (see packages/cli/docs/api-endpoint-policy.md)', (
     ).toEqual([]);
   });
 
-  describe('endpoint declarations', () => {
+  describe('endpoint matching helpers', () => {
     it('validates endpoint format', () => {
       expect(
         validateEndpointFormat({
@@ -118,8 +107,7 @@ describe('API endpoint policy (see packages/cli/docs/api-endpoint-policy.md)', (
       ).toBe('POST /v13/deployments');
     });
 
-    it('matches declarations against the public spec', () => {
-      // stable, long-public endpoints
+    it('matches paths against the public spec', () => {
       expect(
         isPublicEndpoint(
           { method: 'GET', path: '/v9/projects/:idOrName' },
@@ -129,7 +117,6 @@ describe('API endpoint policy (see packages/cli/docs/api-endpoint-policy.md)', (
       expect(
         isPublicEndpoint({ method: 'GET', path: '/v2/user' }, PUBLIC_ENDPOINTS)
       ).toBe(true);
-      // never-public endpoint
       expect(
         isPublicEndpoint(
           { method: 'GET', path: '/v1/oauth-apps/installations' },
@@ -142,16 +129,43 @@ describe('API endpoint policy (see packages/cli/docs/api-endpoint-policy.md)', (
   describe('evaluatePolicy', () => {
     const emptyBaseline = new Set<string>();
 
-    it('requires new commands to declare endpoints', () => {
-      const violations = evaluatePolicy(
-        [makeCommand({ name: 'new-command' })],
-        { grandfathered: emptyBaseline, publicEndpoints: PUBLIC_ENDPOINTS }
-      );
+    it('rejects private fetch call sites on new commands', () => {
+      const violations = evaluatePolicy([makeCommand({ name: 'apps' })], {
+        grandfathered: emptyBaseline,
+        publicEndpoints: PUBLIC_ENDPOINTS,
+        extractFetches: () => [
+          fetch('GET', '/v1/oauth-apps/installations', 'apps/index.ts', 10),
+        ],
+      });
       expect(violations).toHaveLength(1);
-      expect(violations[0].message).toContain('must declare the API endpoints');
+      expect(violations[0].message).toContain('not in the public OpenAPI spec');
+      expect(violations[0].message).toContain(
+        'GET /v1/oauth-apps/installations'
+      );
     });
 
-    it('requires new subcommands to declare endpoints even when the parent is grandfathered', () => {
+    it('accepts public fetch call sites on new commands', () => {
+      const violations = evaluatePolicy([makeCommand({ name: 'projects' })], {
+        grandfathered: emptyBaseline,
+        publicEndpoints: PUBLIC_ENDPOINTS,
+        extractFetches: () => [fetch('GET', '/v9/projects/:idOrName')],
+      });
+      expect(violations).toEqual([]);
+    });
+
+    it('skips grandfathered commands even if they call private endpoints', () => {
+      const violations = evaluatePolicy(
+        [makeCommand({ name: 'old-command' })],
+        {
+          grandfathered: new Set(['old-command']),
+          publicEndpoints: PUBLIC_ENDPOINTS,
+          extractFetches: () => [fetch('GET', '/v1/oauth-apps/installations')],
+        }
+      );
+      expect(violations).toEqual([]);
+    });
+
+    it('checks new subcommands even when the parent is grandfathered', () => {
       const violations = evaluatePolicy(
         [
           makeCommand({
@@ -162,35 +176,17 @@ describe('API endpoint policy (see packages/cli/docs/api-endpoint-policy.md)', (
         {
           grandfathered: new Set(['old-command']),
           publicEndpoints: PUBLIC_ENDPOINTS,
+          extractFetches: commandPath =>
+            commandPath === 'old-command new-subcommand'
+              ? [fetch('GET', '/v1/oauth-apps/installations')]
+              : [],
         }
       );
       expect(violations).toHaveLength(1);
       expect(violations[0].commandPath).toBe('old-command new-subcommand');
     });
 
-    it('rejects an empty endpoints list', () => {
-      const violations = evaluatePolicy(
-        [makeCommand({ name: 'sneaky', endpoints: [] })],
-        { grandfathered: emptyBaseline, publicEndpoints: PUBLIC_ENDPOINTS }
-      );
-      expect(violations).toHaveLength(1);
-      expect(violations[0].message).toContain(
-        'empty `endpoints` list, which would bypass'
-      );
-    });
-
-    it('rejects an empty endpoints list even on grandfathered commands', () => {
-      const violations = evaluatePolicy(
-        [makeCommand({ name: 'sneaky', endpoints: [] })],
-        {
-          grandfathered: new Set(['sneaky']),
-          publicEndpoints: PUBLIC_ENDPOINTS,
-        }
-      );
-      expect(violations).toHaveLength(1);
-    });
-
-    it('lets parent commands that only route to subcommands omit endpoints', () => {
+    it('skips parent router commands that only have subcommands', () => {
       const violations = evaluatePolicy(
         [
           makeCommand({
@@ -198,154 +194,29 @@ describe('API endpoint policy (see packages/cli/docs/api-endpoint-policy.md)', (
             subcommands: [
               makeCommand({
                 name: 'child',
-                endpoints: [{ method: 'GET', path: '/v9/projects/:idOrName' }],
               }),
             ],
           }),
         ],
-        { grandfathered: emptyBaseline, publicEndpoints: PUBLIC_ENDPOINTS }
+        {
+          grandfathered: emptyBaseline,
+          publicEndpoints: PUBLIC_ENDPOINTS,
+          extractFetches: commandPath =>
+            commandPath === 'parent'
+              ? [fetch('GET', '/v1/oauth-apps/installations')]
+              : [fetch('GET', '/v2/user')],
+        }
       );
       expect(violations).toEqual([]);
     });
 
-    it('rejects private endpoints on commands not marked beta', () => {
-      const violations = evaluatePolicy(
-        [
-          makeCommand({
-            name: 'apps',
-            endpoints: [
-              { method: 'GET', path: '/v1/oauth-apps/installations' },
-            ],
-          }),
-        ],
-        { grandfathered: emptyBaseline, publicEndpoints: PUBLIC_ENDPOINTS }
-      );
-      expect(violations).toHaveLength(1);
-      expect(violations[0].message).toContain('must be marked `beta: true`');
-    });
-
-    it('accepts private endpoints on commands marked beta', () => {
-      const violations = evaluatePolicy(
-        [
-          makeCommand({
-            name: 'apps',
-            beta: true,
-            endpoints: [
-              { method: 'GET', path: '/v1/oauth-apps/installations' },
-            ],
-          }),
-        ],
-        { grandfathered: emptyBaseline, publicEndpoints: PUBLIC_ENDPOINTS }
-      );
+    it('treats commands with no resolvable fetches as compliant', () => {
+      const violations = evaluatePolicy([makeCommand({ name: 'local-only' })], {
+        grandfathered: emptyBaseline,
+        publicEndpoints: PUBLIC_ENDPOINTS,
+        extractFetches: () => [],
+      });
       expect(violations).toEqual([]);
-    });
-
-    it('accepts public endpoints without a beta marker', () => {
-      const violations = evaluatePolicy(
-        [
-          makeCommand({
-            name: 'projects',
-            endpoints: [{ method: 'GET', path: '/v9/projects/:idOrName' }],
-          }),
-        ],
-        { grandfathered: emptyBaseline, publicEndpoints: PUBLIC_ENDPOINTS }
-      );
-      expect(violations).toEqual([]);
-    });
-
-    it('rejects malformed endpoint declarations', () => {
-      const violations = evaluatePolicy(
-        [
-          makeCommand({
-            name: 'bad',
-            endpoints: [{ method: 'GET', path: 'v9/projects' }],
-          }),
-        ],
-        { grandfathered: emptyBaseline, publicEndpoints: PUBLIC_ENDPOINTS }
-      );
-      expect(violations).toHaveLength(1);
-      expect(violations[0].message).toContain('malformed endpoint declaration');
-    });
-  });
-});
-
-describe('beta command warning', () => {
-  let printSpy: ReturnType<typeof vi.spyOn>;
-
-  beforeEach(() => {
-    printSpy = vi.spyOn(output, 'print').mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    printSpy.mockRestore();
-  });
-
-  it('prints a warning naming the command', () => {
-    printBetaWarning('vercel apps install');
-    expect(printSpy).toHaveBeenCalledTimes(1);
-    const message = String(printSpy.mock.calls[0][0]);
-    expect(message).toContain('vercel apps install');
-    expect(message).toContain('beta command');
-  });
-
-  it('does not warn for non-beta commands', () => {
-    maybePrintBetaWarning('whoami', []);
-    expect(printSpy).not.toHaveBeenCalled();
-  });
-
-  it('does not warn for unknown commands', () => {
-    maybePrintBetaWarning('does-not-exist', []);
-    expect(printSpy).not.toHaveBeenCalled();
-  });
-
-  describe('findBetaCommandPath', () => {
-    const registry = new Map<string, Command>([
-      [
-        'apps',
-        makeCommand({
-          name: 'apps',
-          subcommands: [
-            makeCommand({ name: 'list' }),
-            makeCommand({
-              name: 'install',
-              aliases: ['add'],
-              beta: true,
-            }),
-            makeCommand({
-              name: 'tokens',
-              subcommands: [makeCommand({ name: 'revoke', beta: true })],
-            }),
-          ],
-        }),
-      ],
-      ['all-beta', makeCommand({ name: 'all-beta', beta: true })],
-    ]);
-
-    it('resolves a beta top-level command', () => {
-      expect(findBetaCommandPath(registry, 'all-beta', ['anything'])).toBe(
-        'vercel all-beta'
-      );
-    });
-
-    it('resolves a beta subcommand, including via alias', () => {
-      expect(findBetaCommandPath(registry, 'apps', ['install'])).toBe(
-        'vercel apps install'
-      );
-      expect(findBetaCommandPath(registry, 'apps', ['add'])).toBe(
-        'vercel apps install'
-      );
-    });
-
-    it('resolves nested beta subcommands', () => {
-      expect(findBetaCommandPath(registry, 'apps', ['tokens', 'revoke'])).toBe(
-        'vercel apps tokens revoke'
-      );
-    });
-
-    it('returns null for non-beta invocations', () => {
-      expect(findBetaCommandPath(registry, 'apps', ['list'])).toBeNull();
-      expect(findBetaCommandPath(registry, 'apps', [])).toBeNull();
-      expect(findBetaCommandPath(registry, 'missing', [])).toBeNull();
     });
   });
 });
@@ -368,42 +239,5 @@ describe('client.fetch call-site extraction', () => {
         line: 4,
       }),
     ]);
-  });
-
-  it('flags undeclared fetch call sites as coverage gaps', () => {
-    const missing = coverageGap(
-      [{ method: 'GET', path: '/v2/user' }],
-      [
-        {
-          method: 'GET',
-          path: '/v2/user',
-          file: 'a.ts',
-          line: 1,
-        },
-        {
-          method: 'POST',
-          path: '/v1/oauth-apps/installations',
-          file: 'a.ts',
-          line: 2,
-        },
-      ]
-    );
-    expect(missing).toHaveLength(1);
-    expect(missing[0].path).toBe('/v1/oauth-apps/installations');
-  });
-
-  it('does not report a gap when declaration uses :param and call uses interpolation', () => {
-    const missing = coverageGap(
-      [{ method: 'POST', path: '/v2/projects/:idOrName/deploy-hooks' }],
-      [
-        {
-          method: 'POST',
-          path: '/v2/projects/{}/deploy-hooks',
-          file: 'create.ts',
-          line: 10,
-        },
-      ]
-    );
-    expect(missing).toEqual([]);
   });
 });

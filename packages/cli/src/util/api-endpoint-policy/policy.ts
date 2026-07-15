@@ -1,5 +1,9 @@
 import type { Command, CommandEndpoint, HttpMethod } from '../../commands/help';
 import { OPENAPI_URL, FETCH_TIMEOUT_MS } from '../openapi/constants';
+import {
+  extractCommandFetches,
+  type ExtractCommandFetches,
+} from './endpoint-coverage';
 
 export const HTTP_METHODS: ReadonlyArray<HttpMethod> = [
   'GET',
@@ -44,8 +48,7 @@ export function formatEndpoint(endpoint: CommandEndpoint): string {
 
 /**
  * Returns `null` when the endpoint declaration is well formed, otherwise a
- * description of the problem. Guards against malformed declarations sneaking
- * past the type system (e.g. from `as const` casts or untyped literals).
+ * description of the problem.
  */
 export function validateEndpointFormat(
   endpoint: CommandEndpoint
@@ -66,8 +69,8 @@ export function validateEndpointFormat(
 }
 
 /**
- * Normalizes an endpoint so that declarations and OpenAPI spec entries can
- * be compared: strips query strings and trailing slashes, and replaces
+ * Normalizes an endpoint so that fetch call sites and OpenAPI spec entries
+ * can be compared: strips query strings and trailing slashes, and replaces
  * `:param` / `{param}` path segments with `{}`.
  *
  * `/v9/projects/:idOrName/` and `/v9/projects/{id}` both normalize to
@@ -141,12 +144,7 @@ export async function fetchPublicEndpoints(
 }
 
 /**
- * Whether an endpoint declaration is part of the public OpenAPI spec.
- *
- * @param endpoint - declaration such as
- * `{ method: 'GET', path: '/v9/projects/:idOrName' }`
- * @param publicEndpoints - normalized `"METHOD /path"` entries from the
- * public spec (see `fetchPublicEndpoints`)
+ * Whether an endpoint is part of the public OpenAPI spec.
  */
 export function isPublicEndpoint(
   endpoint: CommandEndpoint,
@@ -160,80 +158,76 @@ export interface PolicyViolation {
   readonly message: string;
 }
 
+export interface EvaluatePolicyOptions {
+  readonly grandfathered: ReadonlySet<string>;
+  readonly publicEndpoints: ReadonlySet<string>;
+  /** Absolute path to `packages/cli/src`. */
+  readonly cliSrcRoot?: string;
+  /**
+   * Override for tests. Defaults to statically extracting `client.fetch`
+   * call sites from the command's implementation files.
+   */
+  readonly extractFetches?: ExtractCommandFetches;
+}
+
 /**
- * Evaluates the API endpoint policy over a command tree:
+ * Evaluates the API endpoint policy over a command tree (CI-only).
  *
- * 1. Commands and subcommands that are not grandfathered must declare
- *    `endpoints`, and the list must not be empty — an empty list would
- *    bypass the policy. Parent commands that only route to subcommands may
- *    omit the field; their subcommands are checked individually.
- * 2. Declared endpoints must be well formed.
- * 3. Any command that declares an endpoint outside the public OpenAPI spec
- *    must be marked `beta: true`.
+ * For each non-grandfathered leaf command/subcommand, statically extract
+ * resolvable `client.fetch` call sites and fail when any are outside the
+ * public OpenAPI spec. Parent commands that only route to subcommands are
+ * skipped; their children are checked individually.
  *
- * Fetch call-site coverage (declared endpoints must match `client.fetch`
- * usage) is enforced separately by `evaluateEndpointCoverage`.
+ * There is no runtime warning and no `endpoints` / `beta` markup on command
+ * definitions — prefer publicizing the API (or landing a dedicated CLI
+ * OpenAPI/SDK) over shipping new private call sites.
  */
 export function evaluatePolicy(
   commands: ReadonlyArray<Command>,
-  options: {
-    grandfathered: ReadonlySet<string>;
-    publicEndpoints: ReadonlySet<string>;
-  }
+  options: EvaluatePolicyOptions
 ): PolicyViolation[] {
   const violations: PolicyViolation[] = [];
+  const extract =
+    options.extractFetches ??
+    ((commandPath, command) =>
+      extractCommandFetches(commandPath, command, {
+        cliSrcRoot: options.cliSrcRoot,
+      }));
 
   for (const { path, command } of flattenCommands(commands)) {
+    if (options.grandfathered.has(path)) {
+      continue;
+    }
+
     const isRouter = (command.subcommands?.length ?? 0) > 0;
-
-    if (command.endpoints === undefined) {
-      if (!options.grandfathered.has(path) && !isRouter) {
-        violations.push({
-          commandPath: path,
-          message:
-            `"${path}" must declare the API endpoints it calls via the ` +
-            '`endpoints` field on its command definition. See ' +
-            'packages/cli/docs/api-endpoint-policy.md',
-        });
-      }
+    if (isRouter) {
       continue;
     }
 
-    if (command.endpoints.length === 0) {
-      violations.push({
-        commandPath: path,
-        message:
-          `"${path}" declares an empty \`endpoints\` list, which would ` +
-          'bypass the API endpoint policy. Declare the endpoints the ' +
-          'command actually calls. See ' +
-          'packages/cli/docs/api-endpoint-policy.md',
-      });
-      continue;
-    }
-
-    const privateEndpoints: string[] = [];
-    for (const endpoint of command.endpoints) {
-      const formatError = validateEndpointFormat(endpoint);
-      if (formatError) {
-        violations.push({
-          commandPath: path,
-          message: `"${path}" has a malformed endpoint declaration: ${formatError}`,
-        });
+    const fetches = extract(path, command);
+    const privateEndpoints = new Map<string, string>();
+    for (const fetch of fetches) {
+      const endpoint = { method: fetch.method, path: fetch.path };
+      if (isPublicEndpoint(endpoint, options.publicEndpoints)) {
         continue;
       }
-      if (!isPublicEndpoint(endpoint, options.publicEndpoints)) {
-        privateEndpoints.push(formatEndpoint(endpoint));
+      const key = normalizeEndpoint(endpoint);
+      if (!privateEndpoints.has(key)) {
+        privateEndpoints.set(
+          key,
+          `${formatEndpoint(endpoint)} (${fetch.file}:${fetch.line})`
+        );
       }
     }
 
-    if (privateEndpoints.length > 0 && command.beta !== true) {
+    if (privateEndpoints.size > 0) {
       violations.push({
         commandPath: path,
         message:
           `"${path}" calls API endpoints that are not in the public ` +
-          `OpenAPI spec (${privateEndpoints.join(', ')}) and must be ` +
-          'marked `beta: true` on its command definition, or the ' +
-          'endpoints must be moved to the public spec first. See ' +
+          `OpenAPI spec (${[...privateEndpoints.values()].join(', ')}). ` +
+          'Move the endpoints to the public spec before adding this ' +
+          'command, or discuss an exception with CLI maintainers. See ' +
           'packages/cli/docs/api-endpoint-policy.md',
       });
     }

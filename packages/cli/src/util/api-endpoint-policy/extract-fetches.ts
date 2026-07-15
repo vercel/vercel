@@ -18,7 +18,7 @@ export interface ExtractedFetch {
  * endpoints via `normalizeEndpoint`.
  *
  * Unresolvable paths (variables, concatenation, etc.) are skipped — those
- * still need to be declared manually and cannot be verified statically.
+ * cannot be verified statically by the CI policy check.
  */
 export function extractFetchesFromSource(
   fileName: string,
