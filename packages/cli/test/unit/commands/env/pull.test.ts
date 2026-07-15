@@ -160,6 +160,37 @@ describe('env pull', () => {
     await expect(env(client)).resolves.toEqual(0);
   });
 
+  it('accepts --project when the deployment response omits projectId', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+      accountId: 'team_dummy',
+    });
+    client.scenario.get('/v13/deployments/dpl_legacy', (_req, res) => {
+      res.json({ id: 'dpl_legacy' });
+    });
+    client.scenario.get('/v3/env/pull/dpl_legacy', (_req, res) => {
+      res.json({ env: {}, buildEnv: { DEPLOYMENT_VAR: 'value' } });
+    });
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    client.setArgv(
+      'env',
+      'pull',
+      '.env.test',
+      '--id',
+      'dpl_legacy',
+      '--project',
+      'vercel-env-pull',
+      '--yes'
+    );
+
+    await expect(env(client)).resolves.toEqual(0);
+  });
+
   it('should handle pulling', async () => {
     useUser();
     useTeams('team_dummy');
