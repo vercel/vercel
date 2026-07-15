@@ -209,6 +209,7 @@ export const pullSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       description: 'Set the Environment when pulling Environment Variables',
@@ -269,6 +270,7 @@ export const runSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       description:
