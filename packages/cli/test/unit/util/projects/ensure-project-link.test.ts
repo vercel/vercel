@@ -1,0 +1,101 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { client } from '../../../mocks/client';
+import { ensureProjectLink } from '../../../../src/util/projects/ensure-project-link';
+import * as agentOutput from '../../../../src/util/agent-output';
+import * as linkModule from '../../../../src/util/projects/link';
+
+vi.mock('../../../../src/util/projects/link', () => ({
+  getLinkedProject: vi.fn(),
+}));
+
+vi.mock('../../../../src/util/agent-output', async importOriginal => {
+  const actual =
+    await importOriginal<typeof import('../../../../src/util/agent-output')>();
+  return {
+    ...actual,
+    outputAgentError: vi.fn(),
+  };
+});
+
+const getLinkedProject = vi.mocked(linkModule.getLinkedProject);
+const outputAgentError = vi.mocked(agentOutput.outputAgentError);
+
+describe('ensureProjectLink', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns link errors unchanged', async () => {
+    getLinkedProject.mockResolvedValue({
+      status: 'error',
+      exitCode: 2,
+    });
+
+    await expect(ensureProjectLink(client, 'routes')).resolves.toBe(2);
+  });
+
+  it('returns the linked project and updates the current team', async () => {
+    const link = {
+      status: 'linked' as const,
+      org: { id: 'team_123', slug: 'acme', type: 'team' as const },
+      project: { id: 'project_123', name: 'site' },
+    };
+    getLinkedProject.mockResolvedValue(link);
+
+    await expect(ensureProjectLink(client, 'routes')).resolves.toBe(link);
+    expect(client.config.currentTeam).toBe('team_123');
+  });
+
+  it('preserves the redirects non-interactive error payload', async () => {
+    getLinkedProject.mockResolvedValue({
+      status: 'not_linked',
+      org: null,
+      project: null,
+    });
+    client.nonInteractive = true;
+
+    await expect(ensureProjectLink(client, 'redirects')).resolves.toBe(1);
+    expect(outputAgentError).toHaveBeenCalledWith(
+      client,
+      {
+        status: 'error',
+        reason: 'not_linked',
+        message:
+          "Your codebase isn't linked to a project on Vercel. Run vercel link to begin.",
+        next: [{ command: 'vercel link' }],
+      },
+      1
+    );
+  });
+
+  it.each([
+    'routes',
+    'firewall',
+  ] as const)('preserves the %s non-interactive error payload and global flags', async command => {
+    getLinkedProject.mockResolvedValue({
+      status: 'not_linked',
+      org: null,
+      project: null,
+    });
+    client.nonInteractive = true;
+    client.setArgv(command, 'list', '--cwd', '/tmp/site', '--non-interactive');
+
+    await expect(ensureProjectLink(client, command)).resolves.toBe(1);
+    expect(outputAgentError).toHaveBeenCalledWith(
+      client,
+      {
+        status: 'error',
+        reason: 'not_linked',
+        userActionRequired: true,
+        message: `Your codebase is not linked to a Vercel project. Run link first, then retry ${command} commands.`,
+        next: [
+          {
+            command: 'vercel link --cwd /tmp/site --non-interactive',
+            when: 'to link this directory to a project',
+          },
+        ],
+      },
+      1
+    );
+  });
+});

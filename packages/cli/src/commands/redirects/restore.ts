@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { ensureProjectLink } from '../../util/projects/ensure-project-link';
 import output from '../../output-manager';
 import {
   outputActionRequired,
@@ -14,7 +15,6 @@ import {
 import { restoreSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   validateRequiredArgs,
   confirmAction,
   getArgsAfterRedirectsSubcommand,
@@ -71,7 +71,7 @@ export default async function restore(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'redirects');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

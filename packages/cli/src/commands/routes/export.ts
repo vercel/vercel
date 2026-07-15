@@ -1,11 +1,8 @@
 import type Client from '../../util/client';
+import { ensureProjectLink } from '../../util/projects/ensure-project-link';
 import output from '../../output-manager';
 import { exportSubcommand } from './command';
-import {
-  parseSubcommandArgs,
-  ensureProjectLink,
-  withGlobalFlags,
-} from './shared';
+import { parseSubcommandArgs, withGlobalFlags } from './shared';
 import { outputAgentError } from '../../util/agent-output';
 import getRoutes from '../../util/routes/get-routes';
 import { getCommandName } from '../../util/pkg-name';
@@ -81,7 +78,7 @@ export default async function exportRoutes(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, exportSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'routes');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

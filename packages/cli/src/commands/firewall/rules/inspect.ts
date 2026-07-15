@@ -1,10 +1,10 @@
 import chalk from 'chalk';
 import type Client from '../../../util/client';
+import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
 import output from '../../../output-manager';
 import { rulesInspectSubcommand } from '../command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   resolveRule,
   outputJson,
   withGlobalFlags,
@@ -55,7 +55,7 @@ export default async function inspect(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'firewall');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

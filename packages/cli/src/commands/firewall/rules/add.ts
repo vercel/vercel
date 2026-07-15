@@ -1,10 +1,10 @@
 import chalk from 'chalk';
 import type Client from '../../../util/client';
+import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
 import output from '../../../output-manager';
 import { rulesAddSubcommand } from '../command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   confirmAction,
   detectExistingDraft,
   offerAutoPublish,
@@ -88,7 +88,7 @@ export default async function add(client: Client, argv: string[]) {
     }
 
     // AI mode
-    const link = await ensureProjectLink(client);
+    const link = await ensureProjectLink(client, 'firewall');
     if (typeof link === 'number') return link;
     const { project, org } = link;
     const teamId = org.type === 'team' ? org.id : undefined;
@@ -130,7 +130,7 @@ export default async function add(client: Client, argv: string[]) {
       ],
     });
 
-    const link = await ensureProjectLink(client);
+    const link = await ensureProjectLink(client, 'firewall');
     if (typeof link === 'number') return link;
     const { project, org } = link;
     const teamId = org.type === 'team' ? org.id : undefined;
@@ -399,7 +399,7 @@ async function createRule(
   parsed: { args: string[]; flags: Record<string, unknown> },
   rule: Omit<FirewallRule, 'id'>
 ): Promise<number> {
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'firewall');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

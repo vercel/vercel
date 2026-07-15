@@ -1,13 +1,9 @@
 import chalk from 'chalk';
 import type Client from '../../../util/client';
+import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
 import output from '../../../output-manager';
 import { systemBypassListSubcommand } from '../command';
-import {
-  parseSubcommandArgs,
-  ensureProjectLink,
-  outputJson,
-  withGlobalFlags,
-} from '../shared';
+import { parseSubcommandArgs, outputJson, withGlobalFlags } from '../shared';
 import getBypass from '../../../util/firewall/get-bypass';
 import {
   formatBypassTable,
@@ -24,7 +20,7 @@ export default async function list(client: Client, argv: string[]) {
   );
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'firewall');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
