@@ -493,7 +493,20 @@ describe('redirects add', () => {
         throw new Error('exit');
       }) as () => never);
 
-      client.setArgv('redirects', 'add');
+      client.setArgv(
+        'redirects',
+        'add',
+        '--status',
+        '301',
+        '--name',
+        'release-1',
+        '--project',
+        'redirects-test',
+        '--scope',
+        'team_dummy',
+        '--cwd',
+        '/tmp/project'
+      );
       await expect(redirects(client)).rejects.toThrow('exit');
 
       expect(logSpy).toHaveBeenCalled();
@@ -502,8 +515,9 @@ describe('redirects add', () => {
       expect(payload.reason).toBe('missing_arguments');
       expect(payload.message).toContain('source and destination are required');
       expect(Array.isArray(payload.next)).toBe(true);
-      expect(payload.next[0].command).toContain('redirects add');
-      expect(payload.next[0].command).toContain('--yes');
+      expect(payload.next[0].command).toBe(
+        'vercel redirects add <source> <destination> --status 301 --name release-1 --project redirects-test --scope team_dummy --cwd /tmp/project --yes'
+      );
       expect(payload.next[0].when).toBe('to add a redirect');
 
       logSpy.mockRestore();

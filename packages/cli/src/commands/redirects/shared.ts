@@ -7,14 +7,19 @@ import {
   parseSubcommandArguments,
   type ParsedSubcommandArguments,
 } from '../../util/command-arguments';
-import { getGlobalFlagsFromArgs } from '../../util/arg-common';
+import {
+  getGlobalFlagsFromArgs,
+  getSameSubcommandSuggestionFlags,
+} from '../../util/arg-common';
 import { withGlobalFlags as withClientGlobalFlags } from '../../util/agent-output';
 
 export function withGlobalFlags(
   client: Client,
   commandTemplate: string
 ): string {
-  return withClientGlobalFlags(client, commandTemplate, true);
+  return withClientGlobalFlags(client, commandTemplate, {
+    preserveProject: true,
+  });
 }
 
 export async function parseSubcommandArgs(
@@ -113,18 +118,7 @@ export function buildRedirectsSuggestionFlags(
   options: { ensureYes?: boolean } = {}
 ): string[] {
   const after = getArgsAfterRedirectsSubcommand(fullArgs, subcommand);
-  const flagParts: string[] = [];
-  for (let i = 0; i < after.length; i++) {
-    if (!after[i].startsWith('-')) continue;
-    flagParts.push(after[i]);
-    if (
-      after[i] === '--project' &&
-      i + 1 < after.length &&
-      !after[i + 1].startsWith('-')
-    ) {
-      flagParts.push(after[++i]);
-    }
-  }
+  const flagParts = getSameSubcommandSuggestionFlags(after);
   if (
     options.ensureYes !== false &&
     !flagParts.some(a => a === '--yes' || a === '-y')
