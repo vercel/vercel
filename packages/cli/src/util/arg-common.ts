@@ -311,6 +311,55 @@ export function getGlobalFlagsOnlyFromArgs(args: string[]): string[] {
   return out;
 }
 
+interface ProjectOptionFromArgs {
+  value: string;
+  args: string[];
+}
+
+function findProjectOption(args: string[]): ProjectOptionFromArgs | undefined {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--') return undefined;
+    if (arg.startsWith('--project=')) {
+      return {
+        value: arg.slice('--project='.length),
+        args: [arg],
+      };
+    }
+    if (arg === '--project') {
+      const value = args[i + 1];
+      if (value && !value.startsWith('-')) {
+        return { value, args: [arg, value] };
+      }
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Collects global CLI flags and an explicit project selector for suggested
+ * commands that operate on the same project.
+ */
+export function getGlobalFlagsAndProjectFromArgs(args: string[]): string[] {
+  const delimiterIndex = args.indexOf('--');
+  const cliArgs = delimiterIndex === -1 ? args : args.slice(0, delimiterIndex);
+  const safeArgs = stripSensitiveAuthArgs(cliArgs);
+  const out = getGlobalFlagsOnlyFromArgs(safeArgs);
+  const projectOption = findProjectOption(safeArgs);
+  if (projectOption) out.push(...projectOption.args);
+
+  return out;
+}
+
+/**
+ * Returns the explicit project selector from CLI arguments, ignoring arguments
+ * passed to a child command after `--`.
+ */
+export function getProjectOptionFromArgs(args: string[]): string | undefined {
+  return findProjectOption(args)?.value;
+}
+
 /**
  * Builds a suggested command with only global CLI flags preserved from argv.
  * Useful for agent next[] hints that should keep context flags like --cwd.
@@ -320,5 +369,17 @@ export function getCommandNameWithGlobalFlags(
   argv: string[]
 ): string {
   const flags = getGlobalFlagsOnlyFromArgs(argv.slice(2));
+  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+}
+
+/**
+ * Builds a suggested command with global CLI flags and an explicit project
+ * selector preserved from argv.
+ */
+export function getCommandNameWithGlobalFlagsAndProject(
+  commandTemplate: string,
+  argv: string[]
+): string {
+  const flags = getGlobalFlagsAndProjectFromArgs(argv.slice(2));
   return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
 }
