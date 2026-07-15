@@ -2082,8 +2082,8 @@ export async function getPageLambdaGroups({
         Object.assign(opts, workflowFunctionsConfig.workflows);
       }
 
-      if (config?.workflow?.maxDuration !== undefined) {
-        opts.maxDuration = config.workflow.maxDuration;
+      if (config?.workflows?.maxDuration !== undefined) {
+        opts.maxDuration = config.workflows.maxDuration;
       }
     }
 

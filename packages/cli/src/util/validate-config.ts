@@ -587,7 +587,7 @@ function buildVercelConfigSchema() {
       rewrites: rewritesSchema,
       trailingSlash: trailingSlashSchema,
       functions: getFunctionsSchema(),
-      workflow: {
+      workflows: {
         type: 'object',
         additionalProperties: false,
         properties: {

@@ -44,7 +44,7 @@ export interface Config {
   zeroConfig?: boolean;
   import?: { [key: string]: string };
   functions?: BuilderFunctions;
-  workflow?: WorkflowConfig;
+  workflows?: WorkflowsConfig;
   projectSettings?: ProjectSettings;
   outputDirectory?: string;
   installCommand?: string;
@@ -452,7 +452,7 @@ export interface Builder {
 
 export type MaxDuration = number | 'max';
 
-export interface WorkflowConfig {
+export interface WorkflowsConfig {
   maxDuration?: MaxDuration;
 }
 

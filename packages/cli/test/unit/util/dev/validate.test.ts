@@ -551,6 +551,27 @@ describe('validateConfig', () => {
     expect(error).toBeNull();
   });
 
+  it('should not error with workflows.maxDuration in vercel.json', () => {
+    const error = validateConfig({
+      workflows: { maxDuration: 1800 },
+    } satisfies Parameters<typeof validateConfig>[0]);
+    expect(error).toBeNull();
+  });
+
+  it('should not error with workflows.maxDuration set to "max"', () => {
+    const error = validateConfig({
+      workflows: { maxDuration: 'max' },
+    } satisfies Parameters<typeof validateConfig>[0]);
+    expect(error).toBeNull();
+  });
+
+  it('should reject unknown properties on workflows config', () => {
+    const error = validateConfig({
+      workflows: { maxDuration: 1800, memory: 1024 },
+    } as Parameters<typeof validateConfig>[0]);
+    expect(error).not.toBeNull();
+  });
+
   it('should reject unsupported beat config for job services', () => {
     const error = validateConfig({
       experimentalServices: {
