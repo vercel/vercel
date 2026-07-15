@@ -28,6 +28,17 @@ describe('resolveHelpCommand', () => {
     ).toBe(null);
   });
 
+  it.each([
+    [['--help'], 0],
+    [['help'], 0],
+    [['flags', '--help'], 2],
+    [['help', 'flags'], 2],
+  ])('preserves the help exit code for %j', (args, expectedExitCode) => {
+    expect(resolveHelpCommand(args, commandDefinitions)?.exitCode).toBe(
+      expectedExitCode
+    );
+  });
+
   it('leaves invalid nested command structures to the command router', () => {
     expect(
       resolveHelpCommand(
