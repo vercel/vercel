@@ -32,7 +32,9 @@ export function withGlobalFlags(
   client: Client,
   commandTemplate: string
 ): string {
-  return withClientGlobalFlags(client, commandTemplate, true);
+  return withClientGlobalFlags(client, commandTemplate, {
+    preserveProject: true,
+  });
 }
 
 /**
