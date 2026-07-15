@@ -28,7 +28,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { addSubcommand } from './command';
-import { getLinkedProject } from '../../util/projects/link';
+import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import { determineAgent } from '@vercel/detect-agent';
 import { suggestNextCommands } from '../../util/suggest-next-commands';
 import getTeamById from '../../util/teams/get-team-by-id';
@@ -275,6 +275,7 @@ export default async function add(client: Client, argv: string[]) {
   telemetryClient.trackCliFlagForce(opts['--force']);
   telemetryClient.trackCliFlagGuidance(opts['--guidance']);
   telemetryClient.trackCliFlagYes(opts['--yes']);
+  telemetryClient.trackCliOptionProject(opts['--project']);
 
   if (args.length > 3) {
     output.error(
@@ -300,7 +301,10 @@ export default async function add(client: Client, argv: string[]) {
 
   // Non-interactive: resolve link and choices once, then report all missing requirements in a single JSON (no iteration)
   if (client.nonInteractive) {
-    const link = await getLinkedProject(client);
+    const link = await resolveProjectContext({
+      client,
+      projectNameOrId: opts['--project'],
+    });
     if (link.status === 'error') {
       return link.exitCode;
     }
@@ -587,7 +591,10 @@ export default async function add(client: Client, argv: string[]) {
     }
   }
 
-  const link = await getLinkedProject(client);
+  const link = await resolveProjectContext({
+    client,
+    projectNameOrId: opts['--project'],
+  });
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
@@ -742,11 +749,14 @@ export default async function add(client: Client, argv: string[]) {
   ];
 
   if (!envGitBranch && choices.length === 0 && !opts['--force']) {
+    const projectFlag = opts['--project']
+      ? ` --project ${opts['--project']}`
+      : '';
     output.error(
       `The variable ${param(
         envName
       )} has already been added to all Environments. To remove, run ${getCommandName(
-        `env rm ${envName}`
+        `env rm ${envName}${projectFlag}`
       )}.`
     );
     return 1;
@@ -1149,7 +1159,13 @@ export default async function add(client: Client, argv: string[]) {
   const guidanceMode = parsedArgs.flags['--guidance'] ?? isAgent;
 
   if (guidanceMode) {
-    suggestNextCommands([getCommandName(`env ls`), getCommandName(`env pull`)]);
+    const projectFlag = opts['--project']
+      ? ` --project ${opts['--project']}`
+      : '';
+    suggestNextCommands([
+      getCommandName(`env ls${projectFlag}`),
+      getCommandName(`env pull${projectFlag}`),
+    ]);
   }
 
   return 0;
