@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getGlobalFlagsAndProjectFromArgs,
   getGlobalFlagsOnlyFromArgs,
+  getProjectOptionFromArgs,
   getSameSubcommandSuggestionFlags,
 } from '../../../src/util/arg-common';
 
@@ -46,6 +48,56 @@ describe('getSameSubcommandSuggestionFlags', () => {
     const args = ['--slug', 'acme', '--token', '-secret-token', '--yes'];
     const out = getSameSubcommandSuggestionFlags(args);
     expect(out).toEqual(['--slug', 'acme', '--yes']);
+  });
+});
+
+describe('getProjectOptionFromArgs', () => {
+  it('reads spaced and joined project options', () => {
+    expect(getProjectOptionFromArgs(['--project', 'payments-api'])).toBe(
+      'payments-api'
+    );
+    expect(getProjectOptionFromArgs(['--project=payments-api'])).toBe(
+      'payments-api'
+    );
+  });
+
+  it('ignores project options passed to a child command', () => {
+    expect(
+      getProjectOptionFromArgs(['--', '--project', 'child-project'])
+    ).toBeUndefined();
+  });
+});
+
+describe('getGlobalFlagsAndProjectFromArgs', () => {
+  it('preserves project context while removing unrelated and sensitive flags', () => {
+    expect(
+      getGlobalFlagsAndProjectFromArgs([
+        '--project',
+        'payments-api',
+        '--cwd',
+        '/tmp/project',
+        '--token',
+        'secret',
+        '--status',
+        '301',
+      ])
+    ).toEqual(['--cwd', '/tmp/project', '--project', 'payments-api']);
+  });
+
+  it('ignores project flags passed to a child command', () => {
+    expect(
+      getGlobalFlagsAndProjectFromArgs([
+        '--cwd',
+        '/tmp/project',
+        '--',
+        '--project',
+        'child-project',
+        '--scope',
+        'child-scope',
+        '--cwd',
+        '/tmp/child',
+      ])
+    ).toEqual(['--cwd', '/tmp/project']);
   });
 });
 
