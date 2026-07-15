@@ -236,7 +236,7 @@ const main = async () => {
         ? commandHelp(resolvedHelp.command, { parent: resolvedHelp.parent })
         : help()
     );
-    return resolvedHelp.exitCode;
+    return 0;
   }
 
   const localConfigPath = parsedArgs.flags['--local-config'];

@@ -3,7 +3,6 @@ import type { Command } from '../commands/help';
 export interface ResolvedHelpCommand {
   command?: Command;
   parent?: Command;
-  exitCode: 0 | 2;
 }
 
 function matchesCommand(command: Command, value: string) {
@@ -32,7 +31,7 @@ export function resolveHelpCommand(
   );
 
   if (commandPath.length === 0) {
-    return { exitCode: 0 };
+    return {};
   }
 
   let command = commands.find(candidate =>
@@ -57,5 +56,5 @@ export function resolveHelpCommand(
     command = child;
   }
 
-  return { command, parent, exitCode: 2 };
+  return { command, parent };
 }
