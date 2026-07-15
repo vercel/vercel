@@ -4,7 +4,7 @@
 
 # Class: VercelKmsError
 
-Defined in: packages/kms/src/errors.ts:7
+Defined in: [packages/kms/src/errors.ts:7](https://github.com/vercel/vercel/blob/main/packages/kms/src/errors.ts#L7)
 
 Error thrown when a Vercel KMS request fails. Mirrors the API error envelope
 `{ error: { code, message, ...meta } }`: `code` and `message` come from the
@@ -21,7 +21,7 @@ response body when present, and any remaining fields are exposed on
 
 > **new VercelKmsError**(`__namedParameters`): `VercelKmsError`
 
-Defined in: packages/kms/src/errors.ts:15
+Defined in: [packages/kms/src/errors.ts:15](https://github.com/vercel/vercel/blob/main/packages/kms/src/errors.ts#L15)
 
 #### Parameters
 
@@ -57,7 +57,7 @@ Defined in: packages/kms/src/errors.ts:15
 
 > `readonly` **code**: `string`
 
-Defined in: packages/kms/src/errors.ts:11
+Defined in: [packages/kms/src/errors.ts:11](https://github.com/vercel/vercel/blob/main/packages/kms/src/errors.ts#L11)
 
 Machine-readable error code from the API (e.g. `issuer_not_found`).
 
@@ -79,7 +79,7 @@ Defined in: node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/lib/lib.
 
 > `readonly` **metadata**: [`Record`](https://www.typescriptlang.org/docs/handbook/utility-types.html#recordkeys-type)\<`string`, `unknown`\>
 
-Defined in: packages/kms/src/errors.ts:13
+Defined in: [packages/kms/src/errors.ts:13](https://github.com/vercel/vercel/blob/main/packages/kms/src/errors.ts#L13)
 
 Any additional fields the API attached to the error envelope.
 
@@ -113,7 +113,7 @@ Defined in: node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/lib/lib.
 
 > `readonly` **status**: `number`
 
-Defined in: packages/kms/src/errors.ts:9
+Defined in: [packages/kms/src/errors.ts:9](https://github.com/vercel/vercel/blob/main/packages/kms/src/errors.ts#L9)
 
 HTTP status code of the failed response.
 

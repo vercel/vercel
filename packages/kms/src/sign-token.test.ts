@@ -10,18 +10,8 @@ import { VercelKmsError } from './errors';
 
 const getVercelOidcTokenMock = vi.mocked(getVercelOidcToken);
 
-function base64url(obj: object): string {
-  return Buffer.from(JSON.stringify(obj)).toString('base64url');
-}
-
-function makeJwt(payload: Record<string, unknown>): string {
-  return `${base64url({ alg: 'none' })}.${base64url(payload)}.sig`;
-}
-
-/** OIDC token expiring far in the future, unique per test to isolate the cache. */
-function freshOidcToken(): string {
-  return makeJwt({ exp: 4_000_000_000, jti: crypto.randomUUID() });
-}
+const OIDC_TOKEN = 'oidc-token';
+const SIGNED_TOKEN = 'signed.jwt.token';
 
 /**
  * Returns a fetch mock implementation that produces a fresh `Response` on every
@@ -41,19 +31,17 @@ describe('signToken', () => {
   });
 
   test('signs a token and returns the JWT string', async () => {
-    const oidc = freshOidcToken();
-    getVercelOidcTokenMock.mockResolvedValue(oidc);
-    const signed = makeJwt({ exp: 4_000_000_000, sub: 'user' });
+    getVercelOidcTokenMock.mockResolvedValue(OIDC_TOKEN);
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
-      .mockImplementation(fetchReturning({ token: signed }));
+      .mockImplementation(fetchReturning({ token: SIGNED_TOKEN }));
 
     const result = await signToken({
       issuerId: 'issuer_a',
       claims: { sub: 'user' },
     });
 
-    expect(result).toBe(signed);
+    expect(result).toBe(SIGNED_TOKEN);
     expect(getVercelOidcTokenMock).toHaveBeenCalledWith();
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
@@ -62,7 +50,7 @@ describe('signToken', () => {
     );
     expect(init?.method).toBe('POST');
     expect((init?.headers as Record<string, string>).authorization).toBe(
-      `Bearer ${oidc}`
+      `Bearer ${OIDC_TOKEN}`
     );
     expect(JSON.parse(init?.body as string)).toEqual({
       claims: { sub: 'user' },
@@ -72,12 +60,10 @@ describe('signToken', () => {
   });
 
   test('targets the regional host when a region is provided', async () => {
-    getVercelOidcTokenMock.mockResolvedValue(freshOidcToken());
+    getVercelOidcTokenMock.mockResolvedValue(OIDC_TOKEN);
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
-      .mockImplementation(
-        fetchReturning({ token: makeJwt({ exp: 4_000_000_000 }) })
-      );
+      .mockImplementation(fetchReturning({ token: SIGNED_TOKEN }));
 
     await signToken({ issuerId: 'issuer_region', region: 'sfo1' });
 
@@ -87,56 +73,10 @@ describe('signToken', () => {
     );
   });
 
-  test('caches the result and does not re-fetch for identical inputs', async () => {
-    getVercelOidcTokenMock.mockResolvedValue(freshOidcToken());
-    const signed = makeJwt({ exp: 4_000_000_000 });
-    const fetchMock = vi
-      .spyOn(globalThis, 'fetch')
-      .mockImplementation(fetchReturning({ token: signed }));
-
-    const options = { issuerId: 'issuer_cache', claims: { a: 1 } };
-    const first = await signToken(options);
-    const second = await signToken(options);
-
-    expect(first).toBe(signed);
-    expect(second).toBe(signed);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  test('skipCache forces a fresh signature', async () => {
-    getVercelOidcTokenMock.mockResolvedValue(freshOidcToken());
-    const signed = makeJwt({ exp: 4_000_000_000 });
-    const fetchMock = vi
-      .spyOn(globalThis, 'fetch')
-      .mockImplementation(fetchReturning({ token: signed }));
-
-    const options = { issuerId: 'issuer_skip', skipCache: true };
-    await signToken(options);
-    await signToken(options);
-
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-  });
-
-  test('does not cache when neither token carries an expiry', async () => {
-    getVercelOidcTokenMock.mockResolvedValue(makeJwt({ jti: 'no-exp' }));
-    const signed = makeJwt({ sub: 'user' });
-    const fetchMock = vi
-      .spyOn(globalThis, 'fetch')
-      .mockImplementation(fetchReturning({ token: signed }));
-
-    const options = { issuerId: 'issuer_noexp' };
-    await signToken(options);
-    await signToken(options);
-
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-  });
-
   test('uses an explicit token without fetching an OIDC token', async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
-      .mockImplementation(
-        fetchReturning({ token: makeJwt({ exp: 4_000_000_000 }) })
-      );
+      .mockImplementation(fetchReturning({ token: SIGNED_TOKEN }));
 
     await signToken({ issuerId: 'issuer_explicit', token: 'my-token' });
 
@@ -148,7 +88,7 @@ describe('signToken', () => {
   });
 
   test('throws a VercelKmsError mapping the API error envelope', async () => {
-    getVercelOidcTokenMock.mockResolvedValue(freshOidcToken());
+    getVercelOidcTokenMock.mockResolvedValue(OIDC_TOKEN);
     vi.spyOn(globalThis, 'fetch').mockImplementation(
       fetchReturning(
         { error: { code: 'issuer_not_found', message: 'nope', issuerId: 'x' } },

@@ -5,9 +5,7 @@ Runtime KMS signing helpers intended to be used with your Vercel Functions.
 `@vercel/kms` calls the Vercel KMS signing API to sign JWTs and arbitrary
 messages with an issuer's managed signing key. It authenticates using the
 function's [Vercel OIDC token](https://vercel.com/docs/oidc) (fetched
-automatically via [`@vercel/oidc`](https://www.npmjs.com/package/@vercel/oidc))
-and caches results in memory until they expire, so repeated calls with the same
-inputs avoid a round-trip to the API.
+automatically via [`@vercel/oidc`](https://www.npmjs.com/package/@vercel/oidc)).
 
 ## Usage
 
@@ -61,7 +59,6 @@ Signs a JWT for an issuer.
 - `headers?: Record<string, unknown>` — Additional JWT headers.
 - `ttl?: number | null` — Time-to-live in seconds (default: `300`).
 - `token?: string` — Explicit OIDC token; skips automatic retrieval.
-- `skipCache?: boolean` — Bypass the in-memory cache for reads (still repopulates).
 - `region?: string` — Region for the regional KMS API host, e.g. `sfo1`, producing `https://api-<region>.vercel.com/v1`. Defaults to the `VERCEL_REGION` environment variable, falling back to `https://api.vercel.com/v1`. Ignored when `baseUrl` is set.
 - `baseUrl?: string` — Override the API base URL. Takes precedence over `region`.
 
@@ -76,7 +73,6 @@ Signs a base64-encoded message for an issuer.
 - `issuerId: string` — The ID of the issuer.
 - `message: string` — Base64-encoded message to sign.
 - `token?: string` — Explicit OIDC token; skips automatic retrieval.
-- `skipCache?: boolean` — Bypass the in-memory cache for reads (still repopulates).
 - `region?: string` — Region for the regional KMS API host, e.g. `sfo1`, producing `https://api-<region>.vercel.com/v1`. Defaults to the `VERCEL_REGION` environment variable, falling back to `https://api.vercel.com/v1`. Ignored when `baseUrl` is set.
 - `baseUrl?: string` — Override the API base URL. Takes precedence over `region`.
 

@@ -4,7 +4,7 @@
 
 # Interface: SignTokenOptions
 
-Defined in: packages/kms/src/sign-token.ts:13
+Defined in: [packages/kms/src/sign-token.ts:7](https://github.com/vercel/vercel/blob/main/packages/kms/src/sign-token.ts#L7)
 
 Options for [signToken](../functions/signToken.md).
 
@@ -14,7 +14,7 @@ Options for [signToken](../functions/signToken.md).
 
 > `optional` **baseUrl?**: `string`
 
-Defined in: packages/kms/src/sign-token.ts:44
+Defined in: [packages/kms/src/sign-token.ts:32](https://github.com/vercel/vercel/blob/main/packages/kms/src/sign-token.ts#L32)
 
 Override the API base URL. Takes precedence over `region`.
 
@@ -30,7 +30,7 @@ Override the API base URL. Takes precedence over `region`.
 
 > `optional` **claims?**: [`Record`](https://www.typescriptlang.org/docs/handbook/utility-types.html#recordkeys-type)\<`string`, `unknown`\>
 
-Defined in: packages/kms/src/sign-token.ts:17
+Defined in: [packages/kms/src/sign-token.ts:11](https://github.com/vercel/vercel/blob/main/packages/kms/src/sign-token.ts#L11)
 
 The claims to include in the token.
 
@@ -40,7 +40,7 @@ The claims to include in the token.
 
 > `optional` **headers?**: [`Record`](https://www.typescriptlang.org/docs/handbook/utility-types.html#recordkeys-type)\<`string`, `unknown`\>
 
-Defined in: packages/kms/src/sign-token.ts:19
+Defined in: [packages/kms/src/sign-token.ts:13](https://github.com/vercel/vercel/blob/main/packages/kms/src/sign-token.ts#L13)
 
 Additional headers to include in the token.
 
@@ -50,7 +50,7 @@ Additional headers to include in the token.
 
 > **issuerId**: `string`
 
-Defined in: packages/kms/src/sign-token.ts:15
+Defined in: [packages/kms/src/sign-token.ts:9](https://github.com/vercel/vercel/blob/main/packages/kms/src/sign-token.ts#L9)
 
 The ID of the issuer whose signing key should sign the token.
 
@@ -60,7 +60,7 @@ The ID of the issuer whose signing key should sign the token.
 
 > `optional` **region?**: `string`
 
-Defined in: packages/kms/src/sign-token.ts:39
+Defined in: [packages/kms/src/sign-token.ts:27](https://github.com/vercel/vercel/blob/main/packages/kms/src/sign-token.ts#L27)
 
 Region for the regional KMS API host, e.g. `sfo1`, producing
 `https://api-<region>.vercel.com/v1`. Defaults to the `VERCEL_REGION`
@@ -69,28 +69,11 @@ Ignored when `baseUrl` is provided.
 
 ---
 
-### skipCache?
-
-> `optional` **skipCache?**: `boolean`
-
-Defined in: packages/kms/src/sign-token.ts:32
-
-When `true`, bypasses the in-memory cache for reads and performs a fresh
-signature. The fresh result still replaces any cached entry.
-
-#### Default
-
-```ts
-false;
-```
-
----
-
 ### token?
 
 > `optional` **token?**: `string`
 
-Defined in: packages/kms/src/sign-token.ts:26
+Defined in: [packages/kms/src/sign-token.ts:20](https://github.com/vercel/vercel/blob/main/packages/kms/src/sign-token.ts#L20)
 
 An explicit Vercel OIDC token to authenticate with. When omitted, the
 function's OIDC token is fetched automatically via `@vercel/oidc`.
@@ -101,6 +84,6 @@ function's OIDC token is fetched automatically via `@vercel/oidc`.
 
 > `optional` **ttl?**: `number` \| `null`
 
-Defined in: packages/kms/src/sign-token.ts:21
+Defined in: [packages/kms/src/sign-token.ts:15](https://github.com/vercel/vercel/blob/main/packages/kms/src/sign-token.ts#L15)
 
 The time-to-live for the token, in seconds. Defaults to 300.
