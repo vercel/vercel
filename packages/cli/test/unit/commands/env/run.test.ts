@@ -159,6 +159,49 @@ describe('env run', () => {
       );
     });
 
+    it('ignores scope flags passed to the child command', async () => {
+      useUser();
+      useTeams('team_dummy');
+      const project = {
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+        accountId: 'team_dummy',
+      };
+      let requestedTeamId: unknown;
+
+      client.scenario.get('/v9/projects/vercel-env-pull', (req, res) => {
+        requestedTeamId = req.query.teamId;
+        if (requestedTeamId !== 'team_dummy') {
+          res.status(404).send();
+          return;
+        }
+        res.json(project);
+      });
+      useProject(project);
+
+      client.cwd = setupUnitFixture('vercel-env-pull');
+      client.config.currentTeam = 'team_current';
+      client.setArgv(
+        'env',
+        'run',
+        '--project',
+        'vercel-env-pull',
+        '--',
+        'child',
+        '--scope',
+        'child-scope'
+      );
+
+      await expect(env(client)).resolves.toEqual(0);
+      expect(requestedTeamId).toEqual('team_dummy');
+      expect(execa).toHaveBeenCalledWith(
+        'child',
+        ['--scope', 'child-scope'],
+        expect.objectContaining({ cwd: client.cwd })
+      );
+    });
+
     it('should run command with development env vars by default', async () => {
       useUser();
       useTeams('team_dummy');
