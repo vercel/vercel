@@ -2064,7 +2064,7 @@ export async function getPageLambdaGroups({
       const configRelativePath = isAppRouterRoute
         ? '../config.json'
         : './config.json';
-      const config = JSON.parse(
+      const workflowFunctionsConfig = JSON.parse(
         await fs
           .readFile(
             path.join(entryPath, path.dirname(sourceFile), configRelativePath),
@@ -2076,10 +2076,14 @@ export async function getPageLambdaGroups({
         workflows?: LambdaOptions;
       };
 
-      if (isGeneratedSteps && config.steps) {
-        Object.assign(opts, config.steps);
-      } else if (isGeneratedWorkflows && config.workflows) {
-        Object.assign(opts, config.workflows);
+      if (isGeneratedSteps && workflowFunctionsConfig.steps) {
+        Object.assign(opts, workflowFunctionsConfig.steps);
+      } else if (isGeneratedWorkflows && workflowFunctionsConfig.workflows) {
+        Object.assign(opts, workflowFunctionsConfig.workflows);
+      }
+
+      if (config?.workflow?.maxDuration !== undefined) {
+        opts.maxDuration = config.workflow.maxDuration;
       }
     }
 

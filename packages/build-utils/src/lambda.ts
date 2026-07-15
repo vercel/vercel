@@ -125,6 +125,22 @@ interface GetLambdaOptionsFromFunctionOptions {
   config?: Pick<Config, 'functions' | 'serviceName'>;
 }
 
+function normalizeFunctionPath(functionPath: string): string {
+  return functionPath.replace(/^\/+/, '');
+}
+
+function matchesFunctionPattern(
+  pattern: string,
+  functionPath: string
+): boolean {
+  const normalizedPattern = normalizeFunctionPath(pattern);
+  const normalizedPath = normalizeFunctionPath(functionPath);
+  return (
+    normalizedPath === normalizedPattern ||
+    minimatch(normalizedPath, normalizedPattern)
+  );
+}
+
 function getDefaultLambdaArchitecture(
   architecture: LambdaArchitecture | undefined
 ): LambdaArchitecture {
@@ -548,45 +564,47 @@ export async function getLambdaOptionsFromFunction({
         ? config.serviceName
         : undefined;
     for (const [pattern, fn] of Object.entries(config.functions)) {
-      if (sourceFile === pattern || minimatch(sourceFile, pattern)) {
-        const consumer = sanitizeConsumerName(
-          serviceName ? `${serviceName}~${pattern}` : pattern
-        );
-        const experimentalTriggers: TriggerEvent[] | undefined =
-          fn.experimentalTriggers?.map(
-            (trigger: TriggerEventInput): TriggerEvent => {
-              if (trigger.type === 'queue/v2beta') {
-                return {
-                  ...trigger,
-                  consumer,
-                };
-              }
-              return trigger;
-            }
-          );
-
-        // User-configured functions can only have one v2beta trigger.
-        // Services may attach multiple triggers programmatically.
-        if (
-          experimentalTriggers &&
-          experimentalTriggers.length > 1 &&
-          experimentalTriggers.some(t => t.type === 'queue/v2beta')
-        ) {
-          throw new Error(
-            `functions["${pattern}"].experimentalTriggers can only have one item for queue/v2beta`
-          );
-        }
-
-        return {
-          architecture: fn.architecture,
-          memory: fn.memory,
-          maxDuration: fn.maxDuration,
-          regions: fn.regions,
-          functionFailoverRegions: fn.functionFailoverRegions,
-          experimentalTriggers,
-          supportsCancellation: fn.supportsCancellation,
-        };
+      if (!matchesFunctionPattern(pattern, sourceFile)) {
+        continue;
       }
+
+      const consumer = sanitizeConsumerName(
+        serviceName ? `${serviceName}~${pattern}` : pattern
+      );
+      const experimentalTriggers: TriggerEvent[] | undefined =
+        fn.experimentalTriggers?.map(
+          (trigger: TriggerEventInput): TriggerEvent => {
+            if (trigger.type === 'queue/v2beta') {
+              return {
+                ...trigger,
+                consumer,
+              };
+            }
+            return trigger;
+          }
+        );
+
+      // User-configured functions can only have one v2beta trigger.
+      // Services may attach multiple triggers programmatically.
+      if (
+        experimentalTriggers &&
+        experimentalTriggers.length > 1 &&
+        experimentalTriggers.some(t => t.type === 'queue/v2beta')
+      ) {
+        throw new Error(
+          `functions["${pattern}"].experimentalTriggers can only have one item for queue/v2beta`
+        );
+      }
+
+      return {
+        architecture: fn.architecture,
+        memory: fn.memory,
+        maxDuration: fn.maxDuration,
+        regions: fn.regions,
+        functionFailoverRegions: fn.functionFailoverRegions,
+        experimentalTriggers,
+        supportsCancellation: fn.supportsCancellation,
+      };
     }
   }
 
