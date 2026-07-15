@@ -5,6 +5,7 @@ import output from '../../output-manager';
 import { listSubcommand, targetCommand } from './command';
 import { validateLsArgs } from '../../util/validate-ls-args';
 import { ensureLink } from '../../util/link/ensure-link';
+import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import { formatProject } from '../../util/projects/format-project';
 import { formatEnvironment } from '../../util/target/format-environment';
 import { validateJsonOutput } from '../../util/output-format';
@@ -86,11 +87,24 @@ export default async function list(client: Client, argv: string[]) {
   }
   const asJson = formatResult.jsonOutput;
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
+  const projectName = parsedArgs.flags['--project'];
+  telemetry.trackCliOptionProject(projectName);
 
   const autoConfirm = !!parsedArgs.flags['--yes'];
-  const link = await ensureLink(targetCommand.name, client, cwd, {
-    autoConfirm,
-  });
+  let link;
+  if (projectName) {
+    const resolvedProject = await resolveProjectContext({
+      client,
+      cwd,
+      projectNameOrId: projectName,
+    });
+    if (resolvedProject.status !== 'linked') {
+      return resolvedProject.status === 'error' ? resolvedProject.exitCode : 1;
+    }
+    link = resolvedProject;
+  } else {
+    link = await ensureLink(targetCommand.name, client, cwd, { autoConfirm });
+  }
   if (typeof link === 'number') {
     return link;
   }
