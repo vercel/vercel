@@ -168,7 +168,7 @@ export default async function pull(
 
   if (deploymentId && opts['--project']) {
     const deployment = await getDeployment(client, link.org.slug, deploymentId);
-    if (deployment.projectId !== link.project.id) {
+    if (deployment.projectId && deployment.projectId !== link.project.id) {
       output.error(
         `Deployment ${chalk.bold(deploymentId)} does not belong to project ${chalk.bold(link.project.name)}.`
       );
