@@ -1,7 +1,5 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
@@ -14,6 +12,10 @@ import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
 import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import type { Command } from '../help';
 import {
+  parseSubcommandArguments,
+  type ParsedSubcommandArguments,
+} from '../../util/command-arguments';
+import {
   getRouteTypeLabel,
   isTargetTransform,
   type RoutingRule,
@@ -21,11 +23,6 @@ import {
   type RouteVersion,
   type Transform,
 } from '../../util/routes/types';
-
-export interface ParsedSubcommand {
-  args: string[];
-  flags: { [key: string]: any };
-}
 
 /**
  * Shell-escape route identifier for suggested `next` commands. Uses single
@@ -51,13 +48,11 @@ export async function parseSubcommandArgs(
   argv: string[],
   command: Command,
   client?: Client
-): Promise<ParsedSubcommand | number> {
+): Promise<ParsedSubcommandArguments | number> {
   let parsedArgs;
-  const flagsSpecification = getFlagsSpecification(command.options);
 
   try {
-    // @ts-expect-error - TypeScript complains about the flags specification type
-    parsedArgs = parseArguments(argv, flagsSpecification);
+    parsedArgs = parseSubcommandArguments(argv, command);
   } catch (err) {
     if (client?.nonInteractive) {
       const rawMessage = err instanceof Error ? err.message : String(err);
@@ -159,18 +154,6 @@ export async function confirmAction(
   }
 
   return await client.input.confirm(message, false);
-}
-
-export function validateRequiredArgs(
-  args: string[],
-  required: string[]
-): string | null {
-  for (let i = 0; i < required.length; i++) {
-    if (!args[i]) {
-      return `Missing required argument: ${required[i]}`;
-    }
-  }
-  return null;
 }
 
 /**

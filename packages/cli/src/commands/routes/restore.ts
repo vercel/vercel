@@ -6,10 +6,10 @@ import { restoreSubcommand } from './command';
 import {
   parseSubcommandArgs,
   confirmAction,
-  validateRequiredArgs,
   printDiffSummary,
   findVersionById,
 } from './shared';
+import { validateRequiredArguments } from '../../util/command-arguments';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import updateRouteVersion from '../../util/routes/update-route-version';
 import getRoutes from '../../util/routes/get-routes';
@@ -21,7 +21,7 @@ export default async function restore(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, restoreSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const error = validateRequiredArgs(parsed.args, ['version-id']);
+  const error = validateRequiredArguments(parsed.args, ['version-id']);
   if (error) {
     if (client.nonInteractive) {
       outputAgentError(client, {

@@ -15,13 +15,13 @@ import {
 import { removeSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  validateRequiredArgs,
   confirmAction,
   buildRedirectsSuggestionFlags,
   getArgsAfterRedirectsSubcommand,
   getRedirectGlobalFlagsOnly,
   getRedirectPromoteSuggestionFlags,
 } from './shared';
+import { validateRequiredArguments } from '../../util/command-arguments';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import deleteRedirects from '../../util/redirects/delete-redirects';
 import getRedirects from '../../util/redirects/get-redirects';
@@ -33,7 +33,7 @@ export default async function remove(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, removeSubcommand);
   if (typeof parsed === 'number') return parsed;
 
-  const error = validateRequiredArgs(parsed.args, ['source']);
+  const error = validateRequiredArguments(parsed.args, ['source']);
   if (error) {
     if (client.nonInteractive) {
       const flagParts = buildRedirectsSuggestionFlags(

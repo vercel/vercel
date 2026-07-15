@@ -15,12 +15,12 @@ import {
 import { promoteSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  validateRequiredArgs,
   confirmAction,
   getArgsAfterRedirectsSubcommand,
   getRedirectGlobalFlagsOnly,
   getRedirectPromoteSuggestionFlags,
 } from './shared';
+import { validateRequiredArguments } from '../../util/command-arguments';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import getRedirectVersions from '../../util/redirects/get-redirect-versions';
 import updateRedirectVersion from '../../util/redirects/update-redirect-version';
@@ -31,7 +31,7 @@ export default async function promote(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, promoteSubcommand);
   if (typeof parsed === 'number') return parsed;
 
-  const error = validateRequiredArgs(parsed.args, ['version-id']);
+  const error = validateRequiredArguments(parsed.args, ['version-id']);
   if (error) {
     if (client.nonInteractive) {
       const afterPromote = getArgsAfterRedirectsSubcommand(
