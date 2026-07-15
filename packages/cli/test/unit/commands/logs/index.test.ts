@@ -1201,7 +1201,31 @@ describe('logs', () => {
       );
     });
 
-    it('should prioritize positional argument over --deployment flag', async () => {
+    it('should reject conflicting positional and --deployment selectors', async () => {
+      const user = useUser();
+      const deployment = useLogsDeployment(user);
+
+      let requestedLogs = false;
+      client.scenario.get('/api/logs/request-logs', (_req, res) => {
+        requestedLogs = true;
+        res.json({
+          rows: [createMockLog({ deploymentId: deployment.id })],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', deployment.id, '--deployment', 'other_dpl_id');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(2);
+      expect(requestedLogs).toBe(false);
+      await expect(client.stderr).toOutput(
+        'positional argument and --deployment option must select the same deployment'
+      );
+    });
+
+    it('should accept matching positional and --deployment selectors', async () => {
       const user = useUser();
       const deployment = useLogsDeployment(user);
 
@@ -1215,7 +1239,12 @@ describe('logs', () => {
       });
 
       client.cwd = fixture('linked-project');
-      client.setArgv('logs', deployment.id, '--deployment', 'other_dpl_id');
+      client.setArgv(
+        'logs',
+        `https://${deployment.url}`,
+        '--deployment',
+        deployment.url
+      );
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(0);
