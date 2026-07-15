@@ -7,8 +7,6 @@ on:
 
 env:
   TURBO_REMOTE_ONLY: 'true'
-  TURBO_TEAM: 'zero-conf-vtest314'
-  TURBO_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -23,6 +21,11 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
+
+      - name: Setup Turborepo Remote Cache
+        uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
+        with:
+          team: ${{ vars.TURBO_TEAM }}
 
       - name: Setup Node
         uses: actions/setup-node@v4

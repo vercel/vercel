@@ -11,7 +11,11 @@ import {
   setupUnitFixture,
   setupTmpDir,
 } from '../../../helpers/setup-unit-fixture';
-import { defaultProject, useProject } from '../../../mocks/project';
+import {
+  defaultProject,
+  useProject,
+  useUnknownProject,
+} from '../../../mocks/project';
 import { useDeployment, useBuildLogs } from '../../../mocks/deployment';
 import { useTeams, createTeam } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
@@ -3212,7 +3216,7 @@ describe('deploy', () => {
       const cwd = setupTmpDir();
       useUser();
       useTeams('team_dummy');
-      // Intentionally no useProject() — every API lookup will 404.
+      useUnknownProject();
 
       client.cwd = cwd;
       client.setArgv('deploy', '--yes', '--project=does-not-exist');

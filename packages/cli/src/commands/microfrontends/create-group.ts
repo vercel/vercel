@@ -459,7 +459,7 @@ export default async function createGroup(client: Client): Promise<number> {
   );
 
   // If the default app is the linked project, offer to create microfrontends.json
-  const link = await getLinkedProject(client, client.cwd);
+  const link = await getLinkedProject(client, { cwd: client.cwd });
   const linkedProject = link.status === 'linked' ? link.project : undefined;
   if (linkedProject && linkedProject.id === defaultApp.id) {
     const repoRoot = link.status === 'linked' ? link.repoRoot : undefined;
