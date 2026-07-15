@@ -132,11 +132,12 @@ export default async function ls(client: Client, argv: string[]) {
   if (!asJson) {
     const { isAgent } = await determineAgent();
     const guidanceMode = parsedArgs.flags['--guidance'] ?? isAgent;
-    if (guidanceMode && !projectName) {
+    if (guidanceMode) {
+      const projectFlag = projectName ? ` --project ${projectName}` : '';
       suggestNextCommands([
-        getCommandName('env add'),
-        getCommandName('env rm'),
-        getCommandName('env pull'),
+        getCommandName(`env add${projectFlag}`),
+        getCommandName(`env rm${projectFlag}`),
+        getCommandName(`env pull${projectFlag}`),
       ]);
     }
   }
