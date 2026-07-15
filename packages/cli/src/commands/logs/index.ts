@@ -565,14 +565,29 @@ export default async function logs(client: Client) {
   const deploymentFlag = parsedArguments.flags['--deployment'];
   const environmentOption = parsedArguments.flags['--environment'];
 
-  let deploymentOption: string | undefined = deploymentFlag;
-  if (deploymentArgument) {
-    let deploymentIdOrHost = deploymentArgument;
+  const normalizeDeploymentSelector = (selector: string | undefined) => {
+    if (!selector) return undefined;
     try {
-      deploymentIdOrHost = new URL(deploymentArgument).hostname;
+      return new URL(selector).hostname;
     } catch {}
-    deploymentOption = deploymentIdOrHost;
+    return selector;
+  };
+  const normalizedDeploymentFlag = normalizeDeploymentSelector(deploymentFlag);
+  const normalizedDeploymentArgument =
+    normalizeDeploymentSelector(deploymentArgument);
+
+  if (
+    normalizedDeploymentFlag &&
+    normalizedDeploymentArgument &&
+    normalizedDeploymentFlag !== normalizedDeploymentArgument
+  ) {
+    output.error(
+      `The deployment positional argument and ${chalk.bold('--deployment')} option must select the same deployment.`
+    );
+    return 2;
   }
+  const deploymentOption =
+    normalizedDeploymentFlag ?? normalizedDeploymentArgument;
   const levelOption = parsedArguments.flags['--level'];
   const statusCodeOption = parsedArguments.flags['--status-code'];
   const sourceOption = parsedArguments.flags['--source'];
