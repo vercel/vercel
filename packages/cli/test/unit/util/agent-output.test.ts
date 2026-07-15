@@ -9,6 +9,13 @@ import {
   buildCommandWithYes,
   buildCommandWithGlobalFlags,
   getGlobalFlagsFromArgv,
+  getPreservedArgsForEnvAdd,
+  getPreservedArgsForEnvPull,
+  getPreservedArgsForEnvRm,
+  getPreservedArgsForEnvUpdate,
+  buildEnvAddCommandWithPreservedArgs,
+  buildEnvRmCommandWithPreservedArgs,
+  buildEnvUpdateCommandWithPreservedArgs,
   enrichActionRequiredWithInvokingCommand,
   type ActionRequiredPayload,
 } from '../../../src/util/agent-output';
@@ -457,6 +464,18 @@ describe('argvHasNonInteractive', () => {
 });
 
 describe('getGlobalFlagsFromArgv', () => {
+  it.each([
+    [
+      ['--config', 'custom.json'],
+      ['--config', 'custom.json'],
+    ],
+    [['--config=custom.json'], ['--config=custom.json']],
+  ])('preserves config arguments %#', (configArgs, expected) => {
+    expect(
+      getGlobalFlagsFromArgv(['node', 'vc.js', 'deploy', ...configArgs])
+    ).toEqual(expected);
+  });
+
   it('does not treat the subcommand after --non-interactive as a flag value', () => {
     const argv = [
       'node',
@@ -475,6 +494,144 @@ describe('getGlobalFlagsFromArgv', () => {
       '--non-interactive',
       '--yes',
     ]);
+  });
+});
+
+describe('env suggestion argument preservation', () => {
+  it.each([
+    {
+      name: 'add',
+      getPreserved: getPreservedArgsForEnvAdd,
+      argv: [
+        'env',
+        'add',
+        '--project',
+        'payments-api',
+        'API_KEY',
+        'preview',
+        'feature',
+        '--value',
+        'next-value',
+        '--yes',
+      ],
+      expected: ['--project', 'payments-api', '--value', 'next-value', '--yes'],
+    },
+    {
+      name: 'pull',
+      getPreserved: getPreservedArgsForEnvPull,
+      argv: [
+        'env',
+        'pull',
+        '--project',
+        'payments-api',
+        '.env.test',
+        '--environment',
+        'preview',
+        '--git-branch',
+        'feature',
+        '--id',
+        'dpl_123',
+        '--yes',
+      ],
+      expected: [
+        '--project',
+        'payments-api',
+        '--environment',
+        'preview',
+        '--git-branch',
+        'feature',
+        '--id',
+        'dpl_123',
+        '--yes',
+      ],
+    },
+    {
+      name: 'remove alias',
+      getPreserved: getPreservedArgsForEnvRm,
+      argv: [
+        'env',
+        'remove',
+        '--project',
+        'payments-api',
+        'API_KEY',
+        'preview',
+        'feature',
+        '--yes',
+      ],
+      expected: ['--project', 'payments-api', '--yes'],
+    },
+    {
+      name: 'update',
+      getPreserved: getPreservedArgsForEnvUpdate,
+      argv: [
+        'env',
+        'update',
+        '--project=payments-api',
+        'API_KEY',
+        'preview',
+        'feature',
+        '--value=next-value',
+        '--yes',
+      ],
+      expected: ['--project=payments-api', '--value=next-value', '--yes'],
+    },
+  ])('preserves $name flags regardless of positional order', testCase => {
+    expect(testCase.getPreserved(['node', 'vc.js', ...testCase.argv])).toEqual(
+      testCase.expected
+    );
+  });
+
+  it.each([
+    {
+      name: 'add',
+      build: buildEnvAddCommandWithPreservedArgs,
+      argv: [
+        'env',
+        'add',
+        '--project',
+        'payments-api',
+        'API_KEY',
+        'preview',
+        '--value',
+        'old-value',
+        '--yes',
+      ],
+      template: 'env add <name> preview --value <value> --yes',
+    },
+    {
+      name: 'remove',
+      build: buildEnvRmCommandWithPreservedArgs,
+      argv: [
+        'env',
+        'remove',
+        '--project',
+        'payments-api',
+        'API_KEY',
+        'preview',
+        '--yes',
+      ],
+      template: 'env rm <name> preview --yes',
+    },
+    {
+      name: 'update',
+      build: buildEnvUpdateCommandWithPreservedArgs,
+      argv: [
+        'env',
+        'update',
+        '--project',
+        'payments-api',
+        'API_KEY',
+        'preview',
+        '--value',
+        'old-value',
+        '--yes',
+      ],
+      template: 'env update <name> preview --value <value> --yes',
+    },
+  ])('deduplicates flags already present in $name templates', testCase => {
+    expect(
+      testCase.build(['node', 'vc.js', ...testCase.argv], testCase.template)
+    ).toBe(`vercel ${testCase.template} --project payments-api`);
   });
 });
 

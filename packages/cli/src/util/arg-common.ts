@@ -118,7 +118,12 @@ export function globalCliFlagTakesValue(flagName: string): boolean {
  * Used when the suggested `next` command is the SAME subcommand so we
  * preserve e.g. --slug acme, --status 301 alongside globals.
  */
-const SUBCOMMAND_FLAG_TAKES_VALUE = new Set([
+const SUGGESTION_FLAGS_TAKING_VALUE = new Set([
+  '--config',
+  '--environment',
+  '--git-branch',
+  '--id',
+  '--value',
   '--status',
   '--name',
   '--slug',
@@ -130,10 +135,10 @@ const SUBCOMMAND_FLAG_TAKES_VALUE = new Set([
   '--per-page',
 ]);
 
-function suggestionFlagTakesSeparateValue(flagName: string): boolean {
+export function suggestionFlagTakesSeparateValue(flagName: string): boolean {
   const name = normalizeFlagName(flagName);
   if (globalCliFlagTakesValue(name)) return true;
-  return SUBCOMMAND_FLAG_TAKES_VALUE.has(name);
+  return SUGGESTION_FLAGS_TAKING_VALUE.has(name);
 }
 
 /**
@@ -304,12 +309,17 @@ export function getGlobalFlagsFromArgs(
       out.push(a);
       continue;
     }
-    if (options?.preserveConfig && a === '--config') {
+    if (
+      options?.preserveConfig &&
+      (a === '--config' || a.startsWith('--config='))
+    ) {
       out.push(a);
-      const next = safeArgs[i + 1];
-      if (next && !next.startsWith('-')) {
-        out.push(next);
-        i++;
+      if (a === '--config') {
+        const next = safeArgs[i + 1];
+        if (next && !next.startsWith('-')) {
+          out.push(next);
+          i++;
+        }
       }
       continue;
     }

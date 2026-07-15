@@ -30,6 +30,20 @@ describe('getSameSubcommandSuggestionFlags', () => {
     expect(out).toEqual(['--status', '301', '--yes']);
   });
 
+  it('preserves values for env suggestion flags', () => {
+    const args = [
+      '--environment',
+      'preview',
+      '--git-branch',
+      'feature',
+      '--id',
+      'dpl_123',
+      '--value',
+      'next-value',
+    ];
+    expect(getSameSubcommandSuggestionFlags(args)).toEqual(args);
+  });
+
   it('strips token flags and values', () => {
     const args = [
       '--slug',

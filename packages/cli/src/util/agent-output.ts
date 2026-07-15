@@ -3,7 +3,10 @@ import type Client from './client';
 import { isAPIError, LinkRequiredError, ProjectNotFound } from './errors-ts';
 import { packageName } from './pkg-name';
 import { stripSensitiveAuthArgs } from './redact-args';
-import { getGlobalFlagsFromArgs, globalCliFlagTakesValue } from './arg-common';
+import {
+  getGlobalFlagsFromArgs,
+  suggestionFlagTakesSeparateValue,
+} from './arg-common';
 
 /**
  * Structured payload for "action required" (e.g. scope choice, login passcode).
@@ -125,9 +128,6 @@ const GLOBAL_FLAG_NAMES = new Set([
   // --token/-t are intentionally excluded and stripped via stripSensitiveAuthArgs.
 ]);
 
-/** Global flags that never consume a separate argv token as their value (unlike `--cwd path`). */
-const GLOBAL_FLAGS_BOOLEAN = new Set(['--yes', '-y', '--non-interactive']);
-
 /** Shorthand → long form for global flags, so `-S` and `--scope` dedupe as the same flag. */
 const GLOBAL_FLAG_SHORTHANDS: Record<string, string> = {
   '-y': '--yes',
@@ -154,7 +154,7 @@ export function getGlobalFlagsFromArgv(argv: string[]): string[] {
     if (GLOBAL_FLAG_NAMES.has(name)) {
       out.push(arg);
       const takesSeparateValue =
-        globalCliFlagTakesValue(name) &&
+        suggestionFlagTakesSeparateValue(name) &&
         !arg.includes('=') &&
         i + 1 < args.length &&
         !args[i + 1].startsWith('-');
@@ -179,7 +179,7 @@ export function omitGlobalFlagsFromArgs(args: string[]): string[] {
     const name = arg.startsWith('--') ? arg.split('=')[0] : arg;
     if (GLOBAL_FLAG_NAMES.has(name)) {
       const skipSeparateValue =
-        !GLOBAL_FLAGS_BOOLEAN.has(name) &&
+        suggestionFlagTakesSeparateValue(name) &&
         !arg.includes('=') &&
         i + 1 < safeArgs.length &&
         !safeArgs[i + 1].startsWith('-');
@@ -288,10 +288,14 @@ export function buildCommandWithGlobalFlags(
  * Builds a suggested command from a client invocation using the complete
  * global option set historically preserved by command-local helpers.
  */
+export interface WithGlobalFlagsOptions {
+  preserveProject?: boolean;
+}
+
 export function withGlobalFlags(
   client: Client,
   commandTemplate: string,
-  preserveProject = false
+  options: WithGlobalFlagsOptions = {}
 ): string {
   return buildCommandWithGlobalFlags(
     client.argv,
@@ -299,9 +303,84 @@ export function withGlobalFlags(
     packageName,
     {
       globalFlags: 'all',
-      preserveProject,
+      preserveProject: options.preserveProject,
     }
   );
+}
+
+function getPreservedArgsAfterEnvSubcommand(
+  argv: string[],
+  subcommands: readonly string[],
+  positionalCount: number
+): string[] {
+  const args = stripSensitiveAuthArgs(argv.slice(2));
+  const envIdx = args.indexOf('env');
+  const subcommandIdx = envIdx + 1;
+  if (envIdx === -1 || !subcommands.includes(args[subcommandIdx])) {
+    return args;
+  }
+
+  const preserved: string[] = [];
+  let positionals = 0;
+  let optionsEnded = false;
+  for (let i = subcommandIdx + 1; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--' && !optionsEnded) {
+      optionsEnded = true;
+      continue;
+    }
+    if (!optionsEnded && arg.startsWith('-')) {
+      preserved.push(arg);
+      if (
+        !arg.includes('=') &&
+        suggestionFlagTakesSeparateValue(arg) &&
+        i + 1 < args.length &&
+        !args[i + 1].startsWith('-')
+      ) {
+        preserved.push(args[++i]);
+      }
+      continue;
+    }
+    if (positionals < positionalCount) {
+      positionals++;
+      continue;
+    }
+    if (optionsEnded && !preserved.includes('--')) {
+      preserved.push('--');
+    }
+    preserved.push(arg);
+  }
+  return preserved;
+}
+
+function omitPreservedFlagsAlreadyInTemplate(
+  args: string[],
+  commandTemplate: string
+): string[] {
+  const templateFlags = new Set(
+    commandTemplate
+      .split(/\s+/)
+      .filter(token => token.startsWith('-'))
+      .map(token => canonicalGlobalFlagName(token.split('=')[0]))
+  );
+  const out: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    const name = arg.startsWith('-') ? arg.split('=')[0] : arg;
+    if (!templateFlags.has(canonicalGlobalFlagName(name))) {
+      out.push(arg);
+      continue;
+    }
+    if (
+      !arg.includes('=') &&
+      suggestionFlagTakesSeparateValue(name) &&
+      i + 1 < args.length &&
+      !args[i + 1].startsWith('-')
+    ) {
+      i++;
+    }
+  }
+  return out;
 }
 
 /**
@@ -309,17 +388,7 @@ export function withGlobalFlags(
  * These are all args after "env add" and its 0–3 positionals (name, target, git-branch).
  */
 export function getPreservedArgsForEnvAdd(argv: string[]): string[] {
-  const args = argv.slice(2);
-  const addIdx = args.indexOf('add');
-  if (addIdx === -1 || args[addIdx - 1] !== 'env')
-    return stripSensitiveAuthArgs(args);
-  let i = addIdx + 1;
-  let positionals = 0;
-  while (i < args.length && positionals < 3 && !args[i].startsWith('-')) {
-    positionals++;
-    i++;
-  }
-  return stripSensitiveAuthArgs(args.slice(i));
+  return getPreservedArgsAfterEnvSubcommand(argv, ['add'], 3);
 }
 
 /**
@@ -333,23 +402,10 @@ export function buildEnvAddCommandWithPreservedArgs(
   commandTemplate: string,
   pkgName: string = packageName
 ): string {
-  let preserved = getPreservedArgsForEnvAdd(argv);
-  // Avoid duplicating flags that are already in the template (e.g. --yes)
-  if (commandTemplate.includes('--yes')) {
-    preserved = preserved.filter(a => a !== '--yes' && a !== '-y');
-  }
-  if (commandTemplate.includes('--value')) {
-    const out: string[] = [];
-    for (let j = 0; j < preserved.length; j++) {
-      if (preserved[j] === '--value' && j + 1 < preserved.length) {
-        j++; // skip --value and its value
-        continue;
-      }
-      if (preserved[j].startsWith('--value=')) continue;
-      out.push(preserved[j]);
-    }
-    preserved = out;
-  }
+  const preserved = omitPreservedFlagsAlreadyInTemplate(
+    getPreservedArgsForEnvAdd(argv),
+    commandTemplate
+  );
   const base = `${pkgName} ${commandTemplate}`;
   if (preserved.length === 0) return base;
   return `${base} ${preserved.join(' ')}`;
@@ -359,30 +415,14 @@ export function buildEnvAddCommandWithPreservedArgs(
  * Returns args after "env pull" and its 0–1 positionals (filename).
  */
 export function getPreservedArgsForEnvPull(argv: string[]): string[] {
-  const args = argv.slice(2);
-  const pullIdx = args.indexOf('pull');
-  if (pullIdx === -1 || args[pullIdx - 1] !== 'env')
-    return stripSensitiveAuthArgs(args);
-  let i = pullIdx + 1;
-  if (i < args.length && !args[i].startsWith('-')) i++;
-  return stripSensitiveAuthArgs(args.slice(i));
+  return getPreservedArgsAfterEnvSubcommand(argv, ['pull'], 1);
 }
 
 /**
  * Returns args after "env rm" and its 0–3 positionals (name, target, branch).
  */
 export function getPreservedArgsForEnvRm(argv: string[]): string[] {
-  const args = argv.slice(2);
-  const rmIdx = args.indexOf('rm');
-  if (rmIdx === -1 || args[rmIdx - 1] !== 'env')
-    return stripSensitiveAuthArgs(args);
-  let i = rmIdx + 1;
-  let positionals = 0;
-  while (i < args.length && positionals < 3 && !args[i].startsWith('-')) {
-    positionals++;
-    i++;
-  }
-  return stripSensitiveAuthArgs(args.slice(i));
+  return getPreservedArgsAfterEnvSubcommand(argv, ['rm', 'remove'], 3);
 }
 
 /**
@@ -393,10 +433,10 @@ export function buildEnvRmCommandWithPreservedArgs(
   commandTemplate: string,
   pkgName: string = packageName
 ): string {
-  let preserved = getPreservedArgsForEnvRm(argv);
-  if (commandTemplate.includes('--yes')) {
-    preserved = preserved.filter(a => a !== '--yes' && a !== '-y');
-  }
+  const preserved = omitPreservedFlagsAlreadyInTemplate(
+    getPreservedArgsForEnvRm(argv),
+    commandTemplate
+  );
   const base = `${pkgName} ${commandTemplate}`;
   if (preserved.length === 0) return base;
   return `${base} ${preserved.join(' ')}`;
@@ -406,17 +446,7 @@ export function buildEnvRmCommandWithPreservedArgs(
  * Returns args after "env update" and its 0–3 positionals (name, target, branch).
  */
 export function getPreservedArgsForEnvUpdate(argv: string[]): string[] {
-  const args = argv.slice(2);
-  const updateIdx = args.indexOf('update');
-  if (updateIdx === -1 || args[updateIdx - 1] !== 'env')
-    return stripSensitiveAuthArgs(args);
-  let i = updateIdx + 1;
-  let positionals = 0;
-  while (i < args.length && positionals < 3 && !args[i].startsWith('-')) {
-    positionals++;
-    i++;
-  }
-  return stripSensitiveAuthArgs(args.slice(i));
+  return getPreservedArgsAfterEnvSubcommand(argv, ['update'], 3);
 }
 
 /**
@@ -427,22 +457,10 @@ export function buildEnvUpdateCommandWithPreservedArgs(
   commandTemplate: string,
   pkgName: string = packageName
 ): string {
-  let preserved = getPreservedArgsForEnvUpdate(argv);
-  if (commandTemplate.includes('--yes')) {
-    preserved = preserved.filter(a => a !== '--yes' && a !== '-y');
-  }
-  if (commandTemplate.includes('--value')) {
-    const out: string[] = [];
-    for (let i = 0; i < preserved.length; i++) {
-      if (preserved[i] === '--value' && i + 1 < preserved.length) {
-        i++;
-        continue;
-      }
-      if (preserved[i].startsWith('--value=')) continue;
-      out.push(preserved[i]);
-    }
-    preserved = out;
-  }
+  const preserved = omitPreservedFlagsAlreadyInTemplate(
+    getPreservedArgsForEnvUpdate(argv),
+    commandTemplate
+  );
   const base = `${pkgName} ${commandTemplate}`;
   if (preserved.length === 0) return base;
   return `${base} ${preserved.join(' ')}`;
