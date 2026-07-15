@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
+import { defaultProject } from '../../../mocks/project';
 import { ensureProjectLink } from '../../../../src/util/projects/ensure-project-link';
 import * as agentOutput from '../../../../src/util/agent-output';
 import * as linkModule from '../../../../src/util/projects/link';
@@ -38,7 +39,7 @@ describe('ensureProjectLink', () => {
     const link = {
       status: 'linked' as const,
       org: { id: 'team_123', slug: 'acme', type: 'team' as const },
-      project: { id: 'project_123', name: 'site' },
+      project: { ...defaultProject, id: 'project_123', name: 'site' },
     };
     getLinkedProject.mockResolvedValue(link);
 
