@@ -43,6 +43,7 @@ import getUpdateCommand from '../get-update-command';
 import { getTitleName } from '../pkg-name';
 import { importBuilders } from '../build/import-builders';
 import output from '../../output-manager';
+import { dev } from './diagnostics';
 
 interface BuildMessage {
   type: string;
@@ -361,19 +362,15 @@ export async function executeBuild(
     const { output, ...rest } = buildResultOrOutputs as BuildResultV3;
 
     if (!output || (output as BuilderOutput).type !== 'Lambda') {
-      throw new Error('The result of "builder.build()" must be a `Lambda`');
+      throw dev.DEV_BUILDER_RESULT_NOT_LAMBDA();
     }
 
     if (output.maxDuration) {
-      throw new Error(
-        'The result of "builder.build()" must not contain `maxDuration`'
-      );
+      throw dev.DEV_BUILDER_RESULT_HAS_MAXDURATION();
     }
 
     if (output.memory) {
-      throw new Error(
-        'The result of "builder.build()" must not contain `memory`'
-      );
+      throw dev.DEV_BUILDER_RESULT_HAS_MEMORY();
     }
 
     for (const [src, func] of Object.entries(config.functions || {})) {
@@ -397,17 +394,17 @@ export async function executeBuild(
       },
     } as BuildResult;
   } else {
-    throw new Error(
-      `${getTitleName()} CLI does not support builder version ${
-        (builder as any).version
-      }.\nPlease run \`${await getUpdateCommand()}\` to update to the latest CLI.`
-    );
+    throw dev.DEV_UNSUPPORTED_BUILDER_VERSION({
+      titleName: getTitleName(),
+      version: (builder as any).version,
+      updateCommand: await getUpdateCommand(),
+    });
   }
 
   // Normalize Builder Routes
   const normalized = normalizeRoutes(result.routes);
   if (normalized.error) {
-    throw new Error(normalized.error.message);
+    throw dev.DEV_INVALID_ROUTES({ message: normalized.error.message });
   } else {
     result.routes = normalized.routes || [];
   }
@@ -681,7 +678,7 @@ export async function getBuildMatches(
 
       const builderWithPkg = buildersWithPkgs.get(use);
       if (!builderWithPkg) {
-        throw new Error(`Failed to load Builder "${use}"`);
+        throw dev.DEV_BUILDER_LOAD_FAILED({ use });
       }
 
       matches.push({

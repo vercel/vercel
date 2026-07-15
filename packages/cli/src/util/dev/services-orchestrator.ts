@@ -41,30 +41,9 @@ import { getStaticServiceSchedules } from '../service-schedules';
 import output from '../../output-manager';
 import { treeKill } from '../tree-kill';
 import { injectNextDevWebSocketShimIfNeeded } from './next-dev-websocket-shim-injection';
+import { dev, ServiceStartError } from './diagnostics';
 
 const STARTUP_TIMEOUT = ms('5m');
-
-export class ServiceStartError extends Error {
-  constructor(failures: Error[]) {
-    // Deduplicate errors that are the same for all services
-    const dedupeErrorCodes = new Set(['PYTHON_EXTERNAL_VENV_DETECTED']);
-    const seenCodes = new Set<string>();
-    const uniqueMessages: string[] = [];
-
-    for (const err of failures) {
-      if (err instanceof NowBuildError && dedupeErrorCodes.has(err.code)) {
-        if (!seenCodes.has(err.code)) {
-          uniqueMessages.push(err.message);
-          seenCodes.add(err.code);
-        }
-      } else {
-        uniqueMessages.push(err.message);
-      }
-    }
-
-    super(uniqueMessages.join('\n'));
-  }
-}
 
 const SERVICE_COLORS = [
   chalk.cyan,
@@ -611,9 +590,10 @@ export class ServicesOrchestrator {
     const devCommand =
       spec.explicitDevCommand || spec.framework?.settings?.devCommand?.value;
     if (!devCommand) {
-      throw new Error(
-        `No dev server available for service "${service.name}" (framework: ${service.framework ?? 'none'}).`
-      );
+      throw dev.DEV_SERVICE_NO_DEV_SERVER({
+        name: service.name,
+        framework: service.framework ?? 'none',
+      });
     }
 
     return this.spawnDevCommandProcess({
@@ -925,11 +905,9 @@ export class ServicesOrchestrator {
     });
 
     if (!child.pid) {
-      throw new Error(`Failed to start service "${name}": no PID returned`);
+      throw dev.DEV_SERVICE_NO_PID({ name });
     } else if (!child.stdout || !child.stderr) {
-      throw new Error(
-        `Failed to start service "${name}": expected child process to have stdout and stderr`
-      );
+      throw dev.DEV_SERVICE_NO_STDIO({ name });
     }
 
     // Track process immediately so we can kill it if startup fails

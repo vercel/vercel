@@ -259,6 +259,7 @@
     "minimatch": "3.1.2",
     "mock-fs": "5.5.0",
     "ms": "2.1.2",
+    "nostics": "1.1.4",
     "npm-package-arg": "6.1.0",
     "open": "8.4.0",
     "ora": "3.4.0",

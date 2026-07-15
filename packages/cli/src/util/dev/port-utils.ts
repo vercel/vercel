@@ -1,4 +1,5 @@
 import isPortReachable from 'is-port-reachable';
+import { dev } from './diagnostics';
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -27,7 +28,7 @@ export async function checkForPort(
     await sleep(100);
   }
   if (!host) {
-    throw new Error(`Detecting port ${port} timed out after ${timeout}ms`);
+    throw dev.DEV_PORT_DETECTION_TIMED_OUT({ port, timeout });
   }
   return host;
 }

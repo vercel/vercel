@@ -26,10 +26,7 @@ const { mockStart, devServerInstances, mockedRepoRoots } = vi.hoisted(() => ({
   mockedRepoRoots: new Map<string, string>(),
 }));
 
-vi.mock('../../../../src/util/dev/server', async () => {
-  const actual = await vi.importActual<
-    typeof import('../../../../src/util/dev/server')
-  >('../../../../src/util/dev/server');
+vi.mock('../../../../src/util/dev/server', () => {
   class DevServer {
     devCommand = 'framework dev';
     constructor(cwd: string, options: { projectId?: string; orgId?: string }) {
@@ -47,7 +44,6 @@ vi.mock('../../../../src/util/dev/server', async () => {
   }
   return {
     default: DevServer,
-    DevCommandExitError: actual.DevCommandExitError,
   };
 });
 
@@ -286,7 +282,7 @@ describe('dev', () => {
 
     it('prints error and exits with the dev command exit code', async () => {
       const { DevCommandExitError } = await import(
-        '../../../../src/util/dev/server'
+        '../../../../src/util/dev/diagnostics'
       );
 
       mockStart.mockRejectedValueOnce(
@@ -300,13 +296,13 @@ describe('dev', () => {
 
       await expect(dev(client)).rejects.toThrow('__exit__:127');
       await expect(client.stderr).toOutput(
-        'Error: Dev Command “framework dev” exited with code 127'
+        'Error: [DEV_COMMAND_EXITED] Dev Command “framework dev” exited with code 127'
       );
     });
 
     it('exits with code 1 on ServiceStartError', async () => {
       const { ServiceStartError } = await import(
-        '../../../../src/util/dev/services-orchestrator'
+        '../../../../src/util/dev/diagnostics'
       );
 
       mockStart.mockRejectedValueOnce(

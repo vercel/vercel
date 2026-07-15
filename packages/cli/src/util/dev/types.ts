@@ -30,6 +30,7 @@ export interface DevServerOptions {
   useImplicitServicesEnvInjection?: boolean;
   projectId?: string;
   orgId?: string;
+  onErrorCode?: (code: string | undefined) => void;
 }
 
 export interface EnvConfigs {

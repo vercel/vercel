@@ -4,8 +4,13 @@ import { resolve, join } from 'path';
 import fs from 'fs-extra';
 import type { Service } from '@vercel/fs-detectors';
 
-import DevServer, { DevCommandExitError } from '../../util/dev/server';
+import DevServer from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
+import {
+  dev as devDiagnostics,
+  DevCommandExitError,
+} from '../../util/dev/diagnostics';
+import { createErrorReporter } from '../../util/dev/report-error';
 import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import { printProjectNotFoundError } from '../../util/projects/project-not-found-error';
@@ -14,7 +19,6 @@ import setupAndLink from '../../util/link/setup-and-link';
 import { findRepoRoot } from '../../util/link/repo';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import param from '../../util/output/param';
-import cmd from '../../util/output/cmd';
 import { OUTPUT_DIR } from '../../util/build/write-build-result';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import output from '../../output-manager';
@@ -51,6 +55,8 @@ export default async function dev(
   cwd = await resolveProjectCwd(cwd);
 
   const projectNameOrId = opts['--project'];
+
+  const reportError = createErrorReporter(code => telemetry.trackError(code));
 
   // retrieve dev command
   let link = await getLinkedProject(client, {
@@ -173,22 +179,19 @@ export default async function dev(
     const lockResult = await acquireDevLock(cwd, port);
 
     if (!lockResult.acquired) {
-      output.error(
-        `Another ${getCommandName('dev')} process is already running for this project.`
-      );
+      let detail: string;
       if (lockResult.existingLock) {
         const { existingLock } = lockResult;
         const startTime = ms(Date.now() - existingLock.startedAt);
-        output.print(`  Port: ${chalk.cyan(existingLock.port)}\n`);
-        output.print(`  PID: ${chalk.cyan(existingLock.pid)}\n`);
-        output.print(`  Started: ${chalk.cyan(startTime)} ago\n`);
-        output.log(
-          `To stop the existing process, press Ctrl+C in its terminal or run: ` +
-            cmd(`kill ${existingLock.pid}`)
-        );
+        detail =
+          `Port: ${existingLock.port}\n` +
+          `PID: ${existingLock.pid}\n` +
+          `Started: ${startTime} ago\n` +
+          `Stop it by pressing Ctrl+C in its terminal, or run \`kill ${existingLock.pid}\`.`;
       } else {
-        output.log(lockResult.reason);
+        detail = lockResult.reason;
       }
+      reportError(devDiagnostics.DEV_LOCK_HELD({ detail }));
       return 1;
     }
     lockAcquired = true;
@@ -202,6 +205,7 @@ export default async function dev(
     useImplicitServicesEnvInjection,
     projectId,
     orgId,
+    onErrorCode: code => telemetry.trackError(code),
   });
 
   const controller = new AbortController();

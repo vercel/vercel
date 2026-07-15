@@ -64,6 +64,7 @@ import getGlobalPathConfig from './util/config/global-path';
 import { getDefaultAuthConfig, defaultGlobalConfig } from '@vercel/cli-config';
 import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
+import { Diagnostic } from 'nostics';
 import getUpdateCommand from './util/get-update-command';
 import { executeUpgrade } from './util/upgrade';
 import {
@@ -446,7 +447,12 @@ const main = async () => {
     }
 
     telemetry.trackErrorStatus(getNumberProperty(err, 'status'));
-    telemetry.trackErrorCode(getStringProperty(err, 'code'));
+    // `Diagnostic` errors carry their stable code on `name`, other errors use a `code` field
+    telemetry.trackErrorCode(
+      err instanceof Diagnostic && err.name !== 'Diagnostic'
+        ? err.name
+        : getStringProperty(err, 'code')
+    );
     telemetry.trackErrorSlug(getStringProperty(err, 'slug'));
     telemetry.trackErrorAction(getStringProperty(err, 'action'));
 

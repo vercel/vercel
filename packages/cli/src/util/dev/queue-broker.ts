@@ -9,6 +9,7 @@ import {
   isQueueBackedService,
 } from '@vercel/build-utils';
 import output from '../../output-manager';
+import { dev } from './diagnostics';
 
 interface StoredMessage {
   messageId: string;
@@ -107,9 +108,10 @@ export class QueueBroker {
         const topicPattern = topicConfig.topic;
         const id = `${consumerGroup}::${topicPattern}`;
         if (this.deliveryState.has(id)) {
-          throw new Error(
-            `Queue consumer "${consumerGroup}" is configured more than once for topic "${topicPattern}"`
-          );
+          throw dev.DEV_QUEUE_CONSUMER_DUPLICATE({
+            consumerGroup,
+            topic: topicPattern,
+          });
         }
         const group: ConsumerGroup = {
           id,

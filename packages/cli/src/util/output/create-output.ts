@@ -4,6 +4,7 @@ import { supportsHyperlink as detectSupportsHyperlink } from 'supports-hyperlink
 import renderLink from './link';
 import wait, { type StopSpinner } from './wait';
 import { errorToString } from '@vercel/error-utils';
+import { Diagnostic } from 'nostics';
 import { removeEmoji } from '../emoji';
 import type * as tty from 'tty';
 import { inspect } from 'util';
@@ -137,6 +138,20 @@ export class Output {
   };
 
   prettyError = (err: unknown) => {
+    if (err instanceof Diagnostic) {
+      // `Diagnostic` defaults `name` to 'Diagnostic' when no code was assigned
+      const code = err.name && err.name !== 'Diagnostic' ? err.name : undefined;
+      let str = code
+        ? `${chalk.dim(`[${code}]`)} ${errorToString(err)}`
+        : errorToString(err);
+      if (err.fix) {
+        str += `\n${chalk.bold('Fix:')} ${err.fix}`;
+      }
+      // A wrapped error may carry a custom label, so
+      // fall back to the generic "Learn More" for native diagnostics.
+      const action = (err as Diagnostic & { action?: string }).action;
+      return this.error(str, undefined, err.docs, action ?? 'Learn More');
+    }
     return this.error(
       errorToString(err),
       undefined,

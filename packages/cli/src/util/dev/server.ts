@@ -78,6 +78,8 @@ import {
 import getMimeType from './mime-type';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
 import { generateErrorMessage, generateHttpStatusDescription } from './errors';
+import { dev, DevCommandExitError } from './diagnostics';
+import { createErrorReporter } from './report-error';
 import output from '../../output-manager';
 
 // HTML templates
@@ -156,15 +158,6 @@ function sortBuilders(buildA: Builder, buildB: Builder) {
   return 0;
 }
 
-export class DevCommandExitError extends Error {
-  exitCode: number;
-  constructor(message: string, exitCode: number) {
-    super(message);
-    this.name = 'DevCommandExitError';
-    this.exitCode = exitCode;
-  }
-}
-
 export default class DevServer {
   public cwd: string;
   public repoRoot: string;
@@ -175,9 +168,7 @@ export default class DevServer {
   private _address: URL | undefined;
   public get address(): URL {
     if (!this._address) {
-      throw new Error(
-        'Invalid access to `address` because `start` has not yet populated `this.address`.'
-      );
+      throw dev.DEV_INTERNAL_ADDRESS_UNAVAILABLE();
     }
     return this._address;
   }
@@ -222,6 +213,7 @@ export default class DevServer {
   private useImplicitServicesEnvInjection: boolean;
   private projectId?: string;
   private orgId?: string;
+  private reportError: (err: unknown) => void;
 
   private responseTransformsByReq = new WeakMap<
     http.IncomingMessage,
@@ -327,6 +319,7 @@ export default class DevServer {
     this.envValues = options.envValues || {};
     this.projectId = options.projectId;
     this.orgId = options.orgId;
+    this.reportError = createErrorReporter(code => options.onErrorCode?.(code));
     this.files = {};
     this.originalProjectSettings = options.projectSettings;
     this.projectSettings = options.projectSettings;
@@ -684,7 +677,7 @@ export default class DevServer {
       };
     } catch (err) {
       if (err instanceof MissingDotenvVarsError) {
-        output.error(err.message);
+        this.reportError(err);
         await this.exit();
       } else {
         throw err;
@@ -758,7 +751,7 @@ export default class DevServer {
     const { error: routeError, routes: maybeRoutes } =
       getTransformedRoutes(vercelConfig);
     if (routeError) {
-      output.prettyError(routeError);
+      this.reportError(routeError);
       await this.exit();
     }
     vercelConfig.routes = maybeRoutes || [];
@@ -809,7 +802,7 @@ export default class DevServer {
       ).hostRewriteRoutes;
 
       if (errors) {
-        output.error(errors[0].message);
+        this.reportError(errors[0]);
         await this.exit();
       }
 
@@ -1026,7 +1019,7 @@ export default class DevServer {
 
   async validateVercelConfig(config: VercelConfig): Promise<void> {
     if (config.version === 1) {
-      output.error('Cannot run `version: 1` projects.');
+      this.reportError(dev.DEV_UNSUPPORTED_CONFIG_VERSION());
       await this.exit(1);
       return;
     }
@@ -1034,7 +1027,7 @@ export default class DevServer {
     const error = validateConfig(config);
 
     if (error) {
-      output.prettyError(error);
+      this.reportError(error);
       await this.exit(1);
     }
   }
@@ -1116,11 +1109,11 @@ export default class DevServer {
    */
   async _start(...listenSpec: ListenSpec): Promise<void> {
     if (!fs.existsSync(this.cwd)) {
-      throw new Error(`${chalk.bold(this.cwd)} doesn't exist`);
+      throw dev.DEV_CWD_NOT_FOUND({ cwd: this.cwd });
     }
 
     if (!fs.lstatSync(this.cwd).isDirectory()) {
-      throw new Error(`${chalk.bold(this.cwd)} is not a directory`);
+      throw dev.DEV_CWD_NOT_DIRECTORY({ cwd: this.cwd });
     }
 
     const { ig } = await getVercelIgnore(this.cwd);
@@ -1143,10 +1136,10 @@ export default class DevServer {
               );
               listenSpec[0]++;
             } else {
-              output.error(
-                `Requested socket ${chalk.cyan(
-                  listenSpec[0]
-                )} is already in use`
+              this.reportError(
+                dev.DEV_LISTEN_ADDRESS_IN_USE({
+                  address: String(listenSpec[0]),
+                })
               );
               process.exit(1);
             }
@@ -2700,7 +2693,7 @@ export default class DevServer {
     }
 
     if (!routeResult) {
-      throw new Error('Expected Route Result but none was found.');
+      throw dev.DEV_INTERNAL_NO_ROUTE_RESULT();
     }
 
     const { dest, query, headers } = routeResult;
@@ -3251,7 +3244,7 @@ export default class DevServer {
     this.devProcess = p;
 
     if (!p.stdout || !p.stderr) {
-      throw new Error('Expected child process to have stdout and stderr');
+      throw dev.DEV_INTERNAL_MISSING_CHILD_STDIO();
     }
 
     p.stderr.pipe(process.stderr);

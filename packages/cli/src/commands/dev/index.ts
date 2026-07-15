@@ -7,14 +7,17 @@ import getSubcommand from '../../util/get-subcommand';
 import type Client from '../../util/client';
 import { NowError } from '../../util/now-error';
 import { printError } from '../../util/error';
-import cmd from '../../util/output/cmd';
 import highlight from '../../util/output/highlight';
 import dev from './dev';
-import { DevCommandExitError } from '../../util/dev/server';
-import { ServiceStartError } from '../../util/dev/services-orchestrator';
+import {
+  dev as devDiagnostics,
+  DevCommandExitError,
+  ServiceStartError,
+} from '../../util/dev/diagnostics';
+import { createErrorReporter } from '../../util/dev/report-error';
 import readConfig from '../../util/config/read-config';
 import readJSONFile from '../../util/read-json-file';
-import { packageName, getCommandName } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
 import { CantParseJSONFile } from '../../util/errors-ts';
 import { isErrnoException } from '@vercel/error-utils';
 import { help } from '../help';
@@ -28,28 +31,21 @@ const COMMAND_CONFIG = {
 };
 
 export default async function main(client: Client) {
-  if (process.env.__VERCEL_DEV_RUNNING) {
-    output.error(
-      `${cmd(
-        `${packageName} dev`
-      )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
-        'dev'
-      )} script in ${cmd('package.json')}`
-    );
-    output.error(
-      `Learn More: https://vercel.link/recursive-invocation-of-commands`
-    );
-    return 1;
-  } else {
-    process.env.__VERCEL_DEV_RUNNING = '1';
-  }
-
   const { telemetryEventStore } = client;
   const telemetry = new DevTelemetryClient({
     opts: {
       store: telemetryEventStore,
     },
   });
+
+  const reportError = createErrorReporter(code => telemetry.trackError(code));
+
+  if (process.env.__VERCEL_DEV_RUNNING) {
+    reportError(devDiagnostics.DEV_RECURSIVE_INVOCATION());
+    return 1;
+  } else {
+    process.env.__VERCEL_DEV_RUNNING = '1';
+  }
 
   let parsedArgs = null;
 
@@ -96,7 +92,7 @@ export default async function main(client: Client) {
   const vercelConfig = await readConfig(dir);
 
   if (vercelConfig instanceof Error) {
-    output.prettyError(vercelConfig);
+    reportError(vercelConfig);
     return 1;
   }
 
@@ -110,21 +106,12 @@ export default async function main(client: Client) {
     const pkg = await readJSONFile<PackageJson>(path.join(dir, 'package.json'));
 
     if (pkg instanceof CantParseJSONFile) {
-      output.error(pkg.message);
+      reportError(pkg);
       return 1;
     }
 
     if (/\b(now|vercel)\b\W+\bdev\b/.test(pkg?.scripts?.dev || '')) {
-      output.error(
-        `${cmd(
-          `${packageName} dev`
-        )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
-          'dev'
-        )} script in ${cmd('package.json')}`
-      );
-      output.error(
-        `Learn More: https://vercel.link/recursive-invocation-of-commands`
-      );
+      reportError(devDiagnostics.DEV_RECURSIVE_INVOCATION());
       return 1;
     }
   }
@@ -141,7 +128,7 @@ export default async function main(client: Client) {
       err instanceof DevCommandExitError ||
       err instanceof ServiceStartError
     ) {
-      output.error(err.message);
+      reportError(err);
       process.exit(err instanceof DevCommandExitError ? err.exitCode : 1);
     }
     if (isErrnoException(err) && err.code === 'ENOTFOUND') {
@@ -155,13 +142,15 @@ export default async function main(client: Client) {
             hostname
           )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
         );
+      } else {
+        reportError(err);
       }
       if (typeof err.stack === 'string') {
         output.debug(err.stack);
       }
       return 1;
     }
-    output.prettyError(err);
+    reportError(err);
     output.debug(stringifyError(err));
     return 1;
   }

@@ -27,6 +27,7 @@ const binaryRuntimePackageNames = [
   'esbuild',
   'jose',
   'luxon',
+  'nostics',
   'sandbox',
   'smol-toml',
   'undici',

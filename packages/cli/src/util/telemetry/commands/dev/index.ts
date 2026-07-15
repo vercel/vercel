@@ -54,4 +54,11 @@ export class DevTelemetryClient
   trackOidcTokenRefresh(count: number) {
     super.trackOidcTokenRefresh(count);
   }
+
+  trackError(code: string | undefined) {
+    // 'Diagnostic' is nostics' default name for a codeless wrapped error which is not a real code.
+    if (code && code !== 'Diagnostic') {
+      this.trackErrorCode(code);
+    }
+  }
 }

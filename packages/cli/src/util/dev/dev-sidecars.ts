@@ -5,6 +5,7 @@ import type {
 } from '@vercel/fs-detectors';
 import type { Builder, DevSidecar } from '@vercel/build-utils';
 import { importBuilders } from '../build/import-builders';
+import { dev } from './diagnostics';
 
 type OrchestratorSidecar = ExperimentalService & { consumer?: string };
 
@@ -39,7 +40,7 @@ export async function collectBuilderDevSidecars({
     builds.map(async build => {
       const builder = buildersWithPkgs.get(build.use)?.builder;
       if (!builder) {
-        throw new Error(`Failed to load Builder "${build.use}"`);
+        throw dev.DEV_BUILDER_LOAD_FAILED({ use: build.use });
       }
 
       const service = servicesByBuilder.get(build);
@@ -68,14 +69,10 @@ export async function collectBuilderDevSidecars({
   for (const sidecar of sidecars) {
     const { name, type } = sidecar as { name: string; type: string };
     if (type !== 'subscriber') {
-      throw new Error(
-        `Development sidecar "${name}" has unsupported type "${type}"`
-      );
+      throw dev.DEV_SIDECAR_UNSUPPORTED_TYPE({ name, type });
     }
     if (names.has(name)) {
-      throw new Error(
-        `Multiple builders contributed a development sidecar named "${name}"`
-      );
+      throw dev.DEV_SIDECAR_DUPLICATE_NAME({ name });
     }
     names.add(name);
   }
