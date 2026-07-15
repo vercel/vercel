@@ -3,7 +3,10 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import flags from '../../../../src/commands/flags';
 import { formatFlagConditionComparatorList } from '../../../../src/util/flags/comparators';
 import type { Flag, UpdateFlagRequest } from '../../../../src/util/flags/types';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import {
   defaultFlagSettings,
@@ -103,6 +106,34 @@ describe('flags rules', () => {
       'rule_1',
       'rule_2',
     ]);
+  });
+
+  it('lists rules for the project selected by --project', async () => {
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject({
+      ...defaultProject,
+      id: 'explicit-flags-rules',
+      name: 'explicit-flags-rules',
+      accountId: 'team_dummy',
+    });
+    client.setArgv(
+      'flags',
+      'rules',
+      'ls',
+      'my-feature',
+      '--environment',
+      'production',
+      '--project',
+      'explicit-flags-rules',
+      '--json'
+    );
+
+    await expect(flags(client)).resolves.toEqual(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      flag: 'my-feature',
+      environment: 'production',
+    });
   });
 
   it('lists inherited rules for a reused environment as JSON', async () => {
