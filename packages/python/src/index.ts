@@ -132,12 +132,19 @@ function getDevSubscriberTopics(subscriber: Subscriber): ServiceQueueTopic[] {
 export async function getDevSidecars({
   workPath,
   build,
+  service,
 }: GetDevSidecarsOptions): Promise<DevSubscriber[]> {
   const framework = build.config?.framework;
+  const isPyprojectEntrypoint = basename(build.src ?? '') === 'pyproject.toml';
+  const isPyprojectService =
+    service !== undefined &&
+    basename(service.entrypoint ?? '') === 'pyproject.toml';
   if (
     build.config?.middleware === true ||
-    typeof framework !== 'string' ||
-    !isPythonFramework(framework)
+    (service !== undefined && !isPyprojectService) ||
+    (service === undefined &&
+      !isPyprojectEntrypoint &&
+      (typeof framework !== 'string' || !isPythonFramework(framework)))
   ) {
     return [];
   }
@@ -151,7 +158,7 @@ export async function getDevSidecars({
         name: subscriber.name,
         consumer: getSubscriberConsumerName(subscriber.name),
         workspace: '.',
-        framework,
+        framework: typeof framework === 'string' ? framework : undefined,
         runtime: 'python',
         builder: {
           use: build.use,
@@ -169,7 +176,7 @@ export async function getDevSidecars({
         name: workflow.name,
         consumer: getWorkflowConsumerName(workflow.name),
         workspace: '.',
-        framework,
+        framework: typeof framework === 'string' ? framework : undefined,
         runtime: 'python',
         builder: {
           use: build.use,

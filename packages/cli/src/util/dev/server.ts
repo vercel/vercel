@@ -867,12 +867,14 @@ export default class DevServer {
     }
 
     if (this.sidecars === undefined) {
-      this.sidecars = this.shouldUseServicesOrchestrator()
-        ? []
-        : await collectBuilderDevSidecars({
-            builds: vercelConfig.builds ?? [],
-            workPath: this.cwd,
-          });
+      const services = (this.services ?? []).filter(isExperimentalServiceV2);
+      this.sidecars = await collectBuilderDevSidecars({
+        builds: this.shouldUseServicesOrchestrator()
+          ? services.map(service => service.builder)
+          : (vercelConfig.builds ?? []),
+        workPath: this.cwd,
+        services,
+      });
     }
 
     if (Array.isArray(vercelConfig.builds)) {
@@ -1169,8 +1171,12 @@ export default class DevServer {
     };
 
     if (this.shouldUseServicesOrchestrator()) {
+      const orchestratorServices = [
+        ...(this.services || []),
+        ...(this.sidecars || []).map(toOrchestratorService),
+      ];
       this.orchestrator = new ServicesOrchestrator({
-        services: this.services || [],
+        services: orchestratorServices,
         cwd: this.cwd,
         repoRoot: this.repoRoot,
         env: this.envConfigs.allEnv,
@@ -1182,7 +1188,7 @@ export default class DevServer {
 
       // Instantiate the dev queue broker if any queue-backed services exist.
       // Queue-backed services are `experimentalServices` feature only.
-      const queueServices = (this.services || [])
+      const queueServices = orchestratorServices
         .filter(isExperimentalService)
         .filter(isQueueBackedService);
       if (queueServices.length > 0) {
