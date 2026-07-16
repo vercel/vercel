@@ -1,13 +1,10 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { listSubcommand } from './command';
-import {
-  parseSubcommandArgs,
-  requireProjectContext,
-  withGlobalFlags,
-} from './shared';
+import { parseSubcommandArgs, withGlobalFlags } from './shared';
 import getRedirects from '../../util/redirects/get-redirects';
 import getRedirectVersions from '../../util/redirects/get-redirect-versions';
 import stamp from '../../util/output/stamp';
@@ -17,7 +14,11 @@ export default async function list(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, listSubcommand);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await requireProjectContext(client, parsed.flags['--project']);
+  const link = await requireProjectContext(
+    client,
+    'redirects',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

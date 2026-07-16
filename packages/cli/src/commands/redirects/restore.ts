@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import {
   outputActionRequired,
@@ -14,7 +15,6 @@ import {
 import { restoreSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  requireProjectContext,
   confirmAction,
   getArgsAfterRedirectsSubcommand,
   getRedirectGlobalFlagsOnly,
@@ -71,7 +71,11 @@ export default async function restore(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await requireProjectContext(client, parsed.flags['--project']);
+  const link = await requireProjectContext(
+    client,
+    'redirects',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

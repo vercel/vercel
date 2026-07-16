@@ -1,10 +1,10 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { discardSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  requireProjectContext,
   confirmAction,
   printDiffSummary,
   withGlobalFlags,
@@ -19,7 +19,11 @@ export default async function discard(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, discardSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await requireProjectContext(client, parsed.flags['--project']);
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

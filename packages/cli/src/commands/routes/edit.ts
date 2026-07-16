@@ -1,10 +1,10 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { editSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  requireProjectContext,
   resolveRoute,
   offerAutoPromote,
   shellQuoteRouteIdentifierForSuggestion,
@@ -39,7 +39,11 @@ export default async function edit(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, editSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await requireProjectContext(client, parsed.flags['--project']);
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

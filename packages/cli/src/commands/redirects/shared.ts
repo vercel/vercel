@@ -2,7 +2,6 @@ import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import type { Command } from '../help';
-import { requireProjectContext as requireProjectContextForCommand } from '../../util/projects/require-project-context';
 import {
   parseSubcommandArguments,
   type ParsedSubcommandArguments,
@@ -36,10 +35,6 @@ export async function parseSubcommandArgs(
   }
 
   return parsedArgs;
-}
-
-export function requireProjectContext(client: Client, projectName?: string) {
-  return requireProjectContextForCommand(client, 'redirects', projectName);
 }
 
 export async function confirmAction(

@@ -1,11 +1,8 @@
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { exportSubcommand } from './command';
-import {
-  parseSubcommandArgs,
-  requireProjectContext,
-  withGlobalFlags,
-} from './shared';
+import { parseSubcommandArgs, withGlobalFlags } from './shared';
 import { outputAgentError } from '../../util/agent-output';
 import getRoutes from '../../util/routes/get-routes';
 import type { RoutingRule } from '../../util/routes/types';
@@ -80,7 +77,11 @@ export default async function exportRoutes(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, exportSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await requireProjectContext(client, parsed.flags['--project']);
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

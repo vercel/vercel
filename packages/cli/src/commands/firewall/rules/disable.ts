@@ -1,11 +1,11 @@
 import chalk from 'chalk';
 import type Client from '../../../util/client';
+import { requireProjectContext } from '../../../util/projects/require-project-context';
 import output from '../../../output-manager';
 import { rulesDisableSubcommand } from '../command';
 import {
   withGlobalFlags,
   parseSubcommandArgs,
-  requireProjectContext,
   resolveRule,
   detectExistingDraft,
   offerAutoPublish,
@@ -25,7 +25,11 @@ export default async function disable(client: Client, argv: string[]) {
   );
   if (typeof parsed === 'number') return parsed;
 
-  const link = await requireProjectContext(client, parsed.flags['--project']);
+  const link = await requireProjectContext(
+    client,
+    'firewall',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

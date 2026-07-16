@@ -1,11 +1,11 @@
 import chalk from 'chalk';
 import type Client from '../../../util/client';
+import { requireProjectContext } from '../../../util/projects/require-project-context';
 import output from '../../../output-manager';
 import { rulesAddSubcommand } from '../command';
 import {
   withGlobalFlags,
   parseSubcommandArgs,
-  requireProjectContext,
   confirmAction,
   detectExistingDraft,
   offerAutoPublish,
@@ -87,7 +87,11 @@ export default async function add(client: Client, argv: string[]) {
     }
 
     // AI mode
-    const link = await requireProjectContext(client, parsed.flags['--project']);
+    const link = await requireProjectContext(
+      client,
+      'firewall',
+      parsed.flags['--project']
+    );
     if (typeof link === 'number') return link;
     const { project, org } = link;
     const teamId = org.type === 'team' ? org.id : undefined;
@@ -129,7 +133,11 @@ export default async function add(client: Client, argv: string[]) {
       ],
     });
 
-    const link = await requireProjectContext(client, parsed.flags['--project']);
+    const link = await requireProjectContext(
+      client,
+      'firewall',
+      parsed.flags['--project']
+    );
     if (typeof link === 'number') return link;
     const { project, org } = link;
     const teamId = org.type === 'team' ? org.id : undefined;

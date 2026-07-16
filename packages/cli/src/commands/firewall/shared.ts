@@ -19,7 +19,6 @@ import type { FirewallIpRule, FirewallRule } from '../../util/firewall/types';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import activateFirewallConfig from '../../util/firewall/activate-firewall-config';
 import stamp from '../../util/output/stamp';
-import { requireProjectContext as requireProjectContextForCommand } from '../../util/projects/require-project-context';
 
 /**
  * Plain suggested command with global flags from argv (--cwd, --non-interactive, etc.).
@@ -74,10 +73,6 @@ export async function parseSubcommandArgs(
   }
 
   return parsedArgs;
-}
-
-export function requireProjectContext(client: Client, projectName?: string) {
-  return requireProjectContextForCommand(client, 'firewall', projectName);
 }
 
 export async function confirmAction(

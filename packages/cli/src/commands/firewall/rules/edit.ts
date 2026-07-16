@@ -1,11 +1,11 @@
 import chalk from 'chalk';
 import type Client from '../../../util/client';
+import { requireProjectContext } from '../../../util/projects/require-project-context';
 import output from '../../../output-manager';
 import { rulesEditSubcommand } from '../command';
 import {
   withGlobalFlags,
   parseSubcommandArgs,
-  requireProjectContext,
   confirmAction,
   detectExistingDraft,
   offerAutoPublish,
@@ -42,7 +42,11 @@ export default async function edit(client: Client, argv: string[]) {
 
   let identifier = parsed.args[0] as string | undefined;
 
-  const link = await requireProjectContext(client, parsed.flags['--project']);
+  const link = await requireProjectContext(
+    client,
+    'firewall',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

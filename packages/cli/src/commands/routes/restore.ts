@@ -1,10 +1,10 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { restoreSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  requireProjectContext,
   confirmAction,
   printDiffSummary,
   findVersionById,
@@ -45,7 +45,11 @@ export default async function restore(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await requireProjectContext(client, parsed.flags['--project']);
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

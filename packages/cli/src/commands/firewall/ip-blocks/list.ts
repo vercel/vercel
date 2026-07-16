@@ -1,13 +1,9 @@
 import chalk from 'chalk';
 import type Client from '../../../util/client';
+import { requireProjectContext } from '../../../util/projects/require-project-context';
 import output from '../../../output-manager';
 import { ipBlocksListSubcommand } from '../command';
-import {
-  parseSubcommandArgs,
-  requireProjectContext,
-  outputJson,
-  withGlobalFlags,
-} from '../shared';
+import { parseSubcommandArgs, outputJson, withGlobalFlags } from '../shared';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
 import {
   annotateIpRules,
@@ -24,7 +20,11 @@ export default async function list(client: Client, argv: string[]) {
   );
   if (typeof parsed === 'number') return parsed;
 
-  const link = await requireProjectContext(client, parsed.flags['--project']);
+  const link = await requireProjectContext(
+    client,
+    'firewall',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
