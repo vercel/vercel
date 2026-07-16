@@ -832,9 +832,7 @@ describe('ai-gateway coding-agents setup', () => {
       await expect(client.stderr).toOutput(
         'Planned changes  existing files are backed up alongside as .bak first'
       );
-      await expect(client.stderr).toOutput(
-        'How do you want to apply these changes?'
-      );
+      await expect(client.stderr).toOutput('Apply these changes?');
       client.stdin.write('\n'); // accept default (yes)
 
       expect(await exitCodePromise).toBe(0);
@@ -915,10 +913,10 @@ describe('ai-gateway coding-agents setup', () => {
   });
 
   describe('apply action', () => {
-    // Drives the interactive setup to the "How do you want to apply these
-    // changes?" select for a
-    // single claude-code agent, with all key options pinned via flags.
-    function startInteractiveSetup() {
+    // Drives the interactive setup to the "Apply these changes?" prompt for a
+    // single claude-code agent, with all key options pinned via flags. Without
+    // the Keychain that prompt is a y/n confirm; with it, a three-way select.
+    function startInteractiveSetup(extraArgv: string[] = []) {
       const team = useTeam();
       useUser();
       useCreateApiKey();
@@ -935,7 +933,8 @@ describe('ai-gateway coding-agents setup', () => {
         '--refresh-period',
         'none',
         '--expiration',
-        'none'
+        'none',
+        ...extraArgv
       );
       return aiGateway(client);
     }
@@ -945,12 +944,9 @@ describe('ai-gateway coding-agents setup', () => {
 
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
-      await expect(client.stderr).toOutput(
-        'How do you want to apply these changes?'
-      );
-      // Copy prompt is disabled without keychain, so select navigation skips it:
-      // Apply (0) → down → Cancel.
-      client.stdin.write('\x1b[B\n');
+      // No Keychain: the apply prompt is a plain y/n confirm. Decline it.
+      await expect(client.stderr).toOutput('Apply these changes?');
+      client.stdin.write('n\n');
 
       expect(await exitCodePromise).toBe(0);
       await expect(client.stderr).toOutput('No files were changed');
@@ -967,10 +963,8 @@ describe('ai-gateway coding-agents setup', () => {
       // Keychain is available, so the storage prompt appears; accept the default.
       await expect(client.stderr).toOutput('macOS Keychain');
       client.stdin.write('\n');
-      await expect(client.stderr).toOutput(
-        'How do you want to apply these changes?'
-      );
-      // Apply (0) → Copy prompt (1).
+      await expect(client.stderr).toOutput('Apply these changes?');
+      // Select: "Yes, write the files now" (0) → "Copy a prompt…" (1).
       client.stdin.write('\x1b[B\n');
 
       expect(await exitCodePromise).toBe(0);
@@ -998,9 +992,7 @@ describe('ai-gateway coding-agents setup', () => {
       client.stdin.write('\n');
       await expect(client.stderr).toOutput('macOS Keychain');
       client.stdin.write('\n');
-      await expect(client.stderr).toOutput(
-        'How do you want to apply these changes?'
-      );
+      await expect(client.stderr).toOutput('Apply these changes?');
       client.stdin.write('\x1b[B\n');
 
       expect(await exitCodePromise).toBe(0);
@@ -1009,20 +1001,76 @@ describe('ai-gateway coding-agents setup', () => {
       expect(client.stdout.getFullOutput()).toContain('settings.json');
     });
 
-    it('applies normally when Apply is chosen', async () => {
+    it('applies normally when the y/n confirm is accepted', async () => {
       const exitCodePromise = startInteractiveSetup();
 
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
-      await expect(client.stderr).toOutput(
-        'How do you want to apply these changes?'
-      );
-      client.stdin.write('\n'); // default: Apply
+      await expect(client.stderr).toOutput('Apply these changes?');
+      client.stdin.write('\n'); // accept default (yes)
 
       expect(await exitCodePromise).toBe(0);
       expect(existsSync(claudeSettingsPath())).toBe(true);
       const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
       expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe(CREATED_KEY);
+    });
+
+    it('--apply prompt emits the prompt on stdout without writing files', async () => {
+      keychainState.available = true;
+      const exitCode = await startInteractiveSetup([
+        '--apply',
+        'prompt',
+        '--yes',
+      ]);
+
+      expect(exitCode).toBe(0);
+      // Key created and stored in the Keychain.
+      expect(lastCreateBody).toBeDefined();
+      expect(keychainState.stored).toContain(CREATED_KEY);
+      // Prompt goes to stdout (pipeable) but never the plaintext key…
+      const out = client.stdout.getFullOutput();
+      expect(out).toContain('settings.json');
+      expect(out).not.toContain(CREATED_KEY);
+      // …and the config files are left to the agent.
+      expect(existsSync(claudeSettingsPath())).toBe(false);
+    });
+
+    it('--apply edit writes the files without prompting', async () => {
+      const exitCode = await startInteractiveSetup([
+        '--apply',
+        'edit',
+        '--yes',
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(existsSync(claudeSettingsPath())).toBe(true);
+      const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
+      expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe(CREATED_KEY);
+    });
+
+    it('--apply prompt is rejected without the Keychain', async () => {
+      // keychainState.available defaults to undefined → not macOS/Keychain.
+      const exitCode = await startInteractiveSetup([
+        '--apply',
+        'prompt',
+        '--yes',
+      ]);
+
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('macOS Keychain');
+      expect(lastCreateBody).toBeUndefined();
+      expect(existsSync(claudeSettingsPath())).toBe(false);
+    });
+
+    it('rejects an invalid --apply value', async () => {
+      const exitCode = await startInteractiveSetup([
+        '--apply',
+        'nope',
+        '--yes',
+      ]);
+
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('Invalid --apply');
     });
   });
 
@@ -2078,9 +2126,7 @@ describe('ai-gateway coding-agents setup', () => {
       );
       await expect(client.stderr).toOutput('Configure Codex anyway?');
       client.stdin.write('y\n');
-      await expect(client.stderr).toOutput(
-        'How do you want to apply these changes?'
-      );
+      await expect(client.stderr).toOutput('Apply these changes?');
       client.stdin.write('\n');
 
       expect(await exitCodePromise).toBe(0);
@@ -2109,9 +2155,7 @@ describe('ai-gateway coding-agents setup', () => {
       await expect(client.stderr).toOutput('Configure Codex anyway?');
       client.stdin.write('\n'); // default No
       await expect(client.stderr).toOutput('Skipped Codex');
-      await expect(client.stderr).toOutput(
-        'How do you want to apply these changes?'
-      );
+      await expect(client.stderr).toOutput('Apply these changes?');
       client.stdin.write('\n');
 
       expect(await exitCodePromise).toBe(0);
