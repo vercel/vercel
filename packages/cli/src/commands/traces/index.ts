@@ -14,6 +14,7 @@ import {
 } from './command';
 import get from './get';
 import { runCurl } from '../curl';
+import { getArgsAfterCommand } from '../curl/shared';
 
 const COMMAND_CONFIG = {
   get: getCommandAliases(getSubcommandMetadata),
@@ -65,12 +66,14 @@ export default async function traces(client: Client): Promise<number> {
 
   if (subcommand === createSubcommandMetadata.name) {
     // `traces create` is an alias for `vercel curl --trace`. The router
-    // dispatched here off `client.argv`, so the first two tokens are always
-    // `traces create` (like `curl`, this assumes no global flags precede the
-    // command token). Drop that prefix and hand the rest to the shared curl
-    // runner with the trace flow forced on. Passing `args` explicitly avoids
-    // mutating `client.argv` (which is the live `process.argv` in production).
-    const args = client.argv.slice(4);
+    // Drop the command prefix while accounting for global flags in any of the
+    // positions accepted by the root CLI parser. Passing `args` explicitly
+    // avoids mutating `client.argv` (the live `process.argv` in production).
+    const tracesArgs = getArgsAfterCommand(
+      client.argv.slice(2),
+      tracesCommand.name
+    );
+    const args = getArgsAfterCommand(tracesArgs, createSubcommandMetadata.name);
     return runCurl(client, { forceTrace: true, args });
   }
 

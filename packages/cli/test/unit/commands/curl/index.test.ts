@@ -394,6 +394,35 @@ describe('curl', () => {
       bypassSpy.mockRestore();
     });
 
+    it('does not link when the deployment project cannot be loaded', async () => {
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+      useUser();
+      useTeams('team_dummy');
+
+      client.scenario.get('/v13/deployments/dpl_EXPLICIT123', (_req, res) => {
+        res.json({
+          id: 'dpl_EXPLICIT123',
+          url: 'explicit-project-abc123.vercel.app',
+          projectId: 'explicit-project',
+          ownerId: 'team_dummy',
+        });
+      });
+      client.scenario.get('/v9/projects/explicit-project', (_req, res) => {
+        res.status(500).json({ error: { message: 'Internal Server Error' } });
+      });
+
+      client.setArgv('curl', '/api/hello', '--deployment', 'dpl_EXPLICIT123');
+
+      await expect(curl(client)).resolves.toEqual(0);
+      expect(existsSync(join(cwd, '.vercel'))).toBe(false);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        ['--url', 'https://explicit-project-abc123.vercel.app/api/hello'],
+        { stdio: 'inherit', shell: false }
+      );
+    });
+
     it('should resolve full URL auth from aliases without querying limited teams', async () => {
       useUser();
       const [team] = useTeams('team_active') as ReturnType<typeof createTeam>[];
@@ -580,6 +609,42 @@ describe('curl', () => {
       );
       expect(result.deploymentProtectionToken).toBe('test-secret');
     });
+
+    it('does not forward a global scope flag to curl', async () => {
+      client.cwd = setupTmpDir();
+      useUser();
+      useTeams('team_dummy');
+      client.config.currentTeam = 'team_dummy';
+
+      client.scenario.get('/v13/deployments/dpl_ABC123', (_req, res) => {
+        res.json({ url: 'deployment-abc123.vercel.app' });
+      });
+
+      client.setArgv(
+        '--scope',
+        'my-team',
+        'curl',
+        '/api/hello',
+        '--deployment',
+        'dpl_ABC123',
+        '--protection-bypass',
+        'test-secret'
+      );
+
+      const exitCode = await curl(client);
+
+      expect(exitCode).toEqual(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        [
+          '--url',
+          'https://deployment-abc123.vercel.app/api/hello',
+          '--header',
+          'x-vercel-protection-bypass: test-secret',
+        ],
+        { stdio: 'inherit', shell: false }
+      );
+    });
   });
 
   describe('--protection-bypass flag', () => {
@@ -701,6 +766,41 @@ describe('curl', () => {
   });
 
   describe('error handling', () => {
+    it('continues an explicit deployment request when automatic bypass token lookup fails', async () => {
+      client.cwd = setupTmpDir();
+      useUser();
+      useTeams('team_dummy');
+      useProject({ id: 'static', name: 'static-project' });
+
+      client.scenario.get('/v13/deployments/:host', (_req, res) => {
+        res.json({ projectId: 'static', ownerId: 'team_dummy' });
+      });
+
+      const bypassTokenModule = await import(
+        '../../../../src/commands/curl/bypass-token'
+      );
+      const mockSpy = vi
+        .spyOn(bypassTokenModule, 'getOrCreateDeploymentProtectionToken')
+        .mockRejectedValueOnce(new Error('token lookup failed'));
+
+      client.setArgv(
+        'curl',
+        '/api/hello',
+        '--deployment',
+        'https://deployment-abc123.vercel.app'
+      );
+
+      const exitCode = await curl(client);
+
+      expect(exitCode).toBe(0);
+      expect(mockSpy).toHaveBeenCalledOnce();
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        ['--url', 'https://deployment-abc123.vercel.app/api/hello'],
+        { stdio: 'inherit', shell: false }
+      );
+    });
+
     it('should handle getOrCreateDeploymentProtectionToken failure gracefully', async () => {
       // Import setupUnitFixture to use a real fixture
       const { setupUnitFixture } = await import(
@@ -1054,6 +1154,24 @@ describe('parseCurlLikeArgs', () => {
     expect(parsed.target).toBe('https://example.com');
     expect(parsed.protectionBypass).toBe('secret');
     expect(parsed.toolFlags).toEqual(['--compressed']);
+  });
+
+  it('does not pass global long flags through to curl', () => {
+    const parsed = parseCurlLikeArgs(
+      [
+        '--scope',
+        'my-team',
+        '--debug',
+        'curl',
+        'https://example.com',
+        '--team=legacy-team',
+        '--silent',
+      ],
+      'curl'
+    );
+
+    expect(parsed.target).toBe('https://example.com');
+    expect(parsed.toolFlags).toEqual(['--silent']);
   });
 
   it('uses curl --url as the target', () => {
