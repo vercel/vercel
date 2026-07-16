@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Allow environment variable add, remove, and update commands to select a project explicitly with `--project`.
+Allow environment variable list, pull, run, add, remove, and update commands to select a project explicitly with `--project`.
