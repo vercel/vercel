@@ -49,13 +49,22 @@ export const creditsSubcommand = {
 } as const;
 
 // TODO(mingchungx): Add other addons
-export const SUPPORTED_ADDON_ALIASES = ['siem', 'customEnvironment'] as const;
+export const SUPPORTED_ADDON_ALIASES = [
+  'siem',
+  'customEnvironment',
+  'flatRateCdnBase',
+  'flatRateCdnStandard',
+  'flatRateCdnAdvanced',
+] as const;
 export type AddonAlias = (typeof SUPPORTED_ADDON_ALIASES)[number];
 
 // TODO(mingchungx): Add other labels
 export const ADDON_LABELS: Record<AddonAlias, string> = {
   siem: 'SIEM',
   customEnvironment: 'Custom Environments',
+  flatRateCdnBase: 'Flat Rate CDN Base',
+  flatRateCdnStandard: 'Flat Rate CDN Standard',
+  flatRateCdnAdvanced: 'Flat Rate CDN Advanced',
 };
 
 export const addonSubcommand = {
@@ -88,6 +97,18 @@ export const addonSubcommand = {
     {
       name: 'Purchase 1 unit of the Custom Environments addon',
       value: `${packageName} buy addon customEnvironment 1`,
+    },
+    {
+      name: 'Purchase the Flat Rate CDN Base addon',
+      value: `${packageName} buy addon flatRateCdnBase 1`,
+    },
+    {
+      name: 'Purchase the Flat Rate CDN Standard addon',
+      value: `${packageName} buy addon flatRateCdnStandard 1`,
+    },
+    {
+      name: 'Purchase the Flat Rate CDN Advanced addon',
+      value: `${packageName} buy addon flatRateCdnAdvanced 1`,
     },
   ],
 } as const;
@@ -160,6 +181,10 @@ export const buyCommand = {
     {
       name: 'Purchase the Custom Environments addon',
       value: `${packageName} buy addon customEnvironment 1`,
+    },
+    {
+      name: 'Purchase the Flat Rate CDN Base addon',
+      value: `${packageName} buy addon flatRateCdnBase 1`,
     },
     {
       name: 'Upgrade to Pro',
