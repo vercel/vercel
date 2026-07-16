@@ -17,8 +17,11 @@ export interface ExtractedFetch {
  * path segments so they can be compared with declared `:param` / `{param}`
  * endpoints via `normalizeEndpoint`.
  *
- * Unresolvable paths (variables, concatenation, etc.) are skipped — those
- * cannot be verified statically by the CI policy check.
+ * Local `const base = '/v1/...'` bindings are resolved when used as
+ * template interpolations or `+` concatenation (`${base}/token`).
+ *
+ * Unresolvable paths (non-local variables, complex expressions, etc.) are
+ * skipped — those cannot be verified statically by the CI policy check.
  */
 export function extractFetchesFromSource(
   fileName: string,
@@ -42,11 +45,7 @@ export function extractFetchesFromSource(
       if (node.expression.name.text === 'fetch' && node.arguments.length > 0) {
         const pathArg = node.arguments[0];
         const optsArg = node.arguments[1];
-        const extractedPath =
-          extractPathExpression(pathArg) ??
-          (ts.isIdentifier(pathArg)
-            ? (localPaths.get(pathArg.text) ?? null)
-            : null);
+        const extractedPath = extractPathExpression(pathArg, localPaths);
         if (extractedPath) {
           const method = extractMethod(optsArg) ?? 'GET';
           const { line } = sourceFile.getLineAndCharacterOfPosition(
@@ -73,7 +72,14 @@ export function extractFetchesFromFile(filePath: string): ExtractedFetch[] {
   return extractFetchesFromSource(filePath, sourceText);
 }
 
-function extractPathExpression(node: ts.Expression): string | null {
+function extractPathExpression(
+  node: ts.Expression,
+  localPaths: ReadonlyMap<string, string>
+): string | null {
+  if (ts.isIdentifier(node)) {
+    return localPaths.get(node.text) ?? null;
+  }
+
   if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
     return node.text.startsWith('/') ? node.text : null;
   }
@@ -81,42 +87,98 @@ function extractPathExpression(node: ts.Expression): string | null {
   if (ts.isTemplateExpression(node)) {
     let path = node.head.text;
     for (const span of node.templateSpans) {
-      // Path-segment interpolations look like `.../${id}` / `.../${id}/...`.
-      // Suffix interpolations (`...${query}`, optional `?${...}`) are ignored
-      // so they do not produce a bogus trailing `{}` segment.
-      if (path.endsWith('/')) {
+      const resolved = resolveInterpolation(span.expression, localPaths);
+      if (resolved !== null) {
+        path += resolved;
+      } else if (path.endsWith('/')) {
+        // Path-segment interpolations look like `.../${id}` / `.../${id}/...`.
         path += '{}';
       }
+      // Suffix interpolations (`...${query}`, optional `?${...}`) are ignored
+      // so they do not produce a bogus trailing `{}` segment.
       path += span.literal.text;
     }
     return path.startsWith('/') ? path : null;
+  }
+
+  if (
+    ts.isBinaryExpression(node) &&
+    node.operatorToken.kind === ts.SyntaxKind.PlusToken
+  ) {
+    const left = extractPathExpression(node.left, localPaths);
+    const right = extractPathExpression(node.right, localPaths);
+    if (left && right) {
+      return left + right;
+    }
+    return null;
   }
 
   return null;
 }
 
 /**
- * Maps simple `const url = '/...'` / template bindings in a file so
- * `client.fetch(url)` call sites can be attributed.
+ * Resolves a template interpolation to a path fragment when possible.
+ * Local path bindings are substituted in full; everything else that sits
+ * on a `/`-terminated prefix becomes `{}`.
+ */
+function resolveInterpolation(
+  expression: ts.Expression,
+  localPaths: ReadonlyMap<string, string>
+): string | null {
+  if (ts.isIdentifier(expression)) {
+    return localPaths.get(expression.text) ?? null;
+  }
+  // Parenthesized identifiers: `${(base)}/token`
+  if (ts.isParenthesizedExpression(expression)) {
+    return resolveInterpolation(expression.expression, localPaths);
+  }
+  return null;
+}
+
+/**
+ * Maps simple `const url = '/...'` / template / `${base}/…` bindings in a
+ * file so `client.fetch(url)` and `` client.fetch(`${base}/token`) `` call
+ * sites can be attributed.
  */
 function collectLocalPathBindings(
   sourceFile: ts.SourceFile
 ): Map<string, string> {
-  const bindings = new Map<string, string>();
+  const declarations: Array<{
+    name: string;
+    initializer: ts.Expression;
+  }> = [];
 
   const visit = (node: ts.Node) => {
     if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
       if (node.initializer) {
-        const path = extractPathExpression(node.initializer);
-        if (path) {
-          bindings.set(node.name.text, path);
-        }
+        declarations.push({
+          name: node.name.text,
+          initializer: node.initializer,
+        });
       }
     }
     ts.forEachChild(node, visit);
   };
 
   visit(sourceFile);
+
+  // Multi-pass so `const url = \`${base}/token\`` can resolve after `base`.
+  const bindings = new Map<string, string>();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const { name, initializer } of declarations) {
+      if (bindings.has(name)) {
+        continue;
+      }
+      const path = extractPathExpression(initializer, bindings);
+      if (path) {
+        bindings.set(name, path);
+        changed = true;
+      }
+    }
+  }
+
   return bindings;
 }
 

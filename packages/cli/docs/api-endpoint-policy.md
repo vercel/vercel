@@ -19,6 +19,8 @@ For every non-grandfathered leaf command/subcommand, the test:
    `delete-store` → `store-remove.ts`).
 2. Statically extracts resolvable `client.fetch(...)` call sites (string
    literals and template literals; interpolations become `{}` path segments).
+   Local `const base = '/v1/...'` bindings used as `${base}/token` fragments
+   or `base + '/token'` concatenation are resolved to the full path.
 3. Fails if any extracted call is missing from the live public OpenAPI spec.
 
 Parent commands that only route to subcommands are skipped; each subcommand
@@ -32,10 +34,11 @@ with CLI maintainers rather than extending the grandfathered list casually.
 
 ## Limits of static extraction
 
-Dynamic paths (variables that are not a simple local `const url = '/...'`
-binding, string concatenation) and fetches in shared helpers outside
-`commands/<name>` / `util/<name>` are out of scope for this check. Keep
-fetches local when possible so the policy can see them.
+Dynamic paths (non-local variables, complex expressions) and fetches in
+shared helpers outside `commands/<name>` / `util/<name>` are out of scope
+for this check. Local `base`/`url` bindings and simple `+` concatenation of
+path fragments are supported. Keep fetches local when possible so the
+policy can see them.
 
 ## How the public spec is loaded
 

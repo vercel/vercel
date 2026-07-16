@@ -261,4 +261,49 @@ describe('client.fetch call-site extraction', () => {
       }),
     ]);
   });
+
+  it('resolves base + fragment templates and concatenation', () => {
+    const source = `
+      async function run(client: { fetch: Function }, id: string, backupId: string) {
+        const base = \`/v1/edge-config/\${encodeURIComponent(id)}\`;
+        await client.fetch(\`\${base}/token\`, { method: 'POST' });
+        await client.fetch(\`\${base}/tokens\`);
+        await client.fetch(\`\${base}/tokens\`, { method: 'DELETE' });
+
+        const backups = \`/v1/edge-config/\${id}/backups\`;
+        await client.fetch(\`\${backups}/\${backupId}\`);
+        await client.fetch(\`\${backups}/\${backupId}/restore\`, { method: 'POST' });
+
+        const prefix = '/v1/edge-config/{}';
+        await client.fetch(prefix + '/token', { method: 'POST' });
+      }
+    `;
+    const fetches = extractFetchesFromSource('edge-config.ts', source);
+    expect(fetches).toEqual([
+      expect.objectContaining({
+        method: 'POST',
+        path: '/v1/edge-config/{}/token',
+      }),
+      expect.objectContaining({
+        method: 'GET',
+        path: '/v1/edge-config/{}/tokens',
+      }),
+      expect.objectContaining({
+        method: 'DELETE',
+        path: '/v1/edge-config/{}/tokens',
+      }),
+      expect.objectContaining({
+        method: 'GET',
+        path: '/v1/edge-config/{}/backups/{}',
+      }),
+      expect.objectContaining({
+        method: 'POST',
+        path: '/v1/edge-config/{}/backups/{}/restore',
+      }),
+      expect.objectContaining({
+        method: 'POST',
+        path: '/v1/edge-config/{}/token',
+      }),
+    ]);
+  });
 });
