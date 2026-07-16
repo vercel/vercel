@@ -314,9 +314,11 @@ function getPreservedArgsAfterEnvSubcommand(
   positionalCount: number
 ): string[] {
   const args = stripSensitiveAuthArgs(argv.slice(2));
-  const envIdx = args.indexOf('env');
+  const envIdx = args.findIndex(
+    (arg, index) => arg === 'env' && subcommands.includes(args[index + 1])
+  );
   const subcommandIdx = envIdx + 1;
-  if (envIdx === -1 || !subcommands.includes(args[subcommandIdx])) {
+  if (envIdx === -1) {
     return args;
   }
 

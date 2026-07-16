@@ -498,6 +498,34 @@ describe('getGlobalFlagsFromArgv', () => {
 });
 
 describe('env suggestion argument preservation', () => {
+  it('does not mistake a global option value for the env command', () => {
+    const argv = [
+      'node',
+      'vc.js',
+      '--scope',
+      'env',
+      'env',
+      'add',
+      'API_KEY',
+      'preview',
+      '--value',
+      'secret',
+      '--yes',
+    ];
+
+    expect(getPreservedArgsForEnvAdd(argv)).toEqual([
+      '--value',
+      'secret',
+      '--yes',
+    ]);
+    expect(
+      buildEnvAddCommandWithPreservedArgs(
+        argv,
+        'env add API_KEY preview --value <value> --yes'
+      )
+    ).toBe('vercel env add API_KEY preview --value <value> --yes');
+  });
+
   it.each([
     {
       name: 'add',
