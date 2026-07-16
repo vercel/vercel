@@ -5,7 +5,7 @@ import { rulesDisableSubcommand } from '../command';
 import {
   withGlobalFlags,
   parseSubcommandArgs,
-  ensureProjectLink,
+  requireProjectContext,
   resolveRule,
   detectExistingDraft,
   offerAutoPublish,
@@ -25,7 +25,7 @@ export default async function disable(client: Client, argv: string[]) {
   );
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client, parsed.flags['--project']);
+  const link = await requireProjectContext(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

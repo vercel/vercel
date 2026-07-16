@@ -5,7 +5,7 @@ import { rulesAddSubcommand } from '../command';
 import {
   withGlobalFlags,
   parseSubcommandArgs,
-  ensureProjectLink,
+  requireProjectContext,
   confirmAction,
   detectExistingDraft,
   offerAutoPublish,
@@ -87,7 +87,7 @@ export default async function add(client: Client, argv: string[]) {
     }
 
     // AI mode
-    const link = await ensureProjectLink(client, parsed.flags['--project']);
+    const link = await requireProjectContext(client, parsed.flags['--project']);
     if (typeof link === 'number') return link;
     const { project, org } = link;
     const teamId = org.type === 'team' ? org.id : undefined;
@@ -129,7 +129,7 @@ export default async function add(client: Client, argv: string[]) {
       ],
     });
 
-    const link = await ensureProjectLink(client, parsed.flags['--project']);
+    const link = await requireProjectContext(client, parsed.flags['--project']);
     if (typeof link === 'number') return link;
     const { project, org } = link;
     const teamId = org.type === 'team' ? org.id : undefined;
@@ -399,7 +399,7 @@ async function createRule(
   rule: Omit<FirewallRule, 'id'>
 ): Promise<number> {
   const projectName = parsed.flags['--project'];
-  const link = await ensureProjectLink(
+  const link = await requireProjectContext(
     client,
     typeof projectName === 'string' ? projectName : undefined
   );

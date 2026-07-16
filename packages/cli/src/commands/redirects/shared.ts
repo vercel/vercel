@@ -2,7 +2,7 @@ import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import type { Command } from '../help';
-import { ensureProjectLink as ensureProjectLinkForCommand } from '../../util/projects/ensure-project-link';
+import { requireProjectContext as requireProjectContextForCommand } from '../../util/projects/require-project-context';
 import {
   parseSubcommandArguments,
   type ParsedSubcommandArguments,
@@ -38,8 +38,8 @@ export async function parseSubcommandArgs(
   return parsedArgs;
 }
 
-export function ensureProjectLink(client: Client, projectName?: string) {
-  return ensureProjectLinkForCommand(client, 'redirects', projectName);
+export function requireProjectContext(client: Client, projectName?: string) {
+  return requireProjectContextForCommand(client, 'redirects', projectName);
 }
 
 export async function confirmAction(

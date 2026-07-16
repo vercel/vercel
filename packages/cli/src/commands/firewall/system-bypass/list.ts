@@ -4,7 +4,7 @@ import output from '../../../output-manager';
 import { systemBypassListSubcommand } from '../command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
+  requireProjectContext,
   outputJson,
   withGlobalFlags,
 } from '../shared';
@@ -24,7 +24,7 @@ export default async function list(client: Client, argv: string[]) {
   );
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client, parsed.flags['--project']);
+  const link = await requireProjectContext(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

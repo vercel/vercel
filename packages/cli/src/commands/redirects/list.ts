@@ -5,7 +5,7 @@ import output from '../../output-manager';
 import { listSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
+  requireProjectContext,
   withGlobalFlags,
 } from './shared';
 import getRedirects from '../../util/redirects/get-redirects';
@@ -17,7 +17,7 @@ export default async function list(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, listSubcommand);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client, parsed.flags['--project']);
+  const link = await requireProjectContext(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

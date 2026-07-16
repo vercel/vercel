@@ -11,7 +11,7 @@ import {
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
 import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import type { Command } from '../help';
-import { ensureProjectLink as ensureProjectLinkForCommand } from '../../util/projects/ensure-project-link';
+import { requireProjectContext as requireProjectContextForCommand } from '../../util/projects/require-project-context';
 import {
   parseSubcommandArguments,
   type ParsedSubcommandArguments,
@@ -140,7 +140,7 @@ export async function parseSubcommandArgs(
 }
 
 export function requireProjectContext(client: Client, projectName?: string) {
-  return ensureProjectLinkForCommand(client, 'routes', projectName);
+  return requireProjectContextForCommand(client, 'routes', projectName);
 }
 
 export async function confirmAction(

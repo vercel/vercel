@@ -5,7 +5,7 @@ import { ipBlocksBlockSubcommand } from '../command';
 import {
   withGlobalFlags,
   parseSubcommandArgs,
-  ensureProjectLink,
+  requireProjectContext,
   confirmAction,
   detectExistingDraft,
   offerAutoPublish,
@@ -63,7 +63,7 @@ export default async function block(client: Client, argv: string[]) {
     }
   }
 
-  const link = await ensureProjectLink(client, parsed.flags['--project']);
+  const link = await requireProjectContext(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

@@ -4,7 +4,7 @@ import output from '../../../output-manager';
 import { systemBypassAddSubcommand } from '../command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
+  requireProjectContext,
   confirmAction,
   withGlobalFlags,
 } from '../shared';
@@ -60,7 +60,7 @@ export default async function add(client: Client, argv: string[]) {
     }
   }
 
-  const link = await ensureProjectLink(client, parsed.flags['--project']);
+  const link = await requireProjectContext(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

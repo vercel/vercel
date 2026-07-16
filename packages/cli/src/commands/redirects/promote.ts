@@ -14,7 +14,7 @@ import {
 import { promoteSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
+  requireProjectContext,
   confirmAction,
   getArgsAfterRedirectsSubcommand,
   getRedirectGlobalFlagsOnly,
@@ -68,7 +68,7 @@ export default async function promote(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await ensureProjectLink(client, parsed.flags['--project']);
+  const link = await requireProjectContext(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

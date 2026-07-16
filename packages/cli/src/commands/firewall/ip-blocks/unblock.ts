@@ -5,7 +5,7 @@ import { ipBlocksUnblockSubcommand } from '../command';
 import {
   withGlobalFlags,
   parseSubcommandArgs,
-  ensureProjectLink,
+  requireProjectContext,
   confirmAction,
   offerAutoPublish,
   resolveIpRule,
@@ -30,7 +30,7 @@ export default async function unblock(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await ensureProjectLink(client, parsed.flags['--project']);
+  const link = await requireProjectContext(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

@@ -4,7 +4,7 @@ import output from '../../output-manager';
 import { publishSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
+  requireProjectContext,
   confirmAction,
   withGlobalFlags,
 } from './shared';
@@ -18,7 +18,7 @@ export default async function publish(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, publishSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client, parsed.flags['--project']);
+  const link = await requireProjectContext(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

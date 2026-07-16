@@ -4,7 +4,7 @@ import output from '../../../output-manager';
 import { attackModeEnableSubcommand } from '../command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
+  requireProjectContext,
   confirmAction,
   withGlobalFlags,
 } from '../shared';
@@ -68,7 +68,7 @@ export default async function enable(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await ensureProjectLink(client, parsed.flags['--project']);
+  const link = await requireProjectContext(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project } = link;

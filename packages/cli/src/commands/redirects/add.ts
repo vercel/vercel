@@ -10,7 +10,7 @@ import {
 import { addSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
+  requireProjectContext,
   isValidUrl,
   buildRedirectsSuggestionFlags,
   getArgsAfterRedirectsSubcommand,
@@ -30,7 +30,7 @@ export default async function add(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, addSubcommand);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client, parsed.flags['--project']);
+  const link = await requireProjectContext(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

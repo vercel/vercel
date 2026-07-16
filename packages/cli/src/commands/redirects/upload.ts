@@ -15,7 +15,7 @@ import {
 import { uploadSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
+  requireProjectContext,
   getArgsAfterRedirectsSubcommand,
   getRedirectPromoteSuggestionFlags,
   buildRedirectsSuggestionFlags,
@@ -52,7 +52,7 @@ export default async function upload(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, uploadSubcommand);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client, parsed.flags['--project']);
+  const link = await requireProjectContext(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

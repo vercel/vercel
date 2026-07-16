@@ -14,7 +14,7 @@ import {
 import { removeSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
+  requireProjectContext,
   confirmAction,
   buildRedirectsSuggestionFlags,
   getArgsAfterRedirectsSubcommand,
@@ -60,7 +60,7 @@ export default async function remove(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await ensureProjectLink(client, parsed.flags['--project']);
+  const link = await requireProjectContext(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
