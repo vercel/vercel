@@ -13,16 +13,16 @@ Parse only stdout for URLs and JSON. Warnings, progress, and `--help` print to s
 
 In agent/non-interactive mode, many commands report errors and required confirmations as a single JSON object on stdout with `status`, `reason`, `hint`, and `next` (runnable follow-up commands). Prefer running a suggested `next` command over composing a retry. Read commands such as `list`, `logs`, `inspect`, and `api` keep their normal output shape.
 
-## Critical: Project Linking
+## Project Context
 
-Commands must be run from the directory containing the `.vercel` folder (or a subdirectory of it). How `.vercel` gets set up depends on your project structure:
+Commands use the project linked in local `.vercel` metadata by default. Many project-aware commands also accept `--project <name-or-id>` with `--scope <team>` for explicit targeting without changing the link.
 
 - **`.vercel/project.json`**: Created by `vercel link`. Links a single project. Fine for single-project repos, and can work in monorepos if there's only one project.
 - **`.vercel/repo.json`**: Created by `vercel link --repo`. Links a repo that may contain multiple projects. Always a good idea when any project has a non-root directory (e.g., `apps/web`).
 
 Running from a project subdirectory (e.g., `apps/web/`) skips the "which project?" prompt since it's unambiguous.
 
-**When something goes wrong, check how things are linked first** — look at what's in `.vercel/` and whether it's `project.json` or `repo.json`. Also verify you're on the right team with `vercel whoami` — linking while on the wrong team is a common mistake.
+For linking or scope errors, inspect `.vercel/` and verify the current team with `vercel whoami`.
 
 ## Quick Start
 

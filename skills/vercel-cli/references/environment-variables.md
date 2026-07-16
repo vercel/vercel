@@ -17,8 +17,6 @@ vercel env ls --format json
 vercel env ls production --format json
 ```
 
-Use `--project <name-or-id>` with `--scope <team>` when needed to override the linked project.
-
 If CLI output does not include required metadata, use `vercel api` after checking available endpoints with `vercel api list`.
 
 ## Managing Env Vars
