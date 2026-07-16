@@ -485,14 +485,12 @@ export default async function codingAgentsSetup(
   let applyAction: 'apply' | 'copy' = 'apply';
   if (changed.length > 0 && canPrompt && !yes) {
     const choice = await client.input.select<'apply' | 'copy' | 'cancel'>({
-      message: 'Apply these changes?',
+      message: 'How do you want to apply these changes?',
       choices: [
-        { name: 'Apply', value: 'apply' },
+        { name: 'Make edits now', value: 'apply' },
         {
-          name: 'Copy prompt',
+          name: 'Copy prompt for an agent',
           value: 'copy',
-          description:
-            'Copy the diff and instructions to hand to a coding agent',
           // A prompt is only safe when the key lives in the Keychain; otherwise
           // the diff embeds the plaintext key, which must not be handed off.
           disabled: useKeychain

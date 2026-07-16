@@ -832,7 +832,9 @@ describe('ai-gateway coding-agents setup', () => {
       await expect(client.stderr).toOutput(
         'Planned changes  existing files are backed up alongside as .bak first'
       );
-      await expect(client.stderr).toOutput('Apply these changes?');
+      await expect(client.stderr).toOutput(
+        'How do you want to apply these changes?'
+      );
       client.stdin.write('\n'); // accept default (yes)
 
       expect(await exitCodePromise).toBe(0);
@@ -913,7 +915,8 @@ describe('ai-gateway coding-agents setup', () => {
   });
 
   describe('apply action', () => {
-    // Drives the interactive setup to the "Apply these changes?" select for a
+    // Drives the interactive setup to the "How do you want to apply these
+    // changes?" select for a
     // single claude-code agent, with all key options pinned via flags.
     function startInteractiveSetup() {
       const team = useTeam();
@@ -942,7 +945,9 @@ describe('ai-gateway coding-agents setup', () => {
 
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
-      await expect(client.stderr).toOutput('Apply these changes?');
+      await expect(client.stderr).toOutput(
+        'How do you want to apply these changes?'
+      );
       // Copy prompt is disabled without keychain, so select navigation skips it:
       // Apply (0) → down → Cancel.
       client.stdin.write('\x1b[B\n');
@@ -962,7 +967,9 @@ describe('ai-gateway coding-agents setup', () => {
       // Keychain is available, so the storage prompt appears; accept the default.
       await expect(client.stderr).toOutput('macOS Keychain');
       client.stdin.write('\n');
-      await expect(client.stderr).toOutput('Apply these changes?');
+      await expect(client.stderr).toOutput(
+        'How do you want to apply these changes?'
+      );
       // Apply (0) → Copy prompt (1).
       client.stdin.write('\x1b[B\n');
 
@@ -991,7 +998,9 @@ describe('ai-gateway coding-agents setup', () => {
       client.stdin.write('\n');
       await expect(client.stderr).toOutput('macOS Keychain');
       client.stdin.write('\n');
-      await expect(client.stderr).toOutput('Apply these changes?');
+      await expect(client.stderr).toOutput(
+        'How do you want to apply these changes?'
+      );
       client.stdin.write('\x1b[B\n');
 
       expect(await exitCodePromise).toBe(0);
@@ -1005,7 +1014,9 @@ describe('ai-gateway coding-agents setup', () => {
 
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
-      await expect(client.stderr).toOutput('Apply these changes?');
+      await expect(client.stderr).toOutput(
+        'How do you want to apply these changes?'
+      );
       client.stdin.write('\n'); // default: Apply
 
       expect(await exitCodePromise).toBe(0);
@@ -2067,7 +2078,9 @@ describe('ai-gateway coding-agents setup', () => {
       );
       await expect(client.stderr).toOutput('Configure Codex anyway?');
       client.stdin.write('y\n');
-      await expect(client.stderr).toOutput('Apply these changes?');
+      await expect(client.stderr).toOutput(
+        'How do you want to apply these changes?'
+      );
       client.stdin.write('\n');
 
       expect(await exitCodePromise).toBe(0);
@@ -2096,7 +2109,9 @@ describe('ai-gateway coding-agents setup', () => {
       await expect(client.stderr).toOutput('Configure Codex anyway?');
       client.stdin.write('\n'); // default No
       await expect(client.stderr).toOutput('Skipped Codex');
-      await expect(client.stderr).toOutput('Apply these changes?');
+      await expect(client.stderr).toOutput(
+        'How do you want to apply these changes?'
+      );
       client.stdin.write('\n');
 
       expect(await exitCodePromise).toBe(0);
