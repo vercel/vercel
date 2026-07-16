@@ -409,6 +409,7 @@ async function createRule(
   const projectName = parsed.flags['--project'];
   const link = await requireProjectContext(
     client,
+    'firewall',
     typeof projectName === 'string' ? projectName : undefined
   );
   if (typeof link === 'number') return link;
