@@ -22,6 +22,10 @@ import type { Command } from '../help';
 import type arg from 'arg';
 import getDeployment from '../../util/get-deployment';
 import { getDeploymentUrlById } from './deployment-url';
+import {
+  GLOBAL_CLI_FLAG_NAMES,
+  globalCliFlagTakesValue,
+} from '../../util/arg-common';
 
 export interface DeploymentUrlOptions {
   deploymentFlag?: string;
@@ -95,6 +99,9 @@ async function ensureLinkedProject(
 
 const VC_STRING_FLAGS = new Set(['--deployment', '--protection-bypass']);
 const VC_BOOLEAN_FLAGS = new Set(['--yes', '--help', '--trace', '--json']);
+const VC_GLOBAL_LONG_FLAGS = new Set(
+  [...GLOBAL_CLI_FLAG_NAMES].filter(name => name.startsWith('--'))
+);
 
 function flagName(arg: string): string {
   const eqIdx = arg.indexOf('=');
@@ -110,6 +117,34 @@ function flagValue(args: string[], index: number): string | undefined {
 
   const next = args[index + 1];
   return next && !next.startsWith('-') ? next : undefined;
+}
+
+export function getArgsAfterCommand(
+  rawArgs: string[],
+  commandName: string
+): string[] {
+  let commandIndex = 0;
+
+  while (commandIndex < rawArgs.length) {
+    const arg = rawArgs[commandIndex];
+    const name = flagName(arg);
+    if (!VC_GLOBAL_LONG_FLAGS.has(name)) {
+      break;
+    }
+
+    commandIndex++;
+    if (
+      !arg.includes('=') &&
+      globalCliFlagTakesValue(name) &&
+      commandIndex < rawArgs.length
+    ) {
+      commandIndex++;
+    }
+  }
+
+  return rawArgs[commandIndex] === commandName
+    ? rawArgs.slice(commandIndex + 1)
+    : [...rawArgs];
 }
 
 export function parseCurlLikeArgs(
@@ -135,7 +170,7 @@ export function parseCurlLikeArgs(
     json: false,
     toolFlags: [] as string[],
   };
-  const args = rawArgs[0] === commandName ? rawArgs.slice(1) : [...rawArgs];
+  const args = getArgsAfterCommand(rawArgs, commandName);
   const separatorIndex = args.indexOf('--');
   const beforeSeparator =
     separatorIndex === -1 ? args : args.slice(0, separatorIndex);
@@ -168,6 +203,18 @@ export function parseCurlLikeArgs(
         result.json = true;
       } else {
         result.help = true;
+      }
+      continue;
+    }
+
+    if (VC_GLOBAL_LONG_FLAGS.has(name)) {
+      const value = flagValue(beforeSeparator, i);
+      if (
+        !arg.includes('=') &&
+        globalCliFlagTakesValue(name) &&
+        value !== undefined
+      ) {
+        i++;
       }
       continue;
     }
@@ -576,10 +623,9 @@ export async function getDeploymentUrlAndToken(
       if (link && resolvedBaseUrl) {
         baseUrl = resolvedBaseUrl;
       } else {
-        // Preserve the legacy behavior for every selector that worked before
-        // explicit deployments learned how to resolve their owning project.
-        // Validate the target before falling back to the linked project's
-        // protection settings so an unknown target never triggers linking.
+        // Preserve legacy target resolution, then reuse an existing link for
+        // protection settings when available. Never link for an explicit
+        // target, and validate it before considering the linked fallback.
         const legacyBaseUrl =
           resolvedBaseUrl ??
           requestedBaseUrl ??
@@ -589,15 +635,12 @@ export async function getDeploymentUrlAndToken(
           return 1;
         }
 
-        const linkedProject = await ensureLinkedProject(
-          client,
-          commandName,
-          autoConfirm
-        );
-        if (typeof linkedProject === 'number') {
-          return linkedProject;
+        const existingLink = await getLinkedProject(client, {
+          cwd: client.cwd,
+        });
+        if (existingLink.status === 'linked') {
+          link = existingLink;
         }
-        link = linkedProject;
         baseUrl = legacyBaseUrl;
       }
     }
@@ -641,10 +684,13 @@ export async function getDeploymentUrlAndToken(
         link
       );
     } catch (err) {
-      output.error(
-        `Failed to get deployment protection bypass token: ${err instanceof Error ? err.message : String(err)}`
-      );
-      return 1;
+      const message = `Failed to get deployment protection bypass token: ${err instanceof Error ? err.message : String(err)}`;
+      if (deploymentFlag) {
+        output.debug(message);
+      } else {
+        output.error(message);
+        return 1;
+      }
     }
   }
 
