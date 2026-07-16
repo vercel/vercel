@@ -21,7 +21,7 @@ export const help = () => `
       dev                              Start a local development server
       env                              Manages the Environment Variables for your current Project
       git                              Manage Git provider repository for your current Project
-      help                 [command...] Displays complete help for a command path
+      help                 [cmd]       Displays complete help for [cmd]
       init                 [example]   Initialize an example project
       inspect              [id]        Displays information related to a deployment
       i | install          [name]      Install an integration from the Marketplace
@@ -118,9 +118,9 @@ export const help = () => `
 
     ${chalk.cyan(`$ ${packageName} -e NODE_ENV=production`)}
 
-  ${chalk.gray('–')} Show the usage information for the nested command ${chalk.dim(
-    '`flags rules list`'
+  ${chalk.gray('–')} Show the usage information for the sub command ${chalk.dim(
+    '`list`'
   )}
 
-    ${chalk.cyan(`$ ${packageName} help flags rules list`)}
+    ${chalk.cyan(`$ ${packageName} help list`)}
 `;
