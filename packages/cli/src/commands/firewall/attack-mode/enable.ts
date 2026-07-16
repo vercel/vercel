@@ -1,10 +1,13 @@
 import chalk from 'chalk';
-import { withGlobalFlags } from '../../../util/agent-output';
 import type Client from '../../../util/client';
-import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
 import output from '../../../output-manager';
 import { attackModeEnableSubcommand } from '../command';
-import { parseSubcommandArgs, confirmAction } from '../shared';
+import {
+  parseSubcommandArgs,
+  ensureProjectLink,
+  confirmAction,
+  withGlobalFlags,
+} from '../shared';
 import updateAttackMode from '../../../util/firewall/update-attack-mode';
 import stamp from '../../../util/output/stamp';
 import { outputAgentError } from '../../../util/agent-output';
@@ -65,7 +68,7 @@ export default async function enable(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await ensureProjectLink(client, 'firewall');
+  const link = await ensureProjectLink(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project } = link;
