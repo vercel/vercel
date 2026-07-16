@@ -10,7 +10,6 @@ import { printError } from '../../util/error';
 import { GitDisconnectTelemetryClient } from '../../util/telemetry/commands/git/disconnect';
 import type Client from '../../util/client';
 import { ensureLink } from '../../util/link/ensure-link';
-import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 
 export default async function disconnect(client: Client, argv: string[]) {
   let parsedArgs;
@@ -49,21 +48,12 @@ export default async function disconnect(client: Client, argv: string[]) {
   }
 
   const autoConfirm = Boolean(parsedArgs.flags['--yes']);
-  let linkedProject;
-  if (opts['--project']) {
-    const resolvedProject = await resolveProjectContext({
-      client,
-      projectNameOrId: opts['--project'],
-    });
-    if (resolvedProject.status !== 'linked') {
-      return resolvedProject.status === 'error' ? resolvedProject.exitCode : 1;
-    }
-    linkedProject = resolvedProject;
-  } else {
-    linkedProject = await ensureLink('git', client, client.cwd, {
-      autoConfirm,
-    });
-  }
+  const projectName = opts['--project'];
+  const linkedProject = await ensureLink('git', client, client.cwd, {
+    autoConfirm,
+    projectName,
+    failIfNotFound: Boolean(projectName),
+  });
   if (typeof linkedProject === 'number') {
     return linkedProject;
   }

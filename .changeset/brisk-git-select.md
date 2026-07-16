@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Allow Git connect and disconnect commands to select a project explicitly with `--project`.
+Allow target, Flags rules, and Git commands to select a project explicitly with `--project`.
