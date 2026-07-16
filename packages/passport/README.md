@@ -47,6 +47,12 @@ only accepts the dedicated `https://passport.vercel.com/{owner}` issuer. It also
 validates the Passport-specific token shape so regular Vercel OIDC tokens are
 not accepted as Passport identities.
 
+Resource-bound preview identities are verified automatically when Vercel
+supplies the trusted `x-vercel-passport-resource` request context. A token with
+a `resource` claim is rejected when that context is absent or does not match.
+Tests and non-Vercel runtimes can provide the expected value explicitly with
+`verifyOptions.resource`.
+
 ## Local development
 
 Local development usually does not have a real `_vercel_passport` cookie or

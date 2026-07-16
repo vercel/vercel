@@ -1,7 +1,9 @@
 import { getVercelOidcToken } from '@vercel/oidc';
-import type { ConnectTokenParams } from './token.js';
+import { passportAuthorizationHeaders } from './internal/passport.js';
+import type { ConnectPassportOptions, ConnectTokenParams } from './token.js';
 
-export interface ConnectAuthorizationOptions {
+export interface ConnectAuthorizationOptions
+  extends Partial<ConnectPassportOptions> {
   vercelToken?: string;
   callbackUrl?: string;
   webhook?: string;
@@ -54,6 +56,7 @@ export async function startAuthorization(
   if (options?.webhook !== undefined) {
     validateWebhookUrl(options.webhook);
   }
+  const passportHeaders = passportAuthorizationHeaders(params.subject, options);
 
   const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
   const endpoint = `https://api.vercel.com/v1/connect/authorize/${encodeURIComponent(connector)}`;
@@ -78,6 +81,7 @@ export async function startAuthorization(
       Accept: 'application/json',
       'Content-Type': 'application/json',
       Authorization: `Bearer ${vercelToken}`,
+      ...passportHeaders,
     },
     body: JSON.stringify(body),
   });

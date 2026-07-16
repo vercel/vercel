@@ -9,6 +9,8 @@ export {
   ConnectorInstallationRequiredError,
   type ConnectErrorOptions,
   type ConnectOptions,
+  type ConnectPassportOptions,
+  type ConnectPassportTokenSubject,
   type ConnectTokenParams,
   type ConnectTokenResponse,
   type ConnectTokenSubject,

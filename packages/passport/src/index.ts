@@ -2,6 +2,7 @@ import { createRemoteJWKSet, jwtVerify, type JWTVerifyOptions } from 'jose';
 
 export const PASSPORT_HEADER_NAME = 'x-vercel-oidc-passport-token';
 export const PASSPORT_COOKIE_NAME = '_vercel_passport';
+export const PASSPORT_RESOURCE_HEADER_NAME = 'x-vercel-passport-resource';
 
 export type TokenSource = 'header' | 'cookie' | 'local';
 
@@ -11,6 +12,7 @@ export interface PassportIdentityPayload {
   owner_id?: string;
   project?: string;
   project_id?: string;
+  resource?: string;
   environment?: string;
   plan?: string;
   aud?: string;
@@ -47,6 +49,7 @@ export interface PassportIdentity {
     id?: string;
     name?: string;
   };
+  resource?: string;
   environment?: string;
 }
 
@@ -179,7 +182,13 @@ export async function getIdentity(
     const shouldVerify =
       tokenSource === 'local' ? (options.verify ?? false) : true;
     if (shouldVerify) {
-      const payload = await verifyPassportToken(token, options.verifyOptions);
+      const resource =
+        options.verifyOptions?.resource ??
+        getHeader(headers, PASSPORT_RESOURCE_HEADER_NAME);
+      const payload = await verifyPassportToken(token, {
+        ...options.verifyOptions,
+        resource,
+      });
       return createIdentity(token, tokenSource, true, payload);
     }
 
@@ -224,6 +233,7 @@ function createIdentity(
       slug: stringClaim(payload.owner)!,
     },
     project: createProjectIdentity(payload),
+    resource: stringClaim(payload.resource),
     environment: stringClaim(payload.environment),
   };
 }
@@ -494,6 +504,11 @@ export type PassportVerifyOptions = {
   projectId?: string | string[] | '*';
   environment?: string | string[] | '*';
   ownerId?: string;
+  /**
+   * Resource expected for a delegated preview identity. Delegated tokens are
+   * rejected when this does not exactly match their resource claim.
+   */
+  resource?: string;
 } & JWTVerifyOptions;
 
 async function verifyPassportToken(
@@ -505,6 +520,7 @@ async function verifyPassportToken(
     environment = process.env.VERCEL_TARGET_ENV || process.env.VERCEL_ENV,
     ownerId,
     projectId = process.env.VERCEL_PROJECT_ID,
+    resource,
     ...verifyOptions
   } = options ?? {};
 
@@ -548,8 +564,36 @@ async function verifyPassportToken(
     claim: 'owner_id',
     expected: ownerId,
   });
+  validateDelegatedResource(payload.resource, resource);
 
   return payload;
+}
+
+function validateDelegatedResource(
+  actual: unknown,
+  expected: string | undefined
+): void {
+  if (actual === undefined) {
+    return;
+  }
+
+  if (typeof actual !== 'string' || actual === '') {
+    throw new TypeError(
+      'Expected Passport token resource claim to be a non-empty string.'
+    );
+  }
+
+  if (expected === undefined || expected === '') {
+    throw new TypeError(
+      `Expected ${PASSPORT_RESOURCE_HEADER_NAME} to be set or verifyOptions.resource to be provided for a resource-bound Passport token.`
+    );
+  }
+
+  if (actual !== expected) {
+    throw new TypeError(
+      `Expected Passport token resource claim to be "${expected}".`
+    );
+  }
 }
 
 function hasAudienceVerification(
