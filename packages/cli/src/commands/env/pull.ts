@@ -5,7 +5,7 @@ import { resolve } from 'path';
 import type Client from '../../util/client';
 import param from '../../util/output/param';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
-import {
+import getEnvRecords, {
   type EnvRecordsSource,
   pullEnvRecords,
 } from '../../util/env/get-env-records';
@@ -77,6 +77,34 @@ const VARIABLES_TO_IGNORE = [
   'VERCEL_SPEED_INSIGHTS_ID',
   'VERCEL_WEB_ANALYTICS_ID',
 ];
+
+export const SENSITIVE_PLACEHOLDER = '[SENSITIVE]';
+
+async function getRedactedSensitiveKeys(
+  client: Client,
+  projectId: string | undefined,
+  source: EnvRecordsSource,
+  target: string,
+  gitBranch: string | undefined,
+  records: Record<string, string>
+): Promise<Set<string>> {
+  const emptyKeys = Object.keys(records).filter(key => !records[key]);
+  if (!projectId || emptyKeys.length === 0) {
+    return new Set();
+  }
+  try {
+    const { envs } = await getEnvRecords(client, projectId, source, {
+      target,
+      gitBranch,
+    });
+    const sensitiveKeys = new Set(
+      envs.filter(env => env.type === 'sensitive').map(env => env.key)
+    );
+    return new Set(emptyKeys.filter(key => sensitiveKeys.has(key)));
+  } catch {
+    return new Set();
+  }
+}
 
 export default async function pull(
   client: Client,
@@ -265,18 +293,11 @@ export async function envPullCommandLogic(
   let oldEnv;
   if (exists && !oidcTokenOnly) {
     oldEnv = await createEnvObject(fullPath);
-    if (oldEnv) {
-      // Removes any double quotes from `records`, if they exist
-      // We need this because double quotes are stripped from the local .env file,
-      // but `records` is already in the form of a JSON object that doesn't filter
-      // double quotes.
-      const newEnv = JSONparse(JSON.stringify(records).replace(/\\"/g, ''));
-      deltaString = buildDeltaString(oldEnv, newEnv);
-    }
   }
 
   let contents: string;
   let fileChanged = true;
+  const keptLocalKeys: string[] = [];
 
   if (oidcTokenOnly) {
     const existingContents = exists ? await readFile(fullPath, 'utf8') : '';
@@ -286,14 +307,47 @@ export async function envPullCommandLogic(
     );
     fileChanged = contents !== existingContents;
   } else {
+    const sensitiveKeys = await getRedactedSensitiveKeys(
+      client,
+      deploymentId ? undefined : link.project.id,
+      source,
+      environment,
+      gitBranch,
+      records
+    );
+
+    const mergedRecords: Record<string, string | undefined> = { ...records };
+    for (const key of sensitiveKeys) {
+      mergedRecords[key] = SENSITIVE_PLACEHOLDER;
+    }
+    if (oldEnv) {
+      for (const [key, value] of Object.entries(oldEnv)) {
+        if (
+          !(key in mergedRecords) &&
+          key !== VERCEL_OIDC_TOKEN &&
+          !VARIABLES_TO_IGNORE.includes(key)
+        ) {
+          mergedRecords[key] = value;
+          keptLocalKeys.push(key);
+        }
+      }
+    }
+
     contents =
       CONTENTS_PREFIX +
-      Object.keys(records)
+      Object.keys(mergedRecords)
         .sort()
         .filter(key => !VARIABLES_TO_IGNORE.includes(key))
-        .map(key => `${key}="${escapeValue(records[key])}"`)
+        .map(key => `${key}="${escapeValue(mergedRecords[key])}"`)
         .join('\n') +
       '\n';
+
+    if (oldEnv) {
+      const newEnv = JSONparse(
+        JSON.stringify(mergedRecords).replace(/\\"/g, '')
+      );
+      deltaString = buildDeltaString(oldEnv, newEnv);
+    }
   }
 
   if (fileChanged) {
@@ -304,6 +358,17 @@ export async function envPullCommandLogic(
     output.print('\n' + deltaString);
   } else if (oldEnv && exists) {
     output.log('No changes found.');
+  }
+
+  if (keptLocalKeys.length > 0) {
+    output.log(
+      `Kept ${keptLocalKeys
+        .sort()
+        .map(key => chalk.bold(key))
+        .join(', ')} (defined locally, not found in the ${chalk.cyan(
+        environment
+      )} Environment)`
+    );
   }
 
   let isGitIgnoreUpdated = false;

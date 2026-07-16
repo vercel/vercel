@@ -502,6 +502,30 @@ describe('buildCommandWithGlobalFlags', () => {
       'vercel --cwd /tmp/p --non-interactive integration resource remove r1 --disconnect-all --yes'
     );
   });
+
+  it('does not append a global flag the template already carries', () => {
+    const argv = ['node', 'vc.js', 'deploy', '--scope', 'vercel', '--yes'];
+    expect(
+      buildCommandWithGlobalFlags(
+        argv,
+        'deploy --project my-app --scope <team-slug> --yes'
+      )
+    ).toBe('vercel deploy --project my-app --scope <team-slug> --yes');
+  });
+
+  it('dedupes shorthand and long form of the same global flag', () => {
+    const argv = ['node', 'vc.js', 'deploy', '-S', 'vercel'];
+    expect(
+      buildCommandWithGlobalFlags(argv, 'deploy --scope <team-slug>')
+    ).toBe('vercel deploy --scope <team-slug>');
+  });
+
+  it('still appends globals absent from the template', () => {
+    const argv = ['node', 'vc.js', 'deploy', '--scope', 'vercel', '--yes'];
+    expect(buildCommandWithGlobalFlags(argv, 'link')).toBe(
+      'vercel link --scope vercel --yes'
+    );
+  });
 });
 
 describe('exitWithNonInteractiveError', () => {
@@ -666,50 +690,5 @@ describe('exitWithNonInteractiveError', () => {
     expect(payload).not.toHaveProperty('resource');
 
     vi.restoreAllMocks();
-  });
-});
-
-describe('getGlobalFlagsFromArgv', () => {
-  it('does not treat the subcommand after --non-interactive as a flag value', () => {
-    expect(
-      getGlobalFlagsFromArgv([
-        'node',
-        'vc.js',
-        '--non-interactive',
-        'oauth-apps',
-        'register',
-        '--name',
-        'x',
-      ])
-    ).toEqual(['--non-interactive']);
-  });
-
-  it('collects --cwd and --non-interactive from anywhere in argv', () => {
-    expect(
-      getGlobalFlagsFromArgv([
-        'node',
-        'vc.js',
-        'oauth-apps',
-        'register',
-        '--name',
-        'display-name',
-        '--cwd=/tmp/proj',
-        '--non-interactive',
-      ])
-    ).toEqual(['--cwd=/tmp/proj', '--non-interactive']);
-  });
-
-  it('never includes token flags from argv', () => {
-    expect(
-      getGlobalFlagsFromArgv([
-        'node',
-        'vc.js',
-        'deploy',
-        '--cwd=/tmp/proj',
-        '--token',
-        'secret-token',
-        '--non-interactive',
-      ])
-    ).toEqual(['--cwd=/tmp/proj', '--non-interactive']);
   });
 });

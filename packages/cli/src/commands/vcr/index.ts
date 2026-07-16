@@ -14,6 +14,7 @@ import {
   inspectSubcommand,
   addSubcommand,
   removeSubcommand,
+  loginSubcommand,
 } from './command';
 import {
   imageAggregateCommand,
@@ -32,6 +33,7 @@ const COMMAND_CONFIG = {
   inspect: getCommandAliases(inspectSubcommand),
   add: getCommandAliases(addSubcommand),
   rm: getCommandAliases(removeSubcommand),
+  login: getCommandAliases(loginSubcommand),
   tag: getCommandAliases(tagsAggregateCommand),
   image: getCommandAliases(imageAggregateCommand),
 };
@@ -83,6 +85,10 @@ export default async function vcr(client: Client): Promise<number> {
       case 'rm':
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         printHelp(removeSubcommand);
+        return 2;
+      case 'login':
+        telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
+        printHelp(loginSubcommand);
         return 2;
       case 'tag': {
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
@@ -136,6 +142,9 @@ export default async function vcr(client: Client): Promise<number> {
     case 'rm':
       telemetry.trackCliSubcommandRm(subcommandOriginal);
       return (await import('./rm')).default(client, args, telemetry);
+    case 'login':
+      telemetry.trackCliSubcommandLogin(subcommandOriginal);
+      return (await import('./login')).default(client, args, telemetry);
     case 'tag':
       telemetry.trackCliSubcommandTag(subcommandOriginal);
       return (await import('./tags')).default(client, args, telemetry);

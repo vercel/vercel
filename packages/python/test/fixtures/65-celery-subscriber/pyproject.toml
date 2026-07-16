@@ -10,6 +10,6 @@ dependencies = [
 
 # Declares a background worker compiled into a queue-triggered Lambda alongside
 # the FastAPI app. The topic must match the Celery queue published to below.
-[tool.vercel.subscribers.celery-worker]
+[[tool.vercel.subscribers]]
 entrypoint = "worker:app"
 topics = ["celery"]

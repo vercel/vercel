@@ -80,6 +80,7 @@ export interface DjangoCollectStaticResult {
 export async function runDjangoCollectStatic(
   venvPath: string,
   workPath: string,
+  djangoPath: string,
   env: NodeJS.ProcessEnv,
   outputStaticDir: string,
   settingsModule: string,
@@ -125,7 +126,7 @@ export async function runDjangoCollectStatic(
       | (string | [string, string])[]
       | undefined) ?? [];
   const staticSourceDirs = [
-    ...installedApps.map(app => join(workPath, ...app.split('.'), 'static')),
+    ...installedApps.map(app => join(djangoPath, ...app.split('.'), 'static')),
     // TODO: Deal with optional prefixes in STATICFILES_DIRS.
     ...staticfilesDirs.map(d => (Array.isArray(d) ? d[1] : d)),
   ].filter(d => fs.existsSync(d));
@@ -139,11 +140,11 @@ export async function runDjangoCollectStatic(
     );
     await execa(pythonPath, ['manage.py', 'collectstatic', '--noinput'], {
       env: { ...env, DJANGO_SETTINGS_MODULE: settingsModule },
-      cwd: workPath,
+      cwd: djangoPath,
     });
     return {
       staticSourceDirs,
-      staticRoot: staticRoot ? resolve(workPath, staticRoot) : null,
+      staticRoot: staticRoot ? resolve(djangoPath, staticRoot) : null,
       cdnOutputDir: null,
       manifestRelPath: null,
     };
@@ -165,7 +166,7 @@ export async function runDjangoCollectStatic(
   // directly at the Vercel Build Output static directory.
   const staticOutputDir = join(outputStaticDir, staticUrlPath);
   await fs.promises.mkdir(staticOutputDir, { recursive: true });
-  const shimPath = join(workPath, '_vercel_collectstatic_settings.py');
+  const shimPath = join(djangoPath, '_vercel_collectstatic_settings.py');
   const shimLines = [
     `from ${settingsModule} import *`,
     `STATIC_ROOT = ${JSON.stringify(staticOutputDir)}`,
@@ -182,7 +183,7 @@ export async function runDjangoCollectStatic(
         ...env,
         DJANGO_SETTINGS_MODULE: '_vercel_collectstatic_settings',
       },
-      cwd: workPath,
+      cwd: djangoPath,
     });
   } finally {
     await fs.promises.unlink(shimPath).catch(() => {});
@@ -199,7 +200,7 @@ export async function runDjangoCollectStatic(
   let manifestRelPath: string | null = null;
   if (MANIFEST_STORAGE_BACKENDS.includes(storageBackend) && staticRoot) {
     const manifestSrc = join(staticOutputDir, 'staticfiles.json');
-    const resolvedStaticRoot = resolve(workPath, staticRoot);
+    const resolvedStaticRoot = resolve(djangoPath, staticRoot);
     const manifestDest = join(resolvedStaticRoot, 'staticfiles.json');
     await fs.promises.mkdir(resolvedStaticRoot, { recursive: true });
     await fs.promises.copyFile(manifestSrc, manifestDest);
@@ -209,7 +210,7 @@ export async function runDjangoCollectStatic(
 
   return {
     staticSourceDirs,
-    staticRoot: staticRoot ? resolve(workPath, staticRoot) : null,
+    staticRoot: staticRoot ? resolve(djangoPath, staticRoot) : null,
     cdnOutputDir: outputStaticDir,
     manifestRelPath,
   };

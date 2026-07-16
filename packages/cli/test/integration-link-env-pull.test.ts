@@ -49,10 +49,6 @@ test('[vc link] should refresh OIDC when creating a new project', async () => {
     },
   });
 
-  await waitForPrompt(vc, 'Directory');
-  await waitForPrompt(vc, 'Which team?');
-  vc.stdin?.write('\n');
-
   await waitForPrompt(vc, 'Project?');
   vc.stdin?.write('\n');
 
@@ -98,10 +94,6 @@ test('[vc link] should preserve existing .env.local when refreshing OIDC', async
       FORCE_TTY: '1',
     },
   });
-
-  await waitForPrompt(vc, 'Directory');
-  await waitForPrompt(vc, 'Which team?');
-  vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'Project?');
   vc.stdin?.write('\n');

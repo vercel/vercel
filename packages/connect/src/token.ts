@@ -50,6 +50,11 @@ export interface ConnectTokenParams {
 
 export interface ConnectTokenResponse {
   token: string;
+  /**
+   * Per-issuance identifier for the token (`stk_…`), stable for its lifetime;
+   * use it to correlate the token with its usage in Vercel observability data.
+   */
+  tokenId?: string;
   /** Token expiration timestamp in milliseconds since epoch. */
   expiresAt: number;
   connector: {

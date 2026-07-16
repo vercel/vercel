@@ -143,6 +143,7 @@ export function entrypointToModule(entrypoint: string): string {
   return entrypoint
     .replace(/\\/g, '/')
     .replace(/\.py$/i, '')
+    .replace(/\/__init__$/i, '')
     .replace(/\//g, '.');
 }
 
@@ -246,16 +247,53 @@ async function resolveModuleAttrEntrypoint(
 }
 
 export async function getVercelToolsEntrypoint(
-  workPath: string
+  workPath: string,
+  repoRootPath?: string
 ): Promise<PythonEntrypoint | null> {
+  const pyprojectPath = join(workPath, 'pyproject.toml');
   const pyprojectData = await readConfigFile<{
     tool?: { vercel?: { entrypoint?: unknown } };
-  }>(join(workPath, 'pyproject.toml'));
+  }>(pyprojectPath);
   if (!pyprojectData) return null;
 
   const vercelEntrypoint = pyprojectData.tool?.vercel?.entrypoint;
-  if (typeof vercelEntrypoint !== 'string') return null;
-  return resolveModuleAttrEntrypoint(workPath, vercelEntrypoint);
+  if (vercelEntrypoint === undefined) return null;
+
+  // Name the specific file in errors relative to the repo root: a monorepo
+  // can contain several pyproject.toml files (one per service), so a bare
+  // "pyproject.toml" would not identify which one is broken.
+  const relPyprojectPath = relative(repoRootPath ?? workPath, pyprojectPath);
+  const displayPath =
+    !relPyprojectPath || relPyprojectPath.startsWith('..')
+      ? pyprojectPath
+      : relPyprojectPath;
+
+  // `tool.vercel.*` is Vercel-owned configuration: a declared entrypoint that
+  // cannot be resolved is a hard error. Silently falling back to filename
+  // detection could build a different app than the one the user declared —
+  // and the fallback's failure message would suggest setting the very field
+  // that is already set.
+  if (typeof vercelEntrypoint !== 'string') {
+    throw new NowBuildError({
+      code: 'PYTHON_INVALID_ENTRYPOINT',
+      message: `"tool.vercel.entrypoint" in "${displayPath}" must be a string in "module:object" format (e.g. "main:app").`,
+      link: PYTHON_ENTRYPOINT_DOCS_URL,
+      action: 'Learn More',
+    });
+  }
+  const resolved = await resolveModuleAttrEntrypoint(
+    workPath,
+    vercelEntrypoint
+  );
+  if (!resolved) {
+    throw new NowBuildError({
+      code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
+      message: `"tool.vercel.entrypoint" in "${displayPath}" is "${vercelEntrypoint}" but no matching module file was found. Use "module:object" format (e.g. "main:app") and ensure the module file exists, or remove the setting to use automatic entrypoint detection.`,
+      link: PYTHON_ENTRYPOINT_DOCS_URL,
+      action: 'Learn More',
+    });
+  }
+  return resolved;
 }
 
 // Legacy: kept for compatibility. Prefer tool.vercel.entrypoint.
@@ -493,7 +531,8 @@ export async function detectPythonEntrypoint(
   framework: PythonFramework | undefined,
   workPath: string,
   configuredEntrypoint?: { filePath: string; varName?: string },
-  service?: { type?: ServiceType; trigger?: JobTrigger }
+  service?: { type?: ServiceType; trigger?: JobTrigger },
+  repoRootPath?: string
 ): Promise<DetectedPythonEntrypoint | null> {
   // If a configured entrypoint was provided, check it first
   if (configuredEntrypoint) {
@@ -551,7 +590,7 @@ export async function detectPythonEntrypoint(
   }
 
   // Check `tool.vercel.entrypoint` in pyproject.toml first.
-  const vercelEntry = await getVercelToolsEntrypoint(workPath);
+  const vercelEntry = await getVercelToolsEntrypoint(workPath, repoRootPath);
   if (vercelEntry) return { entrypoint: vercelEntry };
 
   // Then do a framework-specific search, collecting diagnostics for better error messages
@@ -602,16 +641,33 @@ export async function detectPythonEntrypoint(
  * Returns `null` for non-Python frameworks, when no entrypoint is found,
  * and for Django when only a `manage.py` baseDir was discovered (the
  * Django framework hook resolves the WSGI/ASGI entrypoint at build time).
+ *
+ * Detection errors (e.g. an unresolvable `tool.vercel.entrypoint`) also
+ * return `null`: this function runs speculatively over many candidate
+ * directories during monorepo auto-detection and project linking, where one
+ * directory's broken config must not abort the whole sweep. The same error
+ * is a hard failure on the build and dev paths, which call
+ * {@link detectPythonEntrypoint} directly.
  */
 export const detectEntrypoint: DetectEntrypointFn = async ({
   workPath,
   framework,
 }) => {
   if (!isPythonFramework(framework)) return null;
-  const detected = await detectPythonEntrypoint(
-    framework as PythonFramework,
-    workPath
-  );
+  let detected: DetectedPythonEntrypoint | null;
+  try {
+    detected = await detectPythonEntrypoint(
+      framework as PythonFramework,
+      workPath
+    );
+  } catch (err) {
+    debug(
+      `Python entrypoint detection failed for ${workPath}: ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
+    return null;
+  }
   if (!detected?.entrypoint) return null;
   const { entrypoint, variableName } = detected.entrypoint;
   return {

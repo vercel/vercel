@@ -297,6 +297,53 @@ describe('env pull', () => {
     );
   });
 
+  it('writes a placeholder for redacted sensitive env vars', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject(
+      {
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      },
+      [
+        ...envs,
+        {
+          type: 'sensitive',
+          id: 'sens1234sens5678',
+          key: 'SENSITIVE_SECRET',
+          value: '',
+          target: ['production'],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+        {
+          type: 'encrypted',
+          id: 'empt1234empt5678',
+          key: 'ACTUALLY_EMPTY',
+          value: '',
+          target: ['production'],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+      ]
+    );
+    const cwd = setupUnitFixture('vercel-env-pull');
+    client.cwd = cwd;
+    client.setArgv('env', 'pull', '--yes', '--environment', 'production');
+    const exitCode = await env(client);
+    expect(exitCode, 'exit code for "env"').toEqual(0);
+
+    const rawProdEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+    expect(rawProdEnv).toContain('SENSITIVE_SECRET="[SENSITIVE]"');
+    expect(rawProdEnv).not.toContain('SENSITIVE_SECRET=""');
+    expect(rawProdEnv).toContain('ACTUALLY_EMPTY=""');
+  });
+
   it('should handle pulling from specific Git branch', async () => {
     useUser();
     useTeams('team_dummy');
@@ -539,17 +586,45 @@ describe('env pull', () => {
         'Downloading `development` environment variables for'
       );
       await expect(client.stderr).toOutput(
-        '  Changes:\n  + SPECIAL_FLAG (Updated)\n  + NEW_VAR\n  - TEST\n'
+        '  Changes:\n  + SPECIAL_FLAG (Updated)\n  + NEW_VAR\n\n> Kept TEST (defined locally, not found in the development Environment)'
       );
       await expect(client.stderr).toOutput(
         'Updated         .env.local file and added it to .gitignore'
       );
 
       await expect(pullPromise).resolves.toEqual(0);
+
+      const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'));
+      expect(rawDevEnv.toString()).toContain('TEST="hi"');
     } finally {
       client.setArgv('env', 'rm', 'NEW_VAR', '--yes');
       await env(client);
     }
+  });
+
+  it('should keep variables that only exist locally', async () => {
+    const cwd = setupUnitFixture('vercel-env-pull-delta');
+    client.cwd = cwd;
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'env-pull-delta',
+      name: 'env-pull-delta',
+    });
+
+    client.setArgv('env', 'pull', '--yes');
+    const pullPromise = env(client);
+    await expect(client.stderr).toOutput(
+      'Kept TEST (defined locally, not found in the development Environment)'
+    );
+    await expect(pullPromise).resolves.toEqual(0);
+
+    const rawDevEnv = (
+      await fs.readFile(path.join(cwd, '.env.local'))
+    ).toString();
+    expect(rawDevEnv).toContain('TEST="hi"');
+    expect(rawDevEnv).toContain('SPECIAL_FLAG="1"');
   });
 
   it('should not show a delta string when it fails to read a file', async () => {

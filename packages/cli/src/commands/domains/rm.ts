@@ -12,7 +12,7 @@ import stamp from '../../util/output/stamp';
 import * as ERRORS from '../../util/errors-ts';
 import param from '../../util/output/param';
 import setCustomSuffix from '../../util/domains/set-custom-suffix';
-import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
+import { countProjectsForDomain } from '../../util/projects/find-projects-for-domain';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { DomainsRmTelemetryClient } from '../../util/telemetry/commands/domains/rm';
@@ -79,15 +79,11 @@ export default async function rm(client: Client, argv: string[]) {
     return 1;
   }
 
-  const projects = await findProjectsForDomain(client, domain.name);
+  const projectCount = await countProjectsForDomain(client, domain.name);
 
-  if (Array.isArray(projects) && projects.length > 0) {
+  if (typeof projectCount === 'number' && projectCount > 0) {
     output.warn(
-      `The domain is currently used by ${plural(
-        'project',
-        projects.length,
-        true
-      )}.`
+      `The domain is currently used by ${plural('project', projectCount, true)}.`
     );
   }
 

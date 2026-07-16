@@ -379,6 +379,15 @@ export const build: BuildV2 = async ({
   // e.g., routePrefix="/admin" mounts files at "admin/" so they're served at /admin/*
   // Strip leading slash from routePrefix to create valid mountpoint
   const routePrefix = config.routePrefix as string | undefined;
+  if (routePrefix) {
+    const mountpointCandidate = routePrefix.replace(/^\//, '') || '.';
+    if (mountpointCandidate.split(/[/\\]/).some(segment => segment === '..')) {
+      throw new NowBuildError({
+        code: 'STATIC_BUILD_UNSAFE_ROUTE_PREFIX',
+        message: `Invalid routePrefix "${routePrefix}": path traversal segments are not allowed.`,
+      });
+    }
+  }
   const mountpoint = routePrefix
     ? routePrefix.replace(/^\//, '') || '.'
     : path.dirname(entrypoint);

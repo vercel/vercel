@@ -5,7 +5,11 @@ import path from 'path';
 import pull from '../../../../src/commands/pull';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
-import { defaultProject, useProject } from '../../../mocks/project';
+import {
+  defaultProject,
+  useProject,
+  useUnknownProject,
+} from '../../../mocks/project';
 import { useTeams, createTeam } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
@@ -118,7 +122,9 @@ describe('pull', () => {
       return res.status(404).json({});
     });
 
-    useUser();
+    // Northstar + a single team: the team resolves unambiguously, since
+    // `--yes` no longer guesses a team when several are available.
+    useUser({ version: 'northstar' });
     useTeams('team_dummy');
     (client as { nonInteractive: boolean }).nonInteractive = false;
 
@@ -475,7 +481,7 @@ describe('pull', () => {
       const cwd = setupUnitFixture('vercel-pull-unlinked');
       useUser();
       useTeams('team_dummy');
-      // No useProject() — every GET /v9/projects/* will 404.
+      useUnknownProject();
 
       client.setArgv('pull', '--yes', '--project=does-not-exist', cwd);
       const exitCodePromise = pull(client);

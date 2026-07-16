@@ -2,13 +2,17 @@ import type Client from '../client';
 import setupAndLink from '../link/setup-and-link';
 import param from '../output/param';
 import { getCommandName, getCommandNamePlain } from '../pkg-name';
-import { getLinkedProject } from '../projects/link';
+import {
+  getLinkedProject,
+  type ProjectLinkResultWithOrgId,
+} from '../projects/link';
 import { resolveProjectCwd } from '../projects/find-project-root';
 import type { SetupAndLinkOptions } from '../link/setup-and-link';
 import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
 import { outputActionRequired, buildCommandWithYes } from '../agent-output';
 import { printProjectNotFoundError } from '../projects/project-not-found-error';
+import { detectExplicitScope } from '../get-scope';
 
 interface EnsureLinkOptions extends SetupAndLinkOptions {
   /** When true, fail instead of setting up a project that is not linked. */
@@ -39,7 +43,7 @@ export async function ensureLink(
 ): Promise<ProjectLinked | number> {
   cwd = await resolveProjectCwd(cwd);
 
-  let { link } = opts;
+  let link: ProjectLinkResultWithOrgId | undefined = opts.link;
   // All commands respect global --non-interactive; link can override via opts
   const nonInteractive = opts.nonInteractive ?? client.nonInteractive ?? false;
   opts.nonInteractive = nonInteractive;
@@ -54,12 +58,12 @@ export async function ensureLink(
       // `failIfNotFound` doubles as the opt-in for API-based name/ID
       // resolution: both behaviors only apply when `projectName` came from
       // an explicit user flag.
-      link = await getLinkedProject(
-        client,
+      link = await getLinkedProject(client, {
         cwd,
-        opts.projectName,
-        opts.failIfNotFound
-      );
+        projectName: opts.projectName,
+        projectNameIsExplicit: Boolean(opts.projectName && opts.failIfNotFound),
+        scopeIsExplicit: detectExplicitScope(client),
+      });
     }
     opts.link = link;
   }
@@ -75,7 +79,12 @@ export async function ensureLink(
       opts.failIfNotFound &&
       opts.projectName
     ) {
-      await printProjectNotFoundError(client, opts.projectName, commandName);
+      await printProjectNotFoundError(
+        client,
+        opts.projectName,
+        commandName,
+        link.orgId
+      );
       return 1;
     }
 
