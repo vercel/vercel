@@ -115,14 +115,13 @@ describe('refreshToken', () => {
   });
 
   test('saveToken writes owner-only permissions without a chmod race', () => {
-    // Permission bits are not enforced the same way on Windows.
+    // Windows does not enforce these mode bits.
     if (process.platform === 'win32') {
       return;
     }
 
     const tokenPath = path.join(tokenDataDir, `${projectId}.json`);
 
-    // Pre-create a world-readable file to ensure overwrite does not inherit it.
     fs.writeFileSync(tokenPath, JSON.stringify({ token: 'stale' }), {
       mode: 0o644,
     });

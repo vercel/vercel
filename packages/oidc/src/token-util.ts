@@ -219,9 +219,7 @@ export function saveToken(token: VercelTokenResponse, projectId: string): void {
   const tokenPath = path.join(tokenDir, `${projectId}.json`);
   const tokenJson = JSON.stringify(token);
 
-  // Owner-only directory and file modes. Write via a temp file + rename so the
-  // token is never created with umask-default (world-readable) permissions,
-  // which previously left a TOCTOU window between writeFileSync and chmodSync.
+  // Write 0600 then rename so the token is never briefly world-readable.
   fs.mkdirSync(tokenDir, { mode: 0o700, recursive: true });
 
   const tmpPath = path.join(
