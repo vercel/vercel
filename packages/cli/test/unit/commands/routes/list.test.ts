@@ -196,6 +196,12 @@ describe('routes list', () => {
 
     await expect(routes(client)).rejects.toThrow('exit');
     const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+    expect(payload.message).toContain(
+      'vercel routes add --project explicit-routes'
+    );
+    expect(payload.message).toContain(
+      'vercel routes edit --project explicit-routes'
+    );
     expect(
       payload.next.map(({ command }: { command: string }) => command)
     ).toEqual([

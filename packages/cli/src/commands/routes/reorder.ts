@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import { withGlobalFlags } from '../../util/agent-output';
 import type Client from '../../util/client';
 import output from '../../output-manager';
 import { reorderSubcommand } from './command';
@@ -10,6 +9,7 @@ import {
   parsePosition,
   offerAutoPromote,
   shellQuoteRouteIdentifierForSuggestion,
+  withGlobalFlags,
 } from './shared';
 import { outputAgentError } from '../../util/agent-output';
 import getRoutes from '../../util/routes/get-routes';
