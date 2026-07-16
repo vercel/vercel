@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import { ensureProjectLink } from '../../util/projects/ensure-project-link';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { restoreSubcommand } from './command';
 import {
@@ -8,14 +8,14 @@ import {
   confirmAction,
   printDiffSummary,
   findVersionById,
+  withGlobalFlags,
 } from './shared';
 import { validateRequiredArguments } from '../../util/command-arguments';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import updateRouteVersion from '../../util/routes/update-route-version';
 import getRoutes from '../../util/routes/get-routes';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
-import { outputAgentError, withGlobalFlags } from '../../util/agent-output';
+import { outputAgentError } from '../../util/agent-output';
 
 export default async function restore(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, restoreSubcommand, client);
@@ -45,7 +45,11 @@ export default async function restore(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await ensureProjectLink(client, 'routes');
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -57,7 +61,7 @@ export default async function restore(client: Client, argv: string[]) {
 
   const { versions } = await getRouteVersions(client, project.id, { teamId });
 
-  const result = findVersionById(versions, versionIdentifier);
+  const result = findVersionById(client, versions, versionIdentifier);
   if (result.error) {
     if (client.nonInteractive) {
       outputAgentError(client, {
@@ -89,7 +93,7 @@ export default async function restore(client: Client, argv: string[]) {
   }
 
   if (version.isLive) {
-    const liveMsg = `Version ${version.id.slice(0, 12)} is currently live. You cannot restore the live version. Run ${getCommandName('routes list-versions')} to see previous versions you can restore.`;
+    const liveMsg = `Version ${version.id.slice(0, 12)} is currently live. You cannot restore the live version. Run ${withGlobalFlags(client, 'routes list-versions')} to see previous versions you can restore.`;
     if (client.nonInteractive) {
       outputAgentError(client, {
         status: 'error',
@@ -104,14 +108,14 @@ export default async function restore(client: Client, argv: string[]) {
       `Version ${chalk.bold(
         version.id.slice(0, 12)
       )} is currently live. You cannot restore the live version.\nRun ${chalk.cyan(
-        getCommandName('routes list-versions')
+        withGlobalFlags(client, 'routes list-versions')
       )} to see previous versions you can restore.`
     );
     return 1;
   }
 
   if (version.isStaging) {
-    const stagingMsg = `Version ${version.id.slice(0, 12)} is staged. Use ${getCommandName('routes publish')} to publish it instead.`;
+    const stagingMsg = `Version ${version.id.slice(0, 12)} is staged. Use ${withGlobalFlags(client, 'routes publish')} to publish it instead.`;
     if (client.nonInteractive) {
       outputAgentError(client, {
         status: 'error',
@@ -126,7 +130,7 @@ export default async function restore(client: Client, argv: string[]) {
       `Version ${chalk.bold(
         version.id.slice(0, 12)
       )} is staged. Use ${chalk.cyan(
-        getCommandName('routes publish')
+        withGlobalFlags(client, 'routes publish')
       )} to publish it instead.`
     );
     return 1;

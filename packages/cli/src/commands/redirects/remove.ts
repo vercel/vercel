@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import { ensureProjectLink } from '../../util/projects/ensure-project-link';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import {
   outputActionRequired,
@@ -20,6 +20,7 @@ import {
   getArgsAfterRedirectsSubcommand,
   getRedirectGlobalFlagsOnly,
   getRedirectPromoteSuggestionFlags,
+  withGlobalFlags,
 } from './shared';
 import { validateRequiredArguments } from '../../util/command-arguments';
 import { getCommandNamePlain } from '../../util/pkg-name';
@@ -59,7 +60,11 @@ export default async function remove(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await ensureProjectLink(client, 'redirects');
+  const link = await requireProjectContext(
+    client,
+    'redirects',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -178,7 +183,7 @@ export default async function remove(client: Client, argv: string[]) {
         ],
       }),
       ...(existingStagingVersion && {
-        hint: `Review staged changes with ${getCommandNamePlain('redirects list --staging')} before promoting.`,
+        hint: `Review staged changes with ${withGlobalFlags(client, 'redirects list --staging')} before promoting.`,
       }),
     };
     client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);

@@ -1,9 +1,13 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
-import { outputAgentError, buildCommandWithYes } from '../../util/agent-output';
+import {
+  outputAgentError,
+  buildCommandWithYes,
+  withGlobalFlags as withClientGlobalFlags,
+} from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
 import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import type { Command } from '../help';
@@ -15,6 +19,18 @@ import type { FirewallIpRule, FirewallRule } from '../../util/firewall/types';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import activateFirewallConfig from '../../util/firewall/activate-firewall-config';
 import stamp from '../../util/output/stamp';
+
+/**
+ * Plain suggested command with global flags from argv (--cwd, --non-interactive, etc.).
+ */
+export function withGlobalFlags(
+  client: Client,
+  commandTemplate: string
+): string {
+  return withClientGlobalFlags(client, commandTemplate, {
+    preserveProject: true,
+  });
+}
 
 export async function parseSubcommandArgs(
   argv: string[],
@@ -30,7 +46,9 @@ export async function parseSubcommandArgs(
   } catch (err) {
     if (client?.nonInteractive) {
       const rawMessage = err instanceof Error ? err.message : String(err);
-      const flags = getGlobalFlagsFromArgs(client.argv.slice(2));
+      const flags = getGlobalFlagsFromArgs(client.argv.slice(2), {
+        preserveProject: true,
+      });
       outputAgentError(
         client,
         {
@@ -117,7 +135,7 @@ export async function offerAutoPublish(
   opts: { teamId?: string; skipPrompts?: boolean }
 ): Promise<void> {
   output.print(
-    `\n  ${chalk.gray(`This change is staged. Run ${chalk.cyan(getCommandName('firewall publish'))} to make it live, or ${chalk.cyan(getCommandName('firewall discard'))} to undo.`)}\n`
+    `\n  ${chalk.gray(`This change is staged. Run ${chalk.cyan(withGlobalFlags(client, 'firewall publish'))} to make it live, or ${chalk.cyan(withGlobalFlags(client, 'firewall discard'))} to undo.`)}\n`
   );
 
   if (
@@ -152,7 +170,7 @@ export async function offerAutoPublish(
     }
   } else if (hadExistingDraft) {
     output.warn(
-      `There are other draft changes. Review with ${chalk.cyan(getCommandName('firewall diff'))} before publishing.`
+      `There are other draft changes. Review with ${chalk.cyan(withGlobalFlags(client, 'firewall diff'))} before publishing.`
     );
   }
 }

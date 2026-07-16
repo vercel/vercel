@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.34.0
+
+### Minor Changes
+
+- 238543c: Support Python services that declare their web app and development workflow sidecars through a `pyproject.toml` entrypoint in `vercel dev`.
+
 ## 13.33.1
 
 ### Patch Changes

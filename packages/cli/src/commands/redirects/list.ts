@@ -1,21 +1,24 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 import type Client from '../../util/client';
-import { ensureProjectLink } from '../../util/projects/ensure-project-link';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { listSubcommand } from './command';
-import { parseSubcommandArgs } from './shared';
+import { parseSubcommandArgs, withGlobalFlags } from './shared';
 import getRedirects from '../../util/redirects/get-redirects';
 import getRedirectVersions from '../../util/redirects/get-redirect-versions';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 
 export default async function list(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, listSubcommand);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client, 'redirects');
+  const link = await requireProjectContext(
+    client,
+    'redirects',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -39,7 +42,7 @@ export default async function list(client: Client, argv: string[]) {
     if (!stagingVersion) {
       output.error(
         `No staging version found for ${chalk.bold(project.name)}. Run ${chalk.cyan(
-          'vercel redirects list-versions'
+          withGlobalFlags(client, 'redirects list-versions')
         )} to see available versions.`
       );
       return 1;
@@ -68,7 +71,7 @@ export default async function list(client: Client, argv: string[]) {
     if (!version) {
       output.error(
         `Version "${versionIdFlag}" not found. Run ${chalk.cyan(
-          'vercel redirects list-versions'
+          withGlobalFlags(client, 'redirects list-versions')
         )} to see available versions.`
       );
       return 1;
@@ -154,8 +157,8 @@ export default async function list(client: Client, argv: string[]) {
       !versionIdFlag
     ) {
       output.log(
-        `  ${getCommandNamePlain('redirects list')} shows production redirects only. ` +
-          `If you added redirects but do not see them here, they may still be staged only—run ${getCommandNamePlain('redirects list --staging')} to view staged changes.`
+        `  ${withGlobalFlags(client, 'redirects list')} shows production redirects only. ` +
+          `If you added redirects but do not see them here, they may still be staged only—run ${withGlobalFlags(client, 'redirects list --staging')} to view staged changes.`
       );
     }
 
@@ -174,7 +177,9 @@ export default async function list(client: Client, argv: string[]) {
     if (perPage) {
       command += ` --per-page ${perPage}`;
     }
-    output.log(`To display the next page, run ${getCommandName(command)}`);
+    output.log(
+      `To display the next page, run ${withGlobalFlags(client, command)}`
+    );
   }
 
   return 0;

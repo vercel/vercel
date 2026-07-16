@@ -1,10 +1,10 @@
 import chalk from 'chalk';
-import { withGlobalFlags } from '../../../util/agent-output';
 import type Client from '../../../util/client';
-import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
+import { requireProjectContext } from '../../../util/projects/require-project-context';
 import output from '../../../output-manager';
 import { rulesEditSubcommand } from '../command';
 import {
+  withGlobalFlags,
   parseSubcommandArgs,
   confirmAction,
   detectExistingDraft,
@@ -30,7 +30,6 @@ import type { FirewallRule } from '../../../util/firewall/types';
 import { runInteractiveEditLoop } from './edit-interactive';
 import stamp from '../../../util/output/stamp';
 import { outputAgentError } from '../../../util/agent-output';
-import { getCommandName } from '../../../util/pkg-name';
 
 export default async function edit(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(
@@ -43,7 +42,11 @@ export default async function edit(client: Client, argv: string[]) {
 
   let identifier = parsed.args[0] as string | undefined;
 
-  const link = await ensureProjectLink(client, 'firewall');
+  const link = await requireProjectContext(
+    client,
+    'firewall',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -64,7 +67,7 @@ export default async function edit(client: Client, argv: string[]) {
 
     if (client.nonInteractive || !client.stdin.isTTY) {
       output.error(
-        `Missing required argument: <name-or-id>. Run ${chalk.cyan(getCommandName('firewall rules list'))} to see all rules.`
+        `Missing required argument: <name-or-id>. Run ${chalk.cyan(withGlobalFlags(client, 'firewall rules list'))} to see all rules.`
       );
       return 1;
     }
@@ -96,7 +99,7 @@ export default async function edit(client: Client, argv: string[]) {
 
   if (matches.length === 0) {
     output.error(
-      `No rule found for "${identifier}". Run ${chalk.cyan(getCommandName('firewall rules list'))} to view all rules.`
+      `No rule found for "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'firewall rules list'))} to view all rules.`
     );
     return 1;
   }

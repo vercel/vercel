@@ -7,9 +7,19 @@ import {
   type ParsedSubcommandArguments,
 } from '../../util/command-arguments';
 import {
-  GLOBAL_CLI_FLAG_NAMES,
-  globalCliFlagTakesValue,
+  getGlobalFlagsFromArgs,
+  getSameSubcommandSuggestionFlags,
 } from '../../util/arg-common';
+import { withGlobalFlags as withClientGlobalFlags } from '../../util/agent-output';
+
+export function withGlobalFlags(
+  client: Client,
+  commandTemplate: string
+): string {
+  return withClientGlobalFlags(client, commandTemplate, {
+    preserveProject: true,
+  });
+}
 
 export async function parseSubcommandArgs(
   argv: string[],
@@ -56,19 +66,6 @@ export function isValidUrl(url: string): boolean {
 }
 
 /**
- * Flags that belong only to redirects add/upload/remove. Forwarding them into
- * suggested `redirects list`, `redirects promote`, or `redirects list-versions`
- * commands causes parse errors for agents.
- */
-const REDIRECTS_SUBCOMMAND_EXCLUSIVE_FLAGS = new Set([
-  '--status',
-  '--case-sensitive',
-  '--preserve-query-params',
-  '--name',
-  '--overwrite',
-]);
-
-/**
  * Slice argv after `vercel` (i.e. client.argv.slice(2)) starting after the
  * given redirects subcommand name.
  */
@@ -87,44 +84,9 @@ export function getArgsAfterRedirectsSubcommand(
 export function getRedirectGlobalFlagsOnly(
   afterSubcommandArgs: string[]
 ): string[] {
-  const out: string[] = [];
-  for (let i = 0; i < afterSubcommandArgs.length; i++) {
-    const a = afterSubcommandArgs[i];
-    if (!a.startsWith('-')) continue;
-
-    let name = a;
-    const hasEq = a.includes('=');
-    if (hasEq) {
-      name = a.slice(0, a.indexOf('='));
-    }
-
-    if (REDIRECTS_SUBCOMMAND_EXCLUSIVE_FLAGS.has(name)) {
-      if (
-        !hasEq &&
-        (name === '--status' || name === '--name') &&
-        i + 1 < afterSubcommandArgs.length &&
-        !afterSubcommandArgs[i + 1].startsWith('-')
-      ) {
-        i++;
-      }
-      continue;
-    }
-
-    if (!GLOBAL_CLI_FLAG_NAMES.has(name)) {
-      continue;
-    }
-
-    out.push(a);
-    if (!hasEq && globalCliFlagTakesValue(name)) {
-      if (
-        i + 1 < afterSubcommandArgs.length &&
-        !afterSubcommandArgs[i + 1].startsWith('-')
-      ) {
-        out.push(afterSubcommandArgs[++i]);
-      }
-    }
-  }
-  return out;
+  return getGlobalFlagsFromArgs(afterSubcommandArgs, {
+    preserveProject: true,
+  });
 }
 
 /**
@@ -151,7 +113,7 @@ export function buildRedirectsSuggestionFlags(
   options: { ensureYes?: boolean } = {}
 ): string[] {
   const after = getArgsAfterRedirectsSubcommand(fullArgs, subcommand);
-  const flagParts = after.filter(a => a.startsWith('-'));
+  const flagParts = getSameSubcommandSuggestionFlags(after);
   if (
     options.ensureYes !== false &&
     !flagParts.some(a => a === '--yes' || a === '-y')

@@ -1,5 +1,13 @@
 # @vercel/fs-detectors
 
+## 6.13.2
+
+### Patch Changes
+
+- a55e7df: Replace user-facing `experimentalServices` references with `services` in error/warning messages and rename error codes (`NO_EXPERIMENTAL_SERVICES_CONFIGURED` → `NO_SERVICES_CONFIGURED`, `MISSING_EXPERIMENTAL_SERVICES` → `MISSING_SERVICES`). The deprecated v1 config key should no longer appear in guidance shown to users.
+- Updated dependencies [238543c]
+  - @vercel/build-utils@13.34.0
+
 ## 6.13.1
 
 ### Patch Changes
