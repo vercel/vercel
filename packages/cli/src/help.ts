@@ -21,7 +21,7 @@ export const help = () => `
       dev                              Start a local development server
       env                              Manages the Environment Variables for your current Project
       git                              Manage Git provider repository for your current Project
-      h | help             [command...] Displays complete help for a command path
+      help                 [command...] Displays complete help for a command path
       init                 [example]   Initialize an example project
       inspect              [id]        Displays information related to a deployment
       i | install          [name]      Install an integration from the Marketplace
