@@ -230,7 +230,7 @@ describe('env ls', () => {
       ]);
     });
 
-    it('suppresses unsupported guidance for an explicitly selected project', async () => {
+    it('preserves the explicitly selected project in guidance', async () => {
       const cwd = setupTmpDir('env-ls-project-guidance');
       client.cwd = cwd;
       useProject({
@@ -251,9 +251,9 @@ describe('env ls', () => {
 
       expect(exitCode).toEqual(0);
       const output = client.stderr.getFullOutput();
-      expect(output).not.toContain('vercel env add');
-      expect(output).not.toContain('vercel env rm');
-      expect(output).not.toContain('vercel env pull');
+      expect(output).toContain('vercel env add --project guidance-project');
+      expect(output).toContain('vercel env rm --project guidance-project');
+      expect(output).toContain('vercel env pull --project guidance-project');
     });
 
     it('reports an unknown explicit project instead of linking', async () => {

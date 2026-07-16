@@ -1,12 +1,10 @@
 import type Client from '../../util/client';
-import { withGlobalFlags } from '../../util/agent-output';
-import { ensureProjectLink } from '../../util/projects/ensure-project-link';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { exportSubcommand } from './command';
-import { parseSubcommandArgs } from './shared';
+import { parseSubcommandArgs, withGlobalFlags } from './shared';
 import { outputAgentError } from '../../util/agent-output';
 import getRoutes from '../../util/routes/get-routes';
-import { getCommandName } from '../../util/pkg-name';
 import type { RoutingRule } from '../../util/routes/types';
 import type { RouteWithSrc } from '@vercel/routing-utils';
 
@@ -79,7 +77,11 @@ export default async function exportRoutes(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, exportSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client, 'routes');
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -92,7 +94,7 @@ export default async function exportRoutes(client: Client, argv: string[]) {
 
   const validFormats = ['json', 'ts'];
   if (!validFormats.includes(format)) {
-    const msg = `Invalid output format: "${rawFormat}". Valid formats: ${validFormats.join(', ')}. Usage: ${getCommandName('routes export --output json')}`;
+    const msg = `Invalid output format: "${rawFormat}". Valid formats: ${validFormats.join(', ')}. Usage: ${withGlobalFlags(client, 'routes export --output json')}`;
     if (client.nonInteractive) {
       outputAgentError(client, {
         status: 'error',
@@ -118,7 +120,7 @@ export default async function exportRoutes(client: Client, argv: string[]) {
 
     if (routes.length === 0) {
       output.log(
-        `No routes found. Create one with ${getCommandName('routes add')}.`
+        `No routes found. Create one with ${withGlobalFlags(client, 'routes add')}.`
       );
       return 0;
     }
@@ -135,7 +137,7 @@ export default async function exportRoutes(client: Client, argv: string[]) {
       );
 
       if (routesToExport.length === 0) {
-        const msg = `No route found matching "${nameOrId}". Run ${getCommandName('routes list')} to see all routes.`;
+        const msg = `No route found matching "${nameOrId}". Run ${withGlobalFlags(client, 'routes list')} to see all routes.`;
         if (client.nonInteractive) {
           outputAgentError(client, {
             status: 'error',

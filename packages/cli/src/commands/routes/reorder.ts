@@ -1,7 +1,6 @@
 import chalk from 'chalk';
-import { withGlobalFlags } from '../../util/agent-output';
 import type Client from '../../util/client';
-import { ensureProjectLink } from '../../util/projects/ensure-project-link';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { reorderSubcommand } from './command';
 import {
@@ -10,19 +9,23 @@ import {
   parsePosition,
   offerAutoPromote,
   shellQuoteRouteIdentifierForSuggestion,
+  withGlobalFlags,
 } from './shared';
 import { outputAgentError } from '../../util/agent-output';
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import stageRoutes from '../../util/routes/stage-routes';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
 
 export default async function reorder(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, reorderSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client, 'routes');
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -53,7 +56,7 @@ export default async function reorder(client: Client, argv: string[]) {
       );
     }
     output.error(
-      `Route name or ID is required. Usage: ${getCommandName('routes reorder <name-or-id> --position <pos>')}`
+      `Route name or ID is required. Usage: ${withGlobalFlags(client, 'routes reorder <name-or-id> --position <pos>')}`
     );
     return 1;
   }
@@ -121,7 +124,7 @@ export default async function reorder(client: Client, argv: string[]) {
     }
     output.error(
       `No route found matching "${identifier}". Run ${chalk.cyan(
-        getCommandName('routes list')
+        withGlobalFlags(client, 'routes list')
       )} to see all routes.`
     );
     return 1;
@@ -209,7 +212,7 @@ export default async function reorder(client: Client, argv: string[]) {
             if (refIndex === -1) {
               output.error(
                 `Reference route "${pos.referenceId}" not found. Run ${chalk.cyan(
-                  getCommandName('routes list')
+                  withGlobalFlags(client, 'routes list')
                 )} to see route IDs.`
               );
               return 1;
@@ -220,7 +223,7 @@ export default async function reorder(client: Client, argv: string[]) {
             if (refIndex === -1) {
               output.error(
                 `Reference route "${pos.referenceId}" not found. Run ${chalk.cyan(
-                  getCommandName('routes list')
+                  withGlobalFlags(client, 'routes list')
                 )} to see route IDs.`
               );
               return 1;
@@ -232,7 +235,7 @@ export default async function reorder(client: Client, argv: string[]) {
           }
         } catch (e) {
           output.error(
-            `${e instanceof Error ? e.message : 'Invalid position'}. Usage: ${getCommandName('routes reorder <name-or-id> --position <pos>')}`
+            `${e instanceof Error ? e.message : 'Invalid position'}. Usage: ${withGlobalFlags(client, 'routes reorder <name-or-id> --position <pos>')}`
           );
           return 1;
         }

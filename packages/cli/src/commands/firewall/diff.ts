@@ -1,20 +1,22 @@
 import chalk from 'chalk';
-import { withGlobalFlags } from '../../util/agent-output';
 import type Client from '../../util/client';
-import { ensureProjectLink } from '../../util/projects/ensure-project-link';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { diffSubcommand } from './command';
-import { parseSubcommandArgs, outputJson } from './shared';
+import { parseSubcommandArgs, outputJson, withGlobalFlags } from './shared';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import { formatDiffOutput } from '../../util/firewall/format';
-import { getCommandName } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 
 export default async function diff(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, diffSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client, 'firewall');
+  const link = await requireProjectContext(
+    client,
+    'firewall',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -50,7 +52,7 @@ export default async function diff(client: Client, argv: string[]) {
     output.print(formatDiffOutput(draft.changes, activeRulesMap));
     output.print('\n\n');
     output.print(
-      `  Run ${chalk.cyan(getCommandName('firewall publish'))} to publish, or ${chalk.cyan(getCommandName('firewall discard'))} to discard.\n\n`
+      `  Run ${chalk.cyan(withGlobalFlags(client, 'firewall publish'))} to publish, or ${chalk.cyan(withGlobalFlags(client, 'firewall discard'))} to discard.\n\n`
     );
 
     return 0;

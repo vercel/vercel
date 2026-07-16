@@ -1,10 +1,9 @@
 import chalk from 'chalk';
-import { withGlobalFlags } from '../../../util/agent-output';
 import type Client from '../../../util/client';
-import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
+import { requireProjectContext } from '../../../util/projects/require-project-context';
 import output from '../../../output-manager';
 import { systemBypassAddSubcommand } from '../command';
-import { parseSubcommandArgs, confirmAction } from '../shared';
+import { parseSubcommandArgs, confirmAction, withGlobalFlags } from '../shared';
 import addBypass from '../../../util/firewall/add-bypass';
 import {
   validateBypassIp,
@@ -57,7 +56,11 @@ export default async function add(client: Client, argv: string[]) {
     }
   }
 
-  const link = await ensureProjectLink(client, 'firewall');
+  const link = await requireProjectContext(
+    client,
+    'firewall',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

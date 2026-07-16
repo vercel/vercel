@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { defaultProject } from '../../../mocks/project';
-import { ensureProjectLink } from '../../../../src/util/projects/ensure-project-link';
+import { requireProjectContext } from '../../../../src/util/projects/require-project-context';
 import * as agentOutput from '../../../../src/util/agent-output';
 import * as projectContextModule from '../../../../src/util/projects/resolve-project-context';
 
@@ -23,7 +23,7 @@ const resolveProjectContext = vi.mocked(
 );
 const outputAgentError = vi.mocked(agentOutput.outputAgentError);
 
-describe('ensureProjectLink', () => {
+describe('requireProjectContext', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -34,7 +34,7 @@ describe('ensureProjectLink', () => {
       exitCode: 2,
     });
 
-    await expect(ensureProjectLink(client, 'routes')).resolves.toBe(2);
+    await expect(requireProjectContext(client, 'routes')).resolves.toBe(2);
   });
 
   it('returns the linked project and updates the current team', async () => {
@@ -45,7 +45,7 @@ describe('ensureProjectLink', () => {
     };
     resolveProjectContext.mockResolvedValue(link);
 
-    await expect(ensureProjectLink(client, 'routes')).resolves.toBe(link);
+    await expect(requireProjectContext(client, 'routes')).resolves.toBe(link);
     expect(resolveProjectContext).toHaveBeenCalledWith({
       client,
       projectNameOrId: undefined,
@@ -62,7 +62,7 @@ describe('ensureProjectLink', () => {
     resolveProjectContext.mockResolvedValue(link);
 
     await expect(
-      ensureProjectLink(client, 'routes', 'payments-api')
+      requireProjectContext(client, 'routes', 'payments-api')
     ).resolves.toBe(link);
     expect(resolveProjectContext).toHaveBeenCalledWith({
       client,
@@ -78,7 +78,7 @@ describe('ensureProjectLink', () => {
     });
     client.nonInteractive = true;
 
-    await expect(ensureProjectLink(client, 'redirects')).resolves.toBe(1);
+    await expect(requireProjectContext(client, 'redirects')).resolves.toBe(1);
     expect(outputAgentError).toHaveBeenCalledWith(
       client,
       {
@@ -104,7 +104,7 @@ describe('ensureProjectLink', () => {
     client.nonInteractive = true;
     client.setArgv(command, 'list', '--cwd', '/tmp/site', '--non-interactive');
 
-    await expect(ensureProjectLink(client, command)).resolves.toBe(1);
+    await expect(requireProjectContext(client, command)).resolves.toBe(1);
     expect(outputAgentError).toHaveBeenCalledWith(
       client,
       {

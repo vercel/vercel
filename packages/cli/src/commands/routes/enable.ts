@@ -1,22 +1,29 @@
 import chalk from 'chalk';
-import { withGlobalFlags } from '../../util/agent-output';
 import type Client from '../../util/client';
-import { ensureProjectLink } from '../../util/projects/ensure-project-link';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { enableSubcommand } from './command';
-import { parseSubcommandArgs, resolveRoute, offerAutoPromote } from './shared';
+import {
+  parseSubcommandArgs,
+  resolveRoute,
+  offerAutoPromote,
+  withGlobalFlags,
+} from './shared';
 import { outputAgentError } from '../../util/agent-output';
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import editRoute from '../../util/routes/edit-route';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
 
 export default async function enable(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, enableSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client, 'routes');
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -47,7 +54,7 @@ export default async function enable(client: Client, argv: string[]) {
       );
     }
     output.error(
-      `Route name or ID is required. Usage: ${getCommandName('routes enable <name-or-id>')}`
+      `Route name or ID is required. Usage: ${withGlobalFlags(client, 'routes enable <name-or-id>')}`
     );
     return 1;
   }
@@ -105,7 +112,7 @@ export default async function enable(client: Client, argv: string[]) {
     }
     output.error(
       `No route found matching "${identifier}". Run ${chalk.cyan(
-        getCommandName('routes list')
+        withGlobalFlags(client, 'routes list')
       )} to see all routes.`
     );
     return 1;

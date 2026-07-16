@@ -29,6 +29,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import { FirewallTelemetryClient } from '../../util/telemetry/commands/firewall';
+import { getProjectOptionFromArgs } from '../../util/arg-common';
 
 const COMMAND_CONFIG = {
   overview: getCommandAliases(overviewSubcommand),
@@ -83,6 +84,10 @@ export default async function main(client: Client) {
     );
   }
 
+  if (subcommand && !needHelp) {
+    telemetry.trackCliOptionProject(getProjectOptionFromArgs(args));
+  }
+
   switch (subcommand) {
     case 'overview':
       if (needHelp) {
@@ -119,27 +124,27 @@ export default async function main(client: Client) {
     case 'rules': {
       telemetry.trackCliSubcommandRules(subcommandOriginal);
       const nestedArgs = needHelp ? [...args, '--help'] : args;
-      return rules(client, nestedArgs);
+      return rules(client, nestedArgs, telemetry);
     }
     case 'ip-blocks': {
       telemetry.trackCliSubcommandIpBlocks(subcommandOriginal);
       const nestedArgs = needHelp ? [...args, '--help'] : args;
-      return ipBlocks(client, nestedArgs);
+      return ipBlocks(client, nestedArgs, telemetry);
     }
     case 'system-bypass': {
       telemetry.trackCliSubcommandSystemBypass(subcommandOriginal);
       const nestedArgs = needHelp ? [...args, '--help'] : args;
-      return systemBypass(client, nestedArgs);
+      return systemBypass(client, nestedArgs, telemetry);
     }
     case 'attack-mode': {
       telemetry.trackCliSubcommandAttackMode(subcommandOriginal);
       const nestedArgs = needHelp ? [...args, '--help'] : args;
-      return attackMode(client, nestedArgs);
+      return attackMode(client, nestedArgs, telemetry);
     }
     case 'system-mitigations': {
       telemetry.trackCliSubcommandSystemMitigations(subcommandOriginal);
       const nestedArgs = needHelp ? [...args, '--help'] : args;
-      return systemMitigations(client, nestedArgs);
+      return systemMitigations(client, nestedArgs, telemetry);
     }
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));

@@ -1,7 +1,6 @@
 import chalk from 'chalk';
-import { withGlobalFlags } from '../../util/agent-output';
 import type Client from '../../util/client';
-import { ensureProjectLink } from '../../util/projects/ensure-project-link';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { editSubcommand } from './command';
 import {
@@ -9,6 +8,7 @@ import {
   resolveRoute,
   offerAutoPromote,
   shellQuoteRouteIdentifierForSuggestion,
+  withGlobalFlags,
 } from './shared';
 import { outputAgentError } from '../../util/agent-output';
 import {
@@ -32,7 +32,6 @@ import {
   printGeneratedRoutePreview,
 } from '../../util/routes/ai-transform';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
 import { hasAnyTransformFlags } from '../../util/routes/interactive';
 import type { RoutingRule } from '../../util/routes/types';
 
@@ -40,7 +39,11 @@ export default async function edit(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, editSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client, 'routes');
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -136,7 +139,7 @@ export default async function edit(client: Client, argv: string[]) {
       );
     }
     output.error(
-      `Route name or ID is required. Usage: ${getCommandName('routes edit <name-or-id>')}`
+      `Route name or ID is required. Usage: ${withGlobalFlags(client, 'routes edit <name-or-id>')}`
     );
     return 1;
   }
@@ -200,9 +203,7 @@ export default async function edit(client: Client, argv: string[]) {
       );
     }
     output.error(
-      `No route found matching "${identifier}". Run ${chalk.cyan(
-        getCommandName('routes list')
-      )} to see all routes.`
+      `No route found matching "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'routes list'))} to see all routes.`
     );
     return 1;
   }
@@ -350,7 +351,7 @@ export default async function edit(client: Client, argv: string[]) {
         );
       }
       output.error(
-        `No edit flags provided. When running non-interactively, use flags like --name, --dest, --src, etc. Run ${getCommandName('routes edit --help')} for all options.`
+        `No edit flags provided. When running non-interactively, use flags like --name, --dest, --src, etc. Run ${withGlobalFlags(client, 'routes edit --help')} for all options.`
       );
       return 1;
     }
@@ -534,7 +535,7 @@ async function handleAIEdit(
 
   if (!client.stdin.isTTY) {
     output.error(
-      `Cannot interactively confirm route changes in a non-TTY environment. Use ${getCommandName('routes edit <name-or-id> --ai "..." --yes')} to skip confirmation.`
+      `Cannot interactively confirm route changes in a non-TTY environment. Use ${withGlobalFlags(client, 'routes edit <name-or-id> --ai "..." --yes')} to skip confirmation.`
     );
     return 1;
   }

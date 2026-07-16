@@ -6,11 +6,15 @@ import { AGENT_REASON, AGENT_STATUS } from '../agent-output-constants';
 import { getCommandName, getCommandNamePlain } from '../pkg-name';
 import { resolveProjectContext } from './resolve-project-context';
 
-export type ProjectLinkCommand = 'redirects' | 'routes' | 'firewall';
+export type ProjectContextCommand = 'redirects' | 'routes' | 'firewall';
 
-export async function ensureProjectLink(
+/**
+ * Resolves an existing project context or reports that one is required.
+ * This helper never links the directory or creates a project.
+ */
+export async function requireProjectContext(
   client: Client,
-  command: ProjectLinkCommand,
+  command: ProjectContextCommand,
   projectName?: string
 ) {
   const link = await resolveProjectContext({
