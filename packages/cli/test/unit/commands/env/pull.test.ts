@@ -297,6 +297,53 @@ describe('env pull', () => {
     );
   });
 
+  it('writes a placeholder for redacted sensitive env vars', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject(
+      {
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      },
+      [
+        ...envs,
+        {
+          type: 'sensitive',
+          id: 'sens1234sens5678',
+          key: 'SENSITIVE_SECRET',
+          value: '',
+          target: ['production'],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+        {
+          type: 'encrypted',
+          id: 'empt1234empt5678',
+          key: 'ACTUALLY_EMPTY',
+          value: '',
+          target: ['production'],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+      ]
+    );
+    const cwd = setupUnitFixture('vercel-env-pull');
+    client.cwd = cwd;
+    client.setArgv('env', 'pull', '--yes', '--environment', 'production');
+    const exitCode = await env(client);
+    expect(exitCode, 'exit code for "env"').toEqual(0);
+
+    const rawProdEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+    expect(rawProdEnv).toContain('SENSITIVE_SECRET="[SENSITIVE]"');
+    expect(rawProdEnv).not.toContain('SENSITIVE_SECRET=""');
+    expect(rawProdEnv).toContain('ACTUALLY_EMPTY=""');
+  });
+
   it('should handle pulling from specific Git branch', async () => {
     useUser();
     useTeams('team_dummy');

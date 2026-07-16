@@ -46,13 +46,11 @@ import {
 } from './install';
 import {
   PythonDependencyExternalizer,
-  BYTECODE_COVERAGE_FLOOR,
   BYTECODE_FILL_CEILING_BYTES,
-  MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE,
+  LARGE_FUNCTION_FILL_CEILING_BYTES,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   lambdaKnapsack,
   calculateBundleSize,
-  estimateBytecodeSize,
   RUNTIME_DEPS_DIR,
   type GenerateBundleResult,
 } from './dependency-externalizer';
@@ -134,12 +132,19 @@ function getDevSubscriberTopics(subscriber: Subscriber): ServiceQueueTopic[] {
 export async function getDevSidecars({
   workPath,
   build,
+  service,
 }: GetDevSidecarsOptions): Promise<DevSubscriber[]> {
   const framework = build.config?.framework;
+  const isPyprojectEntrypoint = basename(build.src ?? '') === 'pyproject.toml';
+  const isPyprojectService =
+    service !== undefined &&
+    basename(service.entrypoint ?? '') === 'pyproject.toml';
   if (
     build.config?.middleware === true ||
-    typeof framework !== 'string' ||
-    !isPythonFramework(framework)
+    (service !== undefined && !isPyprojectService) ||
+    (service === undefined &&
+      !isPyprojectEntrypoint &&
+      (typeof framework !== 'string' || !isPythonFramework(framework)))
   ) {
     return [];
   }
@@ -153,7 +158,7 @@ export async function getDevSidecars({
         name: subscriber.name,
         consumer: getSubscriberConsumerName(subscriber.name),
         workspace: '.',
-        framework,
+        framework: typeof framework === 'string' ? framework : undefined,
         runtime: 'python',
         builder: {
           use: build.use,
@@ -171,7 +176,7 @@ export async function getDevSidecars({
         name: workflow.name,
         consumer: getWorkflowConsumerName(workflow.name),
         workspace: '.',
-        framework,
+        framework: typeof framework === 'string' ? framework : undefined,
         runtime: 'python',
         builder: {
           use: build.use,
@@ -1280,7 +1285,10 @@ export const build: BuildVX = async ({
       //
       // Record the size via the onSized callback (invoked before any
       // size-limit enforcement that may throw) so the span is tagged even
-      // for oversized bundles that subsequently fail the build.
+      // for oversized bundles that subsequently fail the build. On
+      // successful builds the attribute is overwritten at the end of this
+      // span with the final bundle size (including compiled bytecode and
+      // runtime-install tooling).
       const depAnalysis = await depExternalizer.analyze(files, {
         onSized: ({ totalSizeBytes, runtimeInstallEnabled }) => {
           bundleSpan.setAttributes({
@@ -1486,10 +1494,17 @@ export const build: BuildVX = async ({
           `Function "${entrypoint ?? rawEntrypoint}" exceeds the standard size limit; enabling large functions (beta).`
         );
 
+      // How the bundle was packed, for the span attributes below:
+      // - standard:        fits the standard size limit; everything in the zip
+      // - runtime-install: public deps deferred to a cold-start `uv sync`
+      // - hive:            large functions; everything in the zip
+      let packingMode: 'standard' | 'runtime-install' | 'hive';
+
       if (depAnalysis.runtimeInstallEnabled) {
         // Pack the zip and defer the rest to runtime install. If it can't be
         // made to fit, generateBundle bundles everything for the large
         // functions path (which then takes compileall, below).
+        packingMode = 'runtime-install';
         const bytecodeFirst =
           compileAllEnabled &&
           pythonVersion.major != null &&
@@ -1498,27 +1513,33 @@ export const build: BuildVX = async ({
           bytecodeFirst,
         });
         if (bundleResult.fellBackToFullBundle) {
+          packingMode = 'hive';
           announceLargeFunction();
           if (compileAllEnabled) {
             await runCompileAllAndFillBytecode(
-              MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
+              LARGE_FUNCTION_FILL_CEILING_BYTES
             );
           }
         } else if (bundleResult.packingMode === 'bytecode-first') {
           await runPrefixCompileAndFill(bundleResult);
         } else if (compileAllEnabled) {
           // Knapsack packing (bytecode-first skipped or fell back): fill
-          // only the slack under the ceiling with bytecode for in-zip
-          // packages, and only when enough of it ships to justify the
-          // compile time. Always-bundled packages get capacity first.
+          // the slack under the ceiling with bytecode for in-zip packages.
+          // Always-bundled packages get capacity first. Skip only when the
+          // bundle already exceeds the fill ceiling, since nothing could
+          // ship.
           const currentSize = await calculateBundleSize(files);
           const capacity = BYTECODE_FILL_CEILING_BYTES - currentSize;
-          const estimate = await estimateBytecodeSize(files);
-          if (capacity >= BYTECODE_COVERAGE_FLOOR * estimate) {
+          if (capacity > 0) {
             await runCompileAllAndFillBytecode(BYTECODE_FILL_CEILING_BYTES, [
               bundleResult.alwaysBundledPackages ?? [],
               bundleResult.bundledPublicPackages ?? [],
             ]);
+          } else {
+            debug(
+              `skipping bytecode precompilation: no zip capacity remaining ` +
+                `(bundle is ${(currentSize / (1024 * 1024)).toFixed(2)} MB)`
+            );
           }
         }
       } else {
@@ -1526,25 +1547,46 @@ export const build: BuildVX = async ({
         // large functions are enabled and the whole bundle ships.
         addFiles(files, depAnalysis.allVendorFiles);
         if (depAnalysis.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES) {
+          packingMode = 'hive';
           if (isLargeFunctionsEnabled()) {
             announceLargeFunction();
           }
           if (compileAllEnabled) {
             await runCompileAllAndFillBytecode(
-              MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
+              LARGE_FUNCTION_FILL_CEILING_BYTES
             );
           }
-        } else if (compileAllEnabled) {
-          // Compile only when enough of the expected bytecode ships to
-          // justify the compile time.
-          const capacity =
-            BYTECODE_FILL_CEILING_BYTES - depAnalysis.totalBundleSize;
-          const estimate = await estimateBytecodeSize(files);
-          if (capacity >= BYTECODE_COVERAGE_FLOOR * estimate) {
-            await runCompileAllAndFillBytecode(BYTECODE_FILL_CEILING_BYTES);
+        } else {
+          packingMode = 'standard';
+          if (compileAllEnabled) {
+            // Fill any remaining zip capacity with bytecode. Skip only when
+            // the bundle already exceeds the fill ceiling, since nothing
+            // could ship.
+            const capacity =
+              BYTECODE_FILL_CEILING_BYTES - depAnalysis.totalBundleSize;
+            if (capacity > 0) {
+              await runCompileAllAndFillBytecode(BYTECODE_FILL_CEILING_BYTES);
+            } else {
+              debug(
+                `skipping bytecode precompilation: no zip capacity remaining ` +
+                  `(bundle is ${(depAnalysis.totalBundleSize / (1024 * 1024)).toFixed(2)} MB)`
+              );
+            }
           }
         }
       }
+
+      // Final span attributes: overwrite the source-only size recorded by
+      // onSized with the shipped bundle size (now including compiled
+      // bytecode and runtime-install tooling). Cheap: calculateBundleSize
+      // memoizes stat results on the FileFsRefs, and every file has been
+      // through at least one sizing pass by this point.
+      bundleSpan.setAttributes({
+        'python.bundle.totalSizeBytes': String(
+          await calculateBundleSize(files)
+        ),
+        'python.bundle.packingMode': packingMode,
+      });
     });
 
   let output: Lambda | undefined;

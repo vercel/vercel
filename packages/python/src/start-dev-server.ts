@@ -20,6 +20,8 @@ import isPortReachable from 'is-port-reachable';
 import {
   detectPythonEntrypoint,
   entrypointToModule,
+  getVercelToolsEntrypoint,
+  type DetectedPythonEntrypoint,
   type PythonEntrypoint,
 } from './entrypoint';
 import { runFrameworkHook } from './index';
@@ -707,6 +709,7 @@ export const startDevServer: StartDevServer = async opts => {
   installGlobalCleanupHandlers();
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
   const entrypoint = rawEntrypoint === '<detect>' ? undefined : rawEntrypoint;
+  const isPyprojectEntrypoint = entrypoint === 'pyproject.toml';
 
   // For non-web background processes, use the raw entrypoint directly because
   // they don't export app/application, so standard detection would skip them.
@@ -716,27 +719,36 @@ export const startDevServer: StartDevServer = async opts => {
       ? config.handlerFunction
       : undefined;
 
-  const detected = await detectPythonEntrypoint(
-    framework as PythonFramework,
-    workPath,
-    entrypoint
-      ? {
-          filePath: entrypoint,
-          // Schedule-triggered services create their own "app" wrapper dynamically.
-          // Other services use handlerFunction as the entrypoint variable name.
-          varName:
-            service && isScheduleTriggeredService(service)
-              ? undefined
-              : handlerFunction,
-        }
-      : undefined,
-    service,
-    opts.repoRootPath
-  );
+  let detected: DetectedPythonEntrypoint | null;
+  if (isPyprojectEntrypoint) {
+    const declaredEntrypoint = await getVercelToolsEntrypoint(
+      workPath,
+      opts.repoRootPath
+    );
+    detected = declaredEntrypoint ? { entrypoint: declaredEntrypoint } : null;
+  } else {
+    detected = await detectPythonEntrypoint(
+      framework as PythonFramework,
+      workPath,
+      entrypoint
+        ? {
+            filePath: entrypoint,
+            // Schedule-triggered services create their own "app" wrapper dynamically.
+            // Other services use handlerFunction as the entrypoint variable name.
+            varName:
+              service && isScheduleTriggeredService(service)
+                ? undefined
+                : handlerFunction,
+          }
+        : undefined,
+      service,
+      opts.repoRootPath
+    );
+  }
   let hookResult: Awaited<ReturnType<typeof runFrameworkHook>> | undefined;
   if (detected?.entrypoint) {
     resolved = detected.entrypoint;
-  } else {
+  } else if (!isPyprojectEntrypoint) {
     hookResult = await runFrameworkHook(framework, {
       pythonEnv: env,
       workPath,
@@ -750,9 +762,12 @@ export const startDevServer: StartDevServer = async opts => {
       throw detected.error;
     }
     throw new NowBuildError({
-      code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
-      message:
-        'No Python entrypoint could be detected. Please specify an entrypoint file.',
+      code: isPyprojectEntrypoint
+        ? 'PYTHON_PYPROJECT_NOTHING_TO_BUILD'
+        : 'PYTHON_ENTRYPOINT_NOT_FOUND',
+      message: isPyprojectEntrypoint
+        ? 'Entrypoint "pyproject.toml" does not declare a web app. Set "tool.vercel.entrypoint" in pyproject.toml.'
+        : 'No Python entrypoint could be detected. Please specify an entrypoint file.',
     });
   }
   const { entrypoint: entry, variableName } = resolved;

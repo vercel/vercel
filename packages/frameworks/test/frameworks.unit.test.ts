@@ -244,7 +244,15 @@ describe('frameworks', () => {
     'storybook',
     'eve', // examples/fixtures live in github.com/vercel/ash
     'tanstack-start-lovable', // platform variant, no dedicated example
+    'services', // project-level preset, no dedicated framework example
   ];
+
+  it('marks Services as stable', () => {
+    const services = frameworkList.find(f => f.slug === 'services');
+
+    expect(services).toBeDefined();
+    expect(services?.experimental).toBeUndefined();
+  });
 
   it('ensure there is an example for every framework', async () => {
     const root = join(__dirname, '..', '..', '..');
