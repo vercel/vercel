@@ -203,6 +203,33 @@ describe('getLinkedProject', () => {
     expect(isOwnerLookupUnavailableLink(link)).toEqual(true);
   });
 
+  it('should preserve repo link metadata when owner lookup fallback is allowed', async () => {
+    const cwd = fixture('monorepo-link');
+
+    useUser();
+    useTeams('team_dummy', { failNoAccess: true });
+    useProject({
+      ...defaultProject,
+      accountId: 'team_dummy',
+      id: 'QmX6P93ChNDoZP',
+      name: 'monorepo-marketing',
+    });
+
+    const link = await getLinkedProject(client, {
+      cwd: join(cwd, 'marketing/subdir'),
+      allowOwnerLookupFallback: true,
+    });
+
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    expect(link.project.id).toEqual('QmX6P93ChNDoZP');
+    expect(link.repoRoot).toEqual(cwd);
+    expect(link.projectRootDirectory).toEqual('marketing');
+    expect(link.orgId).toEqual('team_dummy');
+    expect(isOwnerLookupUnavailableLink(link)).toEqual(true);
+  });
+
   it('should still require project lookup when owner lookup fallback is allowed', async () => {
     const cwd = fixture('vercel-pull-next');
 
@@ -216,6 +243,23 @@ describe('getLinkedProject', () => {
     });
 
     expect(link.status).toEqual('not_linked');
+  });
+
+  it('should not use owner lookup fallback for unrelated 403 errors', async () => {
+    const cwd = fixture('vercel-pull-next');
+
+    useUser();
+    useTeams('team_dummy', { failWithCustom403Code: true });
+    useProject({
+      ...defaultProject,
+      accountId: 'team_dummy',
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+
+    await expect(
+      getLinkedProject(client, { cwd, allowOwnerLookupFallback: true })
+    ).rejects.toThrow('You are not authorized to read this team. (403)');
   });
 
   it('should return link with `project.json`', async () => {
