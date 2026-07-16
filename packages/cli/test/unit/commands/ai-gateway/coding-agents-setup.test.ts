@@ -51,6 +51,8 @@ const keychainState = vi.hoisted(() => ({
   available: undefined as boolean | undefined,
   stored: [] as string[],
   storeResult: true,
+  copied: [] as string[],
+  copyResult: true,
 }));
 
 vi.mock(
@@ -72,6 +74,11 @@ vi.mock(
           keychainState.stored.push(key);
         }
         return keychainState.storeResult;
+      },
+      // Deterministic clipboard: never shell out to pbcopy under test.
+      copyToClipboard: (text: string) => {
+        keychainState.copied.push(text);
+        return keychainState.copyResult;
       },
     };
   }
@@ -131,6 +138,8 @@ beforeEach(() => {
   keychainState.available = undefined;
   keychainState.stored.length = 0;
   keychainState.storeResult = true;
+  keychainState.copied.length = 0;
+  keychainState.copyResult = true;
   desktopState.codex = false;
   home = mkdtempSync(join(tmpdir(), 'vc-setup-agents-'));
   savedEnv = {
@@ -900,6 +909,109 @@ describe('ai-gateway coding-agents setup', () => {
 
       expect(await aiGateway(client)).toBe(1);
       await expect(client.stderr).toOutput('Invalid expiration');
+    });
+  });
+
+  describe('apply action', () => {
+    // Drives the interactive setup to the "Apply these changes?" select for a
+    // single claude-code agent, with all key options pinned via flags.
+    function startInteractiveSetup() {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--agent',
+        'claude-code',
+        '--name',
+        'my-key',
+        '--refresh-period',
+        'none',
+        '--expiration',
+        'none'
+      );
+      return aiGateway(client);
+    }
+
+    it('cancels without creating a key or writing files', async () => {
+      const exitCodePromise = startInteractiveSetup();
+
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Apply these changes?');
+      // Copy prompt is disabled without keychain, so select navigation skips it:
+      // Apply (0) → down → Cancel.
+      client.stdin.write('\x1b[B\n');
+
+      expect(await exitCodePromise).toBe(0);
+      await expect(client.stderr).toOutput('No files were changed');
+      expect(existsSync(claudeSettingsPath())).toBe(false);
+      expect(lastCreateBody).toBeUndefined();
+    });
+
+    it('copies a prompt and delegates file writes when keychain-backed', async () => {
+      keychainState.available = true;
+      const exitCodePromise = startInteractiveSetup();
+
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
+      // Keychain is available, so the storage prompt appears; accept the default.
+      await expect(client.stderr).toOutput('macOS Keychain');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Apply these changes?');
+      // Apply (0) → Copy prompt (1).
+      client.stdin.write('\x1b[B\n');
+
+      expect(await exitCodePromise).toBe(0);
+      await expect(client.stderr).toOutput('copied to clipboard');
+
+      // The key was created and stored in the Keychain…
+      expect(lastCreateBody).toBeDefined();
+      expect(keychainState.stored).toContain(CREATED_KEY);
+      // …but the config files were left to the agent, not written here.
+      expect(existsSync(claudeSettingsPath())).toBe(false);
+
+      // The copied prompt describes the change without leaking the raw key.
+      const [prompt] = keychainState.copied;
+      expect(prompt).toBeDefined();
+      expect(prompt).toContain('settings.json');
+      expect(prompt).not.toContain(CREATED_KEY);
+    });
+
+    it('prints the prompt when the clipboard is unavailable', async () => {
+      keychainState.available = true;
+      keychainState.copyResult = false;
+      const exitCodePromise = startInteractiveSetup();
+
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('macOS Keychain');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Apply these changes?');
+      client.stdin.write('\x1b[B\n');
+
+      expect(await exitCodePromise).toBe(0);
+      await expect(client.stderr).toOutput('prompt printed below');
+      // The prompt lands on stdout for the user to copy manually.
+      expect(client.stdout.getFullOutput()).toContain('settings.json');
+    });
+
+    it('applies normally when Apply is chosen', async () => {
+      const exitCodePromise = startInteractiveSetup();
+
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Apply these changes?');
+      client.stdin.write('\n'); // default: Apply
+
+      expect(await exitCodePromise).toBe(0);
+      expect(existsSync(claudeSettingsPath())).toBe(true);
+      const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
+      expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe(CREATED_KEY);
     });
   });
 

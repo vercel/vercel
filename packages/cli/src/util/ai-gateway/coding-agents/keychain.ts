@@ -42,3 +42,23 @@ export function keychainLookup(opts: { fish?: boolean } = {}): string {
   const cmd = `${SECURITY_BIN} find-generic-password -s '${KEYCHAIN_SERVICE}' -a '${KEYCHAIN_ACCOUNT}' -w 2>/dev/null`;
   return opts.fish ? `(${cmd})` : `$(${cmd})`;
 }
+
+const PBCOPY_BIN = '/usr/bin/pbcopy';
+
+/**
+ * Copy text to the macOS clipboard via pbcopy. Callers gate this behind the
+ * Keychain flow, which is macOS-only, so pbcopy is present wherever this runs;
+ * returns `false` (rather than throwing) if it is somehow unavailable so the
+ * caller can fall back to printing.
+ */
+export function copyToClipboard(text: string): boolean {
+  try {
+    execFileSync(PBCOPY_BIN, {
+      input: text,
+      stdio: ['pipe', 'ignore', 'ignore'],
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}

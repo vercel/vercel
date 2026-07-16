@@ -49,9 +49,7 @@ export function defaultKeyName(): string {
 export async function promptKeyName(client: Client): Promise<string> {
   const fallback = defaultKeyName();
   const answer = await client.input.text({
-    message: `Key name? ${chalk.dim(
-      'A new AI Gateway API key will be created for your coding agents'
-    )}`,
+    message: 'Key name?',
     default: fallback,
   });
   return answer.trim() || fallback;
@@ -136,10 +134,7 @@ export async function ensureTeam(
   const { machine, canPrompt, yes } = opts;
 
   if (canPrompt && !yes && !hasExplicitScopeFlag(client.argv)) {
-    const org = await selectOrg(
-      client,
-      `Which team? ${chalk.dim('The API key is created under this team')}`
-    );
+    const org = await selectOrg(client, 'Which team?', undefined, true);
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
     return undefined;
   }

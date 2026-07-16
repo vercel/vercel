@@ -42,6 +42,7 @@ import {
   printReceiptPath,
   printStatus,
   printWarning,
+  buildAgentPrompt,
 } from '../../util/ai-gateway/coding-agents/render';
 import {
   collectAgentWarnings,
@@ -55,6 +56,7 @@ import { KEY_PLACEHOLDER } from '../../util/ai-gateway/coding-agents/gateway';
 import {
   isKeychainAvailable,
   storeKeyInKeychain,
+  copyToClipboard,
 } from '../../util/ai-gateway/coding-agents/keychain';
 import {
   outputAgentError,
@@ -288,6 +290,14 @@ export default async function codingAgentsSetup(
   if (willCreate && agents.length > 0 && (!dryRun || canPrompt)) {
     const promptCreate = canPrompt && !yes;
 
+    if (promptCreate) {
+      printStatus(
+        chalk.dim(
+          'A new AI Gateway API key will be created for your coding agents.'
+        )
+      );
+    }
+
     const teamError = await ensureTeam(client, {
       machine,
       canPrompt,
@@ -472,12 +482,32 @@ export default async function codingAgentsSetup(
     return 1;
   }
 
+  let applyAction: 'apply' | 'copy' = 'apply';
   if (changed.length > 0 && canPrompt && !yes) {
-    const confirmed = await client.input.confirm('Apply these changes?', true);
-    if (!confirmed) {
+    const choice = await client.input.select<'apply' | 'copy' | 'cancel'>({
+      message: 'Apply these changes?',
+      choices: [
+        { name: 'Apply', value: 'apply' },
+        {
+          name: 'Copy prompt',
+          value: 'copy',
+          description:
+            'Copy the diff and instructions to hand to a coding agent',
+          // A prompt is only safe when the key lives in the Keychain; otherwise
+          // the diff embeds the plaintext key, which must not be handed off.
+          disabled: useKeychain
+            ? false
+            : 'requires the macOS Keychain — a prompt would expose your plaintext key',
+        },
+        { name: 'Cancel', value: 'cancel' },
+      ],
+      default: 'apply',
+    });
+    if (choice === 'cancel') {
       printStatus('Aborted. No files were changed.');
       return 0;
     }
+    applyAction = choice;
   }
 
   let keySource: KeySource;
@@ -504,6 +534,15 @@ export default async function codingAgentsSetup(
   }
 
   if (useKeychain && !storeKeyInKeychain(keySource.key)) {
+    // Without the key in the Keychain, a copied prompt would fall back to
+    // embedding the plaintext key — the exact thing the Keychain gate prevents.
+    // Refuse rather than silently downgrade.
+    if (applyAction === 'copy') {
+      output.error(
+        'Failed to store the key in the macOS Keychain, so a prompt would expose your plaintext key. Re-run and choose Apply, or pass --no-keychain to write the key to the config files.'
+      );
+      return 1;
+    }
     printWarning(
       'Failed to store the key in the macOS Keychain; writing it to the config files instead.'
     );
@@ -517,6 +556,24 @@ export default async function codingAgentsSetup(
     overrides,
     shellRcOverride,
   });
+
+  // "Copy prompt": the key is created and stored in the Keychain, but the config
+  // edits are delegated to a coding agent via a copied prompt rather than written
+  // here.
+  if (applyAction === 'copy') {
+    const promptText = buildAgentPrompt(applyPlanResult, keySource.key);
+    if (copyToClipboard(promptText)) {
+      printStatus(
+        'Prompt copied to clipboard. Paste it into your coding agent to apply the changes.'
+      );
+    } else {
+      output.debug('pbcopy failed or unavailable');
+      printStatus('Could not access the clipboard — prompt printed below:');
+      client.stdout.write(`${promptText}\n`);
+    }
+    printKey(keySource.key, { keychain: true });
+    return 0;
+  }
 
   const results = await applyPlan(applyPlanResult, { backup: !noBackup });
 

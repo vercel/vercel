@@ -81,6 +81,12 @@ export interface RenderDiffOptions {
   secrets?: string[];
   context?: number;
   indent?: string;
+  /**
+   * Emit plain, uncolored diff text. Used for content that leaves the terminal
+   * (e.g. a prompt copied to the clipboard for a coding agent) where ANSI codes
+   * would be noise.
+   */
+  color?: boolean;
 }
 
 export function renderDiff(
@@ -88,7 +94,10 @@ export function renderDiff(
   after: string,
   options: RenderDiffOptions = {}
 ): string {
-  const { secrets = [], context = 2, indent = '  ' } = options;
+  const { secrets = [], context = 2, indent = '  ', color = true } = options;
+  const dim = color ? chalk.dim : (s: string) => s;
+  const green = color ? chalk.green : (s: string) => s;
+  const red = color ? chalk.red : (s: string) => s;
   const lines = diffLines(before, after);
   if (!lines.some(l => l.type !== ' ')) {
     return '';
@@ -112,7 +121,7 @@ export function renderDiff(
   lines.forEach((line, idx) => {
     if (!keep[idx]) {
       if (!collapsed) {
-        rendered.push(chalk.dim(`${indent}  ⋯`));
+        rendered.push(dim(`${indent}  ⋯`));
         collapsed = true;
       }
       return;
@@ -120,11 +129,11 @@ export function renderDiff(
     collapsed = false;
     const text = mask(line.text, secrets);
     if (line.type === '+') {
-      rendered.push(chalk.green(`${indent}+ ${text}`));
+      rendered.push(green(`${indent}+ ${text}`));
     } else if (line.type === '-') {
-      rendered.push(chalk.red(`${indent}- ${text}`));
+      rendered.push(red(`${indent}- ${text}`));
     } else {
-      rendered.push(chalk.dim(`${indent}  ${text}`));
+      rendered.push(dim(`${indent}  ${text}`));
     }
   });
   return rendered.join('\n');

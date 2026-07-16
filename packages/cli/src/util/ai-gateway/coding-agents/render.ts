@@ -151,3 +151,37 @@ export function printKey(key: string, opts: { keychain?: boolean } = {}): void {
   output.print('\n');
   printKeyRow(key, opts);
 }
+
+/**
+ * A plain-text prompt describing the pending config changes, for the user to
+ * hand to a coding agent (the "Copy prompt" action). Only offered on a Keychain
+ * setup, so the API key lives in the Keychain and the diffs reference it via a
+ * `security find-generic-password` lookup rather than embedding it. The key is
+ * still passed to `renderDiff` as a secret so any agent that writes it directly
+ * (e.g. Pi) is masked rather than leaked — masked values are resolvable from the
+ * Keychain, which the preamble explains.
+ */
+export function buildAgentPrompt(plan: SetupPlan, apiKey: string): string {
+  const sections: string[] = [
+    'Set up the Vercel AI Gateway for my coding agents by applying the file changes below.',
+    'For each file, create it if missing or edit it to match the diff (lines starting with `+` are added, `-` are removed; `⋯` marks skipped unchanged lines).',
+    `Any masked value (e.g. ${maskSecret(apiKey)}) is my AI Gateway API key, stored in my macOS Keychain; the config and shell already reference it with \`${'security find-generic-password'}\`, so leave those lookups as-is and do not ask me to paste the key.`,
+    '',
+  ];
+  for (const change of plan.changes) {
+    if (change.status !== 'create' && change.status !== 'update') {
+      continue;
+    }
+    const diff = renderDiff(change.current ?? '', change.next ?? '', {
+      secrets: [apiKey],
+      indent: '',
+      color: false,
+    });
+    sections.push(`# ${change.label} — ${change.path}`);
+    if (diff) {
+      sections.push(diff);
+    }
+    sections.push('');
+  }
+  return `${sections.join('\n').trimEnd()}\n`;
+}
