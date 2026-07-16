@@ -1,11 +1,13 @@
 import chalk from 'chalk';
-import { withGlobalFlags } from '../../util/agent-output';
 import ms from 'ms';
 import type Client from '../../util/client';
-import { ensureProjectLink } from '../../util/projects/ensure-project-link';
 import output from '../../output-manager';
 import { listVersionsSubcommand } from './command';
-import { parseSubcommandArgs } from './shared';
+import {
+  parseSubcommandArgs,
+  requireProjectContext,
+  withGlobalFlags,
+} from './shared';
 import { outputAgentError } from '../../util/agent-output';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import stamp from '../../util/output/stamp';
@@ -20,7 +22,7 @@ export default async function listVersions(client: Client, argv: string[]) {
   );
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client, 'routes');
+  const link = await requireProjectContext(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

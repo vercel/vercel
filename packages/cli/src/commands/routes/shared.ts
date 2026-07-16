@@ -1,16 +1,17 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
 import {
   outputAgentError,
   buildCommandWithYes,
-  withGlobalFlags,
+  withGlobalFlags as withClientGlobalFlags,
 } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
 import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import type { Command } from '../help';
+import { ensureProjectLink as ensureProjectLinkForCommand } from '../../util/projects/ensure-project-link';
 import {
   parseSubcommandArguments,
   type ParsedSubcommandArguments,
@@ -23,6 +24,18 @@ import {
   type RouteVersion,
   type Transform,
 } from '../../util/routes/types';
+
+/**
+ * Plain suggested command with global flags from argv (--cwd, --non-interactive, etc.).
+ */
+export function withGlobalFlags(
+  client: Client,
+  commandTemplate: string
+): string {
+  return withClientGlobalFlags(client, commandTemplate, {
+    preserveProject: true,
+  });
+}
 
 /**
  * Shell-escape route identifier for suggested `next` commands. Uses single
@@ -56,7 +69,9 @@ export async function parseSubcommandArgs(
   } catch (err) {
     if (client?.nonInteractive) {
       const rawMessage = err instanceof Error ? err.message : String(err);
-      const flags = getGlobalFlagsFromArgs(client.argv.slice(2));
+      const flags = getGlobalFlagsFromArgs(client.argv.slice(2), {
+        preserveProject: true,
+      });
       let message = rawMessage;
       let next: Array<{ command: string; when?: string }> = [
         {
@@ -122,6 +137,10 @@ export async function parseSubcommandArgs(
   }
 
   return parsedArgs;
+}
+
+export function requireProjectContext(client: Client, projectName?: string) {
+  return ensureProjectLinkForCommand(client, 'routes', projectName);
 }
 
 export async function confirmAction(
@@ -283,7 +302,7 @@ export async function offerAutoPromote(
 
   // Always inform the user that changes are staged
   output.print(
-    `\n  ${chalk.gray(`This change is staged. Run ${chalk.cyan(getCommandName('routes publish'))} to make it live, or ${chalk.cyan(getCommandName('routes discard-staging'))} to undo.`)}\n`
+    `\n  ${chalk.gray(`This change is staged. Run ${chalk.cyan(withGlobalFlags(client, 'routes publish'))} to make it live, or ${chalk.cyan(withGlobalFlags(client, 'routes discard-staging'))} to undo.`)}\n`
   );
 
   if (!hadExistingStagingVersion && !opts.skipPrompts) {
@@ -314,7 +333,7 @@ export async function offerAutoPromote(
     }
   } else if (hadExistingStagingVersion) {
     output.warn(
-      `There are other staged changes. Review with ${chalk.cyan(getCommandName('routes list --diff'))} before promoting.`
+      `There are other staged changes. Review with ${chalk.cyan(withGlobalFlags(client, 'routes list --diff'))} before promoting.`
     );
   }
 }
@@ -464,9 +483,7 @@ export async function resolveRoutes(
         return null;
       }
       output.error(
-        `No route found matching "${identifier}". Run ${chalk.cyan(
-          getCommandName('routes list')
-        )} to see all routes.`
+        `No route found matching "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'routes list'))} to see all routes.`
       );
       return null;
     }
@@ -480,6 +497,7 @@ export async function resolveRoutes(
  * Find a version by ID, supporting partial ID matching.
  */
 export function findVersionById(
+  client: Client,
   versions: RouteVersion[],
   identifier: string
 ):
@@ -490,7 +508,7 @@ export function findVersionById(
   if (matchingVersions.length === 0) {
     return {
       error: `Version "${identifier}" not found. Run ${chalk.cyan(
-        getCommandName('routes list-versions')
+        withGlobalFlags(client, 'routes list-versions')
       )} to see available versions.`,
     };
   }
