@@ -1643,8 +1643,33 @@ describe('ai-gateway coding-agents setup', () => {
       // Exactly one ✓ — file rows and the key row keep the blank gutter.
       expect(stderr.match(/✓/g)).toHaveLength(1);
       expect(stderr).toMatch(/^ {2}Created {9}/m);
+      // A caller-provided key stays "API Key" (not "New API Key").
       expect(stderr).toMatch(/^ {2}API Key {9}vck_/m);
       expect(stderr).not.toContain('WARNING!');
+    });
+
+    it('labels a freshly created key "New API Key"', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      client.nonInteractive = false;
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--agent',
+        'claude-code',
+        '--yes'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+
+      const stderr = client.stderr.getFullOutput();
+      // A key minted by this run reads as "New API Key".
+      expect(stderr).toMatch(/^ {2}New API Key {5}vck_/m);
+      expect(stderr).not.toMatch(/^ {2}API Key {9}vck_/m);
     });
   });
 

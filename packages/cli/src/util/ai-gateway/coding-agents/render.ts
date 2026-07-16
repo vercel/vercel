@@ -124,13 +124,17 @@ export function printReceiptPath(label: string, path: string): void {
   );
 }
 
-/** Masked-key receipt row, e.g. `API Key  vck_1234••••abcd · macOS Keychain`. */
+/**
+ * Masked-key receipt row, e.g. `New API Key  vck_1234••••abcd · macOS Keychain`.
+ * `created` distinguishes a freshly minted key ("New API Key") from a
+ * caller-provided one ("API Key").
+ */
 export function printKeyRow(
   key: string,
-  opts: { keychain?: boolean } = {}
+  opts: { keychain?: boolean; created?: boolean } = {}
 ): void {
   printAlignedLabel(
-    'API Key',
+    opts.created ? 'New API Key' : 'API Key',
     `${maskSecret(key)} · ${opts.keychain ? 'macOS Keychain' : 'Config files'}`
   );
 }
@@ -147,7 +151,10 @@ export function printNotes(plan: SetupPlan): void {
   }
 }
 
-export function printKey(key: string, opts: { keychain?: boolean } = {}): void {
+export function printKey(
+  key: string,
+  opts: { keychain?: boolean; created?: boolean } = {}
+): void {
   output.print('\n');
   printKeyRow(key, opts);
 }

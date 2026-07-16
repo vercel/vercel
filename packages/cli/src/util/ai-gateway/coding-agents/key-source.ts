@@ -144,7 +144,7 @@ export async function ensureTeam(
       undefined,
       true,
       undefined,
-      'The new AI Gateway API key will be created under this team.'
+      'The new AI Gateway API key will be created under this team:'
     );
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
     return undefined;

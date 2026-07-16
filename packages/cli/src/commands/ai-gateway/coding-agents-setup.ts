@@ -610,7 +610,7 @@ export default async function codingAgentsSetup(
       printStatus('Could not access the clipboard — prompt printed below:');
       client.stdout.write(`${promptText}\n`);
     }
-    printKey(keySource.key, { keychain: true });
+    printKey(keySource.key, { keychain: true, created: keySource.created });
     return 0;
   }
 
@@ -620,8 +620,12 @@ export default async function codingAgentsSetup(
     // Rotated with a fresh key but nothing in the config files changed (e.g. the
     // key is resolved from the environment rather than embedded).
     output.print('\n');
-    printAlignedLabel('Rotated', 'AI Gateway API key', { gutter: '✓' });
-    printKeyRow(keySource.key, { keychain: useKeychain });
+    // No ✓ gutter: the verb "Rotated" already reads as completed.
+    printAlignedLabel('Rotated', 'AI Gateway API key');
+    printKeyRow(keySource.key, {
+      keychain: useKeychain,
+      created: keySource.created,
+    });
     output.print(chalk.dim('  No config files changed.\n'));
   }
   if (results.length > 0) {
@@ -639,7 +643,10 @@ export default async function codingAgentsSetup(
         result.path
       );
     }
-    printKeyRow(keySource.key, { keychain: useKeychain });
+    printKeyRow(keySource.key, {
+      keychain: useKeychain,
+      created: keySource.created,
+    });
     if (results.some(r => r.backupPath)) {
       output.print(chalk.dim('  Previous files saved alongside as .bak\n'));
     }
