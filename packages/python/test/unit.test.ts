@@ -2481,9 +2481,20 @@ describe('pyproject subscribers', () => {
         ],
       },
     ]);
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: {
+          use: '@vercel/python',
+          src: 'pyproject.toml',
+          config: {},
+        },
+      })
+    ).resolves.toHaveLength(1);
   });
 
-  it('only contributes dev sidecars for standalone Python framework builds', async () => {
+  it('lets pyproject services and standalone frameworks contribute dev sidecars', async () => {
     await expect(
       getDevSidecars({
         workPath: mockWorkPath,
@@ -2500,6 +2511,55 @@ describe('pyproject subscribers', () => {
         },
       })
     ).resolves.toEqual([]);
+
+    const service = {
+      schema: 'experimentalServicesV2' as const,
+      name: 'backend',
+      root: 'backend',
+      framework: 'fastapi',
+      runtime: 'python',
+      entrypoint: 'app.py',
+      builder: {
+        use: '@vercel/python',
+        src: 'backend/app.py',
+        config: { framework: 'fastapi', workspace: 'backend' },
+      },
+    };
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: service.builder,
+        service,
+      })
+    ).resolves.toEqual([]);
+
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'worker.py'),
+      'from celery import Celery\napp = Celery("worker")\n'
+    );
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        '',
+        '[[tool.vercel.subscribers]]',
+        'entrypoint = "worker:app"',
+        'topics = ["celery"]',
+        '',
+      ].join('\n')
+    );
+    service.entrypoint = 'pyproject.toml';
+    service.builder.src = 'backend/pyproject.toml';
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: service.builder,
+        service,
+      })
+    ).resolves.toHaveLength(1);
   });
 
   it('emits one queue/v2beta Lambda per subscriber with all topics attached', async () => {

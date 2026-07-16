@@ -1,5 +1,108 @@
 # vercel
 
+## 56.3.0
+
+### Minor Changes
+
+- 238543c: Support Python services that declare their web app and development workflow sidecars through a `pyproject.toml` entrypoint in `vercel dev`.
+
+### Patch Changes
+
+- d5751d6: Allow Env, Target, Flags rules, Routes, Redirects, Firewall, and Git commands to select a project explicitly with `--project`, including from an unlinked directory.
+- 1d8e0ee: Extract project-link validation shared by routes, redirects, and firewall commands.
+- b0aa678: Consolidate suggested-command and subcommand-argument helpers while preserving explicit project context and required-argument validation.
+- c06b596: Fix `vercel domains add` sending the alias mutation under a stale ambient team scope. When run inside a directory linked to a project in another team, the command now resolves the local project link (like `vercel domains ls`) and scopes the domain/alias request to the linked team, so a same-name project in the ambient team can no longer be targeted by mistake.
+- a39869e: Fix `vercel dev` returning 404 for `api/` functions using the rust, python, ruby, or go runtimes when the project has a framework dev command (e.g. Next.js). These runtimes are registered by backend framework presets, which caused the dev server to misclassify `api/` functions as the frontend build and skip building them.
+- a55e7df: Replace user-facing `experimentalServices` references with `services` in error/warning messages and rename error codes (`NO_EXPERIMENTAL_SERVICES_CONFIGURED` → `NO_SERVICES_CONFIGURED`, `MISSING_EXPERIMENTAL_SERVICES` → `MISSING_SERVICES`). The deprecated v1 config key should no longer appear in guidance shown to users.
+- e4866e9: Skip the Rust `target/` directory by default for Rust projects.
+
+  Rust projects produce a `target/` directory of build artifacts that can be
+  hundreds of MB. It's rebuilt on Vercel during the deployment (and cached
+  server-side), so uploading it only slows deployments down. When a root
+  `Cargo.toml` is detected, `target/` is now ignored by default during
+  `vercel deploy` and `vercel dev`. Users can opt back in with `!/target` in
+  their `.vercelignore`.
+
+  Also hardened the local file scanner used by `vercel dev` so that a directory
+  removed mid-scan (a common race with `cargo build` churning `target/`) is
+  skipped instead of crashing the process.
+
+- 7ea6c7a: Preserve buildCommand and combine preDeployCommand when writing inferred services config to vercel.json in V2 format.
+- 4cce813: Write `[SENSITIVE]` placeholder instead of an empty string when `vercel env pull` encounters sensitive environment variables whose values cannot be read, so an unset value is distinguishable from a redacted one
+- Updated dependencies [b0ed8e5]
+- Updated dependencies [c555d3a]
+- Updated dependencies [238543c]
+- Updated dependencies [f97e2e0]
+  - @vercel/python@6.51.0
+  - @vercel/build-utils@13.34.0
+  - @vercel/static-build@2.11.8
+  - @vercel/backends@0.8.25
+  - @vercel/container@0.0.5
+  - @vercel/elysia@0.1.102
+  - @vercel/express@0.1.116
+  - @vercel/fastify@0.1.105
+  - @vercel/go@3.10.2
+  - @vercel/h3@0.1.111
+  - @vercel/hono@0.2.105
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.85
+  - @vercel/nestjs@0.2.106
+  - @vercel/next@4.20.4
+  - @vercel/node@5.8.26
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.0
+
+## 56.2.1
+
+### Patch Changes
+
+- ce094f1: Show a specific error message when purchasing v0 credits without a paid v0 plan, instead of the generic unexpected-error fallback.
+- 3e0e6a8: Refactor linked project resolution to use named options.
+- 877c1ba: Allow `vercel env ls` to target a project explicitly without linking the current directory.
+- 81360cf: Use `/v5/certs` instead of legacy `/v5/now/certs` when listing custom certs for a domain.
+- a6af051: Add `vercel flags versions <flag>` and `vercel flags versions diff <flag> --revision <number>` to inspect feature flag version history and changes.
+
+  Examples:
+
+  ```bash
+  vercel flags versions my-flag
+  vercel flags versions my-flag --environment production
+  vercel flags versions diff my-flag --revision 4
+  ```
+
+- 51c7c32: `vercel logs --follow` now resolves a deployment automatically instead of erroring. When no deployment is specified it follows, in order: the latest deployment on the current git branch (using the provider-agnostic `branch` filter, which also matches deployments from unrecognized git remotes), your latest deployment, then the latest production deployment. `--environment production` streams the latest production deployment directly, and `--environment preview` restricts resolution to preview deployments.
+- 51c7c32: `vercel logs` now defaults to `--expand` output when stderr is not a TTY (agents, pipes, CI), printing every log message in full instead of truncating messages to a fixed-width table column.
+- def07fc: Migrate `@vercel/client` and `@vercel/build-utils` from `node-fetch` to native `fetch`. This removes the last `url.parse()` usage from the CLI bundle, which triggered a `DEP0169` DeprecationWarning on Node 24 (visible in the standalone binary during `vercel deploy`).
+
+  BREAKING CHANGE (`@vercel/client`): the `agent?: http.Agent` option was replaced with `dispatcher?: FetchDispatcher` (an undici dispatcher, e.g. `undici.ProxyAgent`), since native `fetch` does not support Node.js HTTP agents. The CLI now threads its proxy-aware dispatcher through automatically, so `HTTP_PROXY`/`HTTPS_PROXY` behavior is unchanged for CLI users.
+
+- 75342cb: Resolve an explicit scope before looking up a project for local builds.
+- b16a9a2: Standardize explicit project resolution across existing project-aware commands.
+- 075dc0c: Respect explicit project and scope selection when resolving project context.
+- Updated dependencies [def07fc]
+  - @vercel/build-utils@13.33.1
+  - @vercel/backends@0.8.24
+  - @vercel/container@0.0.5
+  - @vercel/elysia@0.1.101
+  - @vercel/express@0.1.115
+  - @vercel/fastify@0.1.104
+  - @vercel/go@3.10.2
+  - @vercel/h3@0.1.110
+  - @vercel/hono@0.2.104
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.84
+  - @vercel/nestjs@0.2.105
+  - @vercel/next@4.20.4
+  - @vercel/node@5.8.25
+  - @vercel/python@6.50.0
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.0
+  - @vercel/static-build@2.11.7
+
 ## 56.2.0
 
 ### Minor Changes

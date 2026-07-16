@@ -56,6 +56,7 @@ export const addSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'sensitive',
       description: 'Store the value as sensitive for Production or Preview',
@@ -164,6 +165,7 @@ export const removeSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description:
@@ -207,6 +209,7 @@ export const pullSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       description: 'Set the Environment when pulling Environment Variables',
@@ -267,6 +270,7 @@ export const runSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       description:
@@ -314,6 +318,7 @@ export const updateSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'sensitive',
       description: 'Update to a sensitive Environment Variable',

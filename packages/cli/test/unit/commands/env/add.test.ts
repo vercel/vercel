@@ -1,7 +1,10 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import stripAnsi from 'strip-ansi';
 import env from '../../../../src/commands/env';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { defaultProject, envs, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
@@ -52,6 +55,48 @@ describe('env add', () => {
         },
       ]);
     });
+  });
+
+  it('adds a variable to the project selected by --project', async () => {
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject({
+      ...testProject,
+      id: 'explicit-env-add',
+      name: 'explicit-env-add',
+      accountId: 'team_dummy',
+    });
+    client.setArgv(
+      'env',
+      'add',
+      'EXPLICIT_PROJECT_VAR',
+      'development',
+      '--value',
+      'value',
+      '--yes',
+      '--project',
+      'explicit-env-add'
+    );
+
+    await expect(env(client)).resolves.toEqual(0);
+    await expect(client.stderr).toOutput('EXPLICIT_PROJECT_VAR');
+  });
+
+  it('continues to use the linked project when --project is omitted', async () => {
+    client.setArgv(
+      'env',
+      'add',
+      'LINKED_PROJECT_VAR',
+      'development',
+      '--value',
+      'value',
+      '--yes'
+    );
+
+    await expect(env(client)).resolves.toEqual(0);
+    expect(stripAnsi(client.stderr.getFullOutput())).toMatch(
+      /Project\s+\S+\/vercel-env-pull/
+    );
   });
 
   describe('[name]', () => {

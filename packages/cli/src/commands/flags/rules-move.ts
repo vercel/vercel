@@ -53,6 +53,7 @@ export default async function rulesMove(
   telemetryClient.trackCliOptionEnvironment(environment);
   telemetryClient.trackCliOptionPosition(position);
   telemetryClient.trackCliOptionMessage(message);
+  telemetryClient.trackCliOptionProject(flags['--project']);
 
   if (!flagArg || !ruleId || position === undefined) {
     output.error(
@@ -66,6 +67,7 @@ export default async function rulesMove(
 
   try {
     const context = await resolveRulesCommandContext(client, {
+      projectName: parsedArgs.flags['--project'],
       flagArg,
       environment,
       promptMessage: 'Select an environment containing the rule:',

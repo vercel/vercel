@@ -17,6 +17,11 @@ import { detectExplicitScope } from '../get-scope';
 interface EnsureLinkOptions extends SetupAndLinkOptions {
   /** When true, fail instead of setting up a project that is not linked. */
   requireExistingLink?: boolean;
+  /**
+   * Deploy-only fallback for project-scoped tokens that can fetch the linked
+   * project but cannot fetch the owner user/team resource.
+   */
+  allowOwnerLookupFallback?: boolean;
 }
 
 /**
@@ -63,6 +68,7 @@ export async function ensureLink(
         projectName: opts.projectName,
         projectNameIsExplicit: Boolean(opts.projectName && opts.failIfNotFound),
         scopeIsExplicit: detectExplicitScope(client),
+        allowOwnerLookupFallback: opts.allowOwnerLookupFallback,
       });
     }
     opts.link = link;

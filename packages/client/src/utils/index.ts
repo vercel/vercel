@@ -7,7 +7,7 @@ import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
 import { FetchDispatcher, VercelClientOptions, VercelConfig } from '../types';
 import { Sema } from 'async-sema';
-import { readFile, stat } from 'fs-extra';
+import { pathExists, readFile, stat } from 'fs-extra';
 import readdir from './readdir-recursive';
 import {
   findConfig as findMicrofrontendsConfig,
@@ -309,6 +309,14 @@ export async function getVercelIgnore(
         return vercelignore || nowignore;
       })
     );
+
+    const isRustProject = (
+      await Promise.all(cwds.map(cwd => pathExists(join(cwd, 'Cargo.toml'))))
+    ).some(Boolean);
+
+    if (isRustProject) {
+      ignores.push('/target');
+    }
 
     const ignoreFile = files.join('\n');
 

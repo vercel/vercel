@@ -1,6 +1,7 @@
 import { Readable } from 'stream';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { describe, expect, it, vi } from 'vitest';
+import { frameworkList } from '@vercel/frameworks';
 import DevServer from '../../../../src/util/dev/server';
 
 vi.mock('../../../../src/output-manager', () => ({
@@ -12,6 +13,71 @@ vi.mock('../../../../src/output-manager', () => ({
     error: vi.fn(),
   },
 }));
+
+describe('DevServer build filtering', () => {
+  it('keeps `api/` builds for every framework runtime when services are not configured', () => {
+    const server = new DevServer(process.cwd(), {});
+    const shouldBuildInDev = (server as any).shouldBuildInDev as (build: {
+      use: string;
+      src?: string;
+    }) => boolean;
+
+    const frameworkRuntimes = new Set(
+      frameworkList.map(f => f.useRuntime?.use).filter(Boolean)
+    );
+
+    expect(frameworkRuntimes.size).toBeGreaterThan(0);
+    for (const use of frameworkRuntimes) {
+      expect(
+        shouldBuildInDev({ use: use as string, src: 'api/handler.rs' })
+      ).toBe(true);
+    }
+  });
+
+  it('filters framework builds that are not in the `api/` directory', () => {
+    const server = new DevServer(process.cwd(), {});
+    const shouldBuildInDev = (server as any).shouldBuildInDev as (build: {
+      use: string;
+      src?: string;
+    }) => boolean;
+
+    expect(shouldBuildInDev({ use: '@vercel/next', src: 'package.json' })).toBe(
+      false
+    );
+    expect(shouldBuildInDev({ use: '@vercel/rust', src: 'src/main.rs' })).toBe(
+      false
+    );
+  });
+
+  it('keeps versioned `api/` builds with a leading "./" in `src`', () => {
+    const server = new DevServer(process.cwd(), {});
+    const shouldBuildInDev = (server as any).shouldBuildInDev as (build: {
+      use: string;
+      src?: string;
+    }) => boolean;
+
+    expect(
+      shouldBuildInDev({ use: '@vercel/rust@1.4.0', src: './api/simple.rs' })
+    ).toBe(true);
+  });
+
+  it('keeps the previous filtering behavior in services mode', () => {
+    const server = new DevServer(process.cwd(), {
+      services: [{ name: 'rust-api' }],
+    } as any);
+    const shouldBuildInDev = (server as any).shouldBuildInDev as (build: {
+      use: string;
+      src?: string;
+    }) => boolean;
+
+    expect(
+      shouldBuildInDev({ use: '@vercel/rust', src: 'api/simple.rs' })
+    ).toBe(false);
+    expect(shouldBuildInDev({ use: '@vercel/node', src: 'api/date.js' })).toBe(
+      true
+    );
+  });
+});
 
 describe('DevServer queue routes', () => {
   it('forwards the VQS idempotency key to the queue broker', async () => {

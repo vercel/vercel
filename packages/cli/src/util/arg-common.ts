@@ -1,5 +1,4 @@
 import { getFlagsSpecification } from './get-flags-specification';
-import { getCommandNamePlain } from './pkg-name';
 import { normalizeFlagName, stripSensitiveAuthArgs } from './redact-args';
 
 export const globalCommandOptions = [
@@ -119,7 +118,12 @@ export function globalCliFlagTakesValue(flagName: string): boolean {
  * Used when the suggested `next` command is the SAME subcommand so we
  * preserve e.g. --slug acme, --status 301 alongside globals.
  */
-const SUBCOMMAND_FLAG_TAKES_VALUE = new Set([
+const SUGGESTION_FLAGS_TAKING_VALUE = new Set([
+  '--config',
+  '--environment',
+  '--git-branch',
+  '--id',
+  '--value',
   '--status',
   '--name',
   '--slug',
@@ -131,20 +135,20 @@ const SUBCOMMAND_FLAG_TAKES_VALUE = new Set([
   '--per-page',
 ]);
 
-function suggestionFlagTakesSeparateValue(flagName: string): boolean {
+export function suggestionFlagTakesSeparateValue(flagName: string): boolean {
   const name = normalizeFlagName(flagName);
   if (globalCliFlagTakesValue(name)) return true;
-  return SUBCOMMAND_FLAG_TAKES_VALUE.has(name);
+  return SUGGESTION_FLAGS_TAKING_VALUE.has(name);
 }
 
 /**
  * Builds a flag suffix for suggested commands that repeat the SAME subcommand
  * as the user's invocation. Preserves subcommand-specific flags and their
- * values; skips bare positionals. Use this instead of getGlobalFlagsOnlyFromArgs
+ * values; skips bare positionals. Use this instead of getGlobalFlagsFromArgs
  * when next[] points at the same command (e.g. teams add with missing --name).
  *
  * When next[] points at a different subcommand (e.g. promote, list), use
- * getGlobalFlagsOnlyFromArgs so flags that don't apply are not forwarded.
+ * getGlobalFlagsFromArgs so flags that don't apply are not forwarded.
  */
 export function getSameSubcommandSuggestionFlags(args: string[]): string[] {
   const safeArgs = stripSensitiveAuthArgs(args);
@@ -285,11 +289,40 @@ for (const opt of globalCommandOptions) {
 /**
  * Collects only global CLI flags from argv for suggested next commands.
  */
-export function getGlobalFlagsOnlyFromArgs(args: string[]): string[] {
-  const safeArgs = stripSensitiveAuthArgs(args);
+export interface GetGlobalFlagsFromArgsOptions {
+  preserveProject?: boolean;
+  preserveYes?: boolean;
+  preserveConfig?: boolean;
+}
+
+export function getGlobalFlagsFromArgs(
+  args: string[],
+  options?: GetGlobalFlagsFromArgsOptions
+): string[] {
+  const delimiterIndex = args.indexOf('--');
+  const cliArgs = delimiterIndex === -1 ? args : args.slice(0, delimiterIndex);
+  const safeArgs = stripSensitiveAuthArgs(cliArgs);
   const out: string[] = [];
   for (let i = 0; i < safeArgs.length; i++) {
     const a = safeArgs[i];
+    if (options?.preserveYes && (a === '--yes' || a === '-y')) {
+      out.push(a);
+      continue;
+    }
+    if (
+      options?.preserveConfig &&
+      (a === '--config' || a.startsWith('--config='))
+    ) {
+      out.push(a);
+      if (a === '--config') {
+        const next = safeArgs[i + 1];
+        if (next && !next.startsWith('-')) {
+          out.push(next);
+          i++;
+        }
+      }
+      continue;
+    }
     let opt: GlobalOpt | undefined;
     if (a.startsWith('--') && a.includes('=')) {
       const name = a.slice(2).split('=')[0];
@@ -308,17 +341,43 @@ export function getGlobalFlagsOnlyFromArgs(args: string[]): string[] {
       }
     }
   }
+  if (options?.preserveProject) {
+    const projectOption = findProjectOption(safeArgs);
+    if (projectOption) out.push(...projectOption.args);
+  }
   return out;
 }
 
+interface ProjectOptionFromArgs {
+  value: string;
+  args: string[];
+}
+
+function findProjectOption(args: string[]): ProjectOptionFromArgs | undefined {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--') return undefined;
+    if (arg.startsWith('--project=')) {
+      return {
+        value: arg.slice('--project='.length),
+        args: [arg],
+      };
+    }
+    if (arg === '--project') {
+      const value = args[i + 1];
+      if (value && !value.startsWith('-')) {
+        return { value, args: [arg, value] };
+      }
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
 /**
- * Builds a suggested command with only global CLI flags preserved from argv.
- * Useful for agent next[] hints that should keep context flags like --cwd.
+ * Returns the explicit project selector from CLI arguments, ignoring arguments
+ * passed to a child command after `--`.
  */
-export function getCommandNameWithGlobalFlags(
-  commandTemplate: string,
-  argv: string[]
-): string {
-  const flags = getGlobalFlagsOnlyFromArgs(argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+export function getProjectOptionFromArgs(args: string[]): string | undefined {
+  return findProjectOption(args)?.value;
 }

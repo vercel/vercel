@@ -2655,12 +2655,13 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
   Options:
 
-       --force          Overwrite an existing variable for the same target                                                   
-       --guidance       Show command suggestions after completion                                                            
-       --no-sensitive   Store the value as non-sensitive when policy allows                                                  
-       --sensitive      Store the value as sensitive for Production or Preview                                               
-       --value <VALUE>  Set the variable value for non-interactive use; otherwise use stdin or the prompt                    
-  -y,  --yes            Skip the confirmation prompt when adding an Environment Variable                                     
+       --force                 Overwrite an existing variable for the same target                                            
+       --guidance              Show command suggestions after completion                                                     
+       --no-sensitive          Store the value as non-sensitive when policy allows                                           
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
+       --sensitive             Store the value as sensitive for Production or Preview                                        
+       --value <VALUE>         Set the variable value for non-interactive use; otherwise use stdin or the prompt             
+  -y,  --yes                   Skip the confirmation prompt when adding an Environment Variable                              
 
 
   Global Options:
@@ -2985,6 +2986,7 @@ exports[`help command > env help output snapshots > env pull help output snapsho
        --environment <TARGET>  Set the Environment when pulling Environment Variables                                        
        --git-branch <NAME>     Specify the Git branch to pull specific Environment Variables for                             
        --id <ID>               Pull environment variables for a specific deployment (e.g. dpl_xxx)                           
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
   -y,  --yes                   Skip the confirmation prompt when removing an environment variable                            
 
 
@@ -3024,7 +3026,8 @@ exports[`help command > env help output snapshots > env remove help output snaps
 
   Options:
 
-  -y,  --yes  Skip the confirmation prompt when removing an Environment Variable                                        
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
+  -y,  --yes                   Skip the confirmation prompt when removing an Environment Variable                            
 
 
   Global Options:
@@ -3069,7 +3072,8 @@ exports[`help command > git help output snapshots > git connect help output snap
 
   Options:
 
-  -y,  --yes  Accept default value for all prompts                                                                      
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
+  -y,  --yes                   Accept default value for all prompts                                                          
 
 
   Global Options:
@@ -3107,7 +3111,8 @@ exports[`help command > git help output snapshots > git disconnect help output s
 
   Options:
 
-  -y,  --yes  Accept default value for all prompts                                                                      
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
+  -y,  --yes                   Accept default value for all prompts                                                          
 
 
   Global Options:
@@ -7059,8 +7064,9 @@ exports[`help command > target help output snapshots > target list help output s
 
   Options:
 
-  -F,  --format <FORMAT>  Specify the output format (json)                                                              
-  -y,  --yes              Skip confirmation when linking is required (e.g. in non-interactive mode)                     
+  -F,  --format <FORMAT>       Specify the output format (json)                                                              
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
+  -y,  --yes                   Skip confirmation when linking is required (e.g. in non-interactive mode)                     
 
 
   Global Options:

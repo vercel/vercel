@@ -4,7 +4,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { getFlag, getFlagSettings } from '../../util/flags/get-flags';
 import { resolveFlagEnvironment } from '../../util/flags/environment-variant';
 import { formatVariantForDisplay } from '../../util/flags/resolve-variant';
-import { getLinkedProject } from '../../util/projects/link';
+import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import output from '../../output-manager';
 import type {
   Flag,
@@ -13,6 +13,7 @@ import type {
 } from '../../util/flags/types';
 
 interface ResolveRulesContextOptions {
+  projectName?: string;
   flagArg: string;
   environment?: string;
   promptMessage: string;
@@ -32,7 +33,10 @@ export async function resolveRulesCommandContext(
   client: Client,
   options: ResolveRulesContextOptions
 ): Promise<RulesCommandContext | { exitCode: number }> {
-  const link = await getLinkedProject(client);
+  const link = await resolveProjectContext({
+    client,
+    projectNameOrId: options.projectName,
+  });
   if (link.status === 'error') {
     return { exitCode: link.exitCode };
   } else if (link.status === 'not_linked') {
