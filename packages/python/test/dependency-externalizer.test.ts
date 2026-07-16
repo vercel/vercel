@@ -12,6 +12,7 @@ import {
   EPHEMERAL_INSTALL_BUDGET_BYTES,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
+  LARGE_FUNCTION_FILL_CEILING_BYTES,
   MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE,
 } from '../src/dependency-externalizer';
 import { classifyPackages, parseUvLock } from '@vercel/python-analysis';
@@ -311,6 +312,27 @@ describe('dependency externalizer support', () => {
 
     it('large function limit is greater than the ephemeral storage limit', () => {
       expect(MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE).toBeGreaterThan(
+        LAMBDA_EPHEMERAL_STORAGE_BYTES
+      );
+    });
+
+    it('large function fill ceiling is 5 MiB under the 5 GiB limit', () => {
+      expect(LARGE_FUNCTION_FILL_CEILING_BYTES).toBe(
+        MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE - 5 * 1024 * 1024
+      );
+    });
+
+    it('large function fill ceiling leaves margin under the size limit', () => {
+      // The margin absorbs files added after the fill (e.g. the handler
+      // trampoline) and byte-sum vs. platform measurement drift, so
+      // bytecode can never push a near-limit function over the check.
+      expect(LARGE_FUNCTION_FILL_CEILING_BYTES).toBeLessThan(
+        MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
+      );
+    });
+
+    it('large function fill ceiling is greater than the ephemeral storage limit', () => {
+      expect(LARGE_FUNCTION_FILL_CEILING_BYTES).toBeGreaterThan(
         LAMBDA_EPHEMERAL_STORAGE_BYTES
       );
     });
