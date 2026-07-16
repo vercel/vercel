@@ -79,7 +79,7 @@ export async function tryDetectServices(
 
   // No services configured
   const hasNoServicesError = result.errors.some(
-    e => e.code === 'NO_EXPERIMENTAL_SERVICES_CONFIGURED'
+    e => e.code === 'NO_SERVICES_CONFIGURED'
   );
   if (hasNoServicesError) {
     return null;

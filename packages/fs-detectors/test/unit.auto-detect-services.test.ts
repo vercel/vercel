@@ -456,7 +456,7 @@ describe('detectServices with auto-detection', () => {
       expect(result.services).toHaveLength(0);
       expect(result.errors).toEqual([
         {
-          code: 'NO_EXPERIMENTAL_SERVICES_CONFIGURED',
+          code: 'NO_SERVICES_CONFIGURED',
           message: 'No services configured. Add `services` to vercel.json.',
         },
       ]);
@@ -477,7 +477,7 @@ describe('detectServices with auto-detection', () => {
       expect(result.services).toHaveLength(0);
       expect(result.errors).toEqual([
         {
-          code: 'NO_EXPERIMENTAL_SERVICES_CONFIGURED',
+          code: 'NO_SERVICES_CONFIGURED',
           message: 'No services configured. Add `services` to vercel.json.',
         },
       ]);

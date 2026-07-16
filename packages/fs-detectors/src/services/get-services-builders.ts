@@ -72,7 +72,7 @@ export async function getServicesBuilders(
       builders: null,
       errors: [
         {
-          code: 'MISSING_EXPERIMENTAL_SERVICES',
+          code: 'MISSING_SERVICES',
           message:
             'Project framework is set to "services", but no services are declared. Add `services` to vercel.json with at least one service, or change the project framework setting.',
         },
@@ -142,7 +142,7 @@ export async function getServicesBuilders(
       builders: null,
       errors: [
         {
-          code: 'NO_EXPERIMENTAL_SERVICES_CONFIGURED',
+          code: 'NO_SERVICES_CONFIGURED',
           message: 'No services configured. Add `services` to vercel.json.',
         },
       ],
