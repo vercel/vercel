@@ -4,7 +4,7 @@ import output from '../../output-manager';
 import { disableSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
+  requireProjectContext,
   resolveRoute,
   offerAutoPromote,
   withGlobalFlags,
@@ -19,7 +19,7 @@ export default async function disable(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, disableSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client, parsed.flags['--project']);
+  const link = await requireProjectContext(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

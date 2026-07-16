@@ -139,7 +139,7 @@ export async function parseSubcommandArgs(
   return parsedArgs;
 }
 
-export function ensureProjectLink(client: Client, projectName?: string) {
+export function requireProjectContext(client: Client, projectName?: string) {
   return ensureProjectLinkForCommand(client, 'routes', projectName);
 }
 

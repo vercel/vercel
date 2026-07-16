@@ -3,7 +3,7 @@ import output from '../../output-manager';
 import { exportSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
+  requireProjectContext,
   withGlobalFlags,
 } from './shared';
 import { outputAgentError } from '../../util/agent-output';
@@ -80,7 +80,7 @@ export default async function exportRoutes(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, exportSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client, parsed.flags['--project']);
+  const link = await requireProjectContext(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
