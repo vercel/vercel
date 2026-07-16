@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Allow target, Flags rules, and Git commands to select a project explicitly with `--project`, using shared subcommand parsing and required argument validation helpers.
+Allow Env, Target, Flags rules, Routes, Redirects, Firewall, and Git commands to select a project explicitly with `--project`, including from an unlinked directory.
