@@ -43,7 +43,14 @@ export default async function selectOrg(
   autoConfirm?: boolean,
   searchable = false,
   /** Filled with resolution details for callers that adjust follow-up UI. */
-  meta?: { choiceCount?: number }
+  meta?: { choiceCount?: number },
+  /**
+   * Optional dim context rendered on a second line beneath the prompt. It is
+   * painted atomically with the prompt (which appears only after the async team
+   * load), so callers avoid printing a separate status line that would flash on
+   * its own during the load and then be jumped by the prompt.
+   */
+  description?: string
 ): Promise<Org> {
   const {
     config: { currentTeam },
@@ -198,9 +205,15 @@ export default async function selectOrg(
     return choices[0].value;
   }
 
+  // A dim second line under the prompt, painted with it rather than printed
+  // ahead of the async load.
+  const descriptionLine = description
+    ? `\n${chalk.dim(`  ${description}`)}`
+    : '';
+
   if (!searchable) {
     return await client.input.select({
-      message: question,
+      message: `${question}${descriptionLine}`,
       choices,
       default: choices[defaultChoiceIndex].value,
     });
@@ -218,7 +231,7 @@ export default async function selectOrg(
       : '';
 
   return await client.input.search<Org>({
-    message: `${question}${countHint}`,
+    message: `${question}${countHint}${descriptionLine}`,
     pageSize,
     source: term => {
       const searchTerm = term?.trim().toLowerCase();

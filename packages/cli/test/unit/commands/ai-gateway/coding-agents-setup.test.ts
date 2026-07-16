@@ -939,6 +939,21 @@ describe('ai-gateway coding-agents setup', () => {
       return aiGateway(client);
     }
 
+    it('shows the key-creation context on the team picker, not a separate line', async () => {
+      const exitCodePromise = startInteractiveSetup();
+
+      // The context rides on a dim second line of the team prompt itself,
+      // rather than being printed ahead of it (where it flashed during the
+      // async team load).
+      await expect(client.stderr).toOutput('Which team?');
+      await expect(client.stderr).toOutput('will be created under this team');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Apply these changes?');
+      client.stdin.write('n\n'); // no Keychain → y/n confirm; decline
+
+      expect(await exitCodePromise).toBe(0);
+    });
+
     it('cancels without creating a key or writing files', async () => {
       const exitCodePromise = startInteractiveSetup();
 

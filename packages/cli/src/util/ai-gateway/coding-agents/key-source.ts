@@ -134,7 +134,18 @@ export async function ensureTeam(
   const { machine, canPrompt, yes } = opts;
 
   if (canPrompt && !yes && !hasExplicitScopeFlag(client.argv)) {
-    const org = await selectOrg(client, 'Which team?', undefined, true);
+    // `searchable: true` opts into the fuzzy team picker (matching `vc link`).
+    // The key-creation context rides on a dim second line of this prompt so it
+    // appears with the picker rather than flashing on its own during the team
+    // load.
+    const org = await selectOrg(
+      client,
+      'Which team?',
+      undefined,
+      true,
+      undefined,
+      'The new AI Gateway API key will be created under this team.'
+    );
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
     return undefined;
   }

@@ -314,14 +314,9 @@ export default async function codingAgentsSetup(
   if (willCreate && agents.length > 0 && (!dryRun || canPrompt)) {
     const promptCreate = canPrompt && !yes;
 
-    if (promptCreate) {
-      printStatus(
-        chalk.dim(
-          'A new AI Gateway API key will be created for your coding agents.'
-        )
-      );
-    }
-
+    // The "a new key will be created" context is shown as a dim line on the
+    // team picker (see ensureTeam), so it appears with that prompt instead of
+    // flashing on its own line beforehand.
     const teamError = await ensureTeam(client, {
       machine,
       canPrompt,
