@@ -65,7 +65,7 @@ import { webhooksCommand } from './webhooks/command';
 import type { Command } from './help';
 import output from '../output-manager';
 
-const commandsStructs = [
+export const commandsStructs = [
   agentCommand,
   agentRunsCommand,
   aiGatewayCommand,

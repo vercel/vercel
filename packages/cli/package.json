@@ -27,6 +27,8 @@
     "vercel": "pnpm build && node ./dist/vc.js",
     "vc": "pnpm vercel",
     "type-check": "tsc --noEmit",
+    "generate-skill-reference": "tsx scripts/generate-skill-reference.ts",
+    "check-skill-reference": "tsx scripts/generate-skill-reference.ts --check",
     "test:evals": "tsx evals/run.ts",
     "test:evals:smoke": "tsx evals/run.ts smoke --smoke",
     "test:evals:dry": "tsx evals/run.ts --dry",
