@@ -5,7 +5,6 @@ import output from '../../output-manager';
 import { listSubcommand, targetCommand } from './command';
 import { validateLsArgs } from '../../util/validate-ls-args';
 import { ensureLink } from '../../util/link/ensure-link';
-import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import { formatProject } from '../../util/projects/format-project';
 import { formatEnvironment } from '../../util/target/format-environment';
 import { validateJsonOutput } from '../../util/output-format';
@@ -91,20 +90,11 @@ export default async function list(client: Client, argv: string[]) {
   telemetry.trackCliOptionProject(projectName);
 
   const autoConfirm = !!parsedArgs.flags['--yes'];
-  let link;
-  if (projectName) {
-    const resolvedProject = await resolveProjectContext({
-      client,
-      cwd,
-      projectNameOrId: projectName,
-    });
-    if (resolvedProject.status !== 'linked') {
-      return resolvedProject.status === 'error' ? resolvedProject.exitCode : 1;
-    }
-    link = resolvedProject;
-  } else {
-    link = await ensureLink(targetCommand.name, client, cwd, { autoConfirm });
-  }
+  const link = await ensureLink(targetCommand.name, client, cwd, {
+    autoConfirm,
+    projectName,
+    failIfNotFound: Boolean(projectName),
+  });
   if (typeof link === 'number') {
     return link;
   }

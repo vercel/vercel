@@ -20,7 +20,6 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { connectSubcommand } from './command';
 import { ensureLink } from '../../util/link/ensure-link';
-import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 
 interface ConnectArgParams {
   client: Client;
@@ -81,21 +80,12 @@ export default async function connect(client: Client, argv: string[]) {
   const repoArg = args[0];
   telemetry.trackCliArgumentGitUrl(repoArg);
 
-  let linkedProject;
-  if (opts['--project']) {
-    const resolvedProject = await resolveProjectContext({
-      client,
-      projectNameOrId: opts['--project'],
-    });
-    if (resolvedProject.status !== 'linked') {
-      return resolvedProject.status === 'error' ? resolvedProject.exitCode : 1;
-    }
-    linkedProject = resolvedProject;
-  } else {
-    linkedProject = await ensureLink('git', client, client.cwd, {
-      autoConfirm: confirm,
-    });
-  }
+  const projectName = opts['--project'];
+  const linkedProject = await ensureLink('git', client, client.cwd, {
+    autoConfirm: confirm,
+    projectName,
+    failIfNotFound: Boolean(projectName),
+  });
   if (typeof linkedProject === 'number') {
     return linkedProject;
   }
