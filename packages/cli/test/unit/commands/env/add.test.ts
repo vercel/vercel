@@ -82,6 +82,23 @@ describe('env add', () => {
     await expect(client.stderr).toOutput('EXPLICIT_PROJECT_VAR');
   });
 
+  it('continues to use the linked project when --project is omitted', async () => {
+    client.setArgv(
+      'env',
+      'add',
+      'LINKED_PROJECT_VAR',
+      'development',
+      '--value',
+      'value',
+      '--yes'
+    );
+
+    await expect(env(client)).resolves.toEqual(0);
+    expect(stripAnsi(client.stderr.getFullOutput())).toMatch(
+      /Project\s+\S+\/vercel-env-pull/
+    );
+  });
+
   describe('[name]', () => {
     describe('--sensitive', () => {
       it('tracks flag', async () => {
