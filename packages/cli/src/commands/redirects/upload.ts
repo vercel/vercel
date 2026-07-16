@@ -2,6 +2,7 @@ import { readFileSync } from 'fs';
 import { basename } from 'path';
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { ensureProjectLink } from '../../util/projects/ensure-project-link';
 import output from '../../output-manager';
 import {
   outputActionRequired,
@@ -15,7 +16,6 @@ import {
 import { uploadSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   getArgsAfterRedirectsSubcommand,
   getRedirectPromoteSuggestionFlags,
   buildRedirectsSuggestionFlags,
@@ -51,7 +51,7 @@ export default async function upload(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, uploadSubcommand);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'redirects');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

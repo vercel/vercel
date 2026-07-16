@@ -1,28 +1,27 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { ensureProjectLink } from '../../util/projects/ensure-project-link';
 import output from '../../output-manager';
 import { restoreSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   confirmAction,
-  validateRequiredArgs,
   printDiffSummary,
   findVersionById,
-  withGlobalFlags,
 } from './shared';
+import { validateRequiredArguments } from '../../util/command-arguments';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import updateRouteVersion from '../../util/routes/update-route-version';
 import getRoutes from '../../util/routes/get-routes';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
-import { outputAgentError } from '../../util/agent-output';
+import { outputAgentError, withGlobalFlags } from '../../util/agent-output';
 
 export default async function restore(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, restoreSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const error = validateRequiredArgs(parsed.args, ['version-id']);
+  const error = validateRequiredArguments(parsed.args, ['version-id']);
   if (error) {
     if (client.nonInteractive) {
       outputAgentError(client, {
@@ -46,7 +45,7 @@ export default async function restore(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'routes');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

@@ -177,6 +177,9 @@ describe('microfrontends create-group', () => {
       client.stdin.write('n\n');
 
       expect(await exitCodePromise).toBe(0);
+      expect(mockedGetLinkedProject).toHaveBeenCalledWith(client, {
+        cwd: client.cwd,
+      });
       expect(mocks.getPostCalled()).toBe(true);
       expect(mocks.getPostBody()).toEqual({
         groupName: 'My Group',

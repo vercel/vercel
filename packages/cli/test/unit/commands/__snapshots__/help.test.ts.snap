@@ -2952,8 +2952,9 @@ exports[`help command > env help output snapshots > env list help output snapsho
 
   Options:
 
-  -F,  --format <FORMAT>  Specify the output format (json)                                                              
-       --guidance         Receive command suggestions once command is complete                                          
+  -F,  --format <FORMAT>       Specify the output format (json)                                                              
+       --guidance              Receive command suggestions once command is complete                                          
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
 
 
   Global Options:

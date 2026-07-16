@@ -22,7 +22,7 @@ import { listSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
+import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import { determineAgent } from '@vercel/detect-agent';
 import { suggestNextCommands } from '../../util/suggest-next-commands';
 import { validateLsArgs } from '../../util/validate-ls-args';
@@ -69,13 +69,19 @@ export default async function ls(client: Client, argv: string[]) {
   telemetryClient.trackCliArgumentGitBranch(envGitBranch);
   telemetryClient.trackCliFlagGuidance(flags['--guidance']);
   telemetryClient.trackCliOptionFormat(flags['--format']);
+  const projectName = flags['--project'];
+  telemetryClient.trackCliOptionProject(projectName);
 
-  const link = await getLinkedProject(client);
+  const link = await resolveProjectContext({
+    client,
+    projectNameOrId: projectName,
+    commandName: 'env ls',
+  });
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
-      `Your codebase isn’t linked to a project on Vercel. ${client.nonInteractive ? `Run ${getCommandName('link --yes --team <team-id> --project <project-id>')} to link non-interactively.` : `Run ${getCommandName('link')} to begin.`}`
+      `Your codebase isn’t linked to a project on Vercel. Pass --project <name>, or ${client.nonInteractive ? `run ${getCommandName('link --yes --team <team-id> --project <project-id>')} to link non-interactively.` : `run ${getCommandName('link')} to begin.`}`
     );
     return 1;
   }
@@ -126,11 +132,11 @@ export default async function ls(client: Client, argv: string[]) {
   if (!asJson) {
     const { isAgent } = await determineAgent();
     const guidanceMode = parsedArgs.flags['--guidance'] ?? isAgent;
-    if (guidanceMode) {
+    if (guidanceMode && !projectName) {
       suggestNextCommands([
-        getCommandName(`env add`),
+        getCommandName('env add'),
         getCommandName('env rm'),
-        getCommandName(`env pull`),
+        getCommandName('env pull'),
       ]);
     }
   }

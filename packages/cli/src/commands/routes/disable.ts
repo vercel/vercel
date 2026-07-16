@@ -1,14 +1,10 @@
 import chalk from 'chalk';
+import { withGlobalFlags } from '../../util/agent-output';
 import type Client from '../../util/client';
+import { ensureProjectLink } from '../../util/projects/ensure-project-link';
 import output from '../../output-manager';
 import { disableSubcommand } from './command';
-import {
-  parseSubcommandArgs,
-  ensureProjectLink,
-  resolveRoute,
-  offerAutoPromote,
-  withGlobalFlags,
-} from './shared';
+import { parseSubcommandArgs, resolveRoute, offerAutoPromote } from './shared';
 import { outputAgentError } from '../../util/agent-output';
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
@@ -20,7 +16,7 @@ export default async function disable(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, disableSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'routes');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

@@ -1,10 +1,10 @@
 import chalk from 'chalk';
+import { withGlobalFlags } from '../../../util/agent-output';
 import type Client from '../../../util/client';
 import output from '../../../output-manager';
 import {
   detectExistingDraft,
   offerAutoPublish,
-  withGlobalFlags,
   printActionImpactWarning,
 } from '../shared';
 import { outputAgentError } from '../../../util/agent-output';
