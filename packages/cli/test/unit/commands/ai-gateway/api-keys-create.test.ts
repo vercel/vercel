@@ -85,7 +85,66 @@ describe('ai-gateway api-keys create', () => {
     });
   });
 
+  describe('success with expiration and alert thresholds', () => {
+    it('creates an API key with --expiration and --alert-thresholds', async () => {
+      const team = useTeam();
+      useUser();
+      let body: unknown;
+      client.scenario.post('/v1/api-keys', (req, res) => {
+        body = req.body;
+        res.json(mockApiKeyResponse);
+      });
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'api-keys',
+        'create',
+        '--budget',
+        '500',
+        '--alert-thresholds',
+        '75,100',
+        '--expiration',
+        '90d'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stdout).toOutput(mockApiKeyResponse.apiKeyString);
+      expect(await exitCodePromise).toBe(0);
+      expect(body).toMatchObject({
+        aiGatewayQuota: { limitAmount: 500, alertThresholds: [75, 100] },
+      });
+      expect((body as { expiresAt?: number }).expiresAt).toBeTypeOf('number');
+    });
+  });
+
   describe('validation', () => {
+    it('fails with invalid --alert-thresholds', async () => {
+      useUser();
+      client.setArgv(
+        'ai-gateway',
+        'api-keys',
+        'create',
+        '--alert-thresholds',
+        '80'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput('Invalid alert threshold "80"');
+      expect(await exitCodePromise).toBe(1);
+    });
+
+    it('fails with invalid --expiration', async () => {
+      useUser();
+      client.setArgv('ai-gateway', 'api-keys', 'create', '--expiration', '5m');
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput('Invalid expiration "5m"');
+      expect(await exitCodePromise).toBe(1);
+    });
+
     it('fails with invalid --refresh-period', async () => {
       useUser();
       client.setArgv(

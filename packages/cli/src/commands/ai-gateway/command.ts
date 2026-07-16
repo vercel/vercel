@@ -39,6 +39,24 @@ export const createSubcommand = {
       deprecated: false,
       description: 'Include BYOK usage in quota (default: false)',
     },
+    {
+      name: 'alert-thresholds',
+      shorthand: null,
+      type: String,
+      argument: 'LIST',
+      deprecated: false,
+      description:
+        'Comma-separated spend percentages to alert at, a subset of 50,75,100 (e.g. 75,100)',
+    },
+    {
+      name: 'expiration',
+      shorthand: null,
+      type: String,
+      argument: 'PERIOD',
+      deprecated: false,
+      description:
+        'Expiry for the key: 7d, 30d, 60d, 90d, 1y, or none (default: none)',
+    },
   ],
   examples: [
     {
@@ -49,6 +67,52 @@ export const createSubcommand = {
       name: 'Create an API key with a budget',
       value: `${packageName} ai-gateway api-keys create --name my-key --budget 500 --refresh-period monthly`,
     },
+    {
+      name: 'Create a key that expires and alerts on spend',
+      value: `${packageName} ai-gateway api-keys create --budget 500 --alert-thresholds 75,100 --expiration 90d`,
+    },
+  ],
+} as const;
+
+export const listSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List AI Gateway API keys',
+  arguments: [],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'List API keys',
+      value: `${packageName} ai-gateway api-keys ls`,
+    },
+  ],
+} as const;
+
+export const inspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description: 'Show details about an AI Gateway API key',
+  arguments: [{ name: 'id', required: true }],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Inspect an API key',
+      value: `${packageName} ai-gateway api-keys inspect key_123`,
+    },
+  ],
+} as const;
+
+export const removeSubcommand = {
+  name: 'remove',
+  aliases: ['rm', 'delete'],
+  description: 'Remove an AI Gateway API key',
+  arguments: [{ name: 'id', required: true }],
+  options: [yesOption, formatOption],
+  examples: [
+    {
+      name: 'Remove an API key',
+      value: `${packageName} ai-gateway api-keys rm key_123`,
+    },
   ],
 } as const;
 
@@ -57,7 +121,12 @@ export const apiKeysSubcommand = {
   aliases: [],
   description: 'Manage AI Gateway API keys',
   arguments: [],
-  subcommands: [createSubcommand],
+  subcommands: [
+    createSubcommand,
+    listSubcommand,
+    inspectSubcommand,
+    removeSubcommand,
+  ],
   options: [],
   examples: [],
 } as const;

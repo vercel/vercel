@@ -4,6 +4,7 @@ export type AiGatewayQuota = {
   limitAmount?: number;
   refreshPeriod?: string;
   includeByokInQuota?: boolean;
+  alertThresholds?: number[];
 };
 
 type CreateApiKeyRequest = {
