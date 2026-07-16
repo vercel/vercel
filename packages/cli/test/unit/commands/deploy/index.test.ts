@@ -11,7 +11,11 @@ import {
   setupUnitFixture,
   setupTmpDir,
 } from '../../../helpers/setup-unit-fixture';
-import { defaultProject, useProject } from '../../../mocks/project';
+import {
+  defaultProject,
+  useProject,
+  useUnknownProject,
+} from '../../../mocks/project';
 import { useDeployment, useBuildLogs } from '../../../mocks/deployment';
 import { useTeams, createTeam } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
@@ -2080,6 +2084,83 @@ describe('deploy', () => {
       expect(callCount).toEqual(2);
     });
 
+    it('should finish from the streamed alias event without a final deployment fetch', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      const deploymentId = 'dpl_streamed_alias';
+      const aliasAssigned = 1783370781619;
+      let statusFetchCount = 0;
+      let statusConnectionClosed = false;
+      let eventsConnectionClosed = false;
+
+      client.scenario.post(`/v13/deployments`, (_req, res) => {
+        res.json({
+          creator: { uid: user.id, username: user.username },
+          id: deploymentId,
+          url: 'streamed-alias.vercel.app',
+          readyState: 'BUILDING',
+          aliasAssigned: false,
+          target: 'production',
+          alias: ['initial-streamed-app.vercel.app'],
+        });
+      });
+
+      client.scenario.get(`/v13/deployments/${deploymentId}`, req => {
+        statusFetchCount++;
+        // Leave a raced status request open so the alias signal must abort it.
+        req.on('close', () => {
+          statusConnectionClosed = true;
+        });
+      });
+
+      client.scenario.get(
+        `/v3/now/deployments/${deploymentId}/events`,
+        (req, res) => {
+          req.on('close', () => {
+            eventsConnectionClosed = true;
+          });
+          res.write(
+            `${JSON.stringify({
+              type: 'alias-assigned',
+              deploymentId,
+              date: aliasAssigned,
+              alias: ['my-streamed-app.vercel.app'],
+              aliasError: null,
+              aliasWarning: {
+                code: 'alias_warning',
+                message: 'Alias warning from event',
+              },
+            })}\n`
+          );
+        }
+      );
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--yes');
+
+      const exitCode = await deploy(client);
+
+      expect(exitCode).toEqual(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Aliased         https://my-streamed-app.vercel.app'
+      );
+      expect(client.stderr.getFullOutput()).toContain(
+        'Alias warning from event'
+      );
+      expect(client.stderr.getFullOutput()).not.toContain('alias-assigned');
+      expect(statusFetchCount).toBeLessThanOrEqual(1);
+      if (statusFetchCount === 1) {
+        await vi.waitFor(() => expect(statusConnectionClosed).toBe(true));
+      }
+      await vi.waitFor(() => expect(eventsConnectionClosed).toBe(true));
+    });
+
     it('should display the ▲ gutter on Production when --no-wait skips the Aliased row', async () => {
       const user = useUser();
       useTeams('team_dummy');
@@ -3135,7 +3216,7 @@ describe('deploy', () => {
       const cwd = setupTmpDir();
       useUser();
       useTeams('team_dummy');
-      // Intentionally no useProject() — every API lookup will 404.
+      useUnknownProject();
 
       client.cwd = cwd;
       client.setArgv('deploy', '--yes', '--project=does-not-exist');

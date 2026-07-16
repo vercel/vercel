@@ -1,13 +1,9 @@
 import chalk from 'chalk';
 import type Client from '../../../util/client';
+import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
 import output from '../../../output-manager';
 import { systemBypassRemoveSubcommand } from '../command';
-import {
-  parseSubcommandArgs,
-  ensureProjectLink,
-  confirmAction,
-  withGlobalFlags,
-} from '../shared';
+import { parseSubcommandArgs, confirmAction, withGlobalFlags } from '../shared';
 import removeBypass from '../../../util/firewall/remove-bypass';
 import {
   validateBypassIp,
@@ -50,7 +46,7 @@ export default async function remove(client: Client, argv: string[]) {
     }
   }
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'firewall');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

@@ -1,10 +1,10 @@
 import chalk from 'chalk';
 import type Client from '../../../util/client';
+import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
 import output from '../../../output-manager';
 import { rulesRemoveSubcommand } from '../command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   resolveRule,
   confirmAction,
   detectExistingDraft,
@@ -27,7 +27,7 @@ export default async function remove(client: Client, argv: string[]) {
   );
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'firewall');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

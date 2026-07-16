@@ -1,10 +1,10 @@
 import chalk from 'chalk';
 import type Client from '../../../util/client';
+import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
 import output from '../../../output-manager';
 import { rulesEditSubcommand } from '../command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   confirmAction,
   detectExistingDraft,
   offerAutoPublish,
@@ -43,7 +43,7 @@ export default async function edit(client: Client, argv: string[]) {
 
   let identifier = parsed.args[0] as string | undefined;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'firewall');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

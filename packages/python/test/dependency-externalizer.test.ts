@@ -4,15 +4,15 @@ import path from 'path';
 import { tmpdir } from 'os';
 import {
   PythonDependencyExternalizer,
-  BYTECODE_COVERAGE_FLOOR,
   BYTECODE_FILL_CEILING_BYTES,
-  PYC_TO_PY_RATIO,
   calculateBundleSize,
-  estimateBytecodeSize,
   getPackagesReachableOnPlatform,
   lambdaKnapsack,
+  planPublicPackagePacking,
+  EPHEMERAL_INSTALL_BUDGET_BYTES,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
+  LARGE_FUNCTION_FILL_CEILING_BYTES,
   MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE,
 } from '../src/dependency-externalizer';
 import { classifyPackages, parseUvLock } from '@vercel/python-analysis';
@@ -272,61 +272,22 @@ describe('dependency externalizer support', () => {
     });
   });
 
-  describe('estimateBytecodeSize', () => {
-    it('estimates bytecode as PYC_TO_PY_RATIO times the .py bytes', async () => {
-      const files = {
-        'app.py': new FileFsRef({ fsPath: '/nonexistent/app.py', size: 100 }),
-        '_vendor/pkg/mod.py': new FileFsRef({
-          fsPath: '/nonexistent/mod.py',
-          size: 900,
-        }),
-        'lib.so': new FileFsRef({
-          fsPath: '/nonexistent/lib.so',
-          size: 5000,
-        }),
-      };
-
-      expect(await estimateBytecodeSize(files)).toBe(PYC_TO_PY_RATIO * 1000);
-    });
-
-    it('returns 0 when the bundle has no .py files', async () => {
-      const files = {
-        'lib.so': new FileFsRef({ fsPath: '/nonexistent/lib.so', size: 5000 }),
-      };
-
-      expect(await estimateBytecodeSize(files)).toBe(0);
-    });
-  });
-
-  describe('bytecode gate math (coverage floor)', () => {
+  describe('bytecode fill capacity guard', () => {
     const MB = 1024 * 1024;
-    const gatePasses = (bundleSize: number, pyBytes: number) => {
-      const capacity = BYTECODE_FILL_CEILING_BYTES - bundleSize;
-      const estimate = PYC_TO_PY_RATIO * pyBytes;
-      return capacity >= BYTECODE_COVERAGE_FLOOR * estimate;
-    };
+    // Mirrors the gate in the builder: compile whenever any capacity
+    // remains under the fill ceiling; skip only when nothing could ship.
+    const gatePasses = (bundleSize: number) =>
+      BYTECODE_FILL_CEILING_BYTES - bundleSize > 0;
 
-    it('compiles a 101MB all-Python app despite a partial fill', () => {
-      expect(gatePasses(101 * MB, 101 * MB)).toBe(true);
+    it('compiles near-limit apps regardless of expected coverage', () => {
+      // Previously skipped by the coverage-ratio heuristic.
+      expect(gatePasses(219 * MB)).toBe(true);
+      expect(gatePasses(200 * MB)).toBe(true);
     });
 
-    it('compiles all-Python apps up to the guaranteed zone boundary', () => {
-      // 220 - S >= 0.5 * 1.2 * S  =>  S <= 220 / 1.6 = 137.5MB
-      expect(gatePasses(137 * MB, 137 * MB)).toBe(true);
-      expect(gatePasses(138 * MB, 138 * MB)).toBe(false);
-    });
-
-    it('skips near-limit apps with low expected coverage', () => {
-      expect(gatePasses(219 * MB, 40 * MB)).toBe(false);
-      expect(gatePasses(200 * MB, 80 * MB)).toBe(false);
-    });
-
-    it('compiles binary-heavy near-limit apps with little .py', () => {
-      expect(gatePasses(200 * MB, 10 * MB)).toBe(true);
-    });
-
-    it('skips when the bundle exceeds the fill ceiling', () => {
-      expect(gatePasses(221 * MB, 0)).toBe(false);
+    it('skips when the bundle meets or exceeds the fill ceiling', () => {
+      expect(gatePasses(BYTECODE_FILL_CEILING_BYTES)).toBe(false);
+      expect(gatePasses(221 * MB)).toBe(false);
     });
   });
 
@@ -351,6 +312,27 @@ describe('dependency externalizer support', () => {
 
     it('large function limit is greater than the ephemeral storage limit', () => {
       expect(MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE).toBeGreaterThan(
+        LAMBDA_EPHEMERAL_STORAGE_BYTES
+      );
+    });
+
+    it('large function fill ceiling is 5 MiB under the 5 GiB limit', () => {
+      expect(LARGE_FUNCTION_FILL_CEILING_BYTES).toBe(
+        MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE - 5 * 1024 * 1024
+      );
+    });
+
+    it('large function fill ceiling leaves margin under the size limit', () => {
+      // The margin absorbs files added after the fill (e.g. the handler
+      // trampoline) and byte-sum vs. platform measurement drift, so
+      // bytecode can never push a near-limit function over the check.
+      expect(LARGE_FUNCTION_FILL_CEILING_BYTES).toBeLessThan(
+        MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
+      );
+    });
+
+    it('large function fill ceiling is greater than the ephemeral storage limit', () => {
+      expect(LARGE_FUNCTION_FILL_CEILING_BYTES).toBeGreaterThan(
         LAMBDA_EPHEMERAL_STORAGE_BYTES
       );
     });
@@ -1016,6 +998,51 @@ version = "8.1.7"
     });
   });
 
+  describe('planPublicPackagePacking', () => {
+    const MB = 1024 * 1024;
+
+    it('chooses bytecode-first when requested and the public set fits the ephemeral budget', () => {
+      const plan = planPublicPackagePacking({
+        publicPackageSizes: new Map([
+          ['a', 100 * MB],
+          ['b', 200 * MB],
+        ]),
+        zipCapacity: 150 * MB,
+        bytecodeFirst: true,
+      });
+      expect(plan.packingMode).toBe('bytecode-first');
+      expect(plan.bundledPublic).toEqual([]);
+    });
+
+    it('falls back to knapsack when the public set exceeds the ephemeral budget', () => {
+      const plan = planPublicPackagePacking({
+        publicPackageSizes: new Map([
+          ['a', 200 * MB],
+          ['b', EPHEMERAL_INSTALL_BUDGET_BYTES],
+        ]),
+        zipCapacity: 210 * MB,
+        bytecodeFirst: true,
+      });
+      expect(plan.packingMode).toBe('knapsack');
+      // The knapsack bundles what fits the zip; the rest installs at cold
+      // start.
+      expect(plan.bundledPublic).toEqual(['a']);
+    });
+
+    it('uses knapsack when bytecode-first is not requested, regardless of size', () => {
+      const plan = planPublicPackagePacking({
+        publicPackageSizes: new Map([
+          ['a', 150 * MB],
+          ['b', 100 * MB],
+        ]),
+        zipCapacity: 160 * MB,
+        bytecodeFirst: false,
+      });
+      expect(plan.packingMode).toBe('knapsack');
+      expect(plan.bundledPublic).toEqual(['a']);
+    });
+  });
+
   describe('analyze', () => {
     const originalLargeFunctionsEnv =
       process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
@@ -1473,6 +1500,10 @@ version = "8.1.7"
       const result = await ext.generateBundle(files);
 
       expect(result.fellBackToFullBundle).toBe(true);
+      // Package lists are only reported for a generated runtime-install
+      // bundle; the fallback bundles everything.
+      expect(result.alwaysBundledPackages).toBeUndefined();
+      expect(result.bundledPublicPackages).toBeUndefined();
       // Every vendor file is bundled directly.
       expect(files['_vendor/pkg/__init__.py']).toBe(
         allVendorFiles['_vendor/pkg/__init__.py']

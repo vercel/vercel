@@ -3,7 +3,6 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { outputAgentError, buildCommandWithYes } from '../../util/agent-output';
@@ -72,46 +71,6 @@ export async function parseSubcommandArgs(
   }
 
   return parsedArgs;
-}
-
-export async function ensureProjectLink(client: Client) {
-  const link = await getLinkedProject(client);
-
-  if (link.status === 'error') {
-    return link.exitCode;
-  } else if (link.status === 'not_linked') {
-    if (client.nonInteractive) {
-      const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-      const cmd = getCommandNamePlain(`link ${flags.join(' ')}`.trim());
-      outputAgentError(
-        client,
-        {
-          status: AGENT_STATUS.ERROR,
-          reason: AGENT_REASON.NOT_LINKED,
-          userActionRequired: true,
-          message:
-            'Your codebase is not linked to a Vercel project. Run link first, then retry firewall commands.',
-          next: [
-            {
-              command: cmd,
-              when: 'to link this directory to a project',
-            },
-          ],
-        },
-        1
-      );
-      return 1;
-    }
-    output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
-    );
-    return 1;
-  }
-
-  client.config.currentTeam =
-    link.org.type === 'team' ? link.org.id : undefined;
-
-  return link;
 }
 
 export async function confirmAction(

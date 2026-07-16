@@ -4,6 +4,7 @@ import type {
   SdkKey,
   CreatedSdkKey,
   FlagSettings,
+  FlagVersion,
   Segment,
   SegmentMembershipOperation,
   UpdateFlagRequest,
@@ -167,6 +168,97 @@ export const defaultSdkKeys: SdkKey[] = [
   },
 ];
 
+export const defaultFlagVersions: FlagVersion[] = [
+  {
+    id: 'flag_version_3',
+    flagId: 'flag_abc123',
+    revision: 3,
+    createdAt: Date.now() - 3600000,
+    createdBy: 'user_456',
+    message: 'Enabled production rollout',
+    changedEnvironments: ['production'],
+    metadata: {
+      creator: {
+        id: 'user_456',
+        name: 'Ada Lovelace',
+      },
+    },
+    data: {
+      description: defaultFlags[0].description,
+      variants: defaultFlags[0].variants,
+      environments: defaultFlags[0].environments,
+      seed: defaultFlags[0].seed,
+      state: defaultFlags[0].state,
+    },
+  },
+  {
+    id: 'flag_version_2',
+    flagId: 'flag_abc123',
+    revision: 2,
+    createdAt: Date.now() - 7200000,
+    createdBy: 'user_123',
+    message: 'Updated preview defaults',
+    changedEnvironments: ['preview'],
+    metadata: {
+      creator: {
+        id: 'user_123',
+        name: 'Grace Hopper',
+      },
+    },
+    data: {
+      description: defaultFlags[0].description,
+      variants: defaultFlags[0].variants,
+      environments: defaultFlags[0].environments,
+      seed: defaultFlags[0].seed,
+      state: defaultFlags[0].state,
+    },
+  },
+  {
+    id: 'flag_version_1',
+    flagId: 'flag_abc123',
+    revision: 1,
+    createdAt: Date.now() - 86400000,
+    createdBy: 'user_123',
+    message: 'Created flag',
+    changedEnvironments: ['production', 'preview', 'development'],
+    metadata: {
+      creator: {
+        id: 'user_123',
+        name: 'Grace Hopper',
+      },
+    },
+    data: {
+      description: defaultFlags[0].description,
+      variants: defaultFlags[0].variants,
+      environments: defaultFlags[0].environments,
+      seed: defaultFlags[0].seed,
+      state: defaultFlags[0].state,
+    },
+  },
+  {
+    id: 'flag_version_4',
+    flagId: 'flag_def456',
+    revision: 2,
+    createdAt: Date.now() - 7200000,
+    createdBy: 'user_123',
+    message: 'Created string flag',
+    changedEnvironments: ['production', 'preview', 'development'],
+    metadata: {
+      creator: {
+        id: 'user_123',
+        name: 'Grace Hopper',
+      },
+    },
+    data: {
+      description: defaultFlags[1].description,
+      variants: defaultFlags[1].variants,
+      environments: defaultFlags[1].environments,
+      seed: defaultFlags[1].seed,
+      state: defaultFlags[1].state,
+    },
+  },
+];
+
 export const defaultSegments: Segment[] = [
   {
     id: 'seg_beta123',
@@ -233,7 +325,8 @@ export function useFlags(
   settings: FlagSettings = defaultFlagSettings,
   segmentsList: Segment[] = defaultSegments,
   onUpdateFlag?: (request: UpdateFlagRequest) => void,
-  onGetSettings?: () => void
+  onGetSettings?: () => void,
+  versionsList: FlagVersion[] = defaultFlagVersions
 ) {
   // Get flag settings
   client.scenario.get(
@@ -279,6 +372,46 @@ export function useFlags(
         nextOffset < filteredFlags.length ? String(nextOffset) : null;
 
       res.json({ data: page, pagination: { next } });
+    }
+  );
+
+  // List flag versions
+  client.scenario.get(
+    '/v1/projects/:projectId/feature-flags/flags/:flagIdOrSlug/versions',
+    (req, res) => {
+      const { flagIdOrSlug } = req.params;
+      const flag = flagsList.find(
+        f => f.id === flagIdOrSlug || f.slug === flagIdOrSlug
+      );
+      if (!flag) {
+        res.status(404).json({ error: { message: 'Flag not found' } });
+        return;
+      }
+
+      const environment = req.query.environment as string | undefined;
+      let filteredVersions = versionsList.filter(
+        version => version.flagId === flag.id
+      );
+      if (environment) {
+        filteredVersions = filteredVersions.filter(version =>
+          version.changedEnvironments.includes(environment)
+        );
+      }
+
+      const limit = req.query.limit ? Number(req.query.limit) : 20;
+      const offset = req.query.cursor ? Number(req.query.cursor) : 0;
+      const page = filteredVersions.slice(offset, offset + limit);
+      const nextOffset = offset + limit;
+      const next =
+        nextOffset < filteredVersions.length ? String(nextOffset) : null;
+
+      res.json({
+        versions: page,
+        pagination: {
+          cursor: next,
+          hasNext: next !== null,
+        },
+      });
     }
   );
 

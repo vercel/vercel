@@ -1,13 +1,9 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { ensureProjectLink } from '../../util/projects/ensure-project-link';
 import output from '../../output-manager';
 import { discardSubcommand } from './command';
-import {
-  parseSubcommandArgs,
-  ensureProjectLink,
-  confirmAction,
-  withGlobalFlags,
-} from './shared';
+import { parseSubcommandArgs, confirmAction, withGlobalFlags } from './shared';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import deleteFirewallDraft from '../../util/firewall/delete-firewall-draft';
 import { formatDiffOutput } from '../../util/firewall/format';
@@ -18,7 +14,7 @@ export default async function discard(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, discardSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'firewall');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

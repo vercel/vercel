@@ -1,11 +1,8 @@
 import type Client from '../../util/client';
+import { ensureProjectLink } from '../../util/projects/ensure-project-link';
 import output from '../../output-manager';
 import { exportSubcommand } from './command';
-import {
-  parseSubcommandArgs,
-  ensureProjectLink,
-  withGlobalFlags,
-} from './shared';
+import { parseSubcommandArgs, withGlobalFlags } from './shared';
 import { outputAgentError } from '../../util/agent-output';
 import getRoutes from '../../util/routes/get-routes';
 import { getCommandName } from '../../util/pkg-name';
@@ -81,18 +78,20 @@ export default async function exportRoutes(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, exportSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'routes');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
   const teamId = org.type === 'team' ? org.id : undefined;
   const { args, flags } = parsed;
-  const format = (flags['--format'] as string) || 'json';
+  const rawFormat = (flags['--output'] as string) || 'json';
+  // Accept both bare and dotted, file-extension-style values (e.g. `ts` or `.ts`).
+  const format = rawFormat.toLowerCase().replace(/^\./, '');
   const nameOrId = args[0];
 
   const validFormats = ['json', 'ts'];
   if (!validFormats.includes(format)) {
-    const msg = `Invalid format: "${format}". Valid formats: ${validFormats.join(', ')}. Usage: ${getCommandName('routes export --format json')}`;
+    const msg = `Invalid output format: "${rawFormat}". Valid formats: ${validFormats.join(', ')}. Usage: ${getCommandName('routes export --output json')}`;
     if (client.nonInteractive) {
       outputAgentError(client, {
         status: 'error',
@@ -100,7 +99,7 @@ export default async function exportRoutes(client: Client, argv: string[]) {
         message: msg,
         next: [
           {
-            command: withGlobalFlags(client, 'routes export --format json'),
+            command: withGlobalFlags(client, 'routes export --output json'),
           },
         ],
       });

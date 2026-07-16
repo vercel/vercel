@@ -1,10 +1,10 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { ensureProjectLink } from '../../util/projects/ensure-project-link';
 import output from '../../output-manager';
 import { deleteSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   resolveRoutes,
   offerAutoPromote,
   withGlobalFlags,
@@ -22,7 +22,7 @@ export default async function deleteRoute(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, deleteSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'routes');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

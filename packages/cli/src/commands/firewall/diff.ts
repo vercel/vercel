@@ -1,13 +1,9 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { ensureProjectLink } from '../../util/projects/ensure-project-link';
 import output from '../../output-manager';
 import { diffSubcommand } from './command';
-import {
-  parseSubcommandArgs,
-  ensureProjectLink,
-  outputJson,
-  withGlobalFlags,
-} from './shared';
+import { parseSubcommandArgs, outputJson, withGlobalFlags } from './shared';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import { formatDiffOutput } from '../../util/firewall/format';
 import { getCommandName } from '../../util/pkg-name';
@@ -17,7 +13,7 @@ export default async function diff(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, diffSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'firewall');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

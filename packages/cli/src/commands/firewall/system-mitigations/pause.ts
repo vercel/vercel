@@ -1,13 +1,9 @@
 import chalk from 'chalk';
 import type Client from '../../../util/client';
+import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
 import output from '../../../output-manager';
 import { systemMitigationsPauseSubcommand } from '../command';
-import {
-  parseSubcommandArgs,
-  ensureProjectLink,
-  confirmAction,
-  withGlobalFlags,
-} from '../shared';
+import { parseSubcommandArgs, confirmAction, withGlobalFlags } from '../shared';
 import addBypass from '../../../util/firewall/add-bypass';
 import stamp from '../../../util/output/stamp';
 import { outputAgentError } from '../../../util/agent-output';
@@ -54,7 +50,7 @@ export default async function pause(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'firewall');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

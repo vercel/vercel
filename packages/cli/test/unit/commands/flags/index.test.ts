@@ -6,6 +6,7 @@ import * as rolloutFlag from '../../../../src/commands/flags/rollout';
 import * as segmentsFlag from '../../../../src/commands/flags/segments';
 import * as splitFlag from '../../../../src/commands/flags/split';
 import * as updateFlag from '../../../../src/commands/flags/update';
+import * as versionsFlag from '../../../../src/commands/flags/versions';
 import { client } from '../../../mocks/client';
 
 describe('flags', () => {
@@ -15,6 +16,7 @@ describe('flags', () => {
   const segmentsSpy = vi.spyOn(segmentsFlag, 'segments').mockResolvedValue(0);
   const splitSpy = vi.spyOn(splitFlag, 'default').mockResolvedValue(0);
   const updateSpy = vi.spyOn(updateFlag, 'default').mockResolvedValue(0);
+  const versionsSpy = vi.spyOn(versionsFlag, 'default').mockResolvedValue(0);
 
   afterEach(() => {
     lsSpy.mockClear();
@@ -23,6 +25,7 @@ describe('flags', () => {
     segmentsSpy.mockClear();
     splitSpy.mockClear();
     updateSpy.mockClear();
+    versionsSpy.mockClear();
   });
 
   describe('--help', () => {
@@ -80,6 +83,14 @@ describe('flags', () => {
     client.setArgv('flags', 'update', ...args);
     await flags(client);
     expect(updateSpy).toHaveBeenCalledWith(client, args);
+  });
+
+  it('routes to versions subcommand', async () => {
+    const args: string[] = ['my-feature', '--limit', '10'];
+
+    client.setArgv('flags', 'versions', ...args);
+    await flags(client);
+    expect(versionsSpy).toHaveBeenCalledWith(client, args);
   });
 
   it('routes to rollout subcommand', async () => {

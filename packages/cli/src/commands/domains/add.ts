@@ -200,7 +200,9 @@ export default async function add(client: Client, argv: string[]) {
 
   const force = opts['--force'];
   telemetry.trackCliFlagForce(force);
-  const { contextName } = await getScope(client);
+  // Scope the mutation to the linked project's team (like `domains ls`) so a
+  // stale ambient team can't be targeted.
+  const { contextName } = await getScope(client, { resolveLocalScope: true });
 
   if (args.length < 1 || args.length > 2) {
     if (client.nonInteractive) {

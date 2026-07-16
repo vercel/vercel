@@ -16,8 +16,14 @@ import execa from 'execa';
 import { FileFsRef } from '@vercel/build-utils';
 import {
   COMPILEALL_TIMEOUT_MS,
+  PYCACHE_PREFIX_DIR,
+  RUNTIME_PYCACHE_PREFIX,
   collectAppBytecodeFiles,
+  collectAppPrefixBytecodeFiles,
+  derivePrefixPycBundlePath,
+  derivePrefixPycRelPath,
   derivePycPath,
+  deriveStagedPycFsPath,
   getCompileAllAppExcludeRegex,
   runCompileAll,
   shouldCompileAll,
@@ -168,6 +174,44 @@ describe('runCompileAll', () => {
       })
     ).resolves.toBeUndefined();
   });
+
+  it('sets PYTHONPYCACHEPREFIX on the subprocess when pycachePrefix is provided', async () => {
+    mockedExeca.mockResolvedValue({} as any);
+    const env = { VIRTUAL_ENV: '/work/.vercel/python/.venv' };
+
+    await runCompileAll({
+      pythonBin: '/work/.vercel/python/.venv/bin/python',
+      filesOrDirectories: ['/work'],
+      env,
+      pycachePrefix: '/work/.vercel/python/pycache',
+    });
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      '/work/.vercel/python/.venv/bin/python',
+      expect.arrayContaining(['-m', 'compileall']),
+      {
+        env: { ...env, PYTHONPYCACHEPREFIX: '/work/.vercel/python/pycache' },
+        timeout: COMPILEALL_TIMEOUT_MS,
+      }
+    );
+  });
+
+  it('does not set PYTHONPYCACHEPREFIX without pycachePrefix', async () => {
+    mockedExeca.mockResolvedValue({} as any);
+    const env = { VIRTUAL_ENV: '/work/.vercel/python/.venv' };
+
+    await runCompileAll({
+      pythonBin: '/work/.vercel/python/.venv/bin/python',
+      filesOrDirectories: ['/work'],
+      env,
+    });
+
+    const passedEnv = mockedExeca.mock.calls[0][2]?.env as Record<
+      string,
+      string
+    >;
+    expect(passedEnv.PYTHONPYCACHEPREFIX).toBeUndefined();
+  });
 });
 
 describe('derivePycPath', () => {
@@ -179,6 +223,57 @@ describe('derivePycPath', () => {
 
   it('returns null for non-Python files', () => {
     expect(derivePycPath('pkg/data.txt', 3, 12)).toBeNull();
+  });
+});
+
+describe('pycache-prefix path derivation', () => {
+  it('derives the prefix-relative pyc path (no __pycache__ component)', () => {
+    expect(derivePrefixPycRelPath('pkg/mod.py', 3, 12)).toBe(
+      'pkg/mod.cpython-312.pyc'
+    );
+    expect(derivePrefixPycRelPath('pkg/data.txt', 3, 12)).toBeNull();
+  });
+
+  it('derives the staged pyc fs path from an absolute source path', () => {
+    expect(
+      deriveStagedPycFsPath('/staging', '/vercel/path0/src/app.py', 3, 12)
+    ).toBe('/staging/vercel/path0/src/app.cpython-312.pyc');
+    expect(deriveStagedPycFsPath('/staging', '/x/lib.so', 3, 12)).toBeNull();
+  });
+
+  it('strips the Windows drive like CPython cache_from_source (vercel build on Windows)', () => {
+    const derived = deriveStagedPycFsPath(
+      '/staging',
+      'C:\\Users\\dev\\proj\\app.py',
+      3,
+      12
+    );
+    // CPython drops the drive and leading separators before joining onto
+    // the prefix, so the derived path must not retain "C:".
+    expect(derived).not.toBeNull();
+    expect(derived).not.toContain('C:');
+    expect(derived!.replaceAll('\\', '/')).toBe(
+      '/staging/Users/dev/proj/app.cpython-312.pyc'
+    );
+  });
+
+  it('derives the zip bundle key from a runtime absolute path', () => {
+    expect(
+      derivePrefixPycBundlePath('/var/task/_vendor/pkg/mod.py', 3, 12)
+    ).toBe(`${PYCACHE_PREFIX_DIR}/var/task/_vendor/pkg/mod.cpython-312.pyc`);
+    expect(
+      derivePrefixPycBundlePath(
+        '/tmp/_vc_deps/lib/python3.12/site-packages/pkg/mod.py',
+        3,
+        12
+      )
+    ).toBe(
+      `${PYCACHE_PREFIX_DIR}/tmp/_vc_deps/lib/python3.12/site-packages/pkg/mod.cpython-312.pyc`
+    );
+  });
+
+  it('runtime prefix constant addresses the bundle tree under /var/task', () => {
+    expect(RUNTIME_PYCACHE_PREFIX).toBe(`/var/task/${PYCACHE_PREFIX_DIR}`);
   });
 });
 
@@ -244,5 +339,68 @@ describe('app bytecode collection', () => {
     expect(result.perItemSizes.get('pkg/__pycache__/app.cpython-312.pyc')).toBe(
       10
     );
+  });
+
+  it('collects staged prefix bytecode keyed under the runtime task root', async () => {
+    const workPath = makeTempWorkPath();
+    const stagingDir = path.join(workPath, '.vercel', 'python', 'pycache');
+
+    // compileall with PYTHONPYCACHEPREFIX writes
+    // <staging>/<abs source dir>/<mod>.<tag>.pyc
+    const stagedPyc = path.join(
+      stagingDir,
+      workPath.replace(/^[/\\]+/, ''),
+      'pkg',
+      'app.cpython-312.pyc'
+    );
+    fs.mkdirSync(path.dirname(stagedPyc), { recursive: true });
+    fs.writeFileSync(stagedPyc, Buffer.alloc(12));
+
+    const result = await collectAppPrefixBytecodeFiles({
+      stagingDir,
+      workPath,
+      files: {
+        'pkg/app.py': new FileFsRef({
+          fsPath: path.join(workPath, 'pkg', 'app.py'),
+        }),
+        'static/logo.png': new FileFsRef({
+          fsPath: path.join(workPath, 'static', 'logo.png'),
+        }),
+      },
+      runtimeTaskRoot: '/var/task',
+      pythonMajor: 3,
+      pythonMinor: 12,
+    });
+
+    expect(Object.keys(result.files)).toEqual([
+      `${PYCACHE_PREFIX_DIR}/var/task/pkg/app.cpython-312.pyc`,
+    ]);
+    expect(result.totalSize).toBe(12);
+    const ref = result.files[
+      `${PYCACHE_PREFIX_DIR}/var/task/pkg/app.cpython-312.pyc`
+    ] as FileFsRef;
+    expect(ref.fsPath).toBe(stagedPyc);
+  });
+
+  it('silently drops app sources with no staged pyc', async () => {
+    const workPath = makeTempWorkPath();
+    const stagingDir = path.join(workPath, '.vercel', 'python', 'pycache');
+    fs.mkdirSync(stagingDir, { recursive: true });
+
+    const result = await collectAppPrefixBytecodeFiles({
+      stagingDir,
+      workPath,
+      files: {
+        'missing.py': new FileFsRef({
+          fsPath: path.join(workPath, 'missing.py'),
+        }),
+      },
+      runtimeTaskRoot: '/var/task',
+      pythonMajor: 3,
+      pythonMinor: 12,
+    });
+
+    expect(Object.keys(result.files)).toHaveLength(0);
+    expect(result.totalSize).toBe(0);
   });
 });

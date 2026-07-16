@@ -1,13 +1,9 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { ensureProjectLink } from '../../util/projects/ensure-project-link';
 import output from '../../output-manager';
 import { addSubcommand } from './command';
-import {
-  parseSubcommandArgs,
-  ensureProjectLink,
-  parsePosition,
-  offerAutoPromote,
-} from './shared';
+import { parseSubcommandArgs, parsePosition, offerAutoPromote } from './shared';
 import addRoute from '../../util/routes/add-route';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import { parseConditions } from '../../util/routes/parse-conditions';
@@ -127,7 +123,7 @@ export default async function add(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, addSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'routes');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

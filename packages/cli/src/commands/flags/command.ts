@@ -118,6 +118,134 @@ export const inspectSubcommand = {
   ],
 } as const;
 
+export const versionsListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  default: true,
+  description: 'List version history for a feature flag',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description: 'Filter versions by changed environment',
+      argument: 'ENV',
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Return at most NUMBER versions (1-100)',
+      argument: 'NUMBER',
+    },
+    {
+      name: 'cursor',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Pagination cursor from a previous versions response',
+      argument: 'CURSOR',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'List version history for a feature flag',
+      value: `${packageName} flags versions my-feature-flag`,
+    },
+    {
+      name: 'List version history using the explicit list subcommand',
+      value: `${packageName} flags versions list my-feature-flag`,
+    },
+    {
+      name: 'List production version history',
+      value: `${packageName} flags versions my-feature-flag --environment production`,
+    },
+    {
+      name: 'List the next page of version history',
+      value: `${packageName} flags versions my-feature-flag --limit 10 --cursor <cursor>`,
+    },
+    {
+      name: 'List version history as JSON',
+      value: `${packageName} flags versions my-feature-flag --json`,
+    },
+  ],
+} as const;
+
+export const versionsDiffSubcommand = {
+  name: 'diff',
+  aliases: [],
+  description: 'Show changes introduced by a feature flag version',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'revision',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Revision number to compare with the previous revision',
+      argument: 'NUMBER',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output the diff in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'Show what changed in a revision',
+      value: `${packageName} flags versions diff my-feature-flag --revision 4`,
+    },
+    {
+      name: 'Show the revision diff as JSON',
+      value: `${packageName} flags versions diff my-feature-flag --revision 4 --json`,
+    },
+  ],
+} as const;
+
+export const versionsSubcommand = {
+  name: 'versions',
+  aliases: [],
+  description: 'List and compare version history for a feature flag',
+  arguments: [],
+  subcommands: [versionsListSubcommand, versionsDiffSubcommand],
+  options: [],
+  examples: [
+    {
+      name: 'List version history for a feature flag',
+      value: `${packageName} flags versions my-feature-flag`,
+    },
+    {
+      name: 'Show what changed in a revision',
+      value: `${packageName} flags versions diff my-feature-flag --revision 4`,
+    },
+  ],
+} as const;
+
 export const createSubcommand = {
   name: 'create',
   aliases: ['add'],
@@ -1408,6 +1536,7 @@ export const flagsCommand = {
   subcommands: [
     listSubcommand,
     inspectSubcommand,
+    versionsSubcommand,
     createSubcommand,
     openSubcommand,
     updateSubcommand,
