@@ -1,14 +1,8 @@
 # Deployment
 
+Bare `vercel` (or `vercel deploy`) creates a preview deployment; `--prod` targets production and `--target <name>` targets a custom environment. Run `vercel deploy --help` for flags; this file covers workflows and behavior that help output cannot tell you.
+
 Ensure `.vercel/` exists before deploying (via `vercel link` or `vercel link --repo`).
-
-## Basic Usage
-
-```bash
-vercel                    # preview deployment (default)
-vercel --prod             # production deployment
-vercel --target staging   # custom environment
-```
 
 ## Prebuilt Deploy
 
@@ -70,12 +64,11 @@ vercel curl /api/health --deployment $PREVIEW_URL
 
 **Do not disable deployment protection.** Use `vercel curl` instead.
 
-## Other Deploy Commands
+## Choosing A Deploy Command
 
-- `vercel redeploy <url>` — rebuild an existing deployment; no no-cache flag
-- `vercel promote <url>` — move a deployment to production without rebuilding
-- `vercel rollback <url>` — revert to a previous deployment
-- `vercel rolling-release` / `vercel rr` — gradual traffic shifting
+- `vercel promote <url>` moves an existing deployment to production **without rebuilding** — prefer it over redeploying when the build is already good.
+- `vercel rollback <url>` reverts production to a previous deployment.
+- `vercel rolling-release` (alias `vercel rr`) shifts production traffic gradually instead of all at once.
 
 ## Workflows
 

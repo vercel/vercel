@@ -1,6 +1,6 @@
 # Monorepos on Vercel
 
-Vercel auto-detects monorepo tools (Turborepo, Nx) and workspace managers (pnpm, Yarn, npm). Each project in the monorepo gets its own Vercel project, linked via `vercel link --repo`.
+Vercel auto-detects monorepo tools (Turborepo, Nx) and workspace managers (pnpm, Yarn, npm). Each project in the monorepo gets its own Vercel project, linked via `vercel link --repo`. Run `vercel link --help` for flags; this file covers monorepo configuration and behavior that help output cannot tell you.
 
 ## Quick Start
 

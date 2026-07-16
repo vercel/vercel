@@ -1,52 +1,21 @@
 # Agent, MCP, Skills, and AI Gateway
 
-Use these commands for AI-agent setup and AI Gateway key management. Confirm flags with `vercel <command> --help` before scripting client-specific setup.
+Commands for AI-agent setup and AI Gateway management. Run `vercel <command> --help` for flags; this file covers behavior help cannot tell you.
 
 ## Agent Instructions
 
-`vercel agent` generates an `AGENTS.md` file with Vercel deployment best practices.
-
-```bash
-vercel agent init
-vercel agent init --yes
-```
+`vercel agent init` generates an `AGENTS.md` file with Vercel deployment best practices (`--yes` to skip prompts).
 
 ## MCP Setup
 
-`vercel mcp` sets up MCP agents and configuration for Vercel integration.
-
-```bash
-vercel mcp                                      # interactive setup
-vercel mcp --project                            # project-specific access
-vercel mcp --clients "Cursor,VS Code with Copilot"
-```
-
-In non-interactive mode, pass `--clients`. Supported client labels are listed in `vercel mcp --help`.
+`vercel mcp` sets up MCP agents and configuration for Vercel integration. Bare `vercel mcp` is interactive; in non-interactive mode, pass `--clients` (e.g. `--clients "Cursor,VS Code with Copilot"`). Supported client labels are listed in `vercel mcp --help`. Use `--project` for project-specific access.
 
 ## Skill Discovery
 
-`vercel skills` discovers agent skills relevant to a project.
-
-```bash
-vercel skills
-vercel skills nextjs --format json
-vercel skills --json
-```
+`vercel skills` discovers agent skills relevant to a project; pass a keyword (e.g. `vercel skills nextjs`) to narrow results.
 
 ## AI Gateway
 
-`vercel ai-gateway` manages AI Gateway API keys, routing rules, and models.
-
-```bash
-vercel ai-gateway api-keys create
-vercel ai-gateway api-keys create --name my-key --budget 500 --refresh-period monthly
-vercel ai-gateway api-keys create --include-byok
-
-vercel ai-gateway rules ls
-vercel ai-gateway rules add --type rewrite --source anthropic/claude-fable-5 --destination anthropic/claude-opus-4.8
-
-vercel ai-gateway models ls
-vercel ai-gateway models endpoints anthropic/claude-opus-4.8
-```
+`vercel ai-gateway` manages AI Gateway API keys (`api-keys`, including budgets and BYOK inclusion), routing rules (`rules`, e.g. rewriting one model to another), and model discovery (`models`).
 
 Use the dashboard or `vercel api` only when first-class CLI commands do not expose the needed operation.

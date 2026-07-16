@@ -5,13 +5,22 @@ description: Deploy, manage, inspect, and troubleshoot Vercel projects from the 
 
 # Vercel CLI Skill
 
-The Vercel CLI (`vercel` or `vc`) deploys, manages, and develops projects on the Vercel platform from the command line. Use `vercel <command> --help` for full flag details on any command.
+The Vercel CLI (`vercel` or `vc`) deploys, manages, and develops projects on the Vercel platform from the command line.
 
-The installed CLI help is the source of truth for obscure or newly added flags. If a command example here is not enough, check `vercel <command> --help` before acting instead of guessing.
+## Syntax Comes From the CLI, Not From This Skill
 
-Parse only stdout for URLs and JSON. Warnings, progress, and `--help` print to stderr; merge streams only when searching help text. Some help commands exit 2 after printing usage, so treat printed usage as a successful help read.
+The installed CLI is the source of truth for commands, flags, and defaults. Before running an unfamiliar command or flag, run `vercel <command> [subcommand] --help` — never guess flag names, and don't trust remembered syntax over the installed CLI's help. The reference files in this skill deliberately do not catalog flags; they cover workflows, semantics, and gotchas that help output cannot tell you.
+
+Reading help output: it prints to **stderr**, and some help invocations exit 2 after printing usage — treat printed usage as a successful help read. Parse only stdout for URLs and JSON; warnings and progress go to stderr.
 
 In agent/non-interactive mode, many commands report errors and required confirmations as a single JSON object on stdout with `status`, `reason`, `hint`, and `next` (runnable follow-up commands). Prefer running a suggested `next` command over composing a retry. Read commands such as `list`, `logs`, `inspect`, and `api` keep their normal output shape.
+
+## Global Behavior
+
+- `--help`, `--debug`, `--cwd`, `--scope`, and `--token` are global flags on every command (see any command's help). Prefer the `VERCEL_TOKEN` env var over `--token` to keep secrets out of shell history.
+- `--yes` / `-y` is **not** global — it exists only on commands that confirm mutations. Check the command's help.
+- `--non-interactive` is auto-set only when an agent is detected and stdin is not a TTY. Plain CI does **not** get this default; pass it explicitly when scripting. Even with `--non-interactive`, confirmed mutations still require `--yes` separately.
+- For machine-readable output, prefer `--format json` where a command documents it; the boolean `--json` is deprecated on commands that also support `--format`.
 
 ## Critical: Project Linking
 
@@ -69,11 +78,12 @@ Use this to route to the correct reference file:
 - **Captured request traces (`vercel traces`, including `--open` / `--view`)** → `references/advanced.md`
 - **Vercel Apps / OAuth apps (`vercel oauth-apps`)** → `references/advanced.md`
 - **Advanced (`vercel api` fallback, webhooks)** → `references/advanced.md`
-- **Global flags** → `references/global-options.md`
 - **First-time setup** → `references/getting-started.md`
+- **Anything not covered above, or unsure which command exists** → run `vercel --help` and `vercel <command> --help`
 
 ## Anti-Patterns
 
+- **Guessing flags from memory**: Skill snapshots and model knowledge go stale; the installed CLI's `--help` does not. Check it before using unfamiliar flags.
 - **Wrong link type in monorepos with multiple projects**: `vercel link` creates `project.json`, which only tracks one project. Use `vercel link --repo` instead. When things break, check `.vercel/` first.
 - **Letting commands auto-link in monorepos**: Many commands implicitly run `vercel link` if `.vercel/` doesn't exist. This creates `project.json`, which may be wrong. Run `vercel link` (or `--repo`) explicitly first.
 - **Linking while on the wrong team**: Use `vercel whoami` to check, `vercel teams switch` to change.

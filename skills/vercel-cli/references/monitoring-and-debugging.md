@@ -1,5 +1,7 @@
 # Monitoring & Debugging
 
+Observability from the CLI: deployments, logs, metrics, activity, and regression hunting. Run `vercel logs --help`, `vercel metrics --help`, `vercel inspect --help`, etc. for flags; this file covers diagnostic workflows and behavior that help output cannot tell you.
+
 ## Diagnostic Ladder
 
 For production issues, start broad and narrow with bounded commands:
@@ -42,29 +44,9 @@ Use confidence language in conclusions:
 - Not yet proven is `<remaining uncertainty>`.
 - Validate by `<specific redeploy/test/check>`.
 
-Useful discovery commands:
-
-```bash
-vercel logs --help
-vercel metrics --help
-vercel metrics schema --format=json
-vercel metrics schema <metric-or-prefix> --format=json
-vercel activity --help
-vercel activity types --format json --scope <team>
-vercel usage --help
-vercel httpstat /api/health --deployment <deployment-url>
-```
+Discovery commands beyond the ladders: `vercel metrics schema --format=json` lists available metrics (pass a metric or prefix to inspect one), `vercel activity types --format json --scope <team>` lists activity types, and `vercel httpstat /api/health --deployment <deployment-url>` probes a single endpoint with timing breakdown.
 
 ## Logs
-
-```bash
-vercel logs <deployment-url>                   # view logs
-vercel logs --follow                           # stream live
-vercel logs --level error --level warning      # filter by severity (error, warning, info, fatal)
-vercel logs --source serverless                # filter by source (serverless, edge-function, edge-middleware, static)
-vercel logs --since 2024-01-01                 # filter by time
-vercel logs --query "timeout"                  # search
-```
 
 With `--follow` and no deployment, the CLI tries the latest deployment on the current Git branch, your latest deployment, then the latest production deployment. Use `--environment production` or `--environment preview` to constrain automatic resolution.
 
@@ -74,32 +56,23 @@ Use `--follow` only for live debugging. Historical log queries should be bounded
 
 ## Metrics
 
-Inspect schema before querying unfamiliar metrics. Use bounded time windows and group limits when grouping results.
+Inspect schema before querying unfamiliar metrics. Use bounded time windows and group limits when grouping results:
 
 ```bash
-vercel metrics schema                                                    # list available metrics
-vercel metrics schema vercel.function_invocation                         # inspect a metric prefix
-vercel metrics vercel.function_invocation.count --since 1h               # query linked project
+vercel metrics schema vercel.function_invocation
 vercel metrics vercel.function_invocation.count -f "http_status ge 500" --group-by error_code --since 1h --format=json
-vercel metrics vercel.function_invocation.request_duration_ms -a avg --group-by route --since 1h
-vercel metrics --all vercel.function_invocation.count --group-by project_id --since 24h
 ```
 
 ## Inspecting Deployments
 
-```bash
-vercel inspect <url>               # deployment details
-vercel inspect <url> --wait        # wait for completion
-vercel inspect <url> --logs        # show build logs
-```
-
 If a redeploy is meant to validate a build-cache or branch-specific hypothesis,
-inspect or wait until the new deployment reaches `Ready` or `Error`; do not stop
-at `Building` unless the user only asked to start the deployment.
+inspect (or `vercel inspect --wait`) until the new deployment reaches `Ready` or
+`Error`; do not stop at `Building` unless the user only asked to start the
+deployment.
 
 ## `vercel curl` — Access Preview Deployments
 
-**Use `vercel curl` to access preview deploys.** It handles deployment protection automatically — no need to disable protection or manage bypass secrets.
+**Use `vercel curl` to access preview deploys.** It handles deployment protection automatically — no need to disable protection or manage bypass secrets. Extra curl arguments go after `--`:
 
 ```bash
 vercel curl /api/health --deployment $PREVIEW_URL
@@ -110,18 +83,8 @@ vercel curl /api/data --deployment $PREVIEW_URL -- -X POST -d '{"key":"value"}'
 
 ## Finding Regressions
 
-`vercel bisect` performs a binary search across deployments to find which one introduced a problem:
-
-```bash
-vercel bisect --good <url> --bad <url> --path /api/users
-vercel bisect --run ./test-script.sh    # automated testing
-```
+`vercel bisect` performs a binary search across deployments to find which one introduced a problem. Pass `--run <script>` to automate the good/bad judgment instead of answering prompts interactively.
 
 ## Cache
 
-```bash
-vercel cache purge --type cdn --yes      # purge CDN cache
-vercel cache invalidate --tag mytag --yes # invalidate by cache tag
-```
-
-See `references/project-infra.md` for destructive cache deletion and other project infrastructure commands.
+For CDN purge, tag invalidation, and destructive cache deletion, see `references/project-infra.md`.

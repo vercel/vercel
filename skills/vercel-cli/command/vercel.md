@@ -12,7 +12,7 @@ Use the decision tree in SKILL.md to select the relevant reference file.
 
 ### Step 2: Read the reference file
 
-Based on task type, read `references/<topic>.md`. Use `vercel <command> --help` for full flag details before using uncommon or risky flags.
+Based on task type, read `references/<topic>.md`. The reference files cover workflows and gotchas only — for command syntax and flags, always run `vercel <command> [subcommand] --help` (prints to stderr, may exit 2 after printing usage).
 
 ### Step 3: Execute task
 
