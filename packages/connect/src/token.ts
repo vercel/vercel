@@ -71,6 +71,8 @@ export interface ConnectTokenResponse {
   externalSubject?: string;
   /** Driver-specific metadata stored during OAuth */
   metadata?: Record<string, unknown>;
+  /** Allow-listed claims propagated from the upstream OAuth token. */
+  claims?: Record<string, unknown>;
 }
 
 export type ConnectVendorErrorPayload = Record<string, unknown>;
