@@ -15,20 +15,18 @@ import {
 import { getFlagsSpecification } from '../../../util/get-flags-specification';
 import output from '../../../output-manager';
 import { getCommandAliases } from '../..';
-import { FirewallTelemetryClient } from '../../../util/telemetry/commands/firewall';
+import type { FirewallTelemetryClient } from '../../../util/telemetry/commands/firewall';
 
 const COMMAND_CONFIG = {
   pause: getCommandAliases(systemMitigationsPauseSubcommand),
   resume: getCommandAliases(systemMitigationsResumeSubcommand),
 };
 
-export default async function main(client: Client, args: string[]) {
-  const telemetry = new FirewallTelemetryClient({
-    opts: {
-      store: client.telemetryEventStore,
-    },
-  });
-
+export default async function main(
+  client: Client,
+  args: string[],
+  telemetry: FirewallTelemetryClient
+) {
   const flagsSpecification = getFlagsSpecification(
     systemMitigationsSubcommand.options
   );
