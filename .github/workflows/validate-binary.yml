@@ -50,6 +50,16 @@ jobs:
           toolchain: stable
           targets: wasm32-wasip2
 
+      # The workspace build compiles @vercel-internals/ipc-proxy, which
+      # requires a Go toolchain on PATH (build.mjs hard-fails in GitHub
+      # Actions rather than downloading Go). Keep in sync with GO_VERSION
+      # in internals/ipc-proxy/build.mjs and test.yml.
+      - name: Setup Go toolchain
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.23.12'
+          cache: false
+
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
