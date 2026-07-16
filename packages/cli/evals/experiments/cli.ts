@@ -1,11 +1,15 @@
 import { existsSync, readFileSync, readdirSync } from 'fs';
-import { join, dirname, relative } from 'path';
+import { join, dirname, relative, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import type { ExperimentConfig } from '@vercel/agent-eval';
 import { setupAuthAndConfig } from '../setup/auth-and-config';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SKILLS_DIR = join(__dirname, '../../../../skills/vercel-cli');
+// CLI_EVAL_SKILLS_DIR lets a run point at an alternate skill directory
+// (e.g. an assembled variant) instead of the committed skill.
+const SKILLS_DIR = process.env.CLI_EVAL_SKILLS_DIR
+  ? resolve(process.env.CLI_EVAL_SKILLS_DIR)
+  : join(__dirname, '../../../../skills/vercel-cli');
 
 /** Recursively list all files under dir, returns paths relative to dir. */
 function listSkillFiles(dir: string, baseDir: string = dir): string[] {
