@@ -1,13 +1,16 @@
 import chalk from 'chalk';
-import { withGlobalFlags } from '../../../util/agent-output';
 import type Client from '../../../util/client';
-import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
 import output from '../../../output-manager';
 import { rulesInspectSubcommand } from '../command';
-import { parseSubcommandArgs, resolveRule, outputJson } from '../shared';
+import {
+  parseSubcommandArgs,
+  ensureProjectLink,
+  resolveRule,
+  outputJson,
+  withGlobalFlags,
+} from '../shared';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
 import { formatRuleDetail } from '../../../util/firewall/format';
-import { getCommandName } from '../../../util/pkg-name';
 import { outputAgentError } from '../../../util/agent-output';
 
 export default async function inspect(client: Client, argv: string[]) {
@@ -46,12 +49,12 @@ export default async function inspect(client: Client, argv: string[]) {
       );
     }
     output.error(
-      `Rule name or ID is required. Usage: ${getCommandName('firewall rules inspect <name-or-id>')}`
+      `Rule name or ID is required. Usage: ${withGlobalFlags(client, 'firewall rules inspect <name-or-id>')}`
     );
     return 1;
   }
 
-  const link = await ensureProjectLink(client, 'firewall');
+  const link = await ensureProjectLink(client, parsed.flags['--project']);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -88,7 +91,7 @@ export default async function inspect(client: Client, argv: string[]) {
         );
       }
       output.error(
-        `No rule found for "${identifier}". Run ${chalk.cyan(getCommandName('firewall rules list'))} to view all rules.`
+        `No rule found for "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'firewall rules list'))} to view all rules.`
       );
       return 1;
     }

@@ -3,7 +3,10 @@ import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import {
   useEditRoute,
   useEditRouteComprehensive,
@@ -43,6 +46,14 @@ describe('routes edit', () => {
 
   it('non-interactive missing flags: suggested command uses single quotes for spaced name (no backslash)', async () => {
     useEditRouteComprehensive();
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject({
+      ...defaultProject,
+      id: 'explicit-routes',
+      name: 'explicit-routes',
+      accountId: 'team_dummy',
+    });
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const exitSpy = vi
       .spyOn(process, 'exit')
@@ -53,13 +64,16 @@ describe('routes edit', () => {
       'edit',
       'API Rewrite',
       '--yes',
-      '--non-interactive'
+      '--non-interactive',
+      '--project',
+      'explicit-routes'
     );
     await routes(client);
     const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
     expect(payload.reason).toBe('missing_arguments');
     const nextCmd = payload.next?.[0]?.command ?? '';
     expect(nextCmd).toContain("'API Rewrite'");
+    expect(nextCmd).toContain('--project explicit-routes');
     expect(nextCmd).not.toContain('\\"');
     logSpy.mockRestore();
     exitSpy.mockRestore();

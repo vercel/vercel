@@ -6,7 +6,10 @@ import env from '../../../../src/commands/env';
 import pull, {
   getAcrValuesFromWWWAuthenticate,
 } from '../../../../src/commands/env/pull';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { defaultProject, envs, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
@@ -71,6 +74,121 @@ describe('env pull', () => {
         },
       ]);
     });
+  });
+
+  it('pulls variables from the project selected by --project', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+      accountId: 'team_dummy',
+    });
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    client.setArgv(
+      'env',
+      'pull',
+      '.env.test',
+      '--yes',
+      '--project',
+      'vercel-env-pull'
+    );
+
+    await expect(env(client)).resolves.toEqual(0);
+  });
+
+  it('rejects --project when --id belongs to another project', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+      accountId: 'team_dummy',
+    });
+    client.scenario.get('/v13/deployments/dpl_other', (_req, res) => {
+      res.json({ id: 'dpl_other', projectId: 'other-project' });
+    });
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    client.setArgv(
+      'env',
+      'pull',
+      '--id',
+      'dpl_other',
+      '--project',
+      'vercel-env-pull',
+      '--yes'
+    );
+
+    await expect(env(client)).resolves.toEqual(1);
+    await expect(client.stderr).toOutput(
+      'does not belong to project vercel-env-pull'
+    );
+  });
+
+  it('accepts --project when --id belongs to the selected project', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+      accountId: 'team_dummy',
+    });
+    client.scenario.get('/v13/deployments/dpl_same', (_req, res) => {
+      res.json({ id: 'dpl_same', projectId: 'vercel-env-pull' });
+    });
+    client.scenario.get('/v3/env/pull/dpl_same', (_req, res) => {
+      res.json({ env: {}, buildEnv: { DEPLOYMENT_VAR: 'value' } });
+    });
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    client.setArgv(
+      'env',
+      'pull',
+      '.env.test',
+      '--id',
+      'dpl_same',
+      '--project',
+      'vercel-env-pull',
+      '--yes'
+    );
+
+    await expect(env(client)).resolves.toEqual(0);
+  });
+
+  it('accepts --project when the deployment response omits projectId', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+      accountId: 'team_dummy',
+    });
+    client.scenario.get('/v13/deployments/dpl_legacy', (_req, res) => {
+      res.json({ id: 'dpl_legacy' });
+    });
+    client.scenario.get('/v3/env/pull/dpl_legacy', (_req, res) => {
+      res.json({ env: {}, buildEnv: { DEPLOYMENT_VAR: 'value' } });
+    });
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    client.setArgv(
+      'env',
+      'pull',
+      '.env.test',
+      '--id',
+      'dpl_legacy',
+      '--project',
+      'vercel-env-pull',
+      '--yes'
+    );
+
+    await expect(env(client)).resolves.toEqual(0);
   });
 
   it('should handle pulling', async () => {
