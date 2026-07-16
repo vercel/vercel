@@ -46,13 +46,11 @@ import {
 } from './install';
 import {
   PythonDependencyExternalizer,
-  BYTECODE_COVERAGE_FLOOR,
   BYTECODE_FILL_CEILING_BYTES,
   MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   lambdaKnapsack,
   calculateBundleSize,
-  estimateBytecodeSize,
   RUNTIME_DEPS_DIR,
   type GenerateBundleResult,
 } from './dependency-externalizer';
@@ -1508,17 +1506,22 @@ export const build: BuildVX = async ({
           await runPrefixCompileAndFill(bundleResult);
         } else if (compileAllEnabled) {
           // Knapsack packing (bytecode-first skipped or fell back): fill
-          // only the slack under the ceiling with bytecode for in-zip
-          // packages, and only when enough of it ships to justify the
-          // compile time. Always-bundled packages get capacity first.
+          // the slack under the ceiling with bytecode for in-zip packages.
+          // Always-bundled packages get capacity first. Skip only when the
+          // bundle already exceeds the fill ceiling, since nothing could
+          // ship.
           const currentSize = await calculateBundleSize(files);
           const capacity = BYTECODE_FILL_CEILING_BYTES - currentSize;
-          const estimate = await estimateBytecodeSize(files);
-          if (capacity >= BYTECODE_COVERAGE_FLOOR * estimate) {
+          if (capacity > 0) {
             await runCompileAllAndFillBytecode(BYTECODE_FILL_CEILING_BYTES, [
               bundleResult.alwaysBundledPackages ?? [],
               bundleResult.bundledPublicPackages ?? [],
             ]);
+          } else {
+            debug(
+              `skipping bytecode precompilation: no zip capacity remaining ` +
+                `(bundle is ${(currentSize / (1024 * 1024)).toFixed(2)} MB)`
+            );
           }
         }
       } else {
@@ -1535,13 +1538,18 @@ export const build: BuildVX = async ({
             );
           }
         } else if (compileAllEnabled) {
-          // Compile only when enough of the expected bytecode ships to
-          // justify the compile time.
+          // Fill any remaining zip capacity with bytecode. Skip only when
+          // the bundle already exceeds the fill ceiling, since nothing
+          // could ship.
           const capacity =
             BYTECODE_FILL_CEILING_BYTES - depAnalysis.totalBundleSize;
-          const estimate = await estimateBytecodeSize(files);
-          if (capacity >= BYTECODE_COVERAGE_FLOOR * estimate) {
+          if (capacity > 0) {
             await runCompileAllAndFillBytecode(BYTECODE_FILL_CEILING_BYTES);
+          } else {
+            debug(
+              `skipping bytecode precompilation: no zip capacity remaining ` +
+                `(bundle is ${(depAnalysis.totalBundleSize / (1024 * 1024)).toFixed(2)} MB)`
+            );
           }
         }
       }

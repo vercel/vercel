@@ -1360,30 +1360,6 @@ export async function calculateBundleSize(
 }
 
 /**
- * Expected .pyc-to-.py size ratio. Measured empirically on real venvs
- * (1.06 and 1.14 across different dependency mixes); slightly high so the
- * gate errs toward skipping marginal compiles.
- */
-export const PYC_TO_PY_RATIO = 1.2;
-
-/**
- * Minimum fraction of the estimated bytecode that must fit the remaining
- * capacity to justify running compileall. Cold-start benefit is roughly
- * proportional to coverage, so partial fills above this floor are worth it.
- */
-export const BYTECODE_COVERAGE_FLOOR = 0.5;
-
-/**
- * Estimate the total bytecode size compileall would produce for the .py
- * files in the bundle. Used only to gate whether compiling is worthwhile;
- * the fill itself measures real .pyc sizes.
- */
-export async function estimateBytecodeSize(files: Files): Promise<number> {
-  const pyBytes = await calculateBundleSize(files, p => p.endsWith('.py'));
-  return PYC_TO_PY_RATIO * pyBytes;
-}
-
-/**
  * Largest-first knapsack packing algorithm.
  *
  * Given a map of package names to sizes (in bytes) and a capacity,

@@ -4,11 +4,8 @@ import path from 'path';
 import { tmpdir } from 'os';
 import {
   PythonDependencyExternalizer,
-  BYTECODE_COVERAGE_FLOOR,
   BYTECODE_FILL_CEILING_BYTES,
-  PYC_TO_PY_RATIO,
   calculateBundleSize,
-  estimateBytecodeSize,
   getPackagesReachableOnPlatform,
   lambdaKnapsack,
   planPublicPackagePacking,
@@ -274,61 +271,22 @@ describe('dependency externalizer support', () => {
     });
   });
 
-  describe('estimateBytecodeSize', () => {
-    it('estimates bytecode as PYC_TO_PY_RATIO times the .py bytes', async () => {
-      const files = {
-        'app.py': new FileFsRef({ fsPath: '/nonexistent/app.py', size: 100 }),
-        '_vendor/pkg/mod.py': new FileFsRef({
-          fsPath: '/nonexistent/mod.py',
-          size: 900,
-        }),
-        'lib.so': new FileFsRef({
-          fsPath: '/nonexistent/lib.so',
-          size: 5000,
-        }),
-      };
-
-      expect(await estimateBytecodeSize(files)).toBe(PYC_TO_PY_RATIO * 1000);
-    });
-
-    it('returns 0 when the bundle has no .py files', async () => {
-      const files = {
-        'lib.so': new FileFsRef({ fsPath: '/nonexistent/lib.so', size: 5000 }),
-      };
-
-      expect(await estimateBytecodeSize(files)).toBe(0);
-    });
-  });
-
-  describe('bytecode gate math (coverage floor)', () => {
+  describe('bytecode fill capacity guard', () => {
     const MB = 1024 * 1024;
-    const gatePasses = (bundleSize: number, pyBytes: number) => {
-      const capacity = BYTECODE_FILL_CEILING_BYTES - bundleSize;
-      const estimate = PYC_TO_PY_RATIO * pyBytes;
-      return capacity >= BYTECODE_COVERAGE_FLOOR * estimate;
-    };
+    // Mirrors the gate in the builder: compile whenever any capacity
+    // remains under the fill ceiling; skip only when nothing could ship.
+    const gatePasses = (bundleSize: number) =>
+      BYTECODE_FILL_CEILING_BYTES - bundleSize > 0;
 
-    it('compiles a 101MB all-Python app despite a partial fill', () => {
-      expect(gatePasses(101 * MB, 101 * MB)).toBe(true);
+    it('compiles near-limit apps regardless of expected coverage', () => {
+      // Previously skipped by the coverage-ratio heuristic.
+      expect(gatePasses(219 * MB)).toBe(true);
+      expect(gatePasses(200 * MB)).toBe(true);
     });
 
-    it('compiles all-Python apps up to the guaranteed zone boundary', () => {
-      // 220 - S >= 0.5 * 1.2 * S  =>  S <= 220 / 1.6 = 137.5MB
-      expect(gatePasses(137 * MB, 137 * MB)).toBe(true);
-      expect(gatePasses(138 * MB, 138 * MB)).toBe(false);
-    });
-
-    it('skips near-limit apps with low expected coverage', () => {
-      expect(gatePasses(219 * MB, 40 * MB)).toBe(false);
-      expect(gatePasses(200 * MB, 80 * MB)).toBe(false);
-    });
-
-    it('compiles binary-heavy near-limit apps with little .py', () => {
-      expect(gatePasses(200 * MB, 10 * MB)).toBe(true);
-    });
-
-    it('skips when the bundle exceeds the fill ceiling', () => {
-      expect(gatePasses(221 * MB, 0)).toBe(false);
+    it('skips when the bundle meets or exceeds the fill ceiling', () => {
+      expect(gatePasses(BYTECODE_FILL_CEILING_BYTES)).toBe(false);
+      expect(gatePasses(221 * MB)).toBe(false);
     });
   });
 
