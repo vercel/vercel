@@ -1,5 +1,17 @@
 # @vercel/python
 
+## 6.51.0
+
+### Minor Changes
+
+- c555d3a: Make vc dev support pyproject.toml entrypoints
+- 238543c: Support Python services that declare their web app and development workflow sidecars through a `pyproject.toml` entrypoint in `vercel dev`.
+
+### Patch Changes
+
+- b0ed8e5: Always run bytecode precompilation when `VERCEL_PYTHON_COMPILEALL` is enabled, removing the coverage-ratio heuristic that skipped compiles when the estimated bytecode would not sufficiently fit the remaining zip capacity.
+- f97e2e0: Report the final bundle size (including compiled bytecode and runtime-install tooling) and the packing mode (`standard` | `runtime-install` | `hive`) on the `vc.builder.python.bundle` trace span. The source-only size is still recorded before size-limit enforcement so oversized builds that fail remain tagged.
+
 ## 6.50.0
 
 ### Minor Changes
