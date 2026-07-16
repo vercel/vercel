@@ -1,82 +1,30 @@
 import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
-import { outputAgentError } from '../../util/agent-output';
-import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
 import type { Command } from '../help';
+import {
+  parseSubcommandArguments,
+  type ParsedSubcommandArguments,
+} from '../../util/command-arguments';
 import {
   GLOBAL_CLI_FLAG_NAMES,
   globalCliFlagTakesValue,
 } from '../../util/arg-common';
 
-export interface ParsedSubcommand {
-  args: string[];
-  flags: { [key: string]: any };
-}
-
 export async function parseSubcommandArgs(
   argv: string[],
   command: Command
-): Promise<ParsedSubcommand | number> {
+): Promise<ParsedSubcommandArguments | number> {
   let parsedArgs;
-  const flagsSpecification = getFlagsSpecification(command.options);
 
   try {
-    // @ts-expect-error - TypeScript complains about the flags specification type
-    parsedArgs = parseArguments(argv, flagsSpecification);
+    parsedArgs = parseSubcommandArguments(argv, command);
   } catch (err) {
     printError(err);
     return 1;
   }
 
   return parsedArgs;
-}
-
-export function validateRequiredArgs(
-  args: string[],
-  required: string[]
-): string | null {
-  for (let i = 0; i < required.length; i++) {
-    if (!args[i]) {
-      return `Missing required argument: ${required[i]}`;
-    }
-  }
-  return null;
-}
-
-export async function ensureProjectLink(client: Client) {
-  const link = await getLinkedProject(client);
-
-  if (link.status === 'error') {
-    return link.exitCode;
-  } else if (link.status === 'not_linked') {
-    if (client.nonInteractive) {
-      const linkCmd = getCommandNamePlain('link');
-      outputAgentError(
-        client,
-        {
-          status: AGENT_STATUS.ERROR,
-          reason: AGENT_REASON.NOT_LINKED,
-          message: `Your codebase isn't linked to a project on Vercel. Run ${linkCmd} to begin.`,
-          next: [{ command: linkCmd }],
-        },
-        1
-      );
-    }
-    output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
-    );
-    return 1;
-  }
-
-  client.config.currentTeam =
-    link.org.type === 'team' ? link.org.id : undefined;
-
-  return link;
 }
 
 export async function confirmAction(

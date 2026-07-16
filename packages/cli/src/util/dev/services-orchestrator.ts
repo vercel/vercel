@@ -748,6 +748,18 @@ export class ServicesOrchestrator {
       perServiceEnv
     );
 
+    if (
+      this.hasQueueServices &&
+      service.runtime === 'python' &&
+      env.VERCEL_HAS_WORKER_SERVICES === undefined
+    ) {
+      env.VERCEL_HAS_WORKER_SERVICES = '1';
+    }
+    if (this.hasQueueServices) {
+      env.VERCEL_QUEUE_BASE_URL = `${this.proxyOrigin}/_svc/_queues`;
+      env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
+    }
+
     const root = service.root || '.';
     return {
       rootPath: path.join(this.cwd, root),

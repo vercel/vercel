@@ -1,14 +1,14 @@
 import chalk from 'chalk';
+import { withGlobalFlags } from '../../../util/agent-output';
 import type Client from '../../../util/client';
+import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
 import output from '../../../output-manager';
 import { ipBlocksUnblockSubcommand } from '../command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   confirmAction,
   offerAutoPublish,
   resolveIpRule,
-  withGlobalFlags,
 } from '../shared';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
@@ -31,7 +31,7 @@ export default async function unblock(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'firewall');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

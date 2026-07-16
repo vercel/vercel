@@ -1,14 +1,14 @@
 import chalk from 'chalk';
+import { withGlobalFlags } from '../../../util/agent-output';
 import type Client from '../../../util/client';
+import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
 import output from '../../../output-manager';
 import { rulesDisableSubcommand } from '../command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   resolveRule,
   detectExistingDraft,
   offerAutoPublish,
-  withGlobalFlags,
 } from '../shared';
 import { formatActionDisplay } from '../../../util/firewall/format';
 import { outputAgentError } from '../../../util/agent-output';
@@ -26,7 +26,7 @@ export default async function disable(client: Client, argv: string[]) {
   );
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'firewall');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

@@ -5,7 +5,7 @@ import { resolve } from 'path';
 import type Client from '../../util/client';
 import param from '../../util/output/param';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
-import {
+import getEnvRecords, {
   type EnvRecordsSource,
   pullEnvRecords,
 } from '../../util/env/get-env-records';
@@ -77,6 +77,34 @@ const VARIABLES_TO_IGNORE = [
   'VERCEL_SPEED_INSIGHTS_ID',
   'VERCEL_WEB_ANALYTICS_ID',
 ];
+
+export const SENSITIVE_PLACEHOLDER = '[SENSITIVE]';
+
+async function getRedactedSensitiveKeys(
+  client: Client,
+  projectId: string | undefined,
+  source: EnvRecordsSource,
+  target: string,
+  gitBranch: string | undefined,
+  records: Record<string, string>
+): Promise<Set<string>> {
+  const emptyKeys = Object.keys(records).filter(key => !records[key]);
+  if (!projectId || emptyKeys.length === 0) {
+    return new Set();
+  }
+  try {
+    const { envs } = await getEnvRecords(client, projectId, source, {
+      target,
+      gitBranch,
+    });
+    const sensitiveKeys = new Set(
+      envs.filter(env => env.type === 'sensitive').map(env => env.key)
+    );
+    return new Set(emptyKeys.filter(key => sensitiveKeys.has(key)));
+  } catch {
+    return new Set();
+  }
+}
 
 export default async function pull(
   client: Client,
@@ -279,7 +307,19 @@ export async function envPullCommandLogic(
     );
     fileChanged = contents !== existingContents;
   } else {
+    const sensitiveKeys = await getRedactedSensitiveKeys(
+      client,
+      deploymentId ? undefined : link.project.id,
+      source,
+      environment,
+      gitBranch,
+      records
+    );
+
     const mergedRecords: Record<string, string | undefined> = { ...records };
+    for (const key of sensitiveKeys) {
+      mergedRecords[key] = SENSITIVE_PLACEHOLDER;
+    }
     if (oldEnv) {
       for (const [key, value] of Object.entries(oldEnv)) {
         if (

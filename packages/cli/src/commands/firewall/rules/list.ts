@@ -1,13 +1,10 @@
 import chalk from 'chalk';
+import { withGlobalFlags } from '../../../util/agent-output';
 import type Client from '../../../util/client';
+import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
 import output from '../../../output-manager';
 import { rulesListSubcommand } from '../command';
-import {
-  parseSubcommandArgs,
-  ensureProjectLink,
-  outputJson,
-  withGlobalFlags,
-} from '../shared';
+import { parseSubcommandArgs, outputJson } from '../shared';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
 import {
   annotateRules,
@@ -26,7 +23,7 @@ export default async function list(client: Client, argv: string[]) {
   );
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'firewall');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

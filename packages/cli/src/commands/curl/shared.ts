@@ -484,7 +484,7 @@ export async function getDeploymentUrlAndToken(
 
   const { project } = link;
 
-  const linkedProject = await getLinkedProject(client, client.cwd);
+  const linkedProject = await getLinkedProject(client, { cwd: client.cwd });
 
   if (linkedProject.status !== 'linked') {
     output.error('This command requires a linked project. Please run:');

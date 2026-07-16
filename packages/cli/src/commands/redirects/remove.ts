@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { ensureProjectLink } from '../../util/projects/ensure-project-link';
 import output from '../../output-manager';
 import {
   outputActionRequired,
@@ -14,14 +15,13 @@ import {
 import { removeSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
-  validateRequiredArgs,
   confirmAction,
   buildRedirectsSuggestionFlags,
   getArgsAfterRedirectsSubcommand,
   getRedirectGlobalFlagsOnly,
   getRedirectPromoteSuggestionFlags,
 } from './shared';
+import { validateRequiredArguments } from '../../util/command-arguments';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import deleteRedirects from '../../util/redirects/delete-redirects';
 import getRedirects from '../../util/redirects/get-redirects';
@@ -33,7 +33,7 @@ export default async function remove(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, removeSubcommand);
   if (typeof parsed === 'number') return parsed;
 
-  const error = validateRequiredArgs(parsed.args, ['source']);
+  const error = validateRequiredArguments(parsed.args, ['source']);
   if (error) {
     if (client.nonInteractive) {
       const flagParts = buildRedirectsSuggestionFlags(
@@ -59,7 +59,7 @@ export default async function remove(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'redirects');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

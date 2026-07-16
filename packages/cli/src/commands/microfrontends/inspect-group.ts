@@ -339,7 +339,7 @@ async function enrichGroupProject(
 
 async function getLocalRepoContext(client: Client): Promise<LocalRepoContext> {
   try {
-    const link = await getLinkedProject(client, client.cwd);
+    const link = await getLinkedProject(client, { cwd: client.cwd });
     // link is discriminated union, need to make TS happy
     if (link.status !== 'linked') {
       return {

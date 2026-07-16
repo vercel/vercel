@@ -6,3 +6,6 @@ dependencies = [
     "fastapi==0.133.0",
     "uvicorn==0.41.0",
 ]
+
+[tool.vercel]
+entrypoint = "server:app"

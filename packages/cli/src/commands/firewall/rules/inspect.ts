@@ -1,14 +1,10 @@
 import chalk from 'chalk';
+import { withGlobalFlags } from '../../../util/agent-output';
 import type Client from '../../../util/client';
+import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
 import output from '../../../output-manager';
 import { rulesInspectSubcommand } from '../command';
-import {
-  parseSubcommandArgs,
-  ensureProjectLink,
-  resolveRule,
-  outputJson,
-  withGlobalFlags,
-} from '../shared';
+import { parseSubcommandArgs, resolveRule, outputJson } from '../shared';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
 import { formatRuleDetail } from '../../../util/firewall/format';
 import { getCommandName } from '../../../util/pkg-name';
@@ -55,7 +51,7 @@ export default async function inspect(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await ensureProjectLink(client);
+  const link = await ensureProjectLink(client, 'firewall');
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
