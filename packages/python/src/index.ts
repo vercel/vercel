@@ -1495,21 +1495,16 @@ export const build: BuildVX = async ({
         );
 
       // How the bundle was packed, for the span attributes below:
-      // - bundled:        fits the standard size limit; everything in the zip
-      // - knapsack:       runtime install; largest public packages in the zip
-      // - bytecode-first: runtime install; all public packages deferred,
-      //                   zip capacity spent on bytecode instead
-      // - full-bundle:    large functions; everything in the zip
-      let packingMode:
-        | 'bundled'
-        | 'knapsack'
-        | 'bytecode-first'
-        | 'full-bundle';
+      // - standard:        fits the standard size limit; everything in the zip
+      // - runtime-install: public deps deferred to a cold-start `uv sync`
+      // - hive:            large functions; everything in the zip
+      let packingMode: 'standard' | 'runtime-install' | 'hive';
 
       if (depAnalysis.runtimeInstallEnabled) {
         // Pack the zip and defer the rest to runtime install. If it can't be
         // made to fit, generateBundle bundles everything for the large
         // functions path (which then takes compileall, below).
+        packingMode = 'runtime-install';
         const bytecodeFirst =
           compileAllEnabled &&
           pythonVersion.major != null &&
@@ -1518,7 +1513,7 @@ export const build: BuildVX = async ({
           bytecodeFirst,
         });
         if (bundleResult.fellBackToFullBundle) {
-          packingMode = 'full-bundle';
+          packingMode = 'hive';
           announceLargeFunction();
           if (compileAllEnabled) {
             await runCompileAllAndFillBytecode(
@@ -1526,29 +1521,25 @@ export const build: BuildVX = async ({
             );
           }
         } else if (bundleResult.packingMode === 'bytecode-first') {
-          packingMode = 'bytecode-first';
           await runPrefixCompileAndFill(bundleResult);
-        } else {
-          packingMode = 'knapsack';
-          if (compileAllEnabled) {
-            // Knapsack packing (bytecode-first skipped or fell back): fill
-            // the slack under the ceiling with bytecode for in-zip packages.
-            // Always-bundled packages get capacity first. Skip only when the
-            // bundle already exceeds the fill ceiling, since nothing could
-            // ship.
-            const currentSize = await calculateBundleSize(files);
-            const capacity = BYTECODE_FILL_CEILING_BYTES - currentSize;
-            if (capacity > 0) {
-              await runCompileAllAndFillBytecode(BYTECODE_FILL_CEILING_BYTES, [
-                bundleResult.alwaysBundledPackages ?? [],
-                bundleResult.bundledPublicPackages ?? [],
-              ]);
-            } else {
-              debug(
-                `skipping bytecode precompilation: no zip capacity remaining ` +
-                  `(bundle is ${(currentSize / (1024 * 1024)).toFixed(2)} MB)`
-              );
-            }
+        } else if (compileAllEnabled) {
+          // Knapsack packing (bytecode-first skipped or fell back): fill
+          // the slack under the ceiling with bytecode for in-zip packages.
+          // Always-bundled packages get capacity first. Skip only when the
+          // bundle already exceeds the fill ceiling, since nothing could
+          // ship.
+          const currentSize = await calculateBundleSize(files);
+          const capacity = BYTECODE_FILL_CEILING_BYTES - currentSize;
+          if (capacity > 0) {
+            await runCompileAllAndFillBytecode(BYTECODE_FILL_CEILING_BYTES, [
+              bundleResult.alwaysBundledPackages ?? [],
+              bundleResult.bundledPublicPackages ?? [],
+            ]);
+          } else {
+            debug(
+              `skipping bytecode precompilation: no zip capacity remaining ` +
+                `(bundle is ${(currentSize / (1024 * 1024)).toFixed(2)} MB)`
+            );
           }
         }
       } else {
@@ -1556,7 +1547,7 @@ export const build: BuildVX = async ({
         // large functions are enabled and the whole bundle ships.
         addFiles(files, depAnalysis.allVendorFiles);
         if (depAnalysis.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES) {
-          packingMode = 'full-bundle';
+          packingMode = 'hive';
           if (isLargeFunctionsEnabled()) {
             announceLargeFunction();
           }
@@ -1566,7 +1557,7 @@ export const build: BuildVX = async ({
             );
           }
         } else {
-          packingMode = 'bundled';
+          packingMode = 'standard';
           if (compileAllEnabled) {
             // Fill any remaining zip capacity with bytecode. Skip only when
             // the bundle already exceeds the fill ceiling, since nothing
