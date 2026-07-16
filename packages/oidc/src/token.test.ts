@@ -114,6 +114,30 @@ describe('refreshToken', () => {
     expect(token).toEqual({ token: 'test-token' });
   });
 
+  test('saveToken writes owner-only permissions without a chmod race', () => {
+    // Permission bits are not enforced the same way on Windows.
+    if (process.platform === 'win32') {
+      return;
+    }
+
+    const tokenPath = path.join(tokenDataDir, `${projectId}.json`);
+
+    // Pre-create a world-readable file to ensure overwrite does not inherit it.
+    fs.writeFileSync(tokenPath, JSON.stringify({ token: 'stale' }), {
+      mode: 0o644,
+    });
+    fs.chmodSync(tokenPath, 0o644);
+
+    tokenUtil.saveToken({ token: 'oidc.sensitive-token' }, projectId);
+
+    const mode = fs.statSync(tokenPath).mode & 0o777;
+    expect(mode).toBe(0o600);
+    expect(mode & 0o077).toBe(0);
+    expect(JSON.parse(fs.readFileSync(tokenPath, 'utf8'))).toEqual({
+      token: 'oidc.sensitive-token',
+    });
+  });
+
   test('should use cli-exec when keyring-backed credentials are likely', async () => {
     vi.mocked(getLikelyEffectiveCredStorage).mockReturnValue('keyring');
 
