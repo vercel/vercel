@@ -38,7 +38,9 @@ export const VERCEL_DIR_PROJECT = 'project.json';
 export const VERCEL_DIR_REPO = 'repo.json';
 
 export interface OwnerLookupUnavailableProjectLinked extends ProjectLinked {
+  orgId?: string;
   ownerLookupUnavailable: true;
+  projectRootDirectory?: string;
 }
 
 export function isOwnerLookupUnavailableLink(
@@ -46,6 +48,14 @@ export function isOwnerLookupUnavailableLink(
 ): link is OwnerLookupUnavailableProjectLinked {
   return (
     'ownerLookupUnavailable' in link && link.ownerLookupUnavailable === true
+  );
+}
+
+function isOwnerLookupUnavailableError(error: unknown): boolean {
+  return (
+    isAPIError(error) &&
+    error.status === 403 &&
+    error.code === 'team_unauthorized'
   );
 }
 
@@ -303,8 +313,8 @@ export interface GetLinkedProjectOptions {
   projectNameIsExplicit?: boolean;
   scopeIsExplicit?: boolean;
   /**
-   * Allows default deploy to continue when a project-scoped token can fetch the
-   * linked project but cannot fetch the owner user/team resource.
+   * Allows deploying with a project-scoped token, which can fetch the
+   * linked project, but cannot fetch the owning user/team.
    */
   allowOwnerLookupFallback?: boolean;
 }
@@ -440,13 +450,7 @@ export async function getLinkedProject(
       org = null;
     } else if (
       options.allowOwnerLookupFallback &&
-      (orgResult.reason instanceof InvalidToken ||
-        (isAPIError(orgResult.reason) &&
-          orgResult.reason.status === 403 &&
-          (orgResult.reason.missingToken ||
-            orgResult.reason.invalidToken ||
-            orgResult.reason.code === 'forbidden' ||
-            orgResult.reason.code === 'team_unauthorized')))
+      isOwnerLookupUnavailableError(orgResult.reason)
     ) {
       ownerLookupUnavailable = true;
     } else {
@@ -500,6 +504,8 @@ export async function getLinkedProject(
         },
         project,
         repoRoot: link.repoRoot,
+        projectRootDirectory: link.projectRootDirectory,
+        orgId: link.orgId,
         ownerLookupUnavailable: true,
       };
       return ownerLookupUnavailableLink;

@@ -6,14 +6,13 @@ export default async function getProjectByNameOrId(
   client: Client,
   projectNameOrId: string,
   accountId?: string,
-  includeRollbackInfo?: boolean,
-  options: { useCurrentTeam?: boolean } = {}
+  includeRollbackInfo?: boolean
 ) {
   try {
     const qs = includeRollbackInfo ? '?rollbackInfo=true' : '';
     const project = await client.fetch<Project>(
       `/v9/projects/${encodeURIComponent(projectNameOrId)}${qs}`,
-      { accountId, ...options }
+      { accountId }
     );
     return project;
   } catch (err: unknown) {

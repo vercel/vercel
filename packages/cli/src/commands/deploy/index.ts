@@ -1202,17 +1202,11 @@ async function handleDefaultDeploy(
   // #endregion
 
   const contextName = org.slug;
-  const ownerLookupUnavailable = isOwnerLookupUnavailableLink(link);
-  const currentTeam = ownerLookupUnavailable
-    ? undefined
-    : org.type === 'team'
-      ? org.id
-      : undefined;
-  if (currentTeam) {
-    client.config.currentTeam = currentTeam;
-  } else {
-    delete client.config.currentTeam;
-  }
+  const currentTeam =
+    isOwnerLookupUnavailableLink(link) || org.type !== 'team'
+      ? undefined
+      : org.id;
+  client.config.currentTeam = currentTeam;
 
   if (
     rootDirectory &&
