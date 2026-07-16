@@ -47,7 +47,7 @@ import {
 import {
   PythonDependencyExternalizer,
   BYTECODE_FILL_CEILING_BYTES,
-  MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE,
+  LARGE_FUNCTION_FILL_CEILING_BYTES,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   lambdaKnapsack,
   calculateBundleSize,
@@ -1499,7 +1499,7 @@ export const build: BuildVX = async ({
           announceLargeFunction();
           if (compileAllEnabled) {
             await runCompileAllAndFillBytecode(
-              MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
+              LARGE_FUNCTION_FILL_CEILING_BYTES
             );
           }
         } else if (bundleResult.packingMode === 'bytecode-first') {
@@ -1534,7 +1534,7 @@ export const build: BuildVX = async ({
           }
           if (compileAllEnabled) {
             await runCompileAllAndFillBytecode(
-              MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
+              LARGE_FUNCTION_FILL_CEILING_BYTES
             );
           }
         } else if (compileAllEnabled) {

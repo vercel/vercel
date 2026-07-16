@@ -98,6 +98,12 @@ export const RUNTIME_DEPS_DIR = '/tmp/_vc_deps';
 // install), served on Hive.
 export const MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE = 5 * 1024 * 1024 * 1024;
 
+// Bytecode fill target for large functions, with the same margin as the
+// standard ceiling so the fill can never push a function over the
+// platform's uncompressed-size check (enforced at >= the 5 GiB limit).
+export const LARGE_FUNCTION_FILL_CEILING_BYTES =
+  MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE - BYTECODE_FILL_MARGIN_BYTES;
+
 const BUNDLING_DOCS_LINK =
   'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled';
 
