@@ -684,13 +684,66 @@ export const budgetsSubcommand = {
   examples: [],
 } as const;
 
+export const leaderboardLabsSubcommand = {
+  name: 'labs',
+  aliases: [],
+  description: 'Show the most-used model creators (labs) on AI Gateway',
+  arguments: [],
+  options: [
+    leaderboardModalityOption,
+    leaderboardMetricOption,
+    leaderboardDateOption,
+    leaderboardFormatOption,
+    leaderboardOutOption,
+  ],
+  examples: [
+    {
+      name: 'Show the top labs by spend',
+      value: `${packageName} ai-gateway leaderboard labs --metric spend`,
+    },
+  ],
+} as const;
+
+export const leaderboardAppsSubcommand = {
+  name: 'apps',
+  aliases: [],
+  description: 'Show the top apps built on AI Gateway',
+  arguments: [],
+  options: [leaderboardFormatOption, leaderboardOutOption],
+  examples: [
+    {
+      name: 'Show the top apps',
+      value: `${packageName} ai-gateway leaderboard apps`,
+    },
+  ],
+} as const;
+
+export const leaderboardProvidersSubcommand = {
+  name: 'providers',
+  aliases: [],
+  description: 'Show the top inference providers on AI Gateway',
+  arguments: [],
+  options: [leaderboardFormatOption, leaderboardOutOption],
+  examples: [
+    {
+      name: 'Show the top providers as JSON',
+      value: `${packageName} ai-gateway leaderboard providers --format json`,
+    },
+  ],
+} as const;
+
 export const leaderboardSubcommand = {
   name: 'leaderboard',
   aliases: ['leaderboards'],
   description:
     'Explore AI Gateway usage leaderboards (open, anonymized data under CC BY 4.0)',
   arguments: [],
-  subcommands: [leaderboardModelsSubcommand],
+  subcommands: [
+    leaderboardModelsSubcommand,
+    leaderboardLabsSubcommand,
+    leaderboardAppsSubcommand,
+    leaderboardProvidersSubcommand,
+  ],
   options: [],
   examples: [],
 } as const;
