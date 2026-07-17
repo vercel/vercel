@@ -59,8 +59,8 @@ function printModelsTable(models: Model[]) {
   const availabilityCell = (model: Model): string => {
     if (model.available === undefined) return chalk.gray('–');
     if (model.available) return chalk.green('yes');
-    return model.available_reason
-      ? chalk.red(`no (${model.available_reason})`)
+    return model.unavailable_reason
+      ? chalk.red(`no (${model.unavailable_reason})`)
       : chalk.red('no');
   };
 

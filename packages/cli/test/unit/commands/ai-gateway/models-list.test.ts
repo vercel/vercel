@@ -84,7 +84,7 @@ describe('ai-gateway models list', () => {
         name: 'GPT-5',
         type: 'language',
         available: false,
-        available_reason: 'no_allowlisted_provider',
+        unavailable_reason: 'no_allowlisted_provider',
       },
     ]);
     client.setArgv('ai-gateway', 'models', 'list');

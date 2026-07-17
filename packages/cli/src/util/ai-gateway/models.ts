@@ -26,7 +26,7 @@ export type Model = {
   // already sends the token + `?teamId=<currentTeam>`, so no request change is
   // needed to receive these — `--scope <team>` selects the team as usual.
   available?: boolean;
-  available_reason?: string;
+  unavailable_reason?: string;
 };
 
 export type ModelEndpointPricing = {
