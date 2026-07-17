@@ -14,8 +14,10 @@ export interface ResolvedHelpCommand {
  * Resolve an explicit help request to the deepest known command path.
  *
  * Expects the positional arguments and `--help` flag produced by a
- * permissive `parseArguments` pass, so recognized global flags and
- * anything after a `--` terminator never enter the command path.
+ * permissive `parseArguments` pass: recognized global flags are consumed
+ * by the parser, and a `--help` after a `--` terminator does not count as
+ * a help request. Unrecognized flag tokens are dropped from the command
+ * path below; tokens after `--` arrive as ordinary positionals.
  */
 export function resolveHelpCommand(
   positionalArgs: string[],
@@ -30,11 +32,19 @@ export function resolveHelpCommand(
 
   // Permissive parsing leaves flags the global spec does not know about in
   // the positionals; they are never command names, so drop them.
-  const commandPath = (
-    isHelpCommand ? positionalArgs.slice(1) : positionalArgs
-  ).filter(arg => !arg.startsWith('-'));
+  const rawCommandPath = isHelpCommand
+    ? positionalArgs.slice(1)
+    : positionalArgs;
+  const commandPath = rawCommandPath.filter(arg => !arg.startsWith('-'));
 
   if (commandPath.length === 0) {
+    // Only a genuinely bare request (`vercel --help`, `vercel help`) means
+    // root help. A request made of only unknown flags (`vercel --prod
+    // --help`) is left to the router, which routes it to the default
+    // deploy command as before.
+    if (rawCommandPath.length > 0) {
+      return null;
+    }
     return { path: [], viaHelpCommand: isHelpCommand };
   }
 

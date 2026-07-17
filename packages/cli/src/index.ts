@@ -274,12 +274,16 @@ const main = async () => {
           const telemetryEventStore = new TelemetryEventStore({
             isDebug: process.env.VERCEL_TELEMETRY_DEBUG === '1',
             config: config.telemetry,
-            cliDevice: {
-              filePath: join(VERCEL_DIR, 'telemetry-device.json'),
-            },
-            cliSession: {
-              filePath: join(VERCEL_DIR, 'telemetry-session.json'),
-            },
+            cliDevice: isTelemetryFlushCommand
+              ? undefined
+              : {
+                  filePath: join(VERCEL_DIR, 'telemetry-device.json'),
+                },
+            cliSession: isTelemetryFlushCommand
+              ? undefined
+              : {
+                  filePath: join(VERCEL_DIR, 'telemetry-session.json'),
+                },
           });
           const telemetry = new RootTelemetryClient({
             opts: { store: telemetryEventStore },
@@ -287,13 +291,21 @@ const main = async () => {
           if (resolvedHelp.viaHelpCommand) {
             telemetry.trackCliCommandHelp('help');
           }
-          // Handlers group nested help as `<space-joined parent path>:<leaf>`
-          // (e.g. `flags rules:list`); a bare command tracks only its name.
+          // Handlers report help on a node with subcommands as the
+          // space-joined breadcrumb (`flags rules`) and help on a leaf as
+          // `<parent breadcrumb>:<leaf>` (`flags rules:list`); a bare
+          // command tracks only its name.
           const helpPath = resolvedHelp.path;
-          telemetry.trackCliFlagHelp(
-            helpPath.length > 1 ? helpPath.slice(0, -1).join(' ') : helpPath[0],
-            helpPath.length > 1 ? helpPath[helpPath.length - 1] : undefined
-          );
+          if (resolvedHelp.command?.subcommands?.length) {
+            telemetry.trackCliFlagHelp(helpPath.join(' '));
+          } else if (helpPath.length > 1) {
+            telemetry.trackCliFlagHelp(
+              helpPath.slice(0, -1).join(' '),
+              helpPath[helpPath.length - 1]
+            );
+          } else {
+            telemetry.trackCliFlagHelp(helpPath[0]);
+          }
           await telemetryEventStore.save();
         }
       } catch {

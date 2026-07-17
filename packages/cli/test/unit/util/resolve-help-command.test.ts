@@ -58,6 +58,11 @@ describe('resolveHelpCommand', () => {
       path: ['flags', 'rules', 'list'],
       viaHelpCommand: true,
     });
+    // Help on a mid-level node keeps the full breadcrumb in the path.
+    expect(resolve(['flags', 'rules', '--help'])).toMatchObject({
+      path: ['flags', 'rules'],
+      viaHelpCommand: false,
+    });
     // Positionals after the resolved command are not part of the path.
     expect(resolve(['deploy', 'my-app', '--help'])).toMatchObject({
       path: ['deploy'],
@@ -71,6 +76,15 @@ describe('resolveHelpCommand', () => {
       path: [],
       viaHelpCommand: true,
     });
+  });
+
+  it('resolves root help only for genuinely bare requests', () => {
+    // Known global flags are consumed by the parser: still bare.
+    expect(resolve(['--debug', '--help'])).toMatchObject({ path: [] });
+    // Unknown flags are not: the router owns this shape (it routes to the
+    // default deploy command, matching previous behavior).
+    expect(resolve(['--prod', '--help'])).toBeNull();
+    expect(resolve(['--force', '--help'])).toBeNull();
   });
 
   it('does not treat "h" as a help alias', () => {
