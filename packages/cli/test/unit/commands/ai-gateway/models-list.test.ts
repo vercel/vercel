@@ -91,11 +91,9 @@ describe('ai-gateway models list', () => {
 
     const exitCodePromise = aiGateway(client);
 
-    // The column header and the machine-readable reason both render. Models
-    // without the field (the default, unrestricted listing) keep the column
-    // hidden — covered by 'lists models in a table' above.
-    await expect(client.stdout).toOutput('available');
-    await expect(client.stdout).toOutput('no_allowlisted_provider');
+    // The rendered reason cell implies the column is present; a model without
+    // the field keeps the column hidden (see 'lists models in a table').
+    await expect(client.stdout).toOutput('no (no_allowlisted_provider)');
     expect(await exitCodePromise).toBe(0);
   });
 });
