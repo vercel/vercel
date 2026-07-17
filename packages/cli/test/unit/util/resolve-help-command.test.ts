@@ -49,6 +49,30 @@ describe('resolveHelpCommand', () => {
     expect(resolved?.parent?.name).toBe('env');
   });
 
+  it('reports the canonical path and help-command form for telemetry', () => {
+    expect(resolve(['env', 'ls', '--help'])).toMatchObject({
+      path: ['env', 'list'],
+      viaHelpCommand: false,
+    });
+    expect(resolve(['help', 'flags', 'rules', 'list'])).toMatchObject({
+      path: ['flags', 'rules', 'list'],
+      viaHelpCommand: true,
+    });
+    // Positionals after the resolved command are not part of the path.
+    expect(resolve(['deploy', 'my-app', '--help'])).toMatchObject({
+      path: ['deploy'],
+      viaHelpCommand: false,
+    });
+    expect(resolve(['--help'])).toMatchObject({
+      path: [],
+      viaHelpCommand: false,
+    });
+    expect(resolve(['help'])).toMatchObject({
+      path: [],
+      viaHelpCommand: true,
+    });
+  });
+
   it('does not treat "h" as a help alias', () => {
     expect(resolve(['h'])).toBeNull();
     expect(resolve(['h', 'flags'])).toBeNull();

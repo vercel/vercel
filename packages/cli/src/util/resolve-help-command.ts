@@ -4,6 +4,10 @@ import type { Command } from '../commands/help';
 export interface ResolvedHelpCommand {
   command?: Command;
   parent?: Command;
+  /** Canonical names of the resolved command path, e.g. `['env', 'list']`. */
+  path: string[];
+  /** Whether the request used the `help` command form (`vercel help x`). */
+  viaHelpCommand: boolean;
 }
 
 /**
@@ -31,7 +35,7 @@ export function resolveHelpCommand(
   ).filter(arg => !arg.startsWith('-'));
 
   if (commandPath.length === 0) {
-    return {};
+    return { path: [], viaHelpCommand: isHelpCommand };
   }
 
   const rootCommand = commands.find(candidate =>
@@ -43,6 +47,7 @@ export function resolveHelpCommand(
 
   let command: Command = rootCommand;
   let parent: Command | undefined;
+  const path = [rootCommand.name];
   for (const segment of commandPath.slice(1)) {
     const child: Command | undefined = command.subcommands?.find(candidate =>
       getCommandAliases(candidate).includes(segment)
@@ -58,7 +63,8 @@ export function resolveHelpCommand(
     }
     parent = command;
     command = child;
+    path.push(child.name);
   }
 
-  return { command, parent };
+  return { command, parent, path, viaHelpCommand: isHelpCommand };
 }

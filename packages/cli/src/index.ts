@@ -263,6 +263,41 @@ const main = async () => {
           })
         : help()
     );
+    // Telemetry consent lives in the global config: only track when the
+    // config is readable and the user has already seen the telemetry notice.
+    // Bare help emitted no telemetry before the early help path either, and
+    // telemetry failures must never block help output.
+    if (resolvedHelp.path.length > 0) {
+      try {
+        const config = configFiles.readConfigFile();
+        if (config.telemetry) {
+          const telemetryEventStore = new TelemetryEventStore({
+            isDebug: process.env.VERCEL_TELEMETRY_DEBUG === '1',
+            config: config.telemetry,
+            cliDevice: {
+              filePath: join(VERCEL_DIR, 'telemetry-device.json'),
+            },
+            cliSession: {
+              filePath: join(VERCEL_DIR, 'telemetry-session.json'),
+            },
+          });
+          const telemetry = new RootTelemetryClient({
+            opts: { store: telemetryEventStore },
+          });
+          if (resolvedHelp.viaHelpCommand) {
+            telemetry.trackCliCommandHelp('help');
+          }
+          telemetry.trackCliFlagHelp(
+            resolvedHelp.path[0],
+            resolvedHelp.path[1]
+          );
+          await telemetryEventStore.save();
+        }
+      } catch {
+        // ignored: consent state is unknown without a readable config
+      }
+    }
+
     // Explicit help is a successful operation, so exit `0`. Exit code `2` is
     // reserved for invalid or missing command structure, which never resolves
     // here and falls through to the router's usage errors.
