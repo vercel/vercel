@@ -35,7 +35,7 @@ describe('signMessage', () => {
     delete process.env.VERCEL_REGION;
   });
 
-  test('signs a message and returns the flattened JWS', async () => {
+  test('signs a string message (UTF-8) and returns the flattened JWS', async () => {
     getVercelOidcTokenMock.mockResolvedValue(OIDC_TOKEN);
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
@@ -43,7 +43,7 @@ describe('signMessage', () => {
 
     const result = await signMessage({
       issuerId: 'issuer_a',
-      message: 'aGVsbG8=',
+      message: 'hello',
     });
 
     expect(result).toEqual(SIGNATURE);
@@ -52,6 +52,23 @@ describe('signMessage', () => {
     expect((url as URL).toString()).toBe(
       'https://api.vercel.com/v1/kms/issuers/issuer_a/sign/message'
     );
+    // The raw string is UTF-8 encoded, then base64-encoded before sending.
+    expect(JSON.parse(init?.body as string)).toEqual({ message: 'aGVsbG8=' });
+  });
+
+  test('base64-encodes a Uint8Array message before sending', async () => {
+    getVercelOidcTokenMock.mockResolvedValue(OIDC_TOKEN);
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(fetchReturning({ signature: SIGNATURE }));
+
+    await signMessage({
+      issuerId: 'issuer_bytes',
+      // Raw bytes for "hello".
+      message: new Uint8Array([104, 101, 108, 108, 111]),
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
     expect(JSON.parse(init?.body as string)).toEqual({ message: 'aGVsbG8=' });
   });
 

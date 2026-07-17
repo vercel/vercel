@@ -7,8 +7,12 @@ import { resolveOidcToken } from './resolve-token';
 export interface SignMessageOptions {
   /** The ID of the issuer whose signing key should sign the message. */
   issuerId: string;
-  /** Base64-encoded message to be signed. */
-  message: string;
+  /**
+   * The message to sign. Provide raw bytes as a `Uint8Array`, or a `string`
+   * which is treated as UTF-8 text. The value is base64-encoded internally
+   * before being sent to the KMS API.
+   */
+  message: Uint8Array | string;
   /**
    * An explicit Vercel OIDC token to authenticate with. When omitted, the
    * function's OIDC token is fetched automatically via `@vercel/oidc`.
@@ -29,8 +33,9 @@ export interface SignMessageOptions {
 }
 
 /**
- * Signs a base64-encoded message for an issuer using its managed signing key
- * and returns the resulting JOSE Flattened JWS.
+ * Signs a message for an issuer using its managed signing key and returns the
+ * resulting JOSE Flattened JWS. The message may be provided as raw bytes
+ * (`Uint8Array`) or a UTF-8 `string`; it is base64-encoded before being sent.
  *
  * @throws {import('./errors').VercelKmsError} If the sign request fails.
  */
@@ -49,8 +54,20 @@ export async function signMessage(
     baseUrl,
     path: `/kms/issuers/${encodeURIComponent(issuerId)}/sign/message`,
     token: oidcToken,
-    body: { message },
+    body: { message: toBase64(message) },
   });
 
   return signature;
+}
+
+/**
+ * Base64-encodes a message for transport. A `string` is encoded as UTF-8; a
+ * `Uint8Array` is encoded as its raw bytes.
+ */
+function toBase64(message: Uint8Array | string): string {
+  return (
+    typeof message === 'string'
+      ? Buffer.from(message, 'utf-8')
+      : Buffer.from(message)
+  ).toString('base64');
 }
