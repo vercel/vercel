@@ -34,16 +34,17 @@ export function resolveHelpCommand(
     return {};
   }
 
-  let command = commands.find(candidate =>
+  const rootCommand = commands.find(candidate =>
     getCommandAliases(candidate).includes(commandPath[0])
   );
-  if (!command) {
+  if (!rootCommand) {
     return null;
   }
 
+  let command: Command = rootCommand;
   let parent: Command | undefined;
   for (const segment of commandPath.slice(1)) {
-    const child = command.subcommands?.find(candidate =>
+    const child: Command | undefined = command.subcommands?.find(candidate =>
       getCommandAliases(candidate).includes(segment)
     );
     if (!child) {

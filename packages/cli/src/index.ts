@@ -263,8 +263,10 @@ const main = async () => {
           })
         : help()
     );
-    // Command help keeps the usage exit code `2`; bare help stays `0`.
-    return resolvedHelp.command ? 2 : 0;
+    // Explicit help is a successful operation, so exit `0`. Exit code `2` is
+    // reserved for invalid or missing command structure, which never resolves
+    // here and falls through to the router's usage errors.
+    return 0;
   }
 
   const localConfigPath = parsedArgs.flags['--local-config'];
