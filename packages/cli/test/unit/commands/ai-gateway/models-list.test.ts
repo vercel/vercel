@@ -73,7 +73,7 @@ describe('ai-gateway models list', () => {
     expect(await exitCodePromise).toBe(0);
   });
 
-  it('shows an availability column when the gateway annotates it (AIG-187)', async () => {
+  it('shows an availability column when the gateway annotates it', async () => {
     useUser();
     useListModels([
       { ...sampleModel, available: true },

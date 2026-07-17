@@ -52,8 +52,8 @@ export default async function list(client: Client, argv: string[]) {
 
 function printModelsTable(models: Model[]) {
   // `available` is present only when the gateway annotated the response for a
-  // restricted team (AIG-187). Show the column only then, so output for
-  // unauthenticated / unrestricted listings is unchanged.
+  // restricted team. Show the column only then, so output for unauthenticated /
+  // unrestricted listings is unchanged.
   const showAvailability = models.some(m => m.available !== undefined);
 
   const availabilityCell = (model: Model): string => {

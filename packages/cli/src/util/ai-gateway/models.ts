@@ -20,11 +20,8 @@ export type Model = {
   type?: string;
   tags?: string[];
   pricing?: ModelPricing;
-  // Per-team routing availability (AIG-187). Only present on an authenticated
-  // request to a team that has an active restriction (provider allowlist / ZDR);
-  // an absent `available` means the team can route to the model. `client.fetch`
-  // already sends the token + `?teamId=<currentTeam>`, so no request change is
-  // needed to receive these — `--scope <team>` selects the team as usual.
+  // Per-team routing availability, present only on an authenticated request to a
+  // team with an active restriction; an absent `available` means it is routable.
   available?: boolean;
   unavailable_reason?: string;
 };
@@ -67,11 +64,11 @@ function gatewayBase(): string {
 }
 
 export async function listModels(client: Client): Promise<Model[]> {
-  // OpenAI-style model catalog. The absolute URL bypasses the default api host
-  // (new URL(url, apiUrl)), but client.fetch still attaches the auth token and
-  // `?teamId=<currentTeam>` — so an authenticated caller gets their team's
-  // private models plus, for a restricted team, per-model `available` flags
-  // (AIG-187). Unauthenticated callers get the public catalog only.
+  // OpenAI-style model catalog. The absolute URL bypasses the default api host,
+  // but client.fetch still attaches the auth token and `?teamId=<currentTeam>`,
+  // so an authenticated caller gets their team's private models plus, for a
+  // restricted team, per-model `available` flags. Unauthenticated callers get the
+  // public catalog only.
   const { data } = await client.fetch<{ object: 'list'; data: Model[] }>(
     `${gatewayBase()}/v1/models`,
     { method: 'GET' }
