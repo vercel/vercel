@@ -134,10 +134,6 @@ export async function ensureTeam(
   const { machine, canPrompt, yes } = opts;
 
   if (canPrompt && !yes && !hasExplicitScopeFlag(client.argv)) {
-    // `searchable: true` opts into the fuzzy team picker (matching `vc link`).
-    // The key-creation context rides on a dim second line of this prompt so it
-    // appears with the picker rather than flashing on its own during the team
-    // load.
     const org = await selectOrg(
       client,
       'Which team?',

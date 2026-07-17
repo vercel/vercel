@@ -75,7 +75,6 @@ vi.mock(
         }
         return keychainState.storeResult;
       },
-      // Deterministic clipboard: never shell out to pbcopy under test.
       copyToClipboard: (text: string) => {
         keychainState.copied.push(text);
         return keychainState.copyResult;
@@ -913,9 +912,6 @@ describe('ai-gateway coding-agents setup', () => {
   });
 
   describe('apply action', () => {
-    // Drives the interactive setup to the "Apply these changes?" prompt for a
-    // single claude-code agent, with all key options pinned via flags. Without
-    // the Keychain that prompt is a y/n confirm; with it, a three-way select.
     function startInteractiveSetup(extraArgv: string[] = []) {
       const team = useTeam();
       useUser();
@@ -942,9 +938,6 @@ describe('ai-gateway coding-agents setup', () => {
     it('shows the key-creation context on the team picker, not a separate line', async () => {
       const exitCodePromise = startInteractiveSetup();
 
-      // The context rides on a dim second line of the team prompt itself,
-      // rather than being printed ahead of it (where it flashed during the
-      // async team load).
       await expect(client.stderr).toOutput('Which team?');
       await expect(client.stderr).toOutput('will be created under this team');
       client.stdin.write('\n');
@@ -959,7 +952,6 @@ describe('ai-gateway coding-agents setup', () => {
 
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
-      // No Keychain: the apply prompt is a plain y/n confirm. Decline it.
       await expect(client.stderr).toOutput('Apply these changes?');
       client.stdin.write('n\n');
 
@@ -975,23 +967,18 @@ describe('ai-gateway coding-agents setup', () => {
 
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
-      // Keychain is available, so the storage prompt appears; accept the default.
       await expect(client.stderr).toOutput('macOS Keychain');
       client.stdin.write('\n');
       await expect(client.stderr).toOutput('Apply these changes?');
-      // Select: "Yes, write the files now" (0) → "Copy a prompt…" (1).
-      client.stdin.write('\x1b[B\n');
+      client.stdin.write('\x1b[B\n'); // arrow down to "Copy a prompt for my agent"
 
       expect(await exitCodePromise).toBe(0);
       await expect(client.stderr).toOutput('copied to clipboard');
 
-      // The key was created and stored in the Keychain…
       expect(lastCreateBody).toBeDefined();
       expect(keychainState.stored).toContain(CREATED_KEY);
-      // …but the config files were left to the agent, not written here.
       expect(existsSync(claudeSettingsPath())).toBe(false);
 
-      // The copied prompt describes the change without leaking the raw key.
       const [prompt] = keychainState.copied;
       expect(prompt).toBeDefined();
       expect(prompt).toContain('settings.json');
@@ -1012,7 +999,6 @@ describe('ai-gateway coding-agents setup', () => {
 
       expect(await exitCodePromise).toBe(0);
       await expect(client.stderr).toOutput('prompt printed below');
-      // The prompt lands on stdout for the user to copy manually.
       expect(client.stdout.getFullOutput()).toContain('settings.json');
     });
 
@@ -1039,14 +1025,11 @@ describe('ai-gateway coding-agents setup', () => {
       ]);
 
       expect(exitCode).toBe(0);
-      // Key created and stored in the Keychain.
       expect(lastCreateBody).toBeDefined();
       expect(keychainState.stored).toContain(CREATED_KEY);
-      // Prompt goes to stdout (pipeable) but never the plaintext key…
       const out = client.stdout.getFullOutput();
       expect(out).toContain('settings.json');
       expect(out).not.toContain(CREATED_KEY);
-      // …and the config files are left to the agent.
       expect(existsSync(claudeSettingsPath())).toBe(false);
     });
 
@@ -1064,7 +1047,6 @@ describe('ai-gateway coding-agents setup', () => {
     });
 
     it('--apply prompt is rejected without the Keychain', async () => {
-      // keychainState.available defaults to undefined → not macOS/Keychain.
       const exitCode = await startInteractiveSetup([
         '--apply',
         'prompt',
@@ -1643,7 +1625,6 @@ describe('ai-gateway coding-agents setup', () => {
       // Exactly one ✓ — file rows and the key row keep the blank gutter.
       expect(stderr.match(/✓/g)).toHaveLength(1);
       expect(stderr).toMatch(/^ {2}Created {9}/m);
-      // A caller-provided key stays "API Key" (not "New API Key").
       expect(stderr).toMatch(/^ {2}API Key {9}vck_/m);
       expect(stderr).not.toContain('WARNING!');
     });
@@ -1667,7 +1648,6 @@ describe('ai-gateway coding-agents setup', () => {
       expect(await aiGateway(client)).toBe(0);
 
       const stderr = client.stderr.getFullOutput();
-      // A key minted by this run reads as "New API Key".
       expect(stderr).toMatch(/^ {2}New API Key {5}vck_/m);
       expect(stderr).not.toMatch(/^ {2}API Key {9}vck_/m);
     });

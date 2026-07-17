@@ -124,11 +124,7 @@ export function printReceiptPath(label: string, path: string): void {
   );
 }
 
-/**
- * Masked-key receipt row, e.g. `New API Key  vck_1234••••abcd · macOS Keychain`.
- * `created` distinguishes a freshly minted key ("New API Key") from a
- * caller-provided one ("API Key").
- */
+/** Masked-key receipt row, e.g. `API Key  vck_1234••••abcd · macOS Keychain`. */
 export function printKeyRow(
   key: string,
   opts: { keychain?: boolean; created?: boolean } = {}
@@ -159,15 +155,7 @@ export function printKey(
   printKeyRow(key, opts);
 }
 
-/**
- * A plain-text prompt describing the pending config changes, for the user to
- * hand to a coding agent (the "Copy prompt" action). Only offered on a Keychain
- * setup, so the API key lives in the Keychain and the diffs reference it via a
- * `security find-generic-password` lookup rather than embedding it. The key is
- * still passed to `renderDiff` as a secret so any agent that writes it directly
- * (e.g. Pi) is masked rather than leaked — masked values are resolvable from the
- * Keychain, which the preamble explains.
- */
+/** Agent-handoff prompt (Keychain-only): diffs carry a Keychain lookup, and the key stays masked where a config embeds it. */
 export function buildAgentPrompt(plan: SetupPlan, apiKey: string): string {
   const sections: string[] = [
     'Set up the Vercel AI Gateway for my coding agents by applying the file changes below.',

@@ -44,12 +44,7 @@ export default async function selectOrg(
   searchable = false,
   /** Filled with resolution details for callers that adjust follow-up UI. */
   meta?: { choiceCount?: number },
-  /**
-   * Optional dim context rendered on a second line beneath the prompt. It is
-   * painted atomically with the prompt (which appears only after the async team
-   * load), so callers avoid printing a separate status line that would flash on
-   * its own during the load and then be jumped by the prompt.
-   */
+  /** Dim second line painted with the prompt, so it can't flash alone during the async team load. */
   description?: string
 ): Promise<Org> {
   const {
@@ -205,8 +200,6 @@ export default async function selectOrg(
     return choices[0].value;
   }
 
-  // A dim second line under the prompt, painted with it rather than printed
-  // ahead of the async load.
   const descriptionLine = description
     ? `\n${chalk.dim(`  ${description}`)}`
     : '';

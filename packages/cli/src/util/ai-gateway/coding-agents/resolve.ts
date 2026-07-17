@@ -76,11 +76,8 @@ export async function resolveAgents(args: {
     checked: detected[i],
   }));
   const picked = await client.input.checkbox<string>({
-    // The key legend and "pre-selected" note live on a persistent dim second
-    // line of the message. @inquirer/checkbox hides its `instructions` hint after
-    // the first keypress, so a user who selects one agent would otherwise lose
-    // the legend; `instructions: false` suppresses the library's parenthesized
-    // default so only our line shows.
+    // @inquirer/checkbox hides `instructions` after the first keypress, so the
+    // legend lives on a persistent dim line and the built-in hint is disabled.
     message: `Which coding agents should use the AI Gateway?\n${chalk.dim(
       '  Detected agents are pre-selected ·'
     )}${CHECKBOX_INSTRUCTIONS}`,

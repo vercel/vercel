@@ -81,11 +81,7 @@ export interface RenderDiffOptions {
   secrets?: string[];
   context?: number;
   indent?: string;
-  /**
-   * Emit plain, uncolored diff text. Used for content that leaves the terminal
-   * (e.g. a prompt copied to the clipboard for a coding agent) where ANSI codes
-   * would be noise.
-   */
+  /** Set false for text that leaves the terminal (clipboard/stdout prompts). */
   color?: boolean;
 }
 

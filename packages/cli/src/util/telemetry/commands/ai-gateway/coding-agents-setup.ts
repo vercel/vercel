@@ -101,7 +101,6 @@ export class AiGatewayCodingAgentsSetupTelemetryClient
 
   trackCliOptionApply(apply: string | undefined) {
     if (apply) {
-      // Enum value (edit/prompt) — safe to record as-is.
       this.trackCliOption({ option: 'apply', value: apply });
     }
   }

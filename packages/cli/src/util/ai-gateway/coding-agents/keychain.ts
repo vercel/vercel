@@ -45,12 +45,7 @@ export function keychainLookup(opts: { fish?: boolean } = {}): string {
 
 const PBCOPY_BIN = '/usr/bin/pbcopy';
 
-/**
- * Copy text to the macOS clipboard via pbcopy. Callers gate this behind the
- * Keychain flow, which is macOS-only, so pbcopy is present wherever this runs;
- * returns `false` (rather than throwing) if it is somehow unavailable so the
- * caller can fall back to printing.
- */
+/** macOS-only, like the Keychain flow that gates every caller; returns false so callers can fall back to printing. */
 export function copyToClipboard(text: string): boolean {
   try {
     execFileSync(PBCOPY_BIN, {

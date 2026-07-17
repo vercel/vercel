@@ -162,8 +162,7 @@ export default async function codingAgentsSetup(
     );
   }
   if (applyMode === 'prompt' && !wantKeychain) {
-    // A prompt handed to an agent must never carry the plaintext key; only the
-    // Keychain flow keeps it out of the diff (via a runtime lookup).
+    // An agent prompt must never carry the plaintext key; only the Keychain flow keeps it out of the diffs.
     return failValidation(
       client,
       machine,
@@ -314,9 +313,6 @@ export default async function codingAgentsSetup(
   if (willCreate && agents.length > 0 && (!dryRun || canPrompt)) {
     const promptCreate = canPrompt && !yes;
 
-    // The "a new key will be created" context is shown as a dim line on the
-    // team picker (see ensureTeam), so it appears with that prompt instead of
-    // flashing on its own line beforehand.
     const teamError = await ensureTeam(client, {
       machine,
       canPrompt,
@@ -415,7 +411,6 @@ export default async function codingAgentsSetup(
       alreadyConfigured,
       // With nothing consented there is nothing to rotate or reconfigure.
       reconfigure: Boolean(reconfigure) && agents.length > 0,
-      // `--apply prompt`: emit an agent prompt in the JSON instead of writing.
       promptMode: applyMode === 'prompt',
     });
   }
@@ -503,13 +498,10 @@ export default async function codingAgentsSetup(
     return 1;
   }
 
-  // `--apply` forces the action non-interactively; `prompt` maps to the copy
-  // handoff. Otherwise ask — but only when there is something to write.
   let applyAction: 'apply' | 'copy' = applyMode === 'prompt' ? 'copy' : 'apply';
   if (applyMode === undefined && changed.length > 0 && canPrompt && !yes) {
     if (useKeychain) {
-      // Keychain-backed: the diffs reference a Keychain lookup, not the key, so
-      // a prompt is safe to hand to an agent — offer it alongside applying.
+      // Only Keychain-backed diffs are key-free, so only they get the agent-prompt option.
       const choice = await client.input.select<'apply' | 'copy' | 'cancel'>({
         message: 'Apply these changes?',
         choices: [
@@ -525,8 +517,6 @@ export default async function codingAgentsSetup(
       }
       applyAction = choice;
     } else {
-      // Without the Keychain the diff embeds the plaintext key, so a prompt
-      // handoff isn't offered; the only question is whether to write the files.
       const confirmed = await client.input.confirm(
         'Apply these changes?',
         true
@@ -562,9 +552,7 @@ export default async function codingAgentsSetup(
   }
 
   if (useKeychain && !storeKeyInKeychain(keySource.key)) {
-    // Without the key in the Keychain, a copied prompt would fall back to
-    // embedding the plaintext key — the exact thing the Keychain gate prevents.
-    // Refuse rather than silently downgrade.
+    // A copy handoff can't downgrade to embedding the plaintext key — refuse instead.
     if (applyAction === 'copy') {
       output.error(
         'Failed to store the key in the macOS Keychain, so a prompt would expose your plaintext key. Re-run and choose Apply, or pass --no-keychain to write the key to the config files.'
@@ -585,15 +573,10 @@ export default async function codingAgentsSetup(
     shellRcOverride,
   });
 
-  // Copy/prompt handoff: the key is created and stored in the Keychain, but the
-  // config edits are delegated to a coding agent via the prompt rather than
-  // written here.
   if (applyAction === 'copy') {
     const promptText = buildAgentPrompt(applyPlanResult, keySource.key);
     if (applyMode === 'prompt') {
-      // Flag mode: the prompt is the command's output. Write it to stdout so it
-      // can be piped into an agent (`… --apply prompt --yes | claude -p`);
-      // clipboard copy is a best-effort extra and status stays on stderr.
+      // Prompt on stdout (pipeable, e.g. `| claude -p`); status stays on stderr.
       const copied = copyToClipboard(promptText);
       printStatus(
         copied

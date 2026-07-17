@@ -173,9 +173,6 @@ export async function runMachine(args: {
     shellRcOverride: args.shellRcOverride,
   });
 
-  // `--apply prompt`: don't write files — emit an agent prompt as a JSON field
-  // (pipe with `| jq -r .prompt`). Requires the key in the Keychain so the
-  // prompt carries a runtime lookup, never the plaintext key.
   if (args.promptMode) {
     if (!useKeychain) {
       client.stdout.write(
