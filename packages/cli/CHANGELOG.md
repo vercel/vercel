@@ -1,5 +1,11 @@
 # vercel
 
+## 56.3.1
+
+### Patch Changes
+
+- b08b736: Support linked-project deploys with project-scoped tokens that cannot fetch owner user/team resources.
+
 ## 56.3.0
 
 ### Minor Changes
