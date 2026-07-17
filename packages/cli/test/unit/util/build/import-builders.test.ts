@@ -225,7 +225,8 @@ describe('importBuilders()', () => {
     expect(installBuildersModule.installBuilders).toHaveBeenCalledWith(
       buildersDir,
       new Set([spec]),
-      undefined
+      undefined,
+      new Map([[spec, 'not-installed']])
     );
     if (!err) {
       throw new Error('Expected `err` to be defined');
@@ -233,6 +234,53 @@ describe('importBuilders()', () => {
     expect(
       err.message.startsWith('Importing "@vercel/does-not-exist": Cannot')
     ).toBe(true);
+  });
+
+  it('should report `entrypoint-load-failed` when a Builder is present but fails to load', async () => {
+    const pkgName = 'broken-builder';
+    const spec = pkgName;
+    const cwd = await getWriteableDirectory();
+    const buildersDir = join(cwd, '.vercel', 'builders');
+    const builderModuleDir = join(buildersDir, 'node_modules', pkgName);
+
+    // A Builder whose `package.json` resolves but whose entrypoint
+    // requires a package that is not installed
+    await outputJSON(join(builderModuleDir, 'package.json'), {
+      name: pkgName,
+      version: '1.0.0',
+      main: 'index.js',
+    });
+    await writeFile(
+      join(builderModuleDir, 'index.js'),
+      `require('some-package-that-does-not-exist');`
+    );
+
+    vi.mocked(installBuildersModule.installBuilders).mockImplementationOnce(
+      async () => {
+        // Reinstalling repairs the broken entrypoint
+        await writeFile(
+          join(builderModuleDir, 'index.js'),
+          `exports.version = 3; exports.build = async function() { return { output: {} }; };`
+        );
+        return new Map();
+      }
+    );
+
+    try {
+      const builders = await importBuilders(new Set([spec]), cwd);
+      expect(installBuildersModule.installBuilders).toHaveBeenCalledWith(
+        buildersDir,
+        new Set([spec]),
+        undefined,
+        new Map([
+          [spec, 'entrypoint-load-failed:some-package-that-does-not-exist'],
+        ])
+      );
+      expect(builders.get(spec)?.pkg.version).toBe('1.0.0');
+      expect(builders.get(spec)?.dynamicallyInstalled).toBe(true);
+    } finally {
+      await remove(cwd);
+    }
   });
 
   it('should install and import builder', async () => {

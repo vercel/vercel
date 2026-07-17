@@ -1,5 +1,17 @@
 # @vercel/frameworks
 
+## 3.30.7
+
+### Patch Changes
+
+- fa14ee9: Mark the Services framework preset as stable.
+
+## 3.30.6
+
+### Patch Changes
+
+- 7bc4db0: [frameworks] Add Lovable platform framework and platform attribute
+
 ## 3.30.5
 
 ### Patch Changes

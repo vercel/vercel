@@ -81,7 +81,6 @@ import type {
   User,
 } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
-import { Agent as HttpsAgent } from 'https';
 import box from './util/output/box';
 import { TelemetryEventStore } from './util/telemetry';
 import { RootTelemetryClient } from './util/telemetry/root';
@@ -545,18 +544,12 @@ const main = async () => {
   );
 
   // Only load proxy support if proxy env vars are configured (saves startup time).
-  const proxyConfigured = hasProxyConfig();
-  const agent = proxyConfigured
-    ? new (await import('proxy-agent')).ProxyAgent({ keepAlive: true })
-    : new HttpsAgent({ keepAlive: true });
-
-  if (proxyConfigured) {
+  if (hasProxyConfig()) {
     const { EnvProxyDispatcher } = await import('./util/fetch-proxy');
     setFetchDispatcher(new EnvProxyDispatcher());
   }
 
   client = new Client({
-    agent,
     apiUrl,
     stdin: process.stdin,
     stdout: process.stdout,
@@ -791,11 +784,17 @@ const main = async () => {
     parsedArgs.flags['--scope'] ||
     parsedArgs.flags['--team'] ||
     localConfig?.scope;
+  const separatorIndex = client.argv.indexOf('--');
+  const cliArgs =
+    separatorIndex === -1 ? client.argv : client.argv.slice(0, separatorIndex);
+  const buildNeedsRemoteProjectScope =
+    targetCommand === 'build' &&
+    cliArgs.some(arg => arg === '--project' || arg.startsWith('--project='));
 
   if (
     typeof scope === 'string' &&
     targetCommand !== 'login' &&
-    targetCommand !== 'build' &&
+    (targetCommand !== 'build' || buildNeedsRemoteProjectScope) &&
     targetCommand !== 'sandbox'
   ) {
     let user = null;
@@ -1113,10 +1112,6 @@ const main = async () => {
         case 'microfrontends':
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).microfrontends;
-          break;
-        case 'oauth-apps':
-          telemetry.trackCliCommandOauthApps(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).oauthApps;
           break;
         case 'open':
           telemetry.trackCliCommandOpen(userSuppliedSubCommand);

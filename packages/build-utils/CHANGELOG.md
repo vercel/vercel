@@ -1,5 +1,31 @@
 # @vercel/build-utils
 
+## 13.34.0
+
+### Minor Changes
+
+- 238543c: Support Python services that declare their web app and development workflow sidecars through a `pyproject.toml` entrypoint in `vercel dev`.
+
+## 13.33.1
+
+### Patch Changes
+
+- def07fc: Migrate `@vercel/client` and `@vercel/build-utils` from `node-fetch` to native `fetch`. This removes the last `url.parse()` usage from the CLI bundle, which triggered a `DEP0169` DeprecationWarning on Node 24 (visible in the standalone binary during `vercel deploy`).
+
+  BREAKING CHANGE (`@vercel/client`): the `agent?: http.Agent` option was replaced with `dispatcher?: FetchDispatcher` (an undici dispatcher, e.g. `undici.ProxyAgent`), since native `fetch` does not support Node.js HTTP agents. The CLI now threads its proxy-aware dispatcher through automatically, so `HTTP_PROXY`/`HTTPS_PROXY` behavior is unchanged for CLI users.
+
+## 13.33.0
+
+### Minor Changes
+
+- 607f0ef: Add service information to deploy-manifest.
+
+## 13.32.3
+
+### Patch Changes
+
+- 7b30856: Add `vercel dev` support for Python queue subscribers defined in `pyproject.toml`.
+
 ## 13.32.2
 
 ### Patch Changes

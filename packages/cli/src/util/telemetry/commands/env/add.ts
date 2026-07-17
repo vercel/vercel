@@ -19,13 +19,13 @@ export class EnvAddTelemetryClient
 
   trackCliArgumentEnvironment(environment: string | undefined) {
     if (environment) {
+      const allStandard = environment
+        .split(',')
+        .map(t => t.trim())
+        .every(t => STANDARD_ENVIRONMENTS.includes(t as CustomEnvironmentType));
       this.trackCliArgument({
         arg: 'environment',
-        value: STANDARD_ENVIRONMENTS.includes(
-          environment as CustomEnvironmentType
-        )
-          ? environment
-          : this.redactedValue,
+        value: allStandard ? environment : this.redactedValue,
       });
     }
   }
