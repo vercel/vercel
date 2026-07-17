@@ -125,10 +125,13 @@ export function getArgsAfterCommand(
 ): string[] {
   let commandIndex = 0;
 
+  // Before the command token every flag belongs to the root CLI, so short
+  // forms (-t, -S, ...) are skipped too. After the command token only long
+  // globals are stripped, since short flags there are tool flags (curl -d).
   while (commandIndex < rawArgs.length) {
     const arg = rawArgs[commandIndex];
     const name = flagName(arg);
-    if (!VC_GLOBAL_LONG_FLAGS.has(name)) {
+    if (!GLOBAL_CLI_FLAG_NAMES.has(name)) {
       break;
     }
 
@@ -548,6 +551,7 @@ export async function getDeploymentUrlAndToken(
   }
 
   let baseUrl: string;
+  let allowProtectionTokenCreation = true;
 
   if (deploymentFlag) {
     const accountId = scope.team?.id || scope.user.id;
@@ -558,6 +562,12 @@ export async function getDeploymentUrlAndToken(
     const requestedBaseUrl = isLegacyDirectUrl
       ? await getDeploymentUrlById(client, deploymentFlag, accountId)
       : null;
+
+    // Read (never prompt for or create) the local link. It scopes which
+    // project we may mint bypass secrets on, and stays available to trace
+    // creation (including cross-team links).
+    const existingLink = await getLinkedProject(client, { cwd: client.cwd });
+    const localLink = existingLink.status === 'linked' ? existingLink : null;
 
     // A caller-supplied bypass already provides everything needed to access
     // the target. Preserve the legacy URL/ID resolver here so using a bypass
@@ -571,13 +581,7 @@ export async function getDeploymentUrlAndToken(
         return 1;
       }
       baseUrl = deploymentUrl;
-
-      // Keep existing linked context available to trace creation (including
-      // cross-team links), but do not prompt or create a link when absent.
-      const existingLink = await getLinkedProject(client, { cwd: client.cwd });
-      if (existingLink.status === 'linked') {
-        link = existingLink;
-      }
+      link = localLink;
     } else {
       const deploymentSelector =
         deploymentFlag.includes('.') || deploymentFlag.startsWith('dpl_')
@@ -622,6 +626,11 @@ export async function getDeploymentUrlAndToken(
 
       if (link && resolvedBaseUrl) {
         baseUrl = resolvedBaseUrl;
+        // Creating a bypass secret is a remote mutation; only do it on the
+        // project linked to this directory. Other projects reuse existing
+        // secrets or go without.
+        allowProtectionTokenCreation =
+          localLink?.project.id === link.project.id;
       } else {
         // Preserve legacy target resolution, then reuse an existing link for
         // protection settings when available. Never link for an explicit
@@ -635,12 +644,9 @@ export async function getDeploymentUrlAndToken(
           return 1;
         }
 
-        const existingLink = await getLinkedProject(client, {
-          cwd: client.cwd,
-        });
-        if (existingLink.status === 'linked') {
-          link = existingLink;
-        }
+        link = link ?? localLink;
+        allowProtectionTokenCreation =
+          link !== null && localLink?.project.id === link.project.id;
         baseUrl = legacyBaseUrl;
       }
     }
@@ -681,7 +687,8 @@ export async function getDeploymentUrlAndToken(
     try {
       deploymentProtectionToken = await getOrCreateDeploymentProtectionToken(
         client,
-        link
+        link,
+        { createIfMissing: allowProtectionTokenCreation }
       );
     } catch (err) {
       const message = `Failed to get deployment protection bypass token: ${err instanceof Error ? err.message : String(err)}`;
