@@ -16,6 +16,7 @@ describe('@vercel/functions', () => {
     'geolocation',
     'getCache',
     'getEnv',
+    'getMaxDuration',
     'invalidateBySrcImage',
     'invalidateByTag',
     'ipAddress',
