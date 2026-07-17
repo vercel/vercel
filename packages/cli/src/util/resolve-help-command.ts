@@ -1,3 +1,4 @@
+import { getCommandAliases } from '../commands';
 import type { Command } from '../commands/help';
 
 export interface ResolvedHelpCommand {
@@ -5,37 +6,36 @@ export interface ResolvedHelpCommand {
   parent?: Command;
 }
 
-function matchesCommand(command: Command, value: string) {
-  return command.name === value || command.aliases.includes(value);
-}
-
-/** Resolve an explicit help request to the deepest known command path. */
+/**
+ * Resolve an explicit help request to the deepest known command path.
+ *
+ * Expects the positional arguments and `--help` flag produced by a
+ * permissive `parseArguments` pass, so recognized global flags and
+ * anything after a `--` terminator never enter the command path.
+ */
 export function resolveHelpCommand(
-  args: string[],
+  positionalArgs: string[],
+  hasHelpOption: boolean,
   commands: ReadonlyArray<Command>
 ): ResolvedHelpCommand | null {
-  const childArgumentBoundary = args.indexOf('--');
-  const cliArgs = args.slice(
-    0,
-    childArgumentBoundary === -1 ? undefined : childArgumentBoundary
-  );
-  const isHelpCommand = cliArgs[0] === 'help' || cliArgs[0] === 'h';
-  const hasHelpOption = cliArgs.includes('--help') || cliArgs.includes('-h');
+  const isHelpCommand = positionalArgs[0] === 'help';
 
   if (!isHelpCommand && !hasHelpOption) {
     return null;
   }
 
-  const commandPath = (isHelpCommand ? cliArgs.slice(1) : cliArgs).filter(
-    arg => arg !== '--help' && arg !== '-h'
-  );
+  // Permissive parsing leaves flags the global spec does not know about in
+  // the positionals; they are never command names, so drop them.
+  const commandPath = (
+    isHelpCommand ? positionalArgs.slice(1) : positionalArgs
+  ).filter(arg => !arg.startsWith('-'));
 
   if (commandPath.length === 0) {
     return {};
   }
 
   let command = commands.find(candidate =>
-    matchesCommand(candidate, commandPath[0])
+    getCommandAliases(candidate).includes(commandPath[0])
   );
   if (!command) {
     return null;
@@ -43,17 +43,16 @@ export function resolveHelpCommand(
 
   let parent: Command | undefined;
   for (const segment of commandPath.slice(1)) {
-    const currentCommand: Command = command;
-    const child: Command | undefined = currentCommand.subcommands?.find(
-      candidate => matchesCommand(candidate, segment)
+    const child = command.subcommands?.find(candidate =>
+      getCommandAliases(candidate).includes(segment)
     );
     if (!child) {
-      if (currentCommand.subcommands?.length) {
+      if (command.subcommands?.length) {
         return null;
       }
       break;
     }
-    parent = currentCommand;
+    parent = command;
     command = child;
   }
 

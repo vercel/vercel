@@ -226,17 +226,45 @@ const main = async () => {
     return 1;
   }
 
-  const resolvedHelp = resolveHelpCommand(
-    process.argv.slice(2),
-    commandDefinitions
-  );
+  // The second argument to the command can be:
+  //
+  //  * a path to deploy (as in: `vercel path/`)
+  //  * a subcommand (as in: `vercel ls`)
+  const targetOrSubcommand = parsedArgs.args[2];
+  const subSubCommand = parsedArgs.args[3];
+
+  // If empty, leave this code here for easy adding of beta commands later
+  const betaCommands: string[] = ['api', 'crons', 'curl', 'webhooks'];
+  const versionBanner = isNativeBinaryInstall()
+    ? `${getTitleName()} CLI ${pkg.version}`
+    : `${getTitleName()} CLI ${pkg.version} (Node.js ${process.versions.node})`;
+  const msg = betaCommands.includes(targetOrSubcommand)
+    ? `${versionBanner} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
+    : versionBanner;
+
+  // Resolve explicit help requests before configuration and authentication
+  // setup so help stays available when either of those is broken. Bare
+  // `--version` outranks `--help`, matching the pre-existing ordering below.
+  const resolvedHelp =
+    parsedArgs.flags['--version'] && !targetOrSubcommand
+      ? null
+      : resolveHelpCommand(
+          parsedArgs.args.slice(2),
+          parsedArgs.flags['--help'] === true,
+          commandDefinitions
+        );
   if (resolvedHelp) {
+    output.print(`${chalk.dim(msg)}\n`);
     output.print(
       resolvedHelp.command
-        ? commandHelp(resolvedHelp.command, { parent: resolvedHelp.parent })
+        ? commandHelp(resolvedHelp.command, {
+            columns: output.stream.columns,
+            parent: resolvedHelp.parent,
+          })
         : help()
     );
-    return 0;
+    // Command help keeps the usage exit code `2`; bare help stays `0`.
+    return resolvedHelp.command ? 2 : 0;
   }
 
   const localConfigPath = parsedArgs.flags['--local-config'];
@@ -266,35 +294,12 @@ const main = async () => {
     return 1;
   }
 
-  // The second argument to the command can be:
-  //
-  //  * a path to deploy (as in: `vercel path/`)
-  //  * a subcommand (as in: `vercel ls`)
-  const targetOrSubcommand = parsedArgs.args[2];
-  const subSubCommand = parsedArgs.args[3];
-
-  // If empty, leave this code here for easy adding of beta commands later
-  const betaCommands: string[] = ['api', 'crons', 'curl', 'webhooks'];
-  const versionBanner = isNativeBinaryInstall()
-    ? `${getTitleName()} CLI ${pkg.version}`
-    : `${getTitleName()} CLI ${pkg.version} (Node.js ${process.versions.node})`;
-  const msg = betaCommands.includes(targetOrSubcommand)
-    ? `${versionBanner} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
-    : versionBanner;
   output.print(`${chalk.dim(msg)}\n`);
 
   // Handle `--version` directly
   if (!targetOrSubcommand && parsedArgs.flags['--version']) {
     // biome-ignore lint/suspicious/noConsole: intentional console usage
     console.log(pkg.version);
-    return 0;
-  }
-
-  // Handle bare `-h` directly
-  const bareHelpOption = !targetOrSubcommand && parsedArgs.flags['--help'];
-  const bareHelpSubcommand = targetOrSubcommand === 'help' && !subSubCommand;
-  if (bareHelpOption || bareHelpSubcommand) {
-    output.print(help());
     return 0;
   }
 
@@ -1403,8 +1408,10 @@ main()
   .then(async exitCode => {
     // Skip the update notification after `vc upgrade`: the process still has
     // the pre-upgrade version in memory, so it would prompt the user to
-    // upgrade again right after the upgrade completed.
-    if (cachedLatest && resolvedCommandForUpdate !== 'upgrade') {
+    // upgrade again right after the upgrade completed. `client` is unassigned
+    // when main() returns before setup (help and version requests), and the
+    // update flow needs it for config and prompts.
+    if (client && cachedLatest && resolvedCommandForUpdate !== 'upgrade') {
       const originalExitCode = typeof exitCode === 'number' ? exitCode : 0;
 
       // Await the fresh registry lookup to verify the exact version before
