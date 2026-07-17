@@ -1,6 +1,7 @@
 import { projectOption, yesOption } from '../../util/arg-common';
 import { formatFlagConditionComparatorList } from '../../util/flags/comparators';
 import { packageName } from '../../util/pkg-name';
+import { FLAG_EVALUATIONS_GRANULARITIES } from './evaluations-config';
 
 const segmentRuleOperatorDescription = `Valid operators: ${formatFlagConditionComparatorList()}`;
 
@@ -242,6 +243,63 @@ export const versionsSubcommand = {
     {
       name: 'Show what changed in a revision',
       value: `${packageName} flags versions diff my-feature-flag --revision 4`,
+    },
+  ],
+} as const;
+
+export const evaluationsSubcommand = {
+  name: 'evaluations',
+  aliases: ['evals'],
+  description: 'Display evaluation metrics for a feature flag',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'since',
+      shorthand: 's',
+      type: String,
+      deprecated: false,
+      description:
+        'Start time: relative (1h, 30m, 2d) or ISO date (default: 1h)',
+      argument: 'TIME',
+    },
+    {
+      name: 'until',
+      shorthand: 'u',
+      type: String,
+      deprecated: false,
+      description: 'End time (default: now)',
+      argument: 'TIME',
+    },
+    {
+      name: 'granularity',
+      shorthand: 'g',
+      type: String,
+      deprecated: false,
+      description: `Time bucket size: ${FLAG_EVALUATIONS_GRANULARITIES.join(', ')} (default: auto)`,
+      argument: 'SIZE',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'Show evaluations by variant for the last hour',
+      value: `${packageName} flags evaluations my-feature`,
+    },
+    {
+      name: 'Show evaluation metrics as JSON',
+      value: `${packageName} flags evaluations my-feature --since 24h --json`,
     },
   ],
 } as const;
@@ -1542,6 +1600,7 @@ export const flagsCommand = {
     listSubcommand,
     inspectSubcommand,
     versionsSubcommand,
+    evaluationsSubcommand,
     createSubcommand,
     openSubcommand,
     updateSubcommand,
