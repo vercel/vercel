@@ -287,9 +287,12 @@ const main = async () => {
           if (resolvedHelp.viaHelpCommand) {
             telemetry.trackCliCommandHelp('help');
           }
+          // Handlers group nested help as `<space-joined parent path>:<leaf>`
+          // (e.g. `flags rules:list`); a bare command tracks only its name.
+          const helpPath = resolvedHelp.path;
           telemetry.trackCliFlagHelp(
-            resolvedHelp.path[0],
-            resolvedHelp.path[1]
+            helpPath.length > 1 ? helpPath.slice(0, -1).join(' ') : helpPath[0],
+            helpPath.length > 1 ? helpPath[helpPath.length - 1] : undefined
           );
           await telemetryEventStore.save();
         }
