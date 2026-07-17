@@ -72,4 +72,30 @@ describe('ai-gateway models list', () => {
     await expect(client.stdout).toOutput('"models"');
     expect(await exitCodePromise).toBe(0);
   });
+
+  it('shows an availability column when the gateway annotates it (AIG-187)', async () => {
+    useUser();
+    useListModels([
+      { ...sampleModel, available: true },
+      {
+        id: 'openai/gpt-5',
+        object: 'model',
+        owned_by: 'openai',
+        name: 'GPT-5',
+        type: 'language',
+        available: false,
+        available_reason: 'no_allowlisted_provider',
+      },
+    ]);
+    client.setArgv('ai-gateway', 'models', 'list');
+
+    const exitCodePromise = aiGateway(client);
+
+    // The column header and the machine-readable reason both render. Models
+    // without the field (the default, unrestricted listing) keep the column
+    // hidden — covered by 'lists models in a table' above.
+    await expect(client.stdout).toOutput('available');
+    await expect(client.stdout).toOutput('no_allowlisted_provider');
+    expect(await exitCodePromise).toBe(0);
+  });
 });
