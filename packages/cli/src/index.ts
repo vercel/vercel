@@ -1388,8 +1388,11 @@ main()
   .then(async exitCode => {
     // Skip the update notification after `vc upgrade`: the process still has
     // the pre-upgrade version in memory, so it would prompt the user to
-    // upgrade again right after the upgrade completed.
-    if (cachedLatest && resolvedCommandForUpdate !== 'upgrade') {
+    // upgrade again right after the upgrade completed. `client` is never
+    // assigned when main() returns before setup (bare `--help`, `--version`,
+    // and config-read errors), and the update flow dereferences it for
+    // config and prompts.
+    if (client && cachedLatest && resolvedCommandForUpdate !== 'upgrade') {
       const originalExitCode = typeof exitCode === 'number' ? exitCode : 0;
 
       // Await the fresh registry lookup to verify the exact version before
