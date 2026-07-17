@@ -942,7 +942,7 @@ describe('ai-gateway coding-agents setup', () => {
       await expect(client.stderr).toOutput('will be created under this team');
       client.stdin.write('\n');
       await expect(client.stderr).toOutput('Apply these changes?');
-      client.stdin.write('n\n'); // no Keychain → y/n confirm; decline
+      client.stdin.write('n\n');
 
       expect(await exitCodePromise).toBe(0);
     });
@@ -970,7 +970,7 @@ describe('ai-gateway coding-agents setup', () => {
       await expect(client.stderr).toOutput('macOS Keychain');
       client.stdin.write('\n');
       await expect(client.stderr).toOutput('Apply these changes?');
-      client.stdin.write('\x1b[B\n'); // arrow down to "Copy a prompt for my agent"
+      client.stdin.write('\x1b[B\n');
 
       expect(await exitCodePromise).toBe(0);
       await expect(client.stderr).toOutput('copied to clipboard');
@@ -1008,7 +1008,7 @@ describe('ai-gateway coding-agents setup', () => {
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
       await expect(client.stderr).toOutput('Apply these changes?');
-      client.stdin.write('\n'); // accept default (yes)
+      client.stdin.write('\n');
 
       expect(await exitCodePromise).toBe(0);
       expect(existsSync(claudeSettingsPath())).toBe(true);

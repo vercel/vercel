@@ -81,7 +81,6 @@ export interface RenderDiffOptions {
   secrets?: string[];
   context?: number;
   indent?: string;
-  /** Set false for text that leaves the terminal (clipboard/stdout prompts). */
   color?: boolean;
 }
 

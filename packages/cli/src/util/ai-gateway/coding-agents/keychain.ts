@@ -45,7 +45,6 @@ export function keychainLookup(opts: { fish?: boolean } = {}): string {
 
 const PBCOPY_BIN = '/usr/bin/pbcopy';
 
-/** macOS-only, like the Keychain flow that gates every caller; returns false so callers can fall back to printing. */
 export function copyToClipboard(text: string): boolean {
   try {
     execFileSync(PBCOPY_BIN, {

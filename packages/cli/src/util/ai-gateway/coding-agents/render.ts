@@ -124,7 +124,6 @@ export function printReceiptPath(label: string, path: string): void {
   );
 }
 
-/** Masked-key receipt row, e.g. `API Key  vck_1234••••abcd · macOS Keychain`. */
 export function printKeyRow(
   key: string,
   opts: { keychain?: boolean; created?: boolean } = {}
@@ -155,7 +154,6 @@ export function printKey(
   printKeyRow(key, opts);
 }
 
-/** Agent-handoff prompt (Keychain-only): diffs carry a Keychain lookup, and the key stays masked where a config embeds it. */
 export function buildAgentPrompt(plan: SetupPlan, apiKey: string): string {
   const sections: string[] = [
     'Set up the Vercel AI Gateway for my coding agents by applying the file changes below.',

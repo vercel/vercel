@@ -44,7 +44,6 @@ export default async function selectOrg(
   searchable = false,
   /** Filled with resolution details for callers that adjust follow-up UI. */
   meta?: { choiceCount?: number },
-  /** Dim second line painted with the prompt, so it can't flash alone during the async team load. */
   description?: string
 ): Promise<Org> {
   const {

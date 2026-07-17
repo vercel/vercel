@@ -162,7 +162,6 @@ export default async function codingAgentsSetup(
     );
   }
   if (applyMode === 'prompt' && !wantKeychain) {
-    // An agent prompt must never carry the plaintext key; only the Keychain flow keeps it out of the diffs.
     return failValidation(
       client,
       machine,
@@ -501,7 +500,6 @@ export default async function codingAgentsSetup(
   let applyAction: 'apply' | 'copy' = applyMode === 'prompt' ? 'copy' : 'apply';
   if (applyMode === undefined && changed.length > 0 && canPrompt && !yes) {
     if (useKeychain) {
-      // Only Keychain-backed diffs are key-free, so only they get the agent-prompt option.
       const choice = await client.input.select<'apply' | 'copy' | 'cancel'>({
         message: 'Apply these changes?',
         choices: [
@@ -552,7 +550,6 @@ export default async function codingAgentsSetup(
   }
 
   if (useKeychain && !storeKeyInKeychain(keySource.key)) {
-    // A copy handoff can't downgrade to embedding the plaintext key — refuse instead.
     if (applyAction === 'copy') {
       output.error(
         'Failed to store the key in the macOS Keychain, so a prompt would expose your plaintext key. Re-run and choose Apply, or pass --no-keychain to write the key to the config files.'
@@ -576,7 +573,6 @@ export default async function codingAgentsSetup(
   if (applyAction === 'copy') {
     const promptText = buildAgentPrompt(applyPlanResult, keySource.key);
     if (applyMode === 'prompt') {
-      // Prompt on stdout (pipeable, e.g. `| claude -p`); status stays on stderr.
       const copied = copyToClipboard(promptText);
       printStatus(
         copied
@@ -603,7 +599,6 @@ export default async function codingAgentsSetup(
     // Rotated with a fresh key but nothing in the config files changed (e.g. the
     // key is resolved from the environment rather than embedded).
     output.print('\n');
-    // No ✓ gutter: the verb "Rotated" already reads as completed.
     printAlignedLabel('Rotated', 'AI Gateway API key');
     printKeyRow(keySource.key, {
       keychain: useKeychain,
