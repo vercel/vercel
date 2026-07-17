@@ -488,6 +488,142 @@ export const modelsSubcommand = {
   examples: [],
 } as const;
 
+const leaderboardFormatOption = {
+  name: 'format',
+  shorthand: 'F',
+  type: String,
+  argument: 'FORMAT',
+  deprecated: false,
+  description:
+    'Output format: table, json, or csv (default: table in a terminal, json otherwise)',
+} as const;
+
+const leaderboardOutOption = {
+  name: 'out',
+  shorthand: 'o',
+  type: String,
+  argument: 'FILE',
+  deprecated: false,
+  description:
+    'Write the payload to a file instead of stdout (defaults to json; use --format csv for CSV)',
+} as const;
+
+const leaderboardModalityOption = {
+  name: 'modality',
+  shorthand: null,
+  type: String,
+  argument: 'MODALITY',
+  deprecated: false,
+  description: 'Filter by modality: all, text, image, or video (default: all)',
+} as const;
+
+const leaderboardMetricOption = {
+  name: 'metric',
+  shorthand: null,
+  type: String,
+  argument: 'METRIC',
+  deprecated: false,
+  description:
+    'Metric for the table view: requests, tokens, spend, imageCount, or videoCount (default: requests)',
+} as const;
+
+const leaderboardDateOption = {
+  name: 'date',
+  shorthand: null,
+  type: String,
+  argument: 'YYYY-MM-DD',
+  deprecated: false,
+  description: 'Day to show in the table view (default: most recent)',
+} as const;
+
+export const leaderboardModelsSubcommand = {
+  name: 'models',
+  aliases: [],
+  description: 'Show the most-used models on AI Gateway',
+  arguments: [],
+  options: [
+    leaderboardModalityOption,
+    leaderboardMetricOption,
+    leaderboardDateOption,
+    leaderboardFormatOption,
+    leaderboardOutOption,
+  ],
+  examples: [
+    {
+      name: 'Show the top text models',
+      value: `${packageName} ai-gateway leaderboard models --modality text`,
+    },
+    {
+      name: 'Export the full model data as CSV',
+      value: `${packageName} ai-gateway leaderboard models --format csv --out models.csv`,
+    },
+  ],
+} as const;
+
+export const leaderboardLabsSubcommand = {
+  name: 'labs',
+  aliases: [],
+  description: 'Show the most-used model creators (labs) on AI Gateway',
+  arguments: [],
+  options: [
+    leaderboardModalityOption,
+    leaderboardMetricOption,
+    leaderboardDateOption,
+    leaderboardFormatOption,
+    leaderboardOutOption,
+  ],
+  examples: [
+    {
+      name: 'Show the top labs by spend',
+      value: `${packageName} ai-gateway leaderboard labs --metric spend`,
+    },
+  ],
+} as const;
+
+export const leaderboardAppsSubcommand = {
+  name: 'apps',
+  aliases: [],
+  description: 'Show the top apps built on AI Gateway',
+  arguments: [],
+  options: [leaderboardFormatOption, leaderboardOutOption],
+  examples: [
+    {
+      name: 'Show the top apps',
+      value: `${packageName} ai-gateway leaderboard apps`,
+    },
+  ],
+} as const;
+
+export const leaderboardProvidersSubcommand = {
+  name: 'providers',
+  aliases: [],
+  description: 'Show the top inference providers on AI Gateway',
+  arguments: [],
+  options: [leaderboardFormatOption, leaderboardOutOption],
+  examples: [
+    {
+      name: 'Show the top providers as JSON',
+      value: `${packageName} ai-gateway leaderboard providers --format json`,
+    },
+  ],
+} as const;
+
+export const leaderboardSubcommand = {
+  name: 'leaderboard',
+  aliases: ['leaderboards'],
+  description:
+    'Explore AI Gateway usage leaderboards (open, anonymized data under CC BY 4.0)',
+  arguments: [],
+  subcommands: [
+    leaderboardModelsSubcommand,
+    leaderboardLabsSubcommand,
+    leaderboardAppsSubcommand,
+    leaderboardProvidersSubcommand,
+  ],
+  options: [],
+  examples: [],
+} as const;
+
 export const aiGatewayCommand = {
   name: 'ai-gateway',
   aliases: [],
@@ -498,6 +634,7 @@ export const aiGatewayCommand = {
     rulesSubcommand,
     codingAgentsSubcommand,
     modelsSubcommand,
+    leaderboardSubcommand,
   ],
   options: [],
   examples: [],
