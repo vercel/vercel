@@ -281,6 +281,11 @@ export default class DevServer {
       proxyOrigin: this.address.origin,
       useImplicitEnvInjection: false,
       preferServiceBuilder: true,
+      onQueueSubscriptions: (serviceName, subscriptions) =>
+        this.queueBroker?.updateServiceSubscriptions(
+          serviceName,
+          subscriptions
+        ),
     });
 
     const queueBroker = new QueueBroker(services, name =>
@@ -1198,6 +1203,11 @@ export default class DevServer {
         env: this.envConfigs.allEnv,
         proxyOrigin: this.address.origin,
         useImplicitEnvInjection: this.useImplicitServicesEnvInjection,
+        onQueueSubscriptions: (serviceName, subscriptions) =>
+          this.queueBroker?.updateServiceSubscriptions(
+            serviceName,
+            subscriptions
+          ),
       });
       devCommandPromise = this.orchestrator.startAll();
       this.devProcessOrigin = undefined;

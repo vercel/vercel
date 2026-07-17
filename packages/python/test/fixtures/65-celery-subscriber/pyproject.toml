@@ -9,7 +9,9 @@ dependencies = [
 ]
 
 # Declares a background worker compiled into a queue-triggered Lambda alongside
-# the FastAPI app. The topic must match the Celery queue published to below.
+# the FastAPI app. Topics are introspected from the Celery app's queues (the
+# vercel-celery adapter registers them as "celery-<app name>-<queue>"), so we
+# use a wildcard topic filter.
 [[tool.vercel.subscribers]]
 entrypoint = "worker:app"
-topics = ["celery"]
+topics = ["celery-*"]

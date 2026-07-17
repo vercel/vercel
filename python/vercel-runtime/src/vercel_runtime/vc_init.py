@@ -54,6 +54,7 @@ from vercel_runtime.routing import (
 )
 from vercel_runtime.utils import read_wsgi_request_body
 from vercel_runtime.workers import (
+    install_queue_integrations,
     is_worker_service,
     maybe_bootstrap_worker_service_app,
     prepare_worker_environment,
@@ -484,6 +485,9 @@ if _extra_path:
 
 try:
     prepare_worker_environment()
+    # Publish-side activation only: subscriber lambdas do the consuming-side
+    # activation themselves in their generated handler modules.
+    install_queue_integrations(queue_serving=False)
     __vc_module = import_module(_entrypoint_modname, _entrypoint_abs)
     __vc_variables = dir(__vc_module)
 except Exception:
