@@ -38,7 +38,7 @@ describe('detectServices', () => {
       expect(result.resolved?.source).toBe('auto-detected');
       expect(result.inferred).toBeNull();
       expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe('NO_EXPERIMENTAL_SERVICES_CONFIGURED');
+      expect(result.errors[0].code).toBe('NO_SERVICES_CONFIGURED');
     });
 
     it('should auto-detect a Ruby backend service in backend/', async () => {
@@ -93,7 +93,7 @@ describe('detectServices', () => {
 
       expect(result.services).toEqual([]);
       expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe('NO_EXPERIMENTAL_SERVICES_CONFIGURED');
+      expect(result.errors[0].code).toBe('NO_SERVICES_CONFIGURED');
     });
   });
 

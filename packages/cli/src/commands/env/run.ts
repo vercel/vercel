@@ -6,10 +6,11 @@ import { printError } from '../../util/error';
 import { runSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
-import { getLinkedProject } from '../../util/projects/link';
+import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import parseTarget from '../../util/parse-target';
 import { getCommandName } from '../../util/pkg-name';
+import type { EnvTelemetryClient } from '../../util/telemetry/commands/env';
 
 /**
  * Parses argv for the run subcommand, splitting on `--` to separate
@@ -44,7 +45,10 @@ export function needsHelpForRun(client: Client): boolean {
   }
 }
 
-export default async function run(client: Client): Promise<number> {
+export default async function run(
+  client: Client,
+  telemetry: EnvTelemetryClient
+): Promise<number> {
   const { vercelArgs, userCommand } = parseRunArgs(client.argv);
 
   let parsedArgs;
@@ -64,8 +68,14 @@ export default async function run(client: Client): Promise<number> {
     return 1;
   }
 
-  // Get the linked project
-  const link = await getLinkedProject(client);
+  // Resolve the selected project
+  const projectName = parsedArgs.flags['--project'];
+  telemetry.trackCliOptionProject(projectName);
+
+  const link = await resolveProjectContext({
+    client,
+    projectNameOrId: projectName,
+  });
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {

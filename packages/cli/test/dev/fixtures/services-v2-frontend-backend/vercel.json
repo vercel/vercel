@@ -87,7 +87,7 @@
     "backend": {
       "root": "backend",
       "framework": "fastapi",
-      "entrypoint": "server.py",
+      "entrypoint": "pyproject.toml",
       "redirects": [
         {
           "source": "/api/old",

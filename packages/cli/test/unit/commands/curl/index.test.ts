@@ -10,6 +10,7 @@ import { useUser } from '../../../mocks/user';
 import { useProject } from '../../../mocks/project';
 import { useTeams, createTeam } from '../../../mocks/team';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
+import * as linkModule from '../../../../src/util/projects/link';
 
 const MOCK_ACCOUNT_ID = 'team_test123';
 
@@ -130,11 +131,16 @@ describe('curl', () => {
 
     it('should accept / as a valid path', async () => {
       await setupLinkedProject();
+      const getLinkedProjectSpy = vi.spyOn(linkModule, 'getLinkedProject');
 
       client.setArgv('curl', '/', '--protection-bypass', 'test-secret');
       const exitCode = await curl(client);
 
       expect(exitCode).toEqual(0);
+      expect(getLinkedProjectSpy).toHaveBeenCalledWith(client, {
+        cwd: client.cwd,
+      });
+      getLinkedProjectSpy.mockRestore();
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

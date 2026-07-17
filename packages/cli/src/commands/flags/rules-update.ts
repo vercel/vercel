@@ -90,6 +90,7 @@ export default async function rulesUpdate(
   telemetryClient.trackCliOptionStage(stageInputs);
   telemetryClient.trackCliOptionStart(start);
   telemetryClient.trackCliOptionMessage(message);
+  telemetryClient.trackCliOptionProject(flags['--project']);
 
   const outcomeOptions = {
     variantSelector,
@@ -112,6 +113,7 @@ export default async function rulesUpdate(
 
   try {
     const context = await resolveRulesCommandContext(client, {
+      projectName: parsedArgs.flags['--project'],
       flagArg,
       environment,
       promptMessage: 'Select an environment containing the rule:',

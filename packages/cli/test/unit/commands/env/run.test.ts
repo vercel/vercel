@@ -1,6 +1,9 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import env from '../../../../src/commands/env';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
@@ -127,6 +130,78 @@ describe('env run', () => {
   });
 
   describe('running commands', () => {
+    it('runs with variables from the project selected by --project', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+        accountId: 'team_dummy',
+      });
+      client.cwd = setupTmpDir();
+      client.config.currentTeam = 'team_dummy';
+      client.setArgv(
+        'env',
+        'run',
+        '--project',
+        'vercel-env-pull',
+        '--',
+        'echo',
+        'hello'
+      );
+
+      await expect(env(client)).resolves.toEqual(0);
+      expect(execa).toHaveBeenCalledWith(
+        'echo',
+        ['hello'],
+        expect.objectContaining({ cwd: client.cwd })
+      );
+    });
+
+    it('ignores scope flags passed to the child command', async () => {
+      useUser();
+      useTeams('team_dummy');
+      const project = {
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+        accountId: 'team_dummy',
+      };
+      let requestedTeamId: unknown;
+
+      client.scenario.get('/v9/projects/vercel-env-pull', (req, res) => {
+        requestedTeamId = req.query.teamId;
+        if (requestedTeamId !== 'team_dummy') {
+          res.status(404).send();
+          return;
+        }
+        res.json(project);
+      });
+      useProject(project);
+
+      client.cwd = setupUnitFixture('vercel-env-pull');
+      client.config.currentTeam = 'team_current';
+      client.setArgv(
+        'env',
+        'run',
+        '--project',
+        'vercel-env-pull',
+        '--',
+        'child',
+        '--scope',
+        'child-scope'
+      );
+
+      await expect(env(client)).resolves.toEqual(0);
+      expect(requestedTeamId).toEqual('team_dummy');
+      expect(execa).toHaveBeenCalledWith(
+        'child',
+        ['--scope', 'child-scope'],
+        expect.objectContaining({ cwd: client.cwd })
+      );
+    });
+
     it('should run command with development env vars by default', async () => {
       useUser();
       useTeams('team_dummy');

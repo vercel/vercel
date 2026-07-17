@@ -14,7 +14,7 @@ import {
 import { isErrorLike } from '@vercel/error-utils';
 import bytes from 'bytes';
 import chalk from 'chalk';
-import type { Agent } from 'http';
+import { getFetchDispatcher } from '../fetch';
 import type Now from '../../util';
 import { displayBuildLogs, type BuildLog, parseLogLines } from '../logs';
 import { progress } from '../output/progress';
@@ -43,7 +43,6 @@ export default async function processDeployment({
   skipAutoDetectionConfirmation,
   noWait,
   withFullLogs,
-  agent,
   manual,
   jsonOutput,
   linkedProject,
@@ -65,7 +64,6 @@ export default async function processDeployment({
   rootDirectory?: string | null;
   noWait?: boolean;
   withFullLogs?: boolean;
-  agent?: Agent;
   bulkRedirectsPath?: string | null;
   manual?: boolean;
   jsonOutput?: boolean;
@@ -104,7 +102,7 @@ export default async function processDeployment({
   };
 
   const clientOptions: VercelClientOptions = {
-    teamId: org.type === 'team' ? org.id : undefined,
+    teamId: now.currentTeam ?? undefined,
     apiUrl: now._apiUrl,
     token,
     debug: output.isDebugEnabled(),
@@ -117,7 +115,7 @@ export default async function processDeployment({
     rootDirectory,
     skipAutoDetectionConfirmation,
     archive,
-    agent,
+    dispatcher: getFetchDispatcher(),
     projectName,
     bulkRedirectsPath,
     manual,

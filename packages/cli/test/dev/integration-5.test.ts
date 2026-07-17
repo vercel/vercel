@@ -645,7 +645,7 @@ describe('[vercel dev] Multi-service with experimentalServices', () => {
 });
 
 describe('[vercel dev] Multi-service with experimentalServicesV2', () => {
-  test('[vercel dev] service routing', async () => {
+  test('[vercel dev] service routing with a pyproject Python entrypoint', async () => {
     const dir = fixture('services-v2-frontend-backend');
     const { dev, port, readyResolver } = await testFixture(
       dir,

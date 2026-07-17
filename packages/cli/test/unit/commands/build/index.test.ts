@@ -8,12 +8,17 @@ import {
 import build from '../../../../src/commands/build';
 import cliPkg from '../../../../src/util/pkg';
 import { client } from '../../../mocks/client';
-import { defaultProject, useProject } from '../../../mocks/project';
+import {
+  defaultProject,
+  useProject,
+  useUnknownProject,
+} from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { execSync } from 'child_process';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { vi } from 'vitest';
+import * as linkModule from '../../../../src/util/projects/link';
 import {
   detectBuilders,
   REGEX_NON_VERCEL_PLATFORM_FILES,
@@ -1849,6 +1854,7 @@ createServer((_req, res) => {
       ...defaultProject,
       id: 'QmX6P93ChNDoZP',
       name: 'monorepo-marketing',
+      accountId: 'team_dummy',
       rootDirectory: 'marketing',
       outputDirectory: 'dist',
       framework: null,
@@ -1856,6 +1862,26 @@ createServer((_req, res) => {
     output = join(cwd, 'marketing/.vercel/output');
     client.cwd = join(cwd, 'marketing');
     client.setArgv('build', '--yes');
+    exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+    delete process.env.__VERCEL_BUILD_RUNNING;
+
+    files = await fs.readdir(join(output, 'static'));
+    expect(files.sort()).toEqual(['index.txt']);
+    expect(
+      (await fs.readFile(join(output, 'static/index.txt'), 'utf8')).trim()
+    ).toEqual('marketing');
+
+    // Explicit scope resolves the project through the API, then recovers the
+    // matching repo link so the build still runs from the selected directory.
+    client.config.currentTeam = 'team_dummy';
+    client.cwd = join(cwd, 'marketing');
+    client.setArgv(
+      'build',
+      '--project=monorepo-marketing',
+      '--scope=team-dummy',
+      '--yes'
+    );
     exitCode = await build(client);
     expect(exitCode).toEqual(0);
     delete process.env.__VERCEL_BUILD_RUNNING;
@@ -3531,10 +3557,14 @@ writeFileSync(
         { name: 'vc.doBuild', parent: 'vc' },
         { name: 'vc.loadEnv', parent: 'vc' },
         { name: 'vc.compileVercelConfig', parent: 'vc.doBuild' },
+        { name: 'vc.readConfigInputs', parent: 'vc.doBuild' },
         { name: 'vc.detectFirstDeploymentFramework', parent: 'vc.doBuild' },
+        { name: 'vc.prepareFlagsDefinitions', parent: 'vc.doBuild' },
+        { name: 'vc.getFiles', parent: 'vc.doBuild' },
         { name: 'vc.detectAllFrameworks', parent: 'vc.doBuild' },
         { name: 'vc.detectBuilders', parent: 'vc.doBuild' },
         { name: 'vc.importBuilders', parent: 'vc.doBuild' },
+        { name: 'vc.populateFilesMap', parent: 'vc.doBuild' },
         { name: 'vc.builder', parent: 'vc.doBuild' },
         { name: 'vc.frameworkCrossCheck', parent: 'vc.doBuild' },
         { name: 'vc.validateBuildOutput', parent: 'vc.doBuild' },
@@ -3551,9 +3581,10 @@ writeFileSync(
 
     it('fails fast with a clean error when the project does not exist anywhere', async () => {
       const cwd = await getWriteableDirectory();
+      const getLinkedProjectSpy = vi.spyOn(linkModule, 'getLinkedProject');
       useUser();
       useTeams('team_dummy');
-      // No useProject() — every API lookup will 404.
+      useUnknownProject();
 
       client.cwd = cwd;
       client.setArgv('build', '--project=does-not-exist');
@@ -3564,6 +3595,13 @@ writeFileSync(
       );
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "build"').toEqual(1);
+      expect(getLinkedProjectSpy).toHaveBeenCalledWith(client, {
+        cwd: await fs.realpath(cwd),
+        projectName: 'does-not-exist',
+        projectNameIsExplicit: true,
+        scopeIsExplicit: false,
+      });
+      getLinkedProjectSpy.mockRestore();
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -3573,10 +3611,40 @@ writeFileSync(
       ]);
     });
 
+    it('uses the resolved explicit scope instead of a conflicting local link', async () => {
+      const cwd = await getWriteableDirectory();
+      const scopedProject = {
+        ...defaultProject,
+        id: 'prj_scoped',
+        name: 'scoped-project',
+        accountId: 'team_scope',
+      };
+      let requestedTeamId: unknown;
+
+      useUser();
+      useTeams('team_scope');
+      client.config.currentTeam = 'team_scope';
+      client.scenario.get('/v9/projects/scoped-project', (req, res) => {
+        requestedTeamId = req.query.teamId;
+        res.json(scopedProject);
+      });
+      await fs.outputJSON(join(cwd, '.vercel', 'project.json'), {
+        orgId: 'team_stale',
+        projectId: 'prj_stale',
+      });
+
+      client.cwd = cwd;
+      client.setArgv('build', '--project=scoped-project', '--scope=team-scope');
+      await build(client);
+
+      expect(requestedTeamId).toEqual('team_scope');
+    });
+
     it('tracks --project telemetry as [REDACTED]', async () => {
       const cwd = await getWriteableDirectory();
       useUser();
       useTeams('team_dummy');
+      useUnknownProject();
 
       client.cwd = cwd;
       client.setArgv('build', '--project=my-app');

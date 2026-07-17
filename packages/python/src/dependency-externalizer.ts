@@ -98,6 +98,12 @@ export const RUNTIME_DEPS_DIR = '/tmp/_vc_deps';
 // install), served on Hive.
 export const MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE = 5 * 1024 * 1024 * 1024;
 
+// Bytecode fill target for large functions, with the same margin as the
+// standard ceiling so the fill can never push a function over the
+// platform's uncompressed-size check (enforced at >= the 5 GiB limit).
+export const LARGE_FUNCTION_FILL_CEILING_BYTES =
+  MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE - BYTECODE_FILL_MARGIN_BYTES;
+
 const BUNDLING_DOCS_LINK =
   'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled';
 
@@ -1357,30 +1363,6 @@ export async function calculateBundleSize(
     totalSize += s;
   }
   return totalSize;
-}
-
-/**
- * Expected .pyc-to-.py size ratio. Measured empirically on real venvs
- * (1.06 and 1.14 across different dependency mixes); slightly high so the
- * gate errs toward skipping marginal compiles.
- */
-export const PYC_TO_PY_RATIO = 1.2;
-
-/**
- * Minimum fraction of the estimated bytecode that must fit the remaining
- * capacity to justify running compileall. Cold-start benefit is roughly
- * proportional to coverage, so partial fills above this floor are worth it.
- */
-export const BYTECODE_COVERAGE_FLOOR = 0.5;
-
-/**
- * Estimate the total bytecode size compileall would produce for the .py
- * files in the bundle. Used only to gate whether compiling is worthwhile;
- * the fill itself measures real .pyc sizes.
- */
-export async function estimateBytecodeSize(files: Files): Promise<number> {
-  const pyBytes = await calculateBundleSize(files, p => p.endsWith('.py'));
-  return PYC_TO_PY_RATIO * pyBytes;
 }
 
 /**

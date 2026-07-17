@@ -213,6 +213,76 @@ mount = "/api"`
     });
   });
 
+  it('should preserve buildCommand in written services config', async () => {
+    await writeFile(join(tempDir, 'vercel.json'), '{}');
+
+    await writeServicesConfig(tempDir, {
+      frontend: { root: '.', framework: 'nextjs', mountPath: '/' },
+      api: {
+        root: 'api',
+        entrypoint: 'main:app',
+        runtime: 'python',
+        buildCommand: 'pip install -r requirements.txt',
+        mountPath: '/_/api',
+      },
+    });
+
+    const vercelConfig = JSON.parse(
+      await readFile(join(tempDir, 'vercel.json'), 'utf8')
+    );
+    // buildCommand is preserved; runtime is omitted because
+    // the V2 resolver can infer it from the framework/entrypoint.
+    expect(vercelConfig.services.api).toEqual({
+      root: 'api',
+      entrypoint: 'main:app',
+      buildCommand: 'pip install -r requirements.txt',
+    });
+    expect(vercelConfig.services.frontend).toEqual({
+      root: '.',
+      framework: 'nextjs',
+    });
+  });
+
+  it('should combine preDeployCommand into buildCommand', async () => {
+    await writeFile(join(tempDir, 'vercel.json'), '{}');
+
+    await writeServicesConfig(tempDir, {
+      web: {
+        root: '.',
+        framework: 'nextjs',
+        buildCommand: 'npm run build',
+        preDeployCommand: 'npm run db:migrate',
+        mountPath: '/',
+      },
+    });
+
+    const vercelConfig = JSON.parse(
+      await readFile(join(tempDir, 'vercel.json'), 'utf8')
+    );
+    expect(vercelConfig.services.web.buildCommand).toBe(
+      'npm run build && npm run db:migrate'
+    );
+  });
+
+  it('should use preDeployCommand as buildCommand when no buildCommand', async () => {
+    await writeFile(join(tempDir, 'vercel.json'), '{}');
+
+    await writeServicesConfig(tempDir, {
+      api: {
+        root: 'api',
+        preDeployCommand: 'python manage.py migrate',
+        mountPath: '/_/api',
+      },
+    });
+
+    const vercelConfig = JSON.parse(
+      await readFile(join(tempDir, 'vercel.json'), 'utf8')
+    );
+    expect(vercelConfig.services.api.buildCommand).toBe(
+      'python manage.py migrate'
+    );
+  });
+
   it('should write inferred services config into vercel.toml', async () => {
     await writeFile(
       join(tempDir, 'vercel.toml'),
