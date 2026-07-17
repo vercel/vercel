@@ -188,6 +188,105 @@ class InMemoryReporter implements Reporter {
   }
 }
 
+interface ParsedGlobalFlags {
+  '--cwd'?: string;
+  '--local-config'?: string;
+  '--global-config'?: string;
+  '--debug'?: boolean;
+  '--no-color'?: boolean;
+  '--scope'?: string;
+  '--token'?: string;
+  '--team'?: string;
+  '--api'?: string;
+}
+
+const createTelemetryEventStore = (
+  config: GlobalConfig,
+  isTelemetryFlushCommand: boolean
+) =>
+  new TelemetryEventStore({
+    isDebug: process.env.VERCEL_TELEMETRY_DEBUG === '1',
+    config: config.telemetry,
+    cliDevice: isTelemetryFlushCommand
+      ? undefined
+      : {
+          filePath: join(VERCEL_DIR, 'telemetry-device.json'),
+        },
+    cliSession: isTelemetryFlushCommand
+      ? undefined
+      : {
+          filePath: join(VERCEL_DIR, 'telemetry-session.json'),
+        },
+  });
+
+/** Standard per-invocation context events every telemetry path must emit. */
+const trackCliInvocationContext = async (
+  telemetry: RootTelemetryClient,
+  telemetryEventStore: TelemetryEventStore,
+  flags: ParsedGlobalFlags
+) => {
+  const { isAgent, agent: detectedAgent } = await determineAgent();
+  telemetry.trackInvocationId(telemetryEventStore.currentInvocationId);
+  telemetry.trackDeviceId(telemetryEventStore.currentDeviceId);
+  const vercelPluginMarker = readVercelPluginActiveSessionMarker();
+  if (vercelPluginMarker) {
+    telemetry.trackVercelPluginActiveSession();
+    telemetry.trackVercelPluginVersion(vercelPluginMarker.pluginVersion);
+  }
+  telemetry.trackAgenticUse(detectedAgent?.name);
+  telemetry.trackCPUs();
+  telemetry.trackPlatform();
+  telemetry.trackArch();
+  telemetry.trackCIVendorName();
+  telemetry.trackStdinIsTTY(process.stdin?.isTTY === true);
+  telemetry.trackVersion(pkg.version);
+  telemetry.trackCliOptionCwd(flags['--cwd']);
+  telemetry.trackCliOptionLocalConfig(flags['--local-config']);
+  telemetry.trackCliOptionGlobalConfig(flags['--global-config']);
+  telemetry.trackCliFlagDebug(flags['--debug']);
+  telemetry.trackCliFlagNoColor(flags['--no-color']);
+  telemetry.trackCliOptionScope(flags['--scope']);
+  telemetry.trackCliOptionToken(flags['--token']);
+  telemetry.trackCliOptionTeam(flags['--team']);
+  telemetry.trackCliOptionApi(flags['--api']);
+  return { isAgent, detectedAgent };
+};
+
+/**
+ * Attach team/user/project attribution from local sources and record the
+ * project id event. Callers add network fallbacks where appropriate.
+ */
+const applyTelemetryAttribution = async ({
+  telemetry,
+  telemetryEventStore,
+  teamId,
+  userId,
+  cwd,
+}: {
+  telemetry: RootTelemetryClient;
+  telemetryEventStore: TelemetryEventStore;
+  teamId: string | undefined;
+  userId: string | undefined;
+  cwd: string;
+}) => {
+  telemetryEventStore.updateTeamId(teamId);
+  telemetryEventStore.updateUserId(userId);
+  try {
+    const envProjectId = getPlatformEnv('PROJECT_ID');
+    if (envProjectId) {
+      telemetryEventStore.updateProjectId(envProjectId);
+    } else {
+      const link = await getLinkFromDir(getVercelDirectory(cwd));
+      if (link) {
+        telemetryEventStore.updateProjectId(link.projectId);
+      }
+    }
+  } catch {
+    // best-effort for telemetry — project may not be linked
+  }
+  telemetry.trackProjectId(telemetryEventStore.currentProjectId);
+};
+
 const main = async () => {
   const traceReporter = new InMemoryReporter();
   const rootSpan = new Span({ name: 'vc.cli', reporter: traceReporter });
@@ -271,23 +370,18 @@ const main = async () => {
       try {
         const config = configFiles.readConfigFile();
         if (config.telemetry) {
-          const telemetryEventStore = new TelemetryEventStore({
-            isDebug: process.env.VERCEL_TELEMETRY_DEBUG === '1',
-            config: config.telemetry,
-            cliDevice: isTelemetryFlushCommand
-              ? undefined
-              : {
-                  filePath: join(VERCEL_DIR, 'telemetry-device.json'),
-                },
-            cliSession: isTelemetryFlushCommand
-              ? undefined
-              : {
-                  filePath: join(VERCEL_DIR, 'telemetry-session.json'),
-                },
-          });
+          const telemetryEventStore = createTelemetryEventStore(
+            config,
+            isTelemetryFlushCommand
+          );
           const telemetry = new RootTelemetryClient({
             opts: { store: telemetryEventStore },
           });
+          await trackCliInvocationContext(
+            telemetry,
+            telemetryEventStore,
+            parsedArgs.flags
+          );
           if (resolvedHelp.viaHelpCommand) {
             telemetry.trackCliCommandHelp('help');
           }
@@ -306,6 +400,30 @@ const main = async () => {
           } else {
             telemetry.trackCliFlagHelp(helpPath[0]);
           }
+          // Attribution uses the same local sources as the router path.
+          // Skip the credentials read when an explicit token is provided,
+          // matching the router, and never fall back to the network.
+          let userId: string | undefined;
+          if (
+            typeof parsedArgs.flags['--token'] !== 'string' &&
+            !process.env.VERCEL_TOKEN
+          ) {
+            try {
+              userId = configFiles.readAuthConfigFile(config).userId;
+            } catch {
+              // credentials store may be unavailable; user stays anonymous
+            }
+          }
+          await applyTelemetryAttribution({
+            telemetry,
+            telemetryEventStore,
+            teamId: config.currentTeam,
+            userId,
+            cwd:
+              typeof parsedArgs.flags['--cwd'] === 'string'
+                ? parsedArgs.flags['--cwd']
+                : process.cwd(),
+          });
           await telemetryEventStore.save();
         }
       } catch {
@@ -425,20 +543,10 @@ const main = async () => {
     }
   }
 
-  const telemetryEventStore = new TelemetryEventStore({
-    isDebug: process.env.VERCEL_TELEMETRY_DEBUG === '1',
-    config: config.telemetry,
-    cliDevice: isTelemetryFlushCommand
-      ? undefined
-      : {
-          filePath: join(VERCEL_DIR, 'telemetry-device.json'),
-        },
-    cliSession: isTelemetryFlushCommand
-      ? undefined
-      : {
-          filePath: join(VERCEL_DIR, 'telemetry-session.json'),
-        },
-  });
+  const telemetryEventStore = createTelemetryEventStore(
+    config,
+    isTelemetryFlushCommand
+  );
 
   checkTelemetryStatus({
     config,
@@ -456,30 +564,11 @@ const main = async () => {
     },
   });
 
-  const { isAgent, agent: detectedAgent } = await determineAgent();
-  telemetry.trackInvocationId(telemetryEventStore.currentInvocationId);
-  telemetry.trackDeviceId(telemetryEventStore.currentDeviceId);
-  const vercelPluginMarker = readVercelPluginActiveSessionMarker();
-  if (vercelPluginMarker) {
-    telemetry.trackVercelPluginActiveSession();
-    telemetry.trackVercelPluginVersion(vercelPluginMarker.pluginVersion);
-  }
-  telemetry.trackAgenticUse(detectedAgent?.name);
-  telemetry.trackCPUs();
-  telemetry.trackPlatform();
-  telemetry.trackArch();
-  telemetry.trackCIVendorName();
-  telemetry.trackStdinIsTTY(process.stdin?.isTTY === true);
-  telemetry.trackVersion(pkg.version);
-  telemetry.trackCliOptionCwd(parsedArgs.flags['--cwd']);
-  telemetry.trackCliOptionLocalConfig(parsedArgs.flags['--local-config']);
-  telemetry.trackCliOptionGlobalConfig(parsedArgs.flags['--global-config']);
-  telemetry.trackCliFlagDebug(parsedArgs.flags['--debug']);
-  telemetry.trackCliFlagNoColor(parsedArgs.flags['--no-color']);
-  telemetry.trackCliOptionScope(parsedArgs.flags['--scope']);
-  telemetry.trackCliOptionToken(parsedArgs.flags['--token']);
-  telemetry.trackCliOptionTeam(parsedArgs.flags['--team']);
-  telemetry.trackCliOptionApi(parsedArgs.flags['--api']);
+  const { isAgent, detectedAgent } = await trackCliInvocationContext(
+    telemetry,
+    telemetryEventStore,
+    parsedArgs.flags
+  );
 
   let earlyGetUserPromise: Promise<User | undefined> | undefined;
   let telemetrySaved = false;
@@ -535,12 +624,17 @@ const main = async () => {
 
     const postCommandSpan = rootSpan.child('vc.postCommand');
 
-    telemetryEventStore.updateTeamId(
-      client?.config.currentTeam ?? config.currentTeam
-    );
-    telemetryEventStore.updateUserId(
-      client?.authConfig.userId ?? authConfig.userId
-    );
+    await applyTelemetryAttribution({
+      telemetry,
+      telemetryEventStore,
+      teamId: client?.config.currentTeam ?? config.currentTeam,
+      userId: client?.authConfig.userId ?? authConfig.userId,
+      cwd:
+        client?.cwd ||
+        (typeof parsedArgs.flags['--cwd'] === 'string'
+          ? parsedArgs.flags['--cwd']
+          : process.cwd()),
+    });
     if (!telemetryEventStore.hasUserId) {
       const getUserSpan = postCommandSpan.child('vc.postCommand.getUser');
       try {
@@ -554,26 +648,6 @@ const main = async () => {
         getUserSpan.stop();
       }
     }
-
-    try {
-      const envProjectId = getPlatformEnv('PROJECT_ID');
-      if (envProjectId) {
-        telemetryEventStore.updateProjectId(envProjectId);
-      } else {
-        const cwdForProjectId =
-          client?.cwd ||
-          (typeof parsedArgs.flags['--cwd'] === 'string'
-            ? parsedArgs.flags['--cwd']
-            : process.cwd());
-        const link = await getLinkFromDir(getVercelDirectory(cwdForProjectId));
-        if (link) {
-          telemetryEventStore.updateProjectId(link.projectId);
-        }
-      }
-    } catch {
-      // best-effort for telemetry — project may not be linked
-    }
-    telemetry.trackProjectId(telemetryEventStore.currentProjectId);
 
     await telemetryEventStore.save();
     postCommandSpan.stop();
