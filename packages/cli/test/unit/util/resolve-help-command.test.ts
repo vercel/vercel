@@ -77,4 +77,15 @@ describe('resolveHelpCommand', () => {
       resolve(['inspect', 'my-deployment.vercel.app', '--help'])?.command?.name
     ).toBe('inspect');
   });
+
+  it('allows positional arguments after a command that declares them alongside subcommands', () => {
+    expect(resolve(['deploy', 'my-app', '--help'])?.command?.name).toBe(
+      'deploy'
+    );
+    // `--target` is not a global flag, so `production` stays positional in
+    // the permissive parse and must not abort resolution.
+    expect(
+      resolve(['deploy', '--target', 'production', '--help'])?.command?.name
+    ).toBe('deploy');
+  });
 });

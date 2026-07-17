@@ -48,7 +48,10 @@ export function resolveHelpCommand(
       getCommandAliases(candidate).includes(segment)
     );
     if (!child) {
-      if (command.subcommands?.length) {
+      // An unmatched segment is only an invalid subcommand when the command
+      // declares no positional arguments; commands that accept both (e.g.
+      // `deploy [project-path]`) treat it as a positional, like leaf commands.
+      if (command.subcommands?.length && !command.arguments.length) {
         return null;
       }
       break;
