@@ -130,7 +130,7 @@ export default async function react(
             client,
             jsonOutput,
             'REACTION_NOT_FOUND',
-            `No "${name}" reaction of yours found in the ${thread.messages.length} most recent messages. Pass --message <id> (see \`vercel comments inspect ${threadId}\`).`
+            `No "${name}" reaction of yours found in the ${thread.messages.length} most recent messages. Pass --message-id <id> (see \`vercel comments inspect ${threadId}\`).`
           );
         }
       } else {
