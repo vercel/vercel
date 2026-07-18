@@ -4,6 +4,7 @@ import { outputAgentError } from '../../agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../agent-output-constants';
 import { UNSUPPORTED_AGENTS } from './agents';
 import { buildSetupPlan, applyPlan, type SetupPlan } from './apply';
+import { buildAgentPrompt } from './render';
 import { storeKeyInKeychain } from './keychain';
 import type { KeySource } from './key-source';
 import type { CodingAgent } from './types';
@@ -25,6 +26,7 @@ export async function runMachine(args: {
   home: string;
   alreadyConfigured: boolean;
   reconfigure: boolean;
+  promptMode?: boolean;
 }): Promise<number> {
   const { client, selected, previewPlan, dryRun, backup, home } = args;
 
@@ -170,6 +172,47 @@ export async function runMachine(args: {
     overrides: args.overrides,
     shellRcOverride: args.shellRcOverride,
   });
+
+  if (args.promptMode) {
+    if (!useKeychain) {
+      client.stdout.write(
+        `${JSON.stringify(
+          {
+            status: AGENT_STATUS.ERROR,
+            reason: 'keychain_error',
+            message:
+              'The `--apply prompt` mode needs the key in the macOS Keychain, but storing it failed, so no prompt was produced.',
+            skipped,
+            warnings: args.warnings,
+          },
+          null,
+          2
+        )}\n`
+      );
+      return 1;
+    }
+    client.stdout.write(
+      `${JSON.stringify(
+        {
+          status: AGENT_STATUS.OK,
+          reason: 'agent_prompt',
+          message:
+            'Created the AI Gateway key and generated an agent prompt. No files were written.',
+          prompt: buildAgentPrompt(finalPlan, key),
+          configured: [],
+          skipped,
+          warnings: args.warnings,
+          notes: finalPlan.notes.flatMap(n =>
+            n.notes.map(line => `${n.displayName}: ${line}`)
+          ),
+        },
+        null,
+        2
+      )}\n`
+    );
+    return 0;
+  }
+
   const results = await applyPlan(finalPlan, { backup });
 
   client.stdout.write(

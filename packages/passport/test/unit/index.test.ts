@@ -10,6 +10,7 @@ import {
   getIdentity,
   PASSPORT_COOKIE_NAME,
   PASSPORT_HEADER_NAME,
+  verifyIdentity,
 } from '../../src';
 
 function createToken(payload: Record<string, unknown>): string {
@@ -312,5 +313,47 @@ describe('getIdentity', () => {
 
   test('returns null when development identity is disabled', async () => {
     expect(await getIdentity(undefined, { development: false })).toBeNull();
+  });
+});
+
+describe('verifyIdentity', () => {
+  test('verifies an explicit Passport token', async () => {
+    const token = createToken(payload);
+    const identity = await verifyIdentity(token, verifyOptions);
+
+    expect(identity).toMatchObject({
+      externalSubject: 'user_123',
+      subject: payload.sub,
+      token,
+      tokenSource: 'local',
+      verified: true,
+    });
+    expect(jwtVerify).toHaveBeenCalledWith(
+      token,
+      'jwks',
+      expect.objectContaining({ algorithms: ['RS256'] })
+    );
+  });
+
+  test('verifies a Passport token from the authorization header', async () => {
+    const token = createToken(payload);
+    const identity = await verifyIdentity(
+      new Headers({ authorization: `Bearer ${token}` }),
+      verifyOptions
+    );
+
+    expect(identity).toMatchObject({
+      externalSubject: 'user_123',
+      subject: payload.sub,
+      token,
+      tokenSource: 'header',
+      verified: true,
+    });
+  });
+
+  test('throws when no Passport token is provided', async () => {
+    await expect(verifyIdentity(new Headers(), verifyOptions)).rejects.toThrow(
+      'Passport identity token was not found.'
+    );
   });
 });

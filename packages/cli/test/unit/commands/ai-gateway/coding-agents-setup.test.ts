@@ -51,6 +51,8 @@ const keychainState = vi.hoisted(() => ({
   available: undefined as boolean | undefined,
   stored: [] as string[],
   storeResult: true,
+  copied: [] as string[],
+  copyResult: true,
 }));
 
 vi.mock(
@@ -72,6 +74,10 @@ vi.mock(
           keychainState.stored.push(key);
         }
         return keychainState.storeResult;
+      },
+      copyToClipboard: (text: string) => {
+        keychainState.copied.push(text);
+        return keychainState.copyResult;
       },
     };
   }
@@ -131,6 +137,8 @@ beforeEach(() => {
   keychainState.available = undefined;
   keychainState.stored.length = 0;
   keychainState.storeResult = true;
+  keychainState.copied.length = 0;
+  keychainState.copyResult = true;
   desktopState.codex = false;
   home = mkdtempSync(join(tmpdir(), 'vc-setup-agents-'));
   savedEnv = {
@@ -903,6 +911,166 @@ describe('ai-gateway coding-agents setup', () => {
     });
   });
 
+  describe('apply action', () => {
+    function startInteractiveSetup(extraArgv: string[] = []) {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--agent',
+        'claude-code',
+        '--name',
+        'my-key',
+        '--refresh-period',
+        'none',
+        '--expiration',
+        'none',
+        ...extraArgv
+      );
+      return aiGateway(client);
+    }
+
+    it('shows the key-creation context on the team picker, not a separate line', async () => {
+      const exitCodePromise = startInteractiveSetup();
+
+      await expect(client.stderr).toOutput('Which team?');
+      await expect(client.stderr).toOutput('will be created under this team');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Apply these changes?');
+      client.stdin.write('n\n');
+
+      expect(await exitCodePromise).toBe(0);
+    });
+
+    it('cancels without creating a key or writing files', async () => {
+      const exitCodePromise = startInteractiveSetup();
+
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Apply these changes?');
+      client.stdin.write('n\n');
+
+      expect(await exitCodePromise).toBe(0);
+      await expect(client.stderr).toOutput('No files were changed');
+      expect(existsSync(claudeSettingsPath())).toBe(false);
+      expect(lastCreateBody).toBeUndefined();
+    });
+
+    it('copies a prompt and delegates file writes when keychain-backed', async () => {
+      keychainState.available = true;
+      const exitCodePromise = startInteractiveSetup();
+
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('macOS Keychain');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Apply these changes?');
+      client.stdin.write('\x1b[B\n');
+
+      expect(await exitCodePromise).toBe(0);
+      await expect(client.stderr).toOutput('copied to clipboard');
+
+      expect(lastCreateBody).toBeDefined();
+      expect(keychainState.stored).toContain(CREATED_KEY);
+      expect(existsSync(claudeSettingsPath())).toBe(false);
+
+      const [prompt] = keychainState.copied;
+      expect(prompt).toBeDefined();
+      expect(prompt).toContain('settings.json');
+      expect(prompt).not.toContain(CREATED_KEY);
+    });
+
+    it('prints the prompt when the clipboard is unavailable', async () => {
+      keychainState.available = true;
+      keychainState.copyResult = false;
+      const exitCodePromise = startInteractiveSetup();
+
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('macOS Keychain');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Apply these changes?');
+      client.stdin.write('\x1b[B\n');
+
+      expect(await exitCodePromise).toBe(0);
+      await expect(client.stderr).toOutput('prompt printed below');
+      expect(client.stdout.getFullOutput()).toContain('settings.json');
+    });
+
+    it('applies normally when the y/n confirm is accepted', async () => {
+      const exitCodePromise = startInteractiveSetup();
+
+      await expect(client.stderr).toOutput('Which team?');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Apply these changes?');
+      client.stdin.write('\n');
+
+      expect(await exitCodePromise).toBe(0);
+      expect(existsSync(claudeSettingsPath())).toBe(true);
+      const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
+      expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe(CREATED_KEY);
+    });
+
+    it('--apply prompt emits the prompt on stdout without writing files', async () => {
+      keychainState.available = true;
+      const exitCode = await startInteractiveSetup([
+        '--apply',
+        'prompt',
+        '--yes',
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(lastCreateBody).toBeDefined();
+      expect(keychainState.stored).toContain(CREATED_KEY);
+      const out = client.stdout.getFullOutput();
+      expect(out).toContain('settings.json');
+      expect(out).not.toContain(CREATED_KEY);
+      expect(existsSync(claudeSettingsPath())).toBe(false);
+    });
+
+    it('--apply edit writes the files without prompting', async () => {
+      const exitCode = await startInteractiveSetup([
+        '--apply',
+        'edit',
+        '--yes',
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(existsSync(claudeSettingsPath())).toBe(true);
+      const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
+      expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe(CREATED_KEY);
+    });
+
+    it('--apply prompt is rejected without the Keychain', async () => {
+      const exitCode = await startInteractiveSetup([
+        '--apply',
+        'prompt',
+        '--yes',
+      ]);
+
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('macOS Keychain');
+      expect(lastCreateBody).toBeUndefined();
+      expect(existsSync(claudeSettingsPath())).toBe(false);
+    });
+
+    it('rejects an invalid --apply value', async () => {
+      const exitCode = await startInteractiveSetup([
+        '--apply',
+        'nope',
+        '--yes',
+      ]);
+
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('Invalid --apply');
+    });
+  });
+
   describe('custom config paths', () => {
     it('writes an agent config to an --agent-config path', async () => {
       useUser();
@@ -1459,6 +1627,29 @@ describe('ai-gateway coding-agents setup', () => {
       expect(stderr).toMatch(/^ {2}Created {9}/m);
       expect(stderr).toMatch(/^ {2}API Key {9}vck_/m);
       expect(stderr).not.toContain('WARNING!');
+    });
+
+    it('labels a freshly created key "New API Key"', async () => {
+      const team = useTeam();
+      useUser();
+      useCreateApiKey();
+      client.config.currentTeam = team.id;
+      client.nonInteractive = false;
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--agent',
+        'claude-code',
+        '--yes'
+      );
+
+      expect(await aiGateway(client)).toBe(0);
+
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toMatch(/^ {2}New API Key {5}vck_/m);
+      expect(stderr).not.toMatch(/^ {2}API Key {9}vck_/m);
     });
   });
 

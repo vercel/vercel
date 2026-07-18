@@ -42,3 +42,17 @@ export function keychainLookup(opts: { fish?: boolean } = {}): string {
   const cmd = `${SECURITY_BIN} find-generic-password -s '${KEYCHAIN_SERVICE}' -a '${KEYCHAIN_ACCOUNT}' -w 2>/dev/null`;
   return opts.fish ? `(${cmd})` : `$(${cmd})`;
 }
+
+const PBCOPY_BIN = '/usr/bin/pbcopy';
+
+export function copyToClipboard(text: string): boolean {
+  try {
+    execFileSync(PBCOPY_BIN, {
+      input: text,
+      stdio: ['pipe', 'ignore', 'ignore'],
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
