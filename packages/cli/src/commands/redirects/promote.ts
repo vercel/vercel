@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import { ensureProjectLink } from '../../util/projects/ensure-project-link';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import {
   outputActionRequired,
@@ -68,7 +68,11 @@ export default async function promote(client: Client, argv: string[]) {
     return 1;
   }
 
-  const link = await ensureProjectLink(client, 'redirects');
+  const link = await requireProjectContext(
+    client,
+    'redirects',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

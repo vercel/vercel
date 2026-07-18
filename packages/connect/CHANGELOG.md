@@ -1,5 +1,17 @@
 # @vercel/connect
 
+## 0.4.1
+
+### Patch Changes
+
+- dad41da: Test Connect against a recent stable Eve and AI SDK 7 release.
+
+## 0.4.0
+
+### Minor Changes
+
+- c636d67: Add optional `claims` field to `ConnectTokenResponse` for allow-listed upstream OAuth token claims
+
 ## 0.3.3
 
 ### Patch Changes

@@ -5,7 +5,10 @@ import { useUser } from '../../../mocks/user';
 import { useRedirects } from '../../../mocks/redirects';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 
 describe('redirects list', () => {
   beforeEach(() => {
@@ -44,6 +47,26 @@ describe('redirects list', () => {
     const exitCode = await redirects(client);
     expect(exitCode, 'exit code for "redirects list"').toEqual(0);
     await expect(client.stderr).toOutput('3 Redirects found');
+  });
+
+  it('lists redirects for the project selected by --project', async () => {
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject({
+      ...defaultProject,
+      id: 'explicit-redirects',
+      name: 'explicit-redirects',
+      accountId: 'team_dummy',
+    });
+    useRedirects(3);
+    client.setArgv('redirects', 'list', '--project', 'explicit-redirects');
+
+    await expect(redirects(client)).resolves.toEqual(0);
+    await expect(client.stderr).toOutput('3 Redirects found');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'option:project', value: '[REDACTED]' },
+      { key: 'subcommand:list', value: 'list' },
+    ]);
   });
 
   it('should list redirects using ls alias', async () => {

@@ -349,12 +349,25 @@ export const setupSubcommand = {
       deprecated: false,
       description: 'Shell rc file to write the env exports into',
     },
+    {
+      name: 'apply',
+      shorthand: null,
+      type: String,
+      argument: 'MODE',
+      deprecated: false,
+      description:
+        'How to apply non-interactively: edit (write files, default) or prompt (emit an agent prompt on stdout; requires the macOS Keychain)',
+    },
     yesOption,
   ],
   examples: [
     {
       name: 'Connect all detected coding agents (creates a key)',
       value: `${packageName} ai-gateway coding-agents setup`,
+    },
+    {
+      name: 'Emit a prompt to hand to a coding agent instead of writing files',
+      value: `${packageName} ai-gateway coding-agents setup --apply prompt --yes`,
     },
     {
       name: 'Connect specific agents with a budgeted key',

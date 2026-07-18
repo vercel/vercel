@@ -1,22 +1,29 @@
 import chalk from 'chalk';
-import { withGlobalFlags } from '../../util/agent-output';
 import type Client from '../../util/client';
-import { ensureProjectLink } from '../../util/projects/ensure-project-link';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { publishSubcommand } from './command';
-import { parseSubcommandArgs, confirmAction, printDiffSummary } from './shared';
+import {
+  parseSubcommandArgs,
+  confirmAction,
+  printDiffSummary,
+  withGlobalFlags,
+} from './shared';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import updateRouteVersion from '../../util/routes/update-route-version';
 import getRoutes from '../../util/routes/get-routes';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 
 export default async function publish(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, publishSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client, 'routes');
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -30,7 +37,7 @@ export default async function publish(client: Client, argv: string[]) {
   if (!version) {
     output.warn(
       `No staged changes to publish. Make changes first with ${chalk.cyan(
-        getCommandName('routes add')
+        withGlobalFlags(client, 'routes add')
       )}.`
     );
     return 0;

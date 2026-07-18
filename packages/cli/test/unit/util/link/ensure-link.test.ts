@@ -36,6 +36,42 @@ describe('ensureLink', () => {
     setupAndLink = setupAndLinkModule.default as ReturnType<typeof vi.fn>;
   });
 
+  it('does not enable owner lookup fallback by default', async () => {
+    const linked = {
+      status: 'linked' as const,
+      org: { id: 'o1', slug: 'team', type: 'team' as const },
+      project: { id: 'p1', name: 'proj' },
+    };
+    vi.mocked(getLinkedProject).mockResolvedValue(linked);
+
+    const result = await ensureLink('pull', client, '/cwd', {});
+
+    expect(result).toEqual(linked);
+    expect(getLinkedProject).toHaveBeenCalledTimes(1);
+    expect(
+      getLinkedProject.mock.calls[0][1].allowOwnerLookupFallback
+    ).toBeUndefined();
+  });
+
+  it('passes owner lookup fallback when explicitly enabled', async () => {
+    const linked = {
+      status: 'linked' as const,
+      org: { id: 'o1', slug: 'team', type: 'team' as const },
+      project: { id: 'p1', name: 'proj' },
+    };
+    vi.mocked(getLinkedProject).mockResolvedValue(linked);
+
+    const result = await ensureLink('deploy', client, '/cwd', {
+      allowOwnerLookupFallback: true,
+    });
+
+    expect(result).toEqual(linked);
+    expect(getLinkedProject).toHaveBeenCalledTimes(1);
+    expect(getLinkedProject.mock.calls[0][1].allowOwnerLookupFallback).toEqual(
+      true
+    );
+  });
+
   it('returns action_required payload when not linked and setupAndLink returns action_required', async () => {
     const actionRequiredPayload = {
       status: 'action_required' as const,
