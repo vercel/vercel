@@ -13,7 +13,7 @@ const logo = '▲';
  * or omit ones that do. Only the grouping is curated: anything registered
  * but not named here is listed under "Advanced" automatically.
  */
-const BASIC_COMMANDS = [
+export const BASIC_COMMANDS = [
   'deploy',
   'build',
   'cache',
@@ -41,11 +41,6 @@ const NAME_COLUMN = 21;
 const ARGS_COLUMN = 12;
 const MAX_DESCRIPTION = 78;
 
-type RootCommandEntry = Pick<Command, 'name' | 'aliases'> &
-  Partial<Pick<Command, 'description' | 'arguments' | 'subcommands'>> & {
-    hidden?: boolean;
-  };
-
 function firstSentence(text: string): string {
   const normalized = text.replace(/\s+/g, ' ').trim();
   const match = normalized.match(/^.*?[.!?](?=\s)/);
@@ -59,7 +54,7 @@ function truncate(text: string, max: number): string {
   return `${cut.slice(0, lastSpace > 0 ? lastSpace : max)}…`;
 }
 
-function displayName(command: RootCommandEntry): string {
+function displayName(command: Command): string {
   // Shortest first, matching the established `ls | list` convention.
   return [command.name, ...command.aliases]
     .slice()
@@ -67,21 +62,17 @@ function displayName(command: RootCommandEntry): string {
     .join(' | ');
 }
 
-function argsHint(command: RootCommandEntry): string {
-  if (command.name === 'help') return '[cmd]';
-  const first = command.arguments?.[0];
+function argsHint(command: Command): string {
+  const first = command.arguments[0];
   if (first) {
     return first.required ? `<${first.name}>` : `[${first.name}]`;
   }
   return command.subcommands?.length ? '[cmd]' : '';
 }
 
-function description(command: RootCommandEntry): string {
-  if (command.name === 'help') {
-    return 'Display help for a command';
-  }
+function description(command: Command): string {
   const text = truncate(
-    firstSentence(command.description ?? '').replace(/\.$/, ''),
+    firstSentence(command.description).replace(/\.$/, ''),
     MAX_DESCRIPTION
   );
   if (command.name === 'deploy') {
@@ -94,7 +85,7 @@ function pad(text: string, width: number): string {
   return text.length >= width ? `${text} ` : text.padEnd(width);
 }
 
-function commandLine(command: RootCommandEntry): string {
+function commandLine(command: Command): string {
   return `      ${pad(displayName(command), NAME_COLUMN)}${pad(
     argsHint(command),
     ARGS_COLUMN
@@ -102,9 +93,7 @@ function commandLine(command: RootCommandEntry): string {
 }
 
 function commandLines(): { basic: string[]; advanced: string[] } {
-  const visible = (commandsStructs as readonly RootCommandEntry[]).filter(
-    command => !command.hidden
-  );
+  const visible = commandsStructs.filter(command => !command.hidden);
   const byName = new Map(visible.map(command => [command.name, command]));
 
   const basic: string[] = [];

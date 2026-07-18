@@ -65,7 +65,7 @@ import { webhooksCommand } from './webhooks/command';
 import type { Command } from './help';
 import output from '../output-manager';
 
-export const commandsStructs = [
+export const commandsStructs: Command[] = [
   agentCommand,
   agentRunsCommand,
   aiGatewayCommand,
@@ -128,7 +128,14 @@ export const commandsStructs = [
   vcrCommand,
   whoamiCommand,
   // added because we don't have a full help command
-  { name: 'help', aliases: [] },
+  {
+    name: 'help',
+    aliases: [],
+    description: 'Display help for a command',
+    arguments: [{ name: 'command', required: false }],
+    options: [],
+    examples: [],
+  },
 ];
 
 if (process.env.FF_GUIDANCE_MODE) {

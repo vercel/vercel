@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { help } from '../../../src/help';
+import { BASIC_COMMANDS, help } from '../../../src/help';
 import { commandsStructs } from '../../../src/commands';
 
 describe('root help output', () => {
   const output = help();
+
+  it('curated grouping only names registered commands', () => {
+    // Guards against renames/removals leaving stale entries in the
+    // hand-maintained grouping list (the lines themselves are generated).
+    const registered = new Set(commandsStructs.map(command => command.name));
+    for (const name of BASIC_COMMANDS) {
+      expect(registered.has(name), `BASIC_COMMANDS entry "${name}"`).toBe(true);
+    }
+  });
 
   it('lists every registered visible command', () => {
     for (const command of commandsStructs) {
