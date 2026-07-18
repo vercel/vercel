@@ -1,0 +1,18 @@
+{
+  "invalidExamples": [
+    {
+      "path": "rolling-release status",
+      "reason": "The prose explicitly explains that this command does not exist; use rolling-release fetch instead."
+    },
+    {
+      "path": "vcr push",
+      "reason": "The prose explains that pushing is delegated to Docker or another container engine; there is no vercel vcr push command."
+    }
+  ],
+  "delegatedFamilies": [
+    {
+      "path": "sandbox",
+      "reason": "Subcommands are owned by the separately versioned Sandbox CLI."
+    }
+  ]
+}

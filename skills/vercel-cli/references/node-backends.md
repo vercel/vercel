@@ -1,16 +1,8 @@
 # Node Backends on Vercel
 
-Vercel supports Node.js backend frameworks as first-class apps. Express and Hono are the most common, but Fastify, Elysia, NestJS, H3, and Koa are also supported. Your app is the entrypoint — not the `api/` folder. No rewrites, no build scripts. Just export your app and deploy.
+> Exact syntax: `vercel deploy --help`, `vercel dev --help`
 
-## Quick Start
-
-```bash
-# Express
-npm init -y && npm i express
-# Create server.ts that exports default app
-vc dev       # local development
-vc deploy    # deploy
-```
+Vercel supports Node.js backend frameworks (Express, Hono, Fastify, Elysia, NestJS, H3, Koa) as first-class apps. Your app is the entrypoint — not the `api/` folder. No rewrites, no build scripts.
 
 ## How It Works
 
@@ -21,7 +13,7 @@ vc deploy    # deploy
 
 ## Entrypoint Detection
 
-Vercel searches for these filenames (in order): `app`, `index`, `server`, `main`, `src/app`, `src/index`, `src/server`, `src/main`
+Vercel searches for these filenames: `app`, `index`, `server`, `main`, `src/app`, `src/index`, `src/server`, `src/main`
 
 With these extensions: `.js`, `.cjs`, `.mjs`, `.ts`, `.cts`, `.mts`
 
@@ -29,69 +21,9 @@ The preferred entrypoint filename is `server.ts`. The file must import the frame
 
 We recommend using `export default` for the app instance, but calling `.listen()` also works.
 
-## Minimal Express App
-
-```
-my-app/
-├── package.json
-└── server.ts
-```
-
-**package.json:**
-
-```json
-{
-  "type": "module",
-  "dependencies": {
-    "express": "5.1.0"
-  }
-}
-```
-
-**server.ts:**
-
-```typescript
-import express from 'express';
-
-const app = express();
-
-app.get('/', (_req, res) => {
-  res.send('Hello Express!');
-});
-
-export default app;
-```
-
-## Minimal Hono App
-
-**package.json:**
-
-```json
-{
-  "type": "module",
-  "dependencies": {
-    "hono": "^4.8.9"
-  }
-}
-```
-
-**server.ts:**
-
-```typescript
-import { Hono } from 'hono';
-
-const app = new Hono();
-
-app.get('/', c => {
-  return c.text('Hello Hono!');
-});
-
-export default app;
-```
-
 ## Local Development
 
-Run `vc dev` from the project root. Vercel runs your app directly with TypeScript support. No `dev` script is required, though you can add one if you prefer.
+Run `vc dev` from the project root. Vercel runs your app directly with TypeScript support. No `dev` script is required.
 
 Static files in `public/` are served automatically.
 
@@ -108,6 +40,10 @@ Most apps need zero configuration. Optional `vercel.json` settings:
   }
 }
 ```
+
+## Bun Runtime
+
+Add `"bunVersion": "1.x"` to `vercel.json` to run on Bun instead of Node.js (works with any framework). Without it the project silently runs on Node.js and Bun-specific APIs like `Bun.file()` fail at runtime.
 
 ## Anti-Patterns
 

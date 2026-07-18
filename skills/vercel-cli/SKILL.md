@@ -1,15 +1,15 @@
 ---
 name: vercel-cli
-description: Deploy, manage, inspect, and troubleshoot Vercel projects from the command line. Use for Vercel deployments, build failures, projects and teams, environment variables, domains and DNS, logs, metrics, Speed Insights, Core Web Vitals, request traces, usage, activity, alerts, firewall rules, cache, cron jobs, deploy hooks, Edge Config, feature flags, integrations, connectors, Blob storage, Container Registry (VCR), microfrontends, rolling releases, custom environments, Sandbox, agent/MCP setup, OAuth apps, preview access, local development, or `vercel api` fallback.
+description: Deploy, manage, inspect, and troubleshoot Vercel projects from the command line. Use for Vercel deployments, build failures, projects and teams, environment variables, domains and DNS, logs, metrics, Speed Insights, Core Web Vitals, request traces, usage, activity, alerts, firewall rules, cache, cron jobs, deploy hooks, Edge Config, feature flags, integrations, connectors, Blob storage, Container Registry (VCR), microfrontends, rolling releases, custom environments, Sandbox, agent/MCP setup, agent runs, preview access, local development, or `vercel api` fallback.
 ---
 
 # Vercel CLI Skill
 
-The Vercel CLI (`vercel` or `vc`) deploys, manages, and develops projects on the Vercel platform from the command line. Use `vercel <command> --help` for full flag details on any command.
+The Vercel CLI (`vercel` or `vc`) deploys, manages, and develops projects on the Vercel platform from the command line.
 
-The installed CLI help is the source of truth for obscure or newly added flags. If a command example here is not enough, check `vercel <command> --help` before acting instead of guessing.
+**The installed CLI is the syntax authority.** For exact syntax (arguments, options, examples), run `vercel <command> --help` — never guess flags, and never trust remembered syntax for uncommon commands; the CLI changes between versions. To discover which commands exist (and their aliases and global options), see `generated/index.md`. Use the handwritten references for workflows, prerequisites, safety constraints, and troubleshooting — if guidance here ever disagrees with the CLI's own output, trust the CLI.
 
-Parse only stdout for URLs and JSON. Warnings, progress, and `--help` print to stderr; merge streams only when searching help text. Some help commands exit 2 after printing usage, so treat printed usage as a successful help read.
+Parse only stdout for URLs and JSON. Warnings, progress, and `--help` print to stderr; merge streams only when searching help text. Many commands exit `2` even after printing `--help` successfully — treat printed usage as a successful help read regardless of exit code; exit `2` without usage output means invalid or incomplete usage.
 
 In agent/non-interactive mode, many commands report errors and required confirmations as a single JSON object on stdout with `status`, `reason`, `hint`, and `next` (runnable follow-up commands). Prefer running a suggested `next` command over composing a retry. Read commands such as `list`, `logs`, `inspect`, and `api` keep their normal output shape.
 
@@ -35,6 +35,7 @@ vercel link --repo       # monorepo
 vercel pull
 vercel dev        # local development
 vercel deploy     # preview deployment
+vercel logout     # clear local credentials
 vercel --prod     # production deployment
 ```
 
@@ -44,7 +45,6 @@ Use this to route to the correct reference file:
 
 - **Deploy, redeploy, forced builds, no-cache builds, or deployment source/provenance** → `references/deployment.md`
 - **Rolling releases, deploy hooks, cron jobs, cache, git connection, Edge Config, redirects, custom environments** → `references/project-infra.md`
-- **Local development** → `references/local-development.md`
 - **Environment variables** → `references/environment-variables.md`
 - **CI/CD automation** → `references/ci-automation.md`
 - **Domains or DNS** → `references/domains-and-dns.md`
@@ -61,16 +61,13 @@ Use this to route to the correct reference file:
 - **CLI command is unavailable or output is missing required fields** → use `vercel api` after first-class CLI paths are unavailable or insufficient (see `references/advanced.md`)
 - **Node.js backends (Express, Hono, etc.)** → `references/node-backends.md`
 - **Monorepos (Turborepo, Nx, workspaces)** → `references/monorepos.md`
-- **Bun runtime** → `references/bun.md`
+- **Bun runtime** → `references/node-backends.md`
 - **Feature flags** → `references/flags.md`
 - **Microfrontends** → `references/microfrontends.md`
 - **Sandbox** → `references/sandbox.md`
-- **Agent, MCP, skills discovery, or AI Gateway** → `references/agent-and-ai.md`
-- **Captured request traces (`vercel traces`, including `--open` / `--view`)** → `references/advanced.md`
-- **Vercel Apps / OAuth apps (`vercel oauth-apps`)** → `references/advanced.md`
+- **Captured request traces (`vercel traces`)** → `references/monitoring-and-debugging.md`
 - **Advanced (`vercel api` fallback, webhooks)** → `references/advanced.md`
 - **Global flags** → `references/global-options.md`
-- **First-time setup** → `references/getting-started.md`
 
 ## Anti-Patterns
 

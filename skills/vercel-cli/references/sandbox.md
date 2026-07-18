@@ -1,6 +1,8 @@
 # Sandbox
 
-`vercel sandbox` forwards to the Sandbox CLI for project-scoped sandbox environments. Run `vercel sandbox --help` for the current list; the subcommands below are wired through `sandbox/index.ts`.
+> Exact syntax: `vercel sandbox --help`
+
+`vercel sandbox` forwards to the Sandbox CLI for project-scoped sandbox environments. Run `vercel sandbox --help` for the current subcommand list.
 
 ## Subcommands
 

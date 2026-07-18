@@ -65,6 +65,12 @@ jobs:
       - name: Check dependency versions
         run: pnpm exec syncpack lint
       - run: pnpm run build
+      # After build: the skill scripts import CLI command metadata, which
+      # requires built workspace deps (e.g. @vercel-internals/constants dist).
+      - name: Vercel CLI skill parity
+        run: |
+          pnpm skills:vercel-cli:check
+          pnpm skills:vercel-cli:test
       - run: pnpm run type-check
       - name: Ensure clean git workspace
         run: git diff --name-only --exit-code
