@@ -19,6 +19,15 @@ converged on.
 | --- | --- | --- |
 | `vercel <command> --help` | Arguments, options, examples | The installed CLI |
 | `skills/vercel-cli/generated/index.md` | Command map: families, aliases, one-line descriptions, global options | Generated from `packages/cli/src/commands/**/command.ts` |
+
+Why a generated command map exists at all: `--help` is authoritative at the
+command and subcommand level (rendered from metadata), but the ROOT help is
+hand-maintained static text (`packages/cli/src/help.ts`, hardcoded to avoid
+extra imports) and nothing forces it to stay current — at the time of
+writing it still lists a command that is not registered (`oauth-apps`).
+The map is the discovery surface that cannot drift: it is built from the
+same registration metadata the CLI routes with, and CI fails if it is
+stale. It also works in contexts where the agent cannot execute commands.
 | `skills/vercel-cli/SKILL.md` | Universal guidance, always in context: linking, output parsing, exit codes, agent-mode JSON errors, decision tree, anti-patterns | Handwritten |
 | `skills/vercel-cli/references/*.md` | Family-specific traps, workflows, ordering constraints, negative guidance | Handwritten |
 

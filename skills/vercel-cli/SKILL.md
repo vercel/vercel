@@ -7,7 +7,7 @@ description: Deploy, manage, inspect, and troubleshoot Vercel projects from the 
 
 The Vercel CLI (`vercel` or `vc`) deploys, manages, and develops projects on the Vercel platform from the command line.
 
-**The installed CLI is the syntax authority.** For exact syntax (arguments, options, examples), run `vercel <command> --help` — never guess flags, and never trust remembered syntax for uncommon commands; the CLI changes between versions. To discover which commands exist (and their aliases and global options), see `generated/index.md`. Use the handwritten references for workflows, prerequisites, safety constraints, and troubleshooting — if guidance here ever disagrees with the CLI's own output, trust the CLI.
+**The installed CLI is the syntax authority.** For exact syntax (arguments, options, examples), run `vercel <command> --help` — never guess flags, and never trust remembered syntax for uncommon commands; the CLI changes between versions. To discover which commands exist (and their aliases and global options), read `generated/index.md` — it is generated from command metadata and CI-checked, whereas the CLI's root help text is hand-maintained and can drift. Use the handwritten references for workflows, prerequisites, safety constraints, and troubleshooting — if guidance here ever disagrees with the CLI's own output, trust the CLI.
 
 Parse only stdout for URLs and JSON. Warnings, progress, and `--help` print to stderr; merge streams only when searching help text. Many commands exit `2` even after printing `--help` successfully — treat printed usage as a successful help read regardless of exit code; exit `2` without usage output means invalid or incomplete usage.
 
