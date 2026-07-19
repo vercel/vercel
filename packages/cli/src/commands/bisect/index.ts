@@ -3,8 +3,7 @@ import execa from 'execa';
 import plural from 'pluralize';
 import { resolve } from 'path';
 import chalk, { type Chalk } from 'chalk';
-import { URLSearchParams } from 'url';
-import { URLPattern } from 'urlpattern-polyfill';
+import { URL, URLSearchParams } from 'url';
 
 import box from '../../util/output/box';
 import formatDate from '../../util/format-date';
@@ -26,26 +25,60 @@ interface Deployments {
   deployments: Deployment[];
 }
 
-const URL_COMPONENT_PATTERN = new URLPattern({
-  protocol: '*',
-  hostname: '*',
-  port: '*',
-  pathname: '*',
-  search: '*',
-});
+type UrlPatternMatch = {
+  hostname: { input: string };
+  pathname: { input: string };
+  search: { input: string };
+};
+
+type UrlPattern = {
+  exec(input: string): UrlPatternMatch | null;
+};
+
+type UrlPatternConstructor = new (init: {
+  protocol: string;
+  hostname: string;
+  port: string;
+  pathname: string;
+  search: string;
+}) => UrlPattern;
+
+const NativeURLPattern = (globalThis as { URLPattern?: UrlPatternConstructor })
+  .URLPattern;
+const URL_COMPONENT_PATTERN = NativeURLPattern
+  ? new NativeURLPattern({
+      protocol: '*',
+      hostname: '*',
+      port: '*',
+      pathname: '*',
+      search: '*',
+    })
+  : null;
 
 function getUrlComponents(url: string) {
-  const match = URL_COMPONENT_PATTERN.exec(url);
-  if (!match || !match.hostname.input) {
-    return null;
+  const match = URL_COMPONENT_PATTERN?.exec(url);
+  if (match?.hostname.input) {
+    return {
+      hostname: match.hostname.input.replace(/^\[(.*)\]$/, '$1'),
+      path: `${match.pathname.input}${
+        match.search.input ? `?${match.search.input}` : ''
+      }`,
+    };
   }
 
-  return {
-    hostname: match.hostname.input.replace(/^\[(.*)\]$/, '$1'),
-    path: `${match.pathname.input}${
-      match.search.input ? `?${match.search.input}` : ''
-    }`,
-  };
+  try {
+    const parsed = new URL(url);
+    if (!parsed.hostname) {
+      return null;
+    }
+
+    return {
+      hostname: parsed.hostname.replace(/^\[(.*)\]$/, '$1'),
+      path: `${parsed.pathname}${parsed.search}`,
+    };
+  } catch {
+    return null;
+  }
 }
 export default async function bisect(client: Client): Promise<number> {
   let parsedArgs = null;
