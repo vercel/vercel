@@ -2347,7 +2347,7 @@ export default class DevServer {
           }
 
           const middlewareRes = await directFetch(
-            `http://127.0.0.1:${port}${parsed.path}`,
+            `http://127.0.0.1:${port}${parsed.pathname}`,
             {
               headers: middlewareReqHeaders,
               method: req.method,
