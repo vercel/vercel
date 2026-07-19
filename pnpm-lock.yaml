@@ -584,9 +584,6 @@ importers:
       undici:
         specifier: 5.29.0
         version: 5.29.0
-      urlpattern-polyfill:
-        specifier: 10.1.0
-        version: 10.1.0
       zod:
         specifier: 4.1.11
         version: 4.1.11
@@ -12604,9 +12601,6 @@ packages:
   urlgrey@0.4.4:
     resolution: {integrity: sha512-vfQzI+JDPBrBRw374pgWi6bFPfc+6BonRsazCj3weBIWe8moRcvfgy0lpaiGkMGnExs4Z/Dws8lp5mc9IegURw==}
 
-  urlpattern-polyfill@10.1.0:
-    resolution: {integrity: sha512-IGjKp/o0NL3Bso1PymYURCJxMPNAf/ILOpendP9f5B6e1rTJgdgiOvgfoT8VxCAdY+Wisb9uhGaJJf3yZ2V9nw==}
-
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
@@ -24027,8 +24021,6 @@ snapshots:
       punycode: 2.3.1
 
   urlgrey@0.4.4: {}
-
-  urlpattern-polyfill@10.1.0: {}
 
   util-deprecate@1.0.2: {}
 

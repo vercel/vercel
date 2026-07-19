@@ -1,11 +1,29 @@
-import { URLPattern } from 'urlpattern-polyfill';
 import type { ListenSpec } from './types';
 
-const TCP_PATTERN = new URLPattern({
-  protocol: 'tcp',
-  hostname: '*',
-  port: '*',
-});
+type UrlPatternMatch = {
+  hostname: { input: string };
+  port: { input: string };
+};
+
+type UrlPattern = {
+  exec(input: string): UrlPatternMatch | null;
+};
+
+type UrlPatternConstructor = new (init: {
+  protocol: string;
+  hostname: string;
+  port: string;
+}) => UrlPattern;
+
+const NativeURLPattern = (globalThis as { URLPattern?: UrlPatternConstructor })
+  .URLPattern;
+const TCP_PATTERN = NativeURLPattern
+  ? new NativeURLPattern({
+      protocol: 'tcp',
+      hostname: '*',
+      port: '*',
+    })
+  : null;
 
 export function parseListen(str: string, defaultPort = 3000): ListenSpec {
   const port = Number(str);
@@ -33,11 +51,19 @@ export function parseListen(str: string, defaultPort = 3000): ListenSpec {
     return [pathname];
   }
 
-  const tcpMatch = TCP_PATTERN.exec(str);
+  const tcpMatch = TCP_PATTERN?.exec(str);
   if (tcpMatch) {
     return [
       parseInt(tcpMatch.port.input || String(defaultPort), 10),
       tcpMatch.hostname.input.replace(/^\[(.*)\]$/, '$1') || undefined,
+    ];
+  }
+
+  if (str.startsWith('tcp:')) {
+    const url = new URL(str);
+    return [
+      parseInt(url.port || String(defaultPort), 10),
+      url.hostname.replace(/^\[(.*)\]$/, '$1') || undefined,
     ];
   }
 
