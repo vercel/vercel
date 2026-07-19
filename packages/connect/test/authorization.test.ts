@@ -21,6 +21,7 @@ describe('startAuthorization', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -51,6 +52,34 @@ describe('startAuthorization', () => {
     expect(JSON.parse(init.body as string)).toMatchObject({
       returnUrl: 'http://agent.localhost:3000/eve/v1/authorization/callback',
     });
+  });
+
+  it('uses detached device authorization when requested by environment', async () => {
+    vi.stubEnv('VERCEL_CONNECT_INTERACTIVE_AUTH_MODE', 'detached');
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        request: 'req_123',
+        verifier: 'verifier_123',
+        url: 'https://connect.vercel.com/authorize/req_123',
+        deviceCode: 'ABC123',
+      })
+    );
+
+    await expect(
+      startAuthorization(CONNECTOR, PARAMS, {
+        callbackUrl: 'http://example.com/connect/callback',
+      })
+    ).resolves.toMatchObject({
+      request: 'req_123',
+      verifier: 'verifier_123',
+      deviceCode: 'ABC123',
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      deviceCode: true,
+    });
+    expect(JSON.parse(init.body as string)).not.toHaveProperty('returnUrl');
   });
 
   it('rejects non-local http callback URLs', async () => {
