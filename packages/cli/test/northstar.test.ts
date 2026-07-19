@@ -1,4 +1,5 @@
 import type http from 'http';
+import { URLPattern } from 'urlpattern-polyfill';
 import fs from 'fs-extra';
 import path from 'path';
 import { execCli } from './helpers/exec';
@@ -9,6 +10,25 @@ import formatOutput from './helpers/format-output';
 import type { User } from '@vercel-internals/types';
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
+
+const MOCK_API_URL_PATTERN = new URLPattern({
+  protocol: '*',
+  hostname: '*',
+  pathname: '*',
+  search: '*',
+});
+
+function parseMockApiUrl(input: string) {
+  const match = MOCK_API_URL_PATTERN.exec(input, 'http://localhost');
+  if (!match) {
+    throw new Error(`Unable to parse URL: ${input}`);
+  }
+
+  return {
+    pathname: match.pathname.input,
+    searchParams: new URLSearchParams(match.search.input),
+  };
+}
 
 function getGlobalConfigPath() {
   return path.join(getGlobalDir(), 'config.json');
@@ -41,7 +61,7 @@ afterEach(() => {
 function mockApi(user: Partial<User>) {
   return function (req: http.IncomingMessage, res: http.ServerResponse) {
     const { url = '/', method } = req;
-    const { pathname, searchParams } = new URL(url, 'http://localhost');
+    const { pathname, searchParams } = parseMockApiUrl(url);
     const securityCode = 'Bears Beets Battlestar Galactica';
     res.setHeader('content-type', 'application/json');
     if (

@@ -3,7 +3,8 @@ import execa from 'execa';
 import plural from 'pluralize';
 import { resolve } from 'path';
 import chalk, { type Chalk } from 'chalk';
-import { URL, URLSearchParams } from 'url';
+import { URLSearchParams } from 'url';
+import { URLPattern } from 'urlpattern-polyfill';
 
 import box from '../../util/output/box';
 import formatDate from '../../util/format-date';
@@ -23,6 +24,28 @@ import { BisectTelemetryClient } from '../../util/telemetry/commands/bisect';
 
 interface Deployments {
   deployments: Deployment[];
+}
+
+const URL_COMPONENT_PATTERN = new URLPattern({
+  protocol: '*',
+  hostname: '*',
+  port: '*',
+  pathname: '*',
+  search: '*',
+});
+
+function getUrlComponents(url: string) {
+  const match = URL_COMPONENT_PATTERN.exec(url);
+  if (!match || !match.hostname.input) {
+    return null;
+  }
+
+  return {
+    hostname: match.hostname.input.replace(/^\[(.*)\]$/, '$1'),
+    path: `${match.pathname.input}${
+      match.search.input ? `?${match.search.input}` : ''
+    }`,
+  };
 }
 export default async function bisect(client: Client): Promise<number> {
   let parsedArgs = null;
@@ -78,13 +101,13 @@ export default async function bisect(client: Client): Promise<number> {
   }
 
   bad = normalizeURL(bad);
-  let parsed = new URL(bad);
-  if (!parsed.hostname) {
+  const badComponents = getUrlComponents(bad);
+  if (!badComponents) {
     output.error('Invalid input: no hostname provided');
     return 1;
   }
-  bad = parsed.hostname.replace(/^\[(.*)\]$/, '$1');
-  const badPath = `${parsed.pathname}${parsed.search}`;
+  bad = badComponents.hostname;
+  const badPath = badComponents.path;
   if (badPath !== '/') {
     if (subpath && subpath !== badPath) {
       output.note(
@@ -98,13 +121,13 @@ export default async function bisect(client: Client): Promise<number> {
   }
 
   good = normalizeURL(good);
-  parsed = new URL(good);
-  if (!parsed.hostname) {
+  const goodComponents = getUrlComponents(good);
+  if (!goodComponents) {
     output.error('Invalid input: no hostname provided');
     return 1;
   }
-  good = parsed.hostname.replace(/^\[(.*)\]$/, '$1');
-  const goodPath = `${parsed.pathname}${parsed.search}`;
+  good = goodComponents.hostname;
+  const goodPath = goodComponents.path;
   if (goodPath !== '/' && subpath && subpath !== goodPath) {
     output.note(
       `Ignoring subpath ${chalk.bold(goodPath)} which does not match ${chalk.bold(

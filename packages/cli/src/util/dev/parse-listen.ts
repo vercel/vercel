@@ -1,4 +1,11 @@
+import { URLPattern } from 'urlpattern-polyfill';
 import type { ListenSpec } from './types';
+
+const TCP_PATTERN = new URLPattern({
+  protocol: 'tcp',
+  hostname: '*',
+  port: '*',
+});
 
 export function parseListen(str: string, defaultPort = 3000): ListenSpec {
   const port = Number(str);
@@ -26,11 +33,11 @@ export function parseListen(str: string, defaultPort = 3000): ListenSpec {
     return [pathname];
   }
 
-  if (str.startsWith('tcp:')) {
-    const url = new URL(str);
+  const tcpMatch = TCP_PATTERN.exec(str);
+  if (tcpMatch) {
     return [
-      parseInt(url.port || String(defaultPort), 10),
-      url.hostname.replace(/^\[(.*)\]$/, '$1') || undefined,
+      parseInt(tcpMatch.port.input || String(defaultPort), 10),
+      tcpMatch.hostname.input.replace(/^\[(.*)\]$/, '$1') || undefined,
     ];
   }
 

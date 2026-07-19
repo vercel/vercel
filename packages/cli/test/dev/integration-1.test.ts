@@ -1,4 +1,5 @@
 import os from 'os';
+import { URLPattern } from 'urlpattern-polyfill';
 import fs from 'fs-extra';
 import { join } from 'path';
 import { listen } from 'async-listen';
@@ -12,6 +13,25 @@ import {
   validateResponseHeaders,
 } from './utils';
 import nodeFetch from '../../src/util/fetch';
+
+const TEST_URL_PATTERN = new URLPattern({
+  protocol: '*',
+  hostname: '*',
+  pathname: '*',
+  search: '*',
+});
+
+function parseTestUrl(input: string) {
+  const match = TEST_URL_PATTERN.exec(input, 'http://localhost');
+  if (!match) {
+    throw new Error(`Unable to parse URL: ${input}`);
+  }
+
+  return {
+    pathname: match.pathname.input,
+    searchParams: new URLSearchParams(match.search.input),
+  };
+}
 
 test('[verdel dev] should support serverless functions', async () => {
   const dir = fixture('serverless-function');
@@ -428,7 +448,7 @@ test('[vercel dev] should maintain query when invoking serverless function', asy
     validateResponseHeaders(res);
 
     const text = await res.text();
-    const parsed = new URL(text, 'http://localhost');
+    const parsed = parseTestUrl(text);
     expect(parsed.pathname).toEqual('/something');
     expect(parsed.searchParams.get('url-param')).toEqual('a');
     expect(parsed.searchParams.get('route-param')).toEqual('b');
@@ -458,7 +478,7 @@ test('[vercel dev] should maintain query when proxy passing', async () => {
     validateResponseHeaders(res);
 
     const text = await res.text();
-    const parsed = new URL(text, 'http://localhost');
+    const parsed = parseTestUrl(text);
     expect(parsed.pathname).toEqual('/something');
     expect(parsed.searchParams.get('url-param')).toEqual('a');
     expect(parsed.searchParams.get('route-param')).toEqual('b');
@@ -489,7 +509,7 @@ test('[vercel dev] should maintain query when dev server defines routes', async 
       .replace(/&amp;/g, '&')
       .replace(/&quot;/g, '"');
     const parsed = JSON.parse(json);
-    const query = new URL(parsed.url, 'http://localhost').searchParams;
+    const query = parseTestUrl(parsed.url).searchParams;
 
     expect(query.get('url-param')).toEqual('a');
     expect(query.get('route-param')).toEqual('b');
