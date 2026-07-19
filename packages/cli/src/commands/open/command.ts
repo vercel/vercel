@@ -4,7 +4,7 @@ import { yesOption } from '../../util/arg-common';
 export const openCommand = {
   name: 'open',
   aliases: [],
-  description: 'Opens the current project in the Vercel Dashboard.',
+  description: 'Open the current project in the Vercel Dashboard.',
   arguments: [],
   options: [
     {
