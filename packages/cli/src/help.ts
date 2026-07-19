@@ -38,8 +38,7 @@ export const BASIC_COMMANDS = [
 ];
 
 const NAME_COLUMN = 21;
-const ARGS_COLUMN = 12;
-const MAX_DESCRIPTION = 78;
+const MAX_DESCRIPTION = 64;
 
 function firstSentence(text: string): string {
   const normalized = text.replace(/\s+/g, ' ').trim();
@@ -85,10 +84,10 @@ function pad(text: string, width: number): string {
   return text.length >= width ? `${text} ` : text.padEnd(width);
 }
 
-function commandLine(command: Command): string {
+function commandLine(command: Command, argsColumn: number): string {
   return `      ${pad(displayName(command), NAME_COLUMN)}${pad(
     argsHint(command),
-    ARGS_COLUMN
+    argsColumn
   )}${description(command)}`;
 }
 
@@ -96,20 +95,28 @@ function commandLines(): { basic: string[]; advanced: string[] } {
   const visible = commandsStructs.filter(command => !command.hidden);
   const byName = new Map(visible.map(command => [command.name, command]));
 
-  const basic: string[] = [];
+  // Size the hint column to the widest hint so metadata-derived
+  // placeholders (`[url|deploymentId]`) never push descriptions ragged.
+  const argsColumn =
+    Math.max(...visible.map(command => argsHint(command).length)) + 2;
+
+  const basic: Command[] = [];
   for (const name of BASIC_COMMANDS) {
     const command = byName.get(name);
     if (command) {
-      basic.push(commandLine(command));
+      basic.push(command);
       byName.delete(name);
     }
   }
 
-  const advanced = [...byName.values()]
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map(commandLine);
+  const advanced = [...byName.values()].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
 
-  return { basic, advanced };
+  return {
+    basic: basic.map(command => commandLine(command, argsColumn)),
+    advanced: advanced.map(command => commandLine(command, argsColumn)),
+  };
 }
 
 function globalOptionLines(): string[] {
