@@ -91,7 +91,10 @@ export function parseRootCommandBindings(indexSource: string): string[] {
   const source = stripJsComments(indexSource);
   const importMap = parseCommandImportMap(indexSource);
 
-  const arrayMatch = source.match(/const commandsStructs = \[([\s\S]*?)\];/);
+  // Tolerates `export` and a type annotation (`: Command[]`) on the array.
+  const arrayMatch = source.match(
+    /const commandsStructs[^=\n]*= \[([\s\S]*?)\];/
+  );
   if (!arrayMatch) {
     throw new Error(
       'Could not locate commandsStructs array in commands/index.ts'

@@ -17,11 +17,18 @@ import { guidanceCommand } from './guidance/command';
 import { metricsCommand } from './metrics/command';
 import { connexCommand } from './connex/command';
 
-const commandsStructs = [
+export const commandsStructs: Command[] = [
   deployCommand,
   aliasCommand,
   // retiredCommand,
-  { name: 'help', aliases: [] },
+  {
+    name: 'help',
+    aliases: [],
+    description: 'Display help for a command',
+    arguments: [{ name: 'command', required: false }],
+    options: [],
+    examples: [],
+  },
 ];
 
 if (process.env.FF_GUIDANCE_MODE) {
