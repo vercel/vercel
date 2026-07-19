@@ -3,7 +3,7 @@ import execa from 'execa';
 import plural from 'pluralize';
 import { resolve } from 'path';
 import chalk, { type Chalk } from 'chalk';
-import { URLSearchParams, parse } from 'url';
+import { URL, URLSearchParams } from 'url';
 
 import box from '../../util/output/box';
 import formatDate from '../../util/format-date';
@@ -78,41 +78,38 @@ export default async function bisect(client: Client): Promise<number> {
   }
 
   bad = normalizeURL(bad);
-  let parsed = parse(bad);
+  let parsed = new URL(bad);
   if (!parsed.hostname) {
     output.error('Invalid input: no hostname provided');
     return 1;
   }
-  bad = parsed.hostname;
-  if (typeof parsed.path === 'string' && parsed.path !== '/') {
-    if (subpath && subpath !== parsed.path) {
+  bad = parsed.hostname.replace(/^\[(.*)\]$/, '$1');
+  const badPath = `${parsed.pathname}${parsed.search}`;
+  if (badPath !== '/') {
+    if (subpath && subpath !== badPath) {
       output.note(
         `Ignoring subpath ${chalk.bold(
-          parsed.path
+          badPath
         )} in favor of \`--path\` argument ${chalk.bold(subpath)}`
       );
     } else {
-      subpath = parsed.path;
+      subpath = badPath;
     }
   }
 
   good = normalizeURL(good);
-  parsed = parse(good);
+  parsed = new URL(good);
   if (!parsed.hostname) {
     output.error('Invalid input: no hostname provided');
     return 1;
   }
-  good = parsed.hostname;
-  if (
-    typeof parsed.path === 'string' &&
-    parsed.path !== '/' &&
-    subpath &&
-    subpath !== parsed.path
-  ) {
+  good = parsed.hostname.replace(/^\[(.*)\]$/, '$1');
+  const goodPath = `${parsed.pathname}${parsed.search}`;
+  if (goodPath !== '/' && subpath && subpath !== goodPath) {
     output.note(
-      `Ignoring subpath ${chalk.bold(
-        parsed.path
-      )} which does not match ${chalk.bold(subpath)}`
+      `Ignoring subpath ${chalk.bold(goodPath)} which does not match ${chalk.bold(
+        subpath
+      )}`
     );
   }
 

@@ -1,7 +1,6 @@
 import type http from 'http';
 import fs from 'fs-extra';
 import path from 'path';
-import { parse as parseUrl } from 'url';
 import { execCli } from './helpers/exec';
 import waitForPrompt from './helpers/wait-for-prompt';
 import getGlobalDir from './helpers/get-global-dir';
@@ -42,19 +41,19 @@ afterEach(() => {
 function mockApi(user: Partial<User>) {
   return function (req: http.IncomingMessage, res: http.ServerResponse) {
     const { url = '/', method } = req;
-    const { pathname = '/', query = {} } = parseUrl(url, true);
+    const { pathname, searchParams } = new URL(url, 'http://localhost');
     const securityCode = 'Bears Beets Battlestar Galactica';
     res.setHeader('content-type', 'application/json');
     if (
       method === 'POST' &&
       pathname === '/registration' &&
-      query.mode === 'login'
+      searchParams.get('mode') === 'login'
     ) {
       res.end(JSON.stringify({ token: 'test', securityCode }));
     } else if (
       method === 'GET' &&
       pathname === '/registration/verify' &&
-      query.email === user.email
+      searchParams.get('email') === user.email
     ) {
       res.end(JSON.stringify({ token: 'test' }));
     } else if (method === 'GET' && pathname === '/v2/user') {

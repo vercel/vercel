@@ -1,4 +1,4 @@
-import url, { URL } from 'url';
+import { URL } from 'url';
 import http from 'http';
 import fs from 'fs-extra';
 import ms from 'ms';
@@ -113,6 +113,7 @@ import {
 import { injectNextDevWebSocketShimIfNeeded } from './next-dev-websocket-shim-injection';
 import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
+import { formatUrl, parseUrl } from './url';
 import {
   errorToString,
   isErrnoException,
@@ -1296,7 +1297,7 @@ export default class DevServer {
 
       if (this.orchestrator || this.sidecarOrchestrator) {
         // Services V1 and sidecars use routePrefixes for WebSocket routing.
-        const pathname = url.parse(req.url || '/').pathname || '/';
+        const pathname = parseUrl(req.url || '/').pathname || '/';
         const service =
           this.orchestrator?.getServiceForRoute(pathname) ||
           this.sidecarOrchestrator?.getServiceForRoute(pathname);
@@ -1353,7 +1354,7 @@ export default class DevServer {
       // that can handle the WebSocket upgrade. For now this picks the
       // first builder that returns a running dev server — sufficient for
       // single-entrypoint projects where one process handles all routes.
-      const pathname = url.parse(req.url || '/').pathname || '/';
+      const pathname = parseUrl(req.url || '/').pathname || '/';
       for (const match of this.buildMatches.values()) {
         const { builder } = match.builderWithPkg;
         if (
@@ -1723,7 +1724,7 @@ export default class DevServer {
     }
 
     // Resolve lookup path for the service's route table
-    const parsed = url.parse(req.url || '/');
+    const parsed = parseUrl(req.url || '/');
     const originalPathname = parsed.pathname || '/';
 
     let lookupPath = originalPathname;
@@ -2216,7 +2217,7 @@ export default class DevServer {
 
     // If there is a double-slash present in the URL,
     // then perform a redirect to make it "clean".
-    const parsed = url.parse(req.url || '/');
+    const parsed = parseUrl(req.url || '/');
     if (typeof parsed.pathname === 'string' && parsed.pathname.includes('//')) {
       let location = parsed.pathname.replace(/\/+/g, '/');
       if (parsed.search) {
@@ -2275,11 +2276,11 @@ export default class DevServer {
     const getReqUrl = (rr: RouteResult): string | undefined => {
       if (rr.dest) {
         if (rr.query) {
-          const destParsed = url.parse(rr.dest);
+          const destParsed = parseUrl(rr.dest);
           const destQuery = parseQueryString(destParsed.search);
           Object.assign(destQuery, rr.query);
-          destParsed.search = formatQueryString(destQuery);
-          return url.format(destParsed);
+          destParsed.search = formatQueryString(destQuery) || '';
+          return formatUrl(destParsed);
         }
         return rr.dest;
       }
@@ -2441,9 +2442,9 @@ export default class DevServer {
               }
             } else {
               // Retain orginal pathname, but override query parameters from the rewrite
-              const rewriteUrlParsed = url.parse(beforeRewriteUrl);
-              rewriteUrlParsed.search = url.parse(rewritePath).search;
-              req.url = url.format(rewriteUrlParsed);
+              const rewriteUrlParsed = parseUrl(beforeRewriteUrl);
+              rewriteUrlParsed.search = parseUrl(rewritePath).search;
+              req.url = formatUrl(rewriteUrlParsed);
             }
 
             debug(
@@ -2531,11 +2532,11 @@ export default class DevServer {
 
       if (routeResult.isDestUrl) {
         // Mix the `routes` result dest query params into the req path
-        const destParsed = url.parse(routeResult.dest);
+        const destParsed = parseUrl(routeResult.dest);
         const destQuery = parseQueryString(destParsed.search);
         Object.assign(destQuery, routeResult.query);
-        destParsed.search = formatQueryString(destQuery);
-        const destUrl = url.format(destParsed);
+        destParsed.search = formatQueryString(destQuery) || '';
+        const destUrl = formatUrl(destParsed);
 
         this.prepareTransforms(req, requestTransforms, responseTransforms);
 
@@ -2738,12 +2739,12 @@ export default class DevServer {
         }
 
         this.setResponseHeaders(res, requestId);
-        const origUrl = url.parse(req.url || '/');
+        const origUrl = parseUrl(req.url || '/');
         const origQuery = parseQueryString(origUrl.search);
         origUrl.pathname = dest;
         Object.assign(origQuery, query);
-        origUrl.search = formatQueryString(origQuery);
-        req.url = url.format(origUrl);
+        origUrl.search = formatQueryString(origQuery) || '';
+        req.url = formatUrl(origUrl);
         this.prepareTransforms(req, requestTransforms, responseTransforms);
         return proxyPass(req, res, upstream, this, requestId, false);
       }
@@ -2765,12 +2766,12 @@ export default class DevServer {
       Array.isArray(buildResult.routes) &&
       buildResult.routes.length > 0
     ) {
-      const origUrl = url.parse(req.url || '/');
+      const origUrl = parseUrl(req.url || '/');
       const origQuery = parseQueryString(origUrl.search);
       origUrl.pathname = dest;
       Object.assign(origQuery, query);
-      origUrl.search = formatQueryString(origQuery);
-      const newUrl = url.format(origUrl);
+      origUrl.search = formatQueryString(origQuery) || '';
+      const newUrl = formatUrl(origUrl);
       debug(
         `Checking build result's ${buildResult.routes.length} \`routes\` to match ${newUrl}`
       );
@@ -2867,14 +2868,11 @@ export default class DevServer {
         );
 
         // Mix in the routing based query parameters
-        const origUrl = url.parse(req.url || '/');
+        const origUrl = parseUrl(req.url || '/');
         const origQuery = parseQueryString(origUrl.search);
         Object.assign(origQuery, query);
-        origUrl.search = formatQueryString(origQuery);
-        req.url = url.format({
-          pathname: origUrl.pathname,
-          search: origUrl.search,
-        });
+        origUrl.search = formatQueryString(origQuery) || '';
+        req.url = `${origUrl.pathname}${origUrl.search}`;
 
         // Add the Vercel platform proxy request headers
         const headers = this.getProxyHeaders(req, requestId, false);
@@ -2989,14 +2987,11 @@ export default class DevServer {
         requestId = generateRequestId(this.podId, true);
 
         // Mix the `routes` result dest query params into the req path
-        const origUrl = url.parse(req.url || '/');
+        const origUrl = parseUrl(req.url || '/');
         const origQuery = parseQueryString(origUrl.search);
         Object.assign(origQuery, query);
-        origUrl.search = formatQueryString(origQuery);
-        req.url = url.format({
-          pathname: origUrl.pathname,
-          search: origUrl.search,
-        });
+        origUrl.search = formatQueryString(origQuery) || '';
+        req.url = `${origUrl.pathname}${origUrl.search}`;
 
         applyRequestTransforms(req, requestTransforms);
         const path = req.url || '/';
