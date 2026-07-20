@@ -850,7 +850,7 @@ test('next unsupported functions config shows warning link', async () => {
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toMatch(
-    /Ignoring function property `runtime`\. When using Next\.js, only `memory` and `maxDuration` can be used\./gm
+    /Ignoring function property `runtime`\. When using Next\.js, only `memory`(?: and `maxDuration`|, `maxDuration`, and `maxConcurrency`) can be used\./gm
   );
   expect(output.stderr).toMatch(
     /Learn More: https:\/\/vercel\.link\/functions-property-next/gm
