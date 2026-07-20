@@ -19,6 +19,11 @@ describe('getDeadline', () => {
     expect(getDeadline()).toEqual(new Date('2026-07-20T12:00:00.000Z'));
   });
 
+  it('returns undefined when deadline is not a valid date', () => {
+    setContext({ deadline: 'not a valid date' });
+    expect(getDeadline()).toBeUndefined();
+  });
+
   it('returns undefined when no runtime data is available', () => {
     setContext({});
     expect(getDeadline()).toBeUndefined();
