@@ -6,7 +6,7 @@ import { AddCacheTagApi } from './addcachetag/types';
 
 type Context = {
   waitUntil?: (promise: Promise<unknown>) => void;
-  maxDuration?: number;
+  deadline?: string;
   cache?: RuntimeCache;
   purge?: PurgeApi;
   addCacheTag?: AddCacheTagApi;
