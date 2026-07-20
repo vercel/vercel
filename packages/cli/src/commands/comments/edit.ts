@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -102,7 +103,7 @@ export default async function edit(
       client.stdout.write(`${JSON.stringify(message, null, 2)}\n`);
       return 0;
     }
-    output.success(`Edited message ${messageId}`);
+    output.print(`${chalk.green('✓')} Edited message ${messageId}\n`);
     return 0;
   } catch (err) {
     if (isAPIError(err)) {

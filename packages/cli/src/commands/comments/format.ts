@@ -1,6 +1,16 @@
 import chalk from 'chalk';
 import ms from 'ms';
+import { ALIGNED_LABEL_WIDTH } from '../../util/output/print-aligned-label';
 import type { CommentActor, CommentMessage, Thread } from './types';
+
+/**
+ * Mirrors printAlignedLabel()'s blank-gutter layout (2-space gutter +
+ * shared 16-char label column). That helper prints directly and cannot be
+ * used inside these pure string renderers.
+ */
+function alignedRow(label: string, value: string): string {
+  return `  ${chalk.bold(label.padEnd(ALIGNED_LABEL_WIDTH))}${value}`;
+}
 
 export function actorLabel(actor: CommentActor | undefined): string {
   if (!actor) {
@@ -86,7 +96,7 @@ function renderThreadSummary(thread: Thread, complete: boolean): string {
       : undefined;
   const lastTimestamp = thread.messages[thread.messages.length - 1]?.timestamp;
 
-  const parts = [`↳ ${replies} ${replies === 1 ? 'reply' : 'replies'}`];
+  const parts = [`→ ${replies} ${replies === 1 ? 'reply' : 'replies'}`];
   if (participants) {
     parts.push(participants);
   }
@@ -101,7 +111,7 @@ export function renderThreadRow(
   // The embedded window is the LAST 50 messages: for longer threads,
   // messages[0] is not the root comment and must not be presented as it.
   const complete = thread.messageCount <= thread.messages.length;
-  const dot = thread.resolved ? chalk.dim('○') : chalk.cyan('●');
+  const dot = thread.resolved ? chalk.dim('○') : '●';
   const author = complete ? actorLabel(thread.messages[0]?.author) : '…';
   const columns: string[] = [
     dot,
@@ -114,7 +124,7 @@ export function renderThreadRow(
     columns.push(chalk.dim(thread.branch));
   }
   if (thread.isLocalhost) {
-    columns.push(chalk.yellow('⚑ localhost'));
+    columns.push(chalk.dim('localhost'));
   }
 
   const lines = [`  ${columns.join('  ')}`];
@@ -122,7 +132,7 @@ export function renderThreadRow(
   if (complete) {
     const excerpt = truncate(firstMessageText(thread), 80);
     if (excerpt) {
-      lines.push(`    ${chalk.italic(`“${excerpt}”`)}`);
+      lines.push(`    “${excerpt}”`);
     }
   } else {
     lines.push(
@@ -132,7 +142,7 @@ export function renderThreadRow(
 
   const selection = thread.context?.selection;
   if (selection) {
-    lines.push(chalk.dim(`    ↳ selected: “${truncate(selection, 60)}”`));
+    lines.push(chalk.dim(`    → selected: “${truncate(selection, 60)}”`));
   }
 
   if (thread.messageCount > 1) {
@@ -192,9 +202,7 @@ export function renderMessage(message: CommentMessage): string {
     // Monochrome glyphs only — house style has no color-emoji decoration.
     // (API-provided reaction emoji are data, not decoration.)
     lines.push(
-      chalk.dim(
-        `  ↳ attachment ${attachment.filename}${dimensions} ${attachment.url}`
-      )
+      `${chalk.dim(`  → attachment ${attachment.filename}${dimensions}`)} ${chalk.cyan(attachment.url)}`
     );
   }
   const reactions = renderReactions(message);
@@ -213,13 +221,13 @@ export function renderThreadDetail(
 
   const status = thread.resolved
     ? chalk.dim(`resolved by ${actorLabel(thread.resolvedBy)}`)
-    : chalk.cyan('unresolved');
+    : 'unresolved';
   const headline = [chalk.bold(thread.id), status];
   if (thread.branch) {
     headline.push(chalk.dim(thread.branch));
   }
   if (thread.isLocalhost) {
-    headline.push(chalk.yellow('⚑ localhost'));
+    headline.push(chalk.dim('localhost'));
   }
   sections.push(headline.join(' · '));
 
@@ -228,24 +236,20 @@ export function renderThreadDetail(
   const pageTitle = thread.context?.pageTitle;
   headerLines.push(pageTitle ? `${path} — “${pageTitle}”` : path);
   if (thread.context?.href) {
-    headerLines.push(chalk.dim(thread.context.href));
+    headerLines.push(chalk.cyan(thread.context.href));
   }
   sections.push(headerLines.join('\n'));
 
   const contextLines: string[] = [];
   if (thread.context?.selection) {
-    contextLines.push(
-      `  ${chalk.cyan('Selected')}  “${thread.context.selection}”`
-    );
+    contextLines.push(alignedRow('Selected', `“${thread.context.selection}”`));
   }
   if (thread.context?.selector) {
-    contextLines.push(
-      `  ${chalk.cyan('Element')}   ${thread.context.selector}`
-    );
+    contextLines.push(alignedRow('Element', thread.context.selector));
   }
   for (const link of thread.links ?? []) {
     contextLines.push(
-      `  ${chalk.cyan('Linked')}    ${link.label} — ${link.link}`
+      alignedRow('Linked', `${link.label} — ${chalk.cyan(link.link)}`)
     );
   }
   if (contextLines.length > 0) {
@@ -258,12 +262,12 @@ export function renderThreadDetail(
     const extra: string[] = [];
     if (thread.context?.frameworkContext) {
       extra.push(
-        `${chalk.cyan('Framework context')}\n${thread.context.frameworkContext}`
+        `${chalk.bold('Framework context')}\n${thread.context.frameworkContext}`
       );
     }
     if (thread.context?.device) {
       extra.push(
-        `${chalk.cyan('Device')}\n${JSON.stringify(thread.context.device, null, 2)}`
+        `${chalk.bold('Device')}\n${JSON.stringify(thread.context.device, null, 2)}`
       );
     }
     if (extra.length > 0) {
@@ -272,7 +276,7 @@ export function renderThreadDetail(
   }
 
   if (thread.webUrl) {
-    sections.push(`${chalk.cyan('Open in Vercel')} → ${thread.webUrl}`);
+    sections.push(`Open in Vercel → ${chalk.cyan(thread.webUrl)}`);
   }
 
   return sections.join('\n\n');

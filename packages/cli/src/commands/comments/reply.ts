@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -116,7 +117,7 @@ export default async function reply(
       return 0;
     }
 
-    output.success(`Replied to ${threadId}`);
+    output.print(`${chalk.green('✓')} Replied to ${threadId}\n`);
     return 0;
   } catch (err) {
     if (isAPIError(err)) {

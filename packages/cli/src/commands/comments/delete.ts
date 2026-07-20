@@ -99,7 +99,7 @@ export default async function deleteCommentMessage(
       client.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
       return 0;
     }
-    output.success(`Deleted message ${messageId}`);
+    output.print(`${chalk.green('✓')} Deleted message ${messageId}\n`);
     return 0;
   } catch (err) {
     if (isAPIError(err)) {

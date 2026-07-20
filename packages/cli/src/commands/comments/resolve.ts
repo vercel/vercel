@@ -155,8 +155,8 @@ export default async function resolveThreads(
         );
         return 0;
       }
-      output.success(
-        `${threadId} ${pastVerb}${replied ? ' (with closing reply)' : ''}`
+      output.print(
+        `${chalk.green('✓')} ${threadId} ${pastVerb}${replied ? ' (with closing reply)' : ''}\n`
       );
       return 0;
     } catch (err) {
@@ -204,7 +204,9 @@ export default async function resolveThreads(
     if (result.ok) {
       output.print(`${chalk.green('✓')} ${result.id} ${pastVerb}\n`);
     } else {
-      output.print(`${chalk.red('✗')} ${result.id} ${result.error}\n`);
+      // Nonfatal to the batch (the run continues past failures); the
+      // overall error state is carried by the exit code below.
+      output.print(`${chalk.yellow('!')} ${result.id} ${result.error}\n`);
     }
   }
   return failed.length > 0 ? 1 : 0;
