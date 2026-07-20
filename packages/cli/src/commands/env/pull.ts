@@ -458,6 +458,9 @@ async function pullEnvRecordsForEnvPull(
       userId: undefined,
       expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
     });
+    if (tokens.refresh_token) {
+      client.updateAuthConfig({ refreshToken: tokens.refresh_token });
+    }
     client.persistAuthConfig();
 
     output.spinner('Downloading');

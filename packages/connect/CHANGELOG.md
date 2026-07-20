@@ -1,5 +1,11 @@
 # @vercel/connect
 
+## 0.4.2
+
+### Patch Changes
+
+- 0be0e28: Adding support for authorization mode override via env var.
+
 ## 0.4.1
 
 ### Patch Changes

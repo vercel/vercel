@@ -27,6 +27,19 @@ export function formatVariantForDisplay(variant: FlagVariant): string {
 }
 
 /**
+ * Formats a variant for list output, matching `flags inspect`.
+ * Shows the value first, followed by a muted label when available.
+ */
+export function formatVariantListSummary(variant: FlagVariant): string {
+  const value = formatVariantValue(variant.value);
+  if (!variant.label) {
+    return value;
+  }
+
+  return `${value}: ${chalk.gray(variant.label)}`;
+}
+
+/**
  * Formats a list of variants for error messages.
  */
 export function formatAvailableVariants(variants: FlagVariant[]): string {
