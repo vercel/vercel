@@ -249,7 +249,7 @@ export const versionsSubcommand = {
 
 export const evaluationsSubcommand = {
   name: 'evaluations',
-  aliases: ['evals'],
+  aliases: [],
   description: 'Display evaluation metrics for a feature flag',
   arguments: [
     {

@@ -1,5 +1,23 @@
 # vercel
 
+## 56.4.0
+
+### Minor Changes
+
+- ed28e18: Add `vercel flags evaluations` for viewing compact, per-variant evaluation charts and bucket-level JSON data with truncation metadata.
+
+  Examples:
+
+  ```bash
+  vercel flags evaluations my-feature
+  vercel flags evaluations my-feature --since 24h --granularity 1h
+  vercel flags evaluations my-feature --since 24h --json
+  ```
+
+### Patch Changes
+
+- 37a95cd: Include cron jobs emitted by services in the project build output so deployments register them.
+
 ## 56.3.2
 
 ### Patch Changes
