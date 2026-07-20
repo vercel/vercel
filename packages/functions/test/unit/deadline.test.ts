@@ -16,7 +16,7 @@ describe('getDeadline', () => {
 
   it('returns deadline from request context', () => {
     setContext({ deadline: '2026-07-20T12:00:00.000Z' });
-    expect(getDeadline()).toBe('2026-07-20T12:00:00.000Z');
+    expect(getDeadline()).toEqual(new Date('2026-07-20T12:00:00.000Z'));
   });
 
   it('returns undefined when no runtime data is available', () => {
