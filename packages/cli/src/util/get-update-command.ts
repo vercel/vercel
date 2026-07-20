@@ -140,6 +140,18 @@ function isGlobalByPath(installPath: string): boolean {
     return true;
   }
 
+  // Homebrew-managed node uses custom PREFIX
+  if (
+    installPath.includes(
+      ['', 'opt', 'homebrew', 'lib', 'node_modules', ''].join(sep)
+    ) ||
+    installPath.includes(
+      ['', '.linuxbrew', 'lib', 'node_modules', ''].join(sep)
+    )
+  ) {
+    return true;
+  }
+
   if (
     installPath.includes(['', 'yarn', 'global', 'node_modules', ''].join(sep))
   ) {
