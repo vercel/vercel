@@ -1281,9 +1281,7 @@ export const build: BuildVX = async ({
         uvLockPath,
         uvProjectDir,
         projectName,
-        pythonMajor: pythonVersion.major,
-        pythonMinor: pythonVersion.minor,
-        pythonPath: pythonVersion.pythonPath,
+        pythonVersion,
         hasCustomCommand,
         alwaysBundlePackages: [
           ...(quirksResult.alwaysBundlePackages ?? []),

@@ -25,6 +25,7 @@ import {
 import { detectTargetPlatform } from './platform-info';
 import { isLargeFunctionsEnabled } from './large-functions';
 import { InstalledPythonDistributions } from './installed-distributions';
+import type { PythonVersion } from './version';
 
 const readFile = promisify(fs.readFile);
 
@@ -77,9 +78,7 @@ interface PythonDependencyExternalizerOptions {
   uvLockPath: string | null;
   uvProjectDir: string | null;
   projectName: string | undefined;
-  pythonMajor: number | undefined;
-  pythonMinor: number | undefined;
-  pythonPath: string;
+  pythonVersion: PythonVersion;
   hasCustomCommand: boolean;
   alwaysBundlePackages?: string[];
 }
@@ -141,9 +140,7 @@ export class PythonDependencyExternalizer {
   private uvLockPath: string | null;
   private uvProjectDir: string | null;
   private projectName: string | undefined;
-  private pythonMajor: number | undefined;
-  private pythonMinor: number | undefined;
-  private pythonPath: string;
+  private readonly pythonVersion: PythonVersion;
   private hasCustomCommand: boolean;
   private alwaysBundlePackages: string[];
 
@@ -158,9 +155,7 @@ export class PythonDependencyExternalizer {
     this.uvLockPath = options.uvLockPath;
     this.uvProjectDir = options.uvProjectDir;
     this.projectName = options.projectName;
-    this.pythonMajor = options.pythonMajor;
-    this.pythonMinor = options.pythonMinor;
-    this.pythonPath = options.pythonPath;
+    this.pythonVersion = options.pythonVersion;
     this.hasCustomCommand = options.hasCustomCommand;
     this.alwaysBundlePackages = options.alwaysBundlePackages ?? [];
   }
@@ -695,7 +690,10 @@ export class PythonDependencyExternalizer {
     const platform = detectTargetPlatform();
 
     // Skip wheel-compat filtering in dev; the bundle isn't deployed.
-    if (this.pythonMajor === undefined || this.pythonMinor === undefined) {
+    if (
+      this.pythonVersion.major === undefined ||
+      this.pythonVersion.minor === undefined
+    ) {
       debug('Skipping wheel compatibility check: dev mode');
       return [];
     }
@@ -705,8 +703,8 @@ export class PythonDependencyExternalizer {
     const reachable = await getPackagesReachableOnPlatform(
       lockFile,
       this.projectName,
-      this.pythonMajor,
-      this.pythonMinor,
+      this.pythonVersion.major,
+      this.pythonVersion.minor,
       platform.sysPlatform,
       platform.archName
     );
@@ -757,8 +755,8 @@ export class PythonDependencyExternalizer {
         try {
           const compatible = await isWheelCompatible(
             filename,
-            this.pythonMajor,
-            this.pythonMinor,
+            this.pythonVersion.major,
+            this.pythonVersion.minor,
             platform.osName,
             platform.archName,
             platform.osMajor,
@@ -788,7 +786,7 @@ export class PythonDependencyExternalizer {
   /** Resolve the uv binary for bundling (host binary on build image, downloaded on local). */
   private async resolveUvBinaryForBundling(): Promise<string> {
     if (process.env.VERCEL_BUILD_IMAGE) {
-      return getUvBinaryForBundling(this.pythonPath);
+      return getUvBinaryForBundling(this.pythonVersion.pythonPath);
     }
     // Builds targeting arm64 run inside the build container where
     // uv is preinstalled.

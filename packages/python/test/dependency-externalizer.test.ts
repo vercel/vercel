@@ -24,6 +24,15 @@ import {
   downloadUvBinaryForTarget,
 } from '../src/uv';
 import { InstalledPythonDistributions } from '../src/installed-distributions';
+import type { PythonVersion } from '../src/version';
+
+const TEST_PYTHON_VERSION = {
+  major: 3,
+  minor: 12,
+  pipPath: 'pip3.12',
+  pythonPath: '/usr/bin/python3',
+  runtime: 'python3.12',
+} satisfies PythonVersion;
 
 function createInstalledDistributions() {
   return new InstalledPythonDistributions({
@@ -65,9 +74,7 @@ describe('dependency externalizer support', () => {
         uvLockPath,
         uvProjectDir: '/tmp/work',
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand,
       });
       // Set the private totalBundleSize field for testing
@@ -1069,9 +1076,7 @@ version = "8.1.7"
         uvLockPath: null,
         uvProjectDir: null,
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: false,
       });
 
@@ -1103,9 +1108,7 @@ version = "8.1.7"
         uvLockPath: path.join(tempDir, 'uv.lock'),
         uvProjectDir: tempDir,
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: true,
       });
 
@@ -1126,9 +1129,7 @@ version = "8.1.7"
           uvLockPath: path.join(tempDir, 'uv.lock'),
           uvProjectDir: tempDir,
           projectName: 'test-project',
-          pythonMajor: 3,
-          pythonMinor: 12,
-          pythonPath: '/usr/bin/python3',
+          pythonVersion: TEST_PYTHON_VERSION,
           hasCustomCommand: true,
         });
 
@@ -1162,9 +1163,7 @@ version = "8.1.7"
         uvLockPath: path.join(tempDir, 'uv.lock'),
         uvProjectDir: tempDir,
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: true,
       });
 
@@ -1203,9 +1202,7 @@ version = "8.1.7"
         uvLockPath: path.join(tempDir, 'uv.lock'),
         uvProjectDir: tempDir,
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: false,
       });
 
@@ -1251,9 +1248,7 @@ version = "8.1.7"
         uvLockPath: path.join(tempDir, 'uv.lock'),
         uvProjectDir: tempDir,
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: false,
       });
 
@@ -1291,9 +1286,7 @@ version = "8.1.7"
         uvLockPath: path.join(tempDir, 'uv.lock'),
         uvProjectDir: tempDir,
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: false,
       });
 
@@ -1329,9 +1322,7 @@ version = "8.1.7"
         uvLockPath: path.join(tempDir, 'uv.lock'),
         uvProjectDir: tempDir,
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: false,
       });
 
@@ -1368,9 +1359,7 @@ version = "8.1.7"
         uvLockPath: path.join(tempDir, 'uv.lock'),
         uvProjectDir: tempDir,
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: false,
       });
 
@@ -1407,9 +1396,7 @@ version = "8.1.7"
         uvLockPath: path.join(tempDir, 'uv.lock'),
         uvProjectDir: tempDir,
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: true,
       });
 
@@ -1441,9 +1428,7 @@ version = "8.1.7"
         uvLockPath: path.join(tempDir, 'uv.lock'),
         uvProjectDir: tempDir,
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: false,
       });
 
@@ -1495,9 +1480,7 @@ version = "8.1.7"
         uvLockPath: '/tmp/work/uv.lock',
         uvProjectDir: '/tmp/work',
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: false,
       });
       (ext as any).analyzed = true;
