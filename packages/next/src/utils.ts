@@ -1910,6 +1910,7 @@ export type LambdaGroup = {
   pages: string[];
   memory?: number;
   maxDuration?: number | 'max';
+  maxConcurrency?: number;
   regions?: string[];
   functionFailoverRegions?: string[];
   supportsCancellation?: boolean;
@@ -2003,6 +2004,7 @@ export async function getPageLambdaGroups({
       architecture?: NodejsLambda['architecture'];
       memory?: number;
       maxDuration?: number | 'max';
+      maxConcurrency?: number;
       regions?: string[];
       functionFailoverRegions?: string[];
       experimentalTriggers?: NodejsLambda['experimentalTriggers'];
@@ -2124,6 +2126,7 @@ export async function getPageLambdaGroups({
             // Never merge a normal route into a large (single-route) group.
             (group.isLargeFunctions ?? false) === isLargeFunction &&
             group.maxDuration === opts.maxDuration &&
+            group.maxConcurrency === opts.maxConcurrency &&
             group.memory === opts.memory &&
             compareRegions(group.regions, opts.regions) &&
             compareRegions(

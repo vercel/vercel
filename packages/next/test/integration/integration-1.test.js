@@ -282,17 +282,20 @@ it('should build using server build', async () => {
   expect(output['index'].allowQuery).toBe(undefined);
   expect(output['index'].memory).toBe(512);
   expect(output['index'].maxDuration).toBe(5);
+  expect(output['index'].maxConcurrency).toBe(2);
   expect(output['index'].operationType).toBe('Page');
 
   expect(output['another'].type).toBe('Lambda');
   expect(output['another'].memory).toBe(512);
   expect(output['another'].maxDuration).toBe(5);
+  expect(output['another'].maxConcurrency).toBe(8);
   expect(output['another'].allowQuery).toBe(undefined);
   expect(output['another'].operationType).toBe('Page');
 
   expect(output['dynamic/[slug]'].type).toBe('Lambda');
   expect(output['dynamic/[slug]'].memory).toBe(undefined);
   expect(output['dynamic/[slug]'].maxDuration).toBe(5);
+  expect(output['dynamic/[slug]'].maxConcurrency).toBe(4);
   expect(output['dynamic/[slug]'].operationType).toBe('Page');
 
   expect(output['fallback/[slug]'].type).toBe('Prerender');
@@ -331,6 +334,7 @@ it('should build using server build', async () => {
   expect(output['api'].allowQuery).toBe(undefined);
   expect(output['api'].memory).toBe(128);
   expect(output['api'].maxDuration).toBe(5);
+  expect(output['api'].maxConcurrency).toBe(6);
   expect(output['api'].operationType).toBe('API');
 
   expect(output['api/another'].type).toBe('Lambda');
@@ -350,7 +354,7 @@ it('should build using server build', async () => {
   expect(output['ssg'].lambda.operationType).toBe('ISR');
   expect(output['ssg'].sourcePath).toBe(undefined);
 
-  expect(output['index'] === output['another']).toBe(true);
+  expect(output['index'] === output['another']).toBe(false);
   expect(output['dynamic/[slug]'] !== output['fallback/[slug]'].lambda).toBe(
     true
   );
@@ -375,7 +379,7 @@ it('should build using server build', async () => {
       totalLambdas += 1;
     }
   }
-  expect(lambdas.size).toBe(5);
+  expect(lambdas.size).toBe(6);
   expect(lambdas.size).toBeLessThan(totalLambdas);
 });
 

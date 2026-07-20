@@ -67,6 +67,7 @@ interface FunctionConfiguration {
   architecture?: string;
   memory?: number;
   maxDuration?: number | 'max';
+  maxConcurrency?: number;
   regions?: Lambda['regions'];
   functionFailoverRegions?: Lambda['functionFailoverRegions'];
   experimentalTriggers?: TriggerEvent[];
@@ -706,6 +707,9 @@ async function writeContainerImage(
     functionConfiguration?.memory ?? (containerImage as any).memory;
   const maxDuration =
     functionConfiguration?.maxDuration ?? (containerImage as any).maxDuration;
+  const maxConcurrency =
+    functionConfiguration?.maxConcurrency ??
+    (containerImage as any).maxConcurrency;
   const regions =
     functionConfiguration?.regions ?? (containerImage as any).regions;
   const functionFailoverRegions =
@@ -731,6 +735,7 @@ async function writeContainerImage(
       ...(architecture !== undefined ? { architecture } : {}),
       ...(memory !== undefined ? { memory } : {}),
       ...(maxDuration !== undefined ? { maxDuration } : {}),
+      ...(maxConcurrency !== undefined ? { maxConcurrency } : {}),
       ...(regions !== undefined ? { regions } : {}),
       ...(functionFailoverRegions !== undefined
         ? { functionFailoverRegions }
@@ -840,6 +845,8 @@ async function writeLambda(
     functionConfiguration?.architecture ?? lambda.architecture;
   const memory = functionConfiguration?.memory ?? lambda.memory;
   const maxDuration = functionConfiguration?.maxDuration ?? lambda.maxDuration;
+  const maxConcurrency =
+    functionConfiguration?.maxConcurrency ?? lambda.maxConcurrency;
   const regions = functionConfiguration?.regions ?? lambda.regions;
   const functionFailoverRegions =
     functionConfiguration?.functionFailoverRegions ??
@@ -855,6 +862,7 @@ async function writeLambda(
     architecture,
     memory,
     maxDuration,
+    maxConcurrency,
     regions,
     functionFailoverRegions,
     experimentalTriggers,

@@ -93,6 +93,7 @@ describe('writeBuildResult()', () => {
           'Dockerfile.vercel': {
             memory: 2048,
             maxDuration: 60,
+            maxConcurrency: 8,
             regions: ['iad1'],
           },
         },
@@ -120,6 +121,7 @@ describe('writeBuildResult()', () => {
               environment: {},
               memory: 2048,
               maxDuration: 60,
+              maxConcurrency: 8,
               regions: ['iad1'],
             },
           },
@@ -132,6 +134,7 @@ describe('writeBuildResult()', () => {
             'Dockerfile.vercel': {
               memory: 2048,
               maxDuration: 60,
+              maxConcurrency: 8,
               regions: ['iad1'],
             },
           },
@@ -148,6 +151,7 @@ describe('writeBuildResult()', () => {
         runtime: 'container',
         memory: 2048,
         maxDuration: 60,
+        maxConcurrency: 8,
         regions: ['iad1'],
       });
     } finally {

@@ -456,6 +456,7 @@ export interface BuilderFunctions {
     architecture?: LambdaArchitecture;
     memory?: number;
     maxDuration?: MaxDuration;
+    maxConcurrency?: number;
     regions?: string[];
     functionFailoverRegions?: string[];
     runtime?: string;

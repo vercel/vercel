@@ -8,18 +8,22 @@
         "functions": {
           "pages/index.js": {
             "memory": 512,
-            "maxDuration": 5
+            "maxDuration": 5,
+            "maxConcurrency": 2
           },
           "pages/another.js": {
             "memory": 512,
-            "maxDuration": 5
+            "maxDuration": 5,
+            "maxConcurrency": 8
           },
           "pages/api/index.js": {
             "memory": 128,
-            "maxDuration": 5
+            "maxDuration": 5,
+            "maxConcurrency": 6
           },
           "**/*.js": {
-            "maxDuration": 5
+            "maxDuration": 5,
+            "maxConcurrency": 4
           }
         }
       }
