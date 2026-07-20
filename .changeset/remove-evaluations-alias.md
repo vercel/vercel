@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Remove alias for evaluations
+Remove alias for flag evaluations
