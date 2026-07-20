@@ -196,6 +196,7 @@ describe('comments list', () => {
     const exitCode = await comments(client);
 
     expect(exitCode).toBe(0);
+    expect(client.stderr.getFullOutput()).not.toContain('Fetching comments');
     const parsed = JSON.parse(client.stdout.getFullOutput());
     expect(parsed.scope).toEqual({
       teamId: 'team_dummy',

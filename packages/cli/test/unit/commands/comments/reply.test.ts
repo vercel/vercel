@@ -55,6 +55,7 @@ describe('comments reply', () => {
     const exitCode = await comments(client);
 
     expect(exitCode).toBe(0);
+    expect(client.stderr.getFullOutput()).not.toContain('Posting reply');
     const parsed = JSON.parse(client.stdout.getFullOutput());
     expect(parsed.id).toBe('msg_new');
   });

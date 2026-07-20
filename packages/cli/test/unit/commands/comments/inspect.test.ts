@@ -148,6 +148,7 @@ describe('comments inspect', () => {
     const exitCode = await comments(client);
 
     expect(exitCode).toBe(0);
+    expect(client.stderr.getFullOutput()).not.toContain('Fetching comment');
     const parsed = JSON.parse(client.stdout.getFullOutput());
     expect(parsed.messages.map((m: { id: string }) => m.id)).toEqual([
       'msg_a',

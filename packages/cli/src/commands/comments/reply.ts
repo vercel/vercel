@@ -101,7 +101,9 @@ export default async function reply(
     return scope;
   }
 
-  output.spinner('Posting reply…');
+  if (!jsonOutput) {
+    output.spinner('Posting reply…');
+  }
   try {
     const message = await addMessage(client, scope.teamId, threadId, {
       ...(content !== undefined && { markdown: content }),

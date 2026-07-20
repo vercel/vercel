@@ -164,7 +164,9 @@ export default async function inspect(
     return scope;
   }
 
-  output.spinner('Fetching comment…');
+  if (!jsonOutput) {
+    output.spinner('Fetching comment…');
+  }
   let thread: Thread;
   let messages: CommentMessage[];
   try {

@@ -346,7 +346,9 @@ export default async function list(
     cursor: flags['--next'],
   };
 
-  output.spinner('Fetching comments…');
+  if (!jsonOutput) {
+    output.spinner('Fetching comments…');
+  }
   let response;
   try {
     response = await listThreads(client, scope.teamId, params);
