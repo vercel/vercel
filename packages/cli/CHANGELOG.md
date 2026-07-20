@@ -1,5 +1,16 @@
 # vercel
 
+## 56.4.1
+
+### Patch Changes
+
+- c973e6b: Declare builders as optional `peerDependencies` and use the declared versions to pin dynamic Builder installs: bare specs install the version this CLI release was published with instead of `latest`, stale `.vercel/builders` copies are reinstalled, `@vercel/build-utils` is pinned to the CLI's own version, and post-install resolution failures now report a per-Builder reason instead of "Something went wrong!". Explicit Builder version pins are unchanged and always win. Builders remain in `dependencies`.
+- 604de7c: Do not emit curl request body flags for generated GET API requests.
+- 4486556: Suppress DEP0169 `url.parse()` deprecation warnings in the native binary
+- 48e840d: Fix an infinite launcher loop when `vercel` and `@vercel/vc-native` are both installed globally. The launcher no longer resolves a native binary when already running inside one (`VERCEL_VC_NATIVE=1`), and only resolves the native package from its own install tree, ignoring `NODE_PATH`.
+- 09f2642: Persist the rotated refresh token after the `vc env pull` step-up authentication. The step-up rotates the token pair server-side and revokes the previous refresh token, so keeping the old one caused subsequent step-ups to fail with `Device authorization request failed` and eventually forced a re-login.
+- 02c3933: Remove alias for flag evaluations
+
 ## 56.4.0
 
 ### Minor Changes
