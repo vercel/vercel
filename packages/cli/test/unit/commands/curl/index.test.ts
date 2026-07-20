@@ -434,14 +434,15 @@ describe('curl', () => {
       );
     });
 
-    it('preserves linked-project protection when the deployment project cannot be loaded', async () => {
+    it('never attaches the linked-project secret when the deployment belongs to another project', async () => {
       await setupLinkedProject();
       const bypassTokenModule = await import(
         '../../../../src/commands/curl/bypass-token'
       );
-      const bypassSpy = vi
-        .spyOn(bypassTokenModule, 'getOrCreateDeploymentProtectionToken')
-        .mockResolvedValue('linked-project-token');
+      const bypassSpy = vi.spyOn(
+        bypassTokenModule,
+        'getOrCreateDeploymentProtectionToken'
+      );
 
       client.scenario.get('/v13/deployments/dpl_EXPLICIT123', (_req, res) => {
         res.json({
@@ -458,19 +459,11 @@ describe('curl', () => {
       client.setArgv('curl', '/api/hello', '--deployment', 'dpl_EXPLICIT123');
 
       await expect(curl(client)).resolves.toEqual(0);
-      expect(bypassSpy).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.anything(),
-        { createIfMissing: false }
-      );
+      expect(bypassSpy).not.toHaveBeenCalled();
       expect(spawnMock).toHaveBeenCalledWith(
         'curl',
-        expect.arrayContaining([
-          '--header',
-          'x-vercel-protection-bypass: linked-project-token',
-          'https://explicit-project-abc123.vercel.app/api/hello',
-        ]),
-        expect.any(Object)
+        ['--url', 'https://explicit-project-abc123.vercel.app/api/hello'],
+        { stdio: 'inherit', shell: false }
       );
       bypassSpy.mockRestore();
     });
@@ -874,7 +867,7 @@ describe('curl', () => {
   });
 
   describe('error handling', () => {
-    it('continues an explicit deployment request when automatic bypass token lookup fails', async () => {
+    it('fails when automatic bypass token lookup fails for an explicit deployment', async () => {
       client.cwd = setupTmpDir();
       useUser();
       useTeams('team_dummy');
@@ -900,16 +893,12 @@ describe('curl', () => {
 
       const exitCode = await curl(client);
 
-      expect(exitCode).toBe(0);
+      expect(exitCode).toBe(1);
       expect(mockSpy).toHaveBeenCalledOnce();
       await expect(client.stderr).toOutput(
-        'Continuing without a bypass header'
+        'Failed to get deployment protection bypass token'
       );
-      expect(spawnMock).toHaveBeenCalledWith(
-        'curl',
-        ['--url', 'https://deployment-abc123.vercel.app/api/hello'],
-        { stdio: 'inherit', shell: false }
-      );
+      expect(spawnMock).not.toHaveBeenCalled();
     });
 
     it('should handle getOrCreateDeploymentProtectionToken failure gracefully', async () => {
@@ -1265,6 +1254,16 @@ describe('parseCurlLikeArgs', () => {
     expect(parsed.target).toBe('https://example.com');
     expect(parsed.protectionBypass).toBe('secret');
     expect(parsed.toolFlags).toEqual(['--compressed']);
+  });
+
+  it('forwards --version to curl as a tool flag', () => {
+    const parsed = parseCurlLikeArgs(
+      ['curl', 'https://example.com', '--version'],
+      'curl'
+    );
+
+    expect(parsed.target).toBe('https://example.com');
+    expect(parsed.toolFlags).toEqual(['--version']);
   });
 
   it('treats --help before the command token as a help request', () => {

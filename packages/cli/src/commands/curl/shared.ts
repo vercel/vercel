@@ -99,8 +99,13 @@ async function ensureLinkedProject(
 
 const VC_STRING_FLAGS = new Set(['--deployment', '--protection-bypass']);
 const VC_BOOLEAN_FLAGS = new Set(['--yes', '--help', '--trace', '--json']);
+// `--version` is a real curl option (print version and exit) and the root CLI
+// already handles a pre-command `--version` itself, so it is never stripped
+// from the tool args.
 const VC_GLOBAL_LONG_FLAGS = new Set(
-  [...GLOBAL_CLI_FLAG_NAMES].filter(name => name.startsWith('--'))
+  [...GLOBAL_CLI_FLAG_NAMES].filter(
+    name => name.startsWith('--') && name !== '--version'
+  )
 );
 
 function flagName(arg: string): string {
@@ -508,10 +513,16 @@ export async function getFullUrlAndToken(
   let deploymentProtectionToken: string | null = null;
 
   if (link) {
+    // Same policy as --deployment: reuse a secret from the URL's verified
+    // owning project, but only mint one on the locally linked project.
+    const localLink = await getLinkedProject(client, { cwd: client.cwd });
+    const createIfMissing =
+      localLink.status === 'linked' && localLink.project.id === link.project.id;
     try {
       deploymentProtectionToken = await getOrCreateDeploymentProtectionToken(
         client,
-        link
+        link,
+        { createIfMissing }
       );
     } catch (err) {
       output.debug(`Failed to get deployment protection bypass token: ${err}`);
@@ -649,14 +660,15 @@ export async function getDeploymentUrlAndToken(
           return 1;
         }
 
-        link = link ?? localLink;
-        // The fallback target was not verified against a resolved deployment,
-        // so never mint a secret for it unless the deployment metadata proves
-        // the target belongs to the locally linked project. Existing secrets
-        // may still be reused.
-        allowProtectionTokenCreation =
+        // Credentials may only come from a project the target verifiably
+        // belongs to. Without that proof, attaching (or minting) the linked
+        // project's secret would disclose it to a host we know nothing
+        // about, so the request goes out with no bypass header at all.
+        const verifiedLocalProject =
           deployment?.projectId != null &&
           deployment.projectId === localLink?.project.id;
+        link = link ?? (verifiedLocalProject ? localLink : null);
+        allowProtectionTokenCreation = verifiedLocalProject;
         baseUrl = legacyBaseUrl;
       }
     }
@@ -701,15 +713,10 @@ export async function getDeploymentUrlAndToken(
         { createIfMissing: allowProtectionTokenCreation }
       );
     } catch (err) {
-      const message = `Failed to get deployment protection bypass token: ${err instanceof Error ? err.message : String(err)}`;
-      if (deploymentFlag) {
-        output.warn(
-          `${message}. Continuing without a bypass header; pass --protection-bypass <secret> if this deployment is protected.`
-        );
-      } else {
-        output.error(message);
-        return 1;
-      }
+      output.error(
+        `Failed to get deployment protection bypass token: ${err instanceof Error ? err.message : String(err)}`
+      );
+      return 1;
     }
   }
 
