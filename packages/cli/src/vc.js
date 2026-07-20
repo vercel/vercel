@@ -24,10 +24,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
 function resolveNative() {
+  // Already running inside the native binary — never trampoline again.
+  if (process.env.VERCEL_VC_NATIVE === '1') return null;
   const pkgName = `@vercel/vc-native-${process.platform}-${process.arch}`;
   const binName = process.platform === 'win32' ? 'vercel.exe' : 'vercel';
   try {
-    const dir = dirname(require.resolve(`${pkgName}/package.json`));
+    // Resolve only from this install's own tree, never from NODE_PATH.
+    const dir = dirname(
+      require.resolve(`${pkgName}/package.json`, { paths: [__dirname] })
+    );
     const a = join(dir, 'bin', binName);
     if (existsSync(a)) return a;
     const b = join(dir, binName);

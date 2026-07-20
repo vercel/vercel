@@ -125,6 +125,48 @@ describe('dist/vc.js native resolution', () => {
   );
 
   it.runIf(process.platform !== 'win32')(
+    'does not trampoline again when VERCEL_VC_NATIVE=1 (loop guard)',
+    () => {
+      const { vcJs } = buildInstall({
+        platform: process.platform,
+        arch: process.arch,
+        body: '#!/bin/sh\necho NATIVE_RAN\nexit 7\n',
+      });
+      const r = spawnSync(process.execPath, [vcJs, '--version'], {
+        encoding: 'utf8',
+        env: { ...cleanEnv(), VERCEL_VC_NATIVE: '1' },
+      });
+      expect(r.status).toBe(0);
+      expect(r.stdout.trim()).toBe(cliVersion);
+      expect(r.stdout).not.toContain('NATIVE_RAN');
+    }
+  );
+
+  it.runIf(process.platform !== 'win32')(
+    'ignores a native package resolved via NODE_PATH',
+    () => {
+      const { vcJs } = buildInstall({
+        platform: process.platform,
+        arch: process.arch,
+      });
+      // A second install holds the native package; expose it via NODE_PATH.
+      const other = buildInstall({
+        platform: process.platform,
+        arch: process.arch,
+        body: '#!/bin/sh\necho NATIVE_RAN\nexit 7\n',
+      });
+      const r = spawnSync(process.execPath, [vcJs, '--version'], {
+        encoding: 'utf8',
+        env: { ...cleanEnv(), NODE_PATH: join(other.root, 'node_modules') },
+      });
+      expect(r.status).toBe(0);
+      expect(r.stdout.trim()).toBe(cliVersion);
+      expect(r.stdout).not.toContain('NATIVE_RAN');
+      expect(r.stderr).not.toContain('(native)');
+    }
+  );
+
+  it.runIf(process.platform !== 'win32')(
     'falls through to JS when the native binary is not executable',
     () => {
       const { vcJs } = buildInstall({
