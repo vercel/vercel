@@ -67,3 +67,48 @@ export async function deleteApiKey(
     method: 'DELETE',
   });
 }
+
+export type AiGatewayQuota = {
+  limitAmount?: number;
+  refreshPeriod?: string;
+  includeByokInQuota?: boolean;
+  alertThresholds?: number[];
+};
+
+type CreateApiKeyRequest = {
+  purpose: 'ai-gateway';
+  name?: string;
+  aiGatewayQuota?: AiGatewayQuota;
+  expiresAt?: number;
+};
+
+type CreateApiKeyApiKey = {
+  id: string;
+  name: string;
+  partialKey: string;
+  teamId: string;
+  purpose: string;
+  createdAt: number;
+};
+
+export type CreateApiKeyResponse = {
+  apiKeyString: string;
+  apiKey: CreateApiKeyApiKey;
+};
+
+export async function createApiKey(
+  client: Client,
+  payload: {
+    name?: string;
+    aiGatewayQuota?: AiGatewayQuota;
+    expiresAt?: number;
+  }
+): Promise<CreateApiKeyResponse> {
+  return await client.fetch<CreateApiKeyResponse>('/v1/api-keys', {
+    method: 'POST',
+    body: {
+      purpose: 'ai-gateway',
+      ...payload,
+    } satisfies CreateApiKeyRequest,
+  });
+}

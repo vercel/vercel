@@ -1,4 +1,4 @@
-import type { AiGatewayQuota } from './create-api-key';
+import type { AiGatewayQuota } from './api-keys';
 
 export const VALID_REFRESH_PERIODS = [
   'daily',
