@@ -114,7 +114,7 @@ export class CompileAllRunner {
         tempDir = await fs.promises.mkdtemp(
           join(tmpdir(), 'vercel-python-compileall-')
         );
-        const listPath = join(tempDir, 'sources.txt');
+        const listPath = join(tempDir, 'pysources.txt');
         await fs.promises.writeFile(listPath, `${sourceFiles.join('\n')}\n`);
         listArgs.push('-i', listPath);
       }
