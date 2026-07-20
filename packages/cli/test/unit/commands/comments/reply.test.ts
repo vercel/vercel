@@ -139,4 +139,15 @@ describe('comments reply', () => {
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain('No content provided');
   });
+
+  it('does not prompt for missing content when stdin is not a TTY', async () => {
+    client.stdin.isTTY = false;
+    client.input.text = vi.fn();
+    client.setArgv('comments', 'reply', 'icZ9BnPPINuK');
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(1);
+    expect(client.input.text).not.toHaveBeenCalled();
+    expect(client.stderr.getFullOutput()).toContain('No content provided');
+  });
 });

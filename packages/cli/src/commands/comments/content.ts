@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import type Client from '../../util/client';
+import { canPrompt } from '../../util/can-prompt';
 import { outputError } from '../../util/command-validation';
 
 interface ReadableStdin {
@@ -114,7 +115,7 @@ export async function resolveMessageContent(
     return undefined;
   }
 
-  if (!client.nonInteractive) {
+  if (canPrompt(client)) {
     const text = await client.input.text({ message: 'Comment message:' });
     if (text) {
       return text;
