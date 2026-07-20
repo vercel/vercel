@@ -145,6 +145,9 @@ function formatEvaluationsJson(
   return `${JSON.stringify(
     {
       flag: flag.slug,
+      variants: Object.fromEntries(
+        flag.variants.map(({ id, value }) => [id, value])
+      ),
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
       granularity,
@@ -293,7 +296,7 @@ export default async function evaluations(
   try {
     const body = {
       scope,
-      reason: 'observability_chart',
+      reason: 'flag_evaluation_chart',
       event: 'flagEvaluation',
       rollups: {
         [FLAG_EVALUATIONS_ROLLUP]: {

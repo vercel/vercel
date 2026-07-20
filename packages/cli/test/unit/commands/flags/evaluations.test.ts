@@ -3,6 +3,7 @@ import stripAnsi from 'strip-ansi';
 import { writeFileSync } from 'fs';
 import { join } from 'path';
 import flags from '../../../../src/commands/flags';
+import type { Flag } from '../../../../src/util/flags/types';
 import {
   removeProjectLink,
   setupUnitFixture,
@@ -18,6 +19,38 @@ import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
 const ROLLUP = 'vercel_flag_evaluation_flag_evaluations_sum';
+const evaluationFlags: Flag[] = [
+  ...defaultFlags,
+  {
+    ...defaultFlags[1],
+    id: 'flag_number789',
+    slug: 'number-feature',
+    kind: 'number',
+    variants: [
+      { id: 'default', value: 10, label: 'Small' },
+      { id: 'variant-a', value: 20, label: 'Large' },
+    ],
+  },
+  {
+    ...defaultFlags[1],
+    id: 'flag_json999',
+    slug: 'json-feature',
+    kind: 'json',
+    variants: [
+      {
+        id: 'default',
+        value: { theme: 'light', sidebar: false },
+        label: 'Light',
+      },
+      {
+        id: 'variant-a',
+        value: ['dark', 'compact'],
+        label: 'Dark',
+      },
+      { id: 'disabled', value: null, label: 'Disabled' },
+    ],
+  },
+];
 
 describe('flags evaluations', () => {
   let postedBody: Record<string, unknown> | undefined;
@@ -59,7 +92,7 @@ describe('flags evaluations', () => {
         });
       }
     );
-    useFlags();
+    useFlags(evaluationFlags);
   });
 
   afterEach(() => {
@@ -136,7 +169,7 @@ describe('flags evaluations', () => {
         ownerId: 'team_dummy',
         projectIds: ['vercel-flags-test'],
       },
-      reason: 'observability_chart',
+      reason: 'flag_evaluation_chart',
       event: 'flagEvaluation',
       rollups: {
         [ROLLUP]: {
@@ -243,6 +276,7 @@ describe('flags evaluations', () => {
     const json = JSON.parse(client.stdout.getFullOutput());
     expect(json).toEqual({
       flag: 'my-feature',
+      variants: { off: false, on: true },
       startTime: '2026-07-10T10:00:00.000Z',
       endTime: '2026-07-10T11:00:00.000Z',
       granularity: { minutes: 1 },
@@ -270,6 +304,54 @@ describe('flags evaluations', () => {
       { key: 'option:until', value: '[REDACTED]' },
       { key: 'flag:json', value: 'TRUE' },
     ]);
+  });
+
+  it.each([
+    {
+      kind: 'boolean',
+      flagSlug: 'my-feature',
+      expectedVariants: { off: false, on: true },
+    },
+    {
+      kind: 'string',
+      flagSlug: 'another-feature',
+      expectedVariants: { default: 'control', 'variant-a': 'variant-a' },
+    },
+    {
+      kind: 'number',
+      flagSlug: 'number-feature',
+      expectedVariants: { default: 10, 'variant-a': 20 },
+    },
+    {
+      kind: 'json',
+      flagSlug: 'json-feature',
+      expectedVariants: {
+        default: { theme: 'light', sidebar: false },
+        'variant-a': ['dark', 'compact'],
+        disabled: null,
+      },
+    },
+  ])('maps $kind variant IDs to raw values in JSON output', async ({
+    flagSlug,
+    expectedVariants,
+  }) => {
+    useEvaluationsResponse();
+    client.setArgv(
+      'flags',
+      'evaluations',
+      flagSlug,
+      '--since',
+      '2026-07-10T10:00:00.000Z',
+      '--until',
+      '2026-07-10T11:00:00.000Z',
+      '--json'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toBe(0);
+    const json = JSON.parse(client.stdout.getFullOutput());
+    expect(json.variants).toEqual(expectedVariants);
   });
 
   it('discloses when variants are truncated and preserves response order', async () => {
