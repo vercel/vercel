@@ -54,15 +54,6 @@ const nextCursorOption = {
   description: 'Show the next page using the cursor from the previous output',
 } as const;
 
-const messageIdOption = {
-  name: 'message-id',
-  shorthand: null,
-  type: String,
-  argument: 'MESSAGE_ID',
-  deprecated: false,
-  description: 'Target message ID (defaults to the latest message)',
-} as const;
-
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
@@ -259,40 +250,6 @@ export const reopenSubcommand = {
   ],
 } as const;
 
-export const reactSubcommand = {
-  name: 'react',
-  aliases: [],
-  description: 'Add an emoji reaction to a comment message',
-  arguments: [
-    { name: 'thread', required: true },
-    { name: 'name', required: true },
-  ],
-  options: [commentsProjectOption, messageIdOption, formatOption],
-  examples: [
-    {
-      name: 'React to the latest message (names, not glyphs)',
-      value: `${packageName} comments react icZ9BnPPINuK white_check_mark`,
-    },
-  ],
-} as const;
-
-export const unreactSubcommand = {
-  name: 'unreact',
-  aliases: [],
-  description: 'Remove your emoji reaction from a comment message',
-  arguments: [
-    { name: 'thread', required: true },
-    { name: 'name', required: true },
-  ],
-  options: [commentsProjectOption, messageIdOption, formatOption],
-  examples: [
-    {
-      name: 'Remove your reaction',
-      value: `${packageName} comments unreact icZ9BnPPINuK white_check_mark`,
-    },
-  ],
-} as const;
-
 export const editSubcommand = {
   name: 'edit',
   aliases: [],
@@ -332,20 +289,6 @@ export const deleteSubcommand = {
   ],
 } as const;
 
-export const emojisSubcommand = {
-  name: 'emojis',
-  aliases: [],
-  description: 'List reaction emoji names',
-  arguments: [{ name: 'search', required: false }],
-  options: [commentsProjectOption, formatOption],
-  examples: [
-    {
-      name: 'Find an emoji name',
-      value: `${packageName} comments emojis check`,
-    },
-  ],
-} as const;
-
 export const commentsCommand = {
   name: 'comments',
   aliases: [],
@@ -359,11 +302,8 @@ export const commentsCommand = {
     replySubcommand,
     resolveSubcommand,
     reopenSubcommand,
-    reactSubcommand,
-    unreactSubcommand,
     editSubcommand,
     deleteSubcommand,
-    emojisSubcommand,
   ],
   options: [],
   examples: [

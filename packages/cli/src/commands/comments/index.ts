@@ -15,11 +15,8 @@ import {
   replySubcommand,
   resolveSubcommand,
   reopenSubcommand,
-  reactSubcommand,
-  unreactSubcommand,
   editSubcommand,
   deleteSubcommand,
-  emojisSubcommand,
 } from './command';
 
 const COMMAND_CONFIG = {
@@ -29,11 +26,8 @@ const COMMAND_CONFIG = {
   reply: getCommandAliases(replySubcommand),
   resolve: getCommandAliases(resolveSubcommand),
   reopen: getCommandAliases(reopenSubcommand),
-  react: getCommandAliases(reactSubcommand),
-  unreact: getCommandAliases(unreactSubcommand),
   edit: getCommandAliases(editSubcommand),
   delete: getCommandAliases(deleteSubcommand),
-  emojis: getCommandAliases(emojisSubcommand),
 };
 
 export default async function comments(client: Client): Promise<number> {
@@ -108,16 +102,6 @@ export default async function comments(client: Client): Promise<number> {
       telemetry.trackCliSubcommandReopen(subcommandOriginal);
       return (await import('./resolve')).default(client, telemetry, false);
     }
-    case 'react': {
-      if (handleHelp(reactSubcommand)) return 0;
-      telemetry.trackCliSubcommandReact(subcommandOriginal);
-      return (await import('./react')).default(client, telemetry, false);
-    }
-    case 'unreact': {
-      if (handleHelp(unreactSubcommand)) return 0;
-      telemetry.trackCliSubcommandUnreact(subcommandOriginal);
-      return (await import('./react')).default(client, telemetry, true);
-    }
     case 'edit': {
       if (handleHelp(editSubcommand)) return 0;
       telemetry.trackCliSubcommandEdit(subcommandOriginal);
@@ -127,11 +111,6 @@ export default async function comments(client: Client): Promise<number> {
       if (handleHelp(deleteSubcommand)) return 0;
       telemetry.trackCliSubcommandDelete(subcommandOriginal);
       return (await import('./delete')).default(client, telemetry);
-    }
-    case 'emojis': {
-      if (handleHelp(emojisSubcommand)) return 0;
-      telemetry.trackCliSubcommandEmojis(subcommandOriginal);
-      return (await import('./emojis')).default(client, telemetry);
     }
     default: {
       if (needHelp) {

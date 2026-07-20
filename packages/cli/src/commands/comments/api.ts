@@ -1,7 +1,6 @@
 import type Client from '../../util/client';
 import type {
   CommentMessage,
-  EmojisResponse,
   ListThreadsParams,
   MessageInput,
   MessagesListResponse,
@@ -116,43 +115,6 @@ export function deleteMessage(
   return client.fetch<{ id: string }>(
     `/toolbar/threads/${encodeURIComponent(threadId)}/messages/${encodeURIComponent(messageId)}?${query(teamId)}`,
     { ...fetchOpts, method: 'DELETE' }
-  );
-}
-
-export function addReaction(
-  client: Client,
-  teamId: string,
-  threadId: string,
-  messageId: string,
-  name: string
-): Promise<CommentMessage> {
-  return client.fetch<CommentMessage>(
-    `/toolbar/threads/${encodeURIComponent(threadId)}/messages/${encodeURIComponent(messageId)}/reactions?${query(teamId)}`,
-    { ...fetchOpts, method: 'POST', body: { name } }
-  );
-}
-
-export function removeReaction(
-  client: Client,
-  teamId: string,
-  threadId: string,
-  messageId: string,
-  name: string
-): Promise<CommentMessage> {
-  return client.fetch<CommentMessage>(
-    `/toolbar/threads/${encodeURIComponent(threadId)}/messages/${encodeURIComponent(messageId)}/reactions/${encodeURIComponent(name)}?${query(teamId)}`,
-    { ...fetchOpts, method: 'DELETE' }
-  );
-}
-
-export function listEmojis(
-  client: Client,
-  teamId: string,
-  search?: string
-): Promise<EmojisResponse> {
-  return client.fetch<EmojisResponse>(
-    `/toolbar/emojis?${query(teamId, { search })}`,
-    fetchOpts
   );
 }
 

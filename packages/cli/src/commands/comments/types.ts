@@ -101,22 +101,6 @@ export interface MessagesListResponse {
   messages: CommentMessage[];
 }
 
-export interface EmojiEntry {
-  name: string;
-  emoji: string;
-  url?: string;
-}
-
-export interface EmojisResponse {
-  emojis: EmojiEntry[];
-  pagination: {
-    total: number;
-    from: number;
-    limit: number;
-    hasMore: boolean;
-  };
-}
-
 export interface CommentsScope {
   teamId: string;
   teamSlug?: string;

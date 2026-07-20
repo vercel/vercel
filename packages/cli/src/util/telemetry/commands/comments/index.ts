@@ -30,24 +30,12 @@ export class CommentsTelemetryClient
     this.trackCliSubcommand({ subcommand: 'reopen', value: actual });
   }
 
-  trackCliSubcommandReact(actual: string) {
-    this.trackCliSubcommand({ subcommand: 'react', value: actual });
-  }
-
-  trackCliSubcommandUnreact(actual: string) {
-    this.trackCliSubcommand({ subcommand: 'unreact', value: actual });
-  }
-
   trackCliSubcommandEdit(actual: string) {
     this.trackCliSubcommand({ subcommand: 'edit', value: actual });
   }
 
   trackCliSubcommandDelete(actual: string) {
     this.trackCliSubcommand({ subcommand: 'delete', value: actual });
-  }
-
-  trackCliSubcommandEmojis(actual: string) {
-    this.trackCliSubcommand({ subcommand: 'emojis', value: actual });
   }
 
   trackCliOptionFormat(v: string | undefined) {
@@ -134,12 +122,6 @@ export class CommentsTelemetryClient
     }
   }
 
-  trackCliOptionMessageId(v: string | undefined) {
-    if (v) {
-      this.trackCliOption({ option: 'message-id', value: this.redactedValue });
-    }
-  }
-
   trackCliOptionFile(v: string | undefined) {
     if (v) {
       this.trackCliOption({ option: 'file', value: this.redactedValue });
@@ -158,12 +140,6 @@ export class CommentsTelemetryClient
         arg: 'thread',
         value: this.redactedValue,
       });
-    }
-  }
-
-  trackCliArgumentName(v: string | undefined) {
-    if (v) {
-      this.trackCliArgument({ arg: 'name', value: this.redactedValue });
     }
   }
 
