@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import createApiKeyRequest from '../../util/ai-gateway/create-api-key';
+import { createApiKey } from '../../util/ai-gateway/api-keys';
 import selectOrg from '../../util/input/select-org';
 import stamp from '../../util/output/stamp';
 import output from '../../output-manager';
@@ -109,6 +109,22 @@ export default async function create(client: Client, argv: string[]) {
     const result = parseAlertThresholds(alertThresholdsInput);
     if (!result.valid) {
       const message = `Invalid alert threshold "${result.invalid}". Must be a comma-separated subset of: ${VALID_ALERT_THRESHOLDS.join(', ')}.`;
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ALERT_THRESHOLDS,
+          message,
+          next: [
+            {
+              command: getCommandNamePlain(
+                'ai-gateway api-keys create --alert-thresholds 50,75,100'
+              ),
+            },
+          ],
+        },
+        1
+      );
       output.error(message);
       return 1;
     }
@@ -166,7 +182,7 @@ export default async function create(client: Client, argv: string[]) {
   output.spinner('Creating API key');
 
   try {
-    const result = await createApiKeyRequest(client, {
+    const result = await createApiKey(client, {
       name,
       aiGatewayQuota,
       ...(expiresAt !== undefined && { expiresAt }),
