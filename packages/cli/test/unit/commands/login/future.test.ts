@@ -36,6 +36,21 @@ function simulateTokenPolling(pollCount: number, finalResponse: Response) {
   return finalResponse.json();
 }
 
+async function ensureAuthorizationServerMetadata() {
+  fetch.mockResolvedValueOnce(
+    mockResponse({
+      issuer: 'https://vercel.com',
+      device_authorization_endpoint: 'https://vercel.com',
+      token_endpoint: 'https://vercel.com',
+      revocation_endpoint: 'https://vercel.com',
+      jwks_uri: 'https://vercel.com',
+      introspection_endpoint: 'https://vercel.com',
+    })
+  );
+  await oauth.as();
+  fetch.mockReset();
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
 });
@@ -132,8 +147,61 @@ describe('login', () => {
     expect(tokenAfter).toBe(tokenResult.access_token);
   });
 
-  it.todo('Authorization request error');
-  it.todo('Token request error');
+  it('shows the device authorization error description', async () => {
+    const errorDescription = 'Two-factor authentication is required.';
+
+    await ensureAuthorizationServerMetadata();
+    fetch.mockResolvedValueOnce(
+      mockResponse(
+        {
+          error: 'access_denied',
+          error_description: errorDescription,
+        },
+        false
+      )
+    );
+
+    client.setArgv('login');
+
+    expect(await login(client, { shouldParseArgs: true })).toBe(1);
+    await expect(client.stderr).toOutput(errorDescription);
+    expect(await client.stderr.getFullOutput()).not.toContain(
+      'Device authorization request failed'
+    );
+  });
+
+  it('shows the token request error description', async () => {
+    const errorDescription = 'Two-factor authentication is required.';
+
+    await ensureAuthorizationServerMetadata();
+    fetch.mockResolvedValueOnce(
+      mockResponse({
+        device_code: randomUUID(),
+        user_code: randomUUID(),
+        verification_uri: 'https://vercel.com/device',
+        verification_uri_complete: `https://vercel.com/device?code=${randomUUID()}`,
+        expires_in: 30,
+        interval: 0.005,
+      })
+    );
+    fetch.mockResolvedValueOnce(
+      mockResponse(
+        {
+          error: 'access_denied',
+          error_description: errorDescription,
+        },
+        false
+      )
+    );
+
+    client.setArgv('login');
+
+    expect(await login(client, { shouldParseArgs: true })).toBe(1);
+    await expect(client.stderr).toOutput(errorDescription);
+    expect(await client.stderr.getFullOutput()).not.toContain(
+      'Device access token request failed'
+    );
+  });
 
   it('sends provided acr values for step-up device authorization requests', async () => {
     vi.resetModules();

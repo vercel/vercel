@@ -52,7 +52,11 @@ export async function performDeviceCodeFlow(
     await processDeviceAuthorizationResponse(deviceAuthorizationResponse);
 
   if (deviceAuthorizationError) {
-    printError(deviceAuthorizationError);
+    printError(
+      isOAuthError(deviceAuthorizationError)
+        ? deviceAuthorizationError.cause
+        : deviceAuthorizationError
+    );
     return null;
   }
 
