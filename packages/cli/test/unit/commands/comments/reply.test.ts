@@ -140,14 +140,20 @@ describe('comments reply', () => {
     expect(client.stderr.getFullOutput()).toContain('No content provided');
   });
 
-  it('does not prompt for missing content when stdin is not a TTY', async () => {
-    client.stdin.isTTY = false;
+  it.each([
+    ['stdin is not a TTY', () => (client.stdin.isTTY = false), []],
+    ['JSON output is requested', () => {}, ['--format', 'json']],
+  ])('does not prompt for missing content when %s', async (_name, configure, args) => {
+    configure();
     client.input.text = vi.fn();
-    client.setArgv('comments', 'reply', 'icZ9BnPPINuK');
+    client.setArgv('comments', 'reply', 'icZ9BnPPINuK', ...args);
     const exitCode = await comments(client);
 
     expect(exitCode).toBe(1);
     expect(client.input.text).not.toHaveBeenCalled();
-    expect(client.stderr.getFullOutput()).toContain('No content provided');
+    const output = args.length
+      ? JSON.parse(client.stdout.getFullOutput()).error.message
+      : client.stderr.getFullOutput();
+    expect(output).toContain('No content provided');
   });
 });

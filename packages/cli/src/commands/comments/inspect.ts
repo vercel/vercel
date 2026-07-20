@@ -2,6 +2,7 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
+import { canPrompt } from '../../util/can-prompt';
 import { validateJsonOutput } from '../../util/output-format';
 import { outputError } from '../../util/command-validation';
 import type { CommentsTelemetryClient } from '../../util/telemetry/commands/comments';
@@ -29,9 +30,9 @@ async function pickThread(
   client: Client,
   jsonOutput: boolean
 ): Promise<string | number> {
-  // JSON mode never prompts (same rule as mutations): an agent piping JSON
-  // should get a deterministic error, not an interactive picker on stderr.
-  if (client.nonInteractive || jsonOutput) {
+  // Machine and non-TTY modes never prompt. Return a deterministic error
+  // instead of invoking the picker against a non-interactive stdin.
+  if (!canPrompt(client) || jsonOutput) {
     return outputError(
       client,
       jsonOutput,

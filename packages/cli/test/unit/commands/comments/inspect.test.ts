@@ -156,12 +156,17 @@ describe('comments inspect', () => {
     ]);
   });
 
-  it('errors with usage when no thread is given non-interactively', async () => {
-    client.nonInteractive = true;
+  it.each([
+    ['non-interactive mode', () => (client.nonInteractive = true)],
+    ['non-TTY stdin', () => (client.stdin.isTTY = false)],
+  ])('errors with usage when no thread is given in %s', async (_name, configure) => {
+    configure();
+    client.input.select = vi.fn();
     client.setArgv('comments', 'inspect');
     const exitCode = await comments(client);
 
     expect(exitCode).toBe(1);
+    expect(client.input.select).not.toHaveBeenCalled();
     expect(client.stderr.getFullOutput()).toContain('thread');
   });
 });

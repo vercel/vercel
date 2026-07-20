@@ -55,12 +55,17 @@ describe('comments delete', () => {
     mockTeamScope();
   });
 
-  it('requires --yes non-interactively', async () => {
-    client.nonInteractive = true;
+  it.each([
+    ['non-interactive mode', () => (client.nonInteractive = true)],
+    ['non-TTY stdin', () => (client.stdin.isTTY = false)],
+  ])('requires --yes in %s', async (_name, configure) => {
+    configure();
+    client.input.confirm = vi.fn();
     client.setArgv('comments', 'delete', 'icZ9BnPPINuK', 'msg_target');
     const exitCode = await comments(client);
 
     expect(exitCode).toBe(1);
+    expect(client.input.confirm).not.toHaveBeenCalled();
     expect(client.stderr.getFullOutput()).toContain('--yes');
   });
 

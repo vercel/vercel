@@ -3,6 +3,7 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
+import { canPrompt } from '../../util/can-prompt';
 import { validateJsonOutput } from '../../util/output-format';
 import { outputError } from '../../util/command-validation';
 import type { CommentsTelemetryClient } from '../../util/telemetry/commands/comments';
@@ -67,7 +68,7 @@ export default async function deleteCommentMessage(
   }
 
   if (!yes) {
-    if (client.nonInteractive || jsonOutput) {
+    if (!canPrompt(client) || jsonOutput) {
       return outputError(
         client,
         jsonOutput,

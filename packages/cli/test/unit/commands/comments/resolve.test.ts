@@ -92,12 +92,17 @@ describe('comments resolve/reopen', () => {
     expect(client.stderr.getFullOutput()).toContain('multiple threads');
   });
 
-  it('requires --yes for bulk operations non-interactively', async () => {
-    client.nonInteractive = true;
+  it.each([
+    ['non-interactive mode', () => (client.nonInteractive = true)],
+    ['non-TTY stdin', () => (client.stdin.isTTY = false)],
+  ])('requires --yes for bulk operations in %s', async (_name, configure) => {
+    configure();
+    client.input.confirm = vi.fn();
     client.setArgv('comments', 'resolve', 'id1', 'id2');
     const exitCode = await comments(client);
 
     expect(exitCode).toBe(1);
+    expect(client.input.confirm).not.toHaveBeenCalled();
     expect(client.stderr.getFullOutput()).toContain('--yes');
   });
 

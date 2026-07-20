@@ -115,7 +115,7 @@ export async function resolveMessageContent(
     return undefined;
   }
 
-  if (canPrompt(client)) {
+  if (canPrompt(client) && !jsonOutput) {
     const text = await client.input.text({ message: 'Comment message:' });
     if (text) {
       return text;
