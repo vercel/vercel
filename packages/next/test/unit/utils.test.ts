@@ -524,7 +524,7 @@ function groupPagesBySize(
 }
 
 describe('getPageLambdaGroups maxConcurrency', () => {
-  it('does not group routes with different limits', async () => {
+  it('isolates every configured route, including matching limits', async () => {
     const groups = await groupPagesBySize(
       { 'a.js': MiB, 'b.js': MiB },
       'nodejs22.x',
@@ -532,13 +532,13 @@ describe('getPageLambdaGroups maxConcurrency', () => {
         version: 1,
         functions: {
           '/a': { maxConcurrency: 2 },
-          '/b': { maxConcurrency: 8 },
+          '/b': { maxConcurrency: 2 },
         },
       } as Parameters<typeof getPageLambdaGroups>[0]['functionsConfigManifest']
     );
 
     expect(groups).toHaveLength(2);
-    expect(groups.map(group => group.maxConcurrency).sort()).toEqual([2, 8]);
+    expect(groups.map(group => group.maxConcurrency)).toEqual([2, 2]);
   });
 });
 

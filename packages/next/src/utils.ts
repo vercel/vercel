@@ -2116,8 +2116,14 @@ export async function getPageLambdaGroups({
       isLargeFunction = standaloneUncompressedSize >= normalBudget;
     }
 
-    // Both deferred bundling and large routes skip merging — fresh group below.
-    const skipGroupBundling = experimentalAllowBundling || isLargeFunction;
+    // Customer-configured concurrency relies on one logical route per physical
+    // function so runtime admission can use the incoming request's limit without
+    // retaining cross-request configuration state. Never bundle a configured
+    // route, even with another route that has the same limit.
+    const skipGroupBundling =
+      experimentalAllowBundling ||
+      isLargeFunction ||
+      opts.maxConcurrency !== undefined;
 
     let matchingGroup = skipGroupBundling
       ? undefined
@@ -2126,7 +2132,6 @@ export async function getPageLambdaGroups({
             // Never merge a normal route into a large (single-route) group.
             (group.isLargeFunctions ?? false) === isLargeFunction &&
             group.maxDuration === opts.maxDuration &&
-            group.maxConcurrency === opts.maxConcurrency &&
             group.memory === opts.memory &&
             compareRegions(group.regions, opts.regions) &&
             compareRegions(
