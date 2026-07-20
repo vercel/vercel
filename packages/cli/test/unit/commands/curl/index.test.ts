@@ -1267,6 +1267,12 @@ describe('parseCurlLikeArgs', () => {
     expect(parsed.toolFlags).toEqual(['--compressed']);
   });
 
+  it('treats --help before the command token as a help request', () => {
+    const parsed = parseCurlLikeArgs(['--help', 'curl', '/api/hello'], 'curl');
+
+    expect(parsed.help).toBe(true);
+  });
+
   it('skips short global flags before the command token', () => {
     const parsed = parseCurlLikeArgs(
       ['-t', 'tok_123', '-S', 'my-team', 'curl', '/api/hello', '--silent'],

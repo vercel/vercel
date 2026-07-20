@@ -119,6 +119,11 @@ function flagValue(args: string[], index: number): string | undefined {
   return next && !next.startsWith('-') ? next : undefined;
 }
 
+// Help and version requests must reach parseCurlLikeArgs (via the
+// command-token-not-found fallback) instead of being skipped, so
+// `vercel --help curl` still prints help rather than running the command.
+const PRE_COMMAND_KEEP_FLAGS = new Set(['--help', '-h', '--version', '-v']);
+
 export function getArgsAfterCommand(
   rawArgs: string[],
   commandName: string
@@ -131,7 +136,7 @@ export function getArgsAfterCommand(
   while (commandIndex < rawArgs.length) {
     const arg = rawArgs[commandIndex];
     const name = flagName(arg);
-    if (!GLOBAL_CLI_FLAG_NAMES.has(name)) {
+    if (!GLOBAL_CLI_FLAG_NAMES.has(name) || PRE_COMMAND_KEEP_FLAGS.has(name)) {
       break;
     }
 
