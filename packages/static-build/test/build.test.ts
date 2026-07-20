@@ -31,7 +31,10 @@ describe('build()', () => {
         }
 
         expect(buildResult.output['index.html']).toBeTruthy();
-        const about = buildResult.output['.vercel/functions/about/index'];
+        const about =
+          buildResult.output[
+            path.join('.vercel', 'functions', 'about', 'index')
+          ];
         expect(about.type).toBe('Lambda');
         if (about.type !== 'Lambda') {
           throw new Error('Expected the about output to be a Lambda');
