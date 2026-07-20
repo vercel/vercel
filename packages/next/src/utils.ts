@@ -1215,6 +1215,10 @@ export type NextPrerenderedRoutes = {
       dataRoute: string | null;
       fallback: string | boolean | null;
       fallbackRootParams?: string[];
+      remainingPrerenderableParams?: {
+        paramName: string;
+        paramType: string;
+      }[];
       dataRouteRegex: string | null;
       prefetchDataRoute?: string | null;
       prefetchDataRouteRegex?: string | null;
@@ -1473,6 +1477,10 @@ export async function getPrerenderManifest(
             fallbackExpire?: number;
             fallbackRootParams: string[] | undefined;
             fallbackSourceRoute?: string;
+            remainingPrerenderableParams?: {
+              paramName: string;
+              paramType: string;
+            }[];
             dataRoute: string | null;
             dataRouteRegex: string | null;
             prefetchDataRoute: string | null | undefined;
@@ -1631,6 +1639,9 @@ export async function getPrerenderManifest(
         let fallbackRevalidate: number | false | undefined;
         let fallbackExpire: number | undefined;
         let fallbackRootParams: undefined | string[];
+        let remainingPrerenderableParams:
+          | undefined
+          | { paramName: string; paramType: string }[];
         let allowHeader: undefined | string[];
         let fallbackSourceRoute: undefined | string;
         if (manifest.version === 4) {
@@ -1654,6 +1665,8 @@ export async function getPrerenderManifest(
           fallbackExpire = manifest.dynamicRoutes[lazyRoute].fallbackExpire;
           fallbackRootParams =
             manifest.dynamicRoutes[lazyRoute].fallbackRootParams;
+          remainingPrerenderableParams =
+            manifest.dynamicRoutes[lazyRoute].remainingPrerenderableParams;
           allowHeader = manifest.dynamicRoutes[lazyRoute].allowHeader;
           fallbackSourceRoute =
             manifest.dynamicRoutes[lazyRoute].fallbackSourceRoute;
@@ -1688,6 +1701,7 @@ export async function getPrerenderManifest(
             renderingMode,
             allowHeader,
             fallbackRootParams,
+            remainingPrerenderableParams,
             fallback: null,
           };
         } else {
@@ -2481,6 +2495,28 @@ export const onPrerenderRouteInitial = (
   };
 };
 
+// The first Next.js version whose runtime we trust to serve blocking
+// prerender invocations with never-prerenderable params stripped from the
+// request (deferring them through the params-missing handling and resuming
+// them per request). This is the canary the earliest 16.3.0 preview
+// release was cut from, so every 16.3.0-preview.x release qualifies.
+// (Semver orders `preview.*` after `canary.*` lexically regardless of the
+// numbers, so previews pass any canary pin — with this floor that accident
+// agrees with the content.) Versions that already emit
+// `remainingPrerenderableParams` but predate this (16.2.x behind the
+// experimental partialFallbacks flag, the earliest 16.3 canaries) keep
+// their previous allowQuery so their runtimes are never sent stripped
+// blocking requests they were not validated against.
+const BLOCKING_ALLOW_QUERY_FILTER_MINIMUM_NEXT_VERSION = '16.3.0-canary.47';
+
+// Next.js prefixes dynamic route params when they appear as query params
+// and `routeKeys` values (`tenant` -> `nxtPtenant`). This is part of the
+// stable wire contract between Next.js, this builder, and the proxy (see
+// `NEXT_QUERY_PARAM_PREFIX` in next/dist/lib/constants). The manifest's
+// `fallbackRootParams`/`remainingPrerenderableParams` carry UNPREFIXED
+// param names, so comparisons against `allowQuery` entries must add it.
+const NEXT_QUERY_PARAM_PREFIX = 'nxtP';
+
 type OnPrerenderRouteArgs = {
   appDir: string | null;
   pagesDir: string;
@@ -3199,6 +3235,58 @@ export const onPrerenderRoute =
         // RSC shell.
         else if (postponedPrerender) {
           htmlAllowQuery = [];
+        }
+        // BLOCKING entries (no servable fallback) still cache their
+        // on-demand renders, so the same cache-key contract applies as for
+        // partial fallbacks: only params that `generateStaticParams` can
+        // still provide may partition the cache — root params (which are
+        // always provided) and the remaining prerenderable params.
+        // Including a never-prerenderable param would create a cache entry
+        // per param value and resolve the param into the cached content,
+        // so it must be stripped from the request instead, which defers it
+        // to a per-request resume.
+        else if (
+          isBlocking &&
+          isAppPathRoute &&
+          isAppClientParamParsingEnabled &&
+          routeKeys &&
+          semver.gte(
+            nextVersion,
+            BLOCKING_ALLOW_QUERY_FILTER_MINIMUM_NEXT_VERSION
+          )
+        ) {
+          const { remainingPrerenderableParams } =
+            prerenderManifest.blockingFallbackRoutes[routeKey];
+
+          if (remainingPrerenderableParams !== undefined) {
+            // NOTE: `routeKeys` KEYS are regex group names (themselves
+            // prefixed), so the filter must operate on the VALUES — the
+            // actual query param names the proxy matches against.
+            const prerenderableQueryKeys = new Set<string>();
+            for (const paramName of fallbackRootParams ?? []) {
+              prerenderableQueryKeys.add(
+                `${NEXT_QUERY_PARAM_PREFIX}${paramName}`
+              );
+            }
+            for (const param of remainingPrerenderableParams) {
+              prerenderableQueryKeys.add(
+                `${NEXT_QUERY_PARAM_PREFIX}${param.paramName}`
+              );
+            }
+            const filteredAllowQuery = Object.values(routeKeys).filter(
+              routeKeyName => prerenderableQueryKeys.has(routeKeyName)
+            );
+
+            // Assign the SAME reference to both: the html/data prerender
+            // group split below keys off `htmlAllowQuery !== allowQuery` by
+            // identity, and these outputs must keep sharing their group —
+            // the registered data prerender varies identically to the html
+            // one (it follows htmlAllowQuery under client param parsing),
+            // so splitting them would let the document and its RSC payload
+            // revalidate to different generations.
+            allowQuery = filteredAllowQuery;
+            htmlAllowQuery = filteredAllowQuery;
+          }
         }
       }
 
