@@ -80,7 +80,14 @@ function resolveFormat(
   return { format: interactive ? 'table' : 'json' };
 }
 
-function parseEnum<T extends string>(
+/**
+ * Case-insensitive enum parse that returns the canonical allowed value, so
+ * camelCase members like `imageCount` match `--metric imagecount` (and any
+ * other casing) instead of being rejected by a lowercased comparison.
+ *
+ * Exported for unit tests.
+ */
+export function parseEnum<T extends string>(
   value: string | undefined,
   allowed: readonly T[],
   label: string
@@ -88,13 +95,14 @@ function parseEnum<T extends string>(
   if (value === undefined) {
     return { value: undefined };
   }
-  const normalized = value.toLowerCase() as T;
-  if (!allowed.includes(normalized)) {
+  const normalized = value.toLowerCase();
+  const match = allowed.find(member => member.toLowerCase() === normalized);
+  if (match === undefined) {
     return {
       error: `Invalid ${label}: "${value}". Valid values: ${allowed.join(', ')}`,
     };
   }
-  return { value: normalized };
+  return { value: match };
 }
 
 /** Fetch (json or raw csv) wrapped with the shared spinner + API-error flow. */
