@@ -1,5 +1,5 @@
 ---
-'@vercel/functions': patch
+'@vercel/functions': minor
 ---
 
 Adds getDeadline
