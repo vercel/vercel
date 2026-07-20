@@ -2,4 +2,4 @@
 '@vercel/functions': patch
 ---
 
-Adds getMaxDuration
+Adds getDeadline
