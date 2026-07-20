@@ -243,6 +243,43 @@ describe('traces create', () => {
     expect(captured.query?.teamId).toBe('team_dummy');
   });
 
+  it('traces against the explicit deployment project, not the linked project', async () => {
+    await setupLinkedProject();
+    client.scenario.get('/v13/deployments/:host', (_req, res) => {
+      res.json({
+        id: 'dpl_other',
+        url: 'other-app.vercel.app',
+        target: null,
+        ownerId: 'team_other',
+        projectId: 'other-project',
+      });
+    });
+    const captured: {
+      body?: unknown;
+      query?: Record<string, unknown>;
+    } = {};
+    mockSessionEndpoint(captured);
+    installSpawnMock();
+
+    client.setArgv(
+      'traces',
+      'create',
+      '/api/hello',
+      '--deployment',
+      'https://other-app.vercel.app',
+      '--protection-bypass',
+      'test-secret'
+    );
+    const exitCode = await traces(client);
+
+    expect(exitCode).toEqual(0);
+    expect(captured.body).toEqual({
+      projectId: 'other-project',
+      hostname: 'other-app.vercel.app',
+    });
+    expect(captured.query?.teamId).toBe('team_other');
+  });
+
   it('accepts global flags before traces create', async () => {
     client.cwd = setupTmpDir();
     useUser({ id: USER_ID });

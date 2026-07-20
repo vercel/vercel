@@ -21,8 +21,9 @@ export interface TraceOptions {
   fullUrl: string;
   /**
    * Linked project context when available (linked dir or resolved from URL).
-   * Used as the canonical source for project/team ids. When null, we fall
-   * back to ids carried on the looked-up Deployment.
+   * Fallback source for project/team ids when the looked-up Deployment does
+   * not carry them — the deployment's own ids take precedence, since the cwd
+   * link may point at a different project than the one being traced.
    */
   link: ProjectLinked | null;
   /** Existing curl flags (protection bypass header already injected if applicable). */
@@ -55,20 +56,21 @@ async function lookupDeployment(
 }
 
 /**
- * Pick the most authoritative team id available. Prefer the linked project's
- * org (set by `vercel link`); otherwise fall back to the deployment's owner
- * when it's a team-scoped account (`team_*`). Returns undefined for user
+ * Pick the most authoritative team id available. Prefer the owner of the
+ * deployment actually being traced when it's a team-scoped account
+ * (`team_*`) — the cwd link may point at a different project entirely.
+ * Fall back to the linked project's org, and return undefined for user
  * accounts so the API call is correctly scoped.
  */
 function resolveTeamId(
   link: ProjectLinked | null,
   deployment: Deployment
 ): string | undefined {
-  if (link?.org.type === 'team') {
-    return link.org.id;
-  }
   if (deployment.ownerId?.startsWith('team_')) {
     return deployment.ownerId;
+  }
+  if (link?.org.type === 'team') {
+    return link.org.id;
   }
   return undefined;
 }
@@ -223,7 +225,9 @@ export async function trace(
     return 1;
   }
 
-  const projectId = link?.project.id ?? deployment.projectId;
+  // The deployment being traced is authoritative for its own project; the
+  // cwd link is only a fallback when the lookup lacks project metadata.
+  const projectId = deployment.projectId ?? link?.project.id;
   if (!projectId) {
     output.error(
       'Could not resolve project for trace session. Run `vercel link` and retry.'

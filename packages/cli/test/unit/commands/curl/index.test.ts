@@ -458,7 +458,11 @@ describe('curl', () => {
       client.setArgv('curl', '/api/hello', '--deployment', 'dpl_EXPLICIT123');
 
       await expect(curl(client)).resolves.toEqual(0);
-      expect(bypassSpy).toHaveBeenCalled();
+      expect(bypassSpy).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        { createIfMissing: false }
+      );
       expect(spawnMock).toHaveBeenCalledWith(
         'curl',
         expect.arrayContaining([
@@ -469,6 +473,33 @@ describe('curl', () => {
         expect.any(Object)
       );
       bypassSpy.mockRestore();
+    });
+
+    it('does not mint a linked-project secret for an unverifiable deployment target', async () => {
+      await setupLinkedProject();
+      let createAttempted = false;
+      client.scenario.patch(
+        '/v1/projects/static/protection-bypass',
+        (_req, res) => {
+          createAttempted = true;
+          res.json({ protectionBypass: {} });
+        }
+      );
+
+      client.setArgv(
+        'curl',
+        '/api/hello',
+        '--deployment',
+        'https://unknown-host.vercel.app'
+      );
+
+      await expect(curl(client)).resolves.toEqual(0);
+      expect(createAttempted).toBe(false);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        ['--url', 'https://unknown-host.vercel.app/api/hello'],
+        { stdio: 'inherit', shell: false }
+      );
     });
 
     it('does not link when the deployment project cannot be loaded', async () => {
@@ -871,6 +902,9 @@ describe('curl', () => {
 
       expect(exitCode).toBe(0);
       expect(mockSpy).toHaveBeenCalledOnce();
+      await expect(client.stderr).toOutput(
+        'Continuing without a bypass header'
+      );
       expect(spawnMock).toHaveBeenCalledWith(
         'curl',
         ['--url', 'https://deployment-abc123.vercel.app/api/hello'],

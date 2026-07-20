@@ -645,8 +645,13 @@ export async function getDeploymentUrlAndToken(
         }
 
         link = link ?? localLink;
+        // The fallback target was not verified against a resolved deployment,
+        // so never mint a secret for it unless the deployment metadata proves
+        // the target belongs to the locally linked project. Existing secrets
+        // may still be reused.
         allowProtectionTokenCreation =
-          link !== null && localLink?.project.id === link.project.id;
+          deployment?.projectId != null &&
+          deployment.projectId === localLink?.project.id;
         baseUrl = legacyBaseUrl;
       }
     }
@@ -693,7 +698,9 @@ export async function getDeploymentUrlAndToken(
     } catch (err) {
       const message = `Failed to get deployment protection bypass token: ${err instanceof Error ? err.message : String(err)}`;
       if (deploymentFlag) {
-        output.debug(message);
+        output.warn(
+          `${message}. Continuing without a bypass header; pass --protection-bypass <secret> if this deployment is protected.`
+        );
       } else {
         output.error(message);
         return 1;
