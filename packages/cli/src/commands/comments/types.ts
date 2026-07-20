@@ -1,3 +1,22 @@
+export interface ListThreadsParams {
+  projectId?: string;
+  branch?: string[];
+  status?: 'resolved' | 'unresolved';
+  page?: string[];
+  author?: string[];
+  contentId?: string[];
+  search?: string;
+  limit?: number;
+  cursor?: string;
+}
+
+// Type alias (not interface) so it satisfies the client's JSONObject body
+// type via implicit index signature compatibility.
+export type MessageInput = {
+  markdown?: string;
+  attachments?: Array<{ url?: string; id?: string; name?: string }>;
+};
+
 export interface CommentActor {
   type: 'user' | 'app';
   id: string;

@@ -16,10 +16,15 @@ import {
 import type { CommentsTelemetryClient } from '../../util/telemetry/commands/comments';
 import { listSubcommand } from './command';
 import { handleCommentsParseError } from './errors';
-import { listThreads, type ListThreadsParams } from './api';
+import { listThreads } from './api';
 import { resolveCommentsScope, inferBranch } from './scope';
 import { renderThreadRow } from './format';
-import type { BranchFocus, CommentsScope, Thread } from './types';
+import type {
+  BranchFocus,
+  CommentsScope,
+  ListThreadsParams,
+  Thread,
+} from './types';
 
 export interface ListFlags {
   '--project'?: string;

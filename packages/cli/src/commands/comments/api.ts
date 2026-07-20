@@ -2,6 +2,8 @@ import type Client from '../../util/client';
 import type {
   CommentMessage,
   EmojisResponse,
+  ListThreadsParams,
+  MessageInput,
   MessagesListResponse,
   Thread,
   ThreadsListResponse,
@@ -33,18 +35,6 @@ function query(
 }
 
 const fetchOpts = { useCurrentTeam: false } as const;
-
-export interface ListThreadsParams {
-  projectId?: string;
-  branch?: string[];
-  status?: 'resolved' | 'unresolved';
-  page?: string[];
-  author?: string[];
-  contentId?: string[];
-  search?: string;
-  limit?: number;
-  cursor?: string;
-}
 
 export function listThreads(
   client: Client,
@@ -91,13 +81,6 @@ export function listMessages(
     fetchOpts
   );
 }
-
-// Type alias (not interface) so it satisfies the client's JSONObject body
-// type via implicit index signature compatibility.
-export type MessageInput = {
-  markdown?: string;
-  attachments?: Array<{ url?: string; id?: string; name?: string }>;
-};
 
 export function addMessage(
   client: Client,
