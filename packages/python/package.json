@@ -18,10 +18,10 @@
     "build": "node ../../utils/build-builder.mjs",
     "type-check": "tsc --noEmit",
     "test": "cross-env VERCEL_FORCE_PYTHON_STREAMING=1 NODE_OPTIONS=--experimental-vm-modules vitest run --config ../../vitest.config.mts",
-    "test-unit": "vitest run --config ../../vitest.config.mts test/unit.test.ts",
+    "test-unit": "vitest run --config ../../vitest.config.mts test/unit.test.ts test/bytecode-fill.test.ts test/dependency-externalizer.test.ts test/installed-distributions.test.ts",
     "test-e2e": "pnpm test test/integration-*",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/unit.test.ts'",
+    "vitest-unit": "glob --absolute 'test/unit.test.ts' 'test/bytecode-fill.test.ts' 'test/dependency-externalizer.test.ts' 'test/installed-distributions.test.ts'",
     "vitest-e2e": "glob --absolute 'test/integration-*'"
   },
   "dependencies": {

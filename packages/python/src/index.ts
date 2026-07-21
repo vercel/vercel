@@ -90,6 +90,7 @@ import {
   shouldCompileAll,
   type BytecodeCollectionResult,
 } from './compileall';
+import { InstalledPythonDistributions } from './installed-distributions';
 import {
   getPyprojectSubscribers,
   getSubscriberConsumerName,
@@ -225,13 +226,16 @@ function addBytecodeWithinCapacity(
 
 async function addVendorBytecodeWithinCapacity({
   files,
-  depExternalizer,
+  installedDistributions,
   vendorDir,
   bytecodeInfo,
   capacity,
 }: {
   files: Files;
-  depExternalizer: Pick<PythonDependencyExternalizer, 'collectBytecodeFiles'>;
+  installedDistributions: Pick<
+    InstalledPythonDistributions,
+    'collectBytecodeFiles'
+  >;
   vendorDir: string;
   bytecodeInfo: BytecodeCollectionResult | undefined;
   capacity: number;
@@ -248,7 +252,7 @@ async function addVendorBytecodeWithinCapacity({
   const selectedPkgs = lambdaKnapsack(bytecodeInfo.perItemSizes, capacity);
   if (selectedPkgs.length === 0) return capacity;
 
-  const selectedBytecode = await depExternalizer.collectBytecodeFiles({
+  const selectedBytecode = await installedDistributions.collectBytecodeFiles({
     vendorDirName: vendorDir,
     includePackages: selectedPkgs,
   });
@@ -263,13 +267,16 @@ async function addVendorBytecodeWithinCapacity({
  */
 export async function addVendorBytecodeInTiers({
   files,
-  depExternalizer,
+  installedDistributions,
   vendorDir,
   capacity,
   vendorPackageTiers,
 }: {
   files: Files;
-  depExternalizer: Pick<PythonDependencyExternalizer, 'collectBytecodeFiles'>;
+  installedDistributions: Pick<
+    InstalledPythonDistributions,
+    'collectBytecodeFiles'
+  >;
   vendorDir: string;
   capacity: number;
   vendorPackageTiers: (string[] | undefined)[];
@@ -278,13 +285,13 @@ export async function addVendorBytecodeInTiers({
   for (const tier of vendorPackageTiers) {
     if (remainingCapacity <= 0) break;
     if (tier && tier.length === 0) continue;
-    const bytecodeInfo = await depExternalizer.collectBytecodeFiles({
+    const bytecodeInfo = await installedDistributions.collectBytecodeFiles({
       vendorDirName: vendorDir,
       includePackages: tier,
     });
     remainingCapacity = await addVendorBytecodeWithinCapacity({
       files,
-      depExternalizer,
+      installedDistributions,
       vendorDir,
       bytecodeInfo,
       capacity: remainingCapacity,
@@ -1257,29 +1264,33 @@ export const build: BuildVX = async ({
     files['.sesskey'] = new FileBlob({ data: `"${SESSKEY}"` });
   }
 
-  // Bundle dependencies, using runtime installation for oversized bundles
-  const depExternalizer = new PythonDependencyExternalizer({
-    venvPath,
-    vendorDir,
-    workPath,
-    uvLockPath,
-    uvProjectDir,
-    projectName,
-    pythonMajor: pythonVersion.major,
-    pythonMinor: pythonVersion.minor,
-    pythonPath: pythonVersion.pythonPath,
-    hasCustomCommand,
-    alwaysBundlePackages: [
-      ...(quirksResult.alwaysBundlePackages ?? []),
-      ...(shouldInstallVercelWorkers
-        ? ['vercel-workers', 'vercel_workers']
-        : []),
-    ],
-  });
-
   await builderSpan
     .child('vc.builder.python.bundle')
     .trace(async bundleSpan => {
+      const installedDistributions = await InstalledPythonDistributions.load({
+        venvPath,
+        pythonMajor: pythonVersion.major,
+        pythonMinor: pythonVersion.minor,
+      });
+
+      // Bundle dependencies, using runtime installation for oversized bundles
+      const depExternalizer = new PythonDependencyExternalizer({
+        installedDistributions,
+        vendorDir,
+        workPath,
+        uvLockPath,
+        uvProjectDir,
+        projectName,
+        pythonVersion,
+        hasCustomCommand,
+        alwaysBundlePackages: [
+          ...(quirksResult.alwaysBundlePackages ?? []),
+          ...(shouldInstallVercelWorkers
+            ? ['vercel-workers', 'vercel_workers']
+            : []),
+        ],
+      });
+
       // analyze() always computes source-only sizes so threshold
       // decisions are not inflated by bytecode overhead.
       //
@@ -1360,7 +1371,7 @@ export const build: BuildVX = async ({
 
           await addVendorBytecodeInTiers({
             files,
-            depExternalizer,
+            installedDistributions,
             vendorDir,
             capacity: remainingCapacity,
             vendorPackageTiers: vendorPackageTiers ?? [undefined],
@@ -1457,7 +1468,7 @@ export const build: BuildVX = async ({
             files,
             capacity: remainingCapacity,
             collect: include =>
-              depExternalizer.collectPrefixBytecodeFiles({
+              installedDistributions.collectPrefixBytecodeFiles({
                 stagingDir,
                 runtimeRoot: `/var/task/${vendorDir}`,
                 includePackages: include ?? alwaysBundled,
@@ -1470,7 +1481,7 @@ export const build: BuildVX = async ({
             files,
             capacity: remainingCapacity,
             collect: include =>
-              depExternalizer.collectPrefixBytecodeFiles({
+              installedDistributions.collectPrefixBytecodeFiles({
                 stagingDir,
                 runtimeRoot: `${RUNTIME_DEPS_DIR}/lib/python${pyMajor}.${pyMinor}/site-packages`,
                 includePackages: include ?? externalized,

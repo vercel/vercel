@@ -73,7 +73,7 @@ describe('addVendorBytecodeInTiers', () => {
 
     const remaining = await addVendorBytecodeInTiers({
       files,
-      depExternalizer: stub,
+      installedDistributions: stub,
       vendorDir: '_vendor',
       capacity: 20 * MB,
       vendorPackageTiers: [
@@ -99,7 +99,7 @@ describe('addVendorBytecodeInTiers', () => {
 
     await addVendorBytecodeInTiers({
       files,
-      depExternalizer: stub,
+      installedDistributions: stub,
       vendorDir: '_vendor',
       capacity: 100 * MB,
       vendorPackageTiers: [['private-pkg'], ['public-big']],
@@ -119,7 +119,7 @@ describe('addVendorBytecodeInTiers', () => {
     // Capacity fits tier 1 (5MB) plus only the small public package.
     const remaining = await addVendorBytecodeInTiers({
       files,
-      depExternalizer: stub,
+      installedDistributions: stub,
       vendorDir: '_vendor',
       capacity: 6 * MB,
       vendorPackageTiers: [
@@ -141,7 +141,7 @@ describe('addVendorBytecodeInTiers', () => {
 
     const remaining = await addVendorBytecodeInTiers({
       files,
-      depExternalizer: stub,
+      installedDistributions: stub,
       vendorDir: '_vendor',
       capacity: 5 * MB,
       vendorPackageTiers: [
@@ -162,7 +162,7 @@ describe('addVendorBytecodeInTiers', () => {
 
     await addVendorBytecodeInTiers({
       files,
-      depExternalizer: stub,
+      installedDistributions: stub,
       vendorDir: '_vendor',
       capacity: 100 * MB,
       vendorPackageTiers: [[], ['public-small']],
@@ -178,7 +178,7 @@ describe('addVendorBytecodeInTiers', () => {
 
     await addVendorBytecodeInTiers({
       files,
-      depExternalizer: stub,
+      installedDistributions: stub,
       vendorDir: '_vendor',
       capacity: 100 * MB,
       vendorPackageTiers: [undefined],
@@ -194,7 +194,7 @@ describe('addVendorBytecodeInTiers', () => {
 
     const remaining = await addVendorBytecodeInTiers({
       files,
-      depExternalizer: stub,
+      installedDistributions: stub,
       vendorDir: '_vendor',
       capacity: -1 * MB,
       vendorPackageTiers: [['private-pkg']],
