@@ -61,6 +61,7 @@ export async function runCurl(
         deploymentFlag,
         protectionBypassFlag,
         autoConfirm: setup.yes,
+        resolveProjectForTrace: traceFlag,
       });
 
   if (typeof result === 'number') {

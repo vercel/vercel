@@ -341,6 +341,87 @@ describe('curl', () => {
       getLinkedProjectSpy.mockRestore();
     });
 
+    it('does not create a bypass token on an explicit target project', async () => {
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+      useUser();
+      let protectionBypassPatchCalled = false;
+
+      client.scenario.get('/v13/deployments/dpl_EXPLICIT123', (_req, res) => {
+        res.json({
+          id: 'dpl_EXPLICIT123',
+          url: 'explicit-project-abc123.vercel.app',
+          projectId: 'explicit-project',
+          ownerId: 'team_target',
+        });
+      });
+      client.scenario.get('/v9/projects/explicit-project', (_req, res) => {
+        res.json({
+          id: 'explicit-project',
+          name: 'explicit-project',
+          protectionBypass: {
+            'shareable-secret': { scope: 'shareable-link' },
+          },
+        });
+      });
+      client.scenario.patch(
+        '/v1/projects/explicit-project/protection-bypass',
+        (_req, res) => {
+          protectionBypassPatchCalled = true;
+          res.status(500).end();
+        }
+      );
+
+      client.setArgv('curl', '/api/hello', '--deployment', 'dpl_EXPLICIT123');
+
+      await expect(curl(client)).resolves.toBe(0);
+      expect(protectionBypassPatchCalled).toBe(false);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        ['--url', 'https://explicit-project-abc123.vercel.app/api/hello'],
+        expect.any(Object)
+      );
+      expect(existsSync(join(cwd, '.vercel'))).toBe(false);
+    });
+
+    it('can create a bypass token when the explicit target is locally linked', async () => {
+      await setupLinkedProject();
+      client.scenario.get('/v13/deployments/dpl_EXPLICIT123', (_req, res) => {
+        res.json({
+          id: 'dpl_EXPLICIT123',
+          url: 'static-project-abc123.vercel.app',
+          projectId: 'static',
+          ownerId: 'team_dummy',
+        });
+      });
+      const bypassTokenModule = await import(
+        '../../../../src/commands/curl/bypass-token'
+      );
+      const tokenSpy = vi
+        .spyOn(bypassTokenModule, 'getOrCreateDeploymentProtectionToken')
+        .mockResolvedValue('same-project-secret');
+
+      client.setArgv('curl', '/api/hello', '--deployment', 'dpl_EXPLICIT123');
+
+      await expect(curl(client)).resolves.toBe(0);
+      expect(tokenSpy).toHaveBeenCalledWith(
+        client,
+        expect.objectContaining({
+          project: expect.objectContaining({ id: 'static' }),
+        }),
+        { createIfMissing: true }
+      );
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        expect.arrayContaining([
+          '--header',
+          'x-vercel-protection-bypass: same-project-secret',
+        ]),
+        expect.any(Object)
+      );
+      tokenSpy.mockRestore();
+    });
+
     it.each([
       { source: 'flag', extraArgs: ['--protection-bypass', 'caller-secret'] },
       { source: 'environment', extraArgs: [] },
@@ -381,7 +462,7 @@ describe('curl', () => {
       vi.unstubAllEnvs();
     });
 
-    it('does not fall back to cwd when the target project cannot be loaded', async () => {
+    it('proceeds without a bypass when the target project cannot be loaded', async () => {
       await setupLinkedProject();
       client.scenario.get('/v13/deployments/dpl_EXPLICIT123', (_req, res) => {
         res.json({
@@ -398,13 +479,44 @@ describe('curl', () => {
       const getLinkedProjectSpy = vi.spyOn(linkModule, 'getLinkedProject');
       client.setArgv('curl', '/api/hello', '--deployment', 'dpl_EXPLICIT123');
 
-      await expect(curl(client)).resolves.toBe(1);
+      await expect(curl(client)).resolves.toBe(0);
       expect(getLinkedProjectSpy).not.toHaveBeenCalled();
-      expect(spawnMock).not.toHaveBeenCalled();
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        ['--url', 'https://explicit-project-abc123.vercel.app/api/hello'],
+        expect.any(Object)
+      );
       await expect(client.stderr).toOutput(
-        'Failed to load project for deployment "dpl_EXPLICIT123"'
+        'proceeding without an automatic protection bypass token'
       );
       getLinkedProjectSpy.mockRestore();
+    });
+
+    it('uses an explicit deployment URL when metadata cannot be resolved', async () => {
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+      useUser();
+      client.scenario.get('/v13/deployments/:host', (_req, res) => {
+        res.status(500).json({ error: { message: 'Internal Server Error' } });
+      });
+
+      client.setArgv(
+        'curl',
+        '/api/hello',
+        '--deployment',
+        'https://explicit-project-abc123.vercel.app'
+      );
+
+      await expect(curl(client)).resolves.toBe(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        ['--url', 'https://explicit-project-abc123.vercel.app/api/hello'],
+        expect.any(Object)
+      );
+      await expect(client.stderr).toOutput(
+        'proceeding without an automatic protection bypass token'
+      );
+      expect(existsSync(join(cwd, '.vercel'))).toBe(false);
     });
 
     it('should resolve full URL auth from aliases without querying limited teams', async () => {

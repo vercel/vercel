@@ -27,6 +27,7 @@ export interface DeploymentUrlOptions {
   deploymentFlag?: string;
   protectionBypassFlag?: string;
   autoConfirm?: boolean;
+  resolveProjectForTrace?: boolean;
 }
 
 export interface DeploymentUrlResult {
@@ -484,13 +485,19 @@ export async function getDeploymentUrlAndToken(
   path: string,
   options: DeploymentUrlOptions
 ): Promise<DeploymentUrlResult | number> {
-  const { deploymentFlag, protectionBypassFlag, autoConfirm } = options;
+  const {
+    deploymentFlag,
+    protectionBypassFlag,
+    autoConfirm,
+    resolveProjectForTrace,
+  } = options;
   const suppliedProtectionBypass = deploymentFlag
     ? (protectionBypassFlag ??
       (process.env.VERCEL_AUTOMATION_BYPASS_SECRET || undefined))
     : protectionBypassFlag;
 
   let link: ProjectLinked | null = null;
+  let createProtectionBypassIfMissing = !deploymentFlag;
   let scope;
 
   try {
@@ -519,8 +526,9 @@ export async function getDeploymentUrlAndToken(
       ? await getDeploymentUrlById(client, deploymentFlag, accountId)
       : null;
 
-    // A caller-supplied bypass makes project resolution unnecessary. Keep
-    // the existing URL/ID resolution semantics and stay independent of cwd.
+    // A caller-supplied bypass makes project resolution unnecessary for the
+    // request itself. Trace sessions still benefit from verified target
+    // context, but failure to resolve it must not block a valid request.
     if (suppliedProtectionBypass !== undefined) {
       const deploymentUrl =
         requestedBaseUrl ??
@@ -530,13 +538,53 @@ export async function getDeploymentUrlAndToken(
         return 1;
       }
       baseUrl = deploymentUrl;
+
+      if (resolveProjectForTrace) {
+        try {
+          const deploymentSelector =
+            deploymentFlag.includes('.') || deploymentFlag.startsWith('dpl_')
+              ? deploymentFlag
+              : `dpl_${deploymentFlag}`;
+          const deployment = await getDeployment(
+            client,
+            scope.contextName,
+            deploymentSelector
+          );
+          if (deployment.projectId && deployment.ownerId) {
+            const project = await client.fetch<Project>(
+              `/v9/projects/${encodeURIComponent(deployment.projectId)}`,
+              { accountId: deployment.ownerId }
+            );
+            link = {
+              status: 'linked',
+              project,
+              org: orgFromOwner(deployment.ownerId),
+            };
+          }
+        } catch (err) {
+          output.debug(`Failed to resolve trace project context: ${err}`);
+        }
+
+        if (!link) {
+          try {
+            const linkedProject = await getLinkedProject(client, {
+              cwd: client.cwd,
+            });
+            if (linkedProject.status === 'linked') {
+              link = linkedProject;
+            }
+          } catch (err) {
+            output.debug(`Failed to load linked trace context: ${err}`);
+          }
+        }
+      }
     } else {
       const deploymentSelector =
         deploymentFlag.includes('.') || deploymentFlag.startsWith('dpl_')
           ? deploymentFlag
           : `dpl_${deploymentFlag}`;
 
-      let deployment: Deployment;
+      let deployment: Deployment | null = null;
       try {
         deployment = await getDeployment(
           client,
@@ -545,37 +593,69 @@ export async function getDeploymentUrlAndToken(
         );
       } catch (err) {
         output.debug(`Failed to resolve deployment: ${err}`);
+        if (!requestedBaseUrl) {
+          output.error(`No deployment found for ID "${deploymentFlag}"`);
+          return 1;
+        }
+        output.warn(
+          `Could not resolve project information for deployment "${deploymentFlag}"; proceeding without an automatic protection bypass token.`
+        );
+      }
+
+      baseUrl =
+        requestedBaseUrl ??
+        (deployment?.url ? `https://${deployment.url}` : '');
+
+      if (!baseUrl) {
         output.error(`No deployment found for ID "${deploymentFlag}"`);
         return 1;
       }
 
-      if (!deployment.url || !deployment.projectId || !deployment.ownerId) {
-        output.error(
-          `Deployment "${deploymentFlag}" is missing project metadata`
-        );
-        return 1;
-      }
+      if (deployment) {
+        if (!deployment.projectId || !deployment.ownerId) {
+          output.warn(
+            `Deployment "${deploymentFlag}" is missing project metadata; proceeding without an automatic protection bypass token.`
+          );
+        } else {
+          try {
+            const project = await client.fetch<Project>(
+              `/v9/projects/${encodeURIComponent(deployment.projectId)}`,
+              { accountId: deployment.ownerId }
+            );
 
-      let project: Project;
-      try {
-        project = await client.fetch<Project>(
-          `/v9/projects/${encodeURIComponent(deployment.projectId)}`,
-          { accountId: deployment.ownerId }
-        );
-      } catch (err) {
-        output.debug(`Failed to resolve deployment project: ${err}`);
-        output.error(
-          `Failed to load project for deployment "${deploymentFlag}"`
-        );
-        return 1;
-      }
+            link = {
+              status: 'linked',
+              project,
+              org: orgFromOwner(deployment.ownerId),
+            };
 
-      link = {
-        status: 'linked',
-        project,
-        org: orgFromOwner(deployment.ownerId),
-      };
-      baseUrl = requestedBaseUrl ?? `https://${deployment.url}`;
+            const hasAutomationBypass = Object.values(
+              project.protectionBypass ?? {}
+            ).some(token => token.scope === 'automation-bypass');
+            if (!hasAutomationBypass) {
+              // Preserve automatic creation for the linked project, but never
+              // mutate a different project selected through --deployment.
+              try {
+                const linkedProject = await getLinkedProject(client, {
+                  cwd: client.cwd,
+                });
+                createProtectionBypassIfMissing =
+                  linkedProject.status === 'linked' &&
+                  linkedProject.project.id === project.id;
+              } catch (err) {
+                output.debug(
+                  `Failed to check linked project for bypass-token creation: ${err}`
+                );
+              }
+            }
+          } catch (err) {
+            output.debug(`Failed to resolve deployment project: ${err}`);
+            output.warn(
+              `Failed to load project for deployment "${deploymentFlag}"; proceeding without an automatic protection bypass token.`
+            );
+          }
+        }
+      }
     }
   } else {
     let ensuredLink;
@@ -631,7 +711,8 @@ export async function getDeploymentUrlAndToken(
     try {
       deploymentProtectionToken = await getOrCreateDeploymentProtectionToken(
         client,
-        link
+        link,
+        { createIfMissing: createProtectionBypassIfMissing }
       );
     } catch (err) {
       output.error(
