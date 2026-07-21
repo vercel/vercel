@@ -3,9 +3,8 @@ import fs from 'fs-extra';
 import path from 'path';
 import { parse } from 'dotenv';
 import env from '../../../../src/commands/env';
-import pull, {
-  getAcrValuesFromWWWAuthenticate,
-} from '../../../../src/commands/env/pull';
+import pull from '../../../../src/commands/env/pull';
+import { getAcrValuesFromWWWAuthenticate } from '../../../../src/util/env/challenge-recovery';
 import {
   setupTmpDir,
   setupUnitFixture,
