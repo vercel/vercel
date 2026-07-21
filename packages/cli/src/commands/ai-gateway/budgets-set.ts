@@ -2,8 +2,8 @@ import chalk from 'chalk';
 import type Client from '../../util/client';
 import {
   setBudget,
+  parseBudgetScope,
   type BudgetRefreshPeriod,
-  type BudgetScopeType,
 } from '../../util/ai-gateway/budgets';
 import { ensureTeam } from '../../util/ai-gateway/ensure-team';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
@@ -42,15 +42,14 @@ export default async function set(client: Client, argv: string[]) {
     printError(error);
     return 1;
   }
-  const { flags: opts } = parsedArgs;
+  const { args, flags: opts } = parsedArgs;
 
-  const project = opts['--project'] as string | undefined;
-  const scope: BudgetScopeType = project ? 'project' : 'team';
   const limit = opts['--limit'] as number | undefined;
   const refreshPeriod = opts['--refresh-period'] as string | undefined;
   const includeByok = opts['--include-byok'] as boolean | undefined;
 
-  telemetry.trackCliOptionProject(project);
+  telemetry.trackCliArgumentScope(args[0]);
+  telemetry.trackCliArgumentName(args[1]);
   telemetry.trackCliOptionLimit(limit);
   telemetry.trackCliOptionRefreshPeriod(refreshPeriod);
   telemetry.trackCliFlagIncludeByok(includeByok);
@@ -62,6 +61,13 @@ export default async function set(client: Client, argv: string[]) {
     return 1;
   }
   const asJson = formatResult.jsonOutput;
+
+  const scopeResult = parseBudgetScope(args);
+  if ('error' in scopeResult) {
+    output.error(scopeResult.error);
+    return 1;
+  }
+  const { scope } = scopeResult;
 
   if (limit === undefined || Number.isNaN(limit) || limit < 1) {
     output.error('The --limit flag is required and must be at least 1.');
@@ -82,10 +88,10 @@ export default async function set(client: Client, argv: string[]) {
   }
 
   let projectId: string | undefined;
-  if (scope === 'project' && project) {
-    const resolved = await getProjectByNameOrId(client, project);
+  if (scope.scopeType === 'project') {
+    const resolved = await getProjectByNameOrId(client, scope.name);
     if (resolved instanceof ProjectNotFound) {
-      output.error(`Project not found: ${project}`);
+      output.error(`Project not found: ${scope.name}`);
       return 1;
     }
     projectId = resolved.id;
@@ -96,7 +102,7 @@ export default async function set(client: Client, argv: string[]) {
 
   try {
     const budget = await setBudget(client, {
-      scopeType: scope,
+      scopeType: scope.scopeType,
       ...(projectId ? { projectId } : {}),
       limitAmount: limit,
       ...(refreshPeriod

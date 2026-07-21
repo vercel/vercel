@@ -271,18 +271,12 @@ export const budgetsSetSubcommand = {
   name: 'set',
   aliases: [],
   description:
-    'Create or update an AI Gateway budget (team by default, or a project via --project)',
-  arguments: [],
+    'Create or update an AI Gateway budget for a scope (team or project <name>)',
+  arguments: [
+    { name: 'scope', required: true },
+    { name: 'name', required: false },
+  ],
   options: [
-    {
-      name: 'project',
-      shorthand: null,
-      type: String,
-      argument: 'NAME_OR_ID',
-      deprecated: false,
-      description:
-        'Set the budget for this project (name or id) instead of the team',
-    },
     {
       name: 'limit',
       shorthand: null,
@@ -312,11 +306,11 @@ export const budgetsSetSubcommand = {
   examples: [
     {
       name: 'Set a team budget',
-      value: `${packageName} ai-gateway budgets set --limit 500 --refresh-period monthly`,
+      value: `${packageName} ai-gateway budgets set team --limit 500 --refresh-period monthly`,
     },
     {
       name: 'Set a project budget',
-      value: `${packageName} ai-gateway budgets set --project my-project --limit 200`,
+      value: `${packageName} ai-gateway budgets set project my-project --limit 200`,
     },
   ],
 } as const;
@@ -339,29 +333,20 @@ export const budgetsRemoveSubcommand = {
   name: 'remove',
   aliases: ['rm', 'delete'],
   description:
-    'Remove an AI Gateway budget (team by default, or a project via --project)',
-  arguments: [],
-  options: [
-    {
-      name: 'project',
-      shorthand: null,
-      type: String,
-      argument: 'NAME_OR_ID',
-      deprecated: false,
-      description:
-        'Remove the budget for this project (name or id) instead of the team',
-    },
-    yesOption,
-    formatOption,
+    'Remove an AI Gateway budget for a scope (team or project <name>)',
+  arguments: [
+    { name: 'scope', required: true },
+    { name: 'name', required: false },
   ],
+  options: [yesOption, formatOption],
   examples: [
     {
       name: 'Remove the team budget',
-      value: `${packageName} ai-gateway budgets rm`,
+      value: `${packageName} ai-gateway budgets rm team`,
     },
     {
       name: 'Remove a project budget',
-      value: `${packageName} ai-gateway budgets rm --project my-project`,
+      value: `${packageName} ai-gateway budgets rm project my-project`,
     },
   ],
 } as const;

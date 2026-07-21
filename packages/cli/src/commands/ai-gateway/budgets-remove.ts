@@ -1,9 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import {
-  removeBudget,
-  type BudgetScopeType,
-} from '../../util/ai-gateway/budgets';
+import { removeBudget, parseBudgetScope } from '../../util/ai-gateway/budgets';
 import { ensureTeam } from '../../util/ai-gateway/ensure-team';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import { ProjectNotFound } from '../../util/errors-ts';
@@ -34,13 +31,12 @@ export default async function remove(client: Client, argv: string[]) {
     printError(error);
     return 1;
   }
-  const { flags: opts } = parsedArgs;
+  const { args, flags: opts } = parsedArgs;
 
-  const project = opts['--project'] as string | undefined;
-  const scope: BudgetScopeType = project ? 'project' : 'team';
   const yes = opts['--yes'] as boolean | undefined;
 
-  telemetry.trackCliOptionProject(project);
+  telemetry.trackCliArgumentScope(args[0]);
+  telemetry.trackCliArgumentName(args[1]);
   telemetry.trackCliFlagYes(yes);
   telemetry.trackCliOptionFormat(opts['--format']);
 
@@ -51,24 +47,31 @@ export default async function remove(client: Client, argv: string[]) {
   }
   const asJson = formatResult.jsonOutput;
 
+  const scopeResult = parseBudgetScope(args);
+  if ('error' in scopeResult) {
+    output.error(scopeResult.error);
+    return 1;
+  }
+  const { scope } = scopeResult;
+
   if (!(await ensureTeam(client))) {
     return 1;
   }
 
   let projectId: string | undefined;
-  if (scope === 'project' && project) {
-    const resolved = await getProjectByNameOrId(client, project);
+  if (scope.scopeType === 'project') {
+    const resolved = await getProjectByNameOrId(client, scope.name);
     if (resolved instanceof ProjectNotFound) {
-      output.error(`Project not found: ${project}`);
+      output.error(`Project not found: ${scope.name}`);
       return 1;
     }
     projectId = resolved.id;
   }
 
   const target =
-    scope === 'team'
+    scope.scopeType === 'team'
       ? 'the team budget'
-      : `the budget for ${chalk.bold(project ?? '')}`;
+      : `the budget for ${chalk.bold(scope.name)}`;
 
   if (!yes) {
     if (!client.stdin.isTTY) {
@@ -86,13 +89,13 @@ export default async function remove(client: Client, argv: string[]) {
   output.spinner('Removing budget');
 
   try {
-    await removeBudget(client, scope, projectId);
+    await removeBudget(client, scope.scopeType, projectId);
     output.stopSpinner();
     if (asJson) {
       client.stdout.write(
         `${JSON.stringify(
           {
-            scopeType: scope,
+            scopeType: scope.scopeType,
             ...(projectId ? { projectId } : {}),
             removed: true,
           },

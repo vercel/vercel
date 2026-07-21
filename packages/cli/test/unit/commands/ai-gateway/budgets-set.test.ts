@@ -52,6 +52,7 @@ describe('ai-gateway budgets set', () => {
       'ai-gateway',
       'budgets',
       'set',
+      'team',
       '--limit',
       '500',
       '--refresh-period',
@@ -85,7 +86,7 @@ describe('ai-gateway budgets set', () => {
       'ai-gateway',
       'budgets',
       'set',
-      '--project',
+      'project',
       defaultProject.name!,
       '--limit',
       '200'
@@ -115,6 +116,7 @@ describe('ai-gateway budgets set', () => {
       'ai-gateway',
       'budgets',
       'set',
+      'team',
       '--limit',
       '100',
       '--refresh-period',
@@ -136,6 +138,7 @@ describe('ai-gateway budgets set', () => {
       'ai-gateway',
       'budgets',
       'set',
+      'team',
       '--limit',
       '500',
       '--format',
@@ -146,5 +149,49 @@ describe('ai-gateway budgets set', () => {
 
     await expect(client.stdout).toOutput('"quotaEntityId"');
     expect(await exitCodePromise).toBe(0);
+  });
+
+  it('requires a scope', async () => {
+    client.setArgv('ai-gateway', 'budgets', 'set', '--limit', '100');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput('Expected a scope');
+    expect(await exitCodePromise).toBe(1);
+  });
+
+  it('rejects an unknown scope', async () => {
+    client.setArgv('ai-gateway', 'budgets', 'set', 'user', '--limit', '100');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput('Unknown scope');
+    expect(await exitCodePromise).toBe(1);
+  });
+
+  it('rejects a name on the team scope', async () => {
+    client.setArgv(
+      'ai-gateway',
+      'budgets',
+      'set',
+      'team',
+      'oops',
+      '--limit',
+      '100'
+    );
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput('team scope does not take a name');
+    expect(await exitCodePromise).toBe(1);
+  });
+
+  it('requires a project name', async () => {
+    client.setArgv('ai-gateway', 'budgets', 'set', 'project', '--limit', '100');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput('project scope requires');
+    expect(await exitCodePromise).toBe(1);
   });
 });

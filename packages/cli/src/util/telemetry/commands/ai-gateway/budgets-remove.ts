@@ -6,9 +6,15 @@ export class AiGatewayBudgetsRemoveTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof budgetsRemoveSubcommand>
 {
-  trackCliOptionProject(project: string | undefined) {
-    if (project) {
-      this.trackCliOption({ option: 'project', value: this.redactedValue });
+  trackCliArgumentScope(scope: string | undefined) {
+    if (scope) {
+      this.trackCliArgument({ arg: 'scope', value: scope });
+    }
+  }
+
+  trackCliArgumentName(name: string | undefined) {
+    if (name) {
+      this.trackCliArgument({ arg: 'name', value: this.redactedValue });
     }
   }
 

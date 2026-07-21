@@ -52,7 +52,7 @@ describe('ai-gateway budgets remove', () => {
       'ai-gateway',
       'budgets',
       'rm',
-      '--project',
+      'project',
       defaultProject.name!,
       '--yes'
     );
@@ -72,7 +72,7 @@ describe('ai-gateway budgets remove', () => {
     useRemoveBudget();
     client.config.currentTeam = team.id;
     client.stdin.isTTY = false;
-    client.setArgv('ai-gateway', 'budgets', 'remove');
+    client.setArgv('ai-gateway', 'budgets', 'remove', 'team');
 
     const exitCodePromise = aiGateway(client);
 
@@ -89,6 +89,7 @@ describe('ai-gateway budgets remove', () => {
       'ai-gateway',
       'budgets',
       'remove',
+      'team',
       '--yes',
       '--format',
       'json'
@@ -98,5 +99,23 @@ describe('ai-gateway budgets remove', () => {
 
     await expect(client.stdout).toOutput('"removed": true');
     expect(await exitCodePromise).toBe(0);
+  });
+
+  it('requires a scope', async () => {
+    client.setArgv('ai-gateway', 'budgets', 'remove', '--yes');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput('Expected a scope');
+    expect(await exitCodePromise).toBe(1);
+  });
+
+  it('rejects an unknown scope', async () => {
+    client.setArgv('ai-gateway', 'budgets', 'remove', 'user', '--yes');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput('Unknown scope');
+    expect(await exitCodePromise).toBe(1);
   });
 });
