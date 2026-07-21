@@ -743,8 +743,6 @@ describe('ai-gateway coding-agents setup', () => {
         useKeychain: true,
       });
 
-      // Claude Code resolves the token in-process from the Keychain — no shell
-      // rc change, so the token can't leak into other processes.
       expect(plan.changes.some(c => c.format === 'shell')).toBe(false);
 
       const claude = plan.changes.find(c => c.label === 'Claude Code settings');
@@ -753,10 +751,8 @@ describe('ai-gateway coding-agents setup', () => {
         'https://ai-gateway.vercel.sh'
       );
       expect(settings.apiKeyHelper).toContain('security find-generic-password');
-      // Both higher-precedence env vars are emptied so the helper always wins.
       expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe('');
       expect(settings.env.ANTHROPIC_API_KEY).toBe('');
-      // The secret itself never lands in the config — only the Keychain lookup.
       expect(claude?.next).not.toContain(secret);
     });
 
@@ -2642,9 +2638,6 @@ describe('ai-gateway coding-agents setup', () => {
           true
         );
 
-        // A single shared shell block. Codex and OpenCode both want
-        // AI_GATEWAY_API_KEY — it's exported once (deduped). Claude Code does
-        // NOT touch the shell in keychain mode; it resolves via apiKeyHelper.
         const shells = plan.changes.filter(c => c.format === 'shell');
         expect(shells).toHaveLength(1);
         const gateway = shells[0].next?.match(/AI_GATEWAY_API_KEY/g) ?? [];
