@@ -2182,9 +2182,10 @@ async function doBuild(
     localConfig.images,
     topLevelBuildResults.values()
   );
+  // Cron jobs are registered for the deployment, including jobs emitted by services.
   const mergedCrons = mergeCrons(
     [...(localConfig.crons || []), ...synthesizedServiceCrons],
-    topLevelBuildResults.values()
+    buildResults.values()
   );
   const mergedWildcard = mergeWildcard(topLevelBuildResults.values());
   const mergedDeploymentId = await mergeDeploymentId(

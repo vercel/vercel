@@ -2969,7 +2969,7 @@ createServer((_req, res) => {
     ).toBe(true);
   });
 
-  it('should keep already-built generated experimentalServicesV2 output at root and nest new services', async () => {
+  it('should keep generated output at root and include nested service crons', async () => {
     const cwd = await getWriteableDirectory();
     const output = join(cwd, '.vercel', 'output');
     await fs.ensureDir(join(cwd, '.vercel'));
@@ -3081,7 +3081,13 @@ const outputDir = join(process.cwd(), '.vercel', 'output');
 const staticDir = join(outputDir, 'static');
 mkdirSync(staticDir, { recursive: true });
 writeFileSync(join(staticDir, 'backend.html'), 'backend output');
-writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, null, 2));
+writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    crons: [{ path: '/backend/cron', schedule: '0 * * * *' }]
+  }, null, 2)
+);
 `
     );
 
@@ -3143,6 +3149,9 @@ writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, nul
           (route: { handle?: string }) => route.handle === 'filesystem'
         )
       ).toHaveLength(1);
+      expect(config.crons).toEqual([
+        { path: '/backend/cron', schedule: '0 * * * *' },
+      ]);
       expect(await fs.readFile(join(cwd, 'build-count.txt'), 'utf8')).toBe('1');
       expect(await fs.readJSON(join(cwd, 'root-immutable-env.json'))).toEqual(
         Object.fromEntries(immutableEnvVars.map(name => [name, '1']))
@@ -3169,6 +3178,10 @@ writeFileSync(join(outputDir, 'config.json'), JSON.stringify({ version: 3 }, nul
           (route: { handle?: string }) => route.handle === 'filesystem'
         )
       ).toHaveLength(1);
+      expect(backendConfig.crons).toContainEqual({
+        path: '/backend/cron',
+        schedule: '0 * * * *',
+      });
       expect(
         await fs.readFile(
           join(output, 'services/backend/static/backend.html'),
