@@ -8,7 +8,7 @@ import type {
   DistributionIndex,
   PackagePath,
 } from '@vercel/python-analysis';
-import { PYCACHE_PREFIX_DIR } from '../src/compileall';
+import { deriveStagedPycFsPath, PYCACHE_PREFIX_DIR } from '../src/compileall';
 import { RUNTIME_DEPS_DIR } from '../src/dependency-externalizer';
 import {
   getDistributionFileGroups,
@@ -264,13 +264,14 @@ describe('InstalledPythonDistributions', () => {
     const baseDir = makeTempDir('prefix-bytecode-records-');
     const sitePackagesDir = path.join(baseDir, 'site-packages');
     const stagingDir = path.join(baseDir, 'staging');
-    const stagedPyc = path.join(
+    const stagedPyc = deriveStagedPycFsPath(
       stagingDir,
-      sitePackagesDir.replace(/^[/\\]+/, ''),
-      'pkg',
-      'mod.cpython-312.pyc'
+      path.join(sitePackagesDir, 'pkg', 'mod.py'),
+      3,
+      12
     );
-    fs.outputFileSync(stagedPyc, Buffer.alloc(30));
+    expect(stagedPyc).not.toBeNull();
+    fs.outputFileSync(stagedPyc!, Buffer.alloc(30));
 
     const installed = createInstalledDistributions({
       sitePackagesDir,
@@ -297,18 +298,15 @@ describe('InstalledPythonDistributions', () => {
     const sitePackagesDir = path.join(baseDir, 'site-packages');
     const stagingDir = path.join(baseDir, 'staging');
 
-    for (const relativePath of [
-      'a/mod.cpython-312.pyc',
-      'b/mod.cpython-312.pyc',
-    ]) {
-      fs.outputFileSync(
-        path.join(
-          stagingDir,
-          sitePackagesDir.replace(/^[/\\]+/, ''),
-          relativePath.replaceAll('/', path.sep)
-        ),
-        Buffer.alloc(5)
+    for (const relativePath of ['a/mod.py', 'b/mod.py']) {
+      const stagedPyc = deriveStagedPycFsPath(
+        stagingDir,
+        path.join(sitePackagesDir, relativePath),
+        3,
+        12
       );
+      expect(stagedPyc).not.toBeNull();
+      fs.outputFileSync(stagedPyc!, Buffer.alloc(5));
     }
 
     const installed = createInstalledDistributions({
