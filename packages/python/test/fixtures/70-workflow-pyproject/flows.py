@@ -8,7 +8,7 @@ CACHE_NAMESPACE = "workflow-jobs"
 # Workflow entrypoint ("flows:workflows"). Constructing the registry hooks the
 # workflow and step queue handlers into the Lambda built from
 # [tool.vercel.workflows] in pyproject.toml.
-workflows = Workflows()
+workflows = Workflows(namespace="addition")
 
 
 @workflows.step

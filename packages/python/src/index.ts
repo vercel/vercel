@@ -98,10 +98,12 @@ import {
   type Subscriber,
 } from './subscribers';
 import {
+  detectWorkflowNamespaces,
+  detectWorkflowNamespacesFromSource,
   getPyprojectWorkflows,
   getWorkflowConsumerName,
   getWorkflowOutputPath,
-  WORKFLOW_TOPIC_PATTERN,
+  getWorkflowTopicPattern,
   type PyprojectWorkflow,
 } from './workflows';
 
@@ -151,7 +153,24 @@ export async function getDevSidecars({
   }
 
   const subscribers = await getPyprojectSubscribers(workPath);
-  const workflows = await getPyprojectWorkflows(workPath);
+  let workflows = await getPyprojectWorkflows(workPath);
+  if (workflows.length > 0) {
+    const uvPath = findUvInPath();
+    if (!uvPath) {
+      throw new NowBuildError({
+        code: 'PYTHON_UV_NOT_FOUND',
+        message:
+          'uv is required to inspect Python workflow namespaces during local development.',
+      });
+    }
+    workflows = await detectWorkflowNamespacesFromSource({
+      workflows,
+      uvPath,
+      uvRunArgs: ['--no-project'],
+      env: process.env,
+      workPath,
+    });
+  }
   return [
     ...subscribers.map(
       (subscriber): DevSubscriber => ({
@@ -186,7 +205,7 @@ export async function getDevSidecars({
             handlerFunction: workflow.variableName,
           },
         },
-        topics: [{ topic: WORKFLOW_TOPIC_PATTERN }],
+        topics: [{ topic: getWorkflowTopicPattern(workflow.namespace) }],
       })
     ),
   ];
@@ -1103,6 +1122,16 @@ export const build: BuildVX = async ({
     });
   }
 
+  if (workflows.length > 0) {
+    workflows = await detectWorkflowNamespaces({
+      workflows,
+      uvPath: uv.getPath(),
+      uvRunArgs: ['--active', '--no-sync'],
+      env: pythonEnv,
+      workPath,
+    });
+  }
+
   // Run quirks: detect dependencies that need special handling (e.g. prisma)
   // and perform fix-up routines before bundling.
   const quirksResult = await runQuirks({ venvPath, pythonEnv, workPath });
@@ -1670,7 +1699,7 @@ export const build: BuildVX = async ({
     const experimentalTriggers: TriggerEvent[] = [
       {
         type: 'queue/v2beta',
-        topic: WORKFLOW_TOPIC_PATTERN,
+        topic: getWorkflowTopicPattern(workflow.namespace),
         consumer: getWorkflowConsumerName(workflow.name),
       },
     ];
