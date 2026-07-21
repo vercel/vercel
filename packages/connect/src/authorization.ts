@@ -40,6 +40,9 @@ export interface ConnectAuthorizationResponse {
   };
 }
 
+const DETACHED_INTERACTIVE_AUTH_MODE = 'detached';
+const INTERACTIVE_AUTH_MODE_ENV = 'VERCEL_CONNECT_INTERACTIVE_AUTH_MODE';
+
 export async function startAuthorization(
   connector: string,
   params: ConnectTokenParams,
@@ -48,7 +51,9 @@ export async function startAuthorization(
   if (!connector) {
     throw new Error('connector is required');
   }
-  if (options?.callbackUrl !== undefined) {
+  const detachedInteractiveAuth =
+    process.env[INTERACTIVE_AUTH_MODE_ENV] === DETACHED_INTERACTIVE_AUTH_MODE;
+  if (!detachedInteractiveAuth && options?.callbackUrl !== undefined) {
     validateCallbackUrl(options.callbackUrl);
   }
   if (options?.webhook !== undefined) {
@@ -57,15 +62,19 @@ export async function startAuthorization(
 
   const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
   const endpoint = `https://api.vercel.com/v1/connect/authorize/${encodeURIComponent(connector)}`;
+  const deviceCode =
+    options?.deviceCode ?? (detachedInteractiveAuth ? true : undefined);
+  const returnUrl =
+    !detachedInteractiveAuth && options?.callbackUrl !== undefined
+      ? { returnUrl: options.callbackUrl }
+      : {};
 
   const body = {
     ...params,
-    ...(options?.callbackUrl !== undefined && {
-      returnUrl: options.callbackUrl,
-    }),
+    ...returnUrl,
     ...(options?.webhook !== undefined && { webhook: options.webhook }),
-    ...(options?.deviceCode !== undefined && {
-      deviceCode: options.deviceCode,
+    ...(deviceCode !== undefined && {
+      deviceCode,
     }),
     ...(options?.expiresInMs !== undefined && {
       expiresInMs: options.expiresInMs,

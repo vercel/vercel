@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import {
   getMeasureType,
@@ -155,6 +156,12 @@ describe('text-output', () => {
       // endLength=2, startLength=3
       expect(result).toBe('abc…ij');
       expect(result).toHaveLength(6);
+    });
+
+    it('should not split ANSI styling in visible-length mode', () => {
+      const result = ellipsizeMiddle(chalk.gray('a'.repeat(100)), 10, true);
+      expect(result).toBe('aaaaa…aaaa');
+      expect(stripAnsi(result)).toHaveLength(10);
     });
   });
 
@@ -368,7 +375,24 @@ describe('text-output', () => {
       // Sub-day intervals are timezone-independent, so no zone is shown.
       expect(metadata).not.toContain('Timezone:');
       expect(metadata).not.toContain('Europe/Paris');
-      expect(metadata).toContain('2026-02-19 10:00 to 2026-02-19 10:15');
+      expect(metadata).toContain('2026-02-19 10:00 to 2026-02-19 10:15 (UTC)');
+      expect(stripAnsi(metadata)).not.toContain('[15m]');
+    });
+
+    it('should show a compact elapsed span for bucket-aligned bounds', () => {
+      const metadata = formatMetadataHeader({
+        metric: 'vercel.request.count',
+        aggregation: 'sum',
+        periodStart: '2026-07-10T09:03:00.000Z',
+        periodEnd: '2026-07-10T10:04:00.000Z',
+        granularity: { minutes: 1 },
+        scope: projectScope,
+        compact: true,
+      });
+
+      expect(stripAnsi(metadata)).toContain(
+        'Period: 2026-07-10 09:03 to 2026-07-10 10:04 (UTC) [1h]'
+      );
     });
 
     it('should annotate day intervals with the bucket alignment timezone', () => {
@@ -420,6 +444,21 @@ describe('text-output', () => {
       expect(sparklineSection).toContain('shop-app');
       expect(sparklineSection).toContain('▁▂▃');
       expect(sparklineSection).toContain('█▇▆');
+    });
+
+    it('should omit sparkline labels in compact output', () => {
+      const sparklineSection = formatSparklineSection(
+        [['true: Enabled']],
+        ['▁▂▃'],
+        ['Variants'],
+        true
+      );
+
+      expect(sparklineSection).not.toContain('sparklines:');
+      expect(sparklineSection).not.toContain('sparkline');
+      expect(sparklineSection).toContain('Variants');
+      expect(sparklineSection).toContain('true: Enabled');
+      expect(sparklineSection).toContain('▁▂▃');
     });
   });
 
@@ -536,9 +575,60 @@ describe('text-output', () => {
       expect(output).toContain('projectName');
       expect(output).toContain('httpStatus');
       expect(output).toContain('sparklines:');
+      expect(output).toContain('sparkline');
+      expect(output).toContain('█');
       expect(output).toContain('my-app');
       expect(output).toContain('200');
       expect(output).toContain('500');
+    });
+
+    it('should apply compact presentation at render time without merging groups', () => {
+      const output = stripAnsi(
+        formatText(
+          {
+            data: [
+              {
+                timestamp: '2026-02-19T10:00:00.000Z',
+                Variants: 'variant-a',
+                vercel_flag_evaluation_count_sum: 1,
+              },
+              {
+                timestamp: '2026-02-19T10:00:00.000Z',
+                Variants: 'variant-b',
+                vercel_flag_evaluation_count_sum: 9,
+              },
+            ],
+            summary: [],
+            statistics: {},
+          },
+          {
+            metric: 'vercel.flag_evaluation.count',
+            metricUnit: 'count',
+            aggregation: 'sum',
+            groupBy: ['Variants'],
+            filter: "flag_key eq 'example'",
+            scope: projectScope,
+            periodStart: '2026-02-19T10:00:00.000Z',
+            periodEnd: '2026-02-19T10:05:00.000Z',
+            granularity: { minutes: 5 },
+            presentation: {
+              compact: true,
+              formatGroupValue: () => 'same display value',
+            },
+          }
+        )
+      );
+
+      expect(output).not.toContain('Metric:');
+      expect(output).not.toContain('Filter:');
+      expect(output).not.toContain('Groups:');
+      expect(output).not.toContain('Order By:');
+      expect(output).not.toContain('sparklines:');
+      expect(output).not.toContain('sparkline');
+      expect(output.match(/same display value/g)).toHaveLength(4);
+      expect(output.match(/Variants/g)).toHaveLength(2);
+      expect(output).toContain(' 1 ');
+      expect(output).toContain(' 9 ');
     });
 
     it('should keep fractional average for count sum output', () => {

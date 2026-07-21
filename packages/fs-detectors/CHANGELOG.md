@@ -1,5 +1,33 @@
 # @vercel/fs-detectors
 
+## 6.13.2
+
+### Patch Changes
+
+- a55e7df: Replace user-facing `experimentalServices` references with `services` in error/warning messages and rename error codes (`NO_EXPERIMENTAL_SERVICES_CONFIGURED` → `NO_SERVICES_CONFIGURED`, `MISSING_EXPERIMENTAL_SERVICES` → `MISSING_SERVICES`). The deprecated v1 config key should no longer appear in guidance shown to users.
+- Updated dependencies [238543c]
+  - @vercel/build-utils@13.34.0
+
+## 6.13.1
+
+### Patch Changes
+
+- Updated dependencies [def07fc]
+- Updated dependencies [fa14ee9]
+  - @vercel/build-utils@13.33.1
+  - @vercel/frameworks@3.30.7
+
+## 6.13.0
+
+### Minor Changes
+
+- 7bbfd48: Support `"entrypoint": "pyproject.toml"` for services. A service may now set `entrypoint: "pyproject.toml"` to build exactly what that file declares: the web app from `tool.vercel.entrypoint` (when present) and queue subscribers from `[[tool.vercel.subscribers]]`. Filename-based entrypoint auto-detection never runs in this mode, and subscribers-only services (no web function) are supported.
+
+### Patch Changes
+
+- Updated dependencies [607f0ef]
+  - @vercel/build-utils@13.33.0
+
 ## 6.12.1
 
 ### Patch Changes

@@ -20,6 +20,20 @@ export class FlagsTelemetryClient
     });
   }
 
+  trackCliSubcommandVersions(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'versions',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandEvaluations(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'evaluations',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandOpen(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'open',

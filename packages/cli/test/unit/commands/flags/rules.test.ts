@@ -3,7 +3,10 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import flags from '../../../../src/commands/flags';
 import { formatFlagConditionComparatorList } from '../../../../src/util/flags/comparators';
 import type { Flag, UpdateFlagRequest } from '../../../../src/util/flags/types';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import {
   defaultFlagSettings,
@@ -105,6 +108,34 @@ describe('flags rules', () => {
     ]);
   });
 
+  it('lists rules for the project selected by --project', async () => {
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject({
+      ...defaultProject,
+      id: 'explicit-flags-rules',
+      name: 'explicit-flags-rules',
+      accountId: 'team_dummy',
+    });
+    client.setArgv(
+      'flags',
+      'rules',
+      'ls',
+      'my-feature',
+      '--environment',
+      'production',
+      '--project',
+      'explicit-flags-rules',
+      '--json'
+    );
+
+    await expect(flags(client)).resolves.toEqual(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      flag: 'my-feature',
+      environment: 'production',
+    });
+  });
+
   it('lists inherited rules for a reused environment as JSON', async () => {
     testFlags[0].environments.production.reuse = {
       active: true,
@@ -200,9 +231,74 @@ describe('flags rules', () => {
       pausedOutcome: { type: 'variant', variantId: 'off' },
     });
     expect(settingsRequests).toEqual(0);
+    expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
+      'This rule update was saved'
+    );
   });
 
-  it('activates a paused environment when adding a rule', async () => {
+  it.each([
+    {
+      action: 'adding',
+      argv: [
+        'add',
+        'my-feature',
+        '--environment',
+        'production',
+        '--condition',
+        'user.plan:eq:enterprise',
+        '--variant',
+        'on',
+      ],
+    },
+    {
+      action: 'updating',
+      argv: [
+        'update',
+        'my-feature',
+        'rule_1',
+        '--environment',
+        'production',
+        '--condition',
+        'user.plan:eq:enterprise',
+      ],
+    },
+    {
+      action: 'moving',
+      argv: [
+        'move',
+        'my-feature',
+        'rule_2',
+        '--environment',
+        'production',
+        '--position',
+        '1',
+      ],
+    },
+    {
+      action: 'removing',
+      argv: ['rm', 'my-feature', 'rule_1', '--environment', 'production'],
+    },
+  ])('warns after $action a rule while the environment serves a fixed variant', async ({
+    argv,
+  }) => {
+    testFlags[0].environments.production.active = false;
+    client.setArgv('flags', 'rules', ...argv);
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(patchBodies).toHaveLength(1);
+    const output = stripAnsi(client.stderr.getFullOutput());
+    expect(output).toMatch(
+      /^! This rule update was saved, but production is serving false Off\./m
+    );
+    expect(output).toContain(
+      'Rule changes will not affect flag evaluation until the environment uses targeting again.'
+    );
+    expect(output).not.toContain('WARNING!');
+  });
+
+  it('preserves a paused environment when adding a rule', async () => {
     testFlags[0].environments.preview.active = false;
 
     client.setArgv(
@@ -222,19 +318,22 @@ describe('flags rules', () => {
 
     expect(exitCode).toEqual(0);
     expect(testFlags[0].environments.preview).toMatchObject({
-      active: true,
+      active: false,
       fallthrough: { type: 'variant', variantId: 'on' },
       pausedOutcome: { type: 'variant', variantId: 'off' },
     });
     expect(testFlags[0].environments.preview.rules).toHaveLength(1);
     expect(patchBodies[0].environments?.preview).toMatchObject({
-      active: true,
+      active: false,
       rules: [
         {
           outcome: { type: 'variant', variantId: 'on' },
         },
       ],
     });
+    expect(stripAnsi(client.stderr.getFullOutput())).toMatch(
+      /^! This rule update was saved, but preview is serving false Off\./m
+    );
   });
 
   it('adds a rule on top of inherited rules and disables reuse', async () => {
@@ -281,6 +380,9 @@ describe('flags rules', () => {
       environment: 'preview',
     });
     expect(testFlags[0].environments.production.active).toEqual(true);
+    expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
+      'This rule update was saved'
+    );
   });
 
   it('adds a segment condition with a split outcome', async () => {

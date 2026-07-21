@@ -226,6 +226,9 @@ export function applyScopeFromLink(client: Client, link: { org: Org }): void {
 export function detectExplicitScope(client: Client): boolean {
   const argv = client.argv;
   for (const arg of argv) {
+    if (arg === '--') {
+      break;
+    }
     if (
       arg === '--scope' ||
       arg === '--team' ||

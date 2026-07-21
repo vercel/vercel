@@ -92,7 +92,7 @@ export default async function deleteGroup(client: Client): Promise<number> {
     selectedGroup = found;
   } else {
     // If the linked project is the default app for a group, suggest that group first
-    const link = await getLinkedProject(client, client.cwd);
+    const link = await getLinkedProject(client, { cwd: client.cwd });
     const linkedProject = link.status === 'linked' ? link.project : undefined;
     const linkedGroup = linkedProject
       ? groups.find(g =>

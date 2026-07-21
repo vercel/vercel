@@ -10,6 +10,62 @@ try {
   }
 } catch {}
 
+// Native-first: spawn a @vercel/vc-native-{platform}-{arch} binary when
+// present and exit with its result, otherwise fall through to the JS CLI.
+// The native package is declared as an os/cpu-filtered optionalDependency
+// so at most one platform binary downloads per install.
+import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+import { existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
+
+function resolveNative() {
+  // Already running inside the native binary — never trampoline again.
+  if (process.env.VERCEL_VC_NATIVE === '1') return null;
+  const pkgName = `@vercel/vc-native-${process.platform}-${process.arch}`;
+  const binName = process.platform === 'win32' ? 'vercel.exe' : 'vercel';
+  try {
+    // Resolve only from this install's own tree, never from NODE_PATH.
+    const dir = dirname(
+      require.resolve(`${pkgName}/package.json`, { paths: [__dirname] })
+    );
+    const a = join(dir, 'bin', binName);
+    if (existsSync(a)) return a;
+    const b = join(dir, binName);
+    if (existsSync(b)) return b;
+  } catch {}
+  return null;
+}
+
+const bin = resolveNative();
+
+if (bin) {
+  process.env.VERCEL_VC_NATIVE = '1';
+  const r = spawnSync(bin, process.argv.slice(2), {
+    stdio: 'inherit',
+    windowsHide: true,
+  });
+  if (r.error && (r.error.code === 'ENOENT' || r.error.code === 'EACCES')) {
+    delete process.env.VERCEL_VC_NATIVE;
+    // fall through to JS
+  } else {
+    if (r.error) {
+      console.error(r.error.message);
+      process.exit(1);
+    }
+    if (r.signal) {
+      try {
+        process.kill(process.pid, r.signal);
+      } catch {}
+    }
+    process.exit(r.status ?? 1);
+  }
+}
+
 // Fast path for --version to avoid loading the entire CLI
 if (
   process.argv.length === 3 &&

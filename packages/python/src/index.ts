@@ -46,13 +46,11 @@ import {
 } from './install';
 import {
   PythonDependencyExternalizer,
-  BYTECODE_COVERAGE_FLOOR,
   BYTECODE_FILL_CEILING_BYTES,
-  MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE,
+  LARGE_FUNCTION_FILL_CEILING_BYTES,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   lambdaKnapsack,
   calculateBundleSize,
-  estimateBytecodeSize,
   RUNTIME_DEPS_DIR,
   type GenerateBundleResult,
 } from './dependency-externalizer';
@@ -92,12 +90,20 @@ import {
   shouldCompileAll,
   type BytecodeCollectionResult,
 } from './compileall';
+import { InstalledPythonDistributions } from './installed-distributions';
 import {
   getPyprojectSubscribers,
   getSubscriberConsumerName,
   getSubscriberOutputPath,
   type Subscriber,
 } from './subscribers';
+import {
+  getPyprojectWorkflows,
+  getWorkflowConsumerName,
+  getWorkflowOutputPath,
+  WORKFLOW_TOPIC_PATTERN,
+  type PyprojectWorkflow,
+} from './workflows';
 
 const writeFile = fs.promises.writeFile;
 const PYTHON_ENTRYPOINT_DOCS_URL =
@@ -106,6 +112,7 @@ const PYTHON_ENTRYPOINT_DOCS_URL =
 import {
   detectPythonEntrypoint,
   entrypointToModule,
+  getVercelToolsEntrypoint,
   type DetectedPythonEntrypoint,
   type PythonEntrypoint,
 } from './entrypoint';
@@ -126,33 +133,63 @@ function getDevSubscriberTopics(subscriber: Subscriber): ServiceQueueTopic[] {
 export async function getDevSidecars({
   workPath,
   build,
+  service,
 }: GetDevSidecarsOptions): Promise<DevSubscriber[]> {
   const framework = build.config?.framework;
+  const isPyprojectEntrypoint = basename(build.src ?? '') === 'pyproject.toml';
+  const isPyprojectService =
+    service !== undefined &&
+    basename(service.entrypoint ?? '') === 'pyproject.toml';
   if (
     build.config?.middleware === true ||
-    typeof framework !== 'string' ||
-    !isPythonFramework(framework)
+    (service !== undefined && !isPyprojectService) ||
+    (service === undefined &&
+      !isPyprojectEntrypoint &&
+      (typeof framework !== 'string' || !isPythonFramework(framework)))
   ) {
     return [];
   }
 
   const subscribers = await getPyprojectSubscribers(workPath);
-  return subscribers.map(subscriber => ({
-    type: 'subscriber',
-    name: subscriber.name,
-    consumer: getSubscriberConsumerName(subscriber.name),
-    workspace: '.',
-    framework,
-    runtime: 'python',
-    builder: {
-      use: build.use,
-      src: subscriber.entrypoint,
-      config: {
-        handlerFunction: subscriber.variableName,
-      },
-    },
-    topics: getDevSubscriberTopics(subscriber),
-  }));
+  const workflows = await getPyprojectWorkflows(workPath);
+  return [
+    ...subscribers.map(
+      (subscriber): DevSubscriber => ({
+        type: 'subscriber',
+        name: subscriber.name,
+        consumer: getSubscriberConsumerName(subscriber.name),
+        workspace: '.',
+        framework: typeof framework === 'string' ? framework : undefined,
+        runtime: 'python',
+        builder: {
+          use: build.use,
+          src: subscriber.entrypoint,
+          config: {
+            handlerFunction: subscriber.variableName,
+          },
+        },
+        topics: getDevSubscriberTopics(subscriber),
+      })
+    ),
+    ...workflows.map(
+      (workflow): DevSubscriber => ({
+        type: 'subscriber',
+        name: workflow.name,
+        consumer: getWorkflowConsumerName(workflow.name),
+        workspace: '.',
+        framework: typeof framework === 'string' ? framework : undefined,
+        runtime: 'python',
+        builder: {
+          use: build.use,
+          src: workflow.entrypoint,
+          config: {
+            handlerFunction: workflow.variableName,
+          },
+        },
+        topics: [{ topic: WORKFLOW_TOPIC_PATTERN }],
+      })
+    ),
+  ];
 }
 
 function addFiles(target: Files, source: Files) {
@@ -189,13 +226,16 @@ function addBytecodeWithinCapacity(
 
 async function addVendorBytecodeWithinCapacity({
   files,
-  depExternalizer,
+  installedDistributions,
   vendorDir,
   bytecodeInfo,
   capacity,
 }: {
   files: Files;
-  depExternalizer: Pick<PythonDependencyExternalizer, 'collectBytecodeFiles'>;
+  installedDistributions: Pick<
+    InstalledPythonDistributions,
+    'collectBytecodeFiles'
+  >;
   vendorDir: string;
   bytecodeInfo: BytecodeCollectionResult | undefined;
   capacity: number;
@@ -212,7 +252,7 @@ async function addVendorBytecodeWithinCapacity({
   const selectedPkgs = lambdaKnapsack(bytecodeInfo.perItemSizes, capacity);
   if (selectedPkgs.length === 0) return capacity;
 
-  const selectedBytecode = await depExternalizer.collectBytecodeFiles({
+  const selectedBytecode = await installedDistributions.collectBytecodeFiles({
     vendorDirName: vendorDir,
     includePackages: selectedPkgs,
   });
@@ -227,13 +267,16 @@ async function addVendorBytecodeWithinCapacity({
  */
 export async function addVendorBytecodeInTiers({
   files,
-  depExternalizer,
+  installedDistributions,
   vendorDir,
   capacity,
   vendorPackageTiers,
 }: {
   files: Files;
-  depExternalizer: Pick<PythonDependencyExternalizer, 'collectBytecodeFiles'>;
+  installedDistributions: Pick<
+    InstalledPythonDistributions,
+    'collectBytecodeFiles'
+  >;
   vendorDir: string;
   capacity: number;
   vendorPackageTiers: (string[] | undefined)[];
@@ -242,13 +285,13 @@ export async function addVendorBytecodeInTiers({
   for (const tier of vendorPackageTiers) {
     if (remainingCapacity <= 0) break;
     if (tier && tier.length === 0) continue;
-    const bytecodeInfo = await depExternalizer.collectBytecodeFiles({
+    const bytecodeInfo = await installedDistributions.collectBytecodeFiles({
       vendorDirName: vendorDir,
       includePackages: tier,
     });
     remainingCapacity = await addVendorBytecodeWithinCapacity({
       files,
-      depExternalizer,
+      installedDistributions,
       vendorDir,
       bytecodeInfo,
       capacity: remainingCapacity,
@@ -618,10 +661,27 @@ export const build: BuildVX = async ({
   let entrypoint: string | undefined =
     rawEntrypoint === '<detect>' ? undefined : rawEntrypoint;
 
+  // A "pyproject.toml" entrypoint opts the build into declared-only mode: the
+  // web app comes from `tool.vercel.entrypoint` (if present), and workers come
+  // from `tool.vercel.subscribers` / `tool.vercel.workflows`. Filename-based
+  // auto-detection never runs, so a service builds exactly what its
+  // pyproject.toml declares.
+  const isPyprojectEntrypoint =
+    entrypoint !== undefined && basename(entrypoint) === 'pyproject.toml';
+  if (isPyprojectEntrypoint && entrypoint !== 'pyproject.toml') {
+    throw new NowBuildError({
+      code: 'PYTHON_INVALID_PYPROJECT_ENTRYPOINT',
+      message:
+        `A "pyproject.toml" entrypoint must sit at the service root. ` +
+        `Set the service "root" to "${dirname(entrypoint!)}" and use entrypoint "pyproject.toml".`,
+    });
+  }
+
   const builderSpan = parentSpan ?? new Span({ name: 'vc.builder' });
   const framework = config?.framework;
   let shouldInstallVercelWorkers = config?.hasWorkerServices === true;
   let subscribers: Subscriber[] = [];
+  let workflows: PyprojectWorkflow[] = [];
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
@@ -641,17 +701,19 @@ export const build: BuildVX = async ({
     meta,
   });
 
-  // `tool.vercel.subscribers` declares queue subscribers for a standalone
-  // Python app and compiles them into additional Lambdas.
-  // It is intentionally scoped to non-service framework builds:
-  //   - Service projects already own their process topology, so an implicit
-  //     mechanism would be ambiguous (services can share one pyproject.toml,
-  //     which would duplicate subscribers across each service build).
-  //   - Bare `api/**` functions build once per file sharing this workPath, so
-  //     emitting subscribers there would duplicate their outputs per build.
-  if (!service && isPythonFramework(framework)) {
+  // `tool.vercel.subscribers` and `tool.vercel.workflows` compile into
+  // additional worker Lambdas. They apply to standalone Python framework apps,
+  // and to explicit "pyproject.toml" entrypoints that opt a service into
+  // declared-only worker composition. They are intentionally not implicit for
+  // other service builds: services can share one pyproject.toml, and composing
+  // its workers into every service build would duplicate queue consumers. Bare
+  // `api/**` functions are excluded for the same reason: they build once per
+  // file sharing this workPath, so emitting workers there would duplicate them.
+  if (isPyprojectEntrypoint || (!service && isPythonFramework(framework))) {
     subscribers = await getPyprojectSubscribers(workPath);
-    shouldInstallVercelWorkers ||= subscribers.length > 0;
+    workflows = await getPyprojectWorkflows(workPath);
+    shouldInstallVercelWorkers ||=
+      subscribers.length > 0 || workflows.length > 0;
   }
 
   try {
@@ -679,24 +741,45 @@ export const build: BuildVX = async ({
       ? config.handlerFunction
       : undefined;
 
-  detected =
-    (await detectPythonEntrypoint(
-      config.framework as PythonFramework,
-      workPath,
-      entrypoint
-        ? {
-            filePath: entrypoint,
-            // For schedule-triggered jobs, the WSGI variable is always 'app' (created dynamically).
-            // For other services, handlerFunction is used as the entrypoint variable name.
-            varName:
-              service && isScheduleTriggeredService(service)
-                ? undefined
-                : handlerFunction,
-          }
-        : undefined,
-      service,
-      repoRootPath
-    )) ?? undefined;
+  if (isPyprojectEntrypoint) {
+    // Declared-only mode: use `tool.vercel.entrypoint` when present, and
+    // never fall back to filename-based detection. The helper hard-errors on
+    // a declared-but-unresolvable entrypoint, so a typo cannot silently drop
+    // the web app. A pyproject.toml with neither a web entrypoint nor declared
+    // workers has nothing to build.
+    const declared = await getVercelToolsEntrypoint(workPath, repoRootPath);
+    if (declared) {
+      detected = { entrypoint: declared };
+    } else if (subscribers.length === 0 && workflows.length === 0) {
+      throw new NowBuildError({
+        code: 'PYTHON_PYPROJECT_NOTHING_TO_BUILD',
+        message:
+          'Entrypoint "pyproject.toml" declares nothing to build. Set "tool.vercel.entrypoint" ' +
+          'for a web app and/or declare "[[tool.vercel.subscribers]]" or ' +
+          '"[[tool.vercel.workflows]]" entries in pyproject.toml.',
+      });
+    }
+    entrypoint = undefined;
+  } else {
+    detected =
+      (await detectPythonEntrypoint(
+        config.framework as PythonFramework,
+        workPath,
+        entrypoint
+          ? {
+              filePath: entrypoint,
+              // For schedule-triggered jobs, the WSGI variable is always 'app' (created dynamically).
+              // For other services, handlerFunction is used as the entrypoint variable name.
+              varName:
+                service && isScheduleTriggeredService(service)
+                  ? undefined
+                  : handlerFunction,
+            }
+          : undefined,
+        service,
+        repoRootPath
+      )) ?? undefined;
+  }
 
   if (detected?.error && detected?.baseDir === undefined) {
     throw detected?.error;
@@ -964,14 +1047,23 @@ export const build: BuildVX = async ({
     detected,
   });
 
-  // Collect the resolved entrypoint from detection or hook, preferring the hook.
-  const resolved = hookResult?.entrypoint ?? detected?.entrypoint;
+  // Collect the resolved entrypoint from detection or hook, preferring the
+  // hook. In declared-only mode the hook must not introduce a web app that
+  // pyproject.toml did not declare, so only the declared entrypoint counts.
+  const resolved = isPyprojectEntrypoint
+    ? detected?.entrypoint
+    : (hookResult?.entrypoint ?? detected?.entrypoint);
   if (!resolved && detected?.error) {
     throw detected?.error;
   }
 
   entrypoint = resolved?.entrypoint;
-  if (!entrypoint) {
+  // Declared-only builds may consist of workers alone (no web app).
+  const isWorkersOnly =
+    !entrypoint &&
+    isPyprojectEntrypoint &&
+    (subscribers.length > 0 || workflows.length > 0);
+  if (!entrypoint && !isWorkersOnly) {
     throw new NowBuildError({
       code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
       message:
@@ -1041,64 +1133,68 @@ export const build: BuildVX = async ({
     });
   }
 
-  debug('Entrypoint is', entrypoint);
-  const moduleName = entrypointToModule(entrypoint);
-
-  if (handlerFunction) {
-    const entrypointPath = join(workPath, entrypoint);
-    const source = await fs.promises.readFile(entrypointPath, 'utf-8');
-    const found = await containsTopLevelCallable(source, handlerFunction);
-    if (!found) {
-      throw new NowBuildError({
-        code: 'PYTHON_HANDLER_NOT_FOUND',
-        message:
-          `Handler function "${handlerFunction}" not found in ${entrypoint}. ` +
-          `Ensure it is defined at the module's top level.`,
-      });
-    }
-  }
-
   const vendorDir = resolveVendorDir();
 
-  // Since `vercel dev` renames source files, we must reference the original
-  const suffix = meta.isDev && !entrypoint.endsWith('.py') ? '.py' : '';
-  const entrypointWithSuffix = `${entrypoint}${suffix}`;
-  debug('Entrypoint with suffix is', entrypointWithSuffix);
+  let crons: Awaited<ReturnType<typeof getServiceCrons>>;
+  let runtimeTrampoline: string | undefined;
+  if (entrypoint) {
+    debug('Entrypoint is', entrypoint);
+    const moduleName = entrypointToModule(entrypoint);
 
-  const crons = await getServiceCrons({
-    service,
-    entrypoint,
-    rawEntrypoint,
-    handlerFunction,
-    pythonBin: getVenvPythonBin(venvPath),
-    env: pythonEnv,
-    workPath,
-  });
+    if (handlerFunction) {
+      const entrypointPath = join(workPath, entrypoint);
+      const source = await fs.promises.readFile(entrypointPath, 'utf-8');
+      const found = await containsTopLevelCallable(source, handlerFunction);
+      if (!found) {
+        throw new NowBuildError({
+          code: 'PYTHON_HANDLER_NOT_FOUND',
+          message:
+            `Handler function "${handlerFunction}" not found in ${entrypoint}. ` +
+            `Ensure it is defined at the module's top level.`,
+        });
+      }
+    }
 
-  // Build trampoline env line for cron routing.
-  // Injected into os.environ.update() in the Python trampoline source,
-  // not lambdaEnv, because the platform rejects env var names with
-  // leading underscores.
-  const extraTrampolineEnv: string[] = [];
-  if (crons?.length) {
-    // Single-quote the JSON so embedded double quotes don't need escaping
-    // in the surrounding Python dict literal. Backslashes would be
-    // misinterpreted by Python's string parser, but cron paths/handlers
-    // only contain [a-zA-Z0-9_./:-] so JSON.stringify won't produce any.
-    const json = JSON.stringify(buildCronRouteTable(crons));
-    assert(!json.includes('\\'), `backslash in cron route table: ${json}`);
-    extraTrampolineEnv.push(`"__VC_CRON_ROUTES": '${json}'`);
+    // Since `vercel dev` renames source files, we must reference the original
+    const suffix = meta.isDev && !entrypoint.endsWith('.py') ? '.py' : '';
+    const entrypointWithSuffix = `${entrypoint}${suffix}`;
+    debug('Entrypoint with suffix is', entrypointWithSuffix);
+
+    crons = await getServiceCrons({
+      service,
+      entrypoint,
+      rawEntrypoint,
+      handlerFunction,
+      pythonBin: getVenvPythonBin(venvPath),
+      env: pythonEnv,
+      workPath,
+    });
+
+    // Build trampoline env line for cron routing.
+    // Injected into os.environ.update() in the Python trampoline source,
+    // not lambdaEnv, because the platform rejects env var names with
+    // leading underscores.
+    const extraTrampolineEnv: string[] = [];
+    if (crons?.length) {
+      // Single-quote the JSON so embedded double quotes don't need escaping
+      // in the surrounding Python dict literal. Backslashes would be
+      // misinterpreted by Python's string parser, but cron paths/handlers
+      // only contain [a-zA-Z0-9_./:-] so JSON.stringify won't produce any.
+      const json = JSON.stringify(buildCronRouteTable(crons));
+      assert(!json.includes('\\'), `backslash in cron route table: ${json}`);
+      extraTrampolineEnv.push(`"__VC_CRON_ROUTES": '${json}'`);
+    }
+
+    const variableName = resolved?.variableName ?? '';
+
+    runtimeTrampoline = createRuntimeTrampoline({
+      moduleName,
+      entrypoint: entrypointWithSuffix,
+      vendorDir,
+      variableName,
+      extraEnv: extraTrampolineEnv,
+    });
   }
-
-  const variableName = resolved?.variableName ?? '';
-
-  const runtimeTrampoline = createRuntimeTrampoline({
-    moduleName,
-    entrypoint: entrypointWithSuffix,
-    vendorDir,
-    variableName,
-    extraEnv: extraTrampolineEnv,
-  });
 
   const compileAllEnabled = shouldCompileAll({
     isDev: meta.isDev,
@@ -1168,35 +1264,42 @@ export const build: BuildVX = async ({
     files['.sesskey'] = new FileBlob({ data: `"${SESSKEY}"` });
   }
 
-  // Bundle dependencies, using runtime installation for oversized bundles
-  const depExternalizer = new PythonDependencyExternalizer({
-    venvPath,
-    vendorDir,
-    workPath,
-    uvLockPath,
-    uvProjectDir,
-    projectName,
-    pythonMajor: pythonVersion.major,
-    pythonMinor: pythonVersion.minor,
-    pythonPath: pythonVersion.pythonPath,
-    hasCustomCommand,
-    alwaysBundlePackages: [
-      ...(quirksResult.alwaysBundlePackages ?? []),
-      ...(shouldInstallVercelWorkers
-        ? ['vercel-workers', 'vercel_workers']
-        : []),
-    ],
-  });
-
   await builderSpan
     .child('vc.builder.python.bundle')
     .trace(async bundleSpan => {
+      const installedDistributions = await InstalledPythonDistributions.load({
+        venvPath,
+        pythonMajor: pythonVersion.major,
+        pythonMinor: pythonVersion.minor,
+      });
+
+      // Bundle dependencies, using runtime installation for oversized bundles
+      const depExternalizer = new PythonDependencyExternalizer({
+        installedDistributions,
+        vendorDir,
+        workPath,
+        uvLockPath,
+        uvProjectDir,
+        projectName,
+        pythonVersion,
+        hasCustomCommand,
+        alwaysBundlePackages: [
+          ...(quirksResult.alwaysBundlePackages ?? []),
+          ...(shouldInstallVercelWorkers
+            ? ['vercel-workers', 'vercel_workers']
+            : []),
+        ],
+      });
+
       // analyze() always computes source-only sizes so threshold
       // decisions are not inflated by bytecode overhead.
       //
       // Record the size via the onSized callback (invoked before any
       // size-limit enforcement that may throw) so the span is tagged even
-      // for oversized bundles that subsequently fail the build.
+      // for oversized bundles that subsequently fail the build. On
+      // successful builds the attribute is overwritten at the end of this
+      // span with the final bundle size (including compiled bytecode and
+      // runtime-install tooling).
       const depAnalysis = await depExternalizer.analyze(files, {
         onSized: ({ totalSizeBytes, runtimeInstallEnabled }) => {
           bundleSpan.setAttributes({
@@ -1268,7 +1371,7 @@ export const build: BuildVX = async ({
 
           await addVendorBytecodeInTiers({
             files,
-            depExternalizer,
+            installedDistributions,
             vendorDir,
             capacity: remainingCapacity,
             vendorPackageTiers: vendorPackageTiers ?? [undefined],
@@ -1365,7 +1468,7 @@ export const build: BuildVX = async ({
             files,
             capacity: remainingCapacity,
             collect: include =>
-              depExternalizer.collectPrefixBytecodeFiles({
+              installedDistributions.collectPrefixBytecodeFiles({
                 stagingDir,
                 runtimeRoot: `/var/task/${vendorDir}`,
                 includePackages: include ?? alwaysBundled,
@@ -1378,7 +1481,7 @@ export const build: BuildVX = async ({
             files,
             capacity: remainingCapacity,
             collect: include =>
-              depExternalizer.collectPrefixBytecodeFiles({
+              installedDistributions.collectPrefixBytecodeFiles({
                 stagingDir,
                 runtimeRoot: `${RUNTIME_DEPS_DIR}/lib/python${pyMajor}.${pyMinor}/site-packages`,
                 includePackages: include ?? externalized,
@@ -1399,13 +1502,20 @@ export const build: BuildVX = async ({
 
       const announceLargeFunction = () =>
         console.log(
-          `Function "${entrypoint}" exceeds the standard size limit; enabling large functions (beta).`
+          `Function "${entrypoint ?? rawEntrypoint}" exceeds the standard size limit; enabling large functions (beta).`
         );
+
+      // How the bundle was packed, for the span attributes below:
+      // - standard:        fits the standard size limit; everything in the zip
+      // - runtime-install: public deps deferred to a cold-start `uv sync`
+      // - hive:            large functions; everything in the zip
+      let packingMode: 'standard' | 'runtime-install' | 'hive';
 
       if (depAnalysis.runtimeInstallEnabled) {
         // Pack the zip and defer the rest to runtime install. If it can't be
         // made to fit, generateBundle bundles everything for the large
         // functions path (which then takes compileall, below).
+        packingMode = 'runtime-install';
         const bytecodeFirst =
           compileAllEnabled &&
           pythonVersion.major != null &&
@@ -1414,27 +1524,33 @@ export const build: BuildVX = async ({
           bytecodeFirst,
         });
         if (bundleResult.fellBackToFullBundle) {
+          packingMode = 'hive';
           announceLargeFunction();
           if (compileAllEnabled) {
             await runCompileAllAndFillBytecode(
-              MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
+              LARGE_FUNCTION_FILL_CEILING_BYTES
             );
           }
         } else if (bundleResult.packingMode === 'bytecode-first') {
           await runPrefixCompileAndFill(bundleResult);
         } else if (compileAllEnabled) {
           // Knapsack packing (bytecode-first skipped or fell back): fill
-          // only the slack under the ceiling with bytecode for in-zip
-          // packages, and only when enough of it ships to justify the
-          // compile time. Always-bundled packages get capacity first.
+          // the slack under the ceiling with bytecode for in-zip packages.
+          // Always-bundled packages get capacity first. Skip only when the
+          // bundle already exceeds the fill ceiling, since nothing could
+          // ship.
           const currentSize = await calculateBundleSize(files);
           const capacity = BYTECODE_FILL_CEILING_BYTES - currentSize;
-          const estimate = await estimateBytecodeSize(files);
-          if (capacity >= BYTECODE_COVERAGE_FLOOR * estimate) {
+          if (capacity > 0) {
             await runCompileAllAndFillBytecode(BYTECODE_FILL_CEILING_BYTES, [
               bundleResult.alwaysBundledPackages ?? [],
               bundleResult.bundledPublicPackages ?? [],
             ]);
+          } else {
+            debug(
+              `skipping bytecode precompilation: no zip capacity remaining ` +
+                `(bundle is ${(currentSize / (1024 * 1024)).toFixed(2)} MB)`
+            );
           }
         }
       } else {
@@ -1442,46 +1558,70 @@ export const build: BuildVX = async ({
         // large functions are enabled and the whole bundle ships.
         addFiles(files, depAnalysis.allVendorFiles);
         if (depAnalysis.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES) {
+          packingMode = 'hive';
           if (isLargeFunctionsEnabled()) {
             announceLargeFunction();
           }
           if (compileAllEnabled) {
             await runCompileAllAndFillBytecode(
-              MAX_LARGE_FUNCTION_UNCOMPRESSED_SIZE
+              LARGE_FUNCTION_FILL_CEILING_BYTES
             );
           }
-        } else if (compileAllEnabled) {
-          // Compile only when enough of the expected bytecode ships to
-          // justify the compile time.
-          const capacity =
-            BYTECODE_FILL_CEILING_BYTES - depAnalysis.totalBundleSize;
-          const estimate = await estimateBytecodeSize(files);
-          if (capacity >= BYTECODE_COVERAGE_FLOOR * estimate) {
-            await runCompileAllAndFillBytecode(BYTECODE_FILL_CEILING_BYTES);
+        } else {
+          packingMode = 'standard';
+          if (compileAllEnabled) {
+            // Fill any remaining zip capacity with bytecode. Skip only when
+            // the bundle already exceeds the fill ceiling, since nothing
+            // could ship.
+            const capacity =
+              BYTECODE_FILL_CEILING_BYTES - depAnalysis.totalBundleSize;
+            if (capacity > 0) {
+              await runCompileAllAndFillBytecode(BYTECODE_FILL_CEILING_BYTES);
+            } else {
+              debug(
+                `skipping bytecode precompilation: no zip capacity remaining ` +
+                  `(bundle is ${(depAnalysis.totalBundleSize / (1024 * 1024)).toFixed(2)} MB)`
+              );
+            }
           }
         }
       }
+
+      // Final span attributes: overwrite the source-only size recorded by
+      // onSized with the shipped bundle size (now including compiled
+      // bytecode and runtime-install tooling). Cheap: calculateBundleSize
+      // memoizes stat results on the FileFsRefs, and every file has been
+      // through at least one sizing pass by this point.
+      bundleSpan.setAttributes({
+        'python.bundle.totalSizeBytes': String(
+          await calculateBundleSize(files)
+        ),
+        'python.bundle.packingMode': packingMode,
+      });
     });
 
-  const webFiles: Files = {
-    ...files,
-    [`${handlerPyFilename}.py`]: new FileBlob({ data: runtimeTrampoline }),
-  };
+  let output: Lambda | undefined;
+  if (entrypoint && runtimeTrampoline) {
+    const webFiles: Files = {
+      ...files,
+      [`${handlerPyFilename}.py`]: new FileBlob({ data: runtimeTrampoline }),
+    };
 
-  const lambdaOptions = await getPythonLambdaOptions({
-    config,
-    entrypoint,
-  });
+    const lambdaOptions = await getPythonLambdaOptions({
+      config,
+      entrypoint,
+    });
 
-  const output = new Lambda({
-    files: webFiles,
-    handler: `${handlerPyFilename}.vc_handler`,
-    runtime: pythonVersion.runtime,
-    ...lambdaOptions,
-    architecture: target.architecture,
-    environment: lambdaEnv,
-    supportsResponseStreaming: true,
-  });
+    output = new Lambda({
+      files: webFiles,
+      handler: `${handlerPyFilename}.vc_handler`,
+      runtime: pythonVersion.runtime,
+      ...lambdaOptions,
+      architecture: target.architecture,
+      environment: lambdaEnv,
+      supportsResponseStreaming: true,
+    });
+  }
 
   const subscriberLambdas: Record<string, Lambda> = {};
 
@@ -1523,6 +1663,44 @@ export const build: BuildVX = async ({
     });
   }
 
+  const workflowLambdas: Record<string, Lambda> = {};
+
+  for (const workflow of workflows) {
+    const outputPath = getWorkflowOutputPath(workflow.name);
+    const experimentalTriggers: TriggerEvent[] = [
+      {
+        type: 'queue/v2beta',
+        topic: WORKFLOW_TOPIC_PATTERN,
+        consumer: getWorkflowConsumerName(workflow.name),
+      },
+    ];
+
+    workflowLambdas[outputPath] = new Lambda({
+      files: {
+        ...files,
+        [`${handlerPyFilename}.py`]: new FileBlob({
+          data: createRuntimeTrampoline({
+            moduleName: workflow.moduleName,
+            entrypoint: workflow.entrypoint,
+            vendorDir,
+            variableName: workflow.variableName,
+          }),
+        }),
+      },
+      handler: `${handlerPyFilename}.vc_handler`,
+      runtime: pythonVersion.runtime,
+      architecture: target.architecture,
+      environment: {
+        ...lambdaEnv,
+        VERCEL_HAS_WORKER_SERVICES: '1',
+        // Compatibility marker consumed by the current Python runtime.
+        VERCEL_SERVICE_TYPE: 'worker',
+      },
+      experimentalTriggers,
+      supportsResponseStreaming: true,
+    });
+  }
+
   // Write project manifest for diagnostics (best-effort, never fails the build).
   // Requires uv.lock to resolve versions and dependency graph.  Skipped in
   // `vercel dev` since the CLI only reads the manifest in `vercel build`.
@@ -1543,9 +1721,15 @@ export const build: BuildVX = async ({
     }
   }
 
-  // Subscribers only attach to framework apps or named services, both of which
-  // already take the V2 path below, so no early V3 return needs to consider them.
-  if (!isPythonFramework(framework) && !service?.name) {
+  // Subscribers and workflows only attach to framework apps, named services,
+  // or declared pyproject.toml builds, all of which take the V2 path below,
+  // so this early V3 return never needs to consider them.
+  if (
+    !isPythonFramework(framework) &&
+    !service?.name &&
+    !isPyprojectEntrypoint
+  ) {
+    assert(output, 'web Lambda must exist for non-service builds');
     return { resultVersion: 3, result: { output } };
   }
 
@@ -1562,22 +1746,25 @@ export const build: BuildVX = async ({
   // because their routes are merged into a shared top-level table and would
   // shadow other services (see #15960). Web services and V2 services (which
   // have isolated per-service route tables) need the catch-all to reach the
-  // Lambda.
+  // Lambda. Subscribers-only builds emit no web Lambda, so a catch-all would
+  // point at a nonexistent function.
   const isNonWebService =
     service?.name && service.type && service.type !== 'web';
-  const routes = isNonWebService
-    ? undefined
-    : [
-        { handle: 'filesystem' as const },
-        { src: '/(.*)', dest: `/${lambdaPath}` },
-      ];
+  const routes =
+    isNonWebService || !output
+      ? undefined
+      : [
+          { handle: 'filesystem' as const },
+          { src: '/(.*)', dest: `/${lambdaPath}` },
+        ];
 
   return {
     resultVersion: 2,
     result: {
       output: {
-        [lambdaPath]: output,
+        ...(output ? { [lambdaPath]: output } : {}),
         ...subscriberLambdas,
+        ...workflowLambdas,
         ...staticFiles,
       },
       ...(routes ? { routes } : {}),

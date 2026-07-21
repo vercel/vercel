@@ -1,0 +1,13 @@
+[project]
+name = "workflow-pyproject"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "vercel",
+]
+
+# Declares the workflow entrypoint compiled into a queue-triggered Lambda
+# alongside the FastAPI app. All workflows must be registered on this module.
+[[tool.vercel.workflows]]
+entrypoint = "flows:workflows"

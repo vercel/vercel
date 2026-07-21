@@ -16,8 +16,6 @@ permissions:
 
 env:
   TURBO_REMOTE_ONLY: 'true'
-  TURBO_TEAM: 'zero-conf-vtest314'
-  TURBO_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
 concurrency:
   group: release-binary-${{ inputs.tag || github.ref }}
@@ -86,6 +84,11 @@ jobs:
         with:
           ref: ${{ inputs.tag || github.ref }}
 
+      - name: Setup Turborepo Remote Cache
+        uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
+        with:
+          team: ${{ vars.TURBO_TEAM }}
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -93,10 +96,20 @@ jobs:
           package-manager-cache: false
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@a75363d06101555fc97c6c7e1e65670b99104d98 # 1.96.1
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
         with:
           toolchain: stable
           targets: wasm32-wasip2
+
+      # The workspace build compiles @vercel-internals/ipc-proxy, which
+      # requires a Go toolchain on PATH (build.mjs hard-fails in GitHub
+      # Actions rather than downloading Go). Keep in sync with GO_VERSION
+      # in internals/ipc-proxy/build.mjs and test.yml.
+      - name: Setup Go toolchain
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.23.12'
+          cache: false
 
       - name: Setup Python
         uses: actions/setup-python@v6

@@ -324,6 +324,7 @@ describe('validateConfig', () => {
     it('allows maxDuration above 1800s when set to "1" (defers to the server)', () => {
       process.env[ENV] = '1';
       expect(validateConfig(configWith(1800))).toBeNull();
+      expect(validateConfig(configWith(1900))).toBeNull();
     });
 
     it('still enforces the lower bound and integer check when skipped', () => {
