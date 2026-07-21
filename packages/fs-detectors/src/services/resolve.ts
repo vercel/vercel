@@ -15,12 +15,14 @@ import {
   JobTrigger,
 } from '@vercel/build-utils';
 import {
+  BUILDPACK_RUNTIMES,
   ENTRYPOINT_EXTENSIONS,
   RUNTIME_BUILDERS,
   STATIC_BUILDERS,
   RUNTIME_MANIFESTS,
 } from './types';
 import {
+  DETECTION_FRAMEWORKS,
   filterFrameworksByRuntime,
   getBuilderForRuntime,
   hasFile,
@@ -145,6 +147,13 @@ function getEntrypointRequiredRuntime(
     return config.runtime as ServiceRuntime;
   }
   return inferRuntimeFromFramework(config.framework);
+}
+
+function getBuildpackRuntime(
+  config: ConfiguredServiceConfig
+): ServiceRuntime | undefined {
+  const runtime = getEntrypointRequiredRuntime(config);
+  return runtime && BUILDPACK_RUNTIMES.has(runtime) ? runtime : undefined;
 }
 
 function validateBackendFileEntrypoint(
@@ -315,10 +324,16 @@ export async function detectFrameworkFromWorkspace({
   runtime?: ServiceRuntime;
 }): Promise<{ framework?: string; error?: ServiceDetectionError }> {
   const serviceFs = workspace === '.' ? fs : fs.chdir(workspace);
-  const frameworkCandidates = filterFrameworksByRuntime(frameworkList, runtime);
+  // Services intentionally include runtime-framework presets (Ruby, Go, etc.)
+  // even when they are hidden from normal project framework detection.
+  const frameworkCandidates = filterFrameworksByRuntime(
+    DETECTION_FRAMEWORKS,
+    runtime
+  );
   const frameworks = await detectFrameworks({
     fs: serviceFs,
     frameworkList: frameworkCandidates,
+    useExperimentalFrameworks: true,
   });
 
   if (frameworks.length > 1) {
@@ -697,17 +712,26 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
-  if (hasBuilderOrRuntime && !hasFramework && !hasEntrypoint) {
+  if (
+    hasBuilderOrRuntime &&
+    !hasFramework &&
+    !hasEntrypoint &&
+    !getBuildpackRuntime(config)
+  ) {
     return {
       code: 'MISSING_ENTRYPOINT',
       message: `Service "${name}" must specify "entrypoint" when using "${config.builder ? 'builder' : 'runtime'}".`,
       serviceName: name,
     };
   }
-  if (config.command !== undefined && !isContainerRuntime(config)) {
+  if (
+    config.command !== undefined &&
+    !isContainerRuntime(config) &&
+    !getBuildpackRuntime(config)
+  ) {
     return {
       code: 'INVALID_COMMAND',
-      message: `Service "${name}" can only specify "command" when using runtime "container".`,
+      message: `Service "${name}" can only specify "command" for container or buildpack-backed services.`,
       serviceName: name,
     };
   }
@@ -824,6 +848,10 @@ export async function resolveConfiguredService(
     ...config,
     entrypoint: entrypointIsDirectory ? undefined : normalizedEntrypoint,
   });
+  const buildpackRuntime =
+    inferredRuntime && BUILDPACK_RUNTIMES.has(inferredRuntime)
+      ? inferredRuntime
+      : undefined;
   let workspace = '.';
   let resolvedEntrypointFile =
     entrypointIsDirectory || !normalizedEntrypoint
@@ -884,6 +912,9 @@ export async function resolveConfiguredService(
       resolvedEntrypointFile ||
       frameworkDefinition?.useRuntime?.src ||
       'package.json';
+  } else if (buildpackRuntime) {
+    builderUse = '@vercel/container';
+    builderSrc = '<detect>';
   } else if (config.framework) {
     const isCronService = isScheduleTriggeredService({ type, trigger });
     if (
@@ -977,11 +1008,17 @@ export async function resolveConfiguredService(
   if (config.framework) {
     builderConfig.framework = config.framework;
   }
+  if (buildpackRuntime) {
+    builderConfig.buildpack = buildpackRuntime;
+  }
   if (containerImage) {
     builderConfig.handler = containerImage;
   }
   if (config.command !== undefined) {
     builderConfig.command = normalizeContainerCommand(config.command);
+    if (typeof config.command === 'string') {
+      builderConfig.commandShell = true;
+    }
   }
   if (moduleAttrParsed) {
     builderConfig.handlerFunction = moduleAttrParsed.attrName;

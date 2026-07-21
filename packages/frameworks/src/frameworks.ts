@@ -4366,9 +4366,9 @@ export const frameworks = [
     tagline:
       'A dynamic, open source programming language with a focus on simplicity and productivity.',
     description:
-      'A generic Ruby application deployed as a serverless function.',
+      'A generic Ruby application built as a container with Cloud Native Buildpacks.',
     website: 'https://www.ruby-lang.org',
-    useRuntime: { src: 'config.ru', use: '@vercel/ruby' },
+    useRuntime: { src: '<detect>', use: '@vercel/container' },
     ignoreRuntimes: ['@vercel/ruby'],
     detectors: {
       every: [
@@ -4403,7 +4403,7 @@ export const frameworks = [
       },
       {
         src: '/(.*)',
-        dest: '/config',
+        dest: '/index',
       },
     ],
   },

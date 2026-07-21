@@ -13,6 +13,7 @@
     "build": "node ../../utils/build-builder.mjs",
     "type-check": "tsc --noEmit",
     "test-unit": "vitest run --config ../../vitest.config.mts test/unit.test.ts",
+    "test-integration-buildpack": "RUN_BUILDPACK_INTEGRATION=1 vitest run --config ../../vitest.config.mts test/integration-buildpack.test.ts",
     "vitest-unit": "glob --absolute 'test/unit.test.ts'"
   },
   "files": [

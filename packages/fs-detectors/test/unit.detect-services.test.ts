@@ -175,6 +175,62 @@ describe('detectServices', () => {
       });
     });
 
+    it('should route Ruby runtime services through buildpacks without an entrypoint', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              runtime: 'ruby',
+              command: 'bundle exec puma',
+              mount: '/api',
+            },
+          },
+        }),
+        Gemfile: 'source "https://rubygems.org"\ngem "puma"\n',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services[0]).toMatchObject({
+        name: 'api',
+        runtime: 'ruby',
+        entrypoint: undefined,
+        builder: {
+          src: '<detect>',
+          use: '@vercel/container',
+          config: {
+            buildpack: 'ruby',
+            command: ['bundle exec puma'],
+            commandShell: true,
+          },
+        },
+      });
+    });
+
+    it('should not treat a Ruby service entrypoint as a prebuilt image', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              runtime: 'ruby',
+              entrypoint: 'app.rb',
+              mount: '/api',
+            },
+          },
+        }),
+        Gemfile: 'source "https://rubygems.org"\n',
+        'app.rb': 'puts "hello"\n',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services[0].builder).toMatchObject({
+        src: '<detect>',
+        use: '@vercel/container',
+        config: { buildpack: 'ruby' },
+      });
+    });
+
     it('should detect container runtime services with OCI image entrypoints', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
@@ -783,10 +839,9 @@ describe('detectServices', () => {
         workspace: 'services/ruby-api',
         entrypoint: 'config.ru',
       });
-      expect(result.services[0].builder.src).toBe(
-        'services/ruby-api/config.ru'
-      );
+      expect(result.services[0].builder.src).toBe('services/ruby-api/<detect>');
       expect(result.services[0].builder.config).toMatchObject({
+        buildpack: 'ruby',
         workspace: 'services/ruby-api',
       });
     });

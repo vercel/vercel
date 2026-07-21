@@ -1,9 +1,24 @@
 import type { BuildResultV2Typical } from '@vercel/build-utils';
 import { sanitizeConsumerName } from '@vercel/build-utils';
 import { EventEmitter } from 'node:events';
-import { readFileSync, statSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { build, prepareCache, startDevServer } from '../src';
 import { __resetStorageDriverCache } from '../src/storage-driver';
 import { __resetRunningContainers } from '../src/dev';
@@ -1284,6 +1299,410 @@ describe('@vercel/container', () => {
       existsSyncMock.mockReturnValue(false); // graphroot missing
       const result = await prepareCache(baseOpts);
       expect(result).toEqual({});
+    });
+  });
+
+  describe('buildpacks (Ruby)', () => {
+    let ruby: import('../src/buildpacks/registry').BuildpackDescriptor;
+    let requestedBuildpack: typeof import('../src/buildpacks/registry').requestedBuildpack;
+    let resolveImageSource: typeof import('../src/image-source').resolveImageSource;
+
+    beforeAll(async () => {
+      const registry = await import('../src/buildpacks/registry');
+      requestedBuildpack = registry.requestedBuildpack;
+      ruby = registry.BUILDPACKS.find(bp => bp.runtime === 'ruby')!;
+      resolveImageSource = (await import('../src/image-source'))
+        .resolveImageSource;
+    });
+
+    it('pins the builder and run images by digest', () => {
+      // Deploys run the builder on Vercel infrastructure — a mutable tag
+      // would silently track upstream pushes.
+      expect(ruby.builder).toMatch(/@sha256:[0-9a-f]{64}$/);
+      expect(ruby.runImage).toMatch(/@sha256:[0-9a-f]{64}$/);
+    });
+
+    it('resolves the buildpack from either config channel and honors marker/Dockerfile precedence', () => {
+      expect(requestedBuildpack({ buildpack: 'ruby' })).toBe(ruby);
+      expect(requestedBuildpack({ framework: 'ruby' })).toBe(ruby);
+      expect(requestedBuildpack({ runtime: 'container' })).toBeUndefined();
+
+      const options = (config: Record<string, unknown>) => ({
+        config,
+        workPath: '/',
+        entrypoint: '<detect>',
+      });
+
+      existsSyncMock.mockImplementation((p: string) => p === '/Gemfile');
+      expect(
+        resolveImageSource(options({ buildpack: 'ruby' }), 'build')
+      ).toMatchObject({ kind: 'buildpack', buildpack: { runtime: 'ruby' } });
+
+      // A conventional Dockerfile opts out of buildpacks.
+      existsSyncMock.mockImplementation(
+        (p: string) => p === '/Gemfile' || p === '/Dockerfile'
+      );
+      expect(
+        resolveImageSource(options({ buildpack: 'ruby' }), 'build')
+      ).toMatchObject({ kind: 'dockerfile', dockerfileRel: 'Dockerfile' });
+
+      // A Procfile is not language evidence — it must not mark a project as
+      // a Ruby buildpack project on its own.
+      existsSyncMock.mockImplementation((p: string) => p === '/Procfile');
+      expect(() =>
+        resolveImageSource(options({ buildpack: 'ruby' }), 'build')
+      ).toThrow(/no supported project marker/i);
+    });
+
+    it('returns an actionable error when the selected Ruby project has no markers', async () => {
+      existsSyncMock.mockReturnValue(false);
+      await expect(
+        build({
+          ...createBuildOptions({ buildpack: 'ruby' }),
+          entrypoint: '<detect>',
+          service: { name: 'api' },
+        })
+      ).rejects.toThrow(/Ruby buildpack.*no supported project marker/i);
+    });
+
+    it('returns a local container tag and preserves an optional command in dev', async () => {
+      existsSyncMock.mockImplementation((p: string) => p === '/Gemfile');
+      const result = expectTypicalBuildResult(
+        await build({
+          ...createBuildOptions({
+            buildpack: 'ruby',
+            command: ['bundle', 'exec', 'puma'],
+          }),
+          entrypoint: '<detect>',
+          service: { name: 'api' },
+          meta: { isDev: true },
+        } as any)
+      );
+      expect(result.output.index).toMatchObject({
+        runtime: 'container',
+        handler: 'vercel-dev/api:dev',
+        command: ['bundle', 'exec', 'puma'],
+      });
+    });
+
+    it('exports a Ruby buildpack image directly to VCR with isolated auth', async () => {
+      process.env.VERCEL_BUILD_IMAGE = 'al2023';
+      process.env.VERCEL_OIDC_TOKEN = fakeOidcToken();
+      const fetchMock = vi.fn();
+      stubRegistryFetch(fetchMock);
+      vi.stubGlobal('fetch', fetchMock);
+      const digest = `sha256:${'b'.repeat(64)}`;
+      existsSyncMock.mockImplementation((p: string) => p === '/Gemfile');
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'buildah' && args.includes('info')) {
+          return fakeChild(
+            JSON.stringify({
+              store: {
+                GraphRoot: '/vercel/.containers/storage',
+                RunRoot: '/run/containers/storage',
+                GraphDriverName: 'overlay',
+                GraphStatus: { 'Backing Filesystem': 'xfs' },
+              },
+            })
+          );
+        }
+        if (cmd === 'buildah' && args.includes('/cnb/lifecycle/creator')) {
+          const reportMount = args
+            .filter((_arg, index) => args[index - 1] === '--volume')
+            .find(arg => arg.endsWith(':/platform-output'));
+          expect(reportMount).toBeDefined();
+          writeFileSync(
+            `${reportMount!.slice(0, -':/platform-output'.length)}/report.toml`,
+            `[image]\ndigest = "${digest}"\n`
+          );
+        }
+        return fakeChild('');
+      });
+
+      const result = expectTypicalBuildResult(
+        await build({
+          ...createBuildOptions({ buildpack: 'ruby' }),
+          entrypoint: '<detect>',
+          service: { name: 'api' },
+        })
+      );
+      expect(result.output.index).toMatchObject({
+        runtime: 'container',
+        handler: `vcr.vercel.com/acme/my-app/api@${digest}`,
+      });
+
+      const creatorCall = spawnMock.mock.calls.find(
+        ([cmd, args]) =>
+          cmd === 'buildah' &&
+          (args as string[]).includes('/cnb/lifecycle/creator')
+      );
+      expect(creatorCall).toBeDefined();
+      const creatorArgs = creatorCall?.[1] as string[];
+      const creatorOptions = creatorCall?.[2] as {
+        env?: NodeJS.ProcessEnv;
+      };
+      expect(creatorArgs).toContain('CNB_REGISTRY_AUTH');
+      expect(creatorArgs.join(' ')).not.toContain(
+        process.env.VERCEL_OIDC_TOKEN!
+      );
+      expect(creatorOptions.env?.CNB_REGISTRY_AUTH).toMatch(
+        /"vcr\.vercel\.com":"Basic /
+      );
+      // Exports against the pinned run image rather than whatever mutable tag
+      // the builder metadata references.
+      expect(creatorArgs).toContain(`-run-image=${ruby.runImage}`);
+      const builderFromCall = spawnMock.mock.calls.find(
+        ([cmd, args]) =>
+          cmd === 'buildah' && (args as string[]).includes('from')
+      );
+      expect((builderFromCall?.[1] as string[]).join(' ')).toContain(
+        ruby.builder
+      );
+    });
+
+    it('cleans up the Buildah working container when export fails', async () => {
+      process.env.VERCEL_BUILD_IMAGE = 'al2023';
+      process.env.VERCEL_OIDC_TOKEN = fakeOidcToken();
+      const fetchMock = vi.fn();
+      stubRegistryFetch(fetchMock);
+      vi.stubGlobal('fetch', fetchMock);
+      existsSyncMock.mockImplementation((p: string) => p === '/Gemfile');
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'buildah' && args.includes('info')) {
+          return fakeChild(
+            JSON.stringify({
+              store: {
+                GraphRoot: '/vercel/.containers/storage',
+                RunRoot: '/run/containers/storage',
+                GraphDriverName: 'overlay',
+                GraphStatus: { 'Backing Filesystem': 'xfs' },
+              },
+            })
+          );
+        }
+        if (cmd === 'buildah' && args.includes('/cnb/lifecycle/creator')) {
+          return fakeChildFailure('ERROR: failed to detect a launch process');
+        }
+        return fakeChild('');
+      });
+
+      await expect(
+        build({
+          ...createBuildOptions({ buildpack: 'ruby' }),
+          entrypoint: '<detect>',
+          service: { name: 'api' },
+        })
+      ).rejects.toThrow(/failed to detect a launch process/);
+      expect(
+        spawnMock.mock.calls.some(
+          ([cmd, args]) =>
+            cmd === 'buildah' &&
+            (args as string[]).includes('rm') &&
+            (args as string[]).includes('--force')
+        )
+      ).toBe(true);
+    });
+
+    it('builds and starts a Ruby buildpack image in local dev', async () => {
+      existsSyncMock.mockImplementation((p: string) => p === '/Gemfile');
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'docker' && args[0] === 'image' && args[1] === 'inspect') {
+          return fakeChild('linux/amd64\n');
+        }
+        if (
+          cmd === 'docker' &&
+          args[0] === 'run' &&
+          args.includes('/cnb/lifecycle/creator')
+        ) {
+          expect(args).toContain(`-run-image=${ruby.runImage}`);
+          const platformEnvMount = args
+            .filter((_arg, index) => args[index - 1] === '-v')
+            .find(arg => arg.endsWith(':/platform/env:ro'));
+          expect(platformEnvMount).toBeDefined();
+          expect(
+            readFileSync(
+              `${platformEnvMount!.slice(0, -':/platform/env:ro'.length)}/BP_MRI_VERSION`,
+              'utf8'
+            )
+          ).toBe('3.3');
+          return fakeChild('');
+        }
+        if (cmd === 'docker' && args[0] === 'run') {
+          return fakeRunningChild(4343);
+        }
+        if (cmd === 'docker' && args.includes('inspect')) {
+          return fakeChild('{"8080/tcp":{}}');
+        }
+        if (cmd === 'docker' && args[0] === 'port') {
+          return fakeChild('127.0.0.1:54322\n');
+        }
+        return fakeChild('');
+      });
+
+      const result = await startDevServer({
+        ...createBuildOptions({ buildpack: 'ruby' }),
+        entrypoint: '<detect>',
+        service: { name: 'ruby-api' },
+        meta: { isDev: true, buildEnv: { BP_MRI_VERSION: '3.3' } },
+      } as any);
+      expect(result).toMatchObject({ port: 54322, pid: 4343 });
+      const commands = spawnMock.mock.calls.map(([cmd, args]) =>
+        [cmd, ...(args as string[])].join(' ')
+      );
+      expect(
+        commands.some(
+          command =>
+            command.includes('docker pull') && command.includes(ruby.builder)
+        )
+      ).toBe(true);
+      expect(
+        commands.some(
+          command =>
+            command.includes('docker pull --platform linux/amd64') &&
+            command.includes(ruby.runImage)
+        )
+      ).toBe(true);
+      expect(
+        commands.some(
+          command =>
+            command.includes('/cnb/lifecycle/creator') &&
+            command.includes('docker run --platform linux/amd64') &&
+            command.includes('vercel-dev/ruby-api:dev')
+        )
+      ).toBe(true);
+      await result!.shutdown!();
+    });
+
+    it('runs a dev command override through the CNB launcher', async () => {
+      existsSyncMock.mockImplementation((p: string) => p === '/Gemfile');
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (
+          cmd === 'docker' &&
+          args[0] === 'run' &&
+          args.includes('/cnb/lifecycle/creator')
+        ) {
+          return fakeChild('');
+        }
+        if (cmd === 'docker' && args[0] === 'run') {
+          return fakeRunningChild(4444);
+        }
+        if (cmd === 'docker' && args.includes('inspect')) {
+          return fakeChild('{"8080/tcp":{}}');
+        }
+        if (cmd === 'docker' && args[0] === 'port') {
+          return fakeChild('127.0.0.1:54323\n');
+        }
+        return fakeChild('');
+      });
+
+      const result = await startDevServer({
+        ...createBuildOptions({
+          buildpack: 'ruby',
+          command: ['bundle', 'exec', 'puma'],
+        }),
+        entrypoint: '<detect>',
+        service: { name: 'ruby-api' },
+        meta: { isDev: true },
+      } as any);
+      expect(result).toMatchObject({ port: 54323 });
+
+      // The image entrypoint is the default web process; a raw command would
+      // be appended to it. The override must exec via the launcher instead.
+      const runArgs = spawnMock.mock.calls.find(
+        ([cmd, args]) =>
+          cmd === 'docker' &&
+          (args as string[])[0] === 'run' &&
+          !(args as string[]).includes('/cnb/lifecycle/creator')
+      )?.[1] as string[];
+      const entrypointIdx = runArgs.indexOf('--entrypoint');
+      expect(entrypointIdx).toBeGreaterThanOrEqual(0);
+      expect(runArgs[entrypointIdx + 1]).toBe('launcher');
+      expect(runArgs[runArgs.indexOf('vercel-dev/ruby-api:dev') + 1]).toBe(
+        '--'
+      );
+      expect(runArgs.slice(-3)).toEqual(['bundle', 'exec', 'puma']);
+      await result!.shutdown!();
+    });
+
+    it('bakes a deploy command override into the image via a Procfile web process', async () => {
+      process.env.VERCEL_BUILD_IMAGE = 'al2023';
+      process.env.VERCEL_OIDC_TOKEN = fakeOidcToken();
+      const fetchMock = vi.fn();
+      stubRegistryFetch(fetchMock);
+      vi.stubGlobal('fetch', fetchMock);
+      const digest = `sha256:${'c'.repeat(64)}`;
+      // Production starts container services from the image's OCI config, so
+      // the override must land in the image itself. The Procfile write and the
+      // platform env dir hit the real filesystem — use a real workPath.
+      const workPath = mkdtempSync(join(tmpdir(), 'vercel-cnb-test-'));
+      existsSyncMock.mockImplementation((p: string) => p.endsWith('/Gemfile'));
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'buildah' && args.includes('info')) {
+          return fakeChild(
+            JSON.stringify({
+              store: {
+                GraphRoot: '/vercel/.containers/storage',
+                RunRoot: '/run/containers/storage',
+                GraphDriverName: 'overlay',
+                GraphStatus: { 'Backing Filesystem': 'xfs' },
+              },
+            })
+          );
+        }
+        if (cmd === 'buildah' && args.includes('/cnb/lifecycle/creator')) {
+          const reportMount = args
+            .filter((_arg, index) => args[index - 1] === '--volume')
+            .find(arg => arg.endsWith(':/platform-output'));
+          writeFileSync(
+            `${reportMount!.slice(0, -':/platform-output'.length)}/report.toml`,
+            `[image]\ndigest = "${digest}"\n`
+          );
+        }
+        return fakeChild('');
+      });
+
+      try {
+        await build({
+          ...createBuildOptions({
+            buildpack: 'ruby',
+            command: ['bundle', 'exec', 'puma', '-p', '$PORT'],
+          }),
+          workPath,
+          entrypoint: '<detect>',
+          service: { name: 'api' },
+          meta: { buildEnv: { BP_MRI_VERSION: '3.3' } },
+        } as any);
+
+        expect(readFileSync(join(workPath, 'Procfile'), 'utf8')).toBe(
+          `web: bundle exec puma -p '$PORT'\n`
+        );
+
+        // The build env travels via the CNB platform dir, not process env.
+        const creatorArgs = spawnMock.mock.calls.find(
+          ([cmd, args]) =>
+            cmd === 'buildah' &&
+            (args as string[]).includes('/cnb/lifecycle/creator')
+        )?.[1] as string[];
+        const platformEnvMount = creatorArgs
+          .filter((_arg, index) => creatorArgs[index - 1] === '--volume')
+          .find(arg => arg.endsWith(':/platform/env'));
+        expect(platformEnvMount).toBeDefined();
+
+        await build({
+          ...createBuildOptions({
+            buildpack: 'ruby',
+            command: 'bundle exec puma -p $PORT',
+          }),
+          workPath,
+          entrypoint: '<detect>',
+          service: { name: 'api' },
+        } as any);
+        expect(readFileSync(join(workPath, 'Procfile'), 'utf8')).toBe(
+          `web: bundle exec puma -p $PORT\n`
+        );
+      } finally {
+        rmSync(workPath, { recursive: true, force: true });
+      }
     });
   });
 });

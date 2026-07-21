@@ -171,14 +171,39 @@ export interface ServiceDetectionError {
   serviceName?: string;
 }
 
+/**
+ * Builder per runtime in services mode. The map doubles as the set of valid
+ * `runtime` values (`config.runtime in RUNTIME_BUILDERS`). It is consulted
+ * only by services detection — framework-null `api/**` functions resolve
+ * their Lambda builders (e.g. `@vercel/ruby`) through builds-and-routes
+ * detection instead and are unaffected by these entries.
+ *
+ * {@link BUILDPACK_RUNTIMES} map to `@vercel/container`: services for those
+ * languages are always container images built with Cloud Native Buildpacks —
+ * there is no Lambda services path. No per-language builder package exists
+ * or should be created for them (a future `java` entry would also map to
+ * `@vercel/container`).
+ */
 export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
   node: '@vercel/backends',
   python: '@vercel/python',
   go: '@vercel/go',
   rust: '@vercel/rust',
-  ruby: '@vercel/ruby',
+  ruby: '@vercel/container',
   container: '@vercel/container',
 };
+
+/**
+ * Runtimes whose services build the whole service root into a container
+ * image with Cloud Native Buildpacks via `@vercel/container` (builder src is
+ * the `<detect>` sentinel; no entrypoint file is required or resolved).
+ *
+ * Adding a language here requires a matching descriptor in
+ * `@vercel/container`'s buildpack registry (`src/buildpacks/registry.ts`).
+ */
+export const BUILDPACK_RUNTIMES: ReadonlySet<ServiceRuntime> = new Set([
+  'ruby',
+]);
 
 export const RUNTIME_MANIFESTS: Partial<Record<ServiceRuntime, string[]>> = {
   node: ['package.json'],

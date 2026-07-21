@@ -217,9 +217,19 @@ export function inferServiceRuntime(config: {
     return frameworkRuntime;
   }
 
-  // Infer from builder
+  // Infer from builder. Buildpack runtimes (ruby, future java, …) also map
+  // to `@vercel/container` in RUNTIME_BUILDERS, so only the `container`
+  // runtime may claim that builder here — a service declaring
+  // `builder: "@vercel/container"` is a container service, not whichever
+  // buildpack runtime happens to come first in the map.
   if (config.builder) {
     for (const [runtime, builderName] of Object.entries(RUNTIME_BUILDERS)) {
+      if (
+        builderName === RUNTIME_BUILDERS.container &&
+        runtime !== 'container'
+      ) {
+        continue;
+      }
       if (config.builder === builderName) {
         return runtime as ServiceRuntime;
       }

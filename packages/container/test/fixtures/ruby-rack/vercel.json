@@ -1,0 +1,8 @@
+{
+  "services": {
+    "api": {
+      "root": ".",
+      "runtime": "ruby"
+    }
+  }
+}

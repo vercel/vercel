@@ -9,6 +9,31 @@ import { basename, join } from 'node:path';
 /** Verbose tracing for the container builder, gated on `BUILDER_DEBUG` like every other builder. */
 export const DEBUG = Boolean(getPlatformEnv('BUILDER_DEBUG'));
 
+/**
+ * Callbacks the dev orchestrator provides so long-running child output is
+ * routed through the CLI's per-service prefixed logger rather than written to
+ * `process.stderr` directly (which would print unprefixed and interleave with
+ * other services).
+ */
+export interface DevOutput {
+  onStdout?: (data: Buffer) => void;
+  onStderr?: (data: Buffer) => void;
+}
+
+/** Coerce a `command` config value to a string array, or `undefined`. */
+export function normalizeCommand(command: unknown): string[] | undefined {
+  if (typeof command === 'string') {
+    return [command];
+  }
+  if (
+    Array.isArray(command) &&
+    command.every(item => typeof item === 'string')
+  ) {
+    return command;
+  }
+  return undefined;
+}
+
 export function write(line: string): void {
   process.stderr.write(`${line}\n`);
 }
@@ -101,6 +126,7 @@ export const DOCKERFILE_CANDIDATES = [
   'Dockerfile.vercel',
   'Containerfile.vercel',
 ];
+const CONVENTIONAL_DOCKERFILE_CANDIDATES = ['Dockerfile', 'Containerfile'];
 
 /**
  * Discover a Vercel container opt-in marker (`Dockerfile.vercel` /
@@ -108,8 +134,14 @@ export const DOCKERFILE_CANDIDATES = [
  * so they resolve the same Dockerfile when the entrypoint is the `<detect>`
  * sentinel.
  */
-export function findDockerfile(workPath: string): string | undefined {
-  return DOCKERFILE_CANDIDATES.find(name => existsSync(join(workPath, name)));
+export function findDockerfile(
+  workPath: string,
+  includeConventional = false
+): string | undefined {
+  const candidates = includeConventional
+    ? [...DOCKERFILE_CANDIDATES, ...CONVENTIONAL_DOCKERFILE_CANDIDATES]
+    : DOCKERFILE_CANDIDATES;
+  return candidates.find(name => existsSync(join(workPath, name)));
 }
 
 /**
@@ -133,11 +165,18 @@ export interface RunResult {
 export function run(
   cmd: string,
   args: string[],
-  opts: { cwd?: string; input?: string; quiet?: boolean } = {}
+  opts: {
+    cwd?: string;
+    input?: string;
+    quiet?: boolean;
+    env?: NodeJS.ProcessEnv;
+    output?: DevOutput;
+  } = {}
 ): Promise<RunResult> {
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args, {
       cwd: opts.cwd,
+      env: opts.env,
       stdio: [opts.input !== undefined ? 'pipe' : 'ignore', 'pipe', 'pipe'],
     });
 
@@ -148,14 +187,22 @@ export function run(
       const text = chunk.toString();
       stdout += text;
       if (!opts.quiet) {
-        process.stderr.write(text);
+        if (opts.output?.onStdout) {
+          opts.output.onStdout(chunk);
+        } else {
+          process.stderr.write(text);
+        }
       }
     });
     child.stderr?.on('data', (chunk: Buffer) => {
       const text = chunk.toString();
       stderr += text;
       if (!opts.quiet) {
-        process.stderr.write(text);
+        if (opts.output?.onStderr) {
+          opts.output.onStderr(chunk);
+        } else {
+          process.stderr.write(text);
+        }
       }
     });
 

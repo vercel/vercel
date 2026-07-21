@@ -772,6 +772,44 @@ describe('Test `detectBuilders`', () => {
     });
   });
 
+  it('routes the Ruby framework through the container buildpack builder', async () => {
+    const { builders } = await invokeDetectBuildersAndThrow(
+      ['Gemfile', 'config.ru'],
+      null,
+      {
+        projectSettings: { framework: 'ruby' },
+      }
+    );
+
+    expect(builders).toContainEqual({
+      src: '<detect>',
+      use: '@vercel/container',
+      config: {
+        zeroConfig: true,
+        framework: 'ruby',
+      },
+    });
+  });
+
+  it('keeps framework-null api Ruby files on the legacy Ruby builder', async () => {
+    const { builders } = await invokeDetectBuildersAndThrow(
+      ['api/date.rb'],
+      null,
+      {
+        projectSettings: { framework: null },
+      }
+    );
+
+    expect(builders).toContainEqual({
+      src: 'api/date.rb',
+      use: '@vercel/ruby',
+      config: { zeroConfig: true },
+    });
+    expect(builders.some(builder => builder.use === '@vercel/container')).toBe(
+      false
+    );
+  });
+
   it('extend with functions', async () => {
     const pkg = {
       scripts: { build: 'next build' },

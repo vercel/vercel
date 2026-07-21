@@ -8,7 +8,7 @@ import type {
   ServiceDetectionError,
   ServiceRuntime,
 } from './types';
-import { RUNTIME_BUILDERS, STATIC_BUILDERS } from './types';
+import { BUILDPACK_RUNTIMES, RUNTIME_BUILDERS, STATIC_BUILDERS } from './types';
 import {
   getServiceFs,
   resolveEntrypointPath,
@@ -87,7 +87,7 @@ async function detectContainerEntrypoint(
   return undefined;
 }
 
-function normalizeContainerCommand(
+function normalizeCommand(
   command: string | string[] | undefined
 ): string[] | undefined {
   if (command === undefined) {
@@ -151,7 +151,7 @@ async function resolveContainerServiceV2(
   if (!isRoot) {
     builderConfig.workspace = normalizedRoot;
   }
-  const command = normalizeContainerCommand(config.command);
+  const command = normalizeCommand(config.command);
   if (command) {
     builderConfig.command = command;
   }
@@ -358,7 +358,20 @@ export async function resolveConfiguredServiceV2(
   }
 
   const frameworkRuntime = inferRuntimeFromFramework(framework);
-  if (detectedFramework && frameworkRuntime && !entrypointFile) {
+  // Buildpack runtimes build the entire service root into a container image
+  // with Cloud Native Buildpacks: there is no entrypoint file to resolve or
+  // require, and the builder is always `@vercel/container` with the
+  // `<detect>` sentinel as its source.
+  const buildpackRuntime =
+    inferredRuntime && BUILDPACK_RUNTIMES.has(inferredRuntime as ServiceRuntime)
+      ? (inferredRuntime as ServiceRuntime)
+      : undefined;
+  if (
+    detectedFramework &&
+    frameworkRuntime &&
+    !entrypointFile &&
+    !buildpackRuntime
+  ) {
     return {
       error: {
         code: 'MISSING_SERVICE_CONFIG',
@@ -373,7 +386,10 @@ export async function resolveConfiguredServiceV2(
     : undefined;
   let builderUse: string;
   let builderSrc: string;
-  if (framework) {
+  if (buildpackRuntime) {
+    builderUse = '@vercel/container';
+    builderSrc = '<detect>';
+  } else if (framework) {
     builderUse = isNodeBackendFramework(framework)
       ? '@vercel/backends'
       : frameworkDefinition?.useRuntime?.use || '@vercel/static-build';
@@ -428,6 +444,18 @@ export async function resolveConfiguredServiceV2(
   if (framework) {
     builderConfig.framework = framework;
   }
+  const command = buildpackRuntime
+    ? normalizeCommand(config.command)
+    : undefined;
+  if (buildpackRuntime) {
+    builderConfig.buildpack = buildpackRuntime;
+    if (command) {
+      builderConfig.command = command;
+      if (typeof config.command === 'string') {
+        builderConfig.commandShell = true;
+      }
+    }
+  }
   if (config.outputDirectory) {
     builderConfig.outputDirectory = config.outputDirectory;
   }
@@ -448,6 +476,7 @@ export async function resolveConfiguredServiceV2(
       framework,
       runtime,
       entrypoint: entrypointFile,
+      command,
       builder: {
         src: projectRelativeSrc,
         use: builderUse,
