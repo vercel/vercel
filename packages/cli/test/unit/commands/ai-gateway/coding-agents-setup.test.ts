@@ -735,32 +735,50 @@ describe('ai-gateway coding-agents setup', () => {
       expect(keychainLookup()).toContain('security find-generic-password');
     });
 
-    // Keychain-backed shell exports only exist on macOS (no shell rc on Windows).
-    it.skipIf(process.platform === 'win32')(
-      'keeps the secret out of the configs and reads it from the shell',
-      async () => {
-        const secret = 'vck_KeychainSecret321';
-        const plan = await buildSetupPlan([claudeCode], {
-          apiKey: secret,
-          home,
-          useKeychain: true,
-        });
+    it('resolves Claude Code via apiKeyHelper and never touches the shell', async () => {
+      const secret = 'vck_KeychainSecret321';
+      const plan = await buildSetupPlan([claudeCode], {
+        apiKey: secret,
+        home,
+        useKeychain: true,
+      });
 
-        // The env-based agent resolves its var from the Keychain at runtime.
-        const shell = plan.changes.find(c => c.format === 'shell');
-        expect(shell?.next).toContain('security find-generic-password');
-        expect(shell?.next).toContain('export ANTHROPIC_AUTH_TOKEN=');
-        expect(shell?.next).not.toContain(secret);
+      // Claude Code resolves the token in-process from the Keychain — no shell
+      // rc change, so the token can't leak into other processes.
+      expect(plan.changes.some(c => c.format === 'shell')).toBe(false);
 
-        // Claude's token is no longer embedded in settings.json.
-        const claude = plan.changes.find(
-          c => c.label === 'Claude Code settings'
-        );
-        expect(claude?.next).toContain('ANTHROPIC_BASE_URL');
-        expect(claude?.next).not.toContain('ANTHROPIC_AUTH_TOKEN');
-        expect(claude?.next).not.toContain(secret);
-      }
-    );
+      const claude = plan.changes.find(c => c.label === 'Claude Code settings');
+      const settings = JSON.parse(claude?.next ?? '{}');
+      expect(settings.env.ANTHROPIC_BASE_URL).toBe(
+        'https://ai-gateway.vercel.sh'
+      );
+      expect(settings.apiKeyHelper).toContain('security find-generic-password');
+      // Both higher-precedence env vars are emptied so the helper always wins.
+      expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe('');
+      expect(settings.env.ANTHROPIC_API_KEY).toBe('');
+      // The secret itself never lands in the config — only the Keychain lookup.
+      expect(claude?.next).not.toContain(secret);
+    });
+
+    it('overwrites a pre-existing apiKeyHelper in keychain mode', async () => {
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      writeFileSync(
+        claudeSettingsPath(),
+        JSON.stringify({ apiKeyHelper: '/usr/local/bin/my-own-helper.sh' }),
+        'utf8'
+      );
+      const plan = await buildSetupPlan([claudeCode], {
+        apiKey: 'vck_KeychainSecret654',
+        home,
+        useKeychain: true,
+      });
+
+      const claude = plan.changes.find(c => c.label === 'Claude Code settings');
+      expect(claude?.status).toBe('update');
+      const settings = JSON.parse(claude?.next ?? '{}');
+      expect(settings.apiKeyHelper).toContain('security find-generic-password');
+      expect(settings.apiKeyHelper).not.toContain('my-own-helper');
+    });
 
     it('embeds the key directly when keychain is off', async () => {
       const secret = 'vck_PlainSecret654';
@@ -2625,13 +2643,19 @@ describe('ai-gateway coding-agents setup', () => {
         );
 
         // A single shared shell block. Codex and OpenCode both want
-        // AI_GATEWAY_API_KEY — it's exported once (deduped) — and Claude Code
-        // contributes ANTHROPIC_AUTH_TOKEN.
+        // AI_GATEWAY_API_KEY — it's exported once (deduped). Claude Code does
+        // NOT touch the shell in keychain mode; it resolves via apiKeyHelper.
         const shells = plan.changes.filter(c => c.format === 'shell');
         expect(shells).toHaveLength(1);
         const gateway = shells[0].next?.match(/AI_GATEWAY_API_KEY/g) ?? [];
         expect(gateway).toHaveLength(1);
-        expect(shells[0].next).toContain('ANTHROPIC_AUTH_TOKEN');
+        expect(shells[0].next).not.toContain('ANTHROPIC_AUTH_TOKEN');
+        const claude = plan.changes.find(
+          c => c.label === 'Claude Code settings'
+        );
+        expect(JSON.parse(claude?.next ?? '{}').apiKeyHelper).toContain(
+          'security find-generic-password'
+        );
       }
     );
 

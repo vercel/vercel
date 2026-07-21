@@ -38,8 +38,17 @@ export function storeKeyInKeychain(key: string): boolean {
   }
 }
 
+/**
+ * The bare lookup command, with no shell substitution wrapping. Suitable as a
+ * value that is itself run by a shell — e.g. Claude Code's `apiKeyHelper`, which
+ * executes the string through `/bin/sh` and reads the key from its stdout.
+ */
+export function keychainLookupCommand(): string {
+  return `${SECURITY_BIN} find-generic-password -s '${KEYCHAIN_SERVICE}' -a '${KEYCHAIN_ACCOUNT}' -w 2>/dev/null`;
+}
+
 export function keychainLookup(opts: { fish?: boolean } = {}): string {
-  const cmd = `${SECURITY_BIN} find-generic-password -s '${KEYCHAIN_SERVICE}' -a '${KEYCHAIN_ACCOUNT}' -w 2>/dev/null`;
+  const cmd = keychainLookupCommand();
   return opts.fish ? `(${cmd})` : `$(${cmd})`;
 }
 
