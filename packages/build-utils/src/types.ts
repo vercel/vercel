@@ -905,6 +905,19 @@ export interface Chain {
   headers: Record<string, string>;
 }
 
+/**
+ * Configuration for a Partial Prerendering (PPR) route.
+ */
+export interface PartialPrerenderConfig {
+  /**
+   * `true` when the page had no dynamic components detected at build time,
+   * hinting that the prerendered shell is fully static. Such pages should be
+   * opted out of async-shell-miss handling at the CDN so they keep MISS
+   * request collapsing and single invocations.
+   */
+  staticHint?: boolean;
+}
+
 interface TriggerEventBase {
   /** Name of the queue topic to consume from (REQUIRED) */
   topic: string;

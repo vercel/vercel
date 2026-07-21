@@ -3,6 +3,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { describe, expect, it, vi } from 'vitest';
 import { Lambda } from '../src/lambda';
+import { Prerender } from '../src/prerender';
 import type {
   DeserializeBuildOutputConfig,
   DeserializeBuildOutputResult,
@@ -75,12 +76,17 @@ async function writeNodeFunction(outputDir: string, outputPath: string) {
   );
 }
 
-async function writePrerenderConfig(outputDir: string, outputPath: string) {
+async function writePrerenderConfig(
+  outputDir: string,
+  outputPath: string,
+  config: Record<string, unknown> = {}
+) {
   await fs.outputJSON(
     join(outputDir, 'functions', `${outputPath}.prerender-config.json`),
     {
       expiration: 60,
       fallback: null,
+      ...config,
     }
   );
 }
@@ -222,6 +228,57 @@ describe('deserializeBuildOutput()', () => {
       );
       expect(result.meta).toBeUndefined();
       expect(result.deploymentId).toBeUndefined();
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it('round-trips partialPrerenderConfig through serialization', async () => {
+    const fixture = await createOutputFixture();
+
+    try {
+      await writeNodeFunction(fixture.outputDir, 'api/ppr-static');
+      await writeNodeFunction(fixture.outputDir, 'api/ppr-plain');
+
+      // Serialize the same way the CLI's `write-build-result.ts` does: the
+      // `Prerender` instance is spread into `.prerender-config.json`.
+      const prerender = new Prerender({
+        expiration: 60,
+        fallback: null,
+        bypassToken: 'some-long-bypass-token-to-make-it-work',
+        partialPrerenderConfig: { staticHint: true },
+      });
+      await writePrerenderConfig(fixture.outputDir, 'api/ppr-static', {
+        ...prerender,
+        lambda: undefined,
+        fallback: null,
+      });
+      await writePrerenderConfig(fixture.outputDir, 'api/ppr-plain');
+
+      const result = await deserializeBuildOutput<TestConfig>({
+        outputDir: fixture.outputDir,
+        repoRootPath: fixture.repoRootPath,
+        deserializeLambda: async () => createLambda('noop.handler'),
+        groupLambdas: async () => ({}),
+      });
+
+      const staticOutput =
+        result.output[getOutputKey(result.output, 'api/ppr-static')];
+      expect(staticOutput.type).toBe('Prerender');
+      if (staticOutput.type !== 'Prerender') {
+        throw new Error('Expected prerender output');
+      }
+      expect(staticOutput.partialPrerenderConfig).toEqual({
+        staticHint: true,
+      });
+
+      const plainOutput =
+        result.output[getOutputKey(result.output, 'api/ppr-plain')];
+      expect(plainOutput.type).toBe('Prerender');
+      if (plainOutput.type !== 'Prerender') {
+        throw new Error('Expected prerender output');
+      }
+      expect(plainOutput.partialPrerenderConfig).toBeUndefined();
     } finally {
       await fixture.cleanup();
     }

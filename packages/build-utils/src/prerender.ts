@@ -1,4 +1,4 @@
-import type { File, HasField, Chain } from './types';
+import type { File, HasField, Chain, PartialPrerenderConfig } from './types';
 import { Lambda } from './lambda';
 
 function assertOptionalBoolean(
@@ -34,6 +34,7 @@ interface PrerenderOptions {
   hasFallback?: boolean;
   htmlSize?: number;
   isDynamicRoute?: boolean;
+  partialPrerenderConfig?: PartialPrerenderConfig;
 }
 
 export class Prerender {
@@ -90,6 +91,13 @@ export class Prerender {
    * rather than a concrete prerender.
    */
   public isDynamicRoute?: boolean;
+  /**
+   * Present when this route uses Partial Prerendering (PPR). `staticHint:
+   * true` means no dynamic components were detected at build time, so the
+   * page should be opted out of async-shell-miss handling at the CDN.
+   * `undefined` when the builder did not provide the signal.
+   */
+  public partialPrerenderConfig?: PartialPrerenderConfig;
 
   constructor({
     expiration,
@@ -113,6 +121,7 @@ export class Prerender {
     hasFallback,
     htmlSize,
     isDynamicRoute,
+    partialPrerenderConfig,
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
@@ -315,6 +324,25 @@ export class Prerender {
       throw new Error(
         `The \`exposeErrBody\` argument for \`Prerender\` must be a boolean.`
       );
+    }
+
+    if (partialPrerenderConfig !== undefined) {
+      if (
+        partialPrerenderConfig === null ||
+        typeof partialPrerenderConfig !== 'object' ||
+        Array.isArray(partialPrerenderConfig)
+      ) {
+        throw new Error(
+          'The `partialPrerenderConfig` argument for `Prerender` must be an object.'
+        );
+      }
+
+      assertOptionalBoolean(
+        partialPrerenderConfig.staticHint,
+        'partialPrerenderConfig.staticHint'
+      );
+
+      this.partialPrerenderConfig = partialPrerenderConfig;
     }
 
     if (partialFallback === true) {
