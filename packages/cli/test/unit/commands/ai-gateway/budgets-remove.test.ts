@@ -37,7 +37,7 @@ describe('ai-gateway budgets remove', () => {
 
     const exitCodePromise = aiGateway(client);
 
-    await expect(client.stderr).toOutput('Removed the team budget');
+    await expect(client.stderr).toOutput('team budget');
     expect(await exitCodePromise).toBe(0);
     expect(getQuery()).toMatchObject({ scopeType: 'team' });
   });
@@ -71,7 +71,7 @@ describe('ai-gateway budgets remove', () => {
     useUser();
     useRemoveBudget();
     client.config.currentTeam = team.id;
-    client.stdin.isTTY = false;
+    client.nonInteractive = true;
     client.setArgv('ai-gateway', 'budgets', 'remove', 'team');
 
     const exitCodePromise = aiGateway(client);

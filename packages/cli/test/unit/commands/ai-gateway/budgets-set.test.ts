@@ -61,7 +61,7 @@ describe('ai-gateway budgets set', () => {
 
     const exitCodePromise = aiGateway(client);
 
-    await expect(client.stderr).toOutput('Budget of $500');
+    await expect(client.stderr).toOutput('Set budget');
     expect(await exitCodePromise).toBe(0);
     expect(getBody()).toMatchObject({
       scopeType: 'team',

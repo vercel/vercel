@@ -4,7 +4,7 @@ import { removeBudget, parseBudgetScope } from '../../util/ai-gateway/budgets';
 import { ensureTeam } from '../../util/ai-gateway/ensure-team';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import { ProjectNotFound } from '../../util/errors-ts';
-import stamp from '../../util/output/stamp';
+import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import output from '../../output-manager';
 import { AiGatewayBudgetsRemoveTelemetryClient } from '../../util/telemetry/commands/ai-gateway/budgets-remove';
 import { budgetsRemoveSubcommand } from './command';
@@ -74,7 +74,7 @@ export default async function remove(client: Client, argv: string[]) {
       : `the budget for ${chalk.bold(scope.name)}`;
 
   if (!yes) {
-    if (!client.stdin.isTTY) {
+    if (client.nonInteractive) {
       output.error('To remove in non-interactive mode, re-run with --yes.');
       return 1;
     }
@@ -85,8 +85,7 @@ export default async function remove(client: Client, argv: string[]) {
     }
   }
 
-  const removeStamp = stamp();
-  output.spinner('Removing budget');
+  output.spinner('Removing budget…');
 
   try {
     await removeBudget(client, scope.scopeType, projectId);
@@ -104,7 +103,9 @@ export default async function remove(client: Client, argv: string[]) {
         )}\n`
       );
     } else {
-      output.success(`Removed ${target} ${removeStamp()}`);
+      const removedValue =
+        scope.scopeType === 'team' ? 'team budget' : `budget for ${scope.name}`;
+      printAlignedLabel('Removed', removedValue, { gutter: '✓' });
     }
     return 0;
   } catch (err: unknown) {

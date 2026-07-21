@@ -1,4 +1,3 @@
-import chalk from 'chalk';
 import type Client from '../../util/client';
 import {
   setBudget,
@@ -8,7 +7,7 @@ import {
 import { ensureTeam } from '../../util/ai-gateway/ensure-team';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import { ProjectNotFound } from '../../util/errors-ts';
-import stamp from '../../util/output/stamp';
+import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import output from '../../output-manager';
 import { AiGatewayBudgetsSetTelemetryClient } from '../../util/telemetry/commands/ai-gateway/budgets-set';
 import { budgetsSetSubcommand } from './command';
@@ -97,8 +96,7 @@ export default async function set(client: Client, argv: string[]) {
     projectId = resolved.id;
   }
 
-  const setStamp = stamp();
-  output.spinner('Setting budget');
+  output.spinner('Setting budget…');
 
   try {
     const budget = await setBudget(client, {
@@ -116,11 +114,11 @@ export default async function set(client: Client, argv: string[]) {
     if (asJson) {
       client.stdout.write(`${JSON.stringify(budget, null, 2)}\n`);
     } else {
-      output.success(
-        `Budget of $${budget.limitAmount} (${budget.refreshPeriod}) set for ${chalk.bold(
-          budget.scopeId
-        )} ${setStamp()}`
-      );
+      const scopeLabel =
+        scope.scopeType === 'project' ? `project ${scope.name}` : 'team';
+      printAlignedLabel('Set budget', scopeLabel, { gutter: '✓' });
+      printAlignedLabel('Limit', `$${budget.limitAmount}`);
+      printAlignedLabel('Refresh', budget.refreshPeriod);
     }
 
     return 0;

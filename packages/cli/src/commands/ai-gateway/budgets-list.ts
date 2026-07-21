@@ -3,7 +3,6 @@ import table from '../../util/output/table';
 import type Client from '../../util/client';
 import { listBudgets, type Budget } from '../../util/ai-gateway/budgets';
 import { ensureTeam } from '../../util/ai-gateway/ensure-team';
-import stamp from '../../util/output/stamp';
 import output from '../../output-manager';
 import { AiGatewayBudgetsListTelemetryClient } from '../../util/telemetry/commands/ai-gateway/budgets-list';
 import { budgetsListSubcommand } from './command';
@@ -46,8 +45,7 @@ export default async function list(client: Client, argv: string[]) {
     return 1;
   }
 
-  const lsStamp = stamp();
-  output.spinner('Fetching budgets');
+  output.spinner('Fetching budgets…');
 
   let budgets: Budget[];
   try {
@@ -75,7 +73,7 @@ export default async function list(client: Client, argv: string[]) {
     return 0;
   }
 
-  output.log(`Budgets ${lsStamp()}`);
+  output.log('Budgets');
   client.stdout.write(printBudgetsTable(budgets));
   return 0;
 }
