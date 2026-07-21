@@ -488,7 +488,7 @@ export const attachSubcommand = {
       argument: 'ENV',
       deprecated: false,
       description:
-        'Environments to enable. Repeatable and comma-separated (e.g. -e production -e preview, or -e production,preview). Defaults to all environments.',
+        'Environments to enable by system name, custom slug, or custom ID. Repeatable and comma-separated. Defaults to production, preview, and development.',
     },
     {
       ...projectOption,
@@ -529,12 +529,20 @@ export const attachSubcommand = {
   ],
   examples: [
     {
-      name: 'Attach the current project to a connector for all environments',
+      name: 'Attach the current project for all system environments',
       value: `${packageName} connect attach scl_abc123`,
     },
     {
       name: 'Restrict to specific environments',
       value: `${packageName} connect attach scl_abc123 -e production -e preview`,
+    },
+    {
+      name: 'Attach to a custom environment by slug',
+      value: `${packageName} connect attach scl_abc123 -e qa`,
+    },
+    {
+      name: 'Attach to a custom environment by stable ID',
+      value: `${packageName} connect attach scl_abc123 -e env_qa123`,
     },
     {
       name: 'Attach a different project by name',

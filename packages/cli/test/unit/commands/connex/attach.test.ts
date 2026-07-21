@@ -30,7 +30,20 @@ describe('connex attach', () => {
     useUser();
     team = useTeam('team_test');
     client.config.currentTeam = team.id;
-    useProject({ ...defaultProject, id: PROJECT_ID, name: PROJECT_NAME });
+    useProject({
+      ...defaultProject,
+      id: PROJECT_ID,
+      name: PROJECT_NAME,
+      customEnvironments: [
+        {
+          id: 'env_qa123',
+          slug: 'qa',
+          type: 'preview',
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      ],
+    });
   });
 
   it('errors when no client argument is provided', async () => {
@@ -67,6 +80,179 @@ describe('connex attach', () => {
     const stderr = client.stderr.getFullOutput();
     expect(stderr).toContain('Invalid environment');
     expect(stderr).toContain('production, preview, development');
+    expect(stderr).toContain('custom environment slug or ID');
+  });
+
+  it('resolves a project custom environment slug to its stable ID', async () => {
+    await setupLinkedProject(team);
+    let postBody: { environments?: string[] } | undefined;
+
+    client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+      res.json({ id: 'scl_abc123', uid: 'slack/my-bot' });
+    });
+    client.scenario.get(
+      '/v1/connect/connectors/:clientId/projects/:projectId',
+      (_req, res) => {
+        res.statusCode = 404;
+        res.json({ error: { code: 'not_found' } });
+      }
+    );
+    client.scenario.post(
+      '/v1/connect/connectors/:clientId/projects/:projectId',
+      (req, res) => {
+        postBody = req.body;
+        res.json({});
+      }
+    );
+
+    client.setArgv(
+      'connect',
+      'attach',
+      'scl_abc123',
+      '-e',
+      'production,qa',
+      '--yes'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(postBody?.environments).toEqual(['production', 'env_qa123']);
+  });
+
+  it('accepts a stable custom environment ID belonging to the project', async () => {
+    await setupLinkedProject(team);
+    let postBody: { environments?: string[] } | undefined;
+
+    client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+      res.json({ id: 'scl_abc123', uid: 'slack/my-bot' });
+    });
+    client.scenario.get(
+      '/v1/connect/connectors/:clientId/projects/:projectId',
+      (_req, res) => {
+        res.statusCode = 404;
+        res.json({ error: { code: 'not_found' } });
+      }
+    );
+    client.scenario.post(
+      '/v1/connect/connectors/:clientId/projects/:projectId',
+      (req, res) => {
+        postBody = req.body;
+        res.json({});
+      }
+    );
+
+    client.setArgv(
+      'connect',
+      'attach',
+      'scl_abc123',
+      '-e',
+      'env_qa123',
+      '--yes'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(postBody?.environments).toEqual(['env_qa123']);
+  });
+
+  it('deduplicates built-in names, custom slugs, and their stable IDs', async () => {
+    await setupLinkedProject(team);
+    let postBody: { environments?: string[] } | undefined;
+
+    client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+      res.json({ id: 'scl_abc123', uid: 'slack/my-bot' });
+    });
+    client.scenario.get(
+      '/v1/connect/connectors/:clientId/projects/:projectId',
+      (_req, res) => {
+        res.statusCode = 404;
+        res.json({ error: { code: 'not_found' } });
+      }
+    );
+    client.scenario.post(
+      '/v1/connect/connectors/:clientId/projects/:projectId',
+      (req, res) => {
+        postBody = req.body;
+        res.json({});
+      }
+    );
+
+    client.setArgv(
+      'connect',
+      'attach',
+      'scl_abc123',
+      '-e',
+      'production,qa',
+      '-e',
+      'env_qa123,production',
+      '--yes'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(postBody?.environments).toEqual(['production', 'env_qa123']);
+  });
+
+  it('resolves a custom environment for an explicit --project', async () => {
+    client.cwd = setupTmpDir();
+    let postProjectId = '';
+    let postBody: { environments?: string[] } | undefined;
+
+    client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+      res.json({ id: 'scl_abc123', uid: 'slack/my-bot' });
+    });
+    client.scenario.get(
+      '/v1/connect/connectors/:clientId/projects/:projectId',
+      (_req, res) => {
+        res.statusCode = 404;
+        res.json({ error: { code: 'not_found' } });
+      }
+    );
+    client.scenario.post(
+      '/v1/connect/connectors/:clientId/projects/:projectId',
+      (req, res) => {
+        postProjectId = req.params.projectId;
+        postBody = req.body;
+        res.json({});
+      }
+    );
+
+    client.setArgv(
+      'connect',
+      'attach',
+      'scl_abc123',
+      '--project',
+      PROJECT_NAME,
+      '-e',
+      'qa',
+      '--yes'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(postProjectId).toBe(PROJECT_ID);
+    expect(postBody?.environments).toEqual(['env_qa123']);
+  });
+
+  it('rejects a custom environment ID belonging to another project', async () => {
+    await setupLinkedProject(team);
+    client.setArgv(
+      'connect',
+      'attach',
+      'scl_abc123',
+      '-e',
+      'env_other_project',
+      '--yes'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain('Invalid environment');
   });
 
   it('errors when no project is linked and --project is not provided', async () => {

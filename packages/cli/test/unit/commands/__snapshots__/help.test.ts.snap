@@ -759,8 +759,8 @@ exports[`help command > connex help output snapshots > connex attach subcommand 
 
   Options:
 
-  -e,  --environment <ENV>        Environments to enable. Repeatable and comma-separated (e.g. -e production -e preview, or
-                                  -e production,preview). Defaults to all environments.                                    
+  -e,  --environment <ENV>        Environments to enable by system name, custom slug, or custom ID. Repeatable and         
+                                  comma-separated. Defaults to production, preview, and development.                       
   -F,  --format <FORMAT>          Specify the output format (json)                                                         
   -p,  --project <NAME_OR_ID>     Project name or ID (default: current linked project)                                     
        --trigger-branch <BRANCH>  Target a specific git branch for the trigger destination (default: production). Only     
@@ -788,13 +788,21 @@ exports[`help command > connex help output snapshots > connex attach subcommand 
 
   Examples:
 
-  - Attach the current project to a connector for all environments
+  - Attach the current project for all system environments
 
     $ vercel connect attach scl_abc123
 
   - Restrict to specific environments
 
     $ vercel connect attach scl_abc123 -e production -e preview
+
+  - Attach to a custom environment by slug
+
+    $ vercel connect attach scl_abc123 -e qa
+
+  - Attach to a custom environment by stable ID
+
+    $ vercel connect attach scl_abc123 -e env_qa123
 
   - Attach a different project by name
 

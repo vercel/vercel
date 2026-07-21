@@ -8,6 +8,10 @@ import { getLinkedProject } from '../../util/projects/link';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import { ProjectNotFound } from '../../util/errors-ts';
 import { envTargetChoices, isValidEnvTarget } from '../../util/env/env-target';
+import {
+  getCustomEnvironments,
+  pickCustomEnvironment,
+} from '../../util/target/get-custom-environments';
 import { normalizeRepeatableStringFilters } from '../../util/command-validation';
 import { sanitizeForTerminal } from '../../util/connex/sanitize';
 import { packageName } from '../../util/pkg-name';
@@ -25,6 +29,49 @@ import type {
 } from './types';
 
 const ALL_ENVS = ['production', 'preview', 'development'] as const;
+
+async function resolveRequestedEnvironments(
+  client: Client,
+  projectId: string,
+  projectName: string,
+  requestedEnvironments: string[]
+): Promise<string[] | undefined> {
+  if (requestedEnvironments.length === 0) {
+    return [...ALL_ENVS];
+  }
+
+  const customEnvironmentInputs = requestedEnvironments.filter(
+    environment => !isValidEnvTarget(environment)
+  );
+  const customEnvironments =
+    customEnvironmentInputs.length > 0
+      ? await getCustomEnvironments(client, projectId)
+      : [];
+  const resolvedEnvironments = new Set<string>();
+
+  for (const environment of requestedEnvironments) {
+    if (isValidEnvTarget(environment)) {
+      resolvedEnvironments.add(environment);
+      continue;
+    }
+
+    const customEnvironment = pickCustomEnvironment(
+      customEnvironments,
+      environment
+    );
+    if (!customEnvironment) {
+      output.error(
+        `Invalid environment ${chalk.bold(environment)} for project ${chalk.bold(projectName)}. Use ${envTargetChoices
+          .map(choice => choice.value)
+          .join(', ')}, or a custom environment slug or ID from that project.`
+      );
+      return undefined;
+    }
+    resolvedEnvironments.add(customEnvironment.id);
+  }
+
+  return [...resolvedEnvironments];
+}
 
 function envSetsEqual(a: readonly string[], b: readonly string[]): boolean {
   if (a.length !== b.length) {
@@ -79,22 +126,11 @@ export async function attach(
     return 1;
   }
 
-  // Validate environments. Empty → all three.
+  // Custom environment slugs are project-scoped, so resolve the project before
+  // validating these values. An omitted option still means all three built-ins.
   const requestedEnvsRaw = normalizeRepeatableStringFilters(
     flags['--environment']
   );
-  for (const env of requestedEnvsRaw) {
-    if (!isValidEnvTarget(env)) {
-      output.error(
-        `Invalid environment ${chalk.bold(env)}. Allowed values: ${envTargetChoices
-          .map(c => c.value)
-          .join(', ')}.`
-      );
-      return 1;
-    }
-  }
-  const environments =
-    requestedEnvsRaw.length > 0 ? requestedEnvsRaw : [...ALL_ENVS];
 
   // Resolve project — explicit --project takes priority over the linked one.
   let projectId: string;
@@ -143,6 +179,22 @@ export async function attach(
     }
     projectId = linked.project.id;
     projectName = sanitizeForTerminal(linked.project.name);
+  }
+
+  let environments: string[] | undefined;
+  try {
+    environments = await resolveRequestedEnvironments(
+      client,
+      projectId,
+      projectName,
+      requestedEnvsRaw
+    );
+  } catch (err: unknown) {
+    printError(err);
+    return 1;
+  }
+  if (!environments) {
+    return 1;
   }
 
   // Resolve client identity → canonical id + display name. The base GET
