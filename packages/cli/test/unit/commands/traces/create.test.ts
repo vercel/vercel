@@ -8,7 +8,6 @@ import traces from '../../../../src/commands/traces';
 import { useUser } from '../../../mocks/user';
 import { useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
-import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 
 vi.mock('child_process', () => ({
   spawn: vi.fn(),
@@ -86,15 +85,8 @@ function installSpawnMock(config: SpawnResponse = {}) {
   });
 }
 
-function mockSessionEndpoint(captured?: {
-  body?: unknown;
-  query?: Record<string, unknown>;
-}) {
-  client.scenario.post('/v1/projects/traces/session', (req, res) => {
-    if (captured) {
-      captured.body = req.body;
-      captured.query = req.query;
-    }
+function mockSessionEndpoint() {
+  client.scenario.post('/v1/projects/traces/session', (_req, res) => {
     res.json({ token: TRACE_TOKEN, expiresAt: Date.now() + 5 * 60 * 1000 });
   });
 }
@@ -204,112 +196,6 @@ describe('traces create', () => {
       { key: 'option:protection-bypass', value: '[REDACTED]' },
       { key: 'flag:trace', value: 'TRUE' },
     ]);
-  });
-
-  it('targets an explicit deployment from an unlinked directory', async () => {
-    client.cwd = setupTmpDir();
-    useUser({ id: USER_ID });
-    useTeams('team_dummy');
-    client.authConfig.userId = USER_ID;
-    mockDeploymentLookup();
-    const captured: {
-      body?: unknown;
-      query?: Record<string, unknown>;
-    } = {};
-    mockSessionEndpoint(captured);
-    installSpawnMock();
-
-    client.setArgv(
-      'traces',
-      'create',
-      '/api/hello',
-      '--deployment',
-      `https://${PREVIEW_ALIAS}`,
-      '--protection-bypass',
-      'test-secret'
-    );
-    const exitCode = await traces(client);
-
-    expect(exitCode).toEqual(0);
-    expect(spawnMock).toHaveBeenCalledTimes(1);
-    const [, args] = spawnMock.mock.calls[0];
-    expect(args).toEqual(
-      expect.arrayContaining(['--url', `https://${PREVIEW_ALIAS}/api/hello`])
-    );
-    expect(captured.body).toEqual({
-      projectId: 'static',
-      hostname: PREVIEW_ALIAS,
-    });
-    expect(captured.query?.teamId).toBe('team_dummy');
-  });
-
-  it('traces against the explicit deployment project, not the linked project', async () => {
-    await setupLinkedProject();
-    client.scenario.get('/v13/deployments/:host', (_req, res) => {
-      res.json({
-        id: 'dpl_other',
-        url: 'other-app.vercel.app',
-        target: null,
-        ownerId: 'team_other',
-        projectId: 'other-project',
-      });
-    });
-    const captured: {
-      body?: unknown;
-      query?: Record<string, unknown>;
-    } = {};
-    mockSessionEndpoint(captured);
-    installSpawnMock();
-
-    client.setArgv(
-      'traces',
-      'create',
-      '/api/hello',
-      '--deployment',
-      'https://other-app.vercel.app',
-      '--protection-bypass',
-      'test-secret'
-    );
-    const exitCode = await traces(client);
-
-    expect(exitCode).toEqual(0);
-    expect(captured.body).toEqual({
-      projectId: 'other-project',
-      hostname: 'other-app.vercel.app',
-    });
-    expect(captured.query?.teamId).toBe('team_other');
-  });
-
-  it('accepts global flags before traces create', async () => {
-    client.cwd = setupTmpDir();
-    useUser({ id: USER_ID });
-    useTeams('team_dummy');
-    client.config.currentTeam = 'team_dummy';
-    client.authConfig.userId = USER_ID;
-    mockDeploymentLookup();
-    mockSessionEndpoint();
-    installSpawnMock();
-
-    client.setArgv(
-      '--scope',
-      'my-team',
-      'traces',
-      'create',
-      '/api/hello',
-      '--deployment',
-      `https://${PREVIEW_ALIAS}`,
-      '--protection-bypass',
-      'test-secret'
-    );
-    const exitCode = await traces(client);
-
-    expect(exitCode).toEqual(0);
-    const [, args] = spawnMock.mock.calls[0];
-    expect(args).toEqual(
-      expect.arrayContaining(['--url', `https://${PREVIEW_ALIAS}/api/hello`])
-    );
-    expect(args).not.toContain('--scope');
-    expect(args).not.toContain('my-team');
   });
 
   it('emits a JSON envelope with --json', async () => {

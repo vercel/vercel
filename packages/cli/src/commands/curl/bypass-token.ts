@@ -92,11 +92,8 @@ export function getAutomationBypassToken(
 
 export async function getOrCreateDeploymentProtectionToken(
   client: Client,
-  { project, org }: ProjectLinked,
-  options: { createIfMissing?: boolean } = {}
-): Promise<string | null> {
-  const { createIfMissing = true } = options;
-
+  { project, org }: ProjectLinked
+): Promise<string> {
   if (process.env.VERCEL_AUTOMATION_BYPASS_SECRET) {
     output.debug('Using protection bypass secret from environment variable');
     return process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
@@ -114,17 +111,6 @@ export async function getOrCreateDeploymentProtectionToken(
       return protectionBypass;
     }
   }
-
-  // Creating a secret is a remote mutation on the project. Callers targeting
-  // a project other than the one linked to the current directory reuse
-  // existing secrets only.
-  if (!createIfMissing) {
-    output.debug(
-      `No existing automation bypass secret for project ${project.id}; not creating one for a project that is not linked here`
-    );
-    return null;
-  }
-
   const token = await createDeploymentProtectionToken(
     client,
     project.id,

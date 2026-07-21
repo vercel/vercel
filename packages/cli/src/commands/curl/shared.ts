@@ -6,6 +6,7 @@ import { ensureLink } from '../../util/link/ensure-link';
 import getScope from '../../util/get-scope';
 import { getOrCreateDeploymentProtectionToken } from './bypass-token';
 import { getLinkedProject } from '../../util/projects/link';
+import { getDeploymentUrlById } from './deployment-url';
 import toHost from '../../util/to-host';
 import getTeams from '../../util/teams/get-teams';
 import type {
@@ -21,11 +22,6 @@ import { getCommandName } from '../../util/pkg-name';
 import type { Command } from '../help';
 import type arg from 'arg';
 import getDeployment from '../../util/get-deployment';
-import { getDeploymentUrlById } from './deployment-url';
-import {
-  GLOBAL_CLI_FLAG_NAMES,
-  globalCliFlagTakesValue,
-} from '../../util/arg-common';
 
 export interface DeploymentUrlOptions {
   deploymentFlag?: string;
@@ -65,48 +61,9 @@ function orgFromOwner(id: string, slug = id): ProjectLinked['org'] {
   return { type: id.startsWith('team_') ? 'team' : 'user', id, slug };
 }
 
-async function ensureLinkedProject(
-  client: Client,
-  commandName: string,
-  autoConfirm?: boolean
-): Promise<ProjectLinked | number> {
-  let ensuredLink;
-  try {
-    ensuredLink = await ensureLink(commandName, client, client.cwd, {
-      autoConfirm,
-    });
-  } catch (err: unknown) {
-    if (isErrnoException(err) && err.code === 'NOT_AUTHORIZED') {
-      output.error(err.message);
-      return 1;
-    }
-    throw err;
-  }
-
-  if (typeof ensuredLink === 'number') {
-    return ensuredLink;
-  }
-
-  const linkedProject = await getLinkedProject(client, { cwd: client.cwd });
-  if (linkedProject.status !== 'linked') {
-    output.error('This command requires a linked project. Please run:');
-    output.print('  vercel link');
-    return 1;
-  }
-
-  return linkedProject;
-}
-
 const VC_STRING_FLAGS = new Set(['--deployment', '--protection-bypass']);
+const VC_IGNORED_STRING_FLAGS = new Set(['--scope', '--team']);
 const VC_BOOLEAN_FLAGS = new Set(['--yes', '--help', '--trace', '--json']);
-// `--version` is a real curl option (print version and exit) and the root CLI
-// already handles a pre-command `--version` itself, so it is never stripped
-// from the tool args.
-const VC_GLOBAL_LONG_FLAGS = new Set(
-  [...GLOBAL_CLI_FLAG_NAMES].filter(
-    name => name.startsWith('--') && name !== '--version'
-  )
-);
 
 function flagName(arg: string): string {
   const eqIdx = arg.indexOf('=');
@@ -124,33 +81,23 @@ function flagValue(args: string[], index: number): string | undefined {
   return next && !next.startsWith('-') ? next : undefined;
 }
 
-// Help and version requests must reach parseCurlLikeArgs (via the
-// command-token-not-found fallback) instead of being skipped, so
-// `vercel --help curl` still prints help rather than running the command.
-const PRE_COMMAND_KEEP_FLAGS = new Set(['--help', '-h', '--version', '-v']);
+function getCurlLikeArgs(rawArgs: string[], commandName: string): string[] {
+  if (rawArgs[0] === commandName) {
+    return rawArgs.slice(1);
+  }
 
-export function getArgsAfterCommand(
-  rawArgs: string[],
-  commandName: string
-): string[] {
+  // The root CLI permits --scope/--team before the command token. Skip only
+  // those known prefixes; other global-flag interactions are outside this
+  // command's parser and curl's short flags must remain untouched.
   let commandIndex = 0;
-
-  // Before the command token every flag belongs to the root CLI, so short
-  // forms (-t, -S, ...) are skipped too. After the command token only long
-  // globals are stripped, since short flags there are tool flags (curl -d).
   while (commandIndex < rawArgs.length) {
     const arg = rawArgs[commandIndex];
-    const name = flagName(arg);
-    if (!GLOBAL_CLI_FLAG_NAMES.has(name) || PRE_COMMAND_KEEP_FLAGS.has(name)) {
+    if (!VC_IGNORED_STRING_FLAGS.has(flagName(arg))) {
       break;
     }
 
     commandIndex++;
-    if (
-      !arg.includes('=') &&
-      globalCliFlagTakesValue(name) &&
-      commandIndex < rawArgs.length
-    ) {
+    if (!arg.includes('=') && commandIndex < rawArgs.length) {
       commandIndex++;
     }
   }
@@ -183,7 +130,7 @@ export function parseCurlLikeArgs(
     json: false,
     toolFlags: [] as string[],
   };
-  const args = getArgsAfterCommand(rawArgs, commandName);
+  const args = getCurlLikeArgs(rawArgs, commandName);
   const separatorIndex = args.indexOf('--');
   const beforeSeparator =
     separatorIndex === -1 ? args : args.slice(0, separatorIndex);
@@ -207,6 +154,16 @@ export function parseCurlLikeArgs(
       continue;
     }
 
+    // These flags are parsed and applied by the root CLI. Consume them here
+    // so they do not leak into the underlying curl invocation.
+    if (VC_IGNORED_STRING_FLAGS.has(name)) {
+      const value = flagValue(beforeSeparator, i);
+      if (!arg.includes('=') && value !== undefined) {
+        i++;
+      }
+      continue;
+    }
+
     if (VC_BOOLEAN_FLAGS.has(name)) {
       if (name === '--yes') {
         result.yes = true;
@@ -216,18 +173,6 @@ export function parseCurlLikeArgs(
         result.json = true;
       } else {
         result.help = true;
-      }
-      continue;
-    }
-
-    if (VC_GLOBAL_LONG_FLAGS.has(name)) {
-      const value = flagValue(beforeSeparator, i);
-      if (
-        !arg.includes('=') &&
-        globalCliFlagTakesValue(name) &&
-        value !== undefined
-      ) {
-        i++;
       }
       continue;
     }
@@ -513,16 +458,10 @@ export async function getFullUrlAndToken(
   let deploymentProtectionToken: string | null = null;
 
   if (link) {
-    // Same policy as --deployment: reuse a secret from the URL's verified
-    // owning project, but only mint one on the locally linked project.
-    const localLink = await getLinkedProject(client, { cwd: client.cwd });
-    const createIfMissing =
-      localLink.status === 'linked' && localLink.project.id === link.project.id;
     try {
       deploymentProtectionToken = await getOrCreateDeploymentProtectionToken(
         client,
-        link,
-        { createIfMissing }
+        link
       );
     } catch (err) {
       output.debug(`Failed to get deployment protection bypass token: ${err}`);
@@ -546,8 +485,10 @@ export async function getDeploymentUrlAndToken(
   options: DeploymentUrlOptions
 ): Promise<DeploymentUrlResult | number> {
   const { deploymentFlag, protectionBypassFlag, autoConfirm } = options;
-  const suppliedProtectionBypass =
-    protectionBypassFlag ?? process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+  const suppliedProtectionBypass = deploymentFlag
+    ? (protectionBypassFlag ??
+      (process.env.VERCEL_AUTOMATION_BYPASS_SECRET || undefined))
+    : protectionBypassFlag;
 
   let link: ProjectLinked | null = null;
   let scope;
@@ -567,28 +508,20 @@ export async function getDeploymentUrlAndToken(
   }
 
   let baseUrl: string;
-  let allowProtectionTokenCreation = true;
 
   if (deploymentFlag) {
     const accountId = scope.team?.id || scope.user.id;
-    const isLegacyDirectUrl =
+    const isDirectUrl =
       deploymentFlag.startsWith('http://') ||
       deploymentFlag.startsWith('https://') ||
       deploymentFlag.includes('vercel.app');
-    const requestedBaseUrl = isLegacyDirectUrl
+    const requestedBaseUrl = isDirectUrl
       ? await getDeploymentUrlById(client, deploymentFlag, accountId)
       : null;
 
-    // Read (never prompt for or create) the local link. It scopes which
-    // project we may mint bypass secrets on, and stays available to trace
-    // creation (including cross-team links).
-    const existingLink = await getLinkedProject(client, { cwd: client.cwd });
-    const localLink = existingLink.status === 'linked' ? existingLink : null;
-
-    // A caller-supplied bypass already provides everything needed to access
-    // the target. Preserve the legacy URL/ID resolver here so using a bypass
-    // never adds a project lookup or requires a linked directory.
-    if (suppliedProtectionBypass) {
+    // A caller-supplied bypass makes project resolution unnecessary. Keep
+    // the existing URL/ID resolution semantics and stay independent of cwd.
+    if (suppliedProtectionBypass !== undefined) {
       const deploymentUrl =
         requestedBaseUrl ??
         (await getDeploymentUrlById(client, deploymentFlag, accountId));
@@ -597,15 +530,13 @@ export async function getDeploymentUrlAndToken(
         return 1;
       }
       baseUrl = deploymentUrl;
-      link = localLink;
     } else {
       const deploymentSelector =
         deploymentFlag.includes('.') || deploymentFlag.startsWith('dpl_')
           ? deploymentFlag
           : `dpl_${deploymentFlag}`;
-      let resolvedBaseUrl: string | null = null;
-      let deployment: Deployment | null = null;
 
+      let deployment: Deployment;
       try {
         deployment = await getDeployment(
           client,
@@ -614,82 +545,73 @@ export async function getDeploymentUrlAndToken(
         );
       } catch (err) {
         output.debug(`Failed to resolve deployment: ${err}`);
+        output.error(`No deployment found for ID "${deploymentFlag}"`);
+        return 1;
       }
 
-      if (deployment?.url) {
-        resolvedBaseUrl = requestedBaseUrl ?? `https://${deployment.url}`;
-      }
-
-      if (deployment?.projectId && deployment.ownerId) {
-        try {
-          const project = await client.fetch<Project>(
-            `/v9/projects/${encodeURIComponent(deployment.projectId)}`,
-            { accountId: deployment.ownerId }
-          );
-          link = {
-            status: 'linked',
-            project,
-            org: orgFromOwner(deployment.ownerId, scope.contextName),
-          };
-        } catch (err) {
-          output.debug(`Failed to resolve deployment project: ${err}`);
-        }
-      } else if (deployment) {
-        output.debug(
+      if (!deployment.url || !deployment.projectId || !deployment.ownerId) {
+        output.error(
           `Deployment "${deploymentFlag}" is missing project metadata`
         );
+        return 1;
       }
 
-      if (link && resolvedBaseUrl) {
-        baseUrl = resolvedBaseUrl;
-        // Creating a bypass secret is a remote mutation; only do it on the
-        // project linked to this directory. Other projects reuse existing
-        // secrets or go without.
-        allowProtectionTokenCreation =
-          localLink?.project.id === link.project.id;
-      } else {
-        // Preserve legacy target resolution, then reuse an existing link for
-        // protection settings when available. Never link for an explicit
-        // target, and validate it before considering the linked fallback.
-        const legacyBaseUrl =
-          resolvedBaseUrl ??
-          requestedBaseUrl ??
-          (await getDeploymentUrlById(client, deploymentFlag, accountId));
-        if (!legacyBaseUrl) {
-          output.error(`No deployment found for ID "${deploymentFlag}"`);
-          return 1;
-        }
-
-        // Credentials may only come from a project the target verifiably
-        // belongs to. Without that proof, attaching (or minting) the linked
-        // project's secret would disclose it to a host we know nothing
-        // about, so the request goes out with no bypass header at all.
-        const verifiedLocalProject =
-          deployment?.projectId != null &&
-          deployment.projectId === localLink?.project.id;
-        link = link ?? (verifiedLocalProject ? localLink : null);
-        allowProtectionTokenCreation = verifiedLocalProject;
-        baseUrl = legacyBaseUrl;
+      let project: Project;
+      try {
+        project = await client.fetch<Project>(
+          `/v9/projects/${encodeURIComponent(deployment.projectId)}`,
+          { accountId: deployment.ownerId }
+        );
+      } catch (err) {
+        output.debug(`Failed to resolve deployment project: ${err}`);
+        output.error(
+          `Failed to load project for deployment "${deploymentFlag}"`
+        );
+        return 1;
       }
+
+      link = {
+        status: 'linked',
+        project,
+        org: orgFromOwner(deployment.ownerId),
+      };
+      baseUrl = requestedBaseUrl ?? `https://${deployment.url}`;
     }
   } else {
-    const linkedProject = await ensureLinkedProject(
-      client,
-      commandName,
-      autoConfirm
-    );
-    if (typeof linkedProject === 'number') {
-      return linkedProject;
+    let ensuredLink;
+    try {
+      ensuredLink = await ensureLink(commandName, client, client.cwd, {
+        autoConfirm,
+      });
+    } catch (err: unknown) {
+      if (isErrnoException(err) && err.code === 'NOT_AUTHORIZED') {
+        output.error(err.message);
+        return 1;
+      }
+
+      throw err;
     }
-    link = linkedProject;
-    /** this is a url like `test-express-5.vercel.app` */
-    const preferredAlias = link.project.targets?.production?.alias?.[0];
-    /**
-     * this is a url like `test-express-5-yw3u1f2bj-uncurated-tests.vercel.app`
-     *
-     * we're using it as a fallback because as a deployment rolls out there can be a race on getting the `preferredAlias`
-     */
-    const backupAlias = link.project.latestDeployments?.[0]?.url;
+
+    if (typeof ensuredLink === 'number') {
+      return ensuredLink;
+    }
+
+    const linkedProject = await getLinkedProject(client, { cwd: client.cwd });
+    if (linkedProject.status !== 'linked') {
+      output.error('This command requires a linked project. Please run:');
+      output.print('  vercel link');
+      return 1;
+    }
+
+    if (!linkedProject.project || !linkedProject.org) {
+      output.error('Failed to get project information');
+      return 1;
+    }
+
+    link = ensuredLink;
+    const preferredAlias =
+      linkedProject.project.targets?.production?.alias?.[0];
+    const backupAlias = linkedProject.project.latestDeployments?.[0]?.url;
     const target = preferredAlias || backupAlias;
     if (!target) {
       throw new Error('No deployment URL found for the project');
@@ -705,12 +627,11 @@ export async function getDeploymentUrlAndToken(
   let deploymentProtectionToken: string | null =
     suppliedProtectionBypass ?? null;
 
-  if (!deploymentProtectionToken && link?.project.id) {
+  if (suppliedProtectionBypass === undefined && link?.project.id) {
     try {
       deploymentProtectionToken = await getOrCreateDeploymentProtectionToken(
         client,
-        link,
-        { createIfMissing: allowProtectionTokenCreation }
+        link
       );
     } catch (err) {
       output.error(
