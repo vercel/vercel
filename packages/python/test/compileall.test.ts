@@ -133,13 +133,12 @@ describe('shouldCompileAll', () => {
 });
 
 describe('CompileAllRunner', () => {
-  it('passes explicit sources through a temporary list', async () => {
+  it('passes a deduplicated JSON source list to the compile coordinator', async () => {
     let listPath = '';
-    let sourceList = '';
+    let sourceList: string[] = [];
     mockedExeca.mockImplementation(((_file, args: string[]) => {
-      const listIndex = args.indexOf('-i');
-      listPath = args[listIndex + 1];
-      sourceList = fs.readFileSync(listPath, 'utf8');
+      listPath = args[1];
+      sourceList = JSON.parse(fs.readFileSync(listPath, 'utf8'));
       return Promise.resolve({});
     }) as any);
     const env = { VIRTUAL_ENV: '/work/.vercel/python/.venv' };
@@ -149,94 +148,68 @@ describe('CompileAllRunner', () => {
     });
 
     await expect(
-      runner.run({ sourceFiles: ['/work/app.py', '/work/pkg/mod.py'] })
+      runner.run(['/work/app.py', '/work/pkg/mod.py', '/work/app.py'])
     ).resolves.toBe(true);
 
+    const args = mockedExeca.mock.calls[0][1];
+    expect(args).toEqual([
+      expect.stringMatching(/templates[/\\\\]vc_compileall\.py$/),
+      listPath,
+    ]);
     expect(mockedExeca).toHaveBeenCalledWith(
       '/work/.vercel/python/.venv/bin/python',
-      [
-        '-m',
-        'compileall',
-        '-q',
-        '-j',
-        '0',
-        '-f',
-        '--invalidation-mode',
-        'unchecked-hash',
-        '-i',
-        listPath,
-      ],
+      args,
       { env, timeout: COMPILEALL_TIMEOUT_MS }
     );
-    expect(sourceList).toBe('/work/app.py\n/work/pkg/mod.py\n');
+    expect(sourceList).toEqual(['/work/app.py', '/work/pkg/mod.py']);
     expect(fs.existsSync(listPath)).toBe(false);
+    expect(fs.existsSync(path.dirname(listPath))).toBe(false);
   });
 
-  it('passes directories directly so compileall can process them concurrently', async () => {
-    mockedExeca.mockResolvedValue({} as any);
+  it('does not invoke the coordinator when there are no source files', async () => {
     const runner = new CompileAllRunner({ pythonBin: 'python3' });
 
-    await expect(
-      runner.run({ directories: ['/work/site-packages'] })
-    ).resolves.toBe(true);
-
-    expect(mockedExeca.mock.calls[0][1]).toEqual([
-      '-m',
-      'compileall',
-      '-q',
-      '-j',
-      '0',
-      '-f',
-      '--invalidation-mode',
-      'unchecked-hash',
-      '/work/site-packages',
-    ]);
-  });
-
-  it('does not invoke compileall without sources or directories', async () => {
-    const runner = new CompileAllRunner({ pythonBin: 'python3' });
-
-    await expect(runner.run({})).resolves.toBe(false);
+    await expect(runner.run([])).resolves.toBe(false);
 
     expect(mockedExeca).not.toHaveBeenCalled();
   });
 
-  it('resolves without throwing and removes its temporary list on failure', async () => {
+  it('returns false and removes the temporary list after failure', async () => {
     let listPath = '';
     mockedExeca.mockImplementation(((_file, args: string[]) => {
-      const listIndex = args.indexOf('-i');
-      listPath = args[listIndex + 1];
+      listPath = args[1];
       expect(fs.existsSync(listPath)).toBe(true);
-      return Promise.reject(new Error('compileall crashed'));
+      return Promise.reject(
+        Object.assign(new Error('compileall exited with code 1'), {
+          exitCode: 1,
+        })
+      );
     }) as any);
     const runner = new CompileAllRunner({ pythonBin: 'python3' });
 
-    await expect(runner.run({ sourceFiles: ['/work/app.py'] })).resolves.toBe(
-      false
-    );
+    await expect(runner.run(['/work/app.py'])).resolves.toBe(false);
 
     expect(fs.existsSync(listPath)).toBe(false);
+    expect(fs.existsSync(path.dirname(listPath))).toBe(false);
   });
 
-  it('removes its temporary list after a timeout', async () => {
+  it('returns false and removes the temporary list after timeout', async () => {
     let listPath = '';
     mockedExeca.mockImplementation(((_file, args: string[]) => {
-      const listIndex = args.indexOf('-i');
-      listPath = args[listIndex + 1];
+      listPath = args[1];
       return Promise.reject(
         Object.assign(new Error('compileall timed out'), { timedOut: true })
       );
     }) as any);
     const runner = new CompileAllRunner({ pythonBin: 'python3' });
 
-    await expect(runner.run({ sourceFiles: ['/work/app.py'] })).resolves.toBe(
-      false
-    );
+    await expect(runner.run(['/work/app.py'])).resolves.toBe(false);
 
     expect(fs.existsSync(listPath)).toBe(false);
+    expect(fs.existsSync(path.dirname(listPath))).toBe(false);
   });
 
-  it('sets PYTHONPYCACHEPREFIX on the subprocess when pycachePrefix is provided', async () => {
+  it('sets PYTHONPYCACHEPREFIX on the subprocess when provided', async () => {
     mockedExeca.mockResolvedValue({} as any);
     const env = { VIRTUAL_ENV: '/work/.vercel/python/.venv' };
     const runner = new CompileAllRunner({
@@ -244,14 +217,14 @@ describe('CompileAllRunner', () => {
       env,
     });
 
-    await runner.run({
-      sourceFiles: ['/work/app.py'],
-      pycachePrefix: '/work/.vercel/python/pycache',
-    });
+    await runner.run(['/work/app.py'], '/work/.vercel/python/pycache');
 
     expect(mockedExeca).toHaveBeenCalledWith(
       '/work/.vercel/python/.venv/bin/python',
-      expect.arrayContaining(['-m', 'compileall']),
+      [
+        expect.stringMatching(/templates[/\\\\]vc_compileall\.py$/),
+        expect.stringMatching(/pysources\.json$/),
+      ],
       {
         env: { ...env, PYTHONPYCACHEPREFIX: '/work/.vercel/python/pycache' },
         timeout: COMPILEALL_TIMEOUT_MS,
@@ -259,7 +232,7 @@ describe('CompileAllRunner', () => {
     );
   });
 
-  it('does not set PYTHONPYCACHEPREFIX without pycachePrefix', async () => {
+  it('does not set PYTHONPYCACHEPREFIX without a prefix', async () => {
     mockedExeca.mockResolvedValue({} as any);
     const env = { VIRTUAL_ENV: '/work/.vercel/python/.venv' };
     const runner = new CompileAllRunner({
@@ -267,27 +240,13 @@ describe('CompileAllRunner', () => {
       env,
     });
 
-    await runner.run({ sourceFiles: ['/work/app.py'] });
+    await runner.run(['/work/app.py']);
 
     const passedEnv = mockedExeca.mock.calls[0][2]?.env as Record<
       string,
       string
     >;
     expect(passedEnv.PYTHONPYCACHEPREFIX).toBeUndefined();
-  });
-
-  it('passes an exclude regex when provided', async () => {
-    mockedExeca.mockResolvedValue({} as any);
-    const runner = new CompileAllRunner({ pythonBin: 'python3' });
-
-    await runner.run({
-      directories: ['/work'],
-      excludeRegex: '[/\\\\]\\.vercel(?:[/\\\\]|$)',
-    });
-
-    expect(mockedExeca.mock.calls[0][1]).toEqual(
-      expect.arrayContaining(['-x', '[/\\\\]\\.vercel(?:[/\\\\]|$)'])
-    );
   });
 });
 

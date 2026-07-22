@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import execa from 'execa';
 import fs from 'fs';
 import os from 'os';
@@ -11,6 +11,13 @@ import {
 } from '../src/dependency-externalizer';
 
 const tmpDirs: string[] = [];
+const compileAllScriptPath = path.join(
+  __dirname,
+  '..',
+  'templates',
+  'vc_compileall.py'
+);
+let processPoolAvailable = false;
 
 function makeTempDir(prefix: string) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -24,9 +31,19 @@ afterAll(() => {
   }
 });
 
+beforeAll(async () => {
+  try {
+    await execa(process.env.PYTHON_BIN || 'python3', [
+      '-c',
+      'from concurrent.futures import ProcessPoolExecutor; ProcessPoolExecutor().shutdown()',
+    ]);
+    processPoolAvailable = true;
+  } catch {}
+});
+
 describe('explicit-list compilation layout (real CPython)', () => {
   // Validates the core assumption of the bytecode-first packing mode: the
-  // path where compileall (run with PYTHONPYCACHEPREFIX) writes a .pyc
+  // path where the coordinator (run with PYTHONPYCACHEPREFIX) writes a .pyc
   // matches deriveStagedPycFsPath(). If CPython's cache_from_source layout
   // ever changes, this test fails rather than silently shipping an
   // unaddressable bytecode tree.
@@ -40,7 +57,8 @@ describe('explicit-list compilation layout (real CPython)', () => {
     return JSON.parse(stdout) as [number, number, string | null];
   }
 
-  it('writes adjacent bytecode for a source from the list file', async () => {
+  it('writes adjacent bytecode for multiple source files', async () => {
+    if (!processPoolAvailable) return;
     const [major, minor, interpreterPrefix] = await getPythonInfo();
     // Apple's system Python forces a global prefix that cannot be disabled
     // through PYTHONPYCACHEPREFIX. Other CPython installations exercise the
@@ -48,49 +66,120 @@ describe('explicit-list compilation layout (real CPython)', () => {
     if (interpreterPrefix !== null) return;
 
     const workPath = makeTempDir('vc-py-adjacent-real-');
-    const srcPath = path.join(workPath, 'src', 'pkg', 'mod.py');
-    fs.mkdirSync(path.dirname(srcPath), { recursive: true });
-    fs.writeFileSync(srcPath, 'X = 1\n');
+    const sourcePaths = ['first.py', 'nested/second.py'].map(relativePath =>
+      path.join(workPath, 'src', relativePath)
+    );
+    for (const srcPath of sourcePaths) {
+      fs.mkdirSync(path.dirname(srcPath), { recursive: true });
+      fs.writeFileSync(srcPath, 'X = 1\n');
+    }
 
     const runner = new CompileAllRunner({ pythonBin });
-    await expect(runner.run({ sourceFiles: [srcPath] })).resolves.toBe(true);
+    await expect(runner.run(sourcePaths)).resolves.toBe(true);
 
-    expect(
-      fs.existsSync(
-        path.join(
-          path.dirname(srcPath),
-          '__pycache__',
-          `mod.cpython-${major}${minor}.pyc`
+    for (const srcPath of sourcePaths) {
+      expect(
+        fs.existsSync(
+          path.join(
+            path.dirname(srcPath),
+            '__pycache__',
+            `${path.parse(srcPath).name}.cpython-${major}${minor}.pyc`
+          )
         )
-      )
-    ).toBe(true);
+      ).toBe(true);
+    }
   });
 
-  it('writes staged pyc at the derived path', async () => {
+  it('writes multiple staged pyc files at their derived paths', async () => {
+    if (!processPoolAvailable) return;
     const [major, minor] = await getPythonInfo();
 
     const workPath = makeTempDir('vc-py-prefix-real-');
     const stagingDir = path.join(workPath, 'staging');
-    const srcPath = path.join(workPath, 'src', 'pkg', 'mod.py');
-    fs.mkdirSync(path.dirname(srcPath), { recursive: true });
-    fs.writeFileSync(srcPath, 'X = 1\n');
+    const sourcePaths = ['pkg/first.py', 'pkg/nested/second.py'].map(
+      relativePath => path.join(workPath, 'src', relativePath)
+    );
+    for (const srcPath of sourcePaths) {
+      fs.mkdirSync(path.dirname(srcPath), { recursive: true });
+      fs.writeFileSync(srcPath, 'X = 1\n');
+    }
+
+    const runner = new CompileAllRunner({ pythonBin });
+    await expect(runner.run(sourcePaths, stagingDir)).resolves.toBe(true);
+
+    for (const srcPath of sourcePaths) {
+      const derived = deriveStagedPycFsPath(stagingDir, srcPath, major, minor);
+      expect(derived).not.toBeNull();
+      expect(fs.existsSync(derived!)).toBe(true);
+      expect(
+        fs.existsSync(path.join(path.dirname(srcPath), '__pycache__'))
+      ).toBe(false);
+    }
+  });
+
+  it('does not run when loaded as a multiprocessing child module', async () => {
+    await expect(
+      execa(pythonBin, [
+        '-c',
+        "import runpy, sys; runpy.run_path(sys.argv[1], run_name='vc_compileall_child')",
+        compileAllScriptPath,
+      ])
+    ).resolves.toBeDefined();
+  });
+
+  it('reports failure after preserving successfully compiled bytecode', async () => {
+    if (!processPoolAvailable) return;
+    const [major, minor] = await getPythonInfo();
+
+    const workPath = makeTempDir('vc-py-partial-real-');
+    const stagingDir = path.join(workPath, 'staging');
+    const validSource = path.join(workPath, 'valid.py');
+    const invalidSource = path.join(workPath, 'invalid.py');
+    fs.writeFileSync(validSource, 'X = 1\n');
+    fs.writeFileSync(invalidSource, 'def invalid syntax\n');
 
     const runner = new CompileAllRunner({ pythonBin });
     await expect(
-      runner.run({
-        sourceFiles: [srcPath],
-        pycachePrefix: stagingDir,
-      })
-    ).resolves.toBe(true);
+      runner.run([validSource, invalidSource], stagingDir)
+    ).resolves.toBe(false);
 
-    const derived = deriveStagedPycFsPath(stagingDir, srcPath, major, minor);
-    expect(derived).not.toBeNull();
-    expect(fs.existsSync(derived!)).toBe(true);
-
-    // No adjacent __pycache__ was created next to the source.
-    expect(fs.existsSync(path.join(path.dirname(srcPath), '__pycache__'))).toBe(
-      false
+    const validBytecode = deriveStagedPycFsPath(
+      stagingDir,
+      validSource,
+      major,
+      minor
     );
+    expect(validBytecode).not.toBeNull();
+    expect(fs.existsSync(validBytecode!)).toBe(true);
+  });
+
+  it('exits nonzero when multiprocessing is unavailable', async () => {
+    const workPath = makeTempDir('vc-py-unavailable-real-');
+    const sourcePath = path.join(workPath, 'source.py');
+    const sourceListPath = path.join(workPath, 'sources.json');
+    fs.writeFileSync(sourcePath, 'X = 1\n');
+    fs.writeFileSync(sourceListPath, JSON.stringify([sourcePath]));
+
+    const runWithUnavailablePool = `
+import runpy
+import sys
+
+module = runpy.run_path(sys.argv[1], run_name="vc_compileall_test")
+
+def unavailable_pool():
+    raise OSError("multiprocessing unavailable")
+
+module["main"].__globals__["ProcessPoolExecutor"] = unavailable_pool
+sys.argv = [sys.argv[1], sys.argv[2]]
+sys.exit(module["main"]())
+`;
+
+    const result = await execa(
+      pythonBin,
+      ['-c', runWithUnavailablePool, compileAllScriptPath, sourceListPath],
+      { reject: false }
+    );
+    expect(result.code).toBe(1);
   });
 });
 

@@ -1336,10 +1336,10 @@ export const build: BuildVX = async ({
           .child('vc.builder.python.compileall')
           .trace(async compileSpan => {
             console.log('Compiling Python bytecode...');
-            await compileAllRunner.run({
-              sourceFiles: [...appPythonSourceFiles, ...vendorSourceFiles],
-              pycachePrefix,
-            });
+            await compileAllRunner.run(
+              [...appPythonSourceFiles, ...vendorSourceFiles],
+              pycachePrefix
+            );
 
             compileSpan.setAttributes({
               'python.compileall.enabled': 'true',

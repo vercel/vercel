@@ -1122,13 +1122,9 @@ describe('file exclusions', () => {
 
     process.env.VERCEL_PYTHON_COMPILEALL = '1';
     mockedExeca.mockImplementation(((_file, args: string[]) => {
-      if (args.includes('compileall')) {
+      if (args[0]?.endsWith('vc_compileall.py')) {
         compileAllCalls++;
-        const listIndex = args.indexOf('-i');
-        compiledSources = fs
-          .readFileSync(args[listIndex + 1], 'utf8')
-          .trim()
-          .split('\n');
+        compiledSources = JSON.parse(fs.readFileSync(args[1], 'utf8'));
       }
       return Promise.resolve({ stdout: '', stderr: '' });
     }) as any);

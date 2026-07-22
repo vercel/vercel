@@ -64,22 +64,9 @@ interface CompileAllRunnerOptions {
   env?: NodeJS.ProcessEnv;
 }
 
-interface CompileAllRunOptions {
-  /** Source files passed to compileall through a temporary `-i` list. */
-  sourceFiles?: string[];
-  /** Directories passed directly to compileall as positional destinations. */
-  directories?: string[];
-  /** Optional regular expression passed to compileall's -x skip filter. */
-  excludeRegex?: string;
-  /**
-   * Write bytecode into this pycache-prefix tree (via PYTHONPYCACHEPREFIX)
-   * instead of adjacent `__pycache__` directories.
-   */
-  pycachePrefix?: string;
-}
-
 /**
- * Runs `python -m compileall` to precompile `.py` files into `.pyc` bytecode.
+ * Runs the Python compile coordinator to precompile `.py` files into `.pyc`
+ * bytecode.
  *
  * Uses `--invalidation-mode unchecked-hash` for fastest cold-start: the
  * bytecode is trusted without re-hashing the source on every import.  This
@@ -96,49 +83,28 @@ export class CompileAllRunner {
     this.env = env;
   }
 
-  async run({
-    sourceFiles = [],
-    directories = [],
-    excludeRegex,
-    pycachePrefix,
-  }: CompileAllRunOptions): Promise<boolean> {
-    if (sourceFiles.length === 0 && directories.length === 0) {
+  async run(sourceFiles: string[], pycachePrefix?: string): Promise<boolean> {
+    const uniqueSourceFiles = [...new Set(sourceFiles)];
+    if (uniqueSourceFiles.length === 0) {
       return false;
     }
 
     let tempDir: string | undefined;
 
     try {
-      const listArgs: string[] = [];
-      if (sourceFiles.length > 0) {
-        tempDir = await fs.promises.mkdtemp(
-          join(tmpdir(), 'vercel-python-compileall-')
-        );
-        const listPath = join(tempDir, 'pysources.txt');
-        await fs.promises.writeFile(listPath, `${sourceFiles.join('\n')}\n`);
-        listArgs.push('-i', listPath);
-      }
-
-      const args = [
-        '-m',
-        'compileall',
-        '-q',
-        '-j',
-        '0',
-        '-f',
-        '--invalidation-mode',
-        'unchecked-hash',
-        ...(excludeRegex ? ['-x', excludeRegex] : []),
-        ...listArgs,
-        ...directories,
-      ];
+      tempDir = await fs.promises.mkdtemp(
+        join(tmpdir(), 'vercel-python-compileall-')
+      );
+      const listPath = join(tempDir, 'pysources.json');
+      await fs.promises.writeFile(listPath, JSON.stringify(uniqueSourceFiles));
+      const scriptPath = join(__dirname, '..', 'templates', 'vc_compileall.py');
 
       const baseEnv = this.env || process.env;
       const subprocessEnv = pycachePrefix
         ? { ...baseEnv, PYTHONPYCACHEPREFIX: pycachePrefix }
         : baseEnv;
 
-      await execa(this.pythonBin, args, {
+      await execa(this.pythonBin, [scriptPath, listPath], {
         env: subprocessEnv,
         timeout: COMPILEALL_TIMEOUT_MS,
       });
