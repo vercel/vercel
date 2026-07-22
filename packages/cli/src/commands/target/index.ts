@@ -69,10 +69,7 @@ export default async function main(client: Client) {
         printHelp(purchaseSubcommand);
         return 2;
       }
-      telemetry.trackCliSubcommand({
-        subcommand: 'purchase',
-        value: subcommand,
-      });
+      telemetry.trackCliSubcommandPurchase(subcommand);
       return await purchase(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
