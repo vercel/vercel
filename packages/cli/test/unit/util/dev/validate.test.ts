@@ -189,7 +189,7 @@ describe('validateConfig', () => {
 
     it('should accept a binding with `type` omitted', () => {
       const error = validateConfig({
-        experimentalServicesV2: {
+        services: {
           web: { root: '.' },
           api: {
             root: 'api/',
