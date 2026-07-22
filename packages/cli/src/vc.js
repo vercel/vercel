@@ -15,13 +15,26 @@ try {
 // The native package is declared as an os/cpu-filtered optionalDependency
 // so at most one platform binary downloads per install.
 import { spawnSync } from 'node:child_process';
-import { createRequire } from 'node:module';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const require = createRequire(import.meta.url);
+
+function resolveLocalPackage(pkgName) {
+  let dir = __dirname;
+  while (true) {
+    const packageJson = join(dir, 'node_modules', pkgName, 'package.json');
+    if (existsSync(packageJson)) return packageJson;
+    const parent = dirname(dir);
+    if (parent === dir) {
+      const error = new Error(`Cannot find module '${pkgName}'`);
+      error.code = 'MODULE_NOT_FOUND';
+      throw error;
+    }
+    dir = parent;
+  }
+}
 
 function resolveNative() {
   // Already running inside the native binary — never trampoline again.
@@ -30,12 +43,11 @@ function resolveNative() {
   const binName = process.platform === 'win32' ? 'vercel.exe' : 'vercel';
   try {
     // Resolve only from this install's own tree, never from NODE_PATH.
-    const dir = dirname(
-      require.resolve(`${pkgName}/package.json`, { paths: [__dirname] })
-    );
+    const resolvedPackage = resolveLocalPackage(pkgName);
+    const dir = dirname(resolvedPackage);
     const a = join(dir, 'bin', binName);
-    if (existsSync(a)) return a;
     const b = join(dir, binName);
+    if (existsSync(a)) return a;
     if (existsSync(b)) return b;
   } catch {}
   return null;
