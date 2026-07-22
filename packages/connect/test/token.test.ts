@@ -171,6 +171,35 @@ describe('getTokenResponse cache', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('sends token exchange subjects and uses them for cache keying', async () => {
+    fetchMock.mockResolvedValue(tokenResponse('tok_passport'));
+
+    const first = await getTokenResponse('oauth/linear', {
+      subject: {
+        type: 'token',
+        token: 'passport.jwt',
+      },
+    });
+    const second = await getTokenResponse('oauth/linear', {
+      subject: {
+        type: 'token',
+        token: 'passport.jwt',
+      },
+    });
+
+    expect(first.token).toBe('tok_passport');
+    expect(second.token).toBe('tok_passport');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      subject: {
+        type: 'token',
+        token: 'passport.jwt',
+      },
+    });
+  });
+
   it('surfaces a revoked grant on re-check instead of serving the cached bearer', async () => {
     fetchMock.mockResolvedValueOnce(tokenResponse('tok_live'));
     const params = { subject: { type: 'user' as const, id: 'revoked' } };

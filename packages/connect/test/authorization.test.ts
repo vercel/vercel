@@ -82,6 +82,35 @@ describe('startAuthorization', () => {
     expect(JSON.parse(init.body as string)).not.toHaveProperty('returnUrl');
   });
 
+  it('posts token exchange subjects on authorization requests', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        request: 'req_123',
+        verifier: 'verifier_123',
+        url: 'https://connect.vercel.com/authorize/req_123',
+      })
+    );
+
+    await startAuthorization(
+      CONNECTOR,
+      {
+        subject: {
+          type: 'token',
+          token: 'passport.jwt',
+        },
+      },
+      { vercelToken: 'vercel_token' }
+    );
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      subject: {
+        type: 'token',
+        token: 'passport.jwt',
+      },
+    });
+  });
+
   it('rejects non-local http callback URLs', async () => {
     await expect(
       startAuthorization(CONNECTOR, PARAMS, {

@@ -9,6 +9,7 @@ export {
   ConnectorInstallationRequiredError,
   type ConnectErrorOptions,
   type ConnectOptions,
+  type ConnectTokenExchangeSubject,
   type ConnectTokenParams,
   type ConnectTokenResponse,
   type ConnectTokenSubject,

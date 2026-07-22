@@ -1,12 +1,13 @@
 import { getVercelOidcToken } from '@vercel/oidc';
 import type { ConnectAuthorizationDetail } from './authorization-details.js';
 
-export type ConnectSubjectType = 'app' | 'user' | 'jwt-bearer';
+export type ConnectSubjectType = 'app' | 'user' | 'jwt-bearer' | 'token';
 
 export type ConnectTokenSubject =
   | ConnectAppTokenSubject
   | ConnectUserTokenSubject
-  | ConnectJwtBearerTokenSubject;
+  | ConnectJwtBearerTokenSubject
+  | ConnectTokenExchangeSubject;
 
 export interface ConnectAppTokenSubject {
   type: 'app';
@@ -26,6 +27,11 @@ export interface ConnectJwtBearerTokenSubject {
   /** Defaults to the connector's OAuth token endpoint. */
   aud?: string;
   additionalClaims?: Record<string, unknown>;
+}
+
+export interface ConnectTokenExchangeSubject {
+  type: 'token';
+  token: string;
 }
 
 export interface ConnectTokenParams {
