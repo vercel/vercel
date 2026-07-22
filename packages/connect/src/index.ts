@@ -21,4 +21,11 @@ export {
   type ConnectAuthorizationResponse,
 } from './authorization.js';
 
+export {
+  experimental_startInstallation,
+  type ConnectInstallationOptions,
+  type ConnectInstallationParams,
+  type ConnectInstallationResponse,
+} from './installation.js';
+
 export type { ConnectAuthorizationDetail } from './authorization-details.js';
