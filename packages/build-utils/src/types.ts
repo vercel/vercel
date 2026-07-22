@@ -487,6 +487,8 @@ export interface GetDevSidecarsOptions {
   workPath: string;
   /** Original build configuration before source expansion or dev filtering. */
   build: Builder;
+  /** Resolved Services V2 service when collecting its sidecars. */
+  service?: ExperimentalServiceV2;
 }
 
 export interface DevSubscriber {

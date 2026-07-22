@@ -121,7 +121,7 @@ export async function detectProcfileServices(options: {
       errors: [
         {
           code: 'MULTIPLE_FRAMEWORKS_SERVICE',
-          message: `Multiple frameworks detected: ${names}. Use explicit experimentalServices config.`,
+          message: `Multiple frameworks detected: ${names}. Use explicit services config.`,
         },
       ],
       warnings,
@@ -169,7 +169,7 @@ export async function detectProcfileServices(options: {
         code: 'SERVICE_SKIPPED',
         message:
           `Skipped Procfile process "${processType}": no framework detected and could not ` +
-          `infer entrypoint from command "${command}". Configure it manually in experimentalServices.`,
+          `infer entrypoint from command "${command}". Configure it manually in services.`,
       });
       continue;
     }

@@ -3,12 +3,14 @@ import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import apiKeys from './api-keys';
+import budgets from './budgets';
 import rules from './rules';
 import codingAgents from './coding-agents';
 import models from './models';
 import {
   aiGatewayCommand,
   apiKeysSubcommand,
+  budgetsSubcommand,
   rulesSubcommand,
   codingAgentsSubcommand,
   modelsSubcommand,
@@ -21,6 +23,7 @@ import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
   'api-keys': getCommandAliases(apiKeysSubcommand),
+  budgets: getCommandAliases(budgetsSubcommand),
   rules: getCommandAliases(rulesSubcommand),
   'coding-agents': getCommandAliases(codingAgentsSubcommand),
   models: getCommandAliases(modelsSubcommand),
@@ -61,6 +64,9 @@ export default async function main(client: Client) {
     case 'api-keys':
       telemetry.trackCliSubcommandApiKeys(subcommandOriginal);
       return apiKeys(client);
+    case 'budgets':
+      telemetry.trackCliSubcommandBudgets(subcommandOriginal);
+      return budgets(client);
     case 'rules':
       telemetry.trackCliSubcommandRules(subcommandOriginal);
       return rules(client);

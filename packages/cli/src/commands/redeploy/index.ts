@@ -12,6 +12,7 @@ import Now from '../../util';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
 import stamp from '../../util/output/stamp';
 import ua from '../../util/ua';
+import { getFetchDispatcher } from '../../util/fetch';
 import type { VercelClientOptions } from '@vercel/client';
 import { help } from '../help';
 import { redeployCommand } from './command';
@@ -198,7 +199,7 @@ export default async function redeploy(client: Client): Promise<number> {
       } else {
         try {
           const clientOptions: VercelClientOptions = {
-            agent: client.agent,
+            dispatcher: getFetchDispatcher(),
             apiUrl: client.apiUrl,
             debug: output.debugEnabled,
             path: '', // unused by checkDeploymentStatus()

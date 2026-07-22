@@ -52,6 +52,7 @@ export default async function rulesRemove(
   telemetryClient.trackCliArgumentRule(ruleId);
   telemetryClient.trackCliOptionEnvironment(environment);
   telemetryClient.trackCliOptionMessage(message);
+  telemetryClient.trackCliOptionProject(flags['--project']);
 
   if (!flagArg || !ruleId) {
     output.error('Please provide a flag slug or ID and rule ID to remove');
@@ -63,6 +64,7 @@ export default async function rulesRemove(
 
   try {
     const context = await resolveRulesCommandContext(client, {
+      projectName: parsedArgs.flags['--project'],
       flagArg,
       environment,
       promptMessage: 'Select an environment containing the rule:',

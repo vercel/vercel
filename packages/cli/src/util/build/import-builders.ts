@@ -1,5 +1,5 @@
 import npa from 'npm-package-arg';
-import { satisfies } from 'semver';
+import { satisfies, validRange } from 'semver';
 import { dirname, join } from 'path';
 import { createRequire } from 'module';
 import { readJSON } from 'fs-extra';
@@ -15,6 +15,7 @@ import * as staticBuilder from './static-builder';
 import { VERCEL_DIR } from '../projects/link';
 import { isErrnoException } from '@vercel/error-utils';
 import output from '../../output-manager';
+import cliPkg from '../pkg';
 import { installBuilders } from './install-builders';
 
 export interface BuilderWithPkg {
@@ -42,6 +43,44 @@ type ResolveBuildersResult =
 // Get a real `require()` reference that esbuild won't mutate
 const require_ = createRequire(__filename);
 
+// Builder versions this CLI release was published with, from its
+// `peerDependencies` (`workspace:*` in the monorepo, so a no-op in dev)
+let builderPins: Map<string, string> | undefined;
+
+function getBuilderPins(): Map<string, string> {
+  if (!builderPins) {
+    builderPins = new Map();
+    const peerDependencies: Record<string, string> =
+      (cliPkg as { peerDependencies?: Record<string, string> })
+        .peerDependencies ?? {};
+    for (const [name, version] of Object.entries(peerDependencies)) {
+      if (validRange(version)) {
+        builderPins.set(name, version);
+      }
+    }
+  }
+  return builderPins;
+}
+
+function isBareSpec(parsed: ReturnType<typeof npa>): boolean {
+  return parsed.type === 'tag' && parsed.rawSpec === '';
+}
+
+function pinBuilderSpecs(specs: Set<string>): Map<string, string> {
+  const pins = getBuilderPins();
+  const pinnedSpecs = new Map<string, string>();
+  for (const spec of specs) {
+    const parsed = npa(spec);
+    if (parsed.name && isBareSpec(parsed)) {
+      const version = pins.get(parsed.name);
+      if (version) {
+        pinnedSpecs.set(spec, `${parsed.name}@${version}`);
+      }
+    }
+  }
+  return pinnedSpecs;
+}
+
 /**
  * Imports the specified Vercel Builders, installing any missing ones
  * into `.vercel/builders` if necessary.
@@ -57,9 +96,10 @@ export async function importBuilders(
 
   if ('buildersToAdd' in importResult) {
     const { buildersToAdd, installReasons } = importResult;
+    const pinnedSpecs = pinBuilderSpecs(buildersToAdd);
     const installResult = await installBuilders(
       buildersDir,
-      buildersToAdd,
+      new Set(Array.from(buildersToAdd, spec => pinnedSpecs.get(spec) ?? spec)),
       span,
       installReasons
     );
@@ -71,7 +111,19 @@ export async function importBuilders(
     );
 
     if ('buildersToAdd' in importResult) {
-      throw new Error('Something went wrong!');
+      const { buildersToAdd: failed, installReasons: reasons } = importResult;
+      const failures = Array.from(failed, spec => {
+        const reason = reasons.get(spec);
+        return reason ? `${spec} (${reason})` : spec;
+      });
+      const err = new Error(
+        `Failed to load Builders after installing them: ${failures.join(
+          ', '
+        )}. Retry the build. If the failure persists, contact Vercel Support.`
+      );
+      (err as any).link =
+        'https://vercel.link/builder-dependencies-install-failed';
+      throw err;
     }
   }
 
@@ -170,6 +222,21 @@ async function resolveBuilders(
         throw new Error(
           `\`package.json\` for "${name}" does not contain a "version" field`
         );
+      }
+
+      const peerVersion = getBuilderPins().get(name);
+      if (
+        isBareSpec(parsed) &&
+        peerVersion &&
+        pkgPath.startsWith(buildersDir) &&
+        !satisfies(builderPkg.version, peerVersion)
+      ) {
+        output.debug(
+          `Cached "${name}@${builderPkg.version}" does not satisfy "${peerVersion}"`
+        );
+        buildersToAdd.add(spec);
+        installReasons.set(spec, 'peer-version-mismatch');
+        continue;
       }
 
       if (parsed.type === 'version' && parsed.rawSpec !== builderPkg.version) {
