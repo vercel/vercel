@@ -73,7 +73,8 @@ import {
   findUvOnBuildImage,
 } from '../src/uv';
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
-import { createPyprojectToml } from '../src/install';
+import { createPyprojectToml, getVenvSitePackagesDirs } from '../src/install';
+import { BUILD_CACHE_MARKER_FILENAME } from '../src/build-cache';
 import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
 import { getSubscriberOutputPath } from '../src/subscribers';
 import { getWorkflowOutputPath } from '../src/workflows';
@@ -1156,6 +1157,120 @@ describe('file exclusions', () => {
       );
       expect(compileAllCalls).toBe(1);
     } finally {
+      mockedExeca.mockReset();
+      if (originalCompileAllEnv === undefined) {
+        delete process.env.VERCEL_PYTHON_COMPILEALL;
+      } else {
+        process.env.VERCEL_PYTHON_COMPILEALL = originalCompileAllEnv;
+      }
+    }
+  });
+
+  it('reuses dependency bytecode and invalidates it after failures and flag changes', async () => {
+    const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
+    const mockedExeca = vi.mocked(execa);
+    const sourceLists: string[][] = [];
+    const spanEvents: any[] = [];
+    let failCompile = false;
+    const venvPath = path.join(mockWorkPath, '.vercel/python/.venv');
+    const sitePackagesDir = path.join(venvPath, 'lib/python3.9/site-packages');
+    const packageSource = path.join(
+      sitePackagesDir,
+      'stable_package/module.py'
+    );
+    const distInfoDir = path.join(
+      sitePackagesDir,
+      'stable_package-1.0.0.dist-info'
+    );
+    fs.outputFileSync(packageSource, 'STABLE_PACKAGE = True\n');
+    fs.outputFileSync(
+      path.join(distInfoDir, 'METADATA'),
+      'Metadata-Version: 2.1\nName: stable-package\nVersion: 1.0.0\n'
+    );
+    fs.outputFileSync(
+      path.join(distInfoDir, 'RECORD'),
+      'stable_package/module.py,,22\n'
+    );
+
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+    vi.mocked(getVenvSitePackagesDirs).mockResolvedValue([sitePackagesDir]);
+    mockedExeca.mockImplementation(((_file, args: string[]) => {
+      if (args[0]?.endsWith('vc_compileall.py')) {
+        const sourceFiles = JSON.parse(
+          fs.readFileSync(args[1], 'utf8')
+        ) as string[];
+        sourceLists.push(sourceFiles);
+        if (failCompile) return Promise.reject(new Error('compileall failed'));
+        for (const sourceFile of sourceFiles) {
+          const parsed = path.parse(sourceFile);
+          fs.outputFileSync(
+            path.join(
+              parsed.dir,
+              '__pycache__',
+              `${parsed.name}.cpython-39.pyc`
+            ),
+            'compiled'
+          );
+        }
+      }
+      return Promise.resolve({ stdout: '', stderr: '' });
+    }) as any);
+
+    const buildOptions = {
+      workPath: mockWorkPath,
+      files: {
+        'handler.py': new FileBlob({
+          data: 'def app(environ, start_response): pass',
+        }),
+      },
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+      span: new Span({
+        name: 'vc.builder',
+        reporter: { report: event => spanEvents.push(event) },
+      }),
+    } as const;
+    const markerPath = path.join(venvPath, BUILD_CACHE_MARKER_FILENAME);
+
+    try {
+      await build(buildOptions);
+      expect(sourceLists[0]).toContain(packageSource);
+      expect(fs.existsSync(markerPath)).toBe(true);
+
+      await build(buildOptions);
+      expect(sourceLists).toHaveLength(2);
+      expect(sourceLists[1]).not.toContain(packageSource);
+      expect(sourceLists[1]).toContain(path.join(mockWorkPath, 'handler.py'));
+      expect(
+        spanEvents
+          .filter(event => event.name === 'vc.builder.python.compileall')
+          .at(-1)?.tags
+      ).toMatchObject({ 'python.compileall.cacheHit': 'true' });
+
+      failCompile = true;
+      await build(buildOptions);
+      expect(fs.existsSync(markerPath)).toBe(false);
+
+      process.env.VERCEL_PYTHON_COMPILEALL = '0';
+      await build(buildOptions);
+      expect(fs.existsSync(markerPath)).toBe(false);
+
+      process.env.VERCEL_PYTHON_COMPILEALL = '1';
+      failCompile = false;
+      await build(buildOptions);
+      expect(sourceLists.at(-1)).toContain(packageSource);
+      expect(fs.existsSync(markerPath)).toBe(true);
+
+      await build({
+        ...buildOptions,
+        config: { preDeployCommand: 'echo safe' },
+        registerPreDeploy: vi.fn(),
+      });
+      expect(fs.existsSync(markerPath)).toBe(false);
+    } finally {
+      vi.mocked(getVenvSitePackagesDirs).mockResolvedValue([]);
       mockedExeca.mockReset();
       if (originalCompileAllEnv === undefined) {
         delete process.env.VERCEL_PYTHON_COMPILEALL;

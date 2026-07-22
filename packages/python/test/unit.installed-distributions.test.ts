@@ -289,6 +289,41 @@ describe('InstalledPythonDistributions', () => {
     expect(result.perItemSizes).toEqual(new Map([['pkg', 10]]));
   });
 
+  it('maps adjacent bytecode into bundled and runtime-install prefix layouts', async () => {
+    const sitePackagesDir = makeTempDir('adjacent-prefix-bytecode-');
+    const adjacentPyc = path.join(
+      sitePackagesDir,
+      'pkg',
+      '__pycache__',
+      'mod.cpython-312.pyc'
+    );
+    fs.outputFileSync(adjacentPyc, Buffer.alloc(15));
+    const installed = createInstalledDistributions({
+      sitePackagesDir,
+      distributions: createDistributionIndex([
+        ['pkg', [{ path: 'pkg/mod.py' }]],
+      ]),
+    });
+
+    const bundled = await installed.collectAdjacentBytecodeAsPrefixFiles({
+      runtimeRoot: '/var/task/_vendor',
+    });
+    const runtimeInstalled =
+      await installed.collectAdjacentBytecodeAsPrefixFiles({
+        runtimeRoot: `${RUNTIME_DEPS_DIR}/lib/python3.12/site-packages`,
+      });
+
+    expect(Object.keys(bundled.files)).toEqual([
+      `${PYCACHE_PREFIX_DIR}/var/task/_vendor/pkg/mod.cpython-312.pyc`,
+    ]);
+    expect(Object.keys(runtimeInstalled.files)).toEqual([
+      `${PYCACHE_PREFIX_DIR}/tmp/_vc_deps/lib/python3.12/site-packages/pkg/mod.cpython-312.pyc`,
+    ]);
+    expect((Object.values(runtimeInstalled.files)[0] as FileFsRef).fsPath).toBe(
+      adjacentPyc
+    );
+  });
+
   it('collects staged prefix bytecode under its runtime root', async () => {
     const baseDir = makeTempDir('prefix-bytecode-records-');
     const sitePackagesDir = path.join(baseDir, 'site-packages');
@@ -383,6 +418,11 @@ describe('InstalledPythonDistributions', () => {
     expect(
       await installed.collectPrefixBytecodeFiles({
         stagingDir: '/tmp/staging',
+        runtimeRoot: '/var/task/_vendor',
+      })
+    ).toEqual({ files: {}, totalSize: 0, perItemSizes: new Map() });
+    expect(
+      await installed.collectAdjacentBytecodeAsPrefixFiles({
         runtimeRoot: '/var/task/_vendor',
       })
     ).toEqual({ files: {}, totalSize: 0, perItemSizes: new Map() });

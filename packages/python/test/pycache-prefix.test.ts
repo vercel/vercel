@@ -3,12 +3,19 @@ import execa from 'execa';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { deriveStagedPycFsPath, runCompileAll } from '../src/compileall';
+import { FileFsRef } from '@vercel/build-utils';
+import type { Distribution } from '@vercel/python-analysis';
+import {
+  deriveStagedPycFsPath,
+  PYCACHE_PREFIX_DIR,
+  runCompileAll,
+} from '../src/compileall';
 import {
   RUNTIME_DEPS_DIR,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
   EPHEMERAL_INSTALL_BUDGET_BYTES,
 } from '../src/dependency-externalizer';
+import { InstalledPythonDistributions } from '../src/installed-distributions';
 
 const tmpDirs: string[] = [];
 const compileAllScriptPath = path.join(
@@ -121,6 +128,90 @@ describe('explicit-list compilation layout (real CPython)', () => {
         fs.existsSync(path.join(path.dirname(srcPath), '__pycache__'))
       ).toBe(false);
     }
+  });
+
+  it('loads adjacent dependency bytecode after mapping it into a runtime prefix', async () => {
+    if (!processPoolAvailable) return;
+    const [major, minor, interpreterPrefix] = await getPythonInfo();
+    if (interpreterPrefix !== null) return;
+
+    const workPath = makeTempDir('vc-py-adjacent-prefix-real-');
+    const venvPath = path.join(workPath, 'venv');
+    const sitePackagesDir = path.join(
+      venvPath,
+      'lib',
+      `python${major}.${minor}`,
+      'site-packages'
+    );
+    const buildSource = path.join(sitePackagesDir, 'pkg', 'mod.py');
+    fs.mkdirSync(path.dirname(buildSource), { recursive: true });
+    fs.writeFileSync(buildSource, 'VALUE = "compiled dependency"\n');
+
+    await expect(
+      runCompileAll({ pythonBin, sourceFiles: [buildSource] })
+    ).resolves.toBe(true);
+
+    const distribution: Distribution = {
+      name: 'pkg',
+      version: '1.0.0',
+      metadataVersion: '2.1',
+      requiresDist: [],
+      providesExtra: [],
+      classifiers: [],
+      projectUrls: [],
+      platforms: [],
+      dynamic: [],
+      files: [{ path: 'pkg/mod.py' }],
+    };
+    const installed = new InstalledPythonDistributions({
+      sitePackageDirs: [sitePackagesDir],
+      distributions: new Map([
+        [sitePackagesDir, new Map([['pkg', distribution]])],
+      ]),
+      pythonMajor: major,
+      pythonMinor: minor,
+    });
+    const runtimeSitePackages = path.join(workPath, 'runtime', 'site-packages');
+    const collected = await installed.collectAdjacentBytecodeAsPrefixFiles({
+      runtimeRoot: runtimeSitePackages,
+    });
+    const [bundlePath] = Object.keys(collected.files);
+    expect(bundlePath).toMatch(
+      new RegExp(
+        `^${PYCACHE_PREFIX_DIR}/.+/pkg/mod\\.cpython-${major}${minor}\\.pyc$`
+      )
+    );
+
+    const prefixDir = path.join(workPath, 'runtime-pycache');
+    const prefixRelativePath = bundlePath.slice(
+      `${PYCACHE_PREFIX_DIR}/`.length
+    );
+    const prefixPycPath = path.join(
+      prefixDir,
+      ...prefixRelativePath.split('/')
+    );
+    fs.mkdirSync(path.dirname(prefixPycPath), { recursive: true });
+    fs.copyFileSync(
+      (collected.files[bundlePath] as FileFsRef).fsPath,
+      prefixPycPath
+    );
+
+    const runtimeSource = path.join(runtimeSitePackages, 'pkg', 'mod.py');
+    fs.mkdirSync(path.dirname(runtimeSource), { recursive: true });
+    fs.writeFileSync(runtimeSource, 'VALUE = "runtime source"\n');
+    const { stdout } = await execa(
+      pythonBin,
+      ['-c', 'from pkg.mod import VALUE; print(VALUE)'],
+      {
+        env: {
+          ...process.env,
+          PYTHONPATH: runtimeSitePackages,
+          PYTHONPYCACHEPREFIX: prefixDir,
+          PYTHONDONTWRITEBYTECODE: '1',
+        },
+      }
+    );
+    expect(stdout).toBe('compiled dependency');
   });
 
   it('does not run when loaded as a multiprocessing child module', async () => {

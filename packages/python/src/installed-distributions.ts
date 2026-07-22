@@ -5,7 +5,11 @@ import {
   normalizePackageName,
   scanDistributions,
 } from '@vercel/python-analysis';
-import type { DistributionIndex, PackagePath } from '@vercel/python-analysis';
+import type {
+  DirectUrlInfo,
+  DistributionIndex,
+  PackagePath,
+} from '@vercel/python-analysis';
 import {
   derivePrefixPycBundlePath,
   derivePycPath,
@@ -40,6 +44,21 @@ export interface DistributionFileGroup {
   packageName: string;
   sitePackagesDir: string;
   files: DistributionFileEntry[];
+}
+
+export interface DistributionCacheRecord {
+  path: string;
+  hash: string | undefined;
+  size: string | undefined;
+}
+
+export interface DistributionCacheEntry {
+  packageName: string;
+  version: string;
+  origin: DirectUrlInfo | undefined;
+  sitePackagesDir: string;
+  records: DistributionCacheRecord[];
+  sourceFiles: { absolutePath: string; relativePath: string }[];
 }
 
 export function getDistributionFileGroups({
@@ -263,6 +282,50 @@ export class InstalledPythonDistributions {
     return [...sourceFiles].sort();
   }
 
+  getBuildCacheEntries(includePackages?: string[]): DistributionCacheEntry[] {
+    const distributionIndexes = new Map(
+      [...this.distributions].map(([dir, index]) => [resolve(dir), index])
+    );
+
+    return getDistributionFileGroups({
+      sitePackageDirs: this.sitePackageDirs,
+      distributions: this.distributions,
+      includePackages,
+    }).map(({ packageName, sitePackagesDir, files }) => {
+      const distribution = [
+        ...(distributionIndexes.get(sitePackagesDir) ?? []),
+      ].find(([name]) => normalizePackageName(name) === packageName)?.[1];
+      if (!distribution) {
+        throw new Error(`Missing distribution metadata for ${packageName}`);
+      }
+
+      return {
+        packageName,
+        version: distribution.version,
+        origin: distribution.origin,
+        sitePackagesDir,
+        records: files
+          .map(({ relativePath, record }) => ({
+            path: relativePath.replaceAll(sep, '/'),
+            hash: record.hash,
+            size: record.size?.toString(),
+          }))
+          .sort((a, b) =>
+            `${a.path}\0${a.hash ?? ''}\0${a.size ?? ''}`.localeCompare(
+              `${b.path}\0${b.hash ?? ''}\0${b.size ?? ''}`
+            )
+          ),
+        sourceFiles: files
+          .filter(({ relativePath }) => relativePath.endsWith('.py'))
+          .map(({ absolutePath, relativePath }) => ({
+            absolutePath,
+            relativePath: relativePath.replaceAll(sep, '/'),
+          }))
+          .sort((a, b) => a.relativePath.localeCompare(b.relativePath)),
+      };
+    });
+  }
+
   async collectBytecodeFiles({
     vendorDirName,
     includePackages,
@@ -365,6 +428,61 @@ export class InstalledPythonDistributions {
     const result = await this.collectExistingBytecode(pending);
     debug(
       `Collected ${Object.keys(result.files).length} prefix bytecode files` +
+        ` (${(result.totalSize / (1024 * 1024)).toFixed(2)} MB)` +
+        ` for runtime root ${runtimeRoot}` +
+        (includePackages ? ` from ${includePackages.length} packages` : '')
+    );
+    return result;
+  }
+
+  async collectAdjacentBytecodeAsPrefixFiles({
+    runtimeRoot,
+    includePackages,
+  }: {
+    runtimeRoot: string;
+    includePackages?: string[];
+  }): Promise<BytecodeCollectionResult> {
+    if (this.pythonMajor == null || this.pythonMinor == null) {
+      return { files: {}, totalSize: 0, perItemSizes: new Map() };
+    }
+
+    const pending: {
+      bundlePath: string;
+      srcFsPath: string;
+      packageName: string;
+    }[] = [];
+    const distributionGroups = getDistributionFileGroups({
+      sitePackageDirs: this.sitePackageDirs,
+      distributions: this.distributions,
+      includePackages,
+    });
+
+    for (const { packageName, sitePackagesDir, files } of distributionGroups) {
+      for (const { relativePath } of files) {
+        const sourcePath = relativePath.replaceAll(sep, '/');
+        const adjacentPath = derivePycPath(
+          sourcePath,
+          this.pythonMajor,
+          this.pythonMinor
+        );
+        const bundlePath = derivePrefixPycBundlePath(
+          `${runtimeRoot}/${sourcePath}`,
+          this.pythonMajor,
+          this.pythonMinor
+        );
+        if (!adjacentPath || !bundlePath) continue;
+
+        pending.push({
+          bundlePath,
+          srcFsPath: join(sitePackagesDir, adjacentPath.replaceAll('/', sep)),
+          packageName,
+        });
+      }
+    }
+
+    const result = await this.collectExistingBytecode(pending);
+    debug(
+      `Collected ${Object.keys(result.files).length} adjacent bytecode files` +
         ` (${(result.totalSize / (1024 * 1024)).toFixed(2)} MB)` +
         ` for runtime root ${runtimeRoot}` +
         (includePackages ? ` from ${includePackages.length} packages` : '')
