@@ -3,7 +3,8 @@ import { parseArguments } from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import { type Command, help } from '../help';
 import list from './list';
-import { listSubcommand, targetCommand } from './command';
+import purchase from './purchase';
+import { listSubcommand, purchaseSubcommand, targetCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
@@ -12,6 +13,7 @@ import { getCommandAliases } from '..';
 
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
+  purchase: getCommandAliases(purchaseSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -61,6 +63,17 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandList(subcommand);
       return await list(client, args);
+    case 'purchase':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('target', 'purchase');
+        printHelp(purchaseSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommand({
+        subcommand: 'purchase',
+        value: subcommand,
+      });
+      return await purchase(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(targetCommand, { columns: client.stderr.columns }));

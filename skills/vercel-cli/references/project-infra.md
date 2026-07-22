@@ -73,11 +73,12 @@ Routing and redirect changes have separate command groups. Route changes are sta
 
 ```bash
 vercel target ls --format json
+vercel target purchase 2 --project my-app --yes
 vercel pull --environment=<target>
 vercel --target=<target>
 ```
 
-`vercel target` lists custom environments. `deploy` and `build` accept `--target`; `pull` accepts `--environment` (not `--target`).
+`vercel target` lists custom environments. `vercel target purchase` updates purchased custom environment capacity for a project via `POST /v1/projects/custom-environments/settings`. `deploy` and `build` accept `--target`; `pull` accepts `--environment` (not `--target`).
 
 ## Rolling Releases
 
