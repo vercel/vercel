@@ -1,7 +1,8 @@
 {
   "build": {
     "env": {
-      "VERCEL_FASTAPI_STATIC_CDN": "1"
+      "VERCEL_FASTAPI_STATIC_CDN": "1",
+      "VERCEL_ENABLE_FASTAPI_ROUTES_DISCOVERY": "1"
     }
   }
 }

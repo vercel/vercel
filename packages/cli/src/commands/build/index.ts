@@ -1546,35 +1546,56 @@ async function doBuild(
                     ? (buildResult.output['index'] as Lambda)
                     : undefined;
                 // Convert routes from introspection format to Vercel routing format
-                const convertedRoutes = [];
+                const beforeFilesystemRoutes: Route[] = [];
+                const afterFilesystemRoutes: Route[] = [];
                 const convertedOutputs: Record<string, Lambda> = indexLambda
                   ? { index: indexLambda }
                   : {};
+                const functionDestination = Array.isArray(
+                  (buildResult as BuildResultV2Typical).routes
+                )
+                  ? ([...(buildResult as BuildResultV2Typical).routes!]
+                      .reverse()
+                      .find(route => route?.dest)?.dest ?? '/')
+                  : '/';
                 for (const route of routesJson.routes) {
                   if (typeof route.source !== 'string') {
                     continue;
                   }
-                  const { src } = sourceToRegex(route.source);
+                  const src =
+                    typeof route.src === 'string'
+                      ? route.src
+                      : sourceToRegex(route.source).src;
+                  const beforeFilesystem =
+                    route.priority === 'before-filesystem';
                   const newRoute: Route = {
                     src,
-                    dest: route.source,
+                    dest: beforeFilesystem ? functionDestination : route.source,
                   };
-                  if (route.methods) {
+                  // FastAPI handles method mismatches before its low-priority
+                  // frontend routes. Matching all methods here preserves 405
+                  // responses instead of allowing a CDN file to win.
+                  if (route.methods && !beforeFilesystem) {
                     newRoute.methods = route.methods;
                   }
-                  if (route.source === '/') {
+                  if (route.source === '/' && !beforeFilesystem) {
                     continue;
                   }
-                  if (indexLambda) {
+                  if (indexLambda && route.source !== '/') {
                     convertedOutputs[route.source] = indexLambda;
                   }
-                  convertedRoutes.push(newRoute);
+                  if (beforeFilesystem) {
+                    beforeFilesystemRoutes.push(newRoute);
+                  } else {
+                    afterFilesystemRoutes.push(newRoute);
+                  }
                 }
                 // Wrap routes with filesystem handler and catch-all
                 (buildResult as BuildResultV2Typical).routes = [
+                  ...beforeFilesystemRoutes,
                   { handle: 'filesystem' },
-                  ...convertedRoutes,
-                  { src: '/(.*)', dest: '/' },
+                  ...afterFilesystemRoutes,
+                  { src: '/(.*)', dest: functionDestination },
                 ];
                 if (indexLambda) {
                   (buildResult as BuildResultV2Typical).output =

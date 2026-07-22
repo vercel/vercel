@@ -1767,6 +1767,14 @@ createServer((_req, res) => {
         expect(config).toMatchObject({
           version: 3,
           routes: [
+            {
+              src: '^/before/[^/]+$',
+              dest: '/',
+            },
+            {
+              src: '^/$',
+              dest: '/',
+            },
             { handle: 'filesystem' },
             {
               src: expect.stringMatching(/^\^.*users.*\$$/),
@@ -1784,10 +1792,15 @@ createServer((_req, res) => {
             },
           ],
         });
+        expect(config.routes[0]).not.toHaveProperty('methods');
+        expect(config.routes[1]).not.toHaveProperty('methods');
 
         // "functions" directory should have the express function
         const functions = await fs.readdir(join(output, 'functions'));
         expect(functions).toContain('index.func');
+        expect(
+          fs.existsSync(join(output, 'functions', 'before', ':id.func'))
+        ).toBe(true);
       } finally {
         delete process.env.VERCEL_EXPERIMENTAL_ROUTES_JSON;
       }

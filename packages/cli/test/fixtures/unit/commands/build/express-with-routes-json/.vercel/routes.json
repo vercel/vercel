@@ -1,6 +1,18 @@
 {
   "routes": [
     {
+      "source": "/before/:id",
+      "src": "^/before/[^/]+$",
+      "priority": "before-filesystem",
+      "methods": ["POST"]
+    },
+    {
+      "source": "/",
+      "src": "^/$",
+      "priority": "before-filesystem",
+      "methods": ["GET"]
+    },
+    {
       "source": "/users/:id",
       "methods": ["GET"]
     },

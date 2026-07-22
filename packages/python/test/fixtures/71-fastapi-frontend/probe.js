@@ -8,6 +8,18 @@ module.exports = async ({ deploymentUrl, fetch }) => {
     failures.push(`asset: expected FRONTEND_ASSET, got ${JSON.stringify(assetBody)}`);
   }
 
+  const collision = await fetch(`https://${deploymentUrl}/api/collision.txt`);
+  const collisionBody = await collision.text();
+  if (collision.status !== 200) failures.push(`collision: expected 200, got ${collision.status}`);
+  if (!collisionBody.includes('API_ROUTE_WON')) {
+    failures.push(`collision: expected API_ROUTE_WON, got ${JSON.stringify(collisionBody)}`);
+  }
+
+  const methodCollision = await fetch(`https://${deploymentUrl}/method-collision.txt`);
+  if (methodCollision.status !== 405) {
+    failures.push(`method collision: expected 405, got ${methodCollision.status}`);
+  }
+
   const nav = await fetch(`https://${deploymentUrl}/client/route`, {
     headers: { accept: 'text/html' },
   });

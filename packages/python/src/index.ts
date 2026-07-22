@@ -83,7 +83,11 @@ import {
   type DjangoCollectStaticResult,
 } from './django';
 import {
+  clearFastAPIRoutesManifest,
+  inspectFastAPIApp,
   runFastAPICollectStatic,
+  writeFastAPIRoutesManifest,
+  type FastAPIApplicationRoute,
   type FastAPICollectStaticResult,
 } from './fastapi';
 import { containsTopLevelCallable } from '@vercel/python-analysis';
@@ -338,7 +342,8 @@ interface DjangoFrameworkHookResult extends FrameworkHookResult {
 }
 
 interface FastAPIFrameworkHookResult extends FrameworkHookResult {
-  fastapiStatic: FastAPICollectStaticResult;
+  fastapiStatic: FastAPICollectStaticResult | null;
+  fastapiRoutes: FastAPIApplicationRoute[];
 }
 
 type FrameworkHook = (
@@ -455,25 +460,61 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
     const entrypointAbs = join(workPath, entrypointRel);
     const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
 
-    const cdnEnv = process.env.VERCEL_FASTAPI_STATIC_CDN?.toLowerCase();
-    if (cdnEnv !== '1' && cdnEnv !== 'true') {
+    const isEnabled = (value: string | undefined) => {
+      const normalized = value?.toLowerCase();
+      return normalized === '1' || normalized === 'true';
+    };
+    const staticCdnEnabled = isEnabled(pythonEnv.VERCEL_FASTAPI_STATIC_CDN);
+    const routesDiscoveryEnabled = isEnabled(
+      pythonEnv.VERCEL_ENABLE_FASTAPI_ROUTES_DISCOVERY
+    );
+
+    await clearFastAPIRoutesManifest(workPath);
+    if (!staticCdnEnabled && !routesDiscoveryEnabled) {
       debug(
-        'FastAPI: VERCEL_FASTAPI_STATIC_CDN not set, skipping static CDN collection'
+        'FastAPI: static CDN and route discovery are disabled, skipping inspection'
       );
       return;
     }
 
-    const fastapiStatic = await runFastAPICollectStatic(
+    const inspection = await inspectFastAPIApp(
       venvPath,
-      workPath,
-      pythonEnv,
-      outputStaticDir,
       entrypointAbs,
-      variableName
+      variableName,
+      pythonEnv,
+      workPath
     );
-    if (!fastapiStatic) return;
+    if (!inspection) return;
 
-    return { fastapiStatic };
+    const fastapiStatic = staticCdnEnabled
+      ? await runFastAPICollectStatic(
+          venvPath,
+          workPath,
+          pythonEnv,
+          outputStaticDir,
+          entrypointAbs,
+          variableName,
+          inspection.staticMounts
+        )
+      : null;
+
+    const fastapiRoutes = routesDiscoveryEnabled ? inspection.routes : [];
+    if (routesDiscoveryEnabled) {
+      try {
+        await writeFastAPIRoutesManifest(workPath, fastapiRoutes);
+      } catch (error) {
+        console.error(
+          'Warning: Failed to write discovered FastAPI routes metadata.'
+        );
+        debug(
+          `FastAPI: could not write routes.json: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
+    }
+
+    return { fastapiStatic, fastapiRoutes };
   },
 };
 
@@ -1112,6 +1153,8 @@ export const build: BuildVX = async ({
   const fastapiStatic: FastAPICollectStaticResult | null =
     (hookResult as FastAPIFrameworkHookResult | undefined)?.fastapiStatic ??
     null;
+  const fastapiRoutes: FastAPIApplicationRoute[] =
+    (hookResult as FastAPIFrameworkHookResult | undefined)?.fastapiRoutes ?? [];
   const cdnOutputDir =
     djangoStatic?.cdnOutputDir ?? fastapiStatic?.cdnOutputDir ?? null;
 
@@ -1754,15 +1797,27 @@ export const build: BuildVX = async ({
     isNonWebService || !output
       ? undefined
       : [
+          ...fastapiRoutes.map(route => ({
+            src: route.src,
+            dest: `/${lambdaPath}`,
+          })),
           { handle: 'filesystem' as const },
           { src: '/(.*)', dest: `/${lambdaPath}` },
         ];
+  const fastapiRouteOutputs = output
+    ? Object.fromEntries(
+        fastapiRoutes
+          .filter(route => route.source !== '/')
+          .map(route => [route.source, output])
+      )
+    : {};
 
   return {
     resultVersion: 2,
     result: {
       output: {
         ...(output ? { [lambdaPath]: output } : {}),
+        ...fastapiRouteOutputs,
         ...subscriberLambdas,
         ...workflowLambdas,
         ...staticFiles,
