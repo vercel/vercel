@@ -88,7 +88,10 @@ export default async function addon(client: Client, argv: string[]) {
 
   if (!SUPPORTED_ADDON_ALIASES.includes(addonName as AddonAlias)) {
     output.error(
-      `Invalid addon "${addonName}". Supported addons: ${SUPPORTED_ADDON_ALIASES.join(', ')}`
+      `Invalid addon "${addonName}". Supported addons: ${SUPPORTED_ADDON_ALIASES.join(', ')}.`
+    );
+    output.log(
+      `Custom environment capacity is purchased with ${getCommandName('target purchase <packs>')}.`
     );
     return 1;
   }

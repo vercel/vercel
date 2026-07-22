@@ -95,8 +95,10 @@ export default async function purchase(client: Client, argv: string[]) {
   const maxPacks = settings.maxPurchasedAmount / packSize;
 
   if (packs < minPacks || packs > maxPacks) {
+    const minEnvironments = minPacks * packSize;
+    const maxEnvironments = maxPacks * packSize;
     output.error(
-      `Packs must be between ${minPacks} and ${maxPacks} for this project.`
+      `Packs must be between ${minPacks} and ${maxPacks} for this project (${minEnvironments}-${maxEnvironments} purchased environments).`
     );
     return 1;
   }

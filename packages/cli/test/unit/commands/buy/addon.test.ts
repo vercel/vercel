@@ -138,7 +138,59 @@ describe('buy addon', () => {
       client.setArgv('buy', 'addon', 'customEnvironment', '1500', '--yes');
       const exitCode = await buy(client);
       expect(exitCode).toBe(1);
-      await expect(client.stderr).toOutput('Packs must be between');
+      await expect(client.stderr).toOutput(
+        'Packs must be between 0 and 3 for this project (0-15 purchased environments)'
+      );
+    });
+
+    it('shows Pro upsell when hobby team purchases via legacy buy addon', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.scenario.get(
+        `/v1/projects/custom-environments/settings`,
+        (_req, res) => {
+          res.json({
+            packSize: 5,
+            baseline: 1,
+            purchasedAmount: 0,
+            minPurchasedAmount: 0,
+            maxPurchasedAmount: 15,
+            effectiveLimit: 1,
+            environmentsUsed: 1,
+          });
+        }
+      );
+      client.scenario.post(
+        `/v1/projects/custom-environments/settings`,
+        (_req, res) => {
+          res.status(403).json({
+            error: {
+              code: 'upgrade_required',
+              message:
+                'You must be on an active Pro or Enterprise plan to purchase custom environments.',
+            },
+          });
+        }
+      );
+
+      client.setArgv('buy', 'addon', 'customEnvironment', '1', '--yes');
+      const exitCode = await buy(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('Pro or Enterprise');
+      await expect(client.stderr).toOutput('buy pro');
+    });
+
+    it('supports the add-on subcommand alias', async () => {
+      client.setArgv('buy', 'add-on', '--help');
+      const exitCode = await buy(client);
+      expect(exitCode).toBe(2);
+      await expect(client.stderr).toOutput('Supported addons: siem');
     });
 
     it('errors when quantity is not a number', async () => {

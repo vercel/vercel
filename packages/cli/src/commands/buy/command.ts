@@ -59,8 +59,8 @@ export const ADDON_LABELS: Record<AddonAlias, string> = {
 
 export const addonSubcommand = {
   name: 'addon',
-  aliases: ['addons'],
-  description: `Purchase a Vercel addon for your team. Supported addons: ${SUPPORTED_ADDON_ALIASES.join(', ')}.`,
+  aliases: ['addons', 'add-on'],
+  description: `Purchase a Vercel addon for your team. Supported addons: ${SUPPORTED_ADDON_ALIASES.join(', ')}. Custom environment capacity uses ${packageName} target purchase instead.`,
   arguments: [
     {
       name: 'addon-name',
@@ -83,6 +83,10 @@ export const addonSubcommand = {
     {
       name: 'Purchase 1 SIEM addon',
       value: `${packageName} buy addon siem 1`,
+    },
+    {
+      name: 'Purchase custom environment packs for a project',
+      value: `${packageName} target purchase 2 --project my-app`,
     },
   ],
 } as const;

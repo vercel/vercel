@@ -131,6 +131,8 @@ describe('target purchase', () => {
     client.setArgv('target', 'purchase', '4', '--yes');
     const exitCode = await target(client);
     expect(exitCode).toBe(1);
-    await expect(client.stderr).toOutput('Packs must be between 0 and 3');
+    await expect(client.stderr).toOutput(
+      'Packs must be between 0 and 3 for this project (0-15 purchased environments)'
+    );
   });
 });
