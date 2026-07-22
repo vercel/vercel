@@ -1,5 +1,20 @@
 # vercel
 
+## 56.5.0
+
+### Minor Changes
+
+- ab9c775: Add `vercel ai-gateway budgets` set/list/remove commands
+
+### Patch Changes
+
+- 83c72a4: Recover from sensitive Environment Variable step-up challenges in every command that fetches Environment Variables (`vercel dev`, `vercel pull`, `vercel env run`, `vercel build`, `vercel link`, OIDC token refresh), not just `vercel env pull`. The device-code re-authentication flow now lives at the shared env-records layer, so any `challenge_required` response triggers it when running interactively.
+- 4e9df75: Add `vercel comments` — a project-aware inbox for Vercel Toolbar comments. List unresolved comments for the linked project (focused on the current Git branch), inspect full threads, reply, resolve/reopen (optionally with a closing reply via `-m`), and edit/delete messages. Supports `--format json` with a stable envelope for scripting and agents.
+- b789421: Precompile `vercel.json` validation to improve CLI startup performance.
+- Updated dependencies [393645b]
+- Updated dependencies [41a3f2f]
+  - @vercel/python@6.51.1
+
 ## 56.4.1
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @vercel/python
 
+## 6.51.1
+
+### Patch Changes
+
+- 393645b: Refactor installed Python distribution handling into a dedicated component and simplify dependency externalizer configuration.
+- 41a3f2f: fix 70-workflow-pyproject integration test
+
 ## 6.51.0
 
 ### Minor Changes
