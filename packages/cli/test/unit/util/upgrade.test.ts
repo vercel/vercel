@@ -5,6 +5,8 @@ import { spawn, execFile } from 'child_process';
 import output from '../../../src/output-manager';
 import { executeUpgrade } from '../../../src/util/upgrade';
 import { getUpdateCommandInfo } from '../../../src/util/get-update-command';
+import { isNativeBinaryInstall } from '../../../src/util/native-install';
+import { getInstalledVersion } from '../../../src/util/upgrade-version';
 import pkg from '../../../src/util/pkg';
 
 // Mock child_process
@@ -23,6 +25,7 @@ vi.mock('../../../src/output-manager', () => ({
     print: vi.fn(),
     spinner: vi.fn(),
     stopSpinner: vi.fn(),
+    warn: vi.fn(),
   },
 }));
 
@@ -33,10 +36,24 @@ vi.mock('../../../src/util/get-update-command', () => ({
     .mockResolvedValue({ command: 'npm i -g vercel@latest', global: true }),
 }));
 
+// Mock native-install so tests control whether the JS-vs-native verification
+// path runs, independent of the real process environment.
+vi.mock('../../../src/util/native-install', () => ({
+  isNativeBinaryInstall: vi.fn(() => false),
+}));
+
+// Mock the post-install disk read so tests can simulate whether the upgrade
+// actually changed the installed version, without touching the real fs.
+vi.mock('../../../src/util/upgrade-version', () => ({
+  getInstalledVersion: vi.fn(() => undefined),
+}));
+
 const spawnMock = vi.mocked(spawn);
 const execFileMock = vi.mocked(execFile);
 const outputMock = vi.mocked(output);
 const getUpdateCommandInfoMock = vi.mocked(getUpdateCommandInfo);
+const isNativeBinaryInstallMock = vi.mocked(isNativeBinaryInstall);
+const getInstalledVersionMock = vi.mocked(getInstalledVersion);
 
 // Makes the package manager's `latest` lookup resolve to `version`.
 function mockLatestVersion(version: string) {
@@ -67,6 +84,11 @@ describe('executeUpgrade', () => {
       callback(new Error('command not found'));
       return {} as any;
     }) as any);
+    // Defaults: JS install (not native), and the post-install disk read is
+    // unobservable so the generic "still on v<before>" notice is used unless a
+    // test opts into a concrete installed version.
+    isNativeBinaryInstallMock.mockReturnValue(false);
+    getInstalledVersionMock.mockReturnValue(undefined);
   });
 
   afterEach(() => {
@@ -461,5 +483,94 @@ describe('executeUpgrade', () => {
     expect(outputMock.debug).toHaveBeenCalledWith(
       `Executing: npm i -g vercel@latest (cwd: ${tmpdir()})`
     );
+  });
+
+  it('reports the on-disk version when the install actually upgraded the CLI', async () => {
+    const mockProcess = createMockProcess();
+    spawnMock.mockReturnValue(mockProcess as any);
+    mockLatestVersion('999.0.0');
+    getInstalledVersionMock.mockReturnValue('999.0.0');
+
+    const exitCodePromise = executeUpgrade();
+    await tick();
+
+    mockProcess.emit('close', 0);
+    const exitCode = await exitCodePromise;
+
+    expect(exitCode).toBe(0);
+    expect(outputMock.success).toHaveBeenCalledWith(
+      'Vercel CLI has been upgraded to v999.0.0 successfully!'
+    );
+  });
+
+  it('warns when the installer exits 0 but the on-disk version is unchanged', async () => {
+    const mockProcess = createMockProcess();
+    spawnMock.mockReturnValue(mockProcess as any);
+    mockLatestVersion('999.0.0');
+    getInstalledVersionMock.mockReturnValue(pkg.version);
+
+    const exitCodePromise = executeUpgrade();
+    await tick();
+
+    mockProcess.emit('close', 0);
+    const exitCode = await exitCodePromise;
+
+    expect(exitCode).toBe(0);
+    expect(outputMock.success).not.toHaveBeenCalled();
+    expect(outputMock.warn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        `The upgrade completed, but the active Vercel CLI is still v${pkg.version}.`
+      )
+    );
+    expect(outputMock.warn).toHaveBeenCalledWith(
+      expect.stringContaining('shadowing the updated one on your PATH.')
+    );
+    expect(outputMock.log).toHaveBeenCalledWith(
+      expect.stringContaining('Verify with `vc --version`')
+    );
+  });
+
+  it('reports the resolved target version for a successful native upgrade', async () => {
+    isNativeBinaryInstallMock.mockReturnValue(true);
+    getUpdateCommandInfoMock.mockResolvedValueOnce({
+      command: 'npm i -g @vercel/vc-native@latest --force',
+      global: true,
+    });
+    mockLatestVersion('999.0.0');
+    const mockProcess = createMockProcess();
+    spawnMock.mockReturnValue(mockProcess as any);
+
+    const exitCodePromise = executeUpgrade();
+    await tick();
+
+    mockProcess.emit('close', 0);
+    const exitCode = await exitCodePromise;
+
+    expect(exitCode).toBe(0);
+    // Native installs can't verify on disk (VFS snapshot), so the resolved
+    // target version is trusted.
+    expect(outputMock.success).toHaveBeenCalledWith(
+      'Vercel CLI has been upgraded to v999.0.0 successfully!'
+    );
+    expect(outputMock.warn).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the resolved target when the on-disk version is unreadable', async () => {
+    const mockProcess = createMockProcess();
+    spawnMock.mockReturnValue(mockProcess as any);
+    mockLatestVersion('999.0.0');
+    getInstalledVersionMock.mockReturnValue(undefined);
+
+    const exitCodePromise = executeUpgrade();
+    await tick();
+
+    mockProcess.emit('close', 0);
+    const exitCode = await exitCodePromise;
+
+    expect(exitCode).toBe(0);
+    expect(outputMock.success).toHaveBeenCalledWith(
+      'Vercel CLI has been upgraded to v999.0.0 successfully!'
+    );
+    expect(outputMock.warn).not.toHaveBeenCalled();
   });
 });

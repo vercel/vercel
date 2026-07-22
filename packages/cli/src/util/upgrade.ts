@@ -2,6 +2,8 @@ import { spawn, execFile } from 'child_process';
 import { tmpdir } from 'os';
 import semver from 'semver';
 import { getUpdateCommandInfo } from './get-update-command';
+import { isNativeBinaryInstall } from './native-install';
+import { getInstalledVersion } from './upgrade-version';
 import pkg from './pkg';
 import output from '../output-manager';
 import { progress } from './output/progress';
@@ -117,8 +119,6 @@ export async function executeUpgrade(targetVersion?: string): Promise<number> {
 
   const cwd = global ? tmpdir() : process.cwd();
 
-  // The version currently running, captured before the install overwrites it.
-  // This is what `vc --version` reports, for both Node.js and native binary.
   const versionBefore = pkg.version;
 
   let resolvedTargetVersion = targetVersion;
@@ -194,6 +194,43 @@ export async function executeUpgrade(targetVersion?: string): Promise<number> {
       renderUpgradeProgress(totalSteps, totalSteps);
       output.stopSpinner();
 
+      // The installer may exit 0 yet not update the running CLI (e.g. a second
+      // global install shadows the updated one). Re-read the on-disk version to
+      // report what actually got installed. Native binaries embed package.json
+      // in a VFS snapshot, so skip the check there and trust the exit code.
+      const nativeInstall = isNativeBinaryInstall();
+      const installedVersion = nativeInstall
+        ? undefined
+        : getInstalledVersion();
+
+      if (
+        installedVersion &&
+        semver.valid(installedVersion) &&
+        semver.valid(versionBefore) &&
+        semver.neq(installedVersion, versionBefore)
+      ) {
+        output.success(
+          `Vercel CLI has been upgraded to v${installedVersion} successfully!`
+        );
+        resolve(0);
+        return;
+      }
+
+      // The on-disk version is unchanged — the upgrade didn't reach the
+      // active CLI. Surface this honestly instead of claiming success.
+      if (installedVersion && !nativeInstall) {
+        output.warn(
+          `The upgrade completed, but the active Vercel CLI is still v${versionBefore}. ` +
+            `Another install may be shadowing the updated one on your PATH.`
+        );
+        output.log(
+          `Verify with \`vc --version\`, or reinstall with: ${updateCommand}`
+        );
+        resolve(0);
+        return;
+      }
+
+      // Native install, or the on-disk version was unreadable.
       if (resolvedTargetVersion) {
         output.success(
           `Vercel CLI has been upgraded to v${resolvedTargetVersion} successfully!`
