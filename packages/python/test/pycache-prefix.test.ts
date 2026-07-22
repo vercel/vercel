@@ -3,14 +3,8 @@ import execa from 'execa';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { FileFsRef } from '@vercel/build-utils';
+import { deriveStagedPycFsPath, runCompileAll } from '../src/compileall';
 import {
-  PYCACHE_PREFIX_DIR,
-  deriveStagedPycFsPath,
-  runCompileAll,
-} from '../src/compileall';
-import {
-  PythonDependencyExternalizer,
   RUNTIME_DEPS_DIR,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
   EPHEMERAL_INSTALL_BUDGET_BYTES,
@@ -99,126 +93,5 @@ describe('runtime deps constants', () => {
     expect(EPHEMERAL_INSTALL_BUDGET_BYTES).toBeLessThan(
       LAMBDA_EPHEMERAL_STORAGE_BYTES
     );
-  });
-});
-
-describe('collectPrefixBytecodeFiles', () => {
-  function makeAnalyzedExternalizer({
-    sitePackagesDir,
-    distributions,
-  }: {
-    sitePackagesDir: string;
-    distributions: Map<string, { files: { path: string }[] }>;
-  }) {
-    const ext = new PythonDependencyExternalizer({
-      venvPath: '/tmp/venv',
-      vendorDir: '_vendor',
-      workPath: '/tmp/work',
-      uvLockPath: null,
-      uvProjectDir: null,
-      projectName: 'proj',
-      pythonMajor: 3,
-      pythonMinor: 12,
-      pythonPath: 'python3',
-      hasCustomCommand: false,
-    });
-    (ext as any).analyzed = true;
-    (ext as any).sitePackageDirs = [sitePackagesDir];
-    (ext as any).distributions = new Map([[sitePackagesDir, distributions]]);
-    return ext;
-  }
-
-  it('collects staged pyc keyed under the runtime root', async () => {
-    const base = makeTempDir('vc-py-prefix-collect-');
-    const sitePackagesDir = path.join(base, 'site-packages');
-    const stagingDir = path.join(base, 'staging');
-
-    const stagedPyc = path.join(
-      stagingDir,
-      sitePackagesDir.replace(/^[/\\]+/, ''),
-      'pkg',
-      'mod.cpython-312.pyc'
-    );
-    fs.mkdirSync(path.dirname(stagedPyc), { recursive: true });
-    fs.writeFileSync(stagedPyc, Buffer.alloc(30));
-
-    const ext = makeAnalyzedExternalizer({
-      sitePackagesDir,
-      distributions: new Map([
-        ['pkg', { files: [{ path: 'pkg/mod.py' }, { path: 'pkg/native.so' }] }],
-        // Staged pyc missing on disk -> silently dropped.
-        ['otherpkg', { files: [{ path: 'otherpkg/mod.py' }] }],
-      ]) as any,
-    });
-
-    const runtimeRoot = `${RUNTIME_DEPS_DIR}/lib/python3.12/site-packages`;
-    const result = await ext.collectPrefixBytecodeFiles({
-      stagingDir,
-      runtimeRoot,
-    });
-
-    const expectedKey = `${PYCACHE_PREFIX_DIR}/tmp/_vc_deps/lib/python3.12/site-packages/pkg/mod.cpython-312.pyc`;
-    expect(Object.keys(result.files)).toEqual([expectedKey]);
-    expect((result.files[expectedKey] as FileFsRef).fsPath).toBe(stagedPyc);
-    expect(result.totalSize).toBe(30);
-    expect(result.perItemSizes.get('pkg')).toBe(30);
-  });
-
-  it('honors includePackages and skips out-of-tree RECORD entries', async () => {
-    const base = makeTempDir('vc-py-prefix-collect2-');
-    const sitePackagesDir = path.join(base, 'site-packages');
-    const stagingDir = path.join(base, 'staging');
-
-    for (const rel of ['a/mod.cpython-312.pyc', 'b/mod.cpython-312.pyc']) {
-      const staged = path.join(
-        stagingDir,
-        sitePackagesDir.replace(/^[/\\]+/, ''),
-        rel.replaceAll('/', path.sep)
-      );
-      fs.mkdirSync(path.dirname(staged), { recursive: true });
-      fs.writeFileSync(staged, Buffer.alloc(5));
-    }
-
-    const ext = makeAnalyzedExternalizer({
-      sitePackagesDir,
-      distributions: new Map([
-        ['a', { files: [{ path: 'a/mod.py' }] }],
-        [
-          'b',
-          { files: [{ path: 'b/mod.py' }, { path: '../../bin/script.py' }] },
-        ],
-      ]) as any,
-    });
-
-    const result = await ext.collectPrefixBytecodeFiles({
-      stagingDir,
-      runtimeRoot: '/var/task/_vendor',
-      includePackages: ['b'],
-    });
-
-    expect(Object.keys(result.files)).toEqual([
-      `${PYCACHE_PREFIX_DIR}/var/task/_vendor/b/mod.cpython-312.pyc`,
-    ]);
-    expect(result.perItemSizes.has('a')).toBe(false);
-  });
-
-  it('collects nothing for an empty includePackages list', async () => {
-    const base = makeTempDir('vc-py-prefix-collect3-');
-    const sitePackagesDir = path.join(base, 'site-packages');
-    const stagingDir = path.join(base, 'staging');
-    fs.mkdirSync(stagingDir, { recursive: true });
-
-    const ext = makeAnalyzedExternalizer({
-      sitePackagesDir,
-      distributions: new Map([['a', { files: [{ path: 'a/mod.py' }] }]]) as any,
-    });
-
-    const result = await ext.collectPrefixBytecodeFiles({
-      stagingDir,
-      runtimeRoot: '/var/task/_vendor',
-      includePackages: [],
-    });
-
-    expect(Object.keys(result.files)).toHaveLength(0);
   });
 });

@@ -13,6 +13,13 @@ export class AiGatewayTelemetryClient
     });
   }
 
+  trackCliSubcommandBudgets(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'budgets',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandRules(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'rules',

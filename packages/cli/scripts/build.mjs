@@ -11,6 +11,7 @@ import { compileDevTemplates } from './compile-templates.mjs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { esbuild, getDependencies } from '../../../utils/build.mjs';
+import { createConfigValidatorPlugin } from './precompile-config-validator.mjs';
 
 const repoRoot = new URL('../', import.meta.url);
 const cwd = process.cwd();
@@ -127,7 +128,7 @@ await esbuild({
   outdir: distDir,
   external: getDependencies(),
   banner,
-  plugins: [jsoncParserPlugin],
+  plugins: [jsoncParserPlugin, await createConfigValidatorPlugin()],
 });
 
 // Move priority command outputs to expected locations

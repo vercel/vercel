@@ -12,29 +12,36 @@ try {
 
 // Native-first: spawn a @vercel/vc-native-{platform}-{arch} binary when
 // present and exit with its result, otherwise fall through to the JS CLI.
-// Part 1 of 2: no optionalDependencies are wired yet, so resolveNative()
-// always returns null here and the CLI runs as JS. Part 2 will wire the
-// release flow to publish natives before vercel, activating this path.
+// The native package is declared as an os/cpu-filtered optionalDependency
+// so at most one platform binary downloads per install.
 import { spawnSync } from 'node:child_process';
-import { createRequire } from 'node:module';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const require = createRequire(import.meta.url);
 
 function resolveNative() {
+  // Already running inside the native binary — never trampoline again.
+  if (process.env.VERCEL_VC_NATIVE === '1') return null;
   const pkgName = `@vercel/vc-native-${process.platform}-${process.arch}`;
   const binName = process.platform === 'win32' ? 'vercel.exe' : 'vercel';
-  try {
-    const dir = dirname(require.resolve(`${pkgName}/package.json`));
-    const a = join(dir, 'bin', binName);
-    if (existsSync(a)) return a;
-    const b = join(dir, binName);
-    if (existsSync(b)) return b;
-  } catch {}
-  return null;
+  // Walk up from this install's own tree looking for a sibling native
+  // package. `require.resolve()` is not used because it falls back to
+  // NODE_PATH and the global folders even when `paths` is given.
+  let dir = __dirname;
+  while (true) {
+    const pkgDir = join(dir, 'node_modules', pkgName);
+    if (existsSync(join(pkgDir, 'package.json'))) {
+      const a = join(pkgDir, 'bin', binName);
+      if (existsSync(a)) return a;
+      const b = join(pkgDir, binName);
+      if (existsSync(b)) return b;
+    }
+    const parent = dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
 }
 
 const bin = resolveNative();
@@ -46,6 +53,7 @@ if (bin) {
     windowsHide: true,
   });
   if (r.error && (r.error.code === 'ENOENT' || r.error.code === 'EACCES')) {
+    delete process.env.VERCEL_VC_NATIVE;
     // fall through to JS
   } else {
     if (r.error) {

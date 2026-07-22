@@ -186,7 +186,7 @@ rg -n "Link to existing project\\?|Link to different existing project\\?|Link to
 4. Existing targets: current Environment Variables plus custom Environments.
 5. Sensitivity: explicit `--sensitive`/`--no-sensitive`, Development restrictions, team sensitive-variable policy, otherwise `Store as sensitive?`.
 6. Value: stdin, `--value`, or `Value?`. Mask sensitive values; leave non-sensitive typed values visible; never repeat the value after entry.
-7. Environment targets: positional target or `Environments?` multiselect.
+7. Environment targets: positional target (single or comma-separated list, e.g. `production,preview,development`; standard targets and custom Environment slugs/ids) or `Environments?` multiselect.
 8. Preview branch: optional third arg, or `Git branch?` when adding only to Preview.
 9. Mutation: save variable, optional force overwrite.
 10. Result: aligned receipt rows with variable, project, environments, branch, and type.
@@ -197,6 +197,7 @@ Rules:
 - Show linked `Project` context only when it changes the next decision or prevents real ambiguity. Prefer no preview over a block that repeats already-known values.
 - Never repeat the Environment Variable value after entry in human output, JSON, debug logs, telemetry, warnings, errors, or suggested commands. Sensitive values must not be visible at all.
 - Do not include actual `--value` contents in agent `next` commands. Use quoted `"<value>"` placeholders in shell commands, even if the user provided a value.
+- The environment positional accepts a comma-separated list producing one multi-target entry. Unknown tokens fail locally with `error: invalid_environment` naming valid targets; custom Environment slugs normalize to ids. A Git branch is only allowed when Preview is the only target (`error: branch_requires_preview_only` otherwise). `missing_environment` and `missing_requirements` payloads must include a comma-separated multi-target `next` suggestion (with `--no-sensitive` when Development is included and sensitivity was not explicit).
 - Use masked input for sensitive interactive `Value?` prompts. Use visible text input for non-sensitive `Value?` prompts so users can catch typos before saving.
 - Use `Name?`, `Store as sensitive?`, `Value?`, `Environments?`, and `Git branch?`.
 - Use `Variable name?` for public-prefix warning choices; use `Value?` for value-warning choices.
@@ -233,6 +234,7 @@ Env add acceptance matrix:
 - Development-only target
 - Production/Preview target
 - mixed target selection
+- comma-separated multi-target positional (dedupe, trim, invalid token, branch with multiple targets)
 - custom Environment target
 - Preview with a branch and all Preview branches
 - team sensitive-variable policy on/off

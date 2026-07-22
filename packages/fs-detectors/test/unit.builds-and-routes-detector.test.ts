@@ -230,9 +230,9 @@ describe('Test `detectBuilders`', () => {
     expect(rewriteRoutes).toBeNull();
     expect(errors).toEqual([
       {
-        code: 'MISSING_EXPERIMENTAL_SERVICES',
+        code: 'MISSING_SERVICES',
         message:
-          'Project framework is set to "services", but no services are declared. Add `experimentalServices` to vercel.json with at least one service, or change the project framework setting.',
+          'Project framework is set to "services", but no services are declared. Add `services` to vercel.json with at least one service, or change the project framework setting.',
       },
     ]);
   });
