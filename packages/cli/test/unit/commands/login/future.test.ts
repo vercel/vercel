@@ -26,6 +26,19 @@ function mockResponse(data: unknown, ok = true): Response {
   } as unknown as Response;
 }
 
+/** A JSON API response that survives `client.fetch` (headers + content-type). */
+function mockJsonResponse(data: unknown): Response {
+  return {
+    ok: true,
+    status: 200,
+    headers: new Headers({
+      'content-type': 'application/json; charset=utf-8',
+    }),
+    clone: () => ({ text: async () => 'mock json response' }),
+    json: async () => data,
+  } as unknown as Response;
+}
+
 function simulateTokenPolling(pollCount: number, finalResponse: Response) {
   for (let i = 0; i < pollCount; i++) {
     fetch.mockResolvedValueOnce(
@@ -212,5 +225,128 @@ describe('login', () => {
 
     expect(exitCode).toBe(0);
     expect(client.authConfig.userId).toBeUndefined();
+  });
+
+  describe('currentTeam preservation on re-login', () => {
+    const discoveryResponse = {
+      issuer: 'https://vercel.com',
+      device_authorization_endpoint: 'https://vercel.com',
+      token_endpoint: 'https://vercel.com',
+      revocation_endpoint: 'https://vercel.com',
+      jwks_uri: 'https://vercel.com',
+      introspection_endpoint: 'https://vercel.com',
+    };
+
+    async function setupDeviceCodeFlow() {
+      vi.resetModules();
+      const freshOauth = await import('../../../../src/util/oauth');
+      const { default: freshLogin } = await import(
+        '../../../../src/commands/login'
+      );
+
+      fetch.mockResolvedValueOnce(mockResponse(discoveryResponse));
+      await freshOauth.as();
+
+      fetch.mockResolvedValueOnce(
+        mockResponse({
+          device_code: randomUUID(),
+          user_code: randomUUID(),
+          verification_uri: 'https://vercel.com/device',
+          verification_uri_complete: `https://vercel.com/device?code=${randomUUID()}`,
+          expires_in: 30,
+          interval: 0.005,
+        })
+      );
+
+      await simulateTokenPolling(
+        1,
+        mockResponse({
+          access_token: randomUUID(),
+          token_type: 'Bearer',
+          expires_in: 60,
+          scope: 'openid offline_access',
+        })
+      );
+
+      return freshLogin;
+    }
+
+    it('preserves the selected team when the user is still a member', async () => {
+      const freshLogin = await setupDeviceCodeFlow();
+
+      // Membership validation: the previously selected team is still listed
+      fetch.mockResolvedValueOnce(
+        mockJsonResponse({
+          teams: [{ id: 'team_prev', slug: 'prev-team', name: 'Prev Team' }],
+        })
+      );
+
+      client.setArgv('login');
+      // Simulate the expired-session state: auth was emptied after a failed
+      // token refresh, but the selected team survived in the global config.
+      delete client.authConfig.token;
+      client.config.currentTeam = 'team_prev';
+
+      const exitCode = await freshLogin(client, { shouldParseArgs: true });
+
+      expect(exitCode).toBe(0);
+      expect(client.config.currentTeam).toBe('team_prev');
+
+      client.config.currentTeam = undefined;
+    });
+
+    it('falls back to the default team when no longer a member', async () => {
+      const freshLogin = await setupDeviceCodeFlow();
+
+      // Membership validation: the previously selected team is gone
+      fetch.mockResolvedValueOnce(
+        mockJsonResponse({
+          teams: [{ id: 'team_other', slug: 'other-team', name: 'Other' }],
+        })
+      );
+      // `updateCurrentTeamAfterLogin` fetches the user to resolve the default
+      fetch.mockResolvedValueOnce(
+        mockJsonResponse({
+          user: {
+            id: 'user_1',
+            username: 'me',
+            email: 'me@example.com',
+            version: 'northstar',
+            defaultTeamId: 'team_default',
+          },
+        })
+      );
+
+      client.setArgv('login');
+      delete client.authConfig.token;
+      client.config.currentTeam = 'team_gone';
+
+      const exitCode = await freshLogin(client, { shouldParseArgs: true });
+
+      expect(exitCode).toBe(0);
+      expect(client.config.currentTeam).toBe('team_default');
+      await expect(client.stderr).toOutput(
+        'Your previously selected team is no longer accessible'
+      );
+
+      client.config.currentTeam = undefined;
+    });
+
+    it('keeps the selected team when membership validation fails', async () => {
+      const freshLogin = await setupDeviceCodeFlow();
+
+      // No teams response queued: the validation request fails. Keep the
+      // selection rather than silently switching scope.
+      client.setArgv('login');
+      delete client.authConfig.token;
+      client.config.currentTeam = 'team_prev';
+
+      const exitCode = await freshLogin(client, { shouldParseArgs: true });
+
+      expect(exitCode).toBe(0);
+      expect(client.config.currentTeam).toBe('team_prev');
+
+      client.config.currentTeam = undefined;
+    });
   });
 });

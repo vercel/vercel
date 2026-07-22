@@ -5,6 +5,7 @@ import { eraseLines } from 'ansi-escapes';
 import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
+import getTeams from '../../util/teams/get-teams';
 import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
 import { getCommandName } from '../../util/pkg-name';
 import { emoji } from '../../util/emoji';
@@ -208,8 +209,11 @@ export async function login(
     return 1;
   }
 
-  // user is not currently authenticated on this machine
-  const isInitialLogin = !client.authConfig.token;
+  // The selected team (`vc switch`) survives in the global config even when
+  // the auth config was emptied after a failed token refresh, so its presence
+  // — not the presence of a token — is the signal that this login is a
+  // re-authentication on an already-configured machine.
+  const previousTeamId = client.config.currentTeam;
 
   client.updateAuthConfig({
     token: tokens.access_token,
@@ -218,10 +222,26 @@ export async function login(
     refreshToken: tokens.refresh_token,
   });
 
-  client.updateConfig({ currentTeam: undefined });
+  if (previousTeamId) {
+    let isMember = true;
+    try {
+      const teams = await getTeams(client);
+      isMember = teams.some(team => team.id === previousTeamId);
+    } catch {
+      // Membership could not be verified (e.g. transient API failure). Keep
+      // the selection instead of silently switching scope; a stale team can
+      // be corrected with `vc switch`.
+    }
 
-  // If we have a brand new login, update `currentTeam`
-  if (isInitialLogin) {
+    if (!isMember) {
+      o.warn(
+        'Your previously selected team is no longer accessible; switching to your default scope.'
+      );
+      client.updateConfig({ currentTeam: undefined });
+      await updateCurrentTeamAfterLogin(client);
+    }
+  } else {
+    client.updateConfig({ currentTeam: undefined });
     await updateCurrentTeamAfterLogin(client);
   }
 
