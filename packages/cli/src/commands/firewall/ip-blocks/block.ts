@@ -1,14 +1,14 @@
 import chalk from 'chalk';
 import type Client from '../../../util/client';
+import { requireProjectContext } from '../../../util/projects/require-project-context';
 import output from '../../../output-manager';
 import { ipBlocksBlockSubcommand } from '../command';
 import {
+  withGlobalFlags,
   parseSubcommandArgs,
-  ensureProjectLink,
   confirmAction,
   detectExistingDraft,
   offerAutoPublish,
-  withGlobalFlags,
 } from '../shared';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
 import {
@@ -63,7 +63,11 @@ export default async function block(client: Client, argv: string[]) {
     }
   }
 
-  const link = await ensureProjectLink(client);
+  const link = await requireProjectContext(
+    client,
+    'firewall',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

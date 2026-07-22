@@ -59,7 +59,6 @@ import {
 import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import getProjectName from '../../util/get-project-name';
 import getSubcommand from '../../util/get-subcommand';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
@@ -69,7 +68,7 @@ import stamp from '../../util/output/stamp';
 import table from '../../util/output/table';
 import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
-import { getCommandNameWithGlobalFlags } from '../../util/arg-common';
+import { withGlobalFlags } from '../../util/agent-output';
 import { getCommandName } from '../../util/pkg-name';
 import { getErrorCta } from '../../util/get-error-cta';
 import link from '../../util/output/link';
@@ -91,6 +90,7 @@ import parseTarget from '../../util/parse-target';
 import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
+import { isOwnerLookupUnavailableLink } from '../../util/projects/link';
 import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
 import { displayBuildLogsUntilFinalError } from '../../util/logs';
 import { determineAgent } from '@vercel/detect-agent';
@@ -281,13 +281,9 @@ async function handleInitDeployment(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
-    projectName:
-      projectNameOrId ??
-      getProjectName({
-        nameParam: undefined,
-        nowConfig: localConfig,
-        paths,
-      }),
+    // Only explicit names: the folder-name fallback is derived inside
+    // `setupAndLink`, and passing it would suppress Git-match suggestions.
+    projectName: projectNameOrId ?? localConfig?.name,
     failIfNotFound: !!projectNameOrId,
     v0: isV0,
   });
@@ -519,7 +515,7 @@ async function handleInitDeployment(
               message: deployment.message,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -548,7 +544,7 @@ async function handleInitDeployment(
               message: msg,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -588,7 +584,7 @@ async function handleInitDeployment(
               deployment: deploymentJson,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -636,7 +632,7 @@ async function handleInitDeployment(
               deployment: deploymentJson,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -659,7 +655,7 @@ async function handleInitDeployment(
               message: 'Uploading failed. Please try again.',
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -685,17 +681,11 @@ async function handleInitDeployment(
             message: `Deployment ${deployment.url} ready.`,
             next: [
               {
-                command: getCommandNameWithGlobalFlags(
-                  `inspect ${deployment.url}`,
-                  client.argv
-                ),
+                command: withGlobalFlags(client, `inspect ${deployment.url}`),
                 when: 'Inspect deployment',
               },
               {
-                command: getCommandNameWithGlobalFlags(
-                  'deploy --prod',
-                  client.argv
-                ),
+                command: withGlobalFlags(client, 'deploy --prod'),
                 when: 'Promote to production',
               },
             ],
@@ -808,9 +798,9 @@ async function handleContinueSubcommand(
             'Missing required --id flag. Provide the deployment ID to continue.',
           next: [
             {
-              command: getCommandNameWithGlobalFlags(
-                'deploy continue --id <deployment-id>',
-                client.argv
+              command: withGlobalFlags(
+                client,
+                'deploy continue --id <deployment-id>'
               ),
               when: 'provide deployment ID',
             },
@@ -844,11 +834,9 @@ async function handleContinueSubcommand(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm: true,
-    projectName: getProjectName({
-      nameParam: undefined,
-      nowConfig: localConfig,
-      paths,
-    }),
+    // Only explicit names: the folder-name fallback is derived inside
+    // `setupAndLink`, and passing it would suppress Git-match suggestions.
+    projectName: localConfig?.name,
   });
   if (typeof link === 'number') {
     return link;
@@ -894,13 +882,13 @@ async function handleContinueSubcommand(
             'No prebuilt output found in ".vercel/output". Run build first.',
           next: [
             {
-              command: getCommandNameWithGlobalFlags('build', client.argv),
+              command: withGlobalFlags(client, 'build'),
               when: 'generate prebuilt output',
             },
             {
-              command: getCommandNameWithGlobalFlags(
-                `deploy continue --id ${idFlag}`,
-                client.argv
+              command: withGlobalFlags(
+                client,
+                `deploy continue --id ${idFlag}`
               ),
               when: 'deploy prebuilt output',
             },
@@ -1129,15 +1117,13 @@ async function handleDefaultDeploy(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
+    // Only explicit names: the folder-name fallback is derived inside
+    // `setupAndLink`, and passing it would suppress Git-match suggestions.
     projectName:
-      projectNameOrId ??
-      getProjectName({
-        nameParam: parsedArguments.flags['--name'],
-        nowConfig: localConfig,
-        paths,
-      }),
+      projectNameOrId ?? parsedArguments.flags['--name'] ?? localConfig?.name,
     failIfNotFound: !!projectNameOrId,
     requireExistingLink: parsedArguments.flags['--dry'],
+    allowOwnerLookupFallback: true,
     v0: isV0,
   });
   if (typeof link === 'number') {
@@ -1210,7 +1196,11 @@ async function handleDefaultDeploy(
   // #endregion
 
   const contextName = org.slug;
-  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+  const currentTeam =
+    isOwnerLookupUnavailableLink(link) || org.type !== 'team'
+      ? undefined
+      : org.id;
+  client.config.currentTeam = currentTeam;
 
   if (
     rootDirectory &&
@@ -1360,7 +1350,6 @@ async function handleDefaultDeploy(
   const regions = regionFlag.length > 0 ? regionFlag : localConfig.regions;
   // #endregion
 
-  const currentTeam = org.type === 'team' ? org.id : undefined;
   const now = new Now({
     client,
     currentTeam,
@@ -1466,7 +1455,7 @@ async function handleDefaultDeploy(
               message: deployment.message,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -1495,7 +1484,7 @@ async function handleDefaultDeploy(
               message: msg,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -1535,7 +1524,7 @@ async function handleDefaultDeploy(
               deployment: deploymentJson,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -1583,7 +1572,7 @@ async function handleDefaultDeploy(
               deployment: deploymentJson,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -1612,7 +1601,7 @@ async function handleDefaultDeploy(
               message: 'Uploading failed. Please try again.',
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -1642,7 +1631,7 @@ async function handleDefaultDeploy(
               message: err.message,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -1668,7 +1657,7 @@ async function handleDefaultDeploy(
               message: err.message,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -1735,7 +1724,7 @@ async function handleDefaultDeploy(
               message: err instanceof Error ? err.message : String(err),
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -1821,7 +1810,7 @@ async function handleDefaultDeploy(
               message,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -1844,7 +1833,7 @@ async function handleDefaultDeploy(
             message: err instanceof Error ? err.message : String(err),
             next: [
               {
-                command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                command: withGlobalFlags(client, 'deploy'),
                 when: 'retry deploy',
               },
             ],
@@ -1868,17 +1857,11 @@ async function handleDefaultDeploy(
           message: `Deployment ${deployment.url} ready.`,
           next: [
             {
-              command: getCommandNameWithGlobalFlags(
-                `inspect ${deployment.url}`,
-                client.argv
-              ),
+              command: withGlobalFlags(client, `inspect ${deployment.url}`),
               when: 'Inspect deployment',
             },
             {
-              command: getCommandNameWithGlobalFlags(
-                'deploy --prod',
-                client.argv
-              ),
+              command: withGlobalFlags(client, 'deploy --prod'),
               when: 'Promote to production',
             },
           ],
@@ -2459,7 +2442,7 @@ async function handleFailedCheckRuns(
         failedCheckRuns: failedCheckRunsWithLogs,
         next: [
           {
-            command: getCommandNameWithGlobalFlags('deploy', client.argv),
+            command: withGlobalFlags(client, 'deploy'),
             when: 'retry deploy after fixing check failures',
           },
         ],

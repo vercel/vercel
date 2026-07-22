@@ -5,7 +5,7 @@ import getWebhook from '../../util/webhooks/get-webhook';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { buildCommandWithYes, outputAgentError } from '../../util/agent-output';
 import output from '../../output-manager';
@@ -21,7 +21,7 @@ function webhookCommandWithGlobalFlags(
   baseSubcommand: string,
   argv: string[]
 ): string {
-  const globalFlags = getGlobalFlagsOnlyFromArgs(argv.slice(2));
+  const globalFlags = getGlobalFlagsFromArgs(argv.slice(2));
   const full = globalFlags.length
     ? `${baseSubcommand} ${globalFlags.join(' ')}`
     : baseSubcommand;

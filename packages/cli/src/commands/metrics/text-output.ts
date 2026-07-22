@@ -1,6 +1,8 @@
 import chalk from 'chalk';
+import stripAnsi from 'strip-ansi';
 import table from '../../util/output/table';
 import indent from '../../util/output/indent';
+import elapsed from '../../util/output/elapsed';
 import { getResolvedOrderMetadata, getRollupColumnName } from './output';
 import { toGranularityMsFromDuration } from './time-utils';
 import type {
@@ -47,6 +49,7 @@ interface SummaryTableOptions {
   aggregation: Aggregation;
   periodStart: Date;
   periodEnd: Date;
+  ansiAwareGroupValues?: boolean;
 }
 
 interface MetadataHeaderOptions {
@@ -65,6 +68,12 @@ interface MetadataHeaderOptions {
   teamName?: string;
   unit?: string;
   groupCount?: number;
+  compact?: boolean;
+}
+
+export interface TextOutputPresentation {
+  compact?: boolean;
+  formatGroupValue?: (field: string, value: string) => string;
 }
 
 export interface FormatTextOptions {
@@ -82,6 +91,7 @@ export interface FormatTextOptions {
   bucketTimezone?: string;
   orderBy?: OrderBy;
   orderDirection?: OrderDirection;
+  presentation?: TextOutputPresentation;
 }
 
 // Use a non-printable delimiter so group keys remain stable without colliding
@@ -156,6 +166,19 @@ function formatPeriodBound(input: string): string {
   }
   // Keep metadata period compact and deterministic at minute precision.
   return formatHumanMinute(date);
+}
+
+/** Formats the elapsed time between valid period bounds. */
+function formatPeriodSpan(startInput: string, endInput: string): string | null {
+  const start = Date.parse(startInput);
+  const end = Date.parse(endInput);
+  const durationMs = end - start;
+
+  if (!Number.isFinite(durationMs) || durationMs <= 0) {
+    return null;
+  }
+
+  return elapsed(durationMs);
 }
 
 /** Renders granularity objects in short form (e.g. 5m, 1h, 1d). */
@@ -606,11 +629,16 @@ const MAX_GROUP_VALUE_LENGTH = 60;
  * Example (maxLength=60):
  *   "/very/long/path/..." → "/very/long/pa…nd/of/path"
  */
-export function ellipsizeMiddle(str: string, maxLength: number): string {
-  if (str.length <= maxLength) return str;
+export function ellipsizeMiddle(
+  str: string,
+  maxLength: number,
+  useVisibleLength: boolean = false
+): string {
+  const comparable = useVisibleLength ? stripAnsi(str) : str;
+  if (comparable.length <= maxLength) return str;
   const endLength = Math.floor((maxLength - 1) / 2);
   const startLength = maxLength - 1 - endLength;
-  return `${str.slice(0, startLength)}…${str.slice(str.length - endLength)}`;
+  return `${comparable.slice(0, startLength)}…${comparable.slice(comparable.length - endLength)}`;
 }
 
 /**
@@ -702,17 +730,25 @@ export function generateSparkline(values: (number | null)[]): string {
 
 /** Builds aligned metadata header lines shown above results. */
 export function formatMetadataHeader(opts: MetadataHeaderOptions): string {
-  const rows: Array<{ key: string; value: string }> = [
-    {
+  const periodSpan = opts.compact
+    ? formatPeriodSpan(opts.periodStart, opts.periodEnd)
+    : null;
+  const rows: Array<{ key: string; value: string }> = [];
+
+  if (!opts.compact) {
+    rows.push({
       key: 'Metric',
       value: `${opts.metric} ${opts.aggregation}`,
-    },
+    });
+  }
+
+  rows.push(
     {
       // Period bounds are always UTC; annotate them so the boundary is
       // unambiguous when the Interval below reports a different
       // --bucket-timezone.
       key: 'Period',
-      value: `${formatPeriodBound(opts.periodStart)} to ${formatPeriodBound(opts.periodEnd)} (UTC)`,
+      value: `${formatPeriodBound(opts.periodStart)} to ${formatPeriodBound(opts.periodEnd)} (UTC)${periodSpan ? ` ${periodSpan}` : ''}`,
     },
     {
       // Period bounds are always UTC; the timezone only controls calendar
@@ -724,8 +760,8 @@ export function formatMetadataHeader(opts: MetadataHeaderOptions): string {
         'days' in opts.granularity
           ? `${formatGranularity(opts.granularity)} (${opts.bucketTimezone ?? 'UTC'})`
           : formatGranularity(opts.granularity),
-    },
-  ];
+    }
+  );
 
   // Whole-period deduplicated count from the API summary. Per-bucket uniques
   // cannot be summed, so this is the only correct period total for `unique`.
@@ -736,11 +772,11 @@ export function formatMetadataHeader(opts: MetadataHeaderOptions): string {
     });
   }
 
-  if (opts.filter) {
+  if (!opts.compact && opts.filter) {
     rows.push({ key: 'Filter', value: opts.filter });
   }
 
-  if (opts.orderBy && opts.orderDirection) {
+  if (!opts.compact && opts.orderBy && opts.orderDirection) {
     rows.push({
       key: 'Order By',
       value: `${opts.orderBy} ${opts.orderDirection}${
@@ -765,7 +801,7 @@ export function formatMetadataHeader(opts: MetadataHeaderOptions): string {
     rows.push({ key: 'Units', value: formatUnitLabel(opts.unit) });
   }
 
-  if (typeof opts.groupCount === 'number') {
+  if (!opts.compact && typeof opts.groupCount === 'number') {
     rows.push({ key: 'Groups', value: String(opts.groupCount) });
   }
 
@@ -783,7 +819,7 @@ export function formatSummaryTable(opts: SummaryTableOptions): string {
 
   for (const row of opts.rows) {
     const nextRow: string[] = row.groupValues.map(v =>
-      ellipsizeMiddle(v, MAX_GROUP_VALUE_LENGTH)
+      ellipsizeMiddle(v, MAX_GROUP_VALUE_LENGTH, opts.ansiAwareGroupValues)
     );
 
     if (row.stats.allMissing) {
@@ -824,43 +860,35 @@ export function formatSummaryTable(opts: SummaryTableOptions): string {
 export function formatSparklineSection(
   groupRows: string[][],
   sparklines: string[],
-  groupByFields: string[]
+  groupByFields: string[],
+  compact: boolean = false
 ): string {
-  const lines = ['sparklines:'];
-
   if (groupRows.length === 0) {
     const sparkline = sparklines[0];
-    if (sparkline) {
-      lines.push(indent(sparkline, 2));
-    }
-    return lines.join('\n');
+    const chart = sparkline ? indent(sparkline, 2) : '';
+    return compact ? chart : ['sparklines:', chart].filter(Boolean).join('\n');
   }
 
-  const rowsWithSparklines = groupRows.map((groupValues, index) => ({
-    groupValues,
-    sparkline: sparklines[index] ?? '',
-  }));
-
+  const header = [...groupByFields, compact ? '' : 'sparkline'];
   const rows = [
-    [...groupByFields, 'sparkline'].map(name => chalk.bold(chalk.cyan(name))),
-    ...rowsWithSparklines.map(({ groupValues, sparkline }) => [
-      ...groupValues.map(v => ellipsizeMiddle(v, MAX_GROUP_VALUE_LENGTH)),
-      sparkline,
+    header.map(name => chalk.bold(chalk.cyan(name))),
+    ...groupRows.map((groupValues, index) => [
+      ...groupValues.map(v =>
+        ellipsizeMiddle(v, MAX_GROUP_VALUE_LENGTH, compact)
+      ),
+      sparklines[index] ?? '',
     ]),
   ];
   const align: TableAlignment[] = groupByFields.map(() => 'r');
   align.push('l');
-  lines.push(
-    indent(
-      table(rows, {
-        align,
-        hsep: 2,
-      }),
-      2
-    )
+  const chart = indent(
+    table(rows, {
+      align,
+      hsep: 2,
+    }),
+    2
   );
-
-  return lines.join('\n');
+  return compact ? chart : `sparklines:\n${chart}`;
 }
 
 /**
@@ -952,6 +980,7 @@ export function formatText(
     teamName: opts.teamName,
     unit: displayUnit,
     groupCount: opts.groupBy.length > 0 ? groups.length : undefined,
+    compact: opts.presentation?.compact,
   });
 
   if (groups.length === 0) {
@@ -967,12 +996,16 @@ export function formatText(
     const points = series.get(key) ?? [];
     const values = points.map(point => point.value);
     const currentGroupValues = groupValues.get(key) ?? [];
+    const displayGroupValues = currentGroupValues.map((value, index) => {
+      const field = opts.groupBy[index];
+      return opts.presentation?.formatGroupValue?.(field, value) ?? value;
+    });
 
     summaryRows.push({
-      groupValues: currentGroupValues,
+      groupValues: displayGroupValues,
       stats: computeGroupStats(points),
     });
-    groupRows.push(currentGroupValues);
+    groupRows.push(displayGroupValues);
     sparklineRows.push(generateSparkline(values));
   }
 
@@ -983,13 +1016,15 @@ export function formatText(
     aggregation: opts.aggregation,
     periodStart: new Date(opts.periodStart),
     periodEnd: new Date(opts.periodEnd),
+    ansiAwareGroupValues: opts.presentation?.compact,
   });
 
   const groupedOutput = opts.groupBy.length > 0;
   const sparklineSection = formatSparklineSection(
     groupedOutput ? groupRows : [],
     sparklineRows,
-    opts.groupBy
+    opts.groupBy,
+    opts.presentation?.compact
   );
 
   const sections = [metadata, summaryTable, sparklineSection];

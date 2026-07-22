@@ -266,6 +266,37 @@ export const claimSubcommand = {
   ],
 } as const;
 
+export const inspectSubcommand = {
+  name: 'inspect',
+  aliases: ['status'],
+  description:
+    'Show live details and status for a marketplace integration resource, fetched fresh from the provider',
+  arguments: [
+    {
+      name: 'resource',
+      required: true,
+    },
+  ],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Show live details and status for a resource',
+      value: [
+        `${packageName} integration resource inspect <resource>`,
+        `${packageName} integration resource inspect my-acme-resource`,
+      ],
+    },
+    {
+      name: 'Show live status for a resource (alias)',
+      value: `${packageName} integration resource status my-acme-resource`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} integration resource inspect my-acme-resource --format=json`,
+    },
+  ],
+} as const;
+
 export const integrationResourceCommand = {
   name: 'integration-resource',
   aliases: ['ir'],
@@ -279,6 +310,7 @@ export const integrationResourceCommand = {
     disconnectSubcommand,
     removeSubcommand,
     claimSubcommand,
+    inspectSubcommand,
   ],
   examples: [],
 } as const;

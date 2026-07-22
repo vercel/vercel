@@ -2,6 +2,7 @@ import { packageName } from '../../util/pkg-name';
 import {
   formatOption,
   jsonOption,
+  limitOption,
   nextOption,
   yesOption,
 } from '../../util/arg-common';
@@ -157,6 +158,7 @@ export const listSubcommand = {
   arguments: [],
   options: [
     nextOption,
+    limitOption,
     formatOption,
     jsonOption,
     {
@@ -224,6 +226,94 @@ export const renameSubcommand = {
     {
       name: 'Rename a project',
       value: `${packageName} project rename my-project my-renamed-project`,
+    },
+  ],
+} as const;
+
+export const updateSubcommand = {
+  name: 'update',
+  aliases: ['set'],
+  description:
+    'Update one or more project settings; omitted settings remain unchanged',
+  arguments: [
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      name: 'framework',
+      shorthand: null,
+      type: String,
+      argument: 'SLUG',
+      description:
+        'Set the framework preset by slug; use "other" to clear the preset',
+      deprecated: false,
+    },
+    {
+      name: 'build-command',
+      shorthand: null,
+      type: String,
+      argument: 'COMMAND',
+      description: 'Set the build command',
+      deprecated: false,
+    },
+    {
+      name: 'dev-command',
+      shorthand: null,
+      type: String,
+      argument: 'COMMAND',
+      description: 'Set the development command',
+      deprecated: false,
+    },
+    {
+      name: 'install-command',
+      shorthand: null,
+      type: String,
+      argument: 'COMMAND',
+      description: 'Set the install command',
+      deprecated: false,
+    },
+    {
+      name: 'output-directory',
+      shorthand: null,
+      type: String,
+      argument: 'DIR',
+      description: 'Set the output directory',
+      deprecated: false,
+    },
+    {
+      name: 'auto-detect',
+      shorthand: null,
+      type: [String],
+      argument: 'SETTING',
+      description:
+        'Reset a setting to automatic detection; repeat for build-command, dev-command, install-command, or output-directory',
+      deprecated: false,
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Set the linked project framework preset to Next.js',
+      value: `${packageName} project update --framework nextjs`,
+    },
+    {
+      name: 'Set a named project framework preset to Vite',
+      value: `${packageName} project update my-project --framework vite`,
+    },
+    {
+      name: 'Update multiple settings in one command',
+      value: `${packageName} project update my-project --build-command "pnpm build" --output-directory dist`,
+    },
+    {
+      name: 'Reset individual settings to automatic detection',
+      value: `${packageName} project update my-project --auto-detect build-command --auto-detect output-directory`,
+    },
+    {
+      name: 'Clear the framework preset and return JSON',
+      value: `${packageName} project update my-project --framework other --format json`,
     },
   ],
 } as const;
@@ -565,6 +655,7 @@ export const projectCommand = {
     protectionSubcommand,
     webAnalyticsSubcommand,
     speedInsightsSubcommand,
+    updateSubcommand,
     renameSubcommand,
     removeSubcommand,
     tokenSubcommand,

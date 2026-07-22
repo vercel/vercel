@@ -1,9 +1,11 @@
 import { URL } from 'url';
 import plural from 'pluralize';
 import { join } from 'path';
+import { validRange } from 'semver';
 import { mkdirp, outputJSON, symlink } from 'fs-extra';
 import type { PackageJson, Span } from '@vercel/build-utils';
 import execa from 'execa';
+import cliPkg from '../pkg';
 import readJSONFile from '../read-json-file';
 import { CantParseJSONFile } from '../errors-ts';
 import { isErrnoException, isError } from '@vercel/error-utils';
@@ -51,10 +53,16 @@ async function untracedInstallBuilders(
       buildersToAdd
     ).join(', ')}`
   );
+  const buildUtilsVersion = cliPkg.dependencies?.['@vercel/build-utils'];
+  const buildUtilsSpec =
+    buildUtilsVersion && validRange(buildUtilsVersion)
+      ? `@vercel/build-utils@${buildUtilsVersion}`
+      : '@vercel/build-utils';
+
   try {
     const { stderr } = await execa(
       'npm',
-      ['install', '@vercel/build-utils', ...buildersToAdd],
+      ['install', buildUtilsSpec, ...buildersToAdd],
       {
         cwd: buildersDir,
         stdio: 'pipe',
@@ -128,14 +136,21 @@ async function untracedInstallBuilders(
 export async function installBuilders(
   buildersDir: string,
   buildersToAdd: Set<string>,
-  span?: Span
+  span?: Span,
+  installReasons?: Map<string, string>
 ): Promise<Map<string, string>> {
   if (!span) {
     return untracedInstallBuilders(buildersDir, buildersToAdd);
   }
-  const installSpan = span.child('vc.installBuilders', {
+  const attributes: Record<string, string> = {
     packages: Array.from(buildersToAdd).join(','),
-  });
+  };
+  if (installReasons && installReasons.size > 0) {
+    attributes.reasons = Array.from(installReasons)
+      .map(([spec, reason]) => `${spec}=${reason}`)
+      .join(',');
+  }
+  const installSpan = span.child('vc.installBuilders', attributes);
   return installSpan.trace(async s => {
     try {
       return await untracedInstallBuilders(buildersDir, buildersToAdd);

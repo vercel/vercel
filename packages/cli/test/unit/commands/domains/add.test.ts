@@ -1,9 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
+import { join } from 'path';
+import { outputFile } from 'fs-extra';
 import domains from '../../../../src/commands/domains';
 import { client } from '../../../mocks/client';
 import { useDomain } from '../../../mocks/domains';
-import { useProject } from '../../../mocks/project';
+import { defaultProject, useProject } from '../../../mocks/project';
+import { useTeam } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 
 describe('domains add', () => {
   describe('--help', () => {
@@ -165,6 +169,53 @@ describe('domains add', () => {
         await expect(client.stderr).toOutput(
           `Domain ${domain.name} is already assigned to project ${project.name}`
         );
+      });
+
+      it('scopes the alias mutation to the linked team, not the ambient team', async () => {
+        // Directory linked to a project owned by team_linked, but the ambient
+        // scope is a stale team. The alias mutation must be scoped to the
+        // linked team so a same-name project in the stale team is not hit.
+        useUser();
+        useTeam('team_stale');
+        useTeam('team_linked');
+        const domain = useDomain();
+
+        const cwd = setupTmpDir();
+        client.cwd = cwd;
+        await outputFile(
+          join(cwd, '.vercel', 'project.json'),
+          JSON.stringify({ projectId: 'prj_linked', orgId: 'team_linked' })
+        );
+
+        useProject({
+          ...defaultProject,
+          id: 'prj_linked',
+          name: 'my-app',
+          accountId: 'team_linked',
+        });
+
+        client.config.currentTeam = 'team_stale';
+        client.setArgv('domains', 'add', domain.name, 'my-app');
+
+        let aliasTeamId: string | undefined;
+        client.scenario.post('/projects/:idOrName/alias', (req, res) => {
+          aliasTeamId =
+            typeof req.query.teamId === 'string' ? req.query.teamId : undefined;
+          res.json([{ domain: domain.name }]);
+        });
+        client.scenario.get(
+          `/:version/domains/${domain.name}/config`,
+          (_req, res) => {
+            res.json({});
+          }
+        );
+
+        const exitCode = await domains(client);
+        expect(exitCode, 'exit code for "domains"').toEqual(0);
+
+        // Fixed behavior: the alias mutation is sent under the linked team, so
+        // it can never resolve `my-app` in the stale ambient team.
+        expect(aliasTeamId).toEqual('team_linked');
       });
 
       describe('--force', () => {

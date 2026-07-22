@@ -75,12 +75,23 @@ import {
 } from '@vercel/routing-utils';
 
 import output from '../../output-manager';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
+import {
+  detectFirstDeploymentFramework,
+  detectAllFrameworks,
+  isFrameworkDetectionEnabled,
+  warnIfFrameworkMismatch,
+  type DetectedFramework,
+} from '../../util/build/framework-detection';
+import {
+  validateBuildOutput,
+  reportBuildOutputProblems,
+} from '../../util/build/validate-build-output';
 import { scrubArgv } from '../../util/build/scrub-argv';
 import { scopeRoutesToServiceOwnership } from '../../util/build/service-route-ownership';
 import { sortBuilders } from '../../util/build/sort-builders';
@@ -109,6 +120,7 @@ import {
 } from '../../util/projects/link';
 import { printProjectNotFoundError } from '../../util/projects/project-not-found-error';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
+import { detectExplicitScope } from '../../util/get-scope';
 import {
   pickOverrides,
   readProjectSettings,
@@ -126,6 +138,7 @@ import {
   DEFAULT_VERCEL_CONFIG_FILENAME,
 } from '../../util/compile-vercel-config';
 import { help } from '../help';
+import { ensureLink } from '../../util/link/ensure-link';
 import { pullCommandLogic } from '../pull';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import { buildCommand } from './command';
@@ -139,7 +152,7 @@ function buildCommandWithGlobalFlags(
   baseSubcommand: string,
   argv: string[]
 ): string {
-  const globalFlags = getGlobalFlagsOnlyFromArgs(argv.slice(2));
+  const globalFlags = getGlobalFlagsFromArgs(argv.slice(2));
   const full = globalFlags.length
     ? `${baseSubcommand} ${globalFlags.join(' ')}`
     : baseSubcommand;
@@ -224,6 +237,12 @@ export interface BuildsManifest {
     speedInsightsVersion?: string | undefined;
     webAnalyticsVersion?: string | undefined;
   };
+  /**
+   * Result of first-deployment framework detection. Present whenever the
+   * build ran, with `status` distinguishing a positive detection from
+   * "nothing detected" and "did not run".
+   */
+  detectedFramework?: DetectedFramework;
 }
 
 export default async function main(client: Client): Promise<number> {
@@ -312,31 +331,41 @@ export default async function main(client: Client): Promise<number> {
   }
 
   const projectNameOrId = parsedArgs.flags['--project'];
+  const hasExplicitScope =
+    Boolean(projectNameOrId) && detectExplicitScope(client);
 
   // If repo linked, update `cwd` to the repo root
-  let link = await rootSpan
-    .child('vc.getProjectLink')
-    .trace(() => getProjectLink(client, cwd, projectNameOrId, true));
+  let link = hasExplicitScope
+    ? null
+    : await rootSpan
+        .child('vc.getProjectLink')
+        .trace(() => getProjectLink(client, cwd, projectNameOrId, true));
 
   // No local link matched `--project`; resolve via API before the
   // settings-pull prompt would silently re-link to the wrong project.
   if (projectNameOrId && !link) {
-    const linkedFromApi = await getLinkedProject(
-      client,
+    const linkedFromApi = await getLinkedProject(client, {
       cwd,
-      projectNameOrId,
-      true
-    );
+      projectName: projectNameOrId,
+      projectNameIsExplicit: true,
+      scopeIsExplicit: hasExplicitScope,
+    });
     if (linkedFromApi.status === 'linked') {
       link = {
         projectId: linkedFromApi.project.id,
         orgId: linkedFromApi.org.id,
         repoRoot: linkedFromApi.repoRoot,
+        projectRootDirectory: linkedFromApi.projectRootDirectory,
       };
     } else if (linkedFromApi.status === 'error') {
       return linkedFromApi.exitCode;
     } else {
-      await printProjectNotFoundError(client, projectNameOrId, 'build');
+      await printProjectNotFoundError(
+        client,
+        projectNameOrId,
+        'build',
+        linkedFromApi.orgId
+      );
       return 1;
     }
   }
@@ -398,6 +427,21 @@ export default async function main(client: Client): Promise<number> {
         return 1;
       }
 
+      // An unlinked directory gets the link flow first, so the pull
+      // question refers to a known project instead of linking as a side
+      // effect of the pull.
+      if (!link) {
+        const ensured = await ensureLink('build', client, cwd, {
+          projectName: projectNameOrId,
+          failIfNotFound: !!projectNameOrId,
+          pullEnv: false,
+        });
+        if (typeof ensured === 'number') {
+          return ensured;
+        }
+        link = await getProjectLink(client, cwd, projectNameOrId, true);
+      }
+
       confirmed = await client.input.confirm(
         `No Project Settings found locally. Run ${cli.getCommandName(
           'pull'
@@ -434,17 +478,20 @@ export default async function main(client: Client): Promise<number> {
     project = await readProjectSettings(vercelDir);
   }
 
+  // The settings pull above may have just established the link; re-read it
+  // so the re-anchoring below sees it.
+  if (!link) {
+    link = await getProjectLink(client, cwd, projectNameOrId, true);
+  }
+
   // A per-directory link (`<dir>/.vercel/project.json`) doesn't report a
   // `repoRoot` like a repo-level (`repo.json`) link does, so the build would
-  // treat the linked subdirectory as the repo root. Re-anchor it to the
-  // detected root and express the project relative to that root, so it behaves
-  // like a repo-level link regardless of where the command was run.
-  if (
-    !hasRepoLevelLink &&
-    link &&
-    project?.settings &&
-    process.env.VERCEL_RESOLVE_ROOT_DIRECTORY === '1'
-  ) {
+  // treat the linked subdirectory as the repo root. When an ancestor workspace
+  // claims the directory as a member package, re-anchor to that root and
+  // express the project relative to it, so it behaves like a repo-level link
+  // regardless of where the command was run. Directories not claimed by any
+  // workspace are left untouched.
+  if (!hasRepoLevelLink && link && project?.settings) {
     const resolved = resolvePerDirectoryLinkRoot(
       invokedCwd,
       project.settings.rootDirectory
@@ -720,11 +767,15 @@ async function doBuild(
     compileResult.configPath ||
     join(workPath, 'vercel.json');
 
-  const [pkg, vercelConfig, hasInstrumentation] = await Promise.all([
-    readJSONFile<PackageJson>(join(workPath, 'package.json')),
-    readJSONFile<VercelConfig>(vercelConfigPath),
-    detectInstrumentation(new LocalFileSystemDetector(workPath)),
-  ]);
+  const [pkg, vercelConfig, hasInstrumentation] = await span
+    .child('vc.readConfigInputs')
+    .trace(() =>
+      Promise.all([
+        readJSONFile<PackageJson>(join(workPath, 'package.json')),
+        readJSONFile<VercelConfig>(vercelConfigPath),
+        detectInstrumentation(new LocalFileSystemDetector(workPath)),
+      ])
+    );
 
   if (pkg instanceof CantParseJSONFile) throw pkg;
   if (vercelConfig instanceof CantParseJSONFile) throw vercelConfig;
@@ -762,16 +813,47 @@ async function doBuild(
     ...pickOverrides(localConfig),
   };
 
+  // On a project's first deployment, detect the framework when none is
+  // configured. Mutates `projectSettings` in place so the `detectBuilders`
+  // call below sees the detected framework; must therefore run before it.
+  // The result is always recorded in `builds.json`, including when detection
+  // was skipped or found nothing.
+  buildsJson.detectedFramework = await span
+    .child('vc.detectFirstDeploymentFramework', {
+      enabled: String(isFrameworkDetectionEnabled()),
+      firstDeployment: String(process.env.VERCEL_FIRST_DEPLOYMENT === '1'),
+      configuredFramework: projectSettings.framework ?? undefined,
+    })
+    .trace(async s => {
+      const result = await detectFirstDeploymentFramework({
+        workPath,
+        projectSettings,
+      });
+      s.setAttributes({
+        detectionStatus: result.status,
+        detectedFramework: result.slug,
+        detectedFrameworkVersion: result.version,
+      });
+      return result;
+    });
+
   if (
     process.env.VERCEL_BUILD_MONOREPO_SUPPORT === '1' &&
     pkg?.scripts?.['vercel-build'] === undefined &&
     projectSettings.rootDirectory !== null &&
     projectSettings.rootDirectory !== '.'
   ) {
-    await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
+    await span
+      .child('vc.setMonorepoDefaultSettings')
+      .trace(() => setMonorepoDefaultSettings(cwd, workPath, projectSettings));
   }
 
-  if (await shouldEmbedFlagsDefinitions(cwd)) {
+  await span.child('vc.prepareFlagsDefinitions').trace(async s => {
+    const shouldEmbed = await shouldEmbedFlagsDefinitions(cwd);
+    s.setAttributes({ shouldEmbed: String(shouldEmbed) });
+    if (!shouldEmbed) {
+      return;
+    }
     const { prepareFlagsDefinitions } = await import(
       '@vercel/prepare-flags-definitions'
     );
@@ -781,12 +863,42 @@ async function doBuild(
       userAgentSuffix: ua,
       output,
     });
-  }
+  });
 
   // Get a list of source files
-  const files = (await getFiles(workPath, {})).map(f =>
-    normalizePath(relative(workPath, f))
-  );
+  const files = await span.child('vc.getFiles').trace(async s => {
+    const result = (await getFiles(workPath, {})).map(f =>
+      normalizePath(relative(workPath, f))
+    );
+    s.setAttributes({ fileCount: String(result.length) });
+    return result;
+  });
+
+  // Framework detection for the end-of-build cross-check, started here so it
+  // runs concurrently with the builders instead of adding latency.
+  const detectedFrameworksPromise = span
+    .child('vc.detectAllFrameworks', {
+      enabled: String(isFrameworkDetectionEnabled()),
+    })
+    .trace(async s => {
+      if (!isFrameworkDetectionEnabled()) {
+        return [] as string[];
+      }
+      try {
+        const slugs = await detectAllFrameworks(workPath);
+        s.setAttributes({
+          detectedFrameworks: slugs.join(',') || undefined,
+          detectedFrameworkCount: String(slugs.length),
+        });
+        return slugs;
+      } catch (err) {
+        output.debug(`Framework cross-check detection failed: ${err}`);
+        s.setAttributes({
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return [] as string[];
+      }
+    });
 
   const routesResult = getTransformedRoutes(localConfig);
   if (routesResult.error) {
@@ -971,12 +1083,18 @@ async function doBuild(
     .trace(() => importBuilders(builderSpecs, cwd, span));
 
   // Populate Files -> FileFsRef mapping
-  const filesMap: Files = {};
-  for (const path of files) {
-    const fsPath = join(workPath, path);
-    const { mode } = await fs.stat(fsPath);
-    filesMap[path] = new FileFsRef({ mode, fsPath });
-  }
+  const filesMap: Files = await span
+    .child('vc.populateFilesMap')
+    .trace(async s => {
+      const map: Files = {};
+      for (const path of files) {
+        const fsPath = join(workPath, path);
+        const { mode } = await fs.stat(fsPath);
+        map[path] = new FileFsRef({ mode, fsPath });
+      }
+      s.setAttributes({ fileCount: String(files.length) });
+      return map;
+    });
 
   const buildStamp = stamp();
 
@@ -1588,12 +1706,14 @@ async function doBuild(
               if (outputConfig instanceof CantParseJSONFile) {
                 throw outputConfig;
               }
+              let shouldMergeGeneratedOutputRoutes = false;
               if (
                 hasNonEmptyObject(outputConfig?.experimentalServices) &&
                 !hasNonEmptyObject(buildOutputConfig.experimentalServices)
               ) {
                 buildOutputConfig.experimentalServices =
                   outputConfig.experimentalServices;
+                shouldMergeGeneratedOutputRoutes = true;
               }
               if (
                 hasNonEmptyObject(outputConfig?.experimentalServicesV2) &&
@@ -1601,12 +1721,23 @@ async function doBuild(
               ) {
                 buildOutputConfig.experimentalServicesV2 =
                   outputConfig.experimentalServicesV2;
+                shouldMergeGeneratedOutputRoutes = true;
               }
               if (
                 hasGeneratedServicesConfig(outputConfig) &&
                 !hasGeneratedServicesConfig(buildOutputConfig)
               ) {
                 buildOutputConfig.services = outputConfig.services;
+                shouldMergeGeneratedOutputRoutes = true;
+              }
+              if (
+                shouldMergeGeneratedOutputRoutes &&
+                Array.isArray(outputConfig?.routes)
+              ) {
+                buildOutputConfig.routes = prependMissingBuildOutputRoutes(
+                  outputConfig.routes,
+                  buildOutputConfig.routes
+                );
               }
               if (
                 hasNonEmptyObject(buildOutputConfig.experimentalServices) ||
@@ -2051,9 +2182,10 @@ async function doBuild(
     localConfig.images,
     topLevelBuildResults.values()
   );
+  // Cron jobs are registered for the deployment, including jobs emitted by services.
   const mergedCrons = mergeCrons(
     [...(localConfig.crons || []), ...synthesizedServiceCrons],
-    topLevelBuildResults.values()
+    buildResults.values()
   );
   const mergedWildcard = mergeWildcard(topLevelBuildResults.values());
   const mergedDeploymentId = await mergeDeploymentId(
@@ -2097,14 +2229,19 @@ async function doBuild(
     routesResult.routes,
     detectedExperimentalServicesV2RootRoutes ?? existingConfig?.routes
   );
+  const mergedRoutesWithGeneratedServicesV2Routes =
+    nestExperimentalServicesV2Output
+      ? appendBuildOutputRouteTables(
+          mergedRoutes,
+          detectedExperimentalServicesV2RootRoutes ?? existingConfig?.routes
+        )
+      : mergedRoutes;
 
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results
   const config: BuildOutputConfig = {
     version: 3,
-    routes: nestExperimentalServicesV2Output
-      ? explicitRootRoutes
-      : mergedRoutes,
+    routes: mergedRoutesWithGeneratedServicesV2Routes ?? explicitRootRoutes,
     images: mergedImages,
     wildcard: mergedWildcard,
     overrides: mergedOverrides,
@@ -2137,6 +2274,39 @@ async function doBuild(
   }
 
   await writeFlagsJSON(buildResults.values(), outputDir);
+
+  // Warn when the detected frameworks don't match how the project was built.
+  await span.child('vc.frameworkCrossCheck').trace(async s => {
+    const detectedFrameworks = await detectedFrameworksPromise;
+    const executedBuilders = Array.from(buildResults.keys());
+    const usedBuilders = executedBuilders
+      .map(b => b.use)
+      .filter((use): use is string => Boolean(use));
+    const mismatchResult = warnIfFrameworkMismatch({
+      configuredFramework: projectSettings.framework,
+      detectedFrameworks,
+      usedBuilders,
+      usedFrameworks: executedBuilders.map(b => b.config?.framework),
+    });
+    s.setAttributes({
+      result: mismatchResult,
+      configuredFramework: projectSettings.framework ?? undefined,
+      detectedFrameworks: detectedFrameworks.join(',') || undefined,
+      usedBuilders: usedBuilders.join(',') || undefined,
+    });
+  });
+
+  await span.child('vc.validateBuildOutput').trace(async s => {
+    const outputProblems = await validateBuildOutput(outputDir);
+    s.setAttributes({
+      problemCount: String(outputProblems.length),
+      problems:
+        outputProblems.map(p => `${p.severity}: ${p.message}`).join('; ') ||
+        undefined,
+    });
+    reportBuildOutputProblems(outputProblems);
+  });
+
   collectSpan.stop();
 
   const relOutputDir = relative(cwd, outputDir);
@@ -2547,6 +2717,24 @@ function appendBuildOutputRouteTables(
   }
 
   return routes.length > 0 ? routes : undefined;
+}
+
+function prependMissingBuildOutputRoutes(
+  routesToPrepend: BuildOutputConfig['routes'],
+  existingRoutes: BuildOutputConfig['routes']
+): BuildOutputConfig['routes'] | undefined {
+  if (!Array.isArray(routesToPrepend) || routesToPrepend.length === 0) {
+    return existingRoutes;
+  }
+
+  const existingRouteKeys = new Set(
+    (existingRoutes ?? []).map(route => JSON.stringify(route))
+  );
+  const missingRoutes = routesToPrepend.filter(
+    route => !existingRouteKeys.has(JSON.stringify(route))
+  );
+
+  return appendBuildOutputRouteTables(missingRoutes, existingRoutes);
 }
 
 async function writeServiceConfigs(

@@ -142,29 +142,109 @@ const DEFAULT_TEST_NAME_PATTERNS = ['test', 'spec'];
 // Packages whose build requires the Rust toolchain (cargo + wasm32-wasip2).
 // @vercel/python-analysis compiles a wasm binary; @vercel/build-utils depends on
 // it and is in turn a dependency of almost every other builder package.
-// Rather than walking the full dep graph at chunk time, we enumerate the roots:
-// any package that directly depends on one of these will get needsRust=true via
-// the dep-check below.
+// We walk the dep graph transitively so CLI and other deep dependents also
+// get the right toolchain flag.
 const RUST_BUILD_ROOTS = new Set([
   '@vercel/python-analysis',
   '@vercel/build-utils',
 ]);
 
+// Packages whose build requires the Go toolchain.
+// `@vercel-internals/ipc-proxy` compiles cross-arch proxy binaries during its
+// build step; `@vercel/go` depends on it and copies those binaries. The `vercel`
+// CLI depends on `@vercel/go`, so its build transitively needs Go as well.
+// We walk the dep graph transitively — matching the way turbo builds
+// dependencies — so indirect consumers like `vercel` get needsGo even when
+// @vercel/go is a workspace dep but @vercel-internals/ipc-proxy is not direct.
+const GO_BUILD_ROOTS = new Set(['@vercel-internals/ipc-proxy', '@vercel/go']);
+
+function directNeeds(manifest, roots) {
+  if (roots.has(manifest.name)) return true;
+  const allDeps = { ...manifest.dependencies, ...manifest.devDependencies };
+  return Object.keys(allDeps).some(dep => roots.has(dep));
+}
+
+function computeTransitiveNeeds(manifests, roots) {
+  // Build dep graph for workspace packages only.
+  const knownNames = new Set(manifests.map(m => m.packageName));
+  const nameToDeps = new Map();
+  for (const { packageName, packageJson } of manifests) {
+    const allDeps = {
+      ...packageJson.dependencies,
+      ...packageJson.devDependencies,
+    };
+    const deps = new Set(Object.keys(allDeps).filter(d => knownNames.has(d)));
+    nameToDeps.set(packageName, deps);
+  }
+
+  // Invert: dep -> parents, so we can walk "who depends on me?"
+  const reverseEdges = new Map();
+  for (const [parent, deps] of nameToDeps) {
+    for (const dep of deps) {
+      if (!reverseEdges.has(dep)) reverseEdges.set(dep, new Set());
+      reverseEdges.get(dep).add(parent);
+    }
+  }
+
+  // Seed with direct matches (roots themselves or direct dep on a root).
+  // This handles cases where a root isn't in knownNames (e.g. internals may
+  // not appear in turbo packages list) — directNeeds still catches the
+  // first level via package.json inspection.
+  const initial = new Set();
+  for (const m of manifests) {
+    if (directNeeds(m.packageJson, roots)) initial.add(m.packageName);
+  }
+  // Also include roots that happen to be workspace packages themselves.
+  for (const r of roots) {
+    if (knownNames.has(r)) initial.add(r);
+  }
+
+  const needed = new Set(initial);
+  const queue = [...initial];
+  // Include roots in visited so we don't re-visit them if they later appear
+  // as a parent, but traversal is driven by initial (known) nodes. We also
+  // push roots into the BFS if they are known, so their parents are found.
+  const visited = new Set([...queue, ...roots]);
+
+  while (queue.length > 0) {
+    const cur = queue.shift();
+    const parents = reverseEdges.get(cur);
+    if (!parents) continue;
+    for (const parent of parents) {
+      if (!visited.has(parent)) {
+        visited.add(parent);
+        needed.add(parent);
+        queue.push(parent);
+      }
+    }
+  }
+
+  return needed;
+}
+
 function readPackageManifest(rootPath, packageJsonPath) {
   const manifest = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-  const allDeps = {
-    ...manifest.dependencies,
-    ...manifest.devDependencies,
-  };
-  const needsRust =
-    RUST_BUILD_ROOTS.has(manifest.name) ||
-    Object.keys(allDeps).some(dep => RUST_BUILD_ROOTS.has(dep));
+  // First pass: direct flag only; transitive enrichment happens after we have
+  // the full manifest list (see getPackageManifests / finalizeTransitiveNeeds).
+  const needsRust = directNeeds(manifest, RUST_BUILD_ROOTS);
+  const needsGo = directNeeds(manifest, GO_BUILD_ROOTS);
   return {
     packagePath: path.relative(rootPath, path.dirname(packageJsonPath)),
     packageJson: manifest,
     packageName: manifest.name,
     needsRust,
+    needsGo,
   };
+}
+
+function finalizeTransitiveNeeds(manifests) {
+  const goNeeded = computeTransitiveNeeds(manifests, GO_BUILD_ROOTS);
+  const rustNeeded = computeTransitiveNeeds(manifests, RUST_BUILD_ROOTS);
+  for (const m of manifests) {
+    if (goNeeded.has(m.packageName)) m.needsGo = true;
+    if (rustNeeded.has(m.packageName)) m.needsRust = true;
+  }
+  return manifests;
 }
 
 function getScriptTestPatterns(packageJson, scriptName) {
@@ -359,7 +439,7 @@ async function getChunkedTests() {
    */
   const testsToRun = {};
 
-  const packageManifests = (await getAllPackages())
+  let packageManifests = (await getAllPackages())
     .filter(pkg => pkg.name && pkg.name !== '//' && pkg.path)
     .map(pkg =>
       readPackageManifest(
@@ -367,6 +447,9 @@ async function getChunkedTests() {
         path.join(rootPath, pkg.path, 'package.json')
       )
     );
+  // Enrich with transitive toolchain needs via dep-graph walk so consumers
+  // like `vercel` CLI (which depends on @vercel/go transitively) get marked.
+  packageManifests = finalizeTransitiveNeeds(packageManifests);
   const affectedPackageSet = new Set(affectedPackages);
   packageManifests
     .filter(({ packageName }) => {
@@ -374,36 +457,39 @@ async function getChunkedTests() {
         affectedPackageSet.size === 0 || affectedPackageSet.has(packageName)
       );
     })
-    .forEach(({ packageJson, packageName, packagePath, needsRust }) => {
-      for (const scriptName of scripts) {
-        const patterns = getScriptTestPatterns(packageJson, scriptName);
-        if (patterns.length === 0) {
-          continue;
-        }
+    .forEach(
+      ({ packageJson, packageName, packagePath, needsRust, needsGo }) => {
+        for (const scriptName of scripts) {
+          const patterns = getScriptTestPatterns(packageJson, scriptName);
+          if (patterns.length === 0) {
+            continue;
+          }
 
-        const testPaths = getTestPathsForPackage(
-          rootPath,
-          packagePath,
-          patterns
-        );
-        if (testPaths.length === 0) {
-          continue;
-        }
+          const testPaths = getTestPathsForPackage(
+            rootPath,
+            packagePath,
+            patterns
+          );
+          if (testPaths.length === 0) {
+            continue;
+          }
 
-        const packagePathAndName = `${packagePath},${packageName}`;
-        testsToRun[packagePathAndName] = testsToRun[packagePathAndName] || {
-          needsRust,
-        };
-        testsToRun[packagePathAndName][scriptName] = testPaths;
+          const packagePathAndName = `${packagePath},${packageName}`;
+          testsToRun[packagePathAndName] = testsToRun[packagePathAndName] || {
+            needsRust,
+            needsGo,
+          };
+          testsToRun[packagePathAndName][scriptName] = testPaths;
+        }
       }
-    });
+    );
 
   const chunkedTests = Object.entries(testsToRun).flatMap(
     ([packagePathAndName, scriptNames]) => {
       const [packagePath, packageName] = packagePathAndName.split(',');
-      const { needsRust } = scriptNames;
+      const { needsRust, needsGo } = scriptNames;
       return Object.entries(scriptNames).flatMap(([scriptName, testPaths]) => {
-        if (scriptName === 'needsRust') return [];
+        if (scriptName === 'needsRust' || scriptName === 'needsGo') return [];
         const runnerOptions = getRunnerOptions(scriptName, packageName);
         const {
           runners,
@@ -453,6 +539,7 @@ async function getChunkedTests() {
                   allChunksLength: allChunks.length,
                   useEnvPaths,
                   needsRust,
+                  needsGo,
                   label,
                 };
               });

@@ -5,12 +5,13 @@ import {
   connectSubcommand,
   createThresholdSubcommand,
   disconnectSubcommand,
+  inspectSubcommand,
   removeSubcommand as resourceRemoveSubcommand,
 } from '../integration-resource/command';
 
 export const addSubcommand = {
   name: 'add',
-  aliases: [],
+  aliases: ['install'],
   description: 'Installs a marketplace integration',
   arguments: [
     {
@@ -649,6 +650,7 @@ export const resourceSubcommand = {
     disconnectSubcommand,
     resourceRemoveSubcommand,
     claimSubcommand,
+    inspectSubcommand,
   ],
   examples: [
     {

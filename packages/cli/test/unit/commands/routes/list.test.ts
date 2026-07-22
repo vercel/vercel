@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import routes from '../../../../src/commands/routes';
 import { useUser } from '../../../mocks/user';
@@ -9,7 +9,10 @@ import {
 } from '../../../mocks/routes';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 
 describe('routes list', () => {
   beforeEach(() => {
@@ -48,6 +51,26 @@ describe('routes list', () => {
     const exitCode = await routes(client);
     expect(exitCode, 'exit code for "routes list"').toEqual(0);
     await expect(client.stderr).toOutput('3 Routes found');
+  });
+
+  it('lists routes for the project selected by --project', async () => {
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject({
+      ...defaultProject,
+      id: 'explicit-routes',
+      name: 'explicit-routes',
+      accountId: 'team_dummy',
+    });
+    useRoutes(3);
+    client.setArgv('routes', 'list', '--project', 'explicit-routes');
+
+    await expect(routes(client)).resolves.toEqual(0);
+    await expect(client.stderr).toOutput('3 Routes found');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'option:project', value: '[REDACTED]' },
+      { key: 'subcommand:list', value: 'list' },
+    ]);
   });
 
   it('should list routes using ls alias', async () => {
@@ -151,6 +174,44 @@ describe('routes list', () => {
     const exitCode = await routes(client);
     expect(exitCode, 'exit code for --diff without staging').toEqual(1);
     await expect(client.stderr).toOutput('No staged changes to diff');
+  });
+
+  it('preserves --project in suggestions when no staging version exists', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('exit');
+    }) as () => never);
+    client.nonInteractive = true;
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject({
+      ...defaultProject,
+      id: 'explicit-routes',
+      name: 'explicit-routes',
+      accountId: 'team_dummy',
+    });
+    useRouteVersions(0);
+    useRoutes(3);
+    client.setArgv('routes', 'list', '--diff', '--project', 'explicit-routes');
+
+    await expect(routes(client)).rejects.toThrow('exit');
+    const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+    expect(payload.message).toContain(
+      'vercel routes add --project explicit-routes'
+    );
+    expect(payload.message).toContain(
+      'vercel routes edit --project explicit-routes'
+    );
+    expect(
+      payload.next.map(({ command }: { command: string }) => command)
+    ).toEqual([
+      'vercel routes list --project explicit-routes',
+      'vercel routes add --project explicit-routes',
+    ]);
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+    client.nonInteractive = false;
   });
 
   describe('--expand', () => {

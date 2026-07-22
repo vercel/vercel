@@ -2655,12 +2655,13 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
   Options:
 
-       --force          Overwrite an existing variable for the same target                                                   
-       --guidance       Show command suggestions after completion                                                            
-       --no-sensitive   Store the value as non-sensitive when policy allows                                                  
-       --sensitive      Store the value as sensitive for Production or Preview                                               
-       --value <VALUE>  Set the variable value for non-interactive use; otherwise use stdin or the prompt                    
-  -y,  --yes            Skip the confirmation prompt when adding an Environment Variable                                     
+       --force                 Overwrite an existing variable for the same target                                            
+       --guidance              Show command suggestions after completion                                                     
+       --no-sensitive          Store the value as non-sensitive when policy allows                                           
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
+       --sensitive             Store the value as sensitive for Production or Preview                                        
+       --value <VALUE>         Set the variable value for non-interactive use; otherwise use stdin or the prompt             
+  -y,  --yes                   Skip the confirmation prompt when adding an Environment Variable                              
 
 
   Global Options:
@@ -2679,7 +2680,7 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
   Examples:
 
-  - Add a new variable to all Environments
+  - Add a new variable (prompts for value and Environments)
 
     $ vercel env add <name>
     $ vercel env add API_TOKEN
@@ -2688,6 +2689,11 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
     $ vercel env add <name> <production | preview | development>
     $ vercel env add DB_PASS production
+
+  - Add one variable to multiple Environments (comma-separated)
+
+    $ vercel env add <name> <environment>[,<environment>]
+    $ vercel env add API_URL production,preview,development
 
   - Override an existing Environment Variable of same target (production, preview, deployment)
 
@@ -2834,6 +2840,10 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
 
     $ vercel env run -- <command>
 
+  - Add one variable to multiple Environments
+
+    $ vercel env add API_URL production,preview,development
+
 "
 `;
 
@@ -2883,6 +2893,10 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
 
     $ vercel env run -- <command>
 
+  - Add one variable to multiple Environments
+
+    $ vercel env add API_URL production,preview,development
+
 "
 `;
 
@@ -2924,6 +2938,10 @@ exports[`help command > env help output snapshots > env help column width 120 1`
 
     $ vercel env run -- <command>
 
+  - Add one variable to multiple Environments
+
+    $ vercel env add API_URL production,preview,development
+
 "
 `;
 
@@ -2935,8 +2953,9 @@ exports[`help command > env help output snapshots > env list help output snapsho
 
   Options:
 
-  -F,  --format <FORMAT>  Specify the output format (json)                                                              
-       --guidance         Receive command suggestions once command is complete                                          
+  -F,  --format <FORMAT>       Specify the output format (json)                                                              
+       --guidance              Receive command suggestions once command is complete                                          
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
 
 
   Global Options:
@@ -2967,6 +2986,7 @@ exports[`help command > env help output snapshots > env pull help output snapsho
        --environment <TARGET>  Set the Environment when pulling Environment Variables                                        
        --git-branch <NAME>     Specify the Git branch to pull specific Environment Variables for                             
        --id <ID>               Pull environment variables for a specific deployment (e.g. dpl_xxx)                           
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
   -y,  --yes                   Skip the confirmation prompt when removing an environment variable                            
 
 
@@ -3006,7 +3026,8 @@ exports[`help command > env help output snapshots > env remove help output snaps
 
   Options:
 
-  -y,  --yes  Skip the confirmation prompt when removing an Environment Variable                                        
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
+  -y,  --yes                   Skip the confirmation prompt when removing an Environment Variable                            
 
 
   Global Options:
@@ -3051,7 +3072,8 @@ exports[`help command > git help output snapshots > git connect help output snap
 
   Options:
 
-  -y,  --yes  Accept default value for all prompts                                                                      
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
+  -y,  --yes                   Accept default value for all prompts                                                          
 
 
   Global Options:
@@ -3089,7 +3111,8 @@ exports[`help command > git help output snapshots > git disconnect help output s
 
   Options:
 
-  -y,  --yes  Accept default value for all prompts                                                                      
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
+  -y,  --yes                   Accept default value for all prompts                                                          
 
 
   Global Options:
@@ -4668,6 +4691,21 @@ exports[`help command > integration-resource help output snapshots > integration
                                                   …
                                                   …
                                                   …
+  inspect           resource                      …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  a
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
 
 
   Global Options:
@@ -4749,6 +4787,12 @@ exports[`help command > integration-resource help output snapshots > integration
                                                   by opening the        
                                                   provider claim URL in 
                                                   your browser          
+  inspect           resource                      Show live details and 
+                                                  status for a          
+                                                  marketplace           
+                                                  integration resource, 
+                                                  fetched fresh from the
+                                                  provider              
 
 
   Global Options:
@@ -4785,6 +4829,8 @@ exports[`help command > integration-resource help output snapshots > integration
   remove            resource                      Delete an integration resource                                
   claim             [resource]                    Claim a sandbox marketplace resource (e.g. Stripe, Shopify) by
                                                   opening the provider claim URL in your browser                
+  inspect           resource                      Show live details and status for a marketplace integration    
+                                                  resource, fetched fresh from the provider                     
 
 
   Global Options:
@@ -5128,6 +5174,13 @@ exports[`help command > list help output snapshots > list help column width 40 1
                                output     
                                format     
                                (json)     
+       --limit <NUMBER>        Number of  
+                               results to 
+                               return per 
+                               page       
+                               (default:  
+                               20, max:   
+                               100)       
   -m,  --meta <KEY=VALUE>      Filter     
                                deployments
                                by metadata
@@ -5259,6 +5312,8 @@ exports[`help command > list help output snapshots > list help column width 80 1
   -a,  --all                   List resources across all projects                 
        --environment <TARGET>                                                     
   -F,  --format <FORMAT>       Specify the output format (json)                   
+       --limit <NUMBER>        Number of results to return per page (default: 20, 
+                               max: 100)                                          
   -m,  --meta <KEY=VALUE>      Filter deployments by metadata (e.g.: \`-m          
                                KEY=value\`). Can appear many times.                
   -N,  --next <MS>             Show next page of results                          
@@ -5331,6 +5386,7 @@ exports[`help command > list help output snapshots > list help column width 120 
   -a,  --all                   List resources across all projects                                                         
        --environment <TARGET>                                                                                             
   -F,  --format <FORMAT>       Specify the output format (json)                                                           
+       --limit <NUMBER>        Number of results to return per page (default: 20, max: 100)                               
   -m,  --meta <KEY=VALUE>      Filter deployments by metadata (e.g.: \`-m KEY=value\`). Can appear many times.              
   -N,  --next <MS>             Show next page of results                                                                  
   -p,  --policy <KEY=VALUE>    See deployments with provided Deployment Retention policies (e.g.: \`-p KEY=value\`). Can    
@@ -5618,6 +5674,16 @@ exports[`help command > project help output snapshots > project help column widt
                                    …
                                    a
                                    …
+  update          [name]           …
+                                   …
+                                   …
+                                   …
+                                   …
+                                   …
+                                   …
+                                   …
+                                   …
+                                   …
   rename          name new-name    …
                                    a
                                    …
@@ -5709,6 +5775,8 @@ exports[`help command > project help output snapshots > project help column widt
                                    settings for a project                   
   web-analytics   [name]           Enable Web Analytics for a project       
   speed-insights  [name]           Enable Speed Insights for a project      
+  update          [name]           Update one or more project settings;     
+                                   omitted settings remain unchanged        
   rename          name new-name    Rename a project                         
   remove          name             Delete a project                         
   token           [name]           Get a development OIDC token for a       
@@ -5754,6 +5822,7 @@ exports[`help command > project help output snapshots > project help column widt
   protection      [action] [name]  Show or toggle deployment protection settings for a project                      
   web-analytics   [name]           Enable Web Analytics for a project                                               
   speed-insights  [name]           Enable Speed Insights for a project                                              
+  update          [name]           Update one or more project settings; omitted settings remain unchanged           
   rename          name new-name    Rename a project                                                                 
   remove          name             Delete a project                                                                 
   token           [name]           Get a development OIDC token for a project                                       
@@ -5824,6 +5893,7 @@ exports[`help command > project help output snapshots > project list help output
 
   -f,  --filter <NAME>    Filter projects by name (substring match)                                                     
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --limit <NUMBER>   Number of results to return per page (default: 20, max: 100)                                  
   -N,  --next <MS>        Show next page of results                                                                     
        --update-required  A list of projects affected by an upcoming deprecation                                        
 
@@ -6994,8 +7064,9 @@ exports[`help command > target help output snapshots > target list help output s
 
   Options:
 
-  -F,  --format <FORMAT>  Specify the output format (json)                                                              
-  -y,  --yes              Skip confirmation when linking is required (e.g. in non-interactive mode)                     
+  -F,  --format <FORMAT>       Specify the output format (json)                                                              
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
+  -y,  --yes                   Skip confirmation when linking is required (e.g. in non-interactive mode)                     
 
 
   Global Options:
@@ -7267,6 +7338,7 @@ exports[`help command > teams help output snapshots > teams list help output sna
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --limit <NUMBER>   Number of results to return per page (default: 20, max: 100)                                  
   -N,  --next <MS>        Show next page of results                                                                     
 
 

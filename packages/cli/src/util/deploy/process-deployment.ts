@@ -6,6 +6,7 @@ import type {
 } from '@vercel-internals/types';
 import {
   type ArchiveFormat,
+  type DeploymentAliasAssignedEvent,
   type DeploymentOptions,
   type VercelClientOptions,
   createDeployment,
@@ -13,7 +14,7 @@ import {
 import { isErrorLike } from '@vercel/error-utils';
 import bytes from 'bytes';
 import chalk from 'chalk';
-import type { Agent } from 'http';
+import { getFetchDispatcher } from '../fetch';
 import type Now from '../../util';
 import { displayBuildLogs, type BuildLog, parseLogLines } from '../logs';
 import { progress } from '../output/progress';
@@ -42,7 +43,6 @@ export default async function processDeployment({
   skipAutoDetectionConfirmation,
   noWait,
   withFullLogs,
-  agent,
   manual,
   jsonOutput,
   linkedProject,
@@ -64,7 +64,6 @@ export default async function processDeployment({
   rootDirectory?: string | null;
   noWait?: boolean;
   withFullLogs?: boolean;
-  agent?: Agent;
   bulkRedirectsPath?: string | null;
   manual?: boolean;
   jsonOutput?: boolean;
@@ -97,8 +96,13 @@ export default async function processDeployment({
     throw new Error('Missing authentication token');
   }
 
+  const aliasAssignedController = new AbortController();
+  const onAliasAssigned = (event: DeploymentAliasAssignedEvent) => {
+    aliasAssignedController.abort(event);
+  };
+
   const clientOptions: VercelClientOptions = {
-    teamId: org.type === 'team' ? org.id : undefined,
+    teamId: now.currentTeam ?? undefined,
     apiUrl: now._apiUrl,
     token,
     debug: output.isDebugEnabled(),
@@ -111,10 +115,11 @@ export default async function processDeployment({
     rootDirectory,
     skipAutoDetectionConfirmation,
     archive,
-    agent,
+    dispatcher: getFetchDispatcher(),
     projectName,
     bulkRedirectsPath,
     manual,
+    aliasAssignedSignal: aliasAssignedController.signal,
   };
 
   const deployingSpinnerVal = isSettingUpProject
@@ -236,7 +241,8 @@ export default async function processDeployment({
           ({ abortController, promise } = displayBuildLogs(
             client,
             deployment,
-            true
+            true,
+            onAliasAssigned
           ));
           promise.catch(error =>
             output.warn(`Failed to read build logs: ${error}`)
@@ -248,6 +254,7 @@ export default async function processDeployment({
             deployment.id,
             {
               mode: 'logs',
+              onAliasAssigned,
               onEvent: (event: BuildLog) => {
                 if (!event.created) return;
                 const lines = parseLogLines(event);
@@ -296,7 +303,8 @@ export default async function processDeployment({
         const v2ChecksPending =
           event.payload.checks?.['deployment-alias']?.state === 'pending';
 
-        stopSpinner();
+        // Keep the event stream open while polling waits for alias assignment.
+        output.stopSpinner();
         process.stderr.write(eraseLines(2));
         const isProdDeployment = event.payload.target === 'production';
         const previewUrl = `https://${event.payload.url}`;
