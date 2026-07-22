@@ -29,8 +29,6 @@ import { printError } from '../../util/error';
 import parseTarget from '../../util/parse-target';
 import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import getDeployment from '../../util/get-deployment';
-import { isAPIError } from '../../util/errors-ts';
-import { performDeviceCodeFlow } from '../login/future';
 import {
   buildCommandWithYes,
   getPreservedArgsForEnvPull,
@@ -298,7 +296,7 @@ export async function envPullCommandLogic(
   output.spinner('Downloading');
 
   const pullId = deploymentId || link.project.id;
-  const pullResult = await pullEnvRecordsForEnvPull(client, pullId, source, {
+  const pullResult = await pullEnvRecords(client, pullId, source, {
     target: environment || 'development',
     gitBranch,
   });
@@ -417,73 +415,6 @@ export async function envPullCommandLogic(
     `${filename} file${isGitIgnoreUpdated ? ' and added it to .gitignore' : ''}`,
     { gutter: '✓' }
   );
-}
-
-async function pullEnvRecordsForEnvPull(
-  client: Client,
-  pullId: string,
-  source: EnvRecordsSource,
-  options: { target: string; gitBranch?: string }
-) {
-  try {
-    return await pullEnvRecords(client, pullId, source, options);
-  } catch (error) {
-    if (!isAPIError(error) || error.code !== 'challenge_required') {
-      throw error;
-    }
-
-    const refreshToken = client.authConfig.refreshToken;
-    if (!refreshToken || client.authConfig.tokenSource || !client.stdin.isTTY) {
-      throw error;
-    }
-
-    output.stopSpinner();
-    output.log('Sensitive Environment Variables require fresh authentication.');
-
-    const acrValues = getAcrValuesFromWWWAuthenticate(error.wwwAuthenticate);
-    if (!acrValues) {
-      throw error;
-    }
-
-    const tokens = await performDeviceCodeFlow(client, {
-      refreshToken,
-      acrValues,
-    });
-    if (!tokens) {
-      throw error;
-    }
-
-    client.updateAuthConfig({
-      token: tokens.access_token,
-      userId: undefined,
-      expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
-    });
-    if (tokens.refresh_token) {
-      client.updateAuthConfig({ refreshToken: tokens.refresh_token });
-    }
-    client.persistAuthConfig();
-
-    output.spinner('Downloading');
-    return await pullEnvRecords(client, pullId, source, options);
-  }
-}
-
-export function getAcrValuesFromWWWAuthenticate(header: string | undefined) {
-  if (!header) {
-    return;
-  }
-
-  const bearerIndex = header.toLowerCase().indexOf('bearer');
-  if (bearerIndex === -1) {
-    return;
-  }
-
-  const bearerChallenge = header.slice(bearerIndex + 'bearer'.length);
-  const match = bearerChallenge.match(
-    /(?:^|[,\s])acr_values=(?:"((?:\\.|[^"\\])*)"|([^,\s]+))/i
-  );
-
-  return match?.[1]?.replace(/\\(.)/g, '$1') ?? match?.[2];
 }
 
 function escapeValue(value: string | undefined) {
