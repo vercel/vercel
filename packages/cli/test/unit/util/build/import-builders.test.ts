@@ -3,7 +3,10 @@ import { join } from 'path';
 import { ensureDir, remove, outputJSON, writeFile } from 'fs-extra';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import { client } from '../../../mocks/client';
-import { importBuilders } from '../../../../src/util/build/import-builders';
+import {
+  formatResolvedBuilders,
+  importBuilders,
+} from '../../../../src/util/build/import-builders';
 import * as installBuildersModule from '../../../../src/util/build/install-builders';
 import vercelNextPkg from '@vercel/next/package.json';
 
@@ -447,5 +450,15 @@ describe('importBuilders()', () => {
     expect((err as any).link).toEqual(
       'https://vercel.link/builder-dependencies-install-failed'
     );
+  });
+
+  it('should format resolved Builders with their source directory', async () => {
+    const specs = new Set(['@vercel/node', '@vercel/static']);
+    const builders = await importBuilders(specs, process.cwd());
+    const resolved = formatResolvedBuilders(builders);
+    expect(resolved).toContain(
+      `@vercel/node@${vercelNodePkg.version}=${join(repoRoot, 'packages/node')}`
+    );
+    expect(resolved).toContain('@vercel/static=built-in');
   });
 });

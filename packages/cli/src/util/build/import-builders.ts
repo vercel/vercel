@@ -66,6 +66,20 @@ function isBareSpec(parsed: ReturnType<typeof npa>): boolean {
   return parsed.type === 'tag' && parsed.rawSpec === '';
 }
 
+/**
+ * Formats resolved Builders as `name@version=<dir>` pairs for trace
+ * attributes, so we can tell which installation each Builder loaded from.
+ */
+export function formatResolvedBuilders(
+  builders: Map<string, BuilderWithPkg>
+): string {
+  return Array.from(builders.values(), b =>
+    b.pkgPath
+      ? `${b.pkg.name}@${b.pkg.version}=${dirname(b.pkgPath)}`
+      : `${b.pkg.name}=built-in`
+  ).join(',');
+}
+
 function pinBuilderSpecs(specs: Set<string>): Map<string, string> {
   const pins = getBuilderPins();
   const pinnedSpecs = new Map<string, string>();
