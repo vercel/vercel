@@ -3,6 +3,7 @@ import { client } from '../../../mocks/client';
 import aiGateway from '../../../../src/commands/ai-gateway';
 import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
+import { useProject, defaultProject } from '../../../mocks/project';
 
 const teamBudget = {
   quotaEntityId: 'team_abc',
@@ -50,16 +51,47 @@ describe('ai-gateway budgets list', () => {
     });
   });
 
-  it('lists budgets in a table', async () => {
+  it('resolves a project scope id to its name', async () => {
     const team = useTeam();
     useUser();
-    useListBudgets();
+    useProject({ ...defaultProject });
+    useListBudgets([{ ...projectBudget, scopeId: defaultProject.id }]);
     client.config.currentTeam = team.id;
     client.setArgv('ai-gateway', 'budgets', 'list');
 
     const exitCodePromise = aiGateway(client);
 
-    await expect(client.stdout).toOutput('prj_123');
+    await expect(client.stdout).toOutput(defaultProject.name!);
+    expect(await exitCodePromise).toBe(0);
+  });
+
+  it('resolves a team scope id to its slug', async () => {
+    const team = useTeam();
+    useUser();
+    useListBudgets([{ ...teamBudget, scopeId: team.id }]);
+    client.config.currentTeam = team.id;
+    client.setArgv('ai-gateway', 'budgets', 'list');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stdout).toOutput(team.slug);
+    expect(await exitCodePromise).toBe(0);
+  });
+
+  it('falls back to the scope id when a name cannot be resolved', async () => {
+    const team = useTeam();
+    useUser();
+    client.scenario.get('/v9/projects/prj_gone', (_req, res) => {
+      res.statusCode = 404;
+      res.json({ error: { code: 'not_found', message: 'Project not found' } });
+    });
+    useListBudgets([{ ...projectBudget, scopeId: 'prj_gone' }]);
+    client.config.currentTeam = team.id;
+    client.setArgv('ai-gateway', 'budgets', 'list');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stdout).toOutput('prj_gone');
     expect(await exitCodePromise).toBe(0);
   });
 

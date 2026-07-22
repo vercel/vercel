@@ -3,6 +3,9 @@ import table from '../../util/output/table';
 import type Client from '../../util/client';
 import { listBudgets, type Budget } from '../../util/ai-gateway/budgets';
 import { ensureTeam } from '../../util/ai-gateway/ensure-team';
+import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
+import { ProjectNotFound } from '../../util/errors-ts';
+import getTeamById from '../../util/teams/get-team-by-id';
 import output from '../../output-manager';
 import { AiGatewayBudgetsListTelemetryClient } from '../../util/telemetry/commands/ai-gateway/budgets-list';
 import { budgetsListSubcommand } from './command';
@@ -59,34 +62,62 @@ export default async function list(client: Client, argv: string[]) {
     throw err;
   }
 
-  output.stopSpinner();
-
   if (asJson) {
+    output.stopSpinner();
     client.stdout.write(`${JSON.stringify({ budgets }, null, 2)}\n`);
     return 0;
   }
 
   if (budgets.length === 0) {
+    output.stopSpinner();
     output.log(
       `No budgets found. Set one with ${getCommandName('ai-gateway budgets set')}.`
     );
     return 0;
   }
 
+  const names = await Promise.all(
+    budgets.map(budget => resolveScopeName(client, budget))
+  );
+
+  output.stopSpinner();
+
   output.log('Budgets');
-  client.stdout.write(printBudgetsTable(budgets));
+  client.stdout.write(printBudgetsTable(budgets, names));
   return 0;
 }
 
-function printBudgetsTable(budgets: Budget[]) {
+// Budgets carry only the internal scope id; resolve it to a human name for the
+// table (team slug or project name), falling back to the id when the resource
+// can't be resolved. JSON output keeps the raw scopeId as the stable contract.
+async function resolveScopeName(
+  client: Client,
+  budget: Budget
+): Promise<string> {
+  try {
+    if (budget.scopeType === 'team') {
+      const team = await getTeamById(client, budget.scopeId);
+      return team.slug || team.name || budget.scopeId;
+    }
+    const project = await getProjectByNameOrId(client, budget.scopeId);
+    if (project instanceof ProjectNotFound) {
+      return budget.scopeId;
+    }
+    return project.name || budget.scopeId;
+  } catch {
+    return budget.scopeId;
+  }
+}
+
+function printBudgetsTable(budgets: Budget[], names: string[]) {
   return `${table(
     [
-      ['scope', 'id', 'limit', 'spent', 'refresh'].map(header =>
+      ['scope', 'name', 'limit', 'spent', 'refresh'].map(header =>
         chalk.gray(header)
       ),
-      ...budgets.map(budget => [
+      ...budgets.map((budget, i) => [
         budget.scopeType,
-        budget.scopeId,
+        names[i],
         `$${budget.limitAmount}`,
         `$${budget.currentSpend.toFixed(2)}`,
         budget.refreshPeriod,
