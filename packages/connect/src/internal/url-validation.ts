@@ -1,9 +1,12 @@
+import { readNonEmptyEnv } from './env.js';
+
 const DETACHED_INTERACTIVE_AUTH_MODE = 'detached';
 const INTERACTIVE_AUTH_MODE_ENV = 'VERCEL_CONNECT_INTERACTIVE_AUTH_MODE';
 
 export function isDetachedInteractiveAuth(): boolean {
   return (
-    process.env[INTERACTIVE_AUTH_MODE_ENV] === DETACHED_INTERACTIVE_AUTH_MODE
+    readNonEmptyEnv(INTERACTIVE_AUTH_MODE_ENV) ===
+    DETACHED_INTERACTIVE_AUTH_MODE
   );
 }
 
