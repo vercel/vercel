@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import buy from '../../../../src/commands/buy';
 import { useUser } from '../../../mocks/user';
-import { useTeam } from '../../../mocks/team';
+import { useTeam, useTeams } from '../../../mocks/team';
 
 vi.mock('open', () => {
   return {
@@ -60,6 +60,83 @@ describe('buy addon', () => {
       const exitCode = await buy(client);
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('Missing quantity');
+    });
+
+    it('redirects customEnvironment to target purchase with clearer pack errors', async () => {
+      setupTeam();
+      client.setArgv('buy', 'addon', 'customEnvironment');
+      const exitCode = await buy(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('Missing packs');
+      await expect(client.stderr).toOutput('target purchase');
+    });
+
+    it('redirects customEnvironment purchases to target purchase', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.scenario.get(
+        `/v1/projects/custom-environments/settings`,
+        (_req, res) => {
+          res.json({
+            packSize: 5,
+            baseline: 1,
+            purchasedAmount: 0,
+            minPurchasedAmount: 0,
+            maxPurchasedAmount: 15,
+            effectiveLimit: 1,
+            environmentsUsed: 1,
+          });
+        }
+      );
+      client.scenario.post(
+        `/v1/projects/custom-environments/settings`,
+        (req, res) => {
+          const body =
+            typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+          res.json({ purchasedAmount: body.purchasedAmount });
+        }
+      );
+
+      client.setArgv('buy', 'addon', 'customEnvironment', '2', '--yes');
+      const exitCode = await buy(client);
+      expect(exitCode).toBe(0);
+      await expect(client.stderr).toOutput('target purchase');
+    });
+
+    it('rejects over-limit customEnvironment purchases with a clear message', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.scenario.get(
+        `/v1/projects/custom-environments/settings`,
+        (_req, res) => {
+          res.json({
+            packSize: 5,
+            baseline: 1,
+            purchasedAmount: 0,
+            minPurchasedAmount: 0,
+            maxPurchasedAmount: 15,
+            effectiveLimit: 1,
+            environmentsUsed: 1,
+          });
+        }
+      );
+
+      client.setArgv('buy', 'addon', 'customEnvironment', '1500', '--yes');
+      const exitCode = await buy(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('Packs must be between');
     });
 
     it('errors when quantity is not a number', async () => {

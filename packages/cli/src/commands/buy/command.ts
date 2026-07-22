@@ -60,7 +60,7 @@ export const ADDON_LABELS: Record<AddonAlias, string> = {
 export const addonSubcommand = {
   name: 'addon',
   aliases: ['addons'],
-  description: 'Purchase a Vercel addon for your team',
+  description: `Purchase a Vercel addon for your team. Supported addons: ${SUPPORTED_ADDON_ALIASES.join(', ')}.`,
   arguments: [
     {
       name: 'addon-name',
@@ -81,7 +81,7 @@ export const addonSubcommand = {
   ],
   examples: [
     {
-      name: 'Purchase 1 unit of the SIEM addon',
+      name: 'Purchase 1 SIEM addon',
       value: `${packageName} buy addon siem 1`,
     },
   ],

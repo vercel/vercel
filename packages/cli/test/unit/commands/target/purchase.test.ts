@@ -104,4 +104,33 @@ describe('target purchase', () => {
     expect(exitCode).toBe(1);
     await expect(client.stderr).toOutput('Packs must be between');
   });
+
+  it('surfaces upgrade_required from the API for hobby teams', async () => {
+    useSettingsEndpoint();
+    client.scenario.post(
+      `/v1/projects/custom-environments/settings`,
+      (_req, res) => {
+        res.status(403).json({
+          error: {
+            code: 'upgrade_required',
+            message:
+              'You must be on an active Pro or Enterprise plan to purchase custom environments.',
+          },
+        });
+      }
+    );
+    client.setArgv('target', 'purchase', '1', '--yes');
+    const exitCode = await target(client);
+    expect(exitCode).toBe(1);
+    await expect(client.stderr).toOutput('Pro or Enterprise');
+    await expect(client.stderr).toOutput('buy pro');
+  });
+
+  it('rejects over-limit pack counts before calling the API', async () => {
+    useSettingsEndpoint({ maxPurchasedAmount: PACK_SIZE * 3 });
+    client.setArgv('target', 'purchase', '4', '--yes');
+    const exitCode = await target(client);
+    expect(exitCode).toBe(1);
+    await expect(client.stderr).toOutput('Packs must be between 0 and 3');
+  });
 });

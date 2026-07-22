@@ -15,7 +15,28 @@ import { getCommandName } from '../../util/pkg-name';
 import stamp from '../../util/output/stamp';
 import { createPurchase } from '../../util/buy/create-purchase';
 import { handlePurchaseError } from '../../util/buy/handle-purchase-error';
+import { isCustomEnvironmentAddonAlias } from '../../util/buy/custom-environment-addon';
 import { validateJsonOutput } from '../../util/output-format';
+import targetPurchase from '../target/purchase';
+
+function buildTargetPurchaseArgv(
+  packs: string,
+  flags: Record<string, string | boolean | undefined>
+): string[] {
+  const argv = [packs];
+  if (flags['--yes']) {
+    argv.push('--yes');
+  }
+  const project = flags['--project'];
+  if (typeof project === 'string') {
+    argv.push('--project', project);
+  }
+  const format = flags['--format'];
+  if (typeof format === 'string') {
+    argv.push('--format', format);
+  }
+  return argv;
+}
 
 export default async function addon(client: Client, argv: string[]) {
   const flagsSpecification = getFlagsSpecification(addonSubcommand.options);
@@ -34,8 +55,27 @@ export default async function addon(client: Client, argv: string[]) {
   }
   const asJson = formatResult.jsonOutput;
 
-  const { args } = parsedArgs;
+  const { args, flags } = parsedArgs;
   const [addonName, quantityStr] = args;
+
+  if (addonName && isCustomEnvironmentAddonAlias(addonName)) {
+    output.log(
+      `${chalk.yellow('Note:')} Custom environment purchases use ${getCommandName('target purchase <packs>')} per project (not buy addon).`
+    );
+
+    if (!quantityStr) {
+      output.error(
+        'Missing packs. Specify the number of custom environment packs to purchase.'
+      );
+      output.log(
+        `Example: ${getCommandName('target purchase 2')} — each pack adds 5 environments.`
+      );
+      output.log(`Run ${getCommandName('target purchase --help')} for usage.`);
+      return 1;
+    }
+
+    return targetPurchase(client, buildTargetPurchaseArgv(quantityStr, flags));
+  }
 
   // Validate addon name argument
   if (!addonName) {
@@ -55,7 +95,7 @@ export default async function addon(client: Client, argv: string[]) {
 
   // Validate quantity argument
   if (!quantityStr) {
-    output.error('Missing quantity. Please specify the number of units.');
+    output.error('Missing quantity. Please specify how many to purchase.');
     output.log(`Run ${getCommandName('buy addon --help')} for usage.`);
     return 1;
   }
@@ -98,7 +138,7 @@ export default async function addon(client: Client, argv: string[]) {
     }
     if (
       !(await client.input.confirm(
-        `Purchase ${chalk.bold(quantity)} unit${quantity === 1 ? '' : 's'} of ${label} for team ${chalk.bold(contextName)}?`,
+        `Purchase ${chalk.bold(quantity)} ${label} addon${quantity === 1 ? '' : 's'} for team ${chalk.bold(contextName)}?`,
         false
       ))
     ) {
@@ -133,7 +173,7 @@ export default async function addon(client: Client, argv: string[]) {
       );
     } else {
       output.success(
-        `Purchased ${chalk.bold(quantity)} unit${quantity === 1 ? '' : 's'} of ${label} for ${chalk.bold(contextName)} ${purchaseStamp()}`
+        `Purchased ${chalk.bold(quantity)} ${label} addon${quantity === 1 ? '' : 's'} for ${chalk.bold(contextName)} ${purchaseStamp()}`
       );
       if (result.subscriptionIntent) {
         output.debug(`Subscription intent: ${result.subscriptionIntent.id}`);

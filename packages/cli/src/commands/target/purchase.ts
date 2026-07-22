@@ -9,6 +9,7 @@ import { ensureLink } from '../../util/link/ensure-link';
 import { getCommandName } from '../../util/pkg-name';
 import stamp from '../../util/output/stamp';
 import { validateJsonOutput } from '../../util/output-format';
+import { handleCustomEnvironmentPurchaseError } from '../../util/buy/handle-custom-environment-purchase-error';
 
 type ProjectCustomEnvironmentsSettings = {
   packSize: number;
@@ -84,8 +85,7 @@ export default async function purchase(client: Client, argv: string[]) {
     );
   } catch (err: unknown) {
     output.stopSpinner();
-    output.prettyError(err);
-    return 1;
+    return handleCustomEnvironmentPurchaseError(err);
   }
   output.stopSpinner();
 
@@ -165,7 +165,6 @@ export default async function purchase(client: Client, argv: string[]) {
     return 0;
   } catch (err: unknown) {
     output.stopSpinner();
-    output.prettyError(err);
-    return 1;
+    return handleCustomEnvironmentPurchaseError(err);
   }
 }
