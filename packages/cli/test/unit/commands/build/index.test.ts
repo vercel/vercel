@@ -1798,6 +1798,9 @@ createServer((_req, res) => {
         // "functions" directory should have the express function
         const functions = await fs.readdir(join(output, 'functions'));
         expect(functions).toContain('index.func');
+        expect(
+          fs.existsSync(join(output, 'functions', 'before', ':id.func'))
+        ).toBe(true);
       } finally {
         delete process.env.VERCEL_EXPERIMENTAL_ROUTES_JSON;
       }

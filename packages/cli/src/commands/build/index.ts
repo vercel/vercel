@@ -1581,11 +1581,7 @@ async function doBuild(
                   if (route.source === '/' && !beforeFilesystem) {
                     continue;
                   }
-                  if (
-                    indexLambda &&
-                    route.source !== '/' &&
-                    !beforeFilesystem
-                  ) {
+                  if (indexLambda && route.source !== '/') {
                     convertedOutputs[route.source] = indexLambda;
                   }
                   if (beforeFilesystem) {

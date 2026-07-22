@@ -1804,12 +1804,20 @@ export const build: BuildVX = async ({
           { handle: 'filesystem' as const },
           { src: '/(.*)', dest: `/${lambdaPath}` },
         ];
+  const fastapiRouteOutputs = output
+    ? Object.fromEntries(
+        fastapiRoutes
+          .filter(route => route.source !== '/')
+          .map(route => [route.source, output])
+      )
+    : {};
 
   return {
     resultVersion: 2,
     result: {
       output: {
         ...(output ? { [lambdaPath]: output } : {}),
+        ...fastapiRouteOutputs,
         ...subscriberLambdas,
         ...workflowLambdas,
         ...staticFiles,

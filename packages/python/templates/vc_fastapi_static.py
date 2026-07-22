@@ -99,6 +99,15 @@ def to_ecmascript_regex(pattern: str) -> str:
     return re.sub(r"\(\?P<[^>]+>", "(?:", pattern)
 
 
+def to_route_source(path: str) -> str:
+    def replace_parameter(match: re.Match[str]) -> str:
+        name, converter = match.groups()
+        suffix = "*" if converter == "path" else ""
+        return f":{name}{suffix}"
+
+    return re.sub(r"\{([^}:]+)(?::([^}]+))?\}", replace_parameter, path)
+
+
 def application_route_from_candidate(candidate: object) -> ApplicationRoute | None:
     original_route = getattr(candidate, "original_route", candidate)
     if isinstance(original_route, WebSocketRoute):
@@ -119,7 +128,7 @@ def application_route_from_candidate(candidate: object) -> ApplicationRoute | No
 
     methods = sorted(getattr(effective_route, "methods", None) or [])
     return ApplicationRoute(
-        source=source,
+        source=to_route_source(source),
         src=to_ecmascript_regex(path_regex.pattern),
         methods=methods,
     )

@@ -1818,7 +1818,7 @@ describe('FastAPI route discovery hook', () => {
     };
     const routes = [
       {
-        source: '/api/items/{item_id}',
+        source: '/api/items/:item_id',
         src: '^/api/items/(?:[^/]+)$',
         methods: ['GET'],
       },
@@ -1883,7 +1883,7 @@ describe('FastAPI route discovery hook', () => {
 
     const routes = [
       {
-        source: '/api/items/{item_id}',
+        source: '/api/items/:item_id',
         src: '^/api/items/(?:[^/]+)$',
         methods: ['GET'],
       },
@@ -1910,11 +1910,15 @@ describe('FastAPI route discovery hook', () => {
         repoRootPath: workPath,
       });
 
-      expect(getBuildOutputV2(result).routes).toEqual([
+      const buildOutput = getBuildOutputV2(result);
+      expect(buildOutput.routes).toEqual([
         { src: '^/api/items/(?:[^/]+)$', dest: '/index' },
         { handle: 'filesystem' },
         { src: '/(.*)', dest: '/index' },
       ]);
+      expect(buildOutput.output['/api/items/:item_id']).toBe(
+        buildOutput.output.index
+      );
     } finally {
       fs.removeSync(workPath);
     }

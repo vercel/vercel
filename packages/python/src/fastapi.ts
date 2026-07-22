@@ -13,7 +13,7 @@ export interface FastAPIStaticMount {
 }
 
 export interface FastAPIApplicationRoute {
-  /** FastAPI/Starlette path, retained for route diagnostics. */
+  /** Path-to-regexp route pattern used for observability output aliases. */
   source: string;
   /** ECMAScript-compatible route matcher for Vercel's routing layer. */
   src: string;

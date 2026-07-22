@@ -136,7 +136,7 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
       },
     ]);
     expect(inspection!.routes).toContainEqual({
-      source: '/api/users/{user_id}',
+      source: '/api/users/:user_id',
       src: '^/api/users/(?:[^/]+)$',
       methods: ['GET'],
     });
@@ -245,7 +245,7 @@ describe('FastAPI routes manifest', () => {
 
     await writeFastAPIRoutesManifest(workPath, [
       {
-        source: '/api/items/{item_id}',
+        source: '/api/items/:item_id',
         src: '^/api/items/(?:[^/]+)$',
         methods: ['GET'],
       },
@@ -256,7 +256,7 @@ describe('FastAPI routes manifest', () => {
       routes: [
         { source: '/existing/:id', methods: ['GET'] },
         {
-          source: '/api/items/{item_id}',
+          source: '/api/items/:item_id',
           src: '^/api/items/(?:[^/]+)$',
           methods: ['GET'],
           priority: 'before-filesystem',
