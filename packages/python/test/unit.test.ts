@@ -50,6 +50,13 @@ vi.mock('../src/django', () => ({
   runDjangoCollectStatic: vi.fn(async () => null),
 }));
 
+vi.mock('../src/fastapi', () => ({
+  clearFastAPIRoutesManifest: vi.fn(async () => {}),
+  inspectFastAPIApp: vi.fn(async () => null),
+  runFastAPICollectStatic: vi.fn(async () => null),
+  writeFastAPIRoutesManifest: vi.fn(async () => {}),
+}));
+
 vi.mock('execa', () => ({
   default: vi.fn(),
 }));
@@ -62,7 +69,12 @@ import {
   getInstalledPythonsFromFilesystem,
 } from '../src/version';
 import type { PythonConstraint, PythonPackage } from '@vercel/python-analysis';
-import { build, getDevSidecars, prepareCache } from '../src/index';
+import {
+  build,
+  getDevSidecars,
+  prepareCache,
+  runFrameworkHook,
+} from '../src/index';
 import type { BuildResultV3, BuildResultV2 } from '@vercel/build-utils';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import {
@@ -75,6 +87,11 @@ import {
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml } from '../src/install';
 import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
+import {
+  clearFastAPIRoutesManifest,
+  inspectFastAPIApp,
+  writeFastAPIRoutesManifest,
+} from '../src/fastapi';
 import { getSubscriberOutputPath } from '../src/subscribers';
 import { getWorkflowOutputPath } from '../src/workflows';
 import {
@@ -1772,6 +1789,135 @@ describe('Django entrypoint discovery', () => {
     expect(v2result.output['static/app.css']).toBeDefined(); // Static file from collectstatic
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+});
+
+describe('FastAPI route discovery hook', () => {
+  const originalRoutesDiscovery =
+    process.env.VERCEL_ENABLE_FASTAPI_ROUTES_DISCOVERY;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    if (originalRoutesDiscovery === undefined) {
+      delete process.env.VERCEL_ENABLE_FASTAPI_ROUTES_DISCOVERY;
+    } else {
+      process.env.VERCEL_ENABLE_FASTAPI_ROUTES_DISCOVERY =
+        originalRoutesDiscovery;
+    }
+  });
+
+  it('gates discovery and returns application route patterns', async () => {
+    const workPath = path.join(tmpdir(), `python-fastapi-routes-${Date.now()}`);
+    const venvPath = path.join(workPath, '.venv');
+    const pythonEnv = {
+      ...process.env,
+      VERCEL_ENABLE_FASTAPI_ROUTES_DISCOVERY: '1',
+    };
+    const routes = [
+      {
+        source: '/api/items/{item_id}',
+        src: '^/api/items/(?:[^/]+)$',
+        methods: ['GET'],
+      },
+    ];
+    vi.mocked(inspectFastAPIApp).mockResolvedValueOnce({
+      staticMounts: [],
+      routes,
+    });
+
+    const result = await runFrameworkHook('fastapi', {
+      pythonEnv,
+      workPath,
+      venvPath,
+      entrypoint: undefined,
+      detected: {
+        entrypoint: { entrypoint: 'main.py', variableName: 'app' },
+      },
+    });
+
+    expect(inspectFastAPIApp).toHaveBeenCalledOnce();
+    expect(writeFastAPIRoutesManifest).toHaveBeenCalledWith(workPath, routes);
+    expect(clearFastAPIRoutesManifest).toHaveBeenCalledWith(workPath);
+    expect(result).toMatchObject({
+      fastapiStatic: null,
+      fastapiRoutes: routes,
+    });
+  });
+
+  it('clears generated route metadata when discovery is disabled', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-fastapi-routes-disabled-${Date.now()}`
+    );
+
+    const pythonEnv = { ...process.env };
+    delete pythonEnv.VERCEL_ENABLE_FASTAPI_ROUTES_DISCOVERY;
+    delete pythonEnv.VERCEL_FASTAPI_STATIC_CDN;
+
+    const result = await runFrameworkHook('fastapi', {
+      pythonEnv,
+      workPath,
+      venvPath: path.join(workPath, '.venv'),
+      entrypoint: undefined,
+      detected: {
+        entrypoint: { entrypoint: 'main.py', variableName: 'app' },
+      },
+    });
+
+    expect(clearFastAPIRoutesManifest).toHaveBeenCalledWith(workPath);
+    expect(inspectFastAPIApp).not.toHaveBeenCalled();
+    expect(result).toBeUndefined();
+  });
+
+  it('places discovered application routes before the filesystem phase', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-fastapi-route-order-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+    process.env.VERCEL_ENABLE_FASTAPI_ROUTES_DISCOVERY = '1';
+
+    const routes = [
+      {
+        source: '/api/items/{item_id}',
+        src: '^/api/items/(?:[^/]+)$',
+        methods: ['GET'],
+      },
+    ];
+    vi.mocked(inspectFastAPIApp).mockResolvedValueOnce({
+      staticMounts: [],
+      routes,
+    });
+
+    const files = {
+      'app.py': new FileBlob({
+        data: 'from fastapi import FastAPI\napp = FastAPI()\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, workPath);
+
+    try {
+      const result = await build({
+        workPath,
+        files,
+        entrypoint: '<detect>',
+        meta: { isDev: true },
+        config: { framework: 'fastapi' },
+        repoRootPath: workPath,
+      });
+
+      expect(getBuildOutputV2(result).routes).toEqual([
+        { src: '^/api/items/(?:[^/]+)$', dest: '/index' },
+        { handle: 'filesystem' },
+        { src: '/(.*)', dest: '/index' },
+      ]);
+    } finally {
+      fs.removeSync(workPath);
+    }
   });
 });
 
