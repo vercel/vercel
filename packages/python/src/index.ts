@@ -1343,9 +1343,6 @@ export const build: BuildVX = async ({
 
             compileSpan.setAttributes({
               'python.compileall.enabled': 'true',
-              'python.compileall.mode': pycachePrefix
-                ? 'pycache-prefix'
-                : 'adjacent',
               'python.compileall.appSourceFileCount': String(
                 appPythonSourceFiles.length
               ),
