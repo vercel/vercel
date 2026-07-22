@@ -1113,6 +1113,61 @@ describe('file exclusions', () => {
 
     expect(outputFiles.some(f => f.includes('.git'))).toBe(false);
   });
+
+  it('compiles only Python sources included by the app glob', async () => {
+    const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
+    const mockedExeca = vi.mocked(execa);
+    let compiledSources: string[] = [];
+    let compileAllCalls = 0;
+
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+    mockedExeca.mockImplementation(((_file, args: string[]) => {
+      if (args.includes('compileall')) {
+        compileAllCalls++;
+        const listIndex = args.indexOf('-i');
+        compiledSources = fs
+          .readFileSync(args[listIndex + 1], 'utf8')
+          .trim()
+          .split('\n');
+      }
+      return Promise.resolve({ stdout: '', stderr: '' });
+    }) as any);
+
+    try {
+      await build({
+        workPath: mockWorkPath,
+        files: {
+          'handler.py': new FileBlob({
+            data: 'def app(environ, start_response): pass',
+          }),
+          'included.py': new FileBlob({ data: 'INCLUDED = True' }),
+          'excluded.py': new FileBlob({ data: 'EXCLUDED = True' }),
+          'public/ignored.py': new FileBlob({ data: 'IGNORED = True' }),
+        },
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: { excludeFiles: 'excluded.py' },
+        repoRootPath: mockWorkPath,
+      });
+
+      expect(compiledSources).toContain(path.join(mockWorkPath, 'handler.py'));
+      expect(compiledSources).toContain(path.join(mockWorkPath, 'included.py'));
+      expect(compiledSources).not.toContain(
+        path.join(mockWorkPath, 'excluded.py')
+      );
+      expect(compiledSources).not.toContain(
+        path.join(mockWorkPath, 'public', 'ignored.py')
+      );
+      expect(compileAllCalls).toBe(1);
+    } finally {
+      mockedExeca.mockReset();
+      if (originalCompileAllEnv === undefined) {
+        delete process.env.VERCEL_PYTHON_COMPILEALL;
+      } else {
+        process.env.VERCEL_PYTHON_COMPILEALL = originalCompileAllEnv;
+      }
+    }
+  });
 });
 
 describe('python version selection from uv.lock and pyproject.toml', () => {

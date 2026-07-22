@@ -3,7 +3,7 @@ import execa from 'execa';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { deriveStagedPycFsPath, runCompileAll } from '../src/compileall';
+import { CompileAllRunner, deriveStagedPycFsPath } from '../src/compileall';
 import {
   RUNTIME_DEPS_DIR,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
@@ -24,7 +24,7 @@ afterAll(() => {
   }
 });
 
-describe('pycache-prefix staging layout (real CPython)', () => {
+describe('explicit-list compilation layout (real CPython)', () => {
   // Validates the core assumption of the bytecode-first packing mode: the
   // path where compileall (run with PYTHONPYCACHEPREFIX) writes a .pyc
   // matches deriveStagedPycFsPath(). If CPython's cache_from_source layout
@@ -32,12 +32,42 @@ describe('pycache-prefix staging layout (real CPython)', () => {
   // unaddressable bytecode tree.
   const pythonBin = process.env.PYTHON_BIN || 'python3';
 
-  it('compileall writes staged pyc at the derived path', async () => {
+  async function getPythonInfo() {
     const { stdout } = await execa(pythonBin, [
       '-c',
-      'import sys; print(f"{sys.version_info[0]} {sys.version_info[1]}")',
+      'import json, sys; print(json.dumps([sys.version_info[0], sys.version_info[1], sys.pycache_prefix]))',
     ]);
-    const [major, minor] = stdout.trim().split(' ').map(Number);
+    return JSON.parse(stdout) as [number, number, string | null];
+  }
+
+  it('writes adjacent bytecode for a source from the list file', async () => {
+    const [major, minor, interpreterPrefix] = await getPythonInfo();
+    // Apple's system Python forces a global prefix that cannot be disabled
+    // through PYTHONPYCACHEPREFIX. Other CPython installations exercise the
+    // adjacent layout here; prefix layout is covered unconditionally below.
+    if (interpreterPrefix !== null) return;
+
+    const workPath = makeTempDir('vc-py-adjacent-real-');
+    const srcPath = path.join(workPath, 'src', 'pkg', 'mod.py');
+    fs.mkdirSync(path.dirname(srcPath), { recursive: true });
+    fs.writeFileSync(srcPath, 'X = 1\n');
+
+    const runner = new CompileAllRunner({ pythonBin });
+    await expect(runner.run({ sourceFiles: [srcPath] })).resolves.toBe(true);
+
+    expect(
+      fs.existsSync(
+        path.join(
+          path.dirname(srcPath),
+          '__pycache__',
+          `mod.cpython-${major}${minor}.pyc`
+        )
+      )
+    ).toBe(true);
+  });
+
+  it('writes staged pyc at the derived path', async () => {
+    const [major, minor] = await getPythonInfo();
 
     const workPath = makeTempDir('vc-py-prefix-real-');
     const stagingDir = path.join(workPath, 'staging');
@@ -45,11 +75,13 @@ describe('pycache-prefix staging layout (real CPython)', () => {
     fs.mkdirSync(path.dirname(srcPath), { recursive: true });
     fs.writeFileSync(srcPath, 'X = 1\n');
 
-    await runCompileAll({
-      pythonBin,
-      filesOrDirectories: [path.join(workPath, 'src')],
-      pycachePrefix: stagingDir,
-    });
+    const runner = new CompileAllRunner({ pythonBin });
+    await expect(
+      runner.run({
+        sourceFiles: [srcPath],
+        pycachePrefix: stagingDir,
+      })
+    ).resolves.toBe(true);
 
     const derived = deriveStagedPycFsPath(stagingDir, srcPath, major, minor);
     expect(derived).not.toBeNull();
