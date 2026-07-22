@@ -1,4 +1,9 @@
 import { getVercelOidcToken } from '@vercel/oidc';
+import {
+  isDetachedInteractiveAuth,
+  validateCallbackUrl,
+  validateWebhookUrl,
+} from './internal/url-validation.js';
 import type { ConnectTokenParams } from './token.js';
 import { createConnectErrorFromResponse } from './token.js';
 
@@ -39,9 +44,6 @@ export interface ConnectInstallationResponse {
   };
 }
 
-const DETACHED_INTERACTIVE_AUTH_MODE = 'detached';
-const INTERACTIVE_AUTH_MODE_ENV = 'VERCEL_CONNECT_INTERACTIVE_AUTH_MODE';
-
 /**
  * Create an operator installation request for an app-scoped connector.
  *
@@ -57,11 +59,10 @@ export async function experimental_startInstallation(
     throw new Error('connector is required');
   }
 
-  const detachedInteractiveAuth =
-    process.env[INTERACTIVE_AUTH_MODE_ENV] === DETACHED_INTERACTIVE_AUTH_MODE;
+  const detachedInteractiveAuth = isDetachedInteractiveAuth();
 
   if (!detachedInteractiveAuth && options?.returnUrl !== undefined) {
-    validateReturnUrl(options.returnUrl);
+    validateCallbackUrl(options.returnUrl, 'returnUrl');
   }
   if (options?.webhook !== undefined) {
     validateWebhookUrl(options.webhook);
@@ -104,32 +105,4 @@ export async function experimental_startInstallation(
 
   const data: ConnectInstallationResponse = await response.json();
   return data;
-}
-
-function validateReturnUrl(value: string): void {
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new Error(`Invalid returnUrl: ${value}`);
-  }
-  if (url.protocol === 'https:') return;
-  if (url.protocol === 'http:' && url.hostname === 'localhost') {
-    return;
-  }
-  throw new Error(
-    `returnUrl must be https:// or http://localhost, got: ${value}`
-  );
-}
-
-function validateWebhookUrl(value: string): void {
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new Error(`Invalid webhook URL: ${value}`);
-  }
-  if (url.protocol !== 'https:') {
-    throw new Error(`webhook must be https://, got: ${value}`);
-  }
 }

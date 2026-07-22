@@ -125,7 +125,9 @@ describe('experimental_startInstallation', () => {
       experimental_startInstallation(CONNECTOR, undefined, {
         returnUrl: 'http://example.com/connect/install/return',
       })
-    ).rejects.toThrow('returnUrl must be https:// or http://localhost');
+    ).rejects.toThrow(
+      'returnUrl must be https://, http://localhost, or http://*.localhost'
+    );
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
