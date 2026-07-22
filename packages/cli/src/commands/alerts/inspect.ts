@@ -21,9 +21,392 @@ import {
 import { AGENT_REASON } from '../../util/agent-output-constants';
 import { packageName } from '../../util/pkg-name';
 import { emitAlertsScopeError } from './resolve-alerts-scope';
+import formatDate from '../../util/format-date';
 import chalk from 'chalk';
+import {
+  formatTriggerOperator,
+  humanizeReference,
+  normalizeTimestamp,
+  renderAlertTable,
+} from './format';
+import { truncateEnd, truncateMiddle } from '../../util/output/truncate';
 
 type AlertScope = { teamId: string; projectId?: string };
+
+interface Ai {
+  title?: string;
+  currentSummary?: string;
+  keyFindings?: string[];
+}
+
+interface FormattedValues {
+  changeAmount?: string;
+  changeDirection?: string;
+  formattedAvg?: string;
+  formattedCount?: string;
+  formattedThreshold?: string;
+  errorRate?: string;
+  avgErrorRate?: string;
+}
+
+interface Alert {
+  id?: string;
+  groupId?: string;
+  type?: string;
+  pipe?: string;
+  status?: string;
+  level?: string;
+  title?: string;
+  startedAt?: number;
+  resolvedAt?: number;
+  recordedStartedAt?: number;
+  recordedResolvedAt?: number;
+  rules?: string[];
+  data?: Record<string, unknown>;
+  eventLabel?: string;
+  measureLabel?: string;
+  unit?: string;
+  formattedValues?: FormattedValues;
+}
+
+interface AlertGroup {
+  id?: string;
+  teamId?: string;
+  projectId?: string;
+  title?: string;
+  type?: string;
+  pipe?: string;
+  status?: string;
+  level?: string;
+  recordedStartedAt?: number;
+  recordedResolvedAt?: number;
+  updatedAt?: number;
+  ai?: Ai;
+  alerts?: Alert[];
+}
+
+const detailKeysToSkip = new Set([
+  'average',
+  'count',
+  'customAlertDefinitionId',
+  'fields',
+  'formula',
+  'minThreshold',
+  'sonarQuery',
+  'stddev',
+  'title',
+  'triggerOperator',
+  'triggerThreshold',
+  'triggerType',
+  'zscore',
+]);
+
+function getPrimaryAlert(group: AlertGroup): Alert | undefined {
+  return group.alerts?.[0];
+}
+
+function getGroupTitle(group: AlertGroup): string {
+  return (
+    group.ai?.title ||
+    group.title ||
+    getPrimaryAlert(group)?.title ||
+    'Alert group'
+  );
+}
+
+function getGroupType(group: AlertGroup): string {
+  return group.type || getPrimaryAlert(group)?.type || '-';
+}
+
+function getGroupStatus(group: AlertGroup): string {
+  if (group.status) {
+    return group.status;
+  }
+
+  const alerts = group.alerts ?? [];
+  if (alerts.some(alert => alert.status === 'active')) {
+    return 'active';
+  }
+  if (alerts.length > 0) {
+    return 'resolved';
+  }
+
+  return '-';
+}
+
+function getGroupStartedAt(group: AlertGroup): number | undefined {
+  return normalizeTimestamp(
+    group.recordedStartedAt ??
+    getPrimaryAlert(group)?.recordedStartedAt ??
+    getPrimaryAlert(group)?.startedAt
+  );
+}
+
+function humanizeLabel(value: string): string {
+  return humanizeReference(value)
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(word => {
+      if (['ai', 'api', 'cpu', 'id', 'url', 'waf'].includes(word)) {
+        return word.toUpperCase();
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
+}
+
+function formatScalar(value: unknown): string | undefined {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    const values = value.map(formatScalar).filter(Boolean);
+    return values.length > 0 ? values.join(', ') : undefined;
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+
+  return undefined;
+}
+
+function formatDisplayValue(value: unknown, maxLength = 80): string {
+  const scalar = formatScalar(value);
+  if (!scalar) {
+    return '-';
+  }
+
+  return truncateMiddle(scalar, maxLength);
+}
+
+function getDataNumber(
+  data: Record<string, unknown> | undefined,
+  key: string
+): number | undefined {
+  const value = data?.[key];
+  return typeof value === 'number' && Number.isFinite(value)
+    ? value
+    : undefined;
+}
+
+function formatNumber(value: number): string {
+  return Number.isInteger(value)
+    ? String(value)
+    : value.toFixed(2).replace(/\.?0+$/, '');
+}
+
+function appendUnit(value: string, unit: string | undefined): string {
+  if (!unit || unit === 'ratio' || unit === 'score') {
+    return value;
+  }
+  if (unit === '%') {
+    return value.endsWith('%') ? value : `${value}%`;
+  }
+  if (value.toLowerCase().includes(unit.toLowerCase())) {
+    return value;
+  }
+
+  return `${value} ${unit}`;
+}
+
+function formatThreshold(alert: Alert): string | undefined {
+  const data = alert.data;
+  const formatted =
+    alert.formattedValues?.formattedThreshold ??
+    formatScalar(getDataNumber(data, 'triggerThreshold'));
+  if (!formatted) {
+    return undefined;
+  }
+
+  const operator = formatTriggerOperator(data?.triggerOperator);
+  const threshold =
+    data?.triggerType === 'anomaly'
+      ? `${formatted} z-score`
+      : appendUnit(formatted, alert.unit);
+
+  return [operator, threshold].filter(Boolean).join(' ');
+}
+
+function getRuleIds(alert: Alert): string[] {
+  const ids = new Set<string>();
+  const dataRuleId = alert.data?.ruleId;
+  if (typeof dataRuleId === 'string' && dataRuleId) {
+    ids.add(dataRuleId);
+  }
+  for (const ruleId of alert.rules ?? []) {
+    if (ruleId) {
+      ids.add(ruleId);
+    }
+  }
+
+  return [...ids];
+}
+
+function getSignalRows(alert: Alert): string[][] {
+  const rows: string[][] = [];
+  const formattedValues = alert.formattedValues ?? {};
+  const observed = formattedValues.formattedCount;
+  const baseline = formattedValues.formattedAvg;
+  const change = [formattedValues.changeDirection, formattedValues.changeAmount]
+    .filter(Boolean)
+    .join(' ');
+  const zscore = getDataNumber(alert.data, 'zscore');
+  const threshold = formatThreshold(alert);
+  const minThreshold = getDataNumber(alert.data, 'minThreshold');
+
+  if (alert.eventLabel) {
+    rows.push(['Event', alert.eventLabel]);
+  }
+  if (alert.measureLabel) {
+    rows.push(['Measure', alert.measureLabel]);
+  }
+  if (observed) {
+    rows.push(['Observed Value', appendUnit(observed, alert.unit)]);
+  }
+  if (baseline) {
+    rows.push(['Baseline', appendUnit(baseline, alert.unit)]);
+  }
+  if (change) {
+    rows.push(['Change', change]);
+  }
+  if (zscore !== undefined) {
+    rows.push(['Observed Deviation', `${formatNumber(zscore)} z-score`]);
+  }
+  if (threshold) {
+    rows.push(['Threshold', threshold]);
+  }
+  if (minThreshold !== undefined) {
+    rows.push(['Minimum', appendUnit(formatNumber(minThreshold), alert.unit)]);
+  }
+  if (formattedValues.errorRate) {
+    rows.push(['Error Rate', formattedValues.errorRate]);
+  }
+  if (formattedValues.avgErrorRate) {
+    rows.push(['Baseline Error Rate', formattedValues.avgErrorRate]);
+  }
+
+  return rows;
+}
+
+function getDimensionRows(alert: Alert): string[][] {
+  const fields = alert.data?.fields;
+  if (!fields || typeof fields !== 'object' || Array.isArray(fields)) {
+    return [];
+  }
+
+  return Object.entries(fields)
+    .map(([key, value]) => [humanizeLabel(key), formatDisplayValue(value, 64)])
+    .filter(([, value]) => value !== '-');
+}
+
+function getDetailRows(alert: Alert): string[][] {
+  const data = alert.data;
+  if (!data) {
+    return [];
+  }
+
+  const ruleIds = new Set(getRuleIds(alert));
+  return Object.entries(data)
+    .filter(([key, value]) => {
+      if (detailKeysToSkip.has(key)) {
+        return false;
+      }
+      if (key === 'ruleId' && typeof value === 'string' && ruleIds.has(value)) {
+        return false;
+      }
+      return formatScalar(value) !== undefined;
+    })
+    .map(([key, value]) => [humanizeLabel(key), formatDisplayValue(value, 64)]);
+}
+
+function renderAlert(alert: Alert, index: number, totalAlerts: number): string {
+  const lines: string[] = [];
+  const title = alert.title || `Alert ${index + 1}`;
+  const ruleIds = getRuleIds(alert);
+
+  lines.push(
+    chalk.bold(totalAlerts > 1 ? `Alert ${index + 1}: ${title}` : title)
+  );
+
+  const summaryRows = [
+    ['Alert id', alert.id || '-'],
+    ['Type', alert.type || '-'],
+    ['Status', alert.status || '-'],
+    [
+      'Started At',
+      formatDate(normalizeTimestamp(alert.recordedStartedAt ?? alert.startedAt)),
+    ],
+    ...(alert.resolvedAt !== undefined || alert.recordedResolvedAt !== undefined
+      ? [
+          [
+            'Resolved At',
+            formatDate(
+              normalizeTimestamp(alert.recordedResolvedAt ?? alert.resolvedAt)
+            ),
+          ],
+        ]
+      : []),
+    ...(ruleIds.length > 0
+      ? [['Rule id', ruleIds.map(id => truncateMiddle(id, 48)).join(', ')]]
+      : []),
+  ];
+  lines.push(renderAlertTable(summaryRows, 3));
+
+  const signalRows = getSignalRows(alert);
+  if (signalRows.length > 0) {
+    lines.push(chalk.cyan('Signals'));
+    lines.push(renderAlertTable(signalRows, 3));
+  }
+
+  const dimensionRows = getDimensionRows(alert);
+  if (dimensionRows.length > 0) {
+    lines.push(chalk.cyan('Dimensions'));
+    lines.push(renderAlertTable(dimensionRows, 3));
+  }
+
+  const detailRows = getDetailRows(alert);
+  if (detailRows.length > 0) {
+    lines.push(chalk.cyan('Details'));
+    lines.push(renderAlertTable(detailRows, 3));
+  }
+
+  return lines.join('\n');
+}
+
+function printAlertGroup(group: AlertGroup, groupId: string) {
+  const alerts = group.alerts ?? [];
+  const summaryRows = [
+    ['Title', truncateEnd(getGroupTitle(group), 80)],
+    ['Group id', group.id || groupId],
+    ['Type', getGroupType(group)],
+    ['Status', getGroupStatus(group)],
+    ['Started At', formatDate(getGroupStartedAt(group))],
+    ['Alerts', String(alerts.length)],
+  ];
+  const renderedAlerts =
+    alerts.length > 0
+      ? alerts
+          .map((alert, index) => renderAlert(alert, index, alerts.length))
+          .join('\n\n')
+      : 'No alerts in this group.';
+
+  output.print(
+    [
+      '',
+      `${chalk.bold('Alert group')} ${chalk.cyan(group.id || groupId)}`,
+      renderAlertTable(summaryRows, 3),
+      '',
+      renderedAlerts,
+      '',
+    ].join('\n')
+  );
+}
 
 async function resolveInspectScope(
   client: Client,
@@ -306,12 +689,11 @@ export default async function inspect(
   const path = `/alerts/v3/groups/${encodeURIComponent(groupId)}?${query.toString()}`;
   output.spinner('Fetching alert group...');
   try {
-    const group = await client.fetch<Record<string, unknown>>(path);
+    const group = await client.fetch<AlertGroup>(path);
     if (fr.jsonOutput) {
       client.stdout.write(`${JSON.stringify({ group }, null, 2)}\n`);
     } else {
-      output.log(`${chalk.bold('Alert group')} ${chalk.cyan(groupId)}`);
-      client.stdout.write(`${JSON.stringify(group, null, 2)}\n`);
+      printAlertGroup(group, groupId);
     }
     return 0;
   } catch (err) {

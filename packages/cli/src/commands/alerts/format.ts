@@ -1,0 +1,176 @@
+import indent from '../../util/output/indent';
+import table from '../../util/output/table';
+import { truncateMiddle } from '../../util/output/truncate';
+
+export function renderAlertTable(rows: string[][], hsep = 3): string {
+  return indent(
+    table(rows, { hsep })
+      .split('\n')
+      .map(line => line.trimEnd())
+      .join('\n'),
+    2
+  );
+}
+
+export function normalizeTimestamp(
+  value: number | undefined
+): number | undefined {
+  if (value === undefined || !Number.isFinite(value)) {
+    return undefined;
+  }
+
+  return Math.abs(value) < 1_000_000_000_000 ? value * 1000 : value;
+}
+
+export function formatTriggerOperator(value: unknown): string | undefined {
+  switch (value) {
+    case 'gt':
+      return '>';
+    case 'gte':
+      return '>=';
+    case 'lt':
+      return '<';
+    case 'lte':
+      return '<=';
+    default:
+      return undefined;
+  }
+}
+
+export function humanizeReference(value: string): string {
+  return value
+    .replace(/_/g, ' ')
+    .replace(/-/g, ' ')
+    .replace(/\//g, ' / ')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .trim()
+    .toLowerCase();
+}
+
+export function formatRuleScope(
+  projectId: string | undefined,
+  {
+    projectIdMaxLength = 48,
+    filterMaxLength = 80,
+  }: {
+    projectIdMaxLength?: number;
+    filterMaxLength?: number;
+  } = {}
+): string {
+  if (!projectId) {
+    return 'team-wide';
+  }
+
+  const projectIdMatch = projectId.match(/^projectId eq '([^']+)'$/);
+  if (projectIdMatch?.[1]) {
+    return `project: ${truncateMiddle(projectIdMatch[1], projectIdMaxLength)}`;
+  }
+  if (!/\s/.test(projectId)) {
+    return `project: ${truncateMiddle(projectId, projectIdMaxLength)}`;
+  }
+
+  return `project filter: ${truncateMiddle(projectId, filterMaxLength)}`;
+}
+
+export function isCustomAlertRule(rule: {
+  alertTypes?: Array<{ type: string }>;
+  customAlert?: unknown;
+}): boolean {
+  return (
+    Boolean(rule.customAlert) ||
+    Boolean(
+      rule.alertTypes?.some(alertType => alertType.type === 'custom_alert')
+    )
+  );
+}
+
+interface CustomAlertFormula {
+  operator?: string;
+  left?: string;
+  right?: string;
+}
+
+interface CustomAlertMetricSource {
+  formula?: CustomAlertFormula;
+  queryJsonString?: string;
+}
+
+export interface CustomAlertQuery {
+  event?: string;
+  rollups?: Record<string, { aggregation?: string; measure?: string }>;
+  groupBy?: string[];
+  granularity?: unknown;
+}
+
+export function formatCustomAlertTrigger(customAlert: {
+  triggerType?: string;
+  triggerOperator?: unknown;
+  triggerThreshold?: number;
+}): string | undefined {
+  const operator = formatTriggerOperator(customAlert.triggerOperator);
+  const threshold =
+    typeof customAlert.triggerThreshold === 'number'
+      ? String(customAlert.triggerThreshold)
+      : undefined;
+  const trigger =
+    customAlert.triggerType === 'anomaly'
+      ? `z-score ${[operator, threshold].filter(Boolean).join(' ')}`
+      : ['threshold', operator, threshold].filter(Boolean).join(' ');
+
+  return trigger || undefined;
+}
+
+export function parseCustomAlertQuery(
+  value: string | undefined
+): CustomAlertQuery {
+  if (!value) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(value) as CustomAlertQuery;
+  } catch {
+    return {};
+  }
+}
+
+function formatFormula(
+  formula: CustomAlertFormula | undefined
+): string | undefined {
+  if (!formula?.left || !formula.right) {
+    return undefined;
+  }
+
+  switch (formula.operator) {
+    case 'divide':
+      return `${humanizeReference(formula.left)} / ${humanizeReference(
+        formula.right
+      )}`;
+    default:
+      return undefined;
+  }
+}
+
+export function formatCustomAlertMetric(
+  customAlert: CustomAlertMetricSource
+): string | undefined {
+  const formula = formatFormula(customAlert.formula);
+  if (formula) {
+    return formula;
+  }
+
+  const query = parseCustomAlertQuery(customAlert.queryJsonString);
+  const firstRollup = Object.values(query.rollups ?? {})[0];
+  const parts = [query.event, firstRollup?.aggregation, firstRollup?.measure];
+  const base = parts
+    .flatMap(part => (part ? [humanizeReference(part)] : []))
+    .join(' ');
+  const groupBy = query.groupBy ?? [];
+
+  if (base && groupBy.length > 0) {
+    return `${base} by ${groupBy.map(humanizeReference).join(', ')}`;
+  }
+
+  return base || undefined;
+}
