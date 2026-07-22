@@ -11,9 +11,17 @@ const sampleModel = {
   type: 'language',
 };
 
-function useListModels(models: unknown[] = [sampleModel]) {
-  client.scenario.get('/v1/models', (_req, res) => {
-    res.json({ object: 'list', data: models });
+function useListModels(
+  models: unknown[] = [sampleModel],
+  availabilityStatus: 'complete' | 'degraded' = 'complete'
+) {
+  client.scenario.get('/v1/models', (req, res) => {
+    expect(req.query.include_availability).toBe('');
+    res.json({
+      object: 'list',
+      data: models,
+      availability_status: availabilityStatus,
+    });
   });
 }
 
@@ -94,6 +102,19 @@ describe('ai-gateway models list', () => {
     // The rendered reason cell implies the column is present; a model without
     // the field keeps the column hidden (see 'lists models in a table').
     await expect(client.stdout).toOutput('no (no_allowlisted_provider)');
+    expect(await exitCodePromise).toBe(0);
+  });
+
+  it('warns when availability could not be determined', async () => {
+    useUser();
+    useListModels([sampleModel], 'degraded');
+    client.setArgv('ai-gateway', 'models', 'list');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput(
+      'Model availability could not be determined'
+    );
     expect(await exitCodePromise).toBe(0);
   });
 });

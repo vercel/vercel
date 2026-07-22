@@ -20,10 +20,16 @@ export type Model = {
   type?: string;
   tags?: string[];
   pricing?: ModelPricing;
-  // Per-team routing availability, present only on an authenticated request to a
-  // team with an active restriction; an absent `available` means it is routable.
+  // Per-team routing availability, returned when this client explicitly opts in
+  // via `include_availability`. An absent value means the verdict degraded; it
+  // must not be interpreted as routable.
   available?: boolean;
   unavailable_reason?: string;
+};
+
+export type ModelsListResult = {
+  models: Model[];
+  availabilityStatus?: 'complete' | 'degraded';
 };
 
 export type ModelEndpointPricing = {
@@ -63,17 +69,19 @@ function gatewayBase(): string {
   return process.env.VERCEL_AI_GATEWAY_URL ?? DEFAULT_AI_GATEWAY_URL;
 }
 
-export async function listModels(client: Client): Promise<Model[]> {
+export async function listModels(client: Client): Promise<ModelsListResult> {
   // OpenAI-style model catalog. The absolute URL bypasses the default api host,
   // but client.fetch still attaches the auth token and `?teamId=<currentTeam>`,
-  // so an authenticated caller gets their team's private models plus, for a
-  // restricted team, per-model `available` flags. Unauthenticated callers get the
-  // public catalog only.
-  const { data } = await client.fetch<{ object: 'list'; data: Model[] }>(
-    `${gatewayBase()}/v1/models`,
-    { method: 'GET' }
-  );
-  return data ?? [];
+  // while `include_availability` explicitly opts this CLI into the Gateway's
+  // team-specific availability extension without changing the default response
+  // consumed by OpenAI-compatible harnesses.
+  const { data, availability_status: availabilityStatus } =
+    await client.fetch<{
+      object: 'list';
+      data: Model[];
+      availability_status?: 'complete' | 'degraded';
+    }>(`${gatewayBase()}/v1/models?include_availability`, { method: 'GET' });
+  return { models: data ?? [], availabilityStatus };
 }
 
 export async function listModelEndpoints(

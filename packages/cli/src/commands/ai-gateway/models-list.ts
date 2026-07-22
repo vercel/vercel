@@ -41,7 +41,15 @@ export default async function list(client: Client, argv: string[]) {
   return renderResource<Model[]>(client, {
     asJson: formatResult.jsonOutput,
     spinnerText: 'Fetching models',
-    fetch: () => listModels(client),
+    fetch: async () => {
+      const { models, availabilityStatus } = await listModels(client);
+      if (availabilityStatus === 'degraded') {
+        output.warn(
+          'Model availability could not be determined. Retry before treating unannotated models as available.'
+        );
+      }
+      return models;
+    },
     toJSON: models => ({ models }),
     isEmpty: models => models.length === 0,
     emptyMessage: 'No models found.',
@@ -51,9 +59,9 @@ export default async function list(client: Client, argv: string[]) {
 }
 
 function printModelsTable(models: Model[]) {
-  // `available` is present only when the gateway annotated the response for a
-  // restricted team. Show the column only then, so output for unauthenticated /
-  // unrestricted listings is unchanged.
+  // The CLI explicitly requests availability. Keep this defensive check for a
+  // degraded Gateway response, where annotations are intentionally omitted
+  // rather than presented as optimistic `available: true` verdicts.
   const showAvailability = models.some(m => m.available !== undefined);
 
   const availabilityCell = (model: Model): string => {
