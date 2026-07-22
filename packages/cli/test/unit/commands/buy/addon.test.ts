@@ -4,6 +4,8 @@ import { client } from '../../../mocks/client';
 import buy from '../../../../src/commands/buy';
 import { useUser } from '../../../mocks/user';
 import { useTeam, useTeams } from '../../../mocks/team';
+import { defaultProject, useProject } from '../../../mocks/project';
+import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 
 vi.mock('open', () => {
   return {
