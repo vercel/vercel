@@ -13,7 +13,7 @@ export function handleCustomEnvironmentPurchaseError(err: unknown): number {
         'Custom environment purchases require an active Pro or Enterprise plan.'
       );
       output.log(
-        `Upgrade with ${getCommandName('buy pro')} or visit ${output.link('https://vercel.com/pricing', 'vercel.com/pricing')}.`
+        `Upgrade with ${getCommandName('buy pro')} or visit ${output.link('vercel.com/pricing', 'https://vercel.com/pricing')}.`
       );
       return 1;
     }
