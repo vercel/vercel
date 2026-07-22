@@ -75,12 +75,11 @@ export async function listModels(client: Client): Promise<ModelsListResult> {
   // while `include_availability` explicitly opts this CLI into the Gateway's
   // team-specific availability extension without changing the default response
   // consumed by OpenAI-compatible harnesses.
-  const { data, availability_status: availabilityStatus } =
-    await client.fetch<{
-      object: 'list';
-      data: Model[];
-      availability_status?: 'complete' | 'degraded';
-    }>(`${gatewayBase()}/v1/models?include_availability`, { method: 'GET' });
+  const { data, availability_status: availabilityStatus } = await client.fetch<{
+    object: 'list';
+    data: Model[];
+    availability_status?: 'complete' | 'degraded';
+  }>(`${gatewayBase()}/v1/models?include_availability`, { method: 'GET' });
   return { models: data ?? [], availabilityStatus };
 }
 
