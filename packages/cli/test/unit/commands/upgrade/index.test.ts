@@ -188,6 +188,65 @@ describe('upgrade', () => {
     });
   });
 
+  describe('--binary', () => {
+    it('opts in to the native binary in the global config', async () => {
+      client.setArgv('upgrade', '--binary');
+      const exitCode = await upgrade(client);
+
+      expect(exitCode).toBe(0);
+      expect(client.config.useNativeBinary).toBe(true);
+      expect(writeConfigSpy).toHaveBeenCalledWith({
+        useNativeBinary: true,
+      });
+      await expect(client.stderr).toOutput('Native Vercel CLI binary enabled.');
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:binary',
+          value: 'true',
+        },
+      ]);
+    });
+
+    it('opts out of the native binary with --binary false', async () => {
+      client.config = { useNativeBinary: true };
+      client.setArgv('upgrade', '--binary', 'false');
+      const exitCode = await upgrade(client);
+
+      expect(exitCode).toBe(0);
+      expect(client.config.useNativeBinary).toBe(false);
+      expect(writeConfigSpy).toHaveBeenCalledWith({
+        useNativeBinary: false,
+      });
+      await expect(client.stderr).toOutput(
+        'Native Vercel CLI binary disabled.'
+      );
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:binary',
+          value: 'false',
+        },
+      ]);
+    });
+
+    it('opts in with an explicit --binary true', async () => {
+      client.setArgv('upgrade', '--binary', 'true');
+      const exitCode = await upgrade(client);
+
+      expect(exitCode).toBe(0);
+      expect(client.config.useNativeBinary).toBe(true);
+    });
+
+    it('rejects an invalid --binary value', async () => {
+      client.setArgv('upgrade', '--binary', 'maybe');
+      const exitCode = await upgrade(client);
+
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput(
+        'Invalid value for `--binary`. Expected `true` or `false`.'
+      );
+    });
+  });
+
   it('rejects mutually exclusive auto-update flags', async () => {
     client.setArgv('upgrade', '--enable-auto', '--disable-auto');
     const result = await upgrade(client);

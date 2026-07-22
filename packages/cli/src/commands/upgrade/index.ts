@@ -11,6 +11,28 @@ import pkg from '../../util/pkg';
 import type Client from '../../util/client';
 import { UpgradeTelemetryClient } from '../../util/telemetry/commands/upgrade';
 import { isAutoUpdateEnabled, setAutoUpdate } from '../../util/updates';
+import { setUseNativeBinary } from '../../util/native-binary';
+
+// `--binary` accepts an optional boolean value. The `arg` parser has no notion
+// of optional-value flags, so normalize a valueless `--binary` to `--binary=true`.
+function normalizeBinaryFlag(argv: string[]): string[] {
+  const result: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--binary') {
+      const next = argv[i + 1];
+      if (next !== undefined && !next.startsWith('-')) {
+        result.push(arg, next);
+        i++;
+      } else {
+        result.push('--binary=true');
+      }
+      continue;
+    }
+    result.push(arg);
+  }
+  return result;
+}
 
 export default async function upgrade(client: Client): Promise<number> {
   let parsedArgs = null;
@@ -25,7 +47,10 @@ export default async function upgrade(client: Client): Promise<number> {
 
   // Parse CLI args
   try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+    parsedArgs = parseArguments(
+      normalizeBinaryFlag(client.argv.slice(2)),
+      flagsSpecification
+    );
   } catch (error) {
     printError(error);
     return 1;
@@ -40,6 +65,7 @@ export default async function upgrade(client: Client): Promise<number> {
   const dryRun = parsedArgs.flags['--dry-run'];
   const enableAuto = parsedArgs.flags['--enable-auto'];
   const disableAuto = parsedArgs.flags['--disable-auto'];
+  const binaryFlag = parsedArgs.flags['--binary'];
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
@@ -50,12 +76,26 @@ export default async function upgrade(client: Client): Promise<number> {
   telemetry.trackCliFlagDryRun(dryRun);
   telemetry.trackCliFlagEnableAuto(enableAuto);
   telemetry.trackCliFlagDisableAuto(disableAuto);
+  telemetry.trackCliOptionBinary(binaryFlag);
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
   telemetry.trackCliFlagJson(parsedArgs.flags['--json']);
 
   if (enableAuto && disableAuto) {
     output.error('Cannot use --enable-auto and --disable-auto together');
     return 1;
+  }
+
+  if (binaryFlag !== undefined) {
+    if (binaryFlag !== 'true' && binaryFlag !== 'false') {
+      output.error('Invalid value for `--binary`. Expected `true` or `false`.');
+      return 1;
+    }
+    const enabled = binaryFlag === 'true';
+    setUseNativeBinary(client, enabled);
+    output.success(
+      `Native Vercel CLI binary ${enabled ? 'enabled' : 'disabled'}.`
+    );
+    return 0;
   }
 
   if (enableAuto || disableAuto) {

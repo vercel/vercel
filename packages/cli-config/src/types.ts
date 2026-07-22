@@ -55,4 +55,11 @@ export interface GlobalConfig {
   telemetry?: TelemetryConfig;
   guidance?: GuidanceConfig;
   updates?: UpdatesConfig;
+  /**
+   * Opt-in to running the native (compiled) Vercel CLI binary when a matching
+   * `@vercel/vc-native-*` package is installed. When unset or `false`, the CLI
+   * always runs as JavaScript even if a native binary is present. Members of
+   * the `vercel` team are auto-opted-in; opt out with `vercel upgrade --binary false`.
+   */
+  useNativeBinary?: boolean;
 }

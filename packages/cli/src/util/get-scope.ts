@@ -7,6 +7,7 @@ import { TeamDeleted } from './errors-ts';
 import { getLinkFromDir, getVercelDirectory } from './projects/link';
 import { getRepoLink, findProjectsFromPath } from './link/repo';
 import type { RepoProjectsConfig } from './link/repo';
+import { maybeAutoOptInNativeBinary } from './native-binary-auto-opt-in';
 import output from '../output-manager';
 
 export interface ScopeContext {
@@ -86,6 +87,11 @@ export default async function getScope(
     }
 
     contextName = team.slug;
+
+    // Members of the `vercel` team are auto-opted-in to the native binary the
+    // first time we resolve their team. This is a no-op once the user has an
+    // explicit preference (including having opted out via `upgrade --binary false`).
+    maybeAutoOptInNativeBinary(client, team.slug);
   }
 
   if (!opts.resolveLocalScope) {

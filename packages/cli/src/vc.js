@@ -10,13 +10,16 @@ try {
   }
 } catch {}
 
-// Native-first: spawn a @vercel/vc-native-{platform}-{arch} binary when
-// present and exit with its result, otherwise fall through to the JS CLI.
-// The native package is declared as an os/cpu-filtered optionalDependency
-// so at most one platform binary downloads per install.
+// Native-first: spawn a @vercel/vc-native-{platform}-{arch} binary when it's
+// present AND the user has opted in, otherwise fall through to the JS CLI.
+// The native package is declared as an os/cpu-filtered optionalDependency so
+// at most one platform binary downloads per install. Even when present, the
+// binary is only spawned when the user has opted in (`useNativeBinary` in the
+// global config, via `vercel upgrade --binary` or auto-enabled for the
+// `vercel` team); otherwise the CLI runs as JS.
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -44,9 +47,45 @@ function resolveNative() {
   }
 }
 
+// Read `--global-config`/`-Q` without loading the full CLI arg parser.
+function globalConfigDirFromArgv() {
+  const argv = process.argv.slice(2);
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--global-config' || arg === '-Q') {
+      return argv[i + 1];
+    }
+    if (arg.startsWith('--global-config=')) {
+      return arg.slice('--global-config='.length);
+    }
+  }
+  return undefined;
+}
+
+// Any failure to read config is treated as "not opted in" so we never spawn a
+// binary the user didn't ask for.
+async function isNativeBinaryOptedIn() {
+  const envOverride = process.env.VERCEL_CLI_USE_NATIVE_BINARY;
+  if (envOverride === '1' || envOverride === 'true') return true;
+  if (envOverride === '0' || envOverride === 'false') return false;
+
+  try {
+    // Zod-free `paths` subpath avoids loading zod + schemas (~40ms) on this hot path.
+    const config = await import('@vercel/cli-config/paths');
+    const argDir = globalConfigDirFromArgv();
+    const configDir = argDir
+      ? resolve(process.cwd(), argDir)
+      : config.getGlobalPathConfig();
+    const configPath = config.getConfigFilePath(configDir);
+    return config.readGlobalConfigFlag(configPath, 'useNativeBinary') === true;
+  } catch {
+    return false;
+  }
+}
+
 const bin = resolveNative();
 
-if (bin) {
+if (bin && (await isNativeBinaryOptedIn())) {
   process.env.VERCEL_VC_NATIVE = '1';
   const r = spawnSync(bin, process.argv.slice(2), {
     stdio: 'inherit',
