@@ -81,6 +81,28 @@ function envSetsEqual(a: readonly string[], b: readonly string[]): boolean {
   return b.every(env => aSet.has(env));
 }
 
+function getAttachmentEnvironments(
+  requestedEnvironments: readonly string[],
+  projectId: string,
+  destinations: readonly ConnexTriggerDestination[]
+): string[] {
+  const environments = new Set(requestedEnvironments);
+
+  // The API adds custom environments required by trigger destinations to the
+  // connector-project link. Preserve those implicit entries so a repeat attach
+  // remains a no-op and an attachment update does not remove trigger access.
+  for (const destination of destinations) {
+    if (
+      destination.projectId === projectId &&
+      destination.customEnvironmentId !== undefined
+    ) {
+      environments.add(destination.customEnvironmentId);
+    }
+  }
+
+  return [...environments];
+}
+
 export async function attach(
   client: Client,
   args: string[],
@@ -113,17 +135,27 @@ export async function attach(
     return 1;
   }
 
-  if (!withTriggers && (triggerBranch || triggerEnvironment || triggerPath)) {
+  if (
+    !withTriggers &&
+    (triggerBranch !== undefined ||
+      triggerEnvironment !== undefined ||
+      triggerPath !== undefined)
+  ) {
     output.error(
       '--trigger-branch, --trigger-environment, and --trigger-path require --triggers to also be set.'
     );
     return 1;
   }
 
-  if (triggerBranch && triggerEnvironment) {
+  if (triggerBranch !== undefined && triggerEnvironment !== undefined) {
     output.error(
       '--trigger-branch and --trigger-environment are mutually exclusive.'
     );
+    return 1;
+  }
+
+  if (triggerEnvironment !== undefined && triggerEnvironment.trim() === '') {
+    output.error('--trigger-environment must not be empty.');
     return 1;
   }
 
@@ -246,7 +278,7 @@ export async function attach(
     triggersEnabledOnConnector = target.triggers?.enabled === true;
 
     let customEnvironmentId: string | undefined;
-    if (triggerEnvironment) {
+    if (triggerEnvironment !== undefined) {
       let customEnvironments;
       try {
         customEnvironments = await getCustomEnvironments(client, projectId);
@@ -304,9 +336,14 @@ export async function attach(
     }
   }
 
+  const attachmentEnvironments = getAttachmentEnvironments(
+    environments,
+    projectId,
+    target.triggerDestinations ?? []
+  );
   const attachmentMatches =
     existingAttachment !== undefined &&
-    envSetsEqual(existingAttachment.environments ?? [], environments);
+    envSetsEqual(existingAttachment.environments ?? [], attachmentEnvironments);
   const shouldAttach = !attachmentMatches;
   const shouldRegisterTrigger = withTriggers && !triggerAlreadyRegistered;
 
@@ -319,7 +356,7 @@ export async function attach(
             clientId: target.id,
             uid: target.uid,
             projectId,
-            environments,
+            environments: attachmentEnvironments,
             triggerDestination: withTriggers ? desiredDestination : undefined,
             unchanged: true,
           },
@@ -335,7 +372,7 @@ export async function attach(
     output.log(
       `Connector ${chalk.bold(displayName)} is already attached to ${chalk.bold(
         projectName
-      )} for environments: ${environments.join(', ')}${triggerPart}. Nothing to do.`
+      )} for environments: ${attachmentEnvironments.join(', ')}${triggerPart}. Nothing to do.`
     );
     return 0;
   }
@@ -353,7 +390,7 @@ export async function attach(
       if (existingAttachment) {
         const current =
           (existingAttachment.environments ?? []).join(', ') || '—';
-        const next = environments.join(', ');
+        const next = attachmentEnvironments.join(', ');
         output.log(
           `Connector ${chalk.bold(displayName)} is already attached to ${chalk.bold(
             projectName
@@ -365,7 +402,7 @@ export async function attach(
         output.log(
           `Connector ${chalk.bold(displayName)} will be attached to ${chalk.bold(
             projectName
-          )} for environments: ${environments.join(', ')}.`
+          )} for environments: ${attachmentEnvironments.join(', ')}.`
         );
       }
     }
@@ -396,7 +433,7 @@ export async function attach(
         `/v1/connect/connectors/${encodeURIComponent(target.id)}/projects/${encodeURIComponent(projectId)}`,
         {
           method: 'POST',
-          body: { environments },
+          body: { environments: attachmentEnvironments },
         }
       );
     } catch (err: unknown) {
@@ -457,7 +494,7 @@ export async function attach(
           clientId: target.id,
           uid: target.uid,
           projectId,
-          environments,
+          environments: attachmentEnvironments,
           triggerDestination: withTriggers ? desiredDestination : undefined,
         },
         null,
@@ -469,7 +506,7 @@ export async function attach(
 
   if (shouldAttach) {
     output.success(
-      `Attached connector ${chalk.bold(displayName)} to ${chalk.bold(projectName)} for environments: ${environments.join(', ')}.`
+      `Attached connector ${chalk.bold(displayName)} to ${chalk.bold(projectName)} for environments: ${attachmentEnvironments.join(', ')}.`
     );
   }
   if (shouldRegisterTrigger && desiredDestination) {

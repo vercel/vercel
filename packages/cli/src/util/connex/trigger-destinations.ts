@@ -30,7 +30,7 @@ export function buildTriggerDestination(input: {
   branch?: string;
   path?: string;
 }): ConnexTriggerDestination {
-  if (input.branch && input.customEnvironmentId) {
+  if (input.branch !== undefined && input.customEnvironmentId !== undefined) {
     throw new Error(
       'Trigger destinations cannot target both a branch and a custom environment.'
     );

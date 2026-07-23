@@ -759,17 +759,19 @@ exports[`help command > connex help output snapshots > connex attach subcommand 
 
   Options:
 
-  -e,  --environment <ENV>        Environments to enable by system name, custom slug, or custom ID. Repeatable and         
-                                  comma-separated. Defaults to production, preview, and development.                       
-  -F,  --format <FORMAT>          Specify the output format (json)                                                         
-  -p,  --project <NAME_OR_ID>     Project name or ID (default: current linked project)                                     
-       --trigger-branch <BRANCH>  Target a specific git branch for the trigger destination (default: production). Only     
-                                  valid with --triggers.                                                                   
-       --trigger-path <PATH>      Path on the destination project that receives the forwarded webhook (default:            
-                                  /{service}). Only valid with --triggers.                                                 
-       --triggers                 Also register this project as a trigger destination so the connector forwards verified   
-                                  webhooks to it (max 3 destinations per connector)                                        
-  -y,  --yes                      Skip the confirmation prompt                                                             
+  -e,  --environment <ENV>          Environments to enable by system name, custom slug, or custom ID. Repeatable and         
+                                    comma-separated. Defaults to production, preview, and development.                       
+  -F,  --format <FORMAT>            Specify the output format (json)                                                         
+  -p,  --project <NAME_OR_ID>       Project name or ID (default: current linked project)                                     
+       --trigger-branch <BRANCH>    Target a specific git branch for the trigger destination (default: production). Only     
+                                    valid with --triggers.                                                                   
+       --trigger-environment <ENV>  Target a custom environment by slug or stable ID. Mutually exclusive with                
+                                    --trigger-branch and only valid with --triggers.                                         
+       --trigger-path <PATH>        Path on the destination project that receives the forwarded webhook (default:            
+                                    /{service}). Only valid with --triggers.                                                 
+       --triggers                   Also register this project as a trigger destination so the connector forwards verified   
+                                    webhooks to it (max 3 destinations per connector)                                        
+  -y,  --yes                        Skip the confirmation prompt                                                             
 
 
   Global Options:
@@ -815,6 +817,10 @@ exports[`help command > connex help output snapshots > connex attach subcommand 
   - Attach and register a preview-branch trigger destination
 
     $ vercel connect attach scl_abc123 --triggers --trigger-branch staging --trigger-path /slack
+
+  - Attach and register a custom-environment trigger destination
+
+    $ vercel connect attach scl_abc123 --triggers --trigger-environment qa --trigger-path /slack
 
   - Non-interactive output as JSON
 
