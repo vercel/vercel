@@ -4,6 +4,7 @@ import multiStream from 'multistream';
 import path from 'path';
 import Sema from 'async-sema';
 import { FileBase } from './types';
+import { createGracefulReadStream } from './graceful-fs';
 
 const semaToPreventEMFILE = new Sema(20);
 
@@ -27,6 +28,12 @@ class FileFsRef implements FileBase {
   public fsPath: string;
   public size?: number;
   public contentType: string | undefined;
+
+  /**
+   * Counter tracking EMFILE/ENFILE errors encountered by this instance.
+   * Consuming services can read this to monitor file descriptor pressure.
+   */
+  public emfileErrorCount = 0;
 
   constructor({
     mode = 0o100644,
@@ -84,11 +91,24 @@ class FileFsRef implements FileBase {
   }
 
   async toStreamAsync(): Promise<NodeJS.ReadableStream> {
+    if (process.env.VERCEL_BUILD_UTILS_GRACEFUL_FS_OPEN === '1') {
+      return createGracefulReadStream(this.fsPath, () => {
+        this.emfileErrorCount++;
+      });
+    }
+
+    // Existing semaphore-based implementation
     await semaToPreventEMFILE.acquire();
     const release = () => semaToPreventEMFILE.release();
     const stream = fs.createReadStream(this.fsPath);
     stream.on('close', release);
-    stream.on('error', release);
+    stream.on('error', (err: NodeJS.ErrnoException) => {
+      // Track EMFILE/ENFILE errors even with semaphore approach for comparison during rollout
+      if (err.code === 'EMFILE' || err.code === 'ENFILE') {
+        this.emfileErrorCount++;
+      }
+      release();
+    });
     return stream;
   }
 
