@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
     "outDir": "./dist",
+    "resolveJsonModule": true,
     "types": ["node", "vitest/globals"]
   },
   "extends": "../../tsconfig.base.json",
-  "include": ["src/*.ts"],
+  "include": ["src/*.ts", "src/frameworks.json"],
   "exclude": ["node_modules"]
 }
