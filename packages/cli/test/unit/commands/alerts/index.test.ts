@@ -152,6 +152,8 @@ describe('alerts', () => {
 
   it('renders custom alert titles from the API without crowding the table', async () => {
     let requestQuery: any;
+    const longTitle =
+      'Checkout request volume with a very long custom alert title that would otherwise stretch the alerts table beyond a comfortable width';
     client.scenario.get('/alerts/v3/groups', (req, res) => {
       requestQuery = req.query;
       res.json([
@@ -167,7 +169,7 @@ describe('alerts', () => {
               status: 'active',
               type: 'custom_alert',
               pipe: 'customAlert',
-              title: 'Checkout request volume',
+              title: longTitle,
               eventLabel: 'Requests',
               measureLabel: 'Count',
               unit: 'requests',
@@ -193,7 +195,8 @@ describe('alerts', () => {
     expect(exitCode).toBe(0);
     expect(requestQuery.types).toBe('custom_alert');
     const output = client.stderr.getFullOutput();
-    expect(output).toContain('Checkout request volume');
+    expect(output).toContain(`${longTitle.slice(0, 77)}...`);
+    expect(output).not.toContain(longTitle);
     expect(output).toContain('custom_alert');
     expect(output).not.toContain('Details');
     expect(output).not.toContain('Requests / Count');

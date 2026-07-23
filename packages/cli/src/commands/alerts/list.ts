@@ -28,6 +28,7 @@ import {
 } from '../../util/agent-output';
 import { AGENT_REASON } from '../../util/agent-output-constants';
 import formatDate from '../../util/format-date';
+import { truncateEnd } from '../../util/output/truncate';
 import { normalizeTimestamp } from './format';
 
 interface ListFlags {
@@ -266,7 +267,7 @@ function printGroups(groups: AlertGroup[]) {
     headers,
     ...groups.map(group => {
       const row = [
-        chalk.bold(getGroupTitle(group)),
+        chalk.bold(truncateEnd(getGroupTitle(group), 80)),
         chalk.dim(group.id || '-'),
         getStartedAt(group),
         getGroupType(group),
