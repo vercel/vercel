@@ -138,7 +138,8 @@ export default async function ls(
       '--project': flags['--project'],
       '--all': flags['--all'],
     },
-    fr.jsonOutput
+    fr.jsonOutput,
+    'alerts rules ls'
   );
   if (typeof scope === 'number') {
     return scope;

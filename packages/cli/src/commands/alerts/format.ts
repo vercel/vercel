@@ -1,6 +1,7 @@
 import indent from '../../util/output/indent';
 import table from '../../util/output/table';
 import { truncateMiddle } from '../../util/output/truncate';
+import { humanizeIdentifier } from '../../util/openapi/column-label';
 import type {
   Alert,
   AlertGroup,
@@ -75,15 +76,17 @@ export function formatTriggerOperator(
   }
 }
 
-export function humanizeReference(value: string): string {
+export function humanizeReference(
+  value: string,
+  opts: { case?: 'title' | 'lower' } = {}
+): string {
   return value
-    .replace(/_/g, ' ')
-    .replace(/-/g, ' ')
-    .replace(/\//g, ' / ')
-    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .trim()
-    .toLowerCase();
+    .split('/')
+    .map(part => {
+      const label = humanizeIdentifier(part);
+      return opts.case === 'title' ? label : label.toLowerCase();
+    })
+    .join(' / ');
 }
 
 export function formatRuleScope(
@@ -189,7 +192,9 @@ export function formatCustomAlertMetric(
   const groupBy = query.groupBy ?? [];
 
   if (base && groupBy.length > 0) {
-    return `${base} by ${groupBy.map(humanizeReference).join(', ')}`;
+    return `${base} by ${groupBy
+      .map(value => humanizeReference(value))
+      .join(', ')}`;
   }
 
   return base || undefined;

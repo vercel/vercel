@@ -612,8 +612,6 @@ export function computeGroupStats(points: TimeSeriesPoint[]): GroupStats {
 /** Maximum display length for group values before ellipsizing. */
 const MAX_GROUP_VALUE_LENGTH = 60;
 
-export { ellipsizeMiddle };
-
 /**
  * Reduces long series to `maxLen` buckets.
  * Bucket rules:

@@ -23,15 +23,22 @@ export type AlertTriggerOperator = 'gt' | 'gte' | 'lt' | 'lte';
 export type AlertTriggerType = 'threshold' | 'anomaly';
 
 export interface CustomAlertFormula {
-  operator?: string;
+  operator?: 'divide';
   left?: string;
   right?: string;
 }
 
+export interface CustomAlertRollup {
+  aggregation?: string;
+  measure?: string;
+  filter?: string;
+}
+
 export interface CustomAlertQuery {
   event?: string;
-  rollups?: Record<string, { aggregation?: string; measure?: string }>;
+  rollups?: Record<string, CustomAlertRollup>;
   groupBy?: string[];
+  filter?: string;
   granularity?: GranularityLike;
 }
 
@@ -41,18 +48,15 @@ export interface AlertData {
   zscore?: number;
   fields?: Record<string, AlertFieldValue>;
   ruleId?: string;
+  formula?: CustomAlertFormula;
+  sonarQuery?: CustomAlertQuery;
   triggerOperator?: AlertTriggerOperator;
   triggerThreshold?: number;
   triggerType?: AlertTriggerType;
   minThreshold?: number;
-  metric?: string;
-  route?: string;
   statusGroup?: string;
-  cause?: string;
-  requestHostname?: string;
-  action?: string;
+  route?: string;
   deploymentId?: string;
-  path?: string;
 }
 
 export interface Alert {
@@ -72,6 +76,7 @@ export interface Alert {
   rules?: string[];
   ai?: AlertAi;
   data?: AlertData;
+  sonarQuery?: CustomAlertQuery;
   eventLabel?: string;
   measureLabel?: string;
   unit?: string;

@@ -26,7 +26,40 @@ import {
   renderAlertTable,
 } from './format';
 import { truncateEnd, truncateMiddle } from '../../util/output/truncate';
-import type { Alert, AlertFieldValue, AlertGroup } from './types';
+import type {
+  Alert,
+  AlertFieldValue,
+  AlertGroup,
+  CustomAlertRollup,
+} from './types';
+import { formatGranularity } from '../../util/output/format-granularity';
+
+const aggregationLabels: Record<string, string> = {
+  sum: 'Sum',
+  avg: 'Average',
+  min: 'Min',
+  max: 'Max',
+  p50: 'P50',
+  p75: 'P75',
+  p90: 'P90',
+  p95: 'P95',
+  p99: 'P99',
+  stddev: 'Std Dev',
+  unique: 'Unique',
+  persecond: 'Per Second',
+  percent: 'Percent',
+};
+
+const formatCustomAlertRatioBelowFivePercent = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 2,
+  minimumFractionDigits: 2,
+  style: 'percent',
+});
+const formatCustomAlertRatioThresholdValue = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 4,
+  minimumFractionDigits: 0,
+  style: 'percent',
+});
 
 function getGroupStatus(group: AlertGroup): string {
   if (group.status) {
@@ -45,16 +78,7 @@ function getGroupStatus(group: AlertGroup): string {
 }
 
 function humanizeLabel(value: string): string {
-  return humanizeReference(value)
-    .split(/\s+/)
-    .filter(Boolean)
-    .map(word => {
-      if (['ai', 'api', 'cpu', 'id', 'url', 'waf'].includes(word)) {
-        return word.toUpperCase();
-      }
-      return word.charAt(0).toUpperCase() + word.slice(1);
-    })
-    .join(' ');
+  return humanizeReference(value, { case: 'title' });
 }
 
 function formatAlertFieldValue(
@@ -93,9 +117,65 @@ function formatNumber(value: number): string {
     : value.toFixed(2).replace(/\.?0+$/, '');
 }
 
-function appendUnit(value: string, unit: string | undefined): string {
-  if (!unit || unit === 'ratio' || unit === 'score') {
+function parseFormattedNumber(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  const number = Number(trimmed.replace(/,/g, ''));
+  return Number.isFinite(number) ? number : undefined;
+}
+
+function formatRatio(value: string): string {
+  if (value.trim().endsWith('%')) {
     return value;
+  }
+
+  const number = parseFormattedNumber(value);
+  if (number === undefined) {
+    return value;
+  }
+
+  const percent = number * 100;
+  if (percent >= 5) {
+    return `${Math.floor(percent)}%`;
+  }
+
+  return formatCustomAlertRatioBelowFivePercent.format(number);
+}
+
+function formatRatioThreshold(value: string): string {
+  if (value.trim().endsWith('%')) {
+    return value;
+  }
+
+  const number = parseFormattedNumber(value);
+  return number === undefined
+    ? value
+    : formatCustomAlertRatioThresholdValue.format(number);
+}
+
+function getAlertSonarQuery(alert: Alert) {
+  return alert.sonarQuery ?? alert.data?.sonarQuery;
+}
+
+function getCustomAlertBaselineTitle(alert: Alert): string {
+  const granularity = getAlertSonarQuery(alert)?.granularity;
+  const baseline =
+    granularity && ('hours' in granularity || 'days' in granularity)
+      ? '7-day baseline'
+      : '24-hour baseline';
+
+  return baseline.replace(/\b[a-z]/g, character => character.toUpperCase());
+}
+
+function appendUnit(value: string, unit: string | undefined): string {
+  if (!unit || unit === 'score') {
+    return value;
+  }
+  if (unit === 'ratio') {
+    return formatRatio(value);
   }
   if (unit === '%') {
     return value.endsWith('%') ? value : `${value}%`;
@@ -122,7 +202,9 @@ function formatThreshold(alert: Alert): string | undefined {
   const threshold =
     data?.triggerType === 'anomaly'
       ? `${formatted} z-score`
-      : appendUnit(formatted, alert.unit);
+      : alert.unit === 'ratio'
+        ? formatRatioThreshold(formatted)
+        : appendUnit(formatted, alert.unit);
 
   return [operator, threshold].filter(Boolean).join(' ');
 }
@@ -142,6 +224,10 @@ function getRuleIds(alert: Alert): string[] {
   return [...ids];
 }
 
+function getAlertResolvedAt(alert: Alert): number | undefined {
+  return normalizeTimestamp(alert.recordedResolvedAt ?? alert.resolvedAt);
+}
+
 function getSignalRows(alert: Alert): string[][] {
   const rows: string[][] = [];
   const formattedValues = alert.formattedValues ?? {};
@@ -153,6 +239,7 @@ function getSignalRows(alert: Alert): string[][] {
   const zscore = alert.data?.zscore;
   const threshold = formatThreshold(alert);
   const minThreshold = alert.data?.minThreshold;
+  const isRatioFormulaAlert = Boolean(getCustomAlertFormula(alert));
 
   if (alert.eventLabel) {
     rows.push(['Event', alert.eventLabel]);
@@ -164,7 +251,12 @@ function getSignalRows(alert: Alert): string[][] {
     rows.push(['Observed Value', appendUnit(observed, alert.unit)]);
   }
   if (baseline) {
-    rows.push(['Baseline', appendUnit(baseline, alert.unit)]);
+    rows.push([
+      alert.type === 'custom_alert' && alert.data?.triggerType === 'anomaly'
+        ? getCustomAlertBaselineTitle(alert)
+        : 'Baseline',
+      appendUnit(baseline, alert.unit),
+    ]);
   }
   if (change) {
     rows.push(['Change', change]);
@@ -175,8 +267,13 @@ function getSignalRows(alert: Alert): string[][] {
   if (threshold) {
     rows.push(['Threshold', threshold]);
   }
-  if (minThreshold !== undefined) {
-    rows.push(['Minimum', appendUnit(formatNumber(minThreshold), alert.unit)]);
+  if (minThreshold !== undefined && !isRatioFormulaAlert) {
+    rows.push([
+      'Minimum',
+      alert.unit === 'ratio'
+        ? formatNumber(minThreshold)
+        : appendUnit(formatNumber(minThreshold), alert.unit),
+    ]);
   }
   if (formattedValues.errorRate) {
     rows.push(['Error Rate', formattedValues.errorRate]);
@@ -184,20 +281,129 @@ function getSignalRows(alert: Alert): string[][] {
   if (formattedValues.avgErrorRate) {
     rows.push(['Baseline Error Rate', formattedValues.avgErrorRate]);
   }
+  rows.push(...getFieldRows(alert));
 
   return rows;
 }
 
-function getDimensionRows(alert: Alert): string[][] {
+function getFieldRows(alert: Alert): string[][] {
   const fields = alert.data?.fields;
   if (!fields) {
     return [];
   }
 
-  return Object.entries(fields).flatMap(([key, value]) => {
+  const groupBy = getAlertSonarQuery(alert)?.groupBy ?? [];
+  const fieldKeys = [
+    ...groupBy,
+    ...Object.keys(fields).filter(key => !groupBy.includes(key)),
+  ];
+
+  return fieldKeys.flatMap(key => {
+    const value = fields[key];
     const displayValue = formatAlertFieldValue(value);
     return displayValue ? [[humanizeLabel(key), displayValue]] : [];
   });
+}
+
+function formatAggregation(value: string | undefined): string | undefined {
+  return value ? (aggregationLabels[value] ?? humanizeLabel(value)) : undefined;
+}
+
+function formatQueryReference(value: string | undefined): string | undefined {
+  return value ? humanizeLabel(value) : undefined;
+}
+
+function formatRollupDetail(
+  rollup: CustomAlertRollup | undefined,
+  fallbackMeasure?: string
+): string | undefined {
+  if (!rollup) {
+    return undefined;
+  }
+
+  const aggregation = formatAggregation(rollup.aggregation);
+  const measure = fallbackMeasure ?? formatQueryReference(rollup.measure);
+  const detail = [aggregation, measure].filter(Boolean).join(' ');
+
+  return detail || undefined;
+}
+
+function getPrimaryRollup(
+  rollups: Record<string, CustomAlertRollup> | undefined
+): CustomAlertRollup | undefined {
+  return Object.values(rollups ?? {})[0];
+}
+
+function getCustomAlertFormula(
+  alert: Alert
+): { operator: 'divide'; left: string; right: string } | undefined {
+  const formula = alert.data?.formula;
+  if (formula?.operator === 'divide' && formula.left && formula.right) {
+    return {
+      operator: formula.operator,
+      left: formula.left,
+      right: formula.right,
+    };
+  }
+
+  return undefined;
+}
+
+function getQueryRows(alert: Alert): string[][] {
+  if (alert.type !== 'custom_alert') {
+    return [];
+  }
+
+  const query = getAlertSonarQuery(alert);
+  if (!query) {
+    return [];
+  }
+
+  const formula = getCustomAlertFormula(alert);
+  const rows: string[][] = [];
+  const addRow = (label: string, value: string | undefined) => {
+    if (value) {
+      rows.push([label, truncateMiddle(value, 120)]);
+    }
+  };
+
+  addRow('Event', alert.eventLabel ?? formatQueryReference(query.event));
+
+  if (formula) {
+    addRow('Numerator', formatRollupDetail(query.rollups?.[formula.left]));
+    addRow('Denominator', formatRollupDetail(query.rollups?.[formula.right]));
+  } else {
+    const primaryRollup = getPrimaryRollup(query.rollups);
+    addRow(
+      'Measure',
+      alert.measureLabel ?? formatQueryReference(primaryRollup?.measure)
+    );
+    addRow('Aggregation', formatAggregation(primaryRollup?.aggregation));
+  }
+
+  addRow('Granularity', formatGranularity(query.granularity));
+
+  const groupBy = query.groupBy?.filter(Boolean) ?? [];
+  if (groupBy.length > 0) {
+    addRow('Group by', groupBy.map(humanizeLabel).join(', '));
+  }
+
+  if (formula && typeof alert.data?.minThreshold === 'number') {
+    addRow('Minimum Numerator', formatNumber(alert.data.minThreshold));
+  }
+
+  addRow('Filter by', query.filter?.trim());
+
+  if (formula) {
+    for (const [label, rollupName] of [
+      ['Numerator filter', formula.left],
+      ['Denominator filter', formula.right],
+    ] as const) {
+      addRow(label, query.rollups?.[rollupName]?.filter?.trim());
+    }
+  }
+
+  return rows;
 }
 
 function getDetailRows(alert: Alert): string[][] {
@@ -214,28 +420,37 @@ function getDetailRows(alert: Alert): string[][] {
     }
   };
 
-  addRow('Metric', data.metric);
   addRow('Route', data.route);
   addRow('Status Group', data.statusGroup);
-  addRow('Cause', data.cause);
-  addRow('Request Hostname', data.requestHostname);
-  addRow('Action', data.action);
   addRow('Deployment ID', data.deploymentId);
-  addRow('Path', data.path);
 
   return rows;
 }
 
-function renderAlert(alert: Alert, index: number, totalAlerts: number): string {
+function renderAlertSections(alert: Alert): string {
   const lines: string[] = [];
+
+  const signalRows = getSignalRows(alert);
+  if (signalRows.length > 0) {
+    lines.push(chalk.cyan('Signals'));
+    lines.push(renderAlertTable(signalRows, 3));
+  }
+
+  const queryRows = getQueryRows(alert);
+  if (queryRows.length > 0) {
+    lines.push(chalk.cyan('Query'));
+    lines.push(renderAlertTable(queryRows, 3));
+  }
+
+  return lines.join('\n');
+}
+
+function renderAlert(alert: Alert, index: number, totalAlerts: number): string {
   const title = alert.title || `Alert ${index + 1}`;
   const ruleIds = getRuleIds(alert);
-
-  lines.push(
-    chalk.bold(totalAlerts > 1 ? `Alert ${index + 1}: ${title}` : title)
-  );
-
-  const summaryRows = [
+  const resolvedAt = getAlertResolvedAt(alert);
+  const sections = renderAlertSections(alert);
+  const summaryRows: string[][] = [
     ['Alert id', alert.id || '-'],
     ['Type', alert.type || '-'],
     ['Status', alert.status || '-'],
@@ -245,58 +460,57 @@ function renderAlert(alert: Alert, index: number, totalAlerts: number): string {
         normalizeTimestamp(alert.recordedStartedAt ?? alert.startedAt)
       ),
     ],
-    ...(alert.resolvedAt !== undefined || alert.recordedResolvedAt !== undefined
-      ? [
-          [
-            'Resolved At',
-            formatDate(
-              normalizeTimestamp(alert.recordedResolvedAt ?? alert.resolvedAt)
-            ),
-          ],
-        ]
+    ...(resolvedAt !== undefined
+      ? [['Resolved At', formatDate(resolvedAt)]]
       : []),
     ...(ruleIds.length > 0
       ? [['Rule id', ruleIds.map(id => truncateMiddle(id, 48)).join(', ')]]
       : []),
+    ...getDetailRows(alert),
   ];
-  lines.push(renderAlertTable(summaryRows, 3));
 
-  const signalRows = getSignalRows(alert);
-  if (signalRows.length > 0) {
-    lines.push(chalk.cyan('Signals'));
-    lines.push(renderAlertTable(signalRows, 3));
-  }
-
-  const dimensionRows = getDimensionRows(alert);
-  if (dimensionRows.length > 0) {
-    lines.push(chalk.cyan('Dimensions'));
-    lines.push(renderAlertTable(dimensionRows, 3));
-  }
-
-  const detailRows = getDetailRows(alert);
-  if (detailRows.length > 0) {
-    lines.push(chalk.cyan('Details'));
-    lines.push(renderAlertTable(detailRows, 3));
-  }
-
-  return lines.join('\n');
+  return [
+    chalk.bold(totalAlerts > 1 ? `Alert ${index + 1}: ${title}` : title),
+    renderAlertTable(summaryRows, 3),
+    ...(sections ? [sections] : []),
+  ].join('\n');
 }
 
 function printAlertGroup(group: AlertGroup, groupId: string) {
   const alerts = group.alerts ?? [];
-  const summaryRows = [
+  const singleAlert = alerts.length === 1 ? alerts[0] : undefined;
+  const singleAlertRuleIds = singleAlert ? getRuleIds(singleAlert) : [];
+  const singleAlertResolvedAt = singleAlert
+    ? getAlertResolvedAt(singleAlert)
+    : undefined;
+  const summaryRows: string[][] = [
     ['Title', truncateEnd(getGroupTitle(group), 80)],
     ['Group id', group.id || groupId],
     ['Type', getGroupType(group)],
     ['Status', getGroupStatus(group)],
     ['Started At', formatDate(getGroupStartedAt(group))],
+    ...(singleAlertResolvedAt !== undefined
+      ? [['Resolved At', formatDate(singleAlertResolvedAt)]]
+      : []),
     ['Alerts', String(alerts.length)],
+    ...(singleAlert?.id ? [['Alert id', singleAlert.id]] : []),
+    ...(singleAlertRuleIds.length > 0
+      ? [
+          [
+            'Rule id',
+            singleAlertRuleIds.map(id => truncateMiddle(id, 48)).join(', '),
+          ],
+        ]
+      : []),
+    ...(singleAlert ? getDetailRows(singleAlert) : []),
   ];
   const renderedAlerts =
     alerts.length > 0
-      ? alerts
-          .map((alert, index) => renderAlert(alert, index, alerts.length))
-          .join('\n\n')
+      ? alerts.length === 1
+        ? renderAlertSections(alerts[0])
+        : alerts
+            .map((alert, index) => renderAlert(alert, index, alerts.length))
+            .join('\n\n')
       : 'No alerts in this group.';
 
   output.print(

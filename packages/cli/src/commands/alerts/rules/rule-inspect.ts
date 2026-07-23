@@ -54,7 +54,7 @@ function getAlertTypeRows(rule: AlertRule): string[][] {
   return [
     [
       uniqueTypes.length === 1 ? 'Type' : 'Types',
-      uniqueTypes.map(humanizeReference).join(', '),
+      uniqueTypes.map(value => humanizeReference(value)).join(', '),
     ],
   ];
 }
@@ -109,7 +109,12 @@ function getCustomAlertRows(customAlert: CustomAlertDefinition): string[][] {
       : []),
     ...(query.event ? [['Event', humanizeReference(query.event)]] : []),
     ...(groupBy.length > 0
-      ? [['Group By', groupBy.map(humanizeReference).join(', ')]]
+      ? [
+          [
+            'Group By',
+            groupBy.map(value => humanizeReference(value)).join(', '),
+          ],
+        ]
       : []),
     ...(granularity ? [['Granularity', granularity]] : []),
     ...(customAlert.createdAt
@@ -243,7 +248,8 @@ export default async function ruleInspect(
       '--project': parsedArgs.flags['--project'] as string | undefined,
       '--all': parsedArgs.flags['--all'] as boolean | undefined,
     },
-    fr.jsonOutput
+    fr.jsonOutput,
+    `alerts rules inspect ${ruleId}`
   );
   if (typeof scope === 'number') {
     return scope;

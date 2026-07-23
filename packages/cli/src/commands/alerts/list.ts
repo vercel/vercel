@@ -127,7 +127,7 @@ function getGroupResolvedAt(group: AlertGroup): number | undefined {
     return Math.max(...resolvedTimes);
   }
 
-  return getGroupStartedAt(group);
+  return undefined;
 }
 
 function getStatus(group: AlertGroup): string {

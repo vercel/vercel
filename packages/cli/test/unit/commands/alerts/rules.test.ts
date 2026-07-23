@@ -54,6 +54,11 @@ describe('alerts rules', () => {
     client.cwd = tmpDir;
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+    client.nonInteractive = false;
+  });
+
   it('lists alert rules for linked project', async () => {
     let path = '';
     client.scenario.get('/alerts/v2/alert-rules', (req, res) => {
@@ -285,6 +290,38 @@ describe('alerts rules', () => {
     });
   });
 
+  it('uses inspect command in scope retry hints', async () => {
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code ?? 0}`);
+    }) as () => never);
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'not_linked',
+      org: null,
+      project: null,
+    });
+
+    client.setArgv(
+      'alerts',
+      'rules',
+      'inspect',
+      'ar_builtin',
+      '--non-interactive'
+    );
+
+    await expect(alerts(client)).rejects.toThrow('exit:1');
+
+    const payload = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(payload.next).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          command: expect.stringContaining(
+            'alerts rules inspect ar_builtin --project <name_or_id>'
+          ),
+        }),
+      ])
+    );
+  });
+
   it('inspects a custom alert rule with query details', async () => {
     const queryJsonString = JSON.stringify({
       event: 'incomingRequest',
@@ -514,11 +551,6 @@ describe('alerts rules', () => {
   });
 
   describe('--non-interactive', () => {
-    afterEach(() => {
-      vi.restoreAllMocks();
-      client.nonInteractive = false;
-    });
-
     it('rm without --yes emits confirmation_required JSON', async () => {
       vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
         throw new Error(`exit:${code ?? 0}`);
