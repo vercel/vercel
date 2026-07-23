@@ -82,12 +82,14 @@ export async function ensureVenv({
   uvPath,
   uvCacheDir,
   quiet,
+  seed = true,
 }: {
   pythonVersion: { pythonPath: string; major?: number; minor?: number };
   venvPath: string;
   uvPath?: string | null;
   uvCacheDir?: string;
   quiet?: boolean;
+  seed?: boolean;
 }) {
   const marker = join(venvPath, 'pyvenv.cfg');
   let venvExists = false;
@@ -129,8 +131,12 @@ export async function ensureVenv({
 
   if (uvPath) {
     // --allow-existing allows uv to reuse a cached venv
-    // --seed installs pip into the venv so custom install commands can use it
-    const args = ['venv', venvPath, '--allow-existing', '--seed'];
+    const args = ['venv', venvPath, '--allow-existing'];
+    // Custom install commands may use pip. Isolated proxy environments do not
+    // run those commands and should not contain pip unless explicitly listed.
+    if (seed) {
+      args.push('--seed');
+    }
     if (pythonVersion.major != null && pythonVersion.minor != null) {
       args.push('--python', `${pythonVersion.major}.${pythonVersion.minor}`);
     }
@@ -138,7 +144,12 @@ export async function ensureVenv({
       env: getProtectedUvEnv(process.env, uvCacheDir),
     });
   } else {
-    await execa(pythonVersion.pythonPath, ['-m', 'venv', venvPath]);
+    await execa(pythonVersion.pythonPath, [
+      '-m',
+      'venv',
+      ...(seed ? [] : ['--without-pip']),
+      venvPath,
+    ]);
   }
 }
 

@@ -698,10 +698,14 @@ export function getProxyBuilder(
 ): Builder {
   const { fnPattern, func } = getFunction(proxy.entrypoint, { functions });
   const runtime = func?.runtime;
+  const isPythonProxy = proxy.entrypoint.endsWith('.py');
   const config: Config = {
     zeroConfig: true,
     middleware: true,
-    ...(!runtime ? { middlewareRuntime: 'nodejs' as const } : {}),
+    ...(isPythonProxy ? { handlerFunction: 'proxy' } : {}),
+    ...(!isPythonProxy && !runtime
+      ? { middlewareRuntime: 'nodejs' as const }
+      : {}),
     ...(proxy.matcher ? { middlewareMatcher: proxy.matcher } : {}),
   };
 
@@ -719,7 +723,9 @@ export function getProxyBuilder(
 
   return {
     src: proxy.entrypoint,
-    use: runtime || `@vercel/node${tag ? `@${tag}` : ''}`,
+    use:
+      runtime ||
+      `@vercel/${isPythonProxy ? 'python' : 'node'}${tag ? `@${tag}` : ''}`,
     config,
   };
 }
@@ -755,7 +761,7 @@ export function validateProxyConfig(proxy: ProxyConfig): ErrorResponse | null {
     return {
       code: 'invalid_proxy',
       message:
-        'The `proxy` property must contain an `entrypoint` string that references a `.js` or `.ts` file.',
+        'The `proxy` property must contain an `entrypoint` string that references a `.js`, `.ts`, or `.py` file.',
     };
   }
 
@@ -775,11 +781,11 @@ export function validateProxyConfig(proxy: ProxyConfig): ErrorResponse | null {
     };
   }
 
-  if (!/\.(?:js|ts)$/.test(entrypoint) || entrypoint.endsWith('.d.ts')) {
+  if (!/\.(?:js|ts|py)$/.test(entrypoint) || entrypoint.endsWith('.d.ts')) {
     return {
       code: 'invalid_proxy_entrypoint',
       message:
-        'The `proxy.entrypoint` path must end in `.js` or `.ts` and reference an executable file.',
+        'The `proxy.entrypoint` path must end in `.js`, `.ts`, or `.py` and reference an executable file.',
     };
   }
 
@@ -822,7 +828,7 @@ function validateProxy(
   if (!files.includes(proxy.entrypoint)) {
     return {
       code: 'proxy_entrypoint_not_found',
-      message: `The proxy entrypoint \`${proxy.entrypoint}\` does not exist. Set \`proxy.entrypoint\` to an existing \`.js\` or \`.ts\` file.`,
+      message: `The proxy entrypoint \`${proxy.entrypoint}\` does not exist. Set \`proxy.entrypoint\` to an existing \`.js\`, \`.ts\`, or \`.py\` file.`,
     };
   }
 

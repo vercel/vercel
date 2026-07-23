@@ -872,7 +872,7 @@ export default class DevServer {
       const { entrypoint } = vercelConfig.proxy;
       if (!(await fs.pathExists(join(this.cwd, entrypoint)))) {
         output.error(
-          `The proxy entrypoint \`${entrypoint}\` does not exist. Set \`proxy.entrypoint\` to an existing \`.js\` or \`.ts\` file.`
+          `The proxy entrypoint \`${entrypoint}\` does not exist. Set \`proxy.entrypoint\` to an existing \`.js\`, \`.ts\`, or \`.py\` file.`
         );
         await this.exit();
       }

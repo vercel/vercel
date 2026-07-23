@@ -3,7 +3,8 @@
 '@vercel/client': minor
 '@vercel/fs-detectors': minor
 '@vercel/node': minor
+'@vercel/python': minor
 'vercel': minor
 ---
 
-Support Node.js Routing Middleware entrypoints through `proxy.entrypoint`, with optional path matching through `proxy.matcher`. The matcher may be configured in the entrypoint source or `vercel.json`, but not both.
+Support Node.js and Python Routing Middleware entrypoints through `proxy.entrypoint`, with optional path matching through `proxy.matcher`. Node.js matchers may be configured in the entrypoint source or `vercel.json`, but not both. Python proxies install only dependencies declared in the `proxy` dependency group.

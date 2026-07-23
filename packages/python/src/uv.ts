@@ -135,6 +135,7 @@ export class UvRunner {
     frozen?: boolean;
     noBuild?: boolean;
     noInstallProject?: boolean;
+    onlyGroup?: string;
     pythonPlatform?: string;
   }): Promise<void> {
     const {
@@ -144,9 +145,17 @@ export class UvRunner {
       frozen,
       noBuild,
       noInstallProject,
+      onlyGroup,
       pythonPlatform,
     } = options;
-    const args = ['sync', '--active', '--no-dev', '--link-mode', 'hardlink'];
+    const args = ['sync', '--active', '--link-mode', 'hardlink'];
+    if (onlyGroup) {
+      // Unlike `--group`, `--only-group` omits the project and its default
+      // dependencies. A Python proxy must be isolated from the application.
+      args.push('--only-group', onlyGroup);
+    } else {
+      args.push('--no-dev');
+    }
     if (frozen) {
       args.push('--frozen');
     } else if (locked) {

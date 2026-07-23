@@ -108,6 +108,13 @@ import {
   WORKFLOW_TOPIC_PATTERN,
   type PyprojectWorkflow,
 } from './workflows';
+import { entrypointToOutputPath, getRegExpFromMatchers } from './middleware';
+import {
+  getProxyAdapterSource,
+  hasProxyDependencyGroup,
+  PROXY_ADAPTER_FILENAME,
+  PROXY_DEPENDENCY_GROUP,
+} from './proxy';
 
 const writeFile = fs.promises.writeFile;
 const PYTHON_ENTRYPOINT_DOCS_URL =
@@ -726,8 +733,12 @@ export const build: BuildVX = async ({
   }
 
   const builderSpan = parentSpan ?? new Span({ name: 'vc.builder' });
-  const framework = config?.framework;
-  let shouldInstallVercelWorkers = config?.hasWorkerServices === true;
+  const isRoutingMiddleware = config?.middleware === true;
+  // A configured Python proxy is a standalone runtime entrypoint even when
+  // the project itself uses FastAPI, Flask, or another Python framework.
+  const framework = isRoutingMiddleware ? undefined : config?.framework;
+  let shouldInstallVercelWorkers =
+    !isRoutingMiddleware && config?.hasWorkerServices === true;
   let subscribers: Subscriber[] = [];
   let workflows: PyprojectWorkflow[] = [];
   let spawnEnv: NodeJS.ProcessEnv | undefined;
@@ -811,7 +822,7 @@ export const build: BuildVX = async ({
   } else {
     detected =
       (await detectPythonEntrypoint(
-        config.framework as PythonFramework,
+        framework as PythonFramework,
         workPath,
         entrypoint
           ? {
@@ -847,6 +858,8 @@ export const build: BuildVX = async ({
         rootDir,
       })
     );
+  const hasProxyDependencies =
+    isRoutingMiddleware && hasProxyDependencyGroup(pythonPackage);
 
   const { pythonVersion, pinVersionFilePath } = await builderSpan
     .child('vc.builder.python.version')
@@ -894,9 +907,11 @@ export const build: BuildVX = async ({
   const uvVersion = checkUvBinaryVersion(uv.getPath());
   console.log(`Using ${uvVersion}`);
 
-  const venvPath = service?.name
-    ? join(workPath, '.vercel', 'python', 'services', service.name, '.venv')
-    : join(workPath, '.vercel', 'python', '.venv');
+  const venvPath = isRoutingMiddleware
+    ? join(workPath, '.vercel', 'python', 'proxy', '.venv')
+    : service?.name
+      ? join(workPath, '.vercel', 'python', 'services', service.name, '.venv')
+      : join(workPath, '.vercel', 'python', '.venv');
   const hasCachedVenv = fs.existsSync(join(venvPath, 'pyvenv.cfg'));
   const hasCachedUv = fs.existsSync(uvCacheDir);
   const restoredCache =
@@ -918,6 +933,7 @@ export const build: BuildVX = async ({
       venvPath,
       uvPath: uv.getPath(),
       uvCacheDir,
+      seed: !isRoutingMiddleware,
     });
   });
 
@@ -971,7 +987,28 @@ export const build: BuildVX = async ({
       'python.cache.restored': restoredCache,
     })
     .trace(async () => {
-      if (projectInstallCommand) {
+      if (isRoutingMiddleware && !hasProxyDependencies) {
+        // A cached proxy environment may contain dependencies from a previous
+        // build that declared the group. Recreate it so removing the group
+        // reliably produces a dependency-free proxy.
+        await fs.promises.rm(venvPath, { recursive: true, force: true });
+        await ensureVenv({
+          pythonVersion,
+          venvPath,
+          uvPath: uv.getPath(),
+          uvCacheDir,
+          quiet: true,
+          seed: false,
+        });
+        console.log(
+          `No "${PROXY_DEPENDENCY_GROUP}" dependency group found; skipping Python proxy dependencies.`
+        );
+        return;
+      } else if (isRoutingMiddleware) {
+        console.log(
+          `Installing Python proxy dependencies from the "${PROXY_DEPENDENCY_GROUP}" dependency group...`
+        );
+      } else if (projectInstallCommand) {
         // Custom commands may not prune removed packages, so always
         // start from a fresh venv to avoid stale dependency accumulation.
         await fs.promises.rm(venvPath, { recursive: true, force: true });
@@ -1010,9 +1047,11 @@ export const build: BuildVX = async ({
         // Compute the path where we stash a copy of the generated uv.lock
         // so `uv lock` can validate it on the next build instead of
         // re-resolving all packages from PyPI.
-        const lockCacheKey = service?.name
-          ? `uv.lock.${service.name}`
-          : 'uv.lock';
+        const lockCacheKey = isRoutingMiddleware
+          ? 'uv.lock.proxy'
+          : service?.name
+            ? `uv.lock.${service.name}`
+            : 'uv.lock';
         const cachedLockPath = join(uvCacheDir, lockCacheKey);
 
         // Default installation path: use uv to normalize manifests into a uv.lock and
@@ -1047,6 +1086,7 @@ export const build: BuildVX = async ({
           projectDir,
           frozen: lockFileProvidedByUser,
           locked: !lockFileProvidedByUser,
+          onlyGroup: isRoutingMiddleware ? PROXY_DEPENDENCY_GROUP : undefined,
           pythonPlatform: target.uvPlatform,
         });
 
@@ -1239,12 +1279,21 @@ export const build: BuildVX = async ({
     }
 
     const variableName = resolved?.variableName ?? '';
+    if (isRoutingMiddleware) {
+      extraTrampolineEnv.push(
+        `"__VC_PROXY_MODULE_NAME": ${JSON.stringify(moduleName)}`
+      );
+    }
 
     runtimeTrampoline = createRuntimeTrampoline({
-      moduleName,
-      entrypoint: entrypointWithSuffix,
+      moduleName: isRoutingMiddleware
+        ? entrypointToModule(PROXY_ADAPTER_FILENAME)
+        : moduleName,
+      entrypoint: isRoutingMiddleware
+        ? PROXY_ADAPTER_FILENAME
+        : entrypointWithSuffix,
       vendorDir,
-      variableName,
+      variableName: isRoutingMiddleware ? 'app' : variableName,
       extraEnv: extraTrampolineEnv,
     });
   }
@@ -1295,6 +1344,11 @@ export const build: BuildVX = async ({
   };
 
   const files: Files = await glob('**', globOptions);
+  if (isRoutingMiddleware) {
+    files[PROXY_ADAPTER_FILENAME] = new FileBlob({
+      data: getProxyAdapterSource(),
+    });
+  }
 
   // Re-inject staticfiles.json into the Lambda bundle if a manifest storage
   // backend is in use. The CDN serves static assets; only the manifest is
@@ -1312,7 +1366,7 @@ export const build: BuildVX = async ({
   // "fasthtml" framework requires a `.sesskey` file to exist,
   // otherwise it tries to create one at runtime, which fails
   // due Lambda's read-only filesystem
-  if (config.framework === 'fasthtml') {
+  if (framework === 'fasthtml') {
     const { SESSKEY = '' } = process.env;
     files['.sesskey'] = new FileBlob({ data: `"${SESSKEY}"` });
   }
@@ -1774,6 +1828,36 @@ export const build: BuildVX = async ({
     }
   }
 
+  if (isRoutingMiddleware) {
+    assert(output, 'routing middleware Lambda must exist');
+    const outputPath = entrypointToOutputPath(
+      rawEntrypoint,
+      config?.zeroConfig
+    );
+    const rawMatchers = config?.middlewareMatcher;
+    const middlewareRawSrc = rawMatchers
+      ? Array.isArray(rawMatchers)
+        ? rawMatchers
+        : [rawMatchers]
+      : [];
+
+    return {
+      resultVersion: 2,
+      result: {
+        output: { [outputPath]: output },
+        routes: [
+          {
+            src: getRegExpFromMatchers(rawMatchers),
+            middlewareRawSrc,
+            middlewarePath: outputPath,
+            continue: true,
+            override: true,
+          },
+        ],
+      },
+    };
+  }
+
   // Subscribers and workflows only attach to framework apps, named services,
   // or declared pyproject.toml builds, all of which take the V2 path below,
   // so this early V3 return never needs to consider them.
@@ -1849,10 +1933,13 @@ export const prepareCache: PrepareCache = async ({
 
   // Cache the uv package cache, the default venv, and any service-namespaced
   // venvs so that subsequent builds can skip dependency installation.
-  return glob('**/.vercel/python/{.venv,services/*/.venv,cache/uv}/**', {
-    cwd: root,
-    ignore,
-  });
+  return glob(
+    '**/.vercel/python/{.venv,proxy/.venv,services/*/.venv,cache/uv}/**',
+    {
+      cwd: root,
+      ignore,
+    }
+  );
 };
 
 export const shouldServe: ShouldServe = opts => {

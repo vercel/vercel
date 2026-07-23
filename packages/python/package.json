@@ -25,7 +25,8 @@
     "vitest-e2e": "glob --absolute 'test/integration-*'"
   },
   "dependencies": {
-    "@vercel/python-analysis": "workspace:*"
+    "@vercel/python-analysis": "workspace:*",
+    "path-to-regexp": "6.1.0"
   },
   "devDependencies": {
     "@renovatebot/pep440": "4.2.1",

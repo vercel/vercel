@@ -1,0 +1,6 @@
+{
+  "proxy": {
+    "entrypoint": "proxy.py",
+    "matcher": "/protected/:path*"
+  }
+}

@@ -3043,6 +3043,33 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     );
   });
 
+  it('builds a Python proxy entrypoint with the Python runtime', async () => {
+    const files = ['proxy.py', 'main.py'];
+    const { builders } = await invokeDetectBuildersAndThrow(files, null, {
+      proxy: { entrypoint: 'proxy.py', matcher: '/api/:path*' },
+      projectSettings: { framework: 'fastapi' },
+    });
+
+    expect(builders[0]).toEqual({
+      src: 'proxy.py',
+      use: '@vercel/python',
+      config: {
+        handlerFunction: 'proxy',
+        middleware: true,
+        middlewareMatcher: '/api/:path*',
+        zeroConfig: true,
+      },
+    });
+    expect(builders).toContainEqual({
+      src: '<detect>',
+      use: '@vercel/python',
+      config: {
+        framework: 'fastapi',
+        zeroConfig: true,
+      },
+    });
+  });
+
   it('applies functions config targeting the proxy entrypoint', async () => {
     const { builders } = await invokeDetectBuildersAndThrow(
       ['proxy.ts'],
@@ -3116,7 +3143,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       {
         code: 'invalid_proxy_entrypoint',
         message:
-          'The `proxy.entrypoint` path must end in `.js` or `.ts` and reference an executable file.',
+          'The `proxy.entrypoint` path must end in `.js`, `.ts`, or `.py` and reference an executable file.',
       },
     ]);
   });
@@ -3144,7 +3171,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       {
         code: 'proxy_entrypoint_not_found',
         message:
-          'The proxy entrypoint `proxy.ts` does not exist. Set `proxy.entrypoint` to an existing `.js` or `.ts` file.',
+          'The proxy entrypoint `proxy.ts` does not exist. Set `proxy.entrypoint` to an existing `.js`, `.ts`, or `.py` file.',
       },
     ]);
   });

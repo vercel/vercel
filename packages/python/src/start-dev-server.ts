@@ -3,10 +3,11 @@ import {
   existsSync,
   readFileSync,
   readdirSync,
+  rmSync,
   writeFileSync,
   mkdirSync,
 } from 'fs';
-import { join, delimiter, dirname, basename } from 'path';
+import { join, delimiter, dirname, basename, relative } from 'path';
 import type { ChildProcess } from 'child_process';
 import type { PythonFramework, StartDevServer } from '@vercel/build-utils';
 import {
@@ -44,6 +45,13 @@ import {
   VERCEL_RUNTIME_VERSION,
   VERCEL_WORKERS_VERSION,
 } from './package-versions';
+import { getRegExpFromMatchers } from './middleware';
+import {
+  getProxyAdapterSource,
+  hasProxyDependencyGroup,
+  PROXY_ADAPTER_FILENAME,
+  PROXY_DEPENDENCY_GROUP,
+} from './proxy';
 
 const DEV_SERVER_STARTUP_TIMEOUT = 5 * 60_000; // 5 minutes
 
@@ -175,11 +183,25 @@ async function syncDependencies({
   env,
   onStdout,
   onStderr,
-}: DevPythonOptions): Promise<void> {
+  dependencyGroup,
+}: DevPythonOptions & { dependencyGroup?: string }): Promise<void> {
   const pythonPackage = await discoverPackage({
     entrypointDir: workPath,
     rootDir: workPath,
   });
+
+  if (
+    dependencyGroup === PROXY_DEPENDENCY_GROUP &&
+    !hasProxyDependencyGroup(pythonPackage)
+  ) {
+    const message = `No "${PROXY_DEPENDENCY_GROUP}" dependency group found; skipping Python proxy dependencies.\n`;
+    if (onStdout) {
+      onStdout(Buffer.from(message));
+    } else {
+      process.stdout.write(message);
+    }
+    return;
+  }
 
   const installInfo = detectInstallSource(pythonPackage, workPath);
 
@@ -231,6 +253,7 @@ async function syncDependencies({
       uvPath,
       pythonBin,
       env,
+      dependencyGroup,
       onStdout: data => captured.push(['stdout', data]),
       onStderr: data => captured.push(['stderr', data]),
     });
@@ -254,6 +277,7 @@ interface RunSyncOptions {
   uvPath: string | null;
   pythonBin: string;
   env: NodeJS.ProcessEnv;
+  dependencyGroup?: string;
   onStdout?: (buf: Buffer) => void;
   onStderr?: (buf: Buffer) => void;
 }
@@ -264,6 +288,7 @@ async function runSync({
   uvPath,
   pythonBin,
   env,
+  dependencyGroup,
   onStdout,
   onStderr,
 }: RunSyncOptions): Promise<void> {
@@ -276,33 +301,52 @@ async function runSync({
   let spawnCmd: string;
   let spawnArgs: string[];
 
-  switch (manifestType) {
-    case 'uv.lock': {
-      if (!uvPath) {
-        throw new NowBuildError({
-          code: 'PYTHON_DEPENDENCY_SYNC_FAILED',
-          message: 'uv is required to install dependencies from uv.lock.',
-          link: 'https://docs.astral.sh/uv/getting-started/installation/',
-          action: 'Install uv',
-        });
+  if (dependencyGroup) {
+    if (!uvPath) {
+      throw new NowBuildError({
+        code: 'PYTHON_DEPENDENCY_SYNC_FAILED',
+        message: `uv is required to install the "${dependencyGroup}" dependency group.`,
+        link: 'https://docs.astral.sh/uv/getting-started/installation/',
+        action: 'Install uv',
+      });
+    }
+    spawnCmd = uvPath;
+    spawnArgs = [
+      'sync',
+      '--active',
+      '--only-group',
+      dependencyGroup,
+      '--no-editable',
+    ];
+  } else {
+    switch (manifestType) {
+      case 'uv.lock': {
+        if (!uvPath) {
+          throw new NowBuildError({
+            code: 'PYTHON_DEPENDENCY_SYNC_FAILED',
+            message: 'uv is required to install dependencies from uv.lock.',
+            link: 'https://docs.astral.sh/uv/getting-started/installation/',
+            action: 'Install uv',
+          });
+        }
+        spawnCmd = uvPath;
+        spawnArgs = ['sync'];
+        break;
       }
-      spawnCmd = uvPath;
-      spawnArgs = ['sync'];
-      break;
+      case 'pylock.toml': {
+        spawnCmd = pip.cmd;
+        spawnArgs = [...pip.prefix, '-r', manifestPath];
+        break;
+      }
+      case 'pyproject.toml': {
+        spawnCmd = pip.cmd;
+        spawnArgs = [...pip.prefix, projectDir];
+        break;
+      }
+      default:
+        debug(`Unknown manifest type: ${manifestType}`);
+        return;
     }
-    case 'pylock.toml': {
-      spawnCmd = pip.cmd;
-      spawnArgs = [...pip.prefix, '-r', manifestPath];
-      break;
-    }
-    case 'pyproject.toml': {
-      spawnCmd = pip.cmd;
-      spawnArgs = [...pip.prefix, projectDir];
-      break;
-    }
-    default:
-      debug(`Unknown manifest type: ${manifestType}`);
-      return;
   }
 
   await new Promise<void>((resolve, reject) => {
@@ -554,7 +598,8 @@ function createDevShim(
   modulePath: string,
   serviceName: string | undefined,
   framework: string,
-  variableName: string
+  variableName: string,
+  qualifyModule = true
 ): DevShimResult | null {
   try {
     // When a service name is provided, place the shim in a per-service
@@ -570,7 +615,7 @@ function createDevShim(
     // __package__ is set correctly (e.g. "main" -> "backend.main").
     let qualifiedModule = modulePath;
     let extraPythonPath: string | undefined;
-    if (existsSync(join(workPath, '__init__.py'))) {
+    if (qualifyModule && existsSync(join(workPath, '__init__.py'))) {
       const pkgName = basename(workPath);
       qualifiedModule = `${pkgName}.${modulePath}`;
       extraPythonPath = dirname(workPath);
@@ -651,6 +696,35 @@ async function getMultiServicePythonRunner(
   return { command: pythonBin, args: [] };
 }
 
+async function getProxyPythonRunner(
+  workPath: string,
+  env: NodeJS.ProcessEnv,
+  systemPython: string,
+  uvPath: string | null
+): Promise<PythonRunner> {
+  const venvPath = join(workPath, '.vercel', 'python', 'proxy', '.venv');
+
+  // Each dev server process starts with a clean proxy environment. This
+  // prevents an application or a previously removed proxy group from leaking
+  // dependencies into Routing Middleware.
+  rmSync(venvPath, { recursive: true, force: true });
+  await ensureVenv({
+    pythonVersion: { pythonPath: systemPython },
+    venvPath,
+    uvPath,
+    quiet: true,
+    seed: false,
+  });
+
+  const pythonBin = getVenvPythonBin(venvPath);
+  const binDir = getVenvBinDir(venvPath);
+  env.VIRTUAL_ENV = venvPath;
+  env.UV_PROJECT_ENVIRONMENT = venvPath;
+  env.PATH = `${binDir}${delimiter}${env.PATH || ''}`;
+
+  return { command: pythonBin, args: [] };
+}
+
 export const startDevServer: StartDevServer = async opts => {
   const {
     entrypoint: rawEntrypoint,
@@ -662,16 +736,29 @@ export const startDevServer: StartDevServer = async opts => {
     onStderr,
   } = opts;
 
-  const framework = config?.framework;
+  const isRoutingMiddleware = config?.middleware === true;
+  const framework = isRoutingMiddleware ? 'python' : config?.framework;
+
+  if (isRoutingMiddleware && typeof meta.requestUrl === 'string') {
+    const matchers = new RegExp(
+      getRegExpFromMatchers(config?.middlewareMatcher)
+    );
+    const parsed = new URL(meta.requestUrl, 'http://localhost');
+    if (!matchers.test(parsed.pathname)) {
+      return null;
+    }
+  }
 
   // Check for an existing persistent server.
   // Include serviceName so that services sharing a workspace get separate servers.
   const serviceName =
     service?.name ??
     (typeof meta.serviceName === 'string' ? meta.serviceName : undefined);
-  const serverKey = serviceName
-    ? `${workPath}::${framework}::${serviceName}`
-    : `${workPath}::${framework}`;
+  const serverKey = isRoutingMiddleware
+    ? `${workPath}::proxy::${rawEntrypoint}`
+    : serviceName
+      ? `${workPath}::${framework}::${serviceName}`
+      : `${workPath}::${framework}`;
   const existing = PERSISTENT_SERVERS.get(serverKey);
   if (existing) {
     return {
@@ -803,7 +890,7 @@ export const startDevServer: StartDevServer = async opts => {
     const pythonServiceCount =
       (meta.pythonServiceCount as number | undefined) ?? 1;
 
-    if (venv && pythonServiceCount > 1) {
+    if (!isRoutingMiddleware && venv && pythonServiceCount > 1) {
       const yellow = '\x1b[33m';
       const white = '\x1b[1m';
       const reset = '\x1b[0m';
@@ -819,7 +906,19 @@ export const startDevServer: StartDevServer = async opts => {
     let spawnCommand = systemPython;
     let spawnArgsPrefix: string[] = [];
 
-    if (serviceCount > 0) {
+    if (isRoutingMiddleware) {
+      const runner = await getProxyPythonRunner(
+        workPath,
+        env,
+        systemPython,
+        uvPath
+      );
+      spawnCommand = runner.command;
+      spawnArgsPrefix = runner.args;
+      debug(
+        `Python proxy runner: ${spawnCommand} ${spawnArgsPrefix.join(' ')}`
+      );
+    } else if (serviceCount > 0) {
       const runner = await getMultiServicePythonRunner(
         workPath,
         env,
@@ -870,7 +969,7 @@ export const startDevServer: StartDevServer = async opts => {
       onStderr,
     };
 
-    if (meta.syncDependencies) {
+    if (isRoutingMiddleware || meta.syncDependencies) {
       const gray = '\x1b[90m';
       const reset = '\x1b[0m';
       const syncMessage = `${gray}Synchronizing dependencies...${reset}\n`;
@@ -880,8 +979,12 @@ export const startDevServer: StartDevServer = async opts => {
         console.log(syncMessage);
       }
 
-      await dedupePendingOperation(PENDING_DEPENDENCY_SYNCS, workPath, () =>
-        syncDependencies(devOpts)
+      const dependencyGroup = isRoutingMiddleware
+        ? PROXY_DEPENDENCY_GROUP
+        : undefined;
+      const syncKey = isRoutingMiddleware ? `${workPath}::proxy` : workPath;
+      await dedupePendingOperation(PENDING_DEPENDENCY_SYNCS, syncKey, () =>
+        syncDependencies({ ...devOpts, dependencyGroup })
       );
     }
 
@@ -896,7 +999,7 @@ export const startDevServer: StartDevServer = async opts => {
       devOpts
     );
 
-    if (hasWorkerServicesEnabled(env)) {
+    if (!isRoutingMiddleware && hasWorkerServicesEnabled(env)) {
       await installInjectedDevPackage(
         {
           name: 'vercel-workers',
@@ -910,15 +1013,17 @@ export const startDevServer: StartDevServer = async opts => {
     // Detect crons before spawning so we can set __VC_CRON_ROUTES.
     // For "<dynamic>" schedules, the entrypoint "module:object" must have
     // a get_crons() method returning (module:function, schedule) pairs.
-    const crons = await getServiceCrons({
-      service,
-      entrypoint,
-      rawEntrypoint,
-      handlerFunction,
-      pythonBin: spawnCommand,
-      env,
-      workPath,
-    });
+    const crons = isRoutingMiddleware
+      ? []
+      : await getServiceCrons({
+          service,
+          entrypoint,
+          rawEntrypoint,
+          handlerFunction,
+          pythonBin: spawnCommand,
+          env,
+          workPath,
+        });
 
     if (crons?.length) {
       env.__VC_CRON_ROUTES = JSON.stringify(buildCronRouteTable(crons));
@@ -927,18 +1032,43 @@ export const startDevServer: StartDevServer = async opts => {
     const port = typeof meta.port === 'number' ? meta.port : await getPort();
     env.PORT = `${port}`;
 
-    if (entry) {
-      env.__VC_HANDLER_ENTRYPOINT_ABS = join(workPath, entry);
+    let devEntry = entry;
+    let devModulePath = modulePath;
+    let devVariableName = variableName ?? '';
+    let proxyExtraPythonPath: string | undefined;
+    if (isRoutingMiddleware) {
+      const proxyDir = serviceName
+        ? join(workPath, '.vercel', 'python', 'services', serviceName)
+        : join(workPath, '.vercel', 'python');
+      mkdirSync(proxyDir, { recursive: true });
+      const proxyAdapterPath = join(proxyDir, PROXY_ADAPTER_FILENAME);
+      writeFileSync(proxyAdapterPath, getProxyAdapterSource(), 'utf8');
+
+      let proxyModuleName = modulePath;
+      if (existsSync(join(workPath, '__init__.py'))) {
+        proxyModuleName = `${basename(workPath)}.${modulePath}`;
+        proxyExtraPythonPath = dirname(workPath);
+      }
+      env.__VC_PROXY_MODULE_NAME = proxyModuleName;
+
+      devEntry = relative(workPath, proxyAdapterPath);
+      devModulePath = PROXY_ADAPTER_FILENAME.replace(/\.py$/, '');
+      devVariableName = 'app';
+    }
+
+    if (devEntry) {
+      env.__VC_HANDLER_ENTRYPOINT_ABS = join(workPath, devEntry);
     }
 
     // Spawn the actual server process
     const devShim = createDevShim(
       workPath,
-      entry,
-      modulePath,
+      devEntry,
+      devModulePath,
       serviceName,
       framework,
-      variableName ?? ''
+      devVariableName,
+      !isRoutingMiddleware
     );
 
     // Add shim directory to PYTHONPATH so the shim can be imported,
@@ -951,6 +1081,10 @@ export const startDevServer: StartDevServer = async opts => {
 
       if (devShim.extraPythonPath) {
         pathParts.push(devShim.extraPythonPath);
+      }
+
+      if (proxyExtraPythonPath) {
+        pathParts.push(proxyExtraPythonPath);
       }
 
       if (hookResult?.extraPythonPath) {

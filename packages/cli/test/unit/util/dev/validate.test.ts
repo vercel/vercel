@@ -6,6 +6,7 @@ describe('validateConfig', () => {
     it.each([
       'proxy.js',
       'src/proxy.ts',
+      'proxy.py',
     ])('accepts the supported entrypoint %s', entrypoint => {
       expect(validateConfig({ proxy: { entrypoint } })).toBeNull();
     });
@@ -67,7 +68,7 @@ describe('validateConfig', () => {
 
       expect(error?.code).toBe('INVALID_PROXY_ENTRYPOINT');
       expect(error?.message).toBe(
-        'The `proxy.entrypoint` path must end in `.js` or `.ts` and reference an executable file.'
+        'The `proxy.entrypoint` path must end in `.js`, `.ts`, or `.py` and reference an executable file.'
       );
     });
 
