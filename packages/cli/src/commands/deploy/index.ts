@@ -674,20 +674,31 @@ async function handleInitDeployment(
     if (asJson) {
       output.stopSpinner();
       const deploymentJson = getDeploymentOutputJson(deployment, client.apiUrl);
+      const isImplicitProduction =
+        deployment.target === 'production' && !target;
       const payload = client.nonInteractive
         ? {
             status: AGENT_STATUS.OK,
             deployment: deploymentJson,
             message: `Deployment ${deployment.url} ready.`,
+            ...(isImplicitProduction
+              ? {
+                  hint: 'This is the project\u2019s first deployment, so it was assigned to production. Future deployments will be preview deployments unless you use --prod.',
+                }
+              : {}),
             next: [
               {
                 command: withGlobalFlags(client, `inspect ${deployment.url}`),
                 when: 'Inspect deployment',
               },
-              {
-                command: withGlobalFlags(client, 'deploy --prod'),
-                when: 'Promote to production',
-              },
+              ...(isImplicitProduction
+                ? []
+                : [
+                    {
+                      command: withGlobalFlags(client, 'deploy --prod'),
+                      when: 'Promote to production',
+                    },
+                  ]),
             ],
           }
         : deploymentJson;
@@ -1850,20 +1861,30 @@ async function handleDefaultDeploy(
   if (asJson) {
     output.stopSpinner();
     const deploymentJson = getDeploymentOutputJson(deployment, client.apiUrl);
+    const isImplicitProduction = deployment.target === 'production' && !target;
     const payload = client.nonInteractive
       ? {
           status: AGENT_STATUS.OK,
           deployment: deploymentJson,
           message: `Deployment ${deployment.url} ready.`,
+          ...(isImplicitProduction
+            ? {
+                hint: 'This is the project\u2019s first deployment, so it was assigned to production. Future deployments will be preview deployments unless you use --prod.',
+              }
+            : {}),
           next: [
             {
               command: withGlobalFlags(client, `inspect ${deployment.url}`),
               when: 'Inspect deployment',
             },
-            {
-              command: withGlobalFlags(client, 'deploy --prod'),
-              when: 'Promote to production',
-            },
+            ...(isImplicitProduction
+              ? []
+              : [
+                  {
+                    command: withGlobalFlags(client, 'deploy --prod'),
+                    when: 'Promote to production',
+                  },
+                ]),
           ],
         }
       : deploymentJson;
