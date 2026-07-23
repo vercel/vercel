@@ -68,6 +68,20 @@ export const AGENT_REASON = {
   HAS_RESOURCES: 'has_resources',
   /** User must claim a sandbox marketplace resource (e.g. Stripe, Shopify) in the browser. */
   INTEGRATION_SANDBOX_CLAIM_REQUIRED: 'integration_sandbox_claim_required',
+  // Domain purchase
+  /**
+   * The domain is buyable, but a human must confirm the purchase interactively.
+   * Emitted as action_required (exit 0) with a prefilled `domains buy` command
+   * in next[]; agents prepare the purchase but must never perform it.
+   */
+  PURCHASE_REQUIRES_USER: 'purchase_requires_user',
+  DOMAIN_NOT_AVAILABLE: 'domain_not_available',
+  TLD_NOT_SUPPORTED: 'tld_not_supported',
+  /** The quoted price differs from --expected-price; confirm with the user and retry. */
+  PRICE_CHANGED: 'price_changed',
+  PAYMENT_FAILED: 'payment_failed',
+  /** The TLD requires registrant details the CLI cannot collect; purchase in the dashboard. */
+  ADDITIONAL_CONTACT_INFO_REQUIRED: 'additional_contact_info_required',
   // Tokens
   CLASSIC_TOKEN_REQUIRED: 'classic_token_required',
   /** Classic token lacks full user/account scope (e.g. team- or product-scoped token). */
