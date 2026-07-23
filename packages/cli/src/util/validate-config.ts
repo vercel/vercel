@@ -503,9 +503,13 @@ const servicesServiceNamePattern = '^[a-z]([a-z_-]*[a-z])?$';
 const servicesBindingSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['type', 'service', 'format', 'env'],
+  required: ['service', 'format', 'env'],
   properties: {
-    type: { const: 'service' },
+    type: {
+      description:
+        'Optional binding type marker. Currently the only supported type is `service`. When present this must be `service`.',
+      const: 'service',
+    },
     service: {
       type: 'string',
       minLength: 1,

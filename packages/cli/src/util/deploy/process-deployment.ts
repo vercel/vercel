@@ -219,6 +219,20 @@ export default async function processDeployment({
         const isProdDeployment = deployment.target === 'production';
         const previewUrl = `https://${deployment.url}`;
 
+        // When the user did not explicitly request a production deployment
+        // (no `--prod` / `--target=production`) but the API returned one
+        // anyway, surface a notice. This happens on a project's first
+        // deployment because the API assigns it to production when no prior
+        // production deployment exists.
+        if (isProdDeployment && !requestBody.target) {
+          indications.push({
+            type: 'notice',
+            payload:
+              'This is your project\u2019s first deployment, so it was assigned to production. Future deployments will be preview deployments unless you use --prod.',
+            link: 'https://vercel.com/docs/deployments/environments',
+          });
+        }
+
         printAlignedLabel(
           isProdDeployment ? 'Production' : 'Preview',
           chalk.cyan(previewUrl),
@@ -230,6 +244,9 @@ export default async function processDeployment({
         }
 
         if (noWait) {
+          (
+            deployment as Deployment & { indications: typeof indications }
+          ).indications = indications;
           return deployment;
         }
 
@@ -293,6 +310,7 @@ export default async function processDeployment({
       if (event.type === 'ready' && rollingRelease) {
         output.spinner('Releasing…', 0);
         stopSpinner();
+        event.payload.indications = indications;
         return event.payload;
       }
 

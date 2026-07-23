@@ -187,6 +187,19 @@ describe('validateConfig', () => {
       );
     });
 
+    it('should accept a binding with `type` omitted', () => {
+      const error = validateConfig({
+        services: {
+          web: { root: '.' },
+          api: {
+            root: 'api/',
+            bindings: [{ service: 'web', format: 'url', env: 'WEB_URL' }],
+          },
+        },
+      } as any);
+      expect(error).toBeNull();
+    });
+
     it('should reject a binding missing a required field', () => {
       const error = validateConfig({
         experimentalServicesV2: {
