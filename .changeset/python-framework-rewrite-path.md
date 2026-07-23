@@ -1,5 +1,5 @@
 ---
-'@vercel/python': patch
+'@vercel/python': minor
 'vercel': patch
 ---
 
