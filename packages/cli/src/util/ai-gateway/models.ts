@@ -20,9 +20,13 @@ export type Model = {
   type?: string;
   tags?: string[];
   pricing?: ModelPricing;
-  // Per-team routing availability, returned when this client explicitly opts in
-  // via `include_availability`. An absent value means the verdict degraded; it
-  // must not be interpreted as routable.
+  // Per-team availability, returned when this client explicitly opts in via
+  // `include_availability`. `available` is effective: the account-wide gate
+  // (card, credits, quota) composed with the team's routing policy for this
+  // model. The `account_unavailable` reason marks exactly the policy-admitted
+  // models an account blocker is holding back — they become runnable once it
+  // clears. An absent value means the verdict degraded; it must not be
+  // interpreted as routable.
   available?: boolean;
   unavailable_reason?: string;
 };
