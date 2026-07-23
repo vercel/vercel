@@ -197,7 +197,7 @@ export async function detectBuilders(
     };
   }
   const { framework } = projectSettings;
-  const proxyError = validateProxy(options.proxy, files, framework);
+  const proxyError = validateProxy(options, files, framework);
   if (proxyError) {
     return {
       builders: null,
@@ -281,12 +281,9 @@ export async function detectBuilders(
   const frameworkConfig = slugToFramework.get(framework || '');
   const ignoreRuntimes = new Set(frameworkConfig?.ignoreRuntimes);
   const withTag = options.tag ? `@${options.tag}` : '';
-  const apiMatches = getApiMatches(options.proxy)
+  const apiMatches = getApiMatches()
     .filter(
       b =>
-        // Explicit proxy entrypoints are enabled unless the framework owns
-        // routing middleware, which is validated separately.
-        b.src === options.proxy?.entrypoint ||
         // Root-level middleware is enabled, unless `disableRootMiddleware: true`
         (b.config?.middleware && !frameworkConfig?.disableRootMiddleware) ||
         // "api" dir runtimes are enabled, unless opted-out via `ignoreRuntimes`
@@ -314,13 +311,21 @@ export async function detectBuilders(
 
   // API
   for (const fileName of sortedFiles) {
+    // The proxy entrypoint is built by the explicitly configured proxy
+    // builder below, not by file-convention detection.
+    if (fileName === options.proxy?.entrypoint) {
+      continue;
+    }
+
     const apiBuilder = await maybeGetApiBuilder(fileName, apiMatches, options);
 
     if (apiBuilder) {
-      const { routeError, apiRoute, isDynamic } =
-        apiBuilder.config?.middleware === true
-          ? { routeError: null, apiRoute: null, isDynamic: false }
-          : getApiRoute(fileName, apiSortedFiles, options, absolutePathCache);
+      const { routeError, apiRoute, isDynamic } = getApiRoute(
+        fileName,
+        apiSortedFiles,
+        options,
+        absolutePathCache
+      );
 
       if (routeError) {
         return {
@@ -378,6 +383,10 @@ export async function detectBuilders(
     ) {
       fallbackEntrypoint = fileName;
     }
+  }
+
+  if (options.proxy) {
+    apiBuilders.unshift(getProxyBuilder(options.proxy, options.tag));
   }
 
   if (
@@ -562,19 +571,19 @@ async function maybeGetApiBuilder(
   apiMatches: Builder[],
   options: Options
 ): Promise<Builder | null> {
-  const proxy = options.proxy?.entrypoint === fileName;
+  // Root-level Middleware files are superseded by an explicitly
+  // configured proxy entrypoint.
   const middleware =
     !options.proxy &&
     (fileName === 'middleware.js' || fileName === 'middleware.ts');
-  const routingMiddleware = proxy || middleware;
 
-  // Routing Middleware is handled by `@vercel/next`, so don't schedule a
-  // separate Builder when the "nextjs" framework is selected.
-  if (routingMiddleware && options.projectSettings?.framework === 'nextjs') {
+  // Root-level Middleware file is handled by `@vercel/next`, so don't
+  // schedule a separate Builder when "nextjs" framework is selected
+  if (middleware && options.projectSettings?.framework === 'nextjs') {
     return null;
   }
 
-  if (!(fileName.startsWith('api/') || routingMiddleware)) {
+  if (!(fileName.startsWith('api/') || middleware)) {
     return null;
   }
 
@@ -627,7 +636,7 @@ async function maybeGetApiBuilder(
 
   const { fnPattern, func } = getFunction(fileName, options);
 
-  const use = proxy ? match?.use : func?.runtime || match?.use;
+  const use = func?.runtime || match?.use;
 
   if (!use) {
     return null;
@@ -635,15 +644,8 @@ async function maybeGetApiBuilder(
 
   const config: Config = { zeroConfig: true };
 
-  if (routingMiddleware) {
+  if (middleware) {
     config.middleware = true;
-  }
-
-  if (proxy) {
-    config.middlewareRuntime = 'nodejs';
-    if (options.proxy?.matcher) {
-      config.middlewareMatcher = options.proxy.matcher;
-    }
   }
 
   if (fnPattern && func) {
@@ -685,7 +687,7 @@ function getFunction(fileName: string, { functions = {} }: Options) {
     : { fnPattern: null, func: null };
 }
 
-function getProxyBuilder(proxy: ProxyConfig, tag?: string): Builder {
+export function getProxyBuilder(proxy: ProxyConfig, tag?: string): Builder {
   return {
     src: proxy.entrypoint,
     use: `@vercel/node${tag ? `@${tag}` : ''}`,
@@ -698,11 +700,10 @@ function getProxyBuilder(proxy: ProxyConfig, tag?: string): Builder {
   };
 }
 
-function getApiMatches(proxy?: ProxyConfig): Builder[] {
+function getApiMatches(): Builder[] {
   const config = { zeroConfig: true };
 
   return [
-    ...(proxy ? [getProxyBuilder(proxy)] : []),
     {
       src: REGEX_MIDDLEWARE_FILES,
       use: `@vercel/node`,
@@ -716,15 +717,12 @@ function getApiMatches(proxy?: ProxyConfig): Builder[] {
   ];
 }
 
-function validateProxy(
-  proxy: ProxyConfig | undefined,
-  files: string[],
-  framework: string | null | undefined
-): ErrorResponse | null {
-  if (!proxy) {
-    return null;
-  }
-
+/**
+ * Validates a `proxy` config value in isolation, without knowledge of the
+ * project's files or framework. Also used by the CLI to validate
+ * `vercel.json` before builders are detected.
+ */
+export function validateProxyConfig(proxy: ProxyConfig): ErrorResponse | null {
   if (
     typeof proxy !== 'object' ||
     typeof proxy.entrypoint !== 'string' ||
@@ -762,12 +760,9 @@ function validateProxy(
   }
 
   if (proxy.matcher !== undefined) {
-    const matchers =
-      typeof proxy.matcher === 'string'
-        ? [proxy.matcher]
-        : Array.isArray(proxy.matcher)
-          ? proxy.matcher
-          : [];
+    const matchers = Array.isArray(proxy.matcher)
+      ? proxy.matcher
+      : [proxy.matcher];
     if (
       matchers.length === 0 ||
       matchers.some(
@@ -782,10 +777,35 @@ function validateProxy(
     }
   }
 
-  if (!files.includes(entrypoint)) {
+  return null;
+}
+
+function validateProxy(
+  options: Options,
+  files: string[],
+  framework: string | null | undefined
+): ErrorResponse | null {
+  const { proxy } = options;
+  if (!proxy) {
+    return null;
+  }
+
+  const configError = validateProxyConfig(proxy);
+  if (configError) {
+    return configError;
+  }
+
+  if (!files.includes(proxy.entrypoint)) {
     return {
       code: 'proxy_entrypoint_not_found',
-      message: `The proxy entrypoint \`${entrypoint}\` does not exist. Set \`proxy.entrypoint\` to an existing \`.js\` or \`.ts\` file.`,
+      message: `The proxy entrypoint \`${proxy.entrypoint}\` does not exist. Set \`proxy.entrypoint\` to an existing \`.js\` or \`.ts\` file.`,
+    };
+  }
+
+  if (options.functions?.[proxy.entrypoint]) {
+    return {
+      code: 'proxy_function_conflict',
+      message: `The \`functions\` property cannot be used to configure the proxy entrypoint \`${proxy.entrypoint}\`. Configure the proxy through the \`proxy\` property instead.`,
     };
   }
 

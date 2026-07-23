@@ -105,28 +105,14 @@ export function getRegExpFromMatchers(matcherOrMatchers: unknown): string {
 }
 
 export function resolveMiddlewareMatcher(
-  configuredMatcher: unknown,
+  configuredMatcher: string | string[] | undefined,
   sourceMatcher: unknown,
   entrypoint: string
 ): unknown {
   if (configuredMatcher !== undefined && sourceMatcher !== undefined) {
-    const configuredMatchers = Array.isArray(configuredMatcher)
-      ? configuredMatcher
-      : [configuredMatcher];
-    const sourceMatchers = Array.isArray(sourceMatcher)
-      ? sourceMatcher
-      : [sourceMatcher];
-    const matchersAreEqual =
-      configuredMatchers.length === sourceMatchers.length &&
-      configuredMatchers.every(
-        (matcher, index) => matcher === sourceMatchers[index]
-      );
-
-    if (!matchersAreEqual) {
-      throw new Error(
-        `${entrypoint}: \`proxy.matcher\` in vercel.json conflicts with \`config.matcher\` exported from the proxy entrypoint. Configure the matcher in only one location, or use identical values in both.`
-      );
-    }
+    throw new Error(
+      `${entrypoint}: \`proxy.matcher\` in vercel.json conflicts with \`config.matcher\` exported from the proxy entrypoint. Configure the matcher in only one location.`
+    );
   }
 
   return configuredMatcher ?? sourceMatcher;

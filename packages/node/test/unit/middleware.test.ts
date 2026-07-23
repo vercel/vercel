@@ -9,20 +9,30 @@ it.each([
     expectedType: 'EdgeFunction',
   },
   {
-    name: 'use "nodejs" for an explicit proxy',
-    middlewareRuntime: 'nodejs' as const,
+    name: 'use "nodejs" as runtime',
+    runtime: 'nodejs',
     expectedType: 'Lambda',
   },
   {
-    name: 'use "nodejs" as runtime',
-    runtime: 'nodejs',
-    middlewareRuntime: 'nodejs' as const,
-    expectedType: 'Lambda',
+    name: 'use "edge" as runtime',
+    runtime: 'edge',
+    expectedType: 'EdgeFunction',
   },
   {
     name: 'use "experimental-edge" as runtime',
     runtime: 'experimental-edge',
     expectedType: 'EdgeFunction',
+  },
+  {
+    name: 'use "nodejs" for an explicit proxy',
+    middlewareRuntime: 'nodejs' as const,
+    expectedType: 'Lambda',
+  },
+  {
+    name: 'use "nodejs" as runtime for an explicit proxy',
+    runtime: 'nodejs',
+    middlewareRuntime: 'nodejs' as const,
+    expectedType: 'Lambda',
   },
 ])('$name', async ({ runtime, middlewareRuntime, expectedType }) => {
   const config = runtime

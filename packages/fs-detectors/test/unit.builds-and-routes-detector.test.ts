@@ -3043,8 +3043,8 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     );
   });
 
-  it('does not allow functions config to replace the proxy runtime', async () => {
-    const { builders, errors } = await detectBuilders(['proxy.ts'], null, {
+  it('rejects functions config targeting the proxy entrypoint', async () => {
+    const { errors } = await detectBuilders(['proxy.ts'], null, {
       proxy: { entrypoint: 'proxy.ts' },
       functions: {
         'proxy.ts': {
@@ -3053,9 +3053,13 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       },
     });
 
-    expect(errors).toBeNull();
-    expect(builders[0].use).toBe('@vercel/node');
-    expect(builders[0].config?.middlewareRuntime).toBe('nodejs');
+    expect(errors).toEqual([
+      {
+        code: 'proxy_function_conflict',
+        message:
+          'The `functions` property cannot be used to configure the proxy entrypoint `proxy.ts`. Configure the proxy through the `proxy` property instead.',
+      },
+    ]);
   });
 
   it('rejects unsupported proxy entrypoint extensions', async () => {

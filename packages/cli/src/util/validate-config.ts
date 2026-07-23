@@ -15,6 +15,7 @@ import {
   getPrettyError,
 } from '@vercel/build-utils';
 import { fileNameSymbol } from '@vercel/client';
+import { validateProxyConfig } from '@vercel/fs-detectors';
 import { getConfigValidator } from './config-validator';
 
 const imagesSchema = {
@@ -639,39 +640,11 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
   }
 
   if (config.proxy) {
-    const entrypoint = config.proxy.entrypoint;
-    const segments = entrypoint.split('/');
-    if (
-      entrypoint.startsWith('/') ||
-      entrypoint.includes('\\') ||
-      segments.includes('.') ||
-      segments.includes('..') ||
-      /[?#\u0000-\u001f]/.test(entrypoint)
-    ) {
+    const proxyError = validateProxyConfig(config.proxy);
+    if (proxyError) {
       return new NowBuildError({
-        code: 'INVALID_PROXY_ENTRYPOINT',
-        message:
-          'The `proxy.entrypoint` path must be relative to the project root and cannot contain traversal, query, fragment, or control characters.',
-      });
-    }
-
-    if (!/\.(?:js|ts)$/.test(entrypoint) || entrypoint.endsWith('.d.ts')) {
-      return new NowBuildError({
-        code: 'INVALID_PROXY_ENTRYPOINT',
-        message:
-          'The `proxy.entrypoint` path must end in `.js` or `.ts` and reference an executable file.',
-      });
-    }
-
-    const matchers =
-      typeof config.proxy.matcher === 'string'
-        ? [config.proxy.matcher]
-        : config.proxy.matcher;
-    if (matchers?.some(matcher => !matcher.startsWith('/'))) {
-      return new NowBuildError({
-        code: 'INVALID_PROXY_MATCHER',
-        message:
-          'The `proxy.matcher` value must be a path matcher starting with `/`, or an array of path matchers starting with `/`.',
+        code: proxyError.code.toUpperCase(),
+        message: proxyError.message,
       });
     }
   }

@@ -105,31 +105,7 @@ describe('middleware matchers', () => {
     ]);
   });
 
-  it('allows identical matchers in source and builder config', async () => {
-    const filesystem = await prepareFilesystem({
-      'proxy.js': `
-        export const config = { matcher: '/api/:func*' };
-        export default () => new Response('proxy');
-      `,
-    });
-    const buildResult = await build({
-      ...filesystem,
-      entrypoint: 'proxy.js',
-      config: {
-        middleware: true,
-        middlewareRuntime: 'nodejs',
-        middlewareMatcher: ['/api/:func*'],
-      },
-      meta: { skipDownload: true },
-    });
-
-    expect(buildResult.routes?.[0]).toMatchObject({
-      middlewareRawSrc: ['/api/:func*'],
-      middlewarePath: 'proxy.js',
-    });
-  });
-
-  it('rejects conflicting matchers in source and builder config', async () => {
+  it('rejects a matcher configured in both source and builder config', async () => {
     const filesystem = await prepareFilesystem({
       'proxy.js': `
         export const config = { matcher: '/from-source' };
@@ -149,7 +125,7 @@ describe('middleware matchers', () => {
         meta: { skipDownload: true },
       })
     ).rejects.toThrow(
-      'proxy.js: `proxy.matcher` in vercel.json conflicts with `config.matcher` exported from the proxy entrypoint. Configure the matcher in only one location, or use identical values in both.'
+      'proxy.js: `proxy.matcher` in vercel.json conflicts with `config.matcher` exported from the proxy entrypoint. Configure the matcher in only one location.'
     );
   });
 });

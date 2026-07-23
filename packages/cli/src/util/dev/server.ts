@@ -53,6 +53,7 @@ import {
   detectBuilders,
   detectApiDirectory,
   detectApiExtensions,
+  getProxyBuilder,
   isOfficialRuntime,
   isExperimentalService,
   isExperimentalServiceV2,
@@ -766,15 +767,15 @@ export default class DevServer {
 
     // no builds -> zero config
     //
-    // The services orchestrator owns service builds. When a global proxy is
-    // configured, run detection with the service config and retain only the
-    // top-level proxy builder below.
+    // Skip zero-config builder detection when the dev server already has
+    // resolved services (`experimentalServices`/`experimentalServicesV2`): the
+    // services orchestrator owns building and running them. Without this,
+    // `detectBuilders` runs with the remote `framework: "services"` setting but
+    // no service config threaded in, and errors with "no services declared".
     const hasResolvedServices = !!this.services && this.services.length > 0;
-    const shouldDetectServicesProxy =
-      hasResolvedServices && vercelConfig.proxy !== undefined;
     if (
       !vercelConfig.experimentalServices &&
-      (!hasResolvedServices || shouldDetectServicesProxy) &&
+      !hasResolvedServices &&
       (!vercelConfig.builds || vercelConfig.builds.length === 0)
     ) {
       const featHandleMiss = true; // enable for zero config
@@ -792,10 +793,6 @@ export default class DevServer {
         cleanUrls,
         trailingSlash,
         proxy: vercelConfig.proxy,
-        services: shouldDetectServicesProxy ? vercelConfig.services : undefined,
-        experimentalServicesV2: shouldDetectServicesProxy
-          ? vercelConfig.experimentalServicesV2
-          : undefined,
         workPath: this.cwd,
       });
       const {
@@ -825,15 +822,8 @@ export default class DevServer {
       }
 
       if (builders) {
-        const buildersForDev = shouldDetectServicesProxy
-          ? builders.filter(
-              builder =>
-                builder.src === vercelConfig.proxy?.entrypoint &&
-                builder.config?.middleware === true
-            )
-          : builders;
         vercelConfig.builds = vercelConfig.builds || [];
-        vercelConfig.builds.push(...buildersForDev);
+        vercelConfig.builds.push(...builders);
 
         delete vercelConfig.functions;
       }
@@ -852,32 +842,42 @@ export default class DevServer {
           ? convertRewrites(serviceRewrites)
           : null;
 
-      if (!shouldDetectServicesProxy) {
-        let routes: Route[] = [];
-        routes.push(...(redirectRoutes || []));
-        routes = appendRoutesToPhase({
-          routes,
-          newRoutes: hostRewriteRoutes ?? null,
-          phase: null,
-        });
-        routes.push(
-          ...appendRoutesToPhase({
-            routes: vercelConfig.routes,
-            newRoutes: [
-              ...(rewriteRoutes || []),
-              ...(serviceRewriteRoutes || []),
-            ],
-            phase: 'filesystem',
-          })
+      let routes: Route[] = [];
+      routes.push(...(redirectRoutes || []));
+      routes = appendRoutesToPhase({
+        routes,
+        newRoutes: hostRewriteRoutes ?? null,
+        phase: null,
+      });
+      routes.push(
+        ...appendRoutesToPhase({
+          routes: vercelConfig.routes,
+          newRoutes: [
+            ...(rewriteRoutes || []),
+            ...(serviceRewriteRoutes || []),
+          ],
+          phase: 'filesystem',
+        })
+      );
+      routes = appendRoutesToPhase({
+        routes,
+        newRoutes: errorRoutes,
+        phase: 'error',
+      });
+      routes.push(...(defaultRoutes || []));
+      vercelConfig.routes = routes;
+    } else if (hasResolvedServices && vercelConfig.proxy) {
+      // Service builds are owned by the orchestrator; only the top-level
+      // proxy participates in the dev server's build pipeline.
+      const { entrypoint } = vercelConfig.proxy;
+      if (!(await fs.pathExists(join(this.cwd, entrypoint)))) {
+        output.error(
+          `The proxy entrypoint \`${entrypoint}\` does not exist. Set \`proxy.entrypoint\` to an existing \`.js\` or \`.ts\` file.`
         );
-        routes = appendRoutesToPhase({
-          routes,
-          newRoutes: errorRoutes,
-          phase: 'error',
-        });
-        routes.push(...(defaultRoutes || []));
-        vercelConfig.routes = routes;
+        await this.exit();
       }
+      vercelConfig.builds = vercelConfig.builds || [];
+      vercelConfig.builds.push(getProxyBuilder(vercelConfig.proxy, 'latest'));
     }
 
     if (this.sidecars === undefined) {
