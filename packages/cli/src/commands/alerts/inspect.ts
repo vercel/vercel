@@ -26,23 +26,7 @@ import {
   renderAlertTable,
 } from './format';
 import { truncateEnd, truncateMiddle } from '../../util/output/truncate';
-import type { Alert, AlertGroup } from './types';
-
-const detailKeysToSkip = new Set([
-  'average',
-  'count',
-  'customAlertDefinitionId',
-  'fields',
-  'formula',
-  'minThreshold',
-  'sonarQuery',
-  'stddev',
-  'title',
-  'triggerOperator',
-  'triggerThreshold',
-  'triggerType',
-  'zscore',
-]);
+import type { Alert, AlertFieldValue, AlertGroup } from './types';
 
 function getGroupStatus(group: AlertGroup): string {
   if (group.status) {
@@ -73,47 +57,37 @@ function humanizeLabel(value: string): string {
     .join(' ');
 }
 
-function formatScalar(value: unknown): string | undefined {
+function formatAlertFieldValue(
+  value: AlertFieldValue | undefined,
+  maxLength = 64
+): string | undefined {
   if (value === null || value === undefined) {
     return undefined;
   }
-  if (typeof value === 'string') {
-    return value;
-  }
-  if (typeof value === 'number' || typeof value === 'boolean') {
-    return String(value);
-  }
-  if (Array.isArray(value)) {
-    const values = value.map(formatScalar).filter(Boolean);
-    return values.length > 0 ? values.join(', ') : undefined;
-  }
-  if (typeof value === 'object') {
-    return JSON.stringify(value);
+  const displayValue =
+    typeof value === 'number' ? formatNumber(value) : String(value);
+  if (!displayValue) {
+    return undefined;
   }
 
-  return undefined;
-}
-
-function formatDisplayValue(value: unknown, maxLength = 80): string {
-  const scalar = formatScalar(value);
-  if (!scalar) {
-    return '-';
-  }
-
-  return truncateMiddle(scalar, maxLength);
-}
-
-function getDataNumber(
-  data: Record<string, unknown> | undefined,
-  key: string
-): number | undefined {
-  const value = data?.[key];
-  return typeof value === 'number' && Number.isFinite(value)
-    ? value
-    : undefined;
+  return truncateMiddle(displayValue, maxLength);
 }
 
 function formatNumber(value: number): string {
+  const absValue = Math.abs(value);
+  const sign = value < 0 ? '-' : '';
+  for (const [threshold, suffix] of [
+    [1_000_000_000, 'B'],
+    [1_000_000, 'M'],
+    [1_000, 'k'],
+  ] as const) {
+    if (absValue >= threshold) {
+      return `${sign}${(absValue / threshold)
+        .toFixed(1)
+        .replace(/\.0$/, '')}${suffix}`;
+    }
+  }
+
   return Number.isInteger(value)
     ? String(value)
     : value.toFixed(2).replace(/\.?0+$/, '');
@@ -137,7 +111,9 @@ function formatThreshold(alert: Alert): string | undefined {
   const data = alert.data;
   const formatted =
     alert.formattedValues?.formattedThreshold ??
-    formatScalar(getDataNumber(data, 'triggerThreshold'));
+    (data?.triggerThreshold === undefined
+      ? undefined
+      : formatNumber(data.triggerThreshold));
   if (!formatted) {
     return undefined;
   }
@@ -154,7 +130,7 @@ function formatThreshold(alert: Alert): string | undefined {
 function getRuleIds(alert: Alert): string[] {
   const ids = new Set<string>();
   const dataRuleId = alert.data?.ruleId;
-  if (typeof dataRuleId === 'string' && dataRuleId) {
+  if (dataRuleId) {
     ids.add(dataRuleId);
   }
   for (const ruleId of alert.rules ?? []) {
@@ -174,9 +150,9 @@ function getSignalRows(alert: Alert): string[][] {
   const change = [formattedValues.changeDirection, formattedValues.changeAmount]
     .filter(Boolean)
     .join(' ');
-  const zscore = getDataNumber(alert.data, 'zscore');
+  const zscore = alert.data?.zscore;
   const threshold = formatThreshold(alert);
-  const minThreshold = getDataNumber(alert.data, 'minThreshold');
+  const minThreshold = alert.data?.minThreshold;
 
   if (alert.eventLabel) {
     rows.push(['Event', alert.eventLabel]);
@@ -214,13 +190,14 @@ function getSignalRows(alert: Alert): string[][] {
 
 function getDimensionRows(alert: Alert): string[][] {
   const fields = alert.data?.fields;
-  if (!fields || typeof fields !== 'object' || Array.isArray(fields)) {
+  if (!fields) {
     return [];
   }
 
-  return Object.entries(fields)
-    .map(([key, value]) => [humanizeLabel(key), formatDisplayValue(value, 64)])
-    .filter(([, value]) => value !== '-');
+  return Object.entries(fields).flatMap(([key, value]) => {
+    const displayValue = formatAlertFieldValue(value);
+    return displayValue ? [[humanizeLabel(key), displayValue]] : [];
+  });
 }
 
 function getDetailRows(alert: Alert): string[][] {
@@ -229,18 +206,24 @@ function getDetailRows(alert: Alert): string[][] {
     return [];
   }
 
-  const ruleIds = new Set(getRuleIds(alert));
-  return Object.entries(data)
-    .filter(([key, value]) => {
-      if (detailKeysToSkip.has(key)) {
-        return false;
-      }
-      if (key === 'ruleId' && typeof value === 'string' && ruleIds.has(value)) {
-        return false;
-      }
-      return formatScalar(value) !== undefined;
-    })
-    .map(([key, value]) => [humanizeLabel(key), formatDisplayValue(value, 64)]);
+  const rows: string[][] = [];
+  const addRow = (label: string, value: AlertFieldValue | undefined) => {
+    const displayValue = formatAlertFieldValue(value);
+    if (displayValue) {
+      rows.push([label, displayValue]);
+    }
+  };
+
+  addRow('Metric', data.metric);
+  addRow('Route', data.route);
+  addRow('Status Group', data.statusGroup);
+  addRow('Cause', data.cause);
+  addRow('Request Hostname', data.requestHostname);
+  addRow('Action', data.action);
+  addRow('Deployment ID', data.deploymentId);
+  addRow('Path', data.path);
+
+  return rows;
 }
 
 function renderAlert(alert: Alert, index: number, totalAlerts: number): string {

@@ -1,3 +1,5 @@
+import type { GranularityLike } from '../../util/output/format-granularity';
+
 export interface AlertAi {
   activityId?: string;
   version?: number;
@@ -17,6 +19,42 @@ export interface AlertFormattedValues {
   avgErrorRate?: string;
 }
 
+export type AlertTriggerOperator = 'gt' | 'gte' | 'lt' | 'lte';
+export type AlertTriggerType = 'threshold' | 'anomaly';
+
+export interface CustomAlertFormula {
+  operator?: string;
+  left?: string;
+  right?: string;
+}
+
+export interface CustomAlertQuery {
+  event?: string;
+  rollups?: Record<string, { aggregation?: string; measure?: string }>;
+  groupBy?: string[];
+  granularity?: GranularityLike;
+}
+
+export type AlertFieldValue = string | number | boolean | null;
+
+export interface AlertData {
+  zscore?: number;
+  fields?: Record<string, AlertFieldValue>;
+  ruleId?: string;
+  triggerOperator?: AlertTriggerOperator;
+  triggerThreshold?: number;
+  triggerType?: AlertTriggerType;
+  minThreshold?: number;
+  metric?: string;
+  route?: string;
+  statusGroup?: string;
+  cause?: string;
+  requestHostname?: string;
+  action?: string;
+  deploymentId?: string;
+  path?: string;
+}
+
 export interface Alert {
   id?: string;
   groupId?: string;
@@ -33,7 +71,7 @@ export interface Alert {
   recordedResolvedAt?: number;
   rules?: string[];
   ai?: AlertAi;
-  data?: Record<string, unknown>;
+  data?: AlertData;
   eventLabel?: string;
   measureLabel?: string;
   unit?: string;
@@ -69,30 +107,17 @@ export interface NotificationConfig {
   webhooks?: string[];
 }
 
-export interface CustomAlertFormula {
-  operator?: string;
-  left?: string;
-  right?: string;
-}
-
 export interface CustomAlertMetricSource {
   formula?: CustomAlertFormula;
   queryJsonString?: string;
-}
-
-export interface CustomAlertQuery {
-  event?: string;
-  rollups?: Record<string, { aggregation?: string; measure?: string }>;
-  groupBy?: string[];
-  granularity?: unknown;
 }
 
 export interface CustomAlertDefinition extends CustomAlertMetricSource {
   id?: string;
   ruleId?: string;
   title?: string;
-  triggerType?: string;
-  triggerOperator?: string;
+  triggerType?: AlertTriggerType;
+  triggerOperator?: AlertTriggerOperator;
   triggerThreshold?: number;
   minThreshold?: number;
   createdAt?: number;

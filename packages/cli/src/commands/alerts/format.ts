@@ -5,6 +5,8 @@ import type {
   Alert,
   AlertGroup,
   AlertRule,
+  AlertTriggerOperator,
+  AlertTriggerType,
   CustomAlertFormula,
   CustomAlertMetricSource,
   CustomAlertQuery,
@@ -56,7 +58,9 @@ export function getGroupStartedAt(group: AlertGroup): number | undefined {
   );
 }
 
-export function formatTriggerOperator(value: unknown): string | undefined {
+export function formatTriggerOperator(
+  value: AlertTriggerOperator | undefined
+): string | undefined {
   switch (value) {
     case 'gt':
       return '>';
@@ -120,8 +124,8 @@ export function isCustomAlertRule(rule: {
 }
 
 export function formatCustomAlertTrigger(customAlert: {
-  triggerType?: string;
-  triggerOperator?: unknown;
+  triggerType?: AlertTriggerType;
+  triggerOperator?: AlertTriggerOperator;
   triggerThreshold?: number;
 }): string | undefined {
   const operator = formatTriggerOperator(customAlert.triggerOperator);
