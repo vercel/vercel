@@ -47,7 +47,6 @@ import {
   PythonDependencyExternalizer,
   BYTECODE_FILL_CEILING_BYTES,
   LARGE_FUNCTION_FILL_CEILING_BYTES,
-  LAMBDA_EPHEMERAL_STORAGE_BYTES,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   lambdaKnapsack,
   calculateBundleSize,
@@ -1206,9 +1205,6 @@ export const build: BuildVX = async ({
     rootPath: rootDir,
     workPath,
   });
-  if (!compileAllEnabled) {
-    await pythonBuildCache.invalidateVenv(venvPath);
-  }
 
   const predefinedExcludes = [
     '.git/**',
@@ -1310,33 +1306,16 @@ export const build: BuildVX = async ({
       // successful builds the attribute is overwritten at the end of this
       // span with the final bundle size (including compiled bytecode and
       // runtime-install tooling).
-      let analyzedBundleSize: number | undefined;
-      const depAnalysis = await (async () => {
-        try {
-          return await depExternalizer.analyze(files, {
-            onSized: ({ totalSizeBytes, runtimeInstallEnabled }) => {
-              analyzedBundleSize = totalSizeBytes;
-              bundleSpan.setAttributes({
-                'python.bundle.totalSizeBytes': String(totalSizeBytes),
-                'python.bundle.runtimeInstallEnabled': String(
-                  runtimeInstallEnabled
-                ),
-              });
-            },
+      const depAnalysis = await depExternalizer.analyze(files, {
+        onSized: ({ totalSizeBytes, runtimeInstallEnabled }) => {
+          bundleSpan.setAttributes({
+            'python.bundle.totalSizeBytes': String(totalSizeBytes),
+            'python.bundle.runtimeInstallEnabled': String(
+              runtimeInstallEnabled
+            ),
           });
-        } catch (error) {
-          if (
-            analyzedBundleSize != null &&
-            analyzedBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES
-          ) {
-            await pythonBuildCache.invalidateVenv(venvPath);
-          }
-          throw error;
-        }
-      })();
-      if (depAnalysis.totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES) {
-        await pythonBuildCache.invalidateVenv(venvPath);
-      }
+        },
+      });
 
       const compileAllOptions = compileAllEnabled
         ? {
@@ -1367,19 +1346,17 @@ export const build: BuildVX = async ({
           .trace(async compileSpan => {
             console.log('Compiling Python bytecode...');
             const appSucceeded = appPycachePrefix
-              ? appPythonSourceFiles.length === 0 ||
-                (await runCompileAll({
+              ? await runCompileAll({
                   ...compileAllOptions,
                   sourceFiles: appPythonSourceFiles,
                   pycachePrefix: appPycachePrefix,
-                }))
+                })
               : true;
             const vendorSucceeded = appPycachePrefix
-              ? sources.length === 0 ||
-                (await runCompileAll({
+              ? await runCompileAll({
                   ...compileAllOptions,
                   sourceFiles: sources,
-                }))
+                })
               : await runCompileAll({
                   ...compileAllOptions,
                   sourceFiles: [...appPythonSourceFiles, ...sources],
@@ -1440,7 +1417,6 @@ export const build: BuildVX = async ({
             cacheHit: cachePlan.cacheHit,
           });
           if (!compileSucceeded) {
-            await pythonBuildCache.invalidateVenv(venvPath);
             console.log(
               'Bytecode precompilation failed; continuing without precompiled bytecode.'
             );
@@ -1473,7 +1449,6 @@ export const build: BuildVX = async ({
             vendorPackageTiers: vendorPackageTiers ?? [undefined],
           });
         } catch (err) {
-          await pythonBuildCache.invalidateVenv(venvPath);
           console.log(
             'Bytecode precompilation failed; continuing without precompiled bytecode.'
           );
@@ -1490,17 +1465,13 @@ export const build: BuildVX = async ({
       ) => {
         const pyMajor = pythonVersion.major;
         const pyMinor = pythonVersion.minor;
-        if (pyMajor == null || pyMinor == null) {
-          await pythonBuildCache.invalidateVenv(venvPath);
-          return;
-        }
+        if (pyMajor == null || pyMinor == null) return;
         try {
           // Skip the compile entirely when the zip has no slack for bytecode
           // (e.g. very large always-bundled private packages).
           const currentSize = await calculateBundleSize(files);
           let remainingCapacity = BYTECODE_FILL_CEILING_BYTES - currentSize;
           if (remainingCapacity <= 0) {
-            await pythonBuildCache.invalidateVenv(venvPath);
             debug(
               `skipping bytecode precompilation: no zip capacity remaining ` +
                 `(bundle is ${(currentSize / (1024 * 1024)).toFixed(2)} MB)`
@@ -1528,7 +1499,6 @@ export const build: BuildVX = async ({
             cacheHit: cachePlan.cacheHit,
           });
           if (!compileSucceeded) {
-            await pythonBuildCache.invalidateVenv(venvPath);
             console.log(
               'Bytecode precompilation failed; continuing without precompiled bytecode.'
             );
@@ -1554,17 +1524,14 @@ export const build: BuildVX = async ({
           );
 
           // Tier 2: bundled vendor packages, imported from /var/task/_vendor.
-          const bundledPackages = [
-            ...(bundleResult.alwaysBundledPackages ?? []),
-            ...(bundleResult.bundledPublicPackages ?? []),
-          ];
+          const alwaysBundled = bundleResult.alwaysBundledPackages ?? [];
           remainingCapacity = await addCollectedVendorBytecode({
             files,
             capacity: remainingCapacity,
             collect: include =>
               installedDistributions.collectAdjacentBytecodeAsPrefixFiles({
                 runtimeRoot: `/var/task/${vendorDir}`,
-                includePackages: include ?? bundledPackages,
+                includePackages: include ?? alwaysBundled,
               }),
           });
 
@@ -1585,7 +1552,6 @@ export const build: BuildVX = async ({
             lambdaEnv.PYTHONPYCACHEPREFIX = RUNTIME_PYCACHE_PREFIX;
           }
         } catch (err) {
-          await pythonBuildCache.invalidateVenv(venvPath);
           console.log(
             'Bytecode precompilation failed; continuing without precompiled bytecode.'
           );
@@ -1625,8 +1591,6 @@ export const build: BuildVX = async ({
               undefined,
               'hive'
             );
-          } else {
-            await pythonBuildCache.invalidateVenv(venvPath);
           }
         } else if (bundleResult.packingMode === 'bytecode-first') {
           await runPrefixCompileAndFill(bundleResult);
@@ -1648,7 +1612,6 @@ export const build: BuildVX = async ({
               'knapsack'
             );
           } else {
-            await pythonBuildCache.invalidateVenv(venvPath);
             debug(
               `skipping bytecode precompilation: no zip capacity remaining ` +
                 `(bundle is ${(currentSize / (1024 * 1024)).toFixed(2)} MB)`
@@ -1670,8 +1633,6 @@ export const build: BuildVX = async ({
               undefined,
               'hive'
             );
-          } else {
-            await pythonBuildCache.invalidateVenv(venvPath);
           }
         } else {
           packingMode = 'standard';
@@ -1688,7 +1649,6 @@ export const build: BuildVX = async ({
                 'standard'
               );
             } else {
-              await pythonBuildCache.invalidateVenv(venvPath);
               debug(
                 `skipping bytecode precompilation: no zip capacity remaining ` +
                   `(bundle is ${(depAnalysis.totalBundleSize / (1024 * 1024)).toFixed(2)} MB)`

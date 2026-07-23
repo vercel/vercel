@@ -1166,7 +1166,7 @@ describe('file exclusions', () => {
     }
   });
 
-  it('reuses dependency bytecode and invalidates it after failures and flag changes', async () => {
+  it('reuses dependency bytecode without deleting it on unrelated build outcomes', async () => {
     const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
     const mockedExeca = vi.mocked(execa);
     const sourceLists: string[][] = [];
@@ -1251,16 +1251,16 @@ describe('file exclusions', () => {
 
       failCompile = true;
       await build(buildOptions);
-      expect(fs.existsSync(markerPath)).toBe(false);
+      expect(fs.existsSync(markerPath)).toBe(true);
 
       process.env.VERCEL_PYTHON_COMPILEALL = '0';
       await build(buildOptions);
-      expect(fs.existsSync(markerPath)).toBe(false);
+      expect(fs.existsSync(markerPath)).toBe(true);
 
       process.env.VERCEL_PYTHON_COMPILEALL = '1';
       failCompile = false;
       await build(buildOptions);
-      expect(sourceLists.at(-1)).toContain(packageSource);
+      expect(sourceLists.at(-1)).not.toContain(packageSource);
       expect(fs.existsSync(markerPath)).toBe(true);
 
       await build({
@@ -1268,7 +1268,7 @@ describe('file exclusions', () => {
         config: { preDeployCommand: 'echo safe' },
         registerPreDeploy: vi.fn(),
       });
-      expect(fs.existsSync(markerPath)).toBe(false);
+      expect(fs.existsSync(markerPath)).toBe(true);
     } finally {
       vi.mocked(getVenvSitePackagesDirs).mockResolvedValue([]);
       mockedExeca.mockReset();

@@ -3,7 +3,7 @@ import fs from 'fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'path';
 import { debug, FileFsRef, glob, type Files } from '@vercel/build-utils';
 import { normalizePackageName } from '@vercel/python-analysis';
-import { derivePycPath } from './compileall';
+import { COMPILE_ALL_SCRIPT_PATH, derivePycPath } from './compileall';
 import { LAMBDA_EPHEMERAL_STORAGE_BYTES } from './dependency-externalizer';
 import type {
   DistributionCacheEntry,
@@ -74,6 +74,11 @@ interface GetCompilePlanOptions {
   includePackages?: string[];
   volatilePackages?: string[];
 }
+
+type MarkerReadResult =
+  | { status: 'valid'; marker: BytecodeCacheMarker }
+  | { status: 'invalid' }
+  | { status: 'unavailable' };
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -227,41 +232,59 @@ function sortCacheEntries(
 
 async function hashStableSources(
   entries: DistributionCacheEntry[]
-): Promise<Map<string, string> | null> {
+): Promise<Map<string, string | null>> {
   const sourceFiles = uniqueSorted(
     entries.flatMap(entry => entry.sourceFiles.map(file => file.absolutePath))
   );
-  const hashes = new Map<string, string>();
+  const hashes = new Map<string, string | null>();
   const concurrency = 64;
 
+  for (let index = 0; index < sourceFiles.length; index += concurrency) {
+    const batch = sourceFiles.slice(index, index + concurrency);
+    const results = await Promise.all(
+      batch.map(async sourcePath => {
+        try {
+          const source = await fs.promises.readFile(sourcePath);
+          return {
+            sourcePath,
+            hash: createHash('sha256')
+              .update(source as Uint8Array)
+              .digest('hex'),
+          };
+        } catch {
+          return { sourcePath, hash: null };
+        }
+      })
+    );
+    for (const result of results) hashes.set(result.sourcePath, result.hash);
+  }
+  return hashes;
+}
+
+async function hashCompilerScript(): Promise<string | null> {
   try {
-    for (let index = 0; index < sourceFiles.length; index += concurrency) {
-      const batch = sourceFiles.slice(index, index + concurrency);
-      const results = await Promise.all(
-        batch.map(async sourcePath => ({
-          sourcePath,
-          hash: createHash('sha256')
-            .update((await fs.promises.readFile(sourcePath)).toString('base64'))
-            .digest('hex'),
-        }))
-      );
-      for (const result of results) hashes.set(result.sourcePath, result.hash);
-    }
-    return hashes;
+    const source = await fs.promises.readFile(COMPILE_ALL_SCRIPT_PATH);
+    return createHash('sha256')
+      .update(source as Uint8Array)
+      .digest('hex');
   } catch {
     return null;
   }
 }
 
-async function readMarker(
-  markerPath: string
-): Promise<BytecodeCacheMarker | null> {
+async function readMarker(markerPath: string): Promise<MarkerReadResult> {
+  let contents: string;
   try {
-    return parseMarker(
-      JSON.parse(await fs.promises.readFile(markerPath, 'utf8'))
-    );
+    contents = await fs.promises.readFile(markerPath, 'utf8');
   } catch {
-    return null;
+    return { status: 'unavailable' };
+  }
+
+  try {
+    const marker = parseMarker(JSON.parse(contents));
+    return marker ? { status: 'valid', marker } : { status: 'invalid' };
+  } catch {
+    return { status: 'invalid' };
   }
 }
 
@@ -311,6 +334,7 @@ export class PythonBuildCache {
     const allVendorSourceFiles = uniqueSorted(
       entries.flatMap(entry => entry.sourceFiles.map(file => file.absolutePath))
     );
+    // Hive is excluded as a conservative rollout choice, not for correctness.
     const eligible =
       pythonMajor != null &&
       pythonMinor != null &&
@@ -318,13 +342,11 @@ export class PythonBuildCache {
       totalBundleSize <= LAMBDA_EPHEMERAL_STORAGE_BYTES;
 
     if (!eligible || pythonMajor == null || pythonMinor == null) {
-      await this.invalidateVenv(venvPath);
       return this.uncacheablePlan(venvPath, allVendorSourceFiles);
     }
 
     const normalizedEntries = sortCacheEntries(venvPath, entries);
     if (!normalizedEntries) {
-      await this.invalidateVenv(venvPath);
       return this.uncacheablePlan(venvPath, allVendorSourceFiles);
     }
 
@@ -340,8 +362,8 @@ export class PythonBuildCache {
       entry => !stableEntries.includes(entry)
     );
     const stableSourceHashes = await hashStableSources(stableEntries);
-    if (!stableSourceHashes) {
-      await this.invalidateVenv(venvPath);
+    const compilerScriptHash = await hashCompilerScript();
+    if (!compilerScriptHash) {
       return this.uncacheablePlan(venvPath, allVendorSourceFiles);
     }
 
@@ -372,7 +394,6 @@ export class PythonBuildCache {
         );
         const venvRelativePath = getVenvRelativePath(venvPath, fsPath);
         if (!venvRelativePath) {
-          await this.invalidateVenv(venvPath);
           return this.uncacheablePlan(venvPath, allVendorSourceFiles);
         }
         expectedByPath.set(venvRelativePath, {
@@ -398,6 +419,7 @@ export class PythonBuildCache {
             },
             mode,
             packageScope,
+            compilerScriptHash,
             distributions: stableEntries.map(entry => ({
               sitePackagesPath: entry.sitePackagesPath,
               packageName: entry.packageName,
@@ -424,10 +446,16 @@ export class PythonBuildCache {
     const expectedBytecodeFiles = [...expectedByPath.values()].sort((a, b) =>
       a.path.localeCompare(b.path)
     );
-    const restoredMarker = await readMarker(this.getMarkerPath(venvPath));
+    const markerResult = await readMarker(this.getMarkerPath(venvPath));
+    if (markerResult.status === 'invalid') {
+      await this.removeMarker(venvPath);
+    }
+    const restoredMarker =
+      markerResult.status === 'valid' ? markerResult.marker : null;
     const restoredManifest = restoredMarker
       ? await getManifestIfComplete(restoredMarker, venvPath)
       : null;
+    const expectedPaths = new Set(expectedBytecodeFiles.map(file => file.path));
     const cacheHit =
       restoredMarker?.fingerprint === markerWithoutFiles.fingerprint &&
       restoredMarker.mode === markerWithoutFiles.mode &&
@@ -440,13 +468,12 @@ export class PythonBuildCache {
         (packageName, index) => packageName === packageScope[index]
       ) &&
       restoredManifest !== null &&
-      restoredManifest.length === expectedBytecodeFiles.length &&
-      restoredManifest.every(
-        (file, index) => file.path === expectedBytecodeFiles[index].path
-      );
+      restoredManifest.length > 0 &&
+      restoredManifest.every(file => expectedPaths.has(file.path));
 
     const usableCacheHit = cacheHit && expectedBytecodeFiles.length > 0;
-    if (!usableCacheHit) await this.invalidateVenv(venvPath);
+    // Valid markers are self-validating. A venv stores one marker, so eligible
+    // functions with different fingerprints still have last-writer-wins reuse.
     debug(
       `Python bytecode build cache ${usableCacheHit ? 'hit' : 'miss'} for ${venvPath}`
     );
@@ -478,10 +505,8 @@ export class PythonBuildCache {
         }
       })
     );
-    if (manifest.some(file => file === null)) {
-      await this.invalidateVenv(plan.venvPath);
-      return false;
-    }
+    const completedManifest = manifest.filter(file => file !== null);
+    if (completedManifest.length === 0) return false;
 
     const markerPath = this.getMarkerPath(plan.venvPath);
     const tempPath = `${markerPath}.${process.pid}.${randomUUID()}.tmp`;
@@ -490,25 +515,26 @@ export class PythonBuildCache {
         tempPath,
         `${JSON.stringify({
           ...plan.marker,
-          files: manifest.filter(file => file !== null),
+          files: completedManifest,
         })}\n`
       );
       await fs.promises.rename(tempPath, markerPath);
       return true;
     } catch (error) {
       debug(`failed to commit Python bytecode cache marker: ${String(error)}`);
-      await this.invalidateVenv(plan.venvPath);
       return false;
     } finally {
       await fs.promises.rm(tempPath, { force: true }).catch(() => undefined);
     }
   }
 
-  async invalidateVenv(venvPath: string): Promise<void> {
+  private async removeMarker(venvPath: string): Promise<void> {
     await fs.promises
       .rm(this.getMarkerPath(venvPath), { force: true })
       .catch(error =>
-        debug(`failed to invalidate Python bytecode cache: ${String(error)}`)
+        debug(
+          `failed to remove invalid Python bytecode marker: ${String(error)}`
+        )
       );
   }
 
@@ -538,8 +564,9 @@ export class PythonBuildCache {
     );
 
     for (const [cachePath, markerFile] of Object.entries(markerFiles)) {
-      const marker = await readMarker(markerFile.fsPath);
-      if (!marker) continue;
+      const markerResult = await readMarker(markerFile.fsPath);
+      if (markerResult.status !== 'valid') continue;
+      const marker = markerResult.marker;
       const venvPath = dirname(markerFile.fsPath);
       const manifest = await getManifestIfComplete(marker, venvPath);
       if (!manifest) continue;

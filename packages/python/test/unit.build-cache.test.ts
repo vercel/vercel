@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
@@ -10,6 +10,7 @@ import {
 } from '../src/build-cache';
 import { LAMBDA_EPHEMERAL_STORAGE_BYTES } from '../src/dependency-externalizer';
 import type { DistributionCacheEntry } from '../src/installed-distributions';
+import { COMPILE_ALL_SCRIPT_PATH } from '../src/compileall';
 
 const tempDirs: string[] = [];
 
@@ -105,6 +106,7 @@ async function writeExpectedBytecode(
 }
 
 afterEach(() => {
+  vi.restoreAllMocks();
   for (const dir of tempDirs.splice(0)) fs.removeSync(dir);
 });
 
@@ -189,7 +191,7 @@ describe('PythonBuildCache', () => {
       'dependency removal',
       (entries: DistributionCacheEntry[]) => entries.slice(0, 1),
     ],
-  ])('invalidates the whole cache on %s', async (_name, mutate) => {
+  ])('misses without deleting the marker on %s', async (_name, mutate) => {
     const rootPath = makeTempDir();
     const venvPath = path.join(rootPath, '.vercel/python/.venv');
     const cache = makeCache(rootPath);
@@ -209,10 +211,10 @@ describe('PythonBuildCache', () => {
     expect(changedPlan.cacheHit).toBe(false);
     expect(
       fs.existsSync(path.join(venvPath, BUILD_CACHE_MARKER_FILENAME))
-    ).toBe(false);
+    ).toBe(true);
   });
 
-  it('invalidates when stable source content changes without a RECORD update', async () => {
+  it('misses when stable source content changes without a RECORD update', async () => {
     const rootPath = makeTempDir();
     const venvPath = path.join(rootPath, '.vercel/python/.venv');
     const cache = makeCache(rootPath);
@@ -229,7 +231,36 @@ describe('PythonBuildCache', () => {
     expect((await getPlan({ cache, venvPath, entries })).cacheHit).toBe(false);
   });
 
-  it('invalidates when Python, mode, or compilation scope changes', async () => {
+  it('caches readable bytecode when a RECORD-listed source is missing', async () => {
+    const rootPath = makeTempDir();
+    const venvPath = path.join(rootPath, '.vercel/python/.venv');
+    const cache = makeCache(rootPath);
+    const readable = makeEntry({
+      venvPath,
+      packageName: 'readable-package',
+    });
+    const missing = makeEntry({ venvPath, packageName: 'missing-package' });
+    const entries = [readable, missing];
+    fs.removeSync(missing.sourceFiles[0].absolutePath);
+
+    const coldPlan = await getPlan({ cache, venvPath, entries });
+    const readableBytecode = coldPlan.expectedBytecodeFiles.find(file =>
+      file.path.includes('readable_package')
+    );
+    expect(readableBytecode).toBeDefined();
+    await fs.outputFile(readableBytecode!.fsPath, 'readable bytecode');
+    expect(await cache.commit(coldPlan)).toBe(true);
+
+    expect((await getPlan({ cache, venvPath, entries })).cacheHit).toBe(true);
+
+    fs.outputFileSync(
+      missing.sourceFiles[0].absolutePath,
+      'missing_package = True\n'
+    );
+    expect((await getPlan({ cache, venvPath, entries })).cacheHit).toBe(false);
+  });
+
+  it('misses when Python, mode, or compilation scope changes', async () => {
     const rootPath = makeTempDir();
     const venvPath = path.join(rootPath, '.vercel/python/.venv');
     const cache = makeCache(rootPath);
@@ -267,22 +298,23 @@ describe('PythonBuildCache', () => {
     ).toBe(false);
   });
 
-  it.each(['null', '[]', '{}', '{"version":1}', '{"files":"wrong"}'])(
-    'treats malformed marker %s as a miss',
-    async marker => {
-      const rootPath = makeTempDir();
-      const venvPath = path.join(rootPath, '.vercel/python/.venv');
-      const markerPath = path.join(venvPath, BUILD_CACHE_MARKER_FILENAME);
-      const cache = makeCache(rootPath);
-      const entries = [makeEntry({ venvPath, packageName: 'stable-package' })];
-      fs.outputFileSync(markerPath, marker);
+  it.each([
+    'null',
+    '[]',
+    '{}',
+    '{"version":1}',
+    '{"files":"wrong"}',
+  ])('treats malformed marker %s as a miss', async marker => {
+    const rootPath = makeTempDir();
+    const venvPath = path.join(rootPath, '.vercel/python/.venv');
+    const markerPath = path.join(venvPath, BUILD_CACHE_MARKER_FILENAME);
+    const cache = makeCache(rootPath);
+    const entries = [makeEntry({ venvPath, packageName: 'stable-package' })];
+    fs.outputFileSync(markerPath, marker);
 
-      expect((await getPlan({ cache, venvPath, entries })).cacheHit).toBe(
-        false
-      );
-      expect(fs.existsSync(markerPath)).toBe(false);
-    }
-  );
+    expect((await getPlan({ cache, venvPath, entries })).cacheHit).toBe(false);
+    expect(fs.existsSync(markerPath)).toBe(false);
+  });
 
   it('rejects a marker when restored bytecode is missing', async () => {
     const rootPath = makeTempDir();
@@ -297,7 +329,7 @@ describe('PythonBuildCache', () => {
     expect((await getPlan({ cache, venvPath, entries })).cacheHit).toBe(false);
     expect(
       fs.existsSync(path.join(venvPath, BUILD_CACHE_MARKER_FILENAME))
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('rejects unsafe paths in an otherwise valid marker', async () => {
@@ -317,20 +349,87 @@ describe('PythonBuildCache', () => {
     expect(fs.existsSync(markerPath)).toBe(false);
   });
 
-  it('commits a marker only after every expected file exists', async () => {
+  it('rejects a manifest path outside the current expected set', async () => {
+    const rootPath = makeTempDir();
+    const venvPath = path.join(rootPath, '.vercel/python/.venv');
+    const markerPath = path.join(venvPath, BUILD_CACHE_MARKER_FILENAME);
+    const cache = makeCache(rootPath);
+    const entries = [makeEntry({ venvPath, packageName: 'stable-package' })];
+    const coldPlan = await getPlan({ cache, venvPath, entries });
+    await writeExpectedBytecode(coldPlan);
+    expect(await cache.commit(coldPlan)).toBe(true);
+
+    const unexpectedPath =
+      'lib/python3.12/site-packages/unexpected/__pycache__/module.cpython-312.pyc';
+    const unexpectedFsPath = path.join(venvPath, ...unexpectedPath.split('/'));
+    fs.outputFileSync(unexpectedFsPath, 'unexpected bytecode');
+    const marker = fs.readJsonSync(markerPath);
+    marker.files = [
+      {
+        path: unexpectedPath,
+        size: Buffer.byteLength('unexpected bytecode'),
+      },
+    ];
+    fs.writeJsonSync(markerPath, marker);
+
+    expect((await getPlan({ cache, venvPath, entries })).cacheHit).toBe(false);
+    expect(fs.existsSync(markerPath)).toBe(true);
+  });
+
+  it('commits and reuses a non-empty subset of expected bytecode', async () => {
     const rootPath = makeTempDir();
     const venvPath = path.join(rootPath, '.vercel/python/.venv');
     const cache = makeCache(rootPath);
+    const entries = [
+      makeEntry({ venvPath, packageName: 'first-package' }),
+      makeEntry({ venvPath, packageName: 'second-package' }),
+    ];
     const plan = await getPlan({
       cache,
       venvPath,
-      entries: [makeEntry({ venvPath, packageName: 'stable-package' })],
+      entries,
     });
+    await fs.outputFile(
+      plan.expectedBytecodeFiles[0].fsPath,
+      'compiled bytecode'
+    );
 
-    expect(await cache.commit(plan)).toBe(false);
-    expect(
-      fs.existsSync(path.join(venvPath, BUILD_CACHE_MARKER_FILENAME))
-    ).toBe(false);
+    expect(await cache.commit(plan)).toBe(true);
+    const marker = fs.readJsonSync(
+      path.join(venvPath, BUILD_CACHE_MARKER_FILENAME)
+    );
+    expect(marker.files).toEqual([
+      {
+        path: plan.expectedBytecodeFiles[0].path,
+        size: Buffer.byteLength('compiled bytecode'),
+      },
+    ]);
+
+    const warmPlan = await getPlan({ cache, venvPath, entries });
+    expect(warmPlan.cacheHit).toBe(true);
+    expect(warmPlan.vendorSourceFiles).toEqual([]);
+  });
+
+  it('preserves the previous marker when no expected bytecode exists', async () => {
+    const rootPath = makeTempDir();
+    const venvPath = path.join(rootPath, '.vercel/python/.venv');
+    const markerPath = path.join(venvPath, BUILD_CACHE_MARKER_FILENAME);
+    const cache = makeCache(rootPath);
+    const entries = [makeEntry({ venvPath, packageName: 'stable-package' })];
+    const initialPlan = await getPlan({ cache, venvPath, entries });
+    await writeExpectedBytecode(initialPlan);
+    expect(await cache.commit(initialPlan)).toBe(true);
+    const previousMarker = fs.readFileSync(markerPath, 'utf8');
+
+    fs.writeFileSync(
+      entries[0].sourceFiles[0].absolutePath,
+      'CHANGED = True\n'
+    );
+    const changedPlan = await getPlan({ cache, venvPath, entries });
+    fs.removeSync(changedPlan.expectedBytecodeFiles[0].fsPath);
+
+    expect(await cache.commit(changedPlan)).toBe(false);
+    expect(fs.readFileSync(markerPath, 'utf8')).toBe(previousMarker);
     expect(
       fs
         .readdirSync(venvPath)
@@ -338,21 +437,22 @@ describe('PythonBuildCache', () => {
     ).toBe(false);
   });
 
-  it.each(['standard', 'knapsack', 'bytecode-first'] as const)(
-    'caches %s at the inclusive 500 MiB boundary',
-    async mode => {
-      const rootPath = makeTempDir();
-      const venvPath = path.join(rootPath, '.vercel/python/.venv');
-      const plan = await getPlan({
-        cache: makeCache(rootPath),
-        venvPath,
-        entries: [makeEntry({ venvPath, packageName: 'stable-package' })],
-        mode,
-        totalBundleSize: LAMBDA_EPHEMERAL_STORAGE_BYTES,
-      });
-      expect(plan.cacheable).toBe(true);
-    }
-  );
+  it.each([
+    'standard',
+    'knapsack',
+    'bytecode-first',
+  ] as const)('caches %s at the inclusive 500 MiB boundary', async mode => {
+    const rootPath = makeTempDir();
+    const venvPath = path.join(rootPath, '.vercel/python/.venv');
+    const plan = await getPlan({
+      cache: makeCache(rootPath),
+      venvPath,
+      entries: [makeEntry({ venvPath, packageName: 'stable-package' })],
+      mode,
+      totalBundleSize: LAMBDA_EPHEMERAL_STORAGE_BYTES,
+    });
+    expect(plan.cacheable).toBe(true);
+  });
 
   it.each([
     ['standard above 500 MiB', 'standard' as const],
@@ -370,6 +470,86 @@ describe('PythonBuildCache', () => {
       totalBundleSize: mode === 'hive' ? 1 : LAMBDA_EPHEMERAL_STORAGE_BYTES + 1,
     });
     expect(plan.cacheable).toBe(false);
+  });
+
+  it.each([
+    ['an oversized standard plan', 'standard' as const],
+    ['a Hive plan', 'hive' as const],
+  ])('preserves a valid marker for %s', async (_name, mode) => {
+    const rootPath = makeTempDir();
+    const venvPath = path.join(rootPath, '.vercel/python/.venv');
+    const markerPath = path.join(venvPath, BUILD_CACHE_MARKER_FILENAME);
+    const cache = makeCache(rootPath);
+    const entries = [makeEntry({ venvPath, packageName: 'stable-package' })];
+    const initialPlan = await getPlan({ cache, venvPath, entries });
+    await writeExpectedBytecode(initialPlan);
+    expect(await cache.commit(initialPlan)).toBe(true);
+
+    const ineligiblePlan = await getPlan({
+      cache,
+      venvPath,
+      entries,
+      mode,
+      totalBundleSize: mode === 'hive' ? 1 : LAMBDA_EPHEMERAL_STORAGE_BYTES + 1,
+    });
+    expect(ineligiblePlan.cacheable).toBe(false);
+    expect(fs.existsSync(markerPath)).toBe(true);
+  });
+
+  it('preserves the previous marker when a marker write fails', async () => {
+    const rootPath = makeTempDir();
+    const venvPath = path.join(rootPath, '.vercel/python/.venv');
+    const markerPath = path.join(venvPath, BUILD_CACHE_MARKER_FILENAME);
+    const cache = makeCache(rootPath);
+    const entries = [makeEntry({ venvPath, packageName: 'stable-package' })];
+    const initialPlan = await getPlan({ cache, venvPath, entries });
+    await writeExpectedBytecode(initialPlan);
+    expect(await cache.commit(initialPlan)).toBe(true);
+    const previousMarker = fs.readFileSync(markerPath, 'utf8');
+
+    fs.writeFileSync(
+      entries[0].sourceFiles[0].absolutePath,
+      'CHANGED = True\n'
+    );
+    const changedPlan = await getPlan({ cache, venvPath, entries });
+    await writeExpectedBytecode(changedPlan);
+    vi.spyOn(fs.promises, 'rename').mockRejectedValueOnce(
+      new Error('rename failed')
+    );
+
+    expect(await cache.commit(changedPlan)).toBe(false);
+    expect(fs.readFileSync(markerPath, 'utf8')).toBe(previousMarker);
+    expect(
+      fs
+        .readdirSync(venvPath)
+        .some(file => file.startsWith(`${BUILD_CACHE_MARKER_FILENAME}.`))
+    ).toBe(false);
+  });
+
+  it('fingerprints the compile coordinator contents', async () => {
+    const rootPath = makeTempDir();
+    const venvPath = path.join(rootPath, '.vercel/python/.venv');
+    const cache = makeCache(rootPath);
+    const entries = [makeEntry({ venvPath, packageName: 'stable-package' })];
+    const originalReadFile = fs.promises.readFile.bind(fs.promises);
+    let compilerContents = Buffer.from('first compiler');
+    vi.spyOn(fs.promises, 'readFile').mockImplementation(((
+      filePath: any,
+      options?: any
+    ) => {
+      if (filePath === COMPILE_ALL_SCRIPT_PATH) {
+        return Promise.resolve(compilerContents);
+      }
+      return originalReadFile(filePath, options);
+    }) as any);
+
+    const firstPlan = await getPlan({ cache, venvPath, entries });
+    compilerContents = Buffer.from('second compiler');
+    const secondPlan = await getPlan({ cache, venvPath, entries });
+
+    expect(firstPlan.marker?.fingerprint).not.toBe(
+      secondPlan.marker?.fingerprint
+    );
   });
 
   it('prepares validated bytecode independently for default and service venvs', async () => {
