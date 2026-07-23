@@ -29,14 +29,18 @@ export const upgradeCommand = {
       description: 'Disable automatic CLI updates',
     },
     {
-      // Internal: opt in/out of the native CLI binary. Intentionally
-      // undocumented (no `description`) so it is omitted from `--help`, but
-      // still parseable: `--binary`, `--binary true`, `--binary false`.
-      name: 'binary',
+      // Internal: opt in/out of the native CLI binary. Undocumented (no
+      // `description`) so it is omitted from `--help`.
+      name: 'enable-binary',
       shorthand: null,
-      type: String,
+      type: Boolean,
       deprecated: false,
-      argument: 'BOOL',
+    },
+    {
+      name: 'disable-binary',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
     },
     {
       ...formatOption,

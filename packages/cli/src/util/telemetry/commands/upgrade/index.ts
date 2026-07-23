@@ -25,12 +25,15 @@ export class UpgradeTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionBinary(binary: string | undefined) {
-    if (binary === 'true' || binary === 'false') {
-      this.trackCliOption({
-        option: 'binary',
-        value: binary,
-      });
+  trackCliFlagEnableBinary(enableBinary: boolean | undefined) {
+    if (enableBinary) {
+      this.trackCliFlag('enable-binary');
+    }
+  }
+
+  trackCliFlagDisableBinary(disableBinary: boolean | undefined) {
+    if (disableBinary) {
+      this.trackCliFlag('disable-binary');
     }
   }
 }

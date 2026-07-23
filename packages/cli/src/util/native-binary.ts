@@ -2,11 +2,8 @@ import type { GlobalConfig } from '@vercel-internals/types';
 import type Client from './client';
 import { writeToConfigFile } from './config/files';
 
-/**
- * Slug of the Vercel team whose members are auto-opted-in to the native
- * binary. Team slugs are globally unique across the Vercel platform, so this
- * is stable without hardcoding a team id into the source.
- */
+// Slug of the team whose members are auto-opted-in. Slugs are globally unique,
+// so matching on it avoids hardcoding a team id.
 export const NATIVE_BINARY_AUTO_OPT_IN_TEAM_SLUG = 'vercel';
 
 export function isNativeBinaryEnabled(config: GlobalConfig): boolean {

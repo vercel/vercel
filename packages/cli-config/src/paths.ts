@@ -1,6 +1,5 @@
-// Zod-free path helpers for locating the global config directory/files. Kept
-// dependency-light so hot paths (e.g. the pre-CLI `vc.js` shim) can import it
-// without paying the ~40ms cost of loading zod and the config schemas.
+// Zod-free path helpers so hot paths (e.g. the `vc.js` shim) can locate and
+// read the global config without loading zod and the config schemas.
 import fs from 'node:fs';
 import path from 'node:path';
 import { homedir } from 'node:os';
@@ -10,7 +9,6 @@ function isReadableDirectory(targetPath: string): boolean {
   try {
     return fs.lstatSync(targetPath).isDirectory();
   } catch (_) {
-    // We don't care which kind of error occured, it isn't a readable directory anyway.
     return false;
   }
 }
@@ -38,9 +36,8 @@ export function getAuthConfigFilePath(configDir: string): string {
   return path.join(configDir, 'auth.json');
 }
 
-// Reads a single key from the global config file without schema validation.
-// For cheap feature-gate reads on hot paths; use `readGlobalConfigFile` when
-// you need the validated config.
+// Reads a single key from the global config file without schema validation,
+// for cheap feature-gate reads on hot paths.
 export function readGlobalConfigFlag(configPath: string, key: string): unknown {
   try {
     const content = fs.readFileSync(configPath, 'utf8').replace(/^\uFEFF/, '');

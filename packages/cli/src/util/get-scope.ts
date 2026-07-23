@@ -89,11 +89,9 @@ export default async function getScope(
     contextName = team.slug;
   }
 
-  // Members of the `vercel` team are auto-opted-in to the native binary. This
-  // checks team membership (not the resolved scope) and is a no-op once the
-  // user has an explicit preference (including having opted out via
-  // `upgrade --binary false`), in which case no teams API call is made.
-  await maybeAutoOptInNativeBinary(client);
+  // Auto-opt-in `vercel` team members to the native binary when their teams
+  // are already loaded; never triggers its own request.
+  maybeAutoOptInNativeBinary(client);
 
   if (!opts.resolveLocalScope) {
     return { contextName, team, user };

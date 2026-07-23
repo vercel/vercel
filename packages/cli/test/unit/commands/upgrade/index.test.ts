@@ -188,9 +188,9 @@ describe('upgrade', () => {
     });
   });
 
-  describe('--binary', () => {
+  describe('--enable-binary', () => {
     it('opts in to the native binary in the global config', async () => {
-      client.setArgv('upgrade', '--binary');
+      client.setArgv('upgrade', '--enable-binary');
       const exitCode = await upgrade(client);
 
       expect(exitCode).toBe(0);
@@ -201,15 +201,17 @@ describe('upgrade', () => {
       await expect(client.stderr).toOutput('Native Vercel CLI binary enabled.');
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'option:binary',
-          value: 'true',
+          key: 'flag:enable-binary',
+          value: 'TRUE',
         },
       ]);
     });
+  });
 
-    it('opts out of the native binary with --binary false', async () => {
+  describe('--disable-binary', () => {
+    it('opts out of the native binary in the global config', async () => {
       client.config = { useNativeBinary: true };
-      client.setArgv('upgrade', '--binary', 'false');
+      client.setArgv('upgrade', '--disable-binary');
       const exitCode = await upgrade(client);
 
       expect(exitCode).toBe(0);
@@ -222,29 +224,21 @@ describe('upgrade', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'option:binary',
-          value: 'false',
+          key: 'flag:disable-binary',
+          value: 'TRUE',
         },
       ]);
     });
+  });
 
-    it('opts in with an explicit --binary true', async () => {
-      client.setArgv('upgrade', '--binary', 'true');
-      const exitCode = await upgrade(client);
+  it('rejects mutually exclusive binary flags', async () => {
+    client.setArgv('upgrade', '--enable-binary', '--disable-binary');
+    const result = await upgrade(client);
 
-      expect(exitCode).toBe(0);
-      expect(client.config.useNativeBinary).toBe(true);
-    });
-
-    it('rejects an invalid --binary value', async () => {
-      client.setArgv('upgrade', '--binary', 'maybe');
-      const exitCode = await upgrade(client);
-
-      expect(exitCode).toBe(1);
-      await expect(client.stderr).toOutput(
-        'Invalid value for `--binary`. Expected `true` or `false`.'
-      );
-    });
+    expect(result).toBe(1);
+    await expect(client.stderr).toOutput(
+      'Cannot use --enable-binary and --disable-binary together'
+    );
   });
 
   it('rejects mutually exclusive auto-update flags', async () => {
