@@ -28,6 +28,10 @@
     "./middleware": {
       "import": "./middleware.js",
       "require": "./middleware.js"
+    },
+    "./world-id": {
+      "import": "./world-id.js",
+      "require": "./world-id.js"
     }
   },
   "version": "3.7.5",
