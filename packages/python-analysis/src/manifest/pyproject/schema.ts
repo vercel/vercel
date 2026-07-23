@@ -20,6 +20,8 @@ import {
   pyProjectToolSectionSchema as generatedPyProjectToolSectionSchema,
   readmeObjectSchema as generatedReadmeObjectSchema,
   readmeSchema as generatedReadmeSchema,
+  pyProjectToolVercelFastapiSectionSchema as generatedPyProjectToolVercelFastapiSectionSchema,
+  pyProjectToolVercelSectionSchema as generatedPyProjectToolVercelSectionSchema,
 } from './schema.zod';
 
 import type {
@@ -33,6 +35,8 @@ import type {
   PyProjectToolSection,
   Readme,
   ReadmeObject,
+  PyProjectToolVercelFastapiSection,
+  PyProjectToolVercelSection,
 } from './types';
 
 /**
@@ -82,6 +86,18 @@ export const PyProjectDependencyGroupsSchema =
   generatedPyProjectDependencyGroupsSchema as z.ZodType<PyProjectDependencyGroups>;
 
 /**
+ * Schema for [tool.vercel] section.
+ */
+export const PyProjectToolVercelSectionSchema =
+  generatedPyProjectToolVercelSectionSchema as z.ZodType<PyProjectToolVercelSection>;
+
+/**
+ * Schema for [tool.vercel.fastapi] section.
+ */
+export const PyProjectToolVercelFastapiSectionSchema =
+  generatedPyProjectToolVercelFastapiSectionSchema as z.ZodType<PyProjectToolVercelFastapiSection>;
+
+/**
  * Schema for [tool.FOO] section.
  */
 export const PyProjectToolSectionSchema =
@@ -90,5 +106,6 @@ export const PyProjectToolSectionSchema =
 /**
  * Schema for a pyproject.toml file.
  */
-export const PyProjectTomlSchema =
-  generatedPyProjectTomlSchema.passthrough() as z.ZodType<PyProjectToml>;
+export const PyProjectTomlSchema = generatedPyProjectTomlSchema
+  .extend({ tool: PyProjectToolSectionSchema.optional() })
+  .passthrough() as z.ZodType<PyProjectToml>;

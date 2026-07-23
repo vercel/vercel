@@ -87,7 +87,6 @@ import {
 import {
   containsTopLevelCallable,
   type PyProjectToml,
-  type PyProjectToolSection,
 } from '@vercel/python-analysis';
 import {
   collectAppBytecodeFiles,
@@ -336,14 +335,6 @@ export async function addCollectedVendorBytecode({
   return capacity - selectedInfo.totalSize;
 }
 
-type VercelToolSection = PyProjectToolSection & {
-  vercel?: {
-    fastapi?: {
-      static_cdn?: unknown;
-    };
-  };
-};
-
 interface FrameworkHookContext {
   pythonEnv: NodeJS.ProcessEnv;
   workPath: string;
@@ -489,16 +480,7 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
       return;
     }
 
-    const staticCdn = (pyprojectData?.tool as VercelToolSection | undefined)
-      ?.vercel?.fastapi?.static_cdn;
-    if (staticCdn !== undefined && typeof staticCdn !== 'boolean') {
-      throw new NowBuildError({
-        code: 'PYTHON_INVALID_STATIC_CDN_CONFIG',
-        message:
-          `"tool.vercel.fastapi.static_cdn" in pyproject.toml must be a boolean ` +
-          `(true or false), got ${JSON.stringify(staticCdn)}.`,
-      });
-    }
+    const staticCdn = pyprojectData?.tool?.vercel?.fastapi?.static_cdn;
     if (staticCdn === false) {
       debug(
         'FastAPI: static_cdn = false in pyproject.toml, skipping CDN collection'

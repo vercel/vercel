@@ -60,8 +60,17 @@ export const pyProjectDependencyGroupsSchema = z.record(
   z.array(dependencyGroupEntrySchema)
 );
 
+export const pyProjectToolVercelFastapiSectionSchema = z.object({
+  static_cdn: z.boolean().optional(),
+});
+
+export const pyProjectToolVercelSectionSchema = z.object({
+  fastapi: pyProjectToolVercelFastapiSectionSchema.optional(),
+});
+
 export const pyProjectToolSectionSchema = z.object({
   uv: uvConfigSchema.optional(),
+  vercel: pyProjectToolVercelSectionSchema.optional(),
 });
 
 export const pyProjectTomlSchema = z.object({
