@@ -1,7 +1,14 @@
 import indent from '../../util/output/indent';
 import table from '../../util/output/table';
 import { truncateMiddle } from '../../util/output/truncate';
-import type { Alert, AlertGroup } from './types';
+import type {
+  Alert,
+  AlertGroup,
+  AlertRule,
+  CustomAlertFormula,
+  CustomAlertMetricSource,
+  CustomAlertQuery,
+} from './types';
 
 export function renderAlertTable(rows: string[][], hsep = 3): string {
   return indent(
@@ -101,8 +108,8 @@ export function formatRuleScope(
 }
 
 export function isCustomAlertRule(rule: {
-  alertTypes?: Array<{ type: string }>;
-  customAlert?: unknown;
+  alertTypes?: AlertRule['alertTypes'];
+  customAlert?: AlertRule['customAlert'];
 }): boolean {
   return (
     Boolean(rule.customAlert) ||
@@ -110,24 +117,6 @@ export function isCustomAlertRule(rule: {
       rule.alertTypes?.some(alertType => alertType.type === 'custom_alert')
     )
   );
-}
-
-interface CustomAlertFormula {
-  operator?: string;
-  left?: string;
-  right?: string;
-}
-
-interface CustomAlertMetricSource {
-  formula?: CustomAlertFormula;
-  queryJsonString?: string;
-}
-
-export interface CustomAlertQuery {
-  event?: string;
-  rollups?: Record<string, { aggregation?: string; measure?: string }>;
-  groupBy?: string[];
-  granularity?: unknown;
 }
 
 export function formatCustomAlertTrigger(customAlert: {

@@ -6,11 +6,11 @@ import output from '../../output-manager';
 import { metricsCommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import {
-  validateMutualExclusivity,
   validateOrderBy,
   validateOrderDirection,
   validateRequiredMetric,
 } from './validation';
+import { validateAllProjectMutualExclusivity } from '../../util/command-validation';
 import { fetchMetricDetailOrExit, getDefaultAggregation } from './schema-api';
 import {
   formatErrorJson,
@@ -251,7 +251,7 @@ export default async function query(
   }
   const metric = requiredMetric.value;
 
-  const mutualResult = validateMutualExclusivity(all, project);
+  const mutualResult = validateAllProjectMutualExclusivity(all, project);
   if (!mutualResult.valid) {
     return handleValidationError(mutualResult, jsonOutput, client);
   }

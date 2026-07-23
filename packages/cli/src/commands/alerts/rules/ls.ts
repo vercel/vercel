@@ -26,25 +26,7 @@ import {
   renderAlertTable,
 } from '../format';
 import { truncateEnd } from '../../../util/output/truncate';
-
-interface AlertRule {
-  id?: string;
-  name?: string;
-  projectId?: string;
-  alertTypes?: Array<{ type: string }>;
-  customAlert?: {
-    queryJsonString?: string;
-    triggerType?: string;
-    triggerOperator?: string;
-    triggerThreshold?: number;
-    minThreshold?: number;
-    formula?: {
-      operator?: string;
-      left?: string;
-      right?: string;
-    };
-  };
-}
+import type { AlertRule } from '../types';
 
 interface ListFlags {
   '--project'?: string;

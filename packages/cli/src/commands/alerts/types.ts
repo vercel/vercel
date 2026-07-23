@@ -58,3 +58,60 @@ export interface AlertGroup {
   ai?: AlertAi;
   alerts?: Alert[];
 }
+
+export interface AlertTypeConfig {
+  type: string;
+  filter?: string;
+}
+
+export interface NotificationConfig {
+  slack?: string[];
+  webhooks?: string[];
+}
+
+export interface CustomAlertFormula {
+  operator?: string;
+  left?: string;
+  right?: string;
+}
+
+export interface CustomAlertMetricSource {
+  formula?: CustomAlertFormula;
+  queryJsonString?: string;
+}
+
+export interface CustomAlertQuery {
+  event?: string;
+  rollups?: Record<string, { aggregation?: string; measure?: string }>;
+  groupBy?: string[];
+  granularity?: unknown;
+}
+
+export interface CustomAlertDefinition extends CustomAlertMetricSource {
+  id?: string;
+  ruleId?: string;
+  title?: string;
+  triggerType?: string;
+  triggerOperator?: string;
+  triggerThreshold?: number;
+  minThreshold?: number;
+  createdAt?: number;
+}
+
+export interface AlertRule {
+  id?: string;
+  name?: string;
+  teamId?: string;
+  projectId?: string;
+  odataFilters?: string;
+  action?: string;
+  alertTypes?: AlertTypeConfig[];
+  sensitivityLevel?: number;
+  notifications?: NotificationConfig[];
+  isDefault?: boolean;
+  autosubscribeOwnersInKnock?: boolean;
+  autosubscribeProjectAdminsInKnock?: boolean;
+  owner?: string;
+  lastEditedByUserId?: string;
+  customAlert?: CustomAlertDefinition;
+}

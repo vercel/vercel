@@ -5,22 +5,15 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { inspectSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
-import getScope from '../../util/get-scope';
-import { getLinkedProject } from '../../util/projects/link';
-import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
-import { isAPIError, ProjectNotFound } from '../../util/errors-ts';
-import {
-  outputError,
-  handleValidationError,
-  validateAllProjectMutualExclusivity,
-} from '../../util/command-validation';
+import { isAPIError } from '../../util/errors-ts';
+import { outputError } from '../../util/command-validation';
 import {
   buildCommandWithGlobalFlags,
   outputAgentError,
 } from '../../util/agent-output';
 import { AGENT_REASON } from '../../util/agent-output-constants';
 import { packageName } from '../../util/pkg-name';
-import { emitAlertsScopeError } from './resolve-alerts-scope';
+import { resolveAlertsScope } from './resolve-alerts-scope';
 import formatDate from '../../util/format-date';
 import chalk from 'chalk';
 import {
@@ -34,8 +27,6 @@ import {
 } from './format';
 import { truncateEnd, truncateMiddle } from '../../util/output/truncate';
 import type { Alert, AlertGroup } from './types';
-
-type AlertScope = { teamId: string; projectId?: string };
 
 const detailKeysToSkip = new Set([
   'average',
@@ -337,178 +328,6 @@ function printAlertGroup(group: AlertGroup, groupId: string) {
   );
 }
 
-async function resolveInspectScope(
-  client: Client,
-  flags: {
-    '--project'?: string;
-    '--all'?: boolean;
-  },
-  jsonOutput: boolean
-): Promise<AlertScope | number> {
-  const mutual = validateAllProjectMutualExclusivity(
-    flags['--all'],
-    flags['--project']
-  );
-  if (!mutual.valid) {
-    outputAgentError(
-      client,
-      {
-        status: 'error',
-        reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: mutual.message,
-        next: [
-          {
-            command: buildCommandWithGlobalFlags(
-              client.argv,
-              'alerts inspect <groupId> --help'
-            ),
-            when: 'Use either `--project` or `--all`, not both',
-          },
-        ],
-      },
-      1
-    );
-    return handleValidationError(mutual, jsonOutput, client);
-  }
-
-  if (flags['--all']) {
-    const { team } = await getScope(client);
-    if (!team) {
-      const msg =
-        'No team context found. Run `vercel switch` to select a team, or use `vercel link`.';
-      return emitAlertsScopeError(client, jsonOutput, 'NO_TEAM', msg, {
-        reason: AGENT_REASON.MISSING_SCOPE,
-        next: [
-          {
-            command: buildCommandWithGlobalFlags(client.argv, 'whoami'),
-            when: 'See current user and team',
-          },
-          {
-            command: buildCommandWithGlobalFlags(client.argv, 'teams switch'),
-            when: 'Switch to a team that owns the project',
-          },
-        ],
-      });
-    }
-    return { teamId: team.id };
-  }
-
-  if (flags['--project']) {
-    const { team } = await getScope(client);
-    if (!team) {
-      const msg =
-        'No team context found. Run `vercel switch` to select a team.';
-      return emitAlertsScopeError(client, jsonOutput, 'NO_TEAM', msg, {
-        reason: AGENT_REASON.MISSING_SCOPE,
-        next: [
-          {
-            command: buildCommandWithGlobalFlags(client.argv, 'whoami'),
-            when: 'See current user and team',
-          },
-          {
-            command: buildCommandWithGlobalFlags(client.argv, 'teams switch'),
-            when: 'Switch to a team that owns the project',
-          },
-        ],
-      });
-    }
-    try {
-      const p = await getProjectByNameOrId(client, flags['--project'], team.id);
-      if (p instanceof ProjectNotFound) {
-        const msg = `Project "${flags['--project']}" was not found.`;
-        return emitAlertsScopeError(
-          client,
-          jsonOutput,
-          'PROJECT_NOT_FOUND',
-          msg,
-          {
-            reason: AGENT_REASON.NOT_FOUND,
-            next: [
-              {
-                command: buildCommandWithGlobalFlags(
-                  client.argv,
-                  'alerts inspect <groupId> --project <name_or_id>'
-                ),
-                when: 'Retry with a valid project (replace placeholders)',
-              },
-            ],
-          }
-        );
-      }
-      return { teamId: team.id, projectId: p.id };
-    } catch (err) {
-      if (isAPIError(err)) {
-        const msg =
-          err.serverMessage ||
-          (err.status === 403
-            ? `You do not have permission to access project "${flags['--project']}" in team "${team.slug}".`
-            : `API error (${err.status}).`);
-        const reason =
-          err.status === 401
-            ? 'not_authorized'
-            : err.status === 403
-              ? 'forbidden'
-              : AGENT_REASON.API_ERROR;
-        return emitAlertsScopeError(
-          client,
-          jsonOutput,
-          err.code || 'API_ERROR',
-          msg,
-          {
-            reason,
-            next: [
-              {
-                command: buildCommandWithGlobalFlags(
-                  client.argv,
-                  'alerts inspect <groupId> --project <name_or_id>'
-                ),
-                when: 'Retry with a project you can access',
-              },
-            ],
-          }
-        );
-      }
-      throw err;
-    }
-  }
-
-  const linked = await getLinkedProject(client);
-  if (linked.status === 'error') {
-    return linked.exitCode;
-  }
-  if (linked.status === 'not_linked') {
-    const msg =
-      'No linked project. Run `vercel link` or pass --project <name> or --all.';
-    return emitAlertsScopeError(client, jsonOutput, 'NOT_LINKED', msg, {
-      reason: AGENT_REASON.NOT_LINKED,
-      next: [
-        {
-          command: buildCommandWithGlobalFlags(client.argv, 'link'),
-          when: 'Link this directory to a Vercel project',
-        },
-        {
-          command: buildCommandWithGlobalFlags(
-            client.argv,
-            'alerts inspect <groupId> --project <name_or_id>'
-          ),
-          when: 'Inspect using an explicit project',
-        },
-        {
-          command: buildCommandWithGlobalFlags(
-            client.argv,
-            'alerts inspect <groupId> --all'
-          ),
-          when: 'Inspect using team-wide scope',
-        },
-      ],
-    });
-  }
-  return {
-    teamId: linked.org.id,
-    projectId: linked.project.id,
-  };
-}
-
 export default async function inspect(
   client: Client,
   argv: string[]
@@ -598,14 +417,12 @@ export default async function inspect(
     );
   }
 
-  const scope = await resolveInspectScope(
-    client,
-    {
-      '--project': parsedArgs.flags['--project'] as string | undefined,
-      '--all': parsedArgs.flags['--all'] as boolean | undefined,
-    },
-    fr.jsonOutput
-  );
+  const scope = await resolveAlertsScope(client, {
+    project: parsedArgs.flags['--project'] as string | undefined,
+    all: parsedArgs.flags['--all'] as boolean | undefined,
+    jsonOutput: fr.jsonOutput,
+    command: `alerts inspect ${groupId}`,
+  });
   if (typeof scope === 'number') {
     return scope;
   }

@@ -31,51 +31,7 @@ import {
   renderAlertTable,
 } from '../format';
 import { truncateMiddle } from '../../../util/output/truncate';
-
-interface AlertTypeConfig {
-  type: string;
-  filter?: string;
-}
-
-interface NotificationConfig {
-  slack?: string[];
-  webhooks?: string[];
-}
-
-interface CustomAlertDefinition {
-  id?: string;
-  ruleId?: string;
-  title?: string;
-  queryJsonString?: string;
-  triggerType?: string;
-  triggerOperator?: string;
-  triggerThreshold?: number;
-  minThreshold?: number;
-  formula?: {
-    operator?: string;
-    left?: string;
-    right?: string;
-  };
-  createdAt?: number;
-}
-
-interface AlertRule {
-  id?: string;
-  name?: string;
-  teamId?: string;
-  projectId?: string;
-  odataFilters?: string;
-  action?: string;
-  alertTypes?: AlertTypeConfig[];
-  sensitivityLevel?: number;
-  notifications?: NotificationConfig[];
-  isDefault?: boolean;
-  autosubscribeOwnersInKnock?: boolean;
-  autosubscribeProjectAdminsInKnock?: boolean;
-  owner?: string;
-  lastEditedByUserId?: string;
-  customAlert?: CustomAlertDefinition;
-}
+import type { AlertRule, CustomAlertDefinition } from '../types';
 
 function formatBoolean(value: boolean | undefined): string {
   if (value === undefined) {
