@@ -30,6 +30,17 @@ export type Model = {
 export type ModelsListResult = {
   models: Model[];
   availabilityStatus?: 'complete' | 'degraded';
+  accountAvailability?: AccountAvailability;
+};
+
+export type AccountAvailability = {
+  available: boolean;
+  unavailable_reason?:
+    | 'insufficient_funds'
+    | 'payment_method_required'
+    | 'quota_exceeded'
+    | 'quota_invalid'
+    | 'team_blocked';
 };
 
 export type ModelEndpointPricing = {
@@ -75,12 +86,17 @@ export async function listModels(client: Client): Promise<ModelsListResult> {
   // while `include_availability` explicitly opts this CLI into the Gateway's
   // team-specific availability extension without changing the default response
   // consumed by OpenAI-compatible harnesses.
-  const { data, availability_status: availabilityStatus } = await client.fetch<{
+  const {
+    account_availability: accountAvailability,
+    data,
+    availability_status: availabilityStatus,
+  } = await client.fetch<{
     object: 'list';
     data: Model[];
+    account_availability?: AccountAvailability;
     availability_status?: 'complete' | 'degraded';
   }>(`${gatewayBase()}/v1/models?include_availability`, { method: 'GET' });
-  return { models: data ?? [], availabilityStatus };
+  return { models: data ?? [], availabilityStatus, accountAvailability };
 }
 
 export async function listModelEndpoints(

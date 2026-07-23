@@ -1,7 +1,12 @@
 import chalk from 'chalk';
 import table from '../../util/output/table';
 import type Client from '../../util/client';
-import { listModels, type Model } from '../../util/ai-gateway/models';
+import {
+  listModels,
+  type AccountAvailability,
+  type Model,
+  type ModelsListResult,
+} from '../../util/ai-gateway/models';
 import output from '../../output-manager';
 import { AiGatewayModelsListTelemetryClient } from '../../util/telemetry/commands/ai-gateway/models-list';
 import { modelsListSubcommand } from './command';
@@ -38,24 +43,53 @@ export default async function list(client: Client, argv: string[]) {
     return 1;
   }
 
-  return renderResource<Model[]>(client, {
+  return renderResource<ModelsListResult>(client, {
     asJson: formatResult.jsonOutput,
     spinnerText: 'Fetching models',
     fetch: async () => {
-      const { models, availabilityStatus } = await listModels(client);
+      const result = await listModels(client);
+      const { accountAvailability, availabilityStatus } = result;
       if (availabilityStatus === 'degraded') {
         output.warn(
           'Model availability could not be determined. Retry before treating unannotated models as available.'
         );
       }
-      return models;
+      if (accountAvailability && !accountAvailability.available) {
+        output.warn(accountAvailabilityMessage(accountAvailability));
+      }
+      return result;
     },
-    toJSON: models => ({ models }),
-    isEmpty: models => models.length === 0,
+    toJSON: result => ({
+      models: result.models,
+      ...(result.availabilityStatus && {
+        availability_status: result.availabilityStatus,
+      }),
+      ...(result.accountAvailability && {
+        account_availability: result.accountAvailability,
+      }),
+    }),
+    isEmpty: result => result.models.length === 0,
     emptyMessage: 'No models found.',
     header: () => 'Models',
-    renderTable: printModelsTable,
+    renderTable: result => printModelsTable(result.models),
   });
+}
+
+function accountAvailabilityMessage(account: AccountAvailability): string {
+  switch (account.unavailable_reason) {
+    case 'payment_method_required':
+      return 'Add a payment method before running models for this team.';
+    case 'insufficient_funds':
+      return 'Add AI Gateway credits before running models for this team.';
+    case 'quota_exceeded':
+      return 'The active API key or team budget has been reached.';
+    case 'quota_invalid':
+      return "The active API key's quota settings are invalid.";
+    case 'team_blocked':
+      return "This team can't run AI Gateway models.";
+    default:
+      return "This account can't run AI Gateway models.";
+  }
 }
 
 function printModelsTable(models: Model[]) {

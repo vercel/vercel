@@ -13,7 +13,11 @@ const sampleModel = {
 
 function useListModels(
   models: unknown[] = [sampleModel],
-  availabilityStatus: 'complete' | 'degraded' = 'complete'
+  availabilityStatus: 'complete' | 'degraded' = 'complete',
+  accountAvailability?: {
+    available: boolean;
+    unavailable_reason?: string;
+  }
 ) {
   client.scenario.get('/v1/models', (req, res) => {
     expect(req.query.include_availability).toBe('');
@@ -21,6 +25,9 @@ function useListModels(
       object: 'list',
       data: models,
       availability_status: availabilityStatus,
+      ...(accountAvailability && {
+        account_availability: accountAvailability,
+      }),
     });
   });
 }
@@ -72,12 +79,49 @@ describe('ai-gateway models list', () => {
 
   it('outputs JSON with --format json', async () => {
     useUser();
-    useListModels();
+    useListModels([sampleModel], 'complete', {
+      available: false,
+      unavailable_reason: 'payment_method_required',
+    });
     client.setArgv('ai-gateway', 'models', 'list', '--format', 'json');
 
     const exitCodePromise = aiGateway(client);
 
     await expect(client.stdout).toOutput('"models"');
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      models: [sampleModel],
+      availability_status: 'complete',
+      account_availability: {
+        available: false,
+        unavailable_reason: 'payment_method_required',
+      },
+    });
+    expect(await exitCodePromise).toBe(0);
+  });
+
+  it('explains a team-wide account blocker on stderr', async () => {
+    useUser();
+    useListModels(
+      [
+        {
+          ...sampleModel,
+          available: false,
+          unavailable_reason: 'account_unavailable',
+        },
+      ],
+      'complete',
+      {
+        available: false,
+        unavailable_reason: 'payment_method_required',
+      }
+    );
+    client.setArgv('ai-gateway', 'models', 'list');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput(
+      'Add a payment method before running models for this team.'
+    );
     expect(await exitCodePromise).toBe(0);
   });
 
