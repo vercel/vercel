@@ -92,6 +92,10 @@ import {
   type DetectedFramework,
 } from '../../util/build/framework-detection';
 import {
+  BACKEND_REWRITE_BEHAVIOR_WARNING,
+  hasBackendRewriteBehaviorChange,
+} from '../../util/build/backend-rewrite-warning';
+import {
   validateBuildOutput,
   reportBuildOutputProblems,
 } from '../../util/build/validate-build-output';
@@ -1079,6 +1083,15 @@ async function doBuild(
     }
   }
 
+  if (
+    hasBackendRewriteBehaviorChange({
+      projectRewrites: localConfig.rewrites,
+      builders: builds,
+    })
+  ) {
+    output.warn(BACKEND_REWRITE_BEHAVIOR_WARNING);
+  }
+
   const builderSpecs = new Set(builds.map(b => b.use));
 
   let buildersWithPkgs = await span
@@ -1991,7 +2004,6 @@ async function doBuild(
           appendExperimentalServicesV1Routes(detectedServices);
         }
       }
-
       if (
         detectedServices &&
         detectedServices.length > 0 &&
