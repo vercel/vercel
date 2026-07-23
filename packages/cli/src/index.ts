@@ -1117,6 +1117,10 @@ const main = async () => {
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).microfrontends;
           break;
+        case 'oidc':
+          telemetry.trackCliCommandOidc(userSuppliedSubCommand);
+          func = require('./commands/oidc').default;
+          break;
         case 'open':
           telemetry.trackCliCommandOpen(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).open;
