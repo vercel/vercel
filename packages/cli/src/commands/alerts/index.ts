@@ -29,6 +29,15 @@ const COMMAND_CONFIG = {
   rules: ['rules'],
 };
 
+function getAlertsSubcommand(rawArgs: string[], parsedArgs: string[]) {
+  const rawSubcommand = rawArgs[1];
+  if (!rawSubcommand || rawSubcommand.startsWith('-')) {
+    return getSubcommand([], COMMAND_CONFIG);
+  }
+
+  return getSubcommand(parsedArgs.slice(1), COMMAND_CONFIG);
+}
+
 export default async function alerts(client: Client): Promise<number> {
   const telemetry = new AlertsTelemetryClient({
     opts: {
@@ -89,9 +98,10 @@ export default async function alerts(client: Client): Promise<number> {
     return 1;
   }
 
-  const { subcommand, args, subcommandOriginal } = getSubcommand(
-    parsedArgs.args.slice(1),
-    COMMAND_CONFIG
+  const rawArgs = client.argv.slice(2);
+  const { subcommand, args, subcommandOriginal } = getAlertsSubcommand(
+    rawArgs,
+    parsedArgs.args
   );
   const needHelp = parsedArgs.flags['--help'];
 
@@ -147,19 +157,13 @@ export default async function alerts(client: Client): Promise<number> {
     case 'inspect': {
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
       const inspectFn = (await import('./inspect')).default;
-      const rawArgs = client.argv.slice(2);
-      const inspectIndex = rawArgs.indexOf(subcommandOriginal);
-      const inspectArgs =
-        inspectIndex === -1 ? args : rawArgs.slice(inspectIndex + 1);
+      const inspectArgs = rawArgs.slice(2);
       return inspectFn(client, inspectArgs);
     }
     case 'rules': {
       telemetry.trackCliSubcommandRules(args[0] ?? 'ls');
       const rulesFn = (await import('./rules')).default;
-      const rawArgs = client.argv.slice(2);
-      const rulesIndex = rawArgs.indexOf(subcommandOriginal);
-      const rulesArgs =
-        rulesIndex === -1 ? args : rawArgs.slice(rulesIndex + 1);
+      const rulesArgs = rawArgs.slice(2);
       return rulesFn(client, rulesArgs);
     }
     default: {
