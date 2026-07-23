@@ -217,6 +217,15 @@ export const introspectApp = async (args: {
     {
       src: '/(.*)',
       dest: '/',
+      // Expose the resolved (post-rewrite) path to the framework Lambda so
+      // application routing observes the rewritten destination.
+      transforms: [
+        {
+          type: 'request.path' as const,
+          op: 'set' as const,
+          args: '/$1',
+        },
+      ],
     },
   ];
 
@@ -246,6 +255,15 @@ const defaultResult = (args: {
       {
         src: '/(.*)',
         dest: '/',
+        // Expose the resolved (post-rewrite) path to the framework Lambda so
+        // application routing observes the rewritten destination.
+        transforms: [
+          {
+            type: 'request.path' as const,
+            op: 'set' as const,
+            args: '/$1',
+          },
+        ],
       },
     ],
     framework: getFramework(args),

@@ -375,6 +375,16 @@ export const build: BuildV2 = async args => {
           {
             src: getServiceCatchallSource(serviceRoutePrefix),
             dest: serviceFunctionPath ?? '/',
+            // Copy the resolved (post-rewrite) path into the runtime request
+            // before dispatching the shared framework Lambda so application
+            // routing observes the rewrite rather than the original path.
+            transforms: [
+              {
+                type: 'request.path' as const,
+                op: 'set' as const,
+                args: '/$1',
+              },
+            ],
           },
         ];
 
