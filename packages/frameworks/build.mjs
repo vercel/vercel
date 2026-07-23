@@ -1,5 +1,5 @@
 import { copyFileSync, readdirSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { esbuild, tsc } from '../../utils/build.mjs';
 
@@ -25,7 +25,11 @@ copyFileSync(
 // Fail the build if the compiled manifest cannot be fully interpreted into
 // runtime Framework objects. This guarantees the pinned representation is
 // always valid.
-const { frameworkList } = await import(path.join(distDir, 'frameworks.js'));
+// Use a file:// URL so the dynamic import works on Windows, where a bare
+// absolute path (e.g. `D:\...`) is rejected as an unsupported URL scheme.
+const { frameworkList } = await import(
+  pathToFileURL(path.join(distDir, 'frameworks.js')).href
+);
 if (!Array.isArray(frameworkList) || frameworkList.length === 0) {
   throw new Error('Interpreted framework list is empty');
 }
