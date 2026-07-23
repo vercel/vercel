@@ -72,8 +72,8 @@ import {
   isNativeBinaryInstall,
   setAutoUpdate,
 } from './util/updates';
-import { getCommandName, getTitleName } from './util/pkg-name';
-import login from './commands/login';
+import { getTitleName } from './util/pkg-name';
+import promptMissingCredentials from './util/login/prompt-missing-credentials';
 import type {
   AuthConfig,
   GlobalConfig,
@@ -646,6 +646,7 @@ const main = async () => {
     'help',
     'init',
     'build',
+    'deploy',
     'sandbox',
     'telemetry',
     'upgrade',
@@ -683,41 +684,12 @@ const main = async () => {
     subcommand &&
     !subcommandsWithoutToken.includes(subcommand)
   ) {
-    if (isTTY) {
-      output.log(`No existing credentials found. Please log in:`);
-      try {
-        const result = await login(client, { shouldParseArgs: false });
-        // The login function failed, so it returned an exit code
-        if (result !== 0) return finishWithExitCode(result);
-      } catch (error) {
-        printError(error);
-        trackAgenticErrorTelemetry(error);
-        return finishWithExitCode(1);
-      }
-
-      output.debug(`Saved credentials in "${hp(VERCEL_DIR)}"`);
-    } else if (isAgent) {
-      // Agent detected without credentials — auto-launch device code login flow.
-      // The login flow handles non-TTY: prints auth URL, opens browser if possible, polls.
-      output.log('No existing credentials found. Starting login flow...');
-      try {
-        const result = await login(client, { shouldParseArgs: false });
-        if (result !== 0) return finishWithExitCode(result);
-      } catch (error) {
-        printError(error);
-        trackAgenticErrorTelemetry(error);
-        return finishWithExitCode(1);
-      }
-
-      output.debug(`Saved credentials in "${hp(VERCEL_DIR)}"`);
-    } else {
-      output.prettyError({
-        message:
-          'No existing credentials found. Please run ' +
-          `${getCommandName('login')} or pass ${param('--token')}`,
-        link: 'https://err.sh/vercel/no-credentials-found',
-      });
-      return finishWithExitCode(1);
+    const result = await promptMissingCredentials(
+      client,
+      trackAgenticErrorTelemetry
+    );
+    if (result !== 0) {
+      return finishWithExitCode(result);
     }
   }
 

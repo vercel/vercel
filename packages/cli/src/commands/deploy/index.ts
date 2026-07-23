@@ -24,6 +24,12 @@ import type Client from '../../util/client';
 import { readLocalConfig } from '../../util/config/files';
 import { compileVercelConfig } from '../../util/compile-vercel-config';
 import { createGitMeta } from '../../util/create-git-meta';
+import {
+  clearAnonymousState,
+  ensureAnonymousLink,
+  type AnonymousLink,
+} from '../../util/deploy/anonymous';
+import promptMissingCredentials from '../../util/login/prompt-missing-credentials';
 import createDeploy from '../../util/deploy/create-deploy';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import { getDeploymentCheckRuns } from '../../util/deploy/get-deployment-check-runs';
@@ -90,7 +96,11 @@ import parseTarget from '../../util/parse-target';
 import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
-import { isOwnerLookupUnavailableLink } from '../../util/projects/link';
+import {
+  isOwnerLookupUnavailableLink,
+  VERCEL_DIR,
+  VERCEL_DIR_PROJECT,
+} from '../../util/projects/link';
 import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
 import { displayBuildLogsUntilFinalError } from '../../util/logs';
 import { determineAgent } from '@vercel/detect-agent';
@@ -1086,11 +1096,21 @@ async function handleDefaultDeploy(
   }
   // #endregion
 
-  const target = parseTarget({
+  let isAnonymous = !client.authConfig.token;
+
+  let target = parseTarget({
     flagName: 'target',
     flags: parsedArguments.flags,
   });
   telemetryClient.trackTargetEnvironment(target);
+  if (isAnonymous && target && target !== 'production') {
+    error(
+      `Anonymous deployments always target production, so "${target}" is not available. Remove the ${param(
+        '--target'
+      )} option, or run ${getCommandName('login')} to deploy to other environments.`
+    );
+    return 1;
+  }
 
   // Validate that --skip-domain is only used with production deployments
   const skipDomain = parsedArguments.flags['--skip-domain'];
@@ -1126,17 +1146,42 @@ async function handleDefaultDeploy(
   const cliMeta = parseMeta(parsedArguments.flags['--meta']);
   const isV0 = cliMeta.v0 === 'true';
 
-  const link = await ensureLink('deploy', client, cwd, {
-    autoConfirm,
-    // Only explicit names: the folder-name fallback is derived inside
-    // `setupAndLink`, and passing it would suppress Git-match suggestions.
-    projectName:
-      projectNameOrId ?? parsedArguments.flags['--name'] ?? localConfig?.name,
-    failIfNotFound: !!projectNameOrId,
-    requireExistingLink: parsedArguments.flags['--dry'],
-    allowOwnerLookupFallback: true,
-    v0: isV0,
-  });
+  if (!isAnonymous) {
+    await clearAnonymousState(cwd);
+  }
+
+  let anonymousLink: AnonymousLink | undefined;
+  if (isAnonymous) {
+    const anonymous = await ensureAnonymousLink(client, cwd, {
+      requireExistingState: Boolean(parsedArguments.flags['--dry']),
+    });
+    if (anonymous === 'refused') {
+      const loginExitCode = await promptMissingCredentials(client);
+      if (loginExitCode !== 0) {
+        return loginExitCode;
+      }
+      isAnonymous = false;
+    } else if (anonymous === 'failed') {
+      return 1;
+    } else {
+      anonymousLink = anonymous;
+      target = 'production';
+    }
+  }
+
+  const link =
+    anonymousLink ??
+    (await ensureLink('deploy', client, cwd, {
+      autoConfirm,
+      // Only explicit names: the folder-name fallback is derived inside
+      // `setupAndLink`, and passing it would suppress Git-match suggestions.
+      projectName:
+        projectNameOrId ?? parsedArguments.flags['--name'] ?? localConfig?.name,
+      failIfNotFound: !!projectNameOrId,
+      requireExistingLink: parsedArguments.flags['--dry'],
+      allowOwnerLookupFallback: true,
+      v0: isV0,
+    }));
   if (typeof link === 'number') {
     return link;
   }
@@ -1151,15 +1196,23 @@ async function handleDefaultDeploy(
   }
 
   // #region Build `--prebuilt`
+  const prebuilt = isAnonymous || !!parsedArguments.flags['--prebuilt'];
   let vercelOutputDir: string | undefined;
-  if (parsedArguments.flags['--prebuilt']) {
+  if (prebuilt) {
     vercelOutputDir = join(cwd, '.vercel/output');
 
     if (link.repoRoot && link.project.rootDirectory) {
       vercelOutputDir = join(cwd, link.project.rootDirectory, '.vercel/output');
     }
 
-    const prebuiltExists = await fs.pathExists(vercelOutputDir);
+    let prebuiltExists = await fs.pathExists(vercelOutputDir);
+    if (!prebuiltExists && isAnonymous && !parsedArguments.flags['--dry']) {
+      const buildExitCode = await runImplicitBuild(client, cwd);
+      if (buildExitCode !== 0) {
+        return buildExitCode;
+      }
+      prebuiltExists = await fs.pathExists(vercelOutputDir);
+    }
     if (!prebuiltExists) {
       error(
         `The ${param(
@@ -1254,7 +1307,7 @@ async function handleDefaultDeploy(
         path: cwd,
         archive: parsedArchive ? 'tgz' : undefined,
         debug: output.isDebugEnabled(),
-        prebuilt: parsedArguments.flags['--prebuilt'],
+        prebuilt,
         vercelOutputDir,
         projectName: project.name,
         rootDirectory,
@@ -1390,7 +1443,8 @@ async function handleDefaultDeploy(
       build: { env: deploymentBuildEnv as Dictionary<string> },
       forceNew: parsedArguments.flags['--force'],
       withCache: parsedArguments.flags['--with-cache'],
-      prebuilt: parsedArguments.flags['--prebuilt'],
+      prebuilt,
+      anonymous: isAnonymous,
       vercelOutputDir,
       rootDirectory,
       quiet,
@@ -1403,7 +1457,7 @@ async function handleDefaultDeploy(
       gitMetadata,
       deployStamp,
       target,
-      skipAutoDetectionConfirmation: autoConfirm,
+      skipAutoDetectionConfirmation: autoConfirm || isAnonymous,
       noWait,
       withFullLogs,
       autoAssignCustomDomains,
@@ -1630,6 +1684,18 @@ async function handleDefaultDeploy(
   } catch (err: unknown) {
     if (isError(err)) {
       debug(`Error: ${err}\n${err.stack}`);
+    }
+
+    if (
+      anonymousLink &&
+      isAPIError(err) &&
+      (err.status === 401 || err.status === 410)
+    ) {
+      await clearAnonymousState(cwd);
+      prettyError({
+        message: `Your anonymous deployment has expired. Create an account to keep deploying this app by running ${getCommandName('login')}.`,
+      });
+      return 1;
     }
 
     if (err instanceof UploadErrorMissingArchive) {
@@ -1860,36 +1926,56 @@ async function handleDefaultDeploy(
 
   if (asJson) {
     output.stopSpinner();
-    const deploymentJson = getDeploymentOutputJson(deployment, client.apiUrl);
+    const anonymousUrl = anonymousLink ? deployment.alias?.[0] : undefined;
+    const deploymentJson = {
+      ...getDeploymentOutputJson(deployment, client.apiUrl),
+      ...(anonymousLink ? { expiresAt: anonymousLink.expiresAt } : {}),
+      ...(anonymousUrl
+        ? { url: `https://${anonymousUrl}`, inspectorUrl: null }
+        : {}),
+    };
     const isImplicitProduction = deployment.target === 'production' && !target;
     const payload = client.nonInteractive
       ? {
           status: AGENT_STATUS.OK,
           deployment: deploymentJson,
-          message: `Deployment ${deployment.url} ready.`,
+          message: anonymousLink
+            ? `Anonymous deployment ${anonymousUrl ?? deployment.url} ready. It expires in ${ms(anonymousLink.expiresAt - Date.now())}.`
+            : `Deployment ${deployment.url} ready.`,
           ...(isImplicitProduction
             ? {
                 hint: 'This is the project\u2019s first deployment, so it was assigned to production. Future deployments will be preview deployments unless you use --prod.',
               }
             : {}),
-          next: [
-            {
-              command: `${packageName} curl https://${deployment.url}`,
-              when: 'Verify deployment, including when Deployment Protection is enabled',
-            },
-            {
-              command: withGlobalFlags(client, `inspect ${deployment.url}`),
-              when: 'Inspect deployment',
-            },
-            ...(isImplicitProduction
-              ? []
-              : [
-                  {
-                    command: withGlobalFlags(client, 'deploy --prod'),
-                    when: 'Promote to production',
-                  },
-                ]),
-          ],
+          next: anonymousLink
+            ? [
+                {
+                  command: withGlobalFlags(client, 'deploy'),
+                  when: 'Redeploy changes to the same anonymous deployment',
+                },
+                {
+                  command: withGlobalFlags(client, 'login'),
+                  when: 'Create an account to keep this deployment',
+                },
+              ]
+            : [
+                {
+                  command: `${packageName} curl https://${deployment.url}`,
+                  when: 'Verify deployment, including when Deployment Protection is enabled',
+                },
+                {
+                  command: withGlobalFlags(client, `inspect ${deployment.url}`),
+                  when: 'Inspect deployment',
+                },
+                ...(isImplicitProduction
+                  ? []
+                  : [
+                      {
+                        command: withGlobalFlags(client, 'deploy --prod'),
+                        when: 'Promote to production',
+                      },
+                    ]),
+              ],
         }
       : deploymentJson;
     client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
@@ -1897,14 +1983,46 @@ async function handleDefaultDeploy(
   }
 
   const { isAgent } = await determineAgent();
-  const guidanceMode = parsedArguments.flags['--guidance'] ?? isAgent;
-  return printDeploymentStatus(
+  const guidanceMode =
+    (parsedArguments.flags['--guidance'] ?? isAgent) && !anonymousLink;
+  const exitCode = await printDeploymentStatus(
     client,
     deployment,
     deployStamp,
     noWait,
     guidanceMode
   );
+  if (anonymousLink) {
+    log(
+      `You have ${ms(anonymousLink.expiresAt - Date.now())} to claim this deployment. Run ${getCommandName('login')} to keep it.`
+    );
+  }
+  return exitCode;
+}
+
+async function runImplicitBuild(client: Client, cwd: string): Promise<number> {
+  const projectJsonPath = join(cwd, VERCEL_DIR, VERCEL_DIR_PROJECT);
+  if (!(await fs.pathExists(projectJsonPath))) {
+    // Settings-only `project.json` (no projectId/orgId) is treated as
+    // unlinked everywhere else, so `vercel build` runs without linking.
+    await fs.outputJSON(projectJsonPath, { settings: {} }, { spaces: 2 });
+  }
+
+  output.log(
+    `No prebuilt output found. Running ${getCommandName('build')} first…`
+  );
+
+  const originalArgv = client.argv;
+  const originalCwd = client.cwd;
+  client.cwd = cwd;
+  client.setArgv([...originalArgv.slice(0, 2), 'build', '--prod', '--yes']);
+  try {
+    const build = (await import('../build')).default;
+    return await build(client);
+  } finally {
+    client.setArgv(originalArgv);
+    client.cwd = originalCwd;
+  }
 }
 
 function handleCreateDeployError(error: Error, localConfig: VercelConfig) {
