@@ -224,7 +224,7 @@ describe('explicit-list compilation layout (real CPython)', () => {
     ).resolves.toBeDefined();
   });
 
-  it('preserves successfully compiled bytecode when another source fails', async () => {
+  it('removes stale bytecode when recompilation fails for one source', async () => {
     if (!processPoolAvailable) return;
     const [major, minor] = await getPythonInfo();
 
@@ -233,7 +233,7 @@ describe('explicit-list compilation layout (real CPython)', () => {
     const validSource = path.join(workPath, 'valid.py');
     const invalidSource = path.join(workPath, 'invalid.py');
     fs.writeFileSync(validSource, 'X = 1\n');
-    fs.writeFileSync(invalidSource, 'def invalid syntax\n');
+    fs.writeFileSync(invalidSource, 'X = 1\n');
 
     await expect(
       runCompileAll({
@@ -249,8 +249,28 @@ describe('explicit-list compilation layout (real CPython)', () => {
       major,
       minor
     );
+    const invalidBytecode = deriveStagedPycFsPath(
+      stagingDir,
+      invalidSource,
+      major,
+      minor
+    );
     expect(validBytecode).not.toBeNull();
+    expect(invalidBytecode).not.toBeNull();
     expect(fs.existsSync(validBytecode!)).toBe(true);
+    expect(fs.existsSync(invalidBytecode!)).toBe(true);
+
+    fs.writeFileSync(invalidSource, 'def invalid syntax\n');
+    await expect(
+      runCompileAll({
+        pythonBin,
+        sourceFiles: [validSource, invalidSource],
+        pycachePrefix: stagingDir,
+      })
+    ).resolves.toBe(true);
+
+    expect(fs.existsSync(validBytecode!)).toBe(true);
+    expect(fs.existsSync(invalidBytecode!)).toBe(false);
   });
 
   it('exits nonzero when multiprocessing is unavailable', async () => {

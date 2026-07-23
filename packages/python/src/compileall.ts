@@ -17,6 +17,13 @@ export const PYCACHE_PREFIX_DIR = '_vc_pycache';
  */
 export const RUNTIME_PYCACHE_PREFIX = `/var/task/${PYCACHE_PREFIX_DIR}`;
 
+export const COMPILE_ALL_SCRIPT_PATH = join(
+  __dirname,
+  '..',
+  'templates',
+  'vc_compileall.py'
+);
+
 function isCompileAllFlagEnabled(): boolean {
   const val = process.env.VERCEL_PYTHON_COMPILEALL;
   if (val === undefined || val === '') return false;
@@ -80,7 +87,7 @@ export async function runCompileAll({
 }): Promise<boolean> {
   const uniqueSourceFiles = [...new Set(sourceFiles)];
   if (uniqueSourceFiles.length === 0) {
-    return false;
+    return true;
   }
 
   let tempDir: string | undefined;
@@ -91,14 +98,13 @@ export async function runCompileAll({
     );
     const listPath = join(tempDir, 'pysources.json');
     await fs.promises.writeFile(listPath, JSON.stringify(uniqueSourceFiles));
-    const scriptPath = join(__dirname, '..', 'templates', 'vc_compileall.py');
 
     const baseEnv = env || process.env;
     const subprocessEnv = pycachePrefix
       ? { ...baseEnv, PYTHONPYCACHEPREFIX: pycachePrefix }
       : baseEnv;
 
-    await execa(pythonBin, [scriptPath, listPath], {
+    await execa(pythonBin, [COMPILE_ALL_SCRIPT_PATH, listPath], {
       env: subprocessEnv,
       timeout: COMPILEALL_TIMEOUT_MS,
     });

@@ -1,5 +1,7 @@
 import compileall
+import importlib.util
 import json
+import os
 import signal
 import sys
 from multiprocessing import Pool
@@ -7,6 +9,12 @@ from py_compile import PycInvalidationMode
 
 
 def compile_source(source_file):
+    bytecode_file = importlib.util.cache_from_source(source_file)
+    try:
+        os.unlink(bytecode_file)
+    except FileNotFoundError:
+        pass
+
     try:
         return compileall.compile_file(
             source_file,

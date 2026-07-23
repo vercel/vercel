@@ -169,7 +169,7 @@ describe('runCompileAll', () => {
   it('does not invoke the coordinator when there are no source files', async () => {
     await expect(
       runCompileAll({ pythonBin: 'python3', sourceFiles: [] })
-    ).resolves.toBe(false);
+    ).resolves.toBe(true);
 
     expect(mockedExeca).not.toHaveBeenCalled();
   });
