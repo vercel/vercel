@@ -1,6 +1,7 @@
 import indent from '../../util/output/indent';
 import table from '../../util/output/table';
 import { truncateMiddle } from '../../util/output/truncate';
+import type { Alert, AlertGroup } from './types';
 
 export function renderAlertTable(rows: string[][], hsep = 3): string {
   return indent(
@@ -20,6 +21,32 @@ export function normalizeTimestamp(
   }
 
   return Math.abs(value) < 1_000_000_000_000 ? value * 1000 : value;
+}
+
+export function getPrimaryAlert(group: AlertGroup): Alert | undefined {
+  return group.alerts?.[0];
+}
+
+export function getGroupTitle(group: AlertGroup): string {
+  return (
+    group.ai?.title ||
+    group.title ||
+    getPrimaryAlert(group)?.title ||
+    'Alert group'
+  );
+}
+
+export function getGroupType(group: AlertGroup): string {
+  return group.type || getPrimaryAlert(group)?.type || '-';
+}
+
+export function getGroupStartedAt(group: AlertGroup): number | undefined {
+  const primaryAlert = getPrimaryAlert(group);
+  return normalizeTimestamp(
+    group.recordedStartedAt ??
+      primaryAlert?.recordedStartedAt ??
+      primaryAlert?.startedAt
+  );
 }
 
 export function formatTriggerOperator(value: unknown): string | undefined {

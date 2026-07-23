@@ -258,6 +258,33 @@ describe('alerts rules', () => {
     expect(output).not.toContain('"autosubscribeOwnersInKnock"');
   });
 
+  it('inspects an alert rule when flags precede the rule id', async () => {
+    let requestPath = '';
+    client.scenario.get('/alerts/v2/alert-rules/:ruleId', (req, res) => {
+      requestPath = req.path;
+      expect(req.query.teamId).toBe('team_dummy');
+      res.json({
+        id: 'ar_builtin',
+        name: 'Vercel Site',
+        teamId: 'team_dummy',
+      });
+    });
+
+    client.setArgv('alerts', 'rules', 'get', '--format', 'json', 'ar_builtin');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    expect(requestPath).toContain('/alerts/v2/alert-rules/ar_builtin');
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      rule: {
+        id: 'ar_builtin',
+        name: 'Vercel Site',
+        teamId: 'team_dummy',
+      },
+    });
+  });
+
   it('inspects a custom alert rule with query details', async () => {
     const queryJsonString = JSON.stringify({
       event: 'incomingRequest',

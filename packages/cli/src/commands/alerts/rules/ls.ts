@@ -4,7 +4,6 @@ import { getFlagsSpecification } from '../../../util/get-flags-specification';
 import { printError } from '../../../util/error';
 import output from '../../../output-manager';
 import chalk from 'chalk';
-import table from '../../../util/output/table';
 import { validateJsonOutput } from '../../../util/output-format';
 import { isAPIError } from '../../../util/errors-ts';
 import { outputAgentError } from '../../../util/agent-output';
@@ -24,6 +23,7 @@ import {
   formatRuleScope,
   isCustomAlertRule,
   parseCustomAlertQuery,
+  renderAlertTable,
 } from '../format';
 import { truncateEnd } from '../../../util/output/truncate';
 
@@ -115,12 +115,7 @@ function printRules(rules: AlertRule[]) {
       return row;
     }),
   ];
-  const tableOutput = table(rows, { hsep: 2 })
-    .split('\n')
-    .map(line => line.trimEnd())
-    .join('\n')
-    .replace(/^/gm, '  ');
-  output.print(`\n${tableOutput}\n`);
+  output.print(`\n${renderAlertTable(rows, 2)}\n`);
 }
 
 export default async function ls(

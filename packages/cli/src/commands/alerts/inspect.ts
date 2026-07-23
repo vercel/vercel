@@ -25,65 +25,17 @@ import formatDate from '../../util/format-date';
 import chalk from 'chalk';
 import {
   formatTriggerOperator,
+  getGroupStartedAt,
+  getGroupTitle,
+  getGroupType,
   humanizeReference,
   normalizeTimestamp,
   renderAlertTable,
 } from './format';
 import { truncateEnd, truncateMiddle } from '../../util/output/truncate';
+import type { Alert, AlertGroup } from './types';
 
 type AlertScope = { teamId: string; projectId?: string };
-
-interface Ai {
-  title?: string;
-  currentSummary?: string;
-  keyFindings?: string[];
-}
-
-interface FormattedValues {
-  changeAmount?: string;
-  changeDirection?: string;
-  formattedAvg?: string;
-  formattedCount?: string;
-  formattedThreshold?: string;
-  errorRate?: string;
-  avgErrorRate?: string;
-}
-
-interface Alert {
-  id?: string;
-  groupId?: string;
-  type?: string;
-  pipe?: string;
-  status?: string;
-  level?: string;
-  title?: string;
-  startedAt?: number;
-  resolvedAt?: number;
-  recordedStartedAt?: number;
-  recordedResolvedAt?: number;
-  rules?: string[];
-  data?: Record<string, unknown>;
-  eventLabel?: string;
-  measureLabel?: string;
-  unit?: string;
-  formattedValues?: FormattedValues;
-}
-
-interface AlertGroup {
-  id?: string;
-  teamId?: string;
-  projectId?: string;
-  title?: string;
-  type?: string;
-  pipe?: string;
-  status?: string;
-  level?: string;
-  recordedStartedAt?: number;
-  recordedResolvedAt?: number;
-  updatedAt?: number;
-  ai?: Ai;
-  alerts?: Alert[];
-}
 
 const detailKeysToSkip = new Set([
   'average',
@@ -101,23 +53,6 @@ const detailKeysToSkip = new Set([
   'zscore',
 ]);
 
-function getPrimaryAlert(group: AlertGroup): Alert | undefined {
-  return group.alerts?.[0];
-}
-
-function getGroupTitle(group: AlertGroup): string {
-  return (
-    group.ai?.title ||
-    group.title ||
-    getPrimaryAlert(group)?.title ||
-    'Alert group'
-  );
-}
-
-function getGroupType(group: AlertGroup): string {
-  return group.type || getPrimaryAlert(group)?.type || '-';
-}
-
 function getGroupStatus(group: AlertGroup): string {
   if (group.status) {
     return group.status;
@@ -132,14 +67,6 @@ function getGroupStatus(group: AlertGroup): string {
   }
 
   return '-';
-}
-
-function getGroupStartedAt(group: AlertGroup): number | undefined {
-  return normalizeTimestamp(
-    group.recordedStartedAt ??
-      getPrimaryAlert(group)?.recordedStartedAt ??
-      getPrimaryAlert(group)?.startedAt
-  );
 }
 
 function humanizeLabel(value: string): string {
