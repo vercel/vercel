@@ -110,6 +110,13 @@ export class VcrTelemetryClient
     });
   }
 
+  trackCliSubcommandPermissions(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'permissions',
+      value: actual,
+    });
+  }
+
   trackCliOptionLimit(value: number | undefined) {
     if (typeof value === 'number') {
       this.trackCliOption({

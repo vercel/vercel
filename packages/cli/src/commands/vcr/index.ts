@@ -29,6 +29,14 @@ import {
   tagsLsSubcommand,
   tagsInspectSubcommand,
 } from './tags/command';
+import {
+  PERMISSIONS_ACTIONS,
+  permissionsAggregateCommand,
+  permissionsLsSubcommand,
+  permissionsAddSubcommand,
+  permissionsRmSubcommand,
+  permissionsClearSubcommand,
+} from './permissions/command';
 
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
@@ -40,6 +48,7 @@ const COMMAND_CONFIG = {
   push: getCommandAliases(pushSubcommand),
   tag: getCommandAliases(tagsAggregateCommand),
   image: getCommandAliases(imageAggregateCommand),
+  permissions: getCommandAliases(permissionsAggregateCommand),
 };
 
 export default async function vcr(client: Client): Promise<number> {
@@ -134,6 +143,40 @@ export default async function vcr(client: Client): Promise<number> {
         printHelp(imageAggregateCommand);
         return 2;
       }
+      case 'permissions': {
+        telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
+        // Actions use `<repository> <action>` ordering, so the action may be
+        // the first or second positional (the repository may be omitted).
+        const nested = args.slice(0, 2);
+        const hasAction = (aliases: string[]) =>
+          nested.some(arg => arg !== undefined && aliases.includes(arg));
+        function printPermissionsActionHelp(command: Command): void {
+          output.print(
+            help(command, {
+              parent: { ...vcrCommand, name: 'vcr permissions repository' },
+              columns: client.stderr.columns,
+            })
+          );
+        }
+        if (hasAction(PERMISSIONS_ACTIONS.ls)) {
+          printPermissionsActionHelp(permissionsLsSubcommand);
+          return 2;
+        }
+        if (hasAction(PERMISSIONS_ACTIONS.add)) {
+          printPermissionsActionHelp(permissionsAddSubcommand);
+          return 2;
+        }
+        if (hasAction(PERMISSIONS_ACTIONS.rm)) {
+          printPermissionsActionHelp(permissionsRmSubcommand);
+          return 2;
+        }
+        if (hasAction(PERMISSIONS_ACTIONS.clear)) {
+          printPermissionsActionHelp(permissionsClearSubcommand);
+          return 2;
+        }
+        printHelp(permissionsAggregateCommand);
+        return 2;
+      }
       default:
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         output.print(help(vcrCommand, { columns: client.stderr.columns }));
@@ -169,6 +212,9 @@ export default async function vcr(client: Client): Promise<number> {
     case 'image':
       telemetry.trackCliSubcommandImage(subcommandOriginal);
       return (await import('./image')).default(client, args, telemetry);
+    case 'permissions':
+      telemetry.trackCliSubcommandPermissions(subcommandOriginal);
+      return (await import('./permissions')).default(client, args, telemetry);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(vcrCommand, { columns: client.stderr.columns }));
