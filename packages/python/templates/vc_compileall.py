@@ -1,7 +1,8 @@
 import compileall
 import json
+import signal
 import sys
-from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import Pool
 from py_compile import PycInvalidationMode
 
 
@@ -26,13 +27,20 @@ def main():
         return 0
 
     try:
-        with ProcessPoolExecutor() as executor:
-            results = list(executor.map(compile_source, source_files))
+        with Pool() as pool:
+            def abort_pool(signum, _):
+                pool.terminate()
+                raise SystemExit(128 + signum)
+
+            for sig in signal.SIGINT, signal.SIGTERM:
+              signal.signal(sig, abort_pool)
+
+            pool.map(compile_source, source_files)
     except OSError as error:
         print(f"Bytecode compilation unavailable: {error}", file=sys.stderr)
         return 1
 
-    return 0 if all(results) else 1
+    return 0
 
 
 if __name__ == "__main__":
