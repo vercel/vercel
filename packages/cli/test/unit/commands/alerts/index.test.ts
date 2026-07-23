@@ -496,5 +496,4 @@ describe('alerts', () => {
     expect(output).toContain('Cause');
     expect(output).toContain('function');
   });
-
 });

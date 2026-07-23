@@ -177,7 +177,9 @@ function getGroupStartedAt(group: AlertGroup): number | undefined {
 
 function getGroupResolvedAt(group: AlertGroup): number | undefined {
   const resolvedTimes = (group.alerts ?? [])
-    .map(alert => normalizeTimestamp(alert.recordedResolvedAt ?? alert.resolvedAt))
+    .map(alert =>
+      normalizeTimestamp(alert.recordedResolvedAt ?? alert.resolvedAt)
+    )
     .filter((time): time is number => time !== undefined);
 
   if (resolvedTimes.length > 0) {
@@ -197,11 +199,7 @@ function getStatus(group: AlertGroup): string {
     const startedAt = getGroupStartedAt(group);
     const resolvedAt = getGroupResolvedAt(group);
 
-    if (
-      startedAt &&
-      resolvedAt &&
-      resolvedAt >= startedAt
-    ) {
+    if (startedAt && resolvedAt && resolvedAt >= startedAt) {
       return `resolved after ${ms(resolvedAt - startedAt)}`;
     }
 

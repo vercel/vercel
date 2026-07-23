@@ -137,8 +137,8 @@ function getGroupStatus(group: AlertGroup): string {
 function getGroupStartedAt(group: AlertGroup): number | undefined {
   return normalizeTimestamp(
     group.recordedStartedAt ??
-    getPrimaryAlert(group)?.recordedStartedAt ??
-    getPrimaryAlert(group)?.startedAt
+      getPrimaryAlert(group)?.recordedStartedAt ??
+      getPrimaryAlert(group)?.startedAt
   );
 }
 
@@ -340,7 +340,9 @@ function renderAlert(alert: Alert, index: number, totalAlerts: number): string {
     ['Status', alert.status || '-'],
     [
       'Started At',
-      formatDate(normalizeTimestamp(alert.recordedStartedAt ?? alert.startedAt)),
+      formatDate(
+        normalizeTimestamp(alert.recordedStartedAt ?? alert.startedAt)
+      ),
     ],
     ...(alert.resolvedAt !== undefined || alert.recordedResolvedAt !== undefined
       ? [

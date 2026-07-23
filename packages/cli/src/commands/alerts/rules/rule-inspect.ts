@@ -87,8 +87,7 @@ function formatBoolean(value: boolean | undefined): string {
 
 function getAlertTypeRows(rule: AlertRule): string[][] {
   const types =
-    rule.alertTypes
-      ?.map(alertType => alertType.type) ??
+    rule.alertTypes?.map(alertType => alertType.type) ??
     (rule.customAlert ? ['custom_alert'] : []);
 
   if (types.length === 0) {
