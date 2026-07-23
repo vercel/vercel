@@ -81,9 +81,9 @@ import {
 } from './django';
 import { containsTopLevelCallable } from '@vercel/python-analysis';
 import {
-  CompileAllRunner,
   collectAppBytecodeFiles,
   collectAppPrefixBytecodeFiles,
+  runCompileAll,
   RUNTIME_PYCACHE_PREFIX,
   shouldCompileAll,
   type BytecodeCollectionResult,
@@ -1313,11 +1313,11 @@ export const build: BuildVX = async ({
         },
       });
 
-      const compileAllRunner = compileAllEnabled
-        ? new CompileAllRunner({
+      const compileAllOptions = compileAllEnabled
+        ? {
             pythonBin: getVenvPythonBin(venvPath),
             env: pythonEnv,
-          })
+          }
         : null;
 
       const compileSources = async ({
@@ -1327,7 +1327,7 @@ export const build: BuildVX = async ({
         includePackages?: string[];
         pycachePrefix?: string;
       }) => {
-        if (!compileAllRunner) return;
+        if (!compileAllOptions) return;
 
         const vendorSourceFiles =
           installedDistributions.getPythonSourceFiles(includePackages);
@@ -1336,10 +1336,11 @@ export const build: BuildVX = async ({
           .child('vc.builder.python.compileall')
           .trace(async compileSpan => {
             console.log('Compiling Python bytecode...');
-            await compileAllRunner.run(
-              [...appPythonSourceFiles, ...vendorSourceFiles],
-              pycachePrefix
-            );
+            await runCompileAll({
+              ...compileAllOptions,
+              sourceFiles: [...appPythonSourceFiles, ...vendorSourceFiles],
+              pycachePrefix,
+            });
 
             compileSpan.setAttributes({
               'python.compileall.enabled': 'true',
