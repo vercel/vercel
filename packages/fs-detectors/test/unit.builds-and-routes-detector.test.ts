@@ -3043,23 +3043,68 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     );
   });
 
-  it('rejects functions config targeting the proxy entrypoint', async () => {
-    const { errors } = await detectBuilders(['proxy.ts'], null, {
-      proxy: { entrypoint: 'proxy.ts' },
-      functions: {
-        'proxy.ts': {
-          runtime: '@vercel/static@1.0.0',
+  it('applies functions config targeting the proxy entrypoint', async () => {
+    const { builders } = await invokeDetectBuildersAndThrow(
+      ['proxy.ts'],
+      null,
+      {
+        proxy: { entrypoint: 'proxy.ts' },
+        functions: {
+          'proxy.ts': {
+            maxDuration: 10,
+            memory: 1024,
+          },
         },
+      }
+    );
+
+    expect(builders[0]).toEqual({
+      src: 'proxy.ts',
+      use: '@vercel/node',
+      config: {
+        functions: {
+          'proxy.ts': {
+            maxDuration: 10,
+            memory: 1024,
+          },
+        },
+        middleware: true,
+        middlewareRuntime: 'nodejs',
+        zeroConfig: true,
       },
     });
+  });
 
-    expect(errors).toEqual([
+  it.each([
+    'proxy.ts',
+    '**/*.ts',
+  ])('uses a functions runtime targeting the proxy through %s', async pattern => {
+    const { builders } = await invokeDetectBuildersAndThrow(
+      ['proxy.ts'],
+      null,
       {
-        code: 'proxy_function_conflict',
-        message:
-          'The `functions` property cannot be used to configure the proxy entrypoint `proxy.ts`. Configure the proxy through the `proxy` property instead.',
+        proxy: { entrypoint: 'proxy.ts' },
+        functions: {
+          [pattern]: {
+            runtime: 'some-runtime@1.0.0',
+          },
+        },
+      }
+    );
+
+    expect(builders[0]).toEqual({
+      src: 'proxy.ts',
+      use: 'some-runtime@1.0.0',
+      config: {
+        functions: {
+          [pattern]: {
+            runtime: 'some-runtime@1.0.0',
+          },
+        },
+        middleware: true,
+        zeroConfig: true,
       },
-    ]);
+    });
   });
 
   it('rejects unsupported proxy entrypoint extensions', async () => {

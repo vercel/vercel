@@ -19,6 +19,36 @@ describe('validateConfig', () => {
       ).toBeNull();
     });
 
+    it('accepts functions configuration for the proxy', () => {
+      expect(
+        validateConfig({
+          proxy: { entrypoint: 'proxy.ts' },
+          functions: {
+            'proxy.ts': {
+              maxDuration: 10,
+              memory: 1024,
+            },
+          },
+        })
+      ).toBeNull();
+    });
+
+    it.each([
+      'proxy.ts',
+      '**/*.ts',
+    ])('accepts a functions runtime targeting the proxy through %s', pattern => {
+      expect(
+        validateConfig({
+          proxy: { entrypoint: 'proxy.ts' },
+          functions: {
+            [pattern]: {
+              runtime: 'some-runtime@1.0.0',
+            },
+          },
+        })
+      ).toBeNull();
+    });
+
     it('requires an entrypoint', () => {
       const error = validateConfig({
         // @ts-expect-error - testing invalid configuration

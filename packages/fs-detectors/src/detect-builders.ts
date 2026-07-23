@@ -53,25 +53,21 @@ const VERCEL_PLATFORM_FILES = [
 
 export const REGEX_VERCEL_PLATFORM_FILES = VERCEL_PLATFORM_FILES.join(',');
 
-/**
- * Pattern for non-Vercel platform files.
- */
-export const REGEX_NON_VERCEL_PLATFORM_FILES = `!{${REGEX_VERCEL_PLATFORM_FILES}}`;
-
 function escapeMinimatchPath(path: string): string {
   return path.replace(/([\\,*?[\]{}()!+@])/g, '\\$1');
 }
 
-function getNonVercelPlatformFiles(proxy?: ProxyConfig): string {
-  if (!proxy) {
-    return REGEX_NON_VERCEL_PLATFORM_FILES;
-  }
-
+function getStaticFilesPattern(additionalExclusions: string[] = []): string {
   return `!{${[
     ...VERCEL_PLATFORM_FILES,
-    escapeMinimatchPath(proxy.entrypoint),
+    ...additionalExclusions.map(escapeMinimatchPath),
   ].join(',')}}`;
 }
+
+/**
+ * Pattern for non-Vercel platform files.
+ */
+export const REGEX_NON_VERCEL_PLATFORM_FILES = getStaticFilesPattern();
 
 const slugToFramework = new Map<string | null, Framework>(
   frameworkList.map(f => [f.slug, f])
@@ -236,7 +232,7 @@ export async function detectBuilders(
 
     if (!result.errors && options.proxy) {
       result.builders = [
-        getProxyBuilder(options.proxy, options.tag),
+        getProxyBuilder(options.proxy, options.tag, options.functions),
         ...(result.builders ?? []),
       ];
     }
@@ -386,7 +382,13 @@ export async function detectBuilders(
   }
 
   if (options.proxy) {
-    apiBuilders.unshift(getProxyBuilder(options.proxy, options.tag));
+    const proxyBuilder = getProxyBuilder(
+      options.proxy,
+      options.tag,
+      options.functions
+    );
+    addToUsedFunctions(proxyBuilder);
+    apiBuilders.unshift(proxyBuilder);
   }
 
   if (
@@ -438,7 +440,9 @@ export async function detectBuilders(
       // and package.json can be served as static files
       frontendBuilder = {
         use: '@vercel/static',
-        src: getNonVercelPlatformFiles(options.proxy),
+        src: getStaticFilesPattern(
+          options.proxy ? [options.proxy.entrypoint] : []
+        ),
         config: {
           zeroConfig: true,
         },
@@ -687,16 +691,36 @@ function getFunction(fileName: string, { functions = {} }: Options) {
     : { fnPattern: null, func: null };
 }
 
-export function getProxyBuilder(proxy: ProxyConfig, tag?: string): Builder {
+export function getProxyBuilder(
+  proxy: ProxyConfig,
+  tag?: string,
+  functions: BuilderFunctions = {}
+): Builder {
+  const { fnPattern, func } = getFunction(proxy.entrypoint, { functions });
+  const runtime = func?.runtime;
+  const config: Config = {
+    zeroConfig: true,
+    middleware: true,
+    ...(!runtime ? { middlewareRuntime: 'nodejs' as const } : {}),
+    ...(proxy.matcher ? { middlewareMatcher: proxy.matcher } : {}),
+  };
+
+  if (fnPattern && func) {
+    config.functions = { [fnPattern]: func };
+
+    if (func.includeFiles) {
+      config.includeFiles = func.includeFiles;
+    }
+
+    if (func.excludeFiles) {
+      config.excludeFiles = func.excludeFiles;
+    }
+  }
+
   return {
     src: proxy.entrypoint,
-    use: `@vercel/node${tag ? `@${tag}` : ''}`,
-    config: {
-      zeroConfig: true,
-      middleware: true,
-      middlewareRuntime: 'nodejs',
-      ...(proxy.matcher ? { middlewareMatcher: proxy.matcher } : {}),
-    },
+    use: runtime || `@vercel/node${tag ? `@${tag}` : ''}`,
+    config,
   };
 }
 
@@ -799,13 +823,6 @@ function validateProxy(
     return {
       code: 'proxy_entrypoint_not_found',
       message: `The proxy entrypoint \`${proxy.entrypoint}\` does not exist. Set \`proxy.entrypoint\` to an existing \`.js\` or \`.ts\` file.`,
-    };
-  }
-
-  if (options.functions?.[proxy.entrypoint]) {
-    return {
-      code: 'proxy_function_conflict',
-      message: `The \`functions\` property cannot be used to configure the proxy entrypoint \`${proxy.entrypoint}\`. Configure the proxy through the \`proxy\` property instead.`,
     };
   }
 

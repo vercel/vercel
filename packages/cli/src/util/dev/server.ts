@@ -877,7 +877,9 @@ export default class DevServer {
         await this.exit();
       }
       vercelConfig.builds = vercelConfig.builds || [];
-      vercelConfig.builds.push(getProxyBuilder(vercelConfig.proxy, 'latest'));
+      vercelConfig.builds.push(
+        getProxyBuilder(vercelConfig.proxy, 'latest', vercelConfig.functions)
+      );
     }
 
     if (this.sidecars === undefined) {

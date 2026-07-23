@@ -635,6 +635,12 @@ describe.skipIf(flakey)('build', () => {
             middleware: true,
             middlewareRuntime: 'nodejs',
             middlewareMatcher: '/api/:func*',
+            functions: {
+              'proxy.ts': {
+                maxDuration: 10,
+                memory: 1024,
+              },
+            },
           },
         },
         {
@@ -675,6 +681,8 @@ describe.skipIf(flakey)('build', () => {
       join(output, 'functions/proxy.func/.vc-config.json')
     );
     expect(functionConfig.runtime).toMatch(/^nodejs/);
+    expect(functionConfig.maxDuration).toBe(10);
+    expect(functionConfig.memory).toBe(1024);
   });
 
   it('should build root-level `middleware.js` with "Root Directory" setting', async () => {
