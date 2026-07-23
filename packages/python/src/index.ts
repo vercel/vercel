@@ -1786,11 +1786,16 @@ export const build: BuildVX = async ({
     return { resultVersion: 3, result: { output } };
   }
 
-  // V2 services omit `type` and have isolated build outputs, so their Lambda
-  // can use the natural `index` path. V1 services still share one output and
-  // need the internal service namespace to avoid collisions.
+  // Keep framework Lambdas away from `index`: the filesystem treats that
+  // output as a match for `/`, which can finish a rewrite before the catch-all
+  // below copies the resolved destination into the runtime request path.
+  // V1 services still share one output and need their legacy namespace.
+  const frameworkLambdaName = framework ?? 'python';
+
   const lambdaPath =
-    service?.name && service.type ? `_svc/${service.name}/index` : 'index';
+    service?.name && service.type
+      ? `_svc/${service.name}/index`
+      : frameworkLambdaName;
   const staticFiles = cdnOutputDir
     ? await glob('**', { cwd: cdnOutputDir })
     : {};
@@ -1808,7 +1813,20 @@ export const build: BuildVX = async ({
       ? undefined
       : [
           { handle: 'filesystem' as const },
-          { src: '/(.*)', dest: `/${lambdaPath}` },
+          // This route matches the resolved destination after rewrites. Copy
+          // that path into the runtime request before dispatching the shared
+          // framework Lambda so application routing observes the rewrite.
+          {
+            src: '/(.*)',
+            dest: `/${lambdaPath}`,
+            transforms: [
+              {
+                type: 'request.path' as const,
+                op: 'set' as const,
+                args: '/$1',
+              },
+            ],
+          },
         ];
 
   return {
