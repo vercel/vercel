@@ -57,13 +57,6 @@ export function shouldCompileAll({
   return isCompileAllFlagEnabled();
 }
 
-interface CompileAllRunnerOptions {
-  /** Path to the venv Python binary (e.g. from getVenvPythonBin). */
-  pythonBin: string;
-  /** Environment to pass to the subprocess. */
-  env?: NodeJS.ProcessEnv;
-}
-
 /**
  * Runs the Python compile coordinator to precompile `.py` files into `.pyc`
  * bytecode.
@@ -72,53 +65,53 @@ interface CompileAllRunnerOptions {
  * bytecode is trusted without re-hashing the source on every import.  This
  * is safe because Lambda payloads are immutable after deployment.
  *
- * Failures are logged but not surfaced to the user.
+ * Coordinator failures are logged but not surfaced to the user.
  */
-export class CompileAllRunner {
-  private readonly pythonBin: string;
-  private readonly env?: NodeJS.ProcessEnv;
-
-  constructor({ pythonBin, env }: CompileAllRunnerOptions) {
-    this.pythonBin = pythonBin;
-    this.env = env;
+export async function runCompileAll({
+  pythonBin,
+  sourceFiles,
+  env,
+  pycachePrefix,
+}: {
+  pythonBin: string;
+  sourceFiles: string[];
+  env?: NodeJS.ProcessEnv;
+  pycachePrefix?: string;
+}): Promise<boolean> {
+  const uniqueSourceFiles = [...new Set(sourceFiles)];
+  if (uniqueSourceFiles.length === 0) {
+    return false;
   }
 
-  async run(sourceFiles: string[], pycachePrefix?: string): Promise<boolean> {
-    const uniqueSourceFiles = [...new Set(sourceFiles)];
-    if (uniqueSourceFiles.length === 0) {
-      return false;
-    }
+  let tempDir: string | undefined;
 
-    let tempDir: string | undefined;
+  try {
+    tempDir = await fs.promises.mkdtemp(
+      join(tmpdir(), 'vercel-python-compileall-')
+    );
+    const listPath = join(tempDir, 'pysources.json');
+    await fs.promises.writeFile(listPath, JSON.stringify(uniqueSourceFiles));
+    const scriptPath = join(__dirname, '..', 'templates', 'vc_compileall.py');
 
-    try {
-      tempDir = await fs.promises.mkdtemp(
-        join(tmpdir(), 'vercel-python-compileall-')
-      );
-      const listPath = join(tempDir, 'pysources.json');
-      await fs.promises.writeFile(listPath, JSON.stringify(uniqueSourceFiles));
-      const scriptPath = join(__dirname, '..', 'templates', 'vc_compileall.py');
+    const baseEnv = env || process.env;
+    const subprocessEnv = pycachePrefix
+      ? { ...baseEnv, PYTHONPYCACHEPREFIX: pycachePrefix }
+      : baseEnv;
 
-      const baseEnv = this.env || process.env;
-      const subprocessEnv = pycachePrefix
-        ? { ...baseEnv, PYTHONPYCACHEPREFIX: pycachePrefix }
-        : baseEnv;
-
-      await execa(this.pythonBin, [scriptPath, listPath], {
-        env: subprocessEnv,
-        timeout: COMPILEALL_TIMEOUT_MS,
-      });
-      return true;
-    } catch (err) {
-      debug(`compileall error details: ${JSON.stringify(err)}`);
-      return false;
-    } finally {
-      if (tempDir) {
-        try {
-          await fs.promises.rm(tempDir, { recursive: true, force: true });
-        } catch (err) {
-          debug(`compileall temporary file cleanup error: ${String(err)}`);
-        }
+    await execa(pythonBin, [scriptPath, listPath], {
+      env: subprocessEnv,
+      timeout: COMPILEALL_TIMEOUT_MS,
+    });
+    return true;
+  } catch (err) {
+    debug(`compileall error details: ${JSON.stringify(err)}`);
+    return false;
+  } finally {
+    if (tempDir) {
+      try {
+        await fs.promises.rm(tempDir, { recursive: true, force: true });
+      } catch (err) {
+        debug(`compileall temporary file cleanup error: ${String(err)}`);
       }
     }
   }

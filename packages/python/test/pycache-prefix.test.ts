@@ -3,7 +3,7 @@ import execa from 'execa';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { CompileAllRunner, deriveStagedPycFsPath } from '../src/compileall';
+import { deriveStagedPycFsPath, runCompileAll } from '../src/compileall';
 import {
   RUNTIME_DEPS_DIR,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
@@ -35,7 +35,7 @@ beforeAll(async () => {
   try {
     await execa(process.env.PYTHON_BIN || 'python3', [
       '-c',
-      'from concurrent.futures import ProcessPoolExecutor; ProcessPoolExecutor().shutdown()',
+      'from multiprocessing import Pool; Pool().terminate()',
     ]);
     processPoolAvailable = true;
   } catch {}
@@ -74,8 +74,9 @@ describe('explicit-list compilation layout (real CPython)', () => {
       fs.writeFileSync(srcPath, 'X = 1\n');
     }
 
-    const runner = new CompileAllRunner({ pythonBin });
-    await expect(runner.run(sourcePaths)).resolves.toBe(true);
+    await expect(
+      runCompileAll({ pythonBin, sourceFiles: sourcePaths })
+    ).resolves.toBe(true);
 
     for (const srcPath of sourcePaths) {
       expect(
@@ -104,8 +105,13 @@ describe('explicit-list compilation layout (real CPython)', () => {
       fs.writeFileSync(srcPath, 'X = 1\n');
     }
 
-    const runner = new CompileAllRunner({ pythonBin });
-    await expect(runner.run(sourcePaths, stagingDir)).resolves.toBe(true);
+    await expect(
+      runCompileAll({
+        pythonBin,
+        sourceFiles: sourcePaths,
+        pycachePrefix: stagingDir,
+      })
+    ).resolves.toBe(true);
 
     for (const srcPath of sourcePaths) {
       const derived = deriveStagedPycFsPath(stagingDir, srcPath, major, minor);
@@ -127,7 +133,7 @@ describe('explicit-list compilation layout (real CPython)', () => {
     ).resolves.toBeDefined();
   });
 
-  it('reports failure after preserving successfully compiled bytecode', async () => {
+  it('preserves successfully compiled bytecode when another source fails', async () => {
     if (!processPoolAvailable) return;
     const [major, minor] = await getPythonInfo();
 
@@ -138,10 +144,13 @@ describe('explicit-list compilation layout (real CPython)', () => {
     fs.writeFileSync(validSource, 'X = 1\n');
     fs.writeFileSync(invalidSource, 'def invalid syntax\n');
 
-    const runner = new CompileAllRunner({ pythonBin });
     await expect(
-      runner.run([validSource, invalidSource], stagingDir)
-    ).resolves.toBe(false);
+      runCompileAll({
+        pythonBin,
+        sourceFiles: [validSource, invalidSource],
+        pycachePrefix: stagingDir,
+      })
+    ).resolves.toBe(true);
 
     const validBytecode = deriveStagedPycFsPath(
       stagingDir,
@@ -169,7 +178,7 @@ module = runpy.run_path(sys.argv[1], run_name="vc_compileall_test")
 def unavailable_pool():
     raise OSError("multiprocessing unavailable")
 
-module["main"].__globals__["ProcessPoolExecutor"] = unavailable_pool
+module["main"].__globals__["Pool"] = unavailable_pool
 sys.argv = [sys.argv[1], sys.argv[2]]
 sys.exit(module["main"]())
 `;

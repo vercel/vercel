@@ -16,7 +16,6 @@ import execa from 'execa';
 import { FileFsRef } from '@vercel/build-utils';
 import {
   COMPILEALL_TIMEOUT_MS,
-  CompileAllRunner,
   PYCACHE_PREFIX_DIR,
   RUNTIME_PYCACHE_PREFIX,
   collectAppBytecodeFiles,
@@ -25,6 +24,7 @@ import {
   derivePrefixPycRelPath,
   derivePycPath,
   deriveStagedPycFsPath,
+  runCompileAll,
   shouldCompileAll,
 } from '../src/compileall';
 import {
@@ -132,7 +132,7 @@ describe('shouldCompileAll', () => {
   });
 });
 
-describe('CompileAllRunner', () => {
+describe('runCompileAll', () => {
   it('passes a deduplicated JSON source list to the compile coordinator', async () => {
     let listPath = '';
     let sourceList: string[] = [];
@@ -142,13 +142,13 @@ describe('CompileAllRunner', () => {
       return Promise.resolve({});
     }) as any);
     const env = { VIRTUAL_ENV: '/work/.vercel/python/.venv' };
-    const runner = new CompileAllRunner({
-      pythonBin: '/work/.vercel/python/.venv/bin/python',
-      env,
-    });
 
     await expect(
-      runner.run(['/work/app.py', '/work/pkg/mod.py', '/work/app.py'])
+      runCompileAll({
+        pythonBin: '/work/.vercel/python/.venv/bin/python',
+        sourceFiles: ['/work/app.py', '/work/pkg/mod.py', '/work/app.py'],
+        env,
+      })
     ).resolves.toBe(true);
 
     const args = mockedExeca.mock.calls[0][1];
@@ -167,9 +167,9 @@ describe('CompileAllRunner', () => {
   });
 
   it('does not invoke the coordinator when there are no source files', async () => {
-    const runner = new CompileAllRunner({ pythonBin: 'python3' });
-
-    await expect(runner.run([])).resolves.toBe(false);
+    await expect(
+      runCompileAll({ pythonBin: 'python3', sourceFiles: [] })
+    ).resolves.toBe(false);
 
     expect(mockedExeca).not.toHaveBeenCalled();
   });
@@ -185,9 +185,13 @@ describe('CompileAllRunner', () => {
         })
       );
     }) as any);
-    const runner = new CompileAllRunner({ pythonBin: 'python3' });
 
-    await expect(runner.run(['/work/app.py'])).resolves.toBe(false);
+    await expect(
+      runCompileAll({
+        pythonBin: 'python3',
+        sourceFiles: ['/work/app.py'],
+      })
+    ).resolves.toBe(false);
 
     expect(fs.existsSync(listPath)).toBe(false);
     expect(fs.existsSync(path.dirname(listPath))).toBe(false);
@@ -201,9 +205,13 @@ describe('CompileAllRunner', () => {
         Object.assign(new Error('compileall timed out'), { timedOut: true })
       );
     }) as any);
-    const runner = new CompileAllRunner({ pythonBin: 'python3' });
 
-    await expect(runner.run(['/work/app.py'])).resolves.toBe(false);
+    await expect(
+      runCompileAll({
+        pythonBin: 'python3',
+        sourceFiles: ['/work/app.py'],
+      })
+    ).resolves.toBe(false);
 
     expect(fs.existsSync(listPath)).toBe(false);
     expect(fs.existsSync(path.dirname(listPath))).toBe(false);
@@ -212,12 +220,12 @@ describe('CompileAllRunner', () => {
   it('sets PYTHONPYCACHEPREFIX on the subprocess when provided', async () => {
     mockedExeca.mockResolvedValue({} as any);
     const env = { VIRTUAL_ENV: '/work/.vercel/python/.venv' };
-    const runner = new CompileAllRunner({
+    await runCompileAll({
       pythonBin: '/work/.vercel/python/.venv/bin/python',
+      sourceFiles: ['/work/app.py'],
       env,
+      pycachePrefix: '/work/.vercel/python/pycache',
     });
-
-    await runner.run(['/work/app.py'], '/work/.vercel/python/pycache');
 
     expect(mockedExeca).toHaveBeenCalledWith(
       '/work/.vercel/python/.venv/bin/python',
@@ -235,12 +243,11 @@ describe('CompileAllRunner', () => {
   it('does not set PYTHONPYCACHEPREFIX without a prefix', async () => {
     mockedExeca.mockResolvedValue({} as any);
     const env = { VIRTUAL_ENV: '/work/.vercel/python/.venv' };
-    const runner = new CompileAllRunner({
+    await runCompileAll({
       pythonBin: '/work/.vercel/python/.venv/bin/python',
+      sourceFiles: ['/work/app.py'],
       env,
     });
-
-    await runner.run(['/work/app.py']);
 
     const passedEnv = mockedExeca.mock.calls[0][2]?.env as Record<
       string,
