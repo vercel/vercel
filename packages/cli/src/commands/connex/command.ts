@@ -513,6 +513,15 @@ export const attachSubcommand = {
         'Target a specific git branch for the trigger destination (default: production). Only valid with --triggers.',
     },
     {
+      name: 'trigger-environment',
+      shorthand: null,
+      type: String,
+      argument: 'ENV',
+      deprecated: false,
+      description:
+        'Target a custom environment by slug or stable ID. Mutually exclusive with --trigger-branch and only valid with --triggers.',
+    },
+    {
       name: 'trigger-path',
       shorthand: null,
       type: String,
@@ -555,6 +564,10 @@ export const attachSubcommand = {
     {
       name: 'Attach and register a preview-branch trigger destination',
       value: `${packageName} connect attach scl_abc123 --triggers --trigger-branch staging --trigger-path /slack`,
+    },
+    {
+      name: 'Attach and register a custom-environment trigger destination',
+      value: `${packageName} connect attach scl_abc123 --triggers --trigger-environment qa --trigger-path /slack`,
     },
     {
       name: 'Non-interactive output as JSON',

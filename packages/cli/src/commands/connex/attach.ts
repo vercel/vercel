@@ -89,6 +89,7 @@ export async function attach(
     '--project'?: string;
     '--triggers'?: boolean;
     '--trigger-branch'?: string;
+    '--trigger-environment'?: string;
     '--trigger-path'?: string;
     '--yes'?: boolean;
     '--format'?: string;
@@ -104,6 +105,7 @@ export async function attach(
   const skipConfirmation = !!flags['--yes'];
   const withTriggers = !!flags['--triggers'];
   const triggerBranch = flags['--trigger-branch'];
+  const triggerEnvironment = flags['--trigger-environment'];
   const triggerPath = flags['--trigger-path'];
 
   if (asJson && !skipConfirmation) {
@@ -111,9 +113,16 @@ export async function attach(
     return 1;
   }
 
-  if (!withTriggers && (triggerBranch || triggerPath)) {
+  if (!withTriggers && (triggerBranch || triggerEnvironment || triggerPath)) {
     output.error(
-      '--trigger-branch and --trigger-path require --triggers to also be set.'
+      '--trigger-branch, --trigger-environment, and --trigger-path require --triggers to also be set.'
+    );
+    return 1;
+  }
+
+  if (triggerBranch && triggerEnvironment) {
+    output.error(
+      '--trigger-branch and --trigger-environment are mutually exclusive.'
     );
     return 1;
   }
@@ -235,8 +244,32 @@ export async function attach(
     }
 
     triggersEnabledOnConnector = target.triggers?.enabled === true;
+
+    let customEnvironmentId: string | undefined;
+    if (triggerEnvironment) {
+      let customEnvironments;
+      try {
+        customEnvironments = await getCustomEnvironments(client, projectId);
+      } catch (err: unknown) {
+        printError(err);
+        return 1;
+      }
+      const customEnvironment = pickCustomEnvironment(
+        customEnvironments,
+        triggerEnvironment
+      );
+      if (!customEnvironment) {
+        output.error(
+          `Unknown trigger environment ${chalk.bold(triggerEnvironment)} for project ${chalk.bold(projectName)}. Use a custom environment slug or stable ID from that project.`
+        );
+        return 1;
+      }
+      customEnvironmentId = customEnvironment.id;
+    }
+
     desiredDestination = buildTriggerDestination({
       projectId,
+      customEnvironmentId,
       branch: triggerBranch,
       path: triggerPath,
     });

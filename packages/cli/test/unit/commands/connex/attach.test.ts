@@ -654,7 +654,47 @@ describe('connex attach', () => {
 
       expect(exitCode).toBe(1);
       expect(client.stderr.getFullOutput()).toContain(
-        '--trigger-branch and --trigger-path require --triggers'
+        '--trigger-branch, --trigger-environment, and --trigger-path require --triggers'
+      );
+    });
+
+    it('rejects --trigger-environment without --triggers', async () => {
+      await setupLinkedProject(team);
+      client.setArgv(
+        'connect',
+        'attach',
+        'scl_abc123',
+        '--trigger-environment',
+        'qa',
+        '--yes'
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain('--trigger-environment');
+      expect(client.stderr.getFullOutput()).toContain('require --triggers');
+    });
+
+    it('rejects branch and custom-environment trigger targets together', async () => {
+      await setupLinkedProject(team);
+      client.setArgv(
+        'connect',
+        'attach',
+        'scl_abc123',
+        '--triggers',
+        '--trigger-branch',
+        'staging',
+        '--trigger-environment',
+        'qa',
+        '--yes'
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        '--trigger-branch and --trigger-environment are mutually exclusive'
       );
     });
 
@@ -786,6 +826,172 @@ describe('connex attach', () => {
       expect(patchBody?.destinations).toEqual([
         { projectId: PROJECT_ID, branch: 'staging', path: '/slack-events' },
       ]);
+    });
+
+    it('resolves a custom-environment slug to its stable ID for the PATCH', async () => {
+      await setupLinkedProject(team);
+      let patchBody:
+        | {
+            destinations: Array<{
+              projectId: string;
+              customEnvironmentId?: string;
+              path?: string;
+            }>;
+          }
+        | undefined;
+
+      client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+        res.json({
+          id: 'scl_abc123',
+          uid: 'slack/my-bot',
+          supportsTriggers: true,
+          triggers: { enabled: true },
+          triggerDestinations: [],
+        });
+      });
+      client.scenario.get(
+        '/v1/connect/connectors/:clientId/projects/:projectId',
+        (_req, res) => {
+          res.statusCode = 404;
+          res.json({});
+        }
+      );
+      client.scenario.post(
+        '/v1/connect/connectors/:clientId/projects/:projectId',
+        (_req, res) => {
+          res.json({});
+        }
+      );
+      client.scenario.patch(
+        '/v1/connect/connectors/:clientId/trigger-destinations',
+        (req, res) => {
+          patchBody = req.body;
+          res.json({});
+        }
+      );
+
+      client.setArgv(
+        'connect',
+        'attach',
+        'scl_abc123',
+        '--triggers',
+        '--trigger-environment',
+        'qa',
+        '--trigger-path',
+        '/slack-events',
+        '--yes'
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(0);
+      expect(patchBody?.destinations).toEqual([
+        {
+          projectId: PROJECT_ID,
+          customEnvironmentId: 'env_qa123',
+          path: '/slack-events',
+        },
+      ]);
+    });
+
+    it('accepts a stable custom-environment ID belonging to the project', async () => {
+      await setupLinkedProject(team);
+      let patchBody:
+        | {
+            destinations: Array<{
+              projectId: string;
+              customEnvironmentId?: string;
+            }>;
+          }
+        | undefined;
+
+      client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+        res.json({
+          id: 'scl_abc123',
+          uid: 'slack/my-bot',
+          supportsTriggers: true,
+          triggers: { enabled: true },
+          triggerDestinations: [],
+        });
+      });
+      client.scenario.get(
+        '/v1/connect/connectors/:clientId/projects/:projectId',
+        (_req, res) => {
+          res.json({
+            clientId: 'scl_abc123',
+            projectId: PROJECT_ID,
+            environments: ['production', 'preview', 'development'],
+          });
+        }
+      );
+      client.scenario.patch(
+        '/v1/connect/connectors/:clientId/trigger-destinations',
+        (req, res) => {
+          patchBody = req.body;
+          res.json({});
+        }
+      );
+
+      client.setArgv(
+        'connect',
+        'attach',
+        'scl_abc123',
+        '--triggers',
+        '--trigger-environment',
+        'env_qa123',
+        '--yes'
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(0);
+      expect(patchBody?.destinations).toEqual([
+        {
+          projectId: PROJECT_ID,
+          customEnvironmentId: 'env_qa123',
+        },
+      ]);
+    });
+
+    it('rejects an unknown or wrong-project custom-environment ID', async () => {
+      await setupLinkedProject(team);
+      let patchCalled = false;
+
+      client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+        res.json({
+          id: 'scl_abc123',
+          uid: 'slack/my-bot',
+          supportsTriggers: true,
+          triggers: { enabled: true },
+          triggerDestinations: [],
+        });
+      });
+      client.scenario.patch(
+        '/v1/connect/connectors/:clientId/trigger-destinations',
+        (_req, res) => {
+          patchCalled = true;
+          res.json({});
+        }
+      );
+
+      client.setArgv(
+        'connect',
+        'attach',
+        'scl_abc123',
+        '--triggers',
+        '--trigger-environment',
+        'env_other_project',
+        '--yes'
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(1);
+      expect(patchCalled).toBe(false);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('Unknown trigger environment');
+      expect(stderr).toContain('env_other_project');
+      expect(stderr).toContain(PROJECT_NAME);
     });
 
     it('merges with existing trigger destinations', async () => {
