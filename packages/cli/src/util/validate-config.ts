@@ -571,6 +571,34 @@ const getServicesSchema = () => ({
   additionalProperties: getServicesServiceConfigSchema(),
 });
 
+const proxySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['entrypoint'],
+  properties: {
+    entrypoint: {
+      type: 'string',
+      minLength: 1,
+    },
+    matcher: {
+      oneOf: [
+        {
+          type: 'string',
+          minLength: 1,
+        },
+        {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'string',
+            minLength: 1,
+          },
+        },
+      ],
+    },
+  },
+};
+
 export function buildVercelConfigSchema() {
   return {
     type: 'object',
@@ -589,6 +617,7 @@ export function buildVercelConfigSchema() {
       images: imagesSchema,
       crons: cronsSchema,
       bunVersion: { type: 'string' },
+      proxy: proxySchema,
       experimentalServices: getExperimentalServicesSchema(),
       experimentalServiceGroups: experimentalServiceGroupsSchema,
       services: getServicesSchema(),
@@ -609,12 +638,58 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
     }
   }
 
+  if (config.proxy) {
+    const entrypoint = config.proxy.entrypoint;
+    const segments = entrypoint.split('/');
+    if (
+      entrypoint.startsWith('/') ||
+      entrypoint.includes('\\') ||
+      segments.includes('.') ||
+      segments.includes('..') ||
+      /[?#\u0000-\u001f]/.test(entrypoint)
+    ) {
+      return new NowBuildError({
+        code: 'INVALID_PROXY_ENTRYPOINT',
+        message:
+          'The `proxy.entrypoint` path must be relative to the project root and cannot contain traversal, query, fragment, or control characters.',
+      });
+    }
+
+    if (!/\.(?:js|ts)$/.test(entrypoint) || entrypoint.endsWith('.d.ts')) {
+      return new NowBuildError({
+        code: 'INVALID_PROXY_ENTRYPOINT',
+        message:
+          'The `proxy.entrypoint` path must end in `.js` or `.ts` and reference an executable file.',
+      });
+    }
+
+    const matchers =
+      typeof config.proxy.matcher === 'string'
+        ? [config.proxy.matcher]
+        : config.proxy.matcher;
+    if (matchers?.some(matcher => !matcher.startsWith('/'))) {
+      return new NowBuildError({
+        code: 'INVALID_PROXY_MATCHER',
+        message:
+          'The `proxy.matcher` value must be a path matcher starting with `/`, or an array of path matchers starting with `/`.',
+      });
+    }
+  }
+
   if (config.functions && config.builds) {
     return new NowBuildError({
       code: 'FUNCTIONS_AND_BUILDS',
       message:
         'The `functions` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
       link: 'https://vercel.link/functions-and-builds',
+    });
+  }
+
+  if (config.proxy && config.builds) {
+    return new NowBuildError({
+      code: 'PROXY_AND_BUILDS',
+      message:
+        'The `proxy` property cannot be used with the `builds` property. Remove `builds` to use an explicit proxy entrypoint.',
     });
   }
 

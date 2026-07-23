@@ -52,6 +52,10 @@ export interface Config {
   framework?: string | null;
   nodeVersion?: string;
   middleware?: boolean;
+  /** Enforced runtime for explicitly configured Routing Middleware. */
+  middlewareRuntime?: 'nodejs';
+  /** Matcher supplied outside of the middleware source module. */
+  middlewareMatcher?: string | string[];
   /** Owning service name; scopes per-function config such as the v2beta consumer. */
   serviceName?: string;
   [key: string]: unknown;

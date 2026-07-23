@@ -1,0 +1,6 @@
+{
+  "proxy": {
+    "entrypoint": "proxy.ts",
+    "matcher": "/api/:func*"
+  }
+}

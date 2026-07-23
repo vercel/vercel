@@ -9,21 +9,22 @@ it.each([
     expectedType: 'EdgeFunction',
   },
   {
-    name: 'use "nodejs" as runtime',
-    runtime: 'nodejs',
+    name: 'use "nodejs" for an explicit proxy',
+    middlewareRuntime: 'nodejs' as const,
     expectedType: 'Lambda',
   },
   {
-    name: 'use "edge" as runtime',
-    runtime: 'edge',
-    expectedType: 'EdgeFunction',
+    name: 'use "nodejs" as runtime',
+    runtime: 'nodejs',
+    middlewareRuntime: 'nodejs' as const,
+    expectedType: 'Lambda',
   },
   {
     name: 'use "experimental-edge" as runtime',
     runtime: 'experimental-edge',
     expectedType: 'EdgeFunction',
   },
-])('$name', async ({ runtime, expectedType }) => {
+])('$name', async ({ runtime, middlewareRuntime, expectedType }) => {
   const config = runtime
     ? `export const config = { runtime: '${runtime}' }`
     : '';
@@ -43,6 +44,7 @@ it.each([
     entrypoint: 'middleware.js',
     config: {
       middleware: true,
+      middlewareRuntime,
     },
     meta: { skipDownload: true },
   });
@@ -60,6 +62,32 @@ it.each([
       override: true,
     },
   ]);
+});
+
+it.each([
+  'edge',
+  'experimental-edge',
+])('rejects the "%s" runtime for an explicit proxy', async runtime => {
+  const filesystem = await prepareFilesystem({
+    'proxy.js': `
+        export const config = { runtime: '${runtime}' };
+        export default () => new Response('proxy');
+      `,
+  });
+
+  await expect(
+    build({
+      ...filesystem,
+      entrypoint: 'proxy.js',
+      config: {
+        middleware: true,
+        middlewareRuntime: 'nodejs',
+      },
+      meta: { skipDownload: true },
+    })
+  ).rejects.toThrow(
+    `proxy.js: explicit proxy entrypoints only support the Node.js runtime. Remove \`runtime: "${runtime}"\` from the exported \`config\`.`
+  );
 });
 
 it('should throw an error for an unsupported runtime', async () => {

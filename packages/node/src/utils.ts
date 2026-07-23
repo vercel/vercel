@@ -104,6 +104,34 @@ export function getRegExpFromMatchers(matcherOrMatchers: unknown): string {
   return regExps;
 }
 
+export function resolveMiddlewareMatcher(
+  configuredMatcher: unknown,
+  sourceMatcher: unknown,
+  entrypoint: string
+): unknown {
+  if (configuredMatcher !== undefined && sourceMatcher !== undefined) {
+    const configuredMatchers = Array.isArray(configuredMatcher)
+      ? configuredMatcher
+      : [configuredMatcher];
+    const sourceMatchers = Array.isArray(sourceMatcher)
+      ? sourceMatcher
+      : [sourceMatcher];
+    const matchersAreEqual =
+      configuredMatchers.length === sourceMatchers.length &&
+      configuredMatchers.every(
+        (matcher, index) => matcher === sourceMatchers[index]
+      );
+
+    if (!matchersAreEqual) {
+      throw new Error(
+        `${entrypoint}: \`proxy.matcher\` in vercel.json conflicts with \`config.matcher\` exported from the proxy entrypoint. Configure the matcher in only one location, or use identical values in both.`
+      );
+    }
+  }
+
+  return configuredMatcher ?? sourceMatcher;
+}
+
 function getRegExpFromMatcher(
   matcher: unknown,
   index: number,
@@ -192,6 +220,20 @@ export function validateConfiguredRuntime(
         )}). Learn more: https://vercel.link/creating-edge-functions`
       );
     }
+  }
+}
+
+export function validateMiddlewareRuntime(
+  runtime: string | undefined,
+  entrypoint: string,
+  requiredRuntime?: 'nodejs'
+) {
+  validateConfiguredRuntime(runtime, entrypoint);
+
+  if (requiredRuntime === 'nodejs' && isEdgeRuntime(runtime)) {
+    throw new Error(
+      `${entrypoint}: explicit proxy entrypoints only support the Node.js runtime. Remove \`runtime: ${JSON.stringify(runtime)}\` from the exported \`config\`.`
+    );
   }
 }
 
