@@ -4,6 +4,7 @@ import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import { help, type Command } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getCommonArgs from '../../util/arg-common';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import { AlertsTelemetryClient } from '../../util/telemetry/commands/alerts';
@@ -29,13 +30,85 @@ const COMMAND_CONFIG = {
   rules: ['rules'],
 };
 
-function getAlertsSubcommand(rawArgs: string[], parsedArgs: string[]) {
-  const rawSubcommand = rawArgs[1];
-  if (!rawSubcommand || rawSubcommand.startsWith('-')) {
-    return getSubcommand([], COMMAND_CONFIG);
+type FlagsSpecification = Record<string, unknown>;
+
+function getFlagSpecValue(
+  flagsSpecification: FlagsSpecification,
+  flag: string
+): unknown {
+  const value = flagsSpecification[flag];
+  if (typeof value === 'string') {
+    return flagsSpecification[value];
+  }
+  return value;
+}
+
+function flagConsumesValue(
+  rawArg: string,
+  flagsSpecification: FlagsSpecification
+): boolean {
+  if (!rawArg.startsWith('-') || rawArg === '-' || rawArg.includes('=')) {
+    return false;
   }
 
-  return getSubcommand(parsedArgs.slice(1), COMMAND_CONFIG);
+  const value = getFlagSpecValue(flagsSpecification, rawArg);
+  return value === String || value === Number || Array.isArray(value);
+}
+
+function findCommandIndex(
+  rawArgs: string[],
+  commandName: string | undefined,
+  flagsSpecification: FlagsSpecification
+): number {
+  if (!commandName) {
+    return -1;
+  }
+
+  for (let index = 0; index < rawArgs.length; index++) {
+    const rawArg = rawArgs[index];
+    if (rawArg === '--') {
+      return rawArgs.indexOf(commandName, index + 1);
+    }
+
+    if (rawArg.startsWith('-')) {
+      if (flagConsumesValue(rawArg, flagsSpecification)) {
+        index++;
+      }
+      continue;
+    }
+
+    if (rawArg === commandName) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function getAlertsSubcommand(
+  rawArgs: string[],
+  parsedArgs: string[],
+  flagsSpecification: FlagsSpecification
+) {
+  const commandIndex = findCommandIndex(
+    rawArgs,
+    parsedArgs[0],
+    flagsSpecification
+  );
+  const rawArgsAfterCommand =
+    commandIndex === -1 ? [] : rawArgs.slice(commandIndex + 1);
+  const rawSubcommand = rawArgsAfterCommand[0];
+  if (!rawSubcommand || rawSubcommand.startsWith('-')) {
+    return {
+      ...getSubcommand([], COMMAND_CONFIG),
+      rawSubcommandArgs: rawArgsAfterCommand,
+    };
+  }
+
+  return {
+    ...getSubcommand(parsedArgs.slice(1), COMMAND_CONFIG),
+    rawSubcommandArgs: rawArgsAfterCommand.slice(1),
+  };
 }
 
 export default async function alerts(client: Client): Promise<number> {
@@ -99,10 +172,11 @@ export default async function alerts(client: Client): Promise<number> {
   }
 
   const rawArgs = client.argv.slice(2);
-  const { subcommand, args, subcommandOriginal } = getAlertsSubcommand(
-    rawArgs,
-    parsedArgs.args
-  );
+  const { subcommand, args, subcommandOriginal, rawSubcommandArgs } =
+    getAlertsSubcommand(rawArgs, parsedArgs.args, {
+      ...getCommonArgs(),
+      ...flagsSpecification,
+    });
   const needHelp = parsedArgs.flags['--help'];
 
   function printHelp(command: Command): void {
@@ -157,14 +231,12 @@ export default async function alerts(client: Client): Promise<number> {
     case 'inspect': {
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
       const inspectFn = (await import('./inspect')).default;
-      const inspectArgs = rawArgs.slice(2);
-      return inspectFn(client, inspectArgs);
+      return inspectFn(client, rawSubcommandArgs);
     }
     case 'rules': {
       telemetry.trackCliSubcommandRules(args[0] ?? 'ls');
       const rulesFn = (await import('./rules')).default;
-      const rulesArgs = rawArgs.slice(2);
-      return rulesFn(client, rulesArgs);
+      return rulesFn(client, rawSubcommandArgs);
     }
     default: {
       telemetry.trackCliSubcommandLs(subcommandOriginal);

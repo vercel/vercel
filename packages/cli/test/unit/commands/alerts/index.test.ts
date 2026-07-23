@@ -372,6 +372,21 @@ describe('alerts', () => {
     expect(client.stdout.getFullOutput()).not.toContain('"id"');
   });
 
+  it('passes nested inspect args when global flags precede alerts', async () => {
+    let inspectPath = '';
+    client.scenario.get('/alerts/v3/groups/:groupId', (req, res) => {
+      inspectPath = req.path;
+      res.json({ id: 'grp_x', status: 'active' });
+    });
+
+    client.setArgv('--debug', 'alerts', 'inspect', 'grp_x');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    expect(inspectPath).toContain('/alerts/v3/groups/grp_x');
+  });
+
   it('inspect renders custom alert signals and dimensions', async () => {
     client.scenario.get('/alerts/v3/groups/:groupId', (_req, res) => {
       res.json({

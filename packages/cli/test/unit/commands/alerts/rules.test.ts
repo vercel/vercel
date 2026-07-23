@@ -347,6 +347,30 @@ describe('alerts rules', () => {
     expect(requestQuery.projectId).toBeUndefined();
   });
 
+  it('passes nested rules args when global flags precede alerts', async () => {
+    let requestQuery: any;
+    client.scenario.get('/alerts/v2/alert-rules', (req, res) => {
+      requestQuery = req.query;
+      res.json([]);
+    });
+
+    client.setArgv(
+      '--debug',
+      '--token',
+      'test-token',
+      'alerts',
+      'rules',
+      'ls',
+      '--all'
+    );
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    expect(requestQuery.teamId).toBe('team_dummy');
+    expect(requestQuery.projectId).toBeUndefined();
+  });
+
   it('lists team-wide alert rules without a linked project', async () => {
     mockedGetLinkedProject.mockResolvedValue({
       status: 'not_linked',
