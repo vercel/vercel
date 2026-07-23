@@ -36,7 +36,7 @@ def main():
               signal.signal(sig, abort_pool)
 
             pool.map(compile_source, source_files)
-    except OSError as error:
+    except Exception as error:
         print(f"Bytecode compilation unavailable: {error}", file=sys.stderr)
         return 1
 
