@@ -17,10 +17,12 @@ function logDebug(message: string): void {
 }
 
 /**
- * Build-time framework detection is opt-in via `VERCEL_FRAMEWORK_DETECTION=1`.
- * The variable is set by the Vercel build pipeline (to control rollout) and
- * can also be set manually, e.g. in project build env vars or locally when
- * running `vc build`.
+ * The end-of-build framework cross-check (detecting all frameworks from source
+ * and warning on mismatch) is opt-in via `VERCEL_FRAMEWORK_DETECTION=1`. The
+ * variable is set by the Vercel build pipeline (to control rollout) and can
+ * also be set manually, e.g. in project build env vars or locally when running
+ * `vc build`. It does not gate first-deployment framework detection, which is
+ * driven solely by `VERCEL_FIRST_DEPLOYMENT` (see `isFirstDeployment`).
  */
 export function isFrameworkDetectionEnabled(): boolean {
   const raw = process.env.VERCEL_FRAMEWORK_DETECTION;
@@ -63,17 +65,15 @@ export interface DetectedFramework {
 /**
  * On a project's first deployment, detect the framework from the source code
  * and apply it to the in-memory `projectSettings` (mutated in place so the
- * caller's subsequent `detectBuilders` call sees it).
+ * caller's subsequent `detectBuilders` call sees it). Gated solely by
+ * `VERCEL_FIRST_DEPLOYMENT`; runs even when the `VERCEL_FRAMEWORK_DETECTION`
+ * cross-check is disabled.
  */
 export async function detectFirstDeploymentFramework(options: {
   workPath: string;
   projectSettings: { framework?: string | null };
 }): Promise<DetectedFramework> {
   const { workPath, projectSettings } = options;
-
-  if (!isFrameworkDetectionEnabled()) {
-    return { status: 'skipped' };
-  }
 
   logDebug(
     `First deployment: evaluating framework detection (workPath="${workPath}", ` +

@@ -37,6 +37,17 @@ describe('curl-based deployment via Vercel API', () => {
   let tarball: string;
   let projectId: string | undefined;
 
+  // Use a unique project name per run so every deployment is a genuine first
+  // deployment. Zero-config framework detection (which lets a bare `server.ts`
+  // be built and served at `/`) only runs when the API sets
+  // `VERCEL_FIRST_DEPLOYMENT=1`, and that is only set for a project's very
+  // first deployment (see api `is-first-deployment.ts`). Reusing a fixed
+  // project name would make the project exist after the first run, so
+  // subsequent runs would never exercise the first-deployment path.
+  const projectName = `curl-deploy-test-${Date.now().toString(36)}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
+
   beforeAll(() => {
     // Create a minimal Node project: just server.ts
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'curl-deploy-'));
@@ -100,9 +111,14 @@ describe('curl-based deployment via Vercel API', () => {
     //    `.vercel/source.tgz.part1` file name is what the server expects for
     //    archive deployments (see packages/client/src/utils/archive.ts).
     const payload = {
-      name: 'curl-deploy-test',
+      name: projectName,
       version: 2,
       files: [{ file: '.vercel/source.tgz.part1', sha, size, mode: 0o666 }],
+      // First-deployment framework detection is driven solely by the API-set
+      // `VERCEL_FIRST_DEPLOYMENT=1` (only present on a project's first
+      // deployment, which the unique `projectName` above guarantees). This lets
+      // the bare `server.ts` be detected as the `node` framework, built, and
+      // served at `/`.
     };
 
     const deployBody = curl([
@@ -153,7 +169,23 @@ describe('curl-based deployment via Vercel API', () => {
       `Deployment did not become READY (last state: ${readyState})`
     ).toBe('READY');
 
-    // 4. Disable SSO protection so the deployment is publicly reachable, then
+    // 4. Assert the detected framework was persisted to the project settings.
+    //    Zero-config first-deployment detection applies the detected framework
+    //    ("node" for a bare `server.ts`) to the project, so a follow-up read of
+    //    the project should report `framework: 'node'`.
+    expect(projectId, 'Expected a projectId to read settings').toBeTruthy();
+    const projectBody = curl([
+      apiUrl(`/v9/projects/${encodeURIComponent(projectId!)}`),
+      '-H',
+      `Authorization: Bearer ${TOKEN}`,
+    ]);
+    const projectJson = JSON.parse(projectBody);
+    expect(
+      projectJson.framework,
+      `Expected project framework "node" to be persisted, got: ${projectBody}`
+    ).toBe('node');
+
+    // 5. Disable SSO protection so the deployment is publicly reachable, then
     //    probe `/` and assert it responds with the expected text.
     if (projectId) {
       curl([

@@ -813,7 +813,6 @@ async function doBuild(
   // was skipped or found nothing.
   buildsJson.detectedFramework = await span
     .child('vc.detectFirstDeploymentFramework', {
-      enabled: String(isFrameworkDetectionEnabled()),
       firstDeployment: String(process.env.VERCEL_FIRST_DEPLOYMENT === '1'),
       configuredFramework: projectSettings.framework ?? undefined,
     })
