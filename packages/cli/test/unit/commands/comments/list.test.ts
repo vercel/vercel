@@ -2,8 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import comments from '../../../../src/commands/comments';
 import { inferBranch } from '../../../../src/commands/comments/scope';
-import getProjectByNameOrId from '../../../../src/util/projects/get-project-by-id-or-name';
-import { ProjectNotFound } from '../../../../src/util/errors-ts';
 import {
   makeMessage,
   makeThread,
@@ -15,7 +13,6 @@ import {
 
 vi.mock('../../../../src/util/projects/link');
 vi.mock('../../../../src/util/get-scope');
-vi.mock('../../../../src/util/projects/get-project-by-id-or-name');
 vi.mock('../../../../src/commands/comments/scope', async importOriginal => {
   const actual =
     await importOriginal<
@@ -25,8 +22,6 @@ vi.mock('../../../../src/commands/comments/scope', async importOriginal => {
 });
 
 const mockedInferBranch = vi.mocked(inferBranch);
-const mockedGetProject = vi.mocked(getProjectByNameOrId);
-
 describe('comments list', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -335,10 +330,40 @@ describe('comments list', () => {
     expect(stderr).toContain('--project');
   });
 
-  it('resolves an explicit --project against the current team', async () => {
-    mockedGetProject.mockResolvedValue({
-      id: 'prj_other',
-      name: 'other-project',
+  it('uses repo metadata to resolve an explicit project owner and infer the branch', async () => {
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'linked',
+      project: { id: 'prj_other', name: 'other-project' },
+      org: { id: 'team_other', slug: 'other-team', type: 'team' },
+      repoRoot: '/repo',
+    } as never);
+    let requestQuery: Record<string, unknown> | undefined;
+    client.scenario.get('/toolbar/threads', (req, res) => {
+      requestQuery = req.query;
+      res.json({ pagination: {}, threads: [makeThread()] });
+    });
+
+    client.setArgv('comments', '--project', 'other-project');
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(0);
+    expect(mockedGetLinkedProject).toHaveBeenCalledWith(
+      client,
+      expect.objectContaining({
+        projectName: 'other-project',
+        projectNameIsExplicit: true,
+      })
+    );
+    expect(requestQuery?.teamId).toBe('team_other');
+    expect(requestQuery?.projectId).toBe('prj_other');
+    expect(requestQuery?.branch).toBe('feat-x');
+  });
+
+  it('does not infer a branch for an explicit project without local repo metadata', async () => {
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'linked',
+      project: { id: 'prj_other', name: 'other-project' },
+      org: { id: 'team_dummy', slug: 'my-team', type: 'team' },
     } as never);
     let requestQuery: Record<string, unknown> | undefined;
     client.scenario.get('/toolbar/threads', (req, res) => {
@@ -350,22 +375,15 @@ describe('comments list', () => {
     const exitCode = await comments(client);
 
     expect(exitCode).toBe(0);
-    expect(mockedGetProject).toHaveBeenCalledWith(
-      client,
-      'other-project',
-      'team_dummy'
-    );
-    expect(requestQuery?.projectId).toBe('prj_other');
-    // Branch inference is gated on link-sourced scope: with an explicit
-    // --project, the cwd's git branch belongs to some unrelated checkout.
     expect(requestQuery?.branch).toBeUndefined();
     expect(client.stderr.getFullOutput()).toContain('all branches');
   });
 
   it('carries scope flags into the inspect hint', async () => {
-    mockedGetProject.mockResolvedValue({
-      id: 'prj_other',
-      name: 'other-project',
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'linked',
+      project: { id: 'prj_other', name: 'other-project' },
+      org: { id: 'team_dummy', slug: 'my-team', type: 'team' },
     } as never);
     client.scenario.get('/toolbar/threads', (_req, res) => {
       res.json({ pagination: {}, threads: [makeThread()] });
@@ -381,7 +399,12 @@ describe('comments list', () => {
   });
 
   it('errors when --project is not found in the team', async () => {
-    mockedGetProject.mockResolvedValue(new ProjectNotFound('nope') as never);
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'not_linked',
+      org: null,
+      project: null,
+      orgId: 'team_dummy',
+    } as never);
 
     client.setArgv('comments', '--project', 'nope');
     const exitCode = await comments(client);

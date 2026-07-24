@@ -2,8 +2,7 @@ import { spawnSync } from 'node:child_process';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import { getLinkedProject } from '../../util/projects/link';
-import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
-import { ProjectNotFound, isAPIError } from '../../util/errors-ts';
+import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import { outputError } from '../../util/command-validation';
 import type { BranchFocus, CommentsScope } from './types';
 
@@ -45,45 +44,32 @@ export async function resolveCommentsScope(
   }
 
   if (opts.project) {
-    const { team } = await getScope(client);
-    if (!team) {
-      return outputError(
-        client,
-        opts.jsonOutput,
-        'NO_TEAM',
-        'No team context found. Run `vercel switch` to select a team, or run `vercel link` in a project directory.'
-      );
+    const context = await resolveProjectContext({
+      client,
+      projectNameOrId: opts.project,
+      projectNotFoundHandling: 'return',
+    });
+    if (context.status === 'error') {
+      return context.exitCode;
     }
-
-    let project: Awaited<ReturnType<typeof getProjectByNameOrId>>;
-    try {
-      project = await getProjectByNameOrId(client, opts.project, team.id);
-    } catch (err) {
-      if (isAPIError(err)) {
-        return outputError(
-          client,
-          opts.jsonOutput,
-          err.code || 'API_ERROR',
-          err.serverMessage || `API error (${err.status}).`
-        );
-      }
-      throw err;
-    }
-
-    if (project instanceof ProjectNotFound) {
+    if (context.status === 'not_linked') {
+      const { team } = await getScope(client);
       return outputError(
         client,
         opts.jsonOutput,
         'PROJECT_NOT_FOUND',
-        `Project "${opts.project}" was not found in team "${team.slug}".`
+        `Project "${opts.project}" was not found in team "${team?.slug ?? context.orgId ?? 'unknown'}".`
       );
     }
 
     return {
-      teamId: team.id,
-      teamSlug: team.slug,
-      projectId: project.id,
-      projectName: project.name,
+      teamId: context.org.id,
+      teamSlug: context.org.slug,
+      projectId: context.project.id,
+      projectName: context.project.name,
+      // An explicit project can still come from this checkout's repo metadata.
+      // In that case, the current Git branch is coherent and useful.
+      linked: Boolean(context.repoRoot),
     };
   }
 
