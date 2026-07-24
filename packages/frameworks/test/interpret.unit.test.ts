@@ -1,27 +1,29 @@
 import { describe, test, expect } from 'vitest';
 import { join } from 'path';
-import { promises } from 'fs';
+import { promises, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { frameworkList } from '../src/frameworks';
 import { interpretFramework, type FrameworkManifest } from '../src/interpret';
-import manifest from '../src/frameworks.json';
 
 const { mkdtemp, mkdir, writeFile } = promises;
 
+// The manifest is fetched from the API at build time; read the built artifact
+// (tests run after `build`).
+const manifest = JSON.parse(
+  readFileSync(join(__dirname, '..', 'dist', 'frameworks.json'), 'utf8')
+) as FrameworkManifest;
+
 describe('frameworks manifest interpreter', () => {
   test('manifest is non-empty and every entry interprets', () => {
-    const list = manifest as unknown as FrameworkManifest;
-    expect(list.length).toBeGreaterThan(0);
-    for (const descriptor of list) {
+    expect(manifest.length).toBeGreaterThan(0);
+    for (const descriptor of manifest) {
       const framework = interpretFramework(descriptor);
       expect(typeof framework.getOutputDirName).toBe('function');
     }
   });
 
   test('frameworkList length matches manifest length', () => {
-    expect(frameworkList.length).toBe(
-      (manifest as unknown as FrameworkManifest).length
-    );
+    expect(frameworkList.length).toBe(manifest.length);
   });
 
   test('every framework exposes required declarative fields', () => {
@@ -33,14 +35,14 @@ describe('frameworks manifest interpreter', () => {
     }
   });
 
-  test('constant output dirs resolve regardless of prefix', async () => {
-    const other = frameworkList.find(f => f.slug === null);
-    expect(other).toBeDefined();
-    expect(await other!.getOutputDirName('')).toBe('public');
-    expect(await other!.getOutputDirName('/some/prefix')).toBe('public');
+  test('static strategy resolves regardless of prefix', async () => {
+    const container = frameworkList.find(f => f.slug === 'container');
+    expect(container).toBeDefined();
+    expect(await container!.getOutputDirName('')).toBe('public');
+    expect(await container!.getOutputDirName('/some/prefix')).toBe('public');
   });
 
-  test('registry override: hugo reads publishDir from config', async () => {
+  test('config-file strategy: hugo reads publishDir from config', async () => {
     const hugo = frameworkList.find(f => f.slug === 'hugo');
     expect(hugo).toBeDefined();
 
@@ -55,7 +57,7 @@ describe('frameworks manifest interpreter', () => {
     expect(await hugo!.getOutputDirName(dir)).toBe('out');
   });
 
-  test('registry override: angular single-subdir detection', async () => {
+  test('single-subdir strategy: angular detection', async () => {
     const angular = frameworkList.find(f => f.slug === 'angular');
     expect(angular).toBeDefined();
 
@@ -67,7 +69,7 @@ describe('frameworks manifest interpreter', () => {
     expect(await angular!.getOutputDirName(dir)).toBe(join('dist', 'my-app'));
   });
 
-  test('registry override: gatsby function defaultRoutes fallback', async () => {
+  test('gatsby strategy: function defaultRoutes falls back', async () => {
     const gatsby = frameworkList.find(f => f.slug === 'gatsby');
     expect(gatsby).toBeDefined();
     expect(typeof gatsby!.defaultRoutes).toBe('function');

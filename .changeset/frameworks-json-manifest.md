@@ -2,4 +2,4 @@
 '@vercel/frameworks': patch
 ---
 
-Source the framework list from a committed `frameworks.json` manifest that is compiled into `dist/` at build time and interpreted into runtime `Framework` objects. Behavior is identical to the previous hand-written array; this is a no-op that establishes the pinned, hardcoded representation ahead of sourcing the manifest from the frameworks API.
+Source the framework list from the frameworks API (`/v1/frameworks.json`) at build time. `build.mjs` fetches the manifest, writes it to `dist/frameworks.json`, and it is interpreted into runtime `Framework` objects; the API is the single source of truth (no committed copy in `src/`, no runtime network access). Behavior is identical to the previous hand-written array.

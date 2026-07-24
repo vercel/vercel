@@ -16,7 +16,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/container.svg",
     "name": "Container",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "runtimeFramework": true,
     "settings": {
       "buildCommand": {
@@ -59,7 +62,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     "envPrefix": "NEXT_PUBLIC_",
     "logo": "https://api-frameworks.vercel.sh/framework-logos/blitz.svg",
     "name": "Blitz.js (Legacy)",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`blitz build\`",
@@ -98,7 +104,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     "envPrefix": "NEXT_PUBLIC_",
     "logo": "https://api-frameworks.vercel.sh/framework-logos/next.svg",
     "name": "Next.js",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "recommendedIntegrations": [
       {
         "dependencies": [
@@ -136,6 +145,40 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
   },
   {
     "cachePattern": "{.cache,public}/**",
+    "defaultRoutes": {
+      "fallback": [
+        {
+          "continue": true,
+          "headers": {
+            "cache-control": "public,max-age=31536000,immutable",
+          },
+          "src": "^/static/(.*)$",
+        },
+        {
+          "continue": true,
+          "headers": {
+            "cache-control": "public,max-age=31536000,immutable",
+          },
+          "src": "^/.*\\.(js|css)$",
+        },
+        {
+          "continue": true,
+          "headers": {
+            "cache-control": "public,max-age=0,must-revalidate",
+          },
+          "src": "^/(sw\\.js|app-data\\.json|.*\\.html|page-data/.*)$",
+        },
+        {
+          "handle": "filesystem",
+        },
+        {
+          "dest": "404.html",
+          "src": ".*",
+          "status": 404,
+        },
+      ],
+      "type": "gatsby",
+    },
     "demo": "https://gatsby.vercel.app",
     "dependency": "gatsby",
     "description": "A Gatsby starter app with an API Route.",
@@ -149,7 +192,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     "envPrefix": "GATSBY_",
     "logo": "https://api-frameworks.vercel.sh/framework-logos/gatsby.svg",
     "name": "Gatsby.js",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`gatsby build\`",
@@ -193,7 +239,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     ],
     "logo": "https://api-frameworks.vercel.sh/framework-logos/remix-no-shadow.svg",
     "name": "Remix",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`remix build\`",
@@ -252,7 +301,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     ],
     "logo": "https://api-frameworks.vercel.sh/framework-logos/react-router.svg",
     "name": "React Router",
-    "outputDirName": "build",
+    "outputDirName": {
+      "type": "static",
+      "value": "build",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`react-router build\`",
@@ -314,7 +366,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     "envPrefix": "PUBLIC_",
     "logo": "https://api-frameworks.vercel.sh/framework-logos/astro.svg",
     "name": "Astro",
-    "outputDirName": "dist",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`astro build\`",
@@ -348,7 +403,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/hexo.svg",
     "name": "Hexo",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`hexo generate\`",
@@ -383,7 +441,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/eleventy.svg",
     "name": "Eleventy",
-    "outputDirName": "_site",
+    "outputDirName": {
+      "type": "static",
+      "value": "_site",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`npx @11ty/eleventy\`",
@@ -462,6 +523,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/docusaurus.svg",
     "name": "Docusaurus (v2+)",
+    "outputDirName": {
+      "base": "build",
+      "type": "single-subdir",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`docusaurus build\`",
@@ -495,6 +560,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/docusaurus.svg",
     "name": "Docusaurus (v1)",
+    "outputDirName": {
+      "base": "build",
+      "type": "single-subdir",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`docusaurus-build\`",
@@ -537,7 +606,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/preact.svg",
     "name": "Preact",
-    "outputDirName": "build",
+    "outputDirName": {
+      "type": "static",
+      "value": "build",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`preact build\`",
@@ -574,7 +646,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     "envPrefix": "VITE_",
     "logo": "https://api-frameworks.vercel.sh/framework-logos/solid.svg",
     "name": "SolidStart (v1)",
-    "outputDirName": ".output",
+    "outputDirName": {
+      "type": "static",
+      "value": ".output",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`vinxi build\`",
@@ -610,7 +685,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     "envPrefix": "VITE_",
     "logo": "https://api-frameworks.vercel.sh/framework-logos/solid.svg",
     "name": "SolidStart (v0)",
-    "outputDirName": ".output",
+    "outputDirName": {
+      "type": "static",
+      "value": ".output",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`solid-start build\`",
@@ -673,7 +751,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/dojo.png",
     "name": "Dojo",
-    "outputDirName": "output/dist",
+    "outputDirName": {
+      "type": "static",
+      "value": "output/dist",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`dojo build\`",
@@ -719,7 +800,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/ember.svg",
     "name": "Ember.js",
-    "outputDirName": "dist",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`ember build\`",
@@ -777,7 +861,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     "envPrefix": "VUE_APP_",
     "logo": "https://api-frameworks.vercel.sh/framework-logos/vue.svg",
     "name": "Vue.js",
-    "outputDirName": "dist",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`vue-cli-service build\`",
@@ -811,7 +898,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/scullyio-logo.png",
     "name": "Scully",
-    "outputDirName": "dist/static",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist/static",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`ng build && scully\`",
@@ -854,7 +944,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/ionic.svg",
     "name": "Ionic Angular",
-    "outputDirName": "www",
+    "outputDirName": {
+      "type": "static",
+      "value": "www",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`ng build\`",
@@ -896,6 +989,11 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/angular.svg",
     "name": "Angular",
+    "outputDirName": {
+      "base": "dist",
+      "checkBrowser": true,
+      "type": "single-subdir",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`ng build\`",
@@ -938,6 +1036,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/polymer.svg",
     "name": "Polymer",
+    "outputDirName": {
+      "base": "build",
+      "type": "single-subdir-nodot",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`polymer build\`",
@@ -983,7 +1085,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/svelte.svg",
     "name": "Svelte",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`rollup -c\`",
@@ -1018,7 +1123,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     "envPrefix": "VITE_",
     "logo": "https://api-frameworks.vercel.sh/framework-logos/svelte.svg",
     "name": "SvelteKit (v0)",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "screenshot": "https://py8fhxnkzwtsqdo9.public.blob.vercel-storage.com/front/import/sveltekit.png",
     "settings": {
       "buildCommand": {
@@ -1057,7 +1165,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/svelte.svg",
     "name": "SvelteKit",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "screenshot": "https://py8fhxnkzwtsqdo9.public.blob.vercel-storage.com/front/import/sveltekit.png",
     "settings": {
       "buildCommand": {
@@ -1130,7 +1241,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/ionic.svg",
     "name": "Ionic React",
-    "outputDirName": "build",
+    "outputDirName": {
+      "type": "static",
+      "value": "build",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`react-scripts build\`",
@@ -1202,7 +1316,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     "envPrefix": "REACT_APP_",
     "logo": "https://api-frameworks.vercel.sh/framework-logos/react.svg",
     "name": "Create React App",
-    "outputDirName": "build",
+    "outputDirName": {
+      "type": "static",
+      "value": "build",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`react-scripts build\`",
@@ -1236,7 +1353,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/gridsome.svg",
     "name": "Gridsome",
-    "outputDirName": "dist",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`gridsome build\`",
@@ -1279,7 +1399,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/umi.svg",
     "name": "UmiJS",
-    "outputDirName": "dist",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`umi build\`",
@@ -1313,7 +1436,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/svelte.svg",
     "name": "Sapper",
-    "outputDirName": "__sapper__/export",
+    "outputDirName": {
+      "type": "static",
+      "value": "__sapper__/export",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`sapper export\`",
@@ -1362,7 +1488,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/saber.svg",
     "name": "Saber",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`saber build\`",
@@ -1426,7 +1555,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/stencil.svg",
     "name": "Stencil",
-    "outputDirName": "www",
+    "outputDirName": {
+      "type": "static",
+      "value": "www",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`stencil build\`",
@@ -1494,7 +1626,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     "envPrefix": "NUXT_ENV_",
     "logo": "https://api-frameworks.vercel.sh/framework-logos/nuxt.svg",
     "name": "Nuxt",
-    "outputDirName": "dist",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
     "screenshot": "https://py8fhxnkzwtsqdo9.public.blob.vercel-storage.com/front/import/nuxtjs.png",
     "settings": {
       "buildCommand": {
@@ -1535,7 +1670,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     ],
     "logo": "https://api-frameworks.vercel.sh/framework-logos/redwoodjs.svg",
     "name": "RedwoodJS",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "value": "yarn rw deploy vercel",
@@ -1581,6 +1719,16 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/hugo.svg",
     "name": "Hugo",
+    "outputDirName": {
+      "fallback": "public",
+      "files": [
+        "config.json",
+        "config.yaml",
+        "config.toml",
+      ],
+      "key": "publishDir",
+      "type": "config-file",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`hugo --gc\`",
@@ -1614,6 +1762,14 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/jekyll.svg",
     "name": "Jekyll",
+    "outputDirName": {
+      "fallback": "_site",
+      "files": [
+        "_config.yml",
+      ],
+      "key": "destination",
+      "type": "config-file",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`jekyll build\`",
@@ -1649,7 +1805,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/brunch.svg",
     "name": "Brunch",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`brunch build --production\`",
@@ -1683,7 +1842,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/middleman.svg",
     "name": "Middleman",
-    "outputDirName": "build",
+    "outputDirName": {
+      "type": "static",
+      "value": "build",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`bundle exec middleman build\`",
@@ -1718,7 +1880,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/zola.png",
     "name": "Zola",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "value": "zola build",
@@ -1758,7 +1923,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     "envPrefix": "PUBLIC_",
     "logo": "https://api-frameworks.vercel.sh/framework-logos/hydrogen.svg",
     "name": "Hydrogen (v1)",
-    "outputDirName": "dist",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`shopify hydrogen build\`",
@@ -1800,7 +1968,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     "envPrefix": "VITE_",
     "logo": "https://api-frameworks.vercel.sh/framework-logos/vite.svg",
     "name": "Vite",
-    "outputDirName": "dist",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`vite build\`",
@@ -1844,7 +2015,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/tanstack-start.svg",
     "name": "TanStack Start",
-    "outputDirName": "dist",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`vite build\`",
@@ -1889,7 +2063,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/tanstack-start.svg",
     "name": "TanStack Start",
-    "outputDirName": "dist",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
     "platform": {
       "logo": "https://api-frameworks.vercel.sh/framework-logos/lovable.svg",
       "name": "lovable",
@@ -1931,7 +2108,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/vite.svg",
     "name": "VitePress",
-    "outputDirName": "docs/.vitepress/dist",
+    "outputDirName": {
+      "type": "static",
+      "value": "docs/.vitepress/dist",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`vitepress build docs\`",
@@ -1963,7 +2143,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/vuepress.png",
     "name": "VuePress",
-    "outputDirName": "src/.vuepress/dist",
+    "outputDirName": {
+      "type": "static",
+      "value": "src/.vuepress/dist",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`vuepress build src\`",
@@ -2008,7 +2191,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/parcel.png",
     "name": "Parcel",
-    "outputDirName": "dist",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`parcel build\`",
@@ -2063,7 +2249,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     ],
     "logo": "https://api-frameworks.vercel.sh/framework-logos/fastapi.svg",
     "name": "FastAPI",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "None",
@@ -2123,7 +2312,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     ],
     "logo": "https://api-frameworks.vercel.sh/framework-logos/flask.svg",
     "name": "Flask",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "None",
@@ -2174,7 +2366,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/fasthtml.png",
     "name": "FastHTML",
-    "outputDirName": "",
+    "outputDirName": {
+      "type": "static",
+      "value": "",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "None",
@@ -2237,7 +2432,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     ],
     "logo": "https://api-frameworks.vercel.sh/framework-logos/django.svg",
     "name": "Django",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "None",
@@ -2279,7 +2477,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     "experimental": true,
     "logo": "https://api-frameworks.vercel.sh/framework-logos/ash.svg",
     "name": "Ash",
-    "outputDirName": ".output",
+    "outputDirName": {
+      "type": "static",
+      "value": ".output",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`ash build\`",
@@ -2312,7 +2513,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/eve.svg",
     "name": "eve",
-    "outputDirName": ".output",
+    "outputDirName": {
+      "type": "static",
+      "value": ".output",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`eve build\`",
@@ -2370,7 +2574,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     "envPrefix": "SANITY_STUDIO_",
     "logo": "https://api-frameworks.vercel.sh/framework-logos/sanity.svg",
     "name": "Sanity",
-    "outputDirName": "dist",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`sanity build\`",
@@ -2419,7 +2626,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     "envPrefix": "SANITY_STUDIO_",
     "logo": "https://api-frameworks.vercel.sh/framework-logos/sanity-v2.svg",
     "name": "Sanity (v2 - legacy)",
-    "outputDirName": "dist",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`sanity build\`",
@@ -2456,7 +2666,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     ],
     "logo": "https://api-frameworks.vercel.sh/framework-logos/storybook.svg",
     "name": "Storybook",
-    "outputDirName": "storybook-static",
+    "outputDirName": {
+      "type": "static",
+      "value": "storybook-static",
+    },
     "settings": {
       "buildCommand": {
         "ignorePackageJsonScript": true,
@@ -2491,7 +2704,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/nitro.svg",
     "name": "Nitro",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`nitro build\`",
@@ -2682,7 +2898,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/hono.svg",
     "name": "Hono",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "None",
@@ -2879,7 +3098,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/express.svg",
     "name": "Express",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "None",
@@ -3074,7 +3296,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/h3.svg",
     "name": "H3",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "None",
@@ -3269,7 +3494,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/koa.svg",
     "name": "Koa",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "None",
@@ -3512,7 +3740,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/nestjs.svg",
     "name": "NestJS",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "None",
@@ -3706,7 +3937,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/elysia.svg",
     "name": "Elysia",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "None",
@@ -3901,7 +4135,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/fastify.svg",
     "name": "Fastify",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "None",
@@ -3948,7 +4185,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/xmcp.svg",
     "name": "xmcp",
-    "outputDirName": "dist",
+    "outputDirName": {
+      "type": "static",
+      "value": "dist",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`xmcp build\`",
@@ -3998,7 +4238,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     ],
     "logo": "https://api-frameworks.vercel.sh/framework-logos/python.svg",
     "name": "Python",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "runtimeFramework": true,
     "settings": {
       "buildCommand": {
@@ -4051,7 +4294,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     ],
     "logo": "https://api-frameworks.vercel.sh/framework-logos/ruby.svg",
     "name": "Ruby",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "runtimeFramework": true,
     "settings": {
       "buildCommand": {
@@ -4104,7 +4350,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     ],
     "logo": "https://api-frameworks.vercel.sh/framework-logos/rust.svg",
     "name": "Rust",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "runtimeFramework": true,
     "settings": {
       "buildCommand": {
@@ -4158,7 +4407,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     ],
     "logo": "https://api-frameworks.vercel.sh/framework-logos/axum.svg",
     "name": "Axum",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "None",
@@ -4214,7 +4466,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     ],
     "logo": "https://api-frameworks.vercel.sh/framework-logos/actix-web.svg",
     "name": "Actix Web",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "runtimeFramework": true,
     "settings": {
       "buildCommand": {
@@ -4305,7 +4560,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     ],
     "logo": "https://api-frameworks.vercel.sh/framework-logos/bun.svg",
     "name": "Bun",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "runtimeFramework": true,
     "settings": {
       "buildCommand": {
@@ -4391,7 +4649,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     ],
     "logo": "https://api-frameworks.vercel.sh/framework-logos/node.svg",
     "name": "Node",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "runtimeFramework": true,
     "settings": {
       "buildCommand": {
@@ -4451,7 +4712,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     ],
     "logo": "https://api-frameworks.vercel.sh/framework-logos/go.svg",
     "name": "Go",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "runtimeFramework": true,
     "settings": {
       "buildCommand": {
@@ -4481,7 +4745,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     "description": "Multiple services deployed as serverless functions within your project.",
     "logo": "https://api-frameworks.vercel.sh/framework-logos/services.svg",
     "name": "Services",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "None",
@@ -4514,7 +4781,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     },
     "logo": "https://api-frameworks.vercel.sh/framework-logos/mastra.svg",
     "name": "Mastra",
-    "outputDirName": ".mastra",
+    "outputDirName": {
+      "type": "static",
+      "value": ".mastra",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run build\` or \`mastra build\`",
@@ -4538,7 +4808,10 @@ exports[`frameworks.json manifest (temporary drift guard) > manifest matches the
     "description": "No framework or an unoptimized framework.",
     "logo": "https://api-frameworks.vercel.sh/framework-logos/other.svg",
     "name": "Other",
-    "outputDirName": "public",
+    "outputDirName": {
+      "type": "static",
+      "value": "public",
+    },
     "settings": {
       "buildCommand": {
         "placeholder": "\`npm run vercel-build\` or \`npm run build\`",

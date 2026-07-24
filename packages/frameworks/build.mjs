@@ -1,30 +1,45 @@
-import { copyFileSync, readdirSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { esbuild, tsc } from '../../utils/build.mjs';
 
-const srcDir = fileURLToPath(new URL('src', import.meta.url));
 const distDir = fileURLToPath(new URL('dist', import.meta.url));
 
-// Compile only the TypeScript sources with esbuild. The manifest JSON is part
-// of the tsconfig `include` (so `tsc` type-checks the import) but must not be
-// treated as an esbuild entry point.
-const entryPoints = readdirSync(srcDir)
-  .filter(f => f.endsWith('.ts'))
-  .map(f => path.join(srcDir, f));
+// The framework manifest is sourced from the frameworks API at build time and
+// written into `dist/`. There is no committed copy in `src/`; the API is the
+// single source of truth. If the fetch fails the build fails (no fallback).
+const MANIFEST_URL =
+  process.env.VERCEL_FRAMEWORKS_MANIFEST_URL ||
+  'https://api-frameworks.vercel.sh/v1/frameworks.json';
 
-await Promise.all([tsc(), esbuild({ entryPoints })]);
+async function fetchManifest() {
+  const res = await fetch(MANIFEST_URL);
+  if (!res.ok) {
+    throw new Error(
+      `Failed to fetch frameworks manifest from ${MANIFEST_URL}: ${res.status} ${res.statusText}`
+    );
+  }
+  const manifest = await res.json();
+  if (!Array.isArray(manifest) || manifest.length === 0) {
+    throw new Error(
+      `Frameworks manifest from ${MANIFEST_URL} is empty or not an array`
+    );
+  }
+  return manifest;
+}
 
-// Ship the hardcoded manifest alongside the compiled output so it is always
-// available at runtime without any network access.
-copyFileSync(
-  path.join(srcDir, 'frameworks.json'),
-  path.join(distDir, 'frameworks.json')
+const [manifest] = await Promise.all([fetchManifest(), tsc(), esbuild()]);
+
+// Write the fetched manifest alongside the compiled output so it is loaded at
+// runtime by `frameworks.js`.
+writeFileSync(
+  path.join(distDir, 'frameworks.json'),
+  `${JSON.stringify(manifest, null, 2)}\n`
 );
 
-// Fail the build if the compiled manifest cannot be fully interpreted into
-// runtime Framework objects. This guarantees the pinned representation is
-// always valid.
+// Fail the build if the fetched manifest cannot be fully interpreted into
+// runtime Framework objects. This guarantees the sourced representation is
+// always valid before it ships.
 // Use a file:// URL so the dynamic import works on Windows, where a bare
 // absolute path (e.g. `D:\...`) is rejected as an unsupported URL scheme.
 const { frameworkList } = await import(
@@ -41,5 +56,5 @@ for (const fw of frameworkList) {
   }
 }
 console.log(
-  `Compiled and validated ${frameworkList.length} frameworks from frameworks.json`
+  `Fetched and validated ${frameworkList.length} frameworks from ${MANIFEST_URL}`
 );
