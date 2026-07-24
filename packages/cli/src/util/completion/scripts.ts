@@ -61,8 +61,10 @@ function fishScript(binary: string): string {
 function __${binary}_completion
   set -l tokens (commandline -opc)
   set -l current (commandline -ct)
-  # Drop the program name; always append the current partial (may be empty).
-  set -l args $tokens[2..-1] $current
+  # $tokens[2..-1] drops the program name. Quote $current so an empty word
+  # (cursor after a space) still contributes one empty argument; unquoted, an
+  # empty fish variable expands to zero arguments and the word would be lost.
+  set -l args $tokens[2..-1] "$current"
   ${binary} completion __complete -- $args 2>/dev/null
 end
 complete -c ${binary} -a '(__${binary}_completion)'
