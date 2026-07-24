@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { vi, describe, it, expect, afterEach } from 'vitest';
 import { join } from 'path';
 import fs from 'fs-extra';
 import os from 'os';
@@ -15,10 +15,13 @@ import { parseRepoUrl } from '../../../../src/util/git/connect-git-provider';
 import { useUser } from '../../../mocks/user';
 import { defaultProject, useProject } from '../../../mocks/project';
 import type { Project } from '@vercel-internals/types';
-import { vi } from 'vitest';
 import output from '../../../../src/output-manager';
 
 vi.setConfig({ testTimeout: 10 * 1000 });
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/create-git-meta', name);
@@ -230,7 +233,7 @@ describe('createGitMeta', () => {
     const directory = fixture('test-github');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const data = await createGitMeta(directory);
+      let data = await createGitMeta(directory);
       expect(data).toMatchObject({
         remoteUrl: 'https://github.com/user/repo.git',
         commitAuthorName: 'Matthew Stanciu',
@@ -238,6 +241,21 @@ describe('createGitMeta', () => {
         commitRef: 'master',
         commitSha: '0499dbfa2f58cd8b3b3ce5b2c02a24200862ac97',
         dirty: false,
+      });
+
+      vi.stubEnv('GITHUB_ACTIONS', 'true');
+      vi.stubEnv('GITHUB_ACTOR', 'someGithubUsername');
+      data = await createGitMeta(directory);
+      expect(data).toMatchObject({
+        remoteUrl: 'https://github.com/user/repo.git',
+        commitAuthorName: 'Matthew Stanciu',
+        commitMessage: 'hi',
+        commitRef: 'master',
+        commitSha: '0499dbfa2f58cd8b3b3ce5b2c02a24200862ac97',
+        dirty: false,
+        ci: true,
+        ciType: 'github-actions',
+        ciGitProviderUsername: 'someGithubUsername',
       });
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
@@ -264,7 +282,7 @@ describe('createGitMeta', () => {
     const directory = fixture('test-gitlab');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const data = await createGitMeta(directory);
+      let data = await createGitMeta(directory);
       expect(data).toMatchObject({
         remoteUrl: 'https://gitlab.com/user/repo.git',
         commitAuthorName: 'Matthew Stanciu',
@@ -272,6 +290,23 @@ describe('createGitMeta', () => {
         commitRef: 'master',
         commitSha: '328fa04e4363b462ad96a7180d67d2785bace650',
         dirty: false,
+      });
+
+      vi.stubEnv('GITLAB_CI', 'true');
+      vi.stubEnv('GITLAB_USER_LOGIN', 'someGitlabUsername');
+      vi.stubEnv('CI_PROJECT_VISIBILITY', 'private');
+      data = await createGitMeta(directory);
+      expect(data).toMatchObject({
+        remoteUrl: 'https://gitlab.com/user/repo.git',
+        commitAuthorName: 'Matthew Stanciu',
+        commitMessage: 'hi',
+        commitRef: 'master',
+        commitSha: '328fa04e4363b462ad96a7180d67d2785bace650',
+        dirty: false,
+        ci: true,
+        ciType: 'gitlab-ci-cd',
+        ciGitProviderUsername: 'someGitlabUsername',
+        ciGitRepoVisibility: 'private',
       });
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
@@ -281,7 +316,7 @@ describe('createGitMeta', () => {
     const directory = fixture('test-bitbucket');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const data = await createGitMeta(directory);
+      let data = await createGitMeta(directory);
       expect(data).toMatchObject({
         remoteUrl: 'https://bitbucket.org/user/repo.git',
         commitAuthorName: 'Matthew Stanciu',
@@ -289,6 +324,19 @@ describe('createGitMeta', () => {
         commitRef: 'master',
         commitSha: '3d883ccee5de4222ef5f40bde283a57b533b1256',
         dirty: false,
+      });
+
+      vi.stubEnv('BITBUCKET_PIPELINE_UUID', 'someUuid');
+      data = await createGitMeta(directory);
+      expect(data).toMatchObject({
+        remoteUrl: 'https://bitbucket.org/user/repo.git',
+        commitAuthorName: 'Matthew Stanciu',
+        commitMessage: 'hi',
+        commitRef: 'master',
+        commitSha: '3d883ccee5de4222ef5f40bde283a57b533b1256',
+        dirty: false,
+        ci: true,
+        ciType: 'bitbucket-pipelines',
       });
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
