@@ -19,7 +19,12 @@ export const VERCEL_DIR_ANONYMOUS = 'anonymous.json';
 export interface AnonymousState {
   projectId: string;
   token: string;
+  claimCode: string;
   expiresAt: number;
+}
+
+export function claimUrl(claimCode: string) {
+  return `https://vercel.com/claim-deployment?code=${claimCode}`;
 }
 
 function anonymousStatePath(cwd: string) {
@@ -34,6 +39,7 @@ export async function readAnonymousState(
     if (
       typeof state?.projectId === 'string' &&
       typeof state.token === 'string' &&
+      typeof state.claimCode === 'string' &&
       typeof state.expiresAt === 'number'
     ) {
       return state;
@@ -54,22 +60,21 @@ export async function clearAnonymousState(cwd: string) {
 export async function bootstrapAnonymousProject(
   client: Client
 ): Promise<AnonymousState> {
-  const { projectId, token, expiresAt } = await client.fetch<AnonymousState>(
-    '/v1/anonymous/projects',
-    {
+  const { projectId, token, claimCode, expiresAt } =
+    await client.fetch<AnonymousState>('/v1/anonymous/projects', {
       method: 'POST',
       body: {},
       useCurrentTeam: false,
       // Not idempotent: each attempt creates a project server-side.
       retry: { retries: 0 },
-    }
-  );
-  return { projectId, token, expiresAt };
+    });
+  return { projectId, token, claimCode, expiresAt };
 }
 
 export type AnonymousLink = ProjectLinked & {
   anonymous: true;
   expiresAt: number;
+  claimUrl: string;
 };
 
 export async function ensureAnonymousLink(
@@ -113,6 +118,7 @@ export async function ensureAnonymousLink(
     status: 'linked',
     anonymous: true,
     expiresAt: state.expiresAt,
+    claimUrl: claimUrl(state.claimCode),
     org: { type: 'user', id: '', slug: 'anonymous' },
     project: { id: state.projectId, name: state.projectId } as Project,
   };

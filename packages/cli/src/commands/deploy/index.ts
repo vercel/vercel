@@ -1929,7 +1929,12 @@ async function handleDefaultDeploy(
     const anonymousUrl = anonymousLink ? deployment.alias?.[0] : undefined;
     const deploymentJson = {
       ...getDeploymentOutputJson(deployment, client.apiUrl),
-      ...(anonymousLink ? { expiresAt: anonymousLink.expiresAt } : {}),
+      ...(anonymousLink
+        ? {
+            expiresAt: anonymousLink.expiresAt,
+            claimUrl: anonymousLink.claimUrl,
+          }
+        : {}),
       ...(anonymousUrl
         ? { url: `https://${anonymousUrl}`, inspectorUrl: null }
         : {}),
@@ -1940,7 +1945,7 @@ async function handleDefaultDeploy(
           status: AGENT_STATUS.OK,
           deployment: deploymentJson,
           message: anonymousLink
-            ? `Anonymous deployment ${anonymousUrl ?? deployment.url} ready. It expires in ${ms(anonymousLink.expiresAt - Date.now())}.`
+            ? `Anonymous deployment ${anonymousUrl ?? deployment.url} ready. It expires in ${ms(anonymousLink.expiresAt - Date.now())}. Claim it at ${anonymousLink.claimUrl} to keep it.`
             : `Deployment ${deployment.url} ready.`,
           ...(isImplicitProduction
             ? {
@@ -1955,7 +1960,7 @@ async function handleDefaultDeploy(
                 },
                 {
                   command: withGlobalFlags(client, 'login'),
-                  when: 'Create an account to keep this deployment',
+                  when: 'Create an account to keep deploying',
                 },
               ]
             : [
@@ -1994,7 +1999,7 @@ async function handleDefaultDeploy(
   );
   if (anonymousLink) {
     log(
-      `You have ${ms(anonymousLink.expiresAt - Date.now())} to claim this deployment. Run ${getCommandName('login')} to keep it.`
+      `You have ${ms(anonymousLink.expiresAt - Date.now())} to claim this deployment: ${chalk.cyan(anonymousLink.claimUrl)}`
     );
   }
   return exitCode;

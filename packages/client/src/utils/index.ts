@@ -298,13 +298,16 @@ export async function getVercelIgnore(
       throw new Error(`\`cwd\` must be a "string"`);
     }
     const relOutputDir = relative(cwd, vercelOutputDir);
+    // Root-anchor negations: ignore@4 caches regexes by pattern string without
+    // the negation flag, so an unanchored `!.vercel` collides with a positive
+    // `.vercel` compiled earlier and re-includes files meant to stay local.
     ignores = ['*'];
     const parts = relOutputDir.split(sep);
     parts.forEach((_, i) => {
       const level = parts.slice(0, i + 1).join('/');
-      ignores.push(`!${level}`);
+      ignores.push(`!/${level}`);
     });
-    ignores.push(`!${parts.join('/')}/**`);
+    ignores.push(`!/${parts.join('/')}/**`);
     ig.add(ignores.join('\n'));
   } else {
     ignores = [

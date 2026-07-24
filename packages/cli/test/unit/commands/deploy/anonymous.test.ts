@@ -88,11 +88,15 @@ describe('deploy [anonymous]', () => {
     expect(stderr).not.toContain('anon-app-abc.vercel.app');
     expect(stderr).not.toContain('Inspect');
     expect(stderr).toMatch(/You have .* to claim this deployment/);
+    expect(stderr).toContain(
+      'https://vercel.com/claim-deployment?code=claim_dummy'
+    );
 
     const state = await fs.readJSON(join(cwd, ANONYMOUS_FILE));
     expect(state).toEqual({
       projectId: 'prj_anon',
       token: 'vcn_test',
+      claimCode: 'claim_dummy',
       expiresAt: expect.any(Number),
     });
     expect(await fs.pathExists(join(cwd, '.vercel/project.json'))).toEqual(
@@ -132,6 +136,7 @@ describe('deploy [anonymous]', () => {
     await fs.outputJSON(join(cwd, ANONYMOUS_FILE), {
       projectId: 'prj_anon',
       token: 'vcn_sticky',
+      claimCode: 'claim_sticky',
       expiresAt: Date.now() + 1800_000,
     });
 
@@ -238,6 +243,7 @@ describe('deploy [anonymous]', () => {
     await fs.outputJSON(join(cwd, ANONYMOUS_FILE), {
       projectId: 'prj_anon',
       token: 'vcn_sticky',
+      claimCode: 'claim_sticky',
       expiresAt: Date.now() + 1800_000,
     });
 
@@ -263,6 +269,7 @@ describe('deploy [anonymous]', () => {
     await fs.outputJSON(join(cwd, ANONYMOUS_FILE), {
       projectId: 'prj_anon',
       token: 'vcn_expired',
+      claimCode: 'claim_expired',
       expiresAt: Date.now() - 1000,
     });
 
@@ -340,6 +347,12 @@ describe('deploy [anonymous]', () => {
     expect(payload.deployment.expiresAt).toEqual(expiresAt);
     expect(payload.deployment.url).toEqual('https://anon-app.vercel.app');
     expect(payload.deployment.inspectorUrl).toBeNull();
+    expect(payload.deployment.claimUrl).toEqual(
+      'https://vercel.com/claim-deployment?code=claim_dummy'
+    );
+    expect(payload.message).toContain(
+      'https://vercel.com/claim-deployment?code=claim_dummy'
+    );
     const commands = payload.next.map((n: { command: string }) => n.command);
     expect(commands.some((c: string) => c.includes('login'))).toEqual(true);
     expect(commands.some((c: string) => c.includes('inspect'))).toEqual(false);
