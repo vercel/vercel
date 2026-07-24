@@ -3,14 +3,6 @@ import { getBuildResultMetadata } from '../src/collect-build-result/get-build-re
 import { getLambdaByOutputPath } from '../src/collect-build-result/get-lambda-by-output-path';
 import { isRouteMiddleware } from '../src/collect-build-result/is-route-middleware';
 import { getPrerenderChain } from '../src/collect-build-result/get-prerender-chain';
-import { prerenderToBuildOutputFile } from '../src/collect-build-result/prerender-to-build-output-file';
-import {
-  streamWithExtendedPayload,
-  type ExtendedBodyData,
-} from '../src/collect-build-result/stream-with-extended-payload';
-import { Readable } from 'stream';
-import streamToBuffer from '../src/fs/stream-to-buffer';
-import FileBlob from '../src/file-blob';
 import { Lambda } from '../src/lambda';
 import { Prerender } from '../src/prerender';
 import { EdgeFunction } from '../src/edge-function';
@@ -43,10 +35,6 @@ function createEdgeFunction(
     files: {},
     ...overrides,
   });
-}
-
-function getBoundary(prefix?: string) {
-  return prefix?.split('\r\n')[0]?.replace('--', '');
 }
 
 describe('getLambdaByOutputPath', () => {
@@ -191,61 +179,5 @@ describe('getBuildResultMetadata', () => {
     });
     expect(result.middleware.size).toBe(0);
     expect(result.ppr.size).toBe(0);
-  });
-});
-
-describe('streamWithExtendedPayload', () => {
-  it('returns original stream when no data provided', async () => {
-    const stream = Readable.from([Buffer.from('content')]);
-    const result = streamWithExtendedPayload(stream);
-    const buf = await streamToBuffer(result);
-    expect(buf.toString()).toBe('content');
-  });
-
-  it('wraps stream with prefix and suffix', async () => {
-    const stream = Readable.from([Buffer.from('body')]);
-    const data: ExtendedBodyData = {
-      prefix: 'PRE:',
-      suffix: ':POST',
-    };
-    const result = streamWithExtendedPayload(stream, data);
-    const buf = await streamToBuffer(result);
-    expect(buf.toString()).toBe('PRE:body:POST');
-  });
-});
-
-describe('prerenderToBuildOutputFile', () => {
-  it('reuses the multipart boundary across prerender fallbacks', async () => {
-    const initialHeaders = {
-      'content-type': 'text/html',
-      'x-test': 'value',
-    };
-
-    const first = await prerenderToBuildOutputFile({
-      buildResult: createPrerender({
-        fallback: new FileBlob({ data: 'first' }),
-        initialHeaders,
-      }),
-      outputPath: 'first',
-    });
-    const second = await prerenderToBuildOutputFile({
-      buildResult: createPrerender({
-        fallback: new FileBlob({ data: 'second' }),
-        initialHeaders,
-      }),
-      outputPath: 'second',
-    });
-
-    const firstBoundary = getBoundary(first?.extended.extendedBody?.prefix);
-    const secondBoundary = getBoundary(second?.extended.extendedBody?.prefix);
-
-    expect(firstBoundary).toBeDefined();
-    expect(secondBoundary).toBe(firstBoundary);
-    expect(first?.extended.initialHeaders).toEqual({
-      'content-type': `multipart/x-nextjs-extended-payload; boundary=${firstBoundary}`,
-    });
-    expect(second?.extended.initialHeaders).toEqual({
-      'content-type': `multipart/x-nextjs-extended-payload; boundary=${firstBoundary}`,
-    });
   });
 });

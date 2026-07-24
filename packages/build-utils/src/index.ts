@@ -194,17 +194,6 @@ export * from './node-entrypoint';
 export * from './service-path-utils';
 
 export {
-  getEncryptedEnv,
-  type EncryptedEnvFile,
-} from './process-serverless/get-encrypted-env-file';
-export { getLambdaEnvironment } from './process-serverless/get-lambda-environment';
-export {
-  getLambdaPreloadScripts,
-  type BytecodeCachingOptions,
-} from './process-serverless/get-lambda-preload-scripts';
-export { getLambdaSupportsStreaming } from './process-serverless/get-lambda-supports-streaming';
-
-export {
   streamToDigestAsync,
   sha256,
   md5,
@@ -215,40 +204,9 @@ export {
   getBuildResultMetadata,
   type BuildResultMetadata,
 } from './collect-build-result/get-build-result-metadata';
-export {
-  validateBuildResult,
-  SUPPORTED_AL2023_RUNTIMES,
-  type ValidateBuildResultParams,
-  type ValidateBuildResultResult,
-} from './collect-build-result/validate-build-result';
 export { getLambdaByOutputPath } from './collect-build-result/get-lambda-by-output-path';
 export { isRouteMiddleware } from './collect-build-result/is-route-middleware';
 export { getPrerenderChain } from './collect-build-result/get-prerender-chain';
-export {
-  streamWithExtendedPayload,
-  type ExtendedBodyData,
-} from './collect-build-result/stream-with-extended-payload';
-
-export { collectUncompressedSize } from './collect-uncompressed-size';
-
-export {
-  finalizeLambda,
-  type CreateZipResult,
-  type CreateZipFn,
-  type FinalizeLambdaParams,
-  type FinalizeLambdaResult,
-  type TraceFn,
-} from './finalize-lambda';
-
-export {
-  validateLambdaSize,
-  validateUncompressedLambdaSize,
-  FunctionSizeError,
-  MAX_LAMBDA_SIZE,
-  MAX_LAMBDA_UNCOMPRESSED_SIZE,
-  validateEnvWrapperSupport,
-  ENV_WRAPPER_SUPPORTED_FAMILIES,
-} from './validate-lambda-size';
 
 export { validateFrameworkVersion } from './deserialize/validate-framework-version';
 export { hydrateFilesMap } from './deserialize/hydrate-files-map';
@@ -282,15 +240,3 @@ export type {
   SerializedFileFsRef,
   SerializedPrerender,
 } from './deserialize/serialized-types';
-
-export { validateRegularFile } from './collect-build-result/validate-regular-file';
-export { validatePrerender } from './collect-build-result/validate-prerender';
-export { getContentType } from './collect-build-result/get-content-type';
-export {
-  fileToBuildOutputFile,
-  type BuildOutputFile,
-} from './collect-build-result/file-to-build-output-file';
-export {
-  prerenderToBuildOutputFile,
-  type ExtendedPayload,
-} from './collect-build-result/prerender-to-build-output-file';
