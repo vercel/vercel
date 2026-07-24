@@ -18,6 +18,7 @@ import {
   formatQuantity,
   extractDatePortion,
 } from '../../util/billing/format';
+import { changePlan, previewPlan } from './plan';
 
 export default async function contract(client: Client): Promise<number> {
   const { print, log, error, spinner } = output;
@@ -50,6 +51,30 @@ export default async function contract(client: Client): Promise<number> {
     return 1;
   }
   const asJson = formatResult.jsonOutput;
+  const billingAction = parsedArgs.args[1];
+
+  if (billingAction === 'plan') {
+    const planAction = parsedArgs.args[2] ?? 'preview';
+    try {
+      if (planAction === 'preview') {
+        return await previewPlan(client, asJson);
+      }
+      if (planAction === 'change') {
+        const toPlan = parsedArgs.flags['--to'] as string | undefined;
+        telemetry.trackCliOptionTo(toPlan);
+        if (!toPlan) {
+          error('Usage: vercel billing plan change --to <plan>');
+          return 2;
+        }
+        return await changePlan(client, toPlan, asJson);
+      }
+      error('Usage: vercel billing plan preview | change --to <plan>');
+      return 2;
+    } catch (err) {
+      output.prettyError(err);
+      return 1;
+    }
+  }
 
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
