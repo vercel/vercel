@@ -129,7 +129,11 @@ jobs:
       tag: ${{ needs.release.outputs.vercel_tag }}
       upload_to_release: true
       publish_native: true
-    secrets: inherit
+    secrets:
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      APPLE_CERT_DATA: ${{ secrets.APPLE_CERT_DATA }}
+      APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+      APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
 
   summary:
     name: Summary (release)
