@@ -1,7 +1,8 @@
 import fs from 'fs';
-import { join } from 'path';
+import { join, relative } from 'path';
 import execa from 'execa';
 import { debug } from '@vercel/build-utils';
+import { entrypointToModule } from './entrypoint';
 import { getVenvPythonBin } from './utils';
 
 const scriptPath = join(__dirname, '..', 'templates', 'vc_fastapi_static.py');
@@ -34,6 +35,9 @@ export async function getFastAPIStaticMounts(
   workPath: string
 ): Promise<FastAPIStaticMount[]> {
   const pythonPath = getVenvPythonBin(venvPath);
+  const moduleName = entrypointToModule(
+    relative(workPath, entrypointAbs).replace(/\\/g, '/')
+  );
   const outputPath = join(
     workPath,
     '.vercel',
@@ -46,7 +50,7 @@ export async function getFastAPIStaticMounts(
   try {
     const { stderr } = await execa(
       pythonPath,
-      [scriptPath, entrypointAbs, variableName, outputPath],
+      [scriptPath, moduleName, entrypointAbs, variableName, outputPath],
       { env, cwd: workPath }
     );
     if (stderr) {

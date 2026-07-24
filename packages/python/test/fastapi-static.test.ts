@@ -92,6 +92,41 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     );
   });
 
+  it('supports package-relative imports from the entrypoint module', async () => {
+    const appDir = path.join(testDir, 'package-import');
+    const packageDir = path.join(appDir, 'backend');
+    fs.mkdirSync(path.join(appDir, 'dist'), { recursive: true });
+    fs.mkdirSync(packageDir, { recursive: true });
+    fs.writeFileSync(path.join(packageDir, '__init__.py'), '');
+    fs.writeFileSync(
+      path.join(packageDir, 'settings.py'),
+      'FRONTEND_DIRECTORY = "dist"\n'
+    );
+    const entrypointAbs = path.join(packageDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'from .settings import FRONTEND_DIRECTORY',
+        'app = FastAPI()',
+        'app.frontend("/", directory=FRONTEND_DIRECTORY)',
+      ].join('\n')
+    );
+
+    const mounts = await getFastAPIStaticMounts(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    expect(mounts).toHaveLength(1);
+    expect(mounts[0].directory).toBe(
+      fs.realpathSync(path.join(appDir, 'dist'))
+    );
+  });
+
   it('returns empty when no StaticFiles mounts exist', async () => {
     const appDir = path.join(testDir, 'app-no-static');
     fs.mkdirSync(appDir, { recursive: true });
