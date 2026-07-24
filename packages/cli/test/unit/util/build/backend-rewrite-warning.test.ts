@@ -14,29 +14,37 @@ function builder(framework: string, use = '@vercel/static-build'): Builder {
 }
 
 describe('backend rewrite behavior warning', () => {
-  it.each(['fastapi', 'flask', 'django', 'python', 'fasthtml'])(
-    'warns for an internal rewrite in a %s (Python) project',
-    framework => {
-      expect(
-        hasBackendRewriteBehaviorChange({
-          projectRewrites: [{ source: '/old', destination: '/new' }],
-          builders: [builder(framework)],
-        })
-      ).toBe(true);
-    }
-  );
+  it.each([
+    'fastapi',
+    'flask',
+    'django',
+    'python',
+    'fasthtml',
+  ])('warns for an internal rewrite in a %s (Python) project', framework => {
+    expect(
+      hasBackendRewriteBehaviorChange({
+        projectRewrites: [{ source: '/old', destination: '/new' }],
+        builders: [builder(framework)],
+      })
+    ).toBe(true);
+  });
 
-  it.each(['express', 'hono', 'h3', 'koa', 'nestjs', 'fastify', 'elysia'])(
-    'warns for an internal rewrite in a %s (Node backend) project',
-    framework => {
-      expect(
-        hasBackendRewriteBehaviorChange({
-          projectRewrites: [{ source: '/old', destination: '/new' }],
-          builders: [builder(framework)],
-        })
-      ).toBe(true);
-    }
-  );
+  it.each([
+    'express',
+    'hono',
+    'h3',
+    'koa',
+    'nestjs',
+    'fastify',
+    'elysia',
+  ])('warns for an internal rewrite in a %s (Node backend) project', framework => {
+    expect(
+      hasBackendRewriteBehaviorChange({
+        projectRewrites: [{ source: '/old', destination: '/new' }],
+        builders: [builder(framework)],
+      })
+    ).toBe(true);
+  });
 
   it('does not infer the framework from the builder package', () => {
     expect(
@@ -106,7 +114,9 @@ describe('backend rewrite behavior warning', () => {
     expect(BACKEND_REWRITE_BEHAVIOR_WARNING).toContain(
       'now route requests using the rewritten destination path'
     );
-    expect(BACKEND_REWRITE_BEHAVIOR_WARNING).toContain('previously unsupported');
+    expect(BACKEND_REWRITE_BEHAVIOR_WARNING).toContain(
+      'previously unsupported'
+    );
     expect(BACKEND_REWRITE_BEHAVIOR_WARNING).toContain('behavior');
   });
 });

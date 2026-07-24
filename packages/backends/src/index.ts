@@ -378,11 +378,18 @@ export const build: BuildV2 = async args => {
             // Copy the resolved (post-rewrite) path into the runtime request
             // before dispatching the shared framework Lambda so application
             // routing observes the rewrite rather than the original path.
+            //
+            // The catch-all capture group only matches the segment *after* the
+            // service route prefix, so include the prefix here to reconstruct
+            // the full resolved path. The runtime shim
+            // (VERCEL_SERVICE_ROUTE_PREFIX_STRIP) remains the single place that
+            // strips the mount prefix, avoiding a double-strip when the suffix
+            // itself begins with the prefix segment.
             transforms: [
               {
                 type: 'request.path' as const,
                 op: 'set' as const,
-                args: '/$1',
+                args: serviceRoutePrefix ? `${serviceRoutePrefix}/$1` : '/$1',
               },
             ],
           },
