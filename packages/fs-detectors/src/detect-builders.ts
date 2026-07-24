@@ -85,6 +85,29 @@ export interface ProxyConfig {
   matcher?: string | string[];
 }
 
+interface ResolvedProxyEntrypoint {
+  filePath: string;
+  isPython: boolean;
+}
+
+const PYTHON_PROXY_MODULE_ENTRYPOINT =
+  /^([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*):proxy$/;
+
+function resolveProxyEntrypoint(entrypoint: string): ResolvedProxyEntrypoint {
+  const pythonModule = PYTHON_PROXY_MODULE_ENTRYPOINT.exec(entrypoint);
+  if (pythonModule) {
+    return {
+      filePath: `${pythonModule[1].replace(/\./g, '/')}.py`,
+      isPython: true,
+    };
+  }
+
+  return {
+    filePath: entrypoint,
+    isPython: entrypoint.endsWith('.py'),
+  };
+}
+
 export interface Options {
   tag?: string;
   functions?: BuilderFunctions;
@@ -441,7 +464,9 @@ export async function detectBuilders(
       frontendBuilder = {
         use: '@vercel/static',
         src: getStaticFilesPattern(
-          options.proxy ? [options.proxy.entrypoint] : []
+          options.proxy
+            ? [resolveProxyEntrypoint(options.proxy.entrypoint).filePath]
+            : []
         ),
         config: {
           zeroConfig: true,
@@ -696,16 +721,14 @@ export function getProxyBuilder(
   tag?: string,
   functions: BuilderFunctions = {}
 ): Builder {
-  const { fnPattern, func } = getFunction(proxy.entrypoint, { functions });
+  const { filePath, isPython } = resolveProxyEntrypoint(proxy.entrypoint);
+  const { fnPattern, func } = getFunction(filePath, { functions });
   const runtime = func?.runtime;
-  const isPythonProxy = proxy.entrypoint.endsWith('.py');
   const config: Config = {
     zeroConfig: true,
     middleware: true,
-    ...(isPythonProxy ? { handlerFunction: 'proxy' } : {}),
-    ...(!isPythonProxy && !runtime
-      ? { middlewareRuntime: 'nodejs' as const }
-      : {}),
+    ...(isPython ? { handlerFunction: 'proxy' } : {}),
+    ...(!isPython && !runtime ? { middlewareRuntime: 'nodejs' as const } : {}),
     ...(proxy.matcher ? { middlewareMatcher: proxy.matcher } : {}),
   };
 
@@ -722,10 +745,10 @@ export function getProxyBuilder(
   }
 
   return {
-    src: proxy.entrypoint,
+    src: filePath,
     use:
       runtime ||
-      `@vercel/${isPythonProxy ? 'python' : 'node'}${tag ? `@${tag}` : ''}`,
+      `@vercel/${isPython ? 'python' : 'node'}${tag ? `@${tag}` : ''}`,
     config,
   };
 }
@@ -766,27 +789,30 @@ export function validateProxyConfig(proxy: ProxyConfig): ErrorResponse | null {
   }
 
   const entrypoint = proxy.entrypoint;
-  const segments = entrypoint.split('/');
-  if (
-    entrypoint.startsWith('/') ||
-    entrypoint.includes('\\') ||
-    segments.includes('.') ||
-    segments.includes('..') ||
-    /[?#\u0000-\u001f]/.test(entrypoint)
-  ) {
-    return {
-      code: 'invalid_proxy_entrypoint',
-      message:
-        'The `proxy.entrypoint` path must be relative to the project root and cannot contain traversal, query, fragment, or control characters.',
-    };
-  }
+  const isPythonModule = PYTHON_PROXY_MODULE_ENTRYPOINT.test(proxy.entrypoint);
+  if (!isPythonModule) {
+    const segments = entrypoint.split('/');
+    if (
+      entrypoint.startsWith('/') ||
+      entrypoint.includes('\\') ||
+      segments.includes('.') ||
+      segments.includes('..') ||
+      /[?#\u0000-\u001f]/.test(entrypoint)
+    ) {
+      return {
+        code: 'invalid_proxy_entrypoint',
+        message:
+          'The `proxy.entrypoint` path must be relative to the project root and cannot contain traversal, query, fragment, or control characters.',
+      };
+    }
 
-  if (!/\.(?:js|ts|py)$/.test(entrypoint) || entrypoint.endsWith('.d.ts')) {
-    return {
-      code: 'invalid_proxy_entrypoint',
-      message:
-        'The `proxy.entrypoint` path must end in `.js`, `.ts`, or `.py` and reference an executable file.',
-    };
+    if (!/\.(?:js|ts|py)$/.test(entrypoint) || entrypoint.endsWith('.d.ts')) {
+      return {
+        code: 'invalid_proxy_entrypoint',
+        message:
+          'The `proxy.entrypoint` path must end in `.js`, `.ts`, or `.py` and reference an executable file.',
+      };
+    }
   }
 
   if (proxy.matcher !== undefined) {
@@ -825,10 +851,14 @@ function validateProxy(
     return configError;
   }
 
-  if (!files.includes(proxy.entrypoint)) {
+  const resolvedEntrypoint = resolveProxyEntrypoint(proxy.entrypoint);
+  if (!files.includes(resolvedEntrypoint.filePath)) {
     return {
       code: 'proxy_entrypoint_not_found',
-      message: `The proxy entrypoint \`${proxy.entrypoint}\` does not exist. Set \`proxy.entrypoint\` to an existing \`.js\`, \`.ts\`, or \`.py\` file.`,
+      message:
+        resolvedEntrypoint.filePath === proxy.entrypoint
+          ? `The proxy entrypoint \`${proxy.entrypoint}\` does not exist. Set \`proxy.entrypoint\` to an existing \`.js\`, \`.ts\`, or \`.py\` file.`
+          : `The Python proxy entrypoint \`${proxy.entrypoint}\` does not resolve to an existing \`${resolvedEntrypoint.filePath}\` file.`,
     };
   }
 

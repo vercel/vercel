@@ -870,16 +870,25 @@ export default class DevServer {
       // Service builds are owned by the orchestrator; only the top-level
       // proxy participates in the dev server's build pipeline.
       const { entrypoint } = vercelConfig.proxy;
-      if (!(await fs.pathExists(join(this.cwd, entrypoint)))) {
+      const proxyBuilder = getProxyBuilder(
+        vercelConfig.proxy,
+        'latest',
+        vercelConfig.functions
+      );
+      const proxyFilePath = proxyBuilder.src;
+      if (
+        !proxyFilePath ||
+        !(await fs.pathExists(join(this.cwd, proxyFilePath)))
+      ) {
         output.error(
-          `The proxy entrypoint \`${entrypoint}\` does not exist. Set \`proxy.entrypoint\` to an existing \`.js\`, \`.ts\`, or \`.py\` file.`
+          proxyFilePath === entrypoint
+            ? `The proxy entrypoint \`${entrypoint}\` does not exist. Set \`proxy.entrypoint\` to an existing \`.js\`, \`.ts\`, or \`.py\` file.`
+            : `The Python proxy entrypoint \`${entrypoint}\` does not resolve to an existing \`${proxyFilePath}\` file.`
         );
         await this.exit();
       }
       vercelConfig.builds = vercelConfig.builds || [];
-      vercelConfig.builds.push(
-        getProxyBuilder(vercelConfig.proxy, 'latest', vercelConfig.functions)
-      );
+      vercelConfig.builds.push(proxyBuilder);
     }
 
     if (this.sidecars === undefined) {

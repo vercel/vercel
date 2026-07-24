@@ -7,6 +7,8 @@ describe('validateConfig', () => {
       'proxy.js',
       'src/proxy.ts',
       'proxy.py',
+      'proxy:proxy',
+      'routing.proxy:proxy',
     ])('accepts the supported entrypoint %s', entrypoint => {
       expect(validateConfig({ proxy: { entrypoint } })).toBeNull();
     });

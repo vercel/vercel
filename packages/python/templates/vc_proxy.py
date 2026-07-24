@@ -1,4 +1,4 @@
-"""Adapt a configured ``proxy.py`` function into a routing middleware ASGI app."""
+"""Adapt a configured Python proxy entrypoint into a routing middleware ASGI app."""
 
 from __future__ import annotations
 
@@ -43,6 +43,12 @@ async def _continue_routing(scope, receive, send):
 
 
 async def app(scope, receive, send):
+    # ``vercel.proxy.Proxy`` is already a complete ASGI application. Its
+    # terminal response implements the Vercel routing continuation protocol,
+    # so it must receive the original ASGI arguments rather than a Request.
+    if getattr(proxy, "__vercel_proxy__", False):
+        return await proxy(scope, receive, send)
+
     if scope.get("type") != "http":
         return await _continue_routing(scope, receive, send)
 
