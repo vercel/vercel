@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  connectDiscordCredentials,
   connectGitHubCredentials,
   connectLinearCredentials,
   connectPhotonCredentials,
@@ -17,6 +18,67 @@ describe('Eve channel credential helpers', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+  });
+
+  it('builds Discord credentials backed by one app-scoped Connect token response', async () => {
+    fetchMock.mockResolvedValue(
+      jsonTokenResponse('discord_token', {
+        metadata: { applicationId: '123456789' },
+      })
+    );
+
+    const credentials = connectDiscordCredentials(
+      'discord/my-bot',
+      {},
+      { vercelToken: 'vercel_token' }
+    );
+
+    expect(credentials.webhookVerifier).toEqual(expect.any(Function));
+    const [botToken, applicationId] = await Promise.all([
+      resolveToken(credentials.botToken),
+      resolveToken(credentials.applicationId),
+    ]);
+    expect(botToken).toBe('discord_token');
+    expect(applicationId).toBe('123456789');
+    expectTokenRequest('discord/my-bot', { subject: { type: 'app' } });
+  });
+
+  it('retries Discord credential resolution after a failed shared request', async () => {
+    fetchMock
+      .mockRejectedValueOnce(new Error('temporary failure'))
+      .mockResolvedValueOnce(
+        jsonTokenResponse('discord_token', {
+          metadata: { applicationId: '123456789' },
+        })
+      );
+
+    const credentials = connectDiscordCredentials(
+      'discord/retry',
+      {},
+      { vercelToken: 'vercel_token' }
+    );
+
+    await expect(resolveToken(credentials.botToken)).rejects.toThrow(
+      'temporary failure'
+    );
+    await expect(resolveToken(credentials.applicationId)).resolves.toBe(
+      '123456789'
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('fails clearly when Discord application metadata is unavailable', async () => {
+    fetchMock.mockResolvedValue(jsonTokenResponse('discord_token'));
+
+    const credentials = connectDiscordCredentials(
+      'discord/missing-metadata',
+      {},
+      { vercelToken: 'vercel_token' }
+    );
+
+    await expect(resolveToken(credentials.applicationId)).rejects.toThrow(
+      'did not return a Discord application id'
+    );
   });
 
   it('builds GitHub credentials backed by an app-scoped Connect token', async () => {
