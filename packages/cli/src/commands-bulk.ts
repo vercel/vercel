@@ -18,6 +18,7 @@ export { default as cache } from './commands/cache';
 export { default as connex } from './commands/connex';
 export { default as contract } from './commands/contract';
 export { default as certs } from './commands/certs';
+export { default as completion } from './commands/completion';
 export { default as crons } from './commands/crons';
 export { default as curl } from './commands/curl';
 export { default as deployHooks } from './commands/deploy-hooks';

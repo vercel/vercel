@@ -631,6 +631,17 @@ const main = async () => {
     client.argv.push('-h');
   }
 
+  // Shell completion is routed before the login prompt, telemetry command
+  // tracking, and post-run update check. The hidden `__complete` driver runs on
+  // every TAB, so it must emit only candidates with no other side effects;
+  // script generation (`completion <shell>`) needs no auth either.
+  if (subcommand === 'completion') {
+    const completion = (await import('./commands/completion')).default;
+    const code = await completion(client);
+    // Keep the per-keystroke driver free of telemetry flushes.
+    return client.argv.includes('__complete') ? code : finishWithExitCode(code);
+  }
+
   const subcommandsWithoutToken = [
     'agent',
     'login',
@@ -642,6 +653,9 @@ const main = async () => {
     'telemetry',
     'upgrade',
     'skills',
+    // Script generation needs no auth; the `__complete` driver authenticates
+    // best-effort on its own and returns nothing when logged out.
+    'completion',
   ];
 
   if (process.env.FF_GUIDANCE_MODE) {

@@ -18,6 +18,7 @@ describe('index', () => {
         ['cache', 'cache'],
         ['cert', 'certs'],
         ['certs', 'certs'],
+        ['completion', 'completion'],
         ['connect', 'connect'],
         ['contract', 'contract'],
         ['cron', 'crons'],

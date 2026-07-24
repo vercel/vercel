@@ -9,6 +9,7 @@ import { buildCommand } from './build/command';
 import { buyCommand } from './buy/command';
 import { cacheCommand } from './cache/command';
 import { certsCommand } from './certs/command';
+import { completionCommand } from './completion/command';
 import { connexCommand } from './connex/command';
 import { contractCommand } from './contract/command';
 import { cronsCommand } from './crons/command';
@@ -64,7 +65,7 @@ import { webhooksCommand } from './webhooks/command';
 import type { Command } from './help';
 import output from '../output-manager';
 
-const commandsStructs = [
+export const commandsStructs = [
   agentCommand,
   aiGatewayCommand,
   alertsCommand,
@@ -77,6 +78,7 @@ const commandsStructs = [
   buyCommand,
   cacheCommand,
   certsCommand,
+  completionCommand,
   contractCommand,
   cronsCommand,
   curlCommand,

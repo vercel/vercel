@@ -70,6 +70,7 @@ export const globalCommandOptions = [
     type: String,
     description: 'Set a custom scope',
     deprecated: false,
+    completion: 'team',
   },
   {
     name: 'token',
@@ -79,7 +80,13 @@ export const globalCommandOptions = [
     description: 'Login token',
     deprecated: false,
   },
-  { name: 'team', shorthand: 'T', type: String, deprecated: false },
+  {
+    name: 'team',
+    shorthand: 'T',
+    type: String,
+    deprecated: false,
+    completion: 'team',
+  },
   { name: 'api', shorthand: null, type: String, deprecated: false },
 ] as const;
 

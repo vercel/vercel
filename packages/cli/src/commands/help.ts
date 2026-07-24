@@ -12,6 +12,13 @@ export type PrimitiveConstructor =
   | typeof Boolean
   | typeof Number;
 
+/**
+ * Tags an argument or option value as a dynamic resource so shell completion
+ * can fetch candidates at runtime. Extend the union as more sources are wired
+ * (e.g. 'project').
+ */
+export type CompletionSource = 'team';
+
 export interface CommandOption {
   readonly name: string;
   readonly shorthand: string | null;
@@ -19,11 +26,15 @@ export interface CommandOption {
   readonly argument?: string;
   readonly deprecated: boolean;
   readonly description?: string;
+  readonly completion?: CompletionSource;
 }
 export interface CommandArgument {
   readonly name: string;
   readonly required: boolean;
   readonly multiple?: true;
+  readonly completion?: CompletionSource;
+  /** Static candidates for shell completion (e.g. a fixed set of shells). */
+  readonly values?: ReadonlyArray<string>;
 }
 export interface CommandExample {
   readonly name: string;

@@ -88,6 +88,7 @@ export const switchSubcommand = {
     {
       name: 'name',
       required: false,
+      completion: 'team',
     },
   ],
   options: [],

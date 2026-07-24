@@ -4,6 +4,23 @@ import { tmpdir } from 'os';
 import { getUpdateCommandInfo } from './get-update-command';
 import pkg from './pkg';
 import output from '../output-manager';
+import { refreshInstalledCompletions } from './completion/install';
+
+/**
+ * Keeps already-installed shell completion scripts current after an upgrade.
+ * Never creates a first-time install, and never throws, so completion upkeep
+ * cannot affect the upgrade's outcome.
+ */
+async function refreshCompletionsAfterUpgrade(): Promise<void> {
+  try {
+    const refreshed = await refreshInstalledCompletions();
+    if (refreshed.length > 0) {
+      output.debug(`Refreshed shell completion for: ${refreshed.join(', ')}`);
+    }
+  } catch {
+    // Intentionally ignored.
+  }
+}
 
 const execFileAsync = promisify(execFile);
 
@@ -69,7 +86,7 @@ export async function executeUpgrade(targetVersion?: string): Promise<number> {
       resolve(1);
     });
 
-    upgradeProcess.on('close', (code: number | null) => {
+    upgradeProcess.on('close', async (code: number | null) => {
       if (code !== 0) {
         // Show output only on error
         const stdoutStr = Buffer.concat(stdout).toString();
@@ -87,6 +104,10 @@ export async function executeUpgrade(targetVersion?: string): Promise<number> {
         resolve(code ?? 1);
         return;
       }
+
+      // Keep any already-installed shell completions current with the new
+      // version. Best-effort and non-fatal.
+      await refreshCompletionsAfterUpgrade();
 
       if (targetVersion) {
         output.success(
