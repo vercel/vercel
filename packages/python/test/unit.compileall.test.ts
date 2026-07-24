@@ -24,7 +24,6 @@ import {
   derivePrefixPycRelPath,
   derivePycPath,
   deriveStagedPycFsPath,
-  getCompileAllAppExcludeRegex,
   runCompileAll,
   shouldCompileAll,
 } from '../src/compileall';
@@ -134,61 +133,106 @@ describe('shouldCompileAll', () => {
 });
 
 describe('runCompileAll', () => {
-  it('passes -j 0, -f, and exclude regex to compileall when provided', async () => {
-    mockedExeca.mockResolvedValue({} as any);
+  it('passes a deduplicated JSON source list to the compile coordinator', async () => {
+    let listPath = '';
+    let sourceList: string[] = [];
+    mockedExeca.mockImplementation(((_file, args: string[]) => {
+      listPath = args[1];
+      sourceList = JSON.parse(fs.readFileSync(listPath, 'utf8'));
+      return Promise.resolve({});
+    }) as any);
     const env = { VIRTUAL_ENV: '/work/.vercel/python/.venv' };
-
-    await runCompileAll({
-      pythonBin: '/work/.vercel/python/.venv/bin/python',
-      filesOrDirectories: ['/work'],
-      env,
-      excludeRegex: '[/\\\\]\\.vercel(?:[/\\\\]|$)',
-    });
-
-    expect(mockedExeca).toHaveBeenCalledWith(
-      '/work/.vercel/python/.venv/bin/python',
-      [
-        '-m',
-        'compileall',
-        '-q',
-        '-j',
-        '0',
-        '-f',
-        '--invalidation-mode',
-        'unchecked-hash',
-        '-x',
-        '[/\\\\]\\.vercel(?:[/\\\\]|$)',
-        '/work',
-      ],
-      { env, timeout: COMPILEALL_TIMEOUT_MS }
-    );
-  });
-
-  it('resolves without throwing when compileall fails', async () => {
-    mockedExeca.mockRejectedValue(new Error('compileall crashed'));
 
     await expect(
       runCompileAll({
         pythonBin: '/work/.vercel/python/.venv/bin/python',
-        filesOrDirectories: ['/work'],
+        sourceFiles: ['/work/app.py', '/work/pkg/mod.py', '/work/app.py'],
+        env,
       })
-    ).resolves.toBeUndefined();
+    ).resolves.toBe(true);
+
+    const args = mockedExeca.mock.calls[0][1];
+    expect(args).toEqual([
+      expect.stringMatching(/templates[/\\\\]vc_compileall\.py$/),
+      listPath,
+    ]);
+    expect(mockedExeca).toHaveBeenCalledWith(
+      '/work/.vercel/python/.venv/bin/python',
+      args,
+      { env, timeout: COMPILEALL_TIMEOUT_MS }
+    );
+    expect(sourceList).toEqual(['/work/app.py', '/work/pkg/mod.py']);
+    expect(fs.existsSync(listPath)).toBe(false);
+    expect(fs.existsSync(path.dirname(listPath))).toBe(false);
   });
 
-  it('sets PYTHONPYCACHEPREFIX on the subprocess when pycachePrefix is provided', async () => {
+  it('does not invoke the coordinator when there are no source files', async () => {
+    await expect(
+      runCompileAll({ pythonBin: 'python3', sourceFiles: [] })
+    ).resolves.toBe(false);
+
+    expect(mockedExeca).not.toHaveBeenCalled();
+  });
+
+  it('returns false and removes the temporary list after failure', async () => {
+    let listPath = '';
+    mockedExeca.mockImplementation(((_file, args: string[]) => {
+      listPath = args[1];
+      expect(fs.existsSync(listPath)).toBe(true);
+      return Promise.reject(
+        Object.assign(new Error('compileall exited with code 1'), {
+          exitCode: 1,
+        })
+      );
+    }) as any);
+
+    await expect(
+      runCompileAll({
+        pythonBin: 'python3',
+        sourceFiles: ['/work/app.py'],
+      })
+    ).resolves.toBe(false);
+
+    expect(fs.existsSync(listPath)).toBe(false);
+    expect(fs.existsSync(path.dirname(listPath))).toBe(false);
+  });
+
+  it('returns false and removes the temporary list after timeout', async () => {
+    let listPath = '';
+    mockedExeca.mockImplementation(((_file, args: string[]) => {
+      listPath = args[1];
+      return Promise.reject(
+        Object.assign(new Error('compileall timed out'), { timedOut: true })
+      );
+    }) as any);
+
+    await expect(
+      runCompileAll({
+        pythonBin: 'python3',
+        sourceFiles: ['/work/app.py'],
+      })
+    ).resolves.toBe(false);
+
+    expect(fs.existsSync(listPath)).toBe(false);
+    expect(fs.existsSync(path.dirname(listPath))).toBe(false);
+  });
+
+  it('sets PYTHONPYCACHEPREFIX on the subprocess when provided', async () => {
     mockedExeca.mockResolvedValue({} as any);
     const env = { VIRTUAL_ENV: '/work/.vercel/python/.venv' };
-
     await runCompileAll({
       pythonBin: '/work/.vercel/python/.venv/bin/python',
-      filesOrDirectories: ['/work'],
+      sourceFiles: ['/work/app.py'],
       env,
       pycachePrefix: '/work/.vercel/python/pycache',
     });
 
     expect(mockedExeca).toHaveBeenCalledWith(
       '/work/.vercel/python/.venv/bin/python',
-      expect.arrayContaining(['-m', 'compileall']),
+      [
+        expect.stringMatching(/templates[/\\\\]vc_compileall\.py$/),
+        expect.stringMatching(/pysources\.json$/),
+      ],
       {
         env: { ...env, PYTHONPYCACHEPREFIX: '/work/.vercel/python/pycache' },
         timeout: COMPILEALL_TIMEOUT_MS,
@@ -196,13 +240,12 @@ describe('runCompileAll', () => {
     );
   });
 
-  it('does not set PYTHONPYCACHEPREFIX without pycachePrefix', async () => {
+  it('does not set PYTHONPYCACHEPREFIX without a prefix', async () => {
     mockedExeca.mockResolvedValue({} as any);
     const env = { VIRTUAL_ENV: '/work/.vercel/python/.venv' };
-
     await runCompileAll({
       pythonBin: '/work/.vercel/python/.venv/bin/python',
-      filesOrDirectories: ['/work'],
+      sourceFiles: ['/work/app.py'],
       env,
     });
 
@@ -237,7 +280,9 @@ describe('pycache-prefix path derivation', () => {
   it('derives the staged pyc fs path from an absolute source path', () => {
     expect(
       deriveStagedPycFsPath('/staging', '/vercel/path0/src/app.py', 3, 12)
-    ).toBe('/staging/vercel/path0/src/app.cpython-312.pyc');
+    ).toBe(
+      path.join('/staging', 'vercel', 'path0', 'src', 'app.cpython-312.pyc')
+    );
     expect(deriveStagedPycFsPath('/staging', '/x/lib.so', 3, 12)).toBeNull();
   });
 
@@ -252,8 +297,8 @@ describe('pycache-prefix path derivation', () => {
     // the prefix, so the derived path must not retain "C:".
     expect(derived).not.toBeNull();
     expect(derived).not.toContain('C:');
-    expect(derived!.replaceAll('\\', '/')).toBe(
-      '/staging/Users/dev/proj/app.cpython-312.pyc'
+    expect(derived!.replaceAll('\\', path.sep)).toBe(
+      path.join('/staging', 'Users', 'dev', 'proj', 'app.cpython-312.pyc')
     );
   });
 
@@ -274,23 +319,6 @@ describe('pycache-prefix path derivation', () => {
 
   it('runtime prefix constant addresses the bundle tree under /var/task', () => {
     expect(RUNTIME_PYCACHE_PREFIX).toBe(`/var/task/${PYCACHE_PREFIX_DIR}`);
-  });
-});
-
-describe('getCompileAllAppExcludeRegex', () => {
-  it('produces a regex that matches excluded directories under workPath', () => {
-    const regex = new RegExp(getCompileAllAppExcludeRegex('/work'));
-    expect(regex.test('/work/.venv/lib/python3.12/foo.py')).toBe(true);
-    expect(regex.test('/work/node_modules/pkg/index.py')).toBe(true);
-    expect(regex.test('/work/__pycache__/app.cpython-312.pyc')).toBe(true);
-    expect(regex.test('/work/.git/hooks/pre-commit')).toBe(true);
-  });
-
-  it('does not match regular application paths', () => {
-    const regex = new RegExp(getCompileAllAppExcludeRegex('/work'));
-    expect(regex.test('/work/app.py')).toBe(false);
-    expect(regex.test('/work/src/main.py')).toBe(false);
-    expect(regex.test('/work/pkg/utils.py')).toBe(false);
   });
 });
 
@@ -347,21 +375,18 @@ describe('app bytecode collection', () => {
 
     // compileall with PYTHONPYCACHEPREFIX writes
     // <staging>/<abs source dir>/<mod>.<tag>.pyc
-    const stagedPyc = path.join(
-      stagingDir,
-      workPath.replace(/^[/\\]+/, ''),
-      'pkg',
-      'app.cpython-312.pyc'
-    );
-    fs.mkdirSync(path.dirname(stagedPyc), { recursive: true });
-    fs.writeFileSync(stagedPyc, Buffer.alloc(12));
+    const appSourcePath = path.join(workPath, 'pkg', 'app.py');
+    const stagedPyc = deriveStagedPycFsPath(stagingDir, appSourcePath, 3, 12);
+    expect(stagedPyc).not.toBeNull();
+    fs.mkdirSync(path.dirname(stagedPyc!), { recursive: true });
+    fs.writeFileSync(stagedPyc!, Buffer.alloc(12));
 
     const result = await collectAppPrefixBytecodeFiles({
       stagingDir,
       workPath,
       files: {
         'pkg/app.py': new FileFsRef({
-          fsPath: path.join(workPath, 'pkg', 'app.py'),
+          fsPath: appSourcePath,
         }),
         'static/logo.png': new FileFsRef({
           fsPath: path.join(workPath, 'static', 'logo.png'),
@@ -379,7 +404,7 @@ describe('app bytecode collection', () => {
     const ref = result.files[
       `${PYCACHE_PREFIX_DIR}/var/task/pkg/app.cpython-312.pyc`
     ] as FileFsRef;
-    expect(ref.fsPath).toBe(stagedPyc);
+    expect(ref.fsPath).toBe(stagedPyc!);
   });
 
   it('silently drops app sources with no staged pyc', async () => {

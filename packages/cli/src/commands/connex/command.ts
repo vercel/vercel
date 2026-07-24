@@ -488,7 +488,7 @@ export const attachSubcommand = {
       argument: 'ENV',
       deprecated: false,
       description:
-        'Environments to enable. Repeatable and comma-separated (e.g. -e production -e preview, or -e production,preview). Defaults to all environments.',
+        'Environments to enable by system name, custom slug, or custom ID. Repeatable and comma-separated. Defaults to production, preview, and development.',
     },
     {
       ...projectOption,
@@ -513,6 +513,15 @@ export const attachSubcommand = {
         'Target a specific git branch for the trigger destination (default: production). Only valid with --triggers.',
     },
     {
+      name: 'trigger-environment',
+      shorthand: null,
+      type: String,
+      argument: 'ENV',
+      deprecated: false,
+      description:
+        'Target a custom environment by slug or stable ID. Mutually exclusive with --trigger-branch and only valid with --triggers.',
+    },
+    {
       name: 'trigger-path',
       shorthand: null,
       type: String,
@@ -529,12 +538,20 @@ export const attachSubcommand = {
   ],
   examples: [
     {
-      name: 'Attach the current project to a connector for all environments',
+      name: 'Attach the current project for all system environments',
       value: `${packageName} connect attach scl_abc123`,
     },
     {
       name: 'Restrict to specific environments',
       value: `${packageName} connect attach scl_abc123 -e production -e preview`,
+    },
+    {
+      name: 'Attach to a custom environment by slug',
+      value: `${packageName} connect attach scl_abc123 -e qa`,
+    },
+    {
+      name: 'Attach to a custom environment by stable ID',
+      value: `${packageName} connect attach scl_abc123 -e env_qa123`,
     },
     {
       name: 'Attach a different project by name',
@@ -547,6 +564,10 @@ export const attachSubcommand = {
     {
       name: 'Attach and register a preview-branch trigger destination',
       value: `${packageName} connect attach scl_abc123 --triggers --trigger-branch staging --trigger-path /slack`,
+    },
+    {
+      name: 'Attach and register a custom-environment trigger destination',
+      value: `${packageName} connect attach scl_abc123 --triggers --trigger-environment qa --trigger-path /slack`,
     },
     {
       name: 'Non-interactive output as JSON',

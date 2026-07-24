@@ -128,6 +128,10 @@ export const alertsCommand = {
       value: `${packageName} alerts --type usage_anomaly --type error_anomaly`,
     },
     {
+      name: 'List custom alert groups',
+      value: `${packageName} alerts --type custom_alert`,
+    },
+    {
       name: 'Output JSON',
       value: `${packageName} alerts --format json`,
     },

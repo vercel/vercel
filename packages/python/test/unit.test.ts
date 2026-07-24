@@ -1113,6 +1113,57 @@ describe('file exclusions', () => {
 
     expect(outputFiles.some(f => f.includes('.git'))).toBe(false);
   });
+
+  it('compiles only Python sources included by the app glob', async () => {
+    const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
+    const mockedExeca = vi.mocked(execa);
+    let compiledSources: string[] = [];
+    let compileAllCalls = 0;
+
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+    mockedExeca.mockImplementation(((_file, args: string[]) => {
+      if (args[0]?.endsWith('vc_compileall.py')) {
+        compileAllCalls++;
+        compiledSources = JSON.parse(fs.readFileSync(args[1], 'utf8'));
+      }
+      return Promise.resolve({ stdout: '', stderr: '' });
+    }) as any);
+
+    try {
+      await build({
+        workPath: mockWorkPath,
+        files: {
+          'handler.py': new FileBlob({
+            data: 'def app(environ, start_response): pass',
+          }),
+          'included.py': new FileBlob({ data: 'INCLUDED = True' }),
+          'excluded.py': new FileBlob({ data: 'EXCLUDED = True' }),
+          'public/ignored.py': new FileBlob({ data: 'IGNORED = True' }),
+        },
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: { excludeFiles: 'excluded.py' },
+        repoRootPath: mockWorkPath,
+      });
+
+      expect(compiledSources).toContain(path.join(mockWorkPath, 'handler.py'));
+      expect(compiledSources).toContain(path.join(mockWorkPath, 'included.py'));
+      expect(compiledSources).not.toContain(
+        path.join(mockWorkPath, 'excluded.py')
+      );
+      expect(compiledSources).not.toContain(
+        path.join(mockWorkPath, 'public', 'ignored.py')
+      );
+      expect(compileAllCalls).toBe(1);
+    } finally {
+      mockedExeca.mockReset();
+      if (originalCompileAllEnv === undefined) {
+        delete process.env.VERCEL_PYTHON_COMPILEALL;
+      } else {
+        process.env.VERCEL_PYTHON_COMPILEALL = originalCompileAllEnv;
+      }
+    }
+  });
 });
 
 describe('python version selection from uv.lock and pyproject.toml', () => {
@@ -1764,10 +1815,20 @@ describe('Django entrypoint discovery', () => {
     const v2result = getBuildOutputV2(result);
     expect(v2result.routes).toContainEqual({ handle: 'filesystem' });
     expect(v2result.routes).toContainEqual(
-      expect.objectContaining({ src: '/(.*)', dest: '/index' })
+      expect.objectContaining({
+        src: '/(.*)',
+        dest: '/django',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$1',
+          },
+        ],
+      })
     );
-    const lambda = v2result.output['index'];
-    expect(lambda).toBeDefined(); // Lambda keyed by entrypoint sans extension
+    const lambda = v2result.output.django;
+    expect(lambda).toBeDefined();
     expect((lambda as any).files?.['static/app.css']).toBeDefined(); // Included in Lambda bundle
     expect(v2result.output['static/app.css']).toBeDefined(); // Static file from collectstatic
 
@@ -2769,11 +2830,11 @@ describe('pyproject subscribers', () => {
     const workerPath = getSubscriberOutputPath('worker_app');
     const consumer = sanitizeConsumerName(workerPath);
 
-    expect(output.index).toBeDefined();
+    expect(output.flask).toBeDefined();
     expect(output[workerPath]).toBeDefined();
     expect(output[`${workerPath}/celery`]).toBeUndefined();
     expect(output[`${workerPath}/emails`]).toBeUndefined();
-    expect(output.index.environment.VERCEL_HAS_WORKER_SERVICES).toBe('1');
+    expect(output.flask.environment.VERCEL_HAS_WORKER_SERVICES).toBe('1');
 
     const worker = output[workerPath];
     expect(worker.handler).toBe('vc__handler__python.vc_handler');
@@ -2926,10 +2987,20 @@ describe('pyproject.toml service entrypoint', () => {
     const v2 = getBuildOutputV2(result) as any;
     const workerPath = getSubscriberOutputPath('worker_app');
 
-    expect(v2.output.index).toBeDefined();
+    expect(v2.output.python).toBeDefined();
     expect(v2.routes).toEqual([
       { handle: 'filesystem' },
-      { src: '/(.*)', dest: '/index' },
+      {
+        src: '/(.*)',
+        dest: '/python',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$1',
+          },
+        ],
+      },
     ]);
     expect(v2.output[workerPath]).toBeDefined();
     expect(v2.output[workerPath].experimentalTriggers).toEqual([
@@ -2949,7 +3020,7 @@ describe('pyproject.toml service entrypoint', () => {
     const v2 = getBuildOutputV2(result) as any;
     const workerPath = getSubscriberOutputPath('worker_app');
 
-    expect(v2.output.index).toBeUndefined();
+    expect(v2.output.python).toBeUndefined();
     expect(v2.routes).toBeUndefined();
     expect(v2.output[workerPath]).toBeDefined();
     expect(v2.output[workerPath].experimentalTriggers).toEqual([
@@ -2966,7 +3037,7 @@ describe('pyproject.toml service entrypoint', () => {
     const v2 = getBuildOutputV2(result) as any;
     const workflowPath = getWorkflowOutputPath('flows_workflows');
 
-    expect(v2.output.index).toBeUndefined();
+    expect(v2.output.python).toBeUndefined();
     expect(v2.routes).toBeUndefined();
     expect(v2.output[workflowPath]).toBeDefined();
     expect(v2.output[workflowPath].experimentalTriggers).toEqual([
@@ -2988,7 +3059,7 @@ describe('pyproject.toml service entrypoint', () => {
     });
 
     const v2 = getBuildOutputV2(result) as any;
-    expect(v2.output.index).toBeUndefined();
+    expect(v2.output.python).toBeUndefined();
     expect(v2.output[getSubscriberOutputPath('worker_app')]).toBeDefined();
   });
 
@@ -3132,8 +3203,8 @@ describe('pyproject workflows', () => {
     const output = getBuildOutputV2(result).output as any;
     const workflowPath = getWorkflowOutputPath('flows_workflows');
 
-    expect(output.index).toBeDefined();
-    expect(output.index.environment.VERCEL_HAS_WORKER_SERVICES).toBe('1');
+    expect(output.flask).toBeDefined();
+    expect(output.flask.environment.VERCEL_HAS_WORKER_SERVICES).toBe('1');
     expect(output[workflowPath]).toBeDefined();
 
     const workflow = output[workflowPath];
@@ -3679,11 +3750,21 @@ describe('V2 services should generate catch-all routes', () => {
     });
 
     const v2result = getBuildOutputV2(result);
-    expect(v2result.output.index).toBeDefined();
+    expect(v2result.output.fastapi).toBeDefined();
     expect(v2result.output['_svc/my-backend/index']).toBeUndefined();
     expect(v2result.routes).toEqual([
       { handle: 'filesystem' },
-      { src: '/(.*)', dest: '/index' },
+      {
+        src: '/(.*)',
+        dest: '/fastapi',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$1',
+          },
+        ],
+      },
     ]);
   });
 });

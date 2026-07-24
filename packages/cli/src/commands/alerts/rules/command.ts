@@ -27,7 +27,19 @@ export const rulesLsSubcommand = {
   aliases: ['list'],
   description: 'List alert rules for the current scope',
   arguments: [],
-  options: [...scopeOptions, formatOption],
+  options: [
+    ...scopeOptions,
+    {
+      name: 'type',
+      shorthand: null,
+      type: [String],
+      argument: 'TYPE',
+      deprecated: false,
+      description:
+        'Filter by alert type. Repeatable and comma-separated (for example --type custom_alert).',
+    },
+    formatOption,
+  ],
   examples: [
     {
       name: 'List rules for the linked project',
@@ -36,6 +48,10 @@ export const rulesLsSubcommand = {
     {
       name: 'List team-wide rules',
       value: `${packageName} alerts rules ls --all`,
+    },
+    {
+      name: 'List custom alert rules',
+      value: `${packageName} alerts rules ls --type custom_alert`,
     },
     {
       name: 'JSON output',

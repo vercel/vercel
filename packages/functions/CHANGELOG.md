@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 3.7.6
+
+### Patch Changes
+
+- @vercel/oidc@3.8.1
+
 ## 3.7.5
 
 ### Patch Changes

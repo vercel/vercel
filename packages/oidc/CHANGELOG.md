@@ -1,5 +1,12 @@
 # @vercel/oidc
 
+## 3.8.1
+
+### Patch Changes
+
+- Updated dependencies [6e29745]
+  - @vercel/cli-config@0.2.1
+
 ## 3.8.0
 
 ### Minor Changes
