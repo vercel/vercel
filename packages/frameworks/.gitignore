@@ -1,0 +1,3 @@
+# Generated at build time by `build.mjs` (fetched from the frameworks API).
+# The API is the single source of truth; this file is never committed.
+src/frameworks.json
