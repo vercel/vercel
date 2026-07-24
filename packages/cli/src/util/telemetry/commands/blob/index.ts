@@ -1,11 +1,11 @@
-import { TelemetryClient } from '../..';
 import type { blobCommand } from '../../../../commands/blob/command';
 import type { TelemetryMethods } from '../../types';
+import { BlobAuthTelemetryClient } from './auth';
 export { BlobPresignTelemetryClient } from './presign';
 export { BlobSignedTokenTelemetryClient } from './signed-token';
 
 export class BlobTelemetryClient
-  extends TelemetryClient
+  extends BlobAuthTelemetryClient
   implements TelemetryMethods<typeof blobCommand>
 {
   trackCliSubcommandList(actual: string) {
@@ -90,32 +90,5 @@ export class BlobTelemetryClient
       subcommand: 'empty-store',
       value: actual,
     });
-  }
-
-  trackCliOptionRwToken(value: string | undefined) {
-    if (value) {
-      this.trackCliOption({
-        option: '--rw-token',
-        value: this.redactedValue,
-      });
-    }
-  }
-
-  trackCliOptionOidcToken(value: string | undefined) {
-    if (value) {
-      this.trackCliOption({
-        option: '--oidc-token',
-        value: this.redactedValue,
-      });
-    }
-  }
-
-  trackCliOptionStoreId(value: string | undefined) {
-    if (value) {
-      this.trackCliOption({
-        option: '--store-id',
-        value: this.redactedValue,
-      });
-    }
   }
 }
