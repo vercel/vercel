@@ -1,46 +1,43 @@
-const assert = require('assert');
-const { execFileSync } = require('child_process');
-const { createHash } = require('crypto');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const { fetchCachedToken } = require('./lib/deployment/now-deploy');
+import { execFileSync } from 'child_process';
+import { createHash } from 'crypto';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+
+const TEST_TIMEOUT = 15 * 60 * 1000;
+vi.setConfig({ testTimeout: TEST_TIMEOUT, hookTimeout: TEST_TIMEOUT });
 
 const API_HOST = process.env.API_HOST || 'api.vercel.com';
+const TOKEN = process.env.VERCEL_TOKEN;
+const TEAM_ID = process.env.VERCEL_TEAM_ID;
 
 /**
  * Build a fully-qualified API URL, appending the `teamId` query param when
- * `VERCEL_TEAM_ID` is set (mirrors the behavior in now-deploy.js).
+ * `VERCEL_TEAM_ID` is set (matches the CLI e2e helper in helpers/api-fetch.ts).
  */
-function apiUrl(p, query) {
+function apiUrl(p: string, query?: string): string {
   let url = `https://${API_HOST}${p}`;
-  const parts = [
-    query,
-    process.env.VERCEL_TEAM_ID && `teamId=${process.env.VERCEL_TEAM_ID}`,
-  ].filter(Boolean);
+  const parts = [query, TEAM_ID && `teamId=${TEAM_ID}`].filter(Boolean);
   if (parts.length) url += `?${parts.join('&')}`;
   return url;
 }
 
 /** Run curl with `-sS` and return stdout as a string. */
-function curl(args) {
+function curl(args: string[]): string {
   return execFileSync('curl', ['-sS', ...args], {
     encoding: 'utf8',
     maxBuffer: 10 * 1024 * 1024,
   });
 }
 
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 describe('curl-based deployment via Vercel API', () => {
-  let token;
-  let tmpDir;
-  let tarball;
-  let projectId;
+  let tmpDir: string;
+  let tarball: string;
+  let projectId: string | undefined;
 
-  beforeAll(async () => {
-    token = await fetchCachedToken();
-
+  beforeAll(() => {
     // Create a minimal Node project: just server.ts
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'curl-deploy-'));
     fs.writeFileSync(
@@ -58,7 +55,7 @@ describe('curl-based deployment via Vercel API', () => {
     console.log('created tarball at', tarball);
   });
 
-  afterAll(async () => {
+  afterAll(() => {
     // Delete the project created by this test.
     if (projectId) {
       const deleteBody = curl([
@@ -66,7 +63,7 @@ describe('curl-based deployment via Vercel API', () => {
         'DELETE',
         apiUrl(`/v9/projects/${encodeURIComponent(projectId)}`),
         '-H',
-        `Authorization: Bearer ${token}`,
+        `Authorization: Bearer ${TOKEN}`,
       ]);
       console.log('project delete response:', deleteBody || '(empty)');
     }
@@ -75,7 +72,7 @@ describe('curl-based deployment via Vercel API', () => {
 
   it('uploads the tarball, deploys, and serves "Hello from Vercel!" at /', async () => {
     const data = fs.readFileSync(tarball);
-    const sha = createHash('sha1').update(data).digest('hex');
+    const sha = createHash('sha1').update(new Uint8Array(data)).digest('hex');
     const size = data.length;
     console.log('tarball sha:', sha, 'size:', size);
 
@@ -86,7 +83,7 @@ describe('curl-based deployment via Vercel API', () => {
       'POST',
       apiUrl('/v2/files'),
       '-H',
-      `Authorization: Bearer ${token}`,
+      `Authorization: Bearer ${TOKEN}`,
       '-H',
       'Content-Type: application/octet-stream',
       '-H',
@@ -97,7 +94,7 @@ describe('curl-based deployment via Vercel API', () => {
       `@${tarball}`,
     ]);
     const uploadJson = JSON.parse(uploadBody);
-    assert.ok(!uploadJson.error, `File upload failed: ${uploadBody}`);
+    expect(uploadJson.error, `File upload failed: ${uploadBody}`).toBeFalsy();
 
     // 2. Create a deployment referencing the uploaded tarball chunk. The
     //    `.vercel/source.tgz.part1` file name is what the server expects for
@@ -113,7 +110,7 @@ describe('curl-based deployment via Vercel API', () => {
       'POST',
       apiUrl('/v13/deployments', 'skipAutoDetectionConfirmation=1&forceNew=1'),
       '-H',
-      `Authorization: Bearer ${token}`,
+      `Authorization: Bearer ${TOKEN}`,
       '-H',
       'Content-Type: application/json',
       '-d',
@@ -122,38 +119,39 @@ describe('curl-based deployment via Vercel API', () => {
     const deployJson = JSON.parse(deployBody);
     console.log('deployment response:', deployBody);
 
-    assert.ok(!deployJson.error, `Deployment creation failed: ${deployBody}`);
-    assert.ok(deployJson.id, `Expected deployment id: ${deployBody}`);
+    expect(
+      deployJson.error,
+      `Deployment creation failed: ${deployBody}`
+    ).toBeFalsy();
+    expect(deployJson.id, `Expected deployment id: ${deployBody}`).toBeTruthy();
 
     const deploymentId = deployJson.id;
     const deploymentUrl = deployJson.url;
     projectId = deployJson.projectId;
-    assert.ok(deploymentUrl, `Expected deployment url: ${deployBody}`);
+    expect(
+      deploymentUrl,
+      `Expected deployment url: ${deployBody}`
+    ).toBeTruthy();
 
     // 3. Poll the deployment until it is READY (or ERROR).
-    let readyState;
+    let readyState: string | undefined;
     for (let i = 0; i < 750; i += 1) {
       const statusBody = curl([
         apiUrl(`/v13/deployments/${encodeURIComponent(deploymentId)}`),
         '-H',
-        `Authorization: Bearer ${token}`,
+        `Authorization: Bearer ${TOKEN}`,
       ]);
       const statusJson = JSON.parse(statusBody);
       readyState = statusJson.readyState;
       if (!projectId && statusJson.projectId) projectId = statusJson.projectId;
       if (readyState === 'READY') break;
-      assert.notStrictEqual(
-        readyState,
-        'ERROR',
-        `Deployment failed: ${statusBody}`
-      );
+      expect(readyState, `Deployment failed: ${statusBody}`).not.toBe('ERROR');
       await sleep(1000);
     }
-    assert.strictEqual(
+    expect(
       readyState,
-      'READY',
       `Deployment did not become READY (last state: ${readyState})`
-    );
+    ).toBe('READY');
 
     // 4. Disable SSO protection so the deployment is publicly reachable, then
     //    probe `/` and assert it responds with the expected text.
@@ -163,7 +161,7 @@ describe('curl-based deployment via Vercel API', () => {
         'PATCH',
         apiUrl(`/v5/projects/${encodeURIComponent(projectId)}`),
         '-H',
-        `Authorization: Bearer ${token}`,
+        `Authorization: Bearer ${TOKEN}`,
         '-H',
         'Content-Type: application/json',
         '-d',
@@ -171,15 +169,15 @@ describe('curl-based deployment via Vercel API', () => {
       ]);
     }
 
-    let body;
+    let body = '';
     for (let i = 0; i < 30; i += 1) {
       body = curl([`https://${deploymentUrl}/`]);
       if (body.includes('Hello from Vercel!')) break;
       await sleep(1000);
     }
-    assert.ok(
+    expect(
       body.includes('Hello from Vercel!'),
       `Expected "Hello from Vercel!" at /, got: ${body}`
-    );
+    ).toBe(true);
   });
 });
