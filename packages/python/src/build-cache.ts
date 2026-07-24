@@ -12,13 +12,6 @@ import type {
 import { findUvInPath, getUvCacheDir, UvRunner } from './uv';
 
 export const BUILD_CACHE_MARKER_FILENAME = '.vercel-python-bytecode-cache.json';
-const BUILD_CACHE_MARKER_VERSION = 1;
-
-export type PythonBuildCacheMode =
-  | 'standard'
-  | 'knapsack'
-  | 'bytecode-first'
-  | 'hive';
 
 interface BytecodeManifestEntry {
   path: string;
@@ -26,9 +19,7 @@ interface BytecodeManifestEntry {
 }
 
 interface BytecodeCacheMarker {
-  version: typeof BUILD_CACHE_MARKER_VERSION;
   fingerprint: string;
-  mode: Exclude<PythonBuildCacheMode, 'hive'>;
   python: {
     major: number;
     minor: number;
@@ -69,16 +60,24 @@ interface GetCompilePlanOptions {
   pythonMajor: number | undefined;
   pythonMinor: number | undefined;
   pythonRuntime: string;
-  mode: PythonBuildCacheMode;
+  isHive: boolean;
   totalBundleSize: number;
   includePackages?: string[];
   volatilePackages?: string[];
+}
+
+interface PrepareFilesOptions {
+  includeBytecode: boolean;
 }
 
 type MarkerReadResult =
   | { status: 'valid'; marker: BytecodeCacheMarker }
   | { status: 'invalid' }
   | { status: 'unavailable' };
+
+export function isPythonBytecodeBuildCacheEnabled(): boolean {
+  return process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE === '1';
+}
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -123,54 +122,78 @@ function isSafeManifestPath(path: string, cacheTag: string): boolean {
 function parseMarker(value: unknown): BytecodeCacheMarker | null {
   if (
     !isObject(value) ||
-    !hasExactKeys(value, [
-      'files',
-      'fingerprint',
-      'mode',
-      'packageScope',
-      'python',
-      'version',
-    ]) ||
-    value.version !== BUILD_CACHE_MARKER_VERSION ||
-    (value.mode !== 'standard' &&
-      value.mode !== 'knapsack' &&
-      value.mode !== 'bytecode-first') ||
-    typeof value.fingerprint !== 'string' ||
-    !/^[a-f0-9]{64}$/.test(value.fingerprint) ||
-    !Array.isArray(value.packageScope) ||
-    !value.packageScope.every(item => typeof item === 'string') ||
-    !isSortedUnique(value.packageScope) ||
-    !isObject(value.python) ||
-    !hasExactKeys(value.python, ['cacheTag', 'major', 'minor', 'runtime']) ||
-    typeof value.python.major !== 'number' ||
-    !Number.isSafeInteger(value.python.major) ||
-    typeof value.python.minor !== 'number' ||
-    !Number.isSafeInteger(value.python.minor) ||
-    typeof value.python.runtime !== 'string' ||
-    typeof value.python.cacheTag !== 'string' ||
-    value.python.major < 0 ||
-    value.python.minor < 0 ||
-    value.python.runtime.length === 0 ||
-    value.python.cacheTag !==
-      `cpython-${value.python.major}${value.python.minor}` ||
-    !Array.isArray(value.files)
+    !hasExactKeys(value, ['files', 'fingerprint', 'packageScope', 'python'])
+  ) {
+    return null;
+  }
+
+  const { files: markerFiles, fingerprint, packageScope, python } = value;
+  if (
+    typeof fingerprint !== 'string' ||
+    !Array.isArray(packageScope) ||
+    !isObject(python) ||
+    !Array.isArray(markerFiles)
+  ) {
+    return null;
+  }
+
+  const hasValidFingerprint = /^[a-f0-9]{64}$/.test(fingerprint);
+  const hasOnlyPackageNames = packageScope.every(
+    item => typeof item === 'string'
+  );
+  const hasValidPythonShape = hasExactKeys(python, [
+    'cacheTag',
+    'major',
+    'minor',
+    'runtime',
+  ]);
+  if (!hasValidFingerprint || !hasOnlyPackageNames || !hasValidPythonShape) {
+    return null;
+  }
+
+  const packageNames = packageScope as string[];
+  const hasValidPackageScope = isSortedUnique(packageNames);
+  const { cacheTag, major, minor, runtime } = python;
+  if (
+    typeof major !== 'number' ||
+    typeof minor !== 'number' ||
+    typeof runtime !== 'string' ||
+    typeof cacheTag !== 'string'
+  ) {
+    return null;
+  }
+
+  const hasValidPythonVersion =
+    Number.isSafeInteger(major) &&
+    major >= 0 &&
+    Number.isSafeInteger(minor) &&
+    minor >= 0;
+  const hasValidRuntime = runtime.length > 0;
+  const hasValidCacheTag = cacheTag === `cpython-${major}${minor}`;
+  if (
+    !hasValidPackageScope ||
+    !hasValidPythonVersion ||
+    !hasValidRuntime ||
+    !hasValidCacheTag
   ) {
     return null;
   }
 
   const files: BytecodeManifestEntry[] = [];
-  for (const file of value.files) {
+  for (const file of markerFiles) {
     if (
       !isObject(file) ||
       !hasExactKeys(file, ['path', 'size']) ||
       typeof file.path !== 'string' ||
-      typeof file.size !== 'number' ||
-      !Number.isSafeInteger(file.size) ||
-      file.size < 0 ||
-      !isSafeManifestPath(file.path, value.python.cacheTag)
+      typeof file.size !== 'number'
     ) {
       return null;
     }
+
+    const hasValidSize = Number.isSafeInteger(file.size) && file.size >= 0;
+    const hasValidPath = isSafeManifestPath(file.path, cacheTag);
+    if (!hasValidSize || !hasValidPath) return null;
+
     files.push({ path: file.path, size: file.size });
   }
   if (files.length === 0 || !isSortedUnique(files.map(file => file.path))) {
@@ -178,16 +201,14 @@ function parseMarker(value: unknown): BytecodeCacheMarker | null {
   }
 
   return {
-    version: BUILD_CACHE_MARKER_VERSION,
-    fingerprint: value.fingerprint,
-    mode: value.mode,
+    fingerprint,
     python: {
-      major: value.python.major,
-      minor: value.python.minor,
-      runtime: value.python.runtime,
-      cacheTag: value.python.cacheTag,
+      major,
+      minor,
+      runtime,
+      cacheTag,
     },
-    packageScope: value.packageScope,
+    packageScope: packageNames,
     files,
   };
 }
@@ -324,7 +345,7 @@ export class PythonBuildCache {
     pythonMajor,
     pythonMinor,
     pythonRuntime,
-    mode,
+    isHive,
     totalBundleSize,
     includePackages,
     volatilePackages = [],
@@ -338,7 +359,7 @@ export class PythonBuildCache {
     const eligible =
       pythonMajor != null &&
       pythonMinor != null &&
-      mode !== 'hive' &&
+      !isHive &&
       totalBundleSize <= LAMBDA_EPHEMERAL_STORAGE_BYTES;
 
     if (!eligible || pythonMajor == null || pythonMinor == null) {
@@ -407,7 +428,6 @@ export class PythonBuildCache {
       normalizedEntries.map(entry => entry.packageName)
     );
     const markerWithoutFiles: Omit<BytecodeCacheMarker, 'files'> = {
-      version: BUILD_CACHE_MARKER_VERSION,
       fingerprint: createHash('sha256')
         .update(
           JSON.stringify({
@@ -417,7 +437,6 @@ export class PythonBuildCache {
               runtime: pythonRuntime,
               cacheTag,
             },
-            mode,
             packageScope,
             compilerScriptHash,
             distributions: stableEntries.map(entry => ({
@@ -434,7 +453,6 @@ export class PythonBuildCache {
           })
         )
         .digest('hex'),
-      mode,
       python: {
         major: pythonMajor,
         minor: pythonMinor,
@@ -458,7 +476,6 @@ export class PythonBuildCache {
     const expectedPaths = new Set(expectedBytecodeFiles.map(file => file.path));
     const cacheHit =
       restoredMarker?.fingerprint === markerWithoutFiles.fingerprint &&
-      restoredMarker.mode === markerWithoutFiles.mode &&
       restoredMarker.python.major === markerWithoutFiles.python.major &&
       restoredMarker.python.minor === markerWithoutFiles.python.minor &&
       restoredMarker.python.runtime === markerWithoutFiles.python.runtime &&
@@ -538,7 +555,7 @@ export class PythonBuildCache {
       );
   }
 
-  async prepareFiles(): Promise<Files> {
+  async prepareFiles({ includeBytecode }: PrepareFilesOptions): Promise<Files> {
     const uvCacheDir = getUvCacheDir(this.workPath);
     try {
       const uvPath = findUvInPath();
@@ -558,6 +575,8 @@ export class PythonBuildCache {
         ],
       }
     );
+    if (!includeBytecode) return files;
+
     const markerFiles = await glob(
       `**/.vercel/python/{.venv,services/*/.venv}/${BUILD_CACHE_MARKER_FILENAME}`,
       { cwd: this.rootPath }

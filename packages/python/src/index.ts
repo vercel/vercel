@@ -92,7 +92,10 @@ import {
   type BytecodeCollectionResult,
 } from './compileall';
 import { InstalledPythonDistributions } from './installed-distributions';
-import { PythonBuildCache, type PythonBuildCacheMode } from './build-cache';
+import {
+  isPythonBytecodeBuildCacheEnabled,
+  PythonBuildCache,
+} from './build-cache';
 import {
   getPyprojectSubscribers,
   getSubscriberConsumerName,
@@ -1254,6 +1257,7 @@ export const build: BuildVX = async ({
     // unchecked-hash precompiled bytecode stale; skip precompilation to avoid serving it.
     hasPreDeployCommand: typeof preDeployCommand === 'string',
   });
+  const bytecodeBuildCacheEnabled = isPythonBytecodeBuildCacheEnabled();
   const pythonBuildCache = new PythonBuildCache({
     rootPath: rootDir,
     workPath,
@@ -1398,26 +1402,31 @@ export const build: BuildVX = async ({
           .child('vc.builder.python.compileall')
           .trace(async compileSpan => {
             console.log('Compiling Python bytecode...');
-            const appSucceeded = appPycachePrefix
-              ? await runCompileAll({
-                  ...compileAllOptions,
-                  sourceFiles: appPythonSourceFiles,
-                  pycachePrefix: appPycachePrefix,
-                })
-              : true;
-            const vendorSucceeded = appPycachePrefix
-              ? await runCompileAll({
-                  ...compileAllOptions,
-                  sourceFiles: sources,
-                })
-              : await runCompileAll({
-                  ...compileAllOptions,
-                  sourceFiles: [...appPythonSourceFiles, ...sources],
-                });
-            const succeeded = appSucceeded && vendorSucceeded;
+            let succeeded: boolean;
+            if (appPycachePrefix && bytecodeBuildCacheEnabled) {
+              const appSucceeded = await runCompileAll({
+                ...compileAllOptions,
+                sourceFiles: appPythonSourceFiles,
+                pycachePrefix: appPycachePrefix,
+              });
+              const vendorSucceeded = await runCompileAll({
+                ...compileAllOptions,
+                sourceFiles: sources,
+              });
+              succeeded = appSucceeded && vendorSucceeded;
+            } else {
+              succeeded = await runCompileAll({
+                ...compileAllOptions,
+                sourceFiles: [...appPythonSourceFiles, ...sources],
+                pycachePrefix: appPycachePrefix,
+              });
+            }
 
             compileSpan.setAttributes({
               'python.compileall.enabled': 'true',
+              'python.compileall.buildCacheEnabled': String(
+                bytecodeBuildCacheEnabled
+              ),
               'python.compileall.appSourceFileCount': String(
                 appPythonSourceFiles.length
               ),
@@ -1431,17 +1440,18 @@ export const build: BuildVX = async ({
           });
       };
 
-      const getCachePlan = (
-        mode: PythonBuildCacheMode,
+      const getCachePlan = async (
+        isHive: boolean,
         includePackages?: string[]
-      ) =>
-        pythonBuildCache.getCompilePlan({
+      ) => {
+        if (!bytecodeBuildCacheEnabled) return null;
+        return pythonBuildCache.getCompilePlan({
           venvPath,
           installedDistributions,
           pythonMajor: pythonVersion.major,
           pythonMinor: pythonVersion.minor,
           pythonRuntime: pythonVersion.runtime,
-          mode,
+          isHive,
           totalBundleSize: depAnalysis.totalBundleSize,
           includePackages,
           volatilePackages: [
@@ -1450,6 +1460,7 @@ export const build: BuildVX = async ({
             ...(quirksResult.alwaysBundlePackages ?? []),
           ],
         });
+      };
 
       // Precompile bytecode and fill remaining capacity up to capacityBytes.
       // Only .pyc for .py files already in the bundle are collected, so
@@ -1459,15 +1470,21 @@ export const build: BuildVX = async ({
       // omitted = one unrestricted pass.
       const runCompileAllAndFillBytecode = async (
         capacityBytes: number,
-        vendorPackageTiers?: string[][],
-        cacheMode: PythonBuildCacheMode = 'hive'
+        {
+          vendorPackageTiers,
+          isHive = false,
+        }: {
+          vendorPackageTiers?: string[][];
+          isHive?: boolean;
+        } = {}
       ) => {
         try {
           const includePackages = vendorPackageTiers?.flat();
-          const cachePlan = await getCachePlan(cacheMode, includePackages);
+          const cachePlan = await getCachePlan(isHive, includePackages);
           const compileSucceeded = await compileSources({
-            vendorSourceFiles: cachePlan.vendorSourceFiles,
-            cacheHit: cachePlan.cacheHit,
+            includePackages,
+            vendorSourceFiles: cachePlan?.vendorSourceFiles,
+            cacheHit: cachePlan?.cacheHit,
           });
           if (!compileSucceeded) {
             console.log(
@@ -1475,7 +1492,9 @@ export const build: BuildVX = async ({
             );
             return;
           }
-          if (!cachePlan.cacheHit) await pythonBuildCache.commit(cachePlan);
+          if (cachePlan && !cachePlan.cacheHit) {
+            await pythonBuildCache.commit(cachePlan);
+          }
 
           const currentSize = await calculateBundleSize(files);
           let remainingCapacity = capacityBytes - currentSize;
@@ -1542,14 +1561,12 @@ export const build: BuildVX = async ({
             ...(bundleResult.bundledPublicPackages ?? []),
             ...(bundleResult.externalizedPublicPackages ?? []),
           ];
-          const cachePlan = await getCachePlan(
-            'bytecode-first',
-            includedPackages
-          );
+          const cachePlan = await getCachePlan(false, includedPackages);
           const compileSucceeded = await compileSources({
-            vendorSourceFiles: cachePlan.vendorSourceFiles,
+            includePackages: includedPackages,
+            vendorSourceFiles: cachePlan?.vendorSourceFiles,
             appPycachePrefix: stagingDir,
-            cacheHit: cachePlan.cacheHit,
+            cacheHit: cachePlan?.cacheHit,
           });
           if (!compileSucceeded) {
             console.log(
@@ -1557,7 +1574,9 @@ export const build: BuildVX = async ({
             );
             return;
           }
-          if (!cachePlan.cacheHit) await pythonBuildCache.commit(cachePlan);
+          if (cachePlan && !cachePlan.cacheHit) {
+            await pythonBuildCache.commit(cachePlan);
+          }
 
           const beforeCount = Object.keys(files).length;
 
@@ -1576,13 +1595,31 @@ export const build: BuildVX = async ({
             remainingCapacity
           );
 
+          const collectVendorPrefixBytecode = ({
+            runtimeRoot,
+            includePackages,
+          }: {
+            runtimeRoot: string;
+            includePackages?: string[];
+          }) =>
+            bytecodeBuildCacheEnabled
+              ? installedDistributions.collectAdjacentBytecodeAsPrefixFiles({
+                  runtimeRoot,
+                  includePackages,
+                })
+              : installedDistributions.collectPrefixBytecodeFiles({
+                  stagingDir,
+                  runtimeRoot,
+                  includePackages,
+                });
+
           // Tier 2: bundled vendor packages, imported from /var/task/_vendor.
           const alwaysBundled = bundleResult.alwaysBundledPackages ?? [];
           remainingCapacity = await addCollectedVendorBytecode({
             files,
             capacity: remainingCapacity,
             collect: include =>
-              installedDistributions.collectAdjacentBytecodeAsPrefixFiles({
+              collectVendorPrefixBytecode({
                 runtimeRoot: `/var/task/${vendorDir}`,
                 includePackages: include ?? alwaysBundled,
               }),
@@ -1594,7 +1631,7 @@ export const build: BuildVX = async ({
             files,
             capacity: remainingCapacity,
             collect: include =>
-              installedDistributions.collectAdjacentBytecodeAsPrefixFiles({
+              collectVendorPrefixBytecode({
                 runtimeRoot: `${RUNTIME_DEPS_DIR}/lib/python${pyMajor}.${pyMinor}/site-packages`,
                 includePackages: include ?? externalized,
               }),
@@ -1641,8 +1678,7 @@ export const build: BuildVX = async ({
           if (compileAllEnabled) {
             await runCompileAllAndFillBytecode(
               LARGE_FUNCTION_FILL_CEILING_BYTES,
-              undefined,
-              'hive'
+              { isHive: true }
             );
           }
         } else if (bundleResult.packingMode === 'bytecode-first') {
@@ -1656,14 +1692,12 @@ export const build: BuildVX = async ({
           const currentSize = await calculateBundleSize(files);
           const capacity = BYTECODE_FILL_CEILING_BYTES - currentSize;
           if (capacity > 0) {
-            await runCompileAllAndFillBytecode(
-              BYTECODE_FILL_CEILING_BYTES,
-              [
+            await runCompileAllAndFillBytecode(BYTECODE_FILL_CEILING_BYTES, {
+              vendorPackageTiers: [
                 bundleResult.alwaysBundledPackages ?? [],
                 bundleResult.bundledPublicPackages ?? [],
               ],
-              'knapsack'
-            );
+            });
           } else {
             debug(
               `skipping bytecode precompilation: no zip capacity remaining ` +
@@ -1683,8 +1717,7 @@ export const build: BuildVX = async ({
           if (compileAllEnabled) {
             await runCompileAllAndFillBytecode(
               LARGE_FUNCTION_FILL_CEILING_BYTES,
-              undefined,
-              'hive'
+              { isHive: true }
             );
           }
         } else {
@@ -1696,11 +1729,7 @@ export const build: BuildVX = async ({
             const capacity =
               BYTECODE_FILL_CEILING_BYTES - depAnalysis.totalBundleSize;
             if (capacity > 0) {
-              await runCompileAllAndFillBytecode(
-                BYTECODE_FILL_CEILING_BYTES,
-                undefined,
-                'standard'
-              );
+              await runCompileAllAndFillBytecode(BYTECODE_FILL_CEILING_BYTES);
             } else {
               debug(
                 `skipping bytecode precompilation: no zip capacity remaining ` +
@@ -1906,7 +1935,9 @@ export const prepareCache: PrepareCache = async ({
   return new PythonBuildCache({
     rootPath: repoRootPath || workPath,
     workPath,
-  }).prepareFiles();
+  }).prepareFiles({
+    includeBytecode: isPythonBytecodeBuildCacheEnabled(),
+  });
 };
 
 export const shouldServe: ShouldServe = opts => {
