@@ -52,11 +52,16 @@ import type * as tty from 'tty';
 import type { z } from 'zod';
 import output from '../output-manager';
 import { parseArguments } from './get-args';
-import { processTokenResponse, refreshTokenRequest } from './oauth';
+import {
+  isOAuthError,
+  processTokenResponse,
+  refreshTokenRequest,
+} from './oauth';
 import {
   PromptBackError,
   PromptCanceledError,
 } from './input/prompt-cancellation';
+import { performDeviceCodeFlow } from '../commands/login/future';
 
 const DOMAINS_API_PATH = /^\/v\d+\/(?:domains|registrar)(?:\/|$)/;
 
@@ -371,6 +376,34 @@ export default class Client extends EventEmitter implements Stdio {
     });
 
     const [tokensError, tokens] = await processTokenResponse(tokenResponse);
+
+    // CLI versions before 56.4.1 could persist a rotated access token without
+    // its matching refresh token after step-up authentication. Once that
+    // access token expires, recover the interactive stored session here so
+    // commands such as `vercel link` do not fail before their first API call.
+    if (
+      isOAuthError(tokensError) &&
+      tokensError.code === 'invalid_grant' &&
+      !authConfig.tokenSource &&
+      this.stdin.isTTY &&
+      !this.nonInteractive
+    ) {
+      output.debug(
+        `Stored session refresh failed: ${tokensError.cause.message}`
+      );
+      output.log("Couldn't refresh the saved login. Starting a new login.");
+      const recoveredTokens = await performDeviceCodeFlow(this);
+      if (recoveredTokens) {
+        this.updateAuthConfig({
+          token: recoveredTokens.access_token,
+          userId: undefined,
+          expiresAt: Math.floor(Date.now() / 1000) + recoveredTokens.expires_in,
+          refreshToken: recoveredTokens.refresh_token,
+        });
+        this.persistAuthConfig();
+        return;
+      }
+    }
 
     // If we had an error, during the refresh process, empty the auth config
     // to force the user to re-authenticate

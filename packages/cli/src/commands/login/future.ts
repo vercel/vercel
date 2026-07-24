@@ -26,6 +26,19 @@ export interface DeviceCodeTokens {
   refresh_token?: string;
 }
 
+interface DeviceCodeFlowOptions {
+  teamId?: string;
+  refreshToken?: string;
+  acrValues?: string;
+  /**
+   * A CLI version before 56.4.1 could persist the rotated access token after
+   * step-up without persisting its matching refresh token. Recover those
+   * sessions, along with authorizations that predate the `offline_access`
+   * requirement, by starting a full device login.
+   */
+  fallbackToLoginOnStepUpFailure?: boolean;
+}
+
 /**
  * Core device code flow: initiates the device authorization request,
  * displays the verification URL, opens the browser, and polls for
@@ -38,7 +51,7 @@ export interface DeviceCodeTokens {
  */
 export async function performDeviceCodeFlow(
   client: Client,
-  options?: { teamId?: string; refreshToken?: string; acrValues?: string }
+  options?: DeviceCodeFlowOptions
 ): Promise<DeviceCodeTokens | null> {
   const deviceAuthorizationResponse = await deviceAuthorizationRequest({
     refresh_token: options?.refreshToken,
@@ -53,7 +66,28 @@ export async function performDeviceCodeFlow(
     await processDeviceAuthorizationResponse(deviceAuthorizationResponse);
 
   if (deviceAuthorizationError) {
-    printError(deviceAuthorizationError);
+    if (
+      options?.fallbackToLoginOnStepUpFailure &&
+      options.refreshToken &&
+      isOAuthError(deviceAuthorizationError) &&
+      (deviceAuthorizationError.code === 'invalid_grant' ||
+        deviceAuthorizationError.code === 'invalid_scope')
+    ) {
+      o.debug(
+        `Step-up device authorization failed: ${deviceAuthorizationError.cause.message}`
+      );
+      o.log("Couldn't refresh the saved login. Starting a new login.");
+      return performDeviceCodeFlow(
+        client,
+        options.teamId ? { teamId: options.teamId } : undefined
+      );
+    }
+
+    printError(
+      isOAuthError(deviceAuthorizationError)
+        ? deviceAuthorizationError.cause
+        : deviceAuthorizationError
+    );
     return null;
   }
 
