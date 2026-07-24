@@ -54,6 +54,7 @@ import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
 import { frameworkList, type Framework } from '@vercel/frameworks';
 import {
+  builderToFrameworks,
   detectBuilders,
   detectFrameworkRecord,
   detectFrameworkVersion,
@@ -1348,7 +1349,11 @@ async function doBuild(
               buildCommand: projectSettings.buildCommand ?? undefined,
               framework: isFrontendBuilder
                 ? projectSettings.framework
-                : (build.config?.framework ?? undefined),
+                : (build.config?.framework ??
+                  (await detectApiDirFramework(
+                    build.use ?? '',
+                    buildWorkPath
+                  ))),
               nodeVersion: projectSettings.nodeVersion,
               bunVersion: localConfig.bunVersion ?? undefined,
             };
@@ -2986,6 +2991,30 @@ async function writeFlagsJSON(
   if (hasFlags) {
     await fs.writeJSON(flagsFilePath, flags, { spaces: 2 });
   }
+}
+
+/**
+ * Detects the framework used by an api/dir builder.
+ *
+ * Runs a narrow scan scoped to the builder's own frameworks. Memoised so
+ * multiple api/dir files of the same type share one filesystem scan.
+ */
+const apiDirFrameworkCache = new Map<string, Promise<string[]>>();
+
+async function detectApiDirFramework(
+  builderUse: string,
+  workPath: string
+): Promise<string | undefined> {
+  const runtimeFrameworks = builderToFrameworks.get(builderUse) ?? [];
+  if (runtimeFrameworks.length === 0) return undefined;
+
+  const cacheKey = `${builderUse}:${workPath}`;
+  let cached = apiDirFrameworkCache.get(cacheKey);
+  if (!cached) {
+    cached = detectAllFrameworks(workPath, runtimeFrameworks);
+    apiDirFrameworkCache.set(cacheKey, cached);
+  }
+  return (await cached)[0];
 }
 
 async function writeBuildJson(buildsJson: BuildsManifest, outputDir: string) {
