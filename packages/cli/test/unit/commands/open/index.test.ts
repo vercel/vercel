@@ -43,7 +43,7 @@ describe('open', () => {
       const exitCode = await openCommand(client);
       expect(exitCode).toEqual(0);
       expect(client.getFullOutput()).toContain(
-        'Opens the current project in the Vercel Dashboard'
+        'Open the current project in the Vercel Dashboard'
       );
     });
   });

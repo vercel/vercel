@@ -4,7 +4,7 @@ import { confirmOption, projectOption, yesOption } from '../../util/arg-common';
 export const devCommand = {
   name: 'dev',
   aliases: ['develop'],
-  description: `Starts the \`${packageName} dev\` server.`,
+  description: 'Start a local development server for your project.',
   arguments: [
     {
       name: 'dir',

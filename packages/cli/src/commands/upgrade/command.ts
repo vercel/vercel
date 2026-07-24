@@ -4,7 +4,7 @@ import { packageName } from '../../util/pkg-name';
 export const upgradeCommand = {
   name: 'upgrade',
   aliases: [],
-  description: 'Upgrades the Vercel CLI to the latest version.',
+  description: 'Upgrade the Vercel CLI to the latest version.',
   arguments: [],
   options: [
     {

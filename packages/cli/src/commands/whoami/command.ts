@@ -4,7 +4,7 @@ import { formatOption } from '../../util/arg-common';
 export const whoamiCommand = {
   name: 'whoami',
   aliases: [],
-  description: 'Shows the username of the currently logged in user.',
+  description: 'Show the username of the currently logged in user.',
   arguments: [],
   options: [formatOption],
   examples: [
