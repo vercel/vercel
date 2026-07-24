@@ -1050,6 +1050,7 @@ export const startDevServer: StartDevServer = async opts => {
         proxyExtraPythonPath = dirname(workPath);
       }
       env.__VC_PROXY_MODULE_NAME = proxyModuleName;
+      env.__VC_PROXY_VARIABLE_NAME = variableName ?? 'proxy';
 
       devEntry = relative(workPath, proxyAdapterPath);
       devModulePath = PROXY_ADAPTER_FILENAME.replace(/\.py$/, '');

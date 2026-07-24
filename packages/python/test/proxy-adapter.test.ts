@@ -229,4 +229,83 @@ class Request:
       },
     ]);
   });
+
+  it('turns a function proxy path mutation into a rewrite', async () => {
+    const messages = await invokeProxy(
+      `
+async def proxy(request):
+    request.scope["path"] = "/api/admin"
+    request.scope["query_string"] = b"tab=users"
+    return None
+`,
+      {
+        'starlette/__init__.py': '',
+        'starlette/requests.py': `
+class Request:
+    def __init__(self, scope, receive=None):
+        self.scope = scope
+`,
+      }
+    );
+
+    expect(messages).toEqual([
+      {
+        type: 'http.response.start',
+        status: 200,
+        headers: [['x-middleware-rewrite', '/api/admin?tab=users']],
+      },
+      {
+        type: 'http.response.body',
+        body: '',
+      },
+    ]);
+  });
+
+  it('turns a FastAPI or Starlette middleware path mutation into a rewrite', async () => {
+    const messages = await invokeProxy(
+      `
+from starlette.applications import Starlette
+
+class Middleware:
+    def __init__(self, cls):
+        self.cls = cls
+        self.args = ()
+        self.kwargs = {}
+
+class RewriteMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        scope["path"] = "/api/admin"
+        await self.app(scope, receive, send)
+
+proxy = Starlette()
+proxy.user_middleware = [Middleware(RewriteMiddleware)]
+`,
+      {
+        'starlette/__init__.py': '',
+        'starlette/applications.py': `
+class Starlette:
+    def __init__(self):
+        self.user_middleware = []
+
+    async def __call__(self, scope, receive, send):
+        raise AssertionError("the framework router must not run")
+`,
+      }
+    );
+
+    expect(messages).toEqual([
+      {
+        type: 'http.response.start',
+        status: 200,
+        headers: [['x-middleware-rewrite', '/api/admin']],
+      },
+      {
+        type: 'http.response.body',
+        body: '',
+      },
+    ]);
+  });
 });
