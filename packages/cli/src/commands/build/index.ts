@@ -1346,7 +1346,9 @@ async function doBuild(
               installCommand: projectSettings.installCommand ?? undefined,
               devCommand: projectSettings.devCommand ?? undefined,
               buildCommand: projectSettings.buildCommand ?? undefined,
-              framework: projectSettings.framework,
+              framework: isFrontendBuilder
+                ? projectSettings.framework
+                : (build.config?.framework ?? undefined),
               nodeVersion: projectSettings.nodeVersion,
               bunVersion: localConfig.bunVersion ?? undefined,
             };
