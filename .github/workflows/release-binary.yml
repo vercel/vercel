@@ -11,8 +11,8 @@ on:
         required: true
   workflow_call:
     inputs:
-      ref:
-        description: Git ref or SHA to build from (defaults to the caller ref)
+      tag:
+        description: Existing tag to build (e.g. vercel@53.3.1)
         required: false
         type: string
       upload_to_release:
@@ -34,7 +34,7 @@ env:
   TURBO_REMOTE_ONLY: 'true'
 
 concurrency:
-  group: release-binary-${{ inputs.ref || inputs.tag || github.ref }}
+  group: release-binary-${{ inputs.tag || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -98,7 +98,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || inputs.tag || github.ref }}
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Setup Turborepo Remote Cache
         uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
@@ -407,7 +407,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || inputs.tag || github.ref }}
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -431,8 +431,9 @@ jobs:
         shell: bash
         env:
           NPM_CONFIG_PROVENANCE: 'true'
+          INPUT_TAG: ${{ inputs.tag }}
         run: |
-          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+          if [[ "$GITHUB_REF_TYPE" == "tag" || -n "$INPUT_TAG" ]]; then
             node packages/vc-native/scripts/publish-packages.mjs
           elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             version="$(node -p "require('./packages/cli/package.json').version")"
@@ -447,7 +448,7 @@ jobs:
           fi
 
       - name: Verify @vercel/vc-native global install
-        if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' || inputs.publish_native }}
         shell: bash
         run: |
           set -euo pipefail

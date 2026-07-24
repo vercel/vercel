@@ -21,6 +21,10 @@ jobs:
       id-token: write
       pull-requests: write
       issues: write
+    outputs:
+      published: ${{ steps.changesets.outputs.published }}
+      publish_vercel: ${{ steps.vercel_release.outputs.publish }}
+      vercel_tag: ${{ steps.vercel_release.outputs.tag }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -84,26 +88,14 @@ jobs:
           NPM_CONFIG_PROVENANCE: 'true'
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
-      - name: Trigger binary release
+      - name: Determine vercel release
+        id: vercel_release
         if: steps.changesets.outputs.published == 'true' && contains(fromJSON(steps.changesets.outputs.publishedPackages).*.name, 'vercel')
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-
-            const pkg = JSON.parse(
-              fs.readFileSync('packages/cli/package.json', 'utf8')
-            );
-            const tag = `vercel@${pkg.version}`;
-
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'release-binary.yml',
-              ref: 'main',
-              inputs: { tag },
-            });
+        shell: bash
+        run: |
+          version="$(node -p "require('./packages/cli/package.json').version")"
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+          echo "tag=vercel@$version" >> "$GITHUB_OUTPUT"
 
       # TODO: re-enable with a new bot token or GitHub App
       # - name: Trigger Update (if a Publish Happened)
@@ -124,12 +116,29 @@ jobs:
       #       const script = require('./utils/update-latest-release.js')
       #       await script({ github, context })
 
+  release-binary:
+    name: Release Binary
+    needs:
+      - release
+    if: needs.release.outputs.publish_vercel == 'true'
+    permissions:
+      contents: write
+      id-token: write
+    uses: ./.github/workflows/release-binary.yml
+    with:
+      tag: ${{ needs.release.outputs.vercel_tag }}
+      upload_to_release: true
+      publish_native: true
+    secrets: inherit
+
   summary:
     name: Summary (release)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs:
       - release
+      - release-binary
+    if: always() && needs.release.result == 'success' && (needs.release-binary.result == 'success' || needs.release-binary.result == 'skipped')
     steps:
       - name: Check All
         run: echo OK
