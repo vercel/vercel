@@ -107,6 +107,32 @@ describe('vcr push', () => {
     );
   });
 
+  it('pushes with zstd compression on podman', async () => {
+    client.setArgv('vcr', 'push', 'podman');
+    const exitCode = await vcr(client);
+    expect(exitCode).toBe(0);
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'podman',
+      [
+        'push',
+        '--compression-format',
+        'zstd',
+        '--compression-level',
+        '3',
+        'vcr.vercel.com/my-team/vcr-project/vcr-project:latest',
+      ],
+      { cwd: tmpDir, stdio: ['inherit', 'inherit', 'pipe'], reject: false }
+    );
+  });
+
+  it('does not add compression flags on docker', async () => {
+    client.setArgv('vcr', 'push', 'docker');
+    const exitCode = await vcr(client);
+    expect(exitCode).toBe(0);
+    const args = mockedExeca.mock.calls[0][1] as string[];
+    expect(args).not.toContain('--compression-format');
+  });
+
   it('pushes a specific name:tag', async () => {
     client.setArgv('vcr', 'push', 'docker', 'my-api:1.2.3');
     const exitCode = await vcr(client);

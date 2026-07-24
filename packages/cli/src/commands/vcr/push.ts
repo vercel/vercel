@@ -13,14 +13,13 @@ import type { VcrTelemetryClient } from '../../util/telemetry/commands/vcr';
 import { pushSubcommand } from './command';
 import { resolveVcrScope } from './utils/resolve-vcr-scope';
 import { validateVcrChoice } from './utils/validators';
-import { emitVcrArgParseError } from './utils/errors';
+import { emitVcrArgParseError, reportEnginePushFailure } from './utils/errors';
 import {
-  AUTH_FAILURE,
   VCR_ENGINES,
   isEngineInstalled,
+  pushCompressionArgs,
   resolveRegistry,
   runEngine,
-  stderrTail,
   type VcrEngine,
 } from './utils/engine';
 import {
@@ -160,7 +159,12 @@ export default async function push(
   });
   const ref = `${base}:${parsed.tag ?? DEFAULT_TAG}`;
 
-  const engineArgs = ['push', ref, ...passthrough];
+  const engineArgs = [
+    'push',
+    ...pushCompressionArgs(engine),
+    ref,
+    ...passthrough,
+  ];
 
   output.log(`Running: ${engine} ${engineArgs.join(' ')}`);
 
@@ -169,43 +173,7 @@ export default async function push(
     captureStderr: true,
   });
   if (result.exitCode !== 0) {
-    if (AUTH_FAILURE.test(result.stderr)) {
-      const message = `Push to ${resolveRegistry()} was rejected. Your registry credentials may be missing or expired.`;
-      outputAgentError(
-        client,
-        {
-          status: 'error',
-          reason: 'not_authorized',
-          message,
-          next: [
-            {
-              command: buildCommandWithGlobalFlags(
-                client.argv,
-                `vcr login ${engine}`
-              ),
-              when: 'Refresh registry credentials (valid ~12 hours)',
-            },
-          ],
-        },
-        1
-      );
-      return outputError(client, false, 'NOT_AUTHORIZED', message);
-    }
-
-    const tail = stderrTail(result.stderr);
-    const message = `\`${engine} push\` failed (exit code ${result.exitCode}).${
-      tail ? `\n${tail}` : ''
-    }`;
-    outputAgentError(
-      client,
-      {
-        status: 'error',
-        reason: 'command_failed',
-        message,
-      },
-      1
-    );
-    return outputError(client, false, 'COMMAND_FAILED', message);
+    return reportEnginePushFailure(client, engine, 'push', result);
   }
 
   output.success(`Pushed ${ref}`);

@@ -15,6 +15,35 @@ export function isEngineInstalled(engine: VcrEngine): boolean {
   return which.sync(engine, { nothrow: true }) !== null;
 }
 
+/**
+ * Docker only supports zstd compression through the Buildx `--output` exporter,
+ * which fuses build and push into one step. Detect it by probing `docker buildx
+ * version` (Buildx is a CLI plugin, so it is not always on PATH as its own
+ * binary).
+ */
+export async function isBuildxAvailable(): Promise<boolean> {
+  const result = await execa('docker', ['buildx', 'version'], {
+    reject: false,
+    stdio: 'ignore',
+  });
+  if (result instanceof Error) {
+    return false;
+  }
+  return result.exitCode === 0;
+}
+
+/**
+ * Compression flags for a standalone `push`. Podman and Buildah accept
+ * `--compression-format` and default to zstd for smaller, faster images; Docker
+ * cannot compress on a plain `push` (it needs the Buildx build+push path).
+ */
+export function pushCompressionArgs(engine: VcrEngine): string[] {
+  if (engine === 'docker') {
+    return [];
+  }
+  return ['--compression-format', 'zstd', '--compression-level', '3'];
+}
+
 export interface EngineLoginResult {
   exitCode: number;
   stderr: string;

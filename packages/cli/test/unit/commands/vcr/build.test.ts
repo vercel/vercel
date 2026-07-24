@@ -248,4 +248,122 @@ describe('vcr build', () => {
       },
     ]);
   });
+
+  describe('--push', () => {
+    const REF = 'vcr.vercel.com/my-team/vcr-project/vcr-project:latest';
+
+    it('uses the Buildx build+push path with zstd when Buildx is available', async () => {
+      // Default mock returns exitCode 0 for the `docker buildx version` probe.
+      client.setArgv('vcr', 'build', 'docker', '--push');
+      const exitCode = await vcr(client);
+      expect(exitCode).toBe(0);
+      expect(mockedExeca).toHaveBeenCalledWith(
+        'docker',
+        [
+          'buildx',
+          'build',
+          '--platform',
+          'linux/amd64',
+          '--output',
+          `type=image,name=${REF},push=true,oci-mediatypes=true,compression=zstd,compression-level=3,force-compression=true`,
+          '.',
+        ],
+        { cwd: tmpDir, stdio: ['inherit', 'inherit', 'pipe'], reject: false }
+      );
+      expect(client.stderr.getFullOutput()).toContain(
+        `Built and pushed ${REF} (zstd compression)`
+      );
+    });
+
+    it('falls back to a plain build and push (no compression) when Buildx is missing', async () => {
+      mockedExeca.mockImplementation(((_cmd: string, args: string[]) => {
+        if (args[0] === 'buildx' && args[1] === 'version') {
+          return Promise.resolve({ exitCode: 1 });
+        }
+        const subprocess: any = Promise.resolve({ exitCode: 0, stderr: '' });
+        subprocess.stderr = { pipe: vi.fn() };
+        return subprocess;
+      }) as any);
+
+      client.setArgv('vcr', 'build', 'docker', '--push');
+      const exitCode = await vcr(client);
+      expect(exitCode).toBe(0);
+      expect(client.stderr.getFullOutput()).toContain('Docker Buildx is not');
+      expect(mockedExeca).toHaveBeenCalledWith(
+        'docker',
+        ['build', '--platform', 'linux/amd64', '--tag', REF, '.'],
+        { cwd: tmpDir, stdio: 'inherit', reject: false }
+      );
+      expect(mockedExeca).toHaveBeenCalledWith('docker', ['push', REF], {
+        cwd: tmpDir,
+        stdio: ['inherit', 'inherit', 'pipe'],
+        reject: false,
+      });
+    });
+
+    it('builds then pushes with zstd compression on podman', async () => {
+      client.setArgv('vcr', 'build', 'podman', '--push');
+      const exitCode = await vcr(client);
+      expect(exitCode).toBe(0);
+      expect(mockedExeca).toHaveBeenCalledWith(
+        'podman',
+        ['build', '--platform', 'linux/amd64', '--tag', REF, '.'],
+        { cwd: tmpDir, stdio: 'inherit', reject: false }
+      );
+      expect(mockedExeca).toHaveBeenCalledWith(
+        'podman',
+        [
+          'push',
+          '--compression-format',
+          'zstd',
+          '--compression-level',
+          '3',
+          REF,
+        ],
+        { cwd: tmpDir, stdio: ['inherit', 'inherit', 'pipe'], reject: false }
+      );
+      expect(client.stderr.getFullOutput()).toContain(
+        `Built and pushed ${REF} (zstd compression)`
+      );
+    });
+
+    it('hints to re-login when the fused push is rejected', async () => {
+      mockedExeca.mockImplementation(((_cmd: string, args: string[]) => {
+        if (args[0] === 'buildx' && args[1] === 'version') {
+          return Promise.resolve({ exitCode: 0 });
+        }
+        const subprocess: any = Promise.resolve({
+          exitCode: 1,
+          stderr: 'unauthorized: access denied',
+        });
+        subprocess.stderr = { pipe: vi.fn() };
+        return subprocess;
+      }) as any);
+
+      client.setArgv('vcr', 'build', 'docker', '--push');
+      const exitCode = await vcr(client);
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain('was rejected');
+    });
+
+    it('tracks the push flag telemetry', async () => {
+      client.setArgv('vcr', 'build', 'docker', '--push');
+      const exitCode = await vcr(client);
+      expect(exitCode).toBe(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:build',
+          value: 'build',
+        },
+        {
+          key: 'argument:engine',
+          value: 'docker',
+        },
+        {
+          key: 'flag:push',
+          value: 'TRUE',
+        },
+      ]);
+    });
+  });
 });

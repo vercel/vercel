@@ -32,6 +32,15 @@ const platformOption = {
   argument: 'PLATFORM',
 } as const;
 
+const pushOption = {
+  name: 'push',
+  shorthand: null,
+  type: Boolean,
+  deprecated: false,
+  description:
+    'Push the image after building. With Docker this builds and pushes in one step (Buildx enables zstd compression); Podman and Buildah build, then push with zstd compression.',
+} as const;
+
 export const listSubcommand = {
   name: 'ls',
   aliases: ['list'],
@@ -162,11 +171,15 @@ export const buildSubcommand = {
       required: false,
     },
   ],
-  options: [projectScopeOption, platformOption],
+  options: [projectScopeOption, platformOption, pushOption],
   examples: [
     {
       name: 'Build the current directory into the linked project (repository defaults to the project name, tag to latest)',
       value: `${packageName} vcr build docker`,
+    },
+    {
+      name: 'Build and push in one step (Docker Buildx enables zstd compression)',
+      value: `${packageName} vcr build docker --push`,
     },
     {
       name: 'Build a specific context path with a repository and tag',

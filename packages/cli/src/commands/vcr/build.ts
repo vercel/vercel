@@ -13,10 +13,12 @@ import type { VcrTelemetryClient } from '../../util/telemetry/commands/vcr';
 import { buildSubcommand } from './command';
 import { resolveVcrScope } from './utils/resolve-vcr-scope';
 import { validateVcrChoice } from './utils/validators';
-import { emitVcrArgParseError } from './utils/errors';
+import { emitVcrArgParseError, reportEnginePushFailure } from './utils/errors';
 import {
   VCR_ENGINES,
+  isBuildxAvailable,
   isEngineInstalled,
+  pushCompressionArgs,
   resolveRegistry,
   runEngine,
   type VcrEngine,
@@ -71,12 +73,14 @@ export default async function build(
   >;
   const project = parsedArgs.flags['--project'] as string | undefined;
   const platform = parsedArgs.flags['--platform'] as string | undefined;
+  const push = Boolean(parsedArgs.flags['--push']);
 
   telemetry.trackCliArgumentEngine(engineArg);
   telemetry.trackCliArgumentPath(pathArg);
   telemetry.trackCliArgumentName(nameArg);
   telemetry.trackCliOptionProject(project);
   telemetry.trackCliOptionPlatform(platform);
+  telemetry.trackCliFlagPush(push);
 
   if (!engineArg) {
     const message = `Missing engine. Choose one of: ${VCR_ENGINES.join(', ')}.`;
@@ -169,10 +173,47 @@ export default async function build(
   const ref = `${base}:${parsed.tag ?? DEFAULT_TAG}`;
 
   const contextPath = pathArg ?? '.';
+  const buildPlatform = platform ?? DEFAULT_PLATFORM;
+
+  // Docker can only produce a zstd-compressed image through the Buildx
+  // `--output` exporter, which builds and pushes in a single step.
+  if (push && engine === 'docker' && (await isBuildxAvailable())) {
+    const outputSpec = `type=image,name=${ref},push=true,oci-mediatypes=true,compression=zstd,compression-level=3,force-compression=true`;
+    const engineArgs = [
+      'buildx',
+      'build',
+      '--platform',
+      buildPlatform,
+      '--output',
+      outputSpec,
+      ...passthrough,
+      contextPath,
+    ];
+
+    output.log(`Running: ${engine} ${engineArgs.join(' ')}`);
+
+    const result = await runEngine(engine, engineArgs, {
+      cwd: client.cwd,
+      captureStderr: true,
+    });
+    if (result.exitCode !== 0) {
+      return reportEnginePushFailure(client, engine, 'buildx build', result);
+    }
+
+    output.success(`Built and pushed ${ref} (zstd compression)`);
+    return 0;
+  }
+
+  if (push && engine === 'docker') {
+    output.warn(
+      'Docker Buildx is not available; building and pushing without zstd compression. Install Buildx for smaller, faster image pushes.'
+    );
+  }
+
   const engineArgs = [
     'build',
     '--platform',
-    platform ?? DEFAULT_PLATFORM,
+    buildPlatform,
     '--tag',
     ref,
     ...passthrough,
@@ -196,12 +237,32 @@ export default async function build(
     return outputError(client, false, 'COMMAND_FAILED', message);
   }
 
-  output.success(`Built ${ref}`);
-  output.log(
-    `Push it with \`${buildCommandWithGlobalFlags(
-      client.argv,
-      `vcr push ${engine}${nameArg ? ` ${nameArg}` : ''}`
-    )}\`.`
+  if (!push) {
+    output.success(`Built ${ref}`);
+    output.log(
+      `Push it with \`${buildCommandWithGlobalFlags(
+        client.argv,
+        `vcr push ${engine}${nameArg ? ` ${nameArg}` : ''}`
+      )}\`.`
+    );
+    return 0;
+  }
+
+  const pushArgs = ['push', ...pushCompressionArgs(engine), ref];
+
+  output.log(`Running: ${engine} ${pushArgs.join(' ')}`);
+
+  const pushResult = await runEngine(engine, pushArgs, {
+    cwd: client.cwd,
+    captureStderr: true,
+  });
+  if (pushResult.exitCode !== 0) {
+    return reportEnginePushFailure(client, engine, 'push', pushResult);
+  }
+
+  const compressed = engine !== 'docker';
+  output.success(
+    `Built and pushed ${ref}${compressed ? ' (zstd compression)' : ''}`
   );
   return 0;
 }

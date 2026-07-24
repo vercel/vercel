@@ -157,4 +157,10 @@ export class VcrTelemetryClient
       this.trackCliFlag('yes');
     }
   }
+
+  trackCliFlagPush(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('push');
+    }
+  }
 }
