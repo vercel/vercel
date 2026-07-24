@@ -13,7 +13,7 @@ import { hashes, mapToObject, FilesMap } from './utils/hashes';
 import { isReady, isAliasAssigned } from './utils/ready-state';
 import { uploadFiles, UploadProgress } from './upload';
 import { DeploymentError } from './errors';
-import { createTgzFiles } from './utils/archive';
+import { createArchiveFiles } from './utils/archive';
 
 /**
  * Continues a manual deployment by uploading build outputs and calling the
@@ -66,8 +66,14 @@ export async function* continueDeployment(options: {
   const unbundledFiles = fileList.filter(f => f === provisionJsonPath);
 
   let files: FilesMap;
-  if (options.archive === 'tgz') {
-    files = await createTgzFiles(options.path, fileList, debug, unbundledFiles);
+  if (options.archive) {
+    files = await createArchiveFiles(
+      options.path,
+      fileList,
+      options.archive,
+      debug,
+      unbundledFiles
+    );
     // Hash excluded files individually and merge them into the FilesMap
     if (unbundledFiles.length > 0) {
       const individualFiles = await hashes(unbundledFiles);

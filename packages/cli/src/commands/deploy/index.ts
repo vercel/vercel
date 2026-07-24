@@ -101,6 +101,70 @@ const COMMAND_CONFIG = {
   continue: getCommandAliases(continueSubcommand),
 };
 
+/**
+ * Resolve --archive and --compress into a single archive format.
+ *
+ * Rules:
+ *  - --archive is canonical.
+ *  - If only --compress is provided, it aliases --archive.
+ *  - If both are provided and identical, accept.
+ *  - If both are provided and differ, fail with a clear error.
+ *  - Deprecated split-tgz → tgz translation still applies.
+ *
+ * Returns { format: ArchiveFormat | undefined, warning?: string, error?: string }
+ */
+function resolveArchiveFormat(
+  parsedArchive: string | undefined,
+  parsedCompress: string | undefined
+): {
+  format: ArchiveFormat | undefined;
+  warning?: string;
+  error?: string;
+} {
+  let archive = parsedArchive;
+  let compress = parsedCompress;
+
+  // If only --compress is set, treat it as --archive
+  if (compress !== undefined && archive === undefined) {
+    archive = compress;
+    compress = undefined;
+  }
+
+  // If both are set and differ, fail
+  if (archive !== undefined && compress !== undefined && archive !== compress) {
+    return {
+      format: undefined,
+      error:
+        'Cannot use different values for --archive and --compress. Use one archive compression option.',
+    };
+  }
+
+  // At this point `archive` holds the effective value (from either flag)
+  // Validate and translate deprecated values
+  if (typeof archive === 'string') {
+    if (archive === deprecatedArchiveSplitTgz) {
+      return {
+        format: 'tgz' as ArchiveFormat,
+        warning: `${prependEmoji(
+          `The ${param('split-tgz')} archive format is deprecated. Use ${param(
+            'tgz'
+          )} instead.`,
+          emoji('warning')
+        )}\n`,
+      };
+    }
+    if (!isValidArchive(archive)) {
+      return {
+        format: undefined,
+        error: `Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`,
+      };
+    }
+    return { format: archive as ArchiveFormat };
+  }
+
+  return { format: undefined };
+}
+
 export default async (client: Client): Promise<number> => {
   const telemetryClient = new DeployTelemetryClient({
     opts: {
@@ -255,26 +319,20 @@ async function handleInitDeployment(
   telemetryClient.trackTargetEnvironment(target);
 
   const parsedArchive = parsedArguments.flags['--archive'];
-  if (
-    typeof parsedArchive === 'string' &&
-    !(
-      isValidArchive(parsedArchive) ||
-      parsedArchive === deprecatedArchiveSplitTgz
-    )
-  ) {
-    output.error(`Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`);
+  const parsedCompress = parsedArguments.flags['--compress'];
+
+  const archiveResult = resolveArchiveFormat(parsedArchive, parsedCompress);
+  if (archiveResult.error) {
+    output.error(archiveResult.error);
     return 1;
   }
-  if (parsedArchive === deprecatedArchiveSplitTgz) {
-    output.print(
-      `${prependEmoji(
-        `${param('--archive=tgz')} now has the same behavior as ${param(
-          '--archive=split-tgz'
-        )}. Please use ${param('--archive=tgz')} instead.`,
-        emoji('warning')
-      )}\n`
-    );
+
+  if (archiveResult.warning) {
+    output.print(archiveResult.warning);
   }
+
+  telemetryClient.trackCliOptionArchive(parsedArchive);
+  telemetryClient.trackCliOptionCompress(parsedCompress);
 
   const cliMeta = parseMeta(parsedArguments.flags['--meta']);
   const isV0 = cliMeta.v0 === 'true';
@@ -502,7 +560,7 @@ async function handleInitDeployment(
       createArgs,
       org,
       !project,
-      parsedArchive ? 'tgz' : undefined
+      archiveResult.format
     );
 
     if (deployment instanceof NotDomainOwner) {
@@ -779,17 +837,28 @@ async function handleContinueSubcommand(
 
   const idFlag = parsedArguments.flags['--id'];
   const parsedArchive = parsedArguments.flags['--archive'];
+  const parsedCompress = parsedArguments.flags['--compress'];
   const errorMessage = parsedArguments.flags['--error'];
 
-  if (typeof parsedArchive === 'string' && !isValidArchive(parsedArchive)) {
-    output.error(`Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`);
+  const archiveResult = resolveArchiveFormat(parsedArchive, parsedCompress);
+  if (archiveResult.error) {
+    output.error(archiveResult.error);
     return 1;
   }
 
-  telemetryClient.trackCliOptionArchive(parsedArchive);
+  if (archiveResult.warning) {
+    output.print(archiveResult.warning);
+  }
 
-  if (parsedArchive && errorMessage !== undefined) {
-    output.error(`Cannot use ${param('--archive')} with ${param('--error')}`);
+  telemetryClient.trackCliOptionArchive(parsedArchive);
+  telemetryClient.trackCliOptionCompress(parsedCompress);
+
+  if (archiveResult.format && errorMessage !== undefined) {
+    output.error(
+      `Cannot use ${param('--archive')} or ${param('--compress')} with ${param(
+        '--error'
+      )}`
+    );
     return 1;
   }
 
@@ -928,7 +997,7 @@ async function handleContinueSubcommand(
     noWait: false,
     org,
     vercelOutputDir,
-    archive: parsedArchive ? 'tgz' : undefined,
+    archive: archiveResult.format,
   });
 }
 
@@ -946,7 +1015,24 @@ async function handleDefaultDeploy(
     return 1;
   }
 
-  telemetryClient.trackCliOptionArchive(parsedArguments.flags['--archive']);
+  // Resolve archive/compress early so deploy execution can reference the result.
+  const parsedCompressDefault = parsedArguments.flags['--compress'];
+  const parsedArchiveDefault = parsedArguments.flags['--archive'];
+  const archiveResultDefault = resolveArchiveFormat(
+    parsedArchiveDefault,
+    parsedCompressDefault
+  );
+  if (archiveResultDefault.error) {
+    output.error(archiveResultDefault.error);
+    return 1;
+  }
+
+  if (archiveResultDefault.warning) {
+    output.print(archiveResultDefault.warning);
+  }
+
+  telemetryClient.trackCliOptionArchive(parsedArchiveDefault);
+  telemetryClient.trackCliOptionCompress(parsedCompressDefault);
   telemetryClient.trackCliOptionEnv(parsedArguments.flags['--env']);
   telemetryClient.trackCliOptionBuildEnv(parsedArguments.flags['--build-env']);
   telemetryClient.trackCliOptionMeta(parsedArguments.flags['--meta']);
@@ -1101,28 +1187,6 @@ async function handleDefaultDeploy(
     return 1;
   }
 
-  const parsedArchive = parsedArguments.flags['--archive'];
-  if (
-    typeof parsedArchive === 'string' &&
-    !(
-      isValidArchive(parsedArchive) ||
-      parsedArchive === deprecatedArchiveSplitTgz
-    )
-  ) {
-    output.error(`Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`);
-    return 1;
-  }
-  if (parsedArchive === deprecatedArchiveSplitTgz) {
-    output.print(
-      `${prependEmoji(
-        `${param('--archive=tgz')} now has the same behavior as ${param(
-          '--archive=split-tgz'
-        )}. Please use ${param('--archive=tgz')} instead.`,
-        emoji('warning')
-      )}\n`
-    );
-  }
-
   const cliMeta = parseMeta(parsedArguments.flags['--meta']);
   const isV0 = cliMeta.v0 === 'true';
 
@@ -1252,7 +1316,7 @@ async function handleDefaultDeploy(
     try {
       const summary = await inspectDeploymentFiles({
         path: cwd,
-        archive: parsedArchive ? 'tgz' : undefined,
+        archive: archiveResultDefault.format,
         debug: output.isDebugEnabled(),
         prebuilt: parsedArguments.flags['--prebuilt'],
         vercelOutputDir,
@@ -1449,7 +1513,7 @@ async function handleDefaultDeploy(
       createArgs,
       org,
       !project,
-      parsedArchive ? 'tgz' : undefined
+      archiveResultDefault.format
     );
 
     if (deployment && !(deployment instanceof Error)) {

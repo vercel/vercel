@@ -1210,6 +1210,12 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 KEY1=va…
                                 -b      
                                 KEY2=va…
+       --compress <FORMAT>      Archive 
+                                compres…
+                                format  
+                                (alias  
+                                for     
+                                --archi…
        --dry                    Inspect 
                                 the     
                                 detected
@@ -1417,6 +1423,10 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
     $ vercel deploy --dry
 
+  - Deploy with zstd archive compression (requires zstd on PATH)
+
+    $ vercel deploy --prod --archive=zstd
+
   - Get every deployment file as JSON
 
     $ vercel deploy --dry --format=json
@@ -1443,6 +1453,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 before uploading it                             
   -b,  --build-env <KEY=VALUE>  Specify environment variables during build-time 
                                 (e.g. \`-b KEY1=value1 -b KEY2=value2\`)          
+       --compress <FORMAT>      Archive compression format (alias for --archive)
        --dry                    Inspect the detected framework preset and source
                                 files without uploading or creating a           
                                 deployment. Non-TTY output includes every file  
@@ -1513,6 +1524,10 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
     $ vercel deploy --dry
 
+  - Deploy with zstd archive compression (requires zstd on PATH)
+
+    $ vercel deploy --prod --archive=zstd
+
   - Get every deployment file as JSON
 
     $ vercel deploy --dry --format=json
@@ -1536,6 +1551,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
        --archive <FORMAT>       Compress the deployment code into an archive before uploading it                        
   -b,  --build-env <KEY=VALUE>  Specify environment variables during build-time (e.g. \`-b KEY1=value1 -b KEY2=value2\`)  
+       --compress <FORMAT>      Archive compression format (alias for --archive)                                        
        --dry                    Inspect the detected framework preset and source files without uploading or creating a  
                                 deployment. Non-TTY output includes every file as JSON                                  
   -e,  --env <KEY=VALUE>        Specify environment variables during run-time (e.g. \`-e KEY1=value1 -e KEY2=value2\`)    
@@ -1592,6 +1608,10 @@ exports[`help command > deploy help output snapshots > deploy help column width 
   - Inspect deployment inputs without deploying
 
     $ vercel deploy --dry
+
+  - Deploy with zstd archive compression (requires zstd on PATH)
+
+    $ vercel deploy --prod --archive=zstd
 
   - Get every deployment file as JSON
 

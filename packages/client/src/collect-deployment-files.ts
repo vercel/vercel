@@ -4,7 +4,7 @@ import { isAbsolute, relative, sep } from 'path';
 import { DeploymentError } from './errors';
 import type { VercelClientOptions } from './types';
 import { buildFileTree, type Debug } from './utils';
-import { createTgzFiles } from './utils/archive';
+import { createArchiveFiles } from './utils/archive';
 import { hashes, type FilesMap } from './utils/hashes';
 
 type CollectDeploymentFilesOptions = Pick<
@@ -84,10 +84,14 @@ export async function collectDeploymentFiles(
 
   let filesMap: FilesMap;
   try {
-    filesMap =
-      clientOptions.archive === 'tgz'
-        ? await createTgzFiles(workPath, fileList, debug)
-        : await hashes(fileList);
+    filesMap = clientOptions.archive
+      ? await createArchiveFiles(
+          workPath,
+          fileList,
+          clientOptions.archive,
+          debug
+        )
+      : await hashes(fileList);
   } catch (err: unknown) {
     if (
       clientOptions.prebuilt &&

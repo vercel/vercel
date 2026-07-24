@@ -80,6 +80,14 @@ export const initSubcommand = {
         'Compress the deployment code into an archive before uploading it',
     },
     {
+      name: 'compress',
+      shorthand: null,
+      type: String,
+      argument: 'FORMAT',
+      deprecated: false,
+      description: 'Archive compression format (alias for --archive)',
+    },
+    {
       name: 'skip-domain',
       shorthand: null,
       type: Boolean,
@@ -139,6 +147,14 @@ export const continueSubcommand = {
       deprecated: false,
       description:
         'Compress the deployment code into an archive before uploading it',
+    },
+    {
+      name: 'compress',
+      shorthand: null,
+      type: String,
+      argument: 'FORMAT',
+      deprecated: false,
+      description: 'Archive compression format (alias for --archive)',
     },
     {
       name: 'error',
@@ -242,6 +258,14 @@ export const deployCommand = {
         'Compress the deployment code into an archive before uploading it',
     },
     {
+      name: 'compress',
+      shorthand: null,
+      type: String,
+      argument: 'FORMAT',
+      deprecated: false,
+      description: 'Archive compression format (alias for --archive)',
+    },
+    {
       name: 'no-wait',
       shorthand: null,
       type: Boolean,
@@ -334,6 +358,10 @@ export const deployCommand = {
     {
       name: 'Inspect deployment inputs without deploying',
       value: 'vercel deploy --dry',
+    },
+    {
+      name: 'Deploy with zstd archive compression (requires zstd on PATH)',
+      value: 'vercel deploy --prod --archive=zstd',
     },
     {
       name: 'Get every deployment file as JSON',

@@ -30,6 +30,20 @@ export class DeployTelemetryClient
       });
     }
   }
+  trackCliOptionCompress(format: string | undefined) {
+    if (format) {
+      const allowedFormat = [
+        ...VALID_ARCHIVE_FORMATS,
+        deprecatedArchiveSplitTgz,
+      ].includes(format)
+        ? format
+        : this.redactedValue;
+      this.trackCliOption({
+        option: 'compress',
+        value: allowedFormat,
+      });
+    }
+  }
   trackCliOptionBuildEnv(buildEnv: string[] | undefined) {
     if (buildEnv && buildEnv.length > 0) {
       this.trackCliOption({

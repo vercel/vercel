@@ -9,6 +9,10 @@ import tar from 'tar-fs';
 import { createGunzip } from 'zlib';
 import { once, Readable } from 'stream';
 import fs from 'fs';
+import { spawnSync } from 'child_process';
+
+const describeZstdArchive =
+  spawnSync('zstd', ['--version']).status === 0 ? describe : describe.skip;
 
 describe('create v2 deployment', () => {
   let deployment: Deployment;
@@ -270,6 +274,57 @@ describe('create v2 deployment', () => {
         )
           .pipe(createGunzip())
           .pipe(tar.extract(tmpDir));
+        await once(extractStream, 'finish');
+        assertDirectoriesAreEqual(tmpDir, uploadFolder);
+      }
+    });
+  });
+
+  describeZstdArchive('using --archive=zstd', () => {
+    it('single file deployments decompress to original project', async () => {
+      const uploadFolder = await generateFakeFiles(50, 100);
+      const args: Parameters<typeof createDeployment> = [
+        {
+          token,
+          teamId: process.env.VERCEL_TEAM_ID,
+          path: uploadFolder,
+          archive: 'zstd',
+        },
+        { name: 'archive-project-zstd' },
+      ];
+
+      const buffersFromChunkArchiving = new Map<string, Buffer>();
+      for await (const event of createDeployment(...args)) {
+        if (event.type === 'hashes-calculated') {
+          Object.values(event.payload).forEach(item => {
+            if (
+              isObject(item) &&
+              'data' in item &&
+              Buffer.isBuffer(item.data) &&
+              Array.isArray(item.names)
+            ) {
+              const fileName = path.basename(item.names[0]);
+              buffersFromChunkArchiving.set(fileName, item.data);
+            }
+          });
+        }
+      }
+
+      expect(buffersFromChunkArchiving.size).toEqual(1);
+      const concatenatedBuffer = Buffer.concat([
+        buffersFromChunkArchiving.get('source.tar.zst.part1')!,
+      ]);
+
+      // Decompress via zstd CLI and extract tar
+      {
+        const tmpDir = setupTmpDir();
+        const decompress = spawnSync('zstd', ['--decompress', '--stdout'], {
+          input: concatenatedBuffer,
+        });
+        expect(decompress.status).toBe(0);
+        const extractStream = Readable.from(decompress.stdout).pipe(
+          tar.extract(tmpDir)
+        );
         await once(extractStream, 'finish');
         assertDirectoriesAreEqual(tmpDir, uploadFolder);
       }
