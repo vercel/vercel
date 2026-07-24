@@ -1,0 +1,207 @@
+import type Client from '../../util/client';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import output from '../../output-manager';
+import { outputError } from '../../util/command-validation';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+} from '../../util/agent-output';
+import { AGENT_REASON } from '../../util/agent-output-constants';
+import type { VcrTelemetryClient } from '../../util/telemetry/commands/vcr';
+import { buildSubcommand } from './command';
+import { resolveVcrScope } from './utils/resolve-vcr-scope';
+import { validateVcrChoice } from './utils/validators';
+import { emitVcrArgParseError } from './utils/errors';
+import {
+  VCR_ENGINES,
+  isEngineInstalled,
+  resolveRegistry,
+  runEngine,
+  type VcrEngine,
+} from './utils/engine';
+import {
+  buildRepositoryReference,
+  parseNameArg,
+  validateImageParts,
+} from './utils/image-ref';
+
+const DEFAULT_PLATFORM = 'linux/amd64';
+const DEFAULT_TAG = 'latest';
+
+/**
+ * Splits the caller's argv at `--`: everything before is parsed as Vercel
+ * arguments, everything after is forwarded verbatim to the engine. The router's
+ * permissive parse drops the `--` marker, so it is recovered from `client.argv`
+ * (same approach as `vercel env pull -- <cmd>`).
+ */
+function splitPassthrough(argv: string[]): {
+  own: string[];
+  passthrough: string[];
+} {
+  const idx = argv.indexOf('--');
+  if (idx === -1) {
+    return { own: argv.slice(2), passthrough: [] };
+  }
+  return { own: argv.slice(2, idx), passthrough: argv.slice(idx + 1) };
+}
+
+export default async function build(
+  client: Client,
+  telemetry: VcrTelemetryClient
+): Promise<number> {
+  const { own, passthrough } = splitPassthrough(client.argv);
+
+  let parsedArgs;
+  try {
+    parsedArgs = parseArguments(
+      own,
+      getFlagsSpecification(buildSubcommand.options)
+    );
+  } catch (err) {
+    emitVcrArgParseError(client, err, 'vcr build <engine> [path] [name[:tag]]');
+    printError(err);
+    return 1;
+  }
+
+  // Positionals are `vcr build <engine> [path] [name]`; drop the first two.
+  const [engineArg, pathArg, nameArg] = parsedArgs.args.slice(2) as Array<
+    string | undefined
+  >;
+  const project = parsedArgs.flags['--project'] as string | undefined;
+  const platform = parsedArgs.flags['--platform'] as string | undefined;
+
+  telemetry.trackCliArgumentEngine(engineArg);
+  telemetry.trackCliArgumentPath(pathArg);
+  telemetry.trackCliArgumentName(nameArg);
+  telemetry.trackCliOptionProject(project);
+  telemetry.trackCliOptionPlatform(platform);
+
+  if (!engineArg) {
+    const message = `Missing engine. Choose one of: ${VCR_ENGINES.join(', ')}.`;
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.MISSING_ARGUMENTS,
+        message,
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'vcr build docker'
+            ),
+            when: 'Replace docker with the container tool you use',
+          },
+        ],
+      },
+      1
+    );
+    return outputError(client, false, 'MISSING_ARGUMENTS', message);
+  }
+
+  const choiceError = validateVcrChoice(
+    client,
+    'engine',
+    engineArg,
+    VCR_ENGINES,
+    false
+  );
+  if (typeof choiceError === 'number') {
+    return choiceError;
+  }
+  const engine = engineArg as VcrEngine;
+
+  if (!isEngineInstalled(engine)) {
+    const message = `\`${engine}\` is not installed or not on your PATH. Install it and try again.`;
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: 'engine_not_found',
+        message,
+      },
+      1
+    );
+    return outputError(client, false, 'ENGINE_NOT_FOUND', message);
+  }
+
+  const scope = await resolveVcrScope(client, { project, jsonOutput: false });
+  if (typeof scope === 'number') {
+    return scope;
+  }
+
+  const parsed = parseNameArg(nameArg, scope.projectName);
+  if ('error' in parsed) {
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: parsed.error,
+      },
+      1
+    );
+    return outputError(client, false, 'INVALID_ARGUMENTS', parsed.error);
+  }
+
+  const validationError = validateImageParts(parsed);
+  if (validationError) {
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: validationError,
+      },
+      1
+    );
+    return outputError(client, false, 'INVALID_ARGUMENTS', validationError);
+  }
+
+  const base = buildRepositoryReference({
+    registry: resolveRegistry(),
+    teamSlug: scope.teamSlug,
+    projectName: scope.projectName,
+    repository: parsed.repository,
+  });
+  const ref = `${base}:${parsed.tag ?? DEFAULT_TAG}`;
+
+  const contextPath = pathArg ?? '.';
+  const engineArgs = [
+    'build',
+    '--platform',
+    platform ?? DEFAULT_PLATFORM,
+    '--tag',
+    ref,
+    ...passthrough,
+    contextPath,
+  ];
+
+  output.log(`Running: ${engine} ${engineArgs.join(' ')}`);
+
+  const result = await runEngine(engine, engineArgs, { cwd: client.cwd });
+  if (result.exitCode !== 0) {
+    const message = `\`${engine} build\` failed (exit code ${result.exitCode}).`;
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: 'command_failed',
+        message,
+      },
+      1
+    );
+    return outputError(client, false, 'COMMAND_FAILED', message);
+  }
+
+  output.success(`Built ${ref}`);
+  output.log(
+    `Push it with \`${buildCommandWithGlobalFlags(
+      client.argv,
+      `vcr push ${engine}${nameArg ? ` ${nameArg}` : ''}`
+    )}\`.`
+  );
+  return 0;
+}

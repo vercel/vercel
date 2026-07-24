@@ -15,6 +15,8 @@ import {
   addSubcommand,
   removeSubcommand,
   loginSubcommand,
+  buildSubcommand,
+  pushSubcommand,
 } from './command';
 import {
   imageAggregateCommand,
@@ -34,6 +36,8 @@ const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   rm: getCommandAliases(removeSubcommand),
   login: getCommandAliases(loginSubcommand),
+  build: getCommandAliases(buildSubcommand),
+  push: getCommandAliases(pushSubcommand),
   tag: getCommandAliases(tagsAggregateCommand),
   image: getCommandAliases(imageAggregateCommand),
 };
@@ -90,6 +94,14 @@ export default async function vcr(client: Client): Promise<number> {
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         printHelp(loginSubcommand);
         return 2;
+      case 'build':
+        telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
+        printHelp(buildSubcommand);
+        return 2;
+      case 'push':
+        telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
+        printHelp(pushSubcommand);
+        return 2;
       case 'tag': {
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         const nested = args[0];
@@ -145,6 +157,12 @@ export default async function vcr(client: Client): Promise<number> {
     case 'login':
       telemetry.trackCliSubcommandLogin(subcommandOriginal);
       return (await import('./login')).default(client, args, telemetry);
+    case 'build':
+      telemetry.trackCliSubcommandBuild(subcommandOriginal);
+      return (await import('./build')).default(client, telemetry);
+    case 'push':
+      telemetry.trackCliSubcommandPush(subcommandOriginal);
+      return (await import('./push')).default(client, telemetry);
     case 'tag':
       telemetry.trackCliSubcommandTag(subcommandOriginal);
       return (await import('./tags')).default(client, args, telemetry);
