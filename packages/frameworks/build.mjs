@@ -10,7 +10,7 @@ const distDir = fileURLToPath(new URL('dist', import.meta.url));
 // single source of truth. If the fetch fails the build fails (no fallback).
 const MANIFEST_URL =
   process.env.VERCEL_FRAMEWORKS_MANIFEST_URL ||
-  'https://api-frameworks.vercel.sh/v1/frameworks.json';
+  'https://api-frameworks-two.vercel.sh/v1/frameworks.json';
 
 async function fetchManifest() {
   const res = await fetch(MANIFEST_URL);
