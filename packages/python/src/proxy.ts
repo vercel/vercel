@@ -4,6 +4,8 @@ import type { PythonPackage } from '@vercel/python-analysis';
 
 export const PROXY_ADAPTER_FILENAME = 'vc__proxy__python.py';
 export const PROXY_DEPENDENCY_GROUP = 'proxy';
+export const FASTAPI_FRONTEND_MANIFEST_FILENAME = 'vc_fastapi_frontend.json';
+export const FASTAPI_FRONTEND_PROXY_OUTPUT = 'fastapi-proxy';
 
 const proxyAdapterPath = join(__dirname, '..', 'templates', 'vc_proxy.py');
 const proxyAdapterSource = fs.readFileSync(proxyAdapterPath, 'utf8');

@@ -13,7 +13,8 @@ module.exports = async ({ deploymentUrl, fetch }) => {
   }
   if (
     interceptedBody.source !== 'python-proxy' ||
-    interceptedBody.request_header !== 'received'
+    interceptedBody.request_header !== 'received' ||
+    intercepted.headers.get('x-python-proxy') !== 'intercepted'
   ) {
     failures.push(
       `intercepted: unexpected body ${JSON.stringify(interceptedBody)}`
@@ -24,7 +25,8 @@ module.exports = async ({ deploymentUrl, fetch }) => {
   const continuedBody = await continued.json();
   if (
     continued.status !== 200 ||
-    continuedBody.source !== 'fastapi'
+    continuedBody.source !== 'fastapi' ||
+    continued.headers.get('x-python-proxy') !== 'continued'
   ) {
     failures.push(
       `continued: unexpected response ${continued.status} ${JSON.stringify(

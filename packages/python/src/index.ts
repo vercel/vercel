@@ -1,6 +1,6 @@
 import assert from 'assert';
 import fs from 'fs';
-import { join, dirname, basename, parse } from 'path';
+import { join, dirname, basename, parse, relative } from 'path';
 import {
   VERCEL_RUNTIME_VERSION,
   VERCEL_WORKERS_VERSION,
@@ -81,8 +81,10 @@ import {
   type DjangoCollectStaticResult,
 } from './django';
 import {
+  getFastAPIFrontendConfig,
   runFastAPICollectStatic,
   type FastAPICollectStaticResult,
+  type FastAPIFrontendConfig,
 } from './fastapi';
 import { containsTopLevelCallable } from '@vercel/python-analysis';
 import {
@@ -110,6 +112,8 @@ import {
 } from './workflows';
 import { entrypointToOutputPath, getRegExpFromMatchers } from './middleware';
 import {
+  FASTAPI_FRONTEND_MANIFEST_FILENAME,
+  FASTAPI_FRONTEND_PROXY_OUTPUT,
   getProxyAdapterSource,
   hasProxyDependencyGroup,
   PROXY_ADAPTER_FILENAME,
@@ -358,6 +362,7 @@ interface DjangoFrameworkHookResult extends FrameworkHookResult {
 
 interface FastAPIFrameworkHookResult extends FrameworkHookResult {
   fastapiStatic: FastAPICollectStaticResult;
+  frontendConfig: FastAPIFrontendConfig;
 }
 
 type FrameworkHook = (
@@ -474,11 +479,9 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
     const entrypointAbs = join(workPath, entrypointRel);
     const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
 
-    const cdnEnv = process.env.VERCEL_FASTAPI_STATIC_CDN?.toLowerCase();
-    if (cdnEnv !== '1' && cdnEnv !== 'true') {
-      debug(
-        'FastAPI: VERCEL_FASTAPI_STATIC_CDN not set, skipping static CDN collection'
-      );
+    const frontendConfig = await getFastAPIFrontendConfig(workPath);
+    if (!frontendConfig.cdn) {
+      debug('FastAPI: frontend CDN delivery disabled by pyproject.toml');
       return;
     }
 
@@ -492,7 +495,7 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
     );
     if (!fastapiStatic) return;
 
-    return { fastapiStatic };
+    return { fastapiStatic, frontendConfig };
   },
 };
 
@@ -978,8 +981,10 @@ export const build: BuildVX = async ({
   // Track the lock file path and project info for package classification (used when runtime install is enabled)
   let uvLockPath: string | null = null;
   let uvProjectDir: string | null = null;
+  let uvLockFileProvidedByUser = false;
   let projectName: string | undefined;
 
+  let dependencyBundleSize = 0;
   await builderSpan
     .child(BUILDER_INSTALLER_STEP, {
       installCommand: projectInstallCommand || undefined,
@@ -1072,6 +1077,7 @@ export const build: BuildVX = async ({
 
         uvLockPath = lockPath;
         uvProjectDir = projectDir;
+        uvLockFileProvidedByUser = lockFileProvidedByUser;
 
         // Get the project name from the already-discovered package info
         projectName = pythonPackage?.manifest?.data?.project?.name;
@@ -1164,6 +1170,9 @@ export const build: BuildVX = async ({
   const fastapiStatic: FastAPICollectStaticResult | null =
     (hookResult as FastAPIFrameworkHookResult | undefined)?.fastapiStatic ??
     null;
+  const fastapiFrontendConfig =
+    (hookResult as FastAPIFrameworkHookResult | undefined)?.frontendConfig ??
+    null;
   const cdnOutputDir =
     djangoStatic?.cdnOutputDir ?? fastapiStatic?.cdnOutputDir ?? null;
 
@@ -1192,6 +1201,59 @@ export const build: BuildVX = async ({
       uv,
       venvPath,
       projectDir: join(workPath, entryDirectory),
+      pipPlatformArgs,
+    });
+  }
+
+  let fastapiFrontendProxyVenvPath: string | undefined;
+  if (
+    fastapiStatic &&
+    fastapiStatic.collectedRequestPaths.length > 0 &&
+    fastapiFrontendConfig &&
+    fastapiFrontendConfig.proxy !== false &&
+    hasProxyDependencyGroup(pythonPackage)
+  ) {
+    if (!uvProjectDir || !uvLockPath || hasCustomCommand) {
+      throw new NowBuildError({
+        code: 'PYTHON_FASTAPI_FRONTEND_PROXY_DEPENDENCIES_UNAVAILABLE',
+        message:
+          'The FastAPI frontend proxy dependency group requires the default Python dependency installer. ' +
+          'Remove the custom install command or configure a standalone top-level proxy.',
+      });
+    }
+
+    fastapiFrontendProxyVenvPath = join(
+      workPath,
+      '.vercel',
+      'python',
+      'fastapi-proxy',
+      '.venv'
+    );
+    console.log(
+      `Installing FastAPI frontend proxy dependencies from the "${PROXY_DEPENDENCY_GROUP}" dependency group...`
+    );
+    await ensureVenv({
+      pythonVersion,
+      venvPath: fastapiFrontendProxyVenvPath,
+      uvPath: uv.getPath(),
+      uvCacheDir,
+      seed: false,
+    });
+    await uv.sync({
+      venvPath: fastapiFrontendProxyVenvPath,
+      projectDir: uvProjectDir,
+      frozen: uvLockFileProvidedByUser,
+      locked: !uvLockFileProvidedByUser,
+      onlyGroup: PROXY_DEPENDENCY_GROUP,
+      pythonPlatform: target.uvPlatform,
+    });
+    await installInjectedPackage({
+      name: 'vercel-runtime',
+      pinned: `vercel-runtime==${VERCEL_RUNTIME_VERSION}`,
+      envOverride: baseEnv.VERCEL_RUNTIME_PYTHON,
+      uv,
+      venvPath: fastapiFrontendProxyVenvPath,
+      projectDir: uvProjectDir,
       pipPlatformArgs,
     });
   }
@@ -1281,7 +1343,8 @@ export const build: BuildVX = async ({
     const variableName = resolved?.variableName ?? '';
     if (isRoutingMiddleware) {
       extraTrampolineEnv.push(
-        `"__VC_PROXY_MODULE_NAME": ${JSON.stringify(moduleName)}`
+        `"__VC_PROXY_MODULE_NAME": ${JSON.stringify(moduleName)}`,
+        `"__VC_PROXY_VARIABLE_NAME": ${JSON.stringify(handlerFunction ?? 'proxy')}`
       );
     }
 
@@ -1417,6 +1480,7 @@ export const build: BuildVX = async ({
           });
         },
       });
+      dependencyBundleSize = depAnalysis.totalBundleSize;
 
       // Precompile bytecode and fill remaining capacity up to capacityBytes.
       // Only .pyc for .py files already in the bundle are collected, so
@@ -1730,6 +1794,143 @@ export const build: BuildVX = async ({
     });
   }
 
+  let fastapiFrontendProxyOutput: Lambda | undefined;
+  let fastapiFrontendProxyRoute:
+    | {
+        src: string;
+        middlewareRawSrc: string[];
+        middlewarePath: string;
+        continue: true;
+        override: true;
+      }
+    | undefined;
+  if (
+    output &&
+    entrypoint &&
+    resolved &&
+    fastapiStatic &&
+    fastapiFrontendConfig &&
+    fastapiFrontendConfig.proxy !== false &&
+    fastapiStatic.collectedRequestPaths.length > 0
+  ) {
+    const automatic = fastapiFrontendConfig.proxy === undefined;
+    const [proxyModuleName, proxyVariableName] = automatic
+      ? [entrypointToModule(entrypoint), resolved.variableName]
+      : fastapiFrontendConfig.proxy!.split(':');
+    assert(proxyModuleName && proxyVariableName);
+    const proxyTrampoline = createRuntimeTrampoline({
+      moduleName: entrypointToModule(PROXY_ADAPTER_FILENAME),
+      entrypoint: PROXY_ADAPTER_FILENAME,
+      vendorDir,
+      variableName: 'app',
+      extraEnv: [
+        `"__VC_PROXY_MODULE_NAME": ${JSON.stringify(proxyModuleName)}`,
+        `"__VC_PROXY_VARIABLE_NAME": ${JSON.stringify(proxyVariableName)}`,
+        ...(automatic ? ['"__VC_FASTAPI_FRONTEND_AUTO": "1"'] : []),
+      ],
+    });
+    let proxyBaseFiles = files;
+    if (
+      !fastapiFrontendProxyVenvPath &&
+      dependencyBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES
+    ) {
+      throw new NowBuildError({
+        code: 'PYTHON_FASTAPI_FRONTEND_PROXY_TOO_LARGE',
+        message:
+          'The FastAPI application dependencies exceed the Routing Middleware size limit. ' +
+          'Add a small "proxy" dependency group to pyproject.toml containing only ' +
+          'the dependencies needed to import the application and run its middleware.',
+      });
+    }
+    if (fastapiFrontendProxyVenvPath) {
+      const frontendSourceDirectories = fastapiStatic.sourceDirectories
+        .map(directory => relative(workPath, directory).replace(/\\/g, '/'))
+        .filter(
+          directory =>
+            directory !== '' &&
+            directory !== '..' &&
+            !directory.startsWith('../')
+        );
+      proxyBaseFiles = await glob('**', {
+        ...globOptions,
+        ignore: [
+          ...(Array.isArray(globOptions.ignore)
+            ? globOptions.ignore
+            : globOptions.ignore
+              ? [globOptions.ignore]
+              : []),
+          ...frontendSourceDirectories.map(directory => `${directory}/**`),
+        ],
+      });
+      for (const directory of frontendSourceDirectories) {
+        proxyBaseFiles[`${directory}/.vercel-proxy-placeholder`] = new FileBlob(
+          { data: '' }
+        );
+      }
+      const proxyDistributions = await InstalledPythonDistributions.load({
+        venvPath: fastapiFrontendProxyVenvPath,
+        pythonMajor: pythonVersion.major,
+        pythonMinor: pythonVersion.minor,
+      });
+      addFiles(
+        proxyBaseFiles,
+        await proxyDistributions.mirrorPackagesIntoVendor({
+          vendorDirName: vendorDir,
+        })
+      );
+    }
+    const proxyFiles: Files = {
+      ...proxyBaseFiles,
+      [PROXY_ADAPTER_FILENAME]: new FileBlob({
+        data: getProxyAdapterSource(),
+      }),
+      [FASTAPI_FRONTEND_MANIFEST_FILENAME]: new FileBlob({
+        data: JSON.stringify({
+          requestPaths: fastapiStatic.collectedRequestPaths,
+        }),
+      }),
+      [`${handlerPyFilename}.py`]: new FileBlob({
+        data: proxyTrampoline,
+      }),
+    };
+    const proxySize = await calculateBundleSize(proxyFiles);
+    if (proxySize > LAMBDA_SIZE_THRESHOLD_BYTES) {
+      throw new NowBuildError({
+        code: 'PYTHON_FASTAPI_FRONTEND_PROXY_TOO_LARGE',
+        message:
+          'The generated FastAPI frontend proxy exceeds the Routing Middleware size limit. ' +
+          'Move the middleware into a small module, configure it with ' +
+          '"tool.vercel.fastapi.frontend.proxy", and put only its dependencies ' +
+          'in the "proxy" dependency group.',
+      });
+    }
+
+    const lambdaOptions = await getPythonLambdaOptions({
+      config,
+      entrypoint,
+    });
+    fastapiFrontendProxyOutput = new Lambda({
+      files: proxyFiles,
+      handler: `${handlerPyFilename}.vc_handler`,
+      runtime: pythonVersion.runtime,
+      ...lambdaOptions,
+      architecture: target.architecture,
+      environment: lambdaEnv,
+      supportsResponseStreaming: true,
+    });
+
+    const middlewareRawSrc = fastapiStatic.collectedMounts.map(mount =>
+      mount === '/' ? '/:path*' : `${mount}/:path*`
+    );
+    fastapiFrontendProxyRoute = {
+      src: getRegExpFromMatchers(middlewareRawSrc),
+      middlewareRawSrc,
+      middlewarePath: FASTAPI_FRONTEND_PROXY_OUTPUT,
+      continue: true,
+      override: true,
+    };
+  }
+
   const subscriberLambdas: Record<string, Lambda> = {};
 
   for (const subscriber of subscribers) {
@@ -1891,6 +2092,7 @@ export const build: BuildVX = async ({
     isNonWebService || !output
       ? undefined
       : [
+          ...(fastapiFrontendProxyRoute ? [fastapiFrontendProxyRoute] : []),
           { handle: 'filesystem' as const },
           { src: '/(.*)', dest: `/${lambdaPath}` },
         ];
@@ -1900,6 +2102,11 @@ export const build: BuildVX = async ({
     result: {
       output: {
         ...(output ? { [lambdaPath]: output } : {}),
+        ...(fastapiFrontendProxyOutput
+          ? {
+              [FASTAPI_FRONTEND_PROXY_OUTPUT]: fastapiFrontendProxyOutput,
+            }
+          : {}),
         ...subscriberLambdas,
         ...workflowLambdas,
         ...staticFiles,
@@ -1934,7 +2141,7 @@ export const prepareCache: PrepareCache = async ({
   // Cache the uv package cache, the default venv, and any service-namespaced
   // venvs so that subsequent builds can skip dependency installation.
   return glob(
-    '**/.vercel/python/{.venv,proxy/.venv,services/*/.venv,cache/uv}/**',
+    '**/.vercel/python/{.venv,proxy/.venv,fastapi-proxy/.venv,services/*/.venv,cache/uv}/**',
     {
       cwd: root,
       ignore,

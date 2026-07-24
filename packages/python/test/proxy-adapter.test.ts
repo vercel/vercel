@@ -126,6 +126,80 @@ proxy = Proxy()
     ]);
   });
 
+  it('runs only the user middleware from a FastAPI or Starlette app', async () => {
+    const messages = await invokeProxy(
+      `
+from starlette.applications import Starlette
+
+class Middleware:
+    def __init__(self, cls, *args, **kwargs):
+        self.cls = cls
+        self.args = args
+        self.kwargs = kwargs
+
+class HeaderMiddleware:
+    def __init__(self, app, name, value):
+        self.app = app
+        self.name = name
+        self.value = value
+
+    async def __call__(self, scope, receive, send):
+        assert scope["app"] is proxy
+
+        async def send_with_header(message):
+            if message["type"] == "http.response.start":
+                message = dict(message)
+                message["headers"] = [
+                    *message.get("headers", []),
+                    (self.name, self.value),
+                ]
+            await send(message)
+
+        await self.app(scope, receive, send_with_header)
+
+proxy = Starlette()
+proxy.user_middleware = [
+    Middleware(HeaderMiddleware, b"x-first", b"one"),
+    Middleware(HeaderMiddleware, b"x-second", b"two"),
+]
+`,
+      {
+        'starlette/__init__.py': '',
+        'starlette/applications.py': `
+class Starlette:
+    def __init__(self):
+        self.user_middleware = []
+
+    async def __call__(self, scope, receive, send):
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 418,
+                "headers": [(b"x-framework-router", b"called")],
+            }
+        )
+        await send({"type": "http.response.body", "body": b""})
+`,
+      }
+    );
+
+    expect(messages).toEqual([
+      {
+        type: 'http.response.start',
+        status: 200,
+        headers: [
+          ['x-middleware-next', '1'],
+          ['x-second', 'two'],
+          ['x-first', 'one'],
+        ],
+      },
+      {
+        type: 'http.response.body',
+        body: '',
+      },
+    ]);
+  });
+
   it('continues to invoke function proxies with a Request', async () => {
     const messages = await invokeProxy(
       `
@@ -148,6 +222,85 @@ class Request:
         type: 'http.response.start',
         status: 200,
         headers: [['x-middleware-next', '1']],
+      },
+      {
+        type: 'http.response.body',
+        body: '',
+      },
+    ]);
+  });
+
+  it('turns a function proxy path mutation into a rewrite', async () => {
+    const messages = await invokeProxy(
+      `
+async def proxy(request):
+    request.scope["path"] = "/api/admin"
+    request.scope["query_string"] = b"tab=users"
+    return None
+`,
+      {
+        'starlette/__init__.py': '',
+        'starlette/requests.py': `
+class Request:
+    def __init__(self, scope, receive=None):
+        self.scope = scope
+`,
+      }
+    );
+
+    expect(messages).toEqual([
+      {
+        type: 'http.response.start',
+        status: 200,
+        headers: [['x-middleware-rewrite', '/api/admin?tab=users']],
+      },
+      {
+        type: 'http.response.body',
+        body: '',
+      },
+    ]);
+  });
+
+  it('turns a FastAPI or Starlette middleware path mutation into a rewrite', async () => {
+    const messages = await invokeProxy(
+      `
+from starlette.applications import Starlette
+
+class Middleware:
+    def __init__(self, cls):
+        self.cls = cls
+        self.args = ()
+        self.kwargs = {}
+
+class RewriteMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        scope["path"] = "/api/admin"
+        await self.app(scope, receive, send)
+
+proxy = Starlette()
+proxy.user_middleware = [Middleware(RewriteMiddleware)]
+`,
+      {
+        'starlette/__init__.py': '',
+        'starlette/applications.py': `
+class Starlette:
+    def __init__(self):
+        self.user_middleware = []
+
+    async def __call__(self, scope, receive, send):
+        raise AssertionError("the framework router must not run")
+`,
+      }
+    );
+
+    expect(messages).toEqual([
+      {
+        type: 'http.response.start',
+        status: 200,
+        headers: [['x-middleware-rewrite', '/api/admin']],
       },
       {
         type: 'http.response.body',

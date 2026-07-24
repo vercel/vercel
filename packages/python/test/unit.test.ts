@@ -50,6 +50,15 @@ vi.mock('../src/django', () => ({
   runDjangoCollectStatic: vi.fn(async () => null),
 }));
 
+vi.mock('../src/fastapi', async () => {
+  const real =
+    await vi.importActual<typeof import('../src/fastapi')>('../src/fastapi');
+  return {
+    ...real,
+    runFastAPICollectStatic: vi.fn(async () => null),
+  };
+});
+
 vi.mock('execa', () => ({
   default: vi.fn(),
 }));
@@ -75,6 +84,7 @@ import {
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml } from '../src/install';
 import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
+import { runFastAPICollectStatic } from '../src/fastapi';
 import { getSubscriberOutputPath } from '../src/subscribers';
 import { getWorkflowOutputPath } from '../src/workflows';
 import {
@@ -1414,6 +1424,102 @@ describe('fastapi entrypoint discovery - positive cases', () => {
     fs.removeSync(workPath);
   });
 
+  it('builds an automatic frontend proxy for configured CDN delivery', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-fastapi-frontend-proxy-${Date.now()}`
+    );
+    fs.mkdirSync(path.join(workPath, 'frontend'), { recursive: true });
+    makeMockPython('3.9');
+
+    const outputStaticDir = path.join(workPath, '.vercel', 'output', 'static');
+    vi.mocked(runFastAPICollectStatic).mockImplementationOnce(async () => {
+      fs.mkdirSync(outputStaticDir, { recursive: true });
+      fs.writeFileSync(path.join(outputStaticDir, 'index.html'), 'frontend');
+      return {
+        collectedMounts: ['/'],
+        collectedRequestPaths: ['/', '/index.html'],
+        sourceDirectories: [path.join(workPath, 'frontend')],
+        cdnOutputDir: outputStaticDir,
+      };
+    });
+
+    const files = {
+      'main.py': new FileBlob({
+        data: [
+          'from fastapi import FastAPI',
+          'app = FastAPI()',
+          'app.frontend("/", directory="frontend")',
+        ].join('\n'),
+      }),
+      'frontend/index.html': new FileBlob({ data: 'frontend' }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "fastapi-frontend"',
+          'version = "0.0.1"',
+          '',
+          '[dependency-groups]',
+          'proxy = ["fastapi"]',
+          '',
+          '[tool.vercel.fastapi.frontend]',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, workPath);
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: '<detect>',
+      meta: { isDev: true },
+      config: { framework: 'fastapi', zeroConfig: true },
+      repoRootPath: workPath,
+    });
+
+    const output = getBuildOutputV2(result);
+    expect(Object.keys(output.output)).toEqual(
+      expect.arrayContaining(['index', 'fastapi-proxy', 'index.html'])
+    );
+    expect(output.routes?.[0]).toEqual({
+      src: expect.any(String),
+      middlewareRawSrc: ['/:path*'],
+      middlewarePath: 'fastapi-proxy',
+      continue: true,
+      override: true,
+    });
+
+    const proxyLambda = output.output['fastapi-proxy'] as any;
+    const adapter = proxyLambda.files?.['vc__proxy__python.py'];
+    const handler = proxyLambda.files?.['vc__handler__python.py'];
+    expect(adapter?.data.toString()).toContain('_continue_fastapi_frontend');
+    expect(handler?.data.toString()).toContain(
+      '"__VC_PROXY_MODULE_NAME": "main"'
+    );
+    expect(handler?.data.toString()).toContain(
+      '"__VC_PROXY_VARIABLE_NAME": "app"'
+    );
+    expect(handler?.data.toString()).toContain(
+      '"__VC_FASTAPI_FRONTEND_AUTO": "1"'
+    );
+    expect(proxyLambda.files?.['frontend/index.html']).toBeUndefined();
+    expect(
+      proxyLambda.files?.['frontend/.vercel-proxy-placeholder']
+    ).toBeDefined();
+
+    const proxyGroupSync = vi
+      .mocked(execa)
+      .mock.calls.find(
+        call =>
+          Array.isArray(call[1]) &&
+          call[1].includes('--only-group') &&
+          call[1].includes('proxy')
+      );
+    expect(proxyGroupSync).toBeDefined();
+
+    fs.removeSync(workPath);
+  });
+
   it('discovers src/index.py containing FastAPI', async () => {
     const workPath = path.join(
       tmpdir(),
@@ -2482,7 +2588,12 @@ describe('configured Python proxy', () => {
     expect(adapter.data.toString()).toContain(
       'from starlette.requests import Request'
     );
-    expect(adapter.data.toString()).toContain('(b"x-middleware-next", b"1")');
+    expect(adapter.data.toString()).toContain(
+      'return b"x-middleware-next", b"1"'
+    );
+    expect(adapter.data.toString()).toContain(
+      'return b"x-middleware-rewrite", destination.encode("ascii")'
+    );
 
     const handler = lambda.files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {

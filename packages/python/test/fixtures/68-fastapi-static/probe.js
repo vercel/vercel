@@ -7,13 +7,8 @@ module.exports = async ({ deploymentUrl, fetch }) => {
   if (!body.includes('Hello World')) {
     failures.push(`expected Hello World, got ${JSON.stringify(body)}`);
   }
-
-  // Verify CDN routing: second request to static file should be a cache HIT
-  await fetch(`https://${deploymentUrl}/static/index.html`);
-  const cdnRes = await fetch(`https://${deploymentUrl}/static/index.html`);
-  const cacheHeader = cdnRes.headers.get('x-vercel-cache');
-  if (cacheHeader !== 'HIT') {
-    failures.push(`cdn: expected x-vercel-cache: HIT, got ${JSON.stringify(cacheHeader)}`);
+  if (res.headers.get('x-fastapi-middleware') !== 'ran') {
+    failures.push('ordinary StaticFiles mount bypassed FastAPI middleware');
   }
 
   if (failures.length > 0) throw new Error(failures.join('\n'));
