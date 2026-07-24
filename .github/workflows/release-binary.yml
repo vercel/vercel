@@ -9,6 +9,22 @@ on:
       tag:
         description: Existing tag to build (e.g. vercel@53.3.1)
         required: true
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref or SHA to build from (defaults to the caller ref)
+        required: false
+        type: string
+      upload_to_release:
+        description: Upload built binaries to the matching GitHub Release
+        required: false
+        type: boolean
+        default: false
+      publish_native:
+        description: Publish native npm packages from this workflow
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -18,7 +34,7 @@ env:
   TURBO_REMOTE_ONLY: 'true'
 
 concurrency:
-  group: release-binary-${{ inputs.tag || github.ref }}
+  group: release-binary-${{ inputs.ref || inputs.tag || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -82,7 +98,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ inputs.ref || inputs.tag || github.ref }}
 
       - name: Setup Turborepo Remote Cache
         uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
@@ -273,7 +289,7 @@ jobs:
           if-no-files-found: error
 
       - name: Wait for GitHub Release
-        if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' || inputs.upload_to_release }}
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -303,7 +319,7 @@ jobs:
           exit 1
 
       - name: Upload to GitHub Release
-        if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' || inputs.upload_to_release }}
         shell: bash
         working-directory: packages/cli
         env:
@@ -379,6 +395,7 @@ jobs:
 
   publish-npm:
     name: Publish native npm packages
+    if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' || inputs.publish_native }}
     runs-on: ubuntu-latest
     environment: release
     permissions:
@@ -390,7 +407,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ inputs.ref || inputs.tag || github.ref }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
