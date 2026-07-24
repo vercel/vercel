@@ -7,23 +7,13 @@ import { frameworkList } from '@vercel/frameworks';
 import { debug as builderDebug } from '@vercel/build-utils';
 import output from '../../output-manager';
 
-/**
- * Emit a debug log to both the CLI output manager (visible with `--debug`)
- * and the build-utils debug channel (visible with `VERCEL_BUILDER_DEBUG=1`).
- */
+/** Debug log to both `--debug` output and the `VERCEL_BUILDER_DEBUG` channel. */
 function logDebug(message: string): void {
   output.debug(message);
   builderDebug(message);
 }
 
-/**
- * The end-of-build framework cross-check (detecting all frameworks from source
- * and warning on mismatch) is opt-in via `VERCEL_FRAMEWORK_DETECTION=1`. The
- * variable is set by the Vercel build pipeline (to control rollout) and can
- * also be set manually, e.g. in project build env vars or locally when running
- * `vc build`. It does not gate first-deployment framework detection, which is
- * driven solely by `VERCEL_FIRST_DEPLOYMENT` (see `isFirstDeployment`).
- */
+/** Whether the end-of-build framework cross-check is enabled. */
 export function isFrameworkDetectionEnabled(): boolean {
   const raw = process.env.VERCEL_FRAMEWORK_DETECTION;
   const enabled = raw === '1';
@@ -35,11 +25,7 @@ export function isFrameworkDetectionEnabled(): boolean {
   return enabled;
 }
 
-/**
- * Whether this is the very first deployment for a project, as signalled by
- * the `VERCEL_FIRST_DEPLOYMENT` environment variable. The Vercel deployment
- * pipeline sets it when a deployment is created for a brand-new project.
- */
+/** Whether this is a project's first deployment (set by the deploy pipeline). */
 export function isFirstDeployment(): boolean {
   const raw = process.env.VERCEL_FIRST_DEPLOYMENT;
   const result = raw === '1';
@@ -51,11 +37,7 @@ export function isFirstDeployment(): boolean {
   return result;
 }
 
-/**
- * Result of first-deployment framework detection, recorded in `builds.json`
- * (see `BuildsManifest`). Always includes a `status` so consumers can tell
- * the difference between "detected", "nothing detected", and "did not run".
- */
+/** Result of first-deployment framework detection, recorded in `builds.json`. */
 export interface DetectedFramework {
   status: 'detected' | 'not-detected' | 'skipped';
   slug?: string;
@@ -63,11 +45,9 @@ export interface DetectedFramework {
 }
 
 /**
- * On a project's first deployment, detect the framework from the source code
- * and apply it to the in-memory `projectSettings` (mutated in place so the
- * caller's subsequent `detectBuilders` call sees it). Gated solely by
- * `VERCEL_FIRST_DEPLOYMENT`; runs even when the `VERCEL_FRAMEWORK_DETECTION`
- * cross-check is disabled.
+ * On a project's first deployment with no configured framework, detect it from
+ * source and apply it to `projectSettings` (mutated in place so a later
+ * `detectBuilders` sees it). Gated by `VERCEL_FIRST_DEPLOYMENT`.
  */
 export async function detectFirstDeploymentFramework(options: {
   workPath: string;
@@ -112,7 +92,6 @@ export async function detectFirstDeploymentFramework(options: {
 
   const { slug } = detected;
 
-  // Applied in place so the caller's `detectBuilders` sees the framework.
   projectSettings.framework = slug;
   logDebug(
     `First deployment: detected framework "${slug}"${
@@ -127,10 +106,7 @@ export async function detectFirstDeploymentFramework(options: {
   };
 }
 
-/**
- * Detect all frameworks that match the source code at `workPath`, returning
- * their slugs.
- */
+/** Detect all frameworks matching the source at `workPath`, returning slugs. */
 export async function detectAllFrameworks(workPath: string): Promise<string[]> {
   logDebug(`Framework cross-check: detecting frameworks at "${workPath}"`);
   const frameworks = await detectFrameworks({
@@ -144,10 +120,7 @@ export async function detectAllFrameworks(workPath: string): Promise<string[]> {
   return slugs;
 }
 
-/**
- * Frameworks annotated with `detectionConfidence: 'weak'` may confirm a
- * match but never trigger a warning on their own.
- */
+/** Weak-signal frameworks may confirm a match but never warn on their own. */
 function isHighConfidenceDetection(slug: string): boolean {
   const record = frameworkList.find(f => f.slug === slug);
   return record?.detectionConfidence !== 'weak';
@@ -160,11 +133,7 @@ export type FrameworkMismatchResult =
   | 'configured-mismatch'
   | 'unused-mismatch';
 
-/**
- * Warn when the frameworks detected from the source code do not match how
- * the project was actually built: either a configured framework that was not
- * detected, or a detected framework whose builder was never used.
- */
+/** Warn when detected frameworks don't match how the project was built. */
 export function warnIfFrameworkMismatch(options: {
   configuredFramework: string | null | undefined;
   detectedFrameworks: string[];
@@ -224,8 +193,7 @@ export function warnIfFrameworkMismatch(options: {
     return 'configured-mismatch';
   }
 
-  // No framework configured: check whether the build used any detected
-  // framework via a framework-tagged build config or its runtime builder.
+  // No framework configured: did the build use a detected framework's builder?
   const buildUsedDetectedFramework = detectedFrameworks.some(slug => {
     if (usedFrameworks.includes(slug)) {
       return true;
@@ -249,9 +217,8 @@ export function warnIfFrameworkMismatch(options: {
     return 'match';
   }
 
-  // Frameworks without a `useRuntime` legitimately build via
-  // `@vercel/static-build`, so their absence from the used builders proves
-  // nothing — only warn when a dedicated runtime builder was expected.
+  // Only warn for frameworks with a dedicated runtime builder; others
+  // legitimately build via `@vercel/static-build`.
   const warnableFrameworks = confidentFrameworks.filter(slug => {
     const record = frameworkList.find(f => f.slug === slug);
     return Boolean(record?.useRuntime?.use);

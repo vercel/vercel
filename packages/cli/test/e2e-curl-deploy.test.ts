@@ -114,11 +114,8 @@ describe('curl-based deployment via Vercel API', () => {
       name: projectName,
       version: 2,
       files: [{ file: '.vercel/source.tgz.part1', sha, size, mode: 0o666 }],
-      // First-deployment framework detection is driven solely by the API-set
-      // `VERCEL_FIRST_DEPLOYMENT=1` (only present on a project's first
-      // deployment, which the unique `projectName` above guarantees). This lets
-      // the bare `server.ts` be detected as the `node` framework, built, and
-      // served at `/`.
+      // The unique `projectName` guarantees a first deployment, so the API sets
+      // `VERCEL_FIRST_DEPLOYMENT=1` and `server.ts` is detected as `node`.
     };
 
     const deployBody = curl([
