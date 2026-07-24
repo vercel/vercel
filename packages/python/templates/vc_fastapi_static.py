@@ -7,12 +7,12 @@ as are ordinary ``StaticFiles`` mounts. This lets Vercel put only safe
 frontend responses on the CDN while FastAPI retains its normal precedence,
 fallback, redirect, and 404 behavior.
 
-Usage: python <this_script> <entrypoint_abs_path> <variable_name> <output_path>
+Usage: python <this_script> <module_name> <variable_name> <output_path>
 """
 
 from __future__ import annotations
 
-import importlib.util
+import importlib
 import json
 import os
 import stat
@@ -44,6 +44,7 @@ class FrontendFile:
 class FrontendDiscovery:
     mounts: list[FrontendMount]
     files: list[FrontendFile]
+    runtimeFiles: list[str]
 
 
 @dataclass
@@ -290,35 +291,55 @@ def _collect_files(router: Any, records: list[_FrontendRecord]) -> list[Frontend
     return files
 
 
+def _lookup_fallback_file(record: _FrontendRecord, name: str) -> str | None:
+    full_path, stat_result = record.route.app.lookup_path(name)
+    if stat_result is None or not stat.S_ISREG(stat_result.st_mode):
+        return None
+    return os.path.realpath(full_path)
+
+
+def _collect_runtime_files(records: list[_FrontendRecord]) -> list[str]:
+    """Collect files FastAPI still needs for non-concrete fallback responses."""
+    runtime_files: set[str] = set()
+    for record in records:
+        static_app = record.route.app
+        fallback = getattr(static_app, "fallback", None)
+        fallback_file: str | None = None
+        if fallback == "404.html":
+            fallback_file = _lookup_fallback_file(record, "404.html")
+        elif fallback == "index.html":
+            fallback_file = _lookup_fallback_file(record, "index.html")
+        elif fallback == "auto":
+            fallback_file = _lookup_fallback_file(record, "404.html")
+            if fallback_file is None:
+                fallback_file = _lookup_fallback_file(record, "index.html")
+        if fallback_file is not None:
+            runtime_files.add(fallback_file)
+    return sorted(runtime_files)
+
+
 def write_output(output_path: str, data: FrontendDiscovery) -> None:
     with open(output_path, "w") as f:
         json.dump(asdict(data), f)
 
 
 def main() -> None:
-    entrypoint_abs = sys.argv[1]
+    module_name = sys.argv[1]
     variable_name = sys.argv[2]
     output_path = sys.argv[3]
-    empty = FrontendDiscovery(mounts=[], files=[])
-
-    spec = importlib.util.spec_from_file_location("__vc_app", entrypoint_abs)
-    if spec is None or spec.loader is None:
-        write_output(output_path, empty)
-        return
-
-    mod = importlib.util.module_from_spec(spec)
-    try:
-        spec.loader.exec_module(mod)  # type: ignore[union-attr]
-    except Exception as exc:
-        print(f"vc_fastapi_static: exec_module failed: {exc}", file=sys.stderr)
-        write_output(output_path, empty)
-        return
+    sys.path.insert(0, os.getcwd())
+    mod = importlib.import_module(module_name)
 
     app = getattr(mod, variable_name, None)
+    if app is None:
+        raise RuntimeError(
+            f'FastAPI entrypoint object "{module_name}:{variable_name}" does not exist'
+        )
     router = getattr(app, "router", None)
     if router is None:
-        write_output(output_path, empty)
-        return
+        raise RuntimeError(
+            f'FastAPI entrypoint object "{module_name}:{variable_name}" has no router'
+        )
 
     records = _iter_frontend_records(router)
     mounts = [
@@ -330,6 +351,7 @@ def main() -> None:
         FrontendDiscovery(
             mounts=mounts,
             files=_collect_files(router, records),
+            runtimeFiles=_collect_runtime_files(records),
         ),
     )
 

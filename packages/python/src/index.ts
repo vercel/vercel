@@ -73,7 +73,10 @@ import {
   createVenvEnv,
   getVenvPythonBin,
 } from './utils';
-import { validateBuildArch } from './platform-info';
+import {
+  isUvPlatformCompatibleWithHost,
+  validateBuildArch,
+} from './platform-info';
 import { runQuirks } from './quirks';
 import {
   getDjangoSettings,
@@ -81,7 +84,9 @@ import {
   type DjangoCollectStaticResult,
 } from './django';
 import {
+  addFastAPIFrontendDirectories,
   getFastAPIFrontendConfig,
+  pruneFastAPIFrontendFiles,
   runFastAPICollectStatic,
   type FastAPICollectStaticResult,
   type FastAPIFrontendConfig,
@@ -349,6 +354,7 @@ interface FrameworkHookContext {
   venvPath?: string;
   entrypoint: string | undefined;
   detected: DetectedPythonEntrypoint | undefined;
+  fastapiFrontendConfig?: FastAPIFrontendConfig;
 }
 
 interface FrameworkHookResult {
@@ -464,6 +470,7 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
     detected,
     workPath,
     venvPath,
+    fastapiFrontendConfig,
   }): Promise<FastAPIFrameworkHookResult | void> => {
     if (!detected?.entrypoint || !workPath || !venvPath) {
       debug(
@@ -479,7 +486,8 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
     const entrypointAbs = join(workPath, entrypointRel);
     const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
 
-    const frontendConfig = await getFastAPIFrontendConfig(workPath);
+    const frontendConfig =
+      fastapiFrontendConfig ?? (await getFastAPIFrontendConfig(workPath));
     if (!frontendConfig.cdn) {
       debug('FastAPI: frontend CDN delivery disabled by pyproject.toml');
       return;
@@ -1132,13 +1140,60 @@ export const build: BuildVX = async ({
       });
   }
 
+  const requestedFastAPIFrontendConfig =
+    framework === 'fastapi'
+      ? await getFastAPIFrontendConfig(workPath)
+      : undefined;
+  let frameworkHookVenvPath = venvPath;
+  let frameworkHookPythonEnv = pythonEnv;
+
+  // Local production builds resolve Lambda-compatible Linux wheels, which a
+  // non-Linux host cannot import for build-time FastAPI route discovery.
+  // Reuse the lockfile in a host-compatible inspection environment.
+  if (
+    requestedFastAPIFrontendConfig?.cdn &&
+    !hasCustomCommand &&
+    uvProjectDir &&
+    !isUvPlatformCompatibleWithHost(target.uvPlatform)
+  ) {
+    frameworkHookVenvPath = join(
+      workPath,
+      '.vercel',
+      'python',
+      'fastapi-inspect',
+      '.venv'
+    );
+    console.log(
+      'Installing host-compatible FastAPI dependencies for frontend discovery...'
+    );
+    await ensureVenv({
+      pythonVersion,
+      venvPath: frameworkHookVenvPath,
+      uvPath: uv.getPath(),
+      uvCacheDir,
+      seed: false,
+    });
+    await uv.sync({
+      venvPath: frameworkHookVenvPath,
+      projectDir: uvProjectDir,
+      frozen: uvLockFileProvidedByUser,
+      locked: !uvLockFileProvidedByUser,
+    });
+    frameworkHookPythonEnv = createVenvEnv(
+      frameworkHookVenvPath,
+      baseEnv,
+      uvCacheDir
+    );
+  }
+
   // Run per-framework hooks (e.g. entrypoint detection and collectstatic for Django).
   const hookResult = await runFrameworkHook(framework, {
-    pythonEnv,
+    pythonEnv: frameworkHookPythonEnv,
     workPath,
-    venvPath,
+    venvPath: frameworkHookVenvPath,
     entrypoint,
     detected,
+    fastapiFrontendConfig: requestedFastAPIFrontendConfig,
   });
 
   // Collect the resolved entrypoint from detection or hook, preferring the
@@ -1407,6 +1462,9 @@ export const build: BuildVX = async ({
   };
 
   const files: Files = await glob('**', globOptions);
+  if (fastapiStatic) {
+    await pruneFastAPIFrontendFiles(files, workPath, fastapiStatic);
+  }
   if (isRoutingMiddleware) {
     files[PROXY_ADAPTER_FILENAME] = new FileBlob({
       data: getProxyAdapterSource(),
@@ -1862,11 +1920,11 @@ export const build: BuildVX = async ({
           ...frontendSourceDirectories.map(directory => `${directory}/**`),
         ],
       });
-      for (const directory of frontendSourceDirectories) {
-        proxyBaseFiles[`${directory}/.vercel-proxy-placeholder`] = new FileBlob(
-          { data: '' }
-        );
-      }
+      await addFastAPIFrontendDirectories(
+        proxyBaseFiles,
+        workPath,
+        fastapiStatic.sourceDirectories
+      );
       const proxyDistributions = await InstalledPythonDistributions.load({
         venvPath: fastapiFrontendProxyVenvPath,
         pythonMajor: pythonVersion.major,
@@ -2141,7 +2199,7 @@ export const prepareCache: PrepareCache = async ({
   // Cache the uv package cache, the default venv, and any service-namespaced
   // venvs so that subsequent builds can skip dependency installation.
   return glob(
-    '**/.vercel/python/{.venv,proxy/.venv,fastapi-proxy/.venv,services/*/.venv,cache/uv}/**',
+    '**/.vercel/python/{.venv,proxy/.venv,fastapi-proxy/.venv,fastapi-inspect/.venv,services/*/.venv,cache/uv}/**',
     {
       cwd: root,
       ignore,

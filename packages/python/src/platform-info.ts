@@ -92,6 +92,18 @@ export function validateBuildArch(arch: string): 'x86_64' | 'aarch64' {
   }
 }
 
+export function isUvPlatformCompatibleWithHost(
+  uvPlatform: string | undefined,
+  hostPlatform: NodeJS.Platform = process.platform,
+  hostArch: NodeJS.Architecture = process.arch
+): boolean {
+  if (!uvPlatform) return true;
+  if (hostPlatform !== 'linux') return false;
+  if (uvPlatform.startsWith('x86_64-')) return hostArch === 'x64';
+  if (uvPlatform.startsWith('aarch64-')) return hostArch === 'arm64';
+  return false;
+}
+
 /**
  * Return platform info for the Lambda runtime target.
  *

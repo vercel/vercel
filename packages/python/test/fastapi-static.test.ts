@@ -5,10 +5,13 @@ import { tmpdir } from 'os';
 import execa from 'execa';
 import {
   getFastAPIFrontendConfig,
+  getFastAPIStaticDiscovery,
   getFastAPIStaticMounts,
+  pruneFastAPIFrontendFiles,
   runFastAPICollectStatic,
 } from '../src/fastapi';
 import { getVenvPythonBin } from '../src/utils';
+import { glob, isDirectory } from '@vercel/build-utils';
 
 describe('FastAPI frontend config', () => {
   const temporaryDirectories: string[] = [];
@@ -117,9 +120,7 @@ describe('FastAPI frontend config', () => {
   });
 });
 
-// The shim runs with the build venv Python. The build venv has cross-compiled
-// Linux wheels (pydantic_core), so tests only run on Linux where they load.
-describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
+describe('FastAPI static files', () => {
   let testDir: string;
   let venvPath: string;
   let pythonEnv: NodeJS.ProcessEnv;
@@ -196,6 +197,60 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     );
   });
 
+  it('imports the entrypoint by module name for package-relative imports', async () => {
+    const appDir = path.join(testDir, 'package-import');
+    const packageDir = path.join(appDir, 'backend');
+    fs.mkdirSync(path.join(appDir, 'dist'), { recursive: true });
+    fs.mkdirSync(packageDir, { recursive: true });
+    fs.writeFileSync(path.join(packageDir, '__init__.py'), '');
+    fs.writeFileSync(
+      path.join(packageDir, 'settings.py'),
+      'FRONTEND_DIRECTORY = "dist"\n'
+    );
+    fs.writeFileSync(
+      path.join(packageDir, 'main.py'),
+      [
+        'from fastapi import FastAPI',
+        'from .settings import FRONTEND_DIRECTORY',
+        'app = FastAPI()',
+        'app.frontend("/", directory=FRONTEND_DIRECTORY)',
+      ].join('\n')
+    );
+
+    const mounts = await getFastAPIStaticMounts(
+      venvPath,
+      path.join(packageDir, 'main.py'),
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    expect(mounts).toHaveLength(1);
+    expect(mounts[0].directory).toBe(
+      fs.realpathSync(path.join(appDir, 'dist'))
+    );
+  });
+
+  it('fails the build when the application cannot be imported', async () => {
+    const appDir = path.join(testDir, 'import-error');
+    fs.mkdirSync(appDir, { recursive: true });
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(entrypointAbs, 'raise RuntimeError("import exploded")\n');
+
+    await expect(
+      getFastAPIStaticDiscovery(
+        venvPath,
+        entrypointAbs,
+        'app',
+        pythonEnv,
+        appDir
+      )
+    ).rejects.toMatchObject({
+      code: 'PYTHON_FASTAPI_FRONTEND_DISCOVERY_FAILED',
+      message: expect.stringContaining('import exploded'),
+    });
+  });
+
   it('returns empty when no StaticFiles mounts exist', async () => {
     const appDir = path.join(testDir, 'app-no-static');
     fs.mkdirSync(appDir, { recursive: true });
@@ -214,6 +269,36 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     );
 
     expect(mounts).toHaveLength(0);
+  });
+
+  it('allows a missing frontend directory when check_dir is false', async () => {
+    const appDir = path.join(testDir, 'missing-frontend-directory');
+    const outputDir = path.join(testDir, 'output-missing-directory');
+    fs.mkdirSync(appDir, { recursive: true });
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'app = FastAPI()',
+        'app.frontend("/", directory="missing", check_dir=False, fallback=None)',
+      ].join('\n')
+    );
+
+    const result = await runFastAPICollectStatic(
+      venvPath,
+      appDir,
+      pythonEnv,
+      outputDir,
+      entrypointAbs,
+      'app'
+    );
+    expect(result).not.toBeNull();
+
+    const lambdaFiles = await glob('**', { cwd: appDir });
+    await expect(
+      pruneFastAPIFrontendFiles(lambdaFiles, appDir, result!)
+    ).resolves.toBeUndefined();
   });
 
   it('copies concrete app.frontend() files to the CDN output dir', async () => {
@@ -243,9 +328,59 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     expect(result).not.toBeNull();
     expect(result!.collectedMounts).toContain('/static');
     expect(result!.collectedRequestPaths).toContain('/static/style.css');
+    expect(result!.promotedSourcePaths).toEqual([
+      fs.realpathSync(path.join(appDir, 'static', 'style.css')),
+    ]);
+    expect(result!.runtimeRequiredSourcePaths).toEqual([]);
     expect(fs.existsSync(path.join(outputDir, 'static', 'style.css'))).toBe(
       true
     );
+
+    const lambdaFiles = await glob('**', { cwd: appDir });
+    await pruneFastAPIFrontendFiles(lambdaFiles, appDir, result!);
+    expect(lambdaFiles['static/style.css']).toBeUndefined();
+    expect(lambdaFiles.static).toBeDefined();
+    expect(isDirectory(lambdaFiles.static.mode)).toBe(true);
+  });
+
+  it('retains only the active FastAPI fallback in the Lambda', async () => {
+    const appDir = path.join(testDir, 'app-fallback');
+    const outputDir = path.join(testDir, 'output-fallback');
+    const frontendDir = path.join(appDir, 'frontend');
+    fs.mkdirSync(frontendDir, { recursive: true });
+    fs.writeFileSync(path.join(frontendDir, 'index.html'), 'index fallback');
+    fs.writeFileSync(path.join(frontendDir, '404.html'), '404 fallback');
+    fs.writeFileSync(path.join(frontendDir, 'app.js'), 'asset');
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'app = FastAPI()',
+        'app.frontend("/", directory="frontend", fallback="auto")',
+      ].join('\n')
+    );
+
+    const result = await runFastAPICollectStatic(
+      venvPath,
+      appDir,
+      pythonEnv,
+      outputDir,
+      entrypointAbs,
+      'app'
+    );
+    expect(result).not.toBeNull();
+    expect(result!.runtimeRequiredSourcePaths).toEqual([
+      fs.realpathSync(path.join(frontendDir, '404.html')),
+    ]);
+
+    const lambdaFiles = await glob('**', { cwd: appDir });
+    await pruneFastAPIFrontendFiles(lambdaFiles, appDir, result!);
+
+    expect(lambdaFiles['frontend/404.html']).toBeDefined();
+    expect(lambdaFiles['frontend/index.html']).toBeUndefined();
+    expect(lambdaFiles['frontend/app.js']).toBeUndefined();
+    expect(isDirectory(lambdaFiles.frontend.mode)).toBe(true);
   });
 
   it('preserves multiple frontend mounts', async () => {
@@ -280,6 +415,92 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
       true
     );
     expect(fs.existsSync(path.join(outputDir, 'assets', 'app.js'))).toBe(true);
+  });
+
+  it('preserves more-specific frontend precedence in either registration order', async () => {
+    for (const nestedFirst of [false, true]) {
+      const suffix = nestedFirst ? 'nested-first' : 'root-first';
+      const appDir = path.join(testDir, `app-precedence-${suffix}`);
+      const outputDir = path.join(testDir, `output-precedence-${suffix}`);
+      const rootDir = path.join(appDir, 'root-frontend');
+      const nestedDir = path.join(appDir, 'nested-frontend');
+      fs.mkdirSync(path.join(rootDir, 'admin'), { recursive: true });
+      fs.mkdirSync(nestedDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(rootDir, 'admin', 'shared.txt'),
+        'root shared'
+      );
+      fs.writeFileSync(
+        path.join(rootDir, 'admin', 'root-only.txt'),
+        'root only'
+      );
+      fs.writeFileSync(path.join(nestedDir, 'shared.txt'), 'nested shared');
+      const entrypointAbs = path.join(appDir, 'main.py');
+      const rootRegistration = 'app.frontend("/", directory="root-frontend")';
+      const nestedRegistration = [
+        'nested = APIRouter()',
+        'nested.frontend("/", directory="nested-frontend")',
+        'app.include_router(nested, prefix="/admin")',
+      ].join('\n');
+      fs.writeFileSync(
+        entrypointAbs,
+        [
+          'from fastapi import APIRouter, FastAPI',
+          'app = FastAPI()',
+          ...(nestedFirst
+            ? [nestedRegistration, rootRegistration]
+            : [rootRegistration, nestedRegistration]),
+        ].join('\n')
+      );
+
+      await runFastAPICollectStatic(
+        venvPath,
+        appDir,
+        pythonEnv,
+        outputDir,
+        entrypointAbs,
+        'app'
+      );
+
+      expect(
+        fs.readFileSync(path.join(outputDir, 'admin', 'shared.txt'), 'utf8')
+      ).toBe('nested shared');
+      expect(
+        fs.existsSync(path.join(outputDir, 'admin', 'root-only.txt'))
+      ).toBe(false);
+    }
+  });
+
+  it('preserves registration order for equally specific frontends', async () => {
+    const appDir = path.join(testDir, 'app-equal-precedence');
+    const outputDir = path.join(testDir, 'output-equal-precedence');
+    fs.mkdirSync(path.join(appDir, 'first'), { recursive: true });
+    fs.mkdirSync(path.join(appDir, 'second'), { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'first', 'shared.txt'), 'first');
+    fs.writeFileSync(path.join(appDir, 'second', 'shared.txt'), 'second');
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'app = FastAPI()',
+        'app.frontend("/same", directory="first")',
+        'app.frontend("/same", directory="second")',
+      ].join('\n')
+    );
+
+    await runFastAPICollectStatic(
+      venvPath,
+      appDir,
+      pythonEnv,
+      outputDir,
+      entrypointAbs,
+      'app'
+    );
+
+    expect(
+      fs.readFileSync(path.join(outputDir, 'same', 'shared.txt'), 'utf8')
+    ).toBe('first');
   });
 
   it('does not let a frontend file beat a colliding API route', async () => {

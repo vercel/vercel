@@ -91,6 +91,7 @@ import {
   FileBlob,
   Span,
   download,
+  isDirectory,
   sanitizeConsumerName,
 } from '@vercel/build-utils';
 import { getServiceCrons } from '../src/crons';
@@ -99,6 +100,7 @@ import {
   detectPythonEntrypoint,
   detectEntrypoint,
 } from '../src/entrypoint';
+import { isUvPlatformCompatibleWithHost } from '../src/platform-info';
 import execa from 'execa';
 
 function getBuildOutputV2(result: Awaited<ReturnType<typeof build>>) {
@@ -117,6 +119,35 @@ function getBuildOutputV3(result: Awaited<ReturnType<typeof build>>) {
   expect(result.resultVersion).toBe(3);
   return (result as any).result.output as BuildResultV3['output'];
 }
+
+describe('FastAPI inspection platform compatibility', () => {
+  it('requires a host environment for cross-platform and cross-architecture wheels', () => {
+    expect(
+      isUvPlatformCompatibleWithHost(
+        'x86_64-unknown-linux-gnu',
+        'darwin',
+        'x64'
+      )
+    ).toBe(false);
+    expect(
+      isUvPlatformCompatibleWithHost(
+        'aarch64-unknown-linux-gnu',
+        'linux',
+        'x64'
+      )
+    ).toBe(false);
+    expect(
+      isUvPlatformCompatibleWithHost(
+        'aarch64-unknown-linux-gnu',
+        'linux',
+        'arm64'
+      )
+    ).toBe(true);
+    expect(isUvPlatformCompatibleWithHost(undefined, 'win32', 'x64')).toBe(
+      true
+    );
+  });
+});
 
 /**
  * Build a PythonConstraint from a PEP 440 version specifier string.
@@ -1436,10 +1467,18 @@ describe('fastapi entrypoint discovery - positive cases', () => {
     vi.mocked(runFastAPICollectStatic).mockImplementationOnce(async () => {
       fs.mkdirSync(outputStaticDir, { recursive: true });
       fs.writeFileSync(path.join(outputStaticDir, 'index.html'), 'frontend');
+      fs.writeFileSync(path.join(outputStaticDir, 'app.js'), 'frontend js');
       return {
         collectedMounts: ['/'],
-        collectedRequestPaths: ['/', '/index.html'],
+        collectedRequestPaths: ['/', '/index.html', '/app.js'],
         sourceDirectories: [path.join(workPath, 'frontend')],
+        promotedSourcePaths: [
+          path.join(workPath, 'frontend', 'index.html'),
+          path.join(workPath, 'frontend', 'app.js'),
+        ],
+        runtimeRequiredSourcePaths: [
+          path.join(workPath, 'frontend', 'index.html'),
+        ],
         cdnOutputDir: outputStaticDir,
       };
     });
@@ -1453,6 +1492,7 @@ describe('fastapi entrypoint discovery - positive cases', () => {
         ].join('\n'),
       }),
       'frontend/index.html': new FileBlob({ data: 'frontend' }),
+      'frontend/app.js': new FileBlob({ data: 'frontend js' }),
       'pyproject.toml': new FileBlob({
         data: [
           '[project]',
@@ -1502,10 +1542,13 @@ describe('fastapi entrypoint discovery - positive cases', () => {
     expect(handler?.data.toString()).toContain(
       '"__VC_FASTAPI_FRONTEND_AUTO": "1"'
     );
+    const appLambda = output.output['index'] as any;
+    expect(appLambda.files?.['frontend/index.html']).toBeDefined();
+    expect(appLambda.files?.['frontend/app.js']).toBeUndefined();
+    expect(isDirectory(appLambda.files?.frontend.mode)).toBe(true);
     expect(proxyLambda.files?.['frontend/index.html']).toBeUndefined();
-    expect(
-      proxyLambda.files?.['frontend/.vercel-proxy-placeholder']
-    ).toBeDefined();
+    expect(proxyLambda.files?.['frontend/app.js']).toBeUndefined();
+    expect(isDirectory(proxyLambda.files?.frontend.mode)).toBe(true);
 
     const proxyGroupSync = vi
       .mocked(execa)
@@ -4702,7 +4745,9 @@ describe('custom install hooks', () => {
     const originalBuildImage = process.env.VERCEL_BUILD_IMAGE;
     const originalPythonPlatform = process.env.VERCEL_BUILD_ARCH;
     delete process.env.VERCEL_BUILD_IMAGE;
-    process.env.VERCEL_BUILD_ARCH = 'aarch64';
+    const targetArch = process.arch === 'arm64' ? 'x86_64' : 'aarch64';
+    const targetPlatform = `${targetArch}-unknown-linux-gnu`;
+    process.env.VERCEL_BUILD_ARCH = targetArch;
 
     const realBuildUtils = await vi.importActual<
       typeof import('@vercel/build-utils')
@@ -4782,13 +4827,16 @@ describe('custom install hooks', () => {
 
     expect(mockUvSync).toHaveBeenCalledWith(
       expect.objectContaining({
-        pythonPlatform: 'aarch64-unknown-linux-gnu',
+        pythonPlatform: targetPlatform,
       })
     );
+    const inspectionSync = mockUvSync.mock.calls.find(call =>
+      call[0].venvPath.includes('fastapi-inspect')
+    );
+    expect(inspectionSync).toBeDefined();
+    expect(inspectionSync?.[0].pythonPlatform).toBeUndefined();
     expect(
-      mockUvPip.mock.calls.some(call =>
-        call[0].args.includes('aarch64-unknown-linux-gnu')
-      )
+      mockUvPip.mock.calls.some(call => call[0].args.includes(targetPlatform))
     ).toBe(true);
   });
 });

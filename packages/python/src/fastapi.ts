@@ -1,7 +1,14 @@
 import fs from 'fs';
-import { dirname, join } from 'path';
+import { dirname, isAbsolute, join, relative } from 'path';
 import execa from 'execa';
-import { debug, NowBuildError, readConfigFile } from '@vercel/build-utils';
+import {
+  debug,
+  FileFsRef,
+  NowBuildError,
+  readConfigFile,
+  type Files,
+} from '@vercel/build-utils';
+import { entrypointToModule } from './entrypoint';
 import { getVenvPythonBin } from './utils';
 
 const scriptPath = join(__dirname, '..', 'templates', 'vc_fastapi_static.py');
@@ -38,6 +45,8 @@ export interface FastAPIStaticFile {
 export interface FastAPIStaticDiscovery {
   mounts: FastAPIStaticMount[];
   files: FastAPIStaticFile[];
+  /** Files needed by FastAPI for SPA or custom 404 fallback responses. */
+  runtimeFiles: string[];
 }
 
 export interface FastAPICollectStaticResult {
@@ -47,12 +56,13 @@ export interface FastAPICollectStaticResult {
   collectedRequestPaths: string[];
   /** Source directories registered through app.frontend(). */
   sourceDirectories: string[];
+  /** Concrete source files copied into CDN output. */
+  promotedSourcePaths: string[];
+  /** Promoted files that FastAPI must also retain for fallback responses. */
+  runtimeRequiredSourcePaths: string[];
   /** Absolute path to the directory where CDN static files were written. */
   cdnOutputDir: string;
 }
-
-const _STATIC_FILE_COLLECTION_ERROR_MESSAGE =
-  'Warning: FastAPI static file collection failed. Static files will not be served from the CDN.';
 
 function fastAPIFrontendConfigError(message: string): NowBuildError {
   return new NowBuildError({
@@ -146,9 +156,94 @@ export async function getFastAPIFrontendConfig(
   };
 }
 
+function fastAPIFrontendDiscoveryError(
+  moduleName: string,
+  variableName: string,
+  detail: string
+): NowBuildError {
+  return new NowBuildError({
+    code: 'PYTHON_FASTAPI_FRONTEND_DISCOVERY_FAILED',
+    message:
+      `could not inspect FastAPI application "${moduleName}:${variableName}" ` +
+      `for frontend CDN delivery:\n${detail}`,
+  });
+}
+
+function getErrorDetail(error: unknown): string {
+  if (error && typeof error === 'object') {
+    const stderr = Reflect.get(error, 'stderr');
+    if (typeof stderr === 'string' && stderr.trim()) {
+      return stderr.trim();
+    }
+    const message = Reflect.get(error, 'message');
+    if (typeof message === 'string' && message.trim()) {
+      return message.trim();
+    }
+  }
+  return String(error);
+}
+
+function getBundledPath(workPath: string, absolutePath: string): string | null {
+  const relativePath = relative(
+    fs.realpathSync(workPath),
+    fs.realpathSync(absolutePath)
+  );
+  if (isAbsolute(relativePath)) return null;
+  const normalized = relativePath.replace(/\\/g, '/');
+  if (normalized === '..' || normalized.startsWith('../')) return null;
+  return normalized;
+}
+
+export async function addFastAPIFrontendDirectories(
+  files: Files,
+  workPath: string,
+  sourceDirectories: string[]
+): Promise<void> {
+  await Promise.all(
+    [...new Set(sourceDirectories)].map(async directory => {
+      // check_dir=False permits a frontend directory that does not exist.
+      if (!fs.existsSync(directory)) return;
+      const bundledPath = getBundledPath(workPath, directory);
+      // The application root already exists because it contains the
+      // entrypoint. Directories outside the function root cannot be bundled.
+      if (!bundledPath) return;
+      const stats = await fs.promises.stat(directory);
+      files[bundledPath] = new FileFsRef({
+        fsPath: directory,
+        mode: stats.mode,
+        size: stats.size,
+      });
+    })
+  );
+}
+
 /**
- * Discover StaticFiles mounts by importing the entrypoint via a Python shim
- * run with the build venv Python. The venv already contains the user's
+ * Remove concrete CDN-owned assets from a Lambda while retaining FastAPI's
+ * fallback files and explicit empty directory entries for check_dir=True.
+ */
+export async function pruneFastAPIFrontendFiles(
+  files: Files,
+  workPath: string,
+  result: FastAPICollectStaticResult
+): Promise<void> {
+  const runtimeFiles = new Set(result.runtimeRequiredSourcePaths);
+  for (const sourcePath of result.promotedSourcePaths) {
+    if (runtimeFiles.has(sourcePath)) continue;
+    const bundledPath = getBundledPath(workPath, sourcePath);
+    if (bundledPath) {
+      delete files[bundledPath];
+    }
+  }
+  await addFastAPIFrontendDirectories(
+    files,
+    workPath,
+    result.sourceDirectories
+  );
+}
+
+/**
+ * Discover StaticFiles mounts by importing the entrypoint module via a Python
+ * shim run with the build venv Python. The venv already contains the user's
  * fastapi/starlette dependencies installed during the build step.
  */
 export async function getFastAPIStaticMounts(
@@ -181,6 +276,9 @@ export async function getFastAPIStaticDiscovery(
   workPath: string
 ): Promise<FastAPIStaticDiscovery> {
   const pythonPath = getVenvPythonBin(venvPath);
+  const moduleName = entrypointToModule(
+    relative(workPath, entrypointAbs).replace(/\\/g, '/')
+  );
   const outputPath = join(
     workPath,
     '.vercel',
@@ -190,31 +288,37 @@ export async function getFastAPIStaticDiscovery(
   await fs.promises.mkdir(join(workPath, '.vercel', 'python'), {
     recursive: true,
   });
+  await fs.promises.rm(outputPath, { force: true });
   try {
-    const { stderr } = await execa(
-      pythonPath,
-      [scriptPath, entrypointAbs, variableName, outputPath],
-      { env, cwd: workPath }
-    );
-    if (stderr) {
-      debug(`FastAPI shim stderr:\n${stderr}`);
+    try {
+      const { stderr } = await execa(
+        pythonPath,
+        [scriptPath, moduleName, variableName, outputPath],
+        { env, cwd: workPath }
+      );
+      if (stderr) {
+        debug(`FastAPI shim stderr:\n${stderr}`);
+      }
+    } catch (error) {
+      throw fastAPIFrontendDiscoveryError(
+        moduleName,
+        variableName,
+        getErrorDetail(error)
+      );
     }
-  } catch (err: any) {
-    console.error(_STATIC_FILE_COLLECTION_ERROR_MESSAGE);
-    debug(
-      `FastAPI: could not discover static mounts: ${err?.stderr ?? err?.message ?? err}`
-    );
-    return { mounts: [], files: [] };
-  }
-  try {
-    const raw = await fs.promises.readFile(outputPath, 'utf8');
-    const parsed = JSON.parse(raw) as FastAPIStaticDiscovery;
-    debug(`FastAPI: discovered frontend files: ${JSON.stringify(parsed)}`);
-    return parsed;
-  } catch {
-    console.error(_STATIC_FILE_COLLECTION_ERROR_MESSAGE);
-    debug(`FastAPI: could not read shim output file: ${outputPath}`);
-    return { mounts: [], files: [] };
+
+    try {
+      const raw = await fs.promises.readFile(outputPath, 'utf8');
+      const parsed = JSON.parse(raw) as FastAPIStaticDiscovery;
+      debug(`FastAPI: discovered frontend files: ${JSON.stringify(parsed)}`);
+      return parsed;
+    } catch (error) {
+      throw fastAPIFrontendDiscoveryError(
+        moduleName,
+        variableName,
+        `could not read discovery output file "${outputPath}": ${getErrorDetail(error)}`
+      );
+    }
   } finally {
     await fs.promises.rm(outputPath, { force: true });
   }
@@ -263,6 +367,8 @@ export async function runFastAPICollectStatic(
     collectedMounts: discovery.mounts.map(m => m.urlPath),
     collectedRequestPaths: discovery.files.flatMap(file => file.requestPaths),
     sourceDirectories: discovery.mounts.map(m => m.directory),
+    promotedSourcePaths: discovery.files.map(file => file.sourcePath),
+    runtimeRequiredSourcePaths: discovery.runtimeFiles,
     cdnOutputDir: outputStaticDir,
   };
 }
