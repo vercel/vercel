@@ -118,6 +118,32 @@ describe('buy addon', () => {
       const exitCode = await buy(client);
       expect(exitCode).toBe(0);
     });
+
+    it.each([
+      'flatRateCdnBase',
+      'flatRateCdnStandard',
+      'flatRateCdnAdvanced',
+    ])('purchases the %s addon', async productAlias => {
+      setupTeam();
+      useBuyEndpoint((req, res) => {
+        expect(req.body).toEqual({
+          item: {
+            type: 'addon',
+            productAlias,
+            quantity: 1,
+          },
+        });
+        res.json({
+          subscriptionIntent: {
+            id: 'subint_test_123',
+            status: 'succeeded',
+          },
+        });
+      });
+      client.setArgv('buy', 'addon', productAlias, '1', '--yes');
+
+      expect(await buy(client)).toBe(0);
+    });
   });
 
   describe('confirmation prompt', () => {
@@ -260,6 +286,10 @@ describe('buy addon', () => {
       client.setArgv('buy', 'addon', '--help');
       const exitCode = await buy(client);
       expect(exitCode).toBe(2);
+      const output = client.stderr.getFullOutput();
+      expect(output).toContain('flatRateCdnBase');
+      expect(output).toContain('flatRateCdnStandard');
+      expect(output).toContain('flatRateCdnAdvanced');
     });
 
     it('tracks telemetry', async () => {
