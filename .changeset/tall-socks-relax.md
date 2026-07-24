@@ -3,4 +3,4 @@
 '@vercel/python': minor
 ---
 
-Add [tool.vercel.fastapi] static_cdn opt-out flag.
+Add [tool.vercel.fastapi.static] cdn opt-out flag.
