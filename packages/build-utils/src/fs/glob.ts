@@ -2,7 +2,8 @@ import path from 'path';
 import assert from 'assert';
 import vanillaGlob_ from 'glob';
 import { promisify } from 'util';
-import { lstat, readlink, Stats } from 'fs-extra';
+import { lstat, readlink } from 'fs/promises';
+import type { Stats } from 'fs';
 import { normalizePath } from './normalize-path';
 import FileFsRef from '../file-fs-ref';
 
@@ -63,20 +64,31 @@ export default async function glob(
 
     // When `follow` mode is enabled, ensure that the entry is not a symlink
     // that points to outside of `cwd`
-    if (
-      options.follow &&
-      (isSymlink || (await lstat(fsPath)).isSymbolicLink())
-    ) {
-      const target = await readlink(absPath);
-      const absTarget = path.resolve(path.dirname(absPath), target);
-      if (path.relative(options.cwd, absTarget).startsWith(`..${path.sep}`)) {
-        continue;
+    let symlinkStat: Stats | undefined;
+    if (options.follow) {
+      if (isSymlink) {
+        symlinkStat = await lstat(fsPath);
+      } else {
+        const lstats = await lstat(fsPath);
+        if (lstats.isSymbolicLink()) {
+          symlinkStat = lstats;
+        }
+      }
+
+      if (symlinkStat) {
+        const target = await readlink(absPath);
+        const absTarget = path.resolve(path.dirname(absPath), target);
+        if (path.relative(options.cwd, absTarget).startsWith(`..${path.sep}`)) {
+          continue;
+        }
       }
     }
 
     if (isSymlink || stat.isFile() || stat.isDirectory()) {
       if (isSymlink) {
-        stat = await lstat(absPath);
+        // Reuse symlinkStat from above if available (when follow=true),
+        // otherwise call lstat (when follow=false)
+        stat = symlinkStat ?? (await lstat(fsPath));
       }
 
       // Some bookkeeping to track which directories already have entries within
