@@ -21,6 +21,7 @@ import {
   readmeObjectSchema as generatedReadmeObjectSchema,
   readmeSchema as generatedReadmeSchema,
   pyProjectToolVercelFastapiSectionSchema as generatedPyProjectToolVercelFastapiSectionSchema,
+  pyProjectToolVercelFastapiStaticSectionSchema as generatedPyProjectToolVercelFastapiStaticSectionSchema,
   pyProjectToolVercelSectionSchema as generatedPyProjectToolVercelSectionSchema,
 } from './schema.zod';
 
@@ -36,6 +37,7 @@ import type {
   Readme,
   ReadmeObject,
   PyProjectToolVercelFastapiSection,
+  PyProjectToolVercelFastapiStaticSection,
   PyProjectToolVercelSection,
 } from './types';
 
@@ -96,6 +98,12 @@ export const PyProjectToolVercelSectionSchema =
  */
 export const PyProjectToolVercelFastapiSectionSchema =
   generatedPyProjectToolVercelFastapiSectionSchema as z.ZodType<PyProjectToolVercelFastapiSection>;
+
+/**
+ * Schema for [tool.vercel.fastapi.static] section.
+ */
+export const PyProjectToolVercelFastapiStaticSectionSchema =
+  generatedPyProjectToolVercelFastapiStaticSectionSchema as z.ZodType<PyProjectToolVercelFastapiStaticSection>;
 
 /**
  * Schema for [tool.FOO] section.

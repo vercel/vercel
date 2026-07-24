@@ -107,7 +107,14 @@ export interface PyProjectToolVercelSection {
  * [tool.vercel.fastapi] section.
  */
 export interface PyProjectToolVercelFastapiSection {
-  static_cdn?: boolean;
+  static?: PyProjectToolVercelFastapiStaticSection;
+}
+
+/**
+ * [tool.vercel.fastapi.static] section.
+ */
+export interface PyProjectToolVercelFastapiStaticSection {
+  cdn?: boolean;
 }
 
 /**

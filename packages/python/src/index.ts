@@ -480,10 +480,10 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
       return;
     }
 
-    const staticCdn = pyprojectData?.tool?.vercel?.fastapi?.static_cdn;
+    const staticCdn = pyprojectData?.tool?.vercel?.fastapi?.static?.cdn;
     if (staticCdn === false) {
       debug(
-        'FastAPI: static_cdn = false in pyproject.toml, skipping CDN collection'
+        'FastAPI: static.cdn = false in pyproject.toml, skipping CDN collection'
       );
       return;
     }

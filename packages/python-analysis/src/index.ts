@@ -124,6 +124,7 @@ export {
   ReadmeObjectSchema,
   ReadmeSchema,
   PyProjectToolVercelFastapiSectionSchema,
+  PyProjectToolVercelFastapiStaticSectionSchema,
   PyProjectToolVercelSectionSchema,
 } from './manifest/pyproject/schema';
 
@@ -142,6 +143,7 @@ export type {
   Readme,
   ReadmeObject,
   PyProjectToolVercelFastapiSection,
+  PyProjectToolVercelFastapiStaticSection,
   PyProjectToolVercelSection,
 } from './manifest/pyproject/types';
 
