@@ -1307,6 +1307,11 @@ async function doBuild(
         // the project-level framework is 'services'.
         const builderFramework =
           build.config?.framework ?? projectSettings.framework;
+        // Backend framework detected for api/ dir builds.
+        const apiDirFramework: string | undefined =
+          isZeroConfig && !service && !isFrontendBuilder
+            ? await detectApiDirFramework(build.use ?? '', buildWorkPath)
+            : undefined;
 
         let buildConfig: Config;
 
@@ -1349,11 +1354,7 @@ async function doBuild(
               buildCommand: projectSettings.buildCommand ?? undefined,
               framework: isFrontendBuilder
                 ? projectSettings.framework
-                : (build.config?.framework ??
-                  (await detectApiDirFramework(
-                    build.use ?? '',
-                    buildWorkPath
-                  ))),
+                : undefined,
               nodeVersion: projectSettings.nodeVersion,
               bunVersion: localConfig.bunVersion ?? undefined,
             };
@@ -1544,7 +1545,11 @@ async function doBuild(
                           workspace,
                           key: fullKey,
                           buildConfig: buildConfig,
-                          manifest: packageManifest,
+                          manifest: {
+                            ...packageManifest,
+                            framework:
+                              packageManifest.framework ?? apiDirFramework,
+                          },
                           service,
                           builderUse: builderPkg.name,
                         });
@@ -3005,11 +3010,10 @@ async function writeFlagsJSON(
 /**
  * Detects the framework used by an api/dir builder.
  *
- * Runs a narrow scan scoped to the builder's own frameworks. Memoised so
- * multiple api/dir files of the same type share one filesystem scan.
+ * Runs a narrow scan scoped to the builder's own frameworks; builders with
+ * no framework mappings (e.g. `@vercel/node`) return without touching the
+ * filesystem.
  */
-const apiDirFrameworkCache = new Map<string, Promise<string[]>>();
-
 async function detectApiDirFramework(
   builderUse: string,
   workPath: string
@@ -3017,13 +3021,10 @@ async function detectApiDirFramework(
   const runtimeFrameworks = builderToFrameworks.get(builderUse) ?? [];
   if (runtimeFrameworks.length === 0) return undefined;
 
-  const cacheKey = `${builderUse}:${workPath}`;
-  let cached = apiDirFrameworkCache.get(cacheKey);
-  if (!cached) {
-    cached = detectAllFrameworks(workPath, runtimeFrameworks).catch(() => []);
-    apiDirFrameworkCache.set(cacheKey, cached);
-  }
-  const detectedSlugs = await cached;
+  const detectedSlugs = await detectAllFrameworks(
+    workPath,
+    runtimeFrameworks
+  ).catch(() => []);
   // Return the framework only when exactly one is detected. Zero means none
   // found; more than one means ambiguous (e.g. fastapi + flask), so return
   // undefined rather than picking arbitrarily.
