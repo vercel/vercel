@@ -16,6 +16,23 @@ export function isEngineInstalled(engine: VcrEngine): boolean {
 }
 
 /**
+ * Splits the caller's argv at `--`: everything before is parsed as Vercel
+ * arguments, everything after is forwarded verbatim to the engine. The router's
+ * permissive parse drops the `--` marker, so it is recovered from `client.argv`
+ * (same approach as `vercel env pull -- <cmd>`).
+ */
+export function splitPassthrough(argv: string[]): {
+  own: string[];
+  passthrough: string[];
+} {
+  const idx = argv.indexOf('--');
+  if (idx === -1) {
+    return { own: argv.slice(2), passthrough: [] };
+  }
+  return { own: argv.slice(2, idx), passthrough: argv.slice(idx + 1) };
+}
+
+/**
  * Docker only supports zstd compression through the Buildx `--output` exporter,
  * which fuses build and push into one step. Detect it by probing `docker buildx
  * version` (Buildx is a CLI plugin, so it is not always on PATH as its own
@@ -49,8 +66,16 @@ export interface EngineLoginResult {
   stderr: string;
 }
 
-/** stderr signatures that mean the registry rejected our credentials. */
-export const AUTH_FAILURE = /denied|forbidden|unauthorized|401|403/i;
+/**
+ * stderr signatures that mean the registry rejected our credentials. Anchored on
+ * the OCI/registry error-code format (`unauthorized:`, `denied:`, `forbidden:`)
+ * and the canonical auth phrases, so a build-step failure that merely mentions
+ * "permission denied" or an incidental `401`/`403` in progress output is not
+ * misread as an auth failure (the fused Buildx build+push emits the whole build
+ * log on stderr).
+ */
+export const AUTH_FAILURE =
+  /\b(?:unauthorized|denied|forbidden)\b\s*:|authentication required|access to the resource is denied|\b(?:401 unauthorized|403 forbidden)\b/i;
 
 /** Last few lines of engine stderr, for surfacing an unexpected failure. */
 export function stderrTail(stderr: string): string {

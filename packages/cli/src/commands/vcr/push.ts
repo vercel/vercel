@@ -20,26 +20,15 @@ import {
   pushCompressionArgs,
   resolveRegistry,
   runEngine,
+  splitPassthrough,
   type VcrEngine,
 } from './utils/engine';
 import {
+  DEFAULT_TAG,
   buildRepositoryReference,
   parseNameArg,
   validateImageParts,
 } from './utils/image-ref';
-
-const DEFAULT_TAG = 'latest';
-
-function splitPassthrough(argv: string[]): {
-  own: string[];
-  passthrough: string[];
-} {
-  const idx = argv.indexOf('--');
-  if (idx === -1) {
-    return { own: argv.slice(2), passthrough: [] };
-  }
-  return { own: argv.slice(2, idx), passthrough: argv.slice(idx + 1) };
-}
 
 export default async function push(
   client: Client,
@@ -162,8 +151,8 @@ export default async function push(
   const engineArgs = [
     'push',
     ...pushCompressionArgs(engine),
-    ref,
     ...passthrough,
+    ref,
   ];
 
   output.log(`Running: ${engine} ${engineArgs.join(' ')}`);

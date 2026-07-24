@@ -7,6 +7,9 @@ const REPOSITORY_PATTERN = /^[a-z0-9]+(?:(?:\.|_|__|-+)[a-z0-9]+)*$/;
 /** OCI tag: up to 128 chars of letters, digits, `_`, `.`, `-`. */
 const TAG_PATTERN = /^[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}$/;
 
+/** Tag applied when the user does not type one. */
+export const DEFAULT_TAG = 'latest';
+
 export interface ParsedName {
   repository: string;
   /** Left `undefined` when no `:tag` was typed, so callers can default it. */

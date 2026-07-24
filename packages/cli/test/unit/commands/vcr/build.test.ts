@@ -346,6 +346,30 @@ describe('vcr build', () => {
       expect(client.stderr.getFullOutput()).toContain('was rejected');
     });
 
+    it('does not misreport a build-step failure as an auth failure', async () => {
+      // The fused Buildx build+push emits the whole build log on stderr; a
+      // failing RUN step that mentions "permission denied" must not be read as
+      // a registry credential rejection.
+      mockedExeca.mockImplementation(((_cmd: string, args: string[]) => {
+        if (args[0] === 'buildx' && args[1] === 'version') {
+          return Promise.resolve({ exitCode: 0 });
+        }
+        const subprocess: any = Promise.resolve({
+          exitCode: 1,
+          stderr: 'RUN apt-get update\n/bin/sh: permission denied',
+        });
+        subprocess.stderr = { pipe: vi.fn() };
+        return subprocess;
+      }) as any);
+
+      client.setArgv('vcr', 'build', 'docker', '--push');
+      const exitCode = await vcr(client);
+      expect(exitCode).toBe(1);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).not.toContain('was rejected');
+      expect(stderr).toContain('failed (exit code 1)');
+    });
+
     it('tracks the push flag telemetry', async () => {
       client.setArgv('vcr', 'build', 'docker', '--push');
       const exitCode = await vcr(client);

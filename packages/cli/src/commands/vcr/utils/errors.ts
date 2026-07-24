@@ -100,6 +100,33 @@ export function handleVcrApiError(
 }
 
 /**
+ * Reports a non-auth engine command failure (a build, or a push that failed for
+ * a reason other than credentials), surfacing the engine's exit code and stderr
+ * tail. Always returns 1.
+ */
+export function reportEngineCommandFailure(
+  client: Client,
+  engine: VcrEngine,
+  verb: string,
+  result: { exitCode: number; stderr: string }
+): number {
+  const tail = stderrTail(result.stderr);
+  const message = `\`${engine} ${verb}\` failed (exit code ${result.exitCode}).${
+    tail ? `\n${tail}` : ''
+  }`;
+  outputAgentError(
+    client,
+    {
+      status: 'error',
+      reason: 'command_failed',
+      message,
+    },
+    1
+  );
+  return outputError(client, false, 'COMMAND_FAILED', message);
+}
+
+/**
  * Reports a failed engine operation that talks to the registry (a push, or a
  * fused Buildx build+push). An auth-failure signature hints re-login; anything
  * else surfaces the engine's exit code and stderr tail. Always returns 1.
@@ -133,20 +160,7 @@ export function reportEnginePushFailure(
     return outputError(client, false, 'NOT_AUTHORIZED', message);
   }
 
-  const tail = stderrTail(result.stderr);
-  const message = `\`${engine} ${verb}\` failed (exit code ${result.exitCode}).${
-    tail ? `\n${tail}` : ''
-  }`;
-  outputAgentError(
-    client,
-    {
-      status: 'error',
-      reason: 'command_failed',
-      message,
-    },
-    1
-  );
-  return outputError(client, false, 'COMMAND_FAILED', message);
+  return reportEngineCommandFailure(client, engine, verb, result);
 }
 
 export function emitVcrArgParseError(

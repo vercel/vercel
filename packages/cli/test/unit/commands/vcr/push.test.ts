@@ -152,8 +152,8 @@ describe('vcr push', () => {
       'docker',
       [
         'push',
-        'vcr.vercel.com/my-team/vcr-project/vcr-project:latest',
         '--quiet',
+        'vcr.vercel.com/my-team/vcr-project/vcr-project:latest',
       ],
       { cwd: tmpDir, stdio: ['inherit', 'inherit', 'pipe'], reject: false }
     );

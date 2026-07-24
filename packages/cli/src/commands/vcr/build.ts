@@ -13,7 +13,11 @@ import type { VcrTelemetryClient } from '../../util/telemetry/commands/vcr';
 import { buildSubcommand } from './command';
 import { resolveVcrScope } from './utils/resolve-vcr-scope';
 import { validateVcrChoice } from './utils/validators';
-import { emitVcrArgParseError, reportEnginePushFailure } from './utils/errors';
+import {
+  emitVcrArgParseError,
+  reportEngineCommandFailure,
+  reportEnginePushFailure,
+} from './utils/errors';
 import {
   VCR_ENGINES,
   isBuildxAvailable,
@@ -21,33 +25,17 @@ import {
   pushCompressionArgs,
   resolveRegistry,
   runEngine,
+  splitPassthrough,
   type VcrEngine,
 } from './utils/engine';
 import {
+  DEFAULT_TAG,
   buildRepositoryReference,
   parseNameArg,
   validateImageParts,
 } from './utils/image-ref';
 
 const DEFAULT_PLATFORM = 'linux/amd64';
-const DEFAULT_TAG = 'latest';
-
-/**
- * Splits the caller's argv at `--`: everything before is parsed as Vercel
- * arguments, everything after is forwarded verbatim to the engine. The router's
- * permissive parse drops the `--` marker, so it is recovered from `client.argv`
- * (same approach as `vercel env pull -- <cmd>`).
- */
-function splitPassthrough(argv: string[]): {
-  own: string[];
-  passthrough: string[];
-} {
-  const idx = argv.indexOf('--');
-  if (idx === -1) {
-    return { own: argv.slice(2), passthrough: [] };
-  }
-  return { own: argv.slice(2, idx), passthrough: argv.slice(idx + 1) };
-}
 
 export default async function build(
   client: Client,
@@ -224,17 +212,7 @@ export default async function build(
 
   const result = await runEngine(engine, engineArgs, { cwd: client.cwd });
   if (result.exitCode !== 0) {
-    const message = `\`${engine} build\` failed (exit code ${result.exitCode}).`;
-    outputAgentError(
-      client,
-      {
-        status: 'error',
-        reason: 'command_failed',
-        message,
-      },
-      1
-    );
-    return outputError(client, false, 'COMMAND_FAILED', message);
+    return reportEngineCommandFailure(client, engine, 'build', result);
   }
 
   if (!push) {
