@@ -1,19 +1,11 @@
 name: Release Binary
 
 on:
-  push:
-    tags:
-      - 'vercel@*'
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Existing tag to build (e.g. vercel@53.3.1)
-        required: true
   workflow_call:
     inputs:
       tag:
         description: Existing tag to build (e.g. vercel@53.3.1)
-        required: false
+        required: true
         type: string
       upload_to_release:
         description: Upload built binaries to the matching GitHub Release
@@ -43,7 +35,7 @@ env:
   TURBO_REMOTE_ONLY: 'true'
 
 concurrency:
-  group: release-binary-${{ inputs.tag || github.ref }}
+  group: release-binary-${{ inputs.tag }}
   cancel-in-progress: false
 
 jobs:
@@ -107,7 +99,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ inputs.tag }}
 
       - name: Setup Turborepo Remote Cache
         uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
@@ -298,11 +290,11 @@ jobs:
           if-no-files-found: error
 
       - name: Wait for GitHub Release
-        if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' || inputs.upload_to_release }}
+        if: ${{ inputs.upload_to_release }}
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ inputs.tag || github.ref_name }}
+          TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
           release_url="$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/tags/$TAG"
@@ -328,12 +320,12 @@ jobs:
           exit 1
 
       - name: Upload to GitHub Release
-        if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' || inputs.upload_to_release }}
+        if: ${{ inputs.upload_to_release }}
         shell: bash
         working-directory: packages/cli
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ inputs.tag || github.ref_name }}
+          TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
 
@@ -404,7 +396,7 @@ jobs:
 
   publish-npm:
     name: Publish native npm packages
-    if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' || inputs.publish_native }}
+    if: ${{ inputs.publish_native }}
     runs-on: ubuntu-latest
     environment: release
     permissions:
@@ -416,7 +408,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ inputs.tag }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -440,24 +432,9 @@ jobs:
         shell: bash
         env:
           NPM_CONFIG_PROVENANCE: 'true'
-          INPUT_TAG: ${{ inputs.tag }}
-        run: |
-          if [[ "$GITHUB_REF_TYPE" == "tag" || -n "$INPUT_TAG" ]]; then
-            node packages/vc-native/scripts/publish-packages.mjs
-          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
-            version="$(node -p "require('./packages/cli/package.json').version")"
-            latest="$(npm view vercel version)"
-            if [[ "$version" == "$latest" ]]; then
-              node packages/vc-native/scripts/publish-packages.mjs
-            else
-              node packages/vc-native/scripts/publish-packages.mjs --tag "rebuild-$version"
-            fi
-          else
-            node packages/vc-native/scripts/publish-packages.mjs --dry-run
-          fi
+        run: node packages/vc-native/scripts/publish-packages.mjs
 
       - name: Verify @vercel/vc-native global install
-        if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' || inputs.publish_native }}
         shell: bash
         run: |
           set -euo pipefail

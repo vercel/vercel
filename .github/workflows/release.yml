@@ -88,6 +88,12 @@ jobs:
           NPM_CONFIG_PROVENANCE: 'true'
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
+      # A vercel release happened when the changesets action actually
+      # published this run (`published == 'true'`) AND the `vercel` package
+      # was one of the packages it published. When both hold, the changesets
+      # action has already pushed the `vercel@<version>` git tag and created
+      # the matching GitHub Release, so we emit that tag for the downstream
+      # release-binary job to build and attach binaries to.
       - name: Determine vercel release
         id: vercel_release
         if: steps.changesets.outputs.published == 'true' && contains(fromJSON(steps.changesets.outputs.publishedPackages).*.name, 'vercel')
