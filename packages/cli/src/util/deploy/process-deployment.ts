@@ -225,25 +225,25 @@ export default async function processDeployment({
           const isProdDeployment = deployment.target === 'production';
           const previewUrl = `https://${deployment.url}`;
 
-        // When the user did not explicitly request a production deployment
-        // (no `--prod` / `--target=production`) but the API returned one
-        // anyway, surface a notice. This happens on a project's first
-        // deployment because the API assigns it to production when no prior
-        // production deployment exists.
-        if (isProdDeployment && !requestBody.target) {
-          indications.push({
-            type: 'notice',
-            payload:
-              'This is your project\u2019s first deployment, so it was assigned to production. Future deployments will be preview deployments unless you use --prod.',
-            link: 'https://vercel.com/docs/deployments/environments',
-          });
-        }
+          // When the user did not explicitly request a production deployment
+          // (no `--prod` / `--target=production`) but the API returned one
+          // anyway, surface a notice. This happens on a project's first
+          // deployment because the API assigns it to production when no prior
+          // production deployment exists.
+          if (isProdDeployment && !requestBody.target) {
+            indications.push({
+              type: 'notice',
+              payload:
+                'This is your project\u2019s first deployment, so it was assigned to production. Future deployments will be preview deployments unless you use --prod.',
+              link: 'https://vercel.com/docs/deployments/environments',
+            });
+          }
 
-        printAlignedLabel(
-          isProdDeployment ? 'Production' : 'Preview',
-          chalk.cyan(previewUrl),
-          isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
-        );
+          printAlignedLabel(
+            isProdDeployment ? 'Production' : 'Preview',
+            chalk.cyan(previewUrl),
+            isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
+          );
 
           if (!jsonOutput && (quiet || process.env.FORCE_TTY === '1')) {
             process.stdout.write(`https://${event.payload.url}`);

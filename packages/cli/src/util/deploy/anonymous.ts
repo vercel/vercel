@@ -1,12 +1,10 @@
 import { join } from 'path';
 import { outputJSON, readJSON, remove } from 'fs-extra';
-import ms from 'ms';
 import { getPlatformEnv } from '@vercel/build-utils';
 import { errorToString } from '@vercel/error-utils';
 import type { Project, ProjectLinked } from '@vercel-internals/types';
 import type Client from '../client';
 import output from '../../output-manager';
-import param from '../output/param';
 import { getCommandName } from '../pkg-name';
 import {
   getLinkFromDir,
@@ -79,15 +77,15 @@ export async function ensureAnonymousLink(
   cwd: string,
   { requireExistingState = false } = {}
 ): Promise<AnonymousLink | 'failed' | 'refused'> {
+  // A link (real project intent) or a dry run with nothing to show falls back
+  // to the standard "log in to deploy" flow. Expiry is different: it's the
+  // conversion moment and gets its own explicit message.
   const linked =
     Boolean(getPlatformEnv('ORG_ID') && getPlatformEnv('PROJECT_ID')) ||
     Boolean(await getLinkFromDir(getVercelDirectory(cwd))) ||
     Boolean((await getRepoLink(client, cwd))?.repoConfig);
   if (linked) {
-    output.prettyError({
-      message: `This directory is linked to an existing Vercel project, but no credentials were found. Run ${getCommandName('login')}, pass ${param('--token')}, or remove the .vercel directory to deploy anonymously.`,
-    });
-    return 'failed';
+    return 'refused';
   }
 
   let state = await readAnonymousState(cwd);
@@ -98,21 +96,9 @@ export async function ensureAnonymousLink(
     return 'failed';
   }
   if (!state && requireExistingState) {
-    output.error(
-      `The ${param('--dry')} option requires an existing anonymous deployment. Run ${getCommandName('deploy')} first, or ${getCommandName('login')}.`
-    );
-    return 'failed';
+    return 'refused';
   }
-  if (state) {
-    const remaining = ms(state.expiresAt - Date.now());
-    if (state.expiresAt - Date.now() < 10 * 60 * 1000) {
-      output.warn(
-        `Anonymous deployment expires in ${remaining}. Run ${getCommandName('login')} to keep it.`
-      );
-    } else {
-      output.log(`Anonymous deployment expires in ${remaining}.`);
-    }
-  } else {
+  if (!state) {
     try {
       state = await bootstrapAnonymousProject(client);
     } catch (err: unknown) {
@@ -120,9 +106,7 @@ export async function ensureAnonymousLink(
       return 'refused';
     }
     await writeAnonymousState(cwd, state);
-    output.log(
-      `Deploying anonymously. This deployment expires in ${ms(state.expiresAt - Date.now())}. Run ${getCommandName('login')} to keep it.`
-    );
+    output.log('Deploying anonymously.');
   }
   client.authConfig = { token: state.token, skipWrite: true };
   return {

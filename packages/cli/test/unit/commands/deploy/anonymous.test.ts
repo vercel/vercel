@@ -100,7 +100,7 @@ describe('deploy [anonymous]', () => {
     );
   });
 
-  it('refuses a dry run without an existing anonymous deployment', async () => {
+  it('falls back to login for a dry run without an existing anonymous deployment', async () => {
     const cwd = setupUnitFixture('commands/deploy/anonymous');
     client.cwd = cwd;
     client.authConfig = {};
@@ -116,7 +116,7 @@ describe('deploy [anonymous]', () => {
     expect(getBootstrapCalls()).toEqual(0);
     expect(await fs.pathExists(join(cwd, ANONYMOUS_FILE))).toEqual(false);
     expect(client.stderr.getFullOutput()).toContain(
-      'requires an existing anonymous deployment'
+      'No existing credentials found'
     );
   });
 
@@ -162,7 +162,7 @@ describe('deploy [anonymous]', () => {
     );
   });
 
-  it('refuses to deploy anonymously in a linked directory', async () => {
+  it('falls back to login in a linked directory instead of deploying anon', async () => {
     const cwd = setupUnitFixture('commands/deploy/static');
     client.cwd = cwd;
     client.authConfig = {};
@@ -177,7 +177,7 @@ describe('deploy [anonymous]', () => {
     expect(exitCode).toEqual(1);
     expect(getBootstrapCalls()).toEqual(0);
     expect(client.stderr.getFullOutput()).toContain(
-      'This directory is linked to an existing Vercel project, but no credentials were found'
+      'No existing credentials found'
     );
   });
 
@@ -247,7 +247,9 @@ describe('deploy [anonymous]', () => {
     expect(exitCode).toEqual(0);
     expect(getBootstrapCalls()).toEqual(0);
     expect(requests[0].authorization).toEqual('Bearer vcn_sticky');
-    expect(client.stderr.getFullOutput()).toContain('expires in');
+    expect(client.stderr.getFullOutput()).toMatch(
+      /You have .* to claim this deployment/
+    );
   });
 
   it('fails with a signup message when the anonymous state file is expired', async () => {
