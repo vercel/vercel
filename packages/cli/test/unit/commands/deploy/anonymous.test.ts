@@ -68,6 +68,10 @@ describe('deploy [anonymous]', () => {
     const cwd = setupUnitFixture('commands/deploy/anonymous');
     client.cwd = cwd;
     client.authConfig = {};
+    // A stray VERCEL_TEAM_ID must not ride on the anonymous deploy — the token
+    // is the sole authority and the team would be an inaccessible scope.
+    const originalTeamId = process.env.VERCEL_TEAM_ID;
+    process.env.VERCEL_TEAM_ID = 'team_should_be_stripped';
     const getBootstrapCalls = mockBootstrap({
       token: 'vcn_test',
       expiresAt: Date.now() + 3600_000,
@@ -75,7 +79,16 @@ describe('deploy [anonymous]', () => {
     const requests = mockDeploymentEndpoints();
 
     client.setArgv('deploy');
-    const exitCode = await deploy(client);
+    let exitCode: number;
+    try {
+      exitCode = await deploy(client);
+    } finally {
+      if (originalTeamId === undefined) {
+        delete process.env.VERCEL_TEAM_ID;
+      } else {
+        process.env.VERCEL_TEAM_ID = originalTeamId;
+      }
+    }
 
     expect(exitCode).toEqual(0);
     expect(getBootstrapCalls()).toEqual(1);

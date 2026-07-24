@@ -114,6 +114,9 @@ export async function ensureAnonymousLink(
     output.log('Deploying anonymously.');
   }
   client.authConfig = { token: state.token, skipWrite: true };
+  // The anonymous token is the sole authority; a stray VERCEL_TEAM_ID would be
+  // appended to deploy requests and rejected as an inaccessible scope.
+  delete process.env.VERCEL_TEAM_ID;
   return {
     status: 'linked',
     anonymous: true,
