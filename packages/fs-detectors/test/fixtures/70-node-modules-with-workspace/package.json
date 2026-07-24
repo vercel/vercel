@@ -1,0 +1,8 @@
+{
+  "name": "70-node-modules-with-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "next": "15.4.4"
+  }
+}
