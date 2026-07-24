@@ -1532,14 +1532,23 @@ async function doBuild(
                         service && serviceWorkspace && serviceWorkspace !== '.'
                           ? serviceWorkspace
                           : '.';
-                      packageManifests.push({
-                        workspace,
-                        key: fullKey,
-                        buildConfig: buildConfig,
-                        manifest: packageManifest,
-                        service,
-                        builderUse: builderPkg.name,
-                      });
+                      // Only keep one manifest per builder+workspace — multiple
+                      // api/dir files for the same builder share a manifest slot.
+                      const alreadyPushed = packageManifests.some(
+                        m =>
+                          m.builderUse === builderPkg.name &&
+                          m.workspace === workspace
+                      );
+                      if (!alreadyPushed) {
+                        packageManifests.push({
+                          workspace,
+                          key: fullKey,
+                          buildConfig: buildConfig,
+                          manifest: packageManifest,
+                          service,
+                          builderUse: builderPkg.name,
+                        });
+                      }
                     }
                   } catch (e) {
                     output.debug(
@@ -3011,10 +3020,14 @@ async function detectApiDirFramework(
   const cacheKey = `${builderUse}:${workPath}`;
   let cached = apiDirFrameworkCache.get(cacheKey);
   if (!cached) {
-    cached = detectAllFrameworks(workPath, runtimeFrameworks);
+    cached = detectAllFrameworks(workPath, runtimeFrameworks).catch(() => []);
     apiDirFrameworkCache.set(cacheKey, cached);
   }
-  return (await cached)[0];
+  const detectedSlugs = await cached;
+  // Return the framework only when exactly one is detected. Zero means none
+  // found; more than one means ambiguous (e.g. fastapi + flask), so return
+  // undefined rather than picking arbitrarily.
+  return detectedSlugs.length === 1 ? detectedSlugs[0] : undefined;
 }
 
 async function writeBuildJson(buildsJson: BuildsManifest, outputDir: string) {
