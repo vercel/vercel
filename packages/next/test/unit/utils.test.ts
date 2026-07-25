@@ -733,3 +733,65 @@ describe('detectLambdaLimitExceeding with large functions', () => {
     expect(loggedOutput()).toContain('size was exceeded');
   });
 });
+
+describe('getPageLambdaGroups workflow maxDuration', () => {
+  it('applies vercel.json workflows.maxDuration over generated workflow config', async () => {
+    const entryPath = await genDir({
+      'app/.well-known/workflow/v1/flow/route.js': 'export {}',
+      'app/.well-known/workflow/v1/config.json': JSON.stringify({
+        version: '0',
+        workflows: { maxDuration: 'max' },
+      }),
+    });
+
+    const page = '.well-known/workflow/v1/flow.js';
+    const groups = await getPageLambdaGroups({
+      entryPath,
+      config: { workflows: { maxDuration: 1800 } } as Config,
+      functionsConfigManifest: undefined,
+      pages: [page],
+      prerenderRoutes: new Set(),
+      experimentalPPRRoutes: undefined,
+      pageTraces: {},
+      compressedPages: { [page]: makePseudoFile(1024) },
+      tracedPseudoLayer: {},
+      initialPseudoLayer: { pseudoLayer: {}, pseudoLayerBytes: 0 },
+      initialPseudoLayerUncompressed: 0,
+      internalPages: [],
+      nodeVersion: { runtime: 'nodejs22.x' },
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.maxDuration).toBe(1800);
+  });
+
+  it('leaves workflow builder default when vercel.json workflows.maxDuration is unset', async () => {
+    const entryPath = await genDir({
+      'app/.well-known/workflow/v1/flow/route.js': 'export {}',
+      'app/.well-known/workflow/v1/config.json': JSON.stringify({
+        version: '0',
+        workflows: { maxDuration: 'max' },
+      }),
+    });
+
+    const page = '.well-known/workflow/v1/flow.js';
+    const groups = await getPageLambdaGroups({
+      entryPath,
+      config: {} as Config,
+      functionsConfigManifest: undefined,
+      pages: [page],
+      prerenderRoutes: new Set(),
+      experimentalPPRRoutes: undefined,
+      pageTraces: {},
+      compressedPages: { [page]: makePseudoFile(1024) },
+      tracedPseudoLayer: {},
+      initialPseudoLayer: { pseudoLayer: {}, pseudoLayerBytes: 0 },
+      initialPseudoLayerUncompressed: 0,
+      internalPages: [],
+      nodeVersion: { runtime: 'nodejs22.x' },
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.maxDuration).toBe('max');
+  });
+});
