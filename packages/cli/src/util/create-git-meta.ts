@@ -1,10 +1,9 @@
 import fs from 'fs-extra';
 import { join } from 'path';
 import ini from 'ini';
-import git from 'git-last-commit';
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import type { GitMetadata, Project } from '@vercel-internals/types';
-import { errorToString, normalizeError } from '@vercel/error-utils';
+import { errorToString } from '@vercel/error-utils';
 import output from '../output-manager';
 
 export async function createGitMeta(
@@ -56,8 +55,8 @@ export async function createGitMeta(
 
   return {
     remoteUrl: remoteUrl || undefined,
-    commitAuthorName: commit.author.name,
-    commitAuthorEmail: commit.author.email,
+    commitAuthorName: commit.authorName,
+    commitAuthorEmail: commit.authorEmail,
     commitMessage: commit.subject,
     commitRef: commit.branch,
     commitSha: commit.hash,
@@ -65,17 +64,44 @@ export async function createGitMeta(
   };
 }
 
-function getLastCommit(directory: string): Promise<git.Commit> {
+interface CommitInfo {
+  hash: string;
+  subject: string;
+  authorName: string;
+  authorEmail: string;
+  branch: string;
+}
+
+function getLastCommit(directory: string): Promise<CommitInfo> {
   return new Promise((resolve, reject) => {
-    git.getLastCommit(
-      (err, commit) => {
-        if (err) {
-          return reject(normalizeError(err));
+    // Fetch commit metadata and branch name with two separate commands
+    // instead of the old `git-last-commit` package, which chained three
+    // commands (`git log && git rev-parse && git tag --contains HEAD`)
+    // with `&&` and treated ANY stderr as a fatal error.  That made
+    // metadata collection silently fail whenever git printed a warning
+    // (e.g. newer git versions, large repos, missing notes refs).
+    execFile(
+      'git',
+      ['log', '-1', '--format=%H%n%s%n%an%n%ae'],
+      { cwd: directory },
+      (logErr, logStdout) => {
+        if (logErr || !logStdout.trim()) {
+          return reject(logErr || new Error('No git commits found'));
         }
 
-        resolve(commit);
-      },
-      { dst: directory }
+        const lines = logStdout.trimEnd().split('\n');
+        const [hash, subject, authorName, authorEmail] = lines;
+
+        execFile(
+          'git',
+          ['rev-parse', '--abbrev-ref', 'HEAD'],
+          { cwd: directory },
+          (branchErr, branchStdout) => {
+            const branch = branchErr ? '' : branchStdout.trim();
+            resolve({ hash, subject, authorName, authorEmail, branch });
+          }
+        );
+      }
     );
   });
 }
