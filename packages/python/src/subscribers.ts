@@ -174,10 +174,7 @@ export function getSubscriberConsumerName(subscriberName: string): string {
  * subscriptions through `vercel.queue.asgi_app()`.
  */
 export function getGeneratedQueueHandlerPath(outputPath: string): string {
-  return join(
-    '_vc_queue_handlers',
-    `${outputPath.replace(/[^A-Za-z0-9_]+/g, '_')}.py`
-  );
+  return `_vc_queue_handlers/${outputPath.replace(/[^A-Za-z0-9_]+/g, '_')}.py`;
 }
 
 export function generatedPythonPathToModule(filePath: string): string {

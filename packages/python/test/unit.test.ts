@@ -2929,6 +2929,12 @@ describe('pyproject subscribers', () => {
     }
   });
 
+  it('uses POSIX separators for generated queue handler paths', () => {
+    expect(getGeneratedQueueHandlerPath('_py_workflows/flows_workflows')).toBe(
+      '_vc_queue_handlers/_py_workflows_flows_workflows.py'
+    );
+  });
+
   it('returns dev sidecars matching build consumer names', async () => {
     const workerPackage = path.join(mockWorkPath, 'workers', 'celery');
     fs.mkdirSync(workerPackage, { recursive: true });
