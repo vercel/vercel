@@ -105,6 +105,16 @@ describe('next dev websocket shim preload', () => {
     });
   });
 
+  it('lets socket close listeners register response-close work', async () => {
+    await expect(
+      runShimScenario('late-work-from-socket-close')
+    ).resolves.toMatchObject({
+      socketCloseRan: true,
+      responseCloseRan: true,
+      lateWorkDone: true,
+    });
+  });
+
   it('does not crash when the upgraded socket emits an error', async () => {
     await expect(
       runShimScenario('socket-error-after-upgrade')
@@ -292,6 +302,34 @@ const server = http.createServer((req, res) => {
       return;
     }
 
+    if (scenario === 'late-work-from-socket-close') {
+      const result = {
+        socketCloseRan: false,
+        responseCloseRan: false,
+        lateWorkDone: false,
+      };
+      const { socket } = consumeUpgrade();
+      socket.resume();
+
+      socket.once('close', () => {
+        result.socketCloseRan = true;
+        ctx.waitUntil(
+          new Promise(resolve => {
+            res.once('close', () => {
+              result.responseCloseRan = true;
+              setTimeout(() => {
+                result.lateWorkDone = true;
+                resolve();
+              }, 10);
+            });
+          })
+        );
+        setTimeout(() => finish(result), 30);
+      });
+      setTimeout(() => socket.destroy(), 10);
+      return;
+    }
+
     if (scenario === 'socket-error-after-upgrade') {
       const { socket } = consumeUpgrade();
       setImmediate(() => {
@@ -353,6 +391,14 @@ server.listen(0, '127.0.0.1', async () => {
 
     if (scenario === 'response-close-after-upgrade') {
       await websocketRequest(port, '/ws');
+      return;
+    }
+
+    if (scenario === 'late-work-from-socket-close') {
+      const client = net.createConnection({ host: '127.0.0.1', port });
+      client.on('error', () => {});
+      await once(client, 'connect');
+      client.write(upgradeRequest('/ws'));
       return;
     }
 
