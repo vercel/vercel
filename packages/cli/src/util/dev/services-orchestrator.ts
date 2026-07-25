@@ -726,7 +726,10 @@ export class ServicesOrchestrator {
 
     const perServiceEnv: Record<string, string> = {};
     for (const binding of service.bindings ?? []) {
-      if (binding.type !== 'service' || binding.format !== 'url') {
+      if (
+        (binding.type !== undefined && binding.type !== 'service') ||
+        binding.format !== 'url'
+      ) {
         continue;
       }
       if (binding.env in effectiveProcessEnv) {
@@ -747,6 +750,18 @@ export class ServicesOrchestrator {
       effectiveProcessEnv,
       perServiceEnv
     );
+
+    if (
+      this.hasQueueServices &&
+      service.runtime === 'python' &&
+      env.VERCEL_HAS_WORKER_SERVICES === undefined
+    ) {
+      env.VERCEL_HAS_WORKER_SERVICES = '1';
+    }
+    if (this.hasQueueServices) {
+      env.VERCEL_QUEUE_BASE_URL = `${this.proxyOrigin}/_svc/_queues`;
+      env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
+    }
 
     const root = service.root || '.';
     return {

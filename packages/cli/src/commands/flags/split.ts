@@ -17,8 +17,8 @@ import {
   resolveFlagSplit,
   type ResolvedFlagSplit,
 } from '../../util/flags/split';
+import { canPrompt } from '../../util/can-prompt';
 import { formatFlagBucketingBaseSelector } from '../../util/flags/bucketing-base';
-import { canPrompt } from '../../util/flags/can-prompt';
 import { formatVariantForDisplay } from '../../util/flags/resolve-variant';
 import type {
   Flag,

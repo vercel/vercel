@@ -1,10 +1,10 @@
 import chalk from 'chalk';
+import { canPrompt } from '../can-prompt';
 import type Client from '../client';
 import { STANDARD_ENVIRONMENTS } from '../target/standard-environments';
 import { normalizeOptionalInput } from './normalize-optional-input';
 import { printFlagEnvironmentDetails } from './print-flag-details';
 import type { Flag, FlagEnvironmentConfig, FlagVariant } from './types';
-import { canPrompt } from './can-prompt';
 
 type StandardEnvironment = (typeof STANDARD_ENVIRONMENTS)[number];
 

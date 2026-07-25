@@ -111,7 +111,8 @@ export default async function update(
       '--project': parsedArgs.flags['--project'] as string | undefined,
       '--all': parsedArgs.flags['--all'] as boolean | undefined,
     },
-    fr.jsonOutput
+    fr.jsonOutput,
+    `alerts rules update ${ruleId}`
   );
   if (typeof scope === 'number') {
     return scope;

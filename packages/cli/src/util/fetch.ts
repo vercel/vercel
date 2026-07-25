@@ -47,6 +47,15 @@ export function setFetchDispatcher(
   fetchDispatcher = dispatcher;
 }
 
+/**
+ * The proxy-aware dispatcher applied to CLI requests, if one was configured.
+ * Pass it to libraries that make their own `fetch` calls (e.g.
+ * `@vercel/client`) so they respect `HTTP_PROXY`/`HTTPS_PROXY` too.
+ */
+export function getFetchDispatcher(): FetchDispatcher | undefined {
+  return fetchDispatcher;
+}
+
 export default function fetch(
   input: RequestInfo,
   init?: RequestInit

@@ -22,7 +22,7 @@ import completeRollingRelease from './complete-rolling-release';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { RollingReleaseTelemetryClient } from '../../util/telemetry/commands/rolling-release';
-import { getLinkedProjectOrFail } from '../../util/projects/get-linked-project-or-fail';
+import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import getSubcommand from '../../util/get-subcommand';
 import { getCommandAliases } from '..';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
@@ -210,7 +210,10 @@ export default async function rollingRelease(client: Client): Promise<number> {
       telemetry.trackCliOptionProject(projectName);
     }
 
-    const link = await getLinkedProjectOrFail(client, projectName);
+    const link = await resolveProjectContext({
+      client,
+      projectNameOrId: projectName,
+    });
     if (link.status === 'error') {
       return link.exitCode;
     }

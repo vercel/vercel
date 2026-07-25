@@ -53,6 +53,7 @@ import {
   detectBuilders,
   detectApiDirectory,
   detectApiExtensions,
+  getProxyBuilder,
   isOfficialRuntime,
   isExperimentalService,
   isExperimentalServiceV2,
@@ -123,10 +124,6 @@ import isURL from './is-url';
 import { pickOverrides } from '../projects/project-settings';
 import { replaceLocalhost } from './parse-listen';
 
-const frontendRuntimeSet = new Set(
-  frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
-);
-
 const DEV_SERVER_PORT_BIND_TIMEOUT = ms('5m');
 const DEV_QUEUES_DEFAULT_VISIBILITY_TIMEOUT_SECONDS = 60;
 
@@ -138,6 +135,15 @@ interface FSEvent {
 type WithFileNameSymbol<T> = T & {
   [fileNameSymbol]: string;
 };
+
+const frameworkRuntimeSet = new Set(
+  frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
+);
+
+function isApiDirBuild(build: Builder): boolean {
+  const src = build.src?.replace(/^\.\//, '');
+  return typeof src === 'string' && src.startsWith('api/');
+}
 
 function sortBuilders(buildA: Builder, buildB: Builder) {
   if (buildA && buildA.use && isOfficialRuntime('static-build', buildA.use)) {
@@ -301,6 +307,19 @@ export default class DevServer {
       )}`
     );
   }
+
+  private shouldBuildInDev = (build: Builder): boolean => {
+    // `api/` builds are standalone serverless functions, never the frontend
+    // build owned by the framework dev command. In services mode, the
+    // orchestrator owns every service build, including services with `api/`
+    // entrypoints.
+    if (!this.shouldUseServicesOrchestrator() && isApiDirBuild(build)) {
+      return true;
+    }
+
+    const { name } = npa(build.use);
+    return !frameworkRuntimeSet.has(name || '');
+  };
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
@@ -744,6 +763,7 @@ export default class DevServer {
       await this.exit();
     }
     vercelConfig.routes = maybeRoutes || [];
+    const hasServices = (this.services?.length ?? 0) > 0;
 
     // no builds -> zero config
     //
@@ -772,6 +792,7 @@ export default class DevServer {
         featHandleMiss,
         cleanUrls,
         trailingSlash,
+        proxy: vercelConfig.proxy,
         workPath: this.cwd,
       });
       const {
@@ -845,20 +866,36 @@ export default class DevServer {
       });
       routes.push(...(defaultRoutes || []));
       vercelConfig.routes = routes;
+    } else if (hasResolvedServices && vercelConfig.proxy) {
+      // Service builds are owned by the orchestrator; only the top-level
+      // proxy participates in the dev server's build pipeline.
+      const { entrypoint } = vercelConfig.proxy;
+      if (!(await fs.pathExists(join(this.cwd, entrypoint)))) {
+        output.error(
+          `The proxy entrypoint \`${entrypoint}\` does not exist. Set \`proxy.entrypoint\` to an existing \`.js\` or \`.ts\` file.`
+        );
+        await this.exit();
+      }
+      vercelConfig.builds = vercelConfig.builds || [];
+      vercelConfig.builds.push(
+        getProxyBuilder(vercelConfig.proxy, 'latest', vercelConfig.functions)
+      );
     }
 
     if (this.sidecars === undefined) {
-      this.sidecars = this.shouldUseServicesOrchestrator()
-        ? []
-        : await collectBuilderDevSidecars({
-            builds: vercelConfig.builds ?? [],
-            workPath: this.cwd,
-          });
+      const services = (this.services ?? []).filter(isExperimentalServiceV2);
+      this.sidecars = await collectBuilderDevSidecars({
+        builds: this.shouldUseServicesOrchestrator()
+          ? services.map(service => service.builder)
+          : (vercelConfig.builds ?? []),
+        workPath: this.cwd,
+        services,
+      });
     }
 
     if (Array.isArray(vercelConfig.builds)) {
-      if (this.devCommand || (this.services && this.services.length > 0)) {
-        vercelConfig.builds = vercelConfig.builds.filter(filterFrontendBuilds);
+      if (this.devCommand || hasServices) {
+        vercelConfig.builds = vercelConfig.builds.filter(this.shouldBuildInDev);
       }
 
       // `@vercel/static-build` needs to be the last builder
@@ -1150,8 +1187,12 @@ export default class DevServer {
     };
 
     if (this.shouldUseServicesOrchestrator()) {
+      const orchestratorServices = [
+        ...(this.services || []),
+        ...(this.sidecars || []).map(toOrchestratorService),
+      ];
       this.orchestrator = new ServicesOrchestrator({
-        services: this.services || [],
+        services: orchestratorServices,
         cwd: this.cwd,
         repoRoot: this.repoRoot,
         env: this.envConfigs.allEnv,
@@ -1163,7 +1204,7 @@ export default class DevServer {
 
       // Instantiate the dev queue broker if any queue-backed services exist.
       // Queue-backed services are `experimentalServices` feature only.
-      const queueServices = (this.services || [])
+      const queueServices = orchestratorServices
         .filter(isExperimentalService)
         .filter(isQueueBackedService);
       if (queueServices.length > 0) {
@@ -3567,11 +3608,6 @@ function fileRemoved(
 function needsBlockingBuild(buildMatch: BuildMatch): boolean {
   const { builder } = buildMatch.builderWithPkg;
   return typeof builder.shouldServe !== 'function';
-}
-
-function filterFrontendBuilds(build: Builder) {
-  const { name } = npa(build.use);
-  return !frontendRuntimeSet.has(name || '');
 }
 
 function hasNewRoutingProperties(vercelConfig: VercelConfig) {
