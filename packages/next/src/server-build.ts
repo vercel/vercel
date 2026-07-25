@@ -2620,6 +2620,7 @@ export async function serverBuild({
         ),
         headers: {
           'content-type': 'text/plain; charset=utf-8',
+          'cache-control': 'private, no-store',
         },
       },
 

@@ -1135,6 +1135,7 @@ export const build: BuildV2 = async buildOptions => {
           ),
           headers: {
             'content-type': 'text/plain; charset=utf-8',
+            'cache-control': 'private, no-store',
           },
         },
 
@@ -2828,6 +2829,7 @@ export const build: BuildV2 = async buildOptions => {
         dest: path.join('/', entryDirectory, '_next/static/not-found.txt'),
         headers: {
           'content-type': 'text/plain; charset=utf-8',
+          'cache-control': 'private, no-store',
         },
       },
 
