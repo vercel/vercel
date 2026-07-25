@@ -183,12 +183,14 @@ export default async function bisect(client: Client): Promise<number> {
   }
 
   if (badDeployment.target !== goodDeployment.target) {
+    const badTarget = badDeployment.target || 'preview';
+    const goodTarget = goodDeployment.target || 'preview';
+
     output.error(
-      `Bad deployment target "${
-        badDeployment.target || 'preview'
-      }" does not match good deployment target "${
-        goodDeployment.target || 'preview'
-      }"`
+      `Cannot bisect deployments from different targets.\n\n` +
+        `Known bad:  ${link(`https://${badDeployment.url}`)} (${badTarget})\n` +
+        `Known good: ${link(`https://${goodDeployment.url}`)} (${goodTarget})\n\n` +
+        `Use a known good URL from ${badTarget}, or use a known bad URL from ${goodTarget}.`
     );
     return 1;
   }
