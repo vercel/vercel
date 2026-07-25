@@ -65,18 +65,21 @@ def install_queue_integrations(*, queue_serving: bool) -> None:
             )
         try:
             module = __import__(module_name, fromlist=[installer_name])
-            installer = cast("Any", getattr(module, installer_name))
+            installer = getattr(module, installer_name)
             kwargs: dict[str, Any] = {}
             if not queue_serving:
                 try:
-                    params = inspect.signature(installer).parameters
+                    supports_queue_registration = (
+                        "register_queues"
+                        in inspect.signature(installer).parameters
+                    )
                 except (TypeError, ValueError):
-                    params = {}
-                if "register_queues" in params:
+                    supports_queue_registration = False
+                if supports_queue_registration:
                     kwargs["register_queues"] = False
             installer(**kwargs)
             if queue_serving and activator_name:
-                activator = cast("Any", getattr(module, activator_name))
+                activator = getattr(module, activator_name)
                 activator()
         except Exception as exc:
             raise RuntimeError(
