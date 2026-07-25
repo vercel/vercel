@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { join } from 'path';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'path';
 import execa from 'execa';
 import { debug } from '@vercel/build-utils';
 import { getVenvPythonBin } from './utils';
@@ -9,6 +9,16 @@ const scriptPath = join(__dirname, '..', 'templates', 'vc_fastapi_static.py');
 export interface FastAPIStaticMount {
   urlPath: string;
   directory: string;
+}
+
+export interface FastAPIStaticFile {
+  urlPath: string;
+  sourcePath: string;
+}
+
+export interface FastAPIStaticDiscovery {
+  mounts: FastAPIStaticMount[];
+  files: FastAPIStaticFile[];
 }
 
 export interface FastAPICollectStaticResult {
@@ -33,6 +43,28 @@ export async function getFastAPIStaticMounts(
   env: NodeJS.ProcessEnv,
   workPath: string
 ): Promise<FastAPIStaticMount[]> {
+  return (
+    await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      variableName,
+      env,
+      workPath
+    )
+  ).mounts;
+}
+
+/**
+ * Discover static mounts and the concrete files that FastAPI's own router
+ * selects for CDN delivery.
+ */
+export async function getFastAPIStaticDiscovery(
+  venvPath: string,
+  entrypointAbs: string,
+  variableName: string,
+  env: NodeJS.ProcessEnv,
+  workPath: string
+): Promise<FastAPIStaticDiscovery> {
   const pythonPath = getVenvPythonBin(venvPath);
   const outputPath = join(
     workPath,
@@ -57,26 +89,26 @@ export async function getFastAPIStaticMounts(
     debug(
       `FastAPI: could not discover static mounts: ${err?.stderr ?? err?.message ?? err}`
     );
-    return [];
+    return { mounts: [], files: [] };
   }
   try {
     const raw = await fs.promises.readFile(outputPath, 'utf8');
-    const parsed = JSON.parse(raw) as FastAPIStaticMount[];
-    debug(`FastAPI: discovered mounts: ${JSON.stringify(parsed)}`);
+    const parsed = JSON.parse(raw) as FastAPIStaticDiscovery;
+    debug(`FastAPI: discovered static files: ${JSON.stringify(parsed)}`);
     return parsed;
   } catch {
     console.error(_STATIC_FILE_COLLECTION_ERROR_MESSAGE);
     debug(`FastAPI: could not read shim output file: ${outputPath}`);
-    return [];
+    return { mounts: [], files: [] };
   } finally {
     await fs.promises.rm(outputPath, { force: true });
   }
 }
 
 /**
- * Copy each StaticFiles mount directory into the Vercel Build Output static
- * directory so the CDN serves the files. The original entrypoint is unchanged;
- * the Lambda retains its StaticFiles mounts but CDN routing preempts it.
+ * Copy concrete files selected by FastAPI's router into the Vercel Build
+ * Output static directory. The original entrypoint is unchanged; the Lambda
+ * retains its StaticFiles mounts for paths owned by another route.
  *
  * Returns null when no StaticFiles mounts are found.
  */
@@ -88,7 +120,7 @@ export async function runFastAPICollectStatic(
   entrypointAbs: string,
   variableName: string
 ): Promise<FastAPICollectStaticResult | null> {
-  const mounts = await getFastAPIStaticMounts(
+  const discovery = await getFastAPIStaticDiscovery(
     venvPath,
     entrypointAbs,
     variableName,
@@ -96,25 +128,35 @@ export async function runFastAPICollectStatic(
     workPath
   );
 
-  if (mounts.length === 0) {
+  if (discovery.mounts.length === 0 || discovery.files.length === 0) {
     debug('FastAPI: no StaticFiles mounts found, skipping');
     return null;
   }
 
   debug(
-    `Found ${mounts.length} FastAPI static mount(s): ${mounts.map(m => m.urlPath).join(', ')}`
+    `Found ${discovery.mounts.length} FastAPI static mount(s): ${discovery.mounts.map(m => m.urlPath).join(', ')}`
   );
 
-  for (const mount of mounts) {
-    const urlSubPath = mount.urlPath.replace(/^\/|\/$/g, '');
-    const dest = join(outputStaticDir, urlSubPath);
-    await fs.promises.mkdir(dest, { recursive: true });
-    await fs.promises.cp(mount.directory, dest, { recursive: true });
-    debug(`copied ${mount.directory} -> ${dest}`);
+  const outputRoot = resolve(outputStaticDir);
+  for (const file of discovery.files) {
+    const dest = resolve(outputRoot, file.urlPath.replace(/^\//, ''));
+    const relativeDest = relative(outputRoot, dest);
+    if (
+      isAbsolute(relativeDest) ||
+      relativeDest === '..' ||
+      relativeDest.startsWith(`..${sep}`)
+    ) {
+      throw new Error(
+        `FastAPI static file URL escapes static output: ${file.urlPath}`
+      );
+    }
+    await fs.promises.mkdir(dirname(dest), { recursive: true });
+    await fs.promises.copyFile(file.sourcePath, dest);
+    debug(`copied ${file.sourcePath} -> ${dest}`);
   }
 
   return {
-    collectedMounts: mounts.map(m => m.urlPath),
+    collectedMounts: discovery.mounts.map(m => m.urlPath),
     cdnOutputDir: outputStaticDir,
   };
 }
