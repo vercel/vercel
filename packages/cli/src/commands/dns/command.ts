@@ -88,7 +88,7 @@ export const dnsCommand = {
     {
       name: 'Add an A record for a subdomain',
       value: [
-        `${packageName} dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | TXT>  <VALUE>`,
+        `${packageName} dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | DS | TXT>  <VALUE>`,
         `${packageName} dns add zeit.rocks api A 198.51.100.100`,
       ],
     },
@@ -111,6 +111,13 @@ export const dnsCommand = {
       value: [
         `${packageName} dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'`,
         `${packageName} dns add zeit.rocks '@' CAA '0 issue "example.com"'`,
+      ],
+    },
+    {
+      name: 'Add a DS record',
+      value: [
+        `${packageName} dns add <DOMAIN> <NAME> DS '<KEY TAG> <ALGORITHM> <DIGEST TYPE> <DIGEST>'`,
+        `${packageName} dns add zeit.rocks sub DS '2371 13 2 5be1a3f7'`,
       ],
     },
     {
