@@ -47,6 +47,11 @@ export default async function set(client: Client, argv: string[]) {
   telemetryClient.trackCliFlagDebug(opts['--debug']);
   telemetryClient.trackCliOptionLocalConfig(opts['--local-config']);
   const { contextName, user } = await getScope(client);
+  // This command's logic still needs a user identity; let the server own the
+  // authorization decision for non-user principals once it supports them.
+  if (!user) {
+    throw new ERRORS.MissingUser();
+  }
 
   // If there are more than two args we have to error
   if (args.length > 2) {

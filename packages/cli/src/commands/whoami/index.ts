@@ -43,8 +43,13 @@ export default async function whoami(client: Client): Promise<number> {
   const asJson = formatResult.jsonOutput;
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
-  const scope = await getScope(client, { resolveLocalScope: true });
-  const { user, team, globalTeam } = scope;
+  const scope = await getScope(client, {
+    resolveLocalScope: true,
+  });
+  const { app, user, team } = scope;
+  // The team's slug/name may be absent for an app principal that can't read its
+  // team, so fall back to the id for display.
+  const teamLabel = team ? (team.slug ?? team.id) : null;
 
   // A local override exists when the effective team (from the linked project)
   // differs from the globally-selected team (from `vc switch`). We only treat
@@ -52,46 +57,66 @@ export default async function whoami(client: Client): Promise<number> {
   // flag, since those are user-directed rather than context-inferred.
   const hasLocalOverride =
     !scope.explicitScopeProvided &&
-    ((team?.id ?? null) !== (globalTeam?.id ?? null) ||
+    ((team?.id ?? null) !== (scope.globalTeam?.id ?? null) ||
       // `team` being null while a local project linked to personal scope
       // exists while a global team is selected is also a mismatch.
       scope.scopeMismatch);
 
   if (asJson) {
-    const jsonOutput: {
-      username: string;
-      email: string;
-      name: string | undefined;
-      team: { id: string; slug: string; name: string } | null;
-      globalTeam?: { id: string; slug: string; name: string } | null;
-      localOverride?: boolean;
-    } = {
-      username: user.username,
-      email: user.email,
-      name: user.name,
-      team: team ? { id: team.id, slug: team.slug, name: team.name } : null,
-    };
-    if (hasLocalOverride) {
+    const jsonOutput = app
+      ? {
+          principal: {
+            type: 'app' as const,
+            id: app.id,
+            name: app.name,
+          },
+          app: {
+            id: app.id,
+            name: app.name,
+          },
+          team: team ? { id: team.id, slug: team.slug, name: team.name } : null,
+        }
+      : {
+          username: user?.username,
+          email: user?.email,
+          name: user?.name,
+          team: team ? { id: team.id, slug: team.slug, name: team.name } : null,
+          globalTeam: undefined as
+            | { id: string; slug: string; name: string }
+            | null
+            | undefined,
+          localOverride: undefined as boolean | undefined,
+        };
+    if (hasLocalOverride && !app) {
       jsonOutput.localOverride = true;
-      jsonOutput.globalTeam = globalTeam
-        ? { id: globalTeam.id, slug: globalTeam.slug, name: globalTeam.name }
+      jsonOutput.globalTeam = scope.globalTeam
+        ? {
+            id: scope.globalTeam.id,
+            slug: scope.globalTeam.slug,
+            name: scope.globalTeam.name,
+          }
         : null;
     }
     client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
   } else if (client.stdout.isTTY) {
-    output.log(`Logged in as ${chalk.bold(user.username)}`);
+    const identityLabel = app
+      ? `Vercel App: ${chalk.bold(app.name ?? app.id)}`
+      : chalk.bold(user?.username ?? '');
+    output.log(`Logged in as ${identityLabel}`);
     if (team) {
       output.log(
-        `Active team: ${chalk.bold(team.slug)}${
-          team.name && team.name !== team.slug ? ` (${team.name})` : ''
+        `Active team: ${chalk.bold(teamLabel)}${
+          team.name && team.name !== teamLabel ? ` (${team.name})` : ''
         }`
       );
-    } else {
+    } else if (!app) {
       output.log(`Active team: ${chalk.bold('Personal Account')}`);
     }
-    if (hasLocalOverride) {
-      const globalLabel = globalTeam ? globalTeam.slug : 'Personal Account';
-      const localLabel = team ? team.slug : 'Personal Account';
+    if (hasLocalOverride && !app) {
+      const globalLabel = scope.globalTeam
+        ? scope.globalTeam.slug
+        : 'Personal Account';
+      const localLabel = teamLabel ?? 'Personal Account';
       output.log(
         `${chalk.yellow('Local override:')} scope is set to ${chalk.bold(
           localLabel
@@ -105,7 +130,7 @@ export default async function whoami(client: Client): Promise<number> {
     // the output to another file / executable. This preserves the previous
     // behavior for scripts that rely on `vc whoami` printing the logged-in
     // user. Team information is available via `--format json`.
-    client.stdout.write(`${user.username}\n`);
+    client.stdout.write(`${app ? (app.name ?? app.id) : user?.username}\n`);
   }
 
   return 0;

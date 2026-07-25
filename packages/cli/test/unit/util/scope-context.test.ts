@@ -26,7 +26,7 @@ describe('resolveScopeContext', () => {
 
       expect(ctx.org.id).toEqual(mockTeam.id);
       expect(ctx.contextName).toEqual(mockTeam.slug);
-      expect(ctx.user.id).toEqual(mockUser.id);
+      expect(ctx.user?.id).toEqual(mockUser.id);
       expect(ctx.team?.id).toEqual(mockTeam.id);
       expect(ctx.linkedRepo).toBeNull();
       expect(ctx.isCrossTeamRepo).toBe(false);
@@ -280,7 +280,7 @@ describe('resolveScopeContext', () => {
       const ctx = await getScope(client, { resolveLocalScope: true });
 
       expect(ctx.org.id).toEqual(mockTeam.id);
-      expect(ctx.user.id).toEqual(mockUser.id);
+      expect(ctx.user?.id).toEqual(mockUser.id);
       expect(ctx.team?.id).toEqual(mockTeam.id);
     });
   });

@@ -12,7 +12,7 @@ export default async function reportError(
   if (ignoreError(error)) {
     return;
   }
-  let user: User | undefined;
+  let user: User | null | undefined;
   let team: Team | null | undefined;
   let scopeError: Error | undefined;
 

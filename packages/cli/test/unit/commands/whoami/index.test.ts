@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { join } from 'path';
 import { outputFile } from 'fs-extra';
 import { client } from '../../../mocks/client';
@@ -6,8 +6,13 @@ import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import whoami from '../../../../src/commands/whoami';
+import { APP_PRINCIPAL_SCOPE_ENV } from '../../../../src/util/get-scope';
 
 describe('whoami', () => {
+  afterEach(() => {
+    delete process.env[APP_PRINCIPAL_SCOPE_ENV];
+  });
+
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'whoami';
@@ -47,6 +52,82 @@ describe('whoami', () => {
     const exitCode = await whoami(client);
     expect(exitCode).toEqual(0);
     await expect(client.stderr).toOutput(`Active team: ${team.slug}`);
+  });
+
+  it('should not use token introspection when the feature flag is disabled', async () => {
+    let introspectionCalled = false;
+    client.scenario.get('/v2/user', (_req, res) => {
+      res.status(403).json({
+        error: {
+          code: 'forbidden',
+          message: 'Not authorized',
+        },
+      });
+    });
+    client.scenario.post('/login/oauth/token/introspect', (_req, res) => {
+      introspectionCalled = true;
+      res.status(500).json({
+        error: {
+          code: 'unexpected_introspection',
+          message: 'Introspection should not be called',
+        },
+      });
+    });
+
+    await expect(whoami(client)).rejects.toThrow(
+      'The specified token is not valid.'
+    );
+    expect(introspectionCalled).toBe(false);
+  });
+
+  it('should print the Vercel App principal when the token is not user-backed', async () => {
+    process.env[APP_PRINCIPAL_SCOPE_ENV] = '1';
+    let resolveIntrospectionStarted: () => void = () => {};
+    const introspectionStarted = new Promise<void>(resolve => {
+      resolveIntrospectionStarted = resolve;
+    });
+
+    client.scenario.get('/v2/user', async (_req, res) => {
+      await introspectionStarted;
+      res.status(403).json({
+        error: {
+          code: 'forbidden',
+          message: 'Not authorized',
+        },
+      });
+    });
+    client.scenario.post('/login/oauth/token/introspect', (_req, res) => {
+      resolveIntrospectionStarted();
+      res.json({
+        active: true,
+        client_id: 'cl_vercel_agent',
+        client_name: 'Vercel Agent',
+        sub: 'cl_vercel_agent',
+        team: {
+          id: 'team_vercel',
+          slug: 'vercel',
+          name: 'Vercel',
+        },
+      });
+    });
+    client.scenario.get('/teams/team_vercel', (_req, res) => {
+      res.json({
+        id: 'team_vercel',
+        slug: 'vercel',
+        name: 'Vercel',
+        creatorId: 'u1',
+        created: '2017-04-29T17:21:54.514Z',
+        avatar: null,
+      });
+    });
+
+    const exitCode = await whoami(client);
+
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput(
+      'Logged in as Vercel App: Vercel Agent'
+    );
+    await expect(client.stderr).toOutput('Active team: vercel (Vercel)');
   });
 
   it('should flag a local override when a linked project uses a different team', async () => {
@@ -155,6 +236,65 @@ describe('whoami', () => {
         name: team.name,
       });
       expect(jsonOutput.localOverride).toBeUndefined();
+    });
+
+    it('outputs Vercel App principal information as JSON', async () => {
+      process.env[APP_PRINCIPAL_SCOPE_ENV] = '1';
+      client.scenario.get('/v2/user', (_req, res) => {
+        res.status(403).json({
+          error: {
+            code: 'forbidden',
+            message: 'Not authorized',
+          },
+        });
+      });
+      client.scenario.post('/login/oauth/token/introspect', (_req, res) => {
+        res.json({
+          active: true,
+          client_id: 'cl_vercel_agent',
+          client_name: 'Vercel Agent',
+          sub: 'cl_vercel_agent',
+          team: {
+            id: 'team_vercel',
+            slug: 'vercel',
+            name: 'Vercel',
+          },
+        });
+      });
+      client.scenario.get('/teams/team_vercel', (_req, res) => {
+        res.json({
+          id: 'team_vercel',
+          slug: 'vercel',
+          name: 'Vercel',
+          creatorId: 'u1',
+          created: '2017-04-29T17:21:54.514Z',
+          avatar: null,
+        });
+      });
+      client.setArgv('whoami', '--format', 'json');
+
+      const exitCode = await whoami(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.stdout.getFullOutput();
+      const jsonOutput = JSON.parse(output);
+
+      expect(jsonOutput).toMatchObject({
+        principal: {
+          type: 'app',
+          id: 'cl_vercel_agent',
+          name: 'Vercel Agent',
+        },
+        app: {
+          id: 'cl_vercel_agent',
+          name: 'Vercel Agent',
+        },
+        team: {
+          id: 'team_vercel',
+          slug: 'vercel',
+          name: 'Vercel',
+        },
+      });
     });
   });
 });
