@@ -1,0 +1,8 @@
+{
+  "services": {
+    "app": {
+      "root": ".",
+      "runtime": "container"
+    }
+  }
+}

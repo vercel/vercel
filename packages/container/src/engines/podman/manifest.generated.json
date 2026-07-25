@@ -1,0 +1,20 @@
+{
+  "darwin-arm64": {
+    "url": "/runtimes/podman/v5.4.2/podman-darwin-arm64.tar.gz",
+    "sha256": "b856851e4a7d11f20f0e0d0ddd3ed44f870edc4cf7325f6fb810161e4b6924fd",
+    "type": "tgz",
+    "size": "55.9MB"
+  },
+  "linux-amd64": {
+    "url": "/runtimes/podman/v5.4.2/podman-linux-amd64.tar.gz",
+    "sha256": "7698f2fb586ed6c618c86f8725179d0852f29f4c89e68bf697698d88957b356f",
+    "type": "tgz",
+    "size": "23.2MB"
+  },
+  "linux-arm64": {
+    "url": "/runtimes/podman/v5.4.2/podman-linux-arm64.tar.gz",
+    "sha256": "9d83dd77f507274267386b030c2de5918a076ad523c11d7173857cfa145ef9dc",
+    "type": "tgz",
+    "size": "21.7MB"
+  }
+}

@@ -6,6 +6,11 @@ dist-bin
 dist-native
 .pkg-staging
 .node-runtime
+# vendored podman runtime tars (rebuilt via `pnpm container build:podman-tarballs`)
+# checked-in manifest.generated.json records SHA256; tars themselves live on Vercel CDN
+packages/container/dist-runtimes/
+# vercel-build output (holds published runtimes + framework list)
+public/
 .vscode
 .zed
 npm-debug.log
