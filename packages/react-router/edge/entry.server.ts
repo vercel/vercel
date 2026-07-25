@@ -50,7 +50,7 @@ export async function handleRequest(
   if (vercelSkewProtectionEnabled && vercelDeploymentId) {
     responseHeaders.append(
       'Set-Cookie',
-      `__vdpl=${vercelDeploymentId}; HttpOnly`
+      `__vdpl=${vercelDeploymentId}; Path=/; HttpOnly`
     );
   }
 
