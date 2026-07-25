@@ -15,7 +15,7 @@ import {
 } from '@vercel/fs-detectors';
 import type { Cron } from '@vercel/build-utils';
 import { frameworkList, type Framework } from '@vercel/frameworks';
-import { getNextCronDelay } from './cron';
+import { getNextCronDelay } from '../cron';
 import {
   isExperimentalService,
   isQueueBackedService,
