@@ -156,6 +156,10 @@ function patchSatisfied(existing: unknown, patch: JsonObject): boolean {
 }
 
 function tomlScalar(value: unknown): string | null {
+  if (Array.isArray(value)) {
+    const items = value.map(tomlScalar);
+    return items.some(item => item === null) ? null : `[${items.join(', ')}]`;
+  }
   switch (typeof value) {
     case 'string':
       // A JSON string is a valid TOML basic string.
@@ -212,6 +216,93 @@ function flattenTomlPatch(
 }
 
 const TOML_HEADER = /^\s*\[\[?\s*([^\]]*?)\s*\]\]?\s*(?:#.*)?$/;
+
+/**
+ * Remove nested TOML keys while preserving the user's formatting whenever the
+ * keys are ordinary assignments inside ordinary tables. Exotic layouts (for
+ * example inline tables or assignment-lookalikes inside multi-line strings)
+ * fall back to a verified full rewrite.
+ */
+export function removeTomlKeys(
+  current: string | null,
+  paths: readonly (readonly string[])[]
+): string | null {
+  if (!current || !current.trim() || paths.length === 0) {
+    return current;
+  }
+
+  let parsed: JsonObject;
+  try {
+    parsed = tomlParse(current) as JsonObject;
+  } catch (err) {
+    throw new Error(
+      `existing file is not valid TOML (${(err as Error).message})`
+    );
+  }
+
+  let changed = false;
+  for (const path of paths) {
+    if (path.length === 0) {
+      continue;
+    }
+    let parent: JsonObject = parsed;
+    for (const segment of path.slice(0, -1)) {
+      const child = parent[segment];
+      if (!isPlainObject(child)) {
+        parent = {};
+        break;
+      }
+      parent = child;
+    }
+    const key = path[path.length - 1];
+    if (Object.prototype.hasOwnProperty.call(parent, key)) {
+      delete parent[key];
+      changed = true;
+    }
+  }
+
+  if (!changed) {
+    return current;
+  }
+
+  let section = '';
+  const pathKeys = new Map<string, Set<string>>();
+  for (const path of paths) {
+    if (path.length === 0) {
+      continue;
+    }
+    const table = path.slice(0, -1).join('.');
+    const keys = pathKeys.get(table) ?? new Set<string>();
+    keys.add(path[path.length - 1]);
+    pathKeys.set(table, keys);
+  }
+
+  const lines = current.split('\n').filter(line => {
+    const header = line.match(TOML_HEADER);
+    if (header) {
+      section = header[1]
+        .split('.')
+        .map(segment => segment.trim())
+        .join('.');
+      return true;
+    }
+    const keys = pathKeys.get(section);
+    if (!keys) {
+      return true;
+    }
+    return ![...keys].some(key => new RegExp(`^\\s*${key}\\s*=`).test(line));
+  });
+  const result = lines.join('\n');
+
+  try {
+    if (isDeepStrictEqual(tomlParse(result), parsed)) {
+      return result;
+    }
+  } catch {
+    // fall through to a verified full rewrite
+  }
+  return `${tomlStringify(parsed)}\n`;
+}
 
 /**
  * The user's file is edited line by line, never re-serialized: assignments the

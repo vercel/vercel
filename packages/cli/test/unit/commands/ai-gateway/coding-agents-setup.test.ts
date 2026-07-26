@@ -32,11 +32,15 @@ import { renderDiff } from '../../../../src/util/ai-gateway/coding-agents/diff';
 import {
   mergeJson,
   mergeToml,
+  removeTomlKeys,
   upsertManagedBlock,
 } from '../../../../src/util/ai-gateway/coding-agents/config-files';
 import { useTeam } from '../../../mocks/team';
 import { claudeCode } from '../../../../src/util/ai-gateway/coding-agents/agents/claude-code';
-import { codex } from '../../../../src/util/ai-gateway/coding-agents/agents/codex';
+import {
+  codex,
+  codexAuthConfig,
+} from '../../../../src/util/ai-gateway/coding-agents/agents/codex';
 import { opencode } from '../../../../src/util/ai-gateway/coding-agents/agents/opencode';
 import {
   isKeychainAvailable,
@@ -240,10 +244,13 @@ describe('ai-gateway coding-agents setup', () => {
         // We never pin a default model — only the provider/URL/auth are set up.
         expect(toml.model).toBeUndefined();
         expect(toml.model_providers.vercel.base_url).toBe(
-          'https://ai-gateway.vercel.sh/v1'
+          'https://ai-gateway.vercel.sh/codex/v1'
         );
         expect(toml.model_providers.vercel.wire_api).toBe('responses');
-        expect(toml.model_providers.vercel.env_key).toBe('AI_GATEWAY_API_KEY');
+        expect(toml.model_providers.vercel.env_key).toBeUndefined();
+        expect(toml.model_providers.vercel.auth).toEqual(
+          codexAuthConfig(process.platform)
+        );
 
         const bashrc = readFileSync(bashrcPath(), 'utf8');
         expect(bashrc).toContain('# >>> vercel ai-gateway >>>');
@@ -1914,6 +1921,23 @@ describe('ai-gateway coding-agents setup', () => {
       expect(() => mergeToml('model = [unclosed', { a: 1 })).toThrow(
         /existing file is not valid TOML/
       );
+    });
+
+    it('removes a nested key without changing unrelated TOML', () => {
+      const current = [
+        'model = "gpt-5.5"  # my pick',
+        '',
+        '[model_providers.vercel]',
+        'env_key = "AI_GATEWAY_API_KEY"',
+        'query_params = "keep"',
+        '',
+      ].join('\n');
+      const next = removeTomlKeys(current, [
+        ['model_providers', 'vercel', 'env_key'],
+      ]);
+      expect(next).toContain('model = "gpt-5.5"  # my pick');
+      expect(next).toContain('query_params = "keep"');
+      expect(next).not.toContain('env_key');
     });
 
     it('never corrupts a multi-line string that looks like an assignment', () => {

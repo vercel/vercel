@@ -1,4 +1,5 @@
 export const GATEWAY_OPENAI_BASE_URL = 'https://ai-gateway.vercel.sh/v1';
+export const GATEWAY_CODEX_BASE_URL = 'https://ai-gateway.vercel.sh/codex/v1';
 export const GATEWAY_ANTHROPIC_BASE_URL = 'https://ai-gateway.vercel.sh';
 
 export const GATEWAY_API_KEY_ENV = 'AI_GATEWAY_API_KEY';
