@@ -158,7 +158,7 @@ describe('output-format', () => {
       expect(jsonOption.name).toBe('json');
       expect(jsonOption.shorthand).toBeNull();
       expect(jsonOption.type).toBe(Boolean);
-      expect(jsonOption.deprecated).toBe(true);
+      expect(jsonOption.deprecated).toBe(false);
     });
   });
 });

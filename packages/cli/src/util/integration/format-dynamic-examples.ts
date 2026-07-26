@@ -106,10 +106,13 @@ export function formatDynamicExamples(
 
   // JSON output
   lines.push('');
-  lines.push(`  ${chalk.dim('-')} Output as JSON`);
+  lines.push(`  ${chalk.dim('-')} Output as JSON (both forms are equivalent)`);
   lines.push('');
   lines.push(
     `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --format=json`)}`
+  );
+  lines.push(
+    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --json`)}`
   );
 
   lines.push('');
