@@ -1,31 +1,22 @@
 import { spawnSync } from 'node:child_process';
+import output from '../../output-manager';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import { getLinkedProject } from '../../util/projects/link';
+import getScope, { detectExplicitScope } from '../../util/get-scope';
+import getOrgById from '../../util/projects/get-org-by-id';
+import { getLinkedProject, getProjectLink } from '../../util/projects/link';
+import { resolveProjectCwd } from '../../util/projects/find-project-root';
 import { resolveProjectContext } from '../../util/projects/resolve-project-context';
-import { outputError } from '../../util/command-validation';
+import { isAPIError } from '../../util/errors-ts';
+import { outputError, writeJsonError } from '../../util/command-validation';
 import type { BranchFocus, CommentsScope } from './types';
 
 /**
  * Resolve the team (and optionally project) for a comments command.
  *
- * Precedence: explicit --project (resolved against the current team scope),
- * then the linked project. Thread-scoped commands only need a team, so they
- * pass `requireProject: false` and fall back to the current team scope.
+ * Precedence: explicit --project (resolved from local metadata before the
+ * current team), then the linked project. Thread-scoped commands only need a
+ * team, so they pass `requireProject: false` and fall back to the current team.
  */
-/** Whether the user passed an explicit scope flag on the command line. */
-function scopeIsExplicit(client: Client): boolean {
-  return client.argv.some(
-    arg =>
-      arg === '--scope' ||
-      arg === '-S' ||
-      arg.startsWith('--scope=') ||
-      arg === '--team' ||
-      arg.startsWith('--team=') ||
-      arg === '-T'
-  );
-}
-
 export async function resolveCommentsScope(
   client: Client,
   opts: {
@@ -38,27 +29,73 @@ export async function resolveCommentsScope(
 ): Promise<CommentsScope | number> {
   // Precedence: explicit flags (--project / --scope) beat the URL's team,
   // which beats the linked project, which beats the current default team.
-  if (opts.urlTeamSlug && !opts.project && !scopeIsExplicit(client)) {
+  if (opts.urlTeamSlug && !opts.project && !detectExplicitScope(client)) {
     // The API accepts team slugs directly.
     return { teamId: opts.urlTeamSlug, teamSlug: opts.urlTeamSlug };
   }
 
   if (opts.project) {
-    const context = await resolveProjectContext({
-      client,
-      projectNameOrId: opts.project,
-      projectNotFoundHandling: 'return',
-    });
+    let context: Awaited<ReturnType<typeof resolveProjectContext>>;
+    try {
+      context = await resolveProjectContext({
+        client,
+        projectNameOrId: opts.project,
+        projectNotFoundHandling: 'return',
+      });
+    } catch (err) {
+      if (isAPIError(err)) {
+        return outputError(
+          client,
+          opts.jsonOutput,
+          err.code || 'API_ERROR',
+          err.serverMessage || `API error (${err.status}).`
+        );
+      }
+      throw err;
+    }
     if (context.status === 'error') {
+      if (opts.jsonOutput) {
+        writeJsonError(
+          client,
+          'PROJECT_CONTEXT_ERROR',
+          'Could not resolve the project context.'
+        );
+      }
       return context.exitCode;
     }
     if (context.status === 'not_linked') {
-      const { team } = await getScope(client);
+      let scopeName = context.orgId;
+      if (context.orgId) {
+        try {
+          scopeName =
+            (await getOrgById(client, context.orgId))?.slug ?? context.orgId;
+        } catch (err) {
+          output.debug(`Scope lookup failed during project error: ${err}`);
+        }
+      } else {
+        scopeName = (await getScope(client)).contextName;
+      }
       return outputError(
         client,
         opts.jsonOutput,
         'PROJECT_NOT_FOUND',
-        `Project "${opts.project}" was not found in team "${team?.slug ?? context.orgId ?? 'unknown'}".`
+        `Project "${opts.project}" was not found${scopeName ? ` in scope "${scopeName}"` : ''}.`
+      );
+    }
+
+    let matchesLocalProject = false;
+    try {
+      const projectCwd = await resolveProjectCwd(client.cwd);
+      const localLink = await getProjectLink(
+        client,
+        projectCwd,
+        context.project.id,
+        true
+      );
+      matchesLocalProject = localLink?.projectId === context.project.id;
+    } catch (err) {
+      output.debug(
+        `Ignoring local project metadata during branch inference: ${err}`
       );
     }
 
@@ -67,9 +104,7 @@ export async function resolveCommentsScope(
       teamSlug: context.org.slug,
       projectId: context.project.id,
       projectName: context.project.name,
-      // An explicit project can still come from this checkout's repo metadata.
-      // In that case, the current Git branch is coherent and useful.
-      linked: Boolean(context.repoRoot),
+      linked: matchesLocalProject,
     };
   }
 
@@ -82,7 +117,7 @@ export async function resolveCommentsScope(
     // An explicit --scope must beat the linked directory (documented
     // precedence). Keep the linked project only when it belongs to the
     // explicitly selected team.
-    if (scopeIsExplicit(client)) {
+    if (detectExplicitScope(client)) {
       const { team } = await getScope(client);
       if (!team) {
         return outputError(

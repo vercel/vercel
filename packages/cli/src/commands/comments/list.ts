@@ -322,9 +322,8 @@ export default async function list(
     branchFilter = flags['--branch'];
     focus = { value: branchFilter.join(', '), source: 'flag' };
   } else if (!flags['--all-branches'] && scope.linked) {
-    // Inference only when the project came from the cwd's link: if --project/
-    // --scope selected the project, the cwd's git branch belongs to some
-    // other repo and would focus on garbage (or worse, coincidental 'main').
+    // Infer only when the resolved project matches this checkout's local
+    // metadata. An unrelated explicit project must not inherit this branch.
     const inferred = inferBranch(client.cwd);
     if (inferred) {
       focus = inferred;
