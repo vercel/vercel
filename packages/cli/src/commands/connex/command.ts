@@ -1,4 +1,9 @@
-import { formatOption, projectOption, yesOption } from '../../util/arg-common';
+import {
+  formatOption,
+  jsonOption,
+  projectOption,
+  yesOption,
+} from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const createSubcommand = {
@@ -71,6 +76,7 @@ export const createSubcommand = {
       description: 'Accent color for the connector icon (e.g. #1A2B3C)',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -145,6 +151,7 @@ export const updateSubcommand = {
       description: 'Accent color for the connector icon (e.g. #1A2B3C)',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -220,6 +227,7 @@ export const listSubcommand = {
         'Filter by connector type (slack, github, oauth, custom). Repeatable.',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -289,6 +297,7 @@ export const removeSubcommand = {
       description: 'Skip the confirmation prompt when deleting a connector',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -357,6 +366,7 @@ export const tokenSubcommand = {
     },
     yesOption,
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -417,6 +427,7 @@ export const revokeTokensSubcommand = {
       description: 'Skip the confirmation prompt',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -452,7 +463,7 @@ export const openSubcommand = {
       required: true,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Open a connector by ID',
@@ -535,6 +546,7 @@ export const attachSubcommand = {
       description: 'Skip the confirmation prompt',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -597,6 +609,7 @@ export const detachSubcommand = {
       description: 'Skip the confirmation prompt',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {

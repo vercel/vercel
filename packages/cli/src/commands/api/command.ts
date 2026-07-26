@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption } from '../../util/arg-common';
+import { formatOption, jsonOption } from '../../util/arg-common';
 
 const specUrlOption = {
   name: 'spec-url',
@@ -18,6 +18,7 @@ export const listSubcommand = {
   arguments: [],
   options: [
     formatOption,
+    jsonOption,
     specUrlOption,
     {
       name: 'refresh',

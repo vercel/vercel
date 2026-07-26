@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, yesOption } from '../../util/arg-common';
+import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
 
 export const listSubcommand = {
   name: 'list',
@@ -7,7 +7,7 @@ export const listSubcommand = {
   description: 'List Edge Config stores for the current team',
   default: true,
   arguments: [],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'List Edge Configs as JSON',
@@ -28,6 +28,7 @@ export const addSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     {
       name: 'items',
       shorthand: null,
@@ -56,7 +57,7 @@ export const getSubcommand = {
       required: true,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [],
 } as const;
 
@@ -73,6 +74,7 @@ export const updateSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     {
       name: 'slug',
       shorthand: null,
@@ -104,7 +106,7 @@ export const removeSubcommand = {
       required: true,
     },
   ],
-  options: [yesOption, formatOption],
+  options: [yesOption, formatOption, jsonOption],
   examples: [],
 } as const;
 
@@ -120,6 +122,7 @@ export const itemsSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     {
       name: 'key',
       shorthand: 'k',
@@ -145,6 +148,7 @@ export const tokensSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     yesOption,
     {
       name: 'add',
@@ -179,6 +183,7 @@ export const backupsSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when restoring',

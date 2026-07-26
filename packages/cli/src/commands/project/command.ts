@@ -39,6 +39,7 @@ const checksBlocksOption = {
 /** Flags for `vercel project checks add` (also merged into `checks` help). */
 export const checksAddFlags = [
   formatOption,
+  jsonOption,
   checksBlocksOption,
   {
     name: 'file',
@@ -89,7 +90,7 @@ export const checksAddFlags = [
 ] as const;
 
 /** Flags for `vercel project checks remove` / `rm` (subset of shared `checks` help). */
-export const checksRemoveFlags = [formatOption] as const;
+export const checksRemoveFlags = [formatOption, jsonOption] as const;
 
 export const checksSubcommand = {
   name: 'checks',
@@ -293,6 +294,7 @@ export const updateSubcommand = {
       deprecated: false,
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -328,7 +330,7 @@ export const tokenSubcommand = {
       required: false,
     },
   ],
-  options: [yesOption, formatOption],
+  options: [yesOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Get a development OIDC token for the linked project',
@@ -356,7 +358,7 @@ export const accessSummarySubcommand = {
       required: false,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Summary for the linked project',
@@ -381,6 +383,7 @@ export const membersSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     {
       name: 'search',
       shorthand: null,
@@ -418,6 +421,7 @@ export const protectionSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     {
       name: 'sso',
       shorthand: null,
@@ -557,6 +561,7 @@ export const accessGroupsSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     nextOption,
     {
       name: 'search',
@@ -595,7 +600,7 @@ export const webAnalyticsSubcommand = {
       required: false,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Enable Web Analytics for the linked project',
@@ -622,7 +627,7 @@ export const speedInsightsSubcommand = {
       required: false,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Enable Speed Insights for the linked project',

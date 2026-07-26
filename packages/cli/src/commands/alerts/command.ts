@@ -1,5 +1,6 @@
 import {
   formatOption,
+  jsonOption,
   limitOption,
   projectOption,
 } from '../../util/arg-common';
@@ -29,6 +30,7 @@ export const inspectSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     {
       ...projectOption,
       shorthand: 'p',
@@ -113,6 +115,7 @@ export const alertsCommand = {
     },
     limitOption,
     formatOption,
+    jsonOption,
   ],
   examples: [
     {

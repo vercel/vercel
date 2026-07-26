@@ -1,6 +1,7 @@
 import { packageName } from '../../util/pkg-name';
 import {
   formatOption,
+  jsonOption,
   limitOption,
   nextOption,
   projectOption,
@@ -11,7 +12,7 @@ export const typesSubcommand = {
   aliases: [],
   description: 'List available event types with descriptions.',
   arguments: [],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'List all event types',
@@ -87,6 +88,7 @@ export const activityCommand = {
     limitOption,
     nextOption,
     formatOption,
+    jsonOption,
   ],
   examples: [
     {

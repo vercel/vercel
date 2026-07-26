@@ -1,4 +1,4 @@
-import { formatOption, yesOption } from '../../util/arg-common';
+import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 import {
   claimSubcommand,
@@ -105,6 +105,7 @@ export const addSubcommand = {
         'If the new resource is a sandbox, skip the offer to claim it (only print a hint)',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -196,7 +197,7 @@ export const acceptTermsSubcommand = {
       required: true,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Accept terms interactively, then install on the team',
@@ -243,7 +244,7 @@ export const openSubcommand = {
       required: false,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: "Open a marketplace integration's dashboard",
@@ -285,6 +286,7 @@ export const installationsSubcommand = {
       argument: 'SLUG_OR_ID',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -330,6 +332,7 @@ export const listSubcommand = {
       deprecated: false,
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -379,6 +382,7 @@ export const discoverSubcommand = {
         'Filter integrations by category (can be repeated; e.g., -c storage -c authentication). Run `vercel integration categories` for valid slugs.',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -423,7 +427,7 @@ export const categoriesSubcommand = {
   description:
     'List marketplace integration categories (slugs valid for `integration discover --category`)',
   arguments: [],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'List marketplace categories',
@@ -451,7 +455,7 @@ export const balanceSubcommand = {
       required: true,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Show the balance(s) & threshold(s) of a marketplace integration',
@@ -519,6 +523,7 @@ export const updateSubcommand = {
         'Configuration ID when multiple marketplace installations exist for this integration',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -569,6 +574,7 @@ export const removeSubcommand = {
         'Skip the confirmation prompt when uninstalling an integration',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {

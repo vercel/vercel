@@ -1,4 +1,4 @@
-import { formatOption, yesOption } from '../../util/arg-common';
+import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const removeSubcommand = {
@@ -25,6 +25,7 @@ export const removeSubcommand = {
       description: 'Skip the confirmation prompt when deleting a resource',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -76,6 +77,7 @@ export const disconnectSubcommand = {
       description: 'Skip the confirmation prompt when disconnecting a resource',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -145,6 +147,7 @@ export const connectSubcommand = {
       description: 'Skip the confirmation prompt when connecting a resource',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -246,6 +249,7 @@ export const claimSubcommand = {
       deprecated: false,
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -277,7 +281,7 @@ export const inspectSubcommand = {
       required: true,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Show live details and status for a resource',

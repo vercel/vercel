@@ -1,5 +1,10 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, limitOption, nextOption } from '../../util/arg-common';
+import {
+  formatOption,
+  jsonOption,
+  limitOption,
+  nextOption,
+} from '../../util/arg-common';
 
 export const requestSubcommand = {
   name: 'request',
@@ -12,7 +17,7 @@ export const requestSubcommand = {
       required: false,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Status for your pending request',
@@ -69,6 +74,7 @@ export const listSubcommand = {
     nextOption,
     limitOption,
     formatOption,
+    jsonOption,
     { name: 'since', shorthand: null, type: String, deprecated: true },
     { name: 'until', shorthand: null, type: String, deprecated: true },
     { name: 'count', shorthand: 'C', type: Number, deprecated: true },
@@ -130,7 +136,7 @@ export const ssoSubcommand = {
   aliases: [],
   description: 'Show SAML / SSO configuration for the current team',
   arguments: [],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Human-readable SAML summary',
@@ -148,7 +154,7 @@ export const membersSubcommand = {
   aliases: ['member'],
   description: 'List members for the currently scoped team',
   arguments: [],
-  options: [nextOption, limitOption, formatOption],
+  options: [nextOption, limitOption, formatOption, jsonOption],
   examples: [
     {
       name: 'List team members',

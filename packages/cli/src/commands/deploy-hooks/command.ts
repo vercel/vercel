@@ -1,6 +1,7 @@
 import { packageName } from '../../util/pkg-name';
 import {
   formatOption,
+  jsonOption,
   projectOption as sharedProjectOption,
   yesOption,
 } from '../../util/arg-common';
@@ -15,7 +16,7 @@ export const listSubcommand = {
   aliases: ['ls'],
   description: 'List deploy hooks for a project',
   arguments: [],
-  options: [formatOption, projectOption],
+  options: [formatOption, jsonOption, projectOption],
   examples: [
     {
       name: 'List deploy hooks as JSON',
