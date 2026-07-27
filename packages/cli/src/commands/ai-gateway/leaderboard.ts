@@ -4,7 +4,16 @@ import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
 import { type Command, help } from '../help';
 import models from './leaderboard-models';
-import { leaderboardSubcommand, leaderboardModelsSubcommand } from './command';
+import labs from './leaderboard-labs';
+import apps from './leaderboard-apps';
+import providers from './leaderboard-providers';
+import {
+  leaderboardSubcommand,
+  leaderboardModelsSubcommand,
+  leaderboardLabsSubcommand,
+  leaderboardAppsSubcommand,
+  leaderboardProvidersSubcommand,
+} from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
@@ -13,6 +22,9 @@ import { printError } from '../../util/error';
 
 const COMMAND_CONFIG = {
   models: getCommandAliases(leaderboardModelsSubcommand),
+  labs: getCommandAliases(leaderboardLabsSubcommand),
+  apps: getCommandAliases(leaderboardAppsSubcommand),
+  providers: getCommandAliases(leaderboardProvidersSubcommand),
 };
 
 export default async function leaderboard(client: Client) {
@@ -72,6 +84,39 @@ export default async function leaderboard(client: Client) {
       }
       telemetry.trackCliSubcommandModels(subcommandOriginal);
       return models(client, args);
+    case 'labs':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp(
+          'ai-gateway leaderboard',
+          subcommandOriginal
+        );
+        printHelp(leaderboardLabsSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandLabs(subcommandOriginal);
+      return labs(client, args);
+    case 'apps':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp(
+          'ai-gateway leaderboard',
+          subcommandOriginal
+        );
+        printHelp(leaderboardAppsSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandApps(subcommandOriginal);
+      return apps(client, args);
+    case 'providers':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp(
+          'ai-gateway leaderboard',
+          subcommandOriginal
+        );
+        printHelp(leaderboardProvidersSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandProviders(subcommandOriginal);
+      return providers(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(

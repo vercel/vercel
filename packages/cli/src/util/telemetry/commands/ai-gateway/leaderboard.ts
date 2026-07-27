@@ -9,4 +9,16 @@ export class AiGatewayLeaderboardTelemetryClient
   trackCliSubcommandModels(actual: string) {
     this.trackCliSubcommand({ subcommand: 'models', value: actual });
   }
+
+  trackCliSubcommandLabs(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'labs', value: actual });
+  }
+
+  trackCliSubcommandApps(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'apps', value: actual });
+  }
+
+  trackCliSubcommandProviders(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'providers', value: actual });
+  }
 }
