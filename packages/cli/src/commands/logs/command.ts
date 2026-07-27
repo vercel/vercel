@@ -145,8 +145,8 @@ export const logsCommand = {
       name: 'no-branch',
       shorthand: null,
       type: Boolean,
-      deprecated: false,
-      description: 'Disable auto-detection of git branch',
+      deprecated: true,
+      description: 'No-op; branch filtering only applies when --branch is set',
     },
   ],
   examples: [
