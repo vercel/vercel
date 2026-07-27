@@ -8,7 +8,7 @@ import type {
   ServiceDetectionError,
   ServiceRuntime,
 } from './types';
-import { BUILDPACK_RUNTIMES, RUNTIME_BUILDERS, STATIC_BUILDERS } from './types';
+import { RUNTIME_BUILDERS, STATIC_BUILDERS, toBuildpackRuntime } from './types';
 import {
   getServiceFs,
   resolveEntrypointPath,
@@ -362,10 +362,9 @@ export async function resolveConfiguredServiceV2(
   // with Cloud Native Buildpacks: there is no entrypoint file to resolve or
   // require, and the builder is always `@vercel/container` with the
   // `<detect>` sentinel as its source.
-  const buildpackRuntime =
-    inferredRuntime && BUILDPACK_RUNTIMES.has(inferredRuntime as ServiceRuntime)
-      ? (inferredRuntime as ServiceRuntime)
-      : undefined;
+  const buildpackRuntime = toBuildpackRuntime(
+    inferredRuntime as ServiceRuntime | undefined
+  );
   if (
     detectedFramework &&
     frameworkRuntime &&

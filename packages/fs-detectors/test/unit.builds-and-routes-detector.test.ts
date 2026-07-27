@@ -772,7 +772,31 @@ describe('Test `detectBuilders`', () => {
     });
   });
 
-  it('routes the Ruby framework through the container buildpack builder', async () => {
+  it('routes the Ruby framework through the container buildpack builder when buildpacks are enabled', async () => {
+    process.env.VERCEL_EXPERIMENTAL_BUILDPACKS = '1';
+    try {
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['Gemfile', 'config.ru'],
+        null,
+        {
+          projectSettings: { framework: 'ruby' },
+        }
+      );
+
+      expect(builders).toContainEqual({
+        src: '<detect>',
+        use: '@vercel/container',
+        config: {
+          zeroConfig: true,
+          framework: 'ruby',
+        },
+      });
+    } finally {
+      delete process.env.VERCEL_EXPERIMENTAL_BUILDPACKS;
+    }
+  });
+
+  it('keeps the Ruby framework on the legacy Ruby builder when buildpacks are disabled', async () => {
     const { builders } = await invokeDetectBuildersAndThrow(
       ['Gemfile', 'config.ru'],
       null,
@@ -782,8 +806,8 @@ describe('Test `detectBuilders`', () => {
     );
 
     expect(builders).toContainEqual({
-      src: '<detect>',
-      use: '@vercel/container',
+      src: 'config.ru',
+      use: '@vercel/ruby',
       config: {
         zeroConfig: true,
         framework: 'ruby',

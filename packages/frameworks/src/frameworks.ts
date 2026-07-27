@@ -4366,9 +4366,12 @@ export const frameworks = [
     tagline:
       'A dynamic, open source programming language with a focus on simplicity and productivity.',
     description:
-      'A generic Ruby application built as a container with Cloud Native Buildpacks.',
+      'A generic Ruby application deployed as a serverless function.',
     website: 'https://www.ruby-lang.org',
-    useRuntime: { src: '<detect>', use: '@vercel/container' },
+    // With `VERCEL_EXPERIMENTAL_BUILDPACKS=1`, builds-and-routes detection
+    // replaces this runtime with a `@vercel/container` buildpack build (see
+    // fs-detectors `detectFrontBuilder`).
+    useRuntime: { src: 'config.ru', use: '@vercel/ruby' },
     ignoreRuntimes: ['@vercel/ruby'],
     detectors: {
       every: [
@@ -4397,13 +4400,18 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
-    defaultRoutes: [
+    // The buildpack container build outputs `index`; the legacy Lambda build
+    // outputs a function named after its `config.ru` entrypoint.
+    defaultRoutes: async () => [
       {
         handle: 'filesystem',
       },
       {
         src: '/(.*)',
-        dest: '/index',
+        dest:
+          process.env.VERCEL_EXPERIMENTAL_BUILDPACKS === '1'
+            ? '/index'
+            : '/config',
       },
     ],
   },

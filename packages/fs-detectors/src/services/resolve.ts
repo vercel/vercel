@@ -15,11 +15,11 @@ import {
   JobTrigger,
 } from '@vercel/build-utils';
 import {
-  BUILDPACK_RUNTIMES,
   ENTRYPOINT_EXTENSIONS,
   RUNTIME_BUILDERS,
   STATIC_BUILDERS,
   RUNTIME_MANIFESTS,
+  toBuildpackRuntime,
 } from './types';
 import {
   DETECTION_FRAMEWORKS,
@@ -35,7 +35,10 @@ import { frameworkList } from '@vercel/frameworks';
 import { detectFrameworks } from '../detect-framework';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import { normalizeRoutePrefix } from '@vercel/routing-utils';
-import { isNodeBackendFramework } from '@vercel/build-utils';
+import {
+  isBuildpacksEnabled,
+  isNodeBackendFramework,
+} from '@vercel/build-utils';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
@@ -152,8 +155,7 @@ function getEntrypointRequiredRuntime(
 function getBuildpackRuntime(
   config: ConfiguredServiceConfig
 ): ServiceRuntime | undefined {
-  const runtime = getEntrypointRequiredRuntime(config);
-  return runtime && BUILDPACK_RUNTIMES.has(runtime) ? runtime : undefined;
+  return toBuildpackRuntime(getEntrypointRequiredRuntime(config));
 }
 
 function validateBackendFileEntrypoint(
@@ -324,16 +326,18 @@ export async function detectFrameworkFromWorkspace({
   runtime?: ServiceRuntime;
 }): Promise<{ framework?: string; error?: ServiceDetectionError }> {
   const serviceFs = workspace === '.' ? fs : fs.chdir(workspace);
-  // Services intentionally include runtime-framework presets (Ruby, Go, etc.)
-  // even when they are hidden from normal project framework detection.
+  // With buildpacks enabled, services intentionally include experimental
+  // runtime-framework presets (Ruby, etc.) that are hidden from normal
+  // project framework detection.
+  const buildpacksEnabled = isBuildpacksEnabled();
   const frameworkCandidates = filterFrameworksByRuntime(
-    DETECTION_FRAMEWORKS,
+    buildpacksEnabled ? DETECTION_FRAMEWORKS : frameworkList,
     runtime
   );
   const frameworks = await detectFrameworks({
     fs: serviceFs,
     frameworkList: frameworkCandidates,
-    useExperimentalFrameworks: true,
+    useExperimentalFrameworks: buildpacksEnabled || undefined,
   });
 
   if (frameworks.length > 1) {
@@ -848,10 +852,7 @@ export async function resolveConfiguredService(
     ...config,
     entrypoint: entrypointIsDirectory ? undefined : normalizedEntrypoint,
   });
-  const buildpackRuntime =
-    inferredRuntime && BUILDPACK_RUNTIMES.has(inferredRuntime)
-      ? inferredRuntime
-      : undefined;
+  const buildpackRuntime = toBuildpackRuntime(inferredRuntime);
   let workspace = '.';
   let resolvedEntrypointFile =
     entrypointIsDirectory || !normalizedEntrypoint

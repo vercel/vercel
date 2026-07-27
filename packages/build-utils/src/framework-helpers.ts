@@ -86,6 +86,15 @@ export function isExperimentalBackendsEnabled(): boolean {
   );
 }
 
+/**
+ * Gates the migration of buildpack-backed runtimes (Ruby first) from their
+ * per-language Lambda builders to Cloud Native Buildpack container builds
+ * via `@vercel/container`.
+ */
+export function isBuildpacksEnabled(): boolean {
+  return process.env.VERCEL_EXPERIMENTAL_BUILDPACKS === '1';
+}
+
 export function isBackendBuilder(builder: Builder | null | undefined): boolean {
   if (!builder) return false;
   if (builder.use === UNIFIED_BACKEND_BUILDER) return true;
