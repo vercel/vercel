@@ -153,6 +153,10 @@ function prepareAppDirectory(
  * contract and also leaks the whole map to every phase; the platform dir is
  * both spec-correct and scoped. World-readable so the lifecycle's unprivileged
  * builder user can read it across the container UID mapping.
+ *
+ * TODO: in dev this briefly exposes build env values (which may contain
+ * secrets) to other local users via the world-readable tmpdir. Tightening
+ * requires group-mapping the files to the builder user instead of 0644.
  */
 function writePlatformEnvDir(
   buildEnv: Record<string, string> | undefined
@@ -385,6 +389,9 @@ export async function buildWithLifecycle(
         '/cnb/lifecycle/creator',
         '-app=/workspace',
         `-order=${ORDER_FILE}`,
+        // TODO: replace -skip-restore with a persistent -cache-dir volume
+        // (namespaced by service and builder digest, under meta.devCacheDir)
+        // so dev rebuilds don't re-run full dependency installs.
         '-skip-restore',
         `-run-image=${runImage}`,
         '-daemon',
@@ -538,6 +545,9 @@ export async function buildAndPushWithLifecycle(
             '/cnb/lifecycle/creator',
             '-app=/workspace',
             `-order=${ORDER_FILE}`,
+            // TODO: replace -skip-restore with a persistent -cache-dir
+            // (namespaced by service and builder digest) wired into
+            // prepareCache so deploy rebuilds restore dependency layers.
             '-skip-restore',
             ...(runImage ? [`-run-image=${runImage}`] : []),
             '-report=/platform-output/report.toml',
