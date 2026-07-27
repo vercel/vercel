@@ -10,7 +10,7 @@ export const logsCommand = {
   aliases: ['log'],
   description:
     'Display request logs for a project.\n\n' +
-    'With --follow, stream live runtime logs from a deployment. When no deployment is specified, streams the latest production deployment. Use --environment preview, --branch, or a deployment URL/ID for anything else.\n\n' +
+    'With --follow, stream live runtime logs from a deployment. With no deployment, branch, or environment specified, prefer the latest production deployment and fall back to your latest READY deployment. Use --environment production to require production, or use --environment preview, --branch, or a deployment URL/ID to select another deployment.\n\n' +
     'Source types: λ = serverless, ε = edge/middleware, ◇ = static/external',
   arguments: [
     {
@@ -34,7 +34,7 @@ export const logsCommand = {
       type: String,
       deprecated: false,
       description:
-        'Filter by environment: production or preview. With --follow, selects which environment to stream (production always streams the latest production deployment)',
+        'Filter by environment: production or preview. With --follow, select which environment to stream',
     },
     {
       name: 'level',
@@ -92,7 +92,7 @@ export const logsCommand = {
       type: Boolean,
       deprecated: false,
       description:
-        'Stream live runtime logs. Without a deployment, follows the latest production deployment; use --environment preview, --branch, or a deployment URL/ID for anything else',
+        'Stream live runtime logs. With no deployment, branch, or environment specified, prefer the latest production deployment and fall back to your latest READY deployment',
     },
     {
       name: 'no-follow',
@@ -138,7 +138,8 @@ export const logsCommand = {
       shorthand: 'b',
       type: String,
       deprecated: false,
-      description: 'Filter by git branch',
+      description:
+        'Filter by git branch; with --follow, require a READY deployment on that branch',
     },
     {
       name: 'no-branch',

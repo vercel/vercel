@@ -114,7 +114,36 @@ async function resolveFollowDeployment({
     return { deploymentId: deployment.id, label: 'deployment' };
   }
 
-  // 2. --environment production → latest READY production, else error
+  // 2. Explicit --branch → latest matching READY deployment, else error
+  if (branch) {
+    output.spinner(`Finding latest deployment for branch "${branch}"`, 1000);
+    const branchDeployment = await getLatestDeployment(client, projectId, {
+      branch,
+      target: environment,
+    });
+    output.stopSpinner();
+
+    if (branchDeployment) {
+      output.debug(
+        `Found deployment ${branchDeployment.id} for branch ${branch}`
+      );
+      return {
+        deploymentId: branchDeployment.id,
+        label: `latest deployment on branch "${branch}"`,
+      };
+    }
+
+    const environmentLabel = environment ? ` ${environment}` : '';
+    const deployHint = environment
+      ? `Deploy that branch to ${environment} first`
+      : 'Deploy that branch first';
+    output.error(
+      `No READY${environmentLabel} deployments found for branch "${branch}" in ${formatProject(orgSlug, projectSlug)}. ${deployHint} or specify a deployment with ${chalk.bold('--deployment')}.`
+    );
+    return { exitCode: 1 };
+  }
+
+  // 3. --environment production → latest READY production, else error
   if (environment === 'production') {
     output.spinner('Finding latest production deployment', 1000);
     const productionDeployment = await getLatestDeployment(client, projectId, {
@@ -136,30 +165,6 @@ async function resolveFollowDeployment({
       deploymentId: productionDeployment.id,
       label: 'latest production deployment',
     };
-  }
-
-  const target = environment;
-
-  // 3. Explicit --branch only → latest READY on that branch (target = --environment)
-  if (branch) {
-    output.spinner(`Finding latest deployment for branch "${branch}"`, 1000);
-    const branchDeployment = await getLatestDeployment(client, projectId, {
-      branch,
-      target,
-    });
-    output.stopSpinner();
-
-    if (branchDeployment) {
-      output.debug(
-        `Found deployment ${branchDeployment.id} for branch ${branch}`
-      );
-      return {
-        deploymentId: branchDeployment.id,
-        label: `latest deployment on branch "${branch}"`,
-      };
-    }
-
-    output.debug(`No deployments found for branch "${branch}"`);
   }
 
   // 4. --environment preview → your latest READY preview, else error
