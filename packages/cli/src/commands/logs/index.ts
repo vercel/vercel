@@ -3,7 +3,6 @@ import type { Deployment } from '@vercel-internals/types';
 import chalk from 'chalk';
 import format from 'date-fns/format';
 import type Client from '../../util/client';
-import { createGitMeta } from '../../util/create-git-meta';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -89,42 +88,6 @@ async function getLatestDeployment(
     id: deployments[0].uid,
     url: deployments[0].url,
   };
-}
-
-interface ResolveBranchFilterOptions {
-  client: Client;
-  explicitBranch?: string;
-  logsTarget: LogsTarget;
-  noBranch?: boolean;
-}
-
-async function resolveBranchFilter({
-  client,
-  explicitBranch,
-  logsTarget,
-  noBranch,
-}: ResolveBranchFilterOptions): Promise<string | undefined> {
-  if (explicitBranch) {
-    return explicitBranch;
-  }
-
-  if (
-    noBranch ||
-    logsTarget.deployment ||
-    logsTarget.targetSource !== 'linked-project'
-  ) {
-    return;
-  }
-
-  try {
-    const gitMeta = await createGitMeta(client.cwd);
-    if (gitMeta?.commitRef) {
-      output.debug(`Detected git branch: ${gitMeta.commitRef}`);
-      return gitMeta.commitRef;
-    }
-  } catch {
-    // Not in a git repo or git not available, continue without branch filter
-  }
 }
 
 interface ResolveFollowDeploymentOptions {
@@ -681,18 +644,8 @@ export default async function logs(client: Client) {
     return 1;
   }
 
-  // Determine branch filter:
-  // - If --branch is explicitly set (string), use it
-  // - If --no-branch is set, don't filter by branch
-  // - Otherwise, auto-detect the current git branch only for a linked project
-  const noBranchFlagValue = parsedArguments.flags['--no-branch'];
-  const branchOption = await resolveBranchFilter({
-    client,
-    explicitBranch:
-      typeof branchFlagValue === 'string' ? branchFlagValue : undefined,
-    logsTarget,
-    noBranch: noBranchFlagValue,
-  });
+  const branchOption =
+    typeof branchFlagValue === 'string' ? branchFlagValue : undefined;
 
   if (
     environmentOption &&
