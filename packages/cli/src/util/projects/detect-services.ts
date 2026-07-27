@@ -11,7 +11,6 @@ import type { Rewrite } from '@vercel/routing-utils';
 import type { Services } from '@vercel/build-utils';
 import type { VercelConfig } from '../dev/types';
 import { compileVercelConfig } from '../compile-vercel-config';
-import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
 import { CantParseJSONFile } from '../errors-ts';
 import readJSONFile from '../read-json-file';
 import { validateConfig } from '../validate-config';
@@ -167,7 +166,7 @@ async function prepareServicesConfigWrite(
   const compileResult = await compileVercelConfig(cwd);
   const configPath = join(cwd, 'vercel.json');
 
-  if (isVercelTomlEnabled() && compileResult.sourceFile === 'vercel.toml') {
+  if (compileResult.sourceFile === 'vercel.toml') {
     return prepareTomlServicesConfigWrite(join(cwd, 'vercel.toml'), config);
   }
 

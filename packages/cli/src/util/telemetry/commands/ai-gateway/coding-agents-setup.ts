@@ -105,6 +105,12 @@ export class AiGatewayCodingAgentsSetupTelemetryClient
     }
   }
 
+  trackCliOptionBaseUrl(baseUrl: string | undefined) {
+    if (baseUrl) {
+      this.trackCliOption({ option: 'base-url', value: this.redactedValue });
+    }
+  }
+
   trackCliFlagYes(yes: boolean | undefined) {
     if (yes) {
       this.trackCliFlag('yes');
