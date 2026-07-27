@@ -10,7 +10,13 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { resolveImageSource } from './image-source';
 import type { DevOutput } from './util';
-import { debug, devImageTag, normalizeCommand, withSpan } from './util';
+import {
+  assertValidCommandShell,
+  debug,
+  devImageTag,
+  normalizeCommand,
+  withSpan,
+} from './util';
 
 export type { DevOutput } from './util';
 
@@ -514,6 +520,9 @@ async function startContainer(
       const commandShell =
         typeof rawCommand === 'string' ||
         (config as { commandShell?: unknown }).commandShell === true;
+      if (isBuildpack) {
+        assertValidCommandShell(command, commandShell);
+      }
 
       // Honor the host port the orchestrator pre-allocated for this service
       // (passed via `meta.port`). Service bindings are built against this port

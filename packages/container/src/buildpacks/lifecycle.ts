@@ -15,7 +15,14 @@ import { dirname, join } from 'node:path';
 import { DIGEST_RE, TARGET_PLATFORM } from '../engines/types';
 import { buildahStorageArgs } from '../storage-driver';
 import type { DevOutput } from '../util';
-import { debug, done, run, step, withSpan } from '../util';
+import {
+  assertValidCommandShell,
+  debug,
+  done,
+  run,
+  step,
+  withSpan,
+} from '../util';
 import type { BuildpackDescriptor } from './registry';
 import { builderImageRef, runImageRef } from './registry';
 
@@ -180,6 +187,7 @@ function writeCommandProcfile(
   command: string[],
   commandShell: boolean
 ): void {
+  assertValidCommandShell(command, commandShell);
   // Mirror the CNB launcher's own convention: a command string is a shell
   // command line (left raw so $VARs and operators work), while an array is an
   // argv vector (each element escaped so the Procfile shell preserves it).

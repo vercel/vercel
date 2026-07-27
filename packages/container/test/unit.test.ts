@@ -1710,6 +1710,21 @@ describe('@vercel/container', () => {
         expect(readFileSync(join(workPath, 'Procfile'), 'utf8')).toBe(
           `web: bundle exec puma -p $PORT\n`
         );
+
+        // commandShell + multi-element argv would silently drop every
+        // element after the first.
+        await expect(
+          build({
+            ...createBuildOptions({
+              buildpack: 'ruby',
+              command: ['bundle', 'exec', 'puma'],
+              commandShell: true,
+            }),
+            workPath,
+            entrypoint: '<detect>',
+            service: { name: 'api' },
+          } as any)
+        ).rejects.toThrow(/single command string/);
       } finally {
         rmSync(workPath, { recursive: true, force: true });
       }

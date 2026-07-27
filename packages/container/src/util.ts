@@ -34,6 +34,22 @@ export function normalizeCommand(command: unknown): string[] | undefined {
   return undefined;
 }
 
+/**
+ * A shell `command` (`commandShell`) is a single command line; combining it
+ * with an argv array would silently drop every element after the first.
+ */
+export function assertValidCommandShell(
+  command: string[] | undefined,
+  commandShell: boolean
+): void {
+  if (commandShell && command && command.length !== 1) {
+    throw new Error(
+      `A shell "command" must be a single command string, but received ${command.length} elements. ` +
+        'Pass the command as one string, or as an argv array without "commandShell".'
+    );
+  }
+}
+
 export function write(line: string): void {
   process.stderr.write(`${line}\n`);
 }
