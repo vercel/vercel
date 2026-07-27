@@ -48,6 +48,13 @@ describe('curl-based deployment via Vercel API', () => {
     .toString(36)
     .slice(2, 8)}`;
 
+  // URL of the CLI tarball built for this PR (set by the CI "Wait for
+  // deployment tarballs" step). Forwarding it as `VERCEL_CLI_VERSION` in the
+  // deployment's build env makes the server-side build run THIS PR's builder,
+  // rather than the published CLI — this is how the existing deploy e2e tests
+  // exercise branch code server-side (see test/dev/utils.ts).
+  const CLI_VERSION = process.env.VERCEL_CLI_VERSION;
+
   beforeAll(() => {
     // Create a minimal Node project: just server.ts
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'curl-deploy-'));
@@ -82,6 +89,10 @@ describe('curl-based deployment via Vercel API', () => {
     const sha = createHash('sha1').update(new Uint8Array(data)).digest('hex');
     const size = data.length;
     console.log('tarball sha:', sha, 'size:', size);
+    console.log(
+      'VERCEL_CLI_VERSION:',
+      CLI_VERSION ? CLI_VERSION : '<unset — build will use published CLI>'
+    );
 
     // 1. Upload the tarball to the files endpoint (same headers the CLI sends
     //    in packages/client/src/upload.ts for --archive=tgz chunks).
@@ -113,11 +124,18 @@ describe('curl-based deployment via Vercel API', () => {
       // The unique `projectName` guarantees a first deployment, so the API sets
       // `VERCEL_FIRST_DEPLOYMENT=1` and `server.ts` is detected as `node`.
       //
-      // Enable verbose debug logging in the build container so our
-      // first-deployment framework-detection debug output (routed through
-      // `@vercel/build-utils` `debug`, gated on `VERCEL_BUILDER_DEBUG`) shows up
-      // in the build logs for inspection.
-      build: { env: { VERCEL_BUILDER_DEBUG: '1' } },
+      // Build env for the server-side build:
+      // - VERCEL_CLI_VERSION pins the build to THIS PR's CLI tarball so our
+      //   branch's first-deployment detection actually runs (matches how
+      //   test/dev/utils.ts passes --build-env VERCEL_CLI_VERSION).
+      // - VERCEL_BUILDER_DEBUG enables the `@vercel/build-utils` debug output
+      //   from framework-detection.ts in the build logs.
+      build: {
+        env: {
+          ...(CLI_VERSION ? { VERCEL_CLI_VERSION: CLI_VERSION } : {}),
+          VERCEL_BUILDER_DEBUG: '1',
+        },
+      },
     };
 
     const deployBody = curl([
