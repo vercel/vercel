@@ -67,16 +67,12 @@ describe('curl-based deployment via Vercel API', () => {
   });
 
   afterAll(() => {
-    // Delete the project created by this test.
+    // NOTE: intentionally NOT deleting the created project/deployment so it can
+    // be inspected in the dashboard after the run.
     if (projectId) {
-      const deleteBody = curl([
-        '-X',
-        'DELETE',
-        apiUrl(`/v9/projects/${encodeURIComponent(projectId)}`),
-        '-H',
-        `Authorization: Bearer ${TOKEN}`,
-      ]);
-      console.log('project delete response:', deleteBody || '(empty)');
+      console.log(
+        `LEAVING project in place for inspection: projectId=${projectId} name=${projectName}`
+      );
     }
     if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
   });
@@ -116,6 +112,12 @@ describe('curl-based deployment via Vercel API', () => {
       files: [{ file: '.vercel/source.tgz.part1', sha, size, mode: 0o666 }],
       // The unique `projectName` guarantees a first deployment, so the API sets
       // `VERCEL_FIRST_DEPLOYMENT=1` and `server.ts` is detected as `node`.
+      //
+      // Enable verbose debug logging in the build container so our
+      // first-deployment framework-detection debug output (routed through
+      // `@vercel/build-utils` `debug`, gated on `VERCEL_BUILDER_DEBUG`) shows up
+      // in the build logs for inspection.
+      build: { env: { VERCEL_BUILDER_DEBUG: '1' } },
     };
 
     const deployBody = curl([
