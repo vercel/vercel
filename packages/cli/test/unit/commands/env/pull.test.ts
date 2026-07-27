@@ -377,6 +377,7 @@ describe('env pull', () => {
     expect(performDeviceCodeFlow).toHaveBeenCalledWith(client, {
       refreshToken: 'vcr_old',
       acrValues: 'urn:vercel:loa:sudo',
+      fallbackToLoginOnStepUpFailure: true,
     });
     expect(pullRequests).toBe(2);
     expect(client.authConfig.token).toBe('vca_new');

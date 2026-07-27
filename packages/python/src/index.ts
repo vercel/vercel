@@ -83,7 +83,10 @@ import {
   runFastAPICollectStatic,
   type FastAPICollectStaticResult,
 } from './fastapi';
-import { containsTopLevelCallable } from '@vercel/python-analysis';
+import {
+  containsTopLevelCallable,
+  type PyProjectToml,
+} from '@vercel/python-analysis';
 import {
   collectAppBytecodeFiles,
   collectAppPrefixBytecodeFiles,
@@ -336,6 +339,7 @@ interface FrameworkHookContext {
   venvPath?: string;
   entrypoint: string | undefined;
   detected: DetectedPythonEntrypoint | undefined;
+  pyprojectData?: PyProjectToml;
 }
 
 interface FrameworkHookResult {
@@ -450,6 +454,7 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
     detected,
     workPath,
     venvPath,
+    pyprojectData,
   }): Promise<FastAPIFrameworkHookResult | void> => {
     if (!detected?.entrypoint || !workPath || !venvPath) {
       debug(
@@ -469,6 +474,14 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
     if (cdnEnv !== '1' && cdnEnv !== 'true') {
       debug(
         'FastAPI: VERCEL_FASTAPI_STATIC_CDN not set, skipping static CDN collection'
+      );
+      return;
+    }
+
+    const staticCdn = pyprojectData?.tool?.vercel?.fastapi?.static?.cdn;
+    if (staticCdn === false) {
+      debug(
+        'FastAPI: static.cdn = false in pyproject.toml, skipping CDN collection'
       );
       return;
     }
@@ -1091,6 +1104,7 @@ export const build: BuildVX = async ({
     venvPath,
     entrypoint,
     detected,
+    pyprojectData: pythonPackage.manifest?.data,
   });
 
   // Collect the resolved entrypoint from detection or hook, preferring the

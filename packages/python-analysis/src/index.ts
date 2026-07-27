@@ -123,6 +123,9 @@ export {
   PyProjectTomlSchema,
   ReadmeObjectSchema,
   ReadmeSchema,
+  PyProjectToolVercelFastapiSectionSchema,
+  PyProjectToolVercelFastapiStaticSectionSchema,
+  PyProjectToolVercelSectionSchema,
 } from './manifest/pyproject/schema';
 
 // PyProject types (from source of truth)
@@ -139,6 +142,9 @@ export type {
   PyProjectToolSection,
   Readme,
   ReadmeObject,
+  PyProjectToolVercelFastapiSection,
+  PyProjectToolVercelFastapiStaticSection,
+  PyProjectToolVercelSection,
 } from './manifest/pyproject/types';
 
 // UV config schemas
