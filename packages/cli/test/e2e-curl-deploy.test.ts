@@ -74,12 +74,20 @@ describe('curl-based deployment via Vercel API', () => {
   });
 
   afterAll(() => {
-    // NOTE: intentionally NOT deleting the created project/deployment so it can
-    // be inspected in the dashboard after the run.
+    // Clean up the project created by this test so runs don't accumulate
+    // projects in the team.
     if (projectId) {
-      console.log(
-        `LEAVING project in place for inspection: projectId=${projectId} name=${projectName}`
-      );
+      try {
+        curl([
+          '-X',
+          'DELETE',
+          apiUrl(`/v9/projects/${encodeURIComponent(projectId)}`),
+          '-H',
+          `Authorization: Bearer ${TOKEN}`,
+        ]);
+      } catch (err) {
+        console.log(`Failed to delete project ${projectId}: ${err}`);
+      }
     }
     if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
   });
@@ -124,18 +132,13 @@ describe('curl-based deployment via Vercel API', () => {
       // The unique `projectName` guarantees a first deployment, so the API sets
       // `VERCEL_FIRST_DEPLOYMENT=1` and `server.ts` is detected as `node`.
       //
-      // Build env for the server-side build:
-      // - VERCEL_CLI_VERSION pins the build to THIS PR's CLI tarball so our
-      //   branch's first-deployment detection actually runs (matches how
-      //   test/dev/utils.ts passes --build-env VERCEL_CLI_VERSION).
-      // - VERCEL_BUILDER_DEBUG enables the `@vercel/build-utils` debug output
-      //   from framework-detection.ts in the build logs.
-      build: {
-        env: {
-          ...(CLI_VERSION ? { VERCEL_CLI_VERSION: CLI_VERSION } : {}),
-          VERCEL_BUILDER_DEBUG: '1',
-        },
-      },
+      // Pin the server-side build to THIS PR's CLI tarball via
+      // VERCEL_CLI_VERSION so our branch's first-deployment detection actually
+      // runs (matches how test/dev/utils.ts passes --build-env
+      // VERCEL_CLI_VERSION). Without it the build uses the published CLI.
+      ...(CLI_VERSION
+        ? { build: { env: { VERCEL_CLI_VERSION: CLI_VERSION } } }
+        : {}),
     };
 
     const deployBody = curl([
@@ -219,17 +222,17 @@ describe('curl-based deployment via Vercel API', () => {
       `Expected "Hello from Vercel!" at /, got: ${body}`
     ).toBe(true);
 
-    // 5. Log the persisted project framework for visibility. This is currently
-    //    NON-BLOCKING: it is unclear whether the API writes the detected
-    //    framework back onto `project.framework` for this zero-config path, so
-    //    we only report it rather than assert on it.
+    // 5. Assert the detected framework ("node" for a bare `server.ts`) was
+    //    persisted to the project by first-deployment detection.
     const projectBody = curl([
       apiUrl(`/v9/projects/${encodeURIComponent(projectId!)}`),
       '-H',
       `Authorization: Bearer ${TOKEN}`,
     ]);
     const projectFramework = JSON.parse(projectBody).framework;
-    console.log(`persisted project framework=${projectFramework}`);
-    console.log('final project settings:', projectBody);
+    expect(
+      projectFramework,
+      `Expected project framework "node" to be persisted, got: ${projectBody}`
+    ).toBe('node');
   });
 });
