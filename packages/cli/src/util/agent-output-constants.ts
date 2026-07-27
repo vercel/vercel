@@ -81,6 +81,7 @@ export const AGENT_REASON = {
   INVALID_BUDGET: 'invalid_budget',
   INVALID_REFRESH_PERIOD: 'invalid_refresh_period',
   INVALID_EXPIRATION: 'invalid_expiration',
+  INVALID_ALERT_THRESHOLDS: 'invalid_alert_thresholds',
   /**
    * Every selected agent needs explicit `--agent`/`--all` consent (see the
    * payload's skipped[]). `--yes` does not grant it, so this is deliberately
