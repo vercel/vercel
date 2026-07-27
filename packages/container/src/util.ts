@@ -126,22 +126,16 @@ export const DOCKERFILE_CANDIDATES = [
   'Dockerfile.vercel',
   'Containerfile.vercel',
 ];
-const CONVENTIONAL_DOCKERFILE_CANDIDATES = ['Dockerfile', 'Containerfile'];
 
 /**
  * Discover a Vercel container opt-in marker (`Dockerfile.vercel` /
  * `Containerfile.vercel`) in `workPath`. Used by both the build and dev paths
  * so they resolve the same Dockerfile when the entrypoint is the `<detect>`
- * sentinel.
+ * sentinel. A conventional `Dockerfile` is deliberately not a marker: only
+ * the `.vercel` suffix opts a project out of buildpack or framework builds.
  */
-export function findDockerfile(
-  workPath: string,
-  includeConventional = false
-): string | undefined {
-  const candidates = includeConventional
-    ? [...DOCKERFILE_CANDIDATES, ...CONVENTIONAL_DOCKERFILE_CANDIDATES]
-    : DOCKERFILE_CANDIDATES;
-  return candidates.find(name => existsSync(join(workPath, name)));
+export function findDockerfile(workPath: string): string | undefined {
+  return DOCKERFILE_CANDIDATES.find(name => existsSync(join(workPath, name)));
 }
 
 /**

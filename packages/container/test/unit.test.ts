@@ -1322,7 +1322,7 @@ describe('@vercel/container', () => {
       expect(ruby.runImage).toMatch(/@sha256:[0-9a-f]{64}$/);
     });
 
-    it('resolves the buildpack from either config channel and honors marker/Dockerfile precedence', () => {
+    it('resolves the buildpack from either config channel and honors marker precedence', () => {
       expect(requestedBuildpack({ buildpack: 'ruby' })).toBe(ruby);
       expect(requestedBuildpack({ framework: 'ruby' })).toBe(ruby);
       expect(requestedBuildpack({ runtime: 'container' })).toBeUndefined();
@@ -1338,13 +1338,23 @@ describe('@vercel/container', () => {
         resolveImageSource(options({ buildpack: 'ruby' }), 'build')
       ).toMatchObject({ kind: 'buildpack', buildpack: { runtime: 'ruby' } });
 
-      // A conventional Dockerfile opts out of buildpacks.
+      // Only a `.vercel` marker opts out of buildpacks; a conventional
+      // Dockerfile can coexist with a buildpack build.
       existsSyncMock.mockImplementation(
         (p: string) => p === '/Gemfile' || p === '/Dockerfile'
       );
       expect(
         resolveImageSource(options({ buildpack: 'ruby' }), 'build')
-      ).toMatchObject({ kind: 'dockerfile', dockerfileRel: 'Dockerfile' });
+      ).toMatchObject({ kind: 'buildpack', buildpack: { runtime: 'ruby' } });
+      existsSyncMock.mockImplementation(
+        (p: string) => p === '/Gemfile' || p === '/Dockerfile.vercel'
+      );
+      expect(
+        resolveImageSource(options({ buildpack: 'ruby' }), 'build')
+      ).toMatchObject({
+        kind: 'dockerfile',
+        dockerfileRel: 'Dockerfile.vercel',
+      });
 
       // A Procfile is not language evidence — it must not mark a project as
       // a Ruby buildpack project on its own.

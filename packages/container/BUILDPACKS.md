@@ -33,8 +33,10 @@ No lifecycle, image-source, or resolver code should need to change.
 - Services select a buildpack via `runtime` (e.g. `"ruby"`); the framework
   preset path selects it via the framework slug. Both channels resolve
   through `requestedBuildpack()`.
-- A `Dockerfile` or `Containerfile` in the service root always takes
-  precedence — it is the escape hatch from buildpacks.
+- A `Dockerfile.vercel` or `Containerfile.vercel` in the service root always
+  takes precedence — it is the escape hatch from buildpacks. A conventional
+  `Dockerfile` is ignored, so a repo can keep one for CI or local tooling
+  without changing how Vercel builds it.
 - Project markers (e.g. `Gemfile`, `config.ru` for Ruby) are language
   evidence used only to fail fast with an actionable error; Paketo's own
   detect phase is authoritative during the build.
