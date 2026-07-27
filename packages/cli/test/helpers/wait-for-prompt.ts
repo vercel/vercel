@@ -62,6 +62,28 @@ export async function answerTeamPromptThenCreateProject(cp: CLIProcess) {
   cp.stdin?.write('\n');
 }
 
+/**
+ * Answers the `Code directory?` prompt, which is an `@inquirer/search` list.
+ *
+ * Waits for the choice list rather than the message, since the prompt ignores
+ * enter until its source resolves, and submits with `\r`, the only key it
+ * treats as enter. Passing no path selects the pinned current directory.
+ */
+export async function selectCodeDirectory(
+  cp: CLIProcess,
+  relativePath?: string
+) {
+  await waitForPrompt(cp, 'Use this directory');
+  if (relativePath) {
+    cp.stdin?.write(relativePath);
+    // Wait for the term to reach the highlighted row, not just the input
+    // buffer: the list re-filters asynchronously, and submitting early would
+    // select whatever was highlighted before.
+    await waitForPrompt(cp, `❯ ${relativePath}`);
+  }
+  cp.stdin?.write('\r');
+}
+
 export default async function waitForPrompt(
   cp: CLIProcess,
   rawAssertion: string | RegExp | ((chunk: string) => boolean),

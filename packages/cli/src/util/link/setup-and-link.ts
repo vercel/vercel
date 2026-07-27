@@ -32,6 +32,10 @@ import inputProject, { BACK_TO_TEAM_SELECTION } from '../input/input-project';
 import { validateRootDirectory } from '../validate-paths';
 import { inputRootDirectory } from '../input/input-root-directory';
 import {
+  startRepoFrameworkDetection,
+  type PendingRepoFrameworks,
+} from '../projects/detect-repo-frameworks';
+import {
   editProjectSettings,
   type PartialProjectSettings,
 } from '../input/edit-project-settings';
@@ -305,6 +309,7 @@ export default async function setupAndLink(
   }
   const isTTY = client.stdin.isTTY;
   let rootDirectory: string | null = null;
+  let pendingRepoFrameworks: PendingRepoFrameworks | undefined;
   let newProjectName: string;
   let org = selectedOrg;
 
@@ -444,6 +449,10 @@ export default async function setupAndLink(
 
   if (typeof projectOrNewProjectName === 'string') {
     newProjectName = projectOrNewProjectName;
+    // A new Project is being created, so a root directory may be asked for
+    // shortly. Start the repo-wide framework scan now so it overlaps with the
+    // prompts in between and has landed by the time the picker renders.
+    pendingRepoFrameworks = startRepoFrameworkDetection(path);
   } else if (isCrossTeamMatch(projectOrNewProjectName)) {
     return await linkCrossTeamMatch({
       client,
@@ -530,7 +539,12 @@ export default async function setupAndLink(
           servicesChoice: rootInferredServicesChoice,
         });
         if (shouldPromptRoot) {
-          rootDirectory = await inputRootDirectory(client, path, autoConfirm);
+          rootDirectory = await inputRootDirectory(
+            client,
+            path,
+            autoConfirm,
+            pendingRepoFrameworks
+          );
           if (
             rootDirectory &&
             !(await validateRootDirectory(path, join(path, rootDirectory)))
