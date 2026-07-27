@@ -90,7 +90,8 @@ export default async function add(
       '--project': parsedArgs.flags['--project'] as string | undefined,
       '--all': parsedArgs.flags['--all'] as boolean | undefined,
     },
-    fr.jsonOutput
+    fr.jsonOutput,
+    'alerts rules add'
   );
   if (typeof scope === 'number') {
     return scope;

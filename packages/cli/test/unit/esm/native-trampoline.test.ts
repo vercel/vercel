@@ -27,8 +27,10 @@ import { tmpdir } from 'node:os';
  * mirrors that topology so resolution behaves identically.
  *
  * When no native package is present the trampoline no-ops into JS. When a
- * fake native is installed as a sibling, the CLI spawns it and exits with
- * its exit code. Falling through to JS on EACCES must not leave
+ * fake native is installed as a sibling, the CLI spawns it and exits with its
+ * exit code — but only when the user has opted in (via the `useNativeBinary`
+ * global config or the VERCEL_CLI_USE_NATIVE_BINARY env override); otherwise
+ * it must fall through to JS. Falling through to JS on EACCES must not leave
  * VERCEL_VC_NATIVE=1 set (otherwise the version banner would claim
  * "(native)" while JS is running).
  */
@@ -92,6 +94,14 @@ function cleanEnv() {
   return out;
 }
 
+// Clean env plus an explicit native-binary opt-in / opt-out override.
+function optInEnv() {
+  return { ...cleanEnv(), VERCEL_CLI_USE_NATIVE_BINARY: '1' };
+}
+function optOutEnv() {
+  return { ...cleanEnv(), VERCEL_CLI_USE_NATIVE_BINARY: '0' };
+}
+
 describe('dist/vc.js native resolution', () => {
   it('no-ops to JS when no native package is installed', () => {
     const { vcJs } = buildInstall({
@@ -100,7 +110,7 @@ describe('dist/vc.js native resolution', () => {
     });
     const r = spawnSync(process.execPath, [vcJs, '--version'], {
       encoding: 'utf8',
-      env: cleanEnv(),
+      env: optInEnv(),
     });
     expect(r.status).toBe(0);
     expect(r.stdout.trim()).toBe(cliVersion);
@@ -108,7 +118,7 @@ describe('dist/vc.js native resolution', () => {
   });
 
   it.runIf(process.platform !== 'win32')(
-    'spawns the native binary and exits with its exit code',
+    'does NOT spawn the native binary when not opted in, even if present',
     () => {
       const { vcJs } = buildInstall({
         platform: process.platform,
@@ -117,7 +127,26 @@ describe('dist/vc.js native resolution', () => {
       });
       const r = spawnSync(process.execPath, [vcJs, '--version'], {
         encoding: 'utf8',
-        env: cleanEnv(),
+        env: optOutEnv(),
+      });
+      // Falls through to the JS --version fast path.
+      expect(r.status).toBe(0);
+      expect(r.stdout.trim()).toBe(cliVersion);
+      expect(r.stderr).not.toContain('(native)');
+    }
+  );
+
+  it.runIf(process.platform !== 'win32')(
+    'spawns the native binary and exits with its exit code when opted in',
+    () => {
+      const { vcJs } = buildInstall({
+        platform: process.platform,
+        arch: process.arch,
+        body: '#!/bin/sh\necho NATIVE_RAN\nexit 7\n',
+      });
+      const r = spawnSync(process.execPath, [vcJs, '--version'], {
+        encoding: 'utf8',
+        env: optInEnv(),
       });
       expect(r.status).toBe(7);
       expect(r.stdout.trim()).toBe('NATIVE_RAN');
@@ -134,7 +163,7 @@ describe('dist/vc.js native resolution', () => {
       });
       const r = spawnSync(process.execPath, [vcJs, '--version'], {
         encoding: 'utf8',
-        env: { ...cleanEnv(), VERCEL_VC_NATIVE: '1' },
+        env: { ...optInEnv(), VERCEL_VC_NATIVE: '1' },
       });
       expect(r.status).toBe(0);
       expect(r.stdout.trim()).toBe(cliVersion);
@@ -157,7 +186,7 @@ describe('dist/vc.js native resolution', () => {
       });
       const r = spawnSync(process.execPath, [vcJs, '--version'], {
         encoding: 'utf8',
-        env: { ...cleanEnv(), NODE_PATH: join(other.root, 'node_modules') },
+        env: { ...optInEnv(), NODE_PATH: join(other.root, 'node_modules') },
       });
       expect(r.status).toBe(0);
       expect(r.stdout.trim()).toBe(cliVersion);
@@ -177,7 +206,7 @@ describe('dist/vc.js native resolution', () => {
       });
       const r = spawnSync(process.execPath, [vcJs, '--version'], {
         encoding: 'utf8',
-        env: cleanEnv(),
+        env: optInEnv(),
       });
       // EACCES fall-through hits the JS --version fast path. Must not be
       // mislabeled as native — VERCEL_VC_NATIVE must be cleared on fallback.
