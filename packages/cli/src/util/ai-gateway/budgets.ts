@@ -112,3 +112,56 @@ export async function removeBudget(
     method: 'DELETE',
   });
 }
+
+// The tier that a default applies to. `team` is the team's own default limit;
+// the per-* tiers apply to every project/api-key/user without an explicit budget.
+export type BudgetDefaultTier =
+  | 'perProjectLimit'
+  | 'perApiKeyLimit'
+  | 'perUserLimit';
+
+// A single per-team default policy; one refreshPeriod is shared across tiers.
+export type BudgetDefault = {
+  teamId: string;
+  teamLimit?: number;
+  perProjectLimit?: number;
+  perApiKeyLimit?: number;
+  perUserLimit?: number;
+  refreshPeriod: BudgetRefreshPeriod;
+  active: boolean;
+  createdAt: number;
+  updatedAt: number;
+};
+
+// For each tier: a number sets it, null clears it, undefined leaves it unchanged.
+export type UpsertBudgetDefaultInput = {
+  perProjectLimit?: number | null;
+  perApiKeyLimit?: number | null;
+  perUserLimit?: number | null;
+  refreshPeriod?: BudgetRefreshPeriod;
+};
+
+export async function getBudgetDefault(
+  client: Client
+): Promise<BudgetDefault | null> {
+  // The endpoint returns 200 with a null body when no policy is set.
+  const budgetDefault = await client.fetch<BudgetDefault | null>(
+    '/ai-gateway/budgets/defaults',
+    { method: 'GET' }
+  );
+  return budgetDefault ?? null;
+}
+
+export async function upsertBudgetDefault(
+  client: Client,
+  input: UpsertBudgetDefaultInput
+): Promise<BudgetDefault> {
+  return client.fetch<BudgetDefault>('/ai-gateway/budgets/defaults', {
+    method: 'PUT',
+    body: input,
+  });
+}
+
+export async function archiveBudgetDefault(client: Client): Promise<void> {
+  await client.fetch('/ai-gateway/budgets/defaults', { method: 'DELETE' });
+}

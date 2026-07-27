@@ -516,6 +516,106 @@ export const budgetsRemoveSubcommand = {
   ],
 } as const;
 
+export const budgetsDefaultsInspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description: "Show the team's AI Gateway budget default policy",
+  arguments: [],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Inspect the budget default policy',
+      value: `${packageName} ai-gateway budgets defaults inspect`,
+    },
+  ],
+} as const;
+
+export const budgetsDefaultsSetSubcommand = {
+  name: 'set',
+  aliases: [],
+  description:
+    "Create or update the team's AI Gateway budget default policy (applies to projects, api keys, and users without an explicit budget)",
+  arguments: [],
+  options: [
+    {
+      name: 'per-project',
+      shorthand: null,
+      type: String,
+      argument: 'AMOUNT',
+      deprecated: false,
+      description:
+        "Default budget per project in dollars, or 'none' to clear the tier",
+    },
+    {
+      name: 'per-api-key',
+      shorthand: null,
+      type: String,
+      argument: 'AMOUNT',
+      deprecated: false,
+      description:
+        "Default budget per api key in dollars, or 'none' to clear the tier",
+    },
+    {
+      name: 'per-user',
+      shorthand: null,
+      type: String,
+      argument: 'AMOUNT',
+      deprecated: false,
+      description:
+        "Default budget per user in dollars, or 'none' to clear the tier",
+    },
+    {
+      name: 'refresh-period',
+      shorthand: null,
+      type: String,
+      argument: 'PERIOD',
+      deprecated: false,
+      description:
+        'Budget refresh cadence shared across tiers: daily, weekly, monthly, or none',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Set per-project and per-api-key defaults',
+      value: `${packageName} ai-gateway budgets defaults set --per-project 200 --per-api-key 50 --refresh-period monthly`,
+    },
+    {
+      name: 'Clear the per-project default tier',
+      value: `${packageName} ai-gateway budgets defaults set --per-project none`,
+    },
+  ],
+} as const;
+
+export const budgetsDefaultsRemoveSubcommand = {
+  name: 'remove',
+  aliases: ['rm', 'delete'],
+  description: "Remove the team's AI Gateway budget default policy",
+  arguments: [],
+  options: [yesOption, formatOption],
+  examples: [
+    {
+      name: 'Remove the budget default policy',
+      value: `${packageName} ai-gateway budgets defaults rm`,
+    },
+  ],
+} as const;
+
+export const budgetsDefaultsSubcommand = {
+  name: 'defaults',
+  aliases: [],
+  description:
+    'Manage the team-wide AI Gateway budget default policy (per-project, per-api-key, and per-user tiers)',
+  arguments: [],
+  subcommands: [
+    budgetsDefaultsInspectSubcommand,
+    budgetsDefaultsSetSubcommand,
+    budgetsDefaultsRemoveSubcommand,
+  ],
+  options: [],
+  examples: [],
+} as const;
+
 export const budgetsSubcommand = {
   name: 'budgets',
   aliases: [],
@@ -525,6 +625,7 @@ export const budgetsSubcommand = {
     budgetsSetSubcommand,
     budgetsListSubcommand,
     budgetsRemoveSubcommand,
+    budgetsDefaultsSubcommand,
   ],
   options: [],
   examples: [],
