@@ -10,6 +10,7 @@ import { buildCommand } from './build/command';
 import { buyCommand } from './buy/command';
 import { cacheCommand } from './cache/command';
 import { certsCommand } from './certs/command';
+import { commentsCommand } from './comments/command';
 import { connexCommand } from './connex/command';
 import { contractCommand } from './contract/command';
 import { cronsCommand } from './crons/command';
@@ -79,6 +80,7 @@ const commandsStructs = [
   buyCommand,
   cacheCommand,
   certsCommand,
+  commentsCommand,
   contractCommand,
   cronsCommand,
   curlCommand,

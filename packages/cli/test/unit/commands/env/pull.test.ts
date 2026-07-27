@@ -3,9 +3,8 @@ import fs from 'fs-extra';
 import path from 'path';
 import { parse } from 'dotenv';
 import env from '../../../../src/commands/env';
-import pull, {
-  getAcrValuesFromWWWAuthenticate,
-} from '../../../../src/commands/env/pull';
+import pull from '../../../../src/commands/env/pull';
+import { getAcrValuesFromWWWAuthenticate } from '../../../../src/util/env/challenge-recovery';
 import {
   setupTmpDir,
   setupUnitFixture,
@@ -378,10 +377,11 @@ describe('env pull', () => {
     expect(performDeviceCodeFlow).toHaveBeenCalledWith(client, {
       refreshToken: 'vcr_old',
       acrValues: 'urn:vercel:loa:sudo',
+      fallbackToLoginOnStepUpFailure: true,
     });
     expect(pullRequests).toBe(2);
     expect(client.authConfig.token).toBe('vca_new');
-    expect(client.authConfig.refreshToken).toBe('vcr_old');
+    expect(client.authConfig.refreshToken).toBe('vcr_new');
   });
 
   it('should handle pulling from Preview env vars', async () => {

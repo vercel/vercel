@@ -23,18 +23,25 @@ import {
   UV_BINARY_CHECKSUM,
   downloadUvBinaryForTarget,
 } from '../src/uv';
+import { InstalledPythonDistributions } from '../src/installed-distributions';
+import type { PythonVersion } from '../src/version';
 
-// Mock getVenvSitePackagesDirs to avoid needing a real Python venv in
-// analyze() tests. Returns an empty array so mirrorPackagesIntoVendor
-// produces no vendor files and the bundle size comes solely from the
-// files passed to analyze().
-vi.mock('../src/install', async () => {
-  const actual = await vi.importActual('../src/install');
-  return {
-    ...actual,
-    getVenvSitePackagesDirs: vi.fn().mockResolvedValue([]),
-  };
-});
+const TEST_PYTHON_VERSION = {
+  major: 3,
+  minor: 12,
+  pipPath: 'pip3.12',
+  pythonPath: '/usr/bin/python3',
+  runtime: 'python3.12',
+} satisfies PythonVersion;
+
+function createInstalledDistributions() {
+  return new InstalledPythonDistributions({
+    sitePackageDirs: [],
+    distributions: new Map(),
+    pythonMajor: 3,
+    pythonMinor: 12,
+  });
+}
 
 describe('dependency externalizer support', () => {
   describe('shouldEnableRuntimeInstall', () => {
@@ -61,15 +68,13 @@ describe('dependency externalizer support', () => {
       totalBundleSize = 0,
     } = {}) {
       const ext = new PythonDependencyExternalizer({
-        venvPath: '/tmp/venv',
+        installedDistributions: createInstalledDistributions(),
         vendorDir: '_vendor',
         workPath: '/tmp/work',
         uvLockPath,
         uvProjectDir: '/tmp/work',
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand,
       });
       // Set the private totalBundleSize field for testing
@@ -1055,6 +1060,35 @@ version = "8.1.7"
       }
     });
 
+    it('uses the injected installed distributions when sizing the bundle', async () => {
+      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+
+      const installedDistributions = createInstalledDistributions();
+      const mirrorPackagesIntoVendor = vi
+        .spyOn(installedDistributions, 'mirrorPackagesIntoVendor')
+        .mockResolvedValue({
+          '_vendor/pkg.py': new FileBlob({ data: 'vendor' }),
+        });
+      const ext = new PythonDependencyExternalizer({
+        installedDistributions,
+        vendorDir: '_vendor',
+        workPath: '/tmp/work',
+        uvLockPath: null,
+        uvProjectDir: null,
+        projectName: 'test-project',
+        pythonVersion: TEST_PYTHON_VERSION,
+        hasCustomCommand: false,
+      });
+
+      const result = await ext.analyze({});
+
+      expect(mirrorPackagesIntoVendor).toHaveBeenCalledWith({
+        vendorDirName: '_vendor',
+      });
+      expect(result.totalBundleSize).toBe(6);
+      expect(Object.keys(result.allVendorFiles)).toEqual(['_vendor/pkg.py']);
+    });
+
     it('throws user-friendly error for custom install command with oversized bundle', async () => {
       delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
 
@@ -1068,15 +1102,13 @@ version = "8.1.7"
       fs.closeSync(fd);
 
       const ext = new PythonDependencyExternalizer({
-        venvPath: tempDir,
+        installedDistributions: createInstalledDistributions(),
         vendorDir: '_vendor',
         workPath: tempDir,
         uvLockPath: path.join(tempDir, 'uv.lock'),
         uvProjectDir: tempDir,
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: true,
       });
 
@@ -1091,15 +1123,13 @@ version = "8.1.7"
 
         // Re-create the externalizer since the previous one may have mutated state
         const ext2 = new PythonDependencyExternalizer({
-          venvPath: tempDir,
+          installedDistributions: createInstalledDistributions(),
           vendorDir: '_vendor',
           workPath: tempDir,
           uvLockPath: path.join(tempDir, 'uv.lock'),
           uvProjectDir: tempDir,
           projectName: 'test-project',
-          pythonMajor: 3,
-          pythonMinor: 12,
-          pythonPath: '/usr/bin/python3',
+          pythonVersion: TEST_PYTHON_VERSION,
           hasCustomCommand: true,
         });
 
@@ -1127,15 +1157,13 @@ version = "8.1.7"
       fs.writeFileSync(smallFilePath, 'a'.repeat(100));
 
       const ext = new PythonDependencyExternalizer({
-        venvPath: tempDir,
+        installedDistributions: createInstalledDistributions(),
         vendorDir: '_vendor',
         workPath: tempDir,
         uvLockPath: path.join(tempDir, 'uv.lock'),
         uvProjectDir: tempDir,
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: true,
       });
 
@@ -1168,15 +1196,13 @@ version = "8.1.7"
       fs.closeSync(fd);
 
       const ext = new PythonDependencyExternalizer({
-        venvPath: tempDir,
+        installedDistributions: createInstalledDistributions(),
         vendorDir: '_vendor',
         workPath: tempDir,
         uvLockPath: path.join(tempDir, 'uv.lock'),
         uvProjectDir: tempDir,
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: false,
       });
 
@@ -1216,15 +1242,13 @@ version = "8.1.7"
       fs.closeSync(fd);
 
       const ext = new PythonDependencyExternalizer({
-        venvPath: tempDir,
+        installedDistributions: createInstalledDistributions(),
         vendorDir: '_vendor',
         workPath: tempDir,
         uvLockPath: path.join(tempDir, 'uv.lock'),
         uvProjectDir: tempDir,
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: false,
       });
 
@@ -1256,15 +1280,13 @@ version = "8.1.7"
       fs.closeSync(fd);
 
       const ext = new PythonDependencyExternalizer({
-        venvPath: tempDir,
+        installedDistributions: createInstalledDistributions(),
         vendorDir: '_vendor',
         workPath: tempDir,
         uvLockPath: path.join(tempDir, 'uv.lock'),
         uvProjectDir: tempDir,
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: false,
       });
 
@@ -1294,15 +1316,13 @@ version = "8.1.7"
       fs.closeSync(fd);
 
       const ext = new PythonDependencyExternalizer({
-        venvPath: tempDir,
+        installedDistributions: createInstalledDistributions(),
         vendorDir: '_vendor',
         workPath: tempDir,
         uvLockPath: path.join(tempDir, 'uv.lock'),
         uvProjectDir: tempDir,
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: false,
       });
 
@@ -1333,15 +1353,13 @@ version = "8.1.7"
       fs.closeSync(fd);
 
       const ext = new PythonDependencyExternalizer({
-        venvPath: tempDir,
+        installedDistributions: createInstalledDistributions(),
         vendorDir: '_vendor',
         workPath: tempDir,
         uvLockPath: path.join(tempDir, 'uv.lock'),
         uvProjectDir: tempDir,
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: false,
       });
 
@@ -1372,15 +1390,13 @@ version = "8.1.7"
       fs.closeSync(fd);
 
       const ext = new PythonDependencyExternalizer({
-        venvPath: tempDir,
+        installedDistributions: createInstalledDistributions(),
         vendorDir: '_vendor',
         workPath: tempDir,
         uvLockPath: path.join(tempDir, 'uv.lock'),
         uvProjectDir: tempDir,
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: true,
       });
 
@@ -1406,15 +1422,13 @@ version = "8.1.7"
       fs.writeFileSync(smallFilePath, 'a'.repeat(100));
 
       const ext = new PythonDependencyExternalizer({
-        venvPath: tempDir,
+        installedDistributions: createInstalledDistributions(),
         vendorDir: '_vendor',
         workPath: tempDir,
         uvLockPath: path.join(tempDir, 'uv.lock'),
         uvProjectDir: tempDir,
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: false,
       });
 
@@ -1460,15 +1474,13 @@ version = "8.1.7"
       allVendorFiles: Files;
     }) {
       const ext = new PythonDependencyExternalizer({
-        venvPath: '/tmp/venv',
+        installedDistributions: createInstalledDistributions(),
         vendorDir: '_vendor',
         workPath: '/tmp/work',
         uvLockPath: '/tmp/work/uv.lock',
         uvProjectDir: '/tmp/work',
         projectName: 'test-project',
-        pythonMajor: 3,
-        pythonMinor: 12,
-        pythonPath: '/usr/bin/python3',
+        pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand: false,
       });
       (ext as any).analyzed = true;

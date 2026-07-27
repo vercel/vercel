@@ -1,5 +1,76 @@
 # vercel
 
+## 57.0.0
+
+### Minor Changes
+
+- 7dd4301: Make service bindings type optional.
+
+### Patch Changes
+
+- 3a066fe: Add a `resolved` attribute to the `vc.importBuilders` trace span recording each Builder's resolved version and source directory
+- b40db5b: Improve `vc alerts` and `vc alerts rules` output for custom alerts, including readable inspect views, custom alert rule filtering, compact rule tables, and normalized alert timestamps.
+- fca6de2: Added a notice when a project's first `vercel deploy` (without `--prod`) is assigned to production by the API. The notice explains that this is expected behavior for the first deployment and that future deployments will be preview deployments unless `--prod` is used. In non-interactive mode, the hint is included in the JSON payload and the "Promote to production" next command is omitted since the deployment is already production.
+- 6e29745: Gate the native CLI binary trampoline behind an explicit opt-in. The native `@vercel/vc-native-*` binary is only spawned when the user opts in via `vercel upgrade --enable-binary` (or the `useNativeBinary` global config flag); members of the `vercel` team are auto-opted-in when their teams are already loaded. Adds a zod-free `@vercel/cli-config/paths` subpath so the opt-in flag can be read on the CLI startup hot path without loading zod.
+- e4a7a58: Fix the native trampoline resolving the native binary through `NODE_PATH`: `require.resolve()` consults `NODE_PATH` and the global folders even when `paths` is given, so the native package is now located with an explicit walk up this install's own `node_modules` tree
+- a5439da: Expose `pprState` in `vc logs` output, alongside the existing cache status and reason, so users can see how a PPR page was served (`fully_static` / `partially_dynamic` / `fully_dynamic`).
+- 3540322: Preserve the selected team scope across re-authentication. `vercel login` no longer resets `currentTeam` to the default team when re-authenticating: the previous selection is kept when the authenticated user is still a member of that team, and only falls back to the default scope (with a warning) otherwise. `vercel teams switch` no longer hard-fails when the persisted team is stale (deleted or membership revoked), so it can always be used to switch away.
+- ae12b01: Expose the resolved rewrite destination as the request path observed by Python framework applications, and warn affected Python projects about the behavior change.
+- Updated dependencies [7dd4301]
+- Updated dependencies [bfa1873]
+- Updated dependencies [9a4f1e7]
+- Updated dependencies [6e29745]
+- Updated dependencies [ae12b01]
+- Updated dependencies [67d02cb]
+  - @vercel/build-utils@13.35.0
+  - @vercel/python@6.52.0
+  - @vercel/cli-config@0.2.1
+  - @vercel/container@0.1.0
+  - @vercel/backends@0.8.26
+  - @vercel/elysia@0.1.103
+  - @vercel/express@0.1.117
+  - @vercel/fastify@0.1.106
+  - @vercel/go@3.10.2
+  - @vercel/h3@0.1.112
+  - @vercel/hono@0.2.106
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.86
+  - @vercel/nestjs@0.2.107
+  - @vercel/next@4.20.4
+  - @vercel/node@5.8.27
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.0
+  - @vercel/static-build@2.11.9
+  - @vercel/cli-auth@0.3.1
+
+## 56.5.0
+
+### Minor Changes
+
+- ab9c775: Add `vercel ai-gateway budgets` set/list/remove commands
+
+### Patch Changes
+
+- 83c72a4: Recover from sensitive Environment Variable step-up challenges in every command that fetches Environment Variables (`vercel dev`, `vercel pull`, `vercel env run`, `vercel build`, `vercel link`, OIDC token refresh), not just `vercel env pull`. The device-code re-authentication flow now lives at the shared env-records layer, so any `challenge_required` response triggers it when running interactively.
+- 4e9df75: Add `vercel comments` — a project-aware inbox for Vercel Toolbar comments. List unresolved comments for the linked project (focused on the current Git branch), inspect full threads, reply, resolve/reopen (optionally with a closing reply via `-m`), and edit/delete messages. Supports `--format json` with a stable envelope for scripting and agents.
+- b789421: Precompile `vercel.json` validation to improve CLI startup performance.
+- Updated dependencies [393645b]
+- Updated dependencies [41a3f2f]
+  - @vercel/python@6.51.1
+
+## 56.4.1
+
+### Patch Changes
+
+- c973e6b: Declare builders as optional `peerDependencies` and use the declared versions to pin dynamic Builder installs: bare specs install the version this CLI release was published with instead of `latest`, stale `.vercel/builders` copies are reinstalled, `@vercel/build-utils` is pinned to the CLI's own version, and post-install resolution failures now report a per-Builder reason instead of "Something went wrong!". Explicit Builder version pins are unchanged and always win. Builders remain in `dependencies`.
+- 604de7c: Do not emit curl request body flags for generated GET API requests.
+- 4486556: Suppress DEP0169 `url.parse()` deprecation warnings in the native binary
+- 48e840d: Fix an infinite launcher loop when `vercel` and `@vercel/vc-native` are both installed globally. The launcher no longer resolves a native binary when already running inside one (`VERCEL_VC_NATIVE=1`), and only resolves the native package from its own install tree, ignoring `NODE_PATH`.
+- 09f2642: Persist the rotated refresh token after the `vc env pull` step-up authentication. The step-up rotates the token pair server-side and revokes the previous refresh token, so keeping the old one caused subsequent step-ups to fail with `Device authorization request failed` and eventually forced a re-login.
+- 02c3933: Remove alias for flag evaluations
+
 ## 56.4.0
 
 ### Minor Changes

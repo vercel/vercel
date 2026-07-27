@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.35.0
+
+### Minor Changes
+
+- 7dd4301: Make service bindings type optional.
+
 ## 13.34.0
 
 ### Minor Changes

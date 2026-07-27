@@ -79,7 +79,10 @@ import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
-import { importBuilders } from '../../util/build/import-builders';
+import {
+  formatResolvedBuilders,
+  importBuilders,
+} from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
 import {
   detectFirstDeploymentFramework,
@@ -88,6 +91,10 @@ import {
   warnIfFrameworkMismatch,
   type DetectedFramework,
 } from '../../util/build/framework-detection';
+import {
+  BACKEND_REWRITE_BEHAVIOR_WARNING,
+  hasBackendRewriteBehaviorChange,
+} from '../../util/build/backend-rewrite-warning';
 import {
   validateBuildOutput,
   reportBuildOutputProblems,
@@ -1076,11 +1083,24 @@ async function doBuild(
     }
   }
 
+  if (
+    hasBackendRewriteBehaviorChange({
+      projectRewrites: localConfig.rewrites,
+      builders: builds,
+    })
+  ) {
+    output.warn(BACKEND_REWRITE_BEHAVIOR_WARNING);
+  }
+
   const builderSpecs = new Set(builds.map(b => b.use));
 
   let buildersWithPkgs = await span
     .child('vc.importBuilders')
-    .trace(() => importBuilders(builderSpecs, cwd, span));
+    .trace(async s => {
+      const builders = await importBuilders(builderSpecs, cwd, span);
+      s.setAttributes({ resolved: formatResolvedBuilders(builders) });
+      return builders;
+    });
 
   // Populate Files -> FileFsRef mapping
   const filesMap: Files = await span
@@ -1115,7 +1135,11 @@ async function doBuild(
 
     const importedBuilders = await span
       .child('vc.importBuilders')
-      .trace(() => importBuilders(missingBuilderSpecs, cwd, span));
+      .trace(async s => {
+        const builders = await importBuilders(missingBuilderSpecs, cwd, span);
+        s.setAttributes({ resolved: formatResolvedBuilders(builders) });
+        return builders;
+      });
     buildersWithPkgs = new Map([
       ...buildersWithPkgs.entries(),
       ...importedBuilders.entries(),
@@ -1980,7 +2004,6 @@ async function doBuild(
           appendExperimentalServicesV1Routes(detectedServices);
         }
       }
-
       if (
         detectedServices &&
         detectedServices.length > 0 &&

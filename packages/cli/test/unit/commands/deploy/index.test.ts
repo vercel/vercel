@@ -3350,4 +3350,105 @@ describe('deploy', () => {
       expect(exitCode, 'exit code for "deploy"').toEqual(1);
     });
   });
+
+  describe('first deployment production notice', () => {
+    const deploymentUrl = 'first-deploy-abc123.vercel.app';
+    const deploymentId = 'dpl_first_deploy';
+
+    beforeEach(() => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.post(`/v13/deployments`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: deploymentId,
+          url: deploymentUrl,
+          readyState: 'READY',
+          // API returns production even though no --prod was passed (first deploy)
+          target: 'production',
+        });
+      });
+      client.scenario.get(`/v13/deployments/${deploymentId}`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: deploymentId,
+          url: deploymentUrl,
+          readyState: 'READY',
+          target: 'production',
+          aliasAssigned: true,
+          alias: [],
+        });
+      });
+    });
+
+    it('prints a notice when a non-prod deploy returns a production deployment (TTY)', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--yes');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).toContain('first deployment');
+      expect(stderrOutput).toContain('assigned to production');
+      expect(stderrOutput).toContain('--prod');
+    });
+
+    it('includes a hint and omits "Promote to production" in non-interactive JSON', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+      client.setArgv('deploy', '--non-interactive');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      const stdoutOutput = client.stdout.getFullOutput().trim();
+      const payload = JSON.parse(stdoutOutput);
+      expect(payload.status).toBe('ok');
+      expect(payload.hint).toContain('first deployment');
+      expect(payload.hint).toContain('assigned to production');
+      // "Promote to production" is not useful when already production
+      expect(payload.next).not.toContainEqual(
+        expect.objectContaining({ when: 'Promote to production' })
+      );
+      // Inspect is still offered
+      expect(payload.next).toContainEqual(
+        expect.objectContaining({ when: 'Inspect deployment' })
+      );
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('does not print the notice when --prod is explicitly used (TTY)', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--yes');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).not.toContain('first deployment');
+    });
+
+    it('does not include the hint when --prod is explicitly used (non-interactive)', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+      client.setArgv('deploy', '--prod', '--non-interactive');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      const stdoutOutput = client.stdout.getFullOutput().trim();
+      const payload = JSON.parse(stdoutOutput);
+      expect(payload.hint).toBeUndefined();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+  });
 });

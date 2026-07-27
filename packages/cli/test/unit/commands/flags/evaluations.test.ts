@@ -430,14 +430,14 @@ describe('flags evaluations', () => {
     );
   });
 
-  it('supports the evals alias and --project outside a linked directory', async () => {
+  it('supports --project outside a linked directory', async () => {
     useEvaluationsResponse();
     const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
     removeProjectLink(cwd);
     client.cwd = cwd;
     client.setArgv(
       'flags',
-      'evals',
+      'evaluations',
       'my-feature',
       '--project',
       'vercel-flags-test'
@@ -452,7 +452,7 @@ describe('flags evaluations', () => {
       projectIds: ['vercel-flags-test'],
     });
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
-      { key: 'subcommand:evaluations', value: 'evals' },
+      { key: 'subcommand:evaluations', value: 'evaluations' },
       { key: 'argument:flag', value: '[REDACTED]' },
       { key: 'option:project', value: '[REDACTED]' },
     ]);
