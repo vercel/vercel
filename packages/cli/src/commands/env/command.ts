@@ -1,6 +1,11 @@
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
-import { forceOption, formatOption, yesOption } from '../../util/arg-common';
+import {
+  forceOption,
+  formatOption,
+  projectOption,
+  yesOption,
+} from '../../util/arg-common';
 
 const targetPlaceholder = getEnvTargetPlaceholder();
 
@@ -20,6 +25,7 @@ export const listSubcommand = {
   ],
   options: [
     formatOption,
+    projectOption,
     {
       name: 'guidance',
       description: 'Receive command suggestions once command is complete',
@@ -50,6 +56,7 @@ export const addSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'sensitive',
       description: 'Store the value as sensitive for Production or Preview',
@@ -158,6 +165,7 @@ export const removeSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description:
@@ -201,6 +209,7 @@ export const pullSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       description: 'Set the Environment when pulling Environment Variables',
@@ -261,6 +270,7 @@ export const runSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'environment',
       description:
@@ -308,6 +318,7 @@ export const updateSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'sensitive',
       description: 'Update to a sensitive Environment Variable',

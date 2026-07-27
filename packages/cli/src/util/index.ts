@@ -163,7 +163,6 @@ export default class Now {
 
     const deployment = await processDeployment({
       now: this,
-      agent: this._client.agent,
       path,
       requestBody,
       quiet,

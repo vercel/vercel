@@ -72,9 +72,9 @@ export async function getServicesBuilders(
       builders: null,
       errors: [
         {
-          code: 'MISSING_EXPERIMENTAL_SERVICES',
+          code: 'MISSING_SERVICES',
           message:
-            'Project framework is set to "services", but no services are declared. Add `experimentalServices` to vercel.json with at least one service, or change the project framework setting.',
+            'Project framework is set to "services", but no services are declared. Add `services` to vercel.json with at least one service, or change the project framework setting.',
         },
       ],
       warnings: [],
@@ -142,9 +142,8 @@ export async function getServicesBuilders(
       builders: null,
       errors: [
         {
-          code: 'NO_EXPERIMENTAL_SERVICES_CONFIGURED',
-          message:
-            'No services configured. Add `experimentalServices` to vercel.json.',
+          code: 'NO_SERVICES_CONFIGURED',
+          message: 'No services configured. Add `services` to vercel.json.',
         },
       ],
       warnings: warningResponses,
@@ -212,7 +211,7 @@ export function warnIgnoredDirectories(
       warnings.push({
         code: 'api_dir_ignored',
         message:
-          'The `api/` directory will not be built because `experimentalServices` is configured. To serve these files, declare them as a service in your `vercel.json`.',
+          'The `api/` directory will not be built because services are configured. To serve these files, declare them as a service in your `vercel.json`.',
       });
     }
   }

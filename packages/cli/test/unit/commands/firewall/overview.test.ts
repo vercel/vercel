@@ -13,7 +13,10 @@ import {
 } from '../../../mocks/firewall';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 
 describe('firewall overview', () => {
   beforeEach(() => {
@@ -62,6 +65,23 @@ describe('firewall overview', () => {
     expect(fullOutput).toContain('2 active, 1 inactive (3 total)');
     expect(fullOutput).toContain('IP Blocks');
     expect(fullOutput).toContain('System Bypass');
+  });
+
+  it('shows the overview for the project selected by --project', async () => {
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject({
+      ...defaultProject,
+      id: 'explicit-firewall',
+      name: 'explicit-firewall',
+      accountId: 'team_dummy',
+    });
+    useListFirewallConfigs(createConfig({ firewallEnabled: true }), null);
+    useGetBypass([]);
+    client.setArgv('firewall', 'overview', '--project', 'explicit-firewall');
+
+    await expect(firewall(client)).resolves.toEqual(0);
+    await expect(client.stderr).toOutput('Enabled');
   });
 
   it('should show firewall overview when disabled', async () => {
