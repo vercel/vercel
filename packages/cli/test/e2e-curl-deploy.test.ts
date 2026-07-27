@@ -167,18 +167,24 @@ describe('curl-based deployment via Vercel API', () => {
     ).toBe('READY');
 
     // 4. Assert the detected framework was persisted to the project settings.
-    //    Zero-config first-deployment detection applies the detected framework
-    //    ("node" for a bare `server.ts`) to the project, so a follow-up read of
-    //    the project should report `framework: 'node'`.
+    //    First-deployment detection applies the detected framework ("node" for
+    //    a bare `server.ts`) to the project as a post-build step, so it can lag
+    //    behind the deployment reaching READY. Poll until it appears.
     expect(projectId, 'Expected a projectId to read settings').toBeTruthy();
-    const projectBody = curl([
-      apiUrl(`/v9/projects/${encodeURIComponent(projectId!)}`),
-      '-H',
-      `Authorization: Bearer ${TOKEN}`,
-    ]);
-    const projectJson = JSON.parse(projectBody);
+    let projectFramework: string | null | undefined;
+    let projectBody = '';
+    for (let i = 0; i < 60; i += 1) {
+      projectBody = curl([
+        apiUrl(`/v9/projects/${encodeURIComponent(projectId!)}`),
+        '-H',
+        `Authorization: Bearer ${TOKEN}`,
+      ]);
+      projectFramework = JSON.parse(projectBody).framework;
+      if (projectFramework === 'node') break;
+      await sleep(1000);
+    }
     expect(
-      projectJson.framework,
+      projectFramework,
       `Expected project framework "node" to be persisted, got: ${projectBody}`
     ).toBe('node');
 
