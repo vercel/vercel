@@ -5,6 +5,7 @@ import type {
   ConfiguredServices,
   ExperimentalServiceConfig,
   ServiceDetectionError,
+  ServiceDetectionWarning,
   ServiceRuntime,
 } from './types';
 import {
@@ -22,6 +23,7 @@ import {
   toBuildpackRuntime,
 } from './types';
 import {
+  buildpackEntrypointWarning,
   DETECTION_FRAMEWORKS,
   filterFrameworksByRuntime,
   getBuilderForRuntime,
@@ -1065,9 +1067,11 @@ export async function resolveAllConfiguredServices(
 ): Promise<{
   services: ExperimentalService[];
   errors: ServiceDetectionError[];
+  warnings: ServiceDetectionWarning[];
 }> {
   const resolved: ExperimentalService[] = [];
   const errors: ServiceDetectionError[] = [];
+  const warnings: ServiceDetectionWarning[] = [];
   const webServicesByRoutePrefix = new Map<string, string>();
 
   for (const name of Object.keys(services)) {
@@ -1211,6 +1215,15 @@ export async function resolveAllConfiguredServices(
       routePrefixSource,
     });
 
+    const entrypointWarning = buildpackEntrypointWarning(
+      name,
+      serviceConfig.entrypoint,
+      service.builder
+    );
+    if (entrypointWarning) {
+      warnings.push(entrypointWarning);
+    }
+
     if (service.type === 'web' && typeof service.routePrefix === 'string') {
       const normalizedRoutePrefix = normalizeRoutePrefix(service.routePrefix);
       const existingServiceName = webServicesByRoutePrefix.get(
@@ -1236,7 +1249,7 @@ export async function resolveAllConfiguredServices(
     validateEnvRefs(service.env, service.name, servicesByName, errors);
   }
 
-  return { services: resolved, errors };
+  return { services: resolved, errors, warnings };
 }
 
 function validateEnvRefs(

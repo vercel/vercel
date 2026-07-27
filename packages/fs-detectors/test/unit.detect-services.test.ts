@@ -216,7 +216,7 @@ describe('detectServices', () => {
         });
       });
 
-      it('should not treat a Ruby service entrypoint as a prebuilt image', async () => {
+      it('should ignore a Ruby service entrypoint with a warning', async () => {
         const fs = new VirtualFilesystem({
           'vercel.json': JSON.stringify({
             experimentalServices: {
@@ -238,6 +238,9 @@ describe('detectServices', () => {
           use: '@vercel/container',
           config: { buildpack: 'ruby' },
         });
+        expect(result.warnings).toMatchObject([
+          { code: 'BUILDPACK_ENTRYPOINT_IGNORED', serviceName: 'api' },
+        ]);
       });
 
       it('should infer Ruby workspace from nearest Gemfile when workspace is omitted', async () => {

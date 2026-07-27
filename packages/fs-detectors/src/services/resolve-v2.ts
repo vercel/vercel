@@ -6,6 +6,7 @@ import type {
   ExperimentalServiceV2Config,
   ExperimentalServicesV2,
   ServiceDetectionError,
+  ServiceDetectionWarning,
   ServiceRuntime,
 } from './types';
 import { RUNTIME_BUILDERS, STATIC_BUILDERS, toBuildpackRuntime } from './types';
@@ -16,6 +17,7 @@ import {
   parsePyModuleAttrEntrypoint,
 } from './resolve';
 import {
+  buildpackEntrypointWarning,
   getBuilderForRuntime,
   inferRuntimeFromFramework,
   inferServiceRuntime,
@@ -504,9 +506,11 @@ export async function resolveAllConfiguredServicesV2(
 ): Promise<{
   services: ExperimentalServiceV2[];
   errors: ServiceDetectionError[];
+  warnings: ServiceDetectionWarning[];
 }> {
   const resolved: ExperimentalServiceV2[] = [];
   const errors: ServiceDetectionError[] = [];
+  const warnings: ServiceDetectionWarning[] = [];
 
   for (const name of Object.keys(services)) {
     const config = services[name];
@@ -527,6 +531,14 @@ export async function resolveAllConfiguredServicesV2(
       continue;
     }
     if (service) {
+      const entrypointWarning = buildpackEntrypointWarning(
+        name,
+        config.entrypoint,
+        service.builder
+      );
+      if (entrypointWarning) {
+        warnings.push(entrypointWarning);
+      }
       resolved.push(service);
     }
   }
@@ -553,5 +565,5 @@ export async function resolveAllConfiguredServicesV2(
     }
   }
 
-  return { services: resolved, errors };
+  return { services: resolved, errors, warnings };
 }

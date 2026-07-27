@@ -193,6 +193,31 @@ describe('detectServices (services)', () => {
       });
     });
 
+    it('warns that a Ruby service entrypoint is ignored', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': vercelJson({
+          services: {
+            api: { root: 'api', runtime: 'ruby', entrypoint: 'app.rb' },
+          },
+        }),
+        'api/Gemfile': 'source "https://rubygems.org"\n',
+        'api/app.rb': 'puts "hello"\n',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const [api] = servicesV2(result.services);
+      expect(api.builder).toMatchObject({
+        src: 'api/<detect>',
+        use: '@vercel/container',
+        config: { buildpack: 'ruby' },
+      });
+      expect(result.warnings).toMatchObject([
+        { code: 'BUILDPACK_ENTRYPOINT_IGNORED', serviceName: 'api' },
+      ]);
+    });
+
     it('auto-detects a Ruby service without requiring an entrypoint', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': vercelJson({
