@@ -22,7 +22,9 @@ import pull from '../../commands/env/pull';
 import { parseGitConfig, pluckRemoteUrls } from '../create-git-meta';
 import {
   selectAndParseRemoteUrl,
+  parseRepoUrl,
   checkExistsAndConnect,
+  type RepoInfo,
 } from '../git/connect-git-provider';
 
 import toHumanPath from '../humanize-path';
@@ -482,6 +484,14 @@ export default async function setupAndLink(
     let pathWithRootDirectory = path;
     let rootInferredServicesChoice: InferredServicesChoice | null = null;
 
+    // Ask before printing any results, so the transcript reads as all
+    // questions then all results.
+    const gitConnectIntent = await resolveGitConnectIntent(
+      client,
+      path,
+      autoConfirm
+    );
+
     if (!rootServicesSetup.hasConfiguredServices) {
       rootInferredServicesChoice = await promptForInferredServicesSetup({
         client,
@@ -670,7 +680,13 @@ export default async function setupAndLink(
       'Created'
     );
 
-    await connectGitRepository(client, path, project, autoConfirm, org);
+    await applyGitConnectIntent(
+      client,
+      gitConnectIntent,
+      project,
+      autoConfirm,
+      org
+    );
 
     return { status: 'linked', org, project };
   } catch (err) {
@@ -693,40 +709,76 @@ export default async function setupAndLink(
   }
 }
 
-export async function connectGitRepository(
+/** A remote the user agreed to connect, resolved before the project exists. */
+type GitConnectIntent = { repoInfo: RepoInfo } | null;
+
+/**
+ * Asks whether to connect a detected Git remote. Runs before `createProject`
+ * so the question never follows the `✓ Created` row; `applyGitConnectIntent`
+ * does the connecting once a project id exists. Never prompts under `--yes`
+ * or non-interactive mode.
+ */
+export async function resolveGitConnectIntent(
   client: Client,
   path: string,
-  project: { id: string; link?: any },
-  autoConfirm: boolean,
-  org: Org
-): Promise<void> {
+  autoConfirm: boolean
+): Promise<GitConnectIntent> {
   try {
     const gitConfig = await parseGitConfig(join(path, '.git/config'));
 
     if (!gitConfig) {
-      return;
+      return null;
     }
 
     const remoteUrls = pluckRemoteUrls(gitConfig);
     if (!remoteUrls || Object.keys(remoteUrls).length === 0) {
-      return;
+      return null;
     }
 
-    output.print('\n');
+    const skipPrompts = autoConfirm || client.nonInteractive;
 
     const shouldConnect =
-      autoConfirm ||
+      skipPrompts ||
       (await client.input.confirm(`Connect detected Git repository?`, true));
 
     if (!shouldConnect) {
-      return;
+      return null;
     }
 
-    const repoInfo = await selectAndParseRemoteUrl(client, remoteUrls);
+    // Multiple remotes would otherwise prompt, so prefer `origin`.
+    const repoInfo = skipPrompts
+      ? parseRepoUrl(remoteUrls.origin ?? Object.values(remoteUrls)[0])
+      : await selectAndParseRemoteUrl(client, remoteUrls);
+
     if (!repoInfo) {
-      return;
+      return null;
     }
 
+    return { repoInfo };
+  } catch (error) {
+    if (isPromptCanceledError(error)) {
+      throw error;
+    }
+    // Silently ignore git detection errors to not disrupt the main flow
+    output.debug(`Failed to detect git repository: ${error}`);
+    return null;
+  }
+}
+
+/** Connects the remote resolved by `resolveGitConnectIntent`. */
+export async function applyGitConnectIntent(
+  client: Client,
+  intent: GitConnectIntent,
+  project: { id: string; link?: any },
+  autoConfirm: boolean,
+  org: Org
+): Promise<void> {
+  if (!intent) {
+    return;
+  }
+
+  const { repoInfo } = intent;
+  try {
     await checkExistsAndConnect({
       client,
       confirm: autoConfirm,
@@ -745,4 +797,29 @@ export async function connectGitRepository(
     // Silently ignore git connection errors to not disrupt the main flow
     output.debug(`Failed to connect git repository: ${error}`);
   }
+}
+
+/**
+ * Detects, prompts, and connects in one step.
+ *
+ * `setupAndLink` uses the split `resolveGitConnectIntent` /
+ * `applyGitConnectIntent` pair so the prompt lands before project creation.
+ */
+export async function connectGitRepository(
+  client: Client,
+  path: string,
+  project: { id: string; link?: any },
+  autoConfirm: boolean,
+  org: Org
+): Promise<void> {
+  let intent: GitConnectIntent;
+  try {
+    intent = await resolveGitConnectIntent(client, path, autoConfirm);
+  } catch (error) {
+    if (isPromptCanceledError(error)) {
+      return;
+    }
+    throw error;
+  }
+  await applyGitConnectIntent(client, intent, project, autoConfirm, org);
 }
