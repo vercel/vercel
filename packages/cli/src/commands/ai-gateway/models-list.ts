@@ -49,7 +49,11 @@ export default async function list(client: Client, argv: string[]) {
     fetch: async () => {
       const result = await listModels(client);
       const { accountAvailability, availabilityStatus } = result;
-      if (availabilityStatus === 'degraded') {
+      const availabilityComplete =
+        availabilityStatus === 'complete' &&
+        accountAvailability !== undefined &&
+        result.models.every(model => typeof model.available === 'boolean');
+      if (!availabilityComplete) {
         output.warn(
           'Model availability could not be determined. Retry before treating unannotated models as available.'
         );
@@ -71,7 +75,8 @@ export default async function list(client: Client, argv: string[]) {
     isEmpty: result => result.models.length === 0,
     emptyMessage: 'No models found.',
     header: () => 'Models',
-    renderTable: result => printModelsTable(result.models),
+    renderTable: result =>
+      printModelsTable(result.models, result.accountAvailability),
   });
 }
 
@@ -92,7 +97,10 @@ function accountAvailabilityMessage(account: AccountAvailability): string {
   }
 }
 
-function printModelsTable(models: Model[]) {
+function printModelsTable(
+  models: Model[],
+  accountAvailability?: AccountAvailability
+) {
   // The CLI explicitly requests availability. Keep this defensive check for a
   // degraded Gateway response, where annotations are intentionally omitted
   // rather than presented as optimistic `available: true` verdicts.
@@ -101,6 +109,13 @@ function printModelsTable(models: Model[]) {
   const availabilityCell = (model: Model): string => {
     if (model.available === undefined) return chalk.gray('–');
     if (model.available) return chalk.green('yes');
+    if (
+      model.unavailable_reason === 'account_unavailable' &&
+      accountAvailability &&
+      !accountAvailability.available
+    ) {
+      return chalk.red('no');
+    }
     return model.unavailable_reason
       ? chalk.red(`no (${model.unavailable_reason})`)
       : chalk.red('no');
