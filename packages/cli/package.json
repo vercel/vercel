@@ -26,6 +26,8 @@
     "dev": "echo \"'pnpm dev [command]' has been removed. Use 'pnpm vercel [command]' instead.\" && exit 1",
     "vercel": "pnpm build && node ./dist/vc.js",
     "vc": "pnpm vercel",
+    "prepack": "node scripts/pin-builders.mjs pin",
+    "postpack": "node scripts/pin-builders.mjs restore",
     "type-check": "tsc --noEmit",
     "test:evals": "tsx evals/run.ts",
     "test:evals:smoke": "tsx evals/run.ts smoke --smoke",
@@ -158,6 +160,27 @@
     "@vercel/static-build": {
       "optional": true
     }
+  },
+  "builders": {
+    "@vercel/backends": "workspace:*",
+    "@vercel/container": "workspace:*",
+    "@vercel/elysia": "workspace:*",
+    "@vercel/express": "workspace:*",
+    "@vercel/fastify": "workspace:*",
+    "@vercel/go": "workspace:*",
+    "@vercel/h3": "workspace:*",
+    "@vercel/hono": "workspace:*",
+    "@vercel/hydrogen": "workspace:*",
+    "@vercel/koa": "workspace:*",
+    "@vercel/nestjs": "workspace:*",
+    "@vercel/next": "workspace:*",
+    "@vercel/node": "workspace:*",
+    "@vercel/python": "workspace:*",
+    "@vercel/redwood": "workspace:*",
+    "@vercel/remix-builder": "workspace:*",
+    "@vercel/ruby": "workspace:*",
+    "@vercel/rust": "workspace:*",
+    "@vercel/static-build": "workspace:*"
   },
   "devDependencies": {
     "@edge-runtime/node-utils": "2.3.0",

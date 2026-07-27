@@ -30,8 +30,8 @@ vi.mock('../../../../src/util/pkg', async importOriginal => {
   return {
     default: {
       ...actual.default,
-      peerDependencies: {
-        ...(actual.default.peerDependencies as Record<string, string>),
+      builders: {
+        ...(actual.default.builders as Record<string, string>),
         'fake-pinned-builder': '2.0.0',
       },
     },
