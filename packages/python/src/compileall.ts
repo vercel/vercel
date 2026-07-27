@@ -78,12 +78,10 @@ export async function runCompileAll({
   pythonBin,
   sourceFiles,
   env,
-  pycachePrefix,
 }: {
   pythonBin: string;
   sourceFiles: string[];
   env?: NodeJS.ProcessEnv;
-  pycachePrefix?: string;
 }): Promise<boolean> {
   const uniqueSourceFiles = [...new Set(sourceFiles)];
   if (uniqueSourceFiles.length === 0) {
@@ -99,10 +97,8 @@ export async function runCompileAll({
     const listPath = join(tempDir, 'pysources.json');
     await fs.promises.writeFile(listPath, JSON.stringify(uniqueSourceFiles));
 
-    const baseEnv = env || process.env;
-    const subprocessEnv = pycachePrefix
-      ? { ...baseEnv, PYTHONPYCACHEPREFIX: pycachePrefix }
-      : baseEnv;
+    const subprocessEnv = { ...(env ?? process.env) };
+    delete subprocessEnv.PYTHONPYCACHEPREFIX;
 
     await execa(pythonBin, [COMPILE_ALL_SCRIPT_PATH, listPath], {
       env: subprocessEnv,
@@ -180,25 +176,6 @@ function stripPycachePrefixRoot(head: string): string {
 }
 
 /**
- * Staged `.pyc` path produced by compileall run with
- * PYTHONPYCACHEPREFIX=stagingDir for an absolute source path.
- */
-export function deriveStagedPycFsPath(
-  stagingDir: string,
-  srcAbsPath: string,
-  pythonMajor: number,
-  pythonMinor: number
-): string | null {
-  const rel = derivePrefixPycRelPath(
-    stripPycachePrefixRoot(srcAbsPath),
-    pythonMajor,
-    pythonMinor
-  );
-  if (!rel) return null;
-  return join(stagingDir, rel.replaceAll('/', sep));
-}
-
-/**
  * Zip bundle key of the `.pyc` for a source living at `runtimeAbsPath`:
  * `_vc_pycache/<runtime path, .py → .<tag>.pyc>`.
  */
@@ -226,19 +203,16 @@ export interface BytecodeCollectionResult {
 }
 
 /**
- * Collect staged prefix `.pyc` files for the app's bundled `.py` sources,
- * keyed under `_vc_pycache/<runtimeTaskRoot>/...`. Missing staged files are
- * silently dropped.
+ * Collect adjacent app `.pyc` files and key them under the runtime pycache
+ * prefix layout. Missing adjacent files are silently dropped.
  */
-export async function collectAppPrefixBytecodeFiles({
-  stagingDir,
+export async function collectAppAdjacentBytecodeAsPrefixFiles({
   workPath,
   files: appFiles,
   runtimeTaskRoot,
   pythonMajor,
   pythonMinor,
 }: {
-  stagingDir: string;
   workPath: string;
   files: Files;
   runtimeTaskRoot: string;
@@ -248,22 +222,18 @@ export async function collectAppPrefixBytecodeFiles({
   const pending: { bundlePath: string; srcFsPath: string }[] = [];
 
   for (const bundlePath of Object.keys(appFiles)) {
-    if (!bundlePath.endsWith('.py')) continue;
-
-    const stagedFsPath = deriveStagedPycFsPath(
-      stagingDir,
-      join(workPath, bundlePath.replaceAll('/', sep)),
-      pythonMajor,
-      pythonMinor
-    );
+    const adjacentPath = derivePycPath(bundlePath, pythonMajor, pythonMinor);
     const pycBundlePath = derivePrefixPycBundlePath(
       `${runtimeTaskRoot}/${bundlePath}`,
       pythonMajor,
       pythonMinor
     );
-    if (!stagedFsPath || !pycBundlePath) continue;
+    if (!adjacentPath || !pycBundlePath) continue;
 
-    pending.push({ bundlePath: pycBundlePath, srcFsPath: stagedFsPath });
+    pending.push({
+      bundlePath: pycBundlePath,
+      srcFsPath: join(workPath, adjacentPath.replaceAll('/', sep)),
+    });
   }
 
   const results = await Promise.all(

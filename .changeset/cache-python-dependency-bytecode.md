@@ -2,4 +2,4 @@
 '@vercel/python': minor
 ---
 
-Add feature-gated reuse of cached Python dependency bytecode across builds.
+Add feature-gated reuse of complete, validated Python dependency bytecode across builds while preserving a single adjacent compilation pass.

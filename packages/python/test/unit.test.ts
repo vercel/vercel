@@ -75,6 +75,10 @@ import {
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml, getVenvSitePackagesDirs } from '../src/install';
 import { BUILD_CACHE_MARKER_FILENAME } from '../src/build-cache';
+import {
+  LAMBDA_EPHEMERAL_STORAGE_BYTES,
+  PythonDependencyExternalizer,
+} from '../src/dependency-externalizer';
 import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
 import { getSubscriberOutputPath } from '../src/subscribers';
 import { getWorkflowOutputPath } from '../src/workflows';
@@ -1166,12 +1170,16 @@ describe('file exclusions', () => {
     }
   });
 
-  it('reuses dependency bytecode without deleting it on unrelated build outcomes', async () => {
+  it('uses one adjacent app and vendor compile with or without the build cache', async () => {
     const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
+    const originalBuildCacheEnv =
+      process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE;
+    const originalPycachePrefix = process.env.PYTHONPYCACHEPREFIX;
     const mockedExeca = vi.mocked(execa);
-    const sourceLists: string[][] = [];
-    const spanEvents: any[] = [];
-    let failCompile = false;
+    const compileCalls: {
+      sourceFiles: string[];
+      pycachePrefix: string | undefined;
+    }[] = [];
     const venvPath = path.join(mockWorkPath, '.vercel/python/.venv');
     const sitePackagesDir = path.join(venvPath, 'lib/python3.9/site-packages');
     const packageSource = path.join(
@@ -1190,6 +1198,133 @@ describe('file exclusions', () => {
     fs.outputFileSync(
       path.join(distInfoDir, 'RECORD'),
       'stable_package/module.py,,22\n'
+    );
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+    process.env.PYTHONPYCACHEPREFIX = '/inherited/prefix';
+    vi.mocked(getVenvSitePackagesDirs).mockResolvedValue([sitePackagesDir]);
+    const analyzeSpy = vi
+      .spyOn(PythonDependencyExternalizer.prototype, 'analyze')
+      .mockResolvedValue({
+        runtimeInstallEnabled: true,
+        allVendorFiles: {},
+        totalBundleSize: 1,
+      });
+    const generateBundleSpy = vi
+      .spyOn(PythonDependencyExternalizer.prototype, 'generateBundle')
+      .mockResolvedValue({
+        fellBackToFullBundle: false,
+        packingMode: 'bytecode-first',
+        alwaysBundledPackages: [],
+        bundledPublicPackages: [],
+        externalizedPublicPackages: ['stable-package'],
+      });
+    mockedExeca.mockImplementation(((_file, args: string[], options: any) => {
+      if (args[0]?.endsWith('vc_compileall.py')) {
+        compileCalls.push({
+          sourceFiles: JSON.parse(fs.readFileSync(args[1], 'utf8')),
+          pycachePrefix: options.env?.PYTHONPYCACHEPREFIX,
+        });
+      }
+      return Promise.resolve({ stdout: '', stderr: '' });
+    }) as any);
+
+    const buildOptions = {
+      workPath: mockWorkPath,
+      files: {
+        'handler.py': new FileBlob({
+          data: 'def app(environ, start_response): pass',
+        }),
+      },
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    } as const;
+    const appSource = path.join(mockWorkPath, 'handler.py');
+
+    try {
+      delete process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE;
+      await build(buildOptions);
+      expect(compileCalls).toHaveLength(1);
+      expect(compileCalls[0].sourceFiles).toEqual(
+        expect.arrayContaining([appSource, packageSource])
+      );
+      expect(compileCalls[0].pycachePrefix).toBeUndefined();
+
+      compileCalls.length = 0;
+      process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE = '1';
+      await build(buildOptions);
+      expect(compileCalls).toHaveLength(1);
+      expect(compileCalls[0].sourceFiles).toEqual(
+        expect.arrayContaining([appSource, packageSource])
+      );
+      expect(compileCalls[0].pycachePrefix).toBeUndefined();
+    } finally {
+      analyzeSpy.mockRestore();
+      generateBundleSpy.mockRestore();
+      vi.mocked(getVenvSitePackagesDirs).mockResolvedValue([]);
+      mockedExeca.mockReset();
+      if (originalCompileAllEnv === undefined) {
+        delete process.env.VERCEL_PYTHON_COMPILEALL;
+      } else {
+        process.env.VERCEL_PYTHON_COMPILEALL = originalCompileAllEnv;
+      }
+      if (originalBuildCacheEnv === undefined) {
+        delete process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE;
+      } else {
+        process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE = originalBuildCacheEnv;
+      }
+      if (originalPycachePrefix === undefined) {
+        delete process.env.PYTHONPYCACHEPREFIX;
+      } else {
+        process.env.PYTHONPYCACHEPREFIX = originalPycachePrefix;
+      }
+    }
+  });
+
+  it('feature-gates and reuses dependency bytecode without deleting it on unrelated build outcomes', async () => {
+    const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
+    const originalBuildCacheEnv =
+      process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE;
+    const mockedExeca = vi.mocked(execa);
+    const sourceLists: string[][] = [];
+    const spanEvents: any[] = [];
+    let failCompile = false;
+    const venvPath = path.join(mockWorkPath, '.vercel/python/.venv');
+    const sitePackagesDir = path.join(venvPath, 'lib/python3.9/site-packages');
+    const packageSource = path.join(
+      sitePackagesDir,
+      'stable_package/module.py'
+    );
+    const distInfoDir = path.join(
+      sitePackagesDir,
+      'stable_package-1.0.0.dist-info'
+    );
+    const volatileSource = path.join(
+      sitePackagesDir,
+      'vercel_runtime/cache_test.py'
+    );
+    const volatileDistInfoDir = path.join(
+      sitePackagesDir,
+      'vercel_runtime-1.0.0.dist-info'
+    );
+    fs.outputFileSync(packageSource, 'STABLE_PACKAGE = True\n');
+    fs.outputFileSync(
+      path.join(distInfoDir, 'METADATA'),
+      'Metadata-Version: 2.1\nName: stable-package\nVersion: 1.0.0\n'
+    );
+    fs.outputFileSync(
+      path.join(distInfoDir, 'RECORD'),
+      'stable_package/module.py,,22\n'
+    );
+    fs.outputFileSync(volatileSource, 'VOLATILE_PACKAGE = True\n');
+    fs.outputFileSync(
+      path.join(volatileDistInfoDir, 'METADATA'),
+      'Metadata-Version: 2.1\nName: vercel-runtime\nVersion: 1.0.0\n'
+    );
+    fs.outputFileSync(
+      path.join(volatileDistInfoDir, 'RECORD'),
+      'vercel_runtime/cache_test.py,,24\n'
     );
 
     process.env.VERCEL_PYTHON_COMPILEALL = '1';
@@ -1235,13 +1370,30 @@ describe('file exclusions', () => {
     const markerPath = path.join(venvPath, BUILD_CACHE_MARKER_FILENAME);
 
     try {
+      delete process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE;
+      await build(buildOptions);
+      expect(sourceLists).toHaveLength(1);
+      expect(sourceLists[0]).toContain(packageSource);
+      expect(fs.existsSync(markerPath)).toBe(false);
+      expect(
+        spanEvents
+          .filter(event => event.name === 'vc.builder.python.compileall')
+          .at(-1)?.tags
+      ).toMatchObject({
+        'python.compileall.buildCacheEnabled': 'false',
+      });
+
+      sourceLists.length = 0;
+      process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE = '1';
       await build(buildOptions);
       expect(sourceLists[0]).toContain(packageSource);
+      expect(sourceLists[0]).toContain(volatileSource);
       expect(fs.existsSync(markerPath)).toBe(true);
 
       await build(buildOptions);
       expect(sourceLists).toHaveLength(2);
       expect(sourceLists[1]).not.toContain(packageSource);
+      expect(sourceLists[1]).toContain(volatileSource);
       expect(sourceLists[1]).toContain(path.join(mockWorkPath, 'handler.py'));
       expect(
         spanEvents
@@ -1261,6 +1413,7 @@ describe('file exclusions', () => {
       failCompile = false;
       await build(buildOptions);
       expect(sourceLists.at(-1)).not.toContain(packageSource);
+      expect(sourceLists.at(-1)).toContain(volatileSource);
       expect(fs.existsSync(markerPath)).toBe(true);
 
       await build({
@@ -1276,6 +1429,98 @@ describe('file exclusions', () => {
         delete process.env.VERCEL_PYTHON_COMPILEALL;
       } else {
         process.env.VERCEL_PYTHON_COMPILEALL = originalCompileAllEnv;
+      }
+      if (originalBuildCacheEnv === undefined) {
+        delete process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE;
+      } else {
+        process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE = originalBuildCacheEnv;
+      }
+    }
+  });
+
+  it('removes bytecode persistence for oversized analysis and Hive selection even when compilation is disabled', async () => {
+    const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
+    const originalBuildCacheEnv =
+      process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE;
+    const venvPath = path.join(mockWorkPath, '.vercel/python/.venv');
+    const markerPath = path.join(venvPath, BUILD_CACHE_MARKER_FILENAME);
+    const bytecodePath = path.join(
+      venvPath,
+      'lib/python3.9/site-packages/pkg/__pycache__/module.cpython-39.pyc'
+    );
+    const analyzeSpy = vi.spyOn(
+      PythonDependencyExternalizer.prototype,
+      'analyze'
+    );
+    const generateBundleSpy = vi
+      .spyOn(PythonDependencyExternalizer.prototype, 'generateBundle')
+      .mockResolvedValue({
+        fellBackToFullBundle: true,
+        packingMode: 'knapsack',
+        alwaysBundledPackages: [],
+        bundledPublicPackages: [],
+        externalizedPublicPackages: [],
+      });
+    const buildOptions = {
+      workPath: mockWorkPath,
+      files: {
+        'handler.py': new FileBlob({
+          data: 'def app(environ, start_response): pass',
+        }),
+      },
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    } as const;
+
+    process.env.VERCEL_PYTHON_COMPILEALL = '0';
+    process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE = '1';
+    vi.mocked(getVenvSitePackagesDirs).mockResolvedValue([]);
+
+    try {
+      fs.outputFileSync(markerPath, 'old marker');
+      fs.outputFileSync(bytecodePath, 'old bytecode');
+      analyzeSpy.mockResolvedValueOnce({
+        runtimeInstallEnabled: false,
+        allVendorFiles: {},
+        totalBundleSize: LAMBDA_EPHEMERAL_STORAGE_BYTES + 1,
+      });
+      await build(buildOptions);
+      expect(fs.existsSync(markerPath)).toBe(false);
+
+      fs.outputFileSync(markerPath, 'old marker');
+      analyzeSpy.mockResolvedValueOnce({
+        runtimeInstallEnabled: true,
+        allVendorFiles: {},
+        totalBundleSize: 1,
+      });
+      await build(buildOptions);
+      expect(fs.existsSync(markerPath)).toBe(false);
+
+      const cacheFiles = await prepareCache({
+        files: {},
+        entrypoint: 'handler.py',
+        config: {},
+        workPath: mockWorkPath,
+        repoRootPath: mockWorkPath,
+      });
+      expect(
+        Object.values(cacheFiles).some(file => file.fsPath === bytecodePath)
+      ).toBe(false);
+    } finally {
+      analyzeSpy.mockRestore();
+      generateBundleSpy.mockRestore();
+      vi.mocked(getVenvSitePackagesDirs).mockResolvedValue([]);
+      if (originalCompileAllEnv === undefined) {
+        delete process.env.VERCEL_PYTHON_COMPILEALL;
+      } else {
+        process.env.VERCEL_PYTHON_COMPILEALL = originalCompileAllEnv;
+      }
+      if (originalBuildCacheEnv === undefined) {
+        delete process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE;
+      } else {
+        process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE = originalBuildCacheEnv;
       }
     }
   });

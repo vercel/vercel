@@ -47,6 +47,7 @@ import {
   PythonDependencyExternalizer,
   BYTECODE_FILL_CEILING_BYTES,
   LARGE_FUNCTION_FILL_CEILING_BYTES,
+  LAMBDA_EPHEMERAL_STORAGE_BYTES,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   lambdaKnapsack,
   calculateBundleSize,
@@ -60,6 +61,7 @@ import {
   getUvBinaryOrInstall,
   getUvCacheDir,
   checkUvBinaryVersion,
+  findUvInPath,
 } from './uv';
 import { resolvePythonVersion, pythonVersionString } from './version';
 import { generateProjectManifest } from './diagnostics';
@@ -84,8 +86,8 @@ import {
 } from './fastapi';
 import { containsTopLevelCallable } from '@vercel/python-analysis';
 import {
+  collectAppAdjacentBytecodeAsPrefixFiles,
   collectAppBytecodeFiles,
-  collectAppPrefixBytecodeFiles,
   runCompileAll,
   RUNTIME_PYCACHE_PREFIX,
   shouldCompileAll,
@@ -93,8 +95,12 @@ import {
 } from './compileall';
 import { InstalledPythonDistributions } from './installed-distributions';
 import {
+  BUILD_CACHE_MARKER_FILENAME,
+  commitPythonBytecodeCache,
+  getPythonBytecodeCacheFiles,
+  getPythonBytecodeCachePlan,
   isPythonBytecodeBuildCacheEnabled,
-  PythonBuildCache,
+  removePythonBytecodeCacheMarker,
 } from './build-cache';
 import {
   getPyprojectSubscribers,
@@ -1258,10 +1264,6 @@ export const build: BuildVX = async ({
     hasPreDeployCommand: typeof preDeployCommand === 'string',
   });
   const bytecodeBuildCacheEnabled = isPythonBytecodeBuildCacheEnabled();
-  const pythonBuildCache = new PythonBuildCache({
-    rootPath: rootDir,
-    workPath,
-  });
 
   const predefinedExcludes = [
     '.git/**',
@@ -1373,6 +1375,9 @@ export const build: BuildVX = async ({
           });
         },
       });
+      if (depAnalysis.totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES) {
+        await removePythonBytecodeCacheMarker(venvPath);
+      }
 
       const compileAllOptions = compileAllEnabled
         ? {
@@ -1384,43 +1389,28 @@ export const build: BuildVX = async ({
       const compileSources = async ({
         includePackages,
         vendorSourceFiles,
-        appPycachePrefix,
         cacheHit,
       }: {
         includePackages?: string[];
         vendorSourceFiles?: string[];
-        appPycachePrefix?: string;
         cacheHit?: boolean;
       }): Promise<boolean> => {
         if (!compileAllOptions) return false;
 
         const sources =
           vendorSourceFiles ??
-          installedDistributions.getPythonSourceFiles(includePackages);
+          installedDistributions
+            .getPythonSourceFiles(includePackages)
+            .map(source => source.absolutePath);
 
         return builderSpan
           .child('vc.builder.python.compileall')
           .trace(async compileSpan => {
             console.log('Compiling Python bytecode...');
-            let succeeded: boolean;
-            if (appPycachePrefix && bytecodeBuildCacheEnabled) {
-              const appSucceeded = await runCompileAll({
-                ...compileAllOptions,
-                sourceFiles: appPythonSourceFiles,
-                pycachePrefix: appPycachePrefix,
-              });
-              const vendorSucceeded = await runCompileAll({
-                ...compileAllOptions,
-                sourceFiles: sources,
-              });
-              succeeded = appSucceeded && vendorSucceeded;
-            } else {
-              succeeded = await runCompileAll({
-                ...compileAllOptions,
-                sourceFiles: [...appPythonSourceFiles, ...sources],
-                pycachePrefix: appPycachePrefix,
-              });
-            }
+            const succeeded = await runCompileAll({
+              ...compileAllOptions,
+              sourceFiles: [...appPythonSourceFiles, ...sources],
+            });
 
             compileSpan.setAttributes({
               'python.compileall.enabled': 'true',
@@ -1445,12 +1435,11 @@ export const build: BuildVX = async ({
         includePackages?: string[]
       ) => {
         if (!bytecodeBuildCacheEnabled) return null;
-        return pythonBuildCache.getCompilePlan({
+        return getPythonBytecodeCachePlan({
           venvPath,
           installedDistributions,
           pythonMajor: pythonVersion.major,
           pythonMinor: pythonVersion.minor,
-          pythonRuntime: pythonVersion.runtime,
           isHive,
           totalBundleSize: depAnalysis.totalBundleSize,
           includePackages,
@@ -1493,7 +1482,7 @@ export const build: BuildVX = async ({
             return;
           }
           if (cachePlan && !cachePlan.cacheHit) {
-            await pythonBuildCache.commit(cachePlan);
+            await commitPythonBytecodeCache(cachePlan);
           }
 
           const currentSize = await calculateBundleSize(files);
@@ -1551,11 +1540,6 @@ export const build: BuildVX = async ({
             return;
           }
 
-          // Clear staging output from any previous local build
-          const stagingDir = join(workPath, '.vercel', 'python', 'pycache');
-          await fs.promises.rm(stagingDir, { recursive: true, force: true });
-          await fs.promises.mkdir(stagingDir, { recursive: true });
-
           const includedPackages = [
             ...(bundleResult.alwaysBundledPackages ?? []),
             ...(bundleResult.bundledPublicPackages ?? []),
@@ -1565,7 +1549,6 @@ export const build: BuildVX = async ({
           const compileSucceeded = await compileSources({
             includePackages: includedPackages,
             vendorSourceFiles: cachePlan?.vendorSourceFiles,
-            appPycachePrefix: stagingDir,
             cacheHit: cachePlan?.cacheHit,
           });
           if (!compileSucceeded) {
@@ -1575,14 +1558,13 @@ export const build: BuildVX = async ({
             return;
           }
           if (cachePlan && !cachePlan.cacheHit) {
-            await pythonBuildCache.commit(cachePlan);
+            await commitPythonBytecodeCache(cachePlan);
           }
 
           const beforeCount = Object.keys(files).length;
 
           // Tier 1: app source (always imported at cold start).
-          const appInfo = await collectAppPrefixBytecodeFiles({
-            stagingDir,
+          const appInfo = await collectAppAdjacentBytecodeAsPrefixFiles({
             workPath,
             files,
             runtimeTaskRoot: '/var/task',
@@ -1602,16 +1584,10 @@ export const build: BuildVX = async ({
             runtimeRoot: string;
             includePackages?: string[];
           }) =>
-            bytecodeBuildCacheEnabled
-              ? installedDistributions.collectAdjacentBytecodeAsPrefixFiles({
-                  runtimeRoot,
-                  includePackages,
-                })
-              : installedDistributions.collectPrefixBytecodeFiles({
-                  stagingDir,
-                  runtimeRoot,
-                  includePackages,
-                });
+            installedDistributions.collectAdjacentBytecodeAsPrefixFiles({
+              runtimeRoot,
+              includePackages,
+            });
 
           // Tier 2: bundled vendor packages, imported from /var/task/_vendor.
           const alwaysBundled = bundleResult.alwaysBundledPackages ?? [];
@@ -1674,6 +1650,7 @@ export const build: BuildVX = async ({
         });
         if (bundleResult.fellBackToFullBundle) {
           packingMode = 'hive';
+          await removePythonBytecodeCacheMarker(venvPath);
           announceLargeFunction();
           if (compileAllEnabled) {
             await runCompileAllAndFillBytecode(
@@ -1711,6 +1688,7 @@ export const build: BuildVX = async ({
         addFiles(files, depAnalysis.allVendorFiles);
         if (depAnalysis.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES) {
           packingMode = 'hive';
+          await removePythonBytecodeCacheMarker(venvPath);
           if (isLargeFunctionsEnabled()) {
             announceLargeFunction();
           }
@@ -1932,12 +1910,30 @@ export const prepareCache: PrepareCache = async ({
   repoRootPath,
   workPath,
 }) => {
-  return new PythonBuildCache({
-    rootPath: repoRootPath || workPath,
-    workPath,
-  }).prepareFiles({
-    includeBytecode: isPythonBytecodeBuildCacheEnabled(),
-  });
+  const rootPath = repoRootPath || workPath;
+  const uvCacheDir = getUvCacheDir(workPath);
+  try {
+    const uvPath = findUvInPath();
+    if (uvPath) await new UvRunner(uvPath, uvCacheDir).cachePrune();
+  } catch {
+    // Cache pruning is best-effort and must not fail the build.
+  }
+
+  const files = await glob(
+    '**/.vercel/python/{.venv,services/*/.venv,cache/uv}/**',
+    {
+      cwd: rootPath,
+      ignore: [
+        '**/*.pyc',
+        '**/__pycache__/**',
+        `**/${BUILD_CACHE_MARKER_FILENAME}`,
+      ],
+    }
+  );
+  if (isPythonBytecodeBuildCacheEnabled()) {
+    addFiles(files, await getPythonBytecodeCacheFiles(rootPath));
+  }
+  return files;
 };
 
 export const shouldServe: ShouldServe = opts => {

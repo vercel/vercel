@@ -5,15 +5,10 @@ import {
   normalizePackageName,
   scanDistributions,
 } from '@vercel/python-analysis';
-import type {
-  DirectUrlInfo,
-  DistributionIndex,
-  PackagePath,
-} from '@vercel/python-analysis';
+import type { DistributionIndex, PackagePath } from '@vercel/python-analysis';
 import {
   derivePrefixPycBundlePath,
   derivePycPath,
-  deriveStagedPycFsPath,
   type BytecodeCollectionResult,
 } from './compileall';
 import { getVenvSitePackagesDirs } from './install';
@@ -46,19 +41,12 @@ export interface DistributionFileGroup {
   files: DistributionFileEntry[];
 }
 
-export interface DistributionCacheRecord {
-  path: string;
-  hash: string | undefined;
-  size: string | undefined;
-}
-
-export interface DistributionCacheEntry {
+export interface InstalledPythonSourceFile {
   packageName: string;
-  version: string;
-  origin: DirectUrlInfo | undefined;
   sitePackagesDir: string;
-  records: DistributionCacheRecord[];
-  sourceFiles: { absolutePath: string; relativePath: string }[];
+  absolutePath: string;
+  relativePath: string;
+  isFromLocalDirectory: boolean;
 }
 
 export function getDistributionFileGroups({
@@ -263,35 +251,20 @@ export class InstalledPythonDistributions {
     return sizes;
   }
 
-  getPythonSourceFiles(includePackages?: string[]): string[] {
-    const sourceFiles = new Set<string>();
+  getPythonSourceFiles(
+    includePackages?: string[]
+  ): InstalledPythonSourceFile[] {
+    const sourceFiles = new Map<string, InstalledPythonSourceFile>();
+    const distributionIndexes = new Map(
+      [...this.distributions].map(([dir, index]) => [resolve(dir), index])
+    );
     const distributionGroups = getDistributionFileGroups({
       sitePackageDirs: this.sitePackageDirs,
       distributions: this.distributions,
       includePackages,
     });
 
-    for (const { files } of distributionGroups) {
-      for (const { absolutePath, relativePath } of files) {
-        if (relativePath.endsWith('.py')) {
-          sourceFiles.add(absolutePath);
-        }
-      }
-    }
-
-    return [...sourceFiles].sort();
-  }
-
-  getBuildCacheEntries(includePackages?: string[]): DistributionCacheEntry[] {
-    const distributionIndexes = new Map(
-      [...this.distributions].map(([dir, index]) => [resolve(dir), index])
-    );
-
-    return getDistributionFileGroups({
-      sitePackageDirs: this.sitePackageDirs,
-      distributions: this.distributions,
-      includePackages,
-    }).map(({ packageName, sitePackagesDir, files }) => {
+    for (const { packageName, sitePackagesDir, files } of distributionGroups) {
       const distribution = [
         ...(distributionIndexes.get(sitePackagesDir) ?? []),
       ].find(([name]) => normalizePackageName(name) === packageName)?.[1];
@@ -299,31 +272,23 @@ export class InstalledPythonDistributions {
         throw new Error(`Missing distribution metadata for ${packageName}`);
       }
 
-      return {
-        packageName,
-        version: distribution.version,
-        origin: distribution.origin,
-        sitePackagesDir,
-        records: files
-          .map(({ relativePath, record }) => ({
-            path: relativePath.replaceAll(sep, '/'),
-            hash: record.hash,
-            size: record.size?.toString(),
-          }))
-          .sort((a, b) =>
-            `${a.path}\0${a.hash ?? ''}\0${a.size ?? ''}`.localeCompare(
-              `${b.path}\0${b.hash ?? ''}\0${b.size ?? ''}`
-            )
-          ),
-        sourceFiles: files
-          .filter(({ relativePath }) => relativePath.endsWith('.py'))
-          .map(({ absolutePath, relativePath }) => ({
+      for (const { absolutePath, relativePath } of files) {
+        if (relativePath.endsWith('.py')) {
+          sourceFiles.set(absolutePath, {
+            packageName,
+            sitePackagesDir,
             absolutePath,
             relativePath: relativePath.replaceAll(sep, '/'),
-          }))
-          .sort((a, b) => a.relativePath.localeCompare(b.relativePath)),
-      };
-    });
+            isFromLocalDirectory:
+              distribution.origin?.tag === 'local-directory',
+          });
+        }
+      }
+    }
+
+    return [...sourceFiles.values()].sort((a, b) =>
+      a.absolutePath.localeCompare(b.absolutePath)
+    );
   }
 
   async collectBytecodeFiles({
@@ -372,64 +337,6 @@ export class InstalledPythonDistributions {
     debug(
       `Collected ${Object.keys(result.files).length} bytecode files` +
         ` (${(result.totalSize / (1024 * 1024)).toFixed(2)} MB)` +
-        (includePackages ? ` from ${includePackages.length} packages` : '')
-    );
-    return result;
-  }
-
-  async collectPrefixBytecodeFiles({
-    stagingDir,
-    runtimeRoot,
-    includePackages,
-  }: {
-    stagingDir: string;
-    runtimeRoot: string;
-    includePackages?: string[];
-  }): Promise<BytecodeCollectionResult> {
-    if (this.pythonMajor == null || this.pythonMinor == null) {
-      return { files: {}, totalSize: 0, perItemSizes: new Map() };
-    }
-
-    interface PendingEntry {
-      bundlePath: string;
-      srcFsPath: string;
-      packageName: string;
-    }
-
-    const pending: PendingEntry[] = [];
-    const distributionGroups = getDistributionFileGroups({
-      sitePackageDirs: this.sitePackageDirs,
-      distributions: this.distributions,
-      includePackages,
-    });
-
-    for (const { packageName, files } of distributionGroups) {
-      for (const { absolutePath, relativePath } of files) {
-        if (!relativePath.endsWith('.py')) continue;
-
-        const recordPath = relativePath.replaceAll(sep, '/');
-        const srcFsPath = deriveStagedPycFsPath(
-          stagingDir,
-          absolutePath,
-          this.pythonMajor,
-          this.pythonMinor
-        );
-        const bundlePath = derivePrefixPycBundlePath(
-          `${runtimeRoot}/${recordPath}`,
-          this.pythonMajor,
-          this.pythonMinor
-        );
-        if (!srcFsPath || !bundlePath) continue;
-
-        pending.push({ bundlePath, srcFsPath, packageName });
-      }
-    }
-
-    const result = await this.collectExistingBytecode(pending);
-    debug(
-      `Collected ${Object.keys(result.files).length} prefix bytecode files` +
-        ` (${(result.totalSize / (1024 * 1024)).toFixed(2)} MB)` +
-        ` for runtime root ${runtimeRoot}` +
         (includePackages ? ` from ${includePackages.length} packages` : '')
     );
     return result;

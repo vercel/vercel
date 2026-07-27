@@ -4,15 +4,19 @@ import path from 'path';
 import { tmpdir } from 'os';
 import {
   BUILD_CACHE_MARKER_FILENAME,
-  PythonBuildCache,
-  type PythonBuildCacheCompilePlan,
-  type PythonBuildCacheMode,
+  commitPythonBytecodeCache,
+  getPythonBytecodeCacheFiles,
+  getPythonBytecodeCachePlan,
+  isPythonBytecodeBuildCacheEnabled,
 } from '../src/build-cache';
-import { LAMBDA_EPHEMERAL_STORAGE_BYTES } from '../src/dependency-externalizer';
-import type { DistributionCacheEntry } from '../src/installed-distributions';
 import { COMPILE_ALL_SCRIPT_PATH } from '../src/compileall';
+import { LAMBDA_EPHEMERAL_STORAGE_BYTES } from '../src/dependency-externalizer';
+import type { InstalledPythonSourceFile } from '../src/installed-distributions';
 
 const tempDirs: string[] = [];
+const originalBuildCacheEnv = process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE;
+
+type CachePlan = Awaited<ReturnType<typeof getPythonBytecodeCachePlan>>;
 
 function makeTempDir(): string {
   const dir = fs.mkdtempSync(path.join(tmpdir(), 'vc-python-build-cache-'));
@@ -20,84 +24,80 @@ function makeTempDir(): string {
   return dir;
 }
 
-function makeEntry({
+function normalizePackageName(packageName: string): string {
+  return packageName.toLowerCase().replaceAll(/[-_.]+/g, '-');
+}
+
+function makeSource({
   venvPath,
   packageName,
-  version = '1.0.0',
-  hash = 'sha256=source',
-  origin,
+  relativePath = `${packageName.replaceAll('-', '_')}/module.py`,
+  contents = `${packageName.replaceAll('-', '_')} = True\n`,
+  isFromLocalDirectory = false,
 }: {
   venvPath: string;
   packageName: string;
-  version?: string;
-  hash?: string;
-  origin?: DistributionCacheEntry['origin'];
-}): DistributionCacheEntry {
+  relativePath?: string;
+  contents?: string;
+  isFromLocalDirectory?: boolean;
+}): InstalledPythonSourceFile {
   const sitePackagesDir = path.join(
     venvPath,
     'lib',
     'python3.12',
     'site-packages'
   );
-  const moduleName = packageName.replaceAll('-', '_');
-  const relativePath = `${moduleName}/module.py`;
-  const absolutePath = path.join(sitePackagesDir, moduleName, 'module.py');
-  fs.outputFileSync(absolutePath, `${moduleName} = True\n`);
+  const absolutePath = path.join(sitePackagesDir, ...relativePath.split('/'));
+  fs.outputFileSync(absolutePath, contents);
   return {
     packageName,
-    version,
-    origin,
     sitePackagesDir,
-    records: [{ path: relativePath, hash, size: '16' }],
-    sourceFiles: [{ absolutePath, relativePath }],
+    absolutePath,
+    relativePath,
+    isFromLocalDirectory,
   };
 }
 
-function makeCache(rootPath: string): PythonBuildCache {
-  return new PythonBuildCache({ rootPath, workPath: rootPath });
-}
-
 async function getPlan({
-  cache,
   venvPath,
-  entries,
-  mode = 'standard',
+  sources,
+  isHive = false,
   totalBundleSize = 1,
+  pythonMajor = 3,
   pythonMinor = 12,
   includePackages,
+  volatilePackages = ['vercel-runtime', 'vercel-workers'],
 }: {
-  cache: PythonBuildCache;
   venvPath: string;
-  entries: DistributionCacheEntry[];
-  mode?: PythonBuildCacheMode;
+  sources: InstalledPythonSourceFile[];
+  isHive?: boolean;
   totalBundleSize?: number;
+  pythonMajor?: number;
   pythonMinor?: number;
   includePackages?: string[];
-}): Promise<PythonBuildCacheCompilePlan> {
-  return cache.getCompilePlan({
+  volatilePackages?: string[];
+}): Promise<CachePlan> {
+  return getPythonBytecodeCachePlan({
     venvPath,
     installedDistributions: {
-      getBuildCacheEntries: packages => {
-        if (!packages) return entries;
-        const included = new Set(
-          packages.map(packageName => packageName.replaceAll('_', '-'))
+      getPythonSourceFiles: packages => {
+        if (!packages) return sources;
+        const included = new Set(packages.map(normalizePackageName));
+        return sources.filter(source =>
+          included.has(normalizePackageName(source.packageName))
         );
-        return entries.filter(entry => included.has(entry.packageName));
       },
     },
-    pythonMajor: 3,
+    pythonMajor,
     pythonMinor,
-    pythonRuntime: `python3.${pythonMinor}`,
-    mode,
+    isHive,
     totalBundleSize,
     includePackages,
-    volatilePackages: ['vercel-runtime', 'vercel-workers'],
+    volatilePackages,
   });
 }
 
-async function writeExpectedBytecode(
-  plan: PythonBuildCacheCompilePlan
-): Promise<void> {
+async function writeExpectedBytecode(plan: CachePlan): Promise<void> {
   await Promise.all(
     plan.expectedBytecodeFiles.map(file =>
       fs.outputFile(file.fsPath, `bytecode:${file.path}`)
@@ -105,420 +105,563 @@ async function writeExpectedBytecode(
   );
 }
 
+function getMarkerPath(venvPath: string): string {
+  return path.join(venvPath, BUILD_CACHE_MARKER_FILENAME);
+}
+
+async function populateCache(plan: CachePlan): Promise<void> {
+  await writeExpectedBytecode(plan);
+  expect(await commitPythonBytecodeCache(plan)).toBe(true);
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
   for (const dir of tempDirs.splice(0)) fs.removeSync(dir);
+  if (originalBuildCacheEnv === undefined) {
+    delete process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE;
+  } else {
+    process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE = originalBuildCacheEnv;
+  }
 });
 
-describe('PythonBuildCache', () => {
-  it('reuses stable bytecode while recompiling injected and local packages', async () => {
+describe('Python bytecode build cache', () => {
+  it('enables build caching only for an exact flag value of 1', () => {
+    delete process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE;
+    expect(isPythonBytecodeBuildCacheEnabled()).toBe(false);
+
+    process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE = 'true';
+    expect(isPythonBytecodeBuildCacheEnabled()).toBe(false);
+
+    process.env.VERCEL_PYTHON_BYTECODE_BUILD_CACHE = '1';
+    expect(isPythonBytecodeBuildCacheEnabled()).toBe(true);
+  });
+
+  it('atomically commits a complete versioned marker and reuses it', async () => {
     const rootPath = makeTempDir();
     const venvPath = path.join(rootPath, '.vercel/python/.venv');
-    const cache = makeCache(rootPath);
-    const stable = makeEntry({ venvPath, packageName: 'stable-package' });
-    const injected = makeEntry({ venvPath, packageName: 'vercel-runtime' });
-    const local = makeEntry({
+    const source = makeSource({
       venvPath,
-      packageName: 'local-package',
-      origin: {
-        tag: 'local-directory',
-        val: { url: 'file:///project/local-package', editable: false },
-      },
+      packageName: 'stable-package',
     });
 
-    const coldPlan = await getPlan({
-      cache,
-      venvPath,
-      entries: [stable, injected, local],
-    });
+    const coldPlan = await getPlan({ venvPath, sources: [source] });
     expect(coldPlan.cacheHit).toBe(false);
-    expect(coldPlan.vendorSourceFiles).toEqual(
-      [
-        local.sourceFiles[0].absolutePath,
-        stable.sourceFiles[0].absolutePath,
-        injected.sourceFiles[0].absolutePath,
-      ].sort()
-    );
+    expect(coldPlan.vendorSourceFiles).toEqual([source.absolutePath]);
+    await populateCache(coldPlan);
 
-    await writeExpectedBytecode(coldPlan);
-    await expect(cache.commit(coldPlan)).resolves.toBe(true);
+    const marker = fs.readJsonSync(getMarkerPath(venvPath));
+    expect(marker).toEqual({
+      version: 1,
+      fingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
+      cacheTag: 'cpython-312',
+      files: coldPlan.expectedBytecodeFiles.map(file => ({
+        path: file.path,
+        size: Buffer.byteLength(`bytecode:${file.path}`),
+      })),
+    });
     expect(
       fs
         .readdirSync(venvPath)
         .some(file => file.startsWith(`${BUILD_CACHE_MARKER_FILENAME}.`))
     ).toBe(false);
 
-    const warmPlan = await getPlan({
-      cache,
-      venvPath,
-      entries: [stable, injected, local],
-    });
-    expect(warmPlan.cacheHit).toBe(true);
-    expect(warmPlan.vendorSourceFiles).toEqual(
-      [
-        local.sourceFiles[0].absolutePath,
-        injected.sourceFiles[0].absolutePath,
-      ].sort()
-    );
-    expect(warmPlan.stableVendorSourceFileCount).toBe(1);
-    expect(warmPlan.volatileVendorSourceFileCount).toBe(2);
-  });
-
-  it.each([
-    [
-      'version change',
-      (entries: DistributionCacheEntry[]) => [
-        { ...entries[0], version: '2.0.0' },
-      ],
-    ],
-    [
-      'RECORD change',
-      (entries: DistributionCacheEntry[]) => [
-        {
-          ...entries[0],
-          records: [{ ...entries[0].records[0], hash: 'sha256=changed' }],
-        },
-      ],
-    ],
-    [
-      'dependency addition',
-      (entries: DistributionCacheEntry[], venvPath: string) => [
-        ...entries,
-        makeEntry({ venvPath, packageName: 'added-package' }),
-      ],
-    ],
-    [
-      'dependency removal',
-      (entries: DistributionCacheEntry[]) => entries.slice(0, 1),
-    ],
-  ])('misses without deleting the marker on %s', async (_name, mutate) => {
-    const rootPath = makeTempDir();
-    const venvPath = path.join(rootPath, '.vercel/python/.venv');
-    const cache = makeCache(rootPath);
-    const entries = [
-      makeEntry({ venvPath, packageName: 'first-package' }),
-      makeEntry({ venvPath, packageName: 'second-package' }),
-    ];
-    const coldPlan = await getPlan({ cache, venvPath, entries });
-    await writeExpectedBytecode(coldPlan);
-    expect(await cache.commit(coldPlan)).toBe(true);
-
-    const changedPlan = await getPlan({
-      cache,
-      venvPath,
-      entries: mutate(entries, venvPath),
-    });
-    expect(changedPlan.cacheHit).toBe(false);
-    expect(
-      fs.existsSync(path.join(venvPath, BUILD_CACHE_MARKER_FILENAME))
-    ).toBe(true);
-  });
-
-  it('misses when stable source content changes without a RECORD update', async () => {
-    const rootPath = makeTempDir();
-    const venvPath = path.join(rootPath, '.vercel/python/.venv');
-    const cache = makeCache(rootPath);
-    const entries = [makeEntry({ venvPath, packageName: 'stable-package' })];
-    const coldPlan = await getPlan({ cache, venvPath, entries });
-    await writeExpectedBytecode(coldPlan);
-    expect(await cache.commit(coldPlan)).toBe(true);
-
-    fs.writeFileSync(
-      entries[0].sourceFiles[0].absolutePath,
-      'CHANGED = True\n'
-    );
-
-    expect((await getPlan({ cache, venvPath, entries })).cacheHit).toBe(false);
-  });
-
-  it('caches readable bytecode when a RECORD-listed source is missing', async () => {
-    const rootPath = makeTempDir();
-    const venvPath = path.join(rootPath, '.vercel/python/.venv');
-    const cache = makeCache(rootPath);
-    const readable = makeEntry({
-      venvPath,
-      packageName: 'readable-package',
-    });
-    const missing = makeEntry({ venvPath, packageName: 'missing-package' });
-    const entries = [readable, missing];
-    fs.removeSync(missing.sourceFiles[0].absolutePath);
-
-    const coldPlan = await getPlan({ cache, venvPath, entries });
-    const readableBytecode = coldPlan.expectedBytecodeFiles.find(file =>
-      file.path.includes('readable_package')
-    );
-    expect(readableBytecode).toBeDefined();
-    await fs.outputFile(readableBytecode!.fsPath, 'readable bytecode');
-    expect(await cache.commit(coldPlan)).toBe(true);
-
-    expect((await getPlan({ cache, venvPath, entries })).cacheHit).toBe(true);
-
-    fs.outputFileSync(
-      missing.sourceFiles[0].absolutePath,
-      'missing_package = True\n'
-    );
-    expect((await getPlan({ cache, venvPath, entries })).cacheHit).toBe(false);
-  });
-
-  it('misses when Python, mode, or compilation scope changes', async () => {
-    const rootPath = makeTempDir();
-    const venvPath = path.join(rootPath, '.vercel/python/.venv');
-    const cache = makeCache(rootPath);
-    const entries = [
-      makeEntry({ venvPath, packageName: 'first-package' }),
-      makeEntry({ venvPath, packageName: 'second-package' }),
-    ];
-    const coldPlan = await getPlan({ cache, venvPath, entries });
-    await writeExpectedBytecode(coldPlan);
-    expect(await cache.commit(coldPlan)).toBe(true);
-
-    expect(
-      (await getPlan({ cache, venvPath, entries, pythonMinor: 13 })).cacheHit
-    ).toBe(false);
-
-    const scopedPlan = await getPlan({
-      cache,
-      venvPath,
-      entries,
-      mode: 'knapsack',
-      includePackages: ['first-package'],
-    });
-    await writeExpectedBytecode(scopedPlan);
-    expect(await cache.commit(scopedPlan)).toBe(true);
-    expect(
-      (
-        await getPlan({
-          cache,
-          venvPath,
-          entries,
-          mode: 'bytecode-first',
-          includePackages: ['second-package'],
-        })
-      ).cacheHit
-    ).toBe(false);
-  });
-
-  it.each([
-    'null',
-    '[]',
-    '{}',
-    '{"version":1}',
-    '{"files":"wrong"}',
-  ])('treats malformed marker %s as a miss', async marker => {
-    const rootPath = makeTempDir();
-    const venvPath = path.join(rootPath, '.vercel/python/.venv');
-    const markerPath = path.join(venvPath, BUILD_CACHE_MARKER_FILENAME);
-    const cache = makeCache(rootPath);
-    const entries = [makeEntry({ venvPath, packageName: 'stable-package' })];
-    fs.outputFileSync(markerPath, marker);
-
-    expect((await getPlan({ cache, venvPath, entries })).cacheHit).toBe(false);
-    expect(fs.existsSync(markerPath)).toBe(false);
-  });
-
-  it('rejects a marker when restored bytecode is missing', async () => {
-    const rootPath = makeTempDir();
-    const venvPath = path.join(rootPath, '.vercel/python/.venv');
-    const cache = makeCache(rootPath);
-    const entries = [makeEntry({ venvPath, packageName: 'stable-package' })];
-    const coldPlan = await getPlan({ cache, venvPath, entries });
-    await writeExpectedBytecode(coldPlan);
-    expect(await cache.commit(coldPlan)).toBe(true);
-    fs.removeSync(coldPlan.expectedBytecodeFiles[0].fsPath);
-
-    expect((await getPlan({ cache, venvPath, entries })).cacheHit).toBe(false);
-    expect(
-      fs.existsSync(path.join(venvPath, BUILD_CACHE_MARKER_FILENAME))
-    ).toBe(true);
-  });
-
-  it('rejects unsafe paths in an otherwise valid marker', async () => {
-    const rootPath = makeTempDir();
-    const venvPath = path.join(rootPath, '.vercel/python/.venv');
-    const markerPath = path.join(venvPath, BUILD_CACHE_MARKER_FILENAME);
-    const cache = makeCache(rootPath);
-    const entries = [makeEntry({ venvPath, packageName: 'stable-package' })];
-    const coldPlan = await getPlan({ cache, venvPath, entries });
-    await writeExpectedBytecode(coldPlan);
-    expect(await cache.commit(coldPlan)).toBe(true);
-    const marker = fs.readJsonSync(markerPath);
-    marker.files[0].path = '../escape/__pycache__/module.cpython-312.pyc';
-    fs.writeJsonSync(markerPath, marker);
-
-    expect((await getPlan({ cache, venvPath, entries })).cacheHit).toBe(false);
-    expect(fs.existsSync(markerPath)).toBe(false);
-  });
-
-  it('rejects a manifest path outside the current expected set', async () => {
-    const rootPath = makeTempDir();
-    const venvPath = path.join(rootPath, '.vercel/python/.venv');
-    const markerPath = path.join(venvPath, BUILD_CACHE_MARKER_FILENAME);
-    const cache = makeCache(rootPath);
-    const entries = [makeEntry({ venvPath, packageName: 'stable-package' })];
-    const coldPlan = await getPlan({ cache, venvPath, entries });
-    await writeExpectedBytecode(coldPlan);
-    expect(await cache.commit(coldPlan)).toBe(true);
-
-    const unexpectedPath =
-      'lib/python3.12/site-packages/unexpected/__pycache__/module.cpython-312.pyc';
-    const unexpectedFsPath = path.join(venvPath, ...unexpectedPath.split('/'));
-    fs.outputFileSync(unexpectedFsPath, 'unexpected bytecode');
-    const marker = fs.readJsonSync(markerPath);
-    marker.files = [
-      {
-        path: unexpectedPath,
-        size: Buffer.byteLength('unexpected bytecode'),
-      },
-    ];
-    fs.writeJsonSync(markerPath, marker);
-
-    expect((await getPlan({ cache, venvPath, entries })).cacheHit).toBe(false);
-    expect(fs.existsSync(markerPath)).toBe(true);
-  });
-
-  it('commits and reuses a non-empty subset of expected bytecode', async () => {
-    const rootPath = makeTempDir();
-    const venvPath = path.join(rootPath, '.vercel/python/.venv');
-    const cache = makeCache(rootPath);
-    const entries = [
-      makeEntry({ venvPath, packageName: 'first-package' }),
-      makeEntry({ venvPath, packageName: 'second-package' }),
-    ];
-    const plan = await getPlan({
-      cache,
-      venvPath,
-      entries,
-    });
-    await fs.outputFile(
-      plan.expectedBytecodeFiles[0].fsPath,
-      'compiled bytecode'
-    );
-
-    expect(await cache.commit(plan)).toBe(true);
-    const marker = fs.readJsonSync(
-      path.join(venvPath, BUILD_CACHE_MARKER_FILENAME)
-    );
-    expect(marker.files).toEqual([
-      {
-        path: plan.expectedBytecodeFiles[0].path,
-        size: Buffer.byteLength('compiled bytecode'),
-      },
-    ]);
-
-    const warmPlan = await getPlan({ cache, venvPath, entries });
+    const warmPlan = await getPlan({ venvPath, sources: [source] });
     expect(warmPlan.cacheHit).toBe(true);
     expect(warmPlan.vendorSourceFiles).toEqual([]);
   });
 
-  it('preserves the previous marker when no expected bytecode exists', async () => {
+  it('always recompiles local, injected, and configured volatile packages', async () => {
     const rootPath = makeTempDir();
     const venvPath = path.join(rootPath, '.vercel/python/.venv');
-    const markerPath = path.join(venvPath, BUILD_CACHE_MARKER_FILENAME);
-    const cache = makeCache(rootPath);
-    const entries = [makeEntry({ venvPath, packageName: 'stable-package' })];
-    const initialPlan = await getPlan({ cache, venvPath, entries });
-    await writeExpectedBytecode(initialPlan);
-    expect(await cache.commit(initialPlan)).toBe(true);
-    const previousMarker = fs.readFileSync(markerPath, 'utf8');
+    const stable = makeSource({ venvPath, packageName: 'stable-package' });
+    const local = makeSource({
+      venvPath,
+      packageName: 'local-package',
+      isFromLocalDirectory: true,
+    });
+    const injected = makeSource({
+      venvPath,
+      packageName: 'vercel-runtime',
+    });
+    const configured = makeSource({
+      venvPath,
+      packageName: 'always-bundle',
+    });
+    const sources = [stable, local, injected, configured];
 
-    fs.writeFileSync(
-      entries[0].sourceFiles[0].absolutePath,
-      'CHANGED = True\n'
+    const coldPlan = await getPlan({
+      venvPath,
+      sources,
+      volatilePackages: ['vercel-runtime', 'vercel-workers', 'always-bundle'],
+    });
+    await populateCache(coldPlan);
+
+    const warmPlan = await getPlan({
+      venvPath,
+      sources,
+      volatilePackages: ['vercel-runtime', 'vercel-workers', 'always-bundle'],
+    });
+    expect(warmPlan.cacheHit).toBe(true);
+    expect(warmPlan.vendorSourceFiles).toEqual(
+      [
+        local.absolutePath,
+        injected.absolutePath,
+        configured.absolutePath,
+      ].sort()
     );
-    const changedPlan = await getPlan({ cache, venvPath, entries });
-    fs.removeSync(changedPlan.expectedBytecodeFiles[0].fsPath);
+    expect(coldPlan.expectedBytecodeFiles).toHaveLength(1);
+  });
 
-    expect(await cache.commit(changedPlan)).toBe(false);
-    expect(fs.readFileSync(markerPath, 'utf8')).toBe(previousMarker);
+  it('invalidates for source content, path additions, and path removals', async () => {
+    const rootPath = makeTempDir();
+    const venvPath = path.join(rootPath, '.vercel/python/.venv');
+    const first = makeSource({ venvPath, packageName: 'first-package' });
+    const second = makeSource({ venvPath, packageName: 'second-package' });
+    const initialPlan = await getPlan({
+      venvPath,
+      sources: [first, second],
+    });
+    await populateCache(initialPlan);
+
+    fs.writeFileSync(first.absolutePath, 'CHANGED = True\n');
+    expect(
+      (await getPlan({ venvPath, sources: [first, second] })).cacheHit
+    ).toBe(false);
+    fs.writeFileSync(first.absolutePath, 'first_package = True\n');
+
+    expect((await getPlan({ venvPath, sources: [first] })).cacheHit).toBe(
+      false
+    );
+
+    const third = makeSource({ venvPath, packageName: 'third-package' });
+    expect(
+      (await getPlan({ venvPath, sources: [first, second, third] })).cacheHit
+    ).toBe(false);
+    expect(fs.existsSync(getMarkerPath(venvPath))).toBe(true);
+  });
+
+  it('ignores package metadata changes when source inputs are identical', async () => {
+    const rootPath = makeTempDir();
+    const venvPath = path.join(rootPath, '.vercel/python/.venv');
+    const source = makeSource({
+      venvPath,
+      packageName: 'original-package-name',
+      relativePath: 'shared/module.py',
+    });
+    const initialPlan = await getPlan({ venvPath, sources: [source] });
+    await populateCache(initialPlan);
+
+    const metadataChanged = {
+      ...source,
+      packageName: 'renamed-package',
+    };
+    const warmPlan = await getPlan({
+      venvPath,
+      sources: [metadataChanged],
+    });
+    expect(warmPlan.cacheHit).toBe(true);
+    expect(warmPlan.marker?.fingerprint).toBe(initialPlan.marker?.fingerprint);
+  });
+
+  it('invalidates for Python, compiler, and compilation-scope changes', async () => {
+    const rootPath = makeTempDir();
+    const venvPath = path.join(rootPath, '.vercel/python/.venv');
+    const first = makeSource({ venvPath, packageName: 'first-package' });
+    const second = makeSource({ venvPath, packageName: 'second-package' });
+    const sources = [first, second];
+    const initialPlan = await getPlan({ venvPath, sources });
+    await populateCache(initialPlan);
+
+    expect(
+      (await getPlan({ venvPath, sources, pythonMinor: 13 })).cacheHit
+    ).toBe(false);
+    expect(
+      (
+        await getPlan({
+          venvPath,
+          sources,
+          includePackages: ['first-package'],
+        })
+      ).cacheHit
+    ).toBe(false);
+
+    const originalReadFile = fs.promises.readFile.bind(fs.promises);
+    vi.spyOn(fs.promises, 'readFile').mockImplementation(((
+      filePath: fs.PathLike,
+      options?: unknown
+    ) => {
+      if (filePath === COMPILE_ALL_SCRIPT_PATH) {
+        return Promise.resolve(Buffer.from('changed compiler'));
+      }
+      return originalReadFile(filePath, options as BufferEncoding);
+    }) as typeof fs.promises.readFile);
+    expect((await getPlan({ venvPath, sources })).cacheHit).toBe(false);
+  });
+
+  it('keeps one last-writer-wins scope marker per virtualenv', async () => {
+    const rootPath = makeTempDir();
+    const venvPath = path.join(rootPath, '.vercel/python/.venv');
+    const first = makeSource({ venvPath, packageName: 'first-package' });
+    const second = makeSource({ venvPath, packageName: 'second-package' });
+    const sources = [first, second];
+
+    const firstScope = await getPlan({
+      venvPath,
+      sources,
+      includePackages: ['first-package'],
+    });
+    await populateCache(firstScope);
+    const secondScope = await getPlan({
+      venvPath,
+      sources,
+      includePackages: ['second-package'],
+    });
+    expect(secondScope.cacheHit).toBe(false);
+    await populateCache(secondScope);
+
+    expect(
+      (
+        await getPlan({
+          venvPath,
+          sources,
+          includePackages: ['first-package'],
+        })
+      ).cacheHit
+    ).toBe(false);
     expect(
       fs
         .readdirSync(venvPath)
-        .some(file => file.startsWith(`${BUILD_CACHE_MARKER_FILENAME}.`))
+        .filter(file => file === BUILD_CACHE_MARKER_FILENAME)
+    ).toHaveLength(1);
+  });
+
+  it('caches the complete readable set and always compiles missing sources', async () => {
+    const rootPath = makeTempDir();
+    const venvPath = path.join(rootPath, '.vercel/python/.venv');
+    const readable = makeSource({
+      venvPath,
+      packageName: 'readable-package',
+    });
+    const missing = makeSource({
+      venvPath,
+      packageName: 'missing-package',
+    });
+    fs.removeSync(missing.absolutePath);
+
+    const coldPlan = await getPlan({
+      venvPath,
+      sources: [readable, missing],
+    });
+    expect(coldPlan.expectedBytecodeFiles).toHaveLength(1);
+    expect(coldPlan.vendorSourceFiles).toEqual(
+      [readable.absolutePath, missing.absolutePath].sort()
+    );
+    await populateCache(coldPlan);
+
+    const warmPlan = await getPlan({
+      venvPath,
+      sources: [readable, missing],
+    });
+    expect(warmPlan.cacheHit).toBe(true);
+    expect(warmPlan.vendorSourceFiles).toEqual([missing.absolutePath]);
+
+    fs.outputFileSync(missing.absolutePath, 'NOW_READABLE = True\n');
+    expect(
+      (await getPlan({ venvPath, sources: [readable, missing] })).cacheHit
     ).toBe(false);
   });
 
   it.each([
-    'standard',
-    'knapsack',
-    'bytecode-first',
-  ] as const)('caches %s at the inclusive 500 MiB boundary', async mode => {
+    ['null', 'null'],
+    ['array', '[]'],
+    ['versionless', '{}'],
+    [
+      'wrong version',
+      JSON.stringify({
+        version: 2,
+        fingerprint: 'a'.repeat(64),
+        cacheTag: 'cpython-312',
+        files: [
+          {
+            path: 'lib/__pycache__/module.cpython-312.pyc',
+            size: 1,
+          },
+        ],
+      }),
+    ],
+    [
+      'extra field',
+      JSON.stringify({
+        version: 1,
+        fingerprint: 'a'.repeat(64),
+        cacheTag: 'cpython-312',
+        files: [
+          {
+            path: 'lib/__pycache__/module.cpython-312.pyc',
+            size: 1,
+          },
+        ],
+        mode: 'standard',
+      }),
+    ],
+    [
+      'wrong fingerprint',
+      JSON.stringify({
+        version: 1,
+        fingerprint: 'not-a-sha256',
+        cacheTag: 'cpython-312',
+        files: [],
+      }),
+    ],
+    [
+      'wrong cache tag',
+      JSON.stringify({
+        version: 1,
+        fingerprint: 'a'.repeat(64),
+        cacheTag: 'python-312',
+        files: [],
+      }),
+    ],
+    [
+      'negative file size',
+      JSON.stringify({
+        version: 1,
+        fingerprint: 'a'.repeat(64),
+        cacheTag: 'cpython-312',
+        files: [
+          {
+            path: 'lib/__pycache__/module.cpython-312.pyc',
+            size: -1,
+          },
+        ],
+      }),
+    ],
+    [
+      'duplicate file paths',
+      JSON.stringify({
+        version: 1,
+        fingerprint: 'a'.repeat(64),
+        cacheTag: 'cpython-312',
+        files: [
+          {
+            path: 'lib/__pycache__/module.cpython-312.pyc',
+            size: 1,
+          },
+          {
+            path: 'lib/__pycache__/module.cpython-312.pyc',
+            size: 1,
+          },
+        ],
+      }),
+    ],
+    [
+      'unsorted file paths',
+      JSON.stringify({
+        version: 1,
+        fingerprint: 'a'.repeat(64),
+        cacheTag: 'cpython-312',
+        files: [
+          {
+            path: 'lib/z/__pycache__/module.cpython-312.pyc',
+            size: 1,
+          },
+          {
+            path: 'lib/a/__pycache__/module.cpython-312.pyc',
+            size: 1,
+          },
+        ],
+      }),
+    ],
+    [
+      'unsafe path',
+      JSON.stringify({
+        version: 1,
+        fingerprint: 'a'.repeat(64),
+        cacheTag: 'cpython-312',
+        files: [
+          {
+            path: '../escape/__pycache__/module.cpython-312.pyc',
+            size: 1,
+          },
+        ],
+      }),
+    ],
+  ])('removes a malformed %s marker', async (_name, marker) => {
     const rootPath = makeTempDir();
     const venvPath = path.join(rootPath, '.vercel/python/.venv');
-    const plan = await getPlan({
-      cache: makeCache(rootPath),
+    const source = makeSource({
       venvPath,
-      entries: [makeEntry({ venvPath, packageName: 'stable-package' })],
-      mode,
-      totalBundleSize: LAMBDA_EPHEMERAL_STORAGE_BYTES,
+      packageName: 'stable-package',
     });
-    expect(plan.cacheable).toBe(true);
+    fs.outputFileSync(getMarkerPath(venvPath), marker);
+
+    expect((await getPlan({ venvPath, sources: [source] })).cacheHit).toBe(
+      false
+    );
+    expect(fs.existsSync(getMarkerPath(venvPath))).toBe(false);
   });
 
   it.each([
-    ['standard above 500 MiB', 'standard' as const],
-    ['knapsack above 500 MiB', 'knapsack' as const],
-    ['bytecode-first above 500 MiB', 'bytecode-first' as const],
-    ['Hive at any size', 'hive' as const],
-  ])('does not cache %s', async (_name, mode) => {
+    'missing',
+    'wrong size',
+  ] as const)('removes a marker whose bytecode file is %s', async failure => {
     const rootPath = makeTempDir();
     const venvPath = path.join(rootPath, '.vercel/python/.venv');
-    const plan = await getPlan({
-      cache: makeCache(rootPath),
+    const source = makeSource({
       venvPath,
-      entries: [makeEntry({ venvPath, packageName: 'stable-package' })],
-      mode,
-      totalBundleSize: mode === 'hive' ? 1 : LAMBDA_EPHEMERAL_STORAGE_BYTES + 1,
+      packageName: 'stable-package',
     });
-    expect(plan.cacheable).toBe(false);
+    const initialPlan = await getPlan({ venvPath, sources: [source] });
+    await populateCache(initialPlan);
+    const [bytecodeFile] = initialPlan.expectedBytecodeFiles;
+    if (failure === 'missing') {
+      fs.removeSync(bytecodeFile.fsPath);
+    } else {
+      fs.appendFileSync(bytecodeFile.fsPath, 'changed size');
+    }
+
+    expect((await getPlan({ venvPath, sources: [source] })).cacheHit).toBe(
+      false
+    );
+    expect(fs.existsSync(getMarkerPath(venvPath))).toBe(false);
   });
 
-  it.each([
-    ['an oversized standard plan', 'standard' as const],
-    ['a Hive plan', 'hive' as const],
-  ])('preserves a valid marker for %s', async (_name, mode) => {
+  it('requires the restored manifest to exactly match expected bytecode', async () => {
     const rootPath = makeTempDir();
     const venvPath = path.join(rootPath, '.vercel/python/.venv');
-    const markerPath = path.join(venvPath, BUILD_CACHE_MARKER_FILENAME);
-    const cache = makeCache(rootPath);
-    const entries = [makeEntry({ venvPath, packageName: 'stable-package' })];
-    const initialPlan = await getPlan({ cache, venvPath, entries });
-    await writeExpectedBytecode(initialPlan);
-    expect(await cache.commit(initialPlan)).toBe(true);
+    const first = makeSource({ venvPath, packageName: 'first-package' });
+    const second = makeSource({ venvPath, packageName: 'second-package' });
+    const sources = [first, second];
+    const initialPlan = await getPlan({ venvPath, sources });
+    await populateCache(initialPlan);
+    const markerPath = getMarkerPath(venvPath);
+    const marker = fs.readJsonSync(markerPath);
 
-    const ineligiblePlan = await getPlan({
-      cache,
-      venvPath,
-      entries,
-      mode,
-      totalBundleSize: mode === 'hive' ? 1 : LAMBDA_EPHEMERAL_STORAGE_BYTES + 1,
-    });
-    expect(ineligiblePlan.cacheable).toBe(false);
+    marker.files = marker.files.slice(0, 1);
+    fs.writeJsonSync(markerPath, marker);
+    expect((await getPlan({ venvPath, sources })).cacheHit).toBe(false);
     expect(fs.existsSync(markerPath)).toBe(true);
   });
 
-  it('preserves the previous marker when a marker write fails', async () => {
+  it('does not advance a marker after partial compilation', async () => {
     const rootPath = makeTempDir();
     const venvPath = path.join(rootPath, '.vercel/python/.venv');
-    const markerPath = path.join(venvPath, BUILD_CACHE_MARKER_FILENAME);
-    const cache = makeCache(rootPath);
-    const entries = [makeEntry({ venvPath, packageName: 'stable-package' })];
-    const initialPlan = await getPlan({ cache, venvPath, entries });
-    await writeExpectedBytecode(initialPlan);
-    expect(await cache.commit(initialPlan)).toBe(true);
-    const previousMarker = fs.readFileSync(markerPath, 'utf8');
+    const first = makeSource({ venvPath, packageName: 'first-package' });
+    const second = makeSource({ venvPath, packageName: 'second-package' });
+    const sources = [first, second];
+    const initialPlan = await getPlan({ venvPath, sources });
+    await populateCache(initialPlan);
+    const markerPath = getMarkerPath(venvPath);
+    const originalMarker = fs.readFileSync(markerPath, 'utf8');
 
-    fs.writeFileSync(
-      entries[0].sourceFiles[0].absolutePath,
-      'CHANGED = True\n'
+    fs.writeFileSync(first.absolutePath, 'CHANGED = True\n');
+    const changedPlan = await getPlan({ venvPath, sources });
+    fs.removeSync(changedPlan.expectedBytecodeFiles[0].fsPath);
+    await fs.outputFile(
+      changedPlan.expectedBytecodeFiles[1].fsPath,
+      'new bytecode'
     );
-    const changedPlan = await getPlan({ cache, venvPath, entries });
+
+    expect(await commitPythonBytecodeCache(changedPlan)).toBe(false);
+    expect(fs.readFileSync(markerPath, 'utf8')).toBe(originalMarker);
+  });
+
+  it('does not create a marker when the first compilation is partial', async () => {
+    const rootPath = makeTempDir();
+    const venvPath = path.join(rootPath, '.vercel/python/.venv');
+    const sources = [
+      makeSource({ venvPath, packageName: 'first-package' }),
+      makeSource({ venvPath, packageName: 'second-package' }),
+    ];
+    const plan = await getPlan({ venvPath, sources });
+    await fs.outputFile(plan.expectedBytecodeFiles[0].fsPath, 'bytecode');
+
+    expect(await commitPythonBytecodeCache(plan)).toBe(false);
+    expect(fs.existsSync(getMarkerPath(venvPath))).toBe(false);
+  });
+
+  it('preserves a complete older marker until its replacement commits', async () => {
+    const rootPath = makeTempDir();
+    const venvPath = path.join(rootPath, '.vercel/python/.venv');
+    const source = makeSource({
+      venvPath,
+      packageName: 'stable-package',
+    });
+    const initialPlan = await getPlan({ venvPath, sources: [source] });
+    await populateCache(initialPlan);
+    const markerPath = getMarkerPath(venvPath);
+    const originalMarker = fs.readFileSync(markerPath, 'utf8');
+
+    fs.writeFileSync(source.absolutePath, 'CHANGED = True\n');
+    const changedPlan = await getPlan({ venvPath, sources: [source] });
+    expect(changedPlan.cacheHit).toBe(false);
+    expect(fs.readFileSync(markerPath, 'utf8')).toBe(originalMarker);
+
+    await writeExpectedBytecode(changedPlan);
+    expect(await commitPythonBytecodeCache(changedPlan)).toBe(true);
+    expect(fs.readFileSync(markerPath, 'utf8')).not.toBe(originalMarker);
+  });
+
+  it.each([
+    ['a function above 500 MiB', false] as const,
+    ['a Hive function', true] as const,
+  ])('removes the marker and disables caching for %s', async (_name, isHive) => {
+    const rootPath = makeTempDir();
+    const venvPath = path.join(rootPath, '.vercel/python/.venv');
+    const source = makeSource({
+      venvPath,
+      packageName: 'stable-package',
+    });
+    const initialPlan = await getPlan({ venvPath, sources: [source] });
+    await populateCache(initialPlan);
+
+    const disabledPlan = await getPlan({
+      venvPath,
+      sources: [source],
+      isHive,
+      totalBundleSize: isHive ? 1 : LAMBDA_EPHEMERAL_STORAGE_BYTES + 1,
+    });
+    expect(disabledPlan.marker).toBeNull();
+    expect(disabledPlan.vendorSourceFiles).toEqual([source.absolutePath]);
+    expect(fs.existsSync(getMarkerPath(venvPath))).toBe(false);
+  });
+
+  it('caches at the inclusive 500 MiB boundary', async () => {
+    const rootPath = makeTempDir();
+    const venvPath = path.join(rootPath, '.vercel/python/.venv');
+    const source = makeSource({
+      venvPath,
+      packageName: 'stable-package',
+    });
+    const plan = await getPlan({
+      venvPath,
+      sources: [source],
+      totalBundleSize: LAMBDA_EPHEMERAL_STORAGE_BYTES,
+    });
+    expect(plan.marker).not.toBeNull();
+  });
+
+  it('preserves the previous marker when an atomic rename fails', async () => {
+    const rootPath = makeTempDir();
+    const venvPath = path.join(rootPath, '.vercel/python/.venv');
+    const source = makeSource({
+      venvPath,
+      packageName: 'stable-package',
+    });
+    const initialPlan = await getPlan({ venvPath, sources: [source] });
+    await populateCache(initialPlan);
+    const markerPath = getMarkerPath(venvPath);
+    const originalMarker = fs.readFileSync(markerPath, 'utf8');
+
+    fs.writeFileSync(source.absolutePath, 'CHANGED = True\n');
+    const changedPlan = await getPlan({ venvPath, sources: [source] });
     await writeExpectedBytecode(changedPlan);
     vi.spyOn(fs.promises, 'rename').mockRejectedValueOnce(
       new Error('rename failed')
     );
 
-    expect(await cache.commit(changedPlan)).toBe(false);
-    expect(fs.readFileSync(markerPath, 'utf8')).toBe(previousMarker);
+    expect(await commitPythonBytecodeCache(changedPlan)).toBe(false);
+    expect(fs.readFileSync(markerPath, 'utf8')).toBe(originalMarker);
     expect(
       fs
         .readdirSync(venvPath)
@@ -526,92 +669,39 @@ describe('PythonBuildCache', () => {
     ).toBe(false);
   });
 
-  it('fingerprints the compile coordinator contents', async () => {
-    const rootPath = makeTempDir();
-    const venvPath = path.join(rootPath, '.vercel/python/.venv');
-    const cache = makeCache(rootPath);
-    const entries = [makeEntry({ venvPath, packageName: 'stable-package' })];
-    const originalReadFile = fs.promises.readFile.bind(fs.promises);
-    let compilerContents = Buffer.from('first compiler');
-    vi.spyOn(fs.promises, 'readFile').mockImplementation(((
-      filePath: any,
-      options?: any
-    ) => {
-      if (filePath === COMPILE_ALL_SCRIPT_PATH) {
-        return Promise.resolve(compilerContents);
-      }
-      return originalReadFile(filePath, options);
-    }) as any);
-
-    const firstPlan = await getPlan({ cache, venvPath, entries });
-    compilerContents = Buffer.from('second compiler');
-    const secondPlan = await getPlan({ cache, venvPath, entries });
-
-    expect(firstPlan.marker?.fingerprint).not.toBe(
-      secondPlan.marker?.fingerprint
-    );
-  });
-
-  it('prepares validated bytecode independently for default and service venvs', async () => {
+  it('prepares only complete manifest files from isolated virtualenvs', async () => {
     const rootPath = makeTempDir();
     const defaultVenv = path.join(rootPath, '.vercel/python/.venv');
     const serviceVenv = path.join(
       rootPath,
       '.vercel/python/services/api/.venv'
     );
-    const cache = makeCache(rootPath);
-    const defaultEntry = makeEntry({
+    const defaultSource = makeSource({
       venvPath: defaultVenv,
       packageName: 'default-package',
     });
-    const localEntry = makeEntry({
-      venvPath: defaultVenv,
-      packageName: 'local-package',
-      origin: {
-        tag: 'local-directory',
-        val: { url: 'file:///project/local-package', editable: true },
-      },
-    });
-    const serviceEntry = makeEntry({
+    const serviceSource = makeSource({
       venvPath: serviceVenv,
       packageName: 'service-package',
     });
     const defaultPlan = await getPlan({
-      cache,
       venvPath: defaultVenv,
-      entries: [defaultEntry, localEntry],
+      sources: [defaultSource],
     });
     const servicePlan = await getPlan({
-      cache,
       venvPath: serviceVenv,
-      entries: [serviceEntry],
+      sources: [serviceSource],
     });
-    await writeExpectedBytecode(defaultPlan);
-    await writeExpectedBytecode(servicePlan);
-    expect(await cache.commit(defaultPlan)).toBe(true);
-    expect(await cache.commit(servicePlan)).toBe(true);
+    await populateCache(defaultPlan);
+    await populateCache(servicePlan);
 
-    const excludedPycFiles = [
-      path.join(
-        rootPath,
-        '.vercel/python/cache/uv/archive/pkg/__pycache__/module.pyc'
-      ),
-      path.join(
-        defaultVenv,
-        'lib/python3.12/site-packages/unlisted/__pycache__/module.cpython-312.pyc'
-      ),
-      path.join(
-        defaultVenv,
-        'lib/python3.12/site-packages/default_package/__pycache__/generated.cpython-312.pyc'
-      ),
-      path.join(
-        defaultVenv,
-        'lib/python3.12/site-packages/local_package/__pycache__/module.cpython-312.pyc'
-      ),
-    ];
-    for (const file of excludedPycFiles) fs.outputFileSync(file, 'excluded');
+    const unlistedBytecode = path.join(
+      defaultVenv,
+      'lib/python3.12/site-packages/unlisted/__pycache__/module.cpython-312.pyc'
+    );
+    fs.outputFileSync(unlistedBytecode, 'unlisted');
 
-    const files = await cache.prepareFiles();
+    const files = await getPythonBytecodeCacheFiles(rootPath);
     expect(
       files[
         '.vercel/python/.venv/lib/python3.12/site-packages/default_package/__pycache__/module.cpython-312.pyc'
@@ -622,10 +712,8 @@ describe('PythonBuildCache', () => {
         '.vercel/python/services/api/.venv/lib/python3.12/site-packages/service_package/__pycache__/module.cpython-312.pyc'
       ]
     ).toBeDefined();
-    for (const excluded of excludedPycFiles) {
-      expect(Object.values(files).some(file => file.fsPath === excluded)).toBe(
-        false
-      );
-    }
+    expect(
+      Object.values(files).some(file => file.fsPath === unlistedBytecode)
+    ).toBe(false);
   });
 });
