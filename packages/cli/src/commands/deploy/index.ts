@@ -1945,7 +1945,7 @@ async function handleDefaultDeploy(
           status: AGENT_STATUS.OK,
           deployment: deploymentJson,
           message: anonymousLink
-            ? `Anonymous deployment ${anonymousUrl ?? deployment.url} ready. It expires in ${ms(anonymousLink.expiresAt - Date.now())}. Claim it at ${anonymousLink.claimUrl} to keep it.`
+            ? `Anonymous deployment ${anonymousUrl ?? deployment.url} ready. It expires in ${ms(anonymousLink.expiresAt - Date.now(), { long: true })}. Claim it at ${anonymousLink.claimUrl} to keep it.`
             : `Deployment ${deployment.url} ready.`,
           ...(isImplicitProduction
             ? {
@@ -1999,7 +1999,7 @@ async function handleDefaultDeploy(
   );
   if (anonymousLink) {
     log(
-      `You have ${ms(anonymousLink.expiresAt - Date.now())} to claim this deployment: ${chalk.cyan(anonymousLink.claimUrl)}`
+      `You have ${ms(anonymousLink.expiresAt - Date.now(), { long: true })} to claim this deployment: ${chalk.cyan(anonymousLink.claimUrl)}`
     );
   }
   return exitCode;
