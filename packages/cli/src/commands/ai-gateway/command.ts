@@ -39,6 +39,24 @@ export const createSubcommand = {
       deprecated: false,
       description: 'Include BYOK usage in quota (default: false)',
     },
+    {
+      name: 'alert-thresholds',
+      shorthand: null,
+      type: String,
+      argument: 'LIST',
+      deprecated: false,
+      description:
+        'Comma-separated spend percentages to alert at, a subset of 50,75,100 (e.g. 75,100)',
+    },
+    {
+      name: 'expiration',
+      shorthand: null,
+      type: String,
+      argument: 'PERIOD',
+      deprecated: false,
+      description:
+        'Expiry for the key: 7d, 30d, 60d, 90d, 1y, or none (default: none)',
+    },
   ],
   examples: [
     {
@@ -48,6 +66,10 @@ export const createSubcommand = {
     {
       name: 'Create an API key with a budget',
       value: `${packageName} ai-gateway api-keys create --name my-key --budget 500 --refresh-period monthly`,
+    },
+    {
+      name: 'Create a key that expires and alerts on spend',
+      value: `${packageName} ai-gateway api-keys create --budget 500 --alert-thresholds 75,100 --expiration 90d`,
     },
   ],
 } as const;
