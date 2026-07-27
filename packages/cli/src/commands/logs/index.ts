@@ -572,6 +572,7 @@ export default async function logs(client: Client) {
   const requestIdOption = parsedArguments.flags['--request-id'];
   const expandOption = parsedArguments.flags['--expand'];
   const branchFlagValue = parsedArguments.flags['--branch'];
+  const noBranchFlagValue = parsedArguments.flags['--no-branch'];
 
   const noFollowFlagValue = parsedArguments.flags['--no-follow'];
   const followOption = parsedArguments.flags['--follow'];
@@ -594,6 +595,7 @@ export default async function logs(client: Client) {
   telemetry.trackCliOptionRequestId(requestIdOption);
   telemetry.trackCliFlagExpand(expandOption);
   telemetry.trackCliOptionBranch(branchFlagValue);
+  telemetry.trackCliFlagNoBranch(noBranchFlagValue);
 
   if (followOption) {
     const incompatibleFlags = [
