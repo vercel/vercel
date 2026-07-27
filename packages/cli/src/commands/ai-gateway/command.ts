@@ -52,12 +52,59 @@ export const createSubcommand = {
   ],
 } as const;
 
+export const listSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List AI Gateway API keys',
+  arguments: [],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'List API keys',
+      value: `${packageName} ai-gateway api-keys ls`,
+    },
+  ],
+} as const;
+
+export const inspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description: 'Show details about an AI Gateway API key',
+  arguments: [{ name: 'id', required: true }],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Inspect an API key',
+      value: `${packageName} ai-gateway api-keys inspect key_123`,
+    },
+  ],
+} as const;
+
+export const removeSubcommand = {
+  name: 'remove',
+  aliases: ['rm', 'delete'],
+  description: 'Remove an AI Gateway API key',
+  arguments: [{ name: 'id', required: true }],
+  options: [yesOption, formatOption],
+  examples: [
+    {
+      name: 'Remove an API key',
+      value: `${packageName} ai-gateway api-keys rm key_123`,
+    },
+  ],
+} as const;
+
 export const apiKeysSubcommand = {
   name: 'api-keys',
   aliases: [],
   description: 'Manage AI Gateway API keys',
   arguments: [],
-  subcommands: [createSubcommand],
+  subcommands: [
+    createSubcommand,
+    listSubcommand,
+    inspectSubcommand,
+    removeSubcommand,
+  ],
   options: [],
   examples: [],
 } as const;
