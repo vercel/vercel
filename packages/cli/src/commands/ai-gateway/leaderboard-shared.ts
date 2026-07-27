@@ -5,7 +5,7 @@ import type Client from '../../util/client';
 import output from '../../output-manager';
 import stamp from '../../util/output/stamp';
 import { isAPIError } from '../../util/errors-ts';
-import { canPrompt } from '../../util/flags/can-prompt';
+import { canPrompt } from '../../util/can-prompt';
 import {
   fetchLeaderboard,
   fetchLeaderboardCsv,
