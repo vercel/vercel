@@ -45,3 +45,8 @@ export {
   connectLinearAdapter,
   type ConnectLinearAdapterParams,
 } from './linear-adapter.js';
+export {
+  connectResendAdapter,
+  type ConnectResendAdapterConfig,
+  type ConnectResendAdapterParams,
+} from './resend-adapter.js';

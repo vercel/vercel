@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   connectGitHubAdapter,
   connectLinearAdapter,
+  connectResendAdapter,
   connectSlackAdapter,
 } from '../../src/chat/index.js';
 
@@ -74,6 +75,20 @@ describe('Chat SDK adapter config helpers', () => {
       installationId: 'linear-installation',
       subject: { type: 'app' },
     });
+  });
+
+  it('builds Resend config backed by an app-scoped Connect token', async () => {
+    fetchMock.mockResolvedValue(jsonTokenResponse('resend_token'));
+
+    const config = connectResendAdapter(
+      'resend/support',
+      {},
+      { vercelToken: 'vercel_token' }
+    );
+
+    expect(config.webhookVerifier).toEqual(expect.any(Function));
+    await expect(resolveToken(config.apiKey)).resolves.toBe('resend_token');
+    expectTokenRequest('resend/support', { subject: { type: 'app' } });
   });
 
   it('pins the subject to app even when params are omitted', async () => {
