@@ -109,10 +109,12 @@ async function resolveFollowDeployment({
 }: ResolveFollowDeploymentOptions): Promise<ResolveFollowDeploymentResult> {
   const { deployment, orgSlug, projectId, projectSlug } = logsTarget;
 
+  // 1. Explicit --deployment / positional
   if (deployment?.id) {
     return { deploymentId: deployment.id, label: 'deployment' };
   }
 
+  // 2. --environment production → latest READY production, else error
   if (environment === 'production') {
     output.spinner('Finding latest production deployment', 1000);
     const productionDeployment = await getLatestDeployment(client, projectId, {
@@ -138,6 +140,7 @@ async function resolveFollowDeployment({
 
   const target = environment;
 
+  // 3. Explicit --branch only → latest READY on that branch (target = --environment)
   if (branch) {
     output.spinner(`Finding latest deployment for branch "${branch}"`, 1000);
     const branchDeployment = await getLatestDeployment(client, projectId, {
@@ -159,11 +162,54 @@ async function resolveFollowDeployment({
     output.debug(`No deployments found for branch "${branch}"`);
   }
 
+  // 4. --environment preview → your latest READY preview, else error
+  if (environment === 'preview') {
+    const user = await getUser(client);
+    output.spinner('Finding your latest deployment', 1000);
+    const userDeployment = await getLatestDeployment(client, projectId, {
+      userId: user.id,
+      target: 'preview',
+    });
+    output.stopSpinner();
+
+    if (userDeployment) {
+      output.debug(
+        `Found latest deployment ${userDeployment.id} (${userDeployment.url}) created by current user`
+      );
+      return {
+        deploymentId: userDeployment.id,
+        label: 'your latest deployment',
+      };
+    }
+
+    output.error(
+      `No READY preview deployments found for ${formatProject(orgSlug, projectSlug)}. Deploy a preview first or specify a deployment with ${chalk.bold('--deployment')}.`
+    );
+    return { exitCode: 1 };
+  }
+
+  // 5. No environment specified → latest READY production, if found
+  output.spinner('Finding latest production deployment', 1000);
+  const productionDeployment = await getLatestDeployment(client, projectId, {
+    target: 'production',
+  });
+  output.stopSpinner();
+
+  if (productionDeployment) {
+    output.debug(
+      `Found latest production deployment ${productionDeployment.id} (${productionDeployment.url})`
+    );
+    return {
+      deploymentId: productionDeployment.id,
+      label: 'latest production deployment',
+    };
+  }
+
+  // 6. No production exists → your latest READY deployment, if found
   const user = await getUser(client);
   output.spinner('Finding your latest deployment', 1000);
   const userDeployment = await getLatestDeployment(client, projectId, {
     userId: user.id,
-    target,
   });
   output.stopSpinner();
 
@@ -177,33 +223,11 @@ async function resolveFollowDeployment({
     };
   }
 
-  if (environment === 'preview') {
-    output.error(
-      `No READY preview deployments found for ${formatProject(orgSlug, projectSlug)}. Deploy a preview first or specify a deployment with ${chalk.bold('--deployment')}.`
-    );
-    return { exitCode: 1 };
-  }
-
-  output.spinner('Finding latest production deployment', 1000);
-  const productionDeployment = await getLatestDeployment(client, projectId, {
-    target: 'production',
-  });
-  output.stopSpinner();
-
-  if (!productionDeployment) {
-    output.error(
-      `No READY deployments found for ${formatProject(orgSlug, projectSlug)}. Deploy first or specify a deployment with ${chalk.bold('--deployment')}.`
-    );
-    return { exitCode: 1 };
-  }
-
-  output.debug(
-    `Found latest production deployment ${productionDeployment.id} (${productionDeployment.url})`
+  // 7. Otherwise → error
+  output.error(
+    `No READY deployments found for ${formatProject(orgSlug, projectSlug)}. Deploy first or specify a deployment with ${chalk.bold('--deployment')}.`
   );
-  return {
-    deploymentId: productionDeployment.id,
-    label: 'latest production deployment',
-  };
+  return { exitCode: 1 };
 }
 
 const TIME_ONLY_FORMAT = 'HH:mm:ss.SS';
