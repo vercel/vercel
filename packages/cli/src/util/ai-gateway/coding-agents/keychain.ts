@@ -38,8 +38,12 @@ export function storeKeyInKeychain(key: string): boolean {
   }
 }
 
+export function keychainLookupCommand(): string {
+  return `${SECURITY_BIN} find-generic-password -s '${KEYCHAIN_SERVICE}' -a '${KEYCHAIN_ACCOUNT}' -w 2>/dev/null`;
+}
+
 export function keychainLookup(opts: { fish?: boolean } = {}): string {
-  const cmd = `${SECURITY_BIN} find-generic-password -s '${KEYCHAIN_SERVICE}' -a '${KEYCHAIN_ACCOUNT}' -w 2>/dev/null`;
+  const cmd = keychainLookupCommand();
   return opts.fish ? `(${cmd})` : `$(${cmd})`;
 }
 
