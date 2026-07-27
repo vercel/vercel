@@ -48,6 +48,23 @@ export interface BuildpackDescriptor {
    * depend on the mutable run-image tag recorded in the builder metadata.
    */
   runImage: string;
+  /**
+   * Buildpacks the lifecycle may detect with, written to an explicit
+   * `order.toml` instead of running the builder's full default order. This
+   * keeps detection deterministic in mixed-language roots: a `go.mod` next
+   * to a `Gemfile` must not let another language family out-detect the
+   * requested Ruby build. Versions are resolved by the pinned builder.
+   *
+   * Paketo language-family composites already include the optional procfile
+   * buildpack (which `command` overrides rely on); list it explicitly only
+   * for descriptors whose buildpacks don't.
+   */
+  buildpackGroup: readonly BuildpackGroupEntry[];
+}
+
+export interface BuildpackGroupEntry {
+  id: string;
+  optional?: boolean;
 }
 
 /**
@@ -64,6 +81,9 @@ export const BUILDPACKS: readonly BuildpackDescriptor[] = [
       'paketobuildpacks/builder-jammy-base@sha256:622ba9d364d69f578b49fa8dee2e0d450adbd44b31e7c0a18b714a4eefdf371b',
     runImage:
       'index.docker.io/paketobuildpacks/run-jammy-base@sha256:6de43ef8f4a30fa7b01be23600b2a0433c3ed3851b4fddc3b375212ed69490c2',
+    // The composite includes rackup/puma/etc process detection and the
+    // optional procfile buildpack in every group.
+    buildpackGroup: [{ id: 'paketo-buildpacks/ruby' }],
   },
 ];
 

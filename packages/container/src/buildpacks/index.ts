@@ -5,6 +5,7 @@ export {
   requestedBuildpack,
   runImageRef,
   type BuildpackDescriptor,
+  type BuildpackGroupEntry,
 } from './registry';
 export {
   buildAndPushWithLifecycle,

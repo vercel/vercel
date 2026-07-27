@@ -106,14 +106,20 @@ function needsRuntimeReadableCopy(path: string): boolean {
  * launches as an unprivileged user. Repositories created under a restrictive
  * umask can contain 0700 directories or 0600 files, so stage those trees and
  * make the staged copy runtime-readable without mutating the user's checkout.
+ * `forceStage` requests a copy even for readable trees, for callers that
+ * need to add generated files (e.g. a `command` Procfile) without touching
+ * the source tree.
  */
-function prepareAppDirectory(workPath: string): PreparedAppDirectory {
+function prepareAppDirectory(
+  workPath: string,
+  forceStage = false
+): PreparedAppDirectory {
   // Some unit-level builder callers use the filesystem root as a synthetic
   // workPath. It is never a valid app tree and cannot be staged beneath /tmp.
   if (dirname(workPath) === workPath) {
     return { workPath };
   }
-  if (!needsRuntimeReadableCopy(workPath)) {
+  if (!forceStage && !needsRuntimeReadableCopy(workPath)) {
     return { workPath };
   }
 
@@ -169,6 +175,34 @@ function shellEscape(arg: string): string {
     : `'${arg.replace(/'/g, `'\\''`)}'`;
 }
 
+/** In-container mount point for the generated `order.toml`. */
+const ORDER_MOUNT_DIR = '/platform/order';
+const ORDER_FILE = `${ORDER_MOUNT_DIR}/order.toml`;
+
+/**
+ * Write the descriptor's buildpack group as an explicit `order.toml` for the
+ * creator, replacing the builder's full default order. Without it, detection
+ * free-runs across every language family in the builder and a mixed-language
+ * root (say a `go.mod` next to a `Gemfile`) could build as the wrong
+ * language. World-readable for the same UID-mapping reason as the platform
+ * env dir.
+ */
+function writeOrderDir(bp: BuildpackDescriptor): string {
+  const lines = ['[[order]]'];
+  for (const entry of bp.buildpackGroup) {
+    lines.push('', '  [[order.group]]', `    id = "${entry.id}"`);
+    if (entry.optional) {
+      lines.push('    optional = true');
+    }
+  }
+  const dir = mkdtempSync(join(tmpdir(), 'vercel-cnb-order-'));
+  chmodSync(dir, 0o755);
+  const file = join(dir, 'order.toml');
+  writeFileSync(file, `${lines.join('\n')}\n`);
+  chmodSync(file, 0o644);
+  return dir;
+}
+
 /**
  * Bake a `command` override into the image as its default `web` process by
  * writing a Procfile for Paketo's procfile buildpack to pick up. This is the
@@ -178,9 +212,9 @@ function shellEscape(arg: string): string {
  * user Procfile is intentionally overwritten — explicit vercel.json config
  * wins over convention files.
  *
- * Only the deploy path does this: `workPath` there is the build sandbox. In
- * dev, `workPath` is the developer's source tree, so the command is applied
- * at `docker run` time via the launcher instead (see dev.ts).
+ * Only the deploy path does this, and only into the staged app copy so the
+ * source tree is never mutated. In dev the command is applied at
+ * `docker run` time via the launcher instead (see dev.ts).
  */
 function writeCommandProcfile(
   workPath: string,
@@ -220,9 +254,9 @@ async function resolveDockerSocket(): Promise<string | undefined> {
 }
 
 /**
- * The run image to pre-pull for dev daemon builds: an explicit override, the
- * run image declared by the (possibly overridden) builder's metadata, or the
- * descriptor's pinned default.
+ * The run image to pre-pull for dev daemon builds: an explicit override or
+ * pinned default, otherwise the run image declared by the overridden
+ * builder's metadata.
  */
 async function resolveDevRunImage(
   bp: BuildpackDescriptor,
@@ -256,7 +290,14 @@ async function resolveDevRunImage(
       }`
     );
   }
-  return bp.runImage;
+  // An overridden builder may target a different stack; pairing it with the
+  // pinned default run image would produce a broken image. Require an
+  // explicit run image instead of guessing.
+  throw new Error(
+    `Could not determine the run image for builder ${builder}. Set ` +
+      `VERCEL_BUILDPACK_${bp.runtime.toUpperCase()}_RUN_IMAGE to the run ` +
+      'image matching that builder.'
+  );
 }
 
 async function dockerImagePlatform(image: string): Promise<string | undefined> {
@@ -318,6 +359,7 @@ export async function buildWithLifecycle(
       const platformEnvMount = platformEnvDir
         ? ['-v', `${platformEnvDir}:/platform/env:ro`]
         : [];
+      const orderDir = writeOrderDir(bp);
 
       const dockerSocket = await resolveDockerSocket();
       const socketMount = dockerSocket
@@ -335,11 +377,14 @@ export async function buildWithLifecycle(
         'CNB_PLATFORM_API=0.13',
         '-v',
         `${appDirectory.workPath}:/workspace`,
+        '-v',
+        `${orderDir}:${ORDER_MOUNT_DIR}:ro`,
         ...platformEnvMount,
         ...socketMount,
         builder,
         '/cnb/lifecycle/creator',
         '-app=/workspace',
+        `-order=${ORDER_FILE}`,
         '-skip-restore',
         `-run-image=${runImage}`,
         '-daemon',
@@ -379,6 +424,7 @@ export async function buildWithLifecycle(
         if (platformEnvDir) {
           rmSync(platformEnvDir, { recursive: true, force: true });
         }
+        rmSync(orderDir, { recursive: true, force: true });
         appDirectory.cleanup?.();
       }
 
@@ -428,15 +474,17 @@ export async function buildAndPushWithLifecycle(
       const reportPath = join(reportDir, 'report.toml');
       chmodSync(reportDir, 0o777);
       const platformEnvDir = writePlatformEnvDir(params.buildEnv);
+      const orderDir = writeOrderDir(bp);
 
+      const hasCommand = Boolean(params.command?.length);
+      const appDirectory = prepareAppDirectory(params.workPath, hasCommand);
       if (params.command?.length) {
         writeCommandProcfile(
-          params.workPath,
+          appDirectory.workPath,
           params.command,
           params.commandShell ?? false
         );
       }
-      const appDirectory = prepareAppDirectory(params.workPath);
 
       try {
         step(
@@ -481,12 +529,15 @@ export async function buildAndPushWithLifecycle(
             `${appDirectory.workPath}:/workspace`,
             '--volume',
             `${reportDir}:/platform-output`,
+            '--volume',
+            `${orderDir}:${ORDER_MOUNT_DIR}`,
             ...platformEnvMount,
             ...envFlags,
             containerName,
             '--',
             '/cnb/lifecycle/creator',
             '-app=/workspace',
+            `-order=${ORDER_FILE}`,
             '-skip-restore',
             ...(runImage ? [`-run-image=${runImage}`] : []),
             '-report=/platform-output/report.toml',
@@ -532,6 +583,7 @@ export async function buildAndPushWithLifecycle(
         if (platformEnvDir) {
           rmSync(platformEnvDir, { recursive: true, force: true });
         }
+        rmSync(orderDir, { recursive: true, force: true });
         appDirectory.cleanup?.();
       }
     }
