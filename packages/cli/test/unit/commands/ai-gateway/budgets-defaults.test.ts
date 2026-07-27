@@ -62,6 +62,26 @@ describe('ai-gateway budgets defaults', () => {
       await expect(client.stderr).toOutput('No budget default set');
       expect(await exitCodePromise).toBe(0);
     });
+
+    it('outputs JSON with --format json', async () => {
+      const team = useTeam();
+      useUser();
+      useGetBudgetDefault();
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'budgets',
+        'defaults',
+        'inspect',
+        '--format',
+        'json'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stdout).toOutput('"perProjectLimit"');
+      expect(await exitCodePromise).toBe(0);
+    });
   });
 
   describe('set', () => {
@@ -167,6 +187,30 @@ describe('ai-gateway budgets defaults', () => {
       await expect(client.stderr).toOutput('at least 1');
       expect(await exitCodePromise).toBe(1);
     });
+
+    it('outputs JSON with --format json', async () => {
+      const team = useTeam();
+      useUser();
+      useUpsertBudgetDefault();
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'budgets',
+        'defaults',
+        'set',
+        '--per-project',
+        '200',
+        '--refresh-period',
+        'monthly',
+        '--format',
+        'json'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stdout).toOutput('"perProjectLimit"');
+      expect(await exitCodePromise).toBe(0);
+    });
   });
 
   describe('remove', () => {
@@ -194,6 +238,27 @@ describe('ai-gateway budgets defaults', () => {
 
       await expect(client.stderr).toOutput('--yes');
       expect(await exitCodePromise).toBe(1);
+    });
+
+    it('outputs JSON with --format json', async () => {
+      const team = useTeam();
+      useUser();
+      useDeleteBudgetDefault();
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'budgets',
+        'defaults',
+        'remove',
+        '--yes',
+        '--format',
+        'json'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stdout).toOutput('"removed": true');
+      expect(await exitCodePromise).toBe(0);
     });
   });
 });
