@@ -93,6 +93,14 @@ import {
   canBuildInSubprocess,
   SubprocessBuildRunner,
 } from '../../util/build/builder-process';
+import {
+  getInstallScopeKey,
+  groupIntoScopeChains,
+  resolveBuildConcurrency,
+  resolveInstallScopeRoot,
+  runWithConcurrency,
+  type InstallScope,
+} from '../../util/build/build-concurrency';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
 import {
   detectFirstDeploymentFramework,
@@ -212,17 +220,6 @@ function hasNonEmptyObject(value: unknown): value is Record<string, unknown> {
     !Array.isArray(value) &&
     Object.keys(value).length > 0
   );
-}
-
-function unsetServiceBuildImmutableEnvVars(
-  restoreEnv: Map<string, string | undefined>
-) {
-  for (const key of SERVICE_BUILD_IMMUTABLE_ENV_VARS) {
-    if (!restoreEnv.has(key)) {
-      restoreEnv.set(key, process.env[key]);
-    }
-    delete process.env[key];
-  }
 }
 
 function getGeneratedServiceAlreadyBuiltWarning(service: Service) {
@@ -720,18 +717,32 @@ function dispatchBuildRunner({
   hasDetectedServices,
   builderPath,
   hasBuildCallback,
+  requireSubprocess = false,
 }: {
   ctx: BuildRunnerContext;
   builder: BuilderV2 | BuilderV3 | BuilderVX;
   hasDetectedServices: boolean;
   builderPath: string;
   hasBuildCallback: boolean;
+  /**
+   * Set by the concurrent scheduler: a build running in parallel with siblings
+   * must be process-isolated. Falling back to the in-process runner would run
+   * a builder concurrently inside the parent's event loop — the exact unsafe
+   * case forking exists to prevent — so treat it as an internal error instead.
+   */
+  requireSubprocess?: boolean;
 }): BuildRunner {
-  return canBuildInSubprocess({
+  const forkable = canBuildInSubprocess({
     hasDetectedServices,
     builderPath,
     hasBuildCallback,
-  })
+  });
+  if (requireSubprocess && !forkable) {
+    throw new Error(
+      `Internal error: build scheduled concurrently but cannot run in a subprocess`
+    );
+  }
+  return forkable
     ? new SubprocessBuildRunner(ctx)
     : new InprocessBuildRunner(ctx, builder);
 }
@@ -1229,12 +1240,19 @@ async function doBuild(
   // unconditionally after the deferred pre-deploy loop, even if a build or a
   // pre-deploy callback throws.
   const liveRunners = new Set<BuildRunner>();
+  // Scheduling ordinal per build, assigned in `sortBuilders` order across both
+  // `runBuilders` passes. Under concurrency `buildResults` fills in completion
+  // order; the ordinal restores the deterministic order for result merges.
+  const buildOrdinals = new Map<Builder, number>();
 
   const runBuilders = async (buildsToRun: Builder[]) => {
     await addBuildsToBuildJson(buildsToRun);
 
-    for (const build of sortBuilders(buildsToRun)) {
-      if (typeof build.src !== 'string') continue;
+    const buildOne = async (
+      build: Builder,
+      concurrent: boolean
+    ): Promise<void> => {
+      if (typeof build.src !== 'string') return;
 
       const builderWithPkg = buildersWithPkgs.get(build.use);
       if (!builderWithPkg) {
@@ -1295,6 +1313,20 @@ async function doBuild(
           );
         }
 
+        // Env isolation: on the concurrent path each build gets its own env
+        // copy (mutations never touch the shared `process.env`), so parallel
+        // forks don't race. On the sequential path we mutate `process.env` and
+        // record a restore, exactly as before.
+        const restoreEnv = new Map<string, string | undefined>();
+        const perBuildEnv: NodeJS.ProcessEnv = concurrent
+          ? { ...process.env }
+          : process.env;
+        const setBuildEnv = (key: string, value: string | undefined) => {
+          if (!concurrent) restoreEnv.set(key, process.env[key]);
+          if (value === undefined) delete perBuildEnv[key];
+          else perBuildEnv[key] = value;
+        };
+
         // Set VERCEL_PROJECT_SETTINGS_* env vars.
         // For services: use service-specific values instead of project-level settings
         // (the project-level framework is "services", which is meaningless to individual builders).
@@ -1317,11 +1349,9 @@ async function doBuild(
           const envKey =
             `VERCEL_PROJECT_SETTINGS_` +
             key.replace(/[A-Z]/g, letter => `_${letter}`).toUpperCase();
+          setBuildEnv(envKey, typeof value === 'string' ? value : undefined);
           if (typeof value === 'string') {
-            process.env[envKey] = value;
             output.debug(`Setting env ${envKey} to "${value}"`);
-          } else {
-            delete process.env[envKey];
           }
         }
 
@@ -1455,7 +1485,6 @@ async function doBuild(
         // these env vars are baked into the client bundle so they can be accessed in the client code.
         // User-defined env takes precedence and won't be overwritten. The env will be cleared
         // after the build is complete
-        const restoreEnv = new Map<string, string | undefined>();
         if (detectedServices && legacyExperimentalService?.env) {
           const perServiceEnv = getServiceUrlEnvVars({
             requestedEnv: legacyExperimentalService.env,
@@ -1467,13 +1496,14 @@ async function doBuild(
           });
           for (const [key, value] of Object.entries(perServiceEnv)) {
             if (key in process.env) continue;
-            restoreEnv.set(key, process.env[key]);
-            process.env[key] = value;
+            setBuildEnv(key, value);
             output.debug(`Injected service URL env var: ${key}=${value}`);
           }
         }
         if (service) {
-          unsetServiceBuildImmutableEnvVars(restoreEnv);
+          for (const key of SERVICE_BUILD_IMMUTABLE_ENV_VARS) {
+            setBuildEnv(key, undefined);
+          }
         }
         let buildResult: BuildResultV2 | BuildResultV3;
         let rawBuildResult: BuildResultV2 | BuildResultV3 | BuildResultVX;
@@ -1490,11 +1520,20 @@ async function doBuild(
             cwd: buildWorkPath,
             expectsPreDeploy: Boolean(preDeployCmd),
             builderSpan,
+            // On the concurrent path this is the build's isolated env copy; on the
+            // sequential path it is `process.env` itself (unchanged behavior).
+            env: perBuildEnv,
+            // Concurrent workers interleave on stdout/stderr, so each line is
+            // tagged with its service. Sequential builds keep untagged output.
+            outputPrefix: concurrent
+              ? `[${service?.name ?? build.src}] `
+              : undefined,
           },
           builder,
           hasDetectedServices: getHasDetectedServices(),
           builderPath: builderWithPkg.path,
           hasBuildCallback: Boolean(buildOptions.buildCallback),
+          requireSubprocess: concurrent,
         });
         liveRunners.add(runner);
 
@@ -1885,6 +1924,142 @@ async function doBuild(
           )
         );
       }
+    };
+
+    // Scheduler. Default (concurrency <= 1) preserves the exact sequential
+    // behavior. Above 1, only fork-eligible builds run in parallel — each in
+    // its own worker with an isolated env (see `buildOne`'s `concurrent`
+    // path) — while anything that must stay in-process (e.g. `@vercel/static`)
+    // runs sequentially first, exactly as before.
+    const sortedBuilds = sortBuilders(buildsToRun);
+    for (const build of sortedBuilds) {
+      if (!buildOrdinals.has(build)) {
+        buildOrdinals.set(build, buildOrdinals.size);
+      }
+    }
+    const concurrency = resolveBuildConcurrency();
+    if (concurrency <= 1) {
+      for (const build of sortedBuilds) {
+        await buildOne(build, false);
+      }
+    } else {
+      const parallelBuilds: Builder[] = [];
+      const sequentialBuilds: Builder[] = [];
+      for (const build of sortedBuilds) {
+        const bp =
+          typeof build.src === 'string'
+            ? buildersWithPkgs.get(build.use)
+            : undefined;
+        const eligible =
+          !!bp &&
+          canBuildInSubprocess({
+            hasDetectedServices: getHasDetectedServices(),
+            builderPath: bp.path,
+            // `vc build` never sets `buildCallback` (it is a `vc dev`
+            // mechanism); `dispatchBuildRunner` still hard-fails if a
+            // concurrent build unexpectedly can't fork.
+            hasBuildCallback: false,
+          });
+        (eligible ? parallelBuilds : sequentialBuilds).push(build);
+      }
+      for (const build of sequentialBuilds) {
+        await buildOne(build, false);
+      }
+      if (parallelBuilds.length > 0) {
+        // Two-level install-scope scheduling. Builds whose installs
+        // touch the same install root must never install concurrently:
+        // - OUTER scope (serialization boundary): the toolchain-qualified
+        //   workspace/lockfile root. A package manager invoked from a
+        //   workspace member operates on the workspace ROOT, so members in
+        //   different directories still collide — exact-directory keys alone
+        //   are not safe. One outer scope = one sequential chain; distinct
+        //   chains run concurrently.
+        // - INNER sub-scope (dedup unit): exact (install dir, command). After
+        //   a sub-scope's leader, its default-install siblings skip via the
+        //   leader's merged-back `meta.runNpmInstallSet` and fan out in phase
+        //   B. Custom-install extras stay on the chain (their dedup latch is
+        //   per-worker, so they re-run the command; serialized = safe).
+        const scopeByBuild = new Map<Builder, InstallScope>();
+        for (const build of parallelBuilds) {
+          const service =
+            getHasDetectedServices() && typeof build.src === 'string'
+              ? serviceByBuilder.get(build)
+              : undefined;
+          if (!service) {
+            // No service context to resolve a scope from: give the build its
+            // own scope (degrades to today's behavior).
+            const key = `build:${build.use}:${String(build.src)}`;
+            scopeByBuild.set(build, {
+              outerKey: key,
+              innerKey: key,
+              customInstall: false,
+            });
+            continue;
+          }
+          const serviceWorkspace = isExperimentalService(service)
+            ? service.workspace
+            : service.root;
+          const serviceDir =
+            serviceWorkspace && serviceWorkspace !== '.'
+              ? join(workPath, serviceWorkspace)
+              : workPath;
+          const toolchain =
+            service.runtime === 'python' ||
+            build.use.startsWith('@vercel/python')
+              ? 'python'
+              : 'node';
+          const installRoot = await resolveInstallScopeRoot({
+            toolchain,
+            serviceDir,
+            ceilingDir: repoRootPath,
+          });
+          scopeByBuild.set(build, {
+            outerKey: `${toolchain}:${installRoot}`,
+            innerKey: getInstallScopeKey({
+              installDirectory: serviceDir,
+              installCommand: service.installCommand,
+            }),
+            customInstall: Boolean(service.installCommand?.trim()),
+          });
+        }
+        const { chains, rest } = groupIntoScopeChains(
+          parallelBuilds,
+          build => scopeByBuild.get(build)!
+        );
+        output.log(
+          `Building ${parallelBuilds.length} builds across ${chains.length} install scopes (concurrency ${concurrency})`
+        );
+        // A build that fails after another already failed would otherwise be
+        // silently dropped (only the first error is rethrown) — report it.
+        const onSecondaryError = (err: unknown, item: Builder | Builder[]) => {
+          const src = Array.isArray(item) ? item[0]?.src : item.src;
+          output.error(
+            `Build failed for "${src}": ${err instanceof Error ? err.message : String(err)}`
+          );
+        };
+        // Phase A: one chain per scope; chains run concurrently, builds
+        // within a chain sequentially.
+        await runWithConcurrency(
+          chains,
+          concurrency,
+          async chain => {
+            for (const build of chain) {
+              await buildOne(build, true);
+            }
+          },
+          onSecondaryError
+        );
+        // Phase B: siblings of default-install scopes fan out. They fork
+        // after every leader's meta merge-back, so their installs no-op.
+        if (rest.length > 0) {
+          await runWithConcurrency(
+            rest,
+            concurrency,
+            build => buildOne(build, true),
+            onSecondaryError
+          );
+        }
+      }
     }
   };
 
@@ -2126,6 +2301,19 @@ async function doBuild(
         );
       }
     }
+  }
+
+  // Under concurrency, `buildResults` fills in completion order, which is
+  // nondeterministic. Re-sort it by scheduling ordinal so every downstream
+  // merge (top-level config.json, per-service configs in writeServiceConfigs,
+  // images/wildcard/flags) iterates in the deterministic `sortBuilders` order
+  // and the produced output is byte-identical across concurrency levels.
+  const orderedResults = Array.from(buildResults.entries()).sort(
+    ([a], [b]) => (buildOrdinals.get(a) ?? 0) - (buildOrdinals.get(b) ?? 0)
+  );
+  buildResults.clear();
+  for (const [build, result] of orderedResults) {
+    buildResults.set(build, result);
   }
 
   // Aggregate individual package-manifest.json files from builders into

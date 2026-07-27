@@ -1,0 +1,2 @@
+[tool.uv.workspace]
+members = ["services/py-a", "services/py-b", "libs/py-shared"]

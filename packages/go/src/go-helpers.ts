@@ -51,6 +51,13 @@ const GO_FLAGS = process.platform === 'win32' ? [] : ['-ldflags', '-s -w'];
 const GO_MIN_MAJOR_VERSION = 1;
 const GO_MIN_MINOR_VERSION = 13;
 
+// Written as the final step of a toolchain install. A cached toolchain is only
+// trusted when this file exists: `bin/go` is a single self-contained binary
+// that runs long before the thousands of files in `src/` finish extracting, so
+// without the marker a torn install (killed build, or a concurrent build's
+// re-extraction) is indistinguishable from a complete one.
+const GO_INSTALL_MARKER = '.vercel-go-install-complete';
+
 /**
  * Determines the URL to download the Golang SDK.
  * @param version The desireed Go version
@@ -445,9 +452,15 @@ export async function createGo({
   for (const [label, goDir] of Object.entries(goDirs)) {
     try {
       const goBinDir = goDir && join(goDir, 'bin');
-      if (goBinDir && !(await pathExists(goBinDir))) {
-        debug(`Go not found in ${label}`);
-        continue;
+      if (goBinDir) {
+        if (!(await pathExists(goBinDir))) {
+          debug(`Go not found in ${label}`);
+          continue;
+        }
+        if (!(await pathExists(join(goDir, GO_INSTALL_MARKER)))) {
+          debug(`Go install in ${label} is incomplete — ignoring`);
+          continue;
+        }
       }
 
       env.GOROOT = goDir || undefined;
@@ -491,8 +504,12 @@ export async function createGo({
 /**
  * Download and installs the Go distribution.
  *
- * @param dest The directory to install Go into. If directory exists, it is
- * first deleted before installing.
+ * The archive is extracted into a process-private sibling directory and then
+ * atomically renamed into `dest`, so `dest` never holds a partial install:
+ * concurrent builds each racing this function either win the rename or find
+ * the winner's complete install already in place.
+ *
+ * @param dest The directory to install Go into
  * @param version The Go version to download
  */
 async function download({ dest, version }: { dest: string; version: string }) {
@@ -504,50 +521,72 @@ async function download({ dest, version }: { dest: string; version: string }) {
     throw new Error(`Failed to download: ${url} (${res.status})`);
   }
 
-  debug(`Installing go ${version} to ${dest}`);
+  const tmpSuffix = `${process.pid}-${Math.random().toString(36).slice(2)}`;
+  const tmpDest = `${dest}.tmp-${tmpSuffix}`;
+  debug(`Installing go ${version} to ${dest} (via ${tmpDest})`);
 
-  await remove(dest);
-  await mkdirp(dest);
+  await mkdirp(tmpDest);
+  try {
+    if (/\.zip$/.test(filename)) {
+      const zipFile = join(tmpdir(), `${tmpSuffix}-${filename}`);
+      try {
+        await streamPipeline(res.body, createWriteStream(zipFile));
+        const zip = await yauzl.open(zipFile);
+        let entry = await zip.readEntry();
+        while (entry) {
+          const fileName = entry.fileName.split('/').slice(1).join('/');
 
-  if (/\.zip$/.test(filename)) {
-    const zipFile = join(tmpdir(), filename);
-    try {
-      await streamPipeline(res.body, createWriteStream(zipFile));
-      const zip = await yauzl.open(zipFile);
-      let entry = await zip.readEntry();
-      while (entry) {
-        const fileName = entry.fileName.split('/').slice(1).join('/');
+          if (fileName) {
+            const destPath = join(tmpDest, fileName);
 
-        if (fileName) {
-          const destPath = join(dest, fileName);
-
-          if (/\/$/.test(fileName)) {
-            await mkdirp(destPath);
-          } else {
-            const [entryStream] = await Promise.all([
-              entry.openReadStream(),
-              mkdirp(dirname(destPath)),
-            ]);
-            const out = createWriteStream(destPath);
-            await streamPipeline(entryStream, out);
+            if (/\/$/.test(fileName)) {
+              await mkdirp(destPath);
+            } else {
+              const [entryStream] = await Promise.all([
+                entry.openReadStream(),
+                mkdirp(dirname(destPath)),
+              ]);
+              const out = createWriteStream(destPath);
+              await streamPipeline(entryStream, out);
+            }
           }
+
+          entry = await zip.readEntry();
         }
-
-        entry = await zip.readEntry();
+      } finally {
+        await remove(zipFile);
       }
-    } finally {
-      await remove(zipFile);
+    } else {
+      await new Promise((resolve, reject) => {
+        res.body
+          .on('error', reject)
+          .pipe(extract({ cwd: tmpDest, strip: 1 }))
+          .on('error', reject)
+          .on('finish', resolve);
+      });
     }
-    return;
-  }
 
-  await new Promise((resolve, reject) => {
-    res.body
-      .on('error', reject)
-      .pipe(extract({ cwd: dest, strip: 1 }))
-      .on('error', reject)
-      .on('finish', resolve);
-  });
+    await fs.promises.writeFile(join(tmpDest, GO_INSTALL_MARKER), version);
+
+    // A torn install may already sit at `dest` (a killed build, or a cache
+    // written before the marker existed). The version probe rejected it, so
+    // nothing can be using it — clear it out of the rename's way. An install
+    // WITH a marker is only ever a concurrent winner; leave it alone.
+    if (!(await pathExists(join(dest, GO_INSTALL_MARKER)))) {
+      await remove(dest);
+    }
+    try {
+      await fs.promises.rename(tmpDest, dest);
+    } catch (err) {
+      // Rename fails when a concurrent build installed `dest` first; verify
+      // its install is complete and reuse it.
+      if (!(await pathExists(join(dest, GO_INSTALL_MARKER)))) {
+        throw err;
+      }
+    }
+  } finally {
+    await remove(tmpDest);
+  }
 }
 
 const goVersionRegExp = /(\d+)\.(\d+)(?:\.(\d+))?/;

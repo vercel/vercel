@@ -27,6 +27,20 @@ export interface BuildRunnerContext {
   expectsPreDeploy: boolean;
   /** The `vc.builder` span this build runs under; child spans/events attach to it. */
   builderSpan: Span;
+  /**
+   * Environment to run this build with. When provided, a subprocess build forks
+   * with exactly this env (isolating per-service settings across concurrent
+   * builds) instead of inheriting the parent's mutated `process.env`. Falls back
+   * to `process.env` when omitted (the sequential, in-process path).
+   */
+  env?: NodeJS.ProcessEnv;
+  /**
+   * When set (by the concurrent scheduler), the subprocess's stdout/stderr are
+   * piped and each line is written to the parent's stream with this prefix, so
+   * interleaved output from parallel builds stays attributable per service.
+   * When omitted, the subprocess inherits stdout/stderr as before.
+   */
+  outputPrefix?: string;
 }
 
 export type RawBuildResult = BuildResultV2 | BuildResultV3 | BuildResultVX;

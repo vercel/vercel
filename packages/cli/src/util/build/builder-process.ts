@@ -90,6 +90,60 @@ function toError(error: object | undefined): Error {
   return Object.assign(new Error(), error);
 }
 
+/**
+ * Merge a worker's post-build `meta` clone back into the shared parent `meta`.
+ *
+ * Key-wise commutative so concurrent merge-backs never lose updates: a plain
+ * `Object.assign` is last-write-wins, which under parallel builds would replace e.g. the parent's
+ * `runNpmInstallSet` with whichever worker's clone finished last, silently dropping the union and
+ * re-enabling duplicate installs for later builds. Rules:
+ * - two `Set`s union in place;
+ * - a `true` already in the parent is a sticky latch (e.g. `compiledToCommonJS`) that a worker's
+ *   stale `false`/`undefined` snapshot must not clear;
+ * - everything else is last-write-wins — acceptable, because two concurrent builds could never
+ *   have observed each other's writes in-process either.
+ */
+export function mergeWorkerMeta(target: Meta, workerMeta: Meta): void {
+  for (const [key, value] of Object.entries(workerMeta)) {
+    const existing = target[key];
+    if (existing instanceof Set && value instanceof Set) {
+      for (const entry of value) {
+        existing.add(entry);
+      }
+    } else if (existing === true && typeof value !== 'object') {
+      // sticky-true latch; keep it
+    } else {
+      target[key] = value;
+    }
+  }
+}
+
+/**
+ * Forward each line of `source` to `destination` prefixed with the build's tag, buffering
+ * partial chunks so concurrent workers interleave line-atomically instead of mid-line.
+ */
+function prefixLines(
+  source: NodeJS.ReadableStream,
+  destination: NodeJS.WriteStream,
+  prefix: string
+): void {
+  let pending = '';
+  source.setEncoding('utf8');
+  source.on('data', (chunk: string) => {
+    pending += chunk;
+    const lines = pending.split('\n');
+    pending = lines.pop() ?? '';
+    for (const line of lines) {
+      destination.write(`${prefix}${line}\n`);
+    }
+  });
+  source.on('end', () => {
+    if (pending) {
+      destination.write(`${prefix}${pending}\n`);
+    }
+  });
+}
+
 /** A builder's rehydrated diagnostics: a map of filename → File instance. */
 export type BuilderDiagnostics = Record<string, FileFsRef | FileBlob | FileRef>;
 
@@ -232,25 +286,40 @@ export class SubprocessBuildRunner extends BuildRunner {
    * Fork a worker, run one build, and return the deserialized result. `buildOptions.span` is
    * dropped (a class instance that can't be serialized); the caller keeps its own tracing.
    *
-   * The child inherits stdout/stderr so its build output reaches the terminal directly, matching
-   * the previous in-process behavior. When the build registers a pre-deploy command, the worker
-   * is kept alive: its `registerPreDeploy` callback runs the command in the worker later, when the
-   * command invokes the deferred callback. Teardown is owned by the caller (via `teardown()`), so
-   * a kept-alive worker is released even if that deferred callback is never reached.
+   * Sequentially, the child inherits stdout/stderr so its build output reaches the terminal
+   * directly, matching the previous in-process behavior. When the scheduler runs builds
+   * concurrently it sets `ctx.outputPrefix`, and the child's stdout/stderr are piped through a
+   * per-line tagger instead — interleaved output from parallel workers stays attributable.
+   * When the build registers a pre-deploy command, the worker is kept alive: its
+   * `registerPreDeploy` callback runs the command in the worker later, when the command invokes
+   * the deferred callback. Teardown is owned by the caller (via `teardown()`), so a kept-alive
+   * worker is released even if that deferred callback is never reached.
    */
   async build(): Promise<BuildResultV2 | BuildResultV3> {
     const workerPath = join(__dirname, 'builder-worker.cjs');
 
+    const { outputPrefix } = this.ctx;
     const child = fork(workerPath, [], {
       cwd: this.ctx.cwd,
       execArgv: [],
-      env: process.env,
+      // A per-build env (set by the concurrent scheduler) isolates each service's
+      // VERCEL_PROJECT_SETTINGS_* / service-URL vars into its own worker, so parallel
+      // builds don't race on a shared `process.env`. Falls back to the parent env.
+      env: this.ctx.env ?? process.env,
       // V8 structured clone (not the default JSON) so the build result rides across with its
       // Buffers, cycles (e.g. `@vercel/next`'s `childProcesses`), and shared object identity
       // (one Lambda referenced by many outputs stays one instance) intact.
       serialization: 'advanced',
+      ...(typeof outputPrefix === 'string'
+        ? { stdio: ['inherit', 'pipe', 'pipe', 'ipc'] as const }
+        : {}),
     });
     this.child = child;
+
+    if (typeof outputPrefix === 'string') {
+      if (child.stdout) prefixLines(child.stdout, process.stdout, outputPrefix);
+      if (child.stderr) prefixLines(child.stderr, process.stderr, outputPrefix);
+    }
 
     // Wait for the worker's `ready` handshake before sending the build request.
     await new Promise<void>((resolve, reject) => {
@@ -305,8 +374,9 @@ export class SubprocessBuildRunner extends BuildRunner {
       // e.g. `runNpmInstallSet` for install dedup). Merge those mutations back into the shared
       // `meta` so later builds see them — the cross-process equivalent of the in-process path
       // sharing `meta` by reference. Shallow by design: builder meta state is flat keys/Sets.
+      // Commutative (Sets union) so concurrent workers' merge-backs never clobber each other.
       if (this.ctx.buildOptions.meta && message.meta) {
-        Object.assign(this.ctx.buildOptions.meta, message.meta);
+        mergeWorkerMeta(this.ctx.buildOptions.meta, message.meta);
       }
 
       if (message.hasPreDeploy) {

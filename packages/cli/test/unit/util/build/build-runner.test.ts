@@ -197,9 +197,11 @@ describe('build-runner', () => {
 
       await runner.build();
 
-      // Shallow merge: the worker's returned meta values land on the shared object.
+      // Commutative merge: the worker's Set entries UNION into the shared
+      // Set (a replace would lose a concurrent sibling's entries), and scalar
+      // latches land on the shared object.
       expect(sharedMeta).toMatchObject({
-        runNpmInstallSet: new Set(['/app/package.json']),
+        runNpmInstallSet: new Set(['/root/package.json', '/app/package.json']),
         compiledToCommonJS: true,
       });
     });
