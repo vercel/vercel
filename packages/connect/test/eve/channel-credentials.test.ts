@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   connectGitHubCredentials,
   connectLinearCredentials,
+  connectPhotonCredentials,
   connectSlackCredentials,
 } from '../../src/eve/index.js';
 
@@ -56,6 +57,44 @@ describe('Eve channel credential helpers', () => {
       installationId: 'linear-installation',
       subject: { type: 'app' },
     });
+  });
+
+  it('resolves Photon credentials from an app-scoped Connect token', async () => {
+    fetchMock.mockResolvedValue(
+      jsonTokenResponse('photon-project:photon:secret')
+    );
+
+    await expect(
+      connectPhotonCredentials(
+        'photon/my-project',
+        {},
+        { vercelToken: 'vercel_token' }
+      )
+    ).resolves.toEqual({
+      projectId: 'photon-project',
+      projectSecret: 'photon:secret',
+    });
+    expectTokenRequest('photon/my-project', {
+      subject: { type: 'app' },
+    });
+  });
+
+  it.each([
+    'missing-separator',
+    ':missing-project',
+    'missing-secret:',
+  ])('rejects malformed Photon credentials: %s', async token => {
+    fetchMock.mockResolvedValue(jsonTokenResponse(token));
+
+    await expect(
+      connectPhotonCredentials(
+        `photon/${token}`,
+        {},
+        {
+          vercelToken: 'vercel_token',
+        }
+      )
+    ).rejects.toThrow('Photon connector returned invalid credentials.');
   });
 
   it('keeps Slack credentials backed by an app-scoped Connect token', async () => {

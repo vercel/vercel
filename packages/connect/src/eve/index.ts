@@ -33,6 +33,11 @@ export {
   type ConnectLinearCredentialsParams,
 } from './linear-credentials.js';
 export {
+  connectPhotonCredentials,
+  type PhotonCredentials,
+  type ConnectPhotonCredentialsParams,
+} from './photon-credentials.js';
+export {
   connectSlackCredentials,
   type ConnectSlackCredentialsParams,
 } from './slack-credentials.js';
