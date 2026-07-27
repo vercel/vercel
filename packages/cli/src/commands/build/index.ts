@@ -1190,6 +1190,7 @@ async function doBuild(
     builderUse: string;
   }> = [];
 
+  const apiDirFrameworkDetector = createApiDirFrameworkDetector();
   const getHasDetectedServices = () =>
     detectedResolvedServices !== undefined &&
     detectedResolvedServices.length > 0;
@@ -1310,7 +1311,10 @@ async function doBuild(
         // Backend framework detected for api/ dir builds.
         const apiDirFramework: string | undefined =
           isZeroConfig && !service && !isFrontendBuilder
-            ? await detectApiDirFramework(build.use ?? '', buildWorkPath)
+            ? await apiDirFrameworkDetector.detect(
+                build.use ?? '',
+                buildWorkPath
+              )
             : undefined;
 
         let buildConfig: Config;
@@ -3005,6 +3009,30 @@ async function writeFlagsJSON(
   if (hasFlags) {
     await fs.writeJSON(flagsFilePath, flags, { spaces: 2 });
   }
+}
+
+interface ApiDirFrameworkDetector {
+  detect(builderUse: string, workPath: string): Promise<string | undefined>;
+}
+
+/**
+ * Creates a memoised api/dir framework detector, scoped to one build, so N
+ * api/dir files sharing a builder+workPath share one filesystem scan instead
+ * of running one per file.
+ */
+function createApiDirFrameworkDetector(): ApiDirFrameworkDetector {
+  const cache = new Map<string, Promise<string | undefined>>();
+  return {
+    detect(builderUse, workPath) {
+      const cacheKey = `${builderUse}:${workPath}`;
+      let cached = cache.get(cacheKey);
+      if (!cached) {
+        cached = detectApiDirFramework(builderUse, workPath);
+        cache.set(cacheKey, cached);
+      }
+      return cached;
+    },
+  };
 }
 
 /**
