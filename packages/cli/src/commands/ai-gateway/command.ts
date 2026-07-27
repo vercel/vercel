@@ -358,6 +358,15 @@ export const setupSubcommand = {
       description:
         'How to apply non-interactively: edit (write files, default) or prompt (emit an agent prompt on stdout; requires the macOS Keychain)',
     },
+    {
+      name: 'base-url',
+      shorthand: null,
+      type: String,
+      argument: 'URL',
+      deprecated: false,
+      description:
+        'Override the AI Gateway base URL written into agent configs (advanced; e.g. a preview deployment). Written verbatim.',
+    },
     yesOption,
   ],
   examples: [
@@ -380,6 +389,10 @@ export const setupSubcommand = {
     {
       name: 'Reuse an existing key and preview changes only',
       value: `${packageName} ai-gateway coding-agents setup --key <key> --dry-run`,
+    },
+    {
+      name: 'Point an agent at a different gateway base URL',
+      value: `${packageName} ai-gateway coding-agents setup --agent codex --base-url https://preview.ai-gateway.vercel.sh/v1`,
     },
   ],
 } as const;
