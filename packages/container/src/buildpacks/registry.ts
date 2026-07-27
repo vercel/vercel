@@ -59,7 +59,7 @@ export interface BuildpackDescriptor {
 export const BUILDPACKS: readonly BuildpackDescriptor[] = [
   {
     runtime: 'ruby',
-    projectMarkers: ['Gemfile', 'config.ru'],
+    projectMarkers: ['Gemfile', 'config.ru', 'Gemfile.lock'],
     builder:
       'paketobuildpacks/builder-jammy-base@sha256:622ba9d364d69f578b49fa8dee2e0d450adbd44b31e7c0a18b714a4eefdf371b',
     runImage:
