@@ -3425,6 +3425,10 @@ describe('deploy', () => {
       expect(payload.next).toContainEqual(
         expect.objectContaining({ when: 'Inspect deployment' })
       );
+      expect(payload.next).toContainEqual({
+        command: `vercel curl https://${deploymentUrl}`,
+        when: 'Verify deployment, including when Deployment Protection is enabled',
+      });
       (client as { nonInteractive: boolean }).nonInteractive = false;
     });
 
