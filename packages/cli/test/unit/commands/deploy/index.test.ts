@@ -2043,9 +2043,6 @@ describe('deploy', () => {
         await expect(client.stderr).toOutput('Customize settings?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Customize advanced settings?');
-        client.stdin.write('\n');
-
         const exitCode = await exitCodePromise;
         expect(exitCode).toEqual(0);
         const output = client.stderr.getFullOutput();
@@ -2083,9 +2080,6 @@ describe('deploy', () => {
         await expect(client.stderr).toOutput('Code directory?');
         client.stdin.write('\n');
         await expect(client.stderr).toOutput('Customize settings?');
-        client.stdin.write('\n');
-
-        await expect(client.stderr).toOutput('Customize advanced settings?');
         client.stdin.write('\n');
 
         const exitCode = await exitCodePromise;

@@ -42,11 +42,6 @@ import { detectProjects } from '../projects/detect-projects';
 import readConfig from '../config/read-config';
 import { findSourceVercelConfigFile } from '../compile-vercel-config';
 import { frameworkList } from '@vercel/frameworks';
-import {
-  vercelAuth,
-  type VercelAuthSetting,
-  DEFAULT_VERCEL_AUTH_SETTING,
-} from '../input/vercel-auth';
 import { printAlignedLabel } from '../output/print-aligned-label';
 import {
   displayConfiguredServicesSetup,
@@ -628,22 +623,6 @@ export default async function setupAndLink(
       }
     }
 
-    // Support for changing additional, less frequently used project settings.
-    let changeAdditionalSettings = false;
-    if (!autoConfirm) {
-      changeAdditionalSettings = await client.input.confirm(
-        'Customize advanced settings?',
-        false
-      );
-    }
-
-    let vercelAuthSetting: VercelAuthSetting = DEFAULT_VERCEL_AUTH_SETTING;
-    if (changeAdditionalSettings) {
-      vercelAuthSetting = await vercelAuth(client, {
-        autoConfirm,
-      });
-    }
-
     if (rootDirectory) {
       settings.rootDirectory = rootDirectory;
     }
@@ -651,7 +630,6 @@ export default async function setupAndLink(
     const project = await createProject(client, {
       ...settings,
       name: newProjectName,
-      vercelAuth: vercelAuthSetting,
       v0,
     });
 

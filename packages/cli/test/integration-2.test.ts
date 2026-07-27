@@ -87,13 +87,6 @@ async function setupProject(
     devCommand?: string;
     buildCommand?: string;
     outputDirectory?: string;
-  },
-  {
-    vercelAuth,
-  }: {
-    vercelAuth: 'standard' | 'none';
-  } = {
-    vercelAuth: 'standard',
   }
 ) {
   await selectProjectCreation(process);
@@ -140,31 +133,6 @@ async function setupProject(
     process.stdin?.write(`${outputDirectory || ''}\n`);
   } else {
     process.stdin?.write('no\n');
-  }
-
-  const hasAdditionalProjectSettingsToChange = vercelAuth !== 'standard';
-  await waitForPrompt(process, 'Customize advanced settings?');
-
-  if (hasAdditionalProjectSettingsToChange) {
-    process.stdin?.write('y\n');
-  } else {
-    process.stdin?.write('\n');
-  }
-
-  if (vercelAuth === 'none') {
-    await waitForPrompt(
-      process,
-      'Want to use the default Deployment Protection settings?'
-    );
-    process.stdin?.write('n\n');
-
-    await waitForPrompt(
-      process,
-      'What setting do you want to use for Vercel Authentication?'
-    );
-    // select "none"
-    process.stdin?.write('\x1b[B'); // Down Arrow
-    process.stdin?.write('\n');
   }
 
   await waitForPrompt(process, /Created\s+/);
@@ -251,17 +219,10 @@ test.skip('should show prompts to set up project during first deploy', async () 
     },
   });
 
-  await setupProject(
-    now,
-    projectName,
-    {
-      buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
-      outputDirectory: 'o',
-    },
-    {
-      vercelAuth: 'none',
-    }
-  );
+  await setupProject(now, projectName, {
+    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+    outputDirectory: 'o',
+  });
 
   const output = await now;
 
@@ -365,9 +326,6 @@ test('should prefill "project name" prompt with vercel.json `name`', async () =>
 
   await waitForPrompt(now, 'Customize settings?');
   now.stdin?.write('no\n');
-
-  await waitForPrompt(now, 'Customize advanced settings?');
-  now.stdin?.write('\n');
 
   await waitForPrompt(now, /Created\s+/);
 
@@ -490,14 +448,7 @@ test('use `rootDirectory` from project when deploying', async () => {
       FORCE_TTY: '1',
     },
   });
-  await setupProject(
-    firstDeploy,
-    projectName,
-    {},
-    {
-      vercelAuth: 'none',
-    }
-  );
+  await setupProject(firstDeploy, projectName, {});
   const firstResult = await firstDeploy;
   expect(firstResult.exitCode, formatOutput(firstResult)).toBe(0);
 
@@ -505,6 +456,7 @@ test('use `rootDirectory` from project when deploying', async () => {
     method: 'PATCH',
     body: JSON.stringify({
       rootDirectory: 'src',
+      ssoProtection: null,
     }),
   });
 
@@ -565,15 +517,10 @@ test('add a sensitive env var', async () => {
     },
   });
 
-  await setupProject(
-    vc,
-    projectName,
-    {
-      buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
-      outputDirectory: 'o',
-    },
-    { vercelAuth: 'standard' }
-  );
+  await setupProject(vc, projectName, {
+    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+    outputDirectory: 'o',
+  });
 
   await vc;
 
@@ -616,15 +563,10 @@ test('override an existing env var', async () => {
     },
   });
 
-  await setupProject(
-    vc,
-    projectName,
-    {
-      buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
-      outputDirectory: 'o',
-    },
-    { vercelAuth: 'standard' }
-  );
+  await setupProject(vc, projectName, {
+    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+    outputDirectory: 'o',
+  });
 
   await vc;
 
@@ -946,14 +888,7 @@ test.skip('deploy pnpm twice using pnp and symlink=false', async () => {
   }
 
   const firstDeploy = deploy();
-  await setupProject(
-    firstDeploy,
-    session,
-    {},
-    {
-      vercelAuth: 'none',
-    }
-  );
+  await setupProject(firstDeploy, session, {});
   let { exitCode, stdout, stderr } = await firstDeploy;
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
@@ -1137,9 +1072,6 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   vc.stdin?.write(`${projectName}\n`);
 
   await waitForPrompt(vc, 'Code directory?');
-  vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, 'Customize advanced settings?');
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, /Created\s+/);
@@ -1585,14 +1517,6 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   // otherwise the output from the build command will not be the index route and the page text assertion below will fail.
   await waitForPrompt(vc, 'Output Directory?');
   vc.stdin?.write('output\n');
-  await waitForPrompt(vc, 'Customize advanced settings?');
-  vc.stdin?.write('n\n');
-  await waitForPrompt(
-    vc,
-    'What setting do you want to use for Vercel Authentication?'
-  );
-  vc.stdin?.write('\x1b[B'); // Down Arrow
-  vc.stdin?.write('\n');
   await waitForPrompt(vc, /Created\s+/);
   const deployment = await vc;
   expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
@@ -1688,99 +1612,4 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   page = await nodeFetch(deployment.stdout);
   text = await page.text();
   expect(text).toMatch(/Next\.js Test/);
-});
-
-test.each([
-  {
-    vercelAuth: 'none',
-    expectProtected: false,
-  },
-  {
-    vercelAuth: 'standard',
-    expectProtected: true,
-  },
-] as const)('[vc deploy] should allow a project to be created with Vercel Auth disabled or enabled with prompts - vercelAuth: %s', async ({
-  vercelAuth,
-  expectProtected,
-}: {
-  vercelAuth: 'none' | 'standard';
-  expectProtected: boolean;
-}) => {
-  const dir = await setupE2EFixture('project-vercel-auth');
-  const projectName = `project-vercel-auth-${
-    Math.random().toString(36).split('.')[1]
-  }`;
-
-  // remove previously linked project if it exists
-  await remove(path.join(dir, '.vercel'));
-
-  const now = execCli(binaryPath, [dir], {
-    env: {
-      FORCE_TTY: '1',
-    },
-  });
-
-  await setupProject(
-    now,
-    projectName,
-    {
-      buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
-      outputDirectory: 'o',
-    },
-    {
-      vercelAuth,
-    }
-  );
-
-  const output = await now;
-
-  // Ensure the exit code is right
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-
-  // Ensure .gitignore is created
-  const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  expect(gitignore).toBe('.vercel\n');
-
-  // Ensure .vercel/project.json and .vercel/README.txt are created
-  expect(
-    fs.existsSync(path.join(dir, '.vercel', 'project.json')),
-    'project.json'
-  ).toBe(true);
-  expect(
-    fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
-    'README.txt'
-  ).toBe(true);
-
-  const { href } = new URL(output.stdout);
-
-  // Send an unauthenticated request to the deployment. Use `redirect:
-  // 'manual'` so the deployment's own gate response is observed: otherwise
-  // fetch follows the SSO redirect to the login page and reports its
-  // 200, masking the protection.
-  //
-  // A protected deployment gates anonymous requests with either a terminal
-  // 401 or a 3xx redirect to the SSO login flow (vercel.com/sso-api),
-  // depending on the request. Accept both. A public deployment is served
-  // directly with a 200.
-  const response = await nodeFetch(href, { redirect: 'manual' });
-
-  if (expectProtected) {
-    const location = response.headers.get('location') ?? '';
-    const isSsoRedirect =
-      response.status >= 300 &&
-      response.status < 400 &&
-      location.includes('/sso-api');
-    const isProtected = response.status === 401 || isSsoRedirect;
-    expect(
-      isProtected,
-      `expected a protected response (401 or SSO redirect), got ${response.status} location=${location}\n${formatOutput(output)}`
-    ).toBe(true);
-  } else {
-    expect(response.status, formatOutput(output)).toBe(200);
-  }
-
-  const projectResponse = await apiFetch(`/projects/${projectName}`, {
-    method: 'DELETE',
-  });
-  expect(projectResponse.status).toBe(204);
 });
