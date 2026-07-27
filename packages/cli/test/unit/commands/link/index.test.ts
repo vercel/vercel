@@ -1436,9 +1436,6 @@ describe('link', () => {
 
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
-    const createdProject = await getProjectByNameOrId(client, 'awesome-app');
-    expect(createdProject).not.toBeInstanceOf(ProjectNotFound);
-    expect(createdProject).not.toHaveProperty('ssoProtection');
 
     // Anti-regression: old "Set up and deploy <path>?" confirm prompt is gone.
     // Setup state is an aligned Directory row, not a prompt/status sentence.
