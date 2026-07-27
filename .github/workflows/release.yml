@@ -45,7 +45,11 @@ jobs:
     uses: ./.github/workflows/release-binary.yml
     with:
       ref: ${{ github.sha }}
-    secrets: inherit
+    secrets:
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      APPLE_CERT_DATA: ${{ secrets.APPLE_CERT_DATA }}
+      APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+      APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
 
   release:
     name: Release

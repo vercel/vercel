@@ -8,6 +8,15 @@ on:
         required: false
         type: string
         default: ''
+    secrets:
+      SENTRY_DSN:
+        required: false
+      APPLE_CERT_DATA:
+        required: false
+      APPLE_API_KEY:
+        required: false
+      APPLE_CERT_PASSWORD:
+        required: false
 
 permissions:
   contents: read
