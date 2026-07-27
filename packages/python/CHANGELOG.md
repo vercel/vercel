@@ -1,5 +1,109 @@
 # @vercel/python
 
+## 6.53.0
+
+### Minor Changes
+
+- 6aa29e5: Add [tool.vercel.fastapi.static] cdn opt-out flag.
+
+### Patch Changes
+
+- Updated dependencies [6aa29e5]
+  - @vercel/python-analysis@0.12.0
+
+## 6.52.0
+
+### Minor Changes
+
+- bfa1873: Reduce Python bytecode compilation work by compiling bundled application and dependency sources in a single subprocess.
+- 9a4f1e7: Collect fastapi static files to serve via CDN.
+- ae12b01: Expose the resolved rewrite destination as the request path observed by Python framework applications, and warn affected Python projects about the behavior change.
+
+## 6.51.1
+
+### Patch Changes
+
+- 393645b: Refactor installed Python distribution handling into a dedicated component and simplify dependency externalizer configuration.
+- 41a3f2f: fix 70-workflow-pyproject integration test
+
+## 6.51.0
+
+### Minor Changes
+
+- c555d3a: Make vc dev support pyproject.toml entrypoints
+- 238543c: Support Python services that declare their web app and development workflow sidecars through a `pyproject.toml` entrypoint in `vercel dev`.
+
+### Patch Changes
+
+- b0ed8e5: Always run bytecode precompilation when `VERCEL_PYTHON_COMPILEALL` is enabled, removing the coverage-ratio heuristic that skipped compiles when the estimated bytecode would not sufficiently fit the remaining zip capacity.
+- f97e2e0: Report the final bundle size (including compiled bytecode and runtime-install tooling) and the packing mode (`standard` | `runtime-install` | `hive`) on the `vc.builder.python.bundle` trace span. The source-only size is still recorded before size-limit enforcement so oversized builds that fail remain tagged.
+
+## 6.50.0
+
+### Minor Changes
+
+- 7bbfd48: Support `"entrypoint": "pyproject.toml"` for services. A service may now set `entrypoint: "pyproject.toml"` to build exactly what that file declares: the web app from `tool.vercel.entrypoint` (when present) and queue subscribers from `[[tool.vercel.subscribers]]`. Filename-based entrypoint auto-detection never runs in this mode, and subscribers-only services (no web function) are supported.
+- f11c4c4: Bytecode-first packing for runtime-dependency-install builds (>225 MB) when `VERCEL_PYTHON_COMPILEALL` is enabled.
+
+  The zip bundles only the mandatory packages plus a `sys.pycache_prefix` bytecode tree covering the app and all dependencies including those installed into `/tmp` at cold start, and defers every other public package to the cold-start `uv sync`. Falls back to knapsack packing (now with a slack-capacity bytecode fill) when the externalized set would not fit Lambda ephemeral storage.
+
+### Patch Changes
+
+- 9637ae6: Add support for declaring the workflow entrypoint via `tool.vercel.workflows` in `pyproject.toml`.
+
+## 6.49.0
+
+### Minor Changes
+
+- dbefe95: Require Python `pyproject.toml` subscribers to be declared with `[[tool.vercel.subscribers]]` array entries instead of named subscriber tables.
+- 8b36776: Precompile Python bytecode for standard-size Lambda functions when enough of the estimated bytecode fits the remaining capacity, and allow bytecode precompilation when a custom build command is configured.
+- e12b1bd: Fail the build when `tool.vercel.entrypoint` in pyproject.toml is set but cannot be resolved, instead of silently falling back to filename-based entrypoint detection. A stale or typo'd declaration could previously build a different app than the one declared. Speculative detection (monorepo auto-detection, project linking) still degrades gracefully: one directory's broken config does not abort the sweep.
+
+### Patch Changes
+
+- 89ef74f: Skip bytecode precompilation when a service has a `preDeployCommand`. Precompiled bytecode uses `--invalidation-mode unchecked-hash`, which trusts the `.pyc` without re-checking the source at import — safe only because build output is normally immutable. A `preDeployCommand` runs after the build and can rewrite source files, leaving the already-compiled bytecode stale so the old source is served at runtime. Precompilation is now disabled for such services so the pre-deploy changes take effect.
+- 7b30856: Add `vercel dev` support for Python queue subscribers defined in `pyproject.toml`.
+
+## 6.48.0
+
+### Minor Changes
+
+- 4097a62: Fix django services when using static assets and vc dev.
+
+## 6.47.3
+
+### Patch Changes
+
+- 62a884e: Simplify isolated `services` and `experimentalServicesV2` runtime outputs by emitting their function at `index` instead of `_svc/<service-name>/index`.
+
+## 6.47.2
+
+### Patch Changes
+
+- 34b2c4c: Apply `functions` config to Python framework builds using the resolved Python entrypoint.
+
+## 6.47.1
+
+### Patch Changes
+
+- 95d8879: python: restrict bytecode precompilation to large functions
+- 82b3c3c: python: update functions bundle size limits
+- 96e3137: Emit catch-all routes for services V2 so requests reach the Python Lambda
+- f5fe588: python: update log messages
+- f076559: python: support large functions on Hive via supportLargeFunctions and retire the python-on-hive size path
+
+## 6.47.0
+
+### Minor Changes
+
+- f530cd5: Add Python `pyproject.toml` subscriber support for queue-triggered worker Lambdas.
+
+## 6.46.1
+
+### Patch Changes
+
+- 480ee7c: Record the `python.bundle.totalSizeBytes` build span tag before the bundle size-limit checks, so oversized functions that exceed the limit (and fail the build) still report their size instead of being omitted from telemetry.
+
 ## 6.46.0
 
 ### Minor Changes

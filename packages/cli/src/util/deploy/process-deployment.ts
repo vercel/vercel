@@ -6,6 +6,7 @@ import type {
 } from '@vercel-internals/types';
 import {
   type ArchiveFormat,
+  type DeploymentAliasAssignedEvent,
   type DeploymentOptions,
   type VercelClientOptions,
   createDeployment,
@@ -13,7 +14,7 @@ import {
 import { isErrorLike } from '@vercel/error-utils';
 import bytes from 'bytes';
 import chalk from 'chalk';
-import type { Agent } from 'http';
+import { getFetchDispatcher } from '../fetch';
 import type Now from '../../util';
 import { displayBuildLogs, type BuildLog, parseLogLines } from '../logs';
 import { progress } from '../output/progress';
@@ -42,7 +43,6 @@ export default async function processDeployment({
   skipAutoDetectionConfirmation,
   noWait,
   withFullLogs,
-  agent,
   manual,
   jsonOutput,
   linkedProject,
@@ -64,7 +64,6 @@ export default async function processDeployment({
   rootDirectory?: string | null;
   noWait?: boolean;
   withFullLogs?: boolean;
-  agent?: Agent;
   bulkRedirectsPath?: string | null;
   manual?: boolean;
   jsonOutput?: boolean;
@@ -97,8 +96,13 @@ export default async function processDeployment({
     throw new Error('Missing authentication token');
   }
 
+  const aliasAssignedController = new AbortController();
+  const onAliasAssigned = (event: DeploymentAliasAssignedEvent) => {
+    aliasAssignedController.abort(event);
+  };
+
   const clientOptions: VercelClientOptions = {
-    teamId: org.type === 'team' ? org.id : undefined,
+    teamId: now.currentTeam ?? undefined,
     apiUrl: now._apiUrl,
     token,
     debug: output.isDebugEnabled(),
@@ -111,10 +115,11 @@ export default async function processDeployment({
     rootDirectory,
     skipAutoDetectionConfirmation,
     archive,
-    agent,
+    dispatcher: getFetchDispatcher(),
     projectName,
     bulkRedirectsPath,
     manual,
+    aliasAssignedSignal: aliasAssignedController.signal,
   };
 
   const deployingSpinnerVal = isSettingUpProject
@@ -149,7 +154,12 @@ export default async function processDeployment({
         output.debug(`Total files ${total.size}, ${missing.length} changed`);
 
         const missingSize = missing
-          .map((sha: string) => total.get(sha).data.length)
+          .map((sha: string) => {
+            const file = total.get(sha);
+            // Large files are streamed and have no in-memory `data`; fall back
+            // to the recorded `size`.
+            return file?.data?.length ?? file?.size ?? 0;
+          })
           .reduce((a: number, b: number) => a + b, 0);
         const totalSizeHuman = bytes.format(missingSize, { decimalPlaces: 1 });
 
@@ -189,9 +199,10 @@ export default async function processDeployment({
       }
 
       if (event.type === 'file-uploaded') {
+        const { file } = event.payload;
         output.debug(
-          `Uploaded: ${event.payload.file.names.join(' ')} (${bytes(
-            event.payload.file.data.length
+          `Uploaded: ${file.names.join(' ')} (${bytes(
+            file.data?.length ?? file.size ?? 0
           )})`
         );
       }
@@ -208,6 +219,20 @@ export default async function processDeployment({
         const isProdDeployment = deployment.target === 'production';
         const previewUrl = `https://${deployment.url}`;
 
+        // When the user did not explicitly request a production deployment
+        // (no `--prod` / `--target=production`) but the API returned one
+        // anyway, surface a notice. This happens on a project's first
+        // deployment because the API assigns it to production when no prior
+        // production deployment exists.
+        if (isProdDeployment && !requestBody.target) {
+          indications.push({
+            type: 'notice',
+            payload:
+              'This is your project\u2019s first deployment, so it was assigned to production. Future deployments will be preview deployments unless you use --prod.',
+            link: 'https://vercel.com/docs/deployments/environments',
+          });
+        }
+
         printAlignedLabel(
           isProdDeployment ? 'Production' : 'Preview',
           chalk.cyan(previewUrl),
@@ -219,6 +244,9 @@ export default async function processDeployment({
         }
 
         if (noWait) {
+          (
+            deployment as Deployment & { indications: typeof indications }
+          ).indications = indications;
           return deployment;
         }
 
@@ -230,7 +258,8 @@ export default async function processDeployment({
           ({ abortController, promise } = displayBuildLogs(
             client,
             deployment,
-            true
+            true,
+            onAliasAssigned
           ));
           promise.catch(error =>
             output.warn(`Failed to read build logs: ${error}`)
@@ -242,6 +271,7 @@ export default async function processDeployment({
             deployment.id,
             {
               mode: 'logs',
+              onAliasAssigned,
               onEvent: (event: BuildLog) => {
                 if (!event.created) return;
                 const lines = parseLogLines(event);
@@ -280,6 +310,7 @@ export default async function processDeployment({
       if (event.type === 'ready' && rollingRelease) {
         output.spinner('Releasing…', 0);
         stopSpinner();
+        event.payload.indications = indications;
         return event.payload;
       }
 
@@ -290,7 +321,8 @@ export default async function processDeployment({
         const v2ChecksPending =
           event.payload.checks?.['deployment-alias']?.state === 'pending';
 
-        stopSpinner();
+        // Keep the event stream open while polling waits for alias assignment.
+        output.stopSpinner();
         process.stderr.write(eraseLines(2));
         const isProdDeployment = event.payload.target === 'production';
         const previewUrl = `https://${event.payload.url}`;
@@ -388,8 +420,14 @@ export function handleErrorSolvableWithArchive(error: unknown) {
       error.errorName.startsWith('api-upload-');
     const isTooManyFilesLimit =
       'code' in error && error.code === 'too_many_files';
+    // A file that exceeds the server's per-request upload limit is rejected
+    // with HTTP 413 "Request Entity Too Large". Archiving uploads the
+    // deployment in smaller chunks, which stays under that limit.
+    const isEntityTooLarge = /entity too large|payload too large/i.test(
+      error.message
+    );
 
-    if (isUploadRateLimit || isTooManyFilesLimit) {
+    if (isUploadRateLimit || isTooManyFilesLimit || isEntityTooLarge) {
       return new UploadErrorMissingArchive(
         `${error.message}\n${archiveSuggestionText}`
       );

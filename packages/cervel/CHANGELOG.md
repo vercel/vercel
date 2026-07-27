@@ -1,5 +1,87 @@
 # @vercel/cervel
 
+## 0.1.35
+
+### Patch Changes
+
+- @vercel/backends@0.8.27
+
+## 0.1.34
+
+### Patch Changes
+
+- @vercel/backends@0.8.26
+
+## 0.1.33
+
+### Patch Changes
+
+- @vercel/backends@0.8.25
+
+## 0.1.32
+
+### Patch Changes
+
+- @vercel/backends@0.8.24
+
+## 0.1.31
+
+### Patch Changes
+
+- @vercel/backends@0.8.23
+
+## 0.1.30
+
+### Patch Changes
+
+- @vercel/backends@0.8.22
+
+## 0.1.29
+
+### Patch Changes
+
+- Updated dependencies [cbf22bf]
+  - @vercel/backends@0.8.21
+
+## 0.1.28
+
+### Patch Changes
+
+- @vercel/backends@0.8.20
+
+## 0.1.27
+
+### Patch Changes
+
+- Updated dependencies [62a884e]
+  - @vercel/backends@0.8.19
+
+## 0.1.26
+
+### Patch Changes
+
+- Updated dependencies [8dc4702]
+  - @vercel/backends@0.8.18
+
+## 0.1.25
+
+### Patch Changes
+
+- Updated dependencies [fdb6121]
+  - @vercel/backends@0.8.17
+
+## 0.1.24
+
+### Patch Changes
+
+- @vercel/backends@0.8.16
+
+## 0.1.23
+
+### Patch Changes
+
+- @vercel/backends@0.8.15
+
 ## 0.1.22
 
 ### Patch Changes

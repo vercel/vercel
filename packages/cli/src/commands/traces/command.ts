@@ -41,7 +41,7 @@ export const getSubcommand = {
       name: 'view',
       shorthand: null,
       type: String,
-      argument: 'timeline|tree|gantt',
+      argument: 'timeline|tree|waterfall',
       deprecated: false,
       description:
         'Dashboard view to open. Only valid with --open. Defaults to timeline.',
@@ -69,8 +69,8 @@ export const getSubcommand = {
       value: `${packageName} traces get req_1234567890 --open`,
     },
     {
-      name: 'Open the trace in the Vercel Dashboard with the gantt view',
-      value: `${packageName} traces get req_1234567890 --open --view gantt`,
+      name: 'Open the trace in the Vercel Dashboard with the waterfall view',
+      value: `${packageName} traces get req_1234567890 --open --view waterfall`,
     },
   ],
 } as const;

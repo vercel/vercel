@@ -1,5 +1,84 @@
 # @vercel/connect
 
+## 0.4.3
+
+### Patch Changes
+
+- f999343: Add token exchange subjects to `ConnectTokenParams`.
+- 726c7b4: Add `experimental_startInstallation` for creating Vercel Connect installation requests.
+  - @vercel/oidc@3.8.1
+
+## 0.4.2
+
+### Patch Changes
+
+- 0be0e28: Adding support for authorization mode override via env var.
+
+## 0.4.1
+
+### Patch Changes
+
+- dad41da: Test Connect against a recent stable Eve and AI SDK 7 release.
+
+## 0.4.0
+
+### Minor Changes
+
+- c636d67: Add optional `claims` field to `ConnectTokenResponse` for allow-listed upstream OAuth token claims
+
+## 0.3.3
+
+### Patch Changes
+
+- 0cc0e8d: Expose and document the per-issuance `tokenId` on `ConnectTokenResponse` (returned by `getToken`/`getTokenResponse`). It's a stable identifier for the issued token — new on each issuance/refresh — for correlating a token with its usage in Vercel observability/billing data.
+
+## 0.3.2
+
+### Patch Changes
+
+- 2f8d81f: Surface the connector's human-readable name through authorization challenges. `startAuthorization` now exposes the optional `connector` object returned by `POST /v1/connect/authorize/:connector` (matching the `connector` object on the token response), and the Eve `connect()` adapter stamps the service display name (`connector.serviceName`, eg. `"Salesforce"`, falling back to the connector's own `connector.name` for unknown services) onto the `ConnectionAuthorizationChallenge` as `displayName` so channels can render "Sign in with Salesforce" instead of a title-cased file name. Connection authors can override the server-reported name via the new `displayName` option on `connect()`. No behavior change until the Vercel API starts returning `connector`.
+
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies [d29a8f9]
+  - @vercel/oidc@3.8.0
+
+## 0.3.0
+
+### Minor Changes
+
+- aa64ac7: Add the `@vercel/connect/chat` subpath with adapter helpers for the Chat SDK (`chat`). `connectSlackAdapter`, `connectGitHubAdapter`, and `connectLinearAdapter` each return a config fragment you spread into the matching `create*Adapter` factory, wiring a Connect connector for both outbound app-scoped tokens (`getToken` with `subject: { type: 'app' }`) and inbound trigger-forwarded webhooks (Vercel OIDC verification via the exported `createConnectWebhookVerifier`). The subpath has no runtime dependency on `@chat-adapter/*` — it returns structural config types.
+
+## 0.2.10
+
+### Patch Changes
+
+- 0a3bbd7: Pass eve authorization webhooks through to Vercel Connect so OAuth failures can resume the eve session.
+- f2475bd: Add default-on first-use connector provisioning to `connect()` from `@vercel/connect/eve`. When the helper runs inside a Vercel deployment, it now posts the eve connection URL and connector UID to the managed OAuth create/link endpoint before token or consent calls, so Connect can create a missing connector or link an existing one to the OIDC project and eligible environments. Pass `autoProvision: false` to keep managing the connector link manually.
+- Updated dependencies [fb93ff6]
+  - @vercel/oidc@3.7.1
+
+## 0.2.9
+
+### Patch Changes
+
+- dd77402: Bump the optional `eve` peer dependency for `@vercel/connect/eve` to the next eve patch release that accepts the `auth.evict` hook emitted by Vercel Connect helpers.
+
+## 0.2.8
+
+### Patch Changes
+
+- 64e3219: Allow local Connect authorization callbacks to use `http://*.localhost` URLs.
+
+## 0.2.7
+
+### Patch Changes
+
+- Updated dependencies [415fde0]
+  - @vercel/oidc@3.7.0
+
 ## 0.2.6
 
 ### Patch Changes

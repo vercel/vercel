@@ -29,6 +29,20 @@ export const upgradeCommand = {
       description: 'Disable automatic CLI updates',
     },
     {
+      // Internal: opt in/out of the native CLI binary. Undocumented (no
+      // `description`) so it is omitted from `--help`.
+      name: 'enable-binary',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'disable-binary',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
       ...formatOption,
       description: 'Specify the output format (json) - implies --dry-run',
     },

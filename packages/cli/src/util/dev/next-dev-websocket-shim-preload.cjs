@@ -110,6 +110,7 @@ function emitWebSocketRequest({
       }
       consumed = true;
 
+      const closeResponse = createResponseCloseEmitter(response);
       if (typeof response.detachSocket === 'function') {
         response.detachSocket(socket);
       }
@@ -120,6 +121,7 @@ function emitWebSocketRequest({
         requestContext.run(context, () => {
           req.emit('aborted');
           abortController.abort();
+          closeResponse();
         });
       });
       socket.once('error', noop);
@@ -166,6 +168,24 @@ function suppressFrameworkResponse(response) {
   };
   response.end = function end() {
     return this;
+  };
+}
+
+function createResponseCloseEmitter(response) {
+  let closed = false;
+  response.once('close', () => {
+    closed = true;
+  });
+
+  return () => {
+    if (closed) {
+      return;
+    }
+    closed = true;
+    // Frameworks like Next.js use ServerResponse "close" as their request
+    // lifecycle hook. Upgraded requests detach the socket, so bridge that
+    // hook to the WebSocket close.
+    response.emit('close');
   };
 }
 

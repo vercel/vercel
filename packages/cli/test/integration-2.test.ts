@@ -1,13 +1,16 @@
 import path from 'path';
 import { URL } from 'url';
-import nodeFetch from 'node-fetch';
+import nodeFetch from '../src/util/fetch';
 import express from 'express';
 import { createServer } from 'http';
 import { listen } from 'async-listen';
 import { apiFetch } from './helpers/api-fetch';
 import fs, { writeFile, readFile, remove, ensureDir } from 'fs-extra';
 import sleep from '../src/util/sleep';
-import waitForPrompt from './helpers/wait-for-prompt';
+import waitForPrompt, {
+  answerTeamPromptThenWait,
+  answerTeamPromptThenCreateProject,
+} from './helpers/wait-for-prompt';
 import { execCli } from './helpers/exec';
 import { listTmpDirs } from './helpers/get-tmp-dir';
 import { teamPromise, userPromise } from './helpers/get-account';
@@ -54,6 +57,29 @@ async function findFilesNamed(
   return nestedFiles.flat();
 }
 
+async function selectProjectCreation(process: CLIProcess) {
+  let usesTeamFirstPicker = false;
+  let answeredTeam = false;
+
+  // Single-team accounts auto-select the team, so answer `Which team?` only
+  // if it appears. `vc link` puts creation after search; deploy and dev keep
+  // creation first.
+  await waitForPrompt(process, chunk => {
+    if (!answeredTeam && /Which team[^?]*\?/.test(chunk)) {
+      answeredTeam = true;
+      process.stdin?.write('\n');
+      return false;
+    }
+    usesTeamFirstPicker = chunk.includes('Which project?');
+    return usesTeamFirstPicker || chunk.includes('Project?');
+  });
+
+  if (usesTeamFirstPicker) {
+    process.stdin?.write('\x1b[B');
+  }
+  process.stdin?.write('\n');
+}
+
 async function setupProject(
   process: CLIProcess,
   projectName: string,
@@ -70,12 +96,7 @@ async function setupProject(
     vercelAuth: 'standard',
   }
 ) {
-  await waitForPrompt(process, 'Directory');
-  await waitForPrompt(process, /Which team[^?]*\?/);
-  process.stdin?.write('\n');
-
-  await waitForPrompt(process, 'Project?');
-  process.stdin?.write('\n');
+  await selectProjectCreation(process);
 
   await waitForPrompt(process, 'Name?');
   process.stdin?.write(`${projectName}\n`);
@@ -332,10 +353,8 @@ test('should prefill "project name" prompt with vercel.json `name`', async () =>
   });
 
   await waitForPrompt(now, 'Directory');
-  await waitForPrompt(now, 'Which team?');
-  now.stdin?.write('\n');
-
-  await waitForPrompt(now, 'Project?');
+  // Single-team accounts auto-select the team; answer the prompt only if shown.
+  await answerTeamPromptThenWait(now, 'Project?');
   now.stdin?.write('\n');
 
   await waitForPrompt(now, `Name? (${projectName})`);
@@ -546,10 +565,15 @@ test('add a sensitive env var', async () => {
     },
   });
 
-  await setupProject(vc, projectName, {
-    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
-    outputDirectory: 'o',
-  });
+  await setupProject(
+    vc,
+    projectName,
+    {
+      buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+      outputDirectory: 'o',
+    },
+    { vercelAuth: 'standard' }
+  );
 
   await vc;
 
@@ -592,10 +616,15 @@ test('override an existing env var', async () => {
     },
   });
 
-  await setupProject(vc, projectName, {
-    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
-    outputDirectory: 'o',
-  });
+  await setupProject(
+    vc,
+    projectName,
+    {
+      buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+      outputDirectory: 'o',
+    },
+    { vercelAuth: 'standard' }
+  );
 
   await vc;
 
@@ -995,10 +1024,6 @@ test('[vc link] should detect frameworks in project rootDirectory', async () => 
     },
   });
 
-  await waitForPrompt(vc, 'Directory');
-  await waitForPrompt(vc, 'Which team?');
-  vc.stdin?.write('\n');
-
   await waitForPrompt(vc, 'Project?');
   vc.stdin?.write('\n');
 
@@ -1106,12 +1131,7 @@ test('[vc link] should show project prompts but not framework when `builds` defi
     },
   });
 
-  await waitForPrompt(vc, 'Directory');
-  await waitForPrompt(vc, 'Which team?');
-  vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, 'Project?');
-  vc.stdin?.write('\n');
+  await selectProjectCreation(vc);
 
   await waitForPrompt(vc, 'Name?');
   vc.stdin?.write(`${projectName}\n`);
@@ -1129,9 +1149,9 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   // Ensure the exit code is right
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
-  // Ensure .gitignore is created
+  // Ensure .gitignore includes the link metadata and refreshed OIDC env file
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  expect(gitignore).toBe('.vercel\n');
+  expect(gitignore).toBe('.vercel\n.env*\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   expect(
@@ -1327,7 +1347,22 @@ test('[vc build] should nest experimentalServicesV2 emitted by latest Next.js co
   const outputDirectory = path.join(directory, '.vercel/output');
   const config = await fs.readJSON(path.join(outputDirectory, 'config.json'));
   expect(config.experimentalServices).toBeUndefined();
-  expect(config.services).toBeUndefined();
+  // `experimentalServicesV2` services are recorded in the `services` array,
+  // each tagged with its `schema` discriminant.
+  expect(config.services).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        schema: 'experimentalServicesV2',
+        name: 'web',
+        framework: 'nextjs',
+      }),
+      expect.objectContaining({
+        schema: 'experimentalServicesV2',
+        name: 'nitro-api',
+        framework: 'nitro',
+      }),
+    ])
+  );
   expect(config.experimentalServicesV2).toEqual({
     web: expect.objectContaining({
       framework: 'nextjs',
@@ -1532,10 +1567,9 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   });
 
   await waitForPrompt(vc, 'Directory');
-  await waitForPrompt(vc, 'Which team?');
-  vc.stdin?.write('\n');
-  await waitForPrompt(vc, 'Project?');
-  vc.stdin?.write('\n');
+  // Single-team accounts auto-select the team; answer the prompt only if
+  // shown, then choose project creation in whichever prompt style appears.
+  await answerTeamPromptThenCreateProject(vc);
   await waitForPrompt(vc, 'Name?');
   vc.stdin?.write('\n');
   await waitForPrompt(vc, 'Customize settings?');
@@ -1659,18 +1693,18 @@ test('vercel.json configuration overrides in an existing project do not prompt u
 test.each([
   {
     vercelAuth: 'none',
-    expectedStatus: 200,
+    expectProtected: false,
   },
   {
     vercelAuth: 'standard',
-    expectedStatus: 401,
+    expectProtected: true,
   },
 ] as const)('[vc deploy] should allow a project to be created with Vercel Auth disabled or enabled with prompts - vercelAuth: %s', async ({
   vercelAuth,
-  expectedStatus,
+  expectProtected,
 }: {
   vercelAuth: 'none' | 'standard';
-  expectedStatus: number;
+  expectProtected: boolean;
 }) => {
   const dir = await setupE2EFixture('project-vercel-auth');
   const projectName = `project-vercel-auth-${
@@ -1719,9 +1753,31 @@ test.each([
 
   const { href } = new URL(output.stdout);
 
-  // Send a test request to the deployment
-  const response = await nodeFetch(href);
-  expect(response.status).toBe(expectedStatus);
+  // Send an unauthenticated request to the deployment. Use `redirect:
+  // 'manual'` so the deployment's own gate response is observed: otherwise
+  // fetch follows the SSO redirect to the login page and reports its
+  // 200, masking the protection.
+  //
+  // A protected deployment gates anonymous requests with either a terminal
+  // 401 or a 3xx redirect to the SSO login flow (vercel.com/sso-api),
+  // depending on the request. Accept both. A public deployment is served
+  // directly with a 200.
+  const response = await nodeFetch(href, { redirect: 'manual' });
+
+  if (expectProtected) {
+    const location = response.headers.get('location') ?? '';
+    const isSsoRedirect =
+      response.status >= 300 &&
+      response.status < 400 &&
+      location.includes('/sso-api');
+    const isProtected = response.status === 401 || isSsoRedirect;
+    expect(
+      isProtected,
+      `expected a protected response (401 or SSO redirect), got ${response.status} location=${location}\n${formatOutput(output)}`
+    ).toBe(true);
+  } else {
+    expect(response.status, formatOutput(output)).toBe(200);
+  }
 
   const projectResponse = await apiFetch(`/projects/${projectName}`, {
     method: 'DELETE',

@@ -9,6 +9,13 @@ import {
   buildCommandWithYes,
   buildCommandWithGlobalFlags,
   getGlobalFlagsFromArgv,
+  getPreservedArgsForEnvAdd,
+  getPreservedArgsForEnvPull,
+  getPreservedArgsForEnvRm,
+  getPreservedArgsForEnvUpdate,
+  buildEnvAddCommandWithPreservedArgs,
+  buildEnvRmCommandWithPreservedArgs,
+  buildEnvUpdateCommandWithPreservedArgs,
   enrichActionRequiredWithInvokingCommand,
   type ActionRequiredPayload,
 } from '../../../src/util/agent-output';
@@ -457,6 +464,18 @@ describe('argvHasNonInteractive', () => {
 });
 
 describe('getGlobalFlagsFromArgv', () => {
+  it.each([
+    [
+      ['--config', 'custom.json'],
+      ['--config', 'custom.json'],
+    ],
+    [['--config=custom.json'], ['--config=custom.json']],
+  ])('preserves config arguments %#', (configArgs, expected) => {
+    expect(
+      getGlobalFlagsFromArgv(['node', 'vc.js', 'deploy', ...configArgs])
+    ).toEqual(expected);
+  });
+
   it('does not treat the subcommand after --non-interactive as a flag value', () => {
     const argv = [
       'node',
@@ -478,6 +497,172 @@ describe('getGlobalFlagsFromArgv', () => {
   });
 });
 
+describe('env suggestion argument preservation', () => {
+  it('does not mistake a global option value for the env command', () => {
+    const argv = [
+      'node',
+      'vc.js',
+      '--scope',
+      'env',
+      'env',
+      'add',
+      'API_KEY',
+      'preview',
+      '--value',
+      'secret',
+      '--yes',
+    ];
+
+    expect(getPreservedArgsForEnvAdd(argv)).toEqual([
+      '--value',
+      'secret',
+      '--yes',
+    ]);
+    expect(
+      buildEnvAddCommandWithPreservedArgs(
+        argv,
+        'env add API_KEY preview --value <value> --yes'
+      )
+    ).toBe('vercel env add API_KEY preview --value <value> --yes');
+  });
+
+  it.each([
+    {
+      name: 'add',
+      getPreserved: getPreservedArgsForEnvAdd,
+      argv: [
+        'env',
+        'add',
+        '--project',
+        'payments-api',
+        'API_KEY',
+        'preview',
+        'feature',
+        '--value',
+        'next-value',
+        '--yes',
+      ],
+      expected: ['--project', 'payments-api', '--value', 'next-value', '--yes'],
+    },
+    {
+      name: 'pull',
+      getPreserved: getPreservedArgsForEnvPull,
+      argv: [
+        'env',
+        'pull',
+        '--project',
+        'payments-api',
+        '.env.test',
+        '--environment',
+        'preview',
+        '--git-branch',
+        'feature',
+        '--id',
+        'dpl_123',
+        '--yes',
+      ],
+      expected: [
+        '--project',
+        'payments-api',
+        '--environment',
+        'preview',
+        '--git-branch',
+        'feature',
+        '--id',
+        'dpl_123',
+        '--yes',
+      ],
+    },
+    {
+      name: 'remove alias',
+      getPreserved: getPreservedArgsForEnvRm,
+      argv: [
+        'env',
+        'remove',
+        '--project',
+        'payments-api',
+        'API_KEY',
+        'preview',
+        'feature',
+        '--yes',
+      ],
+      expected: ['--project', 'payments-api', '--yes'],
+    },
+    {
+      name: 'update',
+      getPreserved: getPreservedArgsForEnvUpdate,
+      argv: [
+        'env',
+        'update',
+        '--project=payments-api',
+        'API_KEY',
+        'preview',
+        'feature',
+        '--value=next-value',
+        '--yes',
+      ],
+      expected: ['--project=payments-api', '--value=next-value', '--yes'],
+    },
+  ])('preserves $name flags regardless of positional order', testCase => {
+    expect(testCase.getPreserved(['node', 'vc.js', ...testCase.argv])).toEqual(
+      testCase.expected
+    );
+  });
+
+  it.each([
+    {
+      name: 'add',
+      build: buildEnvAddCommandWithPreservedArgs,
+      argv: [
+        'env',
+        'add',
+        '--project',
+        'payments-api',
+        'API_KEY',
+        'preview',
+        '--value',
+        'old-value',
+        '--yes',
+      ],
+      template: 'env add <name> preview --value <value> --yes',
+    },
+    {
+      name: 'remove',
+      build: buildEnvRmCommandWithPreservedArgs,
+      argv: [
+        'env',
+        'remove',
+        '--project',
+        'payments-api',
+        'API_KEY',
+        'preview',
+        '--yes',
+      ],
+      template: 'env rm <name> preview --yes',
+    },
+    {
+      name: 'update',
+      build: buildEnvUpdateCommandWithPreservedArgs,
+      argv: [
+        'env',
+        'update',
+        '--project',
+        'payments-api',
+        'API_KEY',
+        'preview',
+        '--value',
+        'old-value',
+        '--yes',
+      ],
+      template: 'env update <name> preview --value <value> --yes',
+    },
+  ])('deduplicates flags already present in $name templates', testCase => {
+    expect(
+      testCase.build(['node', 'vc.js', ...testCase.argv], testCase.template)
+    ).toBe(`vercel ${testCase.template} --project payments-api`);
+  });
+});
+
 describe('buildCommandWithGlobalFlags', () => {
   it('prepends globals without swallowing the integration subcommand', () => {
     const argv = [
@@ -494,19 +679,88 @@ describe('buildCommandWithGlobalFlags', () => {
     expect(
       buildCommandWithGlobalFlags(
         argv,
-        'integration-resource remove r1 --disconnect-all --yes',
+        'integration resource remove r1 --disconnect-all --yes',
         'vercel',
         { prependGlobalFlags: true, excludeFlags: ['--yes', '-y'] }
       )
     ).toBe(
-      'vercel --cwd /tmp/p --non-interactive integration-resource remove r1 --disconnect-all --yes'
+      'vercel --cwd /tmp/p --non-interactive integration resource remove r1 --disconnect-all --yes'
     );
+  });
+
+  it('does not append a global flag the template already carries', () => {
+    const argv = ['node', 'vc.js', 'deploy', '--scope', 'vercel', '--yes'];
+    expect(
+      buildCommandWithGlobalFlags(
+        argv,
+        'deploy --project my-app --scope <team-slug> --yes'
+      )
+    ).toBe('vercel deploy --project my-app --scope <team-slug> --yes');
+  });
+
+  it('dedupes shorthand and long form of the same global flag', () => {
+    const argv = ['node', 'vc.js', 'deploy', '-S', 'vercel'];
+    expect(
+      buildCommandWithGlobalFlags(argv, 'deploy --scope <team-slug>')
+    ).toBe('vercel deploy --scope <team-slug>');
+  });
+
+  it('still appends globals absent from the template', () => {
+    const argv = ['node', 'vc.js', 'deploy', '--scope', 'vercel', '--yes'];
+    expect(buildCommandWithGlobalFlags(argv, 'link')).toBe(
+      'vercel link --scope vercel --yes'
+    );
+  });
+
+  it.each([
+    [['--project', 'payments-api'], '--project payments-api'],
+    [['--project=payments-api'], '--project=payments-api'],
+  ])('optionally preserves an explicit project selector', (project, expected) => {
+    const argv = [
+      'node',
+      'vc.js',
+      'routes',
+      'list',
+      '--cwd',
+      '/tmp/project',
+      ...project,
+    ];
+
+    expect(
+      buildCommandWithGlobalFlags(argv, 'routes list', undefined, {
+        globalFlags: 'all',
+        preserveProject: true,
+      })
+    ).toBe(`vercel routes list --cwd /tmp/project ${expected}`);
+  });
+
+  it('does not preserve authentication or child-command project options', () => {
+    const argv = [
+      'node',
+      'vc.js',
+      'env',
+      'run',
+      '--cwd',
+      '/tmp/project',
+      '--token',
+      'secret',
+      '--',
+      '--project',
+      'child-project',
+    ];
+
+    expect(
+      buildCommandWithGlobalFlags(argv, 'env run', undefined, {
+        globalFlags: 'all',
+        preserveProject: true,
+      })
+    ).toBe('vercel env run --cwd /tmp/project');
   });
 });
 
 describe('exitWithNonInteractiveError', () => {
   it('emits JSON when argv includes --non-interactive even if client.nonInteractive is false', async () => {
-    const { Response } = await import('node-fetch');
+    const { Response } = await import('../../../src/util/fetch');
     const res = new Response(
       JSON.stringify({
         error: { code: 'not_found', message: 'Project not found.' },
@@ -578,7 +832,7 @@ describe('exitWithNonInteractiveError', () => {
   });
 
   it('includes action and resource from a 403 APIError', async () => {
-    const { Response } = await import('node-fetch');
+    const { Response } = await import('../../../src/util/fetch');
     const res = new Response(
       JSON.stringify({
         error: {
@@ -628,7 +882,7 @@ describe('exitWithNonInteractiveError', () => {
   });
 
   it('omits action and resource from a 404 APIError', async () => {
-    const { Response } = await import('node-fetch');
+    const { Response } = await import('../../../src/util/fetch');
     const res = new Response(
       JSON.stringify({
         error: { code: 'not_found', message: 'Not found.' },
@@ -666,50 +920,5 @@ describe('exitWithNonInteractiveError', () => {
     expect(payload).not.toHaveProperty('resource');
 
     vi.restoreAllMocks();
-  });
-});
-
-describe('getGlobalFlagsFromArgv', () => {
-  it('does not treat the subcommand after --non-interactive as a flag value', () => {
-    expect(
-      getGlobalFlagsFromArgv([
-        'node',
-        'vc.js',
-        '--non-interactive',
-        'oauth-apps',
-        'register',
-        '--name',
-        'x',
-      ])
-    ).toEqual(['--non-interactive']);
-  });
-
-  it('collects --cwd and --non-interactive from anywhere in argv', () => {
-    expect(
-      getGlobalFlagsFromArgv([
-        'node',
-        'vc.js',
-        'oauth-apps',
-        'register',
-        '--name',
-        'display-name',
-        '--cwd=/tmp/proj',
-        '--non-interactive',
-      ])
-    ).toEqual(['--cwd=/tmp/proj', '--non-interactive']);
-  });
-
-  it('never includes token flags from argv', () => {
-    expect(
-      getGlobalFlagsFromArgv([
-        'node',
-        'vc.js',
-        'deploy',
-        '--cwd=/tmp/proj',
-        '--token',
-        'secret-token',
-        '--non-interactive',
-      ])
-    ).toEqual(['--cwd=/tmp/proj', '--non-interactive']);
   });
 });

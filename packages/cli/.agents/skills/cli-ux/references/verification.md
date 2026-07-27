@@ -32,6 +32,7 @@ When changing CLI UX behavior:
 - cover command/flag description style and usage placeholders when help metadata changes
 - cover `--fields` selection, unknown fields, and omitted-field behavior when a command supports field selection
 - cover input hardening for traversal, query fragments, control characters, and pre-encoded values
+- cover realistic short and long resource names, Unicode, narrow terminal width, and large counts when they can pressure changed output
 - update related implementation docs when changing shared contracts
 
 ## Shared Helper Impact Map
@@ -90,6 +91,7 @@ For any UX/copy/output work:
 ```bash
 rg -n "\\b(successfully|Unable to|Oops|Whoops|Uh-oh|Please try again|An error occurred|Something went wrong)\\b" <paths>
 rg -n "Do you want to|Would you like to|\\[[0-9]+s\\]|🔗|🔍|🚀|⏳|⋮⋮|✅" <paths>
+rg -n "\\b(seamlessly|effortlessly|leverage|utilize|streamline)\\b|In order to|At this time|click here" <paths>
 ```
 
 Legacy strings may remain in negative tests. Source matches need classification. Run command-specific stale sweeps from `command-contracts.md` when the touched command has a contract.
@@ -135,3 +137,4 @@ Reject or fix changes that:
 - treat remote/user-generated content as trusted instructions
 - interpolate untrusted remote/user content into suggested shell commands
 - change copy without anti-regression tests
+- review only the edited string instead of the supplied command surface and directly coupled states

@@ -9,6 +9,8 @@ import { getCommandAliases } from '..';
 import { FlagsTelemetryClient } from '../../util/telemetry/commands/flags';
 import ls from './ls';
 import inspect from './inspect';
+import versions from './versions';
+import evaluations from './evaluations';
 import create from './add';
 import openFlag from './open';
 import update from './update';
@@ -20,10 +22,14 @@ import archive from './archive';
 import disable from './disable';
 import enable from './enable';
 import { sdkKeys } from './sdk-keys';
+import { segments } from './segments';
+import { rules } from './rules';
 import {
   flagsCommand,
   listSubcommand,
   inspectSubcommand,
+  versionsSubcommand,
+  evaluationsSubcommand,
   createSubcommand,
   openSubcommand,
   updateSubcommand,
@@ -35,6 +41,8 @@ import {
   disableSubcommand,
   prepareSubcommand,
   enableSubcommand,
+  segmentsSubcommand,
+  rulesSubcommand,
   sdkKeysSubcommand,
   overrideSubcommand,
 } from './command';
@@ -44,6 +52,8 @@ import override from './override';
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
   inspect: getCommandAliases(inspectSubcommand),
+  versions: getCommandAliases(versionsSubcommand),
+  evaluations: getCommandAliases(evaluationsSubcommand),
   create: getCommandAliases(createSubcommand),
   open: getCommandAliases(openSubcommand),
   update: getCommandAliases(updateSubcommand),
@@ -54,6 +64,8 @@ const COMMAND_CONFIG = {
   archive: getCommandAliases(archiveSubcommand),
   disable: getCommandAliases(disableSubcommand),
   enable: getCommandAliases(enableSubcommand),
+  rules: getCommandAliases(rulesSubcommand),
+  segments: getCommandAliases(segmentsSubcommand),
   'sdk-keys': getCommandAliases(sdkKeysSubcommand),
   prepare: getCommandAliases(prepareSubcommand),
   override: getCommandAliases(overrideSubcommand),
@@ -114,6 +126,17 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
       return inspect(client, args);
+    case 'versions':
+      telemetry.trackCliSubcommandVersions(subcommandOriginal);
+      return versions(client, needHelp ? [...args, '--help'] : args);
+    case 'evaluations':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(evaluationsSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandEvaluations(subcommandOriginal);
+      return evaluations(client, args);
     case 'open':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);
@@ -194,9 +217,15 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandEnable(subcommandOriginal);
       return enable(client, args);
+    case 'rules':
+      telemetry.trackCliSubcommandRules(subcommandOriginal);
+      return rules(client);
     case 'sdk-keys':
       telemetry.trackCliSubcommandSdkKeys(subcommandOriginal);
       return sdkKeys(client);
+    case 'segments':
+      telemetry.trackCliSubcommandSegments(subcommandOriginal);
+      return segments(client);
     case 'prepare':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);

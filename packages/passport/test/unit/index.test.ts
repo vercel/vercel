@@ -10,6 +10,7 @@ import {
   getIdentity,
   PASSPORT_COOKIE_NAME,
   PASSPORT_HEADER_NAME,
+  verifyIdentity,
 } from '../../src';
 
 function createToken(payload: Record<string, unknown>): string {
@@ -79,6 +80,35 @@ describe('getIdentity', () => {
     }
   });
 
+  test('reads Passport cookie from Vercel request context', async () => {
+    const token = createToken(payload);
+    const previousContext = (globalThis as Record<symbol, unknown>)[
+      SYMBOL_FOR_REQ_CONTEXT
+    ];
+
+    (globalThis as Record<symbol, unknown>)[SYMBOL_FOR_REQ_CONTEXT] = {
+      get: () => ({
+        headers: {
+          cookie: `other=value; ${PASSPORT_COOKIE_NAME}=${token}`,
+        },
+      }),
+    };
+
+    try {
+      const identity = await getIdentity(undefined, { verifyOptions });
+      expect(identity?.tokenSource).toBe('cookie');
+      expect(identity?.externalSubject).toBe('user_123');
+      expect(identity?.verified).toBe(true);
+    } finally {
+      if (previousContext === undefined) {
+        delete (globalThis as Record<symbol, unknown>)[SYMBOL_FOR_REQ_CONTEXT];
+      } else {
+        (globalThis as Record<symbol, unknown>)[SYMBOL_FOR_REQ_CONTEXT] =
+          previousContext;
+      }
+    }
+  });
+
   test('reads Passport identity from the trusted header', async () => {
     const token = createToken(payload);
     const identity = await getIdentity(
@@ -108,6 +138,20 @@ describe('getIdentity', () => {
       {
         cookieHeader: `${PASSPORT_COOKIE_NAME}=${token}`,
       },
+      { verifyOptions }
+    );
+
+    expect(identity?.tokenSource).toBe('cookie');
+    expect(identity?.externalSubject).toBe('user_123');
+    expect(identity?.verified).toBe(true);
+  });
+
+  test('falls back to a Passport cookie from explicit headers', async () => {
+    const token = createToken(payload);
+    const identity = await getIdentity(
+      new Headers({
+        cookie: `other=value; ${PASSPORT_COOKIE_NAME}=${token}`,
+      }),
       { verifyOptions }
     );
 
@@ -269,5 +313,47 @@ describe('getIdentity', () => {
 
   test('returns null when development identity is disabled', async () => {
     expect(await getIdentity(undefined, { development: false })).toBeNull();
+  });
+});
+
+describe('verifyIdentity', () => {
+  test('verifies an explicit Passport token', async () => {
+    const token = createToken(payload);
+    const identity = await verifyIdentity(token, verifyOptions);
+
+    expect(identity).toMatchObject({
+      externalSubject: 'user_123',
+      subject: payload.sub,
+      token,
+      tokenSource: 'local',
+      verified: true,
+    });
+    expect(jwtVerify).toHaveBeenCalledWith(
+      token,
+      'jwks',
+      expect.objectContaining({ algorithms: ['RS256'] })
+    );
+  });
+
+  test('verifies a Passport token from the authorization header', async () => {
+    const token = createToken(payload);
+    const identity = await verifyIdentity(
+      new Headers({ authorization: `Bearer ${token}` }),
+      verifyOptions
+    );
+
+    expect(identity).toMatchObject({
+      externalSubject: 'user_123',
+      subject: payload.sub,
+      token,
+      tokenSource: 'header',
+      verified: true,
+    });
+  });
+
+  test('throws when no Passport token is provided', async () => {
+    await expect(verifyIdentity(new Headers(), verifyOptions)).rejects.toThrow(
+      'Passport identity token was not found.'
+    );
   });
 });

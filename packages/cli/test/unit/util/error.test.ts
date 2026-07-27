@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import nodeFetch from 'node-fetch';
+import nodeFetch from '../../../src/util/fetch';
 import { listen } from 'async-listen';
 import type { IncomingMessage, Server, ServerResponse } from 'http';
 import { createServer } from 'http';
@@ -26,9 +26,12 @@ describe('responseError()', () => {
     url = (await listen(server)).toString();
   });
 
-  afterAll(() => {
-    server.close();
-  });
+  afterAll(
+    () =>
+      new Promise<void>(resolve => {
+        server.close(() => resolve());
+      })
+  );
 
   it('should parse 4xx response error with fallback message', async () => {
     handler = (_req: IncomingMessage, res: ServerResponse) => {

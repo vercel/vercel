@@ -10,6 +10,7 @@ import type Client from '../client';
 import { InvalidToken, isAPIError, ProjectNotFound } from '../errors-ts';
 import type {
   Project,
+  ProjectLinked,
   ProjectLinkResult,
   Org,
   ProjectLink,
@@ -35,6 +36,28 @@ export const VERCEL_DIR_FALLBACK = '.now';
 export const VERCEL_DIR_README = 'README.txt';
 export const VERCEL_DIR_PROJECT = 'project.json';
 export const VERCEL_DIR_REPO = 'repo.json';
+
+export interface OwnerLookupUnavailableProjectLinked extends ProjectLinked {
+  orgId?: string;
+  ownerLookupUnavailable: true;
+  projectRootDirectory?: string;
+}
+
+export function isOwnerLookupUnavailableLink(
+  link: ProjectLinked
+): link is OwnerLookupUnavailableProjectLinked {
+  return (
+    'ownerLookupUnavailable' in link && link.ownerLookupUnavailable === true
+  );
+}
+
+function isOwnerLookupUnavailableError(error: unknown): boolean {
+  return (
+    isAPIError(error) &&
+    error.status === 403 &&
+    error.code === 'team_unauthorized'
+  );
+}
 
 const linkSchema = {
   type: 'object',
@@ -284,25 +307,44 @@ async function hasProjectLink(
   return false;
 }
 
+export interface GetLinkedProjectOptions {
+  cwd?: string;
+  projectName?: string;
+  projectNameIsExplicit?: boolean;
+  scopeIsExplicit?: boolean;
+  /**
+   * Allows deploying with a project-scoped token, which can fetch the
+   * linked project, but cannot fetch the owning user/team.
+   */
+  allowOwnerLookupFallback?: boolean;
+}
+
+export type ProjectLinkResultWithOrgId = ProjectLinkResult & {
+  orgId?: string;
+  projectRootDirectory?: string;
+};
+
 export async function getLinkedProject(
   client: Client,
-  path = client.cwd,
-  projectName?: string,
-  /**
-   * When `true`, resolve `projectName` via the API if no local link matches.
-   * Only enable for explicit user-supplied names (e.g. `--project`) so that
-   * implicit `projectName` defaults (like a directory basename) keep their
-   * existing `not_linked` → `setupAndLink` flow.
-   */
-  apiFallback?: boolean
-): Promise<ProjectLinkResult> {
+  options: GetLinkedProjectOptions = {}
+): Promise<ProjectLinkResultWithOrgId> {
+  let path = options.cwd ?? client.cwd;
   path = await resolveProjectCwd(path);
 
   const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
   const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
   const shouldUseEnv = Boolean(VERCEL_ORG_ID && VERCEL_PROJECT_ID);
+  const projectName = options.projectName;
+  const projectNameIsExplicit = options.projectNameIsExplicit === true;
+  const explicitProjectName = projectNameIsExplicit ? projectName : undefined;
+  const hasExplicitProject = Boolean(explicitProjectName);
+  const shouldUseEnvContext = shouldUseEnv && !hasExplicitProject;
 
-  if ((VERCEL_ORG_ID || VERCEL_PROJECT_ID) && !shouldUseEnv) {
+  if (
+    !hasExplicitProject &&
+    (VERCEL_ORG_ID || VERCEL_PROJECT_ID) &&
+    !shouldUseEnv
+  ) {
     output.error(
       `You specified ${
         VERCEL_ORG_ID ? '`VERCEL_ORG_ID`' : '`VERCEL_PROJECT_ID`'
@@ -313,38 +355,88 @@ export async function getLinkedProject(
     return { status: 'error', exitCode: 1 };
   }
 
-  let link =
-    VERCEL_ORG_ID && VERCEL_PROJECT_ID
-      ? { orgId: VERCEL_ORG_ID, projectId: VERCEL_PROJECT_ID }
-      : await getProjectLink(client, path, projectName, apiFallback);
-
-  // Resolve `projectName` via the API when no local link matches. Enables
-  // non-interactive CI use (e.g. `vercel deploy --project my-app`).
-  if (!link && projectName && apiFallback) {
-    try {
-      const apiProject = await getProjectByIdOrName(client, projectName);
-      if (!(apiProject instanceof ProjectNotFound)) {
-        link = {
-          projectId: apiProject.id,
-          orgId: apiProject.accountId,
-        };
+  let link: ProjectLink | null;
+  let explicitlyResolvedProject: Project | null = null;
+  let orgId: string | undefined;
+  if (explicitProjectName) {
+    const hasExplicitScope = options.scopeIsExplicit === true;
+    const matchingLocalLink =
+      hasExplicitScope || shouldUseEnv
+        ? null
+        : await getProjectLink(client, path, explicitProjectName, true);
+    const fallbackOrgId = shouldUseEnv
+      ? VERCEL_ORG_ID
+      : (matchingLocalLink?.orgId ?? client.config.currentTeam);
+    const lookupOrgId = hasExplicitScope
+      ? client.config.currentTeam
+      : fallbackOrgId;
+    orgId = lookupOrgId;
+    const apiProject = await getProjectByIdOrName(
+      client,
+      explicitProjectName,
+      lookupOrgId
+    );
+    explicitlyResolvedProject =
+      apiProject instanceof ProjectNotFound ? null : apiProject;
+    if (explicitlyResolvedProject === null) {
+      link = null;
+    } else {
+      const resolvedOrgId =
+        explicitlyResolvedProject.accountId ??
+        lookupOrgId ??
+        matchingLocalLink?.orgId;
+      let localLink =
+        matchingLocalLink?.projectId === explicitlyResolvedProject.id
+          ? matchingLocalLink
+          : null;
+      if (!localLink) {
+        try {
+          localLink = await getProjectLink(
+            client,
+            path,
+            explicitlyResolvedProject.id,
+            true
+          );
+        } catch (err) {
+          output.debug(
+            `Ignoring local project metadata after explicit project resolution: ${err}`
+          );
+        }
       }
-    } catch {
-      // Swallow; caller handles `not_linked` below.
+      link = resolvedOrgId
+        ? {
+            ...(localLink?.projectId === explicitlyResolvedProject.id &&
+            localLink.orgId === resolvedOrgId
+              ? localLink
+              : {}),
+            projectId: explicitlyResolvedProject.id,
+            orgId: resolvedOrgId,
+          }
+        : null;
+    }
+  } else {
+    link = shouldUseEnvContext
+      ? { orgId: VERCEL_ORG_ID!, projectId: VERCEL_PROJECT_ID! }
+      : await getProjectLink(client, path, projectName, projectNameIsExplicit);
+    if (link) {
+      orgId = link.orgId;
     }
   }
 
   if (!link) {
-    return { status: 'not_linked', org: null, project: null };
+    return { status: 'not_linked', org: null, project: null, orgId };
   }
 
   output.spinner('Retrieving project…', 1000);
   let org: Org | null = null;
   let project: Project | ProjectNotFound | null = null;
+  let ownerLookupUnavailable = false;
   try {
     const [orgResult, projectResult] = await Promise.allSettled([
       getOrgById(client, link.orgId),
-      getProjectByIdOrName(client, link.projectId, link.orgId),
+      explicitlyResolvedProject
+        ? Promise.resolve(explicitlyResolvedProject)
+        : getProjectByIdOrName(client, link.projectId, link.orgId),
     ]);
 
     if (orgResult.status === 'fulfilled') {
@@ -356,6 +448,11 @@ export async function getLinkedProject(
         orgResult.reason.code === 'mock_unimplemented')
     ) {
       org = null;
+    } else if (
+      options.allowOwnerLookupFallback &&
+      isOwnerLookupUnavailableError(orgResult.reason)
+    ) {
+      ownerLookupUnavailable = true;
     } else {
       throw orgResult.reason;
     }
@@ -395,15 +492,35 @@ export async function getLinkedProject(
     output.stopSpinner();
   }
 
+  if (ownerLookupUnavailable) {
+    if (project && !(project instanceof ProjectNotFound)) {
+      const ownerId = project.accountId || link.orgId;
+      const ownerLookupUnavailableLink: OwnerLookupUnavailableProjectLinked = {
+        status: 'linked',
+        org: {
+          type: ownerId.startsWith('team_') ? 'team' : 'user',
+          id: ownerId,
+          slug: ownerId,
+        },
+        project,
+        repoRoot: link.repoRoot,
+        projectRootDirectory: link.projectRootDirectory,
+        orgId: link.orgId,
+        ownerLookupUnavailable: true,
+      };
+      return ownerLookupUnavailableLink;
+    }
+  }
+
   if (!org || !project || project instanceof ProjectNotFound) {
-    if (shouldUseEnv) {
+    if (shouldUseEnvContext) {
       output.error(
         `Project not found (${JSON.stringify({
           VERCEL_PROJECT_ID,
           VERCEL_ORG_ID,
         })})\n`
       );
-      return { status: 'error', exitCode: 1 };
+      return { status: 'error', exitCode: 1, orgId };
     }
 
     output.print(
@@ -412,10 +529,22 @@ export async function getLinkedProject(
         emoji('warning')
       )
     );
-    return { status: 'not_linked', org: null, project: null };
+    return {
+      status: 'not_linked',
+      org: null,
+      project: null,
+      orgId: link.orgId,
+    };
   }
 
-  return { status: 'linked', org, project, repoRoot: link.repoRoot };
+  return {
+    status: 'linked',
+    org,
+    project,
+    repoRoot: link.repoRoot,
+    projectRootDirectory: link.projectRootDirectory,
+    orgId: link.orgId,
+  };
 }
 
 const VERCEL_DIR_README_CONTENT = `> Why do I have a folder named ".vercel" in my project?

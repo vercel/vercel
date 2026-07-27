@@ -1,5 +1,11 @@
 import { spawn } from 'child_process';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import {
+  existsSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+  mkdirSync,
+} from 'fs';
 import { join, delimiter, dirname, basename } from 'path';
 import type { ChildProcess } from 'child_process';
 import type { PythonFramework, StartDevServer } from '@vercel/build-utils';
@@ -14,6 +20,8 @@ import isPortReachable from 'is-port-reachable';
 import {
   detectPythonEntrypoint,
   entrypointToModule,
+  getVercelToolsEntrypoint,
+  type DetectedPythonEntrypoint,
   type PythonEntrypoint,
 } from './entrypoint';
 import { runFrameworkHook } from './index';
@@ -132,6 +140,33 @@ interface DevPythonOptions {
   onStdout?: (buf: Buffer) => void;
   onStderr?: (buf: Buffer) => void;
 }
+
+async function dedupePendingOperation<T>(
+  operations: Map<string, Promise<T>>,
+  key: string,
+  operation: () => Promise<T>
+): Promise<T> {
+  const existing = operations.get(key);
+  if (existing) {
+    return existing;
+  }
+
+  const pending = operation();
+  operations.set(key, pending);
+
+  try {
+    return await pending;
+  } finally {
+    if (operations.get(key) === pending) {
+      operations.delete(key);
+    }
+  }
+}
+
+// Multiple services in one workspace share a managed virtualenv and manifest.
+// Keep their startup paths from mutating those shared resources concurrently.
+const PENDING_MANAGED_VENV_CREATIONS = new Map<string, Promise<void>>();
+const PENDING_DEPENDENCY_SYNCS = new Map<string, Promise<void>>();
 
 async function syncDependencies({
   workPath,
@@ -309,9 +344,11 @@ async function runSync({
   });
 }
 
-// Dedup concurrent installs: keyed by "targetDir:packageName" so parallel
-// requests to vc dev reuse the in-flight promise instead of spawning duplicates.
+// Services in one workspace share this install target. Besides deduplicating
+// concurrent installs, remember successful installs for the dev session so a
+// later service does not rewrite site-packages underneath running workers.
 const PENDING_INSTALLS = new Map<string, Promise<void>>();
+const COMPLETED_INSTALLS = new Set<string>();
 
 interface InjectedPackageSpec {
   name: 'vercel-runtime' | 'vercel-workers';
@@ -319,20 +356,37 @@ interface InjectedPackageSpec {
   envOverride: string | undefined;
 }
 
+function hasInstalledDistribution(targetDir: string, packageName: string) {
+  const prefix = `${packageName.replace('-', '_')}-`;
+  try {
+    return readdirSync(targetDir).some(
+      entry => entry.startsWith(prefix) && entry.endsWith('.dist-info')
+    );
+  } catch {
+    return false;
+  }
+}
+
 async function installInjectedDevPackage(
   pkg: InjectedPackageSpec,
   opts: DevPythonOptions
 ): Promise<void> {
   const targetDir = join(opts.workPath, '.vercel', 'python');
-  const key = `${targetDir}:${pkg.name}`;
+  const source = pkg.envOverride || pkg.pinnedVersion;
+  const key = `${targetDir}:${pkg.name}:${source}`;
 
-  let pending = PENDING_INSTALLS.get(key);
-  if (!pending) {
-    pending = doInstallInjectedDevPackage(pkg, { ...opts, targetDir });
-    PENDING_INSTALLS.set(key, pending);
-    pending.finally(() => PENDING_INSTALLS.delete(key));
+  if (
+    COMPLETED_INSTALLS.has(key) &&
+    hasInstalledDistribution(targetDir, pkg.name)
+  ) {
+    return;
   }
-  await pending;
+  COMPLETED_INSTALLS.delete(key);
+
+  await dedupePendingOperation(PENDING_INSTALLS, key, async () => {
+    await doInstallInjectedDevPackage(pkg, { ...opts, targetDir });
+    COMPLETED_INSTALLS.add(key);
+  });
 }
 
 async function doInstallInjectedDevPackage(
@@ -350,9 +404,8 @@ async function doInstallInjectedDevPackage(
     pkg.envOverride ||
     (isLocalDev ? localDir : `${pkg.name}==${pkg.pinnedVersion}`);
 
-  // Skip install if the exact pypi version is already present;
-  // local dev builds and explicitly specified versions
-  // always reinstall to pick up possible source changes.
+  // Skip install if the exact pypi version is already present. Local dev
+  // builds and overrides always reinstall to pick up possible source changes.
   if (!isLocalDev && !pkg.envOverride) {
     const distInfoName = pkg.name.replace('-', '_');
     const distInfo = join(
@@ -562,6 +615,15 @@ async function getMultiServicePythonRunner(
   systemPython: string,
   uvPath: string | null
 ): Promise<PythonRunner> {
+  const venvPath = join(workPath, '.venv');
+
+  // A sibling service may already be creating this workspace's virtualenv.
+  // Wait before probing it so we never observe a partially-created environment.
+  const pendingCreation = PENDING_MANAGED_VENV_CREATIONS.get(venvPath);
+  if (pendingCreation) {
+    await pendingCreation;
+  }
+
   // Use an existing .venv/venv if present and allowed (single Python service in a project).
   const { pythonCmd, venvRoot } = useVirtualEnv(workPath, env, systemPython);
   if (venvRoot) {
@@ -569,14 +631,16 @@ async function getMultiServicePythonRunner(
     return { command: pythonCmd, args: [] };
   }
 
-  // Create a per-service .venv, so deps are managed separately.
-  const venvPath = join(workPath, '.venv');
-  await ensureVenv({
-    pythonVersion: { pythonPath: systemPython },
-    venvPath,
-    uvPath,
-    quiet: true,
-  });
+  // Create one managed .venv per workspace. Parallel services reuse the same
+  // in-flight creation rather than invoking uv against the directory together.
+  await dedupePendingOperation(PENDING_MANAGED_VENV_CREATIONS, venvPath, () =>
+    ensureVenv({
+      pythonVersion: { pythonPath: systemPython },
+      venvPath,
+      uvPath,
+      quiet: true,
+    })
+  );
   debug(`Created virtualenv at ${venvPath} for multi-service dev`);
 
   const pythonBin = getVenvPythonBin(venvPath);
@@ -645,37 +709,48 @@ export const startDevServer: StartDevServer = async opts => {
   installGlobalCleanupHandlers();
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
   const entrypoint = rawEntrypoint === '<detect>' ? undefined : rawEntrypoint;
+  const isPyprojectEntrypoint = entrypoint === 'pyproject.toml';
 
-  // For schedule-triggered job and worker services, use the raw entrypoint directly, because
-  // they don't export app/application so standard detection would skip them.
+  // For non-web background processes, use the raw entrypoint directly because
+  // they don't export app/application, so standard detection would skip them.
   let resolved: PythonEntrypoint | undefined;
   const handlerFunction =
     typeof config?.handlerFunction === 'string'
       ? config.handlerFunction
       : undefined;
 
-  const detected = await detectPythonEntrypoint(
-    framework as PythonFramework,
-    workPath,
-    entrypoint
-      ? {
-          filePath: entrypoint,
-          // Schedule-triggered services create their own "app" wrapper dynamically.
-          // Other services use handlerFunction as the entrypoint variable name.
-          varName:
-            service && isScheduleTriggeredService(service)
-              ? undefined
-              : handlerFunction,
-        }
-      : undefined,
-    service
-  );
+  let detected: DetectedPythonEntrypoint | null;
+  if (isPyprojectEntrypoint) {
+    const declaredEntrypoint = await getVercelToolsEntrypoint(
+      workPath,
+      opts.repoRootPath
+    );
+    detected = declaredEntrypoint ? { entrypoint: declaredEntrypoint } : null;
+  } else {
+    detected = await detectPythonEntrypoint(
+      framework as PythonFramework,
+      workPath,
+      entrypoint
+        ? {
+            filePath: entrypoint,
+            // Schedule-triggered services create their own "app" wrapper dynamically.
+            // Other services use handlerFunction as the entrypoint variable name.
+            varName:
+              service && isScheduleTriggeredService(service)
+                ? undefined
+                : handlerFunction,
+          }
+        : undefined,
+      service,
+      opts.repoRootPath
+    );
+  }
+  let hookResult: Awaited<ReturnType<typeof runFrameworkHook>> | undefined;
   if (detected?.entrypoint) {
     resolved = detected.entrypoint;
-  } else {
-    const hookResult = await runFrameworkHook(framework, {
+  } else if (!isPyprojectEntrypoint) {
+    hookResult = await runFrameworkHook(framework, {
       pythonEnv: env,
-      projectDir: join(workPath, detected?.baseDir ?? ''),
       workPath,
       entrypoint,
       detected: detected ?? undefined,
@@ -687,9 +762,12 @@ export const startDevServer: StartDevServer = async opts => {
       throw detected.error;
     }
     throw new NowBuildError({
-      code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
-      message:
-        'No Python entrypoint could be detected. Please specify an entrypoint file.',
+      code: isPyprojectEntrypoint
+        ? 'PYTHON_PYPROJECT_NOTHING_TO_BUILD'
+        : 'PYTHON_ENTRYPOINT_NOT_FOUND',
+      message: isPyprojectEntrypoint
+        ? 'Entrypoint "pyproject.toml" does not declare a web app. Set "tool.vercel.entrypoint" in pyproject.toml.'
+        : 'No Python entrypoint could be detected. Please specify an entrypoint file.',
     });
   }
   const { entrypoint: entry, variableName } = resolved;
@@ -802,7 +880,9 @@ export const startDevServer: StartDevServer = async opts => {
         console.log(syncMessage);
       }
 
-      await syncDependencies(devOpts);
+      await dedupePendingOperation(PENDING_DEPENDENCY_SYNCS, workPath, () =>
+        syncDependencies(devOpts)
+      );
     }
 
     // vercel-runtime is a separate dependency that we need to install into .vercel/python/
@@ -871,6 +951,10 @@ export const startDevServer: StartDevServer = async opts => {
 
       if (devShim.extraPythonPath) {
         pathParts.push(devShim.extraPythonPath);
+      }
+
+      if (hookResult?.extraPythonPath) {
+        pathParts.push(hookResult.extraPythonPath);
       }
 
       const existingPythonPath = env.PYTHONPATH || '';

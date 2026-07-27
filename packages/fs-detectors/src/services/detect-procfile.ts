@@ -1,15 +1,14 @@
 import { detectFrameworks } from '../detect-framework';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
-  ExperimentalServiceConfig,
-  ExperimentalServices,
+  InferredServicesConfig,
   ServiceDetectionError,
   ServiceDetectionWarning,
 } from './types';
-import { assignRoutePrefixes, DETECTION_FRAMEWORKS } from './utils';
+import { assignMountPaths, DETECTION_FRAMEWORKS } from './utils';
 
 export interface ProcfileDetectResult {
-  services: ExperimentalServices | null;
+  services: InferredServicesConfig | null;
   errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
 }
@@ -75,7 +74,7 @@ export async function detectProcfileServices(options: {
     return { services: null, errors: [], warnings: [] };
   }
 
-  const services: ExperimentalServices = {};
+  const services: InferredServicesConfig = {};
   const errors: ServiceDetectionError[] = [];
   const warnings: ServiceDetectionWarning[] = [];
 
@@ -122,7 +121,7 @@ export async function detectProcfileServices(options: {
       errors: [
         {
           code: 'MULTIPLE_FRAMEWORKS_SERVICE',
-          message: `Multiple frameworks detected: ${names}. Use explicit experimentalServices config.`,
+          message: `Multiple frameworks detected: ${names}. Use explicit services config.`,
         },
       ],
       warnings,
@@ -154,6 +153,7 @@ export async function detectProcfileServices(options: {
       // and produce them in the output. Otherwise we'll fallback to a hint
       if (hasSupportedWorkerCommand(tokens) && entrypoint?.endsWith('.py')) {
         services[processType] = {
+          root: '.',
           type: 'worker',
           entrypoint,
           runtime: 'python',
@@ -169,20 +169,17 @@ export async function detectProcfileServices(options: {
         code: 'SERVICE_SKIPPED',
         message:
           `Skipped Procfile process "${processType}": no framework detected and could not ` +
-          `infer entrypoint from command "${command}". Configure it manually in experimentalServices.`,
+          `infer entrypoint from command "${command}". Configure it manually in services.`,
       });
       continue;
     }
 
-    const serviceConfig: ExperimentalServiceConfig = { type: 'web' };
-
-    if (detectedFramework) {
-      serviceConfig.framework = detectedFramework.slug ?? undefined;
-    }
-
-    serviceConfig.entrypoint = entrypoint ?? '.';
-
-    services[processType] = serviceConfig;
+    services[processType] = {
+      root: '.',
+      type: 'web',
+      ...(detectedFramework?.slug ? { framework: detectedFramework.slug } : {}),
+      entrypoint: entrypoint ?? '.',
+    };
   }
 
   if (errors.length > 0) {
@@ -204,7 +201,7 @@ export async function detectProcfileServices(options: {
     }
   }
 
-  warnings.push(...assignRoutePrefixes(services));
+  warnings.push(...assignMountPaths(services));
 
   return { services, errors: [], warnings };
 }

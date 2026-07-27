@@ -11,6 +11,7 @@ import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
 import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
 import { isAPIError, ProjectNotFound } from '../../util/errors-ts';
+import { getTeamBillingUrl } from '../../util/billing-url';
 import type { Project } from '@vercel-internals/types';
 import type { MicrofrontendsGroupResponse } from './types';
 import {
@@ -19,7 +20,7 @@ import {
   validateRoutingPath,
 } from './utils';
 import { outputAgentError } from '../../util/agent-output';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import getScope from '../../util/get-scope';
 import { getLinkedProject } from '../../util/projects/link';
@@ -68,7 +69,7 @@ export default async function createGroup(client: Client): Promise<number> {
   if (groups.length >= maxMicrofrontendsGroupsPerTeam) {
     if (isLimitedPlan) {
       const planName = isProTrialPlan ? 'Pro Trial' : 'Hobby';
-      const url = `https://vercel.com/${teamSlug}/~/settings/billing`;
+      const url = getTeamBillingUrl(teamSlug);
       output.log(
         `You've reached the microfrontends group limit for ${planName}. Upgrade to Pro to create more groups.`
       );
@@ -142,7 +143,7 @@ export default async function createGroup(client: Client): Promise<number> {
     existingMfeProjectCount + projectsToAddCount > freeProjects;
   if (wouldAffectBilling) {
     if (isNonInteractive) {
-      const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+      const flags = getGlobalFlagsFromArgs(client.argv.slice(2));
       const interactiveCmd = getCommandNamePlain(
         `microfrontends create-group ${flags.filter(f => f !== '--non-interactive').join(' ')}`.trim()
       );
@@ -458,7 +459,7 @@ export default async function createGroup(client: Client): Promise<number> {
   );
 
   // If the default app is the linked project, offer to create microfrontends.json
-  const link = await getLinkedProject(client, client.cwd);
+  const link = await getLinkedProject(client, { cwd: client.cwd });
   const linkedProject = link.status === 'linked' ? link.project : undefined;
   if (linkedProject && linkedProject.id === defaultApp.id) {
     const repoRoot = link.status === 'linked' ? link.repoRoot : undefined;

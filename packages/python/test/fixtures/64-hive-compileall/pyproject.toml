@@ -6,3 +6,7 @@ dependencies = [
   "flask",
   "pydantic",
 ]
+
+# probes.json asserts compileall runs despite this custom build command.
+[tool.vercel.scripts]
+build = "python build.py"

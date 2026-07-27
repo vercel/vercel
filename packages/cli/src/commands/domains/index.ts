@@ -12,17 +12,20 @@ import rm from './rm';
 import move from './move';
 import price from './price';
 import search from './search';
+import verify from './verify';
 import {
   addSubcommand,
   buySubcommand,
   checkSubcommand,
   domainsCommand,
   inspectSubcommand,
+  listSubcommand,
   moveSubcommand,
   priceSubcommand,
   removeSubcommand,
   searchSubcommand,
   transferInSubcommand,
+  verifySubcommand,
 } from './command';
 import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -40,6 +43,7 @@ const COMMAND_CONFIG = {
   search: ['search'],
   rm: ['rm', 'remove'],
   transferIn: ['transfer-in'],
+  verify: ['verify'],
 };
 
 export default async function main(client: Client) {
@@ -144,10 +148,17 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandTransferIn(subcommandOriginal);
       return transferIn(client, args);
+    case 'verify':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(verifySubcommand);
+      }
+      telemetry.trackCliSubcommandVerify(subcommandOriginal);
+      return verify(client, args);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('domains', subcommandOriginal);
-        return printHelp(transferInSubcommand);
+        return printHelp(listSubcommand);
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return ls(client, args);

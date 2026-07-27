@@ -7,11 +7,13 @@ import {
   fileNameSymbol,
   continueDeployment,
   VALID_ARCHIVE_FORMATS,
+  inspectDeploymentFiles,
   type ArchiveFormat,
   type Dictionary,
   type VercelConfig,
 } from '@vercel/client';
 import { errorToString, isError } from '@vercel/error-utils';
+import { frameworkList, type Framework } from '@vercel/frameworks';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import fs from 'fs-extra';
@@ -57,17 +59,19 @@ import {
 import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import getProjectName from '../../util/get-project-name';
 import getSubcommand from '../../util/get-subcommand';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import param from '../../util/output/param';
 import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import stamp from '../../util/output/stamp';
+import table from '../../util/output/table';
 import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
-import { getCommandNameWithGlobalFlags } from '../../util/arg-common';
+import { withGlobalFlags } from '../../util/agent-output';
 import { getCommandName } from '../../util/pkg-name';
+import { getErrorCta } from '../../util/get-error-cta';
+import link from '../../util/output/link';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS } from '../../util/agent-output-constants';
 import { pickOverrides } from '../../util/projects/project-settings';
@@ -86,6 +90,7 @@ import parseTarget from '../../util/parse-target';
 import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
+import { isOwnerLookupUnavailableLink } from '../../util/projects/link';
 import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
 import { displayBuildLogsUntilFinalError } from '../../util/logs';
 import { determineAgent } from '@vercel/detect-agent';
@@ -276,13 +281,9 @@ async function handleInitDeployment(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
-    projectName:
-      projectNameOrId ??
-      getProjectName({
-        nameParam: undefined,
-        nowConfig: localConfig,
-        paths,
-      }),
+    // Only explicit names: the folder-name fallback is derived inside
+    // `setupAndLink`, and passing it would suppress Git-match suggestions.
+    projectName: projectNameOrId ?? localConfig?.name,
     failIfNotFound: !!projectNameOrId,
     v0: isV0,
   });
@@ -514,7 +515,7 @@ async function handleInitDeployment(
               message: deployment.message,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -543,7 +544,7 @@ async function handleInitDeployment(
               message: msg,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -583,7 +584,7 @@ async function handleInitDeployment(
               deployment: deploymentJson,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -631,7 +632,7 @@ async function handleInitDeployment(
               deployment: deploymentJson,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -654,7 +655,7 @@ async function handleInitDeployment(
               message: 'Uploading failed. Please try again.',
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -673,26 +674,31 @@ async function handleInitDeployment(
     if (asJson) {
       output.stopSpinner();
       const deploymentJson = getDeploymentOutputJson(deployment, client.apiUrl);
+      const isImplicitProduction =
+        deployment.target === 'production' && !target;
       const payload = client.nonInteractive
         ? {
             status: AGENT_STATUS.OK,
             deployment: deploymentJson,
             message: `Deployment ${deployment.url} ready.`,
+            ...(isImplicitProduction
+              ? {
+                  hint: 'This is the project\u2019s first deployment, so it was assigned to production. Future deployments will be preview deployments unless you use --prod.',
+                }
+              : {}),
             next: [
               {
-                command: getCommandNameWithGlobalFlags(
-                  `inspect ${deployment.url}`,
-                  client.argv
-                ),
+                command: withGlobalFlags(client, `inspect ${deployment.url}`),
                 when: 'Inspect deployment',
               },
-              {
-                command: getCommandNameWithGlobalFlags(
-                  'deploy --prod',
-                  client.argv
-                ),
-                when: 'Promote to production',
-              },
+              ...(isImplicitProduction
+                ? []
+                : [
+                    {
+                      command: withGlobalFlags(client, 'deploy --prod'),
+                      when: 'Promote to production',
+                    },
+                  ]),
             ],
           }
         : deploymentJson;
@@ -803,9 +809,9 @@ async function handleContinueSubcommand(
             'Missing required --id flag. Provide the deployment ID to continue.',
           next: [
             {
-              command: getCommandNameWithGlobalFlags(
-                'deploy continue --id <deployment-id>',
-                client.argv
+              command: withGlobalFlags(
+                client,
+                'deploy continue --id <deployment-id>'
               ),
               when: 'provide deployment ID',
             },
@@ -839,11 +845,9 @@ async function handleContinueSubcommand(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm: true,
-    projectName: getProjectName({
-      nameParam: undefined,
-      nowConfig: localConfig,
-      paths,
-    }),
+    // Only explicit names: the folder-name fallback is derived inside
+    // `setupAndLink`, and passing it would suppress Git-match suggestions.
+    projectName: localConfig?.name,
   });
   if (typeof link === 'number') {
     return link;
@@ -889,13 +893,13 @@ async function handleContinueSubcommand(
             'No prebuilt output found in ".vercel/output". Run build first.',
           next: [
             {
-              command: getCommandNameWithGlobalFlags('build', client.argv),
+              command: withGlobalFlags(client, 'build'),
               when: 'generate prebuilt output',
             },
             {
-              command: getCommandNameWithGlobalFlags(
-                `deploy continue --id ${idFlag}`,
-                client.argv
+              command: withGlobalFlags(
+                client,
+                `deploy continue --id ${idFlag}`
               ),
               when: 'deploy prebuilt output',
             },
@@ -949,6 +953,7 @@ async function handleDefaultDeploy(
   telemetryClient.trackCliFlagPrebuilt(parsedArguments.flags['--prebuilt']);
   telemetryClient.trackCliOptionRegions(parsedArguments.flags['--regions']);
   telemetryClient.trackCliFlagNoWait(parsedArguments.flags['--no-wait']);
+  telemetryClient.trackCliFlagDry(parsedArguments.flags['--dry']);
   telemetryClient.trackCliFlagYes(parsedArguments.flags['--yes']);
   telemetryClient.trackCliOptionTarget(parsedArguments.flags['--target']);
   telemetryClient.trackCliFlagProd(parsedArguments.flags['--prod']);
@@ -1123,14 +1128,13 @@ async function handleDefaultDeploy(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
+    // Only explicit names: the folder-name fallback is derived inside
+    // `setupAndLink`, and passing it would suppress Git-match suggestions.
     projectName:
-      projectNameOrId ??
-      getProjectName({
-        nameParam: parsedArguments.flags['--name'],
-        nowConfig: localConfig,
-        paths,
-      }),
+      projectNameOrId ?? parsedArguments.flags['--name'] ?? localConfig?.name,
     failIfNotFound: !!projectNameOrId,
+    requireExistingLink: parsedArguments.flags['--dry'],
+    allowOwnerLookupFallback: true,
     v0: isV0,
   });
   if (typeof link === 'number') {
@@ -1203,7 +1207,11 @@ async function handleDefaultDeploy(
   // #endregion
 
   const contextName = org.slug;
-  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+  const currentTeam =
+    isOwnerLookupUnavailableLink(link) || org.type !== 'team'
+      ? undefined
+      : org.id;
+  client.config.currentTeam = currentTeam;
 
   if (
     rootDirectory &&
@@ -1239,6 +1247,36 @@ async function handleDefaultDeploy(
   }
 
   localConfig = localConfig || {};
+
+  if (parsedArguments.flags['--dry']) {
+    try {
+      const summary = await inspectDeploymentFiles({
+        path: cwd,
+        archive: parsedArchive ? 'tgz' : undefined,
+        debug: output.isDebugEnabled(),
+        prebuilt: parsedArguments.flags['--prebuilt'],
+        vercelOutputDir,
+        projectName: project.name,
+        rootDirectory,
+        bulkRedirectsPath: localConfig.bulkRedirectsPath,
+      });
+      const framework = resolveDeploymentFrameworkPreset({
+        localFramework: localConfig.framework,
+        projectFramework: project.framework,
+      });
+
+      printDeploymentDryRun(
+        client,
+        summary,
+        framework,
+        asJson || !client.stdout.isTTY
+      );
+      return 0;
+    } catch (err: unknown) {
+      printError(err);
+      return 1;
+    }
+  }
 
   if (localConfig.name) {
     output.print(
@@ -1323,7 +1361,6 @@ async function handleDefaultDeploy(
   const regions = regionFlag.length > 0 ? regionFlag : localConfig.regions;
   // #endregion
 
-  const currentTeam = org.type === 'team' ? org.id : undefined;
   const now = new Now({
     client,
     currentTeam,
@@ -1429,7 +1466,7 @@ async function handleDefaultDeploy(
               message: deployment.message,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -1458,7 +1495,7 @@ async function handleDefaultDeploy(
               message: msg,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -1498,7 +1535,7 @@ async function handleDefaultDeploy(
               deployment: deploymentJson,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -1546,7 +1583,7 @@ async function handleDefaultDeploy(
               deployment: deploymentJson,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -1575,7 +1612,7 @@ async function handleDefaultDeploy(
               message: 'Uploading failed. Please try again.',
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -1605,7 +1642,7 @@ async function handleDefaultDeploy(
               message: err.message,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -1631,7 +1668,7 @@ async function handleDefaultDeploy(
               message: err.message,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -1698,7 +1735,7 @@ async function handleDefaultDeploy(
               message: err instanceof Error ? err.message : String(err),
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -1784,7 +1821,7 @@ async function handleDefaultDeploy(
               message,
               next: [
                 {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  command: withGlobalFlags(client, 'deploy'),
                   when: 'retry deploy',
                 },
               ],
@@ -1807,7 +1844,7 @@ async function handleDefaultDeploy(
             message: err instanceof Error ? err.message : String(err),
             next: [
               {
-                command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                command: withGlobalFlags(client, 'deploy'),
                 when: 'retry deploy',
               },
             ],
@@ -1824,26 +1861,30 @@ async function handleDefaultDeploy(
   if (asJson) {
     output.stopSpinner();
     const deploymentJson = getDeploymentOutputJson(deployment, client.apiUrl);
+    const isImplicitProduction = deployment.target === 'production' && !target;
     const payload = client.nonInteractive
       ? {
           status: AGENT_STATUS.OK,
           deployment: deploymentJson,
           message: `Deployment ${deployment.url} ready.`,
+          ...(isImplicitProduction
+            ? {
+                hint: 'This is the project\u2019s first deployment, so it was assigned to production. Future deployments will be preview deployments unless you use --prod.',
+              }
+            : {}),
           next: [
             {
-              command: getCommandNameWithGlobalFlags(
-                `inspect ${deployment.url}`,
-                client.argv
-              ),
+              command: withGlobalFlags(client, `inspect ${deployment.url}`),
               when: 'Inspect deployment',
             },
-            {
-              command: getCommandNameWithGlobalFlags(
-                'deploy --prod',
-                client.argv
-              ),
-              when: 'Promote to production',
-            },
+            ...(isImplicitProduction
+              ? []
+              : [
+                  {
+                    command: withGlobalFlags(client, 'deploy --prod'),
+                    when: 'Promote to production',
+                  },
+                ]),
           ],
         }
       : deploymentJson;
@@ -1911,8 +1952,13 @@ function handleCreateDeployError(error: Error, localConfig: VercelConfig) {
   }
   if (error instanceof BuildsRateLimited) {
     output.error(error.message);
+    // Surface the backend's plan-appropriate call to action when present;
+    // otherwise fall back to a plan-agnostic nudge.
+    const cta = getErrorCta(error.meta);
     output.note(
-      `Run ${getCommandName('upgrade')} to increase your builds limit.`
+      cta
+        ? `${cta.label}: ${link(cta.url)}`
+        : 'Upgrade your plan to increase your builds limit.'
     );
     return 1;
   }
@@ -1932,6 +1978,152 @@ function handleCreateDeployError(error: Error, localConfig: VercelConfig) {
   }
 
   return error;
+}
+
+type DeploymentDryRunSummary = Awaited<
+  ReturnType<typeof inspectDeploymentFiles>
+>;
+
+type DeploymentFramework = Pick<Framework, 'name' | 'slug'>;
+
+function toDeploymentFramework(framework: Framework): DeploymentFramework {
+  return {
+    name: framework.name,
+    slug: framework.slug,
+  };
+}
+
+function resolveDeploymentFrameworkPreset({
+  localFramework,
+  projectFramework,
+}: {
+  localFramework?: string | null;
+  projectFramework?: string | null;
+}): DeploymentFramework {
+  const frameworkSlug =
+    typeof localFramework === 'undefined' ? projectFramework : localFramework;
+  const frameworkPreset = frameworkList.find(
+    framework => framework.slug === frameworkSlug
+  );
+  const otherPreset = frameworkList.find(framework => framework.slug === null);
+
+  return frameworkPreset
+    ? toDeploymentFramework(frameworkPreset)
+    : otherPreset
+      ? toDeploymentFramework(otherPreset)
+      : { name: 'Other', slug: null };
+}
+
+function printDeploymentDryRun(
+  client: Client,
+  summary: DeploymentDryRunSummary,
+  framework: DeploymentFramework,
+  asJson: boolean
+) {
+  const directories = getDirectoryDistribution(summary.files);
+  const largestFiles = [...summary.files]
+    .sort((a, b) => b.size - a.size || a.path.localeCompare(b.path))
+    .slice(0, 10);
+
+  if (asJson) {
+    client.stdout.write(
+      `${JSON.stringify(
+        {
+          framework,
+          basePath: summary.basePath,
+          fileCount: summary.fileCount,
+          totalSize: summary.totalSize,
+          ignoredCount: summary.ignoredCount,
+          ignored: summary.ignored,
+          directories,
+          largestFiles,
+          files: summary.files,
+        },
+        null,
+        2
+      )}\n`
+    );
+    return;
+  }
+
+  const lines = [
+    `${chalk.bold('Deployment Dry Run')}\n`,
+    `${chalk.bold('Detected Framework Preset')}: ${framework.name}${
+      framework.slug ? ` (${framework.slug})` : ''
+    }`,
+    `Included: ${summary.fileCount} ${pluralize(
+      'file',
+      summary.fileCount
+    )}, ${formatBytes(summary.totalSize)}`,
+    `Ignored: ${summary.ignoredCount} ${pluralize(
+      'path',
+      summary.ignoredCount
+    )}\n`,
+  ];
+
+  if (directories.length > 0) {
+    lines.push(
+      table(
+        [
+          ['Path', 'Files', 'Size'],
+          ...directories.map(item => [
+            item.path,
+            String(item.fileCount),
+            formatBytes(item.size),
+          ]),
+        ],
+        { align: ['l', 'r', 'r'], hsep: 4 }
+      ),
+      ''
+    );
+  }
+
+  if (largestFiles.length > 0) {
+    lines.push(
+      chalk.bold('Largest Files'),
+      table(
+        largestFiles.map(file => [file.path, formatBytes(file.size)]),
+        { align: ['l', 'r'], hsep: 4 }
+      ),
+      ''
+    );
+  }
+
+  output.print(`${lines.join('\n')}\n`);
+}
+
+function getDirectoryDistribution(
+  files: DeploymentDryRunSummary['files']
+): Array<{ path: string; fileCount: number; size: number }> {
+  const directories = new Map<
+    string,
+    { path: string; fileCount: number; size: number }
+  >();
+
+  for (const file of files) {
+    const [segment] = file.path.split('/');
+    const key = file.path.includes('/') ? segment : file.path;
+    const current = directories.get(key) ?? {
+      path: key,
+      fileCount: 0,
+      size: 0,
+    };
+    current.fileCount += 1;
+    current.size += file.size;
+    directories.set(key, current);
+  }
+
+  return Array.from(directories.values()).sort(
+    (a, b) => b.size - a.size || a.path.localeCompare(b.path)
+  );
+}
+
+function formatBytes(size: number): string {
+  return bytes.format(size, { decimalPlaces: 1 });
+}
+
+function pluralize(word: string, count: number): string {
+  return count === 1 ? word : `${word}s`;
 }
 
 const addProcessEnv = async (
@@ -2271,7 +2463,7 @@ async function handleFailedCheckRuns(
         failedCheckRuns: failedCheckRunsWithLogs,
         next: [
           {
-            command: getCommandNameWithGlobalFlags('deploy', client.argv),
+            command: withGlobalFlags(client, 'deploy'),
             when: 'retry deploy after fixing check failures',
           },
         ],

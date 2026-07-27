@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "engines": {
+    "node": "22.x",
+    "bun": "1.x"
+  }
+}

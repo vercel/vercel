@@ -7,6 +7,7 @@ import { TeamDeleted } from './errors-ts';
 import { getLinkFromDir, getVercelDirectory } from './projects/link';
 import { getRepoLink, findProjectsFromPath } from './link/repo';
 import type { RepoProjectsConfig } from './link/repo';
+import { maybeAutoOptInNativeBinary } from './native-binary-auto-opt-in';
 import output from '../output-manager';
 
 export interface ScopeContext {
@@ -67,6 +68,17 @@ export default async function getScope(
     user.version === 'northstar' ? user.defaultTeamId : undefined;
   const currentTeamOrDefaultTeamId = client.config.currentTeam || defaultTeamId;
 
+  // A Northstar user has no usable personal scope, so their default team is the
+  // effective scope. The default is only persisted to `currentTeam` at login
+  // (see `updateCurrentTeamAfterLogin`), which means on any invocation where
+  // `currentTeam` isn't set we would otherwise resolve the default team for
+  // *display* but send requests with no `teamId` — silently scoping API calls
+  // to the (resource-less) personal account while the UI claims the team. Apply
+  // the default here so the effective request scope matches what we report.
+  if (!client.config.currentTeam && defaultTeamId) {
+    client.config.currentTeam = defaultTeamId;
+  }
+
   if (currentTeamOrDefaultTeamId && opts.getTeam !== false) {
     team = await getTeamById(client, currentTeamOrDefaultTeamId);
 
@@ -76,6 +88,10 @@ export default async function getScope(
 
     contextName = team.slug;
   }
+
+  // Auto-opt-in `vercel` team members to the native binary when their teams
+  // are already loaded; never triggers its own request.
+  maybeAutoOptInNativeBinary(client);
 
   if (!opts.resolveLocalScope) {
     return { contextName, team, user };
@@ -215,6 +231,9 @@ export function applyScopeFromLink(client: Client, link: { org: Org }): void {
 export function detectExplicitScope(client: Client): boolean {
   const argv = client.argv;
   for (const arg of argv) {
+    if (arg === '--') {
+      break;
+    }
     if (
       arg === '--scope' ||
       arg === '--team' ||

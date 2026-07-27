@@ -467,7 +467,13 @@ export async function executeBuild(
   for (const asset of Object.values(result.output)) {
     if (
       asset.type === 'Lambda' &&
-      !(typeof asset.runtime === 'string' && asset.runtime.startsWith('python'))
+      !(
+        typeof asset.runtime === 'string' && asset.runtime.startsWith('python')
+      ) &&
+      // Container Lambdas carry an OCI image reference in `handler`, not a code
+      // bundle — there is no zip to size-check. They are built and run locally
+      // by the builder's `startDevServer`, not by `fun`.
+      asset.runtime !== 'container'
     ) {
       const size = asset.zipBuffer.length;
       if (size > maxLambdaBytes) {
@@ -482,7 +488,11 @@ export async function executeBuild(
       const path: string = entry[0];
       const asset: BuilderOutput = entry[1];
 
-      if (asset.type === 'Lambda') {
+      // Container Lambdas are an OCI image reference, not a zip-based function:
+      // they have no `zipBuffer`/`createZip` and cannot run under `fun`. The
+      // builder's `startDevServer` builds and runs the image locally instead,
+      // so skip the `fun` function creation here.
+      if (asset.type === 'Lambda' && asset.runtime !== 'container') {
         // Tear down the previous `fun` Lambda instance for this asset
         const oldAsset = match.buildOutput && match.buildOutput[path];
         if (oldAsset && oldAsset.type === 'Lambda' && oldAsset.fn) {
@@ -581,6 +591,60 @@ export async function getBuildMatches(
       const existing = pythonManifestFiles.filter(p => fileList.includes(p));
       if (existing.length > 0) {
         src = existing[0];
+        mapToEntrypoint.set(src, originalSrc);
+      }
+    }
+    // The Node framework preset uses `package.json` as a stable build src,
+    // while @vercel/backends discovers the actual server entrypoint. A
+    // package.json is optional, so match a detected server file in dev while
+    // preserving the sentinel passed to the builder.
+    if (buildConfig.config?.framework === 'node' && !fileList.includes(src)) {
+      const originalSrc = src;
+      const existing = fileList.find(path =>
+        /^(?:src\/)?server\.[cm]?[jt]s$/.test(path)
+      );
+      if (existing) {
+        src = existing;
+        mapToEntrypoint.set(src, originalSrc);
+      }
+    }
+    // The Go framework preset keeps `index.go` as the stable build src for
+    // deployment routing. In dev, if that sentinel file is absent, match one
+    // of the known standalone entrypoints but still pass `index.go` through
+    // as the builder entrypoint so @vercel/go performs the final resolution.
+    if (buildConfig.config?.framework === 'go' && !fileList.includes(src)) {
+      const originalSrc = src;
+      const goEntrypoints = [
+        'main.go',
+        'cmd/api/main.go',
+        'cmd/server/main.go',
+      ];
+      const existing = goEntrypoints.filter(p => fileList.includes(p));
+      if (existing.length > 0) {
+        src = existing[0];
+        mapToEntrypoint.set(src, originalSrc);
+      }
+    }
+    // The container framework preset resolves its entrypoint via `<detect>`,
+    // which @vercel/container expands to a discovered Dockerfile at build time.
+    // Inside `services` the orchestrator owns this, but for a top-level
+    // container build the dev server needs to match a real Dockerfile so a
+    // BuildMatch is created — while still passing the original sentinel src
+    // through as the builder entrypoint.
+    if (
+      buildConfig.config?.framework === 'container' &&
+      !fileList.includes(src)
+    ) {
+      const originalSrc = src;
+      const dockerfileCandidates = [
+        'Dockerfile.vercel',
+        'Containerfile.vercel',
+        'Dockerfile',
+        'Containerfile',
+      ];
+      const existing = dockerfileCandidates.find(p => fileList.includes(p));
+      if (existing) {
+        src = existing;
         mapToEntrypoint.set(src, originalSrc);
       }
     }

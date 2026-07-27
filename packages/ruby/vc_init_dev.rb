@@ -73,11 +73,16 @@ def static_then_app(user_app)
 end
 
 host = '127.0.0.1'
-begin
-  sock = TCPServer.new(host, 0)
-  port = sock.addr[1]
-ensure
-  sock&.close
+requested_port = ENV['VERCEL_DEV_PORT']
+if requested_port && !requested_port.empty?
+  port = requested_port.to_i
+else
+  begin
+    sock = TCPServer.new(host, 0)
+    port = sock.addr[1]
+  ensure
+    sock&.close
+  end
 end
 
 app = static_then_app(build_user_app)

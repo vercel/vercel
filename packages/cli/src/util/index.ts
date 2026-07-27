@@ -2,7 +2,7 @@ import qs from 'querystring';
 import { parse as parseUrl } from 'url';
 import retry from 'async-retry';
 import ms from 'ms';
-import nodeFetch, { Headers } from 'node-fetch';
+import fetch, { Headers } from './fetch';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import ua from './ua';
@@ -137,8 +137,6 @@ export default class Now {
     isSettingUpProject: boolean,
     archive?: ArchiveFormat
   ) {
-    const hashes: any = {};
-
     const requestBody = {
       ...nowConfig,
       env,
@@ -165,7 +163,6 @@ export default class Now {
 
     const deployment = await processDeployment({
       now: this,
-      agent: this._client.agent,
       path,
       requestBody,
       quiet,
@@ -194,11 +191,9 @@ export default class Now {
       deployment.warnings.forEach((warning: any) => {
         if (warning.reason === 'size_limit_exceeded') {
           const { sha, limit } = warning;
-          const n = hashes[sha].names.pop();
 
-          warn(`Skipping file ${n} (size exceeded ${bytes(limit)}`);
+          warn(`Skipping file ${sha} (size exceeded ${bytes(limit)})`);
 
-          hashes[sha].names.unshift(n); // Move name (hack, if duplicate matches we report them in order)
           sizeExceeded++;
         } else if (warning.reason === 'node_version_not_found') {
           warn(`Requested node version ${warning.wanted} is not available`);
@@ -220,11 +215,14 @@ export default class Now {
   async handleDeploymentError(error: any, { env }: any) {
     if (error.status === 429) {
       if (error.code === 'builds_rate_limited') {
-        const err: APIError = Object.create(APIError.prototype);
-        err.message = error.message;
+        const err = new Error(error.message) as APIError;
         err.status = error.status;
-        err.retryAfterMs = 'never';
         err.code = error.code;
+        err.retryAfterMs = 'never';
+        err.ctaLabel = error.ctaLabel;
+        err.ctaUrl = error.ctaUrl;
+        err.action = error.action;
+        err.link = error.link;
         return err;
       }
 
@@ -379,7 +377,7 @@ export default class Now {
 
     const res = await output.time(
       `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
-      nodeFetch(`${this._apiUrl}${_url}`, { ...opts, body })
+      fetch(`${this._apiUrl}${_url}`, { ...opts, body })
     );
     printIndications(res);
     return res;

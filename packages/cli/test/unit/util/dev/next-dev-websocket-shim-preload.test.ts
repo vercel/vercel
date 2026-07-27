@@ -96,6 +96,15 @@ describe('next dev websocket shim preload', () => {
     });
   });
 
+  it('emits response close when the upgraded socket closes', async () => {
+    await expect(
+      runShimScenario('response-close-after-upgrade')
+    ).resolves.toMatchObject({
+      closeEvents: 1,
+      waitUntilDone: true,
+    });
+  });
+
   it('does not crash when the upgraded socket emits an error', async () => {
     await expect(
       runShimScenario('socket-error-after-upgrade')
@@ -260,6 +269,29 @@ const server = http.createServer((req, res) => {
       return;
     }
 
+    if (scenario === 'response-close-after-upgrade') {
+      let closeEvents = 0;
+      let waitUntilDone = false;
+
+      ctx.waitUntil(
+        new Promise(resolve => {
+          res.on('close', () => {
+            closeEvents += 1;
+            resolve();
+          });
+        }).then(() => {
+          waitUntilDone = true;
+        })
+      );
+
+      const { socket } = consumeUpgrade();
+      socket.once('close', () => {
+        setTimeout(() => finish({ closeEvents, waitUntilDone }), 10);
+      });
+      socket.end(textFrame('ok'));
+      return;
+    }
+
     if (scenario === 'socket-error-after-upgrade') {
       const { socket } = consumeUpgrade();
       setImmediate(() => {
@@ -316,6 +348,11 @@ server.listen(0, '127.0.0.1', async () => {
       const client = net.createConnection({ host: '127.0.0.1', port });
       await once(client, 'connect');
       client.write(upgradeRequest('/ws'));
+      return;
+    }
+
+    if (scenario === 'response-close-after-upgrade') {
+      await websocketRequest(port, '/ws');
       return;
     }
 

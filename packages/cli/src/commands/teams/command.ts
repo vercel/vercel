@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, nextOption } from '../../util/arg-common';
+import { formatOption, limitOption, nextOption } from '../../util/arg-common';
 
 export const requestSubcommand = {
   name: 'request',
@@ -67,6 +67,7 @@ export const listSubcommand = {
   arguments: [],
   options: [
     nextOption,
+    limitOption,
     formatOption,
     { name: 'since', shorthand: null, type: String, deprecated: true },
     { name: 'until', shorthand: null, type: String, deprecated: true },
@@ -147,7 +148,7 @@ export const membersSubcommand = {
   aliases: ['member'],
   description: 'List members for the currently scoped team',
   arguments: [],
-  options: [nextOption, formatOption],
+  options: [nextOption, limitOption, formatOption],
   examples: [
     {
       name: 'List team members',
