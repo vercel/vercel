@@ -53,7 +53,8 @@ export interface BuildpackDescriptor {
    * `order.toml` instead of running the builder's full default order. This
    * keeps detection deterministic in mixed-language roots: a `go.mod` next
    * to a `Gemfile` must not let another language family out-detect the
-   * requested Ruby build. Versions are resolved by the pinned builder.
+   * requested Ruby build. IDs and versions must match buildpacks installed
+   * in the pinned builder.
    *
    * Paketo language-family composites already include the optional procfile
    * buildpack (which `command` overrides rely on); list it explicitly only
@@ -64,6 +65,7 @@ export interface BuildpackDescriptor {
 
 export interface BuildpackGroupEntry {
   id: string;
+  version: string;
   optional?: boolean;
 }
 
@@ -83,7 +85,7 @@ export const BUILDPACKS: readonly BuildpackDescriptor[] = [
       'index.docker.io/paketobuildpacks/run-jammy-base@sha256:6de43ef8f4a30fa7b01be23600b2a0433c3ed3851b4fddc3b375212ed69490c2',
     // The composite includes rackup/puma/etc process detection and the
     // optional procfile buildpack in every group.
-    buildpackGroup: [{ id: 'paketo-buildpacks/ruby' }],
+    buildpackGroup: [{ id: 'paketo-buildpacks/ruby', version: '2.0.1' }],
   },
 ];
 

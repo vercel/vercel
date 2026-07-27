@@ -1160,6 +1160,10 @@ importers:
         version: 5.9.3
 
   packages/container:
+    dependencies:
+      smol-toml:
+        specifier: 1.5.2
+        version: 1.5.2
     devDependencies:
       '@types/node':
         specifier: 20.11.0

@@ -19,6 +19,9 @@
   "files": [
     "dist"
   ],
+  "dependencies": {
+    "smol-toml": "1.5.2"
+  },
   "devDependencies": {
     "@types/node": "20.11.0",
     "@vercel/build-utils": "workspace:*",

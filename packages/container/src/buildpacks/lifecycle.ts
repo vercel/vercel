@@ -12,6 +12,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { stringify as stringifyToml } from 'smol-toml';
 import { DIGEST_RE, TARGET_PLATFORM } from '../engines/types';
 import { buildahStorageArgs } from '../storage-driver';
 import type { DevOutput } from '../util';
@@ -192,17 +193,21 @@ const ORDER_FILE = `${ORDER_MOUNT_DIR}/order.toml`;
  * env dir.
  */
 function writeOrderDir(bp: BuildpackDescriptor): string {
-  const lines = ['[[order]]'];
-  for (const entry of bp.buildpackGroup) {
-    lines.push('', '  [[order.group]]', `    id = "${entry.id}"`);
-    if (entry.optional) {
-      lines.push('    optional = true');
-    }
-  }
+  const order = {
+    order: [
+      {
+        group: bp.buildpackGroup.map(entry => ({
+          id: entry.id,
+          version: entry.version,
+          ...(entry.optional ? { optional: true } : {}),
+        })),
+      },
+    ],
+  };
   const dir = mkdtempSync(join(tmpdir(), 'vercel-cnb-order-'));
   chmodSync(dir, 0o755);
   const file = join(dir, 'order.toml');
-  writeFileSync(file, `${lines.join('\n')}\n`);
+  writeFileSync(file, stringifyToml(order));
   chmodSync(file, 0o644);
   return dir;
 }
@@ -581,7 +586,7 @@ export async function buildAndPushWithLifecycle(
         );
       } finally {
         try {
-          await runBuildah(['rm', '--force', containerName]);
+          await runBuildah(['rm', containerName]);
         } catch (err) {
           debug(
             `could not remove Buildah CNB container ${containerName}: ${

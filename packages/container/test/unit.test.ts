@@ -1336,7 +1336,7 @@ describe('@vercel/container', () => {
         projectMarkers: ['mix.exs'],
         builder: 'example/builder-elixir@sha256:deadbeef',
         runImage: 'example/run-elixir@sha256:deadbeef',
-        buildpackGroup: [{ id: 'example/elixir' }],
+        buildpackGroup: [{ id: 'example/elixir', version: '1.2.3' }],
       };
 
       expect(builderImageRef(synthetic)).toBe(synthetic.builder);
@@ -1573,14 +1573,12 @@ describe('@vercel/container', () => {
           service: { name: 'api' },
         })
       ).rejects.toThrow(/failed to detect a launch process/);
-      expect(
-        spawnMock.mock.calls.some(
-          ([cmd, args]) =>
-            cmd === 'buildah' &&
-            (args as string[]).includes('rm') &&
-            (args as string[]).includes('--force')
-        )
-      ).toBe(true);
+      const cleanupArgs = spawnMock.mock.calls.find(
+        ([cmd, args]) => cmd === 'buildah' && (args as string[]).includes('rm')
+      )?.[1] as string[] | undefined;
+      expect(cleanupArgs).toBeDefined();
+      expect(cleanupArgs).not.toContain('--force');
+      expect(cleanupArgs?.at(-1)).toMatch(/^vercel-cnb-ruby-/);
     });
 
     it('builds and starts a Ruby buildpack image in local dev', async () => {
@@ -1615,7 +1613,7 @@ describe('@vercel/container', () => {
               `${orderMount!.slice(0, -':/platform/order:ro'.length)}/order.toml`,
               'utf8'
             )
-          ).toContain('id = "paketo-buildpacks/ruby"');
+          ).toContain('version = "2.0.1"');
           return fakeChild('');
         }
         if (cmd === 'docker' && args[0] === 'run') {
@@ -1791,6 +1789,7 @@ describe('@vercel/container', () => {
         expect(() => readFileSync(join(workPath, 'Procfile'))).toThrow();
         // Detection is scoped to the descriptor's buildpack group.
         expect(stagedOrder).toContain('id = "paketo-buildpacks/ruby"');
+        expect(stagedOrder).toContain('version = "2.0.1"');
 
         // The build env travels via the CNB platform dir, not process env.
         const creatorArgs = spawnMock.mock.calls.find(
