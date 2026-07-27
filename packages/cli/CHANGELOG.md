@@ -1,5 +1,40 @@
 # vercel
 
+## 58.0.0
+
+### Minor Changes
+
+- 843bb99: Support attaching Connect connectors to project custom environments by slug or stable ID.
+- d277bd9: Add custom-environment targeting for Connex trigger destinations.
+- 4502520: Support Node.js Routing Middleware entrypoints through `proxy.entrypoint`, with optional path matching through `proxy.matcher`. The matcher may be configured in the entrypoint source or `vercel.json`, but not both.
+- 506487b: Removed the `VERCEL_TOML_CONFIG_ENABLED` feature flag. `vercel.toml` configuration file support is now always enabled.
+
+### Patch Changes
+
+- c71e6f9: Recover interactive commands from stale stored login sessions by starting a fresh device login, and retry Environment Variable reads after legacy authentication challenges.
+- Updated dependencies [4502520]
+- Updated dependencies [6aa29e5]
+  - @vercel/build-utils@13.36.0
+  - @vercel/node@5.9.0
+  - @vercel/python@6.53.0
+  - @vercel/backends@0.8.27
+  - @vercel/container@0.1.0
+  - @vercel/elysia@0.1.104
+  - @vercel/express@0.1.118
+  - @vercel/fastify@0.1.107
+  - @vercel/go@3.10.2
+  - @vercel/h3@0.1.113
+  - @vercel/hono@0.2.107
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.87
+  - @vercel/nestjs@0.2.108
+  - @vercel/next@4.20.4
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.0
+  - @vercel/static-build@2.11.10
+
 ## 57.0.0
 
 ### Minor Changes
