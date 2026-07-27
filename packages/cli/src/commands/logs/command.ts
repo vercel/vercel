@@ -10,7 +10,7 @@ export const logsCommand = {
   aliases: ['log'],
   description:
     'Display request logs for a project.\n\n' +
-    'With --follow, stream live runtime logs from a deployment. When no deployment is specified, resolves in order: latest deployment on the current git branch, then your latest deployment, then the latest production deployment. Use --environment production to always stream the latest production deployment.\n\n' +
+    'With --follow, stream live runtime logs from a deployment. When no deployment is specified, streams the latest production deployment. Use --environment preview, --branch, or a deployment URL/ID for anything else.\n\n' +
     'Source types: λ = serverless, ε = edge/middleware, ◇ = static/external',
   arguments: [
     {
@@ -92,7 +92,7 @@ export const logsCommand = {
       type: Boolean,
       deprecated: false,
       description:
-        'Stream live runtime logs. Without a deployment, follows the latest deployment on the current git branch, then your latest deployment, then the latest production deployment',
+        'Stream live runtime logs. Without a deployment, follows the latest production deployment; use --environment preview, --branch, or a deployment URL/ID for anything else',
     },
     {
       name: 'no-follow',
@@ -138,8 +138,7 @@ export const logsCommand = {
       shorthand: 'b',
       type: String,
       deprecated: false,
-      description:
-        'Filter by git branch (defaults to current branch for a linked project)',
+      description: 'Filter by git branch',
     },
     {
       name: 'no-branch',
@@ -151,8 +150,12 @@ export const logsCommand = {
   ],
   examples: [
     {
-      name: 'Stream live logs for your most recent deployment',
+      name: 'Stream live logs for the latest production deployment',
       value: `${packageName} logs --follow`,
+    },
+    {
+      name: 'Stream live logs for your latest preview deployment',
+      value: `${packageName} logs --follow --environment preview`,
     },
     {
       name: 'Stream live logs for the latest production deployment',
@@ -211,8 +214,8 @@ export const logsCommand = {
       value: `${packageName} logs --branch feature-x`,
     },
     {
-      name: 'Display logs for all branches (disable auto-detection)',
-      value: `${packageName} logs --no-branch`,
+      name: 'Display logs for the current git branch',
+      value: `${packageName} logs --branch $(git branch --show-current)`,
     },
   ],
 } as const;
