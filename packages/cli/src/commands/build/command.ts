@@ -33,7 +33,7 @@ export const buildCommand = {
     {
       ...yesOption,
       description:
-        'Skip the confirmation prompt about pulling environment variables and project settings when not found locally',
+        'Skip the confirmation prompts when the directory is not yet linked to a project',
     },
     {
       name: 'standalone',

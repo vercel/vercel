@@ -25,7 +25,6 @@ import { addToGitIgnore } from '../link/add-to-gitignore';
 import type { RepoProjectConfig } from '../link/repo';
 import output from '../../output-manager';
 import { printAlignedLabel } from '../output/print-aligned-label';
-import pull from '../../commands/env/pull';
 import { resolveProjectCwd } from './find-project-root';
 
 const readFile = promisify(fs.readFile);
@@ -574,8 +573,6 @@ export async function linkFolderToProject(
   projectName: string,
   orgSlug: string,
   successEmoji: EmojiLabel = 'link',
-  autoConfirm: boolean = false,
-  pullEnv: boolean = true,
   resultLabel: 'Linked' | 'Created' = 'Linked'
 ) {
   // if the project is already linked, we skip linking
@@ -609,44 +606,4 @@ export async function linkFolderToProject(
 
   output.print('\n');
   printAlignedLabel(resultLabel, `${orgSlug}/${projectName}`, { gutter: '✓' });
-
-  if (!pullEnv) {
-    return;
-  }
-
-  // Skip env pull prompt in CI/non-TTY and in `--non-interactive` (agents, scripts).
-  if (!client.stdin.isTTY || client.nonInteractive) {
-    return;
-  }
-
-  output.print('\n');
-
-  const pullEnvConfirmed =
-    autoConfirm ||
-    (await client.input.confirm(
-      'Pull development environment variables into .env.local?',
-      true
-    ));
-
-  if (pullEnvConfirmed) {
-    const originalCwd = client.cwd;
-    try {
-      client.cwd = path;
-
-      const args = autoConfirm ? ['--yes'] : [];
-      const exitCode = await pull(client, args, 'vercel-cli:link');
-
-      if (exitCode !== 0) {
-        output.error(
-          'Failed to pull environment variables. You can run `vc env pull` manually.'
-        );
-      }
-    } catch (_error) {
-      output.error(
-        'Failed to pull environment variables. You can run `vc env pull` manually.'
-      );
-    } finally {
-      client.cwd = originalCwd;
-    }
-  }
 }

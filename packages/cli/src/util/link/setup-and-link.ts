@@ -18,7 +18,6 @@ import { linkRepoProject } from './repo';
 import createProject from '../projects/create-project';
 import type Client from '../client';
 import { printError } from '../error';
-import pull from '../../commands/env/pull';
 import { parseGitConfig, pluckRemoteUrls } from '../create-git-meta';
 import {
   selectAndParseRemoteUrl,
@@ -69,7 +68,6 @@ export interface SetupAndLinkOptions {
   projectName?: string;
   /** When true, avoid prompts and return action_required payload when scope/project choice is needed */
   nonInteractive?: boolean;
-  pullEnv?: boolean;
   /** When true, indicates the project is being created from v0 (grants V0Builder permissions) */
   v0?: boolean;
   /**
@@ -186,63 +184,16 @@ export async function shouldPromptForRootDirectory(opts: {
   }
 }
 
-async function maybePullEnvAfterLink(
-  client: Client,
-  path: string,
-  autoConfirm: boolean,
-  pullEnv: boolean
-): Promise<void> {
-  if (!pullEnv || !client.stdin.isTTY || client.nonInteractive) {
-    return;
-  }
-
-  output.print('\n');
-
-  const pullEnvConfirmed =
-    autoConfirm ||
-    (await client.input.confirm(
-      'Pull development environment variables into .env.local?',
-      true
-    ));
-
-  if (!pullEnvConfirmed) {
-    return;
-  }
-
-  const originalCwd = client.cwd;
-  try {
-    client.cwd = path;
-    const args = autoConfirm ? ['--yes'] : [];
-    const exitCode = await pull(client, args, 'vercel-cli:link');
-
-    if (exitCode !== 0) {
-      output.error(
-        'Failed to pull environment variables. You can run `vc env pull` manually.'
-      );
-    }
-  } catch (_error) {
-    output.error(
-      'Failed to pull environment variables. You can run `vc env pull` manually.'
-    );
-  } finally {
-    client.cwd = originalCwd;
-  }
-}
-
 async function linkCrossTeamMatch({
   client,
   path,
   match,
   successEmoji,
-  autoConfirm,
-  pullEnv,
 }: {
   client: Client;
   path: string;
   match: CrossTeamMatch;
   successEmoji: EmojiLabel;
-  autoConfirm: boolean;
-  pullEnv: boolean;
 }): Promise<ProjectLinkResult> {
   client.config.currentTeam =
     match.org.type === 'team' ? match.org.id : undefined;
@@ -255,7 +206,6 @@ async function linkCrossTeamMatch({
       remoteName: match.repo.remoteName,
       successEmoji,
     });
-    await maybePullEnvAfterLink(client, path, autoConfirm, pullEnv);
     return {
       status: 'linked',
       org: match.org,
@@ -270,9 +220,7 @@ async function linkCrossTeamMatch({
     { projectId: match.project.id, orgId: match.org.id },
     match.project.name,
     match.org.slug,
-    successEmoji,
-    autoConfirm,
-    pullEnv
+    successEmoji
   );
   return { status: 'linked', org: match.org, project: match.project };
 }
@@ -288,7 +236,6 @@ export default async function setupAndLink(
     successEmoji = 'link',
     projectName,
     nonInteractive = false,
-    pullEnv = true,
     v0,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
@@ -450,8 +397,6 @@ export default async function setupAndLink(
       path,
       match: projectOrNewProjectName,
       successEmoji,
-      autoConfirm,
-      pullEnv,
     });
   } else {
     const project = projectOrNewProjectName;
@@ -465,9 +410,7 @@ export default async function setupAndLink(
       },
       project.name,
       org.slug,
-      successEmoji,
-      autoConfirm,
-      pullEnv
+      successEmoji
     );
     return { status: 'linked', org, project };
   }
@@ -659,8 +602,6 @@ export default async function setupAndLink(
       project.name,
       org.slug,
       successEmoji,
-      autoConfirm,
-      false, // don't prompt to pull env for newly created projects
       'Created'
     );
 

@@ -125,7 +125,6 @@ export async function pullCommandLogic(
 ): Promise<number> {
   const link = await ensureLink('pull', client, cwd, {
     autoConfirm,
-    pullEnv: false,
     projectName: projectNameOrId,
     failIfNotFound: !!projectNameOrId,
   });
