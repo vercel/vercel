@@ -10,7 +10,7 @@ export const logsCommand = {
   aliases: ['log'],
   description:
     'Display request logs for a project.\n\n' +
-    'With --follow, stream live runtime logs from a deployment. With no deployment, branch, or environment specified, prefer the latest production deployment and fall back to your latest READY deployment. Use --environment production to require production, or use --environment preview, --branch, or a deployment URL/ID to select another deployment.\n\n' +
+    'Use --follow to stream live runtime logs from a deployment. By default, --follow prefers the latest READY production deployment and falls back to your latest READY deployment.\n\n' +
     'Source types: λ = serverless, ε = edge/middleware, ◇ = static/external',
   arguments: [
     {
@@ -34,7 +34,7 @@ export const logsCommand = {
       type: String,
       deprecated: false,
       description:
-        'Filter by environment: production or preview. With --follow, selects the deployment to stream: production uses the latest production deployment, preview uses your latest preview deployment',
+        'Filter by environment: production or preview; with --follow, select the latest production deployment or your latest preview deployment',
     },
     {
       name: 'level',
@@ -91,8 +91,7 @@ export const logsCommand = {
       shorthand: 'f',
       type: Boolean,
       deprecated: false,
-      description:
-        'Stream live runtime logs. With no deployment, branch, or environment specified, prefer the latest production deployment and fall back to your latest READY deployment',
+      description: 'Stream live runtime logs from a deployment',
     },
     {
       name: 'no-follow',
@@ -139,14 +138,14 @@ export const logsCommand = {
       type: String,
       deprecated: false,
       description:
-        'Filter by git branch; with --follow, require a READY deployment on that branch',
+        'Filter by Git branch; with --follow, require a matching READY deployment',
     },
     {
       name: 'no-branch',
       shorthand: null,
       type: Boolean,
       deprecated: true,
-      description: 'No-op; branch filtering only applies when --branch is set',
+      description: 'Deprecated no-op; use --branch to filter by branch',
     },
   ],
   examples: [
@@ -171,15 +170,11 @@ export const logsCommand = {
       value: `${packageName} logs --status-code 500 --json`,
     },
     {
-      name: 'Search request logs and pipe to jq',
-      value: `${packageName} logs --query "timeout" --json | jq '.message'`,
-    },
-    {
-      name: 'Use advanced search query with filters',
+      name: 'Search request logs by status and message',
       value: `${packageName} logs --query 'status:500 error' --json | jq '.message'`,
     },
     {
-      name: 'Display production request logs only',
+      name: 'Display request logs from production',
       value: `${packageName} logs --environment production`,
     },
     {
@@ -201,6 +196,10 @@ export const logsCommand = {
     {
       name: 'Stream runtime logs for your latest preview deployment',
       value: `${packageName} logs --follow --environment preview`,
+    },
+    {
+      name: 'Stream runtime logs for a specific deployment',
+      value: `${packageName} logs dpl_xxxxx --follow`,
     },
   ],
 } as const;

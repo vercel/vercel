@@ -122,10 +122,10 @@ describe('logs', () => {
       expect(normalizedOutput).toContain('--level');
       expect(normalizedOutput).toContain('--environment');
       expect(normalizedOutput).toContain(
-        'fall back to your latest READY deployment'
+        'falls back to your latest READY deployment'
       );
       expect(normalizedOutput).toContain(
-        'with --follow, require a READY deployment on that branch'
+        'with --follow, require a matching READY deployment'
       );
       expect(normalizedOutput).not.toContain('defaults to current branch');
       expect(normalizedOutput).not.toContain(

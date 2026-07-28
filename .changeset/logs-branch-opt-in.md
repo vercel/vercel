@@ -2,10 +2,10 @@
 'vercel': minor
 ---
 
-`vc logs` no longer filters by the current git branch and shows all branches by default. Use `--branch <name>` to filter, or `--branch $(git branch --show-current)` for the previous default.
+`vc logs` now displays request logs from all branches by default. Use `--branch <name>` to filter by branch. To preserve the previous behavior, pass the current branch name explicitly.
 
-`vc logs --follow` no longer considers the current git branch when choosing a deployment. With no deployment, branch, or environment specified it now streams the latest production deployment, falling back to your latest READY deployment. To stream a preview you just deployed, pass the deployment URL that `vc deploy` prints, or use `--environment preview`.
+`vc logs --follow` now streams the latest READY production deployment by default. If none exists, it falls back to your latest READY deployment. Use `--environment preview`, `--branch <name>`, or a deployment URL or ID to select another deployment.
 
-`--branch` now composes with `--environment` under `--follow`, and errors if no READY deployment matches instead of silently falling back to a different deployment.
+With `--follow`, `--branch` and `--environment` filter the deployment together. If no READY deployment matches both filters, the command returns an error instead of falling back to another branch or environment.
 
-`--no-branch` is still accepted but no longer does anything.
+The deprecated `--no-branch` flag remains accepted as a no-op.
