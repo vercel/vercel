@@ -69,7 +69,7 @@ import table from '../../util/output/table';
 import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
 import { withGlobalFlags } from '../../util/agent-output';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, packageName } from '../../util/pkg-name';
 import { getErrorCta } from '../../util/get-error-cta';
 import link from '../../util/output/link';
 import { outputAgentError } from '../../util/agent-output';
@@ -1873,6 +1873,10 @@ async function handleDefaultDeploy(
               }
             : {}),
           next: [
+            {
+              command: `${packageName} curl https://${deployment.url}`,
+              when: 'Verify deployment, including when Deployment Protection is enabled',
+            },
             {
               command: withGlobalFlags(client, `inspect ${deployment.url}`),
               when: 'Inspect deployment',
