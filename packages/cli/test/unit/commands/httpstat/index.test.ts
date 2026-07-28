@@ -98,6 +98,9 @@ describe('httpstat', () => {
       expect(client.getFullOutput()).toContain(
         'Execute httpstat with automatic deployment URL and protection bypass'
       );
+      expect(client.getFullOutput()).toContain(
+        'vercel httpstat https://your-project-abc123.vercel.app/api/hello'
+      );
     });
   });
 
@@ -106,14 +109,14 @@ describe('httpstat', () => {
       client.setArgv('httpstat');
       const exitCode = await httpstat(client);
       expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('requires an API path');
+      await expect(client.stderr).toOutput('requires a URL or API path');
     });
 
     it('should reject when only -- is provided without a path', async () => {
       client.setArgv('httpstat', '--', '-H', 'Content-Type: application/json');
       const exitCode = await httpstat(client);
       expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('requires an API path');
+      await expect(client.stderr).toOutput('requires a URL or API path');
     });
 
     it('should accept / as a valid path', async () => {
@@ -136,18 +139,36 @@ describe('httpstat', () => {
       ]);
     });
 
-    it('should reject when a full https URL is provided as the path', async () => {
-      client.setArgv('httpstat', 'https://example.com/api/hello');
+    it('should accept when a full https URL is provided as the path', async () => {
+      client.setArgv(
+        'httpstat',
+        'https://example.com/api/hello',
+        '--protection-bypass',
+        'test-secret'
+      );
       const exitCode = await httpstat(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('must be a relative API path');
+      expect(exitCode).toEqual(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'httpstat',
+        expect.arrayContaining(['https://example.com/api/hello']),
+        expect.any(Object)
+      );
     });
 
-    it('should reject when a full http URL is provided as the path', async () => {
-      client.setArgv('httpstat', 'http://localhost:3000/');
+    it('should accept a bare host as the path', async () => {
+      client.setArgv(
+        'httpstat',
+        'example.vercel.app/api/hello',
+        '--protection-bypass',
+        'test-secret'
+      );
       const exitCode = await httpstat(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('must be a relative API path');
+      expect(exitCode).toEqual(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'httpstat',
+        expect.arrayContaining(['https://example.vercel.app/api/hello']),
+        expect.any(Object)
+      );
     });
 
     it('should reject unrecognized flags before --', async () => {

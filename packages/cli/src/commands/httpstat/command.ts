@@ -38,6 +38,10 @@ export const httpstatCommand = {
   ],
   examples: [
     {
+      name: 'Visualize timing for a protected deployment URL',
+      value: `${packageName} httpstat https://your-project-abc123.vercel.app/api/hello`,
+    },
+    {
       name: 'Visualize timing for a GET request to an API endpoint',
       value: `${packageName} httpstat /api/hello`,
     },
