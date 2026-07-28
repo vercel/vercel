@@ -1,10 +1,16 @@
 {
   "$schema": "https://turborepo.org/schema.json",
   "globalDependencies": [
+    ".github/workflows/**",
+    "packages/build-utils/src/**",
+    "packages/cli/scripts/start.js",
+    "pnpm-lock.yaml",
     "turbo-cache-key.json",
     "package.json",
     "test/lib/**",
-    "utils/build.mjs"
+    "utils/**/*.js",
+    "utils/**/*.mjs",
+    "vitest.config.mts"
   ],
   "envMode": "loose",
   "tasks": {
@@ -14,14 +20,6 @@
       "outputs": ["dist/**"]
     },
     "vitest-unit": {
-      "dependsOn": ["build"],
-      "outputLogs": "new-only"
-    },
-    "vitest-unit-node-24": {
-      "dependsOn": ["build"],
-      "outputLogs": "new-only"
-    },
-    "vitest-run": {
       "dependsOn": ["build"],
       "outputLogs": "new-only"
     },

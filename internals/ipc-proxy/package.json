@@ -15,7 +15,8 @@
     "test": "pnpm test-go && vitest run --config ../../vitest.config.mts",
     "test-go": "go -C bootstrap test ./...",
     "test-unit": "pnpm test",
-    "vitest-run": "vitest -c ../../vitest.config.mts"
+    "vitest-run": "vitest -c ../../vitest.config.mts",
+    "vitest-unit": "pnpm test"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",

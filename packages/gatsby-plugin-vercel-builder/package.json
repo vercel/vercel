@@ -18,7 +18,7 @@
     "test-unit": "pnpm test test/unit.*test.*",
     "type-check": "tsc --noEmit",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/unit.*test.*'"
+    "vitest-unit": "pnpm test test/unit."
   },
   "dependencies": {
     "@sinclair/typebox": "0.25.24",

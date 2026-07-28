@@ -37,7 +37,7 @@
     "build": "tsc",
     "generate-types": "tsx scripts/generate-types.ts",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'src/**/*.test.ts'",
+    "vitest-unit": "pnpm vitest-run --run",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

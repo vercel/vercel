@@ -25,7 +25,7 @@
     "test": "pnpm test-unit",
     "test-unit": "pnpm run vitest-run -- test",
     "vitest-run": "vitest run -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/*.test.ts'",
+    "vitest-unit": "pnpm vitest-run --run",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
