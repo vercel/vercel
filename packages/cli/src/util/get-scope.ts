@@ -7,6 +7,7 @@ import { InvalidToken, TeamDeleted } from './errors-ts';
 import { getLinkFromDir, getVercelDirectory } from './projects/link';
 import { getRepoLink, findProjectsFromPath } from './link/repo';
 import type { RepoProjectsConfig } from './link/repo';
+import { maybeAutoOptInNativeBinary } from './native-binary-auto-opt-in';
 import output from '../output-manager';
 import { introspectToken } from './introspect-token';
 import type { TokenIntrospectionResponse } from './introspect-token';
@@ -95,6 +96,10 @@ export default async function getScope(
   if (!contextName) {
     throw new Error(`Unable to determine context name`);
   }
+
+  // Auto-opt-in `vercel` team members to the native binary when their teams
+  // are already loaded; never triggers its own request.
+  maybeAutoOptInNativeBinary(client);
 
   if (!opts.resolveLocalScope) {
     return { contextName, team, user, app };

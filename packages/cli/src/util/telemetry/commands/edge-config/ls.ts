@@ -14,4 +14,10 @@ export class EdgeConfigLsTelemetryClient
       });
     }
   }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
+    }
+  }
 }

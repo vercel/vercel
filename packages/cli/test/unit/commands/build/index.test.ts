@@ -614,6 +614,77 @@ describe.skipIf(flakey)('build', () => {
     expect(functions.sort()).toEqual(['middleware.func']);
   });
 
+  it('should build an explicit proxy with the Node.js runtime', async () => {
+    const cwd = fixture('proxy');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const builds = await fs.readJSON(join(output, 'builds.json'));
+    expect(builds).toMatchObject({
+      target: 'preview',
+      builds: [
+        {
+          require: '@vercel/node',
+          apiVersion: 3,
+          use: '@vercel/node',
+          src: 'proxy.ts',
+          config: {
+            zeroConfig: true,
+            middleware: true,
+            middlewareRuntime: 'nodejs',
+            middlewareMatcher: '/api/:func*',
+            functions: {
+              'proxy.ts': {
+                maxDuration: 10,
+                memory: 1024,
+              },
+            },
+          },
+        },
+        {
+          require: '@vercel/static',
+          apiVersion: 2,
+          use: '@vercel/static',
+          src: REGEX_NON_VERCEL_PLATFORM_FILES.replace('}', ',proxy.ts}'),
+          config: {
+            zeroConfig: true,
+          },
+        },
+      ],
+    });
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config).toMatchObject({
+      version: 3,
+      routes: [
+        {
+          src: '^\\/api(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?[\\/#\\?]?$',
+          middlewarePath: 'proxy',
+          middlewareRawSrc: ['/api/:func*'],
+          override: true,
+          continue: true,
+        },
+        { handle: 'error' },
+        { status: 404, src: '^(?!/api).*$', dest: '/404.html' },
+      ],
+    });
+
+    const staticFiles = await fs.readdir(join(output, 'static'));
+    expect(staticFiles.sort()).toEqual(['index.html']);
+
+    const functions = await fs.readdir(join(output, 'functions'));
+    expect(functions.sort()).toEqual(['proxy.func']);
+
+    const functionConfig = await fs.readJSON(
+      join(output, 'functions/proxy.func/.vc-config.json')
+    );
+    expect(functionConfig.runtime).toMatch(/^nodejs/);
+    expect(functionConfig.maxDuration).toBe(10);
+    expect(functionConfig.memory).toBe(1024);
+  });
+
   it('should build root-level `middleware.js` with "Root Directory" setting', async () => {
     const cwd = fixture('middleware-root-directory');
     const output = join(cwd, '.vercel/output');

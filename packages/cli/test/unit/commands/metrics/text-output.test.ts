@@ -14,8 +14,8 @@ import {
   formatMetadataHeader,
   formatSparklineSection,
   formatText,
-  ellipsizeMiddle,
 } from '../../../../src/commands/metrics/text-output';
+import { ellipsizeMiddle } from '../../../../src/util/output/truncate';
 import type {
   Aggregation,
   MetricsQueryResponse,

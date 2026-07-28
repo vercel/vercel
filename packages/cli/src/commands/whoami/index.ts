@@ -106,7 +106,7 @@ export default async function whoami(client: Client): Promise<number> {
     // If stdout is not a TTY, only print the username to support piping
     // the output to another file / executable. This preserves the previous
     // behavior for scripts that rely on `vc whoami` printing the logged-in
-    // user. Team information is available via `--format json`.
+    // user. Team information is available via `--json`.
     client.stdout.write(`${formatUsername(scope)}\n`);
   }
 
@@ -122,5 +122,5 @@ function formatUsername(scope: ScopeContext): string {
     return scope.app.id;
   }
 
-  throw new Error(`Unable to format username`);
+  throw new Error(`Could not format principal identity`);
 }

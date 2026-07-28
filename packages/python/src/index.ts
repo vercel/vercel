@@ -39,7 +39,6 @@ import {
 import {
   discoverPackage,
   ensureUvProject,
-  getVenvSitePackagesDirs,
   resolveVendorDir,
   installRequirementsFile,
   installRequirement,
@@ -80,11 +79,17 @@ import {
   runDjangoCollectStatic,
   type DjangoCollectStaticResult,
 } from './django';
-import { containsTopLevelCallable } from '@vercel/python-analysis';
+import {
+  runFastAPICollectStatic,
+  type FastAPICollectStaticResult,
+} from './fastapi';
+import {
+  containsTopLevelCallable,
+  type PyProjectToml,
+} from '@vercel/python-analysis';
 import {
   collectAppBytecodeFiles,
   collectAppPrefixBytecodeFiles,
-  getCompileAllAppExcludeRegex,
   runCompileAll,
   RUNTIME_PYCACHE_PREFIX,
   shouldCompileAll,
@@ -334,6 +339,7 @@ interface FrameworkHookContext {
   venvPath?: string;
   entrypoint: string | undefined;
   detected: DetectedPythonEntrypoint | undefined;
+  pyprojectData?: PyProjectToml;
 }
 
 interface FrameworkHookResult {
@@ -343,6 +349,10 @@ interface FrameworkHookResult {
 
 interface DjangoFrameworkHookResult extends FrameworkHookResult {
   djangoStatic: DjangoCollectStaticResult | null;
+}
+
+interface FastAPIFrameworkHookResult extends FrameworkHookResult {
+  fastapiStatic: FastAPICollectStaticResult;
 }
 
 type FrameworkHook = (
@@ -438,6 +448,55 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
       djangoStatic,
       extraPythonPath: baseDir ? join(workPath, baseDir) : undefined,
     };
+  },
+  fastapi: async ({
+    pythonEnv,
+    detected,
+    workPath,
+    venvPath,
+    pyprojectData,
+  }): Promise<FastAPIFrameworkHookResult | void> => {
+    if (!detected?.entrypoint || !workPath || !venvPath) {
+      debug(
+        `FastAPI hook: skipping — detected.entrypoint=${JSON.stringify(detected?.entrypoint)}, workPath=${workPath}, venvPath=${venvPath}`
+      );
+      return;
+    }
+
+    const { entrypoint: entrypointRel, variableName } = detected.entrypoint;
+    debug(
+      `FastAPI hook: entrypoint=${entrypointRel}, variableName=${variableName}`
+    );
+    const entrypointAbs = join(workPath, entrypointRel);
+    const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
+
+    const cdnEnv = process.env.VERCEL_FASTAPI_STATIC_CDN?.toLowerCase();
+    if (cdnEnv !== '1' && cdnEnv !== 'true') {
+      debug(
+        'FastAPI: VERCEL_FASTAPI_STATIC_CDN not set, skipping static CDN collection'
+      );
+      return;
+    }
+
+    const staticCdn = pyprojectData?.tool?.vercel?.fastapi?.static?.cdn;
+    if (staticCdn === false) {
+      debug(
+        'FastAPI: static.cdn = false in pyproject.toml, skipping CDN collection'
+      );
+      return;
+    }
+
+    const fastapiStatic = await runFastAPICollectStatic(
+      venvPath,
+      workPath,
+      pythonEnv,
+      outputStaticDir,
+      entrypointAbs,
+      variableName
+    );
+    if (!fastapiStatic) return;
+
+    return { fastapiStatic };
   },
 };
 
@@ -1045,6 +1104,7 @@ export const build: BuildVX = async ({
     venvPath,
     entrypoint,
     detected,
+    pyprojectData: pythonPackage.manifest?.data,
   });
 
   // Collect the resolved entrypoint from detection or hook, preferring the
@@ -1073,6 +1133,11 @@ export const build: BuildVX = async ({
 
   const djangoStatic: DjangoCollectStaticResult | null =
     (hookResult as DjangoFrameworkHookResult | undefined)?.djangoStatic ?? null;
+  const fastapiStatic: FastAPICollectStaticResult | null =
+    (hookResult as FastAPIFrameworkHookResult | undefined)?.fastapiStatic ??
+    null;
+  const cdnOutputDir =
+    djangoStatic?.cdnOutputDir ?? fastapiStatic?.cdnOutputDir ?? null;
 
   const pipPlatformArgs = target.uvPlatform
     ? ['--python-platform', target.uvPlatform]
@@ -1242,6 +1307,10 @@ export const build: BuildVX = async ({
   };
 
   const files: Files = await glob('**', globOptions);
+  const appPythonSourceFiles = Object.keys(files)
+    .filter(file => file.endsWith('.py'))
+    .map(file => join(workPath, file))
+    .sort();
 
   // Re-inject staticfiles.json into the Lambda bundle if a manifest storage
   // backend is in use. The CDN serves static assets; only the manifest is
@@ -1311,6 +1380,47 @@ export const build: BuildVX = async ({
         },
       });
 
+      const compileAllOptions = compileAllEnabled
+        ? {
+            pythonBin: getVenvPythonBin(venvPath),
+            env: pythonEnv,
+          }
+        : null;
+
+      const compileSources = async ({
+        includePackages,
+        pycachePrefix,
+      }: {
+        includePackages?: string[];
+        pycachePrefix?: string;
+      }) => {
+        if (!compileAllOptions) return;
+
+        const vendorSourceFiles =
+          installedDistributions.getPythonSourceFiles(includePackages);
+
+        await builderSpan
+          .child('vc.builder.python.compileall')
+          .trace(async compileSpan => {
+            console.log('Compiling Python bytecode...');
+            await runCompileAll({
+              ...compileAllOptions,
+              sourceFiles: [...appPythonSourceFiles, ...vendorSourceFiles],
+              pycachePrefix,
+            });
+
+            compileSpan.setAttributes({
+              'python.compileall.enabled': 'true',
+              'python.compileall.appSourceFileCount': String(
+                appPythonSourceFiles.length
+              ),
+              'python.compileall.vendorSourceFileCount': String(
+                vendorSourceFiles.length
+              ),
+            });
+          });
+      };
+
       // Precompile bytecode and fill remaining capacity up to capacityBytes.
       // Only .pyc for .py files already in the bundle are collected, so
       // excluded source can't re-enter as .pyc. Bytecode is a pure
@@ -1322,35 +1432,9 @@ export const build: BuildVX = async ({
         vendorPackageTiers?: string[][]
       ) => {
         try {
-          await builderSpan
-            .child('vc.builder.python.compileall')
-            .trace(async compileSpan => {
-              const sitePackageDirs = (
-                await getVenvSitePackagesDirs(venvPath)
-              ).filter(d => fs.existsSync(d));
-              const pythonBin = getVenvPythonBin(venvPath);
-
-              console.log('Compiling Python bytecode...');
-              await runCompileAll({
-                pythonBin,
-                filesOrDirectories: [workPath],
-                env: pythonEnv,
-                excludeRegex: getCompileAllAppExcludeRegex(workPath),
-              });
-
-              await runCompileAll({
-                pythonBin,
-                filesOrDirectories: sitePackageDirs,
-                env: pythonEnv,
-              });
-
-              compileSpan.setAttributes({
-                'python.compileall.enabled': 'true',
-                'python.compileall.sitePackageDirectoryCount': String(
-                  sitePackageDirs.length
-                ),
-              });
-            });
+          await compileSources({
+            includePackages: vendorPackageTiers?.flat(),
+          });
 
           const currentSize = await calculateBundleSize(files);
           let remainingCapacity = capacityBytes - currentSize;
@@ -1412,38 +1496,14 @@ export const build: BuildVX = async ({
           await fs.promises.rm(stagingDir, { recursive: true, force: true });
           await fs.promises.mkdir(stagingDir, { recursive: true });
 
-          await builderSpan
-            .child('vc.builder.python.compileall')
-            .trace(async compileSpan => {
-              const sitePackageDirs = (
-                await getVenvSitePackagesDirs(venvPath)
-              ).filter(d => fs.existsSync(d));
-              const pythonBin = getVenvPythonBin(venvPath);
-
-              console.log('Compiling Python bytecode...');
-              await runCompileAll({
-                pythonBin,
-                filesOrDirectories: [workPath],
-                env: pythonEnv,
-                excludeRegex: getCompileAllAppExcludeRegex(workPath),
-                pycachePrefix: stagingDir,
-              });
-
-              await runCompileAll({
-                pythonBin,
-                filesOrDirectories: sitePackageDirs,
-                env: pythonEnv,
-                pycachePrefix: stagingDir,
-              });
-
-              compileSpan.setAttributes({
-                'python.compileall.enabled': 'true',
-                'python.compileall.mode': 'pycache-prefix',
-                'python.compileall.sitePackageDirectoryCount': String(
-                  sitePackageDirs.length
-                ),
-              });
-            });
+          await compileSources({
+            includePackages: [
+              ...(bundleResult.alwaysBundledPackages ?? []),
+              ...(bundleResult.bundledPublicPackages ?? []),
+              ...(bundleResult.externalizedPublicPackages ?? []),
+            ],
+            pycachePrefix: stagingDir,
+          });
 
           const beforeCount = Object.keys(files).length;
 
@@ -1733,13 +1793,18 @@ export const build: BuildVX = async ({
     return { resultVersion: 3, result: { output } };
   }
 
-  // V2 services omit `type` and have isolated build outputs, so their Lambda
-  // can use the natural `index` path. V1 services still share one output and
-  // need the internal service namespace to avoid collisions.
+  // Keep framework Lambdas away from `index`: the filesystem treats that
+  // output as a match for `/`, which can finish a rewrite before the catch-all
+  // below copies the resolved destination into the runtime request path.
+  // V1 services still share one output and need their legacy namespace.
+  const frameworkLambdaName = framework ?? 'python';
+
   const lambdaPath =
-    service?.name && service.type ? `_svc/${service.name}/index` : 'index';
-  const staticFiles = djangoStatic?.cdnOutputDir
-    ? await glob('**', { cwd: djangoStatic.cdnOutputDir })
+    service?.name && service.type
+      ? `_svc/${service.name}/index`
+      : frameworkLambdaName;
+  const staticFiles = cdnOutputDir
+    ? await glob('**', { cwd: cdnOutputDir })
     : {};
 
   // Non-web V1 services (cron, worker, job) must not emit a catch-all route
@@ -1755,7 +1820,20 @@ export const build: BuildVX = async ({
       ? undefined
       : [
           { handle: 'filesystem' as const },
-          { src: '/(.*)', dest: `/${lambdaPath}` },
+          // This route matches the resolved destination after rewrites. Copy
+          // that path into the runtime request before dispatching the shared
+          // framework Lambda so application routing observes the rewrite.
+          {
+            src: '/(.*)',
+            dest: `/${lambdaPath}`,
+            transforms: [
+              {
+                type: 'request.path' as const,
+                op: 'set' as const,
+                args: '/$1',
+              },
+            ],
+          },
         ];
 
   return {

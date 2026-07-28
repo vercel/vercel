@@ -1,5 +1,24 @@
 # @vercel/python
 
+## 6.53.0
+
+### Minor Changes
+
+- 6aa29e5: Add [tool.vercel.fastapi.static] cdn opt-out flag.
+
+### Patch Changes
+
+- Updated dependencies [6aa29e5]
+  - @vercel/python-analysis@0.12.0
+
+## 6.52.0
+
+### Minor Changes
+
+- bfa1873: Reduce Python bytecode compilation work by compiling bundled application and dependency sources in a single subprocess.
+- 9a4f1e7: Collect fastapi static files to serve via CDN.
+- ae12b01: Expose the resolved rewrite destination as the request path observed by Python framework applications, and warn affected Python projects about the behavior change.
+
 ## 6.51.1
 
 ### Patch Changes

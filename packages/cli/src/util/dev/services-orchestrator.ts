@@ -726,7 +726,10 @@ export class ServicesOrchestrator {
 
     const perServiceEnv: Record<string, string> = {};
     for (const binding of service.bindings ?? []) {
-      if (binding.type !== 'service' || binding.format !== 'url') {
+      if (
+        (binding.type !== undefined && binding.type !== 'service') ||
+        binding.format !== 'url'
+      ) {
         continue;
       }
       if (binding.env in effectiveProcessEnv) {

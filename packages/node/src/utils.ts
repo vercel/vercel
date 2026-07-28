@@ -104,6 +104,20 @@ export function getRegExpFromMatchers(matcherOrMatchers: unknown): string {
   return regExps;
 }
 
+export function resolveMiddlewareMatcher(
+  configuredMatcher: string | string[] | undefined,
+  sourceMatcher: unknown,
+  entrypoint: string
+): unknown {
+  if (configuredMatcher !== undefined && sourceMatcher !== undefined) {
+    throw new Error(
+      `${entrypoint}: \`proxy.matcher\` in vercel.json conflicts with \`config.matcher\` exported from the proxy entrypoint. Configure the matcher in only one location.`
+    );
+  }
+
+  return configuredMatcher ?? sourceMatcher;
+}
+
 function getRegExpFromMatcher(
   matcher: unknown,
   index: number,
@@ -192,6 +206,20 @@ export function validateConfiguredRuntime(
         )}). Learn more: https://vercel.link/creating-edge-functions`
       );
     }
+  }
+}
+
+export function validateMiddlewareRuntime(
+  runtime: string | undefined,
+  entrypoint: string,
+  requiredRuntime?: 'nodejs'
+) {
+  validateConfiguredRuntime(runtime, entrypoint);
+
+  if (requiredRuntime === 'nodejs' && isEdgeRuntime(runtime)) {
+    throw new Error(
+      `${entrypoint}: explicit proxy entrypoints only support the Node.js runtime. Remove \`runtime: ${JSON.stringify(runtime)}\` from the exported \`config\`.`
+    );
   }
 }
 

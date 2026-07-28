@@ -225,6 +225,35 @@ describe('InstalledPythonDistributions', () => {
     );
   });
 
+  it('returns sorted, package-scoped Python sources from RECORD entries', () => {
+    const sitePackagesDir = path.join(tmpdir(), 'python-source-site-packages');
+    const installed = createInstalledDistributions({
+      sitePackagesDir,
+      distributions: createDistributionIndex([
+        [
+          'always-bundled',
+          [
+            { path: 'always/z.py' },
+            { path: 'always/data.json' },
+            { path: 'always/z.py' },
+            { path: '../outside.py' },
+          ],
+        ],
+        ['selected-public', [{ path: 'selected/a.py' }]],
+        ['externalized-public', [{ path: 'external/module.py' }]],
+      ]),
+    });
+
+    expect(
+      installed.getPythonSourceFiles(['always_bundled', 'selected.public'])
+    ).toEqual([
+      path.resolve(sitePackagesDir, 'always/z.py'),
+      path.resolve(sitePackagesDir, 'selected/a.py'),
+    ]);
+    expect(installed.getPythonSourceFiles([])).toEqual([]);
+    expect(installed.getPythonSourceFiles()).toHaveLength(3);
+  });
+
   it('collects adjacent bytecode and ignores out-of-tree RECORD entries', async () => {
     const baseDir = makeTempDir('adjacent-bytecode-records-');
     const sitePackagesDir = path.join(baseDir, 'site-packages');

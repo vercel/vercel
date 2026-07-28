@@ -1,5 +1,6 @@
 import {
   formatOption,
+  jsonOption,
   limitOption,
   projectOption,
 } from '../../util/arg-common';
@@ -29,6 +30,7 @@ export const inspectSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     {
       ...projectOption,
       shorthand: 'p',
@@ -50,7 +52,7 @@ export const inspectSubcommand = {
     },
     {
       name: 'Inspect as JSON',
-      value: `${packageName} alerts inspect grp_abc123 --format json`,
+      value: `${packageName} alerts inspect grp_abc123 --json`,
     },
   ],
 } as const;
@@ -113,6 +115,7 @@ export const alertsCommand = {
     },
     limitOption,
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -128,8 +131,12 @@ export const alertsCommand = {
       value: `${packageName} alerts --type usage_anomaly --type error_anomaly`,
     },
     {
+      name: 'List custom alert groups',
+      value: `${packageName} alerts --type custom_alert`,
+    },
+    {
       name: 'Output JSON',
-      value: `${packageName} alerts --format json`,
+      value: `${packageName} alerts --json`,
     },
     {
       name: 'Custom time range',

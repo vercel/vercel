@@ -219,7 +219,6 @@ export const formatOption = {
   shorthand: 'F',
   type: String,
   argument: 'FORMAT',
-  description: 'Specify the output format (json)',
   deprecated: false,
 } as const;
 
@@ -227,8 +226,8 @@ export const jsonOption = {
   name: 'json',
   shorthand: null,
   type: Boolean,
-  deprecated: true,
-  description: 'DEPRECATED: Use --format=json instead',
+  deprecated: false,
+  description: 'Output as JSON',
 } as const;
 
 export const nonInteractiveOption = {

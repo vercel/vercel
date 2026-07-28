@@ -188,6 +188,59 @@ describe('upgrade', () => {
     });
   });
 
+  describe('--enable-binary', () => {
+    it('opts in to the native binary in the global config', async () => {
+      client.setArgv('upgrade', '--enable-binary');
+      const exitCode = await upgrade(client);
+
+      expect(exitCode).toBe(0);
+      expect(client.config.useNativeBinary).toBe(true);
+      expect(writeConfigSpy).toHaveBeenCalledWith({
+        useNativeBinary: true,
+      });
+      await expect(client.stderr).toOutput('Native Vercel CLI binary enabled.');
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:enable-binary',
+          value: 'TRUE',
+        },
+      ]);
+    });
+  });
+
+  describe('--disable-binary', () => {
+    it('opts out of the native binary in the global config', async () => {
+      client.config = { useNativeBinary: true };
+      client.setArgv('upgrade', '--disable-binary');
+      const exitCode = await upgrade(client);
+
+      expect(exitCode).toBe(0);
+      expect(client.config.useNativeBinary).toBe(false);
+      expect(writeConfigSpy).toHaveBeenCalledWith({
+        useNativeBinary: false,
+      });
+      await expect(client.stderr).toOutput(
+        'Native Vercel CLI binary disabled.'
+      );
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:disable-binary',
+          value: 'TRUE',
+        },
+      ]);
+    });
+  });
+
+  it('rejects mutually exclusive binary flags', async () => {
+    client.setArgv('upgrade', '--enable-binary', '--disable-binary');
+    const result = await upgrade(client);
+
+    expect(result).toBe(1);
+    await expect(client.stderr).toOutput(
+      'Cannot use --enable-binary and --disable-binary together'
+    );
+  });
+
   it('rejects mutually exclusive auto-update flags', async () => {
     client.setArgv('upgrade', '--enable-auto', '--disable-auto');
     const result = await upgrade(client);

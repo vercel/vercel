@@ -15,6 +15,7 @@ import {
   getPrettyError,
 } from '@vercel/build-utils';
 import { fileNameSymbol } from '@vercel/client';
+import { validateProxyConfig } from '@vercel/fs-detectors';
 import { getConfigValidator } from './config-validator';
 
 const imagesSchema = {
@@ -503,9 +504,13 @@ const servicesServiceNamePattern = '^[a-z]([a-z_-]*[a-z])?$';
 const servicesBindingSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['type', 'service', 'format', 'env'],
+  required: ['service', 'format', 'env'],
   properties: {
-    type: { const: 'service' },
+    type: {
+      description:
+        'Optional binding type marker. Currently the only supported type is `service`. When present this must be `service`.',
+      const: 'service',
+    },
     service: {
       type: 'string',
       minLength: 1,
@@ -571,6 +576,34 @@ const getServicesSchema = () => ({
   additionalProperties: getServicesServiceConfigSchema(),
 });
 
+const proxySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['entrypoint'],
+  properties: {
+    entrypoint: {
+      type: 'string',
+      minLength: 1,
+    },
+    matcher: {
+      oneOf: [
+        {
+          type: 'string',
+          minLength: 1,
+        },
+        {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'string',
+            minLength: 1,
+          },
+        },
+      ],
+    },
+  },
+};
+
 export function buildVercelConfigSchema() {
   return {
     type: 'object',
@@ -589,6 +622,7 @@ export function buildVercelConfigSchema() {
       images: imagesSchema,
       crons: cronsSchema,
       bunVersion: { type: 'string' },
+      proxy: proxySchema,
       experimentalServices: getExperimentalServicesSchema(),
       experimentalServiceGroups: experimentalServiceGroupsSchema,
       services: getServicesSchema(),
@@ -609,12 +643,30 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
     }
   }
 
+  if (config.proxy) {
+    const proxyError = validateProxyConfig(config.proxy);
+    if (proxyError) {
+      return new NowBuildError({
+        code: proxyError.code.toUpperCase(),
+        message: proxyError.message,
+      });
+    }
+  }
+
   if (config.functions && config.builds) {
     return new NowBuildError({
       code: 'FUNCTIONS_AND_BUILDS',
       message:
         'The `functions` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
       link: 'https://vercel.link/functions-and-builds',
+    });
+  }
+
+  if (config.proxy && config.builds) {
+    return new NowBuildError({
+      code: 'PROXY_AND_BUILDS',
+      message:
+        'The `proxy` property cannot be used with the `builds` property. Remove `builds` to use an explicit proxy entrypoint.',
     });
   }
 
