@@ -1,5 +1,12 @@
 # @vercel/connect
 
+## 0.5.0
+
+### Minor Changes
+
+- 72d6d55: Add `connectPhotonCredentials` for resolving app-scoped Photon project credentials from a Vercel Connect connector.
+- 9ac74f0: Adding `getConnectorMetadata()` to `@vercel/connect` SDK
+
 ## 0.4.3
 
 ### Patch Changes

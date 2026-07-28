@@ -1,5 +1,17 @@
 # vercel
 
+## 58.2.0
+
+### Minor Changes
+
+- ce19aa5: Fix `vercel buy addon customEnvironment <packs>` to purchase per-project custom environment capacity via `/v1/projects/custom-environments/settings` instead of `/v1/billing/buy`. Supports `--project` for non-linked directories, accepts common name aliases, validates pack ranges client-side, and shows clearer errors for Hobby teams (`upgrade_required`), feature-flag blocks, and over-limit requests.
+
+### Patch Changes
+
+- b9cbe9c: Support binary versions, gated behind an opt-in flag (`vc upgrade --binary`)
+- 611ecbe: Test the corrected binary release detection in the Release workflow.
+- 18585bc: Restore `--format` in command help output while keeping `--json` available.
+
 ## 58.1.0
 
 ### Minor Changes
