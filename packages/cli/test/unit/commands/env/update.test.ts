@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import env from '../../../../src/commands/env';
 import {
   setupTmpDir,
@@ -491,6 +491,62 @@ describe('env update', () => {
       await expect(exitCodePromise).resolves.toBe(1);
 
       teamSpy.mockRestore();
+    });
+
+    describe('VERCEL_ENV_VAR_CONFIG_SECRET_UI', () => {
+      const originalFlag = process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
+
+      beforeEach(() => {
+        process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI = '1';
+      });
+
+      afterEach(() => {
+        if (originalFlag === undefined) {
+          delete process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
+        } else {
+          process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI = originalFlag;
+        }
+      });
+
+      it('allows updating a Development record when team policy is on', async () => {
+        const teamModule = await import(
+          '../../../../src/util/teams/get-team-by-id'
+        );
+        const teamSpy = vi.spyOn(teamModule, 'default').mockResolvedValue({
+          sensitiveEnvironmentVariablePolicy: 'on',
+        } as any);
+
+        const cwd = setupUnitFixture('vercel-env-pull');
+        client.cwd = cwd;
+        client.setArgv(
+          'env',
+          'update',
+          'TEST_VAR_DEV',
+          '--value',
+          'new-value',
+          '--yes'
+        );
+        const exitCodePromise = env(client);
+        await expect(exitCodePromise).resolves.toBe(0);
+
+        teamSpy.mockRestore();
+      });
+
+      it('allows --sensitive on a Development record', async () => {
+        const cwd = setupUnitFixture('vercel-env-pull');
+        client.cwd = cwd;
+        client.setArgv(
+          'env',
+          'update',
+          'TEST_VAR_DEV',
+          '--sensitive',
+          '--value',
+          'new-value',
+          '--yes'
+        );
+        const exitCodePromise = env(client);
+        await expect(exitCodePromise).resolves.toBe(0);
+      });
     });
   });
 });

@@ -26,6 +26,10 @@ import { resolveProjectContext } from '../../util/projects/resolve-project-conte
 import getTeamById from '../../util/teams/get-team-by-id';
 import type { ProjectEnvVariable } from '@vercel-internals/types';
 import { getGlobalFlagsFromArgs } from '../../util/arg-common';
+import {
+  isEnvVarConfigSecretUiEnabled,
+  shouldEnforceSensitiveEnvVarPolicy,
+} from '../../util/env/env-var-config-secret-ui';
 
 function selectedEnvTargetsDevelopment(env: ProjectEnvVariable): boolean {
   if (typeof env.target === 'string') return env.target === 'development';
@@ -372,11 +376,14 @@ export default async function update(client: Client, argv: string[]) {
   }
 
   // Detect team-level sensitive env var policy. Cached in getTeamById.
+  const configSecretUiEnabled = isEnvVarConfigSecretUiEnabled();
   let policyOn = false;
   if (link.org.type === 'team') {
     try {
       const team = await getTeamById(client, link.org.id);
-      policyOn = team?.sensitiveEnvironmentVariablePolicy === 'on';
+      policyOn = shouldEnforceSensitiveEnvVarPolicy(
+        team?.sensitiveEnvironmentVariablePolicy === 'on'
+      );
     } catch {
       // Non-fatal — policy detection is best-effort.
     }
@@ -401,7 +408,7 @@ export default async function update(client: Client, argv: string[]) {
     return 1;
   }
 
-  if (opts['--sensitive'] && selectedIsDevelopment) {
+  if (opts['--sensitive'] && selectedIsDevelopment && !configSecretUiEnabled) {
     const msg = `--sensitive is not allowed with the Development Environment. Sensitive Environment Variables are only supported on Production and Preview.`;
     if (client.nonInteractive) {
       outputAgentError(
