@@ -883,7 +883,7 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 
   - Create a non-managed connector from explicit data
 
-    $ vercel connect create mcp.linear.app --name linear --data '{\\"clientId\\":\\"abc123\\"}'
+    $ vercel connect create mcp.linear.app --name linear --data '{"clientId":"abc123"}'
 
   - Create a non-managed connector, reading credentials from a file (keeps secrets out of shell history)
 
@@ -1143,7 +1143,7 @@ exports[`help command > connex help output snapshots > connex token subcommand >
                                default installation)                                                                         
        --json                  Output as JSON                                                                                
        --scopes <SCOPES>       Scopes (comma- or space-separated)                                                            
-  -s,  --subject <TYPE>        Subject type: \\"user\\" (default, acts on behalf of you) or \\"app\\" (uses the connector's default  
+  -s,  --subject <TYPE>        Subject type: "user" (default, acts on behalf of you) or "app" (uses the connector's default  
                                installation)                                                                                 
   -y,  --yes                   Accept default value for all prompts                                                          
 
@@ -1348,7 +1348,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 cache   
                                 when    
                                 using   
-                                \\"--forc…
+                                "--forc…
   -y,  --yes                    Use     
                                 default 
                                 options 
@@ -1481,7 +1481,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 deployment. You can use \`vc promote\` to complete
                                 the domain-assignment process later             
        --target <TARGET>        Specify the target deployment environment       
-       --with-cache             Retain build cache when using \\"--force\\"         
+       --with-cache             Retain build cache when using "--force"         
   -y,  --yes                    Use default options to skip all prompts         
 
 
@@ -1563,7 +1563,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
        --skip-domain            Disable the automatic promotion (aliasing) of the relevant domains to a new production  
                                 deployment. You can use \`vc promote\` to complete the domain-assignment process later    
        --target <TARGET>        Specify the target deployment environment                                               
-       --with-cache             Retain build cache when using \\"--force\\"                                                 
+       --with-cache             Retain build cache when using "--force"                                                 
   -y,  --yes                    Use default options to skip all prompts                                                 
 
 
@@ -4501,7 +4501,7 @@ exports[`help command > integration help output snapshots > integration update s
        --installation-id <ID>   Configuration ID when multiple marketplace installations exist for this integration          
        --json                   Output as JSON                                                                               
   -p,  --plan <PLAN_ID>         Billing plan ID for integrations that support installation-level billing plans               
-       --projects <PROJECT>     Project ID allowed to use this installation, or \\"all\\" for all projects (repeatable)          
+       --projects <PROJECT>     Project ID allowed to use this installation, or "all" for all projects (repeatable)          
 
 
   Global Options:

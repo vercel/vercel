@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import login from '../../../../src/commands/login';
 import { performDeviceCodeFlow } from '../../../../src/commands/login/future';
 import { client } from '../../../mocks/client';
@@ -16,9 +16,13 @@ vi.mock('../../../../src/util/fetch', async () => ({
 
 vi.mock('open', () => {
   return {
-    default: vi.fn().mockResolvedValue(undefined),
+    default: vi.fn().mockResolvedValue({
+      on: vi.fn(),
+    }),
   };
 });
+
+let originalCI: string | undefined;
 
 function mockResponse(data: unknown, ok = true): Response {
   return {
@@ -53,6 +57,16 @@ function simulateTokenPolling(pollCount: number, finalResponse: Response) {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  originalCI = process.env.CI;
+  delete process.env.CI;
+});
+
+afterEach(() => {
+  if (originalCI === undefined) {
+    delete process.env.CI;
+  } else {
+    process.env.CI = originalCI;
+  }
 });
 
 describe('login', () => {
@@ -453,7 +467,7 @@ describe('login', () => {
 
       expect(exitCode).toBe(0);
       expect(client.config.currentTeam).toBe('team_default');
-      await expect(client.stderr).toOutput(
+      expect(client.getFullOutput()).toContain(
         'Your previously selected team is no longer accessible'
       );
 
