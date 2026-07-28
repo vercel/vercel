@@ -123,6 +123,46 @@ describe('getScope', () => {
       expect(contextName).toEqual(mockTeam.slug);
     });
 
+    it('should apply the token team to subsequent API requests', async () => {
+      useAppToken();
+      client.scenario.get('/scope-probe', (req, res) => {
+        expect(req.query.teamId).toEqual(mockTeam.id);
+        res.json({ ok: true });
+      });
+
+      await getScope(client);
+      await client.fetch('/scope-probe');
+
+      expect(client.config.currentTeam).toEqual(mockTeam.id);
+    });
+
+    it('should override a stale configured team with the token team', async () => {
+      useAppToken();
+      client.config.currentTeam = 'team_stale';
+
+      const { team } = await getScope(client);
+
+      expect(team?.id).toEqual(mockTeam.id);
+      expect(client.config.currentTeam).toEqual(mockTeam.id);
+    });
+
+    it('should clear stale scope for an app token without a team', async () => {
+      client.scenario.get('/v2/user', (_req, res) => {
+        res.status(403).json({ error: { message: 'forbidden' } });
+      });
+      introspectTokenMock.mockResolvedValue({
+        active: true,
+        client_id: 'app_dummy',
+        client_name: 'Dummy App',
+      });
+      client.config.currentTeam = 'team_stale';
+
+      await expect(getScope(client)).rejects.toThrow(
+        'Unable to determine context name'
+      );
+      expect(client.config.currentTeam).toBeUndefined();
+    });
+
     it('should resolve local scope to the token team for an app token', async () => {
       useAppToken();
       const ctx = await getScope(client, { resolveLocalScope: true });

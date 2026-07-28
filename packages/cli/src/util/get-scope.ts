@@ -76,6 +76,14 @@ export default async function getScope(
 
   const defaultTeamId =
     user?.version === 'northstar' ? user.defaultTeamId : undefined;
+  const appTeamId = !user && app ? token?.team?.id : undefined;
+
+  // App tokens are bound to their introspected team. Make that team the
+  // effective request scope so subsequent API calls include the correct
+  // `teamId`, and so a stale team from the user's global config cannot win.
+  if (!user && app) {
+    client.config.currentTeam = appTeamId;
+  }
 
   // A Northstar user has no usable personal scope, so their default team is the
   // effective scope. The default is only persisted to `currentTeam` at login
@@ -88,7 +96,7 @@ export default async function getScope(
     client.config.currentTeam = defaultTeamId;
   }
 
-  const teamId = client.config.currentTeam || defaultTeamId || token?.team?.id;
+  const teamId = client.config.currentTeam || defaultTeamId;
   const team =
     teamId && opts.getTeam !== false ? await getTeam(client, teamId) : null;
 
