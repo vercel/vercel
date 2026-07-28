@@ -2,4 +2,4 @@
 '@vercel/connect': minor
 ---
 
-Adding `getConnector()` to `@vercel/connect` SDK
+Adding `getConnectorMetadata()` to `@vercel/connect` SDK

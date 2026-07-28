@@ -8,7 +8,7 @@ import {
  * Connector metadata as returned by Vercel Connect. This is the stable, useful
  * subset of the connector object the management APIs return.
  */
-export interface ConnexConnector {
+export interface ConnectorMetadata {
   /** Opaque Vercel Connect connector id (e.g. `scl_…`). */
   id: string;
   /** Human-readable Vercel Connect connector UID. */
@@ -22,8 +22,8 @@ export interface ConnexConnector {
   clientUrl?: string;
   createdAt: number;
   updatedAt: number;
-  /** Service-specific public configuration. */
-  data: Record<string, unknown>;
+  /** Vendor-specific public configuration. */
+  vendor: Record<string, unknown>;
 }
 
 /**
@@ -35,10 +35,10 @@ export interface ConnexConnector {
  *
  * @param connector - The connector id or UID.
  */
-export async function getConnector(
+export async function getConnectorMetadata(
   connector: string,
   options?: ConnectOptions
-): Promise<ConnexConnector> {
+): Promise<ConnectorMetadata> {
   const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
 
   const endpoint = `https://api.vercel.com/v1/connect/connectors/${encodeURIComponent(connector)}`;
@@ -58,5 +58,11 @@ export async function getConnector(
     );
   }
 
-  return (await response.json()) as ConnexConnector;
+  const { data, ...rest } = (await response.json()) as Record<
+    string,
+    unknown
+  > & {
+    data?: Record<string, unknown>;
+  };
+  return { ...rest, vendor: data ?? {} } as ConnectorMetadata;
 }

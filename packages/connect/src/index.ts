@@ -31,4 +31,7 @@ export {
 
 export type { ConnectAuthorizationDetail } from './authorization-details.js';
 
-export { getConnector, type ConnexConnector } from './connector.js';
+export {
+  getConnectorMetadata,
+  type ConnectorMetadata,
+} from './connector.js';

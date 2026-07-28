@@ -1,6 +1,6 @@
 import { getVercelOidcToken } from '@vercel/oidc';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ConnectError, getConnector } from '../src/index.js';
+import { ConnectError, getConnectorMetadata } from '../src/index.js';
 
 vi.mock('@vercel/oidc', () => ({
   getVercelOidcToken: vi.fn(),
@@ -21,7 +21,7 @@ const CONNECTOR = {
   },
 };
 
-describe('getConnector', () => {
+describe('getConnectorMetadata', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -38,7 +38,7 @@ describe('getConnector', () => {
   it('fetches connector metadata with the explicit Vercel token', async () => {
     fetchMock.mockResolvedValue(jsonResponse(CONNECTOR));
 
-    const connector = await getConnector('snowflake/analytics', {
+    const connector = await getConnectorMetadata('snowflake/analytics', {
       vercelToken: 'vercel_token',
     });
 
@@ -63,7 +63,7 @@ describe('getConnector', () => {
   it('uses the Vercel OIDC token when no explicit token is provided', async () => {
     fetchMock.mockResolvedValue(jsonResponse(CONNECTOR));
 
-    await getConnector('snowflake/analytics');
+    await getConnectorMetadata('snowflake/analytics');
 
     expect(getVercelOidcToken).toHaveBeenCalledTimes(1);
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -72,13 +72,15 @@ describe('getConnector', () => {
     );
   });
 
-  it('returns the connector service and service-specific data', async () => {
+  it('surfaces the wire `data` field as `vendor`', async () => {
     fetchMock.mockResolvedValue(jsonResponse(CONNECTOR));
 
-    const connector = await getConnector('snowflake/analytics');
+    const connector = await getConnectorMetadata('snowflake/analytics');
 
     expect(connector.service).toBe('snowflake');
-    expect(connector.data.accountIdentifier).toBe('ACME-XY123');
+    expect(connector.vendor.accountIdentifier).toBe('ACME-XY123');
+    expect(connector.vendor.defaultSessionRole).toBe('REPORTER');
+    expect('data' in connector).toBe(false);
   });
 
   it('throws a ConnectError on a non-ok response', async () => {
@@ -86,7 +88,7 @@ describe('getConnector', () => {
       jsonResponse({ error: { code: 'not_found' } }, { status: 404 })
     );
 
-    await expect(getConnector('scl_missing')).rejects.toBeInstanceOf(
+    await expect(getConnectorMetadata('scl_missing')).rejects.toBeInstanceOf(
       ConnectError
     );
   });
