@@ -101,7 +101,7 @@ function stubRegistryFetch(
 }
 
 /** Fake child process that exits with a failure code. */
-function fakeChildFailure(stderr = '') {
+function fakeChildFailure(stderr = '', code = 1) {
   const child: any = new EventEmitter();
   child.stdout = new EventEmitter();
   child.stderr = new EventEmitter();
@@ -110,7 +110,7 @@ function fakeChildFailure(stderr = '') {
     if (stderr) {
       child.stderr.emit('data', Buffer.from(stderr));
     }
-    child.emit('close', 1);
+    child.emit('close', code);
   });
   return child;
 }
@@ -1392,6 +1392,22 @@ describe('@vercel/container', () => {
       }
     });
 
+    it('describes CNB lifecycle creator exit codes by phase', async () => {
+      const { describeCreatorExitCode } = await import(
+        '../src/buildpacks/lifecycle'
+      );
+      expect(describeCreatorExitCode(20)).toBe('no buildpack detected the app');
+      expect(describeCreatorExitCode(21)).toMatch(/errored during detection/);
+      expect(describeCreatorExitCode(51)).toMatch(
+        /failed while building the app/
+      );
+      expect(describeCreatorExitCode(52)).toBe('the build phase failed');
+      expect(describeCreatorExitCode(62)).toMatch(/export phase/);
+      // Unknown / generic codes get no interpretation.
+      expect(describeCreatorExitCode(1)).toBeUndefined();
+      expect(describeCreatorExitCode(undefined)).toBeUndefined();
+    });
+
     it('resolves the buildpack from either config channel and honors marker precedence', () => {
       expect(requestedBuildpack({ buildpack: 'ruby' })).toBe(ruby);
       expect(requestedBuildpack({ framework: 'ruby' })).toBe(ruby);
@@ -1561,18 +1577,26 @@ describe('@vercel/container', () => {
           );
         }
         if (cmd === 'buildah' && args.includes('/cnb/lifecycle/creator')) {
-          return fakeChildFailure('ERROR: failed to detect a launch process');
+          // 51: lifecycle build-phase failure (a buildpack's /bin/build errored).
+          return fakeChildFailure('ERROR: failed to build: exit status 1', 51);
         }
         return fakeChild('');
       });
 
-      await expect(
-        build({
-          ...createBuildOptions({ buildpack: 'ruby' }),
-          entrypoint: '<detect>',
-          service: { name: 'api' },
-        })
-      ).rejects.toThrow(/failed to detect a launch process/);
+      const failure = await build({
+        ...createBuildOptions({ buildpack: 'ruby' }),
+        entrypoint: '<detect>',
+        service: { name: 'api' },
+      }).then(
+        () => undefined,
+        err => err as Error
+      );
+      expect(failure?.message).toContain('exited with code 51');
+      // The wrapper explains the lifecycle exit code instead of leaving a
+      // bare number.
+      expect(failure?.message).toContain(
+        'The lifecycle exited with code 51: a buildpack failed while building the app'
+      );
       const cleanupArgs = spawnMock.mock.calls.find(
         ([cmd, args]) => cmd === 'buildah' && (args as string[]).includes('rm')
       )?.[1] as string[] | undefined;
@@ -1660,6 +1684,34 @@ describe('@vercel/container', () => {
         )
       ).toBe(true);
       await result!.shutdown!();
+    });
+
+    it('explains creator exit codes when a dev buildpack build fails', async () => {
+      existsSyncMock.mockImplementation((p: string) => p === '/Gemfile');
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'docker' && args[0] === 'image' && args[1] === 'inspect') {
+          return fakeChild('linux/amd64\n');
+        }
+        if (
+          cmd === 'docker' &&
+          args[0] === 'run' &&
+          args.includes('/cnb/lifecycle/creator')
+        ) {
+          return fakeChildFailure('ERROR: No buildpack groups passed', 20);
+        }
+        return fakeChild('');
+      });
+
+      await expect(
+        startDevServer({
+          ...createBuildOptions({ buildpack: 'ruby' }),
+          entrypoint: '<detect>',
+          service: { name: 'ruby-api' },
+          meta: { isDev: true },
+        } as any)
+      ).rejects.toThrow(
+        /exited with code 20 \(no buildpack detected the app\)/
+      );
     });
 
     it('runs a dev command override through the CNB launcher', async () => {

@@ -169,6 +169,11 @@ export interface RunResult {
   stderr: string;
 }
 
+/** Rejection from {@link run} carrying the command's exit code. */
+export interface RunError extends Error {
+  exitCode?: number;
+}
+
 /**
  * Run a command, streaming its output to stderr while capturing it for parsing.
  */
@@ -232,12 +237,12 @@ export function run(
         resolve({ stdout, stderr });
       } else {
         const detail = stderr.trim().split('\n').slice(-5).join('\n');
-        reject(
-          new Error(
-            `\`${cmd} ${args.join(' ')}\` exited with code ${code}` +
-              (detail ? `\n${detail}` : '')
-          )
+        const error: RunError = new Error(
+          `\`${cmd} ${args.join(' ')}\` exited with code ${code}` +
+            (detail ? `\n${detail}` : '')
         );
+        error.exitCode = code ?? undefined;
+        reject(error);
       }
     });
 

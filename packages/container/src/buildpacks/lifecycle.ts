@@ -15,7 +15,7 @@ import { dirname, join } from 'node:path';
 import { stringify as stringifyToml } from 'smol-toml';
 import { DIGEST_RE, TARGET_PLATFORM } from '../engines/types';
 import { buildahStorageArgs } from '../storage-driver';
-import type { DevOutput } from '../util';
+import type { DevOutput, RunError } from '../util';
 import {
   assertValidCommandShell,
   debug,
@@ -178,6 +178,29 @@ function shellEscape(arg: string): string {
   return /^[A-Za-z0-9_/.=:@%^+-]+$/.test(arg)
     ? arg
     : `'${arg.replace(/'/g, `'\\''`)}'`;
+}
+
+/**
+ * Explain a CNB lifecycle/creator exit code in terms of the phase that
+ * failed, so failures point at the right part of the build output instead of
+ * a bare number. Codes per `buildpacks/lifecycle` `platform/exit.go`.
+ */
+export function describeCreatorExitCode(
+  code: number | undefined
+): string | undefined {
+  if (code === undefined) return undefined;
+  if (code === 20) return 'no buildpack detected the app';
+  if (code === 21)
+    return 'no buildpack detected the app and at least one errored during detection';
+  if (code >= 22 && code <= 29) return 'the detect phase failed';
+  if (code >= 30 && code <= 39) return 'the analyze phase failed';
+  if (code >= 40 && code <= 49) return 'the restore phase failed';
+  if (code === 51)
+    return 'a buildpack failed while building the app (e.g. installing dependencies) — its error is in the build output above';
+  if (code >= 50 && code <= 59) return 'the build phase failed';
+  if (code >= 60 && code <= 69)
+    return 'the export phase failed to write the image';
+  return undefined;
 }
 
 /** In-container mount point for the generated `order.toml`. */
@@ -428,8 +451,17 @@ export async function buildWithLifecycle(
             );
           });
           child.on('close', code => {
-            if (code === 0) resolve();
-            else reject(new Error(`\`docker run\` exited with code ${code}`));
+            if (code === 0) {
+              resolve();
+              return;
+            }
+            const hint = describeCreatorExitCode(code ?? undefined);
+            reject(
+              new Error(
+                `\`docker run\` exited with code ${code}` +
+                  (hint ? ` (${hint})` : '')
+              )
+            );
           });
         });
       } finally {
@@ -575,9 +607,15 @@ export async function buildAndPushWithLifecycle(
         });
         return { imageRef: params.imageRef, digest, builder };
       } catch (err) {
+        const hint = describeCreatorExitCode((err as RunError).exitCode);
         throw new Error(
           [
             `${bp.runtime} buildpack build failed via lifecycle/creator (${builder}).`,
+            ...(hint
+              ? [
+                  `The lifecycle exited with code ${(err as RunError).exitCode}: ${hint}.`,
+                ]
+              : []),
             '',
             `Underlying error: ${(err as Error).message}`,
             '',
