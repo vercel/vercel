@@ -15,7 +15,9 @@ import type {
 } from '@vercel/build-utils';
 import {
   debug,
+  isQueueBackedService,
   isScheduleTriggeredService,
+  isWorkflowTriggeredService,
   NowBuildError,
 } from '@vercel/build-utils';
 import { buildCronRouteTable, getServiceCrons } from './crons';
@@ -962,16 +964,37 @@ export const startDevServer: StartDevServer = async opts => {
       );
     }
 
+    // Legacy vercel-workers projects run every dev process on the injected
+    // pinned vercel-workers, mirroring the build-time injection: both the
+    // worker bootstrap and publish-side send() need the pinned version
+    if (legacyProject) {
+      await installInjectedDevPackage(
+        {
+          name: 'vercel-workers',
+          pinnedVersion: VERCEL_WORKERS_VERSION,
+          envOverride: env.VERCEL_WORKERS_PYTHON,
+        },
+        devOpts
+      );
+    }
+
     // Queue sidecars (subscribers/workflows) are served through vercel-queue
     // when the project's SDK supports it, and through the legacy
     // vercel-workers bootstrap otherwise. Deliberately not keyed on
     // env.VERCEL_HAS_WORKER_SERVICES: the CLI sets that for every
-    // queue-service project regardless of SDK generation.
+    // queue-service project regardless of SDK generation. Besides pyproject
+    // sidecars (marked by the CLI via config.pythonQueueSidecar), this
+    // covers queue-backed experimentalServices (worker and queue/workflow
+    // triggered job services) until we fully get rid of them.
     const queueSidecarKind =
       config?.pythonQueueSidecar === 'subscriber' ||
       config?.pythonQueueSidecar === 'workflow'
         ? config.pythonQueueSidecar
-        : undefined;
+        : service && isQueueBackedService(service)
+          ? isWorkflowTriggeredService(service)
+            ? 'workflow'
+            : 'subscriber'
+          : undefined;
     let queueSubscriptions: DevQueueSubscription[] | undefined;
     if (queueSidecarKind) {
       let useQueueServing = !legacyProject;
