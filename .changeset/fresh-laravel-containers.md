@@ -15,3 +15,6 @@ declared package-manager version support, Services command overrides, and local
 Laravel-native Blob, Queues, and broadcasting adapters without an application
 dependency. Deploys provision private Blob storage when needed and emit private
 `queue/v2beta` consumers that execute jobs through Laravel's native worker.
+Laravel broadcasting is routed to an attached, digest-pinned Reverb-compatible
+WebSocket service. Services also accept qualified prebuilt OCI image
+entrypoints, avoiding a source container rebuild during fresh deployments.

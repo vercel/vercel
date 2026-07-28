@@ -29,7 +29,8 @@ async function detectFixture(fixture: string) {
  *   - `runtime: "container"` with no `entrypoint` auto-detects one of the four
  *     blessed names (`Dockerfile`, `Containerfile`, `Dockerfile.vercel`,
  *     `Containerfile.vercel`) in the service root.
- *   - There is no prebuilt-image-reference entrypoint anymore.
+ *   - A fully-qualified tagged or digest-pinned OCI image is accepted without
+ *     a local Dockerfile.
  */
 describe('detectServices (services) — container detection', () => {
   describe('success cases', () => {
@@ -62,8 +63,27 @@ describe('detectServices (services) — container detection', () => {
       });
       expect(svc.builder.use).toBe('@vercel/container');
       expect(svc.builder.src).toBe(expectedSrc);
-      // Images are gone: no prebuilt-image handler should ever be set.
       expect(svc.builder.config).not.toHaveProperty('handler');
+    });
+
+    it('resolves a prebuilt OCI image without building a Dockerfile', async () => {
+      const result = await detectFixture('pass-prebuilt-image');
+
+      expect(result.errors).toEqual([]);
+      const [svc] = servicesV2(result.services);
+      expect(svc).toMatchObject({
+        root: '.',
+        runtime: 'container',
+        entrypoint:
+          'ghcr.io/vercel/example@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        builder: {
+          use: '@vercel/container',
+          config: {
+            handler:
+              'ghcr.io/vercel/example@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          },
+        },
+      });
     });
 
     it('prefers a .vercel marker over a plain Dockerfile when auto-detecting', async () => {
