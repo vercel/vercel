@@ -443,9 +443,15 @@ export default async function inputProject(
       // single remote there is no choice to make.
       if (remoteContext && remoteContext.otherRemoteNames.length > 0) {
         choices.push({
-          name: 'Choose a different remote',
+          // Name the remote in the label, not just the description: unlike the
+          // team, which the "Which team?" line above still shows, nothing else
+          // on screen says which remote produced these suggestions, and
+          // descriptions only render for the highlighted row.
+          name: `Choose a different remote ${chalk.gray(
+            `(using ${remoteContext.remoteName})`
+          )}`,
           value: CHOOSE_DIFFERENT_REMOTE,
-          description: `Currently ${remoteContext.remoteName}; also ${remoteContext.otherRemoteNames.join(
+          description: `Also available: ${remoteContext.otherRemoteNames.join(
             ', '
           )}`,
         });
