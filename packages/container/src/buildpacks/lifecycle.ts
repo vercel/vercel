@@ -15,7 +15,7 @@ import { dirname, join } from 'node:path';
 import { stringify as stringifyToml } from 'smol-toml';
 import { DIGEST_RE, TARGET_PLATFORM } from '../engines/types';
 import { buildahStorageArgs } from '../storage-driver';
-import type { DevOutput, RunError } from '../util';
+import type { DevOutput, RunError, RunResult } from '../util';
 import {
   assertValidCommandShell,
   debug,
@@ -107,20 +107,26 @@ function needsRuntimeReadableCopy(path: string): boolean {
  * launches as an unprivileged user. Repositories created under a restrictive
  * umask can contain 0700 directories or 0600 files, so stage those trees and
  * make the staged copy runtime-readable without mutating the user's checkout.
- * `forceStage` requests a copy even for readable trees, for callers that
- * need to add generated files (e.g. a `command` Procfile) without touching
- * the source tree.
+ *
+ * Dev-only: the deploy path copies the app into the working container with
+ * build-user ownership instead (see `buildAndPushWithLifecycle`).
+ *
+ * TODO: on Linux dev hosts the bind-mounted workspace is not writable by the
+ * builder's build user, so buildpacks that write to the app dir (bundler
+ * lockfile updates, rails-assets, ...) fail. Fix it the pack way — a named
+ * volume populated by a root helper container (`docker volume create` →
+ * helper `docker run` copy+chown → mount volume → `docker volume rm`) — not
+ * a chown through the bind mount, which leaves files the unprivileged dev
+ * process cannot delete. macOS Docker Desktop mounts are permissive, so dev
+ * is unaffected there today.
  */
-function prepareAppDirectory(
-  workPath: string,
-  forceStage = false
-): PreparedAppDirectory {
+function prepareAppDirectory(workPath: string): PreparedAppDirectory {
   // Some unit-level builder callers use the filesystem root as a synthetic
   // workPath. It is never a valid app tree and cannot be staged beneath /tmp.
   if (dirname(workPath) === workPath) {
     return { workPath };
   }
-  if (!forceStage && !needsRuntimeReadableCopy(workPath)) {
+  if (!needsRuntimeReadableCopy(workPath)) {
     return { workPath };
   }
 
@@ -244,9 +250,10 @@ function writeOrderDir(bp: BuildpackDescriptor): string {
  * user Procfile is intentionally overwritten — explicit vercel.json config
  * wins over convention files.
  *
- * Only the deploy path does this, and only into the staged app copy so the
- * source tree is never mutated. In dev the command is applied at
- * `docker run` time via the launcher instead (see dev.ts).
+ * Only the deploy path does this: the Procfile is written to a temp dir and
+ * copied into the working container on top of the app, so the source tree is
+ * never mutated. In dev the command is applied at `docker run` time via the
+ * launcher instead (see dev.ts).
  */
 function writeCommandProcfile(
   workPath: string,
@@ -489,10 +496,43 @@ function registryAuth(
 
 async function runBuildah(
   args: string[],
-  env?: NodeJS.ProcessEnv
-): Promise<void> {
+  env?: NodeJS.ProcessEnv,
+  opts: { quiet?: boolean } = {}
+): Promise<RunResult> {
   const storageArgs = await buildahStorageArgs();
-  await run('buildah', [...storageArgs, ...args], { quiet: false, env });
+  return run('buildah', [...storageArgs, ...args], {
+    quiet: opts.quiet ?? false,
+    env,
+  });
+}
+
+/**
+ * The builder's build uid:gid, read from the builder image's own
+ * `CNB_USER_ID`/`CNB_GROUP_ID` env via the working container. `pack` chowns
+ * the app directory to this user, and buildpacks assume the workspace is
+ * writable by it (bundler rewrites Gemfile.lock, rails-assets writes
+ * public/assets, npm rewrites lockfiles, ...).
+ */
+async function resolveBuildUser(containerName: string): Promise<string> {
+  const { stdout } = await runBuildah(
+    [
+      'run',
+      // Host networking like the creator run below: the build sandbox
+      // cannot set up bridge networking (netavark/iptables).
+      '--network',
+      'host',
+      containerName,
+      '--',
+      'sh',
+      '-c',
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: shell parameter expansion inside the container
+      'echo "${CNB_USER_ID:-1000}:${CNB_GROUP_ID:-1000}"',
+    ],
+    undefined,
+    { quiet: true }
+  );
+  const user = stdout.trim().split('\n').at(-1) ?? '';
+  return /^\d+:\d+$/.test(user) ? user : '1000:1000';
 }
 
 /**
@@ -520,11 +560,14 @@ export async function buildAndPushWithLifecycle(
       const platformEnvDir = writePlatformEnvDir(params.buildEnv);
       const orderDir = writeOrderDir(bp);
 
-      const hasCommand = Boolean(params.command?.length);
-      const appDirectory = prepareAppDirectory(params.workPath, hasCommand);
+      let procfileDir: string | undefined;
       if (params.command?.length) {
+        // Validate before allocating the temp dir so a rejected command
+        // doesn't leak it (the cleanup below only runs after the try).
+        assertValidCommandShell(params.command, params.commandShell ?? false);
+        procfileDir = mkdtempSync(join(tmpdir(), 'vercel-cnb-procfile-'));
         writeCommandProcfile(
-          appDirectory.workPath,
+          procfileDir,
           params.command,
           params.commandShell ?? false
         );
@@ -542,6 +585,32 @@ export async function buildAndPushWithLifecycle(
           containerName,
           builder,
         ]);
+
+        // Copy the app into the working container instead of bind-mounting
+        // it, owned by the build user — the environment pack provides and
+        // buildpacks are written against. This makes /workspace writable
+        // during the build and exports the app layer with build-user
+        // ownership instead of the host uid's.
+        const buildUser = await resolveBuildUser(containerName);
+        await runBuildah([
+          'copy',
+          '--chown',
+          buildUser,
+          containerName,
+          params.workPath,
+          '/workspace',
+        ]);
+        if (procfileDir) {
+          // Explicit vercel.json `command` wins over a user-authored Procfile.
+          await runBuildah([
+            'copy',
+            '--chown',
+            buildUser,
+            containerName,
+            join(procfileDir, 'Procfile'),
+            '/workspace/Procfile',
+          ]);
+        }
 
         const lifecycleEnv: NodeJS.ProcessEnv = {
           ...process.env,
@@ -569,8 +638,6 @@ export async function buildAndPushWithLifecycle(
             'run',
             '--network',
             'host',
-            '--volume',
-            `${appDirectory.workPath}:/workspace`,
             '--volume',
             `${reportDir}:/platform-output`,
             '--volume',
@@ -637,7 +704,9 @@ export async function buildAndPushWithLifecycle(
           rmSync(platformEnvDir, { recursive: true, force: true });
         }
         rmSync(orderDir, { recursive: true, force: true });
-        appDirectory.cleanup?.();
+        if (procfileDir) {
+          rmSync(procfileDir, { recursive: true, force: true });
+        }
       }
     }
   );

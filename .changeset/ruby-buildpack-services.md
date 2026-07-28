@@ -25,10 +25,13 @@ supported server gem (puma/thin/unicorn/passenger/rack) in `Gemfile.lock`.
 Ruby services use `runtime: "ruby"` and require neither
 `entrypoint` nor `command` (`entrypoint` is ignored with a warning); versions
 come from `Gemfile` or `BP_MRI_VERSION` (delivered via the CNB platform
-dir). A `command` override is baked into the image as its default `web`
-process via a Procfile written to a staged app copy, so production (which
-launches the image's OCI config) and `vercel dev` (which execs via the CNB
-launcher) behave identically. Projects with `framework: "ruby"` also switch
+dir). On deploy the app is copied into the build container owned by the
+builder's build user (as `pack` does), so buildpacks can write to the
+workspace (bundler lockfile self-healing, asset compilation). A `command`
+override is baked into the image as its default `web` process via a Procfile
+copied on top of the app — the source tree is never mutated — so production
+(which launches the image's OCI config) and `vercel dev` (which execs via
+the CNB launcher) behave identically. Projects with `framework: "ruby"` also switch
 from the `@vercel/ruby` Lambda builder to container builds. A
 `Dockerfile.vercel`/`Containerfile.vercel` marker opts a service out of
 buildpacks; a conventional `Dockerfile` does not.

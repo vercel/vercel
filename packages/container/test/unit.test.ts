@@ -1777,11 +1777,12 @@ describe('@vercel/container', () => {
       // platform env dir hit the real filesystem — use a real workPath.
       const workPath = mkdtempSync(join(tmpdir(), 'vercel-cnb-test-'));
       existsSyncMock.mockImplementation((p: string) => p.endsWith('/Gemfile'));
-      // The Procfile is written to a staged copy of the app (mounted at
-      // /workspace), never the source tree; capture it while the staged
-      // copy still exists.
+      // The Procfile is written to a temp dir and `buildah copy`ed into the
+      // working container, never the source tree; capture its content while
+      // the temp file still exists.
       let stagedProcfile: string | undefined;
       let stagedOrder: string | undefined;
+      const copyCalls: string[][] = [];
       spawnMock.mockImplementation((cmd: string, args: string[]) => {
         if (cmd === 'buildah' && args.includes('info')) {
           return fakeChild(
@@ -1795,6 +1796,23 @@ describe('@vercel/container', () => {
             })
           );
         }
+        if (
+          cmd === 'buildah' &&
+          args.some(arg => arg.includes('CNB_USER_ID'))
+        ) {
+          // The build-user probe reads CNB_USER_ID/CNB_GROUP_ID from the
+          // builder image's env. It must use host networking: the build
+          // sandbox cannot set up bridge networking (netavark/iptables).
+          expect(args.join(' ')).toContain('--network host');
+          return fakeChild('1001:1000\n');
+        }
+        if (cmd === 'buildah' && args.includes('copy')) {
+          copyCalls.push([...args]);
+          if (args.at(-1) === '/workspace/Procfile') {
+            stagedProcfile = readFileSync(args.at(-2)!, 'utf8');
+          }
+          return fakeChild('');
+        }
         if (cmd === 'buildah' && args.includes('/cnb/lifecycle/creator')) {
           const mounts = args.filter(
             (_arg, index) => args[index - 1] === '--volume'
@@ -1806,13 +1824,8 @@ describe('@vercel/container', () => {
             `${reportMount!.slice(0, -':/platform-output'.length)}/report.toml`,
             `[image]\ndigest = "${digest}"\n`
           );
-          const workspaceMount = mounts.find(arg =>
-            arg.endsWith(':/workspace')
-          );
-          stagedProcfile = readFileSync(
-            `${workspaceMount!.slice(0, -':/workspace'.length)}/Procfile`,
-            'utf8'
-          );
+          // The app is copied into the container, not bind-mounted.
+          expect(mounts.some(arg => arg.endsWith(':/workspace'))).toBe(false);
           const orderMount = mounts.find(arg =>
             arg.endsWith(':/platform/order')
           );
@@ -1842,6 +1855,33 @@ describe('@vercel/container', () => {
         // Detection is scoped to the descriptor's buildpack group.
         expect(stagedOrder).toContain('id = "paketo-buildpacks/ruby"');
         expect(stagedOrder).toContain('version = "2.0.1"');
+
+        // The app is copied into the working container owned by the
+        // builder's build user (as pack does), then the command Procfile is
+        // copied on top of it.
+        const appCopy = copyCalls.find(args => args.at(-1) === '/workspace');
+        expect(appCopy).toBeDefined();
+        expect(appCopy).toEqual(
+          expect.arrayContaining(['copy', '--chown', '1001:1000'])
+        );
+        expect(appCopy?.at(-2)).toBe(workPath);
+        const procfileCopy = copyCalls.find(
+          args => args.at(-1) === '/workspace/Procfile'
+        );
+        expect(procfileCopy).toEqual(
+          expect.arrayContaining(['copy', '--chown', '1001:1000'])
+        );
+        const callKinds = spawnMock.mock.calls
+          .filter(([cmd]) => cmd === 'buildah')
+          .map(([, args]) => {
+            const a = args as string[];
+            if (a.includes('copy')) return 'copy';
+            if (a.includes('/cnb/lifecycle/creator')) return 'creator';
+            return 'other';
+          });
+        expect(callKinds.indexOf('copy')).toBeLessThan(
+          callKinds.indexOf('creator')
+        );
 
         // The build env travels via the CNB platform dir, not process env.
         const creatorArgs = spawnMock.mock.calls.find(

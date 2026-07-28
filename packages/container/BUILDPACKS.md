@@ -61,11 +61,11 @@ No lifecycle, image-source, or resolver code should need to change.
   effect on buildpack services and is ignored with a warning.
 - `command` in vercel.json is the Vercel-native process override. On deploy
   it is baked into the image as the default `web` process (via a Procfile
-  generated into a staged copy of the app — the source tree is never
-  mutated — so it runs through the CNB launcher with buildpack-provided env
-  and lands in the image's OCI config, which is what production launches).
-  In `vercel dev` it is applied at `docker run` time via
-  `--entrypoint launcher`.
+  copied into the build container on top of the app — the source tree is
+  never mutated — so it runs through the CNB launcher with
+  buildpack-provided env and lands in the image's OCI config, which is what
+  production launches). In `vercel dev` it is applied at `docker run` time
+  via `--entrypoint launcher`.
 - A user-authored `Procfile` is **not** part of Vercel's configuration
   surface and is not a detection marker. Paketo's procfile buildpack does
   honor one if present (useful for Heroku migrations), but the documented
@@ -104,8 +104,19 @@ Desktop context sockets are mounted into the builder when
 ## Deployments
 
 The Vercel build image creates a temporary Buildah working container from
-the trusted builder. The lifecycle exports directly to VCR using scoped
-`CNB_REGISTRY_AUTH` and the pinned run image, and `report.toml` supplies the
-final digest returned in the build output. Temporary Buildah containers,
-report dirs, order dirs, platform env dirs, and staged app copies are
-removed on success and failure.
+the trusted builder. The app is `buildah copy`ed into the container at
+`/workspace` owned by the builder's build user (`CNB_USER_ID:CNB_GROUP_ID`) —
+the environment pack provides and buildpacks are written against, so
+workspace writes (bundler lockfile updates, rails-assets, npm lockfiles, …)
+work for every language. Bind mounts are used only for read-only inputs
+(order, platform env) and the report output. The lifecycle exports directly
+to VCR using scoped `CNB_REGISTRY_AUTH` and the pinned run image, and
+`report.toml` supplies the final digest returned in the build output.
+Temporary Buildah containers, report dirs, order dirs, platform env dirs,
+and Procfile dirs are removed on success and failure.
+
+In `vercel dev` the workspace is still bind-mounted; on Linux dev hosts it
+is not writable by the build user (macOS Docker Desktop mounts are
+permissive). The planned fix mirrors pack's daemon flow: a named volume
+populated by a root helper container (see the TODO on
+`prepareAppDirectory`).
