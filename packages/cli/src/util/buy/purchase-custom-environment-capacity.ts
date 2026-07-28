@@ -5,6 +5,10 @@ import { getCommandName } from '../pkg-name';
 import output from '../../output-manager';
 import stamp from '../output/stamp';
 import { handleCustomEnvironmentPurchaseError } from './handle-custom-environment-purchase-error';
+import {
+  CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT,
+  CUSTOM_ENVIRONMENTS_PER_PACK,
+} from './custom-environment-addon';
 
 type ProjectCustomEnvironmentsSettings = {
   packSize: number;
@@ -151,7 +155,7 @@ export function validateCustomEnvironmentPacks(
     return {
       error:
         'Missing packs. Specify the number of custom environment packs to purchase.',
-      usage: `Run ${getCommandName('buy addon customEnvironment --help')} for usage.`,
+      usage: `Example: ${getCommandName(`buy addon customEnvironment ${CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT}`)} — each pack adds ${CUSTOM_ENVIRONMENTS_PER_PACK} environments.`,
     };
   }
 

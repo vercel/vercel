@@ -5,6 +5,15 @@ import {
   jsonOption,
   projectOption,
 } from '../../util/arg-common';
+import {
+  CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT,
+  CUSTOM_ENVIRONMENTS_PER_PACK,
+  customEnvironmentPackEnvironments,
+} from '../../util/buy/custom-environment-addon';
+
+const EXAMPLE_CUSTOM_ENVIRONMENT_COUNT = customEnvironmentPackEnvironments(
+  CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT
+);
 
 export const SUPPORTED_CREDIT_TYPES = ['v0', 'gateway', 'agent'] as const;
 export type CreditType = (typeof SUPPORTED_CREDIT_TYPES)[number];
@@ -64,7 +73,7 @@ export const ADDON_LABELS: Record<AddonAlias, string> = {
 export const addonSubcommand = {
   name: 'addon',
   aliases: ['addons', 'add-on'],
-  description: `Purchase a Vercel addon for your team. Supported addons: ${SUPPORTED_ADDON_ALIASES.join(', ')}. Custom environment purchases are per project and use packs (each pack adds 5 environments).`,
+  description: `Purchase a Vercel addon for your team. Supported addons: ${SUPPORTED_ADDON_ALIASES.join(', ')}. Custom environment purchases are per project and use packs (each pack adds ${CUSTOM_ENVIRONMENTS_PER_PACK} environments).`,
   arguments: [
     {
       name: 'addon-name',
@@ -90,8 +99,8 @@ export const addonSubcommand = {
       value: `${packageName} buy addon siem 1`,
     },
     {
-      name: 'Purchase 2 custom environment packs for a project',
-      value: `${packageName} buy addon customEnvironment 2 --project my-app`,
+      name: `Purchase ${CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT} custom environment packs (${EXAMPLE_CUSTOM_ENVIRONMENT_COUNT} environments) for a project`,
+      value: `${packageName} buy addon customEnvironment ${CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT} --project my-app`,
     },
     {
       name: 'Remove purchased custom environment capacity',
