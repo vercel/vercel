@@ -44,7 +44,7 @@ export type {
 import { rolldown } from './rolldown/index.js';
 import { introspection } from './rolldown/introspection.js';
 import { nft } from './rolldown/nft.js';
-import { maybeDoBuildCommand } from './build.js';
+import { maybeDoBuildCommand, getOutputDirectorySetting } from './build.js';
 import { typescript } from './typescript.js';
 import { Colors as c } from './cervel/utils.js';
 
@@ -110,9 +110,12 @@ export const build: BuildV2 = async args => {
     // pointing into `dist/`) are found.
     const userBuildResult = await maybeDoBuildCommand(args, downloadResult);
 
+    // When `outputDirectory` is configured, prefer entrypoints inside it
+    // (wrapper-builder behavior), falling back to the source tree.
     const entrypoint = await findEntrypointWithHintOrThrow(
       args.workPath,
-      args.entrypoint
+      args.entrypoint,
+      { outputDirectory: getOutputDirectorySetting(args.config) }
     );
     debug('Entrypoint', entrypoint);
     args.entrypoint = entrypoint;
