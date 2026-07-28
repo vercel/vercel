@@ -525,10 +525,16 @@ export async function getDeploymentUrlAndToken(
     const requestedBaseUrl = isDirectUrl
       ? await getDeploymentUrlById(client, deploymentFlag, accountId)
       : null;
+    // Prefix a bare deployment id with `dpl_`; pass URLs/prefixed ids through.
+    const deploymentSelector =
+      deploymentFlag.includes('.') || deploymentFlag.startsWith('dpl_')
+        ? deploymentFlag
+        : `dpl_${deploymentFlag}`;
 
-    // A caller-supplied bypass makes project resolution unnecessary for the
-    // request itself. Trace sessions still benefit from verified target
-    // context, but failure to resolve it must not block a valid request.
+    // The deployment lookup below isn't hoisted because its failure policy
+    // differs by branch: with a supplied bypass it only adds optional trace
+    // context (best-effort), while without one it resolves the project the
+    // token comes from (fatal unless a usable URL is already known).
     if (suppliedProtectionBypass !== undefined) {
       const deploymentUrl =
         requestedBaseUrl ??
@@ -541,10 +547,7 @@ export async function getDeploymentUrlAndToken(
 
       if (resolveProjectForTrace) {
         try {
-          const deploymentSelector =
-            deploymentFlag.includes('.') || deploymentFlag.startsWith('dpl_')
-              ? deploymentFlag
-              : `dpl_${deploymentFlag}`;
+          // Best-effort (see note above): trace context only.
           const deployment = await getDeployment(
             client,
             scope.contextName,
@@ -579,11 +582,7 @@ export async function getDeploymentUrlAndToken(
         }
       }
     } else {
-      const deploymentSelector =
-        deploymentFlag.includes('.') || deploymentFlag.startsWith('dpl_')
-          ? deploymentFlag
-          : `dpl_${deploymentFlag}`;
-
+      // Load-bearing (see note above): resolves the project for the token.
       let deployment: Deployment | null = null;
       try {
         deployment = await getDeployment(
@@ -658,6 +657,9 @@ export async function getDeploymentUrlAndToken(
       }
     }
   } else {
+    // No explicit --deployment: target the linked project. `ensureLink` may
+    // return a numeric exit code (aborted link / recoverable error), surfaced
+    // as-is; on success we re-read it for the production alias / latest URL.
     let ensuredLink;
     try {
       ensuredLink = await ensureLink(commandName, client, client.cwd, {
