@@ -36,7 +36,9 @@ import selectOrg from '../input/select-org';
 import inputProject, {
   BACK_TO_TEAM_SELECTION,
   LINK_ALL_PROJECTS,
+  isSelectRemote,
   type MultiProjectOffer,
+  type RemoteContext,
 } from '../input/input-project';
 import { validateRootDirectory } from '../validate-paths';
 import { inputRootDirectory } from '../input/input-root-directory';
@@ -229,8 +231,6 @@ export function resolveMultiProjectOffer({
 
   return {
     connectedCount: connectedProjects.length,
-    repoUrl: repoSearch.remote?.repoUrl,
-    remoteName: repoSearch.remote?.remoteName,
   };
 }
 
@@ -464,6 +464,9 @@ export default async function setupAndLink(
   let connectedForOrg:
     | { remote: ResolvedGitRemote; projects: Project[] }
     | undefined;
+  // Set once the user overrides the default remote from the project picker, so
+  // the suggestion search re-runs against their choice.
+  let chosenRemoteName: string | undefined;
   for (;;) {
     if (!org) {
       const orgMeta: { choiceCount?: number } = {};
@@ -484,6 +487,7 @@ export default async function setupAndLink(
     // The repo-wide offer is derived from the same search, so it costs no
     // additional request.
     let multiProjectOffer: MultiProjectOffer | undefined;
+    let remoteContext: RemoteContext | undefined;
     connectedForOrg = undefined;
     if (showProjectSuggestions) {
       output.spinner('Searching for existing projects…', 1000);
@@ -493,8 +497,16 @@ export default async function setupAndLink(
           cwd: path,
           gitProjectName,
           orgs: [org],
+          remoteName: chosenRemoteName,
         });
         repoMatches = repoSearch.matches;
+        if (repoSearch.remote) {
+          const { remoteName, remoteNames = [] } = repoSearch.remote;
+          remoteContext = {
+            remoteName,
+            otherRemoteNames: remoteNames.filter(name => name !== remoteName),
+          };
+        }
         // Reset per iteration: on a "back to team" loop the previous team's
         // projects must not leak into the newly selected team.
         connectedForOrg = repoSearch.remote
@@ -530,7 +542,8 @@ export default async function setupAndLink(
         showProjectSuggestions,
         searchableTeamPicker && !selectedOrg && !teamAutoSelected,
         repoMatches,
-        multiProjectOffer
+        multiProjectOffer,
+        remoteContext
       );
     } catch (err) {
       if (
@@ -544,6 +557,11 @@ export default async function setupAndLink(
 
     if (projectOrNewProjectName === BACK_TO_TEAM_SELECTION) {
       org = undefined;
+      continue;
+    }
+    // Re-run the search against the chosen remote, keeping the same team.
+    if (isSelectRemote(projectOrNewProjectName)) {
+      chosenRemoteName = projectOrNewProjectName.selectRemote;
       continue;
     }
     break;

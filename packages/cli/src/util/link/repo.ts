@@ -58,6 +58,11 @@ export interface ResolvedGitRemote {
   rootPath: string;
   remoteName: string;
   repoUrl: string;
+  /**
+   * Every remote configured in the repo, sorted. Lets callers offer a remote
+   * switcher only when there is actually another remote to switch to.
+   */
+  remoteNames?: string[];
 }
 
 export interface EnsureRepoLinkOptions {
@@ -119,10 +124,17 @@ export async function resolveGitRemote(
   {
     yes,
     existingRemoteName,
+    preferredRemoteName,
   }: {
     yes: boolean;
     /** When set, skip remote selection and use this remote. */
     existingRemoteName?: string;
+    /**
+     * Remote the user explicitly chose this run. Unlike `existingRemoteName`
+     * it is not authoritative: if it is gone, fall back to the default rather
+     * than failing, since nothing has been written against it yet.
+     */
+    preferredRemoteName?: string;
   }
 ): Promise<ResolvedGitRemote | undefined> {
   // Use getGitConfigPath to correctly resolve the config path for
@@ -144,6 +156,8 @@ export async function resolveGitRemote(
         `Git remote "${remoteName}" from repo.json no longer exists`
       );
     }
+  } else if (preferredRemoteName && remoteUrls[preferredRemoteName]) {
+    remoteName = preferredRemoteName;
   } else {
     const remoteNames = Object.keys(remoteUrls).sort();
     if (remoteNames.length === 1) {
@@ -166,7 +180,12 @@ export async function resolveGitRemote(
     }
   }
 
-  return { rootPath, remoteName, repoUrl: remoteUrls[remoteName] };
+  return {
+    rootPath,
+    remoteName,
+    repoUrl: remoteUrls[remoteName],
+    remoteNames: Object.keys(remoteUrls).sort(),
+  };
 }
 
 export async function fetchProjectsForRepoUrl(

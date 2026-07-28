@@ -153,11 +153,17 @@ export async function searchProjectsByRepoRootDetailed({
   cwd,
   gitProjectName,
   orgs,
+  remoteName,
 }: {
   client: Client;
   cwd: string;
   gitProjectName?: string;
   orgs: Org[];
+  /**
+   * Search this remote instead of the default. Set when the user explicitly
+   * picked a remote, so the suggestions follow their choice.
+   */
+  remoteName?: string;
 }): Promise<RepoRootSearchResult> {
   const empty: RepoRootSearchResult = {
     matches: [],
@@ -177,6 +183,7 @@ export async function searchProjectsByRepoRootDetailed({
     // would ask the user to choose before they know what it affects.
     remote = await resolveGitRemote(client, rootPath, {
       yes: true,
+      preferredRemoteName: remoteName,
     });
   } catch (error) {
     if (isPromptCanceledError(error)) {

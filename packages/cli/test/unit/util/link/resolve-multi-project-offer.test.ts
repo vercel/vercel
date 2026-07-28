@@ -38,14 +38,12 @@ describe('resolveMultiProjectOffer()', () => {
       }),
     });
 
-    expect(offer).toEqual({
-      connectedCount: 3,
-      repoUrl: 'git@github.com:vercel/front.git',
-      remoteName: 'origin',
-    });
+    expect(offer).toEqual({ connectedCount: 3 });
   });
 
-  it('carries no remote attribution when the remote is unresolved', () => {
+  it('offers repo-wide linking even when the remote is unresolved', () => {
+    // The offer describes the count only; naming the remote is the picker's
+    // job, so an unresolved remote must not suppress the offer.
     const offer = resolveMultiProjectOffer({
       path: '/repo',
       org,
@@ -55,11 +53,7 @@ describe('resolveMultiProjectOffer()', () => {
       }),
     });
 
-    expect(offer).toEqual({
-      connectedCount: 2,
-      repoUrl: undefined,
-      remoteName: undefined,
-    });
+    expect(offer).toEqual({ connectedCount: 2 });
   });
 
   it('does not offer repo-wide linking for a single connected project', () => {
