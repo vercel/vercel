@@ -10,7 +10,7 @@ export const logsCommand = {
   aliases: ['log'],
   description:
     'Display request logs for a project.\n\n' +
-    'With --follow, stream live runtime logs from a deployment. When no deployment is specified, resolves in order: latest deployment on the current git branch, then your latest deployment, then the latest production deployment. Use --environment production to always stream the latest production deployment.\n\n' +
+    'With --follow, stream live request logs for the project using the same filters as historical logs (deployment, environment, branch). When no deployment is specified, follows matching requests across deployments. Use --environment, --branch, or --no-branch to narrow the stream.\n\n' +
     'Source types: λ = serverless, ε = edge/middleware, ◇ = static/external',
   arguments: [
     {
@@ -34,7 +34,7 @@ export const logsCommand = {
       type: String,
       deprecated: false,
       description:
-        'Filter by environment: production or preview. With --follow, selects which environment to stream (production always streams the latest production deployment)',
+        'Filter by environment: production or preview. With --follow, streams matching requests in that environment',
     },
     {
       name: 'level',
@@ -92,7 +92,7 @@ export const logsCommand = {
       type: Boolean,
       deprecated: false,
       description:
-        'Stream live runtime logs. Without a deployment, follows the latest deployment on the current git branch, then your latest deployment, then the latest production deployment',
+        'Stream live request logs. Uses the same deployment/environment/branch filters as historical logs; without a deployment, follows matching project requests',
     },
     {
       name: 'no-follow',
@@ -151,12 +151,20 @@ export const logsCommand = {
   ],
   examples: [
     {
-      name: 'Stream live logs for your most recent deployment',
+      name: 'Stream live request logs for the linked project',
       value: `${packageName} logs --follow`,
     },
     {
-      name: 'Stream live logs for the latest production deployment',
-      value: `${packageName} logs --follow --environment production`,
+      name: 'Stream live preview request logs across deployments',
+      value: `${packageName} logs --follow --environment preview`,
+    },
+    {
+      name: 'Stream live request logs for all branches',
+      value: `${packageName} logs --follow --no-branch`,
+    },
+    {
+      name: 'Stream live request logs as JSON Lines',
+      value: `${packageName} logs --follow --json`,
     },
     {
       name: 'Stream live logs for a deployment URL',
