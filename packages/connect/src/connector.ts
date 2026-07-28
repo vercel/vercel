@@ -6,8 +6,7 @@ import {
 
 /**
  * Connector metadata as returned by Vercel Connect. This is the stable, useful
- * subset of the connector object the management APIs return; additional fields
- * may be present on the wire but are not typed here.
+ * subset of the connector object the management APIs return.
  */
 export interface ConnexConnector {
   /** Opaque Vercel Connect connector id (e.g. `scl_…`). */
