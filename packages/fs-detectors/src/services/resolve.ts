@@ -38,7 +38,7 @@ import { detectFrameworks } from '../detect-framework';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import { normalizeRoutePrefix } from '@vercel/routing-utils';
 import {
-  isBuildpacksEnabled,
+  isRubyBuildpacksEnabled,
   isNodeBackendFramework,
 } from '@vercel/build-utils';
 
@@ -331,7 +331,7 @@ export async function detectFrameworkFromWorkspace({
   // With buildpacks enabled, services intentionally include experimental
   // runtime-framework presets (Ruby, etc.) that are hidden from normal
   // project framework detection.
-  const buildpacksEnabled = isBuildpacksEnabled();
+  const buildpacksEnabled = isRubyBuildpacksEnabled();
   const frameworkCandidates = filterFrameworksByRuntime(
     buildpacksEnabled ? DETECTION_FRAMEWORKS : frameworkList,
     runtime

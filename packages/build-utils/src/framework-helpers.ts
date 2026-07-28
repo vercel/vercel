@@ -87,12 +87,11 @@ export function isExperimentalBackendsEnabled(): boolean {
 }
 
 /**
- * Gates the migration of buildpack-backed runtimes (Ruby first) from their
- * per-language Lambda builders to Cloud Native Buildpack container builds
- * via `@vercel/container`.
+ * Gates the migration of Ruby from the `@vercel/ruby` Lambda builder to
+ * Cloud Native Buildpack container builds via `@vercel/container`.
  */
-export function isBuildpacksEnabled(): boolean {
-  return process.env.VERCEL_EXPERIMENTAL_BUILDPACKS === '1';
+export function isRubyBuildpacksEnabled(): boolean {
+  return process.env.VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS === '1';
 }
 
 export function isBackendBuilder(builder: Builder | null | undefined): boolean {

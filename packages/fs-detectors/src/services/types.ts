@@ -20,7 +20,7 @@ import type {
   Service,
   Builder,
 } from '@vercel/build-utils';
-import { isBuildpacksEnabled } from '@vercel/build-utils/dist/framework-helpers';
+import { isRubyBuildpacksEnabled } from '@vercel/build-utils/dist/framework-helpers';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 
 export type {
@@ -208,14 +208,14 @@ const BUILDPACK_RUNTIMES: ReadonlySet<ServiceRuntime> = new Set(['ruby']);
 /**
  * The buildpack runtime for `runtime`, or `undefined` when the runtime is
  * not buildpack-backed or buildpacks are not enabled
- * (`VERCEL_EXPERIMENTAL_BUILDPACKS=1`). While disabled, buildpack-backed
+ * (`VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS=1`). While disabled, buildpack-backed
  * runtimes keep their legacy {@link RUNTIME_BUILDERS} behavior.
  */
 export function toBuildpackRuntime(
   runtime: ServiceRuntime | undefined
 ): ServiceRuntime | undefined {
   return runtime !== undefined &&
-    isBuildpacksEnabled() &&
+    isRubyBuildpacksEnabled() &&
     BUILDPACK_RUNTIMES.has(runtime)
     ? runtime
     : undefined;

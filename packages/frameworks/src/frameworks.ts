@@ -4368,7 +4368,7 @@ export const frameworks = [
     description:
       'A generic Ruby application deployed as a serverless function.',
     website: 'https://www.ruby-lang.org',
-    // With `VERCEL_EXPERIMENTAL_BUILDPACKS=1`, builds-and-routes detection
+    // With `VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS=1`, builds-and-routes detection
     // replaces this runtime with a `@vercel/container` buildpack build (see
     // fs-detectors `detectFrontBuilder`).
     useRuntime: { src: 'config.ru', use: '@vercel/ruby' },
@@ -4409,7 +4409,7 @@ export const frameworks = [
       {
         src: '/(.*)',
         dest:
-          process.env.VERCEL_EXPERIMENTAL_BUILDPACKS === '1'
+          process.env.VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS === '1'
             ? '/index'
             : '/config',
       },

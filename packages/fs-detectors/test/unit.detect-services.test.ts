@@ -175,13 +175,13 @@ describe('detectServices', () => {
       });
     });
 
-    describe('buildpack runtimes (VERCEL_EXPERIMENTAL_BUILDPACKS=1)', () => {
+    describe('buildpack runtimes (VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS=1)', () => {
       beforeAll(() => {
-        process.env.VERCEL_EXPERIMENTAL_BUILDPACKS = '1';
+        process.env.VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS = '1';
       });
 
       afterAll(() => {
-        delete process.env.VERCEL_EXPERIMENTAL_BUILDPACKS;
+        delete process.env.VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS;
       });
 
       it('should route Ruby runtime services through buildpacks without an entrypoint', async () => {

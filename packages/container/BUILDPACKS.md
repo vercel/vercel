@@ -5,7 +5,7 @@ built as OCI images with Cloud Native Buildpacks (Paketo). The CNB lifecycle
 is language-agnostic; everything language-specific lives in one descriptor in
 [`src/buildpacks/registry.ts`](src/buildpacks/registry.ts).
 
-Buildpack builds are gated behind `VERCEL_EXPERIMENTAL_BUILDPACKS=1` while
+Buildpack builds are gated behind `VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS=1` while
 the migration off per-language Lambda builders is in progress. With the flag
 unset, Ruby services and the Ruby framework preset keep their legacy
 `@vercel/ruby` behavior.
