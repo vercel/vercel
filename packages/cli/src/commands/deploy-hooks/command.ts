@@ -20,7 +20,7 @@ export const listSubcommand = {
   examples: [
     {
       name: 'List deploy hooks as JSON',
-      value: `${packageName} deploy-hooks ls --format json`,
+      value: `${packageName} deploy-hooks ls --json`,
     },
   ],
 } as const;

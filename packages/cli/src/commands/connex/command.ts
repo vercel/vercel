@@ -109,7 +109,7 @@ export const createSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} connect create slack --format=json`,
+      value: `${packageName} connect create slack --json`,
     },
   ],
 } as const;
@@ -164,7 +164,7 @@ export const updateSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} connect update scl_abc123 --icon ./logo.png --format=json`,
+      value: `${packageName} connect update scl_abc123 --icon ./logo.png --json`,
     },
   ],
 } as const;
@@ -268,7 +268,7 @@ export const listSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} connect list --format=json`,
+      value: `${packageName} connect list --json`,
     },
   ],
 } as const;
@@ -321,7 +321,7 @@ export const removeSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} connect remove scl_abc123 --format=json --yes`,
+      value: `${packageName} connect remove scl_abc123 --json --yes`,
     },
   ],
 } as const;
@@ -391,7 +391,7 @@ export const tokenSubcommand = {
     },
     {
       name: 'Output as JSON (includes expiresAt, installationId, etc.)',
-      value: `${packageName} connect token scl_abc123 --format=json`,
+      value: `${packageName} connect token scl_abc123 --json`,
     },
   ],
 } as const;
@@ -448,7 +448,7 @@ export const revokeTokensSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} connect revoke-tokens scl_abc123 --my-tokens --yes --format=json`,
+      value: `${packageName} connect revoke-tokens scl_abc123 --my-tokens --yes --json`,
     },
   ],
 } as const;
@@ -475,7 +475,7 @@ export const openSubcommand = {
     },
     {
       name: 'Print the dashboard URL as JSON',
-      value: `${packageName} connect open scl_abc123 --format=json`,
+      value: `${packageName} connect open scl_abc123 --json`,
     },
   ],
 } as const;
@@ -583,7 +583,7 @@ export const attachSubcommand = {
     },
     {
       name: 'Non-interactive output as JSON',
-      value: `${packageName} connect attach scl_abc123 --yes --format=json`,
+      value: `${packageName} connect attach scl_abc123 --yes --json`,
     },
   ],
 } as const;
@@ -622,7 +622,7 @@ export const detachSubcommand = {
     },
     {
       name: 'Non-interactive output as JSON',
-      value: `${packageName} connect detach scl_abc123 --yes --format=json`,
+      value: `${packageName} connect detach scl_abc123 --yes --json`,
     },
   ],
 } as const;

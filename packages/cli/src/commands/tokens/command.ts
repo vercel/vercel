@@ -21,7 +21,7 @@ export const listSubcommand = {
   examples: [
     {
       name: 'List tokens as JSON',
-      value: `${packageName} tokens ls --format json`,
+      value: `${packageName} tokens ls --json`,
     },
   ],
 } as const;

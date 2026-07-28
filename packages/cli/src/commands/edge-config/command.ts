@@ -11,7 +11,7 @@ export const listSubcommand = {
   examples: [
     {
       name: 'List Edge Configs as JSON',
-      value: `${packageName} edge-config list --format json`,
+      value: `${packageName} edge-config list --json`,
     },
   ],
 } as const;
@@ -229,7 +229,7 @@ export const backupsSubcommand = {
     },
     {
       name: 'Inspect a backup as JSON',
-      value: `${packageName} edge-config backups my-store --backup-version <version-id> --format json`,
+      value: `${packageName} edge-config backups my-store --backup-version <version-id> --json`,
     },
     {
       name: 'Restore a backup',

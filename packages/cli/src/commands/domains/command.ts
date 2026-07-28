@@ -114,7 +114,7 @@ export const priceSubcommand = {
     },
     {
       name: 'JSON output',
-      value: `${packageName} domains price example.com --format json`,
+      value: `${packageName} domains price example.com --json`,
     },
   ],
 } as const;
@@ -193,7 +193,7 @@ export const searchSubcommand = {
     },
     {
       name: 'JSON output',
-      value: `${packageName} domains search acme --format=json`,
+      value: `${packageName} domains search acme --json`,
     },
   ],
 } as const;
@@ -235,7 +235,7 @@ export const checkSubcommand = {
     },
     {
       name: 'JSON output',
-      value: `${packageName} domains check example.com --format json`,
+      value: `${packageName} domains check example.com --json`,
     },
   ],
 } as const;
@@ -320,7 +320,7 @@ export const verifySubcommand = {
     },
     {
       name: 'JSON output (the exit code is non-zero when the domain is misconfigured or unverified)',
-      value: `${packageName} domains verify example.com --format json`,
+      value: `${packageName} domains verify example.com --json`,
     },
     {
       name: 'Agent-friendly output with status, reason, and suggested next commands',

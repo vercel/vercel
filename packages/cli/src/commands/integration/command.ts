@@ -173,7 +173,7 @@ export const addSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} integration add acme --format=json`,
+      value: `${packageName} integration add acme --json`,
     },
     {
       name: 'Show available products for an integration',
@@ -208,7 +208,7 @@ export const acceptTermsSubcommand = {
     },
     {
       name: 'Output result as JSON',
-      value: `${packageName} integration accept-terms neon --format=json`,
+      value: `${packageName} integration accept-terms neon --json`,
     },
   ],
 } as const;
@@ -263,8 +263,8 @@ export const openSubcommand = {
     {
       name: 'Get the SSO link as JSON',
       value: [
-        `${packageName} integration open acme --format=json`,
-        `${packageName} integration open acme my-acme-store --format=json`,
+        `${packageName} integration open acme --json`,
+        `${packageName} integration open acme my-acme-store --json`,
       ],
     },
   ],
@@ -299,7 +299,7 @@ export const installationsSubcommand = {
     },
     {
       name: 'JSON output',
-      value: [`${packageName} integration installations --format json`],
+      value: [`${packageName} integration installations --json`],
     },
   ],
 } as const;
@@ -356,7 +356,7 @@ export const listSubcommand = {
     },
     {
       name: 'List resources as JSON',
-      value: [`${packageName} integration list --format=json`],
+      value: [`${packageName} integration list --json`],
     },
   ],
 } as const;
@@ -416,7 +416,7 @@ export const discoverSubcommand = {
     },
     {
       name: 'Discover marketplace integrations as JSON',
-      value: [`${packageName} integration discover --format=json`],
+      value: [`${packageName} integration discover --json`],
     },
   ],
 } as const;
@@ -435,7 +435,7 @@ export const categoriesSubcommand = {
     },
     {
       name: 'List categories as JSON',
-      value: [`${packageName} integration categories --format=json`],
+      value: [`${packageName} integration categories --json`],
     },
     {
       name: 'Use a category slug to filter discover results',
@@ -466,7 +466,7 @@ export const balanceSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} integration balance acme --format=json`,
+      value: `${packageName} integration balance acme --json`,
     },
   ],
 } as const;
@@ -547,7 +547,7 @@ export const updateSubcommand = {
     },
     {
       name: 'Output result as JSON',
-      value: `${packageName} integration update neon --projects all --format=json`,
+      value: `${packageName} integration update neon --projects all --json`,
     },
     {
       name: 'Non-interactive (JSON success and errors on stdout)',
@@ -590,7 +590,7 @@ export const removeSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} integration remove acme --format=json --yes`,
+      value: `${packageName} integration remove acme --json --yes`,
     },
   ],
 } as const;

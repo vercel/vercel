@@ -136,7 +136,7 @@ export const listSubcommand = {
     },
     {
       name: 'List comments as JSON',
-      value: `${packageName} comments --format json | jq '.threads[].id'`,
+      value: `${packageName} comments --json | jq '.threads[].id'`,
     },
   ],
 } as const;

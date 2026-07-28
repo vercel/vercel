@@ -52,7 +52,7 @@ export const inspectSubcommand = {
     },
     {
       name: 'Inspect as JSON',
-      value: `${packageName} alerts inspect grp_abc123 --format json`,
+      value: `${packageName} alerts inspect grp_abc123 --json`,
     },
   ],
 } as const;
@@ -136,7 +136,7 @@ export const alertsCommand = {
     },
     {
       name: 'Output JSON',
-      value: `${packageName} alerts --format json`,
+      value: `${packageName} alerts --json`,
     },
     {
       name: 'Custom time range',

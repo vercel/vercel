@@ -18,7 +18,7 @@ export const schemaSubcommand = {
     },
     {
       name: 'Schema as JSON for agents',
-      value: `${packageName} metrics schema vercel.request.count --format=json`,
+      value: `${packageName} metrics schema vercel.request.count --json`,
     },
   ],
 } as const;

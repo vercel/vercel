@@ -2,4 +2,4 @@
 'vercel': minor
 ---
 
-Support `--json` alongside `--format json` on every command that emits JSON output, and document `--json` in `--help`.
+Make `--json` the documented flag for commands that emit JSON while continuing to support `--format json` for backward compatibility.

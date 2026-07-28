@@ -20,7 +20,7 @@ export const typesSubcommand = {
     },
     {
       name: 'Output JSON',
-      value: `${packageName} activity types --format json`,
+      value: `${packageName} activity types --json`,
     },
   ],
 } as const;
@@ -109,7 +109,7 @@ export const activityCommand = {
     },
     {
       name: 'Output JSON',
-      value: `${packageName} activity --format json | jq '.events[]'`,
+      value: `${packageName} activity --json | jq '.events[]'`,
     },
     {
       name: 'List activity event types',

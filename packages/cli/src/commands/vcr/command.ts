@@ -43,7 +43,7 @@ export const listSubcommand = {
     },
     {
       name: 'List repositories for a specific project as JSON',
-      value: `${packageName} vcr ls --project my-app --format json`,
+      value: `${packageName} vcr ls --project my-app --json`,
     },
   ],
 } as const;

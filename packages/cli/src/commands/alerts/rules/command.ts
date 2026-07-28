@@ -57,7 +57,7 @@ export const rulesLsSubcommand = {
     },
     {
       name: 'JSON output',
-      value: `${packageName} alerts rules ls --format json`,
+      value: `${packageName} alerts rules ls --json`,
     },
   ],
 } as const;
@@ -107,7 +107,7 @@ export const rulesInspectSubcommand = {
     },
     {
       name: 'JSON output',
-      value: `${packageName} alerts rules inspect ar_abc123 --format json`,
+      value: `${packageName} alerts rules inspect ar_abc123 --json`,
     },
   ],
 } as const;

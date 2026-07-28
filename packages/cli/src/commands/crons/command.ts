@@ -50,7 +50,7 @@ export const listSubcommand = {
     },
     {
       name: 'List all cron jobs as JSON',
-      value: `${packageName} crons ls --format json`,
+      value: `${packageName} crons ls --json`,
     },
   ],
 } as const;

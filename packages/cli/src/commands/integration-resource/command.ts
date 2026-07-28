@@ -45,7 +45,7 @@ export const removeSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} integration-resource remove my-acme-resource --format=json --yes`,
+      value: `${packageName} integration-resource remove my-acme-resource --json --yes`,
     },
   ],
 } as const;
@@ -104,7 +104,7 @@ export const disconnectSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} integration-resource disconnect my-acme-resource --format=json --yes`,
+      value: `${packageName} integration-resource disconnect my-acme-resource --json --yes`,
     },
   ],
 } as const;
@@ -177,7 +177,7 @@ export const connectSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} integration resource connect my-acme-resource --format=json --yes`,
+      value: `${packageName} integration resource connect my-acme-resource --json --yes`,
     },
   ],
 } as const;
@@ -265,7 +265,7 @@ export const claimSubcommand = {
     },
     {
       name: 'Print the claim URL as JSON without waiting',
-      value: `${packageName} integration-resource claim my-stripe --format=json --no-wait`,
+      value: `${packageName} integration-resource claim my-stripe --json --no-wait`,
     },
   ],
 } as const;
@@ -296,7 +296,7 @@ export const inspectSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} integration resource inspect my-acme-resource --format=json`,
+      value: `${packageName} integration resource inspect my-acme-resource --json`,
     },
   ],
 } as const;

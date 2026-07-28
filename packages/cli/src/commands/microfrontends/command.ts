@@ -210,7 +210,7 @@ export const inspectGroupSubcommand = {
     },
     {
       name: 'Inspect a microfrontends group as JSON',
-      value: `${packageName} mf inspect-group --group="My Group" --format=json`,
+      value: `${packageName} mf inspect-group --group="My Group" --json`,
     },
   ],
 } as const;

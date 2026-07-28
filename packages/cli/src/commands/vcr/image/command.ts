@@ -53,7 +53,7 @@ export const imageLsSubcommand = {
     },
     {
       name: 'List untagged images as JSON',
-      value: `${packageName} vcr image ls my-app --untagged --format json`,
+      value: `${packageName} vcr image ls my-app --untagged --json`,
     },
   ],
 } as const;

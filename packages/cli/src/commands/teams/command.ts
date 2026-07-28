@@ -144,7 +144,7 @@ export const ssoSubcommand = {
     },
     {
       name: 'JSON',
-      value: `${packageName} teams sso --format json`,
+      value: `${packageName} teams sso --json`,
     },
   ],
 } as const;
@@ -162,7 +162,7 @@ export const membersSubcommand = {
     },
     {
       name: 'List team members as JSON',
-      value: `${packageName} teams members --format json`,
+      value: `${packageName} teams members --json`,
     },
     {
       name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch',

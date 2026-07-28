@@ -185,7 +185,7 @@ export const listSubcommand = {
     },
     {
       name: 'List projects using a deprecated Node.js version in JSON format',
-      value: `${packageName} project ls --update-required --format=json`,
+      value: `${packageName} project ls --update-required --json`,
     },
     {
       name: 'Filter projects by name',
@@ -315,7 +315,7 @@ export const updateSubcommand = {
     },
     {
       name: 'Clear the framework preset and return JSON',
-      value: `${packageName} project update my-project --framework other --format json`,
+      value: `${packageName} project update my-project --framework other --json`,
     },
   ],
 } as const;
@@ -342,7 +342,7 @@ export const tokenSubcommand = {
     },
     {
       name: 'Get a development OIDC token as JSON',
-      value: `${packageName} project token my-project --format=json`,
+      value: `${packageName} project token my-project --json`,
     },
   ],
 } as const;
@@ -366,7 +366,7 @@ export const accessSummarySubcommand = {
     },
     {
       name: 'Summary as JSON',
-      value: `${packageName} project access-summary my-app --format json`,
+      value: `${packageName} project access-summary my-app --json`,
     },
   ],
 } as const;
@@ -406,7 +406,7 @@ export const membersSubcommand = {
     },
     {
       name: 'List members for a named project as JSON',
-      value: `${packageName} project members my-project --format json`,
+      value: `${packageName} project members my-project --json`,
     },
   ],
 } as const;
@@ -492,7 +492,7 @@ export const protectionSubcommand = {
     },
     {
       name: 'Named project as JSON',
-      value: `${packageName} project protection my-app --format json`,
+      value: `${packageName} project protection my-app --json`,
     },
     {
       name: 'Disable password protection',
@@ -585,7 +585,7 @@ export const accessGroupsSubcommand = {
     },
     {
       name: 'List access groups for a named project as JSON',
-      value: `${packageName} project access-groups my-project --format json`,
+      value: `${packageName} project access-groups my-project --json`,
     },
   ],
 } as const;
@@ -612,7 +612,7 @@ export const webAnalyticsSubcommand = {
     },
     {
       name: 'Confirm enablement as JSON (non-interactive / agents)',
-      value: `${packageName} project web-analytics --format json`,
+      value: `${packageName} project web-analytics --json`,
     },
   ],
 } as const;
@@ -639,7 +639,7 @@ export const speedInsightsSubcommand = {
     },
     {
       name: 'Confirm enablement as JSON (non-interactive / agents)',
-      value: `${packageName} project speed-insights --format json`,
+      value: `${packageName} project speed-insights --json`,
     },
   ],
 } as const;

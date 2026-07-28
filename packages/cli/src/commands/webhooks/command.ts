@@ -11,7 +11,7 @@ export const listSubcommand = {
   examples: [
     {
       name: 'List all webhooks as JSON',
-      value: `${packageName} webhooks ls --format json`,
+      value: `${packageName} webhooks ls --json`,
     },
   ],
 } as const;

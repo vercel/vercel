@@ -97,7 +97,7 @@ describe('deploy', () => {
 
       const helpOutput = client.stderr.getFullOutput();
       expect(helpOutput).toContain('--dry');
-      expect(helpOutput).toContain('vercel deploy --dry --format=json');
+      expect(helpOutput).toContain('vercel deploy --dry --json');
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',

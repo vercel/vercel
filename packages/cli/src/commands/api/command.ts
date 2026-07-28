@@ -35,7 +35,7 @@ export const listSubcommand = {
     },
     {
       name: 'List all endpoints as JSON',
-      value: `${packageName} api ls --format json`,
+      value: `${packageName} api ls --json`,
     },
     {
       name: 'List endpoints from a custom OpenAPI spec',
