@@ -23,6 +23,7 @@ import {
   run,
   step,
   withSpan,
+  write,
 } from '../util';
 import type { BuildpackDescriptor } from './registry';
 import { builderImageRef, runImageRef } from './registry';
@@ -178,6 +179,36 @@ function writePlatformEnvDir(
     chmodSync(file, 0o644);
   }
   return dir;
+}
+
+/**
+ * Merge the descriptor's {@link BuildpackDescriptor.defaultBuildEnv} beneath
+ * the user's build env. A default is skipped when the user already set the
+ * same key, or — for `BPE_DEFAULT_<KEY>` launch defaults — the unprefixed
+ * `<KEY>` itself. Returns the merged env plus a log line per applied
+ * default so builds are never silently reconfigured.
+ */
+export function mergeDefaultBuildEnv(
+  bp: BuildpackDescriptor,
+  buildEnv: Record<string, string> | undefined
+): { buildEnv: Record<string, string> | undefined; applied: string[] } {
+  const defaults = Object.entries(bp.defaultBuildEnv ?? {});
+  if (defaults.length === 0) {
+    return { buildEnv, applied: [] };
+  }
+  const merged = { ...(buildEnv ?? {}) };
+  const applied: string[] = [];
+  for (const [key, value] of defaults) {
+    const launchKey = key.startsWith('BPE_DEFAULT_')
+      ? key.slice('BPE_DEFAULT_'.length)
+      : key;
+    if (key in merged || launchKey in merged) continue;
+    merged[key] = value;
+    applied.push(
+      `Defaulting ${launchKey}=${value} (set the ${launchKey} environment variable to override)`
+    );
+  }
+  return { buildEnv: merged, applied };
 }
 
 function shellEscape(arg: string): string {
@@ -394,7 +425,11 @@ export async function buildWithLifecycle(
       emit(out, `  ✓ run image ready: ${runImage}`);
 
       const appDirectory = prepareAppDirectory(params.workPath);
-      const platformEnvDir = writePlatformEnvDir(params.buildEnv);
+      const defaultedEnv = mergeDefaultBuildEnv(bp, params.buildEnv);
+      for (const line of defaultedEnv.applied) {
+        emit(out, `  ${line}`);
+      }
+      const platformEnvDir = writePlatformEnvDir(defaultedEnv.buildEnv);
       const platformEnvMount = platformEnvDir
         ? ['-v', `${platformEnvDir}:/platform/env:ro`]
         : [];
@@ -557,7 +592,11 @@ export async function buildAndPushWithLifecycle(
       const reportDir = mkdtempSync(join(tmpdir(), 'vercel-cnb-report-'));
       const reportPath = join(reportDir, 'report.toml');
       chmodSync(reportDir, 0o777);
-      const platformEnvDir = writePlatformEnvDir(params.buildEnv);
+      const defaultedEnv = mergeDefaultBuildEnv(bp, params.buildEnv);
+      for (const line of defaultedEnv.applied) {
+        write(`  ${line}`);
+      }
+      const platformEnvDir = writePlatformEnvDir(defaultedEnv.buildEnv);
       const orderDir = writeOrderDir(bp);
 
       let procfileDir: string | undefined;

@@ -1392,6 +1392,46 @@ describe('@vercel/container', () => {
       }
     });
 
+    it('applies overridable production env defaults beneath the user build env', async () => {
+      const { mergeDefaultBuildEnv } = await import(
+        '../src/buildpacks/lifecycle'
+      );
+
+      const defaulted = mergeDefaultBuildEnv(ruby, { BP_MRI_VERSION: '3.3' });
+      expect(defaulted.buildEnv).toMatchObject({
+        BP_MRI_VERSION: '3.3',
+        BPE_DEFAULT_RAILS_ENV: 'production',
+        BPE_DEFAULT_RACK_ENV: 'production',
+        BPE_DEFAULT_RAILS_LOG_TO_STDOUT: 'enabled',
+        BPE_DEFAULT_RAILS_SERVE_STATIC_FILES: 'enabled',
+      });
+      expect(defaulted.applied.join('\n')).toContain(
+        'Defaulting RAILS_ENV=production'
+      );
+
+      // A user-provided value suppresses the default, whether set as the
+      // launch variable itself or the BPE_DEFAULT_* form.
+      const overridden = mergeDefaultBuildEnv(ruby, {
+        RAILS_ENV: 'staging',
+        BPE_DEFAULT_RACK_ENV: 'staging',
+      });
+      expect(overridden.buildEnv).not.toHaveProperty('BPE_DEFAULT_RAILS_ENV');
+      expect(overridden.buildEnv).toMatchObject({
+        RAILS_ENV: 'staging',
+        BPE_DEFAULT_RACK_ENV: 'staging',
+        BPE_DEFAULT_RAILS_LOG_TO_STDOUT: 'enabled',
+      });
+      expect(overridden.applied.join('\n')).not.toContain('RAILS_ENV');
+      expect(overridden.applied.join('\n')).not.toContain('RACK_ENV=');
+
+      // Descriptors without defaults pass the env through untouched.
+      const none = mergeDefaultBuildEnv(
+        { ...ruby, defaultBuildEnv: undefined },
+        undefined
+      );
+      expect(none).toEqual({ buildEnv: undefined, applied: [] });
+    });
+
     it('describes CNB lifecycle creator exit codes by phase', async () => {
       const { describeCreatorExitCode } = await import(
         '../src/buildpacks/lifecycle'
@@ -1621,12 +1661,17 @@ describe('@vercel/container', () => {
             .filter((_arg, index) => args[index - 1] === '-v')
             .find(arg => arg.endsWith(':/platform/env:ro'));
           expect(platformEnvMount).toBeDefined();
+          const platformEnvDir = platformEnvMount!.slice(
+            0,
+            -':/platform/env:ro'.length
+          );
+          expect(readFileSync(`${platformEnvDir}/BP_MRI_VERSION`, 'utf8')).toBe(
+            '3.3'
+          );
+          // Dev applies the same overridable production defaults as deploys.
           expect(
-            readFileSync(
-              `${platformEnvMount!.slice(0, -':/platform/env:ro'.length)}/BP_MRI_VERSION`,
-              'utf8'
-            )
-          ).toBe('3.3');
+            readFileSync(`${platformEnvDir}/BPE_DEFAULT_RAILS_ENV`, 'utf8')
+          ).toBe('production');
           // Dev detects with the same explicit buildpack order as deploys.
           expect(args).toContain('-order=/platform/order/order.toml');
           const orderMount = args
@@ -1782,6 +1827,7 @@ describe('@vercel/container', () => {
       // the temp file still exists.
       let stagedProcfile: string | undefined;
       let stagedOrder: string | undefined;
+      let stagedDefaultRailsEnv: string | undefined;
       const copyCalls: string[][] = [];
       spawnMock.mockImplementation((cmd: string, args: string[]) => {
         if (cmd === 'buildah' && args.includes('info')) {
@@ -1831,6 +1877,11 @@ describe('@vercel/container', () => {
           );
           stagedOrder = readFileSync(
             `${orderMount!.slice(0, -':/platform/order'.length)}/order.toml`,
+            'utf8'
+          );
+          const envMount = mounts.find(arg => arg.endsWith(':/platform/env'));
+          stagedDefaultRailsEnv = readFileSync(
+            `${envMount!.slice(0, -':/platform/env'.length)}/BPE_DEFAULT_RAILS_ENV`,
             'utf8'
           );
         }
@@ -1894,6 +1945,8 @@ describe('@vercel/container', () => {
           .find(arg => arg.endsWith(':/platform/env'));
         expect(platformEnvMount).toBeDefined();
         expect(creatorArgs).toContain('-order=/platform/order/order.toml');
+        // Overridable production defaults ride along with the user's env.
+        expect(stagedDefaultRailsEnv).toBe('production');
 
         await build({
           ...createBuildOptions({

@@ -63,6 +63,15 @@ export interface BuildpackDescriptor {
    * for descriptors whose buildpacks don't.
    */
   buildpackGroup: readonly BuildpackGroupEntry[];
+  /**
+   * Build env applied beneath the user's build env (user keys win). Use
+   * Paketo's environment-variables buildpack `BPE_DEFAULT_<KEY>` form to
+   * bake overridable launch-env defaults into the image: the CNB launcher
+   * only applies them when the variable is unset at run time, so env vars
+   * configured on the project always take precedence. Each applied default
+   * is logged during the build.
+   */
+  defaultBuildEnv?: Readonly<Record<string, string>>;
 }
 
 export interface BuildpackGroupEntry {
@@ -88,6 +97,23 @@ export const BUILDPACKS: readonly BuildpackDescriptor[] = [
     // The composite includes rackup/puma/etc process detection and the
     // optional procfile buildpack in every group.
     buildpackGroup: [{ id: 'paketo-buildpacks/ruby', version: '2.0.1' }],
+    // Heroku-style production defaults: overridable at run time by project
+    // env vars, harmless for non-Rails apps. (Paketo's MRI buildpack already
+    // defaults MALLOC_ARENA_MAX=2.)
+    //
+    // TODO: when Rails is detected and neither SECRET_KEY_BASE nor
+    // RAILS_MASTER_KEY is configured, generate a per-deployment
+    // BPE_DEFAULT_SECRET_KEY_BASE so production requests don't 500 with
+    // "Missing secret_key_base" (with a log line noting sessions reset each
+    // deploy), and add a CLI prompt that persists a generated value as a
+    // project env var — the durable store — instead of hiding the secret in
+    // the build cache the way Heroku does.
+    defaultBuildEnv: {
+      BPE_DEFAULT_RAILS_ENV: 'production',
+      BPE_DEFAULT_RACK_ENV: 'production',
+      BPE_DEFAULT_RAILS_LOG_TO_STDOUT: 'enabled',
+      BPE_DEFAULT_RAILS_SERVE_STATIC_FILES: 'enabled',
+    },
   },
 ];
 
