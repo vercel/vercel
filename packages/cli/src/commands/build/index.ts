@@ -1192,8 +1192,6 @@ async function doBuild(
   const getHasDetectedServices = () =>
     detectedResolvedServices !== undefined &&
     detectedResolvedServices.length > 0;
-  const getHasQueueServices = () =>
-    detectedServices?.some(isQueueBackedService);
   const synthesizedServiceCrons: Cron[] = [];
   const serviceByBuilder = new Map<Builder, Service>();
   const serviceFileOverrides = new Map<Builder, Record<string, PathOverride>>();
@@ -1317,9 +1315,6 @@ async function doBuild(
             // build.config already contains framework, routePrefix, memory, etc.
             buildConfig = {
               ...build.config,
-              ...(getHasQueueServices()
-                ? { hasWorkerServices: true }
-                : undefined),
               // `service.functions` isn't on `build.config`, so builders that
               // read `config.functions` (e.g. Next.js) would otherwise miss it;
               // `serviceName` scopes the derived v2beta consumer.
