@@ -108,6 +108,8 @@ export function generateDockerfile(
     `FROM php:${project.phpVersion}-apache-bookworm AS php-base`,
     ...extensionInstall(project),
     'RUN a2enmod expires headers rewrite \\',
+    `    && printf '%s\\n' 'SetEnvIf X-Forwarded-Proto "^https$" HTTPS=on' > /etc/apache2/conf-available/vercel-proxy.conf \\`,
+    '    && a2enconf vercel-proxy \\',
     "    && sed -ri -e 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/*.conf \\",
     "    && sed -ri -e 's!/var/www/!/var/www/html/public!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf",
     'WORKDIR /var/www/html',

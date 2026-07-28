@@ -125,6 +125,9 @@ describe('@vercel/laravel', () => {
     expect(dockerfile).toContain('docker-php-ext-install');
     expect(dockerfile).not.toContain('curl dom');
     expect(dockerfile).not.toContain('pdo_sqlite');
+    expect(dockerfile).toContain(
+      'SetEnvIf X-Forwarded-Proto "^https$" HTTPS=on'
+    );
     expect(dockerfile).toContain('docker-php-ext-configure gd');
     expect(dockerfile).toContain('pecl install redis');
     expect(dockerfile).toContain('COPY package.json package-lock.json ./');
