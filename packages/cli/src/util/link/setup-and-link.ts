@@ -15,7 +15,11 @@ import {
   VERCEL_DIR_README,
   VERCEL_DIR_PROJECT,
 } from '../projects/link';
-import { ensureRepoLink, linkRepoProject } from './repo';
+import {
+  ensureRepoLink,
+  linkRepoProject,
+  type ResolvedGitRemote,
+} from './repo';
 import createProject from '../projects/create-project';
 import type Client from '../client';
 import { printError } from '../error';
@@ -223,7 +227,11 @@ export function resolveMultiProjectOffer({
     return undefined;
   }
 
-  return { connectedCount: connectedProjects.length };
+  return {
+    connectedCount: connectedProjects.length,
+    repoUrl: repoSearch.remote?.repoUrl,
+    remoteName: repoSearch.remote?.remoteName,
+  };
 }
 
 /**
@@ -451,6 +459,11 @@ export default async function setupAndLink(
   // When the team was auto-selected as the only choice, there is no other
   // team to go back to, so the project picker hides that option.
   let teamAutoSelected = false;
+  // Projects connected to the repo remote for the team the user settled on,
+  // carried out of the loop so linking them does not refetch the same list.
+  let connectedForOrg:
+    | { remote: ResolvedGitRemote; projects: Project[] }
+    | undefined;
   for (;;) {
     if (!org) {
       const orgMeta: { choiceCount?: number } = {};
@@ -471,6 +484,7 @@ export default async function setupAndLink(
     // The repo-wide offer is derived from the same search, so it costs no
     // additional request.
     let multiProjectOffer: MultiProjectOffer | undefined;
+    connectedForOrg = undefined;
     if (showProjectSuggestions) {
       output.spinner('Searching for existing projects…', 1000);
       try {
@@ -479,10 +493,16 @@ export default async function setupAndLink(
           cwd: path,
           gitProjectName,
           orgs: [org],
-          autoConfirm,
-          nonInteractive,
         });
         repoMatches = repoSearch.matches;
+        // Reset per iteration: on a "back to team" loop the previous team's
+        // projects must not leak into the newly selected team.
+        connectedForOrg = repoSearch.remote
+          ? {
+              remote: repoSearch.remote,
+              projects: repoSearch.connectedByOrgId.get(org.id) ?? [],
+            }
+          : undefined;
         if (allowMultiProjectLink) {
           multiProjectOffer = resolveMultiProjectOffer({
             path,
@@ -537,6 +557,11 @@ export default async function setupAndLink(
       // Team and link intent were already resolved by the project picker.
       selectedOrg: org,
       skipConfirm: true,
+      // The picker choice was "link all connected", so don't re-ask which
+      // projects, and don't offer to create new ones.
+      linkAllConnected: true,
+      // The picker already fetched this exact list to build the offer.
+      prefetchedConnected: connectedForOrg,
     });
 
     if (!repoLink?.repoConfig) {

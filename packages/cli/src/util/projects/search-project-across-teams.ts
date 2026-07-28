@@ -36,14 +36,10 @@ export default async function searchProjectAcrossTeams(
   projectName: string,
   cwd: string,
   {
-    autoConfirm = false,
-    nonInteractive = false,
     teams,
     skipLimited,
     gitProjectName,
   }: {
-    autoConfirm?: boolean;
-    nonInteractive?: boolean;
     teams?: Team[];
     skipLimited?: boolean;
     gitProjectName?: string;
@@ -85,8 +81,6 @@ export default async function searchProjectAcrossTeams(
     cwd,
     gitProjectName,
     orgs,
-    autoConfirm,
-    nonInteractive,
   });
 
   const slugifiedName = slugify(projectName);
@@ -150,8 +144,6 @@ export async function searchProjectsByRepoRoot(args: {
   cwd: string;
   gitProjectName?: string;
   orgs: Org[];
-  autoConfirm: boolean;
-  nonInteractive: boolean;
 }): Promise<CrossTeamMatch[]> {
   return (await searchProjectsByRepoRootDetailed(args)).matches;
 }
@@ -161,15 +153,11 @@ export async function searchProjectsByRepoRootDetailed({
   cwd,
   gitProjectName,
   orgs,
-  autoConfirm,
-  nonInteractive,
 }: {
   client: Client;
   cwd: string;
   gitProjectName?: string;
   orgs: Org[];
-  autoConfirm: boolean;
-  nonInteractive: boolean;
 }): Promise<RepoRootSearchResult> {
   const empty: RepoRootSearchResult = {
     matches: [],
@@ -183,8 +171,12 @@ export async function searchProjectsByRepoRootDetailed({
 
   let remote: ResolvedGitRemote | undefined;
   try {
+    // This search only builds suggestions, so it must never block on remote
+    // disambiguation: pick the default remote (`origin` when present) and let
+    // the caller show which remote the suggestions came from. Prompting here
+    // would ask the user to choose before they know what it affects.
     remote = await resolveGitRemote(client, rootPath, {
-      yes: autoConfirm || nonInteractive,
+      yes: true,
     });
   } catch (error) {
     if (isPromptCanceledError(error)) {

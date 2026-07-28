@@ -223,6 +223,34 @@ async function searchExistingProjects(
 export interface MultiProjectOffer {
   /** Projects already connected to this repo's Git remote in the team. */
   connectedCount: number;
+  /** Remote URL the connected projects were found through, for attribution. */
+  repoUrl?: string;
+  /** Name of that remote (`origin` unless the repo has no `origin`). */
+  remoteName?: string;
+}
+
+/**
+ * Footer text for the repo-wide option. States the count, the team, and the
+ * Git remote the connected projects were found through, so the chosen remote
+ * is visible without a prompt that interrupts the suggestion search.
+ */
+function describeConnectedSource({
+  connectedCount,
+  org,
+  repoUrl,
+  remoteName,
+}: {
+  connectedCount: number;
+  org: Org;
+  repoUrl?: string;
+  remoteName?: string;
+}): string {
+  const projects = `${connectedCount} projects in ${org.slug}`;
+  if (!repoUrl) {
+    return `${projects} are connected to this Git repository`;
+  }
+  const remoteSuffix = remoteName ? ` (${remoteName})` : '';
+  return `${projects} are connected to ${repoUrl}${remoteSuffix}`;
 }
 
 export default async function inputProject(
@@ -330,13 +358,21 @@ export default async function inputProject(
       // from the root of a repo whose workspace detection found several
       // projects: one pass links them all instead of repeating `vc link`.
       if (multiProjectOffer) {
-        const { connectedCount } = multiProjectOffer;
+        const { connectedCount, repoUrl, remoteName } = multiProjectOffer;
         choices.push({
           name: `Link all ${connectedCount} projects connected to this repo ${chalk.gray(
             '(recommended)'
           )}`,
           value: LINK_ALL_PROJECTS,
-          description: `${connectedCount} projects in ${org.slug} are connected to this Git repository`,
+          // Name the remote the count came from: the search picks the default
+          // remote without asking, so say which one it used rather than
+          // repeating the count already shown in the label.
+          description: describeConnectedSource({
+            connectedCount,
+            org,
+            repoUrl,
+            remoteName,
+          }),
         });
       }
 
