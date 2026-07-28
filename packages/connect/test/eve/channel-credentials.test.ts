@@ -61,7 +61,9 @@ describe('Eve channel credential helpers', () => {
 
   it('resolves Photon credentials from an app-scoped Connect token', async () => {
     fetchMock.mockResolvedValue(
-      jsonTokenResponse('photon-project:photon:secret')
+      jsonTokenResponse('photon-secret', {
+        metadata: { projectId: 'photon-project' },
+      })
     );
 
     await expect(
@@ -72,7 +74,7 @@ describe('Eve channel credential helpers', () => {
       )
     ).resolves.toEqual({
       projectId: 'photon-project',
-      projectSecret: 'photon:secret',
+      projectSecret: 'photon-secret',
     });
     expectTokenRequest('photon/my-project', {
       subject: { type: 'app' },
@@ -80,18 +82,22 @@ describe('Eve channel credential helpers', () => {
   });
 
   it.each([
-    'missing-separator',
-    ':missing-project',
-    'missing-secret:',
-  ])('rejects malformed Photon credentials: %s', async token => {
-    fetchMock.mockResolvedValue(jsonTokenResponse(token));
+    undefined,
+    {},
+    { projectId: '' },
+    { projectId: 123 },
+  ])('rejects malformed Photon metadata: %j', async metadata => {
+    fetchMock.mockResolvedValue(
+      jsonTokenResponse('photon-secret', { metadata })
+    );
 
     await expect(
       connectPhotonCredentials(
-        `photon/${token}`,
+        'photon/my-project',
         {},
         {
           vercelToken: 'vercel_token',
+          forceRefresh: true,
         }
       )
     ).rejects.toThrow('Photon connector returned invalid credentials.');
@@ -143,12 +149,16 @@ async function resolveToken(
   return token();
 }
 
-function jsonTokenResponse(token: string): Response {
+function jsonTokenResponse(
+  token: string,
+  overrides: Record<string, unknown> = {}
+): Response {
   return new Response(
     JSON.stringify({
       token,
       expiresAt: Date.now() + 60 * 60 * 1000,
       connector: { id: 'scl_abc', uid: 'oauth/test', type: 'oauth' },
+      ...overrides,
     }),
     { status: 200, headers: { 'Content-Type': 'application/json' } }
   );

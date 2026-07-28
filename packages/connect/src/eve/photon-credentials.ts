@@ -1,5 +1,5 @@
 import {
-  getToken,
+  getTokenResponse,
   type ConnectOptions,
   type ConnectTokenParams,
 } from '../index.js';
@@ -25,9 +25,9 @@ export type ConnectPhotonCredentialsParams = Omit<
 /**
  * Resolve Photon project credentials from a Vercel Connect connector.
  *
- * Photon connectors issue app-scoped credentials encoded as
- * `projectId:projectSecret`. This helper requests that credential and returns
- * the fields expected by Photon clients and adapters.
+ * Photon connectors issue the project secret as an app-scoped token and the
+ * project ID as public token metadata. This helper returns both fields in the
+ * shape expected by Photon clients and adapters.
  *
  * ```ts
  * import { connectPhotonCredentials } from '@vercel/connect/eve';
@@ -41,17 +41,17 @@ export async function connectPhotonCredentials(
   params: ConnectPhotonCredentialsParams = {},
   options?: ConnectOptions
 ): Promise<PhotonCredentials> {
-  const credential = await getToken(
+  const response = await getTokenResponse(
     connector,
     { ...params, subject: { type: 'app' } },
     options
   );
-  const separator = credential.indexOf(':');
-  if (separator < 1 || separator === credential.length - 1) {
+  const projectId = response.metadata?.projectId;
+  if (typeof projectId !== 'string' || projectId.length === 0) {
     throw new Error('Photon connector returned invalid credentials.');
   }
   return {
-    projectId: credential.slice(0, separator),
-    projectSecret: credential.slice(separator + 1),
+    projectId,
+    projectSecret: response.token,
   };
 }
