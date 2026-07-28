@@ -117,7 +117,13 @@ import { staticFiles as getFiles } from '../../util/get-files';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import cmd from '../../util/output/cmd';
 import stamp from '../../util/output/stamp';
-import parseTarget from '../../util/parse-target';
+import { parseAliasedTarget } from '../../util/parse-target';
+import { isErrnoException } from '@vercel/error-utils';
+import humanizePath from '../../util/humanize-path';
+import {
+  compareEnvProvenance,
+  parseEnvProvenance,
+} from '../../util/env/env-provenance';
 import cliPkg from '../../util/pkg';
 import * as cli from '../../util/pkg-name';
 import {
@@ -299,7 +305,8 @@ async function fetchProjectSettings(
 async function fetchProjectEnv(
   client: Client,
   link: { projectId: string; orgId: string } | null,
-  target: string
+  target: string,
+  gitBranch: string | undefined
 ): Promise<Record<string, string> | undefined> {
   if (!link) {
     return undefined;
@@ -310,7 +317,7 @@ async function fetchProjectEnv(
       client,
       link.projectId,
       'vercel-cli:build',
-      { target }
+      { target, gitBranch }
     );
     return env;
   } catch (err: unknown) {
@@ -363,6 +370,10 @@ export default async function main(client: Client): Promise<number> {
     telemetryClient.trackCliFlagStandalone(parsedArgs.flags['--standalone']);
     telemetryClient.trackCliOptionId(parsedArgs.flags['--id']);
     telemetryClient.trackCliOptionProject(parsedArgs.flags['--project']);
+    telemetryClient.trackCliOptionGitBranch(parsedArgs.flags['--git-branch']);
+    telemetryClient.trackCliOptionEnvironment(
+      parsedArgs.flags['--environment']
+    );
   } catch (error) {
     printError(error);
     return 1;
@@ -375,11 +386,13 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // Build `target` influences which environment variables will be used
-  const target =
-    parseTarget({
-      flagName: 'target',
-      flags: parsedArgs.flags,
-    }) || 'preview';
+  const target = parseAliasedTarget({
+    flags: parsedArgs.flags,
+    defaultTarget: 'preview',
+  });
+
+  // Resolves branch-specific Environment Variables for the build target
+  const gitBranch = parsedArgs.flags['--git-branch'];
 
   const yes = Boolean(parsedArgs.flags['--yes']);
 
@@ -511,6 +524,28 @@ export default async function main(client: Client): Promise<number> {
       .child('vc.fetchProjectSettings')
       .trace(() => fetchProjectSettings(client, link));
     if (!resolved) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: AGENT_STATUS.ERROR,
+            reason: AGENT_REASON.PROJECT_SETTINGS_REQUIRED,
+            message:
+              'Could not resolve project settings from Vercel. Run pull to retrieve them locally, then re-run the build.',
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  `pull --yes --environment ${target}`,
+                  client.argv
+                ),
+                when: 'retrieve project settings locally',
+              },
+            ],
+          },
+          1
+        );
+        return 1;
+      }
       output.error(
         `Failed to resolve Project Settings. Run ${cli.getCommandName(
           'pull'
@@ -610,31 +645,62 @@ export default async function main(client: Client): Promise<number> {
           `Loaded ${Object.keys(buildEnv).length} environment variables from deployment ${deploymentId}`
         );
       } else {
-        // A locally pulled env file wins, so hand-edited values and offline
-        // builds keep working.
         const envPath = join(
           cwd,
           projectRootDirectory,
           VERCEL_DIR,
           `.env.${target}.local`
         );
-        const dotenvResult = dotenv.config({
-          path: envPath,
-          debug: output.isDebugEnabled(),
-        });
-        if (dotenvResult.error) {
-          output.debug(
-            `Failed loading environment variables: ${dotenvResult.error}`
-          );
-        } else if (dotenvResult.parsed) {
-          for (const key of Object.keys(dotenvResult.parsed)) {
-            envToUnset.add(key);
+
+        // A pulled file records what it was resolved for. When that matches
+        // this build, the file wins so `vercel pull --git-branch` and
+        // hand-edited values keep working. When it doesn't, the API wins so a
+        // file pulled for a different Environment or branch can't silently
+        // shadow the right values.
+        let localContents: string | undefined;
+        try {
+          localContents = await fs.readFile(envPath, 'utf8');
+        } catch (err: unknown) {
+          if (!isErrnoException(err) || err.code !== 'ENOENT') {
+            output.debug(`Failed reading "${envPath}": ${err}`);
           }
-          output.debug(`Loaded environment variables from "${envPath}"`);
+        }
+        const provenance = localContents
+          ? parseEnvProvenance(localContents)
+          : undefined;
+        const comparison = compareEnvProvenance(provenance, {
+          target,
+          gitBranch,
+        });
+
+        const isMismatch = comparison.status === 'mismatch';
+        if (localContents && isMismatch) {
+          output.warn(
+            `Ignoring ${humanizePath(envPath)} because ${comparison.reason}. Resolving Environment Variables from Vercel instead.`
+          );
         }
 
-        if (!dotenvResult.parsed) {
-          const apiEnv = await fetchProjectEnv(client, link, target);
+        // Files pulled by older CLI versions have no provenance. Trusting them
+        // preserves the previous behavior for anyone who hasn't re-pulled.
+        const useLocalFile = Boolean(localContents) && !isMismatch;
+
+        if (useLocalFile) {
+          const dotenvResult = dotenv.config({
+            path: envPath,
+            debug: output.isDebugEnabled(),
+          });
+          if (dotenvResult.error) {
+            output.debug(
+              `Failed loading environment variables: ${dotenvResult.error}`
+            );
+          } else if (dotenvResult.parsed) {
+            for (const key of Object.keys(dotenvResult.parsed)) {
+              envToUnset.add(key);
+            }
+            output.debug(`Loaded environment variables from "${envPath}"`);
+          }
+        } else {
+          const apiEnv = await fetchProjectEnv(client, link, target, gitBranch);
           if (apiEnv) {
             for (const [key, value] of Object.entries(apiEnv)) {
               // The ambient environment is the more explicit signal.

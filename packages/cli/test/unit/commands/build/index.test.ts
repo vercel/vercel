@@ -404,7 +404,7 @@ describe.skipIf(flakey)('build', () => {
     ]);
   });
 
-  it('should pull "preview" env vars by default', async () => {
+  it('should resolve "preview" env vars from the API by default', async () => {
     const cwd = fixture('static-pull');
     useUser();
     useTeams('team_dummy');
@@ -414,31 +414,23 @@ describe.skipIf(flakey)('build', () => {
       name: 'vercel-pull-next',
     });
     const envFilePath = join(cwd, '.vercel', '.env.preview.local');
-    const projectJsonPath = join(cwd, '.vercel', 'project.json');
-    const originalProjectJson = await fs.readJSON(
-      join(cwd, '.vercel/project.json')
-    );
     try {
       client.cwd = cwd;
       client.setArgv('build', '--yes');
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      const previewEnv = await fs.readFile(envFilePath, 'utf8');
-      const envFileHasPreviewEnv = previewEnv.includes(
-        'REDIS_CONNECTION_STRING'
-      );
-      expect(envFileHasPreviewEnv).toBeTruthy();
+      // Resolved in memory for the build, not written to disk.
+      expect(await fs.pathExists(envFilePath)).toBe(false);
     } finally {
       await fs.remove(envFilePath);
-      await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
     }
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'flag:yes', value: 'TRUE' },
     ]);
   });
 
-  it('should pull "production" env vars with `--prod`', async () => {
+  it('should resolve "production" env vars with `--prod`', async () => {
     const cwd = fixture('static-pull');
     useUser();
     useTeams('team_dummy');
@@ -448,28 +440,17 @@ describe.skipIf(flakey)('build', () => {
       name: 'vercel-pull-next',
     });
     const envFilePath = join(cwd, '.vercel', '.env.production.local');
-    const projectJsonPath = join(cwd, '.vercel', 'project.json');
-    const originalProjectJson = await fs.readJSON(
-      join(cwd, '.vercel/project.json')
-    );
     try {
       client.cwd = cwd;
       client.setArgv('build', '--yes', '--prod');
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      const prodEnv = await fs.readFile(envFilePath, 'utf8');
-      const envFileHasProductionEnv1 = prodEnv.includes(
-        'REDIS_CONNECTION_STRING'
-      );
-      expect(envFileHasProductionEnv1).toBeTruthy();
-      const envFileHasProductionEnv2 = prodEnv.includes(
-        'SQL_CONNECTION_STRING'
-      );
-      expect(envFileHasProductionEnv2).toBeTruthy();
+      const builds = await fs.readJSON(join(cwd, '.vercel/output/builds.json'));
+      expect(builds.target).toEqual('production');
+      expect(await fs.pathExists(envFilePath)).toBe(false);
     } finally {
       await fs.remove(envFilePath);
-      await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
     }
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'flag:prod', value: 'TRUE' },
@@ -477,7 +458,7 @@ describe.skipIf(flakey)('build', () => {
     ]);
   });
 
-  it('should pull "production" env vars with `--target production`', async () => {
+  it('should resolve "production" env vars with `--target production`', async () => {
     const cwd = fixture('static-pull');
     useUser();
     useTeams('team_dummy');
@@ -487,28 +468,16 @@ describe.skipIf(flakey)('build', () => {
       name: 'vercel-pull-next',
     });
     const envFilePath = join(cwd, '.vercel', '.env.production.local');
-    const projectJsonPath = join(cwd, '.vercel', 'project.json');
-    const originalProjectJson = await fs.readJSON(
-      join(cwd, '.vercel/project.json')
-    );
     try {
       client.cwd = cwd;
       client.setArgv('build', '--yes', '--target', 'production');
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      const prodEnv = await fs.readFile(envFilePath, 'utf8');
-      const envFileHasProductionEnv1 = prodEnv.includes(
-        'REDIS_CONNECTION_STRING'
-      );
-      expect(envFileHasProductionEnv1).toBeTruthy();
-      const envFileHasProductionEnv2 = prodEnv.includes(
-        'SQL_CONNECTION_STRING'
-      );
-      expect(envFileHasProductionEnv2).toBeTruthy();
+      const builds = await fs.readJSON(join(cwd, '.vercel/output/builds.json'));
+      expect(builds.target).toEqual('production');
     } finally {
       await fs.remove(envFilePath);
-      await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
     }
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'option:target', value: 'production' },
@@ -516,7 +485,124 @@ describe.skipIf(flakey)('build', () => {
     ]);
   });
 
-  it('links before asking to pull settings in an unlinked directory', async () => {
+  it('should resolve "production" env vars with `--environment production`', async () => {
+    const cwd = fixture('static-pull');
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    try {
+      client.cwd = cwd;
+      client.setArgv('build', '--yes', '--environment', 'production');
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const builds = await fs.readJSON(join(cwd, '.vercel/output/builds.json'));
+      expect(builds.target).toEqual('production');
+    } finally {
+      await fs.remove(join(cwd, '.vercel', '.env.production.local'));
+    }
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'flag:yes', value: 'TRUE' },
+      { key: 'option:environment', value: 'production' },
+    ]);
+  });
+
+  it('should target "preview" when `--git-branch` is given without an environment', async () => {
+    const cwd = fixture('static-pull');
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    client.cwd = cwd;
+    client.setArgv('build', '--yes', '--git-branch', 'feature-branch');
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const builds = await fs.readJSON(join(cwd, '.vercel/output/builds.json'));
+    expect(builds.target).toEqual('preview');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'flag:yes', value: 'TRUE' },
+      { key: 'option:git-branch', value: '[REDACTED]' },
+    ]);
+  });
+
+  it('ignores a local env file pulled for a different git branch', async () => {
+    const cwd = fixture('static-pull');
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    const envFilePath = join(cwd, '.vercel', '.env.preview.local');
+    try {
+      // Written as if by `vercel pull --environment=preview --git-branch=other`.
+      await fs.outputFile(
+        envFilePath,
+        '# Created by Vercel CLI\n' +
+          '# vercel-env: target=preview gitBranch=other\n' +
+          'STALE_ONLY_IN_FILE="from-other-branch"\n',
+        'utf8'
+      );
+
+      client.cwd = cwd;
+      client.setArgv('build', '--yes');
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      expect(client.stderr.getFullOutput()).toContain(
+        'it was pulled with overrides for branch `other`'
+      );
+      expect(process.env.STALE_ONLY_IN_FILE).toBeUndefined();
+    } finally {
+      await fs.remove(envFilePath);
+      delete process.env.STALE_ONLY_IN_FILE;
+    }
+  });
+
+  it('uses a local env file whose provenance matches the build', async () => {
+    const cwd = fixture('static-pull');
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    const envFilePath = join(cwd, '.vercel', '.env.preview.local');
+    try {
+      await fs.outputFile(
+        envFilePath,
+        '# Created by Vercel CLI\n' +
+          '# vercel-env: target=preview gitBranch=feature-branch\n' +
+          'MATCHED_ONLY_IN_FILE="from-matching-pull"\n',
+        'utf8'
+      );
+
+      client.cwd = cwd;
+      client.setArgv('build', '--yes', '--git-branch', 'feature-branch');
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `envToUnset` clears loaded keys once the build finishes, so assert on
+      // the absence of the mismatch warning instead of `process.env`.
+      expect(client.stderr.getFullOutput()).not.toContain('Ignoring');
+      expect(client.stderr.getFullOutput()).not.toContain('it was pulled');
+    } finally {
+      await fs.remove(envFilePath);
+      delete process.env.MATCHED_ONLY_IN_FILE;
+    }
+  });
+
+  it('links then resolves settings without asking to pull in an unlinked directory', async () => {
     const cwd = setupUnitFixture('commands/build/static-pull');
     await fs.remove(join(cwd, '.vercel'));
 
@@ -535,17 +621,19 @@ describe.skipIf(flakey)('build', () => {
       client.setArgv('build');
       const exitCodePromise = build(client);
 
-      // The link flow runs before the pull question. The single team
-      // auto-selects; pick the detected folder-name match in the picker.
+      // The link flow runs, then settings resolve from the API directly.
+      // The single team auto-selects; pick the detected folder-name match.
       await expect(client.stderr).toOutput('Which project?');
       client.events.keypress('enter');
       await expect(client.stderr).toOutput('Linked');
 
-      await expect(client.stderr).toOutput('No Project Settings found locally');
-      client.stdin.write('y\n');
-
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
+
+      // The removed prompt must not reappear.
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'No Project Settings found locally'
+      );
 
       const projectJson = await fs.readJSON(join(cwd, '.vercel/project.json'));
       expect(projectJson.projectId).toEqual(basename(cwd));

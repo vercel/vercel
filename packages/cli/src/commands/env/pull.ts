@@ -36,6 +36,7 @@ import {
   outputAgentError,
 } from '../../util/agent-output';
 import { printAlignedLabel } from '../../util/output/print-aligned-label';
+import { formatEnvProvenance } from '../../util/env/env-provenance';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -352,6 +353,13 @@ export async function envPullCommandLogic(
 
     contents =
       CONTENTS_PREFIX +
+      // Records what this file was resolved for, so `vercel build` can tell
+      // whether it answers the request it is about to make.
+      formatEnvProvenance({
+        target: environment,
+        gitBranch,
+        pulledAt: new Date().toISOString(),
+      }) +
       Object.keys(mergedRecords)
         .sort()
         .filter(key => !VARIABLES_TO_IGNORE.includes(key))

@@ -23,6 +23,23 @@ export const buildCommand = {
       description: 'Specify the target environment',
     },
     {
+      name: 'environment',
+      shorthand: null,
+      type: String,
+      argument: 'TARGET',
+      deprecated: false,
+      description: 'Alias for `--target`',
+    },
+    {
+      name: 'git-branch',
+      description:
+        'Specify the Git branch to resolve branch-specific Environment Variables for',
+      shorthand: null,
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+    },
+    {
       name: 'output',
       description: 'Directory where built assets will be written to',
       shorthand: null,
@@ -66,6 +83,10 @@ export const buildCommand = {
     {
       name: 'Build with deployment-scoped environment variables',
       value: `${packageName} build --id dpl_xxx`,
+    },
+    {
+      name: 'Build with branch-specific preview environment variables',
+      value: `${packageName} build --target=preview --git-branch=feature-branch`,
     },
   ],
 } as const;

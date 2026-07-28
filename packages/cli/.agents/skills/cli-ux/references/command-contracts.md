@@ -120,10 +120,12 @@ Rules:
 
 Migration state:
 
-- Done: `vc build` resolves settings and env from the API and no longer prompts `No Project Settings found locally. Run vercel pull for retrieving them?`. Local `.vercel/project.json` and `.vercel/.env.<target>.local` remain as fallback.
+- Done: `vc build` resolves settings and env from the API and no longer prompts `No Project Settings found locally. Run vercel pull for retrieving them?`.
+- Done: pulled env files record provenance (`# vercel-env: target=… gitBranch=… pulledAt=…`, see `src/util/env/env-provenance.ts`). `vc build` uses a local file when its provenance matches the requested target and branch, and prefers the API when it doesn't. Files without provenance predate this and are still trusted. `.env.<target>.local` encodes only the target in its filename, so provenance is the only way to distinguish a `--git-branch` pull from a plain one.
+- Done: `vc build` and `vc pull` accept the same environment selection options. `--target` and `--environment` are aliases in both via `parseAliasedTarget` in `src/util/parse-target.ts`, both accept `--git-branch`, and `--git-branch` without an explicit environment implies `preview`.
 - Done: the post-link/post-create `Pull development environment variables into .env.local?` prompt and the `pullEnv` plumbing through `setupAndLink` / `linkFolderToProject` are removed.
 - Remaining: `vc link` still writes `VERCEL_OIDC_TOKEN` to `<root>/.env.local` via `refreshOidcTokenAfterLink()` in `src/commands/link/index.ts`. This is the last path that writes outside `.vercel/` as a link side effect. Removing it needs a decision on how local dev consumes the OIDC token without a file.
-- Remaining: precedence question in `vc build` — a local `.vercel/.env.<target>.local` currently wins over the API, so a stale pulled file silently shadows fresher values. Revisit whether the API should win once files are no longer produced implicitly.
+- Remaining: `vc dev` calls `pullEnvRecords` with neither `target` nor `gitBranch` (`src/commands/dev/dev.ts`), so it can't resolve branch-specific values the way `vc build` and `vc pull` now can.
 - Remaining: docs and skills still teach `vc pull` before `vc build` (`skills/vercel-cli/**`, `packages/cli/src/commands/agent/init.ts`). Update them as the file-writing paths retire.
 
 Stale-string sweep:
