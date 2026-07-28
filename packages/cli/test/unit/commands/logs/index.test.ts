@@ -132,6 +132,16 @@ describe('logs', () => {
         'production always streams the latest production deployment'
       );
     });
+
+    it('should hide the deprecated --no-branch flag', async () => {
+      client.setArgv('logs', '--help');
+      await logs(client);
+
+      const normalizedOutput = client.getFullOutput().replace(/\s+/g, ' ');
+      expect(normalizedOutput).toContain('--branch');
+      expect(normalizedOutput).not.toContain('--no-branch');
+      expect(normalizedOutput).not.toContain('Disable auto-detection');
+    });
   });
 
   describe('with linked project', () => {
@@ -302,6 +312,62 @@ describe('logs', () => {
 
       expect(exitCode).toEqual(0);
       expect(receivedBranch).toEqual('feature-x');
+    });
+
+    it('should accept the deprecated --no-branch flag as a no-op', async () => {
+      let receivedBranch: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedBranch = req.query.branch as string | undefined;
+        res.json({
+          rows: [createMockLog()],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--no-branch');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedBranch).toBeUndefined();
+    });
+
+    it('should keep an explicit branch when --no-branch is also passed', async () => {
+      let receivedBranch: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedBranch = req.query.branch as string | undefined;
+        res.json({
+          rows: [createMockLog()],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--branch', 'feature-x', '--no-branch');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedBranch).toEqual('feature-x');
+    });
+
+    it('should track telemetry for the --no-branch flag', async () => {
+      client.scenario.get('/api/logs/request-logs', (_req, res) => {
+        res.json({
+          rows: [createMockLog()],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--no-branch');
+      await logs(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:no-branch',
+          value: 'TRUE',
+        },
+      ]);
     });
   });
 
