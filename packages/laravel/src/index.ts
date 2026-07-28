@@ -24,7 +24,7 @@ const {
 
 const REVERB_SERVICE = 'laravel-reverb';
 const REVERB_IMAGE =
-  'ghcr.io/jacobparis/vercel-reverb@sha256:57cea0f4732f1ca89aa3b3870ff49950930e22550d7cf44325fa6ece2f20395f';
+  'ghcr.io/jacobparis/vercel-reverb@sha256:eabfee0bcc1f459a17cf1f51f63c4b269590c75baef7b7373bcb8fb97a5246b6';
 
 export const version = 2;
 
@@ -97,7 +97,6 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
   typicalResult.routes = [
     {
       src: '^/__vercel/reverb/(.*)$',
-      dest: '/$1',
       service: REVERB_SERVICE,
     },
     ...(typicalResult.routes ?? []),

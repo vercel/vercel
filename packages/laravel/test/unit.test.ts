@@ -274,7 +274,6 @@ describe('@vercel/laravel', () => {
     expect(result.routes).toEqual([
       {
         src: '^/__vercel/reverb/(.*)$',
-        dest: '/$1',
         service: 'laravel-reverb',
       },
       { src: '/(.*)', dest: '/index' },
@@ -284,7 +283,7 @@ describe('@vercel/laravel', () => {
         root: '.',
         runtime: 'container',
         entrypoint:
-          'ghcr.io/jacobparis/vercel-reverb@sha256:57cea0f4732f1ca89aa3b3870ff49950930e22550d7cf44325fa6ece2f20395f',
+          'ghcr.io/jacobparis/vercel-reverb@sha256:eabfee0bcc1f459a17cf1f51f63c4b269590c75baef7b7373bcb8fb97a5246b6',
       },
     });
     expect(result.output.__vercel_laravel_queue_0).toMatchObject({
