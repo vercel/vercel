@@ -1,0 +1,21 @@
+.about {
+  padding: 12rem 6vw 6rem;
+  max-width: 38rem;
+
+  &__title {
+    font-size: clamp(2.5rem, 6vw, 4rem);
+    letter-spacing: -0.02em;
+    margin: 0 0 2rem;
+  }
+
+  p {
+    font-size: 1.125rem;
+    line-height: 1.7;
+  }
+
+  code {
+    background: rgba(0, 0, 0, 0.06);
+    padding: 0.1em 0.35em;
+    border-radius: 0.3em;
+  }
+}
