@@ -14,9 +14,7 @@ dependencies = [
 [tool.vercel]
 entrypoint = "main:app"
 
-# Topics are introspected from the Celery app's queues (the vercel-celery
-# adapter registers them as "celery-<app name>-<queue>"), so we use a
-# wildcard topic filter.
+# With no "topics" filter, the subscriber consumes every subscription
+# introspected from the Celery app's queues.
 [[tool.vercel.subscribers]]
 entrypoint = "worker:app"
-topics = ["celery-*"]
