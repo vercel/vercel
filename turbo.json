@@ -23,6 +23,7 @@
     },
     "vitest-run": {
       "dependsOn": ["build"],
+      "env": ["VITEST_TEST_FILES"],
       "outputLogs": "new-only"
     },
     "vitest-e2e": {
