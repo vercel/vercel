@@ -149,7 +149,7 @@ describe('@vercel/laravel', () => {
     expect(dockerfile).toContain('FILESYSTEM_DISK=vercel');
     expect(dockerfile).toContain('QUEUE_CONNECTION=vercel');
     expect(dockerfile).toContain(
-      'php /opt/vercel/laravel/runtime/install.php /var/www/html'
+      'php /var/www/html/.vercel-runtime/runtime/install.php /var/www/html'
     );
     expect(dockerfile).toContain('CMD ["apache2-foreground"]');
 
