@@ -1,5 +1,12 @@
 import { join } from 'node:path';
-import type { CodingAgent, EnvExport, FileFormat, SetupContext } from './types';
+import type {
+  CodingAgent,
+  EnvExport,
+  FileFormat,
+  SessionMigrationContext,
+  SessionMigrationPlan,
+  SetupContext,
+} from './types';
 import {
   readFileOrNull,
   backupFile,
@@ -31,11 +38,44 @@ export interface AgentNotes {
   notes: string[];
 }
 
+export interface PlannedSessionMigration extends SessionMigrationPlan {
+  agentId: string;
+  agent: string;
+}
+
+export interface SessionMigrationError {
+  agentId: string;
+  agent: string;
+  message: string;
+}
+
 export interface SetupPlan {
   changes: PlannedChange[];
   notes: AgentNotes[];
   envExports: EnvExport[];
   shellRcPath?: string;
+  migrations: PlannedSessionMigration[];
+}
+
+export async function planSessionMigrations(
+  agents: CodingAgent[],
+  ctx: SessionMigrationContext
+): Promise<PlannedSessionMigration[]> {
+  const migrations: PlannedSessionMigration[] = [];
+
+  for (const agent of agents) {
+    if (!agent.sessionMigration) continue;
+    const migration = await agent.sessionMigration.plan(ctx);
+    if (migration && migration.itemCount > 0) {
+      migrations.push({
+        ...migration,
+        agentId: agent.id,
+        agent: agent.displayName,
+      });
+    }
+  }
+
+  return migrations;
 }
 
 export function detectShellRc(home: string, override?: string): string {
@@ -123,7 +163,8 @@ function matchesWithStoredKey(current: string, templated: string): boolean {
 
 export async function buildSetupPlan(
   agents: CodingAgent[],
-  ctx: SetupContext
+  ctx: SetupContext,
+  migrations: PlannedSessionMigration[] = []
 ): Promise<SetupPlan> {
   const pending: PendingChange[] = [];
   const envExports: EnvExport[] = [];
@@ -246,7 +287,13 @@ export async function buildSetupPlan(
     });
   }
 
-  return { changes, notes, envExports, shellRcPath };
+  return {
+    changes,
+    notes,
+    envExports,
+    shellRcPath,
+    migrations,
+  };
 }
 
 export interface ApplyResult {
@@ -283,4 +330,52 @@ export async function applyPlan(
     });
   }
   return results;
+}
+
+export interface AppliedSessionMigration {
+  agentId: string;
+  agent: string;
+  label: string;
+  copied: number;
+  skipped: number;
+}
+
+export interface SessionMigrationApplyResult {
+  results: AppliedSessionMigration[];
+  errors: SessionMigrationError[];
+}
+
+export async function applySessionMigrations(
+  plan: SetupPlan
+): Promise<SessionMigrationApplyResult> {
+  const results: AppliedSessionMigration[] = [];
+  const errors: SessionMigrationError[] = [];
+
+  for (const migration of plan.migrations) {
+    try {
+      const result = await migration.apply();
+      const { errors: copyErrors = [], ...counts } = result;
+      results.push({
+        agentId: migration.agentId,
+        agent: migration.agent,
+        label: migration.label,
+        ...counts,
+      });
+      errors.push(
+        ...copyErrors.map(message => ({
+          agentId: migration.agentId,
+          agent: migration.agent,
+          message,
+        }))
+      );
+    } catch (error) {
+      errors.push({
+        agentId: migration.agentId,
+        agent: migration.agent,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return { results, errors };
 }

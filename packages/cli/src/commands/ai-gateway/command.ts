@@ -397,6 +397,14 @@ export const setupSubcommand = {
       description: 'Do not write .bak backups of changed files',
     },
     {
+      name: 'no-migrate-sessions',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Do not copy existing desktop sessions into the AI Gateway provider',
+    },
+    {
       name: 'no-keychain',
       shorthand: null,
       type: Boolean,
