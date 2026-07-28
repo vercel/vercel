@@ -35,8 +35,5 @@
     "@vercel/routing-utils": "workspace:*",
     "vitest": "2.0.3"
   },
-  "pnpm": {
-    "neverBuiltDependencies": []
-  },
   "license": "Apache-2.0"
 }
