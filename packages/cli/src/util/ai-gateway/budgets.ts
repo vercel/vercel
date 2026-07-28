@@ -113,13 +113,6 @@ export async function removeBudget(
   });
 }
 
-// The tier that a default applies to. `team` is the team's own default limit;
-// the per-* tiers apply to every project/api-key/user without an explicit budget.
-export type BudgetDefaultTier =
-  | 'perProjectLimit'
-  | 'perApiKeyLimit'
-  | 'perUserLimit';
-
 // A single per-team default policy; one refreshPeriod is shared across tiers.
 export type BudgetDefault = {
   teamId: string;

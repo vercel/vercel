@@ -18,12 +18,6 @@ export class AiGatewayBudgetsDefaultsSetTelemetryClient
     }
   }
 
-  trackCliOptionPerUser(value: string | undefined) {
-    if (value) {
-      this.trackCliOption({ option: 'per-user', value: this.redactedValue });
-    }
-  }
-
   trackCliOptionRefreshPeriod(refreshPeriod: string | undefined) {
     if (refreshPeriod) {
       this.trackCliOption({ option: 'refresh-period', value: refreshPeriod });

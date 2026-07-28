@@ -86,7 +86,6 @@ export default async function inspect(client: Client, argv: string[]) {
   }
   printAlignedLabel('Per project', tier(budgetDefault.perProjectLimit));
   printAlignedLabel('Per api key', tier(budgetDefault.perApiKeyLimit));
-  printAlignedLabel('Per user', tier(budgetDefault.perUserLimit));
   printAlignedLabel('Refresh', budgetDefault.refreshPeriod);
   output.print('\n');
   return 0;

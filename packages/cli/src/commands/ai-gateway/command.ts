@@ -534,7 +534,7 @@ export const budgetsDefaultsSetSubcommand = {
   name: 'set',
   aliases: [],
   description:
-    "Create or update the team's AI Gateway budget default policy (applies to projects, api keys, and users without an explicit budget)",
+    "Create or update the team's AI Gateway budget default policy (applies to projects and api keys without an explicit budget)",
   arguments: [],
   options: [
     {
@@ -554,15 +554,6 @@ export const budgetsDefaultsSetSubcommand = {
       deprecated: false,
       description:
         "Default budget per api key in dollars, or 'none' to clear the tier",
-    },
-    {
-      name: 'per-user',
-      shorthand: null,
-      type: String,
-      argument: 'AMOUNT',
-      deprecated: false,
-      description:
-        "Default budget per user in dollars, or 'none' to clear the tier",
     },
     {
       name: 'refresh-period',
@@ -605,7 +596,7 @@ export const budgetsDefaultsSubcommand = {
   name: 'defaults',
   aliases: [],
   description:
-    'Manage the team-wide AI Gateway budget default policy (per-project, per-api-key, and per-user tiers)',
+    'Manage the team-wide AI Gateway budget default policy (per-project and per-api-key tiers)',
   arguments: [],
   subcommands: [
     budgetsDefaultsInspectSubcommand,

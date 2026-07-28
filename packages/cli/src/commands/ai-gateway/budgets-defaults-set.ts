@@ -69,12 +69,10 @@ export default async function set(client: Client, argv: string[]) {
 
   const perProjectRaw = opts['--per-project'] as string | undefined;
   const perApiKeyRaw = opts['--per-api-key'] as string | undefined;
-  const perUserRaw = opts['--per-user'] as string | undefined;
   const refreshPeriod = opts['--refresh-period'] as string | undefined;
 
   telemetry.trackCliOptionPerProject(perProjectRaw);
   telemetry.trackCliOptionPerApiKey(perApiKeyRaw);
-  telemetry.trackCliOptionPerUser(perUserRaw);
   telemetry.trackCliOptionRefreshPeriod(refreshPeriod);
   telemetry.trackCliOptionFormat(opts['--format']);
 
@@ -95,19 +93,12 @@ export default async function set(client: Client, argv: string[]) {
     output.error(perApiKey.error);
     return 1;
   }
-  const perUser = parseTier(perUserRaw, '--per-user');
-  if ('error' in perUser) {
-    output.error(perUser.error);
-    return 1;
-  }
 
   const noTierChange =
-    perProject.value === undefined &&
-    perApiKey.value === undefined &&
-    perUser.value === undefined;
+    perProject.value === undefined && perApiKey.value === undefined;
   if (noTierChange && refreshPeriod === undefined) {
     output.error(
-      'Nothing to set. Pass --per-project, --per-api-key, --per-user, or --refresh-period.'
+      'Nothing to set. Pass --per-project, --per-api-key, or --refresh-period.'
     );
     return 1;
   }
@@ -145,9 +136,6 @@ export default async function set(client: Client, argv: string[]) {
     if (perApiKey.value !== undefined) {
       input.perApiKeyLimit = perApiKey.value;
     }
-    if (perUser.value !== undefined) {
-      input.perUserLimit = perUser.value;
-    }
 
     const budgetDefault = await upsertBudgetDefault(client, input);
 
@@ -159,7 +147,6 @@ export default async function set(client: Client, argv: string[]) {
       printAlignedLabel('Set budget default', '', { gutter: '✓' });
       printAlignedLabel('Per project', tier(budgetDefault.perProjectLimit));
       printAlignedLabel('Per api key', tier(budgetDefault.perApiKeyLimit));
-      printAlignedLabel('Per user', tier(budgetDefault.perUserLimit));
       printAlignedLabel('Refresh', budgetDefault.refreshPeriod);
     }
 
