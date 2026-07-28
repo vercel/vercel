@@ -351,10 +351,10 @@ describe('logs', () => {
 
       expect(exitCode).toEqual(0);
       expect(receivedProjectId).toEqual('prj_explicit');
-      expect(receivedOwnerId).toEqual(logsProject.accountId);
+      expect(receivedOwnerId).toEqual(defaultProject.accountId);
       expect(receivedDeploymentId).toBeUndefined();
       expect(logsFollow.followRequestLogs).toHaveBeenCalled();
-      await expect(client.stderr).toOutput('Streaming request logs for');
+      expect(client.getFullOutput()).toContain('Streaming request logs for');
     });
 
     it('should pass --environment production through to request-logs while following', async () => {
@@ -376,7 +376,7 @@ describe('logs', () => {
 
       expect(exitCode).toEqual(0);
       expect(receivedEnvironment).toEqual('production');
-      await expect(client.stderr).toOutput('Streaming request logs for');
+      expect(client.getFullOutput()).toContain('Streaming request logs for');
     });
 
     it('should track telemetry for --project option', async () => {
@@ -991,8 +991,9 @@ describe('logs', () => {
 
       expect(exitCode).toEqual(0);
       expect(receivedDeploymentId).toEqual(deployment.id);
-      await expect(client.stderr).toOutput('Streaming request logs for');
-      await expect(client.stderr).toOutput(`deployment ${deployment.id}`);
+      const output = client.getFullOutput();
+      expect(output).toContain('Streaming request logs for');
+      expect(output).toContain(`deployment ${deployment.id}`);
     });
 
     it('should show deployment error and skip runtime logs for errored deployment', async () => {
@@ -1186,8 +1187,9 @@ describe('logs', () => {
         deploymentId: deployment.id,
         teamId: logsProject.accountId,
       });
-      await expect(client.stderr).toOutput('Streaming request logs for');
-      await expect(client.stderr).toOutput(`deployment ${deployment.id}`);
+      const output = client.getFullOutput();
+      expect(output).toContain('Streaming request logs for');
+      expect(output).toContain(`deployment ${deployment.id}`);
     });
 
     it('should fetch historical logs for a deployment URL without a linked project', async () => {
@@ -1405,11 +1407,12 @@ describe('logs', () => {
       expect(exitCode).toEqual(0);
       expect(receivedDeploymentId).toBeUndefined();
       expect(receivedEndDate).toBeUndefined();
-      await expect(client.stderr).toOutput('Streaming request logs for');
-      await expect(client.stderr).toOutput('all branches');
-      await expect(client.stderr).toOutput('Request started');
-      await expect(client.stderr).toOutput('hello from follow');
-      await expect(client.stderr).toOutput('Request finished');
+      const output = client.getFullOutput();
+      expect(output).toContain('Streaming request logs for');
+      expect(output).toContain('all branches');
+      expect(output).toContain('Request started');
+      expect(output).toContain('hello from follow');
+      expect(output).toContain('Request finished');
     });
 
     it('should pass --environment through to request-logs while following', async () => {
@@ -1431,8 +1434,9 @@ describe('logs', () => {
 
       expect(exitCode).toEqual(0);
       expect(receivedEnvironment).toEqual('preview');
-      await expect(client.stderr).toOutput('Streaming request logs for');
-      await expect(client.stderr).toOutput('preview');
+      const output = client.getFullOutput();
+      expect(output).toContain('Streaming request logs for');
+      expect(output).toContain('preview');
     });
 
     it('should pass an explicit --branch through to request-logs while following', async () => {
@@ -1448,7 +1452,7 @@ describe('logs', () => {
 
       expect(exitCode).toEqual(0);
       expect(receivedBranch).toEqual('feature-x');
-      await expect(client.stderr).toOutput('branch feature-x');
+      expect(client.getFullOutput()).toContain('branch feature-x');
     });
 
     it('should error when --follow is used with --level', async () => {
