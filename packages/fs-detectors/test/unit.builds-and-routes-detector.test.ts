@@ -3043,6 +3043,84 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     );
   });
 
+  it('builds a Python proxy entrypoint with the Python runtime', async () => {
+    const files = ['proxy.py', 'main.py'];
+    const { builders } = await invokeDetectBuildersAndThrow(files, null, {
+      proxy: { entrypoint: 'proxy.py', matcher: '/api/:path*' },
+      projectSettings: { framework: 'fastapi' },
+    });
+
+    expect(builders[0]).toEqual({
+      src: 'proxy.py',
+      use: '@vercel/python',
+      config: {
+        handlerFunction: 'proxy',
+        middleware: true,
+        middlewareMatcher: '/api/:path*',
+        zeroConfig: true,
+      },
+    });
+    expect(builders).toContainEqual({
+      src: '<detect>',
+      use: '@vercel/python',
+      config: {
+        framework: 'fastapi',
+        zeroConfig: true,
+      },
+    });
+  });
+
+  it('resolves a Python module proxy entrypoint to its source file', async () => {
+    const files = ['routing/proxy.py', 'main.py'];
+    const { builders } = await invokeDetectBuildersAndThrow(files, null, {
+      proxy: {
+        entrypoint: 'routing.proxy:proxy',
+        matcher: '/api/:path*',
+      },
+      functions: {
+        'routing/proxy.py': {
+          maxDuration: 10,
+        },
+      },
+      projectSettings: { framework: 'fastapi' },
+    });
+
+    expect(builders[0]).toEqual({
+      src: 'routing/proxy.py',
+      use: '@vercel/python',
+      config: {
+        functions: {
+          'routing/proxy.py': {
+            maxDuration: 10,
+          },
+        },
+        handlerFunction: 'proxy',
+        middleware: true,
+        middlewareMatcher: '/api/:path*',
+        zeroConfig: true,
+      },
+    });
+  });
+
+  it('excludes a resolved Python module from static files', async () => {
+    const { builders } = await invokeDetectBuildersAndThrow(
+      ['proxy.py', 'index.html'],
+      null,
+      {
+        featHandleMiss,
+        proxy: { entrypoint: 'proxy:proxy' },
+      }
+    );
+
+    expect(builders[0]).toMatchObject({
+      src: 'proxy.py',
+      use: '@vercel/python',
+    });
+    expect(builders[1].src).toBe(
+      REGEX_NON_VERCEL_PLATFORM_FILES.replace('}', ',proxy.py}')
+    );
+  });
+
   it('applies functions config targeting the proxy entrypoint', async () => {
     const { builders } = await invokeDetectBuildersAndThrow(
       ['proxy.ts'],
@@ -3116,7 +3194,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       {
         code: 'invalid_proxy_entrypoint',
         message:
-          'The `proxy.entrypoint` path must end in `.js` or `.ts` and reference an executable file.',
+          'The `proxy.entrypoint` path must end in `.js`, `.ts`, or `.py` and reference an executable file.',
       },
     ]);
   });
@@ -3144,7 +3222,21 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       {
         code: 'proxy_entrypoint_not_found',
         message:
-          'The proxy entrypoint `proxy.ts` does not exist. Set `proxy.entrypoint` to an existing `.js` or `.ts` file.',
+          'The proxy entrypoint `proxy.ts` does not exist. Set `proxy.entrypoint` to an existing `.js`, `.ts`, or `.py` file.',
+      },
+    ]);
+  });
+
+  it('rejects a Python module proxy entrypoint that does not exist', async () => {
+    const { errors } = await detectBuilders(['index.html'], null, {
+      proxy: { entrypoint: 'routing.proxy:proxy' },
+    });
+
+    expect(errors).toEqual([
+      {
+        code: 'proxy_entrypoint_not_found',
+        message:
+          'The Python proxy entrypoint `routing.proxy:proxy` does not resolve to an existing `routing/proxy.py` file.',
       },
     ]);
   });

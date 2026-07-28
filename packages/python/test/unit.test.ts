@@ -2469,6 +2469,174 @@ describe('handlerFunction validation', () => {
   });
 });
 
+describe('configured Python proxy', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-proxy-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+    vi.mocked(execa).mockClear();
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('builds a proxy function as routing middleware', async () => {
+    const files = {
+      'proxy.py': new FileBlob({
+        data: 'async def proxy(request):\n    return None\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data:
+          '[project]\n' +
+          'name = "python-proxy"\n' +
+          'version = "0.0.1"\n' +
+          'dependencies = ["fastapi"]\n' +
+          '\n' +
+          '[dependency-groups]\n' +
+          'proxy = ["starlette"]\n' +
+          '\n' +
+          '[tool.vercel.scripts]\n' +
+          'vercel-install = "this-command-must-not-run"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'proxy.py',
+      meta: { isDev: false },
+      config: {
+        framework: 'fastapi',
+        handlerFunction: 'proxy',
+        middleware: true,
+        middlewareMatcher: '/api/:path*',
+        projectSettings: {
+          installCommand: 'this-command-must-not-run',
+        },
+        zeroConfig: true,
+      },
+      repoRootPath: mockWorkPath,
+    });
+
+    const output = getBuildOutputV2(result);
+    expect(Object.keys(output.output)).toEqual(['proxy']);
+    expect(output.routes).toEqual([
+      {
+        src: '^\\/api(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?[\\/#\\?]?$',
+        middlewareRawSrc: ['/api/:path*'],
+        middlewarePath: 'proxy',
+        continue: true,
+        override: true,
+      },
+    ]);
+
+    const lambda = output.output.proxy as BuildResultV3['output'];
+    const adapter = lambda.files?.['vc__proxy__python.py'];
+    if (!adapter || !('data' in adapter)) {
+      throw new Error('proxy adapter not found');
+    }
+    expect(adapter.data.toString()).toContain(
+      'from starlette.requests import Request'
+    );
+    expect(adapter.data.toString()).toContain('(b"x-middleware-next", b"1")');
+
+    const handler = lambda.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      '"__VC_PROXY_MODULE_NAME": "proxy"'
+    );
+    expect(handler.data.toString()).toContain(
+      '"__VC_HANDLER_VARIABLE_NAME": "app"'
+    );
+
+    const syncCall = vi
+      .mocked(execa)
+      .mock.calls.find(call => Array.isArray(call[1]) && call[1][0] === 'sync');
+    expect(syncCall).toBeDefined();
+    const syncArgs = syncCall?.[1] as string[];
+    expect(syncArgs).toContain('--only-group');
+    expect(syncArgs[syncArgs.indexOf('--only-group') + 1]).toBe('proxy');
+    expect(syncArgs).not.toContain('--no-dev');
+    expect(syncCall?.[2]).toEqual(
+      expect.objectContaining({
+        env: expect.objectContaining({
+          VIRTUAL_ENV: expect.stringContaining(
+            path.join('.vercel', 'python', 'proxy', '.venv')
+          ),
+        }),
+      })
+    );
+  });
+
+  it('does not install project dependencies when no proxy group exists', async () => {
+    const files = {
+      'proxy.py': new FileBlob({
+        data: 'async def proxy(request):\n    return None\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data:
+          '[project]\n' +
+          'name = "python-proxy"\n' +
+          'version = "0.0.1"\n' +
+          'dependencies = ["fastapi"]\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'proxy.py',
+      meta: { isDev: false },
+      config: {
+        handlerFunction: 'proxy',
+        middleware: true,
+        zeroConfig: true,
+      },
+      repoRootPath: mockWorkPath,
+    });
+
+    const syncCalls = vi
+      .mocked(execa)
+      .mock.calls.filter(
+        call => Array.isArray(call[1]) && call[1][0] === 'sync'
+      );
+    expect(syncCalls).toHaveLength(0);
+  });
+
+  it('requires the configured entrypoint to export proxy', async () => {
+    const files = {
+      'proxy.py': new FileBlob({
+        data: 'async def other(request):\n    return None\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'proxy.py',
+        meta: { isDev: false },
+        config: {
+          handlerFunction: 'proxy',
+          middleware: true,
+          zeroConfig: true,
+        },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/Handler function "proxy" not found in proxy\.py/);
+  });
+});
+
 describe('pyproject subscribers', () => {
   let mockWorkPath: string;
 
@@ -4928,6 +5096,30 @@ describe('ensureVenv uv invocation', () => {
       venvDir,
       '--allow-existing',
       '--seed',
+      '--python',
+      '3.12',
+    ]);
+  });
+
+  it('can create an unseeded environment for Python proxies', async () => {
+    await ensureVenvReal({
+      pythonVersion: {
+        pythonPath: 'python3.12',
+        major: 3,
+        minor: 12,
+      },
+      venvPath: venvDir,
+      uvPath: '/mock/uv',
+      seed: false,
+    });
+
+    expect(mockExeca).toHaveBeenCalledTimes(1);
+    const [cmd, args] = mockExeca.mock.calls[0];
+    expect(cmd).toBe('/mock/uv');
+    expect(args).toEqual([
+      'venv',
+      venvDir,
+      '--allow-existing',
       '--python',
       '3.12',
     ]);

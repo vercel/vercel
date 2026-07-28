@@ -2087,6 +2087,9 @@ importers:
       '@vercel/python-analysis':
         specifier: workspace:*
         version: link:../python-analysis
+      path-to-regexp:
+        specifier: 6.1.0
+        version: 6.1.0
     devDependencies:
       '@renovatebot/pep440':
         specifier: 4.2.1
