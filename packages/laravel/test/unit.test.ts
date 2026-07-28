@@ -56,7 +56,6 @@ describe('@vercel/laravel', () => {
           php: '^8.2',
           'laravel/framework': '^13.0',
           'laravel/wayfinder': '^0.1',
-          'vercel/laravel': '^0.1',
           'ext-gd': '*',
         },
         extra: {
@@ -100,7 +99,6 @@ describe('@vercel/laravel', () => {
       packageManagerVersion: '11',
       hasAssetBuild: true,
       hasWayfinder: true,
-      hasVercelAdapter: true,
       queueTriggers: [
         {
           topic: 'laravel',
@@ -124,15 +122,14 @@ describe('@vercel/laravel', () => {
         packageManagerVersion: undefined,
         hasAssetBuild: true,
         hasWayfinder: false,
-        hasVercelAdapter: false,
         extensions: new Set(['gd', 'redis']),
-        queueTriggers: [],
+        queueTriggers: [{ topic: 'laravel' }],
       },
       { VITE_PUBLIC_NAME: 'demo', SECRET: 'not-a-build-arg' }
     );
 
     expect(dockerfile).toContain(
-      'FROM ghcr.io/jacobparis/vercel-laravel-php@sha256:13ae0b0cb745cd50018e96b8abd1990ccaec3505926057985f3874950e81b08c'
+      'FROM ghcr.io/jacobparis/vercel-laravel-php@sha256:eef0ea0a0f491a1cdc2e5ed4ee848adbafacd0a9ec47a849ad24c9c10a5aa43b'
     );
     expect(dockerfile).not.toContain('libicu-dev');
     expect(dockerfile).toContain('docker-php-ext-install');
@@ -149,7 +146,11 @@ describe('@vercel/laravel', () => {
     expect(dockerfile).toContain('ARG VITE_PUBLIC_NAME');
     expect(dockerfile).not.toContain('ARG SECRET');
     expect(dockerfile).toContain('SESSION_DRIVER=cookie');
-    expect(dockerfile).toContain('QUEUE_CONNECTION=sync');
+    expect(dockerfile).toContain('FILESYSTEM_DISK=vercel');
+    expect(dockerfile).toContain('QUEUE_CONNECTION=vercel');
+    expect(dockerfile).toContain(
+      'php /opt/vercel/laravel/runtime/install.php /var/www/html'
+    );
     expect(dockerfile).toContain('CMD ["apache2-foreground"]');
 
     const adapted = generateDockerfile({
@@ -158,7 +159,6 @@ describe('@vercel/laravel', () => {
       composerLock: true,
       hasAssetBuild: false,
       hasWayfinder: true,
-      hasVercelAdapter: true,
       extensions: new Set(),
       queueTriggers: [{ topic: 'laravel' }],
     });
@@ -179,9 +179,8 @@ describe('@vercel/laravel', () => {
       packageManagerVersion: '11',
       hasAssetBuild: true,
       hasWayfinder: false,
-      hasVercelAdapter: false,
       extensions: new Set(),
-      queueTriggers: [],
+      queueTriggers: [{ topic: 'laravel' }],
     });
     expect(pnpm).toContain(
       'corepack enable pnpm && corepack install --global pnpm@11 && pnpm install --frozen-lockfile'
@@ -196,9 +195,8 @@ describe('@vercel/laravel', () => {
       composerLock: true,
       hasAssetBuild: false,
       hasWayfinder: false,
-      hasVercelAdapter: false,
       extensions: new Set(),
-      queueTriggers: [],
+      queueTriggers: [{ topic: 'laravel' }],
     });
     expect(fallback).toContain('FROM php:8.4-apache-bookworm');
     expect(fallback).toContain('docker-php-ext-install');
@@ -222,7 +220,7 @@ describe('@vercel/laravel', () => {
         expect(source.contextDir).toBe(workPath);
         expect(source.functionSource).toBe('artisan');
         expect(readFileSync(source.dockerfilePath, 'utf8')).toContain(
-          'FROM ghcr.io/jacobparis/vercel-laravel-php@sha256:13ae0b0cb745cd50018e96b8abd1990ccaec3505926057985f3874950e81b08c'
+          'FROM ghcr.io/jacobparis/vercel-laravel-php@sha256:eef0ea0a0f491a1cdc2e5ed4ee848adbafacd0a9ec47a849ad24c9c10a5aa43b'
         );
         return { output: {} };
       }
@@ -242,14 +240,13 @@ describe('@vercel/laravel', () => {
     expect(existsSync(generatedPath)).toBe(false);
   });
 
-  it('emits a private push consumer when the Laravel adapter is installed', async () => {
+  it('emits a private push consumer for a stock Laravel application', async () => {
     const workPath = fixture({
       artisan: '#!/usr/bin/env php',
       'composer.json': JSON.stringify({
         require: {
           php: '^8.2',
           'laravel/framework': '^13.0',
-          'vercel/laravel': '^0.1',
         },
       }),
     });

@@ -20,7 +20,9 @@ Dockerfile or `vercel.json`.
 | Logs                       | Sends Laravel logs to stderr                                                                          |
 | Sessions                   | Uses encrypted cookie sessions by default                                                             |
 | Cache                      | Uses the in-process array store by default                                                            |
-| Queues                     | Emits private `queue/v2beta` consumers when `vercel/laravel` is installed                             |
+| Blob                       | Registers a private Vercel Blob-backed default Laravel filesystem disk                                |
+| Queues                     | Registers the Laravel queue driver and emits a private `queue/v2beta` consumer                        |
+| Broadcasting               | Registers a Reverb-compatible Vercel broadcasting connection                                          |
 | Workers and scheduled jobs | Use a Vercel Service command such as `php artisan queue:work` or `php artisan schedule:run`           |
 | Image build and deploy     | Reuses Vercel Container registry, OIDC, layer cache, routing, function configuration, and diagnostics |
 | Local development          | Builds and runs the same generated image through `vercel dev`                                         |
@@ -28,11 +30,11 @@ Dockerfile or `vercel.json`.
 Set `APP_KEY` as a project environment variable. Database, mail, cache, and
 other external service credentials remain normal Laravel environment variables.
 
-Vercel Blob, Queues, and WebSockets are exposed through the `vercel/laravel`
-Composer package, which implements Laravel's filesystem, queue, and broadcasting
-contracts. When the package is present, the builder adds a private push consumer
-for the `laravel` topic. Queue callbacks run through Laravel's own worker and do
-not require a daemon.
+Vercel Blob, Queues, and WebSockets are exposed through adapters bundled into
+the generated runtime image. Applications keep using Laravel's filesystem,
+queue, and broadcasting contracts and do not install a Vercel-specific Composer
+package. The builder adds a private push consumer for the `laravel` topic. Queue
+callbacks run through Laravel's own worker and do not require a daemon.
 
 Configure one or more push consumers in `composer.json`:
 

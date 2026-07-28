@@ -2,7 +2,7 @@ import type { LaravelProject } from './project';
 
 const PREBUILT_PHP_IMAGES: Partial<Record<string, string>> = {
   '8.5':
-    'ghcr.io/jacobparis/vercel-laravel-php@sha256:13ae0b0cb745cd50018e96b8abd1990ccaec3505926057985f3874950e81b08c',
+    'ghcr.io/jacobparis/vercel-laravel-php@sha256:eef0ea0a0f491a1cdc2e5ed4ee848adbafacd0a9ec47a849ad24c9c10a5aa43b',
 };
 
 function packageManagerCommands(project: LaravelProject): {
@@ -173,12 +173,12 @@ export function generateDockerfile(
     '    LOG_CHANNEL=stderr \\',
     '    SESSION_DRIVER=cookie \\',
     '    CACHE_STORE=array \\',
-    ...(project.hasVercelAdapter
-      ? ['    FILESYSTEM_DISK=vercel \\', '    QUEUE_CONNECTION=vercel']
-      : ['    QUEUE_CONNECTION=sync']),
+    '    FILESYSTEM_DISK=vercel \\',
+    '    QUEUE_CONNECTION=vercel',
     'COPY --from=build --chown=www-data:www-data /app /var/www/html',
     'RUN rm -f /var/www/html/.env \\',
     '    && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \\',
+    '    && php /opt/vercel/laravel/runtime/install.php /var/www/html \\',
     '    && chown -R www-data:www-data storage bootstrap/cache',
     'EXPOSE 80',
     'CMD ["apache2-foreground"]',

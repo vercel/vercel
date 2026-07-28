@@ -16,7 +16,6 @@ export interface LaravelProject {
   packageManagerVersion?: string;
   hasAssetBuild: boolean;
   hasWayfinder: boolean;
-  hasVercelAdapter: boolean;
   extensions: Set<string>;
   queueTriggers: LaravelQueueTrigger[];
 }
@@ -92,14 +91,7 @@ function packageManager(workPath: string): {
     : {};
 }
 
-function queueTriggers(
-  composer: JsonObject,
-  hasAdapter: boolean
-): LaravelQueueTrigger[] {
-  if (!hasAdapter) {
-    return [];
-  }
-
+function queueTriggers(composer: JsonObject): LaravelQueueTrigger[] {
   const configured = object(object(composer.extra).vercel).queues;
   if (configured === false) {
     return [];
@@ -198,9 +190,6 @@ export function inspectLaravelProject(workPath: string): LaravelProject {
     ...(assets.packageManager === 'bun' ? ['bunfig.toml'] : []),
   ].filter(file => existsSync(path.join(workPath, file)));
   let packageManagerVersion: string | undefined;
-  const hasVercelAdapter =
-    string(require['vercel/laravel']) !== undefined ||
-    packages.some(pkg => object(pkg).name === 'vercel/laravel');
   const hasWayfinder =
     string(require['laravel/wayfinder']) !== undefined ||
     packages.some(pkg => object(pkg).name === 'laravel/wayfinder');
@@ -232,8 +221,7 @@ export function inspectLaravelProject(workPath: string): LaravelProject {
     packageManagerVersion,
     hasAssetBuild,
     hasWayfinder,
-    hasVercelAdapter,
     extensions,
-    queueTriggers: queueTriggers(composer, hasVercelAdapter),
+    queueTriggers: queueTriggers(composer),
   };
 }
