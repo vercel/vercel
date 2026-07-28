@@ -42,6 +42,12 @@ jobs:
     name: Binary release
     needs: determine
     if: needs.determine.outputs.should-release-binary == 'true'
+    # Reusable workflow permissions are capped by the calling job, so
+    # id-token: write must be granted here for npm trusted publishing
+    # (OIDC) in the publish-npm job of release-binary.yml to work.
+    permissions:
+      contents: read
+      id-token: write
     uses: ./.github/workflows/release-binary.yml
     with:
       ref: ${{ github.sha }}
