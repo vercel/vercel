@@ -5,6 +5,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
+import type { BuildResultV2Typical } from '@vercel/build-utils';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -54,7 +55,19 @@ describe('@vercel/laravel', () => {
         require: {
           php: '^8.2',
           'laravel/framework': '^13.0',
+          'vercel/laravel': '^0.1',
           'ext-gd': '*',
+        },
+        extra: {
+          vercel: {
+            queues: [
+              {
+                topic: 'laravel',
+                maxConcurrency: 10,
+                retryAfterSeconds: 30,
+              },
+            ],
+          },
         },
       }),
       'composer.lock': JSON.stringify({
@@ -78,6 +91,14 @@ describe('@vercel/laravel', () => {
       packageManager: 'pnpm',
       packageLock: 'pnpm-lock.yaml',
       hasAssetBuild: true,
+      hasVercelAdapter: true,
+      queueTriggers: [
+        {
+          topic: 'laravel',
+          maxConcurrency: 10,
+          retryAfterSeconds: 30,
+        },
+      ],
     });
     expect(project.extensions.has('gd')).toBe(true);
     expect(project.extensions.has('curl')).toBe(true);
@@ -92,7 +113,9 @@ describe('@vercel/laravel', () => {
         packageManager: 'npm',
         packageLock: 'package-lock.json',
         hasAssetBuild: true,
+        hasVercelAdapter: false,
         extensions: new Set(['gd', 'redis']),
+        queueTriggers: [],
       },
       { VITE_PUBLIC_NAME: 'demo', SECRET: 'not-a-build-arg' }
     );
@@ -111,6 +134,18 @@ describe('@vercel/laravel', () => {
     expect(dockerfile).toContain('SESSION_DRIVER=cookie');
     expect(dockerfile).toContain('QUEUE_CONNECTION=sync');
     expect(dockerfile).toContain('CMD ["apache2-foreground"]');
+
+    const adapted = generateDockerfile({
+      laravelVersion: '13.18.0',
+      phpVersion: '8.5',
+      composerLock: true,
+      hasAssetBuild: false,
+      hasVercelAdapter: true,
+      extensions: new Set(),
+      queueTriggers: [{ topic: 'laravel' }],
+    });
+    expect(adapted).toContain('FILESYSTEM_DISK=vercel');
+    expect(adapted).toContain('QUEUE_CONNECTION=vercel');
   });
 
   it('delegates a generated recipe and reports the Laravel version', async () => {
@@ -149,5 +184,50 @@ describe('@vercel/laravel', () => {
       framework: { slug: 'laravel', version: '13.18.0' },
     });
     expect(existsSync(generatedPath)).toBe(false);
+  });
+
+  it('emits a private push consumer when the Laravel adapter is installed', async () => {
+    const workPath = fixture({
+      artisan: '#!/usr/bin/env php',
+      'composer.json': JSON.stringify({
+        require: {
+          php: '^8.2',
+          'laravel/framework': '^13.0',
+          'vercel/laravel': '^0.1',
+        },
+      }),
+    });
+    containerBuild.mockResolvedValueOnce({
+      routes: [{ src: '/(.*)', dest: '/index' }],
+      output: {
+        index: {
+          type: 'Lambda',
+          runtime: 'container',
+          handler: 'registry.example/laravel@sha256:test',
+          environment: {},
+        },
+      },
+    });
+
+    const result = (await build({
+      files: {},
+      entrypoint: '<detect>',
+      workPath,
+      repoRootPath: workPath,
+      config: {},
+    } as any)) as BuildResultV2Typical;
+
+    expect(result.routes).toEqual([{ src: '/(.*)', dest: '/index' }]);
+    expect(result.output.__vercel_laravel_queue_0).toMatchObject({
+      handler: 'registry.example/laravel@sha256:test',
+      environment: { VERCEL_LARAVEL_QUEUE_CALLBACK: '1' },
+      experimentalTriggers: [
+        {
+          type: 'queue/v2beta',
+          topic: 'laravel',
+          consumer: '____vercel__laravel__queue__0',
+        },
+      ],
+    });
   });
 });

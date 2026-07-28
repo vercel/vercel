@@ -13,7 +13,16 @@ export interface LaravelProject {
   packageManager?: 'npm' | 'pnpm' | 'yarn' | 'bun';
   packageLock?: string;
   hasAssetBuild: boolean;
+  hasVercelAdapter: boolean;
   extensions: Set<string>;
+  queueTriggers: LaravelQueueTrigger[];
+}
+
+export interface LaravelQueueTrigger {
+  topic: string;
+  initialDelaySeconds?: number;
+  maxConcurrency?: number;
+  retryAfterSeconds?: number;
 }
 
 function readJson(file: string): JsonObject {
@@ -80,6 +89,55 @@ function packageManager(workPath: string): {
     : {};
 }
 
+function queueTriggers(
+  composer: JsonObject,
+  hasAdapter: boolean
+): LaravelQueueTrigger[] {
+  if (!hasAdapter) {
+    return [];
+  }
+
+  const configured = object(object(composer.extra).vercel).queues;
+  if (configured === false) {
+    return [];
+  }
+
+  const entries = configured === undefined ? ['laravel'] : configured;
+  if (!Array.isArray(entries)) {
+    throw new Error(
+      '`composer.json` extra.vercel.queues must be an array or false.'
+    );
+  }
+
+  return entries.map((entry, index) => {
+    const value = typeof entry === 'string' ? { topic: entry } : object(entry);
+    const topic = string(value.topic);
+    if (!topic || !/^[A-Za-z0-9_-]+\*?$/.test(topic)) {
+      throw new Error(
+        `Invalid Laravel Vercel queue topic at extra.vercel.queues[${index}].`
+      );
+    }
+
+    const trigger: LaravelQueueTrigger = { topic };
+    for (const key of [
+      'initialDelaySeconds',
+      'maxConcurrency',
+      'retryAfterSeconds',
+    ] as const) {
+      const candidate = value[key];
+      if (candidate !== undefined) {
+        if (typeof candidate !== 'number' || !Number.isFinite(candidate)) {
+          throw new Error(
+            `Laravel Vercel queue option [${key}] must be a number.`
+          );
+        }
+        trigger[key] = candidate;
+      }
+    }
+    return trigger;
+  });
+}
+
 export function inspectLaravelProject(workPath: string): LaravelProject {
   const composerPath = path.join(workPath, 'composer.json');
   const artisanPath = path.join(workPath, 'artisan');
@@ -109,9 +167,12 @@ export function inspectLaravelProject(workPath: string): LaravelProject {
 
   let laravelVersion = laravelConstraint;
   const composerLock = existsSync(path.join(workPath, 'composer.lock'));
+  let packages: JsonObject[] = [];
   if (composerLock) {
     const lock = readJson(path.join(workPath, 'composer.lock'));
-    const packages = Array.isArray(lock.packages) ? lock.packages : [];
+    packages = Array.isArray(lock.packages)
+      ? lock.packages.map(pkg => object(pkg))
+      : [];
     for (const pkg of packages) {
       for (const dependency of Object.keys(object(object(pkg).require))) {
         if (dependency.startsWith('ext-')) {
@@ -127,6 +188,9 @@ export function inspectLaravelProject(workPath: string): LaravelProject {
   }
 
   const assets = packageManager(workPath);
+  const hasVercelAdapter =
+    string(require['vercel/laravel']) !== undefined ||
+    packages.some(pkg => object(pkg).name === 'vercel/laravel');
   let hasAssetBuild = false;
   if (assets.packageManager) {
     const packageJson = readJson(path.join(workPath, 'package.json'));
@@ -139,6 +203,8 @@ export function inspectLaravelProject(workPath: string): LaravelProject {
     composerLock,
     ...assets,
     hasAssetBuild,
+    hasVercelAdapter,
     extensions,
+    queueTriggers: queueTriggers(composer, hasVercelAdapter),
   };
 }

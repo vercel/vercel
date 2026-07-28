@@ -151,7 +151,9 @@ export function generateDockerfile(
     '    LOG_CHANNEL=stderr \\',
     '    SESSION_DRIVER=cookie \\',
     '    CACHE_STORE=array \\',
-    '    QUEUE_CONNECTION=sync',
+    ...(project.hasVercelAdapter
+      ? ['    FILESYSTEM_DISK=vercel \\', '    QUEUE_CONNECTION=vercel']
+      : ['    QUEUE_CONNECTION=sync']),
     'COPY --from=build --chown=www-data:www-data /app /var/www/html',
     'RUN rm -f /var/www/html/.env \\',
     '    && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \\',

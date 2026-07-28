@@ -7,6 +7,7 @@ import type {
   StartDevServerOptions,
   StartDevServerResult,
 } from '@vercel/build-utils';
+import { sanitizeConsumerName } from '@vercel/build-utils';
 // @ts-expect-error - Builder packages intentionally do not publish declarations.
 import * as containerBuilder from '@vercel/container';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -64,6 +65,27 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
     source => buildWithContainerSource(withLaravelFramework(options), source)
   );
   const typicalResult = result as BuildResultV2Typical;
+  const output = typicalResult.output as Record<string, any>;
+  const web = output.index;
+  if (web && project.queueTriggers.length > 0) {
+    for (const [index, trigger] of project.queueTriggers.entries()) {
+      const functionPath = `__vercel_laravel_queue_${index}`;
+      output[functionPath] = {
+        ...web,
+        environment: {
+          ...web.environment,
+          VERCEL_LARAVEL_QUEUE_CALLBACK: '1',
+        },
+        experimentalTriggers: [
+          {
+            type: 'queue/v2beta',
+            ...trigger,
+            consumer: sanitizeConsumerName(functionPath),
+          },
+        ],
+      };
+    }
+  }
   typicalResult.framework = {
     slug: 'laravel',
     version: project.laravelVersion,

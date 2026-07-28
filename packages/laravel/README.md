@@ -20,7 +20,7 @@ Dockerfile or `vercel.json`.
 | Logs                       | Sends Laravel logs to stderr                                                                          |
 | Sessions                   | Uses encrypted cookie sessions by default                                                             |
 | Cache                      | Uses the in-process array store by default                                                            |
-| Queues                     | Uses synchronous execution unless the project configures a durable queue adapter                      |
+| Queues                     | Emits private `queue/v2beta` consumers when `vercel/laravel` is installed                             |
 | Workers and scheduled jobs | Use a Vercel Service command such as `php artisan queue:work` or `php artisan schedule:run`           |
 | Image build and deploy     | Reuses Vercel Container registry, OIDC, layer cache, routing, function configuration, and diagnostics |
 | Local development          | Builds and runs the same generated image through `vercel dev`                                         |
@@ -28,12 +28,31 @@ Dockerfile or `vercel.json`.
 Set `APP_KEY` as a project environment variable. Database, mail, cache, and
 other external service credentials remain normal Laravel environment variables.
 
-Vercel Blob, Queues, and WebSockets should be exposed through a Composer package
-that implements Laravel's filesystem, queue, and broadcasting contracts. They
-are intentionally not emulated inside this builder: Blob replaces durable local
-uploads, Queues replaces a hosted queue daemon, and native WebSockets replaces a
-hosted Reverb server. A project can install those adapters without changing the
-framework integration.
+Vercel Blob, Queues, and WebSockets are exposed through the `vercel/laravel`
+Composer package, which implements Laravel's filesystem, queue, and broadcasting
+contracts. When the package is present, the builder adds a private push consumer
+for the `laravel` topic. Queue callbacks run through Laravel's own worker and do
+not require a daemon.
+
+Configure one or more push consumers in `composer.json`:
+
+```json
+{
+  "extra": {
+    "vercel": {
+      "queues": [
+        {
+          "topic": "laravel",
+          "maxConcurrency": 10,
+          "retryAfterSeconds": 30
+        }
+      ]
+    }
+  }
+}
+```
+
+Set `extra.vercel.queues` to `false` to opt into poll-only mode.
 
 ## Trying a CLI preview
 
