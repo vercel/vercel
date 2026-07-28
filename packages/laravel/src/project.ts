@@ -13,6 +13,7 @@ export interface LaravelProject {
   packageManager?: 'npm' | 'pnpm' | 'yarn' | 'bun';
   packageLock?: string;
   hasAssetBuild: boolean;
+  hasWayfinder: boolean;
   hasVercelAdapter: boolean;
   extensions: Set<string>;
   queueTriggers: LaravelQueueTrigger[];
@@ -191,6 +192,9 @@ export function inspectLaravelProject(workPath: string): LaravelProject {
   const hasVercelAdapter =
     string(require['vercel/laravel']) !== undefined ||
     packages.some(pkg => object(pkg).name === 'vercel/laravel');
+  const hasWayfinder =
+    string(require['laravel/wayfinder']) !== undefined ||
+    packages.some(pkg => object(pkg).name === 'laravel/wayfinder');
   let hasAssetBuild = false;
   if (assets.packageManager) {
     const packageJson = readJson(path.join(workPath, 'package.json'));
@@ -203,6 +207,7 @@ export function inspectLaravelProject(workPath: string): LaravelProject {
     composerLock,
     ...assets,
     hasAssetBuild,
+    hasWayfinder,
     hasVercelAdapter,
     extensions,
     queueTriggers: queueTriggers(composer, hasVercelAdapter),

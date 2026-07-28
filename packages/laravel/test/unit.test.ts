@@ -55,6 +55,7 @@ describe('@vercel/laravel', () => {
         require: {
           php: '^8.2',
           'laravel/framework': '^13.0',
+          'laravel/wayfinder': '^0.1',
           'vercel/laravel': '^0.1',
           'ext-gd': '*',
         },
@@ -91,6 +92,7 @@ describe('@vercel/laravel', () => {
       packageManager: 'pnpm',
       packageLock: 'pnpm-lock.yaml',
       hasAssetBuild: true,
+      hasWayfinder: true,
       hasVercelAdapter: true,
       queueTriggers: [
         {
@@ -113,6 +115,7 @@ describe('@vercel/laravel', () => {
         packageManager: 'npm',
         packageLock: 'package-lock.json',
         hasAssetBuild: true,
+        hasWayfinder: false,
         hasVercelAdapter: false,
         extensions: new Set(['gd', 'redis']),
         queueTriggers: [],
@@ -146,10 +149,14 @@ describe('@vercel/laravel', () => {
       phpVersion: '8.5',
       composerLock: true,
       hasAssetBuild: false,
+      hasWayfinder: true,
       hasVercelAdapter: true,
       extensions: new Set(),
       queueTriggers: [{ topic: 'laravel' }],
     });
+    expect(adapted).toContain(
+      'php -d memory_limit=512M artisan wayfinder:generate --ansi'
+    );
     expect(adapted).toContain('FILESYSTEM_DISK=vercel');
     expect(adapted).toContain('QUEUE_CONNECTION=vercel');
     expect(adapted).not.toContain('docker-php-ext-install');
@@ -159,6 +166,7 @@ describe('@vercel/laravel', () => {
       phpVersion: '8.4',
       composerLock: true,
       hasAssetBuild: false,
+      hasWayfinder: false,
       hasVercelAdapter: false,
       extensions: new Set(),
       queueTriggers: [],

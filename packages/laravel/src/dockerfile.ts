@@ -154,6 +154,9 @@ export function generateDockerfile(
     'COPY . .',
     'RUN composer install --no-dev --no-interaction --no-progress --prefer-dist --optimize-autoloader \\',
     '    && php artisan package:discover --ansi',
+    ...(project.hasWayfinder
+      ? ['RUN php -d memory_limit=512M artisan wayfinder:generate --ansi']
+      : []),
     ...(project.hasAssetBuild ? [`RUN ${assets.build}`] : []),
     '',
     'FROM php-base AS runtime',
