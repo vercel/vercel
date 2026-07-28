@@ -50,11 +50,8 @@ let builderPins: Map<string, string> | undefined;
 function getBuilderPins(): Map<string, string> {
   if (!builderPins) {
     builderPins = new Map();
-    const manifest = cliPkg as {
-      builders?: Record<string, string>;
-      peerDependencies?: Record<string, string>;
-    };
-    const pins = manifest.builders ?? manifest.peerDependencies ?? {};
+    const pins: Record<string, string> =
+      (cliPkg as { builders?: Record<string, string> }).builders ?? {};
     for (const [name, version] of Object.entries(pins)) {
       if (validRange(version)) {
         builderPins.set(name, version);

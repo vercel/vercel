@@ -31,7 +31,12 @@ export function pinBuilders(pkg, workspaceVersions) {
     throw new Error('package.json has no `builders` manifest to pin');
   }
   const pinned = {};
-  for (const name of Object.keys(builders)) {
+  for (const [name, marker] of Object.entries(builders)) {
+    if (!marker.startsWith('workspace:')) {
+      // Already rewritten (e.g. to a tarball URL by utils/pack.ts)
+      pinned[name] = marker;
+      continue;
+    }
     const version = workspaceVersions.get(name);
     if (!version) {
       throw new Error(`Builder "${name}" not found in the workspace`);

@@ -25,6 +25,20 @@ describe('pinBuilders()', () => {
     });
   });
 
+  it('passes through entries that are not workspace markers', () => {
+    const pkg = {
+      name: 'vercel',
+      builders: {
+        '@vercel/node': 'https://example.com/tarballs/%40vercel/node.tgz',
+        '@vercel/next': 'workspace:*',
+      },
+    };
+    expect(pinBuilders(pkg, versions).builders).toEqual({
+      '@vercel/node': 'https://example.com/tarballs/%40vercel/node.tgz',
+      '@vercel/next': '4.20.4',
+    });
+  });
+
   it('throws when a builder is not in the workspace', () => {
     const pkg = {
       name: 'vercel',
