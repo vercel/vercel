@@ -32,13 +32,6 @@ export default async function addon(client: Client, argv: string[]) {
     return 1;
   }
 
-  const formatResult = validateJsonOutput(parsedArgs.flags);
-  if (!formatResult.valid) {
-    output.error(formatResult.error);
-    return 1;
-  }
-  const asJson = formatResult.jsonOutput;
-
   const { args, flags } = parsedArgs;
   const [addonName, quantityStr] = args;
 
@@ -57,10 +50,16 @@ export default async function addon(client: Client, argv: string[]) {
       packs: packsResult.packs,
       yes: Boolean(flags['--yes']),
       projectName: typeof project === 'string' ? project : undefined,
-      asJson,
       commandName: 'buy',
     });
   }
+
+  const formatResult = validateJsonOutput(parsedArgs.flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
 
   // Validate addon name argument
   if (!addonName) {

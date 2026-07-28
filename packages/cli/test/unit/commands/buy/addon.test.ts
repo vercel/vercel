@@ -342,11 +342,11 @@ describe('buy addon', () => {
     });
   });
 
-  describe('--format=json', () => {
+  describe('--json', () => {
     it('outputs JSON on success', async () => {
       setupTeam();
       useBuyEndpoint();
-      client.setArgv('buy', 'addon', 'siem', '1', '--yes', '--format=json');
+      client.setArgv('buy', 'addon', 'siem', '1', '--yes', '--json');
       const exitCode = await buy(client);
       expect(exitCode).toBe(0);
 

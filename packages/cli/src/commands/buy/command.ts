@@ -89,7 +89,6 @@ export const addonSubcommand = {
       ...yesOption,
       description: 'Skip the confirmation prompt',
     },
-    formatOption,
     jsonOption,
     projectOption,
   ],

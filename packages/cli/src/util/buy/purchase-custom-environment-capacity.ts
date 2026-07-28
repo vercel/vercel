@@ -24,7 +24,6 @@ export type PurchaseCustomEnvironmentCapacityOptions = {
   packs: number;
   yes: boolean;
   projectName?: string;
-  asJson: boolean;
   commandName: string;
 };
 
@@ -34,7 +33,6 @@ export async function purchaseCustomEnvironmentCapacity(
     packs,
     yes,
     projectName,
-    asJson,
     commandName,
   }: PurchaseCustomEnvironmentCapacityOptions
 ): Promise<number> {
@@ -121,25 +119,9 @@ export async function purchaseCustomEnvironmentCapacity(
 
     output.stopSpinner();
 
-    if (asJson) {
-      client.stdout.write(
-        `${JSON.stringify(
-          {
-            productAlias: 'customEnvironment',
-            project: projectNameResolved,
-            packs,
-            purchasedAmount: result.purchasedAmount,
-            packSize,
-          },
-          null,
-          2
-        )}\n`
-      );
-    } else {
-      output.success(
-        `Updated custom environment capacity for ${chalk.bold(projectNameResolved)} to ${chalk.bold(packs)} pack${packs === 1 ? '' : 's'} (${result.purchasedAmount} environments) ${purchaseStamp()}`
-      );
-    }
+    output.success(
+      `Updated custom environment capacity for ${chalk.bold(projectNameResolved)} to ${chalk.bold(packs)} pack${packs === 1 ? '' : 's'} (${result.purchasedAmount} environments) ${purchaseStamp()}`
+    );
 
     return 0;
   } catch (err: unknown) {
