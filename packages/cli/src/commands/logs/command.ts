@@ -34,7 +34,7 @@ export const logsCommand = {
       type: String,
       deprecated: false,
       description:
-        'Filter by environment: production or preview. With --follow, select which environment to stream',
+        'Filter by environment: production or preview. With --follow, selects the deployment to stream: production uses the latest production deployment, preview uses your latest preview deployment',
     },
     {
       name: 'level',
@@ -151,47 +151,27 @@ export const logsCommand = {
   ],
   examples: [
     {
-      name: 'Stream live logs for the latest production deployment',
-      value: `${packageName} logs --follow`,
-    },
-    {
-      name: 'Stream live logs for your latest preview deployment',
-      value: `${packageName} logs --follow --environment preview`,
-    },
-    {
-      name: 'Stream live logs for the latest production deployment',
-      value: `${packageName} logs --follow --environment production`,
-    },
-    {
-      name: 'Stream live logs for a deployment URL',
-      value: `${packageName} logs https://my-app-xxxxx.vercel.app --follow`,
-    },
-    {
-      name: 'Stream live logs for a deployment ID',
-      value: `${packageName} logs dpl_xxxxx --follow`,
-    },
-    {
-      name: 'Stream logs for a specific project',
-      value: `${packageName} logs --project my-app --follow`,
-    },
-    {
-      name: 'Display recent logs for the linked project',
+      name: 'Display recent request logs for the linked project',
       value: `${packageName} logs`,
     },
     {
-      name: 'Display error logs from the last hour',
+      name: 'Display request logs for a specific project',
+      value: `${packageName} logs --project my-app`,
+    },
+    {
+      name: 'Display request error logs from the last hour',
       value: `${packageName} logs --level error --since 1h`,
     },
     {
-      name: 'Display logs for a specific deployment (historical)',
+      name: 'Display request logs for a specific deployment',
       value: `${packageName} logs dpl_xxxxx`,
     },
     {
-      name: 'Filter logs by status code and output as JSON',
+      name: 'Filter request logs by status code and output as JSON',
       value: `${packageName} logs --status-code 500 --json`,
     },
     {
-      name: 'Search logs and pipe to jq',
+      name: 'Search request logs and pipe to jq',
       value: `${packageName} logs --query "timeout" --json | jq '.message'`,
     },
     {
@@ -199,24 +179,28 @@ export const logsCommand = {
       value: `${packageName} logs --query 'status:500 error' --json | jq '.message'`,
     },
     {
-      name: 'Display production logs only',
+      name: 'Display production request logs only',
       value: `${packageName} logs --environment production`,
     },
     {
-      name: 'Display logs for a specific request',
+      name: 'Display request logs for a specific request',
       value: `${packageName} logs --request-id req_xxxxx`,
     },
     {
-      name: 'Display logs with full message details',
+      name: 'Display request logs with full message details',
       value: `${packageName} logs --expand`,
     },
     {
-      name: 'Display logs for a specific branch',
+      name: 'Display request logs for a specific branch',
       value: `${packageName} logs --branch feature-x`,
     },
     {
-      name: 'Display logs for the current git branch',
-      value: `${packageName} logs --branch $(git branch --show-current)`,
+      name: 'Stream runtime logs for the latest production deployment',
+      value: `${packageName} logs --follow`,
+    },
+    {
+      name: 'Stream runtime logs for your latest preview deployment',
+      value: `${packageName} logs --follow --environment preview`,
     },
   ],
 } as const;
