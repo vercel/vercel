@@ -9,6 +9,7 @@ import {
 } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { platforms } from './platforms.mjs';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = resolve(packageRoot, '..', '..');
@@ -21,40 +22,6 @@ const outputRoot = join(packageRoot, 'dist-native');
 const binaryRoot = join(cliRoot, 'dist-bin');
 const checkSourcesOnly = process.argv.includes('--check-sources');
 const allowMissing = process.argv.includes('--allow-missing');
-
-const platforms = [
-  {
-    name: '@vercel/vc-native-darwin-arm64',
-    asset: 'vercel-darwin-arm64',
-    os: ['darwin'],
-    cpu: ['arm64'],
-  },
-  {
-    name: '@vercel/vc-native-darwin-x64',
-    asset: 'vercel-darwin-x64',
-    os: ['darwin'],
-    cpu: ['x64'],
-  },
-  {
-    name: '@vercel/vc-native-linux-arm64',
-    asset: 'vercel-linux-arm64',
-    os: ['linux'],
-    cpu: ['arm64'],
-  },
-  {
-    name: '@vercel/vc-native-linux-x64',
-    asset: 'vercel-linux-x64',
-    os: ['linux'],
-    cpu: ['x64'],
-  },
-  {
-    name: '@vercel/vc-native-win32-x64',
-    asset: 'vercel-windows-x64.exe',
-    os: ['win32'],
-    cpu: ['x64'],
-    binary: 'vercel.exe',
-  },
-];
 
 if (checkSourcesOnly) {
   await stat(join(packageRoot, 'bin', 'vercel'));
