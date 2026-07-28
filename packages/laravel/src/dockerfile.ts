@@ -9,15 +9,19 @@ function packageManagerCommands(project: LaravelProject): {
   install: string;
   build: string;
 } {
+  const corepack = project.packageManagerVersion
+    ? `corepack enable && corepack install --global ${project.packageManager}@${project.packageManagerVersion}`
+    : 'corepack enable';
+
   switch (project.packageManager) {
     case 'pnpm':
       return {
-        install: 'corepack enable && pnpm install --frozen-lockfile',
+        install: `${corepack} && pnpm install --frozen-lockfile`,
         build: 'pnpm run build',
       };
     case 'yarn':
       return {
-        install: 'corepack enable && yarn install --frozen-lockfile',
+        install: `${corepack} && yarn install --frozen-lockfile`,
         build: 'yarn build',
       };
     case 'bun':

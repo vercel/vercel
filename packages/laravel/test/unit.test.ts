@@ -80,7 +80,10 @@ describe('@vercel/laravel', () => {
           },
         ],
       }),
-      'package.json': JSON.stringify({ scripts: { build: 'vite build' } }),
+      'package.json': JSON.stringify({
+        scripts: { build: 'vite build' },
+        engines: { pnpm: '^11.0.0' },
+      }),
       'pnpm-lock.yaml': 'lockfileVersion: 9',
     });
 
@@ -91,6 +94,7 @@ describe('@vercel/laravel', () => {
       composerLock: true,
       packageManager: 'pnpm',
       packageLock: 'pnpm-lock.yaml',
+      packageManagerVersion: '11',
       hasAssetBuild: true,
       hasWayfinder: true,
       hasVercelAdapter: true,
@@ -114,6 +118,7 @@ describe('@vercel/laravel', () => {
         composerLock: true,
         packageManager: 'npm',
         packageLock: 'package-lock.json',
+        packageManagerVersion: undefined,
         hasAssetBuild: true,
         hasWayfinder: false,
         hasVercelAdapter: false,
@@ -160,6 +165,23 @@ describe('@vercel/laravel', () => {
     expect(adapted).toContain('FILESYSTEM_DISK=vercel');
     expect(adapted).toContain('QUEUE_CONNECTION=vercel');
     expect(adapted).not.toContain('docker-php-ext-install');
+
+    const pnpm = generateDockerfile({
+      laravelVersion: '13.18.0',
+      phpVersion: '8.5',
+      composerLock: true,
+      packageManager: 'pnpm',
+      packageLock: 'pnpm-lock.yaml',
+      packageManagerVersion: '11',
+      hasAssetBuild: true,
+      hasWayfinder: false,
+      hasVercelAdapter: false,
+      extensions: new Set(),
+      queueTriggers: [],
+    });
+    expect(pnpm).toContain(
+      'corepack install --global pnpm@11 && pnpm install --frozen-lockfile'
+    );
 
     const fallback = generateDockerfile({
       laravelVersion: '12.0.0',

@@ -12,6 +12,7 @@ export interface LaravelProject {
   composerLock: boolean;
   packageManager?: 'npm' | 'pnpm' | 'yarn' | 'bun';
   packageLock?: string;
+  packageManagerVersion?: string;
   hasAssetBuild: boolean;
   hasWayfinder: boolean;
   hasVercelAdapter: boolean;
@@ -189,6 +190,7 @@ export function inspectLaravelProject(workPath: string): LaravelProject {
   }
 
   const assets = packageManager(workPath);
+  let packageManagerVersion: string | undefined;
   const hasVercelAdapter =
     string(require['vercel/laravel']) !== undefined ||
     packages.some(pkg => object(pkg).name === 'vercel/laravel');
@@ -199,6 +201,19 @@ export function inspectLaravelProject(workPath: string): LaravelProject {
   if (assets.packageManager) {
     const packageJson = readJson(path.join(workPath, 'package.json'));
     hasAssetBuild = typeof object(packageJson.scripts).build === 'string';
+    const declaredPackageManager = string(packageJson.packageManager);
+    const packageManagerPrefix = `${assets.packageManager}@`;
+    if (declaredPackageManager?.startsWith(packageManagerPrefix)) {
+      packageManagerVersion = declaredPackageManager
+        .slice(packageManagerPrefix.length)
+        .split('+')[0];
+    } else {
+      const engine = string(object(packageJson.engines)[assets.packageManager]);
+      const minimumVersion = engine ? semver.minVersion(engine) : null;
+      packageManagerVersion = minimumVersion
+        ? String(minimumVersion.major)
+        : undefined;
+    }
   }
 
   return {
@@ -206,6 +221,7 @@ export function inspectLaravelProject(workPath: string): LaravelProject {
     phpVersion: resolvePhpVersion(phpConstraint),
     composerLock,
     ...assets,
+    packageManagerVersion,
     hasAssetBuild,
     hasWayfinder,
     hasVercelAdapter,
