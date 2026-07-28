@@ -699,6 +699,8 @@ export class ServicesOrchestrator {
     if (this.hasQueueServices) {
       env.VERCEL_QUEUE_BASE_URL = `${this.proxyOrigin}/_svc/_queues`;
       env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
+      env.VERCEL_REGION = 'dev1';
+      env.VERCEL_DEPLOYMENT_ID = 'dpl_dev';
     }
 
     if (service.routePrefix && service.routePrefix !== '/') {
@@ -776,6 +778,8 @@ export class ServicesOrchestrator {
     if (this.hasQueueServices) {
       env.VERCEL_QUEUE_BASE_URL = `${this.proxyOrigin}/_svc/_queues`;
       env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
+      env.VERCEL_REGION = 'dev1';
+      env.VERCEL_DEPLOYMENT_ID = 'dpl_dev';
     }
 
     const root = service.root || '.';
