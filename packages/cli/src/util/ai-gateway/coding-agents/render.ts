@@ -189,7 +189,7 @@ export function buildAgentPrompt(plan: SetupPlan, apiKey: string): string {
       : [];
   if (plan.migrations.length > 0) {
     sections.push(
-      '# Existing desktop sessions',
+      '# Existing Codex Desktop sessions',
       'Before editing the provider configuration, copy the sessions described below. Never move, delete, or overwrite the originals.'
     );
     for (const migration of plan.migrations) {

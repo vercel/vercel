@@ -402,7 +402,7 @@ export const setupSubcommand = {
       type: Boolean,
       deprecated: false,
       description:
-        'Do not copy existing desktop sessions into the AI Gateway provider',
+        'Do not copy existing Codex Desktop sessions into the AI Gateway provider',
     },
     {
       name: 'no-keychain',

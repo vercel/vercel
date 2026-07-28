@@ -154,7 +154,7 @@ export async function runMachine(args: {
         status: AGENT_STATUS.OK,
         reason: 'agent_prompt',
         message:
-          'Generated a desktop session migration prompt. No changes were applied.',
+          'Generated a Codex Desktop session migration prompt. No changes were applied.',
         prompt: buildAgentPrompt(previewPlan, ''),
         configured: [],
         skipped,
@@ -172,8 +172,8 @@ export async function runMachine(args: {
           : 'sessions_migrated',
       message:
         migrated.errors.length > 0
-          ? 'One or more desktop session copies failed. Original sessions were left unchanged.'
-          : 'Copied existing desktop sessions into the AI Gateway provider. Original sessions remain unchanged.',
+          ? 'One or more Codex Desktop session copies failed. Original sessions were left unchanged.'
+          : 'Copied existing Codex Desktop sessions into the AI Gateway provider. Original sessions remain unchanged.',
       configured: [],
       migrated: migrated.results,
       skipped: [...skipped, ...migrationSkips(migrated.errors)],
@@ -215,7 +215,7 @@ export async function runMachine(args: {
       status: AGENT_STATUS.ERROR,
       reason: 'session_migration_failed',
       message:
-        'No agent configuration was changed because one or more desktop session copies failed. Original sessions were left unchanged.',
+        'No agent configuration was changed because one or more Codex Desktop session copies failed. Original sessions were left unchanged.',
       configured: [],
       migrated: migrated.results,
       skipped: [...skipped, ...migrationSkips(migrated.errors)],

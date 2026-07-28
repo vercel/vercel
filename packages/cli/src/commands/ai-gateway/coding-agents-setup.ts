@@ -327,16 +327,19 @@ export default async function codingAgentsSetup(
         (total, migration) => total + migration.itemCount,
         0
       );
+      const agentNames = [
+        ...new Set(sessionMigrations.map(migration => migration.agent)),
+      ].join(' and ');
       const migrate = await client.input.confirm(
-        `Copy ${count} existing desktop ${
-          count === 1 ? 'session' : 'sessions'
-        } so they stay visible after switching to the AI Gateway? The originals will remain unchanged.`,
+        count === 1
+          ? `Copy your existing ${agentNames} Desktop session so it stays visible after switching to the AI Gateway? The original will be left unchanged.`
+          : `Copy your ${count} existing ${agentNames} Desktop sessions so they stay visible after switching to the AI Gateway? The originals will be left unchanged.`,
         true
       );
       if (!migrate) {
         sessionMigrations = [];
         printStatus(
-          'Skipped desktop session migration — existing sessions were left untouched.'
+          `Skipped ${agentNames} Desktop session migration — your existing sessions were left unchanged.`
         );
       }
     }
