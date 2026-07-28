@@ -120,8 +120,10 @@ describe('@vercel/laravel', () => {
       { VITE_PUBLIC_NAME: 'demo', SECRET: 'not-a-build-arg' }
     );
 
-    expect(dockerfile).toContain('FROM php:8.5-apache-bookworm');
-    expect(dockerfile).toContain('libicu-dev');
+    expect(dockerfile).toContain(
+      'FROM ghcr.io/jacobparis/vercel-laravel-php@sha256:13ae0b0cb745cd50018e96b8abd1990ccaec3505926057985f3874950e81b08c'
+    );
+    expect(dockerfile).not.toContain('libicu-dev');
     expect(dockerfile).toContain('docker-php-ext-install');
     expect(dockerfile).not.toContain('curl dom');
     expect(dockerfile).not.toContain('pdo_sqlite');
@@ -150,6 +152,19 @@ describe('@vercel/laravel', () => {
     });
     expect(adapted).toContain('FILESYSTEM_DISK=vercel');
     expect(adapted).toContain('QUEUE_CONNECTION=vercel');
+    expect(adapted).not.toContain('docker-php-ext-install');
+
+    const fallback = generateDockerfile({
+      laravelVersion: '12.0.0',
+      phpVersion: '8.4',
+      composerLock: true,
+      hasAssetBuild: false,
+      hasVercelAdapter: false,
+      extensions: new Set(),
+      queueTriggers: [],
+    });
+    expect(fallback).toContain('FROM php:8.4-apache-bookworm');
+    expect(fallback).toContain('docker-php-ext-install');
   });
 
   it('delegates a generated recipe and reports the Laravel version', async () => {
@@ -170,7 +185,7 @@ describe('@vercel/laravel', () => {
         expect(source.contextDir).toBe(workPath);
         expect(source.functionSource).toBe('artisan');
         expect(readFileSync(source.dockerfilePath, 'utf8')).toContain(
-          'FROM php:8.5-apache-bookworm'
+          'FROM ghcr.io/jacobparis/vercel-laravel-php@sha256:13ae0b0cb745cd50018e96b8abd1990ccaec3505926057985f3874950e81b08c'
         );
         return { output: {} };
       }
