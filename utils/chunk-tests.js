@@ -134,6 +134,7 @@ const packageOptionsOverrides = {
   // all three runners: the macOS/Windows copies add no coverage and pushed the
   // all-packages unit matrix past GitHub Actions' 256-configuration limit.
   '@vercel/container': { runners: ['ubuntu-latest'] },
+  '@vercel/laravel': { runners: ['ubuntu-latest'] },
 };
 
 const DEFAULT_TEST_FILE_EXTENSIONS = ['js', 'ts', 'mjs', 'mts'];

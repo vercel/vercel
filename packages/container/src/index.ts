@@ -32,14 +32,22 @@ import {
   toTag,
   withSpan,
 } from './util';
+import type { ContainerBuildSource } from './source';
 
 export const version = 2;
 
-export { startDevServer } from './dev';
+export { startDevServer, startDevServerWithContainerSource } from './dev';
 export { prepareCache } from './prepare-cache';
 export { diagnostics } from './diagnostics';
+export type { ContainerBuildSource } from './source';
 
-function resolveFunctionSourceFile(options: BuildOptions): string {
+function resolveFunctionSourceFile(
+  options: BuildOptions,
+  source?: ContainerBuildSource
+): string {
+  if (source?.functionSource) {
+    return source.functionSource;
+  }
   const entrypoint = readString(options.entrypoint) ?? '';
   if (entrypoint === '<detect>') {
     return findDockerfile(options.workPath) ?? entrypoint;
@@ -269,7 +277,8 @@ async function buildAndPushImage(params: {
 
 async function resolveImageHandler(
   options: BuildOptions,
-  span?: Span
+  span?: Span,
+  source?: ContainerBuildSource
 ): Promise<string> {
   const { config, workPath, entrypoint, meta } = options;
 
@@ -278,14 +287,18 @@ async function resolveImageHandler(
   // `Containerfile.vercel` opt-in markers) is built directly. Otherwise — e.g.
   // when the `container` framework preset resolves its entrypoint via
   // `<detect>` — discover a Dockerfile in the work directory.
-  const dockerfileConfigured =
-    entrypointRef && isDockerfileRef(entrypointRef)
+  const dockerfileConfigured = source
+    ? source.dockerfilePath
+    : entrypointRef && isDockerfileRef(entrypointRef)
       ? entrypointRef
       : findDockerfile(workPath);
   const dockerfileRel = dockerfileConfigured ?? 'Dockerfile';
-  const dockerfilePath = path.join(workPath, dockerfileRel);
-  const hasDockerfile =
-    dockerfileConfigured !== undefined || existsSync(dockerfilePath);
+  const dockerfilePath = source
+    ? source.dockerfilePath
+    : path.join(workPath, dockerfileRel);
+  const hasDockerfile = source
+    ? existsSync(source.dockerfilePath)
+    : dockerfileConfigured !== undefined || existsSync(dockerfilePath);
 
   const prebuiltImage =
     readString(config.handler) ?? (hasDockerfile ? undefined : entrypointRef);
@@ -335,10 +348,13 @@ async function resolveImageHandler(
   // to be stable per project.
   const serviceName = options.service?.name;
   const repository = sanitizeRepository(
-    serviceName ?? path.basename(dockerfileRel).split('.')[0]
+    serviceName ??
+      (source
+        ? options.config.framework || 'container'
+        : path.basename(dockerfileRel).split('.')[0])
   );
   const tag = resolveImageTag();
-  const contextDir = path.dirname(dockerfilePath);
+  const contextDir = source?.contextDir ?? path.dirname(dockerfilePath);
 
   // Forward the project's build env to the image build as `--build-arg`s, so
   // Dockerfiles can consume declared `ARG`s during build — matching how other
@@ -377,16 +393,19 @@ function buildArgsFromEnv(
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
-export async function build(options: BuildOptions): Promise<BuildResultV2> {
+async function buildContainer(
+  options: BuildOptions,
+  source?: ContainerBuildSource
+): Promise<BuildResultV2> {
   const image = await withSpan(
     options.span,
     'container.resolve_image',
     { 'service.name': options.service?.name },
-    span => resolveImageHandler(options, span)
+    span => resolveImageHandler(options, span, source)
   );
 
   const lambdaOptions = await getLambdaOptionsFromFunction({
-    sourceFile: resolveFunctionSourceFile(options),
+    sourceFile: resolveFunctionSourceFile(options, source),
     config: options.config,
   });
 
@@ -429,4 +448,19 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
       } as any,
     },
   };
+}
+
+export async function build(options: BuildOptions): Promise<BuildResultV2> {
+  return buildContainer(options);
+}
+
+/**
+ * Build a container from a source supplied by another first-party framework
+ * adapter. The normal `build()` export remains marker-file based for users.
+ */
+export async function buildWithContainerSource(
+  options: BuildOptions,
+  source: ContainerBuildSource
+): Promise<BuildResultV2> {
+  return buildContainer(options, source);
 }

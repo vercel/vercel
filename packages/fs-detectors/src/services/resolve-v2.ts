@@ -438,7 +438,22 @@ export async function resolveConfiguredServiceV2(
     builderConfig.handlerFunction = moduleAttr.attrName;
   }
 
-  const runtime = STATIC_BUILDERS.has(builderUse) ? undefined : inferredRuntime;
+  // Some framework builders produce containers without asking the application
+  // to commit a Dockerfile. Preserve Services command overrides for those
+  // first-party adapters just as we do for an explicit container service.
+  const isContainerBackedFramework = builderUse === '@vercel/laravel';
+  const command = isContainerBackedFramework
+    ? normalizeContainerCommand(config.command)
+    : undefined;
+  if (command) {
+    builderConfig.command = command;
+  }
+
+  const runtime = STATIC_BUILDERS.has(builderUse)
+    ? undefined
+    : isContainerBackedFramework
+      ? 'container'
+      : inferredRuntime;
 
   return {
     service: {
@@ -448,6 +463,7 @@ export async function resolveConfiguredServiceV2(
       framework,
       runtime,
       entrypoint: entrypointFile,
+      command,
       builder: {
         src: projectRelativeSrc,
         use: builderUse,

@@ -255,6 +255,61 @@ describe('detectFramework()', () => {
     expect(await detectFramework({ fs, frameworkList })).toBe('container');
   });
 
+  it('detects Laravel only when experimental frameworks are enabled', async () => {
+    const fs = new VirtualFilesystem({
+      artisan: '#!/usr/bin/env php',
+      'composer.json': JSON.stringify({
+        require: { 'laravel/framework': '^13.0' },
+      }),
+      'package.json': JSON.stringify({
+        devDependencies: { vite: '^7.0.0' },
+      }),
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('vite');
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        useExperimentalFrameworks: true,
+      })
+    ).toBe('laravel');
+  });
+
+  it('requires both artisan and laravel/framework to detect Laravel', async () => {
+    const fs = new VirtualFilesystem({
+      'composer.json': JSON.stringify({
+        require: { 'laravel/framework': '^13.0' },
+      }),
+    });
+
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        useExperimentalFrameworks: true,
+      })
+    ).toBe(null);
+  });
+
+  it('prefers an explicit container marker over Laravel', async () => {
+    const fs = new VirtualFilesystem({
+      artisan: '#!/usr/bin/env php',
+      'composer.json': JSON.stringify({
+        require: { 'laravel/framework': '^13.0' },
+      }),
+      'Dockerfile.vercel': 'FROM php:8.5-apache',
+    });
+
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        useExperimentalFrameworks: true,
+      })
+    ).toBe('container');
+  });
+
   it.each([
     'Dockerfile.vercel',
     'Containerfile.vercel',
