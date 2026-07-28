@@ -22,6 +22,10 @@ import type { RepositoryPermission, TeamOperationFailure } from './team-refs';
 
 const USAGE = 'vcr permissions <repository> add <team>[,<team>...]';
 
+type AddResult =
+  | { ok: true; team: string; permission: RepositoryPermission }
+  | { ok: false; team: string; failure: TeamOperationFailure };
+
 export default async function add(
   client: Client,
   argv: string[],
@@ -87,32 +91,54 @@ export default async function add(
   const added: RepositoryPermission[] = [];
   const failed: TeamOperationFailure[] = [];
 
-  for (const team of teamRefs) {
-    output.spinner(`Sharing ${repository} with ${team}...`);
-    try {
-      const result = await client.fetch<{ permission: RepositoryPermission }>(
-        path,
-        {
-          method: 'POST',
-          body: teamRefBody(team),
+  output.spinner(
+    `Sharing ${repository} with ${
+      teamRefs.length === 1 ? teamRefs[0] : `${teamRefs.length} teams`
+    }...`
+  );
+  let results;
+  try {
+    results = await Promise.all(
+      teamRefs.map(async (team): Promise<AddResult> => {
+        try {
+          const result = await client.fetch<{
+            permission: RepositoryPermission;
+          }>(path, {
+            method: 'POST',
+            body: teamRefBody(team),
+          });
+          return { ok: true, team, permission: result.permission };
+        } catch (err) {
+          if (!isAPIError(err)) {
+            throw err;
+          }
+          const message = err.serverMessage || `API error (${err.status}).`;
+          return {
+            ok: false,
+            team,
+            failure: { team, code: err.code || 'API_ERROR', message },
+          };
         }
-      );
-      output.stopSpinner();
+      })
+    );
+  } finally {
+    output.stopSpinner();
+  }
+
+  for (const result of results) {
+    if (result.ok) {
       added.push(result.permission);
       if (!fr.jsonOutput) {
         output.success(
-          `Shared ${repository} with ${result.permission?.teamSlug ?? team}`
+          `Shared ${repository} with ${result.permission?.teamSlug ?? result.team}`
         );
       }
-    } catch (err) {
-      output.stopSpinner();
-      if (!isAPIError(err)) {
-        throw err;
-      }
-      const message = err.serverMessage || `API error (${err.status}).`;
-      failed.push({ team, code: err.code || 'API_ERROR', message });
+    } else {
+      failed.push(result.failure);
       if (!fr.jsonOutput) {
-        output.error(`Failed to share ${repository} with ${team}: ${message}`);
+        output.error(
+          `Failed to share ${repository} with ${result.team}: ${result.failure.message}`
+        );
       }
     }
   }

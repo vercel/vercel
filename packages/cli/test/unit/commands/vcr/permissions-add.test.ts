@@ -203,6 +203,22 @@ describe('vcr permissions add', () => {
     expect(output).toContain('Shared my-app with other-team');
   });
 
+  it('treats a 2xx response without a permission body as success', async () => {
+    client.scenario.post(
+      '/v1/vcr/repository/my-app/permissions',
+      (_req, res) => {
+        res.json({});
+      }
+    );
+
+    client.setArgv('vcr', 'permissions', 'my-app', 'add', 'team_12345');
+    const exitCode = await vcr(client);
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Shared my-app with team_12345');
+    expect(output).not.toContain('Failed to share');
+  });
+
   it('errors when the team argument is missing', async () => {
     client.setArgv('vcr', 'permissions', 'my-app', 'add');
     const exitCode = await vcr(client);

@@ -22,6 +22,10 @@ import type { TeamOperationFailure } from './team-refs';
 
 const USAGE = 'vcr permissions <repository> rm <team>[,<team>...]';
 
+type RmResult =
+  | { ok: true; team: string }
+  | { ok: false; team: string; failure: TeamOperationFailure };
+
 export default async function rm(
   client: Client,
   argv: string[],
@@ -90,29 +94,50 @@ export default async function rm(
   const removed: string[] = [];
   const failed: TeamOperationFailure[] = [];
 
-  for (const team of teamRefs) {
-    output.spinner(`Removing access to ${repository} for ${team}...`);
-    try {
-      await client.fetch(path, {
-        method: 'DELETE',
-        body: teamRefBody(team),
-      });
-      output.stopSpinner();
-      removed.push(team);
-      if (!fr.jsonOutput) {
-        output.success(`Removed access to ${repository} for ${team}`);
-      }
-    } catch (err) {
-      output.stopSpinner();
-      if (!isAPIError(err)) {
-        throw err;
-      }
-      const message = err.serverMessage || `API error (${err.status}).`;
-      failed.push({ team, code: err.code || 'API_ERROR', message });
+  output.spinner(
+    `Removing access to ${repository} for ${
+      teamRefs.length === 1 ? teamRefs[0] : `${teamRefs.length} teams`
+    }...`
+  );
+  let results;
+  try {
+    results = await Promise.all(
+      teamRefs.map(async (team): Promise<RmResult> => {
+        try {
+          await client.fetch(path, {
+            method: 'DELETE',
+            body: teamRefBody(team),
+          });
+          return { ok: true, team };
+        } catch (err) {
+          if (!isAPIError(err)) {
+            throw err;
+          }
+          const message = err.serverMessage || `API error (${err.status}).`;
+          return {
+            ok: false,
+            team,
+            failure: { team, code: err.code || 'API_ERROR', message },
+          };
+        }
+      })
+    );
+  } finally {
+    output.stopSpinner();
+  }
+
+  for (const result of results) {
+    if (!result.ok) {
+      failed.push(result.failure);
       if (!fr.jsonOutput) {
         output.error(
-          `Failed to remove access to ${repository} for ${team}: ${message}`
+          `Failed to remove access to ${repository} for ${result.team}: ${result.failure.message}`
         );
+      }
+    } else {
+      removed.push(result.team);
+      if (!fr.jsonOutput) {
+        output.success(`Removed access to ${repository} for ${result.team}`);
       }
     }
   }
