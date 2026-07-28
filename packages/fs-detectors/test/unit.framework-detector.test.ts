@@ -401,6 +401,37 @@ describe('detectFramework()', () => {
     ).toBeNull();
   });
 
+  it('Detect Ruby with only VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS set', async () => {
+    const fs = new VirtualFilesystem({
+      Gemfile: 'source "https://rubygems.org"\n',
+      'config.ru': 'run ->(_env) { [200, {}, ["ok"]] }\n',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBeNull();
+
+    process.env.VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS = '1';
+    try {
+      expect(await detectFramework({ fs, frameworkList })).toBe('ruby');
+    } finally {
+      delete process.env.VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS;
+    }
+  });
+
+  it('Detect Ruby with only VERCEL_USE_EXPERIMENTAL_FRAMEWORKS set', async () => {
+    const fs = new VirtualFilesystem({
+      Gemfile: 'source "https://rubygems.org"\n',
+      'config.ru': 'run ->(_env) { [200, {}, ["ok"]] }\n',
+    });
+
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        useExperimentalFrameworks: true,
+      })
+    ).toBe('ruby');
+  });
+
   it('Detect Nuxt.js', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({

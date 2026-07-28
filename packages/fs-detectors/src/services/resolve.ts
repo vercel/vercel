@@ -24,7 +24,6 @@ import {
 } from './types';
 import {
   buildpackEntrypointWarning,
-  DETECTION_FRAMEWORKS,
   filterFrameworksByRuntime,
   getBuilderForRuntime,
   hasFile,
@@ -37,10 +36,7 @@ import { frameworkList } from '@vercel/frameworks';
 import { detectFrameworks } from '../detect-framework';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import { normalizeRoutePrefix } from '@vercel/routing-utils';
-import {
-  isRubyBuildpacksEnabled,
-  isNodeBackendFramework,
-} from '@vercel/build-utils';
+import { isNodeBackendFramework } from '@vercel/build-utils';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
@@ -328,18 +324,10 @@ export async function detectFrameworkFromWorkspace({
   runtime?: ServiceRuntime;
 }): Promise<{ framework?: string; error?: ServiceDetectionError }> {
   const serviceFs = workspace === '.' ? fs : fs.chdir(workspace);
-  // With buildpacks enabled, services intentionally include experimental
-  // runtime-framework presets (Ruby, etc.) that are hidden from normal
-  // project framework detection.
-  const buildpacksEnabled = isRubyBuildpacksEnabled();
-  const frameworkCandidates = filterFrameworksByRuntime(
-    buildpacksEnabled ? DETECTION_FRAMEWORKS : frameworkList,
-    runtime
-  );
+  const frameworkCandidates = filterFrameworksByRuntime(frameworkList, runtime);
   const frameworks = await detectFrameworks({
     fs: serviceFs,
     frameworkList: frameworkCandidates,
-    useExperimentalFrameworks: buildpacksEnabled || undefined,
   });
 
   if (frameworks.length > 1) {
