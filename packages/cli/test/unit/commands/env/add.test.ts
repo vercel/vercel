@@ -1769,6 +1769,53 @@ describe('env add', () => {
         logSpy.mockRestore();
       });
 
+      it('includes Development in the multi-target suggestion when VERCEL_ENV_VAR_CONFIG_SECRET_UI is set', async () => {
+        const originalFlag = process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
+        process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI = '1';
+
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        try {
+          client.nonInteractive = true;
+          client.setArgv(
+            'env',
+            'add',
+            'SENSITIVE_MISSING_ENV',
+            '--value',
+            'v',
+            '--sensitive',
+            '--yes'
+          );
+          await expect(env(client)).rejects.toThrow('exit');
+
+          const payload = JSON.parse(
+            logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+          );
+          expect(payload.missing).toContain('missing_environment');
+          const commands = payload.next.map(
+            (n: { command: string }) => n.command
+          );
+          expect(
+            commands.some(
+              (c: string) =>
+                c.includes('production,preview,development') &&
+                c.includes('--sensitive')
+            )
+          ).toBe(true);
+        } finally {
+          if (originalFlag === undefined) {
+            delete process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
+          } else {
+            process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI = originalFlag;
+          }
+          exitSpy.mockRestore();
+          logSpy.mockRestore();
+        }
+      });
+
       it('includes a comma-separated suggestion when environment is missing (non-interactive)', async () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');

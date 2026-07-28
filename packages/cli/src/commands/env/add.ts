@@ -174,6 +174,22 @@ function multiTargetSuggestion(
   };
 }
 
+function filterSensitiveMultiTargetSuggestionTargets(
+  targets: string[],
+  opts: {
+    configSecretUiEnabled: boolean;
+    forceSensitive: boolean;
+    policyOn: boolean;
+  }
+): string[] {
+  const excludeDevelopment =
+    !opts.configSecretUiEnabled && (opts.forceSensitive || opts.policyOn);
+
+  return excludeDevelopment
+    ? targets.filter(target => target !== 'development')
+    : targets;
+}
+
 function projectLabel(link: ProjectLinked): string {
   return `${link.org.slug}/${link.project.name}`;
 }
@@ -267,6 +283,7 @@ export default async function add(client: Client, argv: string[]) {
   }
 
   const { args, flags: opts } = parsedArgs;
+  const configSecretUiEnabled = isEnvVarConfigSecretUiEnabled();
 
   const stdInput = await readStandardInput(client.stdin);
   const valueFromFlag =
@@ -485,9 +502,14 @@ export default async function add(client: Client, argv: string[]) {
         const standardAvailable = choices
           .map(c => c.value)
           .filter(v => isValidEnvTarget(v));
-        const multiTargets = opts['--sensitive']
-          ? standardAvailable.filter(t => t !== 'development')
-          : standardAvailable;
+        const multiTargets = filterSensitiveMultiTargetSuggestionTargets(
+          standardAvailable,
+          {
+            configSecretUiEnabled,
+            forceSensitive: Boolean(opts['--sensitive']),
+            policyOn: false,
+          }
+        );
         if (multiTargets.length > 1) {
           next.push(
             multiTargetSuggestion(
@@ -788,7 +810,6 @@ export default async function add(client: Client, argv: string[]) {
 
   // Detect team-level sensitive env var policy. Reads from the team object
   // (cached). Only relevant when the linked org is a team.
-  const configSecretUiEnabled = isEnvVarConfigSecretUiEnabled();
   let policyOn = false;
   if (link.org.type === 'team') {
     try {
@@ -895,15 +916,17 @@ export default async function add(client: Client, argv: string[]) {
               multiTargetSuggestion(client.argv, envName, envTargets, true)
             );
           }
-          const nonDev = envTargets.filter(t => t !== 'development');
-          if (nonDev.length > 0) {
-            next.push({
-              command: buildEnvAddCommandWithPreservedArgs(
-                client.argv,
-                `env add ${envName} ${nonDev.join(',')} --value "<value>" --yes`
-              ),
-              when: 'Keep sensitive and skip Development',
-            });
+          if (!configSecretUiEnabled) {
+            const nonDev = envTargets.filter(t => t !== 'development');
+            if (nonDev.length > 0) {
+              next.push({
+                command: buildEnvAddCommandWithPreservedArgs(
+                  client.argv,
+                  `env add ${envName} ${nonDev.join(',')} --value "<value>" --yes`
+                ),
+                when: 'Keep sensitive and skip Development',
+              });
+            }
           }
         } else {
           next.push({
@@ -1010,10 +1033,14 @@ export default async function add(client: Client, argv: string[]) {
       const standardAvailable = choices
         .map(c => c.value)
         .filter(v => isValidEnvTarget(v));
-      const multiTargets =
-        policyOn || forceSensitive
-          ? standardAvailable.filter(t => t !== 'development')
-          : standardAvailable;
+      const multiTargets = filterSensitiveMultiTargetSuggestionTargets(
+        standardAvailable,
+        {
+          configSecretUiEnabled,
+          forceSensitive,
+          policyOn,
+        }
+      );
       const next: Array<{ command: string; when?: string }> = [];
       if (multiTargets.length > 1) {
         next.push(
