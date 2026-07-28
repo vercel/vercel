@@ -64,7 +64,7 @@ describe('usage', () => {
       expect(output).toContain('--from');
       expect(output).toContain('--to');
       expect(output).toContain('--breakdown');
-      expect(output).toContain('--json');
+      expect(output).toContain('--format');
     });
   });
 
