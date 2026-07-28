@@ -4,6 +4,13 @@
   },
   {
     "src": "/(.*)",
-    "dest": "/"
+    "dest": "/",
+    "transforms": [
+      {
+        "type": "request.path",
+        "op": "set",
+        "args": "/$1"
+      }
+    ]
   }
 ]

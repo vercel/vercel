@@ -20,7 +20,7 @@ describe('backend rewrite behavior warning', () => {
     'django',
     'python',
     'fasthtml',
-  ])('warns for an internal rewrite in a %s project', framework => {
+  ])('warns for an internal rewrite in a %s (Python) project', framework => {
     expect(
       hasBackendRewriteBehaviorChange({
         projectRewrites: [{ source: '/old', destination: '/new' }],
@@ -29,7 +29,24 @@ describe('backend rewrite behavior warning', () => {
     ).toBe(true);
   });
 
-  it('does not infer Python from the builder package', () => {
+  it.each([
+    'express',
+    'hono',
+    'h3',
+    'koa',
+    'nestjs',
+    'fastify',
+    'elysia',
+  ])('warns for an internal rewrite in a %s (Node backend) project', framework => {
+    expect(
+      hasBackendRewriteBehaviorChange({
+        projectRewrites: [{ source: '/old', destination: '/new' }],
+        builders: [builder(framework)],
+      })
+    ).toBe(true);
+  });
+
+  it('does not infer the framework from the builder package', () => {
     expect(
       hasBackendRewriteBehaviorChange({
         projectRewrites: [{ source: '/old', destination: '/new' }],
@@ -38,13 +55,16 @@ describe('backend rewrite behavior warning', () => {
     ).toBe(false);
   });
 
-  it('does not warn for other frameworks or external rewrites', () => {
+  it('does not warn for non-backend frameworks', () => {
     expect(
       hasBackendRewriteBehaviorChange({
         projectRewrites: [{ source: '/old', destination: '/new' }],
-        builders: [builder('express', '@vercel/express')],
+        builders: [builder('nextjs')],
       })
     ).toBe(false);
+  });
+
+  it('does not warn for external rewrites', () => {
     expect(
       hasBackendRewriteBehaviorChange({
         projectRewrites: [
@@ -68,6 +88,24 @@ describe('backend rewrite behavior warning', () => {
           },
         ],
         builders: [builder('fastapi')],
+      })
+    ).toBe(false);
+  });
+
+  it('does not warn when there are no rewrites', () => {
+    expect(
+      hasBackendRewriteBehaviorChange({
+        projectRewrites: undefined,
+        builders: [builder('fastapi')],
+      })
+    ).toBe(false);
+  });
+
+  it('does not warn when there are no builders', () => {
+    expect(
+      hasBackendRewriteBehaviorChange({
+        projectRewrites: [{ source: '/old', destination: '/new' }],
+        builders: null,
       })
     ).toBe(false);
   });
