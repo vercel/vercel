@@ -7,6 +7,8 @@ import {
 
 export type TokenIntrospectionResponse = AccessToken;
 
+const VERCEL_API_ORIGIN = 'https://api.vercel.com';
+
 export async function introspectToken(
   client: Client
 ): Promise<TokenIntrospectionResponse> {
@@ -14,6 +16,12 @@ export async function introspectToken(
 
   if (!token) {
     throw new Error('No token to introspect');
+  }
+
+  if (new URL(client.apiUrl).origin !== VERCEL_API_ORIGIN) {
+    throw new Error(
+      'Token introspection is unavailable for custom API origins'
+    );
   }
 
   const [error, introspection] = await processInspectTokenResponse(

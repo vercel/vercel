@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../mocks/client';
 import { introspectToken } from '../../../src/util/introspect-token';
 import { inspectTokenRequest } from '../../../src/util/oauth';
@@ -10,12 +10,19 @@ vi.mock('../../../src/util/oauth', async importOriginal => ({
 }));
 
 const inspectTokenRequestMock = vi.mocked(inspectTokenRequest);
+let mockApiUrl: string;
 
 function mockResponse(data: unknown): Response {
   return { json: async () => data } as unknown as Response;
 }
 
+beforeEach(() => {
+  mockApiUrl = client.apiUrl;
+  client.apiUrl = 'https://api.vercel.com';
+});
+
 afterEach(() => {
+  client.apiUrl = mockApiUrl;
   inspectTokenRequestMock.mockReset();
 });
 
@@ -52,6 +59,15 @@ describe('introspectToken', () => {
 
     await expect(introspectToken(client)).rejects.toThrow(
       'No token to introspect'
+    );
+    expect(inspectTokenRequestMock).not.toHaveBeenCalled();
+  });
+
+  it('does not disclose custom API credentials to Vercel', async () => {
+    client.apiUrl = 'https://api.example.test';
+
+    await expect(introspectToken(client)).rejects.toThrow(
+      'Token introspection is unavailable for custom API origins'
     );
     expect(inspectTokenRequestMock).not.toHaveBeenCalled();
   });
