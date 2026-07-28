@@ -13,6 +13,7 @@
 
 - [ExchangeVercelOidcTokenOptions](interfaces/ExchangeVercelOidcTokenOptions.md)
 - [GetVercelTokenOptions](interfaces/GetVercelTokenOptions.md)
+- [TokenPayload](interfaces/TokenPayload.md)
 
 ## Type Aliases
 
@@ -22,6 +23,7 @@
 
 - [exchangeVercelOidcToken](functions/exchangeVercelOidcToken.md)
 - [getContext](functions/getContext.md)
+- [getTokenPayload](functions/getTokenPayload.md)
 - [getVercelOidcToken](functions/getVercelOidcToken.md)
 - [~~getVercelOidcTokenSync~~](functions/getVercelOidcTokenSync.md)
 - [getVercelToken](functions/getVercelToken.md)

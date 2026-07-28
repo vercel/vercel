@@ -17,3 +17,6 @@ export {
   getVercelToken,
   type GetVercelTokenOptions,
 } from './token-util';
+
+export { getTokenPayload } from './token-payload';
+export type { TokenPayload } from './token-payload';

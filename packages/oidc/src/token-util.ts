@@ -239,26 +239,5 @@ export function loadToken(projectId: string): VercelTokenResponse | null {
   return token;
 }
 
-interface TokenPayload {
-  sub: string;
-  name: string;
-  exp: number;
-}
-
-export function getTokenPayload(token: string): TokenPayload {
-  const tokenParts = token.split('.');
-  if (tokenParts.length !== 3) {
-    throw new VercelOidcTokenError('Invalid token.');
-  }
-
-  const base64 = tokenParts[1].replace(/-/g, '+').replace(/_/g, '/');
-  const padded = base64.padEnd(
-    base64.length + ((4 - (base64.length % 4)) % 4),
-    '='
-  );
-  return JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
-}
-
-export function isExpired(token: TokenPayload, bufferMs = 0): boolean {
-  return token.exp * 1000 < Date.now() + bufferMs;
-}
+export { getTokenPayload, isExpired } from './token-payload';
+export type { TokenPayload } from './token-payload';

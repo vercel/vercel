@@ -42,3 +42,6 @@ export async function getVercelOidcToken(
 export async function getVercelToken(): Promise<string> {
   throw new Error('getVercelToken is not supported in Edge Runtime');
 }
+
+export { getTokenPayload } from './token-payload';
+export type { TokenPayload } from './token-payload';

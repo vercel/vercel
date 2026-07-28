@@ -1,4 +1,4 @@
-import { getVercelOidcToken } from '@vercel/oidc';
+import { getTokenPayload, getVercelOidcToken } from '@vercel/oidc';
 
 const DEFAULT_API_URL = 'https://api.vercel.com';
 
@@ -67,19 +67,6 @@ class ImageOptimizationError extends Error {
   }
 }
 
-function decodeTokenClaims(token: string): Record<string, unknown> {
-  const payload = token.split('.')[1];
-  if (!payload) {
-    throw new Error('Malformed OIDC token: missing payload');
-  }
-  const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
-  const padded = normalized.padEnd(
-    normalized.length + ((4 - (normalized.length % 4)) % 4),
-    '='
-  );
-  return JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
-}
-
 async function requestOptimize(
   path: string,
   searchParams: URLSearchParams,
@@ -87,9 +74,8 @@ async function requestOptimize(
   init: { headers?: Record<string, string>; body?: Uint8Array<ArrayBuffer> }
 ): Promise<OptimizedImage> {
   const token = await getVercelOidcToken();
-  const claims = decodeTokenClaims(token);
-  const projectId = claims.project_id;
-  if (typeof projectId !== 'string' || !projectId) {
+  const { project_id: projectId } = getTokenPayload(token);
+  if (!projectId) {
     throw new Error('OIDC token is missing the "project_id" claim');
   }
 

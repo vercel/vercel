@@ -19,3 +19,6 @@ export function getVercelOidcTokenSync(): string {
 export async function getVercelToken(): Promise<string> {
   throw new Error('getVercelToken is not supported in browser environments');
 }
+
+export { getTokenPayload } from './token-payload';
+export type { TokenPayload } from './token-payload';
