@@ -476,6 +476,95 @@ export async function getFullUrlAndToken(
   };
 }
 
+/** Shape a deployment's owning project as a ProjectLinked. Returns null when
+ *  the deployment carries no project/owner ids; throws only if the project
+ *  fetch itself fails. */
+async function linkFromDeployment(
+  client: Client,
+  deployment: Deployment
+): Promise<ProjectLinked | null> {
+  if (!deployment.projectId || !deployment.ownerId) return null;
+  const project = await client.fetch<Project>(
+    `/v9/projects/${encodeURIComponent(deployment.projectId)}`,
+    { accountId: deployment.ownerId }
+  );
+  return { status: 'linked', project, org: orgFromOwner(deployment.ownerId) };
+}
+
+/** Resolve the owning project for an explicit --deployment target, warning
+ *  (and returning null) when it can't be resolved so the request proceeds
+ *  without an automatic bypass token. */
+async function resolveTargetProject(
+  client: Client,
+  deployment: Deployment,
+  deploymentFlag: string
+): Promise<ProjectLinked | null> {
+  try {
+    const link = await linkFromDeployment(client, deployment);
+    if (!link) {
+      output.warn(
+        `Deployment "${deploymentFlag}" is missing project metadata; proceeding without an automatic protection bypass token.`
+      );
+    }
+    return link;
+  } catch (err) {
+    output.debug(`Failed to resolve deployment project: ${err}`);
+    output.warn(
+      `Failed to load project for deployment "${deploymentFlag}"; proceeding without an automatic protection bypass token.`
+    );
+    return null;
+  }
+}
+
+/** Deployment lookup that returns null (and logs) instead of throwing. */
+async function tryGetDeployment(
+  client: Client,
+  contextName: string,
+  selector: string
+): Promise<Deployment | null> {
+  try {
+    return await getDeployment(client, contextName, selector);
+  } catch (err) {
+    output.debug(`Failed to resolve deployment: ${err}`);
+    return null;
+  }
+}
+
+/** Best-effort project link from a selector, for --trace context only. Any
+ *  failure (lookup or project fetch) resolves to null. */
+async function tryLinkFromSelector(
+  client: Client,
+  contextName: string,
+  selector: string
+): Promise<ProjectLinked | null> {
+  try {
+    const deployment = await getDeployment(client, contextName, selector);
+    return await linkFromDeployment(client, deployment);
+  } catch (err) {
+    output.debug(`Failed to resolve trace project context: ${err}`);
+    return null;
+  }
+}
+
+/** The cwd-linked project, or null when unlinked/unreadable. */
+async function getLinkedProjectOrNull(
+  client: Client
+): Promise<ProjectLinked | null> {
+  try {
+    const linked = await getLinkedProject(client, { cwd: client.cwd });
+    return linked.status === 'linked' ? linked : null;
+  } catch (err) {
+    output.debug(`Failed to load linked project: ${err}`);
+    return null;
+  }
+}
+
+function hasAutomationBypassToken(project: Project): boolean {
+  return Object.values(project.protectionBypass ?? {}).some(
+    token => token.scope === 'automation-bypass'
+  );
+}
+
 /**
  * Shared logic for curl-like commands to get deployment URL and protection token
  */
@@ -522,6 +611,7 @@ export async function getDeploymentUrlAndToken(
       deploymentFlag.startsWith('http://') ||
       deploymentFlag.startsWith('https://') ||
       deploymentFlag.includes('vercel.app');
+    // A URL/host --deployment resolves to a URL with no lookup; a bare id needs one.
     const requestedBaseUrl = isDirectUrl
       ? await getDeploymentUrlById(client, deploymentFlag, accountId)
       : null;
@@ -531,128 +621,56 @@ export async function getDeploymentUrlAndToken(
         ? deploymentFlag
         : `dpl_${deploymentFlag}`;
 
-    // The deployment lookup below isn't hoisted because its failure policy
-    // differs by branch: with a supplied bypass it only adds optional trace
-    // context (best-effort), while without one it resolves the project the
-    // token comes from (fatal unless a usable URL is already known).
     if (suppliedProtectionBypass !== undefined) {
-      const deploymentUrl =
+      // Token already in hand, so we only need a URL. The project is looked up
+      // purely to scope a --trace session; a miss there falls back to the
+      // cwd-linked project and never fails the request.
+      baseUrl =
         requestedBaseUrl ??
-        (await getDeploymentUrlById(client, deploymentFlag, accountId));
-      if (!deploymentUrl) {
+        (await getDeploymentUrlById(client, deploymentFlag, accountId)) ??
+        '';
+      if (!baseUrl) {
         output.error(`No deployment found for ID "${deploymentFlag}"`);
         return 1;
       }
-      baseUrl = deploymentUrl;
-
       if (resolveProjectForTrace) {
-        try {
-          // Best-effort (see note above): trace context only.
-          const deployment = await getDeployment(
+        link =
+          (await tryLinkFromSelector(
             client,
             scope.contextName,
             deploymentSelector
-          );
-          if (deployment.projectId && deployment.ownerId) {
-            const project = await client.fetch<Project>(
-              `/v9/projects/${encodeURIComponent(deployment.projectId)}`,
-              { accountId: deployment.ownerId }
-            );
-            link = {
-              status: 'linked',
-              project,
-              org: orgFromOwner(deployment.ownerId),
-            };
-          }
-        } catch (err) {
-          output.debug(`Failed to resolve trace project context: ${err}`);
-        }
-
-        if (!link) {
-          try {
-            const linkedProject = await getLinkedProject(client, {
-              cwd: client.cwd,
-            });
-            if (linkedProject.status === 'linked') {
-              link = linkedProject;
-            }
-          } catch (err) {
-            output.debug(`Failed to load linked trace context: ${err}`);
-          }
-        }
+          )) ?? (await getLinkedProjectOrNull(client));
       }
     } else {
-      // Load-bearing (see note above): resolves the project for the token.
-      let deployment: Deployment | null = null;
-      try {
-        deployment = await getDeployment(
-          client,
-          scope.contextName,
-          deploymentSelector
-        );
-      } catch (err) {
-        output.debug(`Failed to resolve deployment: ${err}`);
-        if (!requestedBaseUrl) {
-          output.error(`No deployment found for ID "${deploymentFlag}"`);
-          return 1;
-        }
-        output.warn(
-          `Could not resolve project information for deployment "${deploymentFlag}"; proceeding without an automatic protection bypass token.`
-        );
-      }
+      // No token: the lookup is load-bearing — it resolves the project the
+      // token is sourced from, and its url is the fallback target when
+      // --deployment wasn't a direct URL.
+      const deployment = await tryGetDeployment(
+        client,
+        scope.contextName,
+        deploymentSelector
+      );
 
       baseUrl =
         requestedBaseUrl ??
         (deployment?.url ? `https://${deployment.url}` : '');
-
       if (!baseUrl) {
         output.error(`No deployment found for ID "${deploymentFlag}"`);
         return 1;
       }
 
-      if (deployment) {
-        if (!deployment.projectId || !deployment.ownerId) {
-          output.warn(
-            `Deployment "${deploymentFlag}" is missing project metadata; proceeding without an automatic protection bypass token.`
-          );
-        } else {
-          try {
-            const project = await client.fetch<Project>(
-              `/v9/projects/${encodeURIComponent(deployment.projectId)}`,
-              { accountId: deployment.ownerId }
-            );
-
-            link = {
-              status: 'linked',
-              project,
-              org: orgFromOwner(deployment.ownerId),
-            };
-
-            const hasAutomationBypass = Object.values(
-              project.protectionBypass ?? {}
-            ).some(token => token.scope === 'automation-bypass');
-            if (!hasAutomationBypass) {
-              // Preserve automatic creation for the linked project, but never
-              // mutate a different project selected through --deployment.
-              try {
-                const linkedProject = await getLinkedProject(client, {
-                  cwd: client.cwd,
-                });
-                createProtectionBypassIfMissing =
-                  linkedProject.status === 'linked' &&
-                  linkedProject.project.id === project.id;
-              } catch (err) {
-                output.debug(
-                  `Failed to check linked project for bypass-token creation: ${err}`
-                );
-              }
-            }
-          } catch (err) {
-            output.debug(`Failed to resolve deployment project: ${err}`);
-            output.warn(
-              `Failed to load project for deployment "${deploymentFlag}"; proceeding without an automatic protection bypass token.`
-            );
-          }
+      if (!deployment) {
+        output.warn(
+          `Could not resolve project information for deployment "${deploymentFlag}"; proceeding without an automatic protection bypass token.`
+        );
+      } else {
+        link = await resolveTargetProject(client, deployment, deploymentFlag);
+        // Allow creating a secret only when the explicit target IS the linked
+        // project — never mint one on a project selected by --deployment.
+        if (link && !hasAutomationBypassToken(link.project)) {
+          const linked = await getLinkedProjectOrNull(client);
+          createProtectionBypassIfMissing =
+            linked?.project.id === link.project.id;
         }
       }
     }
