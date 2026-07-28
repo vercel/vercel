@@ -148,7 +148,6 @@ describe('@vercel/laravel', () => {
     expect(dockerfile).toContain('SESSION_DRIVER=cookie');
     expect(dockerfile).toContain('FILESYSTEM_DISK=vercel');
     expect(dockerfile).toContain('QUEUE_CONNECTION=vercel');
-    expect(dockerfile).toContain('BROADCAST_CONNECTION=vercel-reverb');
     expect(dockerfile).toContain(
       'php /var/www/html/.vercel-runtime/runtime/install.php /var/www/html'
     );
@@ -271,21 +270,7 @@ describe('@vercel/laravel', () => {
       config: {},
     } as any)) as BuildResultV2Typical;
 
-    expect(result.routes).toEqual([
-      {
-        src: '^/__vercel/reverb/(.*)$',
-        service: 'laravel-reverb',
-      },
-      { src: '/(.*)', dest: '/index' },
-    ]);
-    expect((result as any).services).toEqual({
-      'laravel-reverb': {
-        root: '.',
-        runtime: 'container',
-        entrypoint:
-          'ghcr.io/jacobparis/vercel-reverb@sha256:eabfee0bcc1f459a17cf1f51f63c4b269590c75baef7b7373bcb8fb97a5246b6',
-      },
-    });
+    expect(result.routes).toEqual([{ src: '/(.*)', dest: '/index' }]);
     expect(result.output.__vercel_laravel_queue_0).toMatchObject({
       handler: 'registry.example/laravel@sha256:test',
       environment: { VERCEL_LARAVEL_QUEUE_CALLBACK: '1' },

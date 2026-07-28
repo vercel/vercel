@@ -22,10 +22,6 @@ const {
   startDevServerWithContainerSource,
 } = containerBuilder;
 
-const REVERB_SERVICE = 'laravel-reverb';
-const REVERB_IMAGE =
-  'ghcr.io/jacobparis/vercel-reverb@sha256:eabfee0bcc1f459a17cf1f51f63c4b269590c75baef7b7373bcb8fb97a5246b6';
-
 export const version = 2;
 
 async function withGeneratedSource<T>(
@@ -94,22 +90,6 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
     slug: 'laravel',
     version: project.laravelVersion,
   };
-  typicalResult.routes = [
-    {
-      src: '^/__vercel/reverb/(.*)$',
-      service: REVERB_SERVICE,
-    },
-    ...(typicalResult.routes ?? []),
-  ];
-  Object.assign(typicalResult, {
-    services: {
-      [REVERB_SERVICE]: {
-        root: '.',
-        runtime: 'container',
-        entrypoint: REVERB_IMAGE,
-      },
-    },
-  });
   return typicalResult;
 }
 
