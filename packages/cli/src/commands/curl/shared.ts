@@ -611,7 +611,9 @@ export async function getDeploymentUrlAndToken(
       deploymentFlag.startsWith('http://') ||
       deploymentFlag.startsWith('https://') ||
       deploymentFlag.includes('vercel.app');
-    // A URL/host --deployment resolves to a URL with no lookup; a bare id needs one.
+    // A URL/host --deployment is resolved here via getDeploymentUrlById with no
+    // network fetch. A bare id is left null and resolved later, alongside the
+    // project/bypass-token lookup.
     const requestedBaseUrl = isDirectUrl
       ? await getDeploymentUrlById(client, deploymentFlag, accountId)
       : null;
