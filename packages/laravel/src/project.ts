@@ -12,6 +12,7 @@ export interface LaravelProject {
   composerLock: boolean;
   packageManager?: 'npm' | 'pnpm' | 'yarn' | 'bun';
   packageLock?: string;
+  packageConfigFiles?: string[];
   packageManagerVersion?: string;
   hasAssetBuild: boolean;
   hasWayfinder: boolean;
@@ -190,6 +191,12 @@ export function inspectLaravelProject(workPath: string): LaravelProject {
   }
 
   const assets = packageManager(workPath);
+  const packageConfigFiles = [
+    '.npmrc',
+    ...(assets.packageManager === 'pnpm' ? ['pnpm-workspace.yaml'] : []),
+    ...(assets.packageManager === 'yarn' ? ['.yarnrc.yml'] : []),
+    ...(assets.packageManager === 'bun' ? ['bunfig.toml'] : []),
+  ].filter(file => existsSync(path.join(workPath, file)));
   let packageManagerVersion: string | undefined;
   const hasVercelAdapter =
     string(require['vercel/laravel']) !== undefined ||
@@ -221,6 +228,7 @@ export function inspectLaravelProject(workPath: string): LaravelProject {
     phpVersion: resolvePhpVersion(phpConstraint),
     composerLock,
     ...assets,
+    packageConfigFiles,
     packageManagerVersion,
     hasAssetBuild,
     hasWayfinder,

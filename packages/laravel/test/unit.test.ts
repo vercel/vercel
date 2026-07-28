@@ -84,7 +84,9 @@ describe('@vercel/laravel', () => {
         scripts: { build: 'vite build' },
         engines: { pnpm: '^11.0.0' },
       }),
+      '.npmrc': 'public-hoist-pattern[]=@inertiajs/core',
       'pnpm-lock.yaml': 'lockfileVersion: 9',
+      'pnpm-workspace.yaml': 'allowBuilds:\n  vue-demi: true',
     });
 
     const project = inspectLaravelProject(workPath);
@@ -94,6 +96,7 @@ describe('@vercel/laravel', () => {
       composerLock: true,
       packageManager: 'pnpm',
       packageLock: 'pnpm-lock.yaml',
+      packageConfigFiles: ['.npmrc', 'pnpm-workspace.yaml'],
       packageManagerVersion: '11',
       hasAssetBuild: true,
       hasWayfinder: true,
@@ -172,6 +175,7 @@ describe('@vercel/laravel', () => {
       composerLock: true,
       packageManager: 'pnpm',
       packageLock: 'pnpm-lock.yaml',
+      packageConfigFiles: ['.npmrc', 'pnpm-workspace.yaml'],
       packageManagerVersion: '11',
       hasAssetBuild: true,
       hasWayfinder: false,
@@ -180,7 +184,10 @@ describe('@vercel/laravel', () => {
       queueTriggers: [],
     });
     expect(pnpm).toContain(
-      'corepack install --global pnpm@11 && pnpm install --frozen-lockfile'
+      'corepack enable pnpm && corepack install --global pnpm@11 && pnpm install --frozen-lockfile'
+    );
+    expect(pnpm).toContain(
+      'COPY package.json pnpm-lock.yaml .npmrc pnpm-workspace.yaml ./'
     );
 
     const fallback = generateDockerfile({

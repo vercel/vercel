@@ -10,8 +10,8 @@ function packageManagerCommands(project: LaravelProject): {
   build: string;
 } {
   const corepack = project.packageManagerVersion
-    ? `corepack enable && corepack install --global ${project.packageManager}@${project.packageManagerVersion}`
-    : 'corepack enable';
+    ? `corepack enable ${project.packageManager} && corepack install --global ${project.packageManager}@${project.packageManagerVersion}`
+    : `corepack enable ${project.packageManager}`;
 
   switch (project.packageManager) {
     case 'pnpm':
@@ -120,7 +120,11 @@ export function generateDockerfile(
   buildEnv: Record<string, string | undefined> = {}
 ): string {
   const assets = packageManagerCommands(project);
-  const packageFiles = ['package.json', project.packageLock].filter(Boolean);
+  const packageFiles = [
+    'package.json',
+    project.packageLock,
+    ...(project.packageConfigFiles ?? []),
+  ].filter(Boolean);
   const composerFiles = [
     'composer.json',
     project.composerLock ? 'composer.lock' : undefined,
