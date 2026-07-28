@@ -163,7 +163,7 @@ jobs:
           export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
 
           while [ "$attempt" -le "$max_attempts" ]; do
-            if node_modules/.bin/turbo run vitest-unit --affected --summarize --cache-dir='.turbo' --log-order=stream --continue=always --concurrency=${{ matrix.concurrency }}; then
+            if pnpm turbo run vitest-unit --affected --summarize --cache-dir='.turbo' --log-order=stream --continue=always --concurrency=${{ matrix.concurrency }}; then
               exit 0
             fi
 
@@ -384,7 +384,7 @@ jobs:
           export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
 
           while [ "$attempt" -le "$max_attempts" ]; do
-            if node_modules/.bin/turbo run ${{ matrix.task }} --affected --summarize --cache-dir='.turbo' --log-order=stream --continue=always --concurrency=${{ matrix.concurrency }}; then
+            if pnpm turbo run ${{ matrix.task }} --affected --summarize --cache-dir='.turbo' --log-order=stream --continue=always --concurrency=${{ matrix.concurrency }}; then
               exit 0
             fi
 
