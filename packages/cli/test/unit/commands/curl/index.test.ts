@@ -104,7 +104,10 @@ describe('curl', () => {
       const exitCode = await curl(client);
       expect(exitCode).toEqual(2);
       expect(client.getFullOutput()).toContain(
-        'Execute curl with automatic deployment URL and protection bypass'
+        'Make curl requests to Vercel deployments with automatic protection bypass'
+      );
+      expect(client.getFullOutput()).toContain(
+        'vercel curl https://your-project-abc123.vercel.app/api/hello'
       );
     });
   });

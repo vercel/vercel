@@ -3,6 +3,7 @@ import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 import {
   forceOption,
   formatOption,
+  jsonOption,
   projectOption,
   yesOption,
 } from '../../util/arg-common';
@@ -25,6 +26,7 @@ export const listSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     projectOption,
     {
       name: 'guidance',

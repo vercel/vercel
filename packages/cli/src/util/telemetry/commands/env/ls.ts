@@ -35,4 +35,10 @@ export class EnvLsTelemetryClient
       this.trackCliFlag('guidance');
     }
   }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
+    }
+  }
 }

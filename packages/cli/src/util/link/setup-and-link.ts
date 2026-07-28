@@ -628,14 +628,8 @@ export default async function setupAndLink(
       }
     }
 
-    // Support for changing additional, less frequently used project settings.
-    let changeAdditionalSettings = false;
-    if (!autoConfirm) {
-      changeAdditionalSettings = await client.input.confirm(
-        'Customize advanced settings?',
-        false
-      );
-    }
+    // Keep the advanced settings wiring available without prompting for it.
+    const changeAdditionalSettings = false;
 
     let vercelAuthSetting: VercelAuthSetting = DEFAULT_VERCEL_AUTH_SETTING;
     if (changeAdditionalSettings) {

@@ -65,9 +65,7 @@ describe('connex attach', () => {
     const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain(
-      '--format=json requires --yes'
-    );
+    expect(client.stderr.getFullOutput()).toContain('--json requires --yes');
   });
 
   it('rejects an invalid --environment value', async () => {

@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import type Client from '../../client';
 import output from '../../../output-manager';
 import { getCommandName } from '../../pkg-name';
-import createApiKeyRequest from '../create-api-key';
+import { createApiKey } from '../api-keys';
 import selectOrg from '../../input/select-org';
 import { buildQuota } from '../quota';
 import {
@@ -177,7 +177,7 @@ export async function createKey(
 ): Promise<string> {
   output.spinner('Creating AI Gateway API key…');
   try {
-    const result = await createApiKeyRequest(client, {
+    const result = await createApiKey(client, {
       name: opts.name,
       aiGatewayQuota: buildQuota({
         budget: opts.budget,
