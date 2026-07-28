@@ -803,6 +803,85 @@ it('should validate htmlSize as a non-negative integer', async () => {
   );
 });
 
+it('should validate partialPrerenderConfig', async () => {
+  const staticShell = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    partialPrerenderConfig: { staticHint: true },
+  });
+  expect(staticShell.partialPrerenderConfig).toEqual({ staticHint: true });
+
+  const dynamicShell = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    partialPrerenderConfig: { staticHint: false },
+  });
+  expect(dynamicShell.partialPrerenderConfig).toEqual({ staticHint: false });
+
+  const noHint = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    partialPrerenderConfig: {},
+  });
+  expect(noHint.partialPrerenderConfig).toEqual({});
+
+  const unset = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+  });
+  expect(unset.partialPrerenderConfig).toBeUndefined();
+
+  expect(
+    () =>
+      new Prerender({
+        expiration: 1,
+        fallback: null,
+        group: 1,
+        bypassToken: 'some-long-bypass-token-to-make-it-work',
+        // @ts-expect-error - intentionally invalid to assert validation
+        partialPrerenderConfig: 'static',
+      })
+  ).toThrow(
+    'The `partialPrerenderConfig` argument for `Prerender` must be an object.'
+  );
+
+  expect(
+    () =>
+      new Prerender({
+        expiration: 1,
+        fallback: null,
+        group: 1,
+        bypassToken: 'some-long-bypass-token-to-make-it-work',
+        // @ts-expect-error - intentionally invalid to assert validation
+        partialPrerenderConfig: null,
+      })
+  ).toThrow(
+    'The `partialPrerenderConfig` argument for `Prerender` must be an object.'
+  );
+
+  expect(
+    () =>
+      new Prerender({
+        expiration: 1,
+        fallback: null,
+        group: 1,
+        bypassToken: 'some-long-bypass-token-to-make-it-work',
+        // @ts-expect-error - intentionally invalid to assert validation
+        partialPrerenderConfig: { staticHint: 'yes' },
+      })
+  ).toThrow(
+    'The `partialPrerenderConfig.staticHint` argument for `Prerender` must be a boolean'
+  );
+});
+
 it('should support passQuery correctly', async () => {
   new Prerender({
     expiration: 1,
