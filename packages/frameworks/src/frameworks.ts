@@ -4373,13 +4373,22 @@ export const frameworks = [
     // fs-detectors `detectFrontBuilder`).
     useRuntime: { src: 'config.ru', use: '@vercel/ruby' },
     ignoreRuntimes: ['@vercel/ruby'],
+    // Mirrors the Paketo Ruby buildpack's detect phase: a Gemfile is
+    // mandatory, plus a `config.ru` or a supported server gem resolved in
+    // Gemfile.lock.
     detectors: {
       every: [
+        {
+          path: 'Gemfile',
+        },
+      ],
+      some: [
         {
           path: 'config.ru',
         },
         {
-          path: 'Gemfile',
+          path: 'Gemfile.lock',
+          matchContent: '^    (puma|thin|unicorn|passenger|rack) \\(',
         },
       ],
     },

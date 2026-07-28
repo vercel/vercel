@@ -45,9 +45,13 @@ No lifecycle, image-source, or resolver code should need to change.
   takes precedence — it is the escape hatch from buildpacks. A conventional
   `Dockerfile` is ignored, so a repo can keep one for CI or local tooling
   without changing how Vercel builds it.
-- Project markers (e.g. `Gemfile`, `config.ru` for Ruby) are language
-  evidence used only to fail fast with an actionable error; Paketo's own
-  detect phase is authoritative during the build.
+- Project markers (any-of, e.g. `Gemfile` for Ruby) are language evidence
+  used only to fail fast with an actionable error; Paketo's own detect phase
+  is authoritative during the build. List only files that phase requires —
+  for Ruby, `bundle-install` fails without a `Gemfile`, so a `config.ru` or
+  `Gemfile.lock` alone is not buildable. The framework preset's detectors
+  mirror the same rules (`Gemfile` plus a `config.ru` or a supported server
+  gem in `Gemfile.lock`).
 - Detection runs against a generated `order.toml` containing only the
   descriptor's buildpack group, not the builder's full default order. A
   mixed-language root (say a `go.mod` next to a `Gemfile`) therefore always

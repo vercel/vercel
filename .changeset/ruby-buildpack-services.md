@@ -18,7 +18,11 @@ Detection runs against a generated `order.toml` scoped to the descriptor's
 buildpack group, so mixed-language roots always build as the requested
 language.
 
-With the flag set, Ruby services use `runtime: "ruby"` and require neither
+With the flag set, zero-config detection of the Ruby framework works without
+`VERCEL_USE_EXPERIMENTAL_FRAMEWORKS`, and its detectors mirror what the
+Paketo Ruby buildpack can build: a `Gemfile` plus a `config.ru` or a
+supported server gem (puma/thin/unicorn/passenger/rack) in `Gemfile.lock`.
+Ruby services use `runtime: "ruby"` and require neither
 `entrypoint` nor `command` (`entrypoint` is ignored with a warning); versions
 come from `Gemfile` or `BP_MRI_VERSION` (delivered via the CNB platform
 dir). A `command` override is baked into the image as its default `web`

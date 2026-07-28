@@ -68,7 +68,7 @@ function filterFrameworkList<T extends BaseFramework>(
     if (!experimental) {
       return true;
     }
-    // Buildpack-backed runtime frameworks (Ruby) are enabled by their own
+    // Buildpack-backed runtime frameworks are enabled by their own
     // flag and do not require experimental frameworks to be enabled.
     return toBuildpackRuntime(inferRuntimeFromFramework(f.slug)) !== undefined;
   });

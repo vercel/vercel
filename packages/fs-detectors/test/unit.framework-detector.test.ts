@@ -432,6 +432,68 @@ describe('detectFramework()', () => {
     ).toBe('ruby');
   });
 
+  it('Detect Ruby via a server gem in Gemfile.lock', async () => {
+    const lockfile = [
+      'GEM',
+      '  remote: https://rubygems.org/',
+      '  specs:',
+      '    nio4r (2.7.3)',
+      '    puma (6.4.2)',
+      '      nio4r (~> 2.0)',
+      '',
+      'PLATFORMS',
+      '  ruby',
+      '',
+      'DEPENDENCIES',
+      '  puma',
+      '',
+      'BUNDLED WITH',
+      '   2.5.9',
+      '',
+    ].join('\n');
+    const fs = new VirtualFilesystem({
+      Gemfile: 'source "https://rubygems.org"\ngem "puma"\n',
+      'Gemfile.lock': lockfile,
+    });
+
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        useExperimentalFrameworks: true,
+      })
+    ).toBe('ruby');
+  });
+
+  it.each([
+    ['a Gemfile alone', { Gemfile: 'source "https://rubygems.org"\n' }],
+    [
+      'a config.ru without a Gemfile',
+      { 'config.ru': 'run ->(_env) { [200, {}, ["ok"]] }\n' },
+    ],
+    [
+      'a Gemfile.lock without a Gemfile',
+      { 'Gemfile.lock': 'GEM\n  specs:\n    puma (6.4.2)\n' },
+    ],
+    [
+      'a Gemfile.lock without a server gem',
+      {
+        Gemfile: 'source "https://rubygems.org"\n',
+        'Gemfile.lock': 'GEM\n  specs:\n    rack-session (2.0.0)\n',
+      },
+    ],
+  ])('Ruby is not detected with %s', async (_, files) => {
+    const fs = new VirtualFilesystem(files);
+
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        useExperimentalFrameworks: true,
+      })
+    ).toBeNull();
+  });
+
   it('Detect Nuxt.js', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({

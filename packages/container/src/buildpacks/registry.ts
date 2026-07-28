@@ -29,10 +29,12 @@ export interface BuildpackDescriptor {
    */
   frameworkSlugs?: readonly string[];
   /**
-   * Files that mark a service root as buildable by this buildpack. Purely
-   * language evidence (a `Gemfile` is Ruby; a `Procfile` is not) — used to
-   * fail fast with an actionable error before pulling a multi-GB builder,
-   * not to influence what Paketo's own detect phase does.
+   * Files that mark a service root as buildable by this buildpack. Any one
+   * marker suffices, so list only files the buildpack's detect phase
+   * requires (a `Gemfile` is mandatory for Ruby; a `config.ru` or `Procfile`
+   * alone is not buildable). Used to fail fast with an actionable error
+   * before pulling a multi-GB builder — Paketo's own detect phase stays
+   * authoritative.
    */
   projectMarkers: readonly string[];
   /**
@@ -78,7 +80,7 @@ export interface BuildpackGroupEntry {
 export const BUILDPACKS: readonly BuildpackDescriptor[] = [
   {
     runtime: 'ruby',
-    projectMarkers: ['Gemfile', 'config.ru', 'Gemfile.lock'],
+    projectMarkers: ['Gemfile'],
     builder:
       'paketobuildpacks/builder-jammy-base@sha256:622ba9d364d69f578b49fa8dee2e0d450adbd44b31e7c0a18b714a4eefdf371b',
     runImage:
