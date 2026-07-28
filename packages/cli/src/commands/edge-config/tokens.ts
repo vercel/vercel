@@ -218,7 +218,7 @@ export default async function tokensCmd(
     const rows = await client.fetch<TokenRow[]>(`${base}/tokens`);
     if (asJson) {
       // Pick an explicit allowlist of fields so we never forward a plaintext
-      // `token` in `--format json`, even if an older API deploy still returns
+      // `token` in `--json`, even if an older API deploy still returns
       // it during FLA-2777 rollout. `--add` output is unchanged and still
       // reveals the token once on creation.
       const sanitized = rows.map(row => ({

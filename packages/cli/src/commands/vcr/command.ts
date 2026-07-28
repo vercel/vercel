@@ -1,5 +1,6 @@
 import {
   formatOption,
+  jsonOption,
   limitOption,
   projectOption,
   yesOption,
@@ -28,7 +29,13 @@ export const listSubcommand = {
   aliases: ['list'],
   description: 'List container registry repositories for a project',
   arguments: [],
-  options: [projectScopeOption, limitOption, cursorOption, formatOption],
+  options: [
+    projectScopeOption,
+    limitOption,
+    cursorOption,
+    formatOption,
+    jsonOption,
+  ],
   examples: [
     {
       name: 'List repositories in the linked project',
@@ -36,7 +43,7 @@ export const listSubcommand = {
     },
     {
       name: 'List repositories for a specific project as JSON',
-      value: `${packageName} vcr ls --project my-app --format json`,
+      value: `${packageName} vcr ls --project my-app --json`,
     },
   ],
 } as const;
@@ -51,7 +58,7 @@ export const inspectSubcommand = {
       required: true,
     },
   ],
-  options: [projectScopeOption, formatOption],
+  options: [projectScopeOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Inspect a repository by name',
@@ -70,7 +77,7 @@ export const addSubcommand = {
       required: true,
     },
   ],
-  options: [projectScopeOption, formatOption],
+  options: [projectScopeOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Create a repository',
@@ -89,7 +96,7 @@ export const removeSubcommand = {
       required: true,
     },
   ],
-  options: [projectScopeOption, yesOption, formatOption],
+  options: [projectScopeOption, yesOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Delete a repository',
@@ -113,7 +120,7 @@ export const loginSubcommand = {
       required: true,
     },
   ],
-  options: [projectScopeOption, formatOption],
+  options: [projectScopeOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Log in with Docker',

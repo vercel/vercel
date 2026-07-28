@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, yesOption } from '../../util/arg-common';
+import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
 
 export const createSubcommand = {
   name: 'create',
@@ -178,6 +178,7 @@ export const rulesAddSubcommand = {
       description: 'Human-readable description of the rule',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -205,6 +206,7 @@ export const rulesListSubcommand = {
       description: 'Include disabled rules',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -259,6 +261,7 @@ export const rulesEditSubcommand = {
       description: 'Human-readable description of the rule',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -273,7 +276,7 @@ export const rulesRemoveSubcommand = {
   aliases: ['rm', 'delete'],
   description: 'Remove an AI Gateway routing rule',
   arguments: [{ name: 'ruleId', required: true }],
-  options: [yesOption, formatOption],
+  options: [yesOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Remove a rule',
@@ -481,7 +484,7 @@ export const modelsListSubcommand = {
   aliases: ['ls'],
   description: 'List AI Gateway models',
   arguments: [],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'List available models',
@@ -495,7 +498,7 @@ export const modelsEndpointsSubcommand = {
   aliases: [],
   description: 'List provider endpoints for an AI Gateway model',
   arguments: [{ name: 'model', required: true }],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'List provider endpoints for a model',
@@ -549,6 +552,7 @@ export const budgetsSetSubcommand = {
       description: 'Include BYOK usage in the budget (default: false)',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -567,7 +571,7 @@ export const budgetsListSubcommand = {
   aliases: ['ls'],
   description: 'List AI Gateway budgets',
   arguments: [],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'List budgets',
@@ -585,7 +589,7 @@ export const budgetsRemoveSubcommand = {
     { name: 'scope', required: true },
     { name: 'name', required: false },
   ],
-  options: [yesOption, formatOption],
+  options: [yesOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Remove the team budget',

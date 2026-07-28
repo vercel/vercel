@@ -99,4 +99,10 @@ export class IntegrationAddTelemetryClient
       this.trackCliFlag('no-claim');
     }
   }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
+    }
+  }
 }
