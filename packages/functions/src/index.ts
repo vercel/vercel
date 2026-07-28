@@ -18,6 +18,16 @@ export {
 export type { PurgeApi, DangerouslyDeleteOptions } from './purge/types';
 export { addCacheTag } from './addcachetag';
 export type { AddCacheTagApi } from './addcachetag/types';
+export {
+  optimizeImageFromBytes,
+  optimizeImageFromUrl,
+} from './image-optimization';
+export type {
+  OptimizeImageOptions,
+  OptimizeImageFromBytesOptions,
+  OptimizeImageFormat,
+  OptimizedImage,
+} from './image-optimization';
 export { experimental_upgradeWebSocket } from './websocket';
 export type { UpgradeWebSocketOptions } from './websocket';
 export type { WebSocket, RawData as WebSocketData } from 'ws';

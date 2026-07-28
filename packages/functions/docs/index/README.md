@@ -8,6 +8,9 @@
 
 - [DangerouslyDeleteOptions](interfaces/DangerouslyDeleteOptions.md)
 - [Geo](interfaces/Geo.md)
+- [OptimizedImage](interfaces/OptimizedImage.md)
+- [OptimizeImageFromBytesOptions](interfaces/OptimizeImageFromBytesOptions.md)
+- [OptimizeImageOptions](interfaces/OptimizeImageOptions.md)
 - [PurgeApi](interfaces/PurgeApi.md)
 - [Request](interfaces/Request.md)
 - [RuntimeCache](interfaces/RuntimeCache.md)
@@ -17,6 +20,7 @@
 ## Type Aliases
 
 - [AddCacheTagApi](type-aliases/AddCacheTagApi.md)
+- [OptimizeImageFormat](type-aliases/OptimizeImageFormat.md)
 - [WebSocket](type-aliases/WebSocket.md)
 - [WebSocketData](type-aliases/WebSocketData.md)
 
@@ -38,5 +42,7 @@
 - [invalidateByTag](functions/invalidateByTag.md)
 - [ipAddress](functions/ipAddress.md)
 - [next](functions/next.md)
+- [optimizeImageFromBytes](functions/optimizeImageFromBytes.md)
+- [optimizeImageFromUrl](functions/optimizeImageFromUrl.md)
 - [rewrite](functions/rewrite.md)
 - [waitUntil](functions/waitUntil.md)
