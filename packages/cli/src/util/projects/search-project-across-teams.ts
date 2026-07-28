@@ -131,7 +131,32 @@ export default async function searchProjectAcrossTeams(
   };
 }
 
-export async function searchProjectsByRepoRoot({
+export interface RepoRootSearchResult {
+  /** Projects whose Root Directory matches the current path. */
+  matches: CrossTeamMatch[];
+  /**
+   * Every project connected to the repo's Git remote, per searched org. Kept
+   * from the same request as `matches` so callers that need repo-wide counts
+   * do not issue a second `/v9/projects?repoUrl=…` crawl.
+   */
+  connectedByOrgId: Map<string, Project[]>;
+  /** Resolved Git remote, when the path is inside a Git repository. */
+  remote?: ResolvedGitRemote;
+  rootPath?: string;
+}
+
+export async function searchProjectsByRepoRoot(args: {
+  client: Client;
+  cwd: string;
+  gitProjectName?: string;
+  orgs: Org[];
+  autoConfirm: boolean;
+  nonInteractive: boolean;
+}): Promise<CrossTeamMatch[]> {
+  return (await searchProjectsByRepoRootDetailed(args)).matches;
+}
+
+export async function searchProjectsByRepoRootDetailed({
   client,
   cwd,
   gitProjectName,
@@ -145,10 +170,15 @@ export async function searchProjectsByRepoRoot({
   orgs: Org[];
   autoConfirm: boolean;
   nonInteractive: boolean;
-}): Promise<CrossTeamMatch[]> {
+}): Promise<RepoRootSearchResult> {
+  const empty: RepoRootSearchResult = {
+    matches: [],
+    connectedByOrgId: new Map(),
+  };
+
   const rootPath = await findRepoRoot(cwd);
   if (!rootPath) {
-    return [];
+    return empty;
   }
 
   let remote: ResolvedGitRemote | undefined;
@@ -161,14 +191,15 @@ export async function searchProjectsByRepoRoot({
       throw error;
     }
     output.debug(`Failed to resolve Git remote for project search: ${error}`);
-    return [];
+    return empty;
   }
 
   if (!remote) {
-    return [];
+    return empty;
   }
 
   const relativePath = relative(rootPath, cwd);
+  const connectedByOrgId = new Map<string, Project[]>();
   const results = await Promise.all(
     orgs.map(async org => {
       try {
@@ -177,6 +208,7 @@ export async function searchProjectsByRepoRoot({
           remote.repoUrl,
           org.id
         );
+        connectedByOrgId.set(org.id, projects);
         const repoProjectConfigs = projects
           .filter(
             project =>
@@ -223,5 +255,10 @@ export async function searchProjectsByRepoRoot({
     })
   );
 
-  return results.flat();
+  return {
+    matches: results.flat(),
+    connectedByOrgId,
+    remote,
+    rootPath,
+  };
 }

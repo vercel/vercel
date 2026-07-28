@@ -16,6 +16,7 @@ const SEARCH_ALL_PROJECTS = 'search-all-projects' as const;
 const CREATE_NEW_PROJECT = 'create-new-project' as const;
 const BACK_TO_PROJECT_SELECTION = Symbol('back-to-project-selection');
 export const BACK_TO_TEAM_SELECTION = Symbol('back-to-team-selection');
+export const LINK_ALL_PROJECTS = Symbol('link-all-projects');
 const NO_EXISTING_PROJECTS = Symbol('no-existing-projects');
 
 async function inputProjectDecision(
@@ -214,6 +215,16 @@ async function searchExistingProjects(
   });
 }
 
+/**
+ * Offer to link every project in the repository in one pass. Only set when
+ * `vc link` runs from the repository root and more than one project on Vercel
+ * is already connected to this repository's Git remote.
+ */
+export interface MultiProjectOffer {
+  /** Projects already connected to this repo's Git remote in the team. */
+  connectedCount: number;
+}
+
 export default async function inputProject(
   client: Client,
   org: Org,
@@ -222,8 +233,15 @@ export default async function inputProject(
   skipAutoDetect = false,
   showProjectSuggestions = false,
   allowTeamSelectionBack = false,
-  repoMatches: CrossTeamMatch[] = []
-): Promise<Project | CrossTeamMatch | string | typeof BACK_TO_TEAM_SELECTION> {
+  repoMatches: CrossTeamMatch[] = [],
+  multiProjectOffer?: MultiProjectOffer
+): Promise<
+  | Project
+  | CrossTeamMatch
+  | string
+  | typeof BACK_TO_TEAM_SELECTION
+  | typeof LINK_ALL_PROJECTS
+> {
   const slugifiedName = slugify(detectedProjectName);
 
   // attempt to auto-detect a project to link
@@ -297,7 +315,8 @@ export default async function inputProject(
         | CrossTeamMatch
         | typeof SEARCH_ALL_PROJECTS
         | typeof CREATE_NEW_PROJECT
-        | typeof BACK_TO_TEAM_SELECTION;
+        | typeof BACK_TO_TEAM_SELECTION
+        | typeof LINK_ALL_PROJECTS;
       const choices: Array<
         | Separator
         | {
@@ -306,6 +325,20 @@ export default async function inputProject(
             description?: string;
           }
       > = [];
+
+      // Repository-wide linking is the strongest default when the command runs
+      // from the root of a repo whose workspace detection found several
+      // projects: one pass links them all instead of repeating `vc link`.
+      if (multiProjectOffer) {
+        const { connectedCount } = multiProjectOffer;
+        choices.push({
+          name: `Link all ${connectedCount} projects connected to this repo ${chalk.gray(
+            '(recommended)'
+          )}`,
+          value: LINK_ALL_PROJECTS,
+          description: `${connectedCount} projects in ${org.slug} are connected to this Git repository`,
+        });
+      }
 
       if (repoMatches.length > 0) {
         choices.push(
@@ -323,6 +356,10 @@ export default async function inputProject(
           },
           new Separator()
         );
+      } else if (multiProjectOffer) {
+        // Keep the repo-wide option visually separated from the fallback
+        // actions even when there is no per-directory suggestion.
+        choices.push(new Separator());
       }
       choices.push(
         {
@@ -351,6 +388,9 @@ export default async function inputProject(
 
       if (selected === BACK_TO_TEAM_SELECTION) {
         return BACK_TO_TEAM_SELECTION;
+      }
+      if (selected === LINK_ALL_PROJECTS) {
+        return LINK_ALL_PROJECTS;
       }
       if (selected === CREATE_NEW_PROJECT) {
         const projectName = await promptForProjectNameWithBack(

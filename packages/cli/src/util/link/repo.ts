@@ -15,7 +15,7 @@ import selectOrg from '../input/select-org';
 import { addToGitIgnore } from './add-to-gitignore';
 import type Client from '../client';
 import type { Framework } from '@vercel/frameworks';
-import type { Project } from '@vercel-internals/types';
+import type { Org, Project } from '@vercel-internals/types';
 import createProject from '../projects/create-project';
 import { detectProjects } from '../projects/detect-projects';
 import { repoInfoToUrl } from '../git/repo-info-to-url';
@@ -47,6 +47,11 @@ export interface RepoLink {
   rootPath: string;
   repoConfigPath: string;
   repoConfig?: RepoProjectsConfig;
+  /**
+   * Projects selected during this run, in API form. Only set when the link
+   * flow actually discovered/created projects.
+   */
+  selectedProjects?: Project[];
 }
 
 export interface ResolvedGitRemote {
@@ -58,6 +63,10 @@ export interface ResolvedGitRemote {
 export interface EnsureRepoLinkOptions {
   yes: boolean;
   overwrite: boolean;
+  /** Team already resolved by the caller; skips the `Which team?` prompt. */
+  selectedOrg?: Org;
+  /** Skip the `Link Git repository…?` confirmation when intent is known. */
+  skipConfirm?: boolean;
 }
 
 interface NewProject {
@@ -235,15 +244,29 @@ async function discoverRepoProjects(
     existingProjectIds,
     existingDirectories,
     existingRemoteName,
+    selectedOrg,
+    skipConfirm,
   }: {
     yes: boolean;
     existingProjectIds?: Set<string>;
     existingDirectories?: Set<string>;
     /** When set, skip the remote selection prompt and use this remote. */
     existingRemoteName?: string;
+    /** Team already resolved by the caller; skips the `Which team?` prompt. */
+    selectedOrg?: Org;
+    /**
+     * Skip the `Link Git repository…?` confirmation. Use when the caller
+     * already captured that intent, e.g. the `vc link` project picker.
+     */
+    skipConfirm?: boolean;
   }
 ): Promise<
-  | { remoteName: string; projects: RepoProjectConfig[]; orgSlug: string }
+  | {
+      remoteName: string;
+      projects: RepoProjectConfig[];
+      selectedProjects: Project[];
+      orgSlug: string;
+    }
   | undefined
 > {
   // Detect the projects on the filesystem out of band, so that
@@ -263,14 +286,15 @@ async function discoverRepoProjects(
           `"${toHumanPath(rootPath)}"`
         )} to your Project(s)?`;
 
-  const shouldLink = yes || (await client.input.confirm(confirmMessage, true));
+  const shouldLink =
+    yes || skipConfirm || (await client.input.confirm(confirmMessage, true));
 
   if (!shouldLink) {
     output.print(`  Canceled. Repository not linked.\n`);
     return;
   }
 
-  const org = await selectOrg(client, 'Which team?', yes);
+  const org = selectedOrg ?? (await selectOrg(client, 'Which team?', yes));
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   const remote = await resolveGitRemote(client, rootPath, {
@@ -443,13 +467,18 @@ async function discoverRepoProjects(
     };
   });
 
-  return { remoteName, projects: repoProjects, orgSlug: org.slug };
+  return {
+    remoteName,
+    projects: repoProjects,
+    selectedProjects: selected as Project[],
+    orgSlug: org.slug,
+  };
 }
 
 export async function ensureRepoLink(
   client: Client,
   cwd: string,
-  { yes, overwrite }: EnsureRepoLinkOptions
+  { yes, overwrite, selectedOrg, skipConfirm }: EnsureRepoLinkOptions
 ): Promise<RepoLink | undefined> {
   const repoLink = await getRepoLink(client, cwd);
   if (repoLink) {
@@ -458,12 +487,18 @@ export async function ensureRepoLink(
     throw new Error('Could not determine Git repository root directory');
   }
   let { rootPath, repoConfig, repoConfigPath } = repoLink;
+  let selectedProjects: Project[] | undefined;
 
   if (overwrite || !repoConfig) {
-    const result = await discoverRepoProjects(client, rootPath, { yes });
+    const result = await discoverRepoProjects(client, rootPath, {
+      yes,
+      selectedOrg,
+      skipConfirm,
+    });
     if (!result) {
       return;
     }
+    selectedProjects = result.selectedProjects;
 
     repoConfig = {
       remoteName: result.remoteName,
@@ -486,6 +521,7 @@ export async function ensureRepoLink(
     repoConfig,
     repoConfigPath,
     rootPath,
+    selectedProjects,
   };
 }
 

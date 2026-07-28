@@ -187,10 +187,18 @@ async function linkProject(client: Client) {
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
       pullEnv: false,
+      // Only `vc link` offers linking every project in the repo at once.
+      allowMultiProjectLink: !parsedArgs.flags['--project'],
     });
 
     if (typeof link === 'number') {
       return link;
+    }
+
+    // A repo-wide link has no single project directory to pull an OIDC token
+    // for; `vc env pull` runs per project directory instead.
+    if (link.status === 'repo_linked') {
+      return 0;
     }
 
     await refreshOidcTokenAfterLink(client, cwd);

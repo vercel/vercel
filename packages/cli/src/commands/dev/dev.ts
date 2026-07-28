@@ -77,12 +77,20 @@ export default async function dev(
       );
       return 1;
     } else {
-      link = await setupAndLink(client, cwd, {
+      const setupResult = await setupAndLink(client, cwd, {
         autoConfirm: opts['--yes'],
         link,
         successEmoji: 'link',
         nonInteractive: client.nonInteractive,
       });
+
+      if (setupResult.status === 'repo_linked') {
+        // `dev` never opts into repo-wide linking, so this is unreachable.
+        output.error(`Unexpected repository-wide link result`);
+        return 1;
+      }
+
+      link = setupResult;
 
       if (link.status === 'not_linked') {
         // User aborted project linking questions
