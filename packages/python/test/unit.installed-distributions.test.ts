@@ -8,7 +8,7 @@ import type {
   DistributionIndex,
   PackagePath,
 } from '@vercel/python-analysis';
-import { deriveStagedPycFsPath, PYCACHE_PREFIX_DIR } from '../src/compileall';
+import { PYCACHE_PREFIX_DIR } from '../src/compileall';
 import { RUNTIME_DEPS_DIR } from '../src/dependency-externalizer';
 import {
   getDistributionFileGroups,
@@ -245,13 +245,43 @@ describe('InstalledPythonDistributions', () => {
     });
 
     expect(
-      installed.getPythonSourceFiles(['always_bundled', 'selected.public'])
+      installed
+        .getPythonSourceFiles(['always_bundled', 'selected.public'])
+        .map(source => source.absolutePath)
     ).toEqual([
       path.resolve(sitePackagesDir, 'always/z.py'),
       path.resolve(sitePackagesDir, 'selected/a.py'),
     ]);
     expect(installed.getPythonSourceFiles([])).toEqual([]);
     expect(installed.getPythonSourceFiles()).toHaveLength(3);
+  });
+
+  it('describes source package, paths, site-packages root, and local origin', () => {
+    const sitePackagesDir = path.join(
+      tmpdir(),
+      'source-metadata-site-packages'
+    );
+    const localDistribution = createDistribution('local-package', [
+      { path: 'local_package/module.py' },
+    ]);
+    localDistribution.origin = {
+      tag: 'local-directory',
+      val: { url: 'file:///project/local-package', editable: true },
+    };
+    const installed = createInstalledDistributions({
+      sitePackagesDir,
+      distributions: new Map([['local-package', localDistribution]]),
+    });
+
+    expect(installed.getPythonSourceFiles()).toEqual([
+      {
+        packageName: 'local-package',
+        sitePackagesDir: path.resolve(sitePackagesDir),
+        absolutePath: path.resolve(sitePackagesDir, 'local_package/module.py'),
+        relativePath: 'local_package/module.py',
+        isFromLocalDirectory: true,
+      },
+    ]);
   });
 
   it('collects adjacent bytecode and ignores out-of-tree RECORD entries', async () => {
@@ -289,78 +319,39 @@ describe('InstalledPythonDistributions', () => {
     expect(result.perItemSizes).toEqual(new Map([['pkg', 10]]));
   });
 
-  it('collects staged prefix bytecode under its runtime root', async () => {
-    const baseDir = makeTempDir('prefix-bytecode-records-');
-    const sitePackagesDir = path.join(baseDir, 'site-packages');
-    const stagingDir = path.join(baseDir, 'staging');
-    const stagedPyc = deriveStagedPycFsPath(
-      stagingDir,
-      path.join(sitePackagesDir, 'pkg', 'mod.py'),
-      3,
-      12
+  it('maps adjacent bytecode into bundled and runtime-install prefix layouts', async () => {
+    const sitePackagesDir = makeTempDir('adjacent-prefix-bytecode-');
+    const adjacentPyc = path.join(
+      sitePackagesDir,
+      'pkg',
+      '__pycache__',
+      'mod.cpython-312.pyc'
     );
-    expect(stagedPyc).not.toBeNull();
-    fs.outputFileSync(stagedPyc!, Buffer.alloc(30));
-
+    fs.outputFileSync(adjacentPyc, Buffer.alloc(15));
     const installed = createInstalledDistributions({
       sitePackagesDir,
       distributions: createDistributionIndex([
-        ['pkg', [{ path: 'pkg/mod.py' }, { path: 'pkg/native.so' }]],
-        ['otherpkg', [{ path: 'otherpkg/mod.py' }]],
+        ['pkg', [{ path: 'pkg/mod.py' }]],
       ]),
     });
-    const runtimeRoot = `${RUNTIME_DEPS_DIR}/lib/python3.12/site-packages`;
-    const result = await installed.collectPrefixBytecodeFiles({
-      stagingDir,
-      runtimeRoot,
-    });
 
-    const expectedKey = `${PYCACHE_PREFIX_DIR}/tmp/_vc_deps/lib/python3.12/site-packages/pkg/mod.cpython-312.pyc`;
-    expect(Object.keys(result.files)).toEqual([expectedKey]);
-    expect((result.files[expectedKey] as FileFsRef).fsPath).toBe(stagedPyc);
-    expect(result.totalSize).toBe(30);
-    expect(result.perItemSizes).toEqual(new Map([['pkg', 30]]));
-  });
-
-  it('honors prefix package scopes and empty scopes', async () => {
-    const baseDir = makeTempDir('prefix-bytecode-scopes-');
-    const sitePackagesDir = path.join(baseDir, 'site-packages');
-    const stagingDir = path.join(baseDir, 'staging');
-
-    for (const relativePath of ['a/mod.py', 'b/mod.py']) {
-      const stagedPyc = deriveStagedPycFsPath(
-        stagingDir,
-        path.join(sitePackagesDir, relativePath),
-        3,
-        12
-      );
-      expect(stagedPyc).not.toBeNull();
-      fs.outputFileSync(stagedPyc!, Buffer.alloc(5));
-    }
-
-    const installed = createInstalledDistributions({
-      sitePackagesDir,
-      distributions: createDistributionIndex([
-        ['a', [{ path: 'a/mod.py' }]],
-        ['b', [{ path: 'b/mod.py' }, { path: '../../bin/script.py' }]],
-      ]),
-    });
-    const scoped = await installed.collectPrefixBytecodeFiles({
-      stagingDir,
+    const bundled = await installed.collectAdjacentBytecodeAsPrefixFiles({
       runtimeRoot: '/var/task/_vendor',
-      includePackages: ['b'],
     });
-    const empty = await installed.collectPrefixBytecodeFiles({
-      stagingDir,
-      runtimeRoot: '/var/task/_vendor',
-      includePackages: [],
-    });
+    const runtimeInstalled =
+      await installed.collectAdjacentBytecodeAsPrefixFiles({
+        runtimeRoot: `${RUNTIME_DEPS_DIR}/lib/python3.12/site-packages`,
+      });
 
-    expect(Object.keys(scoped.files)).toEqual([
-      `${PYCACHE_PREFIX_DIR}/var/task/_vendor/b/mod.cpython-312.pyc`,
+    expect(Object.keys(bundled.files)).toEqual([
+      `${PYCACHE_PREFIX_DIR}/var/task/_vendor/pkg/mod.cpython-312.pyc`,
     ]);
-    expect(scoped.perItemSizes.has('a')).toBe(false);
-    expect(Object.keys(empty.files)).toHaveLength(0);
+    expect(Object.keys(runtimeInstalled.files)).toEqual([
+      `${PYCACHE_PREFIX_DIR}/tmp/_vc_deps/lib/python3.12/site-packages/pkg/mod.cpython-312.pyc`,
+    ]);
+    expect((Object.values(runtimeInstalled.files)[0] as FileFsRef).fsPath).toBe(
+      adjacentPyc
+    );
   });
 
   it('returns no bytecode when the Python version is unavailable', async () => {
@@ -381,8 +372,7 @@ describe('InstalledPythonDistributions', () => {
       await installed.collectBytecodeFiles({ vendorDirName: '_vendor' })
     ).toEqual({ files: {}, totalSize: 0, perItemSizes: new Map() });
     expect(
-      await installed.collectPrefixBytecodeFiles({
-        stagingDir: '/tmp/staging',
+      await installed.collectAdjacentBytecodeAsPrefixFiles({
         runtimeRoot: '/var/task/_vendor',
       })
     ).toEqual({ files: {}, totalSize: 0, perItemSizes: new Map() });

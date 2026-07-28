@@ -3,12 +3,20 @@ import execa from 'execa';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { deriveStagedPycFsPath, runCompileAll } from '../src/compileall';
+import { FileFsRef } from '@vercel/build-utils';
+import type { Distribution } from '@vercel/python-analysis';
+import {
+  collectAppAdjacentBytecodeAsPrefixFiles,
+  derivePycPath,
+  PYCACHE_PREFIX_DIR,
+  runCompileAll,
+} from '../src/compileall';
 import {
   RUNTIME_DEPS_DIR,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
   EPHEMERAL_INSTALL_BUDGET_BYTES,
 } from '../src/dependency-externalizer';
+import { InstalledPythonDistributions } from '../src/installed-distributions';
 
 const tmpDirs: string[] = [];
 const compileAllScriptPath = path.join(
@@ -42,11 +50,6 @@ beforeAll(async () => {
 });
 
 describe('explicit-list compilation layout (real CPython)', () => {
-  // Validates the core assumption of the bytecode-first packing mode: the
-  // path where the coordinator (run with PYTHONPYCACHEPREFIX) writes a .pyc
-  // matches deriveStagedPycFsPath(). If CPython's cache_from_source layout
-  // ever changes, this test fails rather than silently shipping an
-  // unaddressable bytecode tree.
   const pythonBin = process.env.PYTHON_BIN || 'python3';
 
   async function getPythonInfo() {
@@ -91,36 +94,146 @@ describe('explicit-list compilation layout (real CPython)', () => {
     }
   });
 
-  it('writes multiple staged pyc files at their derived paths', async () => {
+  it('loads adjacent dependency bytecode after mapping it into a runtime prefix', async () => {
     if (!processPoolAvailable) return;
-    const [major, minor] = await getPythonInfo();
+    const [major, minor, interpreterPrefix] = await getPythonInfo();
+    if (interpreterPrefix !== null) return;
 
-    const workPath = makeTempDir('vc-py-prefix-real-');
-    const stagingDir = path.join(workPath, 'staging');
-    const sourcePaths = ['pkg/first.py', 'pkg/nested/second.py'].map(
-      relativePath => path.join(workPath, 'src', relativePath)
+    const workPath = makeTempDir('vc-py-adjacent-prefix-real-');
+    const venvPath = path.join(workPath, 'venv');
+    const sitePackagesDir = path.join(
+      venvPath,
+      'lib',
+      `python${major}.${minor}`,
+      'site-packages'
     );
-    for (const srcPath of sourcePaths) {
-      fs.mkdirSync(path.dirname(srcPath), { recursive: true });
-      fs.writeFileSync(srcPath, 'X = 1\n');
-    }
+    const buildSource = path.join(sitePackagesDir, 'pkg', 'mod.py');
+    fs.mkdirSync(path.dirname(buildSource), { recursive: true });
+    fs.writeFileSync(buildSource, 'VALUE = "compiled dependency"\n');
 
     await expect(
-      runCompileAll({
-        pythonBin,
-        sourceFiles: sourcePaths,
-        pycachePrefix: stagingDir,
-      })
+      runCompileAll({ pythonBin, sourceFiles: [buildSource] })
     ).resolves.toBe(true);
 
-    for (const srcPath of sourcePaths) {
-      const derived = deriveStagedPycFsPath(stagingDir, srcPath, major, minor);
-      expect(derived).not.toBeNull();
-      expect(fs.existsSync(derived!)).toBe(true);
-      expect(
-        fs.existsSync(path.join(path.dirname(srcPath), '__pycache__'))
-      ).toBe(false);
-    }
+    const distribution: Distribution = {
+      name: 'pkg',
+      version: '1.0.0',
+      metadataVersion: '2.1',
+      requiresDist: [],
+      providesExtra: [],
+      classifiers: [],
+      projectUrls: [],
+      platforms: [],
+      dynamic: [],
+      files: [{ path: 'pkg/mod.py' }],
+    };
+    const installed = new InstalledPythonDistributions({
+      sitePackageDirs: [sitePackagesDir],
+      distributions: new Map([
+        [sitePackagesDir, new Map([['pkg', distribution]])],
+      ]),
+      pythonMajor: major,
+      pythonMinor: minor,
+    });
+    const runtimeSitePackages = path.join(workPath, 'runtime', 'site-packages');
+    const collected = await installed.collectAdjacentBytecodeAsPrefixFiles({
+      runtimeRoot: runtimeSitePackages,
+    });
+    const [bundlePath] = Object.keys(collected.files);
+    expect(bundlePath).toMatch(
+      new RegExp(
+        `^${PYCACHE_PREFIX_DIR}/.+/pkg/mod\\.cpython-${major}${minor}\\.pyc$`
+      )
+    );
+
+    const prefixDir = path.join(workPath, 'runtime-pycache');
+    const prefixRelativePath = bundlePath.slice(
+      `${PYCACHE_PREFIX_DIR}/`.length
+    );
+    const prefixPycPath = path.join(
+      prefixDir,
+      ...prefixRelativePath.split('/')
+    );
+    fs.mkdirSync(path.dirname(prefixPycPath), { recursive: true });
+    fs.copyFileSync(
+      (collected.files[bundlePath] as FileFsRef).fsPath,
+      prefixPycPath
+    );
+
+    const runtimeSource = path.join(runtimeSitePackages, 'pkg', 'mod.py');
+    fs.mkdirSync(path.dirname(runtimeSource), { recursive: true });
+    fs.writeFileSync(runtimeSource, 'VALUE = "runtime source"\n');
+    const { stdout } = await execa(
+      pythonBin,
+      ['-c', 'from pkg.mod import VALUE; print(VALUE)'],
+      {
+        env: {
+          ...process.env,
+          PYTHONPATH: runtimeSitePackages,
+          PYTHONPYCACHEPREFIX: prefixDir,
+          PYTHONDONTWRITEBYTECODE: '1',
+        },
+      }
+    );
+    expect(stdout).toBe('compiled dependency');
+  });
+
+  it('loads adjacent app bytecode after mapping it into a runtime prefix', async () => {
+    if (!processPoolAvailable) return;
+    const [major, minor, interpreterPrefix] = await getPythonInfo();
+    if (interpreterPrefix !== null) return;
+
+    const workPath = makeTempDir('vc-py-adjacent-app-prefix-real-');
+    const buildSource = path.join(workPath, 'app.py');
+    fs.writeFileSync(buildSource, 'VALUE = "compiled app"\n');
+
+    await expect(
+      runCompileAll({ pythonBin, sourceFiles: [buildSource] })
+    ).resolves.toBe(true);
+
+    const runtimeRootPath = path.join(workPath, 'runtime');
+    fs.mkdirSync(runtimeRootPath, { recursive: true });
+    const runtimeRoot = fs.realpathSync(runtimeRootPath);
+    const collected = await collectAppAdjacentBytecodeAsPrefixFiles({
+      workPath,
+      files: { 'app.py': new FileFsRef({ fsPath: buildSource }) },
+      runtimeTaskRoot: runtimeRoot,
+      pythonMajor: major,
+      pythonMinor: minor,
+    });
+    const [bundlePath] = Object.keys(collected.files);
+    expect(bundlePath).toMatch(
+      new RegExp(
+        `^${PYCACHE_PREFIX_DIR}/.+/app\\.cpython-${major}${minor}\\.pyc$`
+      )
+    );
+
+    const prefixDir = path.join(runtimeRoot, PYCACHE_PREFIX_DIR);
+    const prefixPycPath = path.join(runtimeRoot, ...bundlePath.split('/'));
+    fs.mkdirSync(path.dirname(prefixPycPath), { recursive: true });
+    fs.copyFileSync(
+      (collected.files[bundlePath] as FileFsRef).fsPath,
+      prefixPycPath
+    );
+    fs.writeFileSync(
+      path.join(runtimeRoot, 'app.py'),
+      'VALUE = "runtime source"\n'
+    );
+
+    const { stdout } = await execa(
+      pythonBin,
+      ['-c', 'from app import VALUE; print(VALUE)'],
+      {
+        cwd: runtimeRoot,
+        env: {
+          ...process.env,
+          PYTHONPATH: runtimeRoot,
+          PYTHONPYCACHEPREFIX: prefixDir,
+          PYTHONDONTWRITEBYTECODE: '1',
+        },
+      }
+    );
+    expect(stdout).toBe('compiled app');
   });
 
   it('does not run when loaded as a multiprocessing child module', async () => {
@@ -133,33 +246,45 @@ describe('explicit-list compilation layout (real CPython)', () => {
     ).resolves.toBeDefined();
   });
 
-  it('preserves successfully compiled bytecode when another source fails', async () => {
+  it('removes stale bytecode when recompilation fails for one source', async () => {
     if (!processPoolAvailable) return;
-    const [major, minor] = await getPythonInfo();
+    const [major, minor, interpreterPrefix] = await getPythonInfo();
+    if (interpreterPrefix !== null) return;
 
     const workPath = makeTempDir('vc-py-partial-real-');
-    const stagingDir = path.join(workPath, 'staging');
     const validSource = path.join(workPath, 'valid.py');
     const invalidSource = path.join(workPath, 'invalid.py');
     fs.writeFileSync(validSource, 'X = 1\n');
-    fs.writeFileSync(invalidSource, 'def invalid syntax\n');
+    fs.writeFileSync(invalidSource, 'X = 1\n');
 
     await expect(
       runCompileAll({
         pythonBin,
         sourceFiles: [validSource, invalidSource],
-        pycachePrefix: stagingDir,
       })
     ).resolves.toBe(true);
 
-    const validBytecode = deriveStagedPycFsPath(
-      stagingDir,
-      validSource,
-      major,
-      minor
-    );
+    const validRelativeBytecode = derivePycPath('valid.py', major, minor);
+    const invalidRelativeBytecode = derivePycPath('invalid.py', major, minor);
+    expect(validRelativeBytecode).not.toBeNull();
+    expect(invalidRelativeBytecode).not.toBeNull();
+    const validBytecode = path.join(workPath, validRelativeBytecode!);
+    const invalidBytecode = path.join(workPath, invalidRelativeBytecode!);
     expect(validBytecode).not.toBeNull();
-    expect(fs.existsSync(validBytecode!)).toBe(true);
+    expect(invalidBytecode).not.toBeNull();
+    expect(fs.existsSync(validBytecode)).toBe(true);
+    expect(fs.existsSync(invalidBytecode)).toBe(true);
+
+    fs.writeFileSync(invalidSource, 'def invalid syntax\n');
+    await expect(
+      runCompileAll({
+        pythonBin,
+        sourceFiles: [validSource, invalidSource],
+      })
+    ).resolves.toBe(true);
+
+    expect(fs.existsSync(validBytecode)).toBe(true);
+    expect(fs.existsSync(invalidBytecode)).toBe(false);
   });
 
   it('exits nonzero when multiprocessing is unavailable', async () => {
