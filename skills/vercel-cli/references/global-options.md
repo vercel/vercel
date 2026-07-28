@@ -1,15 +1,11 @@
 # Global Options
 
-Key flags available on every `vercel` command:
+> Exact syntax: `vercel --help`; full list: [`generated/index.md`](../generated/index.md)
 
-- `--help` / `-h` — show help for the command
-- `--debug` / `-d` — enable debug output
-- `--cwd DIR` — override working directory
-- `--scope SCOPE` — set team context
+Notes beyond the flag list in `--help`:
+
 - `--team SLUG` — deprecated alias for `--scope`; avoid in new commands
-- `--token TOKEN` — auth token (prefer `VERCEL_TOKEN` env var instead)
 - `--api URL` — override the API base URL (defaults to the public Vercel API)
-- `--non-interactive` — suppress interactive prompts (auto-set when an agent is detected and stdin is not a TTY)
 
 `--yes` / `-y` is **not** a global flag. It is declared per command on the subset that confirm mutations (`env rm`, `domains rm`, `blob delete-store`, `routes delete`, etc.). Always check the command's help to see whether `--yes` is accepted.
 

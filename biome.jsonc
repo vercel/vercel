@@ -19,6 +19,7 @@
       "!packages/**/test/cache-fixtures/**",
       "!packages/**/test/**/test-limit-exceeded*/**",
       "!packages/cli/types/**",
+      "scripts/vercel-cli-skill/**/*.{js,ts,mjs,cjs,jsx,tsx,json,css}",
       "test/**/*.{js,ts,mjs,cjs,jsx,tsx,json,css}",
       "utils/**/*.{js,ts,mjs,cjs,jsx,tsx,json,css}",
       "*.js",

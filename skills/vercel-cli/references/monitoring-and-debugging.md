@@ -1,5 +1,7 @@
 # Monitoring & Debugging
 
+> Exact syntax: `vercel logs --help`, `vercel inspect --help`, `vercel metrics --help`, `vercel traces --help`, `vercel activity --help`, `vercel curl --help`, `vercel httpstat --help`, `vercel bisect --help`
+
 ## Diagnostic Ladder
 
 For production issues, start broad and narrow with bounded commands:
@@ -42,29 +44,7 @@ Use confidence language in conclusions:
 - Not yet proven is `<remaining uncertainty>`.
 - Validate by `<specific redeploy/test/check>`.
 
-Useful discovery commands:
-
-```bash
-vercel logs --help
-vercel metrics --help
-vercel metrics schema --format=json
-vercel metrics schema <metric-or-prefix> --format=json
-vercel activity --help
-vercel activity types --format json --scope <team>
-vercel usage --help
-vercel httpstat /api/health --deployment <deployment-url>
-```
-
 ## Logs
-
-```bash
-vercel logs <deployment-url>                   # view logs
-vercel logs --follow                           # stream live
-vercel logs --level error --level warning      # filter by severity (error, warning, info, fatal)
-vercel logs --source serverless                # filter by source (serverless, edge-function, edge-middleware, static)
-vercel logs --since 2024-01-01                 # filter by time
-vercel logs --query "timeout"                  # search
-```
 
 Use `--follow` only for live debugging. Historical log queries should be bounded with `--since`, `--until`, and `--limit`.
 
@@ -72,22 +52,7 @@ Use `--follow` only for live debugging. Historical log queries should be bounded
 
 Inspect schema before querying unfamiliar metrics. Use bounded time windows and group limits when grouping results.
 
-```bash
-vercel metrics schema                                                    # list available metrics
-vercel metrics schema vercel.function_invocation                         # inspect a metric prefix
-vercel metrics vercel.function_invocation.count --since 1h               # query linked project
-vercel metrics vercel.function_invocation.count -f "http_status ge 500" --group-by error_code --since 1h --format=json
-vercel metrics vercel.function_invocation.request_duration_ms -a avg --group-by route --since 1h
-vercel metrics --all vercel.function_invocation.count --group-by project_id --since 24h
-```
-
 ## Inspecting Deployments
-
-```bash
-vercel inspect <url>               # deployment details
-vercel inspect <url> --wait        # wait for completion
-vercel inspect <url> --logs        # show build logs
-```
 
 If a redeploy is meant to validate a build-cache or branch-specific hypothesis,
 inspect or wait until the new deployment reaches `Ready` or `Error`; do not stop
@@ -95,29 +60,12 @@ at `Building` unless the user only asked to start the deployment.
 
 ## `vercel curl` — Access Preview Deployments
 
-**Use `vercel curl` to access preview deploys.** It handles deployment protection automatically — no need to disable protection or manage bypass secrets.
+`vercel curl` handles deployment protection automatically — no need to manage bypass secrets.
 
-```bash
-vercel curl /api/health --deployment $PREVIEW_URL
-vercel curl /api/data --deployment $PREVIEW_URL -- -X POST -d '{"key":"value"}'
-```
+## Request Traces
 
-**Do not disable deployment protection.** Use `vercel curl` instead.
+`vercel traces` fetches captured request traces for a project (`--open` renders them in a viewer). Useful when logs alone do not explain latency or routing behavior.
 
 ## Finding Regressions
 
-`vercel bisect` performs a binary search across deployments to find which one introduced a problem:
-
-```bash
-vercel bisect --good <url> --bad <url> --path /api/users
-vercel bisect --run ./test-script.sh    # automated testing
-```
-
-## Cache
-
-```bash
-vercel cache purge --type cdn --yes      # purge CDN cache
-vercel cache invalidate --tag mytag --yes # invalidate by cache tag
-```
-
-See `references/project-infra.md` for destructive cache deletion and other project infrastructure commands.
+`vercel bisect` performs a binary search across deployments to find which one introduced a problem.

@@ -6,24 +6,17 @@ Load the Vercel CLI skill and help with Vercel project deployment, management, i
 
 ## Workflow
 
-### Step 1: Identify task type from user request
+### Step 1: Select the handwritten workflow reference
 
-Use the decision tree in SKILL.md to select the relevant reference file.
+Use the decision tree in `SKILL.md` to select the relevant `references/<topic>.md` file for workflows, prerequisites, safety constraints, and troubleshooting.
 
-### Step 2: Read the reference file
+### Step 2: Confirm exact syntax with the installed CLI
 
-Based on task type, read `references/<topic>.md`. Use `vercel <command> --help` for full flag details before using uncommon or risky flags.
+Run `vercel <command> --help` before using uncommon or risky flags — the installed CLI is the syntax authority. Consult `generated/index.md` only to discover which commands exist, their aliases, and global options.
 
-### Step 3: Execute task
+### Step 3: Execute after authorization and safety checks
 
-**Key things to verify:**
-
-- Project is linked (`.vercel/` directory exists)
-- Env vars are pulled if needed (`vercel pull`)
-- Use `--non-interactive` for prompt-free runs and `--yes` only when confirmation is required
-- Use `VERCEL_TOKEN` env var for auth (not `--token`)
-- Use first-class CLI commands before `vercel api`
-- Use `vercel curl` to access preview deployments; don't disable protection
+Verify the project is linked and env vars are pulled if needed; SKILL.md's Project Linking and Anti-Patterns sections are the checklist.
 
 ### Step 4: Summarize
 
