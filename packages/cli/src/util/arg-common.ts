@@ -219,6 +219,7 @@ export const formatOption = {
   shorthand: 'F',
   type: String,
   argument: 'FORMAT',
+  description: 'Specify the output format (json)',
   deprecated: false,
 } as const;
 
