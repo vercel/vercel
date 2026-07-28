@@ -1,13 +1,22 @@
 import { createRequire } from 'module';
-import { relative, basename, dirname } from 'path';
+import { spawnSync } from 'child_process';
+import { relative, basename, dirname, join } from 'path';
 import { NowBuildError } from '@vercel/build-utils';
 import type _ts from 'typescript';
+import {
+  resolveTypescript,
+  shouldUseNativeTypecheck,
+} from './typescript-resolve';
 
 /*
  * Fork of TS-Node - https://github.com/TypeStrong/ts-node
  * Copyright Blake Embrey
  * MIT License
  */
+
+// Cache native typecheck results per tsconfig so NFT's per-file compile
+// path does not re-spawn `tsc` for every TypeScript source.
+const nativeTypecheckCache = new Map<string, { ok: boolean; output: string }>();
 
 /**
  * Debugging.
@@ -121,6 +130,12 @@ const require_ = createRequire(__filename);
  */
 const configFileToBuildMap = new Map<string, GetOutputFunction>();
 
+/** Test helper: reset module-level compile/typecheck caches. */
+export function clearTypescriptCaches() {
+  nativeTypecheckCache.clear();
+  configFileToBuildMap.clear();
+}
+
 /**
  * Register TypeScript compiler.
  */
@@ -135,23 +150,49 @@ export function register(opts: Options = {}): Register {
   ].map(Number);
 
   // Require the TypeScript compiler and configuration.
+  // TypeScript 7+ drops the classic Compiler API, so resolution prefers a
+  // TS≤6 module for transpile/language-service and an optional native `tsc`
+  // binary for typechecking (see typescript-resolve.ts).
   const cwd = options.basePath || process.cwd();
-  let compiler: string;
+  const resolved = resolveTypescript({
+    projectPath: options.project || cwd,
+    compiler: options.compiler,
+  });
+  const ts: typeof _ts = require_(resolved.apiModulePath);
+  const useNativeTypecheck = shouldUseNativeTypecheck(resolved);
+
+  let builtinApiPath: string | undefined;
   try {
-    compiler = require_.resolve(options.compiler || 'typescript', {
-      paths: [options.project || cwd],
+    builtinApiPath = require_.resolve('typescript', {
+      paths: [join(__dirname, '..')],
     });
-  } catch (_e) {
-    compiler = 'typescript';
+  } catch {
+    builtinApiPath = undefined;
   }
-  const ts: typeof _ts = require_(compiler);
-  if (compiler === 'typescript') {
+  const usingBuiltinApi = resolved.apiModulePath === builtinApiPath;
+
+  if (resolved.userIsNative) {
     console.log(
-      `Using built-in TypeScript ${ts.version} since "typescript" is missing from "devDependencies"`
+      `Using built-in TypeScript ${resolved.apiVersion} for transpile (user TypeScript ${resolved.nativeVersion} has no Compiler API); typechecking via native tsc`
+    );
+  } else if (usingBuiltinApi) {
+    console.log(
+      `Using built-in TypeScript ${resolved.apiVersion} since "typescript" is missing from "devDependencies"${
+        useNativeTypecheck && resolved.nativeVersion
+          ? `; typechecking via native tsc ${resolved.nativeVersion}`
+          : ''
+      }`
     );
   } else {
-    console.log(`Using TypeScript ${ts.version} (local user-provided)`);
+    console.log(
+      `Using TypeScript ${resolved.apiVersion} (local user-provided)${
+        useNativeTypecheck && resolved.nativeVersion
+          ? `; typechecking via native tsc ${resolved.nativeVersion}`
+          : ''
+      }`
+    );
   }
+
   const transformers = options.transformers || undefined;
   const readFile = options.readFile || ts.sys.readFile;
   const fileExists = options.fileExists || ts.sys.fileExists;
@@ -184,6 +225,64 @@ export function register(opts: Options = {}): Register {
     }
   }
 
+  function runNativeTypecheck(
+    configFileName: string,
+    failOnError: boolean | undefined
+  ) {
+    if (!resolved.nativeTscPath) return;
+
+    const cacheKey = configFileName || cwd;
+    const cached = nativeTypecheckCache.get(cacheKey);
+    if (cached) {
+      if (!cached.ok) {
+        if (failOnError || process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS) {
+          throw new NowBuildError({
+            code: 'NODE_TYPESCRIPT_ERROR',
+            message: cached.output || 'TypeScript type check failed',
+          });
+        }
+        if (cached.output) {
+          console.error(cached.output);
+        }
+      }
+      return;
+    }
+
+    // Without a tsconfig, native `tsc -p` has nothing to project-check; fall
+    // through to transpile-only (matches missing-config Language Service path).
+    if (!configFileName) {
+      nativeTypecheckCache.set(cacheKey, { ok: true, output: '' });
+      return;
+    }
+
+    const result = spawnSync(
+      resolved.nativeTscPath,
+      ['--noEmit', '--pretty', 'false', '-p', configFileName],
+      {
+        cwd,
+        encoding: 'utf8',
+        env: process.env,
+        maxBuffer: 10 * 1024 * 1024,
+      }
+    );
+
+    const output = [result.stdout, result.stderr].filter(Boolean).join('\n');
+    const ok = result.status === 0;
+    nativeTypecheckCache.set(cacheKey, { ok, output });
+
+    if (!ok) {
+      if (failOnError || process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS) {
+        throw new NowBuildError({
+          code: 'NODE_TYPESCRIPT_ERROR',
+          message: output || 'TypeScript type check failed',
+        });
+      }
+      if (output) {
+        console.error(output);
+      }
+    }
+  }
+
   function getBuild(
     configFileName = '',
     skipTypeCheck?: boolean
@@ -196,6 +295,18 @@ export function register(opts: Options = {}): Register {
 
     const outFiles = new Map<string, SourceOutput>();
     const config = readConfig(configFileName);
+    const useNative = Boolean(
+      useNativeTypecheck && !skipTypeCheck && resolved.nativeTscPath
+    );
+
+    if (useNative) {
+      runNativeTypecheck(
+        configFileName,
+        process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS
+          ? true
+          : config.options.noEmitOnError
+      );
+    }
 
     /**
      * Create the basic function for transpile only (ts-node --transpileOnly)
@@ -228,6 +339,13 @@ export function register(opts: Options = {}): Register {
       outFiles.set(fileName, file);
       return file;
     };
+
+    // Native TS7 typecheck already ran once for the project; emit via
+    // transpileModule and skip constructing the Language Service.
+    if (skipTypeCheck || useNative) {
+      configFileToBuildMap.set(configFileName, getOutputTranspile);
+      return getOutputTranspile;
+    }
 
     const memoryCache = new MemoryCache(config.fileNames);
     const cachedReadFile = cachedLookup(readFile);
@@ -355,10 +473,9 @@ export function register(opts: Options = {}): Register {
       return file;
     };
 
-    const getOutput = skipTypeCheck ? getOutputTranspile : getOutputTypeCheck;
-    configFileToBuildMap.set(configFileName, getOutput);
+    configFileToBuildMap.set(configFileName, getOutputTypeCheck);
 
-    return getOutput;
+    return getOutputTypeCheck;
   }
 
   // determine the tsconfig.json path for a given folder
