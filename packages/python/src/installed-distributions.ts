@@ -244,6 +244,25 @@ export class InstalledPythonDistributions {
     return sizes;
   }
 
+  getPythonSourceFiles(includePackages?: string[]): string[] {
+    const sourceFiles = new Set<string>();
+    const distributionGroups = getDistributionFileGroups({
+      sitePackageDirs: this.sitePackageDirs,
+      distributions: this.distributions,
+      includePackages,
+    });
+
+    for (const { files } of distributionGroups) {
+      for (const { absolutePath, relativePath } of files) {
+        if (relativePath.endsWith('.py')) {
+          sourceFiles.add(absolutePath);
+        }
+      }
+    }
+
+    return [...sourceFiles].sort();
+  }
+
   async collectBytecodeFiles({
     vendorDirName,
     includePackages,

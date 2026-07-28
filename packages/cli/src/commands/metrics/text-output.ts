@@ -1,8 +1,9 @@
 import chalk from 'chalk';
-import stripAnsi from 'strip-ansi';
 import table from '../../util/output/table';
 import indent from '../../util/output/indent';
 import elapsed from '../../util/output/elapsed';
+import { formatGranularity } from '../../util/output/format-granularity';
+import { ellipsizeMiddle } from '../../util/output/truncate';
 import { getResolvedOrderMetadata, getRollupColumnName } from './output';
 import { toGranularityMsFromDuration } from './time-utils';
 import type {
@@ -179,17 +180,6 @@ function formatPeriodSpan(startInput: string, endInput: string): string | null {
   }
 
   return elapsed(durationMs);
-}
-
-/** Renders granularity objects in short form (e.g. 5m, 1h, 1d). */
-function formatGranularity(granularity: Granularity): string {
-  if ('minutes' in granularity) {
-    return `${granularity.minutes}m`;
-  }
-  if ('hours' in granularity) {
-    return `${granularity.hours}h`;
-  }
-  return `${granularity.days}d`;
 }
 
 /** Converts verbose units to compact labels for metadata output. */
@@ -621,25 +611,6 @@ export function computeGroupStats(points: TimeSeriesPoint[]): GroupStats {
 
 /** Maximum display length for group values before ellipsizing. */
 const MAX_GROUP_VALUE_LENGTH = 60;
-
-/**
- * Ellipsizes a string by keeping equal start/end portions and replacing the
- * middle with a single `…` character.
- *
- * Example (maxLength=60):
- *   "/very/long/path/..." → "/very/long/pa…nd/of/path"
- */
-export function ellipsizeMiddle(
-  str: string,
-  maxLength: number,
-  useVisibleLength: boolean = false
-): string {
-  const comparable = useVisibleLength ? stripAnsi(str) : str;
-  if (comparable.length <= maxLength) return str;
-  const endLength = Math.floor((maxLength - 1) / 2);
-  const startLength = maxLength - 1 - endLength;
-  return `${comparable.slice(0, startLength)}…${comparable.slice(comparable.length - endLength)}`;
-}
 
 /**
  * Reduces long series to `maxLen` buckets.

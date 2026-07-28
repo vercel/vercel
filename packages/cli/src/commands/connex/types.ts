@@ -32,6 +32,7 @@ export interface ConnexClientIdentity {
 
 export interface ConnexTriggerDestination {
   projectId: string;
+  customEnvironmentId?: string;
   branch?: string;
   path?: string;
 }

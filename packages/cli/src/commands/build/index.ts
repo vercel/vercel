@@ -92,6 +92,10 @@ import {
   type DetectedFramework,
 } from '../../util/build/framework-detection';
 import {
+  BACKEND_REWRITE_BEHAVIOR_WARNING,
+  hasBackendRewriteBehaviorChange,
+} from '../../util/build/backend-rewrite-warning';
+import {
   validateBuildOutput,
   reportBuildOutputProblems,
 } from '../../util/build/validate-build-output';
@@ -816,14 +820,10 @@ async function doBuild(
     ...pickOverrides(localConfig),
   };
 
-  // On a project's first deployment, detect the framework when none is
-  // configured. Mutates `projectSettings` in place so the `detectBuilders`
-  // call below sees the detected framework; must therefore run before it.
-  // The result is always recorded in `builds.json`, including when detection
-  // was skipped or found nothing.
+  // Must run before `detectBuilders` below, which reads the mutated
+  // `projectSettings`.
   buildsJson.detectedFramework = await span
     .child('vc.detectFirstDeploymentFramework', {
-      enabled: String(isFrameworkDetectionEnabled()),
       firstDeployment: String(process.env.VERCEL_FIRST_DEPLOYMENT === '1'),
       configuredFramework: projectSettings.framework ?? undefined,
     })
@@ -877,8 +877,8 @@ async function doBuild(
     return result;
   });
 
-  // Framework detection for the end-of-build cross-check, started here so it
-  // runs concurrently with the builders instead of adding latency.
+  // Started here to run concurrently with the builders (used in the
+  // end-of-build cross-check).
   const detectedFrameworksPromise = span
     .child('vc.detectAllFrameworks', {
       enabled: String(isFrameworkDetectionEnabled()),
@@ -1077,6 +1077,15 @@ async function doBuild(
       zeroConfigRoutes.push(...(detectedBuilders.defaultRoutes || []));
       zeroConfigFallbackRoutes = detectedBuilders.fallbackRoutes || [];
     }
+  }
+
+  if (
+    hasBackendRewriteBehaviorChange({
+      projectRewrites: localConfig.rewrites,
+      builders: builds,
+    })
+  ) {
+    output.warn(BACKEND_REWRITE_BEHAVIOR_WARNING);
   }
 
   const builderSpecs = new Set(builds.map(b => b.use));
@@ -1991,7 +2000,6 @@ async function doBuild(
           appendExperimentalServicesV1Routes(detectedServices);
         }
       }
-
       if (
         detectedServices &&
         detectedServices.length > 0 &&

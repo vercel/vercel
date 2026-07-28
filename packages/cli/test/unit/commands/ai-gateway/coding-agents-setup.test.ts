@@ -203,10 +203,11 @@ describe('ai-gateway coding-agents setup', () => {
 
       const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
       expect(settings.env.ANTHROPIC_BASE_URL).toBe(
-        'https://ai-gateway.vercel.sh'
+        'https://ai-gateway.vercel.sh/claude-code'
       );
       expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe('vck_DummyKey0001');
       expect(settings.env.ANTHROPIC_API_KEY).toBe('');
+      expect(settings.env.CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY).toBe('1');
 
       const out = JSON.parse(client.stdout.getFullOutput());
       expect(out.status).toBe('ok');
@@ -240,7 +241,7 @@ describe('ai-gateway coding-agents setup', () => {
         // We never pin a default model — only the provider/URL/auth are set up.
         expect(toml.model).toBeUndefined();
         expect(toml.model_providers.vercel.base_url).toBe(
-          'https://ai-gateway.vercel.sh/v1'
+          'https://ai-gateway.vercel.sh/codex/v1'
         );
         expect(toml.model_providers.vercel.wire_api).toBe('responses');
         expect(toml.model_providers.vercel.env_key).toBe('AI_GATEWAY_API_KEY');
@@ -252,6 +253,74 @@ describe('ai-gateway coding-agents setup', () => {
         );
       }
     );
+
+    it('writes a --base-url override verbatim into the Codex config', async () => {
+      useUser();
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0002',
+        '--agent',
+        'codex',
+        '--base-url',
+        'https://preview.ai-gateway.vercel.sh/v1'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const toml = tomlParse(readFileSync(codexConfigPath(), 'utf8')) as any;
+      expect(toml.model_providers.vercel.base_url).toBe(
+        'https://preview.ai-gateway.vercel.sh/v1'
+      );
+    });
+
+    it('writes a --base-url override verbatim into Claude Code settings', async () => {
+      useUser();
+      client.nonInteractive = true;
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0001',
+        '--agent',
+        'claude-code',
+        '--base-url',
+        'https://preview.ai-gateway.vercel.sh'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(0);
+
+      const settings = JSON.parse(readFileSync(claudeSettingsPath(), 'utf8'));
+      expect(settings.env.ANTHROPIC_BASE_URL).toBe(
+        'https://preview.ai-gateway.vercel.sh'
+      );
+    });
+
+    it('rejects an invalid --base-url without writing config', async () => {
+      useUser();
+      client.setArgv(
+        'ai-gateway',
+        'coding-agents',
+        'setup',
+        '--key',
+        'vck_DummyKey0002',
+        '--agent',
+        'codex',
+        '--base-url',
+        'not-a-url'
+      );
+
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('Invalid --base-url');
+      expect(existsSync(codexConfigPath())).toBe(false);
+    });
 
     // Shell rc management is intentionally skipped on Windows.
     it.skipIf(process.platform === 'win32')(
@@ -1719,9 +1788,10 @@ describe('ai-gateway coding-agents setup', () => {
       expect(settings.env.FOO).toBe('bar');
       // …and the gateway keys land alongside them.
       expect(settings.env.ANTHROPIC_BASE_URL).toBe(
-        'https://ai-gateway.vercel.sh'
+        'https://ai-gateway.vercel.sh/claude-code'
       );
       expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe('vck_MergeKey0001');
+      expect(settings.env.CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY).toBe('1');
     });
 
     it('keeps the existing file formatting; only the added keys change the file', async () => {

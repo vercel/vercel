@@ -13,7 +13,8 @@ import { type AlertsScope, resolveAlertsScope } from '../resolve-alerts-scope';
 export async function parseRulesFlagsAndScope(
   client: Client,
   flags: { '--project'?: string; '--all'?: boolean },
-  jsonOutput: boolean
+  jsonOutput: boolean,
+  command = 'alerts rules ls'
 ): Promise<AlertsScope | number> {
   const mutual = validateAllProjectMutualExclusivity(
     flags['--all'],
@@ -44,6 +45,7 @@ export async function parseRulesFlagsAndScope(
     project: flags['--project'],
     all: flags['--all'],
     jsonOutput,
+    command,
   });
 }
 

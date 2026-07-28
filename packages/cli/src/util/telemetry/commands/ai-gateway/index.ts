@@ -40,4 +40,11 @@ export class AiGatewayTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandLeaderboard(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'leaderboard',
+      value: actual,
+    });
+  }
 }
