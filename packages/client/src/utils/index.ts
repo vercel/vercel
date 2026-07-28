@@ -1,13 +1,13 @@
 import { FilesMap } from './hashes';
-import nodeFetch, { RequestInit } from 'node-fetch';
 import { join, sep, relative, basename } from 'path';
+import { Readable } from 'stream';
 import { URL } from 'url';
 import ignore from 'ignore';
 import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
-import { VercelClientOptions, VercelConfig } from '../types';
+import { FetchDispatcher, VercelClientOptions, VercelConfig } from '../types';
 import { Sema } from 'async-sema';
-import { readFile, stat } from 'fs-extra';
+import { pathExists, readFile, stat } from 'fs-extra';
 import readdir from './readdir-recursive';
 import {
   findConfig as findMicrofrontendsConfig,
@@ -310,6 +310,14 @@ export async function getVercelIgnore(
       })
     );
 
+    const isRustProject = (
+      await Promise.all(cwds.map(cwd => pathExists(join(cwd, 'Cargo.toml'))))
+    ).some(Boolean);
+
+    if (isRustProject) {
+      ignores.push('/target');
+    }
+
     const ignoreFile = files.join('\n');
 
     ig.add(`${ignores.join('\n')}\n${clearRelative(ignoreFile)}`);
@@ -326,12 +334,17 @@ function clearRelative(str: string) {
   return str.replace(/(\n|^)\.\//g, '$1');
 }
 
-interface FetchOpts extends RequestInit {
+type NativeRequestInit = NonNullable<Parameters<typeof globalThis.fetch>[1]>;
+
+interface FetchOpts
+  extends Omit<NativeRequestInit, 'body' | 'headers' | 'dispatcher'> {
   apiUrl?: string;
   method?: string;
   teamId?: string;
   headers?: { [key: string]: any };
   userAgent?: string;
+  body?: NonNullable<NativeRequestInit['body']> | Buffer | Readable;
+  dispatcher?: FetchDispatcher;
 }
 
 export const fetchApi = async (
@@ -370,13 +383,21 @@ export const fetchApi = async (
     'user-agent': userAgent,
   };
 
+  if (opts.body instanceof Readable) {
+    // Node.js streams must be sent with half duplex, since the request
+    // body length is not known upfront.
+    (opts as { duplex?: 'half' }).duplex = 'half';
+  }
+
   debug(`${opts.method || 'GET'} ${url}`);
   time = Date.now();
-  const res = await nodeFetch(url, opts);
-  debug(`DONE in ${Date.now() - time}ms: ${opts.method || 'GET'} ${url}`);
-  semaphore.release();
-
-  return res;
+  try {
+    const res = await fetch(url, opts as unknown as NativeRequestInit);
+    debug(`DONE in ${Date.now() - time}ms: ${opts.method || 'GET'} ${url}`);
+    return res;
+  } finally {
+    semaphore.release();
+  }
 };
 
 export interface PreparedFile {

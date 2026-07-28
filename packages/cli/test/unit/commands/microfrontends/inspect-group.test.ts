@@ -1,6 +1,7 @@
-import { describe, beforeEach, expect, it } from 'vitest';
+import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import microfrontends from '../../../../src/commands/microfrontends';
+import * as linkModule from '../../../../src/util/projects/link';
 import { teamCache } from '../../../../src/util/teams/get-team-by-id';
 import type { MicrofrontendsGroupsResponse } from '../../../../src/commands/microfrontends/types';
 
@@ -152,6 +153,7 @@ describe('microfrontends inspect-group', () => {
   });
 
   it('outputs JSON when --format=json is provided', async () => {
+    const getLinkedProjectSpy = vi.spyOn(linkModule, 'getLinkedProject');
     client.setArgv(
       'microfrontends',
       'inspect-group',
@@ -162,6 +164,10 @@ describe('microfrontends inspect-group', () => {
     const exitCode = await microfrontends(client);
 
     expect(exitCode).toBe(0);
+    expect(getLinkedProjectSpy).toHaveBeenCalledWith(client, {
+      cwd: client.cwd,
+    });
+    getLinkedProjectSpy.mockRestore();
     const stdout = client.stdout.getFullOutput().trim();
     const parsed = JSON.parse(stdout);
 

@@ -30,6 +30,22 @@ const token = await getToken(process.env.CONNECTOR_LINEAR!, {
 });
 ```
 
+To create an operator installation request for an app-scoped connector, use the
+experimental install helper:
+
+This feature is gated while experimental. Contact Vercel to enable access
+before using it.
+
+```ts
+import { experimental_startInstallation } from '@vercel/connect';
+
+const { url } = await experimental_startInstallation(
+  process.env.CONNECTOR_SLACK!,
+  {},
+  { returnUrl: 'https://example.com/settings/integrations' }
+);
+```
+
 ### Chat SDK
 
 Spread the helper into the matching `create*Adapter` factory. Each helper
@@ -123,4 +139,4 @@ import { connect } from '@vercel/connect/authjs';
 const providers = [connect({ connector: 'linear' })];
 ```
 
-See the source under `src/` for the full API (additional helpers like `revokeToken`, `getTokenResponse`, `startAuthorization`, typed error classes, and per-adapter options).
+See the source under `src/` for the full API (additional helpers like `revokeToken`, `getTokenResponse`, `startAuthorization`, `experimental_startInstallation`, typed error classes, and per-adapter options).

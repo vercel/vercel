@@ -10,6 +10,7 @@ export const logsCommand = {
   aliases: ['log'],
   description:
     'Display request logs for a project.\n\n' +
+    'With --follow, stream live runtime logs from a deployment. When no deployment is specified, resolves in order: latest deployment on the current git branch, then your latest deployment, then the latest production deployment. Use --environment production to always stream the latest production deployment.\n\n' +
     'Source types: λ = serverless, ε = edge/middleware, ◇ = static/external',
   arguments: [
     {
@@ -32,7 +33,8 @@ export const logsCommand = {
       shorthand: null,
       type: String,
       deprecated: false,
-      description: 'Filter by environment: production or preview',
+      description:
+        'Filter by environment: production or preview. With --follow, selects which environment to stream (production always streams the latest production deployment)',
     },
     {
       name: 'level',
@@ -89,7 +91,8 @@ export const logsCommand = {
       shorthand: 'f',
       type: Boolean,
       deprecated: false,
-      description: 'Stream live runtime logs for a deployment',
+      description:
+        'Stream live runtime logs. Without a deployment, follows the latest deployment on the current git branch, then your latest deployment, then the latest production deployment',
     },
     {
       name: 'no-follow',
@@ -127,7 +130,8 @@ export const logsCommand = {
       shorthand: 'x',
       type: Boolean,
       deprecated: false,
-      description: 'Show full log message below each request line',
+      description:
+        'Show full log message below each request line (default when output is not a TTY)',
     },
     {
       name: 'branch',
@@ -147,6 +151,14 @@ export const logsCommand = {
   ],
   examples: [
     {
+      name: 'Stream live logs for your most recent deployment',
+      value: `${packageName} logs --follow`,
+    },
+    {
+      name: 'Stream live logs for the latest production deployment',
+      value: `${packageName} logs --follow --environment production`,
+    },
+    {
       name: 'Stream live logs for a deployment URL',
       value: `${packageName} logs https://my-app-xxxxx.vercel.app --follow`,
     },
@@ -155,7 +167,7 @@ export const logsCommand = {
       value: `${packageName} logs dpl_xxxxx --follow`,
     },
     {
-      name: 'Stream logs for the latest production deployment of a project',
+      name: 'Stream logs for a specific project',
       value: `${packageName} logs --project my-app --follow`,
     },
     {

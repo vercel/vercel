@@ -1,5 +1,6 @@
 import {
   formatOption,
+  jsonOption,
   projectOption,
   yesOption,
 } from '../../../util/arg-common';
@@ -27,7 +28,20 @@ export const rulesLsSubcommand = {
   aliases: ['list'],
   description: 'List alert rules for the current scope',
   arguments: [],
-  options: [...scopeOptions, formatOption],
+  options: [
+    ...scopeOptions,
+    {
+      name: 'type',
+      shorthand: null,
+      type: [String],
+      argument: 'TYPE',
+      deprecated: false,
+      description:
+        'Filter by alert type. Repeatable and comma-separated (for example --type custom_alert).',
+    },
+    formatOption,
+    jsonOption,
+  ],
   examples: [
     {
       name: 'List rules for the linked project',
@@ -38,8 +52,12 @@ export const rulesLsSubcommand = {
       value: `${packageName} alerts rules ls --all`,
     },
     {
+      name: 'List custom alert rules',
+      value: `${packageName} alerts rules ls --type custom_alert`,
+    },
+    {
       name: 'JSON output',
-      value: `${packageName} alerts rules ls --format json`,
+      value: `${packageName} alerts rules ls --json`,
     },
   ],
 } as const;
@@ -52,6 +70,7 @@ export const rulesAddSubcommand = {
   options: [
     ...scopeOptions,
     formatOption,
+    jsonOption,
     {
       name: 'body',
       shorthand: null,
@@ -80,7 +99,7 @@ export const rulesInspectSubcommand = {
       required: true,
     },
   ],
-  options: [...scopeOptions, formatOption],
+  options: [...scopeOptions, formatOption, jsonOption],
   examples: [
     {
       name: 'Inspect a rule',
@@ -88,7 +107,7 @@ export const rulesInspectSubcommand = {
     },
     {
       name: 'JSON output',
-      value: `${packageName} alerts rules inspect ar_abc123 --format json`,
+      value: `${packageName} alerts rules inspect ar_abc123 --json`,
     },
   ],
 } as const;
@@ -103,7 +122,7 @@ export const rulesRmSubcommand = {
       required: true,
     },
   ],
-  options: [...scopeOptions, formatOption, yesOption],
+  options: [...scopeOptions, formatOption, jsonOption, yesOption],
   examples: [
     {
       name: 'Delete with confirmation',
@@ -129,6 +148,7 @@ export const rulesUpdateSubcommand = {
   options: [
     ...scopeOptions,
     formatOption,
+    jsonOption,
     {
       name: 'body',
       shorthand: null,

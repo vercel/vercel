@@ -11,6 +11,7 @@ export function destinationsMatch(
 ): boolean {
   return (
     a.projectId === b.projectId &&
+    (a.customEnvironmentId ?? null) === (b.customEnvironmentId ?? null) &&
     (a.branch ?? null) === (b.branch ?? null) &&
     (a.path ?? null) === (b.path ?? null)
   );
@@ -25,10 +26,20 @@ export function findMatchingDestination(
 
 export function buildTriggerDestination(input: {
   projectId: string;
+  customEnvironmentId?: string;
   branch?: string;
   path?: string;
 }): ConnexTriggerDestination {
+  if (input.branch !== undefined && input.customEnvironmentId !== undefined) {
+    throw new Error(
+      'Trigger destinations cannot target both a branch and a custom environment.'
+    );
+  }
+
   const dest: ConnexTriggerDestination = { projectId: input.projectId };
+  if (input.customEnvironmentId !== undefined) {
+    dest.customEnvironmentId = input.customEnvironmentId;
+  }
   if (input.branch !== undefined) {
     dest.branch = input.branch;
   }
@@ -39,15 +50,22 @@ export function buildTriggerDestination(input: {
 }
 
 export function formatDestination(d: ConnexTriggerDestination): string {
+  const target = d.customEnvironmentId
+    ? `custom environment ${chalk.bold(d.customEnvironmentId)}`
+    : `branch ${chalk.bold(d.branch ?? 'production')}`;
+
   return [
     `project ${chalk.bold(d.projectId)}`,
-    `branch ${chalk.bold(d.branch ?? 'production')}`,
+    target,
     `path ${chalk.bold(d.path ?? '<default>')}`,
   ].join(', ');
 }
 
 function toJsonDestination(d: ConnexTriggerDestination): JSONObject {
   const entry: JSONObject = { projectId: d.projectId };
+  if (d.customEnvironmentId !== undefined) {
+    entry.customEnvironmentId = d.customEnvironmentId;
+  }
   if (d.branch !== undefined) {
     entry.branch = d.branch;
   }

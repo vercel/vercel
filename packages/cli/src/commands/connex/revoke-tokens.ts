@@ -33,7 +33,7 @@ export async function revokeTokens(
   const asJson = formatResult.jsonOutput;
 
   if (asJson && !flags['--yes']) {
-    output.error('--format=json requires --yes to skip confirmation prompts');
+    output.error('--json requires --yes to skip confirmation prompts');
     return 1;
   }
 

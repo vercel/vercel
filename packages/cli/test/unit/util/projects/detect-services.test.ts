@@ -12,12 +12,10 @@ import {
 
 describe('tryDetectServices()', () => {
   const originalEnv = process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
-  const originalTomlEnv = process.env.VERCEL_TOML_CONFIG_ENABLED;
   let tempDir: string;
 
   beforeEach(async () => {
     process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
-    process.env.VERCEL_TOML_CONFIG_ENABLED = '1';
     tempDir = join(tmpdir(), `detect-services-test-${Date.now()}`);
     await mkdir(tempDir, { recursive: true });
   });
@@ -27,11 +25,6 @@ describe('tryDetectServices()', () => {
       delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
     } else {
       process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = originalEnv;
-    }
-    if (originalTomlEnv === undefined) {
-      delete process.env.VERCEL_TOML_CONFIG_ENABLED;
-    } else {
-      process.env.VERCEL_TOML_CONFIG_ENABLED = originalTomlEnv;
     }
     await rm(tempDir, { recursive: true, force: true });
   });
@@ -213,6 +206,76 @@ mount = "/api"`
     });
   });
 
+  it('should preserve buildCommand in written services config', async () => {
+    await writeFile(join(tempDir, 'vercel.json'), '{}');
+
+    await writeServicesConfig(tempDir, {
+      frontend: { root: '.', framework: 'nextjs', mountPath: '/' },
+      api: {
+        root: 'api',
+        entrypoint: 'main:app',
+        runtime: 'python',
+        buildCommand: 'pip install -r requirements.txt',
+        mountPath: '/_/api',
+      },
+    });
+
+    const vercelConfig = JSON.parse(
+      await readFile(join(tempDir, 'vercel.json'), 'utf8')
+    );
+    // buildCommand is preserved; runtime is omitted because
+    // the V2 resolver can infer it from the framework/entrypoint.
+    expect(vercelConfig.services.api).toEqual({
+      root: 'api',
+      entrypoint: 'main:app',
+      buildCommand: 'pip install -r requirements.txt',
+    });
+    expect(vercelConfig.services.frontend).toEqual({
+      root: '.',
+      framework: 'nextjs',
+    });
+  });
+
+  it('should combine preDeployCommand into buildCommand', async () => {
+    await writeFile(join(tempDir, 'vercel.json'), '{}');
+
+    await writeServicesConfig(tempDir, {
+      web: {
+        root: '.',
+        framework: 'nextjs',
+        buildCommand: 'npm run build',
+        preDeployCommand: 'npm run db:migrate',
+        mountPath: '/',
+      },
+    });
+
+    const vercelConfig = JSON.parse(
+      await readFile(join(tempDir, 'vercel.json'), 'utf8')
+    );
+    expect(vercelConfig.services.web.buildCommand).toBe(
+      'npm run build && npm run db:migrate'
+    );
+  });
+
+  it('should use preDeployCommand as buildCommand when no buildCommand', async () => {
+    await writeFile(join(tempDir, 'vercel.json'), '{}');
+
+    await writeServicesConfig(tempDir, {
+      api: {
+        root: 'api',
+        preDeployCommand: 'python manage.py migrate',
+        mountPath: '/_/api',
+      },
+    });
+
+    const vercelConfig = JSON.parse(
+      await readFile(join(tempDir, 'vercel.json'), 'utf8')
+    );
+    expect(vercelConfig.services.api.buildCommand).toBe(
+      'python manage.py migrate'
+    );
+  });
+
   it('should write inferred services config into vercel.toml', async () => {
     await writeFile(
       join(tempDir, 'vercel.toml'),
@@ -345,21 +408,18 @@ mount = "/api"`
     expect(blocker).toBeNull();
   });
 
-  it('should reject vercel.toml when VERCEL_TOML_CONFIG_ENABLED is not set', async () => {
-    delete process.env.VERCEL_TOML_CONFIG_ENABLED;
-
+  it('should write to vercel.toml when it exists', async () => {
     await writeFile(
       join(tempDir, 'vercel.toml'),
       'buildCommand = "npm run build"\n'
     );
 
-    // With TOML disabled, the toml file is ignored entirely.
-    // writeServicesConfig falls through to the vercel.json path and
-    // creates a new vercel.json (no error, since there's nothing to compile).
+    // TOML config support is always enabled, so writeServicesConfig
+    // appends the detected services config to the existing vercel.toml file.
     const { configFileName } = await writeServicesConfig(tempDir, {
       frontend: { root: '.', framework: 'nextjs', mountPath: '/' },
     });
-    expect(configFileName).toBe('vercel.json');
+    expect(configFileName).toBe('vercel.toml');
   });
 
   describe('without VERCEL_USE_EXPERIMENTAL_SERVICES env var', () => {

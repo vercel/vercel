@@ -547,6 +547,7 @@ export async function serverBuild({
     }
   >();
 
+  let instrumentationHookBuildTrace;
   if (hasLambdas) {
     const initialTracingLabel = 'Traced Next.js server files in';
 
@@ -555,7 +556,6 @@ export async function serverBuild({
     let initialFileList: string[];
     let initialFileReasons: NodeFileTraceReasons;
     let nextServerBuildTrace;
-    let instrumentationHookBuildTrace;
 
     const useBundledServer = semver.gte(
       nextVersion,
@@ -1588,6 +1588,7 @@ export async function serverBuild({
     isCorrectMiddlewareOrder,
     functionsConfigManifest,
     requiredServerFilesManifest,
+    instrumentationHookBuildTrace: instrumentationHookBuildTrace,
   });
 
   const middleware = await getMiddlewareBundle({

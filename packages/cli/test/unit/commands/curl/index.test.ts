@@ -10,6 +10,7 @@ import { useUser } from '../../../mocks/user';
 import { useProject } from '../../../mocks/project';
 import { useTeams, createTeam } from '../../../mocks/team';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
+import * as linkModule from '../../../../src/util/projects/link';
 
 const MOCK_ACCOUNT_ID = 'team_test123';
 
@@ -103,7 +104,10 @@ describe('curl', () => {
       const exitCode = await curl(client);
       expect(exitCode).toEqual(2);
       expect(client.getFullOutput()).toContain(
-        'Execute curl with automatic deployment URL and protection bypass'
+        'Make curl requests to Vercel deployments with automatic protection bypass'
+      );
+      expect(client.getFullOutput()).toContain(
+        'vercel curl https://your-project-abc123.vercel.app/api/hello'
       );
     });
   });
@@ -130,11 +134,16 @@ describe('curl', () => {
 
     it('should accept / as a valid path', async () => {
       await setupLinkedProject();
+      const getLinkedProjectSpy = vi.spyOn(linkModule, 'getLinkedProject');
 
       client.setArgv('curl', '/', '--protection-bypass', 'test-secret');
       const exitCode = await curl(client);
 
       expect(exitCode).toEqual(0);
+      expect(getLinkedProjectSpy).toHaveBeenCalledWith(client, {
+        cwd: client.cwd,
+      });
+      getLinkedProjectSpy.mockRestore();
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

@@ -103,6 +103,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandComments(actual: string) {
+    this.trackCliCommand({
+      command: 'comments',
+      value: actual,
+    });
+  }
+
   trackCliCommandConnex(actual: string) {
     this.trackCliCommand({
       command: 'connex',
@@ -302,13 +309,6 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandMicrofrontends(actual: string) {
     this.trackCliCommand({
       command: 'microfrontends',
-      value: actual,
-    });
-  }
-
-  trackCliCommandOauthApps(actual: string) {
-    this.trackCliCommand({
-      command: 'oauth-apps',
       value: actual,
     });
   }

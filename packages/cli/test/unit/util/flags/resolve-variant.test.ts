@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   resolveVariant,
   formatVariantForDisplay,
+  formatVariantListSummary,
   formatAvailableVariants,
 } from '../../../../src/util/flags/resolve-variant';
 import type { FlagVariant } from '../../../../src/util/flags/types';
@@ -167,6 +168,18 @@ describe('resolve-variant', () => {
     it('formats variant without label', () => {
       const result = formatVariantForDisplay(stringVariants[2]);
       expect(result).toBe('"off"');
+    });
+  });
+
+  describe('formatVariantListSummary', () => {
+    it('matches the value-first format used by flags inspect', () => {
+      const result = formatVariantListSummary(booleanVariants[0]);
+      expect(stripAnsi(result)).toBe('true: Enabled');
+      expect(result).toBe(`true: ${chalk.gray('Enabled')}`);
+    });
+
+    it('formats a variant without a label as its JSON value', () => {
+      expect(formatVariantListSummary(stringVariants[2])).toBe('"off"');
     });
   });
 

@@ -164,6 +164,15 @@ export class ConnexTelemetryClient
     }
   }
 
+  trackCliOptionTriggerEnvironment(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'trigger-environment',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionTriggerPath(v: string | undefined) {
     if (v) {
       this.trackCliOption({

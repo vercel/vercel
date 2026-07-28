@@ -3,6 +3,10 @@ import type Client from './client';
 import { isAPIError, LinkRequiredError, ProjectNotFound } from './errors-ts';
 import { packageName } from './pkg-name';
 import { stripSensitiveAuthArgs } from './redact-args';
+import {
+  getGlobalFlagsFromArgs,
+  suggestionFlagTakesSeparateValue,
+} from './arg-common';
 
 /**
  * Structured payload for "action required" (e.g. scope choice, login passcode).
@@ -124,14 +128,25 @@ const GLOBAL_FLAG_NAMES = new Set([
   // --token/-t are intentionally excluded and stripped via stripSensitiveAuthArgs.
 ]);
 
-/** Boolean globals: the next argv token is never their value (avoids eating a subcommand like `oauth-apps`). */
-const BOOLEAN_GLOBAL_FLAG_NAMES = new Set(['--yes', '-y', '--non-interactive']);
+/** Shorthand → long form for global flags, so `-S` and `--scope` dedupe as the same flag. */
+const GLOBAL_FLAG_SHORTHANDS: Record<string, string> = {
+  '-y': '--yes',
+  '-S': '--scope',
+  '-T': '--team',
+};
+
+function canonicalGlobalFlagName(name: string): string {
+  return GLOBAL_FLAG_SHORTHANDS[name] ?? name;
+}
 
 /**
  * Returns global flag args from argv so suggested commands can include them (e.g. --cwd, --non-interactive).
  */
 export function getGlobalFlagsFromArgv(argv: string[]): string[] {
-  const args = stripSensitiveAuthArgs(argv.slice(2));
+  const args = getGlobalFlagsFromArgs(argv.slice(2), {
+    preserveConfig: true,
+    preserveYes: true,
+  });
   const out: string[] = [];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -139,7 +154,7 @@ export function getGlobalFlagsFromArgv(argv: string[]): string[] {
     if (GLOBAL_FLAG_NAMES.has(name)) {
       out.push(arg);
       const takesSeparateValue =
-        !BOOLEAN_GLOBAL_FLAG_NAMES.has(name) &&
+        suggestionFlagTakesSeparateValue(name) &&
         !arg.includes('=') &&
         i + 1 < args.length &&
         !args[i + 1].startsWith('-');
@@ -164,7 +179,7 @@ export function omitGlobalFlagsFromArgs(args: string[]): string[] {
     const name = arg.startsWith('--') ? arg.split('=')[0] : arg;
     if (GLOBAL_FLAG_NAMES.has(name)) {
       const skipSeparateValue =
-        !BOOLEAN_GLOBAL_FLAG_NAMES.has(name) &&
+        suggestionFlagTakesSeparateValue(name) &&
         !arg.includes('=') &&
         i + 1 < safeArgs.length &&
         !safeArgs[i + 1].startsWith('-');
@@ -198,6 +213,10 @@ export interface BuildCommandWithGlobalFlagsOptions {
   excludeFlags?: string[];
   /** Place preserved flags after `vercel` and before the subcommand (recommended for copy-paste). */
   prependGlobalFlags?: boolean;
+  /** Preserve an explicit command-level --project selector. */
+  preserveProject?: boolean;
+  /** Preserve the complete global option set used by older command helpers. */
+  globalFlags?: 'retry-context' | 'all';
 }
 
 /**
@@ -211,14 +230,37 @@ export function buildCommandWithGlobalFlags(
   pkgName: string = packageName,
   options?: BuildCommandWithGlobalFlagsOptions
 ): string {
-  let preserved = getGlobalFlagsFromArgv(argv);
-  if (options?.excludeFlags?.length) {
-    const exclude = new Set(options.excludeFlags);
+  let preserved =
+    options?.globalFlags === 'all'
+      ? getGlobalFlagsFromArgs(argv.slice(2), {
+          preserveProject: options.preserveProject,
+        })
+      : getGlobalFlagsFromArgv(argv);
+  if (options?.globalFlags !== 'all' && options?.preserveProject) {
+    const globalArgs = getGlobalFlagsFromArgs(argv.slice(2));
+    const contextArgs = getGlobalFlagsFromArgs(argv.slice(2), {
+      preserveProject: true,
+    });
+    preserved.push(...contextArgs.slice(globalArgs.length));
+  }
+  // Flags the template already carries must not be appended again: a template
+  // like `deploy --scope <team-slug>` plus a preserved `--scope my-team` would
+  // suggest a command with two conflicting --scope values.
+  const exclude = new Set(
+    commandTemplate
+      .split(/\s+/)
+      .filter(token => token.startsWith('-'))
+      .map(token => canonicalGlobalFlagName(token.split('=')[0]))
+  );
+  for (const flag of options?.excludeFlags ?? []) {
+    exclude.add(canonicalGlobalFlagName(flag));
+  }
+  if (exclude.size) {
     const out: string[] = [];
     for (let i = 0; i < preserved.length; i++) {
       const arg = preserved[i];
       const name = arg.startsWith('--') ? arg.split('=')[0] : arg;
-      if (exclude.has(name)) {
+      if (exclude.has(canonicalGlobalFlagName(name))) {
         if (
           !arg.includes('=') &&
           i + 1 < preserved.length &&
@@ -243,21 +285,112 @@ export function buildCommandWithGlobalFlags(
 }
 
 /**
+ * Builds a suggested command from a client invocation using the complete
+ * global option set historically preserved by command-local helpers.
+ */
+export interface WithGlobalFlagsOptions {
+  preserveProject?: boolean;
+}
+
+export function withGlobalFlags(
+  client: Client,
+  commandTemplate: string,
+  options: WithGlobalFlagsOptions = {}
+): string {
+  return buildCommandWithGlobalFlags(
+    client.argv,
+    commandTemplate,
+    packageName,
+    {
+      globalFlags: 'all',
+      preserveProject: options.preserveProject,
+    }
+  );
+}
+
+function getPreservedArgsAfterEnvSubcommand(
+  argv: string[],
+  subcommands: readonly string[],
+  positionalCount: number
+): string[] {
+  const args = stripSensitiveAuthArgs(argv.slice(2));
+  const envIdx = args.findIndex(
+    (arg, index) => arg === 'env' && subcommands.includes(args[index + 1])
+  );
+  const subcommandIdx = envIdx + 1;
+  if (envIdx === -1) {
+    return args;
+  }
+
+  const preserved: string[] = [];
+  let positionals = 0;
+  let optionsEnded = false;
+  for (let i = subcommandIdx + 1; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--' && !optionsEnded) {
+      optionsEnded = true;
+      continue;
+    }
+    if (!optionsEnded && arg.startsWith('-')) {
+      preserved.push(arg);
+      if (
+        !arg.includes('=') &&
+        suggestionFlagTakesSeparateValue(arg) &&
+        i + 1 < args.length &&
+        !args[i + 1].startsWith('-')
+      ) {
+        preserved.push(args[++i]);
+      }
+      continue;
+    }
+    if (positionals < positionalCount) {
+      positionals++;
+      continue;
+    }
+    if (optionsEnded && !preserved.includes('--')) {
+      preserved.push('--');
+    }
+    preserved.push(arg);
+  }
+  return preserved;
+}
+
+function omitPreservedFlagsAlreadyInTemplate(
+  args: string[],
+  commandTemplate: string
+): string[] {
+  const templateFlags = new Set(
+    commandTemplate
+      .split(/\s+/)
+      .filter(token => token.startsWith('-'))
+      .map(token => canonicalGlobalFlagName(token.split('=')[0]))
+  );
+  const out: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    const name = arg.startsWith('-') ? arg.split('=')[0] : arg;
+    if (!templateFlags.has(canonicalGlobalFlagName(name))) {
+      out.push(arg);
+      continue;
+    }
+    if (
+      !arg.includes('=') &&
+      suggestionFlagTakesSeparateValue(name) &&
+      i + 1 < args.length &&
+      !args[i + 1].startsWith('-')
+    ) {
+      i++;
+    }
+  }
+  return out;
+}
+
+/**
  * Returns args that should be preserved when suggesting a "next" command for "env add".
  * These are all args after "env add" and its 0–3 positionals (name, target, git-branch).
  */
 export function getPreservedArgsForEnvAdd(argv: string[]): string[] {
-  const args = argv.slice(2);
-  const addIdx = args.indexOf('add');
-  if (addIdx === -1 || args[addIdx - 1] !== 'env')
-    return stripSensitiveAuthArgs(args);
-  let i = addIdx + 1;
-  let positionals = 0;
-  while (i < args.length && positionals < 3 && !args[i].startsWith('-')) {
-    positionals++;
-    i++;
-  }
-  return stripSensitiveAuthArgs(args.slice(i));
+  return getPreservedArgsAfterEnvSubcommand(argv, ['add'], 3);
 }
 
 /**
@@ -271,23 +404,10 @@ export function buildEnvAddCommandWithPreservedArgs(
   commandTemplate: string,
   pkgName: string = packageName
 ): string {
-  let preserved = getPreservedArgsForEnvAdd(argv);
-  // Avoid duplicating flags that are already in the template (e.g. --yes)
-  if (commandTemplate.includes('--yes')) {
-    preserved = preserved.filter(a => a !== '--yes' && a !== '-y');
-  }
-  if (commandTemplate.includes('--value')) {
-    const out: string[] = [];
-    for (let j = 0; j < preserved.length; j++) {
-      if (preserved[j] === '--value' && j + 1 < preserved.length) {
-        j++; // skip --value and its value
-        continue;
-      }
-      if (preserved[j].startsWith('--value=')) continue;
-      out.push(preserved[j]);
-    }
-    preserved = out;
-  }
+  const preserved = omitPreservedFlagsAlreadyInTemplate(
+    getPreservedArgsForEnvAdd(argv),
+    commandTemplate
+  );
   const base = `${pkgName} ${commandTemplate}`;
   if (preserved.length === 0) return base;
   return `${base} ${preserved.join(' ')}`;
@@ -297,30 +417,14 @@ export function buildEnvAddCommandWithPreservedArgs(
  * Returns args after "env pull" and its 0–1 positionals (filename).
  */
 export function getPreservedArgsForEnvPull(argv: string[]): string[] {
-  const args = argv.slice(2);
-  const pullIdx = args.indexOf('pull');
-  if (pullIdx === -1 || args[pullIdx - 1] !== 'env')
-    return stripSensitiveAuthArgs(args);
-  let i = pullIdx + 1;
-  if (i < args.length && !args[i].startsWith('-')) i++;
-  return stripSensitiveAuthArgs(args.slice(i));
+  return getPreservedArgsAfterEnvSubcommand(argv, ['pull'], 1);
 }
 
 /**
  * Returns args after "env rm" and its 0–3 positionals (name, target, branch).
  */
 export function getPreservedArgsForEnvRm(argv: string[]): string[] {
-  const args = argv.slice(2);
-  const rmIdx = args.indexOf('rm');
-  if (rmIdx === -1 || args[rmIdx - 1] !== 'env')
-    return stripSensitiveAuthArgs(args);
-  let i = rmIdx + 1;
-  let positionals = 0;
-  while (i < args.length && positionals < 3 && !args[i].startsWith('-')) {
-    positionals++;
-    i++;
-  }
-  return stripSensitiveAuthArgs(args.slice(i));
+  return getPreservedArgsAfterEnvSubcommand(argv, ['rm', 'remove'], 3);
 }
 
 /**
@@ -331,10 +435,10 @@ export function buildEnvRmCommandWithPreservedArgs(
   commandTemplate: string,
   pkgName: string = packageName
 ): string {
-  let preserved = getPreservedArgsForEnvRm(argv);
-  if (commandTemplate.includes('--yes')) {
-    preserved = preserved.filter(a => a !== '--yes' && a !== '-y');
-  }
+  const preserved = omitPreservedFlagsAlreadyInTemplate(
+    getPreservedArgsForEnvRm(argv),
+    commandTemplate
+  );
   const base = `${pkgName} ${commandTemplate}`;
   if (preserved.length === 0) return base;
   return `${base} ${preserved.join(' ')}`;
@@ -344,17 +448,7 @@ export function buildEnvRmCommandWithPreservedArgs(
  * Returns args after "env update" and its 0–3 positionals (name, target, branch).
  */
 export function getPreservedArgsForEnvUpdate(argv: string[]): string[] {
-  const args = argv.slice(2);
-  const updateIdx = args.indexOf('update');
-  if (updateIdx === -1 || args[updateIdx - 1] !== 'env')
-    return stripSensitiveAuthArgs(args);
-  let i = updateIdx + 1;
-  let positionals = 0;
-  while (i < args.length && positionals < 3 && !args[i].startsWith('-')) {
-    positionals++;
-    i++;
-  }
-  return stripSensitiveAuthArgs(args.slice(i));
+  return getPreservedArgsAfterEnvSubcommand(argv, ['update'], 3);
 }
 
 /**
@@ -365,22 +459,10 @@ export function buildEnvUpdateCommandWithPreservedArgs(
   commandTemplate: string,
   pkgName: string = packageName
 ): string {
-  let preserved = getPreservedArgsForEnvUpdate(argv);
-  if (commandTemplate.includes('--yes')) {
-    preserved = preserved.filter(a => a !== '--yes' && a !== '-y');
-  }
-  if (commandTemplate.includes('--value')) {
-    const out: string[] = [];
-    for (let i = 0; i < preserved.length; i++) {
-      if (preserved[i] === '--value' && i + 1 < preserved.length) {
-        i++;
-        continue;
-      }
-      if (preserved[i].startsWith('--value=')) continue;
-      out.push(preserved[i]);
-    }
-    preserved = out;
-  }
+  const preserved = omitPreservedFlagsAlreadyInTemplate(
+    getPreservedArgsForEnvUpdate(argv),
+    commandTemplate
+  );
   const base = `${pkgName} ${commandTemplate}`;
   if (preserved.length === 0) return base;
   return `${base} ${preserved.join(' ')}`;
@@ -561,15 +643,58 @@ export type ExitWithNonInteractiveErrorVariant =
   | 'access-groups'
   | 'access-summary'
   | 'protection'
+  | 'update'
   | 'speed-insights'
   | 'web-analytics'
   | 'checks'
-  | 'edge-config';
+  | 'edge-config'
+  | 'list';
 
 type ProjectExitWithNonInteractiveVariant = Exclude<
   ExitWithNonInteractiveErrorVariant,
-  'edge-config'
+  'edge-config' | 'list'
 >;
+
+const LIST_ERROR_HINT =
+  'Project names are team-scoped. Use --scope when the project belongs to another team, or `list --all` to list deployments across all projects.';
+
+/**
+ * Suggested follow-ups for `vercel list` failures (only caller of
+ * exitWithNonInteractiveError). `project ls --filter` beats bare `project ls`
+ * here: both return a single page of 20, so on large teams only a name search
+ * reliably surfaces the intended project. When the attempted project name is
+ * known, the filter suggestion is emitted fully runnable.
+ */
+function buildNextStepsForList(
+  client: Client,
+  projectName?: string
+): NonNullable<AgentErrorPayload['next']> {
+  return [
+    projectName
+      ? {
+          command: buildCommandWithGlobalFlags(
+            client.argv,
+            `project ls --filter ${projectName}`
+          ),
+          when: 'Search projects matching the attempted name to find the right one',
+        }
+      : {
+          command: buildCommandWithGlobalFlags(
+            client.argv,
+            'project ls --filter <name>'
+          ),
+          when: 'Search projects by name substring to find the right one (replace <name>)',
+        },
+    {
+      command: buildCommandWithGlobalFlags(client.argv, 'list --all'),
+      when: 'List deployments across all projects in the current scope',
+    },
+    {
+      command: buildCommandWithGlobalFlags(client.argv, 'link'),
+      when: 'Re-link this directory to the correct Vercel project',
+    },
+  ];
+}
 
 /** Suggested follow-ups for project subcommands that use `exitWithNonInteractiveError`. */
 function buildNextStepsForProjectSubcommands(
@@ -592,25 +717,30 @@ function buildNextStepsForProjectSubcommands(
               template: 'project protection <name>' as const,
               when: 'Show deployment protection by project name (replace <name>)',
             }
-          : variant === 'speed-insights'
+          : variant === 'update'
             ? {
-                template: 'project speed-insights <name>' as const,
-                when: 'Enable Speed Insights by project name (replace <name>)',
+                template: 'project update <name> --framework <slug>' as const,
+                when: 'Update a framework preset by project name (replace <name> and <slug>)',
               }
-            : variant === 'web-analytics'
+            : variant === 'speed-insights'
               ? {
-                  template: 'project web-analytics <name>' as const,
-                  when: 'Enable Web Analytics by project name (replace <name>)',
+                  template: 'project speed-insights <name>' as const,
+                  when: 'Enable Speed Insights by project name (replace <name>)',
                 }
-              : variant === 'checks'
+              : variant === 'web-analytics'
                 ? {
-                    template: 'project checks add <name>' as const,
-                    when: 'Create a deployment check by project name (replace <name>)',
+                    template: 'project web-analytics <name>' as const,
+                    when: 'Enable Web Analytics by project name (replace <name>)',
                   }
-                : {
-                    template: 'project members <name>' as const,
-                    when: 'List members by project name (replace <name>)',
-                  };
+                : variant === 'checks'
+                  ? {
+                      template: 'project checks add <name>' as const,
+                      when: 'Create a deployment check by project name (replace <name>)',
+                    }
+                  : {
+                      template: 'project members <name>' as const,
+                      when: 'List members by project name (replace <name>)',
+                    };
   return [
     {
       command: buildCommandWithGlobalFlags(client.argv, 'link'),
@@ -638,6 +768,12 @@ function resolveNonInteractiveDefaults(
     return {
       next: buildNextStepsForEdgeConfig(client),
       hint: EDGE_CONFIG_NON_INTERACTIVE_HINT,
+    };
+  }
+  if (variant === 'list') {
+    return {
+      next: buildNextStepsForList(client),
+      hint: LIST_ERROR_HINT,
     };
   }
   return {
@@ -698,7 +834,11 @@ export function exitWithNonInteractiveError(
   client: Client,
   err: unknown,
   exitCode: number = 1,
-  options: { variant: ExitWithNonInteractiveErrorVariant } = {
+  options: {
+    variant: ExitWithNonInteractiveErrorVariant;
+    /** Attempted project name; makes `list` next[] suggestions fully runnable. */
+    projectName?: string;
+  } = {
     variant: 'members',
   }
 ): void {
@@ -741,6 +881,9 @@ export function exitWithNonInteractiveError(
         status: 'error',
         reason: 'project_not_found',
         message: err instanceof Error ? err.message : String(err),
+        ...(variant === 'list' && options.projectName
+          ? { next: buildNextStepsForList(client, options.projectName) }
+          : {}),
       },
       exitCode,
       variant

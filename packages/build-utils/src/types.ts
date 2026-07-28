@@ -52,6 +52,10 @@ export interface Config {
   framework?: string | null;
   nodeVersion?: string;
   middleware?: boolean;
+  /** Enforced runtime for explicitly configured Routing Middleware. */
+  middlewareRuntime?: 'nodejs';
+  /** Matcher supplied outside of the middleware source module. */
+  middlewareMatcher?: string | string[];
   /** Owning service name; scopes per-function config such as the v2beta consumer. */
   serviceName?: string;
   [key: string]: unknown;
@@ -483,6 +487,32 @@ export interface ProjectSettings {
   commandForIgnoringBuildStep?: string | null;
 }
 
+export interface GetDevSidecarsOptions {
+  workPath: string;
+  /** Original build configuration before source expansion or dev filtering. */
+  build: Builder;
+  /** Resolved Services V2 service when collecting its sidecars. */
+  service?: ExperimentalServiceV2;
+}
+
+export interface DevSubscriber {
+  type: 'subscriber';
+  name: string;
+  consumer: string;
+  workspace: string;
+  framework?: string;
+  runtime?: string;
+  builder: Builder;
+  topics: ServiceTopics;
+}
+
+export type DevSidecar = DevSubscriber;
+
+/** Returns additional processes that a builder needs alongside its primary dev server. */
+export type GetDevSidecars = (
+  options: GetDevSidecarsOptions
+) => Promise<DevSidecar[]>;
+
 /*
  * This is a builder whose build output version may dynamically change.
  */
@@ -493,6 +523,7 @@ export interface BuilderVX {
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
   startDevServer?: StartDevServer;
+  getDevSidecars?: GetDevSidecars;
 }
 
 export interface BuilderV2 {
@@ -502,6 +533,7 @@ export interface BuilderV2 {
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
   startDevServer?: StartDevServer;
+  getDevSidecars?: GetDevSidecars;
 }
 
 export interface BuilderV3 {
@@ -511,6 +543,7 @@ export interface BuilderV3 {
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
   startDevServer?: StartDevServer;
+  getDevSidecars?: GetDevSidecars;
 }
 
 type ImageFormat = 'image/avif' | 'image/webp';
@@ -1049,8 +1082,8 @@ export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
 export type ExperimentalServiceGroups = Record<string, string[]>;
 
 export interface ServiceBinding {
-  /** Must be `"service"` for Service-to-Service HTTP bindings. */
-  type: 'service';
+  /** If present, must be `"service"` for Service-to-Service HTTP bindings. */
+  type?: 'service';
   /** Target service name from `services`. */
   service: string;
   /** Generated value shape, must be `"url"`. */

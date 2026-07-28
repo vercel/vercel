@@ -107,9 +107,8 @@ export function formatDynamicExamples(
   // JSON output
   lines.push('');
   lines.push(`  ${chalk.dim('-')} Output as JSON`);
-  lines.push('');
   lines.push(
-    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --format=json`)}`
+    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --json`)}`
   );
 
   lines.push('');

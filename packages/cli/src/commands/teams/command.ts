@@ -1,5 +1,10 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, nextOption } from '../../util/arg-common';
+import {
+  formatOption,
+  jsonOption,
+  limitOption,
+  nextOption,
+} from '../../util/arg-common';
 
 export const requestSubcommand = {
   name: 'request',
@@ -12,7 +17,7 @@ export const requestSubcommand = {
       required: false,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Status for your pending request',
@@ -67,7 +72,9 @@ export const listSubcommand = {
   arguments: [],
   options: [
     nextOption,
+    limitOption,
     formatOption,
+    jsonOption,
     { name: 'since', shorthand: null, type: String, deprecated: true },
     { name: 'until', shorthand: null, type: String, deprecated: true },
     { name: 'count', shorthand: 'C', type: Number, deprecated: true },
@@ -129,7 +136,7 @@ export const ssoSubcommand = {
   aliases: [],
   description: 'Show SAML / SSO configuration for the current team',
   arguments: [],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Human-readable SAML summary',
@@ -137,7 +144,7 @@ export const ssoSubcommand = {
     },
     {
       name: 'JSON',
-      value: `${packageName} teams sso --format json`,
+      value: `${packageName} teams sso --json`,
     },
   ],
 } as const;
@@ -147,7 +154,7 @@ export const membersSubcommand = {
   aliases: ['member'],
   description: 'List members for the currently scoped team',
   arguments: [],
-  options: [nextOption, formatOption],
+  options: [nextOption, limitOption, formatOption, jsonOption],
   examples: [
     {
       name: 'List team members',
@@ -155,7 +162,7 @@ export const membersSubcommand = {
     },
     {
       name: 'List team members as JSON',
-      value: `${packageName} teams members --format json`,
+      value: `${packageName} teams members --json`,
     },
     {
       name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch',

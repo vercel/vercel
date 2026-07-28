@@ -10,6 +10,7 @@ import { buildCommand } from './build/command';
 import { buyCommand } from './buy/command';
 import { cacheCommand } from './cache/command';
 import { certsCommand } from './certs/command';
+import { commentsCommand } from './comments/command';
 import { connexCommand } from './connex/command';
 import { contractCommand } from './contract/command';
 import { cronsCommand } from './crons/command';
@@ -39,7 +40,6 @@ import { logsCommand } from './logs/command';
 import { mcpCommand } from './mcp/command';
 import { metricsCommand } from './metrics/command';
 import { microfrontendsCommand } from './microfrontends/command';
-import { oauthAppsCommand } from './oauth-apps/command';
 import { openCommand } from './open/command';
 import { projectCommand } from './project/command';
 import { promoteCommand } from './promote/command';
@@ -80,6 +80,7 @@ const commandsStructs = [
   buyCommand,
   cacheCommand,
   certsCommand,
+  commentsCommand,
   contractCommand,
   cronsCommand,
   curlCommand,
@@ -106,7 +107,6 @@ const commandsStructs = [
   logsCommand,
   mcpCommand,
   microfrontendsCommand,
-  oauthAppsCommand,
   openCommand,
   projectCommand,
   promoteCommand,

@@ -1,4 +1,4 @@
-import { formatOption, yesOption } from '../../util/arg-common';
+import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const removeSubcommand = {
@@ -25,6 +25,7 @@ export const removeSubcommand = {
       description: 'Skip the confirmation prompt when deleting a resource',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -44,7 +45,7 @@ export const removeSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} integration-resource remove my-acme-resource --format=json --yes`,
+      value: `${packageName} integration-resource remove my-acme-resource --json --yes`,
     },
   ],
 } as const;
@@ -76,6 +77,7 @@ export const disconnectSubcommand = {
       description: 'Skip the confirmation prompt when disconnecting a resource',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -102,7 +104,7 @@ export const disconnectSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} integration-resource disconnect my-acme-resource --format=json --yes`,
+      value: `${packageName} integration-resource disconnect my-acme-resource --json --yes`,
     },
   ],
 } as const;
@@ -145,6 +147,7 @@ export const connectSubcommand = {
       description: 'Skip the confirmation prompt when connecting a resource',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -174,7 +177,7 @@ export const connectSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} integration resource connect my-acme-resource --format=json --yes`,
+      value: `${packageName} integration resource connect my-acme-resource --json --yes`,
     },
   ],
 } as const;
@@ -246,6 +249,7 @@ export const claimSubcommand = {
       deprecated: false,
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -261,7 +265,38 @@ export const claimSubcommand = {
     },
     {
       name: 'Print the claim URL as JSON without waiting',
-      value: `${packageName} integration-resource claim my-stripe --format=json --no-wait`,
+      value: `${packageName} integration-resource claim my-stripe --json --no-wait`,
+    },
+  ],
+} as const;
+
+export const inspectSubcommand = {
+  name: 'inspect',
+  aliases: ['status'],
+  description:
+    'Show live details and status for a marketplace integration resource, fetched fresh from the provider',
+  arguments: [
+    {
+      name: 'resource',
+      required: true,
+    },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Show live details and status for a resource',
+      value: [
+        `${packageName} integration resource inspect <resource>`,
+        `${packageName} integration resource inspect my-acme-resource`,
+      ],
+    },
+    {
+      name: 'Show live status for a resource (alias)',
+      value: `${packageName} integration resource status my-acme-resource`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} integration resource inspect my-acme-resource --json`,
     },
   ],
 } as const;
@@ -279,6 +314,7 @@ export const integrationResourceCommand = {
     disconnectSubcommand,
     removeSubcommand,
     claimSubcommand,
+    inspectSubcommand,
   ],
   examples: [],
 } as const;
