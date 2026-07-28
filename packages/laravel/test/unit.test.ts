@@ -129,7 +129,7 @@ describe('@vercel/laravel', () => {
     );
 
     expect(dockerfile).toContain(
-      'FROM ghcr.io/jacobparis/vercel-laravel-php@sha256:eef0ea0a0f491a1cdc2e5ed4ee848adbafacd0a9ec47a849ad24c9c10a5aa43b'
+      'FROM ghcr.io/jacobparis/vercel-laravel-php@sha256:19a6a8aa691d853b0393ca740a9297becd642ab1f9a9cffe3b2aa6221c63a867'
     );
     expect(dockerfile).not.toContain('libicu-dev');
     expect(dockerfile).toContain('docker-php-ext-install');
@@ -148,6 +148,7 @@ describe('@vercel/laravel', () => {
     expect(dockerfile).toContain('SESSION_DRIVER=cookie');
     expect(dockerfile).toContain('FILESYSTEM_DISK=vercel');
     expect(dockerfile).toContain('QUEUE_CONNECTION=vercel');
+    expect(dockerfile).toContain('BROADCAST_CONNECTION=vercel-reverb');
     expect(dockerfile).toContain(
       'php /var/www/html/.vercel-runtime/runtime/install.php /var/www/html'
     );
@@ -220,7 +221,7 @@ describe('@vercel/laravel', () => {
         expect(source.contextDir).toBe(workPath);
         expect(source.functionSource).toBe('artisan');
         expect(readFileSync(source.dockerfilePath, 'utf8')).toContain(
-          'FROM ghcr.io/jacobparis/vercel-laravel-php@sha256:eef0ea0a0f491a1cdc2e5ed4ee848adbafacd0a9ec47a849ad24c9c10a5aa43b'
+          'FROM ghcr.io/jacobparis/vercel-laravel-php@sha256:19a6a8aa691d853b0393ca740a9297becd642ab1f9a9cffe3b2aa6221c63a867'
         );
         return { output: {} };
       }
@@ -270,7 +271,22 @@ describe('@vercel/laravel', () => {
       config: {},
     } as any)) as BuildResultV2Typical;
 
-    expect(result.routes).toEqual([{ src: '/(.*)', dest: '/index' }]);
+    expect(result.routes).toEqual([
+      {
+        src: '^/__vercel/reverb/(.*)$',
+        dest: '/$1',
+        service: 'laravel-reverb',
+      },
+      { src: '/(.*)', dest: '/index' },
+    ]);
+    expect((result as any).services).toEqual({
+      'laravel-reverb': {
+        root: '.',
+        runtime: 'container',
+        entrypoint:
+          'ghcr.io/jacobparis/vercel-reverb@sha256:57cea0f4732f1ca89aa3b3870ff49950930e22550d7cf44325fa6ece2f20395f',
+      },
+    });
     expect(result.output.__vercel_laravel_queue_0).toMatchObject({
       handler: 'registry.example/laravel@sha256:test',
       environment: { VERCEL_LARAVEL_QUEUE_CALLBACK: '1' },
