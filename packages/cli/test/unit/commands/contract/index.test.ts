@@ -60,7 +60,7 @@ describe('contract', () => {
 
       const output = client.getFullOutput();
       expect(output).toContain('Show contract information');
-      expect(output).toContain('--format');
+      expect(output).toContain('--json');
     });
   });
 

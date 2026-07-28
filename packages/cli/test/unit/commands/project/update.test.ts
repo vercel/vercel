@@ -57,7 +57,7 @@ describe('project update', () => {
       expect(helpOutput).toContain('--install-command');
       expect(helpOutput).toContain('--output-directory');
       expect(helpOutput).toContain('--auto-detect');
-      expect(helpOutput).toContain('--format');
+      expect(helpOutput).toContain('--json');
       expect(helpOutput).toContain('omitted settings remain unchanged');
       expect(helpOutput).toContain('Update multiple settings in one command');
       expect(helpOutput).toContain(
