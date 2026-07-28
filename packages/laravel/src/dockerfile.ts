@@ -29,33 +29,19 @@ function packageManagerCommands(project: LaravelProject): {
 }
 
 function extensionInstall(project: LaravelProject): string[] {
-  const apt = new Set([
-    'libcurl4-openssl-dev',
-    'libicu-dev',
-    'libxml2-dev',
-    'libonig-dev',
-    'libpq-dev',
-    'libsqlite3-dev',
-    'libzip-dev',
-    'unzip',
-  ]);
+  const apt = new Set(['libicu-dev', 'libpq-dev', 'libzip-dev', 'unzip']);
   const configure: string[] = [];
-  const builtIn = new Set([
+  // The official Apache image already ships Laravel's required curl, DOM,
+  // mbstring, PDO SQLite, SimpleXML, XML, and OPcache modules. Rebuilding them
+  // is both slow and, on PHP 8.5, breaks DOM because its bundled Lexbor headers
+  // are not part of the image's extension source tree.
+  const install = new Set([
     'bcmath',
-    'curl',
-    'dom',
     'intl',
-    'mbstring',
-    'opcache',
     'pcntl',
     'pdo_mysql',
     'pdo_pgsql',
-    'pdo_sqlite',
     'sockets',
-    'simplexml',
-    'xml',
-    'xmlreader',
-    'xmlwriter',
     'zip',
   ]);
   const pecl: string[] = [];
@@ -65,14 +51,14 @@ function extensionInstall(project: LaravelProject): string[] {
     apt.add('libjpeg62-turbo-dev');
     apt.add('libpng-dev');
     configure.push('docker-php-ext-configure gd --with-freetype --with-jpeg');
-    builtIn.add('gd');
+    install.add('gd');
   }
   if (project.extensions.has('soap')) {
     apt.add('libxml2-dev');
-    builtIn.add('soap');
+    install.add('soap');
   }
   if (project.extensions.has('exif')) {
-    builtIn.add('exif');
+    install.add('exif');
   }
   if (project.extensions.has('imagick')) {
     apt.add('libmagickwand-dev');
@@ -88,7 +74,7 @@ function extensionInstall(project: LaravelProject): string[] {
     ].join(' ')} \\`,
     '    && rm -rf /var/lib/apt/lists/*',
     ...configure.map(command => `RUN ${command}`),
-    `RUN docker-php-ext-install -j"$(nproc)" ${[...builtIn].join(' ')}`,
+    `RUN docker-php-ext-install -j"$(nproc)" ${[...install].join(' ')}`,
     ...(pecl.length
       ? [
           `RUN pecl install ${pecl.join(' ')} \\`,

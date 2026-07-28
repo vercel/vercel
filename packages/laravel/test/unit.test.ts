@@ -121,9 +121,10 @@ describe('@vercel/laravel', () => {
     );
 
     expect(dockerfile).toContain('FROM php:8.5-apache-bookworm');
-    expect(dockerfile).toContain('libcurl4-openssl-dev');
+    expect(dockerfile).toContain('libicu-dev');
     expect(dockerfile).toContain('docker-php-ext-install');
-    expect(dockerfile).toContain('curl dom');
+    expect(dockerfile).not.toContain('curl dom');
+    expect(dockerfile).not.toContain('pdo_sqlite');
     expect(dockerfile).toContain('docker-php-ext-configure gd');
     expect(dockerfile).toContain('pecl install redis');
     expect(dockerfile).toContain('COPY package.json package-lock.json ./');
