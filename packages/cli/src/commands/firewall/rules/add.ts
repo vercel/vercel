@@ -1,10 +1,10 @@
 import chalk from 'chalk';
-import { withGlobalFlags } from '../../../util/agent-output';
 import type Client from '../../../util/client';
-import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
+import { requireProjectContext } from '../../../util/projects/require-project-context';
 import output from '../../../output-manager';
 import { rulesAddSubcommand } from '../command';
 import {
+  withGlobalFlags,
   parseSubcommandArgs,
   confirmAction,
   detectExistingDraft,
@@ -25,7 +25,6 @@ import type {
 } from '../../../util/firewall/types';
 import stamp from '../../../util/output/stamp';
 import { outputAgentError } from '../../../util/agent-output';
-import { getCommandName } from '../../../util/pkg-name';
 import { handleAIAdd } from './add-ai';
 import { addInteractive } from './add-interactive';
 
@@ -88,7 +87,11 @@ export default async function add(client: Client, argv: string[]) {
     }
 
     // AI mode
-    const link = await ensureProjectLink(client, 'firewall');
+    const link = await requireProjectContext(
+      client,
+      'firewall',
+      parsed.flags['--project']
+    );
     if (typeof link === 'number') return link;
     const { project, org } = link;
     const teamId = org.type === 'team' ? org.id : undefined;
@@ -130,7 +133,11 @@ export default async function add(client: Client, argv: string[]) {
       ],
     });
 
-    const link = await ensureProjectLink(client, 'firewall');
+    const link = await requireProjectContext(
+      client,
+      'firewall',
+      parsed.flags['--project']
+    );
     if (typeof link === 'number') return link;
     const { project, org } = link;
     const teamId = org.type === 'team' ? org.id : undefined;
@@ -291,7 +298,7 @@ async function handleFlagAdd(
   const name = parsed.args[0] as string | undefined;
   if (!name) {
     output.error(
-      `Missing rule name. Provide as the first argument: ${chalk.cyan(getCommandName('firewall rules add "Rule name" --condition ...'))}`
+      `Missing rule name. Provide as the first argument: ${chalk.cyan(withGlobalFlags(client, 'firewall rules add "Rule name" --condition ...'))}`
     );
     return 1;
   }
@@ -399,7 +406,12 @@ async function createRule(
   parsed: { args: string[]; flags: Record<string, unknown> },
   rule: Omit<FirewallRule, 'id'>
 ): Promise<number> {
-  const link = await ensureProjectLink(client, 'firewall');
+  const projectName = parsed.flags['--project'];
+  const link = await requireProjectContext(
+    client,
+    'firewall',
+    typeof projectName === 'string' ? projectName : undefined
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

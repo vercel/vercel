@@ -76,10 +76,10 @@ export async function resolveAgents(args: {
     checked: detected[i],
   }));
   const picked = await client.input.checkbox<string>({
-    message: `Which coding agents should use the AI Gateway? ${chalk.dim(
-      'Detected agents are pre-selected'
-    )}`,
-    instructions: CHECKBOX_INSTRUCTIONS,
+    message: `Which coding agents should use the AI Gateway?\n${chalk.dim(
+      '  Detected agents are pre-selected ·'
+    )}${CHECKBOX_INSTRUCTIONS}`,
+    instructions: false,
     choices,
   });
   const selected = picked

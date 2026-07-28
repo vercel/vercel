@@ -1,17 +1,15 @@
 import chalk from 'chalk';
-import { withGlobalFlags } from '../../../util/agent-output';
 import type Client from '../../../util/client';
-import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
+import { requireProjectContext } from '../../../util/projects/require-project-context';
 import output from '../../../output-manager';
 import { rulesListSubcommand } from '../command';
-import { parseSubcommandArgs, outputJson } from '../shared';
+import { parseSubcommandArgs, outputJson, withGlobalFlags } from '../shared';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
 import {
   annotateRules,
   formatRulesTable,
   formatRuleExpanded,
 } from '../../../util/firewall/format';
-import { getCommandName } from '../../../util/pkg-name';
 import { outputAgentError } from '../../../util/agent-output';
 
 export default async function list(client: Client, argv: string[]) {
@@ -23,7 +21,11 @@ export default async function list(client: Client, argv: string[]) {
   );
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client, 'firewall');
+  const link = await requireProjectContext(
+    client,
+    'firewall',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -104,7 +106,7 @@ export default async function list(client: Client, argv: string[]) {
     ).length;
     if (ruleChanges > 0) {
       output.print(
-        `\n  ${chalk.yellow(`${ruleChanges} unpublished rule change${ruleChanges !== 1 ? 's' : ''}.`)} Run ${chalk.cyan(getCommandName('firewall publish'))} to publish.\n`
+        `\n  ${chalk.yellow(`${ruleChanges} unpublished rule change${ruleChanges !== 1 ? 's' : ''}.`)} Run ${chalk.cyan(withGlobalFlags(client, 'firewall publish'))} to publish.\n`
       );
     } else {
       output.print(`\n  ${chalk.dim('Showing live configuration.')}\n`);

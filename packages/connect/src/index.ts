@@ -9,6 +9,7 @@ export {
   ConnectorInstallationRequiredError,
   type ConnectErrorOptions,
   type ConnectOptions,
+  type ConnectTokenExchangeSubject,
   type ConnectTokenParams,
   type ConnectTokenResponse,
   type ConnectTokenSubject,
@@ -20,5 +21,12 @@ export {
   type ConnectAuthorizationOptions,
   type ConnectAuthorizationResponse,
 } from './authorization.js';
+
+export {
+  experimental_startInstallation,
+  type ConnectInstallationOptions,
+  type ConnectInstallationParams,
+  type ConnectInstallationResponse,
+} from './installation.js';
 
 export type { ConnectAuthorizationDetail } from './authorization-details.js';

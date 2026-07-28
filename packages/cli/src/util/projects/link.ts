@@ -10,6 +10,7 @@ import type Client from '../client';
 import { InvalidToken, isAPIError, ProjectNotFound } from '../errors-ts';
 import type {
   Project,
+  ProjectLinked,
   ProjectLinkResult,
   Org,
   ProjectLink,
@@ -35,6 +36,28 @@ export const VERCEL_DIR_FALLBACK = '.now';
 export const VERCEL_DIR_README = 'README.txt';
 export const VERCEL_DIR_PROJECT = 'project.json';
 export const VERCEL_DIR_REPO = 'repo.json';
+
+export interface OwnerLookupUnavailableProjectLinked extends ProjectLinked {
+  orgId?: string;
+  ownerLookupUnavailable: true;
+  projectRootDirectory?: string;
+}
+
+export function isOwnerLookupUnavailableLink(
+  link: ProjectLinked
+): link is OwnerLookupUnavailableProjectLinked {
+  return (
+    'ownerLookupUnavailable' in link && link.ownerLookupUnavailable === true
+  );
+}
+
+function isOwnerLookupUnavailableError(error: unknown): boolean {
+  return (
+    isAPIError(error) &&
+    error.status === 403 &&
+    error.code === 'team_unauthorized'
+  );
+}
 
 const linkSchema = {
   type: 'object',
@@ -289,6 +312,11 @@ export interface GetLinkedProjectOptions {
   projectName?: string;
   projectNameIsExplicit?: boolean;
   scopeIsExplicit?: boolean;
+  /**
+   * Allows deploying with a project-scoped token, which can fetch the
+   * linked project, but cannot fetch the owning user/team.
+   */
+  allowOwnerLookupFallback?: boolean;
 }
 
 export type ProjectLinkResultWithOrgId = ProjectLinkResult & {
@@ -402,6 +430,7 @@ export async function getLinkedProject(
   output.spinner('Retrieving project…', 1000);
   let org: Org | null = null;
   let project: Project | ProjectNotFound | null = null;
+  let ownerLookupUnavailable = false;
   try {
     const [orgResult, projectResult] = await Promise.allSettled([
       getOrgById(client, link.orgId),
@@ -419,6 +448,11 @@ export async function getLinkedProject(
         orgResult.reason.code === 'mock_unimplemented')
     ) {
       org = null;
+    } else if (
+      options.allowOwnerLookupFallback &&
+      isOwnerLookupUnavailableError(orgResult.reason)
+    ) {
+      ownerLookupUnavailable = true;
     } else {
       throw orgResult.reason;
     }
@@ -456,6 +490,26 @@ export async function getLinkedProject(
     throw err;
   } finally {
     output.stopSpinner();
+  }
+
+  if (ownerLookupUnavailable) {
+    if (project && !(project instanceof ProjectNotFound)) {
+      const ownerId = project.accountId || link.orgId;
+      const ownerLookupUnavailableLink: OwnerLookupUnavailableProjectLinked = {
+        status: 'linked',
+        org: {
+          type: ownerId.startsWith('team_') ? 'team' : 'user',
+          id: ownerId,
+          slug: ownerId,
+        },
+        project,
+        repoRoot: link.repoRoot,
+        projectRootDirectory: link.projectRootDirectory,
+        orgId: link.orgId,
+        ownerLookupUnavailable: true,
+      };
+      return ownerLookupUnavailableLink;
+    }
   }
 
   if (!org || !project || project instanceof ProjectNotFound) {

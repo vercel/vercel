@@ -1,10 +1,10 @@
 import chalk from 'chalk';
-import { withGlobalFlags } from '../../../util/agent-output';
 import type Client from '../../../util/client';
-import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
+import { requireProjectContext } from '../../../util/projects/require-project-context';
 import output from '../../../output-manager';
 import { ipBlocksBlockSubcommand } from '../command';
 import {
+  withGlobalFlags,
   parseSubcommandArgs,
   confirmAction,
   detectExistingDraft,
@@ -63,7 +63,11 @@ export default async function block(client: Client, argv: string[]) {
     }
   }
 
-  const link = await ensureProjectLink(client, 'firewall');
+  const link = await requireProjectContext(
+    client,
+    'firewall',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;

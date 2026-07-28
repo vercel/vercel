@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   connectGitHubCredentials,
   connectLinearCredentials,
+  connectPhotonCredentials,
   connectSlackCredentials,
 } from '../../src/eve/index.js';
 
@@ -58,6 +59,53 @@ describe('Eve channel credential helpers', () => {
     });
   });
 
+  it('resolves Photon credentials from an app-scoped Connect token', async () => {
+    fetchMock.mockResolvedValue(
+      jsonTokenResponse('photon-secret', {
+        metadata: { projectId: 'photon-project' },
+      })
+    );
+
+    const credentials = connectPhotonCredentials(
+      'photon/my-project',
+      {},
+      { vercelToken: 'vercel_token' }
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    await expect(credentials()).resolves.toEqual({
+      projectId: 'photon-project',
+      projectSecret: 'photon-secret',
+    });
+    expectTokenRequest('photon/my-project', {
+      subject: { type: 'app' },
+    });
+  });
+
+  it.each([
+    undefined,
+    {},
+    { projectId: '' },
+    { projectId: 123 },
+  ])('rejects malformed Photon metadata: %j', async metadata => {
+    fetchMock.mockResolvedValue(
+      jsonTokenResponse('photon-secret', { metadata })
+    );
+
+    const credentials = connectPhotonCredentials(
+      'photon/my-project',
+      {},
+      {
+        vercelToken: 'vercel_token',
+        forceRefresh: true,
+      }
+    );
+
+    await expect(credentials()).rejects.toThrow(
+      'Photon connector returned invalid credentials.'
+    );
+  });
+
   it('keeps Slack credentials backed by an app-scoped Connect token', async () => {
     fetchMock.mockResolvedValue(jsonTokenResponse('slack_token'));
 
@@ -104,12 +152,16 @@ async function resolveToken(
   return token();
 }
 
-function jsonTokenResponse(token: string): Response {
+function jsonTokenResponse(
+  token: string,
+  overrides: Record<string, unknown> = {}
+): Response {
   return new Response(
     JSON.stringify({
       token,
       expiresAt: Date.now() + 60 * 60 * 1000,
       connector: { id: 'scl_abc', uid: 'oauth/test', type: 'oauth' },
+      ...overrides,
     }),
     { status: 200, headers: { 'Content-Type': 'application/json' } }
   );

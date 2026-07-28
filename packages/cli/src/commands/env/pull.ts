@@ -27,9 +27,8 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import parseTarget from '../../util/parse-target';
-import { getLinkedProject } from '../../util/projects/link';
-import { isAPIError } from '../../util/errors-ts';
-import { performDeviceCodeFlow } from '../login/future';
+import { resolveProjectContext } from '../../util/projects/resolve-project-context';
+import getDeployment from '../../util/get-deployment';
 import {
   buildCommandWithYes,
   getPreservedArgsForEnvPull,
@@ -147,8 +146,12 @@ export default async function pull(
   telemetryClient.trackCliOptionGitBranch(gitBranch);
   telemetryClient.trackCliOptionEnvironment(opts['--environment']);
   telemetryClient.trackCliOptionId(opts['--id']);
+  telemetryClient.trackCliOptionProject(opts['--project']);
 
-  const link = await getLinkedProject(client);
+  const link = await resolveProjectContext({
+    client,
+    projectNameOrId: opts['--project'],
+  });
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
@@ -188,6 +191,16 @@ export default async function pull(
     link.org.type === 'team' ? link.org.id : undefined;
 
   const deploymentId = opts['--id'];
+
+  if (deploymentId && opts['--project']) {
+    const deployment = await getDeployment(client, link.org.slug, deploymentId);
+    if (deployment.projectId && deployment.projectId !== link.project.id) {
+      output.error(
+        `Deployment ${chalk.bold(deploymentId)} does not belong to project ${chalk.bold(link.project.name)}.`
+      );
+      return 1;
+    }
+  }
 
   const environment =
     parseTarget({
@@ -231,17 +244,21 @@ export async function envPullCommandLogic(
     output.log(`Overwriting existing ${chalk.bold(filename)} file`);
   } else if (exists && !skipConfirmation && !oidcTokenOnly) {
     if (client.nonInteractive) {
+      const preserved = getPreservedArgsForEnvPull(client.argv).filter(
+        arg => arg !== '--yes' && arg !== '-y'
+      );
+      const suffix = preserved.length > 0 ? ` ${preserved.join(' ')}` : '';
       outputActionRequired(client, {
         status: 'action_required',
         reason: 'env_file_exists',
         message: `File ${param(filename)} already exists and was not created by Vercel CLI. Use --yes to overwrite or specify a different filename.`,
         next: [
           {
-            command: getCommandNamePlain(`env pull ${filename} --yes`),
+            command: getCommandNamePlain(`env pull ${filename} --yes${suffix}`),
             when: 'Overwrite this file',
           },
           {
-            command: getCommandNamePlain('env pull <filename>'),
+            command: getCommandNamePlain(`env pull <filename>${suffix}`),
             when: 'Use a different filename',
           },
         ],
@@ -279,7 +296,7 @@ export async function envPullCommandLogic(
   output.spinner('Downloading');
 
   const pullId = deploymentId || link.project.id;
-  const pullResult = await pullEnvRecordsForEnvPull(client, pullId, source, {
+  const pullResult = await pullEnvRecords(client, pullId, source, {
     target: environment || 'development',
     gitBranch,
   });
@@ -398,70 +415,6 @@ export async function envPullCommandLogic(
     `${filename} file${isGitIgnoreUpdated ? ' and added it to .gitignore' : ''}`,
     { gutter: '✓' }
   );
-}
-
-async function pullEnvRecordsForEnvPull(
-  client: Client,
-  pullId: string,
-  source: EnvRecordsSource,
-  options: { target: string; gitBranch?: string }
-) {
-  try {
-    return await pullEnvRecords(client, pullId, source, options);
-  } catch (error) {
-    if (!isAPIError(error) || error.code !== 'challenge_required') {
-      throw error;
-    }
-
-    const refreshToken = client.authConfig.refreshToken;
-    if (!refreshToken || client.authConfig.tokenSource || !client.stdin.isTTY) {
-      throw error;
-    }
-
-    output.stopSpinner();
-    output.log('Sensitive Environment Variables require fresh authentication.');
-
-    const acrValues = getAcrValuesFromWWWAuthenticate(error.wwwAuthenticate);
-    if (!acrValues) {
-      throw error;
-    }
-
-    const tokens = await performDeviceCodeFlow(client, {
-      refreshToken,
-      acrValues,
-    });
-    if (!tokens) {
-      throw error;
-    }
-
-    client.updateAuthConfig({
-      token: tokens.access_token,
-      userId: undefined,
-      expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
-    });
-    client.persistAuthConfig();
-
-    output.spinner('Downloading');
-    return await pullEnvRecords(client, pullId, source, options);
-  }
-}
-
-export function getAcrValuesFromWWWAuthenticate(header: string | undefined) {
-  if (!header) {
-    return;
-  }
-
-  const bearerIndex = header.toLowerCase().indexOf('bearer');
-  if (bearerIndex === -1) {
-    return;
-  }
-
-  const bearerChallenge = header.slice(bearerIndex + 'bearer'.length);
-  const match = bearerChallenge.match(
-    /(?:^|[,\s])acr_values=(?:"((?:\\.|[^"\\])*)"|([^,\s]+))/i
-  );
-
-  return match?.[1]?.replace(/\\(.)/g, '$1') ?? match?.[2];
 }
 
 function escapeValue(value: string | undefined) {

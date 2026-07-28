@@ -42,8 +42,17 @@ export interface AlertsScope {
 
 export async function resolveAlertsScope(
   client: Client,
-  opts: { project?: string; all?: boolean; jsonOutput: boolean }
+  opts: {
+    project?: string;
+    all?: boolean;
+    jsonOutput: boolean;
+    command?: string;
+  }
 ): Promise<AlertsScope | number> {
+  const command = opts.command ?? 'alerts';
+  const projectCommand = `${command} --project <name_or_id>`;
+  const allCommand = `${command} --all`;
+
   if (opts.all || opts.project) {
     const { team } = await getScope(client);
     if (!team) {
@@ -102,7 +111,7 @@ export async function resolveAlertsScope(
               {
                 command: buildCommandWithGlobalFlags(
                   client.argv,
-                  'alerts rules ls --project <name_or_id>'
+                  projectCommand
                 ),
                 when: 'Retry with a project you can access (replace <name_or_id>)',
               },
@@ -124,11 +133,8 @@ export async function resolveAlertsScope(
           reason: AGENT_REASON.NOT_FOUND,
           next: [
             {
-              command: buildCommandWithGlobalFlags(
-                client.argv,
-                'alerts rules ls'
-              ),
-              when: 'List rules in the current linked project or adjust --project',
+              command: buildCommandWithGlobalFlags(client.argv, projectCommand),
+              when: 'Retry with a valid project (replace <name_or_id>)',
             },
           ],
         }
@@ -158,18 +164,12 @@ export async function resolveAlertsScope(
           when: 'Link this directory to a Vercel project',
         },
         {
-          command: buildCommandWithGlobalFlags(
-            client.argv,
-            'alerts rules ls --project <name_or_id>'
-          ),
-          when: 'List rules for a project without linking (replace <name_or_id>)',
+          command: buildCommandWithGlobalFlags(client.argv, projectCommand),
+          when: 'Retry with an explicit project (replace <name_or_id>)',
         },
         {
-          command: buildCommandWithGlobalFlags(
-            client.argv,
-            'alerts rules ls --all'
-          ),
-          when: 'List team-wide rules without a linked project',
+          command: buildCommandWithGlobalFlags(client.argv, allCommand),
+          when: 'Use team-wide scope without a linked project',
         },
       ],
     });

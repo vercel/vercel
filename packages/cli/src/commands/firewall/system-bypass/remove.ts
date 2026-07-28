@@ -1,16 +1,14 @@
 import chalk from 'chalk';
-import { withGlobalFlags } from '../../../util/agent-output';
 import type Client from '../../../util/client';
-import { ensureProjectLink } from '../../../util/projects/ensure-project-link';
+import { requireProjectContext } from '../../../util/projects/require-project-context';
 import output from '../../../output-manager';
 import { systemBypassRemoveSubcommand } from '../command';
-import { parseSubcommandArgs, confirmAction } from '../shared';
+import { parseSubcommandArgs, confirmAction, withGlobalFlags } from '../shared';
 import removeBypass from '../../../util/firewall/remove-bypass';
 import {
   validateBypassIp,
   validateHostname,
 } from '../../../util/firewall/validate';
-import { getCommandName } from '../../../util/pkg-name';
 import stamp from '../../../util/output/stamp';
 import { outputAgentError } from '../../../util/agent-output';
 
@@ -47,7 +45,11 @@ export default async function remove(client: Client, argv: string[]) {
     }
   }
 
-  const link = await ensureProjectLink(client, 'firewall');
+  const link = await requireProjectContext(
+    client,
+    'firewall',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -89,7 +91,7 @@ export default async function remove(client: Client, argv: string[]) {
     const error = e as { status?: number; message?: string };
     if (error.status === 404) {
       output.error(
-        `No bypass rule found for ${chalk.bold(ip)}. Run ${chalk.cyan(getCommandName('firewall system-bypass list'))} to view all rules.`
+        `No bypass rule found for ${chalk.bold(ip)}. Run ${chalk.cyan(withGlobalFlags(client, 'firewall system-bypass list'))} to view all rules.`
       );
       return 1;
     }

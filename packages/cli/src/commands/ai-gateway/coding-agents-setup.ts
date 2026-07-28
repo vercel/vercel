@@ -42,6 +42,7 @@ import {
   printReceiptPath,
   printStatus,
   printWarning,
+  buildAgentPrompt,
 } from '../../util/ai-gateway/coding-agents/render';
 import {
   collectAgentWarnings,
@@ -55,6 +56,7 @@ import { KEY_PLACEHOLDER } from '../../util/ai-gateway/coding-agents/gateway';
 import {
   isKeychainAvailable,
   storeKeyInKeychain,
+  copyToClipboard,
 } from '../../util/ai-gateway/coding-agents/keychain';
 import {
   outputAgentError,
@@ -98,6 +100,8 @@ export default async function codingAgentsSetup(
   const noKeychain = opts['--no-keychain'] as boolean | undefined;
   const agentConfig = opts['--agent-config'] as string[] | undefined;
   const shellRcOverride = opts['--shell-rc'] as string | undefined;
+  const applyMode = opts['--apply'] as string | undefined;
+  const baseUrl = opts['--base-url'] as string | undefined;
   const yes = opts['--yes'] as boolean | undefined;
 
   telemetry.trackCliOptionAgent(agentFlags as [string] | undefined);
@@ -114,6 +118,8 @@ export default async function codingAgentsSetup(
   telemetry.trackCliFlagNoKeychain(noKeychain);
   telemetry.trackCliOptionAgentConfig(agentConfig);
   telemetry.trackCliOptionShellRc(shellRcOverride);
+  telemetry.trackCliOptionApply(applyMode);
+  telemetry.trackCliOptionBaseUrl(baseUrl);
   telemetry.trackCliFlagYes(yes);
 
   const machine = shouldEmitNonInteractiveCommandError(client);
@@ -143,6 +149,34 @@ export default async function codingAgentsSetup(
       machine,
       AGENT_REASON.INVALID_EXPIRATION,
       `Invalid expiration "${expiration}". Must be one of: ${VALID_EXPIRY_VALUES.join(', ')}.`
+    );
+  }
+  if (
+    applyMode !== undefined &&
+    applyMode !== 'edit' &&
+    applyMode !== 'prompt'
+  ) {
+    return failValidation(
+      client,
+      machine,
+      AGENT_REASON.INVALID_ARGUMENTS,
+      `Invalid --apply "${applyMode}". Must be "edit" or "prompt".`
+    );
+  }
+  if (applyMode === 'prompt' && !wantKeychain) {
+    return failValidation(
+      client,
+      machine,
+      AGENT_REASON.INVALID_ARGUMENTS,
+      'The `--apply prompt` mode needs the macOS Keychain so the prompt never contains your plaintext key. Run on macOS without --no-keychain, or use `--apply edit`.'
+    );
+  }
+  if (baseUrl !== undefined && !isValidBaseUrl(baseUrl)) {
+    return failValidation(
+      client,
+      machine,
+      AGENT_REASON.INVALID_ARGUMENTS,
+      `Invalid --base-url "${baseUrl}". Must be an http(s) URL.`
     );
   }
   const flagExpiresAt =
@@ -346,12 +380,23 @@ export default async function codingAgentsSetup(
       }
     }
   }
+  if (
+    baseUrl &&
+    !machine &&
+    !agents.some(a => a.id === 'codex' || a.id === 'claude-code')
+  ) {
+    printWarning(
+      '--base-url has no effect for the selected agents; only Claude Code and Codex write a gateway base URL.'
+    );
+  }
+
   const previewPlan = await buildSetupPlan(agents, {
     apiKey: previewKey,
     home,
     useKeychain,
     overrides,
     shellRcOverride,
+    baseUrlOverride: baseUrl,
   });
 
   const changed = previewPlan.changes.filter(
@@ -382,10 +427,12 @@ export default async function codingAgentsSetup(
       useKeychain,
       overrides,
       shellRcOverride,
+      baseUrlOverride: baseUrl,
       home,
       alreadyConfigured,
       // With nothing consented there is nothing to rotate or reconfigure.
       reconfigure: Boolean(reconfigure) && agents.length > 0,
+      promptMode: applyMode === 'prompt',
     });
   }
 
@@ -472,11 +519,32 @@ export default async function codingAgentsSetup(
     return 1;
   }
 
-  if (changed.length > 0 && canPrompt && !yes) {
-    const confirmed = await client.input.confirm('Apply these changes?', true);
-    if (!confirmed) {
-      printStatus('Aborted. No files were changed.');
-      return 0;
+  let applyAction: 'apply' | 'copy' = applyMode === 'prompt' ? 'copy' : 'apply';
+  if (applyMode === undefined && changed.length > 0 && canPrompt && !yes) {
+    if (useKeychain) {
+      const choice = await client.input.select<'apply' | 'copy' | 'cancel'>({
+        message: 'Apply these changes?',
+        choices: [
+          { name: 'Yes, write the files now', value: 'apply' },
+          { name: 'Copy a prompt for my agent', value: 'copy' },
+          { name: 'Cancel', value: 'cancel' },
+        ],
+        default: 'apply',
+      });
+      if (choice === 'cancel') {
+        printStatus('Aborted. No files were changed.');
+        return 0;
+      }
+      applyAction = choice;
+    } else {
+      const confirmed = await client.input.confirm(
+        'Apply these changes?',
+        true
+      );
+      if (!confirmed) {
+        printStatus('Aborted. No files were changed.');
+        return 0;
+      }
     }
   }
 
@@ -504,6 +572,12 @@ export default async function codingAgentsSetup(
   }
 
   if (useKeychain && !storeKeyInKeychain(keySource.key)) {
+    if (applyAction === 'copy') {
+      output.error(
+        'Failed to store the key in the macOS Keychain, so a prompt would expose your plaintext key. Re-run and choose Apply, or pass --no-keychain to write the key to the config files.'
+      );
+      return 1;
+    }
     printWarning(
       'Failed to store the key in the macOS Keychain; writing it to the config files instead.'
     );
@@ -516,7 +590,31 @@ export default async function codingAgentsSetup(
     useKeychain,
     overrides,
     shellRcOverride,
+    baseUrlOverride: baseUrl,
   });
+
+  if (applyAction === 'copy') {
+    const promptText = buildAgentPrompt(applyPlanResult, keySource.key);
+    if (applyMode === 'prompt') {
+      const copied = copyToClipboard(promptText);
+      printStatus(
+        copied
+          ? 'Created the key and generated an agent prompt (copied to clipboard; also written to stdout).'
+          : 'Created the key and generated an agent prompt (written to stdout).'
+      );
+      client.stdout.write(`${promptText}\n`);
+    } else if (copyToClipboard(promptText)) {
+      printStatus(
+        'Prompt copied to clipboard. Paste it into your coding agent to apply the changes.'
+      );
+    } else {
+      output.debug('pbcopy failed or unavailable');
+      printStatus('Could not access the clipboard — prompt printed below:');
+      client.stdout.write(`${promptText}\n`);
+    }
+    printKey(keySource.key, { keychain: true, created: keySource.created });
+    return 0;
+  }
 
   const results = await applyPlan(applyPlanResult, { backup: !noBackup });
 
@@ -524,8 +622,11 @@ export default async function codingAgentsSetup(
     // Rotated with a fresh key but nothing in the config files changed (e.g. the
     // key is resolved from the environment rather than embedded).
     output.print('\n');
-    printAlignedLabel('Rotated', 'AI Gateway API key', { gutter: '✓' });
-    printKeyRow(keySource.key, { keychain: useKeychain });
+    printAlignedLabel('Rotated', 'AI Gateway API key');
+    printKeyRow(keySource.key, {
+      keychain: useKeychain,
+      created: keySource.created,
+    });
     output.print(chalk.dim('  No config files changed.\n'));
   }
   if (results.length > 0) {
@@ -543,7 +644,10 @@ export default async function codingAgentsSetup(
         result.path
       );
     }
-    printKeyRow(keySource.key, { keychain: useKeychain });
+    printKeyRow(keySource.key, {
+      keychain: useKeychain,
+      created: keySource.created,
+    });
     if (results.some(r => r.backupPath)) {
       output.print(chalk.dim('  Previous files saved alongside as .bak\n'));
     }
@@ -627,6 +731,15 @@ function failConsent(
     output.error(message);
   }
   return 1;
+}
+
+function isValidBaseUrl(value: string): boolean {
+  try {
+    const { protocol } = new URL(value);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 function failValidation(
