@@ -135,6 +135,27 @@ describe('printDeploymentStatus() — ready terminal state', () => {
     expect(ready).toBe('✓ Ready in 12s');
   });
 
+  it('suggests vercel curl when deployment guidance is enabled', async () => {
+    await printDeploymentStatus(
+      fakeClient(),
+      {
+        readyState: 'READY',
+        alias: [],
+        aliasError: undefined as any,
+        target: 'preview',
+        indications: [],
+        url: 'x.vercel.app',
+      },
+      () => '12s',
+      false,
+      true
+    );
+
+    expect(allPrintedLines().join('\n')).toContain(
+      'vercel curl https://x.vercel.app'
+    );
+  });
+
   it('Ready line has a leading blank line (separates from Aliased row)', async () => {
     // Anti-regression: the prior test uses allPrintedLines() which .trim()s
     // each call, so it cannot catch a regression that removes the leading

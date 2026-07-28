@@ -217,6 +217,40 @@ describe('Test `detectBuilders`', () => {
     );
   });
 
+  it('should add a top-level proxy builder to a services project', async () => {
+    const workPath = join(
+      __dirname,
+      'fixtures',
+      'e2e',
+      '11-services-python-cron'
+    );
+    const { builders, errors } = await detectBuilders(['proxy.ts'], undefined, {
+      services: {
+        web: {
+          root: '.',
+          runtime: 'python',
+          entrypoint: 'server.py',
+        },
+      },
+      proxy: { entrypoint: 'proxy.ts' },
+      projectSettings: {
+        framework: 'services',
+      },
+      workPath,
+    });
+
+    expect(errors).toBeNull();
+    expect(builders?.[0]).toEqual({
+      src: 'proxy.ts',
+      use: '@vercel/node',
+      config: {
+        zeroConfig: true,
+        middleware: true,
+        middlewareRuntime: 'nodejs',
+      },
+    });
+  });
+
   it('should error when the services framework is selected without experimentalServices', async () => {
     const { builders, errors, defaultRoutes, rewriteRoutes } =
       await detectBuilders(['package.json'], undefined, {
@@ -2953,6 +2987,185 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders[1].use).toBe('@vercel/static');
     expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_FILES);
     expect(builders.length).toBe(2);
+  });
+
+  it('builds the configured proxy instead of root middleware', async () => {
+    const files = ['proxy.ts', 'middleware.ts', 'index.html'];
+    const { builders, rewriteRoutes } = await invokeDetectBuildersAndThrow(
+      files,
+      null,
+      {
+        featHandleMiss,
+        proxy: { entrypoint: 'proxy.ts', matcher: '/api/:func*' },
+      }
+    );
+
+    expect(rewriteRoutes).toHaveLength(0);
+    expect(builders).toEqual([
+      {
+        src: 'proxy.ts',
+        use: '@vercel/node',
+        config: {
+          middleware: true,
+          middlewareRuntime: 'nodejs',
+          middlewareMatcher: '/api/:func*',
+          zeroConfig: true,
+        },
+      },
+      {
+        src: REGEX_NON_VERCEL_PLATFORM_FILES.replace('}', ',proxy.ts}'),
+        use: '@vercel/static',
+        config: {
+          zeroConfig: true,
+        },
+      },
+    ]);
+  });
+
+  it('builds a nested JavaScript proxy entrypoint', async () => {
+    const files = ['routing/proxy.js', 'index.html'];
+    const { builders } = await invokeDetectBuildersAndThrow(files, null, {
+      featHandleMiss,
+      proxy: { entrypoint: 'routing/proxy.js' },
+    });
+
+    expect(builders[0]).toEqual({
+      src: 'routing/proxy.js',
+      use: '@vercel/node',
+      config: {
+        middleware: true,
+        middlewareRuntime: 'nodejs',
+        zeroConfig: true,
+      },
+    });
+    expect(builders[1].src).toBe(
+      REGEX_NON_VERCEL_PLATFORM_FILES.replace('}', ',routing/proxy.js}')
+    );
+  });
+
+  it('applies functions config targeting the proxy entrypoint', async () => {
+    const { builders } = await invokeDetectBuildersAndThrow(
+      ['proxy.ts'],
+      null,
+      {
+        proxy: { entrypoint: 'proxy.ts' },
+        functions: {
+          'proxy.ts': {
+            maxDuration: 10,
+            memory: 1024,
+          },
+        },
+      }
+    );
+
+    expect(builders[0]).toEqual({
+      src: 'proxy.ts',
+      use: '@vercel/node',
+      config: {
+        functions: {
+          'proxy.ts': {
+            maxDuration: 10,
+            memory: 1024,
+          },
+        },
+        middleware: true,
+        middlewareRuntime: 'nodejs',
+        zeroConfig: true,
+      },
+    });
+  });
+
+  it.each([
+    'proxy.ts',
+    '**/*.ts',
+  ])('uses a functions runtime targeting the proxy through %s', async pattern => {
+    const { builders } = await invokeDetectBuildersAndThrow(
+      ['proxy.ts'],
+      null,
+      {
+        proxy: { entrypoint: 'proxy.ts' },
+        functions: {
+          [pattern]: {
+            runtime: 'some-runtime@1.0.0',
+          },
+        },
+      }
+    );
+
+    expect(builders[0]).toEqual({
+      src: 'proxy.ts',
+      use: 'some-runtime@1.0.0',
+      config: {
+        functions: {
+          [pattern]: {
+            runtime: 'some-runtime@1.0.0',
+          },
+        },
+        middleware: true,
+        zeroConfig: true,
+      },
+    });
+  });
+
+  it('rejects unsupported proxy entrypoint extensions', async () => {
+    const { errors } = await detectBuilders(['proxy.mjs'], null, {
+      proxy: { entrypoint: 'proxy.mjs' },
+    });
+
+    expect(errors).toEqual([
+      {
+        code: 'invalid_proxy_entrypoint',
+        message:
+          'The `proxy.entrypoint` path must end in `.js` or `.ts` and reference an executable file.',
+      },
+    ]);
+  });
+
+  it('rejects an invalid proxy matcher', async () => {
+    const { errors } = await detectBuilders(['proxy.ts'], null, {
+      proxy: { entrypoint: 'proxy.ts', matcher: 'api/:func*' },
+    });
+
+    expect(errors).toEqual([
+      {
+        code: 'invalid_proxy_matcher',
+        message:
+          'The `proxy.matcher` value must be a path matcher starting with `/`, or an array of path matchers starting with `/`.',
+      },
+    ]);
+  });
+
+  it('rejects a proxy entrypoint that does not exist', async () => {
+    const { errors } = await detectBuilders(['index.html'], null, {
+      proxy: { entrypoint: 'proxy.ts' },
+    });
+
+    expect(errors).toEqual([
+      {
+        code: 'proxy_entrypoint_not_found',
+        message:
+          'The proxy entrypoint `proxy.ts` does not exist. Set `proxy.entrypoint` to an existing `.js` or `.ts` file.',
+      },
+    ]);
+  });
+
+  it('rejects proxy configuration for framework-owned middleware', async () => {
+    const { errors } = await detectBuilders(
+      ['proxy.ts', 'package.json'],
+      null,
+      {
+        proxy: { entrypoint: 'proxy.ts' },
+        projectSettings: { framework: 'nextjs' },
+      }
+    );
+
+    expect(errors).toEqual([
+      {
+        code: 'proxy_framework_conflict',
+        message:
+          'The `proxy` property cannot be used with Next.js because the framework builds its own routing middleware.',
+      },
+    ]);
   });
 
   it('should not add middleware builder when "nextjs" framework is selected', async () => {

@@ -5,6 +5,7 @@ import { eraseLines } from 'ansi-escapes';
 import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
+import getTeams from '../../util/teams/get-teams';
 import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
 import { getCommandName } from '../../util/pkg-name';
 import { emoji } from '../../util/emoji';
@@ -25,6 +26,19 @@ export interface DeviceCodeTokens {
   refresh_token?: string;
 }
 
+interface DeviceCodeFlowOptions {
+  teamId?: string;
+  refreshToken?: string;
+  acrValues?: string;
+  /**
+   * A CLI version before 56.4.1 could persist the rotated access token after
+   * step-up without persisting its matching refresh token. Recover those
+   * sessions, along with authorizations that predate the `offline_access`
+   * requirement, by starting a full device login.
+   */
+  fallbackToLoginOnStepUpFailure?: boolean;
+}
+
 /**
  * Core device code flow: initiates the device authorization request,
  * displays the verification URL, opens the browser, and polls for
@@ -37,7 +51,7 @@ export interface DeviceCodeTokens {
  */
 export async function performDeviceCodeFlow(
   client: Client,
-  options?: { teamId?: string; refreshToken?: string; acrValues?: string }
+  options?: DeviceCodeFlowOptions
 ): Promise<DeviceCodeTokens | null> {
   const deviceAuthorizationResponse = await deviceAuthorizationRequest({
     refresh_token: options?.refreshToken,
@@ -52,7 +66,28 @@ export async function performDeviceCodeFlow(
     await processDeviceAuthorizationResponse(deviceAuthorizationResponse);
 
   if (deviceAuthorizationError) {
-    printError(deviceAuthorizationError);
+    if (
+      options?.fallbackToLoginOnStepUpFailure &&
+      options.refreshToken &&
+      isOAuthError(deviceAuthorizationError) &&
+      (deviceAuthorizationError.code === 'invalid_grant' ||
+        deviceAuthorizationError.code === 'invalid_scope')
+    ) {
+      o.debug(
+        `Step-up device authorization failed: ${deviceAuthorizationError.cause.message}`
+      );
+      o.log("Couldn't refresh the saved login. Starting a new login.");
+      return performDeviceCodeFlow(
+        client,
+        options.teamId ? { teamId: options.teamId } : undefined
+      );
+    }
+
+    printError(
+      isOAuthError(deviceAuthorizationError)
+        ? deviceAuthorizationError.cause
+        : deviceAuthorizationError
+    );
     return null;
   }
 
@@ -208,8 +243,11 @@ export async function login(
     return 1;
   }
 
-  // user is not currently authenticated on this machine
-  const isInitialLogin = !client.authConfig.token;
+  // The selected team (`vc switch`) survives in the global config even when
+  // the auth config was emptied after a failed token refresh, so its presence
+  // — not the presence of a token — is the signal that this login is a
+  // re-authentication on an already-configured machine.
+  const previousTeamId = client.config.currentTeam;
 
   client.updateAuthConfig({
     token: tokens.access_token,
@@ -218,10 +256,26 @@ export async function login(
     refreshToken: tokens.refresh_token,
   });
 
-  client.updateConfig({ currentTeam: undefined });
+  if (previousTeamId) {
+    let isMember = true;
+    try {
+      const teams = await getTeams(client);
+      isMember = teams.some(team => team.id === previousTeamId);
+    } catch {
+      // Membership could not be verified (e.g. transient API failure). Keep
+      // the selection instead of silently switching scope; a stale team can
+      // be corrected with `vc switch`.
+    }
 
-  // If we have a brand new login, update `currentTeam`
-  if (isInitialLogin) {
+    if (!isMember) {
+      o.warn(
+        'Your previously selected team is no longer accessible; switching to your default scope.'
+      );
+      client.updateConfig({ currentTeam: undefined });
+      await updateCurrentTeamAfterLogin(client);
+    }
+  } else {
+    client.updateConfig({ currentTeam: undefined });
     await updateCurrentTeamAfterLogin(client);
   }
 

@@ -53,6 +53,7 @@ import {
   detectBuilders,
   detectApiDirectory,
   detectApiExtensions,
+  getProxyBuilder,
   isOfficialRuntime,
   isExperimentalService,
   isExperimentalServiceV2,
@@ -791,6 +792,7 @@ export default class DevServer {
         featHandleMiss,
         cleanUrls,
         trailingSlash,
+        proxy: vercelConfig.proxy,
         workPath: this.cwd,
       });
       const {
@@ -864,6 +866,20 @@ export default class DevServer {
       });
       routes.push(...(defaultRoutes || []));
       vercelConfig.routes = routes;
+    } else if (hasResolvedServices && vercelConfig.proxy) {
+      // Service builds are owned by the orchestrator; only the top-level
+      // proxy participates in the dev server's build pipeline.
+      const { entrypoint } = vercelConfig.proxy;
+      if (!(await fs.pathExists(join(this.cwd, entrypoint)))) {
+        output.error(
+          `The proxy entrypoint \`${entrypoint}\` does not exist. Set \`proxy.entrypoint\` to an existing \`.js\` or \`.ts\` file.`
+        );
+        await this.exit();
+      }
+      vercelConfig.builds = vercelConfig.builds || [];
+      vercelConfig.builds.push(
+        getProxyBuilder(vercelConfig.proxy, 'latest', vercelConfig.functions)
+      );
     }
 
     if (this.sidecars === undefined) {

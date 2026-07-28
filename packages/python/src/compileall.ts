@@ -1,6 +1,7 @@
 import execa from 'execa';
 import { debug, FileFsRef, type Files } from '@vercel/build-utils';
 import fs from 'fs';
+import { tmpdir } from 'os';
 import { join, sep } from 'path';
 
 /** Converts a hung compileall subprocess into a skipped optimization. */
@@ -56,65 +57,63 @@ export function shouldCompileAll({
   return isCompileAllFlagEnabled();
 }
 
-interface CompileAllOptions {
-  /** Path to the venv Python binary (e.g. from getVenvPythonBin). */
-  pythonBin: string;
-  /** Files or directories to compile. */
-  filesOrDirectories: string[];
-  /** Environment to pass to the subprocess. */
-  env?: NodeJS.ProcessEnv;
-  /** Optional regular expression passed to compileall's -x skip filter. */
-  excludeRegex?: string;
-  /**
-   * Write bytecode into this pycache-prefix tree (via PYTHONPYCACHEPREFIX)
-   * instead of adjacent `__pycache__` directories.
-   */
-  pycachePrefix?: string;
-}
-
 /**
- * Run `python -m compileall` to precompile `.py` files into `.pyc` bytecode.
+ * Runs the Python compile coordinator to precompile `.py` files into `.pyc`
+ * bytecode.
  *
  * Uses `--invalidation-mode unchecked-hash` for fastest cold-start: the
  * bytecode is trusted without re-hashing the source on every import.  This
  * is safe because Lambda payloads are immutable after deployment.
  *
- * Failures are logged but not surfaced to the user
+ * Coordinator failures are logged but not surfaced to the user.
  */
 export async function runCompileAll({
   pythonBin,
-  filesOrDirectories,
+  sourceFiles,
   env,
-  excludeRegex,
   pycachePrefix,
-}: CompileAllOptions): Promise<void> {
-  if (filesOrDirectories.length === 0) return;
+}: {
+  pythonBin: string;
+  sourceFiles: string[];
+  env?: NodeJS.ProcessEnv;
+  pycachePrefix?: string;
+}): Promise<boolean> {
+  const uniqueSourceFiles = [...new Set(sourceFiles)];
+  if (uniqueSourceFiles.length === 0) {
+    return false;
+  }
 
-  const args = [
-    '-m',
-    'compileall',
-    '-q',
-    '-j',
-    '0',
-    '-f',
-    '--invalidation-mode',
-    'unchecked-hash',
-    ...(excludeRegex ? ['-x', excludeRegex] : []),
-    ...filesOrDirectories,
-  ];
-
-  const baseEnv = env || process.env;
-  const subprocessEnv = pycachePrefix
-    ? { ...baseEnv, PYTHONPYCACHEPREFIX: pycachePrefix }
-    : baseEnv;
+  let tempDir: string | undefined;
 
   try {
-    await execa(pythonBin, args, {
+    tempDir = await fs.promises.mkdtemp(
+      join(tmpdir(), 'vercel-python-compileall-')
+    );
+    const listPath = join(tempDir, 'pysources.json');
+    await fs.promises.writeFile(listPath, JSON.stringify(uniqueSourceFiles));
+    const scriptPath = join(__dirname, '..', 'templates', 'vc_compileall.py');
+
+    const baseEnv = env || process.env;
+    const subprocessEnv = pycachePrefix
+      ? { ...baseEnv, PYTHONPYCACHEPREFIX: pycachePrefix }
+      : baseEnv;
+
+    await execa(pythonBin, [scriptPath, listPath], {
       env: subprocessEnv,
       timeout: COMPILEALL_TIMEOUT_MS,
     });
+    return true;
   } catch (err) {
     debug(`compileall error details: ${JSON.stringify(err)}`);
+    return false;
+  } finally {
+    if (tempDir) {
+      try {
+        await fs.promises.rm(tempDir, { recursive: true, force: true });
+      } catch (err) {
+        debug(`compileall temporary file cleanup error: ${String(err)}`);
+      }
+    }
   }
 }
 
@@ -218,41 +217,6 @@ export interface BytecodeCollectionResult {
   totalSize: number;
   /** Per-item bytecode sizes for knapsack packing (keyed by package name or bundle path). */
   perItemSizes: Map<string, number>;
-}
-
-/**
- * Directories excluded from application bytecode compilation.
- * Mirrors the predefined excludes used by the source-file glob in the
- * builder so that compileall does not waste time on files that will
- * never enter the Lambda bundle.
- */
-const COMPILEALL_APP_EXCLUDED_DIRS = [
-  '.git',
-  '.vercel',
-  '.pnpm-store',
-  'node_modules',
-  '.next',
-  '.nuxt',
-  '.venv',
-  'venv',
-  '__pycache__',
-  '.mypy_cache',
-  '.ruff_cache',
-  'public',
-];
-
-function escapePythonRegex(value: string): string {
-  return value.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
-}
-
-/**
- * Build a Python regex for the `-x` flag of `compileall` that skips the
- * same directories the source-file glob excludes.
- */
-export function getCompileAllAppExcludeRegex(workPath: string): string {
-  const excludedDirs =
-    COMPILEALL_APP_EXCLUDED_DIRS.map(escapePythonRegex).join('|');
-  return `${escapePythonRegex(workPath)}[/\\\\](?:${excludedDirs})(?:[/\\\\]|$)`;
 }
 
 /**

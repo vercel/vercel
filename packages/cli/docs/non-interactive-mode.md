@@ -44,7 +44,7 @@ Implementations use **`outputActionRequired`** / **`outputAgentError`** (`packag
 
 ## Ordering of checks (implementers)
 
-- If a **required positional/flag is missing** in non-interactive mode, emit **`missing_arguments`** **before** other errors that depend on config state (e.g. stale `currentTeam`). Otherwise agents see the wrong `reason` (e.g. `current_team_invalid` instead of missing slug).
+- If a **required positional/flag is missing** in non-interactive mode, emit **`missing_arguments`** **before** other errors that depend on config state (e.g. stale `currentTeam`). Otherwise agents see the wrong `reason` (a config-state error instead of the missing slug).
 
 ## Tests (implementers)
 

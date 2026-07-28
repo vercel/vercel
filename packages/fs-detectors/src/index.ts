@@ -3,7 +3,10 @@ export {
   detectOutputDirectory,
   detectApiDirectory,
   detectApiExtensions,
+  getProxyBuilder,
+  validateProxyConfig,
   type Options as DetectBuildersOptions,
+  type ProxyConfig,
 } from './detect-builders';
 export {
   detectServices,

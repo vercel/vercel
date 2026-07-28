@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, projectOption } from '../../util/arg-common';
+import { formatOption, jsonOption, projectOption } from '../../util/arg-common';
 
 export const listSubcommand = {
   name: 'list',
@@ -9,6 +9,7 @@ export const listSubcommand = {
   arguments: [],
   options: [
     formatOption,
+    jsonOption,
     {
       name: 'limit',
       shorthand: null,
@@ -20,7 +21,7 @@ export const listSubcommand = {
   examples: [
     {
       name: 'List tokens as JSON',
-      value: `${packageName} tokens ls --format json`,
+      value: `${packageName} tokens ls --json`,
     },
   ],
 } as const;
@@ -37,6 +38,7 @@ export const addSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     {
       ...projectOption,
       description: 'Optional project ID to scope the token to',
@@ -60,7 +62,7 @@ export const removeSubcommand = {
       required: true,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Remove a token',

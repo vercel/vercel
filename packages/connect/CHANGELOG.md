@@ -1,5 +1,13 @@
 # @vercel/connect
 
+## 0.4.3
+
+### Patch Changes
+
+- f999343: Add token exchange subjects to `ConnectTokenParams`.
+- 726c7b4: Add `experimental_startInstallation` for creating Vercel Connect installation requests.
+  - @vercel/oidc@3.8.1
+
 ## 0.4.2
 
 ### Patch Changes
