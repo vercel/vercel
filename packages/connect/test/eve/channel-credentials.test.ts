@@ -66,13 +66,14 @@ describe('Eve channel credential helpers', () => {
       })
     );
 
-    await expect(
-      connectPhotonCredentials(
-        'photon/my-project',
-        {},
-        { vercelToken: 'vercel_token' }
-      )
-    ).resolves.toEqual({
+    const credentials = connectPhotonCredentials(
+      'photon/my-project',
+      {},
+      { vercelToken: 'vercel_token' }
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    await expect(credentials()).resolves.toEqual({
       projectId: 'photon-project',
       projectSecret: 'photon-secret',
     });
@@ -91,16 +92,18 @@ describe('Eve channel credential helpers', () => {
       jsonTokenResponse('photon-secret', { metadata })
     );
 
-    await expect(
-      connectPhotonCredentials(
-        'photon/my-project',
-        {},
-        {
-          vercelToken: 'vercel_token',
-          forceRefresh: true,
-        }
-      )
-    ).rejects.toThrow('Photon connector returned invalid credentials.');
+    const credentials = connectPhotonCredentials(
+      'photon/my-project',
+      {},
+      {
+        vercelToken: 'vercel_token',
+        forceRefresh: true,
+      }
+    );
+
+    await expect(credentials()).rejects.toThrow(
+      'Photon connector returned invalid credentials.'
+    );
   });
 
   it('keeps Slack credentials backed by an app-scoped Connect token', async () => {

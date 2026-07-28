@@ -34,6 +34,7 @@ export {
 } from './linear-credentials.js';
 export {
   connectPhotonCredentials,
+  type ConnectPhotonCredentialProvider,
   type PhotonCredentials,
   type ConnectPhotonCredentialsParams,
 } from './photon-credentials.js';
