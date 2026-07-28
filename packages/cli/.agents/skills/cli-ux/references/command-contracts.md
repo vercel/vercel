@@ -67,17 +67,17 @@ Current gaps to migrate incrementally:
 
 Link prompt map:
 
-| State                              | Human prompt/output                                                                                                                                                                  | Non-interactive                        |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
-| Multiple teams                     | searchable `Which team?` before project discovery                                                                                                                                    | `action_required: missing_scope` unless explicit signal or single choice |
-| Single team                        | no prompt; aligned `Team` row, then project discovery                                                                                                                                | proceeds with that team                |
-| One folder-name project match      | `Which project?` with the match labeled `(folder name)`, then search/create choices                                                                                                  | link only for explicit/repo-root match |
-| One repository project match       | direct interactive: `Which project?` with the match labeled `(linked by git)`; other paths: `Found existing project`, aligned `Project`/`Source`, then `Link repository to project?` | link only for explicit/repo-root match |
-| No project match                   | `Which project?` with `Search all projects` / `Create a new project`, then `Name?` when creating                                                                                     | require `--yes` or `project_not_found` |
-| Root choices exist                 | `Code directory?`                                                                                                                                                                    | require root flag/config/payload       |
-| Settings differ                    | `Customize settings?`                                                                                                                                                                | require flags/config/payload           |
-| Optional env pull                  | `Pull development environment variables into .env.local?`                                                                                                                            | skip unless explicitly requested       |
-| Stale/deleted link                 | show stale link, then concrete relink choice                                                                                                                                         | `action_required: stale_link`          |
+| State                         | Human prompt/output                                                                                                                                                                  | Non-interactive                                                          |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Multiple teams                | searchable `Which team?` before project discovery                                                                                                                                    | `action_required: missing_scope` unless explicit signal or single choice |
+| Single team                   | no prompt; aligned `Team` row, then project discovery                                                                                                                                | proceeds with that team                                                  |
+| One folder-name project match | `Which project?` with the match labeled `(folder name)`, then search/create choices                                                                                                  | link only for explicit/repo-root match                                   |
+| One repository project match  | direct interactive: `Which project?` with the match labeled `(linked by git)`; other paths: `Found existing project`, aligned `Project`/`Source`, then `Link repository to project?` | link only for explicit/repo-root match                                   |
+| No project match              | `Which project?` with `Search all projects` / `Create a new project`, then `Name?` when creating                                                                                     | require `--yes` or `project_not_found`                                   |
+| Root choices exist            | `Code directory?`                                                                                                                                                                    | require root flag/config/payload                                         |
+| Settings differ               | `Customize settings?`                                                                                                                                                                | require flags/config/payload                                             |
+| Optional env pull             | `Pull development environment variables into .env.local?`                                                                                                                            | skip unless explicitly requested                                         |
+| Stale/deleted link            | show stale link, then concrete relink choice                                                                                                                                         | `action_required: stale_link`                                            |
 
 Link acceptance matrix:
 
@@ -251,3 +251,51 @@ Env add stale-string sweep:
 ```bash
 rg -n "What's the name of the variable\\?|What's the value of|Is the value a sensitive secret\\?|How to proceed\\?|Add .* to which Environments \\(select multiple\\)\\?|Added Environment Variable|Overrode Environment Variable|✅|successfully" <paths>
 ```
+
+## Domains Buy Flow Contract
+
+Posture: **agents prepare, humans purchase.** The purchase POST is only reachable through the interactive flow; `--non-interactive`, `--format json`, and CI runs are prepare-only dry runs that never mutate.
+
+`vc domains buy` resolution order:
+
+1. Domain: positional, validated locally (registrable root domain via tldts, no subdomain).
+2. Scope: `getScope` context; price and availability fetched in parallel with `bailOn429`.
+3. Intent from flags: `--years` (must match the quoted term), `--auto-renew`/`--no-auto-renew`, `--expected-price` (optimistic-concurrency guard against the quote), and registrant contact flags (`--first-name`, `--last-name`, `--email`, `--phone`, `--address`, `--city`, `--state`, `--zip`, `--country`, `--company`) validated locally before any remote call result is shown.
+4. Plan (pure `buy-plan.ts`): facts + intent → buyable/blocked, missing contact flags, prefilled hand-off command, exit code.
+5. Interactive only: auto-renew prompt (when not flagged), contact prompts for missing fields only (country is a searchable select), one order-summary table, one explicit `Buy <domain> for $<price>?` confirmation (default no), then the purchase POST.
+
+Rules:
+
+- No purchase POST is ever reachable in non-interactive, JSON, or CI mode. The gate sits after preparation but is absolute.
+- `--yes` does not grant purchase consent and is stripped from the hand-off command (same rationale as `requires_consent`).
+- When the domain is buyable, structured modes emit `action_required` with `reason: purchase_requires_user`, `action: confirmation_required`, `userActionRequired: true`, price/term facts, `missingContactFields[]` (flag names), and `next[]` containing the fully-prefilled interactive `domains buy` command (single-quote shell quoting so history expansion cannot fire on paste, global flags preserved, `--non-interactive`/`--yes` excluded, `--expected-price` pinned to the quote) plus a dashboard fallback. Exit code **0**: prepared successfully.
+- Blocked states are `error` payloads with exit 1 and recovery `next[]`: `domain_not_available` → `domains search` / `domains transfer-in`; `tld_not_supported` → `domains search`; `price_changed` → rerun with the new `--expected-price`; `payment_failed` → billing dashboard URL; `additional_contact_info_required` → dashboard purchase (do not mislabel it as a TLD limitation).
+- Flags are additive: any provided flag skips its prompt; missing ones still prompt. Contact prompts reuse the same validation as the flags (single source in `collect-contact-information.ts`). The optional company prompt is skipped when all required fields came from flags.
+- Contact information never reaches telemetry (values redacted) and never appears in JSON output beyond the user-provided hand-off command.
+- Human and structured output render from the same plan/failure model (`buy-plan.ts`) so copy and recovery commands never diverge.
+- Spinners only in human mode; `output.stopSpinner()` before any structured write; JSON stdout stays clean.
+
+Domains buy prompt map:
+
+| State                           | Human prompt/output                                    | Non-interactive / JSON / CI                            |
+| ------------------------------- | ------------------------------------------------------ | ------------------------------------------------------ |
+| Missing domain                  | error with `domains --help` pointer                    | `error: missing_arguments` with `domains buy <domain>` |
+| Extra positional domains        | error with single-domain retry command                 | `error: invalid_arguments` with runnable retry         |
+| Invalid/subdomain input         | error                                                  | `error: invalid_domain`                                |
+| Domain unavailable              | error + search/transfer-in commands                    | `error: domain_not_available` + next[]                 |
+| Quote moved vs --expected-price | error + corrected command                              | `error: price_changed` + corrected command             |
+| Buyable                         | availability line, prompts, summary, single confirm    | `action_required: purchase_requires_user`, exit 0      |
+| Auto-renew unresolved           | `Auto renew yearly for $N?` (default yes)              | omitted from payload; hand-off command omits the flag  |
+| Missing contact fields          | prompts for missing fields only; country search-select | listed in `missingContactFields[]`, never prompted     |
+| Purchase succeeds               | `✓ Domain <d> purchased` + verify/inspect/alias next   | unreachable                                            |
+| Payment declined                | error + billing URL command                            | unreachable                                            |
+
+Domains buy acceptance matrix:
+
+- flags parse/validate (`--years`, `--expected-price`, contradictory auto-renew flags, invalid contact values, surplus positional domains)
+- pure plan logic (buyable, unavailable, quote-missing, years mismatch, price change, missing contact fields)
+- structured payload shape parsed from stdout (status, reason, exit codes 0/1)
+- prefilled command generation: single-quote quoting (history-expansion safe), contact flag carry-through, `--non-interactive`/`--yes` filtering
+- TTY prompts with and without prefilled flags; single confirmation; decline path makes no purchase
+- CI emits the structured payload, not a prose error
+- telemetry redacts every contact value

@@ -72,7 +72,7 @@ export default async function purchaseDomain(
         return new ERRORS.UnsupportedTLD(name);
       }
       if (err.code === 'additional_contact_info_required') {
-        return new ERRORS.TLDNotSupportedViaCLI(name);
+        return new ERRORS.DomainRegistrationContactInfoRequired(name);
       }
     }
     throw err;

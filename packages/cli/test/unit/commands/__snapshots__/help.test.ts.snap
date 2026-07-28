@@ -2074,9 +2074,28 @@ exports[`help command > domains help output snapshots > domains add help output 
 
 exports[`help command > domains help output snapshots > domains buy help output snapshots > domains buy help column width 120 1`] = `
 "
-  ▲ vercel domains buy domain
+  ▲ vercel domains buy domain [options]
 
   Purchase a new domain name                                                                                            
+
+  Options:
+
+       --address <ADDRESS>     Registrant street address                                                                     
+       --auto-renew            Renew the domain automatically at the end of the term                                         
+       --city <CITY>           Registrant city                                                                               
+       --company <NAME>        Registrant company name (optional)                                                            
+       --country <CC>          Registrant two-letter country code (e.g. US)                                                  
+       --email <EMAIL>         Registrant email address                                                                      
+       --expected-price <USD>  Refuse to purchase when the quoted purchase price differs from this amount                    
+       --first-name <NAME>     Registrant first name                                                                         
+  -F,  --format <FORMAT>       Specify the output format (json)                                                              
+       --last-name <NAME>      Registrant last name                                                                          
+       --no-auto-renew         Do not renew the domain automatically                                                         
+       --phone <PHONE>         Registrant phone number with country code (e.g. +15551234567)                                 
+       --state <STATE>         Registrant state or province                                                                  
+       --years <NUMBER>        Registration term in years (must match the quoted term for the domain)                        
+       --zip <ZIP>             Registrant postal/ZIP code                                                                    
+
 
   Global Options:
 
@@ -2091,6 +2110,24 @@ exports[`help command > domains help output snapshots > domains buy help output 
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
+
+  Examples:
+
+  - Buy a domain interactively
+
+    $ vercel domains buy example.com
+
+  - Prefill purchase details so only missing ones are prompted
+
+    $ vercel domains buy example.com --years 1 --auto-renew --first-name Jane --last-name Doe --email jane@example.com --country US
+
+  - Agent-friendly dry run: checks availability and price, then returns the prefilled interactive command (never purchases; exit code 0 when the domain is buyable)
+
+    $ vercel domains buy example.com --non-interactive
+
+  - JSON output with the same prepare-only behavior
+
+    $ vercel domains buy example.com --format json
 
 "
 `;
