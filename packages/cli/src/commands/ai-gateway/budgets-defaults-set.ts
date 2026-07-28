@@ -1,9 +1,8 @@
 import type Client from '../../util/client';
 import {
-  getBudgetDefault,
-  upsertBudgetDefault,
+  upsertScopeBudgetDefault,
+  parseBudgetDefaultScope,
   type BudgetRefreshPeriod,
-  type UpsertBudgetDefaultInput,
 } from '../../util/ai-gateway/budgets';
 import { ensureTeam } from '../../util/ai-gateway/ensure-team';
 import { printAlignedLabel } from '../../util/output/print-aligned-label';
@@ -23,31 +22,6 @@ const REFRESH_PERIODS: BudgetRefreshPeriod[] = [
   'none',
 ];
 
-// A tier flag omitted → undefined (unchanged); `none` → null (clear); a number
-// (>= 1) sets it. Anything else is a validation error.
-function parseTier(
-  raw: string | undefined,
-  flag: string
-): { value: number | null | undefined } | { error: string } {
-  if (raw === undefined) {
-    return { value: undefined };
-  }
-  if (raw === 'none') {
-    return { value: null };
-  }
-  const amount = Number(raw);
-  if (Number.isNaN(amount) || amount < 1) {
-    return {
-      error: `${flag} must be a number of at least 1, or 'none' to clear the tier.`,
-    };
-  }
-  return { value: amount };
-}
-
-function tier(amount: number | undefined): string {
-  return amount === undefined ? 'Not set' : `$${amount}`;
-}
-
 export default async function set(client: Client, argv: string[]) {
   const telemetry = new AiGatewayBudgetsDefaultsSetTelemetryClient({
     opts: {
@@ -65,14 +39,13 @@ export default async function set(client: Client, argv: string[]) {
     printError(error);
     return 1;
   }
-  const { flags: opts } = parsedArgs;
+  const { args, flags: opts } = parsedArgs;
 
-  const perProjectRaw = opts['--per-project'] as string | undefined;
-  const perApiKeyRaw = opts['--per-api-key'] as string | undefined;
+  const limit = opts['--limit'] as number | undefined;
   const refreshPeriod = opts['--refresh-period'] as string | undefined;
 
-  telemetry.trackCliOptionPerProject(perProjectRaw);
-  telemetry.trackCliOptionPerApiKey(perApiKeyRaw);
+  telemetry.trackCliArgumentScope(args[0]);
+  telemetry.trackCliOptionLimit(limit);
   telemetry.trackCliOptionRefreshPeriod(refreshPeriod);
   telemetry.trackCliOptionFormat(opts['--format']);
 
@@ -83,26 +56,17 @@ export default async function set(client: Client, argv: string[]) {
   }
   const asJson = formatResult.jsonOutput;
 
-  const perProject = parseTier(perProjectRaw, '--per-project');
-  if ('error' in perProject) {
-    output.error(perProject.error);
+  const scopeResult = parseBudgetDefaultScope(args);
+  if ('error' in scopeResult) {
+    output.error(scopeResult.error);
     return 1;
   }
-  const perApiKey = parseTier(perApiKeyRaw, '--per-api-key');
-  if ('error' in perApiKey) {
-    output.error(perApiKey.error);
-    return 1;
-  }
+  const { scopeType } = scopeResult;
 
-  const noTierChange =
-    perProject.value === undefined && perApiKey.value === undefined;
-  if (noTierChange && refreshPeriod === undefined) {
-    output.error(
-      'Nothing to set. Pass --per-project, --per-api-key, or --refresh-period.'
-    );
+  if (limit === undefined || Number.isNaN(limit) || limit < 1) {
+    output.error('The --limit flag is required and must be at least 1.');
     return 1;
   }
-
   if (
     refreshPeriod !== undefined &&
     !REFRESH_PERIODS.includes(refreshPeriod as BudgetRefreshPeriod)
@@ -120,33 +84,19 @@ export default async function set(client: Client, argv: string[]) {
   output.spinner('Setting budget default…');
 
   try {
-    // The upsert always carries a refreshPeriod (shared across tiers); when the
-    // caller doesn't pass one, keep the existing policy's cadence, else default
-    // to monthly so a first-time tier-only set still has a schedule.
-    let resolvedRefresh = refreshPeriod as BudgetRefreshPeriod | undefined;
-    if (resolvedRefresh === undefined) {
-      const current = await getBudgetDefault(client);
-      resolvedRefresh = current?.refreshPeriod ?? 'monthly';
-    }
-
-    const input: UpsertBudgetDefaultInput = { refreshPeriod: resolvedRefresh };
-    if (perProject.value !== undefined) {
-      input.perProjectLimit = perProject.value;
-    }
-    if (perApiKey.value !== undefined) {
-      input.perApiKeyLimit = perApiKey.value;
-    }
-
-    const budgetDefault = await upsertBudgetDefault(client, input);
+    const budgetDefault = await upsertScopeBudgetDefault(client, {
+      scopeType,
+      limitAmount: limit,
+      refreshPeriod: (refreshPeriod as BudgetRefreshPeriod) ?? 'monthly',
+    });
 
     output.stopSpinner();
 
     if (asJson) {
       client.stdout.write(`${JSON.stringify(budgetDefault, null, 2)}\n`);
     } else {
-      printAlignedLabel('Set budget default', '', { gutter: '✓' });
-      printAlignedLabel('Per project', tier(budgetDefault.perProjectLimit));
-      printAlignedLabel('Per api key', tier(budgetDefault.perApiKeyLimit));
+      printAlignedLabel('Set default', scopeType, { gutter: '✓' });
+      printAlignedLabel('Limit', `$${budgetDefault.limitAmount}`);
       printAlignedLabel('Refresh', budgetDefault.refreshPeriod);
     }
 

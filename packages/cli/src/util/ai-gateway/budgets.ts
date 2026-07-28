@@ -113,48 +113,82 @@ export async function removeBudget(
   });
 }
 
-// A single per-team default policy; one refreshPeriod is shared across tiers.
-export type BudgetDefault = {
-  teamId: string;
-  teamLimit?: number;
-  perProjectLimit?: number;
-  perApiKeyLimit?: number;
-  perUserLimit?: number;
+// Scopes exposed as `budgets defaults set|remove <scope>`. The API also stores
+// `team` and `user` defaults, but the CLI (like the dashboard) only surfaces the
+// project and api-key tiers; `user` isn't released yet.
+export type BudgetDefaultScopeType = 'project' | 'api-key';
+
+export const BUDGET_DEFAULT_SCOPE_TYPES: BudgetDefaultScopeType[] = [
+  'project',
+  'api-key',
+];
+
+// Each scope keeps its own limit and refreshPeriod (per-scope, not a single
+// concatenated policy). The list endpoint may also return team/user rows.
+export type ScopeBudgetDefault = {
+  scopeType: BudgetDefaultScopeType | 'team' | 'user';
+  limitAmount: number;
   refreshPeriod: BudgetRefreshPeriod;
   active: boolean;
   createdAt: number;
   updatedAt: number;
 };
 
-// For each tier: a number sets it, null clears it, undefined leaves it unchanged.
-export type UpsertBudgetDefaultInput = {
-  perProjectLimit?: number | null;
-  perApiKeyLimit?: number | null;
-  perUserLimit?: number | null;
-  refreshPeriod?: BudgetRefreshPeriod;
+export type UpsertScopeBudgetDefaultInput = {
+  scopeType: BudgetDefaultScopeType;
+  limitAmount: number;
+  refreshPeriod: BudgetRefreshPeriod;
 };
 
-export async function getBudgetDefault(
-  client: Client
-): Promise<BudgetDefault | null> {
-  // The endpoint returns 200 with a null body when no policy is set.
-  const budgetDefault = await client.fetch<BudgetDefault | null>(
-    '/ai-gateway/budgets/defaults',
-    { method: 'GET' }
-  );
-  return budgetDefault ?? null;
+export function parseBudgetDefaultScope(
+  args: string[]
+): { scopeType: BudgetDefaultScopeType } | { error: string } {
+  const [scopeArg, ...rest] = args;
+
+  if (!scopeArg) {
+    return {
+      error: `Expected a scope. Specify ${BUDGET_DEFAULT_SCOPE_TYPES.join(' or ')}.`,
+    };
+  }
+  if (
+    !BUDGET_DEFAULT_SCOPE_TYPES.includes(scopeArg as BudgetDefaultScopeType)
+  ) {
+    return {
+      error: `Unknown scope "${scopeArg}". Expected one of: ${BUDGET_DEFAULT_SCOPE_TYPES.join(', ')}.`,
+    };
+  }
+  if (rest.length > 0) {
+    return { error: `Unexpected argument "${rest[0]}".` };
+  }
+  return { scopeType: scopeArg as BudgetDefaultScopeType };
 }
 
-export async function upsertBudgetDefault(
+export async function listScopeBudgetDefaults(
+  client: Client
+): Promise<ScopeBudgetDefault[]> {
+  const { defaults } = await client.fetch<{ defaults: ScopeBudgetDefault[] }>(
+    '/ai-gateway/budgets/defaults/list',
+    { method: 'GET' }
+  );
+  return defaults ?? [];
+}
+
+export async function upsertScopeBudgetDefault(
   client: Client,
-  input: UpsertBudgetDefaultInput
-): Promise<BudgetDefault> {
-  return client.fetch<BudgetDefault>('/ai-gateway/budgets/defaults', {
+  input: UpsertScopeBudgetDefaultInput
+): Promise<ScopeBudgetDefault> {
+  return client.fetch<ScopeBudgetDefault>('/ai-gateway/budgets/defaults', {
     method: 'PUT',
     body: input,
   });
 }
 
-export async function archiveBudgetDefault(client: Client): Promise<void> {
-  await client.fetch('/ai-gateway/budgets/defaults', { method: 'DELETE' });
+export async function deleteScopeBudgetDefault(
+  client: Client,
+  scopeType: BudgetDefaultScopeType
+): Promise<void> {
+  const params = new URLSearchParams({ scopeType });
+  await client.fetch(`/ai-gateway/budgets/defaults?${params.toString()}`, {
+    method: 'DELETE',
+  });
 }

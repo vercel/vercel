@@ -6,15 +6,15 @@ export class AiGatewayBudgetsDefaultsSetTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof budgetsDefaultsSetSubcommand>
 {
-  trackCliOptionPerProject(value: string | undefined) {
-    if (value) {
-      this.trackCliOption({ option: 'per-project', value: this.redactedValue });
+  trackCliArgumentScope(scope: string | undefined) {
+    if (scope) {
+      this.trackCliArgument({ arg: 'scope', value: scope });
     }
   }
 
-  trackCliOptionPerApiKey(value: string | undefined) {
-    if (value) {
-      this.trackCliOption({ option: 'per-api-key', value: this.redactedValue });
+  trackCliOptionLimit(limit: number | undefined) {
+    if (limit !== undefined) {
+      this.trackCliOption({ option: 'limit', value: this.redactedValue });
     }
   }
 

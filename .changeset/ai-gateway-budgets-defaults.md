@@ -2,4 +2,4 @@
 'vercel': minor
 ---
 
-Add `vercel ai-gateway budgets defaults` (inspect/set/remove) to manage the team-wide budget default policy (per-project and per-api-key tiers)
+Add `vercel ai-gateway budgets defaults` (list/set/remove) to manage per-scope AI Gateway budget defaults (project and api-key), each with its own limit and refresh period

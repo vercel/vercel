@@ -3,12 +3,12 @@ import { parseArguments } from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
 import { type Command, help } from '../help';
-import inspect from './budgets-defaults-inspect';
+import list from './budgets-defaults-list';
 import set from './budgets-defaults-set';
 import remove from './budgets-defaults-remove';
 import {
   budgetsDefaultsSubcommand,
-  budgetsDefaultsInspectSubcommand,
+  budgetsDefaultsListSubcommand,
   budgetsDefaultsSetSubcommand,
   budgetsDefaultsRemoveSubcommand,
 } from './command';
@@ -19,7 +19,7 @@ import { AiGatewayBudgetsDefaultsTelemetryClient } from '../../util/telemetry/co
 import { printError } from '../../util/error';
 
 const COMMAND_CONFIG = {
-  inspect: getCommandAliases(budgetsDefaultsInspectSubcommand),
+  list: getCommandAliases(budgetsDefaultsListSubcommand),
   set: getCommandAliases(budgetsDefaultsSetSubcommand),
   remove: getCommandAliases(budgetsDefaultsRemoveSubcommand),
 };
@@ -73,17 +73,17 @@ export default async function budgetsDefaults(client: Client) {
   }
 
   switch (subcommand) {
-    case 'inspect':
+    case 'list':
       if (needHelp) {
         telemetry.trackCliFlagHelp(
           'ai-gateway budgets defaults',
           subcommandOriginal
         );
-        printHelp(budgetsDefaultsInspectSubcommand);
+        printHelp(budgetsDefaultsListSubcommand);
         return 2;
       }
-      telemetry.trackCliSubcommandInspect(subcommandOriginal);
-      return inspect(client, args);
+      telemetry.trackCliSubcommandList(subcommandOriginal);
+      return list(client, args);
     case 'set':
       if (needHelp) {
         telemetry.trackCliFlagHelp(

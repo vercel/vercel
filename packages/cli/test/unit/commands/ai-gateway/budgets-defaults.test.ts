@@ -4,23 +4,40 @@ import aiGateway from '../../../../src/commands/ai-gateway';
 import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
 
-const budgetDefault = {
-  teamId: 'team_abc',
-  perProjectLimit: 200,
-  perApiKeyLimit: 50,
+const projectDefault = {
+  scopeType: 'project',
+  limitAmount: 200,
   refreshPeriod: 'monthly',
   active: true,
   createdAt: 1,
   updatedAt: 2,
 };
 
-function useGetBudgetDefault(body: unknown = budgetDefault) {
-  client.scenario.get('/ai-gateway/budgets/defaults', (_req, res) => {
-    res.json(body);
+const apiKeyDefault = {
+  scopeType: 'api-key',
+  limitAmount: 50,
+  refreshPeriod: 'daily',
+  active: true,
+  createdAt: 1,
+  updatedAt: 2,
+};
+
+const userDefault = {
+  scopeType: 'user',
+  limitAmount: 20,
+  refreshPeriod: 'monthly',
+  active: true,
+  createdAt: 1,
+  updatedAt: 2,
+};
+
+function useListDefaults(defaults: unknown[]) {
+  client.scenario.get('/ai-gateway/budgets/defaults/list', (_req, res) => {
+    res.json({ defaults });
   });
 }
 
-function useUpsertBudgetDefault(response: unknown = budgetDefault) {
+function useUpsertDefault(response: unknown = projectDefault) {
   let captured: unknown;
   client.scenario.put('/ai-gateway/budgets/defaults', (req, res) => {
     captured = req.body;
@@ -29,202 +46,227 @@ function useUpsertBudgetDefault(response: unknown = budgetDefault) {
   return () => captured;
 }
 
-function useDeleteBudgetDefault() {
-  client.scenario.delete('/ai-gateway/budgets/defaults', (_req, res) => {
+function useDeleteDefault() {
+  let query: unknown;
+  client.scenario.delete('/ai-gateway/budgets/defaults', (req, res) => {
+    query = req.query;
     res.json({});
   });
+  return () => query;
 }
 
 describe('ai-gateway budgets defaults', () => {
-  describe('inspect', () => {
-    it('shows the default policy', async () => {
+  describe('list', () => {
+    it('lists project and api-key defaults in a table', async () => {
       const team = useTeam();
       useUser();
-      useGetBudgetDefault();
+      useListDefaults([projectDefault, apiKeyDefault]);
       client.config.currentTeam = team.id;
-      client.setArgv('ai-gateway', 'budgets', 'defaults', 'inspect');
+      client.setArgv('ai-gateway', 'budgets', 'defaults', 'list');
 
       const exitCodePromise = aiGateway(client);
 
-      await expect(client.stderr).toOutput('Per project');
+      await expect(client.stdout).toOutput('api-key');
       expect(await exitCodePromise).toBe(0);
     });
 
-    it('reports when no default policy is set', async () => {
+    it('hides scopes the CLI does not surface yet (user)', async () => {
       const team = useTeam();
       useUser();
-      useGetBudgetDefault(null);
+      useListDefaults([userDefault]);
       client.config.currentTeam = team.id;
-      client.setArgv('ai-gateway', 'budgets', 'defaults', 'inspect');
+      client.setArgv('ai-gateway', 'budgets', 'defaults', 'list');
 
       const exitCodePromise = aiGateway(client);
 
-      await expect(client.stderr).toOutput('No budget default set');
+      // The only default is a user-scope one, which is filtered out, so the
+      // command reports an empty state rather than showing it.
+      await expect(client.stderr).toOutput('No budget defaults set');
+      expect(await exitCodePromise).toBe(0);
+    });
+
+    it('reports when there are no defaults', async () => {
+      const team = useTeam();
+      useUser();
+      useListDefaults([]);
+      client.config.currentTeam = team.id;
+      client.setArgv('ai-gateway', 'budgets', 'defaults', 'ls');
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput('No budget defaults set');
       expect(await exitCodePromise).toBe(0);
     });
 
     it('outputs JSON with --format json', async () => {
       const team = useTeam();
       useUser();
-      useGetBudgetDefault();
+      useListDefaults([projectDefault]);
       client.config.currentTeam = team.id;
       client.setArgv(
         'ai-gateway',
         'budgets',
         'defaults',
-        'inspect',
+        'list',
         '--format',
         'json'
       );
 
       const exitCodePromise = aiGateway(client);
 
-      await expect(client.stdout).toOutput('"perProjectLimit"');
+      await expect(client.stdout).toOutput('"defaults"');
       expect(await exitCodePromise).toBe(0);
     });
   });
 
   describe('set', () => {
-    it('upserts the per-project and per-api-key tiers', async () => {
+    it('sets the project default', async () => {
       const team = useTeam();
       useUser();
-      const getBody = useUpsertBudgetDefault();
+      const getBody = useUpsertDefault();
       client.config.currentTeam = team.id;
       client.setArgv(
         'ai-gateway',
         'budgets',
         'defaults',
         'set',
-        '--per-project',
+        'project',
+        '--limit',
         '200',
-        '--per-api-key',
-        '50',
         '--refresh-period',
         'monthly'
       );
 
       const exitCodePromise = aiGateway(client);
 
-      await expect(client.stderr).toOutput('Set budget default');
+      await expect(client.stderr).toOutput('Set default');
       expect(await exitCodePromise).toBe(0);
       expect(getBody()).toMatchObject({
-        perProjectLimit: 200,
-        perApiKeyLimit: 50,
+        scopeType: 'project',
+        limitAmount: 200,
         refreshPeriod: 'monthly',
       });
     });
 
-    it('clears a tier with none', async () => {
+    it('defaults the refresh period to monthly', async () => {
       const team = useTeam();
       useUser();
-      const getBody = useUpsertBudgetDefault();
+      const getBody = useUpsertDefault(apiKeyDefault);
       client.config.currentTeam = team.id;
       client.setArgv(
         'ai-gateway',
         'budgets',
         'defaults',
         'set',
-        '--per-project',
-        'none',
-        '--refresh-period',
-        'monthly'
+        'api-key',
+        '--limit',
+        '50'
       );
 
       const exitCode = await aiGateway(client);
 
       expect(exitCode).toBe(0);
       expect(getBody()).toMatchObject({
-        perProjectLimit: null,
+        scopeType: 'api-key',
+        limitAmount: 50,
         refreshPeriod: 'monthly',
       });
     });
 
-    it('reuses the existing refresh period when omitted', async () => {
-      const team = useTeam();
-      useUser();
-      useGetBudgetDefault({ ...budgetDefault, refreshPeriod: 'weekly' });
-      const getBody = useUpsertBudgetDefault();
-      client.config.currentTeam = team.id;
+    it('requires a scope', async () => {
       client.setArgv(
         'ai-gateway',
         'budgets',
         'defaults',
         'set',
-        '--per-project',
-        '300'
+        '--limit',
+        '100'
       );
-
-      const exitCode = await aiGateway(client);
-
-      expect(exitCode).toBe(0);
-      expect(getBody()).toMatchObject({
-        perProjectLimit: 300,
-        refreshPeriod: 'weekly',
-      });
-    });
-
-    it('errors when no tier or refresh period is passed', async () => {
-      client.setArgv('ai-gateway', 'budgets', 'defaults', 'set');
 
       const exitCodePromise = aiGateway(client);
 
-      await expect(client.stderr).toOutput('Nothing to set');
+      await expect(client.stderr).toOutput('Expected a scope');
       expect(await exitCodePromise).toBe(1);
     });
 
-    it('rejects a tier amount below 1', async () => {
+    it('rejects an unsupported scope', async () => {
       client.setArgv(
         'ai-gateway',
         'budgets',
         'defaults',
         'set',
-        '--per-project',
+        'team',
+        '--limit',
+        '100'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput('Unknown scope');
+      expect(await exitCodePromise).toBe(1);
+    });
+
+    it('requires a --limit of at least 1', async () => {
+      client.setArgv(
+        'ai-gateway',
+        'budgets',
+        'defaults',
+        'set',
+        'project',
+        '--limit',
         '0'
       );
 
       const exitCodePromise = aiGateway(client);
 
-      await expect(client.stderr).toOutput('at least 1');
+      await expect(client.stderr).toOutput('--limit');
       expect(await exitCodePromise).toBe(1);
     });
 
     it('outputs JSON with --format json', async () => {
       const team = useTeam();
       useUser();
-      useUpsertBudgetDefault();
+      useUpsertDefault();
       client.config.currentTeam = team.id;
       client.setArgv(
         'ai-gateway',
         'budgets',
         'defaults',
         'set',
-        '--per-project',
+        'project',
+        '--limit',
         '200',
-        '--refresh-period',
-        'monthly',
         '--format',
         'json'
       );
 
       const exitCodePromise = aiGateway(client);
 
-      await expect(client.stdout).toOutput('"perProjectLimit"');
+      await expect(client.stdout).toOutput('"limitAmount"');
       expect(await exitCodePromise).toBe(0);
     });
   });
 
   describe('remove', () => {
-    it('archives the policy with --yes', async () => {
+    it('removes a scope default with --yes', async () => {
       const team = useTeam();
       useUser();
-      useDeleteBudgetDefault();
+      const getQuery = useDeleteDefault();
       client.config.currentTeam = team.id;
-      client.setArgv('ai-gateway', 'budgets', 'defaults', 'remove', '--yes');
+      client.setArgv(
+        'ai-gateway',
+        'budgets',
+        'defaults',
+        'remove',
+        'project',
+        '--yes'
+      );
 
       const exitCodePromise = aiGateway(client);
 
       await expect(client.stderr).toOutput('Removed');
       expect(await exitCodePromise).toBe(0);
+      expect(getQuery()).toMatchObject({ scopeType: 'project' });
     });
 
     it('requires --yes in non-interactive mode', async () => {
@@ -232,7 +274,7 @@ describe('ai-gateway budgets defaults', () => {
       useUser();
       client.nonInteractive = true;
       client.config.currentTeam = team.id;
-      client.setArgv('ai-gateway', 'budgets', 'defaults', 'remove');
+      client.setArgv('ai-gateway', 'budgets', 'defaults', 'remove', 'project');
 
       const exitCodePromise = aiGateway(client);
 
@@ -240,16 +282,26 @@ describe('ai-gateway budgets defaults', () => {
       expect(await exitCodePromise).toBe(1);
     });
 
+    it('requires a scope', async () => {
+      client.setArgv('ai-gateway', 'budgets', 'defaults', 'remove', '--yes');
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput('Expected a scope');
+      expect(await exitCodePromise).toBe(1);
+    });
+
     it('outputs JSON with --format json', async () => {
       const team = useTeam();
       useUser();
-      useDeleteBudgetDefault();
+      useDeleteDefault();
       client.config.currentTeam = team.id;
       client.setArgv(
         'ai-gateway',
         'budgets',
         'defaults',
         'remove',
+        'project',
         '--yes',
         '--format',
         'json'

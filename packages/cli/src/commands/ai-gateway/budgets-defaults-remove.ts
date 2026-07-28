@@ -1,5 +1,8 @@
 import type Client from '../../util/client';
-import { archiveBudgetDefault } from '../../util/ai-gateway/budgets';
+import {
+  deleteScopeBudgetDefault,
+  parseBudgetDefaultScope,
+} from '../../util/ai-gateway/budgets';
 import { ensureTeam } from '../../util/ai-gateway/ensure-team';
 import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import output from '../../output-manager';
@@ -28,10 +31,11 @@ export default async function remove(client: Client, argv: string[]) {
     printError(error);
     return 1;
   }
-  const { flags: opts } = parsedArgs;
+  const { args, flags: opts } = parsedArgs;
 
   const yes = opts['--yes'] as boolean | undefined;
 
+  telemetry.trackCliArgumentScope(args[0]);
   telemetry.trackCliFlagYes(yes);
   telemetry.trackCliOptionFormat(opts['--format']);
 
@@ -41,6 +45,13 @@ export default async function remove(client: Client, argv: string[]) {
     return 1;
   }
   const asJson = formatResult.jsonOutput;
+
+  const scopeResult = parseBudgetDefaultScope(args);
+  if ('error' in scopeResult) {
+    output.error(scopeResult.error);
+    return 1;
+  }
+  const { scopeType } = scopeResult;
 
   if (!(await ensureTeam(client))) {
     return 1;
@@ -52,7 +63,7 @@ export default async function remove(client: Client, argv: string[]) {
       return 1;
     }
     const confirmed = await client.input.confirm(
-      'Remove the budget default policy?',
+      `Remove the ${scopeType} budget default?`,
       false
     );
     if (!confirmed) {
@@ -64,12 +75,14 @@ export default async function remove(client: Client, argv: string[]) {
   output.spinner('Removing budget default…');
 
   try {
-    await archiveBudgetDefault(client);
+    await deleteScopeBudgetDefault(client, scopeType);
     output.stopSpinner();
     if (asJson) {
-      client.stdout.write(`${JSON.stringify({ removed: true }, null, 2)}\n`);
+      client.stdout.write(
+        `${JSON.stringify({ scopeType, removed: true }, null, 2)}\n`
+      );
     } else {
-      printAlignedLabel('Removed', 'budget default', { gutter: '✓' });
+      printAlignedLabel('Removed', `${scopeType} default`, { gutter: '✓' });
     }
     return 0;
   } catch (err: unknown) {

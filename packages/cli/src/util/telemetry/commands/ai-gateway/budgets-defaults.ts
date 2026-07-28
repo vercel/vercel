@@ -6,8 +6,8 @@ export class AiGatewayBudgetsDefaultsTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof budgetsDefaultsSubcommand>
 {
-  trackCliSubcommandInspect(actual: string) {
-    this.trackCliSubcommand({ subcommand: 'inspect', value: actual });
+  trackCliSubcommandList(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'list', value: actual });
   }
 
   trackCliSubcommandSet(actual: string) {

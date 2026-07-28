@@ -1,10 +1,10 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { budgetsDefaultsInspectSubcommand } from '../../../../commands/ai-gateway/command';
+import type { budgetsDefaultsListSubcommand } from '../../../../commands/ai-gateway/command';
 
-export class AiGatewayBudgetsDefaultsInspectTelemetryClient
+export class AiGatewayBudgetsDefaultsListTelemetryClient
   extends TelemetryClient
-  implements TelemetryMethods<typeof budgetsDefaultsInspectSubcommand>
+  implements TelemetryMethods<typeof budgetsDefaultsListSubcommand>
 {
   trackCliOptionFormat(format: string | undefined) {
     if (format) {
