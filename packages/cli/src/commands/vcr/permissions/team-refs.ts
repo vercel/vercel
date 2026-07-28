@@ -21,6 +21,8 @@ export interface TeamOperationFailure {
   message: string;
 }
 
+export const MAX_CONCURRENT_REQUESTS = 10;
+
 /**
  * Parses team references from positional arguments. Each argument may contain
  * a single team id/slug or a comma-separated list (`team_123,my-team`).

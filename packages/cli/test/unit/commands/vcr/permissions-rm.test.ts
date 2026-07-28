@@ -114,6 +114,29 @@ describe('vcr permissions rm', () => {
     ]);
   });
 
+  it('caps concurrent requests at 10', async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    client.scenario.delete(
+      '/v1/vcr/repository/my-app/permissions',
+      (_req, res) => {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        setTimeout(() => {
+          inFlight--;
+          res.status(204).end();
+        }, 5);
+      }
+    );
+
+    const teams = Array.from({ length: 25 }, (_, i) => `team-${i}`).join(',');
+    client.setArgv('vcr', 'permissions', 'my-app', 'rm', teams);
+    const exitCode = await vcr(client);
+    expect(exitCode).toBe(0);
+    expect(maxInFlight).toBeGreaterThan(1);
+    expect(maxInFlight).toBeLessThanOrEqual(10);
+  });
+
   it('supports the remove alias', async () => {
     client.scenario.delete(
       '/v1/vcr/repository/my-app/permissions',

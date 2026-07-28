@@ -1,3 +1,4 @@
+import Sema from 'async-sema';
 import type Client from '../../../util/client';
 import { parseArguments } from '../../../util/get-args';
 import { getFlagsSpecification } from '../../../util/get-flags-specification';
@@ -17,7 +18,11 @@ import { resolveVcrScope } from '../utils/resolve-vcr-scope';
 import { validateVcrJsonOutput } from '../utils/validators';
 import { emitVcrArgParseError } from '../utils/errors';
 import { repositoryPermissionsPath } from '../utils/paths';
-import { parseTeamRefs, teamRefBody } from './team-refs';
+import {
+  MAX_CONCURRENT_REQUESTS,
+  parseTeamRefs,
+  teamRefBody,
+} from './team-refs';
 import type { RepositoryPermission, TeamOperationFailure } from './team-refs';
 
 const USAGE = 'vcr permissions <repository> add <team>[,<team>...]';
@@ -96,10 +101,12 @@ export default async function add(
       teamRefs.length === 1 ? teamRefs[0] : `${teamRefs.length} teams`
     }...`
   );
+  const sema = new Sema(MAX_CONCURRENT_REQUESTS);
   let results;
   try {
     results = await Promise.all(
       teamRefs.map(async (team): Promise<AddResult> => {
+        await sema.acquire();
         try {
           const result = await client.fetch<{
             permission: RepositoryPermission;
@@ -118,6 +125,8 @@ export default async function add(
             team,
             failure: { team, code: err.code || 'API_ERROR', message },
           };
+        } finally {
+          sema.release();
         }
       })
     );

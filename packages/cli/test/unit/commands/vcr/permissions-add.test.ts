@@ -203,6 +203,29 @@ describe('vcr permissions add', () => {
     expect(output).toContain('Shared my-app with other-team');
   });
 
+  it('caps concurrent requests at 10', async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    client.scenario.post(
+      '/v1/vcr/repository/my-app/permissions',
+      (req, res) => {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        setTimeout(() => {
+          inFlight--;
+          res.json({ permission: permissionFor(req.body) });
+        }, 5);
+      }
+    );
+
+    const teams = Array.from({ length: 25 }, (_, i) => `team-${i}`).join(',');
+    client.setArgv('vcr', 'permissions', 'my-app', 'add', teams);
+    const exitCode = await vcr(client);
+    expect(exitCode).toBe(0);
+    expect(maxInFlight).toBeGreaterThan(1);
+    expect(maxInFlight).toBeLessThanOrEqual(10);
+  });
+
   it('treats a 2xx response without a permission body as success', async () => {
     client.scenario.post(
       '/v1/vcr/repository/my-app/permissions',
