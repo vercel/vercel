@@ -27,6 +27,8 @@
     "dev": "echo \"'pnpm dev [command]' has been removed. Use 'pnpm vercel [command]' instead.\" && exit 1",
     "vercel": "pnpm build && node ./dist/vc.js",
     "vc": "pnpm vercel",
+    "prepack": "node scripts/pin-builders.mjs pin",
+    "postpack": "node scripts/pin-builders.mjs restore",
     "type-check": "tsc --noEmit",
     "test:evals": "tsx evals/run.ts",
     "test:evals:smoke": "tsx evals/run.ts smoke --smoke",
@@ -80,7 +82,7 @@
     "undici": "5.29.0",
     "zod": "4.1.11"
   },
-  "peerDependencies": {
+  "builders": {
     "@vercel/backends": "workspace:*",
     "@vercel/container": "workspace:*",
     "@vercel/elysia": "workspace:*",
@@ -100,65 +102,6 @@
     "@vercel/ruby": "workspace:*",
     "@vercel/rust": "workspace:*",
     "@vercel/static-build": "workspace:*"
-  },
-  "peerDependenciesMeta": {
-    "@vercel/backends": {
-      "optional": true
-    },
-    "@vercel/container": {
-      "optional": true
-    },
-    "@vercel/elysia": {
-      "optional": true
-    },
-    "@vercel/express": {
-      "optional": true
-    },
-    "@vercel/fastify": {
-      "optional": true
-    },
-    "@vercel/go": {
-      "optional": true
-    },
-    "@vercel/h3": {
-      "optional": true
-    },
-    "@vercel/hono": {
-      "optional": true
-    },
-    "@vercel/hydrogen": {
-      "optional": true
-    },
-    "@vercel/koa": {
-      "optional": true
-    },
-    "@vercel/nestjs": {
-      "optional": true
-    },
-    "@vercel/next": {
-      "optional": true
-    },
-    "@vercel/node": {
-      "optional": true
-    },
-    "@vercel/python": {
-      "optional": true
-    },
-    "@vercel/redwood": {
-      "optional": true
-    },
-    "@vercel/remix-builder": {
-      "optional": true
-    },
-    "@vercel/ruby": {
-      "optional": true
-    },
-    "@vercel/rust": {
-      "optional": true
-    },
-    "@vercel/static-build": {
-      "optional": true
-    }
   },
   "devDependencies": {
     "@edge-runtime/node-utils": "2.3.0",
