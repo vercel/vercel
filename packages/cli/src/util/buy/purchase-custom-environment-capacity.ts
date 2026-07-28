@@ -1,15 +1,10 @@
 import chalk from 'chalk';
-import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
-import { purchaseSubcommand, targetCommand } from './command';
+import type Client from '../client';
+import { ensureLink } from '../link/ensure-link';
+import { getCommandName } from '../pkg-name';
 import output from '../../output-manager';
-import { ensureLink } from '../../util/link/ensure-link';
-import { getCommandName } from '../../util/pkg-name';
-import stamp from '../../util/output/stamp';
-import { validateJsonOutput } from '../../util/output-format';
-import { handleCustomEnvironmentPurchaseError } from '../../util/buy/handle-custom-environment-purchase-error';
+import stamp from '../output/stamp';
+import { handleCustomEnvironmentPurchaseError } from './handle-custom-environment-purchase-error';
 
 type ProjectCustomEnvironmentsSettings = {
   packSize: number;
@@ -21,50 +16,27 @@ type ProjectCustomEnvironmentsSettings = {
   environmentsUsed: number;
 };
 
-export default async function purchase(client: Client, argv: string[]) {
+export type PurchaseCustomEnvironmentCapacityOptions = {
+  packs: number;
+  yes: boolean;
+  projectName?: string;
+  asJson: boolean;
+  commandName: string;
+};
+
+export async function purchaseCustomEnvironmentCapacity(
+  client: Client,
+  {
+    packs,
+    yes,
+    projectName,
+    asJson,
+    commandName,
+  }: PurchaseCustomEnvironmentCapacityOptions
+): Promise<number> {
   const { cwd } = client;
-  const flagsSpecification = getFlagsSpecification(purchaseSubcommand.options);
-  let parsedArgs;
-  try {
-    parsedArgs = parseArguments(argv, flagsSpecification);
-  } catch (error) {
-    printError(error);
-    return 1;
-  }
 
-  const formatResult = validateJsonOutput(parsedArgs.flags);
-  if (!formatResult.valid) {
-    output.error(formatResult.error);
-    return 1;
-  }
-  const asJson = formatResult.jsonOutput;
-
-  const { args, flags } = parsedArgs;
-  const [packsStr] = args;
-
-  if (!packsStr) {
-    output.error(
-      'Missing packs argument. Specify the number of packs to purchase.'
-    );
-    output.log(`Run ${getCommandName('target purchase --help')} for usage.`);
-    return 1;
-  }
-
-  const packs = Number(packsStr);
-  if (!Number.isInteger(packs)) {
-    output.error(`Invalid packs "${packsStr}". Please specify a whole number.`);
-    return 1;
-  }
-  if (packs < 0) {
-    output.error(
-      `Invalid packs "${packsStr}". Please specify a non-negative number.`
-    );
-    return 1;
-  }
-
-  const yes = flags['--yes'];
-  const projectName = flags['--project'];
-  const link = await ensureLink(targetCommand.name, client, cwd, {
+  const link = await ensureLink(commandName, client, cwd, {
     autoConfirm: yes,
     projectName,
     failIfNotFound: Boolean(projectName),
@@ -149,6 +121,7 @@ export default async function purchase(client: Client, argv: string[]) {
       client.stdout.write(
         `${JSON.stringify(
           {
+            productAlias: 'customEnvironment',
             project: projectNameResolved,
             packs,
             purchasedAmount: result.purchasedAmount,
@@ -169,4 +142,30 @@ export default async function purchase(client: Client, argv: string[]) {
     output.stopSpinner();
     return handleCustomEnvironmentPurchaseError(err);
   }
+}
+
+export function validateCustomEnvironmentPacks(
+  packsStr: string | undefined
+): { packs: number } | { error: string; usage?: string } {
+  if (!packsStr) {
+    return {
+      error:
+        'Missing packs. Specify the number of custom environment packs to purchase.',
+      usage: `Run ${getCommandName('buy addon customEnvironment --help')} for usage.`,
+    };
+  }
+
+  const packs = Number(packsStr);
+  if (!Number.isInteger(packs)) {
+    return {
+      error: `Invalid packs "${packsStr}". Please specify a whole number.`,
+    };
+  }
+  if (packs < 0) {
+    return {
+      error: `Invalid packs "${packsStr}". Please specify a non-negative number.`,
+    };
+  }
+
+  return { packs };
 }

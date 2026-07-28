@@ -16,27 +16,11 @@ import stamp from '../../util/output/stamp';
 import { createPurchase } from '../../util/buy/create-purchase';
 import { handlePurchaseError } from '../../util/buy/handle-purchase-error';
 import { isCustomEnvironmentAddonAlias } from '../../util/buy/custom-environment-addon';
+import {
+  purchaseCustomEnvironmentCapacity,
+  validateCustomEnvironmentPacks,
+} from '../../util/buy/purchase-custom-environment-capacity';
 import { validateJsonOutput } from '../../util/output-format';
-import targetPurchase from '../target/purchase';
-
-function buildTargetPurchaseArgv(
-  packs: string,
-  flags: Record<string, string | boolean | undefined>
-): string[] {
-  const argv = [packs];
-  if (flags['--yes']) {
-    argv.push('--yes');
-  }
-  const project = flags['--project'];
-  if (typeof project === 'string') {
-    argv.push('--project', project);
-  }
-  const format = flags['--format'];
-  if (typeof format === 'string') {
-    argv.push('--format', format);
-  }
-  return argv;
-}
 
 export default async function addon(client: Client, argv: string[]) {
   const flagsSpecification = getFlagsSpecification(addonSubcommand.options);
@@ -59,22 +43,23 @@ export default async function addon(client: Client, argv: string[]) {
   const [addonName, quantityStr] = args;
 
   if (addonName && isCustomEnvironmentAddonAlias(addonName)) {
-    output.log(
-      `${chalk.yellow('Note:')} Custom environment purchases use ${getCommandName('target purchase <packs>')} per project (not buy addon).`
-    );
-
-    if (!quantityStr) {
-      output.error(
-        'Missing packs. Specify the number of custom environment packs to purchase.'
-      );
-      output.log(
-        `Example: ${getCommandName('target purchase 2')} — each pack adds 5 environments.`
-      );
-      output.log(`Run ${getCommandName('target purchase --help')} for usage.`);
+    const packsResult = validateCustomEnvironmentPacks(quantityStr);
+    if ('error' in packsResult) {
+      output.error(packsResult.error);
+      if (packsResult.usage) {
+        output.log(packsResult.usage);
+      }
       return 1;
     }
 
-    return targetPurchase(client, buildTargetPurchaseArgv(quantityStr, flags));
+    const project = flags['--project'];
+    return purchaseCustomEnvironmentCapacity(client, {
+      packs: packsResult.packs,
+      yes: Boolean(flags['--yes']),
+      projectName: typeof project === 'string' ? project : undefined,
+      asJson,
+      commandName: 'buy',
+    });
   }
 
   // Validate addon name argument
@@ -89,9 +74,6 @@ export default async function addon(client: Client, argv: string[]) {
   if (!SUPPORTED_ADDON_ALIASES.includes(addonName as AddonAlias)) {
     output.error(
       `Invalid addon "${addonName}". Supported addons: ${SUPPORTED_ADDON_ALIASES.join(', ')}.`
-    );
-    output.log(
-      `Custom environment capacity is purchased with ${getCommandName('target purchase <packs>')}.`
     );
     return 1;
   }

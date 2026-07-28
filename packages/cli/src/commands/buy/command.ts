@@ -1,5 +1,10 @@
 import { packageName } from '../../util/pkg-name';
-import { yesOption, formatOption, jsonOption } from '../../util/arg-common';
+import {
+  yesOption,
+  formatOption,
+  jsonOption,
+  projectOption,
+} from '../../util/arg-common';
 
 export const SUPPORTED_CREDIT_TYPES = ['v0', 'gateway', 'agent'] as const;
 export type CreditType = (typeof SUPPORTED_CREDIT_TYPES)[number];
@@ -48,19 +53,18 @@ export const creditsSubcommand = {
   ],
 } as const;
 
-// TODO(mingchungx): Add other addons
-export const SUPPORTED_ADDON_ALIASES = ['siem'] as const;
+export const SUPPORTED_ADDON_ALIASES = ['siem', 'customEnvironment'] as const;
 export type AddonAlias = (typeof SUPPORTED_ADDON_ALIASES)[number];
 
-// TODO(mingchungx): Add other labels
 export const ADDON_LABELS: Record<AddonAlias, string> = {
   siem: 'SIEM',
+  customEnvironment: 'Custom Environment',
 };
 
 export const addonSubcommand = {
   name: 'addon',
   aliases: ['addons', 'add-on'],
-  description: `Purchase a Vercel addon for your team. Supported addons: ${SUPPORTED_ADDON_ALIASES.join(', ')}. Custom environment capacity uses ${packageName} target purchase instead.`,
+  description: `Purchase a Vercel addon for your team. Supported addons: ${SUPPORTED_ADDON_ALIASES.join(', ')}. Custom environment purchases are per project and use packs (each pack adds 5 environments).`,
   arguments: [
     {
       name: 'addon-name',
@@ -78,6 +82,7 @@ export const addonSubcommand = {
     },
     formatOption,
     jsonOption,
+    projectOption,
   ],
   examples: [
     {
@@ -85,8 +90,12 @@ export const addonSubcommand = {
       value: `${packageName} buy addon siem 1`,
     },
     {
-      name: 'Purchase custom environment packs for a project',
-      value: `${packageName} target purchase 2 --project my-app`,
+      name: 'Purchase 2 custom environment packs for a project',
+      value: `${packageName} buy addon customEnvironment 2 --project my-app`,
+    },
+    {
+      name: 'Remove purchased custom environment capacity',
+      value: `${packageName} buy addon customEnvironment 0 --project my-app --yes`,
     },
   ],
 } as const;

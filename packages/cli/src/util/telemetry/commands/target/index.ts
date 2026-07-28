@@ -12,11 +12,4 @@ export class TargetTelemetryClient
       value: subcommandActual,
     });
   }
-
-  trackCliSubcommandPurchase(subcommandActual: string) {
-    this.trackCliSubcommand({
-      subcommand: 'purchase',
-      value: subcommandActual,
-    });
-  }
 }

@@ -1,37 +1,6 @@
 import { formatOption, projectOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
-export const purchaseSubcommand = {
-  name: 'purchase',
-  aliases: [],
-  description:
-    'Purchase or adjust custom environment capacity for the current project',
-  arguments: [
-    {
-      name: 'packs',
-      required: true,
-    },
-  ],
-  options: [
-    {
-      ...yesOption,
-      description: 'Skip the confirmation prompt',
-    },
-    formatOption,
-    projectOption,
-  ],
-  examples: [
-    {
-      name: 'Purchase 2 packs of custom environments (10 environments)',
-      value: `${packageName} target purchase 2 --project my-app`,
-    },
-    {
-      name: 'Remove purchased custom environment capacity',
-      value: `${packageName} target purchase 0 --project my-app --yes`,
-    },
-  ],
-} as const;
-
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
@@ -59,7 +28,7 @@ export const targetCommand = {
   aliases: ['targets'],
   description: 'Manage your Vercel Project\'s "targets" (custom environments).',
   arguments: [],
-  subcommands: [listSubcommand, purchaseSubcommand],
+  subcommands: [listSubcommand],
   options: [],
   examples: [],
 } as const;

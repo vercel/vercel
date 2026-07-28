@@ -64,16 +64,15 @@ describe('buy addon', () => {
       await expect(client.stderr).toOutput('Missing quantity');
     });
 
-    it('redirects customEnvironment to target purchase with clearer pack errors', async () => {
+    it('errors when customEnvironment packs are missing', async () => {
       setupTeam();
       client.setArgv('buy', 'addon', 'customEnvironment');
       const exitCode = await buy(client);
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('Missing packs');
-      await expect(client.stderr).toOutput('target purchase');
     });
 
-    it('redirects customEnvironment purchases to target purchase', async () => {
+    it('purchases customEnvironment packs for the linked project', async () => {
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -108,7 +107,9 @@ describe('buy addon', () => {
       client.setArgv('buy', 'addon', 'customEnvironment', '2', '--yes');
       const exitCode = await buy(client);
       expect(exitCode).toBe(0);
-      await expect(client.stderr).toOutput('target purchase');
+      await expect(client.stderr).toOutput(
+        'Updated custom environment capacity'
+      );
     });
 
     it('rejects over-limit customEnvironment purchases with a clear message', async () => {
@@ -190,7 +191,7 @@ describe('buy addon', () => {
       client.setArgv('buy', 'add-on', '--help');
       const exitCode = await buy(client);
       expect(exitCode).toBe(2);
-      await expect(client.stderr).toOutput('Supported addons: siem');
+      await expect(client.stderr).toOutput('customEnvironment');
     });
 
     it('errors when quantity is not a number', async () => {
