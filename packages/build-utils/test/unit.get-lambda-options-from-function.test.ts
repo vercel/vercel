@@ -71,6 +71,73 @@ describe('getLambdaOptionsFromFunction', () => {
     expect(options).toEqual({});
   });
 
+  // The top-level `maxDuration` default from `vercel.json` is intentionally
+  // NOT resolved here — consumers with visibility into the Lambda's own value
+  // (e.g. the CLI's write-build-result) apply it. Several builders (e.g.
+  // @vercel/python) also rely on a `{}` return to mean "no pattern matched".
+  it('ignores top-level maxDuration when no function pattern matches', async () => {
+    const config: Pick<Config, 'functions' | 'maxDuration'> = {
+      maxDuration: 30,
+      functions: {
+        'api/*.ts': { regions: ['sfo1'] },
+      },
+    };
+
+    const options = await getLambdaOptionsFromFunction({
+      sourceFile: 'api/user.js',
+      config,
+    });
+
+    expect(options).toEqual({});
+  });
+
+  it('ignores top-level maxDuration when no functions config is set', async () => {
+    const config: Pick<Config, 'maxDuration'> = {
+      maxDuration: 60,
+    };
+
+    const options = await getLambdaOptionsFromFunction({
+      sourceFile: 'api/user.js',
+      config,
+    });
+
+    expect(options).toEqual({});
+  });
+
+  it('ignores top-level maxDuration when a function pattern matches', async () => {
+    const config: Pick<Config, 'functions' | 'maxDuration'> = {
+      maxDuration: 30,
+      functions: {
+        'api/*.js': { memory: 512, maxDuration: 120 },
+      },
+    };
+
+    const options = await getLambdaOptionsFromFunction({
+      sourceFile: 'api/user.js',
+      config,
+    });
+
+    expect(options.maxDuration).toBe(120);
+    expect(options.memory).toBe(512);
+  });
+
+  it('does not inherit top-level maxDuration when a matching function omits it', async () => {
+    const config: Pick<Config, 'functions' | 'maxDuration'> = {
+      maxDuration: 45,
+      functions: {
+        'api/*.js': { memory: 512 },
+      },
+    };
+
+    const options = await getLambdaOptionsFromFunction({
+      sourceFile: 'api/user.js',
+      config,
+    });
+
+    expect(options.maxDuration).toBeUndefined();
+    expect(options.memory).toBe(512);
+  });
+
   it('derives the queue/v2beta consumer from the function pattern', async () => {
     const config: Pick<Config, 'functions'> = {
       functions: {

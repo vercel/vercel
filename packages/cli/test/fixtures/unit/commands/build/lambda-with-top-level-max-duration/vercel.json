@@ -1,0 +1,8 @@
+{
+  "maxDuration": 30,
+  "functions": {
+    "api/override.js": {
+      "maxDuration": 120
+    }
+  }
+}

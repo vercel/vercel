@@ -1150,6 +1150,32 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
+  it('should apply top-level "maxDuration" from "vercel.json" as the default for Serverless Functions', async () => {
+    const cwd = fixture('lambda-with-top-level-max-duration');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    // A function with no other configuration inherits the top-level default
+    const defaultConfig = await fs.readJSON(
+      join(output, 'functions/api/default.func/.vc-config.json')
+    );
+    expect(defaultConfig.maxDuration).toEqual(30);
+
+    // A matching `functions` entry overrides the top-level default
+    const overrideConfig = await fs.readJSON(
+      join(output, 'functions/api/override.func/.vc-config.json')
+    );
+    expect(overrideConfig.maxDuration).toEqual(120);
+
+    // In-code config (`export const config`) overrides the top-level default
+    const inCodeConfig = await fs.readJSON(
+      join(output, 'functions/api/in-code.func/.vc-config.json')
+    );
+    expect(inCodeConfig.maxDuration).toEqual(10);
+  });
+
   it('should apply project settings overrides from "vercel.json"', async () => {
     if (process.platform === 'win32') {
       // this test runs a build command with `mkdir -p` which is unsupported on Windows

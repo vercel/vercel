@@ -590,5 +590,9 @@ export async function getLambdaOptionsFromFunction({
     }
   }
 
+  // Intentionally NOT inherited here: the top-level `maxDuration` default is
+  // applied by consumers that can see the Lambda's own value (e.g. the CLI's
+  // write-build-result), so a project-wide default never overrides in-code
+  // per-function config, and "no pattern matched" still returns `{}`.
   return {};
 }
