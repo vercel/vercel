@@ -17,7 +17,7 @@ import humanizePath from '../../util/humanize-path';
 
 import { help } from '../help';
 import { pullCommand, type PullCommandFlags } from './command';
-import parseTarget from '../../util/parse-target';
+import { parseAliasedTarget } from '../../util/parse-target';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
@@ -86,17 +86,17 @@ export default async function main(client: Client) {
   const cwd = parsedArgs.args[1] || client.cwd;
   const autoConfirm = Boolean(parsedArgs.flags['--yes']);
   const isProduction = Boolean(parsedArgs.flags['--prod']);
-  const environment =
-    parseTarget({
-      flagName: 'environment',
-      flags: parsedArgs.flags,
-    }) || 'development';
+  const environment = parseAliasedTarget({
+    flags: parsedArgs.flags,
+    defaultTarget: 'development',
+  });
 
   telemetryClient.trackCliArgumentProjectPath(parsedArgs.args[1]);
   telemetryClient.trackCliFlagYes(autoConfirm);
   telemetryClient.trackCliFlagProd(isProduction);
   telemetryClient.trackCliOptionGitBranch(parsedArgs.flags['--git-branch']);
   telemetryClient.trackCliOptionEnvironment(parsedArgs.flags['--environment']);
+  telemetryClient.trackCliOptionTarget(parsedArgs.flags['--target']);
   telemetryClient.trackCliOptionProject(parsedArgs.flags['--project']);
 
   const returnCode = await pullCommandLogic(
@@ -125,7 +125,6 @@ export async function pullCommandLogic(
 ): Promise<number> {
   const link = await ensureLink('pull', client, cwd, {
     autoConfirm,
-    pullEnv: false,
     projectName: projectNameOrId,
     failIfNotFound: !!projectNameOrId,
   });

@@ -65,6 +65,7 @@ Load only what the task needs.
 | Destructive/production mutation  | `copy.md` → Clear + Consistent, Prompts; `core.md` → Dangerous Actions, Remote Work, Secrets    |
 | `vc link` or setup/link work     | [`references/command-contracts.md`](references/command-contracts.md) → Link Flow Contract       |
 | `vc env add` work                | `command-contracts.md` → Env Add Flow Contract                                                  |
+| Env/settings pulled to disk      | `command-contracts.md` → Env Files On Disk                                                      |
 | `vc`, `vc deploy`, deploy output | `command-contracts.md` → Deploy Flow Contract                                                   |
 | Tests, stale-copy sweeps, review | [`references/verification.md`](references/verification.md)                                      |
 
