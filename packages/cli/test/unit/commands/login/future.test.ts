@@ -371,6 +371,12 @@ describe('login', () => {
       const { default: freshLogin } = await import(
         '../../../../src/commands/login'
       );
+      const freshOutput = (await import('../../../../src/output-manager'))
+        .default;
+      freshOutput.initialize({
+        stream: client.stderr,
+        supportsHyperlink: false,
+      });
 
       fetch.mockResolvedValueOnce(mockResponse(discoveryResponse));
       await freshOauth.as();
@@ -454,7 +460,7 @@ describe('login', () => {
       expect(exitCode).toBe(0);
       expect(client.config.currentTeam).toBe('team_default');
       await expect(client.stderr).toOutput(
-        'Your previously selected team is no longer accessible'
+        'Your previously selected team is no longer accessible; switching to your default scope.'
       );
 
       client.config.currentTeam = undefined;
