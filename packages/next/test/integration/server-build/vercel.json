@@ -13,8 +13,7 @@
           },
           "pages/another.js": {
             "memory": 512,
-            "maxDuration": 5,
-            "maxConcurrency": 8
+            "maxDuration": 5
           },
           "pages/api/index.js": {
             "memory": 128,

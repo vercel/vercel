@@ -2132,6 +2132,7 @@ export async function getPageLambdaGroups({
             // Never merge a normal route into a large (single-route) group.
             (group.isLargeFunctions ?? false) === isLargeFunction &&
             group.maxDuration === opts.maxDuration &&
+            group.maxConcurrency === opts.maxConcurrency &&
             group.memory === opts.memory &&
             compareRegions(group.regions, opts.regions) &&
             compareRegions(

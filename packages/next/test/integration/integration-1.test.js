@@ -288,7 +288,7 @@ it('should build using server build', async () => {
   expect(output['another'].type).toBe('Lambda');
   expect(output['another'].memory).toBe(512);
   expect(output['another'].maxDuration).toBe(5);
-  expect(output['another'].maxConcurrency).toBe(8);
+  expect(output['another'].maxConcurrency).toBe(undefined);
   expect(output['another'].allowQuery).toBe(undefined);
   expect(output['another'].operationType).toBe('Page');
 
