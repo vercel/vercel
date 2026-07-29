@@ -404,7 +404,7 @@ export interface PreparedFile {
   file: string;
   sha?: string;
   size?: number;
-  mode?: number;
+  mode: number;
   data?: string;
   encoding?: 'base64';
 }
@@ -414,6 +414,8 @@ const isWin = process.platform.includes('win');
 const INLINE_STATIC_EXTENSIONS = ['.html', '.htm', '.md'];
 const MAX_INLINE_FILES = 10;
 const MAX_INLINE_TOTAL_BYTES = 5 * 1024 * 1024; // 5MB
+const S_IFREG = 0o100000;
+const S_IFMT = 0o170000;
 
 /**
  * Small all-static file sets are sent inline in the deployment creation
@@ -426,6 +428,7 @@ export function shouldInlineStaticFiles(files: FilesMap): boolean {
   let count = 0;
   let totalBytes = 0;
   for (const file of files.values()) {
+    if ((file.mode & S_IFMT) !== S_IFREG) return false;
     // Large files are streamed from disk and have no in-memory data
     if (!file.data) return false;
     for (const name of file.names) {
