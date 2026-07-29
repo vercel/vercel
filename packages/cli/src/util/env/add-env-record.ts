@@ -15,7 +15,8 @@ export default async function addEnvRecord(
   key: string,
   value: string,
   targets: string[],
-  gitBranch: string
+  gitBranch: string,
+  visibility?: ProjectEnvVariable['visibility']
 ): Promise<void> {
   const actionWord = upsert ? 'Overriding' : 'Adding';
   output.debug(
@@ -37,6 +38,7 @@ export default async function addEnvRecord(
     customEnvironmentIds:
       customEnvironmentIds.length > 0 ? customEnvironmentIds : undefined,
     gitBranch: gitBranch || undefined,
+    ...(visibility !== undefined ? { visibility } : {}),
   };
   const args = upsert ? `?upsert=${upsert}` : '';
   const url = `/v10/projects/${projectId}/env${args}`;

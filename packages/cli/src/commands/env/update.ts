@@ -29,6 +29,7 @@ import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import {
   isEnvVarConfigSecretUiEnabled,
   shouldEnforceSensitiveEnvVarPolicy,
+  visibilityFromEnvType,
 } from '../../util/env/env-var-config-secret-ui';
 
 function selectedEnvTargetsDevelopment(env: ProjectEnvVariable): boolean {
@@ -511,6 +512,9 @@ export default async function update(client: Client, argv: string[]) {
   }
 
   const type = opts['--sensitive'] ? 'sensitive' : selectedEnv.type;
+  const visibility = configSecretUiEnabled
+    ? visibilityFromEnvType(type)
+    : undefined;
   const targets = Array.isArray(selectedEnv.target)
     ? selectedEnv.target
     : [selectedEnv.target].filter((r): r is NonNullable<typeof r> =>
@@ -530,7 +534,8 @@ export default async function update(client: Client, argv: string[]) {
       keyToUpdate,
       finalValue,
       allTargets,
-      selectedEnv.gitBranch || ''
+      selectedEnv.gitBranch || '',
+      visibility
     );
   } catch (err: unknown) {
     if (client.nonInteractive && isAPIError(err)) {

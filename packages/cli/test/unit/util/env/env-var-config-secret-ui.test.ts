@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   isEnvVarConfigSecretUiEnabled,
   shouldEnforceSensitiveEnvVarPolicy,
+  visibilityFromEnvType,
 } from '../../../../src/util/env/env-var-config-secret-ui';
 
 describe('isEnvVarConfigSecretUiEnabled', () => {
@@ -57,5 +58,20 @@ describe('shouldEnforceSensitiveEnvVarPolicy', () => {
   it('skips policy when the env var flag is on', () => {
     process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI = '1';
     expect(shouldEnforceSensitiveEnvVarPolicy(true)).toBe(false);
+  });
+});
+
+describe('visibilityFromEnvType', () => {
+  it('maps encrypted and plain types to config', () => {
+    expect(visibilityFromEnvType('encrypted')).toBe('config');
+    expect(visibilityFromEnvType('plain')).toBe('config');
+  });
+
+  it('maps sensitive type to secret', () => {
+    expect(visibilityFromEnvType('sensitive')).toBe('secret');
+  });
+
+  it('returns undefined for system', () => {
+    expect(visibilityFromEnvType('system')).toBeUndefined();
   });
 });

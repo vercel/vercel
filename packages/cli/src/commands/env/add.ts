@@ -43,6 +43,7 @@ import {
 import {
   isEnvVarConfigSecretUiEnabled,
   shouldEnforceSensitiveEnvVarPolicy,
+  visibilityFromEnvType,
 } from '../../util/env/env-var-config-secret-ui';
 
 type EnvType = 'encrypted' | 'sensitive';
@@ -1160,6 +1161,9 @@ export default async function add(client: Client, argv: string[]) {
   }
 
   const upsert = opts['--force'] ? 'true' : '';
+  const visibility = configSecretUiEnabled
+    ? visibilityFromEnvType(finalType)
+    : undefined;
 
   try {
     output.spinner('Saving…');
@@ -1171,7 +1175,8 @@ export default async function add(client: Client, argv: string[]) {
       envName,
       finalValue,
       envTargets,
-      envGitBranch
+      envGitBranch,
+      visibility
     );
   } catch (err: unknown) {
     if (client.nonInteractive && isAPIError(err)) {

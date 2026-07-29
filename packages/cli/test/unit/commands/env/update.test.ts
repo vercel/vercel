@@ -512,9 +512,15 @@ describe('env update', () => {
         const teamModule = await import(
           '../../../../src/util/teams/get-team-by-id'
         );
+        const updateEnvRecordModule = await import(
+          '../../../../src/util/env/update-env-record'
+        );
         const teamSpy = vi.spyOn(teamModule, 'default').mockResolvedValue({
           sensitiveEnvironmentVariablePolicy: 'on',
         } as any);
+        const updateSpy = vi
+          .spyOn(updateEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
 
         const cwd = setupUnitFixture('vercel-env-pull');
         client.cwd = cwd;
@@ -529,10 +535,33 @@ describe('env update', () => {
         const exitCodePromise = env(client);
         await expect(exitCodePromise).resolves.toBe(0);
 
+        expect(updateSpy).toHaveBeenCalled();
+        const [, , , , , , , , visibility] = updateSpy.mock
+          .calls[0] as unknown as [
+          unknown,
+          unknown,
+          unknown,
+          unknown,
+          unknown,
+          unknown,
+          unknown,
+          unknown,
+          string,
+        ];
+        expect(visibility).toBe('config');
+
         teamSpy.mockRestore();
+        updateSpy.mockRestore();
       });
 
       it('allows --sensitive on a Development record', async () => {
+        const updateEnvRecordModule = await import(
+          '../../../../src/util/env/update-env-record'
+        );
+        const updateSpy = vi
+          .spyOn(updateEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
         const cwd = setupUnitFixture('vercel-env-pull');
         client.cwd = cwd;
         client.setArgv(
@@ -546,6 +575,24 @@ describe('env update', () => {
         );
         const exitCodePromise = env(client);
         await expect(exitCodePromise).resolves.toBe(0);
+
+        expect(updateSpy).toHaveBeenCalled();
+        const [, , , type, , , , , visibility] = updateSpy.mock
+          .calls[0] as unknown as [
+          unknown,
+          unknown,
+          unknown,
+          string,
+          unknown,
+          unknown,
+          unknown,
+          unknown,
+          string,
+        ];
+        expect(type).toBe('sensitive');
+        expect(visibility).toBe('secret');
+
+        updateSpy.mockRestore();
       });
     });
   });

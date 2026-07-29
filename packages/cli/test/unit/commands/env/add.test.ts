@@ -488,13 +488,20 @@ describe('env add', () => {
           await expect(exitCodePromise).resolves.toBe(0);
 
           expect(addSpy).toHaveBeenCalled();
-          const [, , , type] = addSpy.mock.calls[0] as unknown as [
+          const [, , , type, , , , , visibility] = addSpy.mock
+            .calls[0] as unknown as [
+            unknown,
+            unknown,
+            unknown,
+            string,
+            unknown,
             unknown,
             unknown,
             unknown,
             string,
           ];
           expect(type).toBe('encrypted');
+          expect(visibility).toBe('config');
         } finally {
           teamSpy.mockRestore();
           addSpy.mockRestore();
@@ -524,7 +531,8 @@ describe('env add', () => {
           await expect(exitCodePromise).resolves.toBe(0);
 
           expect(addSpy).toHaveBeenCalled();
-          const [, , , type, , , targets] = addSpy.mock.calls[0] as unknown as [
+          const [, , , type, , , targets, , visibility] = addSpy.mock
+            .calls[0] as unknown as [
             unknown,
             unknown,
             unknown,
@@ -532,9 +540,12 @@ describe('env add', () => {
             unknown,
             unknown,
             string[],
+            unknown,
+            string,
           ];
           expect(type).toBe('sensitive');
           expect(targets).toEqual(['development']);
+          expect(visibility).toBe('secret');
         } finally {
           addSpy.mockRestore();
         }
