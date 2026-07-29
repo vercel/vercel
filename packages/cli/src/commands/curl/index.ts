@@ -37,6 +37,7 @@ export async function runCurl(
 
   const setup = setupCurlLikeCommand(client, curlCommand, telemetryClient, {
     allowFullUrl: true,
+    passthroughToolFlags: true,
     args,
   });
 

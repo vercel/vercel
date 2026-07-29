@@ -206,11 +206,15 @@ export function setupCurlLikeCommand(
   client: Client,
   command: Command,
   telemetryClient: CommandTelemetryClient,
-  options: { allowFullUrl?: boolean; args?: string[] } = {}
+  options: {
+    allowFullUrl?: boolean;
+    passthroughToolFlags?: boolean;
+    args?: string[];
+  } = {}
 ): CommandSetupResult | number {
   const { print } = output;
 
-  if (options.allowFullUrl) {
+  if (options.passthroughToolFlags) {
     const parsed = parseCurlLikeArgs(
       options.args ?? client.argv.slice(2),
       command.name

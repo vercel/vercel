@@ -61,7 +61,7 @@ export const help = () => `
       edge-config          [cmd]       Manage Edge Config stores
       firewall             [cmd]       Manages Vercel Firewall configuration and custom rules
       flags                [cmd]       Manage feature flags for a Vercel project
-      httpstat             path        Visualize HTTP timing statistics for deployments
+      httpstat             [url|path]  Visualize HTTP timing statistics for deployments
       logs                 [url]       Displays the logs for a deployment
       metrics              <metric>    Queries observability metrics for your project or team
       mcp                              Set up MCP agents and configuration
