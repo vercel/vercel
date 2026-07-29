@@ -28,8 +28,8 @@ import type { ProjectEnvVariable } from '@vercel-internals/types';
 import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import {
   isEnvVarConfigSecretUiEnabled,
+  resolveEnvVarVisibility,
   shouldEnforceSensitiveEnvVarPolicy,
-  visibilityFromEnvType,
 } from '../../util/env/env-var-config-secret-ui';
 
 function selectedEnvTargetsDevelopment(env: ProjectEnvVariable): boolean {
@@ -379,12 +379,12 @@ export default async function update(client: Client, argv: string[]) {
   // Detect team-level sensitive env var policy. Cached in getTeamById.
   const configSecretUiEnabled = isEnvVarConfigSecretUiEnabled();
   let policyOn = false;
+  let teamSensitivePolicyOn = false;
   if (link.org.type === 'team') {
     try {
       const team = await getTeamById(client, link.org.id);
-      policyOn = shouldEnforceSensitiveEnvVarPolicy(
-        team?.sensitiveEnvironmentVariablePolicy === 'on'
-      );
+      teamSensitivePolicyOn = team?.sensitiveEnvironmentVariablePolicy === 'on';
+      policyOn = shouldEnforceSensitiveEnvVarPolicy(teamSensitivePolicyOn);
     } catch {
       // Non-fatal — policy detection is best-effort.
     }
@@ -512,15 +512,44 @@ export default async function update(client: Client, argv: string[]) {
   }
 
   const type = opts['--sensitive'] ? 'sensitive' : selectedEnv.type;
-  const visibility = configSecretUiEnabled
-    ? visibilityFromEnvType(type)
-    : undefined;
+  const explicitVisibility =
+    typeof opts['--visibility'] === 'string' ? opts['--visibility'] : undefined;
+  if (explicitVisibility === 'config' && opts['--sensitive']) {
+    output.error(
+      '`--visibility config` cannot be used with `--sensitive`. Pick one.'
+    );
+    return 1;
+  }
   const targets = Array.isArray(selectedEnv.target)
     ? selectedEnv.target
     : [selectedEnv.target].filter((r): r is NonNullable<typeof r> =>
         Boolean(r)
       );
   const allTargets = [...targets, ...(selectedEnv.customEnvironmentIds || [])];
+
+  const { visibility, error: visibilityError } = resolveEnvVarVisibility({
+    configSecretUiEnabled,
+    explicitVisibility,
+    type,
+    key: envName,
+    envTargets: allTargets,
+    teamSensitivePolicyOn,
+  });
+  if (visibilityError) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_visibility',
+          message: visibilityError,
+        },
+        1
+      );
+    }
+    output.error(visibilityError);
+    return 1;
+  }
 
   const updateStamp = stamp();
   try {

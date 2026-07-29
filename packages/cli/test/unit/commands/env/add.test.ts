@@ -477,7 +477,7 @@ describe('env add', () => {
           client.setArgv(
             'env',
             'add',
-            'PUBLIC_FLAG',
+            'API_FLAG',
             'production',
             '--value',
             'foo',
@@ -546,6 +546,92 @@ describe('env add', () => {
           expect(type).toBe('sensitive');
           expect(targets).toEqual(['development']);
           expect(visibility).toBe('secret');
+        } finally {
+          addSpy.mockRestore();
+        }
+      });
+
+      it('omits visibility for public-prefixed keys on Production when team policy is on', async () => {
+        const teamModule = await import(
+          '../../../../src/util/teams/get-team-by-id'
+        );
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+
+        const teamSpy = vi.spyOn(teamModule, 'default').mockResolvedValue({
+          sensitiveEnvironmentVariablePolicy: 'on',
+        } as any);
+        const addSpy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        try {
+          client.setArgv(
+            'env',
+            'add',
+            'NEXT_PUBLIC_API_URL',
+            'production',
+            '--value',
+            'https://example.com',
+            '--no-sensitive',
+            '--yes'
+          );
+          const exitCodePromise = env(client);
+          await expect(exitCodePromise).resolves.toBe(0);
+
+          expect(addSpy).toHaveBeenCalled();
+          const call = addSpy.mock.calls[0] as unknown[];
+          expect(call[8]).toBeUndefined();
+        } finally {
+          teamSpy.mockRestore();
+          addSpy.mockRestore();
+        }
+      });
+
+      it('rejects secret visibility on public-prefixed production keys', async () => {
+        client.setArgv(
+          'env',
+          'add',
+          'NEXT_PUBLIC_API_URL',
+          'production',
+          '--visibility',
+          'secret',
+          '--value',
+          'https://example.com',
+          '--yes'
+        );
+        const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput('cannot use secret visibility');
+        await expect(exitCodePromise).resolves.toBe(1);
+      });
+
+      it('uses explicit --visibility when provided', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const addSpy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        try {
+          client.setArgv(
+            'env',
+            'add',
+            'API_KEY',
+            'production',
+            '--visibility',
+            'config',
+            '--no-sensitive',
+            '--value',
+            'foo',
+            '--yes'
+          );
+          const exitCodePromise = env(client);
+          await expect(exitCodePromise).resolves.toBe(0);
+
+          const call = addSpy.mock.calls[0] as unknown[];
+          expect(call[8]).toBe('config');
         } finally {
           addSpy.mockRestore();
         }

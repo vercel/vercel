@@ -42,8 +42,8 @@ import {
 } from '../../util/agent-output';
 import {
   isEnvVarConfigSecretUiEnabled,
+  resolveEnvVarVisibility,
   shouldEnforceSensitiveEnvVarPolicy,
-  visibilityFromEnvType,
 } from '../../util/env/env-var-config-secret-ui';
 
 type EnvType = 'encrypted' | 'sensitive';
@@ -809,15 +809,30 @@ export default async function add(client: Client, argv: string[]) {
     return 1;
   }
 
+  const explicitVisibility =
+    typeof opts['--visibility'] === 'string' ? opts['--visibility'] : undefined;
+  if (explicitVisibility === 'secret' && forceEncrypted) {
+    output.error(
+      '`--visibility secret` cannot be used with `--no-sensitive`. Pick one.'
+    );
+    return 1;
+  }
+  if (explicitVisibility === 'config' && forceSensitive) {
+    output.error(
+      '`--visibility config` cannot be used with `--sensitive`. Pick one.'
+    );
+    return 1;
+  }
+
   // Detect team-level sensitive env var policy. Reads from the team object
   // (cached). Only relevant when the linked org is a team.
   let policyOn = false;
+  let teamSensitivePolicyOn = false;
   if (link.org.type === 'team') {
     try {
       const team = await getTeamById(client, link.org.id);
-      policyOn = shouldEnforceSensitiveEnvVarPolicy(
-        team?.sensitiveEnvironmentVariablePolicy === 'on'
-      );
+      teamSensitivePolicyOn = team?.sensitiveEnvironmentVariablePolicy === 'on';
+      policyOn = shouldEnforceSensitiveEnvVarPolicy(teamSensitivePolicyOn);
     } catch {
       // Non-fatal — policy detection is best-effort.
     }
@@ -1161,9 +1176,29 @@ export default async function add(client: Client, argv: string[]) {
   }
 
   const upsert = opts['--force'] ? 'true' : '';
-  const visibility = configSecretUiEnabled
-    ? visibilityFromEnvType(finalType)
-    : undefined;
+  const { visibility, error: visibilityError } = resolveEnvVarVisibility({
+    configSecretUiEnabled,
+    explicitVisibility,
+    type: finalType,
+    key: envName,
+    envTargets,
+    teamSensitivePolicyOn,
+  });
+  if (visibilityError) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_visibility',
+          message: visibilityError,
+        },
+        1
+      );
+    }
+    output.error(visibilityError);
+    return 1;
+  }
 
   try {
     output.spinner('Saving…');
