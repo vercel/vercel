@@ -305,11 +305,17 @@ export async function build(options: BuildOptions) {
     }
 
     const runtime = await getProvidedRuntime();
+    // Note: `runtimeLanguage` must NOT be set here. It is reserved for
+    // functions using the "executable" runtime (see
+    // `standalone-server.ts`). `api/` handlers run as a go-bridge
+    // lambda on the "provided" runtime, and tagging them with
+    // `runtimeLanguage` causes the platform to source runtime logs from the
+    // executable-runtime pipeline, dropping the handler's stdout from
+    // runtime logs.
     const lambda = new Lambda({
       files: { ...(await glob('**', outDir)), ...includedFiles },
       handler: HANDLER_FILENAME,
       runtime,
-      runtimeLanguage: 'go',
       supportsWrapper: true,
       environment: {},
     });
