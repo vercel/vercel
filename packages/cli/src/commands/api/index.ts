@@ -33,6 +33,8 @@ import {
   formatDescription,
 } from './format-utils';
 import output from '../../output-manager';
+import { isAPIError } from '../../util/errors-ts';
+import { isJSONObject } from '../../util/client';
 import { renderCard, renderTable, parseArrayColumns } from './display-columns';
 import { packageName } from '../../util/pkg-name';
 import { validateJsonOutput } from '../../util/output-format';
@@ -660,8 +662,7 @@ async function executeSingleRequest(
       options
     );
   } catch (err) {
-    output.prettyError(err);
-    return 1;
+    return outputRequestError(client, err, flags);
   }
 }
 
@@ -698,9 +699,34 @@ async function executePaginatedRequest(
     // Output combined results
     return outputResults(client, results, flags);
   } catch (err) {
-    output.prettyError(err);
+    return outputRequestError(client, err, flags);
+  }
+}
+
+/**
+ * Renders a failed request. API error responses are rendered as the JSON
+ * error body the API returned (preserved on the thrown error by
+ * `responseError`), so callers get the structured payload — e.g. `code`,
+ * `action`, and `resource` on a 403 — instead of only the prose message.
+ * Errors without a structured body (network failures, etc.) fall back to
+ * the standard error output.
+ */
+function outputRequestError(
+  client: Client,
+  err: unknown,
+  flags: ParsedFlags
+): number {
+  if (isAPIError(err) && isJSONObject(err.responseBody)) {
+    if (!flags['--silent']) {
+      client.stdout.write(
+        formatOutput(err.responseBody, { raw: flags['--raw'] }) + '\n'
+      );
+    }
     return 1;
   }
+
+  output.prettyError(err);
+  return 1;
 }
 
 /**

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
-import api from '../../../../src/commands/api';
+import api, { runTagOperation } from '../../../../src/commands/api';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -243,6 +243,158 @@ describe('api', () => {
       const exitCode = await api(client);
 
       expect(exitCode).toEqual(1);
+    });
+
+    describe('API error body rendering', () => {
+      it('renders the 403 error body as JSON on stdout', async () => {
+        client.scenario.post('/v10/projects', (_req, res) => {
+          res.status(403).json({
+            error: {
+              code: 'forbidden',
+              message: "You don't have permission to create the project.",
+              action: 'create',
+              resource: 'project',
+            },
+          });
+        });
+
+        client.setArgv('api', '/v10/projects', '-F', 'name=my-project');
+        const exitCode = await api(client);
+
+        expect(exitCode).toEqual(1);
+        const payload = JSON.parse(client.stdout.getFullOutput());
+        expect(payload).toEqual({
+          error: {
+            code: 'forbidden',
+            message: "You don't have permission to create the project.",
+            action: 'create',
+            resource: 'project',
+          },
+        });
+      });
+
+      it('renders 403 error bodies for tag operations', async () => {
+        const spec = {
+          openapi: '3.0.3',
+          info: { title: 'API', version: '1.0.0' },
+          paths: {
+            '/v10/projects': {
+              post: {
+                operationId: 'createProject',
+                summary: 'Create a project',
+                tags: ['project'],
+                requestBody: {
+                  content: {
+                    'application/json': {
+                      schema: {
+                        type: 'object',
+                        properties: { name: { type: 'string' } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        };
+        // Serve the OpenAPI spec from the stub; delegate everything else
+        // (the mock API server) to the real fetch.
+        const originalFetch = globalThis.fetch;
+        vi.stubGlobal(
+          'fetch',
+          vi.fn((input: string | URL | Request, init?: RequestInit) => {
+            const url =
+              typeof input === 'string'
+                ? input
+                : input instanceof URL
+                  ? input.href
+                  : input.url;
+            if (url.startsWith('https://api.vercel.tools/')) {
+              return Promise.resolve(
+                new Response(JSON.stringify(spec), {
+                  status: 200,
+                  headers: { 'content-type': 'application/json' },
+                })
+              );
+            }
+            return originalFetch(input, init);
+          })
+        );
+        client.scenario.post('/v10/projects', (_req, res) => {
+          res.status(403).json({
+            error: {
+              code: 'forbidden',
+              message: "You don't have permission to create the project.",
+              action: 'create',
+              resource: 'project',
+            },
+          });
+        });
+
+        client.stdin.isTTY = false;
+        client.setArgv('api', 'project', 'createProject', 'name=my-project');
+        const exitCode = await runTagOperation(client, {
+          tag: 'project',
+          operationId: 'createProject',
+          flags: {
+            '--spec-url': 'https://api.vercel.tools/openapi.json',
+            '--refresh': true,
+          },
+          positionalOperationFields: ['name=my-project'],
+        });
+
+        expect(exitCode).toEqual(1);
+        const payload = JSON.parse(client.stdout.getFullOutput());
+        expect(payload.error).toMatchObject({
+          code: 'forbidden',
+          action: 'create',
+          resource: 'project',
+        });
+      });
+
+      it('renders non-403 error bodies as JSON on stdout', async () => {
+        client.scenario.get('/v2/nonexistent', (_req, res) => {
+          res
+            .status(404)
+            .json({ error: { code: 'not_found', message: 'Not found' } });
+        });
+
+        client.setArgv('api', '/v2/nonexistent');
+        const exitCode = await api(client);
+
+        expect(exitCode).toEqual(1);
+        const payload = JSON.parse(client.stdout.getFullOutput());
+        expect(payload).toEqual({
+          error: { code: 'not_found', message: 'Not found' },
+        });
+      });
+
+      it('suppresses the error body with --silent', async () => {
+        client.scenario.get('/v2/nonexistent', (_req, res) => {
+          res
+            .status(404)
+            .json({ error: { code: 'not_found', message: 'Not found' } });
+        });
+
+        client.setArgv('api', '/v2/nonexistent', '--silent');
+        const exitCode = await api(client);
+
+        expect(exitCode).toEqual(1);
+        expect(client.stdout.getFullOutput()).toBe('');
+      });
+
+      it('falls back to the error message when the body is not JSON', async () => {
+        client.scenario.get('/v2/plain-text-error', (_req, res) => {
+          res.status(500).set('content-type', 'text/plain').send('oops');
+        });
+
+        client.setArgv('api', '/v2/plain-text-error');
+        const exitCode = await api(client);
+
+        expect(exitCode).toEqual(1);
+        expect(client.stdout.getFullOutput()).toBe('');
+        expect(client.getFullOutput()).toContain('Response Error');
+      });
     });
   });
 

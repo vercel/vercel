@@ -6,11 +6,10 @@ export default async function responseError(
   fallbackMessage = null,
   parsedBody = {}
 ) {
+  let body;
   let bodyError;
 
   if (!res.ok) {
-    let body;
-
     try {
       body = await res.json();
     } catch (_err) {
@@ -22,5 +21,15 @@ export default async function responseError(
   }
 
   const msg = bodyError?.message || fallbackMessage || 'Response Error';
-  return new APIError(msg, res, bodyError);
+  const error = new APIError(msg, res, bodyError);
+
+  if (body && typeof body === 'object' && Object.keys(body).length > 0) {
+    // Preserve the parsed response body verbatim so commands like
+    // `vercel api` can render the API's structured error payload (e.g.
+    // `code`, `action`, `resource` on a 403) instead of only the prose
+    // message.
+    error.responseBody = body;
+  }
+
+  return error;
 }
