@@ -2,11 +2,10 @@ import assert from 'node:assert';
 import { access, mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { frameworkList } from '@vercel/frameworks';
 import createLineIterator from 'line-async-iterator';
 import projects from '../../../../src/commands/project';
-import { LinkRequiredError } from '../../../../src/util/errors-ts';
 import { useUser } from '../../../mocks/user';
 import { useTeams } from '../../../mocks/team';
 import { defaultProject, useProject } from '../../../mocks/project';
@@ -160,9 +159,24 @@ describe('inspect', () => {
     client.cwd = projectDirectory;
     client.nonInteractive = true;
     client.setArgv('project', 'inspect', '--non-interactive');
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code ?? 0}`);
+    }) as () => never);
 
     try {
-      await expect(projects(client)).rejects.toBeInstanceOf(LinkRequiredError);
+      await expect(projects(client)).rejects.toThrow('exit:1');
+
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'link_required',
+        message: expect.stringMatching(/linked|project name/i),
+      });
+      expect(
+        payload.next?.some((next: { command: string }) =>
+          /project inspect <name>/.test(next.command)
+        )
+      ).toBe(true);
       await expect(
         access(join(projectDirectory, '.vercel'))
       ).rejects.toMatchObject({ code: 'ENOENT' });
