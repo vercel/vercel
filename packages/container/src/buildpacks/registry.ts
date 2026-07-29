@@ -29,10 +29,12 @@ export interface BuildpackDescriptor {
    */
   frameworkSlugs?: readonly string[];
   /**
-   * Files that mark a service root as buildable by this buildpack. Purely
-   * language evidence (a `Gemfile` is Ruby; a `Procfile` is not) — used to
-   * fail fast with an actionable error before pulling a multi-GB builder,
-   * not to influence what Paketo's own detect phase does.
+   * Files that mark a service root as buildable by this buildpack. Any one
+   * marker suffices, so list only files the buildpack's detect phase
+   * requires (a `Gemfile` is mandatory for Ruby; a `config.ru` or `Procfile`
+   * alone is not buildable). Used to fail fast with an actionable error
+   * before pulling a multi-GB builder — Paketo's own detect phase stays
+   * authoritative.
    */
   projectMarkers: readonly string[];
   /**
@@ -48,6 +50,34 @@ export interface BuildpackDescriptor {
    * depend on the mutable run-image tag recorded in the builder metadata.
    */
   runImage: string;
+  /**
+   * Buildpacks the lifecycle may detect with, written to an explicit
+   * `order.toml` instead of running the builder's full default order. This
+   * keeps detection deterministic in mixed-language roots: a `go.mod` next
+   * to a `Gemfile` must not let another language family out-detect the
+   * requested Ruby build. IDs and versions must match buildpacks installed
+   * in the pinned builder.
+   *
+   * Paketo language-family composites already include the optional procfile
+   * buildpack (which `command` overrides rely on); list it explicitly only
+   * for descriptors whose buildpacks don't.
+   */
+  buildpackGroup: readonly BuildpackGroupEntry[];
+  /**
+   * Build env applied beneath the user's build env (user keys win). Use
+   * Paketo's environment-variables buildpack `BPE_DEFAULT_<KEY>` form to
+   * bake overridable launch-env defaults into the image: the CNB launcher
+   * only applies them when the variable is unset at run time, so env vars
+   * configured on the project always take precedence. Each applied default
+   * is logged during the build.
+   */
+  defaultBuildEnv?: Readonly<Record<string, string>>;
+}
+
+export interface BuildpackGroupEntry {
+  id: string;
+  version: string;
+  optional?: boolean;
 }
 
 /**
@@ -59,11 +89,31 @@ export interface BuildpackDescriptor {
 export const BUILDPACKS: readonly BuildpackDescriptor[] = [
   {
     runtime: 'ruby',
-    projectMarkers: ['Gemfile', 'config.ru'],
+    projectMarkers: ['Gemfile'],
     builder:
       'paketobuildpacks/builder-jammy-base@sha256:622ba9d364d69f578b49fa8dee2e0d450adbd44b31e7c0a18b714a4eefdf371b',
     runImage:
       'index.docker.io/paketobuildpacks/run-jammy-base@sha256:6de43ef8f4a30fa7b01be23600b2a0433c3ed3851b4fddc3b375212ed69490c2',
+    // The composite includes rackup/puma/etc process detection and the
+    // optional procfile buildpack in every group.
+    buildpackGroup: [{ id: 'paketo-buildpacks/ruby', version: '2.0.1' }],
+    // Heroku-style production defaults: overridable at run time by project
+    // env vars, harmless for non-Rails apps. (Paketo's MRI buildpack already
+    // defaults MALLOC_ARENA_MAX=2.)
+    //
+    // TODO: when Rails is detected and neither SECRET_KEY_BASE nor
+    // RAILS_MASTER_KEY is configured, generate a per-deployment
+    // BPE_DEFAULT_SECRET_KEY_BASE so production requests don't 500 with
+    // "Missing secret_key_base" (with a log line noting sessions reset each
+    // deploy), and add a CLI prompt that persists a generated value as a
+    // project env var — the durable store — instead of hiding the secret in
+    // the build cache the way Heroku does.
+    defaultBuildEnv: {
+      BPE_DEFAULT_RAILS_ENV: 'production',
+      BPE_DEFAULT_RACK_ENV: 'production',
+      BPE_DEFAULT_RAILS_LOG_TO_STDOUT: 'enabled',
+      BPE_DEFAULT_RAILS_SERVE_STATIC_FILES: 'enabled',
+    },
   },
 ];
 

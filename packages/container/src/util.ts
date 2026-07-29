@@ -34,6 +34,22 @@ export function normalizeCommand(command: unknown): string[] | undefined {
   return undefined;
 }
 
+/**
+ * A shell `command` (`commandShell`) is a single command line; combining it
+ * with an argv array would silently drop every element after the first.
+ */
+export function assertValidCommandShell(
+  command: string[] | undefined,
+  commandShell: boolean
+): void {
+  if (commandShell && command && command.length !== 1) {
+    throw new Error(
+      `A shell "command" must be a single command string, but received ${command.length} elements. ` +
+        'Pass the command as one string, or as an argv array without "commandShell".'
+    );
+  }
+}
+
 export function write(line: string): void {
   process.stderr.write(`${line}\n`);
 }
@@ -126,22 +142,16 @@ export const DOCKERFILE_CANDIDATES = [
   'Dockerfile.vercel',
   'Containerfile.vercel',
 ];
-const CONVENTIONAL_DOCKERFILE_CANDIDATES = ['Dockerfile', 'Containerfile'];
 
 /**
  * Discover a Vercel container opt-in marker (`Dockerfile.vercel` /
  * `Containerfile.vercel`) in `workPath`. Used by both the build and dev paths
  * so they resolve the same Dockerfile when the entrypoint is the `<detect>`
- * sentinel.
+ * sentinel. A conventional `Dockerfile` is deliberately not a marker: only
+ * the `.vercel` suffix opts a project out of buildpack or framework builds.
  */
-export function findDockerfile(
-  workPath: string,
-  includeConventional = false
-): string | undefined {
-  const candidates = includeConventional
-    ? [...DOCKERFILE_CANDIDATES, ...CONVENTIONAL_DOCKERFILE_CANDIDATES]
-    : DOCKERFILE_CANDIDATES;
-  return candidates.find(name => existsSync(join(workPath, name)));
+export function findDockerfile(workPath: string): string | undefined {
+  return DOCKERFILE_CANDIDATES.find(name => existsSync(join(workPath, name)));
 }
 
 /**
@@ -157,6 +167,11 @@ export function devImageTag(serviceName: string): string {
 export interface RunResult {
   stdout: string;
   stderr: string;
+}
+
+/** Rejection from {@link run} carrying the command's exit code. */
+export interface RunError extends Error {
+  exitCode?: number;
 }
 
 /**
@@ -222,12 +237,12 @@ export function run(
         resolve({ stdout, stderr });
       } else {
         const detail = stderr.trim().split('\n').slice(-5).join('\n');
-        reject(
-          new Error(
-            `\`${cmd} ${args.join(' ')}\` exited with code ${code}` +
-              (detail ? `\n${detail}` : '')
-          )
+        const error: RunError = new Error(
+          `\`${cmd} ${args.join(' ')}\` exited with code ${code}` +
+            (detail ? `\n${detail}` : '')
         );
+        error.exitCode = code ?? undefined;
+        reject(error);
       }
     });
 

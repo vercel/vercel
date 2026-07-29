@@ -86,6 +86,14 @@ export function isExperimentalBackendsEnabled(): boolean {
   );
 }
 
+/**
+ * Gates the migration of Ruby from the `@vercel/ruby` Lambda builder to
+ * Cloud Native Buildpack container builds via `@vercel/container`.
+ */
+export function isRubyBuildpacksEnabled(): boolean {
+  return process.env.VERCEL_RUBY_EXPERIMENTAL_BUILDPACK === '1';
+}
+
 export function isBackendBuilder(builder: Builder | null | undefined): boolean {
   if (!builder) return false;
   if (builder.use === UNIFIED_BACKEND_BUILDER) return true;

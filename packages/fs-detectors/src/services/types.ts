@@ -20,6 +20,7 @@ import type {
   Service,
   Builder,
 } from '@vercel/build-utils';
+import { isRubyBuildpacksEnabled } from '@vercel/build-utils/dist/framework-helpers';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 
 export type {
@@ -178,18 +179,16 @@ export interface ServiceDetectionError {
  * their Lambda builders (e.g. `@vercel/ruby`) through builds-and-routes
  * detection instead and are unaffected by these entries.
  *
- * {@link BUILDPACK_RUNTIMES} map to `@vercel/container`: services for those
- * languages are always container images built with Cloud Native Buildpacks —
- * there is no Lambda services path. No per-language builder package exists
- * or should be created for them (a future `java` entry would also map to
- * `@vercel/container`).
+ * Runtimes in {@link toBuildpackRuntime}'s set are rerouted to
+ * `@vercel/container` when buildpacks are enabled, before these entries are
+ * consulted.
  */
 export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
   node: '@vercel/backends',
   python: '@vercel/python',
   go: '@vercel/go',
   rust: '@vercel/rust',
-  ruby: '@vercel/container',
+  ruby: '@vercel/ruby',
   container: '@vercel/container',
 };
 
@@ -197,13 +196,30 @@ export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
  * Runtimes whose services build the whole service root into a container
  * image with Cloud Native Buildpacks via `@vercel/container` (builder src is
  * the `<detect>` sentinel; no entrypoint file is required or resolved).
+ * There is no Lambda services path for them and no per-language builder
+ * package should be created (a future `java` entry would also build with
+ * `@vercel/container`).
  *
  * Adding a language here requires a matching descriptor in
  * `@vercel/container`'s buildpack registry (`src/buildpacks/registry.ts`).
  */
-export const BUILDPACK_RUNTIMES: ReadonlySet<ServiceRuntime> = new Set([
-  'ruby',
-]);
+const BUILDPACK_RUNTIMES: ReadonlySet<ServiceRuntime> = new Set(['ruby']);
+
+/**
+ * The buildpack runtime for `runtime`, or `undefined` when the runtime is
+ * not buildpack-backed or buildpacks are not enabled
+ * (`VERCEL_RUBY_EXPERIMENTAL_BUILDPACK=1`). While disabled, buildpack-backed
+ * runtimes keep their legacy {@link RUNTIME_BUILDERS} behavior.
+ */
+export function toBuildpackRuntime(
+  runtime: ServiceRuntime | undefined
+): ServiceRuntime | undefined {
+  return runtime !== undefined &&
+    isRubyBuildpacksEnabled() &&
+    BUILDPACK_RUNTIMES.has(runtime)
+    ? runtime
+    : undefined;
+}
 
 export const RUNTIME_MANIFESTS: Partial<Record<ServiceRuntime, string[]>> = {
   node: ['package.json'],

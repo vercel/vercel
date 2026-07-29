@@ -211,7 +211,7 @@ export async function detectServices(
       routes: emptyRoutes(),
       rewrites: [],
       errors: result.errors,
-      warnings: [],
+      warnings: result.warnings,
     });
   }
 
@@ -238,7 +238,7 @@ export async function detectServices(
       routes,
       rewrites: [],
       errors: result.errors,
-      warnings: [],
+      warnings: result.warnings,
     });
   }
 
@@ -366,7 +366,7 @@ async function tryResolveInferred(
           : [],
         experimentalServicesV2: shouldInfer ? v2Services : undefined,
         errors: result.errors,
-        warnings: detectResult.warnings,
+        warnings: [...detectResult.warnings, ...result.warnings],
       },
       inferred
     );
@@ -414,7 +414,7 @@ async function tryResolveInferred(
       routes: emptyRoutes(),
       rewrites: [],
       errors: result.errors,
-      warnings: detectResult.warnings,
+      warnings: [...detectResult.warnings, ...result.warnings],
     },
     inferred
   );

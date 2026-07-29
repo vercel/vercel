@@ -5,6 +5,7 @@ import type {
   ConfiguredServices,
   ExperimentalServiceConfig,
   ServiceDetectionError,
+  ServiceDetectionWarning,
   ServiceRuntime,
 } from './types';
 import {
@@ -15,14 +16,14 @@ import {
   JobTrigger,
 } from '@vercel/build-utils';
 import {
-  BUILDPACK_RUNTIMES,
   ENTRYPOINT_EXTENSIONS,
   RUNTIME_BUILDERS,
   STATIC_BUILDERS,
   RUNTIME_MANIFESTS,
+  toBuildpackRuntime,
 } from './types';
 import {
-  DETECTION_FRAMEWORKS,
+  buildpackEntrypointWarning,
   filterFrameworksByRuntime,
   getBuilderForRuntime,
   hasFile,
@@ -152,8 +153,7 @@ function getEntrypointRequiredRuntime(
 function getBuildpackRuntime(
   config: ConfiguredServiceConfig
 ): ServiceRuntime | undefined {
-  const runtime = getEntrypointRequiredRuntime(config);
-  return runtime && BUILDPACK_RUNTIMES.has(runtime) ? runtime : undefined;
+  return toBuildpackRuntime(getEntrypointRequiredRuntime(config));
 }
 
 function validateBackendFileEntrypoint(
@@ -324,16 +324,10 @@ export async function detectFrameworkFromWorkspace({
   runtime?: ServiceRuntime;
 }): Promise<{ framework?: string; error?: ServiceDetectionError }> {
   const serviceFs = workspace === '.' ? fs : fs.chdir(workspace);
-  // Services intentionally include runtime-framework presets (Ruby, Go, etc.)
-  // even when they are hidden from normal project framework detection.
-  const frameworkCandidates = filterFrameworksByRuntime(
-    DETECTION_FRAMEWORKS,
-    runtime
-  );
+  const frameworkCandidates = filterFrameworksByRuntime(frameworkList, runtime);
   const frameworks = await detectFrameworks({
     fs: serviceFs,
     frameworkList: frameworkCandidates,
-    useExperimentalFrameworks: true,
   });
 
   if (frameworks.length > 1) {
@@ -848,10 +842,7 @@ export async function resolveConfiguredService(
     ...config,
     entrypoint: entrypointIsDirectory ? undefined : normalizedEntrypoint,
   });
-  const buildpackRuntime =
-    inferredRuntime && BUILDPACK_RUNTIMES.has(inferredRuntime)
-      ? inferredRuntime
-      : undefined;
+  const buildpackRuntime = toBuildpackRuntime(inferredRuntime);
   let workspace = '.';
   let resolvedEntrypointFile =
     entrypointIsDirectory || !normalizedEntrypoint
@@ -1064,9 +1055,11 @@ export async function resolveAllConfiguredServices(
 ): Promise<{
   services: ExperimentalService[];
   errors: ServiceDetectionError[];
+  warnings: ServiceDetectionWarning[];
 }> {
   const resolved: ExperimentalService[] = [];
   const errors: ServiceDetectionError[] = [];
+  const warnings: ServiceDetectionWarning[] = [];
   const webServicesByRoutePrefix = new Map<string, string>();
 
   for (const name of Object.keys(services)) {
@@ -1210,6 +1203,15 @@ export async function resolveAllConfiguredServices(
       routePrefixSource,
     });
 
+    const entrypointWarning = buildpackEntrypointWarning(
+      name,
+      serviceConfig.entrypoint,
+      service.builder
+    );
+    if (entrypointWarning) {
+      warnings.push(entrypointWarning);
+    }
+
     if (service.type === 'web' && typeof service.routePrefix === 'string') {
       const normalizedRoutePrefix = normalizeRoutePrefix(service.routePrefix);
       const existingServiceName = webServicesByRoutePrefix.get(
@@ -1235,7 +1237,7 @@ export async function resolveAllConfiguredServices(
     validateEnvRefs(service.env, service.name, servicesByName, errors);
   }
 
-  return { services: resolved, errors };
+  return { services: resolved, errors, warnings };
 }
 
 function validateEnvRefs(

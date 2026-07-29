@@ -1,6 +1,8 @@
 import type { Framework, FrameworkDetectionItem } from '@vercel/frameworks';
 import { spawnSync } from 'child_process';
 import { DetectorFilesystem } from './detectors/filesystem';
+import { toBuildpackRuntime } from './services/types';
+import { inferRuntimeFromFramework } from './services/utils';
 
 interface BaseFramework {
   slug: Framework['slug'];
@@ -62,9 +64,13 @@ function filterFrameworkList<T extends BaseFramework>(
     return frameworkList;
   }
   return frameworkList.filter(f => {
-    // Check if framework has experimental property and filter it out if true
     const experimental = (f as { experimental?: boolean }).experimental;
-    return !experimental;
+    if (!experimental) {
+      return true;
+    }
+    // Buildpack-backed runtime frameworks are enabled by their own
+    // flag and do not require experimental frameworks to be enabled.
+    return toBuildpackRuntime(inferRuntimeFromFramework(f.slug)) !== undefined;
   });
 }
 

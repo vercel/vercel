@@ -34,17 +34,19 @@ export function resolveImageSource(
   // An entrypoint that names a Dockerfile (including the `Dockerfile.vercel` /
   // `Containerfile.vercel` opt-in markers) is built directly. Otherwise — e.g.
   // when a framework preset resolves its entrypoint via `<detect>` — discover
-  // one in the work directory. When a buildpack is selected, a conventional
-  // `Dockerfile` / `Containerfile` also counts and takes precedence over the
-  // buildpack, so users can always opt out of buildpacks by adding one.
+  // an opt-in marker in the work directory. A `Dockerfile.vercel` /
+  // `Containerfile.vercel` marker takes precedence over a selected buildpack
+  // (the opt-out from buildpack builds); a conventional `Dockerfile` does
+  // not, so a repo can keep one for other purposes.
   const dockerfileConfigured =
     entrypointRef && isDockerfileRef(entrypointRef)
       ? entrypointRef
-      : findDockerfile(workPath, buildpack !== undefined);
+      : findDockerfile(workPath);
   const dockerfileRel = dockerfileConfigured ?? 'Dockerfile';
   const dockerfilePath = path.join(workPath, dockerfileRel);
   const hasDockerfile =
-    dockerfileConfigured !== undefined || existsSync(dockerfilePath);
+    dockerfileConfigured !== undefined ||
+    (!buildpack && existsSync(dockerfilePath));
   if (hasDockerfile) {
     return { kind: 'dockerfile', dockerfileRel, dockerfilePath };
   }
@@ -67,8 +69,8 @@ export function resolveImageSource(
     throw new Error(
       `The ${buildpack.runtime} buildpack was selected, but no supported ` +
         `project marker was found in "${workPath}". Add ` +
-        `${buildpack.projectMarkers.join(' or ')}, or add a Dockerfile to ` +
-        'control the image build.'
+        `${buildpack.projectMarkers.join(' or ')}, or add a Dockerfile.vercel ` +
+        'to control the image build.'
     );
   }
 

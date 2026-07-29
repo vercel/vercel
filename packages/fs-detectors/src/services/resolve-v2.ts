@@ -6,9 +6,10 @@ import type {
   ExperimentalServiceV2Config,
   ExperimentalServicesV2,
   ServiceDetectionError,
+  ServiceDetectionWarning,
   ServiceRuntime,
 } from './types';
-import { BUILDPACK_RUNTIMES, RUNTIME_BUILDERS, STATIC_BUILDERS } from './types';
+import { RUNTIME_BUILDERS, STATIC_BUILDERS, toBuildpackRuntime } from './types';
 import {
   getServiceFs,
   resolveEntrypointPath,
@@ -16,6 +17,7 @@ import {
   parsePyModuleAttrEntrypoint,
 } from './resolve';
 import {
+  buildpackEntrypointWarning,
   getBuilderForRuntime,
   inferRuntimeFromFramework,
   inferServiceRuntime,
@@ -362,10 +364,9 @@ export async function resolveConfiguredServiceV2(
   // with Cloud Native Buildpacks: there is no entrypoint file to resolve or
   // require, and the builder is always `@vercel/container` with the
   // `<detect>` sentinel as its source.
-  const buildpackRuntime =
-    inferredRuntime && BUILDPACK_RUNTIMES.has(inferredRuntime as ServiceRuntime)
-      ? (inferredRuntime as ServiceRuntime)
-      : undefined;
+  const buildpackRuntime = toBuildpackRuntime(
+    inferredRuntime as ServiceRuntime | undefined
+  );
   if (
     detectedFramework &&
     frameworkRuntime &&
@@ -505,9 +506,11 @@ export async function resolveAllConfiguredServicesV2(
 ): Promise<{
   services: ExperimentalServiceV2[];
   errors: ServiceDetectionError[];
+  warnings: ServiceDetectionWarning[];
 }> {
   const resolved: ExperimentalServiceV2[] = [];
   const errors: ServiceDetectionError[] = [];
+  const warnings: ServiceDetectionWarning[] = [];
 
   for (const name of Object.keys(services)) {
     const config = services[name];
@@ -528,6 +531,14 @@ export async function resolveAllConfiguredServicesV2(
       continue;
     }
     if (service) {
+      const entrypointWarning = buildpackEntrypointWarning(
+        name,
+        config.entrypoint,
+        service.builder
+      );
+      if (entrypointWarning) {
+        warnings.push(entrypointWarning);
+      }
       resolved.push(service);
     }
   }
@@ -554,5 +565,5 @@ export async function resolveAllConfiguredServicesV2(
     }
   }
 
-  return { services: resolved, errors };
+  return { services: resolved, errors, warnings };
 }

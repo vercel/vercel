@@ -101,7 +101,7 @@ function stubRegistryFetch(
 }
 
 /** Fake child process that exits with a failure code. */
-function fakeChildFailure(stderr = '') {
+function fakeChildFailure(stderr = '', code = 1) {
   const child: any = new EventEmitter();
   child.stdout = new EventEmitter();
   child.stderr = new EventEmitter();
@@ -110,7 +110,7 @@ function fakeChildFailure(stderr = '') {
     if (stderr) {
       child.stderr.emit('data', Buffer.from(stderr));
     }
-    child.emit('close', 1);
+    child.emit('close', code);
   });
   return child;
 }
@@ -1303,26 +1303,152 @@ describe('@vercel/container', () => {
   });
 
   describe('buildpacks (Ruby)', () => {
+    let BUILDPACKS: typeof import('../src/buildpacks/registry').BUILDPACKS;
     let ruby: import('../src/buildpacks/registry').BuildpackDescriptor;
     let requestedBuildpack: typeof import('../src/buildpacks/registry').requestedBuildpack;
     let resolveImageSource: typeof import('../src/image-source').resolveImageSource;
 
     beforeAll(async () => {
       const registry = await import('../src/buildpacks/registry');
+      BUILDPACKS = registry.BUILDPACKS;
       requestedBuildpack = registry.requestedBuildpack;
       ruby = registry.BUILDPACKS.find(bp => bp.runtime === 'ruby')!;
       resolveImageSource = (await import('../src/image-source'))
         .resolveImageSource;
     });
 
-    it('pins the builder and run images by digest', () => {
+    it('pins the builder and run images by digest and declares a buildpack group', () => {
       // Deploys run the builder on Vercel infrastructure — a mutable tag
       // would silently track upstream pushes.
-      expect(ruby.builder).toMatch(/@sha256:[0-9a-f]{64}$/);
-      expect(ruby.runImage).toMatch(/@sha256:[0-9a-f]{64}$/);
+      for (const bp of BUILDPACKS) {
+        expect(bp.builder).toMatch(/@sha256:[0-9a-f]{64}$/);
+        expect(bp.runImage).toMatch(/@sha256:[0-9a-f]{64}$/);
+        expect(bp.buildpackGroup.length).toBeGreaterThan(0);
+      }
     });
 
-    it('resolves the buildpack from either config channel and honors marker/Dockerfile precedence', () => {
+    it('resolves images per descriptor without language-specific branches', async () => {
+      const { builderImageRef, runImageRef, hasProjectMarkers } = await import(
+        '../src/buildpacks/registry'
+      );
+      const synthetic = {
+        runtime: 'elixir',
+        projectMarkers: ['mix.exs'],
+        builder: 'example/builder-elixir@sha256:deadbeef',
+        runImage: 'example/run-elixir@sha256:deadbeef',
+        buildpackGroup: [{ id: 'example/elixir', version: '1.2.3' }],
+      };
+
+      expect(builderImageRef(synthetic)).toBe(synthetic.builder);
+      expect(runImageRef(synthetic)).toBe(synthetic.runImage);
+
+      process.env.VERCEL_BUILDPACK_ELIXIR_BUILDER = 'example/custom:tag';
+      try {
+        expect(builderImageRef(synthetic)).toBe('example/custom:tag');
+        // A custom builder may target a different stack; never pair it with
+        // the pinned default run image.
+        expect(runImageRef(synthetic)).toBeUndefined();
+        process.env.VERCEL_BUILDPACK_ELIXIR_RUN_IMAGE = 'example/run:tag';
+        expect(runImageRef(synthetic)).toBe('example/run:tag');
+      } finally {
+        delete process.env.VERCEL_BUILDPACK_ELIXIR_BUILDER;
+        delete process.env.VERCEL_BUILDPACK_ELIXIR_RUN_IMAGE;
+      }
+
+      existsSyncMock.mockImplementation((p: string) => p === '/mix.exs');
+      expect(hasProjectMarkers(synthetic, '/')).toBe(true);
+      existsSyncMock.mockImplementation((p: string) => p === '/Gemfile');
+      expect(hasProjectMarkers(synthetic, '/')).toBe(false);
+    });
+
+    it('fails dev builds when an overridden builder has no resolvable run image', async () => {
+      process.env.VERCEL_BUILDPACK_RUBY_BUILDER = 'example/custom-builder:tag';
+      existsSyncMock.mockImplementation((p: string) => p === '/Gemfile');
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (
+          cmd === 'docker' &&
+          args[0] === 'image' &&
+          args.includes('io.buildpacks.builder.metadata')
+        ) {
+          return fakeChild('');
+        }
+        if (cmd === 'docker' && args[0] === 'image' && args[1] === 'inspect') {
+          return fakeChild('linux/amd64\n');
+        }
+        return fakeChild('');
+      });
+
+      try {
+        await expect(
+          startDevServer({
+            ...createBuildOptions({ buildpack: 'ruby' }),
+            entrypoint: '<detect>',
+            service: { name: 'ruby-api' },
+            meta: { isDev: true },
+          } as any)
+        ).rejects.toThrow(/VERCEL_BUILDPACK_RUBY_RUN_IMAGE/);
+      } finally {
+        delete process.env.VERCEL_BUILDPACK_RUBY_BUILDER;
+      }
+    });
+
+    it('applies overridable production env defaults beneath the user build env', async () => {
+      const { mergeDefaultBuildEnv } = await import(
+        '../src/buildpacks/lifecycle'
+      );
+
+      const defaulted = mergeDefaultBuildEnv(ruby, { BP_MRI_VERSION: '3.3' });
+      expect(defaulted.buildEnv).toMatchObject({
+        BP_MRI_VERSION: '3.3',
+        BPE_DEFAULT_RAILS_ENV: 'production',
+        BPE_DEFAULT_RACK_ENV: 'production',
+        BPE_DEFAULT_RAILS_LOG_TO_STDOUT: 'enabled',
+        BPE_DEFAULT_RAILS_SERVE_STATIC_FILES: 'enabled',
+      });
+      expect(defaulted.applied.join('\n')).toContain(
+        'Defaulting RAILS_ENV=production'
+      );
+
+      // A user-provided value suppresses the default, whether set as the
+      // launch variable itself or the BPE_DEFAULT_* form.
+      const overridden = mergeDefaultBuildEnv(ruby, {
+        RAILS_ENV: 'staging',
+        BPE_DEFAULT_RACK_ENV: 'staging',
+      });
+      expect(overridden.buildEnv).not.toHaveProperty('BPE_DEFAULT_RAILS_ENV');
+      expect(overridden.buildEnv).toMatchObject({
+        RAILS_ENV: 'staging',
+        BPE_DEFAULT_RACK_ENV: 'staging',
+        BPE_DEFAULT_RAILS_LOG_TO_STDOUT: 'enabled',
+      });
+      expect(overridden.applied.join('\n')).not.toContain('RAILS_ENV');
+      expect(overridden.applied.join('\n')).not.toContain('RACK_ENV=');
+
+      // Descriptors without defaults pass the env through untouched.
+      const none = mergeDefaultBuildEnv(
+        { ...ruby, defaultBuildEnv: undefined },
+        undefined
+      );
+      expect(none).toEqual({ buildEnv: undefined, applied: [] });
+    });
+
+    it('describes CNB lifecycle creator exit codes by phase', async () => {
+      const { describeCreatorExitCode } = await import(
+        '../src/buildpacks/lifecycle'
+      );
+      expect(describeCreatorExitCode(20)).toBe('no buildpack detected the app');
+      expect(describeCreatorExitCode(21)).toMatch(/errored during detection/);
+      expect(describeCreatorExitCode(51)).toMatch(
+        /failed while building the app/
+      );
+      expect(describeCreatorExitCode(52)).toBe('the build phase failed');
+      expect(describeCreatorExitCode(62)).toMatch(/export phase/);
+      // Unknown / generic codes get no interpretation.
+      expect(describeCreatorExitCode(1)).toBeUndefined();
+      expect(describeCreatorExitCode(undefined)).toBeUndefined();
+    });
+
+    it('resolves the buildpack from either config channel and honors marker precedence', () => {
       expect(requestedBuildpack({ buildpack: 'ruby' })).toBe(ruby);
       expect(requestedBuildpack({ framework: 'ruby' })).toBe(ruby);
       expect(requestedBuildpack({ runtime: 'container' })).toBeUndefined();
@@ -1338,13 +1464,23 @@ describe('@vercel/container', () => {
         resolveImageSource(options({ buildpack: 'ruby' }), 'build')
       ).toMatchObject({ kind: 'buildpack', buildpack: { runtime: 'ruby' } });
 
-      // A conventional Dockerfile opts out of buildpacks.
+      // Only a `.vercel` marker opts out of buildpacks; a conventional
+      // Dockerfile can coexist with a buildpack build.
       existsSyncMock.mockImplementation(
         (p: string) => p === '/Gemfile' || p === '/Dockerfile'
       );
       expect(
         resolveImageSource(options({ buildpack: 'ruby' }), 'build')
-      ).toMatchObject({ kind: 'dockerfile', dockerfileRel: 'Dockerfile' });
+      ).toMatchObject({ kind: 'buildpack', buildpack: { runtime: 'ruby' } });
+      existsSyncMock.mockImplementation(
+        (p: string) => p === '/Gemfile' || p === '/Dockerfile.vercel'
+      );
+      expect(
+        resolveImageSource(options({ buildpack: 'ruby' }), 'build')
+      ).toMatchObject({
+        kind: 'dockerfile',
+        dockerfileRel: 'Dockerfile.vercel',
+      });
 
       // A Procfile is not language evidence — it must not mark a project as
       // a Ruby buildpack project on its own.
@@ -1481,26 +1617,32 @@ describe('@vercel/container', () => {
           );
         }
         if (cmd === 'buildah' && args.includes('/cnb/lifecycle/creator')) {
-          return fakeChildFailure('ERROR: failed to detect a launch process');
+          // 51: lifecycle build-phase failure (a buildpack's /bin/build errored).
+          return fakeChildFailure('ERROR: failed to build: exit status 1', 51);
         }
         return fakeChild('');
       });
 
-      await expect(
-        build({
-          ...createBuildOptions({ buildpack: 'ruby' }),
-          entrypoint: '<detect>',
-          service: { name: 'api' },
-        })
-      ).rejects.toThrow(/failed to detect a launch process/);
-      expect(
-        spawnMock.mock.calls.some(
-          ([cmd, args]) =>
-            cmd === 'buildah' &&
-            (args as string[]).includes('rm') &&
-            (args as string[]).includes('--force')
-        )
-      ).toBe(true);
+      const failure = await build({
+        ...createBuildOptions({ buildpack: 'ruby' }),
+        entrypoint: '<detect>',
+        service: { name: 'api' },
+      }).then(
+        () => undefined,
+        err => err as Error
+      );
+      expect(failure?.message).toContain('exited with code 51');
+      // The wrapper explains the lifecycle exit code instead of leaving a
+      // bare number.
+      expect(failure?.message).toContain(
+        'The lifecycle exited with code 51: a buildpack failed while building the app'
+      );
+      const cleanupArgs = spawnMock.mock.calls.find(
+        ([cmd, args]) => cmd === 'buildah' && (args as string[]).includes('rm')
+      )?.[1] as string[] | undefined;
+      expect(cleanupArgs).toBeDefined();
+      expect(cleanupArgs).not.toContain('--force');
+      expect(cleanupArgs?.at(-1)).toMatch(/^vercel-cnb-ruby-/);
     });
 
     it('builds and starts a Ruby buildpack image in local dev', async () => {
@@ -1519,12 +1661,28 @@ describe('@vercel/container', () => {
             .filter((_arg, index) => args[index - 1] === '-v')
             .find(arg => arg.endsWith(':/platform/env:ro'));
           expect(platformEnvMount).toBeDefined();
+          const platformEnvDir = platformEnvMount!.slice(
+            0,
+            -':/platform/env:ro'.length
+          );
+          expect(readFileSync(`${platformEnvDir}/BP_MRI_VERSION`, 'utf8')).toBe(
+            '3.3'
+          );
+          // Dev applies the same overridable production defaults as deploys.
+          expect(
+            readFileSync(`${platformEnvDir}/BPE_DEFAULT_RAILS_ENV`, 'utf8')
+          ).toBe('production');
+          // Dev detects with the same explicit buildpack order as deploys.
+          expect(args).toContain('-order=/platform/order/order.toml');
+          const orderMount = args
+            .filter((_arg, index) => args[index - 1] === '-v')
+            .find(arg => arg.endsWith(':/platform/order:ro'));
           expect(
             readFileSync(
-              `${platformEnvMount!.slice(0, -':/platform/env:ro'.length)}/BP_MRI_VERSION`,
+              `${orderMount!.slice(0, -':/platform/order:ro'.length)}/order.toml`,
               'utf8'
             )
-          ).toBe('3.3');
+          ).toContain('version = "2.0.1"');
           return fakeChild('');
         }
         if (cmd === 'docker' && args[0] === 'run') {
@@ -1571,6 +1729,34 @@ describe('@vercel/container', () => {
         )
       ).toBe(true);
       await result!.shutdown!();
+    });
+
+    it('explains creator exit codes when a dev buildpack build fails', async () => {
+      existsSyncMock.mockImplementation((p: string) => p === '/Gemfile');
+      spawnMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'docker' && args[0] === 'image' && args[1] === 'inspect') {
+          return fakeChild('linux/amd64\n');
+        }
+        if (
+          cmd === 'docker' &&
+          args[0] === 'run' &&
+          args.includes('/cnb/lifecycle/creator')
+        ) {
+          return fakeChildFailure('ERROR: No buildpack groups passed', 20);
+        }
+        return fakeChild('');
+      });
+
+      await expect(
+        startDevServer({
+          ...createBuildOptions({ buildpack: 'ruby' }),
+          entrypoint: '<detect>',
+          service: { name: 'ruby-api' },
+          meta: { isDev: true },
+        } as any)
+      ).rejects.toThrow(
+        /exited with code 20 \(no buildpack detected the app\)/
+      );
     });
 
     it('runs a dev command override through the CNB launcher', async () => {
@@ -1636,6 +1822,13 @@ describe('@vercel/container', () => {
       // platform env dir hit the real filesystem — use a real workPath.
       const workPath = mkdtempSync(join(tmpdir(), 'vercel-cnb-test-'));
       existsSyncMock.mockImplementation((p: string) => p.endsWith('/Gemfile'));
+      // The Procfile is written to a temp dir and `buildah copy`ed into the
+      // working container, never the source tree; capture its content while
+      // the temp file still exists.
+      let stagedProcfile: string | undefined;
+      let stagedOrder: string | undefined;
+      let stagedDefaultRailsEnv: string | undefined;
+      const copyCalls: string[][] = [];
       spawnMock.mockImplementation((cmd: string, args: string[]) => {
         if (cmd === 'buildah' && args.includes('info')) {
           return fakeChild(
@@ -1649,13 +1842,47 @@ describe('@vercel/container', () => {
             })
           );
         }
+        if (
+          cmd === 'buildah' &&
+          args.some(arg => arg.includes('CNB_USER_ID'))
+        ) {
+          // The build-user probe reads CNB_USER_ID/CNB_GROUP_ID from the
+          // builder image's env. It must use host networking: the build
+          // sandbox cannot set up bridge networking (netavark/iptables).
+          expect(args.join(' ')).toContain('--network host');
+          return fakeChild('1001:1000\n');
+        }
+        if (cmd === 'buildah' && args.includes('copy')) {
+          copyCalls.push([...args]);
+          if (args.at(-1) === '/workspace/Procfile') {
+            stagedProcfile = readFileSync(args.at(-2)!, 'utf8');
+          }
+          return fakeChild('');
+        }
         if (cmd === 'buildah' && args.includes('/cnb/lifecycle/creator')) {
-          const reportMount = args
-            .filter((_arg, index) => args[index - 1] === '--volume')
-            .find(arg => arg.endsWith(':/platform-output'));
+          const mounts = args.filter(
+            (_arg, index) => args[index - 1] === '--volume'
+          );
+          const reportMount = mounts.find(arg =>
+            arg.endsWith(':/platform-output')
+          );
           writeFileSync(
             `${reportMount!.slice(0, -':/platform-output'.length)}/report.toml`,
             `[image]\ndigest = "${digest}"\n`
+          );
+          // The app is copied into the container, not bind-mounted.
+          expect(mounts.some(arg => arg.endsWith(':/workspace'))).toBe(false);
+          const orderMount = mounts.find(arg =>
+            arg.endsWith(':/platform/order')
+          );
+          stagedOrder = readFileSync(
+            `${orderMount!.slice(0, -':/platform/order'.length)}/order.toml`,
+            'utf8'
+          );
+          const envMount = mounts.find(arg => arg.endsWith(':/platform/env'));
+          stagedDefaultRailsEnv = readFileSync(
+            `${envMount!.slice(0, -':/platform/env'.length)}/BPE_DEFAULT_RAILS_ENV`,
+            'utf8'
           );
         }
         return fakeChild('');
@@ -1673,8 +1900,38 @@ describe('@vercel/container', () => {
           meta: { buildEnv: { BP_MRI_VERSION: '3.3' } },
         } as any);
 
-        expect(readFileSync(join(workPath, 'Procfile'), 'utf8')).toBe(
-          `web: bundle exec puma -p '$PORT'\n`
+        expect(stagedProcfile).toBe(`web: bundle exec puma -p '$PORT'\n`);
+        // The source tree must stay untouched.
+        expect(() => readFileSync(join(workPath, 'Procfile'))).toThrow();
+        // Detection is scoped to the descriptor's buildpack group.
+        expect(stagedOrder).toContain('id = "paketo-buildpacks/ruby"');
+        expect(stagedOrder).toContain('version = "2.0.1"');
+
+        // The app is copied into the working container owned by the
+        // builder's build user (as pack does), then the command Procfile is
+        // copied on top of it.
+        const appCopy = copyCalls.find(args => args.at(-1) === '/workspace');
+        expect(appCopy).toBeDefined();
+        expect(appCopy).toEqual(
+          expect.arrayContaining(['copy', '--chown', '1001:1000'])
+        );
+        expect(appCopy?.at(-2)).toBe(workPath);
+        const procfileCopy = copyCalls.find(
+          args => args.at(-1) === '/workspace/Procfile'
+        );
+        expect(procfileCopy).toEqual(
+          expect.arrayContaining(['copy', '--chown', '1001:1000'])
+        );
+        const callKinds = spawnMock.mock.calls
+          .filter(([cmd]) => cmd === 'buildah')
+          .map(([, args]) => {
+            const a = args as string[];
+            if (a.includes('copy')) return 'copy';
+            if (a.includes('/cnb/lifecycle/creator')) return 'creator';
+            return 'other';
+          });
+        expect(callKinds.indexOf('copy')).toBeLessThan(
+          callKinds.indexOf('creator')
         );
 
         // The build env travels via the CNB platform dir, not process env.
@@ -1687,6 +1944,9 @@ describe('@vercel/container', () => {
           .filter((_arg, index) => creatorArgs[index - 1] === '--volume')
           .find(arg => arg.endsWith(':/platform/env'));
         expect(platformEnvMount).toBeDefined();
+        expect(creatorArgs).toContain('-order=/platform/order/order.toml');
+        // Overridable production defaults ride along with the user's env.
+        expect(stagedDefaultRailsEnv).toBe('production');
 
         await build({
           ...createBuildOptions({
@@ -1697,9 +1957,22 @@ describe('@vercel/container', () => {
           entrypoint: '<detect>',
           service: { name: 'api' },
         } as any);
-        expect(readFileSync(join(workPath, 'Procfile'), 'utf8')).toBe(
-          `web: bundle exec puma -p $PORT\n`
-        );
+        expect(stagedProcfile).toBe(`web: bundle exec puma -p $PORT\n`);
+
+        // commandShell + multi-element argv would silently drop every
+        // element after the first.
+        await expect(
+          build({
+            ...createBuildOptions({
+              buildpack: 'ruby',
+              command: ['bundle', 'exec', 'puma'],
+              commandShell: true,
+            }),
+            workPath,
+            entrypoint: '<detect>',
+            service: { name: 'api' },
+          } as any)
+        ).rejects.toThrow(/single command string/);
       } finally {
         rmSync(workPath, { recursive: true, force: true });
       }

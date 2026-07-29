@@ -95,6 +95,29 @@ export function getInternalServiceWorkerPath(
   return `${getInternalServiceWorkerPathPrefix(serviceName)}/${normalizedEntrypoint}/${handler}`;
 }
 
+/**
+ * Buildpack-backed services build the whole service root; an `entrypoint`
+ * has no effect on them and is ignored with a warning rather than an error
+ * so configs remain portable between the flag-off and flag-on states.
+ */
+export function buildpackEntrypointWarning(
+  name: string,
+  entrypoint: string | undefined,
+  builder: { config?: { buildpack?: unknown } }
+): ServiceDetectionWarning | undefined {
+  if (!entrypoint || !builder.config?.buildpack) {
+    return undefined;
+  }
+  return {
+    code: 'BUILDPACK_ENTRYPOINT_IGNORED',
+    message:
+      `Service "${name}" specifies "entrypoint", which buildpack-backed ` +
+      'services ignore. Use "command" to override the start command, or ' +
+      'add a Dockerfile.vercel to control the image build.',
+    serviceName: name,
+  };
+}
+
 export function getBuilderForRuntime(runtime: ServiceRuntime): string {
   const builder = RUNTIME_BUILDERS[runtime];
   if (!builder) {
@@ -217,19 +240,9 @@ export function inferServiceRuntime(config: {
     return frameworkRuntime;
   }
 
-  // Infer from builder. Buildpack runtimes (ruby, future java, …) also map
-  // to `@vercel/container` in RUNTIME_BUILDERS, so only the `container`
-  // runtime may claim that builder here — a service declaring
-  // `builder: "@vercel/container"` is a container service, not whichever
-  // buildpack runtime happens to come first in the map.
+  // Infer from builder
   if (config.builder) {
     for (const [runtime, builderName] of Object.entries(RUNTIME_BUILDERS)) {
-      if (
-        builderName === RUNTIME_BUILDERS.container &&
-        runtime !== 'container'
-      ) {
-        continue;
-      }
       if (config.builder === builderName) {
         return runtime as ServiceRuntime;
       }
