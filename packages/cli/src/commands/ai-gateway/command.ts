@@ -674,6 +674,88 @@ export const leaderboardModelsSubcommand = {
   ],
 } as const;
 
+export const budgetsDefaultsListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: "List the team's AI Gateway budget defaults",
+  arguments: [],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'List budget defaults',
+      value: `${packageName} ai-gateway budgets defaults ls`,
+    },
+  ],
+} as const;
+
+export const budgetsDefaultsSetSubcommand = {
+  name: 'set',
+  aliases: [],
+  description:
+    'Create or update the AI Gateway budget default for a scope (project or api-key), applied to resources of that scope without an explicit budget',
+  arguments: [{ name: 'scope', required: true }],
+  options: [
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      argument: 'AMOUNT',
+      deprecated: false,
+      description: 'Default budget limit in dollars (minimum 1)',
+    },
+    {
+      name: 'refresh-period',
+      shorthand: null,
+      type: String,
+      argument: 'PERIOD',
+      deprecated: false,
+      description:
+        'Budget refresh cadence: daily, weekly, monthly, or none (default: monthly)',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Set the per-project default',
+      value: `${packageName} ai-gateway budgets defaults set project --limit 200 --refresh-period monthly`,
+    },
+    {
+      name: 'Set the per-api-key default',
+      value: `${packageName} ai-gateway budgets defaults set api-key --limit 50`,
+    },
+  ],
+} as const;
+
+export const budgetsDefaultsRemoveSubcommand = {
+  name: 'remove',
+  aliases: ['rm', 'delete'],
+  description:
+    'Remove the AI Gateway budget default for a scope (project or api-key)',
+  arguments: [{ name: 'scope', required: true }],
+  options: [yesOption, formatOption],
+  examples: [
+    {
+      name: 'Remove the per-project default',
+      value: `${packageName} ai-gateway budgets defaults rm project`,
+    },
+  ],
+} as const;
+
+export const budgetsDefaultsSubcommand = {
+  name: 'defaults',
+  aliases: [],
+  description:
+    'Manage AI Gateway budget defaults (per-project and per-api-key spend limits applied by default)',
+  arguments: [],
+  subcommands: [
+    budgetsDefaultsListSubcommand,
+    budgetsDefaultsSetSubcommand,
+    budgetsDefaultsRemoveSubcommand,
+  ],
+  options: [],
+  examples: [],
+} as const;
+
 export const budgetsSubcommand = {
   name: 'budgets',
   aliases: [],
@@ -683,6 +765,7 @@ export const budgetsSubcommand = {
     budgetsSetSubcommand,
     budgetsListSubcommand,
     budgetsRemoveSubcommand,
+    budgetsDefaultsSubcommand,
   ],
   options: [],
   examples: [],
