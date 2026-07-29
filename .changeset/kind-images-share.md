@@ -1,5 +1,6 @@
 ---
 '@vercel/build-utils': patch
+'vercel': patch
 ---
 
-Add shared function settings to container image build outputs.
+Type shared function settings in container image build outputs.

@@ -152,10 +152,15 @@ function isEdgeFunction(v: any): v is EdgeFunction {
   return v?.type === 'EdgeFunction';
 }
 
-function isContainerImage(v: any): v is ContainerImage {
+function isContainerImage(value: unknown): value is ContainerImage {
   // Container image outputs use `runtime: 'container'`. Detect by runtime so
   // they are handled before the generic Lambda path.
-  return v?.runtime === 'container';
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'runtime' in value &&
+    value.runtime === 'container'
+  );
 }
 
 export function isLambda(v: any): v is Lambda {
@@ -692,8 +697,8 @@ async function writeContainerImage(
 ) {
   const dest = join(outputDir, 'functions', `${path}.func`);
   // For `runtime: 'container'` the OCI image reference is carried in `handler`;
-  // the platform surfaces it as the container image downstream (vercel/api#76729).
-  const handler = (containerImage as any).handler;
+  // the platform uses it as the container image reference.
+  const handler = containerImage.handler;
   if (typeof handler !== 'string' || handler.length === 0) {
     throw new Error(
       `Container image output for "${path}" is missing "handler".`
@@ -701,22 +706,20 @@ async function writeContainerImage(
   }
 
   const architecture =
-    functionConfiguration?.architecture ?? (containerImage as any).architecture;
-  const memory =
-    functionConfiguration?.memory ?? (containerImage as any).memory;
+    functionConfiguration?.architecture ?? containerImage.architecture;
+  const memory = functionConfiguration?.memory ?? containerImage.memory;
   const maxDuration =
-    functionConfiguration?.maxDuration ?? (containerImage as any).maxDuration;
-  const regions =
-    functionConfiguration?.regions ?? (containerImage as any).regions;
+    functionConfiguration?.maxDuration ?? containerImage.maxDuration;
+  const regions = functionConfiguration?.regions ?? containerImage.regions;
   const functionFailoverRegions =
     functionConfiguration?.functionFailoverRegions ??
-    (containerImage as any).functionFailoverRegions;
+    containerImage.functionFailoverRegions;
   const experimentalTriggers =
     functionConfiguration?.experimentalTriggers ??
-    (containerImage as any).experimentalTriggers;
+    containerImage.experimentalTriggers;
   const supportsCancellation =
     functionConfiguration?.supportsCancellation ??
-    (containerImage as any).supportsCancellation;
+    containerImage.supportsCancellation;
 
   await fs.mkdirp(dest);
   await fs.writeJSON(
@@ -724,10 +727,8 @@ async function writeContainerImage(
     {
       handler,
       runtime: 'container',
-      environment: (containerImage as any).environment ?? {},
-      ...((containerImage as any).command
-        ? { command: (containerImage as any).command }
-        : {}),
+      environment: containerImage.environment ?? {},
+      ...(containerImage.command ? { command: containerImage.command } : {}),
       ...(architecture !== undefined ? { architecture } : {}),
       ...(memory !== undefined ? { memory } : {}),
       ...(maxDuration !== undefined ? { maxDuration } : {}),
