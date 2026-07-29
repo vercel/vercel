@@ -3459,6 +3459,47 @@ describe('pyproject subscribers', () => {
     ).rejects.toThrow(/no introspected queue subscriptions matched/);
   });
 
+  it('fails when any declared topic does not match an introspected subscription', async () => {
+    mockQueueIntrospection([
+      { topic: 'jobs', consumer_group: 'job-workers' },
+      { topic: 'events-created', consumer_group: 'event-workers' },
+    ]);
+
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'worker.py': new FileBlob({
+        data: 'import vercel.queue\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "worker:app"',
+          'topics = ["jobs", "events-*", "missing"]',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'app.py',
+        meta: { isDev: false },
+        config: { framework: 'flask' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(
+      /declared topics \[missing\].*introspected topics \[jobs, events-created\]/
+    );
+  });
+
   it('rejects consumer because subscriber consumers are derived from function paths', async () => {
     const files = {
       'app.py': new FileBlob({
