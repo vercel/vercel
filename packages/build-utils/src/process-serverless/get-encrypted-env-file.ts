@@ -1,4 +1,5 @@
 import FileBlob from '../file-blob';
+import { sha256 } from '../fs/stream-to-digest-async';
 
 /**
  * A type to represent the encrypted environment file that needs to be
@@ -18,8 +19,12 @@ export function getEncryptedEnv(
     return;
   }
 
+  const data = Buffer.from(envContent, 'base64');
   return [
     envFilename,
-    new FileBlob({ data: Buffer.from(envContent, 'base64') }),
+    new FileBlob({
+      data,
+      contentHash: sha256(data),
+    }),
   ];
 }

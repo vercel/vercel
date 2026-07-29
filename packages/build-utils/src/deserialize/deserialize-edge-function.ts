@@ -14,6 +14,7 @@ export async function deserializeEdgeFunction(
     await hydrateFilesMap(
       files,
       config.filePathMap,
+      config.fileHashes,
       repoRootPath,
       fileFsRefsCache
     );
