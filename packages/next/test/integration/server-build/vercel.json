@@ -21,9 +21,12 @@
             "maxDuration": 5,
             "maxConcurrency": 6
           },
-          "**/*.js": {
+          "pages/dynamic/[slug].js": {
             "maxDuration": 5,
             "maxConcurrency": 4
+          },
+          "**/*.js": {
+            "maxDuration": 5
           }
         }
       }

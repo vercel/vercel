@@ -339,10 +339,12 @@ it('should build using server build', async () => {
 
   expect(output['api/another'].type).toBe('Lambda');
   expect(output['api/another'].allowQuery).toBe(undefined);
+  expect(output['api/another'].maxConcurrency).toBe(undefined);
   expect(output['api/another'].operationType).toBe('API');
 
   expect(output['api/blog/[slug]'].type).toBe('Lambda');
   expect(output['api/blog/[slug]'].allowQuery).toBe(undefined);
+  expect(output['api/blog/[slug]'].maxConcurrency).toBe(undefined);
   expect(output['api/blog/[slug]'].operationType).toBe('API');
 
   expect(output['static'].type).toBe('FileFsRef');
@@ -354,12 +356,12 @@ it('should build using server build', async () => {
   expect(output['ssg'].lambda.operationType).toBe('ISR');
   expect(output['ssg'].sourcePath).toBe(undefined);
 
-  expect(output['index'] === output['another']).toBe(false);
+  expect(output['index']).not.toBe(output['another']);
   expect(output['dynamic/[slug]'] !== output['fallback/[slug]'].lambda).toBe(
     true
   );
   expect(output['index'] !== output['dynamic/[slug]']).toBe(true);
-  expect(output['api/another'] !== output['api/blog/[slug]']).toBe(true);
+  expect(output['api/another']).toBe(output['api/blog/[slug]']);
   expect(output['api'] !== output['api/another']).toBe(true);
   expect(
     caughtLogs.some(log =>
@@ -379,7 +381,7 @@ it('should build using server build', async () => {
       totalLambdas += 1;
     }
   }
-  expect(lambdas.size).toBe(9);
+  expect(lambdas.size).toBe(7);
   expect(lambdas.size).toBeLessThan(totalLambdas);
 });
 
