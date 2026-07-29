@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.54.1
+
+### Patch Changes
+
+- 5858c35: Validate every configured Python queue subscriber topic against build-time introspected subscriptions. The `topics` field remains optional and, when omitted, all introspected subscriptions are used.
+
 ## 6.54.0
 
 ### Minor Changes
