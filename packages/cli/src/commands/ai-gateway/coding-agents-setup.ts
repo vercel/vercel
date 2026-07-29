@@ -101,7 +101,7 @@ export default async function codingAgentsSetup(
   const reconfigure = opts['--reconfigure'] as boolean | undefined;
   const dryRun = opts['--dry-run'] as boolean | undefined;
   const noBackup = opts['--no-backup'] as boolean | undefined;
-  const noMigrateSessions = opts['--no-migrate-sessions'] as
+  const noSessionMigration = opts['--no-session-migration'] as
     | boolean
     | undefined;
   const noKeychain = opts['--no-keychain'] as boolean | undefined;
@@ -122,7 +122,7 @@ export default async function codingAgentsSetup(
   telemetry.trackCliFlagReconfigure(reconfigure);
   telemetry.trackCliFlagDryRun(dryRun);
   telemetry.trackCliFlagNoBackup(noBackup);
-  telemetry.trackCliFlagNoMigrateSessions(noMigrateSessions);
+  telemetry.trackCliFlagNoSessionMigration(noSessionMigration);
   telemetry.trackCliFlagNoKeychain(noKeychain);
   telemetry.trackCliOptionAgentConfig(agentConfig);
   telemetry.trackCliOptionShellRc(shellRcOverride);
@@ -311,7 +311,7 @@ export default async function codingAgentsSetup(
   }
 
   let sessionMigrations: PlannedSessionMigration[] = [];
-  if (!noMigrateSessions) {
+  if (!noSessionMigration) {
     try {
       sessionMigrations = await planSessionMigrations(agents, { home });
     } catch (error) {
@@ -319,7 +319,7 @@ export default async function codingAgentsSetup(
         client,
         machine,
         'session_migration_failed',
-        `${error instanceof Error ? error.message : String(error)}. No configuration was changed. Pass --no-migrate-sessions to leave existing sessions untouched and continue.`
+        `${error instanceof Error ? error.message : String(error)}. No configuration was changed. Pass --no-session-migration to leave existing sessions untouched and continue.`
       );
     }
     if (sessionMigrations.length > 0 && canPrompt && !yes && !dryRun) {

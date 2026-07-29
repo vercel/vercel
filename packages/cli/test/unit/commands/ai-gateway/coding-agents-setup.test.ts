@@ -1386,7 +1386,7 @@ describe('ai-gateway coding-agents setup', () => {
       ]);
       offset = client.stdout.getFullOutput().length;
       expect(
-        await run('--no-migrate-sessions', '--key', 'vck_ExistingCodexKey')
+        await run('--no-session-migration', '--key', 'vck_ExistingCodexKey')
       ).toBe(0);
       expect(
         JSON.parse(client.stdout.getFullOutput().slice(offset)).reason

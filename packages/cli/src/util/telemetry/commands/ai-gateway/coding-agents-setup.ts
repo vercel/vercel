@@ -77,9 +77,9 @@ export class AiGatewayCodingAgentsSetupTelemetryClient
     }
   }
 
-  trackCliFlagNoMigrateSessions(noMigrateSessions: boolean | undefined) {
-    if (noMigrateSessions) {
-      this.trackCliFlag('no-migrate-sessions');
+  trackCliFlagNoSessionMigration(noSessionMigration: boolean | undefined) {
+    if (noSessionMigration) {
+      this.trackCliFlag('no-session-migration');
     }
   }
 
