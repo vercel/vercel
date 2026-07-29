@@ -249,13 +249,27 @@ export async function resolveQueueSubscribers({
       kind,
       integrations,
     });
+    const hint =
+      kind === 'workflow'
+        ? '; ensure the entrypoint instantiates vercel.workflow.Workflows'
+        : '';
+    const unmatchedTopicPatterns = getUnmatchedQueueTopicPatterns(
+      declaration,
+      introspected
+    );
+    if (unmatchedTopicPatterns.length > 0) {
+      const introspectedTopics = introspected.map(({ topic }) => topic);
+      throw subscriberError(
+        `${kind} "${declaration.name}" declared topics [${unmatchedTopicPatterns.join(
+          ', '
+        )}] but no introspected queue subscriptions matched them; introspected topics [${introspectedTopics.join(
+          ', '
+        )}]${hint}`
+      );
+    }
     const subscriptions = filterQueueSubscriptions(declaration, introspected);
     if (subscriptions.length === 0) {
       const declared = declaration.topicPatterns?.join(', ') ?? '*';
-      const hint =
-        kind === 'workflow'
-          ? '; ensure the entrypoint instantiates vercel.workflow.Workflows'
-          : '';
       throw subscriberError(
         `${kind} "${declaration.name}" declared topics [${declared}] but no introspected queue subscriptions matched${hint}`
       );
@@ -277,6 +291,18 @@ export function filterQueueSubscriptions(
     declaration.topicPatterns!.some(pattern =>
       queueTopicPatternsOverlap(pattern, subscription.topic)
     )
+  );
+}
+
+function getUnmatchedQueueTopicPatterns(
+  declaration: SubscriberDeclaration,
+  subscriptions: SubscriberSubscription[]
+): string[] {
+  return (declaration.topicPatterns ?? []).filter(
+    pattern =>
+      !subscriptions.some(subscription =>
+        queueTopicPatternsOverlap(pattern, subscription.topic)
+      )
   );
 }
 
