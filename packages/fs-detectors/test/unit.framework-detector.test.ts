@@ -401,7 +401,7 @@ describe('detectFramework()', () => {
     ).toBeNull();
   });
 
-  it('Detect Ruby with only VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS set', async () => {
+  it('Detect Ruby with only VERCEL_RUBY_EXPERIMENTAL_BUILDPACK set', async () => {
     const fs = new VirtualFilesystem({
       Gemfile: 'source "https://rubygems.org"\n',
       'config.ru': 'run ->(_env) { [200, {}, ["ok"]] }\n',
@@ -409,11 +409,11 @@ describe('detectFramework()', () => {
 
     expect(await detectFramework({ fs, frameworkList })).toBeNull();
 
-    process.env.VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS = '1';
+    process.env.VERCEL_RUBY_EXPERIMENTAL_BUILDPACK = '1';
     try {
       expect(await detectFramework({ fs, frameworkList })).toBe('ruby');
     } finally {
-      delete process.env.VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS;
+      delete process.env.VERCEL_RUBY_EXPERIMENTAL_BUILDPACK;
     }
   });
 

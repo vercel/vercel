@@ -7,7 +7,7 @@
 ---
 
 Add generic Cloud Native Buildpack container builds, with Ruby as the first
-supported language, gated behind `VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS=1`.
+supported language, gated behind `VERCEL_RUBY_EXPERIMENTAL_BUILDPACK=1`.
 
 `@vercel/container` gains a language-agnostic CNB lifecycle driven by a
 per-language descriptor registry (`src/buildpacks/registry.ts`). Adding a

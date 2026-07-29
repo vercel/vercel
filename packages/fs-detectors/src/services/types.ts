@@ -208,7 +208,7 @@ const BUILDPACK_RUNTIMES: ReadonlySet<ServiceRuntime> = new Set(['ruby']);
 /**
  * The buildpack runtime for `runtime`, or `undefined` when the runtime is
  * not buildpack-backed or buildpacks are not enabled
- * (`VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS=1`). While disabled, buildpack-backed
+ * (`VERCEL_RUBY_EXPERIMENTAL_BUILDPACK=1`). While disabled, buildpack-backed
  * runtimes keep their legacy {@link RUNTIME_BUILDERS} behavior.
  */
 export function toBuildpackRuntime(

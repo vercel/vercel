@@ -2,7 +2,7 @@
   "build": {
     "env": {
       "SECRET_KEY_BASE": "ruby-buildpack-e2e-build-secret",
-      "VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS": "1"
+      "VERCEL_RUBY_EXPERIMENTAL_BUILDPACK": "1"
     }
   },
   "env": {

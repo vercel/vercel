@@ -773,7 +773,7 @@ describe('Test `detectBuilders`', () => {
   });
 
   it('routes the Ruby framework through the container buildpack builder when buildpacks are enabled', async () => {
-    process.env.VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS = '1';
+    process.env.VERCEL_RUBY_EXPERIMENTAL_BUILDPACK = '1';
     try {
       const { builders } = await invokeDetectBuildersAndThrow(
         ['Gemfile', 'config.ru'],
@@ -792,7 +792,7 @@ describe('Test `detectBuilders`', () => {
         },
       });
     } finally {
-      delete process.env.VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS;
+      delete process.env.VERCEL_RUBY_EXPERIMENTAL_BUILDPACK;
     }
   });
 

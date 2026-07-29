@@ -91,7 +91,7 @@ export function isExperimentalBackendsEnabled(): boolean {
  * Cloud Native Buildpack container builds via `@vercel/container`.
  */
 export function isRubyBuildpacksEnabled(): boolean {
-  return process.env.VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS === '1';
+  return process.env.VERCEL_RUBY_EXPERIMENTAL_BUILDPACK === '1';
 }
 
 export function isBackendBuilder(builder: Builder | null | undefined): boolean {

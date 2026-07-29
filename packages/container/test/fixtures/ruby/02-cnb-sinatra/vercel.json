@@ -1,7 +1,7 @@
 {
   "build": {
     "env": {
-      "VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS": "1"
+      "VERCEL_RUBY_EXPERIMENTAL_BUILDPACK": "1"
     }
   },
   "rewrites": [
