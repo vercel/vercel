@@ -52,6 +52,10 @@ export interface Config {
   framework?: string | null;
   nodeVersion?: string;
   middleware?: boolean;
+  /** Enforced runtime for explicitly configured Routing Middleware. */
+  middlewareRuntime?: 'nodejs';
+  /** Matcher supplied outside of the middleware source module. */
+  middlewareMatcher?: string | string[];
   /** Owning service name; scopes per-function config such as the v2beta consumer. */
   serviceName?: string;
   [key: string]: unknown;
@@ -278,6 +282,26 @@ export interface StartDevServerSuccess {
    * Used by the dev orchestrator to schedule cron triggers.
    */
   crons?: Cron[];
+
+  /**
+   * Queue subscriptions registered by this dev server's code, introspected
+   * from the runtime SDK. When present, the dev queue broker delivers with
+   * these consumer groups (matching production trigger behavior) instead of
+   * the synthesized per-service consumer name.
+   */
+  queueSubscriptions?: DevQueueSubscription[];
+}
+
+/**
+ * A queue subscription registered by a dev server's code, keyed the way the
+ * queue SDK dispatches deliveries: by consumer group and topic pattern.
+ */
+export interface DevQueueSubscription {
+  topic: string;
+  consumer: string;
+  retryAfterSeconds?: number;
+  initialDelaySeconds?: number;
+  maxDeliveries?: number;
 }
 
 /**
@@ -1078,8 +1102,8 @@ export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
 export type ExperimentalServiceGroups = Record<string, string[]>;
 
 export interface ServiceBinding {
-  /** Must be `"service"` for Service-to-Service HTTP bindings. */
-  type: 'service';
+  /** If present, must be `"service"` for Service-to-Service HTTP bindings. */
+  type?: 'service';
   /** Target service name from `services`. */
   service: string;
   /** Generated value shape, must be `"url"`. */

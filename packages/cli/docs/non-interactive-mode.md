@@ -44,7 +44,7 @@ Implementations use **`outputActionRequired`** / **`outputAgentError`** (`packag
 
 ## Ordering of checks (implementers)
 
-- If a **required positional/flag is missing** in non-interactive mode, emit **`missing_arguments`** **before** other errors that depend on config state (e.g. stale `currentTeam`). Otherwise agents see the wrong `reason` (e.g. `current_team_invalid` instead of missing slug).
+- If a **required positional/flag is missing** in non-interactive mode, emit **`missing_arguments`** **before** other errors that depend on config state (e.g. stale `currentTeam`). Otherwise agents see the wrong `reason` (a config-state error instead of the missing slug).
 
 ## Tests (implementers)
 
@@ -76,7 +76,7 @@ Implementations use **`outputActionRequired`** / **`outputAgentError`** (`packag
 | `packages/cli/src/util/agent-output.ts` | `outputActionRequired`, `outputAgentError`, `buildCommandWithYes`, `enrichActionRequiredWithInvokingCommand` |
 | `packages/cli/src/util/arg-common.ts` | `globalCommandOptions`; add **`getGlobalFlagsOnlyFromArgs`** / **`getSameSubcommandSuggestionFlags`** when missing so `next[]` can preserve context safely |
 | `packages/cli/src/util/pkg-name.ts` | `getCommandNamePlain`, `packageName` |
-| `edge-config` | Team-scoped store; `exitWithNonInteractiveError` with variant **`edge-config`** maps API **404** to **`not_found`** (not `project_not_found`) and suggests `edge-config list` / `teams switch` / `whoami`. |
+| `global-config` | Team-scoped store; `exitWithNonInteractiveError` with variant **`global-config`** maps API **404** to **`not_found`** (not `project_not_found`) and suggests `global-config list` / `teams switch` / `whoami`. |
 
 ## Backwards compatibility
 

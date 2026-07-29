@@ -60,7 +60,7 @@ export async function remove(client: Client, argv: string[]) {
   telemetry.trackCliOptionFormat(parsedArguments.flags['--format']);
 
   if (asJson && !skipConfirmation) {
-    output.error('--format=json requires --yes to skip confirmation prompts');
+    output.error('--json requires --yes to skip confirmation prompts');
     return 1;
   }
 

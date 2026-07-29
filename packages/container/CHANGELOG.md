@@ -1,5 +1,11 @@
 # @vercel/container
 
+## 0.1.0
+
+### Minor Changes
+
+- 67d02cb: Add package manifest to container builder.
+
 ## 0.0.5
 
 ### Patch Changes

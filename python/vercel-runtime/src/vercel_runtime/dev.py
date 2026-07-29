@@ -19,6 +19,9 @@ from vercel_runtime.routing import (
     strip_service_route_prefix,
 )
 from vercel_runtime.workers import (
+    bootstrap_queue_service_app,
+    install_queue_integrations,
+    is_dev_queue_serving,
     is_worker_service,
     maybe_bootstrap_worker_service_app,
     prepare_worker_environment,
@@ -398,6 +401,9 @@ def _setup_apps() -> None:
 
     _setup_server_log_routing()
     prepare_worker_environment()
+    # Publish-side activation only; queue-serving sidecars get the full
+    # consuming-side activation in bootstrap_queue_service_app below.
+    install_queue_integrations(queue_serving=False)
 
     mod = import_module(module_name, entry_abs)
 
@@ -406,6 +412,11 @@ def _setup_apps() -> None:
         return
 
     if is_worker_service():
+        if is_dev_queue_serving():
+            # vercel-queue SDK path: the module's subscriptions registered
+            # on import; serve them through vercel.queue's ASGI app.
+            _asgi_user_app = cast("ASGI", bootstrap_queue_service_app())
+            return
         worker_app = maybe_bootstrap_worker_service_app(mod)
         if worker_app is not None:
             _asgi_user_app = cast("ASGI", worker_app)

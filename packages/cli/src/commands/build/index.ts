@@ -79,7 +79,10 @@ import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
-import { importBuilders } from '../../util/build/import-builders';
+import {
+  formatResolvedBuilders,
+  importBuilders,
+} from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
 import {
   detectFirstDeploymentFramework,
@@ -88,6 +91,10 @@ import {
   warnIfFrameworkMismatch,
   type DetectedFramework,
 } from '../../util/build/framework-detection';
+import {
+  BACKEND_REWRITE_BEHAVIOR_WARNING,
+  hasBackendRewriteBehaviorChange,
+} from '../../util/build/backend-rewrite-warning';
 import {
   validateBuildOutput,
   reportBuildOutputProblems,
@@ -813,14 +820,10 @@ async function doBuild(
     ...pickOverrides(localConfig),
   };
 
-  // On a project's first deployment, detect the framework when none is
-  // configured. Mutates `projectSettings` in place so the `detectBuilders`
-  // call below sees the detected framework; must therefore run before it.
-  // The result is always recorded in `builds.json`, including when detection
-  // was skipped or found nothing.
+  // Must run before `detectBuilders` below, which reads the mutated
+  // `projectSettings`.
   buildsJson.detectedFramework = await span
     .child('vc.detectFirstDeploymentFramework', {
-      enabled: String(isFrameworkDetectionEnabled()),
       firstDeployment: String(process.env.VERCEL_FIRST_DEPLOYMENT === '1'),
       configuredFramework: projectSettings.framework ?? undefined,
     })
@@ -874,8 +877,8 @@ async function doBuild(
     return result;
   });
 
-  // Framework detection for the end-of-build cross-check, started here so it
-  // runs concurrently with the builders instead of adding latency.
+  // Started here to run concurrently with the builders (used in the
+  // end-of-build cross-check).
   const detectedFrameworksPromise = span
     .child('vc.detectAllFrameworks', {
       enabled: String(isFrameworkDetectionEnabled()),
@@ -1076,11 +1079,24 @@ async function doBuild(
     }
   }
 
+  if (
+    hasBackendRewriteBehaviorChange({
+      projectRewrites: localConfig.rewrites,
+      builders: builds,
+    })
+  ) {
+    output.warn(BACKEND_REWRITE_BEHAVIOR_WARNING);
+  }
+
   const builderSpecs = new Set(builds.map(b => b.use));
 
   let buildersWithPkgs = await span
     .child('vc.importBuilders')
-    .trace(() => importBuilders(builderSpecs, cwd, span));
+    .trace(async s => {
+      const builders = await importBuilders(builderSpecs, cwd, span);
+      s.setAttributes({ resolved: formatResolvedBuilders(builders) });
+      return builders;
+    });
 
   // Populate Files -> FileFsRef mapping
   const filesMap: Files = await span
@@ -1115,7 +1131,11 @@ async function doBuild(
 
     const importedBuilders = await span
       .child('vc.importBuilders')
-      .trace(() => importBuilders(missingBuilderSpecs, cwd, span));
+      .trace(async s => {
+        const builders = await importBuilders(missingBuilderSpecs, cwd, span);
+        s.setAttributes({ resolved: formatResolvedBuilders(builders) });
+        return builders;
+      });
     buildersWithPkgs = new Map([
       ...buildersWithPkgs.entries(),
       ...importedBuilders.entries(),
@@ -1172,8 +1192,6 @@ async function doBuild(
   const getHasDetectedServices = () =>
     detectedResolvedServices !== undefined &&
     detectedResolvedServices.length > 0;
-  const getHasQueueServices = () =>
-    detectedServices?.some(isQueueBackedService);
   const synthesizedServiceCrons: Cron[] = [];
   const serviceByBuilder = new Map<Builder, Service>();
   const serviceFileOverrides = new Map<Builder, Record<string, PathOverride>>();
@@ -1297,9 +1315,6 @@ async function doBuild(
             // build.config already contains framework, routePrefix, memory, etc.
             buildConfig = {
               ...build.config,
-              ...(getHasQueueServices()
-                ? { hasWorkerServices: true }
-                : undefined),
               // `service.functions` isn't on `build.config`, so builders that
               // read `config.functions` (e.g. Next.js) would otherwise miss it;
               // `serviceName` scopes the derived v2beta consumer.
@@ -1980,7 +1995,6 @@ async function doBuild(
           appendExperimentalServicesV1Routes(detectedServices);
         }
       }
-
       if (
         detectedServices &&
         detectedServices.length > 0 &&

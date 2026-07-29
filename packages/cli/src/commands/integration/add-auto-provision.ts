@@ -574,7 +574,7 @@ export async function addAutoProvision(
   );
 
   // Install the product's declared agent skills (from `agentSkills`) in all
-  // modes, including --format=json, where the human-readable summary is
+  // modes, including --json, where the human-readable summary is
   // suppressed and each skill's `installed` status is reported in the payload.
   const skills = resolveProductSkills(product);
   const failedSkills: ResolvedSkill[] = [];

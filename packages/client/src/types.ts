@@ -26,6 +26,11 @@ export interface Dictionary<T> {
   [key: string]: T;
 }
 
+export interface ProxyConfig {
+  entrypoint: string;
+  matcher?: string | string[];
+}
+
 export const VALID_ARCHIVE_FORMATS = ['tgz'] as const;
 export type ArchiveFormat = (typeof VALID_ARCHIVE_FORMATS)[number];
 
@@ -218,6 +223,7 @@ export interface VercelConfig {
   images?: Images;
   crons?: Cron[];
   bunVersion?: string;
+  proxy?: ProxyConfig;
   /**
    * Path to a file containing bulk redirects (relative to the project root).
    * This file will be included in prebuilt deployments.
