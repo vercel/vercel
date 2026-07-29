@@ -86,6 +86,9 @@ export default async function update(client: Client, argv: string[]) {
   telemetryClient.trackCliFlagSensitive(opts['--sensitive']);
   telemetryClient.trackCliFlagYes(opts['--yes']);
   telemetryClient.trackCliOptionValue(valueFromFlag);
+  telemetryClient.trackCliOptionVisibility(
+    typeof opts['--visibility'] === 'string' ? opts['--visibility'] : undefined
+  );
 
   if (args.length > 3) {
     if (client.nonInteractive) {

@@ -311,6 +311,9 @@ export default async function add(client: Client, argv: string[]) {
   telemetryClient.trackCliFlagForce(opts['--force']);
   telemetryClient.trackCliFlagGuidance(opts['--guidance']);
   telemetryClient.trackCliFlagYes(opts['--yes']);
+  telemetryClient.trackCliOptionVisibility(
+    typeof opts['--visibility'] === 'string' ? opts['--visibility'] : undefined
+  );
   telemetryClient.trackCliOptionProject(opts['--project']);
 
   if (args.length > 3) {
