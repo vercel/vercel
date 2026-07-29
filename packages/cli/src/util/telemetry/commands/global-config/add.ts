@@ -1,8 +1,8 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { addSubcommand } from '../../../../commands/edge-config/command';
+import type { addSubcommand } from '../../../../commands/global-config/command';
 
-export class EdgeConfigAddTelemetryClient
+export class GlobalConfigAddTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof addSubcommand>
 {

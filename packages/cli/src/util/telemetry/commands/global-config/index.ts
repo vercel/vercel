@@ -1,10 +1,10 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { edgeConfigCommand } from '../../../../commands/edge-config/command';
+import type { globalConfigCommand } from '../../../../commands/global-config/command';
 
-export class EdgeConfigTelemetryClient
+export class GlobalConfigTelemetryClient
   extends TelemetryClient
-  implements TelemetryMethods<typeof edgeConfigCommand>
+  implements TelemetryMethods<typeof globalConfigCommand>
 {
   trackCliSubcommandList(actual: string) {
     this.trackCliSubcommand({ subcommand: 'list', value: actual });

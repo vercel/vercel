@@ -15,9 +15,9 @@ import {
 import { getCommandName } from '../../util/pkg-name';
 import table from '../../util/output/table';
 import output from '../../output-manager';
-import { EdgeConfigBackupsTelemetryClient } from '../../util/telemetry/commands/edge-config/backups';
+import { GlobalConfigBackupsTelemetryClient } from '../../util/telemetry/commands/global-config/backups';
 import { backupsSubcommand } from './command';
-import { resolveEdgeConfigId } from './resolve-edge-config-id';
+import { resolveGlobalConfigId } from './resolve-global-config-id';
 
 interface BackupRow {
   id: string;
@@ -47,7 +47,7 @@ export default async function backupsCmd(
   client: Client,
   argv: string[]
 ): Promise<number> {
-  const telemetry = new EdgeConfigBackupsTelemetryClient({
+  const telemetry = new GlobalConfigBackupsTelemetryClient({
     opts: { store: client.telemetryEventStore },
   });
 
@@ -59,7 +59,9 @@ export default async function backupsCmd(
     );
   } catch (error) {
     if (client.nonInteractive) {
-      exitWithNonInteractiveError(client, error, 1, { variant: 'edge-config' });
+      exitWithNonInteractiveError(client, error, 1, {
+        variant: 'global-config',
+      });
     }
     printError(error);
     return 1;
@@ -89,12 +91,12 @@ export default async function backupsCmd(
           status: 'error',
           reason: 'missing_arguments',
           message:
-            'Edge Config id or slug is required. Usage: `vercel edge-config backups <id-or-slug>`',
+            'Global Config id or slug is required. Usage: `vercel global-config backups <id-or-slug>`',
           next: [
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                'edge-config list'
+                'global-config list'
               ),
             },
           ],
@@ -102,7 +104,7 @@ export default async function backupsCmd(
         1
       );
     }
-    const usage = getCommandName('edge-config backups <id-or-slug>');
+    const usage = getCommandName('global-config backups <id-or-slug>');
     output.error(`Missing id or slug. Usage: ${chalk.cyan(usage)}`);
     return 1;
   }
@@ -127,7 +129,7 @@ export default async function backupsCmd(
         status: 'error',
         reason: 'confirmation_required',
         message:
-          'Restoring an Edge Config backup requires confirmation. Re-run with `--yes`.',
+          'Restoring a Global Config backup requires confirmation. Re-run with `--yes`.',
         next: [{ command: buildCommandWithYes(client.argv) }],
       },
       1
@@ -143,9 +145,9 @@ export default async function backupsCmd(
 
   let id: string | null;
   try {
-    id = await resolveEdgeConfigId(client, idOrSlug);
+    id = await resolveGlobalConfigId(client, idOrSlug);
   } catch (err: unknown) {
-    exitWithNonInteractiveError(client, err, 1, { variant: 'edge-config' });
+    exitWithNonInteractiveError(client, err, 1, { variant: 'global-config' });
     printError(err);
     return 1;
   }
@@ -157,12 +159,12 @@ export default async function backupsCmd(
         {
           status: 'error',
           reason: 'not_found',
-          message: `No Edge Config matches "${idOrSlug}" in the current team.`,
+          message: `No Global Config matches "${idOrSlug}" in the current team.`,
           next: [
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                'edge-config list'
+                'global-config list'
               ),
             },
           ],
@@ -170,18 +172,18 @@ export default async function backupsCmd(
         1
       );
     }
-    output.error(`No Edge Config matches "${idOrSlug}" in the current team.`);
+    output.error(`No Global Config matches "${idOrSlug}" in the current team.`);
     return 1;
   }
 
-  const base = `/v1/edge-config/${encodeURIComponent(id)}/backups`;
+  const base = `/v1/global-config/${encodeURIComponent(id)}/backups`;
 
   try {
     if (restoreVersion) {
       if (
         !skipConfirmation &&
         !(await client.input.confirm(
-          `Restore Edge Config ${chalk.bold(id)} from backup ${chalk.bold(
+          `Restore Global Config ${chalk.bold(id)} from backup ${chalk.bold(
             restoreVersion
           )}? This updates live items immediately.`,
           false
@@ -200,7 +202,7 @@ export default async function backupsCmd(
         return 0;
       }
       output.success(
-        `Restored Edge Config ${chalk.bold(id)} from backup ${chalk.bold(
+        `Restored Global Config ${chalk.bold(id)} from backup ${chalk.bold(
           restoreVersion
         )}.`
       );
@@ -264,14 +266,14 @@ export default async function backupsCmd(
       output.print(
         `${gray(
           `Next page: ${getCommandName(
-            `edge-config backups ${idOrSlug}${commandFlags} --next ${response.pagination.next}`
+            `global-config backups ${idOrSlug}${commandFlags} --next ${response.pagination.next}`
           )}`
         )}\n`
       );
     }
     return 0;
   } catch (err: unknown) {
-    exitWithNonInteractiveError(client, err, 1, { variant: 'edge-config' });
+    exitWithNonInteractiveError(client, err, 1, { variant: 'global-config' });
     printError(err);
     return 1;
   }

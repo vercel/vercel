@@ -12,16 +12,16 @@ import {
 } from '../../util/agent-output';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
-import { EdgeConfigUpdateTelemetryClient } from '../../util/telemetry/commands/edge-config/update';
+import { GlobalConfigUpdateTelemetryClient } from '../../util/telemetry/commands/global-config/update';
 import { updateSubcommand } from './command';
 import { parsePatchBody } from './parse-patch-body';
-import { resolveEdgeConfigId } from './resolve-edge-config-id';
+import { resolveGlobalConfigId } from './resolve-global-config-id';
 
 export default async function updateCmd(
   client: Client,
   argv: string[]
 ): Promise<number> {
-  const telemetry = new EdgeConfigUpdateTelemetryClient({
+  const telemetry = new GlobalConfigUpdateTelemetryClient({
     opts: { store: client.telemetryEventStore },
   });
 
@@ -33,7 +33,9 @@ export default async function updateCmd(
     );
   } catch (error) {
     if (client.nonInteractive) {
-      exitWithNonInteractiveError(client, error, 1, { variant: 'edge-config' });
+      exitWithNonInteractiveError(client, error, 1, {
+        variant: 'global-config',
+      });
     }
     printError(error);
     return 1;
@@ -54,12 +56,12 @@ export default async function updateCmd(
           status: 'error',
           reason: 'missing_arguments',
           message:
-            'Edge Config id or slug is required. Provide `--slug` and/or `--patch`.',
+            'Global Config id or slug is required. Provide `--slug` and/or `--patch`.',
           next: [
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                'edge-config list'
+                'global-config list'
               ),
             },
           ],
@@ -68,7 +70,7 @@ export default async function updateCmd(
       );
     }
     output.error(
-      `Missing id or slug. Usage: ${chalk.cyan(getCommandName('edge-config update <id-or-slug>'))}`
+      `Missing id or slug. Usage: ${chalk.cyan(getCommandName('global-config update <id-or-slug>'))}`
     );
     return 1;
   }
@@ -91,9 +93,9 @@ export default async function updateCmd(
 
   let id: string | null;
   try {
-    id = await resolveEdgeConfigId(client, idOrSlug);
+    id = await resolveGlobalConfigId(client, idOrSlug);
   } catch (err: unknown) {
-    exitWithNonInteractiveError(client, err, 1, { variant: 'edge-config' });
+    exitWithNonInteractiveError(client, err, 1, { variant: 'global-config' });
     printError(err);
     return 1;
   }
@@ -105,12 +107,12 @@ export default async function updateCmd(
         {
           status: 'error',
           reason: 'not_found',
-          message: `No Edge Config matches "${idOrSlug}" in the current team.`,
+          message: `No Global Config matches "${idOrSlug}" in the current team.`,
           next: [
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                'edge-config list'
+                'global-config list'
               ),
             },
           ],
@@ -118,7 +120,7 @@ export default async function updateCmd(
         1
       );
     }
-    output.error(`No Edge Config matches "${idOrSlug}" in the current team.`);
+    output.error(`No Global Config matches "${idOrSlug}" in the current team.`);
     return 1;
   }
 
@@ -137,7 +139,7 @@ export default async function updateCmd(
   try {
     if (newSlug) {
       lastPayload = await client.fetch(
-        `/v1/edge-config/${encodeURIComponent(id)}`,
+        `/v1/global-config/${encodeURIComponent(id)}`,
         {
           method: 'PUT',
           body: { slug: newSlug },
@@ -147,7 +149,7 @@ export default async function updateCmd(
 
     if (parsedPatchBody) {
       lastPayload = await client.fetch(
-        `/v1/edge-config/${encodeURIComponent(id)}/items`,
+        `/v1/global-config/${encodeURIComponent(id)}/items`,
         {
           method: 'PATCH',
           body: parsedPatchBody as JSONObject,
@@ -155,7 +157,7 @@ export default async function updateCmd(
       );
     }
   } catch (err: unknown) {
-    exitWithNonInteractiveError(client, err, 1, { variant: 'edge-config' });
+    exitWithNonInteractiveError(client, err, 1, { variant: 'global-config' });
     printError(err);
     return 1;
   }
@@ -165,6 +167,6 @@ export default async function updateCmd(
     return 0;
   }
 
-  output.success('Edge Config updated.');
+  output.success('Global Config updated.');
   return 0;
 }

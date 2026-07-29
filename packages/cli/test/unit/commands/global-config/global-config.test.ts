@@ -4,10 +4,10 @@ import { useUser } from '../../../mocks/user';
 import { useTeams } from '../../../mocks/team';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
-import edgeConfig from '../../../../src/commands/edge-config';
+import globalConfig from '../../../../src/commands/global-config';
 import { teamCache } from '../../../../src/util/teams/get-team-by-id';
 
-describe('edge-config', () => {
+describe('global-config', () => {
   beforeEach(() => {
     teamCache.clear();
     client.reset();
@@ -24,7 +24,7 @@ describe('edge-config', () => {
   });
 
   it('lists edge configs in table output', async () => {
-    client.scenario.get('/v1/edge-config', (req, res) => {
+    client.scenario.get('/v1/global-config', (req, res) => {
       expect(req.query.teamId).toBe('team_ec_test');
       res.json([
         {
@@ -37,8 +37,8 @@ describe('edge-config', () => {
       ]);
     });
 
-    client.setArgv('edge-config', 'list');
-    const exitCode = await edgeConfig(client);
+    client.setArgv('global-config', 'list');
+    const exitCode = await globalConfig(client);
     expect(exitCode).toBe(0);
     await expect(client.stderr).toOutput('ecfg_list1');
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -50,10 +50,10 @@ describe('edge-config', () => {
   });
 
   it('resolves slug when getting a config', async () => {
-    client.scenario.get('/v1/edge-config', (_req, res) => {
+    client.scenario.get('/v1/global-config', (_req, res) => {
       res.json([{ id: 'ecfg_resolve', slug: 'my-store' }]);
     });
-    client.scenario.get('/v1/edge-config/ecfg_resolve', (req, res) => {
+    client.scenario.get('/v1/global-config/ecfg_resolve', (req, res) => {
       expect(req.query.teamId).toBe('team_ec_test');
       res.json({
         id: 'ecfg_resolve',
@@ -63,8 +63,8 @@ describe('edge-config', () => {
       });
     });
 
-    client.setArgv('edge-config', 'get', 'my-store', '--format', 'json');
-    const exitCode = await edgeConfig(client);
+    client.setArgv('global-config', 'get', 'my-store', '--format', 'json');
+    const exitCode = await globalConfig(client);
     expect(exitCode).toBe(0);
     const out = JSON.parse(client.stdout.getFullOutput().trim());
     expect(out.id).toBe('ecfg_resolve');
@@ -85,16 +85,16 @@ describe('edge-config', () => {
   });
 
   it('creates a token with --add', async () => {
-    client.scenario.get('/v1/edge-config', (_req, res) => {
+    client.scenario.get('/v1/global-config', (_req, res) => {
       res.json([{ id: 'ecfg_tok', slug: 's' }]);
     });
-    client.scenario.post('/v1/edge-config/ecfg_tok/token', (req, res) => {
+    client.scenario.post('/v1/global-config/ecfg_tok/token', (req, res) => {
       expect(req.body).toEqual({ label: 'ci' });
       res.status(201).json({ token: 'tok_secret', id: 'tokid_1' });
     });
 
-    client.setArgv('edge-config', 'tokens', 'ecfg_tok', '--add', 'ci');
-    const exitCode = await edgeConfig(client);
+    client.setArgv('global-config', 'tokens', 'ecfg_tok', '--add', 'ci');
+    const exitCode = await globalConfig(client);
     expect(exitCode).toBe(0);
     await expect(client.stderr).toOutput('tok_secret');
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -114,11 +114,11 @@ describe('edge-config', () => {
   });
 
   it('revokes by id when --remove values match known token ids', async () => {
-    client.scenario.get('/v1/edge-config', (_req, res) => {
+    client.scenario.get('/v1/global-config', (_req, res) => {
       res.json([{ id: 'ecfg_rm_id', slug: 's' }]);
     });
     let listCount = 0;
-    client.scenario.get('/v1/edge-config/ecfg_rm_id/tokens', (_req, res) => {
+    client.scenario.get('/v1/global-config/ecfg_rm_id/tokens', (_req, res) => {
       listCount += 1;
       res.json([
         { id: 'tokid_a', label: 'prod', partialToken: 'aaaa********' },
@@ -126,13 +126,16 @@ describe('edge-config', () => {
       ]);
     });
     let deleteBody: unknown;
-    client.scenario.delete('/v1/edge-config/ecfg_rm_id/tokens', (req, res) => {
-      deleteBody = req.body;
-      res.status(204).end();
-    });
+    client.scenario.delete(
+      '/v1/global-config/ecfg_rm_id/tokens',
+      (req, res) => {
+        deleteBody = req.body;
+        res.status(204).end();
+      }
+    );
 
     client.setArgv(
-      'edge-config',
+      'global-config',
       'tokens',
       'ecfg_rm_id',
       '--remove',
@@ -143,7 +146,7 @@ describe('edge-config', () => {
       '--format',
       'json'
     );
-    const exitCode = await edgeConfig(client);
+    const exitCode = await globalConfig(client);
     expect(exitCode).toBe(0);
     expect(listCount).toBe(1);
     expect(deleteBody).toEqual({ ids: ['tokid_a', 'tokid_b'] });
@@ -159,22 +162,25 @@ describe('edge-config', () => {
   });
 
   it('revokes by token string when --remove values do not match known ids', async () => {
-    client.scenario.get('/v1/edge-config', (_req, res) => {
+    client.scenario.get('/v1/global-config', (_req, res) => {
       res.json([{ id: 'ecfg_rm_tok', slug: 's' }]);
     });
-    client.scenario.get('/v1/edge-config/ecfg_rm_tok/tokens', (_req, res) => {
+    client.scenario.get('/v1/global-config/ecfg_rm_tok/tokens', (_req, res) => {
       res.json([
         { id: 'tokid_x', label: 'prod', partialToken: 'xxxx********' },
       ]);
     });
     let deleteBody: unknown;
-    client.scenario.delete('/v1/edge-config/ecfg_rm_tok/tokens', (req, res) => {
-      deleteBody = req.body;
-      res.status(204).end();
-    });
+    client.scenario.delete(
+      '/v1/global-config/ecfg_rm_tok/tokens',
+      (req, res) => {
+        deleteBody = req.body;
+        res.status(204).end();
+      }
+    );
 
     client.setArgv(
-      'edge-config',
+      'global-config',
       'tokens',
       'ecfg_rm_tok',
       '--remove',
@@ -185,7 +191,7 @@ describe('edge-config', () => {
       '--format',
       'json'
     );
-    const exitCode = await edgeConfig(client);
+    const exitCode = await globalConfig(client);
     expect(exitCode).toBe(0);
     expect(deleteBody).toEqual({
       tokens: ['plaintext_a', 'plaintext_b'],
@@ -195,22 +201,25 @@ describe('edge-config', () => {
   });
 
   it('splits a mixed --remove list into ids and tokens', async () => {
-    client.scenario.get('/v1/edge-config', (_req, res) => {
+    client.scenario.get('/v1/global-config', (_req, res) => {
       res.json([{ id: 'ecfg_rm_mix', slug: 's' }]);
     });
-    client.scenario.get('/v1/edge-config/ecfg_rm_mix/tokens', (_req, res) => {
+    client.scenario.get('/v1/global-config/ecfg_rm_mix/tokens', (_req, res) => {
       res.json([
         { id: 'tokid_known', label: 'prod', partialToken: 'kkkk********' },
       ]);
     });
     let deleteBody: unknown;
-    client.scenario.delete('/v1/edge-config/ecfg_rm_mix/tokens', (req, res) => {
-      deleteBody = req.body;
-      res.status(204).end();
-    });
+    client.scenario.delete(
+      '/v1/global-config/ecfg_rm_mix/tokens',
+      (req, res) => {
+        deleteBody = req.body;
+        res.status(204).end();
+      }
+    );
 
     client.setArgv(
-      'edge-config',
+      'global-config',
       'tokens',
       'ecfg_rm_mix',
       '--remove',
@@ -221,7 +230,7 @@ describe('edge-config', () => {
       '--format',
       'json'
     );
-    const exitCode = await edgeConfig(client);
+    const exitCode = await globalConfig(client);
     expect(exitCode).toBe(0);
     expect(deleteBody).toEqual({
       tokens: ['plaintext_legacy'],
@@ -232,10 +241,10 @@ describe('edge-config', () => {
   });
 
   it('lists tokens with partialToken (masked value) in table output', async () => {
-    client.scenario.get('/v1/edge-config', (_req, res) => {
+    client.scenario.get('/v1/global-config', (_req, res) => {
       res.json([{ id: 'ecfg_tok', slug: 'my-store' }]);
     });
-    client.scenario.get('/v1/edge-config/ecfg_tok/tokens', (_req, res) => {
+    client.scenario.get('/v1/global-config/ecfg_tok/tokens', (_req, res) => {
       res.json([
         {
           id: 'tok_abc123',
@@ -246,8 +255,8 @@ describe('edge-config', () => {
       ]);
     });
 
-    client.setArgv('edge-config', 'tokens', 'my-store');
-    const exitCode = await edgeConfig(client);
+    client.setArgv('global-config', 'tokens', 'my-store');
+    const exitCode = await globalConfig(client);
     expect(exitCode).toBe(0);
     const output = client.stderr.getFullOutput();
     expect(output).toContain('tok_abc123');
@@ -256,10 +265,10 @@ describe('edge-config', () => {
   });
 
   it('lists tokens with partialToken in JSON output', async () => {
-    client.scenario.get('/v1/edge-config', (_req, res) => {
+    client.scenario.get('/v1/global-config', (_req, res) => {
       res.json([{ id: 'ecfg_tok', slug: 'my-store' }]);
     });
-    client.scenario.get('/v1/edge-config/ecfg_tok/tokens', (_req, res) => {
+    client.scenario.get('/v1/global-config/ecfg_tok/tokens', (_req, res) => {
       res.json([
         {
           id: 'tok_abc123',
@@ -270,8 +279,8 @@ describe('edge-config', () => {
       ]);
     });
 
-    client.setArgv('edge-config', 'tokens', 'my-store', '--format', 'json');
-    const exitCode = await edgeConfig(client);
+    client.setArgv('global-config', 'tokens', 'my-store', '--format', 'json');
+    const exitCode = await globalConfig(client);
     expect(exitCode).toBe(0);
     const out = JSON.parse(client.stdout.getFullOutput().trim());
     expect(out).toEqual([
@@ -285,14 +294,14 @@ describe('edge-config', () => {
   });
 
   it('does not emit plaintext `token` in --format json list output', async () => {
-    client.scenario.get('/v1/edge-config', (_req, res) => {
+    client.scenario.get('/v1/global-config', (_req, res) => {
       res.json([{ id: 'ecfg_list_tokens', slug: 's' }]);
     });
     // Simulate a mixed-version window where the API still returns plaintext
     // `token` on the list endpoint (pre-FLA-2777). The CLI must strip it from
     // JSON output regardless.
     client.scenario.get(
-      '/v1/edge-config/ecfg_list_tokens/tokens',
+      '/v1/global-config/ecfg_list_tokens/tokens',
       (_req, res) => {
         res.json([
           {
@@ -314,13 +323,13 @@ describe('edge-config', () => {
     );
 
     client.setArgv(
-      'edge-config',
+      'global-config',
       'tokens',
       'ecfg_list_tokens',
       '--format',
       'json'
     );
-    const exitCode = await edgeConfig(client);
+    const exitCode = await globalConfig(client);
     expect(exitCode).toBe(0);
     const raw = client.stdout.getFullOutput();
     expect(raw).not.toContain('plaintext_leak_a');
@@ -346,31 +355,34 @@ describe('edge-config', () => {
   });
 
   it('lists backups in table output', async () => {
-    client.scenario.get('/v1/edge-config', (_req, res) => {
+    client.scenario.get('/v1/global-config', (_req, res) => {
       res.json([{ id: 'ecfg_backups', slug: 'my-store' }]);
     });
-    client.scenario.get('/v1/edge-config/ecfg_backups/backups', (req, res) => {
-      expect(req.query.teamId).toBe('team_ec_test');
-      expect(req.query.limit).toBe('2');
-      expect(req.query.next).toBe('cursor_in');
-      expect(req.query.metadata).toBe('true');
-      res.json({
-        backups: [
-          {
-            id: 'backup_version_1',
-            lastModified: 1_713_528_000_000,
-            metadata: {
-              updatedBy: 'user_123',
-              itemsCount: 3,
-              itemsBytes: 128,
+    client.scenario.get(
+      '/v1/global-config/ecfg_backups/backups',
+      (req, res) => {
+        expect(req.query.teamId).toBe('team_ec_test');
+        expect(req.query.limit).toBe('2');
+        expect(req.query.next).toBe('cursor_in');
+        expect(req.query.metadata).toBe('true');
+        res.json({
+          backups: [
+            {
+              id: 'backup_version_1',
+              lastModified: 1_713_528_000_000,
+              metadata: {
+                updatedBy: 'user_123',
+                itemsCount: 3,
+                itemsBytes: 128,
+              },
             },
-          },
-        ],
-        pagination: { hasNext: true, next: 'cursor_next' },
-      });
-    });
+          ],
+          pagination: { hasNext: true, next: 'cursor_next' },
+        });
+      }
+    );
     client.setArgv(
-      'edge-config',
+      'global-config',
       'backups',
       'my-store',
       '--limit',
@@ -378,14 +390,14 @@ describe('edge-config', () => {
       '--next',
       'cursor_in'
     );
-    const exitCode = await edgeConfig(client);
+    const exitCode = await globalConfig(client);
     expect(exitCode).toBe(0);
     const output = client.stderr.getFullOutput();
     expect(output).toContain('backup_version_1');
     expect(output).not.toContain('updated by');
     expect(output).not.toContain('user_123');
     expect(output).toContain(
-      'edge-config backups my-store --limit 2 --next cursor_next'
+      'global-config backups my-store --limit 2 --next cursor_next'
     );
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'subcommand:backups', value: 'backups' },
@@ -396,11 +408,11 @@ describe('edge-config', () => {
   });
 
   it('gets a backup by version id as JSON', async () => {
-    client.scenario.get('/v1/edge-config', (_req, res) => {
+    client.scenario.get('/v1/global-config', (_req, res) => {
       res.json([{ id: 'ecfg_backup_get', slug: 'my-store' }]);
     });
     client.scenario.get(
-      '/v1/edge-config/ecfg_backup_get/backups/backup_version_get',
+      '/v1/global-config/ecfg_backup_get/backups/backup_version_get',
       (req, res) => {
         expect(req.query.teamId).toBe('team_ec_test');
         res.json({
@@ -424,7 +436,7 @@ describe('edge-config', () => {
     );
 
     client.setArgv(
-      'edge-config',
+      'global-config',
       'backups',
       'my-store',
       '--backup-version',
@@ -432,7 +444,7 @@ describe('edge-config', () => {
       '--format',
       'json'
     );
-    const exitCode = await edgeConfig(client);
+    const exitCode = await globalConfig(client);
     expect(exitCode).toBe(0);
     const out = JSON.parse(client.stdout.getFullOutput().trim());
     expect(out.backup.digest).toBe('digest_a');
@@ -445,11 +457,11 @@ describe('edge-config', () => {
   });
 
   it('restores a backup by version id', async () => {
-    client.scenario.get('/v1/edge-config', (_req, res) => {
+    client.scenario.get('/v1/global-config', (_req, res) => {
       res.json([{ id: 'ecfg_backup_restore', slug: 'my-store' }]);
     });
     client.scenario.post(
-      '/v1/edge-config/ecfg_backup_restore/backups/backup_version_restore/restore',
+      '/v1/global-config/ecfg_backup_restore/backups/backup_version_restore/restore',
       (req, res) => {
         expect(req.query.teamId).toBe('team_ec_test');
         res.json({
@@ -462,7 +474,7 @@ describe('edge-config', () => {
     );
 
     client.setArgv(
-      'edge-config',
+      'global-config',
       'backups',
       'my-store',
       '--restore',
@@ -471,7 +483,7 @@ describe('edge-config', () => {
       '--format',
       'json'
     );
-    const exitCode = await edgeConfig(client);
+    const exitCode = await globalConfig(client);
     expect(exitCode).toBe(0);
     const out = JSON.parse(client.stdout.getFullOutput().trim());
     expect(out).toEqual({
@@ -491,13 +503,13 @@ describe('edge-config', () => {
 
   it('validates --patch before slug rename when both --slug and --patch are provided', async () => {
     let putCalled = false;
-    client.scenario.put('/v1/edge-config/ecfg_update_order', (_req, res) => {
+    client.scenario.put('/v1/global-config/ecfg_update_order', (_req, res) => {
       putCalled = true;
       res.json({ id: 'ecfg_update_order', slug: 'new-slug' });
     });
 
     client.setArgv(
-      'edge-config',
+      'global-config',
       'update',
       'ecfg_update_order',
       '--slug',
@@ -505,7 +517,7 @@ describe('edge-config', () => {
       '--patch',
       '{}'
     );
-    const exitCode = await edgeConfig(client);
+    const exitCode = await globalConfig(client);
     expect(exitCode).toBe(1);
     expect(putCalled).toBe(false);
     await expect(client.stderr).toOutput('`--patch` must be');
@@ -514,7 +526,7 @@ describe('edge-config', () => {
   describe('linked project scope', () => {
     it('uses the linked project team instead of the globally configured team', async () => {
       // Globally we are scoped to a different team. The linked project's
-      // team should win so users see Edge Configs from the project they
+      // team should win so users see Global Configs from the project they
       // are currently working on.
       client.config.currentTeam = 'team_other';
 
@@ -522,8 +534,8 @@ describe('edge-config', () => {
       useProject(
         {
           ...defaultProject,
-          id: 'edge-config-linked',
-          name: 'edge-config-linked',
+          id: 'global-config-linked',
+          name: 'global-config-linked',
           accountId: 'team_linked_ec',
         },
         []
@@ -538,14 +550,14 @@ describe('edge-config', () => {
       });
 
       let observedTeamId: string | undefined;
-      client.scenario.get('/v1/edge-config', (req, res) => {
+      client.scenario.get('/v1/global-config', (req, res) => {
         observedTeamId = req.query.teamId as string | undefined;
         res.json([{ id: 'ecfg_linked', slug: 'flags' }]);
       });
 
-      client.cwd = setupUnitFixture('commands/edge-config/linked');
-      client.setArgv('edge-config', 'list');
-      const exitCode = await edgeConfig(client);
+      client.cwd = setupUnitFixture('commands/global-config/linked');
+      client.setArgv('global-config', 'list');
+      const exitCode = await globalConfig(client);
       expect(exitCode).toBe(0);
       expect(observedTeamId).toBe('team_linked_ec');
     });
@@ -554,13 +566,13 @@ describe('edge-config', () => {
       // No fixture / no `.vercel/project.json` here, so the helper
       // should leave `currentTeam` untouched.
       let observedTeamId: string | undefined;
-      client.scenario.get('/v1/edge-config', (req, res) => {
+      client.scenario.get('/v1/global-config', (req, res) => {
         observedTeamId = req.query.teamId as string | undefined;
         res.json([]);
       });
 
-      client.setArgv('edge-config', 'list');
-      const exitCode = await edgeConfig(client);
+      client.setArgv('global-config', 'list');
+      const exitCode = await globalConfig(client);
       expect(exitCode).toBe(0);
       expect(observedTeamId).toBe('team_ec_test');
     });
@@ -573,7 +585,7 @@ describe('edge-config', () => {
     });
 
     it('outputs JSON error when get cannot resolve slug', async () => {
-      client.scenario.get('/v1/edge-config', (_req, res) => {
+      client.scenario.get('/v1/global-config', (_req, res) => {
         res.json([]);
       });
 
@@ -582,9 +594,14 @@ describe('edge-config', () => {
       }) as () => never);
 
       client.nonInteractive = true;
-      client.setArgv('edge-config', 'get', 'unknown-slug', '--non-interactive');
+      client.setArgv(
+        'global-config',
+        'get',
+        'unknown-slug',
+        '--non-interactive'
+      );
 
-      await expect(edgeConfig(client)).rejects.toThrow('exit:1');
+      await expect(globalConfig(client)).rejects.toThrow('exit:1');
 
       const payload = JSON.parse(client.stdout.getFullOutput().trim());
       expect(payload).toMatchObject({

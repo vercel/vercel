@@ -615,18 +615,18 @@ export function outputAgentSuccess(
   process.exit(exitCode);
 }
 
-/** Suggested follow-ups for `edge-config` failures (only callers of exitWithNonInteractiveError). */
-function buildNextStepsForEdgeConfig(
+/** Suggested follow-ups for `global-config` failures (only callers of exitWithNonInteractiveError). */
+function buildNextStepsForGlobalConfig(
   client: Client
 ): NonNullable<AgentErrorPayload['next']> {
   return [
     {
-      command: buildCommandWithGlobalFlags(client.argv, 'edge-config list'),
-      when: 'List Edge Config stores in the current team scope',
+      command: buildCommandWithGlobalFlags(client.argv, 'global-config list'),
+      when: 'List Global Config stores in the current team scope',
     },
     {
       command: buildCommandWithGlobalFlags(client.argv, 'teams switch'),
-      when: 'Switch to the team that owns the Edge Config',
+      when: 'Switch to the team that owns the Global Config',
     },
     {
       command: buildCommandWithGlobalFlags(client.argv, 'whoami'),
@@ -635,8 +635,8 @@ function buildNextStepsForEdgeConfig(
   ];
 }
 
-const EDGE_CONFIG_NON_INTERACTIVE_HINT =
-  'Edge Config commands use your current team scope. Pass --scope or run `vercel teams switch` if the store is missing.';
+const GLOBAL_CONFIG_NON_INTERACTIVE_HINT =
+  'Global Config commands use your current team scope. Pass --scope or run `vercel teams switch` if the store is missing.';
 
 export type ExitWithNonInteractiveErrorVariant =
   | 'members'
@@ -647,12 +647,12 @@ export type ExitWithNonInteractiveErrorVariant =
   | 'speed-insights'
   | 'web-analytics'
   | 'checks'
-  | 'edge-config'
+  | 'global-config'
   | 'list';
 
 type ProjectExitWithNonInteractiveVariant = Exclude<
   ExitWithNonInteractiveErrorVariant,
-  'edge-config' | 'list'
+  'global-config' | 'list'
 >;
 
 const LIST_ERROR_HINT =
@@ -764,10 +764,10 @@ function resolveNonInteractiveDefaults(
   client: Client,
   variant: ExitWithNonInteractiveErrorVariant
 ): Pick<AgentErrorPayload, 'next' | 'hint'> {
-  if (variant === 'edge-config') {
+  if (variant === 'global-config') {
     return {
-      next: buildNextStepsForEdgeConfig(client),
-      hint: EDGE_CONFIG_NON_INTERACTIVE_HINT,
+      next: buildNextStepsForGlobalConfig(client),
+      hint: GLOBAL_CONFIG_NON_INTERACTIVE_HINT,
     };
   }
   if (variant === 'list') {
@@ -847,18 +847,18 @@ export function exitWithNonInteractiveError(
   }
   const { variant } = options;
   if (isLinkRequiredLike(err)) {
-    if (variant === 'edge-config') {
+    if (variant === 'global-config') {
       writeAgentErrorPayloadAndExit(
         client,
         {
           status: 'error',
           reason: 'link_required',
           message: err instanceof Error ? err.message : String(err),
-          next: buildNextStepsForEdgeConfig(client),
-          hint: EDGE_CONFIG_NON_INTERACTIVE_HINT,
+          next: buildNextStepsForGlobalConfig(client),
+          hint: GLOBAL_CONFIG_NON_INTERACTIVE_HINT,
         },
         exitCode,
-        'edge-config'
+        'global-config'
       );
       return;
     }
@@ -899,7 +899,7 @@ export function exitWithNonInteractiveError(
         : err.status === 401
           ? 'not_authorized'
           : err.status === 404
-            ? variant === 'edge-config'
+            ? variant === 'global-config'
               ? 'not_found'
               : 'project_not_found'
             : err.status === 429

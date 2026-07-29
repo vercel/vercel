@@ -58,9 +58,9 @@ export const help = () => `
       deploy-hooks         [cmd]       Manage deploy hooks for Git-triggered builds
       dns                  [name]      Manages your DNS records
       domains              [name]      Manages your domain names
-      edge-config          [cmd]       Manage Edge Config stores
       firewall             [cmd]       Manages Vercel Firewall configuration and custom rules
       flags                [cmd]       Manage feature flags for a Vercel project
+      global-config        [cmd]       Manage Global Config stores
       httpstat             path        Visualize HTTP timing statistics for deployments
       logs                 [url]       Displays the logs for a deployment
       metrics              <metric>    Queries observability metrics for your project or team

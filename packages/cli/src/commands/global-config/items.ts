@@ -11,15 +11,15 @@ import {
 } from '../../util/agent-output';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
-import { EdgeConfigGetTelemetryClient } from '../../util/telemetry/commands/edge-config/get';
-import { getSubcommand } from './command';
-import { resolveEdgeConfigId } from './resolve-edge-config-id';
+import { GlobalConfigItemsTelemetryClient } from '../../util/telemetry/commands/global-config/items';
+import { itemsSubcommand } from './command';
+import { resolveGlobalConfigId } from './resolve-global-config-id';
 
-export default async function getCmd(
+export default async function itemsCmd(
   client: Client,
   argv: string[]
 ): Promise<number> {
-  const telemetry = new EdgeConfigGetTelemetryClient({
+  const telemetry = new GlobalConfigItemsTelemetryClient({
     opts: { store: client.telemetryEventStore },
   });
 
@@ -27,11 +27,13 @@ export default async function getCmd(
   try {
     parsedArgs = parseArguments(
       argv,
-      getFlagsSpecification(getSubcommand.options)
+      getFlagsSpecification(itemsSubcommand.options)
     );
   } catch (error) {
     if (client.nonInteractive) {
-      exitWithNonInteractiveError(client, error, 1, { variant: 'edge-config' });
+      exitWithNonInteractiveError(client, error, 1, {
+        variant: 'global-config',
+      });
     }
     printError(error);
     return 1;
@@ -39,7 +41,10 @@ export default async function getCmd(
 
   const { args, flags } = parsedArgs;
   const [idOrSlug] = args;
+  const key = flags['--key'];
+
   telemetry.trackCliArgumentIdOrSlug(idOrSlug);
+  telemetry.trackCliOptionKey(key);
   telemetry.trackCliOptionFormat(flags['--format']);
 
   if (!idOrSlug) {
@@ -50,12 +55,12 @@ export default async function getCmd(
           status: 'error',
           reason: 'missing_arguments',
           message:
-            'Edge Config id or slug is required. Usage: `vercel edge-config get <id-or-slug>`',
+            'Global Config id or slug is required. Usage: `vercel global-config items <id-or-slug>`',
           next: [
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                'edge-config list'
+                'global-config list'
               ),
             },
           ],
@@ -64,7 +69,7 @@ export default async function getCmd(
       );
     }
     output.error(
-      `Missing id or slug. Usage: ${chalk.cyan(getCommandName('edge-config get <id-or-slug>'))}`
+      `Missing id or slug. Usage: ${chalk.cyan(getCommandName('global-config items <id-or-slug>'))}`
     );
     return 1;
   }
@@ -78,9 +83,9 @@ export default async function getCmd(
 
   let id: string | null;
   try {
-    id = await resolveEdgeConfigId(client, idOrSlug);
+    id = await resolveGlobalConfigId(client, idOrSlug);
   } catch (err: unknown) {
-    exitWithNonInteractiveError(client, err, 1, { variant: 'edge-config' });
+    exitWithNonInteractiveError(client, err, 1, { variant: 'global-config' });
     printError(err);
     return 1;
   }
@@ -92,12 +97,12 @@ export default async function getCmd(
         {
           status: 'error',
           reason: 'not_found',
-          message: `No Edge Config matches "${idOrSlug}" in the current team.`,
+          message: `No Global Config matches "${idOrSlug}" in the current team.`,
           next: [
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                'edge-config list'
+                'global-config list'
               ),
             },
           ],
@@ -105,16 +110,47 @@ export default async function getCmd(
         1
       );
     }
-    output.error(`No Edge Config matches "${idOrSlug}" in the current team.`);
+    output.error(`No Global Config matches "${idOrSlug}" in the current team.`);
     return 1;
   }
 
   let data: unknown;
   try {
-    data = await client.fetch(`/v1/edge-config/${encodeURIComponent(id)}`);
+    if (key) {
+      const path = `/v1/global-config/${encodeURIComponent(id)}/item/${encodeURIComponent(key)}`;
+      data = await client.fetch(path);
+    } else {
+      data = await client.fetch(
+        `/v1/global-config/${encodeURIComponent(id)}/items`
+      );
+    }
   } catch (err: unknown) {
-    exitWithNonInteractiveError(client, err, 1, { variant: 'edge-config' });
+    exitWithNonInteractiveError(client, err, 1, { variant: 'global-config' });
     printError(err);
+    return 1;
+  }
+
+  if (key && (data === null || data === undefined)) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_found',
+          message: `No item with key "${key}" in Global Config ${id}.`,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                `global-config items ${idOrSlug}`
+              ),
+            },
+          ],
+        },
+        1
+      );
+    }
+    output.error(`No item with key "${key}" in Global Config ${id}.`);
     return 1;
   }
 

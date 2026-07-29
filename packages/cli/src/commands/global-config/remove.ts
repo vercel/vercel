@@ -6,20 +6,21 @@ import { printError } from '../../util/error';
 import { validateJsonOutput } from '../../util/output-format';
 import {
   buildCommandWithGlobalFlags,
+  buildCommandWithYes,
   exitWithNonInteractiveError,
   outputAgentError,
 } from '../../util/agent-output';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
-import { EdgeConfigItemsTelemetryClient } from '../../util/telemetry/commands/edge-config/items';
-import { itemsSubcommand } from './command';
-import { resolveEdgeConfigId } from './resolve-edge-config-id';
+import { GlobalConfigRemoveTelemetryClient } from '../../util/telemetry/commands/global-config/remove';
+import { removeSubcommand } from './command';
+import { resolveGlobalConfigId } from './resolve-global-config-id';
 
-export default async function itemsCmd(
+export default async function removeCmd(
   client: Client,
   argv: string[]
 ): Promise<number> {
-  const telemetry = new EdgeConfigItemsTelemetryClient({
+  const telemetry = new GlobalConfigRemoveTelemetryClient({
     opts: { store: client.telemetryEventStore },
   });
 
@@ -27,11 +28,13 @@ export default async function itemsCmd(
   try {
     parsedArgs = parseArguments(
       argv,
-      getFlagsSpecification(itemsSubcommand.options)
+      getFlagsSpecification(removeSubcommand.options)
     );
   } catch (error) {
     if (client.nonInteractive) {
-      exitWithNonInteractiveError(client, error, 1, { variant: 'edge-config' });
+      exitWithNonInteractiveError(client, error, 1, {
+        variant: 'global-config',
+      });
     }
     printError(error);
     return 1;
@@ -39,10 +42,10 @@ export default async function itemsCmd(
 
   const { args, flags } = parsedArgs;
   const [idOrSlug] = args;
-  const key = flags['--key'];
+  const skipConfirmation = flags['--yes'] === true;
 
   telemetry.trackCliArgumentIdOrSlug(idOrSlug);
-  telemetry.trackCliOptionKey(key);
+  telemetry.trackCliFlagYes(flags['--yes']);
   telemetry.trackCliOptionFormat(flags['--format']);
 
   if (!idOrSlug) {
@@ -53,12 +56,12 @@ export default async function itemsCmd(
           status: 'error',
           reason: 'missing_arguments',
           message:
-            'Edge Config id or slug is required. Usage: `vercel edge-config items <id-or-slug>`',
+            'Global Config id or slug is required. Usage: `vercel global-config remove <id-or-slug>`',
           next: [
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                'edge-config list'
+                'global-config list'
               ),
             },
           ],
@@ -67,9 +70,23 @@ export default async function itemsCmd(
       );
     }
     output.error(
-      `Missing id or slug. Usage: ${chalk.cyan(getCommandName('edge-config items <id-or-slug>'))}`
+      `Missing id or slug. Usage: ${chalk.cyan(getCommandName('global-config remove <id-or-slug>'))}`
     );
     return 1;
+  }
+
+  if (client.nonInteractive && !skipConfirmation) {
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: 'confirmation_required',
+        message:
+          'Removing a Global Config requires confirmation. Re-run with `--yes`.',
+        next: [{ command: buildCommandWithYes(client.argv) }],
+      },
+      1
+    );
   }
 
   const formatResult = validateJsonOutput(flags);
@@ -81,9 +98,9 @@ export default async function itemsCmd(
 
   let id: string | null;
   try {
-    id = await resolveEdgeConfigId(client, idOrSlug);
+    id = await resolveGlobalConfigId(client, idOrSlug);
   } catch (err: unknown) {
-    exitWithNonInteractiveError(client, err, 1, { variant: 'edge-config' });
+    exitWithNonInteractiveError(client, err, 1, { variant: 'global-config' });
     printError(err);
     return 1;
   }
@@ -95,12 +112,12 @@ export default async function itemsCmd(
         {
           status: 'error',
           reason: 'not_found',
-          message: `No Edge Config matches "${idOrSlug}" in the current team.`,
+          message: `No Global Config matches "${idOrSlug}" in the current team.`,
           next: [
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                'edge-config list'
+                'global-config list'
               ),
             },
           ],
@@ -108,55 +125,46 @@ export default async function itemsCmd(
         1
       );
     }
-    output.error(`No Edge Config matches "${idOrSlug}" in the current team.`);
+    output.error(`No Global Config matches "${idOrSlug}" in the current team.`);
     return 1;
   }
 
-  let data: unknown;
+  if (
+    !skipConfirmation &&
+    !(await client.input.confirm(
+      `Delete Global Config ${chalk.bold(id)} (${chalk.bold(idOrSlug)})?`,
+      false
+    ))
+  ) {
+    output.log('Canceled');
+    return 0;
+  }
+
   try {
-    if (key) {
-      const path = `/v1/edge-config/${encodeURIComponent(id)}/item/${encodeURIComponent(key)}`;
-      data = await client.fetch(path);
-    } else {
-      data = await client.fetch(
-        `/v1/edge-config/${encodeURIComponent(id)}/items`
-      );
-    }
+    await client.fetch(`/v1/global-config/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
   } catch (err: unknown) {
-    exitWithNonInteractiveError(client, err, 1, { variant: 'edge-config' });
+    exitWithNonInteractiveError(client, err, 1, { variant: 'global-config' });
     printError(err);
     return 1;
   }
 
-  if (key && (data === null || data === undefined)) {
-    if (client.nonInteractive) {
-      outputAgentError(
-        client,
-        {
-          status: 'error',
-          reason: 'not_found',
-          message: `No item with key "${key}" in Edge Config ${id}.`,
-          next: [
-            {
-              command: buildCommandWithGlobalFlags(
-                client.argv,
-                `edge-config items ${idOrSlug}`
-              ),
-            },
-          ],
-        },
-        1
-      );
-    }
-    output.error(`No item with key "${key}" in Edge Config ${id}.`);
-    return 1;
-  }
-
   if (asJson) {
-    client.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
+    client.stdout.write(
+      `${JSON.stringify(
+        {
+          status: 'ok',
+          id,
+          message: `Global Config ${id} removed.`,
+        },
+        null,
+        2
+      )}\n`
+    );
     return 0;
   }
 
-  output.log(JSON.stringify(data, null, 2));
+  output.success(`Global Config ${chalk.bold(id)} removed.`);
   return 0;
 }
