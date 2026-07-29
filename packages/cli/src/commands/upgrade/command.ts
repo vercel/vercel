@@ -42,10 +42,7 @@ export const upgradeCommand = {
       type: Boolean,
       deprecated: false,
     },
-    {
-      ...formatOption,
-      description: 'Specify the output format (json) - implies --dry-run',
-    },
+    formatOption,
     jsonOption,
   ],
   examples: [
@@ -63,7 +60,7 @@ export const upgradeCommand = {
     },
     {
       name: 'Get upgrade information as JSON',
-      value: `${packageName} upgrade --format=json`,
+      value: `${packageName} upgrade --json`,
     },
   ],
 } as const;

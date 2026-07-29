@@ -101,6 +101,7 @@ export default async function codingAgentsSetup(
   const agentConfig = opts['--agent-config'] as string[] | undefined;
   const shellRcOverride = opts['--shell-rc'] as string | undefined;
   const applyMode = opts['--apply'] as string | undefined;
+  const baseUrl = opts['--base-url'] as string | undefined;
   const yes = opts['--yes'] as boolean | undefined;
 
   telemetry.trackCliOptionAgent(agentFlags as [string] | undefined);
@@ -118,6 +119,7 @@ export default async function codingAgentsSetup(
   telemetry.trackCliOptionAgentConfig(agentConfig);
   telemetry.trackCliOptionShellRc(shellRcOverride);
   telemetry.trackCliOptionApply(applyMode);
+  telemetry.trackCliOptionBaseUrl(baseUrl);
   telemetry.trackCliFlagYes(yes);
 
   const machine = shouldEmitNonInteractiveCommandError(client);
@@ -167,6 +169,14 @@ export default async function codingAgentsSetup(
       machine,
       AGENT_REASON.INVALID_ARGUMENTS,
       'The `--apply prompt` mode needs the macOS Keychain so the prompt never contains your plaintext key. Run on macOS without --no-keychain, or use `--apply edit`.'
+    );
+  }
+  if (baseUrl !== undefined && !isValidBaseUrl(baseUrl)) {
+    return failValidation(
+      client,
+      machine,
+      AGENT_REASON.INVALID_ARGUMENTS,
+      `Invalid --base-url "${baseUrl}". Must be an http(s) URL.`
     );
   }
   const flagExpiresAt =
@@ -370,12 +380,23 @@ export default async function codingAgentsSetup(
       }
     }
   }
+  if (
+    baseUrl &&
+    !machine &&
+    !agents.some(a => a.id === 'codex' || a.id === 'claude-code')
+  ) {
+    printWarning(
+      '--base-url has no effect for the selected agents; only Claude Code and Codex write a gateway base URL.'
+    );
+  }
+
   const previewPlan = await buildSetupPlan(agents, {
     apiKey: previewKey,
     home,
     useKeychain,
     overrides,
     shellRcOverride,
+    baseUrlOverride: baseUrl,
   });
 
   const changed = previewPlan.changes.filter(
@@ -406,6 +427,7 @@ export default async function codingAgentsSetup(
       useKeychain,
       overrides,
       shellRcOverride,
+      baseUrlOverride: baseUrl,
       home,
       alreadyConfigured,
       // With nothing consented there is nothing to rotate or reconfigure.
@@ -568,6 +590,7 @@ export default async function codingAgentsSetup(
     useKeychain,
     overrides,
     shellRcOverride,
+    baseUrlOverride: baseUrl,
   });
 
   if (applyAction === 'copy') {
@@ -708,6 +731,15 @@ function failConsent(
     output.error(message);
   }
   return 1;
+}
+
+function isValidBaseUrl(value: string): boolean {
+  try {
+    const { protocol } = new URL(value);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 function failValidation(
