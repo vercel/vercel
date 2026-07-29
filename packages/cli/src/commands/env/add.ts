@@ -234,10 +234,7 @@ function printEnvAddResult(
   customEnvironments: CustomEnvironment[],
   finalType: EnvType,
   force: boolean,
-  options?: {
-    configSecretUiEnabled: boolean;
-    visibility?: EnvVariableVisibility;
-  }
+  visibility?: EnvVariableVisibility
 ): void {
   output.print('\n');
   printAlignedLabel(force ? 'Overrode' : 'Added', envName, { gutter: '✓' });
@@ -250,10 +247,10 @@ function printEnvAddResult(
     printAlignedLabel('Branch', envGitBranch);
   }
   printAlignedLabel('Type', typeLabel(finalType));
-  if (options?.configSecretUiEnabled) {
-    const visibility = formatVisibilityLabel(options.visibility, finalType);
-    if (visibility) {
-      printAlignedLabel('Visibility', visibility);
+  if (isEnvVarConfigSecretUiEnabled()) {
+    const visibilityLabel = formatVisibilityLabel(visibility, finalType);
+    if (visibilityLabel) {
+      printAlignedLabel('Visibility', visibilityLabel);
     }
   }
 }
@@ -1257,7 +1254,7 @@ export default async function add(client: Client, argv: string[]) {
     customEnvironments,
     finalType,
     Boolean(opts['--force']),
-    { configSecretUiEnabled, visibility }
+    visibility
   );
 
   const { isAgent } = await determineAgent();
