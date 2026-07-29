@@ -1,5 +1,17 @@
 # @vercel/container
 
+## 0.1.0
+
+### Minor Changes
+
+- 67d02cb: Add package manifest to container builder.
+
+## 0.0.5
+
+### Patch Changes
+
+- 8d25cea: Apply `functions` configuration (`memory`, `maxDuration`, `architecture`, `regions`, `functionFailoverRegions`, `experimentalTriggers`, `supportsCancellation`) to container runtime outputs. The `@vercel/container` builder now resolves matching `vercel.json` / per-service `functions` entries at build time, and the CLI writes those settings into the container `.vc-config.json`.
+
 ## 0.0.4
 
 ### Patch Changes

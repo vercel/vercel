@@ -113,19 +113,37 @@ export interface FlagsListResponse {
 
 export interface FlagVersion {
   id: string;
+  flagId: string;
   revision: number;
   createdAt: number;
-  createdBy: string;
+  createdBy?: string;
   message?: string;
+  changedEnvironments: string[];
+  metadata?: {
+    creator?: {
+      id: string;
+      name: string;
+    };
+  };
   data: {
     description?: string;
+    maintainerIds?: string[];
+    permanent?: boolean;
+    tags?: string[];
     variants: FlagVariant[];
     environments: Record<string, FlagEnvironmentConfig>;
+    seed?: number;
+    state?: 'active' | 'archived';
   };
 }
 
 export interface FlagVersionsResponse {
   versions: FlagVersion[];
+  pagination?: {
+    next?: string | null;
+    cursor?: string | null;
+    hasNext?: boolean;
+  };
 }
 
 export interface SdkKey {

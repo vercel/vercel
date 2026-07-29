@@ -62,7 +62,7 @@ import {
   getInstalledPythonsFromFilesystem,
 } from '../src/version';
 import type { PythonConstraint, PythonPackage } from '@vercel/python-analysis';
-import { build, prepareCache } from '../src/index';
+import { build, getDevSidecars, prepareCache } from '../src/index';
 import type { BuildResultV3, BuildResultV2 } from '@vercel/build-utils';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import {
@@ -72,9 +72,27 @@ import {
   getUvCacheDir,
   findUvOnBuildImage,
 } from '../src/uv';
-import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
+import {
+  getConditionalInjectedPackages,
+  getQueueIntegrations,
+} from '../src/conditional-vendoring';
+import {
+  isLegacyWorkersProject,
+  resolveWorkflowServingMode,
+} from '../src/sdk-detection';
 import { createPyprojectToml } from '../src/install';
 import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
+import {
+  createQueueHandlerModule,
+  filterQueueSubscriptions,
+  generatedPythonPathToModule,
+  getGeneratedQueueHandlerPath,
+  getSubscriberOutputPath,
+  queueTopicPatternsOverlap,
+  type SubscriberDeclaration,
+  type SubscriberSubscription,
+} from '../src/subscribers';
+import { getWorkflowOutputPath } from '../src/workflows';
 import {
   FileBlob,
   Span,
@@ -82,7 +100,11 @@ import {
   sanitizeConsumerName,
 } from '@vercel/build-utils';
 import { getServiceCrons } from '../src/crons';
-import { entrypointToModule, detectPythonEntrypoint } from '../src/entrypoint';
+import {
+  entrypointToModule,
+  detectPythonEntrypoint,
+  detectEntrypoint,
+} from '../src/entrypoint';
 import execa from 'execa';
 
 function getBuildOutputV2(result: Awaited<ReturnType<typeof build>>) {
@@ -100,6 +122,36 @@ function getBuildOutputV2Lambda(result: Awaited<ReturnType<typeof build>>) {
 function getBuildOutputV3(result: Awaited<ReturnType<typeof build>>) {
   expect(result.resultVersion).toBe(3);
   return (result as any).result.output as BuildResultV3['output'];
+}
+
+function mockQueueIntrospection(
+  subscriptions: unknown[],
+  opts: { sdkVersion?: string } = {}
+) {
+  vi.mocked(execa).mockImplementation(async (_cmd, args, execaOpts) => {
+    if (
+      Array.isArray(args) &&
+      args[0] === 'run' &&
+      typeof args[args.length - 1] === 'string'
+    ) {
+      const script = args[args.length - 1] as string;
+      if (script.includes('get_subscriptions')) {
+        // Introspection must run with the deployed-function marker so
+        // import-time registration (e.g. vercel-celery's auto transport)
+        // behaves as it will at runtime.
+        expect(
+          (execaOpts as { env?: Record<string, string> } | undefined)?.env
+            ?.VERCEL
+        ).toBe('1');
+        return { stdout: JSON.stringify(subscriptions) } as any;
+      }
+      if (script.includes('importlib.metadata')) {
+        // Empty output means "undeterminable" → legacy workers path.
+        return { stdout: opts.sdkVersion ?? '' } as any;
+      }
+    }
+    return { stdout: '' } as any;
+  });
 }
 
 /**
@@ -139,6 +191,22 @@ function makePackage(constraints?: PythonConstraint[]): PythonPackage {
   return { requiresPython: constraints };
 }
 
+function makePackageWithDependencies(dependencies: string[]): PythonPackage {
+  return {
+    requiresPython: [],
+    manifest: {
+      path: 'pyproject.toml',
+      data: {
+        project: {
+          name: 'test-app',
+          version: '0.0.1',
+          dependencies,
+        },
+      },
+    },
+  } as PythonPackage;
+}
+
 function selectVersion(opts: {
   constraints?: PythonConstraint[];
   isDev?: boolean;
@@ -149,6 +217,383 @@ function selectVersion(opts: {
     rootDir: '/tmp',
   });
 }
+
+describe('queue adapter integration activation', () => {
+  it('activates integrations for declared upstream dependencies', async () => {
+    await expect(
+      getQueueIntegrations({
+        pythonPackage: makePackageWithDependencies(['celery>=5.3', 'fastapi']),
+      })
+    ).resolves.toEqual([
+      {
+        module: 'vercel.integrations.celery',
+        installer: 'install_vercel_celery_integration',
+      },
+    ]);
+    await expect(
+      getQueueIntegrations({
+        pythonPackage: makePackageWithDependencies(['fastapi']),
+      })
+    ).resolves.toEqual([]);
+  });
+
+  it('generated handler modules activate integrations after the import', () => {
+    const declaration = {
+      name: 'worker_app',
+      entrypoint: 'worker.py',
+      moduleName: 'worker',
+      variableName: 'app',
+    } as SubscriberDeclaration;
+    const withCelery = createQueueHandlerModule(declaration, [
+      {
+        module: 'vercel.integrations.celery',
+        installer: 'install_vercel_celery_integration',
+      },
+    ]);
+    // Activation is a hard import (no try/except) and runs after the
+    // subscriber module import so installers can retroactively register
+    // apps the import created.
+    expect(withCelery).toContain(
+      'from vercel.integrations.celery import install_vercel_celery_integration'
+    );
+    expect(withCelery.indexOf('importlib.import_module')).toBeLessThan(
+      withCelery.indexOf('install_vercel_celery_integration')
+    );
+    expect(withCelery).not.toContain('except');
+
+    const withoutIntegrations = createQueueHandlerModule(declaration, []);
+    expect(withoutIntegrations).not.toContain('vercel.integrations');
+  });
+});
+
+describe('conditional Python adapter vendoring', () => {
+  it('selects vercel-celery-bundle when celery is declared', async () => {
+    await expect(
+      getConditionalInjectedPackages({
+        pythonPackage: makePackageWithDependencies(['celery>=5.3']),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({ name: 'vercel-celery-bundle' }),
+    ]);
+  });
+
+  it('selects vercel-celery when vercel-queue is declared', async () => {
+    await expect(
+      getConditionalInjectedPackages({
+        pythonPackage: makePackageWithDependencies([
+          'celery>=5.3',
+          'vercel-queue',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([expect.objectContaining({ name: 'vercel-celery' })]);
+  });
+
+  it('does not select vercel-celery for unrelated packages', async () => {
+    await expect(
+      getConditionalInjectedPackages({
+        pythonPackage: makePackageWithDependencies(['celery>=5.3', 'fastapi']),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({ name: 'vercel-celery-bundle' }),
+    ]);
+  });
+
+  it('does not inject when celery is absent', async () => {
+    await expect(
+      getConditionalInjectedPackages({
+        pythonPackage: makePackageWithDependencies(['fastapi']),
+        env: {},
+      })
+    ).resolves.toEqual([]);
+  });
+
+  it('does not inject when only vercel-queue is declared', async () => {
+    await expect(
+      getConditionalInjectedPackages({
+        pythonPackage: makePackageWithDependencies(['vercel-queue']),
+        env: {},
+      })
+    ).resolves.toEqual([]);
+  });
+
+  it('does not inject when vercel-celery is declared', async () => {
+    await expect(
+      getConditionalInjectedPackages({
+        pythonPackage: makePackageWithDependencies([
+          'celery>=5.3',
+          'vercel-celery',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([]);
+  });
+
+  it('does not inject when vercel-celery-bundle is declared', async () => {
+    await expect(
+      getConditionalInjectedPackages({
+        pythonPackage: makePackageWithDependencies([
+          'celery>=5.3',
+          'vercel-celery-bundle',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([]);
+  });
+
+  it('handles extras, specifiers, and markers through PEP 508 parsing', async () => {
+    await expect(
+      getConditionalInjectedPackages({
+        pythonPackage: makePackageWithDependencies([
+          'Celery[redis]>=5.3; python_version >= "3.11"',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({ name: 'vercel-celery-bundle' }),
+    ]);
+  });
+
+  it('returns the unpinned injected package request', async () => {
+    await expect(
+      getConditionalInjectedPackages({
+        pythonPackage: makePackageWithDependencies(['celery>=5.3']),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({
+        name: 'vercel-celery-bundle',
+        requirement: 'vercel-celery-bundle',
+        allowLocalSource: false,
+      }),
+    ]);
+  });
+
+  it('returns the unbundled injected package request when its upstream is declared', async () => {
+    await expect(
+      getConditionalInjectedPackages({
+        pythonPackage: makePackageWithDependencies([
+          'celery>=5.3',
+          'vercel-queue',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({
+        name: 'vercel-celery',
+        requirement: 'vercel-celery',
+        allowLocalSource: false,
+      }),
+    ]);
+  });
+
+  it('selects vercel-dramatiq-bundle when dramatiq is declared', async () => {
+    await expect(
+      getConditionalInjectedPackages({
+        pythonPackage: makePackageWithDependencies(['dramatiq>=1.17']),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({
+        name: 'vercel-dramatiq-bundle',
+        requirement: 'vercel-dramatiq-bundle',
+        allowLocalSource: false,
+      }),
+    ]);
+  });
+
+  it('selects vercel-dramatiq when dramatiq and vercel-queue are declared', async () => {
+    await expect(
+      getConditionalInjectedPackages({
+        pythonPackage: makePackageWithDependencies([
+          'dramatiq>=1.17',
+          'vercel-queue',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({
+        name: 'vercel-dramatiq',
+        requirement: 'vercel-dramatiq',
+        allowLocalSource: false,
+      }),
+    ]);
+  });
+
+  it('does not inject when vercel-dramatiq is declared', async () => {
+    await expect(
+      getConditionalInjectedPackages({
+        pythonPackage: makePackageWithDependencies([
+          'dramatiq>=1.17',
+          'vercel-dramatiq',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([]);
+  });
+
+  it('does not inject when vercel-dramatiq-bundle is declared', async () => {
+    await expect(
+      getConditionalInjectedPackages({
+        pythonPackage: makePackageWithDependencies([
+          'dramatiq>=1.17',
+          'vercel-dramatiq-bundle',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([]);
+  });
+
+  it('returns all matching adapter requests', async () => {
+    await expect(
+      getConditionalInjectedPackages({
+        pythonPackage: makePackageWithDependencies([
+          'celery>=5.3',
+          'dramatiq>=1.17',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({ name: 'vercel-celery-bundle' }),
+      expect.objectContaining({ name: 'vercel-dramatiq-bundle' }),
+    ]);
+  });
+});
+
+describe('Python SDK generation detection', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(
+      tmpdir(),
+      `python-sdk-detection-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    );
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  function writePyproject(dependencies: string[]) {
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        `dependencies = [${dependencies.map(d => JSON.stringify(d)).join(', ')}]`,
+        '',
+      ].join('\n')
+    );
+  }
+
+  function makeUvRunner(versionOutput: string | Error) {
+    return {
+      async run() {
+        if (versionOutput instanceof Error) {
+          throw versionOutput;
+        }
+        return { stdout: versionOutput, stderr: '' };
+      },
+    } as any;
+  }
+
+  it('detects a direct vercel-workers dependency', async () => {
+    writePyproject([
+      'fastapi',
+      'vercel-workers>=0.0.16 ; python_version >= "3.12"',
+    ]);
+    await expect(isLegacyWorkersProject(mockWorkPath)).resolves.toBe(true);
+  });
+
+  it('does not flag projects without vercel-workers', async () => {
+    writePyproject(['fastapi', 'vercel']);
+    await expect(isLegacyWorkersProject(mockWorkPath)).resolves.toBe(false);
+  });
+
+  it('does not flag projects without a pyproject.toml', async () => {
+    await expect(isLegacyWorkersProject(mockWorkPath)).resolves.toBe(false);
+  });
+
+  it('serves workflows via vercel-workers without an explicit vercel dependency', async () => {
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies(['fastapi']),
+        uv: makeUvRunner('0.9.0'),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath: null,
+      })
+    ).resolves.toBe('workers');
+  });
+
+  it('serves workflows via vercel-queue for vercel >= 0.8.0', async () => {
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies(['vercel']),
+        uv: makeUvRunner('0.8.0'),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath: null,
+      })
+    ).resolves.toBe('queue');
+  });
+
+  it('serves workflows via vercel-workers for vercel < 0.8.0', async () => {
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies(['vercel>=0.7']),
+        uv: makeUvRunner('0.7.9'),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath: null,
+      })
+    ).resolves.toBe('workers');
+  });
+
+  it('falls back to uv.lock when the venv query fails', async () => {
+    const uvLockPath = path.join(mockWorkPath, 'uv.lock');
+    fs.writeFileSync(
+      uvLockPath,
+      [
+        'version = 1',
+        'requires-python = ">=3.12"',
+        '',
+        '[[package]]',
+        'name = "vercel"',
+        'version = "0.8.1"',
+        'source = { registry = "https://pypi.org/simple" }',
+        '',
+      ].join('\n')
+    );
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies(['vercel']),
+        uv: makeUvRunner(new Error('boom')),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath,
+      })
+    ).resolves.toBe('queue');
+  });
+
+  it('serves workflows via vercel-workers when the version is undeterminable', async () => {
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies(['vercel']),
+        uv: makeUvRunner(new Error('boom')),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath: null,
+      })
+    ).resolves.toBe('workers');
+  });
+});
 
 let warningMessages: string[];
 const originalConsoleWarn = console.warn;
@@ -163,6 +608,7 @@ function createMockUvRunner(options?: {
   onSync?: (options: any) => void;
   onPip?: (options: any) => void;
   onLock?: (options: any) => void;
+  onRun?: (options: any) => { stdout: string; stderr?: string } | undefined;
 }) {
   return class MockUvRunner {
     uvPath: string;
@@ -180,6 +626,9 @@ function createMockUvRunner(options?: {
     }
     async lock(lockOptions: any) {
       options?.onLock?.(lockOptions);
+    }
+    async run(runOptions: any) {
+      return options?.onRun?.(runOptions) ?? { stdout: '', stderr: '' };
     }
   };
 }
@@ -1107,6 +1556,57 @@ describe('file exclusions', () => {
 
     expect(outputFiles.some(f => f.includes('.git'))).toBe(false);
   });
+
+  it('compiles only Python sources included by the app glob', async () => {
+    const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
+    const mockedExeca = vi.mocked(execa);
+    let compiledSources: string[] = [];
+    let compileAllCalls = 0;
+
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+    mockedExeca.mockImplementation(((_file, args: string[]) => {
+      if (args[0]?.endsWith('vc_compileall.py')) {
+        compileAllCalls++;
+        compiledSources = JSON.parse(fs.readFileSync(args[1], 'utf8'));
+      }
+      return Promise.resolve({ stdout: '', stderr: '' });
+    }) as any);
+
+    try {
+      await build({
+        workPath: mockWorkPath,
+        files: {
+          'handler.py': new FileBlob({
+            data: 'def app(environ, start_response): pass',
+          }),
+          'included.py': new FileBlob({ data: 'INCLUDED = True' }),
+          'excluded.py': new FileBlob({ data: 'EXCLUDED = True' }),
+          'public/ignored.py': new FileBlob({ data: 'IGNORED = True' }),
+        },
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: { excludeFiles: 'excluded.py' },
+        repoRootPath: mockWorkPath,
+      });
+
+      expect(compiledSources).toContain(path.join(mockWorkPath, 'handler.py'));
+      expect(compiledSources).toContain(path.join(mockWorkPath, 'included.py'));
+      expect(compiledSources).not.toContain(
+        path.join(mockWorkPath, 'excluded.py')
+      );
+      expect(compiledSources).not.toContain(
+        path.join(mockWorkPath, 'public', 'ignored.py')
+      );
+      expect(compileAllCalls).toBe(1);
+    } finally {
+      mockedExeca.mockReset();
+      if (originalCompileAllEnv === undefined) {
+        delete process.env.VERCEL_PYTHON_COMPILEALL;
+      } else {
+        process.env.VERCEL_PYTHON_COMPILEALL = originalCompileAllEnv;
+      }
+    }
+  });
 });
 
 describe('python version selection from uv.lock and pyproject.toml', () => {
@@ -1715,7 +2215,7 @@ describe('Django entrypoint discovery', () => {
     });
     // Simulate collectstatic succeeding
     vi.mocked(runDjangoCollectStatic).mockImplementationOnce(
-      async (_venvPath, _workPath, _env, outputStaticDir) => {
+      async (_venvPath, _workPath, _djangoPath, _env, outputStaticDir) => {
         fs.mkdirSync(path.join(outputStaticDir, 'static'), { recursive: true });
         fs.writeFileSync(
           path.join(outputStaticDir, 'static', 'app.css'),
@@ -1758,10 +2258,20 @@ describe('Django entrypoint discovery', () => {
     const v2result = getBuildOutputV2(result);
     expect(v2result.routes).toContainEqual({ handle: 'filesystem' });
     expect(v2result.routes).toContainEqual(
-      expect.objectContaining({ src: '/(.*)', dest: '/index' })
+      expect.objectContaining({
+        src: '/(.*)',
+        dest: '/django',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$1',
+          },
+        ],
+      })
     );
-    const lambda = v2result.output['index'];
-    expect(lambda).toBeDefined(); // Lambda keyed by entrypoint sans extension
+    const lambda = v2result.output.django;
+    expect(lambda).toBeDefined();
     expect((lambda as any).files?.['static/app.css']).toBeDefined(); // Included in Lambda bundle
     expect(v2result.output['static/app.css']).toBeDefined(); // Static file from collectstatic
 
@@ -1972,6 +2482,109 @@ describe('pyproject.toml entrypoint detection', () => {
   });
 });
 
+describe('tool.vercel.entrypoint validation', () => {
+  let workPath: string;
+
+  beforeEach(() => {
+    workPath = path.join(
+      tmpdir(),
+      `python-tool-vercel-validation-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('hard-errors when the declared module does not exist', async () => {
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = "backend.api:app"\n'
+    );
+    // A detectable candidate exists, but the broken declaration must not
+    // silently fall back to it — that could build the wrong app.
+    fs.writeFileSync(path.join(workPath, 'main.py'), 'app = object()\n');
+
+    await expect(detectPythonEntrypoint('fastapi', workPath)).rejects.toThrow(
+      /"tool\.vercel\.entrypoint" in "pyproject\.toml" is "backend\.api:app" but no matching module file was found/
+    );
+  });
+
+  it('names the broken pyproject.toml relative to the repo root', async () => {
+    // Monorepos can contain several pyproject.toml files (one per service);
+    // the error must identify which one is broken.
+    const serviceRoot = path.join(workPath, 'backend');
+    fs.mkdirSync(serviceRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(serviceRoot, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = "api:app"\n'
+    );
+
+    await expect(
+      detectPythonEntrypoint(
+        'fastapi',
+        serviceRoot,
+        undefined,
+        undefined,
+        workPath
+      )
+    ).rejects.toThrow(
+      /"tool\.vercel\.entrypoint" in "backend[/\\]pyproject\.toml"/
+    );
+  });
+
+  it('hard-errors when the declared value is not module:object format', async () => {
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = "main.py"\n'
+    );
+    fs.writeFileSync(path.join(workPath, 'main.py'), 'app = object()\n');
+
+    await expect(detectPythonEntrypoint('fastapi', workPath)).rejects.toThrow(
+      /no matching module file was found/
+    );
+  });
+
+  it('hard-errors when the declared value is not a string', async () => {
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = 42\n'
+    );
+
+    await expect(detectPythonEntrypoint('fastapi', workPath)).rejects.toThrow(
+      /must be a string in "module:object" format/
+    );
+  });
+
+  it('still resolves a valid declared entrypoint', async () => {
+    fs.mkdirSync(path.join(workPath, 'backend'), { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = "backend.api:app"\n'
+    );
+    fs.writeFileSync(
+      path.join(workPath, 'backend', 'api.py'),
+      'app = object()\n'
+    );
+
+    await expect(detectPythonEntrypoint('fastapi', workPath)).resolves.toEqual({
+      entrypoint: { entrypoint: 'backend/api.py', variableName: 'app' },
+    });
+  });
+
+  it('detectEntrypoint returns null instead of throwing for speculative detection', async () => {
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = "backend.api:app"\n'
+    );
+
+    await expect(
+      detectEntrypoint({ workPath, framework: 'fastapi' })
+    ).resolves.toBeNull();
+  });
+});
+
 describe('entrypointToModule', () => {
   it('converts file paths to Python module notation', () => {
     expect(entrypointToModule('app.py')).toBe('app');
@@ -1979,6 +2592,9 @@ describe('entrypointToModule', () => {
       'backend.api.server'
     );
     expect(entrypointToModule('src/main.py')).toBe('src.main');
+    expect(entrypointToModule('workers/celery/__init__.py')).toBe(
+      'workers.celery'
+    );
   });
 
   it('handles backslashes on Windows-style paths', () => {
@@ -2298,11 +2914,13 @@ describe('handlerFunction validation', () => {
 
 describe('pyproject subscribers', () => {
   let mockWorkPath: string;
+  const mockedExeca = vi.mocked(execa);
 
   beforeEach(() => {
     mockWorkPath = path.join(tmpdir(), `python-subscribers-${Date.now()}`);
     fs.mkdirSync(mockWorkPath, { recursive: true });
     makeMockPython('3.11');
+    mockedExeca.mockReset();
   });
 
   afterEach(() => {
@@ -2311,7 +2929,215 @@ describe('pyproject subscribers', () => {
     }
   });
 
-  it('emits one queue/v2beta worker lambda per subscriber with all topics attached', async () => {
+  it('uses POSIX separators for generated queue handler paths', () => {
+    expect(getGeneratedQueueHandlerPath('_py_workflows/flows_workflows')).toBe(
+      '_vc_queue_handlers/_py_workflows_flows_workflows.py'
+    );
+  });
+
+  it('returns dev sidecars matching build consumer names', async () => {
+    const workerPackage = path.join(mockWorkPath, 'workers', 'celery');
+    fs.mkdirSync(workerPackage, { recursive: true });
+    fs.writeFileSync(
+      path.join(workerPackage, '__init__.py'),
+      'from celery import Celery\napp = Celery("worker")\n'
+    );
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        '',
+        '[[tool.vercel.subscribers]]',
+        'entrypoint = "workers.celery:app"',
+        'topics = ["celery"]',
+        '',
+      ].join('\n')
+    );
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: {
+          use: '@vercel/python',
+          src: '<detect>',
+          config: { framework: 'fastapi' },
+        },
+      })
+    ).resolves.toEqual([
+      {
+        name: 'workers-celery_app',
+        type: 'subscriber',
+        consumer: sanitizeConsumerName(
+          getSubscriberOutputPath('workers-celery_app')
+        ),
+        workspace: '.',
+        framework: 'fastapi',
+        runtime: 'python',
+        builder: {
+          use: '@vercel/python',
+          src: 'workers/celery/__init__.py',
+          config: {
+            handlerFunction: 'app',
+            pythonQueueSidecar: 'subscriber',
+          },
+        },
+        topics: [{ topic: 'celery' }],
+      },
+    ]);
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: {
+          use: '@vercel/python',
+          src: 'pyproject.toml',
+          config: {},
+        },
+      })
+    ).resolves.toHaveLength(1);
+  });
+
+  it('returns legacy dev sidecars when the project depends on vercel-workers', async () => {
+    const workerPackage = path.join(mockWorkPath, 'workers', 'celery');
+    fs.mkdirSync(workerPackage, { recursive: true });
+    fs.writeFileSync(
+      path.join(workerPackage, '__init__.py'),
+      'from celery import Celery\napp = Celery("worker")\n'
+    );
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        'dependencies = ["vercel-workers"]',
+        '',
+        '[[tool.vercel.subscribers]]',
+        'entrypoint = "workers.celery:app"',
+        'topics = ["celery"]',
+        'retry_after_seconds = 10',
+        'initial_delay_seconds = 0',
+        '',
+      ].join('\n')
+    );
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: {
+          use: '@vercel/python',
+          src: '<detect>',
+          config: { framework: 'fastapi' },
+        },
+      })
+    ).resolves.toEqual([
+      {
+        name: 'workers-celery_app',
+        type: 'subscriber',
+        consumer: sanitizeConsumerName(
+          getSubscriberOutputPath('workers-celery_app')
+        ),
+        workspace: '.',
+        framework: 'fastapi',
+        runtime: 'python',
+        builder: {
+          use: '@vercel/python',
+          src: 'workers/celery/__init__.py',
+          config: {
+            handlerFunction: 'app',
+            pythonQueueSidecar: 'subscriber',
+          },
+        },
+        topics: [
+          { topic: 'celery', retryAfterSeconds: 10, initialDelaySeconds: 0 },
+        ],
+      },
+    ]);
+  });
+
+  it('lets pyproject services and standalone frameworks contribute dev sidecars', async () => {
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: { use: '@vercel/python', config: {} },
+      })
+    ).resolves.toEqual([]);
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: {
+          use: '@vercel/python',
+          config: { framework: 'fastapi', middleware: true },
+        },
+      })
+    ).resolves.toEqual([]);
+
+    const service = {
+      schema: 'experimentalServicesV2' as const,
+      name: 'backend',
+      root: 'backend',
+      framework: 'fastapi',
+      runtime: 'python',
+      entrypoint: 'app.py',
+      builder: {
+        use: '@vercel/python',
+        src: 'backend/app.py',
+        config: { framework: 'fastapi', workspace: 'backend' },
+      },
+    };
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: service.builder,
+        service,
+      })
+    ).resolves.toEqual([]);
+
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'worker.py'),
+      'from celery import Celery\napp = Celery("worker")\n'
+    );
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        '',
+        '[[tool.vercel.subscribers]]',
+        'entrypoint = "worker:app"',
+        'topics = ["celery"]',
+        '',
+      ].join('\n')
+    );
+    service.entrypoint = 'pyproject.toml';
+    service.builder.src = 'backend/pyproject.toml';
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: service.builder,
+        service,
+      })
+    ).resolves.toHaveLength(1);
+  });
+
+  it('emits one queue/v2beta Lambda per subscriber from introspected metadata', async () => {
+    mockQueueIntrospection([
+      {
+        topic: 'celery',
+        consumer_group: 'celery-workers',
+        max_attempts: 3,
+        retry_after_seconds: 10,
+        initial_delay_seconds: 0,
+        max_concurrency: 5,
+      },
+      { topic: 'emails', consumer_group: 'email-workers' },
+    ]);
+
     const files = {
       'app.py': new FileBlob({
         data: 'def app(environ, start_response): pass\n',
@@ -2325,7 +3151,130 @@ describe('pyproject subscribers', () => {
           'name = "x"',
           'version = "0.0.1"',
           '',
-          '[tool.vercel.subscribers.celery-worker]',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "worker:app"',
+          'topics = ["celery", "emails"]',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: false },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const output = getBuildOutputV2(result).output as any;
+    const workerPath = getSubscriberOutputPath('worker_app');
+
+    expect(output.flask).toBeDefined();
+    expect(output[workerPath]).toBeDefined();
+    expect(output[`${workerPath}/celery`]).toBeUndefined();
+    expect(output[`${workerPath}/emails`]).toBeUndefined();
+
+    const worker = output[workerPath];
+    expect(worker.handler).toBe('vc__handler__python.vc_handler');
+    expect(worker.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: 'celery',
+        consumer: 'celery-workers',
+        maxDeliveries: 3,
+        retryAfterSeconds: 10,
+        initialDelaySeconds: 0,
+        maxConcurrency: 5,
+      },
+      {
+        type: 'queue/v2beta',
+        topic: 'emails',
+        consumer: 'email-workers',
+      },
+    ]);
+
+    const handler = worker.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('subscriber handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      '"__VC_HANDLER_MODULE_NAME": "_vc_queue_handlers._py_subscribers_worker__app"'
+    );
+    expect(
+      worker.files?.['_vc_queue_handlers/_py_subscribers_worker__app.py']
+    ).toBeDefined();
+  });
+
+  it('tolerates null optional fields in introspected subscriptions', async () => {
+    mockQueueIntrospection([
+      {
+        topic: 'celery',
+        consumer_group: 'celery-workers',
+        max_attempts: null,
+        retry_after_seconds: null,
+        initial_delay_seconds: null,
+        max_concurrency: null,
+      },
+    ]);
+
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'worker.py': new FileBlob({
+        data: 'import vercel.queue\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "worker:app"',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: false },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const output = getBuildOutputV2(result).output as any;
+    const worker = output[getSubscriberOutputPath('worker_app')];
+    expect(worker.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: 'celery',
+        consumer: 'celery-workers',
+      },
+    ]);
+  });
+
+  it('emits a legacy worker Lambda when the project depends on vercel-workers', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'worker.py': new FileBlob({
+        data: 'from celery import Celery\napp = Celery("worker")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          'dependencies = ["vercel-workers"]',
+          '',
+          '[[tool.vercel.subscribers]]',
           'entrypoint = "worker:app"',
           'topics = ["celery", "emails"]',
           'max_deliveries = 3',
@@ -2346,20 +3295,22 @@ describe('pyproject subscribers', () => {
       repoRootPath: mockWorkPath,
     });
 
-    const output = getBuildOutputV2(result).output as any;
-    const celeryPath = '_py_subscribers/celery-worker';
-    const consumer = sanitizeConsumerName(celeryPath);
+    const v2 = getBuildOutputV2(result) as any;
+    const output = v2.output;
+    const workerPath = getSubscriberOutputPath('worker_app');
+    const consumer = sanitizeConsumerName(workerPath);
 
-    expect(output.index).toBeDefined();
-    expect(output[celeryPath]).toBeDefined();
-    expect(output['_py_subscribers/celery-worker/celery']).toBeUndefined();
-    expect(output['_py_subscribers/celery-worker/emails']).toBeUndefined();
-    expect(output.index.environment.VERCEL_HAS_WORKER_SERVICES).toBe('1');
+    expect(output.flask).toBeDefined();
+    expect(output[workerPath]).toBeDefined();
+    expect(output[`${workerPath}/celery`]).toBeUndefined();
+    expect(output[`${workerPath}/emails`]).toBeUndefined();
+    expect(output.flask.environment.VERCEL_HAS_WORKER_SERVICES).toBe('1');
 
-    const celery = output[celeryPath];
-    expect(celery.handler).toBe('vc__handler__python.vc_handler');
-    expect(celery.environment.VERCEL_SERVICE_TYPE).toBe('worker');
-    expect(celery.experimentalTriggers).toEqual([
+    const worker = output[workerPath];
+    expect(worker.handler).toBe('vc__handler__python.vc_handler');
+    expect(worker.environment.VERCEL_SERVICE_TYPE).toBe('worker');
+    expect(worker.environment.VERCEL_HAS_WORKER_SERVICES).toBe('1');
+    expect(worker.experimentalTriggers).toEqual([
       {
         type: 'queue/v2beta',
         topic: 'celery',
@@ -2380,13 +3331,132 @@ describe('pyproject subscribers', () => {
       },
     ]);
 
-    const handler = celery.files?.['vc__handler__python.py'];
+    // Served through the user's entrypoint directly — no generated
+    // vercel.queue handler module and no runtime introspection.
+    const handler = worker.files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('subscriber handler bootstrap not found');
     }
     expect(handler.data.toString()).toContain(
+      '"__VC_HANDLER_MODULE_NAME": "worker"'
+    );
+    expect(handler.data.toString()).toContain(
       '"__VC_HANDLER_VARIABLE_NAME": "app"'
     );
+    const generatedFiles = Object.keys(worker.files ?? {}).filter(p =>
+      p.startsWith('_vc_queue_handlers/')
+    );
+    expect(generatedFiles).toEqual([]);
+    expect(
+      mockedExeca.mock.calls.some(
+        ([, args]: any[]) =>
+          Array.isArray(args) &&
+          typeof args[args.length - 1] === 'string' &&
+          args[args.length - 1].includes('get_subscriptions')
+      )
+    ).toBe(false);
+
+    // Legacy worker lambdas are reached via triggers only — no HTTP route.
+    const routes = v2.routes ?? [];
+    expect(routes.some((route: any) => route.src === `/${workerPath}`)).toBe(
+      false
+    );
+  });
+
+  it('rejects legacy trigger fields without a vercel-workers dependency', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'worker.py': new FileBlob({
+        data: 'import vercel.queue\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "worker:app"',
+          'topics = ["celery"]',
+          'max_deliveries = 3',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'app.py',
+        meta: { isDev: false },
+        config: { framework: 'flask' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/unrecognized field "max_deliveries"/);
+  });
+
+  it('intersects declared topics with introspected queue wildcard semantics', () => {
+    expect(queueTopicPatternsOverlap('events-*', 'events-foo')).toBe(true);
+    expect(queueTopicPatternsOverlap('events-*', 'events-bar-*')).toBe(true);
+    expect(queueTopicPatternsOverlap('events-bar-*', 'events-*')).toBe(true);
+    expect(queueTopicPatternsOverlap('*', 'anything')).toBe(true);
+    expect(queueTopicPatternsOverlap('events-*', 'jobs-foo')).toBe(false);
+
+    const declaration: SubscriberDeclaration = {
+      name: 'worker_app',
+      entrypoint: 'worker.py',
+      moduleName: 'worker',
+      variableName: 'app',
+      topicPatterns: ['events-*'],
+    };
+    const subscriptions: SubscriberSubscription[] = [
+      { topic: 'events-foo', consumer: 'a', triggerDefaults: {} },
+      { topic: 'events-bar-*', consumer: 'b', triggerDefaults: {} },
+      { topic: 'jobs-foo', consumer: 'c', triggerDefaults: {} },
+    ];
+    expect(filterQueueSubscriptions(declaration, subscriptions)).toEqual([
+      subscriptions[0],
+      subscriptions[1],
+    ]);
+  });
+
+  it('fails when declared topics match no introspected subscriptions', async () => {
+    mockQueueIntrospection([{ topic: 'jobs', consumer_group: 'job-workers' }]);
+
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'worker.py': new FileBlob({
+        data: 'import vercel.queue\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "worker:app"',
+          'topics = ["events-*"]',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'app.py',
+        meta: { isDev: false },
+        config: { framework: 'flask' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/no introspected queue subscriptions matched/);
   });
 
   it('rejects consumer because subscriber consumers are derived from function paths', async () => {
@@ -2403,7 +3473,7 @@ describe('pyproject subscribers', () => {
           'name = "x"',
           'version = "0.0.1"',
           '',
-          '[tool.vercel.subscribers.worker]',
+          '[[tool.vercel.subscribers]]',
           'entrypoint = "worker:app"',
           'topics = ["jobs"]',
           'consumer = "custom"',
@@ -2422,6 +3492,534 @@ describe('pyproject subscribers', () => {
         repoRootPath: mockWorkPath,
       })
     ).rejects.toThrow(/unrecognized field "consumer"/);
+  });
+});
+
+describe('pyproject.toml service entrypoint', () => {
+  let mockWorkPath: string;
+  const mockedExeca = vi.mocked(execa);
+
+  beforeEach(() => {
+    mockWorkPath = path.join(
+      tmpdir(),
+      `python-pyproject-service-${Date.now()}`
+    );
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+    mockedExeca.mockReset();
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  const SUBSCRIBER_TOML = [
+    '[[tool.vercel.subscribers]]',
+    'entrypoint = "worker:app"',
+    'topics = ["invoices"]',
+  ];
+  const WORKFLOW_TOML = [
+    '[[tool.vercel.workflows]]',
+    'entrypoint = "flows:workflows"',
+  ];
+  const WORKER_PATH = getSubscriberOutputPath('worker_app');
+  const WORKER_CONSUMER = sanitizeConsumerName(WORKER_PATH);
+  const WORKFLOW_CONSUMER = sanitizeConsumerName(
+    getWorkflowOutputPath('flows_workflows')
+  );
+
+  const WORKER_PY = new FileBlob({ data: 'app = object()\n' });
+  const FLOWS_PY = new FileBlob({
+    data: 'from vercel.workflow import Workflows\nworkflows = Workflows()\n',
+  });
+  const MAIN_PY = new FileBlob({
+    data: 'def app(environ, start_response): pass\n',
+  });
+
+  function pyprojectBlob(lines: string[]): FileBlob {
+    return new FileBlob({
+      data: [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        '',
+        ...lines,
+        '',
+      ].join('\n'),
+    });
+  }
+
+  function buildService(files: Record<string, FileBlob>) {
+    return build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'pyproject.toml',
+      meta: { isDev: false },
+      config: { zeroConfig: true },
+      service: { name: 'backend' },
+      repoRootPath: mockWorkPath,
+    });
+  }
+
+  it('builds the declared web entrypoint plus subscribers', async () => {
+    mockQueueIntrospection([
+      { topic: 'invoices', consumer_group: WORKER_CONSUMER },
+    ]);
+
+    const result = await buildService({
+      'main.py': MAIN_PY,
+      'worker.py': WORKER_PY,
+      'pyproject.toml': pyprojectBlob([
+        '[tool.vercel]',
+        'entrypoint = "main:app"',
+        '',
+        ...SUBSCRIBER_TOML,
+      ]),
+    });
+
+    const v2 = getBuildOutputV2(result) as any;
+    const workerPath = WORKER_PATH;
+
+    expect(v2.output.python).toBeDefined();
+    expect(v2.routes).toEqual([
+      { handle: 'filesystem' },
+      { src: `/${WORKER_PATH}`, dest: `/${WORKER_PATH}` },
+      {
+        src: '/(.*)',
+        dest: '/python',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$1',
+          },
+        ],
+      },
+    ]);
+    expect(v2.output[workerPath]).toBeDefined();
+    expect(v2.output[workerPath].experimentalTriggers).toEqual([
+      { type: 'queue/v2beta', topic: 'invoices', consumer: WORKER_CONSUMER },
+    ]);
+  });
+
+  it('builds subscribers only when no tool.vercel.entrypoint is declared', async () => {
+    mockQueueIntrospection([
+      { topic: 'invoices', consumer_group: WORKER_CONSUMER },
+    ]);
+
+    const result = await buildService({
+      'worker.py': WORKER_PY,
+      'pyproject.toml': pyprojectBlob(SUBSCRIBER_TOML),
+    });
+
+    const v2 = getBuildOutputV2(result) as any;
+    const workerPath = WORKER_PATH;
+
+    expect(v2.output.python).toBeUndefined();
+    expect(v2.routes).toEqual([
+      { src: `/${WORKER_PATH}`, dest: `/${WORKER_PATH}` },
+    ]);
+    expect(v2.output[workerPath]).toBeDefined();
+    expect(v2.output[workerPath].experimentalTriggers).toEqual([
+      { type: 'queue/v2beta', topic: 'invoices', consumer: WORKER_CONSUMER },
+    ]);
+  });
+
+  it('builds workflows only when no tool.vercel.entrypoint is declared', async () => {
+    const result = await buildService({
+      'flows.py': FLOWS_PY,
+      'pyproject.toml': pyprojectBlob(WORKFLOW_TOML),
+    });
+
+    const v2 = getBuildOutputV2(result) as any;
+    const workflowPath = getWorkflowOutputPath('flows_workflows');
+
+    expect(v2.output.python).toBeUndefined();
+    expect(v2.routes).toBeUndefined();
+    expect(v2.output[workflowPath]).toBeDefined();
+    expect(v2.output[workflowPath].experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: '__wkf_*',
+        consumer: WORKFLOW_CONSUMER,
+      },
+    ]);
+  });
+
+  it('does not auto-detect a web entrypoint in declared-only mode', async () => {
+    mockQueueIntrospection([
+      { topic: 'invoices', consumer_group: WORKER_CONSUMER },
+    ]);
+
+    // main.py would be picked up by filename-based detection, but a
+    // "pyproject.toml" entrypoint builds only what the file declares.
+    const result = await buildService({
+      'main.py': MAIN_PY,
+      'worker.py': WORKER_PY,
+      'pyproject.toml': pyprojectBlob(SUBSCRIBER_TOML),
+    });
+
+    const v2 = getBuildOutputV2(result) as any;
+    expect(v2.output.python).toBeUndefined();
+    expect(v2.output[WORKER_PATH]).toBeDefined();
+  });
+
+  it('fails when pyproject.toml declares nothing to build', async () => {
+    await expect(
+      buildService({
+        'main.py': MAIN_PY,
+        'pyproject.toml': pyprojectBlob([]),
+      })
+    ).rejects.toThrow(/declares nothing to build/);
+  });
+
+  it('fails when tool.vercel.entrypoint cannot be resolved', async () => {
+    await expect(
+      buildService({
+        'worker.py': WORKER_PY,
+        'pyproject.toml': pyprojectBlob([
+          '[tool.vercel]',
+          'entrypoint = "missing:app"',
+          '',
+          ...SUBSCRIBER_TOML,
+        ]),
+      })
+    ).rejects.toThrow(/no matching module file was found/);
+  });
+
+  it('fails for a pyproject.toml entrypoint outside the service root', async () => {
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files: {
+          'backend/pyproject.toml': pyprojectBlob(SUBSCRIBER_TOML),
+          'backend/worker.py': WORKER_PY,
+        },
+        entrypoint: 'backend/pyproject.toml',
+        meta: { isDev: false },
+        config: { zeroConfig: true },
+        service: { name: 'backend' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/must sit at the service root/);
+  });
+});
+
+describe('pyproject workflows', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-workflows-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+    vi.mocked(execa).mockReset();
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('returns dev sidecars subscribed to the workflow topic pattern', async () => {
+    const workflowPackage = path.join(mockWorkPath, 'app');
+    fs.mkdirSync(workflowPackage, { recursive: true });
+    fs.writeFileSync(
+      path.join(workflowPackage, 'flows.py'),
+      'from vercel.workflow import Workflows\nworkflows = Workflows()\n'
+    );
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        '',
+        '[[tool.vercel.workflows]]',
+        'entrypoint = "app.flows:workflows"',
+        '',
+      ].join('\n')
+    );
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: {
+          use: '@vercel/python',
+          src: '<detect>',
+          config: { framework: 'fastapi' },
+        },
+      })
+    ).resolves.toEqual([
+      {
+        name: 'app-flows_workflows',
+        type: 'subscriber',
+        consumer: sanitizeConsumerName(
+          getWorkflowOutputPath('app-flows_workflows')
+        ),
+        workspace: '.',
+        framework: 'fastapi',
+        runtime: 'python',
+        builder: {
+          use: '@vercel/python',
+          src: 'app/flows.py',
+          config: {
+            handlerFunction: 'workflows',
+            pythonQueueSidecar: 'workflow',
+          },
+        },
+        topics: [{ topic: '__wkf_*' }],
+      },
+    ]);
+  });
+
+  function workflowBuildFiles(pyprojectExtra: string[] = []) {
+    return {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'flows.py': new FileBlob({
+        data: 'from vercel.workflow import Workflows\nworkflows = Workflows()\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          ...pyprojectExtra,
+          '',
+          '[[tool.vercel.workflows]]',
+          'entrypoint = "flows:workflows"',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+  }
+
+  function buildWorkflowProject(files: Record<string, FileBlob>) {
+    return build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: false },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+  }
+
+  it('emits a legacy worker Lambda when the vercel SDK predates vercel-queue workflows', async () => {
+    const result = await buildWorkflowProject(workflowBuildFiles());
+
+    const output = getBuildOutputV2(result).output as any;
+    const workflowPath = getWorkflowOutputPath('flows_workflows');
+
+    expect(output.flask).toBeDefined();
+    expect(output.flask.environment.VERCEL_HAS_WORKER_SERVICES).toBe('1');
+    expect(output[workflowPath]).toBeDefined();
+
+    const workflow = output[workflowPath];
+    expect(workflow.handler).toBe('vc__handler__python.vc_handler');
+    expect(workflow.environment.VERCEL_SERVICE_TYPE).toBe('worker');
+    expect(workflow.environment.VERCEL_HAS_WORKER_SERVICES).toBe('1');
+    expect(workflow.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: '__wkf_*',
+        consumer: sanitizeConsumerName(workflowPath),
+      },
+    ]);
+
+    const handler = workflow.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('workflow handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      '"__VC_HANDLER_MODULE_NAME": "flows"'
+    );
+  });
+
+  it('emits a legacy worker Lambda when the vercel SDK version is below 0.8.0', async () => {
+    mockQueueIntrospection([], { sdkVersion: '0.7.4' });
+
+    const result = await buildWorkflowProject(
+      workflowBuildFiles(['dependencies = ["vercel"]'])
+    );
+
+    const output = getBuildOutputV2(result).output as any;
+    const workflowPath = getWorkflowOutputPath('flows_workflows');
+    const workflow = output[workflowPath];
+    expect(workflow.environment.VERCEL_SERVICE_TYPE).toBe('worker');
+    expect(workflow.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: '__wkf_*',
+        consumer: sanitizeConsumerName(workflowPath),
+      },
+    ]);
+    const handler = workflow.files?.['vc__handler__python.py'];
+    expect(handler.data.toString()).toContain(
+      '"__VC_HANDLER_MODULE_NAME": "flows"'
+    );
+  });
+
+  it('serves workflows through vercel-queue when the SDK is 0.8.0 or newer', async () => {
+    mockQueueIntrospection(
+      [
+        { topic: '__wkf_workflow_*', consumer_group: 'flows-workflows' },
+        { topic: '__wkf_step_*', consumer_group: 'flows-workflows' },
+      ],
+      { sdkVersion: '0.8.0' }
+    );
+
+    const result = await buildWorkflowProject(
+      workflowBuildFiles(['dependencies = ["vercel"]'])
+    );
+
+    const v2 = getBuildOutputV2(result) as any;
+    const output = v2.output;
+    const workflowPath = getWorkflowOutputPath('flows_workflows');
+
+    expect(output.flask).toBeDefined();
+    expect(output.flask.environment.VERCEL_HAS_WORKER_SERVICES).toBeUndefined();
+    const workflow = output[workflowPath];
+    expect(workflow).toBeDefined();
+    expect(workflow.environment.VERCEL_SERVICE_TYPE).toBeUndefined();
+    expect(workflow.environment.VERCEL_HAS_WORKER_SERVICES).toBeUndefined();
+    expect(workflow.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: '__wkf_workflow_*',
+        consumer: 'flows-workflows',
+      },
+      {
+        type: 'queue/v2beta',
+        topic: '__wkf_step_*',
+        consumer: 'flows-workflows',
+      },
+    ]);
+
+    // Served through a generated vercel.queue.asgi_app() handler module.
+    const generatedPath = getGeneratedQueueHandlerPath(workflowPath);
+    const handler = workflow.files?.['vc__handler__python.py'];
+    expect(handler.data.toString()).toContain(
+      `"__VC_HANDLER_MODULE_NAME": "${generatedPythonPathToModule(generatedPath)}"`
+    );
+    const generated = workflow.files?.[generatedPath];
+    expect(generated).toBeDefined();
+
+    // Queue-served workflows are HTTP-routable for push delivery.
+    expect(v2.routes).toEqual(
+      expect.arrayContaining([
+        { src: `/${workflowPath}`, dest: `/${workflowPath}` },
+      ])
+    );
+  });
+
+  it('excludes non-workflow subscriptions from the workflow Lambda triggers', async () => {
+    mockQueueIntrospection(
+      [
+        { topic: '__wkf_workflow_*', consumer_group: 'flows-workflows' },
+        { topic: 'orders', consumer_group: 'order-workers' },
+      ],
+      { sdkVersion: '0.8.0' }
+    );
+
+    const result = await buildWorkflowProject(
+      workflowBuildFiles(['dependencies = ["vercel"]'])
+    );
+
+    const output = getBuildOutputV2(result).output as any;
+    const workflow = output[getWorkflowOutputPath('flows_workflows')];
+    expect(workflow.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: '__wkf_workflow_*',
+        consumer: 'flows-workflows',
+      },
+    ]);
+  });
+
+  it('fails when a vercel-queue workflow entrypoint registers no workflow subscriptions', async () => {
+    mockQueueIntrospection(
+      [{ topic: 'orders', consumer_group: 'order-workers' }],
+      { sdkVersion: '0.8.0' }
+    );
+
+    await expect(
+      buildWorkflowProject(workflowBuildFiles(['dependencies = ["vercel"]']))
+    ).rejects.toThrow(/vercel\.workflow\.Workflows/);
+  });
+
+  it('rejects more than one workflow entrypoint', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'flows.py': new FileBlob({
+        data: 'workflows = object()\nmore = object()\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[[tool.vercel.workflows]]',
+          'entrypoint = "flows:workflows"',
+          '',
+          '[[tool.vercel.workflows]]',
+          'entrypoint = "flows:more"',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'app.py',
+        meta: { isDev: false },
+        config: { framework: 'flask' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/must declare a single entrypoint/);
+  });
+
+  it('rejects topics because workflow topics are implicit', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'flows.py': new FileBlob({
+        data: 'workflows = object()\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[[tool.vercel.workflows]]',
+          'entrypoint = "flows:workflows"',
+          'topics = ["jobs"]',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'app.py',
+        meta: { isDev: false },
+        config: { framework: 'flask' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/unrecognized field "topics"/);
   });
 });
 
@@ -2794,13 +4392,7 @@ describe('non-web V1 services should not generate catch-all routes', () => {
   it('worker service returns V2 with no routes', async () => {
     const files = {
       'worker/broker.py': new FileBlob({
-        data: [
-          'import dramatiq',
-          'from vercel.workers.dramatiq import VercelQueuesBroker',
-          '',
-          'broker = VercelQueuesBroker()',
-          'dramatiq.set_broker(broker)',
-        ].join('\n'),
+        data: ['import dramatiq', 'broker = dramatiq.get_broker()'].join('\n'),
       }),
       'worker/tasks.py': new FileBlob({
         data: [
@@ -2820,7 +4412,7 @@ describe('non-web V1 services should not generate catch-all routes', () => {
         ].join('\n'),
       }),
       'pyproject.toml': new FileBlob({
-        data: '[project]\nname = "my-worker"\nversion = "0.0.1"\ndependencies = ["dramatiq", "vercel-workers"]\n',
+        data: '[project]\nname = "my-worker"\nversion = "0.0.1"\ndependencies = ["dramatiq"]\n',
       }),
     } as Record<string, FileBlob>;
 
@@ -2877,11 +4469,21 @@ describe('V2 services should generate catch-all routes', () => {
     });
 
     const v2result = getBuildOutputV2(result);
-    expect(v2result.output.index).toBeDefined();
+    expect(v2result.output.fastapi).toBeDefined();
     expect(v2result.output['_svc/my-backend/index']).toBeUndefined();
     expect(v2result.routes).toEqual([
       { handle: 'filesystem' },
-      { src: '/(.*)', dest: '/index' },
+      {
+        src: '/(.*)',
+        dest: '/fastapi',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$1',
+          },
+        ],
+      },
     ]);
   });
 });
@@ -3881,10 +5483,9 @@ describe('custom install hooks', () => {
 });
 
 describe('worker services dependency installation', () => {
-  async function buildWithPipSpy(
-    options: { hasWorkerServices?: boolean } = {}
-  ) {
+  async function buildWithPipSpy(options: { dependencies?: string[] } = {}) {
     const pipCalls: string[][] = [];
+    const operations: string[] = [];
 
     const realInstall =
       await vi.importActual<typeof import('../src/install')>('../src/install');
@@ -3913,10 +5514,16 @@ describe('worker services dependency installation', () => {
         listInstalledPythons() {
           return new Set(mockInstalledVersions);
         }
-        async sync() {}
+        async sync() {
+          operations.push('sync');
+        }
         async lock() {}
         async pip(options: { args: string[] }) {
           pipCalls.push(options.args);
+          operations.push(`pip:${options.args[options.args.length - 1]}`);
+        }
+        async run() {
+          return { stdout: '', stderr: '' };
         }
       },
       checkUvBinaryVersion: () => `uv ${UV_VERSION} (mock)`,
@@ -3956,6 +5563,20 @@ describe('worker services dependency installation', () => {
       'handler.py': new FileBlob({
         data: 'def app(environ, start_response): pass',
       }),
+      ...(options.dependencies
+        ? {
+            'pyproject.toml': new FileBlob({
+              data: [
+                '[project]',
+                'name = "test-app"',
+                'version = "0.0.1"',
+                `dependencies = [${options.dependencies
+                  .map(dep => JSON.stringify(dep))
+                  .join(', ')}]`,
+              ].join('\n'),
+            }),
+          }
+        : {}),
     } as Record<string, FileBlob>;
 
     let result;
@@ -3967,9 +5588,6 @@ describe('worker services dependency installation', () => {
         meta: { isDev: false },
         config: {
           framework: 'services',
-          ...(options.hasWorkerServices === true
-            ? { hasWorkerServices: true }
-            : {}),
         },
         repoRootPath: workPath,
       });
@@ -3977,16 +5595,20 @@ describe('worker services dependency installation', () => {
       if (fs.existsSync(workPath)) fs.removeSync(workPath);
     }
 
-    return { pipCalls, result };
+    return { operations, pipCalls, result };
   }
 
   beforeEach(() => {
     vi.resetModules();
     makeMockPython('3.12');
+    delete process.env.VERCEL_PYTHON_CELERY_DEPENDENCY;
+    delete process.env.VERCEL_PYTHON_DRAMATIQ_DEPENDENCY;
     delete process.env.VERCEL_WORKERS_PYTHON;
   });
 
   afterEach(() => {
+    delete process.env.VERCEL_PYTHON_CELERY_DEPENDENCY;
+    delete process.env.VERCEL_PYTHON_DRAMATIQ_DEPENDENCY;
     delete process.env.VERCEL_WORKERS_PYTHON;
     vi.doUnmock('../src/dependency-externalizer');
     vi.doUnmock('../src/install');
@@ -3995,25 +5617,10 @@ describe('worker services dependency installation', () => {
     vi.doUnmock('../src/uv');
   });
 
-  it('installs vercel-workers when worker services are enabled', async () => {
-    const { pipCalls } = await buildWithPipSpy({ hasWorkerServices: true });
-    const pinnedDep = `vercel-workers==${VERCEL_WORKERS_VERSION}`;
-    // In the monorepo, the build defaults to installing from the in-repo
-    // source directory (path ending in /python/vercel-workers) rather than
-    // from PyPI. Accept either form here.
-    expect(
-      pipCalls.some(args =>
-        args.some(
-          arg =>
-            arg === pinnedDep ||
-            arg.endsWith(`${path.sep}python${path.sep}vercel-workers`)
-        )
-      )
-    ).toBe(true);
-  });
-
   it('uses copy link mode for injected pip installs', async () => {
-    const { pipCalls } = await buildWithPipSpy({ hasWorkerServices: true });
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['vercel-workers'],
+    });
     expect(pipCalls).toEqual(
       expect.arrayContaining([
         expect.arrayContaining(['install', '--link-mode', 'copy']),
@@ -4024,19 +5631,112 @@ describe('worker services dependency installation', () => {
     }
   });
 
-  it('does not install vercel-workers when worker services are not enabled', async () => {
-    const { pipCalls } = await buildWithPipSpy();
+  it('installs vercel-celery-bundle after uv sync when celery is declared', async () => {
+    const { operations, pipCalls } = await buildWithPipSpy({
+      dependencies: ['celery>=5.3'],
+    });
+
+    expect(pipCalls.some(args => args.includes('vercel-celery-bundle'))).toBe(
+      true
+    );
+    expect(operations.indexOf('sync')).toBeGreaterThanOrEqual(0);
+    expect(operations.indexOf('pip:vercel-celery-bundle')).toBeGreaterThan(
+      operations.indexOf('sync')
+    );
+  });
+
+  it('installs vercel-celery when vercel-queue is declared', async () => {
+    const { operations, pipCalls } = await buildWithPipSpy({
+      dependencies: ['celery>=5.3', 'vercel-queue'],
+    });
+
     expect(
-      pipCalls.some(args =>
-        args.some(arg => arg.startsWith('vercel-workers=='))
-      )
+      pipCalls.some(args => args[args.length - 1] === 'vercel-celery')
+    ).toBe(true);
+    expect(pipCalls.some(args => args.includes('vercel-celery-bundle'))).toBe(
+      false
+    );
+    expect(operations.indexOf('pip:vercel-celery')).toBeGreaterThan(
+      operations.indexOf('sync')
+    );
+  });
+
+  it('installs vercel-dramatiq-bundle after uv sync when dramatiq is declared', async () => {
+    const { operations, pipCalls } = await buildWithPipSpy({
+      dependencies: ['dramatiq>=1.17'],
+    });
+
+    expect(pipCalls.some(args => args.includes('vercel-dramatiq-bundle'))).toBe(
+      true
+    );
+    expect(operations.indexOf('sync')).toBeGreaterThanOrEqual(0);
+    expect(operations.indexOf('pip:vercel-dramatiq-bundle')).toBeGreaterThan(
+      operations.indexOf('sync')
+    );
+  });
+
+  it('installs vercel-dramatiq when dramatiq and vercel-queue are declared', async () => {
+    const { operations, pipCalls } = await buildWithPipSpy({
+      dependencies: ['dramatiq>=1.17', 'vercel-queue'],
+    });
+
+    expect(
+      pipCalls.some(args => args[args.length - 1] === 'vercel-dramatiq')
+    ).toBe(true);
+    expect(pipCalls.some(args => args.includes('vercel-dramatiq-bundle'))).toBe(
+      false
+    );
+    expect(operations.indexOf('pip:vercel-dramatiq')).toBeGreaterThan(
+      operations.indexOf('sync')
+    );
+  });
+
+  it('skips conditional adapters for legacy vercel-workers projects', async () => {
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['celery>=5.3', 'vercel-queue', 'vercel-workers'],
+    });
+
+    // The legacy integration brings its own celery support through the
+    // vercel-workers runtime; injecting the vercel-queue adapter as well
+    // would install two competing transports.
+    expect(
+      pipCalls.some(args => args[args.length - 1] === 'vercel-celery')
     ).toBe(false);
+    expect(pipCalls.some(args => args.includes('vercel-celery-bundle'))).toBe(
+      false
+    );
+    expect(pipCalls.some(args => isVercelWorkersInstall(args))).toBe(true);
+  });
+
+  function isVercelWorkersInstall(args: string[]): boolean {
+    // In the monorepo, the build defaults to installing from the in-repo
+    // source directory (path ending in /python/vercel-workers) rather than
+    // from PyPI. Accept either form here.
+    return args.some(
+      arg =>
+        arg.startsWith('vercel-workers==') ||
+        arg.endsWith(`${path.sep}python${path.sep}vercel-workers`)
+    );
+  }
+
+  it('installs vercel-workers when the project depends on it directly', async () => {
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['vercel-workers'],
+    });
+    expect(pipCalls.some(args => isVercelWorkersInstall(args))).toBe(true);
+  });
+
+  it('does not install vercel-workers without a direct dependency on it', async () => {
+    const { pipCalls } = await buildWithPipSpy();
+    expect(pipCalls.some(args => isVercelWorkersInstall(args))).toBe(false);
   });
 
   it('uses VERCEL_WORKERS_PYTHON override when provided', async () => {
     process.env.VERCEL_WORKERS_PYTHON =
       'vercel-workers @ file:///tmp/vercel-workers.whl';
-    const { pipCalls } = await buildWithPipSpy({ hasWorkerServices: true });
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['vercel-workers'],
+    });
     expect(
       pipCalls.some(args =>
         args.includes('vercel-workers @ file:///tmp/vercel-workers.whl')
@@ -4044,16 +5744,75 @@ describe('worker services dependency installation', () => {
     ).toBe(true);
   });
 
-  it('marks python lambdas with internal worker services env when enabled', async () => {
-    const { result } = await buildWithPipSpy({ hasWorkerServices: true });
+  it('marks python lambdas with internal worker services env for legacy projects', async () => {
+    const { result } = await buildWithPipSpy({
+      dependencies: ['vercel-workers'],
+    });
     const lambda = getBuildOutputV3(result);
     expect(lambda.environment?.VERCEL_HAS_WORKER_SERVICES).toBe('1');
   });
 
-  it('does not mark python lambdas when worker services are not enabled', async () => {
+  it('does not mark python lambdas without a direct vercel-workers dependency', async () => {
     const { result } = await buildWithPipSpy();
     const lambda = getBuildOutputV3(result);
     expect(lambda.environment?.VERCEL_HAS_WORKER_SERVICES).toBeUndefined();
+  });
+
+  it('uses VERCEL_PYTHON_CELERY_DEPENDENCY override for bundled celery when provided', async () => {
+    process.env.VERCEL_PYTHON_CELERY_DEPENDENCY =
+      'vercel-celery-bundle @ file:///tmp/vercel-celery-bundle.whl';
+
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['celery>=5.3'],
+    });
+
+    expect(
+      pipCalls.some(args =>
+        args.some(arg => arg.includes('vercel-celery-bundle'))
+      )
+    ).toBe(true);
+  });
+
+  it('uses VERCEL_PYTHON_CELERY_DEPENDENCY override for unbundled celery when provided', async () => {
+    process.env.VERCEL_PYTHON_CELERY_DEPENDENCY =
+      'vercel-celery @ file:///tmp/vercel-celery.whl';
+
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['celery>=5.3', 'vercel-queue'],
+    });
+
+    expect(
+      pipCalls.some(args =>
+        args.includes('vercel-celery @ file:///tmp/vercel-celery.whl')
+      )
+    ).toBe(true);
+  });
+
+  it('uses VERCEL_PYTHON_DRAMATIQ_DEPENDENCY override when provided', async () => {
+    process.env.VERCEL_PYTHON_DRAMATIQ_DEPENDENCY =
+      'vercel-dramatiq @ file:///tmp/vercel-dramatiq.whl';
+
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['dramatiq>=1.17', 'vercel-queue'],
+    });
+
+    expect(
+      pipCalls.some(args =>
+        args.includes('vercel-dramatiq @ file:///tmp/vercel-dramatiq.whl')
+      )
+    ).toBe(true);
+  });
+
+  it('does not install vercel-celery-bundle when vercel-celery is declared', async () => {
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['celery>=5.3', 'vercel-celery'],
+    });
+
+    expect(
+      pipCalls.some(args =>
+        args.some(arg => arg.includes('vercel-celery-bundle'))
+      )
+    ).toBe(false);
   });
 });
 

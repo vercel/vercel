@@ -105,6 +105,35 @@ async function getConfigPrefix() {
   return null;
 }
 
+/**
+ * Detects a pnpm global install: the CLI runs from inside `PNPM_HOME`.
+ * Works across pnpm's global layout changes, unlike `pnpm root -g`
+ * (see pnpm/pnpm#11528).
+ */
+async function isPnpmHomeInstall(installPath: string): Promise<boolean> {
+  const pnpmHome = process.env.PNPM_HOME;
+  if (!pnpmHome) {
+    return false;
+  }
+
+  const candidates = [pnpmHome];
+  try {
+    candidates.push(await realpath(pnpmHome));
+  } catch (_) {
+    // unresolvable; check the raw value only
+  }
+
+  const entrypoint = process.argv[1];
+  for (const home of candidates) {
+    const prefix = home.endsWith(sep) ? home : home + sep;
+    if (entrypoint?.startsWith(prefix) || installPath.startsWith(prefix)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function isGlobalByPath(installPath: string): boolean {
   // This is true for e.g. nvm, node path will be equal to now path
   if (dirname(process.argv[0]) === dirname(process.argv[1])) {
@@ -118,6 +147,14 @@ function isGlobalByPath(installPath: string): boolean {
   }
 
   if (installPath.includes(['', 'pnpm', 'global', ''].join(sep))) {
+    return true;
+  }
+
+  // pnpm 11+ global virtual store (`.../pnpm/store/v{N}/links/...`)
+  if (
+    installPath.includes(['', 'pnpm', 'store', ''].join(sep)) &&
+    installPath.includes(sep + 'links' + sep)
+  ) {
     return true;
   }
 
@@ -154,19 +191,36 @@ async function resolveInstall() {
   const pkg = isNativeBinaryInstall() ? nativePackageName : packageName;
   const installPath = await realpath(resolve(__dirname));
 
+  if (await isPnpmHomeInstall(installPath)) {
+    return { cliType: 'pnpm' as const, global: true };
+  }
+
   const globalCliType = await detectGlobalCliType(installPath, pkg);
   if (globalCliType) {
     return { cliType: globalCliType, global: true };
   }
 
-  const entrypoint = await realpath(process.argv[1]);
-  const { cliType, lockfilePath } = await scanParentDirs(
-    dirname(dirname(entrypoint))
-  );
+  let lockfileCliType: string | undefined;
+  try {
+    const entrypoint = await realpath(process.argv[1]);
+    const { cliType, lockfilePath } = await scanParentDirs(
+      dirname(dirname(entrypoint))
+    );
+    if (lockfilePath) {
+      lockfileCliType = cliType;
+    }
+  } catch (_) {
+    // entrypoint may not resolve on disk (e.g. virtual filesystem snapshot)
+  }
+
+  // No lockfile above the install — never guess "local": a wrong local
+  // install runs in (and mutates) the user's cwd. Default to global.
+  if (!lockfileCliType) {
+    return { cliType: 'npm' as const, global: true };
+  }
 
   return {
-    // Global installs for npm do not have a lockfile
-    cliType: lockfilePath ? cliType : 'npm',
+    cliType: lockfileCliType,
     global:
       isGlobalByPath(installPath) || (await isGlobalByPrefix(installPath)),
   };
@@ -200,8 +254,9 @@ export async function getUpdateCommandInfo(): Promise<{
     }
     const install = cliType === 'yarn' ? 'global add' : 'i -g';
     const force = cliType === 'npm' ? ' --force' : '';
+    const allowBuild = pnpmAllowBuildFlag(cliType, nativePackageName);
     return {
-      command: `${cliType} ${install} ${pkgAndVersion}${force}`,
+      command: `${cliType} ${install} ${pkgAndVersion}${force}${allowBuild}`,
       global: true,
     };
   }
@@ -214,7 +269,19 @@ export async function getUpdateCommandInfo(): Promise<{
     install = yarn ? 'global add' : 'i -g';
   }
 
-  return { command: `${cliType} ${install} ${pkgAndVersion}`, global };
+  // Global-only: on a local install pnpm would persist the approval into
+  // the project's pnpm-workspace.yaml, which belongs to the project owner.
+  const allowBuild = global ? pnpmAllowBuildFlag(cliType, 'esbuild') : '';
+  return {
+    command: `${cliType} ${install} ${pkgAndVersion}${allowBuild}`,
+    global,
+  };
+}
+
+// pnpm v10+ skips dependency build scripts (e.g. esbuild's postinstall)
+// without approval; pre-approve the one this install needs
+function pnpmAllowBuildFlag(cliType: string, pkg: string): string {
+  return cliType === 'pnpm' ? ` --allow-build=${pkg}` : '';
 }
 
 export default async function getUpdateCommand(): Promise<string> {

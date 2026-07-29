@@ -34,7 +34,7 @@
       "require": "./world-id.js"
     }
   },
-  "version": "3.7.5",
+  "version": "3.7.6",
   "repository": {
     "directory": "packages/functions",
     "type": "git",

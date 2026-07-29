@@ -2,6 +2,7 @@ import { readFileSync } from 'fs';
 import { basename } from 'path';
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import {
   outputActionRequired,
@@ -15,10 +16,10 @@ import {
 import { uploadSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   getArgsAfterRedirectsSubcommand,
   getRedirectPromoteSuggestionFlags,
   buildRedirectsSuggestionFlags,
+  withGlobalFlags,
 } from './shared';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import stamp from '../../util/output/stamp';
@@ -51,7 +52,11 @@ export default async function upload(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, uploadSubcommand);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await requireProjectContext(
+    client,
+    'redirects',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -263,7 +268,7 @@ export default async function upload(client: Client, argv: string[]) {
           ],
         }),
         ...(existingStagingVersion && {
-          hint: `Review staged changes with ${getCommandNamePlain('redirects list --staging')} before promoting.`,
+          hint: `Review staged changes with ${withGlobalFlags(client, 'redirects list --staging')} before promoting.`,
         }),
       };
       client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);

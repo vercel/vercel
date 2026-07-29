@@ -5,6 +5,7 @@ describe('index', () => {
     expect(commands).toEqual(
       new Map([
         ['agent', 'agent'],
+        ['agent-runs', 'agent-runs'],
         ['ai-gateway', 'ai-gateway'],
         ['alerts', 'alerts'],
         ['alias', 'alias'],
@@ -18,6 +19,7 @@ describe('index', () => {
         ['cache', 'cache'],
         ['cert', 'certs'],
         ['certs', 'certs'],
+        ['comments', 'comments'],
         ['connect', 'connect'],
         ['contract', 'contract'],
         ['cron', 'crons'],
@@ -31,11 +33,12 @@ describe('index', () => {
         ['dns', 'dns'],
         ['domain', 'domains'],
         ['domains', 'domains'],
-        ['edge-config', 'edge-config'],
+        ['edge-config', 'global-config'],
         ['env', 'env'],
         ['firewall', 'firewall'],
         ['flags', 'flags'],
         ['git', 'git'],
+        ['global-config', 'global-config'],
         ['help', 'help'],
         ['httpstat', 'httpstat'],
         ['i', 'install'],
@@ -57,7 +60,6 @@ describe('index', () => {
         ['mf', 'microfrontends'],
         ['metrics', 'metrics'],
         ['microfrontends', 'microfrontends'],
-        ['oauth-apps', 'oauth-apps'],
         ['open', 'open'],
         ['project', 'project'],
         ['projects', 'project'],
@@ -86,6 +88,7 @@ describe('index', () => {
         ['webhook', 'webhooks'],
         ['webhooks', 'webhooks'],
         ['usage', 'usage'],
+        ['vcr', 'vcr'],
         ['whoami', 'whoami'],
       ])
     );

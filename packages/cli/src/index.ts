@@ -81,7 +81,6 @@ import type {
   User,
 } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
-import { Agent as HttpsAgent } from 'https';
 import box from './util/output/box';
 import { TelemetryEventStore } from './util/telemetry';
 import { RootTelemetryClient } from './util/telemetry/root';
@@ -545,18 +544,12 @@ const main = async () => {
   );
 
   // Only load proxy support if proxy env vars are configured (saves startup time).
-  const proxyConfigured = hasProxyConfig();
-  const agent = proxyConfigured
-    ? new (await import('proxy-agent')).ProxyAgent({ keepAlive: true })
-    : new HttpsAgent({ keepAlive: true });
-
-  if (proxyConfigured) {
+  if (hasProxyConfig()) {
     const { EnvProxyDispatcher } = await import('./util/fetch-proxy');
     setFetchDispatcher(new EnvProxyDispatcher());
   }
 
   client = new Client({
-    agent,
     apiUrl,
     stdin: process.stdin,
     stdout: process.stdout,
@@ -648,7 +641,6 @@ const main = async () => {
   }
 
   const subcommandsWithoutToken = [
-    'agent',
     'login',
     'logout',
     'help',
@@ -658,6 +650,7 @@ const main = async () => {
     'telemetry',
     'upgrade',
     'skills',
+    'agent',
   ];
 
   if (process.env.FF_GUIDANCE_MODE) {
@@ -791,11 +784,17 @@ const main = async () => {
     parsedArgs.flags['--scope'] ||
     parsedArgs.flags['--team'] ||
     localConfig?.scope;
+  const separatorIndex = client.argv.indexOf('--');
+  const cliArgs =
+    separatorIndex === -1 ? client.argv : client.argv.slice(0, separatorIndex);
+  const buildNeedsRemoteProjectScope =
+    targetCommand === 'build' &&
+    cliArgs.some(arg => arg === '--project' || arg.startsWith('--project='));
 
   if (
     typeof scope === 'string' &&
     targetCommand !== 'login' &&
-    targetCommand !== 'build' &&
+    (targetCommand !== 'build' || buildNeedsRemoteProjectScope) &&
     targetCommand !== 'sandbox'
   ) {
     let user = null;
@@ -965,6 +964,10 @@ const main = async () => {
           telemetry.trackCliCommandAgent(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).agent;
           break;
+        case 'agent-runs':
+          telemetry.trackCliCommandAgentRuns(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).agentRuns;
+          break;
         case 'ai-gateway':
           telemetry.trackCliCommandAiGateway(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).aiGateway;
@@ -1017,6 +1020,10 @@ const main = async () => {
           telemetry.trackCliCommandCerts(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).certs;
           break;
+        case 'comments':
+          telemetry.trackCliCommandComments(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).comments;
+          break;
         case 'crons':
         case 'cron':
           telemetry.trackCliCommandCrons(userSuppliedSubCommand);
@@ -1035,9 +1042,9 @@ const main = async () => {
           telemetry.trackCliCommandDeployHooks(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).deployHooks;
           break;
-        case 'edge-config':
-          telemetry.trackCliCommandEdgeConfig(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).edgeConfig;
+        case 'global-config':
+          telemetry.trackCliCommandGlobalConfig(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).globalConfig;
           break;
         case 'domains':
           telemetry.trackCliCommandDomains(userSuppliedSubCommand);
@@ -1109,10 +1116,6 @@ const main = async () => {
         case 'microfrontends':
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).microfrontends;
-          break;
-        case 'oauth-apps':
-          telemetry.trackCliCommandOauthApps(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).oauthApps;
           break;
         case 'open':
           telemetry.trackCliCommandOpen(userSuppliedSubCommand);
@@ -1195,6 +1198,10 @@ const main = async () => {
         case 'usage':
           telemetry.trackCliCommandUsage(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).usage;
+          break;
+        case 'vcr':
+          telemetry.trackCliCommandVcr(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).vcr;
           break;
         case 'whoami':
           telemetry.trackCliCommandWhoami(userSuppliedSubCommand);
@@ -1383,7 +1390,10 @@ async function promptAndUpgrade(
 
 main()
   .then(async exitCode => {
-    if (cachedLatest) {
+    // Skip the update notification after `vc upgrade`: the process still has
+    // the pre-upgrade version in memory, so it would prompt the user to
+    // upgrade again right after the upgrade completed.
+    if (cachedLatest && resolvedCommandForUpdate !== 'upgrade') {
       const originalExitCode = typeof exitCode === 'number' ? exitCode : 0;
 
       // Await the fresh registry lookup to verify the exact version before

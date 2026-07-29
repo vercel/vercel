@@ -1,6 +1,9 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import env from '../../../../src/commands/env';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { defaultProject, envs, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
@@ -33,6 +36,46 @@ describe('env update', () => {
         },
       ]
     );
+  });
+
+  it('updates a variable in the project selected by --project', async () => {
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject(
+      {
+        ...defaultProject,
+        id: 'explicit-env-update',
+        name: 'explicit-env-update',
+        accountId: 'team_dummy',
+      },
+      [
+        {
+          type: 'encrypted',
+          id: 'test-env-id-123',
+          key: 'TEST_VAR',
+          value: 'test-value',
+          target: ['production'],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+          customEnvironmentIds: [],
+        },
+      ]
+    );
+    client.setArgv(
+      'env',
+      'update',
+      'TEST_VAR',
+      'production',
+      '--value',
+      'updated',
+      '--yes',
+      '--project',
+      'explicit-env-update'
+    );
+
+    await expect(env(client)).resolves.toEqual(0);
   });
 
   it('should show error when environment variable does not exist', async () => {

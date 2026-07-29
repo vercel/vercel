@@ -1,5 +1,50 @@
 # @vercel/connect
 
+## 0.5.0
+
+### Minor Changes
+
+- 72d6d55: Add `connectPhotonCredentials` for resolving app-scoped Photon project credentials from a Vercel Connect connector.
+- 9ac74f0: Adding `getConnectorMetadata()` to `@vercel/connect` SDK
+
+## 0.4.3
+
+### Patch Changes
+
+- f999343: Add token exchange subjects to `ConnectTokenParams`.
+- 726c7b4: Add `experimental_startInstallation` for creating Vercel Connect installation requests.
+  - @vercel/oidc@3.8.1
+
+## 0.4.2
+
+### Patch Changes
+
+- 0be0e28: Adding support for authorization mode override via env var.
+
+## 0.4.1
+
+### Patch Changes
+
+- dad41da: Test Connect against a recent stable Eve and AI SDK 7 release.
+
+## 0.4.0
+
+### Minor Changes
+
+- c636d67: Add optional `claims` field to `ConnectTokenResponse` for allow-listed upstream OAuth token claims
+
+## 0.3.3
+
+### Patch Changes
+
+- 0cc0e8d: Expose and document the per-issuance `tokenId` on `ConnectTokenResponse` (returned by `getToken`/`getTokenResponse`). It's a stable identifier for the issued token — new on each issuance/refresh — for correlating a token with its usage in Vercel observability/billing data.
+
+## 0.3.2
+
+### Patch Changes
+
+- 2f8d81f: Surface the connector's human-readable name through authorization challenges. `startAuthorization` now exposes the optional `connector` object returned by `POST /v1/connect/authorize/:connector` (matching the `connector` object on the token response), and the Eve `connect()` adapter stamps the service display name (`connector.serviceName`, eg. `"Salesforce"`, falling back to the connector's own `connector.name` for unknown services) onto the `ConnectionAuthorizationChallenge` as `displayName` so channels can render "Sign in with Salesforce" instead of a title-cased file name. Connection authors can override the server-reported name via the new `displayName` option on `connect()`. No behavior change until the Vercel API starts returning `connector`.
+
 ## 0.3.1
 
 ### Patch Changes

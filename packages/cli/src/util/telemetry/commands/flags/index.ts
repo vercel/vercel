@@ -20,6 +20,20 @@ export class FlagsTelemetryClient
     });
   }
 
+  trackCliSubcommandVersions(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'versions',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandEvaluations(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'evaluations',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandOpen(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'open',
@@ -100,6 +114,13 @@ export class FlagsTelemetryClient
   trackCliSubcommandSegments(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'segments',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRules(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules',
       value: actual,
     });
   }

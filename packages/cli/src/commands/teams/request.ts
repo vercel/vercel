@@ -6,20 +6,13 @@ import { printError } from '../../util/error';
 import { isAPIError, type APIError } from '../../util/errors-ts';
 import { requestSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
-import { outputAgentError } from '../../util/agent-output';
+import { outputAgentError, withGlobalFlags } from '../../util/agent-output';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import {
-  getGlobalFlagsOnlyFromArgs,
+  getGlobalFlagsFromArgs,
   getSameSubcommandSuggestionFlags,
-  getCommandNameWithGlobalFlags,
 } from '../../util/arg-common';
 import output from '../../output-manager';
-
-/** Append global argv flags (--cwd, --non-interactive, etc.) so agents can re-run with same context. */
-function withGlobalFlags(client: Client, commandTemplate: string): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
-}
 
 function optionRoot(flagToken: string): string {
   if (flagToken.startsWith('--')) {
@@ -40,7 +33,7 @@ function teamsRequestNextCommand(client: Client): string {
     a => a === 'request' || a === 'access-request'
   );
   const afterRequest = reqIdx >= 0 ? fullArgs.slice(reqIdx + 1) : [];
-  const globalParts = getGlobalFlagsOnlyFromArgs(fullArgs);
+  const globalParts = getGlobalFlagsFromArgs(fullArgs);
   const subParts = getSameSubcommandSuggestionFlags(afterRequest);
 
   const seen = new Set<string>();
@@ -76,10 +69,7 @@ function teamsRequestNextCommand(client: Client): string {
     }
   }
 
-  const base = getCommandNameWithGlobalFlags(
-    'teams request [userId]',
-    client.argv
-  );
+  const base = withGlobalFlags(client, 'teams request [userId]');
   if (extras.length === 0) {
     return base;
   }
