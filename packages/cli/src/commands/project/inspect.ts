@@ -53,6 +53,7 @@ export default async function inspect(
     client,
     commandName: 'project inspect',
     projectNameOrId: name,
+    forReadOnlyCommand: true,
   });
 
   const org = await getTeamById(client, project.accountId);

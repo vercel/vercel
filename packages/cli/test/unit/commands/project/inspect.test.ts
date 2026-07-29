@@ -1,8 +1,12 @@
 import assert from 'node:assert';
+import { access, mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { frameworkList } from '@vercel/frameworks';
 import createLineIterator from 'line-async-iterator';
 import projects from '../../../../src/commands/project';
+import { LinkRequiredError } from '../../../../src/util/errors-ts';
 import { useUser } from '../../../mocks/user';
 import { useTeams } from '../../../mocks/team';
 import { defaultProject, useProject } from '../../../mocks/project';
@@ -134,5 +138,37 @@ describe('inspect', () => {
     // empty line
     line = await lines.next();
     expect(line.value).toEqual('');
+  });
+
+  it('does not auto-link a matching project in non-interactive mode', async () => {
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    const [team] = teams;
+    useProject({
+      ...defaultProject,
+      name: 'test_project',
+      accountId: team.id,
+    });
+
+    const temporaryDirectory = await mkdtemp(
+      join(tmpdir(), 'vc-cli-project-inspect-')
+    );
+    const projectDirectory = join(temporaryDirectory, 'test_project');
+    await mkdir(projectDirectory);
+    const previousCwd = client.cwd;
+    client.cwd = projectDirectory;
+    client.nonInteractive = true;
+    client.setArgv('project', 'inspect', '--non-interactive');
+
+    try {
+      await expect(projects(client)).rejects.toBeInstanceOf(LinkRequiredError);
+      await expect(
+        access(join(projectDirectory, '.vercel'))
+      ).rejects.toMatchObject({ code: 'ENOENT' });
+    } finally {
+      client.cwd = previousCwd;
+      await rm(temporaryDirectory, { recursive: true, force: true });
+    }
   });
 });
