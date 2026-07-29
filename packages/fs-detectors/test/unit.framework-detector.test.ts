@@ -370,10 +370,9 @@ describe('detectFramework()', () => {
     'src/server.mts',
     'src/server.ts',
     'src/server.cts',
-  ])('Detect Bun via `%s` + bun.lock', async entrypoint => {
+  ])('Detect Bun via `%s` + engines.bun', async entrypoint => {
     const fs = new VirtualFilesystem({
-      'package.json': JSON.stringify({}),
-      'bun.lock': '',
+      'package.json': JSON.stringify({ engines: { bun: '1.x' } }),
       [entrypoint]: '// server entrypoint',
     });
 
@@ -388,8 +387,7 @@ describe('detectFramework()', () => {
 
   it('Bun is not detected without a server entrypoint', async () => {
     const fs = new VirtualFilesystem({
-      'package.json': JSON.stringify({}),
-      'bun.lock': '',
+      'package.json': JSON.stringify({ engines: { bun: '1.x' } }),
     });
 
     expect(
