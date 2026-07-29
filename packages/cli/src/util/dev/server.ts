@@ -244,7 +244,6 @@ export default class DevServer {
       VERCEL_QUEUE_BASE_URL: `${this.address.origin}/_svc/_queues`,
       VERCEL_QUEUE_TOKEN: 'vc-dev-token',
       VERCEL_REGION: 'dev1',
-      VERCEL_DEPLOYMENT_ID: 'dpl_dev',
     };
   }
 
