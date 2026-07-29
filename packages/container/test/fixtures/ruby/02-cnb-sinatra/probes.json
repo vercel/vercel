@@ -1,0 +1,15 @@
+{
+  "probes": [
+    {
+      "logMustContain": "via ruby buildpacks"
+    },
+    {
+      "path": "/health",
+      "status": 200,
+      "mustContain": "hello from Sinatra buildpacks",
+      "responseHeaders": {
+        "content-type": "application/json"
+      }
+    }
+  ]
+}

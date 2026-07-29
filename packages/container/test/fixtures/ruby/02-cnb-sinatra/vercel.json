@@ -1,0 +1,22 @@
+{
+  "build": {
+    "env": {
+      "VERCEL_EXPERIMENTAL_RUBY_BUILDPACKS": "1"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "sinatra"
+      }
+    }
+  ],
+  "services": {
+    "sinatra": {
+      "root": ".",
+      "runtime": "ruby"
+    }
+  }
+}
