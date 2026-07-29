@@ -4,6 +4,13 @@ import * as fs from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import type { SessionMigrationPlan } from '../types';
+
+// RFC 4122's predefined URL namespace, used to derive each copy's UUIDv5 from
+// its source session id. Any fixed namespace works; the standard one avoids
+// minting a custom constant. Determinism is what matters: the same source
+// always yields the same destination id, so reruns skip existing copies
+// instead of duplicating them, and the `--apply prompt` path reproduces
+// identical ids to what a direct apply would write.
 const UUID_NAMESPACE = '6ba7b8119dad11d180b400c04fd430c8';
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -232,7 +239,7 @@ export async function planCodexSessionMigration(
   }
   if (files.some(file => file.path.endsWith('.jsonl.zst'))) {
     throw new Error(
-      'Found compressed Codex sessions; decompress them first, or pass --no-migrate-sessions to leave them unchanged'
+      'Found compressed Codex sessions; decompress them first, or pass --no-session-migration to leave them unchanged'
     );
   }
   const copies: SessionCopy[] = [];

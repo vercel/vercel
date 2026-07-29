@@ -49,7 +49,7 @@ describe('planCodexSessionMigration', () => {
     );
     await fs.writeFile(join(sessions, 'rollout-cold.jsonl.zst'), 'compressed');
     await expect(planCodexSessionMigration(home)).rejects.toThrow(
-      '--no-migrate-sessions'
+      '--no-session-migration'
     );
     await fs.unlink(join(sessions, 'rollout-cold.jsonl.zst'));
     await createRollout(join(sessions, 'huge'), SOURCE_ID, {
