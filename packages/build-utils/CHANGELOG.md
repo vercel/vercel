@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.36.2
+
+### Patch Changes
+
+- 2c75803: Preserve 4-byte UTF-8 characters when streaming string `FileBlob` contents (fixes Edge Function corruption during `vercel build`).
+
 ## 13.36.1
 
 ### Patch Changes

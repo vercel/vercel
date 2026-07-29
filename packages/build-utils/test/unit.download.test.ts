@@ -280,6 +280,34 @@ describe('download()', () => {
     strictEqual(linkTarget, 'b.txt');
   });
 
+  it('should preserve 4-byte UTF-8 characters at the 16KiB stream boundary', async () => {
+    // into-stream@5 slices string FileBlob data at highWaterMark (~16384
+    // UTF-16 code units). A surrogate pair starting at offset 16383 is
+    // split across chunks and each half becomes U+FFFD when encoded.
+    const astral = '\u{10437}';
+    const source = `${'a'.repeat(16383)}${astral}b`;
+    const expected = Buffer.from(source, 'utf8');
+    expect(expected.includes(Buffer.from('efbfbd', 'hex'))).toBe(false);
+
+    const outDir = path.join(__dirname, 'utf8-stream-out');
+    await fs.remove(outDir);
+
+    await download(
+      {
+        'index.js': new FileBlob({
+          mode: S_IFREG,
+          contentType: 'application/javascript',
+          data: source,
+        }),
+      },
+      outDir
+    );
+
+    const written = await fs.readFile(path.join(outDir, 'index.js'));
+    expect(written.equals(expected)).toBe(true);
+    expect(written.includes(Buffer.from('efbfbd', 'hex'))).toBe(false);
+  });
+
   it('should create empty directory entries', async () => {
     const outDir = path.join(__dirname, 'symlinks-out');
     await fs.remove(outDir);
