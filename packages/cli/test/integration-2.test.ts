@@ -1227,7 +1227,6 @@ test('[vc build] should build experimentalServices emitted by latest Next.js con
   const output = await execCli(binaryPath, ['build'], {
     cwd: directory,
     env: {
-      NEXT_ENABLE_ADAPTER: '1',
       NEXT_TELEMETRY_DISABLED: '1',
     },
   });
@@ -1329,7 +1328,6 @@ test('[vc build] should nest experimentalServicesV2 emitted by latest Next.js co
   const output = await execCli(binaryPath, ['build'], {
     cwd: directory,
     env: {
-      NEXT_ENABLE_ADAPTER: '1',
       NEXT_TELEMETRY_DISABLED: '1',
     },
   });
