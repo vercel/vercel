@@ -26,10 +26,12 @@ import { resolveProjectContext } from '../../util/projects/resolve-project-conte
 import getTeamById from '../../util/teams/get-team-by-id';
 import type { ProjectEnvVariable } from '@vercel-internals/types';
 import { getGlobalFlagsFromArgs } from '../../util/arg-common';
+import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import {
   isEnvVarConfigSecretUiEnabled,
   resolveEnvVarVisibility,
   shouldEnforceSensitiveEnvVarPolicy,
+  formatVisibilityLabel,
 } from '../../util/env/env-var-config-secret-ui';
 
 function selectedEnvTargetsDevelopment(env: ProjectEnvVariable): boolean {
@@ -598,6 +600,13 @@ export default async function update(client: Client, argv: string[]) {
       emoji('success')
     )}\n`
   );
+
+  if (configSecretUiEnabled) {
+    const visibilityLabel = formatVisibilityLabel(visibility, type);
+    if (visibilityLabel) {
+      printAlignedLabel('Visibility', visibilityLabel);
+    }
+  }
 
   return 0;
 }

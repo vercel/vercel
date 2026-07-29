@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  formatVisibilityLabel,
   getPublicPrefixSecretVisibilityError,
   isEnvVarConfigSecretUiEnabled,
   resolveEnvVarVisibility,
@@ -97,6 +98,18 @@ describe('getPublicPrefixSecretVisibilityError', () => {
         envTargets: ['production'],
       })
     ).toBeNull();
+  });
+});
+
+describe('formatVisibilityLabel', () => {
+  it('formats explicit visibility values', () => {
+    expect(formatVisibilityLabel('config', 'encrypted')).toBe('Config');
+    expect(formatVisibilityLabel('secret', 'sensitive')).toBe('Secret');
+  });
+
+  it('infers visibility from type when not provided', () => {
+    expect(formatVisibilityLabel(undefined, 'encrypted')).toBe('Config');
+    expect(formatVisibilityLabel(undefined, 'sensitive')).toBe('Secret');
   });
 });
 

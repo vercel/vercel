@@ -44,6 +44,8 @@ import {
   isEnvVarConfigSecretUiEnabled,
   resolveEnvVarVisibility,
   shouldEnforceSensitiveEnvVarPolicy,
+  type EnvVariableVisibility,
+  formatVisibilityLabel,
 } from '../../util/env/env-var-config-secret-ui';
 
 type EnvType = 'encrypted' | 'sensitive';
@@ -231,7 +233,11 @@ function printEnvAddResult(
   envGitBranch: string | undefined,
   customEnvironments: CustomEnvironment[],
   finalType: EnvType,
-  force: boolean
+  force: boolean,
+  options?: {
+    configSecretUiEnabled: boolean;
+    visibility?: EnvVariableVisibility;
+  }
 ): void {
   output.print('\n');
   printAlignedLabel(force ? 'Overrode' : 'Added', envName, { gutter: '✓' });
@@ -244,6 +250,12 @@ function printEnvAddResult(
     printAlignedLabel('Branch', envGitBranch);
   }
   printAlignedLabel('Type', typeLabel(finalType));
+  if (options?.configSecretUiEnabled) {
+    const visibility = formatVisibilityLabel(options.visibility, finalType);
+    if (visibility) {
+      printAlignedLabel('Visibility', visibility);
+    }
+  }
 }
 
 function printEnvAddWarning(message: string): void {
@@ -1244,7 +1256,8 @@ export default async function add(client: Client, argv: string[]) {
     envGitBranch,
     customEnvironments,
     finalType,
-    Boolean(opts['--force'])
+    Boolean(opts['--force']),
+    { configSecretUiEnabled, visibility }
   );
 
   const { isAgent } = await determineAgent();

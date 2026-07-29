@@ -19,6 +19,21 @@ export function shouldEnforceSensitiveEnvVarPolicy(policyOn: boolean): boolean {
   return policyOn && !isEnvVarConfigSecretUiEnabled();
 }
 
+/** Human-readable visibility for CLI output. */
+export function formatVisibilityLabel(
+  visibility: EnvVariableVisibility | undefined,
+  type: ProjectEnvType
+): string | undefined {
+  const resolved = visibility ?? visibilityFromEnvType(type);
+  if (resolved === 'config') {
+    return 'Config';
+  }
+  if (resolved === 'secret') {
+    return 'Secret';
+  }
+  return undefined;
+}
+
 /** Maps legacy `type` to config/secret visibility for API requests. */
 export function visibilityFromEnvType(
   type: ProjectEnvType

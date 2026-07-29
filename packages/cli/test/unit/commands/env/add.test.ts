@@ -508,6 +508,33 @@ describe('env add', () => {
         }
       });
 
+      it('prints visibility in the result when the flag is enabled', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const addSpy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        try {
+          client.setArgv(
+            'env',
+            'add',
+            'API_FLAG',
+            'production',
+            '--value',
+            'foo',
+            '--no-sensitive',
+            '--yes'
+          );
+          const exitCodePromise = env(client);
+          await expect(client.stderr).toOutput('Visibility      Config');
+          await expect(exitCodePromise).resolves.toBe(0);
+        } finally {
+          addSpy.mockRestore();
+        }
+      });
+
       it('allows --sensitive on Development', async () => {
         const addEnvRecordModule = await import(
           '../../../../src/util/env/add-env-record'
