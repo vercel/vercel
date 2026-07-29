@@ -15,14 +15,15 @@ In agent/non-interactive mode, many commands report errors and required confirma
 
 ## Critical: Project Linking
 
-Commands must be run from the directory containing the `.vercel` folder (or a subdirectory of it). How `.vercel` gets set up depends on your project structure:
+Project context depends on the command's working directory. Before a consequential read or mutation, run `vercel project inspect` from the intended directory and confirm the reported owner and project.
 
-- **`.vercel/project.json`**: Created by `vercel link`. Links a single project. Fine for single-project repos, and can work in monorepos if there's only one project.
-- **`.vercel/repo.json`**: Created by `vercel link --repo`. Links a repo that may contain multiple projects. Always a good idea when any project has a non-root directory (e.g., `apps/web`).
+- **`<cwd>/.vercel/project.json`**: Created by `vercel link`. This exact working-directory link wins over a repository link. The CLI does not generally inherit a root `project.json` when run from an arbitrary subdirectory.
+- **`<repo-root>/.vercel/repo.json`**: Created by `vercel link --repo`. The CLI selects the deepest project directory that contains the working directory.
+- **Unmatched repository path**: If no repo mapping contains the working directory, interactive mode prompts among the configured projects. Non-interactive mode currently selects the only configured project, or fails when multiple choices remain.
 
-Running from a project subdirectory (e.g., `apps/web/`) skips the "which project?" prompt since it's unambiguous.
+Being inside an app directory is not proof that the intended project was selected. Check the resolved project explicitly, especially when a repo mapping does not cover that directory.
 
-**When something goes wrong, check how things are linked first** — look at what's in `.vercel/` and whether it's `project.json` or `repo.json`. Also verify you're on the right team with `vercel whoami` — linking while on the wrong team is a common mistake.
+`vercel whoami` identifies the authenticated user and effective team; it does not verify the linked project. Read-only project commands can still require login or team SAML re-authentication and open a browser/device flow. Ask the user to complete that flow deliberately before continuing.
 
 ## Quick Start
 
@@ -76,7 +77,8 @@ Use this to route to the correct reference file:
 
 - **Wrong link type in monorepos with multiple projects**: `vercel link` creates `project.json`, which only tracks one project. Use `vercel link --repo` instead. When things break, check `.vercel/` first.
 - **Letting commands auto-link in monorepos**: Many commands implicitly run `vercel link` if `.vercel/` doesn't exist. This creates `project.json`, which may be wrong. Run `vercel link` (or `--repo`) explicitly first.
-- **Linking while on the wrong team**: Use `vercel whoami` to check, `vercel teams switch` to change.
+- **Assuming an app subdirectory determines the project**: Verify with `vercel project inspect`; an unmatched repo path can currently fall back to the sole configured project in non-interactive mode.
+- **Using `vercel whoami` as linked-project verification**: It reports authentication and team context, not the selected project.
 - **Forgetting non-interactive flags in plain CI runs**: detected agents get `--non-interactive` by default, but plain CI does not — pass it explicitly there, and add `--yes` only for commands that require confirmation.
 - **Using `vercel deploy` after `vercel build` without `--prebuilt`**: The build output is ignored.
 - **Using `vercel redeploy` for no-cache rebuilds**: `vercel redeploy` does not expose a no-cache flag; use `vercel deploy --force` without `--with-cache` when you need a fresh deployment that does not retain build cache.

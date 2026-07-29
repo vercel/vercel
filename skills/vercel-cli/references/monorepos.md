@@ -6,7 +6,8 @@ Vercel auto-detects monorepo tools (Turborepo, Nx) and workspace managers (pnpm,
 
 ```bash
 vercel link --repo    # link the whole repo
-vercel pull           # pull env vars
+vercel project inspect # verify the selected owner and project
+vercel pull           # pull settings and env data into .vercel/
 vc dev                # local development
 vercel deploy         # deploy
 ```
@@ -25,7 +26,7 @@ Use `vercel link --repo` to create `.vercel/repo.json`, which maps directories t
 }
 ```
 
-Running from a project subdirectory (e.g., `apps/web/`) skips the "which project?" prompt.
+The deepest configured directory containing the working directory wins. If no mapping matches, interactive mode prompts among the configured projects; non-interactive mode currently selects the sole configured project or fails when multiple choices remain. Being inside an app directory does not by itself verify the target, so run `vercel project inspect` before consequential commands.
 
 ## Root Directory
 
@@ -130,4 +131,4 @@ export default app;
 - **Using `vercel link` instead of `vercel link --repo`**: Creates `project.json` which only tracks one project. Use `--repo` for monorepos.
 - **Missing `build` task in turbo.json/nx.json**: Vercel requires an explicit build task. Without it, the build fails.
 - **Adding a `build` script to package.json for transpilation**: Vercel handles TypeScript compilation. The turbo.json `build` task is for orchestration, not transpilation.
-- **Linking while on the wrong team**: Use `vercel whoami` to check, `vercel teams switch` to change.
+- **Assuming an app directory proves project context**: Verify the resolved owner and project with `vercel project inspect`. `vercel whoami` reports authentication and team context, not the linked project.
