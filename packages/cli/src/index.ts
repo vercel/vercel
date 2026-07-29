@@ -652,6 +652,7 @@ const main = async () => {
     'upgrade',
     'skills',
     'agent',
+    'whoami',
   ];
 
   if (process.env.FF_GUIDANCE_MODE) {

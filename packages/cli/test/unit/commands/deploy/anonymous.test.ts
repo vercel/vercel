@@ -22,7 +22,7 @@ function mockBootstrap(state: { token: string; expiresAt: number }) {
     calls++;
     res.status(200).json({
       projectId: 'prj_anon',
-      claimCode: 'claim_dummy',
+      claimUrl: 'https://vercel.com/claim-deployment?code=claim_dummy',
       ...state,
     });
   });
@@ -109,7 +109,7 @@ describe('deploy [anonymous]', () => {
     expect(state).toEqual({
       projectId: 'prj_anon',
       token: 'vcn_test',
-      claimCode: 'claim_dummy',
+      claimUrl: 'https://vercel.com/claim-deployment?code=claim_dummy',
       expiresAt: expect.any(Number),
     });
     expect(await fs.pathExists(join(cwd, '.vercel/project.json'))).toEqual(
@@ -149,7 +149,7 @@ describe('deploy [anonymous]', () => {
     await fs.outputJSON(join(cwd, ANONYMOUS_FILE), {
       projectId: 'prj_anon',
       token: 'vcn_sticky',
-      claimCode: 'claim_sticky',
+      claimUrl: 'https://vercel.com/claim-deployment?code=claim_sticky',
       expiresAt: Date.now() + 1800_000,
     });
 
@@ -256,7 +256,7 @@ describe('deploy [anonymous]', () => {
     await fs.outputJSON(join(cwd, ANONYMOUS_FILE), {
       projectId: 'prj_anon',
       token: 'vcn_sticky',
-      claimCode: 'claim_sticky',
+      claimUrl: 'https://vercel.com/claim-deployment?code=claim_sticky',
       expiresAt: Date.now() + 1800_000,
     });
 
@@ -282,7 +282,7 @@ describe('deploy [anonymous]', () => {
     await fs.outputJSON(join(cwd, ANONYMOUS_FILE), {
       projectId: 'prj_anon',
       token: 'vcn_expired',
-      claimCode: 'claim_expired',
+      claimUrl: 'https://vercel.com/claim-deployment?code=claim_expired',
       expiresAt: Date.now() - 1000,
     });
 
