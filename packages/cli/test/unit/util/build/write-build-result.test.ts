@@ -1,6 +1,7 @@
 import { join } from 'path';
 import {
   glob,
+  ContainerImage,
   FileBlob,
   FileFsRef,
   getWriteableDirectory,
@@ -113,8 +114,7 @@ describe('writeBuildResult()', () => {
         buildResult: {
           routes: [{ handle: 'filesystem' }, { src: '/(.*)', dest: '/index' }],
           output: {
-            index: {
-              type: 'Lambda',
+            index: new ContainerImage({
               files: {},
               handler: 'docker.io/library/nginx:1.27',
               runtime: 'container',
@@ -123,9 +123,9 @@ describe('writeBuildResult()', () => {
               maxDuration: 60,
               maxConcurrency: 8,
               regions: ['iad1'],
-            },
+            }),
           },
-        } as unknown as import('@vercel/build-utils').BuildResultV2,
+        },
         build,
         builder: runtimeBuilder,
         builderPkg: { name: '@vercel/container' },
