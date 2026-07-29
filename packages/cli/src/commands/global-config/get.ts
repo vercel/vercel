@@ -6,21 +6,20 @@ import { printError } from '../../util/error';
 import { validateJsonOutput } from '../../util/output-format';
 import {
   buildCommandWithGlobalFlags,
-  buildCommandWithYes,
   exitWithNonInteractiveError,
   outputAgentError,
 } from '../../util/agent-output';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
-import { EdgeConfigRemoveTelemetryClient } from '../../util/telemetry/commands/edge-config/remove';
-import { removeSubcommand } from './command';
-import { resolveEdgeConfigId } from './resolve-edge-config-id';
+import { GlobalConfigGetTelemetryClient } from '../../util/telemetry/commands/global-config/get';
+import { getSubcommand } from './command';
+import { resolveGlobalConfigId } from './resolve-global-config-id';
 
-export default async function removeCmd(
+export default async function getCmd(
   client: Client,
   argv: string[]
 ): Promise<number> {
-  const telemetry = new EdgeConfigRemoveTelemetryClient({
+  const telemetry = new GlobalConfigGetTelemetryClient({
     opts: { store: client.telemetryEventStore },
   });
 
@@ -28,11 +27,13 @@ export default async function removeCmd(
   try {
     parsedArgs = parseArguments(
       argv,
-      getFlagsSpecification(removeSubcommand.options)
+      getFlagsSpecification(getSubcommand.options)
     );
   } catch (error) {
     if (client.nonInteractive) {
-      exitWithNonInteractiveError(client, error, 1, { variant: 'edge-config' });
+      exitWithNonInteractiveError(client, error, 1, {
+        variant: 'global-config',
+      });
     }
     printError(error);
     return 1;
@@ -40,10 +41,7 @@ export default async function removeCmd(
 
   const { args, flags } = parsedArgs;
   const [idOrSlug] = args;
-  const skipConfirmation = flags['--yes'] === true;
-
   telemetry.trackCliArgumentIdOrSlug(idOrSlug);
-  telemetry.trackCliFlagYes(flags['--yes']);
   telemetry.trackCliOptionFormat(flags['--format']);
 
   if (!idOrSlug) {
@@ -54,12 +52,12 @@ export default async function removeCmd(
           status: 'error',
           reason: 'missing_arguments',
           message:
-            'Edge Config id or slug is required. Usage: `vercel edge-config remove <id-or-slug>`',
+            'Global Config id or slug is required. Usage: `vercel global-config get <id-or-slug>`',
           next: [
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                'edge-config list'
+                'global-config list'
               ),
             },
           ],
@@ -68,23 +66,9 @@ export default async function removeCmd(
       );
     }
     output.error(
-      `Missing id or slug. Usage: ${chalk.cyan(getCommandName('edge-config remove <id-or-slug>'))}`
+      `Missing id or slug. Usage: ${chalk.cyan(getCommandName('global-config get <id-or-slug>'))}`
     );
     return 1;
-  }
-
-  if (client.nonInteractive && !skipConfirmation) {
-    outputAgentError(
-      client,
-      {
-        status: 'error',
-        reason: 'confirmation_required',
-        message:
-          'Removing an Edge Config requires confirmation. Re-run with `--yes`.',
-        next: [{ command: buildCommandWithYes(client.argv) }],
-      },
-      1
-    );
   }
 
   const formatResult = validateJsonOutput(flags);
@@ -96,9 +80,9 @@ export default async function removeCmd(
 
   let id: string | null;
   try {
-    id = await resolveEdgeConfigId(client, idOrSlug);
+    id = await resolveGlobalConfigId(client, idOrSlug);
   } catch (err: unknown) {
-    exitWithNonInteractiveError(client, err, 1, { variant: 'edge-config' });
+    exitWithNonInteractiveError(client, err, 1, { variant: 'global-config' });
     printError(err);
     return 1;
   }
@@ -110,12 +94,12 @@ export default async function removeCmd(
         {
           status: 'error',
           reason: 'not_found',
-          message: `No Edge Config matches "${idOrSlug}" in the current team.`,
+          message: `No Global Config matches "${idOrSlug}" in the current team.`,
           next: [
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                'edge-config list'
+                'global-config list'
               ),
             },
           ],
@@ -123,46 +107,24 @@ export default async function removeCmd(
         1
       );
     }
-    output.error(`No Edge Config matches "${idOrSlug}" in the current team.`);
+    output.error(`No Global Config matches "${idOrSlug}" in the current team.`);
     return 1;
   }
 
-  if (
-    !skipConfirmation &&
-    !(await client.input.confirm(
-      `Delete Edge Config ${chalk.bold(id)} (${chalk.bold(idOrSlug)})?`,
-      false
-    ))
-  ) {
-    output.log('Canceled');
-    return 0;
-  }
-
+  let data: unknown;
   try {
-    await client.fetch(`/v1/edge-config/${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-    });
+    data = await client.fetch(`/v1/global-config/${encodeURIComponent(id)}`);
   } catch (err: unknown) {
-    exitWithNonInteractiveError(client, err, 1, { variant: 'edge-config' });
+    exitWithNonInteractiveError(client, err, 1, { variant: 'global-config' });
     printError(err);
     return 1;
   }
 
   if (asJson) {
-    client.stdout.write(
-      `${JSON.stringify(
-        {
-          status: 'ok',
-          id,
-          message: `Edge Config ${id} removed.`,
-        },
-        null,
-        2
-      )}\n`
-    );
+    client.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
     return 0;
   }
 
-  output.success(`Edge Config ${chalk.bold(id)} removed.`);
+  output.log(JSON.stringify(data, null, 2));
   return 0;
 }

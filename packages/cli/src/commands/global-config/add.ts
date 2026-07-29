@@ -12,14 +12,14 @@ import {
 } from '../../util/agent-output';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
-import { EdgeConfigAddTelemetryClient } from '../../util/telemetry/commands/edge-config/add';
+import { GlobalConfigAddTelemetryClient } from '../../util/telemetry/commands/global-config/add';
 import { addSubcommand } from './command';
 
 export default async function addCmd(
   client: Client,
   argv: string[]
 ): Promise<number> {
-  const telemetry = new EdgeConfigAddTelemetryClient({
+  const telemetry = new GlobalConfigAddTelemetryClient({
     opts: { store: client.telemetryEventStore },
   });
 
@@ -31,7 +31,9 @@ export default async function addCmd(
     );
   } catch (error) {
     if (client.nonInteractive) {
-      exitWithNonInteractiveError(client, error, 1, { variant: 'edge-config' });
+      exitWithNonInteractiveError(client, error, 1, {
+        variant: 'global-config',
+      });
     }
     printError(error);
     return 1;
@@ -51,12 +53,12 @@ export default async function addCmd(
         {
           status: 'error',
           reason: 'missing_arguments',
-          message: 'Slug is required. Usage: `vercel edge-config add <slug>`',
+          message: 'Slug is required. Usage: `vercel global-config add <slug>`',
           next: [
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                'edge-config add <slug>'
+                'global-config add <slug>'
               ),
             },
           ],
@@ -65,7 +67,7 @@ export default async function addCmd(
       );
     }
     output.error(
-      `Missing slug. Usage: ${chalk.cyan(getCommandName('edge-config add <slug>'))}`
+      `Missing slug. Usage: ${chalk.cyan(getCommandName('global-config add <slug>'))}`
     );
     return 1;
   }
@@ -98,12 +100,12 @@ export default async function addCmd(
 
   let created: unknown;
   try {
-    created = await client.fetch('/v1/edge-config', {
+    created = await client.fetch('/v1/global-config', {
       method: 'POST',
       body: (items ? { slug, items } : { slug }) as JSONObject,
     });
   } catch (err: unknown) {
-    exitWithNonInteractiveError(client, err, 1, { variant: 'edge-config' });
+    exitWithNonInteractiveError(client, err, 1, { variant: 'global-config' });
     printError(err);
     return 1;
   }
@@ -113,6 +115,6 @@ export default async function addCmd(
     return 0;
   }
 
-  output.success(`Edge Config ${chalk.bold(slug)} created.`);
+  output.success(`Global Config ${chalk.bold(slug)} created.`);
   return 0;
 }

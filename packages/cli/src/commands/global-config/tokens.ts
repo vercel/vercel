@@ -13,9 +13,9 @@ import {
 import { getCommandName } from '../../util/pkg-name';
 import table from '../../util/output/table';
 import output from '../../output-manager';
-import { EdgeConfigTokensTelemetryClient } from '../../util/telemetry/commands/edge-config/tokens';
+import { GlobalConfigTokensTelemetryClient } from '../../util/telemetry/commands/global-config/tokens';
 import { tokensSubcommand } from './command';
-import { resolveEdgeConfigId } from './resolve-edge-config-id';
+import { resolveGlobalConfigId } from './resolve-global-config-id';
 
 interface TokenRow {
   id?: string;
@@ -28,7 +28,7 @@ export default async function tokensCmd(
   client: Client,
   argv: string[]
 ): Promise<number> {
-  const telemetry = new EdgeConfigTokensTelemetryClient({
+  const telemetry = new GlobalConfigTokensTelemetryClient({
     opts: { store: client.telemetryEventStore },
   });
 
@@ -40,7 +40,9 @@ export default async function tokensCmd(
     );
   } catch (error) {
     if (client.nonInteractive) {
-      exitWithNonInteractiveError(client, error, 1, { variant: 'edge-config' });
+      exitWithNonInteractiveError(client, error, 1, {
+        variant: 'global-config',
+      });
     }
     printError(error);
     return 1;
@@ -67,12 +69,12 @@ export default async function tokensCmd(
           status: 'error',
           reason: 'missing_arguments',
           message:
-            'Edge Config id or slug is required. Usage: `vercel edge-config tokens <id-or-slug>`',
+            'Global Config id or slug is required. Usage: `vercel global-config tokens <id-or-slug>`',
           next: [
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                'edge-config list'
+                'global-config list'
               ),
             },
           ],
@@ -81,7 +83,7 @@ export default async function tokensCmd(
       );
     }
     output.error(
-      `Missing id or slug. Usage: ${chalk.cyan(getCommandName('edge-config tokens <id-or-slug>'))}`
+      `Missing id or slug. Usage: ${chalk.cyan(getCommandName('global-config tokens <id-or-slug>'))}`
     );
     return 1;
   }
@@ -98,7 +100,7 @@ export default async function tokensCmd(
         status: 'error',
         reason: 'confirmation_required',
         message:
-          'Revoking Edge Config tokens requires confirmation. Re-run with `--yes`.',
+          'Revoking Global Config tokens requires confirmation. Re-run with `--yes`.',
         next: [{ command: buildCommandWithYes(client.argv) }],
       },
       1
@@ -114,9 +116,9 @@ export default async function tokensCmd(
 
   let id: string | null;
   try {
-    id = await resolveEdgeConfigId(client, idOrSlug);
+    id = await resolveGlobalConfigId(client, idOrSlug);
   } catch (err: unknown) {
-    exitWithNonInteractiveError(client, err, 1, { variant: 'edge-config' });
+    exitWithNonInteractiveError(client, err, 1, { variant: 'global-config' });
     printError(err);
     return 1;
   }
@@ -128,12 +130,12 @@ export default async function tokensCmd(
         {
           status: 'error',
           reason: 'not_found',
-          message: `No Edge Config matches "${idOrSlug}" in the current team.`,
+          message: `No Global Config matches "${idOrSlug}" in the current team.`,
           next: [
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                'edge-config list'
+                'global-config list'
               ),
             },
           ],
@@ -141,11 +143,11 @@ export default async function tokensCmd(
         1
       );
     }
-    output.error(`No Edge Config matches "${idOrSlug}" in the current team.`);
+    output.error(`No Global Config matches "${idOrSlug}" in the current team.`);
     return 1;
   }
 
-  const base = `/v1/edge-config/${encodeURIComponent(id)}`;
+  const base = `/v1/global-config/${encodeURIComponent(id)}`;
 
   try {
     if (addLabel) {
@@ -248,7 +250,7 @@ export default async function tokensCmd(
     client.stderr.write(`${table(tableRows, { hsep: 2 })}\n`);
     return 0;
   } catch (err: unknown) {
-    exitWithNonInteractiveError(client, err, 1, { variant: 'edge-config' });
+    exitWithNonInteractiveError(client, err, 1, { variant: 'global-config' });
     printError(err);
     return 1;
   }

@@ -1,8 +1,8 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { tokensSubcommand } from '../../../../commands/edge-config/command';
+import type { tokensSubcommand } from '../../../../commands/global-config/command';
 
-export class EdgeConfigTokensTelemetryClient
+export class GlobalConfigTokensTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof tokensSubcommand>
 {

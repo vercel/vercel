@@ -1042,9 +1042,9 @@ const main = async () => {
           telemetry.trackCliCommandDeployHooks(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).deployHooks;
           break;
-        case 'edge-config':
-          telemetry.trackCliCommandEdgeConfig(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).edgeConfig;
+        case 'global-config':
+          telemetry.trackCliCommandGlobalConfig(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).globalConfig;
           break;
         case 'domains':
           telemetry.trackCliCommandDomains(userSuppliedSubCommand);

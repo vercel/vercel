@@ -10,11 +10,11 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import table from '../../util/output/table';
 import output from '../../output-manager';
-import { EdgeConfigLsTelemetryClient } from '../../util/telemetry/commands/edge-config/ls';
+import { GlobalConfigLsTelemetryClient } from '../../util/telemetry/commands/global-config/ls';
 import { listSubcommand } from './command';
-import type { EdgeConfigListEntry } from './resolve-edge-config-id';
+import type { GlobalConfigListEntry } from './resolve-global-config-id';
 
-type EdgeConfigRow = EdgeConfigListEntry & {
+type GlobalConfigRow = GlobalConfigListEntry & {
   itemCount?: number;
   sizeInBytes?: number;
   updatedAt?: number;
@@ -25,7 +25,7 @@ export default async function listCmd(
   client: Client,
   argv: string[]
 ): Promise<number> {
-  const telemetry = new EdgeConfigLsTelemetryClient({
+  const telemetry = new GlobalConfigLsTelemetryClient({
     opts: { store: client.telemetryEventStore },
   });
 
@@ -37,7 +37,9 @@ export default async function listCmd(
     );
   } catch (error) {
     if (client.nonInteractive) {
-      exitWithNonInteractiveError(client, error, 1, { variant: 'edge-config' });
+      exitWithNonInteractiveError(client, error, 1, {
+        variant: 'global-config',
+      });
     }
     printError(error);
     return 1;
@@ -45,7 +47,7 @@ export default async function listCmd(
 
   const { args, flags } = parsedArgs;
   const lsCheck = validateLsArgs({
-    commandName: 'edge-config list',
+    commandName: 'global-config list',
     args,
     maxArgs: 0,
     exitCode: 2,
@@ -62,11 +64,11 @@ export default async function listCmd(
   const asJson = formatResult.jsonOutput;
   telemetry.trackCliOptionFormat(flags['--format']);
 
-  let rows: EdgeConfigRow[];
+  let rows: GlobalConfigRow[];
   try {
-    rows = await client.fetch<EdgeConfigRow[]>('/v1/edge-config');
+    rows = await client.fetch<GlobalConfigRow[]>('/v1/global-config');
   } catch (err: unknown) {
-    exitWithNonInteractiveError(client, err, 1, { variant: 'edge-config' });
+    exitWithNonInteractiveError(client, err, 1, { variant: 'global-config' });
     printError(err);
     return 1;
   }
@@ -78,7 +80,7 @@ export default async function listCmd(
 
   const { contextName } = await getScope(client);
   output.print(
-    `${gray(`${rows.length} Edge Config${rows.length === 1 ? '' : 's'} found under ${contextName} ${stamp()}`)}\n`
+    `${gray(`${rows.length} Global Config${rows.length === 1 ? '' : 's'} found under ${contextName} ${stamp()}`)}\n`
   );
 
   if (rows.length === 0) {

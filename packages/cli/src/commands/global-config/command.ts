@@ -4,14 +4,14 @@ import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
-  description: 'List Edge Config stores for the current team',
+  description: 'List Global Config stores for the current team',
   default: true,
   arguments: [],
   options: [formatOption, jsonOption],
   examples: [
     {
-      name: 'List Edge Configs as JSON',
-      value: `${packageName} edge-config list --json`,
+      name: 'List Global Configs as JSON',
+      value: `${packageName} global-config list --json`,
     },
   ],
 } as const;
@@ -19,7 +19,7 @@ export const listSubcommand = {
 export const addSubcommand = {
   name: 'add',
   aliases: ['create'],
-  description: 'Create an Edge Config store',
+  description: 'Create a Global Config store',
   arguments: [
     {
       name: 'slug',
@@ -42,7 +42,7 @@ export const addSubcommand = {
   examples: [
     {
       name: 'Create a store with slug `flags`',
-      value: `${packageName} edge-config add flags`,
+      value: `${packageName} global-config add flags`,
     },
   ],
 } as const;
@@ -50,7 +50,7 @@ export const addSubcommand = {
 export const getSubcommand = {
   name: 'get',
   aliases: ['inspect'],
-  description: 'Show metadata for an Edge Config (id `ecfg_…` or slug)',
+  description: 'Show metadata for a Global Config (id `ecfg_…` or slug)',
   arguments: [
     {
       name: 'id-or-slug',
@@ -65,7 +65,7 @@ export const updateSubcommand = {
   name: 'update',
   aliases: [],
   description:
-    'Rename an Edge Config (`--slug`) and/or patch items (`--patch` JSON)',
+    'Rename a Global Config (`--slug`) and/or patch items (`--patch` JSON)',
   arguments: [
     {
       name: 'id-or-slug',
@@ -81,7 +81,7 @@ export const updateSubcommand = {
       type: String,
       argument: 'SLUG',
       deprecated: false,
-      description: 'New slug for the Edge Config',
+      description: 'New slug for the Global Config',
     },
     {
       name: 'patch',
@@ -90,7 +90,7 @@ export const updateSubcommand = {
       argument: 'JSON',
       deprecated: false,
       description:
-        'JSON for `PATCH /v1/edge-config/:id/items`: `{"items":[...]}` or a bare array. Each item needs `operation` (create | update | upsert | delete), `key`, and usually `value` (see REST API: update-edge-config-items-in-batch)',
+        'JSON for `PATCH /v1/global-config/:id/items`: `{"items":[...]}` or a bare array. Each item needs `operation` (create | update | upsert | delete), `key`, and usually `value` (see REST API: update-edge-config-items-in-batch)',
     },
   ],
   examples: [],
@@ -99,7 +99,7 @@ export const updateSubcommand = {
 export const removeSubcommand = {
   name: 'remove',
   aliases: ['rm', 'delete'],
-  description: 'Delete an Edge Config store',
+  description: 'Delete a Global Config store',
   arguments: [
     {
       name: 'id-or-slug',
@@ -113,7 +113,7 @@ export const removeSubcommand = {
 export const itemsSubcommand = {
   name: 'items',
   aliases: [],
-  description: 'List items in an Edge Config, or fetch one item with `--key`',
+  description: 'List items in a Global Config, or fetch one item with `--key`',
   arguments: [
     {
       name: 'id-or-slug',
@@ -139,7 +139,7 @@ export const tokensSubcommand = {
   name: 'tokens',
   aliases: [],
   description:
-    'List, create (`--add`), or revoke (`--remove`) read tokens for an Edge Config',
+    'List, create (`--add`), or revoke (`--remove`) read tokens for a Global Config',
   arguments: [
     {
       name: 'id-or-slug',
@@ -174,7 +174,7 @@ export const tokensSubcommand = {
 export const backupsSubcommand = {
   name: 'backups',
   aliases: [],
-  description: 'List, inspect, or restore Edge Config backups',
+  description: 'List, inspect, or restore Global Config backups',
   arguments: [
     {
       name: 'id-or-slug',
@@ -203,7 +203,7 @@ export const backupsSubcommand = {
       argument: 'VERSION_ID',
       deprecated: false,
       description:
-        'Restore items from the backup version id. Requires confirmation because it updates live Edge Config items',
+        'Restore items from the backup version id. Requires confirmation because it updates live Global Config items',
     },
     {
       name: 'limit',
@@ -224,24 +224,24 @@ export const backupsSubcommand = {
   ],
   examples: [
     {
-      name: 'List backups for an Edge Config',
-      value: `${packageName} edge-config backups my-store`,
+      name: 'List backups for a Global Config',
+      value: `${packageName} global-config backups my-store`,
     },
     {
       name: 'Inspect a backup as JSON',
-      value: `${packageName} edge-config backups my-store --backup-version <version-id> --json`,
+      value: `${packageName} global-config backups my-store --backup-version <version-id> --json`,
     },
     {
       name: 'Restore a backup',
-      value: `${packageName} edge-config backups my-store --restore <version-id> --yes`,
+      value: `${packageName} global-config backups my-store --restore <version-id> --yes`,
     },
   ],
 } as const;
 
-export const edgeConfigCommand = {
-  name: 'edge-config',
-  aliases: [],
-  description: 'Manage Edge Config stores (dashboard API parity)',
+export const globalConfigCommand = {
+  name: 'global-config',
+  aliases: ['edge-config'],
+  description: 'Manage Global Config stores (dashboard API parity)',
   arguments: [],
   subcommands: [
     listSubcommand,
@@ -257,7 +257,7 @@ export const edgeConfigCommand = {
   examples: [
     {
       name: 'List stores',
-      value: `${packageName} edge-config list`,
+      value: `${packageName} global-config list`,
     },
   ],
 } as const;

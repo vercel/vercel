@@ -1,8 +1,8 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { backupsSubcommand } from '../../../../commands/edge-config/command';
+import type { backupsSubcommand } from '../../../../commands/global-config/command';
 
-export class EdgeConfigBackupsTelemetryClient
+export class GlobalConfigBackupsTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof backupsSubcommand>
 {

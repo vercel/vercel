@@ -1,24 +1,18 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { updateSubcommand } from '../../../../commands/edge-config/command';
+import type { itemsSubcommand } from '../../../../commands/global-config/command';
 
-export class EdgeConfigUpdateTelemetryClient
+export class GlobalConfigItemsTelemetryClient
   extends TelemetryClient
-  implements TelemetryMethods<typeof updateSubcommand>
+  implements TelemetryMethods<typeof itemsSubcommand>
 {
   trackCliArgumentIdOrSlug(value: string | undefined) {
     this.trackCliArgument({ arg: 'id-or-slug', value });
   }
 
-  trackCliOptionSlug(value: string | undefined) {
+  trackCliOptionKey(value: string | undefined) {
     if (value) {
-      this.trackCliOption({ option: 'slug', value: this.redactedValue });
-    }
-  }
-
-  trackCliOptionPatch(value: string | undefined) {
-    if (value) {
-      this.trackCliOption({ option: 'patch', value: this.redactedValue });
+      this.trackCliOption({ option: 'key', value: this.redactedValue });
     }
   }
 

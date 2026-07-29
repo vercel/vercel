@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parsePatchBody } from '../../../../src/commands/edge-config/parse-patch-body';
+import { parsePatchBody } from '../../../../src/commands/global-config/parse-patch-body';
 
 describe('parsePatchBody', () => {
   it('parses compact JSON', () => {
