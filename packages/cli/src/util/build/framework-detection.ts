@@ -48,6 +48,13 @@ export interface DetectedFramework {
  * On a project's first deployment with no configured framework, detect it from
  * source and apply it to `projectSettings` (mutated in place so a later
  * `detectBuilders` sees it). Gated by `VERCEL_FIRST_DEPLOYMENT`.
+ *
+ * A framework is considered "configured" when `projectSettings.framework` is
+ * anything other than `undefined`: a string slug means a framework is set, and
+ * `null` means the user explicitly chose "no framework" (the API persists
+ * `null` for that choice, and it survives the `project.json` JSON round-trip).
+ * Only an absent (`undefined`) framework triggers detection, so an explicit
+ * opt-out is never overwritten by detection.
  */
 export async function detectFirstDeploymentFramework(options: {
   workPath: string;
@@ -58,7 +65,11 @@ export async function detectFirstDeploymentFramework(options: {
   logDebug(
     `First deployment: evaluating framework detection (workPath="${workPath}", ` +
       `configuredFramework=${
-        projectSettings.framework ? `"${projectSettings.framework}"` : '<none>'
+        projectSettings.framework === undefined
+          ? '<unset>'
+          : projectSettings.framework === null
+            ? '<null>'
+            : `"${projectSettings.framework}"`
       })`
   );
 
@@ -69,9 +80,14 @@ export async function detectFirstDeploymentFramework(options: {
     return { status: 'skipped' };
   }
 
-  if (projectSettings.framework) {
+  // `null` is an explicit "no framework" opt-out (the API persists `null` for
+  // that choice); only a genuinely absent (`undefined`) framework should
+  // trigger detection. A truthiness check would conflate the two.
+  if (projectSettings.framework !== undefined) {
     logDebug(
-      `First deployment: skipping framework detection because a framework is already configured ("${projectSettings.framework}")`
+      projectSettings.framework === null
+        ? 'First deployment: skipping framework detection because the framework is explicitly set to "none" (null)'
+        : `First deployment: skipping framework detection because a framework is already configured ("${projectSettings.framework}")`
     );
     return { status: 'skipped' };
   }

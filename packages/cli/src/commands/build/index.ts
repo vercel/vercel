@@ -825,7 +825,15 @@ async function doBuild(
   buildsJson.detectedFramework = await span
     .child('vc.detectFirstDeploymentFramework', {
       firstDeployment: String(process.env.VERCEL_FIRST_DEPLOYMENT === '1'),
-      configuredFramework: projectSettings.framework ?? undefined,
+      // Preserve the null vs undefined distinction: `null` is an explicit
+      // "no framework" opt-out (now a distinct skip reason), `undefined` is
+      // an absent framework (triggers detection).
+      configuredFramework:
+        projectSettings.framework === undefined
+          ? undefined
+          : projectSettings.framework === null
+            ? 'null'
+            : projectSettings.framework,
     })
     .trace(async s => {
       const result = await detectFirstDeploymentFramework({

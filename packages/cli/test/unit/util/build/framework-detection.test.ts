@@ -124,7 +124,9 @@ describe('detectFirstDeploymentFramework()', () => {
   it('detects the framework and applies it to project settings', async () => {
     process.env.VERCEL_FIRST_DEPLOYMENT = '1';
     const dir = await makeProjectDir({ dependencies: { next: '14.0.0' } });
-    const projectSettings: { framework?: string | null } = { framework: null };
+    // `undefined` means the framework was never set (absent from project
+    // settings), which is the state that should trigger detection.
+    const projectSettings: { framework?: string | null } = {};
 
     const result = await detectFirstDeploymentFramework({
       workPath: dir,
@@ -142,7 +144,8 @@ describe('detectFirstDeploymentFramework()', () => {
   it('returns not-detected when nothing is detected', async () => {
     process.env.VERCEL_FIRST_DEPLOYMENT = '1';
     const dir = await makeProjectDir();
-    const projectSettings: { framework?: string | null } = { framework: null };
+    // `undefined` (absent) triggers detection; nothing is detected here.
+    const projectSettings: { framework?: string | null } = {};
 
     const result = await detectFirstDeploymentFramework({
       workPath: dir,
@@ -150,7 +153,28 @@ describe('detectFirstDeploymentFramework()', () => {
     });
 
     expect(result).toEqual({ status: 'not-detected' });
+    // Nothing was detected, so the absent framework stays absent.
+    expect(projectSettings.framework).toBeUndefined();
+  });
+
+  it('respects an explicit "no framework" opt-out (null) and skips detection', async () => {
+    process.env.VERCEL_FIRST_DEPLOYMENT = '1';
+    const dir = await makeProjectDir({ dependencies: { next: '14.0.0' } });
+    // `null` is an explicit "no framework" choice (the API persists `null`
+    // for it, and it survives the project.json JSON round-trip). Detection
+    // must NOT overwrite it, even though source would detect `nextjs`.
+    const projectSettings: { framework?: string | null } = { framework: null };
+
+    const result = await detectFirstDeploymentFramework({
+      workPath: dir,
+      projectSettings,
+    });
+
+    expect(result).toEqual({ status: 'skipped' });
+    // The explicit null opt-out must be left completely unaltered: the field
+    // stays null and no other property is added to the settings object.
     expect(projectSettings.framework).toBeNull();
+    expect(projectSettings).toEqual({ framework: null });
   });
 });
 
