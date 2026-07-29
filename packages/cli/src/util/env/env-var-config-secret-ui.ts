@@ -68,12 +68,11 @@ export function getPublicPrefixSecretVisibilityError(
 }
 
 /**
- * Omits inferred visibility for public-prefixed keys when the API would reject
- * secret visibility (e.g. team policy force-coerces type to sensitive).
+ * Omits inferred visibility for public-prefixed keys only when the API team
+ * policy will force-coerce type to sensitive (cannot safely set visibility).
  */
 function shouldOmitInferredVisibility(
   key: string,
-  type: ProjectEnvType,
   envTargets: string[],
   teamSensitivePolicyOn: boolean
 ): boolean {
@@ -85,11 +84,7 @@ function shouldOmitInferredVisibility(
     return false;
   }
 
-  if (teamSensitivePolicyOn) {
-    return true;
-  }
-
-  return visibilityFromEnvType(type) === 'secret';
+  return teamSensitivePolicyOn;
 }
 
 export interface ResolveEnvVarVisibilityOptions {
@@ -150,7 +145,6 @@ export function resolveEnvVarVisibility(
   if (
     shouldOmitInferredVisibility(
       options.key,
-      options.type,
       options.envTargets,
       options.teamSensitivePolicyOn
     )

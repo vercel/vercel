@@ -176,6 +176,18 @@ describe('resolveEnvVarVisibility', () => {
     ).toEqual({});
   });
 
+  it('does not omit inferred visibility for public-prefixed keys when only type is sensitive', () => {
+    expect(
+      resolveEnvVarVisibility({
+        configSecretUiEnabled: true,
+        type: 'sensitive',
+        key: 'NEXT_PUBLIC_API_URL',
+        envTargets: ['production'],
+        teamSensitivePolicyOn: false,
+      }).error
+    ).toMatch(/cannot use secret visibility/);
+  });
+
   it('errors when sensitive type is requested on public-prefixed production keys', () => {
     expect(
       resolveEnvVarVisibility({

@@ -589,6 +589,22 @@ describe('env add', () => {
         }
       });
 
+      it('rejects --sensitive on public-prefixed production keys', async () => {
+        client.setArgv(
+          'env',
+          'add',
+          'NEXT_PUBLIC_API_KEY',
+          'production',
+          '--sensitive',
+          '--value',
+          'my-secret',
+          '--yes'
+        );
+        const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput('cannot use secret visibility');
+        await expect(exitCodePromise).resolves.toBe(1);
+      });
+
       it('rejects secret visibility on public-prefixed production keys', async () => {
         client.setArgv(
           'env',
