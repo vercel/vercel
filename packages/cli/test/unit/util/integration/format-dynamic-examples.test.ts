@@ -53,7 +53,7 @@ describe('formatDynamicExamples', () => {
       ).toBe(true);
     }
 
-    expect(output).not.toContain('--format');
+    expect(output).toContain('--format json');
   });
 
   it('should use custom commandName in examples', () => {

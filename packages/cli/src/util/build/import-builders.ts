@@ -43,17 +43,16 @@ type ResolveBuildersResult =
 // Get a real `require()` reference that esbuild won't mutate
 const require_ = createRequire(__filename);
 
-// Builder versions this CLI release was published with, from its
-// `peerDependencies` (`workspace:*` in the monorepo, so a no-op in dev)
+// Builder versions this CLI release was published with, from its `builders`
+// manifest (`workspace:*` in the monorepo, so a no-op in dev)
 let builderPins: Map<string, string> | undefined;
 
 function getBuilderPins(): Map<string, string> {
   if (!builderPins) {
     builderPins = new Map();
-    const peerDependencies: Record<string, string> =
-      (cliPkg as { peerDependencies?: Record<string, string> })
-        .peerDependencies ?? {};
-    for (const [name, version] of Object.entries(peerDependencies)) {
+    const pins: Record<string, string> =
+      (cliPkg as { builders?: Record<string, string> }).builders ?? {};
+    for (const [name, version] of Object.entries(pins)) {
       if (validRange(version)) {
         builderPins.set(name, version);
       }
