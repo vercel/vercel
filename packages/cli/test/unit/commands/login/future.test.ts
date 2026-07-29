@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import login from '../../../../src/commands/login';
 import { performDeviceCodeFlow } from '../../../../src/commands/login/future';
 import { client } from '../../../mocks/client';
@@ -53,6 +53,11 @@ function simulateTokenPolling(pollCount: number, finalResponse: Response) {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.stubEnv('CI', '');
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe('login', () => {
@@ -368,6 +373,9 @@ describe('login', () => {
     async function setupDeviceCodeFlow() {
       vi.resetModules();
       const freshOauth = await import('../../../../src/util/oauth');
+      const { default: freshOutput } = await import(
+        '../../../../src/output-manager'
+      );
       const { default: freshLogin } = await import(
         '../../../../src/commands/login'
       );
@@ -396,11 +404,11 @@ describe('login', () => {
         })
       );
 
-      return freshLogin;
+      return { freshLogin, freshOutput };
     }
 
     it('preserves the selected team when the user is still a member', async () => {
-      const freshLogin = await setupDeviceCodeFlow();
+      const { freshLogin } = await setupDeviceCodeFlow();
 
       // Membership validation: the previously selected team is still listed
       fetch.mockResolvedValueOnce(
@@ -424,7 +432,8 @@ describe('login', () => {
     });
 
     it('falls back to the default team when no longer a member', async () => {
-      const freshLogin = await setupDeviceCodeFlow();
+      const { freshLogin, freshOutput } = await setupDeviceCodeFlow();
+      const warning = vi.spyOn(freshOutput, 'warn');
 
       // Membership validation: the previously selected team is gone
       fetch.mockResolvedValueOnce(
@@ -453,15 +462,15 @@ describe('login', () => {
 
       expect(exitCode).toBe(0);
       expect(client.config.currentTeam).toBe('team_default');
-      await expect(client.stderr).toOutput(
-        'Your previously selected team is no longer accessible'
+      expect(warning).toHaveBeenCalledWith(
+        'Your previously selected team is no longer accessible; switching to your default scope.'
       );
 
       client.config.currentTeam = undefined;
     });
 
     it('keeps the selected team when membership validation fails', async () => {
-      const freshLogin = await setupDeviceCodeFlow();
+      const { freshLogin } = await setupDeviceCodeFlow();
 
       // No teams response queued: the validation request fails. Keep the
       // selection rather than silently switching scope.

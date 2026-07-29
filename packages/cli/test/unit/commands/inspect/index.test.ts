@@ -529,6 +529,7 @@ describe('inspect', () => {
       it('sets team scope from dashboard URL', async () => {
         const user = useUser();
         const team = useTeam();
+        team.slug = 'dashboard-team';
         const deployment = useDeployment({ creator: user });
 
         client.setArgv(
@@ -543,6 +544,7 @@ describe('inspect', () => {
       it('does not override explicit --scope flag', async () => {
         const user = useUser();
         const team = useTeam();
+        team.slug = 'dashboard-team';
         const deployment = useDeployment({ creator: user });
 
         client.config.currentTeam = team.id;

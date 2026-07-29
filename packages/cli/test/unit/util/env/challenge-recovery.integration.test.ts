@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as open from 'open';
 import _fetch, {
   Headers,
@@ -46,12 +46,17 @@ function challengeError() {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.stubEnv('CI', '');
   client.authConfig = {
     token: 'vca_rotated',
     refreshToken: 'vcr_stale',
   };
   client.stdin.isTTY = true;
   client.nonInteractive = false;
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe('Environment Variable challenge recovery integration', () => {

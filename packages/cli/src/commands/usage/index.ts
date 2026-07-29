@@ -134,6 +134,7 @@ export default async function usage(client: Client): Promise<number> {
   telemetry.trackCliOptionFrom(fromFlag);
   telemetry.trackCliOptionTo(toFlag);
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
+  telemetry.trackCliFlagJson(parsedArgs.flags['--json']);
   telemetry.trackCliOptionBreakdown(breakdownFlag);
   telemetry.trackCliOptionGroupBy(groupByFlag);
 
