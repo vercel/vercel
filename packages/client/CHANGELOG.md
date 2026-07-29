@@ -1,5 +1,12 @@
 # @vercel/client
 
+## 18.2.1
+
+### Patch Changes
+
+- Updated dependencies [17ee736]
+  - @vercel/build-utils@13.36.1
+
 ## 18.2.0
 
 ### Minor Changes
