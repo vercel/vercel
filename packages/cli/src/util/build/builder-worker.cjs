@@ -52,6 +52,11 @@ process.on('unhandledRejection', err => {
 // `runPreDeploy` message, keeping the builder-computed env the callback captured.
 let preDeployCallback;
 
+// Key under which processMessage stashes the diagnostics it collected for a build that threw, so
+// the error path in onMessage can ship them. A Symbol, so `serializeError` (which copies own
+// property *names*) can't fold it into the error the parent writes into builds.json.
+const DIAGNOSTICS = Symbol('diagnostics');
+
 process.on('message', onMessage);
 
 // Convert an Error into a plain object with all its properties enumerable. Structured-clone IPC
@@ -78,6 +83,10 @@ function onMessage(message) {
       {
         type: 'buildResult',
         error: serializeError(err),
+        // A failed build is exactly when diagnostics matter most, so ship whatever the builder
+        // recorded before it threw. `processMessage` collects them in a `finally` and stashes
+        // them on the error (see DIAGNOSTICS) on its way out.
+        diagnostics: err?.[DIAGNOSTICS],
         traceEvents: drainTraceEvents(),
       },
       () => process.exit(1)
@@ -134,6 +143,27 @@ function serializeFiles(files) {
   return files;
 }
 
+// Collect diagnostics from the same builder instance that just built. diagnostics() returns a
+// Files map (e.g. { 'package-manifest.json': FileBlob }); serialize it like build outputs so the
+// parent can validate/write it. Traced here in the worker (the span rides back with the rest), and
+// failures must not propagate — diagnostics are best-effort and never fail (or mask) a build.
+async function collectDiagnostics(builder, buildOptions) {
+  try {
+    const diagnostics = await buildOptions.span
+      .child('vc.builder.diagnostics')
+      .trace(
+        async () => (await builder.diagnostics?.(buildOptions)) || undefined
+      );
+    if (diagnostics) serializeFiles(diagnostics);
+    return diagnostics;
+  } catch (err) {
+    // Surface to the worker's stderr (piped/inherited to the parent) but don't fail the build.
+    // biome-ignore lint/suspicious/noConsole: intentional console usage
+    console.error(`[vc] collecting diagnostics failed: ${err}`);
+    return undefined;
+  }
+}
+
 async function processMessage(message) {
   const { requirePath, buildOptions, expectsPreDeploy } = message;
   const builder = require(requirePath);
@@ -161,7 +191,29 @@ async function processMessage(message) {
     };
   }
 
-  const result = await builder.build(buildOptions);
+  // Build in a try/finally so diagnostics are collected on both outcomes, mirroring `doBuild`'s
+  // handling on the in-process path: a build that threw is exactly when its diagnostics matter
+  // most.
+  let result;
+  let diagnostics;
+  let buildError;
+  try {
+    result = await builder.build(buildOptions);
+  } catch (err) {
+    buildError = err;
+    throw err;
+  } finally {
+    diagnostics = await collectDiagnostics(builder, buildOptions);
+    // A failed build has no result message to carry the diagnostics, so stash them on the error
+    // for `onMessage` to ship. Symbol-keyed, so `serializeError` (which copies own property
+    // *names*) can't fold them into the error the parent writes into builds.json.
+    if (buildError && typeof buildError === 'object') {
+      Object.defineProperty(buildError, DIAGNOSTICS, { value: diagnostics });
+    }
+    // Stop the worker root span so it (and its recorded children) are collected before the events
+    // are drained and shipped for the parent to report under its `vc.builder` span.
+    buildOptions.span.stop();
+  }
 
   // Locate the concrete V2/V3 result and its version WITHOUT unwrapping the wire payload:
   // the parent (and writeBuildResult) still expect a BuildResultVX wrapper for
@@ -204,29 +256,6 @@ async function processMessage(message) {
       }
     }
   }
-
-  // Collect diagnostics from the same builder instance that just built. diagnostics() returns
-  // a Files map (e.g. { 'package-manifest.json': FileBlob }); serialize it like build outputs so
-  // the parent can validate/write it. Traced here in the worker (the span rides back with the
-  // rest), and failures must not fail the build.
-  let diagnostics;
-  try {
-    diagnostics = await buildOptions.span
-      .child('vc.builder.diagnostics')
-      .trace(
-        async () => (await builder.diagnostics?.(buildOptions)) || undefined
-      );
-    if (diagnostics) serializeFiles(diagnostics);
-  } catch (err) {
-    // Surface to the worker's stderr (piped/inherited to the parent) but don't fail the build.
-    // biome-ignore lint/suspicious/noConsole: intentional console usage
-    console.error(`[vc] collecting diagnostics failed: ${err}`);
-    diagnostics = undefined;
-  }
-
-  // Stop the worker root span so it (and its recorded children) are collected before we drain
-  // and ship the events for the parent to report under its `vc.builder` span.
-  buildOptions.span.stop();
 
   // With a pending pre-deploy the worker stays alive to run the callback (which holds the
   // builder-computed env) when the parent later sends `runPreDeploy`; the parent tears the

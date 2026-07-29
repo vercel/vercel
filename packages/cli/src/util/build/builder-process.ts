@@ -60,7 +60,10 @@ type SerializedFile =
 interface BuildMessageResult {
   type: 'buildResult';
   result?: BuildResultV2 | BuildResultV3;
-  /** Serialized Files returned by the builder's `diagnostics()`, if any. */
+  /**
+   * Serialized Files returned by the builder's `diagnostics()`, if any. Sent alongside `error`
+   * too — a build that threw still reports the diagnostics it recorded before failing.
+   */
   diagnostics?: Record<string, SerializedFile>;
   /** True when the builder registered a pre-deploy callback the worker is holding. */
   hasPreDeploy?: boolean;
@@ -297,9 +300,8 @@ export class SubprocessBuildRunner extends BuildRunner {
       const buildResult = message.result;
       rehydrateResult(buildResult);
 
-      this.diagnosticsResult = message.diagnostics
-        ? rehydrateDiagnostics(message.diagnostics)
-        : undefined;
+      // `_runBuild` already captured the diagnostics the worker sent (it does so on the failure
+      // path too, before rejecting).
 
       // The worker mutated a structured-clone copy of `meta` (builders share state through it,
       // e.g. `runNpmInstallSet` for install dedup). Merge those mutations back into the shared
@@ -347,6 +349,15 @@ export class SubprocessBuildRunner extends BuildRunner {
       ...serializableBuildOptions
     } = this.ctx.buildOptions;
     const builderSpan = this.ctx.builderSpan;
+    // Store the diagnostics off a `buildResult` message regardless of outcome. A failed build is
+    // when diagnostics matter most, and the worker collects them before reporting the error, so
+    // this must run before the promise settles — after a reject, `build()` rethrows and never
+    // gets to look at the message, but the command's `finally` still calls `runner.diagnostics()`.
+    const captureDiagnostics = (msg: BuildMessageResult) => {
+      if (msg.diagnostics) {
+        this.diagnosticsResult = rehydrateDiagnostics(msg.diagnostics);
+      }
+    };
 
     child.send({
       type: 'build',
@@ -367,6 +378,7 @@ export class SubprocessBuildRunner extends BuildRunner {
           if (msg.traceEvents) {
             builderSpan?.reportChildEvents(msg.traceEvents);
           }
+          captureDiagnostics(msg);
           if (msg.result) {
             resolve(
               msg as BuildMessageResult & {

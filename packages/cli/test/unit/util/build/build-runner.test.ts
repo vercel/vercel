@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from 'node:events';
-import { Lambda, type BuildOptions } from '@vercel/build-utils';
+import { FileBlob, Lambda, type BuildOptions } from '@vercel/build-utils';
 
 // Mock the worker fork so SubprocessBuildRunner can be driven without a real child.
 const fork = vi.fn();
@@ -337,6 +337,51 @@ describe('build-runner', () => {
       await expect(runner.build()).rejects.toThrow('boom');
       expect(child.disconnect).toHaveBeenCalledTimes(1);
       expect(child.kill).toHaveBeenCalledTimes(1);
+    });
+
+    it('exposes diagnostics the worker sent alongside a build error', async () => {
+      // A failed build is when diagnostics matter most. The worker collects them before
+      // reporting the error, so the runner must capture them even though build() rejects —
+      // the command reads them from a `finally` that runs on both outcomes.
+      queueMicrotask(() => child.emit('message', { type: 'ready' }));
+      child.send.mockImplementation((sent: { type: string }) => {
+        if (sent.type === 'build') {
+          queueMicrotask(() =>
+            child.emit('message', {
+              type: 'buildResult',
+              error: { message: 'boom' },
+              diagnostics: {
+                'package-manifest.json': { type: 'FileBlob', data: '{}' },
+              },
+            })
+          );
+        }
+      });
+      const runner = new SubprocessBuildRunner(makeContext());
+
+      await expect(runner.build()).rejects.toThrow('boom');
+
+      const diagnostics = await runner.diagnostics();
+      expect(Object.keys(diagnostics ?? {})).toEqual(['package-manifest.json']);
+      expect(diagnostics?.['package-manifest.json']).toBeInstanceOf(FileBlob);
+    });
+
+    it('leaves diagnostics undefined when a failed build reported none', async () => {
+      queueMicrotask(() => child.emit('message', { type: 'ready' }));
+      child.send.mockImplementation((sent: { type: string }) => {
+        if (sent.type === 'build') {
+          queueMicrotask(() =>
+            child.emit('message', {
+              type: 'buildResult',
+              error: { message: 'boom' },
+            })
+          );
+        }
+      });
+      const runner = new SubprocessBuildRunner(makeContext());
+
+      await expect(runner.build()).rejects.toThrow('boom');
+      expect(await runner.diagnostics()).toBeUndefined();
     });
 
     it('teardown() is a no-op before build() and does not throw', () => {
