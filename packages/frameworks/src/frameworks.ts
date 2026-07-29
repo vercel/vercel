@@ -17,12 +17,21 @@ export {
   type OutputDirName,
   type GatsbyDefaultRoutes,
 } from './interpret';
+export {
+  getFrameworkList,
+  FRAMEWORKS_MANIFEST_URL,
+  type GetFrameworkListOptions,
+} from './get-framework-list';
 
 /**
  * The framework list is sourced from the frameworks API at build time (written
  * to `src/frameworks.json` by `build.mjs`, and inlined here by esbuild) and
  * interpreted into runtime {@link Framework} objects. The API manifest is the
  * single source of truth; there is no committed copy in `src/`.
+ *
+ * For a fresher list fetched at call time (same interpreted shape), use
+ * {@link getFrameworkList}. The sync export remains the default for consumers
+ * that must not introduce a network dependency at module load.
  *
  * Please note that it is extremely important that the `dependency` property
  * needs to reference a CLI. This is needed because you might want (for
