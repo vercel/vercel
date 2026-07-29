@@ -212,4 +212,16 @@ describe('resolveEnvVarVisibility', () => {
       }).error
     ).toMatch(/cannot use secret visibility/);
   });
+
+  it('rejects secrets on Development when flag is enabled', () => {
+    expect(
+      resolveEnvVarVisibility({
+        configSecretUiEnabled: true,
+        type: 'sensitive',
+        key: 'API_KEY',
+        envTargets: ['development'],
+        teamSensitivePolicyOn: false,
+      }).error
+    ).toMatch(/not allowed with the Development Environment/);
+  });
 });

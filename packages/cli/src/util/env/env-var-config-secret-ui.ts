@@ -6,7 +6,7 @@ export type EnvVariableVisibility = 'config' | 'secret';
 /**
  * Opt-in CLI support for the config/secret env var model (dashboard flag:
  * `env-var-config-secret-ui`). When enabled, the CLI skips legacy Sensitive
- * Environment Variables Policy coercion and allows secrets in Development.
+ * Environment Variables Policy coercion. Development still disallows secrets.
  */
 export function isEnvVarConfigSecretUiEnabled(): boolean {
   const raw = process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
@@ -83,6 +83,34 @@ export function getPublicPrefixSecretVisibilityError(
 }
 
 /**
+ * Returns a client-side error when secrets are requested for Development.
+ */
+export function getDevelopmentSecretVisibilityError(
+  envTargets: string[],
+  options: {
+    type: ProjectEnvType;
+    visibility?: EnvVariableVisibility;
+  }
+): string | null {
+  if (!envTargets.includes('development')) {
+    return null;
+  }
+
+  const wouldBeSecret =
+    options.type === 'sensitive' || options.visibility === 'secret';
+  if (!wouldBeSecret) {
+    return null;
+  }
+
+  const hasNonDevelopment = envTargets.some(target => target !== 'development');
+  if (hasNonDevelopment) {
+    return `Sensitive Environment Variables are not supported on the Development Environment. Add --no-sensitive to store a non-sensitive value for all selected Environments, or run \`vercel env add\` separately for Development.`;
+  }
+
+  return `--sensitive is not allowed with the Development Environment. Sensitive Environment Variables are only supported on Production and Preview.`;
+}
+
+/**
  * Omits inferred visibility for public-prefixed keys only when the API team
  * policy will force-coerce type to sensitive (cannot safely set visibility).
  */
@@ -149,12 +177,34 @@ export function resolveEnvVarVisibility(
       return { error: publicPrefixError };
     }
 
+    const developmentError = getDevelopmentSecretVisibilityError(
+      options.envTargets,
+      {
+        type: options.type,
+        visibility: options.explicitVisibility,
+      }
+    );
+    if (developmentError) {
+      return { error: developmentError };
+    }
+
     return { visibility: options.explicitVisibility };
   }
 
   const inferred = visibilityFromEnvType(options.type);
   if (inferred === undefined) {
     return {};
+  }
+
+  const developmentError = getDevelopmentSecretVisibilityError(
+    options.envTargets,
+    {
+      type: options.type,
+      visibility: inferred,
+    }
+  );
+  if (developmentError) {
+    return { error: developmentError };
   }
 
   if (

@@ -554,14 +554,7 @@ describe('env update', () => {
         updateSpy.mockRestore();
       });
 
-      it('allows --sensitive on a Development record', async () => {
-        const updateEnvRecordModule = await import(
-          '../../../../src/util/env/update-env-record'
-        );
-        const updateSpy = vi
-          .spyOn(updateEnvRecordModule, 'default')
-          .mockResolvedValue(undefined);
-
+      it('rejects --sensitive on a Development record when flag is enabled', async () => {
         const cwd = setupUnitFixture('vercel-env-pull');
         client.cwd = cwd;
         client.setArgv(
@@ -574,25 +567,10 @@ describe('env update', () => {
           '--yes'
         );
         const exitCodePromise = env(client);
-        await expect(exitCodePromise).resolves.toBe(0);
-
-        expect(updateSpy).toHaveBeenCalled();
-        const [, , , type, , , , , visibility] = updateSpy.mock
-          .calls[0] as unknown as [
-          unknown,
-          unknown,
-          unknown,
-          string,
-          unknown,
-          unknown,
-          unknown,
-          unknown,
-          string,
-        ];
-        expect(type).toBe('sensitive');
-        expect(visibility).toBe('secret');
-
-        updateSpy.mockRestore();
+        await expect(client.stderr).toOutput(
+          'not allowed with the Development Environment'
+        );
+        await expect(exitCodePromise).resolves.toBe(1);
       });
     });
   });

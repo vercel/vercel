@@ -535,47 +535,22 @@ describe('env add', () => {
         }
       });
 
-      it('allows --sensitive on Development', async () => {
-        const addEnvRecordModule = await import(
-          '../../../../src/util/env/add-env-record'
+      it('rejects --sensitive on Development', async () => {
+        client.setArgv(
+          'env',
+          'add',
+          'DEV_SECRET',
+          'development',
+          '--sensitive',
+          '--value',
+          'foo',
+          '--yes'
         );
-        const addSpy = vi
-          .spyOn(addEnvRecordModule, 'default')
-          .mockResolvedValue(undefined);
-
-        try {
-          client.setArgv(
-            'env',
-            'add',
-            'DEV_SECRET',
-            'development',
-            '--sensitive',
-            '--value',
-            'foo',
-            '--yes'
-          );
-          const exitCodePromise = env(client);
-          await expect(exitCodePromise).resolves.toBe(0);
-
-          expect(addSpy).toHaveBeenCalled();
-          const [, , , type, , , targets, , visibility] = addSpy.mock
-            .calls[0] as unknown as [
-            unknown,
-            unknown,
-            unknown,
-            string,
-            unknown,
-            unknown,
-            string[],
-            unknown,
-            string,
-          ];
-          expect(type).toBe('sensitive');
-          expect(targets).toEqual(['development']);
-          expect(visibility).toBe('secret');
-        } finally {
-          addSpy.mockRestore();
-        }
+        const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput(
+          'not allowed with the Development Environment'
+        );
+        await expect(exitCodePromise).resolves.toBe(1);
       });
 
       it('omits visibility for public-prefixed keys on Production when team policy is on', async () => {
@@ -1909,7 +1884,7 @@ describe('env add', () => {
         logSpy.mockRestore();
       });
 
-      it('includes Development in the multi-target suggestion when VERCEL_ENV_VAR_CONFIG_SECRET_UI is set', async () => {
+      it('excludes Development from the multi-target suggestion when --sensitive is set and flag is enabled', async () => {
         const originalFlag = process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI;
         process.env.VERCEL_ENV_VAR_CONFIG_SECRET_UI = '1';
 
@@ -1941,8 +1916,9 @@ describe('env add', () => {
           expect(
             commands.some(
               (c: string) =>
-                c.includes('production,preview,development') &&
-                c.includes('--sensitive')
+                c.includes('production,preview') &&
+                c.includes('--sensitive') &&
+                !c.includes('development')
             )
           ).toBe(true);
         } finally {

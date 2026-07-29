@@ -411,7 +411,7 @@ export default async function update(client: Client, argv: string[]) {
     return 1;
   }
 
-  if (opts['--sensitive'] && selectedIsDevelopment && !configSecretUiEnabled) {
+  if (opts['--sensitive'] && selectedIsDevelopment) {
     const msg = `--sensitive is not allowed with the Development Environment. Sensitive Environment Variables are only supported on Production and Preview.`;
     if (client.nonInteractive) {
       outputAgentError(
