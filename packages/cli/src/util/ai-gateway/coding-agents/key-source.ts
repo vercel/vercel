@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import type Client from '../../client';
 import output from '../../../output-manager';
 import { getCommandName } from '../../pkg-name';
-import createApiKeyRequest from '../create-api-key';
+import { createApiKey } from '../api-keys';
 import selectOrg from '../../input/select-org';
 import { buildQuota } from '../quota';
 import {
@@ -49,9 +49,7 @@ export function defaultKeyName(): string {
 export async function promptKeyName(client: Client): Promise<string> {
   const fallback = defaultKeyName();
   const answer = await client.input.text({
-    message: `Key name? ${chalk.dim(
-      'A new AI Gateway API key will be created for your coding agents'
-    )}`,
+    message: 'Key name?',
     default: fallback,
   });
   return answer.trim() || fallback;
@@ -138,7 +136,11 @@ export async function ensureTeam(
   if (canPrompt && !yes && !hasExplicitScopeFlag(client.argv)) {
     const org = await selectOrg(
       client,
-      `Which team? ${chalk.dim('The API key is created under this team')}`
+      'Which team?',
+      undefined,
+      true,
+      undefined,
+      'The new AI Gateway API key will be created under this team:'
     );
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
     return undefined;
@@ -175,7 +177,7 @@ export async function createKey(
 ): Promise<string> {
   output.spinner('Creating AI Gateway API key…');
   try {
-    const result = await createApiKeyRequest(client, {
+    const result = await createApiKey(client, {
       name: opts.name,
       aiGatewayQuota: buildQuota({
         budget: opts.budget,

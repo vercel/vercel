@@ -19,7 +19,7 @@ export default async function rules(
   client: Client,
   argv: string[]
 ): Promise<number> {
-  if (argv.length === 0 || argv[0].startsWith('-')) {
+  if (argv.length === 0 || argv[0]?.startsWith('-')) {
     const lsFn = (await import('./ls')).default;
     return lsFn(client, argv);
   }

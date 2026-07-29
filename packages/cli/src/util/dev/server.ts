@@ -53,6 +53,7 @@ import {
   detectBuilders,
   detectApiDirectory,
   detectApiExtensions,
+  getProxyBuilder,
   isOfficialRuntime,
   isExperimentalService,
   isExperimentalServiceV2,
@@ -242,6 +243,8 @@ export default class DevServer {
       VERCEL_HAS_WORKER_SERVICES: '1',
       VERCEL_QUEUE_BASE_URL: `${this.address.origin}/_svc/_queues`,
       VERCEL_QUEUE_TOKEN: 'vc-dev-token',
+      VERCEL_REGION: 'dev1',
+      VERCEL_DEPLOYMENT_ID: 'dpl_dev',
     };
   }
 
@@ -280,6 +283,11 @@ export default class DevServer {
       proxyOrigin: this.address.origin,
       useImplicitEnvInjection: false,
       preferServiceBuilder: true,
+      onQueueSubscriptions: (serviceName, subscriptions) =>
+        this.queueBroker?.updateServiceSubscriptions(
+          serviceName,
+          subscriptions
+        ),
     });
 
     const queueBroker = new QueueBroker(services, name =>
@@ -791,6 +799,7 @@ export default class DevServer {
         featHandleMiss,
         cleanUrls,
         trailingSlash,
+        proxy: vercelConfig.proxy,
         workPath: this.cwd,
       });
       const {
@@ -864,6 +873,20 @@ export default class DevServer {
       });
       routes.push(...(defaultRoutes || []));
       vercelConfig.routes = routes;
+    } else if (hasResolvedServices && vercelConfig.proxy) {
+      // Service builds are owned by the orchestrator; only the top-level
+      // proxy participates in the dev server's build pipeline.
+      const { entrypoint } = vercelConfig.proxy;
+      if (!(await fs.pathExists(join(this.cwd, entrypoint)))) {
+        output.error(
+          `The proxy entrypoint \`${entrypoint}\` does not exist. Set \`proxy.entrypoint\` to an existing \`.js\` or \`.ts\` file.`
+        );
+        await this.exit();
+      }
+      vercelConfig.builds = vercelConfig.builds || [];
+      vercelConfig.builds.push(
+        getProxyBuilder(vercelConfig.proxy, 'latest', vercelConfig.functions)
+      );
     }
 
     if (this.sidecars === undefined) {
@@ -1182,6 +1205,11 @@ export default class DevServer {
         env: this.envConfigs.allEnv,
         proxyOrigin: this.address.origin,
         useImplicitEnvInjection: this.useImplicitServicesEnvInjection,
+        onQueueSubscriptions: (serviceName, subscriptions) =>
+          this.queueBroker?.updateServiceSubscriptions(
+            serviceName,
+            subscriptions
+          ),
       });
       devCommandPromise = this.orchestrator.startAll();
       this.devProcessOrigin = undefined;

@@ -143,4 +143,10 @@ export class MetricsTelemetryClient
       this.trackCliFlag('all');
     }
   }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
+    }
+  }
 }

@@ -4,6 +4,7 @@ export interface SetupContext {
   useKeychain?: boolean;
   overrides?: Record<string, string>;
   shellRcOverride?: string;
+  baseUrlOverride?: string;
 }
 
 export type FileFormat = 'json' | 'toml' | 'shell';

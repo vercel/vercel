@@ -1,4 +1,9 @@
-import { formatOption, projectOption, yesOption } from '../../util/arg-common';
+import {
+  formatOption,
+  jsonOption,
+  projectOption,
+  yesOption,
+} from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const createSubcommand = {
@@ -71,6 +76,7 @@ export const createSubcommand = {
       description: 'Accent color for the connector icon (e.g. #1A2B3C)',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -103,7 +109,7 @@ export const createSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} connect create slack --format=json`,
+      value: `${packageName} connect create slack --json`,
     },
   ],
 } as const;
@@ -145,6 +151,7 @@ export const updateSubcommand = {
       description: 'Accent color for the connector icon (e.g. #1A2B3C)',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -157,7 +164,7 @@ export const updateSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} connect update scl_abc123 --icon ./logo.png --format=json`,
+      value: `${packageName} connect update scl_abc123 --icon ./logo.png --json`,
     },
   ],
 } as const;
@@ -220,6 +227,7 @@ export const listSubcommand = {
         'Filter by connector type (slack, github, oauth, custom). Repeatable.',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -260,7 +268,7 @@ export const listSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} connect list --format=json`,
+      value: `${packageName} connect list --json`,
     },
   ],
 } as const;
@@ -289,6 +297,7 @@ export const removeSubcommand = {
       description: 'Skip the confirmation prompt when deleting a connector',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -312,7 +321,7 @@ export const removeSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} connect remove scl_abc123 --format=json --yes`,
+      value: `${packageName} connect remove scl_abc123 --json --yes`,
     },
   ],
 } as const;
@@ -357,6 +366,7 @@ export const tokenSubcommand = {
     },
     yesOption,
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -381,7 +391,7 @@ export const tokenSubcommand = {
     },
     {
       name: 'Output as JSON (includes expiresAt, installationId, etc.)',
-      value: `${packageName} connect token scl_abc123 --format=json`,
+      value: `${packageName} connect token scl_abc123 --json`,
     },
   ],
 } as const;
@@ -417,6 +427,7 @@ export const revokeTokensSubcommand = {
       description: 'Skip the confirmation prompt',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -437,7 +448,7 @@ export const revokeTokensSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} connect revoke-tokens scl_abc123 --my-tokens --yes --format=json`,
+      value: `${packageName} connect revoke-tokens scl_abc123 --my-tokens --yes --json`,
     },
   ],
 } as const;
@@ -452,7 +463,7 @@ export const openSubcommand = {
       required: true,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Open a connector by ID',
@@ -464,7 +475,7 @@ export const openSubcommand = {
     },
     {
       name: 'Print the dashboard URL as JSON',
-      value: `${packageName} connect open scl_abc123 --format=json`,
+      value: `${packageName} connect open scl_abc123 --json`,
     },
   ],
 } as const;
@@ -488,7 +499,7 @@ export const attachSubcommand = {
       argument: 'ENV',
       deprecated: false,
       description:
-        'Environments to enable. Repeatable and comma-separated (e.g. -e production -e preview, or -e production,preview). Defaults to all environments.',
+        'Environments to enable by system name, custom slug, or custom ID. Repeatable and comma-separated. Defaults to production, preview, and development.',
     },
     {
       ...projectOption,
@@ -513,6 +524,15 @@ export const attachSubcommand = {
         'Target a specific git branch for the trigger destination (default: production). Only valid with --triggers.',
     },
     {
+      name: 'trigger-environment',
+      shorthand: null,
+      type: String,
+      argument: 'ENV',
+      deprecated: false,
+      description:
+        'Target a custom environment by slug or stable ID. Mutually exclusive with --trigger-branch and only valid with --triggers.',
+    },
+    {
       name: 'trigger-path',
       shorthand: null,
       type: String,
@@ -526,15 +546,24 @@ export const attachSubcommand = {
       description: 'Skip the confirmation prompt',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
-      name: 'Attach the current project to a connector for all environments',
+      name: 'Attach the current project for all system environments',
       value: `${packageName} connect attach scl_abc123`,
     },
     {
       name: 'Restrict to specific environments',
       value: `${packageName} connect attach scl_abc123 -e production -e preview`,
+    },
+    {
+      name: 'Attach to a custom environment by slug',
+      value: `${packageName} connect attach scl_abc123 -e qa`,
+    },
+    {
+      name: 'Attach to a custom environment by stable ID',
+      value: `${packageName} connect attach scl_abc123 -e env_qa123`,
     },
     {
       name: 'Attach a different project by name',
@@ -549,8 +578,12 @@ export const attachSubcommand = {
       value: `${packageName} connect attach scl_abc123 --triggers --trigger-branch staging --trigger-path /slack`,
     },
     {
+      name: 'Attach and register a custom-environment trigger destination',
+      value: `${packageName} connect attach scl_abc123 --triggers --trigger-environment qa --trigger-path /slack`,
+    },
+    {
       name: 'Non-interactive output as JSON',
-      value: `${packageName} connect attach scl_abc123 --yes --format=json`,
+      value: `${packageName} connect attach scl_abc123 --yes --json`,
     },
   ],
 } as const;
@@ -576,6 +609,7 @@ export const detachSubcommand = {
       description: 'Skip the confirmation prompt',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -588,7 +622,7 @@ export const detachSubcommand = {
     },
     {
       name: 'Non-interactive output as JSON',
-      value: `${packageName} connect detach scl_abc123 --yes --format=json`,
+      value: `${packageName} connect detach scl_abc123 --yes --json`,
     },
   ],
 } as const;

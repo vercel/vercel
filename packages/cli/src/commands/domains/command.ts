@@ -2,6 +2,7 @@ import { packageName } from '../../util/pkg-name';
 import {
   forceOption,
   formatOption,
+  jsonOption,
   limitOption,
   nextOption,
   projectOption,
@@ -14,7 +15,7 @@ export const listSubcommand = {
   description: 'Show all domains in a list',
   default: true,
   arguments: [],
-  options: [limitOption, nextOption, formatOption],
+  options: [limitOption, nextOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch',
@@ -101,7 +102,7 @@ export const priceSubcommand = {
       multiple: true,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Price quote for a domain',
@@ -113,7 +114,7 @@ export const priceSubcommand = {
     },
     {
       name: 'JSON output',
-      value: `${packageName} domains price example.com --format json`,
+      value: `${packageName} domains price example.com --json`,
     },
   ],
 } as const;
@@ -171,6 +172,7 @@ export const searchSubcommand = {
       deprecated: false,
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -191,7 +193,7 @@ export const searchSubcommand = {
     },
     {
       name: 'JSON output',
-      value: `${packageName} domains search acme --format=json`,
+      value: `${packageName} domains search acme --json`,
     },
   ],
 } as const;
@@ -221,7 +223,7 @@ export const checkSubcommand = {
       multiple: true,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Check if a domain is available',
@@ -233,7 +235,7 @@ export const checkSubcommand = {
     },
     {
       name: 'JSON output',
-      value: `${packageName} domains check example.com --format json`,
+      value: `${packageName} domains check example.com --json`,
     },
   ],
 } as const;
@@ -305,6 +307,7 @@ export const verifySubcommand = {
         'Check DNS for the exact domain only, without falling back to the parent zone configuration',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -317,7 +320,7 @@ export const verifySubcommand = {
     },
     {
       name: 'JSON output (the exit code is non-zero when the domain is misconfigured or unverified)',
-      value: `${packageName} domains verify example.com --format json`,
+      value: `${packageName} domains verify example.com --json`,
     },
     {
       name: 'Agent-friendly output with status, reason, and suggested next commands',

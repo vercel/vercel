@@ -7,6 +7,7 @@ import type { ExperimentalService } from '@vercel/fs-detectors';
 import {
   getServiceQueueTopicConfigs,
   isQueueBackedService,
+  type DevQueueSubscription,
 } from '@vercel/build-utils';
 import output from '../../output-manager';
 
@@ -22,6 +23,7 @@ interface StoredMessage {
 interface ConsumerGroup {
   id: string;
   name: string;
+  serviceName: string;
   topicPattern: string;
   topicRegex: RegExp;
   serviceOriginFn: () => string | null;
@@ -114,6 +116,7 @@ export class QueueBroker {
         const group: ConsumerGroup = {
           id,
           name: consumerGroup,
+          serviceName: service.name,
           topicPattern,
           topicRegex: topicPatternToRegex(topicPattern),
           serviceOriginFn: () => this.getServiceOrigin(service.name),
@@ -135,6 +138,67 @@ export class QueueBroker {
 
     this.tickTimer = setInterval(() => this.tick(), TICK_INTERVAL);
     this.tickTimer.unref();
+  }
+
+  /**
+   * Replace a service's consumer groups with the queue subscriptions its
+   * dev server introspected from the runtime SDK. The SDK dispatches push
+   * deliveries by the registered (consumer group, topic) pair, so deliveries
+   * must carry these consumer groups — not the synthesized per-service name
+   * derived from the service topology.
+   */
+  updateServiceSubscriptions(
+    serviceName: string,
+    subscriptions: DevQueueSubscription[]
+  ): void {
+    if (subscriptions.length === 0) {
+      return;
+    }
+
+    const kept: ConsumerGroup[] = [];
+    for (const group of this.consumerGroups) {
+      if (group.serviceName === serviceName) {
+        this.deliveryState.delete(group.id);
+      } else {
+        kept.push(group);
+      }
+    }
+    this.consumerGroups = kept;
+
+    for (const subscription of subscriptions) {
+      const id = `${subscription.consumer}::${subscription.topic}`;
+      if (this.deliveryState.has(id)) {
+        output.debug(
+          `Queue consumer "${subscription.consumer}" is already registered ` +
+            `for topic "${subscription.topic}"; keeping the first registration`
+        );
+        continue;
+      }
+      const group: ConsumerGroup = {
+        id,
+        name: subscription.consumer,
+        serviceName,
+        topicPattern: subscription.topic,
+        topicRegex: topicPatternToRegex(subscription.topic),
+        serviceOriginFn: () => this.getServiceOrigin(serviceName),
+        retryAfterMs:
+          subscription.retryAfterSeconds !== undefined
+            ? subscription.retryAfterSeconds * 1000
+            : DEFAULT_RETRY_AFTER,
+        maxDeliveries: subscription.maxDeliveries ?? DEFAULT_MAX_DELIVERIES,
+        initialDelayMs:
+          subscription.initialDelaySeconds !== undefined
+            ? subscription.initialDelaySeconds * 1000
+            : DEFAULT_INITIAL_DELAY,
+      };
+      this.consumerGroups.push(group);
+      this.deliveryState.set(group.id, new Map());
+    }
+
+    output.debug(
+      `Queue consumer groups for service "${serviceName}" updated from ` +
+        `${subscriptions.length} introspected subscription(s)`
+    );
   }
 
   enqueue(

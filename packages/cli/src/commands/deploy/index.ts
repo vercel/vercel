@@ -69,7 +69,7 @@ import table from '../../util/output/table';
 import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
 import { withGlobalFlags } from '../../util/agent-output';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, packageName } from '../../util/pkg-name';
 import { getErrorCta } from '../../util/get-error-cta';
 import link from '../../util/output/link';
 import { outputAgentError } from '../../util/agent-output';
@@ -674,20 +674,31 @@ async function handleInitDeployment(
     if (asJson) {
       output.stopSpinner();
       const deploymentJson = getDeploymentOutputJson(deployment, client.apiUrl);
+      const isImplicitProduction =
+        deployment.target === 'production' && !target;
       const payload = client.nonInteractive
         ? {
             status: AGENT_STATUS.OK,
             deployment: deploymentJson,
             message: `Deployment ${deployment.url} ready.`,
+            ...(isImplicitProduction
+              ? {
+                  hint: 'This is the project\u2019s first deployment, so it was assigned to production. Future deployments will be preview deployments unless you use --prod.',
+                }
+              : {}),
             next: [
               {
                 command: withGlobalFlags(client, `inspect ${deployment.url}`),
                 when: 'Inspect deployment',
               },
-              {
-                command: withGlobalFlags(client, 'deploy --prod'),
-                when: 'Promote to production',
-              },
+              ...(isImplicitProduction
+                ? []
+                : [
+                    {
+                      command: withGlobalFlags(client, 'deploy --prod'),
+                      when: 'Promote to production',
+                    },
+                  ]),
             ],
           }
         : deploymentJson;
@@ -1850,20 +1861,34 @@ async function handleDefaultDeploy(
   if (asJson) {
     output.stopSpinner();
     const deploymentJson = getDeploymentOutputJson(deployment, client.apiUrl);
+    const isImplicitProduction = deployment.target === 'production' && !target;
     const payload = client.nonInteractive
       ? {
           status: AGENT_STATUS.OK,
           deployment: deploymentJson,
           message: `Deployment ${deployment.url} ready.`,
+          ...(isImplicitProduction
+            ? {
+                hint: 'This is the project\u2019s first deployment, so it was assigned to production. Future deployments will be preview deployments unless you use --prod.',
+              }
+            : {}),
           next: [
+            {
+              command: `${packageName} curl https://${deployment.url}`,
+              when: 'Verify deployment, including when Deployment Protection is enabled',
+            },
             {
               command: withGlobalFlags(client, `inspect ${deployment.url}`),
               when: 'Inspect deployment',
             },
-            {
-              command: withGlobalFlags(client, 'deploy --prod'),
-              when: 'Promote to production',
-            },
+            ...(isImplicitProduction
+              ? []
+              : [
+                  {
+                    command: withGlobalFlags(client, 'deploy --prod'),
+                    when: 'Promote to production',
+                  },
+                ]),
           ],
         }
       : deploymentJson;

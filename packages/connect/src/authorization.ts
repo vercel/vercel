@@ -1,4 +1,9 @@
 import { getVercelOidcToken } from '@vercel/oidc';
+import {
+  isDetachedInteractiveAuth,
+  validateCallbackUrl,
+  validateWebhookUrl,
+} from './internal/url-validation.js';
 import type { ConnectTokenParams } from './token.js';
 
 export interface ConnectAuthorizationOptions {
@@ -48,7 +53,8 @@ export async function startAuthorization(
   if (!connector) {
     throw new Error('connector is required');
   }
-  if (options?.callbackUrl !== undefined) {
+  const detachedInteractiveAuth = isDetachedInteractiveAuth();
+  if (!detachedInteractiveAuth && options?.callbackUrl !== undefined) {
     validateCallbackUrl(options.callbackUrl);
   }
   if (options?.webhook !== undefined) {
@@ -57,15 +63,19 @@ export async function startAuthorization(
 
   const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
   const endpoint = `https://api.vercel.com/v1/connect/authorize/${encodeURIComponent(connector)}`;
+  const deviceCode =
+    options?.deviceCode ?? (detachedInteractiveAuth ? true : undefined);
+  const returnUrl =
+    !detachedInteractiveAuth && options?.callbackUrl !== undefined
+      ? { returnUrl: options.callbackUrl }
+      : {};
 
   const body = {
     ...params,
-    ...(options?.callbackUrl !== undefined && {
-      returnUrl: options.callbackUrl,
-    }),
+    ...returnUrl,
     ...(options?.webhook !== undefined && { webhook: options.webhook }),
-    ...(options?.deviceCode !== undefined && {
-      deviceCode: options.deviceCode,
+    ...(deviceCode !== undefined && {
+      deviceCode,
     }),
     ...(options?.expiresInMs !== undefined && {
       expiresInMs: options.expiresInMs,
@@ -94,40 +104,4 @@ export async function startAuthorization(
 
   const data: ConnectAuthorizationResponse = await response.json();
   return data;
-}
-
-function validateCallbackUrl(value: string): void {
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new Error(`Invalid callbackUrl: ${value}`);
-  }
-  if (url.protocol === 'https:') return;
-  if (url.protocol === 'http:' && isLocalHttpCallbackHostname(url.hostname)) {
-    return;
-  }
-  throw new Error(
-    `callbackUrl must be https://, http://localhost, or http://*.localhost, got: ${value}`
-  );
-}
-
-function isLocalHttpCallbackHostname(hostname: string): boolean {
-  return (
-    hostname === 'localhost' ||
-    hostname.endsWith('.localhost') ||
-    hostname === '127.0.0.1'
-  );
-}
-
-function validateWebhookUrl(value: string): void {
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new Error(`Invalid webhook URL: ${value}`);
-  }
-  if (url.protocol !== 'https:') {
-    throw new Error(`webhook must be https://, got: ${value}`);
-  }
 }

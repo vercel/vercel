@@ -38,4 +38,22 @@ export class AiGatewayApiKeysCreateTelemetryClient
       this.trackCliFlag('include-byok');
     }
   }
+
+  trackCliOptionAlertThresholds(alertThresholds: string | undefined) {
+    if (alertThresholds) {
+      this.trackCliOption({
+        option: 'alert-thresholds',
+        value: alertThresholds,
+      });
+    }
+  }
+
+  trackCliOptionExpiration(expiration: string | undefined) {
+    if (expiration) {
+      this.trackCliOption({
+        option: 'expiration',
+        value: expiration,
+      });
+    }
+  }
 }

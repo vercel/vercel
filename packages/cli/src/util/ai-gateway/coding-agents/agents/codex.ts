@@ -2,7 +2,11 @@ import { join } from 'node:path';
 import type { AgentWarning, CodingAgent } from '../types';
 import { mergeToml, pathExists } from '../config-files';
 import { isMacAppInstalled } from '../desktop-apps';
-import { GATEWAY_OPENAI_BASE_URL, GATEWAY_API_KEY_ENV } from '../gateway';
+import {
+  GATEWAY_CODEX_BASE_URL,
+  GATEWAY_API_KEY_ENV,
+  resolveGatewayBaseUrl,
+} from '../gateway';
 
 /** The Codex desktop app shares `~/.codex/config.toml` with the CLI. */
 const CODEX_DESKTOP_APP = 'Codex.app';
@@ -69,7 +73,10 @@ export const codex: CodingAgent = {
               model_providers: {
                 vercel: {
                   name: 'Vercel AI Gateway',
-                  base_url: GATEWAY_OPENAI_BASE_URL,
+                  base_url: resolveGatewayBaseUrl(
+                    ctx.baseUrlOverride,
+                    GATEWAY_CODEX_BASE_URL
+                  ),
                   env_key: GATEWAY_API_KEY_ENV,
                   wire_api: 'responses',
                 },

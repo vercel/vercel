@@ -1020,6 +1020,10 @@ const main = async () => {
           telemetry.trackCliCommandCerts(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).certs;
           break;
+        case 'comments':
+          telemetry.trackCliCommandComments(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).comments;
+          break;
         case 'crons':
         case 'cron':
           telemetry.trackCliCommandCrons(userSuppliedSubCommand);

@@ -41,7 +41,7 @@ export default async function installationsList(
   }
   if (parsed.args.length > 0) {
     output.error(
-      'Invalid number of arguments. Usage: `vercel integration installations [--integration <slug>] [--format json]`'
+      'Invalid number of arguments. Usage: `vercel integration installations [--integration <slug>] [--json]`'
     );
     return 1;
   }

@@ -47,10 +47,11 @@ import { getConfig, type BaseFunctionConfig } from '@vercel/static-config';
 import { Register, register } from './typescript';
 import { generateProjectManifest } from './diagnostics';
 import {
-  validateConfiguredRuntime,
   entrypointToOutputPath,
   getRegExpFromMatchers,
   isEdgeRuntime,
+  resolveMiddlewareMatcher,
+  validateMiddlewareRuntime,
 } from './utils';
 
 interface DownloadOptions {
@@ -525,9 +526,15 @@ export const build = async ({
   const staticConfig = getConfig(project, entrypointPath);
 
   const runtime = staticConfig?.runtime;
-  validateConfiguredRuntime(runtime, entrypoint);
+  validateMiddlewareRuntime(
+    runtime,
+    entrypoint,
+    isMiddleware ? config.middlewareRuntime : undefined
+  );
 
-  if (runtime) {
+  if (isMiddleware && config.middlewareRuntime === 'nodejs') {
+    isEdgeFunction = false;
+  } else if (runtime) {
     isEdgeFunction = isEdgeRuntime(runtime);
   }
 
@@ -558,14 +565,19 @@ export const build = async ({
   // Add a `route` for Middleware
   if (isMiddleware) {
     // Middleware is a catch-all for all paths unless a `matcher` property is defined
-    const src = getRegExpFromMatchers(staticConfig?.matcher);
+    const matcher = resolveMiddlewareMatcher(
+      config.middlewareMatcher,
+      staticConfig?.matcher,
+      entrypoint
+    );
+    const src = getRegExpFromMatchers(matcher);
 
     const middlewareRawSrc: string[] = [];
-    if (staticConfig?.matcher) {
-      if (Array.isArray(staticConfig.matcher)) {
-        middlewareRawSrc.push(...staticConfig.matcher);
+    if (matcher) {
+      if (Array.isArray(matcher)) {
+        middlewareRawSrc.push(...matcher);
       } else {
-        middlewareRawSrc.push(staticConfig.matcher as string);
+        middlewareRawSrc.push(matcher as string);
       }
     }
 

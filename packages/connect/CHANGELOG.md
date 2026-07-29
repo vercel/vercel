@@ -1,5 +1,32 @@
 # @vercel/connect
 
+## 0.5.0
+
+### Minor Changes
+
+- 72d6d55: Add `connectPhotonCredentials` for resolving app-scoped Photon project credentials from a Vercel Connect connector.
+- 9ac74f0: Adding `getConnectorMetadata()` to `@vercel/connect` SDK
+
+## 0.4.3
+
+### Patch Changes
+
+- f999343: Add token exchange subjects to `ConnectTokenParams`.
+- 726c7b4: Add `experimental_startInstallation` for creating Vercel Connect installation requests.
+  - @vercel/oidc@3.8.1
+
+## 0.4.2
+
+### Patch Changes
+
+- 0be0e28: Adding support for authorization mode override via env var.
+
+## 0.4.1
+
+### Patch Changes
+
+- dad41da: Test Connect against a recent stable Eve and AI SDK 7 release.
+
 ## 0.4.0
 
 ### Minor Changes

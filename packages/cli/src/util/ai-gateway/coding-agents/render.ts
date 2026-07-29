@@ -124,13 +124,12 @@ export function printReceiptPath(label: string, path: string): void {
   );
 }
 
-/** Masked-key receipt row, e.g. `API Key  vck_1234••••abcd · macOS Keychain`. */
 export function printKeyRow(
   key: string,
-  opts: { keychain?: boolean } = {}
+  opts: { keychain?: boolean; created?: boolean } = {}
 ): void {
   printAlignedLabel(
-    'API Key',
+    opts.created ? 'New API Key' : 'API Key',
     `${maskSecret(key)} · ${opts.keychain ? 'macOS Keychain' : 'Config files'}`
   );
 }
@@ -147,7 +146,35 @@ export function printNotes(plan: SetupPlan): void {
   }
 }
 
-export function printKey(key: string, opts: { keychain?: boolean } = {}): void {
+export function printKey(
+  key: string,
+  opts: { keychain?: boolean; created?: boolean } = {}
+): void {
   output.print('\n');
   printKeyRow(key, opts);
+}
+
+export function buildAgentPrompt(plan: SetupPlan, apiKey: string): string {
+  const sections: string[] = [
+    'Set up the Vercel AI Gateway for my coding agents by applying the file changes below.',
+    'For each file, create it if missing or edit it to match the diff (lines starting with `+` are added, `-` are removed; `⋯` marks skipped unchanged lines).',
+    `Any masked value (e.g. ${maskSecret(apiKey)}) is my AI Gateway API key, stored in my macOS Keychain; the config and shell already reference it with \`${'security find-generic-password'}\`, so leave those lookups as-is and do not ask me to paste the key.`,
+    '',
+  ];
+  for (const change of plan.changes) {
+    if (change.status !== 'create' && change.status !== 'update') {
+      continue;
+    }
+    const diff = renderDiff(change.current ?? '', change.next ?? '', {
+      secrets: [apiKey],
+      indent: '',
+      color: false,
+    });
+    sections.push(`# ${change.label} — ${change.path}`);
+    if (diff) {
+      sections.push(diff);
+    }
+    sections.push('');
+  }
+  return `${sections.join('\n').trimEnd()}\n`;
 }
