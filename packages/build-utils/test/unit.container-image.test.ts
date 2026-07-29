@@ -1,4 +1,4 @@
-import { ContainerImage } from '../src';
+import { ContainerImage } from '../src/container-image';
 
 describe('ContainerImage', () => {
   it('preserves function settings', () => {
@@ -6,10 +6,24 @@ describe('ContainerImage', () => {
       files: {},
       handler: 'docker.io/library/nginx:1.27',
       runtime: 'container',
-      environment: {},
+      architecture: 'arm64',
+      memory: 2048,
+      maxDuration: 60,
       maxConcurrency: 8,
+      regions: ['iad1'],
+      functionFailoverRegions: ['cle1'],
+      supportsCancellation: true,
     });
 
-    expect(image.maxConcurrency).toBe(8);
+    expect(image).toMatchObject({
+      environment: {},
+      architecture: 'arm64',
+      memory: 2048,
+      maxDuration: 60,
+      maxConcurrency: 8,
+      regions: ['iad1'],
+      functionFailoverRegions: ['cle1'],
+      supportsCancellation: true,
+    });
   });
 });

@@ -15,6 +15,8 @@ import {
   addSubcommand,
   removeSubcommand,
   loginSubcommand,
+  buildSubcommand,
+  pushSubcommand,
 } from './command';
 import {
   imageAggregateCommand,
@@ -27,6 +29,14 @@ import {
   tagsLsSubcommand,
   tagsInspectSubcommand,
 } from './tags/command';
+import {
+  PERMISSIONS_ACTIONS,
+  permissionsAggregateCommand,
+  permissionsLsSubcommand,
+  permissionsAddSubcommand,
+  permissionsRmSubcommand,
+  permissionsClearSubcommand,
+} from './permissions/command';
 
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
@@ -34,8 +44,11 @@ const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   rm: getCommandAliases(removeSubcommand),
   login: getCommandAliases(loginSubcommand),
+  build: getCommandAliases(buildSubcommand),
+  push: getCommandAliases(pushSubcommand),
   tag: getCommandAliases(tagsAggregateCommand),
   image: getCommandAliases(imageAggregateCommand),
+  permissions: getCommandAliases(permissionsAggregateCommand),
 };
 
 export default async function vcr(client: Client): Promise<number> {
@@ -90,6 +103,14 @@ export default async function vcr(client: Client): Promise<number> {
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         printHelp(loginSubcommand);
         return 2;
+      case 'build':
+        telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
+        printHelp(buildSubcommand);
+        return 2;
+      case 'push':
+        telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
+        printHelp(pushSubcommand);
+        return 2;
       case 'tag': {
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         const nested = args[0];
@@ -122,6 +143,40 @@ export default async function vcr(client: Client): Promise<number> {
         printHelp(imageAggregateCommand);
         return 2;
       }
+      case 'permissions': {
+        telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
+        // Actions use `<repository> <action>` ordering, so the action may be
+        // the first or second positional (the repository may be omitted).
+        const nested = args.slice(0, 2);
+        const hasAction = (aliases: string[]) =>
+          nested.some(arg => arg !== undefined && aliases.includes(arg));
+        function printPermissionsActionHelp(command: Command): void {
+          output.print(
+            help(command, {
+              parent: { ...vcrCommand, name: 'vcr permissions repository' },
+              columns: client.stderr.columns,
+            })
+          );
+        }
+        if (hasAction(PERMISSIONS_ACTIONS.ls)) {
+          printPermissionsActionHelp(permissionsLsSubcommand);
+          return 2;
+        }
+        if (hasAction(PERMISSIONS_ACTIONS.add)) {
+          printPermissionsActionHelp(permissionsAddSubcommand);
+          return 2;
+        }
+        if (hasAction(PERMISSIONS_ACTIONS.rm)) {
+          printPermissionsActionHelp(permissionsRmSubcommand);
+          return 2;
+        }
+        if (hasAction(PERMISSIONS_ACTIONS.clear)) {
+          printPermissionsActionHelp(permissionsClearSubcommand);
+          return 2;
+        }
+        printHelp(permissionsAggregateCommand);
+        return 2;
+      }
       default:
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         output.print(help(vcrCommand, { columns: client.stderr.columns }));
@@ -145,12 +200,21 @@ export default async function vcr(client: Client): Promise<number> {
     case 'login':
       telemetry.trackCliSubcommandLogin(subcommandOriginal);
       return (await import('./login')).default(client, args, telemetry);
+    case 'build':
+      telemetry.trackCliSubcommandBuild(subcommandOriginal);
+      return (await import('./build')).default(client, telemetry);
+    case 'push':
+      telemetry.trackCliSubcommandPush(subcommandOriginal);
+      return (await import('./push')).default(client, telemetry);
     case 'tag':
       telemetry.trackCliSubcommandTag(subcommandOriginal);
       return (await import('./tags')).default(client, args, telemetry);
     case 'image':
       telemetry.trackCliSubcommandImage(subcommandOriginal);
       return (await import('./image')).default(client, args, telemetry);
+    case 'permissions':
+      telemetry.trackCliSubcommandPermissions(subcommandOriginal);
+      return (await import('./permissions')).default(client, args, telemetry);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(vcrCommand, { columns: client.stderr.columns }));

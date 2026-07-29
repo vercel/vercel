@@ -104,7 +104,7 @@ export default async function whoami(client: Client): Promise<number> {
     // If stdout is not a TTY, only print the username to support piping
     // the output to another file / executable. This preserves the previous
     // behavior for scripts that rely on `vc whoami` printing the logged-in
-    // user. Team information is available via `--format json`.
+    // user. Team information is available via `--json`.
     client.stdout.write(`${user.username}\n`);
   }
 
