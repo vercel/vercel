@@ -116,6 +116,37 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     expect(mounts).toHaveLength(0);
   });
 
+  it('discovers StaticFiles inside a mounted sub-application', async () => {
+    const appDir = path.join(testDir, 'app-sub-app');
+    fs.mkdirSync(path.join(appDir, 'sub_static'), { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'sub_static', 'file.txt'), 'sub');
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'from fastapi.staticfiles import StaticFiles',
+        'sub = FastAPI()',
+        'sub.mount("/static", StaticFiles(directory="sub_static"), name="s")',
+        'app = FastAPI()',
+        'app.mount("/sub", sub)',
+      ].join('\n')
+    );
+
+    const { mounts } = await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    // The sub-app isn't a StaticFiles or a Router, but its own mount must still
+    // be found under the parent prefix.
+    expect(mounts).toHaveLength(1);
+    expect(mounts[0].urlPath).toBe('/sub/static');
+  });
+
   it('reports a shadow route for a route declared before a mount', async () => {
     const appDir = path.join(testDir, 'app-shadow-mount');
     fs.mkdirSync(path.join(appDir, 'static'), { recursive: true });
