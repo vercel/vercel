@@ -15,6 +15,10 @@ import {
 import { AGENT_REASON } from '../../../util/agent-output-constants';
 import { packageName } from '../../../util/pkg-name';
 import { rulesAddSubcommand } from './command';
+import {
+  parseCustomAlertQueryBody,
+  setMissingCustomAlertProjectScope,
+} from './custom-alert-query';
 import { parseRulesFlagsAndScope } from './parse-scope';
 import {
   emitRulesArgParseError,
@@ -131,14 +135,24 @@ export default async function add(
     return 1;
   }
 
+  const parsedCustomAlertQuery = parseCustomAlertQueryBody(client, body);
+  if (typeof parsedCustomAlertQuery === 'number') {
+    return parsedCustomAlertQuery;
+  }
+
+  const customAlertProjectId =
+    typeof body.projectId === 'string' ? body.projectId : scope.projectId;
+  if (parsedCustomAlertQuery && customAlertProjectId) {
+    body.projectId ??= customAlertProjectId;
+    setMissingCustomAlertProjectScope(
+      parsedCustomAlertQuery,
+      scope.teamId,
+      customAlertProjectId
+    );
+  }
+
   delete body.id;
   delete body.teamId;
-
-  // List with a linked project filters by `projectId`; the API POST only
-  // persisted the JSON body, so attach scope project when the body omits it.
-  if (scope.projectId !== undefined && body.projectId === undefined) {
-    body.projectId = scope.projectId;
-  }
 
   const path = rulesCollectionPath(scope);
   output.spinner('Creating alert rule...');

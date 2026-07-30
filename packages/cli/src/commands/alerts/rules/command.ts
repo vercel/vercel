@@ -62,6 +62,47 @@ export const rulesLsSubcommand = {
   ],
 } as const;
 
+export const rulesSchemaSubcommand = {
+  name: 'schema',
+  aliases: [],
+  description: 'Show alert rule body schema and examples by alert type',
+  arguments: [{ name: 'metric-or-prefix', required: false }],
+  options: [
+    {
+      name: 'type',
+      shorthand: null,
+      type: String,
+      argument: 'TYPE',
+      deprecated: false,
+      description:
+        'Alert rule type to describe: usage_anomaly, error_anomaly, or custom_alert.',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'List supported rule types',
+      value: `${packageName} alerts rules schema`,
+    },
+    {
+      name: 'Show error anomaly rule schema',
+      value: `${packageName} alerts rules schema --type error_anomaly`,
+    },
+    {
+      name: 'Show custom alert rule schema',
+      value: `${packageName} alerts rules schema --type custom_alert`,
+    },
+    {
+      name: 'Show custom alert schema with metric details',
+      value: `${packageName} alerts rules schema --type custom_alert vercel.request`,
+    },
+    {
+      name: 'Schema as JSON',
+      value: `${packageName} alerts rules schema --type custom_alert --format json`,
+    },
+  ],
+} as const;
+
 export const rulesAddSubcommand = {
   name: 'add',
   aliases: ['create'],
@@ -138,7 +179,8 @@ export const rulesRmSubcommand = {
 export const rulesUpdateSubcommand = {
   name: 'update',
   aliases: ['patch'],
-  description: 'Patch an alert rule from a JSON body file',
+  description:
+    'Patch an alert rule from a JSON body file; custom queries retain the stored project scope when omitted',
   arguments: [
     {
       name: 'ruleId',
@@ -174,6 +216,7 @@ export const rulesAggregateCommand = {
   arguments: [],
   subcommands: [
     rulesLsSubcommand,
+    rulesSchemaSubcommand,
     rulesAddSubcommand,
     rulesInspectSubcommand,
     rulesRmSubcommand,
@@ -186,8 +229,28 @@ export const rulesAggregateCommand = {
       value: `${packageName} alerts rules ls`,
     },
     {
+      name: 'List custom alert rules',
+      value: `${packageName} alerts rules ls --type custom_alert`,
+    },
+    {
+      name: 'Show schema for a rule type',
+      value: `${packageName} alerts rules schema --type custom_alert`,
+    },
+    {
       name: 'Add a rule',
       value: `${packageName} alerts rules add --body ./rule.json`,
+    },
+    {
+      name: 'Inspect a rule',
+      value: `${packageName} alerts rules inspect ar_abc123`,
+    },
+    {
+      name: 'Update a rule',
+      value: `${packageName} alerts rules update ar_abc123 --body ./patch.json`,
+    },
+    {
+      name: 'Delete a rule',
+      value: `${packageName} alerts rules rm ar_abc123`,
     },
   ],
 } as const;

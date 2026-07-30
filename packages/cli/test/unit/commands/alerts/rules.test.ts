@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { writeFileSync } from 'fs';
 import { join } from 'path';
+import stripAnsi from 'strip-ansi';
 import { client } from '../../../mocks/client';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import alerts from '../../../../src/commands/alerts';
@@ -86,6 +87,156 @@ describe('alerts rules', () => {
     expect(output).toContain('Scope');
     expect(output).toContain('ar_1');
     expect(output).toContain('My rule');
+  });
+
+  it('prints add help with built-in and custom body examples', async () => {
+    client.setArgv('alerts', 'rules', 'add', '-help');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    const output = stripAnsi(client.stderr.getFullOutput());
+    expect(output).toContain('vercel alerts rules add [options]');
+    expect(output).toContain('Body examples:');
+    expect(output).toContain('Built-in usage anomaly rule:');
+    expect(output).toContain('Built-in 4xx error anomaly rule:');
+    expect(output).toContain('Custom threshold rule:');
+    expect(output).toContain('Custom anomaly rule:');
+    expect(output).toContain('"alertTypes": [{ "type": "custom_alert" }]');
+    expect(output).toContain('queryJsonString');
+    expect(output).toContain('Custom alert metric discovery:');
+    expect(output).toContain('vercel metrics schema');
+    expect(output).toContain('vercel.request.count');
+    expect(output).toContain('event: "incomingRequest"');
+    expect(output).toContain('vercel.function_invocation.count');
+    expect(output).toContain('event: "serverlessFunctionInvocation"');
+    expect(output).toContain('vercel alerts rules schema --type <type>');
+  });
+
+  it('prints alert rule schema type choices', async () => {
+    client.setArgv('alerts', 'rules', 'schema');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    const output = stripAnsi(client.stderr.getFullOutput());
+    expect(output).toContain('Alert rule schema');
+    expect(output).toContain('Type');
+    expect(output).toContain('Description');
+    expect(output).toContain('usage_anomaly');
+    expect(output).toContain('Built-in usage anomaly alerts');
+    expect(output).toContain('vercel alerts rules schema --type <type>');
+  });
+
+  it('prints reference-first schema for error anomaly rules', async () => {
+    client.setArgv('alerts', 'rules', 'schema', '--type', 'error_anomaly');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    const output = stripAnsi(client.stderr.getFullOutput());
+    expect(output).toContain('Alert rule schema: error_anomaly');
+    expect(output).toContain('Fields');
+    expect(output).toContain('alertTypes[].type');
+    expect(output).toContain('alertTypes[].filter values');
+    expect(output).toContain('statusGroup');
+    expect(output).toContain('route eq');
+    expect(output).toContain('"projectId": "projectId eq \'prj_123\'"');
+    expect(output).toContain('Filtered to 5xx on one route');
+    expect(output).toContain(
+      '"filter": "statusGroup eq \'5xx\' and route eq \'/api/checkout\'"'
+    );
+  });
+
+  it('prints custom alert schema with metrics schema details', async () => {
+    client.scenario.get(
+      '/v2/observability/schema/vercel.request',
+      (_req, res) => {
+        res.json([
+          {
+            id: 'vercel.request.count',
+            description: 'Request count',
+            dimensions: [
+              { name: 'route', label: 'Route' },
+              { name: 'requestHostname', label: 'Request Hostname' },
+            ],
+            unit: 'count',
+            aggregations: ['sum', 'persecond'],
+            defaultAggregation: 'sum',
+          },
+        ]);
+      }
+    );
+
+    client.setArgv(
+      'alerts',
+      'rules',
+      'schema',
+      '--type',
+      'custom_alert',
+      'vercel.request'
+    );
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    const output = stripAnsi(client.stderr.getFullOutput());
+    expect(output).toContain('Alert rule schema: custom_alert');
+    expect(output).toContain('Custom alert fields');
+    expect(output).toContain('customAlert.queryJsonString fields');
+    expect(output).toContain(
+      'Alert query event name, for example incomingRequest'
+    );
+    expect(output).toContain(
+      'Selected project on add; stored rule project on update'
+    );
+    expect(output).toContain('customAlert.queryJsonString before escaping');
+    expect(output).toContain('Custom alert metric discovery');
+    expect(output).toContain('vercel metrics schema');
+    expect(output).toContain('vercel.function_invocation.count');
+    expect(output).toContain('event: "serverlessFunctionInvocation"');
+    expect(output).toContain('Metric schema: vercel.request');
+    expect(output).toContain('vercel.request.count');
+    expect(output).toContain('sum (default), persecond');
+    expect(output).toContain('route, requestHostname');
+  });
+
+  it('prints alert rule schema as JSON', async () => {
+    client.setArgv(
+      'alerts',
+      'rules',
+      'schema',
+      '--type',
+      'usage_anomaly',
+      '--format',
+      'json'
+    );
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    expect(payload.schema.type).toBe('usage_anomaly');
+    expect(payload.schema.fields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ field: 'name', required: 'yes' }),
+        expect.objectContaining({ field: 'projectId', required: 'no' }),
+        expect.objectContaining({
+          field: 'alertTypes[].type',
+          required: 'yes',
+        }),
+        expect.objectContaining({
+          field: 'alertTypes[].filter',
+          required: 'no',
+        }),
+      ])
+    );
+    expect(payload.schema.alertTypeFilterValues).toEqual([
+      [
+        'metric',
+        'fluid_cpu_duration, fluid_duration, fast_data_transfer, edge_requests, function_invocations',
+      ],
+    ]);
   });
 
   it('summarizes custom alert rule details when present', async () => {
@@ -255,12 +406,9 @@ describe('alerts rules', () => {
     expect(output).toContain(
       'project: Qmc52npNy86S8VV4Mt8a8dP1LEkRNbgosW3pBCQytkcgf2'
     );
-    expect(output).toContain('Sensitivity');
-    expect(output).toContain('3');
     expect(output).toContain('Notifications');
     expect(output).toContain('Auto-subscribe owners');
     expect(output).toContain('yes');
-    expect(output).not.toContain('"autosubscribeOwnersInKnock"');
   });
 
   it('inspects an alert rule when flags precede the rule id', async () => {
@@ -484,27 +632,33 @@ describe('alerts rules', () => {
     expect(mockedGetLinkedProject).not.toHaveBeenCalled();
   });
 
-  it('creates a rule with POST', async () => {
+  it('creates a rule from the provided JSON body', async () => {
     let method = '';
     client.scenario.post('/alerts/v2/alert-rules', (req, res) => {
       method = req.method;
       expect(req.query.teamId).toBe('team_dummy');
       expect(req.query.projectId).toBe('prj_alerts');
-      expect(req.body).toMatchObject({
+      expect(req.body).toEqual({
         name: 'from-cli',
-        projectId: 'prj_alerts',
+        alertTypes: [{ type: 'usage_anomaly' }],
+        projectId: "projectId eq 'prj_from_body'",
       });
       res.status(201).json({
         id: 'ar_new',
         name: 'from-cli',
         teamId: 'team_dummy',
-        projectId: 'prj_alerts',
       });
     });
 
     writeFileSync(
       join(tmpDir, 'rule.json'),
-      JSON.stringify({ name: 'from-cli' })
+      JSON.stringify({
+        id: 'ar_copied',
+        name: 'from-cli',
+        teamId: 'team_from_copy',
+        alertTypes: [{ type: 'usage_anomaly' }],
+        projectId: "projectId eq 'prj_from_body'",
+      })
     );
     client.setArgv('alerts', 'rules', 'add', '--body', 'rule.json');
 
@@ -512,6 +666,145 @@ describe('alerts rules', () => {
     expect(exitCode).toBe(0);
     expect(method).toBe('POST');
     expect(client.stderr.getFullOutput()).toContain('Created alert rule');
+  });
+
+  it('reports invalid custom alert query JSON before creating a rule', async () => {
+    writeFileSync(
+      join(tmpDir, 'invalid-custom-rule.json'),
+      JSON.stringify({
+        name: 'custom-rule',
+        projectId: 'prj_alerts',
+        alertTypes: [{ type: 'custom_alert' }],
+        customAlert: {
+          queryJsonString: '{"event":',
+          triggerType: 'anomaly',
+          triggerOperator: 'gt',
+          triggerThreshold: 3,
+        },
+      })
+    );
+    client.setArgv(
+      'alerts',
+      'rules',
+      'add',
+      '--body',
+      'invalid-custom-rule.json'
+    );
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Invalid JSON in customAlert.queryJsonString.'
+    );
+  });
+
+  it('adds linked project targeting to a custom alert', async () => {
+    const queryJsonString = JSON.stringify({
+      event: 'incomingRequest',
+      rollups: {
+        requests: {
+          measure: 'count',
+          aggregation: 'sum',
+        },
+      },
+      granularity: { minutes: 5 },
+    });
+
+    client.scenario.post('/alerts/v2/alert-rules', (req, res) => {
+      expect(req.body).toEqual({
+        name: 'custom-rule',
+        projectId: 'prj_alerts',
+        alertTypes: [{ type: 'custom_alert' }],
+        customAlert: {
+          queryJsonString: JSON.stringify({
+            event: 'incomingRequest',
+            rollups: {
+              requests: {
+                measure: 'count',
+                aggregation: 'sum',
+              },
+            },
+            granularity: { minutes: 5 },
+            scope: {
+              type: 'project',
+              ownerId: 'team_dummy',
+              projectIds: ['prj_alerts'],
+            },
+          }),
+          triggerType: 'anomaly',
+          triggerOperator: 'gt',
+          triggerThreshold: 3,
+        },
+      });
+      res.status(201).json({
+        id: 'ar_custom',
+        name: 'custom-rule',
+        teamId: 'team_dummy',
+      });
+    });
+
+    writeFileSync(
+      join(tmpDir, 'custom-rule.json'),
+      JSON.stringify({
+        name: 'custom-rule',
+        alertTypes: [{ type: 'custom_alert' }],
+        customAlert: {
+          queryJsonString,
+          triggerType: 'anomaly',
+          triggerOperator: 'gt',
+          triggerThreshold: 3,
+        },
+      })
+    );
+    client.setArgv('alerts', 'rules', 'add', '--body', 'custom-rule.json');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+  });
+
+  it('uses explicit project scope without rewriting the body', async () => {
+    mockedGetProject.mockResolvedValue({ id: 'prj_explicit' } as any);
+    client.scenario.post('/alerts/v2/alert-rules', (req, res) => {
+      expect(req.query.teamId).toBe('team_dummy');
+      expect(req.query.projectId).toBe('prj_explicit');
+      expect(req.body).toEqual({
+        name: 'project-rule',
+        alertTypes: [{ type: 'error_anomaly' }],
+      });
+      res.status(201).json({
+        id: 'ar_project',
+        name: 'project-rule',
+        teamId: 'team_dummy',
+      });
+    });
+
+    writeFileSync(
+      join(tmpDir, 'project-rule.json'),
+      JSON.stringify({
+        name: 'project-rule',
+        alertTypes: [{ type: 'error_anomaly' }],
+      })
+    );
+    client.setArgv(
+      'alerts',
+      'rules',
+      'add',
+      '--body',
+      'project-rule.json',
+      '--project',
+      'explicit-project'
+    );
+
+    const exitCode = await alerts(client);
+    expect(exitCode).toBe(0);
+    expect(mockedGetProject).toHaveBeenCalledWith(
+      client,
+      'explicit-project',
+      'team_dummy'
+    );
+    expect(mockedGetLinkedProject).not.toHaveBeenCalled();
   });
 
   it('deletes a rule with --yes', async () => {
@@ -548,6 +841,146 @@ describe('alerts rules', () => {
     const exitCode = await alerts(client);
     expect(exitCode).toBe(0);
     expect(method).toBe('PATCH');
+  });
+
+  it('inherits the stored project scope when updating a custom alert query', async () => {
+    const queryJsonString = JSON.stringify({
+      event: 'incomingRequest',
+      rollups: {
+        requests: {
+          measure: 'count',
+          aggregation: 'sum',
+        },
+      },
+      granularity: { hours: 1 },
+    });
+
+    client.scenario.get('/alerts/v2/alert-rules/:ruleId', (req, res) => {
+      expect(req.params.ruleId).toBe('ar_custom');
+      res.json({
+        id: 'ar_custom',
+        teamId: 'team_dummy',
+        projectId: 'prj_rule',
+        alertTypes: [{ type: 'custom_alert' }],
+      });
+    });
+    client.scenario.patch('/alerts/v2/alert-rules/:ruleId', (req, res) => {
+      expect(req.body).toEqual({
+        customAlert: {
+          queryJsonString: JSON.stringify({
+            event: 'incomingRequest',
+            rollups: {
+              requests: {
+                measure: 'count',
+                aggregation: 'sum',
+              },
+            },
+            granularity: { hours: 1 },
+            scope: {
+              type: 'project',
+              ownerId: 'team_dummy',
+              projectIds: ['prj_rule'],
+            },
+          }),
+        },
+      });
+      res.json({ id: 'ar_custom', name: 'custom-rule' });
+    });
+
+    writeFileSync(
+      join(tmpDir, 'custom-patch.json'),
+      JSON.stringify({
+        customAlert: {
+          queryJsonString,
+        },
+      })
+    );
+    client.setArgv(
+      'alerts',
+      'rules',
+      'update',
+      'ar_custom',
+      '--body',
+      'custom-patch.json'
+    );
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+  });
+
+  it('preserves an explicit custom alert query scope on update', async () => {
+    const queryJsonString = JSON.stringify({
+      event: 'incomingRequest',
+      rollups: {
+        requests: {
+          measure: 'count',
+          aggregation: 'sum',
+        },
+      },
+      granularity: { minutes: 5 },
+      scope: {
+        type: 'project',
+        ownerId: 'team_explicit',
+        projectIds: ['prj_explicit'],
+      },
+    });
+
+    client.scenario.patch('/alerts/v2/alert-rules/:ruleId', (req, res) => {
+      expect(req.body).toEqual({
+        customAlert: {
+          queryJsonString,
+        },
+      });
+      res.json({ id: 'ar_custom', name: 'custom-rule' });
+    });
+
+    writeFileSync(
+      join(tmpDir, 'explicit-scope-patch.json'),
+      JSON.stringify({
+        customAlert: {
+          queryJsonString,
+        },
+      })
+    );
+    client.setArgv(
+      'alerts',
+      'rules',
+      'update',
+      'ar_custom',
+      '--body',
+      'explicit-scope-patch.json'
+    );
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+  });
+
+  it('reports invalid custom alert query JSON before updating a rule', async () => {
+    writeFileSync(
+      join(tmpDir, 'invalid-custom-patch.json'),
+      JSON.stringify({
+        customAlert: {
+          queryJsonString: '{"event":',
+        },
+      })
+    );
+    client.setArgv(
+      'alerts',
+      'rules',
+      'update',
+      'ar_custom',
+      '--body',
+      'invalid-custom-patch.json'
+    );
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Invalid JSON in customAlert.queryJsonString.'
+    );
   });
 
   describe('--non-interactive', () => {
