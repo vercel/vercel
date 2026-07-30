@@ -8,6 +8,7 @@ import type Client from '../client';
 import { isIgnoredDirectory } from '../projects/ignored-directories';
 import {
   frameworkLabel,
+  MAX_SCAN_DEPTH,
   type PendingRepoFrameworks,
   type RepoFrameworks,
 } from '../projects/detect-repo-frameworks';
@@ -19,9 +20,9 @@ const ROOT_DISPLAY = './';
 
 const PAGE_SIZE = 12;
 
-// The label goes in `name` so it shows on every row, not just the highlighted
-// one. Tab-completion then writes it into the readline buffer along with the
-// path, so `stripFrameworkLabel()` removes it again on the way back in.
+// The label lives in `name` so it shows on every row, not just the highlighted
+// one. Tab writes `name` into the readline buffer, so it has to be stripped
+// back off on the way in.
 function withFrameworkLabel(name: string, label: string | undefined): string {
   return label ? `${name} (${label})` : name;
 }
@@ -29,18 +30,15 @@ function withFrameworkLabel(name: string, label: string | undefined): string {
 function stripFrameworkLabel(term: string): string {
   const match = term.match(/^(.*?)\s+\(([^)]+)\)\s*$/);
   if (!match) return term;
-  // Only strip real framework names, so a directory named `app (old)` is
-  // still searchable as typed.
+  // Only strip real framework names, so `app (old)` stays searchable as typed.
   return KNOWN_FRAMEWORK_NAMES.has(match[2]) ? match[1] : term;
 }
 
 const KNOWN_FRAMEWORK_NAMES = new Set(frameworkList.map(f => f.name));
 
 /**
- * `name` must stay the bare directory path: `@inquirer/search` writes it into
- * the readline buffer on Tab, so decoration here ends up in the typed path. A
- * trailing `/` is what makes Tab descend, since completing to `apps/` re-runs
- * the source with that term.
+ * A trailing `/` on `name` is what makes Tab descend: completing to `apps/`
+ * re-runs the source with that term.
  */
 interface RootDirectoryChoice {
   name: string;
@@ -79,8 +77,7 @@ function isInsideCwd(cwd: string, relative: string): boolean {
   return target === base || target.startsWith(base + path.sep);
 }
 
-// The source re-runs on every keystroke over mostly the same directories, so
-// without this the same `readdir` calls repeat hundreds of times per word.
+// The source re-runs on every keystroke over mostly the same directories.
 let listingCache = new Map<string, Promise<string[]>>();
 
 function readSubdirectories(
@@ -118,14 +115,15 @@ async function listSubdirectories(
     .sort((a, b) => a.localeCompare(b));
 }
 
-const SEARCH_MAX_DEPTH = 4;
 const SEARCH_MAX_DIRECTORIES = 750;
 const SEARCH_MAX_RESULTS = 40;
 
 /**
- * Find directories at any depth whose name contains `term`, so `cli` matches
- * `packages/cli`. Breadth-first, so shallower matches are found before the
- * budget runs out.
+ * Find directories whose name contains `term`, so `cli` matches
+ * `packages/cli`. Breadth-first, so shallower matches win the budget.
+ *
+ * Depth-capped for cost, not correctness: a path typed past the cap is still
+ * listed by `browseDirectories()` and still selectable.
  */
 async function searchNestedDirectories(
   cwd: string,
@@ -137,15 +135,14 @@ async function searchNestedDirectories(
 
   let level: string[] = [''];
 
-  for (let depth = 0; depth < SEARCH_MAX_DEPTH; depth++) {
+  for (let depth = 0; depth < MAX_SCAN_DEPTH; depth++) {
     if (level.length === 0) break;
     if (matches.length >= SEARCH_MAX_RESULTS) break;
     if (scanned >= SEARCH_MAX_DIRECTORIES) break;
 
     const nextLevel: string[] = [];
 
-    // Sequential per level, so the scan budget stays meaningful instead of
-    // overshooting it in parallel.
+    // Sequential per level, so the budget is not overshot in parallel.
     for (const dir of level) {
       if (scanned >= SEARCH_MAX_DIRECTORIES) break;
       scanned++;
@@ -228,9 +225,8 @@ async function browseDirectories(
     const nested = await searchNestedDirectories(cwd, prefix);
 
     // Drop matches reachable from something already listed: `app` matches
-    // `apps/` and every `apps/*/app` under it, and showing both makes the
-    // shallow entry look duplicated. Matches arrive shallowest-first, so
-    // growing the set as we go also collapses deeper matches under nearer ones.
+    // `apps/` and every `apps/*/app` under it. Matches arrive shallowest-first,
+    // so growing the set as we go collapses deeper matches under nearer ones.
     const shown = new Set(children.map(choice => choice.value));
     const deeper: string[] = [];
     for (const dir of nested) {
@@ -272,7 +268,7 @@ async function toChoices(
 /**
  * Local pre-check only. `validateRootDirectory()` stays the authority after the
  * prompt closes; it prints through the output manager, which would corrupt the
- * prompt's rendering if called from here.
+ * prompt's rendering from in here.
  */
 async function validateChoice(
   cwd: string,
@@ -311,8 +307,8 @@ export async function inputRootDirectory(
 
   listingCache = new Map();
 
-  // Only use detection results that have already arrived, rather than holding
-  // up the prompt. Read on every keystroke so labels appear once the scan lands.
+  // Only results that have already arrived; never block the prompt. Read per
+  // keystroke so labels appear once the scan lands.
   const readyFrameworks = () => pendingFrameworks?.result();
 
   const selected = await client.input.search<string>({

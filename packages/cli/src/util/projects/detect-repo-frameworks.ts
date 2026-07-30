@@ -11,54 +11,31 @@ import { isIgnoredDirectory } from './ignored-directories';
 import output from '../../output-manager';
 
 /**
- * How deep to walk when the repo is not a workspace.
- *
- * Workspaces tell us exactly where their packages are, so they need no walk.
- * Everything else gets a bounded scan: 3 levels covers the common layouts
- * (`app/`, `apps/web/`, `services/api/src` style roots) without turning the
- * scan into a full-tree crawl on a large repo.
+ * How deep to walk the tree. Shared with the root-directory picker so every
+ * directory it can list is also deep enough to have been given a label.
  */
-const NON_WORKSPACE_MAX_DEPTH = 3;
+export const MAX_SCAN_DEPTH = 4;
 
-/** Upper bound on directories visited during a non-workspace scan. */
+/** Upper bound on directories visited during a scan. */
 const MAX_DIRECTORIES = 400;
 
-/**
- * Repo-relative directory -> the frameworks detected there.
- *
- * The repo root is the empty string, matching `detectProjects()` and the
- * root-directory prompt's `ROOT_VALUE`.
- */
+/** Repo-relative directory -> frameworks detected there. Root is `''`. */
 export type RepoFrameworks = Map<string, Framework[]>;
 
-/**
- * A detection run that was started ahead of time.
- *
- * Detection is kicked off as soon as we know a project will be created, so the
- * filesystem work overlaps with the prompts the user is answering in the
- * meantime. Consumers `await` the promise only at the point they actually need
- * labels, and never block on it: `settled()` reports whether the result is
- * already available so callers can render immediately and skip labels rather
- * than stall a prompt behind a slow scan.
- */
+/** A detection run started ahead of the prompt that consumes it. */
 export interface PendingRepoFrameworks {
   promise: Promise<RepoFrameworks>;
   /**
-   * The result, or `undefined` while detection is still running.
-   *
-   * Resolved synchronously by the owner of the run rather than by a `.then()`
-   * on the consumer side: a late subscriber's callback only fires on the next
-   * microtask, which is easily after the first render, so labels would be
-   * dropped even though the data was ready.
+   * The result, or `undefined` while detection is still running. Set
+   * synchronously rather than via a consumer-side `.then()`, whose callback
+   * would not fire until after the prompt's first render.
    */
   result: () => RepoFrameworks | undefined;
 }
 
 /**
- * Start repo-wide framework detection without awaiting it.
- *
- * Never rejects: detection is decorative, so any failure resolves to an empty
- * map and the caller silently renders unlabeled directories.
+ * Start repo-wide framework detection without awaiting it. Never rejects:
+ * labels are decorative, so failure resolves to an empty map.
  */
 export function startRepoFrameworkDetection(
   cwd: string
@@ -78,13 +55,7 @@ export function startRepoFrameworkDetection(
   return { promise, result: () => result };
 }
 
-/**
- * Detect frameworks across the repo.
- *
- * Workspace repos use the package list the workspace manager reports. Anything
- * else falls back to a bounded breadth-first walk, since a non-workspace
- * monorepo still routinely has a deployable app in a subdirectory.
- */
+/** Detect frameworks across the repo. */
 export async function detectRepoFrameworks(
   cwd: string
 ): Promise<RepoFrameworks> {
@@ -97,19 +68,15 @@ export async function detectRepoFrameworks(
     )
   ).flat();
 
-  // Both sources are used, not one or the other. A repo can declare a
-  // workspace that covers only part of the tree (a nested `redwoodjs/`
-  // workspace inside a directory of unrelated apps), and relying on the
-  // workspace alone would leave everything outside it unlabeled.
-  //
-  // `getWorkspacePackagePaths` returns leading-slash paths ('/apps/web'); the
-  // walk returns repo-relative ones. Normalize to repo-relative, root = ''.
+  // Both sources are used: a workspace can cover only part of the tree, so
+  // relying on it alone leaves everything outside it unlabeled.
+  // `getWorkspacePackagePaths` returns '/apps/web'; normalize to repo-relative.
   const candidates = await walkDirectories(cwd);
   for (const p of packagePaths) {
     candidates.add(normalizePath(p).replace(/^\/+/, ''));
   }
 
-  // Always consider the root itself, which neither source reports.
+  // Neither source reports the root itself.
   candidates.add('');
 
   const detected: RepoFrameworks = new Map();
@@ -140,7 +107,7 @@ async function walkDirectories(cwd: string): Promise<Set<string>> {
   let level = [''];
   let visited = 0;
 
-  for (let depth = 0; depth < NON_WORKSPACE_MAX_DEPTH; depth++) {
+  for (let depth = 0; depth < MAX_SCAN_DEPTH; depth++) {
     if (level.length === 0 || visited >= MAX_DIRECTORIES) break;
 
     const next: string[] = [];
@@ -170,12 +137,7 @@ async function walkDirectories(cwd: string): Promise<Set<string>> {
   return found;
 }
 
-/**
- * The label to show beside a directory, e.g. `(Next.js)`.
- *
- * Only the primary (highest-priority) detected framework is shown; listing
- * every match makes the list noisy in exactly the monorepos that need it most.
- */
+/** The label to show beside a directory, e.g. `Next.js`. Primary match only. */
 export function frameworkLabel(
   frameworks: RepoFrameworks,
   relativeDir: string
