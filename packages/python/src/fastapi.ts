@@ -157,6 +157,15 @@ export async function runFastAPICollectStatic(
 }
 
 /**
+ * Escape regex metacharacters in a literal path segment before it goes into a
+ * route `src`. Mirrors the shim's `_escape`: shadow bodies are escaped
+ * Python-side, but mount prefixes are raw URL paths and must be escaped here.
+ */
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
  * Routes that send paths a higher-priority FastAPI route owns to the Lambda.
  * Emitted before `handle: 'filesystem'`, so the app wins over a colliding CDN
  * file — preserving FastAPI's declaration-order precedence. Each shadow body is
@@ -197,7 +206,9 @@ export function fastapiFallbackRoutes(discovery: FastAPICollectStaticResult) {
       .map(urlPath => urlPath.replace(/\/+$/, ''))
       .filter(urlPath => urlPath !== prefix && urlPath.startsWith(`${prefix}/`))
       .map(urlPath => urlPath.slice(prefix.length + 1));
-    const guard = nested.length ? `(?!(?:${nested.join('|')})(?:/|$))` : '';
+    const guard = nested.length
+      ? `(?!(?:${nested.map(escapeRegex).join('|')})(?:/|$))`
+      : '';
     const navigationOnly =
       fb.status === 200
         ? {
@@ -211,7 +222,7 @@ export function fastapiFallbackRoutes(discovery: FastAPICollectStaticResult) {
           }
         : {};
     return {
-      src: `^${prefix}/${guard}.*$`,
+      src: `^${escapeRegex(prefix)}/${guard}.*$`,
       dest: `${prefix}/${fb.file}`,
       status: fb.status,
       check: true,
