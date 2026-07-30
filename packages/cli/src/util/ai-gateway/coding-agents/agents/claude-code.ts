@@ -5,6 +5,7 @@ import {
   GATEWAY_CLAUDE_CODE_BASE_URL,
   resolveGatewayBaseUrl,
 } from '../gateway';
+import { planClaudeDesktopSessionMigration } from '../migrations/claude-desktop-sessions';
 
 /**
  * Claude Code reads env vars from the `env` object in `~/.claude/settings.json`.
@@ -28,6 +29,12 @@ function claudeDir(home: string): string {
 export const claudeCode: CodingAgent = {
   id: 'claude-code',
   displayName: 'Claude Code',
+  // CLI sessions are keyed by project directory and survive the provider
+  // switch untouched; only the desktop app's identity-keyed session store
+  // needs a copy (see migrations/claude-desktop-sessions.ts).
+  sessionMigration: {
+    plan: ({ home }) => planClaudeDesktopSessionMigration(home),
+  },
 
   async detect(home) {
     return pathExists(claudeDir(home));
