@@ -366,6 +366,13 @@ export default async function processDeployment({
           }
         }
 
+        const uploadFailureError = formatUploadFailureError(event.payload, {
+          archive,
+        });
+        if (uploadFailureError) {
+          throw uploadFailureError;
+        }
+
         const error = await now.handleDeploymentError(event.payload, {
           env,
         });
@@ -408,8 +415,121 @@ export default async function processDeployment({
 export const archiveSuggestionText =
   'Try using `--archive=tgz` to limit the amount of files you upload.';
 
+const uploadDocsLink = 'https://vercel.com/docs/cli/deploy#archive';
+const statusPageLink = 'https://www.vercel-status.com/';
+
 export class UploadErrorMissingArchive extends Error {
-  link = 'https://vercel.com/docs/cli/deploy#archive';
+  link = uploadDocsLink;
+}
+
+export class UploadFailureError extends Error {
+  link = uploadDocsLink;
+}
+
+function getErrorMessage(error: unknown): string {
+  if (isErrorLike(error)) {
+    return error.message || '';
+  }
+
+  return String(error);
+}
+
+function isUploadNetworkError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const { message } = error;
+
+  if (
+    message.includes('ETIMEDOUT') ||
+    message.includes('ECONNREFUSED') ||
+    message.includes('ENOTFOUND') ||
+    message.includes('ECONNRESET') ||
+    message.includes('EAI_FAIL') ||
+    message.includes('socket hang up') ||
+    message.includes('network socket disconnected') ||
+    /fetch failed/i.test(message)
+  ) {
+    return true;
+  }
+
+  return isUploadNetworkError((error as { cause?: unknown }).cause);
+}
+
+function isUploadGatewayError(message: string): boolean {
+  return (
+    /invalid json response body/i.test(message) ||
+    /Unexpected token ['"]</i.test(message) ||
+    /upstream timed out/i.test(message) ||
+    /operation timed out/i.test(message)
+  );
+}
+
+function isUploadServiceError(error: unknown): boolean {
+  if (!isErrorLike(error)) {
+    return false;
+  }
+
+  if (
+    'errorName' in error &&
+    typeof error.errorName === 'string' &&
+    error.errorName.startsWith('api-upload-')
+  ) {
+    return true;
+  }
+
+  return /\/v2\/files/i.test(getErrorMessage(error));
+}
+
+export function formatUploadFailureError(
+  error: unknown,
+  { archive }: { archive?: ArchiveFormat } = {}
+): UploadFailureError | undefined {
+  const message = getErrorMessage(error);
+
+  if (!message) {
+    return;
+  }
+
+  const isNetwork = isUploadNetworkError(error);
+  const isGateway = isUploadGatewayError(message);
+  const isService = isUploadServiceError(error);
+
+  if (!isNetwork && !isGateway && !isService) {
+    return;
+  }
+
+  const lines = ['Failed to upload deployment files to Vercel.'];
+
+  if (isNetwork) {
+    lines.push(
+      'The connection timed out or was interrupted after multiple retries.'
+    );
+  } else if (isGateway) {
+    lines.push(
+      'The upload API returned an unexpected response. This can happen when the upload service is under heavy load or temporarily unavailable.'
+    );
+  } else {
+    lines.push(message);
+  }
+
+  lines.push('Retry the deployment in a few minutes.');
+  lines.push(
+    `If the problem persists, check ${statusPageLink} for ongoing incidents.`
+  );
+
+  if (!archive) {
+    lines.push(archiveSuggestionText);
+  }
+
+  const formatted = new UploadFailureError(lines.join('\n'));
+
+  if (isGateway) {
+    formatted.link = statusPageLink;
+  }
+
+  return formatted;
 }
 
 export function handleErrorSolvableWithArchive(error: unknown) {
