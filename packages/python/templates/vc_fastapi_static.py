@@ -36,7 +36,7 @@ import sys
 from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING
 
-from starlette.convertors import Convertor
+from starlette.convertors import Convertor, PathConvertor
 from starlette.routing import BaseRoute, Mount, Route, Router
 from starlette.staticfiles import StaticFiles
 
@@ -144,13 +144,33 @@ class PriorRoute:
     convertors: dict[str, Convertor]
 
     def shadows(self, mount: StaticMount) -> bool:
-        """True if this route matches paths under `mount`'s URL prefix."""
+        """True if this route can match paths the mount serves.
+
+        The mount's URL-prefix segments are walked against the route's: a
+        literal route segment must equal the mount's, a `{param}` covers one
+        segment, and a `{param:path}` covers this segment and everything after.
+        So a param in or above the prefix (`/{full:path}`, `/{x}/items`) still
+        shadows — a plain `str.startswith` on the path missed those. Matching
+        broader than the route's exact runtime matches only over-shadows (routes
+        extra paths to the Lambda, which serves the same content), never under.
+        """
         base = mount.urlPath.rstrip("/")
-        return (
-            base == ""
-            or self.path_format == base
-            or self.path_format.startswith(base + "/")
-        )
+        if base == "":
+            return True  # root mount serves every path
+        mount_segments = base.strip("/").split("/")
+        route_segments = self.path_format.strip("/").split("/")
+        convertors = self.convertors or {}
+        for i, mount_segment in enumerate(mount_segments):
+            if i >= len(route_segments):
+                return False  # route ends above the prefix; can't reach under it
+            names = _PARAM_RE.findall(route_segments[i])
+            if not names:
+                if route_segments[i] != mount_segment:
+                    return False  # literal mismatch: never matches under the mount
+                continue
+            if any(isinstance(convertors.get(n), PathConvertor) for n in names):
+                return True  # `:path` swallows this segment and everything after
+        return True
 
     def shadow_body(self) -> str:
         """This route's path as a `shadowRoutes` regex body (leading slash dropped).
@@ -252,7 +272,7 @@ def collect(
         for ctx in get_effective_route_contexts(route):
             if isinstance(ctx.original_route, Route):
                 prior.add_route(
-                    PriorRoute(ctx.path, ctx.original_route.param_convertors)
+                    PriorRoute(ctx.path, ctx.param_convertors)
                 )
 
         # app.include_router() with a frontend build (low-priority).
