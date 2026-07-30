@@ -15,6 +15,11 @@ import { getCommandName } from '../../util/pkg-name';
 import stamp from '../../util/output/stamp';
 import { createPurchase } from '../../util/buy/create-purchase';
 import { handlePurchaseError } from '../../util/buy/handle-purchase-error';
+import { isCustomEnvironmentAddonAlias } from '../../util/buy/custom-environment-addon';
+import {
+  purchaseCustomEnvironmentCapacity,
+  validateCustomEnvironmentPacks,
+} from '../../util/buy/purchase-custom-environment-capacity';
 import { validateJsonOutput } from '../../util/output-format';
 
 export default async function addon(client: Client, argv: string[]) {
@@ -27,15 +32,34 @@ export default async function addon(client: Client, argv: string[]) {
     return 1;
   }
 
+  const { args, flags } = parsedArgs;
+  const [addonName, quantityStr] = args;
+
+  if (addonName && isCustomEnvironmentAddonAlias(addonName)) {
+    const packsResult = validateCustomEnvironmentPacks(quantityStr);
+    if ('error' in packsResult) {
+      output.error(packsResult.error);
+      if (packsResult.usage) {
+        output.log(packsResult.usage);
+      }
+      return 1;
+    }
+
+    const project = flags['--project'];
+    return purchaseCustomEnvironmentCapacity(client, {
+      packs: packsResult.packs,
+      yes: Boolean(flags['--yes']),
+      projectName: typeof project === 'string' ? project : undefined,
+      commandName: 'buy',
+    });
+  }
+
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
     return 1;
   }
   const asJson = formatResult.jsonOutput;
-
-  const { args } = parsedArgs;
-  const [addonName, quantityStr] = args;
 
   // Validate addon name argument
   if (!addonName) {
@@ -48,14 +72,14 @@ export default async function addon(client: Client, argv: string[]) {
 
   if (!SUPPORTED_ADDON_ALIASES.includes(addonName as AddonAlias)) {
     output.error(
-      `Invalid addon "${addonName}". Supported addons: ${SUPPORTED_ADDON_ALIASES.join(', ')}`
+      `Invalid addon "${addonName}". Supported addons: ${SUPPORTED_ADDON_ALIASES.join(', ')}.`
     );
     return 1;
   }
 
   // Validate quantity argument
   if (!quantityStr) {
-    output.error('Missing quantity. Please specify the number of units.');
+    output.error('Missing quantity. Please specify how many to purchase.');
     output.log(`Run ${getCommandName('buy addon --help')} for usage.`);
     return 1;
   }
@@ -98,7 +122,7 @@ export default async function addon(client: Client, argv: string[]) {
     }
     if (
       !(await client.input.confirm(
-        `Purchase ${chalk.bold(quantity)} unit${quantity === 1 ? '' : 's'} of ${label} for team ${chalk.bold(contextName)}?`,
+        `Purchase ${chalk.bold(quantity)} ${label} addon${quantity === 1 ? '' : 's'} for team ${chalk.bold(contextName)}?`,
         false
       ))
     ) {
@@ -133,7 +157,7 @@ export default async function addon(client: Client, argv: string[]) {
       );
     } else {
       output.success(
-        `Purchased ${chalk.bold(quantity)} unit${quantity === 1 ? '' : 's'} of ${label} for ${chalk.bold(contextName)} ${purchaseStamp()}`
+        `Purchased ${chalk.bold(quantity)} ${label} addon${quantity === 1 ? '' : 's'} for ${chalk.bold(contextName)} ${purchaseStamp()}`
       );
       if (result.subscriptionIntent) {
         output.debug(`Subscription intent: ${result.subscriptionIntent.id}`);

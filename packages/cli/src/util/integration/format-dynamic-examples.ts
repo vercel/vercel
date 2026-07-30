@@ -110,6 +110,9 @@ export function formatDynamicExamples(
   lines.push(
     `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --json`)}`
   );
+  lines.push(
+    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --format json`)}`
+  );
 
   lines.push('');
   lines.push(`  ${chalk.dim('-')} Install using a specific installation`);

@@ -59,4 +59,16 @@ export class EnvUpdateTelemetryClient
       });
     }
   }
+
+  trackCliOptionVisibility(visibility: string | undefined) {
+    if (visibility) {
+      const validVisibilities = ['config', 'secret'];
+      this.trackCliOption({
+        option: 'visibility',
+        value: validVisibilities.includes(visibility)
+          ? visibility
+          : this.redactedValue,
+      });
+    }
+  }
 }
