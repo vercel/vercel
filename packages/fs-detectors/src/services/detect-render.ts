@@ -232,6 +232,7 @@ export async function detectRenderServices(options: {
       const detected = await detectEntrypoint({
         workPath: rootDir,
         framework: serviceConfig.framework,
+        fs: serviceFs,
       });
       if (detected) {
         serviceConfig.entrypoint = detected.entrypoint;

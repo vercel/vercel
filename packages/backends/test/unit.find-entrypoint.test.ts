@@ -2,11 +2,56 @@ import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
+import type { EntrypointDetectorFilesystem } from '@vercel/build-utils';
 import {
   detectEntrypoint,
   findEntrypoint,
   findEntrypointOrThrow,
 } from '../src/find-entrypoint';
+
+/**
+ * Minimal in-memory EntrypointDetectorFilesystem for testing.
+ */
+function createTestFs(
+  files: Record<string, string>
+): EntrypointDetectorFilesystem {
+  const paths = new Set(Object.keys(files));
+  for (const p of Object.keys(files)) {
+    const parts = p.split('/');
+    for (let i = 1; i < parts.length; i++) {
+      paths.add(parts.slice(0, i).join('/'));
+    }
+  }
+  return {
+    hasPath: async (p: string) => paths.has(p),
+    isFile: async (p: string) => p in files,
+    readFile: async (p: string) => {
+      if (!(p in files))
+        throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+      return Buffer.from(files[p]);
+    },
+    readdir: async (dirPath: string) => {
+      const prefix = dirPath === '.' ? '' : `${dirPath}/`;
+      const entries = new Map<string, 'file' | 'dir'>();
+      for (const p of Object.keys(files)) {
+        if (!p.startsWith(prefix)) continue;
+        const rest = p.slice(prefix.length);
+        if (!rest) continue;
+        const segment = rest.split('/')[0];
+        if (rest.includes('/')) {
+          entries.set(segment, 'dir');
+        } else {
+          entries.set(segment, 'file');
+        }
+      }
+      return [...entries].map(([name, type]) => ({
+        name,
+        path: prefix + name,
+        type,
+      }));
+    },
+  };
+}
 
 describe('findEntrypoint', () => {
   it('resolves package.json main when the file exists', async () => {
@@ -117,5 +162,46 @@ describe('detectEntrypoint (normalized)', () => {
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('detectEntrypoint with virtual filesystem', () => {
+  it('detects express entrypoint from package.json + index.ts via virtual fs', async () => {
+    const vfs = createTestFs({
+      'package.json': JSON.stringify({
+        name: 'test',
+        dependencies: { express: '^4' },
+      }),
+      'index.ts': "import express from 'express'\n",
+    });
+    const result = await detectEntrypoint({ workPath: '.', fs: vfs });
+    expect(result).toEqual({ kind: 'file', entrypoint: 'index.ts' });
+  });
+
+  it('detects package.json main field via virtual fs', async () => {
+    const vfs = createTestFs({
+      'package.json': JSON.stringify({
+        name: 'test',
+        main: 'server.js',
+        dependencies: { hono: '^4' },
+      }),
+      'server.js': "import { Hono } from 'hono'\n",
+    });
+    const result = await detectEntrypoint({ workPath: '.', fs: vfs });
+    expect(result).toEqual({ kind: 'file', entrypoint: 'server.js' });
+  });
+
+  it('detects src/index.ts without framework via virtual fs', async () => {
+    const vfs = createTestFs({
+      'src/index.ts': 'export default {}\n',
+    });
+    const result = await detectEntrypoint({ workPath: '.', fs: vfs });
+    expect(result).toEqual({ kind: 'file', entrypoint: 'src/index.ts' });
+  });
+
+  it('returns null when no candidate exists via virtual fs', async () => {
+    const vfs = createTestFs({ 'README.md': '# Hello' });
+    const result = await detectEntrypoint({ workPath: '.', fs: vfs });
+    expect(result).toBeNull();
   });
 });

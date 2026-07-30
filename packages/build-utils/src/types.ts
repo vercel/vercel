@@ -1182,6 +1182,79 @@ export type DetectedEntrypoint =
   | null;
 
 /**
+ * Minimal read-only filesystem abstraction for entrypoint detection.
+ *
+ * This interface is intentionally a structural subset of
+ * `DetectorFilesystem` from `@vercel/fs-detectors` so that any
+ * `DetectorFilesystem` instance satisfies it without an explicit
+ * dependency, avoiding a circular package reference.
+ *
+ * @experimental This feature is experimental and may change.
+ */
+export interface EntrypointDetectorFilesystem {
+  hasPath(path: string): Promise<boolean>;
+  isFile(name: string): Promise<boolean>;
+  readFile(name: string): Promise<Buffer>;
+  readdir(
+    dirPath: string
+  ): Promise<{ name: string; path: string; type: 'file' | 'dir' }[]>;
+}
+
+/**
+ * Create a {@link EntrypointDetectorFilesystem} backed by Node's `fs` module,
+ * rooted at `rootPath`. All paths passed to the returned methods
+ * are resolved relative to `rootPath`.
+ *
+ * @experimental This feature is experimental and may change.
+ */
+export function createEntrypointDetectorFs(
+  rootPath: string
+): EntrypointDetectorFilesystem {
+  // Lazy import so the module can also be used in environments where
+  // Node `fs` is not available (e.g. edge workers loading only types).
+  const nodeFs = require('fs') as typeof import('fs');
+  const nodePath = require('path') as typeof import('path');
+  const { posix: posixPath } = nodePath;
+
+  return {
+    async hasPath(path: string): Promise<boolean> {
+      try {
+        await nodeFs.promises.stat(nodePath.join(rootPath, path));
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    async isFile(name: string): Promise<boolean> {
+      try {
+        const stat = await nodeFs.promises.stat(nodePath.join(rootPath, name));
+        return stat.isFile();
+      } catch {
+        return false;
+      }
+    },
+    async readFile(name: string): Promise<Buffer> {
+      return nodeFs.promises.readFile(nodePath.join(rootPath, name));
+    },
+    async readdir(
+      dirPath: string
+    ): Promise<{ name: string; path: string; type: 'file' | 'dir' }[]> {
+      const entries = await nodeFs.promises.readdir(
+        nodePath.join(rootPath, dirPath),
+        { withFileTypes: true }
+      );
+      return entries
+        .filter(e => e.isFile() || e.isDirectory())
+        .map(e => ({
+          name: e.name,
+          path: posixPath.join(dirPath, e.name),
+          type: e.isFile() ? ('file' as const) : ('dir' as const),
+        }));
+    },
+  };
+}
+
+/**
  * Input to a runtime builder's normalized entrypoint detector.
  * @experimental This feature is experimental and may change.
  */
@@ -1190,6 +1263,12 @@ export interface DetectEntrypointOptions {
   workPath: string;
   /** Framework slug detected for this directory, if any. */
   framework?: string;
+  /**
+   * Virtual filesystem scoped to `workPath`. When provided, builders
+   * read files through this instead of Node's `fs` module.
+   * @experimental This feature is experimental and may change.
+   */
+  fs?: EntrypointDetectorFilesystem;
 }
 
 /**

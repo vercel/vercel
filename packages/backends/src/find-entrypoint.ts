@@ -1,7 +1,9 @@
-import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
-import { join, relative, resolve, sep } from 'node:path';
-import type { DetectEntrypointFn } from '@vercel/build-utils';
+import { relative, resolve, sep } from 'node:path';
+import {
+  createEntrypointDetectorFs,
+  type DetectEntrypointFn,
+  type EntrypointDetectorFilesystem,
+} from '@vercel/build-utils';
 
 const frameworks = [
   'express',
@@ -36,15 +38,18 @@ const createFrameworkRegex = (framework: string) =>
   );
 
 export const findEntrypoint = async (
-  cwd: string
+  cwd: string,
+  fs?: EntrypointDetectorFilesystem
 ): Promise<string | undefined> => {
+  const dfs = fs ?? createEntrypointDetectorFs(cwd);
+
   let packageJsonObject: {
     main?: string;
     dependencies?: Record<string, string>;
   } | null = null;
   try {
-    const packageJson = await readFile(join(cwd, 'package.json'), 'utf-8');
-    packageJsonObject = JSON.parse(packageJson);
+    const buf = await dfs.readFile('package.json');
+    packageJsonObject = JSON.parse(buf.toString('utf-8'));
   } catch (_) {
     // ignore
   }
@@ -55,12 +60,11 @@ export const findEntrypoint = async (
         ? packageJsonObject.main.trim()
         : '';
     if (main) {
-      const abs = resolve(cwd, main);
-      const rel = relative(cwd, abs);
+      const rel = relative(cwd, resolve(cwd, main)).split(sep).join('/');
       if (!rel.startsWith('..') && rel !== '') {
         try {
-          await readFile(abs, 'utf-8');
-          return rel.split(sep).join('/');
+          await dfs.readFile(rel);
+          return rel;
         } catch {
           // main missing or unreadable; fall through to filename heuristics
         }
@@ -77,9 +81,8 @@ export const findEntrypoint = async (
 
   if (!framework) {
     for (const entrypoint of entrypoints) {
-      const entrypointPath = join(cwd, entrypoint);
       try {
-        await readFile(entrypointPath, 'utf-8');
+        await dfs.readFile(entrypoint);
         return entrypoint;
       } catch (_) {
         // ignore
@@ -90,11 +93,10 @@ export const findEntrypoint = async (
   const regex = framework ? createFrameworkRegex(framework) : undefined;
 
   for (const entrypoint of entrypoints) {
-    const entrypointPath = join(cwd, entrypoint);
     try {
-      const content = await readFile(entrypointPath, 'utf-8');
+      const buf = await dfs.readFile(entrypoint);
       if (regex) {
-        if (regex.test(content)) {
+        if (regex.test(buf.toString('utf-8'))) {
           return entrypoint;
         }
       }
@@ -105,8 +107,11 @@ export const findEntrypoint = async (
   return undefined;
 };
 
-export const findEntrypointOrThrow = async (cwd: string): Promise<string> => {
-  const entrypoint = await findEntrypoint(cwd);
+export const findEntrypointOrThrow = async (
+  cwd: string,
+  fs?: EntrypointDetectorFilesystem
+): Promise<string> => {
+  const entrypoint = await findEntrypoint(cwd, fs);
   if (!entrypoint) {
     throw new Error(
       `No entrypoint found in "${cwd}". Set package.json "main" to a server file, or add one of: ${entrypoints.join(', ')}`
@@ -117,14 +122,16 @@ export const findEntrypointOrThrow = async (cwd: string): Promise<string> => {
 
 export const findEntrypointWithHintOrThrow = async (
   workPath: string,
-  configured: string | undefined
+  configured: string | undefined,
+  fs?: EntrypointDetectorFilesystem
 ): Promise<string> => {
+  const dfs = fs ?? createEntrypointDetectorFs(workPath);
   const explicit =
     configured && configured !== 'package.json' ? configured : null;
-  if (explicit && existsSync(join(workPath, explicit))) {
+  if (explicit && (await dfs.isFile(explicit))) {
     return explicit;
   }
-  return findEntrypointOrThrow(workPath);
+  return findEntrypointOrThrow(workPath, fs);
 };
 
 /**
@@ -132,8 +139,11 @@ export const findEntrypointWithHintOrThrow = async (
  * and returns the result in the shared {@link DetectedEntrypoint} shape consumed
  * by services auto-detection.
  */
-export const detectEntrypoint: DetectEntrypointFn = async ({ workPath }) => {
-  const file = await findEntrypoint(workPath);
+export const detectEntrypoint: DetectEntrypointFn = async ({
+  workPath,
+  fs,
+}) => {
+  const file = await findEntrypoint(workPath, fs);
   if (!file) return null;
   return { kind: 'file', entrypoint: file };
 };

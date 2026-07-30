@@ -364,7 +364,11 @@ async function detectServiceInDir(
 
   const detected =
     detectEntrypoint && !isFrontendFramework(slug)
-      ? await detectEntrypoint({ workPath: dirPath, framework: slug })
+      ? await detectEntrypoint({
+          workPath: dirPath,
+          framework: slug,
+          fs: serviceFs,
+        })
       : null;
   return {
     service: {

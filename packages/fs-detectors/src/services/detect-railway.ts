@@ -182,6 +182,7 @@ export async function detectRailwayServices(options: {
       const detected = await detectEntrypoint({
         workPath: cf.dirPath,
         framework: slug,
+        fs: serviceFs,
       });
       if (detected) {
         serviceConfig.entrypoint = detected.entrypoint;

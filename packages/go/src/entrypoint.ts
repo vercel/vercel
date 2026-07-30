@@ -1,6 +1,9 @@
-import { join } from 'path';
-import { pathExists } from 'fs-extra';
-import { debug, type DetectEntrypointFn } from '@vercel/build-utils';
+import {
+  createEntrypointDetectorFs,
+  debug,
+  type DetectEntrypointFn,
+  type EntrypointDetectorFilesystem,
+} from '@vercel/build-utils';
 
 export const GO_CANDIDATE_ENTRYPOINTS = [
   'main.go',
@@ -14,20 +17,20 @@ export const GO_CANDIDATE_ENTRYPOINTS = [
  */
 export async function detectGoEntrypoint(
   workPath: string,
-  configuredEntrypoint?: string
+  configuredEntrypoint?: string,
+  fs?: EntrypointDetectorFilesystem
 ): Promise<string | null> {
+  const dfs = fs ?? createEntrypointDetectorFs(workPath);
+
   // If the configured entrypoint exists, use it
-  if (
-    configuredEntrypoint &&
-    (await pathExists(join(workPath, configuredEntrypoint)))
-  ) {
+  if (configuredEntrypoint && (await dfs.hasPath(configuredEntrypoint))) {
     debug(`Using configured Go entrypoint: ${configuredEntrypoint}`);
     return configuredEntrypoint;
   }
 
   // Search candidate locations
   for (const candidate of GO_CANDIDATE_ENTRYPOINTS) {
-    if (await pathExists(join(workPath, candidate))) {
+    if (await dfs.hasPath(candidate)) {
       debug(`Detected Go entrypoint: ${candidate}`);
       return candidate;
     }
@@ -41,8 +44,11 @@ export async function detectGoEntrypoint(
  * and returns the result in the shared {@link DetectedEntrypoint} shape consumed
  * by services auto-detection.
  */
-export const detectEntrypoint: DetectEntrypointFn = async ({ workPath }) => {
-  const file = await detectGoEntrypoint(workPath);
+export const detectEntrypoint: DetectEntrypointFn = async ({
+  workPath,
+  fs,
+}) => {
+  const file = await detectGoEntrypoint(workPath, undefined, fs);
   if (!file) return null;
   return { kind: 'file', entrypoint: file };
 };

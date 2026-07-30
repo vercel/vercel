@@ -6149,3 +6149,122 @@ describe('detectEntrypoint (normalized)', () => {
     fs.removeSync(workPath);
   });
 });
+
+describe('detectEntrypoint with virtual filesystem', () => {
+  let detectEntrypoint: typeof import('../src/entrypoint').detectEntrypoint;
+
+  function createTestFs(
+    files: Record<string, string>
+  ): import('@vercel/build-utils').EntrypointDetectorFilesystem {
+    const paths = new Set(Object.keys(files));
+    for (const p of Object.keys(files)) {
+      const parts = p.split('/');
+      for (let i = 1; i < parts.length; i++) {
+        paths.add(parts.slice(0, i).join('/'));
+      }
+    }
+    return {
+      hasPath: async (p: string) => paths.has(p),
+      isFile: async (p: string) => p in files,
+      readFile: async (p: string) => {
+        if (!(p in files))
+          throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+        return Buffer.from(files[p]);
+      },
+      readdir: async (dirPath: string) => {
+        const prefix = dirPath === '.' ? '' : `${dirPath}/`;
+        const entries = new Map<string, 'file' | 'dir'>();
+        for (const p of Object.keys(files)) {
+          if (!p.startsWith(prefix)) continue;
+          const rest = p.slice(prefix.length);
+          if (!rest) continue;
+          const segment = rest.split('/')[0];
+          if (rest.includes('/')) {
+            entries.set(segment, 'dir');
+          } else {
+            entries.set(segment, 'file');
+          }
+        }
+        return [...entries].map(([name, type]) => ({
+          name,
+          path: prefix + name,
+          type,
+        }));
+      },
+    };
+  }
+
+  beforeEach(async () => {
+    ({ detectEntrypoint } = await import('../src/entrypoint'));
+  });
+
+  it('detects FastAPI app from main.py via virtual fs', async () => {
+    const vfs = createTestFs({
+      'main.py': 'from fastapi import FastAPI\napp = FastAPI()\n',
+    });
+    const result = await detectEntrypoint({
+      workPath: '.',
+      framework: 'fastapi',
+      fs: vfs,
+    });
+    expect(result).toEqual({
+      kind: 'py-module:attr',
+      entrypoint: 'main:app',
+    });
+  });
+
+  it('detects nested src/main.py via virtual fs', async () => {
+    const vfs = createTestFs({
+      'src/main.py': 'from fastapi import FastAPI\napp = FastAPI()\n',
+    });
+    const result = await detectEntrypoint({
+      workPath: '.',
+      framework: 'fastapi',
+      fs: vfs,
+    });
+    expect(result).toEqual({
+      kind: 'py-module:attr',
+      entrypoint: 'src.main:app',
+    });
+  });
+
+  it('returns null when no entrypoint is found via virtual fs', async () => {
+    const vfs = createTestFs({
+      'pyproject.toml': '[project]\ndependencies = ["fastapi"]',
+    });
+    const result = await detectEntrypoint({
+      workPath: '.',
+      framework: 'fastapi',
+      fs: vfs,
+    });
+    expect(result).toBeNull();
+  });
+
+  it('returns null for non-Python frameworks via virtual fs', async () => {
+    const vfs = createTestFs({
+      'main.py': 'from fastapi import FastAPI\napp = FastAPI()\n',
+    });
+    const result = await detectEntrypoint({
+      workPath: '.',
+      framework: 'express',
+      fs: vfs,
+    });
+    expect(result).toBeNull();
+  });
+
+  it('reads tool.vercel.entrypoint from pyproject.toml via virtual fs', async () => {
+    const vfs = createTestFs({
+      'pyproject.toml': '[tool.vercel]\nentrypoint = "myapp.main:app"\n',
+      'myapp/main.py': 'from fastapi import FastAPI\napp = FastAPI()\n',
+    });
+    const result = await detectEntrypoint({
+      workPath: '.',
+      framework: 'fastapi',
+      fs: vfs,
+    });
+    expect(result).toEqual({
+      kind: 'py-module:attr',
+      entrypoint: 'myapp.main:app',
+    });
+  });
+});
