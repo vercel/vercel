@@ -438,6 +438,15 @@ export const protectionSubcommand = {
       deprecated: false,
     },
     {
+      name: 'protection-password',
+      shorthand: null,
+      type: String,
+      argument: 'PASSWORD',
+      description:
+        'Password value when enabling password protection (max 72 characters). Requires --password.',
+      deprecated: false,
+    },
+    {
       name: 'customer-support-code-visibility',
       shorthand: null,
       type: Boolean,
@@ -501,6 +510,10 @@ export const protectionSubcommand = {
     {
       name: 'Enable password protection',
       value: `${packageName} project protection enable my-app --password`,
+    },
+    {
+      name: 'Enable password protection with a password',
+      value: `${packageName} project protection enable my-app --password --protection-password <password>`,
     },
     {
       name: 'Enable customer support code visibility',
