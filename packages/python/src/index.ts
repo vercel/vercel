@@ -2073,12 +2073,35 @@ export const build: BuildVX = async ({
     src: `/${outputPath}`,
     dest: `/${outputPath}`,
   }));
+  // A path owned by a higher-priority FastAPI route must reach the Lambda
+  // before the CDN can serve a colliding static file; emitting the shim's
+  // shadow routes ahead of `handle: 'filesystem'` is what preserves FastAPI's
+  // route precedence. Each shadow body is a ready-made pattern (path minus its
+  // leading slash, inner groups already non-capturing), so we OR them in one
+  // capturing group and copy the match back into `request.path` via `$1`.
+  const fastapiShadowRoutes =
+    fastapiStatic && fastapiStatic.shadowRoutes.length > 0
+      ? [
+          {
+            src: `^/(${fastapiStatic.shadowRoutes.join('|')})$`,
+            dest: `/${lambdaPath}`,
+            transforms: [
+              {
+                type: 'request.path' as const,
+                op: 'set' as const,
+                args: '/$1',
+              },
+            ],
+          },
+        ]
+      : [];
   const routes =
     isNonWebService || !output
       ? queueRoutes.length > 0
         ? queueRoutes
         : undefined
       : [
+          ...fastapiShadowRoutes,
           { handle: 'filesystem' as const },
           ...queueRoutes,
           // This route matches the resolved destination after rewrites. Copy

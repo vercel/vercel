@@ -6,33 +6,64 @@ import { getVenvPythonBin } from './utils';
 
 const scriptPath = join(__dirname, '..', 'templates', 'vc_fastapi_static.py');
 
-export interface FastAPIStaticMount {
-  urlPath: string;
-  directory: string;
+/** A resolved frontend fallback: which file to serve for a miss, and its status. */
+export interface FastAPIStaticFallback {
+  /** File to serve for unmatched paths under the mount (e.g. "index.html"). */
+  file: string;
+  /** Status to serve it with (200 for index.html, 404 for 404.html). */
+  status: number;
 }
 
+/** One StaticFiles/frontend mount to copy to the CDN. */
+export interface FastAPIStaticMount {
+  /** URL prefix the files are served under (e.g. "/static", or "/" for a frontend). */
+  urlPath: string;
+  /** Absolute source directory to copy. */
+  directory: string;
+  /** Frontend fallback for this mount, or null for a plain StaticFiles mount. */
+  fallback: FastAPIStaticFallback | null;
+}
+
+/** The shim's parsed JSON output (mirrors the Python `Output` dataclass). */
+export interface FastAPIStaticDiscovery {
+  /** StaticFiles/frontend directories to copy to the CDN. */
+  mounts: FastAPIStaticMount[];
+  /**
+   * Routing pattern bodies (regex matched against the request path minus its
+   * leading slash) for paths a higher-priority route owns; these must reach the
+   * Lambda before the CDN, preserving FastAPI's route precedence.
+   */
+  shadowRoutes: string[];
+}
+
+/** Outcome of copying mounts to the CDN, for the builder to wire into routes. */
 export interface FastAPICollectStaticResult {
-  /** URL paths of StaticFiles mounts collected to CDN. */
+  /** URL paths of the StaticFiles mounts copied to the CDN. */
   collectedMounts: string[];
-  /** Absolute path to the directory where CDN static files were written. */
+  /** Absolute path of the build-output static directory the files were written to. */
   cdnOutputDir: string;
+  /** Passed through from discovery; see {@link FastAPIStaticDiscovery.shadowRoutes}. */
+  shadowRoutes: string[];
+  /** Frontend fallbacks to serve from the CDN, each paired with its mount prefix. */
+  fallbacks: (FastAPIStaticFallback & { urlPath: string })[];
 }
 
 const _STATIC_FILE_COLLECTION_ERROR_MESSAGE =
   'Warning: FastAPI static file collection failed. Static files will not be served from the CDN.';
 
 /**
- * Discover StaticFiles mounts by importing the entrypoint via a Python shim
- * run with the build venv Python. The venv already contains the user's
- * fastapi/starlette dependencies installed during the build step.
+ * Discover StaticFiles mounts (with any frontend fallback) and the shadow routes
+ * that must reach the Lambda before the CDN, by importing the entrypoint through
+ * the Python shim run with the build venv (which already has the user's
+ * fastapi/starlette installed).
  */
-export async function getFastAPIStaticMounts(
+export async function getFastAPIStaticDiscovery(
   venvPath: string,
   entrypointAbs: string,
   variableName: string,
   env: NodeJS.ProcessEnv,
   workPath: string
-): Promise<FastAPIStaticMount[]> {
+): Promise<FastAPIStaticDiscovery> {
   const pythonPath = getVenvPythonBin(venvPath);
   const outputPath = join(
     workPath,
@@ -57,17 +88,17 @@ export async function getFastAPIStaticMounts(
     debug(
       `FastAPI: could not discover static mounts: ${err?.stderr ?? err?.message ?? err}`
     );
-    return [];
+    return { mounts: [], shadowRoutes: [] };
   }
   try {
     const raw = await fs.promises.readFile(outputPath, 'utf8');
-    const parsed = JSON.parse(raw) as FastAPIStaticMount[];
-    debug(`FastAPI: discovered mounts: ${JSON.stringify(parsed)}`);
+    const parsed = JSON.parse(raw) as FastAPIStaticDiscovery;
+    debug(`FastAPI: discovered: ${JSON.stringify(parsed)}`);
     return parsed;
   } catch {
     console.error(_STATIC_FILE_COLLECTION_ERROR_MESSAGE);
     debug(`FastAPI: could not read shim output file: ${outputPath}`);
-    return [];
+    return { mounts: [], shadowRoutes: [] };
   } finally {
     await fs.promises.rm(outputPath, { force: true });
   }
@@ -88,7 +119,7 @@ export async function runFastAPICollectStatic(
   entrypointAbs: string,
   variableName: string
 ): Promise<FastAPICollectStaticResult | null> {
-  const mounts = await getFastAPIStaticMounts(
+  const { mounts, shadowRoutes } = await getFastAPIStaticDiscovery(
     venvPath,
     entrypointAbs,
     variableName,
@@ -113,8 +144,14 @@ export async function runFastAPICollectStatic(
     debug(`copied ${mount.directory} -> ${dest}`);
   }
 
+  const fallbacks = mounts.flatMap(m =>
+    m.fallback ? [{ urlPath: m.urlPath, ...m.fallback }] : []
+  );
+
   return {
     collectedMounts: mounts.map(m => m.urlPath),
     cdnOutputDir: outputStaticDir,
+    shadowRoutes,
+    fallbacks,
   };
 }

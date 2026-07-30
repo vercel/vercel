@@ -4,7 +4,7 @@ import path from 'path';
 import { tmpdir } from 'os';
 import execa from 'execa';
 import {
-  getFastAPIStaticMounts,
+  getFastAPIStaticDiscovery,
   runFastAPICollectStatic,
 } from '../src/fastapi';
 import { getVenvPythonBin } from '../src/utils';
@@ -48,7 +48,7 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
       ].join('\n')
     );
 
-    const mounts = await getFastAPIStaticMounts(
+    const { mounts, shadowRoutes } = await getFastAPIStaticDiscovery(
       venvPath,
       entrypointAbs,
       'app',
@@ -61,6 +61,8 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     expect(mounts[0].directory).toBe(
       fs.realpathSync(path.join(appDir, 'static'))
     );
+    expect(mounts[0].fallback).toBeNull();
+    expect(shadowRoutes).toEqual([]);
   });
 
   it('discovers an app.frontend() mount', async () => {
@@ -77,7 +79,7 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
       ].join('\n')
     );
 
-    const mounts = await getFastAPIStaticMounts(
+    const { mounts } = await getFastAPIStaticDiscovery(
       venvPath,
       entrypointAbs,
       'app',
@@ -90,6 +92,8 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     expect(mounts[0].directory).toBe(
       fs.realpathSync(path.join(appDir, 'dist'))
     );
+    // fallback="auto" resolves to the index.html present in the build dir.
+    expect(mounts[0].fallback).toEqual({ file: 'index.html', status: 200 });
   });
 
   it('returns empty when no StaticFiles mounts exist', async () => {
@@ -101,7 +105,7 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
       'from fastapi import FastAPI\napp = FastAPI()\n'
     );
 
-    const mounts = await getFastAPIStaticMounts(
+    const { mounts } = await getFastAPIStaticDiscovery(
       venvPath,
       entrypointAbs,
       'app',
@@ -110,6 +114,90 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     );
 
     expect(mounts).toHaveLength(0);
+  });
+
+  it('reports a shadow route for a route declared before a mount', async () => {
+    const appDir = path.join(testDir, 'app-shadow-mount');
+    fs.mkdirSync(path.join(appDir, 'static'), { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'static', 'example.txt'), 'file');
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'from fastapi.staticfiles import StaticFiles',
+        'app = FastAPI()',
+        '@app.get("/static/example.txt")',
+        'def example():',
+        '    return "api"',
+        'app.mount("/static", StaticFiles(directory="static"), name="static")',
+      ].join('\n')
+    );
+
+    const { mounts, shadowRoutes } = await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    expect(mounts).toHaveLength(1);
+    // A pattern body (path minus leading slash, regex-escaped).
+    expect(shadowRoutes).toEqual(['static/example\\.txt']);
+  });
+
+  it('reports a shadow route that beats a low-priority frontend', async () => {
+    const appDir = path.join(testDir, 'app-shadow-frontend');
+    fs.mkdirSync(path.join(appDir, 'dist'), { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'dist', 'collision.txt'), 'file');
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'app = FastAPI()',
+        '@app.get("/collision.txt")',
+        'def collision():',
+        '    return "api"',
+        'app.frontend("/", directory="dist")',
+      ].join('\n')
+    );
+
+    const { shadowRoutes } = await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    expect(shadowRoutes).toContain('collision\\.txt');
+  });
+
+  it('resolves a 404.html frontend fallback', async () => {
+    const appDir = path.join(testDir, 'app-fallback-404');
+    fs.mkdirSync(path.join(appDir, 'dist'), { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'dist', '404.html'), 'nope');
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'app = FastAPI()',
+        'app.frontend("/", directory="dist", fallback="404.html")',
+      ].join('\n')
+    );
+
+    const { mounts } = await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    expect(mounts[0].fallback).toEqual({ file: '404.html', status: 404 });
   });
 
   it('copies static files to CDN output dir', async () => {
@@ -139,6 +227,8 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
 
     expect(result).not.toBeNull();
     expect(result!.collectedMounts).toContain('/static');
+    expect(result!.shadowRoutes).toEqual([]);
+    expect(result!.fallbacks).toEqual([]);
     expect(fs.existsSync(path.join(outputDir, 'static', 'style.css'))).toBe(
       true
     );
