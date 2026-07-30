@@ -147,10 +147,23 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     expect(shadowRoutes).toEqual(['static/example\\.txt']);
   });
 
-  it('reports a shadow route for a parametrized route', async () => {
-    const appDir = path.join(testDir, 'app-shadow-param');
-    fs.mkdirSync(path.join(appDir, 'items'), { recursive: true });
-    fs.writeFileSync(path.join(appDir, 'items', 'keep.txt'), 'file');
+  // Each Starlette path convertor compiles to its own regex in the shadow body,
+  // so a parametrized route shadows exactly the paths it matches at runtime
+  // rather than a blanket `[^/]+`.
+  it.each([
+    ['str', '{x:str}', 'p/(?:[^/]+)'],
+    ['default (no convertor)', '{x}', 'p/(?:[^/]+)'],
+    ['int', '{x:int}', 'p/(?:[0-9]+)'],
+    ['float', '{x:float}', 'p/(?:[0-9]+(?:\\.[0-9]+)?)'],
+    ['path', '{x:path}', 'p/(?:.*)'],
+    [
+      'uuid',
+      '{x:uuid}',
+      'p/(?:[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12})',
+    ],
+  ])('compiles the %s path convertor in a shadow route', async (slug, param, expected) => {
+    const appDir = path.join(testDir, `app-conv-${slug.replace(/\W+/g, '-')}`);
+    fs.mkdirSync(path.join(appDir, 'assets'), { recursive: true });
     const entrypointAbs = path.join(appDir, 'main.py');
     fs.writeFileSync(
       entrypointAbs,
@@ -158,10 +171,10 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
         'from fastapi import FastAPI',
         'from fastapi.staticfiles import StaticFiles',
         'app = FastAPI()',
-        '@app.get("/items/{item_id:int}")',
-        'def item(item_id: int):',
-        '    return item_id',
-        'app.mount("/items", StaticFiles(directory="items"), name="items")',
+        `@app.get("/p/${param}")`,
+        'def handler(x):',
+        '    return x',
+        'app.mount("/p", StaticFiles(directory="assets"), name="p")',
       ].join('\n')
     );
 
@@ -173,9 +186,7 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
       appDir
     );
 
-    // The `{item_id:int}` convertor becomes its regex, so the route shadows
-    // exactly the integer paths it matches at runtime (not a bare `[^/]+`).
-    expect(shadowRoutes).toEqual(['items/(?:[0-9]+)']);
+    expect(shadowRoutes).toEqual([expected]);
   });
 
   it('reports a shadow route that beats a low-priority frontend', async () => {
