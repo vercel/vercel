@@ -62,6 +62,18 @@ module.exports = async ({ deploymentUrl, fetch }) => {
     failures.push(`spa non-nav GET: expected 404 (Accept-gated), got ${spaNonNav.status} ${JSON.stringify(body)}`);
   }
 
+  // A navigation Accept but a path whose final segment has a file extension
+  // (a missing asset like `/spa/app.js`) must NOT get index.html: the runtime
+  // treats an extensioned path as non-navigation and 404s, so the fallback
+  // route excludes it and it falls through to the Lambda.
+  const spaAsset = await fetch(`https://${deploymentUrl}/spa/missing.js`, {
+    headers: { accept: 'text/html' },
+  });
+  if (spaAsset.status !== 404) {
+    const body = await spaAsset.text();
+    failures.push(`spa missing asset: expected 404 (extension, not navigation), got ${spaAsset.status} ${JSON.stringify(body)}`);
+  }
+
   // Method handling on the 200 (index.html) fallback route, which is GET/HEAD
   // only: a HEAD navigation still serves it (200), while a POST skips it and
   // reaches the Lambda, which 404s a non-GET frontend miss.
