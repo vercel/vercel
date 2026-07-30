@@ -30,6 +30,12 @@ export type TypescriptOptions = {
   entrypoint: string;
   workPath: string;
   span: Span;
+  /**
+   * Node.js major version of the target runtime; used to pick the default
+   * `target` compiler option when the user's tsconfig doesn't set one
+   * (mirrors `@vercel/node`).
+   */
+  nodeVersionMajor?: number;
 };
 
 /**

@@ -233,6 +233,7 @@ export const build: BuildV2 = async args => {
         entrypoint,
         workPath: args.workPath,
         span: buildSpan,
+        nodeVersionMajor: nodeVersion.major,
       });
     }
 
