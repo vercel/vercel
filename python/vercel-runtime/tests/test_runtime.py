@@ -677,6 +677,49 @@ class TestWSGIApp(_RuntimeTestCase):
                 "GET /search?q=test",
             )
 
+    async def test_request_task_runs_once_with_first_request_oidc(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "request_task_wsgi.py",
+            self.tmp_path,
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage,
+                timeout=10.0,
+            )
+            port = ss.payload.http_port
+
+            first = await _http_get(
+                port,
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "first-request-token",
+                },
+            )
+            self.assertEqual(
+                json.loads(first.read()),
+                ["first-request-token"],
+            )
+
+            second = await _http_get(
+                port,
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "second-request-token",
+                },
+            )
+            self.assertEqual(
+                json.loads(second.read()),
+                ["first-request-token"],
+            )
+
     async def test_wsgi_chunked_post_without_content_length(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint(
             "wsgi_echo_app.py", self.tmp_path
@@ -1762,6 +1805,29 @@ class TestLambdaWSGI(_LambdaTestCase):
         self.assertEqual(result["statusCode"], 200)
         body = base64.b64decode(result["body"]).decode()
         self.assertEqual(body, "GET /hello")
+
+    async def test_request_task_runs_after_oidc_context_is_installed(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "request_task_wsgi.py",
+            self.tmp_path,
+        )
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event(
+                "GET",
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "request-token",
+                },
+            ),
+        )
+        self.assertEqual(result["statusCode"], 200)
+        body = base64.b64decode(result["body"]).decode()
+        self.assertEqual(json.loads(body), ["request-token"])
 
     async def test_query_string(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)

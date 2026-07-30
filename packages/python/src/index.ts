@@ -108,6 +108,7 @@ import { InstalledPythonDistributions } from './installed-distributions';
 import {
   createQueueHandlerModule,
   generatedPythonPathToModule,
+  getApschedulerPreviewConfig,
   getGeneratedQueueHandlerPath,
   getPyprojectSubscribers,
   getSubscriberConsumerName,
@@ -1490,6 +1491,12 @@ export const build: BuildVX = async ({
     lambdaEnv.VERCEL_APSCHEDULER_SUBSCRIBERS = JSON.stringify(
       apschedulerSubscribers
     );
+    const previewConfig = await getApschedulerPreviewConfig(workPath);
+    if (previewConfig) {
+      lambdaEnv.VERCEL_APSCHEDULER_PREVIEW_IDLE_TIMEOUT_SECONDS = String(
+        previewConfig.idleTimeoutSeconds
+      );
+    }
   }
 
   const globOptions: GlobOptions = {

@@ -42,6 +42,10 @@ from vercel_runtime.headers import (
     set_vercel_headers_from_asgi_pairs,
     set_vercel_headers_from_http_headers,
 )
+from vercel_runtime.request_tasks import (
+    run_request_tasks,
+    run_request_tasks_async,
+)
 from vercel_runtime.resolver import (
     detect_app_type,
     import_module,
@@ -650,6 +654,7 @@ class ASGIMiddleware:
         )
         set_vercel_headers_from_asgi_pairs(new_headers)
         set_runtime_cache_from_asgi_pairs(sc_pairs)
+        await run_request_tasks_async()
 
         request_finished = False
 
@@ -887,6 +892,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                 }
             )
             set_vercel_headers_from_http_headers(self.headers)
+            run_request_tasks()
 
             try:
                 self.handle_request()  # type: ignore[attr-defined]
@@ -1115,6 +1121,8 @@ if (
         if sc_no_header_leak:
             for sc_header in SC_HEADERS_STRIP_ON_NO_LEAK:
                 headers.pop(sc_header, None)
+        set_vercel_headers_from_http_headers(headers)
+        run_request_tasks()
 
         # `_thread.start_new_thread` does not propagate contextvars
         captured_ctx = contextvars.copy_context()
@@ -1123,6 +1131,7 @@ if (
             (server.handle_request,),  # type: ignore[attr-defined]
         )
         clear_runtime_cache_context()
+        clear_vercel_headers_context()
 
         if (body is not None and len(body) > 0) and (
             encoding is not None and encoding == "base64"
@@ -1257,6 +1266,7 @@ else:
                     environ[env_key] = value
 
             set_vercel_headers_from_http_headers(raw_headers)
+            run_request_tasks()
             try:
                 response = Response.from_app(wsgi_user_app, environ)
             finally:
@@ -1554,6 +1564,7 @@ else:
             }
 
             set_vercel_headers_from_http_headers(headers)
+            run_request_tasks()
             try:
                 asgi_cycle = ASGICycle(scope)
                 response = asgi_cycle(asgi_user_app, body)
