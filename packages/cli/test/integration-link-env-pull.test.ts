@@ -60,9 +60,6 @@ test('[vc link] should refresh OIDC when creating a new project', async () => {
   await waitForPrompt(vc, 'Customize settings?');
   vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, 'Customize advanced settings?');
-  vc.stdin?.write('\n');
-
   await waitForPrompt(vc, /Created\s+/);
 
   const { exitCode, stdout, stderr } = await vc;
@@ -104,9 +101,6 @@ test('[vc link] should preserve existing .env.local when refreshing OIDC', async
 
   await waitForPrompt(vc, 'Customize settings?');
   vc.stdin?.write('no\n');
-
-  await waitForPrompt(vc, 'Customize advanced settings?');
-  vc.stdin?.write('\n');
 
   await waitForPrompt(vc, /Created\s+/);
 

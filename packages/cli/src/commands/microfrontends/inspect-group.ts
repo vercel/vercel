@@ -117,11 +117,11 @@ export default async function inspectGroup(client: Client): Promise<number> {
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         action: AGENT_ACTION.MISSING_ARGUMENTS,
         message:
-          'Missing required flag --group. Use --group and --format=json in non-interactive mode.',
+          'Missing required flag --group. Use --group and --json in non-interactive mode.',
         next: [
           {
             command:
-              'vercel microfrontends inspect-group --group="<group-name-or-id>" --format=json',
+              'vercel microfrontends inspect-group --group="<group-name-or-id>" --json',
             when: 'to inspect a specific microfrontends group non-interactively',
           },
         ],

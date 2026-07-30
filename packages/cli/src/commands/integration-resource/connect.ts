@@ -52,7 +52,7 @@ export async function connect(client: Client, argv: string[]) {
   telemetry.trackCliOptionEnvironment(environmentsFlag);
 
   if (asJson && !skipConfirmation) {
-    output.error('--format=json requires --yes to skip confirmation prompts');
+    output.error('--json requires --yes to skip confirmation prompts');
     return 1;
   }
 

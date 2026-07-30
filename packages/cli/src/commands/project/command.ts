@@ -39,6 +39,7 @@ const checksBlocksOption = {
 /** Flags for `vercel project checks add` (also merged into `checks` help). */
 export const checksAddFlags = [
   formatOption,
+  jsonOption,
   checksBlocksOption,
   {
     name: 'file',
@@ -89,7 +90,7 @@ export const checksAddFlags = [
 ] as const;
 
 /** Flags for `vercel project checks remove` / `rm` (subset of shared `checks` help). */
-export const checksRemoveFlags = [formatOption] as const;
+export const checksRemoveFlags = [formatOption, jsonOption] as const;
 
 export const checksSubcommand = {
   name: 'checks',
@@ -184,7 +185,7 @@ export const listSubcommand = {
     },
     {
       name: 'List projects using a deprecated Node.js version in JSON format',
-      value: `${packageName} project ls --update-required --format=json`,
+      value: `${packageName} project ls --update-required --json`,
     },
     {
       name: 'Filter projects by name',
@@ -293,6 +294,7 @@ export const updateSubcommand = {
       deprecated: false,
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -313,7 +315,7 @@ export const updateSubcommand = {
     },
     {
       name: 'Clear the framework preset and return JSON',
-      value: `${packageName} project update my-project --framework other --format json`,
+      value: `${packageName} project update my-project --framework other --json`,
     },
   ],
 } as const;
@@ -328,7 +330,7 @@ export const tokenSubcommand = {
       required: false,
     },
   ],
-  options: [yesOption, formatOption],
+  options: [yesOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Get a development OIDC token for the linked project',
@@ -340,7 +342,7 @@ export const tokenSubcommand = {
     },
     {
       name: 'Get a development OIDC token as JSON',
-      value: `${packageName} project token my-project --format=json`,
+      value: `${packageName} project token my-project --json`,
     },
   ],
 } as const;
@@ -356,7 +358,7 @@ export const accessSummarySubcommand = {
       required: false,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Summary for the linked project',
@@ -364,7 +366,7 @@ export const accessSummarySubcommand = {
     },
     {
       name: 'Summary as JSON',
-      value: `${packageName} project access-summary my-app --format json`,
+      value: `${packageName} project access-summary my-app --json`,
     },
   ],
 } as const;
@@ -381,6 +383,7 @@ export const membersSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     {
       name: 'search',
       shorthand: null,
@@ -403,7 +406,7 @@ export const membersSubcommand = {
     },
     {
       name: 'List members for a named project as JSON',
-      value: `${packageName} project members my-project --format json`,
+      value: `${packageName} project members my-project --json`,
     },
   ],
 } as const;
@@ -418,6 +421,7 @@ export const protectionSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     {
       name: 'sso',
       shorthand: null,
@@ -431,6 +435,15 @@ export const protectionSubcommand = {
       type: Boolean,
       description:
         'Apply action to password protection (requires eligible plan/permissions).',
+      deprecated: false,
+    },
+    {
+      name: 'protection-password',
+      shorthand: null,
+      type: String,
+      argument: 'PASSWORD',
+      description:
+        'Password value when enabling password protection (max 72 characters). Requires --password.',
       deprecated: false,
     },
     {
@@ -488,7 +501,7 @@ export const protectionSubcommand = {
     },
     {
       name: 'Named project as JSON',
-      value: `${packageName} project protection my-app --format json`,
+      value: `${packageName} project protection my-app --json`,
     },
     {
       name: 'Disable password protection',
@@ -497,6 +510,10 @@ export const protectionSubcommand = {
     {
       name: 'Enable password protection',
       value: `${packageName} project protection enable my-app --password`,
+    },
+    {
+      name: 'Enable password protection with a password',
+      value: `${packageName} project protection enable my-app --password --protection-password <password>`,
     },
     {
       name: 'Enable customer support code visibility',
@@ -557,6 +574,7 @@ export const accessGroupsSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     nextOption,
     {
       name: 'search',
@@ -580,7 +598,7 @@ export const accessGroupsSubcommand = {
     },
     {
       name: 'List access groups for a named project as JSON',
-      value: `${packageName} project access-groups my-project --format json`,
+      value: `${packageName} project access-groups my-project --json`,
     },
   ],
 } as const;
@@ -595,7 +613,7 @@ export const webAnalyticsSubcommand = {
       required: false,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Enable Web Analytics for the linked project',
@@ -607,7 +625,7 @@ export const webAnalyticsSubcommand = {
     },
     {
       name: 'Confirm enablement as JSON (non-interactive / agents)',
-      value: `${packageName} project web-analytics --format json`,
+      value: `${packageName} project web-analytics --json`,
     },
   ],
 } as const;
@@ -622,7 +640,7 @@ export const speedInsightsSubcommand = {
       required: false,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Enable Speed Insights for the linked project',
@@ -634,7 +652,7 @@ export const speedInsightsSubcommand = {
     },
     {
       name: 'Confirm enablement as JSON (non-interactive / agents)',
-      value: `${packageName} project speed-insights --format json`,
+      value: `${packageName} project speed-insights --json`,
     },
   ],
 } as const;
