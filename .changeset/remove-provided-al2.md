@@ -2,10 +2,10 @@
 '@vercel/build-utils': major
 ---
 
-Remove `getOsRelease()` and `getProvidedRuntime()`.
+Remove `getOsRelease()`, and stop deriving the provided runtime from the build host.
 
-Amazon Linux 2 build containers were retired, so `getProvidedRuntime()` could only ever return `provided.al2023`, and `provided.al2` is no longer an accepted Lambda runtime. Worse, the helper derived the runtime from the machine the build ran on — so `vercel build` executed on an AL2 host stamped `provided.al2` and the resulting prebuilt deployment was rejected at deploy time.
+`getProvidedRuntime()` is retained and now always resolves to `'provided.al2023'`. It previously read `/etc/os-release` and returned `'provided.al2'` on Amazon Linux 2 hosts, so the emitted runtime depended on where the build ran — a `vercel build` on an AL2 machine produced output that is rejected at deploy time, because `provided.al2` is no longer an accepted Lambda runtime. Custom runtimes calling `getProvidedRuntime()` need no changes and are fixed by this release.
 
-Custom runtimes that called `getProvidedRuntime()` should use the `'provided.al2023'` literal instead.
+`getOsRelease()` is removed with no replacement.
 
-`validateBuildResult()` no longer accepts an `osRelease` option. The runtime allowlist check was previously skipped unless the caller passed `osRelease.VERSION === '2023'`; it now always runs.
+`validateBuildResult()` no longer accepts an `osRelease` option. Its runtime allowlist check was previously skipped unless the caller passed `osRelease.VERSION === '2023'`; it now always runs.

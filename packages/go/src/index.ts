@@ -33,6 +33,7 @@ import {
   shouldServe as defaultShouldServe,
   debug,
   cloneEnv,
+  getProvidedRuntime,
   execCommand,
   getReportedServiceType,
 } from '@vercel/build-utils';
@@ -303,13 +304,11 @@ export async function build(options: BuildOptions) {
       await buildHandlerWithGoMod(buildOptions);
     }
 
+    const runtime = await getProvidedRuntime();
     const lambda = new Lambda({
       files: { ...(await glob('**', outDir)), ...includedFiles },
       handler: HANDLER_FILENAME,
-      // Amazon Linux 2023 is the only build image, so the custom runtime is
-      // fixed. Do not derive this from the build host: `vercel build` also
-      // runs on user machines, and the value must match the deploy target.
-      runtime: 'provided.al2023',
+      runtime,
       runtimeLanguage: 'go',
       supportsWrapper: true,
       environment: {},
