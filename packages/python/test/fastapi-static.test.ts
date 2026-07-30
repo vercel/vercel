@@ -189,6 +189,98 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     expect(shadowRoutes).toEqual([expected]);
   });
 
+  it('shadows a mount from a catch-all {path} route declared before it', async () => {
+    const appDir = path.join(testDir, 'app-shadow-catchall');
+    fs.mkdirSync(path.join(appDir, 'static'), { recursive: true });
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'from fastapi.staticfiles import StaticFiles',
+        'app = FastAPI()',
+        '@app.get("/{full:path}")',
+        'def catch(full):',
+        '    return full',
+        'app.mount("/static", StaticFiles(directory="static"), name="static")',
+      ].join('\n')
+    );
+
+    const { shadowRoutes } = await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    // The `:path` convertor covers the mount prefix, so the catch-all shadows
+    // the mount's whole subtree.
+    expect(shadowRoutes).toEqual(['(?:.*)']);
+  });
+
+  it('shadows a mount from a route with a parameter in the prefix position', async () => {
+    const appDir = path.join(testDir, 'app-shadow-prefix-param');
+    fs.mkdirSync(path.join(appDir, 'static'), { recursive: true });
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'from fastapi.staticfiles import StaticFiles',
+        'app = FastAPI()',
+        '@app.get("/{category}/items")',
+        'def items(category):',
+        '    return category',
+        'app.mount("/static", StaticFiles(directory="static"), name="static")',
+      ].join('\n')
+    );
+
+    const { shadowRoutes } = await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    // `{category}` matches the mount's literal `static` segment, so
+    // `/static/items` is shadowed to the app.
+    expect(shadowRoutes).toEqual(['(?:[^/]+)/items']);
+  });
+
+  it('compiles an include_router prefix parameter in a shadow route', async () => {
+    const appDir = path.join(testDir, 'app-shadow-router-prefix');
+    fs.mkdirSync(path.join(appDir, 'data'), { recursive: true });
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI, APIRouter',
+        'from fastapi.staticfiles import StaticFiles',
+        'app = FastAPI()',
+        'router = APIRouter()',
+        '@router.get("/report")',
+        'def report():',
+        '    return "r"',
+        'app.include_router(router, prefix="/data/{uid:int}")',
+        'app.mount("/data", StaticFiles(directory="data"), name="data")',
+      ].join('\n')
+    );
+
+    const { shadowRoutes } = await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    // The include prefix's own `uid:int` param compiles to its integer regex in
+    // the shadow body.
+    expect(shadowRoutes).toEqual(['data/(?:[0-9]+)/report']);
+  });
+
   it('reports a shadow route that beats a low-priority frontend', async () => {
     const appDir = path.join(testDir, 'app-shadow-frontend');
     fs.mkdirSync(path.join(appDir, 'dist'), { recursive: true });

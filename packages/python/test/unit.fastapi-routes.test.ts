@@ -58,7 +58,7 @@ describe('fastapiFallbackRoutes', () => {
       )
     ).toEqual([
       {
-        src: '^/spa/.*$',
+        src: '^/spa/(?!.*[^/.]\\.[^/]*$).*$',
         dest: '/spa/index.html',
         status: 200,
         check: true,
@@ -72,6 +72,23 @@ describe('fastapiFallbackRoutes', () => {
         ],
       },
     ]);
+  });
+
+  it('excludes a final segment with a file extension from the 200 fallback', () => {
+    const [route] = fastapiFallbackRoutes(
+      discovery({
+        collectedMounts: ['/spa'],
+        fallbacks: [{ urlPath: '/spa', file: 'index.html', status: 200 }],
+      })
+    );
+    const matches = new RegExp(route.src);
+    // extension-less paths are navigation -> served
+    expect(matches.test('/spa/route')).toBe(true);
+    expect(matches.test('/spa/users/42')).toBe(true);
+    // a final segment with a file extension is a missing asset, not navigation
+    // -> excluded (falls through to the Lambda)
+    expect(matches.test('/spa/app.js')).toBe(false);
+    expect(matches.test('/spa/users/data.json')).toBe(false);
   });
 
   it('serves a 404 (404.html) fallback for every miss (no Accept gate)', () => {
@@ -98,7 +115,9 @@ describe('fastapiFallbackRoutes', () => {
         fallbacks: [{ urlPath: '/', file: 'index.html', status: 200 }],
       })
     );
-    expect(route.src).toBe('^/(?!(?:assets|api/docs)(?:/|$)).*$');
+    expect(route.src).toBe(
+      '^/(?!(?:assets|api/docs)(?:/|$))(?!.*[^/.]\\.[^/]*$).*$'
+    );
     expect(route.dest).toBe('/index.html');
   });
 
