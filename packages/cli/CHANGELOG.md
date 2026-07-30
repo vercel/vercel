@@ -1,5 +1,11 @@
 # vercel
 
+## 58.4.4
+
+### Patch Changes
+
+- dcadcad: Trigger a new release to publish versions that were skipped by the failed release run.
+
 ## 58.4.3
 
 ### Patch Changes
