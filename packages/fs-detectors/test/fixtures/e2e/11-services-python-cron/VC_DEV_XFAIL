@@ -1,1 +1,0 @@
-dev only proxies /_svc/_queues/*; public /_svc/<svc>/crons/... routes are not served by vc dev
