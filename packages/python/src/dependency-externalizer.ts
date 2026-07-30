@@ -80,6 +80,7 @@ interface PythonDependencyExternalizerOptions {
   projectName: string | undefined;
   pythonVersion: PythonVersion;
   hasCustomCommand: boolean;
+  preferHiveForOversizedFunctions?: boolean;
   alwaysBundlePackages?: string[];
 }
 
@@ -142,6 +143,7 @@ export class PythonDependencyExternalizer {
   private projectName: string | undefined;
   private readonly pythonVersion: PythonVersion;
   private hasCustomCommand: boolean;
+  private preferHiveForOversizedFunctions: boolean;
   private alwaysBundlePackages: string[];
 
   private allVendorFiles: Files = {};
@@ -157,6 +159,8 @@ export class PythonDependencyExternalizer {
     this.projectName = options.projectName;
     this.pythonVersion = options.pythonVersion;
     this.hasCustomCommand = options.hasCustomCommand;
+    this.preferHiveForOversizedFunctions =
+      options.preferHiveForOversizedFunctions ?? false;
     this.alwaysBundlePackages = options.alwaysBundlePackages ?? [];
   }
 
@@ -171,12 +175,13 @@ export class PythonDependencyExternalizer {
     ) {
       return false;
     }
-    // Over the threshold with a lock to defer from. Large functions skip
-    // runtime install once deps exceed ephemeral storage (bundled for Hive);
-    // below that, runtime install still keeps it on Lambda.
+    // Direct-Hive builds skip runtime installation for any oversized bundle.
+    // The existing large-function fallback still applies above Lambda's
+    // ephemeral storage boundary.
     if (
-      isLargeFunctionsEnabled() &&
-      this.totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES
+      this.preferHiveForOversizedFunctions ||
+      (isLargeFunctionsEnabled() &&
+        this.totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES)
     ) {
       return false;
     }

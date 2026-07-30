@@ -767,6 +767,8 @@ export const build: BuildVX = async ({
 
   const builderSpan = parentSpan ?? new Span({ name: 'vc.builder' });
   const framework = config?.framework;
+  const largeFunctionsEnabled = isLargeFunctionsEnabled();
+  const preferHiveForOversizedFunctions = largeFunctionsEnabled;
   let subscriberDeclarations: SubscriberDeclaration[] = [];
   let subscribers: Subscriber[] = [];
   let workflows: PyprojectWorkflow[] = [];
@@ -1527,6 +1529,7 @@ export const build: BuildVX = async ({
         projectName,
         pythonVersion,
         hasCustomCommand,
+        preferHiveForOversizedFunctions,
         alwaysBundlePackages: [
           ...(quirksResult.alwaysBundlePackages ?? []),
           ...(shouldInstallVercelWorkers
@@ -1788,13 +1791,20 @@ export const build: BuildVX = async ({
             );
           }
         }
+
+        if (packingMode === 'runtime-install' && !largeFunctionsEnabled) {
+          console.log(
+            'This function exceeds the standard size limit and will install dependencies at runtime. ' +
+              'Set `VERCEL_SUPPORT_LARGE_FUNCTIONS=1` to bundle all dependencies and deploy as a large function.'
+          );
+        }
       } else {
         // Bundle all deps directly. Either it fits the standard size limit, or
         // large functions are enabled and the whole bundle ships.
         addFiles(files, depAnalysis.allVendorFiles);
         if (depAnalysis.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES) {
           packingMode = 'hive';
-          if (isLargeFunctionsEnabled()) {
+          if (largeFunctionsEnabled) {
             announceLargeFunction();
           }
           if (compileAllEnabled) {
@@ -1832,6 +1842,9 @@ export const build: BuildVX = async ({
           await calculateBundleSize(files)
         ),
         'python.bundle.packingMode': packingMode,
+        'python.bundle.directHiveSelected': String(
+          packingMode === 'hive' && preferHiveForOversizedFunctions
+        ),
       });
     });
 

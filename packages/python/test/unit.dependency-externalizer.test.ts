@@ -66,6 +66,7 @@ describe('dependency externalizer support', () => {
       uvLockPath = '/path/to/uv.lock' as string | null,
       hasCustomCommand = false,
       totalBundleSize = 0,
+      preferHiveForOversizedFunctions = false,
     } = {}) {
       const ext = new PythonDependencyExternalizer({
         installedDistributions: createInstalledDistributions(),
@@ -76,6 +77,7 @@ describe('dependency externalizer support', () => {
         projectName: 'test-project',
         pythonVersion: TEST_PYTHON_VERSION,
         hasCustomCommand,
+        preferHiveForOversizedFunctions,
       });
       // Set the private totalBundleSize field for testing
       (ext as any).totalBundleSize = totalBundleSize;
@@ -94,6 +96,26 @@ describe('dependency externalizer support', () => {
       process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
       const ext = createExternalizer({ totalBundleSize: oversized });
       expect(ext.shouldEnableRuntimeInstall()).toBe(true);
+    });
+
+    it('skips runtime install for an oversized bundle when direct Hive is preferred', () => {
+      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
+      const ext = createExternalizer({
+        totalBundleSize: oversized,
+        preferHiveForOversizedFunctions: true,
+      });
+
+      expect(ext.shouldEnableRuntimeInstall()).toBe(false);
+    });
+
+    it('keeps a bundle exactly at the standard threshold on Lambda when direct Hive is preferred', () => {
+      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
+      const ext = createExternalizer({
+        totalBundleSize: LAMBDA_SIZE_THRESHOLD_BYTES,
+        preferHiveForOversizedFunctions: true,
+      });
+
+      expect(ext.shouldEnableRuntimeInstall()).toBe(false);
     });
 
     it('skips runtime install under VERCEL_SUPPORT_LARGE_FUNCTIONS when the bundle exceeds ephemeral storage', () => {

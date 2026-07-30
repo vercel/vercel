@@ -5523,6 +5523,240 @@ describe('custom install hooks', () => {
   });
 });
 
+describe('direct Hive packing', () => {
+  const suggestion =
+    'This function exceeds the standard size limit and will install dependencies at runtime. ' +
+    'Set `VERCEL_SUPPORT_LARGE_FUNCTIONS=1` to bundle all dependencies and deploy as a large function.';
+  const originalLargeFunctionsEnv = process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+  let consoleLogSpy: MockInstance;
+
+  beforeEach(() => {
+    vi.resetModules();
+    makeMockPython('3.12');
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore();
+    if (originalLargeFunctionsEnv === undefined) {
+      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+    } else {
+      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = originalLargeFunctionsEnv;
+    }
+    vi.doUnmock('../src/dependency-externalizer');
+    vi.doUnmock('../src/install');
+    vi.doUnmock('../src/index');
+    vi.doUnmock('../src/utils');
+  });
+
+  async function runBuild({
+    createdAt,
+    largeFunctionsEnv,
+    totalBundleSize = 225 * 1024 * 1024 + 1,
+    generateBundleError,
+  }: {
+    createdAt?: number;
+    largeFunctionsEnv?: string;
+    totalBundleSize?: number;
+    generateBundleError?: Error;
+  }) {
+    if (largeFunctionsEnv === undefined) {
+      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+    } else {
+      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = largeFunctionsEnv;
+    }
+
+    const externalizerOptions = vi.fn();
+    const generateBundle = vi.fn(async () => {
+      if (generateBundleError) {
+        throw generateBundleError;
+      }
+      return {
+        fellBackToFullBundle: false,
+        packingMode: 'knapsack' as const,
+      };
+    });
+
+    const realInstall =
+      await vi.importActual<typeof import('../src/install')>('../src/install');
+    vi.doMock('../src/install', () => ({
+      ...realInstall,
+      getVenvSitePackagesDirs: vi.fn(async () => []),
+    }));
+
+    const realUtils =
+      await vi.importActual<typeof import('../src/utils')>('../src/utils');
+    vi.doMock('../src/utils', () => ({
+      ...realUtils,
+      ensureVenv: vi.fn(async () => {}),
+    }));
+
+    vi.doMock('../src/dependency-externalizer', async () => {
+      const actual = await vi.importActual<
+        typeof import('../src/dependency-externalizer')
+      >('../src/dependency-externalizer');
+
+      return {
+        ...actual,
+        PythonDependencyExternalizer: class {
+          private readonly preferHiveForOversizedFunctions: boolean;
+
+          constructor(options: { preferHiveForOversizedFunctions: boolean }) {
+            externalizerOptions(options);
+            this.preferHiveForOversizedFunctions =
+              options.preferHiveForOversizedFunctions;
+          }
+
+          async analyze(
+            _files: unknown,
+            options: {
+              onSized?: (info: {
+                totalSizeBytes: number;
+                runtimeInstallEnabled: boolean;
+              }) => void;
+            } = {}
+          ) {
+            const runtimeInstallEnabled =
+              totalBundleSize > actual.LAMBDA_SIZE_THRESHOLD_BYTES &&
+              !this.preferHiveForOversizedFunctions;
+            options.onSized?.({
+              totalSizeBytes: totalBundleSize,
+              runtimeInstallEnabled,
+            });
+            return {
+              runtimeInstallEnabled,
+              allVendorFiles: {
+                '_vendor/example.py': new FileBlob({ data: 'example' }),
+              },
+              totalBundleSize,
+            };
+          }
+
+          async generateBundle() {
+            return generateBundle();
+          }
+        },
+      };
+    });
+
+    const { build: buildWithMocks } = await import('../src/index');
+    const workPath = path.join(
+      tmpdir(),
+      `python-direct-hive-${Date.now()}-${Math.random()}`
+    );
+    const events: any[] = [];
+    const span = new Span({
+      name: 'vc.builder',
+      reporter: {
+        report: event => events.push(event),
+      },
+    });
+    const files = {
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
+    };
+    let buildError: unknown;
+
+    try {
+      await buildWithMocks({
+        workPath,
+        files,
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: {
+          projectSettings: {
+            createdAt,
+          },
+        },
+        repoRootPath: workPath,
+        span,
+      });
+    } catch (error: unknown) {
+      buildError = error;
+    } finally {
+      await fs.remove(workPath);
+    }
+
+    return {
+      buildError,
+      externalizerOptions,
+      generateBundle,
+      bundleSpan: events.find(
+        event => event.name === 'vc.builder.python.bundle'
+      ),
+      suggestionCalls: consoleLogSpy.mock.calls.filter(
+        ([message]) => message === suggestion
+      ),
+    };
+  }
+
+  it.each([
+    undefined,
+    Date.parse('2020-01-01T00:00:00Z'),
+  ])('deploys an oversized function directly to Hive with createdAt=%s', async createdAt => {
+    const result = await runBuild({
+      createdAt,
+      largeFunctionsEnv: '1',
+    });
+
+    expect(result.buildError).toBeUndefined();
+    expect(result.externalizerOptions).toHaveBeenCalledWith(
+      expect.objectContaining({
+        preferHiveForOversizedFunctions: true,
+      })
+    );
+    expect(result.generateBundle).not.toHaveBeenCalled();
+    expect(result.suggestionCalls).toHaveLength(0);
+    expect(result.bundleSpan?.tags).toMatchObject({
+      'python.bundle.directHiveSelected': 'true',
+      'python.bundle.packingMode': 'hive',
+    });
+  });
+
+  it.each([
+    undefined,
+    'yes',
+  ])('uses runtime install and suggests Hive once with flag %s', async largeFunctionsEnv => {
+    const result = await runBuild({
+      largeFunctionsEnv,
+    });
+
+    expect(result.buildError).toBeUndefined();
+    expect(result.generateBundle).toHaveBeenCalledTimes(1);
+    expect(result.suggestionCalls).toHaveLength(1);
+    expect(result.bundleSpan?.tags).toMatchObject({
+      'python.bundle.directHiveSelected': 'false',
+      'python.bundle.packingMode': 'runtime-install',
+    });
+  });
+
+  it('keeps a bundle exactly at 225 MiB standard without a suggestion', async () => {
+    const result = await runBuild({
+      totalBundleSize: 225 * 1024 * 1024,
+    });
+
+    expect(result.buildError).toBeUndefined();
+    expect(result.generateBundle).not.toHaveBeenCalled();
+    expect(result.suggestionCalls).toHaveLength(0);
+    expect(result.bundleSpan?.tags).toMatchObject({
+      'python.bundle.directHiveSelected': 'false',
+      'python.bundle.packingMode': 'standard',
+    });
+  });
+
+  it('does not suggest Hive when runtime-install packing fails', async () => {
+    const result = await runBuild({
+      generateBundleError: new Error('runtime install packing failed'),
+    });
+
+    expect(result.buildError).toMatchObject({
+      message: 'runtime install packing failed',
+    });
+    expect(result.suggestionCalls).toHaveLength(0);
+  });
+});
+
 describe('worker services dependency installation', () => {
   async function buildWithPipSpy(options: { dependencies?: string[] } = {}) {
     const pipCalls: string[][] = [];
