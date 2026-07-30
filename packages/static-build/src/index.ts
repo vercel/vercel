@@ -10,14 +10,7 @@ import {
   type ChildProcess,
   type SpawnOptions,
 } from 'child_process';
-import {
-  existsSync,
-  readFileSync,
-  statSync,
-  readdirSync,
-  mkdirSync,
-  promises as fsPromises,
-} from 'fs';
+import { existsSync, readFileSync, statSync, readdirSync, mkdirSync } from 'fs';
 import { cpus } from 'os';
 import {
   BuildOptions,
@@ -44,10 +37,8 @@ import {
   generateProjectManifest,
   generateRubyProjectManifest,
   writeProjectManifest,
-  manifestPath,
   MANIFEST_VERSION,
-  FileBlob,
-  Diagnostics,
+  createDiagnostics,
   getReportedServiceType,
   getNodeVersion,
   debug,
@@ -977,7 +968,14 @@ export const prepareCache: PrepareCache = async ({
   return cacheFiles;
 };
 
-const STATIC_BUILD_MANIFEST_RUNTIMES = ['node', 'go', 'rust', 'ruby'] as const;
+// Manifest storage slot for this builder. Language builders (@vercel/go,
+// @vercel/rust, @vercel/ruby) write to 'go', 'rust', and 'ruby' slots
+// respectively, so using 'static-build' keeps our manifests in a separate
+// directory and prevents overwrites when both builders run in the same project
+// (e.g. Hugo + api/*.go). This value only appears as a directory name on disk
+// (.vercel/static-build/package-manifest.json) and never in the output
+// manifests, whose keys are derived from the builder name and workspace.
+const STATIC_BUILD_MANIFEST_RUNTIME = 'static-build' as const;
 
 async function generateStaticBuildManifest({
   framework,
@@ -1023,7 +1021,7 @@ async function generateStaticBuildManifest({
           ],
         },
         entrypointDir,
-        'go'
+        STATIC_BUILD_MANIFEST_RUNTIME
       );
     } catch (err) {
       debug(
@@ -1057,7 +1055,7 @@ async function generateStaticBuildManifest({
           ],
         },
         entrypointDir,
-        'rust'
+        STATIC_BUILD_MANIFEST_RUNTIME
       );
     } catch (err) {
       debug(
@@ -1070,6 +1068,7 @@ async function generateStaticBuildManifest({
       gemfileLockPath: path.join(entrypointDir, 'Gemfile.lock'),
       framework: framework.slug,
       serviceType: service ? getReportedServiceType(service) : undefined,
+      outputRuntime: STATIC_BUILD_MANIFEST_RUNTIME,
     });
   } else if (framework?.slug) {
     try {
@@ -1081,6 +1080,7 @@ async function generateStaticBuildManifest({
         lockfileVersion,
         framework: framework.slug,
         serviceType: service ? getReportedServiceType(service) : undefined,
+        outputRuntime: STATIC_BUILD_MANIFEST_RUNTIME,
       });
     } catch (err) {
       debug(
@@ -1090,19 +1090,4 @@ async function generateStaticBuildManifest({
   }
 }
 
-export const diagnostics: Diagnostics = async ({ workPath }) => {
-  const files: Files = {};
-  await Promise.all(
-    STATIC_BUILD_MANIFEST_RUNTIMES.map(async runtime => {
-      const relPath = manifestPath(runtime);
-      try {
-        const data = await fsPromises.readFile(
-          path.join(workPath, relPath),
-          'utf-8'
-        );
-        files[relPath] = new FileBlob({ data });
-      } catch {}
-    })
-  );
-  return files;
-};
+export const diagnostics = createDiagnostics(STATIC_BUILD_MANIFEST_RUNTIME);
