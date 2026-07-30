@@ -40,8 +40,6 @@ vercel git connect https://github.com/user/repo.git
 vercel git disconnect --yes
 ```
 
-Verify the linked project and scope before changing Git connections.
-
 ## Edge Config
 
 ```bash

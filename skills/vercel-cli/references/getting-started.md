@@ -16,8 +16,6 @@ npm i -g vercel
 
 ## Project Linking
 
-Commands must be run from the directory containing `.vercel/` or a subdirectory of it.
-
 - **`.vercel/project.json`**: Created by `vercel link`. Links a single project. Fine for single-project repos, and can work in monorepos if there's only one project.
 - **`.vercel/repo.json`**: Created by `vercel link --repo`. Links a repo that may contain multiple projects. Always a good idea when any project has a non-root directory (e.g., `apps/web`).
 
