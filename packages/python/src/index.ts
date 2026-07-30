@@ -2112,12 +2112,31 @@ export const build: BuildVX = async ({
           )
           .map(urlPath => urlPath.slice(prefix.length + 1));
         const guard = nested.length ? `(?!(?:${nested.join('|')})(?:/|$))` : '';
+        // A 200 ("index.html") fallback is navigation-only at runtime: the
+        // frontend serves it solely for `Accept: text/html` (or xhtml) requests
+        // and 404s the rest. Gate the route on the same header so a
+        // non-navigation miss falls through to the Lambda. The router anchors
+        // the `has` value (`^…$`), hence the wrapping `.*`. A 404 ("404.html")
+        // fallback is served for every miss, so it carries no such condition.
+        const navigationOnly =
+          fb.status === 200
+            ? {
+                has: [
+                  {
+                    type: 'header' as const,
+                    key: 'accept',
+                    value: '.*(?:text/html|application/xhtml\\+xml).*',
+                  },
+                ],
+              }
+            : {};
         return {
           src: `^${prefix}/${guard}.*$`,
           dest: `${prefix}/${fb.file}`,
           status: fb.status,
           check: true,
           methods: ['GET', 'HEAD'],
+          ...navigationOnly,
         };
       })
     : [];
