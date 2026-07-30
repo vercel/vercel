@@ -55,12 +55,6 @@ export interface Subscriber extends SubscriberDeclaration {
   subscriptions: SubscriberSubscription[];
 }
 
-export interface APSchedulerControlDeclaration {
-  entrypoint: string;
-  moduleName: string;
-  variableName: string;
-}
-
 interface RawSubscriber {
   entrypoint?: unknown;
   topics?: unknown;
@@ -164,11 +158,6 @@ interface Pyproject {
   tool?: {
     vercel?: {
       subscribers?: RawSubscriber[];
-      apscheduler?: {
-        control?: {
-          entrypoint?: unknown;
-        };
-      };
     };
   };
 }
@@ -233,55 +222,6 @@ export async function getPyprojectSubscribers(
   }
 
   return parsedSubscribers;
-}
-
-export async function getPyprojectAPSchedulerControl(
-  workPath: string
-): Promise<APSchedulerControlDeclaration | undefined> {
-  const pyprojectPath = join(workPath, 'pyproject.toml');
-  if (!fs.existsSync(pyprojectPath)) {
-    return undefined;
-  }
-  const pyproject = await readConfigFile<Pyproject>(pyprojectPath);
-  const config = pyproject?.tool?.vercel?.apscheduler?.control;
-  if (config === undefined) {
-    return undefined;
-  }
-  if (!config || typeof config !== 'object' || Array.isArray(config)) {
-    throw subscriberError('"tool.vercel.apscheduler.control" must be a table');
-  }
-  for (const key of Object.keys(config)) {
-    if (key !== 'entrypoint') {
-      throw subscriberError(
-        `"tool.vercel.apscheduler.control" has unrecognized field "${key}"`
-      );
-    }
-  }
-  if (typeof config.entrypoint !== 'string') {
-    throw subscriberError(
-      '"tool.vercel.apscheduler.control" must define string field "entrypoint"'
-    );
-  }
-  const entrypoint = parseModuleEntrypoint(config.entrypoint);
-  if (!entrypoint) {
-    throw subscriberError(
-      `"tool.vercel.apscheduler.control" has invalid entrypoint "${config.entrypoint}". Use "module:object"`
-    );
-  }
-  const existingEntrypoint = await resolveExistingEntrypoint(
-    workPath,
-    entrypoint.filePath
-  );
-  if (!existingEntrypoint) {
-    throw subscriberError(
-      `APScheduler control entrypoint "${config.entrypoint}" references missing file "${entrypoint.filePath}"`
-    );
-  }
-  return {
-    entrypoint: config.entrypoint,
-    moduleName: entrypoint.moduleName,
-    variableName: entrypoint.variableName,
-  };
 }
 
 export async function resolveQueueSubscribers({
@@ -612,6 +552,7 @@ function createQueueIntrospectionScript(
   return [
     'import importlib, json, os, sys',
     `os.environ[${JSON.stringify(SUBSCRIBER_ID_ENV)}] = ${JSON.stringify(declaration.name)}`,
+    'os.environ["VERCEL_APSCHEDULER_DISCOVERY"] = "1"',
     ...createIntegrationInstallLines(integrations, {
       serving: false,
       beforeImport: true,

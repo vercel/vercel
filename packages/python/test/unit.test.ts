@@ -87,7 +87,6 @@ import {
   filterQueueSubscriptions,
   generatedPythonPathToModule,
   getGeneratedQueueHandlerPath,
-  getPyprojectAPSchedulerControl,
   getSubscriberOutputPath,
   queueTopicPatternsOverlap,
   type SubscriberDeclaration,
@@ -3024,53 +3023,7 @@ describe('pyproject subscribers', () => {
     );
   });
 
-  it('parses an APScheduler control entrypoint', async () => {
-    fs.writeFileSync(
-      path.join(mockWorkPath, 'scheduler.py'),
-      'control = object()\n'
-    );
-    fs.writeFileSync(
-      path.join(mockWorkPath, 'pyproject.toml'),
-      [
-        '[project]',
-        'name = "x"',
-        'version = "0.0.1"',
-        '',
-        '[tool.vercel.apscheduler.control]',
-        'entrypoint = "scheduler:control"',
-        '',
-      ].join('\n')
-    );
-
-    await expect(getPyprojectAPSchedulerControl(mockWorkPath)).resolves.toEqual(
-      {
-        entrypoint: 'scheduler:control',
-        moduleName: 'scheduler',
-        variableName: 'control',
-      }
-    );
-  });
-
-  it('rejects an APScheduler control entrypoint with a missing module', async () => {
-    fs.writeFileSync(
-      path.join(mockWorkPath, 'pyproject.toml'),
-      [
-        '[project]',
-        'name = "x"',
-        'version = "0.0.1"',
-        '',
-        '[tool.vercel.apscheduler.control]',
-        'entrypoint = "missing:control"',
-        '',
-      ].join('\n')
-    );
-
-    await expect(getPyprojectAPSchedulerControl(mockWorkPath)).rejects.toThrow(
-      /references missing file "missing\.py"/
-    );
-  });
-
-  it('injects APScheduler control metadata into web and scheduler Lambdas', async () => {
+  it('injects APScheduler subscriber identities into runtime Lambdas', async () => {
     mockQueueIntrospection([
       {
         topic: '__aps_scheduler_scheduler_start',
@@ -3086,7 +3039,7 @@ describe('pyproject subscribers', () => {
         data: 'def app(environ, start_response): pass\n',
       }),
       'scheduler.py': new FileBlob({
-        data: 'scheduler = object()\ncontrol = object()\n',
+        data: 'scheduler = object()\n',
       }),
       'pyproject.toml': new FileBlob({
         data: [
@@ -3097,9 +3050,6 @@ describe('pyproject subscribers', () => {
           '',
           '[[tool.vercel.subscribers]]',
           'entrypoint = "scheduler:scheduler"',
-          '',
-          '[tool.vercel.apscheduler.control]',
-          'entrypoint = "scheduler:control"',
           '',
         ].join('\n'),
       }),
@@ -3117,11 +3067,8 @@ describe('pyproject subscribers', () => {
     const scheduler = output[getSubscriberOutputPath('scheduler_scheduler')];
 
     for (const lambda of [output.flask, scheduler]) {
-      expect(lambda.environment.VERCEL_APSCHEDULER_CONTROL_ENTRYPOINT).toBe(
-        'scheduler:control'
-      );
       expect(lambda.environment.VERCEL_APSCHEDULER_SUBSCRIBERS).toBe(
-        '["scheduler_scheduler"]'
+        '[{"id":"scheduler_scheduler","entrypoint":"scheduler:scheduler"}]'
       );
       expect(lambda.environment.VERCEL_QUEUE_INTEGRATIONS).toBe(
         'vercel.integrations.apscheduler:install_vercel_apscheduler_integration'
@@ -3136,11 +3083,12 @@ describe('pyproject subscribers', () => {
       );
     expect(introspectionScripts).not.toEqual([]);
     for (const script of introspectionScripts) {
-      expect(script).not.toContain('VERCEL_APSCHEDULER_CONTROL_ENTRYPOINT');
+      expect(script).not.toContain('VERCEL_APSCHEDULER_SUBSCRIBERS');
+      expect(script).toContain('VERCEL_APSCHEDULER_DISCOVERY');
     }
   });
 
-  it('does not inject APScheduler control into unrelated subscriber Lambdas', async () => {
+  it('injects only discovered APScheduler subscriber identities', async () => {
     mockedExeca.mockImplementation(async (_cmd, args) => {
       if (
         Array.isArray(args) &&
@@ -3149,7 +3097,6 @@ describe('pyproject subscribers', () => {
       ) {
         const script = args[args.length - 1] as string;
         if (script.includes('get_subscriptions')) {
-          expect(script).not.toContain('VERCEL_APSCHEDULER_CONTROL_ENTRYPOINT');
           if (script.includes('importlib.import_module("scheduler")')) {
             return {
               stdout: JSON.stringify([
@@ -3178,7 +3125,7 @@ describe('pyproject subscribers', () => {
         data: 'def app(environ, start_response): pass\n',
       }),
       'scheduler.py': new FileBlob({
-        data: 'scheduler = object()\ncontrol = object()\n',
+        data: 'scheduler = object()\n',
       }),
       'worker.py': new FileBlob({
         data: 'worker = object()\n',
@@ -3196,9 +3143,6 @@ describe('pyproject subscribers', () => {
           '[[tool.vercel.subscribers]]',
           'entrypoint = "worker:worker"',
           '',
-          '[tool.vercel.apscheduler.control]',
-          'entrypoint = "scheduler:control"',
-          '',
         ].join('\n'),
       }),
     } as Record<string, FileBlob>;
@@ -3212,19 +3156,11 @@ describe('pyproject subscribers', () => {
       repoRootPath: mockWorkPath,
     });
     const output = getBuildOutputV2(result).output as any;
-    const scheduler = output[getSubscriberOutputPath('scheduler_scheduler')];
     const worker = output[getSubscriberOutputPath('worker_worker')];
 
-    expect(output.flask.environment.VERCEL_APSCHEDULER_CONTROL_ENTRYPOINT).toBe(
-      'scheduler:control'
+    expect(worker.environment.VERCEL_APSCHEDULER_SUBSCRIBERS).toBe(
+      '[{"id":"scheduler_scheduler","entrypoint":"scheduler:scheduler"}]'
     );
-    expect(scheduler.environment.VERCEL_APSCHEDULER_CONTROL_ENTRYPOINT).toBe(
-      'scheduler:control'
-    );
-    expect(
-      worker.environment.VERCEL_APSCHEDULER_CONTROL_ENTRYPOINT
-    ).toBeUndefined();
-    expect(worker.environment.VERCEL_APSCHEDULER_SUBSCRIBERS).toBeUndefined();
   });
 
   it('returns dev sidecars matching build consumer names', async () => {

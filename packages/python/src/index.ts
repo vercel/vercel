@@ -109,13 +109,11 @@ import {
   createQueueHandlerModule,
   generatedPythonPathToModule,
   getGeneratedQueueHandlerPath,
-  getPyprojectAPSchedulerControl,
   getPyprojectSubscribers,
   getSubscriberConsumerName,
   getSubscriberOutputPath,
   resolveQueueSubscribers,
   type Subscriber,
-  type APSchedulerControlDeclaration,
   type SubscriberDeclaration,
 } from './subscribers';
 import {
@@ -771,7 +769,6 @@ export const build: BuildVX = async ({
   const framework = config?.framework;
   let subscriberDeclarations: SubscriberDeclaration[] = [];
   let subscribers: Subscriber[] = [];
-  let apschedulerControl: APSchedulerControlDeclaration | undefined;
   let workflows: PyprojectWorkflow[] = [];
   // Projects that directly depend on the legacy `vercel-workers` SDK keep
   // the pre-vercel-queue integration (legacy subscriber schema, worker env
@@ -811,9 +808,6 @@ export const build: BuildVX = async ({
     subscriberDeclarations = await getPyprojectSubscribers(workPath, {
       legacySchema: legacyWorkersProject,
     });
-    apschedulerControl = legacyWorkersProject
-      ? undefined
-      : await getPyprojectAPSchedulerControl(workPath);
     workflows = await getPyprojectWorkflows(workPath);
   }
 
@@ -1478,32 +1472,24 @@ export const build: BuildVX = async ({
       )
       .join(',');
   }
-  let apschedulerSubscribers: string[] = [];
-  let apschedulerControlEnv: Record<string, string> | undefined;
-  if (apschedulerControl) {
-    apschedulerSubscribers = subscribers
-      .filter(subscriber => {
-        const topics = new Set(
-          subscriber.subscriptions.map(subscription => subscription.topic)
-        );
-        return (
-          topics.has(`__aps_${subscriber.name}_start`) &&
-          topics.has(`__aps_${subscriber.name}_wakeup`)
-        );
-      })
-      .map(subscriber => subscriber.name);
-    if (apschedulerSubscribers.length === 0) {
-      throw new NowBuildError({
-        code: 'PYTHON_INVALID_APSCHEDULER_CONTROL',
-        message:
-          '"tool.vercel.apscheduler.control" is configured, but no declared ' +
-          'APScheduler subscribers were discovered.',
-      });
-    }
-    apschedulerControlEnv = {
-      VERCEL_APSCHEDULER_CONTROL_ENTRYPOINT: apschedulerControl.entrypoint,
-      VERCEL_APSCHEDULER_SUBSCRIBERS: JSON.stringify(apschedulerSubscribers),
-    };
+  const apschedulerSubscribers = subscribers
+    .filter(subscriber => {
+      const topics = new Set(
+        subscriber.subscriptions.map(subscription => subscription.topic)
+      );
+      return (
+        topics.has(`__aps_${subscriber.name}_start`) &&
+        topics.has(`__aps_${subscriber.name}_wakeup`)
+      );
+    })
+    .map(subscriber => ({
+      id: subscriber.name,
+      entrypoint: `${subscriber.moduleName}:${subscriber.variableName}`,
+    }));
+  if (apschedulerSubscribers.length > 0) {
+    lambdaEnv.VERCEL_APSCHEDULER_SUBSCRIBERS = JSON.stringify(
+      apschedulerSubscribers
+    );
   }
 
   const globOptions: GlobOptions = {
@@ -1888,7 +1874,6 @@ export const build: BuildVX = async ({
       architecture: target.architecture,
       environment: {
         ...lambdaEnv,
-        ...(apschedulerControlEnv ?? {}),
       },
       supportsResponseStreaming: true,
     });
@@ -1934,9 +1919,7 @@ export const build: BuildVX = async ({
       handler: `${handlerPyFilename}.vc_handler`,
       runtime: pythonVersion.runtime,
       architecture: target.architecture,
-      environment: apschedulerSubscribers.includes(subscriber.name)
-        ? { ...lambdaEnv, ...(apschedulerControlEnv ?? {}) }
-        : lambdaEnv,
+      environment: lambdaEnv,
       experimentalTriggers,
       supportsResponseStreaming: true,
     });

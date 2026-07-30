@@ -56,7 +56,6 @@ import {
   type QueueIntegration,
 } from './conditional-vendoring';
 import {
-  getPyprojectAPSchedulerControl,
   getPyprojectSubscribers,
   introspectDevQueueSubscriptions,
 } from './subscribers';
@@ -973,25 +972,27 @@ export const startDevServer: StartDevServer = async opts => {
       );
     }
 
-    const apschedulerControl = legacyProject
-      ? undefined
-      : await getPyprojectAPSchedulerControl(workPath);
-    let apschedulerSubscriberNames: string[] = [];
-    if (apschedulerControl) {
+    const apschedulerSubscribers: {
+      id: string;
+      entrypoint: string;
+    }[] = [];
+    if (!legacyProject) {
       const runtimeDir = join(workPath, '.vercel', 'python');
       const declaredSubscribers = await getPyprojectSubscribers(workPath);
+      const introspectionEnv: NodeJS.ProcessEnv = {
+        ...env,
+        PYTHONPATH: [runtimeDir, env.PYTHONPATH]
+          .filter(Boolean)
+          .join(delimiter),
+      };
+      delete introspectionEnv.VERCEL_APSCHEDULER_SUBSCRIBERS;
       for (const declaration of declaredSubscribers) {
         const discovered = await introspectDevQueueSubscriptions({
           moduleName: declaration.moduleName,
           subscriberName: declaration.name,
           pythonBin: spawnCommand,
           cwd: workPath,
-          env: {
-            ...env,
-            PYTHONPATH: [runtimeDir, env.PYTHONPATH]
-              .filter(Boolean)
-              .join(delimiter),
-          },
+          env: introspectionEnv,
           integrations: queueIntegrations,
         });
         const topics = new Set(
@@ -1001,19 +1002,19 @@ export const startDevServer: StartDevServer = async opts => {
           topics.has(`__aps_${declaration.name}_start`) &&
           topics.has(`__aps_${declaration.name}_wakeup`)
         ) {
-          apschedulerSubscriberNames.push(declaration.name);
+          apschedulerSubscribers.push({
+            id: declaration.name,
+            entrypoint: `${declaration.moduleName}:${declaration.variableName}`,
+          });
         }
       }
-      if (apschedulerSubscriberNames.length === 0) {
-        throw new Error(
-          '"tool.vercel.apscheduler.control" is configured, but no declared ' +
-            'APScheduler subscribers were discovered.'
-        );
-      }
-      env.VERCEL_APSCHEDULER_CONTROL_ENTRYPOINT = apschedulerControl.entrypoint;
+    }
+    if (apschedulerSubscribers.length > 0) {
       env.VERCEL_APSCHEDULER_SUBSCRIBERS = JSON.stringify(
-        apschedulerSubscriberNames
+        apschedulerSubscribers
       );
+    } else {
+      delete env.VERCEL_APSCHEDULER_SUBSCRIBERS;
     }
 
     // Legacy vercel-workers projects run every dev process on the injected
@@ -1081,7 +1082,6 @@ export const startDevServer: StartDevServer = async opts => {
             .filter(Boolean)
             .join(delimiter),
         };
-        delete introspectionEnv.VERCEL_APSCHEDULER_CONTROL_ENTRYPOINT;
         delete introspectionEnv.VERCEL_APSCHEDULER_SUBSCRIBERS;
         queueSubscriptions = await introspectDevQueueSubscriptions({
           moduleName: modulePath,
@@ -1091,13 +1091,6 @@ export const startDevServer: StartDevServer = async opts => {
           env: introspectionEnv,
           integrations: queueIntegrations,
         });
-        if (
-          apschedulerControl &&
-          !apschedulerSubscriberNames.includes(subscriberName)
-        ) {
-          delete env.VERCEL_APSCHEDULER_CONTROL_ENTRYPOINT;
-          delete env.VERCEL_APSCHEDULER_SUBSCRIBERS;
-        }
       } else {
         delete env.VERCEL_DEV_QUEUE_SERVING;
         delete env.VERCEL_PYTHON_SUBSCRIBER_ID;
