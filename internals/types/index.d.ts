@@ -322,6 +322,7 @@ export interface ProjectEnvVariable {
   key: string;
   value: string;
   type: ProjectEnvType;
+  visibility?: 'config' | 'secret';
   configurationId?: string | null;
   createdAt?: number;
   updatedAt?: number;
