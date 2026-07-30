@@ -200,6 +200,52 @@ describe('buildFileTree()', () => {
     );
   });
 
+  it('should not re-add `.vercelignore`d files through `filePathMap` when prebuilt=true', async () => {
+    const cwd = fixture('prebuilt-filepathmap-ignore');
+    const { fileList } = await buildFileTree(
+      cwd,
+      {
+        isDirectory: true,
+        prebuilt: true,
+        vercelOutputDir: join(cwd, '.vercel/output'),
+      },
+      noop
+    );
+
+    // `safe-handler.js` is not ignored and must still be included
+    expect(normalizeWindowsPaths(fileList)).toContain(
+      normalizeWindowsPaths([join(cwd, 'safe-handler.js')])[0]
+    );
+    expect(normalizeWindowsPaths(fileList)).toContain(
+      normalizeWindowsPaths([
+        join(cwd, '.vercel/output/functions/api/example.func/.vc-config.json'),
+      ])[0]
+    );
+
+    // `.env` is excluded by `.vercelignore` and must not be re-added
+    // through `filePathMap`
+    expect(normalizeWindowsPaths(fileList)).not.toContain(
+      normalizeWindowsPaths([join(cwd, '.env')])[0]
+    );
+  });
+
+  it('should reject `filePathMap` entries that escape the deployment root when prebuilt=true', async () => {
+    const cwd = fixture('prebuilt-filepathmap-ignore');
+    const { fileList } = await buildFileTree(
+      cwd,
+      {
+        isDirectory: true,
+        prebuilt: true,
+        vercelOutputDir: join(cwd, '.vercel/output'),
+      },
+      noop
+    );
+
+    expect(
+      normalizeWindowsPaths(fileList).some(f => f.endsWith('outside.txt'))
+    ).toBe(false);
+  });
+
   it('monorepo - should find root files but ignore `.vercel/output` files when prebuilt=false', async () => {
     const cwd = fixture('monorepo-boa');
     const { fileList, ignoreList } = await buildFileTree(

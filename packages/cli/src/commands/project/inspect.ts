@@ -13,6 +13,27 @@ import stamp from '../../util/output/stamp';
 import getTeamById from '../../util/teams/get-team-by-id';
 import formatDate from '../../util/format-date';
 import type Client from '../../util/client';
+import { exitWithNonInteractiveError } from '../../util/agent-output';
+
+const getProjectForInspect = async (
+  client: Client,
+  projectNameOrId: string | undefined,
+  autoConfirm: boolean | undefined
+) => {
+  try {
+    return await getProjectByCwdOrLink({
+      autoConfirm,
+      client,
+      commandName: 'project inspect',
+      projectNameOrId,
+      forReadOnlyCommand: true,
+    });
+  } catch (error: unknown) {
+    exitWithNonInteractiveError(client, error, 1, { variant: 'inspect' });
+    printError(error);
+    return null;
+  }
+};
 
 export default async function inspect(
   client: Client,
@@ -48,12 +69,14 @@ export default async function inspect(
   }
 
   const inspectStamp = stamp();
-  const project = await getProjectByCwdOrLink({
-    autoConfirm: parsedArgs.flags['--yes'],
+  const project = await getProjectForInspect(
     client,
-    commandName: 'project inspect',
-    projectNameOrId: name,
-  });
+    name,
+    parsedArgs.flags['--yes']
+  );
+  if (!project) {
+    return 1;
+  }
 
   const org = await getTeamById(client, project.accountId);
   const projectSlugLink = formatProject(org.slug, project.name);
