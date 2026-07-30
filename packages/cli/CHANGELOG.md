@@ -1,5 +1,96 @@
 # vercel
 
+## 58.4.1
+
+### Patch Changes
+
+- Updated dependencies [5858c35]
+  - @vercel/python@6.54.1
+
+## 58.4.0
+
+### Minor Changes
+
+- a928d5a: Add `vercel ai-gateway budgets defaults` (list/set/remove) to manage per-scope AI Gateway budget defaults (project and api-key), each with its own limit and refresh period
+
+### Patch Changes
+
+- Updated dependencies [2c75803]
+- Updated dependencies [57dec92]
+  - @vercel/build-utils@13.36.2
+  - @vercel/backends@0.8.29
+  - @vercel/container@0.1.0
+  - @vercel/elysia@0.1.106
+  - @vercel/express@0.1.120
+  - @vercel/fastify@0.1.109
+  - @vercel/go@3.10.2
+  - @vercel/h3@0.1.115
+  - @vercel/hono@0.2.109
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.89
+  - @vercel/nestjs@0.2.110
+  - @vercel/next@4.20.4
+  - @vercel/node@5.9.2
+  - @vercel/python@6.54.0
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.0
+  - @vercel/static-build@2.11.12
+
+## 58.3.0
+
+### Minor Changes
+
+- 0f04613: Add `vercel vcr permissions` subcommands for managing which teams can pull images from a VCR repository: `vcr permissions <repository> ls` lists teams with access (by team slug), `add` and `rm` grant or revoke access for one or more teams (comma-separated team ids or slugs), and `clear` removes access for every team.
+- 17ee736: Replace the vercel-workers integration for Python queue subscribers and workflows with the new vercel-queue SDK:
+
+  - `[[tool.vercel.subscribers]]` entrypoints are introspected at build time via `vercel.queue.get_subscriptions()` and served through generated `vercel.queue.asgi_app()` handler modules, with `queue/v2beta` triggers carrying the SDK-registered consumer groups and per-subscription tuning.
+  - Celery and Dramatiq projects get the matching `vercel-celery`/`vercel-dramatiq` integration package injected automatically (bundled variant unless `vercel-queue` is an explicit dependency), in builds and in `vercel dev`.
+  - `[[tool.vercel.workflows]]` entrypoints follow the SDK generation: projects on `vercel` >= 0.8.0 are served through vercel-queue like subscribers; older or undeterminable versions keep the legacy vercel-workers serving (worker env markers, injected pinned `vercel-workers`).
+  - Projects that depend on `vercel-workers` directly keep the legacy integration wholesale: legacy subscriber schema, direct entrypoint serving, worker env markers.
+  - `vercel dev` serves queue sidecars through `vercel.queue.asgi_app()` for new-SDK projects, and its queue broker delivers with the SDK-registered consumer groups introspected at sidecar startup (matching production trigger behavior); legacy projects keep the vercel-workers bootstrap.
+  - The CLI no longer injects `config.hasWorkerServices`; the Python builder makes all queue-serving decisions from project metadata.
+
+- 5fc4930: Rename the `vc edge-config` command to `vc global-config`, keeping `edge-config` working as an alias for backwards compatibility.
+
+### Patch Changes
+
+- a12044c: Resolve explicit `--deployment` targets without linking the current directory, reuse existing protection bypass tokens without creating them on cross-project targets, and prevent `--scope` and `--team` from leaking into curl arguments.
+- Updated dependencies [17ee736]
+  - @vercel/python@6.54.0
+  - @vercel/build-utils@13.36.1
+  - @vercel/backends@0.8.28
+  - @vercel/container@0.1.0
+  - @vercel/elysia@0.1.105
+  - @vercel/express@0.1.119
+  - @vercel/fastify@0.1.108
+  - @vercel/go@3.10.2
+  - @vercel/h3@0.1.114
+  - @vercel/hono@0.2.108
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.88
+  - @vercel/nestjs@0.2.109
+  - @vercel/next@4.20.4
+  - @vercel/node@5.9.1
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.0
+  - @vercel/static-build@2.11.11
+
+## 58.2.0
+
+### Minor Changes
+
+- ce19aa5: Fix `vercel buy addon customEnvironment <packs>` to purchase per-project custom environment capacity via `/v1/projects/custom-environments/settings` instead of `/v1/billing/buy`. Supports `--project` for non-linked directories, accepts common name aliases, validates pack ranges client-side, and shows clearer errors for Hobby teams (`upgrade_required`), feature-flag blocks, and over-limit requests.
+
+### Patch Changes
+
+- b9cbe9c: Support binary versions, gated behind an opt-in flag (`vc upgrade --binary`)
+- 611ecbe: Test the corrected binary release detection in the Release workflow.
+- 18585bc: Restore `--format` in command help output while keeping `--json` available.
+
 ## 58.1.0
 
 ### Minor Changes

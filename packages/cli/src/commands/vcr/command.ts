@@ -7,6 +7,7 @@ import {
 } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 import { imageAggregateCommand } from './image/command';
+import { permissionsAggregateCommand } from './permissions/command';
 import { tagsAggregateCommand } from './tags/command';
 
 const projectScopeOption = {
@@ -243,6 +244,7 @@ export const vcrCommand = {
     pushSubcommand,
     tagsAggregateCommand,
     imageAggregateCommand,
+    permissionsAggregateCommand,
   ],
   options: [],
   examples: [

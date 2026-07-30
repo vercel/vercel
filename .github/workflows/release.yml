@@ -15,33 +15,46 @@ jobs:
     name: Determine vercel publish
     runs-on: ubuntu-latest
     outputs:
-      # 'true' when the committed vercel version is not yet on npm, which means
-      # this push will publish vercel and therefore needs native binaries on npm
-      # first. On "Version Packages" PR merges (version already published, or
-      # only a version bump PR) this is 'false' and the binary build is skipped.
+      # 'true' when changesets/action will run the publish script on this push
+      # (i.e. no pending changesets remain, which is what a "Version Packages"
+      # merge looks like).
+      will-publish: ${{ steps.check.outputs.will-publish }}
+      # 'true' when that publish includes `vercel`, which means the native
+      # @vercel/vc-native-* packages must be on npm first. Pushes that only
+      # open/update the Version Packages PR skip the binary build.
       should-release-binary: ${{ steps.check.outputs.should-release-binary }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
 
-      - name: Check if this is a vercel publish
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: install pnpm@10.29.3
+        run: npm i -g pnpm@10.29.3
+
+      # The detection reuses @changesets/read and @changesets/pre (deps of
+      # @changesets/cli) so it cannot drift from changesets/action's own logic.
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Determine whether this push publishes vercel
         id: check
-        shell: bash
-        run: |
-          set -euo pipefail
-          version="$(node -p "require('./packages/cli/package.json').version")"
-          if npm view "vercel@$version" version >/dev/null 2>&1; then
-            echo "vercel@$version already on npm; skipping binary release."
-            echo "should-release-binary=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "vercel@$version not on npm; this run will publish it."
-            echo "should-release-binary=true" >> "$GITHUB_OUTPUT"
-          fi
+        run: node utils/determine-release.mjs
 
   binary:
     name: Binary release
     needs: determine
     if: needs.determine.outputs.should-release-binary == 'true'
+    # Reusable workflow permissions are capped by the calling job, so
+    # id-token: write must be granted here for npm trusted publishing
+    # (OIDC) in the publish-npm job of release-binary.yml to work.
+    permissions:
+      contents: read
+      id-token: write
     uses: ./.github/workflows/release-binary.yml
     with:
       ref: ${{ github.sha }}
@@ -56,9 +69,9 @@ jobs:
     needs:
       - determine
       - binary
-    # Run once the natives are published (binary success), or when there is no
-    # vercel publish this run (binary skipped). Never run if the binary build
-    # was attempted and failed, so vercel is not published without its natives.
+    # Run once the natives are published (binary success), or when this run does
+    # not publish vercel (binary skipped). Never run if the binary build was
+    # attempted and failed, so vercel is not published without its natives.
     if: |
       always() &&
       needs.determine.result == 'success' &&
