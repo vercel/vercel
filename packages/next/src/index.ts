@@ -103,6 +103,7 @@ import {
   require_,
   getServerlessPages,
   RenderingMode,
+  getDefaultNextDeploymentId,
 } from './utils';
 import { getAppRouterPathnameFilesMap } from './metadata';
 
@@ -508,6 +509,11 @@ export const build: BuildV2 = async buildOptions => {
   // and caches may not have the correct trace root so we
   // need to ensure this included in the cache key
   env.NEXT_PRIVATE_OUTPUT_TRACE_ROOT = baseDir;
+
+  const defaultNextDeploymentId = getDefaultNextDeploymentId(env);
+  if (defaultNextDeploymentId) {
+    env.NEXT_DEPLOYMENT_ID = defaultNextDeploymentId;
+  }
 
   if (isServerMode) {
     // when testing with jest NODE_ENV will be set to test so ensure

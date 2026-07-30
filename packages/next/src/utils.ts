@@ -111,6 +111,24 @@ export function getGroupMaxUncompressedLambdaSize(
     : getMaxUncompressedLambdaSize(runtime);
 }
 
+/**
+ * Default `NEXT_DEPLOYMENT_ID` for the build from `VERCEL_DEPLOYMENT_ID` when
+ * Skew Protection is enabled and the variable is not already set. The platform
+ * only injects it for `nextjs`-framework projects, missing e.g. services.
+ */
+export function getDefaultNextDeploymentId(
+  env: NodeJS.ProcessEnv
+): string | undefined {
+  if (
+    env.VERCEL_SKEW_PROTECTION_ENABLED === '1' &&
+    env.VERCEL_DEPLOYMENT_ID &&
+    !env.NEXT_DEPLOYMENT_ID
+  ) {
+    return env.VERCEL_DEPLOYMENT_ID;
+  }
+  return undefined;
+}
+
 const skipDefaultLocaleRewrite = Boolean(
   process.env.NEXT_EXPERIMENTAL_DEFER_DEFAULT_LOCALE_REWRITE
 );

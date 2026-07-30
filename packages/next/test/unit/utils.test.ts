@@ -8,6 +8,7 @@ import {
   getNextConfig,
   getServerlessPages,
   normalizePrefetches,
+  getDefaultNextDeploymentId,
   getMaxUncompressedLambdaSize,
   getGroupMaxUncompressedLambdaSize,
   isLargeFunctionsEnabled,
@@ -592,6 +593,45 @@ describe('isLargeFunctionsEnabled', () => {
   it('is enabled when the env var is set', () => {
     process.env[LARGE_FUNCTIONS_ENV] = '1';
     expect(isLargeFunctionsEnabled()).toBe(true);
+  });
+});
+
+describe('getDefaultNextDeploymentId', () => {
+  it('defaults from VERCEL_DEPLOYMENT_ID when skew protection is enabled', () => {
+    expect(
+      getDefaultNextDeploymentId({
+        VERCEL_SKEW_PROTECTION_ENABLED: '1',
+        VERCEL_DEPLOYMENT_ID: 'dpl_123',
+      })
+    ).toBe('dpl_123');
+  });
+
+  it('returns undefined when skew protection is not enabled', () => {
+    expect(
+      getDefaultNextDeploymentId({ VERCEL_DEPLOYMENT_ID: 'dpl_123' })
+    ).toBeUndefined();
+    expect(
+      getDefaultNextDeploymentId({
+        VERCEL_SKEW_PROTECTION_ENABLED: '0',
+        VERCEL_DEPLOYMENT_ID: 'dpl_123',
+      })
+    ).toBeUndefined();
+  });
+
+  it('returns undefined when there is no deployment id', () => {
+    expect(
+      getDefaultNextDeploymentId({ VERCEL_SKEW_PROTECTION_ENABLED: '1' })
+    ).toBeUndefined();
+  });
+
+  it('never overrides an explicit NEXT_DEPLOYMENT_ID', () => {
+    expect(
+      getDefaultNextDeploymentId({
+        VERCEL_SKEW_PROTECTION_ENABLED: '1',
+        VERCEL_DEPLOYMENT_ID: 'dpl_123',
+        NEXT_DEPLOYMENT_ID: 'dpl_explicit',
+      })
+    ).toBeUndefined();
   });
 });
 
