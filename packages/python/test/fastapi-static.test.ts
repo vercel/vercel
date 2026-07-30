@@ -96,6 +96,320 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     expect(mounts[0].fallback).toEqual({ file: 'index.html', status: 200 });
   });
 
+  // These entrypoints use first-party imports: relative (`from .settings`) or
+  // absolute (`import settings`). Their frontend mount must still be discovered.
+  // This works only if the shim imports the entrypoint as a real module with
+  // the project root importable. If the import fails, discovery returns no
+  // mounts and the frontend is served by the Lambda, not the CDN.
+  describe('discovers mounts for entrypoints using first-party imports', () => {
+    const SETTINGS = 'FRONTEND_DIR = "dist"\n';
+    // A minimal FastAPI entrypoint. Its frontend directory comes from a
+    // first-party import, so the mount appears only if that import resolves.
+    const main = (importLine: string, dirExpr = 'FRONTEND_DIR') =>
+      [
+        'from fastapi import FastAPI',
+        importLine,
+        'app = FastAPI()',
+        `app.frontend("/", directory=${dirExpr})`,
+      ].join('\n');
+
+    const cases: {
+      title: string;
+      dir: string;
+      entrypoint: string;
+      files: Record<string, string>;
+    }[] = [
+      {
+        title: 'package-relative `from .settings import ...`',
+        dir: 'imp-rel-from',
+        entrypoint: 'backend/main.py',
+        files: {
+          'backend/__init__.py': '',
+          'backend/settings.py': SETTINGS,
+          'backend/main.py': main('from .settings import FRONTEND_DIR'),
+        },
+      },
+      {
+        title: 'package-relative `from . import settings`',
+        dir: 'imp-rel-dot',
+        entrypoint: 'backend/main.py',
+        files: {
+          'backend/__init__.py': '',
+          'backend/settings.py': SETTINGS,
+          'backend/main.py': main(
+            'from . import settings',
+            'settings.FRONTEND_DIR'
+          ),
+        },
+      },
+      {
+        title: 'parent-relative `from ..settings import ...`',
+        dir: 'imp-rel-parent',
+        entrypoint: 'backend/sub/main.py',
+        files: {
+          'backend/__init__.py': '',
+          'backend/sub/__init__.py': '',
+          'backend/settings.py': SETTINGS,
+          'backend/sub/main.py': main('from ..settings import FRONTEND_DIR'),
+        },
+      },
+      {
+        title: 'sibling absolute `import settings`',
+        dir: 'imp-abs-import',
+        entrypoint: 'main.py',
+        files: {
+          'settings.py': SETTINGS,
+          'main.py': main('import settings', 'settings.FRONTEND_DIR'),
+        },
+      },
+      {
+        title: 'sibling absolute `from settings import ...`',
+        dir: 'imp-abs-from',
+        entrypoint: 'main.py',
+        files: {
+          'settings.py': SETTINGS,
+          'main.py': main('from settings import FRONTEND_DIR'),
+        },
+      },
+      {
+        title: 'subpackage absolute `from libs.config import ...`',
+        dir: 'imp-abs-subpkg',
+        entrypoint: 'main.py',
+        files: {
+          'libs/__init__.py': '',
+          'libs/config.py': SETTINGS,
+          'main.py': main('from libs.config import FRONTEND_DIR'),
+        },
+      },
+      {
+        title: 'entrypoint is a package `__init__.py` (relative import)',
+        dir: 'imp-init-entry',
+        entrypoint: 'backend/__init__.py',
+        files: {
+          'backend/settings.py': SETTINGS,
+          'backend/__init__.py': main('from .settings import FRONTEND_DIR'),
+        },
+      },
+    ];
+
+    it.each(cases)('$title', async ({ dir, entrypoint, files }) => {
+      const appDir = path.join(testDir, dir);
+      fs.mkdirSync(path.join(appDir, 'dist'), { recursive: true });
+      fs.writeFileSync(path.join(appDir, 'dist', 'index.html'), '<h1>Hi</h1>');
+      for (const [rel, content] of Object.entries(files)) {
+        const abs = path.join(appDir, rel);
+        fs.mkdirSync(path.dirname(abs), { recursive: true });
+        fs.writeFileSync(abs, content);
+      }
+
+      const { mounts } = await getFastAPIStaticDiscovery(
+        venvPath,
+        path.join(appDir, entrypoint),
+        'app',
+        pythonEnv,
+        appDir
+      );
+
+      expect(mounts).toHaveLength(1);
+      expect(mounts[0].urlPath).toBe('/');
+      expect(mounts[0].directory).toBe(
+        fs.realpathSync(path.join(appDir, 'dist'))
+      );
+      expect(mounts[0].fallback).toEqual({ file: 'index.html', status: 200 });
+    });
+  });
+
+  // The mount can be defined in an imported module rather than the entrypoint:
+  // a router, a helper, a re-exported app, a factory, or a mounted sub-app.
+  // Discovery must still find it. This works only when the entrypoint import
+  // succeeds, so each case also exercises the first-party import path.
+  describe('discovers mounts sourced from imported modules', () => {
+    type Expected = {
+      urlPath: string;
+      dir: string;
+      fallback: { file: string; status: number } | null;
+    };
+    // The common shape: a frontend build served at "/" from the dist dir.
+    const FRONTEND: Expected = {
+      urlPath: '/',
+      dir: 'dist',
+      fallback: { file: 'index.html', status: 200 },
+    };
+
+    const cases: {
+      title: string;
+      dir: string;
+      files: Record<string, string>;
+      expected: Expected[];
+    }[] = [
+      {
+        title: 'transitive first-party chain (main -> config -> constants)',
+        dir: 'src-transitive',
+        files: {
+          'backend/__init__.py': '',
+          'backend/constants.py': 'FRONTEND_DIR = "dist"\n',
+          'backend/config.py': 'from .constants import FRONTEND_DIR\n',
+          'backend/main.py': [
+            'from fastapi import FastAPI',
+            'from .config import FRONTEND_DIR',
+            'app = FastAPI()',
+            'app.frontend("/", directory=FRONTEND_DIR)',
+          ].join('\n'),
+        },
+        expected: [FRONTEND],
+      },
+      {
+        title: 'mount defined in an imported router (include_router)',
+        dir: 'src-router',
+        files: {
+          'backend/__init__.py': '',
+          'backend/routes.py': [
+            'from fastapi import APIRouter',
+            'router = APIRouter()',
+            'router.frontend("/", directory="dist")',
+          ].join('\n'),
+          'backend/main.py': [
+            'from fastapi import FastAPI',
+            'from .routes import router',
+            'app = FastAPI()',
+            'app.include_router(router)',
+          ].join('\n'),
+        },
+        expected: [FRONTEND],
+      },
+      {
+        title: 'imported router mounted with app.mount()',
+        dir: 'src-mount-router',
+        files: {
+          'backend/__init__.py': '',
+          'backend/routes.py': [
+            'from fastapi import APIRouter',
+            'from fastapi.staticfiles import StaticFiles',
+            'router = APIRouter()',
+            'router.mount("/static", StaticFiles(directory="static"), name="static")',
+          ].join('\n'),
+          'backend/main.py': [
+            'from fastapi import FastAPI',
+            'from .routes import router',
+            'app = FastAPI()',
+            'app.mount("/api", router)',
+          ].join('\n'),
+        },
+        expected: [{ urlPath: '/api/static', dir: 'static', fallback: null }],
+      },
+      {
+        title: 'mount added by an imported helper function',
+        dir: 'src-helper',
+        files: {
+          'backend/__init__.py': '',
+          'backend/mounts.py': [
+            'from fastapi.staticfiles import StaticFiles',
+            'def add(app):',
+            '    app.mount("/static", StaticFiles(directory="static"), name="static")',
+          ].join('\n'),
+          'backend/main.py': [
+            'from fastapi import FastAPI',
+            'from .mounts import add',
+            'app = FastAPI()',
+            'add(app)',
+          ].join('\n'),
+        },
+        expected: [{ urlPath: '/static', dir: 'static', fallback: null }],
+      },
+      {
+        title: 'mount on an imported sub-application (app.mount(sub))',
+        dir: 'src-subapp',
+        files: {
+          'backend/__init__.py': '',
+          'backend/sub.py': [
+            'from fastapi import FastAPI',
+            'from fastapi.staticfiles import StaticFiles',
+            'sub = FastAPI()',
+            'sub.mount("/static", StaticFiles(directory="static"), name="static")',
+          ].join('\n'),
+          'backend/main.py': [
+            'from fastapi import FastAPI',
+            'from .sub import sub',
+            'app = FastAPI()',
+            'app.mount("/sub", sub)',
+          ].join('\n'),
+        },
+        expected: [{ urlPath: '/sub/static', dir: 'static', fallback: null }],
+      },
+      {
+        title: 're-exported app (from .application import app)',
+        dir: 'src-reexport',
+        files: {
+          'backend/__init__.py': '',
+          'backend/application.py': [
+            'from fastapi import FastAPI',
+            'app = FastAPI()',
+            'app.frontend("/", directory="dist")',
+          ].join('\n'),
+          'backend/main.py': 'from .application import app\n',
+        },
+        expected: [FRONTEND],
+      },
+      {
+        title: 'app factory (from .factory import create_app)',
+        dir: 'src-factory',
+        files: {
+          'backend/__init__.py': '',
+          'backend/factory.py': [
+            'from fastapi import FastAPI',
+            'def create_app():',
+            '    app = FastAPI()',
+            '    app.frontend("/", directory="dist")',
+            '    return app',
+          ].join('\n'),
+          'backend/main.py': [
+            'from .factory import create_app',
+            'app = create_app()',
+          ].join('\n'),
+        },
+        expected: [FRONTEND],
+      },
+    ];
+
+    it.each(cases)('$title', async ({ dir, files, expected }) => {
+      const appDir = path.join(testDir, dir);
+      // Build the directories the apps mount from.
+      fs.mkdirSync(path.join(appDir, 'dist'), { recursive: true });
+      fs.writeFileSync(path.join(appDir, 'dist', 'index.html'), '<h1>Hi</h1>');
+      fs.mkdirSync(path.join(appDir, 'static'), { recursive: true });
+      fs.writeFileSync(path.join(appDir, 'static', 'style.css'), 'body{}');
+      for (const [rel, content] of Object.entries(files)) {
+        const abs = path.join(appDir, rel);
+        fs.mkdirSync(path.dirname(abs), { recursive: true });
+        fs.writeFileSync(abs, content);
+      }
+
+      const { mounts } = await getFastAPIStaticDiscovery(
+        venvPath,
+        path.join(appDir, 'backend/main.py'),
+        'app',
+        pythonEnv,
+        appDir
+      );
+
+      const got = mounts
+        .map(m => ({
+          urlPath: m.urlPath,
+          directory: m.directory,
+          fallback: m.fallback,
+        }))
+        .sort((a, b) => a.urlPath.localeCompare(b.urlPath));
+      const want = expected
+        .map(e => ({
+          urlPath: e.urlPath,
+          directory: fs.realpathSync(path.join(appDir, e.dir)),
+          fallback: e.fallback,
+        }))
+        .sort((a, b) => a.urlPath.localeCompare(b.urlPath));
+      expect(got).toEqual(want);
+    });
+  });
+
   it('returns empty when no StaticFiles mounts exist', async () => {
     const appDir = path.join(testDir, 'app-no-static');
     fs.mkdirSync(appDir, { recursive: true });

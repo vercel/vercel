@@ -1,0 +1,1 @@
+FRONTEND_DIR = "frontend"
