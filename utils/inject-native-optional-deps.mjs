@@ -28,6 +28,18 @@ const execFileAsync = promisify(execFile);
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const cliPackageJsonPath = join(repoRoot, 'packages', 'cli', 'package.json');
 
+// Escape hatch: when the binary release is intentionally disabled (see the
+// `binary` job in .github/workflows/release.yml), skip both the injection and
+// the missing-natives guard so `vercel` publishes without native
+// optionalDependencies. `vc.js` falls back to the JS CLI when no native
+// package is present in node_modules.
+if (process.env.VERCEL_SKIP_NATIVE_DEPS === '1') {
+  console.log(
+    'VERCEL_SKIP_NATIVE_DEPS=1; skipping native optionalDependencies injection.'
+  );
+  process.exit(0);
+}
+
 const raw = await readFile(cliPackageJsonPath, 'utf8');
 const pkg = JSON.parse(raw);
 const version = pkg.version;
