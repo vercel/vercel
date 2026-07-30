@@ -31,6 +31,15 @@ describe('build()', () => {
         }
 
         expect(buildResult.output['index.html']).toBeTruthy();
+        const about =
+          buildResult.output[
+            path.join('.vercel', 'functions', 'about', 'index')
+          ];
+        expect(about.type).toBe('Lambda');
+        if (about.type !== 'Lambda') {
+          throw new Error('Expected the about output to be a Lambda');
+        }
+        expect(about.maxConcurrency).toBe(8);
       } finally {
         remove(path.join(workPath, '.vercel_build_output'));
       }

@@ -8,6 +8,7 @@ export interface ContainerImageConfig
     | 'architecture'
     | 'memory'
     | 'maxDuration'
+    | 'maxConcurrency'
     | 'environment'
     | 'regions'
     | 'functionFailoverRegions'
@@ -34,6 +35,7 @@ export class ContainerImage implements ContainerImageConfig {
   architecture?: ContainerImageConfig['architecture'];
   memory?: ContainerImageConfig['memory'];
   maxDuration?: ContainerImageConfig['maxDuration'];
+  maxConcurrency?: ContainerImageConfig['maxConcurrency'];
   regions?: ContainerImageConfig['regions'];
   functionFailoverRegions?: ContainerImageConfig['functionFailoverRegions'];
   experimentalTriggers?: ContainerImageConfig['experimentalTriggers'];
@@ -49,6 +51,7 @@ export class ContainerImage implements ContainerImageConfig {
     this.architecture = params.architecture;
     this.memory = params.memory;
     this.maxDuration = params.maxDuration;
+    this.maxConcurrency = params.maxConcurrency;
     this.regions = params.regions;
     this.functionFailoverRegions = params.functionFailoverRegions;
     this.experimentalTriggers = params.experimentalTriggers;
