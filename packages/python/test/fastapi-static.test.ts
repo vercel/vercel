@@ -147,6 +147,37 @@ describe.runIf(process.platform === 'linux')('FastAPI static files', () => {
     expect(shadowRoutes).toEqual(['static/example\\.txt']);
   });
 
+  it('reports a shadow route for a parametrized route', async () => {
+    const appDir = path.join(testDir, 'app-shadow-param');
+    fs.mkdirSync(path.join(appDir, 'items'), { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'items', 'keep.txt'), 'file');
+    const entrypointAbs = path.join(appDir, 'main.py');
+    fs.writeFileSync(
+      entrypointAbs,
+      [
+        'from fastapi import FastAPI',
+        'from fastapi.staticfiles import StaticFiles',
+        'app = FastAPI()',
+        '@app.get("/items/{item_id:int}")',
+        'def item(item_id: int):',
+        '    return item_id',
+        'app.mount("/items", StaticFiles(directory="items"), name="items")',
+      ].join('\n')
+    );
+
+    const { shadowRoutes } = await getFastAPIStaticDiscovery(
+      venvPath,
+      entrypointAbs,
+      'app',
+      pythonEnv,
+      appDir
+    );
+
+    // The `{item_id:int}` convertor becomes its regex, so the route shadows
+    // exactly the integer paths it matches at runtime (not a bare `[^/]+`).
+    expect(shadowRoutes).toEqual(['items/(?:[0-9]+)']);
+  });
+
   it('reports a shadow route that beats a low-priority frontend', async () => {
     const appDir = path.join(testDir, 'app-shadow-frontend');
     fs.mkdirSync(path.join(appDir, 'dist'), { recursive: true });
