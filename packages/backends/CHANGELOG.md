@@ -1,5 +1,13 @@
 # @vercel/backends
 
+## 0.8.30
+
+### Patch Changes
+
+- Updated dependencies [a69c714]
+- Updated dependencies [654e898]
+  - @vercel/build-utils@13.36.3
+
 ## 0.8.29
 
 ### Patch Changes
