@@ -258,10 +258,17 @@ def collect(
                 if m := StaticMount.from_route(route, prefix):
                     mounts.append(m)
                     shadow_routes |= prior.shadow_bodies(m)
-                # app.mount(Router): recurse with the precedence gathered so far.
-                if isinstance(route.app, Router):
+                # app.mount(Router | sub-app): recurse into the sub-router so
+                # its own StaticFiles mounts are found too. A Starlette/FastAPI
+                # sub-application isn't a Router but exposes one as `.router`.
+                sub_router = (
+                    route.app
+                    if isinstance(route.app, Router)
+                    else getattr(route.app, "router", None)
+                )
+                if isinstance(sub_router, Router):
                     sub_prefix = prefix + route.path.rstrip("/")
-                    sub_mounts, sub_shadow = collect(route.app, sub_prefix, prior)
+                    sub_mounts, sub_shadow = collect(sub_router, sub_prefix, prior)
                     mounts.extend(sub_mounts)
                     shadow_routes |= sub_shadow
                 # Now owns its subtree, eclipsing later mounts nested under it.
