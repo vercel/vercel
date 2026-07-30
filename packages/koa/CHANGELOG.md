@@ -1,5 +1,11 @@
 # @vercel/koa
 
+## 0.1.89
+
+### Patch Changes
+
+- @vercel/node@5.9.2
+
 ## 0.1.88
 
 ### Patch Changes

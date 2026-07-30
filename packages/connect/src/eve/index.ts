@@ -25,6 +25,10 @@ export {
 } from './connect-oauth.js';
 
 export {
+  connectDiscordCredentials,
+  type ConnectDiscordCredentialsParams,
+} from './discord-credentials.js';
+export {
   connectGitHubCredentials,
   type ConnectGitHubCredentialsParams,
 } from './github-credentials.js';
