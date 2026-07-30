@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, onTestFinished } from 'vitest';
 import login from '../../../../src/commands/login';
 import { performDeviceCodeFlow } from '../../../../src/commands/login/future';
 import { client } from '../../../mocks/client';
@@ -187,6 +187,14 @@ describe('login', () => {
       'The "offline_access" scope is required for step-up authorization.',
     ],
   ])('starts a full device login when step-up returns %s', async (error, errorDescription) => {
+    // `performDeviceCodeFlow` skips opening the browser when `CI` is set,
+    // which would break the `open` assertion below on CI runners.
+    const origCI = process.env.CI;
+    delete process.env.CI;
+    onTestFinished(() => {
+      if (origCI !== undefined) process.env.CI = origCI;
+    });
+
     const authorizationResult = {
       device_code: randomUUID(),
       user_code: 'ABCD-EFGH',
