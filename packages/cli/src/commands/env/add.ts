@@ -40,6 +40,13 @@ import {
   buildEnvAddCommandWithPreservedArgs,
   getPreservedArgsForEnvAdd,
 } from '../../util/agent-output';
+import {
+  isEnvVarConfigSecretUiEnabled,
+  resolveEnvVarVisibility,
+  shouldEnforceSensitiveEnvVarPolicy,
+  type EnvVariableVisibility,
+  formatVisibilityLabel,
+} from '../../util/env/env-var-config-secret-ui';
 
 type EnvType = 'encrypted' | 'sensitive';
 
@@ -56,7 +63,10 @@ const SENSITIVE_SECRET_PROMPT = `Store as sensitive? ${chalk.dim(
 )}`;
 function filterEnvChoicesForSensitivity(
   choices: EnvChoice[],
-  opts: { isSensitive: boolean; policyOn: boolean }
+  opts: {
+    isSensitive: boolean;
+    policyOn: boolean;
+  }
 ): EnvChoice[] {
   if (opts.isSensitive) {
     return choices.filter(c => c.value !== 'development');
@@ -93,7 +103,11 @@ function getTargetCompatibilityError(
 function resolveFinalType(
   envTargets: string[],
   isSensitive: boolean,
-  opts: { forceSensitive: boolean; forceEncrypted: boolean; policyOn: boolean }
+  opts: {
+    forceSensitive: boolean;
+    forceEncrypted: boolean;
+    policyOn: boolean;
+  }
 ): EnvType {
   const hasDevelopment = envTargets.includes('development');
   if (hasDevelopment) {
@@ -160,6 +174,20 @@ function multiTargetSuggestion(
   };
 }
 
+function filterSensitiveMultiTargetSuggestionTargets(
+  targets: string[],
+  opts: {
+    forceSensitive: boolean;
+    policyOn: boolean;
+  }
+): string[] {
+  const excludeDevelopment = opts.forceSensitive || opts.policyOn;
+
+  return excludeDevelopment
+    ? targets.filter(target => target !== 'development')
+    : targets;
+}
+
 function projectLabel(link: ProjectLinked): string {
   return `${link.org.slug}/${link.project.name}`;
 }
@@ -200,7 +228,8 @@ function printEnvAddResult(
   envGitBranch: string | undefined,
   customEnvironments: CustomEnvironment[],
   finalType: EnvType,
-  force: boolean
+  force: boolean,
+  visibility?: EnvVariableVisibility
 ): void {
   output.print('\n');
   printAlignedLabel(force ? 'Overrode' : 'Added', envName, { gutter: '✓' });
@@ -213,6 +242,12 @@ function printEnvAddResult(
     printAlignedLabel('Branch', envGitBranch);
   }
   printAlignedLabel('Type', typeLabel(finalType));
+  if (isEnvVarConfigSecretUiEnabled()) {
+    const visibilityLabel = formatVisibilityLabel(visibility, finalType);
+    if (visibilityLabel) {
+      printAlignedLabel('Visibility', visibilityLabel);
+    }
+  }
 }
 
 function printEnvAddWarning(message: string): void {
@@ -253,6 +288,7 @@ export default async function add(client: Client, argv: string[]) {
   }
 
   const { args, flags: opts } = parsedArgs;
+  const configSecretUiEnabled = isEnvVarConfigSecretUiEnabled();
 
   const stdInput = await readStandardInput(client.stdin);
   const valueFromFlag =
@@ -275,6 +311,9 @@ export default async function add(client: Client, argv: string[]) {
   telemetryClient.trackCliFlagForce(opts['--force']);
   telemetryClient.trackCliFlagGuidance(opts['--guidance']);
   telemetryClient.trackCliFlagYes(opts['--yes']);
+  telemetryClient.trackCliOptionVisibility(
+    typeof opts['--visibility'] === 'string' ? opts['--visibility'] : undefined
+  );
   telemetryClient.trackCliOptionProject(opts['--project']);
 
   if (args.length > 3) {
@@ -471,9 +510,13 @@ export default async function add(client: Client, argv: string[]) {
         const standardAvailable = choices
           .map(c => c.value)
           .filter(v => isValidEnvTarget(v));
-        const multiTargets = opts['--sensitive']
-          ? standardAvailable.filter(t => t !== 'development')
-          : standardAvailable;
+        const multiTargets = filterSensitiveMultiTargetSuggestionTargets(
+          standardAvailable,
+          {
+            forceSensitive: Boolean(opts['--sensitive']),
+            policyOn: false,
+          }
+        );
         if (multiTargets.length > 1) {
           next.push(
             multiTargetSuggestion(
@@ -772,13 +815,30 @@ export default async function add(client: Client, argv: string[]) {
     return 1;
   }
 
+  const explicitVisibility =
+    typeof opts['--visibility'] === 'string' ? opts['--visibility'] : undefined;
+  if (explicitVisibility === 'secret' && forceEncrypted) {
+    output.error(
+      '`--visibility secret` cannot be used with `--no-sensitive`. Pick one.'
+    );
+    return 1;
+  }
+  if (explicitVisibility === 'config' && forceSensitive) {
+    output.error(
+      '`--visibility config` cannot be used with `--sensitive`. Pick one.'
+    );
+    return 1;
+  }
+
   // Detect team-level sensitive env var policy. Reads from the team object
   // (cached). Only relevant when the linked org is a team.
   let policyOn = false;
+  let teamSensitivePolicyOn = false;
   if (link.org.type === 'team') {
     try {
       const team = await getTeamById(client, link.org.id);
-      policyOn = team?.sensitiveEnvironmentVariablePolicy === 'on';
+      teamSensitivePolicyOn = team?.sensitiveEnvironmentVariablePolicy === 'on';
+      policyOn = shouldEnforceSensitiveEnvVarPolicy(teamSensitivePolicyOn);
     } catch {
       // Non-fatal — policy detection is best-effort.
     }
@@ -987,10 +1047,13 @@ export default async function add(client: Client, argv: string[]) {
       const standardAvailable = choices
         .map(c => c.value)
         .filter(v => isValidEnvTarget(v));
-      const multiTargets =
-        policyOn || forceSensitive
-          ? standardAvailable.filter(t => t !== 'development')
-          : standardAvailable;
+      const multiTargets = filterSensitiveMultiTargetSuggestionTargets(
+        standardAvailable,
+        {
+          forceSensitive,
+          policyOn,
+        }
+      );
       const next: Array<{ command: string; when?: string }> = [];
       if (multiTargets.length > 1) {
         next.push(
@@ -1108,6 +1171,29 @@ export default async function add(client: Client, argv: string[]) {
   }
 
   const upsert = opts['--force'] ? 'true' : '';
+  const { visibility, error: visibilityError } = resolveEnvVarVisibility({
+    configSecretUiEnabled,
+    explicitVisibility,
+    type: finalType,
+    key: envName,
+    envTargets,
+    teamSensitivePolicyOn,
+  });
+  if (visibilityError) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_visibility',
+          message: visibilityError,
+        },
+        1
+      );
+    }
+    output.error(visibilityError);
+    return 1;
+  }
 
   try {
     output.spinner('Saving…');
@@ -1119,7 +1205,8 @@ export default async function add(client: Client, argv: string[]) {
       envName,
       finalValue,
       envTargets,
-      envGitBranch
+      envGitBranch,
+      visibility
     );
   } catch (err: unknown) {
     if (client.nonInteractive && isAPIError(err)) {
@@ -1152,7 +1239,8 @@ export default async function add(client: Client, argv: string[]) {
     envGitBranch,
     customEnvironments,
     finalType,
-    Boolean(opts['--force'])
+    Boolean(opts['--force']),
+    visibility
   );
 
   const { isAgent } = await determineAgent();

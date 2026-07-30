@@ -10,4 +10,3 @@ dependencies = [
 
 [[tool.vercel.subscribers]]
 entrypoint = "worker:broker"
-topics = ["dramatiq*"]
