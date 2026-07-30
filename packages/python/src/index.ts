@@ -1257,10 +1257,10 @@ export const build: BuildVX = async ({
 
   // Queue adapter integrations the project's dependencies require; both
   // introspection and the generated handler modules activate them right
-  // after importing the subscriber module (each installer retroactively
-  // registers apps the import created) and fail hard when activation
-  // fails. Legacy vercel-workers projects use the legacy integration
-  // instead (see the conditional injection gate above).
+  // around importing the subscriber module (according to whether the adapter
+  // must observe declarations during import) and fail hard when activation
+  // fails. Legacy vercel-workers projects use the legacy integration instead
+  // (see the conditional injection gate above).
   const queueIntegrations = legacyWorkersProject
     ? []
     : await getQueueIntegrations({ pythonPackage });
@@ -1462,15 +1462,22 @@ export const build: BuildVX = async ({
   }
   if (queueIntegrations.length > 0) {
     // Every function of the project may publish through the adapter's
-    // transport (not just subscriber lambdas), so the runtime activates
-    // the required integrations at startup in all of them.
-    lambdaEnv.VERCEL_QUEUE_INTEGRATIONS = queueIntegrations
+    // transport (not just subscriber lambdas), so the runtime activates those
+    // integrations at startup in all of them. Subscriber-only integrations
+    // are activated by their generated handler modules instead.
+    const publishIntegrations = queueIntegrations.filter(
+      integration => !integration.subscriberOnly
+    );
+    lambdaEnv.VERCEL_QUEUE_INTEGRATIONS = publishIntegrations
       .map(
         ({ module, installer, servingActivator }) =>
           `${module}:${installer}` +
           (servingActivator ? `:${servingActivator}` : '')
       )
       .join(',');
+    if (!lambdaEnv.VERCEL_QUEUE_INTEGRATIONS) {
+      delete lambdaEnv.VERCEL_QUEUE_INTEGRATIONS;
+    }
   }
 
   const globOptions: GlobOptions = {
