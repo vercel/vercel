@@ -90,6 +90,8 @@ import {
 } from './django';
 import {
   runFastAPICollectStatic,
+  fastapiShadowingRoutes,
+  fastapiFallbackRoutes,
   type FastAPICollectStaticResult,
 } from './fastapi';
 import {
@@ -2073,72 +2075,20 @@ export const build: BuildVX = async ({
     src: `/${outputPath}`,
     dest: `/${outputPath}`,
   }));
-  // A path owned by a higher-priority FastAPI route must reach the Lambda
-  // before the CDN can serve a colliding static file; emitting the shim's
-  // shadow routes ahead of `handle: 'filesystem'` is what preserves FastAPI's
-  // route precedence. Each shadow body is a ready-made pattern (path minus its
-  // leading slash, inner groups already non-capturing), so we OR them in one
-  // capturing group and copy the match back into `request.path` via `$1`.
-  const fastapiShadowRoutes =
-    fastapiStatic && fastapiStatic.shadowRoutes.length > 0
-      ? [
-          {
-            src: `^/(${fastapiStatic.shadowRoutes.join('|')})$`,
-            dest: `/${lambdaPath}`,
-            transforms: [
-              {
-                type: 'request.path' as const,
-                op: 'set' as const,
-                args: '/$1',
-              },
-            ],
-          },
-        ]
-      : [];
-  // Frontend fallback (app.frontend(fallback=...)): for a GET/HEAD miss under
-  // the mount, serve the copied file from the CDN. `check: true` re-resolves to
-  // it (a hit) and sorts ahead of the catch-all Lambda; sibling mounts are
-  // excluded. GET/HEAD only — the frontend falls back only for those methods,
-  // so a non-GET miss must reach the Lambda (404/405), not the CDN file.
-  // TODO(fastapi-queue-fallback): check:true also sorts ahead of queue routes,
-  // so a root fallback would shadow queue paths — revisit with queue support.
-  const fastapiFallbackRoutes = fastapiStatic
-    ? fastapiStatic.fallbacks.map(fb => {
-        const prefix = fb.urlPath.replace(/\/+$/, ''); // '' for a root ("/") mount
-        const nested = fastapiStatic.collectedMounts
-          .map(urlPath => urlPath.replace(/\/+$/, ''))
-          .filter(
-            urlPath => urlPath !== prefix && urlPath.startsWith(`${prefix}/`)
-          )
-          .map(urlPath => urlPath.slice(prefix.length + 1));
-        const guard = nested.length ? `(?!(?:${nested.join('|')})(?:/|$))` : '';
-        // A 200 ("index.html") fallback is navigation-only at runtime: the
-        // frontend serves it solely for `Accept: text/html` (or xhtml) requests
-        // and 404s the rest. Gate the route on the same header so a
-        // non-navigation miss falls through to the Lambda. The router anchors
-        // the `has` value (`^…$`), hence the wrapping `.*`. A 404 ("404.html")
-        // fallback is served for every miss, so it carries no such condition.
-        const navigationOnly =
-          fb.status === 200
-            ? {
-                has: [
-                  {
-                    type: 'header' as const,
-                    key: 'accept',
-                    value: '.*(?:text/html|application/xhtml\\+xml).*',
-                  },
-                ],
-              }
-            : {};
-        return {
-          src: `^${prefix}/${guard}.*$`,
-          dest: `${prefix}/${fb.file}`,
-          status: fb.status,
-          check: true,
-          methods: ['GET', 'HEAD'],
-          ...navigationOnly,
-        };
-      })
+  // Static files are served from the CDN by `handle: 'filesystem'`. Two route
+  // sets adjust that for routing precedence: "shadowing" routes emitted before
+  // it divert paths a higher-priority app handler owns to the Lambda (so the app
+  // wins over a colliding CDN file), and "fallback" routes emitted after it serve
+  // a CDN file for otherwise-unmatched paths. See fastapi.ts for how each is
+  // derived.
+  // TODO(cdn-fallback-queue): fallback routes are `check: true`, so mergeRoutes
+  // sorts them ahead of the queue routes — a root fallback would shadow queue
+  // paths. Revisit with queue support.
+  const shadowingRoutes = fastapiStatic
+    ? fastapiShadowingRoutes(fastapiStatic, lambdaPath)
+    : [];
+  const fallbackRoutes = fastapiStatic
+    ? fastapiFallbackRoutes(fastapiStatic)
     : [];
   const routes =
     isNonWebService || !output
@@ -2146,10 +2096,10 @@ export const build: BuildVX = async ({
         ? queueRoutes
         : undefined
       : [
-          ...fastapiShadowRoutes,
+          ...shadowingRoutes,
           { handle: 'filesystem' as const },
           ...queueRoutes,
-          ...fastapiFallbackRoutes,
+          ...fallbackRoutes,
           // This route matches the resolved destination after rewrites. Copy
           // that path into the runtime request before dispatching the shared
           // framework Lambda so application routing observes the rewrite.
