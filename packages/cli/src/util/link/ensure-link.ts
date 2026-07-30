@@ -7,7 +7,10 @@ import {
   type ProjectLinkResultWithOrgId,
 } from '../projects/link';
 import { resolveProjectCwd } from '../projects/find-project-root';
-import type { SetupAndLinkOptions } from '../link/setup-and-link';
+import type {
+  RepoWideLinked,
+  SetupAndLinkOptions,
+} from '../link/setup-and-link';
 import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
 import { outputActionRequired, buildCommandWithYes } from '../agent-output';
@@ -44,8 +47,20 @@ export async function ensureLink(
   commandName: string,
   client: Client,
   cwd: string,
+  opts: EnsureLinkOptions & { allowMultiProjectLink: boolean }
+): Promise<ProjectLinked | RepoWideLinked | number>;
+export async function ensureLink(
+  commandName: string,
+  client: Client,
+  cwd: string,
+  opts?: EnsureLinkOptions
+): Promise<ProjectLinked | number>;
+export async function ensureLink(
+  commandName: string,
+  client: Client,
+  cwd: string,
   opts: EnsureLinkOptions = {}
-): Promise<ProjectLinked | number> {
+): Promise<ProjectLinked | RepoWideLinked | number> {
   cwd = await resolveProjectCwd(cwd);
 
   let link: ProjectLinkResultWithOrgId | undefined = opts.link;
@@ -101,7 +116,14 @@ export async function ensureLink(
       return 1;
     }
 
-    link = await setupAndLink(client, cwd, opts);
+    const setupResult = await setupAndLink(client, cwd, opts);
+
+    if (setupResult.status === 'repo_linked') {
+      // The whole repository was linked; there is no single project to return.
+      return setupResult;
+    }
+
+    link = setupResult;
 
     if (link.status === 'not_linked') {
       // User aborted project linking questions

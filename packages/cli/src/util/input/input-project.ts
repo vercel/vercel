@@ -16,7 +16,21 @@ const SEARCH_ALL_PROJECTS = 'search-all-projects' as const;
 const CREATE_NEW_PROJECT = 'create-new-project' as const;
 const BACK_TO_PROJECT_SELECTION = Symbol('back-to-project-selection');
 export const BACK_TO_TEAM_SELECTION = Symbol('back-to-team-selection');
+export const LINK_ALL_PROJECTS = Symbol('link-all-projects');
+const CHOOSE_DIFFERENT_REMOTE = 'choose-different-remote' as const;
 const NO_EXISTING_PROJECTS = Symbol('no-existing-projects');
+
+/**
+ * The user chose a different Git remote; the caller re-runs the suggestion
+ * search against `remoteName`.
+ */
+export interface SelectRemote {
+  selectRemote: string;
+}
+
+export function isSelectRemote(value: unknown): value is SelectRemote {
+  return typeof value === 'object' && value !== null && 'selectRemote' in value;
+}
 
 async function inputProjectDecision(
   client: Client,
@@ -214,6 +228,55 @@ async function searchExistingProjects(
   });
 }
 
+/**
+ * Offer to link every project in the repository in one pass. Only set when
+ * `vc link` runs from the repository root and more than one project on Vercel
+ * is already connected to this repository's Git remote.
+ */
+export interface MultiProjectOffer {
+  /** Projects already connected to this repo's Git remote in the team. */
+  connectedCount: number;
+}
+
+/**
+ * The Git remote that project suggestions were derived from, plus whether the
+ * repo has others to switch to.
+ */
+export interface RemoteContext {
+  /** Name of the remote in use (`origin` unless the repo has no `origin`). */
+  remoteName: string;
+  /** Remote names available to switch to, excluding the one in use. */
+  otherRemoteNames: string[];
+}
+
+/**
+ * Picks which Git remote the project suggestions should come from. Includes a
+ * way back, since arriving here from the project picker should not be a
+ * one-way door.
+ */
+async function promptForRemote(
+  client: Client,
+  { remoteName, otherRemoteNames }: RemoteContext
+): Promise<string | typeof BACK_TO_PROJECT_SELECTION> {
+  const choices: Array<{
+    name: string;
+    value: string | typeof BACK_TO_PROJECT_SELECTION;
+  }> = [remoteName, ...otherRemoteNames].map(name => ({
+    name: name === remoteName ? `${name} ${chalk.bold('(current)')}` : name,
+    value: name,
+  }));
+  choices.push({
+    name: 'Back to project options',
+    value: BACK_TO_PROJECT_SELECTION,
+  });
+
+  return await client.input.select<string | typeof BACK_TO_PROJECT_SELECTION>({
+    message: 'Which Git remote?',
+    choices,
+    default: remoteName,
+  });
+}
+
 export default async function inputProject(
   client: Client,
   org: Org,
@@ -222,8 +285,17 @@ export default async function inputProject(
   skipAutoDetect = false,
   showProjectSuggestions = false,
   allowTeamSelectionBack = false,
-  repoMatches: CrossTeamMatch[] = []
-): Promise<Project | CrossTeamMatch | string | typeof BACK_TO_TEAM_SELECTION> {
+  repoMatches: CrossTeamMatch[] = [],
+  multiProjectOffer?: MultiProjectOffer,
+  remoteContext?: RemoteContext
+): Promise<
+  | Project
+  | CrossTeamMatch
+  | string
+  | typeof BACK_TO_TEAM_SELECTION
+  | typeof LINK_ALL_PROJECTS
+  | SelectRemote
+> {
   const slugifiedName = slugify(detectedProjectName);
 
   // attempt to auto-detect a project to link
@@ -297,7 +369,9 @@ export default async function inputProject(
         | CrossTeamMatch
         | typeof SEARCH_ALL_PROJECTS
         | typeof CREATE_NEW_PROJECT
-        | typeof BACK_TO_TEAM_SELECTION;
+        | typeof BACK_TO_TEAM_SELECTION
+        | typeof LINK_ALL_PROJECTS
+        | typeof CHOOSE_DIFFERENT_REMOTE;
       const choices: Array<
         | Separator
         | {
@@ -306,6 +380,24 @@ export default async function inputProject(
             description?: string;
           }
       > = [];
+
+      // Repository-wide linking is the strongest default when the command runs
+      // from the root of a repo whose workspace detection found several
+      // projects: one pass links them all instead of repeating `vc link`.
+      if (multiProjectOffer) {
+        const { connectedCount } = multiProjectOffer;
+        choices.push({
+          name: `Link all ${connectedCount} projects connected to this repo ${chalk.gray(
+            '(recommended)'
+          )}`,
+          value: LINK_ALL_PROJECTS,
+          // The label already states the count and that these are connected to
+          // this repo, so the footer only names the remote that produced them.
+          description: remoteContext
+            ? `Using remote ${remoteContext.remoteName}`
+            : undefined,
+        });
+      }
 
       if (repoMatches.length > 0) {
         choices.push(
@@ -323,6 +415,10 @@ export default async function inputProject(
           },
           new Separator()
         );
+      } else if (multiProjectOffer) {
+        // Keep the repo-wide option visually separated from the fallback
+        // actions even when there is no per-directory suggestion.
+        choices.push(new Separator());
       }
       choices.push(
         {
@@ -343,6 +439,23 @@ export default async function inputProject(
           description: 'Return to team selection',
         });
       }
+      // Only worth offering when the repo actually has another remote: with a
+      // single remote there is no choice to make.
+      if (remoteContext && remoteContext.otherRemoteNames.length > 0) {
+        choices.push({
+          // Name the remote in the label, not just the description: unlike the
+          // team, which the "Which team?" line above still shows, nothing else
+          // on screen says which remote produced these suggestions, and
+          // descriptions only render for the highlighted row.
+          name: `Choose a different remote ${chalk.gray(
+            `(using ${remoteContext.remoteName})`
+          )}`,
+          value: CHOOSE_DIFFERENT_REMOTE,
+          description: `Also available: ${remoteContext.otherRemoteNames.join(
+            ', '
+          )}`,
+        });
+      }
 
       const selected = await client.input.select<ProjectPickerValue>({
         message: 'Which project?',
@@ -351,6 +464,16 @@ export default async function inputProject(
 
       if (selected === BACK_TO_TEAM_SELECTION) {
         return BACK_TO_TEAM_SELECTION;
+      }
+      if (selected === LINK_ALL_PROJECTS) {
+        return LINK_ALL_PROJECTS;
+      }
+      if (selected === CHOOSE_DIFFERENT_REMOTE) {
+        const remoteName = await promptForRemote(client, remoteContext!);
+        if (remoteName === BACK_TO_PROJECT_SELECTION) {
+          continue;
+        }
+        return { selectRemote: remoteName };
       }
       if (selected === CREATE_NEW_PROJECT) {
         const projectName = await promptForProjectNameWithBack(
