@@ -17,6 +17,8 @@ In agent/non-interactive mode, many commands report errors and required confirma
 
 Project context depends on the command's working directory. Before a consequential read or mutation, run `vercel project inspect --non-interactive` from the intended directory and confirm the reported owner and project. This command resolves only existing context in non-interactive mode; stop on `link_required` or a target mismatch instead of linking automatically.
 
+Many project-aware commands also accept `--project <name-or-id>` with `--scope <team>` for an explicit, one-command target. Confirm that target and scope preserve the user's intent before using them.
+
 - **`<cwd>/.vercel/project.json`**: Created by `vercel link`. This exact working-directory link wins over a repository link. The CLI does not generally inherit a root `project.json` when run from an arbitrary subdirectory.
 - **`<repo-root>/.vercel/repo.json`**: Created by `vercel link --repo`. The CLI selects the deepest project directory that contains the working directory.
 - **Unmatched repository path**: If no repo mapping contains the working directory, interactive repo resolution prompts among the configured projects. Non-interactive repo resolution currently selects the only configured project or remains unresolved when multiple choices exist. Commands that set up projects may then enter a linking flow, so non-interactive mode is not generally fail-closed.
