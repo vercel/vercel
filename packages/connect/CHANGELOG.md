@@ -1,5 +1,11 @@
 # @vercel/connect
 
+## 0.6.0
+
+### Minor Changes
+
+- 8bd3687: Add `connectDiscordCredentials` to the eve integration, resolving Discord bot tokens and application IDs from app-scoped Connect credentials while verifying forwarded interactions with Vercel OIDC.
+
 ## 0.5.0
 
 ### Minor Changes
