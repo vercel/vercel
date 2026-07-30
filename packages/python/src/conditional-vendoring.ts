@@ -29,10 +29,6 @@ const UPSTREAM_DEPENDENCY_ADAPTERS = new Map<
       integration: {
         module: 'vercel.integrations.apscheduler',
         installer: 'install_vercel_apscheduler_integration',
-        // APScheduler has no publish-side transport to install. Activating it
-        // in ordinary web Functions would unnecessarily patch schedulers that
-        // were not declared as queue subscribers.
-        subscriberOnly: true,
         // APScheduler jobs are declared while the subscriber module imports.
         // Install first so the adapter can capture those definitions.
         installBeforeImport: true,
@@ -80,11 +76,6 @@ export interface QueueIntegration {
   module: string;
   /** Name of the integration's install function within {@link module}. */
   installer: string;
-  /**
-   * Activate only in declared queue subscriber processes. Adapters that also
-   * provide publish-side transports must remain active in every Function.
-   */
-  subscriberOnly?: boolean;
   /**
    * Install before importing the subscriber module. Frameworks whose
    * declarations are created during import use this to observe construction

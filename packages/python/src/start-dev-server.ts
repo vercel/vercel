@@ -55,7 +55,11 @@ import {
   getQueueIntegrations,
   type QueueIntegration,
 } from './conditional-vendoring';
-import { introspectDevQueueSubscriptions } from './subscribers';
+import {
+  getPyprojectAPSchedulerControl,
+  getPyprojectSubscribers,
+  introspectDevQueueSubscriptions,
+} from './subscribers';
 import {
   isLegacyWorkersProject,
   isQueueWorkflowSdkVersion,
@@ -937,15 +941,11 @@ export const startDevServer: StartDevServer = async opts => {
       queueIntegrations = legacyProject
         ? []
         : await getQueueIntegrations({ pythonPackage });
-      // Publish-side transports are active in every dev process. Integrations
-      // that only adapt subscriber objects are enabled below for queue
-      // sidecars so ordinary web processes retain stock framework behavior.
-      const publishIntegrations = queueIntegrations.filter(
-        integration => !integration.subscriberOnly
-      );
-      if (publishIntegrations.length > 0) {
+      // Activate every detected adapter through the same runtime path. Queue
+      // registration remains disabled outside queue-serving sidecars.
+      if (queueIntegrations.length > 0) {
         env.VERCEL_QUEUE_INTEGRATIONS =
-          serializeQueueIntegrations(publishIntegrations);
+          serializeQueueIntegrations(queueIntegrations);
       } else {
         delete env.VERCEL_QUEUE_INTEGRATIONS;
       }
@@ -970,6 +970,49 @@ export const startDevServer: StartDevServer = async opts => {
         `Skipping conditional dev package injection: ${
           err instanceof Error ? err.message : String(err)
         }`
+      );
+    }
+
+    const apschedulerControl = legacyProject
+      ? undefined
+      : await getPyprojectAPSchedulerControl(workPath);
+    let apschedulerSubscriberNames: string[] = [];
+    if (apschedulerControl) {
+      const runtimeDir = join(workPath, '.vercel', 'python');
+      const declaredSubscribers = await getPyprojectSubscribers(workPath);
+      for (const declaration of declaredSubscribers) {
+        const discovered = await introspectDevQueueSubscriptions({
+          moduleName: declaration.moduleName,
+          subscriberName: declaration.name,
+          pythonBin: spawnCommand,
+          cwd: workPath,
+          env: {
+            ...env,
+            PYTHONPATH: [runtimeDir, env.PYTHONPATH]
+              .filter(Boolean)
+              .join(delimiter),
+          },
+          integrations: queueIntegrations,
+        });
+        const topics = new Set(
+          (discovered ?? []).map(subscription => subscription.topic)
+        );
+        if (
+          topics.has(`__aps_${declaration.name}_start`) &&
+          topics.has(`__aps_${declaration.name}_wakeup`)
+        ) {
+          apschedulerSubscriberNames.push(declaration.name);
+        }
+      }
+      if (apschedulerSubscriberNames.length === 0) {
+        throw new Error(
+          '"tool.vercel.apscheduler.control" is configured, but no declared ' +
+            'APScheduler subscribers were discovered.'
+        );
+      }
+      env.VERCEL_APSCHEDULER_CONTROL_ENTRYPOINT = apschedulerControl.entrypoint;
+      env.VERCEL_APSCHEDULER_SUBSCRIBERS = JSON.stringify(
+        apschedulerSubscriberNames
       );
     }
 
@@ -1032,19 +1075,29 @@ export const startDevServer: StartDevServer = async opts => {
         // the same way the build does. Conditional adapters live in
         // .vercel/python, so put it on the interpreter's path.
         const runtimeDir = join(workPath, '.vercel', 'python');
+        const introspectionEnv: NodeJS.ProcessEnv = {
+          ...env,
+          PYTHONPATH: [runtimeDir, env.PYTHONPATH]
+            .filter(Boolean)
+            .join(delimiter),
+        };
+        delete introspectionEnv.VERCEL_APSCHEDULER_CONTROL_ENTRYPOINT;
+        delete introspectionEnv.VERCEL_APSCHEDULER_SUBSCRIBERS;
         queueSubscriptions = await introspectDevQueueSubscriptions({
           moduleName: modulePath,
           subscriberName,
           pythonBin: spawnCommand,
           cwd: workPath,
-          env: {
-            ...env,
-            PYTHONPATH: [runtimeDir, env.PYTHONPATH]
-              .filter(Boolean)
-              .join(delimiter),
-          },
+          env: introspectionEnv,
           integrations: queueIntegrations,
         });
+        if (
+          apschedulerControl &&
+          !apschedulerSubscriberNames.includes(subscriberName)
+        ) {
+          delete env.VERCEL_APSCHEDULER_CONTROL_ENTRYPOINT;
+          delete env.VERCEL_APSCHEDULER_SUBSCRIBERS;
+        }
       } else {
         delete env.VERCEL_DEV_QUEUE_SERVING;
         delete env.VERCEL_PYTHON_SUBSCRIBER_ID;
