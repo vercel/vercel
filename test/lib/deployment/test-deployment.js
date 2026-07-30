@@ -58,7 +58,7 @@ const DEPLOYMENT_LOG_FETCH_ATTEMPTS = Math.ceil(
  * each `send` frame in order, waiting for a reply between frames, and asserts
  * the upgrade status and the received frames.
  */
-async function runWebSocketProbe(spec, deploymentUrl) {
+async function runWebSocketProbe(spec, origin) {
   // Lazily require so non-WebSocket probes don't load the module.
   const WebSocket = require('ws');
 
@@ -74,8 +74,7 @@ async function runWebSocketProbe(spec, deploymentUrl) {
   const expectedStatus = spec.status || 101;
   const timeout = spec.timeout || 20000;
 
-  const scheme = deploymentUrl.startsWith('localhost') ? 'ws' : 'wss';
-  const wsUrl = `${scheme}://${deploymentUrl}${spec.path}`;
+  const wsUrl = `${origin.replace(/^http/, 'ws')}${spec.path}`;
   console.log('testing websocket', wsUrl);
 
   const { received, upgradeStatus } = await new Promise((resolve, reject) => {
@@ -180,18 +179,24 @@ async function runWebSocketProbe(spec, deploymentUrl) {
   console.log('finished testing websocket', wsUrl, JSON.stringify(received));
 }
 
-async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
+async function runProbe(probe, deploymentId, origin, ctx) {
   if (probe.delay) {
     await new Promise(resolve => setTimeout(resolve, probe.delay));
     return;
   }
 
   if (probe.websocket) {
-    await runWebSocketProbe(probe.websocket, deploymentUrl);
+    await runWebSocketProbe(probe.websocket, origin);
     return;
   }
 
   if (probe.logMustContain || probe.logMustNotContain) {
+    if (!deploymentId) {
+      throw new Error(
+        `log probes require a deployment; not supported against a dev server`
+      );
+    }
+
     const shouldContain = !!probe.logMustContain;
     const toCheck = probe.logMustContain || probe.logMustNotContain;
 
@@ -272,7 +277,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     if (!found && shouldContain) {
       console.log({
         deploymentId,
-        deploymentUrl,
+        origin,
         deploymentLogs,
         logLength: deploymentLogs?.length,
       });
@@ -303,7 +308,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     const manifestPrefix = scriptArgs.shift() || '';
 
     if (!ctx.nextBuildManifest) {
-      const manifestUrl = `https://${deploymentUrl}${manifestPrefix}/_next/static/build-TfctsWXpff2fKS/_buildManifest.js`;
+      const manifestUrl = `${origin}${manifestPrefix}/_next/static/build-TfctsWXpff2fKS/_buildManifest.js`;
 
       console.log('fetching buildManifest at', manifestUrl);
       const { text: manifestContent } = await fetchDeploymentUrl(manifestUrl);
@@ -326,7 +331,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
       probe.path.substring(scriptNameEnd + 1);
   }
 
-  const probeUrl = `https://${deploymentUrl}${probe.path}`;
+  const probeUrl = `${origin}${probe.path}`;
   const fetchOpts = {
     ...probe.fetchOptions,
     method: probe.method,
@@ -593,6 +598,8 @@ async function testDeployment(fixturePath, opts = {}) {
   delete bodies['probe.cjs'];
   delete bodies['probe.js'];
   delete bodies['probes.json'];
+  // marks fixtures not expected to work under `vc dev`; not part of the app
+  delete bodies['VC_DEV_XFAIL'];
 
   const { deploymentId, deploymentUrl } = await nowDeploy(
     projectName,
@@ -607,12 +614,30 @@ async function testDeployment(fixturePath, opts = {}) {
     await require(probePath)({ deploymentUrl, fetch, randomness });
   }
 
+  await runProbes(probes, `https://${deploymentUrl}`, {
+    deploymentId,
+    ctx: probeCtx,
+  });
+
+  return { deploymentId, deploymentUrl };
+}
+
+/**
+ * Run declarative probes against an origin (scheme included), e.g.
+ * `https://my-deployment.vercel.app` or `http://localhost:3001`.
+ * `deploymentId` is required only for log probes.
+ */
+async function runProbes(
+  probes,
+  origin,
+  { deploymentId = null, ctx = {} } = {}
+) {
   for (const probe of probes) {
     const stringifiedProbe = JSON.stringify(probe);
     console.log('testing', stringifiedProbe);
 
     try {
-      await runProbe(probe, deploymentId, deploymentUrl, probeCtx);
+      await runProbe(probe, deploymentId, origin, ctx);
     } catch (err) {
       const retries = Math.max(probe.retries || 0, err.retries || 0);
       if (!retries) {
@@ -625,7 +650,7 @@ async function testDeployment(fixturePath, opts = {}) {
         console.log(`re-trying ${i + 1}/${retries}:`, stringifiedProbe);
 
         try {
-          await runProbe(probe, deploymentId, deploymentUrl, probeCtx);
+          await runProbe(probe, deploymentId, origin, ctx);
           break;
         } catch (err) {
           if (i === retries - 1) {
@@ -640,8 +665,39 @@ async function testDeployment(fixturePath, opts = {}) {
       }
     }
   }
+}
 
-  return { deploymentId, deploymentUrl };
+function readFixtureJson5(fixturePath, name, randomness) {
+  const filePath = path.join(fixturePath, name);
+  if (!fs.existsSync(filePath)) return null;
+  let text = fs.readFileSync(filePath, 'utf8');
+  if (randomness) {
+    text = text.split(RANDOMNESS_PLACEHOLDER_STRING).join(randomness);
+  }
+  return json5.parse(text);
+}
+
+/** Read a fixture's vercel.json/now.json; null when neither exists. */
+function loadFixtureConfig(fixturePath, { randomness } = {}) {
+  return (
+    readFixtureJson5(fixturePath, 'vercel.json', randomness) ||
+    readFixtureJson5(fixturePath, 'now.json', randomness)
+  );
+}
+
+/**
+ * Read the declarative probes for a fixture directory: the `probes` key of
+ * vercel.json/now.json if present, else probes.json. Returns [] when neither
+ * exists. Pass `randomness` to substitute RANDOMNESS_PLACEHOLDER before
+ * parsing.
+ */
+function loadFixtureProbes(fixturePath, { randomness } = {}) {
+  const config = loadFixtureConfig(fixturePath, { randomness });
+  if (config && 'probes' in config) {
+    return config.probes;
+  }
+  const probesJson = readFixtureJson5(fixturePath, 'probes.json', randomness);
+  return probesJson ? probesJson.probes : [];
 }
 
 async function nowDeployIndexTgz(file) {
@@ -743,4 +799,7 @@ function formatHeaders(headers) {
 module.exports = {
   packAndDeploy,
   testDeployment,
+  runProbes,
+  loadFixtureConfig,
+  loadFixtureProbes,
 };
