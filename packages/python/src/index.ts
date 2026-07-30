@@ -109,11 +109,13 @@ import {
   createQueueHandlerModule,
   generatedPythonPathToModule,
   getGeneratedQueueHandlerPath,
+  getPyprojectAPSchedulerControl,
   getPyprojectSubscribers,
   getSubscriberConsumerName,
   getSubscriberOutputPath,
   resolveQueueSubscribers,
   type Subscriber,
+  type APSchedulerControlDeclaration,
   type SubscriberDeclaration,
 } from './subscribers';
 import {
@@ -769,6 +771,7 @@ export const build: BuildVX = async ({
   const framework = config?.framework;
   let subscriberDeclarations: SubscriberDeclaration[] = [];
   let subscribers: Subscriber[] = [];
+  let apschedulerControl: APSchedulerControlDeclaration | undefined;
   let workflows: PyprojectWorkflow[] = [];
   // Projects that directly depend on the legacy `vercel-workers` SDK keep
   // the pre-vercel-queue integration (legacy subscriber schema, worker env
@@ -808,6 +811,9 @@ export const build: BuildVX = async ({
     subscriberDeclarations = await getPyprojectSubscribers(workPath, {
       legacySchema: legacyWorkersProject,
     });
+    apschedulerControl = legacyWorkersProject
+      ? undefined
+      : await getPyprojectAPSchedulerControl(workPath);
     workflows = await getPyprojectWorkflows(workPath);
   }
 
@@ -1257,10 +1263,10 @@ export const build: BuildVX = async ({
 
   // Queue adapter integrations the project's dependencies require; both
   // introspection and the generated handler modules activate them right
-  // after importing the subscriber module (each installer retroactively
-  // registers apps the import created) and fail hard when activation
-  // fails. Legacy vercel-workers projects use the legacy integration
-  // instead (see the conditional injection gate above).
+  // around importing the subscriber module (according to whether the adapter
+  // must observe declarations during import) and fail hard when activation
+  // fails. Legacy vercel-workers projects use the legacy integration instead
+  // (see the conditional injection gate above).
   const queueIntegrations = legacyWorkersProject
     ? []
     : await getQueueIntegrations({ pythonPackage });
@@ -1461,9 +1467,9 @@ export const build: BuildVX = async ({
     lambdaEnv.VERCEL_HAS_WORKER_SERVICES = '1';
   }
   if (queueIntegrations.length > 0) {
-    // Every function of the project may publish through the adapter's
-    // transport (not just subscriber lambdas), so the runtime activates
-    // the required integrations at startup in all of them.
+    // Activate every detected adapter through the same runtime path in every
+    // Function. The runtime passes register_queues=False outside queue-serving
+    // processes when an installer supports that distinction.
     lambdaEnv.VERCEL_QUEUE_INTEGRATIONS = queueIntegrations
       .map(
         ({ module, installer, servingActivator }) =>
@@ -1471,6 +1477,33 @@ export const build: BuildVX = async ({
           (servingActivator ? `:${servingActivator}` : '')
       )
       .join(',');
+  }
+  let apschedulerSubscribers: string[] = [];
+  let apschedulerControlEnv: Record<string, string> | undefined;
+  if (apschedulerControl) {
+    apschedulerSubscribers = subscribers
+      .filter(subscriber => {
+        const topics = new Set(
+          subscriber.subscriptions.map(subscription => subscription.topic)
+        );
+        return (
+          topics.has(`__aps_${subscriber.name}_start`) &&
+          topics.has(`__aps_${subscriber.name}_wakeup`)
+        );
+      })
+      .map(subscriber => subscriber.name);
+    if (apschedulerSubscribers.length === 0) {
+      throw new NowBuildError({
+        code: 'PYTHON_INVALID_APSCHEDULER_CONTROL',
+        message:
+          '"tool.vercel.apscheduler.control" is configured, but no declared ' +
+          'APScheduler subscribers were discovered.',
+      });
+    }
+    apschedulerControlEnv = {
+      VERCEL_APSCHEDULER_CONTROL_ENTRYPOINT: apschedulerControl.entrypoint,
+      VERCEL_APSCHEDULER_SUBSCRIBERS: JSON.stringify(apschedulerSubscribers),
+    };
   }
 
   const globOptions: GlobOptions = {
@@ -1853,7 +1886,10 @@ export const build: BuildVX = async ({
       runtime: pythonVersion.runtime,
       ...lambdaOptions,
       architecture: target.architecture,
-      environment: lambdaEnv,
+      environment: {
+        ...lambdaEnv,
+        ...(apschedulerControlEnv ?? {}),
+      },
       supportsResponseStreaming: true,
     });
   }
@@ -1898,7 +1934,9 @@ export const build: BuildVX = async ({
       handler: `${handlerPyFilename}.vc_handler`,
       runtime: pythonVersion.runtime,
       architecture: target.architecture,
-      environment: lambdaEnv,
+      environment: apschedulerSubscribers.includes(subscriber.name)
+        ? { ...lambdaEnv, ...(apschedulerControlEnv ?? {}) }
+        : lambdaEnv,
       experimentalTriggers,
       supportsResponseStreaming: true,
     });

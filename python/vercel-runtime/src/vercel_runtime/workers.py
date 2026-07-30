@@ -40,8 +40,8 @@ def install_queue_integrations(*, queue_serving: bool) -> None:
     "module:installer:serving_activator" entries (comma separated), set by
     the builder from the project's declared dependencies. Because the
     project demonstrably depends on the adapter's upstream package, any
-    activation failure is a hard error. Each install also retroactively
-    registers subscriptions for apps created before it ran.
+    activation failure is a hard error. Installers may hook future framework
+    objects or retroactively register objects created before activation.
 
     With ``queue_serving=False`` only publish capability is activated
     (transport registration and broker defaults): consuming-side queue
