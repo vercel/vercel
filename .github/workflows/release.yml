@@ -48,7 +48,10 @@ jobs:
   binary:
     name: Binary release
     needs: determine
-    if: needs.determine.outputs.should-release-binary == 'true'
+    # Temporarily disabled: skip binary publishing for now.
+    # To re-enable, restore the original condition:
+    # if: needs.determine.outputs.should-release-binary == 'true'
+    if: false
     # Reusable workflow permissions are capped by the calling job, so
     # id-token: write must be granted here for npm trusted publishing
     # (OIDC) in the publish-npm job of release-binary.yml to work.

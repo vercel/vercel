@@ -95,6 +95,10 @@ export const getFunctionsSchema = () => ({
           maximum: 10240,
         },
         maxDuration: getMaxDurationSchema(),
+        maxConcurrency: {
+          type: 'integer',
+          minimum: 1,
+        },
         regions: {
           type: 'array',
           items: {

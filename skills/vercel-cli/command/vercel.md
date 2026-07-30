@@ -18,8 +18,9 @@ Based on task type, read `references/<topic>.md`. Use `vercel <command> --help` 
 
 **Key things to verify:**
 
-- Project is linked (`.vercel/` directory exists)
-- Env vars are pulled if needed (`vercel pull`)
+- Run `vercel project inspect --non-interactive` from the intended working directory and confirm the owner and project; stop on `link_required` or a mismatch instead of treating `.vercel/` existence as proof
+- Use `vercel pull` for project settings and environment data under `.vercel/`; use `vercel env pull` for `.env.local` or another file that is already excluded from source control
+- If login or team SAML re-authentication opens a browser/device flow, wait for deliberate user completion before continuing
 - Use `--non-interactive` for prompt-free runs and `--yes` only when confirmation is required
 - Use `VERCEL_TOKEN` env var for auth (not `--token`)
 - Use first-class CLI commands before `vercel api`

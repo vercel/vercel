@@ -1,5 +1,12 @@
 # @vercel/build-utils
 
+## 13.36.3
+
+### Patch Changes
+
+- a69c714: Propagate per-function `maxConcurrency` configuration into build outputs and keep every configured Next.js route in its own Lambda group, including routes with the same limit.
+- 654e898: Type shared function settings in container image build outputs.
+
 ## 13.36.2
 
 ### Patch Changes

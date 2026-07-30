@@ -1,5 +1,58 @@
 # vercel
 
+## 58.4.3
+
+### Patch Changes
+
+- 5f49021: Add `--protection-password` to `vercel project protection enable` so deployment protection passwords can be set from the CLI when used with `--password`.
+- 230fe53: Made non-interactive project inspection fail instead of linking when project context is unresolved, and corrected Vercel CLI skill guidance for project resolution, pull outputs, and browser authentication flows.
+
+## 58.4.2
+
+### Patch Changes
+
+- a69c714: Propagate per-function `maxConcurrency` configuration into build outputs and keep every configured Next.js route in its own Lambda group, including routes with the same limit.
+- 2d84055: Skip legacy Sensitive Environment Variables Policy in `vercel env add` and `vercel env update` when `VERCEL_ENV_VAR_CONFIG_SECRET_UI` is set, and send `visibility` (`config`/`secret`) on create and update requests when not explicitly set via `--visibility` (omitted for public-prefixed keys that cannot use secret visibility). Development still disallows secrets.
+- 682bf8b: Fix login device-flow unit tests under CI: clear `CI` when asserting browser open, and read already-flushed stderr via `getFullOutput`.
+- c006a5f: Fix pagination for the `vercel teams members` command.
+- 654e898: Type shared function settings in container image build outputs.
+- ae08009: Remove auto-opt-in of `vercel` team members to the native CLI binary.
+- 8b8a729: Added support for adding and removing variants with `vercel flags update`.
+  For example, use
+  `vercel flags update checkout-flow --add-variant treatment="Treatment"` to add
+  a variant, or
+  `vercel flags update checkout-flow --remove-variant legacy --yes` to remove
+  one.
+- Updated dependencies [a69c714]
+- Updated dependencies [654e898]
+  - @vercel/build-utils@13.36.3
+  - @vercel/next@4.20.5
+  - @vercel/static-build@2.11.13
+  - @vercel/backends@0.8.30
+  - @vercel/container@0.1.0
+  - @vercel/elysia@0.1.107
+  - @vercel/express@0.1.121
+  - @vercel/fastify@0.1.110
+  - @vercel/go@3.10.2
+  - @vercel/h3@0.1.116
+  - @vercel/hono@0.2.110
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.90
+  - @vercel/nestjs@0.2.111
+  - @vercel/node@5.9.3
+  - @vercel/python@6.54.1
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/ruby@2.5.1
+  - @vercel/rust@1.4.0
+
+## 58.4.1
+
+### Patch Changes
+
+- Updated dependencies [5858c35]
+  - @vercel/python@6.54.1
+
 ## 58.4.0
 
 ### Minor Changes

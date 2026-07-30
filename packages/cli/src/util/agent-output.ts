@@ -640,6 +640,7 @@ const GLOBAL_CONFIG_NON_INTERACTIVE_HINT =
 
 export type ExitWithNonInteractiveErrorVariant =
   | 'members'
+  | 'inspect'
   | 'access-groups'
   | 'access-summary'
   | 'protection'
@@ -737,10 +738,15 @@ function buildNextStepsForProjectSubcommands(
                       template: 'project checks add <name>' as const,
                       when: 'Create a deployment check by project name (replace <name>)',
                     }
-                  : {
-                      template: 'project members <name>' as const,
-                      when: 'List members by project name (replace <name>)',
-                    };
+                  : variant === 'inspect'
+                    ? {
+                        template: 'project inspect <name>' as const,
+                        when: 'Inspect a project by name (replace <name>)',
+                      }
+                    : {
+                        template: 'project members <name>' as const,
+                        when: 'List members by project name (replace <name>)',
+                      };
   return [
     {
       command: buildCommandWithGlobalFlags(client.argv, 'link'),
