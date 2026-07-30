@@ -190,14 +190,37 @@ export function fastapiShadowingRoutes(
 }
 
 /**
- * Post-filesystem CDN routes that serve each frontend's fallback file for a miss
- * under its mount. `check: true` re-resolves the rewrite to the copied file (so
- * it stays a CDN hit) and sorts the route ahead of the catch-all Lambda; sibling
- * mounts are excluded. GET/HEAD only — the frontend falls back only for those
- * methods. A 200 ("index.html") fallback is additionally gated on
- * `Accept: text/html` to match the frontend's navigation heuristic (the router
- * anchors the `has` value `^…$`, hence the wrapping `.*`); a 404 ("404.html")
- * fallback is served for every miss.
+ * Post-filesystem CDN routes that serve each frontend's fallback file for a
+ * miss under its mount. `check: true` re-resolves the rewrite to the copied
+ * file so it stays a CDN hit, and it sorts the route ahead of the catch-all
+ * Lambda. Sibling mounts are excluded. Each route is GET/HEAD only, since the
+ * frontend only falls back for those methods.
+ *
+ * A 404 ("404.html") fallback is served for every miss. A 200 ("index.html")
+ * fallback is different: the runtime serves it only for navigation requests, so
+ * the route has to match the runtime's `_is_frontend_navigation_request`.
+ *
+ * That check is not the same across versions:
+ *   - fastapi 0.139.0: it is a navigation request when the final path segment
+ *     has no file extension and `Accept` includes text/html or
+ *     application/xhtml+xml (q != 0). A wildcard `Accept` (q != 0) also counts,
+ *     unless html was explicitly rejected with q = 0.
+ *   - fastapi 0.140.0: it is a navigation request when `Accept` includes
+ *     text/html or application/xhtml+xml (q != 0). The extension and wildcard
+ *     rules were removed.
+ *
+ * We build the route ahead of time and don't know which version is installed,
+ * so we gate on what every version agrees is navigation: an explicit text/html
+ * (or xhtml) `Accept` header, plus a final segment with no file extension (so
+ * `/spa/app.js` is excluded). The router anchors the `has` value with `^…$`,
+ * which is why it is wrapped in `.*`.
+ *
+ * This is the strict reading, so the CDN never serves index.html when the app
+ * would return 404. Anything the gate rejects falls through to the Lambda,
+ * which runs the real check for the installed version. The response is still
+ * correct. It just isn't a CDN hit. We leave the wildcard `Accept` out for the
+ * same reason: 0.140.0 does not treat it as navigation, so matching it would
+ * make the CDN serve index.html where that version would not.
  */
 export function fastapiFallbackRoutes(discovery: FastAPICollectStaticResult) {
   return discovery.fallbacks.map(fb => {
@@ -209,20 +232,23 @@ export function fastapiFallbackRoutes(discovery: FastAPICollectStaticResult) {
     const guard = nested.length
       ? `(?!(?:${nested.map(escapeRegex).join('|')})(?:/|$))`
       : '';
-    const navigationOnly =
-      fb.status === 200
-        ? {
-            has: [
-              {
-                type: 'header' as const,
-                key: 'accept',
-                value: '.*(?:text/html|application/xhtml\\+xml).*',
-              },
-            ],
-          }
-        : {};
+    const isNavigation = fb.status === 200;
+    // Exclude a final segment with a file extension like `app.js`. On 0.139.0
+    // that counts as a missing asset, not navigation.
+    const navigationGuard = isNavigation ? '(?!.*[^/.]\\.[^/]*$)' : '';
+    const navigationOnly = isNavigation
+      ? {
+          has: [
+            {
+              type: 'header' as const,
+              key: 'accept',
+              value: '.*(?:text/html|application/xhtml\\+xml).*',
+            },
+          ],
+        }
+      : {};
     return {
-      src: `^${escapeRegex(prefix)}/${guard}.*$`,
+      src: `^${escapeRegex(prefix)}/${guard}${navigationGuard}.*$`,
       dest: `${prefix}/${fb.file}`,
       status: fb.status,
       check: true,
