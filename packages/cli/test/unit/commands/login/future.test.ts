@@ -371,6 +371,16 @@ describe('login', () => {
       const { default: freshLogin } = await import(
         '../../../../src/commands/login'
       );
+      // `vi.resetModules()` gives the fresh login module its own
+      // output-manager singleton bound to the real `process.stderr`. Rebind
+      // it to the mock client's stream so `toOutput` assertions can see it.
+      const { default: freshOutput } = await import(
+        '../../../../src/output-manager'
+      );
+      freshOutput.initialize({
+        stream: client.stderr,
+        supportsHyperlink: false,
+      });
 
       fetch.mockResolvedValueOnce(mockResponse(discoveryResponse));
       await freshOauth.as();
