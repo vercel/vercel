@@ -142,29 +142,28 @@ async function setupProject(
     process.stdin?.write('no\n');
   }
 
-  const hasAdditionalProjectSettingsToChange = vercelAuth !== 'standard';
-  await waitForPrompt(process, 'Customize advanced settings?');
-
-  if (hasAdditionalProjectSettingsToChange) {
-    process.stdin?.write('y\n');
-  } else {
-    process.stdin?.write('\n');
-  }
-
-  if (vercelAuth === 'none') {
+  // Keep this setup available for when advanced project settings are exposed
+  // by the interactive flow again.
+  const changeAdditionalSettings = false;
+  if (changeAdditionalSettings) {
     await waitForPrompt(
       process,
       'Want to use the default Deployment Protection settings?'
     );
-    process.stdin?.write('n\n');
 
-    await waitForPrompt(
-      process,
-      'What setting do you want to use for Vercel Authentication?'
-    );
-    // select "none"
-    process.stdin?.write('\x1b[B'); // Down Arrow
-    process.stdin?.write('\n');
+    if (vercelAuth === 'none') {
+      process.stdin?.write('n\n');
+
+      await waitForPrompt(
+        process,
+        'What setting do you want to use for Vercel Authentication?'
+      );
+      // select "none"
+      process.stdin?.write('\x1b[B'); // Down Arrow
+      process.stdin?.write('\n');
+    } else {
+      process.stdin?.write('\n');
+    }
   }
 
   await waitForPrompt(process, /Created\s+/);
@@ -366,9 +365,6 @@ test('should prefill "project name" prompt with vercel.json `name`', async () =>
   await waitForPrompt(now, 'Customize settings?');
   now.stdin?.write('no\n');
 
-  await waitForPrompt(now, 'Customize advanced settings?');
-  now.stdin?.write('\n');
-
   await waitForPrompt(now, /Created\s+/);
 
   const output = await now;
@@ -505,6 +501,7 @@ test('use `rootDirectory` from project when deploying', async () => {
     method: 'PATCH',
     body: JSON.stringify({
       rootDirectory: 'src',
+      ssoProtection: null,
     }),
   });
 
@@ -1139,9 +1136,6 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   await waitForPrompt(vc, 'Code directory?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Customize advanced settings?');
-  vc.stdin?.write('\n');
-
   await waitForPrompt(vc, /Created\s+/);
 
   const output = await vc;
@@ -1585,7 +1579,10 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   // otherwise the output from the build command will not be the index route and the page text assertion below will fail.
   await waitForPrompt(vc, 'Output Directory?');
   vc.stdin?.write('output\n');
-  await waitForPrompt(vc, 'Customize advanced settings?');
+  await waitForPrompt(
+    vc,
+    'Want to use the default Deployment Protection settings?'
+  );
   vc.stdin?.write('n\n');
   await waitForPrompt(
     vc,
@@ -1690,7 +1687,9 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   expect(text).toMatch(/Next\.js Test/);
 });
 
-test.each([
+// The prompt entry point is intentionally hidden, but keep this coverage ready
+// for when advanced project settings return to the interactive flow.
+test.skip.each([
   {
     vercelAuth: 'none',
     expectProtected: false,

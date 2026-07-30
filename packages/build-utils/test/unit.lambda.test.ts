@@ -141,6 +141,35 @@ describe('Lambda', () => {
     });
   });
 
+  describe('maxConcurrency', () => {
+    const files: Files = {};
+
+    it('accepts a positive integer', () => {
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'nodejs22.x',
+        maxConcurrency: 8,
+      });
+
+      expect(lambda.maxConcurrency).toBe(8);
+    });
+
+    it.each([0, -1, 1.5])('rejects %s', maxConcurrency => {
+      expect(
+        () =>
+          new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'nodejs22.x',
+            maxConcurrency,
+          })
+      ).toThrow(
+        '"maxConcurrency" must be an integer greater than or equal to 1'
+      );
+    });
+  });
+
   describe('TriggerEvent', () => {
     const files: Files = {};
 

@@ -1,5 +1,18 @@
 # @vercel/connect
 
+## 0.6.0
+
+### Minor Changes
+
+- 8bd3687: Add `connectDiscordCredentials` to the eve integration, resolving Discord bot tokens and application IDs from app-scoped Connect credentials while verifying forwarded interactions with Vercel OIDC.
+
+## 0.5.0
+
+### Minor Changes
+
+- 72d6d55: Add `connectPhotonCredentials` for resolving app-scoped Photon project credentials from a Vercel Connect connector.
+- 9ac74f0: Adding `getConnectorMetadata()` to `@vercel/connect` SDK
+
 ## 0.4.3
 
 ### Patch Changes
