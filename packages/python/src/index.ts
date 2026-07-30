@@ -2095,6 +2095,32 @@ export const build: BuildVX = async ({
           },
         ]
       : [];
+  // Frontend fallback (app.frontend(fallback=...)): for a GET/HEAD miss under
+  // the mount, serve the copied file from the CDN. `check: true` re-resolves to
+  // it (a hit) and sorts ahead of the catch-all Lambda; sibling mounts are
+  // excluded. GET/HEAD only — the frontend falls back only for those methods,
+  // so a non-GET miss must reach the Lambda (404/405), not the CDN file.
+  // TODO(fastapi-queue-fallback): check:true also sorts ahead of queue routes,
+  // so a root fallback would shadow queue paths — revisit with queue support.
+  const fastapiFallbackRoutes = fastapiStatic
+    ? fastapiStatic.fallbacks.map(fb => {
+        const prefix = fb.urlPath.replace(/\/+$/, ''); // '' for a root ("/") mount
+        const nested = fastapiStatic.collectedMounts
+          .map(urlPath => urlPath.replace(/\/+$/, ''))
+          .filter(
+            urlPath => urlPath !== prefix && urlPath.startsWith(`${prefix}/`)
+          )
+          .map(urlPath => urlPath.slice(prefix.length + 1));
+        const guard = nested.length ? `(?!(?:${nested.join('|')})(?:/|$))` : '';
+        return {
+          src: `^${prefix}/${guard}.*$`,
+          dest: `${prefix}/${fb.file}`,
+          status: fb.status,
+          check: true,
+          methods: ['GET', 'HEAD'],
+        };
+      })
+    : [];
   const routes =
     isNonWebService || !output
       ? queueRoutes.length > 0
@@ -2104,6 +2130,7 @@ export const build: BuildVX = async ({
           ...fastapiShadowRoutes,
           { handle: 'filesystem' as const },
           ...queueRoutes,
+          ...fastapiFallbackRoutes,
           // This route matches the resolved destination after rewrites. Copy
           // that path into the runtime request before dispatching the shared
           // framework Lambda so application routing observes the rewrite.
